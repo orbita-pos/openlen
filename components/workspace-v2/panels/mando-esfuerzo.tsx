@@ -14,11 +14,11 @@
 //    detrás (`Usage: /effort [low|medium|high|xhigh|max|ultracode|auto]`).
 //    Ponerlo arriba lo haría leer como «el más bajo», y no es un peldaño: es la
 //    instrucción de elegir peldaño por ti.
-//  - 🔴 `auto` SE ENSEÑA RESUELTO: `…` imprime `Effort level: auto
+//  - 🔴 `auto` SE ENSEÑA RESUELTO: allí se lee `Effort level: auto
 //    (currently high)`. El invariante es que el usuario nunca ignore en qué
 //    nivel corre. Nuestro `auto` anterior omitía el nivel y daba 237 tokens de
 //    razonamiento con un rango de 495 (medido, n=8): era justo no saberlo.
-//  - Las etiquetas describen el TRABAJO, nunca los tokens. Literal de allí:
+//  - Las etiquetas describen el TRABAJO, nunca los tokens. Como las suyas:
 //    «Balanced approach with standard testing». Ninguna dice cuánto piensa.
 
 import type { EsfuerzoAgente, NivelEsfuerzo } from "@/lib/agent/esfuerzo";
@@ -43,8 +43,7 @@ export function MandoEsfuerzo({
    * dato sin lector, la version callada de
    * [[la-palanca-que-no-vuelve-a-ningun-sitio]].
    *
-   * Claude Code resuelve la escalera por MODELO (`…` -> `…`),
-   * y eso es lo que se copia: que la diga el modelo y no una constante.
+   * Claude Code resuelve la escalera por MODELO, y eso es lo que se copia: que la diga el modelo y no una constante.
    *
    * ⚰️ Aquí decía que su reserva para uno que no conoce es
    * `["low","medium","high"]`. Es falso (comprobado el 2026-09-13): la suya es
@@ -90,8 +89,8 @@ export function MandoEsfuerzo({
         aria-haspopup="menu"
         // NO SE DESHABILITA CON EL TURNO CORRIENDO: lo que se elija aquí vale
         // para el SIGUIENTE turno. El que ya salió lleva su nivel fijado desde
-        // que se pulsó enviar — es el pin por turno de Claude Code
-        // (`…`), y cambiar el mando a media respuesta no debe
+        // que se pulsó enviar — es el pin por turno de Claude Code, y cambiar
+        // el mando a media respuesta no debe
         // reescribir con qué esfuerzo corrió lo que ya se mandó.
         onClick={() => onAbrir(!abierto)}
         className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition ${

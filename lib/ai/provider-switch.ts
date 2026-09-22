@@ -47,9 +47,9 @@ export type TurnWriter = Extract<ModelRole, "reasoner" | "visual_critic">;
  *
  * `TurnWriter` es un TIPO: quién puede escribir. Esto es el VOCABULARIO que
  * cruza la frontera — lo que pinta el selector de Crear y lo que valida la ruta
- * cuando llega del navegador. Claude Code hace la misma
- * separación: su selector de modelo valida contra la lista de filas (`…`)
- * y no contra "lo que sea un modelo".
+ * cuando llega del navegador. Claude Code hace la misma separación: su
+ * selector de modelo valida contra la lista de filas y no contra "lo que sea
+ * un modelo".
  *
  * Fijar un PAPEL y no un id de modelo es lo que mantiene en pie la regla de la
  * casa «el modelo y su tarifa viajan juntos»: el papel ya lleva `creditRate` en

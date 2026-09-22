@@ -131,7 +131,7 @@ describe("lo que enseña", () => {
     expect(fila.textContent).not.toContain("modelo.masCaro");
   });
 
-  // Las deshabilitadas al fondo, como su `sEe`.
+  // Las deshabilitadas al fondo, como en el suyo.
   it("la fila apagada se hunde al fondo de la lista", () => {
     const textos = opciones(montar({ hasImages: true })).map((b) => b.textContent ?? "");
     expect(textos[textos.length - 1]).toContain("DeepSeek V4 Flash");

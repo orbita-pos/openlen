@@ -114,7 +114,7 @@ describe("crearDiarioDelTurno", () => {
 // saber a qué selector apuntaba. En la transcripción de Claude Code las dos
 // viven juntas —el `tool_use` lleva su `input` entero y el `tool_result` va
 // enlazado por `tool_use_id`—, y la poda que ellos hacen es del BLOQUE GRANDE
-// (`…`), nunca del desenlace.
+// (el contenido del fichero), nunca del desenlace.
 // Aquí es la misma poda por tamaño que ya se le hace a la respuesta.
 describe("crearDiarioDelTurno — lo que se envió", () => {
   it("🔴 guarda los argumentos junto a la respuesta", () => {

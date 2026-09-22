@@ -543,11 +543,11 @@ function HeroComposer({
         </button>
         {/* QUÉ MOTOR ESCRIBE — y ahora, cuál. El nombre sigue estando en la
             entrada como texto tenue, que es la forma de la bienvenida de Claude
-            Code (`BN(modelo) + cYe(modelo, nivel)`), y ADEMÁS es el mando: allí
+            Code (el modelo y, si lo hay, su nivel), y ADEMÁS es el mando: allí
             la propia entrada de `/model` se describe como `Set the AI model for
             Claude Code (currently Opus 5)`, o sea que el nombre es el botón.
-            Sin nivel, porque `cYe` sin nivel devuelve "" y pensar en Crear no
-            compra nada (medido). Ver `selector-de-modelo.tsx`. */}
+            Sin nivel, porque pensar en Crear no compra nada (medido). Ver
+            `selector-de-modelo.tsx`. */}
         <SelectorDeModelo
           escritor={escritor}
           hasImages={state.fotos.length > 0}

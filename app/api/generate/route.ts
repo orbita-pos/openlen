@@ -217,9 +217,9 @@ export async function POST(req: Request): Promise<Response> {
   // LOS FALLOS DEL EMBUDO DE CREAR, con el id del usuario (lib/uso/). Separan
   // «se fue sin intentarlo» de «lo intentó y falló», que la base no distingue:
   // los dos casos dejan el saldo leído y ningún proyecto. Sólo CÓDIGOS cerrados,
-  // nunca `message`, que puede traer texto del proveedor. Es la regla del
-  // Claude Code: a su telemetría sólo llega un error marcado
-  // `…`. Los 400 de arriba se quedan
+  // nunca `message`, que puede traer texto del proveedor. Es la regla de
+  // Claude Code: a su telemetría sólo llega un error que alguien comprobó que no
+  // lleva código ni rutas. Los 400 de arriba se quedan
   // fuera porque ocurren antes de saber quién es.
   //
   // Un DETALLE que no cumple el formato se quita y el evento se guarda con su

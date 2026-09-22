@@ -169,7 +169,7 @@ describe("defectosConDireccion — qué entra y qué NO", () => {
   // 🔴 LA RESTA DE LÍNEA BASE, que es la mitad del valor: una clase muerta que
   // el modelo se encontró hecha no es suya, y decírsela es mandarle a arreglar
   // algo que no rompió en un turno que el usuario pidió para otra cosa. Es la
-  // regla del `…` de Claude Code, y sale gratis porque la base se
+  // regla de Claude Code —la base se toma ANTES de editar—, y sale gratis porque la base se
   // mide por la MISMA dependencia.
   it("🔴 una clase muerta preexistente no se le echa en cara", () => {
     const m = {

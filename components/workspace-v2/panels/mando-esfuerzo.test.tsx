@@ -49,7 +49,7 @@ describe("el mando de esfuerzo tiene la forma de Claude Code", () => {
     expect(opciones(montar())).toHaveLength(NIVELES.length + 1);
   });
 
-  // `Tm` son los peldaños y `auto` se añade suelto DETRÁS. Arriba se leería
+  // Como en Claude Code, los cinco son los peldaños y `auto` se añade suelto DETRÁS. Arriba se leería
   // como «el más bajo», y no es un peldaño.
   it("`auto` va el ÚLTIMO, no el primero", () => {
     const textos = opciones(montar()).map((b) => b.textContent ?? "");
@@ -71,8 +71,7 @@ describe("el mando de esfuerzo tiene la forma de Claude Code", () => {
 
   // 🔴 LA ESCALERA LA MANDA EL SERVIDOR, no una constante del cliente.
   //
-  // Claude Code ofrece los peldaños POR MODELO (`…` -> `…`), y
-  // eso es lo que se copia. ⚰️ Lo que decía aquí de su reserva para un modelo
+  // Claude Code ofrece los peldaños POR MODELO, y eso es lo que se copia. ⚰️ Lo que decía aquí de su reserva para un modelo
   // desconocido —`["low","medium","high"]`— es falso: la suya es permisiva. La
   // nuestra es más estricta a propósito y se gana MIDIENDO el dial del modelo.
   //

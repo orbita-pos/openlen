@@ -2,23 +2,21 @@
 
 // components/workspace-v2/selector-de-modelo.tsx — QUÉ MOTOR ESCRIBE LA PÁGINA.
 //
-// LA FORMA ES LA DEL selector de modelo DE Claude Code
-// Cada
-// decisión de aquí se puede cotejar allí:
+// LA FORMA ES LA DEL SELECTOR DE MODELO DE Claude Code. Cada decisión de aquí
+// se puede cotejar allí:
 //
 //  - EL NOMBRE DEL MODELO ES EL MANDO. La entrada de `/model` en su menú se
 //    describe a sí misma como `Set the AI model for Claude Code (currently
 //    Opus 5)`. Aquí la etiqueta tenue que ya decía el nombre es el botón; no se
 //    añade un icono nuevo al compositor.
-//  - LA PRIMERA FILA ES SIEMPRE EL DEFECTO. Es su `…`: valor `null`, label
-//    «Default (recommended)», descripción «…».
+//  - LA PRIMERA FILA ES SIEMPRE EL DEFECTO. Como la suya: «Default
+//    (recommended)», con la descripción «Use the default model (currently X)».
 //    El «(ahora: …)» sale de la MISMA función que decide quién escribe, así que
 //    con una imagen adjunta cambia solo.
-//  - LA DESCRIPCIÓN ES LA OCASIÓN, nunca los tokens ni el precio. Literal de
-//    allí: «…», «…».
+//  - LA DESCRIPCIÓN ES LA OCASIÓN, nunca los tokens ni el precio. Como las
+//    suyas: «Best for everyday, complex tasks», «Fastest for quick answers».
 //  - LAS FILAS DESHABILITADAS LLEVAN EL MOTIVO DENTRO, en el sitio de la
-//    descripción (`…`), y se hunden al
-//    fondo de la lista. Aquí sólo hay un motivo: el razonador no tiene ojos.
+//    descripción, y se hunden al fondo de la lista. Aquí sólo hay un motivo: el razonador no tiene ojos.
 //
 // 🔴 EL SUFIJO DE COSTE SE CALCULA, y esta línea es la corrección de un fallo
 // que duró ocho días. Decía:

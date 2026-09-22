@@ -14,9 +14,9 @@ describe("la postura se traduce a un número, y `auto` resuelve a un nivel", () 
   // 🔴 ESTA REGLA SE INVIRTIÓ el 2026-09-11, y la prueba anterior afirmaba lo
   // contrario («`auto` NO produce número — el campo no se manda»). Aquella era
   // fiel a una lectura EQUIVOCADA de Claude Code: se tomó el `{type:"adaptive"}`
-  // del eje de PRESUPUESTO por el `auto` del eje de NIVEL. Lo decide `…`, y
-  // su entrada es el modelo, no la elección de la persona. En el eje del nivel
-  // Claude Code resuelve (`…`) y manda.
+  // del eje de PRESUPUESTO por el `auto` del eje de NIVEL. Aquél lo decide el
+  // modelo, no la elección de la persona. En el eje del nivel Claude Code
+  // resuelve (al defecto del modelo, o `high` si no lo tiene) y manda.
   it("`auto` SÍ produce número: el del nivel al que resuelve", () => {
     expect(presupuestoDeEsfuerzo("auto", 32_768)).toBe(
       presupuestoDeEsfuerzo(NIVEL_POR_DEFECTO, 32_768),
@@ -64,7 +64,7 @@ describe("la postura se traduce a un número, y `auto` resuelve a un nivel", () 
     expect(ESFUERZOS).not.toContain("none");
   });
 
-  // `NIVELES` es el `…` de Claude Code y `auto` se añade aparte, no es un peldaño.
+  // `NIVELES` es la escalera de Claude Code y `auto` se añade aparte, no es un peldaño.
   it("BRAZO DE CONTROL: `auto` NO está entre los niveles", () => {
     expect(NIVELES).not.toContain("auto");
     expect(ESFUERZOS).toHaveLength(NIVELES.length + 1);
@@ -81,8 +81,8 @@ describe("la postura se traduce a un número, y `auto` resuelve a un nivel", () 
 
 // ─── LA ESCALERA POR MODELO ─────────────────────────────────────────────────
 //
-// De Claude Code se copia DÓNDE VIVE LA DECISIÓN: `…` saca la escalera de
-// la entrada de catálogo de ESE modelo, no de una constante.
+// De Claude Code se copia DÓNDE VIVE LA DECISIÓN: la escalera sale de la
+// entrada de catálogo de ESE modelo, no de una constante.
 //
 // ⚰️ Aquí decía que su reserva para un modelo desconocido es
 // `["low","medium","high"]`. Es falso (comprobado el 2026-09-13): la suya es

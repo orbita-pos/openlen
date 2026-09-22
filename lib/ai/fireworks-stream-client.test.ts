@@ -160,8 +160,8 @@ describe("transporte de texto en streaming", () => {
   // 🔴 ESTA PRUEBA AFIRMABA LO CONTRARIO hasta el 2026-09-11 («`auto` NO manda
   // reasoning_effort — el campo no viaja»). No se relajó para que pasara: la
   // regla se invirtió al leer bien Claude Code. Lo que allí se omite es el
-  // PRESUPUESTO de pensamiento, y lo decide `…` por MODELO; el NIVEL que
-  // elige la persona se resuelve (`…`) y se manda.
+  // PRESUPUESTO de pensamiento, y lo decide el MODELO; el NIVEL que elige la
+  // persona se resuelve (al defecto del modelo, o `high`) y se manda.
   // Medido, además: omitirlo daba 237 tokens de razonamiento con rango 495.
   it("`auto` SÍ manda reasoning_effort: el número del nivel al que resuelve", async () => {
     const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
@@ -326,9 +326,8 @@ describe("varias imágenes en un turno", () => {
 
 // ─── LA DEGRADACION SILENCIOSA ──────────────────────────────────────────────
 //
-// Claude Code, cuando el proveedor rechaza `reasoning_effort`, marca el modelo
-// (`…`) y REPITE sin el campo — su documentacion lo llama
-// «…». Sin esto, un modelo que
+// Claude Code, cuando el proveedor rechaza el campo de esfuerzo, marca el
+// modelo y REPITE sin el campo — una degradacion silenciosa. Sin esto, un modelo que
 // no acepte el parametro tumbaria TODOS los turnos del Agente hasta que alguien
 // lo notara, y el papel ha cambiado de modelo dos veces en tres semanas.
 //

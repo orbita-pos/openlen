@@ -181,7 +181,7 @@ describe("comparar con la corrida anterior", () => {
 
 // EL CASO ES LA FILA, LA SUBPÁGINA ES UN GRADER.
 //
-// Visto de Claude Code: la tabla lleva
+// De Claude Code (`plugin eval`): la tabla lleva
 // UNA fila por caso —`CASE SCORE PASS% RUNS COST NOTES`— y lo que se mide
 // dentro son `graders` con nombre, peso y explicación. La columna NOTES es
 // `peor.name + ": " + peor.explanation`, y el peor es el de MÁS PESO, uno solo.

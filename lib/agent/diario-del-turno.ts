@@ -11,10 +11,10 @@
 // `{tool:"cambiar_tema", status:"error", summary:"cambiar_tema"}`. El resumen
 // es literalmente el nombre de la herramienta. El motivo se perdió.
 //
-// LA VARA. Su transcripción NO es un resumen
+// LA VARA (Claude Code). Su transcripción NO es un resumen
 // pintado: cada entrada guarda `toolUseResult`, el resultado ESTRUCTURADO de la
-// herramienta, junto al mensaje. Lo que se pinta (`…`,
-// `…`) es una VISTA sobre ese almacén, no el almacén.
+// herramienta, junto al mensaje. Lo que se pinta es una VISTA sobre ese
+// almacén, no el almacén.
 // Nosotros teníamos sólo la vista.
 //
 // 🔴 Y LA LLAMADA VA CON EL RESULTADO (2026-09-18). El diario nació guardando
@@ -25,10 +25,10 @@
 // `tool_use_id`. Leer «`editar_texto` falló» sin saber a qué selector apuntaba
 // es leer media entrada.
 //
-// Y la poda de bulto la hacen igual, herramienta por herramienta:
-//   Edit  → `…`
-//   Write → `…`
-// Es decir: se vacía el BLOQUE GRANDE y se conserva TODO lo demás. Nunca se
+// Y la poda de bulto la hacen igual, herramienta por herramienta: al guardar
+// un Edit se vacía el fichero original, y al guardar un Write también el
+// contenido escrito. Es decir: se vacía el BLOQUE GRANDE y se conserva TODO lo
+// demás. Nunca se
 // tira el desenlace.
 //
 // 🔴 LA ADAPTACIÓN, y es deliberada. Ellos nombran el campo porque tienen tres

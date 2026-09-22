@@ -75,9 +75,9 @@ export async function appendChatMessage(
  *
  * 🔴 POR QUÉ NO ES `appendChatMessage`. Ése lo llama el NAVEGADOR al terminar
  * de leer el stream: si el socket muere fuera de banda, no llega nunca y el
- * turno desaparece aunque sus cambios ya vivan en la base. La vara es el
- * Claude Code, que añade cada entrada con `appendFileSync` desde el
- * proceso que corre el bucle, entrada a entrada — nunca desde la vista.
+ * turno desaparece aunque sus cambios ya vivan en la base. La vara es
+ * Claude Code, que escribe cada entrada de su transcripción desde el proceso
+ * que corre el bucle, entrada a entrada — nunca desde la vista.
  *
  * CONVIVEN A PROPÓSITO, y sin pisarse:
  *  · Fila nueva (el cliente no llegó) → se inserta lo que el servidor tiene.

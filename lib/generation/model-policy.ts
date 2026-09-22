@@ -188,8 +188,8 @@ export type ModelOperation =
    *
    *  🔴 VA EN OTRO PAPEL QUE EL ACTOR, y eso es el punto entero. Len corre en
    *  `agent`; si el mismo papel juzgara su propio turno estaríamos pidiéndole
-   *  al que ya decidió que estaba hecho que confirme que lo está. Claude Code de
-   *  Claude Code lo dice de esta forma: «…».
+   *  al que ya decidió que estaba hecho que confirme que lo está. Claude Code
+   *  razona igual: el agente evaluado es justo quien ya decidió darlo por hecho.
    *
    *  Y va en el papel BARATO: es una lectura corta con tres salidas, no
    *  redacción. */
@@ -302,9 +302,9 @@ export function creditRateForRole(role: ModelRole): CreditRate {
 
 /**
  * El nombre visible del modelo del papel. El tercer gemelo, y existe por lo que
- * pinta la bienvenida de Claude Code: `…` —«…»—, el nombre sacado del mismo registro que el id. Allí no hay
- * forma de ocultar el modelo (hay `…`, no `…`), y
- * un proveedor ajeno también se nombra («Amazon Bedrock», «Cloud gateway»).
+ * pinta la bienvenida de Claude Code: «Opus 5 with high effort», el nombre
+ * sacado del mismo registro que el id. Allí no hay forma de ocultar el modelo,
+ * y un proveedor ajeno también se nombra («Amazon Bedrock»).
  */
 export function displayNameForRole(role: ModelRole): string {
   return role === "visual_critic"

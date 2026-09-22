@@ -95,42 +95,38 @@ cobran `deepseek-flash`; el único que usa `deepseek-pro` es
 
 ---
 
-## 4 · Claude Code
+## 4 · Claude Code — cómo resuelve lo mismo
 
- Las seis cosas que el documento
-pedía verificar:
+Las seis cosas que el documento pedía verificar:
 
-**1 · Tras su propio Write actualiza `…` con lo que escribió — SÍ,
-literal.** Es exactamente el fallo 1, resuelto al revés:
+**1 · Tras su propia escritura actualiza su estado de lectura con lo que
+escribió — SÍ.** Es exactamente el fallo 1, resuelto al revés: la línea base del
+fichero sale del contenido **ya transformado** que acaba de escribir y de la
+marca de tiempo que devuelve esa escritura, no de lo que el modelo propuso. Por
+eso sus escrituras no pueden parecerle ajenas nunca.
 
+**La línea base es contenido + bytes + hash**, y la comparación también: dos
+versiones son la misma si coinciden en tamaño y en hash. Si el fichero cambió
+desde que se leyó, la escritura se rechaza y se le pide al modelo que lo vuelva
+a leer.
 
-`d` es `…`. `n` es el contenido **ya transformado** (`…`
-unas líneas antes) y `…` es el mtime que devuelve la escritura. Su línea base
-sale de lo escrito, no de lo propuesto. Por eso sus escrituras no pueden
-parecerle ajenas nunca.
+**2 · Edit contra el disco actual — sí.** Antes de escribir lee el fichero y
+compara el DISCO contra la línea base leída: no escribe sobre lo que no vio.
 
-**La línea base es contenido + bytes + sha256**, y la comparación también:
+**3 · Qué le dice al modelo cuando el fichero cambió — y es I3:** que cambió
+desde que lo leyó; que eso suele ser deliberado, así que lo tome como el estado
+actual y no lo revierta; y que si el cambio parece un error lo diga, en vez de
+deshacerlo él. Y le enseña los cambios relevantes.
 
-
-**2 · Edit contra el disco actual — sí.** El guardia lee el fichero
-(`…`) y llama a `…`: compara el DISCO contra la línea base leída. La
-variante empaquetada del sandbox lo hace explícito —lee, cuenta ocurrencias,
-sustituye, escribe—.
-
-**3 · Qué le dice al modelo cuando el fichero cambió — literal, y es I3:**
-
-> «…» + «…»
-
-**5 · Diagnósticos del mismo turno — confirmado.** Cadena literal
+**5 · Diagnósticos del mismo turno — sí.** Los diagnósticos nuevos que provoca
+una edición le llegan al modelo en ese mismo turno, como mensaje aparte.
 
 **6 · Tope de pasos — SÍ, pero en los SUBAGENTES, no en el bucle principal.** El
-atributo `…`, el log `…` y la telemetría `…` cuelgan de
-la ruta de agentes. El comentario de nuestro `loop.ts` («su bucle principal no
-lleva tope») se sostiene con lo que vi.
+tope de vueltas y su aviso cuelgan de la ruta de agentes. El comentario de
+nuestro `loop.ts` («su bucle principal no lleva tope») se sostiene.
 
 **4 · Checkpoints y rewind: NO lo verifiqué.** No era necesario para ninguno de
-los siete invariantes y no quise gastar más pasadas en algo que no
-cambiaba una línea de código. **Queda sin confirmar.**
+los siete invariantes. **Queda sin confirmar.**
 
 ---
 
@@ -302,15 +298,18 @@ escritura que pisar y por tanto no hay nada que prometer.
 
 ## 7 · El tope — RESUELTO como lo hace Claude Code
 
-Jesús: «la opción que sea como Claude Code lo hace». Leído en
-y ninguna de mis cuatro opciones era la suya:
+Jesús: «la opción que sea como Claude Code lo hace». Y ninguna de mis cuatro
+opciones era la suya:
 
-1. **Su bucle principal no tiene tope de pasos.** `maxTurns` es un campo
-   OPCIONAL por definición de agente («…»). Sin defecto.
+1. **Su bucle principal no tiene tope de pasos.** El máximo de vueltas es un
+   campo OPCIONAL de la definición de cada agente, sin valor por defecto.
 2. **Lo que acota una sesión larga es el CONTEXTO, y compactando CONTINÚA**:
-3. **El dinero se topa por MES y por cuenta, nunca por turno**: «…», con auto-recarga.
-4. **Cuando un presupuesto sí se agota, no se tira nada**: «…»
-   Y donde hay tope (subagentes): «…» — parcial + dirección para seguir.
+   cuando queda poco, se compacta y se sigue.
+3. **El dinero se topa por MES y por cuenta, nunca por turno**: un límite de
+   gasto mensual, con auto-recarga.
+4. **Cuando un presupuesto sí se agota, no se tira nada**: lo que estaba en
+   marcha termina y sus resultados se conservan. Y donde hay tope (subagentes),
+   se devuelve el resultado parcial con la indicación de cómo seguir.
 
 **El punto 3 es el que nos separaba.** Nosotros YA tenemos el tope mensual
 (`CREDITS_BY_PLAN`), así que el de turno era un **segundo muro redundante con el

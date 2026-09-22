@@ -111,7 +111,7 @@ export interface PageMeasurement {
 
 /** Una subpágina medida por separado dentro del caso que la pidió.
  *
- *  NO es una fila del marcador. Visto de Claude Code (`plugin
+ *  NO es una fila del marcador. De Claude Code (`plugin
  *  eval`): la tabla lleva UNA fila por caso —`CASE SCORE PASS% RUNS
  *  COST NOTES`— y lo que se mide dentro son `graders`, cada uno con nombre,
  *  peso y explicación. Hacer fila a cada subpágina movería el recuento de
@@ -190,7 +190,7 @@ export function caseClean(v: PageVerdict): boolean {
 /** Lo que la corrida IMPRIME de un caso que falló: el peor de sus fallos, con
  *  su sitio y, si lo hay, su porqué.
  *
- *  Copiado de Claude Code, donde la
+ *  Copiado de Claude Code (`plugin eval`), donde la
  *  columna NOTES de la tabla es exactamente esto:
  *
  *      return `${peor.name}: ${peor.explanation}`;

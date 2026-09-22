@@ -11,8 +11,8 @@ import { validatePageSlug } from "@/lib/projects/site-pages";
 // POST /api/lienzo — sube el documento que el taller va a enseñar y devuelve la
 // URL desde la que el iframe lo carga, en `lienzo-<id>.<dominio de páginas>`.
 //
-// Es la mitad «servidor» de la acción `preview` de Claude Code: su
-// `…` guarda cada documento en un Map y lo sirve por HTTP en otro origen. Ver
+// Es la mitad «servidor» de la acción `preview` de Claude Code: guarda cada
+// documento en memoria y lo sirve por HTTP en otro origen. Ver
 // docs/superpowers/specs/2026-09-15-un-solo-camino-de-renderizado-design.md.
 //
 // El `html` llega YA instrumentado por `derive()` (los scripts del editor). Aquí

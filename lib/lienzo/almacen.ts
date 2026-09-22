@@ -1,7 +1,7 @@
 // LOS DOCUMENTOS DEL LIENZO, EN MEMORIA.
 //
-// Es el `…` que sirve la acción `preview` de Claude Code (su `…`): el
-// documento se guarda por un id aleatorio y el iframe navega a él. Y es la
+// Es la forma de la acción `preview` de Claude Code: el documento se guarda en
+// memoria por un id aleatorio y el iframe navega a él. Y es la
 // misma forma que `lib/ai/origen-de-medida.ts` ya usa para el medidor.
 //
 // POR QUÉ EN MEMORIA: el lienzo enseña `activeDoc` + `pendientes`, lo que el

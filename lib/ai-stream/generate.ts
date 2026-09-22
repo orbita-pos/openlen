@@ -209,7 +209,7 @@ export interface GenerateHtmlStreamOpts {
    *
    * Ausente / `null` = «Automático», que es lo que Crear ha hecho siempre:
    * manda la imagen adjunta. No es un defecto disfrazado de ausencia — es la
-   * fila 1 del selector, la misma que el `…` de Claude Code con valor `null`.
+   * fila 1 del selector, la misma «Default» de Claude Code.
    *
    * 🔴 NO PUEDE SALTARSE LA REGLA DE LA VISIÓN: quien lo aplica es
    * `writerForTurn(hasImages, fijado)`, que recorta en silencio si lo fijado no

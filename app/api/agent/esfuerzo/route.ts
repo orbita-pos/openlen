@@ -39,7 +39,8 @@ export async function GET() {
   // `esfuerzoEfectivo` hará con él de todas formas.
   const guardado = await getEsfuerzoGuardado(session.user.id);
   // 🔴 LA ESCALERA LA DICE EL MODELO, no una constante. Eso sí es de Claude Code:
-  // `…` -> `…`, leído de la entrada del catálogo de ESE modelo.
+  // qué niveles admite y a cuál resuelve salen de la entrada del catálogo de
+  // ESE modelo.
   //
   // ⚰️ Aquí decía además que su reserva para un modelo desconocido es
   // `["low","medium","high"]`. Es falso (comprobado el 2026-09-13): la suya es
