@@ -433,12 +433,10 @@ async function main(): Promise<void> {
       (r.cumplimiento?.fallos ?? []).some((f) => f.deLaPrueba === true),
     );
     console.log(
-      // ⚠️ «puntúa en los casos que lo afirman» y no «NO puntúa», que es lo que
-      // decía: la promesa SÍ suspende, pero sólo donde el assert del caso llama
-      // a `prometioYSeComprobo` (hoy tres). El número de aquí es de TODA la
-      // corrida, así que no es una puerta por sí mismo — que es lo que aquella
-      // etiqueta quería decir y decía mal.
-      `Promesa declarada (puntúa en los casos que lo afirman): ${conPromesa.length} caso(s) la declararon, ${corrieron.length} se ejecutaron — ` +
+      // Desde el 2026-09-22 la promesa es puerta en TODOS los casos (ver la
+      // línea de «Promesa del turno», más abajo); antes sólo puntuaba donde el
+      // assert del caso llamaba a `prometioYSeComprobo`.
+      `Promesa declarada (puntúa en todos): ${conPromesa.length} caso(s) la declararon, ${corrieron.length} se ejecutaron — ` +
         `${dePagina.length} incumplida(s) por LA PÁGINA, ${deLaPrueba.length} fallida(s) por EL INSTRUMENTO.`,
     );
     // ⚰️ AQUÍ SE IMPRIMÍAN LA FORMA Y LOS PASOS de la prueba del DSL, para poder
@@ -541,17 +539,16 @@ async function main(): Promise<void> {
       );
     }
   }
-  // 🔴 LA PROMESA, MEDIDA EN TODA LA BATERÍA Y PUNTUANDO EN TRES.
+  // 🔴 LA PROMESA DEL TURNO, PUERTA DE TODA LA BATERÍA (desde el 2026-09-22).
   //
-  // Sólo tres `assert` llaman a `prometioYSeComprobo`, así que en los otros 62
-  // casos el modelo puede cambiar el comportamiento sin prometer nada y nadie
-  // se entera. Esto lo mide en todos SIN tocar el `pass` — la figura
-  // `EvalHechos`: un medidor que corre y se enseña fuera del score.
-  // Este número es el que decide si se promueve a puerta.
+  // Nació midiendo sin puntuar —sólo tres `assert` la llamaban— y se promovió
+  // con el número de una corrida limpia: 64/64 y 0 casos que la habrían
+  // suspendido. Ya está dentro del `pass`; esta línea dice cuántos cayeron por
+  // ella y por qué, para que un rojo nuevo se lea sin abrir cada caso.
   const conMedida = results.filter((r) => r.promesaMedida);
   if (conMedida.length > 0) {
     console.log(
-      `Promesa del turno (mide en ${results.length}, puntúa en 3): ${conMedida.length} caso(s) la habrían suspendido.`,
+      `Promesa del turno (puerta en los ${results.length}): ${conMedida.length} caso(s) no la cumplen.`,
     );
     for (const r of conMedida.slice(0, 8)) {
       console.log(`  · ${r.id}: ${String(r.promesaMedida).slice(0, 150)}`);

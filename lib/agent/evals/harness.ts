@@ -250,12 +250,11 @@ export interface EvalRunResult {
    *  anotó nada o si el veredicto lo leyó y calló. Son dos bugs distintos y se
    *  estaban persiguiendo a ciegas. */
   declaradas?: readonly PruebaEnEval[];
-  /** LO QUE DIRÍA `prometioYSeComprobo` DE ESTE CASO — corra o no en su
-   *  `assert`. **Se mide en los 65, puntúa en 3.**
-   *
-   *  Es la figura de siempre en esta casa (`scored: false`): corre, se enseña,
-   *  y no entra en el `pass`. Ausente ⇒ nada que decir (no editó, o cumplió).
-   *  Presente ⇒ la frase, que es evidencia y no un booleano. */
+  /** LO QUE DICE `prometioYSeComprobo` DE ESTE CASO — corra o no en su
+   *  `assert`. **Puntúa en todos desde el 2026-09-22**: presente ⇒ el caso
+   *  suspende con esta frase, salvo que su `assert` ya lo hubiera tumbado.
+   *  Ausente ⇒ nada que decir (no tocó el comportamiento, o prometió y
+   *  cumplió). Es la frase, que es evidencia y no un booleano. */
   promesaMedida?: string;
   /** Lo que devolvió ESE programa al EJECUTARSE — el DETALLE de la ruta, para
    *  el informe. Lo que PUNTÚA es `cumplimiento`, que desde el 2026-09-21
@@ -976,24 +975,25 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       pruebas: promesas.declaradas,
     });
 
-    // 🔴 LA PROMESA, MEDIDA EN LOS 65 — Y SIN PUNTUAR EN 62 DE ELLOS.
+    // 🔴 LA PROMESA, PUERTA DE TODA LA BATERÍA (promovida el 2026-09-22).
     //
     // Sólo TRES casos llaman a `prometioYSeComprobo` dentro de su `assert`, así
-    // que en los otros 62 el modelo puede editar el comportamiento sin prometer
-    // nada y nadie se entera. El instrumento existe; la batería casi no lo usa.
+    // que en los otros el modelo podía editar el comportamiento sin prometer
+    // nada y nadie se enteraba. Nació como medidor que corre y se enseña sin
+    // entrar en el score —la figura de `EvalHechos`—, a la espera del número de
+    // una corrida limpia. Lo dio la batería del 22/09 tras retirar el DSL:
+    // 64/64, y 0 casos que la habrían suspendido (los 6 que tocaron el runtime
+    // prometieron y cumplieron). Antes de afinar el juez habría suspendido 32
+    // turnos que sólo cambiaron un texto, y por eso no se promovió entonces.
     //
-    // 🔴 LA FORMA ES LA QUE YA USA `EvalHechos`: un medidor CORRE Y SE ENSEÑA
-    // sin entrar en el score. Eso es lo que permite medir los 62 sin cambiar
-    // hoy el significado del marcador histórico. Y lo que viaja es la FRASE
-    // entera de `prometioYSeComprobo`, no un booleano: un veredicto sin
-    // evidencia no se puede auditar después.
-    //
-    // Promoverlo a puerta es UNA línea (meterlo en `reason`) y necesita el
-    // número de una corrida limpia, no ganas — la misma regla que `EvalHechos`.
+    // Lo que viaja es la FRASE entera, no un booleano: el caso suspende
+    // diciendo qué faltó. Y manda el `assert` del caso si ya había suspendido:
+    // una fila nombra un motivo, el primero que lo tumbó.
     const promesaMedida = prometioYSeComprobo({
       cumplimiento,
       pruebas: promesas.declaradas,
     });
+    if (reason === null && promesaMedida) reason = promesaMedida;
 
     // LO QUE SÓLO SE VE USÁNDOLO. Corre aunque el texto ya haya suspendido: su
     // línea de detalle es lo que se cuenta entre corridas.

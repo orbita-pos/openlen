@@ -233,11 +233,11 @@ describe("cumplimientoDelTurno con el brazo sin acciones", () => {
 // 🔴 EL MOTIVO VIAJA DENTRO (2026-09-22).
 //
 // Un arnes de evals riguroso es fail-closed —lo que no se pudo comprobar NO
-// cuenta como aprobado— y el motivo va DENTRO del resultado. Aqui se mantiene
-// fail-open (flipar el score sin numero es el error que `scored:false` existe
-// para evitar), pero lo que no se sostenia era que ademas fuera MUDO: el
-// informe decia «2 declararon, 1 se ejecuto» y la otra desaparecia sin
-// explicacion.
+// cuenta como aprobado— y el motivo va DENTRO del resultado. Mientras la
+// promesa medía sin puntuar se mantuvo fail-open; desde que es puerta
+// (2026-09-22) el juez tampoco aprueba lo no medido (`cases.test.ts`). Lo que
+// esto sujeta es la otra mitad: que el motivo VIAJE, porque el informe decia
+// «2 declararon, 1 se ejecuto» y la otra desaparecia sin explicacion.
 describe("lo que no se pudo comprobar lo dice, no lo calla", () => {
   it("🔴 con `corrio:false` el motivo viaja en el cumplimiento", () => {
     const c = cumplimientoDelTurno({
