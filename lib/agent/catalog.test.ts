@@ -978,7 +978,10 @@ describe("el prompt enseña la conducta buena, no narra la mala", () => {
 /**
  * 🔴 LA REGLA TIENE QUE ESTAR DONDE EL MODELO LA LEE.
  *
- * Claude Code le dice al modelo, en la descripción de `…`: «…»
+ * Claude Code se lo dice al modelo en la descripción de la herramienta que
+ * propone objetivos: si el usuario lo rechaza no se le avisa, así que no hay
+ * que preguntar por la decisión ni volver a proponer la misma condición con
+ * otras palabras.
  *
  * Aquí esa regla vivió sólo en un comentario de `tools.ts` —que el modelo no
  * lee— y se perdió del todo al reescribir ese comentario el 2026-09-09. Es la
@@ -1061,5 +1064,33 @@ describe("dónde se declara un almacén", () => {
     // Cuando eran dos copias, la de aquí decía «hijo directo del <body>» y el
     // modelo apuntó al id del propio <body> → `op_contra_la_raiz` (medido, 2/5).
     expect(d.description).toContain(DONDE_SE_DECLARA_UN_ALMACEN);
+  });
+});
+
+// ── 🔴 UNA HERRAMIENTA QUE NO PUEDE CORRER NO SE DECLARA ────────────────────
+//
+// MEDIDO en la batería del 21/09: `mirar_pagina` se declara siempre, pero el
+// arnés nunca cablea `deps.observarPagina`, así que la llamada devuelve
+// «mirar_pagina no está disponible en este entorno». 2 de 8 casos la llamaron
+// y se comieron una vuelta entera del modelo para recibir eso.
+//
+// Es la regla de la casa sobre las palancas, escrita en CLAUDE.md a propósito
+// de los conmutadores de Gemini: se BORRARON en vez de dejarlos apagados,
+// «porque una palanca que no apunta a nada se lee como una alternativa que
+// existe». Una herramienta declarada es exactamente eso.
+describe("el catálogo declara lo que de verdad puede correr", () => {
+  it("🔴 sin observarPagina, `mirar_pagina` NO se declara", () => {
+    const con = buildFunctionDeclarations({}).map((d) => d.name);
+    const sin = buildFunctionDeclarations({}, { mirarPagina: false }).map((d) => d.name);
+    expect(con).toContain("mirar_pagina");
+    expect(sin).not.toContain("mirar_pagina");
+    // Y NO SE LLEVA NADA MÁS POR DELANTE: sólo esa.
+    expect(sin).toEqual(con.filter((n) => n !== "mirar_pagina"));
+  });
+
+  // CONTRA-PRUEBA: el defecto es declararla. Producción la tiene cableada, así
+  // que omitir por omisión habría apagado la herramienta en el producto.
+  it("CONTRA-PRUEBA: por omisión se sigue declarando", () => {
+    expect(buildFunctionDeclarations({}).map((d) => d.name)).toContain("mirar_pagina");
   });
 });

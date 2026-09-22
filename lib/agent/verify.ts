@@ -17,6 +17,7 @@
 import type { InlineImage, StreamEvent } from "@/lib/ai-gateway";
 import { esGritoDeLaPagina, renderHtmlToInlineImage } from "@/lib/ai/inline-image";
 import { partirGritos } from "@/lib/generation/rotura-ajena";
+import { programaJs } from "@/lib/agent/prueba-js";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 // La cifra del umbral viaja desde donde se MIDE. Ver su comentario: el aviso de
 // aquí abajo llegó a afirmar un mínimo distinto del que se comprobaba.
@@ -31,7 +32,9 @@ import type { LlamadaADatos } from "@/lib/page-data/sustituto";
 import {
   notaSpec,
   leerFallos,
+  leerVacuas,
   specProgram,
+  PRELUDIO_CENSO_CLIC,
   type FalloSpec,
   type PasoSpec,
 } from "@/lib/agent/behavior-spec";
@@ -155,11 +158,30 @@ export interface VisualVerdict {
    * Ver `lib/agent/pruebas-de-la-pagina.ts`.
    */
   regresiones?: readonly Regresion[];
+  /**
+   * POR QUÉ NO SE COMPROBÓ NINGUNA — cuando no se comprobó.
+   *
+   * 🔴 «No se miró» y «se miró y están limpias» NO son el mismo dato, y hasta
+   * hoy los dos salían como `regresiones` ausente. La conflación se evita con
+   * DOS canales, nunca uno: el resultado por un lado y el «no se pudo» por
+   * otro, con su motivo dentro en vez de fuera.
+   *
+   * Lo estrena la ruta JS: cuando corre `programaJs` NO se ejecuta la suite
+   * guardada —el programa es lo único que corre—, así que un turno que promete
+   * en JavaScript pasa sin que nadie mire si se llevó por delante el carrito de
+   * hace seis turnos. Eso ahora se DICE en vez de parecer un cero.
+   *
+   * Ausente ⇒ sí se comprobaron (y `regresiones` dice el resultado).
+   */
+  regresionesSinComprobar?: string;
   /** Los fallos de la promesa que el modelo declaró ESTE turno. Salen crudos
    *  —además de redactados en `observaciones`— porque de ellos depende que la
    *  promesa entre o no en la suite: sólo entra la que NACE EN VERDE, y eso no
    *  se puede leer de una frase en prosa. Vacío/ausente ⇒ se cumplió. */
   fallosDelTurno?: readonly FalloSpec[];
+  /** Expectativas que ya se cumplían antes de actuar. No acusan: ver
+   *  `leerVacuas`. Las lee la batería, no el turno del usuario. */
+  vacuasDelTurno?: readonly FalloSpec[];
   /** Las promesas guardadas que el navegador dice que ya no señalan a nada:
    *  se RETIRAN, no acusan. Son los ids de `PruebaGuardada`. */
   retirarPruebas?: readonly string[];
@@ -171,10 +193,9 @@ export interface VisualVerdict {
    *
    * 🔴 No es «cuántas se pidieron». Una página cuyo render se cae no se mira, y
    * contarla haría que la tarjeta dijera «2 de 2» habiendo visto una: la
-   * mentira exacta que el recuento existe para impedir. El binario de Claude
-   * Code lista SIEMPRE cada captura, incluida la que no salió y con su motivo
-   * (`— not captured: …`); aquí el equivalente es que este número baje y que el
-   * motivo entre en `limites`.
+   * mentira exacta que el recuento existe para impedir. Claude Code lista
+   * SIEMPRE cada captura, incluida la que no salió y con su motivo; aquí el
+   * equivalente es que este número baje y que el motivo entre en `limites`.
    *
    * Ausente ⇒ implementaciones que no lo mandan (el arnés de evals); el bucle
    * cae entonces en lo que pidió.
@@ -229,6 +250,14 @@ export interface VerifyParams {
    * comporta exactamente como antes de que la suite existiera.
    */
   guardadas?: readonly PruebaGuardada[] | null;
+  /** LA PRUEBA EN JAVASCRIPT del turno — la ranura reservada, con la forma de
+   *  `preflight.js`. Cuando viene, es ELLA la que corre.
+   *
+   *  ⚠️ Las promesas GUARDADAS no viajan con ella: se reparten por índice de
+   *  paso (`repartirFallos`) y un programa JS no los tiene, así que mezclarlas
+   *  atribuiría un fallo del turno a una promesa vieja. Con `pruebaJs` esta
+   *  vuelta NO comprueba regresiones — y eso se dice, no se finge. */
+  pruebaJs?: string | null;
   /**
    * EL PROYECTO AL QUE PERTENECE LA PÁGINA, para medir el MISMO documento que
    * el usuario tiene delante en el lienzo.
@@ -242,6 +271,24 @@ export interface VerifyParams {
    * existiera.
    */
   vista?: ContextoDeVista | null;
+  /**
+   * SÓLO LOS HECHOS: rendir, correr la prueba declarada y medir, SIN la llamada
+   * de visión. Ausente ⇒ se comporta exactamente como siempre.
+   *
+   * 🔴 POR QUÉ (2026-09-21). La prueba declarada se EJECUTA en el render, que
+   * es gratis —Chromium, cero créditos—, pero vivía pegada al crítico de pago:
+   * el arnés de evals sólo armaba `verifyTurn` con `--visual`, así que una
+   * corrida normal **no ejecutaba ni una sola prueba declarada**. Medido ese
+   * día: de las 13 reglas de `RUNTIME_MANDA_PRUEBA`, ninguna tenía un caso que
+   * pudiera cazarla, y ésta era una de las cuatro causas.
+   *
+   * No inventa una salida nueva: devuelve `conHechos(fallbackVerdict(), hechos)`,
+   * que es LA MISMA forma que ya sale por las cuatro salidas tempranas (sin
+   * captura, turno abortado, proveedor caído, JSON ilegible). Todo el que
+   * consume un veredicto ya sabe tratarla, y `fallback: true` + `conMedida`
+   * dicen con precisión lo que pasó: nadie opinó, pero sí se midió.
+   */
+  sinVision?: boolean;
   /**
    * LAS OTRAS PÁGINAS QUE EL TURNO TOCÓ — la última versión de cada una.
    *
@@ -406,9 +453,16 @@ interface HechosDelNavegador {
    *  con las reglas del servidor real. Los rechazos son HECHOS de la página. */
   datos: LlamadaADatos[];
   fallosSpec: FalloSpec[];
+  /** Las expectativas que YA se cumplían antes de actuar — ver `leerVacuas`.
+   *  NO son fallos y no acusan a nadie: se miden para poder decidir con el
+   *  número delante si algún día deben suspender en la batería. */
+  vacuas: FalloSpec[];
   /** Las promesas GUARDADAS que dejaron de cumplirse. Aparte de `fallosSpec`
    *  a propósito: otro testigo, otro peso. */
   regresiones: Regresion[];
+  /** Por qué no se comprobó ninguna, si no se comprobaron. Ver
+   *  `VisualVerdict.regresionesSinComprobar`. */
+  regresionesSinComprobar: string | null;
   /** Ids de promesas guardadas que el navegador dice que ya no señalan a nada:
    *  se retiran, no acusan. */
   retirarPruebas: string[];
@@ -450,7 +504,9 @@ function hechosVacios(): HechosDelNavegador {
     soloPublicada: [],
     datos: [],
     fallosSpec: [],
+    vacuas: [],
     regresiones: [],
+    regresionesSinComprobar: null,
     retirarPruebas: [],
     // FALSE por defecto: mientras nadie mida, no se ha medido nada.
     conMedida: false,
@@ -756,14 +812,65 @@ async function runVerify(
   const delTurno = params.spec ?? [];
   const guardadas = params.guardadas ?? [];
   const programa = [...delTurno, ...guardadas.flatMap((p) => p.pasos)];
-  const conGuion = codigo && programa.length > 0;
+  // 🔴 DOS RUTAS, UNA ELEGIDA. `pruebaJs` manda cuando viene: mezclar el
+  // programa del modelo con el compilador del DSL en una misma evaluación no
+  // tiene forma de repartir los fallos después.
+  const js = params.pruebaJs?.trim() ? params.pruebaJs.trim() : null;
+  const conGuion = codigo && (js !== null || programa.length > 0);
   const image = await render(paraRenderizar, {
     onErrors: (e) => hechos.gritos.push(...e),
     onBlocked: (u) => hechos.bloqueadas.push(...u),
     ...(conGuion
       ? {
-          behaviorProgram: specProgram(programa),
+          // `delTurno.length` marca dónde acaba la promesa de este turno: a las
+          // GUARDADAS que vienen detrás no se les aplica la precondición del
+          // clic muerto, porque en ellas un clic sin manejador es la página que
+          // perdió el suyo — la regresión, no el instrumento.
+          behaviorProgram: js !== null ? programaJs(js) : specProgram(programa, delTurno.length),
+          // 🔴 VA SEPARADO PORQUE SE INSTALA EN OTRO MOMENTO: el censo tiene
+          // que existir ANTES de que corran los scripts de la página, y el
+          // programa corre después. Sin esto el programa es fail-open y la
+          // precondición del clic muerto no acusa jamás.
+          behaviorPrelude: PRELUDIO_CENSO_CLIC,
           onBehaviorResult: (b) => {
+            // Por su propio canal: `leerFallos` ya las filtró.
+            hechos.vacuas = leerVacuas(b);
+            // 🔴 CON LA RUTA JS NO HAY NADA QUE REPARTIR, Y REPARTIR ERA EL BUG.
+            //
+            // `repartirFallos` corta por índice de paso: hasta `delTurno.length`
+            // es del turno, y lo que venga detrás pertenece a la guardada que
+            // ocupe ese tramo. Eso describe al programa del DSL, que concatena
+            // `[...delTurno, ...guardadas]`. El de la ranura JS **no lo es**: lo
+            // que corre es `programaJs(js)` A SECAS — ni la spec ni las
+            // guardadas se ejecutan— y sus `paso` son el número de llamada a
+            // `ui.*`, que no indexa nada de esa concatenación.
+            //
+            // MEDIDO el 2026-09-21 (noche), con `spec` descartada y por tanto
+            // `delTurno.length === 0`:
+            //   · sin guardadas → `delTurno: []`. Los fallos de su promesa se
+            //     CAÍAN AL SUELO: el turno pasaba con la promesa incumplida.
+            //   · con una guardada → los dos fallos salían como regresión de
+            //     `carrito-de-hace-seis-turnos`, una promesa que no se ejecutó
+            //     y que no tiene nada que ver. Una página sana acusada.
+            //
+            // Y no era sólo del arnés: la ruta pasa `pruebaJs` desde el
+            // 2026-09-04 (`route.ts`), así que esto corría en producción.
+            //
+            // Con la ranura JS todo fallo es DEL TURNO, porque es lo único que
+            // se ejecutó. Las regresiones de esa vuelta se quedan sin mirar
+            // —límite ya conocido de esta ruta— y eso es no medir, que no es
+            // medir mal: se prefiere al revés, que era acusar a quien no fue.
+            if (js !== null) {
+              hechos.fallosSpec = leerFallos(b);
+              hechos.regresiones = [];
+              hechos.retirarPruebas = [];
+              // 🔴 Y SE DICE QUE NO SE MIRARON, en vez de dejar un cero que se
+              // lee como «limpias». Ver `VisualVerdict.regresionesSinComprobar`.
+              if (guardadas.length > 0) {
+                hechos.regresionesSinComprobar = `la promesa del turno vino por \`prueba_js\`, y con ella corre sólo ese programa: las ${guardadas.length} promesa(s) guardada(s) de esta página no se ejecutaron`;
+              }
+              return;
+            }
             const reparto = repartirFallos(leerFallos(b), delTurno.length, guardadas);
             hechos.fallosSpec = reparto.delTurno;
             hechos.regresiones = reparto.regresiones;
@@ -825,7 +932,7 @@ async function runVerify(
     }).catch(() => null);
     plegarMedicion(susHechos, await suMedicion);
     const etiqueta = etiquetaDePagina(otra.page);
-    // 🔴 LA QUE NO SALE NO SE SALTA EN SILENCIO. El binario de Claude Code
+    // 🔴 LA QUE NO SALE NO SE SALTA EN SILENCIO. Claude Code
     // lista SIEMPRE cada captura, y la que falló dice por qué («— not
     // captured: …»). Saltarla y seguir contándola es lo que haría que la
     // tarjeta dijera «2 de 2» habiendo mirado una — la mentira exacta que este
@@ -845,6 +952,12 @@ async function runVerify(
     extras.push({ etiqueta, html: otra.html, hechos: susHechos, image: suImagen });
   }
   if (signal.aborted) return conHechos(fallbackVerdict(), hechos);
+
+  // LA PUERTA DE «SÓLO HECHOS». Va AQUÍ y no antes: todo lo de arriba —el
+  // render, la prueba declarada, las regresiones de la suite, el desborde, el
+  // contraste del píxel— es gratis y es justo lo que se viene a buscar. Lo
+  // único que se salta es la llamada que cuesta. Ver `sinVision`.
+  if (params.sinVision) return conHechos(fallbackVerdict(), hechos);
 
   // AQUI SE APAGABAN LOS OJOS ENTEROS. Este bloque exigia `GEMINI_API_KEY` y
   // devolvia fallback sin ella — por una credencial que el proveedor por
@@ -1314,7 +1427,12 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   // con datos, no con ganas—. Quien decide qué se le dice al modelo y qué se
   // pinta es el bucle.
   if (h.regresiones.length > 0) verdict.regresiones = h.regresiones;
+  if (h.regresionesSinComprobar) verdict.regresionesSinComprobar = h.regresionesSinComprobar;
   if (h.fallosSpec.length > 0) verdict.fallosDelTurno = h.fallosSpec;
+  // 🔴 SE MIDE Y SE ENSEÑA, pero NO se le dice al usuario ni al modelo: no es
+  // un defecto de su página, es que su prueba no discriminaba. Hoy sólo lo lee
+  // la batería (`EvalCumplimiento.vacuas`).
+  if (h.vacuas.length > 0) verdict.vacuasDelTurno = h.vacuas;
   if (h.retirarPruebas.length > 0) verdict.retirarPruebas = h.retirarPruebas;
   return verdict;
 }
@@ -1678,10 +1796,10 @@ export function parseVisualVerdict(raw: string): VisualVerdict | null {
   // cuenta fue UN hallazgo, y en la segunda corrida cambió de opinión sobre las
   // mismas páginas. Un juez que no repite no es un juez.
   //
-  // Y la vara dice lo mismo: Claude Code no tiene ningún
-  // modelo juzgando sus propias ediciones. Entrega DIAGNÓSTICOS —hechos de una
-  // herramienta, con fichero y línea— y quien decide es el modelo que edita.
-  // `critique` sólo sale en su telemetría de PLANIFICACIÓN.
+  // Y la vara dice lo mismo: Claude Code no tiene ningún modelo juzgando sus
+  // propias ediciones. Entrega DIAGNÓSTICOS —hechos de una herramienta, con
+  // fichero y línea— y quien decide es el modelo que edita. La crítica sólo
+  // aparece al PLANIFICAR.
   //
   // Así que se retira el VOTO y se conserva el DATO, que es literalmente lo que
   // ya se decidió con la prueba declarada que acusó a 3 páginas y acertó en 0.

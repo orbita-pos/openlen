@@ -316,6 +316,34 @@ export function programaJs(codigo: string): string {
 `;
 }
 
+/**
+ * EL BLOQUE DE PROMPT DE LA RUTA JS — RESTITUIDO el 2026-09-21.
+ *
+ * 🔴 Se retiró el 2026-09-05 (la lápida sigue abajo) porque su única puerta
+ * —`OPENLEN_PRUEBA_JS=1`— desapareció y el bloque quedó sin forma de llegar a
+ * ningún modelo. La razón era correcta y ya no aplica: el Agente tiene desde
+ * hoy la ranura `prueba_js`, así que la puerta existe.
+ *
+ * Y la propia lápida decía dónde tenía sentido: «Editar y el Agente SÍ declaran
+ * pruebas, y ahí el modelo puede mirar su propia página».
+ *
+ * LA FORMA ES LA DE `preflight.js` de Claude Code: JavaScript libre con
+ * contrato acotado —tope de tamaño, techo de pared, tope de llamadas— en vez de
+ * un mini-lenguaje de pasos. Lo que el host pone son los PRIMITIVOS; el
+ * pegamento lo escribe el modelo.
+ */
+export function pruebaJsPromptBlock(): string {
+  return [
+    "EN VEZ DE `prueba` puedes mandar `prueba_js`: tu prueba como programa JavaScript, con `await` y `document` enteros, corriendo en un navegador de verdad contra la página que acabas de guardar. Lo que no cubra `ui` lo haces a mano — `document.querySelector(\"#cifras\").scrollIntoView()` para lo que se dispara AL VERSE, `document.querySelectorAll(\".tab\")[1].click()` para un botón sin id.",
+    "ACTUAR: `ui.clic(sel, veces?)` · `ui.escribe(sel, valor)` · `ui.espera(ms)`. LEER, para guardarte el ANTES: `ui.texto(sel)` · `ui.estilo(sel, prop)` · `ui.atributo(sel, nombre)`. AFIRMAR, fallan solas y esperan hasta " + VENTANA_PRUEBA_MS + " ms: `ui.visible` · `ui.oculto` · `ui.contiene(sel, txt)` · `ui.es(sel, txt)` · `ui.cambiaDe(sel, antes)` · `ui.estiloCambiaDe(sel, prop, antes)` · `ui.atributoCambiaDe(sel, nombre, antes)`. Todas con `await`.",
+    // Los TOPES no se enumeran aquí a propósito: el rechazo los nombra cuando
+    // se pasan, y adelantarlos gasta catálogo para decir dos veces lo mismo.
+    // Es lo que hace el `Edit` de Claude Code — su descripción no lista sus
+    // modos de fallo; los listan sus errores.
+    "🔴 GUARDA EL ANTES Y COMPARA, o tu prueba no dice que lo movieras TÚ: `var t = await ui.texto(\"#total\"); await ui.clic(\"#add\"); await ui.cambiaDe(\"#total\", t);`. Manda `prueba` O `prueba_js`, nunca las dos.",
+  ].join(" ");
+}
+
 // ⚰️ `pruebaJsPromptBlock` — EL BLOQUE DE PROMPT DE LA OPCIÓN A, RETIRADO
 // (2026-09-05).
 //

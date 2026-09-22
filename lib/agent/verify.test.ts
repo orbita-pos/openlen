@@ -1089,10 +1089,9 @@ test("red · 🔴 pero un error de VERDAD del código sigue contando", () => {
 // UN hallazgo… y en la segunda corrida cambió de opinión sobre las mismas
 // páginas. Un juez que no repite no es un juez.
 //
-// Y la vara lo dice igual: Claude Code NO tiene ningún
-// modelo juzgando sus propias ediciones. Entrega DIAGNÓSTICOS —hechos de una
-// herramienta, con fichero y línea— y el modelo decide. `critique` sólo aparece
-// en su telemetría de PLANIFICACIÓN (`…`).
+// Y la vara lo dice igual: Claude Code NO tiene ningún modelo juzgando sus
+// propias ediciones. Entrega DIAGNÓSTICOS —hechos de una herramienta, con
+// fichero y línea— y el modelo decide. La crítica sólo aparece al PLANIFICAR.
 //
 // Así que el voto se retira y el dato se conserva: es exactamente lo que ya se
 // decidió con la prueba declarada que acusó a 3 páginas y acertó en 0.
@@ -1543,8 +1542,8 @@ test("con una sola página no hay rótulos ni prefijos", async () => {
 
 // 🔴 NUNCA CONTAR COMO MIRADA UNA PÁGINA QUE NO SE MIRÓ.
 //
-// El binario de Claude Code lista SIEMPRE cada captura, y la que falló dice por
-// qué (`— not captured: …`). Saltarla y seguir contándola haría que la tarjeta
+// Claude Code lista SIEMPRE cada captura, y la que falló dice por
+// qué. Saltarla y seguir contándola haría que la tarjeta
 // dijera «2 de 2 páginas» habiendo visto una — la mentira exacta que el
 // recuento existe para impedir.
 test("🔴 la página que no se pudo capturar no cuenta como mirada, y se dice", async () => {
@@ -1625,4 +1624,205 @@ test("lo que compone el servidor sí lleva la dirección de su página", async (
     v.issues.some((i) => i.startsWith("/: ")),
     `el hecho de la principal salió sin dirección: ${JSON.stringify(v.issues)}`,
   );
+});
+
+// 🔴 EL PRELUDIO VIAJA, O LA PRECONDICIÓN QUEDA A OSCURAS.
+//
+// El censo de manejadores no puede vivir en el programa: `specProgram` corre
+// DESPUÉS de que la página cargue, y para entonces ya no se puede saber qué
+// cableó. Se instala con `evaluateOnNewDocument`, así que tiene que llegar al
+// renderizador junto al programa. Si no llega, el programa es fail-open y NO
+// acusa a nadie: verde, silencioso e inútil — que es exactamente la forma en
+// que este repo ha enviado cosas apagadas antes.
+test("los ojos mandan el preludio del censo junto al programa", async () => {
+  let prelude: string | undefined = "";
+  await verifyEditedPage(
+    {
+      ...PARAMS,
+      runtime: "window.x=1",
+      spec: [{ clic: "#b", entonces: [{ donde: "#x", que: "cambia" }] }] as never,
+    },
+    {
+      render: async (
+        _html,
+        opts?: { behaviorProgram?: string; behaviorPrelude?: string },
+      ) => {
+        prelude = opts?.behaviorPrelude;
+        return IMAGE;
+      },
+      provider: providerReturning("tampoco es JSON"),
+    },
+  );
+  assert.equal(typeof prelude, "string");
+  // Lo que hace falta que esté: el enganche a addEventListener y el sitio
+  // donde el programa lo busca.
+  assert.match(prelude ?? "", /addEventListener/);
+  assert.match(prelude ?? "", /__olCensoClic/);
+});
+
+// 🔴 LA PRUEBA EN JAVASCRIPT SE EJECUTA, o la ranura es decorativa.
+//
+// Es la mitad que faltaba de `preflight.js`: su contrato no sirve de nada si el
+// programa no corre contra la página viva. Aquí se comprueba que cuando el
+// turno trae `pruebaJs`, lo que viaja al navegador es el programa de
+// `prueba-js.ts` y NO el compilador del DSL.
+test("cuando el turno trae prueba_js, los ojos ejecutan ESE programa", async () => {
+  let programa = "";
+  await verifyEditedPage(
+    {
+      ...PARAMS,
+      runtime: "window.x=1",
+      // Verbos REALES de `ui` (no hay `desplaza` ni `cambia`: para lo del
+      // viewport el modelo escribe DOM normal, que es la gracia de esta ruta).
+      pruebaJs: [
+        'var antes = await ui.texto("#n");',
+        'document.querySelector("#n").scrollIntoView();',
+        'await ui.cambiaDe("#n", antes);',
+      ].join(";"),
+    },
+    {
+      render: async (_html, opts?: { behaviorProgram?: string }) => {
+        programa = opts?.behaviorProgram ?? "";
+        return IMAGE;
+      },
+      provider: providerReturning("tampoco es JSON"),
+    },
+  );
+  // El código del modelo viaja dentro.
+  assert.match(programa, /ui\.cambiaDe/);
+  assert.match(programa, /scrollIntoView/);
+  // Y es el programa JS, no el del DSL: aquél incrusta `PASOS`.
+  assert.equal(programa.includes("var PASOS ="), false);
+  assert.match(programa, /MAX_LLAMADAS/);
+});
+
+// CONTRA-PRUEBA: sin `pruebaJs` sigue compilando el DSL de siempre. 64 casos de
+// batería y todo el sistema de regresiones dependen de que esto no se mueva.
+test("sin prueba_js, los ojos siguen compilando el DSL", async () => {
+  let programa = "";
+  await verifyEditedPage(
+    {
+      ...PARAMS,
+      runtime: "window.x=1",
+      spec: [{ clic: "#b", entonces: [{ donde: "#x", que: "cambia" }] }] as never,
+    },
+    {
+      render: async (_html, opts?: { behaviorProgram?: string }) => {
+        programa = opts?.behaviorProgram ?? "";
+        return IMAGE;
+      },
+      provider: providerReturning("tampoco es JSON"),
+    },
+  );
+  assert.match(programa, /var PASOS =/);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔴 LA RANURA JS NO PASA POR `repartirFallos`, Y PASAR ERA EL BUG (2026-09-21).
+//
+// `repartirFallos` corta por índice de paso: hasta `delTurno.length` es del
+// turno, y lo de detrás pertenece a la guardada que ocupe ese tramo. Eso
+// describe al programa del DSL, que concatena `[...delTurno, ...guardadas]`.
+// El de la ranura JS no lo es: corre `programaJs(js)` A SECAS —ni la spec ni
+// las guardadas se ejecutan— y sus `paso` son el número de llamada a `ui.*`.
+//
+// MEDIDO ese día con `repartirFallos(leerFallos([[0,…],[2,…]]), 0, …)`:
+//   · sin guardadas → `delTurno: []`, los fallos AL SUELO.
+//   · con una guardada → los dos salían como regresión suya, una promesa que
+//     ni se ejecutó. Página sana acusada.
+// Y corría en PRODUCCIÓN: la ruta pasa `pruebaJs` desde el 2026-09-04.
+test("con la ranura JS, sus fallos son DEL TURNO y no manchan a una guardada", async () => {
+  let programa = "";
+  const v = await verifyEditedPage(
+    {
+      ...PARAMS,
+      runtime: "window.x=1",
+      // El modelo mandó las DOS: la spec (que no se ejecuta) y el programa.
+      spec: [{ clic: "#b", entonces: [{ donde: "#x", que: "cambia" }] }] as never,
+      pruebaJs: "var t = await ui.texto('#total'); document.querySelector('.add').click();",
+      guardadas: [CARRITO_GUARDADO] as never,
+    },
+    {
+      render: async (
+        _html,
+        opts?: { behaviorProgram?: string; onBehaviorResult?: (b: unknown) => void },
+      ) => {
+        programa = opts?.behaviorProgram ?? "";
+        // Lo que devuelve un programa JS: [nºLlamadaUi, mensaje]. El segundo
+        // caería fuera del tramo del turno con el reparto por índice.
+        opts?.onBehaviorResult?.([
+          [0, "#carrito-total no cambió"],
+          [2, "el botón no existe"],
+        ]);
+        return IMAGE;
+      },
+      provider: providerReturning("tampoco es JSON"),
+    },
+  );
+  // Corrió el programa del modelo, no el compilador del DSL.
+  assert.match(programa, /ui\.texto/);
+  assert.equal(/var PASOS =/.test(programa), false);
+  // LOS DOS fallos son del turno. Con el reparto por índice el segundo se
+  // perdía y el primero también (delTurno.length era 0 con la spec descartada).
+  assert.equal(v.fallosDelTurno?.length, 2);
+  assert.match(v.fallosDelTurno?.[0]?.mensaje ?? "", /#carrito-total no cambió/);
+  assert.match(v.fallosDelTurno?.[1]?.mensaje ?? "", /el botón no existe/);
+  // 🔴 Y LA GUARDADA QUEDA LIMPIA: no se ejecutó, así que no puede haber
+  // fallado. Ésta es la mitad que acusaba a una página sana.
+  assert.equal(v.regresiones?.length ?? 0, 0);
+});
+
+// 🔴 «NO SE MIRO» NO ES «SE MIRO Y ESTAN LIMPIAS» (2026-09-21 noche).
+//
+// Con la ranura JS corre SOLO `programaJs`: la suite guardada no se ejecuta.
+// Eso salia como `regresiones` ausente, que es exactamente lo que sale cuando
+// se comprobaron y ninguna fallo. Dos hechos opuestos, el mismo cero.
+//
+// LA REGLA: son DOS canales, nunca uno — el resultado por un lado y el «no se
+// pudo comprobar» por otro, con su motivo DENTRO en vez de fuera.
+test("con la ranura JS, las guardadas salen como NO COMPROBADAS, no como limpias", async () => {
+  const v = await verifyEditedPage(
+    {
+      ...PARAMS,
+      runtime: "window.x=1",
+      spec: null,
+      pruebaJs: "await ui.texto('#total');",
+      guardadas: [CARRITO_GUARDADO] as never,
+    },
+    {
+      render: async (_html, opts?: { onBehaviorResult?: (b: unknown) => void }) => {
+        opts?.onBehaviorResult?.([]);
+        return IMAGE;
+      },
+      provider: providerReturning("tampoco es JSON"),
+    },
+  );
+  assert.equal(v.regresiones ?? undefined, undefined);
+  assert.ok(
+    v.regresionesSinComprobar,
+    "la suite guardada no se ejecuto y el veredicto no lo dice: se lee como «limpias»",
+  );
+  assert.match(v.regresionesSinComprobar ?? "", /prueba_js/);
+  assert.match(v.regresionesSinComprobar ?? "", /no se ejecutaron/);
+});
+
+// CONTRA-PRUEBA: por la ruta del DSL las guardadas SI se ejecutan, asi que no
+// hay nada que excusar y el campo no aparece.
+test("CONTRA-PRUEBA: por el DSL, las guardadas si se comprueban y no se excusa nada", async () => {
+  const v = await verifyEditedPage(
+    {
+      ...PARAMS,
+      runtime: "window.x=1",
+      spec: [{ clic: "#b", entonces: [{ donde: "#x", que: "cambia" }] }] as never,
+      guardadas: [CARRITO_GUARDADO] as never,
+    },
+    {
+      render: async (_html, opts?: { onBehaviorResult?: (b: unknown) => void }) => {
+        opts?.onBehaviorResult?.([]);
+        return IMAGE;
+      },
+      provider: providerReturning("tampoco es JSON"),
+    },
+  );
+  assert.equal(v.regresionesSinComprobar ?? undefined, undefined);
 });

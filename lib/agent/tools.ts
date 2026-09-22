@@ -54,9 +54,14 @@ import { avisoReglasMuertas, type ReglaMuerta } from "@/lib/document/css-wiring"
 import { avisoEnlacesDesfasados, enlacesDesfasados } from "@/lib/agent/enlaces-desfasados";
 import { avisoHandlersMuertos, esHandler, handlersMuertos, type HandlerMuerto } from "@/lib/agent/handlers-muertos";
 import { enlacesInventados, avisoEnlacesInventados, type EnlaceInventado } from "@/lib/agent/enlaces-inventados";
+import { validaPruebaJs, MAX_PRUEBA_JS_BYTES } from "@/lib/agent/prueba-js";
 import {
   avisoParaLaTarjeta,
   conClicDerivado,
+  conDesplazaDerivado,
+  conGrupoDerivado,
+  claseDeSinAccion,
+  type ClaseSinAccion,
   formaDePrueba,
   parseBehaviorSpec,
   seguimientoDelRechazo,
@@ -533,17 +538,35 @@ export interface AgentSession {
    *  La última gana: un turno con dos ediciones de comportamiento promete lo
    *  que dijo la última, igual que la cápsula guarda el último script. */
   behaviorSpec?: readonly PasoSpec[] | null;
+  /** LA PRUEBA EN JAVASCRIPT — la ranura reservada, con la forma de
+   *  `preflight.js` de Claude Code: «it runs against open pages when Claude
+   *
+   *  🔴 APARTE de `behaviorSpec`, nunca en vez de. Las dos rutas conviven —
+   *  como ya conviven en CREAR (`lib/ai-stream/model-prueba.ts`)— para poder
+   *  medir una contra otra moviendo sólo el prompt.
+   *
+   *  ⚠️ NO entra en la suite de la página. `PruebaGuardada.pasos` y
+   *  `repartirFallos` reparten por ÍNDICE DE PASO, y un programa JS no tiene
+   *  pasos numerados que casen con eso. Guardar aquí un blob rompería la
+   *  detección de regresiones —la medida más valiosa del repo— así que esta
+   *  ruta cubre la promesa DEL TURNO y nada más. Es una limitación estructural,
+   *  no un olvido: se arregla cuando la suite sepa guardar programas. */
+  behaviorJs?: string | null;
   /** El motivo por el que se descartó la ÚLTIMA prueba mandada, o `null` si la
    *  última entró bien. Sirve para contar si el aviso funcionó — ver
    *  `seguimientoDelRechazo`. Vive en la sesión como `behaviorSpec`: es del
    *  turno, no del proyecto. */
   specRechazoPrevio?: string | null;
+  /** La CLASE de la última promesa que salió `sin_accion`, o ausente si no
+   *  hubo ninguna. Ver `claseDeSinAccion`: es lo que convierte «56% de
+   *  `sin_accion`» en «qué reparación falta escribir». */
+  ultimaClaseSinAccion?: ClaseSinAccion | null;
   /**
    * YA PROPUSO UN OBJETIVO Y EL DUEÑO NO HA DECIDIDO.
    *
-   * 🔴 ES EL EJE DE CLAUDE CODE, y no el que teníamos. En `…` la
-   * única guarda sobre un objetivo existente es `…`; de
-   * `…` no comprueba NADA, porque aprobar el nuevo supersede al viejo
+   * 🔴 ES EL EJE DE CLAUDE CODE, y no el que teníamos. Allí la única guarda
+   * sobre un objetivo existente es una propuesta sin decidir; del objetivo
+   * activo no comprueba NADA, porque aprobar el nuevo supersede al viejo.
    *
    * Lo que no puede pasar es pintarle DOS tarjetas a la vez: le harían elegir
    * entre cosas que se pisan, y la segunda taparía a la primera.
@@ -1908,6 +1931,52 @@ function tocaConducta(despues: string, antes: string): boolean {
   return behaviorContractFingerprint(despues) !== behaviorContractFingerprint(antes);
 }
 
+/** Los `<script>` que EJECUTAN, en orden y sin espacios de más.
+ *
+ *  🔴 SÓLO LOS QUE EJECUTAN. Un `application/ld+json` es DATO: cambiarlo no
+ *  cambia el comportamiento, y pedir prueba por él sería exactamente el aviso
+ *  que el dueño aprende a ignorar.
+ *
+ *  Los espacios se colapsan porque entre `beforeTaggedHtml` y `htmlAplicado`
+ *  hay un viaje por el motor de ops: un reformateo del mismo código no es un
+ *  cambio de comportamiento, y tomarlo por uno haría saltar el aviso en CADA
+ *  edición de texto. Un `src` externo se compara por su URL: su contenido no
+ *  está aquí, pero cambiarlo sí cambia lo que la página ejecuta. */
+const TIPOS_QUE_EJECUTAN = new Set(["", "text/javascript", "application/javascript", "module"]);
+
+function scriptsQueEjecutan(html: string): string {
+  const fuera: string[] = [];
+  const re = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+  for (let m = re.exec(html); m !== null; m = re.exec(html)) {
+    const attrs = m[1] ?? "";
+    const tipo = (/\btype\s*=\s*["']?([^"'\s>]*)/i.exec(attrs)?.[1] ?? "").toLowerCase();
+    if (!TIPOS_QUE_EJECUTAN.has(tipo)) continue;
+    const src = /\bsrc\s*=\s*["']?([^"'\s>]*)/i.exec(attrs)?.[1] ?? "";
+    fuera.push(src ? `src:${src}` : (m[2] ?? "").replace(/\s+/g, " ").trim());
+  }
+  return fuera.join("\u0000");
+}
+
+/** ¿Ejecuta la página JavaScript que antes no ejecutaba?
+ *
+ *  🔴 POR QUÉ HACE FALTA, y es el hueco que tapa. `cambioConducta` era
+ *  «escribió runtime» O `tocaConducta`, y `tocaConducta` compara la huella de
+ *  los 9 marcadores del catálogo de CONDUCTAS, RETIRADO el 2026-08-23. Un
+ *  `<script>` metido por `new_html` no mueve ninguno de los dos: no se pedía
+ *  prueba, NO SALTABA el aviso de que faltaba, y el turno salía VERDE con
+ *  comportamiento nuevo sin comprobar. Medido con brazo de control.
+ *
+ *  La señal correcta no es un registro de tipos-de-cambio-conocidos —que es lo
+ *  que envejeció— sino mirar lo que de verdad cambió en el documento.
+ *
+ *  ⚠️ QUEDA FUERA el manejador en atributo (`onclick="…"`), que es la misma
+ *  avería por otra puerta. No se tapa aquí porque está medido que el corpus
+ *  trae CERO (`cero-onclick-en-el-corpus`), y ensanchar una señal sin un caso
+ *  que lo pida es cómo se fabrica un aviso que nadie lee. */
+function tocaScripts(despues: string, antes: string): boolean {
+  return scriptsQueEjecutan(despues) !== scriptsQueEjecutan(antes);
+}
+
 async function toolEditarPagina(
   session: AgentSession,
   deps: AgentDeps,
@@ -2077,7 +2146,7 @@ async function toolEditarPagina(
   // Una prueba mal formada NO tumba la edición: se avisa y se sigue. Perder el
   // arreglo del usuario porque su comprobación venía torcida sería castigar lo
   // que se quiere fomentar.
-  // REPARAR ANTES DE JUZGAR — el `…` de Claude Code, con su contador.
+  // REPARAR ANTES DE JUZGAR — como Claude Code, con su contador.
   //
   // 🔴 CON TRES MEDIDAS Y NO CON UNA IDEA: `sin_accion` salió el 17/09 en casi
   // todas las vueltas del carrito, el 18/09 en producción, y el 19/09 en la
@@ -2090,7 +2159,72 @@ async function toolEditarPagina(
   // escribir dice qué elemento responde a un clic, y de ahí sale. Si no hay
   // nada que pulsar, `conClicDerivado` devuelve `null` y el rechazo de siempre
   // sigue en pie — una promesa falsa sería peor que ninguna.
-  let spec = parseBehaviorSpec(args.prueba);
+  // ─── LA RANURA RESERVADA: `prueba_js` ──────────────────────────────────
+  //
+  // La forma de `preflight.js`: un slot con nombre propio y su contrato, no el
+  // mismo campo que a veces trae otra cosa. `validaPruebaJs` hace cumplir el
+  // tope; el navegador dirá si el programa compila, porque deducir aquí lo que
+  // Chromium puede contestar ya nos mordió una vez.
+  const jsCrudo = typeof args.prueba_js === "string" ? args.prueba_js.trim() : "";
+  const traeJs = jsCrudo.length > 0;
+  const traeDsl = args.prueba !== undefined && args.prueba !== null;
+  let avisoJs = "";
+  // 🔴 LA PROMESA DEL TURNO ES UNA, CON DOS RANURAS — y sólo la borra quien la
+  // sustituye (2026-09-21 noche).
+  //
+  // Esto era `session.behaviorJs = null` A SECAS, y esta función la comparten
+  // LAS CUATRO puertas (`editar_texto`, `editar_atributos`, `editar_html` y
+  // `editar_runtime` entran todas por aquí). O sea que un retoque de titular
+  // sin prueba, tres llamadas después, borraba en silencio la promesa en
+  // JavaScript — mientras `behaviorSpec` está protegido de eso mismo por una
+  // regla escrita a propósito («un cambio puramente textual no borra ni
+  // reemplaza la anterior»). Dos ranuras del mismo campo con reglas opuestas.
+  //
+  // 🔴 LA REGLA, Y SON DOS MITADES:
+  //   · entre dos FUENTES de lo mismo el rango es FIJO y se declara, nunca
+  //     «gana quien escribió último»; y a la que queda tapada SE LA NOMBRA,
+  //     diciendo además cómo evitarlo.
+  //   · cuando es el MODELO quien re-declara su propio estado, el reemplazo es
+  //     ENTERO y se le avisa de que lo omitido se pierde.
+  // Lo que NUNCA puede pasar es que algo se caiga por el ORDEN y en SILENCIO,
+  // que es exactamente lo que pasaba aquí.
+  //
+  // ⚠️ POR QUÉ NO «LA JS MANDA SIEMPRE QUE EXISTA», que era la otra opción: una
+  // promesa JS declarada en la vuelta 1 y SUPERADA por una `prueba` en la 3
+  // describe un comportamiento que el modelo ya cambió. Hacerla ganar
+  // resucitaría la avería de [[la-promesa-vieja-tapaba-el-ultimo-cambio]], que
+  // se arregló en `086e7ff6`. Manda la ÚLTIMA declarada, venga por la ranura que
+  // venga; el rango de `verify` («pruebaJs manda cuando viene») sigue siendo el
+  // desempate, y con el mismo-turno ya rechazado arriba no llega a hacer falta.
+  // 🔴 UNA `prueba` RECHAZADA NO SUSTITUYE A NADA — MEDIDO (2026-09-21 noche).
+  //
+  // Esto borraba con `traeDsl` a secas, o sea en cuanto el modelo MENCIONABA el
+  // otro slot, valiera o no. Y la corrida enseñó lo que costaba: en 2 de 3 casos
+  // el turno fue `editar_runtime:js · editar_runtime:✗sin_accion/sin_id` — una
+  // promesa JS BUENA, tirada por un DSL que acto seguido se rechazó. El modelo
+  // acababa sin ninguna promesa teniendo una válida en la mano.
+  //
+  // Y la regla que lo zanja: que una entrada quede mal es un RESULTADO, no un
+  // efecto — lo que no valida NO llega a aplicarse, así que no puede sustituir
+  // a nada. La sustitución se hace donde la spec se ACEPTA, no donde se menciona.
+  if (traeJs || borrarRuntime) session.behaviorJs = null;
+  if (traeJs && traeDsl) {
+    // AMBIGUO: no se adivina cuál vale. Adivinar aquí sería elegir por el
+    // modelo qué promete, que es justo lo que ninguna de las dos rutas hace.
+    avisoJs =
+      "Mandaste `prueba` y `prueba_js` en la misma llamada y no voy a adivinar cuál vale: manda UNA SOLA. `prueba_js` es un programa JavaScript con `ui.*`; `prueba` es la lista de pasos.";
+  } else if (traeJs) {
+    const js = validaPruebaJs(jsCrudo);
+    if (js.ok) session.behaviorJs = js.codigo;
+    else {
+      avisoJs =
+        js.reason === "demasiado_grande"
+          ? `Tu \`prueba_js\` pasa de ${MAX_PRUEBA_JS_BYTES} bytes. Quédate con lo que de verdad comprueba la promesa.`
+          : "Tu `prueba_js` llegó vacía.";
+    }
+  }
+
+  let spec = parseBehaviorSpec(traeJs ? undefined : args.prueba);
   if (spec.kind === "error" && spec.reason === "sin_accion") {
     // DE DÓNDE SE LEE, y por qué son dos sitios. MEDIDO el 2026-09-19: la
     // promesa NO viaja siempre con el `editar_runtime` que escribe el JS — el
@@ -2099,25 +2233,42 @@ async function toolEditarPagina(
     // (ver `ProjectData.html`), así que el documento es la segunda fuente y
     // cubre el caso normal: prometer sobre lo que ya está cableado.
     const fuente = nuevoRuntime ?? session.taggedHtml ?? "";
-    const reparada = conClicDerivado(args.prueba, fuente);
+    // 🔴 DOS VERBOS, NO UNO. Un `IntersectionObserver` no cablea nada que
+    // pulsar, así que `conClicDerivado` se rendía y el rechazo seguía en pie —
+    // y MEDIDO en corrida de pago el 2026-09-21, el modelo no lo arregla por
+    // mucho que el aviso nombre `desplaza` lo primero: mandó «sólo mirar», se
+    // le rechazó, y volvió a mandar lo mismo. El dato para arreglarlo ya
+    // estaba aquí: el log de abajo imprime «0 listener(s) de clic».
+    // LA CLASE DE FORMA, antes de intentar nada: es lo que convierte «56% de
+    // `sin_accion`» en «qué reparación falta escribir». Ver `claseDeSinAccion`.
+    const clase = claseDeSinAccion(args.prueba, fuente);
+    session.ultimaClaseSinAccion = clase;
+    // EL ORDEN ES EL DE LA CERTEZA, no el de la potencia: primero el id (único
+    // por definición), después el viewport, y sólo al final el GRUPO, que es el
+    // que necesita autorización para desambiguar. Así `cualquiera` no aparece
+    // nunca donde había una salida exacta.
+    const reparada =
+      conClicDerivado(args.prueba, fuente) ??
+      conDesplazaDerivado(args.prueba, fuente) ??
+      conGrupoDerivado(args.prueba, fuente);
     if (!reparada) {
       // 🔴 Y SI NO SE PUDO, SE DICE POR QUÉ. Un arreglo que no dispara y no
       // deja rastro es el mismo silencio que este repo lleva un día entero
       // cerrando — y me acaba de costar una corrida a ciegas.
       // eslint-disable-next-line no-console
       console.warn(
-        `[agente] prueba sin_accion SIN reparar: fuente=${nuevoRuntime ? "runtime" : "documento"}` +
+        `[agente] prueba sin_accion SIN reparar: clase=${clase} fuente=${nuevoRuntime ? "runtime" : "documento"}` +
           ` (${fuente.length} chars, ${(fuente.match(/["']click["']/g) ?? []).length} listener(s) de clic)`,
       );
     }
     if (reparada) {
       const reintento = parseBehaviorSpec(reparada);
-      // Contado como ellos: `…` / `…`. Sin esto
+      // Contado como ellos: si quedó bien o sigue mal. Sin esto
       // no sabríamos si la reparación sirve, que es el error que esta misma
       // línea viene a no repetir.
       // eslint-disable-next-line no-console
       console.warn(
-        `[agente] prueba sin_accion reparada con el clic del runtime: ${
+        `[agente] prueba sin_accion reparada clase=${clase} (${(function(){var p0=Array.isArray(reparada)?(reparada[0]??{}):{};return "desplaza" in p0?"desplaza: se dispara al verse":("cualquiera" in p0?"grupo del runtime":"clic del runtime");})()}): ${
           reintento.kind === "spec" ? "vale" : "sigue_mal"
         }`,
       );
@@ -2127,9 +2278,8 @@ async function toolEditarPagina(
   const avisoPrueba =
     spec.kind === "error" ? specRechazoAviso(spec.reason, spec.paso, spec.desconocidas) : "";
 
-  // ¿SIRVIÓ EL AVISO DE LA VUELTA ANTERIOR? Es el peldaño 2 de Claude Code
-  // (`…` → `…` / `…`):
-  // el aviso no se manda a ciegas, se mide si el intento siguiente quedó bien.
+  // ¿SIRVIÓ EL AVISO DE LA VUELTA ANTERIOR? El aviso no se manda a ciegas: se
+  // mide si el intento siguiente quedó bien (ver `seguimientoDelRechazo`).
   // Sin esto, que `sin_accion` saliera en casi todas las vueltas del carrito se
   // supo porque alguien leyó los logs a mano el 2026-09-17.
   //
@@ -2273,7 +2423,11 @@ async function toolEditarPagina(
     applyHeadOp(applyStylesOp(htmlAplicado, documento.styles), documento.head),
     idioma.lang,
   );
-  const cambioConducta = nuevoRuntime !== null || tocaConducta(htmlAplicado, beforeTaggedHtml);
+  const cambioConducta =
+    nuevoRuntime !== null ||
+    tocaConducta(htmlAplicado, beforeTaggedHtml) ||
+    // El `<script>` colado por una edición de HTML — ver `tocaScripts`.
+    tocaScripts(htmlAplicado, beforeTaggedHtml);
 
   const persisted = await persistHtmlChange(
     session,
@@ -2337,6 +2491,14 @@ async function toolEditarPagina(
     session.behaviorSpec = null;
   } else if (spec.kind === "spec" && (cambioConducta || !session.behaviorSpec)) {
     session.behaviorSpec = spec.pasos;
+    // AQUÍ es donde una `prueba` sustituye a una `prueba_js` viva: cuando de
+    // verdad ENTRA. Y se dice cuál se cae, en vez de que desaparezca y el
+    // modelo siga creyéndola viva — ver el bloque de `session.behaviorJs`.
+    if (session.behaviorJs) {
+      avisoJs =
+        "Tu `prueba_js` anterior queda sustituida por esta `prueba`: vale la ÚLTIMA que declaras, no las dos. Si querías que corriera el programa, vuelve a mandarlo en `prueba_js` y no mandes `prueba`.";
+      session.behaviorJs = null;
+    }
   } else if (cambioConducta) {
     session.behaviorSpec = null;
     if (spec.kind === "error") {
@@ -2482,6 +2644,11 @@ async function toolEditarPagina(
   // venga (ver el bloque de `session.behaviorSpec`), su rechazo tiene que
   // oírse igual: el modelo que resuelve el acordeón con `<details>` y manda una
   // prueba con una errata se quedaría creyendo que se comprobó.
+  // La ranura JS, con su motivo. El cambio SÍ se guarda: tirar el edit entero
+  // se llevaría por delante la página del usuario, y este repo ya decidió esa
+  // frontera con `sin_accion` («El cambio sí se guardó»).
+  if (avisoJs) criticos.push(`${avisoJs} El cambio sí se guardó.`);
+
   if (!borrarRuntime && avisoPrueba) {
     criticos.push(`${avisoPrueba} Vuelve a mandarla bien formada en tu siguiente edit.`);
     // Y QUE SE VEA. Hasta el 2026-09-18 esto sólo se lo decíamos al modelo y a
@@ -3359,8 +3526,9 @@ async function toolProponerObjetivo(
   // 🔴 UNA TARJETA SIN DECIDIR A LA VEZ — y el eje es ÉSE, no el objetivo activo.
   //
   // ⚰️ Aquí se leía el proyecto y se RECHAZABA si ya había un objetivo activo.
-  // Era nuestro. Claude Code no comprueba `…` en ninguna parte de
-  // `…`: aprobar el nuevo supersede al viejo a propósito («…»), y su descripción lo dice entero —«…». Bloquear el eje equivocado le costaba al dueño no poder
+  // Era nuestro. Claude Code no comprueba el objetivo activo al proponer:
+  // aprobar el nuevo supersede al viejo a propósito —un solo objetivo activo a
+  // la vez, y el recién aprobado sustituye al que había—. Bloquear el eje equivocado le costaba al dueño no poder
   // cambiar de objetivo sin cancelar el anterior a mano.
   //
   // Lo que SÍ bloquea, allí y aquí: una propuesta que el dueño todavía no ha

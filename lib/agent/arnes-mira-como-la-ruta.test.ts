@@ -88,14 +88,22 @@ describe("los ojos del arnés miran como los de la ruta", () => {
     expect(arnes.has("guardadas"), "sin `guardadas` una regresión no se ve").toBe(true);
   });
 
-  // Las tres que deciden QUÉ se mide. No es la lista entera de claves a
-  // propósito: compararlas todas necesitaría entender propiedades abreviadas y
-  // spreads con ternario —`...(gemelo ? { taggedHtml } : {})`—, o sea medio
-  // analizador de TypeScript, y un guardia que se equivoca se acaba ignorando.
-  // Éstas tres son las que cambian el veredicto; el resto es contexto.
-  const LAS_QUE_DECIDEN = ["spec", "guardadas", "vista"] as const;
+  // Las que deciden QUÉ se mide. No es la lista entera de claves a propósito:
+  // compararlas todas necesitaría entender propiedades abreviadas y spreads con
+  // ternario —`...(gemelo ? { taggedHtml } : {})`—, o sea medio analizador de
+  // TypeScript, y un guardia que se equivoca se acaba ignorando. Éstas son las
+  // que cambian el veredicto; el resto es contexto.
+  //
+  // 🔴 ERAN TRES Y SON CUATRO (2026-09-21). `pruebaJs` no estaba, y no es una
+  // más: cuando viene, **manda sobre `spec`** (`verify.ts`: «pruebaJs manda
+  // cuando viene»), o sea que decide qué programa corre en el navegador. El
+  // arnés no se la pasaba, así que una promesa escrita en JavaScript se
+  // declaraba y NO SE EJECUTABA en la batería — el caso la daba por buena sin
+  // haberla corrido. Este guardia existe justo para esto y la lista se le
+  // quedó corta; es el mismo modo de fallo que vino a prevenir.
+  const LAS_QUE_DECIDEN = ["spec", "pruebaJs", "guardadas", "vista"] as const;
 
-  it("🔴 pasa las tres que deciden qué se mide", () => {
+  it("🔴 pasa las que deciden qué se mide", () => {
     for (const clave of LAS_QUE_DECIDEN) {
       expect(arnes.has(clave), `el arnés no le pasa \`${clave}\` a los ojos`).toBe(true);
     }
@@ -134,6 +142,9 @@ describe("el arnés multiturno también", () => {
   it("🔴 pasa la promesa del turno y las guardadas", () => {
     expect(claves.has("spec")).toBe(true);
     expect(claves.has("guardadas")).toBe(true);
+    // Y la ranura JS, por lo mismo que arriba: manda sobre `spec`, así que sin
+    // ella una promesa en JavaScript se declara y no se ejecuta.
+    expect(claves.has("pruebaJs"), "el multiturno no le pasa `pruebaJs` a los ojos").toBe(true);
   });
 
   // 🔴 LA SUITE VIVE FUERA DEL BUCLE DE TURNOS, que es toda la diferencia: si

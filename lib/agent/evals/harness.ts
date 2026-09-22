@@ -39,7 +39,7 @@ import {
   summarizeProjectState,
   type AgentSession,
 } from "@/lib/agent/tools";
-import type { PasoSpec } from "@/lib/agent/behavior-spec";
+import { formaDePrueba, type PasoSpec, type FalloSpec } from "@/lib/agent/behavior-spec";
 import type { VerifyOutcome } from "@/lib/agent/loop";
 import {
   actualizarSuite,
@@ -48,7 +48,8 @@ import {
   type PruebaGuardada,
 } from "@/lib/agent/pruebas-de-la-pagina";
 import type { ProjectData } from "@/lib/projects/types";
-import { coverage, type EvalCase } from "./cases";
+import { coverage, prometioYSeComprobo, type EvalCase, type EvalCumplimiento, type PruebaEnEval } from "./cases";
+import { anotarPromesas, cumplimientoDelTurno, type PromesasDelArnes } from "./promesas";
 
 // A tag-rich, valid fixture: hero h1 + subtitle + CTA button + a REAL
 // images.openlen.com photo in the hero (so the costly editar_imagen case passes
@@ -71,6 +72,22 @@ const FIXTURE_HTML = `<!doctype html>
   body { background: var(--ol-bg, #fff); color: var(--ol-fg, #111); font-family: var(--ol-font-display, system-ui), sans-serif; }
   h1, h2 { font-family: var(--ol-font-display, system-ui), sans-serif; }
   [role="button"] { background: var(--ol-accent); color: var(--ol-accent-ink, #fff); border-radius: calc(8px * var(--ol-r-scale, 1)); padding: 12px 20px; display: inline-block; text-decoration: none; }
+  /* 🔴 EL FIXTURE NACIA DESBORDADO EN MOVIL, y se descubrio en la primera
+     corrida de EvalHechos (2026-09-21): 5 de 8 casos salieron con «rotura
+     objetiva» y los CINCO eran el mismo hecho — el img llegando a 808px en un
+     viewport de 390. No lo hacia el modelo: lo traia puesto el <img
+     width="800"> de aqui abajo, sin una sola regla que lo hiciera encoger.
+
+     Si ese medidor hubiera nacido puntuando, habría suspendido a cinco casos
+     SANOS por un defecto NUESTRO, y la culpa se le habría atribuido al modelo.
+     Es la tercera vez que pasa (calc, prueba) y la primera que la figura
+     scored:false lo para antes.
+
+     La regla es además la REAL: una página nacida de /api/generate la lleva.
+     Un fixture que desborda de fábrica no representa nada y mete ruido en todo
+     lo que se mida encima — la misma razón que ya obligó a que el fixture
+     CONSUMA los tokens que declara, dos comentarios más arriba. */
+  img { max-width: 100%; height: auto; }
 </style>
 </head>
 <body>
@@ -146,6 +163,41 @@ export interface RunEvalOptions {
   sinLineaBase?: boolean;
 }
 
+/**
+ * LOS HECHOS MECÁNICOS DEL ESTADO FINAL — CORRE, SE REPORTA, **NO PUNTÚA**.
+ *
+ * 🔴 `scored: false` NO ES UNA DUDA, ES LA FIGURA. Claude Code la trae de serie
+ * en su propio arnés: un chequeo que se ejecuta y se enseña sin entrar en el
+ * score. Es **la forma
+ * correcta de estrenar un medidor sin corpus**, y es exactamente lo que les
+ * faltó a `calc` y a `prueba` — los dos se estrenaron votando, y `prueba`
+ * acabó acusando a 3 páginas sanas de 3.
+ *
+ * ⚠️ POR QUÉ NO SE PROMUEVE HOY, aunque sea tentador: promoverlo cambiaría el
+ * `pass` de los 64 casos a la vez, o sea el significado del marcador histórico,
+ * y sin una corrida que diga cuántos casos sanos se pondrían rojos. Esta casa
+ * ya degradó este canal una vez tras medirlo: **se promueve con datos, no con
+ * ganas**. Una corrida y el número está.
+ *
+ * ⚠️ Y REPORTARLO NO ES OPCIONAL. Retirar el voto no puede significar apagar la
+ * medición, o la corrida siguiente no tiene con qué desmentirte — es la regla
+ * que dejó `el-comprobador-que-acierta-cero-de-tres`.
+ *
+ * NO lleva opinión de modelo: sale de un `verifyEditedPage({ sinVision: true })`,
+ * donde el crítico no llega a correr y `broken` lo ponen sólo los cuatro hechos
+ * de Chromium. Cero créditos; cuesta el render que ya se paga en segundos.
+ */
+export interface EvalHechos {
+  /** Chromium midió algo objetivamente roto en el estado final. */
+  readonly roto: boolean;
+  /** Las frases de esos hechos, recortadas para el informe. */
+  readonly issues: readonly string[];
+  /** SIEMPRE `false`. Está en el tipo, y no sólo en un comentario, para que
+   *  promoverlo sea un cambio DELIBERADO y no un descuido de alguien que
+   *  añade `|| hechos.roto` a la línea del `pass`. */
+  readonly scored: false;
+}
+
 /** P3 — el veredicto visual de un caso que mutó el documento. */
 export interface EvalVisualResult {
   /** El estado FINAL quedó con rotura visual objetiva. */
@@ -179,6 +231,40 @@ export interface EvalRunResult {
   seconds: number;
   /** Presente solo en modo visual Y cuando el caso mutó el documento. */
   visual?: EvalVisualResult;
+  /** Los hechos mecánicos del estado final. CORRE, SE REPORTA, NO PUNTÚA —
+   *  ver `EvalHechos`. Nunca entra en `pass`. */
+  hechos?: EvalHechos;
+  /** Lo que la promesa declarada hizo contra el estado final. Como `hechos`:
+   *  corre, se reporta, NO puntúa. ⚠️ Se calculaba y se tiraba sin imprimir —
+   *  el mismo defecto que esto viene a cerrar, cometido aquí mismo. */
+  cumplimiento?: EvalCumplimiento;
+  /** El programa que el modelo mandó por la ranura `prueba_js`, si la usó.
+   *  Va al informe: sin esto la corrida no puede contestar si la ruta se usa. */
+  pruebasJs?: string;
+  /** UNA ENTRADA POR LLAMADA A UNA PUERTA QUE PODÍA LLEVAR PRUEBA, en orden.
+   *
+   *  🔴 Va al informe porque es EL INSTRUMENTO, y un instrumento que no se
+   *  imprime no se puede auditar: el 2026-09-21 (noche) un caso salió PASS sin
+   *  promesa viva y desde fuera no había forma de saber si es que el arnés no
+   *  anotó nada o si el veredicto lo leyó y calló. Son dos bugs distintos y se
+   *  estaban persiguiendo a ciegas. */
+  declaradas?: readonly PruebaEnEval[];
+  /** LO QUE DIRÍA `prometioYSeComprobo` DE ESTE CASO — corra o no en su
+   *  `assert`. **Se mide en los 65, puntúa en 3.**
+   *
+   *  Es la figura de siempre en esta casa (`scored: false`): corre, se enseña,
+   *  y no entra en el `pass`. Ausente ⇒ nada que decir (no editó, o cumplió).
+   *  Presente ⇒ la frase, que es evidencia y no un booleano. */
+  promesaMedida?: string;
+  /** Lo que devolvió ESE programa al EJECUTARSE — el DETALLE de la ruta, para
+   *  el informe. Lo que PUNTÚA es `cumplimiento`, que desde el 2026-09-21
+   *  (noche) el arnés construye también para esta ruta (`forma: "js"`): las dos
+   *  se juzgan con el mismo juez y no hay dos definiciones de «se cumplió».
+   *
+   *  🔴 Ausente ⇒ no se midió (no mandó JS, o el render reventó). Presente y
+   *  vacío ⇒ corrió y la promesa se cumplió. Son estados distintos a propósito:
+   *  el primero no acusa a nadie, el segundo dice que la página cumplió. */
+  pruebaJsFallos?: readonly FalloSpec[];
   /** Con `aviso`, la SECUENCIA de mediciones del turno: una por tanda que tocó
    *  el documento, en orden. Es el instrumento que distingue «el modelo ignoró
    *  el aviso» de «el aviso nunca se emitió» — sin ella las dos se leen igual
@@ -348,32 +434,16 @@ const RATE_LIMIT_BACKOFF_MS = 65_000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Lo que hace falta de los argumentos para entender un rechazo: con qué op,
- *  contra qué y el principio de lo que mandó. No el documento entero. */
-function resumenDeArgs(args: Record<string, unknown>): string {
-  if (Array.isArray(args.ediciones)) {
-    return args.ediciones
-      .map((e: Record<string, unknown>) =>
-        `[${String(e.op ?? "?")} ${String(e.target ?? "?")} ${String(e.new_html ?? "").slice(0, 90)}]`,
-      )
-      .join(" ");
-  }
-  return JSON.stringify(args).slice(0, 160);
-}
-
 /** Run the agentic loop once, rebuilding the turn from the CURRENT row each
  *  attempt (a 503 almost always hits at stream-open, before any mutation, so a
  *  rebuild-from-fresh retry is safe). Retries bounded + exponential backoff. */
-/** LO QUE LA RUTA SABE Y EL ARNÉS NO SABÍA: la promesa que el modelo
- *  declaró este turno, y las promesas que la página ya cumplió.
- *
- *  Viaja como `medidas`, `avisos` y `tropiezos` —un objeto que el bucle
- *  escribe y el de fuera lee— porque la sesión del agente vive dentro de
- *  `runLoopWithRetry` y los ojos se arman fuera. */
-export interface PromesasDelArnes {
-  spec: readonly PasoSpec[] | null;
-  suite: PruebaGuardada[];
-}
+// `PromesasDelArnes`, `PUERTAS_CON_PRUEBA` y el anotador viven en
+// `./promesas`, que NO importa `@/lib/db`. Ver la cabecera de ese fichero: es
+// lo que deja que una prueba determinista componga el bucle de verdad con este
+// envoltorio de verdad sin abrir una conexión contra producción.
+
+// `PruebaEnEval` vive en `cases.ts` y no aquí: ese fichero es PURO y es el que
+// declara la forma del `assert`, y las importaciones van de aquí hacia allá.
 
 async function runLoopWithRetry(
   opts: RunEvalOptions,
@@ -390,7 +460,13 @@ async function runLoopWithRetry(
   // Antes vivía dos veces —aquí implícita y abajo explícita—, que es la forma
   // exacta del hallazgo 1: dos capas decidiendo lo mismo por su cuenta.
   const sobre: Sobre = opts.sobre ?? "openlen";
-  const tools = herramientasDelSobre(buildFunctionDeclarations(process.env), sobre);
+  // 🔴 SIN `mirar_pagina`: este arnés no cablea `observarPagina`, así que
+  // declararla era invitar al modelo a gastar una vuelta para recibir «no está
+  // disponible en este entorno» — medido, 2 de 8 casos el 2026-09-21.
+  const tools = herramientasDelSobre(
+    buildFunctionDeclarations(process.env, { mirarPagina: false }),
+    sobre,
+  );
   let lastErr: unknown;
   let modelId = "";
 
@@ -534,19 +610,16 @@ async function runLoopWithRetry(
         // vuelve al modelo. MEDIDO el 2026-09-17: dos corridas pagadas enseñaron
         // «la primera declaración del almacén falla» sin poder decir POR QUÉ —
         // y adivinarlo a ciegas cuesta una corrida por hipótesis.
-        runTool: async (name, args) => {
-          const r = await runAgentTool(session, deps, name, args);
-          // LA PROMESA QUE EL MODELO ACABA DE DECLARAR. La ruta se la pasa a
-          // los ojos; el arnés no lo hacía, así que aquí las pruebas de
-          // comportamiento NO se comprobaban y una corrida aprobaba por no
-          // haber mirado — la misma ceguera que este fichero ya documentó
-          // para `medirParaElModelo`.
-          if (promesas) promesas.spec = session.behaviorSpec ?? null;
-          if (tropiezos && r.response.ok === false) {
-            tropiezos.push(`${name} ${resumenDeArgs(args)} → ${String(r.response.error ?? "").slice(0, 300)}`);
-          }
-          return r;
-        },
+        // EL MISMO ENVOLTORIO QUE PRUEBA `promesas-del-arnes.test.ts`, no una
+        // copia suya: lo único que se inyecta aquí es CÓMO se ejecuta la
+        // herramienta. Si esto volviera a escribirse en línea, la prueba
+        // determinista seguiría verde midiendo un envoltorio que ya no corre.
+        runTool: anotarPromesas({
+          session,
+          ejecutar: (name, args) => runAgentTool(session, deps, name, args),
+          ...(promesas ? { promesas } : {}),
+          ...(tropiezos ? { tropiezos } : {}),
+        }),
         // P3 visual: los ojos encendidos, paridad con producción — el
         // auto-arreglo in-loop cuenta como parte del comportamiento medido.
         ...(verifyTurn ? { verifyTurn } : {}),
@@ -678,7 +751,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
   // gasto; tras el loop, el estado FINAL se juzga (reusando el veredicto
   // in-loop cuando ya juzgó exactamente ese estado).
   // La memoria de las promesas de esta corrida. Ver `PromesasDelArnes`.
-  const promesas: PromesasDelArnes = { spec: null, suite: [] };
+  const promesas: PromesasDelArnes = { spec: null, js: null, suite: [], declaradas: [] };
   let inLoopVerdict: VisualVerdict | null = null;
   let visionIn = 0;
   let visionOut = 0;
@@ -690,6 +763,10 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       // cumplió. Sin las dos, el arnés no comprueba comportamiento —ni el
       // declarado ni el que ya funcionaba— y aprueba por no haber mirado.
       spec: promesas.spec,
+      // LA OTRA RUTA, que la ruta de producción pasa desde el 2026-09-04 y el
+      // arnés no pasaba: sin esto una promesa escrita en JavaScript no se
+      // EJECUTA en la batería, y el caso la da por buena sin haberla corrido.
+      pruebaJs: promesas.js,
       guardadas: vivas(promesas.suite, html, null),
       // PARIDAD CON LA RUTA, que es la única promesa de este fichero: allí los
       // ojos miden el documento de vista, así que aquí también. Sin esto el
@@ -786,7 +863,126 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     const finalRow = rows[0];
     const finalData: ProjectData = finalRow?.data ?? data;
 
-    let reason = evalCase.assert({ data: finalData, events, result });
+    // ─── ¿SE CUMPLIÓ LO QUE PROMETIÓ? (2026-09-21) ────────────────────────
+    //
+    // 🔴 EL HUECO QUE ESTO CIERRA. La prueba declarada se EJECUTA dentro del
+    // render, que es gratis —Chromium, cero créditos—, pero vivía pegada al
+    // crítico de pago: `verifyTurn` sólo se armaba con `--visual`, así que una
+    // corrida normal **no ejecutaba ni una sola prueba declarada**. Sin esto,
+    // afirmar sobre `pruebas` mide lo que el modelo DECLARÓ, no lo que la
+    // página CUMPLIÓ, y llamar a eso verificación sería el defecto de siempre.
+    //
+    // ⚠️ VA AQUÍ Y NO DENTRO DEL BUCLE, a propósito. Encender `verifyTurn`
+    // siempre metería mensajes nuevos en el turno y **la batería histórica
+    // dejaría de ser comparable consigo misma** — es el mismo motivo por el que
+    // `visual` y `aviso` están apagados por omisión (ver `RunEvalOptions`).
+    // Contra el estado FINAL, que además es el que juzga el `assert`.
+    //
+    // Sólo cuando hay algo que comprobar: sin promesa declarada esto no
+    // renderizaría nada útil y costaría segundos por caso a cambio de nada.
+    // UN SOLO RENDER para las dos cosas: la promesa declarada y los hechos
+    // mecánicos. Los dos salen del mismo `conHechos`, así que pedirlos por
+    // separado sería pagar dos veces los mismos segundos.
+    const muto = events.some((e) => e.type === "html");
+    let cumplimiento: EvalCumplimiento | null = null;
+    /** Lo que devolvió la promesa de la RANURA JS al ejecutarse. Mide y NO
+     *  puntúa — ver dónde se llena. */
+    let pruebaJsFallos: readonly FalloSpec[] | undefined;
+    let hechos: EvalHechos | undefined;
+    // 🔴 `promesas.js` ENTRA EN LA CONDICIÓN, o la ranura JS se cuela sin medir.
+    // Sin él, una promesa en JavaScript de un turno que no emitió evento `html`
+    // no llegaba a `verifyEditedPage`, `cumplimiento` se quedaba en null y
+    // `prometioYSeComprobo` la dejaba pasar por su escape de `jsFinal` — el pase
+    // libre otra vez, por la puerta de atrás.
+    if (finalData.html && (promesas.spec?.length || promesas.js || muto)) {
+      try {
+        const v = await verifyEditedPage({
+          html: finalData.html,
+          userPrompt: evalCase.prompt,
+          spec: promesas.spec,
+          // Ver la llamada de `judge`: sin esto la ranura JS se declara y no se
+          // corre, y `cumplimiento` se queda en null con la promesa sin mirar.
+          pruebaJs: promesas.js,
+          guardadas: vivas(promesas.suite, finalData.html, null),
+          vista: vistaParaMedir(
+            projectId,
+            { title: `Agent Eval ${evalCase.id}`, data: finalData },
+            null,
+          ),
+          // LA LÍNEA ENTERA DE ESTE CAMBIO: los hechos sí, la opinión no.
+          sinVision: true,
+        });
+        // QUIÉN DE LAS DOS RUTAS SE JUZGA — la decisión vive en
+        // `cumplimientoDelTurno`, que es puro y tiene sus pruebas. Aquí sólo se
+        // le pasa lo medido. El detalle de la ruta JS viaja aparte, para el
+        // informe: `cumplimiento` dice SI se cumplió, `pruebaJsFallos` QUÉ falló.
+        if (promesas.js) pruebaJsFallos = v.fallosDelTurno ?? [];
+        cumplimiento = cumplimientoDelTurno({
+          js: promesas.js,
+          spec: promesas.spec,
+          fallos: v.fallosDelTurno ?? [],
+          vacuas: v.vacuasDelTurno ?? [],
+          corrio: true,
+        });
+        // 🔴 SIN VISIÓN, `broken` ES PURAMENTE MECÁNICO. Lo ponen cuatro hechos
+        // de Chromium y ninguno es una opinión: el JavaScript que revienta
+        // (`verify.ts:1151`), datos que el servidor rechazaría (1253), el
+        // desborde a 390 px (1262) y el contraste leído del PÍXEL (1299). Los
+        // fallos de spec se sacaron de `broken` el 2026-09-04 tras medir que
+        // acusaban 0 de 3, y siguen fuera — aquí viajan aparte, en `cumplimiento`.
+        hechos = { roto: v.broken, issues: v.issues.slice(0, 6), scored: false };
+      } catch (err) {
+        // Un render que revienta NO reprueba el caso: no medir no es medir mal,
+        // que es la regla fail-open de la prueba declarada desde que existe.
+        // Vale igual para la ranura JS ahora que puntúa: `corrio: false` con
+        // `fallos: []` no acusa a nadie (`promesaIncumplida` exige `corrio`), y
+        // `pruebaJsFallos` se queda AUSENTE, que es «no se midió» — distinto de
+        // un `[]`, que diría «corrió y salió limpia».
+        cumplimiento = cumplimientoDelTurno({
+          js: promesas.js,
+          spec: promesas.spec,
+          fallos: [],
+          vacuas: [],
+          corrio: false,
+          // EL MOTIVO, que este `catch` se tragaba. Sin él el informe decía «2
+          // declararon, 1 se ejecutó» y la otra desaparecía sin explicación.
+          motivo: `el render reventó: ${err instanceof Error ? err.message : String(err)}`.slice(0, 160),
+        });
+      }
+    }
+
+    // 🔴 `pruebas` ENTRA AQUÍ (2026-09-21). Hasta hoy el `assert` recibía tres
+    // cosas y la prueba declarada no era ninguna: vivía en `session.behaviorSpec`,
+    // que no viaja en `data`, ni en `events`, ni en `result`. Medido ese día:
+    // de las 13 reglas de `RUNTIME_MANDA_PRUEBA`, CERO tenían un caso capaz de
+    // cazar su violación, y ésta era la primera de las cuatro causas — ningún
+    // caso PODÍA afirmar sobre `prueba` aunque quisiera.
+    let reason = evalCase.assert({
+      cumplimiento,
+      data: finalData,
+      events,
+      result,
+      pruebas: promesas.declaradas,
+    });
+
+    // 🔴 LA PROMESA, MEDIDA EN LOS 65 — Y SIN PUNTUAR EN 62 DE ELLOS.
+    //
+    // Sólo TRES casos llaman a `prometioYSeComprobo` dentro de su `assert`, así
+    // que en los otros 62 el modelo puede editar el comportamiento sin prometer
+    // nada y nadie se entera. El instrumento existe; la batería casi no lo usa.
+    //
+    // 🔴 LA FORMA ES LA QUE YA USA `EvalHechos`: un medidor CORRE Y SE ENSEÑA
+    // sin entrar en el score. Eso es lo que permite medir los 62 sin cambiar
+    // hoy el significado del marcador histórico. Y lo que viaja es la FRASE
+    // entera de `prometioYSeComprobo`, no un booleano: un veredicto sin
+    // evidencia no se puede auditar después.
+    //
+    // Promoverlo a puerta es UNA línea (meterlo en `reason`) y necesita el
+    // número de una corrida limpia, no ganas — la misma regla que `EvalHechos`.
+    const promesaMedida = prometioYSeComprobo({
+      cumplimiento,
+      pruebas: promesas.declaradas,
+    });
 
     // LO QUE SÓLO SE VE USÁNDOLO. Corre aunque el texto ya haya suspendido: su
     // línea de detalle es lo que se cuenta entre corridas.
@@ -880,16 +1076,44 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       modelId,
       seconds: (Date.now() - started) / 1000,
       ...(visual ? { visual } : {}),
+      // NO toca el `pass` de arriba, y ésa es la línea entera de esto.
+      ...(hechos ? { hechos } : {}),
+      ...(cumplimiento ? { cumplimiento } : {}),
+      ...(promesas.js ? { pruebasJs: promesas.js } : {}),
+      ...(pruebaJsFallos ? { pruebaJsFallos } : {}),
+      ...(promesas.declaradas.length > 0 ? { declaradas: promesas.declaradas } : {}),
+      ...(promesaMedida ? { promesaMedida } : {}),
       ...(medidas.length > 0 ? { medidas } : {}),
       ...(avisos.length > 0 ? { avisos } : {}),
       ...(tropiezos.length > 0 ? { tropiezos } : {}),
       ...(enNavegador !== undefined ? { enNavegador } : {}),
-      llamadas: events
-        .filter((e): e is Extract<AgentStreamEvent, { type: "action" }> => e.type === "action")
-        .map((e) => {
-          const s2 = (e as { summary?: string }).summary;
-          return `${e.tool}${e.status === "error" ? "!" : ""}${s2 ? ` (${s2.slice(0, 40)})` : ""}`;
-        }),
+      // 🔴 UNA LÍNEA POR LLAMADA, NO DOS. El bucle emite un `running` al empezar
+      // cada llamada y otro evento al terminarla, y contando los dos cada
+      // llamada salía DOBLE en el informe. Las llamadas van en serie, así que
+      // el único `running` que se queda es el ÚLTIMO: la llamada que el corte
+      // pilló a medias, que no debe desaparecer.
+      llamadas: (() => {
+        const acciones = events.filter(
+          (e): e is Extract<AgentStreamEvent, { type: "action" }> => e.type === "action",
+        );
+        return acciones
+          .filter((e, i) => e.status !== "running" || i === acciones.length - 1)
+          .map((e) => {
+            const s2 = (e as { summary?: string }).summary;
+            // El ÁMBAR también se marca: una llamada que se aplicó con aviso
+            // se leía igual que una limpia, y los asserts sí las distinguen.
+            const motivo = (e as { motivo?: string }).motivo;
+            const marca =
+              e.status === "error"
+                ? "!"
+                : e.status === "running"
+                  ? " [sin terminar]"
+                  : e.status === "warning"
+                    ? ` [ámbar${motivo ? `: ${motivo.slice(0, 90)}` : ""}]`
+                    : "";
+            return `${e.tool}${marca}${s2 ? ` (${s2.slice(0, 40)})` : ""}`;
+          });
+      })(),
       ...(() => {
         const t = events.find((e) => e.type === "confirm" && (e as { action?: string }).action === "objetivo") as
           | { condicion?: string }

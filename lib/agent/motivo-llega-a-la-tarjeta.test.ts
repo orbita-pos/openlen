@@ -76,8 +76,24 @@ describe("el motivo del fallo cruza los cinco eslabones", () => {
 
   it("el bucle la traduce a ÁMBAR, no a verde ni a rojo", () => {
     const loop = lee("lib", "agent", "loop.ts");
-    expect(loop).toContain("avisoDeLaPruebaDescartada");
+    expect(loop).toContain("avisoParaElDueno");
     expect(loop).toMatch(/status: ok \? \(descartada \? "warning" : "done"\) : "error"/);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 🔴 Y NO SÓLO ESA BANDERA (2026-09-21).
+  //
+  // El eslabón de arriba es el de UNA clave. Contadas sobre `tools.ts` hay 13
+  // señales de avería en `extra.*`, y el bucle leía una. Las otras doce vivían
+  // en `aviso_critico`, cuyo único consumidor era el modelo — o sea que el
+  // dueño se enteraba sólo si Len se acordaba de contárselo en su prosa.
+  //
+  // Esto sujeta la forma de Claude Code: UN SOLO CANAL. Lo que el modelo lee
+  // es lo que se enseña, sin una segunda ruta con lista blanca de la que un
+  // hecho pueda caerse.
+  it("🔴 y CUALQUIER aviso_critico llega a la tarjeta, no sólo la prueba", () => {
+    const motivo = lee("lib", "agent", "motivo-del-fallo.ts");
+    expect(motivo).toContain("respuesta.aviso_critico");
   });
 
   it("y el rechazo se CUENTA, que es el peldaño de Claude Code que faltaba", () => {

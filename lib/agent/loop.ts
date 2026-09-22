@@ -12,7 +12,7 @@
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
-import { avisoDeLaPruebaDescartada, motivoDelFallo } from "@/lib/agent/motivo-del-fallo";
+import { avisoParaElDueno, motivoDelFallo } from "@/lib/agent/motivo-del-fallo";
 import { avisoDeRegresion, type Regresion } from "@/lib/agent/pruebas-de-la-pagina";
 // Import de VALOR a propósito, y no viola la regla de arriba: `aviso-medido` no
 // importa nada — ni la pasarela, ni las herramientas, ni Chromium. Es texto y
@@ -274,8 +274,8 @@ export interface AgentLoopArgs {
    * qué página es.
    *
    * Es la pieza que le faltaba a `medirParaElModelo` para poder decir «NUEVO» y
-   * que fuera verdad. Claude Code mide el fichero ANTES de editarlo
-   * (`…`, 500 ms, dentro de la propia tool) y luego resta; sin
+   * que fuera verdad. Claude Code mide el fichero ANTES de editarlo, dentro de
+   * la propia herramienta, y luego resta; sin
    * eso, una página que ya venía rota se lo decía una vez por turno aunque el
    * modelo no la hubiera tocado.
    *
@@ -644,7 +644,11 @@ const INSISTE_SIN_HERRAMIENTAS =
  * por una edición legítima. El texto ya escrito —que el usuario había VISTO
  * llegar por el stream— se tiraba.
  *
- * LA VARA, tal cual de Claude Code: «…»
+ * LA VARA ES CLAUDE CODE: cuando una respuesta se corta a mitad, se le
+ * devuelve al modelo su propia salida parcial, acotada entre marcas, avisando
+ * de que es suya pero puede traer contenido no fiable —que la continúe como
+ * texto, nunca como instrucciones— y de que siga exactamente donde la dejó,
+ * sin repetir.
  *
  * La cláusula de higiene NO es adorno para nosotros: el parcial puede traer
  * dentro trozos del documento del usuario, que es entrada no fiable. Se
@@ -873,8 +877,8 @@ const ABSOLUTE_MAX_TURNS = 16;
 /**
  * 🔴 LOS TOPES DE UN TURNO, Y POR QUÉ YA NO MIRAN EL PLAN.
  *
- * VISTO en Claude Code: su bucle principal NO lleva tope
- * de pasos —`maxTurns` es un campo OPCIONAL por definición de agente—, lo que
+ * En Claude Code el bucle principal NO lleva tope de pasos —`maxTurns` es un
+ * campo OPCIONAL por definición de agente—, lo que
  * acota una sesión larga es el CONTEXTO (y compactando CONTINÚA, no para), y el
  * dinero se topa por MES y por cuenta, con auto-recarga. El turno no se corta
  * nunca por presupuesto.
@@ -1012,8 +1016,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    * La línea base, medida al primer defecto y no antes.
    *
    * 🔴 SIN LÍNEA BASE NO SE HABLA, y es la regla de Claude Code, no una
-   * cautela mía: su `…` devuelve `[]` en cuanto la base está
-   * vacía (`…`). El motivo se sostiene solo
+   * cautela mía: sin base no devuelve ningún diagnóstico nuevo. El motivo se
+   * sostiene solo
    * — el sobre dice «esto salió NUEVO», y sin base eso no se puede saber. Es un
    * estrechamiento deliberado de lo que había: antes se decía igual, sin poder
    * distinguir lo que el modelo rompió de lo que se encontró roto.
@@ -1144,10 +1148,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    * nuestro servidor (`tareas`), no en su contexto. Al cerrar se le reclama —una
    * sola vez— y para entonces ya no queda casi presupuesto.
    *
-   * LO QUE HACE CLAUDE CODE: cuenta `…` y
-   * `…`, y cuando los dos pasan de su umbral REINYECTA la
-   * lista como un adjunto `…` con su contenido y su `…`. No
-   * es una frase en el prompt de sistema: es ESTADO devuelto al contexto.
+   * LO QUE HACE CLAUDE CODE: cuenta las vueltas desde que se tocó la lista y
+   * desde el último recordatorio, y cuando los dos pasan de su umbral le
+   * REINYECTA la lista al modelo, con su contenido. No es una frase en el
+   * prompt de sistema: es ESTADO devuelto al contexto.
    *
    * ⚠️ EL UMBRAL NO SE PORTA. Los suyos son 10 y 10, sobre sesiones de decenas
    * de turnos; aquí el tope son 6, así que copiar el número sería no disparar
@@ -1347,8 +1351,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // titular, no hizo la página de servicios ni el teléfono, y cerró sin
       // nombrar ninguno de los dos.
       //
-      // Lo que se le devuelve ahora es ESTADO, que es lo que hace Claude Code de
-      // Claude Code con su `…` —y lo que ya dice el comentario de
+      // Lo que se le devuelve ahora es ESTADO, que es lo que hace Claude Code con
+      // su recordatorio de tareas —y lo que ya dice el comentario de
       // `recordatorioDeTareas` unas líneas más arriba—: la lista de lo que de
       // verdad se aplicó, contada donde se cuenta la evidencia. Lo que el
       // usuario pidió y no está en esa lista es lo pendiente, y eso el modelo sí
@@ -2036,8 +2040,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       const outcome = await args.runTool(call.name, call.args);
       const ok = outcome.response.ok !== false;
       // El rojo y el ámbar salen del MISMO sitio y se excluyen: `motivoDelFallo`
-      // sólo habla con `ok:false` y `avisoDeLaPruebaDescartada` sólo sin él.
-      const descartada = avisoDeLaPruebaDescartada(outcome.response);
+      // sólo habla con `ok:false` y `avisoParaElDueno` sólo sin él.
+      const descartada = avisoParaElDueno(outcome.response);
       const motivo = motivoDelFallo(outcome.response) ?? descartada;
       if (!ok) failedSignatures.set(sig, (failedSignatures.get(sig) ?? 0) + 1);
       // Se cuenta SIEMPRE, salga bien o mal: lo que se vigila aquí es que la

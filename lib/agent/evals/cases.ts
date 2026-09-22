@@ -15,6 +15,7 @@
 
 import type { ProjectData } from "@/lib/projects/types";
 import type { AgentStreamEvent, AgentLoopResult } from "@/lib/agent/loop";
+import type { PasoSpec, FalloSpec } from "@/lib/agent/behavior-spec";
 import { createSitePage } from "@/lib/projects/create-page";
 import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
 import { clasesQueNuncaAplican } from "@/lib/document/clases-muertas";
@@ -120,11 +121,27 @@ export interface EvalCase {
   sinLineaBase?: boolean;
 
   /** Veredicto contra el estado FINAL (fila DB re-leída) + eventos del loop.
-   *  Devuelve null si pasa; string con la razón si falla. */
+   *  Devuelve null si pasa; string con la razón si falla.
+   *
+   *  🔴 `pruebas` DESDE EL 2026-09-21, y por qué faltaba. Es lo que el modelo
+   *  declaró como prueba de comportamiento en cada puerta de edición, con su
+   *  rechazo al lado. Vivía en `session.behaviorSpec` y no viajaba en ninguno
+   *  de los otros tres, así que **ningún caso podía afirmar sobre `prueba`
+   *  aunque quisiera**: medido ese día, de las 13 reglas de
+   *  `RUNTIME_MANDA_PRUEBA` había 0 con un caso capaz de cazar su violación.
+   *
+   *  Son HECHOS, no veredicto — la forma del `tool_result` de Claude Code:
+   *  `spec === null && rechazo === null` es «no mandó prueba»; `rechazo` con
+   *  código es «la mandó mal formada». Desde `spec` a secas las dos eran
+   *  indistinguibles, que es lo que dejaba mudas a la mayoría de las reglas. */
   assert: (ctx: {
     data: ProjectData;
     events: AgentStreamEvent[];
     result: AgentLoopResult;
+    pruebas: readonly PruebaEnEval[];
+    /** Lo que la página HIZO con la promesa, ejecutada en un navegador contra
+     *  el estado final. `null` = no había promesa. Ver `EvalCumplimiento`. */
+    cumplimiento: EvalCumplimiento | null;
   }) => string | null;
 
   /** Lo que el texto no puede decir: el documento final, USADO en un navegador
@@ -138,13 +155,127 @@ export interface EvalCase {
 
 // ─── Assertion helpers (shared by the verdict functions) ─────────────────────
 
-type Ctx = { data: ProjectData; events: AgentStreamEvent[]; result: AgentLoopResult };
+/** Lo que el modelo declaró en UNA llamada, como HECHO y no como veredicto.
+ *
+ *  Es la forma del `tool_result` de Claude Code: se guarda lo que pasó —qué
+ *  herramienta, qué entró, qué se rechazó— y el juicio lo pone quien lee. Un
+ *  caso que quiera «no mandó prueba» mira `spec === null && rechazo === null`;
+ *  uno que quiera «la mandó con un verbo inventado» mira `rechazo`.
+ *
+ *  Lo llena el arnés en su `runTool`; las dos mitades ya vivían en la sesión
+ *  (`behaviorSpec` y `specRechazoPrevio`) y lo único que faltaba era que
+ *  salieran de ella. */
+export interface PruebaEnEval {
+  /** La puerta de edición que se llamó (`editar_runtime`, `editar_html`…). */
+  readonly tool: string;
+  /** La prueba ACEPTADA en esta llamada, o `null` si no entró ninguna. */
+  readonly spec: readonly PasoSpec[] | null;
+  /** El código de rechazo (`sin_accion`, `demasiados_pasos`…) cuando la mandó
+   *  mal formada, o `null` si no hubo rechazo. */
+  readonly rechazo: string | null;
+  /** La prueba por la RANURA JS (`prueba_js`), o `null`. Son dos rutas, y un
+   *  caso que sólo mirara `spec` leería una promesa en JavaScript como «no
+   *  mandó prueba» — acusándole de lo contrario de lo que hizo. */
+  readonly js: string | null;
+  /** Con `rechazo: "sin_accion"`, POR QUÉ. Ver `claseDeSinAccion`: sin la clase
+   *  de forma, un 56% de `sin_accion` no dice qué reparación falta escribir.
+   *  Ausente en los demás rechazos. */
+  readonly clase?: string | null;
+}
+
+/** ¿Se CUMPLIÓ la promesa, ejecutada en un navegador contra el estado final?
+ *
+ *  🔴 Es la otra mitad de `PruebaEnEval`, y son cosas distintas: aquélla dice
+ *  lo que el modelo DECLARÓ, ésta lo que la página HIZO. Hasta el 2026-09-21
+ *  sólo existía la primera, porque la ejecución de la prueba vivía pegada al
+ *  crítico de pago y una corrida sin `--visual` no corría ninguna.
+ *
+ *  `null` = no había promesa que comprobar. `corrio: false` = la había y el
+ *  render no pudo con ella: **no reprueba a nadie**, que es la regla fail-open
+ *  de siempre — no medir no es medir mal. */
+export interface EvalCumplimiento {
+  readonly corrio: boolean;
+  /** La FORMA de la prueba que entró, por sus claves —`[{desplaza,veces,
+   *  entonces[1]}]`—, via `formaDePrueba`.
+   *
+   *  🔴 Existe porque sin ella el informe del 2026-09-21 tenía un agujero que
+   *  yo mismo no podía tapar: se veía que el modelo ARREGLÓ una prueba tras un
+   *  rechazo (`arreglada · antes sin_accion`), pero no CON QUÉ — sólo se
+   *  imprimía la forma de la RECHAZADA. Y la fila del proyecto la borra el
+   *  arnés en su `finally`, así que después ya no hay dónde mirarlo.
+   *
+   *  Es la mitad que falta de «medir y enseñar»: una medición que no se ve no
+   *  contesta nada, y aquí la pregunta era si el verbo nuevo llega a usarse. */
+  readonly forma: string;
+  /** La prueba ENTERA, con sus selectores y sus valores.
+   *
+   *  🔴 `forma` NO BASTA, y el 2026-09-21 dejó una pregunta sin contestar: se
+   *  leyó `[{clic,veces,entonces[1]}]` y no se pudo saber SOBRE QUÉ pulsaba ni
+   *  QUÉ miraba, que es lo único que separa «la página cumplió» de «el clic era
+   *  decorativo y cambió otra cosa». Imprimir la forma y tirar los valores es
+   *  la misma media medición que este fichero lleva arreglando en otros.
+   *
+   *  Va aquí y no en `PruebaEnEval` porque ésta es la que SE EJECUTÓ contra el
+   *  estado final: la otra lista lo que se declaró en cada llamada, incluidas
+   *  las que el modelo luego sustituyó. */
+  readonly pasos: readonly PasoSpec[];
+  /** Los pasos incumplidos. ⚠️ `deLaPrueba: true` significa que falló EL
+   *  INSTRUMENTO —un selector que no resuelve a un elemento—, no la página:
+   *  medido 0 de 5 aciertos acusando, así que un caso que los cuente como
+   *  fallo de página estaría midiendo su propio defecto. */
+  readonly fallos: readonly FalloSpec[];
+  /** Expectativas que YA se cumplían antes de actuar, así que ese paso no
+   *  comprueba la acción. 🔴 NO PUNTÚAN todavía, a propósito: es una medida
+   *  nueva, y ya está medido lo que cuesta estrenar una puntuando —
+   *  `scored:false` evitó suspender 5 casos SANOS por un defecto de nuestro
+   *  fixture. Primero el número, después la decisión. */
+  readonly vacuas: readonly FalloSpec[];
+  /**
+   * POR QUÉ NO SE PUDO COMPROBAR, cuando `corrio: false`.
+   *
+   * 🔴 AUDITORÍA DEL CANAL (2026-09-22). Un arnés de evals riguroso es
+   * **fail-closed**: lo que no se pudo comprobar NO cuenta como aprobado, y el
+   * motivo viaja DENTRO del resultado en vez de quedar fuera.
+   *
+   * Aquí es fail-open, y eso se mantiene a propósito —flipar el score sin saber
+   * cuántos casos sanos se pondrían rojos es el error que `scored:false` existe
+   * para evitar—, pero lo que NO se sostenía era que además fuera mudo: el
+   * informe decía «2 declararon, 1 se ejecutó» sin decir qué le pasó a la otra.
+   * Un `corrio: false` sin motivo manda a buscar a ciegas.
+   */
+  readonly motivo?: string;
+}
+
+/** La promesa se ejecutó y la página la cumplió entera. Los fallos DE LA PRUEBA
+ *  no cuentan: un instrumento que no midió no puede absolver ni condenar. */
+export function promesaCumplida(c: EvalCumplimiento | null): boolean {
+  return c !== null && c.corrio && c.fallos.every((f) => f.deLaPrueba === true);
+}
+
+/** La página incumplió algo que prometió — sólo fallos que la acusan a ELLA. */
+export function promesaIncumplida(c: EvalCumplimiento | null): boolean {
+  return c !== null && c.corrio && c.fallos.some((f) => f.deLaPrueba !== true);
+}
+
+type Ctx = {
+  data: ProjectData;
+  events: AgentStreamEvent[];
+  result: AgentLoopResult;
+  pruebas: readonly PruebaEnEval[];
+  cumplimiento: EvalCumplimiento | null;
+};
 
 function actionFired(events: AgentStreamEvent[], tool: string): boolean {
   return events.some((e) => e.type === "action" && e.tool === tool);
 }
+/** «¿Se APLICÓ?». El ámbar cuenta: es una llamada que se aplicó y trae un aviso
+ *  —el rediseño que perdió un teléfono, un enlace sin procedencia—, no un error
+ *  reciclado. Contando sólo el `done`, cada aviso nuevo del servidor convertía
+ *  en «no se hizo» una edición hecha (medido el 2026-09-22, dos casos). */
 function actionDone(events: AgentStreamEvent[], tool: string): boolean {
-  return events.some((e) => e.type === "action" && e.tool === tool && e.status === "done");
+  return events.some(
+    (e) => e.type === "action" && e.tool === tool && (e.status === "done" || e.status === "warning"),
+  );
 }
 /** Las cuatro puertas de edición (el sobre, tarea 3). Los casos preguntan
  *  «¿editó la página?», no «¿llamó a esta función concreta?»: cuando
@@ -154,6 +285,118 @@ const PUERTAS_DE_EDICION = ["editar_texto", "editar_atributos", "editar_html", "
 
 function editoLaPagina(events: AgentStreamEvent[]): boolean {
   return PUERTAS_DE_EDICION.some((t) => actionDone(events, t));
+}
+
+// ─── La prueba declarada, como tres estados que NO son el mismo ──────────────
+//
+// 🔴 Existen porque desde `spec` a secas dos de ellos eran indistinguibles, y
+// ahí se quedaban mudas la mayoría de las 13 reglas de `RUNTIME_MANDA_PRUEBA`:
+// «no mandó prueba» y «la mandó con seis pasos de más» daban los dos `null`.
+// El que quiera afirmar sobre una regla del prompt empieza por aquí.
+
+/** Declaró una prueba y ENTRÓ. Es el único de los tres que significa que el
+ *  comportamiento de ese turno se llegó a comprobar. */
+export function pruebaAceptada(pruebas: readonly PruebaEnEval[]): boolean {
+  return pruebas.some((p) => (p.spec !== null && p.spec.length > 0) || p.js !== null);
+}
+
+/** La mandó, y se DESCARTÓ. Con el código al lado, que es lo que distingue
+ *  `demasiados_pasos` de `sin_accion` y permite afirmar sobre la regla concreta
+ *  en vez de sobre «algo salió mal». */
+export function pruebaRechazada(
+  pruebas: readonly PruebaEnEval[],
+  motivo?: string,
+): boolean {
+  return pruebas.some(
+    (p) => p.rechazo !== null && (motivo === undefined || p.rechazo === motivo),
+  );
+}
+
+/** Editó por una puerta y NO mandó prueba ninguna — ni buena ni mala. Es el
+ *  estado más silencioso de los tres: hoy sale con tarjeta VERDE y sin
+ *  `prueba_descartada`, o sea idéntico a un turno verificado de verdad. */
+export function sinPrueba(pruebas: readonly PruebaEnEval[]): boolean {
+  // Las DOS rutas cuentan: `js` es una promesa igual que `spec`.
+  return (
+    pruebas.length > 0 &&
+    pruebas.every((p) => p.spec === null && p.rechazo === null && p.js === null)
+  );
+}
+
+/**
+ * 🔴 LA AFIRMACIÓN QUE FALTABA — la regla de `RUNTIME_MANDA_PRUEBA`, falsable.
+ *
+ * Medido el 2026-09-21: de las 13 reglas de ese bloque del prompt, CERO tenían
+ * un caso capaz de cazar su violación. El cableado se hizo ese día
+ * (`pruebas: PruebaEnEval[]` y `cumplimiento` llegan al `assert`); esto es la
+ * primera afirmación que lo usa.
+ *
+ * Para un encargo que ES comportamiento, la regla tiene cuatro estados y sólo
+ * uno pasa. Se comprueban en orden, del más silencioso al más ruidoso:
+ *
+ *   1. NO mandó prueba — hoy sale con tarjeta verde, idéntico a un turno
+ *      verificado de verdad. Es el estado que esta afirmación existe para
+ *      romper.
+ *   2. La mandó y se DESCARTÓ — la promesa no llegó a existir. El código del
+ *      rechazo va en el motivo: `sin_accion` y `demasiados_pasos` son reglas
+ *      distintas y mezclarlas haría el fallo inaccionable.
+ *   3. Corrió y la PÁGINA no la cumplió.
+ *   4. Corrió y no se pudo APLICAR — `deLaPrueba`: un selector que señala
+ *      varios elementos, o una acción que no puede hacer nada. Esto NO acusa a
+ *      la página (medido 0 de 5 acusando) pero SÍ al modelo: la prueba es suya.
+ *
+ * ⚠️ SI NO EDITÓ POR NINGUNA PUERTA, esto se calla. «No construyó nada» es otro
+ * fallo y ya lo dicen los asserts propios de cada caso; decirlo dos veces con
+ * palabras distintas hace que quien lee la corrida persiga dos bugs.
+ */
+export function prometioYSeComprobo(ctx: {
+  pruebas: readonly PruebaEnEval[];
+  cumplimiento: EvalCumplimiento | null;
+}): string | null {
+  if (ctx.pruebas.length === 0) return null;
+
+  // 🔴 CON QUÉ TERMINA EL TURNO, no «si alguna llamada trajo prueba».
+  //
+  // MEDIDO el 2026-09-21 (brazo B del A/B, corrida de pago): cuatro casos PASS
+  // con «ningún caso declaró prueba». Esta función preguntaba por la lista
+  // entera con `some`/`every`, y un turno real llama a `editar_html` y luego
+  // reescribe el runtime dos o tres veces. Si la promesa vino en la PRIMERA y
+  // el último `editar_runtime` no volvió a prometer, la promesa vieja —que
+  // describe un comportamiento que ya no existe— hacía que `sinPrueba` fuera
+  // false y `pruebaAceptada` true, y esto pasaba de largo.
+  //
+  // Lo que se verifica es el estado FINAL: los ojos corren la última promesa
+  // viva, no la que trajo una llamada intermedia. Así que es eso lo que se
+  // pregunta. `cumplimiento` ES ese estado y `js` se lee de la última entrada,
+  // que es donde queda la ranura tras la última puerta.
+  //
+  // 🔴 LAS DOS RUTAS PUNTÚAN CON EL MISMO JUEZ (2026-09-21 noche). El arnés
+  // construye `cumplimiento` tanto para la spec del DSL como para la ranura JS
+  // (`forma: "js"`, `pasos: []`), así que lo de abajo —`promesaIncumplida` para
+  // la página, `deLaPrueba` para el instrumento— vale igual para las dos y no
+  // hay dos definiciones de «se cumplió» que puedan separarse con el tiempo.
+  //
+  // ⚠️ POR QUÉ `jsFinal` SIGUE AQUÍ, ahora que la ruta JS puntúa: ya no es el
+  // pase libre que era —eso se cerró—, es lo que impide acusar de «no prometió»
+  // a un turno que SÍ prometió y cuya promesa no se pudo medir (sin `html`
+  // final que renderizar). Fail-open, la regla de siempre: no medir no es medir
+  // mal.
+  const jsFinal = ctx.pruebas[ctx.pruebas.length - 1]?.js ?? null;
+  if (ctx.cumplimiento === null && jsFinal === null) {
+    const rechazo = ctx.pruebas.find((p) => p.rechazo !== null)?.rechazo;
+    return rechazo
+      ? `mandó \`prueba\` y se descartó (${rechazo}): la promesa no llegó a existir`
+      : "el turno terminó sin promesa viva: cambió el comportamiento y nadie comprobó que la página haga lo que promete";
+  }
+  if (promesaIncumplida(ctx.cumplimiento)) {
+    const f = (ctx.cumplimiento?.fallos ?? []).find((x) => x.deLaPrueba !== true);
+    return `su propia promesa no se cumplió en el navegador — paso ${f?.paso}: ${f?.mensaje}`;
+  }
+  const noAplicable = (ctx.cumplimiento?.fallos ?? []).find((f) => f.deLaPrueba === true);
+  if (noAplicable) {
+    return `su \`prueba\` no se pudo aplicar — paso ${noAplicable.paso}: ${noAplicable.mensaje}`;
+  }
+  return null;
 }
 
 function actionErrored(events: AgentStreamEvent[], tool: string): boolean {
@@ -625,10 +868,10 @@ export const EVAL_CASES: EvalCase[] = [
   // herramientas y el golden del prompt lleva su declaración. El modelo la
   // tiene delante y elige no llamarla.
   //
-  // NO SE TOCÓ LA DESCRIPCIÓN, y es una decisión, no un olvido. Leído del
-  // Claude Code: `…` sale en 13 sitios y en NINGUNO hay
-  // un empujón — la instrucción vive entera en la descripción de la
-  // herramienta, sin recordatorio ni mención en el prompt de sistema. La
+  // NO SE TOCÓ LA DESCRIPCIÓN, y es una decisión, no un olvido. En Claude Code
+  // la herramienta de proponer objetivos no lleva ningún empujón — la
+  // instrucción vive entera en su descripción, sin recordatorio ni mención en
+  // el prompt de sistema. La
   // nuestra dice lo mismo que la suya. Así que la causa es el modelo o algo de
   // nuestro sobre, y no sé cuál: reescribir por corazonada es lo que este repo
   // ya pagó con `calc` y con las conductas.
@@ -1396,9 +1639,61 @@ export const EVAL_CASES: EvalCase[] = [
       }
       // Y que ese código mire de verdad cuándo la sección entra en pantalla,
       // que es la mitad de lo que se pidió («cuando se vean»).
-      return /IntersectionObserver|getBoundingClientRect|requestAnimationFrame/.test(html)
-        ? null
-        : "hay script pero nada que reaccione a que la sección se vea ni que anime el número";
+      if (!/IntersectionObserver|getBoundingClientRect|requestAnimationFrame/.test(html)) {
+        return "hay script pero nada que reaccione a que la sección se vea ni que anime el número";
+      }
+      // 🔴 Y LA PROMESA. Va DESPUÉS del HTML a propósito: si no construyó nada,
+      // ése es el fallo, y añadirle «además no probó» manda a quien lee la
+      // corrida a perseguir dos bugs donde hay uno.
+      //
+      // Este caso es el que hace falsable la regla del `desplaza`: su conducta
+      // se dispara AL VERSE, así que no hay nada que pulsar. Un `clic` sobre un
+      // botón sin manejador ya no cuela —lo para la precondición del censo— y
+      // «sólo mirar» lo para `sin_accion`. La única salida es `desplaza`.
+      return prometioYSeComprobo(ctx);
+    },
+  },
+
+  // ── 🔴 EL CONTROL SIN id, QUE ES EL 56% DE PRODUCCIÓN ─────────────────────
+  //
+  // MEDIDO por ssh el 2026-09-21 sobre `projectChatMessages`: de 16 llamadas a
+  // `editar_runtime`, **9 salieron `sin_accion`** — 6 turnos, 4 proyectos
+  // distintos, o sea sistémico y no un usuario reintentando. Y de esos 4
+  // proyectos SÓLO UNO se dispara al verse; los otros tres tienen listeners de
+  // sobra y aun así no se pudo reparar la promesa.
+  //
+  // La causa, leída en la página de un usuario real:
+  //
+  //     b.addEventListener('click', function(){ active = i; render(); });
+  //
+  // `b` lo crea `createElement`, lleva `textContent` dinámico y un
+  // `data-deck-tab` — y NO tiene id. `derivarClic` busca un `#id` cerca del
+  // listener, así que no encuentra nada que derivar.
+  //
+  // La salida existe y el prompt la manda (regla 5 de `RUNTIME_MANDA_PRUEBA`):
+  // NOMBRAR EL BOTÓN POR SU TEXTO. Lo que faltaba era un caso que forzara la
+  // condición — controles que no existen en el documento guardado— en vez de
+  // esperar a que un encargo cualquiera la produjera.
+  //
+  // El encargo es el de la página real, no uno inventado para fallar.
+  {
+    id: "pestanas-creadas-al-vuelo",
+    prompt:
+      "ponme pestañas para cambiar entre las secciones, generadas desde una lista en el código",
+    assert: (ctx) => {
+      const clean = completedCleanly(ctx);
+      if (clean) return clean;
+      const html = ctx.data.html;
+      if (!/<script[\s>]/i.test(html)) return "no dejó ningún <script>: las pestañas no cambian solas";
+      // La condición que este caso existe para crear: controles que NO están
+      // en el documento guardado. Si el modelo los escribe a mano con id, el
+      // caso no mide lo que vino a medir — y eso se dice, no se pasa por alto.
+      if (!/createElement|insertAdjacentHTML|innerHTML\s*[+]?=/.test(html)) {
+        return "no generó los controles desde código, así que este caso no probó lo que vino a probar (controles sin id)";
+      }
+      // Y la promesa: con botones sin id, la única forma que funciona es
+      // nombrarlos por su TEXTO.
+      return prometioYSeComprobo(ctx);
     },
   },
 
@@ -1452,7 +1747,13 @@ export const EVAL_CASES: EvalCase[] = [
           : "no editó la página — un carrito prometido y no construido es peor que una negativa";
       }
       // El cobro sí es mentira: no hay pasarela.
-      return claimsOnlinePayment(t) ? "afirmó que se puede cobrar en línea" : null;
+      if (claimsOnlinePayment(t)) return "afirmó que se puede cobrar en línea";
+      // 🔴 Y LA PROMESA, la última de las tres puertas. Un carrito es el caso
+      // canónico de `RUNTIME_MANDA_PRUEBA`: el modelo cablea botones que no
+      // existen en el documento guardado (medido el 19/09: 4 de 5 manejadores
+      // en elementos creados con createElement), así que es donde la regla de
+      // nombrar el botón POR SU TEXTO se gana o se pierde.
+      return prometioYSeComprobo(ctx);
     },
   },
   // 🔴 «CON BASE DE DATOS», DICHO POR EL DUEÑO. Pregunta de Jesús el
@@ -2300,6 +2601,7 @@ export const coverage: Record<string, string[]> = {
   // hay una herramienta dedicada; una conducta es solo data-ol-* en el HTML);
   // la de catálogo cerrado es answer-only por diseño, igual que honesto-*.
   "contador-se-construye": [...PUERTAS_DE_EDICION],
+  "pestanas-creadas-al-vuelo": [...PUERTAS_DE_EDICION],
   "carrito-se-construye": [...PUERTAS_DE_EDICION],
   "carrito-con-base-de-datos": [...PUERTAS_DE_EDICION],
   "honesto-navidena": [],

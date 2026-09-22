@@ -923,6 +923,70 @@ describe("editar_pagina", () => {
     ]);
   });
 
+  // ── 🔴 EL `<script>` COLADO POR UNA EDICIÓN DE HTML ───────────────────────
+  //
+  // `cambioConducta` = «escribió runtime» O `tocaConducta`, y `tocaConducta`
+  // compara la huella de los 9 marcadores del catálogo de CONDUCTAS (retirado
+  // el 2026-08-23). Un `<script>` crudo metido por `new_html` no mueve
+  // ninguno de los dos: nadie pide prueba, NO SALTA el aviso de que falta, y
+  // el turno sale VERDE con comportamiento nuevo sin comprobar.
+  //
+  // La señal correcta no es un registro de tipos-de-cambio-conocidos: es mirar
+  // lo que de verdad cambió. ¿Ejecuta la página JavaScript que antes no
+  // ejecutaba? Eso se ve en el documento.
+  it("🔴 un <script> metido por new_html cuenta como comportamiento: se pide prueba", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const target = contentOpId(session.taggedHtml);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{
+        op: "replace",
+        target,
+        new_html:
+          '<div><button id="mas">+1</button><b id="n">0</b>' +
+          '<script>document.getElementById("mas").addEventListener("click",function(){' +
+          'document.getElementById("n").textContent="1";});<\/script></div>',
+      }],
+      // SIN prueba, que es el caso entero.
+      resumen: "contador",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.match(
+      String(out.response.aviso_critico ?? ""),
+      /prueba/i,
+      "un <script> nuevo no hizo saltar el aviso: el turno sale verde sin comprobar nada",
+    );
+  });
+
+  // CONTRA-PRUEBA: no se llora por cualquier cosa. Un `<script>` de datos
+  // (JSON-LD) no ejecuta nada, así que tocarlo NO es cambiar el comportamiento
+  // — y pedir prueba ahí sería el aviso que el dueño aprende a ignorar.
+  it("CONTRA-PRUEBA: un <script> de JSON-LD no es comportamiento y no pide prueba", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const target = contentOpId(session.taggedHtml);
+
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{
+        op: "replace",
+        target,
+        new_html:
+          '<div><h2>Horario</h2>' +
+          '<script type="application/ld+json">{"@type":"Store","name":"Mi Negocio"}<\/script></div>',
+      }],
+      resumen: "datos para buscadores",
+    });
+
+    assert.equal(out.response.ok, true);
+    assert.equal(
+      /Cambiaste el COMPORTAMIENTO/.test(String(out.response.aviso_critico ?? "")),
+      false,
+      "pidió prueba por un <script> que no ejecuta nada",
+    );
+  });
+
   it("y si esa prueba viene mal formada, se OYE — antes se callaba sin JS de por medio", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
@@ -4576,10 +4640,11 @@ describe("proponer_objetivo", () => {
   });
 
   // ⚰️ AQUÍ SE EXIGÍA LO CONTRARIO: «con uno ya activo, no lo pisa». Era nuestro,
-  // no de Claude Code, y Claude Code contesta esto de plano. En `…` la
-  // ÚNICA guarda sobre un objetivo existente es `…` —una
-  // propuesta SIN DECIDIR—; de `…` no hay ninguna comprobación. Y al
-  // aprobar, su `…` supersede el anterior a propósito: «…». Su descripción lo dice en una línea: «…».
+  // no de Claude Code, y Claude Code contesta esto de plano: al proponer, la
+  // ÚNICA guarda sobre un objetivo existente es que haya una propuesta SIN
+  // DECIDIR; el objetivo activo no se comprueba. Y al aprobar, el nuevo
+  // supersede al anterior a propósito: un solo objetivo activo a la vez, y el
+  // recién aprobado sustituye al que había.
   //
   // Bloqueábamos el eje equivocado, y le costaba al dueño no poder cambiar de
   // objetivo sin cancelar el anterior a mano primero.
@@ -4877,5 +4942,184 @@ describe("I5 · el diagnóstico llega en el mismo turno", () => {
 
     assert.equal(out.response.ok, true, JSON.stringify(out.response));
     assert.equal((out.response as { referencias_rotas?: string[] }).referencias_rotas, undefined);
+  });
+});
+
+// ── 🔴 LA PRUEBA EN JAVASCRIPT, EN EL AGENTE — la forma de `preflight.js` ────
+//
+// Claude Code resuelve algo parecido: cuando su sistema de artefactos necesita
+// comprobar COMPORTAMIENTO sobre una página viva al publicar, reserva un
+// `preflight.js` — un módulo JavaScript con tope de tamaño y una función por
+// defecto, que corre contra las páginas abiertas; si no cumple, la publicación
+// se rechaza. JavaScript libre con contrato acotado, y NO un mini-lenguaje de
+// pasos y expectativas.
+//
+// OpenLen ya tenía esa pieza desde el 2026-09-04 (`lib/agent/prueba-js.ts`,
+// con su tope de bytes, su techo de pared y su `MAX_LLAMADAS_UI`), y estaba
+// enchufada en CREAR — pero NO en el Agente, que es donde `sin_accion` se come
+// el 56% de las llamadas a `editar_runtime` en producción.
+//
+// 🔴 RANURA RESERVADA, no el mismo campo a veces JS: `preflight.js` es un
+// nombre reservado con su contrato, no «index.html que a veces es otra cosa».
+// Aquí es `prueba_js`, aparte de `prueba`.
+describe("prueba_js — la ranura reservada del Agente", () => {
+  const CONTADOR = 'ui.desplaza("#n"); ui.cambia("#n");';
+
+  it("🔴 una prueba en JavaScript se acepta y viaja en la sesión", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "editar_runtime", {
+      script: 'document.getElementById("n").textContent = "1";',
+      prueba_js: CONTADOR,
+      resumen: "contador",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(session.behaviorJs, CONTADOR);
+    // Y NO por el canal del DSL: son dos rutas, no una con dos formas.
+    assert.equal(session.behaviorSpec, null);
+  });
+
+  // 🔴 EL CONTRATO SE HACE CUMPLIR, como el suyo. Lo que NO se copia es
+  // "the publish is refused": tirar el edit entero se llevaría por delante el
+  // cambio del usuario. Se rechaza LA PRUEBA y se guarda la página — que es lo
+  // que este repo ya hace con `sin_accion` («El cambio sí se guardó»).
+  it("🔴 una prueba que pasa del tope se rechaza, y el cambio SE GUARDA", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "editar_runtime", {
+      script: 'document.getElementById("n").textContent = "1";',
+      prueba_js: "x".repeat(5 * 1024),
+      resumen: "contador",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(session.behaviorJs ?? null, null);
+    assert.match(String(out.response.aviso_critico ?? ""), /prueba/i);
+  });
+
+  it("mandar las DOS es ambiguo y se dice: no se adivina cuál vale", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "editar_runtime", {
+      script: 'document.getElementById("n").textContent = "1";',
+      prueba_js: CONTADOR,
+      prueba: [{ clic: "#b", entonces: [{ donde: "#n", que: "cambia" }] }],
+      resumen: "contador",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(session.behaviorJs ?? null, null);
+    assert.equal(session.behaviorSpec, null);
+    assert.match(String(out.response.aviso_critico ?? ""), /una sola|ambas|las dos/i);
+  });
+
+  // CONTRA-PRUEBA: la ruta de siempre no se toca. Son 64 casos de batería y
+  // todo el sistema de regresiones colgando del DSL.
+  it("CONTRA-PRUEBA: sin `prueba_js`, el DSL sigue exactamente igual", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "editar_runtime", {
+      script: 'document.getElementById("n").addEventListener("click", function(){});',
+      prueba: [{ clic: "#n", entonces: [{ donde: "#n", que: "cambia" }] }],
+      resumen: "contador",
+    });
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(session.behaviorSpec, [
+      { clic: "#n", veces: 1, entonces: [{ donde: "#n", que: "cambia" }] },
+    ]);
+    assert.equal(session.behaviorJs ?? null, null);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔴 LA PROMESA DEL TURNO ES UNA, CON DOS RANURAS (2026-09-21 noche).
+//
+// `session.behaviorJs = null` se ejecutaba A SECAS al entrar en
+// `toolEditarPagina`, que es por donde pasan LAS CUATRO puertas. O sea que un
+// retoque de titular sin prueba, tres llamadas despues, borraba en SILENCIO la
+// promesa en JavaScript — mientras `behaviorSpec` esta protegido de eso mismo
+// por una regla escrita a proposito. Dos ranuras del mismo campo con reglas
+// opuestas, y la JS perdiendo por el orden.
+//
+// LA REGLA: entre dos fuentes de lo mismo el rango es FIJO y a la que queda
+// tapada se la NOMBRA; cuando el modelo re-declara su estado el reemplazo es
+// entero y se le avisa. Lo que nunca puede pasar es que algo se caiga por el
+// ORDEN y sin decirlo.
+describe("la promesa del turno sobrevive a lo que no la sustituye", () => {
+  const PROGRAMA = 'ui.desplaza("#n"); ui.cambia("#n");';
+
+  it("🔴 un editar_texto posterior SIN prueba no borra la promesa JS", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    await runAgentTool(session, deps, "editar_runtime", {
+      script: 'document.getElementById("n").textContent = "1";',
+      prueba_js: PROGRAMA,
+      resumen: "contador",
+    });
+    assert.equal(session.behaviorJs, PROGRAMA);
+    // Un retoque de copy, sin prueba de ninguna clase.
+    await runAgentTool(session, deps, "editar_texto", {
+      ediciones: [{ target: "h1", texto: "Hola de nuevo" }],
+      resumen: "titular",
+    });
+    assert.equal(
+      session.behaviorJs,
+      PROGRAMA,
+      "un cambio puramente textual borro la promesa JS — la regla que el DSL si tiene",
+    );
+  });
+
+  it("🔴 una `prueba` posterior SI la sustituye, y se le DICE al modelo", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    await runAgentTool(session, deps, "editar_runtime", {
+      script: 'document.getElementById("n").textContent = "1";',
+      prueba_js: PROGRAMA,
+      resumen: "contador",
+    });
+    const out = await runAgentTool(session, deps, "editar_runtime", {
+      script: 'document.getElementById("n").addEventListener("click", function () {});',
+      prueba: [{ clic: "#n", entonces: [{ donde: "#n", que: "cambia" }] }],
+      resumen: "ahora al pulsar",
+    });
+    // Manda la ULTIMA declarada: resucitar la vieja es la averia de
+    // `la-promesa-vieja-tapaba-el-ultimo-cambio`, arreglada en 086e7ff6.
+    assert.equal(session.behaviorJs, null);
+    assert.ok(session.behaviorSpec, "la prueba nueva no entro");
+    // Y NO en silencio: la que se cae se nombra.
+    assert.match(JSON.stringify(out.response), /prueba_js/);
+  });
+});
+
+// 🔴 UNA `prueba` RECHAZADA NO SUSTITUYE A NADA (2026-09-21 noche, MEDIDO).
+//
+// La corrida de pago enseño el coste: en 2 de 3 casos el turno fue
+// `editar_runtime:js · editar_runtime:✗sin_accion/sin_id` — una promesa JS
+// BUENA, tirada por un DSL que acto seguido se rechazo. El modelo acababa sin
+// ninguna promesa teniendo una valida en la mano, y el caso suspendia por eso.
+//
+// Y la regla que lo zanja: que una entrada quede mal es un RESULTADO, no un
+// efecto. Lo que no valida no llega a aplicarse, asi que no sustituye a nada.
+describe("una prueba que no vale no se lleva por delante la que si valia", () => {
+  const PROGRAMA = 'ui.desplaza("#n"); ui.cambia("#n");';
+
+  it("🔴 un `sin_accion` posterior deja viva la promesa JS", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    await runAgentTool(session, deps, "editar_runtime", {
+      script: 'document.getElementById("n").textContent = "1";',
+      prueba_js: PROGRAMA,
+      resumen: "contador",
+    });
+    assert.equal(session.behaviorJs, PROGRAMA);
+    // Una `prueba` que SOLO MIRA: la rechaza `sin_accion`.
+    await runAgentTool(session, deps, "editar_runtime", {
+      script: 'var b=document.createElement("button"); b.addEventListener("click", function(){});',
+      prueba: [{ entonces: [{ donde: "#n", que: "cambia" }] }],
+      resumen: "pestanas",
+    });
+    assert.equal(
+      session.behaviorJs,
+      PROGRAMA,
+      "una prueba RECHAZADA borro la promesa JS que si valia — el turno se queda sin ninguna",
+    );
   });
 });

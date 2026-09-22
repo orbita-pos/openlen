@@ -6,7 +6,22 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
-import { CANARY_IDS, EVAL_CASES, claimsFalseAction, claimsOnlinePayment, coverage } from "./cases";
+import {
+  CANARY_IDS,
+  EVAL_CASES,
+  claimsFalseAction,
+  claimsOnlinePayment,
+  coverage,
+  pruebaAceptada,
+  pruebaRechazada,
+  sinPrueba,
+  promesaCumplida,
+  promesaIncumplida,
+  prometioYSeComprobo,
+  type PruebaEnEval,
+  type EvalCumplimiento,
+} from "./cases";
+import type { PasoSpec } from "@/lib/agent/behavior-spec";
 import { ESCENARIOS } from "./escenarios";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 
@@ -38,6 +53,8 @@ function veredicto(id: string, html: string): string | null {
     data: { html } as never,
     events: [{ type: "action", tool: "editar_pagina", status: "done" }] as never,
     result: { finalText: "Listo, ya cambié la tipografía.", terminalError: false } as never,
+    pruebas: [],
+    cumplimiento: null,
   });
 }
 
@@ -73,6 +90,43 @@ describe("los asserts cazan el fallo real", () => {
   });
 });
 
+// ─── EL ÁMBAR ES «SE APLICÓ, CON UN AVISO», NO «NO SE HIZO» ─────────────────
+//
+// MEDIDO en la batería del 2026-09-22: dos casos fallaron dos veces seguidas
+// con la llamada HECHA. `redisenar_pagina` volvió en ámbar porque el rediseño
+// perdió dos teléfonos del dueño —el aviso funcionando, y el modelo los repuso
+// en la llamada siguiente— y `editar_html` volvió en ámbar por un aviso de
+// enlace. Los dos se habían aplicado; `actionDone` sólo contaba el `done`, y el
+// ámbar existe desde el 2026-09-04 precisamente para NO ser un error reciclado.
+describe("una llamada en ámbar se aplicó", () => {
+  function conEstado(id: string, tool: string, status: string, html: string): string | null {
+    const c = EVAL_CASES.find((x) => x.id === id);
+    if (!c) throw new Error(`caso desconocido: ${id}`);
+    return c.assert({
+      data: { html } as never,
+      events: [{ type: "action", tool, status }] as never,
+      result: { finalText: "Listo.", terminalError: false } as never,
+      pruebas: [],
+      cumplimiento: null,
+    });
+  }
+  const PIE = `<html><body><h1>Mi Negocio</h1>${"<p>relleno</p>".repeat(200)}
+    <footer><a href="https://wa.me/523312345678">WhatsApp 33 1234 5678</a></footer></body></html>`;
+
+  it("🔴 el whatsapp puesto con aviso cuenta como puesto", () => {
+    expect(conEstado("negocio-whatsapp-de-paso", "editar_html", "warning", PIE)).toBeNull();
+  });
+
+  it("🔴 el rediseño que avisó de lo perdido cuenta como rediseño", () => {
+    expect(conEstado("rediseno-total", "redisenar_pagina", "warning", PIE)).toBeNull();
+  });
+
+  it("…y el rojo sigue sin contar: una llamada que falló no editó nada", () => {
+    expect(conEstado("negocio-whatsapp-de-paso", "editar_html", "error", PIE)).toMatch(/no puso/);
+    expect(conEstado("rediseno-total", "redisenar_pagina", "error", PIE)).toMatch(/no usó/);
+  });
+});
+
 /**
  * EL FIXTURE SE VERIFICA SIN PAGAR. Uno que revienta a mitad de una corrida ya
  * costó una corrida entera.
@@ -93,6 +147,8 @@ describe("color-desde-una-clase — el fixture y el assert, sin gastar un peso",
         ? [{ type: "action", tool: "editar_texto", status: "done" }]
         : []) as never,
       result: { finalText: "listo", terminalError: false } as never,
+    pruebas: [],
+    cumplimiento: null,
     });
 
   // 🔴 EL ANCLA DEL `setup` TIENE QUE EXISTIR EN EL FIXTURE DE VERDAD. Es un
@@ -207,6 +263,8 @@ describe("pagina-rota-de-entrada — el fixture, sin gastar un peso", () => {
         data: { html } as never,
         events: [{ type: "action", tool: "editar_texto", status: "done" }] as never,
         result: { finalText: cierre, terminalError: false } as never,
+    pruebas: [],
+    cumplimiento: null,
       });
     // Contarlo o no contarlo NO cambia el veredicto: eso es juicio sobre prosa
     // y sale por `verCierre` para leerlo.
@@ -355,6 +413,8 @@ describe("tope-no-miente — la vara del cierre honesto", () => {
       data: { html } as never,
       events: [] as never,
       result: { finalText, topeAlcanzado, terminalError: true } as never,
+    pruebas: [],
+    cumplimiento: null,
     });
 
   // BRAZO DE CONTROL. Un PASS sobre un turno donde el tope no saltó no
@@ -422,6 +482,8 @@ describe("tres-tareas-una-imposible", () => {
       data: { html } as never,
       events: [] as never,
       result: { finalText, topeAlcanzado: null, terminalError: false } as never,
+    pruebas: [],
+    cumplimiento: null,
     });
 
   // ⚰️ AQUI SE EXIGIA QUE «ya puedes cobrar con tarjeta» REPROBARA, metiendo el
@@ -479,6 +541,8 @@ describe("tres-tareas-una-imposible", () => {
       data: { html: NADA } as never,
       events: [] as never,
       result: { finalText: "x", topeAlcanzado: "turn_limit", terminalError: true } as never,
+    pruebas: [],
+    cumplimiento: null,
     });
     expect(r).toMatch(/sin cuerda/);
   });
@@ -550,5 +614,380 @@ describe("coverage map", () => {
     for (const [id, tools] of Object.entries(coverage)) {
       for (const t of tools) expect(toolNames.has(t), `${id}: tool inexistente "${t}"`).toBe(true);
     }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔴 LA PRUEBA DECLARADA LLEGA AL `assert` (2026-09-21).
+//
+// Hasta hoy el contexto del veredicto traía tres cosas —`data`, `events`,
+// `result`— y la promesa del modelo no era ninguna: vivía en
+// `session.behaviorSpec`, fuera de las tres. MEDIDO ese día: de las 13 reglas
+// de `RUNTIME_MANDA_PRUEBA` había **0** con un caso capaz de cazar su
+// violación, y ésta era la primera de las cuatro causas — ningún caso PODÍA
+// afirmar sobre `prueba` aunque su autor quisiera.
+//
+// Lo que se sujeta aquí es que los TRES estados se distinguen. Desde `spec` a
+// secas, «no mandó prueba» y «la mandó mal formada» daban los dos `null`, y esa
+// ambigüedad es la que dejaba mudas a la mayoría de las reglas: casi todas se
+// violan por RECHAZO, no por ausencia.
+describe("la prueba declarada es visible y sus tres estados se distinguen", () => {
+  const aceptada: PruebaEnEval[] = [
+    {
+      tool: "editar_runtime",
+      spec: [{ clic: "#b", entonces: [{ donde: "#t", que: "cambia" }] }],
+      rechazo: null,
+      js: null,
+    },
+  ];
+  const rechazada: PruebaEnEval[] = [
+    { tool: "editar_runtime", spec: null, rechazo: "sin_accion", js: null },
+  ];
+  const ninguna: PruebaEnEval[] = [
+    { tool: "editar_html", spec: null, rechazo: null, js: null },
+  ];
+
+  it("🔴 aceptada, rechazada y ausente NO son el mismo estado", () => {
+    expect([pruebaAceptada(aceptada), pruebaRechazada(aceptada), sinPrueba(aceptada)])
+      .toEqual([true, false, false]);
+    expect([pruebaAceptada(rechazada), pruebaRechazada(rechazada), sinPrueba(rechazada)])
+      .toEqual([false, true, false]);
+    expect([pruebaAceptada(ninguna), pruebaRechazada(ninguna), sinPrueba(ninguna)])
+      .toEqual([false, false, true]);
+  });
+
+  // El motivo es lo que permite afirmar sobre UNA regla del prompt en vez de
+  // sobre «algo salió mal»: `demasiados_pasos` es la regla de los 6 pasos,
+  // `sin_accion` es la de que algún paso pulse o escriba.
+  it("el motivo del rechazo distingue QUÉ regla se violó", () => {
+    expect(pruebaRechazada(rechazada, "sin_accion")).toBe(true);
+    expect(pruebaRechazada(rechazada, "demasiados_pasos")).toBe(false);
+  });
+
+  // CONTRA-PRUEBA: un turno que no tocó ninguna puerta de edición no declara
+  // nada, y «no editó» NO puede leerse como «editó sin probar» — eso acusaría
+  // de no comprobar a un turno que no tenía nada que comprobar.
+  it("CONTRA-PRUEBA: sin ediciones, ningún estado se afirma", () => {
+    expect(pruebaAceptada([])).toBe(false);
+    expect(pruebaRechazada([])).toBe(false);
+    expect(sinPrueba([])).toBe(false);
+  });
+
+  // Y EL CABLEADO, que es lo que de verdad se rompería en silencio: el arnés
+  // tiene que LLENARLO y pasarlo. Sin esto, los ayudantes de arriba seguirían
+  // verdes contra un `pruebas: []` que nadie rellena nunca — exactamente la
+  // familia de «la guarda que compara dos copias».
+  // ⚠️ EL LLENADO YA NO SE LEE AQUÍ COMO TEXTO, SE EJECUTA. Desde el
+  // 2026-09-21 (noche) el anotador vive en `./promesas` —fuera de `harness.ts`,
+  // que importa `@/lib/db`— y `promesas-del-arnes.test.ts` compone el bucle DE
+  // VERDAD con él y comprueba que `declaradas` se llena. Eso es estrictamente
+  // más fuerte que buscar una cadena, así que aquí sólo queda lo que la
+  // ejecución NO cubre: que el arnés se lo PASE al veredicto. Ese tramo sigue
+  // necesitando una base de datos para ejercitarse, y por eso sigue siendo texto.
+  it("🔴 el arnés se lo pasa al veredicto", () => {
+    const h = readFileSync(join(process.cwd(), "lib", "agent", "evals", "harness.ts"), "utf8");
+    expect(h).toMatch(/pruebas: promesas\.declaradas/);
+    // Y que el anotador siga siendo el que corre, no una copia re-escrita en
+    // línea que dejaría verde a la prueba de ejecución midiendo código muerto.
+    expect(h).toMatch(/runTool: anotarPromesas\(\{/);
+    const p = readFileSync(join(process.cwd(), "lib", "agent", "evals", "promesas.ts"), "utf8");
+    expect(p).toContain("promesas.declaradas.push({");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔴 Y SE EJECUTA, NO SÓLO SE DECLARA (2026-09-21, causa 2 de las cuatro).
+//
+// La prueba declarada corre DENTRO del render de Chromium — gratis, cero
+// créditos— pero vivía pegada al crítico de pago: el arnés sólo armaba
+// `verifyTurn` con `--visual`, así que **una corrida normal no ejecutaba ni una
+// sola**. Afirmar sobre `pruebas` sin esto mide lo que el modelo DECLARÓ, no lo
+// que la página CUMPLIÓ, y llamar a eso verificación es el defecto de siempre.
+//
+// ⚠️ LA SEPARACIÓN QUE SUJETA ESTO: un fallo `deLaPrueba` NO acusa a la página.
+// Medido 0 de 5 aciertos acusando (ver `el-comprobador-que-acierta-cero-de-tres`),
+// así que un ayudante que los contara como incumplimiento haría que los casos
+// midieran nuestro propio defecto y lo llamaran fallo del modelo.
+describe("el cumplimiento de la promesa, separado de quién falló", () => {
+  const PASOS: readonly PasoSpec[] = [
+    { clic: "#sumar", veces: 1, entonces: [{ donde: "#resultado", que: "cambia" }] },
+  ];
+  const cumplida: EvalCumplimiento = { corrio: true, fallos: [], forma: "[]", pasos: [], vacuas: [] };
+  const rotaLaPagina: EvalCumplimiento = {
+    corrio: true,
+    fallos: [{ paso: 1, mensaje: "#resultado no cambió" }],
+    forma: "[{clic,veces,entonces[1]}]",
+    pasos: PASOS,
+    vacuas: [],
+  };
+  const rotoElInstrumento: EvalCumplimiento = {
+    corrio: true,
+    fallos: [{ paso: 1, mensaje: ".slide señala 10 elementos, no uno", deLaPrueba: true }],
+    forma: "[{clic,veces,entonces[1]}]",
+    pasos: PASOS,
+    vacuas: [],
+  };
+
+  it("🔴 una promesa cumplida es cumplida", () => {
+    expect(promesaCumplida(cumplida)).toBe(true);
+    expect(promesaIncumplida(cumplida)).toBe(false);
+  });
+
+  it("🔴 un fallo de LA PÁGINA sí la acusa", () => {
+    expect(promesaIncumplida(rotaLaPagina)).toBe(true);
+    expect(promesaCumplida(rotaLaPagina)).toBe(false);
+  });
+
+  it("🔴 un fallo DE LA PRUEBA no acusa a la página", () => {
+    expect(promesaIncumplida(rotoElInstrumento)).toBe(false);
+    // Y cuenta como cumplida: lo único que falló fue nuestro instrumento, y un
+    // instrumento que no midió no puede condenar ni absolver a medias.
+    expect(promesaCumplida(rotoElInstrumento)).toBe(true);
+  });
+
+  // CONTRA-PRUEBA: sin promesa, o con un render que no pudo, no se afirma nada
+  // en ninguna dirección. Es la regla fail-open: no medir no es medir mal.
+  it("CONTRA-PRUEBA: sin promesa o sin corrida, ningún veredicto", () => {
+    expect(promesaCumplida(null)).toBe(false);
+    expect(promesaIncumplida(null)).toBe(false);
+    const noCorrio: EvalCumplimiento = { corrio: false, fallos: [], forma: "[]", pasos: [], vacuas: [] };
+    expect(promesaCumplida(noCorrio)).toBe(false);
+    expect(promesaIncumplida(noCorrio)).toBe(false);
+  });
+
+  // EL CABLEADO. Sin esto los ayudantes seguirían verdes contra un
+  // `cumplimiento: null` que nadie rellena nunca.
+  it("🔴 el arnés lo ejecuta SIN visión y se lo pasa al veredicto", () => {
+    const h = readFileSync(join(process.cwd(), "lib", "agent", "evals", "harness.ts"), "utf8");
+    expect(h).toMatch(/sinVision: true/);
+    expect(h).toMatch(/cumplimiento,/);
+    // Y FUERA DEL BUCLE: dentro metería mensajes nuevos en el turno y la
+    // batería histórica dejaría de ser comparable consigo misma.
+    expect(h).toMatch(/verifyTurn[^\n]*opts\.visual/);
+  });
+
+  it("🔴 y la puerta existe de verdad en verify.ts, antes de la llamada cara", () => {
+    const v = readFileSync(join(process.cwd(), "lib", "agent", "verify.ts"), "utf8");
+    expect(v).toMatch(/if \(params\.sinVision\) return conHechos\(fallbackVerdict\(\), hechos\);/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔴 LOS HECHOS CORREN, SE REPORTAN Y **NO PUNTÚAN** (2026-09-21, causa 3).
+//
+// La figura es de Claude Code: `scored: false` permite un chequeo que se
+// ejecuta y se enseña SIN entrar en el score. Es la forma correcta de estrenar un medidor sin corpus, y es
+// exactamente lo que les faltó a `calc` y a `prueba`: los dos se estrenaron
+// votando, y `prueba` acabó acusando a 3 páginas sanas de 3.
+//
+// Estas tres guardas existen porque el defecto sería silencioso en las DOS
+// direcciones: promoverlo sin datos cambia el marcador de los 64 casos a la
+// vez, y no imprimirlo apaga la medición que tiene que desmentirlo.
+describe("los hechos mecánicos no votan, pero se dicen", () => {
+  const h = readFileSync(join(process.cwd(), "lib", "agent", "evals", "harness.ts"), "utf8");
+  const runner = readFileSync(join(process.cwd(), "scripts", "agent-eval.ts"), "utf8");
+
+  it("🔴 `pass` sale SÓLO de `reason` — los hechos no lo tocan", () => {
+    expect(h).toMatch(/pass: reason === null,/);
+    // Nadie ha colado un `|| hechos.roto` en la línea del veredicto.
+    expect(h).not.toMatch(/pass:[^\n]*hechos/);
+    expect(h).not.toMatch(/reason\s*=\s*[^\n]*hechos\?\.roto/);
+  });
+
+  it("🔴 y el tipo lo clava: `scored` es el literal `false`", () => {
+    // En el TIPO y no sólo en un comentario: así promoverlo es un cambio
+    // deliberado que no compila por accidente.
+    expect(h).toMatch(/readonly scored: false;/);
+  });
+
+  it("🔴 se IMPRIME, aunque salga cero — retirar el voto no es apagar la medición", () => {
+    expect(runner).toMatch(/NO puntúan/);
+    expect(runner).toMatch(/const conHechos = results\.filter/);
+    // Y sin depender de `--visual`: sale de un render sin visión, cero créditos.
+    const trozo = runner.slice(runner.indexOf("const conHechos"), runner.indexOf("const conHechos") + 400);
+    expect(trozo).not.toMatch(/args\.visual/);
+  });
+});
+
+// ── 🔴 LA PRIMERA AFIRMACIÓN SOBRE `RUNTIME_MANDA_PRUEBA` ───────────────────
+//
+// Medido el 21/09: de las 13 reglas de ese bloque del prompt, CERO tenían un
+// caso capaz de cazar su violación. Antes de colgarla de ningún caso de pago,
+// se enfrenta a los CUATRO estados a mano. Un assert que nunca ha visto fallar
+// es una promesa, no una prueba — y ya está medido lo que cuesta creerse uno
+// sin verificar: `scored:false` evitó suspender 5 casos SANOS por un defecto
+// de nuestro fixture.
+describe("prometioYSeComprobo — los cuatro estados, sin gastar un peso", () => {
+  const PASOS: readonly PasoSpec[] = [
+    { clic: "#mas", veces: 1, entonces: [{ donde: "#n", que: "cambia" }] },
+  ];
+  const cumplio: EvalCumplimiento = { corrio: true, fallos: [], forma: "[]", pasos: PASOS, vacuas: [] };
+
+  it("🔴 (1) editó y NO mandó prueba — el estado silencioso", () => {
+    const r = prometioYSeComprobo({
+      pruebas: [{ tool: "editar_runtime", spec: null, rechazo: null, js: null }],
+      cumplimiento: null,
+    });
+    expect(r).toMatch(/sin promesa viva/);
+  });
+
+  it("🔴 (2) la mandó y se descartó — con el CÓDIGO del rechazo", () => {
+    const r = prometioYSeComprobo({
+      pruebas: [{ tool: "editar_runtime", spec: null, rechazo: "sin_accion", js: null }],
+      cumplimiento: null,
+    });
+    expect(r).toMatch(/descartó/);
+    // El código concreto, o el fallo es inaccionable: `sin_accion` y
+    // `demasiados_pasos` son reglas distintas.
+    expect(r).toContain("sin_accion");
+  });
+
+  it("🔴 (3) corrió y la PÁGINA no la cumplió", () => {
+    const r = prometioYSeComprobo({
+      pruebas: [{ tool: "editar_runtime", spec: PASOS, rechazo: null, js: null }],
+      cumplimiento: {
+        corrio: true,
+        forma: "[]",
+        pasos: PASOS,
+        vacuas: [],
+        fallos: [{ paso: 1, mensaje: "#n no cambió" }],
+      },
+    });
+    expect(r).toMatch(/no se cumplió/);
+    expect(r).toContain("#n no cambió");
+  });
+
+  it("🔴 (4) corrió y no se pudo APLICAR — la prueba es suya, no de la página", () => {
+    const r = prometioYSeComprobo({
+      pruebas: [{ tool: "editar_runtime", spec: PASOS, rechazo: null, js: null }],
+      cumplimiento: {
+        corrio: true,
+        forma: "[]",
+        pasos: PASOS,
+        vacuas: [],
+        fallos: [{ paso: 1, mensaje: ".slide señala 10 elementos, no uno", deLaPrueba: true }],
+      },
+    });
+    expect(r).toMatch(/no se pudo aplicar/);
+    // Y NO lo llama incumplimiento de la página: son dos poblaciones.
+    expect(r).not.toMatch(/no se cumplió/);
+  });
+
+  it("…y el turno que hizo las cosas bien PASA", () => {
+    expect(
+      prometioYSeComprobo({
+        pruebas: [{ tool: "editar_runtime", spec: PASOS, rechazo: null, js: null }],
+        cumplimiento: cumplio,
+      }),
+    ).toBeNull();
+  });
+
+  // CONTRA-PRUEBA: sin editar por ninguna puerta se calla. «No construyó nada»
+  // lo dice el assert propio del caso; decirlo dos veces manda a quien lee la
+  // corrida a perseguir dos bugs donde hay uno.
+  it("CONTRA-PRUEBA: si no editó por ninguna puerta, no dice nada", () => {
+    expect(prometioYSeComprobo({ pruebas: [], cumplimiento: null })).toBeNull();
+  });
+});
+
+// ── 🔴 LO QUE EL ARNÉS REGISTRA DE VERDAD, TURNO COMPLETO ───────────────────
+//
+// MEDIDO en corrida de pago el 2026-09-21 (brazo B del A/B): los cuatro casos
+// salieron PASS y el informe dijo «ningún caso declaró prueba en esta corrida».
+// Tres de ellos llevan `prometioYSeComprobo`, así que tenían que haber
+// suspendido por «no mandó prueba». No suspendieron.
+//
+// Un turno real llama a VARIAS puertas —`editar_html` y luego dos o tres
+// `editar_runtime`— y el arnés anota UNA ENTRADA POR LLAMADA. Los cuatro
+// estados de arriba se probaron con UNA entrada; esto prueba las listas que un
+// turno produce de verdad, que es donde vivía el hueco.
+describe("prometioYSeComprobo sobre listas de turno COMPLETO", () => {
+  const PASO = { clic: "#a", veces: 1, entonces: [{ donde: "#b", que: "cambia" as const }] };
+  const sin = (tool: string) => ({ tool, spec: null, rechazo: null, js: null });
+  const con = (tool: string) => ({ tool, spec: [PASO], rechazo: null, js: null });
+
+  it("🔴 varias puertas y NINGUNA con prueba: tiene que acusar", () => {
+    const r = prometioYSeComprobo({
+      pruebas: [sin("editar_html"), sin("editar_runtime"), sin("editar_runtime")],
+      cumplimiento: null,
+    });
+    expect(r, "un turno que editó tres veces sin prueba salió limpio").not.toBeNull();
+    expect(r).toMatch(/sin promesa viva/);
+  });
+
+  // 🔴 EL HUECO, Y ERA ÉSTE. Si UNA sola llamada trajo prueba y las demás no,
+  // `sinPrueba` es false (no TODAS están vacías) y `pruebaAceptada` es true
+  // (ALGUNA la trajo), así que la afirmación pasaba de largo. Un turno que
+  // declara en el `editar_html` y luego reescribe el runtime tres veces sin
+  // volver a prometer queda con la promesa VIEJA — describiendo un
+  // comportamiento que ya no existe— y esto lo daba por bueno.
+  it("🔴 la última puerta que cambió el comportamiento NO trajo prueba: acusa", () => {
+    const r = prometioYSeComprobo({
+      pruebas: [con("editar_html"), sin("editar_runtime")],
+      cumplimiento: null,
+    });
+    expect(r, "la promesa vieja tapó que el último cambio no se probó").not.toBeNull();
+  });
+
+  it("…y si la ÚLTIMA sí la trajo, no acusa", () => {
+    expect(
+      prometioYSeComprobo({
+        pruebas: [sin("editar_html"), con("editar_runtime")],
+        cumplimiento: { corrio: true, fallos: [], forma: "[]", pasos: [PASO], vacuas: [] },
+      }),
+    ).toBeNull();
+  });
+});
+
+// ── 🔴 LA RUTA JS PUNTÚA: EL PASE LIBRE, CERRADO (2026-09-21 noche) ─────────
+//
+// Hasta esa noche `prometioYSeComprobo` devolvía `null` en cuanto
+// `jsFinal !== null`, SIN mirar si la promesa se había cumplido. Medido en
+// corrida de pago: `carrito-se-construye` pasó exactamente así, con su programa
+// declarado y sin que nadie lo ejecutara. Y el DSL sí puntuaba, así que la
+// asimetría empujaba al modelo justo a la ruta no verificada.
+//
+// Ahora el arnés construye `cumplimiento` también para la ranura JS
+// (`forma: "js"`, `pasos: []`), así que las dos rutas las juzga el MISMO juez.
+describe("la ranura JS se puntúa como la del DSL", () => {
+  const conJs = [{ tool: "editar_runtime", spec: null, rechazo: null, js: "ui.clic('#a')" }];
+  const jsCumplido = { corrio: true, fallos: [], forma: "js", pasos: [], vacuas: [] };
+
+  it("🔴 una promesa JS INCUMPLIDA suspende el caso", () => {
+    const r = prometioYSeComprobo({
+      pruebas: conJs,
+      cumplimiento: {
+        ...jsCumplido,
+        fallos: [{ paso: 1, mensaje: "#carrito-total no cambió" }],
+      },
+    });
+    expect(r, "una promesa JS incumplida salió limpia — el pase libre").not.toBeNull();
+    expect(r).toMatch(/no se cumplió en el navegador/);
+    expect(r).toMatch(/#carrito-total no cambió/);
+  });
+
+  it("…y una CUMPLIDA no acusa a nadie", () => {
+    expect(prometioYSeComprobo({ pruebas: conJs, cumplimiento: jsCumplido })).toBeNull();
+  });
+
+  // Mismo trato que el DSL: un selector que no resuelve es fallo NUESTRO, no de
+  // la página, y se dice con otras palabras.
+  it("un fallo del INSTRUMENTO en la ruta JS se nombra como tal", () => {
+    const r = prometioYSeComprobo({
+      pruebas: conJs,
+      cumplimiento: {
+        ...jsCumplido,
+        fallos: [{ paso: 2, mensaje: "tu prueba pasa de 40 acciones", deLaPrueba: true }],
+      },
+    });
+    expect(r).toMatch(/no se pudo aplicar/);
+  });
+
+  // 🔴 FAIL-OPEN, que es la regla de siempre: si el render reventó, la promesa
+  // no se pudo medir y no medir NO es medir mal. `corrio: false` no acusa.
+  it("CONTRA-PRUEBA: si no se pudo medir, no acusa", () => {
+    expect(
+      prometioYSeComprobo({ pruebas: conJs, cumplimiento: { ...jsCumplido, corrio: false } }),
+    ).toBeNull();
   });
 });

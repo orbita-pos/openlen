@@ -190,8 +190,7 @@ export async function POST(req: Request): Promise<Response> {
   // un uuid. Un cliente viejo no lo manda y la fila se escribe bajo el id del
   // turno — sigue existiendo, que es lo que importa.
   // EL PESTILLO POR TURNO, copiado de Claude Code. Allí el esfuerzo se FIJA al
-  // enviar el mensaje (`…` / `…`, una caché por
-  // uuid del mensaje) para que cambiar el mando a mitad de turno no reescriba
+  // enviar el mensaje, por mensaje, para que cambiar el mando a mitad de turno no reescriba
   // retroactivamente con qué esfuerzo corrió lo que ya se mandó. Aquí el pin es
   // que el nivel VIAJA EN EL CUERPO del turno en vez de releerse del perfil: el
   // valor que llega es el que el usuario veía cuando pulsó enviar.
@@ -1151,6 +1150,9 @@ export async function POST(req: Request): Promise<Response> {
                     // sesión; sin ella, los ojos pulsan a ciegas y sólo ven lo
                     // que EXPLOTA — nunca lo que simplemente no cumple.
                     spec: agentSession.behaviorSpec ?? null,
+                    // LA RANURA RESERVADA (forma de `preflight.js`). Cuando
+                    // viene, es ella la que corre; ver `VerifyParams.pruebaJs`.
+                    pruebaJs: agentSession.behaviorJs ?? null,
                     // LAS PROMESAS QUE ESTA PÁGINA YA CUMPLIÓ. Van con la del
                     // turno en el mismo programa del navegador: sin esto, una
                     // edición que se lleva por delante el carrito construido

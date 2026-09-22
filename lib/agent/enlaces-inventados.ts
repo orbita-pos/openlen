@@ -82,6 +82,27 @@ export function handleDeRed(href: string): { red: string; handle: string } | nul
 }
 
 /**
+ * ¿ES UN NÚMERO QUE ALGUIEN DICTÓ? El usuario de `wa.me` es un teléfono, y un
+ * teléfono no se escribe como se enlaza: «33 1234 5678» en el mensaje,
+ * `wa.me/523312345678` en el enlace —con el prefijo de país, que wa.me exige—.
+ * Como subcadena no casa nunca, y a cada WhatsApp bien puesto se le acusaba de
+ * cuenta inventada (medido el 2026-09-22).
+ *
+ * Se comparan las CIFRAS, sin separadores, y se admite que a una de las dos le
+ * sobre el prefijo por delante. Desde 7 cifras: por debajo es un año o un
+ * precio, y avalaría cualquier número.
+ */
+function numeroDictado(handle: string, texto: string): boolean {
+  if (!/^\d{7,}$/.test(handle)) return false;
+  for (const m of texto.matchAll(/\+?\d(?:[\s().-]{0,2}\d)+/g)) {
+    const cifras = m[0].replace(/\D/g, "");
+    if (cifras.length < 7) continue;
+    if (handle.endsWith(cifras) || cifras.endsWith(handle)) return true;
+  }
+  return false;
+}
+
+/**
  * Los enlaces de red social que aparecen NUEVOS en `despues` y cuyo handle no
  * sale por ningún lado: ni en la página que ya había, ni en lo que el usuario
  * escribió, ni en su brief.
@@ -113,6 +134,7 @@ export function enlacesInventados(args: {
     const r = handleDeRed(href);
     if (!r) continue;
     if (texto.includes(r.handle.toLowerCase())) continue;
+    if (numeroDictado(r.handle, texto)) continue;
     const clave = `${r.red}|${r.handle}`;
     if (vistos.has(clave)) continue;
     vistos.add(clave);
