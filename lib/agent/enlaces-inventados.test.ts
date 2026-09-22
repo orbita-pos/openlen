@@ -27,6 +27,51 @@ describe("handleDeRed", () => {
   });
 });
 
+// ─── UN NÚMERO DICTADO NO ES UNA CUENTA INVENTADA ───────────────────────────
+//
+// MEDIDO en la batería del 2026-09-22 (`negocio-whatsapp-de-paso`, dos de dos):
+// el usuario dice «mi whatsapp 33 1234 5678», el modelo pone
+// `wa.me/523312345678` —bien: wa.me exige el prefijo de país— y esto le
+// contestaba que se había inventado la cuenta. El número se buscaba como
+// subcadena, y con espacios y prefijo no casa nunca.
+describe("enlacesInventados — el usuario de wa.me es un número", () => {
+  it("🔴 calla con el número dictado con espacios y el prefijo de país delante", () => {
+    const r = enlacesInventados({
+      antes: "<h1>Mi Negocio</h1>",
+      despues: A("https://wa.me/523312345678"),
+      fuentes: ["ponme mi whatsapp 33 1234 5678 abajo en el pie de la página"],
+    });
+    expect(r).toEqual([]);
+  });
+
+  it("calla con el número escrito entero, con + y guiones", () => {
+    const r = enlacesInventados({
+      antes: "<h1>x</h1>",
+      despues: A("https://wa.me/3312345678"),
+      fuentes: ["mi whatsapp es +52 (33) 1234-5678"],
+    });
+    expect(r).toEqual([]);
+  });
+
+  it("…y sigue cazando el número que no dijo nadie", () => {
+    const r = enlacesInventados({
+      antes: "<h1>x</h1>",
+      despues: A("https://wa.me/525512345678"),
+      fuentes: ["ponme mi whatsapp 33 1234 5678"],
+    });
+    expect(r).toHaveLength(1);
+  });
+
+  it("…y una cifra corta —un año, un precio— no avala ningún número", () => {
+    const r = enlacesInventados({
+      antes: "<p>Desde 2026, menú a 5678</p>",
+      despues: A("https://wa.me/525512345678"),
+      fuentes: ["pon un botón de whatsapp"],
+    });
+    expect(r).toHaveLength(1);
+  });
+});
+
 describe("enlacesInventados", () => {
   it("caza el caso medido: un handle deducido del nombre del negocio", () => {
     const r = enlacesInventados({

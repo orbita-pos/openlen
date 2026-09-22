@@ -162,6 +162,14 @@ export interface VisualQualityRenderOptions {
    * del pulsado a ciegas: pulsar todo comprueba «¿explota?» y el guion
    * comprueba «¿hizo lo que prometió?», que es la pregunta que de verdad
    * separa una página entregada de una redactada.
+   *
+   * ⚠️ AQUÍ NO SE INSTALA EL PRELUDIO DEL CENSO (`PRELUDIO_CENSO_CLIC`), que sí
+   * instala `inline-image.ts` — que es por donde entra la prueba declarada del
+   * agente, el único que hoy pasa `behaviorProgram` en producción. El programa
+   * es fail-open sin él, así que por este camino la precondición del clic
+   * muerto simplemente NO acusa: silencio, no acusación en falso. Si algún día
+   * alguien manda un `behaviorProgram` por aquí y espera esa precondición,
+   * tiene que añadir el `evaluateOnNewDocument` antes de cargar.
    */
   readonly behaviorProgram?: string;
   /**
@@ -234,8 +242,8 @@ export interface VisualQualityRendererInternals {
  * cuelgue —un `while(true)` en un manejador, una fuente que no llega, lo que
  * sea— cueste 45 segundos y no el turno.
  *
- * DOS PLAZOS, NO UNO, y es la parte que se copia de Claude Code
- * un vigía de SILENCIO que mata cuando no hay
+ * DOS PLAZOS, NO UNO, y es la parte que se copia de Claude Code al correr un
+ * proceso largo: un vigía de SILENCIO que mata cuando no hay
  * avance, y un TECHO DURO sobre el total. Miden cosas distintas — una página de
  * 4.096 px es LENTA y no se la puede matar por eso, mientras que una bloqueada
  * no avanza ni un paso. Aquí el vigía de silencio es el plazo POR PASO: cada

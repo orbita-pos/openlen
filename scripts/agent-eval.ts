@@ -395,6 +395,207 @@ async function main(): Promise<void> {
 
   const passed = results.filter((r) => r.pass).length;
   console.log(`\n${passed}/${results.length} PASS (de ${cases.length} seleccionados)`);
+
+  /**
+   * 🔴 LOS HECHOS MECÁNICOS — SE DICEN, NO PUNTÚAN. Ver `EvalHechos`.
+   *
+   * Se imprime SIEMPRE (no sólo con `--visual`): sale de un render sin visión,
+   * cero créditos, y es la mitad que no depende de que nadie opine. La línea
+   * dice «NO puntúan» en voz alta a propósito — un número junto a un marcador
+   * se lee como parte del marcador si nadie avisa.
+   *
+   * Y se imprime AUNQUE SALGA CERO. Retirar el voto no puede significar apagar
+   * la medición, o la corrida siguiente no tiene con qué desmentirte; un
+   * «0 rotos de 12» es justo el dato que decide si esto se promueve a puerta.
+   */
+
+  /**
+   * 🔴 LA PROMESA DECLARADA — SE DICE, TAMPOCO PUNTÚA.
+   *
+   * ⚠️ Esto faltaba en la primera corrida (21/09) y el hueco era el de siempre:
+   * `cumplimiento` se calculaba, se le pasaba al `assert` —que todavía no la
+   * mira, porque no hay afirmaciones escritas— y se tiraba SIN IMPRIMIRSE. Una
+   * medición que nadie ve no existe, que es justo lo que este fichero lleva
+   * arreglando en otros. Cazado en la corrida, no en la revisión.
+   *
+   * ⚠️ `deLaPrueba` se cuenta APARTE y no acusa a la página: medido 0 de 5
+   * aciertos acusando, así que mezclarlos volvería a culpar al modelo de
+   * nuestro propio instrumento.
+   */
+  const conPromesa = results.filter((r) => r.cumplimiento);
+  if (conPromesa.length > 0) {
+    const corrieron = conPromesa.filter((r) => r.cumplimiento?.corrio);
+    const dePagina = corrieron.filter((r) =>
+      (r.cumplimiento?.fallos ?? []).some((f) => f.deLaPrueba !== true),
+    );
+    const deLaPrueba = corrieron.filter((r) =>
+      (r.cumplimiento?.fallos ?? []).some((f) => f.deLaPrueba === true),
+    );
+    console.log(
+      // ⚠️ «puntúa en los casos que lo afirman» y no «NO puntúa», que es lo que
+      // decía: la promesa SÍ suspende, pero sólo donde el assert del caso llama
+      // a `prometioYSeComprobo` (hoy tres). El número de aquí es de TODA la
+      // corrida, así que no es una puerta por sí mismo — que es lo que aquella
+      // etiqueta quería decir y decía mal.
+      `Promesa declarada (puntúa en los casos que lo afirman): ${conPromesa.length} caso(s) la declararon, ${corrieron.length} se ejecutaron — ` +
+        `${dePagina.length} incumplida(s) por LA PÁGINA, ${deLaPrueba.length} fallida(s) por EL INSTRUMENTO.`,
+    );
+    // 🔴 Y LA FORMA DE LA QUE ENTRÓ, que es la pregunta que el informe no
+    // podía contestar: se veía «arreglada tras un rechazo» y no CON QUÉ.
+    // `formaDePrueba` lista las CLAVES de cada paso, así que un `desplaza` se
+    // lee directamente aquí. Va por caso y no agregado: son pocas líneas y la
+    // forma es justo el detalle que se pierde al resumir.
+    //
+    // 🔴 Y DEBAJO, LA PRUEBA ENTERA — porque la forma sola dejó una pregunta
+    // colgada el 21/09. Se leyó `[{clic,veces,entonces[1]}]` en un caso cuyo
+    // runtime tenía 0 listeners de clic, y de ahí no se puede saber si el clic
+    // movió algo o si el contador cambió solo y la promesa se cumplió sin
+    // probar nada. Los selectores lo contestan de una. Son ≤6 pasos
+    // (`MAX_PASOS`), así que cabe entero y no hace falta recortarlo.
+    for (const r of conPromesa) {
+      console.log(`  · ${r.id}: ${r.cumplimiento?.forma}`);
+      console.log(`      ${JSON.stringify(r.cumplimiento?.pasos ?? [])}`);
+    }
+    // 🔴 LAS QUE NO SE PUDIERON COMPROBAR, CON SU MOTIVO. Su grader lo mete
+    // dentro del resultado, en vez de dejar un hueco fuera de él.
+    // Aquí el recuento ya salía arriba («N declararon, M se ejecutaron») pero
+    // la diferencia era MUDA: no se sabía qué le había pasado a las otras.
+    // ⚠️ Sigue sin puntuar, a diferencia del suyo, que es fail-closed. Flipar
+    // eso sin saber cuántos casos sanos se pondrían rojos es el error que
+    // `scored:false` existe para evitar — primero el número.
+    const noMedidas = conPromesa.filter((r) => r.cumplimiento && !r.cumplimiento.corrio);
+    for (const r of noMedidas) {
+      console.log(`  · ${r.id}: NO SE PUDO COMPROBAR — ${r.cumplimiento?.motivo ?? "sin motivo anotado"}`);
+    }
+    // 🔴 LAS QUE NO PODÍAN PROBAR NADA — se miden y NO puntúan (todavía).
+    //
+    // Una expectativa absoluta que YA se cumplía antes de actuar deja el paso
+    // verde pase lo que pase. Salió a la luz en la corrida del 21/09:
+    // `contador-se-construye` en PASS pulsando el propio contador y esperando
+    // que contuviera "5,000", que es lo que alcanza solo.
+    //
+    // Nace SIN puntuar a propósito: es la tercera medida nueva de esta línea y
+    // las dos anteriores habrían suspendido casos sanos por defectos nuestros.
+    // Primero el número en corridas limpias, después la decisión.
+    const conVacuas = conPromesa.filter((r) => (r.cumplimiento?.vacuas ?? []).length > 0);
+    if (conVacuas.length > 0) {
+      console.log(
+        `Expectativas que ya se cumplían (NO puntúan): ${conVacuas.length} de ${conPromesa.length} caso(s) con promesa.`,
+      );
+      for (const r of conVacuas.slice(0, 6)) {
+        const v = (r.cumplimiento?.vacuas ?? [])[0];
+        console.log(`  · ${r.id}: paso ${v?.paso} ${String(v?.mensaje).slice(0, 120)}`);
+      }
+    }
+    for (const r of [...dePagina, ...deLaPrueba].slice(0, 6)) {
+      const f = (r.cumplimiento?.fallos ?? [])[0];
+      console.log(`  · ${r.id}: paso ${f?.paso} ${f?.deLaPrueba ? "[de la prueba]" : "[de la página]"} ${String(f?.mensaje).slice(0, 120)}`);
+    }
+  } else {
+    console.log("Promesa declarada: ningún caso declaró prueba en esta corrida.");
+  }
+  // 🔴 LA RANURA JS, FUERA DE ESE `if` — y ahí estaba el bug (2026-09-21 noche).
+  //
+  // Esto vivía DENTRO de `if (conPromesa.length > 0)`, o sea colgado de que
+  // ALGÚN caso tuviera `cumplimiento`, que sólo se construye con una spec del
+  // DSL aceptada. Un turno que promete SÓLO por JavaScript no tiene
+  // `cumplimiento`, así que la corrida caía al `else` y anunciaba «ningún caso
+  // declaró prueba» — con la promesa JS delante, sin imprimirla. Medido ese día:
+  // `carrito-se-construye` pasó así, y desde el informe era indistinguible de un
+  // turno que no prometió nada. Dos preguntas opuestas, la misma línea.
+  const conJs = results.filter((r) => r.pruebasJs);
+  if (conJs.length > 0) {
+    // 🔴 Y SI SE CUMPLIÓ, no sólo si se mandó. Hasta hoy esta línea decía quién
+    // la USÓ y ahí se acababa: el programa ni siquiera se ejecutaba en la
+    // batería —el arnés no le pasaba `pruebaJs` a los ojos— así que un caso
+    // podía pasar con una promesa JS que nadie corrió.
+    //
+    // ⚠️ YA PUNTÚA (2026-09-21 noche): viaja por `cumplimiento` como la del
+    // DSL, así que una promesa JS incumplida SUSPENDE el caso. Esta línea es el
+    // detalle de la ruta —el código que mandó—, no un canal aparte.
+    const corridas = conJs.filter((r) => r.pruebaJsFallos !== undefined);
+    const rotas = corridas.filter((r) => (r.pruebaJsFallos ?? []).length > 0);
+    console.log(
+      `Ruta \`prueba_js\` (puntúa igual que el DSL): ${conJs.length} caso(s) la usaron, ` +
+        `${corridas.length} se ejecutaron — ${rotas.length} incumplida(s).`,
+    );
+    for (const r of conJs) {
+      const f = r.pruebaJsFallos;
+      const estado =
+        f === undefined ? "no se midió" : f.length === 0 ? "cumplida" : `INCUMPLIDA: ${f[0]?.mensaje ?? ""}`;
+      console.log(`  · ${r.id}: [${estado}] ${String(r.pruebasJs).slice(0, 180)}`);
+    }
+  }
+  // 🔴 EL INSTRUMENTO, SIEMPRE — se imprima o no una promesa. «Ningún caso
+  // declaró prueba» tiene DOS causas que desde fuera se leen igual: que el
+  // modelo no prometiera, o que el arnés no anotara. Esta línea las separa:
+  // dice cuántas veces llamó a una puerta que PODÍA llevar prueba y con qué
+  // salió cada una. Sin ella, el 2026-09-21 se persiguió un hueco inexistente.
+  const conPuertas = results.filter((r) => (r.declaradas ?? []).length > 0);
+  if (conPuertas.length > 0) {
+    console.log(`Puertas de edición llamadas (el instrumento, NO puntúa):`);
+    for (const r of conPuertas) {
+      const detalle = (r.declaradas ?? [])
+        .map((d) => {
+          const rechazo = d.rechazo ? `✗${d.rechazo}${d.clase ? `/${d.clase}` : ""}` : null;
+          const estado = d.js ? "js" : d.spec ? `spec[${d.spec.length}]` : rechazo ?? "sin prueba";
+          return `${d.tool}:${estado}`;
+        })
+        .join(" · ");
+      console.log(`  · ${r.id}: ${detalle}`);
+    }
+    // 🔴 EL REPARTO POR CLASE DE FORMA.
+    //
+    // `sin_accion` es el 56% de las llamadas a `editar_runtime` en producción
+    // (9 de 16, 2026-09-21) y cinco intentos de arreglarlo con TEXTO fallaron.
+    // Lo único que funcionó fue REPARAR la entrada, y cuál reparar ahora se
+    // decidía a ojo. Esto lo cuenta: `sin_id` es la familia de `createElement`
+    // —la que no tenía reparación— y su número es el que justifica escribirla.
+    const clases = new Map<string, number>();
+    for (const r of results) {
+      for (const d of r.declaradas ?? []) {
+        if (d.clase) clases.set(d.clase, (clases.get(d.clase) ?? 0) + 1);
+      }
+    }
+    if (clases.size > 0) {
+      const orden = [...clases.entries()].sort((a, b) => b[1] - a[1]);
+      console.log(
+        `  sin_accion por CLASE: ${orden.map(([c, n]) => `${c}=${n}`).join(" · ")}` +
+          " (sin_listener no se repara; sin_id sólo si el runtime cablea un grupo)",
+      );
+    }
+  }
+  // 🔴 LA PROMESA, MEDIDA EN TODA LA BATERÍA Y PUNTUANDO EN TRES.
+  //
+  // Sólo tres `assert` llaman a `prometioYSeComprobo`, así que en los otros 62
+  // casos el modelo puede cambiar el comportamiento sin prometer nada y nadie
+  // se entera. Esto lo mide en todos SIN tocar el `pass` — la figura
+  // `EvalHechos`: un medidor que corre y se enseña fuera del score.
+  // Este número es el que decide si se promueve a puerta.
+  const conMedida = results.filter((r) => r.promesaMedida);
+  if (conMedida.length > 0) {
+    console.log(
+      `Promesa del turno (mide en ${results.length}, puntúa en 3): ${conMedida.length} caso(s) la habrían suspendido.`,
+    );
+    for (const r of conMedida.slice(0, 8)) {
+      console.log(`  · ${r.id}: ${String(r.promesaMedida).slice(0, 150)}`);
+    }
+  }
+  const conHechos = results.filter((r) => r.hechos);
+  if (conHechos.length > 0) {
+    const rotos = conHechos.filter((r) => r.hechos?.roto);
+    console.log(
+      `Hechos del navegador (NO puntúan): ${rotos.length} de ${conHechos.length} caso(s) medidos quedaron con rotura objetiva.`,
+    );
+    for (const r of rotos.slice(0, 6)) {
+      console.log(`  · ${r.id}: ${(r.hechos?.issues ?? []).slice(0, 2).join(" · ").slice(0, 160)}`);
+    }
+    if (rotos.length > 0) {
+      console.log(
+        "  (promoverlo a puerta necesita este número en una corrida limpia, no ganas — ver EvalHechos)",
+      );
+    }
+  }
   if (args.visual) {
     const judged = results.filter((r) => r.visual);
     const clean = judged.filter((r) => r.visual && !r.visual.broken && !r.visual.fallback).length;

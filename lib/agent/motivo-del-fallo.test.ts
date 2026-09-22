@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { avisoDeLaPruebaDescartada, motivoDelFallo, TOPE_MOTIVO } from "./motivo-del-fallo";
+import { avisoParaElDueno, motivoDelFallo, TOPE_MOTIVO } from "./motivo-del-fallo";
 
 describe("motivoDelFallo", () => {
   it("🔴 saca el motivo de una respuesta fallida", () => {
@@ -69,7 +69,7 @@ describe("motivoDelFallo", () => {
   // `behavior-spec.test.ts`); lo que cambia es quién tiene que actuar.
   it("🔴 con `tarjeta`, el ámbar enseña la frase del dueño", () => {
     expect(
-      avisoDeLaPruebaDescartada({
+      avisoParaElDueno({
         ok: true,
         prueba_descartada: {
           motivo: "sin_accion",
@@ -84,15 +84,67 @@ describe("motivoDelFallo", () => {
   // tarjeta técnica se lee peor, pero media tarjeta no se lee.
   it("sin `tarjeta` cae en el aviso de siempre", () => {
     expect(
-      avisoDeLaPruebaDescartada({
+      avisoParaElDueno({
         ok: true,
         prueba_descartada: { motivo: "sin_accion", aviso: "el de antes" },
       }),
     ).toBe("el de antes");
   });
 
-  // CONTRA-PRUEBA: `como_hacerlo` es la corrección que va AL MODELO —el
-  // `…` de Claude Code—, no algo que quepa en una línea de
+  // ─────────────────────────────────────────────────────────────────────────
+  // 🔴 UNA DE TRECE ERA LAS QUE LLEGABAN (2026-09-21).
+  //
+  // `tools.ts` tiene 17 claves `extra.*`, 13 de ellas señales de avería con su
+  // guarda —`handlers_muertos`, `contenido_perdido`, `css_sin_efecto`…—. El
+  // bucle leía CUATRO claves de la respuesta para pintar: `ok`, `cambio`,
+  // `error` y `prueba_descartada`. Las otras doce viajaban en `aviso_critico`,
+  // cuyo único consumidor era el modelo vía «nunca cierres un turno callando un
+  // aviso» — o sea, una señal que dependía de que Len se acordara.
+  //
+  // MEDIDO antes de escribirlo, sobre 90 llamadas con diario en producción: 15
+  // traían `aviso_critico`, 9 eran rechazos de spec (ya ámbar desde el
+  // despliegue del 20/09) y quedan 6 — un 6,7%. No inunda.
+  describe("cualquier aviso al modelo llega al dueño, no sólo la prueba", () => {
+    it("🔴 un aviso_critico solo YA pinta ámbar", () => {
+      expect(
+        avisoParaElDueno({
+          ok: true,
+          aviso_critico: "Escribiste CSS que NUNCA se aplica: `.bar.warn > i`",
+        }),
+      ).toBe("Escribiste CSS que NUNCA se aplica: `.bar.warn > i`");
+    });
+
+    // LA PRECEDENCIA NO CAMBIA: la frase del dueño le gana a la del modelo.
+    // Al revés, el arreglo del 18/09 quedaría deshecho por el de hoy.
+    it("y `tarjeta` le sigue ganando a `aviso_critico`", () => {
+      expect(
+        avisoParaElDueno({
+          ok: true,
+          aviso_critico: "la receta del modelo",
+          prueba_descartada: { motivo: "sin_accion", tarjeta: "la frase del dueño" },
+        }),
+      ).toBe("la frase del dueño");
+    });
+
+    // CONTRA-PRUEBA: una llamada que FALLÓ ya tiene su motivo rojo, y dos
+    // motivos en una fila ni caben ni se leen.
+    it("CONTRA-PRUEBA: con ok:false no añade ámbar sobre el rojo", () => {
+      expect(
+        avisoParaElDueno({ ok: false, aviso_critico: "algo" }),
+      ).toBeUndefined();
+    });
+
+    // CONTRA-PRUEBA: una respuesta limpia sigue saliendo VERDE. Sin esto, el
+    // cambio podría pintar ámbar a todo y el color dejaría de decir nada.
+    it("CONTRA-PRUEBA: sin aviso, nada que pintar", () => {
+      expect(avisoParaElDueno({ ok: true, edits_aplicados: 3 })).toBeUndefined();
+      expect(avisoParaElDueno({ ok: true, aviso_critico: "   " })).toBeUndefined();
+      expect(avisoParaElDueno({ ok: true, aviso_critico: 42 })).toBeUndefined();
+    });
+  });
+
+  // CONTRA-PRUEBA: `como_hacerlo` es la corrección que va AL MODELO —como la
+  // que Claude Code pega a una entrada inválida—, no algo que quepa en una línea de
   // tarjeta. Sin esta contra-prueba, añadirlo a la lista de claves pasaría
   // desapercibido y la tarjeta enseñaría instrucciones de herramienta.
   it("CONTRA-PRUEBA: `como_hacerlo` no se pinta, es para el modelo", () => {

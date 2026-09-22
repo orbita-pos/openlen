@@ -267,3 +267,63 @@ describe("pulsar por nombre cuando no hay selector", () => {
     expect(fallos).toEqual([]);
   }, 60_000);
 });
+
+// ── 🔴 EL GRUPO DECLARADO: `cualquiera` ────────────────────────────────────
+//
+// La clase `sin_id` —el modelo cablea con
+// `querySelectorAll('.add')` o con `createElement`, sin un solo id— no se podia
+// reparar porque TODO lo promovible casa con varios elementos, y un selector
+// multiple se rechaza.
+//
+// Elegir uno por nuestra cuenta seria inventar un objetivo. Ante un objetivo
+// ambiguo no se toca nada: se dice que lo es y se ofrecen DOS salidas —afina el
+// selector, o DECLARA que da igual cual—. `cualquiera` es esa declaracion.
+const TRES_IGUALES = marco(`
+  <button class="add" data-p="1">Producto uno</button>
+  <button class="add" data-p="2">Producto dos</button>
+  <button class="add" data-p="3">Producto tres</button>
+  <div id="total">0</div>
+  <script>
+    var n = 0;
+    document.querySelectorAll('.add').forEach(function (b) {
+      b.addEventListener('click', function () { n += 1; document.getElementById('total').textContent = String(n); });
+    });
+  </script>
+`);
+
+describe("un selector que senala varios, con el grupo declarado", () => {
+  it("🔴 con `cualquiera` se pulsa uno del grupo y la promesa se cumple", async () => {
+    const fallos = await correr(TRES_IGUALES, [
+      { clic: ".add", cualquiera: true, veces: 1, entonces: [{ donde: "#total", que: "cambia" }] },
+    ]);
+    expect(fallos, JSON.stringify(fallos)).toEqual([]);
+  }, 60_000);
+
+  // 🔴 SIN DECLARARLO SIGUE RECHAZANDO, y ese rechazo es la mitad que sujeta a
+  // la otra: si pasara igual, `cualquiera` no estaria autorizando nada.
+  it("🔴 SIN `cualquiera` se rechaza, y el mensaje nombra LAS DOS salidas", async () => {
+    const fallos = await correr(TRES_IGUALES, [
+      { clic: ".add", veces: 1, entonces: [{ donde: "#total", que: "cambia" }] },
+    ]);
+    expect(fallos.length).toBe(1);
+    expect(fallos[0]?.deLaPrueba, "un selector ambiguo no acusa a la pagina").toBe(true);
+    expect(fallos[0]?.mensaje).toMatch(/3 elementos, no uno/);
+    expect(fallos[0]?.mensaje, "no ofrece afinar el selector").toMatch(/afina/);
+    expect(fallos[0]?.mensaje, "no ofrece declarar el grupo").toMatch(/cualquiera/);
+  }, 60_000);
+
+  // CONTRA-PRUEBA: `cualquiera` no vuelve verde lo que esta roto. Si los
+  // botones del grupo no hacen nada, la promesa sigue sin cumplirse.
+  it("CONTRA-PRUEBA: con botones MUERTOS, `cualquiera` no salva la promesa", async () => {
+    const muertos = marco(`
+      <button class="add">Uno</button><button class="add">Dos</button>
+      <div id="total">0</div>
+    `);
+    const fallos = await correr(muertos, [
+      { clic: ".add", cualquiera: true, veces: 1, entonces: [{ donde: "#total", que: "cambia" }] },
+    ]);
+    expect(fallos.length).toBe(1);
+    expect(fallos[0]?.deLaPrueba ?? false, "es la pagina la que no cumplio, no la prueba").toBe(false);
+  }, 60_000);
+});
+

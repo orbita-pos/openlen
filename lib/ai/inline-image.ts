@@ -257,6 +257,16 @@ export async function renderHtmlToInlineImage(
      *  un guion dejaría la página en un estado que el guion no espera — y una
      *  prueba sobre un estado desconocido no comprueba nada. */
     behaviorProgram?: string;
+    /** Lo que tiene que estar YA cuando la página empieza a correr sus
+     *  scripts — hoy, el censo de manejadores de clic que sostiene la
+     *  precondición del clic muerto.
+     *
+     *  🔴 VA APARTE DE `behaviorProgram` porque se instala en otro momento:
+     *  esto con `evaluateOnNewDocument`, antes de cargar; aquél con
+     *  `page.evaluate`, después. Y sólo funciona porque aquí se navega de
+     *  verdad (`cargarEnOrigenReal`): con `setContent` no hay documento nuevo
+     *  y no llegaría a instalarse, que es lo que ya se midió en su día. */
+    behaviorPrelude?: string;
     onBehaviorResult?: (bruto: unknown) => void;
   } = {},
 ): Promise<InlineImage | null> {
@@ -343,6 +353,9 @@ export async function renderHtmlToInlineImage(
       // arreglo existía desde el 2026-08-26 en `visual-quality-renderer.ts`;
       // aquí no llegó porque cada renderizador tenía su propia copia. Ahora hay
       // una sola, en `origen-de-medida.ts`.
+      // ANTES DE CARGAR, o no sirve: lo que el preludio observa son los
+      // `addEventListener` de la página, y ésos corren al cargar.
+      if (opts.behaviorPrelude) await page.evaluateOnNewDocument(opts.behaviorPrelude);
       await cargarEnOrigenReal(page, html);
       // 🔴 LAS IMÁGENES PEREZOSAS NO EXISTEN PARA UNA FOTO DE PÁGINA ENTERA.
       //

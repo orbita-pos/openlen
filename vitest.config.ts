@@ -262,6 +262,12 @@ export default defineConfig({
       // sin haberse ejecutado nunca — `page.evaluate` está mockeado en la suite
       // normal. `include` es LISTA BLANCA.
       "lib/agent/prueba-atributo.browser.test.ts",
+      // La PRECONDICIÓN: un clic cuya cadena entera no tiene manejador se dice
+      // antes de actuar, como el `Edit` que se niega a un no-op. Necesita
+      // navegación DE VERDAD (`cargarEnOrigenReal`): con `setContent` no se
+      // instala `evaluateOnNewDocument` y el censo saldría a cero para todo,
+      // que es como pasar la prueba sin haberla corrido.
+      "lib/agent/censo-de-clic.browser.test.ts",
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "lib/auth/**/*.test.ts",
@@ -386,6 +392,7 @@ export default defineConfig({
       // no sea en secreto igual al de tratamiento. `include` es LISTA BLANCA.
       "lib/agent/evals/sobres.test.ts",
       "lib/agent/evals/cases.test.ts",
+      "lib/agent/evals/promesas-del-arnes.test.ts",
       "lib/agent/objetivo/evaluar-condicion.test.ts",
       "lib/agent/objetivo/veredicto.test.ts",
       "lib/agent/evals/eval-identity.test.ts",

@@ -254,6 +254,10 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
           // este arnés —el único que da varios turnos, o sea el único donde
           // una regresión puede ocurrir— no podía verla nunca.
           spec: session.behaviorSpec ?? null,
+          // Y LA OTRA RUTA, que manda sobre `spec` cuando viene. Sin ella una
+          // promesa en JavaScript se declara y no se ejecuta, igual que le
+          // pasaba al arnés de evals hasta el 2026-09-21.
+          pruebaJs: session.behaviorJs ?? null,
           guardadas: vivas(suiteDeLaPagina, html, null),
         });
         // LA SUITE, actualizada igual que en la ruta y en el mismo orden:
