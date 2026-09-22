@@ -186,9 +186,8 @@ export interface CuentaDeRegresiones {
 /**
  * MARCA LAS QUE SE ROMPIERON Y DESMARCA LAS QUE VOLVIERON, y las cuenta.
  *
- * Es el peldaño 2 de Claude Code otra vez —`…` con
- * `…` / `…`: el aviso no se manda a ciegas, se
- * mide si sirvió. Aquí decide lo único que el plan de la suite dejó abierto a
+ * Es el mismo peldaño que `seguimientoDelRechazo`: el aviso no se manda a
+ * ciegas, se mide si sirvió. Aquí decide lo único que el plan de la suite dejó abierto a
  * propósito: si una regresión puede llegar a declarar rota la página. Esa
  * promoción se hace con el número delante, no con ganas — esta casa ya degradó
  * el canal de las pruebas una vez por medirlo.

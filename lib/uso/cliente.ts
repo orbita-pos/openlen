@@ -1,15 +1,13 @@
 // lib/uso/cliente.ts — LOS EVENTOS DE USO, del lado del navegador.
 //
-// La forma es la de Claude Code, y cada decisión se puede
-// comprobar allí:
+// La forma es la de Claude Code, y cada decisión se puede comprobar allí:
 //
 //  - SE APAGA SI LA PERSONA LO PIDE. Allí `DISABLE_TELEMETRY` y `DO_NOT_TRACK`
 //    ponen la sesión en «no-telemetry» antes de registrar nada. El equivalente
 //    de un navegador es `navigator.doNotTrack` y el Global Privacy Control. El
 //    servidor lo vuelve a comprobar con las cabeceras: esto sólo ahorra el envío.
-//  - VA EN LOTES Y NUNCA BLOQUEA. Su `…` espera
-//    `…` (5000) antes de exportar, y un envío que falla se
-//    cuenta, no se lanza. Aquí, igual: si `sendBeacon` no puede se intenta
+//  - VA EN LOTES Y NUNCA BLOQUEA. Su telemetría espera 5 segundos antes de
+//    exportar, y un envío que falla se cuenta, no se lanza. Aquí, igual: si `sendBeacon` no puede se intenta
 //    `fetch` con `keepalive`, y si tampoco, el lote se pierde.
 //  - SE VACÍA AL IRSE. La pestaña que se cierra es justo lo que este embudo
 //    quiere ver.
@@ -19,11 +17,11 @@
 
 import type { DatosDe, EventoDeCliente } from "./catalogo";
 
-/** El `…` de Claude Code. */
+/** El retraso de lote de Claude Code. */
 export const RETRASO_MS = 5_000;
 /** El tope de eventos por petición que acepta `/api/uso`. */
 export const MAX_POR_LOTE = 20;
-/** Con la cola llena se descarta el más viejo, como con `maxQueueSize` allí. */
+/** Con la cola llena se descarta el más viejo, como allí. */
 export const MAX_EN_COLA = 200;
 
 export interface EventoPendiente {

@@ -6,7 +6,7 @@
 // en otra capa. Claude Code las tiene separadas y por eso su
 // selector funciona.
 
-/** LOS NIVELES, ordenados. Es el `…` de Claude Code, literal:
+/** LOS NIVELES, ordenados. Es la escalera de Claude Code, en el mismo orden.
  *
  *  `auto` NO está aquí a propósito, igual que allí: en el texto de ayuda de
  *  Claude Code se añade aparte y AL FINAL
@@ -26,9 +26,8 @@ export const ESFUERZOS: readonly EsfuerzoAgente[] = ["auto", ...NIVELES] as cons
 /** A QUÉ NIVEL RESUELVE `auto`, y por qué existe esta constante.
  *
  * En Claude Code `auto` NO significa «no mandes nada»: significa «elijo yo por
- * ti». Resuelve por tabla —`…`—
- * y la UI lo ENSEÑA resuelto: `…` imprime literalmente
- * `Effort level: auto (currently high)`. El invariante que sostiene todo eso es
+ * ti». Resuelve por tabla —al defecto del modelo, o `high` si no lo tiene— y
+ * la UI lo ENSEÑA resuelto: `Effort level: auto (currently high)`. El invariante que sostiene todo eso es
  * que el usuario nunca ignore en qué nivel está corriendo.
  *
  * 🔴 Nuestro `auto` ANTERIOR omitía el campo, y eso rompía ese invariante de la
@@ -42,8 +41,8 @@ export const ESFUERZOS: readonly EsfuerzoAgente[] = ["auto", ...NIVELES] as cons
  * niveles POR ENCIMA — que es lo que hace que subir de nivel signifique algo. */
 export const NIVEL_POR_DEFECTO: NivelEsfuerzo = "high";
 
-/** `auto` al nivel concreto que le toca; cualquier otro, a sí mismo. Es el
- *  `…` de Claude Code, y lo usan por igual el cable (para saber qué mandar) y
+/** `auto` al nivel concreto que le toca; cualquier otro, a sí mismo. Como en
+ *  Claude Code, lo usan por igual el cable (para saber qué mandar) y
  *  la UI (para poder decir «Automático (ahora: …)»). Una sola fuente para las
  *  dos, porque el día que discrepen la etiqueta miente. */
 export function resolverEsfuerzo(nivel: EsfuerzoAgente): NivelEsfuerzo {
@@ -81,12 +80,12 @@ const PRESUPUESTO: Readonly<Record<NivelEsfuerzo, number>> = {
  * Antes `auto` devolvía `undefined` para omitir el campo, y este comentario
  * defendía esa omisión citando a Claude Code. Estaba mal leído: lo que Claude Code
  * omite es el PRESUPUESTO DE PENSAMIENTO (`{type:"adaptive"}`), y eso lo decide
- * `…` a partir del MODELO —no del nivel que eligió la persona—. En el eje
- * del NIVEL, que es éste, Claude Code nunca omite: resuelve y manda.
+ * a partir del MODELO —no del nivel que eligió la persona—. En el eje del
+ * NIVEL, que es éste, Claude Code nunca omite: resuelve y manda.
  *
- * El recorte es de Claude Code: `…`, con
- * una segunda instancia de la misma forma en `…`. El suelo no era invención
- * nuestra; su valor es el mínimo legal de cada escala (1024 tokens allí, 1 en
+ * El recorte es de Claude Code: el presupuesto se acota entre un suelo y el
+ * techo de salida menos uno. El suelo no era invención nuestra; su valor es el
+ * mínimo legal de cada escala (1024 tokens allí, 1 en
  * un dial que empieza en 1). Con los números de arriba el `Math.min` no muerde
  * en ninguna configuración real —el techo de salida más bajo es
  * `CLOSEOUT_MAX_OUTPUT_TOKENS = 2048` y el nivel más alto pide 225—, pero se
@@ -102,24 +101,22 @@ export function presupuestoDeEsfuerzo(
 
 // ─── LO QUE EL DIAL HACE EN CADA MODELO ─────────────────────────────────────
 //
-// LA FORMA ES DE CLAUDE CODE: LA CAPACIDAD SE DECLARA POR MODELO. Su catálogo
-// lleva, en la misma entrada que el `id`:
-//
-//
-// y `…` devuelve `…`. Eso —que la escalera la diga el MODELO y no una
-// constante— es lo que se copió, y es lo correcto.
+// LA FORMA ES DE CLAUDE CODE: LA CAPACIDAD SE DECLARA POR MODELO. Cada entrada
+// de su catálogo dice qué niveles admite ese modelo y a cuál resuelve por
+// defecto. Eso —que la escalera la diga el MODELO y no una constante— es lo que
+// se copió, y es lo correcto.
 //
 // ⚰️ AQUÍ DECÍA que su reserva para un modelo que no conoce es
-// `["low","medium","high"]` y que «`xhigh` y `max` se GANAN». **ES FALSO**, leído
+// `["low","medium","high"]` y que «`xhigh` y `max` se GANAN». **ES FALSO**
+// (comprobado el 2026-09-13):
 //
-//   · Esa rama de `…` sólo salta cuando el valor no resuelve a NINGÚN modelo, y
-//     en ella devuelve además `…` — así que la UI pinta
-//     «…» y esos tres niveles no se pintan jamás. Es un valor
-//     por defecto muerto, no una política.
-//   · Para un modelo REAL que su catálogo no conoce, `…` cae hasta su último
-//     renglón, `…` → **true** si el proveedor es de Anthropic. Y
-//     `…`, donde `…` sólo recorta
-//     por el tope de la ORGANIZACIÓN. **Su reserva es PERMISIVA: los cinco.**
+//   · Esa reserva sólo aplica cuando el valor no resuelve a NINGÚN modelo, y
+//     entonces el esfuerzo ni siquiera se admite — la UI pinta «Effort not
+//     supported» y esos tres niveles no se pintan jamás. Es un valor por
+//     defecto muerto, no una política.
+//   · Para un modelo REAL que su catálogo no conoce, si el proveedor es
+//     Anthropic se admite, y la escalera sólo se recorta por el tope de la
+//     ORGANIZACIÓN. **Su reserva es PERMISIVA: los cinco.**
 //   · Lo restrictivo allí es otra cosa: una lista negra de modelos viejos, un
 //     proveedor ajeno, o que el catálogo lo diga explícitamente.
 //
@@ -156,8 +153,8 @@ const NIVELES_SIN_MEDIR: readonly NivelEsfuerzo[] = ["low", "medium", "high"];
 export interface CapacidadDeEsfuerzo {
   /** Los niveles que este modelo puede OFRECER. Lo pinta el mando. */
   readonly niveles: readonly NivelEsfuerzo[];
-  /** A qué resuelve `auto` en este modelo. Es el `…` de Claude Code,
-   *  con su misma reserva (`…`, ver `…`). */
+  /** A qué resuelve `auto` en este modelo. Es el nivel por defecto de Claude
+   *  Code, con su misma reserva: `high`. */
   readonly defecto: NivelEsfuerzo;
   /** ¿Está medido este modelo, o corre con la reserva? Se expone para que quien
    *  lo pinte pueda decirlo en vez de que el usuario deduzca de una lista corta
@@ -165,7 +162,7 @@ export interface CapacidadDeEsfuerzo {
   readonly medido: boolean;
 }
 
-/** Qué dial tiene ESTE modelo. El `…` de Claude Code. */
+/** Qué dial tiene ESTE modelo. Como en Claude Code: lo dice el modelo. */
 export function capacidadDeEsfuerzo(modelId: string): CapacidadDeEsfuerzo {
   const medido = DIAL_MEDIDO[modelId];
   if (!medido) {
@@ -185,7 +182,8 @@ export function capacidadDeEsfuerzo(modelId: string): CapacidadDeEsfuerzo {
  * .agentEffort`), así que alguien que eligió `max` con un modelo medido lo
  * seguiría mandando el día que el papel cambie a uno sin medir — 225 a un dial
  * que nadie ha comprobado, y sin que el mando siquiera enseñe esa opción.
- * Claude Code hace exactamente este recorte (`…`) al elegir modelo.
+ * Claude Code hace exactamente este recorte al elegir modelo: el nivel se
+ * acota a los que ese modelo admite.
  *
  * `auto` NO se recorta: no es un peldaño, es la instrucción de elegir peldaño,
  * y lo que elige ya sale de la capacidad de este modelo.

@@ -12,9 +12,8 @@
 //   REMOTO  `src` en `lienzo-<id>.<dominio de páginas>`, otro sitio que la
 //           app. Las capacidades de la página publicada, que no lleva
 //           sandbox: su origen, su almacenamiento, formularios, ventanas y
-//           descargas. Sin `allow-top-navigation`, como el `…` de la acción
-//           `preview` de Claude Code: la página no puede sacar al
-//           usuario de su taller.
+//           descargas. Sin `allow-top-navigation`, como la acción `preview`
+//           de Claude Code: la página no puede sacar al usuario de su taller.
 //
 // Las lee la guarda `el-lienzo-no-se-traga-los-dialogos.test.ts` y la matriz
 // `lienzo-igual-que-publicada.browser.test.ts`.

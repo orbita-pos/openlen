@@ -58,13 +58,12 @@
 // 🔴 ¿Y DECÍRSELO UNA VEZ POR SESIÓN EN VEZ DE NUNCA? NO. La vara es Claude
 // Code, y lo contesta sin ambigüedad:
 //
-//   · `…` llama a `reset()` en cada consulta del usuario, y
-//     `reset()` hace `…`. La línea base se BORRA cada turno
-//     y se vuelve a tomar del estado ACTUAL, defectos preexistentes incluidos.
-//     No hay memoria que acumule: nunca se reportan, en ningún turno.
-//   · Y no hay puerta trasera por lectura: `…` descarta todo
-//     fichero que no esté en `baseline` (`…`),
-//     o sea SÓLO los que él tocó. Leer un fichero roto no le cuenta nada.
+//   · La línea base se BORRA con cada consulta del usuario y se vuelve a tomar
+//     del estado ACTUAL, defectos preexistentes incluidos. No hay memoria que
+//     acumule: nunca se reportan, en ningún turno.
+//   · Y no hay puerta trasera por lectura: los diagnósticos nuevos sólo se
+//     miran en los ficheros que tienen línea base, o sea SÓLO los que él tocó.
+//     Leer un fichero roto no le cuenta nada.
 //
 // Al modelo se le dice lo que rompió y NADA MÁS; lo demás lo trae el usuario.
 // La pregunta queda cerrada: esta implementación ya es esa.

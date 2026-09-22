@@ -15,15 +15,14 @@
 // no vuelve nunca — por eso el turno del retry de producción tardó 247 s en
 // cerrarse. Hay que MATAR el navegador.
 //
-// 🔴 CÓMO LO HACE CLAUDE CODE, visto en Claude Code (su corredor de
-// `git`, el más cuidado de los tres que tiene):
+// 🔴 CÓMO LO HACE CLAUDE CODE al correr un proceso largo:
 //
-//   · un vigía de SILENCIO que se reinicia con cada señal de avance y mata con
-//     el motivo `"silence"`;
-//   · un TECHO DURO por señal de aborto, motivo `"hard-cap"`;
+//   · un vigía de SILENCIO que se reinicia con cada señal de avance y mata
+//     cuando no la hay;
+//   · un TECHO DURO sobre el total;
 //   · el aborto de quien llamó;
 //   · y en los tres casos `SIGTERM` → temporizador → `SIGKILL`, apuntando POR
-//     QUÉ murió (`f = "escalated"`).
+//     QUÉ murió.
 //
 // Aquí el vigía de silencio es el plazo POR PASO (cada operación contra la
 // página tiene que volver), y el techo duro es el plazo del render entero. Se

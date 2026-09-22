@@ -1259,8 +1259,8 @@ function AIDesignChat({
               // sería falsificable).
               turnId,
               // EL PIN DE ESTE TURNO. Viaja en el cuerpo en vez de releerse del
-              // perfil en el servidor, que es lo que hace Claude Code con
-              // `…`: el nivel que corre es el que el usuario
+              // perfil en el servidor, que es lo que hace Claude Code al fijar
+              // el esfuerzo por mensaje: el nivel que corre es el que el usuario
               // VEÍA al pulsar enviar, y cambiar el mando a media respuesta no
               // reescribe con qué esfuerzo corrió lo que ya salió.
               esfuerzo,
@@ -2439,8 +2439,8 @@ function Composer({
   /** Pone la condición que ESCRIBIÓ el dueño. Devuelve si se guardó. */
   onPonerObjetivo?: (condicion: string) => Promise<boolean>;
   /** CUÁNTO PIENSA LEN. `auto` no es un peldaño de la escalera: es «elige tú»,
-   *  y por eso se pinta aparte y AL FINAL, igual que en Claude Code (`…`
-   *  lleva los cinco niveles; `auto` se añade suelto). */
+   *  y por eso se pinta aparte y AL FINAL, igual que en Claude Code (la
+   *  escalera son los cinco niveles; `auto` se añade suelto). */
   esfuerzo?: EsfuerzoAgente;
   /** A qué nivel resuelve `auto`, para poder DECIRLO. Claude Code nunca deja al
    *  usuario sin saber en qué nivel corre: imprime `Effort level: auto

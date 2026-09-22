@@ -9,13 +9,13 @@
 // fuera. Copiarlo habría sido la misma capacidad quedándose a medias en dos
 // sitios.
 //
-// LO QUE DICE CLAUDE CODE. Su contexto `Select` declara, literal:
-//
+// LO QUE HACE CLAUDE CODE. En sus listas de selección, ↑/↓ recorren (y también
+// `j`/`k` y `ctrl+n`/`ctrl+p`), RePág/AvPág paginan, Inicio/Fin van a los
+// extremos, Enter acepta y Esc cancela.
 //
 // De ahí se porta lo que significa lo mismo en un navegador: **Esc cancela**,
 // **↑/↓ recorren** y **Inicio/Fin van a los extremos**. `enter` ya lo da el
-// navegador sobre un `<button>`. Y su selector pasó a llevar
-// `…` en la raíz, o sea que al abrirse **mete el foco
+// navegador sobre un `<button>`. Y su selector, al abrirse, **mete el foco
 // dentro**: eso también se porta.
 //
 // LO QUE NO SE PORTA, y por qué:
@@ -26,7 +26,7 @@
 //
 // 🔴 EL CLIC FUERA NO SALE DE CLAUDE CODE — no tiene ratón, así que no puede
 // contestarlo. Es la convención del navegador, y es el equivalente exacto de su
-// `escape: "select:cancel"`: salir sin elegir. Pedido por Jesús el 2026-09-13.
+// Esc: salir sin elegir. Pedido por Jesús el 2026-09-13.
 
 import { useCallback, useEffect, useRef, type KeyboardEvent, type RefObject } from "react";
 
@@ -89,8 +89,8 @@ export function useMandoDesplegable({
   }, [abierto]);
 
   // AL ABRIR, EL FOCO ENTRA — en la opción marcada si la hay, si no en la
-  // primera. Es el `…` que su selector estrenó, y sin esto
-  // las flechas no tendrían desde dónde empezar.
+  // primera. Es lo que hace su selector al abrirse, y sin esto las flechas no
+  // tendrían desde dónde empezar.
   useEffect(() => {
     if (!abierto) return;
     const items = opcionesDe(refContenedor.current);
@@ -114,7 +114,7 @@ export function useMandoDesplegable({
       if (items.length === 0) return;
       e.preventDefault();
       const actual = items.indexOf(document.activeElement as HTMLElement);
-      // Da la vuelta, igual que su `_7e` con los niveles: desde la última, ↓
+      // Da la vuelta, igual que su selector de niveles: desde la última, ↓
       // lleva a la primera. Un menú corto en el que la flecha deja de responder
       // se lee como que se ha colgado.
       const destino =

@@ -119,7 +119,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
   // `CLAUDE_CODE_EFFORT_LEVEL` en Claude Code (ver `esfuerzo-efectivo.ts`).
   const env = options.env ?? process.env;
   // 🔴 Y SE RECORTA A LO QUE ESTE MODELO OFRECE, que es el último paso de
-  // Claude Code al resolver el nivel (`…`). Sin esto la tabla por modelo sería
+  // Claude Code al resolver el nivel. Sin esto la tabla por modelo sería
   // decorativa: la postura se GUARDA en `users.agentEffort`, así que quien
   // eligió `max` con un modelo medido lo seguiría mandando el día que el papel
   // cambie a uno sin medir —225 a un dial que nadie ha comprobado— y encima con

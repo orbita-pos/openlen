@@ -276,8 +276,7 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
                   // Antes `auto` omitía, y la razón escrita aquí —«es el default
                   // effort level de Claude Code»— era una lectura equivocada: lo
                   // que Claude Code omite es el PRESUPUESTO de pensamiento, que
-                  // decide `…` por MODELO, no el NIVEL que eligió la
-                  // persona. En el eje del nivel resuelve y manda. Y omitir
+                  // decide el MODELO, no el NIVEL que eligió la persona. En el eje del nivel resuelve y manda. Y omitir
                   // costaba: sin campo el proveedor da mediana 237 tokens de
                   // razonamiento con rango 495 (n=8); con número da lo que se le
                   // pide, apretado (100 -> 100, rango 13).

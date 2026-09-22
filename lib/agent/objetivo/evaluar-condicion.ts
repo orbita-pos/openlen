@@ -2,9 +2,9 @@
 //
 // Copiado del mecanismo de objetivos de Claude Code,
 // donde un objetivo NO es una tarea sino una CONDICIÓN DE PARADA, y quien
-// decide si se cumplió no es el agente que trabajó:
-//
-//     «…»
+// decide si se cumplió no es el agente que trabajó: otro modelo lee la
+// conversación y contesta si la condición se cumplió, sólo con la evidencia
+// que hay en ella.
 //
 // Tres piezas de allí que se copian a propósito:
 //
@@ -14,8 +14,9 @@
 //   2. EL EVALUADOR ES DÉBIL A PROPÓSITO: no ejecuta comandos ni lee ficheros.
 //      Por eso la condición tiene que traer su chequeo dentro y la evidencia
 //      tiene que estar YA en el transcript.
-//   3. NO SE FÍA DEL AGENTE. «…» Aquí es la regla de la casa escrita en otro
-//      idioma: nadie juzga entre el actor y el artefacto.
+//   3. NO SE FÍA DEL AGENTE. Que el agente diga que ya se cumplió no cuenta:
+//      es precisamente quien ya decidió darlo por hecho. Aquí es la regla de la
+//      casa escrita en otro idioma: nadie juzga entre el actor y el artefacto.
 //
 // Corre en el papel `reasoner`, que NO es el de Len (`agent`). Que sean dos
 // modelos distintos no es un detalle de coste: es la separación.

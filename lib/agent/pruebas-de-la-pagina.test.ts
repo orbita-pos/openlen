@@ -264,8 +264,8 @@ describe("la suite de la página", () => {
 
   // ─── El contador, que es quien decide lo que falta ─────────────────────────
   //
-  // Es el peldaño 2 de Claude Code otra vez (`…` /
-  // `…`): el aviso no se manda a ciegas, se mide si sirvió.
+  // Es el mismo peldaño que `seguimientoDelRechazo`: el aviso no se manda a
+  // ciegas, se mide si sirvió.
   // Aquí decide lo ÚNICO que el plan dejó abierto a propósito — si una
   // regresión puede llegar a declarar rota la página—, y esa decisión se toma
   // con el número delante, no con ganas.

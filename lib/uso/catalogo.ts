@@ -2,9 +2,9 @@
 //
 // Un catálogo y no un `track(nombre, cualquierCosa)`, porque es la forma que
 // tiene Claude Code de impedir que un evento se lleve lo que no
-// debe. Allí un error sólo llega a la telemetría marcado
-// `…`, y de un error
-// de validación sólo pasan los códigos que cumplen `/^[a-z_]{1,40}$/`. Aquí,
+// debe. Allí un error sólo llega a la telemetría si alguien comprobó que no
+// lleva código ni rutas, y de un error de validación sólo pasan códigos
+// cortos en minúsculas. Aquí,
 // igual: cada evento declara sus datos con un esquema ESTRICTO —una clave de más
 // y se descarta el evento entero— y ninguno admite texto libre. El brief del
 // usuario no cabe en ninguno.
@@ -105,7 +105,7 @@ export function validarEventoDeCliente(
 }
 
 /** El NOMBRE de un error como código —`TypeError` → `type_error`—, nunca su
- *  mensaje. Es el `…` de Claude Code. */
+ *  mensaje. Como en Claude Code. */
 export function nombreDeError(err: unknown): string {
   const nombre = err instanceof Error ? err.name : "";
   const codigo = nombre

@@ -7,10 +7,9 @@
 // se caerían igual hasta que alguien lo notara. El papel del Agente ha cambiado
 // de modelo dos veces en tres semanas; esto no es hipotético.
 //
-// CLAUDE CODE DE CLAUDE CODE NO SE CAE: detecta el rechazo, marca ese modelo con
-// `…` y sigue. Su propia documentación lo llama, literal,
-// «…» — la petición se repite
-// sin el campo y el turno se salva. Aquí se hace lo mismo.
+// CLAUDE CODE NO SE CAE: detecta el rechazo, marca ese modelo como sin
+// esfuerzo y sigue — una degradación silenciosa: la petición se repite sin el
+// campo y el turno se salva. Aquí se hace lo mismo.
 //
 // LOS MENSAJES SON REALES, sondeados contra Fireworks el 2026-09-13 con
 // `deepseek-v4p1-flash` y `max_tokens: 1`:
@@ -69,8 +68,8 @@ export function rechazoDeEsfuerzo(cuerpo: string): ClaseDeRechazo | null {
 /**
  * Los modelos que ya dijeron que no admiten el campo.
  *
- * Vive en memoria y muere con el proceso, igual que las `…` de
- * Claude Code. No se persiste a propósito: la capacidad de un modelo puede cambiar
+ * Vive en memoria y muere con el proceso, igual que en Claude Code. No se
+ * persiste a propósito: la capacidad de un modelo puede cambiar
  * cuando el proveedor lo despliega otra vez, y una fila en la base diría
  * «este modelo no piensa» para siempre a partir de un 400 de una tarde.
  */

@@ -970,8 +970,8 @@ describe("runAgentLoop — declarar_tareas", () => {
    * turnos— sino que declara la lista UNA vez y no vuelve a verla: vive en el
    * servidor, no en su contexto.
    *
-   * Es lo que hace Claude Code: cuenta
-   * `…` y reinyecta la lista como adjunto `…`.
+   * Es lo que hace Claude Code: cuenta las vueltas desde la última vez que se
+   * tocó la lista y, pasado un umbral, se la vuelve a enseñar al modelo.
    * ESTADO devuelto al contexto, no una frase en el prompt.
    */
   it("🔴 con tareas pendientes, la lista se le devuelve en el mensaje hermano", async () => {
@@ -3175,13 +3175,12 @@ describe("I6 · al cerrar por tope se dice si la página quedó rota", () => {
 
 // ───── E2 · EL TOPE VIVE EN EL PLAN, NO EN EL TURNO ─────
 //
-// Visto en Claude Code: su bucle principal NO lleva tope
-// de pasos —`maxTurns` es un campo opcional por definición de agente, «…»— y lo que acota
-// una sesión larga es el CONTEXTO, con auto-compactación que CONTINÚA en vez de
-// parar («…»).
+// En Claude Code el bucle principal NO lleva tope de pasos —`maxTurns` es un
+// campo opcional por definición de agente— y lo que acota una sesión larga es
+// el CONTEXTO, con auto-compactación que CONTINÚA en vez de parar.
 //
-// El dinero lo topa por MES y por cuenta: «…», con auto-recarga. El turno no se corta
-// nunca por presupuesto.
+// El dinero lo topa por MES y por cuenta, con un límite de gasto mensual y
+// auto-recarga. El turno no se corta nunca por presupuesto.
 //
 // Nosotros ya tenemos ese tope mensual (`CREDITS_BY_PLAN`), así que el tope por
 // turno era un SEGUNDO muro, redundante con el primero — y era el que partía el

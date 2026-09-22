@@ -17,8 +17,8 @@
 /**
  * Cuántos caracteres puede tener una condición de parada.
  *
- * El número sale de Claude Code (`…` en `…`) y por su misma razón,
- * que su descripción deja escrita: «…». No es un límite técnico, es cuánto texto
- * puede leer alguien antes de decidir.
+ * El número es el de Claude Code, y por su misma razón: quien aprueba tiene que
+ * poder leer la condición entera en el diálogo. No es un límite técnico, es
+ * cuánto texto puede leer alguien antes de decidir.
  */
 export const CONDICION_MAX = 500;
