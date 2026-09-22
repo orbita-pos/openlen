@@ -9,7 +9,7 @@ import { programaJs } from "@/lib/agent/prueba-js";
 import { compileCalcRegions, type CalcIssue } from "@/lib/expr/document";
 import { reglasQueNuncaAplican, type ReglaMuerta } from "@/lib/document/css-wiring";
 import { clasesQueNuncaAplican, type ClaseMuerta } from "@/lib/document/clases-muertas";
-import { leerFallos, specProgram, type FalloSpec } from "@/lib/agent/behavior-spec";
+import { leerFallos, type FalloSpec } from "@/lib/agent/behavior-spec";
 import { objectiveBreakage, roturaDeRed } from "@/lib/generation/objective-breakage";
 import { gateReservedMarker } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
@@ -101,17 +101,9 @@ export async function preparePage(
     //
     // Y CON SU PRUEBA, si la declaró. Ocupa el hueco donde el render pulsa los
     // controles a ciegas: mismo navegador, misma pasada, cero arranques nuevos.
-    // LAS DOS FORMAS, un solo hueco. El navegador es el mismo, la pasada es la
-    // misma y lo que devuelven es la misma lista de fallos: lo único que cambia
-    // es quién escribió el programa — nuestro compilador desde su JSON (`spec`)
-    // o el modelo directamente sobre los primitivos `ui.*` (`js`).
-    const guion = !opts.prueba
-      ? undefined
-      : opts.prueba.modo === "js"
-        ? programaJs(opts.prueba.codigo)
-        : opts.prueba.pasos.length > 0
-          ? specProgram(opts.prueba.pasos)
-          : undefined;
+    // El programa lo escribe el modelo sobre los primitivos `ui.*`; hasta el
+    // 2026-09-22 podía ser también el JSON del DSL, que compilábamos nosotros.
+    const guion = opts.prueba ? programaJs(opts.prueba.codigo) : undefined;
     // SE MIDE EL DOCUMENTO DE VISTA, no el pelado: con el chat y el asistente
     // horneados, que es la página que el visitante recibe. Y sólo se MIDE —
     // `current` no se toca, porque lo horneado no se guarda jamás (se volvería

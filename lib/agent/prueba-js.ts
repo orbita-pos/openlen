@@ -48,7 +48,7 @@
 import { VENTANA_PRUEBA_MS } from "./behavior-spec";
 
 /** Techo del programa del modelo. Seis pasos con selectores caben de sobra; más
- *  que esto es una suite dentro de una generación, igual que `MAX_PRUEBA_BYTES`. */
+ *  que esto es una suite dentro de una edición. */
 export const MAX_PRUEBA_JS_BYTES = 4 * 1024;
 
 /** Techo de PARED del programa entero, dentro del navegador. Un `while(true)`
@@ -62,17 +62,23 @@ export const TECHO_PRUEBA_JS_MS = 20_000;
 export const MAX_LLAMADAS_UI = 40;
 
 /**
- * ¿Esto es un programa JS o el JSON de siempre?
+ * ¿Esto es un programa JS, o la lista de pasos del DSL retirado?
  *
- * Se decide por la FORMA del contenido, no por un atributo nuevo: así el
- * transporte (`<script data-openlen-prueba>`) no cambia, las dos rutas conviven
- * y se puede medir una contra otra moviendo sólo el prompt. Un contenido que
- * empieza por `[` o `{` es la spec JSON; cualquier otra cosa se trata como JS.
+ * Se decide por la FORMA del contenido: uno que empieza por `[` o `{` es el
+ * JSON del DSL, que desde el 2026-09-22 se rechaza con su nombre
+ * (`prueba_retirada`) en vez de convertirse; cualquier otra cosa se trata como
+ * JS.
  */
 export function pareceJs(bruto: string): boolean {
   const t = bruto.trim();
   if (!t) return false;
   return !(t.startsWith("[") || t.startsWith("{"));
+}
+
+/** La promesa que el modelo declaró, ya validada: el programa sobre `ui.*`.
+ *  Es lo que viaja hasta el motor de página (`PreparePageOptions.prueba`). */
+export interface PruebaDeclarada {
+  readonly codigo: string;
 }
 
 export type PruebaJsRechazo = "vacia" | "demasiado_grande";
@@ -476,10 +482,14 @@ export function programaSuiteJs(entradas: readonly EntradaDePrograma[]): string 
  * los artifacts de Claude Code. No lo es: aquél corre en las copias ABIERTAS
  * de una página cuando se publica otra versión — un gancho de actualización,
  * no una prueba.)
+ *
+ * `sujeto` es cómo se llama la prueba en la superficie que la lee: el
+ * parámetro `prueba_js` en el Agente, el bloque `<prueba>` en el Chat. El resto
+ * es el MISMO texto en las dos — un vocabulario, no dos.
  */
-export function pruebaJsPromptBlock(): string {
+export function pruebaJsPromptBlock(sujeto = "`prueba_js`"): string {
   return [
-    "`prueba_js` es tu prueba como programa JavaScript, con `await` y `document` enteros, contra la página que acabas de guardar. Lo que tarda en cumplirse no necesita nada: cada afirmación ya espera sola. Si lo que pulsas exige campos, RELLÉNALOS antes con `ui.escribe`: el navegador no dispara el `submit` de un formulario al que le falta un `required`.",
+    `${sujeto} es tu prueba como programa JavaScript, con \`await\` y \`document\` enteros, contra la página que acabas de guardar. Lo que tarda en cumplirse no necesita nada: cada afirmación ya espera sola. Si lo que pulsas exige campos, RELLÉNALOS antes con \`ui.escribe\`: el navegador no dispara el \`submit\` de un formulario al que le falta un \`required\`.`,
     "ACTUAR: `ui.clic(sel, veces?)` · `ui.desplaza(sel)` para lo que se dispara AL VERSE · `ui.escribe(sel, valor)` · `ui.espera(ms)`. Un botón SIN id se nombra por su TEXTO: `ui.clic(\"Añadir al carrito\")`. Si el selector señala varios y da igual cuál, `ui.clic(\".tab\", 1, { cualquiera: true })`. LEER, para guardarte el ANTES: `ui.texto(sel)` · `ui.estilo(sel, prop)` · `ui.atributo(sel, nombre)`. AFIRMAR, fallan solas y esperan hasta " + VENTANA_PRUEBA_MS + " ms: `ui.visible` · `ui.oculto` · `ui.contiene(sel, txt)` · `ui.es(sel, txt)` · `ui.cambiaDe(sel, antes)` · `ui.estiloCambiaDe(sel, prop, antes)` · `ui.atributoCambiaDe(sel, nombre, antes)`. Todas con `await`.",
     // Los TOPES no se enumeran aquí a propósito: el rechazo los nombra cuando
     // se pasan, y adelantarlos gasta catálogo para decir dos veces lo mismo.

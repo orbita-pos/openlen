@@ -1,124 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  MAX_PRUEBA_BYTES,
-  MODEL_PRUEBA_ATTR,
-  extractModelPrueba,
-  extractPruebaFromEdits,
-  modelPruebaPromptBlock,
-} from "./model-prueba";
+import { MAX_PRUEBA_JS_BYTES } from "@/lib/agent/prueba-js";
+import { avisoPruebaDescartada, extractPruebaFromEdits, modelPruebaPromptBlock } from "./model-prueba";
 
-// ⚰️ Aquí vivían un `ON` y un `OFF` con `OPENLEN_MODEL_JS`. Sin usar desde que
-// se retiraron las dos pruebas del interruptor (las lápidas están abajo), y el
-// interruptor mismo se borró el 2026-08-26: ningún `.ts` de producción lo lee.
+// ⚰️ Aquí vivían un `ON` y un `OFF` con `OPENLEN_MODEL_JS`, y las pruebas del
+// sobre del DOCUMENTO (`<script data-openlen-prueba>`) y del DSL en JSON. El
+// interruptor se borró el 2026-08-26; el sobre del documento y el DSL, el
+// 2026-09-22.
 
-const conPrueba = (json: string) =>
-  `<!doctype html><html><body><h1>x</h1>
-<script data-openlen-model-runtime>document.title = "x";</script>
-<script type="application/json" ${MODEL_PRUEBA_ATTR}>${json}</script>
-</body></html>`;
-
-const BUENA = '[{"clic":"#empezar","entonces":[{"donde":"#reloj","que":"cambia"}]}]';
-
-describe("extractModelPrueba", () => {
-  it("saca los pasos que el modelo declaró", () => {
-    const r = extractModelPrueba(conPrueba(BUENA));
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.prueba.modo).toBe("spec");
-    if (r.prueba.modo !== "spec") return;
-    expect(r.prueba.pasos).toEqual([
-      { clic: "#empezar", veces: 1, entonces: [{ donde: "#reloj", que: "cambia" }] },
-    ]);
-  });
-
-  it("una página sin bloque no es un error — es que no hay prueba", () => {
-    expect(extractModelPrueba("<!doctype html><html><body>hola</body></html>")).toEqual({
-      ok: false,
-      reason: "ausente",
-    });
-  });
-
-  it("dos bloques no se fusionan", () => {
-    const doble = conPrueba(BUENA).replace(
-      "</body>",
-      `<script type="application/json" ${MODEL_PRUEBA_ATTR}>${BUENA}</script></body>`,
-    );
-    expect(extractModelPrueba(doble)).toEqual({ ok: false, reason: "varios" });
-  });
-
-  it("JSON roto se descarta con su motivo, no revienta", () => {
-    expect(extractModelPrueba(conPrueba("[{clic:"))).toEqual({ ok: false, reason: "json_invalido" });
-  });
-
-  it("un JSON gigante se rechaza antes de parsearlo", () => {
-    const grande = `[{"clic":"#a","entonces":[{"donde":"#b","que":"contiene","valor":"${"x".repeat(MAX_PRUEBA_BYTES)}"}]}]`;
-    expect(extractModelPrueba(conPrueba(grande))).toEqual({ ok: false, reason: "demasiado_grande" });
-  });
-
-  it("hereda las reglas del Agente: el mismo validador, y desde el 04/09 más corto", () => {
-    // El validador sigue siendo EL MISMO que usa `editar_pagina` —un
-    // vocabulario que se acepte al crear y se rechace al editar serían dos
-    // productos— pero ya no juzga la FORMA del selector: eso se cuenta en el
-    // navegador (`querySelectorAll(sel).length`), donde un `#a, #b` sale como
-    // «señala 2 elementos» y como fallo DE LA PRUEBA, sin acusar a la página.
-    // Ver la lápida en `behavior-spec.ts`: la regex tiró 2 pruebas buenas de 11.
-    const r = extractModelPrueba(conPrueba('[{"clic":"#a, #b","entonces":[{"donde":"#r","que":"cambia"}]}]'));
-    expect(r.ok).toBe(true);
-    // Lo que SÍ sigue rechazándose aquí: una cadena que no es un selector.
-    const vacio = extractModelPrueba(conPrueba('[{"clic":"  ","entonces":[{"donde":"#r","que":"cambia"}]}]'));
-    expect(vacio).toEqual({ ok: false, reason: "selector_invalido" });
-  });
-
-  it("un paso que no hace nada se rechaza", () => {
-    expect(extractModelPrueba(conPrueba('[{"entonces":[{"donde":"#r","que":"visible"}]}]'))).toEqual({
-      ok: false,
-      reason: "sin_accion",
-    });
-  });
-
-  it("`contiene` sin valor con qué comparar se rechaza", () => {
-    expect(
-      extractModelPrueba(conPrueba('[{"clic":"#a","entonces":[{"donde":"#r","que":"contiene"}]}]')),
-    ).toEqual({ ok: false, reason: "falta_valor" });
-  });
-
-  it("un JSON que no es una lista se rechaza", () => {
-    expect(extractModelPrueba(conPrueba('{"clic":"#a"}'))).toEqual({ ok: false, reason: "vacia" });
-  });
-});
-
-describe("el bloque de prompt", () => {
-  // RETIRADA con el interruptor. Fijaba que con `OPENLEN_MODEL_JS` apagado el
-  // bloque de la prueba declarada no costara ni un token. Ahora el JavaScript
-  // es de todos, así que la prueba declarada también.
-
-  it("enseña el marcador y el vocabulario cerrado", () => {
-    const b = modelPruebaPromptBlock();
-    expect(b).toContain(MODEL_PRUEBA_ATTR);
-    expect(b).toContain('"que"');
-    for (const verbo of ["cambia", "contiene", "es", "visible", "oculto"]) {
-      expect(b).toContain(verbo);
-    }
-  });
-
-  it("el ejemplo que le enseñamos PASA nuestro propio validador", () => {
-    // Si el ejemplo del prompt no fuera válido, el modelo lo copiaría y la
-    // prueba se tiraría en silencio en cada generación.
-    const ejemplo = /<script type="application\/json" [^>]+>\s*(\[[\s\S]*?\])\s*<\/script>/.exec(
-      modelPruebaPromptBlock(),
-    );
-    expect(ejemplo).not.toBeNull();
-    expect(extractModelPrueba(conPrueba(ejemplo![1]!)).ok).toBe(true);
-  });
-
-  it("le dice que no compare contra el reloj ni el azar", () => {
-    // El falso positivo MEDIDO: una prueba que esperaba `49:59` donde
-    // reiniciar da `50:00`. Es la advertencia que evita pagar una reparación
-    // por una promesa mal escrita.
-    expect(modelPruebaPromptBlock()).toMatch(/reloj o del azar/);
-  });
-});
+const BUENA = 'var antes = await ui.texto("#reloj"); await ui.clic("#empezar"); await ui.cambiaDe("#reloj", antes);';
 
 // ── EL SOBRE DEL CHAT ───────────────────────────────────────────────────────
 // El Chat entrega `<edits>`, no un documento. La prueba va al lado, DESPUÉS
@@ -129,13 +19,11 @@ describe("extractPruebaFromEdits", () => {
 <edit op="replace" target="runtime"><script data-openlen-model-runtime>var a=1;</script></edit>
 </edits>${extra}`;
 
-  it("saca la prueba de detrás del bloque de ediciones", () => {
-    const r = extractPruebaFromEdits(SOBRE(`\n<prueba>${BUENA}</prueba>`));
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.prueba.modo).toBe("spec");
-    if (r.prueba.modo !== "spec") return;
-    expect(r.prueba.pasos[0]!.clic).toBe("#empezar");
+  it("saca el programa de detrás del bloque de ediciones", () => {
+    expect(extractPruebaFromEdits(SOBRE(`\n<prueba>${BUENA}</prueba>`))).toEqual({
+      ok: true,
+      prueba: { codigo: BUENA },
+    });
   });
 
   it("un turno sin prueba no es un error — la mayoría no toca el comportamiento", () => {
@@ -147,53 +35,92 @@ describe("extractPruebaFromEdits", () => {
     expect(r).toEqual({ ok: false, reason: "varios" });
   });
 
-  it("JSON roto se descarta con su motivo", () => {
-    expect(extractPruebaFromEdits(SOBRE("<prueba>[{clic:</prueba>"))).toEqual({
-      ok: false,
-      reason: "json_invalido",
+  it("tolera espacios y saltos de línea alrededor del programa", () => {
+    expect(extractPruebaFromEdits(SOBRE(`\n<prueba>\n  ${BUENA}\n</prueba>\n`))).toEqual({
+      ok: true,
+      prueba: { codigo: BUENA },
     });
   });
 
-  it("hereda el MISMO validador — y por tanto la misma relajación del 04/09", () => {
-    // Las dos superficies tienen que aceptar y rechazar lo mismo, o el modelo
-    // aprende un vocabulario al crear y otro al editar.
-    expect(
-      extractPruebaFromEdits(SOBRE('<prueba>[{"clic":"#a, #b","entonces":[{"donde":"#r","que":"cambia"}]}]</prueba>')).ok,
-    ).toBe(true);
-    expect(
-      extractPruebaFromEdits(SOBRE('<prueba>[{"clic":"  ","entonces":[{"donde":"#r","que":"cambia"}]}]</prueba>')),
-    ).toEqual({ ok: false, reason: "selector_invalido" });
+  it("uno que pasa del tope se rechaza con su motivo, no revienta", () => {
+    const grande = `await ui.clic("#a"); // ${"x".repeat(MAX_PRUEBA_JS_BYTES)}`;
+    expect(extractPruebaFromEdits(SOBRE(`<prueba>${grande}</prueba>`))).toEqual({
+      ok: false,
+      reason: "demasiado_grande",
+    });
   });
 
-  it("tolera espacios y saltos de línea alrededor del JSON", () => {
-    expect(extractPruebaFromEdits(SOBRE(`\n<prueba>\n  ${BUENA}\n</prueba>\n`)).ok).toBe(true);
+  it("un bloque vacío no es una promesa", () => {
+    expect(extractPruebaFromEdits(SOBRE("<prueba>  </prueba>"))).toEqual({ ok: false, reason: "vacia" });
+  });
+
+  // 🔴 EL DSL RETIRADO SE NOMBRA, no se convierte ni se ejecuta. Un modelo que
+  // copia su historial seguirá mandando la lista de pasos un tiempo; tratarla
+  // como JS la haría fallar en el navegador acusando a la PRUEBA con un error
+  // de sintaxis que no dice por qué.
+  it("🔴 la lista de pasos del DSL retirado se rechaza con su nombre", () => {
+    const dsl = '[{"clic":"#empezar","entonces":[{"donde":"#reloj","que":"cambia"}]}]';
+    expect(extractPruebaFromEdits(SOBRE(`<prueba>${dsl}</prueba>`))).toEqual({
+      ok: false,
+      reason: "prueba_retirada",
+    });
+    expect(extractPruebaFromEdits(SOBRE('<prueba>{"clic":"#a"}</prueba>'))).toEqual({
+      ok: false,
+      reason: "prueba_retirada",
+    });
   });
 });
 
-describe("el bloque de prompt, según el sobre", () => {
-  it("al Chat se le enseña `<prueba>`, NUNCA la forma del documento", () => {
-    // Enseñarle una sintaxis que su superficie no acepta es garantizar que la
-    // copie y que la prueba se tire en silencio en cada turno.
-    const b = modelPruebaPromptBlock("edits");
+describe("avisoPruebaDescartada", () => {
+  // Lo lee el DUEÑO en el texto del turno, y el modelo en el siguiente. Hasta
+  // el 2026-09-22 un rechazo sólo iba al log y el modelo creía haber prometido.
+  it("dice que NO se comprobó, que el cambio está, y por qué — en cada motivo", () => {
+    for (const motivo of ["prueba_retirada", "varios", "vacia", "demasiado_grande"] as const) {
+      const aviso = avisoPruebaDescartada(motivo);
+      expect(aviso, motivo).toMatch(/no se comprobó/);
+      expect(aviso, motivo).toMatch(/El cambio está guardado/);
+    }
+    expect(avisoPruebaDescartada("prueba_retirada")).toMatch(/ya no se usa/);
+  });
+
+  it("no le da al dueño la receta del modelo", () => {
+    for (const motivo of ["prueba_retirada", "varios", "vacia", "demasiado_grande"] as const) {
+      expect(avisoPruebaDescartada(motivo), motivo).not.toMatch(/ui\.|<prueba>|JSON/);
+    }
+  });
+});
+
+describe("el bloque de prompt", () => {
+  it("enseña `<prueba>` detrás de `</edits>`, y sólo en MODE A", () => {
+    const b = modelPruebaPromptBlock();
     expect(b).toContain("<prueba>");
     expect(b).toContain("</edits>");
-    expect(b).not.toContain(MODEL_PRUEBA_ATTR);
+    expect(b).toContain("MODE A");
+    // Ni la forma del documento ni el DSL: enseñar una sintaxis que la
+    // superficie no acepta es garantizar que la copie.
+    expect(b).not.toContain("data-openlen-prueba");
+    expect(b).not.toMatch(/"entonces"|"que"\s*:/);
   });
 
-  it("al crear se le enseña el script, NUNCA `<prueba>`", () => {
-    const b = modelPruebaPromptBlock("documento");
-    expect(b).toContain(MODEL_PRUEBA_ATTR);
-    expect(b).not.toContain("<prueba>");
+  it("el vocabulario de `ui.*` es el mismo que lee el Agente", () => {
+    const b = modelPruebaPromptBlock();
+    for (const verbo of ["ui.clic", "ui.desplaza", "ui.escribe", "ui.texto", "ui.cambiaDe", "ui.atributoCambiaDe"]) {
+      expect(b).toContain(verbo);
+    }
+    expect(b).toContain("El bloque `<prueba>` es tu prueba como programa JavaScript");
   });
 
-  it("el ejemplo del sobre del Chat PASA su propio parser", () => {
-    const ejemplo = /<prueba>(\[[\s\S]*?\])<\/prueba>/.exec(modelPruebaPromptBlock("edits"));
+  it("el ejemplo que le enseñamos PASA su propio extractor", () => {
+    // Si el ejemplo del prompt no fuera válido, el modelo lo copiaría y la
+    // prueba se tiraría en cada turno.
+    const ejemplo = /<prueba>([\s\S]*?)<\/prueba>/.exec(modelPruebaPromptBlock());
     expect(ejemplo).not.toBeNull();
     expect(extractPruebaFromEdits(`<edits></edits><prueba>${ejemplo![1]}</prueba>`).ok).toBe(true);
   });
 
-  // RETIRADA con el interruptor. Fijaba que con `OPENLEN_MODEL_JS` apagado el
-  // bloque de la prueba declarada no costara ni un token. Ahora el JavaScript
-  // es de todos, así que la prueba declarada también.
-
+  it("le dice que no compare contra el reloj ni el azar", () => {
+    // El falso positivo MEDIDO: una prueba que esperaba `49:59` donde
+    // reiniciar da `50:00`.
+    expect(modelPruebaPromptBlock()).toMatch(/reloj o del azar/);
+  });
 });

@@ -42,8 +42,9 @@ import {
 } from "@/lib/html-ops";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
-import { extractModelPrueba, extractPruebaFromEdits } from "@/lib/ai-stream/model-prueba";
-import { avisoSpec, type PruebaDeclarada } from "@/lib/agent/behavior-spec";
+import { avisoPruebaDescartada, extractPruebaFromEdits } from "@/lib/ai-stream/model-prueba";
+import { notaSpec } from "@/lib/agent/behavior-spec";
+import type { PruebaDeclarada } from "@/lib/agent/prueba-js";
 import { userMemoryBlock } from "@/lib/agent/context";
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
@@ -1001,17 +1002,22 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
          *  «aplicado» mientras la mitad de lo prometido se había evaporado. */
         let parseNotice = "";
         let outputMode: "ops" | "rewrite";
-        /** QUÉ DEBE PASAR, según el modelo. En ops llega tras `</edits>`; en
-         *  reescritura, dentro del documento, igual que al crear. */
+        /** QUÉ DEBE PASAR, según el modelo. Sólo en ops: llega tras `</edits>`,
+         *  y la reescritura no tiene `</edits>` (ver `modelPruebaPromptBlock`). */
         let pruebaDeclarada: PruebaDeclarada | undefined;
-        /** Aviso cuando su prueba falló. Va con los demás: el usuario lo lee y
-         *  el modelo lo recibe en el turno siguiente por el historial. */
+        /** Aviso cuando su prueba no se pudo usar o no se cumplió. Va con los
+         *  demás: el usuario lo lee y el modelo lo recibe en el turno siguiente
+         *  por el historial. Las dos cosas se excluyen: una prueba descartada
+         *  no llega a correr. */
         let pruebaNotice = "";
-        const capturarPrueba = (crudo: string, de: "edits" | "documento") => {
-          const p = de === "edits" ? extractPruebaFromEdits(crudo) : extractModelPrueba(crudo);
+        const capturarPrueba = (crudo: string) => {
+          const p = extractPruebaFromEdits(crudo);
           if (p.ok) {
             pruebaDeclarada = p.prueba;
           } else if (p.reason !== "ausente") {
+            // DICHO, no sólo al log: con el aviso en un `console.warn` el
+            // modelo seguía creyendo que había prometido algo.
+            pruebaNotice = avisoPruebaDescartada(p.reason);
             // eslint-disable-next-line no-console
             console.warn(`[ai-design] prueba del modelo descartada: ${p.reason}`);
           }
@@ -1069,7 +1075,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
             runtimeDesdeOps = partido.runtime.code;
             // Sólo si el turno tocó el comportamiento: una prueba sin código
             // nuevo que probar mediría la página de antes.
-            capturarPrueba(raw, "edits");
+            capturarPrueba(raw);
           } else if (partido.runtime.kind === "borrar") {
             // Sin `esElRazonador`: esa puerta existe para no FIRMAR bytes de un
             // proveedor creyéndolos de otro, y borrar no firma nada.
@@ -1182,10 +1188,11 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           // model might have re-emitted into the output even though the
           // prompt told it not to.
           outputMode = "rewrite";
-          // La reescritura entrega UN documento, así que la prueba viaja
-          // dentro, igual que al crear. Aquí ya se abre navegador de todas
-          // formas: la comprobación no cuesta un arranque más.
-          capturarPrueba(raw, "documento");
+          // ⚰️ Aquí se capturaba una prueba DENTRO del documento, en un
+          // `<script data-openlen-prueba>`. El prompt del Chat nunca enseñó esa
+          // forma, y el documento se guarda tal cual: un programa en ese script
+          // se habría ejecutado en la página. Retirada el 2026-09-22; la
+          // reescritura no lleva prueba y los ojos siguen midiendo lo demás.
           // Scoped requests must NEVER produce a Mode B response — the
           // model only saw a slice of the doc, so a "full rewrite" from
           // that context would replace the entire page with what's
@@ -1502,13 +1509,16 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
               .join(", ")}. Esa parte va a salir con el aspecto por defecto del navegador. Pídeme que lo conecte y lo arreglo.`
           : "";
 
-        // Su propia prueba, fallada. A diferencia de crear, el Chat SÍ tiene
-        // bucle: esto viaja en `reasoning`, el cliente lo guarda como el turno
-        // del asistente y el modelo lo recibe en el siguiente. Es el mismo
-        // mensaje que ya usa el Agente — un vocabulario, no dos.
+        // Su propia prueba, fallada. Esto viaja en `reasoning`: lo LEE EL DUEÑO,
+        // el cliente lo guarda como el turno del asistente y el modelo lo recibe
+        // en el siguiente. Es el mismo canal que el Agente usa para su promesa,
+        // y por eso la misma nota (`notaSpec`): dice el hecho, que el cambio
+        // está guardado, y ofrece revisarlo — quien corrige es el usuario.
+        // (Hasta el 2026-09-22 era `avisoSpec`, una orden escrita para el
+        // modelo y pensada para el DSL, que el dueño leía tal cual.)
         const fallosPrueba = prepared.ok ? (prepared.report.specFailures ?? []) : [];
         if (fallosPrueba.length > 0) {
-          pruebaNotice = avisoSpec(fallosPrueba);
+          pruebaNotice = notaSpec(fallosPrueba);
           // eslint-disable-next-line no-console
           console.warn(`[ai-design] la prueba del modelo falló — ${fallosPrueba.map((f) => `paso ${f.paso}: ${f.mensaje}`).join(" · ")}`);
         }
