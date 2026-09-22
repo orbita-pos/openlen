@@ -2664,7 +2664,8 @@ ${t("composer.goalSince", {
                 // 🔴 NO SE DESHABILITA CON EL TURNO CORRIENDO, igual que la X:
                 // es la puerta que no se apaga. Y sigue disponible con un
                 // objetivo ya puesto —poner otro lo reemplaza, que es lo que
-                // hace Claude Code: «…».
+                // hace Claude Code: una propuesta nueva, aprobada o fijada a
+                // mano, sustituye a la actual.
                 className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition ${
                   ponerAbierto || objetivo
                     ? "bg-[var(--accent-strong)] text-white shadow-coral"

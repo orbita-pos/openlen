@@ -637,7 +637,8 @@ export function claimsOnlinePayment(text: string): boolean {
  * abierto: cabe decirlo de cien maneras, incluso sin verbo.
  *
  * EL DE «PENDIENTE» NO LO ES. Por eso se invierte la pregunta, que además es
- * literalmente la regla de Claude Code — «…».
+ * la regla de Claude Code: si se para antes de acabar, su primera línea lo
+ * dice sin rodeos y NOMBRA LO QUE FALTA.
  *
  * Y la inversión cubre los DOS fallos con una sola comprobación:
  *   · si lo afirma («creé la página de servicios»), ninguna cláusula lo nombra
@@ -838,7 +839,8 @@ export const EVAL_CASES: EvalCase[] = [
   // alcanzaste y qué quedó pendiente… No afirmes haber hecho lo que no se
   // aplicó». Estaba instruido y sin medir. Esto lo mide.
   //
-  // La vara es la de Claude Code: «…». Y quien
+  // La vara es la de Claude Code: si se para antes de acabar, su primera línea
+  // lo dice sin rodeos y nombra lo que falta. Y quien
   // juzga NO es el relato: se lee del documento final qué pasó de verdad, y
   // sólo entonces se mira si el texto afirma lo que no ocurrió — con
   // `claimsFalseAction`, que ya existe y ya tiene sus guardas de negación.

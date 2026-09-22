@@ -412,7 +412,8 @@ export function marcarRegresiones(
  *
  * Las tres piezas de Claude Code, en orden: QUÉ dejó de cumplirse, POR QUÉ lo
  * sabemos —se cumplió antes, sobre esta misma página— y QUÉ hacer. Allí eso es
- * «…»; aquí es esto.
+ * decir que no consta si llegó a ejecutarse y que compruebe su efecto antes de
+ * repetirlo; aquí es esto.
  *
  * 🔴 QUIÉN ACTÚA: el dueño. Los ojos corren al CERRAR el turno, así que el
  * modelo no puede arreglarlo sobre la marcha — lo leerá en el historial del

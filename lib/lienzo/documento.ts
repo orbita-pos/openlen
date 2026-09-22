@@ -2,7 +2,7 @@
 //
 // Es la mitad «documento» de docs/superpowers/specs/2026-09-15-un-solo-camino-
 // de-renderizado-design.md, y la copia de lo que hace Claude Code: su vista
-// previa llama al MISMO constructor que publica, con `…`.
+// previa sale del MISMO constructor que publica, en modo de vista previa.
 //
 // El subconjunto PURO de `bakeDocument` (lib/publish/filesystem.ts), en su
 // mismo orden: logo → asistente y chat → sello. Queda fuera, a propósito:

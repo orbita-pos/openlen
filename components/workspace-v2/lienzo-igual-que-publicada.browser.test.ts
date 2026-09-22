@@ -11,7 +11,8 @@
 //
 // QUÉ CUBRE ESTA MATRIZ, Y QUÉ NO. Se enumera, no se afirma que todo va bien —
 // es como lo dice Claude Code en su informe de `preview`: «…», y su propia
-// descripción declara sus límites por delante («…»). Nunca dice «igual que
+// descripción declara sus límites por delante (qué peticiones de la página se
+// rechazan y qué queda desactivado). Nunca dice «igual que
 // publicada» a secas. Aquí igual:
 //
 //   CUBRE  diez capacidades iguales (origen real, localStorage, sessionStorage,

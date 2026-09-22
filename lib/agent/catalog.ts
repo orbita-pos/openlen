@@ -496,7 +496,9 @@ function buildTodasLasDeclaraciones(
         "🔴 QUIEN LA COMPRUEBA NO ERES TÚ: es otro que sólo lee la conversación — no puede ejecutar nada ni abrir ficheros, y NO se cree tu palabra. Así que la condición tiene que decir UN estado final y CÓMO se ve que se cumplió, con lo que dejan las herramientas («el documento devuelto por leer_estado muestra el teléfono en el pie»). Máximo 500 caracteres: el usuario tiene que poder leerla entera en la tarjeta. " +
         "Una sola activa a la vez; aprobar una nueva reemplaza la anterior. " +
         // 🔴 LA CLÁUSULA DEL RECHAZO, y estaba en NINGÚN sitio. Claude Code se la
-        // dice al modelo en su propia descripción —«…»— y aquí sólo vivía en un comentario de
+        // dice al modelo en su propia descripción —si la rechazan no se le avisa,
+        // así que ni pregunta por la decisión ni vuelve a proponer la misma
+        // condición con otras palabras— y aquí sólo vivía en un comentario de
         // `tools.ts`, que el modelo no lee. Es la forma exacta de
         // [[la-frase-verdadera-en-otra-superficie]]: la regla escrita donde no
         // manda. Sin ella, un rechazo se lee como silencio y Len puede volver a

@@ -7,7 +7,7 @@
 //    `OPENLEN_EVENTOS_DE_USO=0` en la caja.
 //  - NUNCA ROMPE LO QUE MIDE. Un evento que no se guarda se cuenta y se avisa
 //    con el código del error de la base, nunca con su mensaje, y el turno sigue.
-//    Allí, literal: «…».
+//    Allí, los fallos que siguen se cuentan y se resumen.
 //  - SÓLO SE GUARDA LO QUE EL CATÁLOGO DEJA PASAR (`catalogo.ts`).
 
 import { db, schema } from "@/lib/db";

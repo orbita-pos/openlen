@@ -91,8 +91,8 @@ export function motivoNoDisponible(
  *
  * 🔴 `fijado` NO PUEDE SALTARSE LA REGLA DE LA VISIÓN, y ése es todo el diseño
  * de este parámetro. Es el mismo recorte silencioso que hace Claude Code cuando
- * lo elegido no cabe en lo que el modelo admite (`…`, y su
- * gemelo nuestro `caparEsfuerzo`): se respeta lo que se pueda respetar y el
+ * lo elegido no cabe en lo que el modelo admite (nuestro gemelo es
+ * `caparEsfuerzo`): se respeta lo que se pueda respetar y el
  * resto se ajusta, en vez de fallar el turno. Quien fije el razonador y luego
  * adjunte una foto obtiene una página que MIRA la foto, no un error — y el
  * selector ya se lo había dicho, porque esa fila sale deshabilitada con el

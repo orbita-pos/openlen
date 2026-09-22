@@ -108,7 +108,7 @@ export interface ProjectSettings {
    * —Claude Code también restaura el objetivo al reanudar—, así
    * que el usuario puede volver mañana y seguir.
    *
-   * UNA A LA VEZ. Una aprobación nueva reemplaza a la anterior, igual que allí:
+   * UNA A LA VEZ. Una aprobación nueva reemplaza a la anterior, igual que allí.
    *
    * 🔴 NO GUARDA EL PRESUPUESTO. Cuántas vueltas se le conceden es constante
    * del SERVIDOR, no un campo que viaje con el objetivo: el modelo propone la

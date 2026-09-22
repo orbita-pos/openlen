@@ -68,9 +68,9 @@ export function sseChannel(
   };
 
   // SE REINICIA CON CADA SEÑAL DE AVANCE, no dispara a ciegas — es el vigía de
-  // silencio de Claude Code (su corredor de `git` hace
-  // `…` en cada línea de progreso). Un turno que habla
-  // no necesita que le añadamos bytes; el latido es para el que se calla.
+  // silencio de Claude Code, que se rearma con cada línea de progreso. Un turno
+  // que habla no necesita que le añadamos bytes; el latido es para el que se
+  // calla.
   const rearmar = () => {
     if (!options.latidoMs || closed) return;
     clearInterval(reloj);

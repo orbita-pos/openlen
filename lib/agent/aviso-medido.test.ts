@@ -131,10 +131,10 @@ describe("defectosConDireccion — qué entra y qué NO", () => {
   /**
    * LA CLASE MUERTA VA LA ÚLTIMA, y eso es la decisión, no un detalle de orden.
    *
-   * Claude Code ordena sus diagnósticos por severidad y recorta POR ABAJO
-   * (`…` y luego `slice(0, 10)`), así que lo que
-   * sobra del tope es siempre lo menos grave. Un script muerto deja la página
-   * inerte; un desborde la deja fea; un contraste malo la deja ilegible para
+   * Claude Code ordena sus diagnósticos por severidad y recorta POR ABAJO, así
+   * que lo que sobra del tope es siempre lo menos grave. Un script muerto deja
+   * la página inerte; un desborde la deja fea; un contraste malo la deja
+   * ilegible para
    * algunos; una clase que no pinta le quita un matiz de color. Es la menos
    * grave de las cuatro y por eso es la primera que se cae si no cabe.
    */
