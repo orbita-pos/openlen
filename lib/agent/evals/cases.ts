@@ -359,17 +359,30 @@ export function prometioYSeComprobo(ctx: {
   // para el instrumento— es la única definición de «se cumplió». (Mientras hubo
   // dos rutas, la del DSL y la JS, ya puntuaban con este mismo juez.)
   //
-  // ⚠️ POR QUÉ `jsFinal` SIGUE AQUÍ, ahora que la ruta JS puntúa: ya no es el
-  // pase libre que era —eso se cerró—, es lo que impide acusar de «no prometió»
-  // a un turno que SÍ prometió y cuya promesa no se pudo medir (sin `html`
-  // final que renderizar). Fail-open, la regla de siempre: no medir no es medir
-  // mal.
+  // ⚠️ POR QUÉ `jsFinal` SIGUE AQUÍ, ahora que la ruta JS puntúa: separa «no
+  // prometió» de «prometió y no se pudo medir» (sin `html` final que
+  // renderizar). Son dos hechos distintos y cada uno lleva su frase.
+  //
+  // 🔴 Y LO QUE NO SE PUDO COMPROBAR NO APRUEBA (2026-09-22), con el motivo
+  // dentro. Mientras esto medía sin puntuar, lo no medido se dejaba pasar:
+  // «no medir no es medir mal». Al promoverse a puerta de toda la batería
+  // manda la regla de un eval riguroso: lo que no pudo evaluarse no cuenta
+  // como aprobado, y dice por qué. Aquí no hay página de nadie a la que acusar;
+  // hay un caso que no se puede dar por bueno sin haberlo mirado. El turno del
+  // USUARIO sigue siendo fail-open (`verify.ts`): allí sí hay una página que no
+  // se acusa sin medirla.
   const jsFinal = ctx.pruebas[ctx.pruebas.length - 1]?.js ?? null;
   if (ctx.cumplimiento === null && jsFinal === null) {
     const rechazo = ctx.pruebas.find((p) => p.rechazo !== null)?.rechazo;
     return rechazo
       ? `mandó \`prueba_js\` y se descartó (${rechazo}): la promesa no llegó a existir`
       : "el turno terminó sin promesa viva: cambió el comportamiento y nadie comprobó que la página haga lo que promete";
+  }
+  if (ctx.cumplimiento === null) {
+    return "prometió, pero la promesa no se pudo comprobar: no quedó página final que renderizar";
+  }
+  if (!ctx.cumplimiento.corrio) {
+    return `prometió, pero la promesa no se pudo comprobar: ${ctx.cumplimiento.motivo ?? "sin motivo anotado"}`;
   }
   if (promesaIncumplida(ctx.cumplimiento)) {
     const f = (ctx.cumplimiento?.fallos ?? []).find((x) => x.deLaPrueba !== true);

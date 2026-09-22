@@ -754,6 +754,14 @@ describe("el cumplimiento de la promesa, separado de quién falló", () => {
     expect(h).toMatch(/verifyTurn[^\n]*opts\.visual/);
   });
 
+  // 🔴 LA PROMOCIÓN ES UNA LÍNEA, y una línea se borra sin que nada se ponga
+  // rojo: el juez seguiría verde en sus pruebas y la batería volvería a medir
+  // sin puntuar. Esto sujeta el cable, no la función.
+  it("🔴 la promesa medida PUNTÚA: el arnés la mete en el veredicto del caso", () => {
+    const h = readFileSync(join(process.cwd(), "lib", "agent", "evals", "harness.ts"), "utf8");
+    expect(h).toMatch(/if \(reason === null && promesaMedida\) reason = promesaMedida;/);
+  });
+
   it("🔴 y la puerta existe de verdad en verify.ts, antes de la llamada cara", () => {
     const v = readFileSync(join(process.cwd(), "lib", "agent", "verify.ts"), "utf8");
     expect(v).toMatch(/if \(params\.sinVision\) return conHechos\(fallbackVerdict\(\), hechos\);/);
@@ -990,11 +998,31 @@ describe("la ranura JS se puntúa como la del DSL", () => {
     expect(r).toMatch(/no se pudo aplicar/);
   });
 
-  // 🔴 FAIL-OPEN, que es la regla de siempre: si el render reventó, la promesa
-  // no se pudo medir y no medir NO es medir mal. `corrio: false` no acusa.
-  it("CONTRA-PRUEBA: si no se pudo medir, no acusa", () => {
+  // 🔴 LO QUE NO SE PUDO COMPROBAR NO APRUEBA (2026-09-22). Era fail-open
+  // mientras la promesa medía sin puntuar; promovida a puerta, un caso cuya
+  // promesa no se pudo mirar no puede darse por bueno. Y el motivo va DENTRO:
+  // «no pasó» sin porqué manda a buscar a ciegas.
+  it("🔴 si no se pudo medir, el caso no aprueba, y dice por qué", () => {
+    const r = prometioYSeComprobo({
+      pruebas: conJs,
+      cumplimiento: { ...jsCumplido, corrio: false, motivo: "el render reventó: Navigation timeout" },
+    });
+    expect(r).toMatch(/no se pudo comprobar/);
+    expect(r).toMatch(/Navigation timeout/);
+  });
+
+  it("…y prometer sin página final que renderizar tampoco aprueba — pero no se confunde con no prometer", () => {
+    const r = prometioYSeComprobo({ pruebas: conJs, cumplimiento: null });
+    expect(r).toMatch(/prometió, pero la promesa no se pudo comprobar/);
+    expect(r).not.toMatch(/sin promesa viva/);
+  });
+
+  // CONTRA-PRUEBA: la exigencia sigue siendo sólo para quien tocó el
+  // comportamiento. Sin eso, un render caído suspendería turnos de texto.
+  it("CONTRA-PRUEBA: un turno que no tocó el comportamiento no la necesita, se mida o no", () => {
+    const deTexto = [{ tool: "editar_texto", rechazo: null, js: "ui.clic('#a')", conducta: false }];
     expect(
-      prometioYSeComprobo({ pruebas: conJs, cumplimiento: { ...jsCumplido, corrio: false } }),
+      prometioYSeComprobo({ pruebas: deTexto, cumplimiento: { ...jsCumplido, corrio: false } }),
     ).toBeNull();
   });
 });
