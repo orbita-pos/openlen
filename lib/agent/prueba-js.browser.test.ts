@@ -181,3 +181,124 @@ describe("`atributoCambiaDe`: el mismo verbo que gano la spec", () => {
     expect(fallos[0]!.mensaje).toContain("disabled");
   }, 60_000);
 });
+
+// ─── LA RUTA JS, A LA ALTURA DEL DSL (2026-09-22) ───────────────────────────
+//
+// Para poder retirar el DSL, sus tres protecciones tenían que existir aquí: el
+// censo de clic muerto como precondición de `ui.clic`, `ui.desplaza` para lo
+// que se dispara al verse, y `{ cualquiera: true }` para un grupo sin id. Se
+// carga en ORIGEN REAL y con el preludio instalado, que es como corre en los
+// ojos: con `setContent` el censo no existe y todo sería fail-open.
+import { cargarEnOrigenReal } from "@/lib/ai/origen-de-medida";
+import { PRELUDIO_CENSO_CLIC } from "./behavior-spec";
+
+async function correrReal(html: string, codigo: string, opciones: { propia?: boolean } = {}) {
+  const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+  try {
+    const page = await browser.newPage();
+    await page.evaluateOnNewDocument(PRELUDIO_CENSO_CLIC);
+    await cargarEnOrigenReal(page, html);
+    return leerFallos(await page.evaluate(programaJs(codigo, opciones)));
+  } finally {
+    await browser.close();
+  }
+}
+
+// Sube AL VERSE y no cablea un solo clic. El relleno lo deja fuera de pantalla
+// al cargar, para que el observer no arranque solo.
+const SUBE_AL_VERSE = marco(`
+  <button id="empezar">Ver cifras</button>
+  <div style="height:3000px"></div>
+  <p id="numeros">0</p>
+  <script>
+    new IntersectionObserver(function (es) {
+      if (!es[0].isIntersecting) return;
+      document.getElementById("numeros").textContent = "5000";
+    }).observe(document.getElementById("numeros"));
+  <\/script>`);
+
+// Pestañas creadas con createElement: sin id, que es la familia que más fallaba.
+const PESTANAS_SIN_ID = marco(`
+  <nav id="nav"></nav><p id="panel">inicio</p>
+  <script>
+    ["inicio", "servicios"].forEach(function (n) {
+      var b = document.createElement("button");
+      b.className = "tab";
+      b.textContent = n;
+      b.addEventListener("click", function () { document.getElementById("panel").textContent = n + "!"; });
+      document.getElementById("nav").appendChild(b);
+    });
+  <\/script>`);
+
+describe("la ruta JS protege como el DSL", () => {
+  it("🔴 un clic sin manejador en la promesa DEL TURNO es fallo de la prueba, y nombra ui.desplaza", async () => {
+    const fallos = await correrReal(
+      SUBE_AL_VERSE,
+      'var t = await ui.texto("#numeros"); await ui.clic("#empezar"); await ui.cambiaDe("#numeros", t);',
+    );
+    expect(fallos).toHaveLength(1);
+    expect(fallos[0]!.deLaPrueba).toBe(true);
+    expect(fallos[0]!.mensaje).toContain('ui.desplaza("#empezar")');
+  }, 60_000);
+
+  it("🔴 …y en una promesa GUARDADA es la página que perdió su manejador: la regresión", async () => {
+    const fallos = await correrReal(SUBE_AL_VERSE, 'await ui.clic("#empezar");', { propia: false });
+    expect(fallos).toHaveLength(1);
+    expect(fallos[0]!.deLaPrueba).toBeUndefined();
+    expect(fallos[0]!.mensaje).toContain("ya no tiene manejador");
+  }, 60_000);
+
+  it("🔴 ui.desplaza arranca lo que se dispara al verse", async () => {
+    const fallos = await correrReal(
+      SUBE_AL_VERSE,
+      'var t = await ui.texto("#numeros"); await ui.desplaza("#numeros"); await ui.cambiaDe("#numeros", t);',
+    );
+    expect(fallos).toEqual([]);
+  }, 60_000);
+
+  it("CONTRA-PRUEBA: sin desplazar no cambia, así que la promesa no pasa de gratis", async () => {
+    const fallos = await correrReal(
+      SUBE_AL_VERSE,
+      'var t = await ui.texto("#numeros"); await ui.espera(200); await ui.cambiaDe("#numeros", t);',
+    );
+    expect(fallos).toHaveLength(1);
+    expect(fallos[0]!.deLaPrueba).toBeUndefined();
+  }, 60_000);
+
+  it("🔴 un grupo sin id se pulsa declarando que da igual cuál", async () => {
+    const fallos = await correrReal(
+      PESTANAS_SIN_ID,
+      'var t = await ui.texto("#panel"); await ui.clic(".tab", 1, { cualquiera: true }); await ui.cambiaDe("#panel", t);',
+    );
+    expect(fallos).toEqual([]);
+  }, 60_000);
+
+  it("…y sin declararlo no se adivina: se dicen las dos salidas", async () => {
+    const fallos = await correrReal(PESTANAS_SIN_ID, 'await ui.clic(".tab");');
+    expect(fallos).toHaveLength(1);
+    expect(fallos[0]!.deLaPrueba).toBe(true);
+    expect(fallos[0]!.mensaje).toMatch(/Afina el selector/);
+    expect(fallos[0]!.mensaje).toContain("cualquiera: true");
+  }, 60_000);
+
+  it("CONTRA-PRUEBA: la delegación en document cuenta — el guardia del programa no la tapa ni la inventa", async () => {
+    const DELEGADO = marco(`
+      <button id="suelto">x</button><p id="panel">antes</p>
+      <script>
+        document.addEventListener("click", function (e) {
+          if (e.target.id === "suelto") document.getElementById("panel").textContent = "despues";
+        });
+      </script>`);
+    const fallos = await correrReal(DELEGADO, 'await ui.clic("#suelto"); await ui.es("#panel", "despues");');
+    expect(fallos).toEqual([]);
+  }, 60_000);
+
+  it("CONTRA-PRUEBA: un botón con manejador no lo toca el censo", async () => {
+    const fallos = await correrReal(
+      PESTANAS_SIN_ID.replace('<nav id="nav"></nav>', '<nav id="nav"></nav><button id="solo">x</button>')
+        .replace("<\/script>", 'document.getElementById("solo").addEventListener("click", function () { document.getElementById("panel").textContent = "solo"; });<\/script>'),
+      'await ui.clic("#solo"); await ui.es("#panel", "solo");',
+    );
+    expect(fallos).toEqual([]);
+  }, 60_000);
+});
