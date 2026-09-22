@@ -41,7 +41,7 @@ import { randomUUID } from "node:crypto";
 
 import { abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
 import { crearDiarioDelTurno } from "@/lib/agent/diario-del-turno";
-import { actualizarSuite, marcarRegresiones, vivas } from "@/lib/agent/pruebas-de-la-pagina";
+import { actualizarSuite, marcarRegresiones, migrarSuite, pasosAJs, vivas } from "@/lib/agent/pruebas-de-la-pagina";
 import type { FalloSpec, PasoSpec } from "@/lib/agent/behavior-spec";
 import { registrarTurnoDelServidor } from "@/lib/projects/chat";
 import type { StoredChatTurn } from "@/lib/projects/types";
@@ -841,7 +841,7 @@ export async function POST(req: Request): Promise<Response> {
       // de los ojos, que ocurre dentro del bucle, y quien lo guarda es la
       // escritura del final. Ver PROMPT-la-suite-de-la-pagina.md.
       type SuiteDelTurno = {
-        turno?: { pasos: readonly PasoSpec[]; fallos: readonly FalloSpec[]; pagina: string | null };
+        turno?: { codigo: string; fallos: readonly FalloSpec[]; pagina: string | null };
         retirar: string[];
         /** Ids de las promesas que este turno llegó a correr, y de las que
          *  fallaron. Las necesita el contador: sin «cuáles se comprobaron», un
@@ -1115,7 +1115,14 @@ export async function POST(req: Request): Promise<Response> {
                   // Las promesas de ESTA página que siguen teniendo sentido.
                   // Se saca a una constante porque hacen falta dos veces: para
                   // los ojos, y para que el contador sepa cuáles se comprobaron.
-                  const promesasDeLaPagina = vivas(project.data.pruebas ?? [], paraLosOjos, pageSlug);
+                  // MIGRADAS AL LEER: las que se guardaron en DSL pasan a JS. La
+                  // que no se pueda convertir se conserva y no corre — y se dice.
+                  const migrada = migrarSuite(project.data.pruebas ?? []);
+                  if (migrada.sinMigrar.length > 0) {
+                    // eslint-disable-next-line no-console
+                    console.warn(`[agent] suite de la pagina: ${migrada.sinMigrar.length} promesa(s) en formato viejo sin convertir`);
+                  }
+                  const promesasDeLaPagina = vivas(migrada.suite, paraLosOjos, pageSlug);
                   // LAS OTRAS PÁGINAS QUE TOCÓ EL TURNO, por el mismo camino que
                   // la principal: con las fotos del dueño dentro, o sus huecos
                   // se leerían como imágenes rotas — que es exactamente lo que
@@ -1192,18 +1199,27 @@ export async function POST(req: Request): Promise<Response> {
                   // 🔴 NACE EN VERDE: la promesa sólo se guarda si NO falló,
                   // o sea con `fallosDelTurno` vacío. La decisión la toma
                   // `actualizarSuite`; aquí sólo se recoge el hecho.
+                  // LA PROMESA DEL TURNO, como programa JS: la de `prueba_js`,
+                  // o la del DSL convertida. Hasta hoy sólo entraba la del DSL,
+                  // y una promesa en JavaScript no se guardaba nunca.
+                  const codigoDelTurno =
+                    agentSession.behaviorJs?.trim() ||
+                    (agentSession.behaviorSpec?.length ? pasosAJs(agentSession.behaviorSpec) : null);
+                  // Las que NO corrieron no se cuentan como comprobadas: si no,
+                  // una rota que no se miró saldría «arreglada».
+                  const sinCorrer = new Set(verdict.guardadasSinCorrer ?? []);
                   suiteDelTurno = {
-                    ...(agentSession.behaviorSpec?.length
+                    ...(codigoDelTurno
                       ? {
                           turno: {
-                            pasos: agentSession.behaviorSpec,
+                            codigo: codigoDelTurno,
                             fallos: verdict.fallosDelTurno ?? [],
                             pagina: pageSlug,
                           },
                         }
                       : {}),
                     retirar: [...(verdict.retirarPruebas ?? [])],
-                    comprobadas: promesasDeLaPagina.map((p) => p.id),
+                    comprobadas: promesasDeLaPagina.filter((p) => !sinCorrer.has(p.id)).map((p) => p.id),
                     rotas: (verdict.regresiones ?? []).map((r) => r.id),
                   };
                   // LOS LÍMITES DE LA MEDIDA, AL REGISTRO Y A NINGÚN OTRO SITIO.
@@ -1376,7 +1392,9 @@ export async function POST(req: Request): Promise<Response> {
               // roto, desmarca las que han vuelto, y cuenta las tres cosas. De
               // este número sale la decisión que el plan dejó abierta — si una
               // regresión puede llegar a declarar rota la página.
-              const { suite: marcadas, cuenta } = marcarRegresiones(actual.pruebas ?? [], {
+              // Migrada también aquí: lo que se escribe de vuelta ya va en JS,
+              // y así la migración queda guardada sin un paso aparte.
+              const { suite: marcadas, cuenta } = marcarRegresiones(migrarSuite(actual.pruebas ?? []).suite, {
                 comprobadas: cambios.comprobadas,
                 rotas: cambios.rotas,
               });

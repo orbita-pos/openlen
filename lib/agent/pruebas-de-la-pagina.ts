@@ -33,7 +33,15 @@ import type { FalloSpec, PasoSpec } from "./behavior-spec";
 /** Una promesa que YA se cumplió una vez, guardada con la página. */
 export interface PruebaGuardada {
   readonly id: string;
-  readonly pasos: readonly PasoSpec[];
+  /** La promesa como programa JS sobre `ui.*` — la forma única desde el
+   *  2026-09-22, la misma que escribe el modelo en `prueba_js`. Una suite es
+   *  código en el lenguaje del proyecto, no un mini-lenguaje aparte. */
+  readonly codigo?: string;
+  /** ⚰️ LA FORMA VIEJA, el DSL. Sólo la lleva una guardada de antes de la
+   *  migración, y sólo mientras NO se haya podido convertir (`migrarSuite`):
+   *  una convertida pierde este campo. La que se queda con él no corre, pero
+   *  tampoco se tira — ver `migrarSuite`. */
+  readonly pasos?: readonly PasoSpec[];
   /** El slug de la página. `null` es la home (`data.html`). */
   readonly pagina: string | null;
   /** ms-epoch. Sólo desempata cuando el tope se llena. */
@@ -68,13 +76,146 @@ export function selectoresDe(pasos: readonly PasoSpec[]): string[] {
   return salida;
 }
 
+/** Los primitivos que reciben un selector como primer argumento. */
+const PRIMITIVOS_CON_SELECTOR =
+  "clic|desplaza|escribe|texto|estilo|atributo|visible|oculto|contiene|es|cambiaDe|estiloCambiaDe|atributoCambiaDe";
+
+/**
+ * Los selectores que un programa JS toca, leídos de sus llamadas a `ui.*` con un
+ * LITERAL de primer argumento, en orden. Uno construido en tiempo de ejecución
+ * no se ve, y por eso esa promesa se queda VIVA: retirar una comprobación por
+ * no saber leerla sería perderla en silencio (ver `vivas`). Si de verdad ya no
+ * señala a nada, lo dice el navegador con `deLaPrueba`.
+ */
+export function selectoresDelCodigo(codigo: string): string[] {
+  const re = new RegExp(
+    `\\bui\\.(?:${PRIMITIVOS_CON_SELECTOR})\\(\\s*("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')`,
+    "g",
+  );
+  const salida: string[] = [];
+  for (const m of codigo.matchAll(re)) {
+    const lit = m[1]!;
+    try {
+      salida.push(lit.startsWith('"') ? JSON.parse(lit) : lit.slice(1, -1).replace(/\\(.)/g, "$1"));
+    } catch {
+      // Un literal que no se sabe leer no se cuenta: se deja viva la promesa.
+    }
+  }
+  return salida;
+}
+
+/** Los selectores de una guardada, tenga la forma que tenga. */
+function selectoresDePrueba(prueba: Pick<PruebaGuardada, "codigo" | "pasos">): string[] {
+  return prueba.codigo !== undefined ? selectoresDelCodigo(prueba.codigo) : selectoresDe(prueba.pasos ?? []);
+}
+
 /** La firma de una promesa: qué toca, en orden. Dos pruebas con la misma firma
  *  son la misma promesa reescrita, no dos — si no, cada turno que repitiera su
  *  comprobación llenaría el tope él solo. */
-function firma(pasos: readonly PasoSpec[]): string {
-  return pasos
-    .map((p) => `${p.clic ?? ""}>${Object.keys(p.escribe ?? {}).join(",")}>${(p.entonces ?? []).map((e) => e.donde).join(",")}`)
-    .join("·");
+function firma(prueba: Pick<PruebaGuardada, "codigo" | "pasos">): string {
+  const sels = selectoresDePrueba(prueba);
+  // Sin un selector legible, la firma es el código mismo: si no, todas las
+  // promesas «opacas» de una página serían la misma y se pisarían entre sí.
+  if (sels.length === 0 && prueba.codigo !== undefined) return `js:${prueba.codigo.replace(/\s+/g, " ")}`;
+  return sels.join("·");
+}
+
+/**
+ * UNA PROMESA DEL DSL, ESCRITA EN JS SOBRE `ui.*` — la migración de la suite.
+ *
+ * Cada verbo del DSL tiene su primitivo, así que la conversión no pierde nada
+ * de lo que la promesa comprobaba: el mismo orden (desplazar, escribir,
+ * pulsar), el mismo grupo (`cualquiera`) y, para `cambia` / `estilo` /
+ * `atributo`, el ANTES leído antes de actuar —que es lo que el DSL hacía solo—.
+ * El antes se lee tolerando que el elemento aún no exista, como allí: que un
+ * panel APAREZCA también es cambiar.
+ *
+ * `null` si hay algo que no sabe escribir (un `que` desconocido, una
+ * expectativa sin el `valor` que necesita): quien migra conserva entonces la
+ * promesa vieja en vez de inventarse una que diga otra cosa.
+ */
+export function pasosAJs(pasos: readonly PasoSpec[]): string | null {
+  const q = (s: string) => JSON.stringify(s);
+  const lineas: string[] = [];
+  let necesitaLeer = false;
+  let v = 0;
+  for (const p of pasos) {
+    const grupo = p.cualquiera ? ", { cualquiera: true }" : "";
+    const antes: string[] = [];
+    const afirma: string[] = [];
+    for (const e of p.entonces ?? []) {
+      const d = q(e.donde);
+      switch (e.que) {
+        case "visible":
+          afirma.push(`await ui.visible(${d});`);
+          break;
+        case "oculto":
+          afirma.push(`await ui.oculto(${d});`);
+          break;
+        case "contiene":
+        case "es":
+          if (e.valor === undefined) return null;
+          afirma.push(`await ui.${e.que}(${d}, ${q(e.valor)});`);
+          break;
+        case "cambia": {
+          const a = `antes${v++}`;
+          necesitaLeer = true;
+          antes.push(`var ${a} = await leer(function () { return ui.texto(${d}); });`);
+          afirma.push(`await ui.cambiaDe(${d}, ${a});`);
+          break;
+        }
+        case "estilo":
+        case "atributo": {
+          if (e.valor === undefined) return null;
+          const a = `antes${v++}`;
+          const lee = e.que === "estilo" ? "estilo" : "atributo";
+          const afirmaVerbo = e.que === "estilo" ? "estiloCambiaDe" : "atributoCambiaDe";
+          necesitaLeer = true;
+          antes.push(`var ${a} = await leer(function () { return ui.${lee}(${d}, ${q(e.valor)}); });`);
+          afirma.push(`await ui.${afirmaVerbo}(${d}, ${q(e.valor)}, ${a});`);
+          break;
+        }
+        default:
+          return null;
+      }
+    }
+    lineas.push(...antes);
+    if (p.desplaza) lineas.push(`await ui.desplaza(${q(p.desplaza)}${grupo});`);
+    for (const [sel, valor] of Object.entries(p.escribe ?? {})) {
+      lineas.push(`await ui.escribe(${q(sel)}, ${q(valor)});`);
+    }
+    if (p.clic) lineas.push(`await ui.clic(${q(p.clic)}, ${p.veces ?? 1}${grupo});`);
+    lineas.push(...afirma);
+  }
+  if (lineas.length === 0) return null;
+  const leer = "var leer = async function (f) { try { return await f(); } catch (e) { return null; } };";
+  return [...(necesitaLeer ? [leer] : []), ...lineas].join("\n");
+}
+
+/**
+ * MIGRA LA SUITE AL LEERLA — las guardadas en DSL pasan a JS.
+ *
+ * Es la forma de las migraciones de Claude Code: corren solas al leer, son
+ * idempotentes, y lo viejo se sustituye SÓLO si la conversión salió bien. La
+ * que no se puede convertir se CONSERVA tal cual y se nombra en `sinMigrar`: no
+ * corre (no queda nada que ejecute el DSL), pero tampoco se tira en silencio.
+ */
+export function migrarSuite(guardadas: readonly PruebaGuardada[]): {
+  readonly suite: PruebaGuardada[];
+  readonly sinMigrar: string[];
+} {
+  const sinMigrar: string[] = [];
+  const suite = guardadas.map((prueba) => {
+    if (prueba.codigo !== undefined || !prueba.pasos) return prueba;
+    const codigo = pasosAJs(prueba.pasos);
+    if (codigo === null) {
+      sinMigrar.push(prueba.id);
+      return prueba;
+    }
+    const { pasos: _viejo, ...resto } = prueba;
+    return { ...resto, codigo };
+  });
+  return { suite, sinMigrar };
 }
 
 /**
@@ -87,23 +228,25 @@ function firma(pasos: readonly PasoSpec[]): string {
 export function guardarSiNaceEnVerde(
   guardadas: readonly PruebaGuardada[],
   turno: {
-    readonly pasos: readonly PasoSpec[];
+    /** La promesa del turno como programa JS (la de `prueba_js`). */
+    readonly codigo: string;
     readonly fallos: readonly FalloSpec[];
     readonly pagina: string | null;
     /** Inyectable para que las pruebas no dependan del reloj. */
     readonly ahora?: number;
   },
 ): PruebaGuardada[] {
-  if (turno.pasos.length === 0 || turno.fallos.length > 0) return [...guardadas];
+  const codigo = turno.codigo.trim();
+  if (!codigo || turno.fallos.length > 0) return [...guardadas];
 
-  const suya = firma(turno.pasos);
+  const suya = firma({ codigo });
   const cuando = turno.ahora ?? Date.now();
   const sinLaVieja = guardadas.filter(
-    (p) => !(p.pagina === turno.pagina && firma(p.pasos) === suya),
+    (p) => !(p.pagina === turno.pagina && firma(p) === suya),
   );
   const nueva: PruebaGuardada = {
     id: `p${cuando}`,
-    pasos: turno.pasos,
+    codigo,
     pagina: turno.pagina,
     creada: cuando,
   };
@@ -134,7 +277,7 @@ export function actualizarSuite(
   guardadas: readonly PruebaGuardada[],
   cambios: {
     readonly turno?: {
-      readonly pasos: readonly PasoSpec[];
+      readonly codigo: string;
       readonly fallos: readonly FalloSpec[];
       readonly pagina: string | null;
       readonly ahora?: number;
@@ -282,8 +425,10 @@ export function avisoDeRegresion(regresiones: readonly Regresion[]): string {
  */
 export function repartirFallos(
   fallos: readonly FalloSpec[],
-  pasosDelTurno: number,
   guardadas: readonly PruebaGuardada[],
+  /** ¿El programa 0 es la promesa del turno? Si no la hay, el 0 ya es la
+   *  primera guardada. */
+  conTurno: boolean,
 ): {
   readonly delTurno: FalloSpec[];
   readonly regresiones: Regresion[];
@@ -292,32 +437,24 @@ export function repartirFallos(
   const delTurno: FalloSpec[] = [];
   const regresiones: Regresion[] = [];
   const retirar: string[] = [];
+  const desfase = conTurno ? 1 : 0;
 
   for (const fallo of fallos) {
-    if (fallo.paso <= pasosDelTurno) {
+    // POR EL ÍNDICE DE PROGRAMA, no por el número de paso: un programa JS no
+    // tiene pasos fijos, y cortar por paso era justo lo que acusaba a una
+    // guardada de lo que había fallado otra.
+    const k = fallo.programa ?? 0;
+    if (conTurno && k === 0) {
       delTurno.push(fallo);
       continue;
     }
-    // Cuántos pasos han pasado ya, para encontrar a cuál de las guardadas
-    // pertenece este número.
-    let desde = pasosDelTurno;
-    let encontrada: PruebaGuardada | undefined;
-    let dentro = 0;
-    for (const prueba of guardadas) {
-      const hasta = desde + prueba.pasos.length;
-      if (fallo.paso > desde && fallo.paso <= hasta) {
-        encontrada = prueba;
-        dentro = fallo.paso - desde;
-        break;
-      }
-      desde = hasta;
-    }
+    const encontrada = guardadas[k - desfase];
     if (!encontrada) continue;
     if (fallo.deLaPrueba) {
       if (!retirar.includes(encontrada.id)) retirar.push(encontrada.id);
       continue;
     }
-    regresiones.push({ id: encontrada.id, paso: dentro, mensaje: fallo.mensaje });
+    regresiones.push({ id: encontrada.id, paso: fallo.paso, mensaje: fallo.mensaje });
   }
 
   return { delTurno, regresiones, retirar };
@@ -349,7 +486,7 @@ export function vivas(
 ): PruebaGuardada[] {
   return guardadas.filter((prueba) => {
     if (prueba.pagina !== pagina) return true;
-    return selectoresDe(prueba.pasos).every((selector) => {
+    return selectoresDePrueba(prueba).every((selector) => {
       const id = /^#([A-Za-z0-9_-]+)$/.exec(selector)?.[1];
       if (!id) return true;
       return new RegExp(`id=["']${id}["']`).test(html);

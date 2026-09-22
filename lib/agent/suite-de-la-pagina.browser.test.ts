@@ -49,6 +49,11 @@ const RUNTIME_ROTO = `
   });
 `;
 
+// El botón SIGUE cableado, pero ya no hace lo que prometía: el síntoma.
+const RUNTIME_MUDO = `
+  document.getElementById("agregar").addEventListener("click", function () {});
+`;
+
 const PROMESA: PruebaGuardada = {
   id: "p-carrito",
   pagina: null,
@@ -78,12 +83,20 @@ describe("la suite de la página, en Chromium", () => {
     expect(v.retirarPruebas ?? []).toEqual([]);
   }, 120_000);
 
+  it("CONTRA-PRUEBA: con el manejador puesto pero mudo, la regresión nombra lo que no cambió", async () => {
+    const v = await mirar(RUNTIME_MUDO, [PROMESA]);
+    expect(v.regresiones?.[0]?.id).toBe("p-carrito");
+    expect(v.regresiones?.[0]?.mensaje).toMatch(/#total/);
+  }, 120_000);
+
   it("🔴 el turno que rompe el carrito hace saltar la promesa, con su id", async () => {
     const v = await mirar(RUNTIME_ROTO, [PROMESA]);
     expect(v.fallback).toBe(false);
     expect(v.regresiones?.[0]?.id).toBe("p-carrito");
-    // El mensaje lo escribe el NAVEGADOR: nombra el elemento y lo que vio.
-    expect(v.regresiones?.[0]?.mensaje).toMatch(/#total/);
+    // El mensaje lo escribe el NAVEGADOR y nombra la CAUSA: este runtime roto
+    // le quitó el manejador a `#agregar`, y el censo lo para ahí antes de
+    // pulsar. (Con el DSL salía el síntoma, «#total no cambió».)
+    expect(v.regresiones?.[0]?.mensaje).toMatch(/#agregar ya no tiene manejador/);
   }, 120_000);
 
   // 🔴 LA OTRA MITAD DEL CICLO DE VIDA, y la que evita el peor final: una

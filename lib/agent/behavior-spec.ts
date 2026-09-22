@@ -452,6 +452,9 @@ export interface FalloSpec {
    *  disparar una reparación — «una prueba que no se pudo correr no acusa a
    *  nadie», la misma regla fail-soft que ya rige la spec mal formada. */
   readonly deLaPrueba?: boolean;
+  /** De QUÉ promesa es, cuando el programa corre varias (`programaSuiteJs`):
+   *  0 es la primera. Es lo que deja repartir sin cortar por número de paso. */
+  readonly programa?: number;
 }
 
 /**
@@ -968,10 +971,34 @@ export function leerFallos(bruto: unknown): FalloSpec[] {
     // `notaSpec`— las leería como «la página no cumplió» y acusaría a una
     // página sana por una prueba floja del modelo. Las recoge `leerVacuas`.
     if (f[2] === "vacua") continue;
+    // Y LO QUE NO LLEGÓ A CORRER tampoco es un fallo: ver `leerSinCorrer`.
+    if (f[2] === "sin_correr") continue;
     const deLaPrueba = f[2] === "prueba";
+    const programa = f.length > 3 && Number.isInteger(f[3]) ? Number(f[3]) : undefined;
     if (Number.isFinite(paso) && mensaje) {
-      out.push({ paso: paso + 1, mensaje: mensaje.slice(0, TOPE_MENSAJE), ...(deLaPrueba ? { deLaPrueba } : {}) });
+      out.push({
+        paso: paso + 1,
+        mensaje: mensaje.slice(0, TOPE_MENSAJE),
+        ...(deLaPrueba ? { deLaPrueba } : {}),
+        ...(programa !== undefined ? { programa } : {}),
+      });
     }
+  }
+  return out;
+}
+
+/**
+ * LAS PROMESAS QUE NO LLEGARON A CORRER, por su índice de programa — el techo
+ * de pared se agotó antes. No son fallos: quien las lea tiene que tratarlas
+ * como NO COMPROBADAS, ni rotas ni sanas. Sin este canal, una guardada que se
+ * quedó sin tiempo se contaría como comprobada y, si estaba rota, como
+ * arreglada sin haberla mirado.
+ */
+export function leerSinCorrer(bruto: unknown): number[] {
+  if (!Array.isArray(bruto)) return [];
+  const out: number[] = [];
+  for (const f of bruto) {
+    if (Array.isArray(f) && f[2] === "sin_correr" && Number.isInteger(f[3])) out.push(Number(f[3]));
   }
   return out;
 }

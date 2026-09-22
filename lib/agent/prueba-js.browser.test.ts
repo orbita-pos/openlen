@@ -302,3 +302,56 @@ describe("la ruta JS protege como el DSL", () => {
     expect(fallos).toEqual([]);
   }, 60_000);
 });
+
+// ─── LA MIGRACIÓN DICE LO MISMO QUE EL ORIGINAL ─────────────────────────────
+//
+// Una guardada en DSL pasa a JS con `pasosAJs`. Si la conversión cambiara lo
+// que la promesa comprueba, la suite migrada acusaría (o callaría) distinto que
+// la que se guardó. Se corren LAS DOS en Chromium sobre la misma página.
+import { pasosAJs } from "./pruebas-de-la-pagina";
+import { specProgram, type PasoSpec } from "./behavior-spec";
+
+async function correrDsl(html: string, pasos: readonly PasoSpec[]) {
+  const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+  try {
+    const page = await browser.newPage();
+    await page.evaluateOnNewDocument(PRELUDIO_CENSO_CLIC);
+    await cargarEnOrigenReal(page, html);
+    return leerFallos(await page.evaluate(specProgram(pasos)));
+  } finally {
+    await browser.close();
+  }
+}
+
+const CARRITO = (manejador: string) => marco(`
+  <button id="agregar">Añadir</button><b id="total">0 €</b>
+  <script>
+    document.getElementById("agregar").addEventListener("click", function () { ${manejador} });
+  <\/script>`);
+const SUMA = 'var t = document.getElementById("total"); t.textContent = (parseInt(t.textContent) + 5) + " €";';
+const PASOS_CARRITO: readonly PasoSpec[] = [
+  { clic: "#agregar", veces: 1, entonces: [{ donde: "#total", que: "cambia" }] },
+];
+
+describe("pasosAJs: la promesa migrada dice lo mismo que la original", () => {
+  it("🔴 en la página que funciona, las dos se cumplen", async () => {
+    expect(await correrDsl(CARRITO(SUMA), PASOS_CARRITO)).toEqual([]);
+    expect(await correrReal(CARRITO(SUMA), pasosAJs(PASOS_CARRITO)!)).toEqual([]);
+  }, 60_000);
+
+  it("🔴 en la que se rompió, las dos fallan acusando a la página", async () => {
+    const dsl = await correrDsl(CARRITO(""), PASOS_CARRITO);
+    const js = await correrReal(CARRITO(""), pasosAJs(PASOS_CARRITO)!);
+    expect(dsl).toHaveLength(1);
+    expect(js).toHaveLength(1);
+    expect(dsl[0]!.deLaPrueba).toBeUndefined();
+    expect(js[0]!.deLaPrueba).toBeUndefined();
+  }, 60_000);
+
+  it("🔴 con desplazar y grupo: lo que se dispara al verse y los botones sin id", async () => {
+    const js1 = pasosAJs([{ desplaza: "#numeros", veces: 1, entonces: [{ donde: "#numeros", que: "cambia" }] }])!;
+    expect(await correrReal(SUBE_AL_VERSE, js1)).toEqual([]);
+    const js2 = pasosAJs([{ clic: ".tab", cualquiera: true, veces: 1, entonces: [{ donde: "#panel", que: "cambia" }] }])!;
+    expect(await correrReal(PESTANAS_SIN_ID, js2)).toEqual([]);
+  }, 60_000);
+});
