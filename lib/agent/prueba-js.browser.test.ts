@@ -691,6 +691,21 @@ describe("el brazo sin acciones: ¿discrimina la promesa?", () => {
     expect(v[0]!.mensaje).toContain("ui.cambiaDe");
   }, 60_000);
 
+  // Hasta la primera acción los dos brazos son idénticos: lo que se afirma ahí
+  // es una precondición y compararlo no mide nada. La primera batería con el
+  // brazo marcaba así el `ui.visible("#inicio")` inicial de unas pestañas.
+  it("CONTRA-PRUEBA: lo que se afirma ANTES de actuar es una precondición, no se marca", async () => {
+    const v = await sinAcciones(
+      SOLO_EL_CLIC,
+      'await ui.contiene("#n", "0"); await ui.clic("#ver"); await ui.contiene("#n", "5,000");',
+    );
+    expect(v).toEqual([]);
+    // Y la misma afirmación DESPUÉS de actuar sí se marca: lo que cambia es
+    // el sitio, no el verbo.
+    const despues = await sinAcciones(SOLO_EL_CLIC, 'await ui.clic("#ver"); await ui.contiene("#n", "0");');
+    expect(despues).toHaveLength(1);
+  }, 60_000);
+
   it("CONTRA-PRUEBA: lo que sólo mueve la acción SÍ discrimina", async () => {
     const codigo =
       'var t = await ui.texto("#n"); await ui.clic("#ver"); await ui.cambiaDe("#n", t); await ui.contiene("#n", "5,000");';

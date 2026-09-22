@@ -449,13 +449,21 @@ export function programaSuiteJs(entradas: readonly EntradaDePrograma[]): string 
   // pide la batería, ver \`programaSinAccionesJs\`— no corta el programa: lo
   // que se cumple aun sin actuar se anota como que no discrimina, y lo que no
   // se cumple es lo esperado. El techo de pared sigue mandando.
+  //
+  // 🔴 SÓLO DESPUÉS DE LA PRIMERA ACCIÓN. Hasta ahí los dos brazos corren en
+  // condiciones idénticas, así que comparar una afirmación de ese tramo no
+  // mide nada: es una PRECONDICIÓN («la primera pestaña se ve»), no algo que
+  // la promesa diga de la acción. Lo enseñó la primera batería con el brazo
+  // (2026-09-22): uno de sus tres avisos era justo eso.
   async function afirmar(descr, fn) {
     presupuesto();
     n++;
     if (!SIN_ACCIONES) { await hasta(fn); return; }
     try {
       await hasta(fn);
-      vacuasDe.push([n - 1, descr + " se cumple también sin tus acciones, así que no dice nada de ellas", "vacua", ACTUAL]);
+      if (acciones > 0) {
+        vacuasDe.push([n - 1, descr + " se cumple también sin tus acciones, así que no dice nada de ellas", "vacua", ACTUAL]);
+      }
     } catch (e) {
       if (e && e.__tiempo) throw e;
     }
