@@ -59,11 +59,18 @@ function sesionFalsa(): AgentSession {
 
 const okOutcome: ToolOutcome = { response: { ok: true } };
 
+/** Lo que devuelve la herramienta real, en lo que importa aquí: reescribir el
+ *  runtime SIEMPRE cambia el comportamiento (`nuevoRuntime !== null` en
+ *  `toolEditarPagina`); las demás puertas, en estos guiones, no. */
+const salidaReal = (name: string): ToolOutcome =>
+  name === "editar_runtime" ? { response: { ok: true }, cambioConducta: true } : okOutcome;
+
 /** Corre el bucle de verdad con el envoltorio de verdad. `guion` dice qué le
  *  pasa a la SESIÓN en cada llamada — que es lo que hace la herramienta real. */
 async function correr(
   nombres: string[],
   guion: (session: AgentSession, name: string, vuelta: number) => void,
+  salida: (name: string) => ToolOutcome = salidaReal,
 ): Promise<PromesasDelArnes> {
   const session = sesionFalsa();
   const promesas: PromesasDelArnes = { spec: null, js: null, suite: [], declaradas: [] };
@@ -78,7 +85,7 @@ async function correr(
       ejecutar: async (name) => {
         guion(session, name, vuelta);
         vuelta += 1;
-        return okOutcome;
+        return salida(name);
       },
       promesas,
     }),
@@ -130,6 +137,16 @@ describe("el arnés anota lo que el modelo promete — la costura de §2", () =>
     });
     expect(p.declaradas[0]?.js).toBe("export default () => {}");
     expect(p.js).toBe("export default () => {}");
+  });
+
+  // 🔴 SI TOCÓ COMPORTAMIENTO, con la decisión del producto. Sin este dato el
+  // juez exigía promesa a cualquier edición: 32 de 64 acusados por un texto.
+  it("🔴 anota si la llamada cambió el comportamiento, leído del resultado", async () => {
+    const p = await correr(["editar_texto", "editar_runtime"], () => {});
+    expect(p.declaradas.map((d) => [d.tool, d.conducta])).toEqual([
+      ["editar_texto", false],
+      ["editar_runtime", true],
+    ]);
   });
 });
 

@@ -166,6 +166,10 @@ export function anotarPromesas(opts: {
           // Y POR QUÉ, cuando el rechazo fue `sin_accion`: contar el 56% no
           // dice nada; contar la CLASE de forma dice qué reparar.
           ...(session.ultimaClaseSinAccion ? { clase: session.ultimaClaseSinAccion } : {}),
+          // SI TOCÓ COMPORTAMIENTO, con la decisión del propio producto. Sin
+          // esto el juez exigía promesa a cualquier edición, y en la batería
+          // del 2026-09-22 acusaba a 32 turnos que sólo cambiaron un texto.
+          conducta: r.cambioConducta === true,
         });
       }
     }
