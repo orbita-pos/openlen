@@ -207,3 +207,11 @@ scratch/creative-sandbox/
 # Las paginas usan los .webp; los .png se quedan en el disco de Jesus como
 # original por si alguna vez hace falta re-exportar.
 designs/fotografo/**/*.png
+
+# Notas de trabajo de cada sesion —prompts de continuacion, informes, borradores
+# de ensayos— en la raiz. Son del disco de Jesus, no del repo. Anclado a la raiz:
+# los .md de docs/ y de cada carpeta siguen rastreandose.
+/PROMPT-*.md
+/INFORME-*.md
+/ENSAYO-*.md
+/ESSAY-*.md
