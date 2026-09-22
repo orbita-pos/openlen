@@ -41,7 +41,7 @@ import { randomUUID } from "node:crypto";
 
 import { abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
 import { crearDiarioDelTurno } from "@/lib/agent/diario-del-turno";
-import { actualizarSuite, marcarRegresiones, migrarSuite, pasosAJs, vivas } from "@/lib/agent/pruebas-de-la-pagina";
+import { actualizarSuite, marcarRegresiones, migrarSuite, vivas } from "@/lib/agent/pruebas-de-la-pagina";
 import type { FalloSpec, PasoSpec } from "@/lib/agent/behavior-spec";
 import { registrarTurnoDelServidor } from "@/lib/projects/chat";
 import type { StoredChatTurn } from "@/lib/projects/types";
@@ -1152,13 +1152,10 @@ export async function POST(req: Request): Promise<Response> {
                       : {}),
                     ...(gemeloParaLosOjos ? { taggedHtml: gemeloParaLosOjos } : {}),
                     runtime: fresco.code,
-                    // LO QUE EL MODELO PROMETIÓ que su código haría. La declara
-                    // en el mismo edit que escribe el JavaScript y vive en la
-                    // sesión; sin ella, los ojos pulsan a ciegas y sólo ven lo
-                    // que EXPLOTA — nunca lo que simplemente no cumple.
-                    spec: agentSession.behaviorSpec ?? null,
-                    // LA RANURA RESERVADA (forma de `preflight.js`). Cuando
-                    // viene, es ella la que corre; ver `VerifyParams.pruebaJs`.
+                    // LO QUE EL MODELO PROMETIÓ que su código haría, como
+                    // programa (`prueba_js`). Vive en la sesión; sin ella, los
+                    // ojos pulsan a ciegas y sólo ven lo que EXPLOTA — nunca lo
+                    // que simplemente no cumple.
                     pruebaJs: agentSession.behaviorJs ?? null,
                     // LAS PROMESAS QUE ESTA PÁGINA YA CUMPLIÓ. Van con la del
                     // turno en el mismo programa del navegador: sin esto, una
@@ -1199,12 +1196,9 @@ export async function POST(req: Request): Promise<Response> {
                   // 🔴 NACE EN VERDE: la promesa sólo se guarda si NO falló,
                   // o sea con `fallosDelTurno` vacío. La decisión la toma
                   // `actualizarSuite`; aquí sólo se recoge el hecho.
-                  // LA PROMESA DEL TURNO, como programa JS: la de `prueba_js`,
-                  // o la del DSL convertida. Hasta hoy sólo entraba la del DSL,
-                  // y una promesa en JavaScript no se guardaba nunca.
-                  const codigoDelTurno =
-                    agentSession.behaviorJs?.trim() ||
-                    (agentSession.behaviorSpec?.length ? pasosAJs(agentSession.behaviorSpec) : null);
+                  // LA PROMESA DEL TURNO, la de `prueba_js`: entra en la suite
+                  // si nació en verde.
+                  const codigoDelTurno = agentSession.behaviorJs?.trim() || null;
                   // Las que NO corrieron no se cuentan como comprobadas: si no,
                   // una rota que no se miró saldría «arreglada».
                   const sinCorrer = new Set(verdict.guardadasSinCorrer ?? []);

@@ -65,16 +65,12 @@ describe("el motivo del fallo cruza los cinco eslabones", () => {
   // ─────────────────────────────────────────────────────────────────────────
   // EL ÁMBAR CRUZA LOS MISMOS ESLABONES (2026-09-18).
   //
-  // Una prueba de comportamiento descartada no es un fallo —la edición se
-  // guardó— así que no pasa por el camino del rojo. Tiene el suyo, y se
-  // rompería igual de callado: la herramienta lo pone en la respuesta, el
-  // bucle lo traduce a `warning`, y la tarjeta lo pinta.
-  it("la herramienta DECLARA la prueba descartada en su respuesta", () => {
-    const tools = lee("lib", "agent", "tools.ts");
-    expect(tools).toMatch(/extra\.prueba_descartada = \{/);
-  });
-
-  it("el bucle la traduce a ÁMBAR, no a verde ni a rojo", () => {
+  // Un aviso sobre una edición que SÍ se guardó no es un fallo, así que no
+  // pasa por el camino del rojo. Tiene el suyo, y se rompería igual de
+  // callado: la herramienta lo pone en la respuesta, el bucle lo traduce a
+  // `warning`, y la tarjeta lo pinta. (Nació para la prueba descartada, que
+  // desde el 2026-09-22 rechaza la llamada entera: ésa ya va por el rojo.)
+  it("el bucle traduce el aviso a ÁMBAR, no a verde ni a rojo", () => {
     const loop = lee("lib", "agent", "loop.ts");
     expect(loop).toContain("avisoParaElDueno");
     expect(loop).toMatch(/status: ok \? \(descartada \? "warning" : "done"\) : "error"/);
@@ -96,8 +92,14 @@ describe("el motivo del fallo cruza los cinco eslabones", () => {
     expect(motivo).toContain("respuesta.aviso_critico");
   });
 
-  it("y el rechazo se CUENTA, que es el peldaño de Claude Code que faltaba", () => {
+  // El rechazo se CUENTA llamada a llamada: la herramienta lo deja en la sesión
+  // y el arnés lo anota en cada entrada (`rechazo`), así que «se arregló en la
+  // siguiente» se lee de la secuencia. Hasta el 2026-09-22 lo llevaba además un
+  // contador propio del DSL (`seguimientoDelRechazo`), que se fue con él.
+  it("y el rechazo se CUENTA, llamada a llamada", () => {
     const tools = lee("lib", "agent", "tools.ts");
-    expect(tools).toContain("seguimientoDelRechazo");
+    expect(tools).toContain("session.rechazoPrueba = js.reason");
+    const arnes = lee("lib", "agent", "evals", "promesas.ts");
+    expect(arnes).toContain("rechazo: session.rechazoPrueba");
   });
 });

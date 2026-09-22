@@ -440,22 +440,9 @@ async function main(): Promise<void> {
       `Promesa declarada (puntúa en los casos que lo afirman): ${conPromesa.length} caso(s) la declararon, ${corrieron.length} se ejecutaron — ` +
         `${dePagina.length} incumplida(s) por LA PÁGINA, ${deLaPrueba.length} fallida(s) por EL INSTRUMENTO.`,
     );
-    // 🔴 Y LA FORMA DE LA QUE ENTRÓ, que es la pregunta que el informe no
-    // podía contestar: se veía «arreglada tras un rechazo» y no CON QUÉ.
-    // `formaDePrueba` lista las CLAVES de cada paso, así que un `desplaza` se
-    // lee directamente aquí. Va por caso y no agregado: son pocas líneas y la
-    // forma es justo el detalle que se pierde al resumir.
-    //
-    // 🔴 Y DEBAJO, LA PRUEBA ENTERA — porque la forma sola dejó una pregunta
-    // colgada el 21/09. Se leyó `[{clic,veces,entonces[1]}]` en un caso cuyo
-    // runtime tenía 0 listeners de clic, y de ahí no se puede saber si el clic
-    // movió algo o si el contador cambió solo y la promesa se cumplió sin
-    // probar nada. Los selectores lo contestan de una. Son ≤6 pasos
-    // (`MAX_PASOS`), así que cabe entero y no hace falta recortarlo.
-    for (const r of conPromesa) {
-      console.log(`  · ${r.id}: ${r.cumplimiento?.forma}`);
-      console.log(`      ${JSON.stringify(r.cumplimiento?.pasos ?? [])}`);
-    }
+    // ⚰️ AQUÍ SE IMPRIMÍAN LA FORMA Y LOS PASOS de la prueba del DSL, para poder
+    // leer SOBRE QUÉ pulsaba. Retirado el DSL (2026-09-22), la promesa es un
+    // programa y sale entero en la sección de `prueba_js`, más abajo.
     // 🔴 LAS QUE NO SE PUDIERON COMPROBAR, CON SU MOTIVO. Su grader lo mete
     // dentro del resultado, en vez de dejar un hueco fuera de él.
     // Aquí el recuento ya salía arriba («N declararon, M se ejecutaron») pero
@@ -510,13 +497,13 @@ async function main(): Promise<void> {
     // batería —el arnés no le pasaba `pruebaJs` a los ojos— así que un caso
     // podía pasar con una promesa JS que nadie corrió.
     //
-    // ⚠️ YA PUNTÚA (2026-09-21 noche): viaja por `cumplimiento` como la del
-    // DSL, así que una promesa JS incumplida SUSPENDE el caso. Esta línea es el
-    // detalle de la ruta —el código que mandó—, no un canal aparte.
+    // ⚠️ PUNTÚA: viaja por `cumplimiento`, así que una promesa incumplida
+    // SUSPENDE el caso. Esta línea es el detalle —el código que mandó—, no un
+    // canal aparte. (Desde el 2026-09-22 es la única forma de prometer.)
     const corridas = conJs.filter((r) => r.pruebaJsFallos !== undefined);
     const rotas = corridas.filter((r) => (r.pruebaJsFallos ?? []).length > 0);
     console.log(
-      `Ruta \`prueba_js\` (puntúa igual que el DSL): ${conJs.length} caso(s) la usaron, ` +
+      `El programa de cada promesa (\`prueba_js\`): ${conJs.length} caso(s) la mandaron, ` +
         `${corridas.length} se ejecutaron — ${rotas.length} incumplida(s).`,
     );
     for (const r of conJs) {
@@ -537,33 +524,15 @@ async function main(): Promise<void> {
     for (const r of conPuertas) {
       const detalle = (r.declaradas ?? [])
         .map((d) => {
-          const rechazo = d.rechazo ? `✗${d.rechazo}${d.clase ? `/${d.clase}` : ""}` : null;
-          const estado = d.js ? "js" : d.spec ? `spec[${d.spec.length}]` : rechazo ?? "sin prueba";
+          const estado = d.js ? "js" : d.rechazo ? `✗${d.rechazo}` : "sin prueba";
           return `${d.tool}:${estado}`;
         })
         .join(" · ");
       console.log(`  · ${r.id}: ${detalle}`);
     }
-    // 🔴 EL REPARTO POR CLASE DE FORMA.
-    //
-    // `sin_accion` es el 56% de las llamadas a `editar_runtime` en producción
-    // (9 de 16, 2026-09-21) y cinco intentos de arreglarlo con TEXTO fallaron.
-    // Lo único que funcionó fue REPARAR la entrada, y cuál reparar ahora se
-    // decidía a ojo. Esto lo cuenta: `sin_id` es la familia de `createElement`
-    // —la que no tenía reparación— y su número es el que justifica escribirla.
-    const clases = new Map<string, number>();
-    for (const r of results) {
-      for (const d of r.declaradas ?? []) {
-        if (d.clase) clases.set(d.clase, (clases.get(d.clase) ?? 0) + 1);
-      }
-    }
-    if (clases.size > 0) {
-      const orden = [...clases.entries()].sort((a, b) => b[1] - a[1]);
-      console.log(
-        `  sin_accion por CLASE: ${orden.map(([c, n]) => `${c}=${n}`).join(" · ")}` +
-          " (sin_listener no se repara; sin_id sólo si el runtime cablea un grupo)",
-      );
-    }
+    // ⚰️ AQUÍ SE CONTABA `sin_accion` POR CLASE DE FORMA, para decidir qué
+    // reparación del DSL escribir. Con el DSL retirado no hay `sin_accion`: sus
+    // protecciones viven en los primitivos `ui.*`.
   }
   // 🔴 LA PROMESA, MEDIDA EN TODA LA BATERÍA Y PUNTUANDO EN TRES.
   //

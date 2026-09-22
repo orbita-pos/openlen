@@ -44,7 +44,6 @@ import type { VerifyOutcome } from "@/lib/agent/loop";
 import {
   actualizarSuite,
   marcarRegresiones,
-  pasosAJs,
   vivas,
   type PruebaGuardada,
 } from "@/lib/agent/pruebas-de-la-pagina";
@@ -752,7 +751,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
   // gasto; tras el loop, el estado FINAL se juzga (reusando el veredicto
   // in-loop cuando ya juzgó exactamente ese estado).
   // La memoria de las promesas de esta corrida. Ver `PromesasDelArnes`.
-  const promesas: PromesasDelArnes = { spec: null, js: null, suite: [], declaradas: [] };
+  const promesas: PromesasDelArnes = { js: null, suite: [], declaradas: [] };
   let inLoopVerdict: VisualVerdict | null = null;
   let visionIn = 0;
   let visionOut = 0;
@@ -763,7 +762,6 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
       // COMO LA RUTA: la promesa de ESTE turno y las que la página ya
       // cumplió. Sin las dos, el arnés no comprueba comportamiento —ni el
       // declarado ni el que ya funcionaba— y aprueba por no haber mirado.
-      spec: promesas.spec,
       // LA OTRA RUTA, que la ruta de producción pasa desde el 2026-09-04 y el
       // arnés no pasaba: sin esto una promesa escrita en JavaScript no se
       // EJECUTA en la batería, y el caso la da por buena sin haberla corrido.
@@ -802,12 +800,10 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
           retirar: [...(v.retirarPruebas ?? [])],
           documento: html,
           pagina: null,
-          // COMO LA RUTA: la promesa del turno entra como programa JS, venga
-          // por `prueba_js` o convertida desde el DSL.
-          ...((): { turno?: { codigo: string; fallos: readonly FalloSpec[]; pagina: null } } => {
-            const codigo = promesas.js?.trim() || (promesas.spec?.length ? pasosAJs(promesas.spec) : null);
-            return codigo ? { turno: { codigo, fallos: v.fallosDelTurno ?? [], pagina: null } } : {};
-          })(),
+          // COMO LA RUTA: la promesa del turno entra si nació en verde.
+          ...(promesas.js?.trim()
+            ? { turno: { codigo: promesas.js.trim(), fallos: v.fallosDelTurno ?? [], pagina: null } }
+            : {}),
         });
         // Y LOS CUATRO ESTADOS, no dos: colapsar `observado` y `no_mirado`
         // en `bien` es medir un producto que no existe — allí una
@@ -897,12 +893,11 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     // no llegaba a `verifyEditedPage`, `cumplimiento` se quedaba en null y
     // `prometioYSeComprobo` la dejaba pasar por su escape de `jsFinal` — el pase
     // libre otra vez, por la puerta de atrás.
-    if (finalData.html && (promesas.spec?.length || promesas.js || muto)) {
+    if (finalData.html && (promesas.js || muto)) {
       try {
         const v = await verifyEditedPage({
           html: finalData.html,
           userPrompt: evalCase.prompt,
-          spec: promesas.spec,
           // Ver la llamada de `judge`: sin esto la ranura JS se declara y no se
           // corre, y `cumplimiento` se queda en null con la promesa sin mirar.
           pruebaJs: promesas.js,
@@ -922,7 +917,6 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
         if (promesas.js) pruebaJsFallos = v.fallosDelTurno ?? [];
         cumplimiento = cumplimientoDelTurno({
           js: promesas.js,
-          spec: promesas.spec,
           fallos: v.fallosDelTurno ?? [],
           vacuas: v.vacuasDelTurno ?? [],
           corrio: true,
@@ -943,7 +937,6 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
         // un `[]`, que diría «corrió y salió limpia».
         cumplimiento = cumplimientoDelTurno({
           js: promesas.js,
-          spec: promesas.spec,
           fallos: [],
           vacuas: [],
           corrio: false,

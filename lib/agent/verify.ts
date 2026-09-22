@@ -36,11 +36,9 @@ import {
   leerVacuas,
   PRELUDIO_CENSO_CLIC,
   type FalloSpec,
-  type PasoSpec,
 } from "@/lib/agent/behavior-spec";
 import {
   migrarSuite,
-  pasosAJs,
   repartirFallos,
   type PruebaGuardada,
   type Regresion,
@@ -241,12 +239,6 @@ export interface VerifyParams {
   runtime?: string | null;
   /** El pedido original del usuario este turno — contexto de intención. */
   userPrompt: string;
-  /** LO QUE EL MODELO PROMETIÓ que su código haría, si lo declaró.
-   *
-   *  Sin esto los ojos sólo responden «¿explotó?». Una ruleta que gira y no
-   *  para nunca carga limpia, sale perfecta en la foto y no lanza un error —
-   *  y está rota. Ausente ⇒ se pulsa a ciegas como hasta ahora. */
-  spec?: readonly PasoSpec[] | null;
   /**
    * LAS PROMESAS QUE ESTA PÁGINA YA CUMPLIÓ, para volver a comprobarlas.
    *
@@ -256,13 +248,14 @@ export interface VerifyParams {
    * comporta exactamente como antes de que la suite existiera.
    */
   guardadas?: readonly PruebaGuardada[] | null;
-  /** LA PRUEBA EN JAVASCRIPT del turno — la ranura reservada, con la forma de
-   *  `preflight.js`. Cuando viene, es ELLA la que corre.
+  /** LO QUE EL MODELO PROMETIÓ que su código haría, como programa sobre `ui.*`
+   *  (`prueba_js`). Corre en el mismo programa que las guardadas, delante.
    *
-   *  ⚠️ Las promesas GUARDADAS no viajan con ella: se reparten por índice de
-   *  paso (`repartirFallos`) y un programa JS no los tiene, así que mezclarlas
-   *  atribuiría un fallo del turno a una promesa vieja. Con `pruebaJs` esta
-   *  vuelta NO comprueba regresiones — y eso se dice, no se finge. */
+   *  Sin esto los ojos sólo responden «¿explotó?». Una ruleta que gira y no
+   *  para nunca carga limpia, sale perfecta en la foto y no lanza un error —
+   *  y está rota. Ausente ⇒ se pulsa a ciegas como hasta ahora.
+   *
+   *  ⚰️ Aquí vivía también `spec`, la promesa del DSL retirado el 2026-09-22. */
   pruebaJs?: string | null;
   /**
    * EL PROYECTO AL QUE PERTENECE LA PÁGINA, para medir el MISMO documento que
@@ -819,17 +812,13 @@ async function runVerify(
   // lleva por delante el carrito de hace seis turnos no trae prueba propia, y
   // es justo la que hay que cazar.
   //
-  // 🔴 UN SOLO LENGUAJE PARA CORRER. La promesa del turno va como programa JS:
-  // la de `prueba_js` tal cual, o la del DSL convertida con el mismo
-  // conversor que migra la suite. Así la ruta JS deja de ser la que se saltaba
-  // las regresiones — hasta hoy, con ella sólo corría su programa y las
-  // guardadas se quedaban sin mirar.
-  const delTurno = params.spec ?? [];
+  // 🔴 UN SOLO LENGUAJE PARA CORRER: el programa de `prueba_js`, y detrás las
+  // guardadas, también en JS (migradas al leerlas si venían del DSL).
   // Migradas también AQUÍ, no sólo en quien llama: la migración corre donde se
   // lee, y un llamador que pase la forma vieja no puede dejarlas sin correr.
   const guardadas = migrarSuite(params.guardadas ?? []).suite;
   const js = params.pruebaJs?.trim() ? params.pruebaJs.trim() : null;
-  const turnoJs = js ?? (delTurno.length > 0 ? pasosAJs(delTurno) : null);
+  const turnoJs = js;
   // Una guardada en formato viejo que no se pudo convertir no tiene quien la
   // corra: no se ejecuta, y se dice (ver `migrarSuite`).
   const corribles = guardadas.filter((g) => g.codigo !== undefined);

@@ -128,7 +128,8 @@ const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
 };
 
 
-const RUNTIME_MANDA_PRUEBA = 'SIEMPRE QUE CAMBIES EL COMPORTAMIENTO de la página, haz TODO ese cambio aquí —editar el marcado no cambia el comportamiento— y MANDA TAMBIÉN `prueba`: una lista corta (máx 6 pasos) de lo que tu código DEBE hacer, que se ejecuta en un navegador de verdad justo después de guardar. Cada paso: {clic:"#selector o el TEXTO del botón", desplaza?:"#selector", veces?:N, escribe?:{"#campo":"valor"}, entonces:[{donde:"#selector", que:"cambia"|"contiene"|"es"|"visible"|"oculto"|"estilo"|"atributo", valor?:"texto"}]}. 🔴 SI EL BOTÓN NO TIENE id —porque lo cableas por clase, o porque lo creas con createElement— NÓMBRALO POR SU TEXTO: {clic:"Añadir al carrito"} se busca entre lo pulsable de la página igual que lo haría una persona, y vale también para los botones que sólo existen tras ejecutar tu código. Un texto que case con VARIOS botones no vale (te lo diré); afina con el texto completo. 🔴 Y LO MISMO VALE PARA EL `donde` DE CADA `entonces`: debe señalar UN elemento. Si señala varios, esa expectativa no comprueba nada y te quedas sin medir eso. Para una colección —diapositivas, tarjetas, filas— apunta al elemento concreto que cambia o al contenedor cuyo contenido cambia, nunca a la clase que llevan todos. 🔴 SI LO QUE CABLEASTE NO SE DISPARA PULSANDO SINO AL VERSE —un contador que sube con IntersectionObserver, un revelado al bajar— la acción es `desplaza`: {desplaza:"#numeros", entonces:[{donde:"#numeros", que:"cambia"}]}. Lleva el elemento al viewport, que es lo que la arranca; sin eso tu prueba sólo MIRA y te la rechazo. Lo que tarda en cumplirse NO necesita nada: ya se espera solo. Ejemplo para una ruleta: [{clic:"#girar", entonces:[{donde:"#resultado", que:"cambia"}]}]. Para un carrito: [{clic:"#add", veces:3, entonces:[{donde:"#total", que:"es", valor:"3"}]}]. Cuando lo que cambia es el ESTADO de un control y no su texto —un botón que deja de estar `disabled`, un acordeón que pasa a `aria-expanded="true"`— usa `que:"atributo"` con el NOMBRE del atributo en `valor`: {donde:"#enviar", que:"atributo", valor:"disabled"}; comprueba que CAMBIE, no lo compares con un valor. Si lo que cambia es el ASPECTO, ése es `que:"estilo"`. SI EL CONTROL QUE PULSAS EXIGE CAMPOS, RELLÉNALOS EN EL MISMO PASO con `escribe`: el navegador no dispara el `submit` de un formulario al que le falta un `required`, así que tu manejador ni llega a correr y la prueba fallaría por la validación, no por tu código. NO es opcional: se ejecuta de verdad y es la ÚNICA forma de saber si lo que cableaste FUNCIONA. Recoger errores sólo ve lo que EXPLOTA, y los dos fallos que de verdad pasan no explotan — un script mal cableado puede dejar un botón MUDO (no hace nada, consola limpia) y una ruleta puede girar y no parar nunca.';
+const RUNTIME_MANDA_PRUEBA =
+  'SIEMPRE QUE CAMBIES EL COMPORTAMIENTO de la página, haz TODO ese cambio aquí —editar el marcado no cambia el comportamiento— y MANDA TAMBIÉN `prueba_js`: un programa corto que dice lo que tu código DEBE hacer, y que se ejecuta en un navegador de verdad justo después de guardar. NO es opcional: es la ÚNICA forma de saber si lo que cableaste FUNCIONA. Recoger errores sólo ve lo que EXPLOTA, y los dos fallos que de verdad pasan no explotan — un script mal cableado puede dejar un botón MUDO (no hace nada, consola limpia) y una ruleta puede girar y no parar nunca.';
 
 /**
  * EJEMPLOS DE USO de las cuatro herramientas de edicion.
@@ -159,7 +160,7 @@ export const EJEMPLOS_EDITAR_ATRIBUTOS = ` EJEMPLOS — entradas COMPLETAS, copi
 export const EJEMPLOS_EDITAR_HTML = ` EJEMPLOS — entradas COMPLETAS, copia la forma: (1) EL VELO BAJO EL TEXTO — asi se arregla NO SE LEE EL TEXTO ENCIMA DE LA IMAGEN, JAMAS quitando la foto: {"ediciones":[{"target":"styles","op":"insert_after","new_html":".hero-copy{position:relative;z-index:2;background:linear-gradient(90deg,rgba(255,255,255,.92),rgba(255,255,255,.45));padding:2.5rem;border-radius:1rem}"}],"resumen":"velo bajo el texto del hero para que se lea sobre la foto"}. (2) TRADUCIR — el idioma es obligatorio al traducir: {"ediciones":[{"target":"idioma","op":"replace","new_html":"en"}],"resumen":"la página pasa a inglés"}. (3) UNA SECCION NUEVA detras de otra: {"ediciones":[{"target":"5d","op":"insert_after","new_html":"<section id=precios>...</section>"}],"resumen":"seccion de precios"}.`;
 
 export const EJEMPLOS_EDITAR_HTML_MINIMO = ` EJEMPLOS — entradas COMPLETAS, copia la forma: (1) UNA SECCION NUEVA detras de otra: {"ediciones":[{"target":"5d","op":"insert_after","new_html":"<section id=precios>...</section>"}],"resumen":"seccion de precios"}. (2) REEMPLAZAR UN NODO cuando de verdad cambia su estructura: {"ediciones":[{"target":"3c","op":"replace","new_html":"<div class=grid>...</div>"}],"resumen":"la lista pasa a rejilla"}.`;
-export const EJEMPLOS_EDITAR_RUNTIME = ` EJEMPLO — entrada COMPLETA, con su prueba, que no es opcional: {"script":"document.getElementById(GIRAR).addEventListener(CLICK, function () { ... })","resumen":"ruleta","prueba":[{"clic":"#girar","entonces":[{"donde":"#resultado","que":"cambia"}]}]}. Para QUITAR lo interactivo, manda script vacío: {"script":"","resumen":"quitar la ruleta"}.`;
+export const EJEMPLOS_EDITAR_RUNTIME = ` EJEMPLO — entrada COMPLETA, con su prueba, que no es opcional: {"script":"document.getElementById(GIRAR).addEventListener(CLICK, function () { ... })","resumen":"ruleta","prueba_js":"var antes = await ui.texto('#resultado'); await ui.clic('#girar'); await ui.cambiaDe('#resultado', antes);"}. Para QUITAR lo interactivo, manda script vacío: {"script":"","resumen":"quitar la ruleta"}.`;
 
 /** Qué puede correr de verdad quien va a recibir estas declaraciones.
  *
@@ -298,52 +299,25 @@ function buildTodasLasDeclaraciones(
         // texto vive en `prueba-js.ts`, junto a los primitivos que describe,
         // para que no derive del motor que lo ejecuta.
         " " + pruebaJsPromptBlock() +
-        " Y NUNCA le digas al usuario que probaste algo si no mandaste `prueba`: no se probó. Si tu prueba falla te lo digo con el elemento y lo que se esperaba, y lo arreglas en ese mismo turno." +
+        " Y NUNCA le digas al usuario que probaste algo si no mandaste `prueba_js`: no se probó. Si tu prueba falla te lo digo con el elemento y lo que se esperaba, y lo arreglas en ese mismo turno." +
         EJEMPLOS_EDITAR_RUNTIME,
       parameters: {
         type: "OBJECT",
         properties: {
           script: { type: "STRING" },
           resumen: { type: "STRING" },
-          // LA PRUEBA QUE TU PROPIO CODIGO DEBE PASAR. Es la unica declaracion
-          // del catalogo por encima de profundidad 2, y a proposito: es un
-          // contrato que ejecuta un navegador de verdad y que valida
-          // behavior-spec.ts. Aplanarlo a texto seria re-encodificar algo ya
-          // validado. Ver el test 'ninguna declaracion pasa de profundidad 2'.
-          // 🔴 LA RANURA RESERVADA, con la forma de `preflight.js` de Claude
-          // Code: cuando su sistema de artefactos necesito comprobar
-          // COMPORTAMIENTO sobre una pagina viva al publicar, la respuesta fue
-          // JavaScript libre con contrato acotado (tope de tamano + forma
-          // exigida + rechazo si no cumple), no un mini-lenguaje de pasos.
+          // LA PRUEBA QUE TU PROPIO CODIGO DEBE PASAR, como programa: JavaScript
+          // libre sobre los primitivos `ui.*`, con contrato acotado (tope de
+          // tamano, techo de pared, tope de llamadas). Es la unica forma desde
+          // el 2026-09-22.
           //
-          // Va APARTE de `prueba`, no en vez de: las dos rutas conviven, igual
-          // que ya conviven en Crear, para poder medir una contra otra moviendo
-          // solo el prompt. Mandar las dos es ambiguo y se rechaza.
+          // ⚰️ AQUI VIVIA `prueba`, la lista de pasos del DSL, y era la unica
+          // declaracion del catalogo por encima de profundidad 3. Se retiro: un
+          // mini-lenguaje propio es otro idioma que el modelo tiene que
+          // aprender y que nosotros tenemos que remendar (cinco parches de
+          // `sin_accion` y contando). La prueba es codigo en el lenguaje de la
+          // pagina, como una suite de pruebas es codigo del proyecto.
           prueba_js: { type: "STRING" },
-          prueba: {
-            type: "ARRAY",
-            items: {
-              type: "OBJECT",
-              properties: {
-                clic: { type: "STRING" },
-                veces: { type: "NUMBER" },
-                escribe: { type: "OBJECT" },
-                entonces: {
-                  type: "ARRAY",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      donde: { type: "STRING" },
-                      que: { type: "STRING", enum: ["cambia", "contiene", "es", "visible", "oculto", "estilo", "atributo"] },
-                      valor: { type: "STRING" },
-                    },
-                    required: ["donde", "que"],
-                  },
-                },
-              },
-              required: ["entonces"],
-            },
-          },
         },
         required: ["script", "resumen"],
       },

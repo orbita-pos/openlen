@@ -82,22 +82,23 @@ function recorta(texto: string): string {
 /**
  * LO QUE EL DUEÑO TIENE QUE SABER DE UNA LLAMADA QUE FUE BIEN, para la ÁMBAR.
  *
- * No es un fallo: la llamada fue bien y la edición se guardó. Lo que no ocurrió
- * es la COMPROBACIÓN, y hasta el 2026-09-18 eso no salía del servidor — se
- * quedaba en un `console.warn` de la caja mientras la tarjeta se pintaba verde.
- * MEDIDO esa noche en producción: dos pruebas descartadas por `sin_accion` en
- * «ponme un carrito con base de datos», y ni una señal en la pantalla del dueño.
- *
- * 🔴 ÁMBAR Y NO ROJA, y la diferencia importa. En Claude Code una entrada que no
- * valida acaba en un `tool_result` con `is_error` —la llamada ENTERA falló—.
- * Aquí la edición sí se aplicó: pintarla roja diría que el trabajo del usuario
- * se perdió, que es mentira y es la avería contraria a la que arreglamos.
+ * No es un fallo: la llamada fue bien y la edición se guardó, pero la
+ * herramienta le avisó al modelo de algo que el servidor comprobó. Hasta el
+ * 2026-09-18 eso no salía del servidor — se quedaba en un `console.warn` de la
+ * caja mientras la tarjeta se pintaba verde.
  *
  * El string es el MISMO que leyó el modelo, no una segunda redacción — la regla
  * de siempre.
  *
+ * ⚰️ LA PRUEBA DESCARTADA, RETIRADA (2026-09-22). El ámbar nació para ella: una
+ * prueba que no entraba se descartaba y la edición se guardaba igual, con
+ * `prueba_descartada` en la respuesta y su frase de dueño. Desde que una prueba
+ * que no valida rechaza la llamada ENTERA —no se guarda nada y el modelo la
+ * reenvía—, ese estado no existe: la tarjeta es roja porque de verdad no se
+ * aplicó nada, y su motivo lo da `motivoDelFallo`.
+ *
  * ─────────────────────────────────────────────────────────────────────────────
- * 🔴 POR QUÉ YA NO MIRA SÓLO `prueba_descartada` (2026-09-21).
+ * 🔴 POR QUÉ MIRA `aviso_critico` (2026-09-21).
  *
  * El arreglo del 18/09 acertó en la forma y se quedó en UNA bandera. Contadas
  * sobre `tools.ts`: hay **17** claves `extra.*`, de las cuales **13 son señales
@@ -120,16 +121,12 @@ function recorta(texto: string): string {
  *
  * NO INUNDA, y se midió antes de escribirlo: sobre 90 llamadas con diario en
  * producción, 15 traían `aviso_critico`; 9 eran rechazos de spec —que desde el
- * despliegue del 20/09 ya salen ámbar— y quedan **6, un 6,7%**, que hoy son
- * invisibles. Ése es el ámbar que esto añade.
+ * despliegue del 20/09 ya salían ámbar— y quedan **6, un 6,7%**, que hasta
+ * entonces eran invisibles. Ése es el ámbar que esto añadió.
  *
- * ⚠️ LA PRECEDENCIA NO CAMBIA, y es lo que evita el defecto contrario: la
- * frase del DUEÑO (`tarjeta`) va primero, y `aviso_critico` es el último
- * recurso. `aviso_critico` está escrito para el modelo y a veces trae su receta
- * dentro; enseñarlo es peor que enseñar nada sólo si hay algo mejor, y cuando
- * no lo hay, una frase áspera y verdadera le gana al silencio. Que las trece
- * ganen su frase de dueño es trabajo aparte, y ahora al menos se nota cuál
- * falta.
+ * `aviso_critico` está escrito para el modelo y a veces trae su receta dentro;
+ * cuando no hay una frase mejor, una áspera y verdadera le gana al silencio.
+ * Que cada aviso gane su frase de dueño es trabajo aparte.
  */
 export function avisoParaElDueno(
   respuesta: Record<string, unknown> | undefined,
@@ -138,23 +135,7 @@ export function avisoParaElDueno(
   // motivo rojo, y dos motivos en una fila no caben ni se leen.
   if (!respuesta || respuesta.ok === false) return undefined;
 
-  // `tarjeta` PRIMERO: es la frase escrita para quien mira —lo que no se
-  // comprobó y qué hacer—, mientras que `aviso` es la receta del modelo
-  // («dale a alguno un `clic:"#selector"`»), que al dueño no le sirve de nada.
-  // El hecho es el mismo en las dos (`HECHO_SIN_COMPROBAR`); lo que cambia es
-  // quién tiene que mover ficha. `aviso` queda de respaldo para las entradas
-  // anteriores al 2026-09-18: una tarjeta técnica se lee mal, media no se lee.
-  const descartada = respuesta.prueba_descartada;
-  if (descartada && typeof descartada === "object") {
-    for (const clave of ["tarjeta", "aviso"] as const) {
-      const texto = (descartada as Record<string, unknown>)[clave];
-      if (typeof texto !== "string") continue;
-      const limpio = texto.trim();
-      if (limpio) return recorta(limpio);
-    }
-  }
-
-  // Y EL CANAL GENERAL. Cualquier aviso que la herramienta le dio al modelo es
+  // EL CANAL GENERAL. Cualquier aviso que la herramienta le dio al modelo es
   // un hecho que el servidor comprobó; que se vea. Ver el bloque de arriba.
   const critico = respuesta.aviso_critico;
   if (typeof critico === "string") {

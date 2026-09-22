@@ -20,6 +20,7 @@ import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { THEME_PRESETS } from "@/lib/theme-presets";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
+import { programaJs } from "@/lib/agent/prueba-js";
 
 const SALTO = String.fromCharCode(10);
 
@@ -186,7 +187,7 @@ describe("buildFunctionDeclarations", () => {
         expect(description, `quedó el marcador declarativo de ${name}`).not.toContain(BEHAVIORS[name].marker);
       }
       expect(description).toContain("código COMPLETO");
-      expect(description).toContain("MANDA TAMBIÉN `prueba`");
+      expect(description).toContain("MANDA TAMBIÉN `prueba_js`");
       expect(description).toContain("NO es opcional");
       expect(description).toContain("no hace nada, consola limpia");
       expect(description).toContain("puede girar y no parar nunca");
@@ -731,8 +732,6 @@ describe("los ejemplos de uso de las cuatro herramientas de edicion", () => {
   const decls = buildFunctionDeclarations({ ...process.env, OPENLEN_AGENT_DOCUMENT_OPS: "1" });
   const por = (n: string) => decls.find((d) => d.name === n) as Record<string, any>;
   const OPS: string[] = por("editar_html").parameters.properties.ediciones.items.properties.op.enum;
-  const QUES: string[] =
-    por("editar_runtime").parameters.properties.prueba.items.properties.entonces.items.properties.que.enum;
 
   const CON_EDICIONES: [string, string][] = [
     ["editar_texto", EJEMPLOS_EDITAR_TEXTO],
@@ -781,13 +780,22 @@ describe("los ejemplos de uso de las cuatro herramientas de edicion", () => {
     }
   });
 
-  it("la prueba del ejemplo de comportamiento usa un `que` que existe", () => {
-    const conPrueba = ejemplosDe(EJEMPLOS_EDITAR_RUNTIME, "script").filter((e) => e.prueba);
+  // La promesa del ejemplo es un PROGRAMA: se le exige lo mismo que al enum de
+  // `op` — que compile y que sólo llame a primitivos que el instrumento define.
+  // Un `ui.algo` inventado en el ejemplo sería el modelo aprendiendo a fallar.
+  it("la promesa del ejemplo de comportamiento compila y usa primitivos que existen", () => {
+    const ejemplos = ejemplosDe(EJEMPLOS_EDITAR_RUNTIME, "script");
+    expect(ejemplos.some((e) => "prueba" in e), "un ejemplo enseña el DSL retirado").toBe(false);
+    const conPrueba = ejemplos.filter((e) => typeof e.prueba_js === "string");
     expect(conPrueba).toHaveLength(1);
-    for (const paso of conPrueba[0].prueba as Record<string, unknown>[]) {
-      for (const esperado of paso.entonces as Record<string, unknown>[]) {
-        expect(QUES).toContain(esperado.que);
-      }
+    const codigo = conPrueba[0].prueba_js as string;
+    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    expect(() => new AsyncFunction("ui", codigo)).not.toThrow();
+    const definidos = programaJs("");
+    const usados = [...codigo.matchAll(/ui\.(\w+)\(/g)].map((m) => m[1]);
+    expect(usados.length).toBeGreaterThan(0);
+    for (const nombre of usados) {
+      expect(definidos, `ui.${nombre} no existe`).toMatch(new RegExp(`async ${nombre}\\(`));
     }
   });
 
@@ -892,17 +900,12 @@ describe("las cuatro herramientas de edición", () => {
     expect(item.properties.op.enum).toEqual(["replace", "insert_before", "insert_after", "delete"]);
   });
 
-  it("ninguna declaración pasa de profundidad 3, salvo la prueba de editar_runtime", () => {
+  // Sin excepciones desde el 2026-09-22: la única que había era `prueba` de
+  // editar_runtime, el DSL de pasos anidados, y se retiró. La promesa es ahora
+  // `prueba_js`, una cadena.
+  it("ninguna declaración pasa de profundidad 3", () => {
     for (const d of decls()) {
       const p = profundidad((d as { parameters?: unknown }).parameters);
-      if (d.name === "editar_runtime") {
-        // EXCEPCIÓN CONSCIENTE. `prueba` es el contrato que un navegador de
-        // verdad ejecuta después de guardar, y lo valida behavior-spec.ts.
-        // Aplanarlo a texto sería re-encodificar algo ya validado, así que se
-        // queda hondo a propósito y aquí se deja escrito.
-        expect(p, "editar_runtime sólo puede ser honda por `prueba`").toBeLessThanOrEqual(5);
-        continue;
-      }
       // TRES, no dos. El suelo lo pone el LOTE: un array de objetos es
       // profundidad 3 por construcción, y mantener el lote fue una decisión
       // —sin él, un turno que hoy hace 1 llamada con 6 ediciones haría 6, y el
