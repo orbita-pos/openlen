@@ -115,10 +115,20 @@ export function validaPruebaJs(bruto: string): PruebaJsExtraction {
  * el programa sólo recibe `ui` por parámetro, que es la forma de CodeMode:
  * «a program that can call only the tools supplied by the host».
  */
-export function programaJs(codigo: string): string {
+export function programaJs(
+  codigo: string,
+  opciones: {
+    /** ¿Es la promesa DE ESTE TURNO (`true`, el defecto) o una GUARDADA? Decide
+     *  de quién es un clic muerto: en la del turno el modelo acaba de escribir
+     *  la prueba, así que es fallo de la PRUEBA; en una guardada, que se
+     *  cumplió el día que se guardó, el que cambió es la PÁGINA — la regresión. */
+    readonly propia?: boolean;
+  } = {},
+): string {
   return `
 (async () => {
   var CODIGO = ${JSON.stringify(codigo)};
+  var PROPIA = ${JSON.stringify(opciones.propia !== false)};
   var VENTANA = ${VENTANA_PRUEBA_MS};
   var TECHO = ${TECHO_PRUEBA_JS_MS};
   var MAX_LLAMADAS = ${MAX_LLAMADAS_UI};
@@ -126,6 +136,12 @@ export function programaJs(codigo: string): string {
   var n = 0;              // qué llamada a ui.* vamos: es el "paso" del mensaje
   var llamadas = 0;
   var finPared = Date.now() + TECHO;
+
+  // EL REGISTRO DEL CENSO, leído ANTES del guardia de abajo. El guardia es un
+  // listener de clic en \`document\`, y con el censo puesto marcaría vivo a
+  // cualquier botón de la página (medido en el DSL: censo 0 antes, 1 después).
+  var REGISTRO = (typeof window !== "undefined" && window.__olCensoClic) || null;
+  var documentoYaTenia = REGISTRO ? REGISTRO.has(document) : false;
 
   // EL GUARDIA, con su excepción. Ver la lápida en behavior-spec.ts: cancelar
   // la acción por defecto de un clic sobre \`type="submit"\` impide que se
@@ -137,6 +153,7 @@ export function programaJs(codigo: string): string {
     e.preventDefault();
   }, true);
   document.addEventListener("submit", function (e) { e.preventDefault(); }, true);
+  if (REGISTRO && !documentoYaTenia) REGISTRO.delete(document);
 
   function Alto(mensaje, deLaPrueba) {
     var err = new Error(mensaje);
@@ -159,6 +176,45 @@ export function programaJs(codigo: string): string {
     if (els.length === 0) throw Alto("no existe " + sel, true);
     if (els.length > 1) throw Alto(sel + " señala " + els.length + " elementos, no uno", true);
     return els[0];
+  }
+
+  // DONDE SE ACTÚA, con las DOS salidas de un objetivo ambiguo: afinar, o
+  // DECLARAR que da igual cuál. Es la forma de \`replace_all\`: un parámetro
+  // explícito, nunca adivinar. Los botones creados con \`createElement\` no
+  // tienen id —era la clase de rechazo que más fallaba—, y \`{ cualquiera: true }\`
+  // pulsa el primero VISIBLE del grupo.
+  function objetivo(sel, verbo, opciones) {
+    var els;
+    try { els = document.querySelectorAll(sel); }
+    catch (e) { throw Alto("el selector " + sel + " no es CSS válido", true); }
+    if (els.length === 0) throw Alto("no existe " + sel, true);
+    if (els.length > 1 && !(opciones && opciones.cualquiera)) {
+      throw Alto(
+        sel + " señala " + els.length + " elementos. Afina el selector, o si da igual cuál usa " +
+          "ui." + verbo + "(\\"" + sel + "\\", " + (verbo === "clic" ? "1, " : "") + "{ cualquiera: true }).",
+        true,
+      );
+    }
+    var lista = Array.prototype.slice.call(els);
+    var visibles = lista.filter(seVe);
+    return visibles.length > 0 ? visibles[0] : lista[0];
+  }
+
+  // EL CENSO DE CLIC MUERTO, como precondición de la acción y no como medida
+  // posterior: una herramienta que se niega a un no-op ANTES de actuar. Lo
+  // instala el preludio (\`PRELUDIO_CENSO_CLIC\`) antes que los scripts de la
+  // página. Sólo acusa con la cadena ENTERA a cero —elemento, ancestros,
+  // document, window y sus \`onclick\`—, y esa asimetría es lo que lo deja
+  // incapaz de acusar en falso. FAIL-OPEN sin registro: no medir no es medir mal.
+  // (\`REGISTRO\` se lee arriba, antes del guardia.)
+  function tieneManejador(el) {
+    for (var e = el; e; e = e.parentElement) {
+      if (REGISTRO.has(e)) return true;
+      if (typeof e.onclick === "function") return true;
+    }
+    if (REGISTRO.has(document) || typeof document.onclick === "function") return true;
+    if (REGISTRO.has(window) || typeof window.onclick === "function") return true;
+    return false;
   }
 
   var texto = function (el) { return (el.textContent || "").replace(/\\s+/g, " ").trim(); };
@@ -196,14 +252,34 @@ export function programaJs(codigo: string): string {
   }
 
   var ui = {
-    async clic(sel, veces) {
+    async clic(sel, veces, opciones) {
       presupuesto();
       n++;
-      var el = uno(sel);
+      var el = objetivo(sel, "clic", opciones);
+      if (REGISTRO && !tieneManejador(el)) {
+        // El ARREGLO va delante: \`leerFallos\` recorta, y lo último es lo que
+        // se pierde con un selector largo.
+        throw Alto(
+          PROPIA
+            ? sel + " no tiene manejador de clic. Si se dispara al verse, usa ui.desplaza(\\"" + sel +
+                "\\"). Si al pulsar, engánchale uno. (note: se miraron addEventListener(\\"click\\") y " +
+                "onclick en el elemento, sus ancestros, document y window.)"
+            : sel + " ya no tiene manejador de clic: lo tenía cuando esta promesa se cumplió.",
+          PROPIA,
+        );
+      }
       var k = Math.max(1, Math.min(10, veces || 1));
       for (var i = 0; i < k; i++) {
         el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
       }
+    },
+    // LO QUE SE DISPARA AL VERSE: un IntersectionObserver no arranca hasta que
+    // el elemento entra en pantalla. Salto instantáneo y no \`smooth\`: el suave
+    // es asíncrono y la ventana se gastaría midiendo el scroll, no la promesa.
+    async desplaza(sel, opciones) {
+      presupuesto();
+      n++;
+      objetivo(sel, "desplaza", opciones).scrollIntoView({ block: "center", inline: "nearest" });
     },
     async escribe(sel, valor) {
       presupuesto();
@@ -327,15 +403,18 @@ export function programaJs(codigo: string): string {
  * Y la propia lápida decía dónde tenía sentido: «Editar y el Agente SÍ declaran
  * pruebas, y ahí el modelo puede mirar su propia página».
  *
- * LA FORMA ES LA DE `preflight.js` de Claude Code: JavaScript libre con
- * contrato acotado —tope de tamaño, techo de pared, tope de llamadas— en vez de
- * un mini-lenguaje de pasos. Lo que el host pone son los PRIMITIVOS; el
- * pegamento lo escribe el modelo.
+ * LA FORMA ES LA DEL MODO CÓDIGO DE OpenCode: JavaScript libre con contrato
+ * acotado —tope de tamaño, techo de pared, tope de llamadas— en vez de un
+ * mini-lenguaje de pasos. Lo que el host pone son los PRIMITIVOS; el pegamento
+ * lo escribe el modelo. (⚰️ Aquí decía que era la forma de `preflight.js` de
+ * los artifacts de Claude Code. No lo es: aquél corre en las copias ABIERTAS
+ * de una página cuando se publica otra versión — un gancho de actualización,
+ * no una prueba.)
  */
 export function pruebaJsPromptBlock(): string {
   return [
-    "EN VEZ DE `prueba` puedes mandar `prueba_js`: tu prueba como programa JavaScript, con `await` y `document` enteros, corriendo en un navegador de verdad contra la página que acabas de guardar. Lo que no cubra `ui` lo haces a mano — `document.querySelector(\"#cifras\").scrollIntoView()` para lo que se dispara AL VERSE, `document.querySelectorAll(\".tab\")[1].click()` para un botón sin id.",
-    "ACTUAR: `ui.clic(sel, veces?)` · `ui.escribe(sel, valor)` · `ui.espera(ms)`. LEER, para guardarte el ANTES: `ui.texto(sel)` · `ui.estilo(sel, prop)` · `ui.atributo(sel, nombre)`. AFIRMAR, fallan solas y esperan hasta " + VENTANA_PRUEBA_MS + " ms: `ui.visible` · `ui.oculto` · `ui.contiene(sel, txt)` · `ui.es(sel, txt)` · `ui.cambiaDe(sel, antes)` · `ui.estiloCambiaDe(sel, prop, antes)` · `ui.atributoCambiaDe(sel, nombre, antes)`. Todas con `await`.",
+    "EN VEZ DE `prueba` puedes mandar `prueba_js`: tu prueba como programa JavaScript, con `await` y `document` enteros, corriendo en un navegador de verdad contra la página que acabas de guardar.",
+    "ACTUAR: `ui.clic(sel, veces?)` · `ui.desplaza(sel)` para lo que se dispara AL VERSE · `ui.escribe(sel, valor)` · `ui.espera(ms)`. Si el selector señala varios y da igual cuál —botones sin id—, `ui.clic(\".tab\", 1, { cualquiera: true })`. LEER, para guardarte el ANTES: `ui.texto(sel)` · `ui.estilo(sel, prop)` · `ui.atributo(sel, nombre)`. AFIRMAR, fallan solas y esperan hasta " + VENTANA_PRUEBA_MS + " ms: `ui.visible` · `ui.oculto` · `ui.contiene(sel, txt)` · `ui.es(sel, txt)` · `ui.cambiaDe(sel, antes)` · `ui.estiloCambiaDe(sel, prop, antes)` · `ui.atributoCambiaDe(sel, nombre, antes)`. Todas con `await`.",
     // Los TOPES no se enumeran aquí a propósito: el rechazo los nombra cuando
     // se pasan, y adelantarlos gasta catálogo para decir dos veces lo mismo.
     // Es lo que hace el `Edit` de Claude Code — su descripción no lista sus
