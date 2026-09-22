@@ -1715,9 +1715,10 @@ async function persistHtmlChange(
   // `finalHtml` que se devuelve, que viaja al lienzo como `updatedHtml` y hasta
   // hoy le enseñaba al usuario el documento de antes del guardado.
   //
-  // Es la misma regla que Claude Code: tras su
-  // propia escritura hace `…` con `n` YA transformado, de modo que sus escrituras no
-  // pueden parecerle ajenas nunca.
+  // Es lo que hace el `Edit` de Claude Code, y se ve usándolo: tras su propia
+  // escritura no se queja de que el fichero cambió desde que lo leyó, porque
+  // lo que recuerda como leído es lo que acaba de escribir, ya transformado.
+  // Sus escrituras no pueden parecerle ajenas nunca.
   const guardado = saved.html;
 
   // Si quien llamo trajo el documento ETIQUETADO (lo hace `editar_pagina`, via
