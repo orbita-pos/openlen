@@ -212,11 +212,35 @@ export function programaSuiteJs(entradas: readonly EntradaDePrograma[]): string 
   // explícito, nunca adivinar. Los botones creados con \`createElement\` no
   // tienen id —era la clase de rechazo que más fallaba—, y \`{ cualquiera: true }\`
   // pulsa el primero VISIBLE del grupo.
+  // POR SU TEXTO, cuando el botón no tiene id: se busca entre lo pulsable igual
+  // que lo haría una persona, y vale para lo que sólo existe tras correr el
+  // código de la página. Entre varios que casan, el único que SE VE; si no hay
+  // uno solo, no se adivina.
+  var PULSABLES = 'button, [role="button"], a, summary, input[type="button"], input[type="submit"], [onclick]';
+  function nombreDe(el) {
+    var n = el.getAttribute("aria-label") || el.value || el.textContent || el.title || "";
+    return String(n).replace(/\\s+/g, " ").trim().toLowerCase();
+  }
+  function porNombre(q) {
+    var busca = String(q).replace(/\\s+/g, " ").trim().toLowerCase();
+    if (!busca) throw Alto("no hay nada que buscar", true);
+    var todos = Array.prototype.slice.call(document.querySelectorAll(PULSABLES));
+    var casan = todos.filter(function (el) { return nombreDe(el).indexOf(busca) !== -1; });
+    if (casan.length > 1) {
+      var visibles = casan.filter(seVe);
+      if (visibles.length === 1) return visibles[0];
+      throw Alto("«" + q + "» señala " + casan.length + " elementos pulsables, no uno. Usa el texto completo o un selector.", true);
+    }
+    if (casan.length === 0) throw Alto("ni existe el selector " + q + " ni hay nada pulsable que se llame así", true);
+    return casan[0];
+  }
+
   function objetivo(sel, verbo, opciones) {
-    var els;
+    var els = null;
     try { els = document.querySelectorAll(sel); }
-    catch (e) { throw Alto("el selector " + sel + " no es CSS válido", true); }
-    if (els.length === 0) throw Alto("no existe " + sel, true);
+    catch (e) { els = null; }
+    // Ni CSS válido ni nada que case: puede ser el TEXTO del botón.
+    if (!els || els.length === 0) return porNombre(sel);
     if (els.length > 1 && !(opciones && opciones.cualquiera)) {
       throw Alto(
         sel + " señala " + els.length + " elementos. Afina el selector, o si da igual cuál usa " +
@@ -456,7 +480,7 @@ export function programaSuiteJs(entradas: readonly EntradaDePrograma[]): string 
 export function pruebaJsPromptBlock(): string {
   return [
     "EN VEZ DE `prueba` puedes mandar `prueba_js`: tu prueba como programa JavaScript, con `await` y `document` enteros, corriendo en un navegador de verdad contra la página que acabas de guardar.",
-    "ACTUAR: `ui.clic(sel, veces?)` · `ui.desplaza(sel)` para lo que se dispara AL VERSE · `ui.escribe(sel, valor)` · `ui.espera(ms)`. Si el selector señala varios y da igual cuál —botones sin id—, `ui.clic(\".tab\", 1, { cualquiera: true })`. LEER, para guardarte el ANTES: `ui.texto(sel)` · `ui.estilo(sel, prop)` · `ui.atributo(sel, nombre)`. AFIRMAR, fallan solas y esperan hasta " + VENTANA_PRUEBA_MS + " ms: `ui.visible` · `ui.oculto` · `ui.contiene(sel, txt)` · `ui.es(sel, txt)` · `ui.cambiaDe(sel, antes)` · `ui.estiloCambiaDe(sel, prop, antes)` · `ui.atributoCambiaDe(sel, nombre, antes)`. Todas con `await`.",
+    "ACTUAR: `ui.clic(sel, veces?)` · `ui.desplaza(sel)` para lo que se dispara AL VERSE · `ui.escribe(sel, valor)` · `ui.espera(ms)`. Un botón SIN id se nombra por su TEXTO: `ui.clic(\"Añadir al carrito\")`. Si el selector señala varios y da igual cuál, `ui.clic(\".tab\", 1, { cualquiera: true })`. LEER, para guardarte el ANTES: `ui.texto(sel)` · `ui.estilo(sel, prop)` · `ui.atributo(sel, nombre)`. AFIRMAR, fallan solas y esperan hasta " + VENTANA_PRUEBA_MS + " ms: `ui.visible` · `ui.oculto` · `ui.contiene(sel, txt)` · `ui.es(sel, txt)` · `ui.cambiaDe(sel, antes)` · `ui.estiloCambiaDe(sel, prop, antes)` · `ui.atributoCambiaDe(sel, nombre, antes)`. Todas con `await`.",
     // Los TOPES no se enumeran aquí a propósito: el rechazo los nombra cuando
     // se pasan, y adelantarlos gasta catálogo para decir dos veces lo mismo.
     // Es lo que hace el `Edit` de Claude Code — su descripción no lista sus

@@ -355,3 +355,34 @@ describe("pasosAJs: la promesa migrada dice lo mismo que la original", () => {
     expect(await correrReal(PESTANAS_SIN_ID, js2)).toEqual([]);
   }, 60_000);
 });
+
+// ─── POR SU TEXTO, como el DSL ──────────────────────────────────────────────
+// Sin esto una guardada migrada que pulsara por texto diría «no es CSS válido»
+// y se RETIRARÍA de la suite en su primera pasada.
+describe("ui.clic por el texto del botón", () => {
+  const CON_TEXTO = marco(`
+    <p id="panel">antes</p>
+    <script>
+      var b = document.createElement("button");
+      b.textContent = "Añadir al carrito";
+      b.addEventListener("click", function () { document.getElementById("panel").textContent = "dentro"; });
+      document.body.appendChild(b);
+    <\/script>`);
+
+  it("🔴 un botón sin id se pulsa por su texto", async () => {
+    const fallos = await correrReal(CON_TEXTO, 'await ui.clic("Añadir al carrito"); await ui.es("#panel", "dentro");');
+    expect(fallos).toEqual([]);
+  }, 60_000);
+
+  it("…y un texto que no existe es fallo de la prueba, no de la página", async () => {
+    const fallos = await correrReal(CON_TEXTO, 'await ui.clic("Comprar ya");');
+    expect(fallos).toHaveLength(1);
+    expect(fallos[0]!.deLaPrueba).toBe(true);
+    expect(fallos[0]!.mensaje).toMatch(/nada pulsable que se llame así/);
+  }, 60_000);
+
+  it("🔴 la guardada migrada que pulsaba por texto sigue cumpliéndose", async () => {
+    const js = pasosAJs([{ clic: "Añadir al carrito", veces: 1, entonces: [{ donde: "#panel", que: "cambia" }] }])!;
+    expect(await correrReal(CON_TEXTO, js)).toEqual([]);
+  }, 60_000);
+});
