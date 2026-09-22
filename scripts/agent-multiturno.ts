@@ -43,7 +43,6 @@ import type { FalloSpec } from "@/lib/agent/behavior-spec";
 import {
   actualizarSuite,
   marcarRegresiones,
-  pasosAJs,
   vivas,
   type PruebaGuardada,
 } from "@/lib/agent/pruebas-de-la-pagina";
@@ -255,8 +254,7 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
           // las que la página ya cumplió en los anteriores. Sin las dos,
           // este arnés —el único que da varios turnos, o sea el único donde
           // una regresión puede ocurrir— no podía verla nunca.
-          spec: session.behaviorSpec ?? null,
-          // Y LA OTRA RUTA, que manda sobre `spec` cuando viene. Sin ella una
+          // LA PROMESA DEL TURNO, como programa. Sin ella una
           // promesa en JavaScript se declara y no se ejecuta, igual que le
           // pasaba al arnés de evals hasta el 2026-09-21.
           pruebaJs: session.behaviorJs ?? null,
@@ -278,8 +276,7 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
           documento: html,
           pagina: null,
           ...((): { turno?: { codigo: string; fallos: readonly FalloSpec[]; pagina: null } } => {
-            const codigo =
-              session.behaviorJs?.trim() || (session.behaviorSpec?.length ? pasosAJs(session.behaviorSpec) : null);
+            const codigo = session.behaviorJs?.trim() || null;
             return codigo ? { turno: { codigo, fallos: v.fallosDelTurno ?? [], pagina: null } } : {};
           })(),
         });

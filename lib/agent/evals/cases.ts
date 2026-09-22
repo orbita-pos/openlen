@@ -125,15 +125,11 @@ export interface EvalCase {
    *
    *  🔴 `pruebas` DESDE EL 2026-09-21, y por qué faltaba. Es lo que el modelo
    *  declaró como prueba de comportamiento en cada puerta de edición, con su
-   *  rechazo al lado. Vivía en `session.behaviorSpec` y no viajaba en ninguno
-   *  de los otros tres, así que **ningún caso podía afirmar sobre `prueba`
-   *  aunque quisiera**: medido ese día, de las 13 reglas de
-   *  `RUNTIME_MANDA_PRUEBA` había 0 con un caso capaz de cazar su violación.
+   *  rechazo al lado. Sin ello **ningún caso podía afirmar sobre la promesa
+   *  aunque quisiera**.
    *
-   *  Son HECHOS, no veredicto — la forma del `tool_result` de Claude Code:
-   *  `spec === null && rechazo === null` es «no mandó prueba»; `rechazo` con
-   *  código es «la mandó mal formada». Desde `spec` a secas las dos eran
-   *  indistinguibles, que es lo que dejaba mudas a la mayoría de las reglas. */
+   *  Son HECHOS, no veredicto: `js === null && rechazo === null` es «no mandó
+   *  prueba»; `rechazo` con código es «la mandó y no entró». */
   assert: (ctx: {
     data: ProjectData;
     events: AgentStreamEvent[];
@@ -157,30 +153,23 @@ export interface EvalCase {
 
 /** Lo que el modelo declaró en UNA llamada, como HECHO y no como veredicto.
  *
- *  Es la forma del `tool_result` de Claude Code: se guarda lo que pasó —qué
- *  herramienta, qué entró, qué se rechazó— y el juicio lo pone quien lee. Un
- *  caso que quiera «no mandó prueba» mira `spec === null && rechazo === null`;
- *  uno que quiera «la mandó con un verbo inventado» mira `rechazo`.
+ *  Se guarda lo que pasó —qué herramienta, qué entró, qué se rechazó— y el
+ *  juicio lo pone quien lee. Un caso que quiera «no mandó prueba» mira
+ *  `js === null && rechazo === null`; uno que quiera «la mandó y no entró»
+ *  mira `rechazo`.
  *
- *  Lo llena el arnés en su `runTool`; las dos mitades ya vivían en la sesión
- *  (`behaviorSpec` y `specRechazoPrevio`) y lo único que faltaba era que
- *  salieran de ella. */
+ *  Lo llena el arnés en su `runTool`, con lo que la herramienta deja en la
+ *  sesión (`behaviorJs` y `rechazoPrueba`). */
 export interface PruebaEnEval {
   /** La puerta de edición que se llamó (`editar_runtime`, `editar_html`…). */
   readonly tool: string;
-  /** La prueba ACEPTADA en esta llamada, o `null` si no entró ninguna. */
-  readonly spec: readonly PasoSpec[] | null;
-  /** El código de rechazo (`sin_accion`, `demasiados_pasos`…) cuando la mandó
-   *  mal formada, o `null` si no hubo rechazo. */
+  /** Por qué no entró la prueba de esta llamada (`demasiado_grande`, `vacia`,
+   *  `prueba_retirada`), o `null` si no hubo rechazo. */
   readonly rechazo: string | null;
-  /** La prueba por la RANURA JS (`prueba_js`), o `null`. Son dos rutas, y un
-   *  caso que sólo mirara `spec` leería una promesa en JavaScript como «no
-   *  mandó prueba» — acusándole de lo contrario de lo que hizo. */
+  /** La promesa viva tras esta llamada —el programa de `prueba_js`—, o
+   *  `null`. ⚰️ Aquí vivía también `spec`, la del DSL retirado el 2026-09-22,
+   *  y `clase`, la clase de forma de sus rechazos `sin_accion`. */
   readonly js: string | null;
-  /** Con `rechazo: "sin_accion"`, POR QUÉ. Ver `claseDeSinAccion`: sin la clase
-   *  de forma, un 56% de `sin_accion` no dice qué reparación falta escribir.
-   *  Ausente en los demás rechazos. */
-  readonly clase?: string | null;
   /** ¿Esta llamada CAMBIÓ EL COMPORTAMIENTO? La misma decisión con la que el
    *  producto le pide prueba al modelo (`ToolOutcome.cambioConducta`). Ausente
    *  ⇒ se asume que sí, que es lo que el juez daba por hecho antes de tenerla. */
@@ -199,30 +188,10 @@ export interface PruebaEnEval {
  *  de siempre — no medir no es medir mal. */
 export interface EvalCumplimiento {
   readonly corrio: boolean;
-  /** La FORMA de la prueba que entró, por sus claves —`[{desplaza,veces,
-   *  entonces[1]}]`—, via `formaDePrueba`.
-   *
-   *  🔴 Existe porque sin ella el informe del 2026-09-21 tenía un agujero que
-   *  yo mismo no podía tapar: se veía que el modelo ARREGLÓ una prueba tras un
-   *  rechazo (`arreglada · antes sin_accion`), pero no CON QUÉ — sólo se
-   *  imprimía la forma de la RECHAZADA. Y la fila del proyecto la borra el
-   *  arnés en su `finally`, así que después ya no hay dónde mirarlo.
-   *
-   *  Es la mitad que falta de «medir y enseñar»: una medición que no se ve no
-   *  contesta nada, y aquí la pregunta era si el verbo nuevo llega a usarse. */
-  readonly forma: string;
-  /** La prueba ENTERA, con sus selectores y sus valores.
-   *
-   *  🔴 `forma` NO BASTA, y el 2026-09-21 dejó una pregunta sin contestar: se
-   *  leyó `[{clic,veces,entonces[1]}]` y no se pudo saber SOBRE QUÉ pulsaba ni
-   *  QUÉ miraba, que es lo único que separa «la página cumplió» de «el clic era
-   *  decorativo y cambió otra cosa». Imprimir la forma y tirar los valores es
-   *  la misma media medición que este fichero lleva arreglando en otros.
-   *
-   *  Va aquí y no en `PruebaEnEval` porque ésta es la que SE EJECUTÓ contra el
-   *  estado final: la otra lista lo que se declaró en cada llamada, incluidas
-   *  las que el modelo luego sustituyó. */
-  readonly pasos: readonly PasoSpec[];
+  // ⚰️ AQUÍ VIVÍAN `forma` y `pasos`: la forma y la lista de pasos de la
+  // prueba del DSL, para poder leer en el informe SOBRE QUÉ pulsaba. Con el DSL
+  // retirado el 2026-09-22 la promesa es un programa, y el programa entero ya
+  // viaja por su propio canal (`EvalRunResult.pruebasJs`).
   /** Los pasos incumplidos. ⚠️ `deLaPrueba: true` significa que falló EL
    *  INSTRUMENTO —un selector que no resuelve a un elemento—, no la página:
    *  medido 0 de 5 aciertos acusando, así que un caso que los cuente como
@@ -293,20 +262,18 @@ function editoLaPagina(events: AgentStreamEvent[]): boolean {
 
 // ─── La prueba declarada, como tres estados que NO son el mismo ──────────────
 //
-// 🔴 Existen porque desde `spec` a secas dos de ellos eran indistinguibles, y
-// ahí se quedaban mudas la mayoría de las 13 reglas de `RUNTIME_MANDA_PRUEBA`:
-// «no mandó prueba» y «la mandó con seis pasos de más» daban los dos `null`.
-// El que quiera afirmar sobre una regla del prompt empieza por aquí.
+// 🔴 Existen porque desde la promesa a secas dos de ellos eran
+// indistinguibles: «no mandó prueba» y «la mandó y no entró» daban los dos
+// `null`. El que quiera afirmar sobre una regla del prompt empieza por aquí.
 
 /** Declaró una prueba y ENTRÓ. Es el único de los tres que significa que el
  *  comportamiento de ese turno se llegó a comprobar. */
 export function pruebaAceptada(pruebas: readonly PruebaEnEval[]): boolean {
-  return pruebas.some((p) => (p.spec !== null && p.spec.length > 0) || p.js !== null);
+  return pruebas.some((p) => p.js !== null);
 }
 
-/** La mandó, y se DESCARTÓ. Con el código al lado, que es lo que distingue
- *  `demasiados_pasos` de `sin_accion` y permite afirmar sobre la regla concreta
- *  en vez de sobre «algo salió mal». */
+/** La mandó, y se DESCARTÓ. Con el código al lado, que permite afirmar sobre
+ *  la regla concreta en vez de sobre «algo salió mal». */
 export function pruebaRechazada(
   pruebas: readonly PruebaEnEval[],
   motivo?: string,
@@ -317,14 +284,10 @@ export function pruebaRechazada(
 }
 
 /** Editó por una puerta y NO mandó prueba ninguna — ni buena ni mala. Es el
- *  estado más silencioso de los tres: hoy sale con tarjeta VERDE y sin
- *  `prueba_descartada`, o sea idéntico a un turno verificado de verdad. */
+ *  estado más silencioso de los tres: sale con tarjeta VERDE, o sea idéntico a
+ *  un turno verificado de verdad. */
 export function sinPrueba(pruebas: readonly PruebaEnEval[]): boolean {
-  // Las DOS rutas cuentan: `js` es una promesa igual que `spec`.
-  return (
-    pruebas.length > 0 &&
-    pruebas.every((p) => p.spec === null && p.rechazo === null && p.js === null)
-  );
+  return pruebas.length > 0 && pruebas.every((p) => p.rechazo === null && p.js === null);
 }
 
 /**
@@ -342,7 +305,7 @@ export function sinPrueba(pruebas: readonly PruebaEnEval[]): boolean {
  *      verificado de verdad. Es el estado que esta afirmación existe para
  *      romper.
  *   2. La mandó y se DESCARTÓ — la promesa no llegó a existir. El código del
- *      rechazo va en el motivo: `sin_accion` y `demasiados_pasos` son reglas
+ *      rechazo va en el motivo: `demasiado_grande` y `vacia` son causas
  *      distintas y mezclarlas haría el fallo inaccionable.
  *   3. Corrió y la PÁGINA no la cumplió.
  *   4. Corrió y no se pudo APLICAR — `deLaPrueba`: un selector que señala
@@ -385,11 +348,10 @@ export function prometioYSeComprobo(ctx: {
   // pregunta. `cumplimiento` ES ese estado y `js` se lee de la última entrada,
   // que es donde queda la ranura tras la última puerta.
   //
-  // 🔴 LAS DOS RUTAS PUNTÚAN CON EL MISMO JUEZ (2026-09-21 noche). El arnés
-  // construye `cumplimiento` tanto para la spec del DSL como para la ranura JS
-  // (`forma: "js"`, `pasos: []`), así que lo de abajo —`promesaIncumplida` para
-  // la página, `deLaPrueba` para el instrumento— vale igual para las dos y no
-  // hay dos definiciones de «se cumplió» que puedan separarse con el tiempo.
+  // UN SOLO JUEZ PARA LA PROMESA: el arnés construye `cumplimiento` de la
+  // ranura JS, y lo de abajo —`promesaIncumplida` para la página, `deLaPrueba`
+  // para el instrumento— es la única definición de «se cumplió». (Mientras hubo
+  // dos rutas, la del DSL y la JS, ya puntuaban con este mismo juez.)
   //
   // ⚠️ POR QUÉ `jsFinal` SIGUE AQUÍ, ahora que la ruta JS puntúa: ya no es el
   // pase libre que era —eso se cerró—, es lo que impide acusar de «no prometió»
@@ -400,7 +362,7 @@ export function prometioYSeComprobo(ctx: {
   if (ctx.cumplimiento === null && jsFinal === null) {
     const rechazo = ctx.pruebas.find((p) => p.rechazo !== null)?.rechazo;
     return rechazo
-      ? `mandó \`prueba\` y se descartó (${rechazo}): la promesa no llegó a existir`
+      ? `mandó \`prueba_js\` y se descartó (${rechazo}): la promesa no llegó a existir`
       : "el turno terminó sin promesa viva: cambió el comportamiento y nadie comprobó que la página haga lo que promete";
   }
   if (promesaIncumplida(ctx.cumplimiento)) {
@@ -409,7 +371,7 @@ export function prometioYSeComprobo(ctx: {
   }
   const noAplicable = (ctx.cumplimiento?.fallos ?? []).find((f) => f.deLaPrueba === true);
   if (noAplicable) {
-    return `su \`prueba\` no se pudo aplicar — paso ${noAplicable.paso}: ${noAplicable.mensaje}`;
+    return `su \`prueba_js\` no se pudo aplicar — paso ${noAplicable.paso}: ${noAplicable.mensaje}`;
   }
   return null;
 }
@@ -1661,10 +1623,10 @@ export const EVAL_CASES: EvalCase[] = [
       // ése es el fallo, y añadirle «además no probó» manda a quien lee la
       // corrida a perseguir dos bugs donde hay uno.
       //
-      // Este caso es el que hace falsable la regla del `desplaza`: su conducta
-      // se dispara AL VERSE, así que no hay nada que pulsar. Un `clic` sobre un
-      // botón sin manejador ya no cuela —lo para la precondición del censo— y
-      // «sólo mirar» lo para `sin_accion`. La única salida es `desplaza`.
+      // Este caso es el que hace falsable `ui.desplaza`: su conducta se
+      // dispara AL VERSE, así que no hay nada que pulsar. Un `ui.clic` sobre un
+      // botón sin manejador no cuela —lo para la precondición del censo—. La
+      // única salida es desplazar.
       return prometioYSeComprobo(ctx);
     },
   },
@@ -1685,8 +1647,9 @@ export const EVAL_CASES: EvalCase[] = [
   // `data-deck-tab` — y NO tiene id. `derivarClic` busca un `#id` cerca del
   // listener, así que no encuentra nada que derivar.
   //
-  // La salida existe y el prompt la manda (regla 5 de `RUNTIME_MANDA_PRUEBA`):
-  // NOMBRAR EL BOTÓN POR SU TEXTO. Lo que faltaba era un caso que forzara la
+  // La salida existe y el prompt la manda: NOMBRAR EL BOTÓN POR SU TEXTO
+  // (`ui.clic("Servicios")`), o declarar que da igual cuál del grupo
+  // (`{ cualquiera: true }`). Lo que faltaba era un caso que forzara la
   // condición — controles que no existen en el documento guardado— en vez de
   // esperar a que un encargo cualquiera la produjera.
   //

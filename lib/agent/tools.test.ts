@@ -682,23 +682,17 @@ describe("el gemelo etiquetado viaja con la mutacion", () => {
 });
 
 describe("editar_pagina", () => {
-  const PRUEBA_A = [
-    { clic: "#accion-a", entonces: [{ donde: "#resultado-a", que: "cambia" }] },
-  ];
-  const PRUEBA_B = [
-    { clic: "#accion-b", entonces: [{ donde: "#resultado-b", que: "cambia" }] },
-  ];
+  const PRUEBA_A = 'var a = await ui.texto("#resultado-a"); await ui.clic("#accion-a"); await ui.cambiaDe("#resultado-a", a);';
+  const PRUEBA_B = 'var b = await ui.texto("#resultado-b"); await ui.clic("#accion-b"); await ui.cambiaDe("#resultado-b", b);';
 
   async function instalaRuntimeConPruebaA(session: AgentSession, deps: AgentDeps) {
     const out = await runAgentTool(session, deps, "editar_pagina", {
       edits: [{ op: "replace", target: "runtime", new_html: "window.estado = 'a';" }],
-      prueba: PRUEBA_A,
+      prueba_js: PRUEBA_A,
       resumen: "conducta A",
     });
     assert.equal(out.response.ok, true);
-    assert.deepEqual(session.behaviorSpec, [
-      { clic: "#accion-a", veces: 1, entonces: [{ donde: "#resultado-a", que: "cambia" }] },
-    ]);
+    assert.equal(session.behaviorJs, PRUEBA_A);
   }
 
   async function instalaCopyA(session: AgentSession, deps: AgentDeps) {
@@ -709,13 +703,11 @@ describe("editar_pagina", () => {
         target,
         new_html: '<h1>Cupones</h1><code id="cupon-a">A20</code><code id="cupon-b">B30</code><button data-ol-copy="cupon-a" aria-label="Copiar cupón">Copiar A</button>',
       }],
-      prueba: PRUEBA_A,
+      prueba_js: PRUEBA_A,
       resumen: "conducta copy A",
     });
     assert.equal(out.response.ok, true);
-    assert.deepEqual(session.behaviorSpec, [
-      { clic: "#accion-a", veces: 1, entonces: [{ donde: "#resultado-a", que: "cambia" }] },
-    ]);
+    assert.equal(session.behaviorJs, PRUEBA_A);
   }
 
   function copyOpId(taggedHtml: string): string {
@@ -725,7 +717,7 @@ describe("editar_pagina", () => {
     return value;
   }
 
-  it("runtime B sin prueba no reutiliza la prueba A: persiste B, deja spec null y avisa", async () => {
+  it("runtime B sin prueba no reutiliza la prueba A: persiste B, deja la promesa en null y avisa", async () => {
     const { deps, store } = makeDeps();
     const session = makeSession();
     await instalaRuntimeConPruebaA(session, deps);
@@ -740,24 +732,25 @@ describe("editar_pagina", () => {
       store.data.html.includes("window.estado = 'b';"),
       "el segundo script no llegó al documento",
     );
-    assert.equal(session.behaviorSpec, null);
+    assert.equal(session.behaviorJs, null);
     assert.match(String(out.response.aviso_critico), /prueba/i);
   });
 
-  it("runtime B con prueba vacía no reutiliza A: deja spec null y avisa que está malformada", async () => {
-    const { deps } = makeDeps();
+  it("runtime B con una prueba que no entra no se aplica: A sigue describiendo el runtime A", async () => {
+    const { deps, store } = makeDeps();
     const session = makeSession();
     await instalaRuntimeConPruebaA(session, deps);
 
     const out = await runAgentTool(session, deps, "editar_pagina", {
       edits: [{ op: "replace", target: "runtime", new_html: "window.estado = 'b';" }],
-      prueba: [],
+      prueba_js: "x".repeat(5000),
       resumen: "conducta B",
     });
 
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorSpec, null);
-    assert.match(String(out.response.aviso_critico), /prueba.*vac[ií]a|vac[ií]a.*prueba/i);
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.detalle), /prueba_js.*pasa de/i);
+    assert.equal(store.data.html.includes("window.estado = 'b';"), false);
+    assert.equal(session.behaviorJs, PRUEBA_A);
   });
 
   it("una conducta nueva en el markup sin prueba produce aviso_critico", async () => {
@@ -775,7 +768,7 @@ describe("editar_pagina", () => {
     });
 
     assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorSpec, null);
+    assert.equal(session.behaviorJs, null);
     assert.match(String(out.response.aviso_critico), /prueba/i);
   });
 
@@ -787,15 +780,13 @@ describe("editar_pagina", () => {
 
     const out = await runAgentTool(session, deps, "editar_pagina", {
       edits: [{ op: "replace", target: "no-existe", new_html: "<p>nunca persiste</p>" }],
-      prueba: PRUEBA_B,
+      prueba_js: PRUEBA_B,
       resumen: "edición fallida",
     });
 
     assert.equal(out.response.ok, false);
     assert.equal(store.saved.length, guardadosAntes);
-    assert.deepEqual(session.behaviorSpec, [
-      { clic: "#accion-a", veces: 1, entonces: [{ donde: "#resultado-a", que: "cambia" }] },
-    ]);
+    assert.equal(session.behaviorJs, PRUEBA_A);
   });
 
   it("un cambio puramente textual no borra ni reemplaza A aunque reciba prueba B", async () => {
@@ -806,14 +797,12 @@ describe("editar_pagina", () => {
 
     const out = await runAgentTool(session, deps, "editar_pagina", {
       edits: [{ op: "replace", target, new_html: "<h1>Nuevo titular</h1>" }],
-      prueba: PRUEBA_B,
+      prueba_js: PRUEBA_B,
       resumen: "sólo texto",
     });
 
     assert.equal(out.response.ok, true);
-    assert.deepEqual(session.behaviorSpec, [
-      { clic: "#accion-a", veces: 1, entonces: [{ donde: "#resultado-a", que: "cambia" }] },
-    ]);
+    assert.equal(session.behaviorJs, PRUEBA_A);
   });
 
   it("borrar runtime tras A limpia la spec y no exige prueba de lo retirado", async () => {
@@ -827,7 +816,7 @@ describe("editar_pagina", () => {
     });
 
     assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorSpec, null);
+    assert.equal(session.behaviorJs, null);
     assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /prueba/i);
   });
 
@@ -846,7 +835,7 @@ describe("editar_pagina", () => {
     });
 
     assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorSpec, null);
+    assert.equal(session.behaviorJs, null);
     assert.match(String(out.response.aviso_critico), /prueba/i);
   });
 
@@ -861,14 +850,12 @@ describe("editar_pagina", () => {
         target: copyOpId(session.taggedHtml),
         new_html: '<button data-ol-copy="cupon-b" aria-label="Copiar cupón">Copiar B</button>',
       }],
-      prueba: PRUEBA_B,
+      prueba_js: PRUEBA_B,
       resumen: "cambiar cupón",
     });
 
     assert.equal(out.response.ok, true);
-    assert.deepEqual(session.behaviorSpec, [
-      { clic: "#accion-b", veces: 1, entonces: [{ donde: "#resultado-b", que: "cambia" }] },
-    ]);
+    assert.equal(session.behaviorJs, PRUEBA_B);
     assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /prueba/i);
   });
 
@@ -887,7 +874,7 @@ describe("editar_pagina", () => {
     });
 
     assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorSpec, null);
+    assert.equal(session.behaviorJs, null);
     assert.match(String(out.response.aviso_critico), /prueba/i);
   });
 
@@ -912,15 +899,13 @@ describe("editar_pagina", () => {
         target,
         new_html: '<details id="faq"><summary id="abrir">¿Abren los domingos?</summary><p id="respuesta">Sí, de 10 a 14.</p></details>',
       }],
-      prueba: [{ clic: "#abrir", entonces: [{ donde: "#respuesta", que: "visible" }] }],
+      prueba_js: 'await ui.clic("#abrir"); await ui.visible("#respuesta");',
       resumen: "faq con details",
     });
 
     assert.equal(out.response.ok, true);
     // NI runtime NI data-ol-*: el turno no toca JavaScript por ningún lado.
-    assert.deepEqual(session.behaviorSpec, [
-      { clic: "#abrir", veces: 1, entonces: [{ donde: "#respuesta", que: "visible" }] },
-    ]);
+    assert.equal(session.behaviorJs, 'await ui.clic("#abrir"); await ui.visible("#respuesta");');
   });
 
   // ── 🔴 EL `<script>` COLADO POR UNA EDICIÓN DE HTML ───────────────────────
@@ -988,38 +973,21 @@ describe("editar_pagina", () => {
   });
 
   it("y si esa prueba viene mal formada, se OYE — antes se callaba sin JS de por medio", async () => {
-    const { deps } = makeDeps();
+    const { deps, store } = makeDeps();
     const session = makeSession();
     const target = contentOpId(session.taggedHtml);
 
     const out = await runAgentTool(session, deps, "editar_pagina", {
       edits: [{ op: "replace", target, new_html: '<details id="faq"><summary>x</summary></details>' }],
-      // `estilo` sin el nombre de la propiedad: rechazo `falta_valor`.
-      prueba: [{ clic: "#abrir", entonces: [{ donde: "#faq", que: "estilo" }] }],
+      // Una que no entra —se pasa del tope— también se oye sin JS de por medio:
+      // rechaza la llamada igual que con runtime.
+      prueba_js: "x".repeat(5000),
       resumen: "faq",
     });
 
-    assert.equal(out.response.ok, true);
-    assert.match(String(out.response.aviso_critico ?? ""), /prueba|comprobar el comportamiento/i);
-  });
-
-  it("una prueba con que:\"estilo\" bien formada llega entera a la sesión", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: "runtime", new_html: "document.body.classList.add('x');" }],
-      prueba: [{ clic: "#tema", entonces: [{ donde: "body", que: "estilo", valor: "background-color" }] }],
-      resumen: "tema oscuro",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.deepEqual(session.behaviorSpec, [
-      {
-        clic: "#tema",
-        veces: 1,
-        entonces: [{ donde: "body", que: "estilo", valor: "background-color" }],
-      },
-    ]);
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.error, "prueba_js_demasiado_grande");
+    assert.equal(store.saved.length, 0);
   });
 
   it("cambiar sólo el texto de un control conserva A y no exige otra prueba", async () => {
@@ -1037,9 +1005,7 @@ describe("editar_pagina", () => {
     });
 
     assert.equal(out.response.ok, true);
-    assert.deepEqual(session.behaviorSpec, [
-      { clic: "#accion-a", veces: 1, entonces: [{ donde: "#resultado-a", que: "cambia" }] },
-    ]);
+    assert.equal(session.behaviorJs, PRUEBA_A);
     assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /prueba/i);
   });
 
@@ -1047,7 +1013,7 @@ describe("editar_pagina", () => {
     const calcHtml = '<!doctype html><html><head><title>Cotizador</title><meta name="description" content="x"></head><body><div data-ol-calc><input data-ol-val="precio" type="number" value="10"><output data-ol-out="precio * 2" aria-live="polite">20</output></div></body></html>';
     const { deps } = makeDeps({ data: { html: calcHtml } });
     const session = makeSession(calcHtml);
-    session.behaviorSpec = [{ clic: "#accion-a", veces: 1, entonces: [{ donde: "#resultado-a", que: "cambia" }] }];
+    session.behaviorJs = PRUEBA_A;
     const target = /<output[^>]*data-op-id="([^"]+)"/.exec(session.taggedHtml)?.[1];
     assert.ok(target, "output calc sin data-op-id");
 
@@ -1057,7 +1023,7 @@ describe("editar_pagina", () => {
     });
 
     assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorSpec, null);
+    assert.equal(session.behaviorJs, null);
     assert.match(String(out.response.aviso_critico), /prueba/i);
   });
 
@@ -1065,7 +1031,7 @@ describe("editar_pagina", () => {
     const html = '<!doctype html><html><head><title>Cupones</title><meta name="description" content="x"></head><body><code id="a">A</code><code id="b">B</code><button id="ba" data-ol-copy="a">Copiar A</button><button id="bb" data-ol-copy="b">Copiar B</button></body></html>';
     const { deps } = makeDeps({ data: { html } });
     const session = makeSession(html);
-    session.behaviorSpec = [{ clic: "#ba", veces: 1, entonces: [{ donde: "#ba", que: "cambia" }] }];
+    session.behaviorJs = 'await ui.clic("#ba");';
     const ba = /<button[^>]*id="ba"[^>]*data-op-id="([^"]+)"/.exec(session.taggedHtml)?.[1];
     const bb = /<button[^>]*id="bb"[^>]*data-op-id="([^"]+)"/.exec(session.taggedHtml)?.[1];
     assert.ok(ba && bb, "controles copy sin data-op-id");
@@ -1079,7 +1045,7 @@ describe("editar_pagina", () => {
     });
 
     assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorSpec, null);
+    assert.equal(session.behaviorJs, null);
     assert.match(String(out.response.aviso_critico), /prueba/i);
   });
 
@@ -1340,15 +1306,13 @@ describe("editar_pagina", () => {
           new_html: `<h1>Tacos</h1><code id="cupon-verano">TACOS20</code><button data-ol-copy="cupon-verano" aria-label="Copiar cupón">Copiar</button>`,
         },
       ],
-      prueba: PRUEBA_B,
+      prueba_js: PRUEBA_B,
       resumen: "cupon correcto",
     });
     assert.equal(out.response.ok, true);
     assert.equal((out.response as { aviso?: string }).aviso, undefined);
     assert.equal((out.response as { aviso_critico?: string }).aviso_critico, undefined);
-    assert.deepEqual(session.behaviorSpec, [
-      { clic: "#accion-b", veces: 1, entonces: [{ donde: "#resultado-b", que: "cambia" }] },
-    ]);
+    assert.equal(session.behaviorJs, PRUEBA_B);
   });
 
   // ANTES componía DOS motivos: «te quité el script» + «tu conducta nace
@@ -2926,7 +2890,7 @@ describe("W1 regression pins (multi-página)", () => {
       {
         edits: [{ op: "replace", target: "runtime", new_html: "document.title='x';" }],
         resumen: "carrito del menú",
-        prueba: [{ clic: "#x", entonces: [{ donde: "#x", que: "cambia" }] }],
+        prueba_js: 'await ui.clic("#x");',
       },
     );
 
@@ -4582,7 +4546,7 @@ describe("editar_pagina avisa del manejador en linea que va a morir", () => {
         },
       ],
       resumen: "comportamiento bien cableado",
-      prueba: [{ clic: "#add", entonces: [{ donde: "#add", que: "visible" }] }],
+      prueba_js: 'await ui.clic("#add"); await ui.visible("#add");',
     });
 
     assert.equal(out.response.ok, true);
@@ -4962,8 +4926,8 @@ describe("I5 · el diagnóstico llega en el mismo turno", () => {
 // 🔴 RANURA RESERVADA, no el mismo campo a veces JS: `preflight.js` es un
 // nombre reservado con su contrato, no «index.html que a veces es otra cosa».
 // Aquí es `prueba_js`, aparte de `prueba`.
-describe("prueba_js — la ranura reservada del Agente", () => {
-  const CONTADOR = 'ui.desplaza("#n"); ui.cambia("#n");';
+describe("prueba_js — la promesa del Agente", () => {
+  const CONTADOR = 'var n = await ui.texto("#n"); await ui.desplaza("#n"); await ui.cambiaDe("#n", n);';
 
   it("🔴 una prueba en JavaScript se acepta y viaja en la sesión", async () => {
     const { deps } = makeDeps();
@@ -4975,8 +4939,6 @@ describe("prueba_js — la ranura reservada del Agente", () => {
     });
     assert.equal(out.response.ok, true);
     assert.equal(session.behaviorJs, CONTADOR);
-    // Y NO por el canal del DSL: son dos rutas, no una con dos formas.
-    assert.equal(session.behaviorSpec, null);
   });
 
   // 🔴 QUIEN MANDÓ `prueba_js` MANDÓ PRUEBA. El aviso de «cambiaste el
@@ -4995,7 +4957,7 @@ describe("prueba_js — la ranura reservada del Agente", () => {
     assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /SIN mandar/);
   });
 
-  it("CONTRA-PRUEBA: sin ninguna de las dos, el aviso sigue saliendo", async () => {
+  it("CONTRA-PRUEBA: sin prueba, el aviso sigue saliendo", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
     const out = await runAgentTool(session, deps, "editar_runtime", {
@@ -5003,73 +4965,74 @@ describe("prueba_js — la ranura reservada del Agente", () => {
       resumen: "contador",
     });
     assert.equal(out.response.ok, true);
-    assert.match(String(out.response.aviso_critico ?? ""), /SIN mandar/);
+    assert.match(String(out.response.aviso_critico ?? ""), /SIN mandar `prueba_js`/);
   });
 
-  // 🔴 EL CONTRATO SE HACE CUMPLIR, como el suyo. Lo que NO se copia es
-  // "the publish is refused": tirar el edit entero se llevaría por delante el
-  // cambio del usuario. Se rechaza LA PRUEBA y se guarda la página — que es lo
-  // que este repo ya hace con `sin_accion` («El cambio sí se guardó»).
-  it("🔴 una prueba que pasa del tope se rechaza, y el cambio SE GUARDA", async () => {
-    const { deps } = makeDeps();
+  // 🔴 EL CONTRATO SE HACE CUMPLIR, y ANTES de aplicar nada (2026-09-22). Una
+  // prueba que no valida es entrada mal formada como cualquier otra: la
+  // llamada entera se rechaza y el modelo la reenvía. Guardar el cambio sin su
+  // prueba dejaba un runtime nuevo con la promesa VIEJA en la mano.
+  it("🔴 una prueba que pasa del tope rechaza la llamada: no se guarda NADA", async () => {
+    const { deps, store } = makeDeps();
     const session = makeSession();
+    const antes = session.taggedHtml;
     const out = await runAgentTool(session, deps, "editar_runtime", {
       script: 'document.getElementById("n").textContent = "1";',
       prueba_js: "x".repeat(5 * 1024),
       resumen: "contador",
     });
-    assert.equal(out.response.ok, true);
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.error, "prueba_js_demasiado_grande");
+    assert.match(String(out.response.detalle ?? ""), /No se guardó nada/);
+    assert.equal(store.saved.length, 0);
+    assert.equal(session.taggedHtml, antes);
     assert.equal(session.behaviorJs ?? null, null);
-    assert.match(String(out.response.aviso_critico ?? ""), /prueba/i);
+    // La batería lo cuenta: el motivo sigue viajando en la sesión.
+    assert.equal(session.rechazoPrueba, "demasiado_grande");
+    // Y no se tocó el comportamiento, que es lo que lee el juez de la batería.
+    assert.notEqual(out.cambioConducta, true);
   });
 
-  it("mandar las DOS es ambiguo y se dice: no se adivina cuál vale", async () => {
-    const { deps } = makeDeps();
+  // ⚰️ EL DSL, RETIRADO (2026-09-22). Un modelo con historial viejo que siga
+  // mandando `prueba` no puede creer que prometió: un parámetro que ya no
+  // existe rechaza la llamada, igual que una prueba que no valida.
+  it("🔴 una `prueba` del DSL retirado rechaza la llamada, y se dice por qué", async () => {
+    const { deps, store } = makeDeps();
     const session = makeSession();
     const out = await runAgentTool(session, deps, "editar_runtime", {
       script: 'document.getElementById("n").textContent = "1";',
-      prueba_js: CONTADOR,
       prueba: [{ clic: "#b", entonces: [{ donde: "#n", que: "cambia" }] }],
       resumen: "contador",
     });
-    assert.equal(out.response.ok, true);
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.error, "prueba_retirada");
+    assert.match(String(out.response.detalle ?? ""), /`prueba` ya no existe/);
+    assert.match(String(out.response.como_hacerlo ?? ""), /prueba_js/);
+    assert.equal(store.saved.length, 0);
     assert.equal(session.behaviorJs ?? null, null);
-    assert.equal(session.behaviorSpec, null);
-    assert.match(String(out.response.aviso_critico ?? ""), /una sola|ambas|las dos/i);
+    assert.equal(session.rechazoPrueba, "prueba_retirada");
   });
 
-  // CONTRA-PRUEBA: la ruta de siempre no se toca. Son 64 casos de batería y
-  // todo el sistema de regresiones colgando del DSL.
-  it("CONTRA-PRUEBA: sin `prueba_js`, el DSL sigue exactamente igual", async () => {
+  // El rechazo es de la llamada que lo trajo: la siguiente, bien formada, no
+  // lo hereda — o la batería contaría dos rechazos donde hubo uno.
+  it("CONTRA-PRUEBA: la llamada siguiente, bien formada, no hereda el rechazo", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
+    await runAgentTool(session, deps, "editar_runtime", {
+      script: 'document.getElementById("n").textContent = "1";',
+      prueba_js: "x".repeat(5 * 1024),
+      resumen: "contador",
+    });
     const out = await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").addEventListener("click", function(){});',
-      prueba: [{ clic: "#n", entonces: [{ donde: "#n", que: "cambia" }] }],
+      script: 'document.getElementById("n").textContent = "1";',
+      prueba_js: 'ui.desplaza("#n"); ui.cambia("#n");',
       resumen: "contador",
     });
     assert.equal(out.response.ok, true);
-    assert.deepEqual(session.behaviorSpec, [
-      { clic: "#n", veces: 1, entonces: [{ donde: "#n", que: "cambia" }] },
-    ]);
-    assert.equal(session.behaviorJs ?? null, null);
+    assert.equal(session.rechazoPrueba, null);
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 🔴 LA PROMESA DEL TURNO ES UNA, CON DOS RANURAS (2026-09-21 noche).
-//
-// `session.behaviorJs = null` se ejecutaba A SECAS al entrar en
-// `toolEditarPagina`, que es por donde pasan LAS CUATRO puertas. O sea que un
-// retoque de titular sin prueba, tres llamadas despues, borraba en SILENCIO la
-// promesa en JavaScript — mientras `behaviorSpec` esta protegido de eso mismo
-// por una regla escrita a proposito. Dos ranuras del mismo campo con reglas
-// opuestas, y la JS perdiendo por el orden.
-//
-// LA REGLA: entre dos fuentes de lo mismo el rango es FIJO y a la que queda
-// tapada se la NOMBRA; cuando el modelo re-declara su estado el reemplazo es
-// entero y se le avisa. Lo que nunca puede pasar es que algo se caiga por el
-// ORDEN y sin decirlo.
 // 🔴 EL RESULTADO DICE SI SE TOCÓ COMPORTAMIENTO, con la misma decisión que
 // pide `prueba`. Lo lee el arnés: sin esto exigía promesa a cualquier edición,
 // y la batería del 2026-09-22 acusó a 32 turnos que sólo cambiaron un texto.
@@ -5125,7 +5088,7 @@ describe("la promesa del turno sobrevive a lo que no la sustituye", () => {
     );
   });
 
-  it("🔴 una `prueba` posterior SI la sustituye, y se le DICE al modelo", async () => {
+  it("🔴 una `prueba_js` posterior SÍ la sustituye: manda la última declarada", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
     await runAgentTool(session, deps, "editar_runtime", {
@@ -5133,34 +5096,33 @@ describe("la promesa del turno sobrevive a lo que no la sustituye", () => {
       prueba_js: PROGRAMA,
       resumen: "contador",
     });
-    const out = await runAgentTool(session, deps, "editar_runtime", {
+    const NUEVA = 'var n = await ui.texto("#n"); await ui.clic("#n"); await ui.cambiaDe("#n", n);';
+    await runAgentTool(session, deps, "editar_runtime", {
       script: 'document.getElementById("n").addEventListener("click", function () {});',
-      prueba: [{ clic: "#n", entonces: [{ donde: "#n", que: "cambia" }] }],
+      prueba_js: NUEVA,
       resumen: "ahora al pulsar",
     });
-    // Manda la ULTIMA declarada: resucitar la vieja es la averia de
+    // Manda la ÚLTIMA declarada: resucitar la vieja es la avería de
     // `la-promesa-vieja-tapaba-el-ultimo-cambio`, arreglada en 086e7ff6.
-    assert.equal(session.behaviorJs, null);
-    assert.ok(session.behaviorSpec, "la prueba nueva no entro");
-    // Y NO en silencio: la que se cae se nombra.
-    assert.match(JSON.stringify(out.response), /prueba_js/);
+    assert.equal(session.behaviorJs, NUEVA);
   });
 });
 
-// 🔴 UNA `prueba` RECHAZADA NO SUSTITUYE A NADA (2026-09-21 noche, MEDIDO).
+// 🔴 UNA PROMESA DESCRIBE EL RUNTIME QUE HAY (2026-09-22).
 //
-// La corrida de pago enseño el coste: en 2 de 3 casos el turno fue
-// `editar_runtime:js · editar_runtime:✗sin_accion/sin_id` — una promesa JS
-// BUENA, tirada por un DSL que acto seguido se rechazo. El modelo acababa sin
-// ninguna promesa teniendo una valida en la mano, y el caso suspendia por eso.
-//
-// Y la regla que lo zanja: que una entrada quede mal es un RESULTADO, no un
-// efecto. Lo que no valida no llega a aplicarse, asi que no sustituye a nada.
-describe("una prueba que no vale no se lleva por delante la que si valia", () => {
-  const PROGRAMA = 'ui.desplaza("#n"); ui.cambia("#n");';
+// Aquí chocaban dos reglas medidas: «una prueba rechazada no se lleva por
+// delante la promesa que sí valía» y «un comportamiento nuevo sin promesa nueva
+// deja FUERA la vieja». Chocaban porque la llamada se aplicaba a medias —runtime
+// nuevo, prueba descartada— y para una promesa que describe un runtime que ya no
+// está no hay respuesta buena. Con la prueba validada ANTES de aplicar, las dos
+// se cumplen a la vez: la llamada mal formada no cambia nada, y la bien formada
+// que cambia el comportamiento sin prometer retira la vieja
+// ([[la-promesa-vieja-tapaba-el-ultimo-cambio]]) y se lo dice al modelo.
+describe("la promesa sigue al runtime que hay, nunca a uno que ya no está", () => {
+  const PROGRAMA = 'var n = await ui.texto("#n"); await ui.desplaza("#n"); await ui.cambiaDe("#n", n);';
 
-  it("🔴 un `sin_accion` posterior deja viva la promesa JS", async () => {
-    const { deps } = makeDeps();
+  async function conPromesa() {
+    const { deps, store } = makeDeps();
     const session = makeSession();
     await runAgentTool(session, deps, "editar_runtime", {
       script: 'document.getElementById("n").textContent = "1";',
@@ -5168,16 +5130,54 @@ describe("una prueba que no vale no se lleva por delante la que si valia", () =>
       resumen: "contador",
     });
     assert.equal(session.behaviorJs, PROGRAMA);
-    // Una `prueba` que SOLO MIRA: la rechaza `sin_accion`.
-    await runAgentTool(session, deps, "editar_runtime", {
+    return { deps, store, session };
+  }
+
+  it("🔴 una prueba que no valida no deja un runtime nuevo con la promesa vieja: no cambia NADA", async () => {
+    const { deps, store, session } = await conPromesa();
+    const guardadas = store.saved.length;
+    const html = session.taggedHtml;
+    const out = await runAgentTool(session, deps, "editar_runtime", {
       script: 'var b=document.createElement("button"); b.addEventListener("click", function(){});',
-      prueba: [{ entonces: [{ donde: "#n", que: "cambia" }] }],
+      prueba_js: "x".repeat(5 * 1024),
       resumen: "pestanas",
     });
-    assert.equal(
-      session.behaviorJs,
-      PROGRAMA,
-      "una prueba RECHAZADA borro la promesa JS que si valia — el turno se queda sin ninguna",
-    );
+    assert.equal(out.response.ok, false);
+    assert.equal(store.saved.length, guardadas);
+    assert.equal(session.taggedHtml, html);
+    // Sigue en pie, y con razón: describe el runtime que sigue ahí.
+    assert.equal(session.behaviorJs, PROGRAMA);
+  });
+
+  it("🔴 un runtime nuevo SIN prueba retira la vieja, y se le DICE", async () => {
+    const { deps, session } = await conPromesa();
+    const out = await runAgentTool(session, deps, "editar_runtime", {
+      script: 'document.getElementById("n").addEventListener("click", function () {});',
+      resumen: "ahora al pulsar",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(session.behaviorJs ?? null, null);
+    assert.match(String(out.response.aviso_critico ?? ""), /promesa anterior .* ya no cuenta/);
+  });
+
+  it("CONTRA-PRUEBA: sin promesa previa, el aviso no habla de una que no hubo", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "editar_runtime", {
+      script: 'document.getElementById("n").textContent = "1";',
+      resumen: "contador",
+    });
+    assert.match(String(out.response.aviso_critico ?? ""), /SIN mandar `prueba_js`/);
+    assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /promesa anterior/);
+  });
+
+  it("quitar el runtime quita la promesa: no queda nada que prometer", async () => {
+    const { deps, session } = await conPromesa();
+    const out = await runAgentTool(session, deps, "editar_runtime", {
+      script: "",
+      resumen: "quitar el contador",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(session.behaviorJs ?? null, null);
   });
 });

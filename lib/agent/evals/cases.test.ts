@@ -27,6 +27,9 @@ import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+/** Una promesa del turno, como la manda el modelo desde el 2026-09-22. */
+const PROMESA_JS = 'var n = await ui.texto("#n"); await ui.clic("#mas"); await ui.cambiaDe("#n", n);';
+
 // ─── ¿LOS ASSERTS CAZAN DE VERDAD LO QUE DICEN CAZAR? ───────────────────────
 //
 // Un caso que nunca ha visto fallar su assert es una promesa, no una prueba. Y
@@ -633,18 +636,13 @@ describe("coverage map", () => {
 // violan por RECHAZO, no por ausencia.
 describe("la prueba declarada es visible y sus tres estados se distinguen", () => {
   const aceptada: PruebaEnEval[] = [
-    {
-      tool: "editar_runtime",
-      spec: [{ clic: "#b", entonces: [{ donde: "#t", que: "cambia" }] }],
-      rechazo: null,
-      js: null,
-    },
+    { tool: "editar_runtime", rechazo: null, js: PROMESA_JS },
   ];
   const rechazada: PruebaEnEval[] = [
-    { tool: "editar_runtime", spec: null, rechazo: "sin_accion", js: null },
+    { tool: "editar_runtime", rechazo: "demasiado_grande", js: null },
   ];
   const ninguna: PruebaEnEval[] = [
-    { tool: "editar_html", spec: null, rechazo: null, js: null },
+    { tool: "editar_html", rechazo: null, js: null },
   ];
 
   it("🔴 aceptada, rechazada y ausente NO son el mismo estado", () => {
@@ -660,8 +658,8 @@ describe("la prueba declarada es visible y sus tres estados se distinguen", () =
   // sobre «algo salió mal»: `demasiados_pasos` es la regla de los 6 pasos,
   // `sin_accion` es la de que algún paso pulse o escriba.
   it("el motivo del rechazo distingue QUÉ regla se violó", () => {
-    expect(pruebaRechazada(rechazada, "sin_accion")).toBe(true);
-    expect(pruebaRechazada(rechazada, "demasiados_pasos")).toBe(false);
+    expect(pruebaRechazada(rechazada, "demasiado_grande")).toBe(true);
+    expect(pruebaRechazada(rechazada, "vacia")).toBe(false);
   });
 
   // CONTRA-PRUEBA: un turno que no tocó ninguna puerta de edición no declara
@@ -712,19 +710,15 @@ describe("el cumplimiento de la promesa, separado de quién falló", () => {
   const PASOS: readonly PasoSpec[] = [
     { clic: "#sumar", veces: 1, entonces: [{ donde: "#resultado", que: "cambia" }] },
   ];
-  const cumplida: EvalCumplimiento = { corrio: true, fallos: [], forma: "[]", pasos: [], vacuas: [] };
+  const cumplida: EvalCumplimiento = { corrio: true, fallos: [], vacuas: [] };
   const rotaLaPagina: EvalCumplimiento = {
     corrio: true,
     fallos: [{ paso: 1, mensaje: "#resultado no cambió" }],
-    forma: "[{clic,veces,entonces[1]}]",
-    pasos: PASOS,
     vacuas: [],
   };
   const rotoElInstrumento: EvalCumplimiento = {
     corrio: true,
     fallos: [{ paso: 1, mensaje: ".slide señala 10 elementos, no uno", deLaPrueba: true }],
-    forma: "[{clic,veces,entonces[1]}]",
-    pasos: PASOS,
     vacuas: [],
   };
 
@@ -750,7 +744,7 @@ describe("el cumplimiento de la promesa, separado de quién falló", () => {
   it("CONTRA-PRUEBA: sin promesa o sin corrida, ningún veredicto", () => {
     expect(promesaCumplida(null)).toBe(false);
     expect(promesaIncumplida(null)).toBe(false);
-    const noCorrio: EvalCumplimiento = { corrio: false, fallos: [], forma: "[]", pasos: [], vacuas: [] };
+    const noCorrio: EvalCumplimiento = { corrio: false, fallos: [], vacuas: [] };
     expect(promesaCumplida(noCorrio)).toBe(false);
     expect(promesaIncumplida(noCorrio)).toBe(false);
   });
@@ -821,11 +815,11 @@ describe("prometioYSeComprobo — los cuatro estados, sin gastar un peso", () =>
   const PASOS: readonly PasoSpec[] = [
     { clic: "#mas", veces: 1, entonces: [{ donde: "#n", que: "cambia" }] },
   ];
-  const cumplio: EvalCumplimiento = { corrio: true, fallos: [], forma: "[]", pasos: PASOS, vacuas: [] };
+  const cumplio: EvalCumplimiento = { corrio: true, fallos: [], vacuas: [] };
 
   it("🔴 (1) editó y NO mandó prueba — el estado silencioso", () => {
     const r = prometioYSeComprobo({
-      pruebas: [{ tool: "editar_runtime", spec: null, rechazo: null, js: null }],
+      pruebas: [{ tool: "editar_runtime", rechazo: null, js: null }],
       cumplimiento: null,
     });
     expect(r).toMatch(/sin promesa viva/);
@@ -833,22 +827,20 @@ describe("prometioYSeComprobo — los cuatro estados, sin gastar un peso", () =>
 
   it("🔴 (2) la mandó y se descartó — con el CÓDIGO del rechazo", () => {
     const r = prometioYSeComprobo({
-      pruebas: [{ tool: "editar_runtime", spec: null, rechazo: "sin_accion", js: null }],
+      pruebas: [{ tool: "editar_runtime", rechazo: "demasiado_grande", js: null }],
       cumplimiento: null,
     });
     expect(r).toMatch(/descartó/);
-    // El código concreto, o el fallo es inaccionable: `sin_accion` y
-    // `demasiados_pasos` son reglas distintas.
-    expect(r).toContain("sin_accion");
+    // El código concreto, o el fallo es inaccionable: `demasiado_grande` y
+    // `vacia` son causas distintas.
+    expect(r).toContain("demasiado_grande");
   });
 
   it("🔴 (3) corrió y la PÁGINA no la cumplió", () => {
     const r = prometioYSeComprobo({
-      pruebas: [{ tool: "editar_runtime", spec: PASOS, rechazo: null, js: null }],
+      pruebas: [{ tool: "editar_runtime", rechazo: null, js: PROMESA_JS }],
       cumplimiento: {
         corrio: true,
-        forma: "[]",
-        pasos: PASOS,
         vacuas: [],
         fallos: [{ paso: 1, mensaje: "#n no cambió" }],
       },
@@ -859,11 +851,9 @@ describe("prometioYSeComprobo — los cuatro estados, sin gastar un peso", () =>
 
   it("🔴 (4) corrió y no se pudo APLICAR — la prueba es suya, no de la página", () => {
     const r = prometioYSeComprobo({
-      pruebas: [{ tool: "editar_runtime", spec: PASOS, rechazo: null, js: null }],
+      pruebas: [{ tool: "editar_runtime", rechazo: null, js: PROMESA_JS }],
       cumplimiento: {
         corrio: true,
-        forma: "[]",
-        pasos: PASOS,
         vacuas: [],
         fallos: [{ paso: 1, mensaje: ".slide señala 10 elementos, no uno", deLaPrueba: true }],
       },
@@ -876,7 +866,7 @@ describe("prometioYSeComprobo — los cuatro estados, sin gastar un peso", () =>
   it("…y el turno que hizo las cosas bien PASA", () => {
     expect(
       prometioYSeComprobo({
-        pruebas: [{ tool: "editar_runtime", spec: PASOS, rechazo: null, js: null }],
+        pruebas: [{ tool: "editar_runtime", rechazo: null, js: PROMESA_JS }],
         cumplimiento: cumplio,
       }),
     ).toBeNull();
@@ -894,16 +884,16 @@ describe("prometioYSeComprobo — los cuatro estados, sin gastar un peso", () =>
   // texto o un atributo. Sin tocar comportamiento no hay nada que prometer.
   it("🔴 editó SIN tocar comportamiento: no hay nada que prometer", () => {
     const soloTexto = [
-      { tool: "editar_texto", spec: null, rechazo: null, js: null, conducta: false },
-      { tool: "editar_atributos", spec: null, rechazo: null, js: null, conducta: false },
+      { tool: "editar_texto", rechazo: null, js: null, conducta: false },
+      { tool: "editar_atributos", rechazo: null, js: null, conducta: false },
     ];
     expect(prometioYSeComprobo({ pruebas: soloTexto, cumplimiento: null })).toBeNull();
   });
 
   it("…y si UNA llamada del turno sí lo tocó, se exige", () => {
     const mixto = [
-      { tool: "editar_texto", spec: null, rechazo: null, js: null, conducta: false },
-      { tool: "editar_runtime", spec: null, rechazo: null, js: null, conducta: true },
+      { tool: "editar_texto", rechazo: null, js: null, conducta: false },
+      { tool: "editar_runtime", rechazo: null, js: null, conducta: true },
     ];
     expect(prometioYSeComprobo({ pruebas: mixto, cumplimiento: null })).toMatch(/sin promesa viva/);
   });
@@ -911,7 +901,7 @@ describe("prometioYSeComprobo — los cuatro estados, sin gastar un peso", () =>
   it("sin el dato de conducta se asume que la tocó, que es lo que se daba por hecho", () => {
     expect(
       prometioYSeComprobo({
-        pruebas: [{ tool: "editar_texto", spec: null, rechazo: null, js: null }],
+        pruebas: [{ tool: "editar_texto", rechazo: null, js: null }],
         cumplimiento: null,
       }),
     ).toMatch(/sin promesa viva/);
@@ -931,8 +921,8 @@ describe("prometioYSeComprobo — los cuatro estados, sin gastar un peso", () =>
 // turno produce de verdad, que es donde vivía el hueco.
 describe("prometioYSeComprobo sobre listas de turno COMPLETO", () => {
   const PASO = { clic: "#a", veces: 1, entonces: [{ donde: "#b", que: "cambia" as const }] };
-  const sin = (tool: string) => ({ tool, spec: null, rechazo: null, js: null });
-  const con = (tool: string) => ({ tool, spec: [PASO], rechazo: null, js: null });
+  const sin = (tool: string) => ({ tool, rechazo: null, js: null });
+  const con = (tool: string) => ({ tool, rechazo: null, js: PROMESA_JS });
 
   it("🔴 varias puertas y NINGUNA con prueba: tiene que acusar", () => {
     const r = prometioYSeComprobo({
@@ -961,7 +951,7 @@ describe("prometioYSeComprobo sobre listas de turno COMPLETO", () => {
     expect(
       prometioYSeComprobo({
         pruebas: [sin("editar_html"), con("editar_runtime")],
-        cumplimiento: { corrio: true, fallos: [], forma: "[]", pasos: [PASO], vacuas: [] },
+        cumplimiento: { corrio: true, fallos: [], vacuas: [] },
       }),
     ).toBeNull();
   });
@@ -978,8 +968,8 @@ describe("prometioYSeComprobo sobre listas de turno COMPLETO", () => {
 // Ahora el arnés construye `cumplimiento` también para la ranura JS
 // (`forma: "js"`, `pasos: []`), así que las dos rutas las juzga el MISMO juez.
 describe("la ranura JS se puntúa como la del DSL", () => {
-  const conJs = [{ tool: "editar_runtime", spec: null, rechazo: null, js: "ui.clic('#a')" }];
-  const jsCumplido = { corrio: true, fallos: [], forma: "js", pasos: [], vacuas: [] };
+  const conJs = [{ tool: "editar_runtime", rechazo: null, js: "ui.clic('#a')" }];
+  const jsCumplido = { corrio: true, fallos: [], vacuas: [] };
 
   it("🔴 una promesa JS INCUMPLIDA suspende el caso", () => {
     const r = prometioYSeComprobo({

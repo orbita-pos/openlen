@@ -458,7 +458,7 @@ test("la prueba que el modelo declaró se DICE, pero no declara rota la página"
     {
       ...PARAMS,
       runtime: "window.x=1",
-      spec: [{ clic: "#b", entonces: [{ donde: "#total", que: "cambia" }] }] as never,
+      pruebaJs: "await ui.clic('#b');",
     },
     {
       render: async (
@@ -503,7 +503,7 @@ test("una promesa GUARDADA que deja de cumplirse sale como regresión", async ()
     {
       ...PARAMS,
       runtime: "window.x=1",
-      spec: [{ clic: "#b", entonces: [{ donde: "#x", que: "cambia" }] }] as never,
+      pruebaJs: "await ui.clic('#b');",
       guardadas: [CARRITO_GUARDADO] as never,
     },
     {
@@ -539,7 +539,6 @@ test("una guardada cuyo selector ya no existe se retira, no acusa", async () => 
     {
       ...PARAMS,
       runtime: "window.x=1",
-      spec: null,
       guardadas: [CARRITO_GUARDADO] as never,
     },
     {
@@ -565,7 +564,7 @@ test("CONTRA-PRUEBA: sin promesas guardadas nada cambia", async () => {
     {
       ...PARAMS,
       runtime: "window.x=1",
-      spec: [{ clic: "#b", entonces: [{ donde: "#x", que: "cambia" }] }] as never,
+      pruebaJs: "await ui.clic('#b');",
     },
     {
       render: async (
@@ -588,7 +587,7 @@ test("CONTRA-PRUEBA: sin promesas guardadas nada cambia", async () => {
 // el canal entero y las cuatro medidas de verdad se irían con ella.
 test("pero un hecho del navegador sí: el desborde acusa aunque la prueba no", async () => {
   const v = await verifyEditedPage(
-    { ...PARAMS, runtime: "window.x=1", spec: [{ paso: "click", sel: "#b" }] as never },
+    { ...PARAMS, runtime: "window.x=1", pruebaJs: "await ui.clic('#b');" },
     {
       render: async (
         _html,
@@ -1644,7 +1643,7 @@ test("los ojos mandan el preludio del censo junto al programa", async () => {
     {
       ...PARAMS,
       runtime: "window.x=1",
-      spec: [{ clic: "#b", entonces: [{ donde: "#x", que: "cambia" }] }] as never,
+      pruebaJs: "await ui.clic('#b');",
     },
     {
       render: async (
@@ -1700,32 +1699,6 @@ test("cuando el turno trae prueba_js, los ojos ejecutan ESE programa", async () 
   assert.match(programa, /MAX_LLAMADAS/);
 });
 
-// 🔴 UN SOLO CORREDOR (2026-09-22). Sin `pruebaJs`, la promesa del DSL ya no se
-// compila con su propio intérprete: se convierte a JS con el mismo conversor
-// que migra la suite, y corre por `programaSuiteJs`. Así las dos rutas
-// comprueban las guardadas igual.
-test("sin prueba_js, la promesa del DSL corre convertida a JS", async () => {
-  let programa = "";
-  await verifyEditedPage(
-    {
-      ...PARAMS,
-      runtime: "window.x=1",
-      spec: [{ clic: "#b", entonces: [{ donde: "#x", que: "cambia" }] }] as never,
-    },
-    {
-      render: async (_html, opts?: { behaviorProgram?: string }) => {
-        programa = opts?.behaviorProgram ?? "";
-        return IMAGE;
-      },
-      provider: providerReturning("tampoco es JSON"),
-    },
-  );
-  assert.equal(programa.includes("var PASOS ="), false);
-  assert.match(programa, /var PROGRAMAS =/);
-  // El código viaja dentro de un JSON, con las comillas escapadas.
-  assert.ok(programa.includes('ui.clic(\\"#b\\", 1)'), "la promesa convertida no viaja en el programa");
-});
-
 // ─────────────────────────────────────────────────────────────────────────────
 // 🔴 LA RANURA JS NO PASA POR `repartirFallos`, Y PASAR ERA EL BUG (2026-09-21).
 //
@@ -1746,8 +1719,6 @@ test("con la ranura JS, sus fallos son DEL TURNO y no manchan a una guardada", a
     {
       ...PARAMS,
       runtime: "window.x=1",
-      // El modelo mandó las DOS: la spec (que no se ejecuta) y el programa.
-      spec: [{ clic: "#b", entonces: [{ donde: "#x", que: "cambia" }] }] as never,
       pruebaJs: "var t = await ui.texto('#total'); document.querySelector('.add').click();",
       guardadas: [CARRITO_GUARDADO] as never,
     },
@@ -1757,11 +1728,12 @@ test("con la ranura JS, sus fallos son DEL TURNO y no manchan a una guardada", a
         opts?: { behaviorProgram?: string; onBehaviorResult?: (b: unknown) => void },
       ) => {
         programa = opts?.behaviorProgram ?? "";
-        // Lo que devuelve un programa JS: [nºLlamadaUi, mensaje]. El segundo
-        // caería fuera del tramo del turno con el reparto por índice.
+        // Lo que devuelve el programa: [nºLlamadaUi, mensaje, marca, programa].
+        // Los dos son del programa 0, el del turno — aunque el paso 2 caería
+        // fuera del tramo del turno con el reparto viejo por número de paso.
         opts?.onBehaviorResult?.([
-          [0, "#carrito-total no cambió"],
-          [2, "el botón no existe"],
+          [0, "#carrito-total no cambió", null, 0],
+          [2, "el botón no existe", null, 0],
         ]);
         return IMAGE;
       },
@@ -1776,8 +1748,8 @@ test("con la ranura JS, sus fallos son DEL TURNO y no manchan a una guardada", a
   assert.equal(v.fallosDelTurno?.length, 2);
   assert.match(v.fallosDelTurno?.[0]?.mensaje ?? "", /#carrito-total no cambió/);
   assert.match(v.fallosDelTurno?.[1]?.mensaje ?? "", /el botón no existe/);
-  // 🔴 Y LA GUARDADA QUEDA LIMPIA: no se ejecutó, así que no puede haber
-  // fallado. Ésta es la mitad que acusaba a una página sana.
+  // 🔴 Y LA GUARDADA QUEDA LIMPIA: ningún fallo lleva su índice de programa.
+  // Ésta es la mitad que acusaba a una página sana.
   assert.equal(v.regresiones?.length ?? 0, 0);
 });
 
@@ -1793,7 +1765,6 @@ test("con la ranura JS, las guardadas van detrás y su fallo es su regresión", 
     {
       ...PARAMS,
       runtime: "window.x=1",
-      spec: null,
       pruebaJs: "await ui.texto('#total');",
       guardadas: [CARRITO_GUARDADO] as never,
     },
@@ -1821,7 +1792,7 @@ test("con la ranura JS, las guardadas van detrás y su fallo es su regresión", 
 test("una guardada que no se pudo convertir sale como NO COMPROBADA, con su id", async () => {
   const vieja = { id: "p9", pasos: [{ clic: "#a", entonces: [{ donde: "#b", que: "brilla" }] }], pagina: null, creada: 1 };
   const v = await verifyEditedPage(
-    { ...PARAMS, runtime: "window.x=1", spec: null, pruebaJs: "await ui.texto('#total');", guardadas: [vieja] as never },
+    { ...PARAMS, runtime: "window.x=1", pruebaJs: "await ui.texto('#total');", guardadas: [vieja] as never },
     {
       render: async (_html, opts?: { onBehaviorResult?: (b: unknown) => void }) => {
         opts?.onBehaviorResult?.([]);
@@ -1834,14 +1805,14 @@ test("una guardada que no se pudo convertir sale como NO COMPROBADA, con su id",
   assert.match(v.regresionesSinComprobar ?? "", /formato viejo/);
 });
 
-// CONTRA-PRUEBA: por la ruta del DSL las guardadas SI se ejecutan, asi que no
-// hay nada que excusar y el campo no aparece.
-test("CONTRA-PRUEBA: por el DSL, las guardadas si se comprueban y no se excusa nada", async () => {
+// CONTRA-PRUEBA: con promesa del turno, las guardadas se ejecutan detrás, así
+// que no hay nada que excusar y el campo no aparece.
+test("CONTRA-PRUEBA: con promesa del turno, las guardadas se comprueban y no se excusa nada", async () => {
   const v = await verifyEditedPage(
     {
       ...PARAMS,
       runtime: "window.x=1",
-      spec: [{ clic: "#b", entonces: [{ donde: "#x", que: "cambia" }] }] as never,
+      pruebaJs: "await ui.clic('#b');",
       guardadas: [CARRITO_GUARDADO] as never,
     },
     {

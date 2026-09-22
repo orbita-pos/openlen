@@ -167,20 +167,17 @@ describe("runAgentLoop", () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // LA PRUEBA DESCARTADA SE VE, EN ÁMBAR (2026-09-18).
+  // UN AVISO DEL SERVIDOR SE VE, EN ÁMBAR (2026-09-18).
   //
-  // MEDIDO en producción esa misma noche: «ponme un carrito con base de datos».
-  // Len mandó una prueba de clics donde NINGÚN paso pulsaba, el validador la
-  // descartó (`sin_accion`) dos veces, y en la pantalla del dueño no había ni
-  // una tarjeta que lo dijera — la edición se aplicó, así que todas eran
+  // MEDIDO en producción esa noche: «ponme un carrito con base de datos». La
+  // herramienta le avisó al modelo dos veces y en la pantalla del dueño no había
+  // ni una tarjeta que lo dijera — la edición se aplicó, así que todas eran
   // verdes. El motivo vivía en un `console.warn` de la caja.
   //
-  // LA VARA: en Claude Code una entrada que no pasa la validación acaba en un
-  // `tool_result` con `…`, o sea VISIBLE en la transcripción. Aquí
-  // se pinta ÁMBAR y no roja a propósito: para ellos falla la llamada entera,
-  // mientras que aquí la edición sí se guardó. Pintarla roja mentiría sobre el
-  // trabajo del usuario, que es la avería contraria.
-  it("🔴 una prueba descartada sale en ámbar, con su aviso", async () => {
+  // ÁMBAR Y NO ROJA: la edición SÍ se guardó, y la roja diría que el trabajo del
+  // usuario se perdió. (Nació para la prueba descartada, que desde el
+  // 2026-09-22 rechaza la llamada entera y sale roja con razón.)
+  it("🔴 una llamada que fue bien CON aviso sale en ámbar, con su aviso", async () => {
     const events: AgentStreamEvent[] = [];
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],
@@ -191,23 +188,20 @@ describe("runAgentLoop", () => {
       runTool: async () => ({
         response: {
           ok: true,
-          prueba_descartada: {
-            motivo: "sin_accion",
-            aviso: "No pude comprobar el comportamiento: NINGÚN paso pulsa ni escribe. El cambio sí se guardó.",
-          },
+          aviso_critico: "Esta edición ha quitado 1 formulario(s) que la página SÍ tenía.",
         },
       }),
       emit: (e) => events.push(e),
     });
     const ambar = events.find((e) => e.type === "action" && e.status === "warning");
     expect(ambar).toBeDefined();
-    expect((ambar as { motivo?: string }).motivo).toContain("NINGÚN paso pulsa");
+    expect((ambar as { motivo?: string }).motivo).toContain("ha quitado 1 formulario");
   });
 
   // CONTRA-PRUEBA: una edición normal sigue saliendo verde. Sin esto, cualquier
   // cosa que se colara en la respuesta pintaría de ámbar turnos sanos, que es
   // la forma más rápida de que el dueño deje de mirar las tarjetas.
-  it("CONTRA-PRUEBA: sin prueba descartada la tarjeta sigue verde", async () => {
+  it("CONTRA-PRUEBA: sin aviso la tarjeta sigue verde", async () => {
     const events: AgentStreamEvent[] = [];
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],

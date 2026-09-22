@@ -479,13 +479,13 @@ export function programaSuiteJs(entradas: readonly EntradaDePrograma[]): string 
  */
 export function pruebaJsPromptBlock(): string {
   return [
-    "EN VEZ DE `prueba` puedes mandar `prueba_js`: tu prueba como programa JavaScript, con `await` y `document` enteros, corriendo en un navegador de verdad contra la página que acabas de guardar.",
+    "`prueba_js` es tu prueba como programa JavaScript, con `await` y `document` enteros, contra la página que acabas de guardar. Lo que tarda en cumplirse no necesita nada: cada afirmación ya espera sola. Si lo que pulsas exige campos, RELLÉNALOS antes con `ui.escribe`: el navegador no dispara el `submit` de un formulario al que le falta un `required`.",
     "ACTUAR: `ui.clic(sel, veces?)` · `ui.desplaza(sel)` para lo que se dispara AL VERSE · `ui.escribe(sel, valor)` · `ui.espera(ms)`. Un botón SIN id se nombra por su TEXTO: `ui.clic(\"Añadir al carrito\")`. Si el selector señala varios y da igual cuál, `ui.clic(\".tab\", 1, { cualquiera: true })`. LEER, para guardarte el ANTES: `ui.texto(sel)` · `ui.estilo(sel, prop)` · `ui.atributo(sel, nombre)`. AFIRMAR, fallan solas y esperan hasta " + VENTANA_PRUEBA_MS + " ms: `ui.visible` · `ui.oculto` · `ui.contiene(sel, txt)` · `ui.es(sel, txt)` · `ui.cambiaDe(sel, antes)` · `ui.estiloCambiaDe(sel, prop, antes)` · `ui.atributoCambiaDe(sel, nombre, antes)`. Todas con `await`.",
     // Los TOPES no se enumeran aquí a propósito: el rechazo los nombra cuando
     // se pasan, y adelantarlos gasta catálogo para decir dos veces lo mismo.
     // Es lo que hace el `Edit` de Claude Code — su descripción no lista sus
     // modos de fallo; los listan sus errores.
-    "🔴 GUARDA EL ANTES Y COMPARA, o tu prueba no dice que lo movieras TÚ: `var t = await ui.texto(\"#total\"); await ui.clic(\"#add\"); await ui.cambiaDe(\"#total\", t);`. Manda `prueba` O `prueba_js`, nunca las dos.",
+    "🔴 GUARDA EL ANTES Y COMPARA, o tu prueba no dice que lo movieras TÚ: `var t = await ui.texto(\"#total\"); await ui.clic(\"#add\"); await ui.cambiaDe(\"#total\", t);`.",
   ].join(" ");
 }
 
