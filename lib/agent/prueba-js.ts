@@ -15,7 +15,7 @@
 // tiraron por la puerta de entrada — y 2 de ellas por una regla de sintaxis que
 // el prompt ni siquiera enunciaba bien.
 //
-// Se investigó qué hacen de verdad las herramientas grandes, leyendo su código:
+// Se investigó qué hacen de verdad las herramientas grandes:
 //
 //   · **OpenCode** (`D:/opencode/packages/codemode`) — su modo «el modelo
 //     escribe JS» existe, y su contrato es: *«a small JavaScript program that
@@ -137,8 +137,10 @@ export interface FalloSpec {
  * LA FORMA DEL ARREGLO NO ES MEDIR DOS VECES, es que la acción falle antes. Es
  * lo que hace Claude Code, provocado en su propio arnés: un `Edit` con
  * `old_string === new_string` devuelve «No changes to make: old_string and
- * new_string are exactly the same» y no toca el fichero; y su contrato dice
- * «…». La acción reporta su propio efecto.
+ * new_string are exactly the same» y no toca el fichero; y su contrato le dice
+ * al modelo que no relea lo que acaba de editar para comprobarlo, porque si el
+ * cambio hubiera fallado la edición habría dado error. La acción reporta su
+ * propio efecto.
  *
  * ⚠️ VA COMO CADENA, no como función: `evaluateOnNewDocument(() => …)` pasa por
  * esbuild/tsx, que inyecta el ayudante `__name`, y ése no existe dentro del

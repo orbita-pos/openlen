@@ -39,8 +39,8 @@ import type { ProjectData } from "@/lib/projects/types";
  * también cuando cambia algo que no es `data`, y un conflicto de más sólo cuesta
  * una relectura.
  *
- * Es la misma forma que Claude Code aplica a los ficheros
- * guarda `…` de lo que leyó y, si el
+ * Es la misma forma que Claude Code aplica a los ficheros: guarda el
+ * contenido y la marca de tiempo de lo que leyó y, si el
  * fichero se movió, se niega a escribir. Aquí se puede hacer mejor que negarse
  * —el cambio es un merge sobre datos, no un `old_string` sobre texto— así que se
  * reintenta encima en vez de devolverle el problema a quien llamó.

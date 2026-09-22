@@ -683,8 +683,8 @@ describe("los avisos del turno van al final, no enterrados", () => {
 // le corregía.
 //
 // LA VARA: en Claude Code, en cuanto el objetivo se fija se le INYECTA al modelo
-// como prompt —`…`— y su propio
-// resultado de herramienta se lo promete: «…». Lo sabe desde el principio.
+// como prompt, y su propio resultado de herramienta se lo promete: «you will
+// receive a kickoff message confirming it». Lo sabe desde el principio.
 //
 // Va en `avisosDelTurno` porque aterriza al FINAL del mensaje del usuario, que
 // es la posición más saliente, y porque es exactamente lo que ese bloque es:

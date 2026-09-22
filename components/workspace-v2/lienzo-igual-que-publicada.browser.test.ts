@@ -13,7 +13,8 @@
 // es como lo dice Claude Code en su informe de `preview`: «they cover overflow,
 // clipping, theme-only color variables, blocked and local-only loads, diagram
 // and console errors — NOT whether the page looks right», y su propia
-// descripción declara sus límites por delante («…»). Nunca dice «igual que
+// descripción declara sus límites por delante (qué peticiones de la página se
+// rechazan y qué queda desactivado). Nunca dice «igual que
 // publicada» a secas. Aquí igual:
 //
 //   CUBRE  diez capacidades iguales (origen real, localStorage, sessionStorage,

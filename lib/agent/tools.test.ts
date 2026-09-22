@@ -4789,8 +4789,9 @@ describe("I2 · nunca pisar lo que no se vio", () => {
 // detectarlo (su base pasaba a ser la del otro) y el modelo no se enteraba
 // nunca. La pérdida quedaba sin dueño y sin aviso.
 //
-// La vara, otra vez, es Claude Code: cuando un fichero cambia
-// en disco le manda al modelo «…» CON el diff. El hecho viaja; la decisión es del modelo.
+// La vara, otra vez, es Claude Code: cuando un fichero cambia en disco se lo
+// dice al modelo —que suele ser deliberado y lo tome como el estado actual en
+// vez de revertirlo— CON el diff. El hecho viaja; la decisión es del modelo.
 describe("I3 · nunca adoptar el disco en silencio", () => {
   const OTRO = HTML.replace("Los mejores del barrio.", "Abrimos domingos.");
 

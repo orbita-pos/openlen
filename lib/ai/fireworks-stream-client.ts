@@ -81,8 +81,8 @@ export interface FireworksStreamRequest {
    *  da 145)—. Un experimento que variara el nombre estaría midiendo ruido.
    *
    *  Es la forma que tiene Claude Code, que resuelve la misma
-   *  pregunta: su campo `effort` es `…` — un NOMBRE o un
-   *  ENTERO, la misma unión, y una sola postura por sesión que cada ámbito
+   *  pregunta: su campo `effort` admite un NOMBRE o un ENTERO —la misma
+   *  unión—, y una sola postura por sesión que cada ámbito
    *  puede anular. Aquí el nombre lo resuelve a número `presupuestoDeEsfuerzo`.
    *
    *  ⚠️ ES ADITIVO: `agent_turn` se comporta EXACTAMENTE igual que antes, con

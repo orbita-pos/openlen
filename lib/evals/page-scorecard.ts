@@ -190,10 +190,9 @@ export function caseClean(v: PageVerdict): boolean {
 /** Lo que la corrida IMPRIME de un caso que falló: el peor de sus fallos, con
  *  su sitio y, si lo hay, su porqué.
  *
- *  Copiado de Claude Code (`plugin eval`), donde la
- *  columna NOTES de la tabla es exactamente esto:
- *
- *      return `${peor.name}: ${peor.explanation}`;
+ *  Copiado de Claude Code (`plugin eval`), donde la columna NOTES de la tabla
+ *  es exactamente esto: de los evaluadores que fallaron, el que más pesa, con
+ *  su nombre y su explicación.
  *
  *  UNO, no la lista: la fila tiene que caber y el que más pesa es el que hay
  *  que mirar. Ellos tienen `weight` porque cada caso escribe sus propios

@@ -2802,8 +2802,7 @@ describe("el objetivo", () => {
   // 🔴 LA VARA ES CLAUDE CODE, y ahí el objetivo NO es un dato copiado al arrancar
   // el turno: es un hook de `Stop` en un registro, y `/goal clear` lo QUITA del
   // registro. En cada punto de decisión se relee el estado vivo y se abandona si
-  // cambió —«…»—, así que
-  // cancelar surte efecto en el turno EN CURSO.
+  // cambió, así que cancelar surte efecto en el turno EN CURSO.
   //
   // Nosotros lo congelábamos en la ruta, así que un dueño que cancelaba seguía
   // PAGANDO hasta dos vueltas de evaluador por un objetivo que acababa de

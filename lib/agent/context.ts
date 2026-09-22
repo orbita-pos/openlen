@@ -152,8 +152,8 @@ export function avisosDelTurno(args: {
    * a qué se le estaba midiendo: el objetivo no le guiaba, le corregía.
    *
    * LA VARA: en Claude Code, en cuanto el objetivo se fija se le inyecta al
-   * modelo como prompt (`…`), y
-   * su resultado de herramienta se lo promete — «…». Lo sabe desde el principio.
+   * modelo como prompt, y su resultado de herramienta se lo promete — «you will
+   * receive a kickoff message confirming it». Lo sabe desde el principio.
    *
    * Ausente/`null` ⇒ salida byte-idéntica.
    */

@@ -920,8 +920,8 @@ test("una imagen de referencia saca el turno del razonador", () => {
 });
 
 // EL SELECTOR DE CREAR: lo que la persona fija manda... hasta la regla de la
-// visión, que no se puede saltar. Es el recorte silencioso de Claude Code
-// (`…`): se respeta lo que cabe y el resto se ajusta, en vez de
+// visión, que no se puede saltar. Es el recorte silencioso de Claude Code: se
+// respeta lo que cabe y el resto se ajusta, en vez de
 // fallar el turno. Sin esto, fijar el razonador y adjuntar una referencia daría
 // una página escrita por alguien que no la ha visto — que es peor que no haber
 // pedido la referencia.

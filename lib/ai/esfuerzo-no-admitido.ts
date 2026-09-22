@@ -21,10 +21,9 @@
 //                             or 'adaptive', field: 'reasoning_effort'"
 //   valor fuera de sitio 400 "integer reasoning_effort must be positive"
 //
-// La primera forma —«…»— es exactamente una de las
-// cadenas que Claude Code lleva en su propia lista de detección. Y de paso el
-// segundo mensaje confirma la unión desde el lado del proveedor: nombre de una
-// lista cerrada, O entero positivo. La misma forma que
+// La primera forma —«Extra inputs are not permitted»— es la señal de «este
+// modelo no admite el esfuerzo». Y de paso el segundo mensaje confirma la unión
+// desde el lado del proveedor: nombre de una lista cerrada, O entero positivo.
 
 /**
  * Dos clases de rechazo, y NO se tratan igual a propósito.

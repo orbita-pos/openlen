@@ -1122,9 +1122,11 @@ function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: strin
  *      pasaba a ser la del otro, así que el siguiente guardado ya no detectaba
  *      nada que pisar. Una lectura apagaba la protección de las escrituras.
  *
- * La vara es Claude Code: cuando un fichero
- * cambia en disco le manda al modelo, tal cual, «…» y detrás el diff. El
- * hecho viaja; la decisión sigue siendo del modelo.
+ * La vara es Claude Code: cuando un fichero cambia en disco se lo dice al
+ * modelo —que cambió desde que lo leyó, que eso suele ser deliberado y lo tome
+ * como el estado actual en vez de revertirlo, y que si el cambio parece un
+ * error lo diga en vez de deshacerlo él— y detrás el diff. El hecho viaja; la
+ * decisión sigue siendo del modelo.
  *
  * Aquí el «diff» es el ÍNDICE de antes y el de después: es la unidad en la que
  * el modelo ya trabaja (una línea por sección, con su op-id), lo calcula una
@@ -3311,8 +3313,8 @@ const MAX_PUBLISH_LOCALES = 9;
 // decisión que no tomó.
 //
 // NO BLOQUEA: devuelve la tarjeta y el bucle sigue trabajando. Es lo que exige
-// Claude Code —«…»— y lo que nuestro confirm de
-// publicar ya hacía.
+// Claude Code —la propuesta se pinta al lado del trabajo y el modelo sigue
+// mientras se resuelve— y lo que nuestro confirm de publicar ya hacía.
 async function toolProponerObjetivo(
   session: AgentSession,
   // ⚰️ Ya no lee el proyecto: la guarda dejó de mirar el objetivo ACTIVO. Se

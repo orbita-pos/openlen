@@ -352,7 +352,8 @@ export interface AgentLoopArgs {
      * 🔴 LA VARA ES CLAUDE CODE. Allí el objetivo no es un dato copiado al
      * arrancar el turno: es un hook de `Stop` en un registro, y `/goal clear` lo
      * QUITA de ese registro. Además, en cada punto de decisión relee el estado
-     * vivo y se retira si cambió («…»). O sea: cancelar surte efecto en el turno EN CURSO.
+     * vivo y se retira si cambió. O sea: cancelar surte efecto en el turno EN
+     * CURSO.
      *
      * Nosotros lo congelábamos al arrancar, así que un dueño que cancelaba a
      * media faena seguía PAGANDO hasta `maxVueltas` llamadas de evaluador por
@@ -1315,8 +1316,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
 
     // NO CUMPLIDA: el turno NO termina. Se le dice POR QUÉ —el `reason` del
-    // evaluador, igual que Claude Code devuelve `…`— y el bucle
-    // vuelve al principio, que es «se le invoca otra vez».
+    // evaluador, igual que Claude Code devuelve «no cumplida» con su razón— y el
+    // bucle vuelve al principio, que es «se le invoca otra vez».
     vueltasDeObjetivo += 1;
     resultadoObjetivo = { veredicto: "no_cumplida", razon, vueltasExtra: vueltasDeObjetivo };
     messages.push({
@@ -2175,8 +2176,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // que el navegador opine de la página es otro hecho, lo produce otra cosa y
     // llega más tarde — meterlo dentro sería que «guardado» dependiera de que
     // Chromium arrancara. Va de hermano, en el mismo mensaje, que es como lo
-    // hace Claude Code con los diagnósticos del LSP (medido: el bloque
-    // `…` es un mensaje aparte, nunca el `tool_result`).
+    // hace Claude Code con los diagnósticos del LSP (llegan en un mensaje
+    // aparte, nunca dentro del `tool_result`).
     //
     // Y va DESPUÉS del `assistant`, así que el modelo lo lee en su siguiente
     // paso —el que iba a dar de todas formas—: cero llamadas nuevas.
