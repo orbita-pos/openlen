@@ -84,7 +84,7 @@ describe("los ojos del arnés miran como los de la ruta", () => {
   const arnes = clavesDeLosOjos(readFileSync(ARNES, "utf8"));
 
   it("🔴 el arnés pasa la promesa del turno y las promesas guardadas", () => {
-    expect(arnes.has("spec"), "sin `spec` las pruebas de comportamiento no se comprueban").toBe(true);
+    expect(arnes.has("pruebaJs"), "sin `pruebaJs` la promesa del turno no se comprueba").toBe(true);
     expect(arnes.has("guardadas"), "sin `guardadas` una regresión no se ve").toBe(true);
   });
 
@@ -101,7 +101,10 @@ describe("los ojos del arnés miran como los de la ruta", () => {
   // declaraba y NO SE EJECUTABA en la batería — el caso la daba por buena sin
   // haberla corrido. Este guardia existe justo para esto y la lista se le
   // quedó corta; es el mismo modo de fallo que vino a prevenir.
-  const LAS_QUE_DECIDEN = ["spec", "pruebaJs", "guardadas", "vista"] as const;
+  //
+  // Y VUELVEN A SER TRES (2026-09-22): `spec` se fue con el DSL, y `pruebaJs`
+  // es desde entonces la única forma de la promesa del turno.
+  const LAS_QUE_DECIDEN = ["pruebaJs", "guardadas", "vista"] as const;
 
   it("🔴 pasa las que deciden qué se mide", () => {
     for (const clave of LAS_QUE_DECIDEN) {
@@ -140,10 +143,9 @@ describe("el arnés multiturno también", () => {
   const claves = clavesDeLosOjos(src);
 
   it("🔴 pasa la promesa del turno y las guardadas", () => {
-    expect(claves.has("spec")).toBe(true);
     expect(claves.has("guardadas")).toBe(true);
-    // Y la ranura JS, por lo mismo que arriba: manda sobre `spec`, así que sin
-    // ella una promesa en JavaScript se declara y no se ejecuta.
+    // Y la promesa del turno, que desde el 2026-09-22 sólo es la ranura JS:
+    // sin ella se declara y no se ejecuta.
     expect(claves.has("pruebaJs"), "el multiturno no le pasa `pruebaJs` a los ojos").toBe(true);
   });
 

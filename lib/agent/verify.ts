@@ -33,10 +33,9 @@ import {
   notaSpec,
   leerFallos,
   leerSinCorrer,
-  leerVacuas,
   PRELUDIO_CENSO_CLIC,
   type FalloSpec,
-} from "@/lib/agent/behavior-spec";
+} from "@/lib/agent/prueba-js";
 import {
   migrarSuite,
   repartirFallos,
@@ -183,9 +182,6 @@ export interface VisualVerdict {
    *  promesa entre o no en la suite: sólo entra la que NACE EN VERDE, y eso no
    *  se puede leer de una frase en prosa. Vacío/ausente ⇒ se cumplió. */
   fallosDelTurno?: readonly FalloSpec[];
-  /** Expectativas que ya se cumplían antes de actuar. No acusan: ver
-   *  `leerVacuas`. Las lee la batería, no el turno del usuario. */
-  vacuasDelTurno?: readonly FalloSpec[];
   /** Las promesas guardadas que el navegador dice que ya no señalan a nada:
    *  se RETIRAN, no acusan. Son los ids de `PruebaGuardada`. */
   retirarPruebas?: readonly string[];
@@ -452,10 +448,6 @@ interface HechosDelNavegador {
    *  con las reglas del servidor real. Los rechazos son HECHOS de la página. */
   datos: LlamadaADatos[];
   fallosSpec: FalloSpec[];
-  /** Las expectativas que YA se cumplían antes de actuar — ver `leerVacuas`.
-   *  NO son fallos y no acusan a nadie: se miden para poder decidir con el
-   *  número delante si algún día deben suspender en la batería. */
-  vacuas: FalloSpec[];
   /** Las promesas GUARDADAS que dejaron de cumplirse. Aparte de `fallosSpec`
    *  a propósito: otro testigo, otro peso. */
   regresiones: Regresion[];
@@ -505,7 +497,6 @@ function hechosVacios(): HechosDelNavegador {
     soloPublicada: [],
     datos: [],
     fallosSpec: [],
-    vacuas: [],
     regresiones: [],
     regresionesSinComprobar: null,
     guardadasSinCorrer: [],
@@ -843,8 +834,6 @@ async function runVerify(
           // precondición del clic muerto no acusa jamás.
           behaviorPrelude: PRELUDIO_CENSO_CLIC,
           onBehaviorResult: (b) => {
-            // Por su propio canal: `leerFallos` ya las filtró.
-            hechos.vacuas = leerVacuas(b);
             const reparto = repartirFallos(leerFallos(b), corribles, turnoJs !== null);
             hechos.fallosSpec = reparto.delTurno;
             hechos.regresiones = reparto.regresiones;
@@ -1262,8 +1251,8 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   // `observado` del bucle: se le dice al usuario, va al texto del turno y con
   // él al historial, así que el modelo lo lee en el turno siguiente y el
   // usuario puede pedir el arreglo. Lo que se retira es la ACUSACIÓN, no el
-  // dato. Y va con `notaSpec` y no con `avisoSpec` porque ese canal lo lee una
-  // persona: `avisoSpec` le habla al modelo y nombra `target="runtime"`.
+  // dato. Y va con `notaSpec`, que está escrita para quien lee una persona
+  // (la orden al modelo, `avisoSpec`, se retiró con el DSL el 2026-09-22).
   if (fallosSpec.length > 0) {
     verdict.observaciones = [notaSpec(fallosSpec), ...verdict.observaciones];
     // eslint-disable-next-line no-console
@@ -1295,7 +1284,8 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   // texto, así que el dueño de la página llevaba desde entonces leyendo una
   // orden escrita para un modelo: «Arréglalo con editar_html», más una receta
   // de `overflow-x:auto`. Es el mismo desajuste que ya se corrigió en la prueba
-  // declarada partiéndola en `avisoSpec` (modelo) y `notaSpec` (persona).
+  // declarada partiéndola en una orden al modelo y una nota a la persona
+  // (`notaSpec`).
   //
   // QUÉ SE CONSERVA Y QUÉ NO. Los HECHOS MEDIDOS se quedan enteros —qué
   // elemento, cuántos px, qué texto, qué ratio—: son lo que hace la queja
@@ -1417,10 +1407,6 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   if (h.regresionesSinComprobar) verdict.regresionesSinComprobar = h.regresionesSinComprobar;
   if (h.guardadasSinCorrer.length > 0) verdict.guardadasSinCorrer = h.guardadasSinCorrer;
   if (h.fallosSpec.length > 0) verdict.fallosDelTurno = h.fallosSpec;
-  // 🔴 SE MIDE Y SE ENSEÑA, pero NO se le dice al usuario ni al modelo: no es
-  // un defecto de su página, es que su prueba no discriminaba. Hoy sólo lo lee
-  // la batería (`EvalCumplimiento.vacuas`).
-  if (h.vacuas.length > 0) verdict.vacuasDelTurno = h.vacuas;
   if (h.retirarPruebas.length > 0) verdict.retirarPruebas = h.retirarPruebas;
   return verdict;
 }

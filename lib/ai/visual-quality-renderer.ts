@@ -3,6 +3,7 @@ import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
+import { PRELUDIO_CENSO_CLIC } from "@/lib/agent/prueba-js";
 import { RUTAS_SOLO_PUBLICADA } from "@/lib/lienzo/rutas-solo-publicada";
 import type { LlamadaADatos } from "@/lib/page-data/sustituto";
 import { decodificarPng, type PngCrudo } from "@/lib/ai/png-crudo";
@@ -157,19 +158,17 @@ export interface VisualQualityViewports {
  *  de inyección para las pruebas. */
 export interface VisualQualityRenderOptions {
   /**
-   * El guion que el modelo declaró para su propio JavaScript, ya compilado a
-   * programa de navegador (`specProgram`). Cuando viene, se ejecuta EN LUGAR
+   * El guion que el modelo declaró para su propio JavaScript, ya envuelto en
+   * programa de navegador (`programaJs`). Cuando viene, se ejecuta EN LUGAR
    * del pulsado a ciegas: pulsar todo comprueba «¿explota?» y el guion
    * comprueba «¿hizo lo que prometió?», que es la pregunta que de verdad
    * separa una página entregada de una redactada.
    *
-   * ⚠️ AQUÍ NO SE INSTALA EL PRELUDIO DEL CENSO (`PRELUDIO_CENSO_CLIC`), que sí
-   * instala `inline-image.ts` — que es por donde entra la prueba declarada del
-   * agente, el único que hoy pasa `behaviorProgram` en producción. El programa
-   * es fail-open sin él, así que por este camino la precondición del clic
-   * muerto simplemente NO acusa: silencio, no acusación en falso. Si algún día
-   * alguien manda un `behaviorProgram` por aquí y espera esa precondición,
-   * tiene que añadir el `evaluateOnNewDocument` antes de cargar.
+   * Con él se instala SIEMPRE el censo de clic (`PRELUDIO_CENSO_CLIC`), igual
+   * que en `inline-image.ts`, que es por donde corre la del Agente. Por aquí la
+   * manda el Chat (`ai-design`, vía `prepare.ts`). Hasta el 2026-09-22 este
+   * camino no lo instalaba y en el Chat un clic sobre un botón muerto no se
+   * decía nunca. Ver `captureWithPage`.
    */
   readonly behaviorProgram?: string;
   /**
@@ -195,6 +194,11 @@ interface PageLike {
    *  los dobles de prueba implementan esta interfaz a mano. Sólo lo usa el
    *  pool, que es quien reutiliza la página. */
   removeAllListeners?(event?: string): unknown;
+  /** Instala el censo de clic ANTES de que corran los scripts de la página, y
+   *  lo retira después. Opcionales por lo mismo que `on`: un doble que no los
+   *  implementa deja el censo fuera, y el programa es fail-open sin él. */
+  evaluateOnNewDocument?(source: string): Promise<{ identifier: string }>;
+  removeScriptToEvaluateOnNewDocument?(identifier: string): Promise<unknown>;
   /** Acepta también una CADENA: el programa de pulsar no puede ser una función
    *  (el ayudante `__name` de esbuild no existe en el navegador). */
   evaluate(pageFunction: (() => unknown) | string): Promise<unknown>;
@@ -374,6 +378,17 @@ function paginaConPlazo(
     // siendo opcionales por lo mismo que en `PageLike`: los dobles de prueba
     // implementan la interfaz a mano.
     ...(page.goto ? { goto: (url: string, options?: { waitUntil?: "load"; timeout?: number }) => paso(() => page.goto!(url, options)) } : {}),
+    // El censo de clic entra y sale por aquí; sin estas dos líneas el adaptador
+    // se lo comía y la precondición callaba igual que antes de instalarla.
+    ...(page.evaluateOnNewDocument
+      ? { evaluateOnNewDocument: (source: string) => paso(() => page.evaluateOnNewDocument!(source)) }
+      : {}),
+    ...(page.removeScriptToEvaluateOnNewDocument
+      ? {
+          removeScriptToEvaluateOnNewDocument: (identifier: string) =>
+            paso(() => page.removeScriptToEvaluateOnNewDocument!(identifier)),
+        }
+      : {}),
     ...(page.on ? { on: (evento: string, handler: (payload: unknown) => void) => page.on!(evento, handler) } : {}),
     ...(page.removeAllListeners
       ? { removeAllListeners: (evento?: string) => page.removeAllListeners!(evento) }
@@ -1006,11 +1021,27 @@ async function captureWithPage(
   });
 
   await page.setViewport(VISUAL_QUALITY_DESKTOP_VIEWPORT);
-  const datos = await cargarEnOrigenReal(
-    page,
-    injectDeterministicRenderReset(html),
-    opts.sub === undefined ? {} : { sub: opts.sub },
-  );
+  // 🔴 EL CENSO VIAJA CON EL PROGRAMA (2026-09-22). La precondición del clic
+  // muerto es parte de `ui.clic`, no de quien lo llama: si un renderizador
+  // corre el programa sin instalar el censo, la comprobación se apaga en
+  // silencio. Pasaba justo aquí, que es por donde corre la prueba del Chat
+  // (`ai-design`, vía `prepare.ts`). Se instala antes de cargar y se retira en
+  // cuanto el documento existe: el pool reutiliza la página, y un guion que se
+  // quedara registrado se apilaría render tras render.
+  const censo =
+    opts.behaviorProgram && page.evaluateOnNewDocument
+      ? await page.evaluateOnNewDocument(PRELUDIO_CENSO_CLIC).catch(() => null)
+      : null;
+  let datos: Awaited<ReturnType<typeof cargarEnOrigenReal>>;
+  try {
+    datos = await cargarEnOrigenReal(
+      page,
+      injectDeterministicRenderReset(html),
+      opts.sub === undefined ? {} : { sub: opts.sub },
+    );
+  } finally {
+    if (censo) await page.removeScriptToEvaluateOnNewDocument?.(censo.identifier).catch(() => {});
+  }
 
   const images: InlineImage[] = [];
   let mobileOverflow = false;

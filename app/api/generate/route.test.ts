@@ -13,7 +13,6 @@
 // seeding and behaviour validation are the real passes.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readTwCarrier } from "@/lib/publish/tw-config";
-import type { PasoSpec } from "@/lib/agent/behavior-spec";
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
@@ -93,7 +92,6 @@ const doc = (head: string, body: string) =>
 function modelReturns(
   html: string,
   modelRuntime: string | null = null,
-  modelPrueba?: readonly PasoSpec[],
 ): void {
   mocks.generateHtmlStream.mockImplementation(() => ({
     stream: new ReadableStream<Uint8Array>({
@@ -110,7 +108,6 @@ function modelReturns(
       stopKind: "end_turn" as const,
       error: null,
       modelRuntime,
-      ...(modelPrueba ? { modelPrueba } : {}),
     }),
   }));
 }

@@ -11,13 +11,13 @@
  *
  * 🔴 Y POR QUÉ HACÍA FALTA LA COSTURA. El eslabón «el bucle llama al envoltorio
  * y el envoltorio llena `declaradas`» no lo cubría NADA: `tools.test.ts` prueba
- * que `runAgentTool` pone `session.behaviorSpec`, `loop.test.ts` prueba que el
+ * que `runAgentTool` pone `session.behaviorJs`, `loop.test.ts` prueba que el
  * bucle llama a `runTool`, y `arnes-multiturno-como-la-ruta.test.ts` compara
  * TEXTO, no ejecución. En medio quedaba justo el tramo del que se sospechaba.
  * Con el instrumento ciego una corrida de pago no contesta nada — le costó tres
  * a la sesión del 2026-09-21.
  */
-import type { FalloSpec } from "@/lib/agent/behavior-spec";
+import type { FalloSpec } from "@/lib/agent/prueba-js";
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import type { PruebaGuardada } from "@/lib/agent/pruebas-de-la-pagina";
 import type { PruebaEnEval, EvalCumplimiento } from "./cases";
@@ -100,7 +100,9 @@ export function rechazosPorMotivo(
 export function cumplimientoDelTurno(opts: {
   js: string | null;
   fallos: readonly FalloSpec[];
-  vacuas: readonly FalloSpec[];
+  /** Lo que el brazo sin acciones cumplió igual. Ausente = no se midió. Ver
+   *  `EvalCumplimiento.vacuas`. */
+  vacuas?: readonly FalloSpec[];
   corrio: boolean;
   /** Por qué no se pudo comprobar. Obligatorio de hecho cuando `corrio:false`:
    *  ver `EvalCumplimiento.motivo` — el motivo va DENTRO en vez de dejar un
@@ -109,10 +111,10 @@ export function cumplimientoDelTurno(opts: {
 }): EvalCumplimiento | null {
   const { js, fallos, vacuas, corrio, motivo } = opts;
   if (!js) return null;
-  // `corrio:false` ⇒ no se midió: ni fallos ni vacuas, y el motivo al lado.
+  // `corrio:false` ⇒ no se midió: sin fallos ni vacuas, y el motivo al lado.
   return corrio
-    ? { corrio: true, fallos, vacuas }
-    : { corrio: false, fallos: [], vacuas: [], ...(motivo ? { motivo } : {}) };
+    ? { corrio: true, fallos, ...(vacuas !== undefined ? { vacuas } : {}) }
+    : { corrio: false, fallos: [], ...(motivo ? { motivo } : {}) };
 }
 
 /**

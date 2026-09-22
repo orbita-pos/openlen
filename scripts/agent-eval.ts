@@ -455,24 +455,23 @@ async function main(): Promise<void> {
     for (const r of noMedidas) {
       console.log(`  · ${r.id}: NO SE PUDO COMPROBAR — ${r.cumplimiento?.motivo ?? "sin motivo anotado"}`);
     }
-    // 🔴 LAS QUE NO PODÍAN PROBAR NADA — se miden y NO puntúan (todavía).
+    // 🔴 EL BRAZO SIN ACCIONES — se mide y NO puntúa (todavía).
     //
-    // Una expectativa absoluta que YA se cumplía antes de actuar deja el paso
-    // verde pase lo que pase. Salió a la luz en la corrida del 21/09:
-    // `contador-se-construye` en PASS pulsando el propio contador y esperando
-    // que contuviera "5,000", que es lo que alcanza solo.
-    //
-    // Nace SIN puntuar a propósito: es la tercera medida nueva de esta línea y
-    // las dos anteriores habrían suspendido casos sanos por defectos nuestros.
-    // Primero el número en corridas limpias, después la decisión.
-    const conVacuas = conPromesa.filter((r) => (r.cumplimiento?.vacuas ?? []).length > 0);
-    if (conVacuas.length > 0) {
+    // La misma promesa, sobre la misma página, con sus acciones anuladas: lo
+    // que se cumple igual no dice nada de lo que hizo el modelo. Salió a la luz
+    // el 21/09 con `contador-se-construye` en PASS esperando un «5,000» que el
+    // contador alcanza solo. Tres recuentos distintos, porque son tres hechos:
+    // se midió y discrimina, se midió y no, o no se pudo medir.
+    const medidas = corrieron.filter((r) => r.cumplimiento?.vacuas !== undefined);
+    const noDiscriminan = medidas.filter((r) => (r.cumplimiento?.vacuas ?? []).length > 0);
+    if (corrieron.length > 0) {
       console.log(
-        `Expectativas que ya se cumplían (NO puntúan): ${conVacuas.length} de ${conPromesa.length} caso(s) con promesa.`,
+        `Brazo sin acciones (NO puntúa): ${medidas.length} de ${corrieron.length} promesa(s) medidas — ` +
+          `${noDiscriminan.length} se cumplen en parte también sin actuar.`,
       );
-      for (const r of conVacuas.slice(0, 6)) {
+      for (const r of noDiscriminan.slice(0, 6)) {
         const v = (r.cumplimiento?.vacuas ?? [])[0];
-        console.log(`  · ${r.id}: paso ${v?.paso} ${String(v?.mensaje).slice(0, 120)}`);
+        console.log(`  · ${r.id}: paso ${v?.paso} ${String(v?.mensaje).slice(0, 140)}`);
       }
     }
     for (const r of [...dePagina, ...deLaPrueba].slice(0, 6)) {

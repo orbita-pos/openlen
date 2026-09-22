@@ -39,7 +39,7 @@ import { buildAgentMessages } from "@/lib/agent/context";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
-import type { FalloSpec } from "@/lib/agent/behavior-spec";
+import type { FalloSpec } from "@/lib/agent/prueba-js";
 import {
   actualizarSuite,
   marcarRegresiones,

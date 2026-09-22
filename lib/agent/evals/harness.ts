@@ -27,7 +27,7 @@ import { componerMedicion, type MedicionCruda } from "@/lib/agent/aviso-medido";
 import { evaluarCondicion } from "@/lib/agent/objetivo/evaluar-condicion";
 import { medirUnaVezPorDocumento } from "@/lib/ai/medir-una-vez";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
-import { vistaParaMedir } from "@/lib/lienzo/documento";
+import { documentoMedible, vistaParaMedir } from "@/lib/lienzo/documento";
 import {
   createVisualQualityRendererPool,
   renderVisualQualityViewports,
@@ -39,7 +39,7 @@ import {
   summarizeProjectState,
   type AgentSession,
 } from "@/lib/agent/tools";
-import { formaDePrueba, type PasoSpec, type FalloSpec } from "@/lib/agent/behavior-spec";
+import type { FalloSpec } from "@/lib/agent/prueba-js";
 import type { VerifyOutcome } from "@/lib/agent/loop";
 import {
   actualizarSuite,
@@ -50,6 +50,7 @@ import {
 import type { ProjectData } from "@/lib/projects/types";
 import { coverage, prometioYSeComprobo, type EvalCase, type EvalCumplimiento, type PruebaEnEval } from "./cases";
 import { anotarPromesas, cumplimientoDelTurno, type PromesasDelArnes } from "./promesas";
+import { brazoSinAcciones } from "./brazo-sin-acciones";
 
 // A tag-rich, valid fixture: hero h1 + subtitle + CTA button + a REAL
 // images.openlen.com photo in the hero (so the costly editar_imagen case passes
@@ -894,6 +895,11 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     // `prometioYSeComprobo` la dejaba pasar por su escape de `jsFinal` — el pase
     // libre otra vez, por la puerta de atrás.
     if (finalData.html && (promesas.js || muto)) {
+      const vistaDeMedida = vistaParaMedir(
+        projectId,
+        { title: `Agent Eval ${evalCase.id}`, data: finalData },
+        null,
+      );
       try {
         const v = await verifyEditedPage({
           html: finalData.html,
@@ -902,11 +908,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
           // corre, y `cumplimiento` se queda en null con la promesa sin mirar.
           pruebaJs: promesas.js,
           guardadas: vivas(promesas.suite, finalData.html, null),
-          vista: vistaParaMedir(
-            projectId,
-            { title: `Agent Eval ${evalCase.id}`, data: finalData },
-            null,
-          ),
+          vista: vistaDeMedida,
           // LA LÍNEA ENTERA DE ESTE CAMBIO: los hechos sí, la opinión no.
           sinVision: true,
         });
@@ -915,10 +917,24 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
         // le pasa lo medido. El detalle de la ruta JS viaja aparte, para el
         // informe: `cumplimiento` dice SI se cumplió, `pruebaJsFallos` QUÉ falló.
         if (promesas.js) pruebaJsFallos = v.fallosDelTurno ?? [];
+        // 🔴 EL BRAZO SIN ACCIONES (2026-09-22): la misma promesa, sobre el
+        // mismo documento que midieron los ojos, con sus acciones anuladas. Lo
+        // que se cumple igual no discrimina. Mide y NO puntúa — ver
+        // `brazo-sin-acciones.ts`. Si no puede medir, la medida queda AUSENTE:
+        // «no se midió» no es «todo discrimina».
+        let vacuas: readonly FalloSpec[] | undefined;
+        if (promesas.js) {
+          try {
+            vacuas = await brazoSinAcciones(documentoMedible(finalData.html, vistaDeMedida), promesas.js);
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn(`[agent-eval] el brazo sin acciones no pudo medir: ${err instanceof Error ? err.message : String(err)}`);
+          }
+        }
         cumplimiento = cumplimientoDelTurno({
           js: promesas.js,
           fallos: v.fallosDelTurno ?? [],
-          vacuas: v.vacuasDelTurno ?? [],
+          ...(vacuas !== undefined ? { vacuas } : {}),
           corrio: true,
         });
         // 🔴 SIN VISIÓN, `broken` ES PURAMENTE MECÁNICO. Lo ponen cuatro hechos
@@ -938,7 +954,6 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
         cumplimiento = cumplimientoDelTurno({
           js: promesas.js,
           fallos: [],
-          vacuas: [],
           corrio: false,
           // EL MOTIVO, que este `catch` se tragaba. Sin él el informe decía «2
           // declararon, 1 se ejecutó» y la otra desaparecía sin explicación.

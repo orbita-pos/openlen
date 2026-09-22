@@ -11,7 +11,7 @@
  *
  * Y el tramo del que se sospechaba era justo el que no cubría nada:
  *
- *   · `tools.test.ts`  → `runAgentTool` pone `session.behaviorSpec`.      ✅
+ *   · `tools.test.ts`  → `runAgentTool` pone `session.behaviorJs`.        ✅
  *   · `loop.test.ts`   → el bucle llama a `args.runTool`.                 ✅
  *   · el envoltorio del arnés entre los dos                               ❌
  *
@@ -21,7 +21,7 @@
  * navegador y sin base de datos.
  *
  * ⚠️ LO ÚNICO FALSO AQUÍ ES `ejecutar`, y a propósito: lo que hace la
- * herramienta de verdad —poner `behaviorSpec` / `specRechazoPrevio` en la
+ * herramienta de verdad —poner `behaviorJs` / `rechazoPrueba` en la
  * sesión— ya lo prueban 20 afirmaciones en `tools.test.ts`. Repetirlo aquí
  * pediría una base de datos, y en esta máquina `DATABASE_URL` apunta a
  * producción.
@@ -179,7 +179,7 @@ describe("y con eso el assert YA PUEDE acusar — lo que no pasó el 2026-09-21"
 // día una promesa en JavaScript no producía cumplimiento y nadie la juzgaba.
 describe("cumplimientoDelTurno", () => {
   const FALLO = [{ paso: 1, mensaje: "#total no cambió" }];
-  const base = { fallos: [], vacuas: [], corrio: true } as const;
+  const base = { fallos: [], corrio: true } as const;
 
   it("sin promesa, no hay nada que juzgar", () => {
     expect(cumplimientoDelTurno({ ...base, js: null })).toBeNull();
@@ -195,10 +195,38 @@ describe("cumplimientoDelTurno", () => {
   });
 
   it("🔴 FAIL-OPEN: si no se pudo medir, no acusa a nadie", () => {
-    const c = cumplimientoDelTurno({ js: UNA_PROMESA, fallos: FALLO, vacuas: [], corrio: false });
+    const c = cumplimientoDelTurno({ js: UNA_PROMESA, fallos: FALLO, corrio: false });
     expect(c?.corrio).toBe(false);
     expect(c?.fallos, "se colaron fallos de una medición que no ocurrió").toEqual([]);
     expect(promesaIncumplida(c)).toBe(false);
+  });
+});
+
+// ── EL BRAZO SIN ACCIONES, EN EL CUMPLIMIENTO (2026-09-22) ─────────────────────
+//
+// Lo que la promesa cumple también sin sus acciones no discrimina. Se MIDE y
+// NO puntúa: ni el juez ni `promesaIncumplida` lo leen. Y «no se midió» no es
+// «todo discrimina»: son dos valores distintos.
+describe("cumplimientoDelTurno con el brazo sin acciones", () => {
+  const VACUA = [{ paso: 2, mensaje: 'ui.contiene("#n", "5,000") se cumple también sin tus acciones' }];
+
+  it("lo medido viaja, y AUSENTE cuando no se midió", () => {
+    expect(cumplimientoDelTurno({ js: UNA_PROMESA, fallos: [], vacuas: VACUA, corrio: true })?.vacuas).toEqual(VACUA);
+    expect(cumplimientoDelTurno({ js: UNA_PROMESA, fallos: [], vacuas: [], corrio: true })?.vacuas).toEqual([]);
+    const sinMedir = cumplimientoDelTurno({ js: UNA_PROMESA, fallos: [], corrio: true });
+    expect(sinMedir !== null && "vacuas" in sinMedir, "«no se midió» se disfrazó de «todo discrimina»").toBe(false);
+  });
+
+  it("🔴 NO puntúa: una promesa cumplida que no discrimina no suspende el caso", () => {
+    const c = cumplimientoDelTurno({ js: UNA_PROMESA, fallos: [], vacuas: VACUA, corrio: true });
+    expect(promesaIncumplida(c)).toBe(false);
+    const p = [{ tool: "editar_runtime", rechazo: null, js: UNA_PROMESA, conducta: true }];
+    expect(prometioYSeComprobo({ pruebas: p, cumplimiento: c })).toBeNull();
+  });
+
+  it("si no se pudo medir la promesa, tampoco se inventa el brazo", () => {
+    const c = cumplimientoDelTurno({ js: UNA_PROMESA, fallos: [], vacuas: VACUA, corrio: false });
+    expect(c !== null && "vacuas" in c).toBe(false);
   });
 });
 
@@ -213,7 +241,7 @@ describe("cumplimientoDelTurno", () => {
 describe("lo que no se pudo comprobar lo dice, no lo calla", () => {
   it("🔴 con `corrio:false` el motivo viaja en el cumplimiento", () => {
     const c = cumplimientoDelTurno({
-      js: UNA_PROMESA, fallos: [], vacuas: [], corrio: false,
+      js: UNA_PROMESA, fallos: [], corrio: false,
       motivo: "el render reventó: Navigation timeout",
     });
     expect(c?.corrio).toBe(false);
@@ -223,7 +251,7 @@ describe("lo que no se pudo comprobar lo dice, no lo calla", () => {
   // CONTRA-PRUEBA: lo que SI se midio no lleva motivo — un motivo ahi seria
   // ruido que se leeria como «paso algo».
   it("CONTRA-PRUEBA: lo que se midio no lleva motivo", () => {
-    const c = cumplimientoDelTurno({ js: UNA_PROMESA, fallos: [], vacuas: [], corrio: true });
+    const c = cumplimientoDelTurno({ js: UNA_PROMESA, fallos: [], corrio: true });
     expect(c?.corrio).toBe(true);
     expect(c?.motivo ?? null).toBeNull();
   });
