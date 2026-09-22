@@ -1,4 +1,4 @@
-import type { PruebaDeclarada } from "@/lib/agent/behavior-spec";
+import type { PruebaDeclarada } from "@/lib/agent/prueba-js";
 import type { ContextoDeVista } from "@/lib/lienzo/documento";
 
 /**
@@ -170,10 +170,9 @@ export interface PreparePageOptions {
    *
    * Ausente ⇒ se pulsa a ciegas, exactamente como antes.
    *
-   * Desde el 2026-09-04 lleva su FORMA: `spec` es el JSON de siempre y `js` el
-   * programa que el modelo escribe sobre los primitivos `ui.*`. Las dos
-   * conviven para poder medirlas una contra otra moviendo sólo el prompt —
-   * ver `lib/agent/prueba-js.ts`.
+   * Es el programa que el modelo escribe sobre los primitivos `ui.*` — ver
+   * `lib/agent/prueba-js.ts`. (Hasta el 2026-09-22 podía ser también una lista
+   * de pasos en JSON, el DSL, que compilábamos nosotros.)
    */
   readonly prueba?: PruebaDeclarada;
 }

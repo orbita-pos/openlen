@@ -427,21 +427,6 @@ function analizarSpec(raw: unknown): SpecResultado {
   return { kind: "spec", pasos };
 }
 
-/**
- * LA PRUEBA QUE EL MODELO DECLARÓ, en cualquiera de sus dos formas.
- *
- * Vive aquí y no en `prueba-js.ts` para que no haya ciclo: `prueba-js` importa
- * de este fichero, no al revés.
- *
- * Las dos rutas conviven a propósito desde el 2026-09-04 — así se puede medir
- * una contra otra moviendo SÓLO el prompt, en vez de arrancar la que funciona
- * para probar la que no se ha medido. `spec` es el JSON de siempre; `js` es el
- * programa del modelo sobre los primitivos `ui.*`.
- */
-export type PruebaDeclarada =
-  | { readonly modo: "spec"; readonly pasos: readonly PasoSpec[] }
-  | { readonly modo: "js"; readonly codigo: string };
-
 /** Lo que un paso falló, en la lengua del usuario — la lee él, y también el
  *  modelo, que necesita saber QUÉ elemento y QUÉ se esperaba. */
 export interface FalloSpec {

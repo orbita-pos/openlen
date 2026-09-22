@@ -176,7 +176,7 @@ export function aiDesignSystemMessage(): string {
   return (
     paraElChat +
     modelRuntimePromptBlock() +
-    modelPruebaPromptBlock("edits") +
+    modelPruebaPromptBlock() +
     `\n\n${bloqueDeLibrerias()}`
   );
 }

@@ -535,18 +535,18 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     expect(mocks.verifyEditedPage.mock.calls[0]![0].runtime).toBe(RUNTIME_NUEVO);
   });
 
-  it("la ruta entrega a verifyEditedPage la spec final de A→B, nunca la anterior", async () => {
-    const SPEC_A = [{ clic: "#a", veces: 1, entonces: [{ donde: "#ra", que: "cambia" }] }];
-    const SPEC_B = [{ clic: "#b", veces: 1, entonces: [{ donde: "#rb", que: "cambia" }] }];
-    mocks.runAgentTool.mockImplementation(async (session: { behaviorSpec?: unknown }, _deps: unknown, _name: string, args: { prueba?: unknown }) => {
-      session.behaviorSpec = args.prueba ?? null;
+  it("la ruta entrega a verifyEditedPage la promesa final de A→B, nunca la anterior", async () => {
+    const PROMESA_A = 'var a = await ui.texto("#ra"); await ui.clic("#a"); await ui.cambiaDe("#ra", a);';
+    const PROMESA_B = 'var b = await ui.texto("#rb"); await ui.clic("#b"); await ui.cambiaDe("#rb", b);';
+    mocks.runAgentTool.mockImplementation(async (session: { behaviorJs?: unknown }, _deps: unknown, _name: string, args: { prueba_js?: unknown }) => {
+      session.behaviorJs = args.prueba_js ?? null;
       return { response: { ok: true }, updatedHtml: "<h1>Hola</h1>", page: null };
     });
     mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
       const runTool = args.runTool as (name: string, input: Record<string, unknown>) => Promise<unknown>;
       const verifyTurn = args.verifyTurn as (input: { html: string; page: null }) => Promise<unknown>;
-      await runTool("editar_pagina", { prueba: SPEC_A });
-      await runTool("editar_pagina", { prueba: SPEC_B });
+      await runTool("editar_runtime", { prueba_js: PROMESA_A });
+      await runTool("editar_runtime", { prueba_js: PROMESA_B });
       await verifyTurn({ html: "<h1>Hola</h1>", page: null });
       return { turns: 2, toolCalls: 2, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
     });
@@ -562,7 +562,7 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
 
     expect(mocks.runAgentTool).toHaveBeenCalledTimes(2);
     expect(mocks.verifyEditedPage).toHaveBeenCalledOnce();
-    expect(mocks.verifyEditedPage.mock.calls[0]![0].spec).toEqual(SPEC_B);
+    expect(mocks.verifyEditedPage.mock.calls[0]![0].pruebaJs).toBe(PROMESA_B);
   });
 
   /**
