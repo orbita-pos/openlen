@@ -44,6 +44,7 @@ import type { VerifyOutcome } from "@/lib/agent/loop";
 import {
   actualizarSuite,
   marcarRegresiones,
+  pasosAJs,
   vivas,
   type PruebaGuardada,
 } from "@/lib/agent/pruebas-de-la-pagina";
@@ -787,7 +788,12 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
         // Aquí vive en memoria —el arnés no escribe `data.pruebas`— pero
         // cruza los turnos de una corrida, que es lo que hace falta para
         // medir una regresión.
-        const comprobadas = vivas(promesas.suite, html, null).map((p) => p.id);
+        // Las que NO corrieron no cuentan como comprobadas (ver
+        // `VisualVerdict.guardadasSinCorrer`).
+        const sinCorrer = new Set(v.guardadasSinCorrer ?? []);
+        const comprobadas = vivas(promesas.suite, html, null)
+          .filter((p) => !sinCorrer.has(p.id))
+          .map((p) => p.id);
         const { suite: marcadas } = marcarRegresiones(promesas.suite, {
           comprobadas,
           rotas: (v.regresiones ?? []).map((r) => r.id),
@@ -796,15 +802,12 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
           retirar: [...(v.retirarPruebas ?? [])],
           documento: html,
           pagina: null,
-          ...(promesas.spec?.length
-            ? {
-                turno: {
-                  pasos: promesas.spec,
-                  fallos: v.fallosDelTurno ?? [],
-                  pagina: null,
-                },
-              }
-            : {}),
+          // COMO LA RUTA: la promesa del turno entra como programa JS, venga
+          // por `prueba_js` o convertida desde el DSL.
+          ...((): { turno?: { codigo: string; fallos: readonly FalloSpec[]; pagina: null } } => {
+            const codigo = promesas.js?.trim() || (promesas.spec?.length ? pasosAJs(promesas.spec) : null);
+            return codigo ? { turno: { codigo, fallos: v.fallosDelTurno ?? [], pagina: null } } : {};
+          })(),
         });
         // Y LOS CUATRO ESTADOS, no dos: colapsar `observado` y `no_mirado`
         // en `bien` es medir un producto que no existe — allí una

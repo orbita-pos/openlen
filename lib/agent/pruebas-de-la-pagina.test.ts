@@ -30,23 +30,28 @@ import {
   avisoDeRegresion,
   guardarSiNaceEnVerde,
   marcarRegresiones,
+  migrarSuite,
+  pasosAJs,
   repartirFallos,
   selectoresDe,
+  selectoresDelCodigo,
   vivas,
   TOPE_PRUEBAS_POR_PAGINA,
   type PruebaGuardada,
 } from "./pruebas-de-la-pagina";
 
 const PASOS = [{ clic: "#agregar", entonces: [{ donde: "#total", que: "cambia" as const }] }];
+/** La MISMA promesa, en la forma que se guarda desde el 2026-09-22. */
+const CODIGO = 'var t = await ui.texto("#total"); await ui.clic("#agregar"); await ui.cambiaDe("#total", t);';
 
 const CON_CARRITO =
   '<html><body><button id="agregar">Añadir</button><b id="total">0 €</b></body></html>';
 
 describe("la suite de la página", () => {
   it("🔴 una prueba que PASÓ entra en la suite", () => {
-    const suite = guardarSiNaceEnVerde([], { pasos: PASOS, fallos: [], pagina: null, ahora: 1 });
+    const suite = guardarSiNaceEnVerde([], { codigo: CODIGO, fallos: [], pagina: null, ahora: 1 });
     expect(suite).toHaveLength(1);
-    expect(suite[0]!.pasos).toEqual(PASOS);
+    expect(suite[0]!.codigo).toBe(CODIGO);
     expect(suite[0]!.pagina).toBeNull();
   });
 
@@ -54,7 +59,7 @@ describe("la suite de la página", () => {
   // pruebas mal escritas —las que acusaron 0 de 3— y el ámbar se vuelve ruido.
   it("🔴 CONTRA-PRUEBA: una prueba que falló NO entra", () => {
     const suite = guardarSiNaceEnVerde([], {
-      pasos: PASOS,
+      codigo: CODIGO,
       fallos: [{ paso: 1, mensaje: "no cambió" }],
       pagina: null,
       ahora: 1,
@@ -66,7 +71,7 @@ describe("la suite de la página", () => {
   // selector no señalaba a nada, esa promesa no se cumplió nunca.
   it("CONTRA-PRUEBA: un fallo `deLaPrueba` tampoco la deja entrar", () => {
     const suite = guardarSiNaceEnVerde([], {
-      pasos: PASOS,
+      codigo: CODIGO,
       fallos: [{ paso: 1, mensaje: "el selector no señala a nada", deLaPrueba: true }],
       pagina: null,
       ahora: 1,
@@ -75,8 +80,8 @@ describe("la suite de la página", () => {
   });
 
   it("un turno sin prueba deja la suite como estaba", () => {
-    const guardadas: PruebaGuardada[] = [{ id: "p1", pasos: PASOS, pagina: null, creada: 1 }];
-    expect(guardarSiNaceEnVerde(guardadas, { pasos: [], fallos: [], pagina: null })).toEqual(
+    const guardadas: PruebaGuardada[] = [{ id: "p1", codigo: CODIGO, pagina: null, creada: 1 }];
+    expect(guardarSiNaceEnVerde(guardadas, { codigo: "", fallos: [], pagina: null })).toEqual(
       guardadas,
     );
   });
@@ -84,7 +89,7 @@ describe("la suite de la página", () => {
   // ─── El ciclo de vida ──────────────────────────────────────────────────────
 
   it("🔴 una promesa cuyo selector ya no está se retira sola", () => {
-    const guardadas: PruebaGuardada[] = [{ id: "p1", pasos: PASOS, pagina: null, creada: 1 }];
+    const guardadas: PruebaGuardada[] = [{ id: "p1", codigo: CODIGO, pagina: null, creada: 1 }];
     expect(vivas(guardadas, "<html><body><div id=\"otro\"></div></body></html>")).toEqual([]);
     expect(vivas(guardadas, CON_CARRITO)).toHaveLength(1);
   });
@@ -92,7 +97,7 @@ describe("la suite de la página", () => {
   // Media promesa tampoco vale: si el botón sigue pero el total desapareció, no
   // hay nada que comprobar y quedaría roja para siempre.
   it("basta con que falte UNO de sus selectores", () => {
-    const guardadas: PruebaGuardada[] = [{ id: "p1", pasos: PASOS, pagina: null, creada: 1 }];
+    const guardadas: PruebaGuardada[] = [{ id: "p1", codigo: CODIGO, pagina: null, creada: 1 }];
     const sinTotal = '<html><body><button id="agregar">Añadir</button></body></html>';
     expect(vivas(guardadas, sinTotal)).toEqual([]);
   });
@@ -114,7 +119,7 @@ describe("la suite de la página", () => {
   });
 
   it("las de OTRA página no se tocan", () => {
-    const otras: PruebaGuardada[] = [{ id: "p1", pasos: PASOS, pagina: "menu", creada: 1 }];
+    const otras: PruebaGuardada[] = [{ id: "p1", codigo: CODIGO, pagina: "menu", creada: 1 }];
     expect(vivas(otras, "<html><body></body></html>", "precios")).toEqual(otras);
   });
 
@@ -134,8 +139,8 @@ describe("la suite de la página", () => {
 
   it("la misma promesa no se duplica: la nueva reemplaza a la vieja", () => {
     const suite = guardarSiNaceEnVerde(
-      [{ id: "p1", pasos: PASOS, pagina: null, creada: 1 }],
-      { pasos: PASOS, fallos: [], pagina: null, ahora: 2 },
+      [{ id: "p1", codigo: CODIGO, pagina: null, creada: 1 }],
+      { codigo: CODIGO, fallos: [], pagina: null, ahora: 2 },
     );
     expect(suite).toHaveLength(1);
     expect(suite[0]!.creada).toBe(2);
@@ -148,7 +153,7 @@ describe("la suite de la página", () => {
       pagina: null,
       creada: i,
     }));
-    const suite = guardarSiNaceEnVerde(llena, { pasos: PASOS, fallos: [], pagina: null, ahora: 99 });
+    const suite = guardarSiNaceEnVerde(llena, { codigo: CODIGO, fallos: [], pagina: null, ahora: 99 });
     expect(suite).toHaveLength(TOPE_PRUEBAS_POR_PAGINA);
     expect(suite.some((p) => p.id === "p0")).toBe(false);
     expect(suite.some((p) => p.creada === 99)).toBe(true);
@@ -161,7 +166,7 @@ describe("la suite de la página", () => {
   // y guardar la que acaba de nacer en verde— y hacerlas en dos pasos sueltos
   // dentro de un fichero de 1.500 líneas es como se pierde una.
   describe("actualizarSuite", () => {
-    const P1: PruebaGuardada = { id: "p1", pasos: PASOS, pagina: null, creada: 1 };
+    const P1: PruebaGuardada = { id: "p1", codigo: CODIGO, pagina: null, creada: 1 };
 
     it("🔴 retira las que el navegador mandó retirar", () => {
       expect(actualizarSuite([P1], { retirar: ["p1"] })).toEqual([]);
@@ -169,7 +174,7 @@ describe("la suite de la página", () => {
 
     it("🔴 guarda la del turno si nació en verde", () => {
       const suite = actualizarSuite([], {
-        turno: { pasos: PASOS, fallos: [], pagina: null, ahora: 5 },
+        turno: { codigo: CODIGO, fallos: [], pagina: null, ahora: 5 },
       });
       expect(suite).toHaveLength(1);
       expect(suite[0]!.creada).toBe(5);
@@ -178,13 +183,13 @@ describe("la suite de la página", () => {
     // Las dos cosas a la vez, que es el caso real: el turno rompe una promesa
     // vieja cuyo elemento ya no está y declara una nueva que pasa.
     it("🔴 retira y guarda en la misma pasada", () => {
-      const otra = [{ clic: "#mas", entonces: [{ donde: "#total", que: "cambia" as const }] }];
+      const otra = 'var t = await ui.texto("#total"); await ui.clic("#mas"); await ui.cambiaDe("#total", t);';
       const suite = actualizarSuite([P1], {
         retirar: ["p1"],
-        turno: { pasos: otra, fallos: [], pagina: null, ahora: 5 },
+        turno: { codigo: otra, fallos: [], pagina: null, ahora: 5 },
       });
       expect(suite).toHaveLength(1);
-      expect(suite[0]!.pasos).toEqual(otra);
+      expect(suite[0]!.codigo).toBe(otra);
     });
 
     // CONTRA-PRUEBA: un turno que no declara nada y no retira nada deja la
@@ -217,7 +222,7 @@ describe("la suite de la página", () => {
       const suite = actualizarSuite([P1], {
         documento: CON_CARRITO,
         pagina: null,
-        turno: { pasos: PASOS, fallos: [], pagina: null, ahora: 9 },
+        turno: { codigo: CODIGO, fallos: [], pagina: null, ahora: 9 },
       });
       expect(suite).toHaveLength(1);
       expect(suite[0]!.creada).toBe(9);
@@ -274,8 +279,8 @@ describe("la suite de la página", () => {
   // el turno y esto tiene que cruzar turnos. Una promesa rota lleva su marca
   // hasta que vuelve a cumplirse.
   describe("marcarRegresiones", () => {
-    const P1: PruebaGuardada = { id: "p1", pasos: PASOS, pagina: null, creada: 1 };
-    const P2: PruebaGuardada = { id: "p2", pasos: PASOS, pagina: "menu", creada: 2 };
+    const P1: PruebaGuardada = { id: "p1", codigo: CODIGO, pagina: null, creada: 1 };
+    const P2: PruebaGuardada = { id: "p2", codigo: CODIGO, pagina: "menu", creada: 2 };
 
     it("🔴 una promesa que se rompe queda marcada, y se cuenta como NUEVA", () => {
       const { suite, cuenta } = marcarRegresiones([P1], {
@@ -337,7 +342,9 @@ describe("la suite de la página", () => {
 
     it("1 · la ruta pasa las promesas vivas a los ojos", () => {
       const ruta = lee("app", "api", "agent", "route.ts");
-      expect(ruta).toMatch(/const promesasDeLaPagina = vivas\(project\.data\.pruebas \?\? \[\]/);
+      // MIGRADAS AL LEER: la forma vieja pasa a JS antes de filtrarse.
+      expect(ruta).toMatch(/const migrada = migrarSuite\(project\.data\.pruebas \?\? \[\]\)/);
+      expect(ruta).toMatch(/const promesasDeLaPagina = vivas\(migrada\.suite/);
       expect(ruta).toContain("guardadas: promesasDeLaPagina");
     });
 
@@ -350,10 +357,12 @@ describe("la suite de la página", () => {
 
     it("4 · la ruta CUENTA lo que le pasó a la suite", () => {
       const ruta = lee("app", "api", "agent", "route.ts");
-      expect(ruta).toContain("marcarRegresiones(actual.pruebas ?? []");
+      expect(ruta).toContain("marcarRegresiones(migrarSuite(actual.pruebas ?? []).suite");
       // Con las que de verdad se comprobaron: sin eso, un turno en la home
       // daría por arregladas las promesas del menú.
-      expect(ruta).toMatch(/comprobadas: promesasDeLaPagina\.map/);
+      // Las que NO corrieron no cuentan como comprobadas: si no, una rota que
+      // no se miró saldría «arreglada».
+      expect(ruta).toMatch(/comprobadas: promesasDeLaPagina\.filter\(\(p\) => !sinCorrer\.has\(p\.id\)\)\.map/);
       expect(ruta).toMatch(/suite de la pagina: nuevas=/);
     });
 
@@ -379,41 +388,34 @@ describe("la suite de la página", () => {
   // que decide de qué se acusa a quién, y por eso se prueba aquí —puro— y no
   // con un navegador.
   describe("repartirFallos", () => {
-    const P1: PruebaGuardada = {
-      id: "p1",
-      pasos: [{ clic: "#agregar", entonces: [{ donde: "#total", que: "cambia" as const }] }],
-      pagina: null,
-      creada: 1,
-    };
+    const P1: PruebaGuardada = { id: "p1", codigo: CODIGO, pagina: null, creada: 1 };
     const P2: PruebaGuardada = {
       id: "p2",
-      pasos: [
-        { clic: "#mas", entonces: [{ donde: "#total", que: "cambia" as const }] },
-        { clic: "#vaciar", entonces: [{ donde: "#total", que: "es" as const, valor: "0 €" }] },
-      ],
+      codigo: 'await ui.clic("#vaciar"); await ui.es("#total", "0 €");',
       pagina: null,
       creada: 2,
     };
 
-    it("🔴 un fallo dentro de la prueba del turno NO es una regresión", () => {
-      const r = repartirFallos([{ paso: 1, mensaje: "no cambió" }], 2, [P1]);
+    // POR PROGRAMA, no por paso: el 0 es la promesa del turno, el 1 la primera
+    // guardada, el 2 la segunda. Cortar por número de paso era lo que, con un
+    // programa JS, acusaba a una guardada de lo que había fallado otra.
+    it("🔴 un fallo de la promesa del turno NO es una regresión", () => {
+      const r = repartirFallos([{ paso: 3, mensaje: "no cambió", programa: 0 }], [P1], true);
       expect(r.delTurno).toHaveLength(1);
       expect(r.regresiones).toEqual([]);
       expect(r.retirar).toEqual([]);
     });
 
-    it("🔴 un fallo más allá de la prueba del turno es la promesa que se rompió", () => {
-      // 2 pasos del turno, luego P1 (1 paso) y P2 (2 pasos): el paso 4 es el
-      // primero de P2.
-      const r = repartirFallos([{ paso: 4, mensaje: "#total no cambió" }], 2, [P1, P2]);
+    it("🔴 un fallo de una guardada es la promesa que se rompió, con SU paso", () => {
+      const r = repartirFallos([{ paso: 2, mensaje: "#total no es 0 €", programa: 2 }], [P1, P2], true);
       expect(r.delTurno).toEqual([]);
-      expect(r.regresiones).toEqual([{ id: "p2", paso: 1, mensaje: "#total no cambió" }]);
+      expect(r.regresiones).toEqual([{ id: "p2", paso: 2, mensaje: "#total no es 0 €" }]);
     });
 
-    it("🔴 señala la promesa correcta cuando hay varias", () => {
-      const r = repartirFallos([{ paso: 3, mensaje: "nada" }], 2, [P1, P2]);
+    it("🔴 sin promesa del turno, el programa 0 ya es la primera guardada", () => {
+      const r = repartirFallos([{ paso: 1, mensaje: "nada", programa: 0 }], [P1, P2], false);
+      expect(r.delTurno).toEqual([]);
       expect(r.regresiones[0]!.id).toBe("p1");
-      expect(r.regresiones[0]!.paso).toBe(1);
     });
 
     // 🔴 `deLaPrueba` NO ACUSA. La bandera la pone el navegador cuando el
@@ -423,25 +425,25 @@ describe("la suite de la página", () => {
     // leer.
     it("🔴 una guardada con `deLaPrueba` se RETIRA, no acusa", () => {
       const r = repartirFallos(
-        [{ paso: 3, mensaje: "el selector no señala a nada", deLaPrueba: true }],
-        2,
+        [{ paso: 1, mensaje: "no existe #agregar", deLaPrueba: true, programa: 1 }],
         [P1, P2],
+        true,
       );
       expect(r.regresiones).toEqual([]);
       expect(r.retirar).toEqual(["p1"]);
     });
 
     it("sin guardadas no hay regresiones que repartir", () => {
-      const r = repartirFallos([{ paso: 1, mensaje: "x" }], 1, []);
+      const r = repartirFallos([{ paso: 1, mensaje: "x", programa: 0 }], [], true);
       expect(r.delTurno).toHaveLength(1);
       expect(r.regresiones).toEqual([]);
     });
 
-    // CONTRA-PRUEBA del reparto: un fallo con un paso imposible no se le cuelga
-    // a la última promesa por descarte. Acusar a la promesa equivocada manda al
-    // modelo a arreglar lo que no está roto.
-    it("CONTRA-PRUEBA: un paso fuera de rango no acusa a nadie", () => {
-      const r = repartirFallos([{ paso: 99, mensaje: "x" }], 2, [P1, P2]);
+    // CONTRA-PRUEBA del reparto: un programa que no existe no se le cuelga a la
+    // última promesa por descarte. Acusar a la equivocada manda al modelo a
+    // arreglar lo que no está roto.
+    it("CONTRA-PRUEBA: un programa fuera de rango no acusa a nadie", () => {
+      const r = repartirFallos([{ paso: 1, mensaje: "x", programa: 9 }], [P1, P2], true);
       expect(r.regresiones).toEqual([]);
       expect(r.retirar).toEqual([]);
     });
@@ -452,14 +454,90 @@ describe("la suite de la página", () => {
     const llena: PruebaGuardada[] = [
       ...Array.from({ length: TOPE_PRUEBAS_POR_PAGINA }, (_, i) => ({
         id: `h${i}`,
-        pasos: [{ clic: `#b${i}`, entonces: [{ donde: `#t${i}`, que: "cambia" as const }] }],
+        codigo: `await ui.clic("#b${i}"); await ui.visible("#t${i}");`,
         pagina: null,
         creada: i,
       })),
-      { id: "menu1", pasos: PASOS, pagina: "menu", creada: 0 },
+      { id: "menu1", codigo: CODIGO, pagina: "menu", creada: 0 },
     ];
-    const suite = guardarSiNaceEnVerde(llena, { pasos: PASOS, fallos: [], pagina: null, ahora: 99 });
+    const suite = guardarSiNaceEnVerde(llena, { codigo: CODIGO, fallos: [], pagina: null, ahora: 99 });
     expect(suite.filter((p) => p.pagina === "menu")).toHaveLength(1);
     expect(suite.filter((p) => p.pagina === null)).toHaveLength(TOPE_PRUEBAS_POR_PAGINA);
+  });
+});
+
+// ─── LA MIGRACIÓN: la suite pasa a JS (2026-09-22) ──────────────────────────
+//
+// La forma de las migraciones de Claude Code: corren solas al leer, son
+// idempotentes, y lo viejo se sustituye SÓLO si la conversión salió bien. La
+// que no se puede convertir se conserva y se nombra — nunca se tira en silencio.
+describe("migrarSuite", () => {
+  it("🔴 una guardada en DSL pasa a JS y pierde la forma vieja", () => {
+    const { suite, sinMigrar } = migrarSuite([{ id: "p1", pasos: PASOS, pagina: null, creada: 1 }]);
+    expect(sinMigrar).toEqual([]);
+    expect(suite[0]!.pasos).toBeUndefined();
+    expect(suite[0]!.codigo).toContain('ui.clic("#agregar", 1)');
+    expect(suite[0]!.codigo).toContain('ui.cambiaDe("#total"');
+    // Y conserva lo demás: id, página, fecha y su marca de rota.
+    expect(suite[0]).toMatchObject({ id: "p1", pagina: null, creada: 1 });
+  });
+
+  it("🔴 la que no se puede convertir se CONSERVA y se nombra", () => {
+    const rara = { id: "p9", pasos: [{ clic: "#a", entonces: [{ donde: "#b", que: "brilla" }] }], pagina: null, creada: 1 } as unknown as PruebaGuardada;
+    const { suite, sinMigrar } = migrarSuite([rara]);
+    expect(sinMigrar).toEqual(["p9"]);
+    expect(suite).toEqual([rara]);
+  });
+
+  it("es idempotente: lo ya migrado no se toca", () => {
+    const ya: PruebaGuardada = { id: "p1", codigo: CODIGO, pagina: null, creada: 1, rota: 5 };
+    expect(migrarSuite([ya]).suite).toEqual([ya]);
+    const una = migrarSuite([{ id: "p1", pasos: PASOS, pagina: null, creada: 1 }]).suite;
+    expect(migrarSuite(una).suite).toEqual(una);
+  });
+});
+
+describe("pasosAJs — cada verbo del DSL tiene su primitivo", () => {
+  it("el orden del DSL: desplazar, escribir, pulsar, y el ANTES leído antes de actuar", () => {
+    const js = pasosAJs([
+      {
+        desplaza: "#zona",
+        escribe: { "#correo": "a@b.c" },
+        clic: ".tab",
+        cualquiera: true,
+        veces: 2,
+        entonces: [
+          { donde: "#n", que: "cambia" },
+          { donde: "#panel", que: "visible" },
+          { donde: "#aviso", que: "contiene", valor: "Gracias" },
+          { donde: "#btn", que: "atributo", valor: "disabled" },
+        ],
+      },
+    ])!;
+    const orden = ["ui.texto(\"#n\")", "ui.desplaza(\"#zona\", { cualquiera: true })", "ui.escribe(\"#correo\", \"a@b.c\")", "ui.clic(\".tab\", 2, { cualquiera: true })", "ui.cambiaDe(\"#n\"", "ui.visible(\"#panel\")", "ui.contiene(\"#aviso\", \"Gracias\")", "ui.atributoCambiaDe(\"#btn\", \"disabled\""];
+    let desde = 0;
+    for (const trozo of orden) {
+      const i = js.indexOf(trozo, desde);
+      expect(i, `falta o va fuera de orden: ${trozo}`).toBeGreaterThanOrEqual(0);
+      desde = i;
+    }
+  });
+
+  it("CONTRA-PRUEBA: lo que no sabe escribir devuelve null, no una promesa distinta", () => {
+    expect(pasosAJs([{ clic: "#a", entonces: [{ donde: "#b", que: "contiene" }] }])).toBeNull();
+    expect(pasosAJs([])).toBeNull();
+  });
+});
+
+describe("selectoresDelCodigo", () => {
+  it("lee los literales de las llamadas a ui.*, en orden", () => {
+    expect(selectoresDelCodigo(CODIGO)).toEqual(["#total", "#agregar", "#total"]);
+    expect(selectoresDelCodigo("await ui.clic('.tab', 1, { cualquiera: true });")).toEqual([".tab"]);
+  });
+
+  it("uno construido en tiempo de ejecución no se ve, y la promesa se queda viva", () => {
+    const opaca: PruebaGuardada = { id: "p1", codigo: 'var s = "#" + "x"; await ui.clic(s);', pagina: null, creada: 1 };
+    expect(selectoresDelCodigo(opaca.codigo!)).toEqual([]);
+    expect(vivas([opaca], "<html><body></body></html>")).toHaveLength(1);
   });
 });

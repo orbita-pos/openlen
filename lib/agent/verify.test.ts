@@ -455,7 +455,11 @@ test("un veredicto ilegible no borra el contraste ni el desborde medidos", async
 // se cambia en vez de borrarse.
 test("la prueba que el modelo declaró se DICE, pero no declara rota la página", async () => {
   const v = await verifyEditedPage(
-    { ...PARAMS, runtime: "window.x=1", spec: [{ paso: "click", sel: "#b" }] as never },
+    {
+      ...PARAMS,
+      runtime: "window.x=1",
+      spec: [{ clic: "#b", entonces: [{ donde: "#total", que: "cambia" }] }] as never,
+    },
     {
       render: async (
         _html,
@@ -482,7 +486,8 @@ test("la prueba que el modelo declaró se DICE, pero no declara rota la página"
 // limpia: la foto sale igual, la consola no grita, y nadie lo comprueba.
 //
 // Van en el MISMO programa —primero la del turno, detrás las guardadas— y lo
-// que vuelve se reparte por el número de paso. Aquí se fija que el reparto
+// que vuelve se reparte por el ÍNDICE DE PROGRAMA de cada fallo (0 = el turno,
+// 1 = la primera guardada), no por número de paso. Aquí se fija que el reparto
 // llega hasta el veredicto por canales distintos: la del turno sigue en
 // `observaciones` sin acusar, y la guardada sale como `regresiones`.
 const CARRITO_GUARDADO = {
@@ -507,9 +512,8 @@ test("una promesa GUARDADA que deja de cumplirse sale como regresión", async ()
         opts?: { behaviorProgram?: string; onBehaviorResult?: (b: unknown) => void },
       ) => {
         programa = opts?.behaviorProgram ?? "";
-        // Paso 2 en base 0 → el primero de la guardada, que va detrás del
-        // único paso de la prueba del turno.
-        opts?.onBehaviorResult?.([[1, "#total ya no cambia al pulsar #agregar"]]);
+        // Programa 1 → la primera guardada, que va detrás de la del turno.
+        opts?.onBehaviorResult?.([[1, "#total ya no cambia al pulsar #agregar", null, 1]]);
         return IMAGE;
       },
       provider: providerReturning("tampoco es JSON"),
@@ -1696,9 +1700,11 @@ test("cuando el turno trae prueba_js, los ojos ejecutan ESE programa", async () 
   assert.match(programa, /MAX_LLAMADAS/);
 });
 
-// CONTRA-PRUEBA: sin `pruebaJs` sigue compilando el DSL de siempre. 64 casos de
-// batería y todo el sistema de regresiones dependen de que esto no se mueva.
-test("sin prueba_js, los ojos siguen compilando el DSL", async () => {
+// 🔴 UN SOLO CORREDOR (2026-09-22). Sin `pruebaJs`, la promesa del DSL ya no se
+// compila con su propio intérprete: se convierte a JS con el mismo conversor
+// que migra la suite, y corre por `programaSuiteJs`. Así las dos rutas
+// comprueban las guardadas igual.
+test("sin prueba_js, la promesa del DSL corre convertida a JS", async () => {
   let programa = "";
   await verifyEditedPage(
     {
@@ -1714,7 +1720,10 @@ test("sin prueba_js, los ojos siguen compilando el DSL", async () => {
       provider: providerReturning("tampoco es JSON"),
     },
   );
-  assert.match(programa, /var PASOS =/);
+  assert.equal(programa.includes("var PASOS ="), false);
+  assert.match(programa, /var PROGRAMAS =/);
+  // El código viaja dentro de un JSON, con las comillas escapadas.
+  assert.ok(programa.includes('ui.clic(\\"#b\\", 1)'), "la promesa convertida no viaja en el programa");
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1772,15 +1781,14 @@ test("con la ranura JS, sus fallos son DEL TURNO y no manchan a una guardada", a
   assert.equal(v.regresiones?.length ?? 0, 0);
 });
 
-// 🔴 «NO SE MIRO» NO ES «SE MIRO Y ESTAN LIMPIAS» (2026-09-21 noche).
+// 🔴 CON LA RANURA JS LAS GUARDADAS YA SE COMPRUEBAN (2026-09-22).
 //
-// Con la ranura JS corre SOLO `programaJs`: la suite guardada no se ejecuta.
-// Eso salia como `regresiones` ausente, que es exactamente lo que sale cuando
-// se comprobaron y ninguna fallo. Dos hechos opuestos, el mismo cero.
-//
-// LA REGLA: son DOS canales, nunca uno — el resultado por un lado y el «no se
-// pudo comprobar» por otro, con su motivo DENTRO en vez de fuera.
-test("con la ranura JS, las guardadas salen como NO COMPROBADAS, no como limpias", async () => {
+// Hasta hoy con `prueba_js` corría SÓLO su programa y la suite guardada se
+// quedaba sin mirar (se decía en `regresionesSinComprobar`, que al menos no
+// era mentir). Ahora van en el mismo programa, detrás, y un fallo suyo es SU
+// regresión.
+test("con la ranura JS, las guardadas van detrás y su fallo es su regresión", async () => {
+  let programa = "";
   const v = await verifyEditedPage(
     {
       ...PARAMS,
@@ -1790,6 +1798,31 @@ test("con la ranura JS, las guardadas salen como NO COMPROBADAS, no como limpias
       guardadas: [CARRITO_GUARDADO] as never,
     },
     {
+      render: async (
+        _html,
+        opts?: { behaviorProgram?: string; onBehaviorResult?: (b: unknown) => void },
+      ) => {
+        programa = opts?.behaviorProgram ?? "";
+        opts?.onBehaviorResult?.([[1, "#total ya no cambia", null, 1]]);
+        return IMAGE;
+      },
+      provider: providerReturning("tampoco es JSON"),
+    },
+  );
+  // La guardada viaja en el programa, convertida.
+  assert.match(programa, /#agregar/);
+  assert.equal(v.regresionesSinComprobar ?? undefined, undefined);
+  assert.equal(v.regresiones?.[0]?.id, "p1");
+  assert.equal(v.fallosDelTurno ?? undefined, undefined);
+});
+
+// «NO SE MIRÓ» SIGUE SIN SER «SE MIRÓ Y ESTÁ LIMPIA». Una guardada en el formato
+// viejo que no se pudo convertir no tiene quien la corra: se dice, por su id.
+test("una guardada que no se pudo convertir sale como NO COMPROBADA, con su id", async () => {
+  const vieja = { id: "p9", pasos: [{ clic: "#a", entonces: [{ donde: "#b", que: "brilla" }] }], pagina: null, creada: 1 };
+  const v = await verifyEditedPage(
+    { ...PARAMS, runtime: "window.x=1", spec: null, pruebaJs: "await ui.texto('#total');", guardadas: [vieja] as never },
+    {
       render: async (_html, opts?: { onBehaviorResult?: (b: unknown) => void }) => {
         opts?.onBehaviorResult?.([]);
         return IMAGE;
@@ -1797,13 +1830,8 @@ test("con la ranura JS, las guardadas salen como NO COMPROBADAS, no como limpias
       provider: providerReturning("tampoco es JSON"),
     },
   );
-  assert.equal(v.regresiones ?? undefined, undefined);
-  assert.ok(
-    v.regresionesSinComprobar,
-    "la suite guardada no se ejecuto y el veredicto no lo dice: se lee como «limpias»",
-  );
-  assert.match(v.regresionesSinComprobar ?? "", /prueba_js/);
-  assert.match(v.regresionesSinComprobar ?? "", /no se ejecutaron/);
+  assert.deepEqual(v.guardadasSinCorrer, ["p9"]);
+  assert.match(v.regresionesSinComprobar ?? "", /formato viejo/);
 });
 
 // CONTRA-PRUEBA: por la ruta del DSL las guardadas SI se ejecutan, asi que no

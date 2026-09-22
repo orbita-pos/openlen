@@ -17,7 +17,7 @@
 import type { InlineImage, StreamEvent } from "@/lib/ai-gateway";
 import { esGritoDeLaPagina, renderHtmlToInlineImage } from "@/lib/ai/inline-image";
 import { partirGritos } from "@/lib/generation/rotura-ajena";
-import { programaJs } from "@/lib/agent/prueba-js";
+import { programaSuiteJs } from "@/lib/agent/prueba-js";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 // La cifra del umbral viaja desde donde se MIDE. Ver su comentario: el aviso de
 // aquí abajo llegó a afirmar un mínimo distinto del que se comprobaba.
@@ -32,13 +32,15 @@ import type { LlamadaADatos } from "@/lib/page-data/sustituto";
 import {
   notaSpec,
   leerFallos,
+  leerSinCorrer,
   leerVacuas,
-  specProgram,
   PRELUDIO_CENSO_CLIC,
   type FalloSpec,
   type PasoSpec,
 } from "@/lib/agent/behavior-spec";
 import {
+  migrarSuite,
+  pasosAJs,
   repartirFallos,
   type PruebaGuardada,
   type Regresion,
@@ -174,6 +176,10 @@ export interface VisualVerdict {
    * Ausente ⇒ sí se comprobaron (y `regresiones` dice el resultado).
    */
   regresionesSinComprobar?: string;
+  /** LOS IDS de las guardadas que NO corrieron —formato viejo sin convertir, o
+   *  sin tiempo dentro del techo—. Quien cuenta regresiones tiene que sacarlas
+   *  de «comprobadas»: si no, una rota que no se miró saldría «arreglada». */
+  guardadasSinCorrer?: readonly string[];
   /** Los fallos de la promesa que el modelo declaró ESTE turno. Salen crudos
    *  —además de redactados en `observaciones`— porque de ellos depende que la
    *  promesa entre o no en la suite: sólo entra la que NACE EN VERDE, y eso no
@@ -463,6 +469,8 @@ interface HechosDelNavegador {
   /** Por qué no se comprobó ninguna, si no se comprobaron. Ver
    *  `VisualVerdict.regresionesSinComprobar`. */
   regresionesSinComprobar: string | null;
+  /** Ver `VisualVerdict.guardadasSinCorrer`. */
+  guardadasSinCorrer: string[];
   /** Ids de promesas guardadas que el navegador dice que ya no señalan a nada:
    *  se retiran, no acusan. */
   retirarPruebas: string[];
@@ -507,6 +515,7 @@ function hechosVacios(): HechosDelNavegador {
     vacuas: [],
     regresiones: [],
     regresionesSinComprobar: null,
+    guardadasSinCorrer: [],
     retirarPruebas: [],
     // FALSE por defecto: mientras nadie mida, no se ha medido nada.
     conMedida: false,
@@ -802,31 +811,43 @@ async function runVerify(
   // ciegas: sigue viendo el script que muere al primer clic, que es lo que
   // había antes de que existiera el guion.
   // LA PROMESA DE ESTE TURNO Y LAS QUE LA PÁGINA YA CUMPLIÓ, en un solo
-  // programa y en este orden: primero la del turno, detrás las guardadas. Lo
-  // que vuelve es una lista plana de pasos numerados, y `repartirFallos`
-  // deshace la suma para saber a quién acusar — o a quién no (ver ahí).
+  // programa y en este orden: primero la del turno, detrás las guardadas. Cada
+  // fallo vuelve con el índice de SU programa, y `repartirFallos` lo usa para
+  // saber a quién acusar — o a quién no (ver ahí).
   //
   // Las guardadas van aunque este turno no declare nada: una edición que se
   // lleva por delante el carrito de hace seis turnos no trae prueba propia, y
   // es justo la que hay que cazar.
+  //
+  // 🔴 UN SOLO LENGUAJE PARA CORRER. La promesa del turno va como programa JS:
+  // la de `prueba_js` tal cual, o la del DSL convertida con el mismo
+  // conversor que migra la suite. Así la ruta JS deja de ser la que se saltaba
+  // las regresiones — hasta hoy, con ella sólo corría su programa y las
+  // guardadas se quedaban sin mirar.
   const delTurno = params.spec ?? [];
-  const guardadas = params.guardadas ?? [];
-  const programa = [...delTurno, ...guardadas.flatMap((p) => p.pasos)];
-  // 🔴 DOS RUTAS, UNA ELEGIDA. `pruebaJs` manda cuando viene: mezclar el
-  // programa del modelo con el compilador del DSL en una misma evaluación no
-  // tiene forma de repartir los fallos después.
+  // Migradas también AQUÍ, no sólo en quien llama: la migración corre donde se
+  // lee, y un llamador que pase la forma vieja no puede dejarlas sin correr.
+  const guardadas = migrarSuite(params.guardadas ?? []).suite;
   const js = params.pruebaJs?.trim() ? params.pruebaJs.trim() : null;
-  const conGuion = codigo && (js !== null || programa.length > 0);
+  const turnoJs = js ?? (delTurno.length > 0 ? pasosAJs(delTurno) : null);
+  // Una guardada en formato viejo que no se pudo convertir no tiene quien la
+  // corra: no se ejecuta, y se dice (ver `migrarSuite`).
+  const corribles = guardadas.filter((g) => g.codigo !== undefined);
+  const entradas = [
+    ...(turnoJs !== null ? [{ codigo: turnoJs, propia: true }] : []),
+    ...corribles.map((g) => ({ codigo: g.codigo as string, propia: false })),
+  ];
+  const conGuion = codigo && entradas.length > 0;
   const image = await render(paraRenderizar, {
     onErrors: (e) => hechos.gritos.push(...e),
     onBlocked: (u) => hechos.bloqueadas.push(...u),
     ...(conGuion
       ? {
-          // `delTurno.length` marca dónde acaba la promesa de este turno: a las
-          // GUARDADAS que vienen detrás no se les aplica la precondición del
-          // clic muerto, porque en ellas un clic sin manejador es la página que
-          // perdió el suyo — la regresión, no el instrumento.
-          behaviorProgram: js !== null ? programaJs(js) : specProgram(programa, delTurno.length),
+          // `propia: false` en las GUARDADAS: a ellas no se les aplica como
+          // fallo de la prueba la precondición del clic muerto, porque en ellas
+          // un clic sin manejador es la página que perdió el suyo — la
+          // regresión, no el instrumento.
+          behaviorProgram: programaSuiteJs(entradas),
           // 🔴 VA SEPARADO PORQUE SE INSTALA EN OTRO MOMENTO: el censo tiene
           // que existir ANTES de que corran los scripts de la página, y el
           // programa corre después. Sin esto el programa es fail-open y la
@@ -835,46 +856,25 @@ async function runVerify(
           onBehaviorResult: (b) => {
             // Por su propio canal: `leerFallos` ya las filtró.
             hechos.vacuas = leerVacuas(b);
-            // 🔴 CON LA RUTA JS NO HAY NADA QUE REPARTIR, Y REPARTIR ERA EL BUG.
-            //
-            // `repartirFallos` corta por índice de paso: hasta `delTurno.length`
-            // es del turno, y lo que venga detrás pertenece a la guardada que
-            // ocupe ese tramo. Eso describe al programa del DSL, que concatena
-            // `[...delTurno, ...guardadas]`. El de la ranura JS **no lo es**: lo
-            // que corre es `programaJs(js)` A SECAS — ni la spec ni las
-            // guardadas se ejecutan— y sus `paso` son el número de llamada a
-            // `ui.*`, que no indexa nada de esa concatenación.
-            //
-            // MEDIDO el 2026-09-21 (noche), con `spec` descartada y por tanto
-            // `delTurno.length === 0`:
-            //   · sin guardadas → `delTurno: []`. Los fallos de su promesa se
-            //     CAÍAN AL SUELO: el turno pasaba con la promesa incumplida.
-            //   · con una guardada → los dos fallos salían como regresión de
-            //     `carrito-de-hace-seis-turnos`, una promesa que no se ejecutó
-            //     y que no tiene nada que ver. Una página sana acusada.
-            //
-            // Y no era sólo del arnés: la ruta pasa `pruebaJs` desde el
-            // 2026-09-04 (`route.ts`), así que esto corría en producción.
-            //
-            // Con la ranura JS todo fallo es DEL TURNO, porque es lo único que
-            // se ejecutó. Las regresiones de esa vuelta se quedan sin mirar
-            // —límite ya conocido de esta ruta— y eso es no medir, que no es
-            // medir mal: se prefiere al revés, que era acusar a quien no fue.
-            if (js !== null) {
-              hechos.fallosSpec = leerFallos(b);
-              hechos.regresiones = [];
-              hechos.retirarPruebas = [];
-              // 🔴 Y SE DICE QUE NO SE MIRARON, en vez de dejar un cero que se
-              // lee como «limpias». Ver `VisualVerdict.regresionesSinComprobar`.
-              if (guardadas.length > 0) {
-                hechos.regresionesSinComprobar = `la promesa del turno vino por \`prueba_js\`, y con ella corre sólo ese programa: las ${guardadas.length} promesa(s) guardada(s) de esta página no se ejecutaron`;
-              }
-              return;
-            }
-            const reparto = repartirFallos(leerFallos(b), delTurno.length, guardadas);
+            const reparto = repartirFallos(leerFallos(b), corribles, turnoJs !== null);
             hechos.fallosSpec = reparto.delTurno;
             hechos.regresiones = reparto.regresiones;
             hechos.retirarPruebas = reparto.retirar;
+            // LAS QUE NO CORRIERON, con su motivo y por su id. «No se miró» y
+            // «se miró y está limpia» no son el mismo dato.
+            const desfase = turnoJs !== null ? 1 : 0;
+            const sinTiempo = leerSinCorrer(b)
+              .map((k) => corribles[k - desfase]?.id)
+              .filter((id): id is string => typeof id === "string");
+            const sinConvertir = guardadas.filter((g) => g.codigo === undefined).map((g) => g.id);
+            hechos.guardadasSinCorrer = [...sinConvertir, ...sinTiempo];
+            if (hechos.guardadasSinCorrer.length > 0) {
+              const motivos = [
+                ...(sinConvertir.length ? [`${sinConvertir.length} en el formato viejo que no se pudo convertir`] : []),
+                ...(sinTiempo.length ? [`${sinTiempo.length} sin tiempo dentro del techo`] : []),
+              ];
+              hechos.regresionesSinComprobar = `${hechos.guardadasSinCorrer.length} promesa(s) guardada(s) de esta página no se ejecutaron: ${motivos.join(", ")}`;
+            }
           },
         }
       : codigo
@@ -933,14 +933,12 @@ async function runVerify(
     plegarMedicion(susHechos, await suMedicion);
     const etiqueta = etiquetaDePagina(otra.page);
     // 🔴 LA QUE NO SALE NO SE SALTA EN SILENCIO. Claude Code
-    // lista SIEMPRE cada captura, y la que falló dice por qué («— not
-    // captured: …»). Saltarla y seguir contándola es lo que haría que la
-    // tarjeta dijera «2 de 2» habiendo mirado una — la mentira exacta que este
-    // recuento existe para impedir.
+    // lista SIEMPRE cada captura, y la que falló dice por qué. Saltarla y
+    // seguir contándola es lo que haría que la tarjeta dijera «2 de 2» habiendo
+    // mirado una — la mentira exacta que este recuento existe para impedir.
     //
-    // La puerta de tamaño es suya también (`base64.length <= 1_400_000`): una
-    // captura enorme no se manda, y no mandarla sin decirlo sería el mismo
-    // silencio con otro disfraz.
+    // La puerta de tamaño también es como la suya: una captura enorme no se
+    // manda, y no mandarla sin decirlo sería el mismo silencio con otro disfraz.
     if (!suImagen || suImagen.dataBase64.length > TOPE_BASE64_CAPTURA) {
       noMiradas.push(
         suImagen
@@ -1428,6 +1426,7 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   // pinta es el bucle.
   if (h.regresiones.length > 0) verdict.regresiones = h.regresiones;
   if (h.regresionesSinComprobar) verdict.regresionesSinComprobar = h.regresionesSinComprobar;
+  if (h.guardadasSinCorrer.length > 0) verdict.guardadasSinCorrer = h.guardadasSinCorrer;
   if (h.fallosSpec.length > 0) verdict.fallosDelTurno = h.fallosSpec;
   // 🔴 SE MIDE Y SE ENSEÑA, pero NO se le dice al usuario ni al modelo: no es
   // un defecto de su página, es que su prueba no discriminaba. Hoy sólo lo lee

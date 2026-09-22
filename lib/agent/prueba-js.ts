@@ -125,10 +125,35 @@ export function programaJs(
     readonly propia?: boolean;
   } = {},
 ): string {
+  return programaSuiteJs([{ codigo, propia: opciones.propia !== false }]);
+}
+
+/** Una promesa dentro de un programa: su código y de quién es. */
+export interface EntradaDePrograma {
+  readonly codigo: string;
+  /** `true` = la del turno; `false` = una guardada. Ver `programaJs`. */
+  readonly propia: boolean;
+}
+
+/**
+ * VARIAS PROMESAS EN UNA SOLA PASADA: la del turno y detrás las guardadas.
+ *
+ * Cada fallo vuelve con el ÍNDICE DE SU PROGRAMA como cuarto elemento, y eso es
+ * lo que deja repartirlo (`repartirFallos`). El DSL repartía cortando por
+ * número de paso, y un programa JS no tiene pasos fijos: sus números son las
+ * llamadas a `ui.*`, que dependen de lo que el código haga.
+ *
+ * 🔴 EL TECHO DE PARED ES DEL CONJUNTO, no de cada una: ocho guardadas con el
+ * suyo cada una podrían tardar minutos. Y a una GUARDADA que se queda sin
+ * tiempo no se la trata como fallo de la prueba —eso la RETIRARÍA de la suite—
+ * sino como SIN CORRER: ni se comprobó ni se toca. No medir no es medir mal.
+ */
+export function programaSuiteJs(entradas: readonly EntradaDePrograma[]): string {
+  const programas = entradas.map((e) => ({ codigo: e.codigo, propia: e.propia }));
   return `
 (async () => {
-  var CODIGO = ${JSON.stringify(codigo)};
-  var PROPIA = ${JSON.stringify(opciones.propia !== false)};
+  var PROGRAMAS = ${JSON.stringify(programas)};
+  var PROPIA = true;      // la de la promesa que está corriendo ahora
   var VENTANA = ${VENTANA_PRUEBA_MS};
   var TECHO = ${TECHO_PRUEBA_JS_MS};
   var MAX_LLAMADAS = ${MAX_LLAMADAS_UI};
@@ -165,7 +190,11 @@ export function programaJs(
 
   function presupuesto() {
     if (++llamadas > MAX_LLAMADAS) throw Alto("tu prueba pasa de " + MAX_LLAMADAS + " acciones", true);
-    if (Date.now() > finPared) throw Alto("tu prueba tardó más de " + (TECHO / 1000) + "s", true);
+    if (Date.now() > finPared) {
+      var agotado = Alto("tu prueba tardó más de " + (TECHO / 1000) + "s", true);
+      agotado.__tiempo = true;
+      throw agotado;
+    }
   }
 
   // EXACTAMENTE UNO, contado aquí y no adivinado con una regex en el servidor.
@@ -367,27 +396,40 @@ export function programaJs(
     },
   };
 
-  // COMPILAR PRIMERO, y por separado: un error de sintaxis del modelo se caza
-  // aquí y se cuenta como fallo de la PRUEBA. Si el código fuera literal, este
-  // catch no existiría — el script entero no parsearía.
-  var prog;
-  try {
-    prog = new Function("ui", "return (async () => {\\n" + CODIGO + "\\n})();");
-  } catch (e) {
-    return [[0, "tu prueba no compila: " + String((e && e.message) || e), "prueba"]];
+  // Lo que ya no cabe en el techo se marca SIN CORRER, desde \`desde\` hasta el
+  // final. Ver la cabecera de \`programaSuiteJs\`.
+  function sinCorrerDesde(desde) {
+    for (var r = desde; r < PROGRAMAS.length; r++) fallos.push([0, "sin tiempo para correrla", "sin_correr", r]);
   }
 
-  try {
-    await prog(ui);
-  } catch (e) {
-    if (e && e.__ol) fallos.push([n > 0 ? n - 1 : 0, e.__mensaje, e.__deLaPrueba ? "prueba" : undefined]);
-    // Cualquier otro error es del PROGRAMA del modelo, no de la página: una
-    // variable que no existe, un await mal puesto, una llave de más. Se dice
-    // como fallo de la prueba — «una prueba que no se pudo correr no acusa a
-    // nadie».
-    else fallos.push([n > 0 ? n - 1 : 0, "tu prueba lanzó: " + String((e && e.message) || e), "prueba"]);
+  for (var k = 0; k < PROGRAMAS.length; k++) {
+    PROPIA = PROGRAMAS[k].propia;
+    n = 0;
+    llamadas = 0;
+    if (Date.now() > finPared) { sinCorrerDesde(k); break; }
+    // COMPILAR PRIMERO, y por separado: un error de sintaxis del modelo se caza
+    // aquí y se cuenta como fallo de la PRUEBA. Si el código fuera literal, este
+    // catch no existiría — el script entero no parsearía.
+    var prog;
+    try {
+      prog = new Function("ui", "return (async () => {\\n" + PROGRAMAS[k].codigo + "\\n})();");
+    } catch (e) {
+      fallos.push([0, "tu prueba no compila: " + String((e && e.message) || e), "prueba", k]);
+      continue;
+    }
+    try {
+      await prog(ui);
+    } catch (e) {
+      if (e && e.__tiempo && !PROPIA) { sinCorrerDesde(k); break; }
+      if (e && e.__ol) fallos.push([n > 0 ? n - 1 : 0, e.__mensaje, e.__deLaPrueba ? "prueba" : null, k]);
+      // Cualquier otro error es del PROGRAMA del modelo, no de la página: una
+      // variable que no existe, un await mal puesto, una llave de más. Se dice
+      // como fallo de la prueba — «una prueba que no se pudo correr no acusa a
+      // nadie».
+      else fallos.push([n > 0 ? n - 1 : 0, "tu prueba lanzó: " + String((e && e.message) || e), "prueba", k]);
+    }
   }
-  return fallos.map(function (f) { return f[2] ? [f[0], f[1], f[2]] : [f[0], f[1]]; });
+  return fallos;
 })();
 `;
 }

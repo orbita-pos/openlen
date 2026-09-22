@@ -39,9 +39,11 @@ import { buildAgentMessages } from "@/lib/agent/context";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
+import type { FalloSpec } from "@/lib/agent/behavior-spec";
 import {
   actualizarSuite,
   marcarRegresiones,
+  pasosAJs,
   vivas,
   type PruebaGuardada,
 } from "@/lib/agent/pruebas-de-la-pagina";
@@ -263,7 +265,10 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
         // LA SUITE, actualizada igual que en la ruta y en el mismo orden:
         // marcar lo roto, retirar lo que ya no señala a nada, y dejar entrar
         // la promesa que nació en verde.
-        const comprobadas = vivas(suiteDeLaPagina, html, null).map((p) => p.id);
+        const sinCorrer = new Set(v.guardadasSinCorrer ?? []);
+        const comprobadas = vivas(suiteDeLaPagina, html, null)
+          .filter((p) => !sinCorrer.has(p.id))
+          .map((p) => p.id);
         const { suite: marcadas, cuenta } = marcarRegresiones(suiteDeLaPagina, {
           comprobadas,
           rotas: (v.regresiones ?? []).map((r) => r.id),
@@ -272,15 +277,11 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
           retirar: [...(v.retirarPruebas ?? [])],
           documento: html,
           pagina: null,
-          ...(session.behaviorSpec?.length
-            ? {
-                turno: {
-                  pasos: session.behaviorSpec,
-                  fallos: v.fallosDelTurno ?? [],
-                  pagina: null,
-                },
-              }
-            : {}),
+          ...((): { turno?: { codigo: string; fallos: readonly FalloSpec[]; pagina: null } } => {
+            const codigo =
+              session.behaviorJs?.trim() || (session.behaviorSpec?.length ? pasosAJs(session.behaviorSpec) : null);
+            return codigo ? { turno: { codigo, fallos: v.fallosDelTurno ?? [], pagina: null } } : {};
+          })(),
         });
         // Y SE DICE EN LA CORRIDA. Este arnés lo lee una persona: una
         // regresión que sólo viviera en el veredicto no se vería en el
