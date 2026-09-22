@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // LA SUITE DE LA PÁGINA — las promesas que ya se cumplieron una vez.
 //
-// 🔴 POR QUÉ EXISTE. `session.behaviorSpec` vive en la sesión y se muere con el
+// 🔴 POR QUÉ EXISTE. `session.behaviorJs` vive en la sesión y se muere con el
 // turno, así que OpenLen no detecta REGRESIONES de comportamiento: el turno 3
 // construye el carrito y lo comprueba, el turno 9 reescribe el runtime —que va
 // entero, no por parches— y si se lo lleva por delante no se entera nadie. Con
@@ -28,7 +28,38 @@
 // y quién guarda vive fuera.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { FalloSpec, PasoSpec } from "./behavior-spec";
+import type { FalloSpec } from "./prueba-js";
+
+// ─── ⚰️ LA FORMA VIEJA, SÓLO PARA MIGRARLA ─────────────────────────────────────
+//
+// Hasta el 2026-09-22 una promesa podía ser una lista de pasos en JSON —el DSL,
+// con su propio validador y su propio compilador a un programa de navegador—.
+// El DSL se retiró entero; lo que queda de él son estos dos tipos, porque una
+// guardada de antes sigue teniendo esa forma hasta que `migrarSuite` la
+// convierte. Es la forma de una migración al leer: el lector conoce el formato
+// viejo, el motor que lo ejecutaba ya no existe.
+
+/** Lo que debía valer un elemento después de actuar, en el DSL. */
+export interface Expectativa {
+  readonly donde: string;
+  readonly que: "cambia" | "contiene" | "es" | "visible" | "oculto" | "estilo" | "atributo";
+  /** El texto para `contiene` / `es`; el NOMBRE de la propiedad o del atributo
+   *  para `estilo` / `atributo`. */
+  readonly valor?: string;
+}
+
+/** Un paso del DSL: actuar, y comprobar. `pasosAJs` sabe escribir cada campo
+ *  con su primitivo `ui.*`. */
+export interface PasoSpec {
+  readonly clic?: string;
+  /** Llevar el elemento al viewport: lo que se dispara AL VERSE. */
+  readonly desplaza?: string;
+  readonly veces?: number;
+  /** El selector señala un grupo y da igual cuál: `{ cualquiera: true }`. */
+  readonly cualquiera?: boolean;
+  readonly escribe?: Readonly<Record<string, string>>;
+  readonly entonces: readonly Expectativa[];
+}
 
 /** Una promesa que YA se cumplió una vez, guardada con la página. */
 export interface PruebaGuardada {
@@ -329,8 +360,7 @@ export interface CuentaDeRegresiones {
 /**
  * MARCA LAS QUE SE ROMPIERON Y DESMARCA LAS QUE VOLVIERON, y las cuenta.
  *
- * Es el mismo peldaño que `seguimientoDelRechazo`: el aviso no se manda a
- * ciegas, se mide si sirvió. Aquí decide lo único que el plan de la suite dejó abierto a
+ * El aviso no se manda a ciegas: se mide si sirvió. Aquí decide lo único que el plan de la suite dejó abierto a
  * propósito: si una regresión puede llegar a declarar rota la página. Esa
  * promoción se hace con el número delante, no con ganas — esta casa ya degradó
  * el canal de las pruebas una vez por medirlo.

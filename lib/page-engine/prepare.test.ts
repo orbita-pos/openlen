@@ -386,6 +386,26 @@ describe("la prueba declarada, dentro de la medición", () => {
     expect(out.report.specFailures).toBeUndefined();
   });
 
+  // 🔴 LO DEL INSTRUMENTO TAMBIÉN VIAJA, marcado (2026-09-22). Iba sólo al log,
+  // y en el Chat el modelo seguía creyendo que su promesa se había comprobado.
+  // No acusa a la página: la marca es la que deja a `notaSpec` decirlo aparte.
+  it("🔴 un fallo DEL INSTRUMENTO llega al informe con su marca, para que se diga", async () => {
+    const out = await preparePage(
+      PAGE,
+      { mode: "create", prueba: PRUEBA },
+      deps({
+        render: (async () => ({
+          behaviorResult: [[0, "#empezar no tiene manejador de clic", "prueba", 0]],
+        })) as never,
+      }),
+    );
+    expect(out.report.specFailures).toEqual([
+      { paso: 1, mensaje: "#empezar no tiene manejador de clic", deLaPrueba: true, programa: 0 },
+    ]);
+    const medir = out.report.stages.find((s) => s.stage === "measure");
+    expect(medir?.detail).toContain("prueba INAPLICABLE paso 1");
+  });
+
   it("los fallos de la prueba se nombran en la etapa `measure`", async () => {
     const out = await preparePage(
       PAGE,

@@ -320,7 +320,7 @@ describe("buildAgentMessages", () => {
         expect(inputEfectivo, `quedó el marcador declarativo de ${name}`).not.toContain(BEHAVIORS[name].marker);
       }
       expect(editarPagina.description).toContain("código COMPLETO");
-      expect(editarPagina.description).toContain("MANDA TAMBIÉN `prueba`");
+      expect(editarPagina.description).toContain("MANDA TAMBIÉN `prueba_js`");
     } finally {
       if (previoDocOps === undefined) delete process.env.OPENLEN_DOC_OPS;
       else process.env.OPENLEN_DOC_OPS = previoDocOps;

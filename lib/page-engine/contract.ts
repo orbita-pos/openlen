@@ -1,4 +1,4 @@
-import type { PruebaDeclarada } from "@/lib/agent/prueba-js";
+import type { FalloSpec, PruebaDeclarada } from "@/lib/agent/prueba-js";
 import type { ContextoDeVista } from "@/lib/lienzo/documento";
 
 /**
@@ -84,6 +84,8 @@ export interface PrepareReport {
   /**
    * Los pasos de la prueba QUE EL MODELO DECLARÓ y que fallaron al ejecutarla
    * en el navegador. Ausente cuando no hubo prueba, no hubo navegador, o pasó.
+   * Los que fallaron por EL INSTRUMENTO llevan `deLaPrueba: true` y no acusan
+   * al documento; viajan igual para que se digan (ver `notaSpec`).
    *
    * Aparte de `breakage` a propósito, y no por orden: aquello es rotura
    * OBSERVABLE —algo gritó— y esto es una PROMESA INCUMPLIDA, que no grita.
@@ -91,7 +93,7 @@ export interface PrepareReport {
    * mal (medido — Len escribió una que esperaba `49:59` donde reiniciar da
    * `50:00`), así que vale una reparación barata y NUNCA una reescritura.
    */
-  readonly specFailures?: readonly { paso: number; mensaje: string }[];
+  readonly specFailures?: readonly FalloSpec[];
   // ⚰️ `modules` y `moduleSettings` salieron el 2026-08-29 con el puente
   // IA→módulos: la etapa que los llenaba ya no existe (ver prepare.ts).
 }

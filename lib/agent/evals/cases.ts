@@ -15,7 +15,7 @@
 
 import type { ProjectData } from "@/lib/projects/types";
 import type { AgentStreamEvent, AgentLoopResult } from "@/lib/agent/loop";
-import type { PasoSpec, FalloSpec } from "@/lib/agent/behavior-spec";
+import type { FalloSpec } from "@/lib/agent/prueba-js";
 import { createSitePage } from "@/lib/projects/create-page";
 import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
 import { clasesQueNuncaAplican } from "@/lib/document/clases-muertas";
@@ -198,12 +198,17 @@ export interface EvalCumplimiento {
    *  medido 0 de 5 aciertos acusando, así que un caso que los cuente como
    *  fallo de página estaría midiendo su propio defecto. */
   readonly fallos: readonly FalloSpec[];
-  /** Expectativas que YA se cumplían antes de actuar, así que ese paso no
-   *  comprueba la acción. 🔴 NO PUNTÚAN todavía, a propósito: es una medida
-   *  nueva, y ya está medido lo que cuesta estrenar una puntuando —
-   *  `scored:false` evitó suspender 5 casos SANOS por un defecto de nuestro
-   *  fixture. Primero el número, después la decisión. */
-  readonly vacuas: readonly FalloSpec[];
+  /** Lo que la promesa cumple TAMBIÉN SIN SUS ACCIONES — el brazo de control
+   *  (`brazo-sin-acciones.ts`): afirmaciones que no discriminan, o una promesa
+   *  que no pide ninguna acción. 🔴 NO PUNTÚAN, a propósito: es una medida, y
+   *  ya está medido lo que cuesta estrenar una puntuando —`scored:false` evitó
+   *  suspender 5 casos SANOS por un defecto de nuestro fixture—. Primero el
+   *  número, después la decisión.
+   *
+   *  AUSENTE = no se midió (no corrió el brazo, o no pudo); `[]` = se midió y
+   *  todo depende de las acciones. Son dos hechos distintos y no comparten
+   *  valor. (Hasta el 2026-09-22 lo medía el DSL por su cuenta.) */
+  readonly vacuas?: readonly FalloSpec[];
   /**
    * POR QUÉ NO SE PUDO COMPROBAR, cuando `corrio: false`.
    *
@@ -1645,8 +1650,9 @@ export const EVAL_CASES: EvalCase[] = [
   //     b.addEventListener('click', function(){ active = i; render(); });
   //
   // `b` lo crea `createElement`, lleva `textContent` dinámico y un
-  // `data-deck-tab` — y NO tiene id. `derivarClic` busca un `#id` cerca del
-  // listener, así que no encuentra nada que derivar.
+  // `data-deck-tab` — y NO tiene id. La reparación del DSL (`derivarClic`,
+  // retirada con él el 2026-09-22) buscaba un `#id` cerca del listener, así
+  // que no encontraba nada que derivar.
   //
   // La salida existe y el prompt la manda: NOMBRAR EL BOTÓN POR SU TEXTO
   // (`ui.clic("Servicios")`), o declarar que da igual cuál del grupo

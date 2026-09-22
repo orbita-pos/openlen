@@ -42,7 +42,7 @@ import { randomUUID } from "node:crypto";
 import { abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
 import { crearDiarioDelTurno } from "@/lib/agent/diario-del-turno";
 import { actualizarSuite, marcarRegresiones, migrarSuite, vivas } from "@/lib/agent/pruebas-de-la-pagina";
-import type { FalloSpec, PasoSpec } from "@/lib/agent/behavior-spec";
+import type { FalloSpec } from "@/lib/agent/prueba-js";
 import { registrarTurnoDelServidor } from "@/lib/projects/chat";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { streamWithRetry } from "@/lib/agent/retry";

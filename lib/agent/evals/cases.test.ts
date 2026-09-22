@@ -21,7 +21,6 @@ import {
   type PruebaEnEval,
   type EvalCumplimiento,
 } from "./cases";
-import type { PasoSpec } from "@/lib/agent/behavior-spec";
 import { ESCENARIOS } from "./escenarios";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 
@@ -654,9 +653,9 @@ describe("la prueba declarada es visible y sus tres estados se distinguen", () =
       .toEqual([false, false, true]);
   });
 
-  // El motivo es lo que permite afirmar sobre UNA regla del prompt en vez de
-  // sobre «algo salió mal»: `demasiados_pasos` es la regla de los 6 pasos,
-  // `sin_accion` es la de que algún paso pulse o escriba.
+  // El motivo es lo que permite afirmar sobre UNA regla en vez de sobre «algo
+  // salió mal»: `demasiado_grande` es el tope de tamaño, `prueba_retirada` el
+  // parámetro del DSL que ya no existe.
   it("el motivo del rechazo distingue QUÉ regla se violó", () => {
     expect(pruebaRechazada(rechazada, "demasiado_grande")).toBe(true);
     expect(pruebaRechazada(rechazada, "vacia")).toBe(false);
@@ -707,19 +706,14 @@ describe("la prueba declarada es visible y sus tres estados se distinguen", () =
 // así que un ayudante que los contara como incumplimiento haría que los casos
 // midieran nuestro propio defecto y lo llamaran fallo del modelo.
 describe("el cumplimiento de la promesa, separado de quién falló", () => {
-  const PASOS: readonly PasoSpec[] = [
-    { clic: "#sumar", veces: 1, entonces: [{ donde: "#resultado", que: "cambia" }] },
-  ];
-  const cumplida: EvalCumplimiento = { corrio: true, fallos: [], vacuas: [] };
+  const cumplida: EvalCumplimiento = { corrio: true, fallos: [] };
   const rotaLaPagina: EvalCumplimiento = {
     corrio: true,
     fallos: [{ paso: 1, mensaje: "#resultado no cambió" }],
-    vacuas: [],
   };
   const rotoElInstrumento: EvalCumplimiento = {
     corrio: true,
     fallos: [{ paso: 1, mensaje: ".slide señala 10 elementos, no uno", deLaPrueba: true }],
-    vacuas: [],
   };
 
   it("🔴 una promesa cumplida es cumplida", () => {
@@ -744,7 +738,7 @@ describe("el cumplimiento de la promesa, separado de quién falló", () => {
   it("CONTRA-PRUEBA: sin promesa o sin corrida, ningún veredicto", () => {
     expect(promesaCumplida(null)).toBe(false);
     expect(promesaIncumplida(null)).toBe(false);
-    const noCorrio: EvalCumplimiento = { corrio: false, fallos: [], vacuas: [] };
+    const noCorrio: EvalCumplimiento = { corrio: false, fallos: [] };
     expect(promesaCumplida(noCorrio)).toBe(false);
     expect(promesaIncumplida(noCorrio)).toBe(false);
   });
@@ -812,10 +806,7 @@ describe("los hechos mecánicos no votan, pero se dicen", () => {
 // sin verificar: `scored:false` evitó suspender 5 casos SANOS por un defecto
 // de nuestro fixture.
 describe("prometioYSeComprobo — los cuatro estados, sin gastar un peso", () => {
-  const PASOS: readonly PasoSpec[] = [
-    { clic: "#mas", veces: 1, entonces: [{ donde: "#n", que: "cambia" }] },
-  ];
-  const cumplio: EvalCumplimiento = { corrio: true, fallos: [], vacuas: [] };
+  const cumplio: EvalCumplimiento = { corrio: true, fallos: [] };
 
   it("🔴 (1) editó y NO mandó prueba — el estado silencioso", () => {
     const r = prometioYSeComprobo({
@@ -841,7 +832,6 @@ describe("prometioYSeComprobo — los cuatro estados, sin gastar un peso", () =>
       pruebas: [{ tool: "editar_runtime", rechazo: null, js: PROMESA_JS }],
       cumplimiento: {
         corrio: true,
-        vacuas: [],
         fallos: [{ paso: 1, mensaje: "#n no cambió" }],
       },
     });
@@ -854,7 +844,6 @@ describe("prometioYSeComprobo — los cuatro estados, sin gastar un peso", () =>
       pruebas: [{ tool: "editar_runtime", rechazo: null, js: PROMESA_JS }],
       cumplimiento: {
         corrio: true,
-        vacuas: [],
         fallos: [{ paso: 1, mensaje: ".slide señala 10 elementos, no uno", deLaPrueba: true }],
       },
     });
@@ -951,7 +940,7 @@ describe("prometioYSeComprobo sobre listas de turno COMPLETO", () => {
     expect(
       prometioYSeComprobo({
         pruebas: [sin("editar_html"), con("editar_runtime")],
-        cumplimiento: { corrio: true, fallos: [], vacuas: [] },
+        cumplimiento: { corrio: true, fallos: [] },
       }),
     ).toBeNull();
   });
@@ -969,7 +958,7 @@ describe("prometioYSeComprobo sobre listas de turno COMPLETO", () => {
 // (`forma: "js"`, `pasos: []`), así que las dos rutas las juzga el MISMO juez.
 describe("la ranura JS se puntúa como la del DSL", () => {
   const conJs = [{ tool: "editar_runtime", rechazo: null, js: "ui.clic('#a')" }];
-  const jsCumplido = { corrio: true, fallos: [], vacuas: [] };
+  const jsCumplido = { corrio: true, fallos: [] };
 
   it("🔴 una promesa JS INCUMPLIDA suspende el caso", () => {
     const r = prometioYSeComprobo({

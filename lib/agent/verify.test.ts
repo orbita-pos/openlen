@@ -1631,7 +1631,7 @@ test("lo que compone el servidor sí lleva la dirección de su página", async (
 
 // 🔴 EL PRELUDIO VIAJA, O LA PRECONDICIÓN QUEDA A OSCURAS.
 //
-// El censo de manejadores no puede vivir en el programa: `specProgram` corre
+// El censo de manejadores no puede vivir en el programa: `programaSuiteJs` corre
 // DESPUÉS de que la página cargue, y para entonces ya no se puede saber qué
 // cableó. Se instala con `evaluateOnNewDocument`, así que tiene que llegar al
 // renderizador junto al programa. Si no llega, el programa es fail-open y NO

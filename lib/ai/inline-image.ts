@@ -249,7 +249,7 @@ export async function renderHtmlToInlineImage(
      *  la captura, y recoger lo que revienten. Apagado por omisión: cuesta unos
      *  cientos de ms y no todo render lo quiere. */
     pressButtons?: boolean;
-    /** El programa de comprobación de comportamiento (lib/agent/behavior-spec)
+    /** El programa de comprobación de comportamiento (lib/agent/prueba-js)
      *  a ejecutar DESPUÉS de la captura, en este mismo navegador. Devuelve lo
      *  que el navegador respondió, sin interpretar.
      *

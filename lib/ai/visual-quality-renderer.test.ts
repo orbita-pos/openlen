@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createVisualQualityRendererPool, renderVisualCandidateContactSheet, renderVisualQualityViewports } from "./visual-quality-renderer";
+import { PRELUDIO_CENSO_CLIC } from "@/lib/agent/prueba-js";
 
 const HTML = "<!doctype html><html><body>hello</body></html>";
 
@@ -887,6 +888,48 @@ describe("el guion declarado por el modelo", () => {
     expect(r).not.toBeNull();
     expect(r?.desktop.dataBase64).not.toBe("");
     expect("behaviorResult" in (r ?? {})).toBe(false);
+  });
+
+  // 🔴 EL CENSO VIAJA CON EL GUION (2026-09-22). Por aquí corre la prueba del
+  // Chat, y sin el preludio la precondición del clic muerto callaba siempre.
+  // Se instala ANTES de cargar —si no, los scripts de la página ya habrían
+  // cableado sin que nadie los contara— y se retira DESPUÉS, porque el pool
+  // reutiliza la página y un guion registrado se apilaría render tras render.
+  const conCenso = (alEvaluarCadena: (arg: string) => unknown) => ({
+    ...doble(alEvaluarCadena),
+    evaluateOnNewDocument: vi.fn(async () => ({ identifier: "censo-1" })),
+    removeScriptToEvaluateOnNewDocument: vi.fn(async () => undefined),
+  });
+
+  it("🔴 con guion, el censo se instala antes de cargar y se retira después", async () => {
+    const page = conCenso(() => []);
+    await conPagina(page, { behaviorProgram: GUION });
+    expect(page.evaluateOnNewDocument).toHaveBeenCalledWith(PRELUDIO_CENSO_CLIC);
+    expect(page.removeScriptToEvaluateOnNewDocument).toHaveBeenCalledWith("censo-1");
+    const instala = page.evaluateOnNewDocument.mock.invocationCallOrder[0]!;
+    const carga = page.setContent.mock.invocationCallOrder[0]!;
+    const retira = page.removeScriptToEvaluateOnNewDocument.mock.invocationCallOrder[0]!;
+    expect(instala).toBeLessThan(carga);
+    expect(carga).toBeLessThan(retira);
+  });
+
+  it("CONTRA-PRUEBA: sin guion no se instala nada — pulsar a ciegas no lo usa", async () => {
+    const page = conCenso(() => 3);
+    await conPagina(page, {});
+    expect(page.evaluateOnNewDocument).not.toHaveBeenCalled();
+    expect(page.removeScriptToEvaluateOnNewDocument).not.toHaveBeenCalled();
+  });
+
+  it("si no se puede instalar, la medición sigue: el programa es fail-open sin él", async () => {
+    const page = {
+      ...conCenso(() => [[0, "#reloj no cambió"]]),
+      evaluateOnNewDocument: vi.fn(async () => {
+        throw new Error("sin CDP");
+      }),
+    };
+    const r = await conPagina(page, { behaviorProgram: GUION });
+    expect(r?.behaviorResult).toEqual([[0, "#reloj no cambió"]]);
+    expect(page.removeScriptToEvaluateOnNewDocument).not.toHaveBeenCalled();
   });
 });
 

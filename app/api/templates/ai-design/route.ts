@@ -43,8 +43,7 @@ import {
 import { preparePage } from "@/lib/page-engine/prepare";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { avisoPruebaDescartada, extractPruebaFromEdits } from "@/lib/ai-stream/model-prueba";
-import { notaSpec } from "@/lib/agent/behavior-spec";
-import type { PruebaDeclarada } from "@/lib/agent/prueba-js";
+import { notaSpec, type PruebaDeclarada } from "@/lib/agent/prueba-js";
 import { userMemoryBlock } from "@/lib/agent/context";
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";

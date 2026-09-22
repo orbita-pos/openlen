@@ -5,11 +5,10 @@ import { documentoMedible } from "@/lib/lienzo/documento";
 import { todoElJsDelDocumento } from "./conservar-scripts";
 import { stampFormIds } from "@/lib/publish/form-identity";
 import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
-import { programaJs } from "@/lib/agent/prueba-js";
+import { leerFallos, programaJs, type FalloSpec } from "@/lib/agent/prueba-js";
 import { compileCalcRegions, type CalcIssue } from "@/lib/expr/document";
 import { reglasQueNuncaAplican, type ReglaMuerta } from "@/lib/document/css-wiring";
 import { clasesQueNuncaAplican, type ClaseMuerta } from "@/lib/document/clases-muertas";
-import { leerFallos, type FalloSpec } from "@/lib/agent/behavior-spec";
 import { objectiveBreakage, roturaDeRed } from "@/lib/generation/objective-breakage";
 import { gateReservedMarker } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
@@ -118,11 +117,16 @@ export async function preparePage(
     //
     // Y desde el 2026-09-04 se separan DOS cosas que antes iban juntas: lo que
     // la página incumplió, y lo que la PRUEBA no pudo aplicar (un selector que
-    // no señala a nada, o a varios). Sólo lo primero es un fallo del documento
-    // y puede disparar una reparación; lo segundo se oye en el informe y en el
-    // log, porque «una prueba que no se pudo correr no acusa a nadie».
+    // no señala a nada, un clic sin manejador). Sólo lo primero es un fallo
+    // del documento; lo segundo «no acusa a nadie».
+    //
+    // 🔴 PERO SE DICE (2026-09-22). Lo del instrumento sólo iba al log, así que
+    // en el Chat el modelo seguía creyendo que su promesa se había comprobado.
+    // Ahora viajan las dos en `specFailures`, cada una con su marca
+    // (`deLaPrueba`), y quien la cuenta —`notaSpec`— las atribuye por separado,
+    // igual que en el Agente.
     const todos = guion ? leerFallos(medido?.behaviorResult) : [];
-    specFailures = todos.filter((f) => !f.deLaPrueba);
+    specFailures = todos;
     const inaplicables = todos.filter((f) => f.deLaPrueba);
     if (inaplicables.length > 0) {
       // eslint-disable-next-line no-console
@@ -142,7 +146,7 @@ export async function preparePage(
     }
     const detalle = [
       ...breakage,
-      ...specFailures.map((f) => `prueba paso ${f.paso}: ${f.mensaje}`),
+      ...specFailures.map((f) => `prueba${f.deLaPrueba ? " INAPLICABLE" : ""} paso ${f.paso}: ${f.mensaje}`),
       ...red.map((g) => `AJENA (red, no del modelo): ${g}`),
     ];
     stages.push({ stage: "measure", status: detalle.length ? "changed" : "skipped", detail: detalle.join(" · ") || undefined });

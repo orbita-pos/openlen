@@ -246,28 +246,13 @@ export default defineConfig({
       // cinco estaban rotos, cuatro en falso negativo y tres en falso positivo.
       // `include` es LISTA BLANCA: sin esta línea no correría nunca.
       "lib/ai/contraste-caminos-css.browser.test.ts",
-      // El programa de la PRUEBA DECLARADA, ejecutado de verdad: el guardia que
-      // mataba el envío de formularios, y el conteo del selector que sustituye
-      // a la regex. MEDIDO el 2026-09-04 sobre 16 páginas — los dos defectos
-      // vivían dentro de `page.evaluate`, que la suite normal mockea.
+      // La prueba declarada, ejecutada de verdad: el modelo escribe el JS y los
+      // primitivos llevan dentro la ventana, el conteo, el guardia y el censo
+      // de clic muerto. Desde el 2026-09-22 es la única forma, así que aquí
+      // viven también las protecciones que antes fijaban las pruebas del DSL
+      // (selector, `required`, nombre, grupo, `atributo`, `estilo`, censo).
       // `include` es LISTA BLANCA: sin esta línea no correría nunca.
-      "lib/agent/prueba-selector.browser.test.ts",
-      // La opción A: el modelo escribe el JS y los primitivos llevan dentro la
-      // ventana, el conteo y el guardia. Fija que esas tres lecciones NO
-      // dependen de que el modelo se acuerde de ellas.
       "lib/agent/prueba-js.browser.test.ts",
-      // El verbo `atributo`, y con él la demostración de que la página de
-      // `quiz` estaba bien: el mismo documento suspende con `estilo` y pasa con
-      // `atributo`. Un verbo nuevo probado fuera del navegador saldría verde
-      // sin haberse ejecutado nunca — `page.evaluate` está mockeado en la suite
-      // normal. `include` es LISTA BLANCA.
-      "lib/agent/prueba-atributo.browser.test.ts",
-      // La PRECONDICIÓN: un clic cuya cadena entera no tiene manejador se dice
-      // antes de actuar, como el `Edit` que se niega a un no-op. Necesita
-      // navegación DE VERDAD (`cargarEnOrigenReal`): con `setContent` no se
-      // instala `evaluateOnNewDocument` y el censo saldría a cero para todo,
-      // que es como pasar la prueba sin haberla corrido.
-      "lib/agent/censo-de-clic.browser.test.ts",
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "lib/auth/**/*.test.ts",
@@ -357,7 +342,9 @@ export default defineConfig({
       "lib/agent/context.test.ts",
       "lib/agent/facts-kept.test.ts",
       "lib/agent/contenido-perdido.test.ts",
-      "lib/agent/behavior-spec.test.ts",
+      // Lo puro de la prueba declarada: leer lo que devuelve el navegador, la
+      // nota de sus fallos y la entrada. `include` es LISTA BLANCA.
+      "lib/agent/prueba-js.test.ts",
       "lib/agent/user-memory-block.test.ts",
       "lib/agent/memoria-larga.test.ts",
       "lib/agent/photo-search.test.ts",

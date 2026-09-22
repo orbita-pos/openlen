@@ -32,8 +32,8 @@ export const PULSAR_CONTROLES = `
   // sólo la ACCIÓN por defecto: los manejadores del modelo corren igual, que es
   // justo lo que se quiere comprobar.
   //
-  // LA EXCEPCIÓN, copiada de sus dos hermanos (lib/agent/behavior-spec.ts y
-  // lib/agent/prueba-js.ts, que la recibieron en b8fcf26e). Cancelar la acción
+  // LA EXCEPCIÓN, copiada de su hermano (lib/agent/prueba-js.ts, que la
+  // recibió en b8fcf26e junto al DSL, ya retirado). Cancelar la acción
   // por defecto de un clic sobre \`type="submit"\` impide que el navegador
   // dispare el \`submit\` del formulario, y ahí es donde el modelo engancha su
   // manejador. Sin ella este pase pulsaba el botón y no ejercitaba NADA: un

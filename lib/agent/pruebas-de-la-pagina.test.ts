@@ -1,6 +1,6 @@
 // LA SUITE DE LA PÁGINA — que una promesa cumplida siga cumpliéndose.
 //
-// 🔴 POR QUÉ EXISTE. Hoy la promesa del modelo (`session.behaviorSpec`) vive en
+// 🔴 POR QUÉ EXISTE. Hoy la promesa del modelo (`session.behaviorJs`) vive en
 // la SESIÓN y se muere con el turno: los ojos la comprueban al cerrar y ahí se
 // acaba. Consecuencia, y no la estaba mirando nadie: OpenLen no detecta
 // regresiones de comportamiento. El turno 3 construye el carrito y lo
@@ -269,8 +269,7 @@ describe("la suite de la página", () => {
 
   // ─── El contador, que es quien decide lo que falta ─────────────────────────
   //
-  // Es el mismo peldaño que `seguimientoDelRechazo`: el aviso no se manda a
-  // ciegas, se mide si sirvió.
+  // El aviso no se manda a ciegas: se mide si sirvió.
   // Aquí decide lo ÚNICO que el plan dejó abierto a propósito — si una
   // regresión puede llegar a declarar rota la página—, y esa decisión se toma
   // con el número delante, no con ganas.
