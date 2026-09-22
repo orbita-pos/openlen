@@ -181,6 +181,10 @@ export interface PruebaEnEval {
    *  de forma, un 56% de `sin_accion` no dice qué reparación falta escribir.
    *  Ausente en los demás rechazos. */
   readonly clase?: string | null;
+  /** ¿Esta llamada CAMBIÓ EL COMPORTAMIENTO? La misma decisión con la que el
+   *  producto le pide prueba al modelo (`ToolOutcome.cambioConducta`). Ausente
+   *  ⇒ se asume que sí, que es lo que el juez daba por hecho antes de tenerla. */
+  readonly conducta?: boolean;
 }
 
 /** ¿Se CUMPLIÓ la promesa, ejecutada en un navegador contra el estado final?
@@ -347,13 +351,24 @@ export function sinPrueba(pruebas: readonly PruebaEnEval[]): boolean {
  *
  * ⚠️ SI NO EDITÓ POR NINGUNA PUERTA, esto se calla. «No construyó nada» es otro
  * fallo y ya lo dicen los asserts propios de cada caso; decirlo dos veces con
- * palabras distintas hace que quien lee la corrida persiga dos bugs.
+ * palabras distintas hace que quien lee la corrida persiga dos bugs. Y se calla
+ * también si editó sin tocar COMPORTAMIENTO: ahí no hay nada que prometer.
  */
 export function prometioYSeComprobo(ctx: {
   pruebas: readonly PruebaEnEval[];
   cumplimiento: EvalCumplimiento | null;
 }): string | null {
   if (ctx.pruebas.length === 0) return null;
+
+  // 🔴 SÓLO SE EXIGE PROMESA A QUIEN TOCÓ COMPORTAMIENTO. Se verifica lo que el
+  // verificador puede ejercitar: la promesa ejercita conducta, y un cambio de
+  // texto o de atributo ya lo miran los ojos. Hasta el 2026-09-22 bastaba con
+  // editar por cualquier puerta, y la batería de ese día lo midió: habría
+  // suspendido 32 de 64 casos, y los 32 eran justo los turnos que no tocaron el
+  // runtime (37 editaron, 5 lo tocaron). La decisión es la MISMA con la que el
+  // producto le pide prueba al modelo, no una segunda definición que pueda
+  // separarse de ella.
+  if (!ctx.pruebas.some((p) => p.conducta !== false)) return null;
 
   // 🔴 CON QUÉ TERMINA EL TURNO, no «si alguna llamada trajo prueba».
   //

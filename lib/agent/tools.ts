@@ -753,6 +753,14 @@ export interface ToolOutcome {
    * que hizo con lo que se puede demostrar.
    */
   tareas?: string[];
+  /**
+   * ¿ESTA EDICIÓN CAMBIÓ EL COMPORTAMIENTO de la página? Es la MISMA decisión
+   * con la que se le pide `prueba` al modelo (`cambioConducta`, sin contar el
+   * borrado del runtime, que no promete nada). No va al modelo ni a la tarjeta:
+   * la lee el arnés, para exigir promesa sólo a los turnos que tocaron
+   * comportamiento y no a los que cambiaron un texto.
+   */
+  cambioConducta?: boolean;
 }
 
 // AgentModule name -> the settings key it actually lives under. Identidad en
@@ -2668,11 +2676,14 @@ async function toolEditarPagina(
   }
 
   // Sin prueba, nadie sabrá si el comportamiento hace lo que promete — sólo si
-  // explota. Se le dice, y se le dice por qué.
+  // explota. Se le dice, y se le dice por qué. Las DOS ranuras cuentan: quien
+  // prometió por `prueba_js` prometió, y decirle lo contrario pintaba de ámbar
+  // un turno con su promesa en regla.
   if (
     !borrarRuntime &&
     cambioConducta &&
     !session.behaviorSpec &&
+    !session.behaviorJs &&
     !avisoPrueba
   ) {
     criticos.push(
@@ -2799,6 +2810,7 @@ async function toolEditarPagina(
     updatedHtml: persisted.finalHtml,
     page: session.page,
     versionPrevia: persisted.versionPrevia,
+    cambioConducta: cambioConducta && !borrarRuntime,
   };
 }
 

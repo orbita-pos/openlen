@@ -4979,6 +4979,33 @@ describe("prueba_js — la ranura reservada del Agente", () => {
     assert.equal(session.behaviorSpec, null);
   });
 
+  // 🔴 QUIEN MANDÓ `prueba_js` MANDÓ PRUEBA. El aviso de «cambiaste el
+  // comportamiento SIN prueba» miraba sólo la ranura del DSL, así que a un
+  // turno que sí prometía por la otra le decía lo contrario —y la tarjeta del
+  // dueño salía en ámbar por una promesa que existía—.
+  it("🔴 con `prueba_js` aceptada no se le dice que no mandó prueba", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "editar_runtime", {
+      script: 'document.getElementById("n").textContent = "1";',
+      prueba_js: CONTADOR,
+      resumen: "contador",
+    });
+    assert.equal(out.response.ok, true);
+    assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /SIN mandar/);
+  });
+
+  it("CONTRA-PRUEBA: sin ninguna de las dos, el aviso sigue saliendo", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "editar_runtime", {
+      script: 'document.getElementById("n").textContent = "1";',
+      resumen: "contador",
+    });
+    assert.equal(out.response.ok, true);
+    assert.match(String(out.response.aviso_critico ?? ""), /SIN mandar/);
+  });
+
   // 🔴 EL CONTRATO SE HACE CUMPLIR, como el suyo. Lo que NO se copia es
   // "the publish is refused": tirar el edit entero se llevaría por delante el
   // cambio del usuario. Se rechaza LA PRUEBA y se guarda la página — que es lo
@@ -5043,6 +5070,34 @@ describe("prueba_js — la ranura reservada del Agente", () => {
 // tapada se la NOMBRA; cuando el modelo re-declara su estado el reemplazo es
 // entero y se le avisa. Lo que nunca puede pasar es que algo se caiga por el
 // ORDEN y sin decirlo.
+// 🔴 EL RESULTADO DICE SI SE TOCÓ COMPORTAMIENTO, con la misma decisión que
+// pide `prueba`. Lo lee el arnés: sin esto exigía promesa a cualquier edición,
+// y la batería del 2026-09-22 acusó a 32 turnos que sólo cambiaron un texto.
+describe("cambioConducta — el dato que lee el arnés", () => {
+  it("🔴 reescribir el runtime SÍ cambia el comportamiento", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "editar_runtime", {
+      script: 'document.getElementById("n").textContent = "1";',
+      resumen: "contador",
+    });
+    assert.equal(out.cambioConducta, true);
+    // Y no viaja al modelo: es del arnés.
+    assert.equal("cambioConducta" in out.response, false);
+  });
+
+  it("…y cambiar un texto NO", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const out = await runAgentTool(session, deps, "editar_texto", {
+      ediciones: [{ target: contentOpId(session.taggedHtml), texto: "Hola de nuevo" }],
+      resumen: "titular",
+    });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.cambioConducta, false);
+  });
+});
+
 describe("la promesa del turno sobrevive a lo que no la sustituye", () => {
   const PROGRAMA = 'ui.desplaza("#n"); ui.cambia("#n");';
 
@@ -5055,11 +5110,14 @@ describe("la promesa del turno sobrevive a lo que no la sustituye", () => {
       resumen: "contador",
     });
     assert.equal(session.behaviorJs, PROGRAMA);
-    // Un retoque de copy, sin prueba de ninguna clase.
-    await runAgentTool(session, deps, "editar_texto", {
-      ediciones: [{ target: "h1", texto: "Hola de nuevo" }],
+    // Un retoque de copy, sin prueba de ninguna clase. Y APLICADO: apuntando a
+    // `"h1"` en vez de a un op-id, la edición fallaba y esto pasaba sin haber
+    // retocado nada.
+    const retoque = await runAgentTool(session, deps, "editar_texto", {
+      ediciones: [{ target: contentOpId(session.taggedHtml), texto: "Hola de nuevo" }],
       resumen: "titular",
     });
+    assert.equal(retoque.response.ok, true);
     assert.equal(
       session.behaviorJs,
       PROGRAMA,

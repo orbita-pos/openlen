@@ -888,6 +888,34 @@ describe("prometioYSeComprobo — los cuatro estados, sin gastar un peso", () =>
   it("CONTRA-PRUEBA: si no editó por ninguna puerta, no dice nada", () => {
     expect(prometioYSeComprobo({ pruebas: [], cumplimiento: null })).toBeNull();
   });
+
+  // 🔴 MEDIDO en la batería del 2026-09-22: 32 de 64 casos acusados de «cambió
+  // el comportamiento y nadie lo comprobó», y los 32 sólo habían cambiado un
+  // texto o un atributo. Sin tocar comportamiento no hay nada que prometer.
+  it("🔴 editó SIN tocar comportamiento: no hay nada que prometer", () => {
+    const soloTexto = [
+      { tool: "editar_texto", spec: null, rechazo: null, js: null, conducta: false },
+      { tool: "editar_atributos", spec: null, rechazo: null, js: null, conducta: false },
+    ];
+    expect(prometioYSeComprobo({ pruebas: soloTexto, cumplimiento: null })).toBeNull();
+  });
+
+  it("…y si UNA llamada del turno sí lo tocó, se exige", () => {
+    const mixto = [
+      { tool: "editar_texto", spec: null, rechazo: null, js: null, conducta: false },
+      { tool: "editar_runtime", spec: null, rechazo: null, js: null, conducta: true },
+    ];
+    expect(prometioYSeComprobo({ pruebas: mixto, cumplimiento: null })).toMatch(/sin promesa viva/);
+  });
+
+  it("sin el dato de conducta se asume que la tocó, que es lo que se daba por hecho", () => {
+    expect(
+      prometioYSeComprobo({
+        pruebas: [{ tool: "editar_texto", spec: null, rechazo: null, js: null }],
+        cumplimiento: null,
+      }),
+    ).toMatch(/sin promesa viva/);
+  });
 });
 
 // ── 🔴 LO QUE EL ARNÉS REGISTRA DE VERDAD, TURNO COMPLETO ───────────────────
