@@ -30,8 +30,8 @@ const ActionSchema = z.object({
   // abajo describe para el `summary` largo.
   status: z.enum(["running", "done", "warning", "error"]),
   // Truncate, don't reject: a model-written summary that runs long must not
-  // 400 the whole turn (which vanishes silently on reload). tool/actions-count
-  // stay hard structural rejects below.
+  // 400 the whole turn (which vanishes silently on reload). `tool` stays a
+  // hard structural reject; the actions count truncates too (see TurnSchema).
   summary: z.string().transform((s) => s.slice(0, 200)),
   /** POR QUÉ falló, literal — el mismo string que leyó el modelo. Se TRUNCA, no
    *  se rechaza, por el mismo motivo que el `summary`: un motivo largo haría
@@ -100,6 +100,11 @@ const ActionSchema = z.object({
       : resto,
   );
 
+/** Tarjetas que se guardan por turno. Por encima de lo que el bucle produce
+ *  (26 llamadas como mucho, más las de los ojos): recortar aquí es una red, no
+ *  algo que un turno normal toque. */
+const MAX_TARJETAS_GUARDADAS = 40;
+
 const TurnSchema = z.object({
   id: z.string().min(1).max(100),
   userText: z.string().min(1).max(4000),
@@ -115,7 +120,18 @@ const TurnSchema = z.object({
   // F2-T11: both optional/backward-compatible — see ActionSchema comment.
   // Confirm cards are deliberately never part of this shape (never sent by
   // the panel) — see chat-panel.tsx's persistTurn comment for why.
-  actions: z.array(ActionSchema).max(12).optional(),
+  //
+  // 🔴 SE RECORTA, NO SE RECHAZA. Esto era `.max(12)`, y el bucle deja hacer
+  // hasta 26 llamadas por turno: un turno de 14 tarjetas respondía 400 y el
+  // navegador no guardaba NADA (comprobado en el navegador el 2026-09-22; en
+  // producción, 2 de los 22 turnos con tarjetas de los 14 días anteriores
+  // pasaban de 12). Por encima de lo que el bucle puede producir se recorta,
+  // como el `summary`; sólo lo que no puede venir de un turno se rechaza.
+  actions: z
+    .array(ActionSchema)
+    .max(200)
+    .transform((a) => a.slice(0, MAX_TARJETAS_GUARDADAS))
+    .optional(),
   noDocChange: z.boolean().optional(),
 });
 
