@@ -2,7 +2,7 @@
 // como un fallo puro». Esta es la mitad del cliente: la decisión de pintar rojo
 // o cerrar aplicado-con-aviso.
 import { describe, expect, it } from "vitest";
-import { cierreDeTurno, laPaginaNoCambio } from "./turno-cerrado";
+import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "./turno-cerrado";
 
 describe("cierreDeTurno", () => {
   it("sin error, el turno cierra aplicado y sin aviso", () => {
@@ -26,6 +26,9 @@ describe("cierreDeTurno", () => {
     ).toEqual({
       kind: "aplicado-con-aviso",
       aviso: "El agente se quedó sin espacio de respuesta.",
+      // Un error DESPUÉS de mutar es un corte de verdad (ver «un aviso no es un
+      // corte», abajo).
+      cortado: true,
     });
   });
 
@@ -176,6 +179,7 @@ describe("el corte de la ventana llega al usuario", () => {
     expect(r).toEqual({
       kind: "aplicado-con-aviso",
       aviso: `El modelo tuvo un problema. ${VENTANA}`,
+      cortado: true,
     });
   });
 
@@ -188,6 +192,50 @@ describe("el corte de la ventana llega al usuario", () => {
         hayDocumentoNuevo: true,
       }),
     ).toEqual({ kind: "aplicado" });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔴 UN AVISO NO ES UN CORTE (revisión pre-deploy del 2026-09-22).
+//
+// El panel marcaba `cortado` en TODO `aplicado-con-aviso`, y ese tipo sale
+// también de un turno que terminó bien con el aviso de ventana o de tope. Con
+// la marca puesta, el historial le decía al modelo que su turno anterior «se
+// CORTÓ… y lo demás NO llegó a hacerse» — de un turno completo, en cada turno de
+// una charla de más de doce. El servidor ya lo decide así (`corteDelTurno`: un
+// tope no es un corte); el panel tiene que decir lo mismo.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("un aviso no es un corte", () => {
+  const VENTANA = "Len ve los últimos 12 mensajes de esta conversación, de 14.";
+  const TOPE = "El agente alcanzó su límite de pasos por turno.";
+  const plantillaDeCorte = (motivo: string) => `⚠️ Este turno se cortó antes de terminar (${motivo}).`;
+
+  it("🔴 un turno limpio con el aviso de ventana NO está cortado, ni se guarda nada", () => {
+    const cierre = cierreDeTurno({ errorMessage: null, avisoDeVentana: VENTANA, mutoDurable: true, hayDocumentoNuevo: true });
+    expect(cierre.kind).toBe("aplicado-con-aviso");
+    expect(cierre.kind === "aplicado-con-aviso" && cierre.cortado).toBeFalsy();
+    // La ventana se recalcula en cada turno: guardarla en el texto la dejaría
+    // dentro de lo que dijo Len, reenviada al modelo como si fuera suya.
+    expect(lineaGuardadaDelCierre(cierre, { avisoDeTope: null, plantillaDeCorte })).toBeNull();
+  });
+
+  it("🔴 un turno que agotó el tope NO está cortado: se guarda el aviso del tope, no «se cortó»", () => {
+    const cierre = cierreDeTurno({ errorMessage: null, avisoDeTope: TOPE, mutoDurable: true, hayDocumentoNuevo: true });
+    expect(cierre.kind === "aplicado-con-aviso" && cierre.cortado).toBeFalsy();
+    expect(lineaGuardadaDelCierre(cierre, { avisoDeTope: TOPE, plantillaDeCorte })).toBe(`⚠️ ${TOPE}`);
+  });
+
+  it("BRAZO DE CONTROL: un error DESPUÉS de mutar sí es un corte, y se guarda como tal", () => {
+    const cierre = cierreDeTurno({ errorMessage: "El turno fue cancelado.", mutoDurable: true, hayDocumentoNuevo: true });
+    expect(cierre.kind === "aplicado-con-aviso" && cierre.cortado).toBe(true);
+    expect(lineaGuardadaDelCierre(cierre, { avisoDeTope: null, plantillaDeCorte })).toBe(
+      plantillaDeCorte("El turno fue cancelado."),
+    );
+  });
+
+  it("un turno aplicado sin aviso no guarda línea", () => {
+    const cierre = cierreDeTurno({ errorMessage: null, mutoDurable: true, hayDocumentoNuevo: true });
+    expect(lineaGuardadaDelCierre(cierre, { avisoDeTope: null, plantillaDeCorte })).toBeNull();
   });
 });
 

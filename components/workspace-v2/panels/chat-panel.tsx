@@ -44,7 +44,7 @@ import {
   planDeUndo,
   type FalloDeUndo,
 } from "./undo-turn";
-import { cierreDeTurno, laPaginaNoCambio } from "./turno-cerrado";
+import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "./turno-cerrado";
 import { MandoEsfuerzo } from "./mando-esfuerzo";
 import { cancelarObjetivo, ponerObjetivo } from "./objetivo-activo";
 import { CONDICION_MAX } from "@/lib/agent/objetivo/condicion";
@@ -1496,12 +1496,13 @@ function AIDesignChat({
           // El usuario pulsaba «Reintentar» y aplicaba el mismo cambio DOS
           // veces. Es el mismo arreglo que el Chat clásico lleva desde el 24/08
           // (`cambioDurable` en ai-design); esta superficie se quedó sin él.
+          // `errors.turn_limit` y `errors.tool_limit` ya existen en los 10
+          // idiomas: el tope se contaba como error cuando lo era, y como nada
+          // cuando el bucle cerraba con elegancia. Ahora se dice siempre.
+          const avisoDeTope = topeAlcanzado ? tAgent(`errors.${topeAlcanzado}`) : null;
           const cierre = cierreDeTurno({
             errorMessage,
-            // `errors.turn_limit` y `errors.tool_limit` ya existen en los 10
-            // idiomas: el tope se contaba como error cuando lo era, y como nada
-            // cuando el bucle cerraba con elegancia. Ahora se dice siempre.
-            avisoDeTope: topeAlcanzado ? tAgent(`errors.${topeAlcanzado}`) : null,
+            avisoDeTope,
             // El corte de la ventana, dicho con los dos números: «ve 12 de 20»
             // es algo que el usuario puede USAR —resumirle lo importante, o
             // empezar otra conversación—; «memoria recortada» es una disculpa.
@@ -1579,11 +1580,12 @@ function AIDesignChat({
             // son las que tocó. Cuando no coinciden, Deshacer no puede cumplir.
             paginasTocadas: [...paginasTocadas],
             versionPrevia,
-            // Se guardó, pero el turno se cortó antes de cerrar. Aplicado CON
-            // aviso: el cambio está y el usuario tiene que saber que quedó a
-            // medias.
+            // Aplicado CON aviso: el cambio está y el usuario tiene que ver el
+            // aviso. La marca de corte, en cambio, sólo si de verdad se cortó
+            // —ver `cierre.cortado`—: el historial se la reenvía al modelo como
+            // «lo demás NO llegó a hacerse».
             ...(cierre.kind === "aplicado-con-aviso"
-              ? { avisoTurno: cierre.aviso, cortado: true }
+              ? { avisoTurno: cierre.aviso, ...(cierre.cortado ? { cortado: true } : {}) }
               : {}),
           });
           void persistTurn({
@@ -1600,9 +1602,10 @@ function AIDesignChat({
             // recargar la conversación sin inventarse una columna nueva.
             assistantReasoning: [
               accumulatedReasoning,
-              cierre.kind === "aplicado-con-aviso"
-                ? tAgent("cortado", { reason: cierre.aviso })
-                : null,
+              lineaGuardadaDelCierre(cierre, {
+                avisoDeTope,
+                plantillaDeCorte: (reason) => tAgent("cortado", { reason }),
+              }),
               notaObjetivo,
             ]
               .filter(Boolean)
