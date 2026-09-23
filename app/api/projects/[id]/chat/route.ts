@@ -52,6 +52,25 @@ const ActionSchema = z.object({
     .transform((s) => s.slice(0, 200))
     .optional(),
   /**
+   * LO QUE VIERON LOS OJOS, y CUÁNTAS páginas miraron de las que tocó el turno.
+   *
+   * 🔴 Tienen que estar AQUÍ por lo mismo que `valores`: el servidor escribe
+   * la fila primero y CON ellos (`registrarTurnoDelServidor`), pero el guardado
+   * del navegador llega después y reescribe `actions` entero con lo que deja
+   * pasar este esquema. Sin estas líneas se veían en vivo y desaparecían al
+   * recargar, justo lo que los comentarios de `AgentAction` dan por arreglado.
+   *
+   * La observación se TRUNCA, no se rechaza, como el `motivo`; el tope es más
+   * largo porque junta hasta cuatro frases del modelo con visión, y a 200 se
+   * cortaría una observación normal.
+   */
+  observacion: z
+    .string()
+    .transform((s) => s.slice(0, 1000))
+    .optional(),
+  paginasMiradas: z.number().int().min(0).max(1000).optional(),
+  paginasTocadas: z.number().int().min(0).max(1000).optional(),
+  /**
    * QUÉ cambió, resuelto por el servidor mientras los `data-op-id` valían.
    *
    * 🔴 VA EN LA ACCIÓN Y NO EN EL TURNO porque `actions` es la única parte del
@@ -72,7 +91,14 @@ const ActionSchema = z.object({
     )
     .max(24)
     .optional(),
-});
+})
+  // El recuento va los dos juntos o ninguno: la tarjeta sólo lo pinta con los
+  // dos. Uno suelto se DESCARTA en vez de tirar el turno entero con un 400.
+  .transform(({ paginasMiradas, paginasTocadas, ...resto }) =>
+    paginasMiradas !== undefined && paginasTocadas !== undefined
+      ? { ...resto, paginasMiradas, paginasTocadas }
+      : resto,
+  );
 
 const TurnSchema = z.object({
   id: z.string().min(1).max(100),
