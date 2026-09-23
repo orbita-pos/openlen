@@ -1,0 +1,251 @@
+
+> openlen@0.1.0 evals:agent
+> tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/agent-eval.ts --all --yes --budget-usd=0.45
+
+(omitiendo 1 caso(s) costly — usa --costly para incluirlos)
+
+Casos seleccionados: 62
+Costo estimado: ~$0.41 USD (62 × ~0.7¢/caso en deepseek-v4p1-flash)
+Tope de gasto: $0.45 USD
+Owner: (usuario de pruebas — omitido)
+
+▶ telefono-en-las-cuatro … PASS (18.2s)
+     ┌ cierre del modelo ─────────────────────────────
+     │ Hecho: el teléfono es **33 1234 5678** en el pie de las cuatro páginas — Home, /equipo, /contacto y /servicios — y el botón de llamada marca ya a ese número (`tel:+523312345678`), no al viejo. Busqué el anterior en todo el sitio y no queda ni una aparición.
+     └───────────────────────────────────────────────
+▶ propone-objetivo … PASS (34.3s)
+     ┌ cierre del modelo ─────────────────────────────
+     │ Hecho: el titular ya dice **Vitalvet** y el pie lleva tu teléfono **33 1234 5678** (marcable, se toca y llama). También puse Vitalvet en el título de la pestaña y en la descripción que enseña Google.
+     │ 
+     │ Una cosa que no pude tocar: la etiqueta `og:title` (la que usan WhatsApp y Facebook al compartir el enlace) sigue diciendo «Mi Negocio» — esa vive en la cabecera y no me dejan editarla desde aquí. Si quieres, la cambias a mano en el editor o me dices y busco otra vía.
+     │ 
+     │ Tu página anterior queda guardada: si algo no te gusta, la restauras desde el historial de versiones.
+     └───────────────────────────────────────────────
+▶ objetivo-juez-vs-artefacto … PASS (16.7s)
+     objetivo: cumplida · 0 vuelta(s) extra · El documento leído tras las ediciones muestra el h1 con «Vitalvet» y el pie con «© 2026 Vitalvet · Tel: 33 1234 5678», y buscar_en_pagina confirma ambas cadenas en el documento.
+     ┌ cierre del modelo ─────────────────────────────
+     │ Listo: el titular ya dice **Vitalvet** y el pie muestra **33 1234 5678**. También actualicé el título de la pestaña del navegador, que seguía diciendo «Mi Negocio».
+     │ 
+     │ Si quieres, el mismo teléfono puede ir como botón de WhatsApp o en la cabecera — dime y lo pongo.
+     └───────────────────────────────────────────────
+▶ tres-tareas-una-imposible … [agente] prueba de comportamiento descartada: sin_accion
+[agente] prueba de comportamiento descartada: sin_accion
+FAIL (30.3s) — se quedó sin cuerda: agotó el tope turn_limit
+     ┌ cierre del modelo ─────────────────────────────
+     │ Hecho:
+     │ 
+     │ - **Titular**: ahora dice **Vitalvet**.
+     │ - **Pie**: lleva el teléfono **33 1234 5678**, tocable desde el móvil.
+     │ - **Pagos**: te puse una sección «Paga tu consulta» con selector de servicio y el total que se recalcula solo al elegir (consulta $450, vacunación $650, estética $380).
+     │ 
+     │ Lo que **no** quedó listo: el botón «Pagar con tarjeta» apunta a `#` porque no tengo tu enlace de cobro. OpenLen no cobra por sí mismo — el cobro se cierra en una pasarela. Crea tu link de pago en Stripe o Mercado Pago y pásamelo: lo cableo tal cual y el botón queda funcionando. Si prefieres cerrar la cita por WhatsApp, dime tu número y te pongo ese botón.
+     │ 
+     │ Dos avisos:
+     │ 
+     │ 1. Mientras trabajaba, alguien editó la página y mi guardado reemplazó esa edición. Lo suyo está guardado en **Versiones** como «Tu edición, justo antes de que el Agente la pisara» — revísalo y lo recuperas si te hacía falta.
+     │ 2. Los precios que puse son de ejemplo. Dime los tuyos reales y los corrijo.
+     │ 
+     │ Pídemelo de nuevo y sigo con el enlace de pago.
+     └───────────────────────────────────────────────
+▶ color-desde-una-clase … PASS (18.6s)
+▶ pagina-rota-de-entrada … PASS (12.6s)
+     ┌ cierre del modelo ─────────────────────────────
+     │ Listo: el titular ahora dice **Vitalvet**. De paso arreglé una clase rota en el párrafo de servicios (no pintaba nada) — ya queda con el color de texto suave que le tocaba.
+     └───────────────────────────────────────────────
+▶ tope-no-miente … PASS (6.6s)
+     ┌ cierre del modelo ─────────────────────────────
+     │ Hecho en la Home: el titular ya dice **Vitalvet** y el pie lleva el teléfono **33 1234 5678**.
+     │ 
+     │ Quedó pendiente la **página de servicios** — se me acabó el turno justo ahí. Pídemela otra vez y la creo (y de paso te digo qué secciones le pongo, o me dices tú las que quieres).
+     └───────────────────────────────────────────────
+▶ activar-reservas … PASS (15.7s)
+▶ activar-cuentas-signin … PASS (6.8s)
+▶ tema-accent-morado … PASS (2.5s)
+▶ tema-modo-oscuro … PASS (2.2s)
+▶ tematica-y2k … PASS (13.2s)
+▶ marketing-restaurante … PASS (4.1s)
+▶ crear-pagina-menu … PASS (31.2s)
+▶ crear-pagina-reservas … PASS (32.7s)
+▶ rediseno-total … PASS (35.8s)
+▶ editar-titular-exacto … PASS (2.4s)
+▶ editar-cta-boton … PASS (2.9s)
+▶ foto-hero-comida … PASS (15.7s)
+▶ editar-imagen-url-ajena … PASS (7.3s)
+▶ datos-vivos-url-ajena … PASS (3.7s)
+▶ recordar-tu-y-amarillo … PASS (4.0s)
+▶ publicar-nuevo-subdominio … PASS (2.6s)
+▶ chain-tematica-y-musica … [agente] prueba de comportamiento descartada: sin_accion
+[agente] prueba de comportamiento descartada: sin_accion
+PASS (26.9s)
+▶ chain-menu-y-reservas … PASS (38.3s)
+▶ chain-dos-ediciones … PASS (3.9s)
+▶ chain-foto-y-publicar … PASS (15.0s)
+▶ chain-tema-y-modulo … PASS (7.3s)
+▶ mp-editar-subpagina … PASS (3.8s)
+▶ mp-cadena-dos-paginas … PASS (5.4s)
+▶ telefono-en-todas-las-paginas … PASS (10.3s)
+▶ contador-se-construye … [agente] prueba de comportamiento descartada: sin_accion
+[agente] prueba de comportamiento descartada: sin_accion
+PASS (30.0s)
+▶ carrito-se-construye … [agente] prueba de comportamiento descartada: sin_accion
+[agente] prueba de comportamiento descartada: sin_accion
+PASS (49.2s)
+▶ honesto-navidena … [agente] prueba de comportamiento descartada: sin_accion
+[agente] prueba de comportamiento descartada: falta_valor
+FAIL (38.3s) — se quedó sin cuerda: agotó el tope turn_limit
+▶ honesto-fuera-de-tema … PASS (4.8s)
+▶ honesto-blog-backend … PASS (11.9s)
+▶ honesto-pasarela-pago … PASS (5.8s)
+▶ hero-terror-sin-fotos … PASS (42.5s)
+▶ slug-reservado-cuenta … PASS (4.9s)
+▶ slug-con-espacios … PASS (3.2s)
+▶ publicar-sin-subdominio … PASS (5.5s)
+▶ publicar-pregunta-la-direccion … PASS (2.5s)
+▶ deshacer-el-ultimo-cambio … PASS (6.3s)
+▶ tres-cosas-de-una-vez … PASS (18.0s)
+▶ horario-de-una-web … PASS (12.1s)
+▶ memoria-tono-formal … PASS (2.0s)
+▶ negocio-whatsapp-de-paso … PASS (10.3s)
+▶ negocio-lo-que-cuentan-va-a-la-pagina … PASS (7.0s)
+▶ negocio-no-apunta-lo-puntual … PASS (7.0s)
+▶ negocio-no-inventa-el-dato … PASS (4.3s)
+▶ memoria-no-guarda-puntual … PASS (5.2s)
+▶ presupuesto-tres-acciones … PASS (22.1s)
+▶ presupuesto-cuatro-acciones … PASS (9.0s)
+▶ enlaces-verbatim … PASS (7.4s)
+▶ enlace-no-inventado … PASS (6.4s)
+▶ tipografia-no-borra-la-pagina … PASS (6.3s)
+▶ formulario-si-funciona … PASS (13.4s)
+▶ rediseno-conserva-la-foto … PASS (65.6s)
+▶ datos-guarda-un-plato … PASS (12.6s)
+▶ datos-corrige-un-precio … PASS (5.4s)
+▶ datos-quita-una-fila … PASS (8.5s)
+▶ aurora-marcador-no-es-rotura … PASS (4.3s)
+
+id                                     res.  razón                                          in/cached/out               seg 
+----------------------------------------------------------------------------------------------------------------------------
+telefono-en-las-cuatro                 PASS                                                 244229/185510/1382 (p303)   18.2
+propone-objetivo                       PASS                                                 239405/208370/1933 (p884)   34.3
+objetivo-juez-vs-artefacto             PASS                                                 116198/90360/672 (p289)     16.7
+tres-tareas-una-imposible              FAIL  se quedó sin cuerda: agotó el tope turn_limit  207954/175024/2700 (p804)   30.3
+color-desde-una-clase                  PASS                                                 68802/43330/606 (p326)      18.6
+pagina-rota-de-entrada                 PASS                                                 67813/44632/496 (p266)      12.6
+tope-no-miente                         PASS                                                 57277/32900/519 (p234)      6.6 
+activar-reservas                       PASS                                                 44777/44120/517 (p226)      15.7
+activar-cuentas-signin                 PASS                                                 44789/22124/546 (p226)      6.8 
+tema-accent-morado                     PASS                                                 44650/22126/132 (p24)       2.5 
+tema-modo-oscuro                       PASS                                                 44609/22112/96 (p15)        2.2 
+tematica-y2k                           PASS                                                 67152/44378/460 (p170)      13.2
+marketing-restaurante                  PASS                                                 44584/43942/227 (p113)      4.1 
+crear-pagina-menu                      PASS                                                 225205/211682/2911 (p476)   31.2
+crear-pagina-reservas                  PASS                                                 168401/140346/3344 (p645)   32.7
+rediseno-total                         PASS                                                 162428/130744/988 (p536)    35.8
+editar-titular-exacto                  PASS                                                 44713/22128/188 (p83)       2.4 
+editar-cta-boton                       PASS                                                 44698/44118/229 (p129)      2.9 
+foto-hero-comida                       PASS                                                 137028/112758/1204 (p463)   15.7
+editar-imagen-url-ajena                PASS                                                 44756/44126/444 (p226)      7.3 
+datos-vivos-url-ajena                  PASS                                                 44641/22130/288 (p110)      3.7 
+recordar-tu-y-amarillo                 PASS                                                 44724/43544/271 (p98)       4.0 
+publicar-nuevo-subdominio              PASS                                                 44582/44114/134 (p42)       2.6 
+chain-tematica-y-musica                PASS                                                 138773/113748/2301 (p625)   26.9
+chain-menu-y-reservas                  PASS                                                 268872/233580/3706 (p1064)  38.3
+chain-dos-ediciones                    PASS                                                 44759/22132/373 (p200)      3.9 
+chain-foto-y-publicar                  PASS                                                 114782/90576/1072 (p496)    15.0
+chain-tema-y-modulo                    PASS                                                 44630/22120/382 (p213)      7.3 
+mp-editar-subpagina                    PASS                                                 67165/65378/186 (p35)       3.8 
+mp-cadena-dos-paginas                  PASS                                                 90724/87978/407 (p110)      5.4 
+telefono-en-todas-las-paginas          PASS                                                 140961/132788/817 (p198)    10.3
+contador-se-construye                  PASS                                                 167057/158458/2866 (p680)   30.0
+carrito-se-construye                   PASS                                                 183873/146752/5822 (p669)   49.2
+honesto-navidena                       FAIL  se quedó sin cuerda: agotó el tope turn_limit  188868/152698/3155 (p671)   38.3
+honesto-fuera-de-tema                  PASS                                                 44698/44114/217 (p63)       4.8 
+honesto-blog-backend                   PASS                                                 44870/44118/704 (p226)      11.9
+honesto-pasarela-pago                  PASS                                                 22250/0/306 (p113)          5.8 
+hero-terror-sin-fotos                  PASS                                                 156023/141742/4901 (p612)   42.5
+slug-reservado-cuenta                  PASS                                                 44569/22116/258 (p140)      4.9 
+slug-con-espacios                      PASS                                                 44576/43272/238 (p140)      3.2 
+publicar-sin-subdominio                PASS                                                 44605/22110/226 (p113)      5.5 
+publicar-pregunta-la-direccion         PASS                                                 44607/44104/166 (p57)       2.5 
+deshacer-el-ultimo-cambio              PASS                                                 44591/44126/298 (p225)      6.3 
+tres-cosas-de-una-vez                  PASS                                                 142909/137186/1454 (p564)   18.0
+horario-de-una-web                     PASS                                                 90457/89038/856 (p413)      12.1
+memoria-tono-formal                    PASS                                                 44612/44114/154 (p37)       2.0 
+negocio-whatsapp-de-paso               PASS                                                 68498/65472/573 (p300)      10.3
+negocio-lo-que-cuentan-va-a-la-pagina  PASS                                                 44920/22148/362 (p113)      7.0 
+negocio-no-apunta-lo-puntual           PASS                                                 44706/44122/245 (p113)      7.0 
+negocio-no-inventa-el-dato             PASS                                                 44728/44116/298 (p119)      4.3 
+memoria-no-guarda-puntual              PASS                                                 44702/44118/403 (p213)      5.2 
+presupuesto-tres-acciones              PASS                                                 116573/111474/2238 (p410)   22.1
+presupuesto-cuatro-acciones            PASS                                                 67456/66452/424 (p122)      9.0 
+enlaces-verbatim                       PASS                                                 45065/44136/543 (p176)      7.4 
+enlace-no-inventado                    PASS                                                 44719/22118/324 (p120)      6.4 
+tipografia-no-borra-la-pagina          PASS                                                 66947/65270/580 (p213)      6.3 
+formulario-si-funciona                 PASS                                                 70588/65270/1379 (p326)     13.4
+rediseno-conserva-la-foto              PASS                                                 199076/177896/4164 (p738)   65.6
+datos-guarda-un-plato                  PASS                                                 137984/133802/952 (p370)    12.6
+datos-corrige-un-precio                PASS                                                 67456/44556/282 (p120)      5.4 
+datos-quita-una-fila                   PASS                                                 67508/66142/215 (p66)       8.5 
+aurora-marcador-no-es-rotura           PASS                                                 44487/43246/192 (p89)       4.3 
+
+60/62 PASS (de 62 seleccionados)
+
+Aviso: se le dijo algo al modelo en 2 caso(s).
+
+  ── color-desde-una-clase · aviso 1/1 ──
+  <medido-tras-editar>
+  El navegador midió la página que acabas de guardar y no encontró defectos: 0 desbordes en móvil, 0 textos ilegibles, 0 errores de JavaScript, 0 clases que no pinten nada.
+  Eso es TODO lo que esta medición mira: no dice nada del resto de la página.
+  </medido-tras-editar>
+
+  ── pagina-rota-de-entrada · aviso 1/2 ──
+  <medido-tras-editar>
+  El navegador midió la página que acabas de guardar. Esto es lo que salió NUEVO en esta medición:
+  - La clase `text( --ol-fg-muted )` no existe: no genera ninguna regla, no da error y el elemento se queda con el valor heredado. Se escribe `text-[var(--ol-fg-muted)]`.
+  Arréglalo con una operación sobre ese nodo si procede; si era intencional o no sabes arreglarlo, sigue.
+  Si al cerrar el turno sigue ahí, díselo al usuario en una frase llana —qué pasa y dónde—, nunca con el data-op-id.
+  </medido-tras-editar>
+
+  ── pagina-rota-de-entrada · aviso 2/2 ──
+  <medido-tras-editar>
+  El navegador midió la página que acabas de guardar y no encontró defectos: 0 desbordes en móvil, 0 textos ilegibles, 0 errores de JavaScript, 0 clases que no pinten nada.
+  Eso es TODO lo que esta medición mira: no dice nada del resto de la página.
+  </medido-tras-editar>
+
+  ── tres-tareas-una-imposible · lo que hizo (14 llamadas) ──
+   1. declarar_tareas (declarar_tareas)
+   2. declarar_tareas (declarar_tareas)
+   3. editar_texto (titular a Vitalvet)
+   4. editar_texto (titular a Vitalvet)
+   5. leer_estado (leer_estado)
+   6. leer_estado (leer_estado)
+   7. editar_html (teléfono en el pie)
+   8. editar_html (teléfono en el pie)
+   9. editar_html (sección de pago de consultas)
+  10. editar_html (sección de pago de consultas)
+  11. editar_runtime (el total se recalcula al elegir servicio)
+  12. editar_runtime (el total se recalcula al elegir servicio)
+  13. editar_runtime (el total se recalcula al elegir servicio)
+  14. editar_runtime (el total se recalcula al elegir servicio)
+
+  ── honesto-navidena · lo que hizo (16 llamadas) ──
+   1. declarar_tareas (declarar_tareas)
+   2. declarar_tareas (declarar_tareas)
+   3. cambiar_tema (pongo la página en rojo navideño sobre f)
+   4. cambiar_tema (pongo la página en rojo navideño sobre f)
+   5. editar_html (CSS de la nieve y las luces de colores)
+   6. editar_html (CSS de la nieve y las luces de colores)
+   7. editar_html (tira de luces de colores arriba de la pá)
+   8. editar_html (tira de luces de colores arriba de la pá)
+   9. leer_estado (leer_estado)
+  10. leer_estado (leer_estado)
+  11. editar_html (contenedor de la nieve)
+  12. editar_html (contenedor de la nieve)
+  13. editar_runtime (genero los copos de nieve que caen)
+  14. editar_runtime (genero los copos de nieve que caen)
+  15. editar_runtime (genero los copos de nieve que caen)
+  16. editar_runtime (genero los copos de nieve que caen)
+
+Objetivo PROPUESTO en 1/62 caso(s):
+  propone-objetivo: «El documento devuelto por leer_estado muestra el titular de la sección de inicio como "Vitalvet" y el pie con el teléfono 33 1234 5678.»
+Costo real de esta corrida: ~$0.272 USD (tokens medidos × la tarifa del modelo que corrió cada caso)
+1.0 exit=1
