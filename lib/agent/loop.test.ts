@@ -3617,6 +3617,10 @@ describe("H12 — lo que rechazan las guardas se cuenta y no quema el turno", ()
     expect(r.topeAlcanzado).toBeNull();
     expect(r.terminalError).toBe(false);
     expect(r.turns).toBe(5);
+    // 🔴 Y NO SE COBRA (revisión pre-deploy del 2026-09-22). Este turno acababa
+    // antes en el tope, y el tope no se cobra (regla del 2026-07-07). Cerrarlo
+    // con elegancia no puede cambiar quién paga por un modelo que insiste.
+    expect(r.sinCobro).toBe("rechazos");
   });
 });
 
@@ -3896,6 +3900,8 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
       expect(instruccion).toMatch(/no se va a poder guardar/);
       expect(r.finalText).toBe("No pude guardar: otra escritura cambia la página a la vez.");
       expect(r.rechazos.map((x) => x.tool)).toEqual(["editar_html"]);
+      // Un turno que no pudo guardar nada no se cobra (regla del 2026-07-07).
+      expect(r.sinCobro).toBe("conflicto");
     });
 
     it("BRAZO DE CONTROL: un choque y luego un guardado bueno siguen el turno normal", async () => {
@@ -3918,6 +3924,8 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
       expect(n).toBe(2);
       expect(cerro).toBe(false);
       expect(r.finalText).toBe("Listo, el titular dice Vitalvet.");
+      // Un turno normal se cobra como siempre.
+      expect(r.sinCobro).toBeUndefined();
     });
   });
 

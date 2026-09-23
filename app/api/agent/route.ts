@@ -1327,7 +1327,7 @@ export async function POST(req: Request): Promise<Response> {
           1,
           creditsForUsage(inputTokens, outputTokens, brain.creditRate(), cachedTokens),
         );
-        if (!result.terminalError) {
+        if (!result.terminalError && !result.sinCobro) {
           // La entrada cacheada SÍ se cobra más barata desde el 2026-08-28:
           // `creditsForUsage` recibe `cachedTokens` y les aplica la tarifa
           // `cached` de `lib/credits.ts`. Este comentario decía lo contrario
@@ -1372,6 +1372,22 @@ export async function POST(req: Request): Promise<Response> {
               ` / vueltas=${result.turns} llamadas=${result.toolCalls}`,
           );
           await debitCredits(userId, credits);
+        } else if (!result.terminalError && result.sinCobro) {
+          // 🔴 CERRADO CON ELEGANCIA, SIN COBRO (revisión pre-deploy del
+          // 2026-09-22). El bucle redacta el cierre de dos turnos que antes
+          // morían en el tope —el modelo que insiste en lo rechazado y el
+          // guardado que choca dos veces—, y el tope no se cobra. Cerrarlos mejor
+          // no puede cambiar quién paga. Mismo `cargo perdido` que el tope, para
+          // que `grep` los sume con él.
+          //
+          // El choque va por `console.error`: dos choques seguidos tras los
+          // reintentos internos casi nunca son un cruce inocente, y el único caso
+          // de producción (15/09) fue un fallo nuestro. Tiene que verse.
+          const linea = `[agent] turno sin cobro — 0 credits${
+            mutoDurable ? ` (MUTÓ: cargo perdido de ${credits})` : ""
+          } motivo=${result.sinCobro}`;
+          if (result.sinCobro === "conflicto") console.error(`${linea} proyecto=${projectId}`);
+          else console.log(linea);
         } else {
           // 🔴 EL CARGO PERDIDO, dicho en voz alta. La regla de facturación
           // (Jesús, 2026-07-07) es 0 créditos en terminal — pero cuando el
