@@ -50,14 +50,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
-  let body: { aplicar?: boolean; ids?: string[] } = {};
+  let body: { aplicar?: boolean; ids?: string[]; todas?: boolean } = {};
   try {
     body = (await req.json()) as typeof body;
   } catch {
     // Sin cuerpo = en seco. Un curl sin `-d` es lo que se teclea primero.
   }
   const aplicar = body.aplicar === true;
-  const idsPedidos = Array.isArray(body.ids) ? body.ids : undefined;
+  const idsPedidos = Array.isArray(body.ids) && body.ids.length > 0 ? body.ids : undefined;
+  const todas = body.todas === true;
 
   const dir = join(process.cwd(), process.env.OPENLEN_TEMPLATES_DIR ?? DIR_POR_DEFECTO);
 
@@ -92,6 +93,19 @@ export async function POST(req: Request) {
   const plan = planificarRepublicacion(disco, galeria);
   const { republicar, ignorados, desconocidos } = seleccionar(plan, idsPedidos);
 
+  /**
+   * LA ORDEN QUE SE SUGIERE LLEVA LOS IDS, siempre.
+   *
+   * 🔴 Revisión pre-deploy del 2026-09-22: esto sugería `{"aplicar":true}` a
+   * secas, que sube TODAS las cambiadas. En el disco de Jesús había 40 fuentes
+   * distintas de producción —14 revisadas y 26 ajenas, sin saber si eran más
+   * nuevas o más viejas—, así que copiar la sugerencia habría pisado 26
+   * plantillas de la galería. Una acción amplia se pide con nombre: `ids`, o
+   * `"todas": true` escrito a propósito.
+   */
+  const ordenCon = (ids: readonly string[]) =>
+    `repite el curl con -d '${JSON.stringify({ aplicar: true, ids })}' — quita los ids que no hayas revisado; para subir TODAS las cambiadas, pídelo con '{"aplicar":true,"todas":true}'`;
+
   // EN SECO POR DEFECTO. Esto escribe en la galería de producción; que haga
   // falta pedirlo dos veces es la diferencia entre una herramienta y un
   // accidente.
@@ -107,8 +121,23 @@ export async function POST(req: Request) {
       seRepublicarian: republicar.map((r) => r.id),
       ignorados,
       desconocidos,
-      comoAplicar: 'repite el curl con -d \'{"aplicar":true}\'',
+      comoAplicar: republicar.length > 0 ? ordenCon(republicar.map((r) => r.id)) : "no hay nada que republicar",
     });
+  }
+
+  // Y APLICAR SIN DECIR CUÁLES NO ESCRIBE NADA. Se contesta con lo que hay y
+  // con la orden exacta, para que el siguiente paso sea elegir, no adivinar.
+  if (!idsPedidos && !todas) {
+    const cambiadas = plan.cambiadas.map((c) => c.id);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "faltan_ids",
+        cambiadas,
+        comoAplicar: cambiadas.length > 0 ? ordenCon(cambiadas) : "no hay nada que republicar",
+      },
+      { status: 400 },
+    );
   }
 
   const htmlPorId = new Map(disco.map((p) => [p.id, p.html]));
