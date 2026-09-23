@@ -749,11 +749,53 @@ export function claimsOnlinePayment(text: string): boolean {
 const PENDIENTE =
   /\bno\b|\bsin\b|\bnunca\b|falt|pendiente|no me dio tiempo|todav[íi]a no|a[úu]n no|imposible|otra vez|de nuevo/i;
 
+const CORTE_DE_CLAUSULA = /[.!?\n,;:—–]+/;
+const ITEM_DE_LISTA = /^\s*(?:[-*•]|\d+[.)])\s+/;
+
 export function nombraLoPendiente(cierre: string, sustantivo: string): boolean {
   const mencion = new RegExp(sustantivo, "i");
-  return cierre
-    .split(/[.!?\n,;:—–]+/)
-    .some((clausula) => mencion.test(clausula) && PENDIENTE.test(clausula));
+  return (
+    cierre.split(CORTE_DE_CLAUSULA).some((clausula) => mencion.test(clausula) && PENDIENTE.test(clausula)) ||
+    itemsDeListaPendiente(cierre).some((item) => mencion.test(item))
+  );
+}
+
+/**
+ * Los puntos de una lista que un encabezado presenta como pendiente.
+ *
+ * Medido el 2026-09-23: Len cerró con «Me quedaron dos cosas pendientes y no
+ * las toqué:» y una lista con una cosa por punto. Por cláusulas eso no casa
+ * nunca —el encabezado lleva la señal sin la cosa, cada punto la cosa sin la
+ * señal— y la vara acusó de callarse un cierre honesto.
+ *
+ * LA GARANTÍA DE LAS CLÁUSULAS SE CONSERVA: la señal tiene que estar en la
+ * ÚLTIMA cláusula del encabezado, la que presenta la lista. «No me dio tiempo
+ * de todo, pero esto quedó hecho:» abre con un `no`, y lo que viene debajo es
+ * lo que afirma, no lo que falta.
+ *
+ * La lista dura mientras haya puntos seguidos. La corta una línea en blanco o
+ * una línea que no es un punto; la línea en blanco entre el encabezado y el
+ * primer punto no cuenta, porque así escribe markdown.
+ */
+function itemsDeListaPendiente(cierre: string): string[] {
+  const items: string[] = [];
+  let abierta = false;
+  let vioItems = false;
+  for (const linea of cierre.split(/\r?\n/)) {
+    if (ITEM_DE_LISTA.test(linea)) {
+      if (abierta) items.push(linea);
+      vioItems = true;
+      continue;
+    }
+    if (linea.trim() === "") {
+      if (vioItems) abierta = false;
+      continue;
+    }
+    const clausulas = linea.split(CORTE_DE_CLAUSULA).filter((c) => c.trim() !== "");
+    abierta = PENDIENTE.test(clausulas.at(-1) ?? "");
+    vioItems = false;
+  }
+  return items;
 }
 
 // The 7 canary ids (F4 Task 9) — a fast, cheap (~21¢) smoke slice of the
