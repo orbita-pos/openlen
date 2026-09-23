@@ -998,6 +998,24 @@ const VUELTAS_SOLO_RECHAZADAS = 3;
 const SIN_SALIDA =
   "SISTEMA (el usuario NO escribió esto): tus últimas llamadas se rechazaron tres vueltas seguidas —repetían algo que ya se hizo o que ya falló— y no vas a poder seguir intentándolas en este turno. Cierra AHORA hablándole al usuario en su idioma: qué quedó hecho, qué no, y qué necesitas de él para seguir.";
 
+/**
+ * 🔴 H12-a · GUARDAR QUE CHOCA DOS VECES SEGUIDAS CIERRA EL TURNO.
+ *
+ * Otra escritura está cambiando la página a la vez y no va a ceder dentro de
+ * este turno: una escritura más sólo puede chocar otra vez. El mensaje de error
+ * ya lo decía (`conflictoRepetido` en tools.ts) y no bastó —C22 siguió
+ * probando una tercera en 2 de 3 corridas—, así que el servidor deja de
+ * ejecutar escrituras y el turno se cierra con las herramientas apagadas,
+ * igual que `SIN_SALIDA`. No repara nada: se le DICE al usuario.
+ */
+const CONFLICTO_SIN_SALIDA =
+  "SISTEMA (el usuario NO escribió esto): guardar chocó dos veces seguidas con otra escritura que está cambiando la página a la vez, y en este turno no se va a poder guardar. Cierra AHORA hablándole al usuario en su idioma: que no se pudo guardar y por qué, qué quedó hecho y qué no, y que te lo vuelva a pedir cuando esa otra escritura termine.";
+
+/** Lo que recibe una escritura que venía en la misma tanda que el segundo
+ *  choque: no se ejecuta, porque sólo podía chocar otra vez. */
+const GUARDAR_YA_CHOCO =
+  "no se ejecutó: guardar ya chocó dos veces seguidas en este turno con otra escritura que cambia la página a la vez, y ésta habría chocado igual.";
+
 interface PendingCall {
   name: string;
   args: Record<string, unknown>;
@@ -1221,6 +1239,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   const rechazos: { tool: string; motivo: string }[] = [];
   /** Vueltas seguidas en las que las guardas rechazaron TODAS las llamadas. */
   let vueltasSoloRechazadas = 0;
+  /** Ver `CONFLICTO_SIN_SALIDA`. */
+  let guardarSinSalida = false;
   /** Vueltas desde que se le devolvió la lista. Ver `recordatorioDeTareas`. */
   let vueltasSinLista = 0;
 
@@ -1484,13 +1504,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           .join(", ")}. Todo lo que el usuario pidió y no esté en esa lista sigue PENDIENTE y tienes que nombrarlo.`
       : "\n\nEn este turno NO se aplicó ningún cambio, medido por nosotros. Dilo tal cual: nada de lo que pidió quedó hecho.";
 
-  /** H12 · el cierre cuando el modelo insiste en llamadas que se le rechazan.
-   *  Un cierre normal, no un tope: hubo trabajo y se cuenta. Sin `closeOut`,
-   *  cae al cierre por tope de siempre. */
-  const cerrarSinSalida = async (): Promise<AgentLoopResult> => {
+  /** H12 · el cierre cuando el modelo insiste en llamadas que se le rechazan,
+   *  o cuando guardar ya no puede salir bien (`CONFLICTO_SIN_SALIDA`). Un
+   *  cierre normal, no un tope: hubo trabajo y se cuenta. Sin `closeOut`, cae
+   *  al cierre por tope de siempre. */
+  const cerrarSinSalida = async (instruccion: string = SIN_SALIDA): Promise<AgentLoopResult> => {
     if (!args.closeOut) return await finishOnCap("turn_limit");
     let texto = "";
-    for await (const ev of args.closeOut([...messages, { role: "user", content: SIN_SALIDA + hechosAplicados() }])) {
+    for await (const ev of args.closeOut([...messages, { role: "user", content: instruccion + hechosAplicados() }])) {
       if (ev.type === "text_delta") {
         if (algunaVueltaYaDijoAlgo && texto.length === 0) args.emit({ type: "text", text: "\n\n" });
         texto += ev.text;
@@ -2156,6 +2177,16 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         ? original
         : { ...original, name: reparo.arreglado };
 
+      // H12-a · una escritura detrás del segundo choque no se ejecuta: sólo
+      // podía chocar otra vez. Las lecturas siguen. Ver `CONFLICTO_SIN_SALIDA`.
+      if (guardarSinSalida && !READ_ONLY_TOOLS.has(call.name)) {
+        rechazos.push({ tool: call.name, motivo: GUARDAR_YA_CHOCO });
+        rechazadasEnLaVuelta += 1;
+        args.onRechazo?.(call.name, call.args, GUARDAR_YA_CHOCO);
+        functionResponses.push({ name: call.name, response: { ok: false, error: GUARDAR_YA_CHOCO } });
+        continue;
+      }
+
       // No-progress guard: this exact call already failed FAIL_REPEAT_LIMIT
       // times — don't run it again. Feed the model a nudge (as a functionResponse
       // so the FC protocol stays balanced) to change approach. A refused call
@@ -2236,6 +2267,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
       const outcome = await args.runTool(call.name, call.args);
       if (!readOnly) ejecutadasDeTrabajo += 1;
+      if (outcome.guardarSinSalida) guardarSinSalida = true;
       const ok = outcome.response.ok !== false;
       // 🔴 H01 · LO QUE LA HERRAMIENTA DICE DE SU PROPIO EFECTO. Las puertas de
       // edición lo declaran (`declararCambio`: `cambio` / `sin_cambio` /
@@ -2455,5 +2487,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
     // H12 · quien insiste en lo que se le rechaza no avanza: se le cierra.
     if (vueltasSoloRechazadas >= VUELTAS_SOLO_RECHAZADAS) return await cerrarSinSalida();
+    // H12-a · y si guardar ya no puede salir bien, tampoco.
+    if (guardarSinSalida) return await cerrarSinSalida(CONFLICTO_SIN_SALIDA);
   }
 }

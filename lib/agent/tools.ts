@@ -313,6 +313,32 @@ async function readImageManifest(): Promise<unknown> {
 export const CONFLICTO_AL_GUARDAR =
   "la página cambió mientras se guardaba y no se pudo fusionar; vuelve a intentarlo";
 
+/**
+ * 🔴 H12-a · EL MISMO CONFLICTO OTRA VEZ YA NO DICE «VUELVE A INTENTARLO».
+ *
+ * La primera vez el consejo es bueno: casi siempre es otra escritura que se
+ * cruzó un instante. La segunda seguida ya no lo es, y el error lo seguía
+ * diciendo: en la batería completa del 2026-09-22, C22 escribió cinco veces,
+ * cambiando de herramienta en cada una —así que la guarda de repetición, que
+ * exige argumentos idénticos, no la veía—, contra un conflicto que no iba a
+ * ceder. El error dice qué ya se probó y qué hacer distinto, que es la forma
+ * de Claude Code.
+ *
+ * Y NOMBRA LO QUE NO SIRVE. Con la primera redacción, C22 bajó de cinco
+ * escrituras a tres, pero 2 de 3 corridas releían la página y probaban con otra
+ * herramienta: el remedio de OTRO choque (el del documento que cambió entre la
+ * lectura y la escritura, que sí se arregla releyendo). Éste no depende de lo
+ * que se envía.
+ *
+ * 🔴 Y EL MENSAJE SOLO NO BASTÓ: nombrando lo que no sirve, C22 siguió en 2 de
+ * 3. Así que aquí sí se corta, cosa que Claude Code no hace: cada vuelta de
+ * este turno le cuesta créditos al dueño, y una escritura más no puede salir
+ * bien. El resultado lleva `guardarSinSalida` y el bucle cierra (ver
+ * `CONFLICTO_SIN_SALIDA` en loop.ts).
+ */
+export const conflictoRepetido = (veces: number) =>
+  `la página volvió a cambiar mientras se guardaba: ${veces} intentos seguidos en este turno chocaron con otra escritura, así que reintentar no lo arregla — ni releer la página, ni cambiar de herramienta, ni enviar otro cambio: el choque no depende de lo que envías. No intentes guardar otra vez en este turno: dile al usuario que no se pudo guardar porque otra escritura está cambiando la página a la vez, y qué quedó sin hacer.`;
+
 export function realDeps(): AgentDeps {
   return {
     async loadProject(projectId, userId) {
@@ -535,6 +561,10 @@ export interface AgentSession {
    *  at 1 (a redesign is one big paid call AND a whole-document rewrite —
    *  two in one turn means the model is flailing, not designing). */
   redesignsThisTurn?: number;
+  /** Guardados SEGUIDOS que chocaron con `CONFLICTO_AL_GUARDAR` este turno;
+   *  uno bueno la pone a cero. Opcional como `redesignsThisTurn`: ausente es 0.
+   *  Ver `CONFLICTO_REPETIDO`. */
+  conflictosAlGuardar?: number;
   /** LA PROMESA DEL TURNO: el programa JS que el modelo declaró en `prueba_js`
    *  para su propio comportamiento.
    *
@@ -620,6 +650,9 @@ export interface AgentSession {
 export interface ToolOutcome {
   /** functionResponse.response que vuelve al modelo. Siempre presente. */
   response: Record<string, unknown>;
+  /** H12-a · guardar ya chocó dos veces seguidas en este turno: el bucle no
+   *  ejecuta más escrituras y cierra. Lo pone `contarConflictos`. */
+  guardarSinSalida?: true;
   /** Tarjeta para el stream (ausente en leer_estado). */
   action?: {
     tool: string;
@@ -4401,13 +4434,32 @@ export async function runAgentTool(
       ? { ...conGemelo, mutoDurable: true }
       : conGemelo;
   };
+  let out: ToolOutcome;
   try {
-    return marcar(await ejecutarHerramienta(session, vigilado, name, args));
+    out = marcar(await ejecutarHerramienta(session, vigilado, name, args));
   } catch (err) {
     // Aunque REVIENTE: si ya había escrito, la mutación es durable igual y el
     // turno no puede cerrarse como si no hubiera pasado nada.
-    return marcar({ response: { ok: false, error: String(err) } });
+    out = marcar({ response: { ok: false, error: String(err) } });
   }
+  return contarConflictos(session, out, escrituras);
+}
+
+/** H12-a · lleva la cuenta de conflictos seguidos y, desde el segundo,
+ *  cambia el consejo del error. Aquí y no en cada herramienta por lo mismo que
+ *  `escrituras`: el conflicto llega por `persistPage` en unas y lanzado en
+ *  otras, y ambos caminos pasan por este sitio. Ver `conflictoRepetido`. */
+function contarConflictos(session: AgentSession, out: ToolOutcome, escrituras: number): ToolOutcome {
+  const error = out.response.ok === false ? String(out.response.error ?? "") : "";
+  if (error.includes(CONFLICTO_AL_GUARDAR)) {
+    const veces = (session.conflictosAlGuardar ?? 0) + 1;
+    session.conflictosAlGuardar = veces;
+    return veces < 2
+      ? out
+      : { ...out, response: { ...out.response, error: conflictoRepetido(veces) }, guardarSinSalida: true };
+  }
+  if (escrituras > 0 && out.response.ok !== false) session.conflictosAlGuardar = 0;
+  return out;
 }
 
 async function ejecutarHerramienta(

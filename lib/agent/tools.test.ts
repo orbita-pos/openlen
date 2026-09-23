@@ -10,7 +10,7 @@ import { lookFromAccent } from "@/lib/palette-gen";
 import { applyTematicaToHtml } from "@/lib/tematicas/apply-server";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { runAgentTool, summarizeProjectState, urlIsPageImage, type AgentDeps, type AgentSession } from "./tools";
-import { realDeps } from "./tools";
+import { CONFLICTO_AL_GUARDAR, realDeps } from "./tools";
 import { buildFunctionDeclarations } from "./catalog";
 import type { RedesignInput } from "./redesign";
 import type { ProjectData } from "@/lib/projects/types";
@@ -3688,6 +3688,53 @@ describe("H09 · el prefijo de país que nadie dio llega al modelo", () => {
       resumen: "teléfono",
     });
     assert.equal(out.response.prefijos_sin_origen, undefined);
+  });
+});
+
+describe("H12-a · un conflicto al guardar que se repite no se arregla reintentando", () => {
+  // Lo que el arnés inyecta en C22: la fila se mueve en CADA guardado.
+  const conDisputa = (deps: AgentDeps): AgentDeps => ({
+    ...deps,
+    async saveProjectData() {
+      throw new Error(CONFLICTO_AL_GUARDAR);
+    },
+  });
+  const editar = (session: AgentSession, deps: AgentDeps, texto: string) =>
+    runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: `<h1>${texto}</h1>` }],
+      resumen: "titular",
+    });
+
+  it("el primer conflicto sí invita a reintentar: suele ser pasajero", async () => {
+    const { deps } = makeDeps();
+    const out = await editar(makeSession(), conDisputa(deps), "Vitalvet");
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /vuelve a intentarlo/);
+  });
+
+  it("🔴 C22 · el SEGUNDO seguido, aunque cambie la llamada, dice que reintentar no lo arregla", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const d = conDisputa(deps);
+    await editar(session, d, "Vitalvet");
+    const segunda = await editar(session, d, "Vitalvet Clínica");
+    assert.equal(segunda.response.ok, false);
+    const error = String(segunda.response.error);
+    assert.doesNotMatch(error, /vuelve a intentarlo/);
+    assert.match(error, /reintentar no lo arregla/);
+    assert.match(error, /2 intentos seguidos/);
+    // Lo que 2 de 3 corridas probaron después: releer y cambiar de herramienta.
+    assert.match(error, /ni releer la página, ni cambiar de herramienta/);
+  });
+
+  it("BRAZO DE CONTROL: un guardado bueno entre medias pone la cuenta a cero", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    await editar(session, conDisputa(deps), "Vitalvet");
+    const buena = await editar(session, deps, "Vitalvet");
+    assert.equal(buena.response.ok, true);
+    const otra = await editar(session, conDisputa(deps), "Vitalvet 24h");
+    assert.match(String(otra.response.error), /vuelve a intentarlo/);
   });
 });
 

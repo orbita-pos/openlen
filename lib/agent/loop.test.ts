@@ -3793,6 +3793,76 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
     expect(r.topeAlcanzado).not.toBe("turn_limit");
   });
 
+  // H12-a · la batería completa del 2026-09-22 lo dio en rojo (C22): cinco
+  // escrituras contra un conflicto que no iba a ceder. Con sólo el mensaje
+  // nuevo bajó a tres, y 2 de 3 corridas seguían probando una más.
+  describe("G7 · guardar que choca dos veces seguidas cierra el turno", () => {
+    const conEditarHtml = [...tools, { name: "editar_html" }];
+    const choque = (sinSalida: boolean) => ({
+      response: { ok: false, error: sinSalida ? "reintentar no lo arregla" : "vuelve a intentarlo" },
+      ...(sinSalida ? { guardarSinSalida: true as const } : {}),
+    });
+
+    it("🔴 la escritura que venía detrás en la misma tanda no se ejecuta, y el turno cierra sin herramientas", async () => {
+      const escrituras: string[] = [];
+      let instruccion = "";
+      const r = await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el titular a Vitalvet" }], tools: conEditarHtml,
+        openStream: scripted(
+          llama("editar_texto", { resumen: "titular" }),
+          [
+            { type: "function_call", name: "editar_texto", args: { resumen: "titular otra vez" } },
+            { type: "function_call", name: "editar_html", args: { resumen: "titular por html" } },
+            usage(10),
+            done,
+          ],
+          llama("editar_html", { resumen: "cuarto intento" }),
+          dice("Listo."),
+        ),
+        runTool: async (n, a) => {
+          escrituras.push(`${n}:${String(a.resumen)}`);
+          return choque(escrituras.length >= 2);
+        },
+        closeOut: (m) => {
+          instruccion = ultimoDelUsuario(m);
+          return (async function* () {
+            yield { type: "text_delta" as const, text: "No pude guardar: otra escritura cambia la página a la vez." };
+          })();
+        },
+        emit: () => {},
+      });
+      expect(escrituras, "se ejecutaban las escrituras que venían detrás").toEqual([
+        "editar_texto:titular",
+        "editar_texto:titular otra vez",
+      ]);
+      expect(instruccion).toMatch(/no se va a poder guardar/);
+      expect(r.finalText).toBe("No pude guardar: otra escritura cambia la página a la vez.");
+      expect(r.rechazos.map((x) => x.tool)).toEqual(["editar_html"]);
+    });
+
+    it("BRAZO DE CONTROL: un choque y luego un guardado bueno siguen el turno normal", async () => {
+      let n = 0;
+      let cerro = false;
+      const r = await runAgentLoop({
+        messages: [{ role: "user", content: "cambia el titular a Vitalvet" }], tools: conEditarHtml,
+        openStream: scripted(
+          llama("editar_texto", { resumen: "titular" }),
+          llama("editar_texto", { resumen: "titular otra vez" }),
+          dice("Listo, el titular dice Vitalvet."),
+        ),
+        runTool: async () => (++n === 1 ? choque(false) : real("titular")),
+        closeOut: () => {
+          cerro = true;
+          return (async function* () { yield { type: "text_delta" as const, text: "x" }; })();
+        },
+        emit: () => {},
+      });
+      expect(n).toBe(2);
+      expect(cerro).toBe(false);
+      expect(r.finalText).toBe("Listo, el titular dice Vitalvet.");
+    });
+  });
+
   it("G6 · el cierre se escribe con el veredicto de los ojos delante", async () => {
     const events: AgentStreamEvent[] = [];
     let recibido = "";
