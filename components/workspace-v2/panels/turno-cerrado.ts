@@ -17,8 +17,12 @@ export type CierreDeTurno =
   | { readonly kind: "error"; readonly texto: string }
   /** Terminó bien. */
   | { readonly kind: "aplicado" }
-  /** Cambió la página y luego se cortó. Aplicado, con el motivo a la vista. */
-  | { readonly kind: "aplicado-con-aviso"; readonly aviso: string };
+  /** Aplicado, con un aviso a la vista. `cortado` sólo cuando de verdad se
+   *  cortó —un error DESPUÉS de haber cambiado algo—: el aviso de ventana o de
+   *  tope sale en un turno que terminó, y marcarlo cortado le contaba al modelo
+   *  que no llegó a hacer lo que sí hizo. Es la misma línea que traza el
+   *  servidor en `corteDelTurno`. */
+  | { readonly kind: "aplicado-con-aviso"; readonly aviso: string; readonly cortado?: true };
 
 export function cierreDeTurno(args: {
   /** El mensaje de error del stream, ya localizado. `null` = terminó limpio. */
@@ -69,8 +73,29 @@ export function cierreDeTurno(args: {
   }
   const yaMuto = args.mutoDurable || args.hayDocumentoNuevo;
   return yaMuto
-    ? { kind: "aplicado-con-aviso", aviso: [args.errorMessage, ...avisos].join(" ") }
+    ? { kind: "aplicado-con-aviso", aviso: [args.errorMessage, ...avisos].join(" "), cortado: true }
     : { kind: "error", texto: args.errorMessage };
+}
+
+/**
+ * LA LÍNEA QUE SE GUARDA EN EL TEXTO DEL TURNO, para que al recargar se siga
+ * contando cómo acabó. Una sola decisión para las tres formas de aviso:
+ *
+ *  · CORTE → la plantilla «se cortó (motivo)». Es lo único que lo merece.
+ *  · TOPE → el aviso del tope, tal cual. Terminó con su cierre redactado; decir
+ *    «se cortó» de él era falso, y ese texto viaja al modelo en el historial.
+ *  · SÓLO VENTANA → nada. Se recalcula en cada turno, y guardarla la dejaría
+ *    dentro de lo que dijo Len, reenviada al modelo como si fuera suya.
+ *
+ * Los textos llegan ya localizados: esto decide, no traduce.
+ */
+export function lineaGuardadaDelCierre(
+  cierre: CierreDeTurno,
+  o: { readonly avisoDeTope: string | null; readonly plantillaDeCorte: (motivo: string) => string },
+): string | null {
+  if (cierre.kind !== "aplicado-con-aviso") return null;
+  if (cierre.cortado) return o.plantillaDeCorte(cierre.aviso);
+  return o.avisoDeTope ? `⚠️ ${o.avisoDeTope}` : null;
 }
 
 /**
