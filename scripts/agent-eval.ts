@@ -377,6 +377,12 @@ async function main(): Promise<void> {
       for (const linea of r.cierre.trim().split(String.fromCharCode(10))) console.log(`     │ ${linea}`);
       console.log("     └───────────────────────────────────────────────");
     }
+    // Y lo que VIO el dueño, si no es lo mismo: ver `EvalRunResult.visto`.
+    if (r.visto) {
+      console.log("     ┌ lo que vio el dueño (≠ cierre) ────────────────");
+      for (const linea of r.visto.trim().split(String.fromCharCode(10))) console.log(`     │ ${linea}`);
+      console.log("     └───────────────────────────────────────────────");
+    }
 
     // Vigilancia del gasto REAL (tokens medidos, no el estimado): al tocar el
     // techo, la batería se detiene aquí — casos restantes SIN correr. Una
