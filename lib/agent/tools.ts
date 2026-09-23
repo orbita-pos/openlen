@@ -270,11 +270,15 @@ export interface AgentDeps {
    *  cuando la versión no existe o no es del dueño.
    *
    *  `versionPrevia` es la fila que archiva el estado de ANTES de restaurar —la
-   *  que hace que restaurar sea, a su vez, deshacible desde el Chat. */
+   *  que hace que restaurar sea, a su vez, deshacible desde el Chat.
+   *
+   *  `escritura`: cuando Len deshace SU cambio, la restauración queda como
+   *  escritura suya (`source: "chat"`). Ver `toolRevertirUltimoCambio`. */
   restoreVersion(
     projectId: string,
     userId: string,
     versionId: string,
+    escritura?: { source: "chat"; label: string },
   ): Promise<{ html: string; versionPrevia: string | null } | null>;
 }
 
@@ -499,9 +503,9 @@ export function realDeps(): AgentDeps {
       const { getVersionHtml } = await import("@/lib/projects/versions");
       return getVersionHtml({ projectId, userId, versionId });
     },
-    async restoreVersion(projectId, userId, versionId) {
+    async restoreVersion(projectId, userId, versionId, escritura) {
       const { restoreVersion } = await import("@/lib/projects/versions");
-      return restoreVersion({ projectId, userId, versionId });
+      return restoreVersion({ projectId, userId, versionId, ...(escritura ? { escritura } : {}) });
     },
   };
 }
@@ -4380,7 +4384,19 @@ async function toolRevertirUltimoCambio(
     };
   }
 
-  const restaurado = await deps.restoreVersion(session.projectId, session.userId, destino.id);
+  // Se restaura EN CRUDO —sin pasar por el saneador, que podría tocar un
+  // documento viejo—, pero si lo que se deshace es de Len, la restauración queda
+  // como escritura SUYA. Si no, su última versión `chat` seguiría siendo la del
+  // cambio que acaba de deshacer, y el turno siguiente leería la diferencia
+  // como una edición a mano del dueño (`cambios-del-dueno.ts`); un segundo
+  // «deshaz» saldría `se_solapan` y le preguntaría por algo que no hizo. La
+  // misma etiqueta que el deshacer con edición del dueño, de arriba.
+  const restaurado = await deps.restoreVersion(
+    session.projectId,
+    session.userId,
+    destino.id,
+    ...(delLenV && antesV ? [{ source: "chat" as const, label: `Agente: deshacer «${delLenV.label}»` }] : []),
+  );
   if (!restaurado) {
     return { response: { ok: false, error: "no se pudo restaurar ese punto de guardado" } };
   }

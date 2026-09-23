@@ -318,12 +318,26 @@ interface RestoreResult {
   versionPrevia: string | null;
 }
 
+interface RestoreParams extends VersionScopedParams {
+  /**
+   * QUIÉN ESCRIBE LA RESTAURACIÓN, cuando no es el dueño. Ausente = la fila
+   * «hacia delante» sale como `restore`, que es lo que hace el panel.
+   *
+   * Lo pasa el Agente al deshacer su propio cambio: esa fila es entonces SU
+   * última escritura (`source: "chat"`). Sin ella, su última versión `chat`
+   * seguía siendo la del cambio que acababa de deshacer, y el turno siguiente
+   * leía la diferencia como una edición a mano del dueño
+   * (`lib/agent/cambios-del-dueno.ts`).
+   */
+  readonly escritura?: { readonly source: "chat"; readonly label: string };
+}
+
 /** Overwrite the version's own document (home or its site page) with the
  *  snapshot, after snapshotting the current state so the restore itself is
  *  undoable. A snapshot of a since-deleted page recreates that page.
  *  Returns null if the version doesn't exist or the user doesn't own it. */
 export async function restoreVersion(
-  params: VersionScopedParams,
+  params: RestoreParams,
 ): Promise<RestoreResult | null> {
   const rows = await db
     .select({
@@ -402,11 +416,13 @@ export async function restoreVersion(
   // above is the older state, kept so the restore itself stays undoable).
   // Without this, the newest row is "Before restoring" yet the page matches
   // an OLDER row, so the panel mislabels the wrong snapshot as Current.
+  //
+  // Y si restaura el Agente, la fila es SUYA: ver `RestoreParams.escritura`.
   await createVersion({
     projectId: params.projectId,
     html: row.versionHtml,
-    label: `Restored "${row.versionLabel.slice(0, 60)}"`,
-    source: "restore",
+    label: params.escritura?.label ?? `Restored "${row.versionLabel.slice(0, 60)}"`,
+    source: params.escritura?.source ?? "restore",
     page,
   });
 
