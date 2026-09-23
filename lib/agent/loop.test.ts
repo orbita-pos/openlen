@@ -3795,6 +3795,94 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
     expect(r.finalText).toBe("Listo: el titular y el teléfono.");
   });
 
+  // 🔴 Revisión pre-deploy del 2026-09-22. Desde G4 la insistencia salta también
+  // tras una simple lectura, y el aviso le pedía al modelo «repítela tal cual»
+  // cuando su respuesta era una explicación. Esa respuesta YA le había llegado
+  // al dueño, así que la veía dos veces. Claude Code, cuando algo le impide
+  // cerrar, le da el motivo al modelo y éste sigue; no le hace repetir lo dicho.
+  it("🔴 leer y contestar: la insistencia no hace repetir la respuesta", async () => {
+    const events: AgentStreamEvent[] = [];
+    const vistos: Message[][] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "¿sale el teléfono en el pie?" }], tools,
+      openStream: grabando(scripted(
+        llama("leer_estado", {}),
+        dice("Sí: el pie dice 33 1234 5678."),
+        // Tras la insistencia, cierra sin escribir nada más.
+        [usage(3), done],
+      ), vistos),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+    });
+    const insistencia = vistos.map(ultimoDelUsuario).find((t) => t.includes("cerraste el turno SIN"));
+    expect(insistencia, "tras una lectura ya no se insistía").toBeDefined();
+    expect(insistencia, "le seguía pidiendo repetir lo que el dueño ya leyó").not.toMatch(/repítela/);
+    expect(insistencia).toMatch(/no la repitas/i);
+    const visto = events.flatMap((e) => (e.type === "text" ? [e.text] : [])).join("");
+    expect(visto, "el dueño vio la respuesta dos veces").toBe("Sí: el pie dice 33 1234 5678.");
+    // Y lo que queda como cierre del turno es lo que el dueño leyó, no un vacío.
+    expect(r.finalText).toBe("Sí: el pie dice 33 1234 5678.");
+  });
+
+  // 🔴 MEDIDO con el modelo real (C13, 2 de 2, 2026-09-22): a «no la repitas;
+  // cierra sin escribir nada» no se calló — escribió «Ya está respondido: …»,
+  // una línea que le habla al aviso y no al dueño, y que además quedaba como
+  // cierre del turno. Callarse del todo no lo hace; contestar una sola palabra,
+  // sí. Así que se le pide el testigo «OK», y esa vuelta se RETIENE hasta
+  // saber qué trae: sólo el testigo no se le enseña al dueño.
+  it("🔴 tras la insistencia, contestar sólo «OK» no llega al dueño", async () => {
+    const events: AgentStreamEvent[] = [];
+    const vistos: Message[][] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "¿qué cambió desde tu último mensaje?" }], tools,
+      openStream: grabando(scripted(
+        dice("Cambiaste tú el titular a mano: ahora dice «Vitalvet · Urgencias 24h»."),
+        dice("OK"),
+      ), vistos),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+    });
+    expect(vistos.map(ultimoDelUsuario).find((t) => t.includes("cerraste el turno SIN"))).toMatch(/«OK»/);
+    const visto = events.flatMap((e) => (e.type === "text" ? [e.text] : [])).join("");
+    expect(visto, "el testigo le llegó al dueño").toBe("Cambiaste tú el titular a mano: ahora dice «Vitalvet · Urgencias 24h».");
+    expect(r.finalText).toBe("Cambiaste tú el titular a mano: ahora dice «Vitalvet · Urgencias 24h».");
+  });
+
+  it("BRAZO DE CONTROL: lo que NO es el testigo —una rectificación— sí llega al dueño", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "pon el titular Vitalvet" }], tools,
+      openStream: scripted(
+        dice("Listo, cambié el titular."),
+        dice("Perdona: no lo cambié, no llegué a llamar a ninguna herramienta."),
+      ),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+    });
+    const visto = events.flatMap((e) => (e.type === "text" ? [e.text] : [])).join("");
+    expect(visto).toBe("Listo, cambié el titular.\n\nPerdona: no lo cambié, no llegué a llamar a ninguna herramienta.");
+    expect(r.finalText).toBe("Perdona: no lo cambié, no llegué a llamar a ninguna herramienta.");
+  });
+
+  it("BRAZO DE CONTROL: si tras la insistencia ACTÚA, lo que dice se ve antes de la tarjeta", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "pon el titular Vitalvet" }], tools,
+      openStream: scripted(
+        dice("Listo, cambié el titular."),
+        [{ type: "text_delta", text: "Ahora sí lo aplico." }, { type: "function_call", name: "editar_texto", args: { resumen: "titular" } }, usage(10), done],
+        dice("Hecho."),
+      ),
+      runTool: async () => real("titular"),
+      emit: (e) => events.push(e),
+    });
+    const orden = events.flatMap((e) =>
+      e.type === "text" ? [`t:${e.text}`] : e.type === "action" && e.status === "running" ? [`a:${e.tool}`] : [],
+    );
+    expect(orden.indexOf("t:Ahora sí lo aplico."), "lo que dijo al actuar se perdió").toBeGreaterThan(-1);
+    expect(orden.indexOf("t:Ahora sí lo aplico.")).toBeLessThan(orden.indexOf("a:editar_texto"));
+  });
+
   it("G3 · al topar se mira la página, y la edición nula no llega como hecha", async () => {
     const events: AgentStreamEvent[] = [];
     let ojos = 0;
