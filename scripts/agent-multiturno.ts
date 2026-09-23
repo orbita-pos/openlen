@@ -38,6 +38,7 @@ import { runAgentLoop, type AgentLoopArgs, type AgentStreamEvent } from "@/lib/a
 import { buildAgentMessages } from "@/lib/agent/context";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { createAgentBrain } from "@/lib/agent/brain";
+import { rateFor, usdTotal } from "@/lib/ai/tarifas-eval";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
 import type { FalloSpec } from "@/lib/agent/prueba-js";
 import {
@@ -73,6 +74,15 @@ const MAX_PROMPT_TOKENS = 240_000;
 // Medido el 2026-09-02 sobre el escenario `aurora`: tres turnos con los ojos
 // encendidos costaron $0.179 con el código arreglado y $0.288 con el anterior.
 // 8¢ por turno sobreestima a propósito — mejor sobrar que drenar la cuenta.
+//
+// ⚠️ AQUELLA MEDIDA ERA CON DEEPSEEK V4 PRO, y el papel `agent` es hoy V4.1
+// Flash. Según lib/ai/tarifas.ts el 2026-09-23, Flash es 4,4x más barato en la
+// entrada, 3,3x en la salida y 7,3x en la cacheada, así que con el mismo
+// volumen de tokens este estimado se pasa de largo. NO se baja, a propósito:
+// ninguna conversación de este arnés se ha medido todavía en Flash, y un
+// modelo más barato por token puede gastar más vueltas. Bajar un estimado sin una medida es el lado peligroso
+// (memoria `paid-runs-budget-discipline`). Se sustituye por el COSTE REAL de la
+// primera corrida en Flash, con su fecha.
 const COSTE_ESTIMADO_POR_TURNO_USD = 0.08;
 
 // El MISMO tope que el arnés de evals, y por la misma razón: el 2026-07-14 una
@@ -80,11 +90,16 @@ const COSTE_ESTIMADO_POR_TURNO_USD = 0.08;
 // --yes confirma «esto gasta»; el budget es el TECHO de cuánto.
 const TOPE_POR_DEFECTO_USD = 0.3;
 
-// Tarifa de deepseek-v4-pro-0813 por millón (entrada / caché / salida), la
-// misma tabla que cita lib/generation/model-policy.ts.
-const USD_ENTRADA = 1.32;
-const USD_CACHE = 0.044;
-const USD_SALIDA = 3.96;
+// ⚰️ AQUÍ VIVÍA LA TARIFA, escrita a mano: la de deepseek-v4-pro-0813
+// (1.32 / 0.044 / 3.96). El papel `agent` pasó a V4.1 Flash el 2026-09-12 y
+// estas tres cifras se quedaron atrás en silencio, así que el «COSTE REAL» del
+// informe era el de un modelo que ya no corría. Es el mismo defecto que cobró 8
+// días V4.1 al precio de V4 (memoria `la-guarda-que-compara-dos-copias`).
+//
+// Ahora el coste sale de `rateFor(<el modelo que llevó el turno>)`, en
+// lib/ai/tarifas-eval.ts, lo mismo que usan `agent-eval.ts` y `sobre-ab.ts`. Sus
+// cifras vienen de lib/ai/tarifas.ts, la única copia. Aquí no se escribe un
+// solo precio.
 
 function fallar(msg: string): never {
   // eslint-disable-next-line no-console
@@ -117,6 +132,10 @@ function leerArgs(argv: string[]) {
 // con lo que hizo el modelo y quien deshace es el usuario, con su Undo. Un
 // modo de prueba para un cable que ya no existe solo puede enseñar a medir mal.
 interface ResumenTurno {
+  /** QUÉ MODELO LLEVÓ EL TURNO, dicho por el cerebro y no por una constante:
+   *  su tarifa es la que paga el turno. Con el precio escrito a mano aquí, el
+   *  informe cobraba V4 Pro, desde el 2026-09-12, por turnos que corrían en Flash. */
+  readonly modelId: string;
   readonly vueltas: number;
   readonly llamadas: number;
   readonly segundos: number;
@@ -397,6 +416,7 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
       ).length;
 
       resumenes.push({
+        modelId: brain.modelId,
         vueltas: result.turns,
         llamadas: result.toolCalls,
         segundos,
@@ -442,9 +462,21 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
       }),
       { vueltas: 0, llamadas: 0, segundos: 0, entrada: 0, cache: 0, salida: 0, roturas: 0 },
     );
-    const frescos = Math.max(0, tot.entrada - tot.cache);
-    const usd =
-      (frescos / 1e6) * USD_ENTRADA + (tot.cache / 1e6) * USD_CACHE + (tot.salida / 1e6) * USD_SALIDA;
+    // EL COSTE, POR MODELO Y CON SU TARIFA. Hoy todos los turnos corren en el
+    // mismo, pero agruparlos no cuesta nada y evita que un turno en otro modelo
+    // se cobre al precio del de al lado. La suma la hace `usdTotal`, que resta
+    // los cacheados de la entrada (son un SUBCONJUNTO de ella), como el cobro,
+    // y que existe para que ningún runner reescriba a mano el `reduce` de
+    // precios (el de sobre-ab.ts perdió su acumulador y marcó 37x menos).
+    const porModelo = new Map<string, { entrada: number; cacheada: number; salida: number }[]>();
+    for (const r of resumenes) {
+      const lista = porModelo.get(r.modelId) ?? [];
+      lista.push({ entrada: r.entrada, cacheada: r.cache, salida: r.salida });
+      porModelo.set(r.modelId, lista);
+    }
+    let usd = 0;
+    for (const [modelo, turnosDelModelo] of porModelo) usd += usdTotal(turnosDelModelo, rateFor(modelo));
+    const modelos = [...porModelo.keys()].map((m) => m.split("/").pop()).join(", ");
 
     /* eslint-disable no-console */
     console.log(`\n═════ TOTAL (${esc.id}) ═════`);
@@ -457,7 +489,7 @@ async function correrEscenario(esc: Escenario, conservar: boolean): Promise<void
       `  vueltas=${tot.vueltas} llamadas=${tot.llamadas} seg=${tot.segundos.toFixed(1)} roturas=${tot.roturas}`,
     );
     console.log(`  tokens in=${tot.entrada} (cached=${tot.cache}) out=${tot.salida}`);
-    console.log(`  COSTE REAL ~$${usd.toFixed(3)} USD (tokens medidos × tarifa del modelo)`);
+    console.log(`  COSTE REAL ~$${usd.toFixed(3)} USD (tokens medidos × tarifa de ${modelos || "ningún modelo"})`);
     // 🔴 UN TURNO QUE MUERE CON CERO TOKENS NO ES UN FALLO DEL AGENTE.
     //
     // MEDIDO el 2026-09-16, y costó $0,033 y un buen rato de desconcierto: una
