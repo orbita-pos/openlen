@@ -261,6 +261,62 @@ describe("lo que ya se sabe roto", () => {
   });
 });
 
+describe("H07 · lo que el dueño cambió a mano llega al modelo", () => {
+  const args = {
+    state: {},
+    taggedHtml: "<html></html>",
+    userBrief: null,
+    now: new Date("2026-09-22T12:00:00Z"),
+  };
+
+  it("🔴 el contexto dice qué cambió el dueño y que NO lo hizo Len", () => {
+    const s = buildAgentContext({ ...args, cambiosDelDueno: ["«Clínica Vitalvet» → «Vitalvet · Urgencias 24h»"] });
+    expect(s).toContain("EL DUEÑO CAMBIÓ LA PÁGINA A MANO");
+    expect(s).toContain("«Clínica Vitalvet» → «Vitalvet · Urgencias 24h»");
+    expect(s).toContain("NO lo hiciste tú");
+  });
+
+  it("…y también por `buildAgentMessages`, que es lo que llaman la ruta y el arnés", () => {
+    const r = buildAgentMessages({
+      ...args,
+      prompt: "¿qué cambió?",
+      history: [],
+      cambiosDelDueno: ["«A» → «B»"],
+      maxPromptTokens: 240_000,
+    });
+    expect(r.ok).toBe(true);
+    expect(JSON.stringify(r.ok ? r.messages : [])).toContain("EL DUEÑO CAMBIÓ LA PÁGINA A MANO");
+  });
+
+  it("BRAZO DE CONTROL: sin cambios del dueño, el contexto sale byte a byte igual", () => {
+    expect(buildAgentContext({ ...args, cambiosDelDueno: [] })).toBe(buildAgentContext(args));
+  });
+});
+
+describe("H08-a · lo que el dueño dijo antes de la ventana llega al modelo", () => {
+  const args = {
+    state: {},
+    taggedHtml: "<html></html>",
+    userBrief: null,
+    now: new Date("2026-09-22T12:00:00Z"),
+  };
+
+  it("🔴 sus palabras van en su bloque, junto a la nota de conversación recortada", () => {
+    const s = buildAgentContext({
+      ...args,
+      conversacionRecortada: { visibles: 12, totales: 14 },
+      dichoAntes: ['todos los precios con MXN y "IVA incluido"'],
+    });
+    expect(s).toContain("LO QUE EL DUEÑO TE DIJO ANTES");
+    expect(s).toContain('«todos los precios con MXN y "IVA incluido"»');
+  });
+
+  it("BRAZO DE CONTROL: sin nada dicho antes, el contexto sale byte a byte igual", () => {
+    const rec = { conversacionRecortada: { visibles: 12, totales: 14 } };
+    expect(buildAgentContext({ ...args, ...rec, dichoAntes: [] })).toBe(buildAgentContext({ ...args, ...rec }));
+  });
+});
+
 describe("estimateContextTokens", () => {
   it("scales with combined content length (~chars/3.5, ceil'd)", () => {
     const userContent = "a".repeat(35);

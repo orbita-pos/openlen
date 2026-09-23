@@ -366,6 +366,9 @@ export interface StoredChatTurn {
      *  al recargar. Ya pasó con `ops` y con `observacion`. Sólo con
      *  `status: "error"`; llega truncado a 200 desde `motivo-del-fallo.ts`. */
     motivo?: string;
+    /** Los valores que aplicó la llamada, para el historial. Ver
+     *  `lib/agent/valores-de-tema.ts`. */
+    valores?: string;
     /** QUÉ cambió, resuelto en el servidor mientras los `data-op-id` valían.
      *  Va aquí y no en el turno porque `actions` es la ÚNICA parte del turno
      *  que se guarda como JSON — `appendChatMessage` escribe columnas
@@ -382,4 +385,8 @@ export interface StoredChatTurn {
    *  Applied/Undo exactly like the live turn does. Absent/false = a document
    *  changed (every pre-F2 row implicitly falls here). */
   noDocChange?: boolean;
+  /** El turno se CORTÓ a medias (plazo, pestaña cerrada, proveedor caído)
+   *  después de haber cambiado algo. Lo escribe el servidor
+   *  (`corteDelTurno`); al recargar se avisa y el historial lo marca. */
+  cortado?: boolean;
 }

@@ -111,7 +111,7 @@ function makeDeps(
      *  tabla real guarda y lo que `revertir_ultimo_cambio` necesita para tener
      *  a dónde volver. `versions` (sólo etiquetas) se conserva porque muchas
      *  pruebas cuentan sobre él. */
-    snapshots: [] as { id: string; label: string; page: string | null; html: string }[],
+    snapshots: [] as { id: string; label: string; page: string | null; html: string; source?: string }[],
     // F4 Task 2 pin: which page each snapshot carried (parallel to
     // `versions`, one entry per snapshotVersion call, same order).
     versionPages: [] as (string | null)[],
@@ -184,6 +184,9 @@ function makeDeps(
         label: a.label,
         page: a.page,
         html: a.html,
+        // Quién la escribió, como la columna real: es lo que distingue la
+        // escritura de Len de la del dueño al deshacer (H06).
+        source: a.source,
       });
       // Como la tabla real: el id sale, y es lo que sube en `versionPrevia`.
       return id;
@@ -194,7 +197,10 @@ function makeDeps(
     async listVersions(_p, _u, page) {
       return store.snapshots
         .filter((s) => s.page === page)
-        .map((s) => ({ id: s.id, label: s.label }));
+        .map((s) => ({ id: s.id, label: s.label, ...(s.source ? { source: s.source } : {}) }));
+    },
+    async versionHtml(_p, _u, versionId) {
+      return store.snapshots.find((s) => s.id === versionId)?.html ?? null;
     },
     async restoreVersion(_p, _u, versionId) {
       const v = store.snapshots.find((s) => s.id === versionId);
@@ -3386,10 +3392,32 @@ describe("declarar_tareas", () => {
     });
 
     assert.equal(out.response.ok, true);
-    assert.deepEqual(out.tareas, ["cambiar el titular", "poner el teléfono", "publicar"]);
+    // Una frase suelta es una tarea sin estado (H02): la lista con estados la
+    // lleva el bucle, que es quien sabe lo medido.
+    assert.deepEqual(out.tareas, [
+      { texto: "cambiar el titular" },
+      { texto: "poner el teléfono" },
+      { texto: "publicar" },
+    ]);
     // Declarar NO hace nada: es una lista de trabajo, no un cambio.
     assert.equal(store.saved.length, 0);
     assert.equal(out.updatedHtml, undefined);
+  });
+
+  it("H02 · con estado y de comprobar, como la lista de Claude Code; un estado inventado se ignora", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "declarar_tareas", {
+      tareas: [
+        { tarea: "contador", estado: "en_curso" },
+        { tarea: "probar que sube", comprobar: true },
+        { tarea: "otra", estado: "casi" },
+      ],
+    });
+    assert.deepEqual(out.tareas, [
+      { texto: "contador", estado: "en_curso" },
+      { texto: "probar que sube", comprobar: true },
+      { texto: "otra" },
+    ]);
   });
 
   it("le dice CÓMO se va a comprobar — un checklist con criterio secreto es un examen sorpresa", async () => {
@@ -3560,6 +3588,106 @@ describe("revertir_ultimo_cambio", () => {
     assert.match(previa.label, /^Before restoring/);
     // Y apunta al documento que había JUSTO ANTES de restaurar, no a otro.
     assert.ok(previa.html.includes("Dos"));
+  });
+});
+
+// ─── H06 · DESHACER LO DE LEN SIN LLEVARSE LO DEL DUEÑO (auditoría 2026-09-22) ─
+//
+// `revertir_ultimo_cambio` restauraba `versiones[1]` fuera de quien fuera. Con el
+// dueño editando a mano poco después de un turno de Len —el editor sólo guarda
+// versión si pasaron cinco minutos— su texto desaparecía de la página viva; con
+// su versión guardada, se deshacía SU edición y se conservaba la de Len (C11 y
+// C11b). Ahora se deshace la última escritura de Len sobre lo que hay ahora.
+describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después", () => {
+  /** Len edita el titular; después el dueño cambia el párrafo a mano. */
+  async function lenYLuegoElDueno(opts: { conVersion: boolean; mismoSitio?: boolean }) {
+    const { deps, store } = makeDeps();
+    const primera = makeSession();
+    const len = await runAgentTool(primera, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(primera.taggedHtml), new_html: "<h1>Tacos de Len</h1>" }],
+      resumen: "titular de Len",
+    });
+    assert.equal(len.response.ok, true);
+    const delDueno = opts.mismoSitio
+      ? store.data.html.replace("Tacos de Len", "Tacos del Dueño")
+      : store.data.html.replace("Los mejores del barrio.", "Los mejores de Monterrey.");
+    store.data = { ...store.data, html: delDueno };
+    if (opts.conVersion) {
+      store.snapshots.unshift({ id: "v-dueno", label: "Edited content", page: null, html: delDueno, source: "manual" });
+    }
+    // El turno siguiente arranca con lo que hay AHORA, como la ruta.
+    const session = { ...makeSession(delDueno), baseHtml: delDueno };
+    return { deps, store, session };
+  }
+
+  it("🔴 C11 · sin versión del dueño: se va lo de Len y se queda lo suyo", async () => {
+    const { deps, store, session } = await lenYLuegoElDueno({ conVersion: false });
+    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    assert.equal(out.response.ok, true, String(out.response.error ?? ""));
+    assert.ok(store.data.html.includes("Los mejores de Monterrey."), "se llevó la edición del dueño");
+    assert.ok(!store.data.html.includes("Tacos de Len"), "no deshizo lo de Len");
+    assert.match(String(out.response.conservado), /dueño/);
+  });
+
+  it("🔴 C11b · con la versión del dueño encima: tampoco se deshace SU edición", async () => {
+    const { deps, store, session } = await lenYLuegoElDueno({ conVersion: true });
+    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    assert.equal(out.response.ok, true, String(out.response.error ?? ""));
+    assert.ok(store.data.html.includes("Los mejores de Monterrey."));
+    assert.ok(!store.data.html.includes("Tacos de Len"));
+  });
+
+  it("🔴 si el dueño tocó LO MISMO, no se toca nada y se le pide preguntar", async () => {
+    const { deps, store, session } = await lenYLuegoElDueno({ conVersion: false, mismoSitio: true });
+    const antes = store.data.html;
+    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /preguntar/);
+    assert.equal(store.data.html, antes, "tocó la página cuando debía preguntar");
+  });
+
+  it("BRAZO DE CONTROL: sin edición del dueño, se vuelve al antes de Len como siempre", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession();
+    await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tacos de Len</h1>" }],
+      resumen: "titular de Len",
+    });
+    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    assert.equal(out.response.ok, true);
+    assert.equal(store.data.html, HTML);
+  });
+});
+
+describe("H09 · el prefijo de país que nadie dio llega al modelo", () => {
+  it("🔴 un tel: con un país inventado vuelve con su aviso crítico", async () => {
+    const { deps } = makeDeps();
+    const session = { ...makeSession(), userPrompt: "pon 33 1234 5678 en el pie" };
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        {
+          op: "replace",
+          target: contentOpId(session.taggedHtml),
+          new_html: '<h1><a href="tel:+333312345678">33 1234 5678</a></h1>',
+        },
+      ],
+      resumen: "teléfono",
+    });
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(out.response.prefijos_sin_origen, ["tel:+333312345678"]);
+    assert.match(String(out.response.aviso_critico), /prefijo de país que nadie te dio/);
+  });
+
+  it("BRAZO DE CONTROL: las cifras dictadas no avisan", async () => {
+    const { deps } = makeDeps();
+    const session = { ...makeSession(), userPrompt: "pon 33 1234 5678 en el pie" };
+    const out = await runAgentTool(session, deps, "editar_pagina", {
+      edits: [
+        { op: "replace", target: contentOpId(session.taggedHtml), new_html: '<h1><a href="tel:3312345678">33 1234 5678</a></h1>' },
+      ],
+      resumen: "teléfono",
+    });
+    assert.equal(out.response.prefijos_sin_origen, undefined);
   });
 });
 

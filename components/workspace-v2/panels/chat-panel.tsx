@@ -36,16 +36,7 @@ import {
 import { ReplaceAssetModal } from "../replace-asset-modal";
 import { AgentActionCard, type AgentAction } from "../agent-action-card";
 
-/** Un mensaje del historial reproducido. Los dos campos de herramienta viajan
- *  sólo en los turnos que de verdad usaron una — ver el comentario largo donde
- *  se arma `history`. El servidor los VALIDA contra el catálogo real; nada de
- *  lo que manda el navegador se ejecuta. */
-export interface HistoryEntry {
-  role: "user" | "assistant";
-  content: string;
-  functionCalls?: { name: string; args: Record<string, unknown> }[];
-  functionResponses?: { name: string; response: Record<string, unknown> }[];
-}
+export type { HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { AgentConfirmCard, TarjetaObjetivo, type AgentConfirm } from "../agent-confirm-card";
 import {
   ejecutarUndo,
@@ -66,7 +57,7 @@ import { elObjetivoTermino, type VeredictoDeTurno } from "@/lib/agent/objetivo/v
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
-import { CHAT_HISTORY_TURNS } from "@/lib/chat/history-window";
+import { historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
 import { seccionesCambiadas, tipoDeOp, agruparCambios, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
@@ -301,6 +292,10 @@ interface DesignTurn {
    *  aviso sobre un turno aplicado, no como error: el cambio ya vive en la
    *  base y decir «falló» manda al usuario a repetirlo. */
   avisoTurno?: string;
+  /** Se cortó a medias: en vivo (`aplicado-con-aviso`) o leído de una fila que
+   *  el servidor guardó como cortada. Es lo que el historial marca para el
+   *  modelo y lo que pinta el aviso al recargar. */
+  cortado?: boolean;
   /** El servidor rechazó el último Deshacer. El turno SIGUE aplicado. */
   undoFallo?: FalloDeUndo;
   /** Deshacer en vuelo — el botón espera al servidor antes de cantar nada. */
@@ -334,11 +329,6 @@ interface DesignTurn {
    *  streaming footer as forward-motion proof. */
   streamedChars?: number;
 }
-
-/** Two turns are on the same document when their page slugs match, treating
- *  null/undefined (pre-multipage + home) as the home document. Una sola
- *  definición, compartida con la decisión de Deshacer (./undo-turn). */
-const samePage = mismaPagina;
 
 const QUICK_PROMPT_KEYS: ReadonlyArray<string> = [
   "quickPrompts.premium",
@@ -1068,89 +1058,10 @@ function AIDesignChat({
       onClearScope?.();
       setSending(true);
 
-      // EL HISTORIAL, CON LA FORMA QUE DE VERDAD TUVO.
-      //
-      // Antes esto emitía dos mensajes planos por turno y tiraba las llamadas a
-      // herramientas. Efecto MEDIDO el 2026-08-22, mismo prompt y misma página,
-      // variando sólo el historial: con las llamadas puestas el Agente editó
-      // 10 de 12 veces; sin ellas, 1 de 12 — y en los 11 fallos respondió
-      // «Listo ✅ añadí el teléfono» sobre una página intacta.
-      //
-      // La causa es que le reescribíamos su propio pasado para que pareciera
-      // que nunca usó una herramienta, y a los pocos turnos lo copiaba. Es la
-      // regla que la documentación de la API enuncia para las llamadas en
-      // paralelo — reproducir mal el historial entrena el comportamiento
-      // futuro — llevada al extremo.
-      //
-      // El resultado que se reproduce es el RESUMEN de la tarjeta, no la carga
-      // real: los resultados de verdad son documentos HTML enteros y mandar
-      // seis turnos de eso reventaría el contexto. Estructura sí, carga no.
-      // LA CHARLA NO SE REINICIA AL CAMBIAR DE PAGINA.
-      //
-      // Antes el historial se filtraba con `samePage`: pasabas de la home a
-      // /menu y la conversacion arrancaba de CERO — mismo proyecto, misma
-      // sesion, mismo minuto. Para el usuario eso es «no me conoce», y es de
-      // las cosas que mas se notan.
-      //
-      // El filtro existia por una razon buena —que un turno sobre la home no
-      // confunda una edicion de /menu— pero la cura correcta no es esconder el
-      // turno: es DECIR de que pagina fue. Lo mismo que hace el bloque de
-      // cambios unas lineas mas abajo.
-      const relevantes = turnsRef.current.filter(
-        (t) => t.status === "applied" || t.status === "reverted",
-      );
-      // Cuántos turnos tiene la charla de VERDAD. Viaja aparte para que el
-      // modelo pueda decir «de eso ya no me acuerdo» en vez de contestar con el
-      // turno más viejo que le quede a mano — que es lo que hacía, con total
-      // seguridad y equivocándose (medido el 2026-08-22).
-      const historyTotal = relevantes.length;
-      const history = relevantes
-        .slice(-CHAT_HISTORY_TURNS)
-        .flatMap((t) => {
-          // 🔴 LO QUE FALLÓ TAMBIÉN CUENTA. Esto filtraba a `status === "done"`,
-          // así que una herramienta que falló no viajaba en el historial de
-          // NINGUNA forma: el modelo no la veía fallar, la veía no existir. Y
-          // unas líneas más abajo, las que sí viajaban se marcaban `ok: true` a
-          // mano — o sea que el recuerdo que el modelo tiene de sus propios
-          // turnos era «todo salió bien, siempre».
-          //
-          // Con eso, el turno siguiente vuelve a intentar exactamente lo que
-          // acaba de no funcionar, y el modelo cierra contándole al usuario un
-          // arreglo que nadie hizo. Ahora viaja lo que terminó —con su
-          // resultado de verdad— y sólo se queda fuera lo que aún corría.
-          const hechas = (t.actions ?? []).filter((a) => a.status !== "running");
-          // El turno de OTRA pagina viaja etiquetado: el modelo necesita saber
-          // que aquello no fue sobre el documento que tiene delante.
-          const deOtraPagina = !samePage(t.page, turnPage);
-          const etiqueta = deOtraPagina
-            ? `[en la página "${t.page ?? "inicio"}"] `
-            : "";
-          const turno: HistoryEntry[] = [
-            { role: "user", content: `${etiqueta}${t.userText}` },
-            {
-              role: "assistant",
-              content: t.assistantReasoning || "",
-              ...(hechas.length
-                ? { functionCalls: hechas.map((a) => ({ name: a.tool, args: {} })) }
-                : {}),
-            },
-          ];
-          // El mensaje de respuestas va INMEDIATAMENTE después: el serializador
-          // del proveedor empareja llamadas y respuestas por POSICIÓN, y una
-          // respuesta sin llamada que la reclame degrada a texto suelto.
-          if (hechas.length) {
-            turno.push({
-              role: "user",
-              content: "",
-              functionResponses: hechas.map((a) => ({
-                name: a.tool,
-                // El resultado DE VERDAD, no un `true` escrito a mano.
-                response: { ok: a.status !== "error", resumen: a.summary },
-              })),
-            });
-          }
-          return turno;
-        });
+      // EL HISTORIAL, CON LA FORMA QUE DE VERDAD TUVO — ver
+      // `lib/chat/historial-del-agente.ts`, que es también lo que el arnés de
+      // evals manda para reproducir una conversación.
+      const { history, historyTotal, dichoAntes } = historialParaElAgente(turnsRef.current, turnPage);
 
       // Snapshot the scope at send time — if the user clears or re-picks
       // mid-stream, the in-flight request keeps the original target. Shared
@@ -1250,6 +1161,8 @@ function AIDesignChat({
               prompt,
               history,
               historyTotal,
+              // Lo que el dueño dijo antes de la ventana (H08-a).
+              ...(dichoAntes.length > 0 ? { dichoAntes } : {}),
               // EL ID DE LA FILA, para que el servidor y este panel escriban la
               // MISMA. El servidor registra el turno desde su `finally` —o sea
               // también cuando el stream muere y este `fetch` nunca llega a
@@ -1388,6 +1301,7 @@ function AIDesignChat({
                 // campo largo haría 400 a `persistTurn` y el turno entero
                 // desaparecería al recargar, en silencio.
                 const motivo = (payload as { motivo?: unknown } | null)?.motivo;
+                const valores = (payload as { valores?: unknown } | null)?.valores;
                 if (tool) {
                   const action: AgentAction = {
                     tool,
@@ -1408,6 +1322,9 @@ function AIDesignChat({
                       : {}),
                     ...(typeof motivo === "string" && motivo.trim()
                       ? { motivo: motivo.slice(0, 200) }
+                      : {}),
+                    ...(typeof valores === "string" && valores.trim()
+                      ? { valores: valores.slice(0, 200) }
                       : {}),
                   };
                   upsertAction(turnId, action);
@@ -1666,7 +1583,7 @@ function AIDesignChat({
             // aviso: el cambio está y el usuario tiene que saber que quedó a
             // medias.
             ...(cierre.kind === "aplicado-con-aviso"
-              ? { avisoTurno: cierre.aviso }
+              ? { avisoTurno: cierre.aviso, cortado: true }
               : {}),
           });
           void persistTurn({
@@ -2267,7 +2184,7 @@ function TurnFooter({
           <div className="inline-flex items-center gap-1.5 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small">
             <span>{t("noChange.label")}</span>
           </div>
-          <AvisoDeTurno texto={turn.avisoTurno} />
+          <AvisoDeTurno texto={turn.avisoTurno} cortado={turn.cortado} />
         </div>
       );
     }
@@ -2309,7 +2226,7 @@ function TurnFooter({
             {t("applied.otherPage")}
           </div>
         )}
-        <AvisoDeTurno texto={turn.avisoTurno} />
+        <AvisoDeTurno texto={turn.avisoTurno} cortado={turn.cortado} />
         {turn.undoFallo && (
           <div className="mt-1 flex items-start gap-1.5 rounded-md ring-1 ring-red-500/40 bg-red-500/5 px-2 py-1 text-[11px] text-red-600 dark:text-red-400 max-w-full">
             <X size={11} className="mt-0.5 shrink-0" />
@@ -2355,8 +2272,12 @@ function TurnFooter({
 
 /** El turno cambió la página y luego se cortó. Ámbar, no rojo: no es un fallo
  *  del cambio —está hecho— sino del cierre. Rojo mandaría a repetirlo. */
-function AvisoDeTurno({ texto }: { texto?: string }) {
+function AvisoDeTurno({ texto, cortado }: { texto?: string; cortado?: boolean }) {
   const t = useTranslations("panelsChat");
+  const tAgent = useTranslations("wsPage.agent");
+  // Una fila que el servidor guardó como cortada no trae el motivo concreto:
+  // el genérico existe ya en los diez idiomas.
+  if (!texto && cortado) texto = tAgent("errors.cancelled");
   if (!texto) return null;
   return (
     <div className="mt-1 flex items-start gap-1.5 rounded-md ring-1 ring-amber-500/40 bg-amber-500/5 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-400 max-w-full">
@@ -2821,6 +2742,9 @@ function restoreTurn(s: StoredChatTurn): DesignTurn {
       a.status === "running" ? { ...a, status: "error" as const } : a,
     ),
     noDocChange: s.noDocChange,
+    // Guardado como cortado por el servidor: el aviso se compone al pintar,
+    // en el idioma de quien lo mira (`AvisoDeTurno`).
+    ...(s.cortado ? { cortado: true } : {}),
   };
 }
 

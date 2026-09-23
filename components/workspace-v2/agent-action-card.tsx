@@ -65,6 +65,9 @@ export interface AgentAction {
    * ni siquiera la palabra «falló».
    */
   motivo?: string;
+  /** Los valores que aplicó la llamada. NO se pinta: lo lee el historial que
+   *  se le reenvía al modelo (`lib/chat/historial-del-agente.ts`). */
+  valores?: string;
   /** Cuántas ediciones aplicó esta llamada. */
   edits?: number;
   /**

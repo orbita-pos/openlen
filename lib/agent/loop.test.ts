@@ -942,7 +942,7 @@ describe("runAgentLoop — declarar_tareas", () => {
    *  de verdad, y `leer_estado` sale bien SIN cambiar nada — que es justo el
    *  `ok:true` que no debe contar como evidencia. */
   const runTool = async (name: string, args: Record<string, unknown>) => {
-    if (name === "declarar_tareas") return { response: { ok: true }, tareas: args.tareas as string[] };
+    if (name === "declarar_tareas") return { response: { ok: true }, tareas: (args.tareas as string[]).map((texto) => ({ texto })) };
     if (name === "editar_pagina") {
       return {
         response: { ok: true, cambio: "cambio" },
@@ -1087,10 +1087,72 @@ describe("runAgentLoop — declarar_tareas", () => {
     const reclamo = [...streams[2]!].reverse().find((m) => m.role === "user")!.content;
     expect(reclamo).toContain("declaraste 3");
     expect(reclamo).toContain("1 cambio");
-    // Por su NOMBRE, no «faltan dos»: el modelo tiene que saber cuáles.
+    // SIN ESTADOS no se sabe cuál falta (H02, 2026-09-22): se le enseñan
+    // todas por su nombre y se le dice que no se sabe. Nombrar «la 2 y la 3»
+    // era casar por orden, y con A y C hechas señalaba C.
     expect(reclamo).toContain("«tarea 2»");
     expect(reclamo).toContain("«tarea 3»");
+    expect(reclamo).toContain("NO sé cuál falta");
     expect(r.finalText).toBe("Ahora sí las tres.");
+  });
+
+  it("🔴 G2b · con estados, el reclamo nombra EXACTAMENTE la que falta", async () => {
+    const streams: Message[][] = [];
+    const lista = (estados: Record<string, string>) => ({
+      type: "function_call" as const,
+      name: "declarar_tareas",
+      args: { tareas: ["A", "B", "C"].map((t) => ({ tarea: t, ...(estados[t] ? { estado: estados[t] } : {}) })) },
+    });
+    const stream = scripted(
+      [lista({ A: "en_curso" }), edita, done],
+      [lista({ A: "hecha", C: "en_curso" }), edita, done],
+      [lista({ A: "hecha", C: "hecha" }), done],
+      [{ type: "text_delta", text: "Hecho todo." }, done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "tres cosas" }], tools: [],
+      openStream: (m) => { streams.push([...m]); return stream(m); },
+      runTool: async (name, args) =>
+        name === "declarar_tareas"
+          ? {
+              response: { ok: true },
+              tareas: (args.tareas as { tarea: string; estado?: "pendiente" | "en_curso" | "hecha" }[]).map((t) => ({
+                texto: t.tarea,
+                ...(t.estado ? { estado: t.estado } : {}),
+              })),
+            }
+          : runTool(name, args),
+      emit: () => {},
+    });
+    expect(r.tareasReclamadas).toEqual(["B"]);
+    const reclamo = streams.map((m) => [...m].reverse().find((x) => x.role === "user")?.content ?? "").find((c) =>
+      String(c).includes("sin terminar se quedan"),
+    );
+    expect(reclamo).toContain("«B»");
+    expect(reclamo).not.toContain("«C»");
+  });
+
+  it("🔴 marcar hecha sin nada detrás vuelve al modelo como aviso, en la misma respuesta", async () => {
+    const vistos: Message[][] = [];
+    const stream = scripted(
+      [{ type: "function_call", name: "declarar_tareas", args: {} }, done],
+      [{ type: "function_call", name: "declarar_tareas", args: { marcar: true } }, done],
+      [{ type: "text_delta", text: "No pude con el teléfono." }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "dos cosas" }], tools: [],
+      openStream: (m) => { vistos.push([...m]); return stream(m); },
+      runTool: async (_name, args) => ({
+        response: { ok: true },
+        tareas: args.marcar
+          ? [{ texto: "titular", estado: "hecha" as const }, { texto: "teléfono", estado: "hecha" as const }]
+          : [{ texto: "titular" }, { texto: "teléfono" }],
+      }),
+      emit: () => {},
+    });
+    const respuesta = vistos[2]!.flatMap((m) => m.functionResponses ?? []).at(-1)!.response;
+    expect(respuesta.sin_evidencia).toEqual(["titular", "teléfono"]);
+    expect(String(respuesta.aviso_critico)).toContain("NO se marcaron hechas");
   });
 
   it("un ok:true que no cambió nada NO es evidencia", async () => {
@@ -1884,14 +1946,18 @@ describe("corregirle el rumbo a media faena", () => {
   it("se lee UNA vez por vuelta, no una vez por herramienta", async () => {
     // Si se leyera por herramienta, dos llamadas en la misma vuelta partirian
     // la correccion en dos y el modelo la veria duplicada.
+    //
+    // Llamadas que ACTÚAN a propósito: desde el 2026-09-22 un turno que sólo
+    // leyó recibe la insistencia de «no cambiaste nada», y esa vuelta de más
+    // haría contar tres lecturas por una razón que no es la de esta prueba.
     let lecturas = 0;
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }],
       tools: [],
       openStream: scripted(
         [
-          { type: "function_call", name: "leer_estado", args: {} },
-          { type: "function_call", name: "leer_estado", args: {} },
+          { type: "function_call", name: "editar_pagina", args: {} },
+          { type: "function_call", name: "editar_pagina", args: {} },
           usage(5),
           doneEv,
         ],
@@ -2894,33 +2960,33 @@ describe("el texto de varias vueltas", () => {
       messages: [{ role: "user", content: "x" }],
       tools: [],
       openStream: scripted(
-        [{ type: "text_delta", text: "Voy a mirarlo." }, { type: "function_call", name: "leer_estado", args: {} }, done],
+        [{ type: "text_delta", text: "Voy a cambiarlo." }, { type: "function_call", name: "editar_pagina", args: {} }, done],
         [{ type: "text_delta", text: "El titular dice X." }, done],
       ),
       runTool: async () => ({ response: { ok: true } }),
       emit: (e) => void events.push(e),
     });
     const texto = recoger(events);
-    expect(texto).not.toContain("mirarlo.El titular");
-    expect(texto).toBe("Voy a mirarlo." + "\n\n" + "El titular dice X.");
+    expect(texto).not.toContain("cambiarlo.El titular");
+    expect(texto).toBe("Voy a cambiarlo." + "\n\n" + "El titular dice X.");
   });
 
   // 🔴 BRAZO DE CONTROL: una sola vuelta con texto NO gana separador. Sin esto,
   // «meter siempre un salto» pasaría la de arriba y le abriría un hueco en
   // blanco a TODOS los turnos normales, que son la mayoría.
   //
-  // ⚠️ La vuelta LLAMA a una herramienta a propósito. Sin llamar a ninguna se
-  // dispara `INSISTE_SIN_HERRAMIENTAS` —la guarda del turno que anuncia y no
-  // hace— el bucle da otra vuelta, y `scripted` repite su última entrada: el
-  // texto sale «Hola.Hola.» por el arnés, no por el producto. Descubierto
-  // escribiendo esta misma prueba.
+  // ⚠️ La vuelta LLAMA a una herramienta que ACTÚA, a propósito. Sin ella se
+  // dispara la insistencia —la guarda del turno que anuncia y no hace— el
+  // bucle da otra vuelta, y `scripted` repite su última entrada: el texto sale
+  // «Hola.Hola.» por el arnés, no por el producto. Descubierto escribiendo esta
+  // misma prueba. Y desde el 2026-09-22 una LECTURA ya no la esquiva.
   it("una sola vuelta con texto sale byte a byte igual que antes", async () => {
     const events: AgentStreamEvent[] = [];
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }],
       tools: [],
       openStream: scripted(
-        [{ type: "text_delta", text: "Hola." }, { type: "function_call", name: "leer_estado", args: {} }, done],
+        [{ type: "text_delta", text: "Hola." }, { type: "function_call", name: "editar_pagina", args: {} }, done],
         [done],
       ),
       runTool: async () => ({ response: { ok: true } }),
@@ -2937,7 +3003,7 @@ describe("el texto de varias vueltas", () => {
       messages: [{ role: "user", content: "x" }],
       tools: [],
       openStream: scripted(
-        [{ type: "function_call", name: "leer_estado", args: {} }, done],
+        [{ type: "function_call", name: "editar_pagina", args: {} }, done],
         [{ type: "text_delta", text: "Ya está." }, done],
       ),
       runTool: async () => ({ response: { ok: true } }),
@@ -3388,5 +3454,371 @@ describe("runAgentLoop — cuántas páginas se miraron", () => {
     const card = tarjetaDeVerificacion(events);
     expect(card!.summary).toBe("no-mirado");
     expect(card!.paginasTocadas).toBeUndefined();
+  });
+});
+
+// ─── LOS SEIS GUIONES DE LA AUDITORÍA (2026-09-22) ─────────────────────────
+//
+// `plans/auditoria-len-vs-claude-code-2026-09-22.md`, §4. Cada uno es un rojo
+// SEGURO: el mecanismo falla sea cual sea el modelo en cuanto se dispara, así
+// que se prueba con un modelo guionado y sin red. Cada prueba afirma lo que el
+// dueño debería recibir; el mensaje de cada `expect` dice lo que recibía el día
+// de la auditoría.
+describe("H01 · H03 — una edición nula no es un hecho, y leer no es actuar", () => {
+  const nula = {
+    response: { ok: true, cambio: "sin_cambio", sin_cambios: true },
+    action: { tool: "editar_texto", ok: true, summary: "teléfono", cambio: "sin_cambio" as const },
+    updatedHtml: "<p>igual</p>",
+    page: null,
+  };
+  const insistencia = (m: Message[]) =>
+    m.some((x) => x.role === "user" && typeof x.content === "string" && x.content.includes("cerraste el turno SIN"));
+
+  it("una edición NULA seguida de «Listo» recibe la insistencia", async () => {
+    const vistos: Message[][] = [];
+    const stream = scripted(
+      [{ type: "function_call", name: "editar_texto", args: { resumen: "teléfono" } }, done],
+      [{ type: "text_delta", text: "Listo, cambié el teléfono." }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: (m) => { vistos.push([...m]); return stream(m); },
+      runTool: async () => nula,
+      emit: () => {},
+    });
+    expect(vistos.some(insistencia)).toBe(true);
+    // Y no le dice «sin llamar a ninguna herramienta»: sí llamó.
+    const texto = vistos.flat().map((m) => (typeof m.content === "string" ? m.content : "")).join(" | ");
+    expect(texto).not.toContain("SIN llamar a ninguna herramienta");
+  });
+
+  it("BRAZO DE CONTROL: una herramienta que actúa sin tocar la página no recibe insistencia", async () => {
+    const vistos: Message[][] = [];
+    const stream = scripted(
+      [{ type: "function_call", name: "recordar_preferencia", args: { preferencia: "tutéame" } }, done],
+      [{ type: "text_delta", text: "Anotado." }, done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: (m) => { vistos.push([...m]); return stream(m); },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(vistos.some(insistencia)).toBe(false);
+    expect(r.finalText).toBe("Anotado.");
+  });
+
+  it("una edición nula no llega a los ojos: la página no cambió", async () => {
+    let ojos = 0;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "editar_texto", args: { resumen: "teléfono" } }, done],
+        [{ type: "text_delta", text: "No hacía falta: ya estaba." }, done],
+      ),
+      runTool: async () => nula,
+      verifyTurn: async () => { ojos += 1; return { estado: "bien" as const }; },
+      emit: () => {},
+    });
+    expect(ojos).toBe(0);
+  });
+
+  it("…y `aplicado` sólo lleva lo que se movió", async () => {
+    let i = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [
+          { type: "function_call", name: "editar_texto", args: { resumen: "teléfono" } },
+          { type: "function_call", name: "editar_texto", args: { resumen: "titular" } },
+          done,
+        ],
+        [{ type: "text_delta", text: "Cambié el titular; el teléfono ya estaba." }, done],
+      ),
+      runTool: async () => {
+        i += 1;
+        return i === 1
+          ? nula
+          : { response: { ok: true, cambio: "cambio" }, action: { tool: "editar_texto", ok: true, summary: "titular" }, updatedHtml: "<p>v2</p>", page: null };
+      },
+      emit: () => {},
+    });
+    expect(r.aplicado).toEqual(["titular"]);
+  });
+});
+
+describe("H05 — un turno que topa dice que no se miró", () => {
+  it("🔴 el cierre por tope sabe que la página no se comprobó", async () => {
+    let recibido = "";
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 1,
+      openStream: scripted([{ type: "function_call", name: "editar_texto", args: { resumen: "a" } }, done]),
+      runTool: async () => ({ response: { ok: true, cambio: "cambio" }, updatedHtml: "<p/>", page: null }),
+      verifyTurn: async () => ({ estado: "bien" as const }),
+      closeOut: (m) => {
+        recibido = String(m.at(-1)?.content ?? "");
+        return (async function* () { yield { type: "text_delta" as const, text: "Topé." }; })();
+      },
+      emit: () => {},
+    });
+    expect(recibido).toContain("NO SE HA COMPROBADO");
+  });
+
+  it("BRAZO DE CONTROL: sin ojos cableados, el tope no inventa una tarjeta", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 1,
+      openStream: scripted([{ type: "function_call", name: "editar_texto", args: { resumen: "a" } }, done]),
+      runTool: async () => ({ response: { ok: true, cambio: "cambio" }, updatedHtml: "<p/>", page: null }),
+      closeOut: () => (async function* () { yield { type: "text_delta" as const, text: "Topé." }; })(),
+      emit: (e) => events.push(e),
+    });
+    expect(events.some((e) => e.type === "action" && e.tool === "verificar_diseno")).toBe(false);
+  });
+});
+
+describe("H12 — lo que rechazan las guardas se cuenta y no quema el turno", () => {
+  const misma: StreamEvent[] = [
+    { type: "function_call", name: "editar_runtime", args: { resumen: "carrito", script: "x" } },
+    done,
+  ];
+
+  it("🔴 cada llamada rechazada se avisa con su motivo, para el diario", async () => {
+    const rechazadas: { tool: string; motivo: string }[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(misma, misma, misma, [{ type: "text_delta", text: "Lo dejo así." }, done]),
+      runTool: async () => ({ response: { ok: true, cambio: "cambio" }, updatedHtml: "<p/>", page: null }),
+      onRechazo: (tool, _a, motivo) => rechazadas.push({ tool, motivo }),
+      emit: () => {},
+    });
+    expect(rechazadas.map((r) => r.tool)).toEqual(["editar_runtime"]);
+    expect(rechazadas[0]!.motivo).toContain("Repetirla otra vez no avanza");
+  });
+
+  it("🔴 quien insiste tres vueltas en lo rechazado cierra con los hechos delante, sin tope", async () => {
+    let cierre = "";
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(misma),
+      runTool: async () => ({ response: { ok: true, cambio: "cambio" }, action: { tool: "editar_runtime", ok: true, summary: "carrito" }, updatedHtml: "<p/>", page: null }),
+      closeOut: (m) => {
+        cierre = String(m.at(-1)?.content ?? "");
+        return (async function* () { yield { type: "text_delta" as const, text: "Quedó el carrito; no pude más." }; })();
+      },
+      emit: () => {},
+    });
+    expect(cierre).toContain("se rechazaron tres vueltas seguidas");
+    expect(cierre).toContain("«carrito»");
+    expect(r.topeAlcanzado).toBeNull();
+    expect(r.terminalError).toBe(false);
+    expect(r.turns).toBe(5);
+  });
+});
+
+describe("H04 — el cierre se redacta con lo medido delante", () => {
+  const edita = [{ type: "function_call" as const, name: "editar_texto", args: { resumen: "titular" } }, done];
+  const cierra = [{ type: "text_delta" as const, text: "Listo." }, done];
+  const runTool = async () => ({ response: { ok: true, cambio: "cambio" }, updatedHtml: "<p>v2</p>", page: null });
+
+  it("una promesa rota sola también le llega al modelo antes de hablar", async () => {
+    let recibido = "";
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(edita, cierra),
+      runTool,
+      verifyTurn: async () => ({
+        estado: "bien" as const,
+        regresiones: [{ id: "p1", paso: 1, mensaje: "#total ya no cambia al pulsar #agregar" }],
+      }),
+      closeOut: (m) => {
+        recibido = m.map((x) => (typeof x.content === "string" ? x.content : "")).join(" | ");
+        return (async function* () { yield { type: "text_delta" as const, text: "Ojo: el total dejó de sumar." }; })();
+      },
+      emit: () => {},
+    });
+    expect(recibido).toContain("#total ya no cambia");
+  });
+
+  it("BRAZO DE CONTROL: una OBSERVACIÓN no gasta la segunda redacción", async () => {
+    let redacciones = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(edita, cierra),
+      runTool,
+      verifyTurn: async () => ({ estado: "observado" as const, notas: ["las tarjetas no tienen foto"] }),
+      closeOut: () => {
+        redacciones += 1;
+        return (async function* () { yield { type: "text_delta" as const, text: "no debería" }; })();
+      },
+      emit: () => {},
+    });
+    expect(redacciones).toBe(0);
+    expect(r.finalText).toBe("Listo.");
+  });
+});
+
+describe("auditoría 2026-09-22 · G1–G6", () => {
+  const tools = ["declarar_tareas", "editar_texto", "leer_estado", "editar_runtime"].map((name) => ({ name }));
+  const llama = (name: string, args: Record<string, unknown>): StreamEvent[] => [
+    { type: "function_call", name, args },
+    usage(10),
+    done,
+  ];
+  const dice = (t: string): StreamEvent[] => [{ type: "text_delta", text: t }, usage(10), done];
+  /** Una edición que movió bytes: lo que devuelve la puerta de edición cuando
+   *  `declararCambio` dice `cambio`. */
+  const real = (summary: string) => ({
+    response: { ok: true, cambio: "cambio" },
+    action: { tool: "editar_texto", ok: true, summary, cambio: "cambio" as const },
+    updatedHtml: `<p>${summary}</p>`,
+    page: null,
+  });
+  /** Una edición que NO movió un byte. La puerta devuelve igualmente el
+   *  documento guardado (`tools.ts`, `updatedHtml: persisted.finalHtml`). */
+  const nula = (summary: string) => ({
+    response: { ok: true, cambio: "sin_cambio", sin_cambios: true, aviso_critico: "Esto NO cambió NADA" },
+    action: { tool: "editar_texto", ok: true, summary, cambio: "sin_cambio" as const },
+    updatedHtml: "<p>igual</p>",
+    page: null,
+  });
+  const ultimoDelUsuario = (m: Message[]): string =>
+    [...m].reverse().find((x) => x.role === "user" && typeof x.content === "string" && x.content.length > 0)
+      ?.content as string ?? "";
+  const grabando = (stream: (m: Message[]) => AsyncIterable<StreamEvent>, vistos: Message[][]) =>
+    (m: Message[]) => { vistos.push([...m]); return stream(m); };
+  /** El reclamo del CIERRE, no el recordatorio `<tus-tareas>` de mitad de turno:
+   *  los dos dicen «tengo evidencia», y confundirlos dio G1 y G2 en verde falso
+   *  la primera vez que se corrieron. */
+  const esReclamo = (t: string) => t.includes("sólo tengo evidencia") && !t.includes("<tus-tareas>");
+
+  it("G1 · una edición nula no cuenta como tarea hecha", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "el titular y el teléfono" }], tools,
+      openStream: grabando(scripted(
+        llama("declarar_tareas", { tareas: ["titular", "teléfono"] }),
+        llama("editar_texto", { resumen: "titular" }),
+        llama("editar_texto", { resumen: "teléfono" }),
+        dice("Listo: cambié el titular y el teléfono."),
+      ), vistos),
+      runTool: async (n, a) =>
+        n === "declarar_tareas"
+          ? { response: { ok: true }, tareas: (a.tareas as string[]).map((texto) => ({ texto })) }
+          : a.resumen === "teléfono" ? nula("teléfono") : real("titular"),
+      emit: () => {},
+    });
+    const reclamo = vistos.map(ultimoDelUsuario).find(esReclamo);
+    expect(reclamo, "cerró con «cambié el titular y el teléfono» sin un solo reclamo").toBeDefined();
+  });
+
+  it("G2 · el reclamo no señala como pendiente una tarea que sí se hizo", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "tres cosas" }], tools,
+      openStream: grabando(scripted(
+        llama("declarar_tareas", { tareas: ["A titular", "B teléfono", "C botón"] }),
+        llama("editar_texto", { resumen: "A titular" }),
+        llama("editar_texto", { resumen: "C botón" }),
+        dice("Hecho todo."),
+      ), vistos),
+      runTool: async (n, a) =>
+        n === "declarar_tareas" ? { response: { ok: true }, tareas: (a.tareas as string[]).map((texto) => ({ texto })) } : real(String(a.resumen)),
+      emit: () => {},
+    });
+    const reclamo = vistos.map(ultimoDelUsuario).find(esReclamo);
+    expect(reclamo, "nadie reclamó la tarea que faltaba").toBeDefined();
+    // Lo único que se sabe es que hay 2 cambios para 3 tareas. «C» se hizo:
+    // nombrarla como la que falta es afirmar un emparejamiento inventado.
+    expect(reclamo, "el reclamo nombraba «C botón», que sí se hizo").not.toMatch(/se quedan:[^.]*«C botón»/);
+  });
+
+  it("G3 · al topar se mira la página, y la edición nula no llega como hecha", async () => {
+    const events: AgentStreamEvent[] = [];
+    let ojos = 0;
+    let cierre = "";
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "teléfono, titular y otra" }], tools, maxTurns: 2,
+      openStream: scripted(
+        llama("editar_texto", { resumen: "teléfono en el pie" }),
+        llama("editar_texto", { resumen: "titular" }),
+        llama("editar_texto", { resumen: "otra" }),
+      ),
+      runTool: async (_n, a) => a.resumen === "teléfono en el pie" ? nula("teléfono en el pie") : real(String(a.resumen)),
+      verifyTurn: async () => { ojos += 1; return { estado: "bien" as const }; },
+      closeOut: (m) => {
+        cierre = ultimoDelUsuario(m);
+        return (async function* () { yield { type: "text_delta" as const, text: "Cambié el titular." }; })();
+      },
+      emit: (e) => events.push(e),
+    });
+    expect(r.topeAlcanzado).toBe("turn_limit");
+    expect(cierre, "el cierre recibía la edición nula como «SÍ se aplicó»").not.toContain("«teléfono en el pie»");
+    const mirada = events.find((e) => e.type === "action" && e.tool === "verificar_diseno" && e.status !== "running");
+    expect(mirada, `un turno que topa no se miraba (ojos llamados = ${ojos})`).toBeDefined();
+  });
+
+  it("G4 · leer y luego decir «Listo, cambié…» no escapa a la insistencia", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "pon el titular Vitalvet" }], tools,
+      openStream: grabando(scripted(
+        llama("leer_estado", {}),
+        dice("Listo, cambié el titular a Vitalvet."),
+      ), vistos),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    const insistio = vistos.map(ultimoDelUsuario).some((t) => t.includes("cerraste el turno SIN"));
+    expect(insistio, "tras una lectura, «Listo, cambié…» salía limpio y cobrado").toBe(true);
+  });
+
+  it("G5 · las llamadas rechazadas no se comen las vueltas del turno", async () => {
+    let reales = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hazme un carrito" }], tools,
+      openStream: scripted(llama("editar_runtime", { resumen: "carrito", codigo: "x" })),
+      closeOut: () => (async function* () { yield { type: "text_delta" as const, text: "cierre" }; })(),
+      runTool: async () => {
+        reales += 1;
+        return { response: { ok: true, cambio: "cambio" }, updatedHtml: "<p/>", page: null };
+      },
+      emit: () => {},
+    });
+    expect(reales).toBe(2);
+    expect(
+      { turns: r.turns, tope: r.topeAlcanzado },
+      "con 2 ejecuciones reales gastaba 12 vueltas y moría en turn_limit",
+    ).not.toEqual({ turns: 12, tope: "turn_limit" });
+    expect(r.topeAlcanzado).not.toBe("turn_limit");
+  });
+
+  it("G6 · el cierre se escribe con el veredicto de los ojos delante", async () => {
+    const events: AgentStreamEvent[] = [];
+    let recibido = "";
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "pon el titular en blanco" }], tools,
+      openStream: scripted(
+        llama("editar_texto", { resumen: "titular" }),
+        dice("Listo, quedó perfecto y se lee de maravilla."),
+      ),
+      runTool: async () => real("titular"),
+      verifyTurn: async () => ({ estado: "roto" as const, critique: "- el titular (#fff sobre #fff) es ilegible a 1.00:1" }),
+      closeOut: (m) => {
+        recibido = m.map((x) => (typeof x.content === "string" ? x.content : "")).join("\n");
+        return (async function* () {
+          yield { type: "text_delta" as const, text: "Cambié el titular, pero quedó ilegible: blanco sobre blanco." };
+        })();
+      },
+      emit: (e) => events.push(e),
+    });
+    expect(recibido, "el modelo nunca leía el veredicto antes de hablar").toContain("ilegible a 1.00:1");
+    const iVeredicto = events.findIndex((e) => e.type === "action" && e.tool === "verificar_diseno" && e.status === "warning");
+    const iUltimoTexto = events.map((e) => e.type).lastIndexOf("text");
+    expect(iVeredicto).toBeGreaterThanOrEqual(0);
+    expect(iUltimoTexto, "lo último que redactó el modelo iba ANTES de los ojos").toBeGreaterThan(iVeredicto);
+    expect(r.finalText, "el final era «perfecto» con la lista de defectos pegada debajo").not.toMatch(
+      /perfecto[\s\S]*- el titular \(#fff sobre #fff\)/,
+    );
   });
 });

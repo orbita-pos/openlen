@@ -14,6 +14,8 @@ import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
 import { avisoParaElDueno, motivoDelFallo } from "@/lib/agent/motivo-del-fallo";
 import { avisoDeRegresion, type Regresion } from "@/lib/agent/pruebas-de-la-pagina";
+// De VALOR y a propósito, como `aviso-medido` abajo: no importa nada.
+import { ListaDeTareas } from "@/lib/agent/lista-de-tareas";
 // Import de VALOR a propósito, y no viola la regla de arriba: `aviso-medido` no
 // importa nada — ni la pasarela, ni las herramientas, ni Chromium. Es texto y
 // un `Set`.
@@ -79,6 +81,8 @@ export type AgentStreamEvent =
       /** QUÉ se cambió, ya resuelto a algo que sobrevive al turno. Sólo lo
        *  pone `editar_pagina`; el resto de herramientas no mueven ops. */
       ops?: readonly OpDescrita[];
+      /** Ver `ToolOutcome.action.valores`. */
+      valores?: string;
       /** Lo que VIO el crítico con visión cuando no hay nada roto, en el idioma
        *  del usuario. Sólo lo pone `verificar_diseno`. Se declara aquí y no se
        *  cuela por el spread: un campo que viaja sin estar en el tipo es un
@@ -321,6 +325,10 @@ export interface AgentLoopArgs {
    *  lo usa para saber que el turno ya mutó incluso si el bucle revienta
    *  después y nunca llega a devolver un resultado. */
   onMutacion?(): void;
+  /** Una llamada que el bucle NO ejecutó porque la paró una guarda, con el
+   *  motivo que se le devolvió al modelo. Nunca pasan por `runTool`, así que
+   *  sin esto no quedaban en el diario del turno (H12-c). Ausente ⇒ nada. */
+  onRechazo?(tool: string, args: Record<string, unknown>, motivo: string): void;
   maxTurns?: number; // default 6
   maxToolCalls?: number; // default 10
 
@@ -444,6 +452,24 @@ export interface AgentLoopResult {
    *  dejaba Undo — mientras el cambio vivía ya en la base. El usuario pulsaba
    *  «Reintentar» y aplicaba el mismo cambio DOS veces. */
   mutoDurable: boolean;
+  /** LO QUE DE VERDAD SE APLICÓ este turno, en orden: los resúmenes de las
+   *  llamadas que cuentan como evidencia, contados en el mismo sitio que la
+   *  evidencia. Es la lista que ya recibe el cierre por tope; aquí sale también
+   *  para quien juzga el turno desde fuera (el arnés de evals), que hasta el
+   *  2026-09-22 sólo podía leer el relato. */
+  aplicado: readonly string[];
+  /** Las tareas que el reclamo de evidencia nombró como pendientes al cerrar,
+   *  o `null` si no hubo reclamo. Para poder comprobar QUÉ se le dijo al
+   *  modelo, no sólo que se le dijo algo. */
+  tareasReclamadas: readonly string[] | null;
+  /** La última lista que el modelo declaró con `declarar_tareas`, en su orden;
+   *  vacía si no declaró ninguna. */
+  tareasDeclaradas: readonly string[];
+  /** Las llamadas que el bucle NO ejecutó porque las paró una guarda —nombre
+   *  inexistente, fallo repetido, misma intención— con el motivo que se le
+   *  devolvió al modelo. Nunca pasan por `runTool`, así que ningún diario las
+   *  ve; ésta es la única cuenta que existe de ellas. */
+  rechazos: readonly { readonly tool: string; readonly motivo: string }[];
 }
 
 /** Lo que queda en el historial en lugar del documento retirado. Dice POR QUÉ
@@ -637,6 +663,13 @@ const REESCRIBEN_TODO = new Set<string>(["editar_runtime"]);
 const INSISTE_SIN_HERRAMIENTAS =
   "SISTEMA (el usuario NO escribió esto): cerraste el turno SIN llamar a ninguna herramienta, así que la página NO ha cambiado. Si tu respuesta anunciaba un cambio —«agrego», «hago», «listo»— ese cambio NO existe: aplícalo AHORA con la herramienta que corresponda, y no vuelvas a decir que lo hiciste hasta haberla llamado. Si en cambio tu respuesta era una explicación, una pregunta o una negativa honesta, estaba bien: repítela tal cual y cierra.";
 
+/** La misma insistencia cuando SÍ hubo llamadas pero ninguna hizo nada: sólo
+ *  lecturas, ediciones que dejaron la página byte a byte igual, o llamadas que
+ *  fallaron. Decirle «sin llamar a ninguna herramienta» sería falso, y un aviso
+ *  que miente sobre lo que pasó enseña a no leerlos. */
+const INSISTE_SIN_EFECTO =
+  "SISTEMA (el usuario NO escribió esto): cerraste el turno SIN que ninguna llamada cambiara nada —sólo lecturas, ediciones que dejaron la página exactamente igual, o llamadas que fallaron—, así que la página NO ha cambiado. Si tu respuesta anunciaba un cambio —«agrego», «cambié», «listo»— ese cambio NO existe: aplícalo AHORA con la herramienta que corresponda, y no vuelvas a decir que lo hiciste hasta que una llamada lo haya hecho. Si en cambio tu respuesta era una explicación, una pregunta o una negativa honesta, estaba bien: repítela tal cual y cierra.";
+
 /**
  * SE CORTÓ A MEDIA FRASE. Se le devuelve SU propio texto y se le pide que siga.
  *
@@ -675,6 +708,25 @@ function continuaLoCortado(parcial: string): string {
  */
 const MAX_CONTINUACIONES = 1;
 
+/**
+ * H04 · EL CIERRE, REDACTADO CON LO QUE VIERON LOS OJOS DELANTE.
+ *
+ * Los ojos corren cuando el modelo ya cerró, así que su texto —«quedó perfecto»—
+ * llegaba al usuario y la lista de defectos se pegaba DEBAJO: el dueño leía las
+ * dos cosas seguidas (G6 de `plans/auditoria-len-vs-claude-code-2026-09-22.md`).
+ * En Claude Code lo que devuelven las comprobaciones llega al modelo ANTES de su
+ * mensaje final.
+ *
+ * 🔴 NO ES UN CICLO DE ARREGLO, y eso no es opinable: Jesús lo retiró el
+ * 2026-09-04 porque «corrige el USUARIO» (`b4a47ae1`). Esta vuelta va con las
+ * herramientas APAGADAS —el mismo `closeOut` del cierre por tope—: el modelo no
+ * puede tocar la página, sólo contar lo que hay.
+ */
+const CON_LO_QUE_SE_MIDIO =
+  "SISTEMA (el usuario NO escribió esto): tu respuesta de arriba ya le llegó al usuario, y DESPUÉS se miró la página que dejaste. Esto es lo que se MIDIÓ:\n";
+const CIERRE_CON_LO_MEDIDO =
+  "\n\nEscríbele AHORA, en su idioma y en dos o tres frases, lo que cambia respecto a lo que le dijiste: qué problema tiene la página, contado con estos hechos. No repitas lo anterior ni copies la lista tal cual. No puedes usar herramientas y NO lo arreglas en este turno: si tiene arreglo, ofrécete a hacerlo cuando te lo pida.";
+
 const WRAP_UP_INSTRUCTION =
   "SISTEMA: Alcanzaste el límite de pasos para este turno y ya no puedes usar herramientas. Cierra hablándole al usuario en SU idioma: resume brevemente qué alcanzaste a hacer y qué quedó pendiente, y dile que te lo pida de nuevo para continuar. No afirmes haber hecho lo que no se aplicó.";
 
@@ -687,35 +739,36 @@ const WRAP_UP_INSTRUCTION =
 // `loop.test.ts` («le inyectamos un arreglo que el usuario no pidió»).
 
 /**
- * LA LISTA DE TAREAS, PASADA POR LA EVIDENCIA.
+ * EL RECLAMO DE TAREAS AL CERRAR — la lista vive en `lib/agent/lista-de-tareas.ts`.
  *
- * 🔴 QUÉ PROBLEMA RESUELVE. Un turno de varios pasos —«cámbiame el titular, pon
- * el teléfono nuevo y publícala»— acababa con el modelo enumerando las tres
- * cosas como hechas. Que las tres se hicieran no lo comprobaba nadie: bastaba
- * con que UNA llamada saliera bien para que el texto final hablara en plural.
- * Es la misma familia que las cuatro auditorías del 2026-09-01 —reportar éxito
- * sin haberlo hecho—, y aquí el modelo ni siquiera está mintiendo: pierde el
- * hilo a la tercera herramienta.
- *
- * QUÉ CUENTA COMO EVIDENCIA, y es lo único que cuenta: una llamada que de
- * verdad movió algo. `cambio === "cambio"` (hash antes ≠ hash después, la
- * evidencia que `declararCambio` ya estampaba y que nadie leía) o una escritura
- * durable. NO cuenta `sin_cambio`, ni `no_se`, ni una lectura, ni un `ok:true`
- * a secas — que es justo lo que hacía pasar por buenos los turnos a medias.
+ * 🔴 DOS REDACCIONES, y la diferencia es lo que se SABE. Con estados, las que
+ * no están hechas se nombran: cada una lleva el suyo, y una «hecha» sin nada
+ * detrás no se aceptó. Sin estados sólo se puede contar, y hasta el 2026-09-22
+ * se nombraba «la cola de la lista» — con A y C hechas, le decía que faltaba C
+ * (G2 de la auditoría). Ahora se le enseña la lista entera y se le dice que no
+ * se sabe cuál es.
  */
-function tareasSinEvidencia(tareas: readonly string[], evidencias: number): string[] {
-  // Se asignan EN ORDEN, que es el orden en el que el modelo dijo que las iba a
-  // hacer. No se pretende saber qué llamada fue cada tarea —no hay forma— y por
-  // eso el aviso habla de cuántas quedan sin evidencia, no de cuál es cuál.
-  return tareas.slice(Math.min(evidencias, tareas.length));
-}
-
-function buildEvidenceInstruction(pendientes: readonly string[], hechas: number, total: number): string {
+function buildEvidenceInstruction(
+  p: { readonly nombradas: readonly string[]; readonly todas: readonly string[] },
+  cambios: number,
+): string {
+  const lista = (ts: readonly string[]) => ts.map((t) => `«${t}»`).join(", ");
+  const cierre =
+    "Haz AHORA las que falten con la herramienta que corresponda. " +
+    "Si alguna no se puede hacer, o ya estaba hecha, dile al usuario EXACTAMENTE eso al cerrar — lo que no vale es enumerarlas todas como hechas.";
+  if (p.nombradas.length > 0) {
+    return (
+      `SISTEMA (el usuario NO escribió esto): de las ${p.todas.length} tarea(s) que declaraste, sin terminar se quedan: ${lista(p.nombradas)}. ` +
+      `Sólo tengo evidencia de ${cambios} cambio(s) real(es) en este turno, y a éstas no se les ha medido ninguno mientras estaban en curso (o no las marcaste hechas). ` +
+      cierre
+    );
+  }
   return (
-    `SISTEMA (el usuario NO escribió esto): declaraste ${total} tarea(s) y sólo tengo evidencia de ${hechas} cambio(s) real(es) — ` +
-    `una llamada que movió bytes de la página o escribió en la base. Sin evidencia se quedan: ${pendientes.map((t) => `«${t}»`).join(", ")}. ` +
-    "Puede que las hicieras y no lo parezca, o puede que se te quedaran por el camino. Haz AHORA las que falten con la herramienta que corresponda. " +
-    "Si alguna no se puede hacer, o ya estaba hecha, dile al usuario EXACTAMENTE eso al cerrar — lo que no vale es enumerarlas todas como hechas."
+    `SISTEMA (el usuario NO escribió esto): declaraste ${p.todas.length} tarea(s) y sólo tengo evidencia de ${cambios} cambio(s) real(es) — ` +
+    "una llamada que movió bytes de la página o escribió en la base. Como no marcaste en qué tarea estabas, NO sé cuál falta: " +
+    `revisa ${lista(p.todas)} y haz la que no esté hecha. ` +
+    "Para que pueda decírtela por su nombre, vuelve a llamar a declarar_tareas con el estado de cada una (en_curso al empezarla, hecha al terminarla). " +
+    cierre
   );
 }
 
@@ -822,6 +875,11 @@ export function repararNombre(
   return { sugerido: masParecida(nombre, declaradas) };
 }
 
+/** Las lecturas que COMPRUEBAN algo de la página: dan por hecha una tarea de
+ *  comprobar en curso. `elegir_foto` o `trabajar_en_pagina` no miran la
+ *  página, y `declarar_tareas`/`preguntar` no leen nada. */
+const LECTURAS_QUE_COMPRUEBAN = new Set(["leer_estado", "buscar_en_pagina", "mirar_pagina"]);
+
 const READ_ONLY_TOOLS = new Set([
   "leer_estado",
   "elegir_foto",
@@ -914,6 +972,31 @@ export function topesPorPlan(): {
  *  turno completo: suficiente para que no pierda la cuenta, poco para que no sea
  *  una regañina en cada tanda. */
 const VUELTAS_SIN_LISTA = 2;
+
+/**
+ * 🔴 H12 · LAS VUELTAS DE LLAMADAS RECHAZADAS NO SON TRABAJO.
+ *
+ * La vuelta contaba como «de trabajo» ANTES de pasar por las guardas, así que
+ * una tanda que las guardas rechazaban entera —la misma intención repetida, el
+ * mismo fallo otra vez— gastaba el presupuesto del turno sin ejecutar nada. G5
+ * de `plans/auditoria-len-vs-claude-code-2026-09-22.md`: dos ejecuciones reales,
+ * doce vueltas y `turn_limit`; en producción, `e1e469e1` con tres llamadas en el
+ * diario y el tope alcanzado.
+ *
+ * Ahora sólo cuenta la vuelta que EJECUTÓ algo que no es de lectura. Y como una
+ * vuelta rechazada ya no acerca el tope, algo tiene que cerrar a quien insiste:
+ * a la TERCERA seguida rechazada entera, el turno se redacta con los hechos
+ * delante y las herramientas apagadas. Tres y no dos: un modelo que se estrella
+ * dos veces contra la guarda suele cerrar solo a la siguiente —lo sujeta la
+ * prueba «a la TERCERA se le refusa… sin cortar el turno»—, y cortarle antes
+ * sería quitarle el cierre que iba a escribir. Claude Code no cuenta
+ * reintentos; aquí el tope es nuestro, por créditos, y lo que se corrige es la
+ * contabilidad.
+ */
+const VUELTAS_SOLO_RECHAZADAS = 3;
+
+const SIN_SALIDA =
+  "SISTEMA (el usuario NO escribió esto): tus últimas llamadas se rechazaron tres vueltas seguidas —repetían algo que ya se hizo o que ya falló— y no vas a poder seguir intentándolas en este turno. Cierra AHORA hablándole al usuario en su idioma: qué quedó hecho, qué no, y qué necesitas de él para seguir.";
 
 interface PendingCall {
   name: string;
@@ -1125,14 +1208,19 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     return con(avisos.nuevos(medicion, base === "sin-base" ? undefined : base) ?? "");
   };
 
-  /** Las tareas que el modelo declaró con `declarar_tareas`, en su orden. */
-  let tareas: string[] = [];
-  /** Llamadas que de verdad movieron algo. Ver `tareasSinEvidencia`. */
-  let evidencias = 0;
+  /** Las tareas que el modelo declaró con `declarar_tareas`, con su estado y
+   *  lo que se midió de cada una. Ver `lib/agent/lista-de-tareas.ts`. */
+  const lista = new ListaDeTareas();
   /** La lista se reclama UNA vez: si el modelo cierra otra vez sin completarla,
    *  se le deja cerrar y que lo diga él. Insistir dos veces es quemarle el
    *  presupuesto al usuario en una discusión. */
   let yaSeExigioEvidencia = false;
+  /** Lo que ese reclamo nombró. Ver `AgentLoopResult.tareasReclamadas`. */
+  let tareasReclamadas: string[] | null = null;
+  /** Ver `AgentLoopResult.rechazos`. */
+  const rechazos: { tool: string; motivo: string }[] = [];
+  /** Vueltas seguidas en las que las guardas rechazaron TODAS las llamadas. */
+  let vueltasSoloRechazadas = 0;
   /** Vueltas desde que se le devolvió la lista. Ver `recordatorioDeTareas`. */
   let vueltasSinLista = 0;
 
@@ -1158,28 +1246,37 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    * de turnos; aquí el tope son 6, así que copiar el número sería no disparar
    * JAMÁS. Se porta la proporción.
    *
-   * ⚠️ Y NO SE DICE CUÁL FALTA, porque no se sabe: `tareasSinEvidencia` asigna
-   * POR ORDEN y su propio comentario dice que no hay forma de saber qué llamada
-   * fue qué tarea. Claude Code puede enseñar estado porque lo mantiene el MODELO
-   * con TodoWrite; aquí lo honesto es devolver la lista entera y el recuento, y
-   * que decida él. Inventarse un «te falta la 4» sería afirmar lo que no se
-   * midió.
+   * 🔴 Y CON SU ESTADO, desde el 2026-09-22 (H02). Claude Code puede enseñar
+   * estado porque lo mantiene el MODELO; ahora aquí también, y además medido:
+   * cada tarea lleva lo que el servidor contó mientras estaba en curso. Si el
+   * modelo no usa estados, se le devuelve la lista y el recuento, y que decida
+   * él: inventarse un «te falta la 4» sería afirmar lo que no se midió.
    */
   const recordatorioDeTareas = (): string => {
-    if (tareas.length === 0 || tareasSinEvidencia(tareas, evidencias).length === 0) return "";
+    if (lista.vacia || !lista.pendientes().faltan) return "";
     if (vueltasSinLista < VUELTAS_SIN_LISTA) return "";
     vueltasSinLista = 0;
     return [
       "<tus-tareas>",
-      `Declaraste ${tareas.length} y tengo evidencia de ${evidencias} cambio(s) real(es). Siguen siendo:`,
-      ...tareas.map((t, i) => `${i + 1}. ${t}`),
-      "Se cuentan en ORDEN, así que no puedo decirte cuál falta — compruébalo tú antes de cerrar.",
+      lista.usaEstados
+        ? `Tu lista, con el estado de cada una y lo que he medido (${lista.cambios} cambio(s) real(es) en el turno):`
+        : `Declaraste ${lista.textos.length} y tengo evidencia de ${lista.cambios} cambio(s) real(es). Siguen siendo:`,
+      ...lista.lineas(),
+      lista.usaEstados
+        ? "Marca en_curso la que empieces y hecha la que termines, llamando otra vez a declarar_tareas."
+        : "No las marcaste con estado, así que no puedo decirte cuál falta — compruébalo tú antes de cerrar, o márcalas (en_curso / hecha) y te lo diré.",
       "</tus-tareas>",
     ].join("\n");
   };
   // ¿Ya se le insistió una vez por cerrar sin llamar a nada? Ver el bloque de
   // `calls.length === 0`.
   let yaSeInsistio = false;
+  /** ¿ALGUNA LLAMADA HIZO ALGO? Una que no es de lectura, que salió bien y que
+   *  no fue una edición nula. Es lo que decide la insistencia de abajo: hasta
+   *  el 2026-09-22 bastaba con haber llamado a CUALQUIER herramienta, así que
+   *  un `leer_estado` seguido de «Listo, cambié el titular» salía limpio y
+   *  cobrado (G4 de la auditoría). */
+  let actuo = false;
 
   /** ¿Escribió algo en la base este request? Ver `AgentLoopResult.mutoDurable`. */
   let mutoDurable = false;
@@ -1209,6 +1306,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     errorCode,
     mutoDurable,
     documentosPodados,
+    aplicado: [...aplicado],
+    tareasReclamadas,
+    tareasDeclaradas: lista.textos,
+    rechazos: [...rechazos],
     ...(resultadoObjetivo ? { objetivo: resultadoObjetivo } : {}),
   });
 
@@ -1341,7 +1442,84 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // `TopeCode` y no `AgentErrorCode`: sus dos únicos llamadores pasan
   // turn_limit/tool_limit, y estrecharlo aquí es lo que deja que el código
   // viaje al resultado sin un cast.
+  /**
+   * La segunda redacción del cierre (H04), con herramientas apagadas. Devuelve
+   * lo que escribió, ya emitido detrás del veredicto; `""` si no hay `closeOut`
+   * o no escribió nada, y entonces quien llama cae a pegar la lista como antes.
+   */
+  const redactarConLoMedido = async (dicho: string, medido: string): Promise<string> => {
+    if (!args.closeOut) return "";
+    let texto = "";
+    try {
+      for await (const ev of args.closeOut([
+        ...messages,
+        ...(dicho.trim() ? [{ role: "assistant" as const, content: dicho }] : []),
+        { role: "user", content: CON_LO_QUE_SE_MIDIO + medido + CIERRE_CON_LO_MEDIDO },
+      ])) {
+        if (ev.type === "text_delta") {
+          if (algunaVueltaYaDijoAlgo && texto.length === 0) args.emit({ type: "text", text: "\n\n" });
+          texto += ev.text;
+          algunaVueltaYaDijoAlgo = true;
+          args.emit({ type: "text", text: ev.text });
+        } else if (ev.type === "usage") {
+          inputTokens += ev.inputTokens;
+          outputTokens += ev.outputTokens;
+          cachedTokens += ev.cachedTokens;
+          thinkingTokens += ev.thinkingTokens;
+        }
+      }
+    } catch {
+      // Fail-soft: contar lo medido por la vía de siempre es mejor que nada.
+    }
+    return texto.trim();
+  };
+
+  /** Lo que SÍ se aplicó este turno, contado donde se cuenta la evidencia. Lo
+   *  reciben los dos cierres que redacta el modelo sin herramientas: el del
+   *  tope y el de las llamadas rechazadas. */
+  const hechosAplicados = (): string =>
+    aplicado.length > 0
+      ? `\n\nLo que SÍ se aplicó en este turno, medido por nosotros (no por tu relato): ${aplicado
+          .map((s) => `«${s}»`)
+          .join(", ")}. Todo lo que el usuario pidió y no esté en esa lista sigue PENDIENTE y tienes que nombrarlo.`
+      : "\n\nEn este turno NO se aplicó ningún cambio, medido por nosotros. Dilo tal cual: nada de lo que pidió quedó hecho.";
+
+  /** H12 · el cierre cuando el modelo insiste en llamadas que se le rechazan.
+   *  Un cierre normal, no un tope: hubo trabajo y se cuenta. Sin `closeOut`,
+   *  cae al cierre por tope de siempre. */
+  const cerrarSinSalida = async (): Promise<AgentLoopResult> => {
+    if (!args.closeOut) return await finishOnCap("turn_limit");
+    let texto = "";
+    for await (const ev of args.closeOut([...messages, { role: "user", content: SIN_SALIDA + hechosAplicados() }])) {
+      if (ev.type === "text_delta") {
+        if (algunaVueltaYaDijoAlgo && texto.length === 0) args.emit({ type: "text", text: "\n\n" });
+        texto += ev.text;
+        algunaVueltaYaDijoAlgo = true;
+        args.emit({ type: "text", text: ev.text });
+      } else if (ev.type === "usage") {
+        inputTokens += ev.inputTokens;
+        outputTokens += ev.outputTokens;
+        cachedTokens += ev.cachedTokens;
+        thinkingTokens += ev.thinkingTokens;
+      }
+    }
+    if (!texto.trim()) return await finishOnCap("turn_limit");
+    finalText = texto;
+    return buildResult(false);
+  };
+
   const finishOnCap = async (code: TopeCode): Promise<AgentLoopResult> => {
+    // 🔴 H05 · UN TURNO QUE TOPA TAMBIÉN SE CUENTA COMO NO MIRADO. Los ojos
+    // exigen presupuesto, así que al topar no corrían y el turno cerraba SIN
+    // tarjeta de verificación: la página había cambiado y nada decía que nadie
+    // la hubiera comprobado (G3 y C06 de la auditoría del 2026-09-22; en
+    // producción, cuatro topes del 14-15/09 sin tarjeta). No se paga una mirada
+    // aquí —el dinero de esa llamada no es una decisión de este bucle—: se DICE,
+    // en la tarjeta y en los hechos que recibe el cierre.
+    const sinComprobar = Boolean(args.verifyTurn && lastMutation);
+    if (sinComprobar) {
+      args.emit({ type: "action", tool: VERIFY_TOOL, status: "warning", summary: "no-mirado" });
+    }
     if (args.closeOut) {
       let wrapText = "";
       // 🔴 LOS HECHOS, NO LA MEMORIA — medido el 2026-09-11 con `tope-no-miente`.
@@ -1363,12 +1541,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // llamada, y este fichero ya explica en `recordatorioDeTareas` por qué no
       // se puede: la asignación es por ORDEN y sería inventarse el emparejamiento.
       // Se le dan los hechos y decide él.
-      const hechosDelTurno =
-        aplicado.length > 0
-          ? `\n\nLo que SÍ se aplicó en este turno, medido por nosotros (no por tu relato): ${aplicado
-              .map((s) => `«${s}»`)
-              .join(", ")}. Todo lo que el usuario pidió y no esté en esa lista sigue PENDIENTE y tienes que nombrarlo.`
-          : "\n\nEn este turno NO se aplicó ningún cambio, medido por nosotros. Dilo tal cual: nada de lo que pidió quedó hecho.";
+      const hechosDelTurno = hechosAplicados();
       // 🔴 I6 · Y EN QUÉ ESTADO SE LA DEJAS. Quedarse sin presupuesto a mitad
       // deja GUARDADO lo que hubiera hecho hasta ahí, y eso puede ser una página
       // que ya no funciona. Medido el 2026-09-14: el turno hizo siete ediciones,
@@ -1382,9 +1555,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         rotoPorLaUltima.length > 0
           ? `\n\n🔴 Y LA PÁGINA QUEDA ROTA, medido por nosotros: su JavaScript busca ${rotoPorLaUltima.length} elemento(s) que ya no existen (${rotoPorLaUltima.join(", ")}). Cuando eso pasa el script entero deja de correr, así que la página perdió TODA su interactividad, no sólo esa parte. DÍSELO al usuario claramente y dile que en el siguiente mensaje lo arreglas. NO cierres diciendo que está hecho.`
           : "";
+      const noSeMiro = sinComprobar
+        ? "\n\nY LA PÁGINA NO SE HA COMPROBADO: no quedó presupuesto para mirarla. No digas que está bien; di que no la has comprobado."
+        : "";
       for await (const ev of args.closeOut([
         ...messages,
-        { role: "user", content: WRAP_UP_INSTRUCTION + hechosDelTurno + estadoDeLaPagina },
+        { role: "user", content: WRAP_UP_INSTRUCTION + hechosDelTurno + estadoDeLaPagina + noSeMiro },
       ])) {
         if (ev.type === "text_delta") {
           wrapText += ev.text;
@@ -1524,6 +1700,32 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
 
     if (calls.length === 0) {
+      // LA LISTA DE TAREAS, ANTES QUE LOS OJOS. No tiene sentido juzgar cómo
+      // quedó la página si media petición no se ha hecho todavía: primero se
+      // completa el trabajo, y lo que se verifica es el resultado final.
+      //
+      // Se reclama UNA vez y sólo con presupuesto para actuar — pedirle que
+      // termine algo que ya no puede hacer sería gastarle una vuelta al usuario
+      // para llegar al mismo sitio, que es la misma regla que la de los ojos.
+      const pendientes = lista.pendientes();
+      if (
+        pendientes.faltan &&
+        !yaSeExigioEvidencia &&
+        mutatingTurns < maxTurns &&
+        budgetedToolCalls < maxToolCalls &&
+        toolCalls < ABSOLUTE_MAX_TOOL_CALLS
+      ) {
+        yaSeExigioEvidencia = true;
+        // Lo que NOMBRÓ como pendiente: sin estados no nombra ninguna.
+        tareasReclamadas = [...pendientes.nombradas];
+        messages.push({ role: "assistant", content: turnText });
+        messages.push({
+          role: "user",
+          content: buildEvidenceInstruction(pendientes, lista.cambios),
+        });
+        continue;
+      }
+
       // 🔴 ANUNCIÓ LA EDICIÓN Y NO LA HIZO. Se le pide UNA vez, aquí mismo.
       //
       // MEDIDO en producción el 2026-08-31, dos veces en tres minutos: a
@@ -1557,34 +1759,25 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // herramienta no marque mutación durable (activar_modulo, publicar…);
       // empujarlo sería pagar una vuelta de más por un turno que hizo su
       // trabajo. Lo que se corrige es cerrar sin haber llamado a NADA.
-      if (toolCalls === 0 && !yaSeInsistio && turnText.trim().length > 0) {
+      //
+      // 🔴 Y DESDE EL 2026-09-22, «NADA» INCLUYE LO QUE NO HIZO NADA. La guarda
+      // miraba `toolCalls === 0`, así que bastaba una lectura —`leer_estado`,
+      // `buscar_en_pagina`— para que «Listo, cambié X» saliera limpio y
+      // cobrado sobre una página intacta (G4 de
+      // `plans/auditoria-len-vs-claude-code-2026-09-22.md`). Ahora se mira
+      // `actuo`: alguna llamada que no es de lectura, que salió bien y que no
+      // dejó la página byte a byte igual. Un `activar_modulo` o una tarjeta de
+      // publicar SÍ actuaron —el brazo de control de su prueba lo sujeta— y
+      // una lectura o una edición nula no.
+      //
+      // Y VA DESPUÉS DEL RECLAMO DE TAREAS, no antes: si el modelo declaró una
+      // lista y no hay evidencia, el reclamo le nombra lo que falta, que es
+      // mejor aviso que éste. Y si ya se le reclamó, no se le insiste encima —
+      // dos avisos por lo mismo es la discusión que el reclamo ya prohíbe.
+      if (!actuo && !yaSeInsistio && !yaSeExigioEvidencia && turnText.trim().length > 0) {
         yaSeInsistio = true;
         messages.push({ role: "assistant", content: turnText });
-        messages.push({ role: "user", content: INSISTE_SIN_HERRAMIENTAS });
-        continue;
-      }
-
-      // LA LISTA DE TAREAS, ANTES QUE LOS OJOS. No tiene sentido juzgar cómo
-      // quedó la página si media petición no se ha hecho todavía: primero se
-      // completa el trabajo, y lo que se verifica es el resultado final.
-      //
-      // Se reclama UNA vez y sólo con presupuesto para actuar — pedirle que
-      // termine algo que ya no puede hacer sería gastarle una vuelta al usuario
-      // para llegar al mismo sitio, que es la misma regla que la de los ojos.
-      const pendientes = tareasSinEvidencia(tareas, evidencias);
-      if (
-        pendientes.length > 0 &&
-        !yaSeExigioEvidencia &&
-        mutatingTurns < maxTurns &&
-        budgetedToolCalls < maxToolCalls &&
-        toolCalls < ABSOLUTE_MAX_TOOL_CALLS
-      ) {
-        yaSeExigioEvidencia = true;
-        messages.push({ role: "assistant", content: turnText });
-        messages.push({
-          role: "user",
-          content: buildEvidenceInstruction(pendientes, evidencias, tareas.length),
-        });
+        messages.push({ role: "user", content: toolCalls === 0 ? INSISTE_SIN_HERRAMIENTAS : INSISTE_SIN_EFECTO });
         continue;
       }
 
@@ -1685,17 +1878,43 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // siguiente. Empujarlo a `messages` aquí sería una escritura MUERTA,
         // que es el error que el comentario de `observado` documenta abajo.
         const regresiones = verdict.regresiones ?? [];
-        if (regresiones.length > 0) {
-          const aviso = avisoDeRegresion(regresiones);
+        const avisoRegresion = regresiones.length > 0 ? avisoDeRegresion(regresiones) : "";
+        if (avisoRegresion) {
           args.emit({
             type: "action",
             tool: VERIFY_TOOL,
             status: "warning",
             summary: "regresion",
-            motivo: aviso,
+            motivo: avisoRegresion,
           });
-          args.emit({ type: "text", text: aviso });
-          turnText = turnText.trim() ? `${turnText.trim()}\n\n${aviso}` : aviso;
+        }
+        // Lo que se ha medido y es AFIRMABLE: la rotura y las promesas rotas.
+        // `observado` no entra: por definición es lo que no se puede afirmar, y
+        // desde el 2026-09-16 va a la tarjeta y no a la boca de Len — se midió
+        // que le repetía al dueño lo que él mismo acababa de decir.
+        const critica = verdict.estado === "roto" ? verdict.critique.trim() : "";
+        if (verdict.estado === "roto") {
+          // La tarjeta sale ANTES de la redacción, para que lo último que el
+          // dueño lee del modelo vaya detrás del veredicto. Lleva la lista
+          // medida en `motivo`: es lo único que dice qué se midió, y con la
+          // redacción de H04 ya no se pega como texto.
+          args.emit({
+            type: "action",
+            tool: VERIFY_TOOL,
+            status: "warning",
+            summary: "issues",
+            ...cobertura,
+            ...(critica ? { motivo: critica } : {}),
+          });
+        }
+        const medido = [critica, avisoRegresion].filter(Boolean).join("\n\n");
+        const redactado = medido ? await redactarConLoMedido(turnText, medido) : "";
+        if (redactado) {
+          turnText = turnText.trim() ? `${turnText.trim()}\n\n${redactado}` : redactado;
+        } else if (medido) {
+          // Sin `closeOut` o sin texto: la lista, verbatim, como hasta hoy.
+          args.emit({ type: "text", text: medido });
+          turnText = turnText.trim() ? `${turnText.trim()}\n\n${medido}` : medido;
         }
         if (verdict.estado === "roto") {
           // ⚰️ EL CICLO DE ARREGLO Y EL REVERT, RETIRADOS (Jesús, 2026-09-04).
@@ -1740,32 +1959,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // —la verificación no falló, encontró cosas— y ese matiz no es de
           // gusto: `status` lo leen el historial que se le manda al modelo y
           // los veredictos de los evals. Ver `agent-action-card.tsx`.
-          args.emit({
-            type: "action",
-            tool: VERIFY_TOOL,
-            status: "warning",
-            summary: "issues",
-            ...cobertura,
-          });
-          // SIN GUARDA DE DUPLICADO, y a diferencia de `observado` no hace
-          // falta: allí la nota la escribe el mismo modelo que redactó el
-          // turno, así que puede repetirla; aquí `critique` es la lista que
-          // arma el SERVIDOR con los issues del revisor («- …\n- …»), y el
-          // modelo no la ha visto nunca. Un `turnText.includes()` sobre varias
-          // líneas con viñetas no puede dar cierto jamás: sería una condición
-          // que se lee como un caso contemplado y no lo es.
-          // Lo que SÍ se comprueba es que haya algo que decir: un `critique`
-          // vacío emitiría una burbuja en blanco en la conversación. Hoy no
-          // puede pasar —`parseVisualVerdict` convierte un `broken:true` sin
-          // issues en `broken:false`— pero `verifyTurn` es una dependencia
-          // inyectada, y esta rama no puede fiarse de quién la implemente.
-          const critica = verdict.critique.trim();
-          if (critica) {
-            args.emit({ type: "text", text: critica });
-            finalText = turnText.trim() ? `${turnText.trim()}\n\n${critica}` : critica;
-          } else {
-            finalText = turnText;
-          }
+          // La tarjeta y lo medido ya salieron arriba —la redacción de H04 o,
+          // si no la hubo, la lista verbatim—, así que aquí sólo se cierra.
+          //
+          // Lo que SÍ se sigue comprobando es que haya algo que decir: un
+          // `critique` vacío emitiría una burbuja en blanco. Hoy no puede pasar
+          // —`parseVisualVerdict` convierte un `broken:true` sin issues en
+          // `broken:false`— pero `verifyTurn` es una dependencia inyectada.
+          finalText = turnText;
           // EL EMBUDO. Si hay objetivo y no se cumple, esto devuelve null y el
           // turno NO termina: se vuelve al principio del bucle, que es invocar
           // otra vez al modelo.
@@ -1890,9 +2091,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
     // A turn counts toward maxTurns only if it did something other than
     // read-only lookups — a hunt/read-only-only turn is "free" (see mutatingTurns).
-    if (calls.some((c) => !READ_ONLY_TOOLS.has(c.name))) {
-      mutatingTurns += 1;
-    }
+    // 🔴 Y SÓLO SI LO EJECUTÓ (H12): se cuenta al terminar la tanda, no antes de
+    // las guardas. Ver `VUELTAS_SOLO_RECHAZADAS`.
+    let ejecutadasDeTrabajo = 0;
+    let rechazadasEnLaVuelta = 0;
 
     const functionResponses: { name: string; response: Record<string, unknown> }[] = [];
     /** La pregunta con la que este turno se cierra, si alguna herramienta la
@@ -1940,16 +2142,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // una en rojo con un nombre inexistente le cuenta al usuario una avería
         // que no es suya. Se le devuelve al modelo una corrección legible y el
         // turno sigue, sin tocar presupuesto ni firmas fallidas.
-        functionResponses.push({
-          name: original.name,
-          response: {
-            ok: false,
-            error_de_uso:
-              `No existe ninguna herramienta llamada "${original.name}".` +
-              (reparo.sugerido ? ` La más parecida es "${reparo.sugerido}".` : "") +
-              " Llama a una de las que tienes declaradas, con su nombre exacto.",
-          },
-        });
+        const error_de_uso =
+          `No existe ninguna herramienta llamada "${original.name}".` +
+          (reparo.sugerido ? ` La más parecida es "${reparo.sugerido}".` : "") +
+          " Llama a una de las que tienes declaradas, con su nombre exacto.";
+        rechazos.push({ tool: original.name, motivo: error_de_uso });
+        rechazadasEnLaVuelta += 1;
+        args.onRechazo?.(original.name, original.args, error_de_uso);
+        functionResponses.push({ name: original.name, response: { ok: false, error_de_uso } });
         continue;
       }
       const call = reparo.arreglado === original.name
@@ -1963,14 +2163,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // guaranteed because a mutating turn advances maxTurns → finishOnCap.
       const sig = `${call.name}\u0000${stableStringify(call.args)}`;
       if ((failedSignatures.get(sig) ?? 0) >= FAIL_REPEAT_LIMIT) {
-        functionResponses.push({
-          name: call.name,
-          response: {
-            ok: false,
-            error:
-              "Ya intentaste esta misma acción con los mismos parámetros y falló varias veces. NO la repitas: cambia de enfoque (otra herramienta o parámetros distintos), o dile al usuario qué pudiste hacer y qué no.",
-          },
-        });
+        const error =
+          "Ya intentaste esta misma acción con los mismos parámetros y falló varias veces. NO la repitas: cambia de enfoque (otra herramienta o parámetros distintos), o dile al usuario qué pudiste hacer y qué no.";
+        rechazos.push({ tool: call.name, motivo: error });
+        rechazadasEnLaVuelta += 1;
+        args.onRechazo?.(call.name, call.args, error);
+        functionResponses.push({ name: call.name, response: { ok: false, error } });
         continue;
       }
 
@@ -2006,16 +2204,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         call.args.resumen.length > 0 &&
         (intentosPorIntencion.get(intencion) ?? 0) >= SAME_INTENT_LIMIT
       ) {
-        functionResponses.push({
-          name: call.name,
-          response: {
-            ok: false,
-            error:
-              `Ya ejecutaste «${call.args.resumen}» ${intentosPorIntencion.get(intencion)} veces en este turno y se aplicó. ` +
-              "Repetirla otra vez no avanza. Si el resultado no es el que esperabas, comprueba la página con leer_estado " +
-              "antes de volver a escribir, cambia de enfoque, o dile al usuario qué quedó hecho y qué no.",
-          },
-        });
+        const error =
+          `Ya ejecutaste «${call.args.resumen}» ${intentosPorIntencion.get(intencion)} veces en este turno y se aplicó. ` +
+          "Repetirla otra vez no avanza. Si el resultado no es el que esperabas, comprueba la página con leer_estado " +
+          "antes de volver a escribir, cambia de enfoque, o dile al usuario qué quedó hecho y qué no.";
+        rechazos.push({ tool: call.name, motivo: error });
+        rechazadasEnLaVuelta += 1;
+        args.onRechazo?.(call.name, call.args, error);
+        functionResponses.push({ name: call.name, response: { ok: false, error } });
         continue;
       }
 
@@ -2039,7 +2235,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       args.emit({ type: "action", tool: call.name, status: "running", summary });
 
       const outcome = await args.runTool(call.name, call.args);
+      if (!readOnly) ejecutadasDeTrabajo += 1;
       const ok = outcome.response.ok !== false;
+      // 🔴 H01 · LO QUE LA HERRAMIENTA DICE DE SU PROPIO EFECTO. Las puertas de
+      // edición lo declaran (`declararCambio`: `cambio` / `sin_cambio` /
+      // `no_se`); el resto no lo dice y se juzga por si escribió.
+      const cambioDeclarado = outcome.response.cambio;
+      const nula = cambioDeclarado === "sin_cambio";
+      if (ok && !nula && !READ_ONLY_TOOLS.has(call.name)) actuo = true;
       // El rojo y el ámbar salen del MISMO sitio y se excluyen: `motivoDelFallo`
       // sólo habla con `ok:false` y `avisoParaElDueno` sólo sin él.
       const descartada = avisoParaElDueno(outcome.response);
@@ -2058,6 +2261,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         ...(outcome.action?.cambio ? { cambio: outcome.action.cambio } : {}),
         ...(outcome.action?.edits !== undefined ? { edits: outcome.action.edits } : {}),
         ...(outcome.action?.ops?.length ? { ops: outcome.action.ops } : {}),
+        ...(outcome.action?.valores ? { valores: outcome.action.valores } : {}),
         // EL MOTIVO, a la tarjeta. Mismo string que acaba de irse al modelo en
         // `outcome.response` y que el diario guarda: uno solo, como en
         // Claude Code. `motivoDelFallo` ya devuelve `undefined` cuando la llamada
@@ -2077,16 +2281,24 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // 🔴 EL GEMELO VIAJA CON LA MUTACIÓN. Leerlo de la sesión al verificar
         // sería leer la página equivocada: `trabajar_en_pagina` mueve la sesión
         // a otra página a mitad de turno y `lastMutation` sigue siendo ésta.
-        lastMutation = {
-          html: outcome.updatedHtml,
-          page: outcome.page ?? null,
-          ...(outcome.taggedHtml ? { taggedHtml: outcome.taggedHtml } : {}),
-        };
-        // El mapa se llena aquí, junto a `lastMutation` y por la misma razón:
-        // es el único sitio donde se sabe QUÉ página acaba de cambiar. Se
-        // sobrescribe la entrada, así que de cada página queda su ÚLTIMA
-        // versión — que es la que hay que mirar.
-        ultimaPorPagina.set(outcome.page ?? null, lastMutation);
+        //
+        // Y UNA EDICIÓN NULA NO ES UNA MUTACIÓN (H01): la página es byte a byte
+        // la de antes, así que no hay nada nuevo que medir ni que mirar. La
+        // puerta devuelve el documento igual (`updatedHtml` va siempre que
+        // guardó), y sin esta guarda un turno cuya única edición fue nula
+        // pagaba unos ojos sobre una página que nadie tocó.
+        if (!nula) {
+          lastMutation = {
+            html: outcome.updatedHtml,
+            page: outcome.page ?? null,
+            ...(outcome.taggedHtml ? { taggedHtml: outcome.taggedHtml } : {}),
+          };
+          // El mapa se llena aquí, junto a `lastMutation` y por la misma razón:
+          // es el único sitio donde se sabe QUÉ página acaba de cambiar. Se
+          // sobrescribe la entrada, así que de cada página queda su ÚLTIMA
+          // versión — que es la que hay que mirar.
+          ultimaPorPagina.set(outcome.page ?? null, lastMutation);
+        }
       }
       // Lo durable incluye los cambios de AJUSTES, que no emiten html: módulos,
       // tema, motion, música, 3D, datos vivos. `runAgentTool` los cuenta.
@@ -2122,12 +2334,47 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       }
 
       if (outcome.pregunta) pregunta = outcome.pregunta;
-      if (outcome.tareas) tareas = outcome.tareas;
+      // LA LISTA, POR EL SERVIDOR. Lo que devuelve `declarar_tareas` es la lista
+      // que manda el modelo; la respuesta que vuelve es la que queda tras medir
+      // cada «hecha» nueva — y las que se negaron, por su nombre.
+      let respuesta = outcome.response;
+      if (outcome.tareas) {
+        const r = lista.declarar(outcome.tareas);
+        respuesta = {
+          ...outcome.response,
+          tareas: r.tareas,
+          ...(r.sinEvidencia.length > 0
+            ? {
+                sin_evidencia: r.sinEvidencia,
+                aviso_critico:
+                  `NO se marcaron hechas: ${r.sinEvidencia.map((t) => `«${t}»`).join(", ")}. ` +
+                  "Ninguna llamada mientras estaban en curso cambió nada (ni, si eran de comprobar, leyó nada). Hazlas ahora, o dile al usuario que no se pudieron.",
+              }
+            : {}),
+        };
+      }
       // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
       // viene de `declararCambio` (hash antes ≠ hash después); lo durable cubre
       // las que no tocan el documento — módulos, páginas, almacenes.
-      if (outcome.response.cambio === "cambio" || outcome.mutoDurable || outcome.updatedHtml) {
-        evidencias += 1;
+      //
+      // 🔴 H01 (2026-09-22): LO QUE LA HERRAMIENTA DECLARA MANDA. La condición
+      // era `cambio === "cambio" || mutoDurable || updatedHtml`, y las puertas
+      // de edición devuelven `updatedHtml` SIEMPRE que guardan — también cuando
+      // acaban de declarar `sin_cambio`. Así una edición nula pasaba por hecha:
+      // la tarea sin hacer no se reclamaba, y al topar el cierre recibía «SÍ se
+      // aplicó» sobre algo que no pasó (G1 y G3 de la auditoría). Es la forma
+      // de Claude Code: la acción informa de su propio efecto, y una edición
+      // que no cambia nada no cuenta como hecha.
+      //
+      // `no_se` SÍ cuenta, y es una decisión: sólo sale cuando no había
+      // documento anterior que comparar, o sea cuando la escritura CREÓ lo que
+      // hay. Descontarla haría reclamar una página que sí existe.
+      const esEvidencia =
+        cambioDeclarado === undefined
+          ? Boolean(outcome.mutoDurable || outcome.updatedHtml)
+          : cambioDeclarado !== "sin_cambio";
+      if (esEvidencia) {
+        lista.anotarCambio();
         // El MISMO sitio que cuenta la evidencia guarda su nombre: si se
         // contaran en dos lados, uno se quedaría atrás — que es la clase de
         // fallo que este repositorio ya tiene documentada tres veces.
@@ -2137,8 +2384,15 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         rotoPorLaUltima = Array.isArray(rotas) ? rotas.map(String) : [];
       }
 
-      functionResponses.push({ name: call.name, response: outcome.response });
+      // Una lectura que salió bien cuenta para una tarea de COMPROBAR en curso.
+      if (!esEvidencia && ok && LECTURAS_QUE_COMPRUEBAN.has(call.name)) lista.anotarLectura();
+
+      functionResponses.push({ name: call.name, response: respuesta });
     }
+
+    // La cuenta de la vuelta, ahora que se sabe qué se ejecutó de verdad.
+    if (ejecutadasDeTrabajo > 0) mutatingTurns += 1;
+    vueltasSoloRechazadas = calls.length > 0 && rechazadasEnLaVuelta === calls.length ? vueltasSoloRechazadas + 1 : 0;
 
     // 🔴 UNA PREGUNTA CIERRA EL TURNO, y la cierra el SERVIDOR.
     //
@@ -2198,5 +2452,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // y la ruta lo saca en la línea de log que ya emite: cero coste, y
     // `grep "podados"` sobre el diario dice cuánto está ahorrando de verdad.
     documentosPodados += podarDocumentosViejos(messages);
+
+    // H12 · quien insiste en lo que se le rechaza no avanza: se le cierra.
+    if (vueltasSoloRechazadas >= VUELTAS_SOLO_RECHAZADAS) return await cerrarSinSalida();
   }
 }

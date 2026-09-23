@@ -45,13 +45,11 @@
 // rompía el JavaScript. Sus revisiones siguen en la pestaña Versiones.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Dos slugs apuntan al mismo documento; null/undefined = la Home. */
-export function mismaPagina(
-  a: string | null | undefined,
-  b: string | null | undefined,
-): boolean {
-  return (a ?? null) === (b ?? null);
-}
+/** Dos slugs apuntan al mismo documento; null/undefined = la Home. Vive con
+ *  el historial del Agente, que la necesita para etiquetar los turnos de otra
+ *  página: una sola definición para las dos decisiones. */
+import { mismaPagina } from "@/lib/chat/historial-del-agente";
+export { mismaPagina };
 
 /** Lo mínimo de un turno que hace falta para decidir. */
 export interface TurnoParaUndo {
