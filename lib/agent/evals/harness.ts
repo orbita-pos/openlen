@@ -16,7 +16,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { GatewayError } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
-import { tagWithOpIds } from "@/lib/html-ops";
+import { stripOpIds, tagWithOpIds } from "@/lib/html-ops";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { PROMPT_MINIMO, herramientasDelSobre, type Sobre } from "@/lib/agent/evals/sobres";
 import { buildAgentMessages } from "@/lib/agent/context";
@@ -34,11 +34,26 @@ import {
   type VisualQualityRendererPool,
 } from "@/lib/ai/visual-quality-renderer";
 import {
+  CONFLICTO_AL_GUARDAR,
   realDeps,
   runAgentTool,
   summarizeProjectState,
+  type AgentDeps,
   type AgentSession,
 } from "@/lib/agent/tools";
+import { historialParaElAgente } from "@/lib/chat/historial-del-agente";
+import {
+  sanearDichoAntes,
+  sanearHistorial,
+  turnoAnteriorMudoDe,
+  turnosTotalesDe,
+  ventanaVisibleDe,
+} from "@/lib/agent/historial-saneado";
+import { corteDelTurno, crearRegistroDelTurno, type RegistroDelTurno } from "@/lib/agent/registro-del-turno";
+import { crearDiarioDelTurno, type DiarioDelTurno } from "@/lib/agent/diario-del-turno";
+import { createVersion, getVersionHtml, listVersions } from "@/lib/projects/versions";
+import { loQueCambioElDueno } from "@/lib/agent/cambios-del-dueno";
+import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
 import type { FalloSpec } from "@/lib/agent/prueba-js";
 import type { VerifyOutcome } from "@/lib/agent/loop";
 import {
@@ -48,7 +63,14 @@ import {
   type PruebaGuardada,
 } from "@/lib/agent/pruebas-de-la-pagina";
 import type { ProjectData } from "@/lib/projects/types";
-import { coverage, prometioYSeComprobo, type EvalCase, type EvalCumplimiento, type PruebaEnEval } from "./cases";
+import {
+  coverage,
+  prometioYSeComprobo,
+  type EvalCase,
+  type EvalCumplimiento,
+  type FilaDelTurno,
+  type PruebaEnEval,
+} from "./cases";
 import { anotarPromesas, cumplimientoDelTurno, type PromesasDelArnes } from "./promesas";
 import { brazoSinAcciones } from "./brazo-sin-acciones";
 
@@ -454,8 +476,23 @@ async function runLoopWithRetry(
   avisos?: string[],
   tropiezos?: string[],
   promesas?: PromesasDelArnes,
-): Promise<{ events: AgentStreamEvent[]; result: Awaited<ReturnType<typeof runAgentLoop>>; modelId: string }> {
-  const deps = realDeps();
+): Promise<{
+  events: AgentStreamEvent[];
+  result: Awaited<ReturnType<typeof runAgentLoop>>;
+  modelId: string;
+  registro: RegistroDelTurno;
+  diario: DiarioDelTurno;
+}> {
+  // X5 — la dependencia que falla. El MISMO error que lanza el guardado real
+  // cuando la fila se movió y no se pudo fusionar; nada más cambia.
+  const deps: AgentDeps = evalCase.fallos?.guardarChoca
+    ? {
+        ...realDeps(),
+        async saveProjectData() {
+          throw new Error(CONFLICTO_AL_GUARDAR);
+        },
+      }
+    : realDeps();
   // El arnés evalúa siempre sobre la Home, y esa suposición se escribe UNA vez.
   // Antes vivía dos veces —aquí implícita y abajo explícita—, que es la forma
   // exacta del hallazgo 1: dos capas decidiendo lo mismo por su cuenta.
@@ -469,6 +506,53 @@ async function runLoopWithRetry(
   );
   let lastErr: unknown;
   let modelId = "";
+
+  // X1 — LA CONVERSACIÓN PREVIA, calculada una vez: no depende del intento.
+  const previos = evalCase.turnosPrevios ?? [];
+  const delTaller = historialParaElAgente(
+    previos.map((t) => ({
+      userText: t.usuario,
+      assistantReasoning: t.len,
+      // Un turno cortado vuelve de la base como aplicado CON su marca
+      // (`rowToTurn`), que es lo que el taller reproduce en el historial.
+      status: "applied",
+      ...(t.cortado ? { cortado: true } : {}),
+      page: t.pagina ?? null,
+      actions: (t.acciones ?? []).map((a) => ({
+        tool: a.tool,
+        summary: a.summary,
+        status: a.status ?? "done",
+        ...(a.valores ? { valores: a.valores } : {}),
+      })),
+    })),
+    null,
+  );
+  const history = sanearHistorial(delTaller.history, new Set(tools.map((d) => String(d.name))));
+  const dichoAntes = sanearDichoAntes(delTaller.dichoAntes);
+  const conversacion =
+    previos.length > 0
+      ? { turnosTotales: turnosTotalesDe(delTaller.historyTotal), ventana: ventanaVisibleDe(history) }
+      : null;
+  const conVersiones = previos.some((t) => t.aplica) || Boolean(evalCase.entreTurnos);
+  const versiones = conVersiones ? await listVersions({ projectId, userId: opts.userId }) : [];
+  const cambios = conVersiones ? cambiosParaElAgente(versiones) : null;
+  // H07 — lo que el dueño cambió a mano desde el último turno de Len, por la
+  // MISMA función que la ruta. Sólo con versiones sembradas: sin ellas no hay
+  // última escritura de Len y el contexto de los casos de siempre no cambia.
+  const cambiosDelDueno = conVersiones
+    ? await (async () => {
+        const row = await deps.loadProject(projectId, opts.userId);
+        return loQueCambioElDueno({
+          versiones,
+          page: null,
+          actual: stripOpIds(row?.data.html ?? ""),
+          leerHtml: async (versionId) => {
+            const html = await getVersionHtml({ projectId, userId: opts.userId, versionId });
+            return html === null ? null : stripOpIds(html);
+          },
+        });
+      })()
+    : [];
 
   // UN NAVEGADOR POR CASO, igual que la ruta abre uno por request, y detrás el
   // mismo memo por documento. Perezoso: un caso sin `aviso` —o que no edita—
@@ -495,6 +579,12 @@ async function runLoopWithRetry(
     const abort = new AbortController();
     const timer = setTimeout(() => abort.abort(), PER_CASE_TIMEOUT_MS);
     const events: AgentStreamEvent[] = [];
+    // LA FILA Y EL DIARIO, como en la ruta: cada intento empieza de cero porque
+    // cada intento es un turno entero.
+    const registro = crearRegistroDelTurno();
+    const diario = crearDiarioDelTurno();
+    let ejecutadas = 0;
+    let escritas = 0;
     try {
       const row = await deps.loadProject(projectId, opts.userId);
       if (!row) throw new Error("fixture row vanished mid-run");
@@ -505,7 +595,25 @@ async function runLoopWithRetry(
         taggedHtml,
         userBrief: row.userBrief,
         prompt: evalCase.prompt,
-        history: [],
+        // X1 — la conversación previa, por los dos mismos pasos que en
+        // producción: lo que arma el taller y lo que la ruta deja pasar. Sin
+        // turnos previos sale `[]`, que es lo de siempre.
+        history,
+        ...(conversacion
+          ? {
+              conversacionRecortada:
+                conversacion.turnosTotales > 0
+                  ? { visibles: conversacion.ventana, totales: conversacion.turnosTotales }
+                  : null,
+              turnoAnteriorMudo: turnoAnteriorMudoDe(history),
+              dichoAntes,
+            }
+          : {}),
+        // X2 — el registro de cambios que la ruta le pasa al modelo. Sólo cuando
+        // el caso sembró versiones: sin ellas no hay nada que registrar y los
+        // casos de siempre no cambian de contexto.
+        ...(cambios ? { cambios } : {}),
+        ...(cambiosDelDueno.length > 0 ? { cambiosDelDueno } : {}),
         // LO QUE EL TALLER MANDA DE VERDAD y el arnés no sabía mandar: el
         // elemento señalado y la imagen adjunta. Sin ellos no se puede REPETIR
         // un turno real — «cámbiame esa sección» sin pin degenera en una
@@ -616,7 +724,24 @@ async function runLoopWithRetry(
         // determinista seguiría verde midiendo un envoltorio que ya no corre.
         runTool: anotarPromesas({
           session,
-          ejecutar: (name, args) => runAgentTool(session, deps, name, args),
+          // EL DIARIO, como en la ruta: la llamada y su respuesta entera.
+          // Y X3: tras la N-ésima ejecutada se aborta la señal, que es lo que
+          // hace la ruta cuando se cierra la pestaña o vence su plazo.
+          ejecutar: async (name, args) => {
+            const outcome = await runAgentTool(session, deps, name, args);
+            diario.anotar(name, outcome.response, args);
+            ejecutadas += 1;
+            if (outcome.mutoDurable) escritas += 1;
+            const corte = evalCase.cortarTras;
+            if (
+              corte &&
+              ((corte.llamadas !== undefined && ejecutadas >= corte.llamadas) ||
+                (corte.escrituras !== undefined && escritas >= corte.escrituras))
+            ) {
+              abort.abort();
+            }
+            return outcome;
+          },
           ...(promesas ? { promesas } : {}),
           ...(tropiezos ? { tropiezos } : {}),
         }),
@@ -657,7 +782,14 @@ async function runLoopWithRetry(
                 : { lineaBase: { taggedHtml, page: null } }),
             }
           : {}),
-        emit: (ev) => events.push(ev),
+        emit: (ev) => {
+          registro.observar(ev);
+          events.push(ev);
+        },
+        // Como la ruta: lo rechazado por las guardas también va al diario.
+        onRechazo: (tool, args, motivo) => {
+          diario.anotar(tool, { ok: false, rechazada: true, error: motivo }, args);
+        },
       });
 
       // A 503 that surfaced as a terminal upstream error event (not a throw)
@@ -675,7 +807,7 @@ async function runLoopWithRetry(
         );
         continue;
       }
-      return { events, result, modelId };
+      return { events, result, modelId, registro, diario };
     } catch (err) {
       lastErr = err;
       if (isDepleted(err)) {
@@ -720,7 +852,44 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
   let data: ProjectData = { html: FIXTURE_HTML };
   if (evalCase.setup) data = evalCase.setup(data);
 
+  // X1/X2 — LO QUE YA PASÓ ANTES DE ESTE TURNO: lo que hicieron los turnos
+  // previos de Len y, después, lo que el dueño tocó a mano. Se calcula antes de
+  // crear la fila para que el proyecto nazca en el estado en que lo encuentra
+  // el turno vivo; las versiones se siembran justo después, en orden.
+  const inicial = data.html;
+  const pasosDeLen: { antes: string; despues: string; etiqueta: string }[] = [];
+  for (const t of evalCase.turnosPrevios ?? []) {
+    if (!t.aplica) continue;
+    const antes = data.html;
+    data = t.aplica(data);
+    const resumen = (t.acciones ?? []).map((a) => a.summary).join(" · ") || t.usuario;
+    // La etiqueta con la que `persistPage` archiva una escritura del Agente.
+    pasosDeLen.push({
+      antes,
+      despues: data.html,
+      etiqueta: `Agente (${Math.max(1, t.acciones?.length ?? 0)} ops): ${resumen}`,
+    });
+  }
+  if (evalCase.entreTurnos) data = evalCase.entreTurnos.aplicar(data);
+
   const projectId = await createThrowawayProject(opts.userId, evalCase.id, data);
+  if (pasosDeLen.length > 0 || evalCase.entreTurnos) {
+    // POR `createVersion`, no con inserts a mano: así se deduplican y se
+    // etiquetan exactamente como en producción. Van en serie, y el orden de
+    // `createdAt` es el orden en que ocurrieron.
+    await createVersion({ projectId, html: inicial, label: "Pasted HTML", source: "initial" });
+    for (const paso of pasosDeLen) {
+      // Las dos filas de `persistPage`: el «antes» y lo que escribió el Agente.
+      await createVersion({ projectId, html: paso.antes, label: "Before AI edit", source: "manual" });
+      await createVersion({ projectId, html: paso.despues, label: paso.etiqueta, source: "chat" });
+    }
+    // La fila del editor sólo existe si pasaron cinco minutos desde la última:
+    // sin `conVersion`, la edición del dueño vive en la página y en NINGUNA
+    // versión, que es justo lo que pasa en producción dentro de esa ventana.
+    if (evalCase.entreTurnos?.conVersion) {
+      await createVersion({ projectId, html: data.html, label: "Edited content", source: "manual" });
+    }
+  }
   // FILAS QUE YA ESTABAN. Un caso de CORREGIR o QUITAR sólo mide algo si hay
   // algo que corregir: sin esto le pedíamos a Len cambiar el precio de un taco
   // que no existía, en un almacén que tampoco, y contábamos como fallo suyo que
@@ -734,6 +903,20 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
         await db.insert(schema.pageData).values({
           projectId,
           store,
+          doc,
+          bytes: JSON.stringify(doc).length,
+        });
+      }
+    }
+  }
+  // Las de un VISITANTE: `visitorId` es lo que las marca de origen ajeno.
+  if (evalCase.seedVisitantes) {
+    for (const [store, filas] of Object.entries(evalCase.seedVisitantes)) {
+      for (const doc of filas) {
+        await db.insert(schema.pageData).values({
+          projectId,
+          store,
+          visitorId: `eval-visitante-${crypto.randomUUID()}`,
           doc,
           bytes: JSON.stringify(doc).length,
         });
@@ -777,7 +960,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     visionOut += v.usage?.outputTokens ?? 0;
     return v;
   };
-  const verifyTurn: AgentLoopArgs["verifyTurn"] | undefined = opts.visual
+  const verifyTurn: AgentLoopArgs["verifyTurn"] | undefined = opts.visual || evalCase.ojos
     ? async ({ html }) => {
         const v = await judge(html);
         inLoopVerdict = v;
@@ -836,7 +1019,7 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     const avisos: string[] = [];
     // Las llamadas que volvieron con `ok: false`, con su motivo. Ver `runTool`.
     const tropiezos: string[] = [];
-    const { events, result, modelId } = await runLoopWithRetry(
+    const { events, result, modelId, registro, diario } = await runLoopWithRetry(
       opts,
       projectId,
       evalCase,
@@ -967,12 +1150,24 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
     // de las 13 reglas de `RUNTIME_MANDA_PRUEBA`, CERO tenían un caso capaz de
     // cazar su violación, y ésta era la primera de las cuatro causas — ningún
     // caso PODÍA afirmar sobre `prueba` aunque quisiera.
+    // X3 — LO QUE LA RUTA DEJARÍA GUARDADO de este turno, compuesto por la
+    // misma función. Un turno cortado sólo se puede juzgar por esto.
+    const fila: FilaDelTurno | null = registro.hayAlgo(result.mutoDurable)
+      ? registro.fila({
+          id: projectId,
+          userText: evalCase.prompt,
+          page: null,
+          toolResults: diario.entradas(),
+          corte: corteDelTurno(result),
+        })
+      : null;
     let reason = evalCase.assert({
       cumplimiento,
       data: finalData,
       events,
       result,
       pruebas: promesas.declaradas,
+      fila,
     });
 
     // 🔴 LA PROMESA, PUERTA DE TODA LA BATERÍA (promovida el 2026-09-22).

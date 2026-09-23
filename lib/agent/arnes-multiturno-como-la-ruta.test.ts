@@ -34,6 +34,9 @@ const SOLO_DE_LA_RUTA: Record<string, string> = {
   // Avisa al cliente por SSE de que el documento mutó, para que el taller
   // repinte. El arnés no tiene taller al otro lado del stream.
   onMutacion: "no hay cliente SSE al otro lado",
+  // Anota en el DIARIO del turno lo que rechazaron las guardas (H12-c). El
+  // conductor multiturno no escribe diario: su `runTool` tampoco anota nada.
+  onRechazo: "el conductor no escribe el diario del turno",
   // NB: los topes NO están aquí a propósito. La ruta dejó de pasarlos
   // (`topesPorPlan`: el tope de dinero es mensual), y esta misma prueba lo
   // cazó cuando se listaron de memoria — que es exactamente para lo que está

@@ -335,6 +335,21 @@ export default defineConfig({
       // es LISTA BLANCA: sin esta linea no corre nunca.
       "lib/generation/model-policy-sin-huerfanas.test.ts",
       "lib/agent/loop.test.ts",
+      // Deshacer lo de Len sobre lo que hay AHORA, sin llevarse lo que el dueño
+      // editó a mano (H06, auditoría 2026-09-22). Núcleo puro — pero `include`
+      // es LISTA BLANCA y sin esta línea la prueba existiría y no correría.
+      "lib/agent/deshacer-lo-de-len.test.ts",
+      // Lo que el dueño cambió a mano desde el último turno de Len (H07). Núcleo
+      // puro — `include` es LISTA BLANCA.
+      "lib/agent/cambios-del-dueno.test.ts",
+      // La lista de tareas con estado, medida por el servidor (H02). Núcleo
+      // puro — `include` es LISTA BLANCA.
+      "lib/agent/lista-de-tareas.test.ts",
+      // La fila del turno y la decisión de si se cortó (H05). Núcleo puro —
+      // `include` es LISTA BLANCA.
+      "lib/agent/registro-del-turno.test.ts",
+      // El prefijo de país que nadie dio (H09). Núcleo puro — LISTA BLANCA.
+      "lib/agent/prefijo-inventado.test.ts",
       // Lo medido que vuelve al modelo tras editar. `include` es LISTA BLANCA:
       // sin esta línea la prueba existiría y no correría nunca.
       "lib/agent/aviso-medido.test.ts",

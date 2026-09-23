@@ -89,7 +89,9 @@ export async function appendChatMessage(
  */
 export async function registrarTurnoDelServidor(
   projectId: string,
-  turn: StoredChatTurn & {
+  turn: Omit<StoredChatTurn, "status"> & {
+    /** `cortado` sólo lo escribe el servidor: ver `corteDelTurno`. */
+    status: StoredChatTurn["status"] | "cortado";
     toolResults?: { tool: string; ok?: boolean; respuesta: Record<string, unknown> }[] | null;
   },
 ): Promise<void> {
@@ -164,5 +166,8 @@ function rowToTurn(
   // treats undefined exactly like a pre-F2 row (no cards, "Applied" verb ok).
   if (row.actions && row.actions.length > 0) turn.actions = row.actions;
   if (row.noDocChange) turn.noDocChange = true;
+  // Un turno que se CORTÓ a medias se lee como aplicado —lo que hizo, hecho
+  // está— con la marca que lo distingue. Ver `corteDelTurno`.
+  if (row.status === "cortado") turn.cortado = true;
   return turn;
 }

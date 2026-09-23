@@ -43,6 +43,14 @@ const ActionSchema = z.object({
     .optional(),
   /** Cuántas ediciones aplicó esta llamada. */
   edits: z.number().int().min(0).max(10_000).optional(),
+  /** Los valores que aplicó la llamada, para el historial (H08-b). Se TRUNCA,
+   *  no se rechaza, como el `summary`. Y tiene que estar AQUÍ: `z.object`
+   *  descarta en silencio lo que no nombra, así que sin esta línea el campo
+   *  llegaría y se perdería al guardar. */
+  valores: z
+    .string()
+    .transform((s) => s.slice(0, 200))
+    .optional(),
   /**
    * QUÉ cambió, resuelto por el servidor mientras los `data-op-id` valían.
    *

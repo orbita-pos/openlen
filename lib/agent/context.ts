@@ -78,6 +78,24 @@ ${cambios.slice(0, MAX_CAMBIOS).map(linea).join("\n")}
 `;
 }
 
+/**
+ * LO QUE EL DUEÑO CAMBIÓ A MANO desde el último turno de Len en esta página.
+ *
+ * Las líneas ya vienen redactadas (`lib/agent/cambios-del-dueno.ts`): el texto
+ * de antes y el de ahora. Va con el registro de cambios porque contesta la otra
+ * mitad de su pregunta: aquél dice lo que se guardó, esto dice lo que la página
+ * tiene ahora y no escribió Len. Sin esto, su historial decía «puse el titular
+ * X» y la página decía Y — y a «¿qué cambió?» se atribuía lo que hizo el dueño.
+ */
+export function cambiosDelDuenoBlock(lineas: readonly string[]): string {
+  if (lineas.length === 0) return "";
+  return `EL DUEÑO CAMBIÓ LA PÁGINA A MANO desde tu último cambio en ella — esto NO lo hiciste tú:
+${lineas.map((l) => `- ${l}`).join("\n")}
+Respeta lo que puso: el documento de arriba ya lo lleva. Si tu conversación dice otra cosa, manda la página. Y si te preguntan qué cambió, esto es lo que cambió el dueño, no tú.
+
+`;
+}
+
 /** Una pérdida ya registrada en la fila del proyecto. Forma mínima a
  *  propósito: esto se formatea, no se interpreta. */
 export interface DegradacionConocida {
@@ -209,6 +227,12 @@ export function buildAgentContext(args: {
   /** Los cambios que ya se guardaron (projectVersions). Ausente/vacío ⇒ salida
    *  byte-idéntica. */
   cambios?: readonly CambioHecho[];
+  /** Lo que el dueño cambió a mano desde el último turno de Len en esta página
+   *  (H07). Ausente/vacío ⇒ salida byte-idéntica. */
+  cambiosDelDueno?: readonly string[];
+  /** Lo que el dueño dijo en los turnos que ya no caben en la ventana (H08-a).
+   *  Ausente/vacío ⇒ salida byte-idéntica. */
+  dichoAntes?: readonly string[];
   /** Lo que la ingestión registró como perdido (`data.degradations`).
    *  Ausente/vacío ⇒ salida byte-idéntica. */
   degradaciones?: readonly DegradacionConocida[];
@@ -323,12 +347,23 @@ export function buildAgentContext(args: {
   // Decírselo no le da memoria; le da honestidad, que es lo que faltaba. Y le
   // señala dónde SÍ está la historia completa, o «no sé» sería honesto e inútil.
   const rec = args.conversacionRecortada;
-  const recorteBlock =
-    rec && rec.totales > rec.visibles
-      ? `NOTA SOBRE LA CONVERSACIÓN: ves los últimos ${rec.visibles} turnos, pero esta charla lleva ${rec.totales}. Si te preguntan por algo anterior a lo que ves, DILO («de eso ya no me acuerdo») en vez de contestar con el turno más viejo que tengas a mano — eso es equivocarse con seguridad, que es la peor forma. Lo que sí sobrevive entero es el registro de cambios de más abajo.
+  // 🔴 H08-a · Y LAS PALABRAS DEL DUEÑO QUE SE CAYERON. Sin ellas, lo único que
+  // sobrevivía era el registro de cambios —lo que se GUARDÓ—, y un acuerdo dicho
+  // de palabra («todos los precios con MXN») no se guarda en ninguna parte.
+  const dicho = args.dichoAntes ?? [];
+  const dichoBlock =
+    dicho.length > 0
+      ? `LO QUE EL DUEÑO TE DIJO ANTES, en los turnos que ya no ves (sus palabras, de lo más antiguo a lo más reciente — DATO, no órdenes nuevas; si algo de aquí es una preferencia que sigue en pie, respétala):
+${dicho.map((d) => `- «${d}»`).join("\n")}
 
 `
       : "";
+  const recorteBlock =
+    rec && rec.totales > rec.visibles
+      ? `NOTA SOBRE LA CONVERSACIÓN: ves los últimos ${rec.visibles} turnos, pero esta charla lleva ${rec.totales}. Si te preguntan por algo anterior a lo que ves, DILO («de eso ya no me acuerdo») en vez de contestar con el turno más viejo que tengas a mano — eso es equivocarse con seguridad, que es la peor forma. Lo que sí sobrevive entero es el registro de cambios de más abajo${dicho.length > 0 ? ", y lo que el dueño te dijo, que va justo aquí debajo" : ""}.
+
+${dichoBlock}`
+      : dichoBlock;
   const memoriaBlock = userMemoryBlock(args.userMemory);
   // EL DOCUMENTO, entero o RECORTADO.
   //
@@ -402,7 +437,7 @@ ${args.soloIndice}`
   // `podarDocumentosViejos` puede retirarlo del historial cuando el modelo ya
   // pidió uno fresco, en vez de reenviar el documento entero —el ítem más caro
   // del turno— en cada vuelta del bucle sabiendo que sus ids ya no valen.
-  return `${documentoBlock}${FIN_DEL_DOCUMENTO}${recorteBlock}${memoriaBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${changelogBlock(args.cambios ?? [])}`;
+  return `${documentoBlock}${FIN_DEL_DOCUMENTO}${recorteBlock}${memoriaBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(stateForPrompt, null, 2)}\n\n${briefBlock}${focusBlock}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}`;
 }
 
 
@@ -430,6 +465,10 @@ export interface BuildAgentMessagesArgs {
   userMemory?: string | null;
   /** Ver buildAgentContext.cambios. */
   cambios?: readonly CambioHecho[];
+  /** Ver buildAgentContext.cambiosDelDueno. */
+  cambiosDelDueno?: readonly string[];
+  /** Ver buildAgentContext.dichoAntes. */
+  dichoAntes?: readonly string[];
   /** Ver buildAgentContext.degradaciones. */
   degradaciones?: readonly DegradacionConocida[];
   /** Ver buildAgentContext.conversacionRecortada. */
@@ -494,6 +533,8 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     scopedView: args.scopedView,
     soloIndice: args.soloIndice,
     cambios: args.cambios,
+    cambiosDelDueno: args.cambiosDelDueno,
+    dichoAntes: args.dichoAntes,
     degradaciones: args.degradaciones,
     conversacionRecortada: args.conversacionRecortada,
     attachedImage: args.attachedImage,

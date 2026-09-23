@@ -30,6 +30,9 @@ import { debitCredits } from "@/lib/credits";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { applyOps, buildOutline, buildScopedView, outerHtmlByOpId, rejectBlindOps, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpAttr, type OpType } from "@/lib/html-ops";
 import { avisoContenidoPerdido, contenidoPerdido } from "@/lib/agent/contenido-perdido";
+import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
+import type { TareaDeclarada } from "@/lib/agent/lista-de-tareas";
+import { valoresDeTema } from "@/lib/agent/valores-de-tema";
 import { vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { CONDICION_MAX, TURNOS_MAXIMOS_CON_OBJETIVO } from "@/lib/agent/objetivo/evaluar-condicion";
 import { describirOps, type OpDescrita } from "@/lib/agent/ops-descritas";
@@ -54,6 +57,7 @@ import { avisoReglasMuertas, type ReglaMuerta } from "@/lib/document/css-wiring"
 import { avisoEnlacesDesfasados, enlacesDesfasados } from "@/lib/agent/enlaces-desfasados";
 import { avisoHandlersMuertos, esHandler, handlersMuertos, type HandlerMuerto } from "@/lib/agent/handlers-muertos";
 import { enlacesInventados, avisoEnlacesInventados, type EnlaceInventado } from "@/lib/agent/enlaces-inventados";
+import { avisoPrefijosInventados, prefijosInventados, type PrefijoInventado } from "@/lib/agent/prefijo-inventado";
 import { validaPruebaJs, MAX_PRUEBA_JS_BYTES } from "@/lib/agent/prueba-js";
 import { AGENT_MEMORY_MAX, rememberAboutUser } from "@/lib/agent/user-memory";
 import { leerDeInternet } from "@/lib/agent/internet";
@@ -256,7 +260,12 @@ export interface AgentDeps {
     projectId: string,
     userId: string,
     page: string | null,
-  ): Promise<{ id: string; label: string }[]>;
+  ): Promise<{ id: string; label: string; source?: string }[]>;
+  /** El documento guardado en ESA versión. Lo necesita `revertir_ultimo_cambio`
+   *  para deshacer lo de Len sobre lo que hay ahora sin llevarse lo que el
+   *  dueño editó después (H06). Opcional: sin ella, la herramienta restaura
+   *  como antes. */
+  versionHtml?(projectId: string, userId: string, versionId: string): Promise<string | null>;
   /** Devuelve la página a ese punto de guardado y escribe el proyecto. `null`
    *  cuando la versión no existe o no es del dueño.
    *
@@ -296,6 +305,14 @@ async function readImageManifest(): Promise<unknown> {
   return data;
 }
 
+/** Lo que lanza el guardado cuando la fila se movió y no se pudo fusionar. Una
+ *  constante y no una cadena en línea: el arnés de evals inyecta este MISMO
+ *  fallo para medir qué hace Len cuando guardar choca (X5 de la auditoría del
+ *  2026-09-22), y una copia de la frase dejaría de ser el mismo fallo en cuanto
+ *  alguien tocara ésta. */
+export const CONFLICTO_AL_GUARDAR =
+  "la página cambió mientras se guardaba y no se pudo fusionar; vuelve a intentarlo";
+
 export function realDeps(): AgentDeps {
   return {
     async loadProject(projectId, userId) {
@@ -324,11 +341,7 @@ export function realDeps(): AgentDeps {
     async saveProjectData(projectId, userId, aplicar) {
       const r = await actualizarData({ projectId, userId, aplicar });
       if (!r.ok) {
-        throw new Error(
-          r.motivo === "conflicto"
-            ? "la página cambió mientras se guardaba y no se pudo fusionar; vuelve a intentarlo"
-            : "proyecto no encontrado",
-        );
+        throw new Error(r.motivo === "conflicto" ? CONFLICTO_AL_GUARDAR : "proyecto no encontrado");
       }
     },
     async redesignDocument(userId, input) {
@@ -452,7 +465,13 @@ export function realDeps(): AgentDeps {
       // la subpágina. El propio módulo lo dice en su cabecera: los snapshots
       // están separados por página justamente para que eso no pase.
       const todas = await listVersions({ projectId, userId });
-      return todas.filter((v) => v.page === page).map((v) => ({ id: v.id, label: v.label }));
+      return todas
+        .filter((v) => v.page === page)
+        .map((v) => ({ id: v.id, label: v.label, source: v.source }));
+    },
+    async versionHtml(projectId, userId, versionId) {
+      const { getVersionHtml } = await import("@/lib/projects/versions");
+      return getVersionHtml({ projectId, userId, versionId });
     },
     async restoreVersion(projectId, userId, versionId) {
       const { restoreVersion } = await import("@/lib/projects/versions");
@@ -638,6 +657,10 @@ export interface ToolOutcome {
      * cae a ese diff, como antes.
      */
     ops?: readonly OpDescrita[];
+    /** Los valores que la llamada APLICÓ (el hex del acento, la fuente…),
+     *  cuando la frase del modelo no los dice. No se pinta: lo lee el historial
+     *  para que el modelo no los pierda (H08-b, `lib/agent/valores-de-tema.ts`). */
+    valores?: string;
   };
   /** HTML nuevo (sin op-ids) para refrescar el iframe. */
   updatedHtml?: string;
@@ -724,7 +747,7 @@ export interface ToolOutcome {
    * justamente el punto — sirven para poder contrastar lo que el modelo dice
    * que hizo con lo que se puede demostrar.
    */
-  tareas?: string[];
+  tareas?: readonly TareaDeclarada[];
   /**
    * ¿ESTA EDICIÓN CAMBIÓ EL COMPORTAMIENTO de la página? Es la MISMA decisión
    * con la que se le pide `prueba` al modelo (`cambioConducta`, sin contar el
@@ -1425,6 +1448,8 @@ type PersistResult =
       formulariosPerdidos?: number;
       /** Enlaces de red social nuevos cuyo usuario no sale por ningún lado. */
       enlacesInventados?: readonly EnlaceInventado[];
+      /** Teléfonos nuevos con un prefijo de país que nadie dio (H09). */
+      prefijosInventados?: readonly PrefijoInventado[];
       /** I5 — los elementos que el `<script>` de la página busca y esta
        *  escritura acaba de dejar sin existir. Viene de `persistPage`, que ya
        *  los calculaba para el modal del usuario; lo que faltaba era
@@ -1674,6 +1699,14 @@ async function persistHtmlChange(
         fuentes: [session.userPrompt, session.brief],
       })
     : [];
+  // Y EL PAÍS DE UN TELÉFONO, con la misma prueba de procedencia (H09).
+  const prefijos = enDisco
+    ? prefijosInventados({
+        antes: enDisco,
+        despues: finalHtml,
+        fuentes: [session.userPrompt, session.brief],
+      })
+    : [];
 
   const saved = await persistPage(
     {
@@ -1755,6 +1788,7 @@ async function persistHtmlChange(
     ...(saved.referenciasRotas.length ? { referenciasRotas: saved.referenciasRotas } : {}),
     ...(formulariosPerdidos > 0 ? { formulariosPerdidos } : {}),
     ...(inventados.length ? { enlacesInventados: inventados } : {}),
+    ...(prefijos.length ? { prefijosInventados: prefijos } : {}),
   };
 }
 
@@ -2479,6 +2513,12 @@ async function toolEditarPagina(
     criticos.push(avisoEnlacesInventados(persisted.enlacesInventados));
   }
 
+  // UN PAÍS QUE NADIE TE DIO (H09). Ver lib/agent/prefijo-inventado.ts.
+  if (persisted.prefijosInventados?.length) {
+    extra.prefijos_sin_origen = persisted.prefijosInventados.map((p) => p.href);
+    criticos.push(avisoPrefijosInventados(persisted.prefijosInventados));
+  }
+
   // Sin prueba, nadie sabrá si el comportamiento hace lo que promete — sólo si
   // explota. Se le dice, y se le dice por qué. Y si tenía una promesa, se le
   // dice también que ya no cuenta: retirarla en silencio le dejaría creyendo
@@ -2934,6 +2974,10 @@ async function toolCambiarTema(
       tool: "cambiar_tema",
       ok: true,
       summary: resumen ?? accent ?? fuente ?? radius ?? modoArg ?? "",
+      ...(() => {
+        const valores = valoresDeTema({ accent, fuente, radius, modo: modoArg });
+        return valores ? { valores } : {};
+      })(),
     },
     updatedHtml: persisted.finalHtml,
     page: session.page,
@@ -4158,10 +4202,28 @@ async function toolDeclararTareas(
   _deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
+  // 🔴 CON ESTADO desde el 2026-09-22 (H02), como la lista de Claude Code: cada
+  // tarea es `{ tarea, estado?, comprobar? }` y el modelo la vuelve a mandar
+  // entera según avanza. Una frase suelta sigue valiendo —es una tarea sin
+  // estado—: el historial y los hábitos del modelo traen listas de frases, y
+  // rechazarlas sería castigarle por algo que ayer era la forma correcta.
   const crudas = Array.isArray(args.tareas) ? args.tareas : [];
-  const tareas = crudas
-    .map((t) => (typeof t === "string" ? t.trim().slice(0, TAREA_MAX) : ""))
-    .filter((t) => t.length > 0)
+  const ESTADOS = new Set(["pendiente", "en_curso", "hecha"]);
+  const tareas: TareaDeclarada[] = crudas
+    .map((t): TareaDeclarada | null => {
+      if (typeof t === "string") return { texto: t.trim().slice(0, TAREA_MAX) };
+      if (!t || typeof t !== "object") return null;
+      const o = t as { tarea?: unknown; estado?: unknown; comprobar?: unknown };
+      if (typeof o.tarea !== "string") return null;
+      return {
+        texto: o.tarea.trim().slice(0, TAREA_MAX),
+        ...(typeof o.estado === "string" && ESTADOS.has(o.estado)
+          ? { estado: o.estado as TareaDeclarada["estado"] }
+          : {}),
+        ...(o.comprobar === true ? { comprobar: true } : {}),
+      };
+    })
+    .filter((t): t is TareaDeclarada => t !== null && t.texto.length > 0)
     .slice(0, MAX_TAREAS);
   if (tareas.length === 0) {
     return {
@@ -4174,10 +4236,14 @@ async function toolDeclararTareas(
   return {
     response: {
       ok: true,
-      tareas,
+      // La lista como QUEDA la escribe el bucle, que es quien sabe lo medido
+      // (`lib/agent/lista-de-tareas.ts`); esto es lo que mandó el modelo.
+      tareas: tareas.map((t) => t.texto),
       // Se le dice CÓMO se va a comprobar. Un checklist cuyo criterio el modelo
       // no conoce es un examen sorpresa, y aquí el criterio no es secreto.
-      nota: `Anotadas ${tareas.length}. Al cerrar el turno comprobaré que cada una tenga detrás una llamada que de verdad cambió algo; las que no, te las diré por su nombre. Declarar no hace nada: ahora hazlas.`,
+      nota:
+        `Anotadas ${tareas.length}. Llama otra vez a declarar_tareas con la lista entera según avances: en_curso la que empiezas (una a la vez) y hecha la que terminas. ` +
+        "Una «hecha» sólo se acepta si mientras estaba en curso alguna llamada cambió algo de verdad —o, si es de comprobar, leyó la página—; las que no, te las digo por su nombre. Declarar no hace nada: ahora hazlas.",
     },
     tareas,
   };
@@ -4206,8 +4272,69 @@ async function toolRevertirUltimoCambio(
   deps: AgentDeps,
 ): Promise<ToolOutcome> {
   const versiones = await deps.listVersions(session.projectId, session.userId, session.page);
-  // La primera es el estado de AHORA; la segunda es a donde se vuelve.
-  const destino = versiones[1];
+
+  // 🔴 H06 · SE DESHACE LO DE LEN, NO LO ÚLTIMO QUE HAYA.
+  //
+  // Restaurar `versiones[1]` a ciegas deshacía lo último guardado FUERA DE
+  // QUIEN FUERA. El editor sólo guarda versión de una edición de contenido si
+  // pasaron cinco minutos desde la anterior, así que había dos caminos, los dos
+  // malos: con el dueño editando poco después de Len, su texto desaparecía de la
+  // página viva; pasados cinco minutos, se deshacía SU edición y se conservaba
+  // la de Len, contestando `revertido_a: <etiqueta de Len>` (C11 y C11b de la
+  // auditoría del 2026-09-22).
+  //
+  // La vara es Claude Code, que no descarta lo que no escribió: deshace SU
+  // cambio sobre el contenido de ahora. Aquí eso es exacto — la última
+  // escritura de Len es la versión más nueva que escribió el Agente, y la de
+  // debajo es su «antes» — así que su cambio se invierte bloque a bloque sobre
+  // el documento actual (`deshacerSobreLoActual`). Si el dueño tocó LO MISMO,
+  // no hay forma correcta de elegir por él: no se toca nada y el modelo le
+  // pregunta.
+  const iLen = ultimaEscrituraDeLen(versiones);
+  const delLenV = iLen >= 0 ? versiones[iLen] : undefined;
+  const antesV = iLen >= 0 ? versiones[iLen + 1] : undefined;
+  if (delLenV && antesV && deps.versionHtml) {
+    const [row, delLen, antes] = await Promise.all([
+      deps.loadProject(session.projectId, session.userId),
+      deps.versionHtml(session.projectId, session.userId, delLenV.id),
+      deps.versionHtml(session.projectId, session.userId, antesV.id),
+    ]);
+    const enDisco = row ? activeHtml(row.data, session.page) : null;
+    if (enDisco !== null && delLen !== null && antes !== null && stripOpIds(enDisco) !== stripOpIds(delLen)) {
+      const r = deshacerSobreLoActual({ antes, delLen, actual: stripOpIds(enDisco) });
+      if (!r.ok) {
+        return {
+          response: {
+            ok: false,
+            error:
+              r.motivo === "se_solapan"
+                ? `Después de tu último cambio («${delLenV.label}») la página se editó a mano, y esa edición toca lo mismo que tú: deshacer se llevaría también lo del dueño. NO lo deshagas por tu cuenta: pregúntale con preguntar si quiere deshacer también su edición o dejarlo como está.`
+                : `tu último cambio («${delLenV.label}») no movió nada de la página: no hay nada tuyo que deshacer.`,
+          },
+        };
+      }
+      const persisted = await persistHtmlChange(session, deps, r.html, `Agente: deshacer «${delLenV.label}»`);
+      if (!persisted.ok) return falloAlGuardar(persisted);
+      return {
+        response: {
+          ok: true,
+          revertido_a: antesV.label,
+          conservado: "lo que el dueño editó a mano después de tu cambio sigue en la página",
+          documento: session.taggedHtml,
+          nota: "los data-op-id de `documento` son los de la página de ahora; los de antes ya no valen",
+        },
+        updatedHtml: persisted.finalHtml,
+        page: session.page,
+        versionPrevia: persisted.versionPrevia,
+        action: { tool: "revertir_ultimo_cambio", ok: true, summary: antesV.label },
+      };
+    }
+  }
+
+  // Sin edición del dueño encima: se vuelve al «antes» de la última escritura
+  // de Len. Sin ninguna escritura de Len en esta página, a la versión anterior
+  // a la última, como siempre: la primera es el estado de AHORA.
+  const destino = antesV ?? versiones[1];
   if (!destino) {
     return {
       response: {

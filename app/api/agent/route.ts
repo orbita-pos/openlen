@@ -33,7 +33,9 @@ import {
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
-import { listVersions } from "@/lib/projects/versions";
+import { getVersionHtml, listVersions } from "@/lib/projects/versions";
+import { loQueCambioElDueno } from "@/lib/agent/cambios-del-dueno";
+import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
 import { runAgentLoop, topesPorPlan, type AgentErrorCode, type VerifyOutcome } from "@/lib/agent/loop";
 import { VUELTAS_DE_OBJETIVO, evaluarCondicion } from "@/lib/agent/objetivo/evaluar-condicion";
 import { elObjetivoTermino } from "@/lib/agent/objetivo/veredicto";
@@ -41,10 +43,10 @@ import { randomUUID } from "node:crypto";
 
 import { abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
 import { crearDiarioDelTurno } from "@/lib/agent/diario-del-turno";
+import { corteDelTurno, crearRegistroDelTurno } from "@/lib/agent/registro-del-turno";
 import { actualizarSuite, marcarRegresiones, migrarSuite, vivas } from "@/lib/agent/pruebas-de-la-pagina";
 import type { FalloSpec } from "@/lib/agent/prueba-js";
 import { registrarTurnoDelServidor } from "@/lib/projects/chat";
-import type { StoredChatTurn } from "@/lib/projects/types";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
 import { observarPagina, verifyEditedPage } from "@/lib/agent/verify";
@@ -54,6 +56,13 @@ import {
   type VisualQualityRendererPool,
   type VisualQualityViewports,
 } from "@/lib/ai/visual-quality-renderer";
+import {
+  sanearDichoAntes,
+  sanearHistorial,
+  turnoAnteriorMudoDe,
+  turnosTotalesDe,
+  ventanaVisibleDe,
+} from "@/lib/agent/historial-saneado";
 import { medirUnaVezPorDocumento } from "@/lib/ai/medir-una-vez";
 import { recordAgentEyes } from "@/lib/ai/quality-metrics";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
@@ -172,6 +181,9 @@ export async function POST(req: Request): Promise<Response> {
     /** Cuántos turnos tiene la conversación entera (el cliente sólo manda los
      *  últimos). Sólo sirve para avisarle al modelo de que no lo ve todo. */
     historyTotal?: number;
+    /** Lo que el dueño dijo en los turnos que ya no caben (H08-a). Se sanea
+     *  con `sanearDichoAntes`: aquí es `unknown` a efectos prácticos. */
+    dichoAntes?: unknown;
     scope?: ScopeBody;
     attachedImage?: AttachedImageBody;
     /** EL ESFUERZO DE ESTE TURNO, fijado por el cliente al ENVIAR. Ver
@@ -321,125 +333,14 @@ export async function POST(req: Request): Promise<Response> {
   // Ver D5 de la spec 2026-09-15.
   const vistaDelTurno = vistaParaMedir(projectId, project, pageSlug);
   const tools = buildFunctionDeclarations(process.env);
-  // History hardening. El principio no cambia — NADA de lo que manda el
-  // navegador se pasa tal cual, porque una entrada esparcida entera sería un
-  // vector de inyección de tool-calls. Lo que cambia es que ahora el historial
-  // SÍ lleva la forma de herramienta, reconstruida aquí desde el catálogo real:
-  // del cliente sólo se acepta un NOMBRE, y sólo si es una herramienta que
-  // existe. Los argumentos se descartan siempre (van vacíos) y el resultado se
-  // reduce a un resumen de texto acotado.
-  //
-  // Por qué: MEDIDO el 2026-08-22 — sin las llamadas en el historial el Agente
-  // editó 1 de 12 veces y en los 11 fallos dijo «Listo ✅» sobre una página
-  // intacta; con ellas, 10 de 12.
-  // Cuántos turnos tiene la conversación DE VERDAD, no cuántos caben. Del
-  // mismo `turnsRef` del cliente del que salieron los que sí viajan.
-  const turnosTotales =
-    typeof body?.historyTotal === "number" && Number.isFinite(body.historyTotal)
-      ? Math.min(Math.max(Math.trunc(body.historyTotal), 0), 500)
-      : 0;
-  const nombresValidos = new Set(tools.map((d) => String(d.name)));
-  const limpiaLlamadas = (v: unknown) =>
-    Array.isArray(v)
-      ? v
-          .filter(
-            (c): c is { name: string } =>
-              !!c && typeof (c as { name?: unknown }).name === "string" &&
-              nombresValidos.has((c as { name: string }).name),
-          )
-          .slice(0, 8)
-          .map((c) => ({ name: c.name, args: {} }))
-      : [];
-  const limpiaRespuestas = (v: unknown) =>
-    Array.isArray(v)
-      ? v
-          .filter(
-            (r): r is { name: string; response?: { ok?: unknown; resumen?: unknown } } =>
-              !!r && typeof (r as { name?: unknown }).name === "string" &&
-              nombresValidos.has((r as { name: string }).name),
-          )
-          .slice(0, 8)
-          .map((r) => ({
-            name: r.name,
-            // 🔴 EL `ok` VIENE DEL CLIENTE, no de aquí. Esto escribía `true` a
-            // mano sobre TODA respuesta del historial, así que un turno pasado
-            // que falló se le reenviaba al modelo como si hubiera salido bien —
-            // y el modelo vuelve a intentar lo que ya no funcionó, o cierra
-            // afirmando un arreglo que no ocurrió.
-            //
-            // Es dato del cliente, así que se COERCE, no se cree: sólo el
-            // booleano `false` exacto marca fallo. Un `ok` inventado no puede
-            // hacer más daño que el `true` que se escribía siempre, y decir la
-            // verdad cuando la hay vale más que negarla siempre.
-            response: {
-              ok: (r.response as { ok?: unknown } | undefined)?.ok !== false,
-              resumen: String(r.response?.resumen ?? "").slice(0, 400),
-            },
-          }))
-      : [];
-
-  const history = Array.isArray(body?.history)
-    ? (() => {
-        const limpio = body.history
-          .filter(
-            (h) =>
-              h &&
-              (h.role === "user" || h.role === "assistant") &&
-              typeof h.content === "string",
-          )
-          .map((h) => {
-            const llamadas = limpiaLlamadas((h as { functionCalls?: unknown }).functionCalls);
-            const respuestas = limpiaRespuestas(
-              (h as { functionResponses?: unknown }).functionResponses,
-            );
-            return {
-              role: h.role,
-              content: h.content.slice(0, 4000),
-              ...(llamadas.length ? { functionCalls: llamadas } : {}),
-              ...(respuestas.length ? { functionResponses: respuestas } : {}),
-            };
-          })
-          // Una entrada sin contenido Y sin respuestas no aporta nada; el
-          // mensaje de respuestas SÍ va con `content` vacío, por diseño.
-          .filter((h) => h.content.length > 0 || h.functionResponses);
-        // 36 mensajes = 12 TURNOS, y un turno con herramientas ocupa TRES
-        // (usuario, asistente+llamadas, respuestas).
-        //
-        // El recorrido de este número cuenta la historia: eran 6 mensajes (3
-        // turnos), luego 12 (6 turnos), y con las llamadas de vuelta un turno
-        // pasó a ocupar tres. Doce turnos es una conversación de verdad y sigue
-        // cabiendo de sobra al lado del documento etiquetado, que es lo que de
-        // verdad pesa en este prompt.
-        //
-        // No se sube a los 50 que la base guarda: el prompt se paga en CADA
-        // turno para siempre, y el caso que motivaba una ventana enorme —«¿qué
-        // hemos hecho?»— lo cubre ahora el registro de cambios, que sobrevive a
-        // cualquier tope.
-        const cortado = limpio.slice(-36);
-        // El corte puede dejar huérfano un mensaje de respuestas cuya llamada
-        // quedó fuera. El serializador degrada eso a texto suelto; mejor
-        // quitarlo: media pareja confunde más de lo que recuerda.
-        while (cortado.length > 0 && cortado[0]!.functionResponses) cortado.shift();
-        return cortado;
-      })()
-    : [];
-
-  /**
-   * CUÁNTOS TURNOS DE LA CHARLA VIAJAN DE VERDAD.
-   *
-   * Se calcula UNA vez porque lo leen DOS sitios que tienen que decir lo mismo:
-   * la nota que va al modelo (`conversacionRecortada`) y el aviso que va al
-   * usuario (en el evento `done`). Estaba escrito sólo en el primero, y cuando
-   * el segundo llegó, copiarlo habría sido plantar la segunda mitad de una
-   * verdad duplicada — la forma exacta del defecto que este barrido persigue.
-   *
-   * Los mensajes de respuestas de herramienta TAMBIÉN son role "user" (con
-   * contenido vacío): contarlos infla la cuenta y diría que se ven más turnos
-   * de los que se ven.
-   */
-  const ventanaVisible = history.filter(
-    (h) => h.role === "user" && h.content.length > 0,
-  ).length;
+  // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador
+  // sólo se acepta un NOMBRE de herramienta que exista, sin argumentos, y un
+  // resumen acotado. Vive fuera para que el arnés de evals reproduzca una
+  // conversación con el MISMO saneado que aplica esta ruta.
+  const turnosTotales = turnosTotalesDe(body?.historyTotal);
+  const history = sanearHistorial(body?.history, new Set(tools.map((d) => String(d.name))));
+  const ventanaVisible = ventanaVisibleDe(history);
+  const dichoAntes = sanearDichoAntes(body?.dichoAntes);
 
   // Validate the scope payload (optional) — same shape/limits as ai-design.
   // The hint is a textual fallback; the path (when it resolves after
@@ -618,18 +519,28 @@ export async function POST(req: Request): Promise<Response> {
   // arreglado media fila. Cada una conserva su propia degradación —las dos
   // acotadas caen a `null`, el historial a `[]`—, así que una base caída sigue
   // dando un turno, que es lo que ya hacían por separado.
-  const [userMemory, esfuerzoDelUsuario, cambios] = await Promise.all([
+  //
+  // Las versiones se leen UNA vez y alimentan dos cosas: el registro de cambios
+  // y lo que el dueño cambió a mano desde el último turno de Len (H07).
+  const versionesDelProyecto = listVersions({ projectId, userId: session.user.id }).catch(() => []);
+  const [userMemory, esfuerzoDelUsuario, cambios, cambiosDelDueno] = await Promise.all([
     getUserMemoryBounded(session.user.id),
     getEsfuerzoGuardado(userId),
-    listVersions({ projectId, userId: session.user.id })
-      .then((vs) =>
-        vs
-          // El «Before AI edit» es el respaldo que se guarda ANTES de cada
-          // cambio; contarlo como cambio duplicaría el registro entero.
-          .filter((v) => v.label && !/^Before AI edit/i.test(v.label))
-          .map((v) => ({ label: v.label, page: v.page, createdAt: v.createdAt })),
-      )
-      .catch(() => []),
+    versionesDelProyecto.then(cambiosParaElAgente),
+    // 🔴 H07 · ENTRE TURNOS, LEN SE ENTERA DE LO QUE EL DUEÑO TOCÓ. Una lectura
+    // más, sólo cuando Len escribió alguna vez en esta página. Fail-soft: es
+    // contexto, y no poder calcularlo deja el turno como estaba.
+    versionesDelProyecto.then((versiones) =>
+      loQueCambioElDueno({
+        versiones,
+        page: pageSlug,
+        actual: stripOpIds(activeHtml),
+        leerHtml: async (versionId) => {
+          const html = await getVersionHtml({ projectId, userId, versionId });
+          return html === null ? null : stripOpIds(html);
+        },
+      }),
+    ),
   ]);
 
   const argsDelTurno = {
@@ -652,6 +563,8 @@ export async function POST(req: Request): Promise<Response> {
     // ventana de la conversación, a recargar y a volver un mes después — que es
     // por qué esto vale más que ampliar la ventana.
     cambios,
+    // Lo que el dueño cambió a mano desde el último turno de Len en esta página.
+    cambiosDelDueno,
     // Lo que la ingestión ya sabe que se perdió en esta página. El Chat lo
     // recibe desde hace tiempo (`KNOWN ISSUES ON THIS PAGE`); el Agente no lo
     // veía por ningún lado, así que empezaba a ciegas una conversación sobre
@@ -661,16 +574,15 @@ export async function POST(req: Request): Promise<Response> {
     // acuerdo» en vez de nombrar el turno más viejo que tenga a mano.
     conversacionRecortada:
       turnosTotales > 0 ? { visibles: ventanaVisible, totales: turnosTotales } : null,
+    // Y lo que el dueño dijo en los turnos que ya no se ven (H08-a).
+    dichoAntes,
     prompt,
     history,
     // ¿El turno anterior fue MUDO? Se deriva del historial que acaba de
     // sanearse: el último mensaje del asistente sin `functionCalls` significa
     // que no tocó nada. Es un hecho estructural, no una lectura de su prosa.
     // Un historial vacío (primer turno) no dispara nada.
-    turnoAnteriorMudo: (() => {
-      const ultimo = [...history].reverse().find((h) => h.role === "assistant");
-      return ultimo ? !("functionCalls" in ultimo) : false;
-    })(),
+    turnoAnteriorMudo: turnoAnteriorMudoDe(history),
     attachedImage: attachedImage
       ? { ...attachedImage, ...(attachedInline ? { visible: true } : {}) }
       : null,
@@ -823,6 +735,10 @@ export async function POST(req: Request): Promise<Response> {
       // ya escribió en la base. Misma idea que `cambioDurable` en el Chat
       // clásico (ai-design), que es la superficie hermana.
       let mutoDurable = false;
+      /** Si el turno se CORTÓ a medias habiendo cambiado algo, con qué código.
+       *  Vive fuera del try por lo mismo que `mutoDurable`: lo lee el `finally`
+       *  al escribir la fila. Ver `corteDelTurno`. */
+      let corte: AgentErrorCode | null = null;
       // EL REGISTRO DEL TURNO, del lado del SERVIDOR. Los tres viven fuera del
       // try por el mismo motivo que `mutoDurable`: quien los vuelca es el
       // `finally`, y el turno que hay que poder leer después es el que revienta.
@@ -834,10 +750,12 @@ export async function POST(req: Request): Promise<Response> {
       // viviera en la base: el usuario pulsaba «Reintentar» y se aplicaba dos
       // veces. Y de un turno que falló no quedaba el MOTIVO, sólo la tarjeta.
       const diario = crearDiarioDelTurno();
-      let textoDeLen = "";
-      const tarjetas: NonNullable<StoredChatTurn["actions"]> = [];
+      // El texto, las tarjetas y si cambió el documento: la fila que se guarda
+      // al final. Vive en `lib/agent/registro-del-turno.ts` para que el arnés
+      // de evals componga la MISMA fila al juzgar un turno cortado.
+      const registro = crearRegistroDelTurno();
       // CÓMO QUEDA LA SUITE DE LA PÁGINA al cerrar el turno. Se recoge aquí
-      // —como `tarjetas` o `mutoDurable`— porque quien lo sabe es el veredicto
+      // —como el registro o `mutoDurable`— porque quien lo sabe es el veredicto
       // de los ojos, que ocurre dentro del bucle, y quien lo guarda es la
       // escritura del final. Ver PROMPT-la-suite-de-la-pagina.md.
       type SuiteDelTurno = {
@@ -850,7 +768,6 @@ export async function POST(req: Request): Promise<Response> {
         rotas: string[];
       };
       let suiteDelTurno: SuiteDelTurno | null = null;
-      let cambioDocumento = false;
       // EL GRABADOR DE TURNOS. Apagado salvo que `OPENLEN_AGENT_RECORD_DIR`
       // diga dónde escribir — OPT-IN de verdad, porque el fixture lleva dentro
       // el HTML de la página y el mensaje del usuario. Sin la variable no se
@@ -1291,40 +1208,21 @@ export async function POST(req: Request): Promise<Response> {
           // falta para registrar el turno: no cambia el orden, ni el contenido,
           // ni el momento en que llega al cliente.
           emit: (ev) => {
-            if (ev.type === "text") textoDeLen += ev.text;
-            else if (ev.type === "action" && ev.status !== "running") {
-              tarjetas.push({
-                tool: ev.tool,
-                status: ev.status,
-                summary: ev.summary,
-                // Se PERSISTE. Sin esto la observación se vería en vivo y no
-                // al recargar — que es media avería, y la peor mitad porque
-                // sólo se nota tarde.
-                ...(ev.observacion ? { observacion: ev.observacion } : {}),
-                // Y EL MOTIVO CON ELLA. El navegador no es el único que escribe
-                // la transcripción: cuando el socket muere, la escribe esta
-                // ruta. Sin esta línea el turno que peor acabó sería justo el
-                // que perdiera el porqué al recargar.
-                ...(ev.motivo ? { motivo: ev.motivo } : {}),
-                // Y EL RECUENTO DE COBERTURA, por la misma razón que los dos de
-                // arriba: esta lista es BLANCA, así que un campo que no se
-                // nombre aquí se ve en vivo y desaparece al recargar.
-                ...(typeof ev.paginasMiradas === "number" &&
-                typeof ev.paginasTocadas === "number"
-                  ? {
-                      paginasMiradas: ev.paginasMiradas,
-                      paginasTocadas: ev.paginasTocadas,
-                    }
-                  : {}),
-              });
-            } else if (ev.type === "html") cambioDocumento = true;
+            registro.observar(ev);
             emit(ev.type, ev);
           },
           onMutacion: () => {
             mutoDurable = true;
           },
+          // H12-c · LO QUE LAS GUARDAS RECHAZARON también va al diario: nunca
+          // pasa por `runTool`, y sin esto un turno que se estrelló contra la
+          // guarda quedaba escrito como uno con tres llamadas y un tope.
+          onRechazo: (tool, args, motivo) => {
+            diario.anotar(tool, { ok: false, rechazada: true, error: motivo }, args);
+          },
         });
         mutoDurable = mutoDurable || result.mutoDurable;
+        corte = corteDelTurno({ ...result, mutoDurable });
 
         // 🔴 UN OBJETIVO QUE YA ACABÓ SE BORRA. Si se quedara puesto, cada turno
         // siguiente volvería a evaluarlo —una llamada más— y podría bloquear el
@@ -1567,6 +1465,7 @@ export async function POST(req: Request): Promise<Response> {
         // es igual de durable. El `done` cierra el turno con el aviso en vez de
         // dejar un rojo sobre una página que sí cambió.
         if (mutoDurable) emit("done", { turns: 0, toolCalls: 0, mutoDurable: true });
+        corte = corteDelTurno({ terminalError: true, topeAlcanzado: null, errorCode: code, mutoDurable });
         close();
       } finally {
         clearTimeout(timeout);
@@ -1588,18 +1487,18 @@ export async function POST(req: Request): Promise<Response> {
         // FAIL-SOFT y del todo: registrar el turno no puede costarle el turno a
         // nadie ni ensuciar una respuesta ya cerrada. El stream ya se cerró
         // cuando esto corre.
-        if (mutoDurable || tarjetas.length > 0 || textoDeLen.trim().length > 0) {
+        if (registro.hayAlgo(mutoDurable)) {
           try {
-            await registrarTurnoDelServidor(projectId, {
-              id: turnIdDelCliente ?? turnoId,
-              userText: prompt,
-              assistantReasoning: textoDeLen,
-              status: "applied",
-              page: pageSlug,
-              actions: tarjetas,
-              noDocChange: !cambioDocumento,
-              toolResults: diario.entradas(),
-            });
+            await registrarTurnoDelServidor(
+              projectId,
+              registro.fila({
+                id: turnIdDelCliente ?? turnoId,
+                userText: prompt,
+                page: pageSlug,
+                toolResults: diario.entradas(),
+                corte,
+              }),
+            );
           } catch (err) {
             console.warn("[agent] no se pudo registrar el turno", err);
           }
