@@ -4,13 +4,14 @@ import { Nav } from "@/components/nav";
 import { Pie } from "@/components/pie";
 import { Imagen } from "@/components/imagen";
 import { TarjetaLen } from "@/components/tarjeta-len";
-import { EstadoPrincipio, Fuente } from "@/components/contenido";
+import { CifraGrande, EstadoPrincipio, Fuente } from "@/components/contenido";
 import { articulos } from "@/content/research";
 
 export default async function Portada({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   if (!isLang(lang)) return null;
-  const p = dic(lang).portada;
+  const d = dic(lang);
+  const p = d.portada;
   return (
     <div className="wrap">
       <Nav lang={lang} ruta="/" />
@@ -24,7 +25,17 @@ export default async function Portada({ params }: { params: Promise<{ lang: stri
               {p.titular[2]}
             </h1>
           </div>
-          <p>{p.parrafo}</p>
+          <div>
+            <p>{p.parrafo}</p>
+            <div className="acciones">
+              <a className="btn" href={d.pruebaUrl}>
+                {p.cta}
+              </a>
+              <a className="btn ghost" href="#oficio">
+                {p.ctaSecundario}
+              </a>
+            </div>
+          </div>
         </section>
 
         <div className="cielo">
@@ -37,6 +48,46 @@ export default async function Portada({ params }: { params: Promise<{ lang: stri
             </a>
           </div>
         </div>
+
+        <section className="sec" id="oficio">
+          <div className="sec-head">
+            <div>
+              <div className="eyebrow">{p.oficio.antetitulo}</div>
+              <h2>{p.oficio.titulo}</h2>
+            </div>
+          </div>
+          <div className="pr oficio">
+            {p.oficio.tarjetas.map((x) => (
+              <div className="pcard" key={x.k}>
+                <h3>{x.t}</h3>
+                <p>{x.p}</p>
+                {x.commit ? <Fuente commit={x.commit} /> : null}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="sec">
+          <div className="sec-head">
+            <div>
+              <div className="eyebrow">{p.cifras.antetitulo}</div>
+              <h2>{p.cifras.titulo}</h2>
+            </div>
+            <Link className="btn ghost" href={`/${lang}/research/len-1-5/`}>
+              {p.cifras.leer}
+            </Link>
+          </div>
+          <div className="big">
+            {p.cifras.items.map((c) => (
+              <CifraGrande key={c.valor} valor={c.valor} commit={c.commit}>
+                {c.texto}
+              </CifraGrande>
+            ))}
+          </div>
+          <p className="nota-cifras">
+            {p.cifras.nota} <Fuente commit={p.cifras.notaCommit} />
+          </p>
+        </section>
 
         <TarjetaLen lang={lang} />
 
@@ -111,6 +162,17 @@ export default async function Portada({ params }: { params: Promise<{ lang: stri
               </div>
             ))}
           </div>
+        </section>
+
+        <section className="disponible">
+          <div>
+            <div className="eyebrow">{p.disponible.antetitulo}</div>
+            <h2>{p.disponible.titulo}</h2>
+            <p>{p.disponible.texto}</p>
+          </div>
+          <a className="btn" href={d.pruebaUrl}>
+            {p.disponible.cta}
+          </a>
         </section>
 
         <section className="mission img">

@@ -8,7 +8,7 @@ export const meta = {
   cover: "segunda",
   readingMinutes: 5,
   author: "Equipo OpenLen",
-  cifra: { valor: "1,00:1", nota: "el contraste que se inventó el medidor", commit: "616c054b" },
+  cifra: { valor: "1,00:1", nota: "el contraste que se inventó el medidor", commit: "d6e3da29" },
   indice: [
     { id: "el-encargo", texto: "Un encargo sencillo" },
     { id: "dos-falsos", texto: "Dos falsos positivos" },
@@ -19,7 +19,7 @@ export const meta = {
 
 <h2 id="el-encargo">Un encargo sencillo</h2>
 
-En un sitio inmobiliario, el encargo era cambiar un titular. Lo que pasó fue otra cosa: <Cifra valor="17" commit="616c054b">ediciones</Cifra> y <Cifra valor="8" commit="81b8d839">búsquedas de foto</Cifra> para un rubro que nuestro catálogo no cubre. La portada acabó con medio héroe en color sólido, tapando justo la foto de fachada que el usuario había pedido.
+En un sitio inmobiliario, el encargo era cambiar un titular. Lo que pasó fue otra cosa: <Cifra valor="17" commit="d6e3da29">ediciones</Cifra> y <Cifra valor="8" commit="bb3dd6f7">búsquedas de foto</Cifra> para un rubro que nuestro catálogo no cubre. La portada acabó con medio héroe en color sólido, tapando justo la foto de fachada que el usuario había pedido.
 
 <div className="pull">Nadie había mentido. El agente perseguía, obediente, dos problemas que no existían.</div>
 
@@ -27,29 +27,29 @@ En un sitio inmobiliario, el encargo era cambiar un titular. Lo que pasó fue ot
 
 Lo interesante es que los dos falsos positivos tenían **autores distintos**, y por tanto causas distintas.
 
-El primero lo firmó el crítico con visión: marcó como imagen rota las cajas de degradado que la generación deja a propósito cuando el catálogo no tiene foto para el rubro. Y no vio mal — en la captura hay rectángulos planos. Falló el paso siguiente, «por lo tanto está roto», que exige saber la **intención**, y la intención vive en el HTML, no en los píxeles. Falló porque nuestro esquema sólo le dejaba entregar conclusiones. <Fuente commit="ca4fc5c8" />
+El primero lo firmó el crítico con visión: marcó como imagen rota las cajas de degradado que la generación deja a propósito cuando el catálogo no tiene foto para el rubro. Y no vio mal — en la captura hay rectángulos planos. Falló el paso siguiente, «por lo tanto está roto», que exige saber la **intención**, y la intención vive en el HTML, no en los píxeles. Falló porque nuestro esquema sólo le dejaba entregar conclusiones. <Fuente commit="8df82832" />
 
-El segundo lo firmó el medidor determinista, que no usa ningún modelo. Midió <Cifra valor="1,00:1" commit="616c054b">«blanco sobre blanco»</Cifra> sobre un titular perfectamente legible: su paseo por los hermanos se saltaba el `<img>` y el div con degradado —los dos tienen el color de fondo transparente— y caía hasta el blanco del `<body>`. <Fuente commit="616c054b" />
+El segundo lo firmó el medidor determinista, que no usa ningún modelo. Midió <Cifra valor="1,00:1" commit="d6e3da29">«blanco sobre blanco»</Cifra> sobre un titular perfectamente legible: su paseo por los hermanos se saltaba el `<img>` y el div con degradado —los dos tienen el color de fondo transparente— y caía hasta el blanco del `<body>`. <Fuente commit="d6e3da29" />
 
-Con ese veredicto encima, y sin poder comprobarlo ni discutirlo, el agente releyó el documento cinco veces y teorizó seis sobre el velo del héroe antes de rendirse y pintar media portada de sólido. <Fuente commit="75ef2790" />
+Con ese veredicto encima, y sin poder comprobarlo ni discutirlo, el agente releyó el documento cinco veces y teorizó seis sobre el velo del héroe antes de rendirse y pintar media portada de sólido. <Fuente commit="4ffafd26" />
 
 <h2 id="el-principio">El principio</h2>
 
 Ningún agente serio pone un juez entre el actor y el artefacto. El que actúa **pide** y **recibe datos**. Eso es lo que cambió:
 
 <div className="big">
-  <CifraGrande valor="medir" commit="75ef2790">lo contesta un navegador real, es gratis, y sabe decir «no puedo determinarlo» — que también es una respuesta</CifraGrande>
-  <CifraGrande valor="describir" commit="75ef2790">lo contesta el papel con visión, y cuesta. El modo es explícito, para que el coste no dependa de cómo se redactó la frase</CifraGrande>
+  <CifraGrande valor="medir" commit="4ffafd26">lo contesta un navegador real, es gratis, y sabe decir «no puedo determinarlo» — que también es una respuesta</CifraGrande>
+  <CifraGrande valor="describir" commit="4ffafd26">lo contesta el papel con visión, y cuesta. El modo es explícito, para que el coste no dependa de cómo se redactó la frase</CifraGrande>
 </div>
 
 Y tres reglas más, cada una con su arreglo:
 
-- Un veredicto sobre el que el bucle **no puede actuar** jamás debe abrir un bucle: sólo la rotura medida gasta el presupuesto del usuario. <Fuente commit="81b8d839" />
-- Un ciclo de arreglo que no baja el número se **revierte**. Antes el bucle paraba, pero paraba *en el daño*: se quedaba con lo que la última reparación había dejado, porque nadie deshacía. <Fuente commit="c847fa55" />
+- Un veredicto sobre el que el bucle **no puede actuar** jamás debe abrir un bucle: sólo la rotura medida gasta el presupuesto del usuario. <Fuente commit="bb3dd6f7" />
+- Un ciclo de arreglo que no baja el número se **revierte**. Antes el bucle paraba, pero paraba *en el daño*: se quedaba con lo que la última reparación había dejado, porque nadie deshacía. <Fuente commit="0b70aac1" />
 - La regresión entra en la batería, con nombre propio: `aurora-marcador-no-es-rotura`. <Fuente ruta="lib/agent/evals/cases.ts" />
 
 <Abierto id="abierto" titulo="Lo que sigue abierto">
 El crítico con visión sigue sin estar medido contra conversaciones reales: sabemos que este caso concreto ya no se le escapa, no cuántos otros sí. Y la asimetría de fondo no se va a ninguna parte — describir cuesta dinero y medir no—, así que cada vez que el modo explícito se elija mal, alguien paga.
 
-La tercera cosa que esta caja daba por abierta —contarle al usuario, dentro del turno, qué observaciones se descartaron— se cerró la misma noche que se escribió el commit de arriba: la observación se emite como texto y viaja con el turno. <Fuente commit="b2b99dae" />
+La tercera cosa que esta caja daba por abierta —contarle al usuario, dentro del turno, qué observaciones se descartaron— se cerró la misma noche que se escribió el commit de arriba: la observación se emite como texto y viaja con el turno. <Fuente commit="633fdd7c" />
 </Abierto>

@@ -4,7 +4,7 @@
 
 **Qué promete.** Toda afirmación de Len descansa en un resultado observado. Si no lo miró, no dice que está bien.
 
-**Por qué.** Un agente que reporta éxito sobre trabajo que no ocurrió es peor que uno que falla a la vista: nadie va a revisar lo que le dijeron que estaba hecho. Nos ha pasado. La puerta de aprobar un objetivo devolvía 400 en silencio y la tarjeta volvía a su sitio como si nada — meses de una función que parecía no gustarle a nadie. <Fuente commit="4d34223e" />
+**Por qué.** Un agente que reporta éxito sobre trabajo que no ocurrió es peor que uno que falla a la vista: nadie va a revisar lo que le dijeron que estaba hecho. Nos ha pasado. La puerta de aprobar un objetivo devolvía 400 en silencio y la tarjeta volvía a su sitio como si nada — meses de una función que parecía no gustarle a nadie. <Fuente commit="4834a64d" />
 
 **Cómo lo comprobamos.** Con una familia de casos de su batería <Fuente ruta="lib/agent/evals/cases.ts" />, no con uno: `tope-no-miente` pregunta qué cuenta Len cuando se queda sin pasos y `tres-tareas-una-imposible` qué cuenta cuando una de las tres no se puede hacer. Otros le piden lo que no existe —una pasarela de cobro, un blog con base de datos, una temática que no está en el catálogo— y lo suspenden si dice que lo hizo. Otros vigilan el dato inventado: un correo o una cuenta que nadie le dio no pueden acabar en la página publicada. Y por debajo hay una guarda que no gasta modelo: si un turno cierra sin haber llamado a ninguna herramienta, se le dice que la página no ha cambiado y que no vuelva a decir que lo hizo hasta llamarla. <Fuente ruta="lib/agent/loop.ts" />
 </section>
@@ -19,7 +19,7 @@
 
 **Cómo lo comprobamos.** Con una guarda que corre en cada turno: si Len declaró tareas y sólo hay evidencia de menos cambios reales —y evidencia es que los bytes de la página se movieran, no un «ok» a secas—, se le nombran las que faltan y no se le deja cerrar enumerándolas todas como hechas. <Fuente ruta="lib/agent/loop.ts" /> La sujetan pruebas que no gastan un modelo, y varios casos de la batería que releen el documento final en vez de creerse el relato del cierre. <Fuente ruta="lib/agent/evals/cases.ts" />
 
-Y hay una medida: el caso que pide el mismo cambio en cuatro páginas se cerró con <Cifra valor="2 PASS" commit="c70fac17">a coste normal, cuando antes no había pasado ni una vez</Cifra>. No está cerrado —una corrida falló con la forma vieja y las seis siguientes salieron nulas—, así que la estabilidad sigue sin medir. Por eso este principio está en medición y no en verde.
+Y hay una medida: el caso que pide el mismo cambio en cuatro páginas se cerró con <Cifra valor="2 PASS" commit="a364731e">a coste normal, cuando antes no había pasado ni una vez</Cifra>. No está cerrado —una corrida falló con la forma vieja y las seis siguientes salieron nulas—, así que la estabilidad sigue sin medir. Por eso este principio está en medición y no en verde.
 </section>
 
 <section className="principio">
@@ -30,18 +30,18 @@ Y hay una medida: el caso que pide el mismo cambio en cuatro páginas se cerró 
 
 **Por qué.** Un agente que decide solo cuándo ha terminado, y además gasta mientras decide, es un agente que puede gastarte el presupuesto persiguiendo su propia idea de «listo».
 
-**Cómo lo comprobamos, y qué salió.** Durante meses la única puerta al objetivo fue que Len lo propusiera, así que «cuántas veces propone» era la medida de si la maquinaria se podía alcanzar siquiera. Medida donde importa —las corridas en las que el encargo NO cabía en un turno—, la respuesta fue <Cifra valor="0 propuestas en 11 corridas" commit="9170e753" />.
+**Cómo lo comprobamos, y qué salió.** Durante meses la única puerta al objetivo fue que Len lo propusiera, así que «cuántas veces propone» era la medida de si la maquinaria se podía alcanzar siquiera. Medida donde importa —las corridas en las que el encargo NO cabía en un turno—, la respuesta fue <Cifra valor="0 propuestas en 11 corridas" commit="fd2cbec9" />.
 
-La primera vez que lo medimos salió <Cifra valor="0 de 7" commit="493faaf9" />, y ahí hubo un matiz que nos costó cuatro equivocaciones aprender: en cinco de aquellas siete corridas **no proponer era lo correcto**, porque el encargo cabía en un turno y la propia herramienta dice que sólo se propone para trabajo de varios turnos. Un caso anterior suspendía a Len por obedecer. <Fuente commit="ef5e2dcb" /> Por eso se volvió a medir sólo donde el encargo no cabía.
+La primera vez que lo medimos salió <Cifra valor="0 de 7" commit="3f05897c" />, y ahí hubo un matiz que nos costó cuatro equivocaciones aprender: en cinco de aquellas siete corridas **no proponer era lo correcto**, porque el encargo cabía en un turno y la propia herramienta dice que sólo se propone para trabajo de varios turnos. Un caso anterior suspendía a Len por obedecer. <Fuente commit="d8f07f46" /> Por eso se volvió a medir sólo donde el encargo no cabía.
 
-Y por eso, desde el 8 de septiembre, ya no es la única puerta: el dueño escribe la condición y la pone él, sin esperar a que Len la proponga. <Fuente commit="9170e753" /> Hasta esa tarde esta sección decía que proponer era la única vía —lo era cuando se midió, y dejó de serlo el mismo día—. La cifra sigue diciendo algo, pero ya no dice si la función se alcanza: dice que el modelo sigue sin usarla.
+Y por eso, desde el 8 de septiembre, ya no es la única puerta: el dueño escribe la condición y la pone él, sin esperar a que Len la proponga. <Fuente commit="fd2cbec9" /> Hasta esa tarde esta sección decía que proponer era la única vía —lo era cuando se midió, y dejó de serlo el mismo día—. La cifra sigue diciendo algo, pero ya no dice si la función se alcanza: dice que el modelo sigue sin usarla.
 </section>
 
 <section className="principio">
 ## Evidencia, no veredictos
 <EstadoPrincipio estado="vigilado">Vigilado en su batería</EstadoPrincipio>
 
-**Qué promete.** Entre Len y tu página no hay un juez. Len pide datos y recibe datos: una medición que puede decir «no puedo determinarlo», o una descripción de la captura cuando hace falta — y el modo es explícito, para que el coste no dependa de cómo se redactó una frase. <Fuente commit="75ef2790" />
+**Qué promete.** Entre Len y tu página no hay un juez. Len pide datos y recibe datos: una medición que puede decir «no puedo determinarlo», o una descripción de la captura cuando hace falta — y el modo es explícito, para que el coste no dependa de cómo se redactó una frase. <Fuente commit="4ffafd26" />
 
 **Por qué.** Un veredicto que el agente no puede comprobar ni discutir convierte un falso positivo en horas de trabajo destructivo. Lo contamos entero en <a href="/es/research/evidence-not-verdicts/">Evidencia, no veredictos</a>.
 

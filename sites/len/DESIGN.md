@@ -184,6 +184,18 @@ validate` antes del `reload`), registro DNS, reserva del subdominio.
 
 ### 5.1 Portada
 
+> **Desde el 2026-09-23 la portada vende a Len como «tu propio desarrollador web»**
+> y anuncia **Len 1.5**. La lista de abajo es la v1 y se conserva como historia. Hoy el
+> orden es: héroe *Tu propio desarrollador web* con «Prueba Len» · franja del cielo «Len
+> 1.5» · **Lo que le pedirías a un desarrollador** (seis tarjetas, cada una con su commit) ·
+> **Len 1.0 → Len 1.5** (dos `CifraGrande` de `48a3b66b` y enlace al artículo `len-1-5`) ·
+> tarjeta de herramientas (*Veintisiete herramientas, un solo desarrollador*) · Cómo
+> trabaja · Lo último · Principios · **Disponible hoy** · misión *Tener una buena web no
+> debería depender de poder pagarla*. La audiencia pasa de inversores a usuarios; la
+> prueba para inversores sigue en Research y Principios. Un número de versión lo gana
+> una corrida de la batería contra la anterior (`scripts/portar-casos-a-version.mjs`),
+> no el calendario.
+
 1. **Nav:** marca (anillo Lens-O + «Len»), Research, Principios, OpenLen, ES·EN, «Prueba
    Len» → `https://openlen.com/new` (con prefijo de idioma).
 2. **Héroe:** antetítulo «OpenLen · El agente»; titular *Un agente que enseña su trabajo* /

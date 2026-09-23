@@ -1,8 +1,9 @@
 export const es = {
   htmlLang: "es",
   meta: {
-    title: "Len — un agente que enseña su trabajo",
-    description: "Len construye y edita tu página, y antes de decir «hecho» la mira.",
+    title: "Len — tu propio desarrollador web",
+    description:
+      "Le dices lo que quieres y Len construye tu página, la publica y la cambia cuando se lo pides. Sin agencia y sin cotizaciones.",
   },
   nav: {
     research: "Research",
@@ -36,19 +37,82 @@ export const es = {
     otroIdioma: "Read in English",
   },
   portada: {
-    antetitulo: "OpenLen · El agente",
-    titular: ["Un agente que ", "enseña", " su trabajo."],
+    antetitulo: "Len, de OpenLen",
+    titular: ["Tu ", "propio", " desarrollador web."],
     parrafo:
-      "Len construye y edita tu página, y antes de decir «hecho» la mira: renderiza el resultado, mide el contraste en el píxel y te cuenta lo que pasó — también cuando algo falla.",
+      "Le dices lo que quieres, como se lo dirías a una persona, y Len construye tu página, la publica y la cambia cada vez que se lo pides. Sin agencia, sin cotizaciones, sin esperar semanas.",
+    cta: "Prueba Len",
+    ctaSecundario: "Qué sabe hacer",
     altCielo: "Un cielo pintado al amanecer con un anillo de luz coral entre las nubes.",
     cielo: {
-      titulo: "Len 1.0",
-      texto: "El agente que construye tu página, la mira y te cuenta lo que vio.",
+      titulo: "Len 1.5",
+      texto: "Lo que antes era contratar a alguien, ahora es escribirle un mensaje.",
       cta: "Cómo trabaja →",
     },
+    oficio: {
+      antetitulo: "Lo que hace por ti",
+      titulo: "Lo que le pedirías a un desarrollador.",
+      tarjetas: [
+        {
+          k: "construye",
+          t: "Construye lo que pides",
+          p: "Una sección, una página nueva o el sitio entero rediseñado. Y si pides cambiar una frase, cambia esa frase: no reescribe todo lo demás.",
+          commit: "",
+        },
+        {
+          k: "funciona",
+          t: "Que funcione, no solo que se vea",
+          p: "Formularios que te llegan, un carrito que guarda en una base de datos, un asistente que contesta a tus visitantes.",
+          commit: "fa5443c7",
+        },
+        {
+          k: "pruebas",
+          t: "Deja pruebas de lo que construye",
+          p: "Cuando algo de tu página se mueve —un carrito, unas pestañas, un menú— escribe una prueba y la corre en un navegador de verdad. En cada cambio siguiente la vuelve a correr: si algo que ya funcionaba se rompe, te avisa.",
+          commit: "f3b10e53",
+        },
+        {
+          k: "mira",
+          t: "Mira antes de entregar",
+          p: "Abre la página y la mide: contraste en el píxel, desbordes en el móvil y errores de JavaScript. En todas las páginas que tocó, no solo en la última.",
+          commit: "10c1cdaa",
+        },
+        {
+          k: "cuenta",
+          t: "Te dice qué comprobó",
+          p: "Qué hizo, qué comprobó y qué no. Si algo no salió, lo dice, y te dice qué faltó.",
+          commit: "f8e9e8cd",
+        },
+        {
+          k: "cobro",
+          t: "No te cobra lo que no hizo",
+          p: "Si un turno se atasca y no llega a ningún lado, no se cobra.",
+          commit: "bfa5a400",
+        },
+      ],
+    },
+    cifras: {
+      antetitulo: "Len 1.0 → Len 1.5",
+      titulo: "Qué cambió desde el 1.0, medido.",
+      leer: "Cómo lo medimos",
+      items: [
+        {
+          valor: "64 → 67",
+          texto: "encargos resueltos de 69, con la misma batería contra el código de las dos versiones y el mismo modelo",
+          commit: "48a3b66b",
+        },
+        {
+          valor: "3",
+          texto: "fallos del 1.0 que el 1.5 ya no tiene: se quedaba sin pasos, avisaba de una edición que nadie hizo y, al topar, ni miraba la página ni decía que no la había mirado",
+          commit: "48a3b66b",
+        },
+      ],
+      nota: "Una corrida por caso: la diferencia es pequeña y está cerca del ruido. Hay 14 encargos más, escritos después del 1.0, que su banco de pruebas no sabe plantear; el 1.5 resuelve 13. Y un fallo que tienen los dos: inventan el prefijo de país de un teléfono que les das sin él.",
+      notaCommit: "48a3b66b",
+    },
     tarjeta: {
-      antetitulo: "Len · septiembre 2026",
-      titulo: "Veintisiete herramientas y dos ojos",
+      antetitulo: "Len 1.5 · septiembre 2026",
+      titulo: "Veintisiete herramientas, un solo desarrollador",
       texto:
         "Edita tu página nodo a nodo, busca en todo el sitio el dato que va a cambiar, elige fotos y publica. Y cada cambio lo verifica mirándolo: una captura que alguien describe y una medición que no depende de ningún modelo.",
       como: "Cómo trabaja →",
@@ -130,9 +194,15 @@ export const es = {
         },
       ],
     },
+    disponible: {
+      antetitulo: "Disponible hoy",
+      titulo: "Len trabaja dentro de OpenLen.",
+      texto: "Es el chat del editor: abres tu página, le escribes lo que quieres y se pone a trabajar. En diez idiomas.",
+      cta: "Prueba Len",
+    },
     mision: {
       antetitulo: "Por qué",
-      frase: ["Una página que ", "miente", " es peor que una página sin terminar. Len está hecho para decirte la verdad."],
+      frase: ["Tener una buena web no debería depender de ", "poder pagarla", "."],
     },
   },
 };

@@ -4,7 +4,7 @@
 
 **What it promises.** Every claim Len makes rests on an observed result. If it didn’t look, it doesn’t say it’s fine.
 
-**Why.** An agent that reports success over work that never happened is worse than one that fails in the open: nobody double-checks what they were told was done. It has happened to us. The gate that approves a goal was returning 400 in silence and the card just snapped back as if nothing had occurred — months of a feature that looked like one nobody wanted. <Fuente commit="4d34223e" />
+**Why.** An agent that reports success over work that never happened is worse than one that fails in the open: nobody double-checks what they were told was done. It has happened to us. The gate that approves a goal was returning 400 in silence and the card just snapped back as if nothing had occurred — months of a feature that looked like one nobody wanted. <Fuente commit="4834a64d" />
 
 **How we check it.** With a family of cases in its battery <Fuente ruta="lib/agent/evals/cases.ts" />, not one: `tope-no-miente` asks what Len reports when it runs out of steps, `tres-tareas-una-imposible` what it reports when one of three cannot be done. Others ask it for what does not exist —a payment gateway, a blog with a database, a theme the catalogue doesn’t have— and fail it if it says it did the work. Others watch the invented fact: an email or an account nobody gave it cannot end up on the published page. And underneath sits a guard that spends no model: if a turn closes without calling a single tool, Len is told the page has not changed, and not to claim it did until it calls one. <Fuente ruta="lib/agent/loop.ts" />
 </section>
@@ -19,7 +19,7 @@
 
 **How we check it.** With a guard that runs on every turn: if Len declared tasks and there is evidence of fewer real changes —and evidence means the page’s bytes actually moved, not a bare “ok”— it is told which ones are missing, and it is not allowed to close by listing them all as done. <Fuente ruta="lib/agent/loop.ts" /> It is held in place by tests that spend no model at all, and by several battery cases that re-read the final document instead of believing the closing account. <Fuente ruta="lib/agent/evals/cases.ts" />
 
-And there is a measurement: the case that asks for the same change on four pages closed with <Cifra valor="2 PASS" commit="c70fac17">at normal cost, where before it had never passed once</Cifra>. It isn’t closed —one run failed with the old shape and the six after it came back null— so stability is still unmeasured. That is why this principle is being measured rather than green.
+And there is a measurement: the case that asks for the same change on four pages closed with <Cifra valor="2 PASS" commit="a364731e">at normal cost, where before it had never passed once</Cifra>. It isn’t closed —one run failed with the old shape and the six after it came back null— so stability is still unmeasured. That is why this principle is being measured rather than green.
 </section>
 
 <section className="principio">
@@ -30,18 +30,18 @@ And there is a measurement: the case that asks for the same change on four pages
 
 **Why.** An agent that decides on its own when it has finished — and spends money while deciding — is an agent that can burn your budget chasing its own idea of “done”.
 
-**How we check it, and what came out.** For months the only gate to a goal was Len proposing one, so “how often does it propose” was the measure of whether that machinery was reachable at all. Measured where it matters —the runs where the job did NOT fit in a single turn— the answer was <Cifra valor="0 proposals across 11 runs" commit="9170e753" />.
+**How we check it, and what came out.** For months the only gate to a goal was Len proposing one, so “how often does it propose” was the measure of whether that machinery was reachable at all. Measured where it matters —the runs where the job did NOT fit in a single turn— the answer was <Cifra valor="0 proposals across 11 runs" commit="fd2cbec9" />.
 
-The first time we measured it the answer was <Cifra valor="0 of 7" commit="493faaf9" />, and there was a nuance it took us four mistakes to learn: in five of those seven runs **not proposing was the right answer**, because the job fitted in a single turn and the tool itself says to propose only for multi-turn work. An earlier test case failed Len for obeying. <Fuente commit="ef5e2dcb" /> That is why we measured again, only where the job didn’t fit.
+The first time we measured it the answer was <Cifra valor="0 of 7" commit="3f05897c" />, and there was a nuance it took us four mistakes to learn: in five of those seven runs **not proposing was the right answer**, because the job fitted in a single turn and the tool itself says to propose only for multi-turn work. An earlier test case failed Len for obeying. <Fuente commit="d8f07f46" /> That is why we measured again, only where the job didn’t fit.
 
-And that is why, since 8 September, it is no longer the only gate: the owner writes the condition and sets it directly, without waiting for Len to propose it. <Fuente commit="9170e753" /> Until that afternoon this section said proposing was the only route — true when we measured it, false by the end of the same day. The number still says something, but it no longer says whether the feature is reachable: it says the model still doesn’t use it.
+And that is why, since 8 September, it is no longer the only gate: the owner writes the condition and sets it directly, without waiting for Len to propose it. <Fuente commit="fd2cbec9" /> Until that afternoon this section said proposing was the only route — true when we measured it, false by the end of the same day. The number still says something, but it no longer says whether the feature is reachable: it says the model still doesn’t use it.
 </section>
 
 <section className="principio">
 ## Evidence, not verdicts
 <EstadoPrincipio estado="vigilado">Guarded by its battery</EstadoPrincipio>
 
-**What it promises.** There is no judge between Len and your page. Len asks for data and receives data: a measurement that is allowed to say “I can’t determine that”, or a description of the screenshot when one is needed — and the mode is explicit, so cost never depends on how a sentence was phrased. <Fuente commit="75ef2790" />
+**What it promises.** There is no judge between Len and your page. Len asks for data and receives data: a measurement that is allowed to say “I can’t determine that”, or a description of the screenshot when one is needed — and the mode is explicit, so cost never depends on how a sentence was phrased. <Fuente commit="4ffafd26" />
 
 **Why.** A verdict the agent can neither check nor argue with turns one false positive into hours of destructive work. The whole story is in <a href="/en/research/evidence-not-verdicts/">Evidence, not verdicts</a>.
 
