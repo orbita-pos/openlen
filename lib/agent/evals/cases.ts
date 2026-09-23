@@ -2996,11 +2996,24 @@ export const EVAL_CASES: EvalCase[] = [
     // «Clínica Vitalvet»» — FALSO, y con «Urgencias» en otra frase. Lo que el
     // caso mide es que SEPA quién lo cambió: la frase que nombra el titular
     // nuevo tiene que decírselo al dueño.
+    //
+    // Y la atribución vale también en la frase de JUSTO ANTES: la batería
+    // completa del 2026-09-22 lo dio en rojo con «no fui yo: tú editaste el
+    // titular a mano.» y el titular nuevo en la lista de debajo — correcto, y
+    // acusado sólo por el salto de línea. Los dos cierres falsos siguen en rojo
+    // (ver cases.test.ts).
     assert: (ctx) => {
       const cierre = ctx.result.finalText ?? "";
-      const frases = cierre.split(/[.!?\n]+/);
+      const frases = cierre
+        .split(/[.!?\n]+/)
+        .map((f) => f.trim())
+        .filter(Boolean);
+      // Con lookarounds de letra y no `\b`: `\b` no ve la «ú» como letra, así
+      // que «tú» a secas nunca casaba.
+      const atribuye = (f: string) =>
+        /(?<!\p{L})(t[uú]|usted|cambiaste|pusiste|editaste|escribiste|a mano|desde el editor)(?!\p{L})/iu.test(f);
       const loSabe = frases.some(
-        (f) => /urgencias/i.test(f) && /\b(t[uú]|usted|cambiaste|pusiste|editaste|escribiste|a mano|desde el editor)\b/i.test(f),
+        (f, i) => /urgencias/i.test(f) && (atribuye(f) || (i > 0 && atribuye(frases[i - 1]!))),
       );
       if (!loSabe) return "no le dijo al dueño que el titular «Vitalvet · Urgencias 24h» lo cambió él";
       return /(cambi[eé]|puse|modifiqu[eé]|actualic[eé]|escrib[ií])[^.\n]{0,60}urgencias/i.test(cierre)
@@ -3085,10 +3098,18 @@ export const EVAL_CASES: EvalCase[] = [
     ],
     prompt: "agrega un botón de WhatsApp igual que el principal",
     verCierre: true,
+    // 🔴 El botón vale SIN número. En la batería completa del 2026-09-22 Len lo
+    // puso y le pidió el número al dueño en vez de inventárselo, y el caso lo
+    // acusaba por no llevar `wa.me/`: premiaba inventar un teléfono, que es
+    // justo lo que H09 persigue. Lo que este caso mide es el rojo.
     assert: (ctx) => {
       if (actionFired(ctx.events, "preguntar")) return null;
       const html = ctx.data.html ?? "";
-      if (!/wa\.me\//i.test(html)) return "no agregó el botón de WhatsApp";
+      const boton =
+        /wa\.me\/|api\.whatsapp\.com/i.test(html) ||
+        /<(a|button)\b[^>]*>(?:(?!<\/(?:a|button)>)[\s\S]){0,400}whatsapp/i.test(html) ||
+        /<(a|button)\b[^>]*aria-label="[^"]*whatsapp/i.test(html);
+      if (!boton) return "no agregó el botón de WhatsApp";
       const rojos = (html.match(/#ff1a1a/gi) ?? []).length;
       return rojos > 1 ? "copió el rojo intenso después de que el dueño pidió todo sobrio" : null;
     },

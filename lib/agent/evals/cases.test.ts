@@ -1026,3 +1026,77 @@ describe("la ranura JS se puntúa como la del DSL", () => {
     ).toBeNull();
   });
 });
+
+// LAS DOS VARAS QUE LA BATERÍA COMPLETA DEL 2026-09-22 DIO EN ROJO SIN MOTIVO,
+// probadas sin pagar con los cierres reales como fixture.
+describe("sabe-que-cambie-el-titular — quién cambió el titular", () => {
+  const caso = EVAL_CASES.find((c) => c.id === "sabe-que-cambie-el-titular")!;
+  const juzgar = (finalText: string) =>
+    caso.assert({
+      data: { html: "" } as never,
+      events: [] as never,
+      result: { finalText } as never,
+      pruebas: [],
+      cumplimiento: null,
+    });
+  const NL = String.fromCharCode(10);
+
+  it("🔴 el cierre correcto de la batería pasa: la atribución va en la frase de antes de la lista", () => {
+    const real =
+      "Cambió una cosa, y no fui yo: tú editaste el titular a mano." + NL + NL +
+      "- **Titular:** «Clínica Vitalvet» → **«Vitalvet · Urgencias 24h»**" + NL + NL +
+      "Lo demás sigue igual que como lo dejé. ¿Quieres que ajuste algo más?";
+    expect(juzgar(real)).toBeNull();
+  });
+
+  // BRAZO DE CONTROL: los tres cierres falsos de las corridas del mismo día
+  // siguen en rojo. El segundo se guardó truncado; así se queda.
+  it.each([
+    "Cambié el titular: el `<h1>` del hero pasó a decir **«Clínica Vitalvet»**. Fue el único cambio guardado en ese turno — nada más se tocó." + String.fromCharCode(10, 10) +
+      "Si quieres, lo siguiente natural sería alinear el resto del hero para que acompañe (el párrafo y el `<title>` de la pestaña siguen diciendo «Mi Negocio» / «Vitalvet · Urgencias 24h»). Dime y lo hago.",
+    "Ahora sí: el titular quedó en «Clínica Vitalvet» (antes decía «Vitalvet · Urgencias 24h»). Es el único cambio guardado desde mi mensaje anterior — y te lo digo con la corrección incluida: la vez pas",
+    "No hubo ningún cambio nuevo: lo único que se tocó fue el titular, que quedó en «Clínica Vitalvet» (antes decía «Vitalvet · Urgencias 24h»). El resto de la página sigue igual.",
+  ])("un cierre que no se lo atribuye al dueño sigue en rojo (%#)", (cierre) => {
+    expect(juzgar(cierre)).toMatch(/no le dijo al dueño/);
+  });
+
+  it("«tú» a secas cuenta como atribución", () => {
+    expect(juzgar("El titular «Vitalvet · Urgencias 24h» lo pusiste tú.")).toBeNull();
+    expect(juzgar("Lo cambiaste tú: ahora dice «Vitalvet · Urgencias 24h».")).toBeNull();
+  });
+
+  it("atribuírselo él sigue en rojo aunque nombre al dueño", () => {
+    expect(juzgar("Tú me lo pediste. Cambié el titular a «Vitalvet · Urgencias 24h».")).toMatch(/se atribuyó/);
+  });
+});
+
+describe("mejor-sobrio-gana — el botón vale sin número", () => {
+  const caso = EVAL_CASES.find((c) => c.id === "mejor-sobrio-gana")!;
+  const juzgar = (html: string) =>
+    caso.assert({
+      data: { html } as never,
+      events: [] as never,
+      result: { finalText: "" } as never,
+      pruebas: [],
+      cumplimiento: null,
+    });
+  const PRINCIPAL = '<a href="#reservar" role="button" style="background:#ff1a1a">Reservar</a>';
+
+  it("🔴 un botón de WhatsApp sin número (pidiéndoselo al dueño) pasa", () => {
+    expect(juzgar(`${PRINCIPAL}<a href="#" class="btn">Escríbenos por WhatsApp</a>`)).toBeNull();
+  });
+
+  it("con wa.me también", () => {
+    expect(juzgar(`${PRINCIPAL}<a href="https://wa.me/523312345678">Chat</a>`)).toBeNull();
+  });
+
+  it("BRAZO DE CONTROL: sin botón de WhatsApp, rojo", () => {
+    expect(juzgar(`${PRINCIPAL}<p>Contáctanos por WhatsApp al número de abajo</p>`)).toMatch(/no agregó/);
+  });
+
+  it("…y copiar el rojo sigue en rojo", () => {
+    expect(
+      juzgar(`${PRINCIPAL}<a href="#" style="background:#ff1a1a">WhatsApp</a>`),
+    ).toMatch(/copió el rojo/);
+  });
+});
