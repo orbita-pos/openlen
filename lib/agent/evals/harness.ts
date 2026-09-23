@@ -328,6 +328,9 @@ export interface EvalRunResult {
   /** El texto con el que el modelo cerró el turno. Sólo si el caso lo pide con
    *  `verCierre`: es para LEERLO, no para puntuar. */
   cierre?: string;
+  /** Todo el texto que se le pintó al dueño en el turno, cuando NO coincide con
+   *  `cierre`. Es para ver si una respuesta salió dos veces; no puntúa. */
+  visto?: string;
   /** Cómo acabó el objetivo, si el caso llevaba uno.
    *
    *  🔴 SIN ESTO, UN «PASS» NO DICE CUÁNTO COSTÓ. La primera corrida con
@@ -1327,6 +1330,16 @@ export async function runEvalCase(evalCase: EvalCase, opts: RunEvalOptions): Pro
         return t ? { propuso: t.condicion ?? "" } : {};
       })(),
       ...(evalCase.verCierre && result.finalText ? { cierre: result.finalText } : {}),
+      // LO QUE VIO EL DUEÑO, cuando no es el cierre. El cliente pinta TODOS los
+      // eventos `text` del turno; `finalText` es sólo la última vuelta. Si el
+      // modelo repite en la segunda vuelta lo que dijo en la primera, el cierre
+      // parece limpio y el dueño lo leyó dos veces (revisión pre-deploy del
+      // 2026-09-22). Sólo aparece cuando difieren: si coinciden no hay nada que ver.
+      ...(() => {
+        if (!evalCase.verCierre) return {};
+        const visto = events.flatMap((e) => (e.type === "text" ? [e.text] : [])).join("");
+        return visto.trim() && visto.trim() !== (result.finalText ?? "").trim() ? { visto } : {};
+      })(),
       ...(result.objetivo ? { objetivo: result.objetivo } : {}),
     };
   } catch (err) {
