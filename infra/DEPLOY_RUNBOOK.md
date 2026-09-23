@@ -61,15 +61,23 @@ Edit, then `systemctl restart openlen-app`. Full reference: `infra/app/env.examp
   e imprimiría `ok` mientras producción no cambia. En seco primero:
 
   ```bash
-  # QUÉ derivó (no escribe nada)
-  curl -sf -X POST -H "x-internal-secret: $OPENLEN_INTERNAL_SECRET" \
+  # QUÉ derivó, y QUÉ se subiría con esos ids (no escribe nada)
+  curl -s -X POST -H "x-internal-secret: $OPENLEN_INTERNAL_SECRET" \
+    -H "content-type: application/json" -d '{"ids":["id-uno","id-dos"]}' \
     http://127.0.0.1:3000/api/internal/republish-templates | jq
 
-  # aplicarlo (todas las cambiadas, o unas pocas con "ids")
-  curl -sf -X POST -H "x-internal-secret: $OPENLEN_INTERNAL_SECRET" \
-    -H "content-type: application/json" -d '{"aplicar":true}' \
+  # aplicarlo — SIEMPRE con los ids que revisaste
+  curl -s -X POST -H "x-internal-secret: $OPENLEN_INTERNAL_SECRET" \
+    -H "content-type: application/json" -d '{"aplicar":true,"ids":["id-uno","id-dos"]}' \
     http://127.0.0.1:3000/api/internal/republish-templates | jq
   ```
+
+  🔴 **`{"aplicar":true}` a secas ya no escribe nada** (400 `faltan_ids`, con la
+  lista de cambiadas y la orden exacta; por eso aquí va `curl -s` y no `-sf`,
+  que se tragaría el cuerpo del 400). En el disco suele haber fuentes ajenas
+  que no coinciden con producción —el 2026-09-22, 26 de 239—, y sin saber si son
+  más nuevas o más viejas subirlas todas pisa la galería. Para subir todas a
+  propósito: `{"aplicar":true,"todas":true}`.
 
   Sólo republica lo que NO coincide por hash: pedir una que ya está bien la
   devuelve en `ignorados` en vez de crear un huérfano en R2. Un `.html` sin fila

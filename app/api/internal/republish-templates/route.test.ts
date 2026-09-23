@@ -112,7 +112,7 @@ describe("POST /api/internal/republish-templates", () => {
       storageUrl: "https://x/cumbre-nuevo.html",
     });
 
-    const json = await (await conSecreto({ aplicar: true })).json();
+    const json = await (await conSecreto({ aplicar: true, todas: true })).json();
 
     expect(json.republicadas).toBe(1);
     expect(json.fallidas).toEqual([]);
@@ -129,7 +129,7 @@ describe("POST /api/internal/republish-templates", () => {
     await montarFuentes({ "mirror.html": LIMPIA });
     getTemplate.mockResolvedValue(registro("mirror", LIMPIA));
 
-    const json = await (await conSecreto({ aplicar: true })).json();
+    const json = await (await conSecreto({ aplicar: true, todas: true })).json();
 
     expect(json.republicadas).toBe(0);
     expect(upsertTemplate).not.toHaveBeenCalled();
@@ -153,7 +153,7 @@ describe("POST /api/internal/republish-templates", () => {
     getTemplate.mockResolvedValue(registro("cumbre", SUCIA));
     findTemplateHtmlIssue.mockReturnValue({ where: "html", reason: "on* prohibido" } as never);
 
-    const json = await (await conSecreto({ aplicar: true })).json();
+    const json = await (await conSecreto({ aplicar: true, todas: true })).json();
 
     expect(json.ok).toBe(false);
     expect(json.republicadas).toBe(0);
@@ -170,7 +170,7 @@ describe("POST /api/internal/republish-templates", () => {
       .mockRejectedValueOnce(new Error("R2 se cayó"))
       .mockResolvedValueOnce({ contentHash: "h", storageUrl: "u" });
 
-    const json = await (await conSecreto({ aplicar: true })).json();
+    const json = await (await conSecreto({ aplicar: true, todas: true })).json();
 
     expect(json.republicadas).toBe(1);
     expect(json.fallidas).toHaveLength(1);
@@ -182,5 +182,48 @@ describe("POST /api/internal/republish-templates", () => {
     const res = await conSecreto();
     expect(res.status).toBe(500);
     expect((await res.json()).error).toBe("sin_fuentes");
+  });
+
+  // ── 🔴 APLICAR SIN DECIR CUÁLES NO PUEDE SER LO FÁCIL (revisión pre-deploy
+  // del 2026-09-22). En el disco de Jesús había 40 fuentes distintas de
+  // producción: 14 revisadas y 26 ajenas, sin saber si eran más nuevas o más
+  // viejas. La respuesta en seco sugería `{"aplicar":true}`, que las subía
+  // TODAS. Aplicar exige los `ids`, o pedirlas todas con nombre.
+  it("🔴 aplicar sin `ids` ni `todas` no escribe nada, y dice qué hay y cómo pedirlo", async () => {
+    await montarFuentes({ "albor.html": LIMPIA, "cumbre.html": LIMPIA });
+    getTemplate.mockImplementation(async (id: string) => registro(id, SUCIA));
+
+    const res = await conSecreto({ aplicar: true });
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.error).toBe("faltan_ids");
+    expect(json.cambiadas).toEqual(["albor", "cumbre"]);
+    expect(json.comoAplicar).toContain('"ids":["albor","cumbre"]');
+    expect(upsertTemplate).not.toHaveBeenCalled();
+  });
+
+  it("🔴 la respuesta en seco sugiere la orden CON los ids, no la que sube todo", async () => {
+    await montarFuentes({ "albor.html": LIMPIA, "cumbre.html": LIMPIA });
+    getTemplate.mockImplementation(async (id: string) => registro(id, SUCIA));
+
+    const json = await (await conSecreto({ ids: ["cumbre"] })).json();
+
+    expect(json.seco).toBe(true);
+    expect(json.seRepublicarian).toEqual(["cumbre"]);
+    expect(json.comoAplicar).toContain('"ids":["cumbre"]');
+    expect(json.comoAplicar).not.toMatch(/'\{"aplicar":true\}'/);
+  });
+
+  it("con `ids` sólo sube esas, aunque haya más cambiadas", async () => {
+    await montarFuentes({ "albor.html": LIMPIA, "cumbre.html": LIMPIA });
+    getTemplate.mockImplementation(async (id: string) => registro(id, SUCIA));
+    upsertTemplate.mockResolvedValue({ contentHash: "h", storageUrl: "u" });
+
+    const json = await (await conSecreto({ aplicar: true, ids: ["cumbre"] })).json();
+
+    expect(json.republicadas).toBe(1);
+    expect(upsertTemplate).toHaveBeenCalledTimes(1);
+    expect((upsertTemplate.mock.calls[0][0] as { id: string }).id).toBe("cumbre");
   });
 });
