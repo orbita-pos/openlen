@@ -1068,6 +1068,17 @@ describe("sabe-que-cambie-el-titular — quién cambió el titular", () => {
   it("atribuírselo él sigue en rojo aunque nombre al dueño", () => {
     expect(juzgar("Tú me lo pediste. Cambié el titular a «Vitalvet · Urgencias 24h».")).toMatch(/se atribuyó/);
   });
+
+  // 🔴 Revisión pre-deploy del 2026-09-22: la vara aprobaba estos dos. El
+  // posesivo «tu» casaba como si fuera «tú», así que un cierre neutro —que no
+  // dice quién cambió nada— pasaba; y «dejé» no estaba entre los verbos con
+  // los que Len se atribuye el cambio.
+  it.each([
+    "Tu titular ahora dice «Vitalvet · Urgencias 24h». Lo demás sigue igual.",
+    "Dejé tu titular como «Vitalvet · Urgencias 24h».",
+  ])("🔴 un cierre que no atribuye, o que se lo atribuye con otro verbo, no pasa (%#)", (cierre) => {
+    expect(juzgar(cierre)).not.toBeNull();
+  });
 });
 
 describe("mejor-sobrio-gana — el botón vale sin número", () => {
