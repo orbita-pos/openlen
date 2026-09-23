@@ -18,6 +18,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { crearRegistroDelTurno } from "./registro-del-turno";
 
 const lee = (...partes: string[]) => readFileSync(join(process.cwd(), ...partes), "utf8");
 
@@ -40,8 +41,18 @@ describe("el motivo del fallo cruza los cinco eslabones", () => {
     // El navegador no es el único que escribe la transcripción: si el socket
     // muere, la escribe la ruta. Sin esta línea, un turno guardado por el
     // servidor pierde el motivo — justo el turno que peor acabó.
+    //
+    // Desde H05 (2026-09-22) la ruta no copia las tarjetas ella misma: se las
+    // pasa a `registro-del-turno.ts`, que es puro, así que este eslabón se
+    // prueba por lo que HACE y el código fuente sólo se mira para el cableado.
     const ruta = lee("app", "api", "agent", "route.ts");
-    expect(ruta).toMatch(/ev\.motivo \? \{ motivo: ev\.motivo \}/);
+    expect(ruta).toMatch(/crearRegistroDelTurno\(\)/);
+    const r = crearRegistroDelTurno();
+    r.observar({ type: "action", tool: "editar_html", status: "error", summary: "x", motivo: "sin id" });
+    r.observar({ type: "action", tool: "editar_html", status: "done", summary: "y" });
+    expect(r.tarjetas[0]).toMatchObject({ motivo: "sin id" });
+    // BRAZO DE CONTROL: la tarjeta sin motivo no se inventa uno.
+    expect(r.tarjetas[1]).not.toHaveProperty("motivo");
   });
 
   it("4 · el esquema del historial lo ACEPTA en vez de tirar el turno", () => {
