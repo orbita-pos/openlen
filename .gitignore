@@ -102,6 +102,10 @@ public/openlen-images/motion/
 # superpowers specs/plans + one-off briefs — internal planning, kept local only
 /docs/superpowers/
 /plans/
+# Y las sesiones de brainstorm (maquetas, capturas, estado): diseño interno, no
+# código. El 2026-09-22 casi entran en el repo público con un commit de «ficheros
+# sueltos»; se sacó de la historia antes de empujar.
+/.superpowers/
 /docs/claude-video-showcase-brief.md
 # AI template-generation prompts + design/image briefs — competitive method, local only
 /docs/claude-*-prompts.md
