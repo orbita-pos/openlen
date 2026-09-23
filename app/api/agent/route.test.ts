@@ -767,6 +767,52 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
   });
 
   /**
+   * 🔴 CERRAR CON ELEGANCIA NO CAMBIA QUIÉN PAGA (revisión pre-deploy del
+   * 2026-09-22).
+   *
+   * El bucle cierra con los hechos delante dos turnos que antes morían en el
+   * tope: el del modelo que insiste en lo que se le rechaza y el del guardado
+   * que choca dos veces. El tope no se cobra (regla del 2026-07-07), y al dejar
+   * de ser tope empezaron a cobrarse sin que nadie lo decidiera. Se registran
+   * como cargo perdido, igual que el tope.
+   */
+  it("🔴 un turno que el bucle cierra sin salida no se cobra, y el diario dice por qué", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const resultado = {
+      finalText: "No pude guardar.", turns: 3, toolCalls: 2,
+      usage: { inputTokens: 1_000, outputTokens: 100, cachedTokens: 0 },
+      terminalError: false,
+      mutoDurable: true,
+    };
+    try {
+      for (const sinCobro of ["rechazos", "conflicto"] as const) {
+        mocks.debitCredits.mockClear();
+        log.mockClear();
+        error.mockClear();
+        mocks.runAgentLoop.mockResolvedValue({ ...resultado, sinCobro });
+
+        await readEvents(await pedir());
+
+        expect(mocks.debitCredits, `se cobró un turno cerrado por ${sinCobro}`).not.toHaveBeenCalled();
+        const linea = [...log.mock.calls, ...error.mock.calls]
+          .map((c) => String(c[0]))
+          .find((l) => l.includes(`motivo=${sinCobro}`));
+        expect(linea, "el diario no dice por qué no se cobró").toBeDefined();
+        expect(linea).toContain("cargo perdido");
+      }
+      // BRAZO DE CONTROL: el mismo turno sin la marca se cobra como siempre.
+      mocks.debitCredits.mockClear();
+      mocks.runAgentLoop.mockResolvedValue(resultado);
+      await readEvents(await pedir());
+      expect(mocks.debitCredits).toHaveBeenCalledTimes(1);
+    } finally {
+      log.mockRestore();
+      error.mockRestore();
+    }
+  });
+
+  /**
    * 🔴 UNA CANCELACIÓN NO PUEDE LEERSE COMO UNA AVERÍA.
    *
    * El diario escribía la misma línea para las dos, y el 2026-09-03 eso costó

@@ -470,6 +470,17 @@ export interface AgentLoopResult {
    *  devolvió al modelo. Nunca pasan por `runTool`, así que ningún diario las
    *  ve; ésta es la única cuenta que existe de ellas. */
   rechazos: readonly { readonly tool: string; readonly motivo: string }[];
+  /**
+   * EL TURNO NO SE COBRA aunque haya cerrado sin error terminal, y por qué.
+   *
+   * Lo pone `cerrarSinSalida`: el modelo que insiste tres vueltas en lo que se
+   * le rechaza (`rechazos`) y el guardado que choca dos veces seguidas
+   * (`conflicto`). Esos dos turnos morían antes en el tope, y el tope no se
+   * cobra (regla del 2026-07-07: un turno sin salida utilizable cuesta 0).
+   * Cerrarlos con los hechos delante es mejor para el dueño, pero no puede
+   * cambiar quién paga sin que nadie lo decida. Ausente = se cobra como siempre.
+   */
+  sinCobro?: "rechazos" | "conflicto";
 }
 
 /** Lo que queda en el historial en lugar del documento retirado. Dice POR QUÉ
@@ -1007,20 +1018,26 @@ const SIN_SALIDA =
 /**
  * 🔴 H12-a · GUARDAR QUE CHOCA DOS VECES SEGUIDAS CIERRA EL TURNO.
  *
- * Otra escritura está cambiando la página a la vez y no va a ceder dentro de
- * este turno: una escritura más sólo puede chocar otra vez. El mensaje de error
- * ya lo decía (`conflictoRepetido` en tools.ts) y no bastó —C22 siguió
- * probando una tercera en 2 de 3 corridas—, así que el servidor deja de
- * ejecutar escrituras y el turno se cierra con las herramientas apagadas,
- * igual que `SIN_SALIDA`. No repara nada: se le DICE al usuario.
+ * Cada guardado ya reintenta por dentro (`actualizarData`, tres veces), así que
+ * dos choques seguidos no son un cruce de un instante: una escritura más sólo
+ * puede chocar otra vez. El mensaje de error ya lo decía (`conflictoRepetido`
+ * en tools.ts) y no bastó —C22 siguió probando una tercera en 2 de 3
+ * corridas—, así que el servidor deja de ejecutar escrituras y el turno se
+ * cierra con las herramientas apagadas, igual que `SIN_SALIDA`. No repara
+ * nada: se le DICE al usuario. Y no se cobra (`AgentLoopResult.sinCobro`).
+ *
+ * ⚠️ LA CAUSA NO SE SABE, y no se afirma. Esto decía «otra escritura está
+ * cambiando la página a la vez», pero el único caso de producción con choques
+ * seguidos (15/09) fue un fallo nuestro del compare-and-swap, no otra
+ * escritura. Se dan las causas posibles y lo que el dueño puede hacer.
  */
 const CONFLICTO_SIN_SALIDA =
-  "SISTEMA (el usuario NO escribió esto): guardar chocó dos veces seguidas con otra escritura que está cambiando la página a la vez, y en este turno no se va a poder guardar. Cierra AHORA hablándole al usuario en su idioma: que no se pudo guardar y por qué, qué quedó hecho y qué no, y que te lo vuelva a pedir cuando esa otra escritura termine.";
+  "SISTEMA (el usuario NO escribió esto): guardar chocó dos veces seguidas —la página cambió en la base entre la lectura y la escritura— y en este turno no se va a poder guardar. La causa no la sabemos: puede ser la página abierta en otra pestaña o en el editor, otro guardado a la vez, o un fallo nuestro; no afirmes cuál. Cierra AHORA hablándole al usuario en su idioma: que no se pudo guardar, qué quedó hecho y qué no, y que si tiene la página abierta en otra pestaña la cierre y te lo vuelva a pedir; si no, que lo intente en un momento.";
 
 /** Lo que recibe una escritura que venía en la misma tanda que el segundo
  *  choque: no se ejecuta, porque sólo podía chocar otra vez. */
 const GUARDAR_YA_CHOCO =
-  "no se ejecutó: guardar ya chocó dos veces seguidas en este turno con otra escritura que cambia la página a la vez, y ésta habría chocado igual.";
+  "no se ejecutó: guardar ya chocó dos veces seguidas en este turno, y ésta habría chocado igual.";
 
 interface PendingCall {
   name: string;
@@ -1510,12 +1527,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           .join(", ")}. Todo lo que el usuario pidió y no esté en esa lista sigue PENDIENTE y tienes que nombrarlo.`
       : "\n\nEn este turno NO se aplicó ningún cambio, medido por nosotros. Dilo tal cual: nada de lo que pidió quedó hecho.";
 
-  /** H12 · el cierre cuando el modelo insiste en llamadas que se le rechazan,
-   *  o cuando guardar ya no puede salir bien (`CONFLICTO_SIN_SALIDA`). Un
-   *  cierre normal, no un tope: hubo trabajo y se cuenta. Sin `closeOut`, cae
-   *  al cierre por tope de siempre. */
-  const cerrarSinSalida = async (instruccion: string = SIN_SALIDA): Promise<AgentLoopResult> => {
+  /** H12 · el cierre cuando el modelo insiste en llamadas que se le rechazan
+   *  (`rechazos`), o cuando guardar ya no puede salir bien (`conflicto`,
+   *  `CONFLICTO_SIN_SALIDA`). Un cierre redactado, no un tope: hubo trabajo y se
+   *  cuenta. Pero NO SE COBRA: ver `AgentLoopResult.sinCobro`. Sin `closeOut`,
+   *  cae al cierre por tope de siempre, que tampoco se cobra. */
+  const cerrarSinSalida = async (motivo: "rechazos" | "conflicto"): Promise<AgentLoopResult> => {
     if (!args.closeOut) return await finishOnCap("turn_limit");
+    const instruccion = motivo === "conflicto" ? CONFLICTO_SIN_SALIDA : SIN_SALIDA;
     let texto = "";
     for await (const ev of args.closeOut([...messages, { role: "user", content: instruccion + hechosAplicados() }])) {
       if (ev.type === "text_delta") {
@@ -1532,7 +1551,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
     if (!texto.trim()) return await finishOnCap("turn_limit");
     finalText = texto;
-    return buildResult(false);
+    return { ...buildResult(false), sinCobro: motivo };
   };
 
   const finishOnCap = async (code: TopeCode): Promise<AgentLoopResult> => {
@@ -2495,8 +2514,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     documentosPodados += podarDocumentosViejos(messages);
 
     // H12 · quien insiste en lo que se le rechaza no avanza: se le cierra.
-    if (vueltasSoloRechazadas >= VUELTAS_SOLO_RECHAZADAS) return await cerrarSinSalida();
+    if (vueltasSoloRechazadas >= VUELTAS_SOLO_RECHAZADAS) return await cerrarSinSalida("rechazos");
     // H12-a · y si guardar ya no puede salir bien, tampoco.
-    if (guardarSinSalida) return await cerrarSinSalida(CONFLICTO_SIN_SALIDA);
+    if (guardarSinSalida) return await cerrarSinSalida("conflicto");
   }
 }

@@ -339,9 +339,14 @@ export const CONFLICTO_AL_GUARDAR =
  * este turno le cuesta créditos al dueño, y una escritura más no puede salir
  * bien. El resultado lleva `guardarSinSalida` y el bucle cierra (ver
  * `CONFLICTO_SIN_SALIDA` en loop.ts).
+ *
+ * ⚠️ Y NO AFIRMA LA CAUSA (revisión pre-deploy del 2026-09-22). Decía «otra
+ * escritura está cambiando la página a la vez», y el único caso de producción
+ * con choques seguidos (15/09) fue un fallo nuestro del compare-and-swap. Se
+ * dice el hecho, las causas posibles y qué hacer; cuál fue, no se sabe.
  */
 export const conflictoRepetido = (veces: number) =>
-  `la página volvió a cambiar mientras se guardaba: ${veces} intentos seguidos en este turno chocaron con otra escritura, así que reintentar no lo arregla — ni releer la página, ni cambiar de herramienta, ni enviar otro cambio: el choque no depende de lo que envías. No intentes guardar otra vez en este turno: dile al usuario que no se pudo guardar porque otra escritura está cambiando la página a la vez, y qué quedó sin hacer.`;
+  `la página volvió a cambiar mientras se guardaba: ${veces} intentos seguidos en este turno chocaron, así que reintentar no lo arregla — ni releer la página, ni cambiar de herramienta, ni enviar otro cambio: el choque no depende de lo que envías. No intentes guardar otra vez en este turno: dile al usuario que no se pudo guardar y qué quedó sin hacer. La causa no la sabemos —la página abierta en otra pestaña o en el editor, otro guardado a la vez, o un fallo nuestro—: no afirmes cuál.`;
 
 export function realDeps(): AgentDeps {
   return {

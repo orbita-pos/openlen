@@ -3750,6 +3750,8 @@ describe("H12-a · un conflicto al guardar que se repite no se arregla reintenta
     const out = await editar(makeSession(), conDisputa(deps), "Vitalvet");
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /vuelve a intentarlo/);
+    // Con UN choque el turno sigue: el bucle no corta.
+    assert.equal(out.guardarSinSalida, undefined);
   });
 
   it("🔴 C22 · el SEGUNDO seguido, aunque cambie la llamada, dice que reintentar no lo arregla", async () => {
@@ -3765,6 +3767,18 @@ describe("H12-a · un conflicto al guardar que se repite no se arregla reintenta
     assert.match(error, /2 intentos seguidos/);
     // Lo que 2 de 3 corridas probaron después: releer y cambiar de herramienta.
     assert.match(error, /ni releer la página, ni cambiar de herramienta/);
+    // 🔴 LA MITAD QUE CORTA (revisión pre-deploy del 2026-09-22). El bucle
+    // cierra el turno por este campo, y ninguna prueba gratis lo miraba: el
+    // doble de `loop.test.ts` lo inyecta él mismo. Sin esta línea, quitarlo
+    // dejaba todo en verde y el corte muerto.
+    assert.equal(segunda.guardarSinSalida, true, "el segundo choque no le dice al bucle que cierre");
+    // Y NO AFIRMA UNA CAUSA QUE NO CONOCE. El único caso de producción con
+    // choques seguidos (15/09) fue un fallo nuestro, no otra escritura: se dan
+    // las causas posibles, y se dice que no se sabe cuál.
+    assert.doesNotMatch(error, /otra escritura (est[aá]|que est[aá]) cambiando/);
+    assert.match(error, /no se pudo guardar/);
+    assert.match(error, /otra pestaña/);
+    assert.match(error, /fallo nuestro/);
   });
 
   it("BRAZO DE CONTROL: un guardado bueno entre medias pone la cuenta a cero", async () => {
