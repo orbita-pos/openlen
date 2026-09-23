@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Vellum — A weekly letter starting January 2026.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --bg: #FBF8F0;
+    --bg-2: #F3EEDE;
+    --line: rgba(26,23,20,0.10);
+    --line-2: rgba(26,23,20,0.18);
+    --ink: #1A1714;
+    --ink-soft: #3a342d;
+    --muted: #6b6358;
+    --dim: #9c9388;
+    --accent: #B05030;
+    --accent-soft: #efd9cd;
+    --rule: #1A1714;
+  }
+  html, body { background: var(--bg); color: var(--ink); }
+  body {
+    font-family: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+    font-feature-settings: "onum", "ss01";
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.005em;
+  }
+  .sans { font-family: 'Inter', system-ui, sans-serif; letter-spacing: -0.01em; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .display {
+    font-family: 'Newsreader', serif;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 0.94;
+  }
+  .display em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+  .lede {
+    font-family: 'Newsreader', serif;
+    font-weight: 400;
+    font-size: 22px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .lede em { font-style: italic; color: var(--accent); }
+
+  .hairline { border-color: var(--line); }
+  .hairline-2 { border-color: var(--line-2); }
+  .ink-rule { border-color: var(--rule); }
+  .text-muted { color: var(--muted); }
+  .text-dim { color: var(--dim); }
+  ::selection { background: rgba(176,80,48,0.20); color: var(--ink); }
+
+  /* paper tint */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(45% 30% at 10% 5%, rgba(176,80,48,0.06), transparent 70%),
+      radial-gradient(35% 25% at 90% 85%, rgba(176,80,48,0.05), transparent 70%);
+  }
+
+  .pulse-dot {
+    width: 7px; height: 7px; border-radius: 999px;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(176,80,48,0.5);
+    animation: pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(176,80,48,0.5); }
+    70%  { box-shadow: 0 0 0 12px rgba(176,80,48,0); }
+    100% { box-shadow: 0 0 0 0 rgba(176,80,48,0); }
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--bg);
+    transition: transform 120ms ease, background 120ms ease;
+  }
+  .btn-primary:hover { transform: translateY(-1px); background: var(--accent); }
+  .input-bare {
+    background: #fff;
+    border: 1px solid var(--line-2);
+    color: var(--ink);
+    font-family: 'Newsreader', serif;
+  }
+  .input-bare::placeholder { color: var(--dim); font-style: italic; }
+  .input-bare:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(176,80,48,0.12); }
+
+  .chip {
+    border: 1px solid var(--line-2);
+    background: #fff;
+  }
+
+  /* Drop cap */
+  .dropcap::first-letter {
+    font-family: 'Newsreader', serif;
+    font-weight: 500;
+    font-style: normal;
+    float: left;
+    font-size: 5.2em;
+    line-height: 0.88;
+    padding: 0.06em 0.12em 0 0;
+    color: var(--accent);
+  }
+
+  /* Issue card */
+  .issue {
+    border-top: 1px solid var(--line);
+    padding: 28px 0;
+    display: grid;
+    grid-template-columns: 80px 1fr auto;
+    gap: 24px;
+    align-items: baseline;
+  }
+  .issue:last-of-type { border-bottom: 1px solid var(--line); }
+  .issue-num { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); letter-spacing: 0.12em; }
+  .issue-title { font-family: 'Newsreader', serif; font-weight: 500; font-size: 26px; line-height: 1.18; letter-spacing: -0.015em; }
+  .issue-title em { color: var(--accent); }
+
+  /* Stamp */
+  .stamp {
+    display: inline-flex; align-items: center; gap: 10px;
+    border: 1px solid var(--accent); color: var(--accent);
+    padding: 3px 10px 4px; border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+  }
+
+  .underline-accent {
+    background-image: linear-gradient(transparent calc(100% - 2px), var(--accent) 2px);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+  }
+
+  /* hand signature */
+  .signature {
+    font-family: 'Newsreader', serif;
+    font-style: italic;
+    font-size: 32px;
+    color: var(--accent);
+    letter-spacing: -0.01em;
+    transform: rotate(-2deg);
+    display: inline-block;
+  }
+</style>
+</head>
+<body class="relative overflow-x-hidden">
+
+<div class="relative z-10">
+
+  <!-- NAV -->
+  <header class="px-6 md:px-10 py-6 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <rect x="3" y="2" width="14" height="18" rx="1" fill="#fff" stroke="#1A1714" stroke-width="1"/>
+        <line x1="6" y1="6" x2="14" y2="6" stroke="#1A1714"/>
+        <line x1="6" y1="9" x2="14" y2="9" stroke="#1A1714"/>
+        <line x1="6" y1="12" x2="11" y2="12" stroke="#B05030" stroke-width="1.6"/>
+      </svg>
+      <span class="text-[16px] tracking-tight font-medium" style="font-family: 'Newsreader', serif; font-style: italic;">Vellum</span>
+    </a>
+    <div class="flex items-center gap-6 text-[13px] text-muted sans">
+      <span class="hidden sm:inline mono text-[11.5px] tracking-widest text-dim">VOL.&nbsp;I · NO.&nbsp;00</span>
+      <a href="#about" class="hover:text-ink transition-colors" style="font-family: 'Newsreader', serif; font-style: italic;">About the writer</a>
+    </div>
+  </header>
+
+  <!-- masthead rule -->
+  <div class="px-6 md:px-10">
+    <div class="max-w-[1240px] mx-auto border-t ink-rule" style="border-top-width: 2px;"></div>
+    <div class="max-w-[1240px] mx-auto mt-1 border-t hairline"></div>
+  </div>
+
+  <!-- HERO -->
+  <section class="relative px-6 md:px-10 pt-16 md:pt-24 pb-24">
+    <div class="relative max-w-[1240px] mx-auto">
+
+      <div class="flex items-center gap-4 mb-10">
+        <span class="stamp"><span class="pulse-dot"></span>Issue 01 · Jan 14, 2026</span>
+        <span class="mono text-[11.5px] text-dim hidden sm:inline tracking-widest">A WEEKLY LETTER</span>
+      </div>
+
+      <h1 class="display text-[clamp(60px,11vw,176px)] max-w-[14ch]">
+        <em>Vellum</em> — a weekly letter starting January&nbsp;2026.
+      </h1>
+
+      <p class="lede mt-12 max-w-[58ch]">
+        Long-form pieces about engineering culture, every Tuesday morning. <em>From the desk of Maya Levenson</em>, Issue 01 lands January 14, 2026.
+      </p>
+
+      <!-- Subscribe -->
+      <form class="mt-12 max-w-[560px]" data-waitlist>
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <input type="email" required placeholder="your name @ a kind house" class="input-bare flex-1 rounded-full px-5 py-3.5 text-[16px]"/>
+          <button class="btn-primary rounded-full px-7 py-3.5 text-[14.5px] font-semibold tracking-tight sans whitespace-nowrap">
+            Subscribe
+          </button>
+        </div>
+        <p class="mt-4 text-[15px] italic text-muted" style="font-family: 'Newsreader', serif;">
+          I write twice and rest once a year. <span class="text-dim not-italic mono text-[12px] ml-1">— ~52 issues, then a long quiet July.</span>
+        </p>
+      </form>
+
+      <!-- meta row -->
+      <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t hairline">
+        <div>
+          <div class="mono text-[11px] text-dim tracking-widest mb-1.5">CADENCE</div>
+          <div class="text-[18px]">Tuesdays · 06:00 ET</div>
+        </div>
+        <div>
+          <div class="mono text-[11px] text-dim tracking-widest mb-1.5">LENGTH</div>
+          <div class="text-[18px] tnum"><span class="mono">~2,000</span> words</div>
+        </div>
+        <div>
+          <div class="mono text-[11px] text-dim tracking-widest mb-1.5">PRICE</div>
+          <div class="text-[18px] italic">Always free</div>
+        </div>
+        <div>
+          <div class="mono text-[11px] text-dim tracking-widest mb-1.5">ADS</div>
+          <div class="text-[18px] italic">None, ever</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT WRITER -->
+  <section id="about" class="px-6 md:px-10 py-24 border-t hairline">
+    <div class="max-w-[1080px] mx-auto grid md:grid-cols-[200px_1fr] gap-12 md:gap-16">
+
+      <div>
+        <div class="w-[160px] h-[200px] border hairline-2"
+             style="background:
+                radial-gradient(ellipse at 50% 38%, #efd9cd 0%, #c98d72 35%, #6e3d2a 75%, #2a1408 100%);
+                box-shadow: inset 0 -30px 40px -10px rgba(26,23,20,0.4);"></div>
+        <div class="mt-4 mono text-[11px] text-dim leading-relaxed">
+          <div class="text-ink text-[13px]" style="font-family: 'Newsreader', serif;">Maya Levenson</div>
+          <div>Brooklyn, NY · est. 2014</div>
+          <div>Prev: Stripe, Linnea, the NYT</div>
+        </div>
+      </div>
+
+      <div class="text-[19px] leading-[1.7] text-ink-soft max-w-[60ch]">
+        <p class="dropcap">For twelve years I've written things at the edges of other people's products — release notes, internal memos, the speech the CEO gave at the all-hands. <em style="color: var(--accent)">Vellum is the first time I'm writing for myself.</em></p>
+        <p class="mt-5">It will be a letter about the culture of building software: <span class="underline-accent">why we ship the way we do</span>, who pays for our convictions, and what an engineering org owes the people inside it. Some weeks it'll be a story. Some weeks an argument. Once or twice a year, a recipe.</p>
+        <p class="mt-6 sans text-[13.5px] text-dim italic">Filed under: engineering culture · the people who do the work · the rooms they do it in.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IT'LL BE -->
+  <section class="px-6 md:px-10 py-24 border-t hairline">
+    <div class="max-w-[1080px] mx-auto">
+      <div class="mono text-[11px] text-dim tracking-widest mb-6">§ WHAT IT'LL BE</div>
+      <h2 class="display text-[clamp(40px,6vw,80px)] max-w-[18ch]">
+        One writer, one editor, <em>one good idea</em> per week.
+      </h2>
+
+      <div class="mt-12 grid md:grid-cols-2 gap-x-16 gap-y-10 max-w-[64ch]">
+        <p class="text-[19px] leading-[1.6]"><span class="mono text-[12px] text-accent text-[var(--accent)] mr-2">I.</span>Each issue will be about <span class="italic">two thousand words</span> — long enough to make an argument, short enough to read on a train.</p>
+        <p class="text-[19px] leading-[1.6]"><span class="mono text-[12px] text-[var(--accent)] mr-2">II.</span>No paywall. No ads. No "if you liked this, share it" footer. <span class="italic">If you liked it, you'll already know what to do.</span></p>
+        <p class="text-[19px] leading-[1.6]"><span class="mono text-[12px] text-[var(--accent)] mr-2">III.</span>Edited by Ines Calderón, who has spent fifteen years cutting things shorter than I wanted them to be.</p>
+        <p class="text-[19px] leading-[1.6]"><span class="mono text-[12px] text-[var(--accent)] mr-2">IV.</span>The archive will live at <span class="mono text-[14px]">vellum.letters</span> — every issue, in order, for as long as I'm writing.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SAMPLE ISSUES -->
+  <section class="px-6 md:px-10 py-24 border-t hairline">
+    <div class="max-w-[1080px] mx-auto">
+
+      <div class="flex items-baseline justify-between mb-10">
+        <div>
+          <div class="mono text-[11px] text-dim tracking-widest mb-3">§ COMING UP</div>
+          <h2 class="display text-[clamp(36px,5vw,60px)]">The first three letters.</h2>
+        </div>
+        <div class="text-[14px] italic text-muted hidden sm:block">subject to a week of pacing the kitchen</div>
+      </div>
+
+      <div>
+        <article class="issue">
+          <div class="issue-num">№ 01 · 14 JAN</div>
+          <div>
+            <div class="issue-title">The release-notes industrial complex, <em>and what we lost</em>.</div>
+            <p class="mt-2.5 text-[15.5px] text-muted leading-snug max-w-[58ch] italic" style="font-family: 'Newsreader', serif;">On the slow disappearance of the engineer's voice from the things she ships, and the marketers who replaced her.</p>
+          </div>
+          <div class="mono text-[11.5px] text-dim whitespace-nowrap self-start mt-2">~2,140 words</div>
+        </article>
+
+        <article class="issue">
+          <div class="issue-num">№ 02 · 21 JAN</div>
+          <div>
+            <div class="issue-title">Pager weeks, <em>and the people who never get one</em>.</div>
+            <p class="mt-2.5 text-[15.5px] text-muted leading-snug max-w-[58ch] italic" style="font-family: 'Newsreader', serif;">A short history of on-call, the math we use to decide it's fair, and the math we use when it isn't.</p>
+          </div>
+          <div class="mono text-[11.5px] text-dim whitespace-nowrap self-start mt-2">~1,860 words</div>
+        </article>
+
+        <article class="issue">
+          <div class="issue-num">№ 03 · 28 JAN</div>
+          <div>
+            <div class="issue-title">Soft launches, hard endings, <em>and the eulogy I owe Halcyon</em>.</div>
+            <p class="mt-2.5 text-[15.5px] text-muted leading-snug max-w-[58ch] italic" style="font-family: 'Newsreader', serif;">Three years inside a company I loved and the long week it took to write its obituary in a single Notion doc.</p>
+          </div>
+          <div class="mono text-[11.5px] text-dim whitespace-nowrap self-start mt-2">~2,310 words</div>
+        </article>
+      </div>
+
+      <div class="mt-10 text-[14px] italic text-muted">— and then forty-nine more.</div>
+    </div>
+  </section>
+
+  <!-- CLOSING SUBSCRIBE -->
+  <section class="px-6 md:px-10 py-32 border-t hairline">
+    <div class="max-w-[820px] mx-auto text-center">
+      <h2 class="display text-[clamp(40px,7vw,84px)] leading-[0.96] max-w-[16ch] mx-auto">
+        Letter one arrives <em>Tuesday, January 14</em>.
+      </h2>
+      <p class="lede mt-8 max-w-[44ch] mx-auto">Put down an email. I'll put down the rest.</p>
+
+      <form class="mt-10 flex flex-col sm:flex-row gap-2.5 max-w-[520px] mx-auto" data-waitlist>
+        <input type="email" required placeholder="you@a-kind-house.com" class="input-bare flex-1 rounded-full px-5 py-3.5 text-[16px]"/>
+        <button class="btn-primary rounded-full px-7 py-3.5 text-[14.5px] font-semibold tracking-tight sans whitespace-nowrap">
+          Subscribe to Vellum
+        </button>
+      </form>
+
+      <div class="mt-12 flex flex-col items-center gap-1">
+        <div class="signature">Maya</div>
+        <div class="mono text-[11.5px] text-dim mt-2 tracking-widest">FROM THE DESK · BK · DEC 2025</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="px-6 md:px-10 py-10 border-t hairline flex flex-col md:flex-row gap-4 md:items-center md:justify-between text-[13px] text-dim sans">
+    <div class="flex items-center gap-2.5">
+      <svg width="16" height="16" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <rect x="3" y="2" width="14" height="18" rx="1" fill="#fff" stroke="#1A1714" stroke-width="1"/>
+        <line x1="6" y1="9" x2="14" y2="9" stroke="#1A1714"/>
+        <line x1="6" y1="12" x2="11" y2="12" stroke="#B05030" stroke-width="1.6"/>
+      </svg>
+      <span class="text-ink/80" style="font-family: 'Newsreader', serif; font-style: italic;">Vellum</span>
+      <span>—</span>
+      <span>A letter from Maya Levenson.</span>
+    </div>
+    <div class="flex items-center gap-6 mono">
+      <a href="#" class="hover:text-ink/80 transition-colors">Archive</a>
+      <a href="#" class="hover:text-ink/80 transition-colors">Privacy</a>
+      <span>© 2026</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+  function joinWaitlist(form) {
+    const btn = form.querySelector('button');
+    const original = btn.textContent;
+    btn.textContent = 'See you Jan 14 ✓';
+    btn.style.background = '#B05030';
+    setTimeout(() => { btn.textContent = original; btn.style.background = ''; }, 3200);
+    form.querySelector('input').value = '';
+  }
+  document.querySelectorAll('form[data-waitlist]').forEach(function (f) {
+    f.addEventListener('submit', function (e) { e.preventDefault(); joinWaitlist(f); });
+  });
+</script>
+</body>
+</html>

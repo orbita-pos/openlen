@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Baseline — Get strong on the evidence, not the hype</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FCFCFA; --text:#14160C; --muted:#62675a; --accent:#65A30D;
+    --line:rgba(20,22,12,0.11); --panel:#FFFFFF;
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html{ scroll-behavior:smooth; }
+  body{ background:var(--bg); color:var(--text); font-family:"Inter",sans-serif;
+    font-feature-settings:"ss01","cv11"; }
+  .display{ font-family:"Archivo",sans-serif; letter-spacing:-0.03em; }
+  .mono{ font-family:"Space Grotesk",monospace; }
+  .muted{ color:var(--muted); }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  .rule{ border-color:var(--line); }
+  .grid-bg{
+    background-image:repeating-linear-gradient(0deg, rgba(20,22,12,0.04) 0 1px, transparent 1px 40px),
+      repeating-linear-gradient(90deg, rgba(20,22,12,0.04) 0 1px, transparent 1px 40px);
+  }
+  .pulse-dot{ position:relative; }
+  .pulse-dot::after{ content:""; position:absolute; inset:0; border-radius:9999px;
+    box-shadow:0 0 0 0 rgba(101,163,13,0.5); animation:pulse 2.4s ease-out infinite; }
+  @keyframes pulse{ to{ box-shadow:0 0 0 12px rgba(101,163,13,0); } }
+  .lift{ transition:transform .12s ease, background-color .12s ease, color .12s ease; }
+  .lift:hover{ transform:translateY(-2px); }
+  .marquee{ display:flex; gap:2.75rem; width:max-content; animation:scroll 30s linear infinite; }
+  @keyframes scroll{ to{ transform:translateX(-50%); } }
+  .btn-sub.is-done{ background:#3f6212 !important; color:#ecfccb !important; }
+  details[open] .faq-plus{ transform:rotate(45deg); }
+  .faq-plus{ transition:transform .15s ease; }
+  ::selection{ background:rgba(101,163,13,0.25); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 backdrop-blur bg-[#FCFCFA]/85 border-b rule">
+  <nav class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="30" height="28" viewBox="0 0 38 34" fill="none" aria-hidden="true">
+        <rect x="2" y="22" width="8" height="10" rx="1.5" fill="#65A30D"/>
+        <rect x="15" y="14" width="8" height="18" rx="1.5" fill="#65A30D"/>
+        <rect x="28" y="4" width="8" height="28" rx="1.5" fill="#65A30D"/>
+      </svg>
+      <span class="display text-[18px] tracking-tight" style="font-weight:800">BASELINE</span>
+    </a>
+    <div class="hidden md:flex items-center gap-7 text-[14px] muted">
+      <a href="#archive" class="hover:text-[#14160C] transition-colors">Archive</a>
+      <a href="#author" class="hover:text-[#14160C] transition-colors">About</a>
+      <a href="#pricing" class="hover:text-[#14160C] transition-colors">Pricing</a>
+    </div>
+    <a href="#subscribe" class="lift inline-flex items-center rounded-full bg-[#65A30D] text-white text-[14px] font-semibold px-4 py-2 hover:bg-[#5a920c]">Subscribe</a>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- HERO -->
+<section class="grid-bg border-b rule">
+  <div class="max-w-6xl mx-auto px-5 pt-20 pb-24">
+    <div class="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 items-center">
+      <div>
+        <div class="flex items-center gap-2.5 mb-6">
+          <span class="pulse-dot inline-block w-2 h-2 rounded-full bg-[#65A30D]"></span>
+          <span class="mono text-[12px] uppercase tracking-[0.14em] muted">Mondays · 341 joined this week</span>
+        </div>
+        <h1 class="display text-[44px] sm:text-[62px] leading-[0.95]" style="font-weight:800">
+          Get strong on the evidence, <span class="muted">not the hype.</span>
+        </h1>
+        <p class="mt-6 text-[18px] leading-relaxed muted max-w-[33rem]">
+          Evidence-based strength and health coaching in your inbox — for intermediate lifters and busy professionals tired of fitness-influencer noise.
+        </p>
+
+        <form id="subscribe" class="mt-8 max-w-[30rem]" data-sub="btn1">
+          <div class="flex flex-col sm:flex-row gap-2.5">
+            <input type="email" required placeholder="you@inbox.com"
+              class="h-14 flex-1 rounded-lg bg-white border rule px-4 text-[16px] text-[#14160C] placeholder:text-[#9a9d90] focus:outline-none focus:border-[#65A30D] focus:ring-1 focus:ring-[#65A30D]" />
+            <button id="btn1" type="submit" class="btn-sub lift h-14 px-6 rounded-lg bg-[#14160C] text-white text-[15px] font-semibold whitespace-nowrap hover:bg-[#272a1c]">Subscribe free</button>
+          </div>
+          <p class="mt-3 text-[13px] muted tnum">Join 22,118 readers · every Monday, 6am · unsubscribe anytime.</p>
+        </form>
+
+        <div class="mt-8">
+          <p class="mono text-[11px] uppercase tracking-[0.12em] muted mb-3">Read by coaches at</p>
+          <div class="flex flex-wrap items-center gap-x-7 gap-y-2 text-[16px]" style="font-weight:600">
+            <span>Whoop</span><span>Eight Sleep</span><span>Renaissance Periodization</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- STRENGTH PROGRESSION -->
+      <div class="lift rounded-xl border rule bg-white p-6">
+        <div class="flex items-center justify-between mb-1">
+          <span class="mono text-[12px] uppercase tracking-[0.12em] muted">Estimated 1RM · back squat</span>
+          <span class="mono text-[12px] text-[#65A30D] tnum">+33%</span>
+        </div>
+        <p class="text-[14px] muted mb-4">16-week block · one reader's logged progression.</p>
+        <svg id="strSvg" viewBox="0 0 320 180" class="w-full" aria-hidden="true"></svg>
+        <div class="flex justify-between mt-3 mono text-[12px] muted tnum">
+          <span>84 kg</span><span class="text-[#65A30D]">deload wk 9</span><span>112 kg</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT YOU'LL GET -->
+<section class="max-w-6xl mx-auto px-5 py-20">
+  <h2 class="mono text-[12px] uppercase tracking-[0.16em] muted mb-10">In every Monday letter</h2>
+  <div class="grid md:grid-cols-3 gap-px bg-[var(--line)] border rule rounded-xl overflow-hidden">
+    <div class="bg-white p-7">
+      <span class="mono text-[12px] text-[#65A30D]">01</span>
+      <h3 class="display text-[24px] mt-2 mb-2" style="font-weight:700">The Study</h3>
+      <p class="muted text-[15px] leading-relaxed">One paper, translated from journal-speak into something you can actually use in the gym this week — with the effect size, not just the headline.</p>
+    </div>
+    <div class="bg-white p-7">
+      <span class="mono text-[12px] text-[#65A30D]">02</span>
+      <h3 class="display text-[24px] mt-2 mb-2" style="font-weight:700">The Program Note</h3>
+      <p class="muted text-[15px] leading-relaxed">One tweak you can apply Monday — a set scheme, a tempo, a rest interval — with the reasoning so you know when to drop it.</p>
+    </div>
+    <div class="bg-white p-7">
+      <span class="mono text-[12px] text-[#65A30D]">03</span>
+      <h3 class="display text-[24px] mt-2 mb-2" style="font-weight:700">Ask the Coach</h3>
+      <p class="muted text-[15px] leading-relaxed">One real reader question, answered honestly — including the times the honest answer is "you're overthinking it."</p>
+    </div>
+  </div>
+</section>
+
+<!-- SAMPLE ISSUE -->
+<section class="max-w-6xl mx-auto px-5 py-12">
+  <div class="rounded-xl border rule bg-white p-7 sm:p-10 relative">
+    <span class="absolute right-6 top-6 mono text-[12px] muted border rule rounded px-2 py-1">№ 131</span>
+    <div class="border-l-2 border-[#65A30D] pl-6 max-w-[44rem]">
+      <p class="mono text-[12px] uppercase tracking-[0.1em] muted">Issue № 131 · Mar 16, 2026 · 7 min read</p>
+      <h3 class="display text-[30px] sm:text-[40px] leading-[1.02] mt-3" style="font-weight:700">Junk volume is real — here's where your sets stop counting.</h3>
+      <blockquote class="mt-5 text-[20px] leading-relaxed" style="font-style:italic">
+        "Past a certain point, another set doesn't build muscle — it builds fatigue you'll pay for on Thursday. The dose-response curve bends, and most lifters are training the flat part."
+      </blockquote>
+      <div class="mt-7 rounded-lg border rule bg-[#FCFCFA] p-5">
+        <p class="mono text-[12px] muted mb-3">Hypertrophy vs. weekly sets · meta-analysis</p>
+        <svg id="sampleSvg" viewBox="0 0 520 120" class="w-full" aria-hidden="true"></svg>
+      </div>
+      <a href="#subscribe" class="lift inline-flex items-center gap-1.5 mt-7 text-[15px] text-[#65A30D] font-semibold hover:gap-2.5 transition-all">Read the full issue <span>→</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHIVE -->
+<section id="archive" class="max-w-6xl mx-auto px-5 py-20">
+  <div class="flex items-end justify-between mb-8">
+    <h2 class="display text-[30px]" style="font-weight:700">The archive</h2>
+    <span class="mono text-[13px] muted tnum">131 issues · since 2023</span>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-9">
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 130 · Mar 9</p>
+      <h3 class="display text-[20px] leading-snug mb-1 group-hover:text-[#65A30D] transition-colors" style="font-weight:600">Protein timing barely matters. Protein total does.</h3>
+      <p class="muted text-[14px]">The anabolic window, finally closed. · 6 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 129 · Mar 2</p>
+      <h3 class="display text-[20px] leading-snug mb-1 group-hover:text-[#65A30D] transition-colors" style="font-weight:600">Why your deadlift stalled at exactly 1.5× bodyweight.</h3>
+      <p class="muted text-[14px]">It's almost never your back. · 8 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 128 · Feb 24</p>
+      <h3 class="display text-[20px] leading-snug mb-1 group-hover:text-[#65A30D] transition-colors" style="font-weight:600">Cardio won't kill your gains. Here's the actual data.</h3>
+      <p class="muted text-[14px]">The interference effect, sized properly. · 7 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 127 · Feb 17</p>
+      <h3 class="display text-[20px] leading-snug mb-1 group-hover:text-[#65A30D] transition-colors" style="font-weight:600">Soreness is not a workout grade. Stop chasing it.</h3>
+      <p class="muted text-[14px]">DOMS vs. actual stimulus. · 5 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 126 · Feb 10</p>
+      <h3 class="display text-[20px] leading-snug mb-1 group-hover:text-[#65A30D] transition-colors" style="font-weight:600">The deload week you keep skipping is the program.</h3>
+      <p class="muted text-[14px]">Fatigue management for adults. · 6 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 125 · Feb 3</p>
+      <h3 class="display text-[20px] leading-snug mb-1 group-hover:text-[#65A30D] transition-colors" style="font-weight:600">Creatine: the one supplement that survives scrutiny.</h3>
+      <p class="muted text-[14px]">Dose, timing, and the bloat myth. · 5 min</p>
+    </a>
+  </div>
+</section>
+
+<!-- AUTHOR -->
+<section id="author" class="max-w-6xl mx-auto px-5 py-12">
+  <div class="rounded-xl border rule bg-white p-7 sm:p-10 flex flex-col sm:flex-row gap-7 items-start">
+    <svg width="72" height="72" viewBox="0 0 72 72" class="shrink-0" aria-hidden="true">
+      <rect width="72" height="72" rx="14" fill="#14160C"/>
+      <text x="36" y="47" text-anchor="middle" class="display" font-size="30" fill="#65A30D" font-weight="800">DK</text>
+    </svg>
+    <div>
+      <h2 class="display text-[26px]" style="font-weight:700">Dr. Dani Okafor</h2>
+      <p class="muted text-[15px] mt-1">PhD in exercise science · CSCS · coached 200+ intermediate lifters past their plateaus.</p>
+      <p class="text-[16px] leading-relaxed mt-4 max-w-[42rem]">I write Baseline because the loudest voices in fitness are rarely the most correct ones, and the most correct ones are usually buried in a paywalled journal. Every Monday I read the research so you don't have to — then tell you the one thing worth changing.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF -->
+<section class="max-w-6xl mx-auto px-5 py-20">
+  <div class="grid md:grid-cols-3 gap-5">
+    <figure class="lift rounded-xl border rule bg-white p-6">
+      <blockquote class="text-[16px] leading-relaxed">"I added 22kg to my squat in a year by doing less, not more. Dani's deload note alone was worth a decade of broscience."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted">Marcus Tobin · intermediate lifter, 4 years in</figcaption>
+    </figure>
+    <figure class="lift rounded-xl border rule bg-white p-6">
+      <blockquote class="text-[16px] leading-relaxed">"Finally, fitness writing that cites the study and tells me the effect size. I coach off these takes now."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted">Hana Suzuki · strength coach at Whoop</figcaption>
+    </figure>
+    <figure class="lift rounded-xl border rule bg-white p-6">
+      <blockquote class="text-[16px] leading-relaxed">"The Coached programs are better than the $200/mo app I cancelled. The form-check reviews are absurdly thorough."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted">Yusuf Abara · busy founder, lifts at 6am</figcaption>
+    </figure>
+  </div>
+
+  <div class="mt-8 grid grid-cols-2 md:grid-cols-4 border rule rounded-xl overflow-hidden">
+    <div class="p-6 border-r rule"><p class="display text-[30px] tnum" style="font-weight:700">59.7%</p><p class="muted text-[13px] mt-1">avg. open rate</p></div>
+    <div class="p-6 md:border-r rule"><p class="display text-[30px] tnum" style="font-weight:700">22,118</p><p class="muted text-[13px] mt-1">subscribers</p></div>
+    <div class="p-6 border-r rule border-t md:border-t-0"><p class="display text-[30px] tnum" style="font-weight:700">131</p><p class="muted text-[13px] mt-1">issues shipped</p></div>
+    <div class="p-6 border-t md:border-t-0"><p class="display text-[30px] tnum" style="font-weight:700">6.4 min</p><p class="muted text-[13px] mt-1">avg. read time</p></div>
+  </div>
+
+  <div class="mt-12 overflow-hidden relative" style="mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)">
+    <div class="marquee text-[18px]" style="font-weight:600">
+      <span>Whoop</span><span>Eight Sleep</span><span>Renaissance Periodization</span><span>StrongLifts</span><span>Barbell Medicine</span><span>Stronger by Science</span><span>Fitbod</span><span>Hevy</span>
+      <span>Whoop</span><span>Eight Sleep</span><span>Renaissance Periodization</span><span>StrongLifts</span><span>Barbell Medicine</span><span>Stronger by Science</span><span>Fitbod</span><span>Hevy</span>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="max-w-6xl mx-auto px-5 py-20">
+  <h2 class="display text-[34px] text-center mb-3" style="font-weight:700">Read free. Get Coached for $10.</h2>
+  <p class="muted text-center mb-12 max-w-[34rem] mx-auto text-[16px]">The Monday letter is free, forever. Coached is the full programs, the form-checks, and the Q&A thread.</p>
+  <div class="grid md:grid-cols-2 gap-5 max-w-[52rem] mx-auto">
+    <div class="rounded-xl border rule bg-white p-7">
+      <p class="mono text-[12px] uppercase tracking-[0.14em] muted">Free</p>
+      <p class="display text-[42px] mt-1" style="font-weight:700">$0</p>
+      <ul class="mt-6 space-y-3 text-[15px] muted">
+        <li class="flex gap-3"><span class="text-[#65A30D]">✓</span> The Monday letter</li>
+        <li class="flex gap-3"><span class="text-[#65A30D]">✓</span> The Study + Program Note</li>
+        <li class="flex gap-3"><span class="text-[#65A30D]">✓</span> Public archive</li>
+      </ul>
+      <a href="#subscribe" class="lift mt-7 inline-flex w-full justify-center rounded-lg border-2 border-[#14160C] px-5 py-3 text-[15px] font-semibold hover:bg-[#14160C] hover:text-white transition-colors">Subscribe free</a>
+    </div>
+    <div class="rounded-xl border-2 border-[#65A30D] bg-white p-7 relative overflow-hidden">
+      <span class="absolute right-0 top-5 bg-[#65A30D] text-white mono text-[11px] uppercase tracking-[0.1em] px-3 py-1 rounded-l-full">Reader-supported</span>
+      <p class="mono text-[12px] uppercase tracking-[0.14em] text-[#65A30D]">Coached</p>
+      <p class="display text-[42px] mt-1 tnum" style="font-weight:700">$10<span class="text-[18px] muted">/mo</span></p>
+      <p class="muted text-[13px] tnum">or $96/yr — two months free</p>
+      <ul class="mt-6 space-y-3 text-[15px]">
+        <li class="flex gap-3"><span class="text-[#65A30D]">✓</span> Full periodized programs (PDF)</li>
+        <li class="flex gap-3"><span class="text-[#65A30D]">✓</span> Video form-check reviews</li>
+        <li class="flex gap-3"><span class="text-[#65A30D]">✓</span> The lifters' Q&A thread</li>
+        <li class="flex gap-3"><span class="text-[#65A30D]">✓</span> Every back issue, unlocked</li>
+      </ul>
+      <a href="#subscribe" class="lift mt-7 inline-flex w-full justify-center rounded-lg bg-[#14160C] text-white px-5 py-3 text-[15px] font-semibold hover:bg-[#272a1c]">Get Coached</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="max-w-3xl mx-auto px-5 py-20">
+  <h2 class="display text-[30px] mb-8" style="font-weight:700">Straight answers</h2>
+  <div class="divide-y rule border-t border-b rule">
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:600">Is this medical or training advice?<span class="faq-plus text-[#65A30D] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">It's educational strength and health content, not medical advice. I'm a coach and a scientist, not your doctor — if you have an injury or condition, talk to a qualified professional before changing how you train.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:600">Free vs Coached — what's behind the paywall?<span class="faq-plus text-[#65A30D] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">The full Monday letter is free. Coached adds the complete periodized programs as PDFs, video form-check reviews where I critique your lifts, the private Q&A thread, and the unlocked archive.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:600">How often, and can I deload the emails too?<span class="faq-plus text-[#65A30D] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">One letter every Monday at 6am. That's it — no daily blasts. And yes, you can pause delivery for a week or a month right from your account if life (or a deload) calls for it.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:600">Can I expense Coached through a wellness stipend?<span class="faq-plus text-[#65A30D] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">Most readers do exactly that — you'll get an itemized receipt on signup that fits cleanly under a health or wellness benefit.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:600">Do you ever sell my email or health info?<span class="faq-plus text-[#65A30D] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">Never. No supplement brands, no data brokers, nothing. Your email and anything you share in form-checks stays between us — and you can unsubscribe and delete your data in one click.</p>
+    </details>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="border-t rule grid-bg">
+  <div class="max-w-3xl mx-auto px-5 py-24 text-center">
+    <h2 class="display text-[40px] sm:text-[54px] leading-[0.98]" style="font-weight:800">Train on the evidence, <span class="muted">not the hype.</span></h2>
+    <form class="mt-10 max-w-[30rem] mx-auto" data-sub="btn2">
+      <div class="flex flex-col sm:flex-row gap-2.5">
+        <input type="email" required placeholder="you@inbox.com"
+          class="h-14 flex-1 rounded-lg bg-white border rule px-4 text-[16px] text-[#14160C] placeholder:text-[#9a9d90] focus:outline-none focus:border-[#65A30D] focus:ring-1 focus:ring-[#65A30D]" />
+        <button id="btn2" type="submit" class="btn-sub lift h-14 px-6 rounded-lg bg-[#14160C] text-white text-[15px] font-semibold whitespace-nowrap hover:bg-[#272a1c]">Subscribe free</button>
+      </div>
+      <p class="mt-3 text-[13px] muted tnum">Join 22,118 readers · every Monday, 6am.</p>
+    </form>
+  </div>
+</section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="border-t rule">
+  <div class="max-w-6xl mx-auto px-5 py-12 flex flex-col sm:flex-row justify-between gap-6">
+    <div>
+      <span class="display text-[18px]" style="font-weight:800">BASELINE</span>
+      <p class="muted text-[13px] mt-2">Powered by Beehiiv · Unsubscribe anytime — one click, zero guilt trips.</p>
+    </div>
+    <div class="flex gap-7 text-[14px] muted">
+      <a href="#archive" class="hover:text-[#14160C] transition-colors">Archive</a>
+      <a href="#author" class="hover:text-[#14160C] transition-colors">About</a>
+      <a href="#" class="hover:text-[#14160C] transition-colors">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function doSub(e, id){
+    e.preventDefault();
+    var b = document.getElementById(id);
+    b.classList.add('is-done');
+    b.textContent = '✓ Subscribed — check your inbox';
+    return false;
+  }
+  document.querySelectorAll('form[data-sub]').forEach(function (f) {
+    f.addEventListener('submit', function (e) { doSub(e, f.getAttribute('data-sub')); });
+  });
+  function linePath(vals,w,h,pad){
+    var min=Math.min.apply(null,vals),max=Math.max.apply(null,vals),rng=(max-min)||1,n=vals.length;
+    return vals.map(function(v,i){
+      var x=pad+(i/(n-1))*(w-2*pad);
+      var y=h-pad-((v-min)/rng)*(h-2*pad);
+      return (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);
+    }).join(' ');
+  }
+  // strength progression with deload dip at index 8
+  (function(){
+    var vals=[84,86,89,92,95,97,100,103,98,102,105,108,110,111,112];
+    var d=linePath(vals,320,170,16);
+    var deX=16+(8/(vals.length-1))*(320-32);
+    document.getElementById('strSvg').innerHTML=
+      '<path d="'+d+'" fill="none" stroke="#65A30D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'+
+      '<line x1="'+deX.toFixed(1)+'" y1="10" x2="'+deX.toFixed(1)+'" y2="160" stroke="#65A30D" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>';
+  })();
+  // hypertrophy dose-response (rising then plateau)
+  (function(){
+    var vals=[10,24,38,50,60,68,73,76,77,77.5,77.6,77.5,77];
+    var d=linePath(vals,520,120,12);
+    document.getElementById('sampleSvg').innerHTML=
+      '<path d="'+d+'" fill="none" stroke="#65A30D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'+
+      '<text x="430" y="34" font-family="Space Grotesk" font-size="11" fill="#62675a">plateau →</text>';
+  })();
+</script>
+</body>
+</html>

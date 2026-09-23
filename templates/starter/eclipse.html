@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Eclipse — Something is being built.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --bg: #050505;
+    --bg-2: #0a0a0c;
+    --line: rgba(255,255,255,0.06);
+    --line-2: rgba(255,255,255,0.10);
+    --text: #ffffff;
+    --muted: #8a8a93;
+    --dim: #5b5b62;
+    --accent: #B388FF;
+    --accent-2: #7c4dff;
+  }
+  html, body { background: var(--bg); color: var(--text); }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: "ss01","cv11","cv02","cv03","cv04";
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+  }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .display {
+    font-weight: 500;
+    letter-spacing: -0.045em;
+    line-height: 0.92;
+  }
+  .display em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+  .hairline { border-color: var(--line); }
+  .hairline-2 { border-color: var(--line-2); }
+  .text-muted { color: var(--muted); }
+  .text-dim { color: var(--dim); }
+
+  /* Mesh background */
+  .mesh {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(60% 50% at 20% 10%, rgba(179,136,255,0.18), transparent 60%),
+      radial-gradient(50% 40% at 85% 30%, rgba(124,77,255,0.12), transparent 60%),
+      radial-gradient(70% 60% at 50% 100%, rgba(80,40,160,0.18), transparent 70%);
+    filter: blur(20px);
+    animation: meshShift 22s ease-in-out infinite alternate;
+  }
+  @keyframes meshShift {
+    0%   { transform: translate3d(0,0,0) scale(1); opacity: 0.9; }
+    50%  { transform: translate3d(-2%, 1%, 0) scale(1.05); opacity: 1; }
+    100% { transform: translate3d(2%, -1%, 0) scale(1.02); opacity: 0.85; }
+  }
+
+  /* Dot grid */
+  .dotgrid {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: -1px -1px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  }
+
+  /* Scanline subtle */
+  .scan { position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, transparent 0, transparent 3px, rgba(255,255,255,0.012) 3px, rgba(255,255,255,0.012) 4px); }
+
+  /* Pulse dot */
+  .pulse-dot {
+    width: 8px; height: 8px; border-radius: 999px;
+    background: #b388ff;
+    box-shadow: 0 0 0 0 rgba(179,136,255,0.65);
+    animation: pulse 2.2s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(179,136,255,0.55); }
+    70%  { box-shadow: 0 0 0 14px rgba(179,136,255,0); }
+    100% { box-shadow: 0 0 0 0 rgba(179,136,255,0); }
+  }
+
+  /* Buttons */
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0410;
+    transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    background: #c4a3ff;
+    box-shadow: 0 10px 30px -10px rgba(179,136,255,0.55), 0 0 0 1px rgba(179,136,255,0.4);
+  }
+  .input-bare {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--line-2);
+    color: white;
+  }
+  .input-bare::placeholder { color: var(--dim); }
+  .input-bare:focus { outline: none; border-color: rgba(179,136,255,0.5); background: rgba(255,255,255,0.05); }
+
+  /* Halftone tease text */
+  .half { color: rgba(255,255,255,0.45); }
+
+  /* Avatars marquee */
+  .marquee { overflow: hidden; mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent); }
+  .marquee-track { display: flex; gap: 10px; animation: scroll 38s linear infinite; width: max-content; }
+  @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* Slow vertical hairline animation */
+  .trace {
+    position: absolute; top: 0; bottom: 0; width: 1px;
+    background: linear-gradient(to bottom, transparent, rgba(179,136,255,0.5), transparent);
+    animation: traceY 6s linear infinite;
+  }
+  @keyframes traceY {
+    0%   { transform: translateY(-100%); opacity: 0; }
+    20%  { opacity: 1; }
+    80%  { opacity: 1; }
+    100% { transform: translateY(100%); opacity: 0; }
+  }
+
+  /* Eclipse hero glyph */
+  .glyph-ring {
+    border: 1px solid rgba(179,136,255,0.18);
+    border-radius: 999px;
+  }
+  .glyph-disc {
+    background: radial-gradient(circle at 35% 35%, #1a0d2e 0%, #050505 65%);
+    box-shadow:
+      inset 0 0 60px rgba(179,136,255,0.25),
+      0 0 80px rgba(179,136,255,0.15),
+      0 0 0 1px rgba(179,136,255,0.18);
+  }
+  .glyph-corona {
+    background: conic-gradient(from 200deg, rgba(179,136,255,0) 0deg, rgba(179,136,255,0.45) 70deg, rgba(179,136,255,0) 140deg, rgba(179,136,255,0) 360deg);
+    filter: blur(10px);
+    animation: spin 38s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .chip {
+    border: 1px solid var(--line-2);
+    background: rgba(255,255,255,0.02);
+  }
+
+  /* Selection */
+  ::selection { background: rgba(179,136,255,0.35); color: white; }
+</style>
+</head>
+<body class="relative overflow-x-hidden">
+
+<div class="mesh"></div>
+
+<div class="relative z-10">
+
+  <!-- NAV -->
+  <header class="px-6 md:px-10 py-6 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5 group">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <circle cx="11" cy="11" r="9.5" stroke="white" stroke-opacity="0.9"/>
+        <circle cx="14" cy="11" r="9.5" fill="#050505" stroke="#B388FF" stroke-opacity="0.9"/>
+      </svg>
+      <span class="text-[15px] tracking-tight font-medium">Eclipse</span>
+    </a>
+    <a href="#about" class="text-[13px] text-muted hover:text-white transition-colors">About</a>
+  </header>
+
+  <!-- HERO -->
+  <section class="relative min-h-[88vh] px-6 md:px-10 pt-10 md:pt-20 pb-20 flex flex-col">
+    <div class="absolute inset-0 pointer-events-none">
+      <div class="dotgrid"></div>
+      <div class="trace" style="left: 18%"></div>
+      <div class="trace" style="left: 73%; animation-delay: 2.4s"></div>
+    </div>
+
+    <div class="relative max-w-[1200px] mx-auto w-full">
+      <!-- status pill -->
+      <div class="inline-flex items-center gap-2 chip rounded-full pl-2 pr-3 py-1.5 mb-10">
+        <span class="pulse-dot"></span>
+        <span class="text-[12px] mono text-muted tracking-tight">STEALTH&nbsp;·&nbsp;ELC&nbsp;//&nbsp;011</span>
+      </div>
+
+      <!-- headline -->
+      <h1 class="display text-[clamp(64px,12vw,184px)] max-w-[14ch]">
+        Something is being built. <em>Slowly.</em>
+      </h1>
+
+      <p class="mt-10 max-w-[44ch] text-[17px] md:text-[19px] text-muted leading-snug">
+        An AI tool for hard problems. Built by four engineers who think most of what's been shipped this year is a demo with a logo. <span class="text-white/85">Coming in 2026.</span>
+      </p>
+
+      <!-- form -->
+      <form class="mt-10 flex flex-col sm:flex-row gap-2.5 max-w-[520px]" data-waitlist>
+        <input type="email" required placeholder="you@domain.com" class="input-bare flex-1 rounded-full px-5 py-3.5 text-[15px] tnum"/>
+        <button class="btn-primary rounded-full px-6 py-3.5 text-[14.5px] font-medium tracking-tight whitespace-nowrap">
+          Join the waitlist  →
+        </button>
+      </form>
+      <p class="mt-3 text-[12.5px] text-dim mono">No newsletter. One email when we open the door.</p>
+
+      <!-- live count -->
+      <div class="mt-14 flex flex-wrap items-center gap-x-8 gap-y-3 text-[13px] mono">
+        <span class="flex items-center gap-2.5 text-muted">
+          <span class="pulse-dot"></span>
+          <span class="tnum"><span class="text-white">4,408</span> builders waitlisted</span>
+        </span>
+        <span class="text-dim hidden md:inline">·</span>
+        <span class="text-muted">SF&nbsp;·&nbsp;Stockholm</span>
+        <span class="text-dim hidden md:inline">·</span>
+        <span class="text-muted tnum">Round 1 closed at 312</span>
+      </div>
+    </div>
+
+    <!-- eclipse glyph, bottom right -->
+    <div class="pointer-events-none absolute right-[-160px] bottom-[-160px] md:right-[-120px] md:bottom-[-120px] w-[480px] h-[480px] md:w-[640px] md:h-[640px]">
+      <div class="absolute inset-0 glyph-ring rounded-full"></div>
+      <div class="absolute inset-8 glyph-ring rounded-full" style="opacity:.7"></div>
+      <div class="absolute inset-20 glyph-ring rounded-full" style="opacity:.5"></div>
+      <div class="absolute inset-[120px] rounded-full glyph-corona"></div>
+      <div class="absolute inset-[150px] rounded-full glyph-disc"></div>
+    </div>
+  </section>
+
+  <!-- COUNTDOWN -->
+  <section class="px-6 md:px-10 py-20 border-t hairline">
+    <div class="max-w-[1200px] mx-auto">
+      <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
+        <div>
+          <div class="text-[12px] mono text-dim tracking-widest mb-3">// LAUNCH WINDOW</div>
+          <div class="display text-[clamp(56px,9vw,128px)] tnum mono font-medium" id="countdown">
+            087&nbsp;<span class="text-dim text-[0.55em] align-top mono">days</span>
+            &nbsp;14&nbsp;<span class="text-dim text-[0.55em] align-top mono">hrs</span>
+            &nbsp;02&nbsp;<span class="text-dim text-[0.55em] align-top mono">min</span>
+          </div>
+        </div>
+        <div class="md:text-right text-[13.5px] text-muted leading-relaxed max-w-[34ch]">
+          We won't ship a day early. We won't ship a day late.<br/>
+          <span class="text-dim">Target: 14 August 2026, 09:00 PT.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOUNDER NOTE -->
+  <section id="about" class="px-6 md:px-10 py-24 border-t hairline">
+    <div class="max-w-[920px] mx-auto grid md:grid-cols-[140px_1fr] gap-10">
+      <div class="flex md:block items-center gap-4">
+        <div class="w-[88px] h-[88px] rounded-full overflow-hidden hairline-2 border" style="background: conic-gradient(from 220deg, #2a1450, #4a1ea8, #b388ff, #2a1450);"></div>
+        <div class="md:mt-3 text-[12px] mono text-dim leading-relaxed">
+          <div class="text-white">Maya Lindqvist</div>
+          <div>Founding engineer</div>
+          <div>Eclipse · Nov 2024 →</div>
+        </div>
+      </div>
+      <div class="text-[18px] md:text-[20px] leading-[1.55] text-white/90">
+        <p>We're a four-person team out of <span class="text-white">San Francisco</span> and <span class="text-white">Stockholm</span>. We've been heads-down for 11 months on a problem we couldn't stop thinking about.</p>
+        <p class="mt-5 text-muted text-[16.5px]">No launch posts. No demos for investors who can't tell the difference. One email, when there's something worth showing. — <span class="text-white">Maya</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT'S COMING -->
+  <section class="px-6 md:px-10 py-24 border-t hairline">
+    <div class="max-w-[1200px] mx-auto">
+      <div class="text-[12px] mono text-dim tracking-widest mb-10">// WHAT'S COMING</div>
+      <div class="grid md:grid-cols-3 gap-10 md:gap-14">
+        <div>
+          <div class="mono text-[12px] text-dim mb-3">01</div>
+          <div class="text-[20px] leading-snug">A model that <em class="italic text-[#b388ff] not-italic" style="font-style:italic">refuses confidently</em> when it doesn't know.</div>
+        </div>
+        <div>
+          <div class="mono text-[12px] text-dim mb-3">02</div>
+          <div class="text-[20px] leading-snug">Latency budget of <span class="mono tnum">1.18s P95</span> on a 70B-class problem set.</div>
+        </div>
+        <div>
+          <div class="mono text-[12px] text-dim mb-3">03</div>
+          <div class="text-[20px] leading-snug">Runs against your data. <span class="text-muted">It never leaves your VPC.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BACKED BY -->
+  <section class="px-6 md:px-10 py-20 border-t hairline">
+    <div class="max-w-[1200px] mx-auto">
+      <div class="text-[12px] mono text-dim tracking-widest mb-8">// BACKED BY</div>
+      <div class="grid grid-cols-2 md:grid-cols-6 gap-x-8 gap-y-6">
+        <div class="text-[15px] tracking-tight text-white/70 font-medium">Halcyon Capital</div>
+        <div class="text-[15px] tracking-tight text-white/70" style="font-family: 'Newsreader', Georgia, serif; font-style: italic;">Cinder Fund</div>
+        <div class="text-[15px] tracking-tight text-white/70 mono">beacon.vc</div>
+        <div class="text-[15px] tracking-tight text-white/70 font-semibold">COAST&nbsp;/</div>
+        <div class="text-[15px] tracking-tight text-white/70" style="font-family: 'Newsreader', Georgia, serif;">Linnea Capital</div>
+        <div class="text-[15px] tracking-tight text-white/70 font-medium">Stratos<span class="text-dim">·VC</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WAITLIST MOMENTUM -->
+  <section class="px-6 md:px-10 py-14 border-t hairline">
+    <div class="max-w-[1400px] mx-auto">
+      <div class="text-[12px] mono text-dim tracking-widest mb-6">// 4,408 ON THE LIST</div>
+      <div class="marquee">
+        <div class="marquee-track" id="avatarTrack"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="px-6 md:px-10 py-10 border-t hairline flex flex-col md:flex-row gap-4 md:items-center md:justify-between text-[13px] text-dim">
+    <div class="flex items-center gap-2.5">
+      <svg width="16" height="16" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <circle cx="11" cy="11" r="9.5" stroke="white" stroke-opacity="0.7"/>
+        <circle cx="14" cy="11" r="9.5" fill="#050505" stroke="#B388FF" stroke-opacity="0.9"/>
+      </svg>
+      <span class="text-white/80">Eclipse</span>
+      <span>—</span>
+      <span>Stealth, on purpose.</span>
+    </div>
+    <div class="flex items-center gap-6 mono">
+      <a href="#" class="hover:text-white/80 transition-colors">Privacy</a>
+      <span>© 2026</span>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+  // Avatars (gradient circles, fictional)
+  (function() {
+    const palettes = [
+      ['#3b1f6b', '#b388ff'],
+      ['#0d2540', '#67e8f9'],
+      ['#3a0f4a', '#ff7ad9'],
+      ['#1a3a2a', '#7dd47a'],
+      ['#3a2a10', '#f5c26b'],
+      ['#1d1d22', '#bfbfd1'],
+      ['#240a36', '#9b5cff'],
+      ['#0b2a3a', '#4ecaf0'],
+    ];
+    const track = document.getElementById('avatarTrack');
+    const make = () => {
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < 36; i++) {
+        const p = palettes[i % palettes.length];
+        const d = document.createElement('div');
+        d.className = 'w-9 h-9 rounded-full shrink-0';
+        d.style.background = `conic-gradient(from ${(i*47)%360}deg, ${p[0]}, ${p[1]}, ${p[0]})`;
+        d.style.boxShadow = 'inset 0 0 0 1px rgba(255,255,255,0.06)';
+        frag.appendChild(d);
+      }
+      return frag;
+    };
+    track.appendChild(make());
+    track.appendChild(make());
+  })();
+
+  // Live countdown
+  (function() {
+    const target = new Date();
+    target.setDate(target.getDate() + 87);
+    target.setHours(target.getHours() + 14, 2, 0, 0);
+    const el = document.getElementById('countdown');
+    const pad = (n, w=2) => String(n).padStart(w,'0');
+    const tick = () => {
+      const ms = target - new Date();
+      if (ms <= 0) return;
+      const d = Math.floor(ms / 86400000);
+      const h = Math.floor((ms % 86400000) / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      el.innerHTML =
+        `${pad(d,3)}&nbsp;<span class="text-dim text-[0.55em] align-top mono">days</span>`+
+        `&nbsp;${pad(h)}&nbsp;<span class="text-dim text-[0.55em] align-top mono">hrs</span>`+
+        `&nbsp;${pad(m)}&nbsp;<span class="text-dim text-[0.55em] align-top mono">min</span>`+
+        `&nbsp;${pad(s)}&nbsp;<span class="text-dim text-[0.55em] align-top mono">sec</span>`;
+    };
+    tick();
+    setInterval(tick, 1000);
+  })();
+
+  function joinWaitlist(form) {
+    const btn = form.querySelector('button');
+    btn.textContent = 'You\u2019re #4,409  ✓';
+    btn.style.background = '#fff';
+    setTimeout(() => { btn.textContent = 'Join the waitlist  →'; btn.style.background = ''; }, 3200);
+    form.querySelector('input').value = '';
+  }
+  document.querySelectorAll('form[data-waitlist]').forEach(function (f) {
+    f.addEventListener('submit', function (e) { e.preventDefault(); joinWaitlist(f); });
+  });
+</script>
+</body>
+</html>

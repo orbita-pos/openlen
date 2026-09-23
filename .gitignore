@@ -158,6 +158,25 @@ public/openlen-images/motion/
 !/templates/starter/sello.html
 !/templates/starter/umbral.html
 !/templates/starter/vispera.html
+# Y ESTAS 14 (2026-09-22), por lo mismo. Eran las plantillas de la galeria de
+# produccion que seguian con `on*` —la limpieza del 01/09 se midio sobre las
+# 178 del disco, no sobre las 451 de la galeria—: `doSub` y `joinWaitlist`
+# pasan a addEventListener, el hover a CSS, los `return false` fuera. Bajadas
+# de R2 con el hash de su fila, limpiadas, y sin republicar todavia.
+!/templates/starter/baseline-strength.html
+!/templates/starter/constellation.html
+!/templates/starter/daybreak.html
+!/templates/starter/drape.html
+!/templates/starter/eclipse.html
+!/templates/starter/mise-letter.html
+!/templates/starter/off-grid-type.html
+!/templates/starter/overland.html
+!/templates/starter/pulse-lab.html
+!/templates/starter/signal-theory.html
+!/templates/starter/the-ledger.html
+!/templates/starter/tide.html
+!/templates/starter/vellum.html
+!/templates/starter/workbench-log.html
 *.tar.gz
 /tests/visual/corpus/templates/
 /tests/visual/corpus/sections/

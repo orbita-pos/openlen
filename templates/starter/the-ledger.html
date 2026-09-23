@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Ledger — Money, explained like you're smart</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#F6F1E6; --text:#1B1813; --muted:#6f6857; --accent:#B08D2E;
+    --line:rgba(27,24,19,0.14); --panel:#FBF7EC;
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html{ scroll-behavior:smooth; }
+  body{ background:var(--bg); color:var(--text); font-family:"Source Serif 4",serif; }
+  .display{ font-family:"Libre Caslon Display",serif; letter-spacing:-0.01em; }
+  .mono{ font-family:"JetBrains Mono",monospace; }
+  .muted{ color:var(--muted); }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  .rule{ border-color:var(--line); }
+  .hero-cols{
+    background-image:repeating-linear-gradient(90deg, rgba(27,24,19,0.05) 0 1px, transparent 1px 96px);
+  }
+  .pulse-dot{ position:relative; }
+  .pulse-dot::after{ content:""; position:absolute; inset:0; border-radius:9999px;
+    box-shadow:0 0 0 0 rgba(176,141,46,0.5); animation:pulse 2.4s ease-out infinite; }
+  @keyframes pulse{ to{ box-shadow:0 0 0 12px rgba(176,141,46,0); } }
+  .lift{ transition:transform .12s ease, box-shadow .12s ease, background-color .12s ease; }
+  .lift:hover{ transform:translateY(-2px); }
+  .marquee{ display:flex; gap:3rem; width:max-content; animation:scroll 30s linear infinite; }
+  @keyframes scroll{ to{ transform:translateX(-50%); } }
+  .btn-sub.is-done{ background:#3f4a2c !important; color:#e8f0cf !important; }
+  details[open] .faq-plus{ transform:rotate(45deg); }
+  .faq-plus{ transition:transform .15s ease; }
+  ::selection{ background:rgba(176,141,46,0.3); }
+  .nameplate{ border-top:2px solid var(--text); border-bottom:1px solid var(--text); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 backdrop-blur bg-[#F6F1E6]/85 border-b rule">
+  <nav class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="40" height="30" viewBox="0 0 52 38" fill="none" aria-hidden="true">
+        <rect x="1.5" y="1.5" width="49" height="29" stroke="#1B1813" stroke-width="1.2"/>
+        <text x="26" y="22" text-anchor="middle" class="display" font-size="18" fill="#1B1813">TL</text>
+        <line x1="14" y1="35" x2="38" y2="35" stroke="#B08D2E" stroke-width="1.5"/>
+      </svg>
+      <span class="display text-[19px]">The Ledger</span>
+    </a>
+    <div class="hidden md:flex items-center gap-7 text-[15px] muted">
+      <a href="#archive" class="hover:text-[#1B1813] transition-colors">Archive</a>
+      <a href="#author" class="hover:text-[#1B1813] transition-colors">About</a>
+      <a href="#pricing" class="hover:text-[#1B1813] transition-colors">Sponsor</a>
+    </div>
+    <a href="#subscribe" class="lift inline-flex items-center rounded-full bg-[#1B1813] text-[#F6F1E6] text-[14px] font-medium px-4 py-2 hover:bg-[#2c281f]">Subscribe</a>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- HERO -->
+<section class="hero-cols border-b rule">
+  <div class="max-w-6xl mx-auto px-5 pt-14 pb-20">
+    <!-- nameplate masthead -->
+    <div class="nameplate py-3 text-center mb-12">
+      <p class="display text-[clamp(34px,7vw,72px)] leading-none tracking-tight">THE LEDGER</p>
+      <p class="mono text-[12px] uppercase tracking-[0.22em] muted mt-2 tnum">EST. 2023 · ISSUE № 168 · SUNDAY EDITION</p>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 items-center">
+      <div>
+        <div class="flex items-center gap-2.5 mb-5">
+          <span class="pulse-dot inline-block w-2 h-2 rounded-full bg-[#B08D2E]"></span>
+          <span class="mono text-[12px] uppercase tracking-[0.16em] muted tnum">412 joined this week</span>
+        </div>
+        <h1 class="display text-[40px] sm:text-[56px] leading-[1.02]">
+          Money, explained <span class="muted">like you're smart.</span>
+        </h1>
+        <p class="mt-6 text-[19px] leading-relaxed muted max-w-[34rem]">
+          Macro, markets, and the week in money — for operators, founders, and curious professionals who want the picture without the doom or the jargon.
+        </p>
+
+        <form id="subscribe" class="mt-8 max-w-[30rem]" data-sub="btn1">
+          <div class="flex flex-col sm:flex-row gap-2.5">
+            <input type="email" required placeholder="you@firm.com"
+              class="h-14 flex-1 rounded-md bg-[#FBF7EC] border rule px-4 text-[16px] text-[#1B1813] placeholder:text-[#9a937f] focus:outline-none focus:border-[#B08D2E] focus:ring-1 focus:ring-[#B08D2E]" />
+            <button id="btn1" type="submit" class="btn-sub lift h-14 px-6 rounded-md bg-[#1B1813] text-[#F6F1E6] text-[15px] font-semibold whitespace-nowrap hover:bg-[#2c281f]">Read it free</button>
+          </div>
+          <p class="mt-3 text-[14px] muted tnum">Join 31,890 readers · every Sunday, 8am ET · unsubscribe anytime.</p>
+        </form>
+
+        <div class="mt-8">
+          <p class="mono text-[11px] uppercase tracking-[0.16em] muted mb-3">Read at</p>
+          <div class="flex flex-wrap items-center gap-x-7 gap-y-2 text-[16px] display">
+            <span>Stripe</span><span>Brex</span><span>Mercury</span><span>a16z</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRICE LINE CARD -->
+      <div class="lift rounded-lg border rule bg-[#FBF7EC] p-6">
+        <div class="flex items-center justify-between mb-1">
+          <span class="mono text-[12px] uppercase tracking-[0.12em] muted">10-yr Treasury yield</span>
+          <span class="mono text-[12px] text-[#B08D2E] tnum">+0.7pp</span>
+        </div>
+        <p class="text-[14px] muted mb-4" style="font-style:italic">Last 12 weeks — the move under everyone's mortgage.</p>
+        <svg id="yieldSvg" viewBox="0 0 320 170" class="w-full" aria-hidden="true"></svg>
+        <div class="flex justify-between mt-3 mono text-[12px] muted tnum">
+          <span>3.9%</span><span>4.6%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT YOU'LL GET -->
+<section class="max-w-6xl mx-auto px-5 py-20">
+  <h2 class="mono text-[12px] uppercase tracking-[0.18em] muted mb-10">In every Sunday letter</h2>
+  <div class="grid md:grid-cols-3 gap-10">
+    <div class="border-t-2 border-[#1B1813] pt-5">
+      <span class="mono text-[12px] text-[#B08D2E]">№ 01</span>
+      <h3 class="display text-[26px] mt-2 mb-2">The Open</h3>
+      <p class="muted text-[16px] leading-relaxed">The entire week in money, in one tight paragraph you could read out loud at dinner.</p>
+    </div>
+    <div class="border-t-2 border-[#1B1813] pt-5">
+      <span class="mono text-[12px] text-[#B08D2E]">№ 02</span>
+      <h3 class="display text-[26px] mt-2 mb-2">The Chart</h3>
+      <p class="muted text-[16px] leading-relaxed">One figure that mattered, drawn plainly and explained — what it shows, and what it doesn't.</p>
+    </div>
+    <div class="border-t-2 border-[#1B1813] pt-5">
+      <span class="mono text-[12px] text-[#B08D2E]">№ 03</span>
+      <h3 class="display text-[26px] mt-2 mb-2">Position</h3>
+      <p class="muted text-[16px] leading-relaxed">What it means for your money — framing, not advice. The questions to ask before you act.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SAMPLE ISSUE -->
+<section class="max-w-6xl mx-auto px-5 py-12">
+  <div class="rounded-lg border rule bg-[#FBF7EC] p-7 sm:p-10 relative">
+    <span class="absolute right-6 top-6 mono text-[12px] muted border rule rounded px-2 py-1">№ 168</span>
+    <div class="border-l-2 border-[#B08D2E] pl-6 max-w-[44rem]">
+      <p class="mono text-[12px] uppercase tracking-[0.12em] muted tnum">Issue № 168 · Mar 16, 2026 · 8 min read</p>
+      <h3 class="display text-[30px] sm:text-[38px] leading-tight mt-3">The carry trade nobody's pricing in.</h3>
+      <blockquote class="mt-5 text-[21px] leading-relaxed" style="font-style:italic">
+        "When the cheapest money in the world is borrowed in one currency and parked in another, the unwind doesn't ring a bell — it just arrives on a Monday."
+      </blockquote>
+      <div class="mt-7 rounded-md border rule bg-[#F6F1E6] p-5">
+        <p class="mono text-[12px] muted mb-3 tnum">USD/JPY · last 90 sessions</p>
+        <svg id="sampleSvg" viewBox="0 0 520 130" class="w-full" aria-hidden="true"></svg>
+      </div>
+      <a href="#subscribe" class="lift inline-flex items-center gap-1.5 mt-7 text-[16px] text-[#B08D2E] font-semibold hover:gap-2.5 transition-all">Read the full issue <span>→</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHIVE -->
+<section id="archive" class="max-w-6xl mx-auto px-5 py-20">
+  <div class="flex items-end justify-between mb-8 border-b-2 border-[#1B1813] pb-3">
+    <h2 class="display text-[30px]">Back issues</h2>
+    <span class="mono text-[13px] muted tnum">168 issues · since 2023</span>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 167 · Mar 9</p>
+      <h3 class="display text-[20px] leading-snug mb-1 group-hover:text-[#B08D2E] transition-colors">The Fed's quiet pivot, hidden in a footnote.</h3>
+      <p class="muted text-[15px]">What the dot plot stopped saying. · 7 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 166 · Mar 2</p>
+      <h3 class="display text-[20px] leading-snug mb-1 group-hover:text-[#B08D2E] transition-colors">Why your savings account is a slow tax.</h3>
+      <p class="muted text-[15px]">Real yield, after inflation, in one table. · 6 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 165 · Feb 23</p>
+      <h3 class="display text-[20px] leading-snug mb-1 group-hover:text-[#B08D2E] transition-colors">The private-credit bubble everyone's polite about.</h3>
+      <p class="muted text-[15px]">Where the marks stop being real. · 9 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 164 · Feb 16</p>
+      <h3 class="display text-[20px] leading-snug mb-1 group-hover:text-[#B08D2E] transition-colors">Gold at all-time highs, explained without the gold bugs.</h3>
+      <p class="muted text-[15px]">Who's actually buying, and why. · 7 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 163 · Feb 9</p>
+      <h3 class="display text-[20px] leading-snug mb-1 group-hover:text-[#B08D2E] transition-colors">The jobs report is two reports. They disagree.</h3>
+      <p class="muted text-[15px]">Household vs. establishment, finally clear. · 6 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 162 · Feb 2</p>
+      <h3 class="display text-[20px] leading-snug mb-1 group-hover:text-[#B08D2E] transition-colors">A recession indicator that's been wrong for two years.</h3>
+      <p class="muted text-[15px]">When to stop trusting the yield curve. · 8 min</p>
+    </a>
+  </div>
+</section>
+
+<!-- AUTHOR -->
+<section id="author" class="max-w-6xl mx-auto px-5 py-12">
+  <div class="rounded-lg border rule bg-[#FBF7EC] p-7 sm:p-10 flex flex-col sm:flex-row gap-7 items-start">
+    <svg width="72" height="72" viewBox="0 0 72 72" class="shrink-0" aria-hidden="true">
+      <rect width="72" height="72" rx="8" fill="#efe7d4"/>
+      <text x="36" y="47" text-anchor="middle" class="display" font-size="30" fill="#B08D2E">EM</text>
+    </svg>
+    <div>
+      <h2 class="display text-[26px]">Eleanor Marsh</h2>
+      <p class="muted text-[15px] mt-1" style="font-style:italic">Former rates strategist · 11 years on a bank macro desk before going independent.</p>
+      <p class="text-[17px] leading-relaxed mt-4 max-w-[42rem]">I spent a decade writing notes that only fifty people were allowed to read. The Ledger is the version I wish my smartest non-finance friends had — same rigor, none of the gatekeeping, and never, ever financial advice.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF -->
+<section class="max-w-6xl mx-auto px-5 py-20">
+  <div class="grid md:grid-cols-3 gap-5">
+    <figure class="lift rounded-lg border rule bg-[#FBF7EC] p-6">
+      <blockquote class="text-[17px] leading-relaxed" style="font-style:italic">"The only finance email I read top to bottom. Eleanor explains the thing the headlines assume you already understand."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted">Yusuf Abara · CTO at Mercury</figcaption>
+    </figure>
+    <figure class="lift rounded-lg border rule bg-[#FBF7EC] p-6">
+      <blockquote class="text-[17px] leading-relaxed" style="font-style:italic">"I forward it to my board before our quarterly. It's cheaper and clearer than the research we pay for."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted">Inés Calderón · CFO at Brightwave</figcaption>
+    </figure>
+    <figure class="lift rounded-lg border rule bg-[#FBF7EC] p-6">
+      <blockquote class="text-[17px] leading-relaxed" style="font-style:italic">"Macro without the doom-scrolling. It made me a calmer investor, which is worth more than any hot tip."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted">Marcus Tobin · Operator at Carta</figcaption>
+    </figure>
+  </div>
+
+  <div class="mt-8 grid grid-cols-2 md:grid-cols-4 border rule rounded-lg overflow-hidden">
+    <div class="p-6 border-r rule">
+      <p class="display text-[32px] tnum">58.2%</p>
+      <p class="muted text-[13px] mt-1">avg. open rate</p>
+    </div>
+    <div class="p-6 md:border-r rule">
+      <p class="display text-[32px] tnum">31,890</p>
+      <p class="muted text-[13px] mt-1">subscribers</p>
+    </div>
+    <div class="p-6 border-r rule border-t md:border-t-0">
+      <p class="display text-[32px] tnum">168</p>
+      <p class="muted text-[13px] mt-1">issues shipped</p>
+    </div>
+    <div class="p-6 border-t md:border-t-0">
+      <p class="display text-[32px] tnum">7.6 min</p>
+      <p class="muted text-[13px] mt-1">avg. read time</p>
+    </div>
+  </div>
+
+  <div class="mt-12 overflow-hidden relative" style="mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)">
+    <div class="marquee text-[19px] display">
+      <span>Stripe</span><span>Brex</span><span>Mercury</span><span>a16z</span><span>Carta</span><span>Ramp</span><span>Bloomberg</span><span>Sequoia</span>
+      <span>Stripe</span><span>Brex</span><span>Mercury</span><span>a16z</span><span>Carta</span><span>Ramp</span><span>Bloomberg</span><span>Sequoia</span>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="max-w-6xl mx-auto px-5 py-20">
+  <h2 class="display text-[34px] text-center mb-3">Read the Open free. Get the rest for $9.</h2>
+  <p class="muted text-center mb-12 max-w-[34rem] mx-auto text-[17px]">Every Sunday you get the Open and one chart, free. Paid is the full letter, the midweek note, and the archive.</p>
+  <div class="grid md:grid-cols-2 gap-5 max-w-[52rem] mx-auto">
+    <div class="rounded-lg border rule bg-[#FBF7EC] p-7">
+      <p class="mono text-[12px] uppercase tracking-[0.14em] muted">Reader</p>
+      <p class="display text-[42px] mt-2">$0</p>
+      <ul class="mt-6 space-y-3 text-[16px] muted">
+        <li class="flex gap-3"><span class="text-[#B08D2E]">✓</span> The Sunday Open</li>
+        <li class="flex gap-3"><span class="text-[#B08D2E]">✓</span> One chart, explained</li>
+        <li class="flex gap-3"><span class="text-[#B08D2E]">✓</span> Issue summaries</li>
+      </ul>
+      <a href="#subscribe" class="lift mt-7 inline-flex w-full justify-center rounded-md border-2 border-[#1B1813] px-5 py-3 text-[15px] font-semibold hover:bg-[#1B1813] hover:text-[#F6F1E6] transition-colors">Read it free</a>
+    </div>
+    <div class="rounded-lg border-2 border-[#B08D2E] bg-[#FBF7EC] p-7 relative overflow-hidden">
+      <span class="absolute right-0 top-5 bg-[#B08D2E] text-white mono text-[11px] uppercase tracking-[0.12em] px-3 py-1 rounded-l-full">Reader-supported</span>
+      <p class="mono text-[12px] uppercase tracking-[0.14em] text-[#B08D2E]">Subscriber</p>
+      <p class="display text-[42px] mt-2 tnum">$9<span class="text-[18px] muted">/mo</span></p>
+      <p class="muted text-[13px] tnum">or $90/yr — two months free</p>
+      <ul class="mt-6 space-y-3 text-[16px]">
+        <li class="flex gap-3"><span class="text-[#B08D2E]">✓</span> The full Sunday letter</li>
+        <li class="flex gap-3"><span class="text-[#B08D2E]">✓</span> The midweek macro note</li>
+        <li class="flex gap-3"><span class="text-[#B08D2E]">✓</span> The archive of all 168 issues</li>
+        <li class="flex gap-3"><span class="text-[#B08D2E]">✓</span> Every chart, as CSV</li>
+      </ul>
+      <a href="#subscribe" class="lift mt-7 inline-flex w-full justify-center rounded-md bg-[#1B1813] text-[#F6F1E6] px-5 py-3 text-[15px] font-semibold hover:bg-[#2c281f]">Subscribe</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="max-w-3xl mx-auto px-5 py-20">
+  <h2 class="display text-[30px] mb-8">Questions readers ask</h2>
+  <div class="divide-y rule border-t border-b rule">
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[18px]" style="font-weight:600">Is this financial advice?<span class="faq-plus text-[#B08D2E] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[16px] leading-relaxed mt-3">No. The Ledger is journalism and analysis, not personalized investment advice. Nothing here is a recommendation to buy or sell anything — it's framing to help you ask better questions before you talk to someone licensed.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[18px]" style="font-weight:600">Free vs paid — what do I miss on free?<span class="faq-plus text-[#B08D2E] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[16px] leading-relaxed mt-3">Free readers get the Open and one chart every Sunday. Subscribers get the full letter (usually 3–4× longer), the midweek macro note, the complete archive, and every chart as downloadable CSV.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[18px]" style="font-weight:600">Cadence — really just Sundays?<span class="faq-plus text-[#B08D2E] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[16px] leading-relaxed mt-3">The main letter lands every Sunday at 8am ET without fail. Subscribers also get a short midweek note when something moves enough to warrant it — never more than twice a week, total.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[18px]" style="font-weight:600">Can my employer expense it?<span class="faq-plus text-[#B08D2E] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[16px] leading-relaxed mt-3">Yes — an itemized receipt arrives the moment you subscribe, and there's a team rate for finance and operations groups who want it on one invoice.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[18px]" style="font-weight:600">Will you ever sell or rent my email?<span class="faq-plus text-[#B08D2E] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[16px] leading-relaxed mt-3">Never. No lists sold, no data brokers, no "partner offers." The only thing that ever arrives from this address is the letter, and you can leave with one click.</p>
+    </details>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="border-t rule hero-cols">
+  <div class="max-w-3xl mx-auto px-5 py-24 text-center">
+    <h2 class="display text-[40px] sm:text-[54px] leading-[1.04]">Money, explained <span class="muted">like you're smart.</span></h2>
+    <form class="mt-10 max-w-[30rem] mx-auto" data-sub="btn2">
+      <div class="flex flex-col sm:flex-row gap-2.5">
+        <input type="email" required placeholder="you@firm.com"
+          class="h-14 flex-1 rounded-md bg-[#FBF7EC] border rule px-4 text-[16px] text-[#1B1813] placeholder:text-[#9a937f] focus:outline-none focus:border-[#B08D2E] focus:ring-1 focus:ring-[#B08D2E]" />
+        <button id="btn2" type="submit" class="btn-sub lift h-14 px-6 rounded-md bg-[#1B1813] text-[#F6F1E6] text-[15px] font-semibold whitespace-nowrap hover:bg-[#2c281f]">Read it free</button>
+      </div>
+      <p class="mt-3 text-[14px] muted tnum">Join 31,890 readers · every Sunday, 8am ET.</p>
+    </form>
+  </div>
+</section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="border-t-2 border-[#1B1813]">
+  <div class="max-w-6xl mx-auto px-5 py-12 flex flex-col sm:flex-row justify-between gap-6">
+    <div>
+      <span class="display text-[18px]">The Ledger</span>
+      <p class="muted text-[13px] mt-2">Powered by Ghost · Unsubscribe anytime — one click, no questions, no clawback.</p>
+    </div>
+    <div class="flex gap-7 text-[14px] muted">
+      <a href="#archive" class="hover:text-[#1B1813] transition-colors">Archive</a>
+      <a href="#author" class="hover:text-[#1B1813] transition-colors">About</a>
+      <a href="#" class="hover:text-[#1B1813] transition-colors">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function doSub(e, id){
+    e.preventDefault();
+    var b = document.getElementById(id);
+    b.classList.add('is-done');
+    b.textContent = '✓ Subscribed — check your inbox';
+    return false;
+  }
+  document.querySelectorAll('form[data-sub]').forEach(function (f) {
+    f.addEventListener('submit', function (e) { doSub(e, f.getAttribute('data-sub')); });
+  });
+  function linePath(vals, w, h, pad){
+    var min=Math.min.apply(null,vals), max=Math.max.apply(null,vals);
+    var rng=(max-min)||1, n=vals.length;
+    return vals.map(function(v,i){
+      var x=pad+(i/(n-1))*(w-2*pad);
+      var y=h-pad-((v-min)/rng)*(h-2*pad);
+      return (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);
+    }).join(' ');
+  }
+  (function(){
+    var vals=[3.9,3.95,3.88,4.02,4.1,4.05,4.18,4.22,4.3,4.41,4.52,4.6];
+    var d=linePath(vals,320,170,16);
+    document.getElementById('yieldSvg').innerHTML =
+      '<path d="'+d+'" fill="none" stroke="#B08D2E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'+
+      '<path d="'+d+' L304 154 L16 154 Z" fill="#B08D2E" opacity="0.08"/>';
+  })();
+  (function(){
+    var vals=[148,147,149,151,150,153,156,158,157,160,159,162,161];
+    var d=linePath(vals,520,130,12);
+    document.getElementById('sampleSvg').innerHTML =
+      '<path d="'+d+'" fill="none" stroke="#B08D2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+  })();
+</script>
+</body>
+</html>
