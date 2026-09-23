@@ -11,6 +11,7 @@ import { applyTematicaToHtml } from "@/lib/tematicas/apply-server";
 import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
 import { runAgentTool, summarizeProjectState, urlIsPageImage, type AgentDeps, type AgentSession } from "./tools";
 import { CONFLICTO_AL_GUARDAR, realDeps } from "./tools";
+import { loQueCambioElDueno } from "./cambios-del-dueno";
 import { buildFunctionDeclarations } from "./catalog";
 import type { RedesignInput } from "./redesign";
 import type { ProjectData } from "@/lib/projects/types";
@@ -202,7 +203,7 @@ function makeDeps(
     async versionHtml(_p, _u, versionId) {
       return store.snapshots.find((s) => s.id === versionId)?.html ?? null;
     },
-    async restoreVersion(_p, _u, versionId) {
+    async restoreVersion(_p, _u, versionId, escritura) {
       const v = store.snapshots.find((s) => s.id === versionId);
       if (!v) return null;
       // EL «ANTES» SE ARCHIVA PRIMERO, como el real: es lo que hace que la
@@ -224,11 +225,13 @@ function makeDeps(
       store.data = v.page
         ? { ...store.data, pages: { ...store.data.pages, [v.page]: { ...store.data.pages?.[v.page], html: v.html } } }
         : { ...store.data, html: v.html };
+      // La fila «hacia delante», como la real: del Agente si él la escribió.
       store.snapshots.unshift({
         id: `v${store.snapshots.length + 1}`,
-        label: `Restored "${v.label}"`,
+        label: escritura?.label ?? `Restored "${v.label}"`,
         page: v.page,
         html: v.html,
+        ...(escritura ? { source: escritura.source } : {}),
       });
       return { html: v.html, versionPrevia };
     },
@@ -3644,6 +3647,43 @@ describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /preguntar/);
     assert.equal(store.data.html, antes, "tocó la página cuando debía preguntar");
+  });
+
+  // 🔴 Revisión pre-deploy del 2026-09-22. El deshacer SIN edición a mano
+  // restaura en crudo (`restoreVersion`), y esa restauración no quedaba como
+  // escritura de Len: su última versión `chat` seguía siendo la del cambio que
+  // acababa de deshacer. El turno siguiente comparaba esa versión con la página
+  // y le decía al modelo «EL DUEÑO CAMBIÓ LA PÁGINA A MANO… esto NO lo hiciste
+  // tú» — de lo que hizo él. Y un segundo «deshaz» salía `se_solapan`: Len le
+  // preguntaba al dueño por una edición que nunca hizo.
+  it("🔴 el deshacer de Len no vuelve en el turno siguiente como cambio del dueño", async () => {
+    const { deps, store } = makeDeps();
+    const session = makeSession();
+    await runAgentTool(session, deps, "editar_pagina", {
+      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tacos de Len</h1>" }],
+      resumen: "titular de Len",
+    });
+    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    assert.equal(out.response.ok, true);
+    assert.equal(store.data.html, HTML);
+
+    // Lo que la ruta le cuenta al modelo al abrir el turno siguiente.
+    const html = async (id: string) => {
+      const h = store.snapshots.find((s) => s.id === id)?.html;
+      return h === undefined ? null : stripOpIds(h);
+    };
+    const bloque = await loQueCambioElDueno({
+      versiones: store.snapshots,
+      page: null,
+      actual: stripOpIds(store.data.html),
+      leerHtml: html,
+    });
+    assert.deepEqual(bloque, [], "el deshacer de Len llegó al turno siguiente como edición del dueño");
+
+    // Y otro «deshaz» no pregunta por una edición a mano que no existe.
+    const siguiente = { ...makeSession(store.data.html), baseHtml: store.data.html };
+    const otra = await runAgentTool(siguiente, deps, "revertir_ultimo_cambio", {});
+    assert.equal(otra.response.ok, true, String(otra.response.error ?? ""));
   });
 
   it("BRAZO DE CONTROL: sin edición del dueño, se vuelve al antes de Len como siempre", async () => {
