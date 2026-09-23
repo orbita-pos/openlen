@@ -1,0 +1,67 @@
+export const meta = {
+  slug: "len-1-5",
+  title: "Len 1.5: qué cambió desde el 1.0, medido",
+  dek: "Doce días y muchos commits después del 1.0, la pregunta era si Len es mejor o sólo más grande. La contestamos corriendo la misma batería contra el código de las dos versiones, con el mismo modelo.",
+  date: "2026-09-23",
+  category: "Research",
+  topic: "Versiones",
+  cover: "segunda",
+  readingMinutes: 4,
+  author: "Equipo OpenLen",
+  cifra: { valor: "64 → 67", nota: "encargos de 69, del 1.0 al 1.5", commit: "48a3b66b" },
+  indice: [
+    { id: "la-pregunta", texto: "La pregunta" },
+    { id: "como", texto: "Cómo lo medimos" },
+    { id: "lo-que-salio", texto: "Lo que salió" },
+    { id: "tres-fallos", texto: "Los tres fallos que ya no tiene" },
+    { id: "la-vara", texto: "La vara que se equivocó" },
+    { id: "abierto", texto: "Lo que sigue abierto" },
+  ],
+}
+
+<h2 id="la-pregunta">La pregunta</h2>
+
+Len 1.0 salió el 11 de septiembre. <Fuente commit="f6c0f915" /> Desde entonces hemos cambiado su código casi a diario, y la tentación era llamar 1.5 a lo que hay hoy por la cantidad de trabajo. Pero una versión nueva no la gana el calendario ni el número de commits: la gana una medición que diga que es mejor en algo que tú notarías.
+
+<h2 id="como">Cómo lo medimos</h2>
+
+La batería son los encargos con los que probamos a Len. Cada uno trae su página, lo que pide el dueño y cómo se comprueba si salió bien, **leyendo el resultado y no lo que Len cuenta**. La corrimos contra el código del 1.0 y contra el de hoy <Fuente commit="19162e5a" />, con el mismo modelo en las dos: lo que cambia entre una y otra es Len.
+
+La batería de hoy tiene encargos que no existían en el 1.0. Siete se pueden correr contra el código viejo tal cual, y los copiamos literalmente con un script que está en el repositorio <Fuente ruta="scripts/portar-casos-a-version.mjs" />; las funciones que los califican son idénticas en las dos versiones. Los otros catorce piden piezas del banco de pruebas que se construyeron después —una conversación previa, un turno que se corta, un guardado que choca—, y portarlos sería inventarle al 1.0 un comportamiento que no tenía.
+
+<h2 id="lo-que-salio">Lo que salió</h2>
+
+<Figura pie={<>Una corrida por encargo, el 23 de septiembre de 2026. <Fuente commit="48a3b66b" /></>}>
+<table>
+  <thead>
+    <tr><th>Encargos</th><th>Len 1.0</th><th>Len 1.5</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Los 62 que ya existían en el 1.0</td><td className="n">60</td><td className="n">61</td></tr>
+    <tr><td>Los 7 nuevos que se pueden portar</td><td className="n">4</td><td className="n">6</td></tr>
+    <tr><td>Los 14 nuevos que no se pueden portar</td><td className="n">—</td><td className="n">13</td></tr>
+  </tbody>
+</table>
+</Figura>
+
+En lo comparable, <Cifra valor="64 → 67" commit="48a3b66b">de 69 encargos</Cifra>. Con una sola corrida por encargo eso está cerca del ruido, y lo decimos así: la batería del 1.0 ya estaba en el 97 %, y un examen que casi todo el mundo aprueba no puede enseñar quién estudió más. Lo que sí separa a las dos versiones son fallos concretos.
+
+<h2 id="tres-fallos">Los tres fallos que ya no tiene</h2>
+
+**Se quedaba sin pasos.** En dos encargos que piden varias cosas a la vez, el 1.0 agotó su presupuesto de pasos antes de terminar. El 1.5 los termina.
+
+**Avisaba de una edición que nadie hizo.** En uno de esos dos, el 1.0 le dijo al dueño que alguien había editado la página mientras trabajaba, y que su guardado había reemplazado esa edición. Nadie la había tocado: era su propia escritura, que no reconocía como suya. Es la avería que arreglamos el 14 de septiembre. <Fuente commit="ef204219" />
+
+<div className="pull">Un aviso falso de que alguien pisó tu trabajo es peor que ningún aviso: te manda a buscar un daño que no existe.</div>
+
+**Al quedarse sin pasos, ni miraba ni lo decía.** Cuando el 1.0 se quedaba sin pasos después de cambiar la página, nadie la miraba, y ninguna tarjeta avisaba de que ese cambio quedaba sin comprobar. El 1.5 la mira, o dice que no la miró.
+
+Un cuarto encargo no llegó a medir nada en el 1.0 —la situación que prueba no se dio en esa corrida— y no lo contamos como fallo.
+
+<h2 id="la-vara">La vara que se equivocó</h2>
+
+En la columna del 1.5 hay un fallo que no es de Len. En el encargo que le pide tres cosas con presupuesto para una, cerró así: «Me quedaron dos cosas pendientes y no las toqué:», con las dos en una lista. La vara buscaba la palabra «pendiente» en la misma frase que cada cosa, y una lista las separa. Arreglamos la vara <Fuente commit="6d61f075" />, y con ella los 62 de siempre salen 62. En la tabla dejamos el 61 que se midió.
+
+<Abierto id="abierto" titulo="Lo que sigue abierto">
+Tres cosas. La primera la tienen las dos versiones: si le das un teléfono sin prefijo de país, **se lo inventa** —el 1.0 puso +33 y el 1.5, +52— y el 1.5, además, dijo en su cierre que lo había dejado sin prefijo. <Fuente commit="48a3b66b" /> La segunda es la muestra: una corrida por encargo no separa una mejora pequeña de la suerte, y los catorce encargos que el 1.0 no puede correr prueban arreglos hechos después, pero no sabemos cómo le habría ido en ellos. La tercera: el carrito que guarda en una base de datos a veces guarda uno cuando se pulsa dos veces, y en esta corrida le tocó al 1.5.
+</Abierto>

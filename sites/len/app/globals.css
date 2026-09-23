@@ -126,6 +126,17 @@ a {
   margin: 0;
 }
 
+.hero .acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+.hero .acciones .btn {
+  padding: 11px 18px;
+  font-size: 14px;
+}
+
 @keyframes entra {
   from {
     opacity: 0;
@@ -445,6 +456,52 @@ a {
   width: 7px;
   height: 7px;
   border-radius: 50%;
+}
+
+/* lo que hace por ti: las tarjetas de principios, sin el ordinal */
+.oficio .pcard h3 {
+  margin-top: 0;
+}
+
+/* medido, no prometido: dos <CifraGrande> y la nota que dice de dónde salen */
+.nota-cifras {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 72ch;
+  margin: 0;
+}
+
+/* disponible hoy */
+.disponible {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 32px;
+  align-items: center;
+  margin-top: 84px;
+  padding: 40px 44px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+.disponible h2 {
+  font-family: var(--f-texto), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 34px;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  margin: 8px 0 10px;
+}
+.disponible p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #4a453d;
+  margin: 0;
+  max-width: 56ch;
+}
+.disponible .btn {
+  padding: 12px 22px;
+  font-size: 14.5px;
 }
 
 /* misión */
@@ -779,8 +836,16 @@ a {
   .mission p {
     font-size: 30px;
   }
+  .disponible {
+    padding: 28px 24px;
+    gap: 20px;
+  }
+  .disponible h2 {
+    font-size: 28px;
+  }
   .hero,
   .model,
+  .disponible,
   .body,
   .row,
   .pr,
@@ -797,8 +862,15 @@ a {
     font-size: 40px;
     overflow-wrap: anywhere;
   }
+  /* En 42px el subrayado de 5px a 9px de distancia tachaba la línea de abajo:
+     «propio» subrayado cruzaba «desarrollador». */
   .hero h1 {
     font-size: 42px;
+    line-height: 1.1;
+  }
+  .hero h1 em {
+    text-decoration-thickness: 3px;
+    text-underline-offset: 6px;
   }
   .art-head h1 {
     font-size: 36px;

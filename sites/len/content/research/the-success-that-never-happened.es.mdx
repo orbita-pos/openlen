@@ -8,7 +8,7 @@ export const meta = {
   cover: "primera",
   readingMinutes: 5,
   author: "Equipo OpenLen",
-  cifra: { valor: "0 de 104", nota: "proyectos con objetivo activo", commit: "4d34223e" },
+  cifra: { valor: "0 de 104", nota: "proyectos con objetivo activo", commit: "4834a64d" },
   indice: [
     { id: "la-puerta", texto: "La puerta que nunca abrió" },
     { id: "el-patron", texto: "El patrón" },
@@ -19,9 +19,9 @@ export const meta = {
 
 <h2 id="la-puerta">La puerta que nunca abrió</h2>
 
-Len puede proponerte un objetivo —«que esta página consiga más llamadas»— y perseguirlo si tú apruebas la tarjeta. Teníamos una cifra incómoda: <Cifra valor="0 de 104" commit="4d34223e">proyectos reales con un objetivo activo</Cifra>. Teníamos también una hipótesis razonable sobre por qué: la gente no entiende la función, no la usa.
+Len puede proponerte un objetivo —«que esta página consiga más llamadas»— y perseguirlo si tú apruebas la tarjeta. Teníamos una cifra incómoda: <Cifra valor="0 de 104" commit="4834a64d">proyectos reales con un objetivo activo</Cifra>. Teníamos también una hipótesis razonable sobre por qué: la gente no entiende la función, no la usa.
 
-La hipótesis era falsa. Al probar la función de punta a punta contra el servidor de verdad salió que **la mitad que sí existía tampoco funcionaba**. El código que sabía guardar el objetivo lo sabía desde el primer día; pero la validación que corre *antes* —la que decide si la petición sigue— no tenía esa clave en su lista blanca. Toda escritura del objetivo salía 400 sin llegar jamás al código que sabía aplicarla. <Fuente commit="4d34223e" />
+La hipótesis era falsa. Al probar la función de punta a punta contra el servidor de verdad salió que **la mitad que sí existía tampoco funcionaba**. El código que sabía guardar el objetivo lo sabía desde el primer día; pero la validación que corre *antes* —la que decide si la petición sigue— no tenía esa clave en su lista blanca. Toda escritura del objetivo salía 400 sin llegar jamás al código que sabía aplicarla. <Fuente commit="4834a64d" />
 
 <div className="pull">El botón mandaba la petición, recibía el 400, y la tarjeta volvía a su estado inicial sin decir nada.</div>
 
@@ -31,19 +31,19 @@ Nadie veía un error. No había nada en la consola. Sólo una función que, vist
 
 Lo importante no es el fallo: es su forma. Una decisión —«qué claves acepto»— escrita en dos sitios, y una se queda atrás.
 
-La versión más limpia de esa forma la encontramos en el chat. La pregunta «¿cambió la página en este turno?» se calculaba en **dos** sitios del mismo fichero, con condiciones distintas y cuarenta y seis líneas de separación: uno para lo que ves en vivo, otro para lo que se guarda. La corrección que arregló la condición llegó sólo al primero. Resultado: lo que veías en vivo y lo que veías al recargar discrepaban, **en las dos direcciones** — un turno que no movió un byte recuperaba su botón de «Deshacer», y un turno que sí había cambiado algo duradero perdía su aviso. <Fuente commit="e283f46d" />
+La versión más limpia de esa forma la encontramos en el chat. La pregunta «¿cambió la página en este turno?» se calculaba en **dos** sitios del mismo fichero, con condiciones distintas y cuarenta y seis líneas de separación: uno para lo que ves en vivo, otro para lo que se guarda. La corrección que arregló la condición llegó sólo al primero. Resultado: lo que veías en vivo y lo que veías al recargar discrepaban, **en las dos direcciones** — un turno que no movió un byte recuperaba su botón de «Deshacer», y un turno que sí había cambiado algo duradero perdía su aviso. <Fuente commit="833677e0" />
 
 El arreglo tiene nombre y es una regla, no un parche: **extraer, no copiar**. Copiar deja dos otra vez, y la próxima corrección vuelve a llegar a una sola. Cuando no se puede extraer —porque de verdad son dos preguntas distintas— lo que las ata es una prueba.
 
 <h2 id="los-otros">Otros dos de la misma familia</h2>
 
 <div className="big">
-  <CifraGrande valor="about:blank" commit="d854c26a">donde los ojos medían. En ese origen `localStorage` no está vacío: **lanza**. El error entraba como «el JavaScript de la página falla» y abría un ciclo de reparación cobrado al usuario sobre una página correcta</CifraGrande>
-  <CifraGrande valor="1 línea" commit="c288f114">era el índice entero en las páginas que lo envuelven todo en un `div`. Y esa línea es la página completa: un reemplazo contra ella la sustituía por lo que el modelo imaginara, sin haber leído un byte</CifraGrande>
+  <CifraGrande valor="about:blank" commit="7fceae6b">donde los ojos medían. En ese origen `localStorage` no está vacío: **lanza**. El error entraba como «el JavaScript de la página falla» y abría un ciclo de reparación cobrado al usuario sobre una página correcta</CifraGrande>
+  <CifraGrande valor="1 línea" commit="5e0336e3">era el índice entero en las páginas que lo envuelven todo en un `div`. Y esa línea es la página completa: un reemplazo contra ella la sustituía por lo que el modelo imaginara, sin haber leído un byte</CifraGrande>
 </div>
 
 Los dos comparten el final: la regla se **ejecuta** en vez de rogarse. En el primero, el cargador que evita el origen opaco pasó a existir una sola vez, porque el arreglo ya existía en otro renderizador y no había llegado a éste — el mismo patrón de siempre. En el segundo, un borrado o un reemplazo exige ahora apuntar a algo que el modelo *haya visto* en este turno; y lo que se descarta se dice, entero o en parte, porque perder una operación en silencio es la degradación que este repositorio prohíbe.
 
 <Abierto id="abierto" titulo="Lo que sigue abierto">
-Los cuatro casos están cerrados y cada uno tiene su prueba, pero lo que nos gustaría tener es un mecanismo que impida que la **clase** vuelva callada, y eso está a medias. La mejor prueba de que lo está es que hay un quinto, y llegó cuatro horas después del commit que este artículo usa de prueba: la cláusula que le dice al modelo qué hacer ante un rechazo vivía sólo en un comentario que el modelo no lee, y se perdió entera al reescribir ese comentario el mismo día. Su propio mensaje se autodiagnostica — «la regla escrita donde no manda». <Fuente commit="d317db26" /> La batería tampoco es todavía ese mecanismo: vigila la forma del fallo —lo que Len cuenta cuando no llega, y lo que no puede afirmar de lo que no existe— <Fuente ruta="lib/agent/evals/cases.ts" />, no que una decisión viva en un solo sitio. La lección incómoda del primero es que los cuatro pasaron con el compilador, la suite y el lint en verde: se encontró probando contra el servidor de verdad, a mano.
+Los cuatro casos están cerrados y cada uno tiene su prueba, pero lo que nos gustaría tener es un mecanismo que impida que la **clase** vuelva callada, y eso está a medias. La mejor prueba de que lo está es que hay un quinto, y llegó cuatro horas después del commit que este artículo usa de prueba: la cláusula que le dice al modelo qué hacer ante un rechazo vivía sólo en un comentario que el modelo no lee, y se perdió entera al reescribir ese comentario el mismo día. Su propio mensaje se autodiagnostica — «la regla escrita donde no manda». <Fuente commit="750c6723" /> La batería tampoco es todavía ese mecanismo: vigila la forma del fallo —lo que Len cuenta cuando no llega, y lo que no puede afirmar de lo que no existe— <Fuente ruta="lib/agent/evals/cases.ts" />, no que una decisión viva en un solo sitio. La lección incómoda del primero es que los cuatro pasaron con el compilador, la suite y el lint en verde: se encontró probando contra el servidor de verdad, a mano.
 </Abierto>

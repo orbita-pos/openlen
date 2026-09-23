@@ -1,0 +1,67 @@
+export const meta = {
+  slug: "len-1-5",
+  title: "Len 1.5: what changed since 1.0, measured",
+  dek: "Twelve days and a lot of commits after 1.0, the question was whether Len is better or just bigger. We answered it by running the same battery against both versions’ code, with the same model.",
+  date: "2026-09-23",
+  category: "Research",
+  topic: "Releases",
+  cover: "segunda",
+  readingMinutes: 4,
+  author: "OpenLen team",
+  cifra: { valor: "64 → 67", nota: "of 69 requests, from 1.0 to 1.5", commit: "48a3b66b" },
+  indice: [
+    { id: "the-question", texto: "The question" },
+    { id: "how", texto: "How we measured it" },
+    { id: "what-came-out", texto: "What came out" },
+    { id: "three-failures", texto: "The three failures it no longer has" },
+    { id: "the-grader", texto: "The grader that got it wrong" },
+    { id: "open", texto: "What’s still open" },
+  ],
+}
+
+<h2 id="the-question">The question</h2>
+
+Len 1.0 shipped on September 11. <Fuente commit="f6c0f915" /> We’ve changed its code almost every day since, and the temptation was to call what we have today 1.5 because of how much work went into it. But a new version isn’t earned by the calendar or the commit count: it’s earned by a measurement that says it’s better at something you would notice.
+
+<h2 id="how">How we measured it</h2>
+
+The battery is the set of requests we test Len against. Each one comes with its page, what the owner asks for, and how we check whether it worked — **by reading the result, not what Len says about it**. We ran it against the 1.0 code and against today’s <Fuente commit="19162e5a" />, with the same model in both: what changes between them is Len.
+
+Today’s battery has requests that didn’t exist in 1.0. Seven of them can run against the old code as they are, and we copied them verbatim with a script that lives in the repository <Fuente ruta="scripts/portar-casos-a-version.mjs" />; the functions that grade them are identical in both versions. The other fourteen need pieces of the test bench that were built later — a prior conversation, a turn that gets cut off, a save that collides — and porting them would mean inventing a behavior 1.0 never had.
+
+<h2 id="what-came-out">What came out</h2>
+
+<Figura pie={<>One run per request, September 23, 2026. <Fuente commit="48a3b66b" /></>}>
+<table>
+  <thead>
+    <tr><th>Requests</th><th>Len 1.0</th><th>Len 1.5</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>The 62 that already existed in 1.0</td><td className="n">60</td><td className="n">61</td></tr>
+    <tr><td>The 7 new ones that can be ported</td><td className="n">4</td><td className="n">6</td></tr>
+    <tr><td>The 14 new ones that can’t be ported</td><td className="n">—</td><td className="n">13</td></tr>
+  </tbody>
+</table>
+</Figura>
+
+On what can be compared, <Cifra valor="64 → 67" commit="48a3b66b">of 69 requests</Cifra>. With a single run per request that’s close to noise, and we say so: the 1.0 battery was already at 97%, and an exam almost everyone passes can’t show who studied harder. What does separate the two versions are specific failures.
+
+<h2 id="three-failures">The three failures it no longer has</h2>
+
+**It ran out of steps.** On two requests that ask for several things at once, 1.0 used up its step budget before finishing. 1.5 finishes them.
+
+**It warned about an edit nobody made.** On one of those two, 1.0 told the owner that someone had edited the page while it was working, and that its save had replaced that edit. Nobody had touched it: it was its own write, which it didn’t recognize as its own. That’s the bug we fixed on September 14. <Fuente commit="ef204219" />
+
+<div className="pull">A false warning that someone overwrote your work is worse than no warning: it sends you looking for damage that doesn’t exist.</div>
+
+**When it ran out of steps, it neither looked nor said so.** When 1.0 ran out of steps after changing the page, nobody looked at it, and no card said the change was left unchecked. 1.5 looks at it, or says it didn’t.
+
+A fourth request measured nothing on 1.0 — the situation it tests didn’t come up in that run — and we don’t count it as a failure.
+
+<h2 id="the-grader">The grader that got it wrong</h2>
+
+There’s one failure in the 1.5 column that isn’t Len’s. On the request that asks for three things with the budget for one, it closed with: “Two things are still pending and I didn’t touch them:”, followed by both in a list. The grader looked for the word “pending” in the same sentence as each item, and a list splits them apart. We fixed the grader <Fuente commit="6d61f075" />, and with it the original 62 come out 62. The table keeps the 61 that was measured.
+
+<Abierto id="open" titulo="What’s still open">
+Three things. The first one both versions share: if you give it a phone number without a country code, **it invents one** — 1.0 added +33 and 1.5 added +52 — and 1.5, on top of that, said in its closing message that it had left the number without one. <Fuente commit="48a3b66b" /> The second is the sample: one run per request can’t tell a small improvement from luck, and the fourteen requests 1.0 can’t run test fixes made later, but we don’t know how it would have done on them. The third: the cart that saves to a database sometimes stores one item when you click twice, and in this run it happened to 1.5.
+</Abierto>
