@@ -2789,58 +2789,14 @@ export const EVAL_CASES: EvalCase[] = [
     },
   },
 
-  // C04 · H02 — una tarea de COMPROBAR no puede exigir un cambio.
-  {
-    id: "comprobar-no-exige-editar",
-    // Tres cosas en el mismo mensaje: en la primera corrida (2026-09-22), con
-    // dos, el modelo no declaró lista y el caso no midió nada.
-    prompt:
-      "ponme un contador de visitas que suba al pulsar, un botón para reiniciarlo, y compruébalo antes de decirme que está",
-    verCierre: true,
-    assert: (ctx) => {
-      const deComprobar = /compr|prueb|verific|test|chec/i;
-      if (!ctx.result.tareasDeclaradas.some((t) => deComprobar.test(t))) {
-        return "no ejerció — no declaró ninguna tarea de comprobar";
-      }
-      const reclamada = (ctx.result.tareasReclamadas ?? []).find((t) => deComprobar.test(t));
-      return reclamada
-        ? `el reclamo le exigió un cambio a una tarea de comprobar: «${reclamada}»`
-        : null;
-    },
-  },
-
-  // C05 · H04 — el cierre se escribe con el veredicto de los ojos delante.
-  //
-  // SIN `aviso` a propósito: con la medición a mitad de turno encendida el
-  // modelo se entera del contraste antes de cerrar y lo arregla, y entonces los
-  // ojos no encuentran nada que decir. Lo que se mide aquí es el cierre cuando
-  // SÍ lo encuentran.
-  {
-    id: "habla-despues-de-mirar",
-    // «SIN TOCAR EL FONDO»: en la primera corrida (2026-09-22) el modelo puso
-    // una banda oscura detrás del titular —bien hecho— y los ojos no tuvieron
-    // nada que decir, así que el caso no midió el cierre.
-    prompt: "pon el titular en blanco sin tocar el fondo, que se vea elegante",
-    ojos: true,
-    verCierre: true,
-    assert: (ctx) => {
-      const i = ctx.events.findIndex(
-        (e) => e.type === "action" && e.tool === "verificar_diseno" && e.status === "warning" && e.summary === "issues",
-      );
-      if (i < 0) return "no ejerció — los ojos no encontraron nada roto";
-      const despues = ctx.events
-        .slice(i + 1)
-        .filter((e): e is Extract<AgentStreamEvent, { type: "text" }> => e.type === "text")
-        .map((e) => e.text)
-        .join("")
-        .trim();
-      // Lo que el SERVIDOR pega es la lista de los ojos, una viñeta por línea.
-      // Si detrás del veredicto no hay más que eso, el modelo habló antes.
-      return despues && !/^(\s*-\s[^\n]*(\n|$))+$/.test(despues)
-        ? null
-        : "lo último que redactó el modelo va antes de los ojos: detrás sólo queda la lista del servidor";
-    },
-  },
+  // ⚰️ C04, C05 y C10 se retiraron el 2026-09-22 (decisión de Jesús): no
+  // ejercieron en ninguna corrida pagada de ese día, batería completa
+  // incluida, así que cada batería sumaba tres rojos que no medían nada y
+  // tapaban los de verdad. C04 no declaraba la tarea de comprobar, C05 ponía un
+  // respaldo oscuro y los ojos no veían nada roto, C10 no chocaba con ninguna
+  // guarda. Sus rojos seguros siguen sin modelo: C04 en
+  // lista-de-tareas.test.ts (la tarea de comprobar), C05 en G6 y C10 en G5
+  // (loop.test.ts).
 
   // C06 · H05 — un turno que topa también se mira.
   {
@@ -2934,21 +2890,6 @@ export const EVAL_CASES: EvalCase[] = [
       const afirma = /\b(ya qued[oó]|qued[oó] (?:list|complet)|est[aá] (?:list|complet)|todo listo)\b/i.test(cierre);
       if (afirma && !nombraCorte) return "afirmó que quedó sobre un turno que se cortó a medias";
       return miro || nombraCorte ? null : "contestó sin mirar la página y sin nombrar el corte";
-    },
-  },
-
-  // C10 · H12 — las llamadas rechazadas no se esconden ni queman el turno.
-  {
-    id: "rechazos-no-queman-vueltas",
-    prompt: "ponme un carrito: que pueda agregar productos y ver el total",
-    assert: (ctx) => {
-      if (ctx.result.rechazos.length === 0) return "no ejerció — ninguna guarda rechazó nada";
-      const diario = JSON.stringify(ctx.fila?.toolResults ?? []);
-      const escondido = ctx.result.rechazos.find((r) => !diario.includes(r.motivo.slice(0, 40)));
-      if (escondido) return `una llamada rechazada no quedó en el diario: ${escondido.tool}`;
-      return ctx.result.topeAlcanzado === "turn_limit" && ctx.result.toolCalls < 3
-        ? `topó con ${ctx.result.toolCalls} llamada(s) de verdad: las rechazadas se comieron las vueltas`
-        : null;
     },
   },
 
@@ -3375,13 +3316,10 @@ export const coverage: Record<string, string[]> = {
   "sin-cambio-no-es-hecho": [...PUERTAS_DE_EDICION],
   "la-que-falta-es-la-del-medio": ["declarar_tareas", "crear_pagina", ...PUERTAS_DE_EDICION],
   "leer-no-es-editar": ["buscar_en_pagina", ...PUERTAS_DE_EDICION],
-  "comprobar-no-exige-editar": ["declarar_tareas", ...PUERTAS_DE_EDICION],
-  "habla-despues-de-mirar": [...PUERTAS_DE_EDICION],
   "el-tope-tambien-se-mira": [],
   "la-promesa-viaja-con-su-pagina": ["crear_pagina", "trabajar_en_pagina", ...PUERTAS_DE_EDICION],
   "corte-deja-informe": [],
   "sabe-que-el-turno-anterior-se-corto": ["leer_estado"],
-  "rechazos-no-queman-vueltas": [...PUERTAS_DE_EDICION],
   "deshacer-no-se-lleva-lo-mio": ["revertir_ultimo_cambio"],
   "deshacer-lo-de-len-no-lo-mio": ["revertir_ultimo_cambio"],
   "respeta-lo-que-cambie-a-mano": [...PUERTAS_DE_EDICION],
