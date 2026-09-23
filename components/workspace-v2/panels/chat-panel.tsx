@@ -58,6 +58,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
+import { trozosConFormato } from "@/lib/chat/formato-de-len";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
 import { seccionesCambiadas, tipoDeOp, agruparCambios, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
@@ -2091,7 +2092,7 @@ function TurnView({
             <div className="inline-block max-w-full rounded-2xl px-3 py-2 text-left bg-elev border bd">
               {turn.assistantReasoning.length > 0 && (
                 <div className="text-[12.5px] fg leading-relaxed whitespace-pre-wrap break-words">
-                  {turn.assistantReasoning}
+                  <TextoDeLen texto={turn.assistantReasoning} />
                 </div>
               )}
               <TurnFooter
@@ -2123,6 +2124,30 @@ function TurnView({
         </div>
       )}
     </div>
+  );
+}
+
+/** Lo que Len escribe, con su **negrita**, `código` y *cursiva* pintados en
+ *  vez de con las marcas a la vista. Cada trozo es texto que React escapa. */
+function TextoDeLen({ texto }: { texto: string }) {
+  return (
+    <>
+      {trozosConFormato(texto).map((t, i) =>
+        t.tipo === "negrita" ? (
+          <strong key={i} className="font-semibold">
+            {t.texto}
+          </strong>
+        ) : t.tipo === "codigo" ? (
+          <code key={i} className="font-mono text-[11.5px] rounded px-1 border bd">
+            {t.texto}
+          </code>
+        ) : t.tipo === "cursiva" ? (
+          <em key={i}>{t.texto}</em>
+        ) : (
+          t.texto
+        ),
+      )}
+    </>
   );
 }
 
