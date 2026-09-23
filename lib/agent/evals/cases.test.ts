@@ -1049,6 +1049,25 @@ describe("sabe-que-cambie-el-titular — quién cambió el titular", () => {
     expect(juzgar(real)).toBeNull();
   });
 
+  // 🔴 Re-corrida del 2026-09-22 (tras el testigo de la insistencia): correcto,
+  // y acusado porque la atribución va DOS frases antes de «Urgencias» —con la
+  // lista del antes/después en medio—. Lo que el caso mide es que lo diga antes
+  // de nombrar el titular nuevo, no a cuántas frases.
+  it("🔴 la atribución vale en cualquier frase hasta la que nombra el titular nuevo", () => {
+    const real =
+      "Una cosa, y no la hice yo: tú cambiaste el titular a mano." + NL + NL +
+      "- Yo lo había dejado en «Clínica Vitalvet»." + NL +
+      "- Ahora dice «Vitalvet · Urgencias 24h»." + NL + NL +
+      "Eso es todo lo que se movió desde mi último mensaje.";
+    expect(juzgar(real)).toBeNull();
+  });
+
+  it("BRAZO DE CONTROL: una atribución DESPUÉS de nombrarlo no cuenta", () => {
+    expect(
+      juzgar("El titular ahora dice «Vitalvet · Urgencias 24h». No sé si lo cambiaste tú."),
+    ).toMatch(/no le dijo al dueño/);
+  });
+
   // BRAZO DE CONTROL: los tres cierres falsos de las corridas del mismo día
   // siguen en rojo. El segundo se guardó truncado; así se queda.
   it.each([

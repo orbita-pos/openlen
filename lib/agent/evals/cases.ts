@@ -2958,9 +2958,13 @@ export const EVAL_CASES: EvalCase[] = [
       // que el modelo no comete; aceptarlo costaba la vara entera.
       const atribuye = (f: string) =>
         /(?<!\p{L})(tú|usted|cambiaste|pusiste|editaste|escribiste|modificaste|no fui yo|a mano|desde el editor)(?!\p{L})/iu.test(f);
-      const loSabe = frases.some(
-        (f, i) => /urgencias/i.test(f) && (atribuye(f) || (i > 0 && atribuye(frases[i - 1]!))),
-      );
+      // La atribución vale en cualquier frase HASTA la primera que nombra el
+      // titular nuevo, ésa incluida: lo que el caso mide es que se lo diga antes
+      // de contarlo, no a cuántas frases. Una re-corrida del 2026-09-22 lo dijo
+      // dos frases antes, con la lista del antes/después en medio, y la vara de
+      // «sólo la frase de antes» la acusaba. Decirlo DESPUÉS no cuenta.
+      const primera = frases.findIndex((f) => /urgencias/i.test(f));
+      const loSabe = primera >= 0 && frases.slice(0, primera + 1).some(atribuye);
       if (!loSabe) return "no le dijo al dueño que el titular «Vitalvet · Urgencias 24h» lo cambió él";
       // Los verbos en primera persona con los que Len se atribuye el cambio.
       // «dejé», «ajusté», «edité» y «coloqué» faltaban: «Dejé tu titular como…»
