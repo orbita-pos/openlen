@@ -366,6 +366,10 @@ export interface StoredChatTurn {
      *  al recargar. Ya pasó con `ops` y con `observacion`. Sólo con
      *  `status: "error"`; llega truncado a 200 desde `motivo-del-fallo.ts`. */
     motivo?: string;
+    /** Cuántas páginas miraron los ojos y cuántas tocó el turno («1 de 2
+     *  páginas»). Los dos juntos o ninguno — ver `AgentAction`. */
+    paginasMiradas?: number;
+    paginasTocadas?: number;
     /** Los valores que aplicó la llamada, para el historial. Ver
      *  `lib/agent/valores-de-tema.ts`. */
     valores?: string;

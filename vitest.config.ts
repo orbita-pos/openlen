@@ -474,6 +474,8 @@ export default defineConfig({
       // @/lib/projects entero porque su cadena arrastra el binding nativo.
       // `include` es LISTA BLANCA: sin esta linea no correria.
       "app/api/projects/[id]/brief/route.test.ts",
+      // El esquema del guardado del chat: qué campos de la tarjeta sobreviven.
+      "app/api/projects/[id]/chat/route.test.ts",
       "app/api/projects/[id]/apply-template/route.test.ts",
       // Same, for the Chat surface. Mocks only the model, DB, auth and
       // credits — the sanitize/normalize/behaviour passes are the real ones.
