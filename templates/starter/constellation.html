@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Constellation — The CRM you'll actually use.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --bg: #0A0F1A;
+    --bg-2: #0e1626;
+    --bg-3: #121b2e;
+    --line: rgba(255,255,255,0.06);
+    --line-2: rgba(255,255,255,0.10);
+    --text: #ffffff;
+    --muted: #93a3b8;
+    --dim: #5b6a82;
+    --accent: #67E8F9;
+    --accent-dim: rgba(103,232,249,0.18);
+  }
+  html, body { background: var(--bg); color: var(--text); }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: "ss01","cv11","cv02";
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+  }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .display {
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 0.94;
+  }
+  .display em {
+    font-style: italic;
+    font-weight: 300;
+    color: var(--accent);
+    font-feature-settings: "ss01";
+  }
+  .hairline { border-color: var(--line); }
+  .hairline-2 { border-color: var(--line-2); }
+  .text-muted { color: var(--muted); }
+  .text-dim { color: var(--dim); }
+  ::selection { background: rgba(103,232,249,0.35); color: white; }
+
+  /* Mesh */
+  .mesh {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(50% 40% at 80% 10%, rgba(103,232,249,0.10), transparent 70%),
+      radial-gradient(60% 50% at 10% 90%, rgba(56,189,248,0.10), transparent 70%),
+      radial-gradient(40% 30% at 50% 50%, rgba(125,211,252,0.06), transparent 70%);
+    animation: meshShift 26s ease-in-out infinite alternate;
+  }
+  @keyframes meshShift {
+    0%   { transform: translate3d(0,0,0); }
+    50%  { transform: translate3d(-1.5%, 1.5%, 0); }
+    100% { transform: translate3d(1%, -1%, 0); }
+  }
+
+  .dotgrid {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
+  }
+
+  /* Pulse dot */
+  .pulse-dot {
+    width: 8px; height: 8px; border-radius: 999px;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(103,232,249,0.6);
+    animation: pulse 2.2s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(103,232,249,0.55); }
+    70%  { box-shadow: 0 0 0 14px rgba(103,232,249,0); }
+    100% { box-shadow: 0 0 0 0 rgba(103,232,249,0); }
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #002030;
+    transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    background: #a5f1fa;
+    box-shadow: 0 12px 30px -10px rgba(103,232,249,0.5), 0 0 0 1px rgba(103,232,249,0.4);
+  }
+  .input-bare {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--line-2);
+    color: white;
+  }
+  .input-bare::placeholder { color: var(--dim); }
+  .input-bare:focus { outline: none; border-color: rgba(103,232,249,0.5); background: rgba(255,255,255,0.05); }
+
+  .chip {
+    border: 1px solid var(--line-2);
+    background: rgba(255,255,255,0.02);
+  }
+  .kbd {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; padding: 1px 6px;
+    border: 1px solid var(--line-2);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.03);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: #d1dceb;
+  }
+
+  /* Card */
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.005));
+    border: 1px solid var(--line-2);
+    border-radius: 14px;
+  }
+
+  /* Star nodes glow */
+  .star-glow { filter: drop-shadow(0 0 6px rgba(103,232,249,0.65)); }
+
+  /* Animated draw */
+  .draw {
+    stroke-dasharray: 4 6;
+    animation: dash 8s linear infinite;
+  }
+  @keyframes dash { to { stroke-dashoffset: -200; } }
+
+  /* Marquee */
+  .marquee { overflow: hidden; mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent); }
+  .marquee-track { display: flex; gap: 14px; animation: scroll 40s linear infinite; width: max-content; }
+  @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+</style>
+</head>
+<body class="relative overflow-x-hidden">
+
+<div class="mesh"></div>
+
+<div class="relative z-10">
+
+  <!-- NAV -->
+  <header class="px-6 md:px-10 py-6 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <circle cx="5" cy="5" r="1.6" fill="#67E8F9"/>
+        <circle cx="17" cy="7" r="1.6" fill="#67E8F9"/>
+        <circle cx="10" cy="12" r="1.6" fill="#67E8F9"/>
+        <circle cx="16" cy="17" r="1.6" fill="#67E8F9"/>
+        <path d="M5 5 L10 12 L17 7 M10 12 L16 17" stroke="#67E8F9" stroke-opacity="0.5" stroke-width="1"/>
+      </svg>
+      <span class="text-[15px] tracking-tight font-medium">Constellation</span>
+    </a>
+    <a href="#story" class="text-[13px] text-muted hover:text-white transition-colors">The story</a>
+  </header>
+
+  <!-- HERO -->
+  <section class="relative min-h-[88vh] px-6 md:px-10 pt-10 md:pt-16 pb-20">
+    <div class="absolute inset-0 pointer-events-none"><div class="dotgrid"></div></div>
+
+    <div class="relative max-w-[1240px] mx-auto grid md:grid-cols-[1.15fr_1fr] gap-14 items-center">
+
+      <div>
+        <div class="inline-flex items-center gap-2 chip rounded-full pl-2 pr-3 py-1.5 mb-10">
+          <span class="pulse-dot"></span>
+          <span class="text-[12px] mono text-muted tracking-tight">PRIVATE&nbsp;BETA&nbsp;//&nbsp;OPEN&nbsp;OCT&nbsp;14</span>
+        </div>
+
+        <h1 class="display text-[clamp(56px,10vw,148px)] max-w-[12ch]">
+          The CRM you'll <em>actually</em> use.
+        </h1>
+
+        <p class="mt-8 max-w-[42ch] text-[18px] text-muted leading-snug">
+          A solo-founder CRM that thinks like you do. Contacts as a graph, follow-ups that schedule themselves, and a single keyboard you'll never leave.
+        </p>
+
+        <form class="mt-8 flex flex-col sm:flex-row gap-2.5 max-w-[520px]" data-waitlist>
+          <input type="email" required placeholder="founder@yourthing.com" class="input-bare flex-1 rounded-full px-5 py-3.5 text-[15px]"/>
+          <button class="btn-primary rounded-full px-6 py-3.5 text-[14.5px] font-semibold tracking-tight whitespace-nowrap">
+            Get the beta invite
+          </button>
+        </form>
+
+        <div class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] mono text-dim">
+          <span>Beta is free</span>
+          <span>·</span>
+          <span>Bring your own Gmail / Fastmail</span>
+          <span>·</span>
+          <span>Mac-first</span>
+        </div>
+
+        <!-- live count -->
+        <div class="mt-12 flex flex-wrap items-center gap-x-8 gap-y-3 text-[13px] mono">
+          <span class="flex items-center gap-2.5 text-muted">
+            <span class="pulse-dot"></span>
+            <span class="tnum"><span class="text-white">1,402</span> founders waitlisted</span>
+          </span>
+          <span class="text-dim hidden md:inline">·</span>
+          <span class="text-muted tnum">+38 in the last 24h</span>
+        </div>
+      </div>
+
+      <!-- Constellation graph viz -->
+      <div class="relative aspect-square w-full max-w-[520px] mx-auto">
+        <svg id="graph" viewBox="0 0 400 400" class="w-full h-full" aria-hidden="true">
+          <defs>
+            <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#67E8F9" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="#67E8F9" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle cx="200" cy="200" r="170" fill="url(#halo)"/>
+          <!-- orbits -->
+          <circle cx="200" cy="200" r="60" fill="none" stroke="rgba(255,255,255,0.06)"/>
+          <circle cx="200" cy="200" r="120" fill="none" stroke="rgba(255,255,255,0.05)"/>
+          <circle cx="200" cy="200" r="170" fill="none" stroke="rgba(255,255,255,0.04)"/>
+          <g id="edges"></g>
+          <g id="nodes"></g>
+          <g id="labels" font-family="JetBrains Mono, monospace" font-size="10" fill="#93a3b8"></g>
+        </svg>
+        <!-- floating contact card -->
+        <div class="absolute right-2 bottom-6 card px-3.5 py-2.5 text-[12.5px] mono w-[210px] backdrop-blur">
+          <div class="flex items-center gap-2 mb-1.5">
+            <div class="w-5 h-5 rounded-full" style="background: conic-gradient(from 200deg, #094a5c, #67e8f9);"></div>
+            <span class="text-white">Priya Anand</span>
+          </div>
+          <div class="text-dim leading-snug">
+            <div>↳ intro'd by Marcus T.</div>
+            <div>↳ last touch · 12 days ago</div>
+            <div class="text-[#67E8F9]">⏎ follow up Thursday</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COUNTDOWN -->
+  <section class="px-6 md:px-10 py-16 border-t hairline">
+    <div class="max-w-[1240px] mx-auto flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+      <div>
+        <div class="text-[12px] mono text-dim tracking-widest mb-3">// BETA OPENS</div>
+        <div class="display tnum mono text-[clamp(48px,8vw,112px)] font-medium" id="countdown">
+          028&nbsp;<span class="text-dim text-[0.55em] align-top mono">d</span>
+          &nbsp;14&nbsp;<span class="text-dim text-[0.55em] align-top mono">h</span>
+        </div>
+      </div>
+      <div class="md:text-right text-[13.5px] text-muted leading-relaxed max-w-[34ch]">
+        First 200 invites go out the morning of October 14, 2026.
+        <span class="text-dim block mt-1">Selection is by hand. We read every signup.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT'S COMING -->
+  <section class="px-6 md:px-10 py-24 border-t hairline">
+    <div class="max-w-[1240px] mx-auto">
+      <div class="text-[12px] mono text-dim tracking-widest mb-12">// WHAT'S COMING</div>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="card p-7">
+          <div class="mono text-[11.5px] text-[#67E8F9] mb-5">/01 · GRAPH</div>
+          <div class="text-[22px] leading-snug font-medium tracking-tight">Contacts as a graph, not a spreadsheet.</div>
+          <p class="mt-3 text-muted text-[14.5px] leading-relaxed">Every intro, reply, and meeting is an edge. Find the path from you to anyone in under three hops.</p>
+          <!-- tiny graph -->
+          <svg viewBox="0 0 220 90" class="mt-6 w-full">
+            <line x1="20" y1="60" x2="80" y2="30" stroke="#67E8F9" stroke-opacity=".5" stroke-width="1"/>
+            <line x1="80" y1="30" x2="140" y2="60" stroke="#67E8F9" stroke-opacity=".5" stroke-width="1"/>
+            <line x1="140" y1="60" x2="200" y2="30" stroke="#67E8F9" stroke-opacity=".3" stroke-width="1" class="draw"/>
+            <line x1="80" y1="30" x2="140" y2="20" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+            <circle cx="20" cy="60" r="5" fill="#67E8F9" class="star-glow"/>
+            <circle cx="80" cy="30" r="4" fill="#fff"/>
+            <circle cx="140" cy="60" r="4" fill="#fff"/>
+            <circle cx="200" cy="30" r="5" fill="#67E8F9" class="star-glow"/>
+            <circle cx="140" cy="20" r="3" fill="#fff" fill-opacity=".6"/>
+          </svg>
+        </div>
+
+        <div class="card p-7">
+          <div class="mono text-[11.5px] text-[#67E8F9] mb-5">/02 · FOLLOW-UPS</div>
+          <div class="text-[22px] leading-snug font-medium tracking-tight">A follow-up scheduler that doesn't nag.</div>
+          <p class="mt-3 text-muted text-[14.5px] leading-relaxed">Reads the thread, picks the right interval, drafts the right tone. Auto-snoozes when someone goes on vacation.</p>
+          <div class="mt-6 space-y-1.5 mono text-[12px] text-dim">
+            <div class="flex justify-between"><span>↳ Hana Suzuki</span><span class="text-[#67E8F9]">in 3d</span></div>
+            <div class="flex justify-between"><span>↳ Yusuf Abara</span><span>in 11d</span></div>
+            <div class="flex justify-between"><span>↳ Marcus Tobin</span><span>paused · OOO</span></div>
+          </div>
+        </div>
+
+        <div class="card p-7">
+          <div class="mono text-[11.5px] text-[#67E8F9] mb-5">/03 · KEYBOARD</div>
+          <div class="text-[22px] leading-snug font-medium tracking-tight">One keyboard. No mouse. No menus.</div>
+          <p class="mt-3 text-muted text-[14.5px] leading-relaxed">Everything is a command. Open a contact, draft a follow-up, find an intro — all in under 200ms.</p>
+          <div class="mt-6 flex flex-wrap gap-2 text-[12px]">
+            <span class="kbd">⌘</span><span class="kbd">K</span>
+            <span class="text-dim self-center mx-1">open anything</span>
+            <div class="basis-full"></div>
+            <span class="kbd">G</span><span class="kbd">F</span>
+            <span class="text-dim self-center mx-1">go to follow-ups</span>
+            <div class="basis-full"></div>
+            <span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">↩</span>
+            <span class="text-dim self-center mx-1">send and snooze</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STORY -->
+  <section id="story" class="px-6 md:px-10 py-24 border-t hairline">
+    <div class="max-w-[820px] mx-auto grid md:grid-cols-[120px_1fr] gap-8">
+      <div>
+        <div class="w-[88px] h-[88px] rounded-full hairline-2 border" style="background: conic-gradient(from 180deg, #062a3a, #67e8f9, #062a3a);"></div>
+      </div>
+      <div class="text-[19px] leading-[1.6] text-white/90">
+        <p>I quit my Salesforce job because their CRM made me want to quit my Salesforce job. <span class="text-muted">After ten years inside the thing, I went home and opened a blank Figma file.</span></p>
+        <p class="mt-5 text-muted text-[16px]">Constellation is what I would've used at every job I've ever had. I'm building it alone, in Lisbon, with one beta tester I trust. — <span class="text-white">Jamie Velasco</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- AVATARS MOMENTUM -->
+  <section class="px-6 md:px-10 py-14 border-t hairline">
+    <div class="max-w-[1400px] mx-auto">
+      <div class="text-[12px] mono text-dim tracking-widest mb-6">// 1,402 FOUNDERS IN LINE</div>
+      <div class="marquee">
+        <div class="marquee-track" id="avatarTrack"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="px-6 md:px-10 py-10 border-t hairline flex flex-col md:flex-row gap-4 md:items-center md:justify-between text-[13px] text-dim">
+    <div class="flex items-center gap-2.5">
+      <svg width="16" height="16" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <circle cx="5" cy="5" r="1.6" fill="#67E8F9"/>
+        <circle cx="17" cy="7" r="1.6" fill="#67E8F9"/>
+        <circle cx="10" cy="12" r="1.6" fill="#67E8F9"/>
+        <circle cx="16" cy="17" r="1.6" fill="#67E8F9"/>
+      </svg>
+      <span class="text-white/80">Constellation</span>
+      <span>—</span>
+      <span>Built by one. For one.</span>
+    </div>
+    <div class="flex items-center gap-6 mono">
+      <a href="#" class="hover:text-white/80 transition-colors">Privacy</a>
+      <span>© 2026</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+  // Graph viz — procedural nodes around center
+  (function() {
+    const cx = 200, cy = 200;
+    const ring = [
+      { r: 60, n: 5, name: ['You','','','',''] },
+      { r: 120, n: 8, name: ['Priya','Marcus','Hana','Yusuf','Ines','Jonas','Ravi','Mira'] },
+      { r: 170, n: 11, name: Array(11).fill('') }
+    ];
+    const nodes = [];
+    nodes.push({x: cx, y: cy, r: 5, primary: true, name: 'You'});
+    ring.forEach((R, ri) => {
+      const offset = ri * 0.4;
+      for (let i = 0; i < R.n; i++) {
+        const a = (i / R.n) * Math.PI * 2 + offset;
+        nodes.push({
+          x: cx + Math.cos(a) * R.r,
+          y: cy + Math.sin(a) * R.r,
+          r: ri === 0 ? 4 : (ri === 1 ? 3 : 2.2),
+          ring: ri+1,
+          name: R.name[i]
+        });
+      }
+    });
+    const edgesG = document.getElementById('edges');
+    const nodesG = document.getElementById('nodes');
+    const labelsG = document.getElementById('labels');
+
+    // edges: each non-center node to its center anchor + some sibling links
+    nodes.forEach((n, i) => {
+      if (i === 0) return;
+      // to a random earlier node (prefer center / ring 1)
+      const targetIdx = i > 6 ? 1 + Math.floor(Math.random()*6) : 0;
+      const t = nodes[targetIdx];
+      const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
+      ln.setAttribute('x1', n.x); ln.setAttribute('y1', n.y);
+      ln.setAttribute('x2', t.x); ln.setAttribute('y2', t.y);
+      ln.setAttribute('stroke', '#67E8F9');
+      ln.setAttribute('stroke-opacity', n.ring === 3 ? '0.10' : '0.28');
+      ln.setAttribute('stroke-width', '1');
+      edgesG.appendChild(ln);
+    });
+
+    nodes.forEach((n, i) => {
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', n.x); c.setAttribute('cy', n.y);
+      c.setAttribute('r', n.r);
+      if (i === 0) {
+        c.setAttribute('fill', '#67E8F9');
+        c.setAttribute('class', 'star-glow');
+      } else if (n.ring === 1) {
+        c.setAttribute('fill', '#fff');
+      } else {
+        c.setAttribute('fill', '#fff');
+        c.setAttribute('fill-opacity', n.ring === 2 ? '0.85' : '0.45');
+      }
+      nodesG.appendChild(c);
+      if (n.name) {
+        const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+        t.setAttribute('x', n.x + 8); t.setAttribute('y', n.y - 4);
+        t.textContent = n.name;
+        t.setAttribute('fill', i === 0 ? '#fff' : '#93a3b8');
+        labelsG.appendChild(t);
+      }
+    });
+  })();
+
+  // Avatars marquee
+  (function() {
+    const palettes = [
+      ['#093a4c','#67e8f9'],['#0d2540','#7dd3fc'],['#022c43','#a5f3fc'],
+      ['#1d2d50','#bae6fd'],['#0a3548','#67e8f9'],['#152a3f','#7dd3fc'],
+      ['#0e3a4c','#22d3ee'],['#103045','#67e8f9'],
+    ];
+    const track = document.getElementById('avatarTrack');
+    const make = () => {
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < 40; i++) {
+        const p = palettes[i % palettes.length];
+        const d = document.createElement('div');
+        d.className = 'w-8 h-8 rounded-full shrink-0';
+        d.style.background = `conic-gradient(from ${(i*53)%360}deg, ${p[0]}, ${p[1]}, ${p[0]})`;
+        d.style.boxShadow = 'inset 0 0 0 1px rgba(255,255,255,0.06)';
+        frag.appendChild(d);
+      }
+      return frag;
+    };
+    track.appendChild(make()); track.appendChild(make());
+  })();
+
+  // Countdown
+  (function() {
+    const target = new Date();
+    target.setDate(target.getDate() + 28);
+    target.setHours(target.getHours() + 14, 0, 0, 0);
+    const el = document.getElementById('countdown');
+    const pad = (n, w=2) => String(n).padStart(w,'0');
+    const tick = () => {
+      const ms = target - new Date();
+      if (ms <= 0) return;
+      const d = Math.floor(ms / 86400000);
+      const h = Math.floor((ms % 86400000) / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      el.innerHTML =
+        `${pad(d,3)}&nbsp;<span class="text-dim text-[0.55em] align-top mono">d</span>`+
+        `&nbsp;${pad(h)}&nbsp;<span class="text-dim text-[0.55em] align-top mono">h</span>`+
+        `&nbsp;${pad(m)}&nbsp;<span class="text-dim text-[0.55em] align-top mono">m</span>`+
+        `&nbsp;${pad(s)}&nbsp;<span class="text-dim text-[0.55em] align-top mono">s</span>`;
+    };
+    tick(); setInterval(tick, 1000);
+  })();
+
+  function joinWaitlist(form) {
+    const btn = form.querySelector('button');
+    btn.textContent = 'You\u2019re #1,403  ✓';
+    btn.style.background = '#fff';
+    setTimeout(() => { btn.textContent = 'Get the beta invite'; btn.style.background = ''; }, 3200);
+    form.querySelector('input').value = '';
+  }
+  document.querySelectorAll('form[data-waitlist]').forEach(function (f) {
+    f.addEventListener('submit', function (e) { e.preventDefault(); joinWaitlist(f); });
+  });
+</script>
+</body>
+</html>

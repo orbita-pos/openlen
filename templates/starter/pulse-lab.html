@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pulse Lab — The desk timer for deep work.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --bg: #000000;
+    --bg-2: #0a0a0a;
+    --line: rgba(255,255,255,0.06);
+    --line-2: rgba(255,255,255,0.10);
+    --text: #ffffff;
+    --muted: #9a958c;
+    --dim: #5d574e;
+    --accent: #F5C26B;
+    --brass: #d9a44a;
+    --brass-2: #8a6a2a;
+    --wood-1: #6a3f1e;
+    --wood-2: #3d2410;
+  }
+  html, body { background: var(--bg); color: var(--text); }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: "ss01","cv11";
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+  }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .display {
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 0.93;
+  }
+  .display em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+  .hairline { border-color: var(--line); }
+  .hairline-2 { border-color: var(--line-2); }
+  .text-muted { color: var(--muted); }
+  .text-dim { color: var(--dim); }
+  ::selection { background: rgba(245,194,107,0.35); color: black; }
+
+  /* Soft amber glow behind hero */
+  .glow {
+    position: absolute; inset: -10% -5% auto -5%;
+    height: 80vh;
+    background: radial-gradient(60% 50% at 70% 35%, rgba(245,194,107,0.18), transparent 70%),
+                radial-gradient(40% 30% at 20% 70%, rgba(217,164,74,0.10), transparent 70%);
+    pointer-events: none; z-index: 0;
+    animation: glowShift 18s ease-in-out infinite alternate;
+  }
+  @keyframes glowShift {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(-2%); opacity: 0.85; }
+  }
+
+  .dotgrid {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 78%);
+  }
+
+  .pulse-dot {
+    width: 8px; height: 8px; border-radius: 999px;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(245,194,107,0.6);
+    animation: pulse 2.2s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(245,194,107,0.55); }
+    70%  { box-shadow: 0 0 0 14px rgba(245,194,107,0); }
+    100% { box-shadow: 0 0 0 0 rgba(245,194,107,0); }
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #1a1305;
+    transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    background: #ffd58a;
+    box-shadow: 0 12px 28px -10px rgba(245,194,107,0.5);
+  }
+  .input-bare {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--line-2);
+    color: white;
+  }
+  .input-bare::placeholder { color: var(--dim); }
+  .input-bare:focus { outline: none; border-color: rgba(245,194,107,0.6); background: rgba(255,255,255,0.05); }
+
+  .chip {
+    border: 1px solid var(--line-2);
+    background: rgba(255,255,255,0.02);
+  }
+
+  /* Device: wooden cylinder with brass button */
+  .device {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1.05;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .device .floor {
+    position: absolute; left: 8%; right: 8%; bottom: 6%;
+    height: 36px;
+    background: radial-gradient(ellipse at center, rgba(245,194,107,0.20), transparent 65%);
+    filter: blur(8px);
+  }
+  .cylinder {
+    position: absolute;
+    left: 18%; right: 18%; top: 10%; bottom: 14%;
+    border-radius: 18px;
+    background:
+      /* lateral wood gradient */
+      linear-gradient(90deg,
+        #1f1207 0%, #4b2c14 8%, #7a4d22 30%, #8c5a28 50%, #6a3f1a 75%, #2c1808 92%, #15090a 100%
+      );
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,0.04),
+      0 60px 80px -20px rgba(0,0,0,0.7),
+      0 0 80px -10px rgba(245,194,107,0.18);
+    overflow: hidden;
+  }
+  /* wood grain rings */
+  .cylinder::before {
+    content: ""; position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.05) 0 1px, transparent 1px 12px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 28px);
+    mix-blend-mode: overlay;
+  }
+  .cylinder::after {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 35% 50%, rgba(255,210,140,0.18), transparent 55%),
+      radial-gradient(ellipse at 85% 50%, rgba(0,0,0,0.4), transparent 60%);
+  }
+  .top-cap {
+    position: absolute; left: 18%; right: 18%; top: 7%;
+    height: 42px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at 45% 35%,
+      #a06832 0%, #6e4419 50%, #2a1608 100%);
+    box-shadow:
+      inset 0 -3px 0 rgba(0,0,0,0.5),
+      inset 0 2px 0 rgba(255,210,140,0.25);
+  }
+  .button {
+    position: absolute; left: 50%; top: 6%;
+    transform: translateX(-50%);
+    width: 96px; height: 96px; border-radius: 999px;
+    background:
+      radial-gradient(circle at 35% 30%, #ffe7a8 0%, #f5c26b 35%, #b88332 70%, #6e4d18 100%);
+    box-shadow:
+      inset 0 -4px 8px rgba(0,0,0,0.45),
+      inset 0 4px 6px rgba(255,255,255,0.4),
+      0 18px 30px -10px rgba(245,194,107,0.4),
+      0 0 0 6px rgba(0,0,0,0.4),
+      0 0 0 7px rgba(245,194,107,0.25);
+  }
+  .button::after {
+    content: ""; position: absolute; inset: 18%;
+    border-radius: 999px;
+    background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.3), transparent 55%);
+  }
+  .led {
+    position: absolute; left: 50%; top: 48%; transform: translateX(-50%);
+    width: 86px;
+    text-align: center;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 12px rgba(245,194,107,0.6);
+  }
+  .dial {
+    position: absolute; left: 50%; bottom: 16%; transform: translateX(-50%);
+    width: 64px; height: 64px; border-radius: 999px;
+    background:
+      radial-gradient(circle at 50% 50%, #d9a44a 0%, #8a6a2a 60%, #3a2810 100%);
+    box-shadow:
+      inset 0 -3px 6px rgba(0,0,0,0.5),
+      inset 0 3px 4px rgba(255,235,180,0.25),
+      0 0 0 4px rgba(0,0,0,0.55);
+  }
+  .dial-marks {
+    position: absolute; inset: 0;
+  }
+  .dial-marks span {
+    position: absolute; left: 50%; top: 50%;
+    width: 1px; height: 22px;
+    background: rgba(0,0,0,0.45);
+    transform-origin: 50% 0;
+  }
+  .stamp {
+    position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 0.2em;
+    color: rgba(245,194,107,0.55);
+  }
+
+  /* Press marks */
+  .press-mark { color: rgba(255,255,255,0.7); }
+
+  /* Inventory bar */
+  .invbar { background: rgba(255,255,255,0.05); }
+  .invbar-fill { background: linear-gradient(90deg, var(--brass-2), var(--accent)); }
+</style>
+</head>
+<body class="relative overflow-x-hidden">
+
+<div class="relative">
+  <div class="glow"></div>
+
+  <!-- NAV -->
+  <header class="px-6 md:px-10 py-6 flex items-center justify-between relative z-10">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <rect x="3" y="3" width="16" height="16" rx="3" stroke="#F5C26B" stroke-width="1.5"/>
+        <circle cx="11" cy="11" r="3.2" fill="#F5C26B"/>
+      </svg>
+      <span class="text-[15px] tracking-tight font-medium">Pulse Lab</span>
+    </a>
+    <div class="flex items-center gap-6 text-[13px] text-muted">
+      <span class="hidden sm:inline">Made in Brooklyn</span>
+      <a href="#preorder" class="text-[var(--accent)] hover:opacity-80 transition-opacity">Preorder ↗</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="relative px-6 md:px-10 pt-8 md:pt-12 pb-24">
+    <div class="absolute inset-0 pointer-events-none"><div class="dotgrid"></div></div>
+
+    <div class="relative max-w-[1280px] mx-auto grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-16 items-center">
+
+      <div class="order-2 lg:order-1">
+        <div class="inline-flex items-center gap-2 chip rounded-full pl-2 pr-3 py-1.5 mb-10">
+          <span class="pulse-dot"></span>
+          <span class="text-[12px] mono text-muted tracking-tight">PREORDER&nbsp;OPEN&nbsp;//&nbsp;BATCH&nbsp;01</span>
+        </div>
+
+        <h1 class="display text-[clamp(54px,10vw,148px)] max-w-[14ch]">
+          The desk timer for <em>deep work</em>.
+        </h1>
+
+        <p class="mt-10 max-w-[44ch] text-[18px] md:text-[19px] text-muted leading-snug">
+          Wood, brass, and a single button. No app. No notifications. Press it and the room goes quiet for fifty minutes. <span class="text-white">Two hundred made by hand in Brooklyn.</span>
+        </p>
+
+        <!-- price + cta -->
+        <div id="preorder" class="mt-10 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div class="flex items-baseline gap-3">
+            <div class="text-[44px] mono tnum font-medium tracking-tight">$148</div>
+            <div class="text-[12.5px] mono text-dim leading-tight">
+              <div>+ free US shipping</div>
+              <div>est. delivery · Nov 2026</div>
+            </div>
+          </div>
+          <a href="#" class="btn-primary rounded-full px-7 py-4 text-[15px] font-semibold tracking-tight inline-flex items-center justify-center gap-2 whitespace-nowrap">
+            Reserve a unit  →
+          </a>
+        </div>
+
+        <!-- inventory -->
+        <div class="mt-10 max-w-[460px]">
+          <div class="flex items-baseline justify-between mb-2 mono text-[12.5px]">
+            <span class="text-muted"><span class="tnum text-white">078</span> of 200 spoken for</span>
+            <span class="text-dim tnum">39% reserved</span>
+          </div>
+          <div class="invbar h-1.5 rounded-full overflow-hidden">
+            <div class="invbar-fill h-full" style="width: 39%"></div>
+          </div>
+          <div class="mt-3 flex items-center gap-2.5 text-[12.5px] mono text-muted">
+            <span class="pulse-dot"></span>
+            <span>3 reserved in the last hour</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DEVICE -->
+      <div class="order-1 lg:order-2 relative">
+        <div class="device">
+          <div class="floor"></div>
+          <div class="cylinder"></div>
+          <div class="top-cap"></div>
+          <div class="button"></div>
+          <div class="led tnum">42:18</div>
+          <div class="dial">
+            <div class="dial-marks">
+              <!-- generated in JS -->
+            </div>
+          </div>
+          <div class="stamp">PULSE&nbsp;·&nbsp;LAB&nbsp;·&nbsp;BK&nbsp;·&nbsp;001/200</div>
+        </div>
+        <!-- spec callouts -->
+        <div class="hidden lg:block absolute right-2 top-8 text-right text-[11.5px] mono text-dim leading-relaxed">
+          <div class="text-white">Brass ↘</div>
+          <div>cast in Long Island City</div>
+        </div>
+        <div class="hidden lg:block absolute left-0 bottom-10 text-[11.5px] mono text-dim leading-relaxed">
+          <div class="text-white">↖ American walnut</div>
+          <div>oiled, not lacquered</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- product specs row -->
+    <div class="relative mt-20 max-w-[1280px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-6 pt-8 border-t hairline">
+      <div>
+        <div class="mono text-[11.5px] text-dim mb-1.5">MATERIAL</div>
+        <div class="text-[15px]">Walnut · solid brass</div>
+      </div>
+      <div>
+        <div class="mono text-[11.5px] text-dim mb-1.5">DIMENSIONS</div>
+        <div class="text-[15px] tnum mono">68 × 68 × 96 mm</div>
+      </div>
+      <div>
+        <div class="mono text-[11.5px] text-dim mb-1.5">WEIGHT</div>
+        <div class="text-[15px] tnum mono">412 g</div>
+      </div>
+      <div>
+        <div class="mono text-[11.5px] text-dim mb-1.5">RUN TIME</div>
+        <div class="text-[15px] tnum mono">~6 months / charge</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY THIS EXISTS -->
+  <section class="px-6 md:px-10 py-24 border-t hairline">
+    <div class="max-w-[1100px] mx-auto">
+      <div class="text-[12px] mono text-dim tracking-widest mb-10">// WHY THIS EXISTS</div>
+      <div class="grid md:grid-cols-3 gap-10 md:gap-14">
+        <div>
+          <div class="mono text-[12px] text-[var(--accent)] mb-3">01</div>
+          <div class="text-[20px] leading-snug">A timer should not have a feed.</div>
+        </div>
+        <div>
+          <div class="mono text-[12px] text-[var(--accent)] mb-3">02</div>
+          <div class="text-[20px] leading-snug">A button should make one sound — <em class="not-italic italic text-muted">tock</em>.</div>
+        </div>
+        <div>
+          <div class="mono text-[12px] text-[var(--accent)] mb-3">03</div>
+          <div class="text-[20px] leading-snug">Your desk earned something better than plastic.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOUNDER NOTE -->
+  <section class="px-6 md:px-10 py-24 border-t hairline">
+    <div class="max-w-[860px] mx-auto grid md:grid-cols-[140px_1fr] gap-10">
+      <div>
+        <div class="w-[108px] h-[108px] rounded-full overflow-hidden border hairline-2"
+             style="background: radial-gradient(circle at 35% 30%, #f0c98a 0%, #8a5a2a 60%, #2a1808 100%);"></div>
+        <div class="mt-4 mono text-[11.5px] text-dim">
+          <div class="text-white">Aida Karim</div>
+          <div>founder · machinist</div>
+        </div>
+      </div>
+      <div class="text-[18.5px] leading-[1.6] text-white/85 max-w-[58ch]">
+        <p>The first prototype was a tomato I cut in half with a kitchen knife and stuck a brass thumbtack into. <span class="text-muted">It worked better than every productivity app on my phone.</span></p>
+        <p class="mt-5">Six prototypes and one tiny workshop in Gowanus later, Pulse Lab is what I would buy if someone else had made it. It does one thing. It will outlive the laptop next to it. And it asks nothing of you except that you press the button.</p>
+        <p class="mt-5 text-muted text-[16px]">Batch 01 is two hundred units. I'm making them on a lathe, by hand, between September and November. — <span class="text-white">Aida</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRESS -->
+  <section class="px-6 md:px-10 py-20 border-t hairline">
+    <div class="max-w-[1280px] mx-auto">
+      <div class="text-[12px] mono text-dim tracking-widest mb-10">// EARLY NOTICES</div>
+      <div class="grid md:grid-cols-2 gap-x-10 gap-y-8">
+
+        <div class="grid grid-cols-[120px_1fr] gap-6 items-start">
+          <div class="press-mark text-[15px] font-semibold tracking-tight" style="font-family: 'Newsreader', Georgia, serif;">Wirecutter</div>
+          <div>
+            <p class="text-[17px] leading-snug">"A small, satisfying object that does exactly one thing — and refuses to do anything else."</p>
+            <div class="mt-2 mono text-[11.5px] text-dim">Office &amp; Desk — Sept 2026</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-[120px_1fr] gap-6 items-start">
+          <div class="press-mark text-[15px] font-medium mono tracking-tight">Kickstarter</div>
+          <div>
+            <p class="text-[17px] leading-snug">"Funded in 4h 22m. The second batch sold out before the first one shipped."</p>
+            <div class="mt-2 mono text-[11.5px] text-dim">Project of the Day — June 2026</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-[120px_1fr] gap-6 items-start">
+          <div class="press-mark text-[15px] font-semibold uppercase tracking-[0.18em]">Field Notes</div>
+          <div>
+            <p class="text-[17px] leading-snug">"It belongs on the same shelf as a Leuchtturm and a Lamy 2000."</p>
+            <div class="mt-2 mono text-[11.5px] text-dim">Tools we use — Aug 2026</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-[120px_1fr] gap-6 items-start">
+          <div class="press-mark text-[15px] font-bold tracking-tight" style="font-family: 'Newsreader', Georgia, serif;">The Verge</div>
+          <div>
+            <p class="text-[17px] leading-snug">"Pulse Lab is the rare hardware story where the product matches the romance."</p>
+            <div class="mt-2 mono text-[11.5px] text-dim">Hardware — Sept 2026</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="px-6 md:px-10 py-28 border-t hairline">
+    <div class="max-w-[860px] mx-auto text-center">
+      <div class="text-[12px] mono text-dim tracking-widest mb-6">// BATCH 01 · CLOSES NOV 02</div>
+      <h2 class="display text-[clamp(44px,8vw,96px)] leading-[0.95] max-w-[16ch] mx-auto">
+        Reserve unit <em>078 / 200</em>.
+      </h2>
+      <form class="mt-10 flex flex-col sm:flex-row gap-2.5 max-w-[520px] mx-auto" data-waitlist>
+        <input type="email" required placeholder="you@domain.com" class="input-bare flex-1 rounded-full px-5 py-3.5 text-[15px]"/>
+        <button class="btn-primary rounded-full px-6 py-3.5 text-[14.5px] font-semibold tracking-tight whitespace-nowrap">
+          Hold my unit  →
+        </button>
+      </form>
+      <p class="mt-4 text-[12.5px] mono text-dim">$50 refundable deposit · balance on ship</p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="px-6 md:px-10 py-10 border-t hairline flex flex-col md:flex-row gap-4 md:items-center md:justify-between text-[13px] text-dim">
+    <div class="flex items-center gap-2.5">
+      <svg width="16" height="16" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <rect x="3" y="3" width="16" height="16" rx="3" stroke="#F5C26B" stroke-width="1.5"/>
+        <circle cx="11" cy="11" r="3.2" fill="#F5C26B"/>
+      </svg>
+      <span class="text-white/80">Pulse Lab</span>
+      <span>—</span>
+      <span>Built by hand · Brooklyn, NY</span>
+    </div>
+    <div class="flex items-center gap-6 mono">
+      <a href="#" class="hover:text-white/80 transition-colors">Shipping</a>
+      <a href="#" class="hover:text-white/80 transition-colors">Privacy</a>
+      <span>© 2026</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+  // dial marks
+  (function() {
+    const marks = document.querySelector('.dial-marks');
+    if (!marks) return;
+    for (let i = 0; i < 24; i++) {
+      const s = document.createElement('span');
+      s.style.transform = `rotate(${i * 15}deg) translate(-50%, -2px)`;
+      s.style.opacity = i % 6 === 0 ? '0.8' : '0.35';
+      s.style.height = i % 6 === 0 ? '8px' : '4px';
+      marks.appendChild(s);
+    }
+  })();
+
+  // LED count down for show
+  (function() {
+    const led = document.querySelector('.led');
+    let total = 42 * 60 + 18;
+    const tick = () => {
+      total = total <= 0 ? 50 * 60 : total - 1;
+      const m = Math.floor(total / 60);
+      const s = total % 60;
+      led.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    };
+    setInterval(tick, 1000);
+  })();
+
+  function joinWaitlist(form) {
+    const btn = form.querySelector('button');
+    btn.textContent = 'Unit held · check email ✓';
+    btn.style.background = '#fff';
+    setTimeout(() => { btn.textContent = 'Hold my unit  →'; btn.style.background = ''; }, 3200);
+    form.querySelector('input').value = '';
+  }
+  document.querySelectorAll('form[data-waitlist]').forEach(function (f) {
+    f.addEventListener('submit', function (e) { e.preventDefault(); joinWaitlist(f); });
+  });
+</script>
+</body>
+</html>

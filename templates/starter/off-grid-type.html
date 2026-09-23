@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Off-Grid — A weekly look at things made well</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FBFAF8; --text:#16140F; --muted:#6c685e; --accent:#E5484D;
+    --line:rgba(22,20,15,0.12); --panel:#FFFFFF;
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html{ scroll-behavior:smooth; }
+  body{ background:var(--bg); color:var(--text); font-family:"Inter",sans-serif;
+    font-feature-settings:"ss01","cv11"; }
+  .display{ font-family:"Fraunces",serif; font-optical-sizing:auto; letter-spacing:-0.025em; }
+  .mono{ font-family:"Space Mono",monospace; }
+  .muted{ color:var(--muted); }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  .rule{ border-color:var(--line); }
+  .baseline-grid{
+    background-image:repeating-linear-gradient(0deg, rgba(22,20,15,0.05) 0 1px, transparent 1px 32px);
+  }
+  .pulse-dot{ position:relative; }
+  .pulse-dot::after{ content:""; position:absolute; inset:0; border-radius:9999px;
+    box-shadow:0 0 0 0 rgba(229,72,77,0.5); animation:pulse 2.4s ease-out infinite; }
+  @keyframes pulse{ to{ box-shadow:0 0 0 12px rgba(229,72,77,0); } }
+  .lift{ transition:transform .12s ease, background-color .12s ease, color .12s ease; }
+  .lift:hover{ transform:translateY(-2px); }
+  .marquee{ display:flex; gap:3rem; width:max-content; animation:scroll 30s linear infinite; }
+  @keyframes scroll{ to{ transform:translateX(-50%); } }
+  .btn-sub.is-done{ background:#1f5132 !important; color:#d7f5e1 !important; }
+  details[open] .faq-plus{ transform:rotate(45deg); }
+  .faq-plus{ transition:transform .15s ease; }
+  ::selection{ background:rgba(229,72,77,0.25); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 backdrop-blur bg-[#FBFAF8]/85 border-b rule">
+  <nav class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="34" height="30" viewBox="0 0 44 38" fill="none" aria-hidden="true">
+        <text x="2" y="31" class="display" font-size="40" fill="#16140F" font-weight="600">o</text>
+        <line x1="0" y1="24" x2="44" y2="24" stroke="#E5484D" stroke-width="2"/>
+      </svg>
+      <span class="display text-[20px]" style="font-weight:600">Off-Grid</span>
+    </a>
+    <div class="hidden md:flex items-center gap-7 text-[14px] muted">
+      <a href="#archive" class="hover:text-[#16140F] transition-colors">Archive</a>
+      <a href="#author" class="hover:text-[#16140F] transition-colors">About</a>
+      <a href="#pricing" class="hover:text-[#16140F] transition-colors">Support</a>
+    </div>
+    <a href="#subscribe" class="lift inline-flex items-center rounded-full bg-[#E5484D] text-white text-[14px] font-medium px-4 py-2 hover:bg-[#d83b40]">Subscribe</a>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- HERO -->
+<section class="baseline-grid border-b rule">
+  <div class="max-w-6xl mx-auto px-5 pt-20 pb-24">
+    <div class="grid lg:grid-cols-[1.1fr_0.9fr] gap-12 items-center">
+      <div>
+        <div class="flex items-center gap-2.5 mb-6">
+          <span class="pulse-dot inline-block w-2 h-2 rounded-full bg-[#E5484D]"></span>
+          <span class="mono text-[12px] uppercase tracking-[0.12em] muted">Thursdays · 134 joined this week</span>
+        </div>
+        <h1 class="display text-[46px] sm:text-[68px] leading-[0.96]" style="font-weight:500">
+          A weekly look at <span class="muted">things made well.</span>
+        </h1>
+        <p class="mt-7 text-[18px] leading-relaxed muted max-w-[33rem]">
+          A letter on design, type, and the craft of making things — for designers, typographers, and makers who care about the seams nobody else notices.
+        </p>
+
+        <form id="subscribe" class="mt-8 max-w-[30rem]" data-sub="btn1">
+          <div class="flex flex-col sm:flex-row gap-2.5">
+            <input type="email" required placeholder="you@studio.com"
+              class="h-14 flex-1 rounded-lg bg-white border rule px-4 text-[16px] text-[#16140F] placeholder:text-[#a39e92] focus:outline-none focus:border-[#E5484D] focus:ring-1 focus:ring-[#E5484D]" />
+            <button id="btn1" type="submit" class="btn-sub lift h-14 px-6 rounded-lg bg-[#16140F] text-white text-[15px] font-semibold whitespace-nowrap hover:bg-[#2a261d]">Subscribe</button>
+          </div>
+          <p class="mt-3 text-[13px] muted tnum">Join 9,640 readers · every Thursday, 9am · unsubscribe anytime.</p>
+        </form>
+
+        <div class="mt-8">
+          <p class="mono text-[11px] uppercase tracking-[0.12em] muted mb-3">Read by designers at</p>
+          <div class="flex flex-wrap items-center gap-x-7 gap-y-2 text-[16px]" style="font-weight:500">
+            <span>Figma</span><span class="display">Pentagram</span><span>Frank Collective</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- TYPE SPECIMEN -->
+      <div class="lift rounded-xl border rule bg-white p-8 relative overflow-hidden">
+        <span class="mono text-[11px] uppercase tracking-[0.14em] muted">Specimen · Fraunces 144</span>
+        <div class="relative mt-2 mb-1" style="height:200px">
+          <svg viewBox="0 0 320 200" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <line x1="0" y1="40" x2="320" y2="40" stroke="#E5484D" stroke-width="1" opacity="0.5"/>
+            <line x1="0" y1="92" x2="320" y2="92" stroke="#E5484D" stroke-width="1" opacity="0.5"/>
+            <line x1="0" y1="160" x2="320" y2="160" stroke="#E5484D" stroke-width="1.5"/>
+            <text x="2" y="46" class="mono" font-size="9" fill="#6c685e">cap</text>
+            <text x="2" y="98" class="mono" font-size="9" fill="#6c685e">x</text>
+            <text x="2" y="172" class="mono" font-size="9" fill="#6c685e">base</text>
+          </svg>
+          <div class="display absolute inset-0 flex items-end justify-center" style="font-weight:600;font-size:150px;line-height:160px;color:#E5484D">Ag</div>
+        </div>
+        <p class="mono text-[12px] muted tnum mt-3">cap-height 800 · x-height 520 · ascender 920</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT YOU'LL GET -->
+<section class="max-w-6xl mx-auto px-5 py-20">
+  <h2 class="mono text-[12px] uppercase tracking-[0.16em] muted mb-10">In every Thursday letter</h2>
+  <div class="grid md:grid-cols-3 gap-px bg-[var(--line)] border rule rounded-xl overflow-hidden">
+    <div class="bg-white p-7">
+      <span class="mono text-[12px] text-[#E5484D]">01</span>
+      <h3 class="display text-[26px] mt-2 mb-2" style="font-weight:600">The Specimen</h3>
+      <p class="muted text-[15px] leading-relaxed">One typeface, examined the way you'd examine a building — who drew it, what it's for, and where it quietly fails.</p>
+    </div>
+    <div class="bg-white p-7">
+      <span class="mono text-[12px] text-[#E5484D]">02</span>
+      <h3 class="display text-[26px] mt-2 mb-2" style="font-weight:600">Found Objects</h3>
+      <p class="muted text-[15px] leading-relaxed">Five things worth your eye this week — a sign, a book cover, a UI, a chair, a wrapper. Linked, never padded.</p>
+    </div>
+    <div class="bg-white p-7">
+      <span class="mono text-[12px] text-[#E5484D]">03</span>
+      <h3 class="display text-[26px] mt-2 mb-2" style="font-weight:600">The Margin Note</h3>
+      <p class="muted text-[15px] leading-relaxed">One principle of craft, argued in a paragraph — the kind of thing you'd write in pencil beside the work.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SAMPLE ISSUE -->
+<section class="max-w-6xl mx-auto px-5 py-12">
+  <div class="rounded-xl border rule bg-white p-7 sm:p-10 relative">
+    <span class="absolute right-6 top-6 mono text-[12px] muted border rule rounded px-2 py-1">№ 87</span>
+    <div class="border-l-2 border-[#E5484D] pl-6 max-w-[44rem]">
+      <p class="mono text-[12px] uppercase tracking-[0.1em] muted">Issue № 87 · Mar 13, 2026 · 6 min read</p>
+      <h3 class="display text-[30px] sm:text-[40px] leading-[1.05] mt-3" style="font-weight:500">Why grotesks feel honest and humanists feel kind.</h3>
+      <blockquote class="display mt-5 text-[22px] leading-relaxed" style="font-weight:400;font-style:italic">
+        "A grotesk withholds its hand — no calligrapher, no apology. A humanist remembers the pen. Reading one feels like a contract; the other, like a conversation."
+      </blockquote>
+      <div class="mt-7 rounded-lg border rule bg-[#FBFAF8] p-5">
+        <p class="mono text-[12px] muted mb-3">Stroke modulation · grotesk vs. humanist</p>
+        <svg id="sampleSvg" viewBox="0 0 520 110" class="w-full" aria-hidden="true"></svg>
+      </div>
+      <a href="#subscribe" class="lift inline-flex items-center gap-1.5 mt-7 text-[15px] text-[#E5484D] font-semibold hover:gap-2.5 transition-all">Read the full issue <span>→</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHIVE -->
+<section id="archive" class="max-w-6xl mx-auto px-5 py-20">
+  <div class="flex items-end justify-between mb-8">
+    <h2 class="display text-[30px]" style="font-weight:600">The archive</h2>
+    <span class="mono text-[13px] muted tnum">87 issues · since 2024</span>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-9">
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 86 · Mar 6</p>
+      <h3 class="display text-[21px] leading-snug mb-1 group-hover:text-[#E5484D] transition-colors" style="font-weight:500">The grid is a promise you make to the next person.</h3>
+      <p class="muted text-[14px]">On baseline grids and trust. · 5 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 85 · Feb 27</p>
+      <h3 class="display text-[21px] leading-snug mb-1 group-hover:text-[#E5484D] transition-colors" style="font-weight:500">In defense of the ugly first draft of everything.</h3>
+      <p class="muted text-[14px]">Why polish is a late skill. · 6 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 84 · Feb 20</p>
+      <h3 class="display text-[21px] leading-snug mb-1 group-hover:text-[#E5484D] transition-colors" style="font-weight:500">Helvetica didn't win. It just stopped arguing.</h3>
+      <p class="muted text-[14px]">A type history nobody asked for. · 7 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 83 · Feb 13</p>
+      <h3 class="display text-[21px] leading-snug mb-1 group-hover:text-[#E5484D] transition-colors" style="font-weight:500">The kerning pair that ruins every wordmark.</h3>
+      <p class="muted text-[14px]">It's almost always the same one. · 4 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 82 · Feb 6</p>
+      <h3 class="display text-[21px] leading-snug mb-1 group-hover:text-[#E5484D] transition-colors" style="font-weight:500">A chair is an argument about how you should sit.</h3>
+      <p class="muted text-[14px]">Eames, Aalto, and intent. · 6 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 81 · Jan 30</p>
+      <h3 class="display text-[21px] leading-snug mb-1 group-hover:text-[#E5484D] transition-colors" style="font-weight:500">Drop shadows are back and I have feelings.</h3>
+      <p class="muted text-[14px]">When skeuomorphism earns its keep. · 5 min</p>
+    </a>
+  </div>
+</section>
+
+<!-- AUTHOR -->
+<section id="author" class="max-w-6xl mx-auto px-5 py-12">
+  <div class="rounded-xl border rule bg-white p-7 sm:p-10 flex flex-col sm:flex-row gap-7 items-start">
+    <svg width="72" height="72" viewBox="0 0 72 72" class="shrink-0" aria-hidden="true">
+      <rect width="72" height="72" rx="12" fill="#16140F"/>
+      <text x="36" y="48" text-anchor="middle" class="display" font-size="32" fill="#E5484D" font-weight="600">N</text>
+    </svg>
+    <div>
+      <h2 class="display text-[26px]" style="font-weight:600">Noa Vinstein</h2>
+      <p class="muted text-[15px] mt-1">Type designer & art director · drew two retail typefaces, art-directed one magazine you've held.</p>
+      <p class="text-[16px] leading-relaxed mt-4 max-w-[42rem]">I write Off-Grid because the internet is great at showing you what's new and terrible at showing you what's good. Every Thursday I slow down and look hard at one made thing — and tell you exactly why it works.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF -->
+<section class="max-w-6xl mx-auto px-5 py-20">
+  <div class="grid md:grid-cols-3 gap-5">
+    <figure class="lift rounded-xl border rule bg-white p-6">
+      <blockquote class="text-[16px] leading-relaxed">"The only newsletter that's made me a better designer instead of just a more anxious one. The Specimen section is a masterclass."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted">Priya Anand · Product Designer at Figma</figcaption>
+    </figure>
+    <figure class="lift rounded-xl border rule bg-white p-6">
+      <blockquote class="text-[16px] leading-relaxed">"I read a lot of design writing. This is the only one I print and keep. Noa notices the things I wish I'd noticed."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted">Marcus Tobin · Partner at Pentagram</figcaption>
+    </figure>
+    <figure class="lift rounded-xl border rule bg-white p-6">
+      <blockquote class="text-[16px] leading-relaxed">"Worth the Supporter tier for the grid templates alone — but I'd pay just for the Margin Note."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted">Hana Suzuki · Brand Lead at Frank Collective</figcaption>
+    </figure>
+  </div>
+
+  <div class="mt-8 grid grid-cols-2 md:grid-cols-4 border rule rounded-xl overflow-hidden">
+    <div class="p-6 border-r rule"><p class="display text-[30px] tnum" style="font-weight:600">64.9%</p><p class="muted text-[13px] mt-1">avg. open rate</p></div>
+    <div class="p-6 md:border-r rule"><p class="display text-[30px] tnum" style="font-weight:600">9,640</p><p class="muted text-[13px] mt-1">subscribers</p></div>
+    <div class="p-6 border-r rule border-t md:border-t-0"><p class="display text-[30px] tnum" style="font-weight:600">87</p><p class="muted text-[13px] mt-1">issues shipped</p></div>
+    <div class="p-6 border-t md:border-t-0"><p class="display text-[30px] tnum" style="font-weight:600">5.8 min</p><p class="muted text-[13px] mt-1">avg. read time</p></div>
+  </div>
+
+  <div class="mt-12 overflow-hidden relative" style="mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)">
+    <div class="marquee text-[18px]" style="font-weight:500">
+      <span>Figma</span><span class="display">Pentagram</span><span>Frank Collective</span><span>Monotype</span><span>Readymag</span><span class="display">It's Nice That</span><span>Klim Type</span><span>Cosmos</span>
+      <span>Figma</span><span class="display">Pentagram</span><span>Frank Collective</span><span>Monotype</span><span>Readymag</span><span class="display">It's Nice That</span><span>Klim Type</span><span>Cosmos</span>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="max-w-6xl mx-auto px-5 py-20">
+  <h2 class="display text-[34px] text-center mb-3" style="font-weight:600">Read free. Support for $7.</h2>
+  <p class="muted text-center mb-12 max-w-[34rem] mx-auto text-[16px]">The Thursday letter is free, always. Supporter is for people who want the templates, the archive, and the room.</p>
+  <div class="grid md:grid-cols-2 gap-5 max-w-[52rem] mx-auto">
+    <div class="rounded-xl border rule bg-white p-7">
+      <p class="mono text-[12px] uppercase tracking-[0.14em] muted">Reader</p>
+      <p class="display text-[42px] mt-2" style="font-weight:600">$0</p>
+      <ul class="mt-6 space-y-3 text-[15px] muted">
+        <li class="flex gap-3"><span class="text-[#E5484D]">✓</span> The Thursday letter</li>
+        <li class="flex gap-3"><span class="text-[#E5484D]">✓</span> The Specimen + Found Objects</li>
+        <li class="flex gap-3"><span class="text-[#E5484D]">✓</span> Public archive</li>
+      </ul>
+      <a href="#subscribe" class="lift mt-7 inline-flex w-full justify-center rounded-lg border-2 border-[#16140F] px-5 py-3 text-[15px] font-semibold hover:bg-[#16140F] hover:text-white transition-colors">Subscribe free</a>
+    </div>
+    <div class="rounded-xl border-2 border-[#E5484D] bg-white p-7 relative overflow-hidden">
+      <span class="absolute right-0 top-5 bg-[#E5484D] text-white mono text-[11px] uppercase tracking-[0.1em] px-3 py-1 rounded-l-full">Reader-supported</span>
+      <p class="mono text-[12px] uppercase tracking-[0.14em] text-[#E5484D]">Supporter</p>
+      <p class="display text-[42px] mt-2 tnum" style="font-weight:600">$7<span class="text-[18px] muted">/mo</span></p>
+      <p class="muted text-[13px] tnum">or $70/yr — two months free</p>
+      <ul class="mt-6 space-y-3 text-[15px]">
+        <li class="flex gap-3"><span class="text-[#E5484D]">✓</span> Everything in Reader</li>
+        <li class="flex gap-3"><span class="text-[#E5484D]">✓</span> The full specimen archive</li>
+        <li class="flex gap-3"><span class="text-[#E5484D]">✓</span> Downloadable grid templates</li>
+        <li class="flex gap-3"><span class="text-[#E5484D]">✓</span> The readers' show-and-tell thread</li>
+      </ul>
+      <a href="#subscribe" class="lift mt-7 inline-flex w-full justify-center rounded-lg bg-[#16140F] text-white px-5 py-3 text-[15px] font-semibold hover:bg-[#2a261d]">Become a Supporter</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="max-w-3xl mx-auto px-5 py-20">
+  <h2 class="display text-[30px] mb-8" style="font-weight:600">Before you subscribe</h2>
+  <div class="divide-y rule border-t border-b rule">
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:500">What do I get on free vs Supporter?<span class="faq-plus text-[#E5484D] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">Free readers get the full Thursday letter every week — the Specimen, Found Objects, and the Margin Note. Supporters add the searchable specimen archive, downloadable grid and baseline templates, and access to the readers' show-and-tell thread.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:500">How often, and what time zone?<span class="faq-plus text-[#E5484D] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">One letter a week, every Thursday at 9am Eastern. No bonus blasts, no "quick updates." If your inbox is precious, this one respects it.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:500">Can I expense a Supporter membership?<span class="faq-plus text-[#E5484D] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">Yes — you'll get an itemized receipt on signup, and the grid templates alone make it an easy line item under professional development.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:500">Do you sell or share my email — ever?<span class="faq-plus text-[#E5484D] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">Never. No sponsors get your address, no analytics partners, no list trades. It's just me writing to you, and you can leave with one click.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:500">Can I cancel and keep what I downloaded?<span class="faq-plus text-[#E5484D] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">Of course. Any template you downloaded is yours to keep forever. Cancel whenever — you'll just drop back to the free letter at the next renewal.</p>
+    </details>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="border-t rule baseline-grid">
+  <div class="max-w-3xl mx-auto px-5 py-24 text-center">
+    <h2 class="display text-[42px] sm:text-[56px] leading-[1.0]" style="font-weight:500">A weekly look at <span class="muted">things made well.</span></h2>
+    <form class="mt-10 max-w-[30rem] mx-auto" data-sub="btn2">
+      <div class="flex flex-col sm:flex-row gap-2.5">
+        <input type="email" required placeholder="you@studio.com"
+          class="h-14 flex-1 rounded-lg bg-white border rule px-4 text-[16px] text-[#16140F] placeholder:text-[#a39e92] focus:outline-none focus:border-[#E5484D] focus:ring-1 focus:ring-[#E5484D]" />
+        <button id="btn2" type="submit" class="btn-sub lift h-14 px-6 rounded-lg bg-[#16140F] text-white text-[15px] font-semibold whitespace-nowrap hover:bg-[#2a261d]">Subscribe</button>
+      </div>
+      <p class="mt-3 text-[13px] muted tnum">Join 9,640 readers · every Thursday, 9am.</p>
+    </form>
+  </div>
+</section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="border-t rule">
+  <div class="max-w-6xl mx-auto px-5 py-12 flex flex-col sm:flex-row justify-between gap-6">
+    <div>
+      <span class="display text-[18px]" style="font-weight:600">Off-Grid</span>
+      <p class="muted text-[13px] mt-2">Powered by Buttondown · Unsubscribe anytime — one click, and we part as friends.</p>
+    </div>
+    <div class="flex gap-7 text-[14px] muted">
+      <a href="#archive" class="hover:text-[#16140F] transition-colors">Archive</a>
+      <a href="#author" class="hover:text-[#16140F] transition-colors">About</a>
+      <a href="#" class="hover:text-[#16140F] transition-colors">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function doSub(e, id){
+    e.preventDefault();
+    var b = document.getElementById(id);
+    b.classList.add('is-done');
+    b.textContent = '✓ Subscribed — check your inbox';
+    return false;
+  }
+  document.querySelectorAll('form[data-sub]').forEach(function (f) {
+    f.addEventListener('submit', function (e) { doSub(e, f.getAttribute('data-sub')); });
+  });
+  // stroke modulation comparison — two bar sets
+  (function(){
+    var grotesk=[40,42,41,43,40,42,41], humanist=[28,46,34,52,30,48,36];
+    var svg=document.getElementById('sampleSvg'), html='';
+    function set(vals,x0,color,label){
+      vals.forEach(function(v,i){
+        var x=x0+i*26, y=90-v;
+        html+='<rect x="'+x+'" y="'+y+'" width="16" height="'+v+'" rx="2" fill="'+color+'"/>';
+      });
+      html+='<text x="'+(x0)+'" y="105" font-family="Space Mono" font-size="10" fill="#6c685e">'+label+'</text>';
+    }
+    set(grotesk,20,'#16140F','grotesk');
+    set(humanist,300,'#E5484D','humanist');
+    svg.innerHTML=html;
+  })();
+</script>
+</body>
+</html>

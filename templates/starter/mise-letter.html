@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mise — Cook like you mean it</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#F4EFE3; --text:#1E1B12; --muted:#6f6a57; --accent:#6E7B2E;
+    --line:rgba(30,27,18,0.13); --panel:#FBF8EF;
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html{ scroll-behavior:smooth; }
+  body{ background:var(--bg); color:var(--text); font-family:"Inter",sans-serif;
+    font-feature-settings:"ss01","cv11"; }
+  .display{ font-family:"Cormorant Garamond",serif; letter-spacing:-0.01em; }
+  .mono{ font-family:"IBM Plex Mono",monospace; }
+  .muted{ color:var(--muted); }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  .rule{ border-color:var(--line); }
+  .paper{
+    background-image:radial-gradient(rgba(30,27,18,0.05) 1px, transparent 1px);
+    background-size:22px 22px;
+  }
+  .pulse-dot{ position:relative; }
+  .pulse-dot::after{ content:""; position:absolute; inset:0; border-radius:9999px;
+    box-shadow:0 0 0 0 rgba(110,123,46,0.5); animation:pulse 2.4s ease-out infinite; }
+  @keyframes pulse{ to{ box-shadow:0 0 0 12px rgba(110,123,46,0); } }
+  .lift{ transition:transform .12s ease, background-color .12s ease, color .12s ease; }
+  .lift:hover{ transform:translateY(-2px); }
+  .marquee{ display:flex; gap:2.5rem; width:max-content; animation:scroll 32s linear infinite; }
+  @keyframes scroll{ to{ transform:translateX(-50%); } }
+  .btn-sub.is-done{ background:#3a4a1c !important; color:#e7f0cc !important; }
+  details[open] .faq-plus{ transform:rotate(45deg); }
+  .faq-plus{ transition:transform .15s ease; }
+  ::selection{ background:rgba(110,123,46,0.28); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 backdrop-blur bg-[#F4EFE3]/85 border-b rule">
+  <nav class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="40" height="26" viewBox="0 0 52 34" fill="none" aria-hidden="true">
+        <path d="M4 22 L34 22 L46 17 L34 12 L4 12" stroke="#6E7B2E" stroke-width="1.6" fill="none" stroke-linejoin="round"/>
+        <line x1="4" y1="17" x2="32" y2="17" stroke="#6E7B2E" stroke-width="1.6"/>
+      </svg>
+      <span class="display text-[24px] tracking-wide" style="font-weight:600;font-variant:small-caps">mise</span>
+    </a>
+    <div class="hidden md:flex items-center gap-7 text-[14px] muted">
+      <a href="#archive" class="hover:text-[#1E1B12] transition-colors">Archive</a>
+      <a href="#author" class="hover:text-[#1E1B12] transition-colors">About</a>
+      <a href="#pricing" class="hover:text-[#1E1B12] transition-colors">Pricing</a>
+    </div>
+    <a href="#subscribe" class="lift inline-flex items-center rounded-full bg-[#6E7B2E] text-white text-[14px] font-medium px-4 py-2 hover:bg-[#5e6a26]">Subscribe</a>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- HERO -->
+<section class="paper border-b rule">
+  <div class="max-w-6xl mx-auto px-5 pt-20 pb-24">
+    <div class="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 items-center">
+      <div>
+        <div class="flex items-center gap-2.5 mb-6">
+          <span class="pulse-dot inline-block w-2 h-2 rounded-full bg-[#6E7B2E]"></span>
+          <span class="mono text-[12px] uppercase tracking-[0.14em] muted">Fridays · 188 joined this week</span>
+        </div>
+        <h1 class="display text-[52px] sm:text-[76px] leading-[0.92]" style="font-weight:600">
+          Cook like you <span class="muted" style="font-style:italic">mean it.</span>
+        </h1>
+        <p class="mt-6 text-[18px] leading-relaxed muted max-w-[33rem]">
+          A chef's weekly letter on recipes and technique — for home cooks who already own a good knife and want the one move that fixes a dish, not forty ingredients that hide it.
+        </p>
+
+        <form id="subscribe" class="mt-8 max-w-[30rem]" data-sub="btn1">
+          <div class="flex flex-col sm:flex-row gap-2.5">
+            <input type="email" required placeholder="you@kitchen.com"
+              class="h-14 flex-1 rounded-lg bg-[#FBF8EF] border rule px-4 text-[16px] text-[#1E1B12] placeholder:text-[#9a937e] focus:outline-none focus:border-[#6E7B2E] focus:ring-1 focus:ring-[#6E7B2E]" />
+            <button id="btn1" type="submit" class="btn-sub lift h-14 px-6 rounded-lg bg-[#1E1B12] text-white text-[15px] font-semibold whitespace-nowrap hover:bg-[#332e1f]">Get the recipe</button>
+          </div>
+          <p class="mt-3 text-[13px] muted tnum">Join 14,206 readers · every Friday, 4pm — in time for the weekend.</p>
+        </form>
+
+        <div class="mt-8">
+          <p class="mono text-[11px] uppercase tracking-[0.12em] muted mb-3">Read in kitchens at</p>
+          <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-[16px] display" style="font-weight:600">
+            <span>Bon Appétit</span><span>Eleven Madison alumni</span><span>Serious Eats</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECIPE STEP DIAGRAM -->
+      <div class="lift rounded-xl border rule bg-[#FBF8EF] p-7">
+        <span class="mono text-[11px] uppercase tracking-[0.14em] muted">This week's method · white fish confit</span>
+        <svg id="stepSvg" viewBox="0 0 320 230" class="w-full mt-3" aria-hidden="true"></svg>
+        <p class="mono text-[12px] muted tnum mt-2">4 steps · ~18 active minutes</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT YOU'LL GET -->
+<section class="max-w-6xl mx-auto px-5 py-20">
+  <h2 class="mono text-[12px] uppercase tracking-[0.16em] muted mb-10">In every Friday letter</h2>
+  <div class="grid md:grid-cols-3 gap-10">
+    <div class="border-t-2 border-[#6E7B2E] pt-5">
+      <span class="mono text-[12px] text-[#6E7B2E]">№ 01</span>
+      <h3 class="display text-[30px] mt-1 mb-2" style="font-weight:600">The Recipe</h3>
+      <p class="muted text-[16px] leading-relaxed">One dish, tested six ways in my kitchen until it works in yours — exact weights, real timings, no "season to taste" cop-outs.</p>
+    </div>
+    <div class="border-t-2 border-[#6E7B2E] pt-5">
+      <span class="mono text-[12px] text-[#6E7B2E]">№ 02</span>
+      <h3 class="display text-[30px] mt-1 mb-2" style="font-weight:600">The Technique</h3>
+      <p class="muted text-[16px] leading-relaxed">The one move that separates the dish that works from the one that doesn't — and why your last attempt went grey.</p>
+    </div>
+    <div class="border-t-2 border-[#6E7B2E] pt-5">
+      <span class="mono text-[12px] text-[#6E7B2E]">№ 03</span>
+      <h3 class="display text-[30px] mt-1 mb-2" style="font-weight:600">Pantry Note</h3>
+      <p class="muted text-[16px] leading-relaxed">One ingredient, demystified — what to buy, what it actually does, and the cheaper thing that's secretly better.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SAMPLE ISSUE -->
+<section class="max-w-6xl mx-auto px-5 py-12">
+  <div class="rounded-xl border rule bg-[#FBF8EF] p-7 sm:p-10 relative">
+    <span class="absolute right-6 top-6 mono text-[12px] muted border rule rounded px-2 py-1">№ 96</span>
+    <div class="border-l-2 border-[#6E7B2E] pl-6 max-w-[44rem]">
+      <p class="mono text-[12px] uppercase tracking-[0.1em] muted">Issue № 96 · Mar 14, 2026 · 5 min read</p>
+      <h3 class="display text-[34px] sm:text-[44px] leading-[1.02] mt-3" style="font-weight:600">The 8-minute confit that makes any white fish taste expensive.</h3>
+      <blockquote class="display mt-5 text-[24px] leading-snug" style="font-weight:500;font-style:italic">
+        "Heat is not the enemy of fish. Hurry is. Drop the temperature, double the patience, and even a Tuesday cod eats like a tasting menu."
+      </blockquote>
+      <div class="mt-7 rounded-lg border rule bg-[#F4EFE3] p-5">
+        <p class="mono text-[12px] muted mb-3">Doneness vs. oil temperature · cod fillet</p>
+        <svg id="sampleSvg" viewBox="0 0 520 120" class="w-full" aria-hidden="true"></svg>
+      </div>
+      <a href="#subscribe" class="lift inline-flex items-center gap-1.5 mt-7 text-[15px] text-[#6E7B2E] font-semibold hover:gap-2.5 transition-all">Read the full issue <span>→</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHIVE -->
+<section id="archive" class="max-w-6xl mx-auto px-5 py-20">
+  <div class="flex items-end justify-between mb-8">
+    <h2 class="display text-[34px]" style="font-weight:600">The recipe archive</h2>
+    <span class="mono text-[13px] muted tnum">96 issues · since 2024</span>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-9">
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 95 · Mar 7</p>
+      <h3 class="display text-[23px] leading-snug mb-1 group-hover:text-[#6E7B2E] transition-colors" style="font-weight:600">A roast chicken with one fewer step than you think.</h3>
+      <p class="muted text-[14px]">Spatchcock skeptics, read this. · 6 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 94 · Feb 28</p>
+      <h3 class="display text-[23px] leading-snug mb-1 group-hover:text-[#6E7B2E] transition-colors" style="font-weight:600">The pasta water myth, finally put to rest.</h3>
+      <p class="muted text-[14px]">How starchy is starchy enough? · 4 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 93 · Feb 21</p>
+      <h3 class="display text-[23px] leading-snug mb-1 group-hover:text-[#6E7B2E] transition-colors" style="font-weight:600">Braised short ribs for a Tuesday, not a holiday.</h3>
+      <p class="muted text-[14px]">Three hours, fifteen of them yours. · 7 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 92 · Feb 14</p>
+      <h3 class="display text-[23px] leading-snug mb-1 group-hover:text-[#6E7B2E] transition-colors" style="font-weight:600">Why your vinaigrette breaks, in one diagram.</h3>
+      <p class="muted text-[14px]">Emulsions, demystified. · 5 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 91 · Feb 7</p>
+      <h3 class="display text-[23px] leading-snug mb-1 group-hover:text-[#6E7B2E] transition-colors" style="font-weight:600">The onion-cutting order that saves ten minutes.</h3>
+      <p class="muted text-[14px]">Mise, the verb, not the noun. · 4 min</p>
+    </a>
+    <a href="#subscribe" class="group block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 90 · Jan 31</p>
+      <h3 class="display text-[23px] leading-snug mb-1 group-hover:text-[#6E7B2E] transition-colors" style="font-weight:600">A loaf for people who swear they can't bake.</h3>
+      <p class="muted text-[14px]">No starter, no stand mixer. · 8 min</p>
+    </a>
+  </div>
+</section>
+
+<!-- AUTHOR -->
+<section id="author" class="max-w-6xl mx-auto px-5 py-12">
+  <div class="rounded-xl border rule bg-[#FBF8EF] p-7 sm:p-10 flex flex-col sm:flex-row gap-7 items-start">
+    <svg width="72" height="72" viewBox="0 0 72 72" class="shrink-0" aria-hidden="true">
+      <rect width="72" height="72" rx="14" fill="#1E1B12"/>
+      <text x="36" y="48" text-anchor="middle" class="display" font-size="34" fill="#6E7B2E" font-weight="600">T·R</text>
+    </svg>
+    <div>
+      <h2 class="display text-[28px]" style="font-weight:600">Tomás Ruiz</h2>
+      <p class="muted text-[15px] mt-1">Former sous chef, one-Michelin kitchen · ten years on the line, now cooking at home like you.</p>
+      <p class="text-[16px] leading-relaxed mt-4 max-w-[42rem]">I left the line because I wanted to cook for people I actually know. Mise is the letter I'd send a friend who's a good cook and wants to be a better one — every recipe tested until it's idiot-proof, because some Fridays I'm the idiot too.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF -->
+<section class="max-w-6xl mx-auto px-5 py-20">
+  <div class="grid md:grid-cols-3 gap-5">
+    <figure class="lift rounded-xl border rule bg-[#FBF8EF] p-6">
+      <blockquote class="text-[16px] leading-relaxed">"The only recipe newsletter where everything actually works the first time. The Technique section turned me into a cook, not a recipe-follower."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted">Priya Anand · home cook, reformed takeout addict</figcaption>
+    </figure>
+    <figure class="lift rounded-xl border rule bg-[#FBF8EF] p-6">
+      <blockquote class="text-[16px] leading-relaxed">"Tomás writes weights, not vibes. My weekends got better and my grocery bill got smaller."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted">Yusuf Abara · weekend cook & dad of three</figcaption>
+    </figure>
+    <figure class="lift rounded-xl border rule bg-[#FBF8EF] p-6">
+      <blockquote class="text-[16px] leading-relaxed">"I cook professionally and I still learn something every Friday. The Table thread is the best kitchen group chat I'm in."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted">Hana Suzuki · pastry chef, Food52 alum</figcaption>
+    </figure>
+  </div>
+
+  <div class="mt-8 grid grid-cols-2 md:grid-cols-4 border rule rounded-xl overflow-hidden">
+    <div class="p-6 border-r rule"><p class="display text-[34px] tnum" style="font-weight:600">67.3%</p><p class="muted text-[13px] mt-1">avg. open rate</p></div>
+    <div class="p-6 md:border-r rule"><p class="display text-[34px] tnum" style="font-weight:600">14,206</p><p class="muted text-[13px] mt-1">subscribers</p></div>
+    <div class="p-6 border-r rule border-t md:border-t-0"><p class="display text-[34px] tnum" style="font-weight:600">96</p><p class="muted text-[13px] mt-1">issues shipped</p></div>
+    <div class="p-6 border-t md:border-t-0"><p class="display text-[34px] tnum" style="font-weight:600">5.2 min</p><p class="muted text-[13px] mt-1">avg. read time</p></div>
+  </div>
+
+  <div class="mt-12 overflow-hidden relative" style="mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)">
+    <div class="marquee text-[18px] display" style="font-weight:600">
+      <span>Bon Appétit</span><span>Serious Eats</span><span>Eleven Madison alumni</span><span>Food52</span><span>Smitten Kitchen</span><span>Kenji's notes</span><span>Ottolenghi test kitchen</span><span>Caraway</span>
+      <span>Bon Appétit</span><span>Serious Eats</span><span>Eleven Madison alumni</span><span>Food52</span><span>Smitten Kitchen</span><span>Kenji's notes</span><span>Ottolenghi test kitchen</span><span>Caraway</span>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="max-w-6xl mx-auto px-5 py-20">
+  <h2 class="display text-[38px] text-center mb-3" style="font-weight:600">Cook free. Set the Table for $8.</h2>
+  <p class="muted text-center mb-12 max-w-[34rem] mx-auto text-[16px]">The Friday recipe is free, every week. The Table is the full tested archive, printable cards, and the cook-along.</p>
+  <div class="grid md:grid-cols-2 gap-5 max-w-[52rem] mx-auto">
+    <div class="rounded-xl border rule bg-[#FBF8EF] p-7">
+      <p class="mono text-[12px] uppercase tracking-[0.14em] muted">Free</p>
+      <p class="display text-[46px] mt-1" style="font-weight:600">$0</p>
+      <ul class="mt-6 space-y-3 text-[15px] muted">
+        <li class="flex gap-3"><span class="text-[#6E7B2E]">✓</span> The Friday recipe</li>
+        <li class="flex gap-3"><span class="text-[#6E7B2E]">✓</span> The Technique + Pantry Note</li>
+        <li class="flex gap-3"><span class="text-[#6E7B2E]">✓</span> Last 8 issues</li>
+      </ul>
+      <a href="#subscribe" class="lift mt-7 inline-flex w-full justify-center rounded-lg border-2 border-[#1E1B12] px-5 py-3 text-[15px] font-semibold hover:bg-[#1E1B12] hover:text-white transition-colors">Get the recipe</a>
+    </div>
+    <div class="rounded-xl border-2 border-[#6E7B2E] bg-[#FBF8EF] p-7 relative overflow-hidden">
+      <span class="absolute right-0 top-5 bg-[#6E7B2E] text-white mono text-[11px] uppercase tracking-[0.1em] px-3 py-1 rounded-l-full">Reader-supported</span>
+      <p class="mono text-[12px] uppercase tracking-[0.14em] text-[#6E7B2E]">The Table</p>
+      <p class="display text-[46px] mt-1 tnum" style="font-weight:600">$8<span class="text-[18px] muted">/mo</span></p>
+      <p class="muted text-[13px] tnum">or $80/yr — two months free</p>
+      <ul class="mt-6 space-y-3 text-[15px]">
+        <li class="flex gap-3"><span class="text-[#6E7B2E]">✓</span> The full tested-recipe archive</li>
+        <li class="flex gap-3"><span class="text-[#6E7B2E]">✓</span> Printable recipe cards</li>
+        <li class="flex gap-3"><span class="text-[#6E7B2E]">✓</span> The subscriber cook-along thread</li>
+        <li class="flex gap-3"><span class="text-[#6E7B2E]">✓</span> Monthly live Q&A</li>
+      </ul>
+      <a href="#subscribe" class="lift mt-7 inline-flex w-full justify-center rounded-lg bg-[#1E1B12] text-white px-5 py-3 text-[15px] font-semibold hover:bg-[#332e1f]">Join the Table</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="max-w-3xl mx-auto px-5 py-20">
+  <h2 class="display text-[34px] mb-8" style="font-weight:600">Questions from the kitchen</h2>
+  <div class="divide-y rule border-t border-b rule">
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:500">What's free vs on the Table plan?<span class="faq-plus text-[#6E7B2E] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">Every Friday recipe — with the Technique and Pantry Note — is free. The Table adds the complete searchable archive, printable cards for every recipe, the subscriber cook-along thread, and a monthly live Q&A.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:500">How often do recipes land, and when?<span class="faq-plus text-[#6E7B2E] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">One recipe every Friday at 4pm your time — deliberately, so you can shop on the way home and cook it that weekend. No mid-week filler.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:500">Can I expense this if I cook for work?<span class="faq-plus text-[#6E7B2E] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">Plenty of private chefs and recipe developers do — you'll get an itemized receipt on signup that drops neatly into an expense report.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:500">Are recipes printable / saveable?<span class="faq-plus text-[#6E7B2E] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">Yes — Table members get a clean printable card for every recipe (no ads, no life story), and everything stays in your account to save and re-cook.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:500">Do you sell my email to brands?<span class="faq-plus text-[#6E7B2E] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">No. No cookware sponsors get your address, no data brokers, nothing. Just me and a recipe, every Friday — unsubscribe in one click whenever.</p>
+    </details>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="border-t rule paper">
+  <div class="max-w-3xl mx-auto px-5 py-24 text-center">
+    <h2 class="display text-[48px] sm:text-[64px] leading-[0.96]" style="font-weight:600">Cook like you <span class="muted" style="font-style:italic">mean it.</span></h2>
+    <form class="mt-10 max-w-[30rem] mx-auto" data-sub="btn2">
+      <div class="flex flex-col sm:flex-row gap-2.5">
+        <input type="email" required placeholder="you@kitchen.com"
+          class="h-14 flex-1 rounded-lg bg-[#FBF8EF] border rule px-4 text-[16px] text-[#1E1B12] placeholder:text-[#9a937e] focus:outline-none focus:border-[#6E7B2E] focus:ring-1 focus:ring-[#6E7B2E]" />
+        <button id="btn2" type="submit" class="btn-sub lift h-14 px-6 rounded-lg bg-[#1E1B12] text-white text-[15px] font-semibold whitespace-nowrap hover:bg-[#332e1f]">Get the recipe</button>
+      </div>
+      <p class="mt-3 text-[13px] muted tnum">Join 14,206 readers · every Friday, 4pm.</p>
+    </form>
+  </div>
+</section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="border-t rule">
+  <div class="max-w-6xl mx-auto px-5 py-12 flex flex-col sm:flex-row justify-between gap-6">
+    <div>
+      <span class="display text-[22px]" style="font-weight:600;font-variant:small-caps">mise</span>
+      <p class="muted text-[13px] mt-2">Powered by Substack · Unsubscribe anytime — one click, no guilt, no hard sell.</p>
+    </div>
+    <div class="flex gap-7 text-[14px] muted">
+      <a href="#archive" class="hover:text-[#1E1B12] transition-colors">Archive</a>
+      <a href="#author" class="hover:text-[#1E1B12] transition-colors">About</a>
+      <a href="#" class="hover:text-[#1E1B12] transition-colors">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function doSub(e, id){
+    e.preventDefault();
+    var b = document.getElementById(id);
+    b.classList.add('is-done');
+    b.textContent = '✓ Subscribed — check your inbox';
+    return false;
+  }
+  document.querySelectorAll('form[data-sub]').forEach(function (f) {
+    f.addEventListener('submit', function (e) { doSub(e, f.getAttribute('data-sub')); });
+  });
+  // recipe step flow — vertical 4 nodes
+  (function(){
+    var steps=[
+      {t:'Brine',d:'2 h'},
+      {t:'Sear',d:'90 s / side'},
+      {t:'Rest',d:'8 m'},
+      {t:'Slice',d:'against grain'}
+    ];
+    var svg=document.getElementById('stepSvg'), html='';
+    steps.forEach(function(s,i){
+      var y=24+i*52;
+      if(i<steps.length-1){
+        html+='<line x1="30" y1="'+(y+14)+'" x2="30" y2="'+(y+52)+'" stroke="#6E7B2E" stroke-width="2"/>';
+      }
+      html+='<circle cx="30" cy="'+y+'" r="8" fill="#6E7B2E"/>';
+      html+='<text x="30" y="'+(y+4)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#FBF8EF" font-weight="600">'+(i+1)+'</text>';
+      html+='<text x="52" y="'+(y-2)+'" font-family="Cormorant Garamond" font-size="22" font-weight="600" fill="#1E1B12">'+s.t+'</text>';
+      html+='<text x="52" y="'+(y+15)+'" font-family="IBM Plex Mono" font-size="11" fill="#6f6a57">'+s.d+'</text>';
+    });
+    svg.setAttribute('viewBox','0 0 320 '+(24+steps.length*52));
+    svg.innerHTML=html;
+  })();
+  // doneness curve
+  (function(){
+    var vals=[20,22,26,33,45,58,68,74,78,80,81,82,82];
+    var min=Math.min.apply(null,vals),max=Math.max.apply(null,vals),rng=max-min;
+    var d=vals.map(function(v,i){
+      var x=12+(i/(vals.length-1))*496, y=108-((v-min)/rng)*88;
+      return (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);
+    }).join(' ');
+    document.getElementById('sampleSvg').innerHTML=
+      '<path d="'+d+'" fill="none" stroke="#6E7B2E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'+
+      '<line x1="12" y1="40" x2="508" y2="40" stroke="rgba(30,27,18,0.13)" stroke-dasharray="4 4"/>'+
+      '<text x="14" y="34" font-family="IBM Plex Mono" font-size="10" fill="#6f6a57">63°C target</text>';
+  })();
+</script>
+</body>
+</html>

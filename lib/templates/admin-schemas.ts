@@ -184,6 +184,15 @@ export type UpdateTemplateInput = z.infer<typeof UpdateSchema>;
 // El corpus quedó en **0 `on*`**, y con él en cero el rechazo no bloquea nada
 // que exista: sólo impide que vuelvan a entrar.
 //
+// ⚠️ «El corpus» eran las 178 del DISCO, no la galería. Medido el 2026-09-22
+// contra las 451 publicadas en producción: 14 seguían con `on*` —y ahí sí
+// llamaban a funciones: `doSub(event,…)` en 6 y `joinWaitlist(this)` en 5, más
+// hover inline en 3 y algún `return false`—. Al clonarlas salía el aviso
+// `handlers_lost`, esta vez con razón. Limpiadas por la misma vía (listener en
+// su `<script>`, hover a CSS) y trackeadas en templates/starter; hasta que
+// /api/internal/republish-templates las suba, producción sigue sirviendo las
+// viejas.
+//
 // Lo medido que conviene NO volver a suponer: en las 178 plantillas había
 // **CERO `onclick`**, y ningún handler llamaba a una función —todos eran
 // one-liners que sólo tocaban `this`—. El `onclick="abrir()"` que ilustra este

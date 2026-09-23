@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Workbench — Building it in public, numbers and all</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#F7F3EA; --text:#161310; --muted:#6b6457; --accent:#F97316;
+    --line:rgba(22,19,16,0.12); --panel:#FFFCF5;
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html{ scroll-behavior:smooth; }
+  body{ background:var(--bg); color:var(--text); font-family:"Inter",sans-serif;
+    font-feature-settings:"ss01","cv11"; }
+  .display{ font-family:"Inter Tight",sans-serif; letter-spacing:-0.03em; }
+  .mono{ font-family:"JetBrains Mono",monospace; }
+  .muted{ color:var(--muted); }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  .rule{ border-color:var(--line); }
+  .dot-grid{
+    background-image:radial-gradient(rgba(22,19,16,0.07) 1px, transparent 1px);
+    background-size:32px 32px;
+  }
+  .pulse-dot{ position:relative; }
+  .pulse-dot::after{ content:""; position:absolute; inset:0; border-radius:9999px;
+    box-shadow:0 0 0 0 rgba(249,115,22,0.5); animation:pulse 2.4s ease-out infinite; }
+  @keyframes pulse{ to{ box-shadow:0 0 0 12px rgba(249,115,22,0); } }
+  .lift{ transition:transform .12s ease, background-color .12s ease, color .12s ease; }
+  .lift:hover{ transform:translateY(-2px); }
+  .marquee{ display:flex; gap:2.75rem; width:max-content; animation:scroll 30s linear infinite; }
+  @keyframes scroll{ to{ transform:translateX(-50%); } }
+  .btn-sub.is-done{ background:#3f3a12 !important; }
+  details[open] .faq-plus{ transform:rotate(45deg); }
+  .faq-plus{ transition:transform .15s ease; }
+  ::selection{ background:rgba(249,115,22,0.28); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 backdrop-blur bg-[#F7F3EA]/85 border-b rule">
+  <nav class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="32" height="28" viewBox="0 0 40 34" fill="none" aria-hidden="true">
+        <path d="M6 6 L2 17 L6 28" stroke="#F97316" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M34 6 L38 17 L34 28" stroke="#F97316" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="20" y="23" text-anchor="middle" class="mono" font-size="15" fill="#161310" font-weight="700">w</text>
+      </svg>
+      <span class="mono text-[16px]" style="font-weight:700">workbench</span>
+    </a>
+    <div class="hidden md:flex items-center gap-7 text-[14px] muted">
+      <a href="#archive" class="hover:text-[#161310] transition-colors">Archive</a>
+      <a href="#author" class="hover:text-[#161310] transition-colors">About</a>
+      <a href="#pricing" class="hover:text-[#161310] transition-colors">Pricing</a>
+    </div>
+    <a href="#subscribe" class="lift inline-flex items-center rounded-md bg-[#F97316] text-white text-[14px] font-semibold px-4 py-2 hover:bg-[#ea6a0e]">Subscribe</a>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- HERO -->
+<section class="dot-grid border-b rule">
+  <div class="max-w-6xl mx-auto px-5 pt-20 pb-24">
+    <div class="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 items-center">
+      <div>
+        <div class="flex items-center gap-2.5 mb-6">
+          <span class="pulse-dot inline-block w-2 h-2 rounded-full bg-[#F97316]"></span>
+          <span class="mono text-[12px] uppercase tracking-[0.12em] muted">Tuesdays · 96 joined this week</span>
+        </div>
+        <h1 class="display text-[44px] sm:text-[60px] leading-[0.96]" style="font-weight:700">
+          Building it in public, <span class="muted">numbers and all.</span>
+        </h1>
+        <p class="mt-6 text-[18px] leading-relaxed muted max-w-[33rem]">
+          An indie maker's build-in-public log — real revenue, what shipped, and what broke. For solo founders and builders who learn from a P&L, not a launch tweet.
+        </p>
+
+        <form id="subscribe" class="mt-8 max-w-[30rem]" data-sub="btn1">
+          <div class="flex flex-col sm:flex-row gap-2.5">
+            <input type="email" required placeholder="you@startup.dev"
+              class="h-14 flex-1 rounded-md bg-[#FFFCF5] border rule px-4 text-[16px] text-[#161310] mono placeholder:text-[#a39c8c] placeholder:font-normal focus:outline-none focus:border-[#F97316] focus:ring-1 focus:ring-[#F97316]" />
+            <button id="btn1" type="submit" class="btn-sub lift h-14 px-6 rounded-md bg-[#161310] text-white text-[15px] font-semibold whitespace-nowrap hover:bg-[#2a251f]">Subscribe free</button>
+          </div>
+          <p class="mt-3 mono text-[12px] muted tnum">Join 11,204 readers · every Tuesday, 6am ET · no spam, ever.</p>
+        </form>
+
+        <div class="mt-8">
+          <p class="mono text-[11px] uppercase tracking-[0.12em] muted mb-3">Read by makers at</p>
+          <div class="flex flex-wrap items-center gap-x-7 gap-y-2 mono text-[15px]" style="font-weight:600">
+            <span>Resend</span><span>Beehiiv</span><span>Plausible</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- MRR SPARKLINE -->
+      <div class="lift rounded-md border rule bg-[#161310] p-6 text-[#F7F3EA]">
+        <div class="flex items-center justify-between mb-1">
+          <span class="mono text-[12px] uppercase tracking-[0.1em] text-[#a39c8c]">MRR · last 90 days</span>
+          <span class="mono text-[12px] text-[#F97316] tnum">live</span>
+        </div>
+        <p class="mono text-[34px] tnum" style="font-weight:700">$4,128</p>
+        <svg id="mrrSvg" viewBox="0 0 320 120" class="w-full mt-2" aria-hidden="true"></svg>
+        <p class="mt-3 mono text-[12px] tnum" style="color:#cfc9bd">$4,128 MRR · 312 users · v2.1 · churn 3.4%</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT YOU'LL GET -->
+<section class="max-w-6xl mx-auto px-5 py-20">
+  <h2 class="mono text-[12px] uppercase tracking-[0.16em] muted mb-10">// in every Tuesday log</h2>
+  <div class="grid md:grid-cols-3 gap-px bg-[var(--line)] border rule rounded-md overflow-hidden">
+    <div class="bg-[#FFFCF5] p-7">
+      <span class="mono text-[12px] text-[#F97316]">01</span>
+      <h3 class="display text-[24px] mt-2 mb-2" style="font-weight:700">The Numbers</h3>
+      <p class="muted text-[15px] leading-relaxed">MRR, churn, signups, refunds — the real dashboard, screenshotted, not a curated highlight reel. Down weeks included.</p>
+    </div>
+    <div class="bg-[#FFFCF5] p-7">
+      <span class="mono text-[12px] text-[#F97316]">02</span>
+      <h3 class="display text-[24px] mt-2 mb-2" style="font-weight:700">Shipped</h3>
+      <p class="muted text-[15px] leading-relaxed">What went out this week, what broke in production at 2am, and the commit that fixed it. Changelog with feelings.</p>
+    </div>
+    <div class="bg-[#FFFCF5] p-7">
+      <span class="mono text-[12px] text-[#F97316]">03</span>
+      <h3 class="display text-[24px] mt-2 mb-2" style="font-weight:700">The Lesson</h3>
+      <p class="muted text-[15px] leading-relaxed">One mistake I made so you can skip it — pricing, hiring, a bad integration, a feature nobody wanted. Cost included.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SAMPLE ISSUE -->
+<section class="max-w-6xl mx-auto px-5 py-12">
+  <div class="rounded-md border rule bg-[#FFFCF5] p-7 sm:p-10 relative">
+    <span class="absolute right-6 top-6 mono text-[12px] muted border rule rounded px-2 py-1">№ 54</span>
+    <div class="border-l-2 border-[#F97316] pl-6 max-w-[44rem]">
+      <p class="mono text-[12px] uppercase tracking-[0.1em] muted tnum">Issue № 54 · Mar 17, 2026 · 6 min read</p>
+      <h3 class="display text-[28px] sm:text-[38px] leading-[1.04] mt-3" style="font-weight:700">I cut my pricing page from 3 tiers to 1 and revenue went up.</h3>
+      <blockquote class="mt-5 text-[20px] leading-relaxed" style="font-style:italic">
+        "Three tiers gave people a decision to make. One tier gave them a yes-or-no. It turns out a yes-or-no converts 41% better when you're a nobody they've never heard of."
+      </blockquote>
+      <div class="mt-7 rounded-md border rule bg-[#161310] p-5 text-[#F7F3EA]">
+        <p class="mono text-[12px] mb-3" style="color:#a39c8c">Weekly signups · before vs after the change</p>
+        <svg id="sampleSvg" viewBox="0 0 520 120" class="w-full" aria-hidden="true"></svg>
+      </div>
+      <a href="#subscribe" class="lift inline-flex items-center gap-1.5 mt-7 text-[15px] text-[#F97316] font-semibold hover:gap-2.5 transition-all">Read the full issue <span>→</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHIVE -->
+<section id="archive" class="max-w-6xl mx-auto px-5 py-20">
+  <div class="flex items-end justify-between mb-8">
+    <h2 class="display text-[30px]" style="font-weight:700">The build log</h2>
+    <span class="mono text-[13px] muted tnum">54 issues · since 2025</span>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[var(--line)] border rule rounded-md overflow-hidden">
+    <a href="#subscribe" class="bg-[#FFFCF5] hover:bg-[#f3eee2] transition-colors p-6 block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 53 · Mar 10 · $3,940 MRR</p>
+      <h3 class="display text-[19px] leading-snug mb-1" style="font-weight:600">The integration that cost me a weekend and 11 users.</h3>
+      <p class="muted text-[14px]">A postmortem with the Sentry logs. · 7 min</p>
+    </a>
+    <a href="#subscribe" class="bg-[#FFFCF5] hover:bg-[#f3eee2] transition-colors p-6 block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 52 · Mar 3 · $3,710 MRR</p>
+      <h3 class="display text-[19px] leading-snug mb-1" style="font-weight:600">Annual plans saved my runway. Here's the math.</h3>
+      <p class="muted text-[14px]">Cash today vs. churn tomorrow. · 6 min</p>
+    </a>
+    <a href="#subscribe" class="bg-[#FFFCF5] hover:bg-[#f3eee2] transition-colors p-6 block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 51 · Feb 24 · $3,402 MRR</p>
+      <h3 class="display text-[19px] leading-snug mb-1" style="font-weight:600">I fired my biggest customer. Best decision of Q1.</h3>
+      <p class="muted text-[14px]">When 40% of revenue is a liability. · 8 min</p>
+    </a>
+    <a href="#subscribe" class="bg-[#FFFCF5] hover:bg-[#f3eee2] transition-colors p-6 block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 50 · Feb 17 · $3,188 MRR</p>
+      <h3 class="display text-[19px] leading-snug mb-1" style="font-weight:600">50 issues in: what I'd tell myself at issue 1.</h3>
+      <p class="muted text-[14px]">The retro nobody asked for. · 9 min</p>
+    </a>
+    <a href="#subscribe" class="bg-[#FFFCF5] hover:bg-[#f3eee2] transition-colors p-6 block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 49 · Feb 10 · $2,961 MRR</p>
+      <h3 class="display text-[19px] leading-snug mb-1" style="font-weight:600">My churn was a copy problem, not a product one.</h3>
+      <p class="muted text-[14px]">One onboarding email, -1.8pp churn. · 5 min</p>
+    </a>
+    <a href="#subscribe" class="bg-[#FFFCF5] hover:bg-[#f3eee2] transition-colors p-6 block">
+      <p class="mono text-[12px] muted tnum mb-2">№ 48 · Feb 3 · $2,744 MRR</p>
+      <h3 class="display text-[19px] leading-snug mb-1" style="font-weight:600">I shipped on a Friday. You already know how this ends.</h3>
+      <p class="muted text-[14px]">A cautionary tale, with timestamps. · 6 min</p>
+    </a>
+  </div>
+</section>
+
+<!-- AUTHOR -->
+<section id="author" class="max-w-6xl mx-auto px-5 py-12">
+  <div class="rounded-md border rule bg-[#FFFCF5] p-7 sm:p-10 flex flex-col sm:flex-row gap-7 items-start">
+    <svg width="72" height="72" viewBox="0 0 72 72" class="shrink-0" aria-hidden="true">
+      <rect width="72" height="72" rx="10" fill="#161310"/>
+      <text x="36" y="47" text-anchor="middle" class="mono" font-size="26" fill="#F97316" font-weight="700">JL</text>
+    </svg>
+    <div>
+      <h2 class="display text-[26px]" style="font-weight:700">Jonas Lind</h2>
+      <p class="muted text-[15px] mt-1 mono">solo founder · 1 product · 312 users · still does his own support</p>
+      <p class="text-[16px] leading-relaxed mt-4 max-w-[42rem]">I write Workbench because every "how I got to $10k MRR" thread skips the part where you don't know if it's working. So I publish the real dashboard every Tuesday — the down weeks, the dumb mistakes, the actual numbers — and you get to learn on my dime instead of yours.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF -->
+<section class="max-w-6xl mx-auto px-5 py-20">
+  <div class="grid md:grid-cols-3 gap-5">
+    <figure class="lift rounded-md border rule bg-[#FFFCF5] p-6">
+      <blockquote class="text-[16px] leading-relaxed">"The only build-in-public letter that shows the down weeks. Jonas's pricing teardown made me $1,200/mo — I'm not exaggerating."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted mono">priya.dev · solo founder</figcaption>
+    </figure>
+    <figure class="lift rounded-md border rule bg-[#FFFCF5] p-6">
+      <blockquote class="text-[16px] leading-relaxed">"Real numbers, real mistakes, zero hustle-porn. I read it before I read my own dashboard on Tuesdays."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted mono">marcus@forecast.io · indie hacker</figcaption>
+    </figure>
+    <figure class="lift rounded-md border rule bg-[#FFFCF5] p-6">
+      <blockquote class="text-[16px] leading-relaxed">"The Builder thread is the most useful Slack I'm not in. The office hours alone are worth the $9."</blockquote>
+      <figcaption class="mt-4 text-[14px] muted mono">hana.builds · maker, 2 exits</figcaption>
+    </figure>
+  </div>
+
+  <div class="mt-8 grid grid-cols-2 md:grid-cols-4 border rule rounded-md overflow-hidden">
+    <div class="p-6 border-r rule"><p class="mono text-[28px] tnum" style="font-weight:700">62.1%</p><p class="muted text-[13px] mt-1">avg. open rate</p></div>
+    <div class="p-6 md:border-r rule"><p class="mono text-[28px] tnum" style="font-weight:700">11,204</p><p class="muted text-[13px] mt-1">subscribers</p></div>
+    <div class="p-6 border-r rule border-t md:border-t-0"><p class="mono text-[28px] tnum" style="font-weight:700">54</p><p class="muted text-[13px] mt-1">issues shipped</p></div>
+    <div class="p-6 border-t md:border-t-0"><p class="mono text-[28px] tnum" style="font-weight:700">6.1 min</p><p class="muted text-[13px] mt-1">avg. read time</p></div>
+  </div>
+
+  <div class="mt-12 overflow-hidden relative" style="mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)">
+    <div class="marquee mono text-[16px]" style="font-weight:600">
+      <span>Resend</span><span>Beehiiv</span><span>Plausible</span><span>Tinybird</span><span>PostHog</span><span>Render</span><span>Polar</span><span>Lemon Squeezy</span>
+      <span>Resend</span><span>Beehiiv</span><span>Plausible</span><span>Tinybird</span><span>PostHog</span><span>Render</span><span>Polar</span><span>Lemon Squeezy</span>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="max-w-6xl mx-auto px-5 py-20">
+  <h2 class="display text-[34px] text-center mb-3" style="font-weight:700">Read free. Go Builder for $9.</h2>
+  <p class="muted text-center mb-12 max-w-[34rem] mx-auto text-[16px]">The Tuesday log is free, forever. Builder is the full metrics, the teardowns, and the room where makers actually help.</p>
+  <div class="grid md:grid-cols-2 gap-5 max-w-[52rem] mx-auto">
+    <div class="rounded-md border rule bg-[#FFFCF5] p-7">
+      <p class="mono text-[12px] uppercase tracking-[0.14em] muted">Free</p>
+      <p class="mono text-[40px] mt-1" style="font-weight:700">$0</p>
+      <ul class="mt-6 space-y-3 text-[15px] muted">
+        <li class="flex gap-3"><span class="text-[#F97316]">✓</span> The Tuesday log</li>
+        <li class="flex gap-3"><span class="text-[#F97316]">✓</span> The Numbers + Shipped + Lesson</li>
+        <li class="flex gap-3"><span class="text-[#F97316]">✓</span> Public archive</li>
+      </ul>
+      <a href="#subscribe" class="lift mt-7 inline-flex w-full justify-center rounded-md border-2 border-[#161310] px-5 py-3 text-[15px] font-semibold hover:bg-[#161310] hover:text-white transition-colors">Subscribe free</a>
+    </div>
+    <div class="rounded-md border-2 border-[#F97316] bg-[#FFFCF5] p-7 relative overflow-hidden">
+      <span class="absolute right-0 top-5 bg-[#F97316] text-white mono text-[11px] uppercase tracking-[0.1em] px-3 py-1 rounded-l-md">Reader-supported</span>
+      <p class="mono text-[12px] uppercase tracking-[0.14em] text-[#F97316]">Builder</p>
+      <p class="mono text-[40px] mt-1 tnum" style="font-weight:700">$9<span class="text-[18px] muted">/mo</span></p>
+      <p class="muted text-[13px] tnum mono">or $90/yr — two months free</p>
+      <ul class="mt-6 space-y-3 text-[15px]">
+        <li class="flex gap-3"><span class="text-[#F97316]">✓</span> The full metrics archive, as CSV</li>
+        <li class="flex gap-3"><span class="text-[#F97316]">✓</span> Teardown deep-dives</li>
+        <li class="flex gap-3"><span class="text-[#F97316]">✓</span> The makers' private thread</li>
+        <li class="flex gap-3"><span class="text-[#F97316]">✓</span> Monthly office hours</li>
+      </ul>
+      <a href="#subscribe" class="lift mt-7 inline-flex w-full justify-center rounded-md bg-[#161310] text-white px-5 py-3 text-[15px] font-semibold hover:bg-[#2a251f]">Go Builder</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="max-w-3xl mx-auto px-5 py-20">
+  <h2 class="display text-[30px] mb-8" style="font-weight:700">Fair questions</h2>
+  <div class="divide-y rule border-t border-b rule">
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:600">Free vs Builder — what's gated?<span class="faq-plus text-[#F97316] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">The full Tuesday log — Numbers, Shipped, and the Lesson — is free every week. Builder unlocks the complete metrics history as downloadable CSV, the long-form teardown deep-dives, the makers' thread, and monthly office hours.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:600">How often, and do you actually share real numbers?<span class="faq-plus text-[#F97316] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">Every Tuesday at 6am ET, and yes — real MRR, real churn, real refunds, screenshotted from the actual dashboard. The down months are in there too; that's the whole point.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:600">Can I expense Builder as a business cost?<span class="faq-plus text-[#F97316] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">Easily — you'll get a proper itemized receipt on signup. Most subscribers file it under software or professional development without a second thought.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:600">Will you sell my email to sponsors?<span class="faq-plus text-[#F97316] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">No. If a sponsor ever runs, it's a clearly-marked block inside the issue — they never get your address. No list sales, no data brokers, one-click unsubscribe.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex items-center justify-between cursor-pointer list-none text-[17px]" style="font-weight:600">Cancel anytime — do I keep the archive I paid for?<span class="faq-plus text-[#F97316] text-[22px] leading-none">+</span></summary>
+      <p class="muted text-[15px] leading-relaxed mt-3">Any CSV or teardown you downloaded is yours to keep. Cancel whenever and you'll drop back to the free log at the next renewal — no clawbacks, no dark patterns.</p>
+    </details>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="border-t rule dot-grid">
+  <div class="max-w-3xl mx-auto px-5 py-24 text-center">
+    <h2 class="display text-[40px] sm:text-[54px] leading-[0.98]" style="font-weight:700">Building it in public, <span class="muted">numbers and all.</span></h2>
+    <form class="mt-10 max-w-[30rem] mx-auto" data-sub="btn2">
+      <div class="flex flex-col sm:flex-row gap-2.5">
+        <input type="email" required placeholder="you@startup.dev"
+          class="h-14 flex-1 rounded-md bg-[#FFFCF5] border rule px-4 text-[16px] text-[#161310] mono placeholder:text-[#a39c8c] placeholder:font-normal focus:outline-none focus:border-[#F97316] focus:ring-1 focus:ring-[#F97316]" />
+        <button id="btn2" type="submit" class="btn-sub lift h-14 px-6 rounded-md bg-[#161310] text-white text-[15px] font-semibold whitespace-nowrap hover:bg-[#2a251f]">Subscribe free</button>
+      </div>
+      <p class="mt-3 mono text-[12px] muted tnum">Join 11,204 readers · every Tuesday, 6am ET.</p>
+    </form>
+  </div>
+</section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="border-t rule">
+  <div class="max-w-6xl mx-auto px-5 py-12 flex flex-col sm:flex-row justify-between gap-6">
+    <div>
+      <span class="mono text-[16px]" style="font-weight:700">workbench</span>
+      <p class="muted text-[13px] mt-2 mono">Powered by Beehiiv · Unsubscribe anytime — one click, no clawback, no hard feelings.</p>
+    </div>
+    <div class="flex gap-7 text-[14px] muted">
+      <a href="#archive" class="hover:text-[#161310] transition-colors">Archive</a>
+      <a href="#author" class="hover:text-[#161310] transition-colors">About</a>
+      <a href="#" class="hover:text-[#161310] transition-colors">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function doSub(e, id){
+    e.preventDefault();
+    var b = document.getElementById(id);
+    b.classList.add('is-done');
+    b.textContent = '✓ Subscribed — check your inbox';
+    return false;
+  }
+  document.querySelectorAll('form[data-sub]').forEach(function (f) {
+    f.addEventListener('submit', function (e) { doSub(e, f.getAttribute('data-sub')); });
+  });
+  function linePath(vals,w,h,pad){
+    var min=Math.min.apply(null,vals),max=Math.max.apply(null,vals),rng=(max-min)||1,n=vals.length;
+    return vals.map(function(v,i){
+      var x=pad+(i/(n-1))*(w-2*pad);
+      var y=h-pad-((v-min)/rng)*(h-2*pad);
+      return (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);
+    }).join(' ');
+  }
+  (function(){
+    var vals=[0,180,320,300,540,720,910,880,1240,1610,1980,2340,2210,2700,3100,3402,3710,3940,4128];
+    var d=linePath(vals,320,120,10);
+    document.getElementById('mrrSvg').innerHTML=
+      '<path d="'+d+' L310 110 L10 110 Z" fill="#F97316" opacity="0.14"/>'+
+      '<path d="'+d+'" fill="none" stroke="#F97316" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
+  })();
+  (function(){
+    // signups before(grey-ish) vs after(orange) — bars
+    var before=[14,12,15,13,16,14], after=[19,23,21,26,24,28];
+    var svg=document.getElementById('sampleSvg'), html='';
+    function set(vals,x0,color){
+      vals.forEach(function(v,i){
+        var x=x0+i*26, y=96-v*2.6;
+        html+='<rect x="'+x+'" y="'+y+'" width="16" height="'+(v*2.6)+'" rx="2" fill="'+color+'"/>';
+      });
+    }
+    set(before,20,'#6b6457');
+    set(after,300,'#F97316');
+    html+='<text x="20" y="112" font-family="JetBrains Mono" font-size="10" fill="#a39c8c">3 tiers</text>';
+    html+='<text x="300" y="112" font-family="JetBrains Mono" font-size="10" fill="#F97316">1 tier</text>';
+    svg.innerHTML=html;
+  })();
+</script>
+</body>
+</html>

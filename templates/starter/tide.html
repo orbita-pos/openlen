@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Tide — Launching on Product Hunt, October 14.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --bg: #FAF6F0;
+    --bg-2: #F3ECDF;
+    --line: rgba(26,23,20,0.08);
+    --line-2: rgba(26,23,20,0.14);
+    --ink: #1A1714;
+    --muted: #6B635A;
+    --dim: #9C9388;
+    --accent: #FF5A36;
+    --accent-soft: #FFE4DC;
+  }
+  html, body { background: var(--bg); color: var(--ink); }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: "ss01","cv11";
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+  }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .hand { font-family: 'Caveat', cursive; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .display {
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 0.93;
+  }
+  .display em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+  .hairline { border-color: var(--line); }
+  .hairline-2 { border-color: var(--line-2); }
+  .text-muted { color: var(--muted); }
+  .text-dim { color: var(--dim); }
+  ::selection { background: rgba(255,90,54,0.25); color: var(--ink); }
+
+  /* paper grain via subtle noise */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(40% 30% at 90% 5%, rgba(255,90,54,0.10), transparent 70%),
+      radial-gradient(40% 30% at 5% 90%, rgba(255,160,90,0.10), transparent 70%);
+    animation: drift 28s ease-in-out infinite alternate;
+  }
+  @keyframes drift {
+    from { transform: translate3d(0,0,0); }
+    to { transform: translate3d(-1.5%, 1%, 0); }
+  }
+
+  .dotgrid {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(26,23,20,0.10) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
+  }
+
+  .pulse-dot {
+    width: 8px; height: 8px; border-radius: 999px;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(255,90,54,0.5);
+    animation: pulse 2.2s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(255,90,54,0.45); }
+    70%  { box-shadow: 0 0 0 14px rgba(255,90,54,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,90,54,0); }
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    background: #ff6e4d;
+    box-shadow: 0 12px 28px -10px rgba(255,90,54,0.55);
+  }
+  .btn-ghost {
+    background: transparent; color: var(--ink);
+    border: 1px solid var(--line-2);
+    transition: transform 120ms ease, background 120ms ease;
+  }
+  .btn-ghost:hover { transform: translateY(-1px); background: rgba(26,23,20,0.04); }
+  .input-bare {
+    background: #fff;
+    border: 1px solid var(--line-2);
+    color: var(--ink);
+  }
+  .input-bare::placeholder { color: var(--dim); }
+  .input-bare:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255,90,54,0.12); }
+
+  .chip {
+    border: 1px solid var(--line-2);
+    background: #fff;
+  }
+
+  /* sketch card */
+  .sketch {
+    background: #fff;
+    border: 1px solid var(--line-2);
+    border-radius: 14px;
+    position: relative;
+  }
+  .sketch::after {
+    content: ""; position: absolute; inset: 0;
+    border-radius: 14px; pointer-events: none;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.02), 0 16px 30px -22px rgba(26,23,20,0.18);
+  }
+
+  .marquee { overflow: hidden; mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent); }
+  .marquee-track { display: flex; gap: 12px; animation: scroll 36s linear infinite; width: max-content; }
+  @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* PH-style badge */
+  .ph-badge {
+    background: #1A1714;
+    color: var(--bg);
+    border-radius: 12px;
+  }
+
+  /* wavy underline */
+  .wavy {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='6' viewBox='0 0 80 6'><path d='M0 4 Q 10 0 20 4 T 40 4 T 60 4 T 80 4' fill='none' stroke='%23FF5A36' stroke-width='2'/></svg>");
+    background-repeat: repeat-x;
+    background-position: bottom left;
+    padding-bottom: 6px;
+  }
+</style>
+</head>
+<body class="relative overflow-x-hidden">
+
+<div class="relative z-10">
+
+  <!-- NAV -->
+  <header class="px-6 md:px-10 py-6 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <path d="M2 13 Q 6 9 10 13 T 18 13 T 26 13" stroke="#FF5A36" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M2 17 Q 6 13 10 17 T 18 17" stroke="#FF5A36" stroke-opacity="0.5" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span class="text-[15px] tracking-tight font-medium">Tide</span>
+    </a>
+    <div class="flex items-center gap-5 text-[13px] text-muted">
+      <span class="hand text-[20px] text-[var(--accent)] -rotate-2 hidden sm:inline">launching Oct 14 →</span>
+      <a href="#help" class="hover:text-ink transition-colors">Help us launch</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="relative min-h-[80vh] px-6 md:px-10 pt-10 md:pt-20 pb-24">
+    <div class="absolute inset-0 pointer-events-none"><div class="dotgrid"></div></div>
+
+    <div class="relative max-w-[1200px] mx-auto">
+      <div class="inline-flex items-center gap-2 chip rounded-full pl-2 pr-3 py-1.5 mb-10">
+        <span class="pulse-dot"></span>
+        <span class="text-[12px] mono text-muted tracking-tight">LAUNCHING&nbsp;ON&nbsp;PRODUCT&nbsp;HUNT&nbsp;//&nbsp;OCT&nbsp;14</span>
+      </div>
+
+      <h1 class="display text-[clamp(56px,11vw,164px)] max-w-[14ch]">
+        Tide — launching <em>on Product Hunt</em>.
+      </h1>
+
+      <p class="mt-10 max-w-[48ch] text-[18px] md:text-[20px] text-muted leading-snug">
+        A scheduling tool that doesn't think it's a calendar. Plan your week in shapes, not in 30-minute boxes. <span class="text-ink">Launching October 14.</span>
+      </p>
+
+      <form class="mt-10 flex flex-col sm:flex-row gap-2.5 max-w-[540px]" data-waitlist>
+        <input type="email" required placeholder="hi@your-thing.com" class="input-bare flex-1 rounded-full px-5 py-3.5 text-[15px]"/>
+        <button class="btn-primary rounded-full px-6 py-3.5 text-[14.5px] font-semibold tracking-tight whitespace-nowrap">
+          Remind me on launch day
+        </button>
+      </form>
+      <p class="mt-3 text-[12.5px] mono text-dim">One email at 12:01 am PT on October 14. That's it.</p>
+
+      <!-- live count -->
+      <div class="mt-14 flex flex-wrap items-center gap-x-8 gap-y-3 text-[13px] mono">
+        <span class="flex items-center gap-2.5 text-muted">
+          <span class="pulse-dot"></span>
+          <span class="tnum"><span class="text-ink">8,408</span> makers excited</span>
+        </span>
+        <span class="text-dim hidden md:inline">·</span>
+        <span class="text-muted tnum">+412 in the last 7 days</span>
+        <span class="text-dim hidden md:inline">·</span>
+        <span class="hand text-[20px] -rotate-1 text-[var(--accent)]">we're nervous</span>
+      </div>
+
+      <!-- hand-drawn arrow + countdown -->
+      <div class="mt-20 grid md:grid-cols-[1.4fr_1fr] gap-10 items-end">
+        <div>
+          <div class="text-[12px] mono text-dim tracking-widest mb-3">// COUNTDOWN</div>
+          <div class="display tnum mono text-[clamp(56px,10vw,128px)] font-medium" id="countdown">
+            014&nbsp;<span class="text-dim text-[0.55em] align-top mono">days</span>
+            &nbsp;04&nbsp;<span class="text-dim text-[0.55em] align-top mono">hrs</span>
+          </div>
+        </div>
+        <div class="relative">
+          <div class="sketch px-5 py-5">
+            <div class="hand text-[26px] -rotate-1 text-ink leading-tight">
+              Show up. <span class="text-[var(--accent)]">Upvote</span>. Send it to one friend.<br/>
+              <span class="text-muted text-[22px]">That's all I'm asking.</span>
+            </div>
+            <div class="mt-4 mono text-[11.5px] text-dim">— Sam, signed at 02:14am</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IS TIDE -->
+  <section class="px-6 md:px-10 py-20 border-t hairline">
+    <div class="max-w-[1200px] mx-auto">
+      <div class="grid md:grid-cols-[1fr_1.4fr] gap-10 md:gap-16">
+        <div>
+          <div class="text-[12px] mono text-dim tracking-widest mb-4">// WHAT IS TIDE</div>
+          <h2 class="display text-[48px] md:text-[64px] leading-[0.95] max-w-[12ch]">
+            A week, drawn <em>like a week</em>.
+          </h2>
+        </div>
+        <div class="text-[18px] leading-[1.55] text-ink/85 space-y-4 max-w-[58ch]">
+          <p>Most calendars give you a grid and ask you to defend it. Tide gives you a canvas and asks what you want the week to <span class="wavy">feel</span> like.</p>
+          <p class="text-muted text-[16px]">Drop a "deep work" block over Tuesday morning. Pencil in a soft window for "anyone could grab me" on Friday afternoon. Tide reshapes around what moves and what doesn't.</p>
+          <p class="text-muted text-[16px]">Then it shares a real, normal calendar link with the people who need one.</p>
+        </div>
+      </div>
+
+      <!-- sketchy feature cards -->
+      <div class="mt-14 grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <div class="sketch p-5">
+          <svg viewBox="0 0 200 110" class="w-full">
+            <rect x="10" y="20" width="180" height="80" rx="6" fill="none" stroke="#1A1714" stroke-opacity=".25" stroke-dasharray="3 3"/>
+            <rect x="20" y="34" width="64" height="56" rx="4" fill="#FFE4DC" stroke="#FF5A36" stroke-width="1.4"/>
+            <rect x="92" y="48" width="44" height="36" rx="4" fill="#fff" stroke="#1A1714" stroke-width="1"/>
+            <rect x="144" y="40" width="36" height="50" rx="4" fill="#FFE4DC" stroke="#FF5A36" stroke-width="1.4"/>
+            <text x="26" y="58" font-family="Caveat" font-size="16" fill="#1A1714">deep work</text>
+            <text x="98" y="68" font-family="JetBrains Mono" font-size="9" fill="#6B635A">1:1</text>
+          </svg>
+          <div class="mt-3 hand text-[22px] -rotate-1">Shapes, not slots.</div>
+          <div class="mt-1 text-[13.5px] text-muted leading-snug">Block what matters. Soft-pencil what might.</div>
+        </div>
+
+        <div class="sketch p-5">
+          <svg viewBox="0 0 200 110" class="w-full">
+            <circle cx="40" cy="60" r="22" fill="none" stroke="#1A1714" stroke-width="1.2"/>
+            <path d="M40 60 L40 42 M40 60 L54 60" stroke="#FF5A36" stroke-width="2" stroke-linecap="round"/>
+            <path d="M80 60 Q 120 30 160 60" stroke="#1A1714" stroke-width="1.2" fill="none" stroke-dasharray="3 3"/>
+            <circle cx="160" cy="60" r="6" fill="#FF5A36"/>
+            <text x="80" y="92" font-family="Caveat" font-size="17" fill="#1A1714">tide reshapes when life does</text>
+          </svg>
+          <div class="mt-3 hand text-[22px] -rotate-1">It moves with you.</div>
+          <div class="mt-1 text-[13.5px] text-muted leading-snug">Reschedule one thing, the rest re-flows.</div>
+        </div>
+
+        <div class="sketch p-5">
+          <svg viewBox="0 0 200 110" class="w-full">
+            <rect x="14" y="20" width="172" height="72" rx="8" fill="#fff" stroke="#1A1714" stroke-width="1"/>
+            <rect x="22" y="30" width="156" height="10" rx="2" fill="#FFE4DC"/>
+            <rect x="22" y="46" width="120" height="6" rx="2" fill="#1A1714" fill-opacity=".1"/>
+            <rect x="22" y="58" width="92" height="6" rx="2" fill="#1A1714" fill-opacity=".1"/>
+            <rect x="22" y="70" width="138" height="14" rx="3" fill="#1A1714"/>
+            <text x="28" y="80" font-family="JetBrains Mono" font-size="9" fill="#FAF6F0">tide.so/sam/coffee</text>
+          </svg>
+          <div class="mt-3 hand text-[22px] -rotate-1">Sends a normal link.</div>
+          <div class="mt-1 text-[13.5px] text-muted leading-snug">Your friends never see Tide. They just pick a time.</div>
+        </div>
+
+        <div class="sketch p-5">
+          <svg viewBox="0 0 200 110" class="w-full">
+            <path d="M20 80 Q 50 30 90 60 T 180 30" stroke="#FF5A36" stroke-width="2" fill="none"/>
+            <circle cx="20" cy="80" r="3" fill="#1A1714"/>
+            <circle cx="90" cy="60" r="3" fill="#1A1714"/>
+            <circle cx="180" cy="30" r="3" fill="#1A1714"/>
+            <text x="14" y="100" font-family="JetBrains Mono" font-size="9" fill="#6B635A">mon</text>
+            <text x="84" y="100" font-family="JetBrains Mono" font-size="9" fill="#6B635A">wed</text>
+            <text x="170" y="100" font-family="JetBrains Mono" font-size="9" fill="#6B635A">fri</text>
+          </svg>
+          <div class="mt-3 hand text-[22px] -rotate-1">Energy, tracked.</div>
+          <div class="mt-1 text-[13.5px] text-muted leading-snug">See where your week ran out of you.</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- HELP US LAUNCH -->
+  <section id="help" class="px-6 md:px-10 py-24 border-t hairline">
+    <div class="max-w-[1200px] mx-auto">
+      <div class="grid md:grid-cols-[1fr_1.4fr] gap-10 md:gap-16">
+        <div>
+          <div class="text-[12px] mono text-dim tracking-widest mb-4">// HELP US LAUNCH BIG</div>
+          <h2 class="display text-[48px] md:text-[72px] leading-[0.95]">
+            Three small things. <em>If you want.</em>
+          </h2>
+          <div class="hand text-[22px] -rotate-1 text-[var(--accent)] mt-6">
+            ↘ all of these take under a minute
+          </div>
+        </div>
+
+        <ol class="space-y-4">
+          <li class="sketch p-6 grid grid-cols-[44px_1fr_auto] items-center gap-4">
+            <div class="mono text-[28px] font-medium text-[var(--accent)]">01</div>
+            <div>
+              <div class="text-[17px] font-medium">Follow Tide on Product Hunt.</div>
+              <div class="text-[13.5px] text-muted">When we launch, you'll see it at the top of your feed.</div>
+            </div>
+            <a href="#" class="ph-badge px-4 py-2.5 text-[13px] font-medium whitespace-nowrap inline-flex items-center gap-2">
+              <span class="text-[var(--accent)]">▲</span> Follow
+            </a>
+          </li>
+          <li class="sketch p-6 grid grid-cols-[44px_1fr_auto] items-center gap-4">
+            <div class="mono text-[28px] font-medium text-[var(--accent)]">02</div>
+            <div>
+              <div class="text-[17px] font-medium">Get an upvote reminder email.</div>
+              <div class="text-[13.5px] text-muted">One email at 6am PT on launch day. Nothing else, ever.</div>
+            </div>
+            <a href="#" class="btn-ghost rounded-full px-4 py-2.5 text-[13px] font-medium whitespace-nowrap">Sign me up</a>
+          </li>
+          <li class="sketch p-6 grid grid-cols-[44px_1fr_auto] items-center gap-4">
+            <div class="mono text-[28px] font-medium text-[var(--accent)]">03</div>
+            <div>
+              <div class="text-[17px] font-medium">We'll DM you on launch day.</div>
+              <div class="text-[13.5px] text-muted">Drop your handle. We'll send a one-line "hey, we're live".</div>
+            </div>
+            <a href="#" class="btn-ghost rounded-full px-4 py-2.5 text-[13px] font-medium whitespace-nowrap">Drop handle</a>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOUNDER -->
+  <section class="px-6 md:px-10 py-24 border-t hairline">
+    <div class="max-w-[820px] mx-auto grid md:grid-cols-[140px_1fr] gap-10">
+      <div>
+        <div class="w-[108px] h-[108px] rounded-full overflow-hidden border hairline-2"
+             style="background: linear-gradient(135deg, #ffbfa8 0%, #ff5a36 55%, #b3331b 100%);"></div>
+        <div class="hand text-[24px] -rotate-3 mt-4 text-ink">— Sam Petrov</div>
+        <div class="mono text-[11.5px] text-dim mt-1">building Tide from Lisbon</div>
+      </div>
+      <div class="text-[18px] leading-[1.6] text-ink/85">
+        <p>I built Tide because I kept missing my own week. Not the meetings — those I made. The <em class="text-[var(--accent)] not-italic" style="font-style: italic">stuff between them</em>: the ten minutes to think before the call, the walk after it.</p>
+        <p class="mt-5 text-muted text-[16.5px]">Two years, four rewrites, one very patient partner. It's almost out. October 14 — see you on Product Hunt.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- AVATARS MOMENTUM -->
+  <section class="px-6 md:px-10 py-14 border-t hairline">
+    <div class="max-w-[1400px] mx-auto">
+      <div class="text-[12px] mono text-dim tracking-widest mb-6">// 8,408 MAKERS ALREADY IN</div>
+      <div class="marquee">
+        <div class="marquee-track" id="avatarTrack"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="px-6 md:px-10 py-10 border-t hairline flex flex-col md:flex-row gap-4 md:items-center md:justify-between text-[13px] text-dim">
+    <div class="flex items-center gap-2.5">
+      <svg width="18" height="18" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <path d="M2 13 Q 6 9 10 13 T 18 13 T 26 13" stroke="#FF5A36" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span class="text-ink/80">Tide</span>
+      <span>—</span>
+      <span>Made in Lisbon · launching Oct 14, 2026</span>
+    </div>
+    <div class="flex items-center gap-6 mono">
+      <a href="#" class="hover:text-ink/80 transition-colors">Privacy</a>
+      <span>© 2026</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+  // Avatars marquee
+  (function() {
+    const palettes = [
+      ['#ffd2bf','#ff5a36'],['#ffbfa8','#b3331b'],['#fff0cf','#f59e0b'],
+      ['#ffe4dc','#ff7a5a'],['#fae0c5','#d97757'],['#f9d7c0','#ff5a36'],
+      ['#fff','#1a1714'],['#ffe4dc','#1a1714'],
+    ];
+    const track = document.getElementById('avatarTrack');
+    const make = () => {
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < 38; i++) {
+        const p = palettes[i % palettes.length];
+        const d = document.createElement('div');
+        d.className = 'w-8 h-8 rounded-full shrink-0';
+        d.style.background = `conic-gradient(from ${(i*47)%360}deg, ${p[0]}, ${p[1]}, ${p[0]})`;
+        d.style.boxShadow = 'inset 0 0 0 1px rgba(26,23,20,0.08)';
+        frag.appendChild(d);
+      }
+      return frag;
+    };
+    track.appendChild(make()); track.appendChild(make());
+  })();
+
+  // Countdown
+  (function() {
+    const target = new Date();
+    target.setDate(target.getDate() + 14);
+    target.setHours(target.getHours() + 4, 0, 0, 0);
+    const el = document.getElementById('countdown');
+    const pad = (n, w=2) => String(n).padStart(w,'0');
+    const tick = () => {
+      const ms = target - new Date();
+      if (ms <= 0) return;
+      const d = Math.floor(ms / 86400000);
+      const h = Math.floor((ms % 86400000) / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      el.innerHTML =
+        `${pad(d,3)}&nbsp;<span class="text-dim text-[0.55em] align-top mono">days</span>`+
+        `&nbsp;${pad(h)}&nbsp;<span class="text-dim text-[0.55em] align-top mono">hrs</span>`+
+        `&nbsp;${pad(m)}&nbsp;<span class="text-dim text-[0.55em] align-top mono">min</span>`+
+        `&nbsp;${pad(s)}&nbsp;<span class="text-dim text-[0.55em] align-top mono">sec</span>`;
+    };
+    tick(); setInterval(tick, 1000);
+  })();
+
+  function joinWaitlist(form) {
+    const btn = form.querySelector('button');
+    btn.textContent = 'Got it — see you Oct 14 ✓';
+    btn.style.background = '#1A1714';
+    setTimeout(() => { btn.textContent = 'Remind me on launch day'; btn.style.background = ''; }, 3200);
+    form.querySelector('input').value = '';
+  }
+  document.querySelectorAll('form[data-waitlist]').forEach(function (f) {
+    f.addEventListener('submit', function (e) { e.preventDefault(); joinWaitlist(f); });
+  });
+</script>
+</body>
+</html>
