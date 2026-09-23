@@ -84,6 +84,27 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
     expect(guardada()).not.toHaveProperty("paginasTocadas");
   });
 
+  // 🔴 El turno de la comprobación en el navegador (2026-09-22) tuvo 14
+  // tarjetas y este guardado respondió 400 «Array must contain at most 12
+  // element(s)»: el navegador no guardó nada. En producción, 2 de los 22 turnos
+  // con tarjetas de los 14 días anteriores pasaban de 12.
+  const tarjetas = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ tool: "editar_texto", status: "done", summary: `paso ${i + 1}` }));
+
+  it("🔴 un turno de 14 tarjetas se guarda entero", async () => {
+    const res = await guardar(turno(tarjetas(14)));
+    expect(res.status).toBe(200);
+    expect(vi.mocked(appendChatMessage).mock.calls[0]![1].actions).toHaveLength(14);
+  });
+
+  it("uno desmesurado se RECORTA a 40 en vez de tirar el turno", async () => {
+    const res = await guardar(turno(tarjetas(45)));
+    expect(res.status).toBe(200);
+    const guardadas = vi.mocked(appendChatMessage).mock.calls[0]![1].actions!;
+    expect(guardadas).toHaveLength(40);
+    expect(guardadas[0]!.summary).toBe("paso 1");
+  });
+
   it("BRAZO DE CONTROL: una tarjeta sin los campos nuevos se guarda como antes, sin claves añadidas", async () => {
     const res = await guardar(turno([{ tool: "editar_pagina", status: "done", summary: "titular", edits: 1 }]));
     expect(res.status).toBe(200);
