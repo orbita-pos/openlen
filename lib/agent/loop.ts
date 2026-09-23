@@ -672,14 +672,20 @@ const REESCRIBEN_TODO = new Set<string>(["editar_runtime"]);
 // `turnoAnteriorMudo` en context.ts —que es el que ya se sabe que funciona—
 // pero entregado DENTRO del turno en vez de en el siguiente.
 const INSISTE_SIN_HERRAMIENTAS =
-  "SISTEMA (el usuario NO escribió esto): cerraste el turno SIN llamar a ninguna herramienta, así que la página NO ha cambiado. Si tu respuesta anunciaba un cambio —«agrego», «hago», «listo»— ese cambio NO existe: aplícalo AHORA con la herramienta que corresponda, y no vuelvas a decir que lo hiciste hasta haberla llamado. Si en cambio tu respuesta era una explicación, una pregunta o una negativa honesta, estaba bien: repítela tal cual y cierra.";
+  "SISTEMA (el usuario NO escribió esto): cerraste el turno SIN llamar a ninguna herramienta, así que la página NO ha cambiado. Si tu respuesta anunciaba un cambio —«agrego», «hago», «listo»— ese cambio NO existe: aplícalo AHORA con la herramienta que corresponda, y no vuelvas a decir que lo hiciste hasta haberla llamado. Si en cambio tu respuesta era una explicación, una pregunta o una negativa honesta, estaba bien y YA le llegó al usuario: no la repitas ni la resumas. Contesta sólo «OK» —no se le enseña al usuario— y nada más.";
 
 /** La misma insistencia cuando SÍ hubo llamadas pero ninguna hizo nada: sólo
  *  lecturas, ediciones que dejaron la página byte a byte igual, o llamadas que
  *  fallaron. Decirle «sin llamar a ninguna herramienta» sería falso, y un aviso
  *  que miente sobre lo que pasó enseña a no leerlos. */
+/** ¿Es sólo el testigo «OK» que piden las dos insistencias? Con o sin
+ *  comillas, puntos o mayúsculas; nada más. Ver `retener` en el bucle. */
+function esTestigo(texto: string): boolean {
+  return /^[^\p{L}\p{N}]*ok[^\p{L}\p{N}]*$/iu.test(texto.trim());
+}
+
 const INSISTE_SIN_EFECTO =
-  "SISTEMA (el usuario NO escribió esto): cerraste el turno SIN que ninguna llamada cambiara nada —sólo lecturas, ediciones que dejaron la página exactamente igual, o llamadas que fallaron—, así que la página NO ha cambiado. Si tu respuesta anunciaba un cambio —«agrego», «cambié», «listo»— ese cambio NO existe: aplícalo AHORA con la herramienta que corresponda, y no vuelvas a decir que lo hiciste hasta que una llamada lo haya hecho. Si en cambio tu respuesta era una explicación, una pregunta o una negativa honesta, estaba bien: repítela tal cual y cierra.";
+  "SISTEMA (el usuario NO escribió esto): cerraste el turno SIN que ninguna llamada cambiara nada —sólo lecturas, ediciones que dejaron la página exactamente igual, o llamadas que fallaron—, así que la página NO ha cambiado. Si tu respuesta anunciaba un cambio —«agrego», «cambié», «listo»— ese cambio NO existe: aplícalo AHORA con la herramienta que corresponda, y no vuelvas a decir que lo hiciste hasta que una llamada lo haya hecho. Si en cambio tu respuesta era una explicación, una pregunta o una negativa honesta, estaba bien y YA le llegó al usuario: no la repitas ni la resumas. Contesta sólo «OK» —no se le enseña al usuario— y nada más.";
 
 /**
  * SE CORTÓ A MEDIA FRASE. Se le devuelve SU propio texto y se le pide que siga.
@@ -1314,6 +1320,16 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // ¿Ya se le insistió una vez por cerrar sin llamar a nada? Ver el bloque de
   // `calls.length === 0`.
   let yaSeInsistio = false;
+  /** Lo que el modelo dijo en la vuelta a la que se le devolvió un aviso —la
+   *  insistencia o el reclamo de tareas—, y en qué vuelta. Ese texto YA le llegó
+   *  al dueño; si la vuelta INMEDIATAMENTE siguiente cierra sin escribir nada,
+   *  es lo que queda como cierre. Más tarde ya no: entre medias pudo pasar de
+   *  todo, y resucitarlo sería devolver un «listo» anterior al trabajo. */
+  let dichoAntesDelAviso: {
+    readonly vuelta: number;
+    readonly texto: string;
+    readonly tipo: "insistencia" | "reclamo";
+  } | null = null;
   /** ¿ALGUNA LLAMADA HIZO ALGO? Una que no es de lectura, que salió bien y que
    *  no fue una edición nula. Es lo que decide la insistencia de abajo: hasta
    *  el 2026-09-22 bastaba con haber llamado a CUALQUIER herramienta, así que
@@ -1664,9 +1680,28 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
      *  llamador. Se pone junto a cada `emit`, no después, para que no puedan
      *  discrepar. */
     let errorCode: AgentErrorCode | null = null;
+    /**
+     * 🔴 LA VUELTA QUE SIGUE A LA INSISTENCIA SE RETIENE hasta saber qué trae.
+     *
+     * Si lo del modelo era una explicación, ya le llegó al dueño, y el aviso le
+     * pide contestar sólo el testigo «OK» (`esTestigo`). MEDIDO con el modelo
+     * real (C13, 2 de 2, 2026-09-22): a «cierra sin escribir nada» no se calló
+     * —escribió «Ya está respondido: …», una línea que le habla al aviso y no
+     * al dueño—; a «repítela tal cual», antes, repetía la respuesta entera.
+     * Retener es lo que deja no enseñarle ninguna de las dos cosas.
+     *
+     * Sólo se oculta EL TESTIGO. Cualquier otro texto —una rectificación
+     * honesta, lo que dice al por fin actuar— se le enseña entero al cerrar la
+     * vuelta: ocultar una rectificación dejaría en pie el «listo» que corrige.
+     */
+    const retener = dichoAntesDelAviso?.tipo === "insistencia" && dichoAntesDelAviso.vuelta === turns - 1;
+    let retenido = "";
 
     for await (const ev of args.openStream(messages)) {
-      if (ev.type === "text_delta") {
+      if (ev.type === "text_delta" && retener) {
+        turnText += ev.text;
+        retenido += ev.text;
+      } else if (ev.type === "text_delta") {
         // EL SEPARADOR ENTRE VUELTAS, y sólo aquí: `turnText.length === 0`
         // identifica el PRIMER trozo de ESTA vuelta —se reinicia arriba— y la
         // bandera dice si alguna anterior habló. Una sola vuelta no gana nada.
@@ -1712,6 +1747,20 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       }
     }
 
+    // Lo retenido, ahora que se sabe qué trae la vuelta: el testigo solo, sin
+    // llamadas, no se enseña —y el cierre vuelve a ser lo que el dueño ya leyó,
+    // ver el bloque de `calls.length === 0`—; todo lo demás sale como habría
+    // salido, con su separador, y antes de las tarjetas de sus llamadas.
+    if (retenido) {
+      if (calls.length === 0 && esTestigo(retenido)) {
+        turnText = "";
+      } else {
+        if (algunaVueltaYaDijoAlgo) args.emit({ type: "text", text: "\n\n" });
+        algunaVueltaYaDijoAlgo = true;
+        args.emit({ type: "text", text: retenido });
+      }
+    }
+
     // ─── SE CORTÓ A MEDIA FRASE ──────────────────────────────────────────
     //
     // Continuable sólo si NO hay llamadas pendientes. Una tanda cortada a mitad
@@ -1746,6 +1795,16 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
 
     if (calls.length === 0) {
+      // 🔴 CERRÓ CALLADO TRAS UN AVISO. La insistencia le dice que, si lo suyo
+      // era una explicación, ya le llegó al dueño y no la repita (revisión
+      // pre-deploy del 2026-09-22: antes se le pedía «repítela tal cual» y el
+      // dueño la leía dos veces). Si obedece y no escribe nada, lo que queda
+      // como cierre —y lo que miran los ojos y la redacción de H04— es lo que
+      // el dueño ya leyó. No se emite otra vez: ya salió.
+      if (!turnText.trim() && dichoAntesDelAviso && dichoAntesDelAviso.vuelta === turns - 1) {
+        turnText = dichoAntesDelAviso.texto;
+      }
+
       // LA LISTA DE TAREAS, ANTES QUE LOS OJOS. No tiene sentido juzgar cómo
       // quedó la página si media petición no se ha hecho todavía: primero se
       // completa el trabajo, y lo que se verifica es el resultado final.
@@ -1764,6 +1823,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         yaSeExigioEvidencia = true;
         // Lo que NOMBRÓ como pendiente: sin estados no nombra ninguna.
         tareasReclamadas = [...pendientes.nombradas];
+        dichoAntesDelAviso = { vuelta: turns, texto: turnText, tipo: "reclamo" };
         messages.push({ role: "assistant", content: turnText });
         messages.push({
           role: "user",
@@ -1822,6 +1882,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // dos avisos por lo mismo es la discusión que el reclamo ya prohíbe.
       if (!actuo && !yaSeInsistio && !yaSeExigioEvidencia && turnText.trim().length > 0) {
         yaSeInsistio = true;
+        dichoAntesDelAviso = { vuelta: turns, texto: turnText, tipo: "insistencia" };
         messages.push({ role: "assistant", content: turnText });
         messages.push({ role: "user", content: toolCalls === 0 ? INSISTE_SIN_HERRAMIENTAS : INSISTE_SIN_EFECTO });
         continue;
