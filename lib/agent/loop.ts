@@ -753,9 +753,15 @@ function buildEvidenceInstruction(
   cambios: number,
 ): string {
   const lista = (ts: readonly string[]) => ts.map((t) => `«${t}»`).join(", ");
+  // 🔴 «COMPRUÉBALA, NO LA REPITAS» (revisión pre-deploy del 2026-09-22). Una
+  // misma llamada hace a menudo el trabajo de dos tareas y el cambio cuenta sólo
+  // para la que estaba en curso: «haz AHORA las que falten» a secas empujaba a
+  // repetir una que ya estaba —un segundo teléfono en el pie—. Y la contabilidad
+  // se quedaba en la boca del modelo: en la batería se la explicó al dueño.
   const cierre =
-    "Haz AHORA las que falten con la herramienta que corresponda. " +
-    "Si alguna no se puede hacer, o ya estaba hecha, dile al usuario EXACTAMENTE eso al cerrar — lo que no vale es enumerarlas todas como hechas.";
+    "Haz AHORA las que falten con la herramienta que corresponda; si alguna ya la hizo una llamada que contó para otra tarea, ponla en_curso y compruébala con una lectura en vez de repetirla. " +
+    "Si alguna no se puede hacer, o ya estaba hecha, dile al usuario EXACTAMENTE eso al cerrar — lo que no vale es enumerarlas todas como hechas. " +
+    "Cómo se cuentan las tareas es contabilidad interna: no se la cuentes al usuario.";
   if (p.nombradas.length > 0) {
     return (
       `SISTEMA (el usuario NO escribió esto): de las ${p.todas.length} tarea(s) que declaraste, sin terminar se quedan: ${lista(p.nombradas)}. ` +
@@ -2380,7 +2386,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
                 sin_evidencia: r.sinEvidencia,
                 aviso_critico:
                   `NO se marcaron hechas: ${r.sinEvidencia.map((t) => `«${t}»`).join(", ")}. ` +
-                  "Ninguna llamada mientras estaban en curso cambió nada (ni, si eran de comprobar, leyó nada). Hazlas ahora, o dile al usuario que no se pudieron.",
+                  "Mientras estaban en curso no cambió nada ni se comprobó en la página. " +
+                  "Si ya la hizo una llamada que contó para otra tarea —una misma edición puede cubrir varias—, ponla en_curso y compruébala con una lectura (buscar_en_pagina o leer_estado) antes de marcarla hecha: no la repitas. " +
+                  "Si no está hecha, hazla ahora, o dile al usuario que no se pudo. " +
+                  "Cómo se cuentan las tareas es contabilidad interna: no se la cuentes al usuario.",
               }
             : {}),
         };

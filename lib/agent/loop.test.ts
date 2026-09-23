@@ -1130,6 +1130,10 @@ describe("runAgentLoop — declarar_tareas", () => {
     );
     expect(reclamo).toContain("«B»");
     expect(reclamo).not.toContain("«C»");
+    // Comprobar antes que repetir, y la contabilidad fuera de la boca del
+    // modelo (revisión pre-deploy del 2026-09-22).
+    expect(reclamo).toMatch(/compru[eé]bala con una lectura en vez de repetirla/);
+    expect(reclamo).toContain("no se la cuentes al usuario");
   });
 
   it("🔴 marcar hecha sin nada detrás vuelve al modelo como aviso, en la misma respuesta", async () => {
@@ -3731,6 +3735,60 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
     // Lo único que se sabe es que hay 2 cambios para 3 tareas. «C» se hizo:
     // nombrarla como la que falta es afirmar un emparejamiento inventado.
     expect(reclamo, "el reclamo nombraba «C botón», que sí se hizo").not.toMatch(/se quedan:[^.]*«C botón»/);
+  });
+
+  // 🔴 Revisión pre-deploy del 2026-09-22. Un `editar_html` puso el titular Y el
+  // teléfono; el cambio contó para «titular», que era la que estaba en curso, y
+  // «teléfono» se rechazó como hecha. En la batería (C07) el modelo acabó
+  // explicándole al dueño la contabilidad de las tareas. La salida es comprobarla
+  // en la página con ella en curso, y el aviso tiene que decirlo — y decir que
+  // eso no es para el dueño.
+  it("🔴 C07 · la tarea que hizo la misma llamada se confirma leyendo, y la contabilidad no va al dueño", async () => {
+    const vistos: Message[][] = [];
+    const lista = (titular: string, telefono?: string) => ({
+      tareas: [{ tarea: "titular", estado: titular }, { tarea: "teléfono", ...(telefono ? { estado: telefono } : {}) }],
+    });
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "el titular y el teléfono" }],
+      tools: [...tools, { name: "buscar_en_pagina" }],
+      openStream: grabando(scripted(
+        llama("declarar_tareas", lista("en_curso")),
+        llama("editar_texto", { resumen: "titular y teléfono" }),
+        llama("declarar_tareas", lista("hecha", "hecha")),
+        [
+          { type: "function_call", name: "declarar_tareas", args: lista("hecha", "en_curso") },
+          { type: "function_call", name: "buscar_en_pagina", args: { texto: "33 1234 5678" } },
+          usage(10),
+          done,
+        ],
+        llama("declarar_tareas", lista("hecha", "hecha")),
+        dice("Listo: el titular y el teléfono."),
+      ), vistos),
+      runTool: async (n, a) =>
+        n === "declarar_tareas"
+          ? {
+              response: { ok: true },
+              tareas: (a.tareas as { tarea: string; estado?: "pendiente" | "en_curso" | "hecha" }[]).map((t) => ({
+                texto: t.tarea,
+                ...(t.estado ? { estado: t.estado } : {}),
+              })),
+            }
+          : n === "buscar_en_pagina"
+            ? { response: { ok: true, coincidencias: 1 } }
+            : real(String(a.resumen)),
+      emit: () => {},
+    });
+    const avisos = vistos
+      .at(-1)!
+      .flatMap((m) => m.functionResponses ?? [])
+      .map((f) => String((f.response as { aviso_critico?: unknown }).aviso_critico ?? ""))
+      .filter(Boolean);
+    expect(avisos, "el rechazo de «teléfono» no le llegó al modelo").toHaveLength(1);
+    expect(avisos[0]).toContain("«teléfono»");
+    expect(avisos[0], "el aviso no le dice cómo probar la que ya hizo").toMatch(/compru[eé]bala con una lectura/);
+    expect(avisos[0], "el aviso no dice que la contabilidad no es para el dueño").toContain("no se la cuentes al usuario");
+    expect(r.tareasReclamadas, "la reclamó como pendiente después de comprobarla").toBeNull();
+    expect(r.finalText).toBe("Listo: el titular y el teléfono.");
   });
 
   it("G3 · al topar se mira la página, y la edición nula no llega como hecha", async () => {

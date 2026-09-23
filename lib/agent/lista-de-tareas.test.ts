@@ -36,6 +36,26 @@ describe("la lista de tareas, con estado y medida", () => {
     expect(l.pendientes().faltan).toBe(false);
   });
 
+  // 🔴 Revisión pre-deploy del 2026-09-22. Una sola llamada hace a menudo el
+  // trabajo de dos tareas —`editar_html` junta varias ops—, y el cambio cuenta
+  // sólo para la que estaba en curso. La otra no tenía forma de probarse: se
+  // rechazaba, el reclamo del cierre la nombraba como pendiente, y en la
+  // batería el modelo acabó explicándole al dueño la contabilidad (C07).
+  // Comprobarla en la página, con ella en curso, es la salida.
+  it("🔴 la que hizo la misma llamada que otra se confirma leyendo, con ella en curso", () => {
+    const l = new ListaDeTareas();
+    l.declarar([{ texto: "titular", estado: "en_curso" }, { texto: "teléfono" }]);
+    l.anotarCambio(); // un editar_html que puso el titular Y el teléfono
+    expect(
+      l.declarar([{ texto: "titular", estado: "hecha" }, { texto: "teléfono", estado: "hecha" }]).sinEvidencia,
+    ).toEqual(["teléfono"]);
+    l.declarar([{ texto: "titular", estado: "hecha" }, { texto: "teléfono", estado: "en_curso" }]);
+    l.anotarLectura(); // buscar_en_pagina: el teléfono está
+    const r = l.declarar([{ texto: "titular", estado: "hecha" }, { texto: "teléfono", estado: "hecha" }]);
+    expect(r.sinEvidencia).toEqual([]);
+    expect(l.pendientes().faltan).toBe(false);
+  });
+
   it("BRAZO DE CONTROL: una lectura NO vale para una tarea que pide un cambio", () => {
     const l = new ListaDeTareas();
     l.declarar([{ texto: "titular", estado: "en_curso" }]);

@@ -17,7 +17,8 @@
 // Y AQUÍ LEN SUPERA A LA VARA, porque el servidor ve lo que allí sólo afirma el
 // modelo: una llamada que cambia algo cuenta para la tarea que está EN CURSO en
 // ese momento, y marcar una «hecha» sin nada detrás no se acepta. Una tarea de
-// comprobar se da por hecha también con una lectura.
+// comprobar se da por hecha también con una lectura, y cualquier otra también
+// cuando en el turno ya hubo un cambio (ver `anotarLectura`).
 //
 // SI EL MODELO NO USA ESTADOS, no se inventa nada: se cuenta, y si faltan
 // cambios se le enseña la lista entera diciendo que no se sabe cuál es. Nombrar
@@ -41,8 +42,8 @@ interface Tarea {
   readonly comprobar: boolean;
   /** Llamadas que cambiaron algo mientras esta tarea estaba en curso. */
   cambios: number;
-  /** Lecturas que salieron bien mientras esta tarea —de comprobar— estaba en
-   *  curso. */
+  /** Lecturas que salieron bien mientras esta tarea estaba en curso y que
+   *  cuentan: ver `anotarLectura`. */
   lecturas: number;
 }
 
@@ -89,7 +90,7 @@ export class ListaDeTareas {
       const pedido = d.estado ?? tarea.estado;
       if (pedido !== "pendiente") this.conEstados = true;
       if (pedido === "hecha" && tarea.estado !== "hecha") {
-        if (tarea.cambios > 0 || (tarea.comprobar && tarea.lecturas > 0)) tarea.estado = "hecha";
+        if (tarea.cambios > 0 || tarea.lecturas > 0) tarea.estado = "hecha";
         else porConfirmar.push(tarea);
       } else {
         tarea.estado = pedido;
@@ -121,10 +122,24 @@ export class ListaDeTareas {
     else this.sueltos += 1;
   }
 
-  /** Una lectura salió bien. Sólo cuenta para una tarea de comprobar en curso. */
+  /**
+   * Una lectura salió bien. Cuenta para la tarea en curso si es de comprobar,
+   * o si en el turno YA HUBO un cambio real.
+   *
+   * 🔴 LO SEGUNDO ES LA SALIDA DE UN CASO NORMAL (revisión pre-deploy del
+   * 2026-09-22): una misma llamada hace a menudo el trabajo de dos tareas, y el
+   * cambio sólo cuenta para la que estaba en curso. La otra no tenía cómo
+   * probarse y se reclamaba como pendiente — con el riesgo de que el modelo la
+   * repitiera. Ponerla en curso y mirarla en la página es comprobar que ya está.
+   *
+   * Sin ningún cambio en el turno, una lectura no confirma nada: no hubo trabajo
+   * que pudiera cubrirla. Ahí nos apartamos de Claude Code, que se fía del
+   * estado que declara el modelo; aquí la evidencia la pone el servidor, y una
+   * lectura sólo vale cuando detrás hubo algo que leer.
+   */
   anotarLectura(): void {
     const enCurso = this.tareas.find((t) => t.estado === "en_curso");
-    if (enCurso?.comprobar) enCurso.lecturas += 1;
+    if (enCurso && (enCurso.comprobar || this.cambiosTotales > 0)) enCurso.lecturas += 1;
   }
 
   /**
@@ -158,7 +173,7 @@ export class ListaDeTareas {
           ? ""
           : t.cambios > 0
             ? ` (${t.cambios} cambio(s) medidos)`
-            : t.comprobar && t.lecturas > 0
+            : t.lecturas > 0
               ? ` (${t.lecturas} lectura(s))`
               : "";
       return `${i + 1}. [${estado}] ${t.texto}${medido}`;
