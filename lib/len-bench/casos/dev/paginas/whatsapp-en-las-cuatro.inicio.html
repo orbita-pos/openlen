@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riva Dental — Dra. Carmen Riva · Odontología sin sorpresas, Puebla</title>
+<meta name="description" content="Valoración con radiografía por $350, plan por escrito con precios cerrados y cero regaños. Col. La Paz, Puebla.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #F9FBFC;
+    --surface: #EFF4F6;
+    --surface-2: #E5EDF1;
+    --fg: #1B2226;
+    --fg-muted: #53616A;
+    --fg-faint: #5F6D75;
+    --border: rgba(27,34,38,0.08);
+    --border-strong: rgba(27,34,38,0.12);
+    --accent: #4A7FA5;
+    --accent-r: 74,127,165;
+    --accent-ink: #F1F7FB;
+    --radius: 13px;
+    --radius-sm: 8px;
+    --radius-lg: 20px;
+    --font-display: "Inter", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --warn: #A3671C;
+    --danger: #8F2D22;
+  }
+  :root.dark {
+    --bg: #121719;
+    --surface: #181F23;
+    --surface-2: #20282D;
+    --fg: #EDF1F3;
+    --fg-muted: rgba(237,241,243,0.66);
+    --fg-faint: rgba(237,241,243,0.56);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #7FAECF;
+    --accent-r: 127,174,207;
+    --accent-ink: #0D1E2B;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-feature-settings: "ss01","cv11"; -webkit-font-smoothing: antialiased; }
+  .display { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.03em; line-height: 1.0; }
+  .mono { font-family: var(--font-mono); }
+  .hairline { border-color: var(--border); }
+  .hairline-2 { border-color: var(--border-strong); }
+  .lift { transition: transform 110ms ease, box-shadow 110ms ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.08); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: rgba(var(--accent-r), 0.92); }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-faint); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .half-tone { opacity: 0.45; }
+  .ph-clinic { background: linear-gradient(145deg, rgba(var(--accent-r),0.20), var(--surface-2) 52%, var(--surface)); }
+  .ph-soft { background: linear-gradient(125deg, var(--surface-2), var(--surface) 55%, rgba(var(--accent-r),0.10)); }
+  .grain::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background-image: radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px); background-size: 26px 26px; opacity: 0.5; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="sticky top-0 z-50 border-b hairline backdrop-blur-md" style="background: color-mix(in srgb, var(--bg) 88%, transparent);">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 3c2 0 3 1 5 1s3-1 5-1c2.5 0 4 2 4 4.5 0 4.5-2.5 13.5-4.5 13.5-1.5 0-1.5-4-4.5-4s-3 4-4.5 4C5.5 21 3 12 3 7.5 3 5 4.5 3 7 3z" stroke="var(--accent)" stroke-width="1.7" stroke-linejoin="round" transform="translate(-1,0)"/>
+      </svg>
+      <div class="leading-none">
+        <div class="display text-[16px]">Riva Dental</div>
+        <div class="mono mt-1 text-[9px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Dra. Carmen Riva</div>
+      </div>
+    </a>
+    <div class="hidden items-center gap-7 text-[13.5px] font-medium text-[color:var(--fg-muted)] md:flex">
+      <a href="#proceso" class="hover:text-[color:var(--fg)]">Cómo trabajo</a>
+      <a href="#servicios" class="hover:text-[color:var(--fg)]">Tratamientos</a>
+      <a href="#ubicacion" class="hover:text-[color:var(--fg)]">Ubicación</a>
+    </div>
+    <a href="#ubicacion" class="btn-primary lift inline-flex h-9 items-center rounded-full px-4 text-[13.5px] font-medium">Agenda tu valoración</a>
+  </nav>
+</header>
+
+<!-- HERO CENTRADO · CREDENCIAL -->
+<section class="mx-auto max-w-3xl px-5 pb-14 pt-14 text-center md:pb-20 md:pt-20">
+  <div class="mono inline-flex items-center gap-2 rounded-full border hairline bg-[var(--surface)] py-1 pl-2.5 pr-3.5 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-muted)]">
+    <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"></span>
+    Col. La Paz, Puebla · citas puntuales, en serio
+  </div>
+  <h1 class="display mt-6 text-[40px] sm:text-[54px]">
+    Dentista sin sermones <span class="text-[color:var(--accent)]">y sin sorpresas en la cuenta.</span>
+  </h1>
+  <p class="mx-auto mt-6 max-w-lg text-[15.5px] leading-relaxed text-[color:var(--fg-muted)]">
+    Sales de la primera cita con radiografía, diagnóstico explicado en cristiano y un plan POR ESCRITO con el precio cerrado de cada cosa. Lo que firmas es lo que pagas.
+  </p>
+  <div class="mx-auto mt-8 max-w-md rounded-[var(--radius)] border hairline bg-[var(--surface)] px-6 py-5">
+    <div class="mono text-[10.5px] uppercase tracking-[0.16em] text-[color:var(--fg-faint)]">Cirujana dentista · BUAP · Céd. Prof. 8841207</div>
+    <div class="mono mt-2 text-[10.5px] uppercase tracking-[0.16em] text-[color:var(--fg-faint)] tabular">Esp. en rehabilitación oral · 15 años de consulta</div>
+  </div>
+  <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+    <a href="#ubicacion" class="btn-primary lift inline-flex h-11 items-center gap-1.5 rounded-full px-6 text-[14px] font-medium">
+      Agenda tu valoración · $350
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <a href="#proceso" class="lift inline-flex h-11 items-center rounded-full border hairline-2 bg-[var(--surface)] px-6 text-[14px] font-medium">Cómo trabajo</a>
+  </div>
+</section>
+
+<!-- PROCESO PRIMERO -->
+<section id="proceso" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="mx-auto max-w-xl text-center">
+      <div class="eyebrow">Cómo trabajo</div>
+      <h2 class="display mt-3 text-[30px] sm:text-[40px]">Tres pasos, todo por escrito.</h2>
+    </div>
+    <div class="mt-11 grid gap-4 md:grid-cols-3">
+      <div class="rounded-[var(--radius)] border hairline bg-[var(--bg)] p-7">
+        <div class="mono text-[12px] font-medium text-[color:var(--accent)] tabular">01</div>
+        <h3 class="display mt-3 text-[19px]">Valoración completa · $350</h3>
+        <p class="mt-2 text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Radiografía panorámica incluida, revisión pieza por pieza y fotos para que TÚ veas lo que yo veo. 50 minutos.</p>
+      </div>
+      <div class="rounded-[var(--radius)] border hairline bg-[var(--bg)] p-7">
+        <div class="mono text-[12px] font-medium text-[color:var(--accent)] tabular">02</div>
+        <h3 class="display mt-3 text-[19px]">Plan con precios cerrados</h3>
+        <p class="mt-2 text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Qué es urgente, qué puede esperar y cuánto cuesta cada cosa — por escrito y ordenado por prioridad. Sin letras chicas.</p>
+      </div>
+      <div class="rounded-[var(--radius)] border hairline bg-[var(--bg)] p-7">
+        <div class="mono text-[12px] font-medium text-[color:var(--accent)] tabular">03</div>
+        <h3 class="display mt-3 text-[19px]">Tratamiento a tu ritmo</h3>
+        <p class="mt-2 text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Empezamos por lo urgente y tú decides el paso. El precio firmado se respeta aunque tardes meses en continuar.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRATAMIENTOS -->
+<section id="servicios" class="border-t hairline">
+  <div class="mx-auto max-w-3xl px-5 py-16 md:py-24">
+    <div class="text-center">
+      <div class="eyebrow">Tratamientos</div>
+      <h2 class="display mt-3 text-[30px] sm:text-[40px]">Precios de lista, a la vista.</h2>
+      <p class="mx-auto mt-3 max-w-md text-[14px] text-[color:var(--fg-muted)]">Los mismos que te doy en el consultorio. Si algo requiere especialista (endodoncia, cirugía), te refiero con colegas de confianza y te lo digo desde el plan.</p>
+    </div>
+    <ul class="mono mt-10 divide-y divide-[color:var(--border)] text-[13px] tabular">
+      <li class="flex items-baseline justify-between py-4">
+        <span class="text-[14.5px] font-medium text-[color:var(--fg)]" style="font-family:var(--font-body);">Limpieza profunda con ultrasonido</span>
+        <span class="text-[15px] font-medium">$650</span>
+      </li>
+      <li class="flex items-baseline justify-between py-4">
+        <span class="text-[14.5px] font-medium text-[color:var(--fg)]" style="font-family:var(--font-body);">Resina estética · por pieza</span>
+        <span class="text-[15px] font-medium">$890</span>
+      </li>
+      <li class="flex items-baseline justify-between py-4">
+        <span class="text-[14.5px] font-medium text-[color:var(--fg)]" style="font-family:var(--font-body);">Corona de zirconia</span>
+        <span class="text-[15px] font-medium">$4,850</span>
+      </li>
+      <li class="flex items-baseline justify-between py-4">
+        <span class="text-[14.5px] font-medium text-[color:var(--fg)]" style="font-family:var(--font-body);">Blanqueamiento en consultorio</span>
+        <span class="text-[15px] font-medium">$2,900</span>
+      </li>
+      <li class="flex items-baseline justify-between py-4">
+        <span class="text-[14.5px] font-medium text-[color:var(--fg)]" style="font-family:var(--font-body);">Guarda oclusal (bruxismo)</span>
+        <span class="text-[15px] font-medium">$1,650</span>
+      </li>
+      <li class="flex items-baseline justify-between py-4">
+        <span class="text-[14.5px] font-medium text-[color:var(--fg)]" style="font-family:var(--font-body);">Extracción simple</span>
+        <span class="text-[15px] font-medium">$1,100</span>
+      </li>
+    </ul>
+    <div class="mono mt-5 text-center text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)]">pagos con tarjeta · planes por etapas sin intereses</div>
+  </div>
+</section>
+
+<!-- LA DRA + CONSULTORIO -->
+<section class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid items-center gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-16">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="ph-clinic grain relative aspect-[3/4] rounded-[var(--radius)] border hairline" data-ol-photo="dentist portrait clinic smiling"></div>
+        <div class="ph-soft grain relative mt-8 aspect-[3/4] rounded-[var(--radius)] border hairline" data-ol-photo="modern dental office chair"></div>
+      </div>
+      <div>
+        <div class="eyebrow">Sobre mí</div>
+        <h2 class="display mt-3 max-w-md text-[30px] sm:text-[40px]">El miedo al dentista casi siempre es miedo a la cuenta. <span class="half-tone">Por eso la enseño primero.</span></h2>
+        <p class="mt-5 max-w-md text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]">
+          Soy Carmen. En 15 años aprendí que nadie falta a sus citas por flojera — faltan por miedo a lo que va a costar o a que los regañen. En mi consultorio no pasa ninguna de las dos: precios cerrados por escrito y cero sermones. Vienes cuando puedas; yo te recibo donde te quedaste.
+        </p>
+        <div class="mono mt-7 grid max-w-sm grid-cols-3 gap-4 border-t hairline pt-5 text-[10.5px] uppercase tracking-[0.12em] text-[color:var(--fg-faint)]">
+          <div><div class="display text-[22px] tracking-tight text-[color:var(--fg)] tabular">15</div>años</div>
+          <div><div class="display text-[22px] tracking-tight text-[color:var(--fg)] tabular">4,900+</div>pacientes</div>
+          <div><div class="display text-[22px] tracking-tight text-[color:var(--fg)] tabular">0</div>sorpresas</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RESEÑAS -->
+<section class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <div class="eyebrow text-center">Pacientes</div>
+    <div class="mt-8 grid gap-4 md:grid-cols-3">
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"Quince años sin ir al dentista por miedo. Carmen revisó todo, no me regañó ni una vez y me dio el plan por partes. Ya voy en la tercera cita."</blockquote>
+        <figcaption class="mt-4 text-[13px] font-medium">Jorge L.</figcaption>
+      </figure>
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"El presupuesto que firmé en enero fue exactamente lo que pagué en junio. En ningún otro lado me había pasado."</blockquote>
+        <figcaption class="mt-4 text-[13px] font-medium">Mariel S.</figcaption>
+      </figure>
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"Llevo a mis dos hijos y a mi mamá. La cita de las 4 empieza a las 4 — eso solo ya la hace la mejor dentista de Puebla."</blockquote>
+        <figcaption class="mt-4 text-[13px] font-medium">Verónica T.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- UBICACIÓN -->
+<section id="ubicacion" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+      <div>
+        <div class="eyebrow">Consultorio</div>
+        <h2 class="display mt-3 text-[30px] sm:text-[40px]">En La Paz,<br><span class="half-tone">con estacionamiento.</span></h2>
+        <ul class="mono mt-8 max-w-md divide-y divide-[color:var(--border)] text-[13px] tabular">
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]">Lunes — Viernes</span><span>10:00 am – 7:00 pm</span></li>
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]">Sábado</span><span>9:00 am – 2:00 pm</span></li>
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]">Urgencias de pacientes</span><span class="text-[color:var(--accent)]">WhatsApp directo</span></li>
+        </ul>
+        <div class="mt-8 space-y-1.5 text-[14.5px] text-[color:var(--fg-muted)]">
+          <div class="font-medium text-[color:var(--fg)]">Av. Teziutlán Sur 47, int. 3 · Col. La Paz</div>
+          <div>Puebla, Pue. · edificio con elevador y estacionamiento</div>
+        </div>
+        <div class="mt-7 flex flex-wrap gap-3">
+          <a href="#" class="btn-primary lift inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14px] font-medium">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .3-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.5-.2.7-.1l2 .9c.3.2.5.3.6.4 0 .1 0 .7-.3 1.3z"/></svg>
+            Agenda por WhatsApp
+          </a>
+          <a href="#" class="lift inline-flex h-11 items-center rounded-full border hairline-2 bg-[var(--bg)] px-5 text-[14px] font-medium">Cómo llegar</a>
+        </div>
+      </div>
+      <div class="ph-clinic grain relative aspect-[4/3] self-center rounded-[var(--radius-lg)] border hairline lg:aspect-[4/5]" data-ol-photo="bright dental clinic reception"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="border-t hairline">
+  <div class="mx-auto max-w-3xl px-5 py-20 text-center md:py-28">
+    <div class="eyebrow">La agenda de esta semana tiene lugares</div>
+    <h2 class="display mt-5 text-[32px] leading-[1.05] sm:text-[44px]">Tu boca lleva rato pidiéndote esta cita.</h2>
+    <p class="mx-auto mt-4 max-w-md text-[14.5px] text-[color:var(--fg-muted)]">Valoración completa con radiografía por $350 — y sales sabiendo exactamente qué tienes y cuánto cuesta arreglarlo.</p>
+    <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+      <a href="#" class="btn-primary lift inline-flex h-12 items-center rounded-full px-7 text-[14px] font-medium">Agenda tu valoración</a>
+      <a href="#servicios" class="lift inline-flex h-12 items-center rounded-full border hairline-2 bg-[var(--surface)] px-7 text-[14px] font-medium">Ver precios</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER LOCAL -->
+<footer class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-[12.5px] text-[color:var(--fg-faint)] md:flex-row">
+    <div class="font-medium text-[color:var(--fg-muted)]">Riva Dental · Dra. Carmen Riva</div>
+    <div class="mono text-[11px] uppercase tracking-[0.12em] tabular">Céd. Prof. 8841207 · Teziutlán Sur 47-3, Puebla</div>
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-[color:var(--fg)]">Instagram</a>
+      <a href="#" class="hover:text-[color:var(--fg)]">WhatsApp</a>
+      <span>© 2026 Riva Dental</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -101,6 +101,12 @@ const targets = [
   // `scripts/qa/infra-huerfanos.mjs` lee CUALQUIER cadena entrecomillada de
   // este bloque como si fuera una migración listada, comentarios incluidos.)
   "crear-writer-migrate",
+  // `projectChatMessages.transcript` — la transcripción del turno (H4 de Len
+  // 2.x): de ella sale el historial del turno siguiente. Aditiva e idempotente.
+  //
+  // 🔴 OBLIGATORIA por lo mismo que el diario: `getChatMessages` hace
+  // `select()` de la tabla entera, y Drizzle selecciona la columna declarada.
+  "transcripcion-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

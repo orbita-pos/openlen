@@ -347,10 +347,9 @@ describe("la suite de la página", () => {
       expect(ruta).toContain("guardadas: promesasDeLaPagina");
     });
 
-    it("2 · los ojos devuelven los fallos del turno crudos", () => {
+    it("2 · los ojos devuelven las regresiones por su canal", () => {
       const ojos = lee("lib", "agent", "verify.ts");
-      expect(ojos).toContain("verdict.fallosDelTurno = h.fallosSpec");
-      // Y las regresiones por su canal, que es de lo que va todo esto.
+      // (Los fallos del turno se fueron con `prueba_js` en Len 2.0.)
       expect(ojos).toContain("verdict.regresiones = h.regresiones");
     });
 
@@ -374,8 +373,6 @@ describe("la suite de la página", () => {
       // turno: entre medias pudo entrar otra escritura.
       expect(ruta).toMatch(/const documento = pageSlug/);
       expect(ruta).toMatch(/\.\.\.\(documento \? \{ documento, pagina: pageSlug \} : \{\}\)/);
-      // Con los fallos del turno, que es lo que decide si nace en verde.
-      expect(ruta).toMatch(/fallos: verdict\.fallosDelTurno \?\? \[\]/);
     });
   });
 

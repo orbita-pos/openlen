@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { ProjectData } from "@/lib/projects/types";
@@ -144,7 +144,6 @@ describe("las superficies que miden hornean el documento de vista", () => {
   const MIDEN: ReadonlyArray<readonly [string, string]> = [
     ["los ojos de Len", "lib/agent/verify.ts"],
     ["la ruta del Agente", "app/api/agent/route.ts"],
-    ["el arnés de evals", "lib/agent/evals/harness.ts"],
     ["el motor de la página", "lib/page-engine/prepare.ts"],
     ["el Chat (ai-design)", "app/api/templates/ai-design/route.ts"],
   ];
@@ -181,6 +180,24 @@ describe("las superficies que miden hornean el documento de vista", () => {
       /observarPagina\(\{[\s\S]{0,600}?vista:/.test(src),
       "toolMirarPagina llama a observarPagina sin vista: mide el documento pelado",
     ).toBe(true);
+  });
+
+  // ⚰️ La lista tenía una sexta entrada, «el arnés de evals»
+  // (`lib/agent/evals/harness.ts`): la batería de Len 1.x, retirada con su arnés
+  // en `a3d5b76c`. La vara de hoy, Len-Bench, NO mide un borrador —y por eso no
+  // hornea nada—: publica por el camino real y califica la release servida como
+  // la sirve Caddy, que es lo que el visitante tiene delante, ya horneado por
+  // `publishToDir`. Lo que hay que sujetar ahí es eso.
+  it("Len-Bench no mide un borrador: publica de verdad y califica lo que se sirve", () => {
+    const src = readFileSync(join(process.cwd(), "lib/len-bench/conductor.ts"), "utf8");
+    expect(src, "Len-Bench calificaría algo que no se publicó").toMatch(/\bpublishProject\(/);
+    expect(src, "Len-Bench calificaría algo que no se sirve como en producción").toMatch(/\bservirPublicada\(/);
+  });
+
+  // BRAZO DE CONTROL: si vuelve un arnés que mida BORRADORES, tiene que volver
+  // a la lista de arriba. Esta prueba se pone roja para recordarlo.
+  it("el arnés de borradores de Len 1.x sigue sin existir", () => {
+    expect(existsSync(join(process.cwd(), "lib/agent/evals/harness.ts"))).toBe(false);
   });
 
   it("y la ruta del lienzo hornea con la función ESTRICTA, no con la blanda", () => {

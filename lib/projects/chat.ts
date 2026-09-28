@@ -5,9 +5,18 @@
 // project interleave instead of overwriting a shared blob. Callers verify
 // project ownership before invoking append/update — see the chat route.
 
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { StoredChatTurn } from "@/lib/projects/types";
+import type { FilaDelHistorial, TranscripcionGuardada } from "@/lib/agent/transcripcion";
+
+/** Las columnas de la fila SIN la transcripción (H4): el panel del chat no la
+ *  usa, y son los resultados enteros de cada turno. Se calculan al usarse, no
+ *  al importar: hay pruebas que simulan un esquema sin esta tabla. */
+function columnasDelPanel() {
+  const { transcript: _transcripcion, ...columnas } = getTableColumns(schema.projectChatMessages);
+  return columnas;
+}
 
 const CHAT_LIMIT = 50;
 
@@ -17,12 +26,35 @@ export async function getChatMessages(
   projectId: string,
 ): Promise<StoredChatTurn[]> {
   const rows = await db
-    .select()
+    .select(columnasDelPanel())
     .from(schema.projectChatMessages)
     .where(eq(schema.projectChatMessages.projectId, projectId))
     .orderBy(asc(schema.projectChatMessages.createdAt))
     .limit(CHAT_LIMIT);
   return rows.map(rowToTurn);
+}
+
+/**
+ * LOS ÚLTIMOS TURNOS PARA EL HISTORIAL DEL AGENTE (H4), del más viejo al más
+ * reciente, con su transcripción. Sale de la base y lo escribió el servidor:
+ * nada de aquí lo pone el navegador. Ownership, como arriba, del llamador.
+ */
+export async function turnosParaElHistorial(projectId: string, cuantos: number): Promise<FilaDelHistorial[]> {
+  const rows = await db
+    .select({
+      userText: schema.projectChatMessages.userText,
+      assistantReasoning: schema.projectChatMessages.assistantReasoning,
+      transcript: schema.projectChatMessages.transcript,
+    })
+    .from(schema.projectChatMessages)
+    .where(eq(schema.projectChatMessages.projectId, projectId))
+    .orderBy(desc(schema.projectChatMessages.createdAt))
+    .limit(cuantos);
+  return rows.reverse().map((r) => ({
+    userText: r.userText,
+    assistantReasoning: r.assistantReasoning,
+    transcript: r.transcript ?? null,
+  }));
 }
 
 /** Append one settled turn. The turn id is the PK, so a retried append is an
@@ -93,9 +125,12 @@ export async function registrarTurnoDelServidor(
     /** `cortado` sólo lo escribe el servidor: ver `corteDelTurno`. */
     status: StoredChatTurn["status"] | "cortado";
     toolResults?: { tool: string; ok?: boolean; respuesta: Record<string, unknown> }[] | null;
+    /** H4: lo que vio el modelo. Como el diario, SÓLO lo escribe el servidor. */
+    transcript?: TranscripcionGuardada | null;
   },
 ): Promise<void> {
   const toolResults = turn.toolResults ?? null;
+  const transcript = turn.transcript ?? null;
   await db
     .insert(schema.projectChatMessages)
     .values({
@@ -109,10 +144,11 @@ export async function registrarTurnoDelServidor(
       noDocChange: turn.noDocChange ?? null,
       status: turn.status,
       toolResults,
+      transcript,
     })
     .onConflictDoUpdate({
       target: schema.projectChatMessages.id,
-      set: { toolResults },
+      set: { toolResults, transcript },
     });
   await trim(projectId);
 }
@@ -150,7 +186,7 @@ async function trim(projectId: string): Promise<void> {
 }
 
 function rowToTurn(
-  row: typeof schema.projectChatMessages.$inferSelect,
+  row: Omit<typeof schema.projectChatMessages.$inferSelect, "transcript">,
 ): StoredChatTurn {
   const turn: StoredChatTurn = {
     id: row.id,

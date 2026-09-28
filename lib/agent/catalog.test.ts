@@ -1,199 +1,104 @@
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   AGENT_MODULES,
-  EJEMPLOS_EDITAR_ATRIBUTOS,
-  EJEMPLOS_EDITAR_HTML,
-  EJEMPLOS_EDITAR_HTML_MINIMO,
-  EJEMPLOS_EDITAR_RUNTIME,
-  EJEMPLOS_EDITAR_TEXTO,
   MODULE_NOMBRE,
   buildAgentSystemPrompt,
   buildFunctionDeclarations,
+  HERRAMIENTAS_DIFERIDAS,
 } from "./catalog";
-import { splitDocumentOps } from "@/lib/ai-stream/document-ops";
-import { DONDE_SE_DECLARA_UN_ALMACEN } from "@/lib/page-data/declaracion";
 import { clauseMarker } from "@/lib/ai/js-clause";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
-import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
-import { THEME_PRESETS } from "@/lib/theme-presets";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
-import { programaJs } from "@/lib/agent/prueba-js";
 
 const SALTO = String.fromCharCode(10);
 
-const RUNTIME_HOME = { allowed: true } as const;
-
-// La tabla completa vive en lib/ai/runtime-capability.test.ts. Aquí sólo se
-// comprueba lo que el CATÁLOGO hace con ella.
-//
-// Lo que había aquí —«ON/subpágina deniega», «un turno ON restringe subpágina
-// y recupera Home al mover el foco»— se RETIRÓ el 2026-08-25, no se debilitó:
-// fijaba una verdad que expiró. La página dejó de entrar en la decisión cuando
-// cada una pasó a guardar su propio JavaScript.
-// Pin byte a byte del prompt crudo anterior al interruptor de JavaScript.
-// Un snapshot textual duplicaría 38 KiB; el SHA-256 fija exactamente los mismos
-// bytes y deja las aserciones semánticas de abajo legibles.
-// Re-sellado el 2026-08-25, a propósito y con el diff revisado línea a línea:
-// el prompt dejó de ofrecer "Pedidos por WhatsApp" y "Reservas para citas"
-// —los dos módulos se retiraron el 2026-08-21— y pasó a declararlos retirados,
-// y `crear_pagina` dejó de anunciar modulo="bookings". Cuatro cambios, todos
-// en el diff de lib/agent/catalog.ts de ese commit. El pin hizo justo su
-// trabajo: cazó un cambio de prompt. Si vuelve a saltar sin que alguien haya
-// tocado el prompt A PROPÓSITO, NO lo re-selles — busca qué se movió.
-const RAW_AGENT_PROMPT_SHA256 = "a5485b5c547966a95b4cb5ed67f666038e672fec347377910e74ee3f5c62301a";
-// Re-sellado el 2026-08-25 (hallazgo 9), a propósito: la descripción decía
-// "TRES targets" y enumeraba CUATRO, y anunciaba `runtime` como "sólo
-// op=replace" cuando `delete` ya lo retira (hallazgo 3). Dos cambios, los dos
-// en el diff de lib/agent/catalog.ts de ese commit.
-// OFF ya no describe el target runtime: se retiró el párrafo (1), se
-// renumeraron styles/head/idioma y la regla de prueba quedó sólo para CONDUCTAS.
-const RAW_EDITAR_PAGINA_SHA256 = "2799867238e5a42a09dfbdb3544546421b3908d83e2d92570085a04cd578e2e4";
+/** Lo que Len 2.0 ya NO le ofrece al modelo (plans/len-2/ficheros-plan.md):
+ *  el vocabulario propio por ids, la mudanza de página, el rediseño con un
+ *  segundo modelo y los atajos de tema. Un nombre de aquí que reaparezca en una
+ *  descripción o en el prompt es una herramienta que el modelo intentará
+ *  llamar y no existe. */
+const RETIRADAS = [
+  // H3 (2026-09-25): los almacenes y la memoria son ficheros.
+  "leer_estado",
+  "guardar_dato",
+  "editar_dato",
+  "quitar_dato",
+  "recordar_preferencia",
+  "editar_texto",
+  "editar_atributos",
+  "editar_html",
+  "editar_runtime",
+  "editar_pagina",
+  "trabajar_en_pagina",
+  "buscar_en_pagina",
+  "crear_pagina",
+  "redisenar_pagina",
+  "cambiar_tema",
+  "aplicar_tematica",
+] as const;
 
 describe("buildFunctionDeclarations", () => {
-  // RETIRADA la variante «sin runtime»: no hay interruptor que la produzca.
-  // El target `runtime` se anuncia siempre, porque el modelo siempre puede
-  // escribir el JavaScript de su página.
-  it("editar_runtime anuncia las DOS cosas: poner código y quitarlo", () => {
-    vi.stubEnv("OPENLEN_DOC_OPS", "1");
-    try {
-      const d = buildFunctionDeclarations()
-        .find((x) => x.name === "editar_runtime") as { description: string };
-      // Antes eran op="replace" y op="delete" sobre target="runtime". Ahora la
-      // herramienta tiene UN campo, y el vocabulario tiene que decir las dos
-      // mitades igual: si sólo anuncia cómo poner código, quitar lo interactivo
-      // se vuelve inalcanzable sin que nadie lo note.
-      expect(d.description).toContain("código COMPLETO");
-      expect(d.description).toContain("script` vacío");
-      // Y NO puede nombrar la interfaz vieja: `editar_runtime` no tiene target.
-      expect(d.description).not.toContain('target="runtime"');
-    } finally {
-      vi.unstubAllEnvs();
-    }
-  });
-  it("declares exactly the F1 + F2 + F3 Task 1 tools", () => {
+  it("declara exactamente las de Len 2.0: las cinco de ficheros primero", () => {
     const names = buildFunctionDeclarations().map((d) => d.name);
     expect(names).toEqual([
-      "leer_estado",
-      // 2026-09-03 — `editar_pagina` se parte en cuatro. El motor sigue siendo
-      // el mismo y `data-op-id` sigue siendo el ancla: lo que cambia es el
-      // EMPAQUETADO. Iban juntas en una declaración de profundidad 5 cuya unión
-      // discriminada vivía en prosa; ahora cada verbo tiene su puerta y el enum
-      // de `op` está en el schema.
-      "editar_texto",
-      "editar_atributos",
-      "editar_html",
-      "editar_runtime",
-      "redisenar_pagina",
+      // El sitio como ficheros, con el contrato de Claude Code.
+      "Read",
+      "Edit",
+      "Write",
+      "Grep",
+      "Glob",
+      // Carga las diferidas (H2).
+      "ToolSearch",
       "activar_modulo",
-      "cambiar_tema",
-      "aplicar_tematica",
       "preparar_marketing",
-      "crear_pagina",
-      // 2026-09-02 — el derecho a preguntar. Va DELANTE de elegir_foto porque
-      // es lo que hay que hacer antes de reeditar sobre un veredicto que no
-      // cuadra: comprobar. Ver su declaración en catalog.ts.
       "mirar_pagina",
+      // H9: usarla, no sólo mirarla. Cargada desde el principio.
+      "usar_pagina",
       "elegir_foto",
       "editar_imagen",
-      "recordar_preferencia",
-                  "publicar",
-      // 2026-09-07 — la condición de parada. Va junto a `publicar` porque es su
-      // hermana: las dos PROPONEN y ninguna actúa sola; lo que las cierra es el
-      // toque del usuario en una tarjeta.
+      "publicar",
       "proponer_objetivo",
-      "trabajar_en_pagina",
-      // 2026-09-01 — buscar un texto en TODO el sitio. Va detrás de
-      // `trabajar_en_pagina` porque es su pareja: buscas, y para lo que salga
-      // fuera de la página activa te mudas.
-      "buscar_en_pagina",
-      // 2026-09-01 — internet: fetch de URL a texto, sin navegador.
       "leer_de_internet",
-      // 2026-09-01 — `preguntar` sustituye al `ok:false` con orden de
-      // comportamiento («termina el turno preguntándole») y al flag de sesión
-      // que vigilaba si el modelo obedecía. `revertir_ultimo_cambio` llega a
-      // unos snapshots que ya existían desde siempre.
-      // La lista de trabajo va ANTES que las dos de abajo porque es lo primero
-      // que el modelo debería llamar en un turno de varios pasos.
-      "declarar_tareas",
+      "TodoWrite",
       "preguntar",
       "revertir_ultimo_cambio",
       "conectar_datos_vivos",
-      // 2026-08-29 — los almacenes de datos. La lista se fija ENTERA a
-      // propósito: una herramienta que aparece sin querer es una que el modelo
-      // empieza a llamar sin que nadie lo haya decidido.
-      "guardar_dato",
-      "editar_dato",
-      "quitar_dato",
     ]);
   });
-  // 🔴 El esquema NO puede anunciar un módulo retirado. Este enum estaba
-  // escrito a mano como ["bookings","collections"] y se quedó atrás cuando
-  // INVERTIDA el 2026-08-29. Fijaba que `crear_pagina` ofreciera un `modulo`,
-  // con el enum saliendo de PAGE_MODULES. Ese parámetro murió con las
-  // colecciones —su único valor— así que ahora se fija lo contrario.
-  //
-  // El porqué de la prueba original no caduca: Reservas se retiró el 2026-08-21
-  // y el enum siguió ofreciéndolo. El modelo lo mandaba, el boundary lo
-  // convertía en `undefined` sin decir nada, y el dueño acababa con una página
-  // en blanco creyendo que le habían atendido.
-  it("crear_pagina expone slug y titulo, y NINGÚN modulo", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "crear_pagina") as any;
-    expect(d.parameters.properties.slug.type).toBe("STRING");
-    expect(d.parameters.properties.titulo.type).toBe("STRING");
-    expect(d.parameters.properties.modulo).toBeUndefined();
-    expect(d.parameters.required).toBeUndefined();
+
+  it("H2 · las diferidas existen TODAS en el catálogo (una que no, sería una palanca a ninguna parte)", () => {
+    const names = new Set(buildFunctionDeclarations().map((d) => String(d.name)));
+    for (const n of HERRAMIENTAS_DIFERIDAS) expect(names.has(n), n).toBe(true);
+    expect([...HERRAMIENTAS_DIFERIDAS].sort()).toEqual(
+      ["activar_modulo", "conectar_datos_vivos", "editar_imagen", "leer_de_internet", "preparar_marketing", "proponer_objetivo", "revertir_ultimo_cambio"],
+    );
   });
-  it("y la descripción tampoco le ofrece bookings al modelo", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "crear_pagina") as any;
-    expect(d.description).not.toContain("bookings");
+
+  it("🔴 ninguna descripción nombra una herramienta retirada, ni data-op-id, ni prueba_js", () => {
+    for (const d of buildFunctionDeclarations()) {
+      const texto = JSON.stringify(d);
+      for (const vieja of [...RETIRADAS, "data-op-id", "op_id", "prueba_js", "incluir_documento", "ver_pagina"]) {
+        expect(texto, `${d.name} nombra ${vieja}`).not.toContain(vieja);
+      }
+    }
   });
+
+  it("mirar_pagina y revertir_ultimo_cambio dicen A QUÉ FICHERO, sin página activa", () => {
+    for (const nombre of ["mirar_pagina", "revertir_ultimo_cambio"]) {
+      const d = buildFunctionDeclarations().find((x) => x.name === nombre) as any;
+      expect(d.parameters.properties.file_path?.type, nombre).toBe("STRING");
+      expect(d.parameters.required ?? [], nombre).not.toContain("file_path");
+    }
+  });
+
+  // 🔴 El esquema NO puede anunciar un módulo retirado: Reservas se retiró el
+  // 2026-08-21 y el enum escrito a mano siguió ofreciéndolo.
   it("activar_modulo enum matches AGENT_MODULES", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "activar_modulo") as any;
     expect(d.parameters.properties.modulo.enum).toEqual([...AGENT_MODULES]);
     expect(d.parameters.required).toContain("modulo");
-  });
-  it("las cuatro piden ediciones + resumen y usan tipos en MAYUSCULAS", () => {
-    const d = buildFunctionDeclarations();
-    for (const nombre of ["editar_texto", "editar_atributos", "editar_html"]) {
-      const x = d.find((y) => y.name === nombre) as any;
-      expect(x.parameters.type, nombre).toBe("OBJECT");
-      expect(x.parameters.required, nombre).toEqual(["ediciones", "resumen"]);
-    }
-    const runtime = d.find((y) => y.name === "editar_runtime") as any;
-    expect(runtime.parameters.required).toEqual(["script", "resumen"]);
-
-    // `attrs` y `text` entraron el 2026-09-02 porque la unidad más pequeña era
-    // el NODO: quitar una clase obligaba a `replace` sobre el contenedor —o sea
-    // a re-teclear el subárbol— y en producción eso vació una tarjeta de
-    // entradas entera (ver lib/agent/contenido-perdido.ts). Esos dos verbos NO
-    // desaparecen al partirla: se vuelven herramienta propia, y por eso el enum
-    // que queda en editar_html ya no los lleva.
-    const html = d.find((y) => y.name === "editar_html") as any;
-    expect(html.parameters.properties.ediciones.items.properties.op.enum)
-      .toEqual(["replace", "insert_before", "insert_after", "delete"]);
-    expect(d.map((y) => y.name)).toContain("editar_texto");
-    expect(d.map((y) => y.name)).toContain("editar_atributos");
-  });
-  it('ON usa sólo target="runtime" y conserva replace + script completo + prueba', () => {
-    vi.stubEnv("OPENLEN_DOC_OPS", "1");
-    try {
-      const d = buildFunctionDeclarations().find((x) => x.name === "editar_runtime") as any;
-      const description = String(d.description);
-      expect(description).not.toMatch(/conducta/i);
-      for (const name of BEHAVIOR_ORDER) {
-        expect(description, `quedó el marcador declarativo de ${name}`).not.toContain(BEHAVIORS[name].marker);
-      }
-      expect(description).toContain("código COMPLETO");
-      expect(description).toContain("MANDA TAMBIÉN `prueba_js`");
-      expect(description).toContain("NO es opcional");
-      expect(description).toContain("no hace nada, consola limpia");
-      expect(description).toContain("puede girar y no parar nunca");
-    } finally {
-      vi.unstubAllEnvs();
-    }
   });
   // 🔴 REAPUNTADA el 2026-09-05, no retirada. Exigía el literal `/api/f/`, que
   // vivía en la línea de REGLAS DURAS. Esa línea se recortó a su mitad de
@@ -227,39 +132,6 @@ describe("buildFunctionDeclarations", () => {
     expect(Array.isArray(d.parameters.properties.registro.enum)).toBe(true);
     expect(d.parameters.required).toEqual(["registro"]);
   });
-  it("cambiar_tema exposes accent/fuente/radius/modo, fuente+radius enums pulled from THEME_PRESETS", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "cambiar_tema") as any;
-    expect(d.parameters.properties.accent.type).toBe("STRING");
-    const presetIds = THEME_PRESETS.map((p) => p.id);
-    expect(d.parameters.properties.fuente.enum).toEqual(presetIds);
-    expect(d.parameters.properties.radius.enum).toEqual(presetIds);
-    expect(d.parameters.properties.modo.enum).toEqual(["light", "dark"]);
-    // `resumen` es OBLIGATORIO desde el 2026-09-10: era la única herramienta
-    // de edición sin él, y por eso la tarjeta que veía el usuario decía
-    // «cambiar_tema» (el nombre de la función) al fallar y «#b31212» al
-    // acertar. Medido en producción, en las dos únicas peticiones de color.
-    // Los rasgos siguen siendo opcionales: «al menos uno de
-    // accent/fuente/radius» lo sigue exigiendo la herramienta, en datos.
-    expect(d.parameters.properties.resumen.type).toBe("STRING");
-    expect(d.parameters.required).toEqual(["resumen"]);
-  });
-  it("aplicar_tematica exposes tematica (kit ids + quitar) and an optional fondo", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "aplicar_tematica") as any;
-    const kitIds = TEMATICA_PRESETS.map((p) => p.id);
-    expect(d.parameters.properties.tematica.enum).toEqual([...kitIds, "quitar"]);
-    expect(d.parameters.properties.fondo.type).toBe("STRING");
-    // fondo enum = every kit's scene ids (deduped, preset order) — generated
-    // from the same backdrop tables resolveBackdrop reads, never hardcoded.
-    const sceneIds = Array.from(
-      new Set(TEMATICA_PRESETS.flatMap((p) => p.backdrops.map((b) => b.id))),
-    );
-    expect(d.parameters.properties.fondo.enum).toEqual(sceneIds);
-    expect(sceneIds.length).toBeGreaterThan(0);
-    // `resumen` obligatorio por el mismo motivo que en `cambiar_tema`: sin él
-    // la tarjeta enseñaba el id del kit en vez de una frase que el dueño lea.
-    expect(d.parameters.properties.resumen.type).toBe("STRING");
-    expect(d.parameters.required).toEqual(["tematica", "resumen"]);
-  });
   it("elegir_foto exposes busqueda + estilo as optional strings, nothing required", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "elegir_foto") as any;
     expect(d.parameters.properties.busqueda.type).toBe("STRING");
@@ -290,18 +162,20 @@ describe("buildFunctionDeclarations", () => {
     const nombres = buildFunctionDeclarations(process.env).map((t) => t.name);
     expect(nombres).not.toContain("guardar_dato_del_negocio");
     expect(nombres).not.toContain("recordar_del_negocio");
-    // BRAZO DE CONTROL: `recordar_preferencia` NO es su hermana y se queda —
-    // escribe en users.agentMemory, que es memoria de la PERSONA y no está
-    // escrita en ninguna página.
-    expect(nombres).toContain("recordar_preferencia");
+    // BRAZO DE CONTROL: la memoria de la PERSONA NO es su hermana y se queda —
+    // users.agentMemory no está escrita en ninguna página—; desde H3 es el
+    // fichero /memoria/dueno.md.
+    expect(buildAgentSystemPrompt()).toContain("/memoria/dueno.md");
   });
 
-  it("recordar_preferencia requires preferencia as a string, and the description warns off one-off asks", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "recordar_preferencia") as any;
-    expect(d.parameters.properties.preferencia.type).toBe("STRING");
-    expect(d.parameters.required).toEqual(["preferencia"]);
-    expect(String(d.description)).toContain("DURABLE");
-    expect(String(d.description).toLowerCase()).toContain("puntual");
+  it("H3 · la memoria son dos ficheros: sólo lo DURABLE, nunca el pedido puntual, y sólo se añade", () => {
+    const p = buildAgentSystemPrompt();
+    const seccion = p.slice(p.indexOf("LA MEMORIA SON DOS FICHEROS")).split(SALTO + SALTO)[0];
+    expect(seccion).toContain("/memoria/dueno.md");
+    expect(seccion).toContain("/memoria/proyecto.md");
+    expect(seccion).toContain("DURABLE");
+    expect(seccion.toLowerCase()).toContain("puntual");
+    expect(seccion).toContain("Sólo se añade");
   });
   it("publicar exposes optional subdominio + idiomas(ARRAY of STRING), nothing required, enumerates PUBLISH_LOCALES", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "publicar") as any;
@@ -317,12 +191,6 @@ describe("buildFunctionDeclarations", () => {
     for (const l of PUBLISH_LOCALES) expect(String(d.description)).toContain(l.code);
     // The user-tap gate must be conveyed to the model.
     expect(String(d.description).toLowerCase()).toContain("usuario");
-  });
-  it("trabajar_en_pagina requires pagina as a string", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "trabajar_en_pagina") as any;
-    expect(d.parameters.type).toBe("OBJECT");
-    expect(d.parameters.properties.pagina.type).toBe("STRING");
-    expect(d.parameters.required).toEqual(["pagina"]);
   });
   it("conectar_datos_vivos requires sheet_url + intent, intent enum is valores", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "conectar_datos_vivos") as any;
@@ -365,7 +233,11 @@ describe("buildAgentSystemPrompt", () => {
   // `AGENT_MODULES`; esto sujeta que siga derivándose.
   it("la frase de apertura nombra EXACTAMENTE los módulos que existen", () => {
     const p = buildAgentSystemPrompt();
-    const abre = p.slice(0, p.indexOf("REGLAS DURAS")).toLowerCase();
+    // Hasta el primer encabezado (TONO:). Medía hasta «REGLAS DURAS», que H4
+    // (2026-09-26) renombró a «CÓMO TRABAJAR»; sin el ancla, la «apertura» era
+    // el prompt entero.
+    expect(p.indexOf("TONO:")).toBeGreaterThan(0);
+    const abre = p.slice(0, p.indexOf("TONO:")).toLowerCase();
     expect(abre).toContain(AGENT_MODULES.map((m) => MODULE_NOMBRE[m]).join(" y "));
     for (const retirado of ["reservas", "cuentas", "pedidos", "comentarios", "broadcast", "miembros"]) {
       expect(abre, `la apertura sigue ofreciendo ${retirado}, que se retiró`).not.toContain(retirado);
@@ -384,11 +256,15 @@ describe("buildAgentSystemPrompt", () => {
   it("cada herramienta que el prompt describe está DECLARADA", () => {
     const p = buildAgentSystemPrompt();
     const declaradas = new Set(buildFunctionDeclarations().map((d) => String(d.name)));
-    const bloque = bloqueDe(p, "HERRAMIENTAS DE SETTINGS:");
+    // Desde H4 (2026-09-26) el bloque es el de las diferidas: se nombran para
+    // que el modelo sepa cuándo cargarlas con ToolSearch.
+    const bloque = bloqueDe(p, "HERRAMIENTAS QUE SE CARGAN CUANDO HACEN FALTA");
     const fichas = [...bloque.matchAll(/^- ([a-z_]+):/gm)].map((m) => m[1]);
     expect(fichas.length).toBeGreaterThan(0);
     for (const t of fichas) {
       expect(declaradas, `el prompt describe ${t}, que no se declara`).toContain(t);
+      // El encabezado promete que se cargan con ToolSearch: tienen que ser diferidas.
+      expect(HERRAMIENTAS_DIFERIDAS.has(t!), `${t} no es diferida`).toBe(true);
     }
   });
 
@@ -474,37 +350,54 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("Todo lo demás que viva en el navegador lo construyes TÚ");
     expect(p).toContain("activar_modulo");
     for (const m of AGENT_MODULES) expect(p).toContain(m);
-    expect(p).toContain("data-op-id");
+    // Len 2.0 no trabaja con ids: el marcador reservado sigue prohibido, el
+    // otro ya ni se nombra.
+    expect(p).not.toContain("data-op-id");
     expect(p).toContain("data-slot-path");
+  });
+
+  it("🔴 el prompt no nombra ninguna herramienta retirada", () => {
+    const p = buildAgentSystemPrompt();
+    for (const vieja of [...RETIRADAS, "prueba_js", "ver_pagina", "incluir_documento", 'target="runtime"', "página activa"]) {
+      expect(p, `el prompt nombra ${vieja}`).not.toContain(vieja);
+    }
+  });
+
+  it("el prompt enseña a trabajar el sitio como ficheros: leer, cambiar el trozo, no reteclear", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("/index.html");
+    expect(p).toContain("/<slug>/index.html");
+    for (const h of ["Read", "Edit", "Write", "Grep"]) expect(p).toContain(h);
+  });
+
+  // H8 (2026-09-26): en E las tres taquerías reescribieron con Write una página
+  // que ya tenía su diseño, para cumplir la guía, y perdieron el lema del dueño.
+  it("H8 · la página que ya existe manda: se edita a su manera, la guía es para lo que Len crea", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("Lo que añades a una página que ya existe se escribe como ella");
+    expect(p).toContain("sus textos se quedan tal cual, palabra por palabra");
+    expect(p).toContain("GUÍA DE DISEÑO (para las páginas que creas tú y para el rediseño que te pidan;");
+    expect(p).toContain("En una página que creas tú, escríbelo también");
+    // La orden que empujaba a convertir la página entera ya no está.
+    expect(p).not.toContain("Si la página aún no lo define, escríbelo tú");
   });
   // MOTION, MÚSICA Y 3D salieron de esta lista el 2026-08-26 con sus
   // herramientas. Lo que sigue vigilado es que el prompt conozca las que
   // quedan y todos los presets de tema.
-  it("carries the F2 Task 1 + Task 2 settings-tool knowledge", () => {
+  it("carries the settings-tool knowledge that queda: preparar_marketing", () => {
     const p = buildAgentSystemPrompt();
     expect(p).toContain("preparar_marketing");
-    expect(p).toContain("cambiar_tema");
-    for (const preset of THEME_PRESETS) expect(p).toContain(preset.id);
   });
-  it("carries the F2 Task 3 aplicar_tematica knowledge, kit names, and the re-ink delta", () => {
-    const p = buildAgentSystemPrompt();
-    expect(p).toContain("aplicar_tematica");
-    for (const kit of TEMATICA_PRESETS) {
-      expect(p).toContain(kit.id);
-      expect(p).toContain(kit.name);
-    }
-    expect(p).toContain("reink");
-  });
-  it("carries the F2 Task 4 crear_pagina knowledge", () => {
-    const p = buildAgentSystemPrompt();
-    expect(p).toContain("crear_pagina");
-    expect(p).toContain("activar_modulo");
-  });
+  // El permiso de images.openlen.com vive desde el 2026-09-26 en la descripción
+  // de `elegir_foto` (siempre cargada): la sección FOTOS del prompt repetía la
+  // herramienta. Es lo que reconcilia la foto del catálogo con el «ninguna URL
+  // de imagen externa» de la guía de diseño.
   it("carries the F2 Task 5 elegir_foto knowledge and the images.openlen.com permission note", () => {
     const p = buildAgentSystemPrompt();
     expect(p).toContain("elegir_foto");
-    expect(p).toContain("images.openlen.com");
-    expect(p).toContain("editar_atributos");
+    const d = (buildFunctionDeclarations() as { name: string; description: string }[]).find((x) => x.name === "elegir_foto")!.description;
+    expect(d).toContain("images.openlen.com");
+    expect(d).toMatch(/no cuenta como imagen externa/);
   });
   it("carries the F2 Task 6 editar_imagen knowledge: on-page-only, per-turn, and the elegir_foto cross-ref", () => {
     const p = buildAgentSystemPrompt();
@@ -512,15 +405,18 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("turno");
     expect(p).toContain("elegir_foto");
   });
+  // Desde el 2026-09-26 esto vive en la DESCRIPCIÓN de `publicar`, no en el
+  // prompt: el prompt lo repetía casi palabra por palabra, y en Claude Code lo
+  // de cada herramienta va en su descripción.
   it("carries the F2 Task 7 publicar knowledge: always waits for the user's tap", () => {
-    const p = buildAgentSystemPrompt();
-    expect(p).toContain("publicar");
+    const d = (buildFunctionDeclarations() as { name: string; description: string }[]).find((x) => x.name === "publicar")!.description;
     // The hard rule — the agent never publishes directly; the tap is the gate.
-    expect(p).toContain("subdominio");
-    expect(p.toLowerCase()).toContain("tap");
+    expect(d).toContain("subdominio");
+    expect(d.toLowerCase()).toContain("tap");
     // The agent can add/set languages but never clear them — that's the
     // publish modal's job (the card omits `languages` when the list is empty).
-    expect(p).toContain("QUITAR idiomas");
+    expect(d).toContain("QUITAR idiomas");
+    expect(buildAgentSystemPrompt()).not.toContain("PUBLICAR (publicar)");
   });
   // Medido, no supuesto: con la redacción anterior DeepSeek reclamaba el
   // subdominio de MUESTRA —"mi-negocio", tomado del «p. ej.» de la propia
@@ -538,9 +434,9 @@ describe("buildAgentSystemPrompt", () => {
       expect(text).not.toMatch(/p\.\s?ej\.\s*[a-z0-9-]+\s*\)/i);
       expect(text).not.toContain("mi-negocio");
     }
-    // Y la prohibición tiene que estar dicha, no sólo implícita.
+    // Y la prohibición tiene que estar dicha, no sólo implícita. Desde el
+    // 2026-09-26 se dice una vez, en la herramienta: el prompt la repetía.
     expect(description).toContain("NUNCA te lo inventes");
-    expect(p).toContain("NUNCA lo eliges tú");
   });
 
   // RETIRADA el 2026-08-26, y es la más elocuente del barrido: fijaba que el
@@ -557,14 +453,20 @@ describe("buildAgentSystemPrompt", () => {
   // llevando es la lista blanca SSRF y los marcadores data-ol-live; lo que se
   // cae con las colecciones es `intent="lista"` y el «solo lectura» que era su
   // consecuencia.
+  // H4 (2026-09-26): la herramienta es diferida (H2) y su ficha larga salió del
+  // prompt: el prompt la NOMBRA para que se cargue, y lo que hay que saber para
+  // usarla lo dice su descripción, que es lo que el modelo lee al cargarla.
   it("carries the conectar_datos_vivos knowledge: SSRF allowlist, valores only", () => {
     const p = buildAgentSystemPrompt();
+    const d = JSON.stringify(buildFunctionDeclarations().find((x) => x.name === "conectar_datos_vivos"));
     expect(p).toContain("conectar_datos_vivos");
-    expect(p).toContain("docs.google.com");
-    expect(p).toContain("data-ol-live");
+    expect(d).toContain("docs.google.com");
+    expect(d).toContain("data-ol-live");
     expect(p).not.toContain('intent="lista"');
+    expect(d).not.toContain('"lista"');
+    expect(d.toLowerCase()).not.toContain("colección");
     // `solo lectura` a secas NO sirve como aserción: el prompt lo usa para
-    // otras cosas legítimas —`leer_estado` no muta, la búsqueda de fotos
+    // otras cosas legítimas —leer no muta, la búsqueda de fotos
     // tampoco—. Lo que no puede quedar es el vocabulario de la colección.
     expect(p.toLowerCase()).not.toContain("colección");
     expect(p.toLowerCase()).not.toContain("collections");
@@ -586,7 +488,7 @@ describe("buildAgentSystemPrompt", () => {
   // ── LÁPIDAS del 2026-08-29 ────────────────────────────────────────────────
   //
   // `collections` murió con el hub de Módulos: lo que hacía lo hace mejor un
-  // almacén declarado en la página (`guardar_dato` y compañía), sin nada que
+  // almacén declarado en la página (hoy, /datos/<almacén>.json), sin nada que
   // activar. Estas aserciones no son ceremonia — un prompt que sigue ofreciendo
   // lo retirado hace que el modelo lo intente, falle, y el usuario pague el
   // turno. Ya pasó con Pedidos y con Reservas.
@@ -601,13 +503,6 @@ describe("buildAgentSystemPrompt", () => {
     // `activar_modulo` SE QUEDA: es como se enciende el Chat. Lo que muere es
     // que `collections` sea uno de sus valores posibles.
     expect([...AGENT_MODULES]).toEqual(["chat", "assistant"]);
-  });
-
-  it("`crear_pagina` ya no nace con un módulo inyectado", () => {
-    const crear = buildFunctionDeclarations().find((d) => d.name === "crear_pagina") as {
-      parameters: { properties: Record<string, unknown> };
-    };
-    expect(Object.keys(crear.parameters.properties)).not.toContain("modulo");
   });
 
   it("datos vivos conserva «valores» y pierde «lista»", () => {
@@ -664,14 +559,9 @@ describe("lo que el Agente cree que puede", () => {
   it("sabe que la navegación es de TODO el sitio, no de una página", () => {
     const p = buildAgentSystemPrompt();
     expect(p).toMatch(/LA NAVEGACIÓN ES DE TODO EL SITIO/);
-    // Y la herramienta que lo hace posible en una sola llamada.
-    expect(p).toMatch(/ver_pagina/);
-  });
-
-  it("y `leer_estado` ofrece mirar otra página sin mudarse", () => {
-    const tools = JSON.stringify(buildFunctionDeclarations(process.env));
-    expect(tools).toContain("ver_pagina");
-    expect(tools).toMatch(/SIN cambiarte de sitio/);
+    // Y la herramienta que lo hace posible en una sola llamada: buscar en
+    // todos los ficheros a la vez.
+    expect(p.slice(p.indexOf("LA NAVEGACIÓN ES DE TODO EL SITIO")).split(String.fromCharCode(10))[0]).toContain("Grep");
   });
 
   it("y comprueba lo que no controla ANTES de construirlo", () => {
@@ -696,243 +586,6 @@ describe("lo que el Agente cree que puede", () => {
     const p = buildAgentSystemPrompt();
     expect(p).not.toMatch(/BOTÓN FLOTANTE DE CONTACTO/);
     expect(p).not.toMatch(/Barra de contacto flotante/);
-  });
-});
-
-// ───── LOS EJEMPLOS DE editar_pagina ─────
-//
-// UN EJEMPLO QUE MIENTE ENSENA A FALLAR, y es peor que no tener ejemplo: el
-// modelo copia la forma. Estas pruebas exigen que cada uno sea JSON valido y
-// que use SOLO lo que el esquema de verdad acepta — asi, el dia que alguien
-// toque el enum de `op` o el de `que`, los ejemplos se ponen rojos en vez de
-// quedarse ensenando algo que el motor ya rechaza.
-describe("los ejemplos de uso de las cuatro herramientas de edicion", () => {
-  /** Los objetos JSON incrustados en la prosa, por conteo de llaves. */
-  function ejemplosDe(texto: string, clave: string): Record<string, unknown>[] {
-    const salida: Record<string, unknown>[] = [];
-    const abre = `{"${clave}"`;
-    let i = texto.indexOf(abre);
-    while (i !== -1) {
-      let nivel = 0;
-      let fin = -1;
-      for (let j = i; j < texto.length; j += 1) {
-        if (texto[j] === "{") nivel += 1;
-        else if (texto[j] === "}") {
-          nivel -= 1;
-          if (nivel === 0) { fin = j + 1; break; }
-        }
-      }
-      if (fin === -1) throw new Error(`ejemplo sin cerrar en ${i}`);
-      salida.push(JSON.parse(texto.slice(i, fin)) as Record<string, unknown>);
-      i = texto.indexOf(abre, fin);
-    }
-    return salida;
-  }
-
-  const decls = buildFunctionDeclarations({ ...process.env, OPENLEN_AGENT_DOCUMENT_OPS: "1" });
-  const por = (n: string) => decls.find((d) => d.name === n) as Record<string, any>;
-  const OPS: string[] = por("editar_html").parameters.properties.ediciones.items.properties.op.enum;
-
-  const CON_EDICIONES: [string, string][] = [
-    ["editar_texto", EJEMPLOS_EDITAR_TEXTO],
-    ["editar_atributos", EJEMPLOS_EDITAR_ATRIBUTOS],
-    ["editar_html", EJEMPLOS_EDITAR_HTML],
-    ["editar_html (minimo)", EJEMPLOS_EDITAR_HTML_MINIMO],
-  ];
-
-  it("todas las herramientas traen ejemplos, y son JSON valido", () => {
-    for (const [nombre, texto] of CON_EDICIONES) {
-      expect(ejemplosDe(texto, "ediciones").length, `${nombre} sin ejemplos`).toBeGreaterThan(0);
-    }
-    expect(ejemplosDe(EJEMPLOS_EDITAR_RUNTIME, "script")).toHaveLength(2);
-  });
-
-  it("cada ejemplo tiene la FORMA de la herramienta a la que cuelga", () => {
-    for (const [nombre, texto] of CON_EDICIONES) {
-      for (const ej of ejemplosDe(texto, "ediciones")) {
-        expect(typeof ej.resumen, `${nombre}: falta resumen`).toBe("string");
-        for (const ed of ej.ediciones as Record<string, unknown>[]) {
-          expect(typeof ed.target).toBe("string");
-        }
-      }
-    }
-    // Y cada una usa SOLO sus propios campos: un ejemplo con la forma de otra
-    // herramienta es lo que ensena al modelo a mezclarlas.
-    for (const ej of ejemplosDe(EJEMPLOS_EDITAR_TEXTO, "ediciones")) {
-      for (const ed of ej.ediciones as Record<string, unknown>[]) {
-        expect(Object.keys(ed).sort()).toEqual(["target", "texto"]);
-      }
-    }
-    for (const ej of ejemplosDe(EJEMPLOS_EDITAR_ATRIBUTOS, "ediciones")) {
-      for (const ed of ej.ediciones as Record<string, unknown>[]) {
-        expect(Object.keys(ed).sort()).toEqual(["nombre", "target", "valor"]);
-      }
-    }
-  });
-
-  it("editar_html no usa ninguna `op` que el esquema no acepte", () => {
-    for (const texto of [EJEMPLOS_EDITAR_HTML, EJEMPLOS_EDITAR_HTML_MINIMO]) {
-      for (const ej of ejemplosDe(texto, "ediciones")) {
-        for (const ed of ej.ediciones as Record<string, unknown>[]) {
-          expect(OPS).toContain(ed.op);
-        }
-      }
-    }
-  });
-
-  // La promesa del ejemplo es un PROGRAMA: se le exige lo mismo que al enum de
-  // `op` — que compile y que sólo llame a primitivos que el instrumento define.
-  // Un `ui.algo` inventado en el ejemplo sería el modelo aprendiendo a fallar.
-  it("la promesa del ejemplo de comportamiento compila y usa primitivos que existen", () => {
-    const ejemplos = ejemplosDe(EJEMPLOS_EDITAR_RUNTIME, "script");
-    expect(ejemplos.some((e) => "prueba" in e), "un ejemplo enseña el DSL retirado").toBe(false);
-    const conPrueba = ejemplos.filter((e) => typeof e.prueba_js === "string");
-    expect(conPrueba).toHaveLength(1);
-    const codigo = conPrueba[0].prueba_js as string;
-    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-    expect(() => new AsyncFunction("ui", codigo)).not.toThrow();
-    const definidos = programaJs("");
-    const usados = [...codigo.matchAll(/ui\.(\w+)\(/g)].map((m) => m[1]);
-    expect(usados.length).toBeGreaterThan(0);
-    for (const nombre of usados) {
-      expect(definidos, `ui.${nombre} no existe`).toMatch(new RegExp(`async ${nombre}\\(`));
-    }
-  });
-
-  it("ENSENAN A CAMBIAR LA FOTO CON atributos, no a reemplazar el nodo", () => {
-    const conSrc = ejemplosDe(EJEMPLOS_EDITAR_ATRIBUTOS, "ediciones").filter((e) =>
-      (e.ediciones as Record<string, unknown>[]).some((d) => d.nombre === "src"),
-    );
-    expect(conSrc.length).toBeGreaterThan(0);
-    // Y en NINGUN ejemplo de estructura se reemplaza un nodo por su foto.
-    for (const ej of ejemplosDe(EJEMPLOS_EDITAR_HTML, "ediciones")) {
-      expect(JSON.stringify(ej)).not.toContain("<img");
-    }
-  });
-
-  it("la respuesta al contraste NO pasa por quitar la foto — el destrozo de Aurora", () => {
-    // El ejemplo del contraste toca el CSS, nunca borra ni reemplaza la imagen.
-    expect(EJEMPLOS_EDITAR_HTML).toMatch(/JAMAS quitando la foto/);
-    const velo = ejemplosDe(EJEMPLOS_EDITAR_HTML, "ediciones").find((e) =>
-      (e.ediciones as Record<string, unknown>[]).some((d) => d.target === "styles"),
-    );
-    expect(velo).toBeTruthy();
-    // Y en NINGUN ejemplo de NINGUNA de las cuatro se borra nada: `delete` esta
-    // en el enum —la capacidad existe— pero no hay un solo ejemplo que copiar.
-    // Esa asimetria es deliberada y es lo que quedo del destrozo de Aurora.
-    for (const [nombre, texto] of CON_EDICIONES) {
-      for (const ej of ejemplosDe(texto, "ediciones")) {
-        for (const ed of ej.ediciones as Record<string, unknown>[]) {
-          expect(ed.op, `${nombre} ensena a borrar`).not.toBe("delete");
-        }
-      }
-    }
-    expect(OPS, "la capacidad de borrar sigue existiendo").toContain("delete");
-  });
-
-  it("la guarda de la foto cuelga de editar_atributos, que es quien la puede quitar", () => {
-    // LA LECCION DE `la-guarda-en-la-herramienta-equivocada`: una regla colgada
-    // de la herramienta que el Agente no llama no protege de nada. Quien puede
-    // cambiar un src es editar_atributos, asi que ahi vive el aviso.
-    expect(por("editar_atributos").description).toMatch(/NUNCA quites la foto del dueño/);
-  });
-});
-
-// ─── EL EMPAQUETADO DE LA EDICIÓN (el sobre, tarea 3) ──────────────────────
-//
-// `editar_pagina` era el 26,4 % de los bytes del catálogo (7.480 de 28.328,
-// medido el 03/09) y la única declaración por encima de profundidad 2 — llegaba
-// a 5, contra 2 de la siguiente. Peor que el tamaño: la regla que decidía qué
-// campos eran legales, el valor de `op`, NO estaba en el schema. `required`
-// pedía ["op","target"] y la unión discriminada vivía en prosa española.
-//
-// Se parte el EMPAQUETADO, no el motor: el nodo sigue siendo la unidad y
-// `data-op-id` sigue siendo el ancla. Las cuatro herramientas construyen la
-// misma op interna y delegan en el camino de siempre.
-describe("las cuatro herramientas de edición", () => {
-  const decls = () => buildFunctionDeclarations();
-  const por = (name: string) =>
-    decls().find((d) => d.name === name) as { name: string; parameters?: Record<string, unknown> } | undefined;
-
-  function profundidad(node: unknown, d = 0): number {
-    if (!node || typeof node !== "object") return d;
-    const n = node as Record<string, unknown>;
-    let max = d;
-    const props = n.properties as Record<string, unknown> | undefined;
-    if (props) for (const sub of Object.values(props)) max = Math.max(max, profundidad(sub, d + 1));
-    if (n.items) max = Math.max(max, profundidad(n.items, d + 1));
-    return max;
-  }
-
-  it("editar_pagina ya no se le ofrece al modelo", () => {
-    expect(por("editar_pagina")).toBeUndefined();
-  });
-
-  it("existen las cuatro", () => {
-    for (const n of ["editar_texto", "editar_atributos", "editar_html", "editar_runtime"]) {
-      expect(por(n), `falta ${n}`).toBeDefined();
-    }
-  });
-
-  it("editar_texto lleva exactamente ediciones + resumen, y cada edición target + texto", () => {
-    const d = por("editar_texto")!;
-    const props = (d.parameters as { properties: Record<string, unknown> }).properties;
-    expect(Object.keys(props).sort()).toEqual(["ediciones", "resumen"]);
-    const item = (props.ediciones as { items: { properties: Record<string, unknown>; required: string[] } }).items;
-    expect(Object.keys(item.properties).sort()).toEqual(["target", "texto"]);
-    expect(item.required.sort()).toEqual(["target", "texto"]);
-  });
-
-  it("editar_atributos aplana attrs a UN atributo por edición", () => {
-    const d = por("editar_atributos")!;
-    const props = (d.parameters as { properties: Record<string, unknown> }).properties;
-    const item = (props.ediciones as { items: { properties: Record<string, unknown> } }).items;
-    // Un `attrs[]` anidado dentro de cada edición devolvería la profundidad 4
-    // que venimos a quitar. Se manda un atributo por entrada y el handler los
-    // reagrupa por target.
-    expect(Object.keys(item.properties).sort()).toEqual(["nombre", "target", "valor"]);
-  });
-
-  it("editar_html declara el enum de op en el SCHEMA, no en la prosa", () => {
-    const d = por("editar_html")!;
-    const props = (d.parameters as { properties: Record<string, unknown> }).properties;
-    const item = (props.ediciones as { items: { properties: Record<string, { enum?: string[] }> } }).items;
-    expect(item.properties.op.enum).toEqual(["replace", "insert_before", "insert_after", "delete"]);
-  });
-
-  // Sin excepciones desde el 2026-09-22: la única que había era `prueba` de
-  // editar_runtime, el DSL de pasos anidados, y se retiró. La promesa es ahora
-  // `prueba_js`, una cadena.
-  it("ninguna declaración pasa de profundidad 3", () => {
-    for (const d of decls()) {
-      const p = profundidad((d as { parameters?: unknown }).parameters);
-      // TRES, no dos. El suelo lo pone el LOTE: un array de objetos es
-      // profundidad 3 por construcción, y mantener el lote fue una decisión
-      // —sin él, un turno que hoy hace 1 llamada con 6 ediciones haría 6, y el
-      // tope son 10—. La ganancia medida es 5 → 3, y el cuarto nivel de
-      // `editar_pagina` (un `attrs[]` DENTRO de cada edit) ya no existe.
-      expect(p, `${d.name} pasa de profundidad 3`).toBeLessThanOrEqual(3);
-    }
-  });
-
-  // NO SE AFIRMA QUE EL CATALOGO ADELGACE, PORQUE NO LO HACE. Medido el 03/09
-  // al partirla: las cuatro suman 8.617 bytes contra los 7.480 de
-  // `editar_pagina`, y el system creció ~900 al absorber el ancla compartida.
-  // Neto +2.071 por turno. Partir una herramienta en cuatro duplica el encuadre
-  // por fuerza, y el plan daba por hecho que partir adelgazaba: no.
-  //
-  // Lo que SI se arregló, y es lo que se guarda aquí, es el OUTLIER: una sola
-  // declaración se llevaba el 26,4 % del catálogo. Ninguna debería volver a
-  // acercarse — eso es lo que hacía imposible leer la lista.
-  it("ninguna declaración vuelve a ser un outlier del catálogo", () => {
-    const todas = decls().map((d) => JSON.stringify(d).length);
-    const total = todas.reduce((a, b) => a + b, 0);
-    expect(Math.max(...todas) / total, "una declaración se come el catálogo otra vez").toBeLessThan(0.15);
-  });
-
-  it("ni el prompt ni ninguna descripción siguen mandando llamar a editar_pagina", () => {
-    const superficie = buildAgentSystemPrompt() + decls().map((d) => JSON.stringify(d)).join(" ");
-    expect(superficie).not.toContain("editar_pagina");
   });
 });
 
@@ -973,7 +626,10 @@ describe("el prompt enseña la conducta buena, no narra la mala", () => {
     // enterrada en mitad de las reglas duras.
     const texto = p();
     expect(texto).toContain("TONO:");
-    expect(texto.indexOf("TONO:")).toBeLessThan(texto.indexOf("REGLAS DURAS:"));
+    // «REGLAS DURAS» pasó a «CÓMO TRABAJAR» en H4 (2026-09-26), con el
+    // «Delivering work» de Claude Code dentro.
+    expect(texto.indexOf("CÓMO TRABAJAR:")).toBeGreaterThan(0);
+    expect(texto.indexOf("TONO:")).toBeLessThan(texto.indexOf("CÓMO TRABAJAR:"));
     expect(texto).toContain("Responde SIEMPRE en el idioma del usuario");
   });
 });
@@ -1039,34 +695,19 @@ describe("la vista «Datos» que el prompt nombra existe", () => {
   });
 });
 
-// 🔴 LA RECETA Y LA PUERTA TIENEN QUE DECIR LO MISMO. La descripción de
-// `guardar_dato` mandaba escribir el bloque `data-ol-stores` con editar_html
-// (target="head"), y la cabecera rechaza TODO `<script>` con cuerpo —para
-// `nodoDeCabezaPermitido` (lib/ai-stream/document-ops.ts) con cuerpo es
-// código—. O sea que obedecer la instrucción fallaba SIEMPRE. MEDIDO el
-// 2026-09-17: en las 2 vueltas de 15 que se quedaron sin pasos, el primer
-// editar_html que declaraba el almacén volvía en error y el reintento en el
-// body se comía los pasos que luego faltaron.
+// Len 2.0: el almacén se declara con Edit, dentro del <body>. La receta vieja
+// (editar_html sobre un data-op-id) ya no existe en su camino.
 describe("dónde se declara un almacén", () => {
-  const BLOQUE =
-    '<script type="application/json" data-ol-stores>' +
-    '{"menu":{"visitante":"lectura","campos":{"plato":"texto"}}}</script>';
-
-  it("la cabecera no lo admite", () => {
-    expect(
-      splitDocumentOps([{ type: "insert_after", target: "head", newHtml: BLOQUE }]).head,
-    ).toEqual({ kind: "error", reason: "almacen_en_cabeza" });
-  });
-
-  it("así que la receta de guardar_dato lo manda al body, no a la cabecera", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "guardar_dato") as {
-      description: string;
-    };
-    expect(d.description).not.toContain('target="head"');
-    // La MISMA frase que el rechazo de la cabecera: una sola, en declaracion.ts.
-    // Cuando eran dos copias, la de aquí decía «hijo directo del <body>» y el
-    // modelo apuntó al id del propio <body> → `op_contra_la_raiz` (medido, 2/5).
-    expect(d.description).toContain(DONDE_SE_DECLARA_UN_ALMACEN);
+  it("la receta de ALMACENES lo manda al body y con Edit, y su fichero es /datos/<almacén>.json", () => {
+    const p = buildAgentSystemPrompt();
+    const seccion = p.slice(p.indexOf("ALMACENES (los datos de la página, en /datos)")).split(SALTO + SALTO)[0];
+    expect(seccion).toContain("data-ol-stores");
+    expect(seccion).toContain("<body>");
+    // Borrar la tienda no debe llevarse el almacén (lo que enseñaba la vieja
+    // `DONDE_SE_DECLARA_UN_ALMACEN`, retirada el 2026-09-25).
+    expect(seccion).toContain("fuera de cualquier sección que se pueda borrar");
+    expect(seccion).toContain("Edit");
+    expect(seccion).toContain("/datos/<almacén>.json");
   });
 });
 
@@ -1089,6 +730,15 @@ describe("el catálogo declara lo que de verdad puede correr", () => {
     expect(sin).not.toContain("mirar_pagina");
     // Y NO SE LLEVA NADA MÁS POR DELANTE: sólo esa.
     expect(sin).toEqual(con.filter((n) => n !== "mirar_pagina"));
+  });
+
+  it("🔴 sin usarPagina, `usar_pagina` NO se declara, y las dos se apagan por separado", () => {
+    const con = buildFunctionDeclarations({}).map((d) => d.name);
+    const sin = buildFunctionDeclarations({}, { usarPagina: false }).map((d) => d.name);
+    expect(con).toContain("usar_pagina");
+    expect(sin).toEqual(con.filter((n) => n !== "usar_pagina"));
+    const ninguna = buildFunctionDeclarations({}, { usarPagina: false, mirarPagina: false }).map((d) => d.name);
+    expect(ninguna).toEqual(con.filter((n) => n !== "usar_pagina" && n !== "mirar_pagina"));
   });
 
   // CONTRA-PRUEBA: el defecto es declararla. Producción la tiene cableada, así

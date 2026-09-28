@@ -529,7 +529,9 @@ function leerCandidatos(value: unknown): CandidatoDeContraste[] {
       if (typeof x !== "number" || typeof y !== "number" || !Number.isFinite(x) || !Number.isFinite(y)) continue;
       puntos.push([x, y]);
     }
-    if (puntos.length === 0) continue;
+    // SIN PUNTOS NO SE DESCARTA: es un texto que lo fijo tapa entero en la
+    // captura, y lo juzga el respaldo por CSS (`fondoCss`). Descartarlo aquí
+    // volvía a esconder lo ilegible que cae debajo de una barra fija.
     const velos: number[][] = [];
     if (Array.isArray(r.velos)) {
       for (const velo of r.velos) {
@@ -552,7 +554,9 @@ function leerCandidatos(value: unknown): CandidatoDeContraste[] {
   return salida;
 }
 
-async function defaultLaunchBrowser(): Promise<BrowserLike> {
+/** Chromium como lo arrancan los ojos. Lo usa también `usar_pagina`
+ *  (`lib/agent/usar-pagina.ts`), que necesita la `Browser` entera de Puppeteer. */
+export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
   // Los perfiles huerfanos del temporal, una vez por proceso y sin bloquear.
   // Va aqui porque es el unico punto por el que pasan TODOS los que crean
   // perfiles: el servidor, los evals y los scripts sueltos. Ver
@@ -565,7 +569,11 @@ async function defaultLaunchBrowser(): Promise<BrowserLike> {
     executablePath,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
     env: { ...process.env, HOME: "/tmp" },
-  }) as unknown as BrowserLike;
+  });
+}
+
+async function defaultLaunchBrowser(): Promise<BrowserLike> {
+  return (await lanzarChromium()) as unknown as BrowserLike;
 }
 
 /**
@@ -585,8 +593,11 @@ async function defaultLaunchBrowser(): Promise<BrowserLike> {
  * NUNCA puede costar el informe. Cualquier fallo aquí deja `pixeles` en null y
  * `juzgarContraste` cae, candidato a candidato, a los dos paseos por CSS de
  * siempre — que por eso viajan dentro de cada candidato como `fondoCss`.
+ *
+ * Exportada para Len-Bench (`texto-se-lee`, lib/len-bench/graders.ts): la vara
+ * mide la legibilidad con la MISMA máquina que los ojos de Len.
  */
-async function medirContrastePorPixel(
+export async function medirContrastePorPixel(
   page: PageLike,
   viewport: { width: number; height: number },
   documentHeight: number | null,
@@ -614,6 +625,25 @@ async function medirContrastePorPixel(
         velos: number[][];
       }[] = [];
       const body = document.body;
+      // ── LO QUE ESTÁ FIJO EN LA VENTANA ──────────────────────────────────
+      //
+      // 🔴 MEDIDO el 2026-09-26 (Len-Bench, `taqueria-menu-whatsapp`): la barra
+      // de «Pedir por WhatsApp», `position:fixed` abajo y con fondo acento,
+      // salía en la captura ENCIMA de un precio acento sobre blanco, y el precio
+      // se leía «#d94f1e sobre #d94f1e a 1.00:1». La captura se toma con el
+      // scroll a cero, y ahí Chromium pinta lo fijo en su sitio de la VENTANA,
+      // tape lo que tape de esa franja del documento. El mismo defecto también
+      // ESCONDÍA lo ilegible de verdad que caía debajo (sale el color de la
+      // barra, no el de la tarjeta). Así que se anota dónde queda cada cosa fija
+      // con el scroll a cero —su rectángulo de ventana, que a scroll cero ya es
+      // el de documento— y abajo se descartan los puntos que caen dentro.
+      const fijos: { el: Element; x0: number; y0: number; x1: number; y1: number }[] = [];
+      for (const el of body ? body.querySelectorAll("*") : []) {
+        if (window.getComputedStyle(el).position !== "fixed") continue;
+        const r = el.getBoundingClientRect();
+        if (r.width <= 0 || r.height <= 0) continue;
+        fijos.push({ el, x0: r.left, y0: r.top, x1: r.right, y1: r.bottom });
+      }
       for (const node of body ? body.querySelectorAll(TEXT_TAGS) : []) {
         // Tope de cordura: el muestreo es gratis (0,2 ms por 72 puntos) pero
         // esto cruza CDP, y una página patológica no puede hincharlo sin fin.
@@ -651,10 +681,17 @@ async function medirContrastePorPixel(
         const puntos: [number, number][] = [];
         for (const fx of [0.2, 0.5, 0.8]) {
           for (const fy of [0.25, 0.5, 0.75]) {
-            puntos.push([
-              Math.round(rect.left + window.scrollX + rect.width * fx),
-              Math.round(rect.top + window.scrollY + rect.height * fy),
-            ]);
+            const x = Math.round(rect.left + window.scrollX + rect.width * fx);
+            const y = Math.round(rect.top + window.scrollY + rect.height * fy);
+            // Un punto bajo algo fijo que NO contiene al texto no dice nada de
+            // su fondo: se descarta. Si no queda ninguno, `juzgarContraste` cae
+            // al respaldo por CSS, que ya salta lo que está ENCIMA del texto.
+            // Lo que va DENTRO de lo fijo se mide contra lo fijo, como siempre.
+            let tapado = false;
+            for (const f of fijos) {
+              if (!f.el.contains(node) && x >= f.x0 && x < f.x1 && y >= f.y0 && y < f.y1) { tapado = true; break; }
+            }
+            if (!tapado) puntos.push([x, y]);
           }
         }
 

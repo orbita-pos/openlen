@@ -12,10 +12,9 @@
 // paga lo que da. Para cuando de verdad hace falta el contenido está el
 // GRABADOR (`grabacion.ts`), que es opt-in y deja el fixture entero.
 //
-// Esto es lo otro: la FORMA. Tamaños, qué bloques había, si el documento viajó
-// completo, recortado o como índice, y el hash del documento. Nada de eso es
-// contenido del usuario — un hash no se lee hacia atrás, y un número de
-// caracteres tampoco.
+// Esto es lo otro: la FORMA. Tamaños, qué bloques había y qué fichero tenía
+// abierto el dueño. Nada de eso es contenido del usuario — un número de
+// caracteres no se lee hacia atrás.
 //
 // Y ES LO QUE JUSTIFICA QUE VAYA SIEMPRE ENCENDIDO, que es la diferencia que de
 // verdad importa: el grabador hay que encenderlo ANTES de que pase lo que
@@ -25,20 +24,16 @@
 // Módulo PURO: sin `fs`, sin `db`, sin bindings nativos. Su prueba corre bajo
 // vitest sin mockear nada.
 
-import { createHash } from "node:crypto";
+import { rutaDePagina } from "@/lib/agent/ficheros/sitio";
 
-/** Cómo viajó el documento en este turno. Las tres son caminos distintos del
- *  contexto y explican por sí solas la mitad de los «¿por qué hizo eso?»: con
- *  `indice` el modelo NO vio el HTML de ninguna sección que no abriera. */
-export type VistaDelDocumento = "completa" | "recortada" | "indice";
+// ⚰️ Aquí se medía también el DOCUMENTO que viajaba en el contexto —cómo
+// (`completa` / `recortada` / `indice`), cuántos caracteres y su hash—. Len
+// 2.0 no lo recibe: lo lee con Read (plans/len-2/ficheros-plan.md, T8c).
 
 export interface EntradaDeForma {
   readonly projectId: string;
   readonly systemPrompt: string;
   readonly contextBlock: string;
-  /** El documento ya etiquetado — el que se le manda al modelo. */
-  readonly taggedHtml: string;
-  readonly vista: VistaDelDocumento;
   readonly history: readonly { readonly content: string }[];
   /** Cuántos turnos tiene la conversación entera, si se sabe. */
   readonly turnosTotales?: number;
@@ -55,13 +50,6 @@ export interface EntradaDeForma {
 
 export interface FormaDelTurno {
   readonly projectId: string;
-  readonly vista: VistaDelDocumento;
-  readonly docChars: number;
-  /** 16 hex de un sha256 del documento. NO es criptografía y NO es el
-   *  documento: es una etiqueta corta que permite decir «el mismo de antes» o
-   *  «otro» entre dos turnos sin arrastrar 100 KB a ninguna parte. El mismo
-   *  formato que usa `hashDocumento` en page-engine/persist. */
-  readonly docHash: string;
   readonly sysChars: number;
   readonly ctxChars: number;
   readonly histChars: number;
@@ -77,7 +65,8 @@ export interface FormaDelTurno {
   readonly mudo: boolean;
   readonly conPin: boolean;
   readonly conImagen: boolean;
-  readonly pagina: string;
+  /** El fichero que el dueño tiene abierto en el editor. */
+  readonly fichero: string;
 }
 
 /** ~3,5 caracteres por token sobre HTML denso en etiquetas + JSON. Es la misma
@@ -91,9 +80,6 @@ export function formaDelTurno(e: EntradaDeForma): FormaDelTurno {
   const total = e.systemPrompt.length + e.contextBlock.length + histChars + e.prompt.length;
   return {
     projectId: e.projectId,
-    vista: e.vista,
-    docChars: e.taggedHtml.length,
-    docHash: createHash("sha256").update(e.taggedHtml).digest("hex").slice(0, 16),
     sysChars: e.systemPrompt.length,
     ctxChars: e.contextBlock.length,
     histChars,
@@ -110,7 +96,7 @@ export function formaDelTurno(e: EntradaDeForma): FormaDelTurno {
     mudo: e.turnoAnteriorMudo === true,
     conPin: e.conPin === true,
     conImagen: e.conImagen === true,
-    pagina: e.activePage ?? "principal",
+    fichero: rutaDePagina(e.activePage ?? null),
   };
 }
 
@@ -129,10 +115,7 @@ export function lineaDeForma(f: FormaDelTurno): string {
   return [
     "[agent] forma",
     `proj=${f.projectId}`,
-    `pagina=${f.pagina}`,
-    `vista=${f.vista}`,
-    `doc=${f.docChars}`,
-    `dochash=${f.docHash}`,
+    `fichero=${f.fichero}`,
     `sys=${f.sysChars}`,
     `ctx=${f.ctxChars}`,
     `hist=${f.histVisibles}/${f.histTotales}`,

@@ -83,11 +83,32 @@ export async function installSubresourceSsrfGuard(
      * El hecho lo tiene el guardia. Tirarlo es lo que deja al juicio inventar.
      */
     onBlocked?: (url: string) => void;
+    /**
+     * LA PÁGINA NO SE VA. Con esto, una navegación del marco principal fuera de
+     * `allowOrigins` —un `location.href = "https://wa.me/…"`, un `tel:`— se
+     * corta y se avisa con su dirección, en vez de salir a la red.
+     *
+     * Lo necesita `usar_pagina` (`lib/agent/usar-pagina.ts`), que usa la página
+     * como un visitante: un botón de WhatsApp no puede abrir WhatsApp de
+     * verdad, y a dónde mandaba es justo el dato que Len tiene que ver. Sin la
+     * opción, todo sigue como antes.
+     */
+    alSalir?: (url: string) => void;
   },
 ): Promise<void> {
   const allowedOrigins = new Set(
     (opts?.allowOrigins ?? []).map((o) => o.toLowerCase()),
   );
+  const saliendo = (url: string, req: { isNavigationRequest(): boolean; frame(): unknown }): boolean => {
+    if (!opts?.alSalir || !req.isNavigationRequest() || req.frame() !== page.mainFrame()) return false;
+    try {
+      const u = new URL(url);
+      if ((u.protocol === "http:" || u.protocol === "https:") && allowedOrigins.has(u.host.toLowerCase())) return false;
+    } catch {
+      /* una dirección que no se deja leer tampoco sale */
+    }
+    return true;
+  };
   const avisar = (url: string) => {
     try {
       opts?.onBlocked?.(url);
@@ -103,6 +124,15 @@ export async function installSubresourceSsrfGuard(
     void (async () => {
       try {
         const url = req.url();
+        if (saliendo(url, req)) {
+          try {
+            opts?.alSalir?.(url);
+          } catch {
+            /* quien escucha no puede tumbar el guardia */
+          }
+          await req.abort("blockedbyclient");
+          return;
+        }
         const scheme = url.slice(0, url.indexOf(":") + 1).toLowerCase();
         if (ALLOWED_NON_HTTP_SCHEMES.has(scheme)) {
           await req.continue();

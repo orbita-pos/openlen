@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { Op } from "@/lib/html-ops";
-import { buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { buildAgentSystemPrompt, buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { LIBRERIAS, LIBRERIAS_HOST } from "@/lib/librerias";
-import { DONDE_SE_DECLARA_UN_ALMACEN } from "@/lib/page-data/declaracion";
 import {
   HEAD_OP_TARGET,
   LANG_OP_TARGET,
@@ -16,7 +15,6 @@ import {
   applyHeadOp,
   applyStylesOp,
   documentOpAviso,
-  rechazoDeCabezaParaElModelo,
   readModelCss,
   splitDocumentOps,
 } from "./document-ops";
@@ -336,33 +334,28 @@ describe("paridad del contrato de objetivos reservados", () => {
     }
   });
 
-  // El catálogo del Agente NO siempre enumera los cuatro: desde el hallazgo 1,
-  // `runtime` sólo se anuncia donde el piloto de verdad lo permite —
-  // interruptor encendido Y documento raíz—. Anunciarlo con el piloto apagado
-  // era ofrecerle al modelo una puerta que el límite iba a cerrarle después de
-  // gastar el turno. Así que la paridad es CONDICIONAL, y en las dos
-  // direcciones: cuando se puede, están los cuatro; cuando no, los tres
-  // documentales y `runtime` no aparece por ningún lado.
-  // LA PARIDAD SIGUE, PERO CAMBIÓ DE FORMA el 2026-09-03, al partir
-  // `editar_pagina` en cuatro. Los tres objetivos documentales siguen siendo
-  // `target` —ahora de `editar_html`— y `runtime` dejó de ser un target para
-  // ser una HERRAMIENTA. Comprobarlo como antes, buscando `"runtime"` en una
-  // sola descripción, habría dado verde en cuanto alguien lo mencionara de
-  // pasada y rojo aunque la puerta funcionase: lo que importa es que los cuatro
-  // sigan siendo ALCANZABLES desde el Agente, no dónde estén escritos.
-  const catalogo = () => buildFunctionDeclarations({ OPENLEN_DOC_OPS: "1" });
+  // LA PARIDAD CAMBIÓ DE LADO con Len 2.0 (2026-09-24). Hasta entonces exigía
+  // que los cuatro objetivos fueran ALCANZABLES desde el Agente —primero como
+  // `target` de `editar_pagina`, desde el 2026-09-03 de `editar_html` más la
+  // herramienta `editar_runtime`—. Len 2.0 retiró las dos: edita el fichero
+  // entero con Edit, y la cabecera, el `<style>`, el `lang` y el `<script>`
+  // son trozos del fichero como cualquier otro. La paridad que queda es la del
+  // Chat consigo mismo: lo que su bloque enseña contra lo que su parser acepta.
+  it("el prompt del Chat enseña los CUATRO objetivos reservados", () => {
+    const bloque = reservedTargetsBlock();
+    for (const t of RESERVED_TARGETS) expect(bloque, `el Chat no aprende target="${t}"`).toContain(`target="${t}"`);
+    // El literal de la lista y la constante del parser dicen lo mismo.
+    expect(RESERVED_TARGETS).toContain(LANG_OP_TARGET);
+  });
 
-  it("con el piloto abierto, el Agente alcanza los CUATRO objetivos reservados", () => {
-    const decls = catalogo();
-    const html = decls.find((x) => x.name === "editar_html") as { description: string };
-    for (const t of RESERVED_TARGETS) {
-      if (t === "runtime") {
-        // No es un target: es su propia puerta.
-        expect(decls.map((x) => x.name)).toContain("editar_runtime");
-        continue;
-      }
-      expect(html.description, `editar_html no menciona "${t}"`).toContain(t);
-    }
+  // BRAZO DE CONTROL: al Agente no se le enseña ninguno. Un `target=` en su
+  // catálogo o en su prompt sería una puerta que ya no existe en su camino.
+  it("al Agente no se le enseña ningún objetivo: edita el fichero", () => {
+    const patron = new RegExp(`target=\\\\?"(${RESERVED_TARGETS.join("|")})\\b`);
+    expect(JSON.stringify(buildFunctionDeclarations({ OPENLEN_DOC_OPS: "1" }))).not.toMatch(patron);
+    expect(buildAgentSystemPrompt()).not.toMatch(patron);
+    // Y el patrón sí caza lo que busca: si no, la prueba pasaría por ciega.
+    expect(reservedTargetsBlock()).toMatch(patron);
   });
 
   // RETIRADA con el interruptor: el target `runtime` se ofrece siempre.
@@ -385,16 +378,14 @@ describe("paridad del contrato de objetivos reservados", () => {
   });
 });
 
-// ─── EL RECHAZO QUE DICE A DÓNDE IR ─────────────────────────────────────────
+// ─── EL RECHAZO DE LA CABECERA ──────────────────────────────────────────────
 //
-// Len recibía un rechazo de la cabecera como «sólo se puede AÑADIR un <link>
-// de fuentes de Google». MENTÍA por omisión —la puerta acepta además el
-// <title>, tres <meta> y las librerías— y no decía dónde va lo rechazado.
-// MEDIDO el 2026-09-17: el bloque de un almacén rebotaba aquí y Len tenía que
-// adivinar el body, a costa de pasos. En Claude Code el rechazo
-// hace lo contrario —«File is a Jupyter Notebook. Use the NotebookEdit tool»—:
-// el sitio que rechaza es el que sabe a dónde mandar.
-describe("el rechazo de la cabecera, dicho al modelo", () => {
+// ⚰️ Aquí se probaba también `rechazoDeCabezaParaElModelo`, lo que se le
+// devolvía a LEN cuando la cabecera rechazaba una op de `editar_html`. Len 2.0
+// edita el fichero con Edit y nadie la llamaba; nombraba `editar_html` y
+// `editar_runtime`, que ya no existen. Se retiró el 2026-09-25. Queda lo que
+// sigue vivo en el Chat: qué acepta la puerta y lo que lee el USUARIO.
+describe("el rechazo de la cabecera", () => {
   const ALMACEN =
     '<script type="application/json" data-ol-stores>' +
     '{"carrito":{"visitante":"propio","campos":{"producto":"texto"}}}</script>';
@@ -405,19 +396,12 @@ describe("el rechazo de la cabecera, dicho al modelo", () => {
     expect(enCabeza(ALMACEN)).toEqual({ kind: "error", reason: "almacen_en_cabeza" });
   });
 
-  it("y el mensaje lo manda al body, con la op que lo consigue", () => {
-    const m = rechazoDeCabezaParaElModelo("almacen_en_cabeza");
-    expect(m).toContain(DONDE_SE_DECLARA_UN_ALMACEN);
-    expect(m).toContain('op="insert_before"');
-    expect(m).toContain("editar_html");
-  });
-
   it("el usuario también lo lee dicho así", () => {
     expect(documentOpAviso("head", "almacen_en_cabeza")).toContain("cuerpo de la página");
   });
 
   // LA LISTA SALE DE LA PUERTA: cada cosa que la cabecera acepta DE VERDAD
-  // tiene que salir en lo que se le dice al modelo cuando rechaza.
+  // tiene que salir en lo que se le dice al usuario cuando rechaza.
   it.each([
     ["la hoja de fuentes", FUENTE, "fuentes"],
     ["el <title>", "<title>Hola</title>", "<title>"],
@@ -425,15 +409,6 @@ describe("el rechazo de la cabecera, dicho al modelo", () => {
     ["una librería", `<script src="${LIBRERIAS[0].scripts[0].url}"></script>`, LIBRERIAS_HOST],
   ])("%s: la cabecera la acepta y el rechazo la nombra", (_, fragmento, palabra) => {
     expect(enCabeza(fragmento).kind).toBe("nodos");
-    expect(rechazoDeCabezaParaElModelo("no_permitido")).toContain(palabra);
-  });
-
-  it("las herramientas que nombra existen", () => {
-    const nombres = new Set(buildFunctionDeclarations().map((d) => d.name));
-    for (const motivo of ["almacen_en_cabeza", "no_permitido"] as const) {
-      const citadas = [...rechazoDeCabezaParaElModelo(motivo).matchAll(/\beditar_[a-z]+\b/g)].map((m) => m[0]);
-      expect(citadas.length, motivo).toBeGreaterThan(0);
-      for (const h of citadas) expect(nombres.has(h), h).toBe(true);
-    }
+    expect(documentOpAviso("head", "no_permitido")).toContain(palabra);
   });
 });

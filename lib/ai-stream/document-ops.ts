@@ -23,7 +23,6 @@
 
 import type { Op } from "@/lib/html-ops";
 import { esUrlDeLibreria, LIBRERIAS_HOST } from "@/lib/librerias";
-import { DONDE_SE_DECLARA_UN_ALMACEN } from "@/lib/page-data/declaracion";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
 
 /** El CSS de la página. */
@@ -280,8 +279,10 @@ function leerHead(op: Op): HeadOpResult {
  *
  * Vive aquí, junto al parser que los implementa, para que añadir un objetivo
  * quinto obligue a tocar el mismo fichero que lo enseña. La prueba de paridad
- * (document-ops.test) exige que cada objetivo de esta lista aparezca TAMBIÉN en
- * el catálogo del Agente.
+ * (document-ops.test) exige que el bloque del Chat enseñe cada objetivo de esta
+ * lista. Hasta Len 2.0 exigía además que estuvieran en el catálogo del Agente;
+ * hoy el Agente edita el fichero entero con Edit —cabecera, `<style>`, `lang` y
+ * `<script>` incluidos— y no ve objetivos.
  */
 export const RESERVED_TARGETS = [
   STYLES_OP_TARGET,
@@ -293,8 +294,8 @@ export const RESERVED_TARGETS = [
   "idioma",
 ] as const;
 
-/** El bloque que ve el modelo del Chat. El Agente dice lo mismo en su catálogo
- *  (`lib/agent/catalog.ts`), en su propio sobre JSON. */
+/** El bloque que ve el modelo del Chat. El Agente no lo necesita: edita el
+ *  fichero con Edit (`lib/agent/ficheros/`). */
 export function reservedTargetsBlock(): string {
   return `FOUR RESERVED TARGETS that are NOT data-op-id values. \`<html>\`, \`<head>\`, \`<style>\` and \`<script>\` carry no id, so ops cannot address them the normal way — these four reach them WITHOUT a full rewrite, and they do NOT count against the op cap:
   · \`<edit target="styles" op="insert_after">\` — appends CSS rules to YOUR OWN style block, which sits last in <head>, so at equal specificity your rules win over the template's. This is how you change typography, colour or spacing on a page whose CSS does not use \`var(--ol-*)\` tokens. Use \`op="replace"\` to rewrite only what you previously added; the template's own CSS is never touched.
@@ -497,24 +498,9 @@ export function documentOpAviso(
   return `No pude aplicar ${que}: ${porque[reason]}. El resto de la edición sí se guardó.`;
 }
 
-/** Lo que se le devuelve al MODELO cuando la cabecera rechaza una op: qué no
- *  entró y A DÓNDE va. Es la forma de los rechazos de las herramientas de
- *  Claude Code —«File is a Jupyter Notebook. Use the
- *  NotebookEdit tool to edit this file»—: el sitio que rechaza es el que sabe
- *  a dónde mandar, y así el primer tropiezo se corrige en un paso aunque el
- *  prompt se equivoque. */
-export function rechazoDeCabezaParaElModelo(reason: DocumentOpRejection): string {
-  switch (reason) {
-    case "almacen_en_cabeza":
-      return `El bloque data-ol-stores de un almacén no va en la cabecera: escríbelo ${DONDE_SE_DECLARA_UN_ALMACEN}.`;
-    case "op_no_soportada":
-      return 'Sobre la cabecera sólo se puede AÑADIR (op="insert_after"), nunca reemplazarla ni borrarla.';
-    case "varias":
-      return 'Manda UNA sola edición con target="head"; en ella caben hasta 4 nodos.';
-    default:
-      return (
-        `Con target="head" sólo entra ${LO_QUE_ENTRA_EN_LA_CABECERA}. ` +
-        "Un <script> con código va en editar_runtime."
-      );
-  }
-}
+// ⚰️ AQUÍ VIVÍA `rechazoDeCabezaParaElModelo`, lo que se le devolvía a LEN
+// cuando la cabecera rechazaba una op de `editar_html` —«un <script> con código
+// va en editar_runtime»—. Len 2.0 edita el fichero con Edit y no usa objetivos,
+// así que nadie la llamaba desde entonces y nombraba dos herramientas que ya no
+// existen (retirada el 2026-09-25). El Chat no la usó nunca: su rechazo lo lee
+// el USUARIO, en `documentOpAviso`.

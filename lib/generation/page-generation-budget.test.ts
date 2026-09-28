@@ -22,7 +22,8 @@ const GLM = "accounts/fireworks/models/glm-5p2";
 // Flash), y un modelo muerto como sujeto de prueba es un sujeto que ya no dice
 // nada del sistema. Se nombra el PAPEL, no el proveedor.
 const VISION = "accounts/fireworks/models/deepseek-v4p1-flash";
-const DEEPSEEK = "accounts/fireworks/models/deepseek-v4-flash-0731";
+// El razonador. Era V4 Flash (`accounts/fireworks/models/deepseek-v4-flash-0731`), fuera de serverless desde el 2026-09-26.
+const DEEPSEEK = "accounts/fireworks/models/deepseek-v4p1-flash";
 
 describe("page generation budget", () => {
   it("exposes the conservative multi-model and image rate card", () => {
@@ -31,13 +32,12 @@ describe("page generation budget", () => {
     // `deepseek-v4p1-flash` es .30/.006/1.20 (salida 1,82x). Comprobado contra
     // la tabla en vivo del proveedor el 2026-09-20.
     expect(FABLE_PRODUCTION_RATES).toEqual({
-      "accounts/fireworks/models/deepseek-v4-flash-0731": { input: .22, cached: .007, output: .66 },
       "accounts/fireworks/models/glm-5p2": { input: 1.40, cached: .26, output: 4.40 },
       "accounts/fireworks/models/deepseek-v4p1-flash": { input: .30, cached: .006, output: 1.20 },
       "gemini-2.5-flash-image": { image: .039 },
     });
     expect(FABLE_PRIORITY_RATES).toEqual({
-      "accounts/fireworks/models/deepseek-v4-flash-0731": { input: .275, cached: .00875, output: .825 },
+      "accounts/fireworks/models/deepseek-v4p1-flash": { input: .375, cached: .0075, output: 1.5 },
     });
   });
 
@@ -51,9 +51,9 @@ describe("page generation budget", () => {
       maxOutputTokens: 2_000,
     });
     expect(lease.ok).toBe(true);
-    // 10.000 x .275 + 2.000 x .825 = 0,0044 USD; x20 MXN/USD = 88.000 micromxn.
-    // Eran 49.000 con la tarjeta pre-correccion del 2026-08-28.
-    expect(budget.snapshot().reservedMicromxn).toBe(88_000);
+    // 10.000 x .375 + 2.000 x 1.5 = 0,00675 USD; x20 MXN/USD = 135.000 micromxn.
+    // Eran 88.000 con V4 Flash, antes del 2026-09-26.
+    expect(budget.snapshot().reservedMicromxn).toBe(135_000);
     if (!lease.ok) throw new Error("expected lease");
     budget.complete(lease.leaseId, { inputTokens: 8_000, cachedTokens: 2_000, outputTokens: 1_000, thinkingTokens: 400 });
     expect(budget.snapshot().modelUsage).toEqual([{
@@ -63,9 +63,9 @@ describe("page generation budget", () => {
       cachedTokens: 2_000,
       outputTokens: 1_000,
       thinkingTokens: 400,
-      // (8.000-2.000) x .275 + 2.000 x .00875 + 1.000 x .825 = 0,0024925 USD;
-      // x20 = 49.850 micromxn. Eran 29.400 con la tarjeta pre-correccion.
-      costMicromxn: 49_850,
+      // (8.000-2.000) x .375 + 2.000 x .0075 + 1.000 x 1.5 = 0,003765 USD;
+      // x20 = 75.300 micromxn. Eran 49.850 con V4 Flash.
+      costMicromxn: 75_300,
     }]);
   });
 
@@ -326,7 +326,7 @@ describe("la tarjeta se deriva de la politica, no se escribe", () => {
   // el factor, que sigue siendo un numero elegido: lo que ya no puede pasar es
   // que la base se mueva y esta no.
   it("priority es exactamente 1,25x la estandar del mismo modelo", () => {
-    const M = "accounts/fireworks/models/deepseek-v4-flash-0731";
+    const M = "accounts/fireworks/models/deepseek-v4p1-flash";
     const e = FABLE_PRODUCTION_RATES[M as keyof typeof FABLE_PRODUCTION_RATES] as {
       input: number;
       cached: number;

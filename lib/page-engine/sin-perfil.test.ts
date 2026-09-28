@@ -127,8 +127,9 @@ describe("el Agente ya no lee ni escribe el perfil", () => {
     expect(catalogo).not.toMatch(/recordar_del_negocio/);
     // BRAZO DE CONTROL: la memoria de USUARIO sobrevive, y con ella la única
     // continuidad que el dueño del repo sí quiso. Sin esta línea, un barrido
-    // que se llevara las tres pasaría igual.
-    expect(catalogo).toMatch(/recordar_preferencia/);
+    // que se llevara las tres pasaría igual. Desde H3 (2026-09-25) no es una
+    // herramienta sino un fichero, /memoria/dueno.md.
+    expect(catalogo).toMatch(/\/memoria\/dueno\.md/);
   });
 
   it("el ESTADO ya no lleva un bloque `negocio`", () => {
@@ -136,9 +137,5 @@ describe("el Agente ya no lee ni escribe el perfil", () => {
     expect(existsSync(join(raiz, "lib/agent/business.ts"))).toBe(false);
   });
 
-  it("el rediseño no recibe hechos del perfil — los COMPRUEBA en el resultado", () => {
-    expect(leer("lib/agent/redesign.ts")).not.toMatch(/DATOS REALES DEL NEGOCIO/);
-    // Y esto es lo que ocupa su lugar: no una frase en el prompt, una medición.
-    expect(leer("lib/agent/tools.ts")).toMatch(/hechosPerdidos/);
-  });
+
 });

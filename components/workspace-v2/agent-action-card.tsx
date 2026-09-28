@@ -93,11 +93,22 @@ export interface AgentAction {
 // y nadie lo vio, porque una lista escrita a mano no avisa de lo que falta.
 export const KNOWN_TOOLS = new Set([
   "leer_estado",
+  // Len 2.0 — el sitio como ficheros, con los nombres de Claude Code
+  // (plans/len-2/ficheros-plan.md). Van en inglés al modelo; al dueño, su
+  // etiqueta llana en su idioma.
+  "Read",
+  "Edit",
+  "Write",
+  "Grep",
+  "Glob",
+  // ⚠️ RETIRADAS DEL CATÁLOGO con Len 2.0 y que SIGUEN AQUÍ a propósito: las
+  // conversaciones guardadas (`projectChatMessages.actions`) las nombran, y sin
+  // su etiqueta el historial de un dueño enseñaría el nombre crudo. Son
+  // `editar_pagina` y sus cuatro puertas, `cambiar_tema`, `aplicar_tematica`,
+  // `crear_pagina`, `trabajar_en_pagina`, `buscar_en_pagina` y
+  // `redisenar_pagina`. Claude Code no cubre esto (no pinta
+  // conversaciones viejas con otro catálogo): decisión nuestra.
   "editar_pagina",
-  // 2026-09-03 — las cuatro puertas en que se partió `editar_pagina`. Sin estas
-  // líneas la tarjeta enseñaría `editar_texto` crudo, que es exactamente el
-  // defecto que este conjunto y su prueba vinieron a cazar. `editar_pagina` se
-  // queda: sigue siendo el motor interno y su etiqueta ya existe.
   "editar_texto",
   "editar_atributos",
   "editar_html",
@@ -112,6 +123,8 @@ export const KNOWN_TOOLS = new Set([
   // tarjeta enseñaría «mirar_pagina» crudo, que es justo el defecto que este
   // conjunto y su prueba vinieron a cazar.
   "mirar_pagina",
+  // H9 (2026-09-26): usar la página como un visitante.
+  "usar_pagina",
   "editar_imagen",
   "recordar_preferencia",
   "conectar_datos_vivos",
@@ -122,6 +135,11 @@ export const KNOWN_TOOLS = new Set([
   "leer_de_internet",
   "declarar_tareas",
   "preguntar",
+  // H2 (2026-09-25): cargar una herramienta diferida, como en Claude Code.
+  "ToolSearch",
+  // La lista de Claude Code, que sustituye a declarar_tareas (H2). Ésa se queda
+  // arriba: el historial de turnos viejos la sigue nombrando.
+  "TodoWrite",
   "revertir_ultimo_cambio",
   "verificar_diseno",
   "redisenar_pagina",

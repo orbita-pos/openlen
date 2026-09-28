@@ -33,16 +33,9 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "./agent/catalog";
-import { redesignPromptFinal } from "./agent/redesign";
 import { PUBLISHED_BASE_HOST } from "./publish/base-host";
 import { generateSystemMessage } from "../app/api/generate/system-prompt";
 import { aiDesignSystemMessage } from "../app/api/templates/ai-design/system-prompt";
-
-const ENTRADA_REDISENO = {
-  html: "<h1>x</h1>",
-  direccion: "más moderna",
-  brief: null,
-};
 
 // EL HOST SE NORMALIZA, y no es cosmética: `PUBLISHED_BASE_HOST` es una const
 // de MÓDULO que sale de `NEXT_PUBLIC_PUBLISH_BASE_HOST`, así que se evalúa al
@@ -57,7 +50,6 @@ const SUPERFICIES: ReadonlyArray<readonly [string, () => string]> = [
   ["crear", () => generateSystemMessage({})],
   ["editar (ai-design)", () => aiDesignSystemMessage()],
   ["agente (Len)", () => buildAgentSystemPrompt()],
-  ["rediseño", () => redesignPromptFinal(ENTRADA_REDISENO)],
 ];
 
 describe("golden de los prompts de producción", () => {

@@ -143,13 +143,3 @@ export function enlacesInventados(args: {
   return out;
 }
 
-/** La frase que se le devuelve al modelo. Dice qué hacer, no sólo qué pasó: un
- *  aviso sin salida se lee como una queja y se ignora. */
-export function avisoEnlacesInventados(enlaces: readonly EnlaceInventado[]): string {
-  const lista = enlaces.map((e) => `${e.red}/${e.handle}`).join(", ");
-  return (
-    `Has puesto ${enlaces.length} enlace(s) de red social cuyo usuario no aparece ni en la página ni en lo que te ha dicho el usuario: ${lista}. ` +
-    `Si te lo has deducido del nombre del negocio, es una cuenta INVENTADA: aparenta funcionar y manda al visitante al perfil de otra persona. ` +
-    `Déjalo en href="#" y PREGÚNTALE al usuario cuál es su cuenta. Si el usuario sí te lo dio antes, ignora este aviso.`
-  );
-}

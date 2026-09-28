@@ -30,15 +30,12 @@ export const ESFUERZOS: readonly EsfuerzoAgente[] = ["auto", ...NIVELES] as cons
  * la UI lo ENSEÑA resuelto: `Effort level: auto (currently high)`. El invariante que sostiene todo eso es
  * que el usuario nunca ignore en qué nivel está corriendo.
  *
- * 🔴 Nuestro `auto` ANTERIOR omitía el campo, y eso rompía ese invariante de la
- * peor manera: MEDIDO el 2026-09-11 con 72 llamadas, omitirlo da una mediana de
- * 237 tokens de razonamiento con un RANGO DE 495 (196..691). O sea que «auto»
- * no era una elección, era una caja negra que además pensaba MÁS que el nivel
- * más alto que le ofrecíamos al usuario. Resolver a un nivel nuestro es lo que
- * lo convierte en una promesa: `high` da 100 con rango 13.
+ * El nivel se resuelve y se enseña; lo que se omite es el PRESUPUESTO del nivel
+ * por defecto (H5, ver `PRESUPUESTO`), que son dos ejes distintos. Sin campo el
+ * modelo piensa lo que decide: mediana 239, rango 196..691 (11/09).
  *
  * `high` es la posición 3 de 5, igual que el defecto de Claude Code, o sea con dos
- * niveles POR ENCIMA — que es lo que hace que subir de nivel signifique algo. */
+ * niveles POR ENCIMA. */
 export const NIVEL_POR_DEFECTO: NivelEsfuerzo = "high";
 
 /** `auto` al nivel concreto que le toca; cualquier otro, a sí mismo. Como en
@@ -49,54 +46,59 @@ export function resolverEsfuerzo(nivel: EsfuerzoAgente): NivelEsfuerzo {
   return nivel === "auto" ? NIVEL_POR_DEFECTO : nivel;
 }
 
-/** LOS NÚMEROS, y esta vez están MEDIDOS — ya no son provisionales.
+/** LOS PRESUPUESTOS. `"adaptativo"` es no mandar ninguno: el modelo decide.
  *
- * Sonda `scripts/medir-dial-esfuerzo.ts`, 72 llamadas reales contra
- * `deepseek-v4p1-flash` el 2026-09-11 ($0.0174). Lo que se midió:
+ * 🔴 H5 (2026-09-26): EL DEFECTO YA NO ATA. Con `high` = 100, en los 1.473
+ * pasos del control de Len-Bench el razonamiento dio p50 100 y máximo 113 —el
+ * tope ataba SIEMPRE—, y en 17 peticiones el modelo siguió razonando en inglés
+ * dentro del texto que lee el dueño (una vez hasta los 32.768 tokens de
+ * salida). Claude Code manda `{type:"adaptive"}` en TODOS los
+ * niveles cuando el modelo sabe pensar solo, y el nivel viaja por otro eje;
+ * sin «adaptive», su presupuesto es el techo de salida menos uno, con suelo de
+ * 1024. Nunca convierte un nivel en un tope pequeño. Lo decidió Jesús: el
+ * modelo decide cuánto pensar. La razón del 11/09 para fijar 100 era la
+ * previsibilidad del dial, no la calidad.
  *
- *   - El dial devuelve EXACTAMENTE lo que se le pide, y apretado, hasta 225:
- *     100 da mediana 100 (rango 13), 200 da 200 (rango 22), 225 da 225
- *     (rango 24), los tres con desvío +0.
- *   - Desde 250 deja de atar: el desvío falla (+13, −28, −31) y el rango se
- *     dobla en 250 (55) y se sextuplica en 300 (142). Pedir de 250 para arriba
- *     es pagar impredecibilidad, no pensamiento.
- *   - El proveedor ACEPTA valores > 100 (72 de 72 en HTTP 200, ni uno
- *     rechazado, ni con 2000): la «escala nativa 1-100» no la impone él.
+ * El dial, medido el 2026-09-11 (sonda `scripts/medir-dial-esfuerzo.ts`, 72
+ * llamadas contra `deepseek-v4p1-flash`): ata EXACTO hasta 225 (desvío +0) y
+ * desde 250 deja de atar y cae en la banda del modelo (210–330). Sin campo:
+ * mediana 239, rango 196–691. Por eso:
  *
- * Así que la escala útil es **1..225**, y estos cinco caen todos dentro con el
- * defecto (`high`) en el centro. Subirlos por encima de 225 no compra
- * pensamiento; lo comprobado es que compra varianza. */
-const PRESUPUESTO: Readonly<Record<NivelEsfuerzo, number>> = {
+ *   - `low` y `medium` siguen siendo números: son los únicos niveles donde el
+ *     dial hace lo que dice, pensar MENOS;
+ *   - `xhigh` es 1024, el suelo que Claude Code pone a todo presupuesto, y
+ *     `max` el techo de salida menos uno, su presupuesto por defecto. Los dos
+ *     quedan por encima de la banda del modelo: son TECHOS, no órdenes, y no
+ *     está medido que piensen más que `high`.
+ *
+ *  ⚠️ Y con `high` adaptativo, en DeepSeek NO pueden pensar más: por eso V4.1
+ *  Flash ya no los ofrece (su tope en `DIAL_MEDIDO` es `high`). Se quedan en el
+ *  vocabulario para el modelo en el que alguien mida que sí suben. */
+const PRESUPUESTO: Readonly<Record<NivelEsfuerzo, number | "adaptativo">> = {
   low: 25,
   medium: 60,
-  high: 100,
-  xhigh: 160,
-  max: 225,
+  high: "adaptativo",
+  xhigh: 1024,
+  max: Number.POSITIVE_INFINITY,
 };
 
 /**
- * El número que viaja al cable. SIEMPRE hay número, también con `auto`.
+ * El número que viaja al cable, o `undefined` para no mandar ninguno —el
+ * `{type:"adaptive"}` de Claude Code: el modelo decide—.
  *
- * Antes `auto` devolvía `undefined` para omitir el campo, y este comentario
- * defendía esa omisión citando a Claude Code. Estaba mal leído: lo que Claude Code
- * omite es el PRESUPUESTO DE PENSAMIENTO (`{type:"adaptive"}`), y eso lo decide
- * a partir del MODELO —no del nivel que eligió la persona—. En el eje del
- * NIVEL, que es éste, Claude Code nunca omite: resuelve y manda.
- *
- * El recorte es de Claude Code: el presupuesto se acota entre un suelo y el
- * techo de salida menos uno. El suelo no era invención nuestra; su valor es el
- * mínimo legal de cada escala (1024 tokens allí, 1 en
- * un dial que empieza en 1). Con los números de arriba el `Math.min` no muerde
- * en ninguna configuración real —el techo de salida más bajo es
- * `CLOSEOUT_MAX_OUTPUT_TOKENS = 2048` y el nivel más alto pide 225—, pero se
- * queda porque es la regla, no la casualidad: pedir más pensamiento del que
- * cabe en la salida es pedir un turno truncado.
+ * `auto` resuelve a `high` como siempre (la UI dice «Automático (ahora:
+ * high)»), y `high` es el adaptativo. El recorte contra el techo de salida es
+ * el de Claude Code (`Math.min(max_tokens - 1, …)`): pedir más pensamiento del
+ * que cabe en la salida es pedir un turno truncado. Su suelo de 1024 no se
+ * aplica a `low` y `medium`, que en este dial son números pequeños a propósito.
  */
 export function presupuestoDeEsfuerzo(
   nivel: EsfuerzoAgente,
   techoSalida: number,
-): number {
-  return Math.max(1, Math.min(PRESUPUESTO[resolverEsfuerzo(nivel)], techoSalida - 1));
+): number | undefined {
+  const p = PRESUPUESTO[resolverEsfuerzo(nivel)];
+  if (p === "adaptativo") return undefined;
+  return Math.max(1, Math.min(p, techoSalida - 1));
 }
 
 // ─── LO QUE EL DIAL HACE EN CADA MODELO ─────────────────────────────────────
@@ -121,7 +123,7 @@ export function presupuestoDeEsfuerzo(
 //     proveedor ajeno, o que el catálogo lo diga explícitamente.
 //
 // 🔴 LA REGLA DE ABAJO NO CAMBIA, y conviene saber que es NUESTRA. Nosotros
-// ofrecíamos los cinco a cualquier cosa con un techo de 225 medido sobre UN
+// ofrecíamos los cinco a cualquier cosa con un dial medido sobre UN
 // modelo, y el papel del Agente ha cambiado de modelo dos veces en tres semanas:
 // el día que cambie a uno sin medir, `max` sería una etiqueta que promete un
 // dial que nadie ha comprobado que exista. Así que aquí la capacidad se gana
@@ -135,13 +137,21 @@ export function presupuestoDeEsfuerzo(
  *
  *  `deepseek-v4p1-flash`: sonda de 72 llamadas el 2026-09-11 ($0.0174). Devuelve
  *  exactamente lo que se le pide hasta 225 (desvío +0, rango 13-24); de 250 para
- *  arriba el desvío falla y el rango se dobla. Por eso su tope es `max` (225) y
- *  no más — y por eso `max` aquí significa «medido», no «el número más grande
- *  que se nos ocurrió». */
+ *  arriba el desvío falla y cae en su propia banda. Está medido que el campo se
+ *  acepta en toda la escalera (72 de 72 en HTTP 200, también con 2000).
+ *
+ *  🔴 SU TOPE ES `high`, NO `max` (2026-09-26, con OK de Jesús). En DeepSeek el
+ *  campo es un TECHO de pensamiento: puede hacerle pensar menos, nunca más. Con
+ *  H5, `high` no manda techo —el modelo decide—, y en la rama de E eso dio p90
+ *  1.299 y máximo 22.071 tokens por paso. `xhigh` (techo 1.024) pensaba entonces
+ *  MENOS que `high` en uno de cada diez pasos, y `max` (sin techo útil) era
+ *  `high` con otro nombre. Ofrecerlos era prometer «más» con un nivel que da
+ *  igual o menos. Que el campo se ACEPTE no es que el nivel HAGA algo: lo único
+ *  medido que hace el dial en este modelo es pensar menos (`low`, `medium`). */
 const DIAL_MEDIDO: Readonly<
   Record<string, { readonly defecto: NivelEsfuerzo; readonly tope: NivelEsfuerzo }>
 > = {
-  "accounts/fireworks/models/deepseek-v4p1-flash": { defecto: "high", tope: "max" },
+  "accounts/fireworks/models/deepseek-v4p1-flash": { defecto: "high", tope: "high" },
 };
 
 /** NUESTRA reserva para un modelo sin sonda: los tres de en medio, con el
@@ -180,8 +190,8 @@ export function capacidadDeEsfuerzo(modelId: string): CapacidadDeEsfuerzo {
  *
  * 🔴 SIN ESTO LA TABLA NO SIRVE DE NADA. La postura se GUARDA (`users
  * .agentEffort`), así que alguien que eligió `max` con un modelo medido lo
- * seguiría mandando el día que el papel cambie a uno sin medir — 225 a un dial
- * que nadie ha comprobado, y sin que el mando siquiera enseñe esa opción.
+ * seguiría mandando el día que el papel cambie a uno sin medir — un número a un
+ * dial que nadie ha comprobado, y sin que el mando siquiera enseñe esa opción.
  * Claude Code hace exactamente este recorte al elegir modelo: el nivel se
  * acota a los que ese modelo admite.
  *

@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AURA — Skincare botánico · El cuidado que tu piel reconoce</title>
+<meta name="description" content="AURA es skincare botánico de alta concentración: fórmulas limpias, activos que de verdad funcionan y una rutina sencilla de tres pasos. Sin perfumes ocultos, sin promesas vacías. Cuida tu piel con calma." />
+<meta property="og:title" content="AURA — Skincare botánico de alta concentración" />
+<meta property="og:description" content="Fórmulas limpias, activos que funcionan y un ritual de tres pasos. El cuidado que tu piel reconoce." />
+<meta property="og:image" content="https://images.openlen.com/136-serum-bottle-1920.webp" />
+<meta name="theme-color" content="#F6EFE7" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23F6EFE7'/%3E%3Ccircle cx='16' cy='16' r='7.5' fill='none' stroke='%23BE6B4A' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='2.4' fill='%23BE6B4A'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6EFE7; --surface:#FBF6F0; --surface-2:#EFE3D6; --shell:#E9DBCB;
+    --ink:#2E2620; --ink-soft:#4A3F36; --muted:#7A6A5C; --faint:#9C8B7C;
+    --line:rgba(46,38,32,0.10); --line-strong:rgba(46,38,32,0.18);
+    --accent:#BE6B4A; --accent-deep:#9A5236; --rose:#D9A98F; --on-accent:#FCF6F0;
+    --radius:10px; --radius-lg:26px; --radius-pill:999px;
+    --display:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+    --body:'Jost',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.65;font-weight:300;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3,.serif{font-family:var(--display);font-weight:500;letter-spacing:0;line-height:1.04}
+  .eyebrow{font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);font-weight:500;font-family:var(--body)}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+  .wrap-narrow{max-width:880px;margin:0 auto;padding:0 24px}
+  .lift{transition:transform .6s cubic-bezier(.2,.7,.2,1),box-shadow .6s}
+  .lift:hover{transform:translateY(-6px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;height:52px;padding:0 30px;border-radius:var(--radius-pill);font-weight:500;font-size:14px;letter-spacing:.06em;text-transform:uppercase;transition:transform .3s,background .3s,color .3s,border-color .3s;text-decoration:none;font-family:var(--body)}
+  .btn-primary{background:var(--accent);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink-soft)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .rule{height:1px;background:var(--line)}
+  .price{font-family:var(--display);font-size:22px;font-weight:500;color:var(--ink)}
+  .stars{display:inline-flex;gap:3px;color:var(--accent);font-size:14px;letter-spacing:2px}
+  .num{font-family:var(--display);font-size:clamp(46px,6vw,70px);font-weight:500;color:var(--rose);line-height:1}
+  .badge{display:inline-flex;align-items:center;gap:.5rem;height:32px;padding:0 16px;border-radius:var(--radius-pill);background:var(--surface);border:1px solid var(--line);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);display:inline-block}
+  /* Content is visible by default; only JS hides it to play the scroll-in
+     entrance. No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(20px);transition:opacity .9s ease,transform .9s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+  .halo{background:radial-gradient(60% 60% at 50% 35%,rgba(217,169,143,.30),rgba(217,169,143,0) 70%)}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(246,239,231,.84);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:74px">
+      <a href="#top" class="serif" style="font-size:25px;letter-spacing:.34em;font-weight:500">AURA</a>
+      <nav class="hidden md:flex items-center gap-10 text-[13px]" style="color:var(--ink-soft);letter-spacing:.06em">
+        <a href="#ritual" class="hover:text-[color:var(--accent)] transition">Ritual</a>
+        <a href="#linea" class="hover:text-[color:var(--accent)] transition">La línea</a>
+        <a href="#ingredientes" class="hover:text-[color:var(--accent)] transition">Ingredientes</a>
+        <a href="#resenas" class="hover:text-[color:var(--accent)] transition">Reseñas</a>
+      </nav>
+      <a href="#comprar" class="btn btn-primary" style="height:42px;padding:0 22px;font-size:12px">Comprar</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="relative overflow-hidden">
+    <div class="absolute inset-0 halo" aria-hidden="true"></div>
+    <div class="wrap relative" style="padding:72px 24px 40px">
+      <div class="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+        <div class="reveal">
+          <span class="eyebrow">Skincare botánico · alta concentración</span>
+          <h1 style="font-size:clamp(48px,8.4vw,96px);margin:20px 0 0">
+            El cuidado<br>que tu piel<br><em style="font-style:italic;color:var(--accent)">reconoce.</em>
+          </h1>
+          <p style="font-size:18px;color:var(--muted);max-width:40ch;margin:26px 0 32px;font-weight:300">
+            Fórmulas limpias, activos que de verdad funcionan y un ritual sencillo de tres pasos. Sin perfumes ocultos, sin promesas vacías.
+          </p>
+          <div class="flex flex-wrap gap-3 items-center">
+            <a href="#comprar" class="btn btn-primary">Comprar el sérum</a>
+            <a href="#ritual" class="btn btn-ghost">Conocer el ritual</a>
+          </div>
+          <div class="flex items-center gap-5 mt-9 text-[13px]" style="color:var(--faint);letter-spacing:.04em">
+            <span class="stars">★★★★★</span>
+            <span>4.9 / 5 · más de 6.200 reseñas</span>
+          </div>
+        </div>
+        <div class="reveal relative">
+          <div class="lift overflow-hidden relative mx-auto" style="border-radius:var(--radius-lg);aspect-ratio:4/5;max-width:460px;box-shadow:0 40px 80px -40px rgba(46,38,32,.45)">
+            <img class="img-cover" src="https://images.openlen.com/136-serum-bottle-1920.webp" alt="Frasco de sérum facial en vidrio esmerilado sobre un fondo crema cálido" loading="eager" width="1080" height="1350">
+          </div>
+          <div class="hidden sm:flex absolute items-center gap-3" style="bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-pill);padding:10px 18px;box-shadow:0 16px 40px -20px rgba(46,38,32,.4)">
+            <span class="dot"></span>
+            <span class="text-[13px]" style="color:var(--ink-soft);letter-spacing:.03em">Sérum Renueva · 30 ml</span>
+            <span class="price" style="font-size:17px">38€</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST STRIP -->
+  <section class="wrap" style="padding:8px 24px 40px">
+    <div class="rule"></div>
+    <div class="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 py-6 text-[12px]" style="color:var(--muted);letter-spacing:.16em;text-transform:uppercase">
+      <span>Vegano</span><span style="color:var(--rose)">·</span>
+      <span>Sin perfume</span><span style="color:var(--rose)">·</span>
+      <span>Dermatológicamente probado</span><span style="color:var(--rose)">·</span>
+      <span>Cruelty-free</span><span style="color:var(--rose)">·</span>
+      <span>Envase recargable</span>
+    </div>
+    <div class="rule"></div>
+  </section>
+
+  <!-- INGREDIENTES / BENEFICIOS -->
+  <section id="ingredientes" class="wrap" style="padding:48px 24px 24px">
+    <div class="max-w-xl reveal">
+      <span class="eyebrow">Por qué funciona</span>
+      <h2 style="font-size:clamp(34px,5vw,56px);margin-top:14px">Pocos ingredientes,<br>todos con un porqué.</h2>
+      <p style="color:var(--muted);font-size:17px;margin-top:18px;font-weight:300">Cada fórmula lleva activos en concentraciones que se notan. Nada de rellenos: lo que está en la lista, está por una razón.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6 mt-12">
+      <article class="reveal" style="background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:32px">
+        <div class="serif" style="font-size:30px;color:var(--accent)">Niacinamida 10%</div>
+        <p class="mt-3 text-[15px]" style="color:var(--muted);font-weight:300">Empareja el tono, afina el poro y refuerza la barrera. La piel se ve más uniforme en pocas semanas.</p>
+      </article>
+      <article class="reveal" style="background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:32px">
+        <div class="serif" style="font-size:30px;color:var(--accent)">Ácido hialurónico</div>
+        <p class="mt-3 text-[15px]" style="color:var(--muted);font-weight:300">Tres pesos moleculares para hidratar en superficie y en profundidad. Tirantez fuera, comodidad dentro.</p>
+      </article>
+      <article class="reveal" style="background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:32px">
+        <div class="serif" style="font-size:30px;color:var(--accent)">Extracto de centella</div>
+        <p class="mt-3 text-[15px]" style="color:var(--muted);font-weight:300">Botánico calmante para piel reactiva. Reduce rojeces y deja una sensación de descanso real.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- LÍNEA DE PRODUCTOS -->
+  <section id="linea" style="background:var(--surface);margin-top:56px">
+    <div class="wrap" style="padding:80px 24px">
+      <div class="flex flex-wrap items-end justify-between gap-6 reveal">
+        <div>
+          <span class="eyebrow">La línea</span>
+          <h2 style="font-size:clamp(32px,4.6vw,50px);margin-top:12px">Tres gestos<br>para toda la rutina.</h2>
+        </div>
+        <p class="text-[14px] max-w-xs" style="color:var(--muted);font-weight:300">Pensados para combinarse entre sí. Empieza por uno o llévate el ritual completo.</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-7 mt-12">
+        <article class="reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;background:var(--bg)"><img class="img-cover" src="https://images.openlen.com/137-cream-jar-1920.webp" alt="Tarro de crema hidratante sobre un pedestal suave en tonos rosados" loading="lazy" width="1080" height="1350"></div>
+          <div class="flex items-center justify-between mt-5">
+            <h3 style="font-size:23px">Crema Equilibra</h3><span class="price">32€</span>
+          </div>
+          <p class="text-[14.5px] mt-1.5" style="color:var(--muted);font-weight:300">Hidratación ligera de día, con niacinamida y manteca de karité. Acabado mate confortable.</p>
+        </article>
+        <article class="reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;background:var(--bg)"><img class="img-cover" src="https://images.openlen.com/140-cosmetic-tube-1920.webp" alt="Tubo cosmético de limpiador facial sobre un fondo crema y coral" loading="lazy" width="1080" height="1350"></div>
+          <div class="flex items-center justify-between mt-5">
+            <h3 style="font-size:23px">Limpiador Calma</h3><span class="price">24€</span>
+          </div>
+          <p class="text-[14.5px] mt-1.5" style="color:var(--muted);font-weight:300">Gel-aceite que disuelve el día sin resecar. Centella y avena para una piel tranquila.</p>
+        </article>
+        <article class="reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;background:var(--bg)"><img class="img-cover" src="https://images.openlen.com/141-soap-bar-1920.webp" alt="Pastilla de jabón sólido sobre una jabonera de cerámica en tonos avena y terracota" loading="lazy" width="1080" height="1350"></div>
+          <div class="flex items-center justify-between mt-5">
+            <h3 style="font-size:23px">Barra Esencial</h3><span class="price">16€</span>
+          </div>
+          <p class="text-[14.5px] mt-1.5" style="color:var(--muted);font-weight:300">Jabón sólido de aceites prensados en frío. Para cara y cuerpo, sin plástico y de larga duración.</p>
+        </article>
+      </div>
+
+      <!-- Set destacado -->
+      <div class="grid lg:grid-cols-12 gap-8 items-center mt-16 reveal" style="background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px">
+        <div class="lg:col-span-5 overflow-hidden" style="border-radius:18px;aspect-ratio:16/12"><img class="img-cover" src="https://images.openlen.com/139-skincare-set-1920.webp" alt="Set de cuidado facial con tres frascos y tarros sobre un pedestal suave" loading="lazy" width="1280" height="960"></div>
+        <div class="lg:col-span-7" style="padding:18px 24px 24px">
+          <span class="badge">Más vendido</span>
+          <h3 class="serif" style="font-size:clamp(28px,3.6vw,40px);margin-top:14px">El Ritual Completo</h3>
+          <p class="mt-3 text-[16px]" style="color:var(--muted);max-width:46ch;font-weight:300">Limpiador, sérum y crema en un solo gesto. La forma más sencilla de empezar — y la que tu piel agradece desde el primer día.</p>
+          <div class="flex flex-wrap items-center gap-5 mt-7">
+            <a href="#comprar" class="btn btn-primary">Llevar el ritual · 78€</a>
+            <span class="text-[13.5px]" style="color:var(--faint)"><s>92€</s> &nbsp;Ahorras 14€</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RITUAL / CÓMO USAR -->
+  <section id="ritual" class="wrap" style="padding:84px 24px">
+    <div class="grid lg:grid-cols-12 gap-12 items-start">
+      <div class="lg:col-span-5 reveal lg:sticky" style="top:96px">
+        <span class="eyebrow">El ritual</span>
+        <h2 style="font-size:clamp(34px,5vw,56px);margin:14px 0 0">Tres pasos,<br>dos minutos,<br>cada noche.</h2>
+        <p style="color:var(--muted);font-size:17px;margin-top:20px;max-width:40ch;font-weight:300">No hace falta una estantería llena de frascos. Solo tres gestos, hechos con calma, para que la piel haga el resto mientras duermes.</p>
+        <div class="overflow-hidden mt-9 lift" style="border-radius:var(--radius-lg);aspect-ratio:5/4;max-width:420px"><img class="img-cover" src="https://images.openlen.com/138-perfume-bottle-1920.webp" alt="Frasco facetado de bruma facial flotando sobre un pedestal suave" loading="lazy" width="1080" height="864"></div>
+      </div>
+      <div class="lg:col-span-7 space-y-8">
+        <article class="reveal flex gap-7 items-start" style="border-bottom:1px solid var(--line);padding-bottom:32px">
+          <div class="num">01</div>
+          <div>
+            <h3 style="font-size:26px">Limpia</h3>
+            <p class="mt-2 text-[16px]" style="color:var(--muted);font-weight:300">Masajea el <strong style="font-weight:500;color:var(--ink-soft)">Limpiador Calma</strong> sobre piel seca y retíralo con agua tibia. Adiós al día, sin tirantez.</p>
+          </div>
+        </article>
+        <article class="reveal flex gap-7 items-start" style="border-bottom:1px solid var(--line);padding-bottom:32px">
+          <div class="num">02</div>
+          <div>
+            <h3 style="font-size:26px">Trata</h3>
+            <p class="mt-2 text-[16px]" style="color:var(--muted);font-weight:300">Tres gotas del <strong style="font-weight:500;color:var(--ink-soft)">Sérum Renueva</strong> sobre la piel aún húmeda. Presiona, no frotes, y deja que absorba.</p>
+          </div>
+        </article>
+        <article class="reveal flex gap-7 items-start">
+          <div class="num">03</div>
+          <div>
+            <h3 style="font-size:26px">Sella</h3>
+            <p class="mt-2 text-[16px]" style="color:var(--muted);font-weight:300">Cierra con la <strong style="font-weight:500;color:var(--ink-soft)">Crema Equilibra</strong> para retener todo lo anterior. A la mañana, la piel se nota descansada.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESEÑAS -->
+  <section id="resenas" style="background:var(--surface-2)">
+    <div class="wrap" style="padding:80px 24px">
+      <div class="text-center max-w-2xl mx-auto reveal">
+        <span class="eyebrow">Lo que dicen</span>
+        <h2 style="font-size:clamp(32px,4.6vw,52px);margin-top:12px">Piel contenta,<br>en sus propias palabras.</h2>
+        <div class="flex items-center justify-center gap-3 mt-5 text-[14px]" style="color:var(--muted)">
+          <span class="stars" style="font-size:16px">★★★★★</span>
+          <span>4.9 sobre 5 · 6.214 reseñas verificadas</span>
+        </div>
+      </div>
+      <div class="grid md:grid-cols-3 gap-6 mt-12">
+        <figure class="reveal" style="background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px">
+          <div class="stars">★★★★★</div>
+          <blockquote class="serif mt-4" style="font-size:21px;line-height:1.35;color:var(--ink-soft)">«La textura es una delicia y en tres semanas mis rojeces bajaron de verdad. No vuelvo atrás.»</blockquote>
+          <figcaption class="mt-5 text-[13px]" style="color:var(--faint);letter-spacing:.04em">Lucía M. · piel sensible</figcaption>
+        </figure>
+        <figure class="reveal" style="background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px">
+          <div class="stars">★★★★★</div>
+          <blockquote class="serif mt-4" style="font-size:21px;line-height:1.35;color:var(--ink-soft)">«Por fin un sérum que no pica ni huele a nada raro. El poro se ve más fino y la piel, luminosa.»</blockquote>
+          <figcaption class="mt-5 text-[13px]" style="color:var(--faint);letter-spacing:.04em">Marta R. · piel mixta</figcaption>
+        </figure>
+        <figure class="reveal" style="background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px">
+          <div class="stars">★★★★★</div>
+          <blockquote class="serif mt-4" style="font-size:21px;line-height:1.35;color:var(--ink-soft)">«El ritual completo me cambió la noche. Es el momento del día que más cuido para mí misma.»</blockquote>
+          <figcaption class="mt-5 text-[13px]" style="color:var(--faint);letter-spacing:.04em">Inés V. · piel madura</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA DE COMPRA -->
+  <section id="comprar" class="wrap" style="padding:88px 24px">
+    <div class="relative overflow-hidden reveal" style="background:var(--accent);color:var(--on-accent);border-radius:var(--radius-lg);padding:64px 40px;text-align:center">
+      <div class="absolute inset-0" aria-hidden="true" style="background:radial-gradient(70% 90% at 50% 0%,rgba(252,246,240,.18),transparent 70%)"></div>
+      <div class="relative">
+        <span class="eyebrow" style="color:rgba(252,246,240,.85)">Empieza esta noche</span>
+        <h2 class="serif" style="font-size:clamp(38px,6vw,68px);margin:16px 0 0;font-weight:500;color:var(--on-accent)">Tu piel, en su mejor versión.</h2>
+        <p style="color:rgba(252,246,240,.86);font-size:18px;margin:20px auto 0;max-width:46ch;font-weight:300">Envío gratis a partir de 40€ · 30 días de garantía · devolución sin preguntas. Si no la sientes distinta, te devolvemos el importe.</p>
+        <div class="flex flex-wrap items-center justify-center gap-4 mt-9">
+          <a href="#comprar" class="btn" style="background:var(--on-accent);color:var(--accent-deep)">Comprar el ritual · 78€</a>
+          <a href="#linea" class="btn" style="border:1px solid rgba(252,246,240,.5);color:var(--on-accent)">Ver la línea</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:24px 24px 48px">
+    <div class="grid md:grid-cols-4 gap-10">
+      <div class="md:col-span-2">
+        <div class="serif" style="font-size:26px;letter-spacing:.30em;font-weight:500">AURA</div>
+        <p class="text-[14.5px] mt-4" style="color:var(--muted);max-width:36ch;font-weight:300">Skincare botánico de alta concentración. Fórmulas limpias, activos que funcionan y un ritual que da gusto repetir.</p>
+        <div class="flex gap-3 mt-6">
+          <span class="badge">Vegano</span>
+          <span class="badge">Cruelty-free</span>
+        </div>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-[.16em]" style="color:var(--faint);margin-bottom:14px">Tienda</div>
+        <p class="text-[14.5px]" style="color:var(--ink-soft);line-height:2;font-weight:300"><a href="#linea" class="hover:text-[color:var(--accent)]">La línea</a><br><a href="#comprar" class="hover:text-[color:var(--accent)]">El Ritual Completo</a><br><a href="#ingredientes" class="hover:text-[color:var(--accent)]">Ingredientes</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-[.16em]" style="color:var(--faint);margin-bottom:14px">Ayuda</div>
+        <p class="text-[14.5px]" style="color:var(--ink-soft);line-height:2;font-weight:300"><a href="#" class="hover:text-[color:var(--accent)]">Envíos y devoluciones</a><br><a href="#resenas" class="hover:text-[color:var(--accent)]">Reseñas</a><br><a href="#" class="hover:text-[color:var(--accent)]">hola@aura.example</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:40px 0 20px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint);letter-spacing:.03em">
+      <span>© AURA · Skincare botánico</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, static preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

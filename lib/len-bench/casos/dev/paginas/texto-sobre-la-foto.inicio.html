@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casa Almar — Hotel boutique frente al Pacífico · Puerto Escondido</title>
+<meta name="description" content="Nueve habitaciones frente al Pacífico, ninguna igual. Alberca de agua salada, desayuno de temporada y el mar a cuatro minutos a pie.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #FBF8F2;
+    --surface: #F4EFE6;
+    --surface-2: #ECE5D8;
+    --fg: #1C1E20;
+    --fg-muted: #565C60;
+    --fg-faint: #63696D;
+    --border: rgba(28,30,32,0.08);
+    --border-strong: rgba(28,30,32,0.12);
+    --accent: #1E3A5F;
+    --accent-r: 30,58,95;
+    --accent-ink: #F3F7FC;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --radius-lg: 24px;
+    --font-display: "Cormorant Garamond", Georgia, serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --warn: #A3671C;
+    --danger: #8F2D22;
+  }
+  :root.dark {
+    --bg: #12161B;
+    --surface: #191E25;
+    --surface-2: #20262F;
+    --fg: #EEF1F4;
+    --fg-muted: rgba(238,241,244,0.66);
+    --fg-faint: rgba(238,241,244,0.56);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #7FA6D0;
+    --accent-r: 127,166,208;
+    --accent-ink: #0C1523;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  .display { font-family: var(--font-display); letter-spacing: -0.008em; line-height: 1.0; }
+  .mono { font-family: var(--font-mono); }
+  .hairline { border-color: var(--border); }
+  .hairline-2 { border-color: var(--border-strong); }
+  .lift { transition: transform 120ms ease, box-shadow 120ms ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(0,0,0,0.10); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: rgba(var(--accent-r), 0.92); }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--fg-faint); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .half-tone { opacity: 0.45; }
+  .ph-sea { background: linear-gradient(155deg, rgba(var(--accent-r),0.34), rgba(var(--accent-r),0.14) 46%, var(--surface-2)); }
+  .ph-sand { background: linear-gradient(135deg, var(--surface-2), var(--surface) 55%, rgba(var(--accent-r),0.10)); }
+  .ph-palm { background: linear-gradient(120deg, rgba(var(--accent-r),0.18), var(--surface-2) 60%, var(--surface)); }
+  .grain::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+    background-image: radial-gradient(rgba(0,0,0,0.045) 1px, transparent 1px);
+    background-size: 28px 28px; opacity: 0.5;
+  }
+  .scrim { background: linear-gradient(to top, rgba(9,13,18,0.66) 0%, rgba(9,13,18,0.22) 46%, rgba(9,13,18,0.34) 100%); }
+</style>
+</head>
+<body>
+
+<!-- HERO FULL-BLEED -->
+<section class="relative flex min-h-[94svh] flex-col">
+  <div class="ph-sea absolute inset-0" data-ol-photo="infinity pool at sunset ocean"></div>
+  <div class="scrim absolute inset-0"></div>
+
+  <!-- NAV (overlay) -->
+  <header class="relative z-20">
+    <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
+      <a href="#" class="flex items-center gap-2.5 text-white">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <path d="M3 17c2.2 0 2.2 2 4.4 2s2.2-2 4.4-2 2.2 2 4.4 2 2.2-2 4.4-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          <path d="M13 4l7 8H6l7-8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+        </svg>
+        <span class="display text-[21px] font-semibold">Casa Almar</span>
+      </a>
+      <div class="hidden items-center gap-8 text-[13.5px] font-medium text-white/80 md:flex">
+        <a href="#habitaciones" class="hover:text-white">Habitaciones</a>
+        <a href="#experiencia" class="hover:text-white">La experiencia</a>
+        <a href="#ubicacion" class="hover:text-white">Ubicación</a>
+      </div>
+      <a href="#reservar" class="lift inline-flex h-9 items-center rounded-full border border-white/40 px-4 text-[13.5px] font-medium text-white hover:bg-white/10">Reservar</a>
+    </nav>
+  </header>
+
+  <!-- Hero content -->
+  <div class="relative z-10 mt-auto">
+    <div class="mx-auto max-w-6xl px-5 pb-10 md:pb-14">
+      <div class="mono text-[11px] uppercase tracking-[0.24em] text-white/70">Frente al mar · Puerto Escondido · 9 habitaciones</div>
+      <h1 class="display mt-4 max-w-3xl text-[52px] font-medium leading-[0.98] text-white sm:text-[72px] lg:text-[88px]">
+        El mar entra<br>por las celosías.
+      </h1>
+      <p class="mt-5 max-w-lg text-[15.5px] leading-relaxed text-white/85">
+        Una casa de los setenta restaurada con manos de la región. Nueve habitaciones, ninguna igual — y Playa Carrizalillo a cuatro minutos a pie.
+      </p>
+
+      <!-- Booking strip (glass) -->
+      <div id="reservar" class="mt-9 max-w-3xl rounded-[var(--radius)] border border-white/25 bg-white/10 p-2 backdrop-blur-md">
+        <div class="grid items-stretch gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+          <div class="rounded-[var(--radius-sm)] bg-white/10 px-4 py-3">
+            <div class="mono text-[10px] uppercase tracking-[0.16em] text-white/60">Llegada</div>
+            <div class="mt-1 text-[14px] font-medium text-white tabular">12 · marzo</div>
+          </div>
+          <div class="rounded-[var(--radius-sm)] bg-white/10 px-4 py-3">
+            <div class="mono text-[10px] uppercase tracking-[0.16em] text-white/60">Salida</div>
+            <div class="mt-1 text-[14px] font-medium text-white tabular">16 · marzo</div>
+          </div>
+          <div class="rounded-[var(--radius-sm)] bg-white/10 px-4 py-3">
+            <div class="mono text-[10px] uppercase tracking-[0.16em] text-white/60">Huéspedes</div>
+            <div class="mt-1 text-[14px] font-medium text-white tabular">2 adultos</div>
+          </div>
+          <a href="#habitaciones" class="lift flex items-center justify-center rounded-[var(--radius-sm)] bg-[var(--bg)] px-6 py-3 text-center text-[13.5px] font-semibold text-[color:var(--fg)]">Consultar disponibilidad</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INTRO EDITORIAL -->
+<section class="mx-auto max-w-3xl px-5 py-20 text-center md:py-28">
+  <div class="eyebrow">La casa</div>
+  <p class="display mt-5 text-[30px] font-medium leading-[1.12] sm:text-[38px]">
+    Construida en 1974, despierta desde 2021. Piso de barro de Zaachila, madera de un solo árbol de parota, <em class="text-[color:var(--accent)]">y el rumor del mar en cada cuarto.</em>
+  </p>
+  <div class="mono mx-auto mt-9 flex max-w-md items-center justify-center gap-8 border-t hairline pt-6 text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)] tabular">
+    <span>9 habitaciones</span><span>·</span><span>desde 1974</span><span>·</span><span>4 min al mar</span>
+  </div>
+</section>
+
+<!-- HABITACIONES — filas editoriales numeradas -->
+<section id="habitaciones" class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="mb-14 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
+      <div>
+        <div class="eyebrow">Habitaciones</div>
+        <h2 class="display mt-3 text-[36px] font-medium sm:text-[48px]">Elige tu vista.</h2>
+      </div>
+      <p class="max-w-sm text-[14px] leading-relaxed text-[color:var(--fg-muted)]">Todas incluyen desayuno de temporada, agua de la casa y hamaca propia. Sin televisión — el mar hace su parte.</p>
+    </div>
+
+    <!-- 01 -->
+    <article class="grid items-center gap-8 border-t hairline py-12 lg:grid-cols-12 lg:gap-12">
+      <div class="ph-sand grain relative aspect-[16/10] rounded-[var(--radius-lg)] border hairline lg:col-span-7" data-ol-photo="hotel room garden view linen"></div>
+      <div class="lg:col-span-5">
+        <div class="mono text-[11px] uppercase tracking-[0.22em] text-[color:var(--accent)] tabular">01 · Jardín</div>
+        <h3 class="display mt-3 text-[38px] font-medium sm:text-[46px]">Bruma</h3>
+        <p class="mt-3 max-w-sm text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]">Cama king bajo el mosquitero y un patio privado entre buganvilias donde el desayuno llega sin que lo pidas.</p>
+        <div class="mt-6 flex items-center gap-6">
+          <div class="text-[13.5px] text-[color:var(--fg-muted)]">desde <span class="display text-[24px] font-semibold text-[color:var(--fg)] tabular">$2,450</span> / noche</div>
+          <a href="#" class="text-[13.5px] font-medium text-[color:var(--accent)] hover:opacity-80">Reservar →</a>
+        </div>
+      </div>
+    </article>
+
+    <!-- 02 -->
+    <article class="grid items-center gap-8 border-t hairline py-12 lg:grid-cols-12 lg:gap-12">
+      <div class="lg:order-2 lg:col-span-7">
+        <div class="ph-palm grain relative aspect-[16/10] rounded-[var(--radius-lg)] border hairline" data-ol-photo="hotel terrace partial ocean view"></div>
+      </div>
+      <div class="lg:order-1 lg:col-span-5 lg:text-right">
+        <div class="mono text-[11px] uppercase tracking-[0.22em] text-[color:var(--accent)] tabular">02 · Terraza</div>
+        <h3 class="display mt-3 text-[38px] font-medium sm:text-[46px]">Marea</h3>
+        <p class="mt-3 max-w-sm text-[14.5px] leading-relaxed text-[color:var(--fg-muted)] lg:ml-auto">Terraza propia con vista al huerto y una franja de mar entre palmeras — la mejor luz de la casa a las 7 de la mañana.</p>
+        <div class="mt-6 flex items-center gap-6 lg:justify-end">
+          <div class="text-[13.5px] text-[color:var(--fg-muted)]">desde <span class="display text-[24px] font-semibold text-[color:var(--fg)] tabular">$3,150</span> / noche</div>
+          <a href="#" class="text-[13.5px] font-medium text-[color:var(--accent)] hover:opacity-80">Reservar →</a>
+        </div>
+      </div>
+    </article>
+
+    <!-- 03 -->
+    <article class="grid items-center gap-8 border-t hairline py-12 lg:grid-cols-12 lg:gap-12">
+      <div class="ph-sea grain relative aspect-[16/10] rounded-[var(--radius-lg)] border hairline lg:col-span-7" data-ol-photo="suite bedroom ocean view"></div>
+      <div class="lg:col-span-5">
+        <div class="mono text-[11px] uppercase tracking-[0.22em] text-[color:var(--accent)] tabular">03 · Frente al mar</div>
+        <h3 class="display mt-3 text-[38px] font-medium sm:text-[46px]">Almar</h3>
+        <p class="mt-3 max-w-sm text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]">La suite de la esquina: tina al aire libre, y el atardecer completo sin levantarte de la cama.</p>
+        <div class="mt-6 flex items-center gap-6">
+          <div class="text-[13.5px] text-[color:var(--fg-muted)]">desde <span class="display text-[24px] font-semibold text-[color:var(--fg)] tabular">$4,780</span> / noche</div>
+          <a href="#" class="text-[13.5px] font-medium text-[color:var(--accent)] hover:opacity-80">Reservar →</a>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- EXPERIENCIA — filas hairline, sin tarjetas -->
+<section id="experiencia" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid gap-12 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
+      <div>
+        <div class="eyebrow">La experiencia</div>
+        <h2 class="display mt-3 text-[36px] font-medium sm:text-[46px]">Los días aquí tienen otra medida.</h2>
+        <p class="mt-4 max-w-sm text-[14px] leading-relaxed text-[color:var(--fg-muted)]">Nada de horarios de animación. Lo que hay, está siempre — y lo que no está, sobra.</p>
+      </div>
+      <ul class="self-center">
+        <li class="flex items-baseline gap-4 border-b hairline py-4">
+          <span class="h-1.5 w-1.5 shrink-0 translate-y-[-2px] rounded-full bg-[var(--accent)]"></span>
+          <span class="display text-[20px] font-medium">Alberca de agua salada</span>
+          <span class="ml-auto text-right text-[13px] text-[color:var(--fg-muted)]">sin cloro · desde las 7:00 am</span>
+        </li>
+        <li class="flex items-baseline gap-4 border-b hairline py-4">
+          <span class="h-1.5 w-1.5 shrink-0 translate-y-[-2px] rounded-full bg-[var(--accent)]"></span>
+          <span class="display text-[20px] font-medium">Desayuno de temporada</span>
+          <span class="ml-auto text-right text-[13px] text-[color:var(--fg-muted)]">mercado de la Punta · café de Pluma Hidalgo</span>
+        </li>
+        <li class="flex items-baseline gap-4 border-b hairline py-4">
+          <span class="h-1.5 w-1.5 shrink-0 translate-y-[-2px] rounded-full bg-[var(--accent)]"></span>
+          <span class="display text-[20px] font-medium">Terraza de lectura</span>
+          <span class="ml-auto text-right text-[13px] text-[color:var(--fg-muted)]">biblioteca abierta · hamacas dobles</span>
+        </li>
+        <li class="flex items-baseline gap-4 border-b hairline py-4">
+          <span class="h-1.5 w-1.5 shrink-0 translate-y-[-2px] rounded-full bg-[var(--accent)]"></span>
+          <span class="display text-[20px] font-medium">Bicis de la casa</span>
+          <span class="ml-auto text-right text-[13px] text-[color:var(--fg-muted)]">seis · a Carrizalillo o al mercado</span>
+        </li>
+        <li class="flex items-baseline gap-4 py-4">
+          <span class="h-1.5 w-1.5 shrink-0 translate-y-[-2px] rounded-full bg-[var(--accent)]"></span>
+          <span class="display text-[20px] font-medium">Cena a la leña, dos veces por semana</span>
+          <span class="ml-auto text-right text-[13px] text-[color:var(--fg-muted)]">martes y viernes · lugar limitado</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- FOTO BAND -->
+<section class="mx-auto max-w-7xl px-5 py-16 md:py-20">
+  <div class="ph-palm grain relative aspect-[21/8] rounded-[var(--radius-lg)] border hairline" data-ol-photo="hotel courtyard plants pottery"></div>
+</section>
+
+<!-- CITA ÚNICA -->
+<section class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-3xl px-5 py-20 text-center md:py-28">
+    <svg class="mx-auto text-[color:var(--accent)]" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 7H6a3 3 0 0 0-3 3v7h7v-7H7c0-1.7 1.3-3 3-3V7zm11 0h-4a3 3 0 0 0-3 3v7h7v-7h-3c0-1.7 1.3-3 3-3V7z" opacity=".35"/></svg>
+    <blockquote class="display mt-6 text-[28px] font-medium italic leading-[1.2] sm:text-[36px]">
+      "Pedimos la habitación Almar para nuestro aniversario. Nadie nos avisó del atardecer — mejor así."
+    </blockquote>
+    <figcaption class="mono mt-6 text-[11px] uppercase tracking-[0.2em] text-[color:var(--fg-faint)]">Sofía y Andrés · Ciudad de México · libro de huéspedes, feb 2026</figcaption>
+  </div>
+</section>
+
+<!-- UBICACIÓN — banda de color -->
+<section id="ubicacion" class="bg-[var(--accent)] text-[color:var(--accent-ink)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+      <div>
+        <div class="mono text-[11px] uppercase tracking-[0.22em] opacity-70">Ubicación</div>
+        <h2 class="display mt-3 text-[36px] font-medium sm:text-[46px]">Rinconada, a la sombra.</h2>
+        <p class="mt-3 max-w-md text-[14.5px] leading-relaxed opacity-85">Calle Tortugas 14, Rinconada · Puerto Escondido, Oaxaca.</p>
+        <ul class="mt-8 max-w-md">
+          <li class="flex items-baseline gap-4 border-b border-white/15 py-3.5"><span class="mono w-14 text-[11.5px] font-medium tabular">4 min</span><span class="text-[14px] opacity-90">a pie a Playa Carrizalillo</span></li>
+          <li class="flex items-baseline gap-4 border-b border-white/15 py-3.5"><span class="mono w-14 text-[11.5px] font-medium tabular">10 min</span><span class="text-[14px] opacity-90">en bici al mercado y los cafés de La Punta</span></li>
+          <li class="flex items-baseline gap-4 border-b border-white/15 py-3.5"><span class="mono w-14 text-[11.5px] font-medium tabular">18 min</span><span class="text-[14px] opacity-90">en coche al aeropuerto de Puerto Escondido</span></li>
+          <li class="flex items-baseline gap-4 py-3.5"><span class="mono w-14 text-[11.5px] font-medium tabular">25 min</span><span class="text-[14px] opacity-90">a los liberamientos de tortugas en Bacocho</span></li>
+        </ul>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href="#" class="lift inline-flex h-11 items-center gap-2 rounded-full bg-[var(--bg)] px-5 text-[14px] font-medium text-[color:var(--fg)]">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .3-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.5-.2.7-.1l2 .9c.3.2.5.3.6.4 0 .1 0 .7-.3 1.3z"/></svg>
+            WhatsApp
+          </a>
+          <a href="#" class="lift inline-flex h-11 items-center rounded-full border border-white/35 px-5 text-[14px] font-medium hover:bg-white/10">Cómo llegar</a>
+        </div>
+      </div>
+      <div class="ph-palm grain relative aspect-[4/3] self-center rounded-[var(--radius-lg)] border border-white/15 lg:aspect-[4/5]" data-ol-photo="beach path palm trees"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA MINIMAL -->
+<section class="mx-auto max-w-3xl px-5 py-24 text-center md:py-32">
+  <div class="mono text-[11px] uppercase tracking-[0.24em] text-[color:var(--fg-faint)]">Temporada marzo — junio abierta</div>
+  <h2 class="display mt-5 text-[38px] font-medium leading-[1.05] sm:text-[52px]">Tu habitación te espera con la ventana abierta.</h2>
+  <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+    <a href="#reservar" class="btn-primary lift inline-flex h-12 items-center rounded-full px-7 text-[14px] font-medium">Reserva tu estancia</a>
+    <a href="#habitaciones" class="lift inline-flex h-12 items-center rounded-full border hairline-2 bg-[var(--surface)] px-7 text-[14px] font-medium">Ver habitaciones</a>
+  </div>
+</section>
+
+<!-- FOOTER LOCAL -->
+<footer class="border-t hairline">
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-[12.5px] text-[color:var(--fg-faint)] md:flex-row">
+    <div class="flex items-center gap-2">
+      <svg width="16" height="16" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M3 17c2.2 0 2.2 2 4.4 2s2.2-2 4.4-2 2.2 2 4.4 2 2.2-2 4.4-2" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>
+      <span class="font-medium text-[color:var(--fg-muted)]">Casa Almar · hotel boutique</span>
+    </div>
+    <div class="mono text-[11px] uppercase tracking-[0.14em]">Calle Tortugas 14, Rinconada · Puerto Escondido</div>
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-[color:var(--fg)]">Instagram</a>
+      <a href="#" class="hover:text-[color:var(--fg)]">WhatsApp</a>
+      <span>© 2026 Casa Almar</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

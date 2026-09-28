@@ -264,3 +264,47 @@ describe("a qué tarifa se cobra el turno", () => {
     expect(brain.creditRate()).toBe(MODEL_POLICY.visualCritic.creditRate);
   });
 });
+
+// 🔴 E del 26/09: con H5 el modelo puede pensar minutos seguidos, y el
+// razonamiento se descartaba ANTES de llegar al reloj de silencio de la ruta
+// (H1, 180 s sin señal = cuelgue). Dos turnos se cancelaron así en plena
+// reflexión. En Claude Code pensar es actividad visible; aquí sigue sin verse,
+// pero rearma el reloj.
+describe("el razonamiento es señal de vida para el reloj de silencio", () => {
+  async function* pensandoLargo(): AsyncIterable<unknown> {
+    for (let i = 0; i < 5; i++) {
+      await new Promise((r) => setTimeout(r, 600));
+      yield { type: "reasoning_delta", text: "pienso" };
+    }
+    yield { type: "text_delta", text: "listo" };
+  }
+  async function correr(conSenal: boolean) {
+    vi.useFakeTimers();
+    try {
+      const { relojDeSilencio } = await import("./reloj-de-silencio");
+      const callado = vi.fn();
+      const reloj = relojDeSilencio(1_000, callado);
+      fireworksStream.mockImplementation(() => pensandoLargo());
+      const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {}, ...(conSenal ? { alPensar: reloj.vivo } : {}) });
+      const salida: StreamEvent[] = [];
+      const consumir = (async () => {
+        for await (const e of brain.openStream([USER])) salida.push(e);
+      })();
+      await vi.advanceTimersByTimeAsync(3_500);
+      await consumir;
+      reloj.parar();
+      return { callado, salida };
+    } finally {
+      vi.useRealTimers();
+    }
+  }
+  it("🔴 pensar más que el reloj NO cancela el turno, y el razonamiento sigue sin llegar al loop", async () => {
+    const { callado, salida } = await correr(true);
+    expect(callado).not.toHaveBeenCalled();
+    expect(salida).toEqual([{ type: "text_delta", text: "listo" }]);
+  });
+  it("BRAZO DE CONTROL: sin la señal, el mismo razonamiento dispara el reloj", async () => {
+    const { callado } = await correr(false);
+    expect(callado).toHaveBeenCalled();
+  });
+});

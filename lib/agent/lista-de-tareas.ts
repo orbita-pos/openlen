@@ -180,6 +180,11 @@ export class ListaDeTareas {
     });
   }
 
+  /** Cada tarea con su estado, para el recordatorio de TodoWrite. */
+  estados(): { texto: string; estado: EstadoDeTarea }[] {
+    return this.tareas.map((t) => ({ texto: t.texto, estado: t.estado }));
+  }
+
   get usaEstados(): boolean {
     return this.conEstados;
   }

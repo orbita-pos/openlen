@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>NIDO — Muebles y objetos para el hogar · hechos para durar</title>
+<meta name="description" content="NIDO diseña y fabrica muebles y objetos para el hogar con maderas nobles y oficio honesto. Piezas cálidas, atemporales y pensadas para acompañarte años. Comprá online con envío a todo el país." />
+<meta property="og:title" content="NIDO — Muebles y objetos para el hogar" />
+<meta property="og:description" content="Maderas nobles, líneas honestas y piezas que envejecen bien. Amueblá tu casa con calma. Envío a todo el país." />
+<meta property="og:image" content="https://images.openlen.com/191-creative-studio-1920.webp" />
+<meta name="theme-color" content="#F6EFE4" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23F6EFE4'/%3E%3Cpath d='M8 20 L16 9 L24 20' fill='none' stroke='%23A4612E' stroke-width='2.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cline x1='8' y1='23' x2='24' y2='23' stroke='%23A4612E' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6EFE4; --surface:#EFE6D6; --surface-2:#E7DAC5; --paper:#FCF8F1;
+    --ink:#2A241C; --ink-soft:#43392E; --muted:#766756; --faint:#998771;
+    --line:rgba(42,36,28,0.12); --line-strong:rgba(42,36,28,0.22);
+    --accent:#A4612E; --accent-deep:#7E4920; --clay:#C08552; --leaf:#5E6B4A; --on-accent:#FBF5EC;
+    --radius:8px; --radius-lg:18px;
+    --display:'Marcellus',Georgia,'Times New Roman',serif;
+    --body:'DM Sans',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3,.serif{font-family:var(--display);font-weight:400;letter-spacing:0;line-height:1.06}
+  .eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+  .lift{transition:transform .55s cubic-bezier(.2,.7,.2,1),box-shadow .55s}
+  .lift:hover{transform:translateY(-5px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block}
+  .btn{display:inline-flex;align-items:center;gap:.55rem;height:52px;padding:0 28px;border-radius:999px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,background .25s,color .25s,border-color .25s;text-decoration:none}
+  .btn-primary{background:var(--accent);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .chip{display:inline-flex;align-items:center;gap:.45rem;height:30px;padding:0 14px;border-radius:999px;border:1px solid var(--line-strong);font-size:12.5px;color:var(--ink-soft);font-weight:500;background:rgba(252,248,241,.5)}
+  .rule{height:1px;background:var(--line)}
+  .price{font-family:var(--display);color:var(--accent);font-size:18px}
+  .stars{display:inline-flex;gap:3px}
+  .star{width:15px;height:15px;display:inline-block;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);background:var(--clay)}
+  .swatch{width:30px;height:30px;border-radius:50%;border:2px solid var(--paper);box-shadow:0 0 0 1px var(--line-strong)}
+  /* Content visible by default; JS hides only to play the scroll-in entrance.
+     No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+  .grain{background-image:radial-gradient(rgba(42,36,28,.035) 1px,transparent 1px);background-size:4px 4px}
+  .ticker{display:flex;gap:48px;white-space:nowrap;animation:slide 32s linear infinite}
+  @keyframes slide{to{transform:translateX(-50%)}}
+  @media(prefers-reduced-motion:reduce){.ticker{animation:none}}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body class="grain">
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(246,239,228,.84);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:74px">
+      <a href="#top" class="serif flex items-center gap-2.5" style="font-size:23px;letter-spacing:.16em">
+        <span style="display:inline-grid;place-items:center;width:24px;height:24px">
+          <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 21 L16 9 L25 21" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><line x1="7" y1="24" x2="25" y2="24" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </span>NIDO
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#coleccion" class="hover:opacity-60 transition">Colección</a>
+        <a href="#materiales" class="hover:opacity-60 transition">Materiales</a>
+        <a href="#ambientes" class="hover:opacity-60 transition">Ambientes</a>
+        <a href="#resenas" class="hover:opacity-60 transition">Reseñas</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="#coleccion" class="hidden sm:inline-flex items-center gap-2 text-[14px] hover:opacity-60 transition" style="color:var(--ink-soft)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h2l2.6 12.4a1.6 1.6 0 0 0 1.6 1.3h8.6a1.6 1.6 0 0 0 1.6-1.2L21 7H5.4"/></svg>
+          <span class="hidden lg:inline">Carrito</span>
+        </a>
+        <a href="#coleccion" class="btn btn-primary" style="height:44px;padding:0 22px;font-size:13.5px">Comprá ahora</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:60px 24px 28px">
+    <div class="grid lg:grid-cols-12 gap-9 items-end">
+      <div class="lg:col-span-5 reveal">
+        <span class="eyebrow">Mueblería · taller propio desde 2009</span>
+        <h1 style="font-size:clamp(44px,7.2vw,82px);margin:20px 0 0">
+          Una casa<br>que se siente<br><span style="color:var(--accent)">como un nido.</span>
+        </h1>
+        <p style="font-size:18px;color:var(--muted);max-width:38ch;margin:26px 0 32px">
+          Muebles y objetos de madera noble, hechos a mano y pensados para durar décadas. Líneas cálidas, calma y oficio honesto.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#coleccion" class="btn btn-primary">Comprá la colección</a>
+          <a href="#materiales" class="btn btn-ghost">Conocé los materiales</a>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-7 gap-y-3 mt-10 text-[13px]" style="color:var(--faint)">
+          <span class="flex items-center gap-2"><span style="color:var(--leaf)">●</span>Envío a todo el país</span>
+          <span class="flex items-center gap-2"><span style="color:var(--leaf)">●</span>10 años de garantía</span>
+          <span class="flex items-center gap-2"><span style="color:var(--leaf)">●</span>Maderas certificadas</span>
+        </div>
+      </div>
+      <div class="lg:col-span-7 reveal">
+        <div class="relative">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:16/12;box-shadow:0 36px 70px -34px rgba(42,28,16,.55)">
+            <img class="img-cover" src="https://images.openlen.com/191-creative-studio-1920.webp" alt="Salón luminoso amueblado con piezas de madera noble, plantas y luz natural cálida" loading="eager" width="1280" height="960">
+          </div>
+          <div class="hidden sm:flex items-center gap-3 absolute" style="left:22px;bottom:22px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 16px;box-shadow:0 20px 40px -24px rgba(42,28,16,.5)">
+            <div class="stars" aria-hidden="true"><span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span></div>
+            <div class="text-[13px]" style="color:var(--ink-soft)"><strong style="font-weight:600">4,9 / 5</strong> · más de 3.200 hogares</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TICKER / value strip -->
+  <section style="border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface);overflow:hidden">
+    <div class="ticker" style="padding:16px 0">
+      <div class="flex gap-12 text-[13.5px]" style="color:var(--muted);letter-spacing:.04em">
+        <span>· Madera de roble y nogal</span><span>· Hecho a mano en el taller</span><span>· Acabados al aceite natural</span><span>· Envío con armado incluido</span><span>· 30 días para devolver</span><span>· Madera de roble y nogal</span><span>· Hecho a mano en el taller</span><span>· Acabados al aceite natural</span><span>· Envío con armado incluido</span><span>· 30 días para devolver</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- COLECCIÓN -->
+  <section id="coleccion" class="wrap" style="padding:78px 24px 24px">
+    <div class="flex flex-wrap items-end justify-between gap-6 mb-12 reveal">
+      <div>
+        <span class="eyebrow">La colección</span>
+        <h2 style="font-size:clamp(32px,5vw,54px);margin-top:14px">Piezas para<br>cada rincón</h2>
+      </div>
+      <p class="text-[14.5px]" style="color:var(--muted);max-width:34ch">Diseños atemporales que combinan entre sí. Empezá por una pieza y armá tu casa con calma, sin prisa.</p>
+    </div>
+
+    <!-- featured large + two -->
+    <div class="grid lg:grid-cols-12 gap-6">
+      <article class="lg:col-span-7 reveal">
+        <div class="lift overflow-hidden relative" style="border-radius:var(--radius-lg);aspect-ratio:16/10">
+          <img class="img-cover" src="https://images.openlen.com/186-home-office-desk-1920.webp" alt="Escritorio de roble macizo junto a la ventana, con luz cálida y objetos cuidados" loading="lazy" width="1280" height="800">
+          <span class="chip absolute" style="top:18px;left:18px;background:var(--paper)">Lo más vendido</span>
+        </div>
+        <div class="flex items-baseline justify-between mt-6">
+          <div>
+            <h3 style="font-size:24px">Escritorio Roble</h3>
+            <p class="text-[14px] mt-1" style="color:var(--muted)">Tablero macizo, cajón oculto y patas cónicas. Para trabajar mirando la luz.</p>
+          </div>
+          <span class="price" style="white-space:nowrap">$ 92.000</span>
+        </div>
+      </article>
+      <div class="lg:col-span-5 grid gap-6">
+        <article class="reveal">
+          <div class="flex gap-5 items-center">
+            <div class="lift overflow-hidden flex-none" style="border-radius:var(--radius);width:128px;height:128px"><img class="img-cover" src="https://images.openlen.com/185-coworking-space-1920.webp" alt="Banco bajo de madera con cojines de lino en un espacio cálido y abierto" loading="lazy" width="256" height="256"></div>
+            <div class="min-w-0">
+              <h3 style="font-size:21px">Banco Sala</h3>
+              <p class="text-[14px] mt-1" style="color:var(--muted)">Roble y lino. Para el recibidor o a los pies de la cama.</p>
+              <span class="price mt-2 inline-block">$ 58.000</span>
+            </div>
+          </div>
+        </article>
+        <div class="rule"></div>
+        <article class="reveal">
+          <div class="flex gap-5 items-center">
+            <div class="lift overflow-hidden flex-none" style="border-radius:var(--radius);width:128px;height:128px"><img class="img-cover" src="https://images.openlen.com/188-retail-interior-1920.webp" alt="Estantería abierta de madera con objetos de cerámica y libros, iluminación cálida" loading="lazy" width="256" height="256"></div>
+            <div class="min-w-0">
+              <h3 style="font-size:21px">Estante Abierto</h3>
+              <p class="text-[14px] mt-1" style="color:var(--muted)">Módulos de nogal que crecen con vos. Sin tornillos a la vista.</p>
+              <span class="price mt-2 inline-block">$ 74.000</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <!-- objects row (CSS-only) -->
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-7">
+      <article class="reveal lift" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:22px">
+        <div style="height:120px;border-radius:var(--radius);background:linear-gradient(160deg,var(--surface-2),var(--surface));display:grid;place-items:center">
+          <span style="width:54px;height:54px;border-radius:50% 50% 46% 46%;border:3px solid var(--accent);border-bottom-width:8px"></span>
+        </div>
+        <div class="flex items-baseline justify-between mt-4">
+          <h3 style="font-size:18px">Cuenco Torneado</h3><span class="price" style="font-size:16px">$ 11.500</span>
+        </div>
+        <p class="text-[13px] mt-1" style="color:var(--muted)">Nogal macizo, una sola pieza.</p>
+      </article>
+      <article class="reveal lift" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:22px">
+        <div style="height:120px;border-radius:var(--radius);background:linear-gradient(160deg,var(--surface-2),var(--surface));display:grid;place-items:center">
+          <span style="width:18px;height:62px;border-radius:8px;background:var(--clay);box-shadow:-22px 8px 0 -2px var(--accent),22px -6px 0 -4px var(--leaf)"></span>
+        </div>
+        <div class="flex items-baseline justify-between mt-4">
+          <h3 style="font-size:18px">Velas de Cera</h3><span class="price" style="font-size:16px">$ 6.900</span>
+        </div>
+        <p class="text-[13px] mt-1" style="color:var(--muted)">Cera de soja, trío de tonos tierra.</p>
+      </article>
+      <article class="reveal lift" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:22px">
+        <div style="height:120px;border-radius:var(--radius);background:linear-gradient(160deg,var(--surface-2),var(--surface));display:grid;place-items:center">
+          <span style="width:56px;height:46px;border-radius:10px;border:3px solid var(--leaf);position:relative"><span style="position:absolute;left:50%;top:-14px;transform:translateX(-50%);width:8px;height:18px;border-radius:4px;background:var(--leaf)"></span></span>
+        </div>
+        <div class="flex items-baseline justify-between mt-4">
+          <h3 style="font-size:18px">Maceta Terracota</h3><span class="price" style="font-size:16px">$ 8.200</span>
+        </div>
+        <p class="text-[13px] mt-1" style="color:var(--muted)">Esmaltada a mano, con plato.</p>
+      </article>
+      <article class="reveal lift" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:22px">
+        <div style="height:120px;border-radius:var(--radius);background:linear-gradient(160deg,var(--surface-2),var(--surface));display:grid;place-items:center">
+          <span style="width:60px;height:40px;border-radius:6px;background:linear-gradient(120deg,var(--clay),var(--accent));transform:skewY(-4deg)"></span>
+        </div>
+        <div class="flex items-baseline justify-between mt-4">
+          <h3 style="font-size:18px">Manta de Lana</h3><span class="price" style="font-size:16px">$ 19.500</span>
+        </div>
+        <p class="text-[13px] mt-1" style="color:var(--muted)">Lana natural, tejida en telar.</p>
+      </article>
+    </div>
+
+    <div class="text-center mt-12 reveal"><a href="#coleccion" class="btn btn-ghost">Ver toda la tienda</a></div>
+  </section>
+
+  <!-- MATERIALES / CALIDAD -->
+  <section id="materiales" style="background:var(--ink);color:var(--bg);margin-top:56px">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="grid lg:grid-cols-12 gap-12 items-start">
+        <div class="lg:col-span-5 reveal">
+          <span class="eyebrow" style="color:var(--clay)">Materiales y oficio</span>
+          <h2 class="serif" style="font-size:clamp(30px,4.6vw,50px);color:var(--bg);margin:16px 0 0">Hecho para<br>durar, no para<br>reemplazar.</h2>
+          <p style="color:rgba(246,239,228,.72);font-size:17.5px;margin-top:22px;max-width:44ch">Elegimos cada tabla por su veta. La cortamos, la curamos y la terminamos con aceites naturales — sin barnices que se descascaren. Una pieza de NIDO se hereda.</p>
+          <div class="flex items-center gap-3 mt-9">
+            <span class="text-[13px]" style="color:rgba(246,239,228,.6)">Tonos disponibles</span>
+            <span class="swatch" style="background:#C9A36A" title="Roble claro"></span>
+            <span class="swatch" style="background:#9A6A3C" title="Roble miel"></span>
+            <span class="swatch" style="background:#5E4326" title="Nogal"></span>
+            <span class="swatch" style="background:#33271B" title="Nogal ahumado"></span>
+          </div>
+        </div>
+        <div class="lg:col-span-7 grid sm:grid-cols-2 gap-5">
+          <div class="reveal lift" style="border:1px solid rgba(246,239,228,.14);border-radius:var(--radius-lg);padding:26px;background:rgba(246,239,228,.04)">
+            <div style="width:44px;height:44px;border-radius:12px;display:grid;place-items:center;border:1px solid rgba(246,239,228,.2)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--clay)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4.5 8-11V5l-8-3-8 3v6c0 6.5 8 11 8 11z"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            <h3 style="font-size:20px;color:var(--bg);margin:16px 0 7px">10 años de garantía</h3>
+            <p class="text-[14.5px]" style="color:rgba(246,239,228,.66)">Si una junta cede, la reparamos sin costo. Confiamos en lo que hacemos.</p>
+          </div>
+          <div class="reveal lift" style="border:1px solid rgba(246,239,228,.14);border-radius:var(--radius-lg);padding:26px;background:rgba(246,239,228,.04)">
+            <div style="width:44px;height:44px;border-radius:12px;display:grid;place-items:center;border:1px solid rgba(246,239,228,.2)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--leaf)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+            </div>
+            <h3 style="font-size:20px;color:var(--bg);margin:16px 0 7px">Madera certificada</h3>
+            <p class="text-[14.5px]" style="color:rgba(246,239,228,.66)">Bosques de gestión responsable. Por cada pieza, plantamos un árbol.</p>
+          </div>
+          <div class="reveal lift" style="border:1px solid rgba(246,239,228,.14);border-radius:var(--radius-lg);padding:26px;background:rgba(246,239,228,.04)">
+            <div style="width:44px;height:44px;border-radius:12px;display:grid;place-items:center;border:1px solid rgba(246,239,228,.2)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--clay)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a5 5 0 0 0-7 7l1 1 5.5-5.5 1-1z"/><path d="m13 9 6 6"/><path d="M19 15a3 3 0 0 1-4 4"/></svg>
+            </div>
+            <h3 style="font-size:20px;color:var(--bg);margin:16px 0 7px">Acabado al aceite</h3>
+            <p class="text-[14.5px]" style="color:rgba(246,239,228,.66)">Aceites vegetales que realzan la veta y se renuevan en casa, sin tóxicos.</p>
+          </div>
+          <div class="reveal lift" style="border:1px solid rgba(246,239,228,.14);border-radius:var(--radius-lg);padding:26px;background:rgba(246,239,228,.04)">
+            <div style="width:44px;height:44px;border-radius:12px;display:grid;place-items:center;border:1px solid rgba(246,239,228,.2)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--leaf)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <h3 style="font-size:20px;color:var(--bg);margin:16px 0 7px">Armado incluido</h3>
+            <p class="text-[14.5px]" style="color:rgba(246,239,228,.66)">Llevamos, montamos y nos llevamos el embalaje. Vos solo elegís dónde va.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AMBIENTES INSPIRADORES -->
+  <section id="ambientes" class="wrap" style="padding:82px 24px 24px">
+    <div class="max-w-xl reveal mb-12">
+      <span class="eyebrow">Ambientes</span>
+      <h2 style="font-size:clamp(30px,4.8vw,50px);margin-top:14px">Casas reales,<br>amuebladas con NIDO</h2>
+      <p style="color:var(--muted);font-size:17px;margin-top:18px">Inspiración para tu próximo rincón. Cada hogar empezó por una sola pieza.</p>
+    </div>
+    <div class="grid md:grid-cols-12 gap-5">
+      <figure class="md:col-span-7 reveal m-0">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:16/11"><img class="img-cover" src="https://images.openlen.com/233-concrete-house-1920.webp" alt="Estar de hormigón visto con grandes ventanales y muebles de madera cálida frente al verde" loading="lazy" width="1280" height="880"></div>
+        <figcaption class="text-[13.5px] mt-3" style="color:var(--faint)">La casa de Mara y Tomás · roble miel, ventanal al jardín</figcaption>
+      </figure>
+      <figure class="md:col-span-5 reveal m-0">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5"><img class="img-cover" src="https://images.openlen.com/239-mid-century-house-1920.webp" alt="Living de líneas modernas de media de siglo, abierto al jardín, con piezas de madera y luz suave" loading="lazy" width="1000" height="1250"></div>
+        <figcaption class="text-[13.5px] mt-3" style="color:var(--faint)">Loft de los Pereyra · nogal y lino crudo</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- RESEÑAS -->
+  <section id="resenas" style="background:var(--surface);margin-top:64px">
+    <div class="wrap" style="padding:80px 24px">
+      <div class="flex flex-wrap items-end justify-between gap-6 mb-12 reveal">
+        <div>
+          <span class="eyebrow">Reseñas</span>
+          <h2 style="font-size:clamp(30px,4.6vw,48px);margin-top:14px">Lo que dicen<br>quienes ya viven con NIDO</h2>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="stars" aria-hidden="true"><span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span></div>
+          <span class="text-[14px]" style="color:var(--ink-soft)"><strong style="font-weight:600">4,9 / 5</strong> · 1.840 reseñas</span>
+        </div>
+      </div>
+      <div class="grid md:grid-cols-3 gap-5">
+        <figure class="reveal m-0" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:28px">
+          <div class="stars mb-4" aria-hidden="true"><span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span></div>
+          <blockquote class="m-0" style="font-size:16.5px;color:var(--ink-soft);line-height:1.65">“El escritorio llegó armado y perfecto. La madera es real, pesa, se siente noble. Tres años después está mejor que el primer día.”</blockquote>
+          <figcaption class="flex items-center gap-3 mt-6">
+            <span style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--clay));display:inline-block"></span>
+            <span class="text-[13.5px]"><strong style="font-weight:600;color:var(--ink)">Lucía Fernández</strong><br><span style="color:var(--faint)">Córdoba · Escritorio Roble</span></span>
+          </figcaption>
+        </figure>
+        <figure class="reveal m-0" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:28px">
+          <div class="stars mb-4" aria-hidden="true"><span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span></div>
+          <blockquote class="m-0" style="font-size:16.5px;color:var(--ink-soft);line-height:1.65">“Compré un estante y terminé amueblando media casa. Combina todo entre sí y el equipo asesora sin apuro. Da gusto.”</blockquote>
+          <figcaption class="flex items-center gap-3 mt-6">
+            <span style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--leaf),var(--clay));display:inline-block"></span>
+            <span class="text-[13.5px]"><strong style="font-weight:600;color:var(--ink)">Diego Salinas</strong><br><span style="color:var(--faint)">Rosario · Estante Abierto</span></span>
+          </figcaption>
+        </figure>
+        <figure class="reveal m-0" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:28px">
+          <div class="stars mb-4" aria-hidden="true"><span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span></div>
+          <blockquote class="m-0" style="font-size:16.5px;color:var(--ink-soft);line-height:1.65">“Buscaba algo que no fuera de fábrica y lo encontré. Los objetos de cerámica son una belleza y llegaron en dos días.”</blockquote>
+          <figcaption class="flex items-center gap-3 mt-6">
+            <span style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--clay),var(--accent-deep));display:inline-block"></span>
+            <span class="text-[13.5px]"><strong style="font-weight:600;color:var(--ink)">Carolina Méndez</strong><br><span style="color:var(--faint)">Mendoza · Objetos para el hogar</span></span>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="wrap" style="padding:80px 24px">
+    <div class="reveal" style="position:relative;overflow:hidden;border-radius:var(--radius-lg);background:var(--accent);color:var(--on-accent);padding:clamp(40px,7vw,80px) clamp(28px,5vw,72px)">
+      <div style="position:absolute;right:-60px;top:-60px;width:280px;height:280px;border-radius:50%;background:rgba(252,248,241,.1)"></div>
+      <div style="position:absolute;left:-40px;bottom:-90px;width:220px;height:220px;border-radius:50%;background:rgba(42,28,16,.12)"></div>
+      <div class="relative grid lg:grid-cols-12 gap-8 items-center" style="z-index:1">
+        <div class="lg:col-span-8">
+          <span class="eyebrow" style="color:rgba(252,248,241,.85)">Empezá tu nido</span>
+          <h2 class="serif" style="font-size:clamp(32px,5.4vw,58px);margin:14px 0 0;color:var(--on-accent)">Amueblá tu casa<br>con calma.</h2>
+          <p style="font-size:18px;color:rgba(252,248,241,.85);margin-top:18px;max-width:46ch">Recibí $10.000 en tu primera compra y armá tu hogar pieza por pieza. Envío y montaje incluidos.</p>
+        </div>
+        <div class="lg:col-span-4 flex flex-col gap-3">
+          <a href="#coleccion" class="btn" style="background:var(--paper);color:var(--accent-deep);justify-content:center">Comprá la colección</a>
+          <a href="#materiales" class="btn" style="border:1px solid rgba(252,248,241,.4);color:var(--on-accent);justify-content:center">Pedí el catálogo</a>
+          <span class="text-[12.5px] text-center" style="color:rgba(252,248,241,.7)">Sin tarjeta para reservar · 30 días para devolver</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:24px 24px 48px">
+    <div class="grid md:grid-cols-5 gap-8">
+      <div class="md:col-span-2">
+        <div class="serif flex items-center gap-2.5" style="font-size:24px;letter-spacing:.16em">
+          <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 21 L16 9 L25 21" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><line x1="7" y1="24" x2="25" y2="24" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"/></svg>
+          NIDO
+        </div>
+        <p class="text-[14px] mt-4" style="color:var(--muted);max-width:34ch">Muebles y objetos de madera noble, hechos a mano para durar décadas. Tu casa, como un nido.</p>
+        <div class="flex items-center gap-2.5 mt-5">
+          <span class="chip" style="height:28px">Envío nacional</span>
+          <span class="chip" style="height:28px">Garantía 10 años</span>
+        </div>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Tienda</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#coleccion" class="hover:opacity-60 transition">Muebles</a><br><a href="#coleccion" class="hover:opacity-60 transition">Objetos</a><br><a href="#coleccion" class="hover:opacity-60 transition">Novedades</a><br><a href="#coleccion" class="hover:opacity-60 transition">Outlet</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Ayuda</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#materiales" class="hover:opacity-60 transition">Materiales</a><br><a href="#" class="hover:opacity-60 transition">Envíos y armado</a><br><a href="#" class="hover:opacity-60 transition">Devoluciones</a><br><a href="#" class="hover:opacity-60 transition">Cuidado de la madera</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Estudio</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#ambientes" class="hover:opacity-60 transition">El taller</a><br><a href="#resenas" class="hover:opacity-60 transition">Reseñas</a><br><a href="#" class="hover:opacity-60 transition">Visitá el showroom</a><br><a href="#" class="hover:opacity-60 transition">Instagram</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:40px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© NIDO · Mueblería y objetos para el hogar</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, static preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { systemPromptFor } from "@/app/api/generate/system-prompt";
 import { aiDesignSystemMessage } from "@/app/api/templates/ai-design/system-prompt";
 import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
-import { redesignPromptFinal } from "@/lib/agent/redesign";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { LIBRERIAS, bloqueDeLibrerias } from "@/lib/librerias";
 
@@ -45,13 +44,6 @@ function superficies(): [string, string][] {
     ["crear (contrato completo)", systemPromptFor({ OPENLEN_MIN_CONTRACT: "0" })],
     ["chat (ai-design)", aiDesignSystemMessage()],
     ["len (agente)", buildAgentSystemPrompt()],
-    [
-      "len (rediseño)",
-      // LO QUE LA RUTA MANDA, por su unica puerta. Antes esto repetia a mano
-      // los dos pasos del ensamblado —recorte y cambio de clausulas—, que es
-      // como una prueba acaba midiendo su propia copia en vez del codigo.
-      redesignPromptFinal({ instruction: "x", html: "<h1>x</h1>" } as never),
-    ],
   ];
 }
 
@@ -67,9 +59,8 @@ describe("ninguna superficie le miente al modelo sobre lo que sobrevive", () => 
 
 describe("y todas saben cómo se pone un mapa que de verdad funciona", () => {
   for (const [nombre, prompt] of superficies()) {
-    // El rediseño no lleva el bloque de embebidos (su regla 5 es sólo sobre
-    // JavaScript), así que se le exige lo mismo que al resto SÓLO si menciona
-    // iframes. Lo que no se acepta de ninguna es que ofrezca la forma MUERTA.
+    // Se le exige a quien menciona iframes. Lo que no se acepta de ninguna es
+    // que ofrezca la forma MUERTA.
     it(`${nombre} — si habla de iframes, da la forma sin clave`, () => {
       if (!/iframe/i.test(prompt)) return;
       expect(prompt).toContain("maps.google.com/maps?q=");

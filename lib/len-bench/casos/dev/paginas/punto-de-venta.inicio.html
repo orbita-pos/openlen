@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MIGA — Panadería y pastelería artesanal · pan de masa madre cada mañana</title>
+<meta name="description" content="MIGA es una panadería artesanal de barrio: masa madre fermentada despacio, croissants de mantequilla y pasteles horneados cada mañana. Pasa a por tu pan o haz tu encargo." />
+<meta property="og:title" content="MIGA — Panadería y pastelería artesanal" />
+<meta property="og:description" content="Masa madre, mantequilla de verdad y horno encendido al amanecer. Pan, bollería y tartas por encargo." />
+<meta property="og:image" content="https://images.openlen.com/170-artisan-bread-1920.webp" />
+<meta name="theme-color" content="#F6EEDF" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23332417'/%3E%3Ctext x='16' y='22' font-family='Georgia,serif' font-size='16' font-style='italic' fill='%23C2742E' text-anchor='middle'%3EM%3C/text%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6EEDF; --surface:#EFE3CE; --surface-2:#E7D7BC; --cream-deep:#EAD9BD;
+    --ink:#2E2114; --ink-soft:#473521; --muted:#7A6549; --faint:#9A8467;
+    --line:rgba(46,33,20,0.13); --line-strong:rgba(46,33,20,0.24);
+    --accent:#C2742E; --accent-deep:#9A551B; --copper:#B5621D; --crust:#7C4A1E;
+    --wheat:#D8A24A; --on-accent:#FFF8EC;
+    --radius:8px; --radius-lg:18px;
+    --display:'Playfair Display',Georgia,'Times New Roman',serif;
+    --body:'Work Sans',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3,.serif{font-family:var(--display);font-weight:600;letter-spacing:-0.01em;line-height:1.04}
+  .eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--copper);font-weight:600}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+  .lift{transition:transform .55s cubic-bezier(.2,.7,.2,1),box-shadow .55s}
+  .lift:hover{transform:translateY(-5px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block}
+  .btn{display:inline-flex;align-items:center;gap:.55rem;height:51px;padding:0 27px;border-radius:999px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,background .25s,color .25s,box-shadow .25s;text-decoration:none;font-family:var(--body)}
+  .btn-primary{background:var(--accent);color:var(--on-accent);box-shadow:0 12px 26px -14px rgba(154,85,27,.85)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent-deep)}
+  .rule{height:1px;background:var(--line)}
+  .price{font-family:var(--display);font-style:italic;color:var(--copper)}
+  .tag{display:inline-flex;align-items:center;gap:.45rem;height:30px;padding:0 14px;border-radius:999px;border:1px solid var(--line-strong);font-size:12.5px;color:var(--ink-soft);font-weight:500;background:rgba(255,255,255,.28)}
+  .seed{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  /* Content visible by default; JS hides it only to play the scroll-in entrance.
+     No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(20px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+  /* Soft paper grain so the cream surface never reads flat */
+  .grain{background-image:radial-gradient(rgba(46,33,20,.05) 1px,transparent 1px);background-size:5px 5px}
+  .num{font-family:var(--display);font-style:italic;color:var(--wheat);font-size:15px;letter-spacing:.04em}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body class="grain">
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(246,238,223,.84);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:74px">
+      <a href="#top" class="serif flex items-baseline gap-2" style="font-size:25px;letter-spacing:.04em;font-weight:700">
+        MIGA<span style="font-family:var(--body);font-style:normal;font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--faint);font-weight:600">horno</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#horno" class="hover:opacity-60 transition">El horno</a>
+        <a href="#vitrina" class="hover:opacity-60 transition">La vitrina</a>
+        <a href="#local" class="hover:opacity-60 transition">El local</a>
+        <a href="#encargos" class="hover:opacity-60 transition">Encargos</a>
+      </nav>
+      <a href="#encargos" class="btn btn-primary" style="height:43px;padding:0 21px;font-size:13.5px">Hacer un encargo</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:62px 24px 26px">
+    <div class="grid lg:grid-cols-12 gap-8 items-end">
+      <div class="lg:col-span-6 reveal">
+        <span class="eyebrow">Panadería artesanal · desde 2009</span>
+        <h1 style="font-size:clamp(46px,8.4vw,96px);margin:18px 0 0">
+          Pan de verdad,<br><em style="font-style:italic;color:var(--accent)">recién</em> salido<br>del horno.
+        </h1>
+        <p style="font-size:18px;color:var(--muted);max-width:35ch;margin:24px 0 30px">
+          Masa madre que fermenta toda la noche, mantequilla de verdad y harinas molidas a la piedra. Horneamos cada mañana — y se nota.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#vitrina" class="btn btn-primary">Ver la vitrina</a>
+          <a href="#encargos" class="btn btn-ghost">Encargar una tarta</a>
+        </div>
+        <div class="flex items-center gap-5 mt-9 text-[13px]" style="color:var(--faint)">
+          <span>Mar–Dom · 07:30–14:30</span><span style="width:1px;height:16px;background:var(--line-strong)"></span><span>Calle Molino 7</span>
+        </div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <div class="relative">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 34px 64px -32px rgba(46,33,20,.55)">
+            <img class="img-cover" src="https://images.openlen.com/170-artisan-bread-1920.webp" alt="Hogazas de pan artesanal de masa madre con corteza dorada recién horneadas" loading="eager" width="1080" height="1350">
+          </div>
+          <div class="hidden sm:block" style="position:absolute;left:-18px;bottom:26px;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px 18px;box-shadow:0 18px 40px -22px rgba(46,33,20,.5)">
+            <div class="serif" style="font-size:26px;font-style:italic;color:var(--copper);line-height:1">18&nbsp;h</div>
+            <div class="text-[12px]" style="color:var(--muted);margin-top:2px">de fermentación lenta</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETAIL STRIP -->
+  <section class="wrap" style="padding:38px 24px">
+    <div class="rule"></div>
+    <div class="flex flex-wrap items-center justify-between gap-y-5 py-6 text-[13px]" style="color:var(--muted);letter-spacing:.03em">
+      <span class="flex items-center gap-2"><span class="seed"></span>Masa madre natural</span>
+      <span class="flex items-center gap-2"><span class="seed"></span>Mantequilla francesa</span>
+      <span class="flex items-center gap-2"><span class="seed"></span>Sin aditivos</span>
+      <span class="flex items-center gap-2"><span class="seed"></span>Harina molida a la piedra</span>
+      <span class="flex items-center gap-2"><span class="seed"></span>Horneado cada día</span>
+    </div>
+    <div class="rule"></div>
+  </section>
+
+  <!-- DEL HORNO CADA MAÑANA / proceso -->
+  <section id="horno" class="wrap" style="padding:54px 24px 24px">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-5 reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 30px 58px -34px rgba(46,33,20,.5)">
+          <img class="img-cover" src="https://images.openlen.com/269-kneading-dough-1920.webp" alt="Manos del panadero amasando la masa sobre la mesa enharinada" loading="lazy" width="1080" height="1350">
+        </div>
+      </div>
+      <div class="lg:col-span-7 reveal">
+        <span class="eyebrow">Del horno cada mañana</span>
+        <h2 style="font-size:clamp(32px,5vw,54px);margin:14px 0 0">El pan no<br>tiene prisa.</h2>
+        <p style="color:var(--muted);font-size:17.5px;margin-top:20px;max-width:50ch">
+          Empezamos la masa la noche anterior y la dejamos fermentar despacio. A las cinco de la mañana ya está el horno encendido. Nada de mejorantes, nada de atajos: solo harina, agua, sal y tiempo.
+        </p>
+        <div class="grid sm:grid-cols-3 gap-6 mt-10">
+          <div class="reveal">
+            <div class="num">01</div>
+            <h3 style="font-size:18px;margin:8px 0 6px">Se mezcla de noche</h3>
+            <p class="text-[14px]" style="color:var(--muted)">Refrescamos la madre y amasamos a última hora. La masa reposa en frío hasta el amanecer.</p>
+          </div>
+          <div class="reveal">
+            <div class="num">02</div>
+            <h3 style="font-size:18px;margin:8px 0 6px">Se forma a mano</h3>
+            <p class="text-[14px]" style="color:var(--muted)">Cada hogaza se bolea y se marca a mano. Sin moldes industriales, sin dos panes iguales.</p>
+          </div>
+          <div class="reveal">
+            <div class="num">03</div>
+            <h3 style="font-size:18px;margin:8px 0 6px">Se hornea al vapor</h3>
+            <p class="text-[14px]" style="color:var(--muted)">Horno de piedra con vapor para una corteza que cruje y una miga abierta y alveolada.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LA VITRINA / productos -->
+  <section id="vitrina" style="background:var(--surface);margin-top:54px">
+    <div class="wrap" style="padding:74px 24px">
+      <div class="flex items-end justify-between mb-12 reveal">
+        <div>
+          <span class="eyebrow">La vitrina</span>
+          <h2 style="font-size:clamp(32px,5vw,52px);margin-top:12px">Lo que sale<br>hoy del horno</h2>
+        </div>
+        <p class="hidden md:block text-[14px]" style="color:var(--muted);max-width:30ch">Bollería y pan recién hecho cada mañana. Cuando se acaba, se acaba — mejor venir temprano.</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-7">
+        <article class="reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 24px 50px -32px rgba(46,33,20,.5)">
+            <img class="img-cover" src="https://images.openlen.com/167-croissants-1920.webp" alt="Croissants de mantequilla dorados y hojaldrados recién horneados" loading="lazy" width="1080" height="1350">
+          </div>
+          <div class="flex items-baseline justify-between mt-5">
+            <h3 style="font-size:21px">Croissant de mantequilla</h3><span class="price" style="font-size:19px">2,20&nbsp;€</span>
+          </div>
+          <p class="text-[14.5px] mt-1.5" style="color:var(--muted)">Hojaldre de 27 capas con mantequilla francesa. Crujiente por fuera, tierno y mantecoso por dentro.</p>
+        </article>
+        <article class="reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 24px 50px -32px rgba(46,33,20,.5)">
+            <img class="img-cover" src="https://images.openlen.com/168-cake-slice-1920.webp" alt="Porción de tarta casera de bizcocho jugoso en un plato" loading="lazy" width="1080" height="1350">
+          </div>
+          <div class="flex items-baseline justify-between mt-5">
+            <h3 style="font-size:21px">Tarta de la casa</h3><span class="price" style="font-size:19px">3,80&nbsp;€</span>
+          </div>
+          <p class="text-[14.5px] mt-1.5" style="color:var(--muted)">Bizcocho jugoso de temporada — limón y almendra en primavera, calabaza y canela en otoño.</p>
+        </article>
+        <article class="reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 24px 50px -32px rgba(46,33,20,.5)">
+            <img class="img-cover" src="https://images.openlen.com/169-pancake-stack-1920.webp" alt="Torre de tortitas esponjosas con sirope dorado para el brunch" loading="lazy" width="1080" height="1350">
+          </div>
+          <div class="flex items-baseline justify-between mt-5">
+            <h3 style="font-size:21px">Tortitas de brunch</h3><span class="price" style="font-size:19px">6,50&nbsp;€</span>
+          </div>
+          <p class="text-[14.5px] mt-1.5" style="color:var(--muted)">Solo fines de semana: pila de tortitas esponjosas con mantequilla, fruta fresca y sirope de arce.</p>
+        </article>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 mt-12 reveal">
+        <span class="tag">Pan de masa madre · 4,20 €</span>
+        <span class="tag">Baguette de campo · 1,80 €</span>
+        <span class="tag">Pain au chocolat · 2,40 €</span>
+        <span class="tag">Brioche trenzado · 5,90 €</span>
+        <span class="tag">Galletas de avena · 1,20 €</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- EL LOCAL -->
+  <section id="local" class="wrap" style="padding:80px 24px">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-7 reveal order-2 lg:order-1">
+        <span class="eyebrow">El local</span>
+        <h2 style="font-size:clamp(30px,4.6vw,48px);margin:14px 0 0">Café, una silla<br>junto al horno<br>y el olor a pan.</h2>
+        <p style="color:var(--muted);font-size:17.5px;margin-top:22px;max-width:50ch">
+          Una esquina pequeña con cuatro mesas de madera, café de tueste local y la vitrina siempre llena por la mañana. Pasa a desayunar, llévate la barra del día o quédate a leer un rato con un croissant.
+        </p>
+        <div class="grid grid-cols-3 gap-6 mt-10" style="max-width:460px">
+          <div><div class="serif" style="font-size:38px;font-style:italic;color:var(--copper)">05:00</div><div class="text-[13px]" style="color:var(--faint)">se enciende el horno</div></div>
+          <div><div class="serif" style="font-size:38px;font-style:italic;color:var(--copper)">15</div><div class="text-[13px]" style="color:var(--faint)">años de barrio</div></div>
+          <div><div class="serif" style="font-size:38px;font-style:italic;color:var(--copper)">0</div><div class="text-[13px]" style="color:var(--faint)">conservantes</div></div>
+        </div>
+      </div>
+      <div class="lg:col-span-5 reveal order-1 lg:order-2">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 30px 58px -34px rgba(46,33,20,.5)">
+          <img class="img-cover" src="https://images.openlen.com/177-coffee-pastry-1920.webp" alt="Taza de café junto a un pastel recién hecho sobre la mesa de la panadería" loading="lazy" width="1080" height="1350">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENCARGOS / CTA -->
+  <section id="encargos" style="background:var(--ink);color:var(--bg)">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-6 reveal">
+          <span class="eyebrow" style="color:var(--wheat)">Encargos</span>
+          <h2 class="serif" style="font-size:clamp(34px,5.2vw,58px);color:var(--bg);margin:14px 0 0;font-weight:600">¿Una tarta<br>para el domingo?</h2>
+          <p style="color:rgba(246,238,223,.74);font-size:17.5px;margin-top:20px;max-width:44ch">
+            Tartas de cumpleaños, pan para tu mesa larga o una caja de bollería para la oficina. Encarga con un día de antelación y lo tienes recién hecho a la hora que vengas.
+          </p>
+          <div class="flex flex-wrap gap-8 mt-9 text-[14px]" style="color:rgba(246,238,223,.82)">
+            <div><div style="color:var(--wheat);font-weight:600;margin-bottom:2px">Encargos</div>hola@miga.example</div>
+            <div><div style="color:var(--wheat);font-weight:600;margin-bottom:2px">Teléfono</div>+34 600 000 000</div>
+            <div><div style="color:var(--wheat);font-weight:600;margin-bottom:2px">Recogida</div>Calle Molino 7</div>
+          </div>
+        </div>
+        <div class="lg:col-span-6 reveal">
+          <div style="background:var(--bg);color:var(--ink);border-radius:var(--radius-lg);padding:30px;box-shadow:0 40px 80px -40px rgba(0,0,0,.6)">
+            <div class="serif" style="font-size:21px;margin-bottom:4px">Hacer un encargo</div>
+            <p class="text-[13.5px]" style="color:var(--muted);margin-bottom:20px">Dinos qué quieres y para cuándo. Te confirmamos por correo el mismo día.</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-[12px]" style="color:var(--faint)">Qué encargas</label>
+                <div style="height:46px;border:1px solid var(--line);border-radius:var(--radius);margin-top:6px;display:flex;align-items:center;padding:0 14px;color:var(--muted);font-size:14px">Tarta de limón</div>
+              </div>
+              <div>
+                <label class="text-[12px]" style="color:var(--faint)">Para cuándo</label>
+                <div style="height:46px;border:1px solid var(--line);border-radius:var(--radius);margin-top:6px;display:flex;align-items:center;padding:0 14px;color:var(--muted);font-size:14px">Domingo, 10:00</div>
+              </div>
+            </div>
+            <div class="mt-3">
+              <label class="text-[12px]" style="color:var(--faint)">Tu correo</label>
+              <div style="height:46px;border:1px solid var(--line);border-radius:var(--radius);margin-top:6px;display:flex;align-items:center;padding:0 14px;color:var(--faint);font-size:14px">tu@correo.com</div>
+            </div>
+            <a href="#encargos" class="btn btn-primary w-full mt-4" style="justify-content:center">Enviar el encargo</a>
+            <p class="text-[12px] text-center mt-3" style="color:var(--faint)">Te respondemos en el día · sin compromiso</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:56px 24px 40px">
+    <div class="grid md:grid-cols-4 gap-8">
+      <div class="md:col-span-2">
+        <div class="serif" style="font-size:26px;letter-spacing:.04em;font-weight:700">MIGA</div>
+        <p class="text-[14px] mt-3" style="color:var(--muted);max-width:36ch">Panadería y pastelería artesanal de barrio. Masa madre, mantequilla de verdad y horno encendido al amanecer.</p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Visítanos</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.95">Calle Molino 7<br>Mar–Dom · 07:30–14:30<br>+34 600 000 000</p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Síguenos</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.95"><a href="#" class="hover:opacity-60">Instagram</a><br><a href="#encargos" class="hover:opacity-60">Encargos</a><br><a href="#" class="hover:opacity-60">Tartas de boda</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:36px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© MIGA · Panadería artesanal</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, static preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

@@ -213,7 +213,7 @@ describe("Fireworks tool transport", () => {
     expect(payload.tool_choice).toBe("auto");
     expect(payload.tools).toEqual(CREATIVE_TOOL_DEFINITIONS);
     expect(payload.response_format).toBeUndefined();
-    expect(payload.model).toBe("accounts/fireworks/models/deepseek-v4-flash-0731");
+    expect(payload.model).toBe("accounts/fireworks/models/deepseek-v4p1-flash");
   });
 
   it("declares every creative op name explicitly so the model cannot shorten them", () => {

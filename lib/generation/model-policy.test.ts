@@ -12,7 +12,9 @@ import {
 
 describe("Fable model policy", () => {
   it("routes each provider role through the one approved Fireworks model", () => {
-    expect(MODEL_POLICY.reasoner.modelId).toBe("accounts/fireworks/models/deepseek-v4-flash-0731");
+    // ⚰️ Era V4 Flash (`deepseek-v4-flash-0731`), que Fireworks sacó de
+    // serverless el 2026-09-26: 404 «not deployed». El porqué, en `model-policy.ts`.
+    expect(MODEL_POLICY.reasoner.modelId).toBe("accounts/fireworks/models/deepseek-v4p1-flash");
     // ⚰️ Decía `qwen3p7-plus`. Cambió el 2026-09-12: ese modelo llevaba desde el
     // 2026-08-27 devolviendo 404 en producción y nadie se enteró porque los ojos
     // fallan BLANDO. El porqué entero, con la medición, en `model-policy.ts`.

@@ -80,11 +80,3 @@ export function prefijosInventados(args: {
   return out;
 }
 
-/** La frase para el modelo: qué pasó y qué hacer. */
-export function avisoPrefijosInventados(lista: readonly PrefijoInventado[]): string {
-  const detalle = lista.map((p) => `${p.href} (le pusiste +${p.prefijo} delante de ${p.dictado})`).join(", ");
-  return (
-    `Pusiste un prefijo de país que nadie te dio: ${detalle}. El país del número es un dato del dueño: si lo adivinas, sus clientes llaman a otro país. ` +
-    "En un enlace tel: deja exactamente las cifras que te dieron. Si es un wa.me, que sí necesita el país, PREGÚNTALE al usuario de qué país es el número en vez de elegirlo tú."
-  );
-}

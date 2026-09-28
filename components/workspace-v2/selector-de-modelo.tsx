@@ -63,7 +63,7 @@ import {
   type EscritorFijado,
   type TurnWriter,
 } from "@/lib/ai/provider-switch";
-import { displayNameForRole, multiploDeSalida } from "@/lib/generation/model-policy";
+import { displayNameForRole, modelIdForRole, multiploDeSalida } from "@/lib/generation/model-policy";
 import { useMandoDesplegable } from "./use-mando-desplegable";
 
 /** Por debajo de esto el múltiplo no se enseña. No es un umbral de gusto: un
@@ -100,7 +100,27 @@ function sufijoDeCoste(
   return ` · ${t("modelo.masCaro", { n: Math.round(m * 10) / 10 })}`;
 }
 
-export function SelectorDeModelo({
+/**
+ * ¿HAY ALGO QUE ELEGIR? Si todos los escritores elegibles son el MISMO modelo,
+ * no: el menú sería una palanca que no lleva a ningún sitio (dos filas con
+ * el mismo nombre y el mismo precio), y se enseña sólo el nombre. Pasó el 2026-09-26, cuando el papel
+ * `reasoner` se movió a V4.1 Flash al retirar Fireworks V4 Flash de serverless.
+ * Vuelve solo el día que los papeles difieran.
+ */
+const HAY_ELECCION = new Set(ESCRITORES_ELEGIBLES.map(modelIdForRole)).size > 1;
+
+export function SelectorDeModelo(props: Parameters<typeof SelectorConFilas>[0]) {
+  if (HAY_ELECCION) return <SelectorConFilas {...props} />;
+  // Sin elección, el NOMBRE se queda —es la bienvenida de Claude Code: qué
+  // modelo escribe—; lo que se va es el menú. Mismo texto tenue que el botón.
+  return (
+    <span className="min-w-0 truncate px-1 py-0.5 text-[11px] fg-faint">
+      {displayNameForRole(escritorDeCrear(props.hasImages, props.escritor))}
+    </span>
+  );
+}
+
+function SelectorConFilas({
   escritor,
   hasImages,
   onChange,

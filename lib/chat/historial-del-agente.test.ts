@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MARCA_DE_TURNO_CORTADO, historialParaElAgente } from "./historial-del-agente";
+import { MARCA_DE_TURNO_CORTADO, accionesAlRecargar, historialParaElAgente } from "./historial-del-agente";
 
 describe("el historial que el taller le manda al Agente", () => {
   const turno = {
@@ -49,5 +49,33 @@ describe("el historial que el taller le manda al Agente", () => {
     const { history, historyTotal } = historialParaElAgente(muchos, null);
     expect(historyTotal).toBe(14);
     expect(history.filter((h) => h.role === "user").map((h) => h.content)[0]).toBe("t2");
+  });
+});
+
+describe("accionesAlRecargar — lo que ve quien RECARGA la conversación", () => {
+  const conAcciones = (actions: { tool: string; status: string; summary: string }[]) => ({
+    userText: "pon el menú",
+    assistantReasoning: "",
+    status: "applied",
+    actions,
+  });
+  const llamadas = (turnos: Parameters<typeof historialParaElAgente>[0]) =>
+    historialParaElAgente(turnos, null).history.find((h) => h.role === "assistant")?.functionCalls?.map((c) => c.name) ?? [];
+
+  it("una acción guardada como `running` murió a medias: vuelve como `error` y el historial la lleva como fallida", () => {
+    const acciones = accionesAlRecargar([
+      { tool: "editar_html", status: "running", summary: "menú" },
+      { tool: "mirar_pagina", status: "done", summary: "captura" },
+    ]);
+    expect(acciones?.map((a) => a.status)).toEqual(["error", "done"]);
+    expect(llamadas([conAcciones(acciones ?? [])])).toEqual(["editar_html", "mirar_pagina"]);
+  });
+
+  it("BRAZO DE CONTROL: sin restaurar, la herramienta que murió desaparece del historial", () => {
+    expect(llamadas([conAcciones([{ tool: "editar_html", status: "running", summary: "menú" }])])).toEqual([]);
+  });
+
+  it("sin acciones sigue sin acciones", () => {
+    expect(accionesAlRecargar(undefined)).toBeUndefined();
   });
 });

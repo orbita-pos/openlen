@@ -47,9 +47,9 @@ export type ClauseId =
   /** La línea de NON-NEGOTIABLE CONSTRAINTS (crear y Chat la comparten). */
   | "no-negociable"
   /** La regla del Agente en `lib/agent/catalog.ts`. */
-  | "agente"
-  /** La regla nº5 del rediseño en `lib/agent/redesign.ts`. */
-  | "rediseno";
+  | "agente";
+  // ⚰️ `rediseno` —la regla nº5 de `lib/agent/redesign.ts`— se fue con el
+  // rediseño (Len 2.0: un Write hace lo mismo sin un segundo modelo).
 
 interface Clausula {
   /** Marca inicial, exacta. Si no aparece, la sustitución LANZA. */
@@ -78,30 +78,33 @@ const SIN_OCULTAR_EN =
 // El dato ya estaba en el prompt, pero enterrado en la lista de QUÉ MÁS SE BORRA,
 // que se lee como una consecuencia para otros scripts. Aquí va como INSTRUCCIÓN.
 //
-// 🔴 POR QUÉ SE BORRAN LOS `on*`, corregido el 2026-09-01. Aquí ponía que
-// conservarlos «exigiría `'unsafe-hashes'` en la CSP» y que un shim que evaluara
-// la expresión «exigiría `'unsafe-eval'`», así que el prompt era «la única
-// palanca legítima». Esa razón CADUCÓ: la CSP se retiró el 2026-08-26 (ver la
-// cabecera de `crates/html-engine/src/publish/seal.rs`). No queda política que
-// debilitar, y el argumento sobrevivió a lo que describía.
+// 🔴 LOS `on*` NO SE BORRAN AL GUARDAR — medido el 2026-09-25, superficie por
+// superficie (`lib/publish/el-on-del-modelo.test.ts`). Aquí se decía que los
+// quitaba «el SANEADO XSS» y la frase del prompt lo repetía: «se borran al
+// guardar, así que un botón cableado así queda mudo». Para lo que escribe el
+// MODELO es falso. Crear, el Chat y Len guardan por `gateReservedMarker`, que
+// sólo mira `data-slot-path`; `publishToDir` usa la misma puerta; y la CSP que
+// antes los bloqueaba en el navegador se retiró el 2026-08-26 (cabecera de
+// `crates/html-engine/src/publish/seal.rs`). Publicado y abierto en Chromium,
+// el `onclick` del modelo FUNCIONA.
 //
-// La razón viva es otra y basta por sí sola: los `on*` los quita el SANEADO
-// XSS, junto a los `javascript:` y los `<iframe>` fuera de lista (ver la
-// cabecera de `crates/html-engine/src/sanitize/mod.rs`). La conclusión no
-// cambia —cablea con `addEventListener` o el botón nace mudo—, cambia el porqué.
-//
-// Y con la CSP fuera, «no hay reparación posible aguas abajo» ya no es cierto
-// sin más: restaurar o reescribir un `on*` en la ingestión es discutible, no
-// imposible. Está abierto para las plantillas curadas —donde el HTML es
-// NUESTRO— y sin decidir. Lo que NO cambia es esto: mientras el saneador se los
-// lleve, prometerle al modelo que su `onclick` sobrevive sería mentirle.
+// LA RAZÓN VIVA es otra, y basta: los borra la MANO DEL DUEÑO. El editor manda
+// desde el navegador lo que tocó y eso se sanea —`aplicarEdiciones` sanea el
+// fragmento; el `PATCH /html` del documento entero (deshacer) lo sanea entero
+// y sólo le devuelve los `<script>` (`conservarScripts`)—. Así que un botón
+// con `onclick` funciona el día que se publica y se queda mudo la primera vez
+// que el dueño le cambia el texto, sin error y sin que nadie lo note; el
+// cableado con `addEventListener` desde el script sobrevive a eso. Se sigue
+// recomendando lo mismo, pero ya no se le miente al modelo sobre el porqué:
+// un modelo que ve su `onclick` guardado y funcionando aprende que la regla
+// era falsa.
 const CABLEADO_ES =
-  "Cablea los manejadores con `addEventListener` DENTRO del script: los atributos `onclick=` —y cualquier `on*`— se borran al guardar, así que un botón cableado así queda mudo aunque el script sobreviva entero.";
+  "Cablea los manejadores con `addEventListener` DENTRO del script, no con atributos `onclick=` (ni ningún `on*`): tu guardado los conserva, pero el editor los borra cuando el dueño retoca ese elemento a mano o deshace un cambio, y el botón se queda mudo sin que nadie lo note.";
 
 // EL SEGUNDO PUNTO CIEGO MEDIDO del JavaScript del modelo, y el que no lanza:
 // una clase que el script pone y que nadie define en el CSS deja el control
 // MUDO — se ejecuta, no falla, no sale en consola, y no se nota. (El primero,
-// que los `on*` se borran, lo cubre `CABLEADO_ES`.)
+// el `on*` que borra el editor del dueño, lo cubre `CABLEADO_ES`.)
 //
 // Vivía suelta en `contrato-min`. Se extrae aquí porque desde el 2026-09-04 el
 // Agente RETIRA esa viñeta del contrato —sus REGLAS DURAS ya decían todo lo
@@ -110,7 +113,7 @@ const CABLEADO_ES =
 const DOS_MITADES_ES =
   "Escribe SIEMPRE LAS DOS MITADES: el comportamiento y el CSS del estado que ese comportamiento activa — una clase que el script pone y que nadie define en el CSS deja el control mudo, se ejecuta y no se nota.";
 const CABLEADO_EN =
-  "Wire handlers with `addEventListener` INSIDE the script: `onclick=` — and any `on*` — attributes are stripped on save, so a button wired that way is dead even though the script itself survives.";
+  "Wire handlers with `addEventListener` INSIDE the script, not with `onclick=` (or any `on*`) attributes: your save keeps them, but the editor strips them when the owner touches that element by hand or undoes a change, and the button goes dead without anyone noticing.";
 
 const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
   "contrato-min": {
@@ -126,7 +129,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       // retórica: es el segundo de los dos puntos ciegos medidos del JavaScript
       // del modelo. Una clase que el script pone y que nadie define en el CSS
       // deja el control MUDO — se ejecuta, no lanza, no sale en consola, y no
-      // se nota. El primero (`on*` se borra) ya lo cubre `CABLEADO_ES`.
+      // se nota. El primero (el `on*` que borra el editor) ya lo cubre `CABLEADO_ES`.
       `${DOS_MITADES_ES} ` +
       `La página tiene que estar completa y legible SIN ese script: mejora, nunca construye el contenido. ${SIN_OCULTAR_ES} ` +
       "Cuando el CSS puro ya resuelve —`<details>`/`<summary>`, un checkbox con `peer-checked:`, `:target`, `@keyframes`— prefiérelo; para lo demás, escribe el script.",
@@ -158,13 +161,15 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       "         – entrances, hovers, marquees → `@keyframes` / `transition`\n" +
       "  A `<button>` still does NOTHING unless it submits a form or your script\n" +
       "  wires it up. Never ship a dead control.\n" +
-      "• `<iframe>` — ONLY from a short allowlist: Google Maps, YouTube and Vimeo.\n" +
-      "  Anything else is stripped on save. Write them directly — there is NO\n" +
+      "• `<iframe>` — Google Maps, YouTube and Vimeo survive everything, including\n" +
+      "  the owner's own hand edits. Write them directly — there is NO\n" +
       "  publish-time transform that turns a link into an embed.\n" +
       '         – map   → `<iframe src="https://maps.google.com/maps?q=<address>&output=embed" loading="lazy">` — no key, no account.\n' +
       '         – video → `<iframe src="https://www.youtube.com/embed/<ID>">` or `https://player.vimeo.com/video/<ID>`, and ONLY when the brief gives you the link: an invented ID is a broken player.\n' +
-      "  For anything else (Spotify, Calendly, third-party booking) do not fake an\n" +
-      "  embed — link out with an honest `<a href>`.\n",
+      "  For anything else (Spotify, Calendly, third-party booking) link out with an\n" +
+      "  honest `<a href>`: an `<iframe>` from any other site survives your save, but\n" +
+      "  the editor strips it as soon as the owner undoes a change by hand, and it\n" +
+      "  vanishes without warning.\n",
   },
 
   conductas: {
@@ -198,8 +203,10 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
     desde: "- OpenLen NO ejecuta JavaScript de la página:",
     hasta: "\n",
     libre:
-      "- Puedes escribir el JavaScript de la página, y sobrevive al guardar. Ponlo TODO en UN `<script>`, el último del body: no es un límite del sistema, es para poder cambiarlo después de una pieza con target=\"runtime\". " +
-      "Los atributos `on*` sí se borran. " +
+      // ⚰️ Decía «Ponlo TODO en UN `<script>`… para poder cambiarlo después de
+      // una pieza con target="runtime"». Len 2.0 (2026-09-24) edita el script
+      // como cualquier otro trozo del fichero, con Edit: esa razón ya no existe.
+      "- Puedes escribir el JavaScript de la página, y sobrevive al guardar. Ponlo en un `<script>` al final del body. " +
       `${CABLEADO_ES} ` +
       `${DOS_MITADES_ES} ` +
       `La página tiene que funcionar SIN él. ${SIN_OCULTAR_ES} ` +
@@ -226,28 +233,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       "MIRA LA RESPUESTA DEL SERVIDOR: el POST puede decir que NO —507 si el dueño ha llenado su cuota, 413 si el documento pasa de 16 KB, y la red puede fallar—. Si no vuelve `ok`, díselo al visitante EN LA PÁGINA y no le dejes el cambio pintado como guardado (deshazlo, o píntalo sólo cuando el servidor conteste bien). Pintar primero y no mirar la respuesta es la forma de que alguien pierda su carrito sin enterarse.",
   },
 
-  rediseno: {
-    desde: "5. NADA de JavaScript propio:",
-    hasta: "\n",
-    libre:
-      "5. Puedes escribir JavaScript, y sobrevive. Ponlo TODO en UN `<script>`, el último del body — no es un límite del sistema, es para poder cambiarlo después de una pieza. " +
-      "Los atributos `on*` sí se borran al guardar. " +
-      // ⚰️ AQUÍ ESTABA LA LISTA DE `<iframe>` PERMITIDOS, retirada el 2026-09-04
-      // por el mismo motivo y con la misma comprobación que la del Agente doce
-      // líneas más arriba: el rediseño CONSERVA el bloque del contrato —no
-      // declara `yaLoDiceLaSuperficie`—, y ése la trae completa (las formas de
-      // URL de YouTube y de Vimeo, «sólo si el brief te da el enlace», y qué
-      // hacer con Spotify o Calendly). Medido sobre el golden ANTES de tocar
-      // nada: el prompt del rediseño decía la lista dos veces, en sus líneas
-      // 1146 y 1163. Aquí sólo estaba la mitad corta.
-      //
-      // El comentario de `js-clause-superficies.test.ts` que dice «el rediseño
-      // no lleva el bloque de embebidos» describe eso mismo al revés y ya era
-      // falso antes de este cambio; su aserción sigue verde porque la forma
-      // `maps.google.com/maps?q=` la sigue dando el contrato.
-      `${CABLEADO_ES} ` +
-      `La página tiene que funcionar sin él. ${SIN_OCULTAR_ES}`,
-  },
+
 };
 
 /**

@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  avisoHechosPerdidos,
-  avisoHechosPerdidosEnEdicion,
-  avisoMetaDesfasada,
   hechosPerdidos,
   hechosPerdidosNetos,
   metaDesfasada,
@@ -78,27 +75,6 @@ describe("los hechos del dueño tras una reescritura", () => {
   });
 });
 
-describe("el aviso al modelo", () => {
-  it("nombra el valor exacto y le dice que lo reponga YA", () => {
-    const a = avisoHechosPerdidos([{ tipo: "imagen", valor: FOTO }]);
-    expect(a).toContain(FOTO);
-    expect(a).toMatch(/editar_texto o editar_html/);
-    // Y que no cierre el turno diciendo que está listo: es el fallo del
-    // «Listo ✅» sobre una página intacta, aplicado aquí.
-    expect(a).toMatch(/NO le digas al usuario/);
-  });
-
-  it("se acota, pero dice cuántos más hay", () => {
-    const muchos = Array.from({ length: 9 }, (_, i) => ({
-      tipo: "imagen" as const,
-      valor: `https://x.com/${i}.webp`,
-    }));
-    const a = avisoHechosPerdidos(muchos);
-    expect(a).toContain("9 dato(s)");
-    expect(a).toContain("y 3 más");
-  });
-});
-
 // MEDIDO con los ataques de QA (2026-08-22): «cambia nuestro telefono en TODA
 // la pagina» actualizaba texto, tel: y WhatsApp, y dejaba el viejo en la meta
 // description — 3 de 3. Con el camino abierto paso a 1 de 3; con este detector,
@@ -133,12 +109,6 @@ describe("la meta description que se queda atras", () => {
     expect(metaDesfasada(`<html><head></head><body><p>Tel. 614 555 0100</p></body></html>`)).toEqual([]);
   });
 
-  it("el aviso dice el dato y por que importa", () => {
-    const a = avisoMetaDesfasada(["614 555 0100"]);
-    expect(a).toContain("614 555 0100");
-    expect(a).toMatch(/Google/);
-    expect(a).toMatch(/target="head"/);
-  });
 });
 
 // ───── LA VARIANTE DE LA EDICIÓN ─────
@@ -189,14 +159,4 @@ describe("una edición que se lleva un dato del dueño", () => {
     expect(perdidos).toEqual([FOTO, OTRA_FOTO].sort());
   });
 
-  it("el aviso nombra el dato y da LAS DOS salidas, sin acusar", () => {
-    const a = avisoHechosPerdidosEnEdicion([{ tipo: "imagen", valor: FOTO }]);
-    expect(a).toContain(FOTO);
-    // Reponer si no se lo pidieron…
-    expect(a).toMatch(/reponlo AHORA/i);
-    // … y decírselo al usuario si sí.
-    expect(a).toMatch(/DÍSELO al usuario/);
-    // Y nombra el camino por el que de verdad pasa.
-    expect(a).toMatch(/contraste/i);
-  });
 });

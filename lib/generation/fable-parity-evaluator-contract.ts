@@ -14,10 +14,12 @@ const ByteArray = z.custom<Uint8Array>((value) => (Buffer.isBuffer(value) || Arr
 const AdapterSchema = z.object({
   adapterId: Identity,
   endpointSha256: Sha256,
+  // Un modelo POR PAPEL, en su orden (ver `validateFableParityEvalEnvironment`).
+  // ⚰️ Aquí se exigía que fueran distintos: dos papeles pueden compartir modelo
+  // —desde el 2026-09-26 `reasoner` y `visualCritic` son los dos V4.1 Flash—,
+  // y con esa regla el manifiesto no validaba.
   modelIds: z.array(Identity).min(1).max(8),
-}).strict().superRefine((value, ctx) => {
-  if (new Set(value.modelIds).size !== value.modelIds.length) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "adapter model IDs must be unique" });
-});
+}).strict();
 
 export const FableParityEvalAuthorizationManifestSchema = z.object({
   schemaVersion: z.literal("fable-parity-eval-authorization/2.0"),

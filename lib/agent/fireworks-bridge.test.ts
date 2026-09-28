@@ -55,6 +55,27 @@ describe("puente del Agente al cable de Fireworks", () => {
     expect(wire[3]).toEqual({ role: "tool", content: '{"ok":true,"modulo":"members"}', toolCallId: calls[1].id });
   });
 
+  it("una herramienta de ficheros devuelve TEXTO, y va tal cual: el cat -n no llega escapado", () => {
+    // Claude Code: el `tool_result` de Read es el texto que el modelo lee, con
+    // sus saltos de línea y tabuladores. Serializado como JSON le llegaría
+    // `"1\\t<html>\\n2\\t…"`, otra cosa de por medio.
+    const wire = messagesForFireworks([
+      { role: "user", content: "lee la home" },
+      { role: "assistant", content: "", functionCalls: [{ name: "Read", args: { file_path: "/index.html" } }] },
+      {
+        role: "user", content: "",
+        functionResponses: [
+          { name: "Read", response: { ok: true, tool_result: "1\t<html>\n2\t<body>" } },
+        ],
+      },
+    ]);
+    expect(wire[2]).toEqual({
+      role: "tool",
+      content: "1\t<html>\n2\t<body>",
+      toolCallId: wire[1].toolCalls?.[0]?.id,
+    });
+  });
+
   it("🔴 el CONTENT del mensaje de respuestas viaja: es donde va lo medido", () => {
     // MEDIDO el 2026-09-06 pagando 6 corridas del Agente: las seis recibieron
     // una página rota, el bucle midió y redactó el aviso con su `data-op-id`, y

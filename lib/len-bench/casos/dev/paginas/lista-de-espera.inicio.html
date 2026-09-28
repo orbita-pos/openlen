@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SAVIA — Nutrición que sí funciona, a tu medida</title>
+<meta name="description" content="SAVIA es nutrición que sí funciona: planes personalizados con dietistas-nutricionistas de verdad, seguimiento real, recetas que apetecen y una app que te acompaña cada día. Sin dietas milagro." />
+<meta property="og:title" content="SAVIA — Nutrición que sí funciona" />
+<meta property="og:description" content="Planes a tu medida con dietistas de verdad, seguimiento humano y recetas que apetecen. Sin dietas milagro." />
+<meta property="og:image" content="https://images.openlen.com/163-grain-bowl-1920.webp" />
+<meta name="theme-color" content="#FBF7EF" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231F2A1C'/%3E%3Cpath d='M16 7c5 2 7 5 7 9s-3 8-7 9c-1-4 0-7 2-9-3 1-5 0-6-3 2 1 4 1 5-1-3-1-4-4-1-5 1 0 2 0 3 1-1-3-2-5-3-10z' fill='%237FB069'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FBF7EF; --surface:#F2ECDF; --surface-2:#E9E1CF;
+    --ink:#202519; --ink-soft:#384031; --muted:#5E6953; --faint:#8A9079;
+    --line:rgba(32,37,25,0.12); --line-strong:rgba(32,37,25,0.22);
+    --accent:#5E8C4A; --accent-deep:#3E6531; --leaf:#7FB069; --on-accent:#FBFCF8;
+    --radius:8px; --radius-lg:20px;
+    --display:'Fraunces',Georgia,'Times New Roman',serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3,.serif{font-family:var(--display);font-weight:500;letter-spacing:-0.01em;line-height:1.05}
+  .eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s}
+  .lift:hover{transform:translateY(-4px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;height:50px;padding:0 26px;border-radius:999px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,background .25s,color .25s,border-color .25s;text-decoration:none}
+  .btn-primary{background:var(--accent);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .card{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-lg)}
+  .rule{height:1px;background:var(--line)}
+  .pill{display:inline-flex;align-items:center;gap:.45rem;font-size:12.5px;font-weight:500;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 14px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--leaf);display:inline-block}
+  /* Content is visible by default; only JS hides it to play the scroll-in
+     entrance. No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+  .grain{background-image:radial-gradient(rgba(32,37,25,.035) 1px,transparent 1px);background-size:4px 4px}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body class="grain">
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(251,247,239,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:72px">
+      <a href="#top" class="flex items-center gap-2">
+        <span style="display:inline-flex;width:26px;height:26px;border-radius:8px;background:var(--accent);align-items:center;justify-content:center">
+          <svg width="15" height="15" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 7c5 2 7 5 7 9s-3 8-7 9c-1-4 0-7 2-9-3 1-5 0-6-3 2 1 4 1 5-1-3-1-4-4-1-5 1 0 2 0 3 1-1-3-2-5-3-10z" fill="#FBFCF8"/></svg>
+        </span>
+        <span class="serif" style="font-size:22px;letter-spacing:.14em;font-weight:600">SAVIA</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#como" class="hover:opacity-60 transition">Cómo funciona</a>
+        <a href="#incluye" class="hover:opacity-60 transition">Qué incluye</a>
+        <a href="#planes" class="hover:opacity-60 transition">Planes</a>
+        <a href="#resultados" class="hover:opacity-60 transition">Resultados</a>
+      </nav>
+      <a href="#planes" class="btn btn-primary" style="height:42px;padding:0 20px;font-size:13.5px">Empezar ahora</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:64px 24px 24px">
+    <div class="grid lg:grid-cols-12 gap-8 items-end">
+      <div class="lg:col-span-6 reveal">
+        <span class="eyebrow">Nutrición real · con dietistas colegiados</span>
+        <h1 style="font-size:clamp(44px,7.6vw,88px);margin:18px 0 0">
+          Nutrición<br>que <em style="font-style:italic;color:var(--accent)">sí</em><br>funciona.
+        </h1>
+        <p style="font-size:18px;color:var(--muted);max-width:38ch;margin:24px 0 30px">
+          Planes a tu medida diseñados por dietistas-nutricionistas de verdad. Sin dietas milagro, sin pasar hambre y sin volver a empezar de cero cada lunes.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#planes" class="btn btn-primary">Empieza tu plan</a>
+          <a href="#como" class="btn btn-ghost">Ver cómo funciona</a>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 mt-9">
+          <span class="pill"><span class="dot"></span>Primera consulta gratis</span>
+          <span class="pill"><span class="dot"></span>Sin permanencia</span>
+          <span class="pill"><span class="dot"></span>+12.000 personas</span>
+        </div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 30px 60px -30px rgba(32,37,25,.45)">
+          <img class="img-cover" src="https://images.openlen.com/163-grain-bowl-1920.webp" alt="Editorial photograph of a fresh colorful grain bowl shot from overhead" loading="eager" width="1080" height="1350">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST STRIP -->
+  <section class="wrap" style="padding:40px 24px">
+    <div class="rule"></div>
+    <div class="flex flex-wrap items-center justify-between gap-y-6 py-6 text-[13px]" style="color:var(--muted);letter-spacing:.04em">
+      <span>· Dietistas colegiados</span><span>· Plan 100% personalizado</span><span>· Recetas semanales</span><span>· Seguimiento humano</span><span>· App incluida</span>
+    </div>
+    <div class="rule"></div>
+  </section>
+
+  <!-- CÓMO FUNCIONA -->
+  <section id="como" class="wrap" style="padding:48px 24px 24px">
+    <div class="flex items-end justify-between mb-10 reveal">
+      <div>
+        <span class="eyebrow">Cómo funciona</span>
+        <h2 style="font-size:clamp(32px,5vw,52px);margin-top:12px">Tres pasos,<br>cero culpa.</h2>
+      </div>
+      <p class="hidden md:block text-[14px]" style="color:var(--muted);max-width:32ch">Nada de planes genéricos descargados de internet. Tu nutricionista escucha, ajusta y te acompaña.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      <article class="card lift reveal" style="padding:30px">
+        <div class="serif" style="font-size:34px;color:var(--accent);line-height:1">01</div>
+        <h3 style="font-size:22px;margin-top:16px">Cuéntanos tu vida</h3>
+        <p class="text-[14.5px] mt-2" style="color:var(--muted)">Tus horarios, tus gustos, tus límites y tu objetivo. Una primera consulta de verdad, no un formulario frío.</p>
+      </article>
+      <article class="card lift reveal" style="padding:30px">
+        <div class="serif" style="font-size:34px;color:var(--accent);line-height:1">02</div>
+        <h3 style="font-size:22px;margin-top:16px">Recibe tu plan</h3>
+        <p class="text-[14.5px] mt-2" style="color:var(--muted)">Tu dietista diseña un plan a tu medida con comidas que te apetecen, lista de la compra y recetas paso a paso.</p>
+      </article>
+      <article class="card lift reveal" style="padding:30px">
+        <div class="serif" style="font-size:34px;color:var(--accent);line-height:1">03</div>
+        <h3 style="font-size:22px;margin-top:16px">Avanza acompañado</h3>
+        <p class="text-[14.5px] mt-2" style="color:var(--muted)">Seguimiento cada semana, ajustes cuando la vida cambia y un chat directo con tu nutricionista. Sin estar solo.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- QUÉ INCLUYE -->
+  <section id="incluye" style="background:var(--surface);margin-top:48px">
+    <div class="wrap" style="padding:72px 24px">
+      <div class="max-w-xl reveal">
+        <span class="eyebrow">Qué incluye</span>
+        <h2 style="font-size:clamp(30px,4.5vw,46px);margin-top:12px">Todo lo que necesitas<br>para que esta vez<br>sí sea la buena.</h2>
+        <p style="color:var(--muted);font-size:17px;margin-top:18px">Plan, seguimiento y recetas en un mismo sitio. Hecho por personas, no por un algoritmo que no te conoce.</p>
+      </div>
+      <div class="grid md:grid-cols-12 gap-5 mt-12">
+        <div class="md:col-span-5 reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;height:100%"><img class="img-cover" src="https://images.openlen.com/178-vegetables-flatlay-1920.webp" alt="Editorial overhead flat-lay of fresh colorful vegetables" loading="lazy" width="1080" height="1350"></div>
+        </div>
+        <div class="md:col-span-7 grid sm:grid-cols-2 gap-5">
+          <div class="card reveal" style="padding:26px">
+            <div class="serif" style="font-size:19px;color:var(--accent)">Tu plan a medida</div>
+            <p class="text-[14.5px] mt-2" style="color:var(--muted)">Menús semanales adaptados a tus horarios, tu presupuesto y los alimentos que de verdad te gustan.</p>
+          </div>
+          <div class="card reveal" style="padding:26px">
+            <div class="serif" style="font-size:19px;color:var(--accent)">Seguimiento humano</div>
+            <p class="text-[14.5px] mt-2" style="color:var(--muted)">Revisión cada semana con tu dietista. Ajustamos sobre la marcha, sin reiniciar nada.</p>
+          </div>
+          <div class="card reveal" style="padding:26px">
+            <div class="serif" style="font-size:19px;color:var(--accent)">Recetas que apetecen</div>
+            <p class="text-[14.5px] mt-2" style="color:var(--muted)">Más de 400 recetas reales, rápidas y para toda la familia. Con lista de la compra incluida.</p>
+          </div>
+          <div class="card reveal" style="padding:26px">
+            <div class="serif" style="font-size:19px;color:var(--accent)">Chat con tu dietista</div>
+            <p class="text-[14.5px] mt-2" style="color:var(--muted)">¿Una duda un domingo por la noche? Escríbele. Una persona de verdad responde.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LA APP -->
+  <section id="app" class="wrap" style="padding:80px 24px">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-6 reveal">
+        <div class="overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:5/4;background:linear-gradient(135deg,var(--surface-2),var(--surface));display:flex;align-items:center;justify-content:center;padding:24px;box-shadow:0 30px 60px -34px rgba(32,37,25,.4)">
+          <img style="max-width:78%;height:auto;filter:drop-shadow(0 24px 40px rgba(32,37,25,.28))" src="https://images.openlen.com/120-phone-health-1920.webp" alt="Floating smartphone showing an abstract health UI with soft activity rings" loading="lazy" width="900" height="900">
+        </div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <span class="eyebrow">La app de SAVIA</span>
+        <h2 style="font-size:clamp(30px,4.5vw,48px);margin:14px 0 0">Tu nutrición,<br>en el bolsillo.</h2>
+        <p style="color:var(--muted);font-size:17.5px;margin-top:22px;max-width:50ch">Tu plan, tus recetas y tu progreso siempre contigo. Marca tus comidas, pasa la lista de la compra al carrito y habla con tu dietista sin salir de la app.</p>
+        <ul class="mt-8 grid gap-3.5" style="max-width:48ch">
+          <li class="flex items-start gap-3 text-[15px]" style="color:var(--ink-soft)"><span class="dot" style="margin-top:8px"></span>Menú de la semana y recetas paso a paso</li>
+          <li class="flex items-start gap-3 text-[15px]" style="color:var(--ink-soft)"><span class="dot" style="margin-top:8px"></span>Lista de la compra automática</li>
+          <li class="flex items-start gap-3 text-[15px]" style="color:var(--ink-soft)"><span class="dot" style="margin-top:8px"></span>Seguimiento de progreso, sin obsesión con la báscula</li>
+          <li class="flex items-start gap-3 text-[15px]" style="color:var(--ink-soft)"><span class="dot" style="margin-top:8px"></span>Chat directo con tu nutricionista</li>
+        </ul>
+        <div class="flex flex-wrap gap-3 mt-9">
+          <a href="#planes" class="btn btn-primary">Probar gratis</a>
+          <a href="#resultados" class="btn btn-ghost">Ver resultados</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLANES / PRECIOS -->
+  <section id="planes" style="background:var(--ink);color:var(--bg)">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="text-center max-w-2xl mx-auto reveal">
+        <span class="eyebrow" style="color:var(--leaf)">Planes</span>
+        <h2 class="serif" style="font-size:clamp(32px,5vw,54px);color:var(--bg);margin:14px 0 0;font-weight:500">Elige cómo<br>quieres empezar.</h2>
+        <p style="color:rgba(251,247,239,.7);font-size:17px;margin-top:18px">Sin permanencia. Cambia o pausa tu plan cuando quieras. La primera consulta siempre es gratis.</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-6 mt-14 items-stretch">
+        <!-- Esencial -->
+        <article class="reveal" style="background:rgba(251,247,239,.05);border:1px solid rgba(251,247,239,.14);border-radius:var(--radius-lg);padding:32px;display:flex;flex-direction:column">
+          <div class="serif" style="font-size:21px;color:var(--leaf)">Esencial</div>
+          <p class="text-[14px] mt-1" style="color:rgba(251,247,239,.65)">Para empezar a comer mejor con buen pie.</p>
+          <div class="mt-6 mb-1" style="font-family:var(--display)"><span style="font-size:46px;color:var(--bg)">19€</span><span style="font-size:15px;color:rgba(251,247,239,.6)"> /mes</span></div>
+          <ul class="grid gap-2.5 mt-6 text-[14.5px]" style="color:rgba(251,247,239,.82)">
+            <li class="flex gap-2.5"><span class="dot" style="margin-top:7px"></span>Plan nutricional personalizado</li>
+            <li class="flex gap-2.5"><span class="dot" style="margin-top:7px"></span>App con recetas y lista de la compra</li>
+            <li class="flex gap-2.5"><span class="dot" style="margin-top:7px"></span>Revisión mensual de tu plan</li>
+          </ul>
+          <a href="#planes" class="btn btn-ghost mt-8" style="border-color:rgba(251,247,239,.3);color:var(--bg);justify-content:center;margin-top:auto">Empezar con Esencial</a>
+        </article>
+        <!-- Acompañado (destacado) -->
+        <article class="reveal" style="background:var(--bg);color:var(--ink);border-radius:var(--radius-lg);padding:32px;display:flex;flex-direction:column;box-shadow:0 30px 60px -28px rgba(0,0,0,.5);position:relative">
+          <span style="position:absolute;top:-13px;left:32px;background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:5px 12px;border-radius:999px">El más elegido</span>
+          <div class="serif" style="font-size:21px;color:var(--accent)">Acompañado</div>
+          <p class="text-[14px] mt-1" style="color:var(--muted)">Tu dietista contigo, semana a semana.</p>
+          <div class="mt-6 mb-1" style="font-family:var(--display)"><span style="font-size:46px">39€</span><span style="font-size:15px;color:var(--faint)"> /mes</span></div>
+          <ul class="grid gap-2.5 mt-6 text-[14.5px]" style="color:var(--ink-soft)">
+            <li class="flex gap-2.5"><span class="dot" style="margin-top:7px"></span>Todo lo de Esencial</li>
+            <li class="flex gap-2.5"><span class="dot" style="margin-top:7px"></span>Seguimiento semanal con tu dietista</li>
+            <li class="flex gap-2.5"><span class="dot" style="margin-top:7px"></span>Chat directo ilimitado</li>
+            <li class="flex gap-2.5"><span class="dot" style="margin-top:7px"></span>Ajustes del plan cuando lo necesites</li>
+          </ul>
+          <a href="#planes" class="btn btn-primary mt-8" style="justify-content:center;margin-top:auto">Empezar con Acompañado</a>
+        </article>
+        <!-- Integral -->
+        <article class="reveal" style="background:rgba(251,247,239,.05);border:1px solid rgba(251,247,239,.14);border-radius:var(--radius-lg);padding:32px;display:flex;flex-direction:column">
+          <div class="serif" style="font-size:21px;color:var(--leaf)">Integral</div>
+          <p class="text-[14px] mt-1" style="color:rgba(251,247,239,.65)">Para objetivos clínicos o deportivos.</p>
+          <div class="mt-6 mb-1" style="font-family:var(--display)"><span style="font-size:46px;color:var(--bg)">69€</span><span style="font-size:15px;color:rgba(251,247,239,.6)"> /mes</span></div>
+          <ul class="grid gap-2.5 mt-6 text-[14.5px]" style="color:rgba(251,247,239,.82)">
+            <li class="flex gap-2.5"><span class="dot" style="margin-top:7px"></span>Todo lo de Acompañado</li>
+            <li class="flex gap-2.5"><span class="dot" style="margin-top:7px"></span>Videoconsulta quincenal</li>
+            <li class="flex gap-2.5"><span class="dot" style="margin-top:7px"></span>Coordinación con tu médico</li>
+            <li class="flex gap-2.5"><span class="dot" style="margin-top:7px"></span>Analíticas interpretadas</li>
+          </ul>
+          <a href="#planes" class="btn btn-ghost mt-8" style="border-color:rgba(251,247,239,.3);color:var(--bg);justify-content:center;margin-top:auto">Empezar con Integral</a>
+        </article>
+      </div>
+      <p class="text-center mt-8 text-[13px]" style="color:rgba(251,247,239,.55)">Primera consulta gratuita en todos los planes · Cancela cuando quieras</p>
+    </div>
+  </section>
+
+  <!-- RESULTADOS / TESTIMONIOS -->
+  <section id="resultados" class="wrap" style="padding:80px 24px">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-5 reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5"><img class="img-cover" src="https://images.openlen.com/175-smoothie-1920.webp" alt="Editorial photograph of a vibrant smoothie topped with fresh fruit and seeds" loading="lazy" width="1080" height="1350"></div>
+      </div>
+      <div class="lg:col-span-7 reveal">
+        <span class="eyebrow">Resultados de verdad</span>
+        <h2 style="font-size:clamp(30px,4.5vw,48px);margin:14px 0 0">Comer mejor<br>cambió mucho<br>más que la talla.</h2>
+        <div class="grid grid-cols-3 gap-6 mt-10" style="max-width:480px">
+          <div><div class="serif" style="font-size:38px;color:var(--accent)">92%</div><div class="text-[13px]" style="color:var(--faint)">siguen su plan a los 6 meses</div></div>
+          <div><div class="serif" style="font-size:38px;color:var(--accent)">4,9</div><div class="text-[13px]" style="color:var(--faint)">valoración media (1.800 reseñas)</div></div>
+          <div><div class="serif" style="font-size:38px;color:var(--accent)">+12k</div><div class="text-[13px]" style="color:var(--faint)">personas acompañadas</div></div>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-5 mt-10">
+          <figure class="card" style="padding:24px">
+            <p class="serif" style="font-size:17px;font-style:italic;color:var(--ink-soft)">"Por fin un plan que encaja en mi vida real. He bajado mi colesterol y dejé de pelearme con la comida."</p>
+            <figcaption class="mt-4 text-[13px]" style="color:var(--faint)">— Marta R. · plan Acompañado</figcaption>
+          </figure>
+          <figure class="card" style="padding:24px">
+            <p class="serif" style="font-size:17px;font-style:italic;color:var(--ink-soft)">"Mi dietista me responde el mismo día. Nunca me había sentido tan acompañada en algo de salud."</p>
+            <figcaption class="mt-4 text-[13px]" style="color:var(--faint)">— Diego F. · plan Integral</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA FINAL -->
+  <section style="background:var(--surface)">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="grid lg:grid-cols-12 gap-8 items-center">
+        <div class="lg:col-span-7 reveal">
+          <span class="eyebrow">Tu primer paso</span>
+          <h2 style="font-size:clamp(32px,5vw,56px);margin:14px 0 0">Reserva tu primera<br>consulta. <em style="font-style:italic;color:var(--accent)">Gratis.</em></h2>
+          <p style="color:var(--muted);font-size:17.5px;margin-top:20px;max-width:46ch">Habla con un dietista-nutricionista colegiado, cuéntale tu objetivo y descubre cómo sería tu plan. Sin compromiso y sin tarjeta.</p>
+          <div class="flex flex-wrap gap-3 mt-9">
+            <a href="#planes" class="btn btn-primary">Reservar consulta gratis</a>
+            <a href="#como" class="btn btn-ghost">Cómo funciona</a>
+          </div>
+        </div>
+        <div class="lg:col-span-5 reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/3"><img class="img-cover" src="https://images.openlen.com/277-washing-vegetables-1920.webp" alt="Editorial lifestyle photograph of hands rinsing fresh vegetables under a clean stream of water" loading="lazy" width="1200" height="900"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:56px 24px 40px">
+    <div class="grid md:grid-cols-4 gap-8">
+      <div class="md:col-span-2">
+        <div class="flex items-center gap-2">
+          <span style="display:inline-flex;width:24px;height:24px;border-radius:7px;background:var(--accent);align-items:center;justify-content:center">
+            <svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 7c5 2 7 5 7 9s-3 8-7 9c-1-4 0-7 2-9-3 1-5 0-6-3 2 1 4 1 5-1-3-1-4-4-1-5 1 0 2 0 3 1-1-3-2-5-3-10z" fill="#FBFCF8"/></svg>
+          </span>
+          <span class="serif" style="font-size:23px;letter-spacing:.12em;font-weight:600">SAVIA</span>
+        </div>
+        <p class="text-[14px] mt-3" style="color:var(--muted);max-width:36ch">Nutrición que sí funciona: planes a tu medida con dietistas de verdad, seguimiento humano y recetas que apetecen.</p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Producto</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9"><a href="#como" class="hover:opacity-60">Cómo funciona</a><br><a href="#incluye" class="hover:opacity-60">Qué incluye</a><br><a href="#planes" class="hover:opacity-60">Planes y precios</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">SAVIA</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9"><a href="#" class="hover:opacity-60">Nuestros dietistas</a><br><a href="#" class="hover:opacity-60">Preguntas frecuentes</a><br><a href="#" class="hover:opacity-60">hola@savia.example</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:36px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© SAVIA · Nutrición personalizada con dietistas colegiados</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, gallery preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

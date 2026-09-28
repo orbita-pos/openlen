@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>REFORMA — Reformas integrales llave en mano</title>
+<meta name="description" content="REFORMA hace reformas integrales de cocina, baño y vivienda completa con presupuesto cerrado y plazos que se cumplen. Pide tu presupuesto gratis y sin compromiso." />
+<meta property="og:title" content="REFORMA — Reformas integrales llave en mano" />
+<meta property="og:description" content="Presupuesto cerrado, un solo equipo y una fecha de entrega real. Reformamos tu cocina, baño o casa entera sin sorpresas." />
+<meta property="og:image" content="https://images.openlen.com/201-modern-kitchen-1920.webp" />
+<meta name="theme-color" content="#F7F5F1" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23173A5E'/%3E%3Cpath d='M9 22V13l7-4 7 4v9' fill='none' stroke='%23F3B14B' stroke-width='2.2' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F5F1; --surface:#FFFFFF; --surface-2:#EFEBE3;
+    --ink:#1B2530; --ink-soft:#3A4654; --muted:#5E6B78; --faint:#8B97A2;
+    --line:rgba(27,37,48,0.10); --line-strong:rgba(27,37,48,0.20);
+    --accent:#173A5E; --accent-deep:#0F2942; --gold:#E0922C; --gold-soft:#F3B14B; --on-accent:#FFFFFF;
+    --radius:10px; --radius-lg:18px;
+    --display:'Sora',ui-sans-serif,system-ui,sans-serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3,.display{font-family:var(--display);font-weight:600;letter-spacing:-0.02em;line-height:1.06}
+  .eyebrow{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s}
+  .lift:hover{transform:translateY(-4px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;height:52px;padding:0 28px;border-radius:999px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,background .25s,color .25s,border-color .25s;text-decoration:none}
+  .btn-primary{background:var(--accent);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg)}
+  .rule{height:1px;background:var(--line)}
+  .chip{display:inline-flex;align-items:center;gap:.45rem;height:34px;padding:0 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:13px;font-weight:500;color:var(--ink-soft)}
+  .star{color:var(--gold)}
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(247,245,241,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:72px">
+      <a href="#top" class="flex items-center gap-2.5">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:var(--accent)">
+          <svg width="17" height="17" viewBox="0 0 32 32" fill="none"><path d="M9 22V13l7-4 7 4v9" stroke="#F3B14B" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        </span>
+        <span class="display" style="font-size:20px;letter-spacing:.14em;font-weight:700">REFORMA</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#servicios" class="hover:opacity-60 transition">Servicios</a>
+        <a href="#proyectos" class="hover:opacity-60 transition">Proyectos</a>
+        <a href="#proceso" class="hover:opacity-60 transition">Cómo trabajamos</a>
+        <a href="#opiniones" class="hover:opacity-60 transition">Opiniones</a>
+      </nav>
+      <a href="#presupuesto" class="btn btn-primary" style="height:42px;padding:0 20px;font-size:13.5px">Presupuesto gratis</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:60px 24px 24px">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-6 reveal">
+        <span class="eyebrow">Reformas integrales · llave en mano</span>
+        <h1 style="font-size:clamp(42px,7vw,76px);margin:18px 0 0">
+          Tu reforma,<br>con precio<br><span style="color:var(--accent)">cerrado</span> y fecha.
+        </h1>
+        <p style="font-size:18px;color:var(--muted);max-width:40ch;margin:24px 0 30px">
+          Cocina, baño o vivienda completa. Un solo equipo, un presupuesto que no cambia y una entrega que se cumple. Sin sustos a mitad de obra.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#presupuesto" class="btn btn-primary">Pide presupuesto gratis</a>
+          <a href="#proyectos" class="btn btn-ghost">Ver proyectos</a>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-3 mt-9 text-[13px]" style="color:var(--faint)">
+          <span class="flex items-center gap-1.5"><span class="star">★★★★★</span> 4,9 · 180 reseñas</span>
+          <span class="rule" style="width:1px;height:16px;background:var(--line-strong)"></span>
+          <span>Garantía de 5 años</span>
+          <span class="rule" style="width:1px;height:16px;background:var(--line-strong)"></span>
+          <span>+400 obras entregadas</span>
+        </div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <div class="lift overflow-hidden relative" style="border-radius:var(--radius-lg);aspect-ratio:5/6;box-shadow:0 36px 70px -34px rgba(27,37,48,.45)">
+          <img class="img-cover" src="https://images.openlen.com/201-modern-kitchen-1920.webp" alt="Editorial interior photograph of a modern kitchen with a clean island and open shelving" loading="eager" width="1080" height="1296">
+        </div>
+        <div class="card lift flex items-center gap-4" style="padding:16px 20px;margin-top:-44px;margin-left:24px;margin-right:24px;position:relative;box-shadow:0 20px 40px -24px rgba(27,37,48,.4)">
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:var(--surface-2);flex:none">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#173A5E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div>
+            <div class="display" style="font-size:15px;font-weight:600">Presupuesto cerrado por contrato</div>
+            <div class="text-[13px]" style="color:var(--muted)">El precio que firmas es el precio que pagas.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST STRIP -->
+  <section class="wrap" style="padding:36px 24px 12px">
+    <div class="rule"></div>
+    <div class="flex flex-wrap items-center justify-between gap-x-8 gap-y-4 py-7 text-[13.5px]" style="color:var(--muted);letter-spacing:.02em">
+      <span class="flex items-center gap-2"><span style="color:var(--gold)">●</span> Presupuesto cerrado</span>
+      <span class="flex items-center gap-2"><span style="color:var(--gold)">●</span> Plazos por contrato</span>
+      <span class="flex items-center gap-2"><span style="color:var(--gold)">●</span> Equipo propio, sin subcontratas sueltas</span>
+      <span class="flex items-center gap-2"><span style="color:var(--gold)">●</span> Materiales con garantía</span>
+      <span class="flex items-center gap-2"><span style="color:var(--gold)">●</span> Una sola persona de contacto</span>
+    </div>
+    <div class="rule"></div>
+  </section>
+
+  <!-- SERVICIOS -->
+  <section id="servicios" class="wrap" style="padding:56px 24px 24px">
+    <div class="flex flex-wrap items-end justify-between gap-6 mb-10 reveal">
+      <div>
+        <span class="eyebrow">Servicios</span>
+        <h2 style="font-size:clamp(32px,5vw,52px);margin-top:12px">Reformamos cada<br>rincón de tu casa</h2>
+      </div>
+      <p class="text-[14.5px]" style="color:var(--muted);max-width:34ch">Desde cambiar un baño hasta vaciar y rehacer la vivienda entera. Mismo equipo, mismo estándar.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      <article class="card lift overflow-hidden reveal">
+        <div class="overflow-hidden" style="aspect-ratio:4/3"><img class="img-cover" src="https://images.openlen.com/201-modern-kitchen-1920.webp" alt="Editorial interior photograph of a modern kitchen with a clean island and open shelving" loading="lazy" width="960" height="720"></div>
+        <div style="padding:24px">
+          <span class="chip" style="border-color:var(--line);background:var(--surface-2)">Desde 6.900€</span>
+          <h3 style="font-size:22px;margin:14px 0 8px">Reforma de cocina</h3>
+          <p class="text-[14.5px]" style="color:var(--muted)">Distribución, fontanería, electricidad, mobiliario y encimera. Cocina nueva y lista para usar, sin que tengas que coordinar gremios.</p>
+        </div>
+      </article>
+      <article class="card lift overflow-hidden reveal">
+        <div class="overflow-hidden" style="aspect-ratio:4/3"><img class="img-cover" src="https://images.openlen.com/54-sunlit-interior-1920.webp" alt="Serene sunlit minimalist architectural interior with long soft light shapes" loading="lazy" width="960" height="720"></div>
+        <div style="padding:24px">
+          <span class="chip" style="border-color:var(--line);background:var(--surface-2)">Desde 3.500€</span>
+          <h3 style="font-size:22px;margin:14px 0 8px">Reforma de baño</h3>
+          <p class="text-[14.5px]" style="color:var(--muted)">Cambio de bañera por ducha, alicatado, sanitarios y mampara. En menos de dos semanas y con la obra protegida cada día.</p>
+        </div>
+      </article>
+      <article class="card lift overflow-hidden reveal">
+        <div class="overflow-hidden" style="aspect-ratio:4/3"><img class="img-cover" src="https://images.openlen.com/202-living-room-1920.webp" alt="Editorial interior photograph of a bright contemporary living room with a low sofa and plant" loading="lazy" width="960" height="720"></div>
+        <div style="padding:24px">
+          <span class="chip" style="border-color:var(--line);background:var(--surface-2)">Proyecto a medida</span>
+          <h3 style="font-size:22px;margin:14px 0 8px">Reforma integral</h3>
+          <p class="text-[14.5px]" style="color:var(--muted)">Vivienda completa de principio a fin: proyecto, licencias, obra y acabados. Te entregamos las llaves de una casa terminada.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- PROYECTOS / ANTES-DESPUÉS -->
+  <section id="proyectos" style="background:var(--surface-2);margin-top:56px">
+    <div class="wrap" style="padding:72px 24px">
+      <div class="flex flex-wrap items-end justify-between gap-6 mb-10 reveal">
+        <div>
+          <span class="eyebrow">Proyectos</span>
+          <h2 style="font-size:clamp(30px,4.5vw,48px);margin-top:12px">Obras reales,<br>entregadas a tiempo</h2>
+        </div>
+        <p class="text-[14.5px]" style="color:var(--muted);max-width:32ch">Una muestra de las últimas viviendas que hemos transformado. Pídenos las direcciones para verlas en persona.</p>
+      </div>
+      <div class="grid md:grid-cols-12 gap-5">
+        <div class="md:col-span-7 reveal">
+          <div class="lift overflow-hidden relative" style="border-radius:var(--radius-lg);aspect-ratio:16/11">
+            <img class="img-cover" src="https://images.openlen.com/233-concrete-house-1920.webp" alt="Editorial architecture photograph of a minimalist concrete house with clean geometric volumes" loading="lazy" width="1280" height="880">
+            <span class="display" style="position:absolute;left:16px;bottom:16px;background:rgba(15,41,66,.88);color:#fff;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px">Vivienda unifamiliar · 142 m²</span>
+          </div>
+        </div>
+        <div class="md:col-span-5 grid gap-5">
+          <div class="reveal">
+            <div class="lift overflow-hidden relative" style="border-radius:var(--radius-lg);aspect-ratio:16/10">
+              <img class="img-cover" src="https://images.openlen.com/201-modern-kitchen-1920.webp" alt="Editorial interior photograph of a modern kitchen with a clean island and open shelving" loading="lazy" width="900" height="560">
+              <span class="display" style="position:absolute;left:14px;bottom:14px;background:rgba(15,41,66,.88);color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px">Cocina · 3 semanas</span>
+            </div>
+          </div>
+          <div class="reveal">
+            <div class="lift overflow-hidden relative" style="border-radius:var(--radius-lg);aspect-ratio:16/10">
+              <img class="img-cover" src="https://images.openlen.com/202-living-room-1920.webp" alt="Editorial interior photograph of a bright contemporary living room with a low sofa and plant" loading="lazy" width="900" height="560">
+              <span class="display" style="position:absolute;left:14px;bottom:14px;background:rgba(15,41,66,.88);color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px">Salón · 4 semanas</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-5 mt-5">
+        <div class="reveal">
+          <div class="lift overflow-hidden relative" style="border-radius:var(--radius-lg);aspect-ratio:16/9">
+            <img class="img-cover" src="https://images.openlen.com/247-townhouse-row-1920.webp" alt="Editorial architecture photograph of a row of modern townhouses with warm varied facades" loading="lazy" width="1100" height="620">
+            <span class="display" style="position:absolute;left:16px;bottom:16px;background:rgba(15,41,66,.88);color:#fff;font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:999px">Rehabilitación de fachada</span>
+          </div>
+        </div>
+        <div class="reveal">
+          <div class="lift overflow-hidden relative" style="border-radius:var(--radius-lg);aspect-ratio:16/9">
+            <img class="img-cover" src="https://images.openlen.com/252-suburban-home-1920.webp" alt="Editorial architecture photograph of a suburban modern family home with a tidy front garden" loading="lazy" width="1100" height="620">
+            <span class="display" style="position:absolute;left:16px;bottom:16px;background:rgba(15,41,66,.88);color:#fff;font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:999px">Chalet · reforma integral</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CÓMO TRABAJAMOS -->
+  <section id="proceso" class="wrap" style="padding:80px 24px">
+    <div class="max-w-xl reveal">
+      <span class="eyebrow">Cómo trabajamos</span>
+      <h2 style="font-size:clamp(30px,4.5vw,48px);margin-top:12px">Cuatro pasos<br>y cero incertidumbre</h2>
+      <p style="color:var(--muted);font-size:17px;margin-top:18px">Sabes en todo momento qué se hace, cuándo se hace y cuánto cuesta. Así es como llevamos tu obra de principio a fin.</p>
+    </div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
+      <div class="card lift reveal" style="padding:28px 24px">
+        <div class="display" style="font-size:34px;color:var(--gold);font-weight:700">01</div>
+        <h3 style="font-size:19px;margin:14px 0 8px">Visita y medición</h3>
+        <p class="text-[14px]" style="color:var(--muted)">Vamos a tu casa, tomamos medidas y escuchamos qué quieres. Sin coste y sin compromiso.</p>
+      </div>
+      <div class="card lift reveal" style="padding:28px 24px">
+        <div class="display" style="font-size:34px;color:var(--gold);font-weight:700">02</div>
+        <h3 style="font-size:19px;margin:14px 0 8px">Presupuesto cerrado</h3>
+        <p class="text-[14px]" style="color:var(--muted)">Recibes una propuesta detallada con precio final y fecha de entrega firmada en contrato.</p>
+      </div>
+      <div class="card lift reveal" style="padding:28px 24px">
+        <div class="display" style="font-size:34px;color:var(--gold);font-weight:700">03</div>
+        <h3 style="font-size:19px;margin:14px 0 8px">Obra con seguimiento</h3>
+        <p class="text-[14px]" style="color:var(--muted)">Un único jefe de obra coordina todo. Te enviamos fotos del avance cada semana.</p>
+      </div>
+      <div class="card lift reveal" style="padding:28px 24px">
+        <div class="display" style="font-size:34px;color:var(--gold);font-weight:700">04</div>
+        <h3 style="font-size:19px;margin:14px 0 8px">Entrega y garantía</h3>
+        <p class="text-[14px]" style="color:var(--muted)">Limpiamos, revisamos contigo cada detalle y te damos 5 años de garantía por escrito.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- GARANTÍAS Y PLAZOS -->
+  <section style="background:var(--accent);color:var(--on-accent)">
+    <div class="wrap" style="padding:80px 24px">
+      <div class="grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-6 reveal">
+          <span class="eyebrow" style="color:var(--gold-soft)">Garantías y plazos</span>
+          <h2 class="display" style="font-size:clamp(30px,4.5vw,50px);color:#fff;margin:14px 0 0;font-weight:600">Si nos retrasamos,<br>te compensamos.</h2>
+          <p style="color:rgba(255,255,255,.78);font-size:17.5px;margin-top:20px;max-width:46ch">Firmamos la fecha de entrega en el contrato. Si por causas nuestras la obra se retrasa, descontamos de tu factura. Trabajamos así desde el primer día.</p>
+          <a href="#presupuesto" class="btn mt-8" style="background:var(--gold);color:#1B2530">Quiero mi presupuesto</a>
+        </div>
+        <div class="lg:col-span-6 grid grid-cols-2 gap-5 reveal">
+          <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:var(--radius-lg);padding:26px">
+            <div class="display" style="font-size:40px;color:var(--gold-soft);font-weight:700">5 años</div>
+            <div class="text-[14px]" style="color:rgba(255,255,255,.72);margin-top:6px">de garantía por escrito en cada obra</div>
+          </div>
+          <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:var(--radius-lg);padding:26px">
+            <div class="display" style="font-size:40px;color:var(--gold-soft);font-weight:700">100%</div>
+            <div class="text-[14px]" style="color:rgba(255,255,255,.72);margin-top:6px">precio cerrado, sin extras a mitad de obra</div>
+          </div>
+          <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:var(--radius-lg);padding:26px">
+            <div class="display" style="font-size:40px;color:var(--gold-soft);font-weight:700">+400</div>
+            <div class="text-[14px]" style="color:rgba(255,255,255,.72);margin-top:6px">viviendas reformadas en 12 años</div>
+          </div>
+          <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:var(--radius-lg);padding:26px">
+            <div class="display" style="font-size:40px;color:var(--gold-soft);font-weight:700">15 días</div>
+            <div class="text-[14px]" style="color:rgba(255,255,255,.72);margin-top:6px">plazo medio para reformar un baño</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OPINIONES -->
+  <section id="opiniones" class="wrap" style="padding:80px 24px">
+    <div class="flex flex-wrap items-end justify-between gap-6 mb-10 reveal">
+      <div>
+        <span class="eyebrow">Opiniones</span>
+        <h2 style="font-size:clamp(30px,4.5vw,48px);margin-top:12px">Lo que dicen<br>las familias</h2>
+      </div>
+      <div class="flex items-center gap-3 text-[14px]" style="color:var(--muted)">
+        <span class="star" style="font-size:18px">★★★★★</span>
+        <span><strong style="color:var(--ink)">4,9 / 5</strong> · 180 reseñas verificadas</span>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      <figure class="card lift reveal" style="padding:28px 26px">
+        <div class="star" style="font-size:15px;letter-spacing:2px">★★★★★</div>
+        <blockquote class="text-[15.5px]" style="color:var(--ink-soft);margin:16px 0 0">"Nos cambiaron la cocina entera en tres semanas, justo lo que prometieron. El presupuesto no se movió ni un euro."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6">
+          <span style="width:40px;height:40px;border-radius:50%;background:var(--surface-2);display:inline-flex;align-items:center;justify-content:center;font-weight:600;color:var(--accent)">L</span>
+          <span><span class="display" style="font-size:14.5px;font-weight:600;display:block">Laura M.</span><span class="text-[13px]" style="color:var(--faint)">Reforma de cocina</span></span>
+        </figcaption>
+      </figure>
+      <figure class="card lift reveal" style="padding:28px 26px">
+        <div class="star" style="font-size:15px;letter-spacing:2px">★★★★★</div>
+        <blockquote class="text-[15.5px]" style="color:var(--ink-soft);margin:16px 0 0">"Reforma integral de un piso de los años 70. Cada semana fotos del avance y un único interlocutor. Sin estrés."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6">
+          <span style="width:40px;height:40px;border-radius:50%;background:var(--surface-2);display:inline-flex;align-items:center;justify-content:center;font-weight:600;color:var(--accent)">J</span>
+          <span><span class="display" style="font-size:14.5px;font-weight:600;display:block">Javier R.</span><span class="text-[13px]" style="color:var(--faint)">Reforma integral · 95 m²</span></span>
+        </figcaption>
+      </figure>
+      <figure class="card lift reveal" style="padding:28px 26px">
+        <div class="star" style="font-size:15px;letter-spacing:2px">★★★★★</div>
+        <blockquote class="text-[15.5px]" style="color:var(--ink-soft);margin:16px 0 0">"Cambiamos la bañera por una ducha en diez días y dejaron el baño impecable. Repetiremos con el resto de la casa."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6">
+          <span style="width:40px;height:40px;border-radius:50%;background:var(--surface-2);display:inline-flex;align-items:center;justify-content:center;font-weight:600;color:var(--accent)">C</span>
+          <span><span class="display" style="font-size:14.5px;font-weight:600;display:block">Carmen y Pedro</span><span class="text-[13px]" style="color:var(--faint)">Reforma de baño</span></span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- PRESUPUESTO CTA — el módulo de captación reemplaza el interior al publicar -->
+  <section id="presupuesto" style="background:var(--surface-2)">
+    <div data-ol-form-section class="wrap" style="padding:84px 24px">
+      <div class="grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-6 reveal">
+          <span class="eyebrow">Presupuesto gratis</span>
+          <h2 style="font-size:clamp(32px,5vw,54px);margin:14px 0 0">Cuéntanos tu<br>reforma. Te llamamos hoy.</h2>
+          <p style="color:var(--muted);font-size:17.5px;margin-top:20px;max-width:44ch">Déjanos tus datos y un técnico se pone en contacto en menos de 24 horas para concertar la visita. Sin coste y sin compromiso.</p>
+          <div class="flex flex-wrap gap-x-8 gap-y-4 mt-9 text-[14px]" style="color:var(--ink-soft)">
+            <div><div class="display" style="color:var(--accent);font-weight:600;font-size:14px;margin-bottom:2px">Teléfono</div>+34 900 123 456</div>
+            <div><div class="display" style="color:var(--accent);font-weight:600;font-size:14px;margin-bottom:2px">Email</div>hola@reforma.example</div>
+            <div><div class="display" style="color:var(--accent);font-weight:600;font-size:14px;margin-bottom:2px">Zona</div>Toda la provincia</div>
+          </div>
+        </div>
+        <div class="lg:col-span-6 reveal">
+          <div class="card" style="padding:30px;box-shadow:0 26px 50px -30px rgba(27,37,48,.4)">
+            <div class="display" style="font-size:20px;font-weight:600;margin-bottom:4px">Pide tu presupuesto</div>
+            <p class="text-[13.5px]" style="color:var(--muted);margin-bottom:20px">Conecta el módulo de <strong>Formularios</strong> y este bloque captura cada solicitud directamente en tu bandeja.</p>
+            <div class="grid gap-3">
+              <div><label class="text-[12px]" style="color:var(--faint)">Nombre</label><div style="height:48px;border:1px solid var(--line);border-radius:var(--radius);margin-top:6px;display:flex;align-items:center;padding:0 14px;color:var(--faint);font-size:14px">Tu nombre</div></div>
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="text-[12px]" style="color:var(--faint)">Teléfono</label><div style="height:48px;border:1px solid var(--line);border-radius:var(--radius);margin-top:6px;display:flex;align-items:center;padding:0 14px;color:var(--faint);font-size:14px">600 000 000</div></div>
+                <div><label class="text-[12px]" style="color:var(--faint)">Tipo</label><div style="height:48px;border:1px solid var(--line);border-radius:var(--radius);margin-top:6px;display:flex;align-items:center;padding:0 14px;color:var(--faint);font-size:14px">Cocina</div></div>
+              </div>
+            </div>
+            <a href="#presupuesto" class="btn btn-primary w-full mt-4" style="justify-content:center">Pedir presupuesto gratis</a>
+            <p class="text-[12px] text-center mt-3" style="color:var(--faint)">Respuesta en menos de 24 h · sin compromiso</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:56px 24px 40px">
+    <div class="grid md:grid-cols-4 gap-8">
+      <div class="md:col-span-2">
+        <div class="flex items-center gap-2.5">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:var(--accent)">
+            <svg width="17" height="17" viewBox="0 0 32 32" fill="none"><path d="M9 22V13l7-4 7 4v9" stroke="#F3B14B" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>
+          </span>
+          <span class="display" style="font-size:20px;letter-spacing:.14em;font-weight:700">REFORMA</span>
+        </div>
+        <p class="text-[14px] mt-3" style="color:var(--muted);max-width:36ch">Reformas integrales llave en mano. Presupuesto cerrado, plazos que se cumplen y una garantía de 5 años en cada obra.</p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Servicios</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.95"><a href="#servicios" class="hover:opacity-60">Reforma de cocina</a><br><a href="#servicios" class="hover:opacity-60">Reforma de baño</a><br><a href="#servicios" class="hover:opacity-60">Reforma integral</a><br><a href="#proyectos" class="hover:opacity-60">Proyectos</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Contacto</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.95">+34 900 123 456<br>hola@reforma.example<br>Lun–Vie · 9:00–19:00<br>Atención en toda la provincia</p>
+      </div>
+    </div>
+    <div class="rule" style="margin:36px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© REFORMA · Reformas integrales llave en mano</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

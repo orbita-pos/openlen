@@ -4,7 +4,6 @@ import { buildAgentContext, changelogBlock } from "./context";
 const base = {
   now: new Date("2026-08-22T12:00:00Z"),
   state: { titulo: "x", publicado: false },
-  taggedHtml: '<h1 data-op-id="a">hola</h1>',
   userBrief: null,
 };
 

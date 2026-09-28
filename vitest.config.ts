@@ -54,6 +54,10 @@ export default defineConfig({
       "lib/workspace-v2/**/*.test.ts",
       "lib/sections/**/*.test.ts",
       "lib/analytics/**/*.test.ts",
+      // Len-Bench (plans/len-2/diseno.md). Las piezas puras de la vara; lo
+      // que abre Chromium o habla con el servidor se prueba con
+      // `bench:len:validar`, que es su prueba en rojo y en verde.
+      "lib/len-bench/**/*.test.ts",
       // `include` es una LISTA BLANCA: un .test.ts fuera de ella NO corre, y
       // pasa desapercibido porque `npm test` sale verde igual.
       "lib/page-data/**/*.test.ts",
@@ -137,7 +141,6 @@ export default defineConfig({
       "lib/ai/origen-de-medida.browser.test.ts",
       // El carrito probado USÁNDOLO contra el sustituto de /api/d, con el
       // carrito de producción del 2026-09-18 como brazo de control.
-      "lib/agent/evals/carrito-en-navegador.browser.test.ts",
       // La suite de la página corriendo en Chromium de verdad: es la única que
       // puede decir si el programa con las promesas guardadas se ejecuta y si
       // lo que devuelve el navegador se reparte bien. LISTA BLANCA.
@@ -203,6 +206,9 @@ export default defineConfig({
       // en verde. include es LISTA BLANCA.
       "lib/ai/desborde-culpable.browser.test.ts",
       "lib/ai/contraste-hermanos.browser.test.ts",
+      // Lo que está FIJO en la ventana no es el fondo del texto: la barra de
+      // WhatsApp tapaba un precio en la captura y salía «acento sobre acento».
+      "lib/ai/contraste-barra-fija.browser.test.ts",
       // El boton muerto: `<a href="#comprar">` sin `id="comprar"`. De navegador
       // por la misma razon que las dos de arriba, y sus contra-pruebas son la
       // mitad importante — `href="#"` a secas salio 45 veces en 12 de 16
@@ -253,6 +259,10 @@ export default defineConfig({
       // (selector, `required`, nombre, grupo, `atributo`, `estilo`, censo).
       // `include` es LISTA BLANCA: sin esta línea no correría nunca.
       "lib/agent/prueba-js.browser.test.ts",
+      // H9: usar la página como un visitante, con un navegador de verdad y el
+      // brazo de control dentro de cada prueba. `include` es LISTA BLANCA.
+      "lib/agent/usar-pagina.browser.test.ts",
+      "lib/agent/pasos-de-uso.test.ts",
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "lib/auth/**/*.test.ts",
@@ -272,6 +282,8 @@ export default defineConfig({
       // `include` es LISTA BLANCA — sin esta línea la prueba existiría y no
       // correría, que es el silencio que este fichero avisa arriba dos veces.
       "lib/agent/diario-del-turno.test.ts",
+      // H4 parte 3: el historial desde la base, con su microcompact.
+      "lib/agent/transcripcion.test.ts",
       // `include` es LISTA BLANCA: sin esta línea la prueba existe y NO corre.
       "lib/agent/motivo-del-fallo.test.ts",
       // La suite de la página: nace en verde y muere con su selector. LISTA
@@ -282,7 +294,6 @@ export default defineConfig({
       "lib/agent/ops-descritas.test.ts",
       "lib/agent/forma-del-turno.test.ts",
       "lib/agent/grabacion.test.ts",
-      "lib/agent/podar-documentos.test.ts",
       // La POSTURA del Agente y su traducción a número. Núcleo puro (sin fs,
       // sin nativo, sin red) — pero `include` es LISTA BLANCA y sin esta línea
       // la prueba existiría y NO CORRERÍA NUNCA.
@@ -325,11 +336,15 @@ export default defineConfig({
       // El arnes multiturno dice cablear el bucle «como en produccion»; esto
       // lo comprueba contra app/api/agent/route.ts. `include` es LISTA
       // BLANCA: sin esta linea la guarda existiria y no correria.
-      "lib/agent/arnes-multiturno-como-la-ruta.test.ts",
       // Los ojos del arnés de evals: sin esto vuelve a mirar sin `spec` ni
       // `guardadas`. LISTA BLANCA.
-      "lib/agent/arnes-mira-como-la-ruta.test.ts",
       "lib/agent/catalog.test.ts",
+      // Len 2.0: el sitio como ficheros, con el contrato de Read/Edit/Write/
+      // Grep/Glob de Claude Code (plans/len-2/ficheros-plan.md). Piezas puras.
+      "lib/agent/ficheros/**/*.test.ts",
+      // …y lo que vuelve tras editar: `<new-diagnostics>` anclados a línea.
+      "lib/agent/diagnosticos.test.ts",
+      "lib/agent/diagnosticos-de-la-escritura.test.ts",
       "lib/agent/fireworks-bridge.test.ts",
       // La guarda de que la politica de modelos no cria filas muertas. `include`
       // es LISTA BLANCA: sin esta linea no corre nunca.
@@ -354,6 +369,7 @@ export default defineConfig({
       // sin esta línea la prueba existiría y no correría nunca.
       "lib/agent/aviso-medido.test.ts",
       "lib/agent/retry.test.ts",
+      "lib/agent/reloj-de-silencio.test.ts",
       "lib/agent/context.test.ts",
       "lib/agent/facts-kept.test.ts",
       "lib/agent/contenido-perdido.test.ts",
@@ -363,10 +379,6 @@ export default defineConfig({
       "lib/agent/user-memory-block.test.ts",
       "lib/agent/memoria-larga.test.ts",
       "lib/agent/photo-search.test.ts",
-      // El buscador de texto del Agente. Núcleo puro (recibe el documento ya
-      // etiquetado), así que NO toca el binding nativo y corre aquí — pero
-      // `include` es LISTA BLANCA y sin esta línea no correría nunca.
-      "lib/agent/buscar-en-pagina.test.ts",
       // La guarda de cuentas de red INVENTADAS. Nucleo puro (dos cadenas y
       // unos textos), sin binding nativo — pero `include` es LISTA BLANCA y sin
       // esta linea no correria nunca.
@@ -376,7 +388,6 @@ export default defineConfig({
       "lib/agent/enlaces-desfasados.test.ts",
       // El boton que nace MUDO: `onclick=` se borra al guardar y no lo ve nadie
       // — ni la consola, ni la captura, ni el critico. `include` es LISTA BLANCA.
-      "lib/agent/handlers-muertos.test.ts",
       // Corregirle el rumbo al Agente a media faena. Nucleo puro (un Map),
       // pero `include` es LISTA BLANCA y sin esta linea no correria nunca.
       "lib/agent/direcciones.test.ts",
@@ -392,12 +403,8 @@ export default defineConfig({
       // what spend credits and are NEVER in the test suite / CI).
       // Las guardas del experimento de los dos sobres: que el brazo de CONTROL
       // no sea en secreto igual al de tratamiento. `include` es LISTA BLANCA.
-      "lib/agent/evals/sobres.test.ts",
-      "lib/agent/evals/cases.test.ts",
-      "lib/agent/evals/promesas-del-arnes.test.ts",
       "lib/agent/objetivo/evaluar-condicion.test.ts",
       "lib/agent/objetivo/veredicto.test.ts",
-      "lib/agent/evals/eval-identity.test.ts",
       "lib/theme-derive.test.ts",
       "lib/palette-gen-look.test.ts",
       "lib/theme-presets.test.ts",

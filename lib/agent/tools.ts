@@ -14,6 +14,16 @@
 // dispatch in try/catch so a bug in one tool can never crash the agent
 // loop mid-conversation.
 
+import type { AlmacenDeclarado } from "@/lib/page-data/declaracion";
+import type { FilaDeAlmacen, PlanDeAlmacen } from "@/lib/agent/ficheros/datos";
+import { NOMBRE_TODO_WRITE, RESULTADO_TODO_WRITE, leerTodos } from "@/lib/agent/ficheros/todo-write";
+import {
+  NINGUNA_DIFERIDA,
+  NOMBRE_TOOL_SEARCH,
+  bloqueDeFunciones,
+  buscarDiferidas,
+  errorDeNoCargada,
+} from "@/lib/agent/ficheros/tool-search";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
@@ -24,65 +34,25 @@ import {
   type ImageEditInput,
   type ImageEditResult,
 } from "@/lib/ai/image-edit-core";
-import { behaviorContractFingerprint, describeBehaviorIssues } from "@/lib/conductas-heredadas/validate";
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
+import { stripOpIds } from "@/lib/html-ops";
+import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import { debitCredits } from "@/lib/credits";
-import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
-import { applyOps, buildOutline, buildScopedView, outerHtmlByOpId, rejectBlindOps, rejectDocumentWideOps, stripOpIds, tagWithOpIds, type Op, type OpAttr, type OpType } from "@/lib/html-ops";
-import { avisoContenidoPerdido, contenidoPerdido } from "@/lib/agent/contenido-perdido";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
 import type { TareaDeclarada } from "@/lib/agent/lista-de-tareas";
-import { valoresDeTema } from "@/lib/agent/valores-de-tema";
 import { vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
+import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 import { CONDICION_MAX, TURNOS_MAXIMOS_CON_OBJETIVO } from "@/lib/agent/objetivo/evaluar-condicion";
-import { describirOps, type OpDescrita } from "@/lib/agent/ops-descritas";
-import { splitRuntimeOps } from "@/lib/ai-stream/model-runtime";
-import {
-  applyHeadOp,
-  applyLangOp,
-  applyStylesOp,
-  rechazoDeCabezaParaElModelo,
-  splitDocumentOps,
-  splitLangOp,
-} from "@/lib/ai-stream/document-ops";
-import {
-  avisoHechosPerdidos,
-  avisoHechosPerdidosEnEdicion,
-  avisoMetaDesfasada,
-  hechosPerdidos,
-  hechosPerdidosNetos,
-  metaDesfasada,
-} from "@/lib/agent/facts-kept";
-import { avisoReglasMuertas, type ReglaMuerta } from "@/lib/document/css-wiring";
-import { avisoEnlacesDesfasados, enlacesDesfasados } from "@/lib/agent/enlaces-desfasados";
-import { avisoHandlersMuertos, esHandler, handlersMuertos, type HandlerMuerto } from "@/lib/agent/handlers-muertos";
-import { enlacesInventados, avisoEnlacesInventados, type EnlaceInventado } from "@/lib/agent/enlaces-inventados";
-import { avisoPrefijosInventados, prefijosInventados, type PrefijoInventado } from "@/lib/agent/prefijo-inventado";
-import { validaPruebaJs, MAX_PRUEBA_JS_BYTES } from "@/lib/agent/prueba-js";
-import { AGENT_MEMORY_MAX, rememberAboutUser } from "@/lib/agent/user-memory";
+import type { OpDescrita } from "@/lib/agent/ops-descritas";
+import { getUserMemory, rememberAboutUser } from "@/lib/agent/user-memory";
 import { leerDeInternet } from "@/lib/agent/internet";
-import {
-  buscarEnDocumento,
-  buscarPorSelector,
-  TEXTO_MINIMO,
-  TOPE_COINCIDENCIAS,
-  type Coincidencia,
-} from "@/lib/agent/buscar-en-pagina";
 import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
-import {
-  activeHtml,
-  persistPage,
-  type CambioDelDocumento,
-  type RuntimeIntent,
-} from "@/lib/page-engine/persist";
-import { preparePage } from "@/lib/page-engine/prepare";
+import { activeHtml } from "@/lib/page-engine/persist";
 import { actualizarData } from "@/lib/projects/escribir-data";
-import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
-import { leerCambiosSinPublicar, setProjectUserBrief, USER_BRIEF_MAX } from "@/lib/projects";
+import { leerCambiosSinPublicar, setProjectUserBrief } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { validateSubdomain } from "@/lib/subdomain/validate";
-import { createSitePage, type CreatePageInput } from "@/lib/projects/create-page";
 import {
   applySettingsPatch,
   validateSettingsPatch,
@@ -91,11 +61,6 @@ import {
 } from "@/lib/projects/settings-patch";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
-import {
-  redesignPage,
-  type RedesignInput,
-  type RedesignOutcome,
-} from "@/lib/agent/redesign";
 import { liveDataEnabled } from "@/lib/publish/kill-switches";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import {
@@ -104,39 +69,19 @@ import {
   type AgentModule,
 } from "@/lib/agent/catalog";
 import { searchCuratedPhotos } from "@/lib/agent/photo-search";
+import type { Leidos } from "@/lib/agent/ficheros/read";
 import {
-  applyThemeTokensToHtml,
-  documentReadsToken,
-  ensureFontLink,
-  fontFamilyName,
-  readThemeModeFromHtml,
-  readThemeTokenFromHtml,
-} from "@/lib/agent/theme-apply";
-import { lookFromAccent, type LookBase } from "@/lib/palette-gen";
-import { applyTematicaToHtml, removeTematicaFromHtml } from "@/lib/tematicas/apply-server";
-import { deriveContractColors, type BaseColors } from "@/lib/theme-derive";
-import { THEME_PRESETS } from "@/lib/theme-presets";
-
-const MAX_EDITS_PER_CALL = 8;
-// `attrs` ENTRA AL VOCABULARIO DEL MODELO (2026-09-02).
-//
-// Existía en el motor desde el 01/09 pero sólo la emitía el taller, para la
-// re-tinta. Al Agente se le daban cuatro verbos cuya unidad más pequeña es el
-// NODO, así que quitar una clase de once caracteres le obligaba a `replace`
-// sobre el contenedor — o sea a volver a teclear el subárbol entero. En
-// producción eso vació una tarjeta de entradas: se pidió centrarla y quitarle
-// dos círculos, y desapareció con sus precios y sus fechas dentro.
-//
-// La comparación con Claude aclara por qué faltaba: su `str_replace` opera
-// sobre CUALQUIER subcadena, así que editar por debajo del nodo le sale gratis
-// sin verbos extra. Direccionar por `data-op-id` gana en tokens
-// ([[html-ops-id-tagged-protocol]]) pero convierte el nodo en la unidad, y esa
-// factura hay que pagarla nombrando lo que Claude tiene implícito.
-const OP_TYPES: readonly OpType[] = ["replace", "insert_before", "insert_after", "delete", "attrs", "text"];
-
-/** Los targets que NO son elementos. `attrs` reescribe una etiqueta de
- *  apertura, así que sobre ninguno de éstos significa nada. */
-const TARGETS_NO_ELEMENTO = new Set(["runtime", "styles", "head", "idioma"]);
+  esHerramientaDeFicheros,
+  guardarFichero,
+  paginaPedida,
+  toolEdit,
+  toolGlob,
+  toolGrep,
+  toolRead,
+  toolWrite,
+} from "@/lib/agent/herramientas-de-ficheros";
+import { ficherosDelSitio, leerFichero, rutaDePagina, rutaRelativa } from "@/lib/agent/ficheros/sitio";
+import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 
 // editar_imagen: the source image must decode as one of the formats Gemini's
 // image edit accepts, and stays under the same 6MB cap the ai-edit-image route
@@ -150,6 +95,26 @@ export type FetchedImage =
   | { ok: false; error: string };
 
 export interface AgentDeps {
+  /** H3 — los almacenes que declara el BORRADOR, con sus filas y quién las
+   *  escribió. Opcional: sin él no hay ficheros en /datos. */
+  almacenesDelProyecto?(projectId: string): Promise<
+    { nombre: string; declarado: AlmacenDeclarado; filas: FilaDeAlmacen[] }[]
+  >;
+  /** H3 — lo que Len sabe del DUEÑO (`users.agentMemory`), para leerlo como
+   *  `/memoria/dueno.md`. Opcional: sin él, el fichero sale vacío. */
+  leerMemoriaDelDueno?(userId: string): Promise<string | null>;
+  /** H3 — un fichero de /datos editado, aplicado ENTERO con las reglas de
+   *  siempre (`aplicarPlanDeAlmacen`): permisos, validación y cuota antes de
+   *  tocar nada. */
+  aplicarAlmacen?(args: {
+    projectId: string;
+    userId: string;
+    almacen: string;
+    plan: PlanDeAlmacen;
+  }): Promise<{ ok: true; mensaje: string } | { ok: false; error: string }>;
+  /** H3 — el aviso de cuota que daba `leer_estado`, o `null` con sitio de
+   *  sobra. Se pide sólo al leer un fichero de /datos. */
+  avisoDeCuota?(projectId: string, userId: string): Promise<string | null>;
   loadProject(projectId: string, userId: string): Promise<{
     data: ProjectData;
     title: string;
@@ -170,10 +135,8 @@ export interface AgentDeps {
     userId: string,
     aplicar: (actual: ProjectData) => ProjectData,
   ): Promise<void>;
-  /** P4 — full-document redesign (one big Gemini call, charged by measured
-   *  tokens like editImage). Injected so tools.test.ts fakes it without the
-   *  network; realDeps wires redesignPage. */
-  redesignDocument(userId: string, input: RedesignInput): Promise<RedesignOutcome>;
+  // ⚰️ `redesignDocument` — el rediseño con un segundo modelo — se fue con
+  // `redisenar_pagina` (Len 2.0: un Write lo hace sin segundo modelo).
   /** Devuelve el id de la fila archivada, o `null` si no se archivó nada. Ese
    *  id es la dirección del Deshacer del Chat — ver `versionPrevia`. */
   snapshotVersion(args: {
@@ -215,6 +178,16 @@ export interface AgentDeps {
      *  documento que el lienzo le enseña al usuario. Ver `MiradaParams.vista`. */
     vista?: ContextoDeVista | null;
   }): Promise<{ respuesta: string } | null>;
+  /** USAR LA PÁGINA — `usar_pagina` (H9). Una visita en Chromium con los pasos
+   *  que da Len; devuelve HECHOS de cada paso, no un veredicto. Opcional por lo
+   *  mismo que `observarPagina`: quien no la cablea no arranca un navegador por
+   *  sorpresa, y la herramienta dice que no está disponible. */
+  usarPagina?(input: {
+    html: string;
+    pasos: readonly PasoDeUso[];
+    ruta: string;
+    vista?: ContextoDeVista | null;
+  }): Promise<{ informe: string }>;
   /** Download an on-page image as base64 — SSRF-guarded (validateUrl, same as
    *  the proxy-image route) + capped + MIME-allowlisted. editar_imagen only
    *  ever passes a URL it already found verbatim in the current document. */
@@ -350,6 +323,34 @@ export const conflictoRepetido = (veces: number) =>
 
 export function realDeps(): AgentDeps {
   return {
+    // H3 — import perezoso por lo mismo que en los tools de almacén:
+    // `lib/page-data/agente.ts` es server-only.
+    async almacenesDelProyecto(projectId) {
+      const { declaracionDelBorrador } = await import("@/lib/page-data/publicada");
+      const { leerDatos } = await import("@/lib/page-data/agente");
+      const declaracion = await declaracionDelBorrador(projectId);
+      const out: { nombre: string; declarado: AlmacenDeclarado; filas: FilaDeAlmacen[] }[] = [];
+      for (const [nombre, declarado] of Object.entries(declaracion)) {
+        out.push({ nombre, declarado, filas: await leerDatos({ projectId, almacen: nombre }) });
+      }
+      return out;
+    },
+    async leerMemoriaDelDueno(userId) {
+      return getUserMemory(userId);
+    },
+    async aplicarAlmacen(args) {
+      const { aplicarPlanDeAlmacen } = await import("@/lib/page-data/agente");
+      return aplicarPlanDeAlmacen(args);
+    },
+    // LA CUOTA, CUANDO APRIETA. El panel de Datos ya la enseña, pero eso sólo
+    // ayuda a quien lo abre — y el 507 les ocurre a los visitantes mientras el
+    // dueño no mira. Len habla con él, así que Len tiene que saberlo.
+    async avisoDeCuota(projectId, userId) {
+      const { cuotaDelProyecto } = await import("@/lib/page-data/agente");
+      const { avisoDeCuotaParaElModelo } = await import("@/lib/page-data/cuota");
+      const cuota = await cuotaDelProyecto({ projectId, userId });
+      return cuota ? avisoDeCuotaParaElModelo(cuota) : null;
+    },
     async loadProject(projectId, userId) {
       const rows = await db
         .select({
@@ -378,15 +379,6 @@ export function realDeps(): AgentDeps {
       if (!r.ok) {
         throw new Error(r.motivo === "conflicto" ? CONFLICTO_AL_GUARDAR : "proyecto no encontrado");
       }
-    },
-    async redesignDocument(userId, input) {
-      // AQUI SE NEGABA LA HERRAMIENTA POR UNA CLAVE QUE NO USABA. Pedia
-      // `GEMINI_API_KEY` y, sin ella, `redisenar_pagina` moria entera con un
-      // motivo FALSO. Con el proveedor fuera no queda clave que pedir ni
-      // modelo que resolver: el rediseno escribe DeepSeek por Fireworks.
-      return redesignPage(input, {
-        debit: (cost) => debitCredits(userId, cost),
-      });
     },
     async snapshotVersion(args) {
       // Best-effort, same as the ai-design route: a snapshot failure must
@@ -518,24 +510,13 @@ export function realDeps(): AgentDeps {
 export interface AgentSession {
   projectId: string;
   userId: string;
-  /** Documento ACTIVO actual, etiquetado — mutado por editar_pagina. Home o
-   *  subpágina según `page`; F4 Task 2 makes every tool read/write through
-   *  this session's active slot instead of always data.html. */
-  taggedHtml: string;
-  /**
-   * EL DOCUMENTO QUE LA SESIÓN CREE QUE HAY EN DISCO, sin etiquetar.
-   *
-   * `taggedHtml` es lo que ve el MODELO; esto es contra qué comparar para saber
-   * si alguien más escribió mientras el turno pensaba. La ventana es el turno
-   * entero —minutos—: el modelo razona sobre el documento fijado al abrirlo y
-   * persiste al final, así que una edición del usuario por la pestaña Contenido
-   * en medio se pierde del documento vivo sin que nadie se entere. (Queda
-   * archivada como versión, porque `persistPage` releía la fila; lo que faltaba
-   * no era el respaldo, era el AVISO.)
-   *
-   * Ausente ⇒ no se comprueba nada y todo sale como antes.
-   */
-  baseHtml?: string;
+  /** Las herramientas DIFERIDAS del turno y las que el modelo ya cargó con
+   *  ToolSearch (H2). Ausente ⇒ todas cargadas (pruebas, caminos viejos). */
+  herramientas?: { readonly diferidas: readonly Record<string, unknown>[]; readonly cargadas: Set<string> };
+  // ⚰️ Aquí vivían `taggedHtml` (el documento activo con ids, contra el que se
+  // aplicaban las ops) y `baseHtml` (contra qué comparar si otro escribió). Len
+  // 2.0 edita ficheros (plans/len-2/ficheros-plan.md): cada herramienta lee la
+  // fila, y «cambió desde que lo leíste» se decide contra `leidos`.
   /**
    * LO QUE EL USUARIO ESCRIBIÓ EN ESTE TURNO.
    *
@@ -565,32 +546,12 @@ export interface AgentSession {
   /** Successful editar_imagen calls so far this request. The route inits it to
    *  0; the tool caps it at 1 per turn (each edit is a paid Gemini image op). */
   imageEditsThisTurn: number;
-  /** P4 — successful redisenar_pagina calls this request. Optional so existing
-   *  session constructors keep working; the tool treats absent as 0 and caps
-   *  at 1 (a redesign is one big paid call AND a whole-document rewrite —
-   *  two in one turn means the model is flailing, not designing). */
-  redesignsThisTurn?: number;
   /** Guardados SEGUIDOS que chocaron con `CONFLICTO_AL_GUARDAR` este turno;
-   *  uno bueno la pone a cero. Opcional como `redesignsThisTurn`: ausente es 0.
+   *  uno bueno la pone a cero. Opcional: ausente es 0.
    *  Ver `CONFLICTO_REPETIDO`. */
   conflictosAlGuardar?: number;
-  /** LA PROMESA DEL TURNO: el programa JS que el modelo declaró en `prueba_js`
-   *  para su propio comportamiento.
-   *
-   *  Vive en la sesión —y no se persiste así— porque describe la promesa de ESTE
-   *  cambio. Los ojos la corren al cerrar el turno, junto a la suite guardada
-   *  de la página, y si se cumple entra en esa suite (`PruebaGuardada.codigo`).
-   *  Sin promesa, los ojos pulsan a ciegas como antes.
-   *
-   *  La última gana: un turno con dos ediciones de comportamiento promete lo
-   *  que dijo la última. Un retoque de texto no la toca; un cambio de
-   *  comportamiento sin `prueba_js` la retira, porque ya no describe lo que hay. */
-  behaviorJs?: string | null;
-  /** POR QUÉ SE RECHAZÓ la ÚLTIMA llamada por su prueba (`demasiado_grande`,
-   *  `vacia`, `prueba_retirada`), o `null` si no fue por eso. Una prueba que no
-   *  valida rechaza la llamada entera, así que esto no convive con un cambio
-   *  guardado. Es del turno, no del proyecto. Lo lee la batería. */
-  rechazoPrueba?: string | null;
+  // ⚰️ `behaviorJs` (la promesa de `prueba_js`) y `rechazoPrueba` se fueron con
+  // `editar_runtime` en Len 2.0: ninguna herramienta los escribía ya.
   /**
    * YA PROPUSO UN OBJETIVO Y EL DUEÑO NO HA DECIDIDO.
    *
@@ -602,21 +563,8 @@ export interface AgentSession {
    * entre cosas que se pisan, y la segunda taparía a la primera.
    */
   objetivoPropuestoSinDecidir?: boolean;
-  /** EL TURNO ENTRÓ A CIEGAS: la página no cabía, así que el modelo recibió
-   *  SÓLO EL ÍNDICE (`buildOutline`) — el nombre de cada sección, nada de su
-   *  contenido. Mientras esté puesto, `editar_pagina` no deja borrar ni
-   *  reemplazar una sección que el modelo no haya abierto. Ver `rejectBlindOps`.
-   *
-   *  Es un BOOLEANO, no el índice: a la sesión no se le cuela nunca el recorte,
-   *  porque las ops se aplican contra el documento COMPLETO. De ahí el nombre —
-   *  `soloIndice` ya significa «el texto del índice» en `buildAgentContext`. */
-  entroACiegas?: boolean;
-  /** Los op-id que el modelo ha VISTO de verdad este turno: los de cada sección
-   *  que abrió con `leer_estado op_id=` y los del documento entero si lo pidió.
-   *  Sólo se consulta en el plano B — fuera de él, el documento va en el prompt
-   *  y no hay nada ciego. Vive en la sesión y no se persiste: describe lo que
-   *  ESTE turno tiene delante, no un hecho de la página. */
-  idsVistos?: Set<string>;
+  // ⚰️ `entroACiegas` e `idsVistos` eran del plano B (sólo el índice en el
+  // contexto): se fueron con él (T8c).
   /** elegir_foto calls so far this request. Read-only + exempt from the action
    *  budget, but the curated catalog is finite: after the 2nd empty result the
    *  tool tells the model to pivot instead of retrying variants, and a hard
@@ -654,6 +602,18 @@ export interface AgentSession {
   /** Lecturas de internet ya hechas este turno. Cada una son hasta 3 URLs; el
    *  tope existe para que «investiga esto» no se convierta en un rastreador. */
   lecturasDeInternetEsteTurno?: number;
+  /** LEN 2.0 · lo leído en este turno, por ruta, como lo apunta Claude
+   *  Code. Sin leer no se edita, y «cambió desde que lo leíste» se decide
+   *  contra esto. Empieza vacío en cada turno (plans/len-2/ficheros-plan.md, B3). */
+  leidos?: Leidos;
+  /** LEN 2.0 · las rutas escritas este turno, la más reciente primero: el
+   *  «orden por fecha» de Grep y Glob (decisión B6). */
+  escritos?: string[];
+  /** Cómo estaba cada fichero antes de su PRIMERA escritura de este turno. Lo
+   *  que la página ya decía sigue siendo de la página aunque un Edit anterior
+   *  del mismo turno lo quitara: los avisos de procedencia lo cuentan como
+   *  fuente (E del 26/09, oficina-y-whatsapp). */
+  alEmpezar?: Map<string, string>;
 }
 
 export interface ToolOutcome {
@@ -706,18 +666,19 @@ export interface ToolOutcome {
   };
   /** HTML nuevo (sin op-ids) para refrescar el iframe. */
   updatedHtml?: string;
-  /** EL GEMELO ETIQUETADO de `updatedHtml` — el mismo documento con sus
-   *  `data-op-id` puestos, tal y como lo dejó `reetiquetar`.
-   *
-   *  🔴 VIAJA CON LA MUTACIÓN, y no se lee de la sesión más tarde, por la misma
-   *  razón que `page` justo debajo: `trabajar_en_pagina` puede mover la sesión
-   *  a OTRA página a mitad de turno, y entonces `session.taggedHtml` ya no es
-   *  el gemelo de lo que se editó. Quien mire el documento al cerrar el turno
-   *  —los ojos— estaría midiendo la página equivocada.
-   *
-   *  Se pone en `runAgentTool`, en un solo sitio, para que una herramienta
-   *  nueva no pueda olvidarse de traerlo. */
-  taggedHtml?: string;
+  // ⚰️ Aquí viajaba `taggedHtml`, el gemelo con los `data-op-id` del motor, para
+  // que los ojos y la medición señalaran nodos. Len 2.0 (T9) señala LÍNEAS: el
+  // bucle hace el gemelo con posiciones (`etiquetarConPosiciones`) de
+  // `updatedHtml`, en un solo sitio.
+  /** LEN 2.0 · cómo estaba el fichero ANTES de esta escritura, tal como lo ve
+   *  Read, o `null` si la escritura lo creó. El bucle guarda el primero de cada
+   *  página: es la línea base de lo que mida el navegador (T9). Ausente ⇒ no se
+   *  sabe, y lo medido en esa página se dice entero. */
+  htmlPrevio?: string | null;
+  /** LEN 2.0 · lo que esta escritura dejó mal, anclado a una línea de su
+   *  fichero (`lib/agent/diagnosticos-de-la-escritura.ts`). El bucle lo junta
+   *  con lo medido y lo manda en el `<new-diagnostics>` hermano. */
+  diagnosticos?: readonly Diagnostico[];
   /** F4 Task 4 — which slot `updatedHtml` belongs to (session.page at the
    *  moment of the write), null for home. Required whenever `updatedHtml` is
    *  set: `trabajar_en_pagina` can move `session.page` mid-turn, so the html
@@ -782,7 +743,7 @@ export interface ToolOutcome {
   pregunta?: string;
   /**
    * LAS TAREAS QUE EL MODELO DECLARÓ este turno, en su orden. Las escribe
-   * `declarar_tareas` y las consume el bucle, que al cerrar comprueba que cada
+   * TodoWrite y las consume el bucle, que al cerrar comprueba que cada
    * una tenga detrás una llamada con evidencia de haber movido algo.
    *
    * Es una lista de trabajo, no una promesa: declararlas no las hace, y ése es
@@ -808,15 +769,11 @@ const MODULE_SETTINGS_KEY: Record<AgentModule, "chat" | "assistant"> = {
   assistant: "assistant",
 };
 
-/** Los tokens del contrato que de verdad mueven algo si se escriben. Es la
- *  misma lista que `cambiar_tema` sabe pedir, y por eso el ESTADO informa
- *  exactamente sobre ella: decirle al modelo que la página «lee tokens» en
- *  general no le sirve para decidir si esta llamada va a hacer algo. */
 /** Los tokens de los que depende que el Tema del editor haga algo. Exportada
  *  desde el 2026-09-04 para que `prompts-superficies.test.ts` pueda atar el
- *  vocabulario que el CONTRATO ordena a esta lista, que es la que la
- *  herramienta comprueba: derivaron en silencio una vez y el precio fue que
- *  toda página nueva naciera sorda al selector de Tema. */
+ *  vocabulario que el CONTRATO ordena a esta lista: derivaron en silencio una
+ *  vez y el precio fue que toda página nueva naciera sorda al selector de Tema.
+ *  (La leía también `cambiar_tema`, retirada con Len 2.0: el selector sigue.) */
 export const TOKENS_DEL_CONTRATO = [
   "--ol-bg",
   "--ol-fg",
@@ -824,40 +781,6 @@ export const TOKENS_DEL_CONTRATO = [
   "--ol-font-display",
   "--ol-r-scale",
 ] as const;
-
-/**
- * LO QUE EL DOCUMENTO ES, no sólo lo que el proyecto tiene.
- *
- * 🔴 POR QUÉ ESTOS TRES. El ESTADO contaba el proyecto —título, subdominio,
- * páginas, módulos— y ni una palabra del documento que el Agente va a editar.
- * Así que el modelo descubría los hechos más caros CHOCÁNDOSE con ellos:
- *
- *   - `lee_tokens`: MEDIDO el 2026-08-22 — sólo 7 de las 178 plantillas dicen
- *     `var(--ol-…)` en su CSS. En las otras 171, `cambiar_tema` escribe el
- *     token, la página no se mueve, y hoy la herramienta se niega en el acto.
- *     El modelo gastaba una llamada entera en enterarse de algo que se sabe
- *     mirando el CSS. Con esto lo sabe ANTES y va derecho a `target="styles"`.
- *   - `modo`: claro u oscuro. Sin esto, «pon el fondo más suave» sale gris
- *     claro sobre una página oscura.
- *   - `fuentes`: la tipografía que la página declara. Sin esto, «ponlo con la
- *     misma fuente del titular» es una adivinanza.
- *
- * Los tres salen de `theme-apply`, que ya los sabía calcular para otra cosa:
- * lo que faltaba no era el cálculo, era decírselo.
- */
-function rasgosDelDocumento(html: string): Record<string, unknown> {
-  if (!html.trim()) return {};
-  const leidos = TOKENS_DEL_CONTRATO.filter((t) => documentReadsToken(html, t));
-  const fuenteDisplay = readThemeTokenFromHtml(html, "--ol-font-display");
-  const nombre = fuenteDisplay ? fontFamilyName(fuenteDisplay) : null;
-  return {
-    // La LISTA, no un booleano: una página puede leer el acento y no la
-    // tipografía, y ésa es justo la diferencia que decide la herramienta.
-    lee_tokens: leidos,
-    modo: readThemeModeFromHtml(html),
-    ...(nombre ? { fuentes: { titular: nombre } } : {}),
-  };
-}
 
 export function summarizeProjectState(
   row: {
@@ -871,8 +794,7 @@ export function summarizeProjectState(
      *  la fila. Ausente ⇒ el campo no se pinta. */
     cambiosSinPublicar?: boolean;
   },
-  /** La página ACTIVA de la sesión. Sin ella se describe la Home — que es lo
-   *  que hacía antes de que el ESTADO mirase el documento siquiera. */
+  /** La página que el dueño tiene abierta en el editor; `null` es la Home. */
   page: string | null = null,
 ): Record<string, unknown> {
   const modulos = {} as Record<AgentModule, boolean>;
@@ -913,244 +835,24 @@ export function summarizeProjectState(
       ? { cambios_sin_publicar: row.cambiosSinPublicar }
       : {}),
     subdominio: row.subdomain,
-    // LA HOME VA EN LA LISTA. `data.pages` son las páginas EXTRA — el propio
-    // tipo lo dice: «Home is `html` above». Así que esto le enseñaba al Agente
-    // un sitio con una página menos de las que tiene, y en un sitio de dos
-    // páginas eso significa que la mitad no existe.
-    //
-    // Medido el 2026-08-26: estando en /nosotros, a «¿cuántas páginas ves?»
-    // contestó que una. Contestó BIEN — le dimos mal la entrada. El fallo del
-    // Agente casi nunca está en el modelo.
-    //
-    // "principal" es el mismo nombre que ya usa `trabajar_en_pagina` para la
-    // Home, así que el modelo puede pasar de la lista a la herramienta sin
-    // traducir nada.
-    paginas: ["principal", ...Object.keys(row.data.pages ?? {})],
+    // LEN 2.0: LAS PÁGINAS SON FICHEROS, con las mismas rutas que usan Read,
+    // Edit, Write, Grep y Glob. Antes era «paginas» con "principal" para la
+    // Home —el nombre que pedía `trabajar_en_pagina`, que ya no existe—. La
+    // Home va en la lista: medido el 2026-08-26, sin ella el Agente contestaba
+    // que un sitio de dos páginas tenía una.
+    ficheros: ficherosDelSitio(row.data),
+    // La que el dueño tiene abierta en el editor, como el «fichero abierto en
+    // el IDE» de Claude Code: puede que la petición sea sobre ésa, o no.
+    abierta_en_el_editor: rutaDePagina(page),
     modulos,
-    ...rasgosDelDocumento(activeHtml(row.data, page) ?? ""),
     ...(sheetUrl ? { datos_vivos: { hoja: sheetUrl } } : {}),
   };
 }
 
-async function toolLeerEstado(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-
-  // La deriva se lee APARTE porque `loadProject` trae el borrador y no las
-  // huellas de lo publicado. Es la misma lectura que usa `activar_modulo` para
-  // decidir si el visitante ya lo ve, y la misma que enciende la franja.
-  const response = summarizeProjectState(
-    { ...row, cambiosSinPublicar: await deps.cambiosSinPublicar(session.projectId, session.userId) },
-    session.page,
-  );
-  // F4 Task 2 — explicit home signal (the T1 reviewer's flagged gap): home
-  // reads "principal" here rather than being silently absent, unlike the
-  // ESTADO block's context string (which omits it to hold F3 byte-identity).
-  response.pagina_activa = session.page ?? "principal";
-  // ⚰️ Aquí viajaba el bloque `negocio` —el perfil del dueño— en CADA lectura
-  // de estado. Se fue con el perfil el 2026-08-31: el Agente ya tiene el
-  // documento delante, y ahí están el nombre, el teléfono y la dirección que
-  // el dueño puso.
-  // LOS ALMACENES QUE LA PÁGINA DECLARA, con sus filas. Sin esto el Agente
-  // sabe guardar pero no CORREGIR: `editar_dato` y `quitar_dato` piden un id
-  // que no tendría de dónde sacar, y acabaría añadiendo una fila nueva cada vez
-  // que el usuario le pide cambiar un precio.
-  //
-  // Import perezoso por lo mismo que en los tools: `agente.ts` es server-only.
-  try {
-    const { declaracionDelBorrador } = await import("@/lib/page-data/publicada");
-    const { leerDatos } = await import("@/lib/page-data/agente");
-    const { vistaDelAlmacen } = await import("@/lib/page-data/vista-del-agente");
-    // DEL BORRADOR, igual que `guardar_dato`: si `leer_estado` mirase lo
-    // publicado y la escritura el borrador, el Agente vería un almacén sin
-    // filas y otro con ellas segun a quien preguntara.
-    const declaracion = await declaracionDelBorrador(session.projectId);
-    const nombres = Object.keys(declaracion);
-    if (nombres.length > 0) {
-      const almacenes: Record<string, unknown> = {};
-      for (const nombre of nombres) {
-        // QUIÉN ESCRIBIÓ CADA FILA — lo marca `vistaDelAlmacen`, y el porqué
-        // está en su cabecera.
-        almacenes[nombre] = vistaDelAlmacen(
-          declaracion[nombre],
-          await leerDatos({ projectId: session.projectId, almacen: nombre }),
-        );
-      }
-      response.almacenes = almacenes;
-      // LA CUOTA, CUANDO APRIETA. El panel de Datos ya la enseña, pero eso sólo
-      // ayuda a quien lo abre — y el 507 les ocurre a los visitantes mientras
-      // el dueño no mira. Len habla con él, así que Len tiene que saberlo.
-      //
-      // Va DENTRO de la guarda de «hay almacenes»: una página sin datos no paga
-      // una consulta por un aviso que no puede tener. Y `avisoDeCuotaParaElModelo`
-      // devuelve `null` con sitio de sobra, así que en el 95% de los turnos esto
-      // no escribe nada en el contexto, que se paga entero.
-      const { cuotaDelProyecto } = await import("@/lib/page-data/agente");
-      const { avisoDeCuotaParaElModelo } = await import("@/lib/page-data/cuota");
-      const cuota = await cuotaDelProyecto({
-        projectId: session.projectId,
-        userId: session.userId,
-      });
-      const avisoCuota = cuota ? avisoDeCuotaParaElModelo(cuota) : null;
-      if (avisoCuota) response.cuota = avisoCuota;
-    }
-  } catch (err) {
-    // Fail-soft: leer_estado es la herramienta que el Agente usa para
-    // orientarse. Que falle entera porque los datos no se pudieron leer lo
-    // dejaría ciego para todo lo demás.
-    // eslint-disable-next-line no-console
-    console.warn("[agente] no se pudieron leer los almacenes", err);
-  }
-  // ABRIR UNA SECCIÓN, no el documento entero.
-  //
-  // La otra mitad del plano B del contexto: cuando la página no cabe, el turno
-  // arranca con SÓLO EL ÍNDICE y el modelo necesita poder abrir lo que le haga
-  // falta. Sin esto, el índice es un menú sin cocina — y la única puerta que le
-  // quedaba (`incluir_documento`) devuelve el documento entero, que es
-  // exactamente lo que no cabía: le estaríamos ofreciendo estrellarse contra el
-  // mismo muro por el otro lado.
-  //
-  // Se re-etiqueta igual que la rama de abajo, y por el mismo motivo: los
-  // data-op-id del turno anterior ya no valen tras una edición.
-  const opIdPedido = typeof args.op_id === "string" ? args.op_id.trim() : "";
-  if (opIdPedido) {
-    // I3: adoptar el disco está bien; adoptarlo CALLANDO, no. Ver
-    // `refrescarDesdeDisco`.
-    const cambio = refrescarDesdeDisco(session, activeHtml(row.data, session.page) ?? "");
-    if (cambio) response.cambio_en_disco = cambio;
-    const vista = buildScopedView(session.taggedHtml, opIdPedido);
-    if (vista) {
-      response.seccion = {
-        op_id: vista.containerOpId,
-        html: vista.scopedHtml,
-      };
-      // Y DEJA DE SER CIEGA. En el plano B esto es lo único que le permite
-      // reemplazar o borrar esta sección: la ha visto. Ver `rejectBlindOps`.
-      anotarIdsVistos(session, vista.scopedHtml);
-    } else {
-      // Que NO encuentre la sección es un dato, no un fallo del turno: el índice
-      // puede venir de antes de una edición. Se le dice y sigue.
-      response.seccion_no_encontrada = opIdPedido;
-      response.nota_seccion =
-        "Ese op-id ya no existe (probablemente lo cambió una edición tuya). Pide leer_estado con op_id de otra sección del índice, o incluir_documento=true si la página es pequeña.";
-    }
-  } else if (args.incluir_documento === true) {
-    const cambio = refrescarDesdeDisco(session, activeHtml(row.data, session.page) ?? "");
-    if (cambio) response.cambio_en_disco = cambio;
-    response.documento = session.taggedHtml;
-    // El documento ENTERO: a partir de aquí no queda nada ciego en este turno.
-    anotarIdsVistos(session, session.taggedHtml);
-  }
-
-  // MIRAR OTRA PÁGINA SIN MUDARSE.
-  //
-  // 🔴 EL PROBLEMA, con los números de un proyecto real (2026-08-31): hasta hoy
-  // el Agente sólo veía la página ACTIVA. Para saber cómo estaba el navbar de
-  // otra tenía que llamar a `trabajar_en_pagina` (una vuelta del bucle),
-  // `leer_estado` (otra vuelta), y volver (dos más) — y CADA vuelta reenvía todo
-  // el historial acumulado. Jesús lo reportó como «los links entre páginas
-  // fallan mucho con el agente y se come muchos tokens haciendo lo mismo», y su
-  // caso lo demuestra: le pidió arreglar el logo, el Agente lo arregló en la
-  // Home y dejó /nosotros igual, porque no la estaba mirando.
-  //
-  // CÓMO LO HACEN LOS DEMÁS, comprobado antes de elegir (2026-08-31): v0 lee
-  // metadatos y hace grep, trayendo sólo lo que necesita —su documentación
-  // llama al otro camino «prompt stuffing, que choca con los límites»—, y el
-  // prompt publicado de Lovable dice literalmente «NUNCA leas ficheros que ya
-  // están en el contexto». O sea: BAJO DEMANDA, nunca por adelantado. Mi primera
-  // idea era mandar todas las páginas en cada turno y era justo lo que las tres
-  // empresas evitan a propósito.
-  //
-  // SIN `data-op-id`: esto es para MIRAR. Etiquetarlo invitaría a editar desde
-  // aquí, y editar exige que `session.taggedHtml` case con el documento —lo que
-  // obliga a mudarse—. El foco NO se toca: quien lo llama sigue donde estaba.
-  const verRaw = typeof args.ver_pagina === "string" ? args.ver_pagina.trim() : "";
-  if (verRaw) {
-    const otra = resolverPagina(row.data, verRaw);
-    if (!otra.ok) return { response: { ok: false, error: otra.error } };
-    const html = activeHtml(row.data, otra.slug) ?? "";
-    response.pagina_vista = {
-      pagina: otra.slug ?? "principal",
-      documento: html,
-      nota: "SIN data-op-id: es para mirar. Para editarla, trabajar_en_pagina primero.",
-    };
-  }
-
-  return { response };
-}
-
-/** Apunta en la sesión cada `data-op-id` del HTML que el modelo acaba de ver.
- *
- *  Es la contrapartida exacta de `rejectBlindOps`: sin esto el plano B no
- *  dejaría destruir NADA, ni siquiera la sección que el modelo abrió a
- *  propósito, y el índice volvería a ser un menú sin cocina. Se apuntan TODOS
- *  los ids del fragmento, no sólo el del contenedor: si el modelo tiene delante
- *  el HTML de una sección, también ha visto sus hijos. */
-function anotarIdsVistos(session: AgentSession, html: string): void {
-  if (!session.idsVistos) session.idsVistos = new Set<string>();
-  for (const m of html.matchAll(/\sdata-op-id="([^"]+)"/g)) session.idsVistos.add(m[1]!);
-}
-
-/**
- * Re-etiqueta el documento de la sesión Y OLVIDA LO VISTO si la numeración se
- * movió.
- *
- * 🔴 EL AGUJERO QUE CIERRA (medido el 2026-09-01). Los `data-op-id` son un
- * contador en orden de documento, así que CUALQUIER edición los renumera de la
- * herida hacia abajo. `session.idsVistos` no se vaciaba nunca, y en el mismo
- * turno pasaba esto:
- *
- *     <body 0><div 1><header 2><h1 3></header>
- *       <section 4><h2 5><p 6>Desde 180</p></section>
- *       <footer 7><p 8>Contacto</p></footer></div></body>
- *
- *   1. `leer_estado op_id=4` → el modelo abre la sección: vistos = {4, 5, 6}.
- *   2. `editar_pagina delete target=6` → legítimo, lo había visto. Se aplica.
- *   3. Se re-etiqueta: ahora el `<footer>` es el 6.
- *   4. `editar_pagina replace target=6` → `rejectBlindOps` lo dejaba pasar,
- *      porque el 6 seguía en `idsVistos`. Y reemplazaba EL PIE, una sección que
- *      el modelo no abrió nunca.
- *
- * O sea: la guarda de «lo que no se ha visto no se destruye» se abría sola en
- * cuanto el modelo hacía UNA edición, que es lo que hace siempre.
- *
- * SÓLO se olvida cuando el documento etiquetado CAMBIA. Un `leer_estado` que
- * vuelve a estampar el mismo documento da la misma numeración —lo que el modelo
- * abrió sigue siendo lo que abrió— y vaciarlo ahí le obligaría a reabrir cada
- * sección en cada lectura, que es justo lo que el plano B no puede permitirse.
- */
-function reetiquetar(session: AgentSession, html: string, taggedPreservado?: string): void {
-  // ─── LAS DIRECCIONES SOBREVIVEN A LA EDICION ─────────────────────────────
-  //
-  // `taggedPreservado` es el resultado de `applyOps(..., keepOpIds=true)`: el
-  // mismo documento que se acaba de guardar, pero con los `data-op-id` intactos
-  // en todo lo que el turno NO toco. Si al limpiarlo sale byte a byte lo que se
-  // guardo, es de fiar y se usa — y entonces el modelo puede seguir editando
-  // SIN volver a pedir el documento, que es una vuelta entera del bucle menos
-  // por edicion.
-  //
-  // Si `persistPage` transformo algo por el camino (normaliza, re-sella el CSP,
-  // hornea), la comparacion falla y se cae al re-etiquetado de siempre. Antes
-  // gastar la vuelta que dejar la sesion creyendo en un documento que no existe.
-  const estable = taggedPreservado !== undefined && stripOpIds(taggedPreservado) === html;
-  const tagged = tagWithOpIds(estable ? taggedPreservado : html).taggedHtml;
-  // Y SOLO SE OLVIDA LO VISTO CUANDO LAS DIRECCIONES PUDIERON MOVERSE. Ese
-  // olvido existe por un incidente real: tras una edicion el id 6 pasaba a ser
-  // el <footer>, y `rejectBlindOps` dejaba reemplazar una seccion que el modelo
-  // no habia abierto nunca. Con ids estables eso no puede pasar — un id no se
-  // reutiliza JAMAS (`tagger.rs` acuna por encima del maximo) —, asi que
-  // olvidar aqui solo obligaria al modelo a reabrir lo que ya habia visto.
-  if (!estable && tagged !== session.taggedHtml) session.idsVistos = undefined;
-  session.taggedHtml = tagged;
-  // La base viaja con el re-etiquetado y no aparte: los SIETE sitios que
-  // refrescan el documento pasan por aquí, así que ninguno puede olvidarse y
-  // dejar la sesión creyendo en un documento viejo.
-  session.baseHtml = html;
-}
+// ⚰️ AQUÍ VIVÍA `toolLeerEstado` (H3, 2026-09-25). El estado del proyecto ya va en
+// el contexto al empezar —como el `git status` de Claude Code— y los almacenes
+// son ficheros de /datos (`lib/agent/ficheros/datos.ts`), con su aviso de
+// visitantes.
 
 function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: string): SettingsPatchBody {
   switch (modulo) {
@@ -1171,58 +873,6 @@ function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: strin
 // than each caller re-deriving nextData by hand).
 // ⚰️ Aquí vivía `esModuloDePagina`. Ya no hay ningún módulo que `crear_pagina`
 // sepa inyectar: el último era `collections`, retirado el 2026-08-29.
-
-/**
- * 🔴 I3 · REFRESCAR LA SESIÓN DESDE EL DISCO **DICIÉNDOLO**.
- *
- * Las tres lecturas que vuelven a estampar la MISMA página (`leer_estado` con
- * `op_id`, `leer_estado` con `incluir_documento`, `buscar_en_pagina`) llamaban a
- * `reetiquetar` con lo que hubiera en disco y sin compararlo con lo que Len
- * creía tener. Dos daños, y el segundo es el que no se ve:
- *
- *   1. Si otro escritor había quitado algo, Len lo ADOPTABA. El modelo no se
- *      enteraba, así que podía cerrar el turno describiendo una página que ya
- *      no existe.
- *   2. Y la guarda de I2 quedaba DESARMADA para el resto del turno: `baseHtml`
- *      pasaba a ser la del otro, así que el siguiente guardado ya no detectaba
- *      nada que pisar. Una lectura apagaba la protección de las escrituras.
- *
- * La vara es Claude Code: cuando un fichero cambia en disco se lo dice al
- * modelo —que cambió desde que lo leyó, que eso suele ser deliberado y lo tome
- * como el estado actual en vez de revertirlo, y que si el cambio parece un
- * error lo diga en vez de deshacerlo él— y detrás el diff. El hecho viaja; la
- * decisión sigue siendo del modelo.
- *
- * Aquí el «diff» es el ÍNDICE de antes y el de después: es la unidad en la que
- * el modelo ya trabaja (una línea por sección, con su op-id), lo calcula una
- * función que ya existe, y no arrastra dos documentos enteros por el contexto.
- * Cuando el índice sale igual la diferencia está DENTRO de alguna sección, y eso
- * también se dice — callarlo sería afirmar que no cambió nada.
- *
- * Devuelve la frase para el modelo, o `null` si el disco es lo que Len creía
- * (que es el caso de siempre, y sale byte a byte como antes).
- */
-function refrescarDesdeDisco(session: AgentSession, enDisco: string): string | null {
-  const antesBase = session.baseHtml;
-  const antesTagged = session.taggedHtml;
-  reetiquetar(session, enDisco);
-  // Sin base no hay nada contra qué comparar: la sesión acaba de nacer.
-  if (antesBase === undefined) return null;
-  if (stripOpIds(enDisco) === stripOpIds(antesBase)) return null;
-
-  const indiceAntes = buildOutline(antesTagged);
-  const indiceAhora = buildOutline(session.taggedHtml);
-  const detalle =
-    indiceAntes !== null && indiceAhora !== null && indiceAntes !== indiceAhora
-      ? `\nÍNDICE DE ANTES:\n${indiceAntes}\nÍNDICE DE AHORA:\n${indiceAhora}`
-      : "\nLa lista de secciones es la misma, así que lo que cambió está DENTRO de alguna de ellas.";
-  return (
-    "ESTA PÁGINA CAMBIÓ EN DISCO desde que la leíste: alguien la editó mientras trabajabas. " +
-    "Lo que tienes delante es el estado ACTUAL. Normalmente es deliberado, así que trabaja SOBRE él en vez de revertirlo; " +
-    "si el cambio te parece un error, dilo en vez de deshacerlo tú. Y menciónaselo al usuario, que es quien puede saber si fue él." +
-    detalle
-  );
-}
 
 async function activateModulePatch(
   session: AgentSession,
@@ -1371,1713 +1021,6 @@ async function toolPrepararMarketing(
   };
 }
 
-async function toolCrearPagina(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  // UN VALOR QUE NO ENTENDEMOS SE RECHAZA, NO SE BORRA.
-  //
-  // Esto era `args.modulo === "collections" ? args.modulo : undefined`: un
-  // `modulo="bookings"` (que el propio esquema anunciaba hasta hoy) se
-  // convertía en `undefined` sin decir una palabra. El core respondía entonces
-  // "se requiere slug, titulo o modulo" — un error de argumentos que no
-  // menciona Reservas por ningún lado — así que el modelo reintentaba con slug
-  // y título y creaba una página genérica EN BLANCO, dando la apariencia de
-  // haber atendido la petición. El dueño pedía citas y recibía una página
-  // vacía llamada "Reservas".
-  // NINGÚN módulo nace ya con la página. Si el modelo manda `modulo`, es que
-  // arrastra un prompt viejo o se lo está inventando — y hay que decírselo con
-  // la alternativa real, no con un error de argumentos.
-  if (args.modulo !== undefined) {
-    return {
-      response: {
-        ok: false,
-        error:
-          `ningún módulo nace ya con la página. Un CATÁLOGO —menú, productos, ` +
-          `cualquier lista que el dueño mantenga— se hace declarando un almacén ` +
-          `en la propia página con editar_html (el bloque data-ol-stores) y ` +
-          `llenándolo con guardar_dato. Reservas, Pedidos, Comentarios, Cuentas y ` +
-          `Broadcast SE RETIRARON: NO crees una página en blanco haciendo como que ` +
-          `lo resolviste — dilo con honestidad.`,
-      },
-    };
-  }
-  const input: CreatePageInput = {
-    slug: typeof args.slug === "string" ? args.slug : undefined,
-    title: typeof args.titulo === "string" ? args.titulo : undefined,
-  };
-
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-
-  const outcome = createSitePage(row.data, input);
-  if ("error" in outcome) {
-    return { response: { ok: false, error: outcome.message } };
-  }
-
-  // I4 — `createSitePage` es pura y se vuelve a correr sobre el `data` de ahora:
-  // crear una página no puede además revertir lo que se guardara entre medias.
-  await deps.saveProjectData(session.projectId, session.userId, (actual) => {
-    const fresco = createSitePage(actual, input);
-    return "error" in fresco ? actual : fresco.nextData;
-  });
-
-  // CREAR UNA PÁGINA ES PONERSE A TRABAJAR EN ELLA.
-  //
-  // Antes esto devolvía el slug y nada más: `session.page` seguía en la Home y
-  // `session.taggedHtml` con el documento de la Home. El modo de fallo no es
-  // un error, es PEOR — el modelo llamaba a `editar_pagina` a continuación,
-  // los op-ids que tenía eran los de la Home, y las ediciones entraban ahí.
-  // El usuario pedía «créame /pricing con tres planes» y le salían tres planes
-  // metidos en su portada, con la página nueva vacía al lado.
-  //
-  // Sólo se salvaba si el modelo encadenaba `trabajar_en_pagina` por su cuenta,
-  // que es exactamente la clase de cosa que un modelo hace en un buen turno y
-  // se salta en uno malo. Aquí el foco lo mueve el código, igual que lo mueve
-  // `trabajar_en_pagina`.
-  //
-  // La capacidad NO se recalcula al mover el foco, y desde el 2026-08-25 no
-  // tiene por qué: ya no depende de la página. Cualquier documento del sitio
-  // puede llevar su JavaScript.
-  session.page = outcome.slug;
-  const nuevaHtml = activeHtml(outcome.nextData, outcome.slug) ?? "";
-  reetiquetar(session, nuevaHtml);
-
-  return {
-    response: {
-      ok: true,
-      slug: outcome.slug,
-      titulo: outcome.title,
-      // Se le DICE, además de hacerlo: si el modelo cree que sigue en la Home
-      // describirá al usuario un cambio que no hizo ahí.
-      pagina_activa: outcome.slug,
-      nota: "ya estás trabajando en ESTA página — los data-op-id del turno anterior son de la Home y ya no valen; pide leer_estado con incluir_documento=true para los nuevos",
-    },
-    action: { tool: "crear_pagina", ok: true, summary: outcome.slug },
-    // El lienzo del taller sigue al foco: crear una página y quedarse mirando
-    // la Home es enseñarle al usuario algo distinto de lo que va a editarse.
-    updatedHtml: nuevaHtml,
-    page: session.page,
-  };
-}
-
-interface RawEdit {
-  op?: unknown;
-  target?: unknown;
-  new_html?: unknown;
-  /** Sólo para `op="attrs"`: `[{name, value}]`, con `value: null` para QUITAR. */
-  attrs?: unknown;
-  /** Sólo para `op="text"`: la cadena que debe quedar dentro del nodo. */
-  text?: unknown;
-}
-
-type PersistResult =
-  | {
-      ok: true;
-      finalHtml: string;
-      sinCambios?: boolean;
-      /** QUÉ LE PASÓ AL DOCUMENTO, en tres variantes: cambió (con el hash de
-       *  antes y el de después), no cambió, o no se sabe. `sinCambios` se
-       *  deriva de aquí — ver `CambioDelDocumento` en page-engine/persist. */
-      cambio: CambioDelDocumento;
-      /** Selectores que no pueden aplicar sobre el documento guardado. */
-      reglasMuertas?: readonly ReglaMuerta[];
-      /** Cuántos `<form>` había en la página antes y ya no están. Un
-       *  formulario es la vía por la que le llegan clientes al dueño; que
-       *  desaparezca en una edición que nadie pidió es la avería medida el
-       *  2026-08-31. */
-      formulariosPerdidos?: number;
-      /** Enlaces de red social nuevos cuyo usuario no sale por ningún lado. */
-      enlacesInventados?: readonly EnlaceInventado[];
-      /** Teléfonos nuevos con un prefijo de país que nadie dio (H09). */
-      prefijosInventados?: readonly PrefijoInventado[];
-      /** I5 — los elementos que el `<script>` de la página busca y esta
-       *  escritura acaba de dejar sin existir. Viene de `persistPage`, que ya
-       *  los calculaba para el modal del usuario; lo que faltaba era
-       *  devolvérselos al modelo en el MISMO turno. */
-      referenciasRotas?: readonly string[];
-      /** La versión que guarda el documento de ANTES de esta escritura, o
-       *  `null` si no hubo nada que archivar. LA DIRECCIÓN DEL DESHACER — sube
-       *  al evento `html` del turno. Ver page-engine/persist.ts. */
-      versionPrevia: string | null;
-    }
-  | {
-      ok: false;
-      error: string;
-      /** EL DOCUMENTO FRESCO VIAJA CON EL ERROR. Presente cuando el fallo se
-       *  arregla reaplicando sobre otro documento —hoy, I2: otro escritor tocó
-       *  la página—, para que el modelo no gaste una vuelta entera del bucle en
-       *  pedir lo que ya le podíamos dar. Etiquetado: sus `data-op-id` son los
-       *  de la sesión, que es lo que `editar_pagina` resolverá después. */
-      documento?: string;
-      /** Qué hacer con ese documento, en una línea. */
-      comoHacerlo?: string;
-    };
-
-/** La respuesta de una herramienta cuando el guardado se negó.
- *
- *  Vive aquí y no copiada en los cinco llamadores porque el patrón «el
- *  documento fresco viaja con el error» sólo sirve si TODOS lo reenvían: uno
- *  que se lo deje devuelve un «no se pudo» a secas y el modelo se queda sin
- *  salida en el mismo turno, que es justo lo que esto existe para evitar. */
-function falloAlGuardar(p: { error: string; documento?: string; comoHacerlo?: string }): {
-  response: { ok: false; error: string; documento?: string; como_hacerlo?: string };
-} {
-  return {
-    response: {
-      ok: false,
-      error: p.error,
-      ...(p.documento !== undefined ? { documento: p.documento } : {}),
-      ...(p.comoHacerlo !== undefined ? { como_hacerlo: p.comoHacerlo } : {}),
-    },
-  };
-}
-
-// ⚰️ `sanitizeAviso` — EL AVISO QUE NO PODÍA DISPARARSE. Retirado el 2026-09-05.
-//
-// Convertía en un hecho para el modelo lo que el saneador le hubiera borrado
-// (<script>, atributos on*, <iframe>), para que no cerrara el turno diciendo
-// «ya te puse el mapa» sobre un documento sin iframe. Buena idea contra el
-// problema que tenía delante en agosto.
-//
-// POR QUÉ SE VA. Su única entrada de producción era `gated.removed`, y por esta
-// ruta el saneador es `gateReservedMarker`, que escribe los cinco contadores a
-// CERO a mano en sus DOS salidas (lib/html-engine.ts) — porque ésa es la
-// verdad: no quita nada. Con ceros la función devolvía `undefined` siempre, así
-// que sus dos llamadas no podían producir mensaje. Y el texto que habría
-// emitido decía «OpenLen nunca ejecuta JS de la página», que desde el 2026-08-26
-// es falso: el JavaScript del modelo sobrevive. Un aviso inalcanzable que
-// además mentiría es peor que no tener aviso.
-//
-// F4 Task 2 — every read of "the document" must resolve through the
-// session's active slot, not always data.html: page=null → home (data.html),
-// page="<slug>" → that subpage's own document (data.pages[slug].html).
-// This is the single choke point the W1 pin depends on for READS; writes go
-// through the mirrored branch inside persistHtmlChange below.
-// Shared F1 persist pipeline — same block editar_pagina always ran:
-// editor-mode marker guard -> passHtmlGate (sanitize, normalize, meta,
-// behaviours — fail closed) -> snapshot pre/post -> save ->
-// re-tag session.taggedHtml.
-// Any tool that hands the model a mutated document (editar_pagina,
-// cambiar_tema, …) funnels its candidate HTML through this so persistence
-// semantics never drift between tools.
-//
-// F4 Task 2 — THE W1 PIN: which slot gets written is keyed off
-// session.page, cloned from ai-design's own page-branch (route.ts, the
-// `nextData = pageSlug ? {...pages spread...} : {...home...}` shape) — an
-// immutable spread so writing a subpage NEVER touches data.html or any
-// sibling page, and writing home NEVER touches data.pages.
-async function persistHtmlChange(
-  session: AgentSession,
-  deps: AgentDeps,
-  candidateHtml: string,
-  label: string,
-  /** `runtimeIntent`: qué hacer con el JavaScript del modelo. `reemplazar`
-   *  llega del REDISEÑO (documento entero) y de `editar_pagina` con un edit
-   *  `target="runtime"`; `borrar`, de ese mismo edit con `op="delete"`. Sin
-   *  intención, `persistPage` re-sella el que ya había en vez de tirarlo. */
-  opts: { isBaseline?: boolean; runtimeIntent?: RuntimeIntent } = {},
-): Promise<PersistResult> {
-  // `data-op-id` es un marcador de MODO EDICIÓN: se estampa para que el modelo
-  // pueda apuntar a un elemento y NUNCA debe persistirse. `applyOps` los quita
-  // al aplicar, así que mientras el turno traía ops el documento salía limpio
-  // por ACCIDENTE, no por contrato. Un turno de sólo comportamiento —o sólo
-  // `styles`/`head`/`idioma`— no llama a `applyOps` y guardaba el documento
-  // entero etiquetado.
-  //
-  // El daño era PERMANENTE, no cosmético: `tag_with_op_ids` salta sin contar el
-  // elemento que ya lleva id (`tagger.rs`), así que al turno siguiente
-  // `taggedCount` es 0 y la ruta responde 400 «no taggable elements» para
-  // siempre. Medido en un proyecto real el 2026-08-23: 60 ids en `data.html` y
-  // el proyecto imposible de editar.
-  //
-  // Va aquí, en el embudo por el que pasa TODA escritura, y no en la rama que
-  // faltaba: es el único sitio donde la garantía no depende del camino tomado.
-  const limpio = stripOpIds(candidateHtml);
-
-  // Editor-mode marker guard first (specific message), then the broader
-  // sanitize pass (defense in depth — mirrors ai-design route).
-  if (detectSlotPath(limpio)) {
-    return { ok: false, error: "el HTML contiene un marcador reservado (data-slot-path)" };
-  }
-  // Fail closed, through the one gate. `seal: false` — nothing is served from
-  // here, publishToDir seals at publish time; `render: false` — an agent turn
-  // cannot pay a twenty-second browser launch, publish verifies instead.
-  //
-  // `priorHtml`: una conducta rota que ya venía en la página no puede condenar
-  // todas las ediciones futuras. Crear falla ABIERTO y entrega la página con el
-  // defecto anotado; sin esta comparación, editar fallaba CERRADO y el Agente
-  // rechazaba cualquier cambio hablando de un control que el usuario no tocó.
-  const prepared = await preparePage(limpio, {
-    mode: "edit",
-    // No encarece el turno: `photographHtml` sale sin tocar la red cuando el
-    // documento no trae huecos `data-ol-photo`, que es el caso corriente.
-    ...(session.brief ? { brief: session.brief } : {}),
-    // Un turno del Agente no puede pagar un arranque de Chrome; publicar
-    // verifica. Los invariantes y la puerta corren igual.
-    renderChecks: false,
-    priorHtml: session.taggedHtml,
-  });
-  // ⚰️ `removed` SALE DE AQUÍ (2026-09-05, la segunda vuelta). Se calculaba y
-  // no lo leía NADIE desde que `sanitizeAviso` se retiró esa misma mañana, y un
-  // contador vivo sin lector no es inocente: esta sesión lo leyó, dio por hecho
-  // que había un aviso que faltaba, y estuvo a punto de reconstruir el que
-  // acababa de morir. El código muerto sigue hablando.
-  //
-  // Y lo que diría tampoco vale: por esta ruta el saneador es
-  // `gateReservedMarker`, que escribe los cinco contadores a CERO a mano porque
-  // ésa es la verdad — no quita nada. `sanitizeForPublish`, el que sí borra,
-  // no corre ni aquí ni al publicar.
-  const gated = prepared.ok
-    ? { ok: true as const, html: prepared.html, issues: prepared.report.behaviorIssues as never[], code: "", detail: "" }
-    : { ok: false as const, html: "", issues: (prepared.report.behaviorIssues ?? []) as never[], code: prepared.code, detail: prepared.detail ?? "" };
-  if (!gated.ok) {
-    // Task 16's rule, now enforced instead of advised: un data-ol-* mal
-    // cableado ya no llega al documento guardado — se rechaza y la página que
-    // el usuario ya tenía queda byte-intacta. El modelo sigue viendo TODAS
-    // las razones: un turno puede a la vez perder un <script> Y traer una
-    // conducta mal cableada, y tiene que arreglar las dos en este mismo
-    // turno; contarle solo la que bloqueó lo devuelve con el mismo script
-    // condenado pegado a un botón ya corregido.
-    const behaviorList = describeBehaviorIssues([...(gated.issues ?? [])]);
-    const whyMsg = behaviorList
-      ? `Hay conductas mal cableadas que nacerían MUERTAS en la página: ${behaviorList}. NO se guardó nada — arréglalas y vuelve a mandar el documento en este mismo turno.`
-      : gated.code === "reserved_marker"
-        ? "el HTML contiene un marcador reservado (data-slot-path)"
-        : `el HTML no pasó la puerta de publicación (${gated.code}${gated.detail ? `: ${gated.detail}` : ""})`;
-    return {
-      ok: false,
-      error: whyMsg,
-    };
-  }
-
-  const finalHtml = gated.html;
-
-  // El CSS que nunca aplica. El motor lo diagnostica desde hoy y el Agente es
-  // la superficie que MEJOR puede actuar sobre él: tiene bucle, así que lo
-  // arregla en este mismo turno en vez de entregar la página torcida.
-  //
-  // Se GUARDA igual y se AVISA — no se rechaza. Un selector que no casa no
-  // rompe la página, la deja con el aspecto por defecto; bloquear la edición
-  // por eso le costaría al usuario un cambio que sí quería.
-  const reglasMuertas = prepared.ok ? [...(prepared.report.deadRules ?? [])] : [];
-
-  // El guardado vive en lib/page-engine/persist: el Chat tenía una copia de
-  // este mismo bloque —dos snapshots, el mismo spread por página— y el
-  // comentario de arriba pedía justo que no derivaran.
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { ok: false, error: "proyecto no encontrado" };
-  // El puente IA→módulos se retiró el 2026-08-29 (el porqué vive en
-  // lib/page-data/sin-puente-ia-modulos.test.ts, que además lo comprueba): su
-  // único módulo puenteado ya no tiene horneado, así que aquí no se enciende
-  // nada. `persistPage` deja los `settings` como estén.
-
-  // 🔴 I2 · NUNCA PISAR LO QUE NO SE VIO. ¿Escribió alguien más mientras este
-  // turno pensaba?
-  //
-  // Se compara el DOCUMENTO y no `updatedAt` a propósito: `updatedAt` sube
-  // también por un cambio de ajustes que no toca esta página, y bloquear por una
-  // pérdida que no hubo enseña a ignorar la guarda.
-  //
-  // `stripOpIds` en los dos lados: los proyectos anteriores al 2026-08-23
-  // pueden tener ids horneados en `data.html`, y sin normalizar eso sería un
-  // falso positivo en el primer guardado de cada uno de ellos.
-  //
-  // ANTES SE GUARDABA IGUAL: se archivaba lo que había con una etiqueta especial
-  // y se le pedía al modelo que avisara. Eso es pérdida con recibo — la edición
-  // ajena salía del documento vivo y el dueño tenía que ir a Versiones a
-  // rescatarla, sabiendo que existía y cómo se llamaba la fila.
-  //
-  // La vara es Claude Code: «File has been
-  // modified since read, either by the user or by a linter. Read it again before
-  // attempting to write it.» Se NIEGA. No escribe.
-  //
-  // Y el documento fresco viaja CON el error, que es el patrón que esta misma
-  // herramienta ya usaba para un op-id inexistente: cuesta el mismo payload que
-  // el modelo iba a pedir de todas formas y le deja reaplicar en el acto, en vez
-  // de gastar una vuelta entera del bucle reenviando el historial.
-  //
-  // La sesión se muda al documento fresco ANTES de contestar: si no, el reintento
-  // volvería a chocar con la misma base vieja y el modelo quedaría atrapado.
-  // `reetiquetar` olvida lo visto si la numeración se movió, así que el plano B
-  // sigue sin poder destruir a ciegas.
-  const enDisco = activeHtml(row.data, session.page);
-  if (
-    session.baseHtml !== undefined &&
-    enDisco !== null &&
-    stripOpIds(enDisco) !== stripOpIds(session.baseHtml)
-  ) {
-    reetiquetar(session, stripOpIds(enDisco));
-    return {
-      ok: false,
-      error:
-        "la página cambió en disco mientras trabajabas: alguien la editó desde el editor. NO se guardó nada — tu cambio se habría llevado el suyo por delante.",
-      documento: session.taggedHtml,
-      comoHacerlo:
-        "Los data-op-id de `documento` son los BUENOS: es la página tal y como está AHORA. Vuelve a aplicar tu cambio sobre ella en este mismo turno, sin pedir leer_estado, y comprueba que lo que el otro escribió sigue ahí. Dile al usuario que su edición entró mientras trabajabas.",
-    };
-  }
-
-  // UN FORMULARIO QUE DESAPARECE. Regla 🔴 del prompt («NO SUSTITUYAS LO QUE YA
-  // FUNCIONA POR TU ALTERNATIVA»), medida el 2026-08-31: el usuario tenía una
-  // sección de reseñas con su formulario, se quejó de que no se veían, y el
-  // modelo reescribió el formulario para que abriera WhatsApp «porque es más
-  // honesto». Nadie se lo pidió. La regla vivía SÓLO en el prompt.
-  //
-  // Se avisa, no se rechaza: quitar un formulario puede ser exactamente lo que
-  // el usuario pidió. Lo que no puede pasar es que ocurra en silencio.
-  const cuentaForms = (h: string) => (h.match(/<form[\s>]/gi) ?? []).length;
-  const formulariosPerdidos = enDisco
-    ? Math.max(0, cuentaForms(enDisco) - cuentaForms(finalHtml))
-    : 0;
-
-  // UNA CUENTA DE RED INVENTADA. Ver lib/agent/enlaces-inventados.ts: la prueba
-  // es de PROCEDENCIA —¿de dónde salió este handle?—, no de existencia.
-  const inventados = enDisco
-    ? enlacesInventados({
-        antes: enDisco,
-        despues: finalHtml,
-        fuentes: [session.userPrompt, session.brief],
-      })
-    : [];
-  // Y EL PAÍS DE UN TELÉFONO, con la misma prueba de procedencia (H09).
-  const prefijos = enDisco
-    ? prefijosInventados({
-        antes: enDisco,
-        despues: finalHtml,
-        fuentes: [session.userPrompt, session.brief],
-      })
-    : [];
-
-  const saved = await persistPage(
-    {
-      projectId: session.projectId,
-      userId: session.userId,
-      page: session.page,
-      html: finalHtml,
-      label,
-      // ⚰️ Aquí iba `etiquetaPrevia: "Tu edición, justo antes de que el Agente
-      // la pisara"`, la fila con la que el dueño podía rescatar lo que este
-      // guardado le acababa de quitar. Se va con I2 (2026-09-14): ya no hay nada
-      // que rescatar, porque ya no se pisa — la escritura se rechaza y la
-      // edición ajena se queda en el documento vivo. `etiquetaPrevia` sigue
-      // existiendo en `persistPage` para quien la necesite.
-      ...(opts.isBaseline !== undefined ? { isBaseline: opts.isBaseline } : {}),
-      ...(opts.runtimeIntent ? { runtimeIntent: opts.runtimeIntent } : {}),
-    },
-    deps,
-  );
-  if (!saved.ok) return saved;
-
-  // 🔴 I1 · LO QUE LEN RECUERDA ES LO QUE SE GUARDÓ — y `finalHtml` NO lo es.
-  //
-  // REPRODUCIDO el 2026-09-14. `persistPage` no escribe lo que se le pasa:
-  // escribe `aplicarIntentDeScript(html, intent)`. Con `runtimeIntent` puesto
-  // —`editar_runtime`, o un `editar_pagina` con un edit contra `runtime`— el
-  // documento que llega al disco lleva el `<script>` NUEVO y `finalHtml` lleva
-  // el VIEJO. Re-etiquetar con `finalHtml` dejaba a la sesión creyendo en un
-  // documento que no existe en ningún sitio, y de ahí salían las DOS averías
-  // que el usuario vio en el mismo turno:
-  //
-  //   (a) la siguiente edición comparaba disco (nuevo) contra `session.baseHtml`
-  //       (viejo), se creía pisada por otro escritor, le contaba al usuario una
-  //       edición ajena que nunca existió y archivaba el guardado del PROPIO
-  //       Agente como «Tu edición, justo antes de que el Agente la pisara»; y
-  //   (b) guardaba su copia, con el script viejo, deshaciendo el comportamiento
-  //       que el mismo turno acababa de escribir.
-  //
-  // `saved.html` ES el documento escrito, con todas las transformaciones del
-  // guardado. Todo lo que hable de «la página ahora» sale de ahí — incluido el
-  // `finalHtml` que se devuelve, que viaja al lienzo como `updatedHtml` y hasta
-  // hoy le enseñaba al usuario el documento de antes del guardado.
-  //
-  // Es lo que hace el `Edit` de Claude Code, y se ve usándolo: tras su propia
-  // escritura no se queja de que el fichero cambió desde que lo leyó, porque
-  // lo que recuerda como leído es lo que acaba de escribir, ya transformado.
-  // Sus escrituras no pueden parecerle ajenas nunca.
-  const guardado = saved.html;
-
-  // Si quien llamo trajo el documento ETIQUETADO (lo hace `editar_pagina`, via
-  // `applyOps(..., keepOpIds=true)`), las direcciones se conservan y el modelo
-  // no tiene que releer. `limpio` es ese mismo documento sin ids; si
-  // `persistPage` no lo transformo, la copia sigue valiendo.
-  //
-  // `persistPage` NORMALIZA, y normalizar AÑADE: los bloques de tokens de
-  // Tailwind (radius, space, type) van detrás del documento. Comparar byte a
-  // byte contra `limpio` fallaba siempre por eso y el respaldo se comía el
-  // ahorro — medido con la prueba de cable, que salió roja hasta que se vio.
-  //
-  // La regla que sí vale: si lo guardado EMPIEZA por lo que mandamos, sólo se
-  // añadió detrás, así que la copia con ids es ese mismo sufijo empalmado. Y si
-  // la normalización llegó a tocar el cuerpo, esto es falso y se cae al
-  // re-etiquetado de siempre — la comprobación se verifica a sí misma.
-  //
-  // Se compara contra `guardado`, no contra `finalHtml`: un intent de script
-  // INSERTA antes de `</body>`, o sea EN MEDIO, así que `startsWith` sale falso
-  // y el atajo se cae solo al re-etiquetado. Eso es exactamente lo correcto —
-  // las direcciones de la copia con ids ya no describen lo guardado.
-  const soloAnadio = guardado.startsWith(limpio);
-  reetiquetar(session, guardado, soloAnadio ? candidateHtml + guardado.slice(limpio.length) : undefined);
-
-  return {
-    ok: true,
-    finalHtml: guardado,
-    cambio: saved.cambio,
-    versionPrevia: saved.versionPrevia,
-    ...(saved.sinCambios ? { sinCambios: true } : {}),
-    ...(reglasMuertas.length ? { reglasMuertas } : {}),
-    ...(saved.referenciasRotas.length ? { referenciasRotas: saved.referenciasRotas } : {}),
-    ...(formulariosPerdidos > 0 ? { formulariosPerdidos } : {}),
-    ...(inventados.length ? { enlacesInventados: inventados } : {}),
-    ...(prefijos.length ? { prefijosInventados: prefijos } : {}),
-  };
-}
-
-/**
- * LO QUE LE PASÓ AL DOCUMENTO, dicho — no inferido.
- *
- * Las dos herramientas que escriben documento (`editar_pagina`, `cambiar_tema`)
- * construyen su respuesta desde aquí, para que no vuelvan a divergir: hasta hoy
- * sólo `editar_pagina` sabía decir «no cambió nada», y `cambiar_tema` devolvía
- * `ok: true` con `tokens_aplicados` aunque no hubiera movido un byte.
- *
- * El caso `no_se` es el que no existía en ninguna de las dos. Un `ok: true` a
- * secas sobre algo que nadie comprobó es cómo el Agente cierra un turno
- * diciéndole al usuario que lo arregló.
- */
-function declararCambio(
-  cambio: CambioDelDocumento,
-  extra: Record<string, unknown>,
-  criticos: string[],
-): void {
-  extra.cambio = cambio.estado;
-  switch (cambio.estado) {
-    case "cambio":
-      // La EVIDENCIA viaja con la afirmación. Dos etiquetas cortas: si salen
-      // iguales, el HTML es el mismo y lo que cambió es el comportamiento.
-      extra.hash_antes = cambio.hashAntes;
-      extra.hash_despues = cambio.hashDespues;
-      return;
-    case "sin_cambio":
-      extra.sin_cambios = true;
-      criticos.push(
-        'Esto NO cambió NADA de la página (el documento guardado es byte a byte el mismo). NO le digas al usuario que lo arreglaste. Si el problema es de comportamiento, el arreglo va en un edit con target="runtime" que lleve el script completo corregido.',
-      );
-      return;
-    case "no_se":
-      criticos.push(
-        `NO SE PUDO COMPROBAR si la página cambió (${cambio.motivo}). Se guardó, pero nadie ha verificado el resultado: dilo así al usuario en vez de afirmar que está hecho.`,
-      );
-      return;
-  }
-}
-
-// P4 — rediseño total del documento activo. Una llamada grande de modelo
-// (deps.redesignDocument) + el MISMO embudo de persistencia de toda edición:
-// persistHtmlChange da el guard de marcadores, sanitize, normalize,
-// ensurePageMeta, los DOS snapshots (el "Before AI edit" es el Undo del
-// usuario) y el aviso de conductas. Los ojos (verifyTurn) juzgan el resultado
-// al cierre del turno como con cualquier mutación.
-async function toolRedisenarPagina(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const direccion = typeof args.direccion === "string" ? args.direccion.trim() : "";
-  const resumen = typeof args.resumen === "string" ? args.resumen : direccion.slice(0, 60);
-  if (!direccion) {
-    return { response: { ok: false, error: "falta direccion — describe el rediseño que pidió el usuario" } };
-  }
-  if ((session.redesignsThisTurn ?? 0) >= 1) {
-    return {
-      response: {
-        ok: false,
-        error:
-          "ya rediseñaste la página este turno. Ajusta lo que falte con las herramientas de edición (leer_estado incluir_documento=true para ids frescos), o dile al usuario que pida otro rediseño en un mensaje nuevo.",
-      },
-    };
-  }
-
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-  const current = activeHtml(row.data, session.page);
-  if (!current) return { response: { ok: false, error: "el documento activo está vacío" } };
-
-  // El JavaScript que la página ya tiene VIENE EN EL DOCUMENTO: `current` es
-  // el HTML guardado, y el `<script>` es parte de él. Antes había que sacarlo
-  // de la columna porque el saneador lo borraba del documento.
-  const runtime = scriptDelDocumento(current) || null;
-
-  const redesigned = await deps.redesignDocument(session.userId, {
-    html: current,
-    direccion,
-    brief: row.userBrief,
-    runtime,
-  });
-  if (!redesigned.ok) {
-    return { response: { ok: false, error: redesigned.error } };
-  }
-
-  const persisted = await persistHtmlChange(
-    session,
-    deps,
-    redesigned.html,
-    `Rediseño: ${direccion.slice(0, 60)}`,
-    // El JavaScript del modelo viaja DENTRO de `redesigned.html`, así que se
-    // guarda con él sin intent ninguno. Aquí se pasaba un `reemplazar` con el
-    // código capturado aparte; esa captura no podía salir nunca y se retiró el
-    // 2026-09-04 (ver la lápida en `redesign.ts`).
-    { isBaseline: true },
-  );
-  if (!persisted.ok) {
-    return falloAlGuardar(persisted);
-  }
-
-  session.redesignsThisTurn = (session.redesignsThisTurn ?? 0) + 1;
-
-  // ¿SOBREVIVIERON LOS HECHOS DEL DUEÑO? La regla 2 del prompt del rediseño lo
-  // ORDENA en mayúsculas, y MEDIDO (n=20): la URL de la foto real desaparece en
-  // 8 de 20 turnos. Se compara sobre el documento que de verdad se guardó, no
-  // sobre lo que el modelo dijo que haría.
-  //
-  // Se AVISA, no se rechaza: la página nueva es lo que el usuario pidió, y
-  // tirarla entera por una foto sería peor que la pérdida. El modelo repone en
-  // este mismo turno, igual que con las conductas mal cableadas.
-  const perdidos = hechosPerdidos(current, persisted.finalHtml ?? redesigned.html);
-  // Y un enlace que DICE un dato y LLEVA a otro. Va tambien aqui, no solo en
-  // `editar_pagina`: la leccion del 03/09 es que una guarda colgada de una sola
-  // de las dos herramientas es indistinguible de no tener guarda.
-  const desfasados = enlacesDesfasados(persisted.finalHtml ?? redesigned.html);
-  // Y los manejadores en linea, sobre lo que el modelo ESCRIBIO — en lo guardado
-  // ya no estan. Va en las dos herramientas, como sus hermanas.
-  const muertos = handlersMuertos(redesigned.html);
-
-  return {
-    response: {
-      ok: true,
-      nota: "rediseño aplicado; los data-op-id cambiaron — usa leer_estado incluir_documento=true antes de editar encima",
-      ...(perdidos.length > 0 ? { hechos_perdidos: perdidos.length } : {}),
-      ...(desfasados.length > 0 ? { enlaces_desfasados: desfasados.map((e) => e.href) } : {}),
-      ...(muertos.length > 0 ? { handlers_muertos: muertos.map((h) => h.atributo) } : {}),
-      ...(persisted.reglasMuertas?.length
-        ? { css_sin_efecto: persisted.reglasMuertas.map((r) => r.selector) }
-        : {}),
-      // Acumulados, no pisados — misma razón que en `editar_pagina`: un
-      // rediseño puede a la vez tirar la foto del dueño Y dejar CSS colgando.
-      ...(() => {
-        const c: string[] = [];
-        if (perdidos.length > 0) c.push(avisoHechosPerdidos(perdidos));
-        if (desfasados.length > 0) c.push(avisoEnlacesDesfasados(desfasados));
-        if (muertos.length > 0) c.push(avisoHandlersMuertos(muertos));
-        if (persisted.reglasMuertas?.length) c.push(avisoReglasMuertas(persisted.reglasMuertas));
-        return c.length ? { aviso_critico: c.join(" · ") } : {};
-      })(),
-    },
-    action: { tool: "redisenar_pagina", ok: true, summary: resumen },
-    updatedHtml: persisted.finalHtml,
-    page: session.page,
-    versionPrevia: persisted.versionPrevia,
-  };
-}
-
-/** ¿Esta edición cambió una CONDUCTA respecto al documento anterior?
- *
- *  La huella viene del registro (no de una lista paralela) e incluye marcador
- *  + valor, no el texto ni `data-op-id`: detecta altas, retiros y cambios de
- *  configuración con el mismo número de controles sin llorar lobo por copy. */
-function tocaConducta(despues: string, antes: string): boolean {
-  return behaviorContractFingerprint(despues) !== behaviorContractFingerprint(antes);
-}
-
-/** Los `<script>` que EJECUTAN, en orden y sin espacios de más.
- *
- *  🔴 SÓLO LOS QUE EJECUTAN. Un `application/ld+json` es DATO: cambiarlo no
- *  cambia el comportamiento, y pedir prueba por él sería exactamente el aviso
- *  que el dueño aprende a ignorar.
- *
- *  Los espacios se colapsan porque entre `beforeTaggedHtml` y `htmlAplicado`
- *  hay un viaje por el motor de ops: un reformateo del mismo código no es un
- *  cambio de comportamiento, y tomarlo por uno haría saltar el aviso en CADA
- *  edición de texto. Un `src` externo se compara por su URL: su contenido no
- *  está aquí, pero cambiarlo sí cambia lo que la página ejecuta. */
-const TIPOS_QUE_EJECUTAN = new Set(["", "text/javascript", "application/javascript", "module"]);
-
-function scriptsQueEjecutan(html: string): string {
-  const fuera: string[] = [];
-  const re = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
-  for (let m = re.exec(html); m !== null; m = re.exec(html)) {
-    const attrs = m[1] ?? "";
-    const tipo = (/\btype\s*=\s*["']?([^"'\s>]*)/i.exec(attrs)?.[1] ?? "").toLowerCase();
-    if (!TIPOS_QUE_EJECUTAN.has(tipo)) continue;
-    const src = /\bsrc\s*=\s*["']?([^"'\s>]*)/i.exec(attrs)?.[1] ?? "";
-    fuera.push(src ? `src:${src}` : (m[2] ?? "").replace(/\s+/g, " ").trim());
-  }
-  return fuera.join("\u0000");
-}
-
-/** ¿Ejecuta la página JavaScript que antes no ejecutaba?
- *
- *  🔴 POR QUÉ HACE FALTA, y es el hueco que tapa. `cambioConducta` era
- *  «escribió runtime» O `tocaConducta`, y `tocaConducta` compara la huella de
- *  los 9 marcadores del catálogo de CONDUCTAS, RETIRADO el 2026-08-23. Un
- *  `<script>` metido por `new_html` no mueve ninguno de los dos: no se pedía
- *  prueba, NO SALTABA el aviso de que faltaba, y el turno salía VERDE con
- *  comportamiento nuevo sin comprobar. Medido con brazo de control.
- *
- *  La señal correcta no es un registro de tipos-de-cambio-conocidos —que es lo
- *  que envejeció— sino mirar lo que de verdad cambió en el documento.
- *
- *  ⚠️ QUEDA FUERA el manejador en atributo (`onclick="…"`), que es la misma
- *  avería por otra puerta. No se tapa aquí porque está medido que el corpus
- *  trae CERO (`cero-onclick-en-el-corpus`), y ensanchar una señal sin un caso
- *  que lo pida es cómo se fabrica un aviso que nadie lee. */
-function tocaScripts(despues: string, antes: string): boolean {
-  return scriptsQueEjecutan(despues) !== scriptsQueEjecutan(antes);
-}
-
-async function toolEditarPagina(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const rawEdits = Array.isArray(args.edits) ? (args.edits as RawEdit[]) : [];
-  const resumen = typeof args.resumen === "string" ? args.resumen : "";
-  // El rechazo es de ESTA llamada: se limpia antes de la primera salida, o una
-  // que falla por otra cosa heredaría el de la anterior.
-  session.rechazoPrueba = null;
-
-  if (rawEdits.length === 0) {
-    return { response: { ok: false, error: "no se recibió ninguna edición" } };
-  }
-  if (rawEdits.length > MAX_EDITS_PER_CALL) {
-    return { response: { ok: false, error: `máximo ${MAX_EDITS_PER_CALL} ediciones por llamada` } };
-  }
-
-  const ops: Op[] = [];
-  for (const raw of rawEdits) {
-    if (typeof raw?.op !== "string" || typeof raw?.target !== "string") {
-      return { response: { ok: false, error: "cada edit necesita op + target" } };
-    }
-    if (!OP_TYPES.includes(raw.op as OpType)) {
-      return { response: { ok: false, error: `tipo de operación desconocido: ${raw.op}` } };
-    }
-    if (raw.op === "attrs") {
-      if (TARGETS_NO_ELEMENTO.has(raw.target)) {
-        return {
-          response: {
-            ok: false,
-            error: `op="attrs" reescribe la etiqueta de apertura de un ELEMENTO, y "${raw.target}" no lo es. Para el CSS usa target="styles"; para el comportamiento, target="runtime".`,
-          },
-        };
-      }
-      const lista = Array.isArray(raw.attrs) ? raw.attrs : null;
-      if (!lista || lista.length === 0) {
-        return {
-          response: {
-            ok: false,
-            error: 'op="attrs" necesita `attrs`: una lista de {name, value}. `value: null` QUITA el atributo.',
-          },
-        };
-      }
-      const attrs: OpAttr[] = [];
-      for (const a of lista) {
-        const name = (a as { name?: unknown } | null)?.name;
-        const value = (a as { value?: unknown } | null)?.value;
-        if (typeof name !== "string" || name.trim() === "") {
-          return { response: { ok: false, error: "cada attr necesita `name` (una cadena)" } };
-        }
-        // `null` QUITA, la cadena vacía ESCRIBE el atributo vacío. Son cosas
-        // distintas y el motor las distingue, así que aquí no se colapsan.
-        if (value !== null && typeof value !== "string") {
-          return {
-            response: {
-              ok: false,
-              error: `el valor de "${name}" tiene que ser una cadena, o null para quitar el atributo`,
-            },
-          };
-        }
-        attrs.push({ name, value });
-      }
-      ops.push({ type: "attrs", target: raw.target, attrs });
-      continue;
-    }
-    // op="text" — «qué dice», la hermana de `attrs`. El motor rechaza el caso
-    // peligroso (un nodo con hijos elemento) y nombra el id al que apuntar; lo
-    // que se comprueba aquí es sólo la forma de la llamada.
-    if (raw.op === "text") {
-      if (TARGETS_NO_ELEMENTO.has(raw.target)) {
-        return {
-          response: {
-            ok: false,
-            error: `op="text" cambia el texto de un ELEMENTO, y "${raw.target}" no lo es. Para el CSS usa target="styles" con op="insert_after"; para el comportamiento, target="runtime" con op="replace".`,
-          },
-        };
-      }
-      // La cadena vacía es legítima («déjalo sin texto»); ausente no lo es.
-      if (typeof raw.text !== "string") {
-        return {
-          response: {
-            ok: false,
-            error: 'op="text" necesita `text`: la cadena que debe quedar dentro del nodo. Va como TEXTO, no como HTML — si lo que quieres es meter etiquetas, eso es op="replace".',
-          },
-        };
-      }
-      ops.push({ type: "text", target: raw.target, text: raw.text });
-      continue;
-    }
-    ops.push({
-      type: raw.op as OpType,
-      target: raw.target,
-      ...(typeof raw.new_html === "string" ? { newHtml: raw.new_html } : {}),
-    });
-  }
-
-  // El runtime no es un elemento: se aparta antes de que el aplicador vea la
-  // tanda. Sin esto, el camino barato del Agente tampoco podía tocar el
-  // comportamiento de la página — mismo agujero que el Chat, misma cura.
-  const partido = splitRuntimeOps(ops);
-  // El CSS y el <head> tampoco son elementos: `SKIP_TAGS` los deja sin
-  // `data-op-id`. Sin esto, «cámbiame la tipografía» sólo tenía la salida cara
-  // —reescribir la página entera— y cada reescritura puede perder algo.
-  const documento = splitDocumentOps(partido.domOps);
-  const idioma = splitLangOp(documento.domOps);
-  if (partido.runtime.kind === "error") {
-    return {
-      response: {
-        ok: false,
-        error: `no pude aplicar el cambio de comportamiento (${partido.runtime.reason}). Manda el script COMPLETO y corregido en un solo edit con target="runtime".`,
-      },
-    };
-  }
-  if (documento.styles.kind === "error") {
-    return {
-      response: {
-        ok: false,
-        error: `no pude aplicar el cambio de estilo (${documento.styles.reason}). Manda UN solo edit con target="styles" y CSS dentro, sin etiquetas.`,
-      },
-    };
-  }
-  if (documento.head.kind === "error") {
-    return {
-      response: {
-        ok: false,
-        error: `no pude tocar la cabecera (${documento.head.reason}). ${rechazoDeCabezaParaElModelo(documento.head.reason)}`,
-      },
-    };
-  }
-  const nuevoRuntime = partido.runtime.kind === "codigo" ? partido.runtime.code : null;
-  // QUITARLE el JavaScript a la página. Hasta el 25/08 no existía: un `replace`
-  // vacío se rechazaba y la ausencia de runtime RE-SELLA el código anterior, así
-  // que «quita el carrito» era literalmente imposible de cumplir. Va aparte de
-  // `nuevoRuntime` porque «no hay código nuevo» y «no debe quedar código» son
-  // cosas distintas — confundirlas era el defecto.
-  const borrarRuntime = partido.runtime.kind === "borrar";
-  const tocaRuntime = nuevoRuntime !== null || borrarRuntime;
-  // UNA SUBPÁGINA NO GUARDA JAVASCRIPT, y hasta hoy este límite no se enteraba.
-  // `persistPage` fuerza `runtime = null` en cuanto la página activa no es la
-  // Home; el script se tiraba en silencio y la respuesta de abajo seguía
-  // diciendo `comportamiento_actualizado: true`. Len le contaba al dueño que le
-  // había cableado el carrito, y el botón no hacía nada.
-  //
-  // Se rechaza AQUÍ, no se avisa después: así el modelo se entera en el mismo
-  // turno y puede decir la verdad o llevar el cambio a la Home. Enterarse el
-  // usuario al pulsar el botón es la degradación que este repo no acepta.
-  //
-  // Las ops de maquetación de este turno NO se pierden: quien manda un cambio
-  // de comportamiento donde no cabe tiene que replantear el turno entero, y
-  // aplicar la mitad dejaría el marcado de una interacción que nadie va a
-  // cablear — botones nuevos, mudos, sin nada detrás.
-  const tocaDocumento =
-    documento.styles.kind === "css" || documento.head.kind === "nodos" || idioma.lang.kind === "idioma";
-
-  // ─── LA PROMESA DEL TURNO: `prueba_js` ──────────────────────────────────
-  //
-  // Un slot con nombre propio y su contrato. `validaPruebaJs` hace cumplir el
-  // tope; el navegador dirá si el programa compila, porque deducir aquí lo que
-  // Chromium puede contestar ya nos mordió una vez.
-  //
-  // Se acepta venga con runtime o SIN él, y no es un detalle: MEDIDO el
-  // 2026-08-22, la primera versión sólo la miraba cuando el turno traía
-  // JavaScript nuevo, y con eso no corrió NUNCA. El acordeón de `<details>`
-  // también promete algo, y mal cableado nace mudo igual.
-  //
-  // ⚰️ AQUÍ VIVÍA LA OTRA RANURA, `prueba` —el DSL de pasos—, con su parser,
-  // las reparaciones de `sin_accion` (clic, desplazar, grupo), la clase de forma
-  // de cada rechazo y el contador de si el aviso sirvió. Se retiró el
-  // 2026-09-22: la promesa es código en el lenguaje de la página, como una suite
-  // de pruebas es código del proyecto. Las protecciones del DSL —el censo de
-  // clic muerto, desplazar, el grupo declarado y el botón por su texto— viven
-  // ahora dentro de los primitivos `ui.*` (`prueba-js.ts`), que es donde una
-  // herramienta comprueba sus propias precondiciones.
-  //
-  // 🔴 UNA PRUEBA QUE NO VALIDA RECHAZA LA LLAMADA ENTERA, como cualquier otra
-  // parte de la entrada, y ANTES de aplicar nada (2026-09-22). Hasta hoy se
-  // descartaba la prueba y se guardaba el cambio, y eso dejaba un estado que
-  // ninguna regla resolvía bien: un runtime NUEVO, su promesa rechazada y la
-  // VIEJA todavía en pie. Conservarla daba por comprobado un runtime que ya no
-  // está; tirarla dejaba que una entrada mal formada se llevara una promesa
-  // buena. Validando antes de aplicar ese estado no existe: la página y la
-  // promesa se quedan como estaban, y el modelo reenvía en el mismo turno. No
-  // le cuesta más que antes: para prometer tenía que volver a mandar el
-  // `script` entero de todas formas.
-  //
-  // La promesa válida entra en la sesión DESPUÉS de guardar, donde se sabe si
-  // el turno cambió el comportamiento (ver el bloque de `session.behaviorJs`
-  // más abajo).
-  const jsCrudo = typeof args.prueba_js === "string" ? args.prueba_js.trim() : "";
-  let pruebaNueva: string | null = null;
-  // UN PARÁMETRO QUE YA NO EXISTE SE RECHAZA, no se ignora: un modelo con
-  // historial viejo que siga mandando `prueba` creería que prometió.
-  if (args.prueba !== undefined && args.prueba !== null) {
-    session.rechazoPrueba = "prueba_retirada";
-    return {
-      response: {
-        ok: false,
-        error: "prueba_retirada",
-        detalle: "`prueba` ya no existe: la promesa va en `prueba_js`. No se guardó nada.",
-        como_hacerlo:
-          "Manda la llamada ENTERA otra vez, con tu promesa escrita como programa sobre `ui.*` en `prueba_js`: `var t = await ui.texto(\"#total\"); await ui.clic(\"#add\"); await ui.cambiaDe(\"#total\", t);`.",
-      },
-    };
-  }
-  if (jsCrudo) {
-    const js = validaPruebaJs(jsCrudo);
-    if (!js.ok) {
-      session.rechazoPrueba = js.reason;
-      return {
-        response: {
-          ok: false,
-          error: `prueba_js_${js.reason}`,
-          detalle:
-            js.reason === "demasiado_grande"
-              ? `Tu \`prueba_js\` pasa de ${MAX_PRUEBA_JS_BYTES} bytes. No se guardó nada.`
-              : "Tu `prueba_js` llegó vacía. No se guardó nada.",
-          como_hacerlo:
-            "Quédate con lo que de verdad comprueba la promesa y manda la llamada ENTERA otra vez, con su `script`.",
-        },
-      };
-    }
-    pruebaNueva = js.codigo;
-  }
-
-  // Un turno que sólo arregla comportamiento —o sólo el estilo— no lleva ops de
-  // maquetación: el cuerpo del documento se queda igual y cambia lo de fuera.
-  // UNA OP CONTRA EL <body> NO ES UNA EDICIÓN: ES UN DOCUMENTO NUEVO.
-  //
-  // El Chat lleva este guardián desde que se midió que el modelo, queriendo
-  // tocar `:root`, apuntaba al <body> y lo reemplazaba por un <style>. El
-  // Agente —que va ENCENDIDO por defecto— no lo tenía.
-  //
-  // MEDIDO el 2026-08-22 en el brazo de control del experimento: 8 de 40
-  // peticiones de «cámbiame la tipografía» acabaron con el <body> reemplazado
-  // por el <link> de la fuente. El documento guardado era
-  // `<html><head>…</head><link …></html>`: sin titular, sin teléfono, sin
-  // botón. El usuario pide una fuente y recibe una página en blanco.
-  //
-  // Los objetivos `styles`/`head` quitan el MOTIVO (el modelo ya tiene por
-  // dónde), y en el brazo de tratamiento no pasó ni una vez. Esto quita la
-  // POSIBILIDAD, que es lo que hace falta cuando lo que está en juego es la
-  // página entera del usuario.
-  // La persistencia re-etiqueta y reemplaza `session.taggedHtml`. Éste es el
-  // único snapshot que permite decidir después si el markup añadió conducta:
-  // tomarlo debajo de persistencia compara el documento nuevo consigo mismo.
-  const beforeTaggedHtml = session.taggedHtml;
-  const { ops: opsSeguras, rejected: opsRechazadas } = rejectDocumentWideOps(
-    beforeTaggedHtml,
-    idioma.domOps,
-  );
-  // Y EN EL PLANO B, LO QUE NO SE HA VISTO NO SE DESTRUYE.
-  //
-  // El índice lista los hijos directos de <body>, así que en una página envuelta
-  // en un solo <div> ese índice es UNA línea — y esa línea es la página entera.
-  // Un `replace` contra ella la borra sin que el modelo haya leído un byte, y
-  // `rejectDocumentWideOps` no la para porque no es <html> ni <body>. Fuera del
-  // plano B esto no corre: quien tiene el documento delante no edita a ciegas.
-  const { ops: opsAplicables, rejected: opsCiegas } = session.entroACiegas
-    ? rejectBlindOps(opsSeguras, session.idsVistos ?? new Set<string>())
-    : { ops: opsSeguras, rejected: [] as Op[] };
-
-  let htmlAplicado = beforeTaggedHtml;
-  let aplicadas = 0;
-  if (opsAplicables.length > 0) {
-    // CONSERVANDO LOS IDS: lo que sale de aqui es la copia de trabajo de la
-    // sesion, no lo que se guarda. `persistHtmlChange` limpia en el embudo.
-    const applied = applyOps(beforeTaggedHtml, opsAplicables, true);
-    if (applied.html === null) {
-      const reason = applied.errors[0]?.reason ?? "no se pudo aplicar la edición";
-      // EL DOCUMENTO FRESCO VIAJA CON EL ERROR, no en otra vuelta.
-      //
-      // Es la MISMA cura que `trabajar_en_pagina` ya aplicó: un error que sólo
-      // dice «ese id no existe» obliga a `leer_estado` para recuperarse, o sea
-      // una vuelta entera del bucle reenviando todo el historial acumulado.
-      // Devolver aquí el documento cuesta el mismo payload que el modelo iba a
-      // pedir de todas formas, y le deja arreglarlo en el acto.
-      //
-      // 🔴 MEDIDO en producción (2026-08-31): `editar_pagina` falla el 7,9% de
-      // las veces (3 de 38). Los agentes que editan por texto exacto tienen ese
-      // problema mucho peor —Anthropic publica un 15-20% de fallo al primer
-      // intento en su `str_replace`— y por eso Cline lleva 4 estrategias de
-      // rescate y OpenCode NUEVE. Direccionar por `data-op-id` nos ahorra casi
-      // todo eso: un id existe o no, no falla por un espacio ni por una comilla
-      // tipográfica. Lo que faltaba no era tolerancia al emparejar, era no
-      // cobrarle al usuario una vuelta por recuperarse.
-      return {
-        response: {
-          ok: false,
-          error: reason,
-          documento: beforeTaggedHtml,
-          como_hacerlo:
-            "Los data-op-id de `documento` son los BUENOS: úsalos y reintenta en este mismo turno, sin pedir leer_estado.",
-        },
-      };
-    }
-    htmlAplicado = applied.html;
-    aplicadas = applied.appliedCount;
-  } else if (opsCiegas.length > 0 && !tocaRuntime && !tocaDocumento) {
-    // Nada que salvar, y el camino correcto vale más que un «no se pudo»: la
-    // sección existe, sólo que él no la ha mirado.
-    return {
-      response: {
-        ok: false,
-        error: "seccion_no_abierta",
-        detalle: `${opsCiegas.length} edit(s) borraban o reemplazaban una sección que NO has abierto. Esta página no cabe entera en un turno, así que sólo tienes el índice — y una línea del índice puede ser la página COMPLETA. No se guardó nada.`,
-        secciones: opsCiegas.map((o) => o.target),
-        como_hacerlo:
-          'Pide `leer_estado` con `op_id` = esa sección, mira su HTML y entonces edítala; en ese mismo turno ya puedes reemplazarla. Sin abrirla puedes insertar antes o después (insert_before / insert_after), que no borra nada, o cambiar el CSS con target="styles".',
-      },
-    };
-  } else if (opsRechazadas.length > 0 && !tocaRuntime && !tocaDocumento) {
-    // Todo lo que mandó era contra la raíz: no hay nada que salvar, y decírselo
-    // con el camino correcto vale más que un "no se pudo".
-    return {
-      response: {
-        ok: false,
-        error: "op_contra_la_raiz",
-        detalle: `${opsRechazadas.length} edit(s) apuntaban al <html> o al <body>, lo que habría reemplazado la página ENTERA. No se guardó nada.`,
-        como_hacerlo:
-          'Para CSS usa un edit con target="styles"; para una hoja de fuentes, target="head". Para cambiar el contenido, apunta al data-op-id del elemento concreto, nunca al del body.',
-      },
-    };
-  } else if (!tocaRuntime && !tocaDocumento) {
-    return { response: { ok: false, error: "ningún edit aplicable" } };
-  }
-  // ¿ALGÚN `replace` VACIÓ LO QUE REEMPLAZABA? Ver lib/agent/contenido-perdido.ts
-  // para el fallo que lo trae. Se mide sobre `opsAplicables` —lo que el motor
-  // aceptó de verdad— y contra el documento de ANTES, que sigue etiquetado, así
-  // que `outerHtmlByOpId` puede recuperar el nodo original byte a byte.
-  //
-  // Sólo los `replace` a elementos: sobre `styles`, `head` o `runtime`,
-  // reemplazarlo todo es la forma correcta de usarlos, no un síntoma.
-  const perdioContenido = contenidoPerdido(
-    opsAplicables
-      .filter(
-        (o) =>
-          o.type === "replace" &&
-          typeof o.newHtml === "string" &&
-          !TARGETS_NO_ELEMENTO.has(o.target),
-      )
-      .map((o) => ({ target: o.target, nuevoHtml: o.newHtml as string })),
-    (target) => outerHtmlByOpId(beforeTaggedHtml, target),
-  );
-
-  htmlAplicado = applyLangOp(
-    applyHeadOp(applyStylesOp(htmlAplicado, documento.styles), documento.head),
-    idioma.lang,
-  );
-  const cambioConducta =
-    nuevoRuntime !== null ||
-    tocaConducta(htmlAplicado, beforeTaggedHtml) ||
-    // El `<script>` colado por una edición de HTML — ver `tocaScripts`.
-    tocaScripts(htmlAplicado, beforeTaggedHtml);
-
-  const persisted = await persistHtmlChange(
-    session,
-    deps,
-    htmlAplicado,
-    `Agente (${aplicadas} ops${nuevoRuntime ? " + comportamiento" : borrarRuntime ? " + comportamiento retirado" : ""}${tocaDocumento ? " + estilo" : ""}): ${resumen}`,
-    nuevoRuntime
-      ? { runtimeIntent: { kind: "reemplazar" as const, code: nuevoRuntime } }
-      : borrarRuntime
-        ? { runtimeIntent: { kind: "borrar" as const } }
-        : {},
-  );
-  if (!persisted.ok) {
-    return falloAlGuardar(persisted);
-  }
-
-  // 🔴 LA PROMESA DEL TURNO, TRAS GUARDAR. Pertenece a la mutación que llegó a
-  // disco, nunca al intento — por eso entra aquí y no donde se valida. Tres
-  // reglas, medidas cuando la promesa tenía dos rutas:
-  //   · borrar el runtime borra la promesa: no hay nada que prometer;
-  //   · la prueba nueva entra si el turno CAMBIÓ el comportamiento, o si no
-  //     había ninguna viva — el acordeón de CSS puro, sin una línea de JS, que
-  //     se caía por el suelo mientras la puerta fue «¿tocaste JavaScript?»;
-  //   · un cambio de comportamiento SIN prueba nueva deja la vieja FUERA: ya no
-  //     describe lo que hay ([[la-promesa-vieja-tapaba-el-ultimo-cambio]]), y
-  //     se le dice al modelo más abajo.
-  // Y un retoque de texto que trae otra prueba NO sustituye a la viva: protege
-  // la promesa verificada de una re-mandada de cualquier manera.
-  //
-  // QUEDA UN HUECO, escrito en vez de tapado a ojo: con una promesa A ya puesta
-  // desde el runtime, un turno posterior que construya algo con CSS puro y
-  // mande su prueba B conserva A. Distinguir «prueba nueva de verdad» de
-  // «prueba re-mandada sin pensar» necesita una señal que hoy no existe.
-  const habiaPromesa = Boolean(session.behaviorJs);
-  if (borrarRuntime) {
-    session.behaviorJs = null;
-  } else if (pruebaNueva !== null && (cambioConducta || !session.behaviorJs)) {
-    session.behaviorJs = pruebaNueva;
-  } else if (cambioConducta) {
-    session.behaviorJs = null;
-  }
-
-  // 🔴 LOS AVISOS SE ACUMULAN, NO SE PISAN.
-  //
-  // Esto eran CUATRO claves `aviso_critico` sueltas dentro del mismo objeto
-  // literal, así que en JavaScript la última ganaba EN SILENCIO. Un turno que a
-  // la vez dejaba la meta desfasada y cambiaba el comportamiento sin prueba
-  // sólo contaba una de las dos cosas — y el comentario de `persistHtmlChange`
-  // ya pedía justo lo contrario: *"el modelo sigue viendo TODAS las razones …
-  // contarle sólo la que bloqueó lo devuelve con el mismo script condenado
-  // pegado a un botón ya corregido"*. La intención estaba escrita y el código
-  // decía otra cosa.
-  const criticos: string[] = [];
-  const extra: Record<string, unknown> = {};
-
-  // La META se quedó atrás: el dato viejo sigue en el fragmento que enseña
-  // Google. Se mira sobre el documento que de verdad se guardó.
-  const viejos = metaDesfasada(persisted.finalHtml ?? htmlAplicado);
-  if (viejos.length > 0) {
-    extra.meta_desfasada = viejos;
-    criticos.push(avisoMetaDesfasada(viejos));
-  }
-
-  // CSS que no puede aplicar nunca: el estilo existe, el elemento existe, y no
-  // se tocan. Lo diagnostica el motor para las TRES superficies; el Agente es
-  // la única que puede arreglarlo en el mismo turno.
-  if (persisted.reglasMuertas?.length) {
-    extra.css_sin_efecto = persisted.reglasMuertas.map((r) => r.selector);
-    criticos.push(avisoReglasMuertas(persisted.reglasMuertas));
-  }
-
-  // ⚰️ AQUÍ VIVÍA `piso_edicion_del_usuario`: el aviso de que este guardado
-  // acababa de reemplazar una edición ajena. Se va con I2 (2026-09-14) porque el
-  // hecho que describía ya no puede ocurrir — `persistHtmlChange` se niega a
-  // escribir sobre un documento que cambió desde la base de la sesión y devuelve
-  // el fresco para reaplicar. Un aviso sobre una pérdida que ya no pasa sólo
-  // sirve para enseñar a ignorar los avisos.
-
-  // 🔴 I5 · EL SCRIPT SE QUEDÓ HABLANDO SOLO, y se dice AHORA.
-  //
-  // `getElementById(...)` devuelve `null` y la excepción aborta el `<script>`
-  // ENTERO: un elemento borrado puede apagar toda la interactividad de la
-  // página, no sólo la suya. El guardado ya lo detectaba —pinta el modal del
-  // usuario— pero al modelo le llegaba por el bloque de contexto, que se monta
-  // al principio del turno: se enteraba en el SIGUIENTE. Ése es el turno 1 del
-  // caso medido el 2026-09-14, el que cerró con «Listo» sobre una página rota.
-  //
-  // Va con los CRÍTICOS: es la página del usuario dejando de funcionar, y el
-  // turno todavía tiene presupuesto para arreglarlo.
-  if (persisted.referenciasRotas?.length) {
-    extra.referencias_rotas = [...persisted.referenciasRotas];
-    criticos.push(
-      `Esta edición ha dejado el JavaScript de la página buscando ${persisted.referenciasRotas.length} elemento(s) que ya no existen: ${persisted.referenciasRotas.join(", ")}. ` +
-        "Cuando `getElementById` no encuentra uno, la excepción ABORTA el script entero y la página se queda sin NADA de su interactividad, no sólo sin eso. " +
-        "Arréglalo en este mismo turno: o vuelves a poner esos elementos, o adaptas el script con editar_runtime. NO cierres el turno diciendo que está hecho mientras esto siga así.",
-    );
-  }
-
-  // UN FORMULARIO QUE YA NO ESTÁ. Regla 🔴 «NO SUSTITUYAS LO QUE YA FUNCIONA
-  // POR TU ALTERNATIVA», que hasta hoy vivía sólo en el prompt. Un <form> es la
-  // vía por la que al dueño le llegan clientes; que desaparezca en una edición
-  // que él no pidió es la avería medida el 2026-08-31.
-  if (persisted.formulariosPerdidos) {
-    extra.formularios_perdidos = persisted.formulariosPerdidos;
-    criticos.push(
-      `Esta edición ha quitado ${persisted.formulariosPerdidos} formulario(s) que la página SÍ tenía. Los formularios funcionan de verdad: al publicar reciben su destino y lo que el visitante envía le llega al dueño por correo y a su Bandeja. Si quitarlo no era lo que te pidieron, vuelve a ponerlo en este mismo turno; si lo era, DÍSELO al usuario en tu respuesta.`,
-    );
-  }
-
-  // UNA FOTO DEL DUEÑO QUE YA NO ESTÁ. La pregunta que Jesús hizo veinte veces
-  // —«¿por qué quita la foto?»— y cuya respuesta era: nadie miraba. La regla
-  // («CONSERVA … TODA URL real») y la comprobación existían las dos, y las dos
-  // colgaban de `redisenar_pagina`. El Agente vive AQUÍ. Ver
-  // lib/agent/facts-kept.ts para por qué es la variante NETA y no `hechosPerdidos`:
-  // en una edición, sustituir una foto es una petición normal y no puede sonar.
-  const hechosFuera = hechosPerdidosNetos(beforeTaggedHtml, persisted.finalHtml ?? htmlAplicado);
-  if (hechosFuera.length > 0) {
-    extra.hechos_perdidos = hechosFuera.map((h) => `${h.tipo}: ${h.valor}`);
-    criticos.push(avisoHechosPerdidosEnEdicion(hechosFuera));
-  }
-
-  // UN BOTON QUE NACE MUDO. `onclick=` y sus hermanos se borran al guardar, y
-  // el fallo es invisible por los cuatro lados: el guardado no falla, la
-  // captura sale impecable, la consola sale LIMPIA (no hay error, es que no hay
-  // manejador) y el critico con vision lo aprueba. Hasta hoy lo unico que lo
-  // evitaba era una frase en el prompt pidiendolo por favor.
-  //
-  // SE MIRA LO QUE EL MODELO MANDO, no `finalHtml`: ahi ya no queda rastro.
-  // Los dos caminos por los que entra: dentro de un `new_html`, y como
-  // `op="attrs"` con `name:"onclick"`.
-  const muertos: HandlerMuerto[] = [];
-  for (const op of opsAplicables) {
-    if (typeof op.newHtml === "string" && op.target !== "runtime") {
-      muertos.push(...handlersMuertos(op.newHtml));
-    }
-    for (const a of op.attrs ?? []) {
-      if (a.value !== null && esHandler(a.name)) {
-        muertos.push({ atributo: a.name.trim().toLowerCase(), donde: `op ${op.target}` });
-      }
-    }
-  }
-  if (muertos.length > 0) {
-    extra.handlers_muertos = muertos.map((h) => h.atributo);
-    criticos.push(avisoHandlersMuertos(muertos));
-  }
-
-  // UN ENLACE QUE DICE UN NUMERO Y MARCA OTRO. Ver
-  // lib/agent/enlaces-desfasados.ts para el fallo que lo trae: cambio los dos
-  // textos del telefono, dejo el href con el viejo, y lo reporto como hecho.
-  // La pagina ensena lo nuevo y el boton marca lo viejo — invisible en una
-  // captura. Se mide sobre el documento FINAL, asi que tambien caza el que ya
-  // venia torcido.
-  const desfasados = enlacesDesfasados(persisted.finalHtml ?? "");
-  if (desfasados.length > 0) {
-    extra.enlaces_desfasados = desfasados.map((e) => e.href);
-    criticos.push(avisoEnlacesDesfasados(desfasados));
-  }
-
-  // UNA CUENTA DE RED QUE NADIE TE DIO. La regla 🔴 «NO TE INVENTES LA CUENTA»
-  // vivía sólo en el prompt y falló tres veces seguidas el 2026-08-31.
-  if (persisted.enlacesInventados?.length) {
-    extra.enlaces_sin_origen = persisted.enlacesInventados.map((e) => e.href);
-    criticos.push(avisoEnlacesInventados(persisted.enlacesInventados));
-  }
-
-  // UN PAÍS QUE NADIE TE DIO (H09). Ver lib/agent/prefijo-inventado.ts.
-  if (persisted.prefijosInventados?.length) {
-    extra.prefijos_sin_origen = persisted.prefijosInventados.map((p) => p.href);
-    criticos.push(avisoPrefijosInventados(persisted.prefijosInventados));
-  }
-
-  // Sin prueba, nadie sabrá si el comportamiento hace lo que promete — sólo si
-  // explota. Se le dice, y se le dice por qué. Y si tenía una promesa, se le
-  // dice también que ya no cuenta: retirarla en silencio le dejaría creyendo
-  // que lo nuevo se comprueba con lo que prometió para lo de antes.
-  if (!borrarRuntime && cambioConducta && !session.behaviorJs) {
-    criticos.push(
-      'Cambiaste el COMPORTAMIENTO de la página SIN mandar `prueba_js`, así que nadie va a comprobar que haga lo que promete — sólo que no explote. Un botón cableado a una conducta mal puesta nace MUDO, sin un solo error en consola.' +
-        (habiaPromesa
-          ? ' Tu promesa anterior describía el comportamiento de ANTES y ya no cuenta.'
-          : '') +
-        ' Manda `prueba_js` con lo que debe pasar al pulsar.',
-    );
-  }
-
-  // Guardar-y-AVISAR: un `replace` que se dejó los hijos del nodo. Va con los
-  // CRÍTICOS y no con los avisos normales a propósito — es una pérdida de
-  // contenido del usuario, la misma categoría que un formulario que desaparece.
-  if (perdioContenido.length > 0) {
-    extra.contenido_perdido = perdioContenido.length;
-    criticos.push(avisoContenidoPerdido(perdioContenido));
-  }
-
-  // Guardar-y-AVISAR: perder una op en silencio es la degradación que este repo
-  // prohíbe, y aquí lo perdido habría sido la página entera.
-  if (opsRechazadas.length > 0) {
-    extra.edits_descartados = opsRechazadas.length;
-    criticos.push(
-      `Descarte ${opsRechazadas.length} edit(s) que apuntaban al <html> o al <body>: habrian reemplazado la pagina ENTERA. El resto SI se aplico. Si querias cambiar CSS, usa target="styles"; para una hoja de fuentes, target="head".`,
-    );
-  }
-
-  // Lo mismo con lo descartado por ciego: el resto SÍ se aplicó, así que el
-  // modelo tiene que saber qué parte de lo que pidió no ocurrió — si no, cierra
-  // el turno contándole al usuario un borrado que nadie hizo.
-  if (opsCiegas.length > 0) {
-    extra.edits_a_ciegas = opsCiegas.map((o) => o.target);
-    criticos.push(
-      `Descarte ${opsCiegas.length} edit(s) que borraban o reemplazaban secciones que NO has abierto (${opsCiegas.map((o) => o.target).join(", ")}). El resto SI se aplico. Abrelas con leer_estado op_id= y reintenta, o usa insert_before/insert_after, que no destruyen nada.`,
-    );
-  }
-
-  // Qué le pasó al documento, en las tres variantes. Se le dice al MODELO para
-  // que no cierre diciéndole al usuario que lo arregló: es el fallo medido el
-  // 22/08 — y su hermano, afirmar sobre lo que nadie comprobó.
-  //
-  // El `&& !borrarRuntime` que había aquí sobraba: `persistPage` ya recibe el
-  // `runtimeIntent`, así que un turno que retira comportamiento nunca sale
-  // `sin_cambio`. Dos sitios decidiendo lo mismo es como se separan.
-  declararCambio(persisted.cambio, extra, criticos);
-
-  let opsDescritas: readonly OpDescrita[] = [];
-  try {
-    opsDescritas = describirOps({
-      ops: opsAplicables,
-      antesTagged: beforeTaggedHtml,
-      despuesTagged: session.taggedHtml,
-      outlineDe: (t) => buildOutline(t),
-      seccionDe: (t, id) => buildScopedView(t, id)?.scopedHtml ?? null,
-    });
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn("[agente] no se pudieron describir las ops del turno", err);
-  }
-
-  // QUÉ SECCIONES TOCÓ, POR SU NOMBRE, Y AL MODELO.
-  //
-  // MEDIDO el 2026-09-02 sobre una página de 80 secciones: a «borra entera la
-  // sección número 40» el modelo borró la 41 y cerró diciendo «Listo, borré la
-  // sección número 40». El índice NO era ambiguo —`- [4oz] <section> "Seccion
-  // numero 40"` estaba ahí, y los op-id son base36 (`4oz`, `4t7`), imposibles de
-  // confundir con los números del texto—: fue un resbalón de UNA FILA leyendo
-  // 82 líneas casi idénticas.
-  //
-  // Eso no se arregla prohibiéndoselo. A un modelo no se le puede impedir leer
-  // mal; lo que se puede es no dejar que la equivocación pase callada. El
-  // servidor YA sabía qué secciones se tocaron —`describirOps` lo resuelve para
-  // pintarlo en el panel— y no se lo decía a quien todavía puede corregirlo.
-  //
-  // `rejectBlindOps` no cubre esto y no tiene por qué: protege de borrar algo
-  // que NO has mirado, no de mirar lo que no era.
-  const seccionesTocadas = opsDescritas
-    .filter((o) => o.donde === "documento" && o.etiqueta)
-    .map((o) => {
-      // `attrs` tiene su propio verbo. Sin él caía en el `else` y se anunciaba
-      // como «insertaste junto a», que es lo contrario de lo que hace: no añade
-      // nada, reescribe la etiqueta de apertura del nodo que ya estaba.
-      const verbo =
-        o.tipo === "delete"
-          ? "quitaste"
-          : o.tipo === "replace"
-            ? "reemplazaste"
-            : o.tipo === "attrs"
-              ? "cambiaste atributos de"
-              : o.tipo === "text"
-                ? "cambiaste el texto de"
-                : "insertaste junto a";
-      return `${verbo}: "${o.etiqueta}"`;
-    });
-
-  return {
-    response: {
-      ok: true,
-      edits_aplicados: aplicadas,
-      ...(seccionesTocadas.length ? { secciones_tocadas: seccionesTocadas } : {}),
-      ...(nuevoRuntime ? { comportamiento_actualizado: true } : {}),
-      ...(borrarRuntime ? { comportamiento_retirado: true } : {}),
-      ...(tocaDocumento ? { estilo_actualizado: true } : {}),
-      ...extra,
-      nota: "data-op-id regenerados; usa leer_estado incluir_documento=true para editar de nuevo",
-      ...(criticos.length ? { aviso_critico: criticos.join(" · ") } : {}),
-    },
-    action: {
-      tool: typeof args.__puerta === "string" ? args.__puerta : "editar_pagina",
-      ok: true,
-      summary: resumen,
-      // Los mismos dos hechos que ya se le cuentan al modelo tres líneas más
-      // arriba (`declararCambio` y `edits_aplicados`). No se recalculan aquí:
-      // dos cuentas de la misma cosa es como se separan.
-      cambio: persisted.cambio.estado,
-      edits: aplicadas,
-      // QUÉ se cambió. Se resuelve AQUÍ y no en el cliente porque aquí es donde
-      // los `data-op-id` todavía significan algo: `persistHtmlChange` acaba de
-      // re-etiquetar la sesión, así que `session.taggedHtml` es el documento de
-      // DESPUÉS y `beforeTaggedHtml` el de antes. Un turno después, los dos
-      // juegos de ids ya no existen.
-      //
-      // Fail-soft entero: describir es diagnóstico y no puede costarle la
-      // edición a nadie — la misma regla que la línea de forma y el grabador.
-      ...(opsDescritas.length ? { ops: opsDescritas } : {}),
-    },
-    updatedHtml: persisted.finalHtml,
-    page: session.page,
-    versionPrevia: persisted.versionPrevia,
-    cambioConducta: cambioConducta && !borrarRuntime,
-  };
-}
-
-// ─── EL EMPAQUETADO DE LA EDICION (el sobre, tarea 3) ───────────────────────
-//
-// `editar_pagina` era el 26,4 % de los bytes del catalogo y la unica
-// declaracion honda: profundidad 5 contra 2 de la siguiente. Y la regla que
-// decidia que campos eran legales —el valor de `op`— NO estaba en el schema:
-// `required` pedia ["op","target"] y la union discriminada vivia en 7.480
-// caracteres de prosa espanola.
-//
-// Lo que se parte es el EMPAQUETADO, no el motor. El nodo sigue siendo la
-// unidad, `data-op-id` sigue siendo el ancla, y las cuatro puertas construyen
-// la MISMA op interna y delegan en `toolEditarPagina`, que sigue siendo quien
-// valida, persiste y arma los 13 `aviso_critico`. Por eso se conservan sin
-// copiarlos: viven en la tuberia compartida, aguas abajo de este punto.
-//
-// `toolEditarPagina` ya no se le declara al modelo (no esta en el catalogo),
-// pero sigue existiendo como motor interno y sigue en el dispatch: es el
-// camino que ejercitan las pruebas y el que estas cuatro reutilizan.
-
-type EdicionTexto = { target?: unknown; texto?: unknown };
-type EdicionAttr = { target?: unknown; nombre?: unknown; valor?: unknown };
-type EdicionHtml = { target?: unknown; op?: unknown; new_html?: unknown };
-
-/** Las cuatro comparten forma: `ediciones` + `resumen`. Un array vacio o
- *  ausente es el mismo error en las tres, y se dice una sola vez. */
-function edicionesDe(args: Record<string, unknown>): unknown[] | { response: { ok: false; error: string } } {
-  const lista = Array.isArray(args.ediciones) ? (args.ediciones as unknown[]) : [];
-  if (lista.length === 0) {
-    return { response: { ok: false, error: "no se recibió ninguna edición" } };
-  }
-  return lista;
-}
-
-async function toolEditarTexto(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const lista = edicionesDe(args);
-  if (!Array.isArray(lista)) return lista;
-
-  const edits: Record<string, unknown>[] = [];
-  for (const cruda of lista as EdicionTexto[]) {
-    if (typeof cruda?.target !== "string" || typeof cruda?.texto !== "string") {
-      return { response: { ok: false, error: "cada edición necesita target + texto" } };
-    }
-    edits.push({ op: "text", target: cruda.target, text: cruda.texto });
-  }
-  return await toolEditarPagina(session, deps, { ...args, edits, __puerta: "editar_texto" });
-}
-
-async function toolEditarAtributos(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const lista = edicionesDe(args);
-  if (!Array.isArray(lista)) return lista;
-
-  // SE REAGRUPA POR TARGET a proposito. La declaracion pide un atributo por
-  // entrada —anidar un `attrs[]` dentro de cada edicion devolveria la
-  // profundidad 4 que veniamos a quitar— pero el motor espera una op por nodo
-  // con todos sus atributos juntos, que es como no puede perder nada. Aqui se
-  // deshace esa diferencia, y el orden de los targets se conserva.
-  const porTarget = new Map<string, { name: string; value: string | null }[]>();
-  for (const cruda of lista as EdicionAttr[]) {
-    if (typeof cruda?.target !== "string" || typeof cruda?.nombre !== "string") {
-      return { response: { ok: false, error: "cada edición necesita target + nombre" } };
-    }
-    const valor = cruda.valor === null || cruda.valor === undefined
-      ? null
-      : typeof cruda.valor === "string" ? cruda.valor : String(cruda.valor);
-    const previos = porTarget.get(cruda.target) ?? [];
-    previos.push({ name: cruda.nombre, value: valor });
-    porTarget.set(cruda.target, previos);
-  }
-
-  const edits = [...porTarget.entries()].map(([target, attrs]) => ({ op: "attrs", target, attrs }));
-  return await toolEditarPagina(session, deps, { ...args, edits, __puerta: "editar_atributos" });
-}
-
-async function toolEditarHtml(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const lista = edicionesDe(args);
-  if (!Array.isArray(lista)) return lista;
-
-  const edits: Record<string, unknown>[] = [];
-  for (const cruda of lista as EdicionHtml[]) {
-    if (typeof cruda?.target !== "string" || typeof cruda?.op !== "string") {
-      return { response: { ok: false, error: "cada edición necesita target + op" } };
-    }
-    // `text` y `attrs` NO entran por aqui: tienen su propia puerta, y dejarlos
-    // pasar reabriria la union discriminada que este corte vino a cerrar.
-    if (cruda.op === "text" || cruda.op === "attrs") {
-      return {
-        response: {
-          ok: false,
-          error: cruda.op === "text"
-            ? "para cambiar un texto usa editar_texto"
-            : "para cambiar un atributo usa editar_atributos",
-        },
-      };
-    }
-    edits.push({ op: cruda.op, target: cruda.target, ...(typeof cruda.new_html === "string" ? { new_html: cruda.new_html } : {}) });
-  }
-  return await toolEditarPagina(session, deps, { ...args, edits, __puerta: "editar_html" });
-}
-
-async function toolEditarRuntime(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  if (typeof args.script !== "string") {
-    return { response: { ok: false, error: "falta `script` — manda el código COMPLETO que debe quedar" } };
-  }
-  // Script vacio es QUITAR lo interactivo, que en el motor es un delete sobre
-  // el target "runtime". Es la misma op de siempre; cambia solo como se pide.
-  const vacio = args.script.trim() === "";
-  const edits = [vacio
-    ? { op: "delete", target: "runtime" }
-    : { op: "replace", target: "runtime", new_html: args.script }];
-  return await toolEditarPagina(session, deps, { ...args, edits, __puerta: "editar_runtime" });
-}
-
-const HEX_COLOR_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
-
-/** LookBase keys are already --ol-*-prefixed (palette-gen's own naming);
- *  deriveContractColors wants the plain BaseColors shape — strip the prefix
- *  to bridge the two. */
-function toBaseColors(look: LookBase): BaseColors {
-  return {
-    bg: look["--ol-bg"],
-    surface: look["--ol-surface"],
-    fg: look["--ol-fg"],
-    border: look["--ol-border"],
-    accent: look["--ol-accent"],
-  };
-}
-
-/** The accent branch of cambiar_tema: derive the full 10-token contract
- *  bundle (5 base + 5 derived) from one hex seed, same composition
- *  applyLookForMode drives client-side (page.tsx:2096) — lookFromAccent for
- *  the light/dark base palette (its WCAG-walked accent included: the button
- *  path is the authority, zero parallel logic), deriveContractColors for the
- *  relationship tokens (surface-2, fg-muted/faint, border-strong, accent-ink). */
-function accentBundleTokens(accentHex: string, modo: "light" | "dark"): Record<string, string> {
-  const base = toBaseColors(lookFromAccent(accentHex)[modo]);
-  const contract = deriveContractColors(base);
-  return {
-    "--ol-bg": contract.bg,
-    "--ol-surface": contract.surface,
-    "--ol-surface-2": contract["surface-2"],
-    "--ol-fg": contract.fg,
-    "--ol-fg-muted": contract["fg-muted"],
-    "--ol-fg-faint": contract["fg-faint"],
-    "--ol-border": contract.border,
-    "--ol-border-strong": contract["border-strong"],
-    "--ol-accent": contract.accent,
-    "--ol-accent-ink": contract["accent-ink"],
-  };
-}
-
-async function toolCambiarTema(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const accent = typeof args.accent === "string" ? args.accent : undefined;
-  const fuente = typeof args.fuente === "string" ? args.fuente : undefined;
-  const radius = typeof args.radius === "string" ? args.radius : undefined;
-  const modoArg = args.modo === "dark" || args.modo === "light" ? args.modo : undefined;
-  // MEDIDO en producción el 2026-09-10: las dos veces que un usuario pidió un
-  // color, la tarjeta que vio decía literalmente «cambiar_tema» —el nombre de
-  // la función— porque ésta era la única herramienta de edición sin `resumen`
-  // declarado y el bucle cae al nombre de la llamada. En éxito enseñaba el hex
-  // («#b31212»). Los cuatro `editar_*` lo exigen desde siempre.
-  const resumen = typeof args.resumen === "string" && args.resumen.trim() ? args.resumen : undefined;
-
-  if (!accent && !fuente && !radius && !modoArg) {
-    return { response: { ok: false, error: "especifica accent, fuente, radius y/o modo" } };
-  }
-  if (accent !== undefined && !HEX_COLOR_RE.test(accent)) {
-    return { response: { ok: false, error: `accent debe ser un color hex (#rgb o #rrggbb): ${accent}` } };
-  }
-
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-
-  const tokens: Record<string, string> = {};
-
-  // F4 Task 2: seed from the ACTIVE document — a subpage's own accent/mode,
-  // never home's, when session.page is set (the W1 pin's read side).
-  const activeDoc = activeHtml(row.data, session.page) ?? "";
-
-  // Colors re-derive whenever there's an accent to derive FROM: an explicit
-  // hex, or (standalone modo — the button's dark/light toggle) the page's
-  // current --ol-accent. Mirrors applyLookForMode: every bundle apply also
-  // stamps the mode attr (empty = light default, removes it). No modo given =
-  // the page's CURRENT mode (the button reads modeRef, never forces light).
-  const modo = modoArg ?? readThemeModeFromHtml(activeDoc);
-  const accentSeed = accent ?? (modoArg ? readThemeTokenFromHtml(activeDoc, "--ol-accent") : null);
-  if (accent !== undefined || modoArg !== undefined) {
-    if (!accentSeed) {
-      return {
-        response: {
-          ok: false,
-          error: "la página no tiene --ol-accent definido; pasa accent junto con modo",
-        },
-      };
-    }
-    Object.assign(tokens, accentBundleTokens(accentSeed, modo));
-    tokens["data-ol-mode"] = modo === "dark" ? "dark" : "";
-  }
-
-  if (fuente !== undefined) {
-    const preset = THEME_PRESETS.find((p) => p.id === fuente);
-    if (!preset) {
-      return { response: { ok: false, error: `preset de fuente desconocido: ${fuente}` } };
-    }
-    const fontToken = preset.tokens["--ol-font-display"];
-    if (fontToken) tokens["--ol-font-display"] = fontToken;
-  }
-
-  if (radius !== undefined) {
-    const preset = THEME_PRESETS.find((p) => p.id === radius);
-    if (!preset) {
-      return { response: { ok: false, error: `preset de radius desconocido: ${radius}` } };
-    }
-    const radiusToken = preset.tokens["--ol-r-scale"];
-    if (radiusToken) tokens["--ol-r-scale"] = radiusToken;
-  }
-
-  // ¿LA PÁGINA LEE ESTOS TOKENS? MEDIDO: 171 de 178 plantillas curadas no leen
-  // ninguno. Sobre ellas esto escribía la declaración, devolvía `ok: true,
-  // tokens_aplicados: 1` y la página se quedaba idéntica — un cambio reportado
-  // que no ocurrió, que es justo lo que la doctrina de degradación prohíbe.
-  //
-  // No se convierte el CSS de la plantilla (eso es Canva-mode en miniatura, y
-  // ya se rechazó): se dice la verdad y se señala el camino que SÍ funciona.
-  // En el bucle del Agente, un `ok:false` con pista es el idioma normal — el
-  // modelo encadena la op y el cambio ocurre de verdad.
-  const pedidos = new Set<string>();
-  if (accent !== undefined || modoArg !== undefined) pedidos.add("--ol-accent");
-  if (fuente !== undefined) pedidos.add("--ol-font-display");
-  if (radius !== undefined) pedidos.add("--ol-r-scale");
-  const muertos = [...pedidos].filter((t) => !documentReadsToken(activeDoc, t));
-  if (muertos.length === pedidos.size) {
-    return {
-      response: {
-        ok: false,
-        error: "sin_tokens",
-        detalle: `Esta página no usa el sistema de tokens (su CSS no dice var(${muertos.join(") ni var(")})), así que escribirlos NO cambiaría nada de lo que se ve.`,
-        como_hacerlo:
-          'Cámbialo en el CSS de verdad con editar_html: una edición con target="styles" e insert_after. Dentro, DOS cosas: (1) las reglas que de verdad pintan, por ejemplo `body,h1,h2{font-family:\'Fraunces\',Georgia,serif}`; y (2) el token en `:root{--ol-font-display:\'Fraunces\',serif}` — los módulos que se añaden al publicar (reproductor de música, secciones de módulo) SÍ leen los tokens, así que definirlo los deja a juego. Si la fuente es de Google, añade su hoja con otro edit target="head" e insert_after.',
-      },
-    };
-  }
-
-  let candidateHtml = applyThemeTokensToHtml(activeDoc, tokens);
-  // La fuente tiene que EXISTIR, no sólo estar nombrada: sin su hoja el
-  // navegador cae al genérico y el usuario ve Times New Roman donde pidió una
-  // editorial.
-  const fontToken = tokens["--ol-font-display"];
-  if (fontToken) candidateHtml = ensureFontLink(candidateHtml, fontToken);
-
-  const persisted = await persistHtmlChange(
-    session,
-    deps,
-    candidateHtml,
-    `Agente: cambio de tema (${Object.keys(tokens).join(", ")})`,
-  );
-  if (!persisted.ok) {
-    return falloAlGuardar(persisted);
-  }
-
-  // Los avisos se ACUMULAN, igual que en `editar_pagina`: aquí había una sola
-  // clave `aviso_critico` dentro del literal, así que en cuanto hubiera dos
-  // razones que contar la última habría ganado en silencio.
-  const criticos: string[] = [];
-  const extra: Record<string, unknown> = {};
-  // Parcial: unos rasgos entran y otros no. Callarlo sería la misma mentira en
-  // pequeño.
-  if (muertos.length > 0) {
-    extra.sin_efecto = muertos;
-    criticos.push(
-      `La página no lee ${muertos.join(" ni ")}, así que ESA parte no cambió. Si el usuario la pidió, hazla con un edit target="styles".`,
-    );
-  }
-  // I5 también AQUÍ. Una guarda que sólo vive en `editar_pagina` es media
-  // guarda: `cambiar_tema` y `aplicar_tematica` escriben por el mismo embudo y
-  // pueden dejar el `<script>` hablando solo igual que cualquier otra edición.
-  // Ésta es la forma de fallo que este repo ya tiene documentada — la guarda en
-  // la herramienta equivocada.
-  if (persisted.referenciasRotas?.length) {
-    extra.referencias_rotas = [...persisted.referenciasRotas];
-    criticos.push(
-      `Esta edición ha dejado el JavaScript de la página buscando ${persisted.referenciasRotas.length} elemento(s) que ya no existen: ${persisted.referenciasRotas.join(", ")}. La excepción ABORTA el script entero, así que la página se queda sin toda su interactividad. Arréglalo en este mismo turno.`,
-    );
-  }
-  declararCambio(persisted.cambio, extra, criticos);
-
-  return {
-    response: {
-      ok: true,
-      tokens_aplicados: Object.keys(tokens).length,
-      ...extra,
-      ...(criticos.length ? { aviso_critico: criticos.join(" · ") } : {}),
-    },
-    // La frase del MODELO, que va en el idioma del usuario. El hex suelto era
-    // lo que veía antes: una tarjeta que ponía «#b31212». Se conserva como
-    // respaldo para las llamadas viejas que aún no traigan `resumen`.
-    action: {
-      tool: "cambiar_tema",
-      ok: true,
-      summary: resumen ?? accent ?? fuente ?? radius ?? modoArg ?? "",
-      ...(() => {
-        const valores = valoresDeTema({ accent, fuente, radius, modo: modoArg });
-        return valores ? { valores } : {};
-      })(),
-    },
-    updatedHtml: persisted.finalHtml,
-    page: session.page,
-    versionPrevia: persisted.versionPrevia,
-  };
-}
-
-async function toolAplicarTematica(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const tematica = args.tematica;
-  if (typeof tematica !== "string" || tematica.length === 0) {
-    return { response: { ok: false, error: "tematica es requerida" } };
-  }
-  const fondo = typeof args.fondo === "string" && args.fondo.length > 0 ? args.fondo : undefined;
-
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-
-  const activeDoc = activeHtml(row.data, session.page) ?? "";
-  let candidateHtml: string;
-  if (tematica === "quitar") {
-    candidateHtml = removeTematicaFromHtml(activeDoc);
-  } else {
-    const applied = applyTematicaToHtml(activeDoc, tematica, fondo);
-    if ("error" in applied) {
-      return { response: { ok: false, error: applied.error } };
-    }
-    candidateHtml = applied.html;
-  }
-
-  const persisted = await persistHtmlChange(
-    session,
-    deps,
-    candidateHtml,
-    `Agente: temática (${tematica})`,
-  );
-  if (!persisted.ok) {
-    return falloAlGuardar(persisted);
-  }
-
-  return {
-    response: { ok: true, tematica },
-    // La frase del modelo, no el id del kit — mismo motivo que en
-    // `cambiar_tema`: es lo que el dueño de la página lee.
-    action: {
-      tool: "aplicar_tematica",
-      ok: true,
-      summary: typeof args.resumen === "string" && args.resumen.trim() ? args.resumen : tematica,
-    },
-    updatedHtml: persisted.finalHtml,
-    page: session.page,
-    versionPrevia: persisted.versionPrevia,
-  };
-}
-
 // Runaway backstop for a read-only tool: the loop exempts elegir_foto from the
 // action budget AND (now) from the turn cap, so the ONLY thing bounding a
 // search-only chain is ABSOLUTE_MAX_TOOL_CALLS — which surfaces a red error.
@@ -3115,7 +1058,7 @@ const MAX_BUSQUEDAS_VACIAS_SEGUIDAS = 2;
 // change approach. Named tools so the model has a concrete next move.
 const PHOTO_PIVOT_NOTE =
   "El catálogo curado «Imágenes by OpenLen» es acotado y no tiene fotos de esto. NO sigas buscando variantes y NUNCA inventes una URL. "
-  + "Deja el hueco con un degradado de la paleta usando editar_html — es exactamente lo que hace la generación cuando no encuentra pareja, "
+  + "Deja el hueco con un degradado de la paleta usando Edit — es exactamente lo que hace la generación cuando no encuentra pareja, "
   + "y una caja neutra es mejor que una foto que miente sobre el negocio del usuario. "
   + "Después SIGUE con el resto de lo que te pidió: quedarte sin una foto no cancela lo demás ni te obliga a pedir permiso para continuar. "
   + "En tu respuesta di qué foto no había y qué pusiste en su lugar.";
@@ -3178,7 +1121,10 @@ async function toolMirarPagina(
 
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-  const html = activeHtml(row.data, session.page) ?? "";
+  // Len 2.0: el fichero que se le dice, o la página que el dueño tiene abierta.
+  const pedida = paginaPedida(session, row.data, args.file_path, { preferirLoEscrito: false });
+  if (!pedida.ok) return { response: { ok: false, error: pedida.error } };
+  const html = activeHtml(row.data, pedida.page) ?? "";
   if (!html) {
     return { response: { ok: false, error: "esta página todavía no tiene documento que mirar" } };
   }
@@ -3192,7 +1138,7 @@ async function toolMirarPagina(
       // LA VISTA, para que lo que se mide sea el documento que el usuario tiene
       // delante y no el pelado. La fila ya está leída aquí arriba, así que no
       // cuesta una consulta. Ver `MiradaParams.vista`.
-      vista: vistaParaMedir(session.projectId, row, session.page),
+      vista: vistaParaMedir(session.projectId, row, pedida.page),
     })
     .catch(() => null);
   if (!visto) {
@@ -3209,6 +1155,53 @@ async function toolMirarPagina(
   // Read-only: sin tarjeta de acción y sin documento nuevo. La página no
   // cambió — preguntar no es editar.
   return { response: { ok: true, respuesta: visto.respuesta } };
+}
+
+// ─── usar_pagina: usarla como un visitante (H9) ──────────────────────────────
+//
+// SIN TOPE POR TURNO, a diferencia de `mirar_pagina`: no gasta créditos (es
+// Chromium) y Claude Code no pone plazo a comprobar. Lo que la contiene es el
+// tope de pasos por visita y el reloj de la visita, en el motor.
+async function toolUsarPagina(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  // La entrada se comprueba ANTES de abrir nada, como el ejecutor de Claude Code.
+  const v = validarPasos(args.pasos);
+  if (!v.ok) return { response: { ok: false, error: v.error } };
+  if (!deps.usarPagina) {
+    return {
+      response: {
+        ok: false,
+        error: "usar_pagina no está disponible en este entorno. Sigue con lo que te pidió el usuario, y al cerrar di que no pudiste probarlo.",
+      },
+    };
+  }
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+  // Sin `file_path`: la última página que escribió en este turno —la que acaba
+  // de cambiar y quiere probar— y si no escribió ninguna, la que el dueño tiene
+  // abierta.
+  const pedida = paginaPedida(session, row.data, args.file_path, { preferirLoEscrito: true });
+  if (!pedida.ok) return { response: { ok: false, error: pedida.error } };
+  const html = activeHtml(row.data, pedida.page) ?? "";
+  if (!html) return { response: { ok: false, error: "esta página todavía no tiene documento que usar" } };
+
+  const visto = await deps
+    .usarPagina({ html, pasos: v.pasos, ruta: pedida.ruta, vista: vistaParaMedir(session.projectId, row, pedida.page) })
+    .catch(() => null);
+  if (!visto) {
+    // No poder abrirla no es que funcione ni que no: se dice así, para que no
+    // cierre dándola por buena.
+    return {
+      response: {
+        ok: false,
+        error: "no se pudo abrir la página en el navegador esta vez. No lo tomes como que funciona ni como que no; si cierras sin probarlo, dilo.",
+      },
+    };
+  }
+  return { response: { ok: true, visita: visto.informe } };
 }
 
 async function toolElegirFoto(
@@ -3320,19 +1313,22 @@ async function toolEditarImagen(
     return { response: { ok: false, error: "límite de una edición de imagen por turno" } };
   }
 
-  // Anti prompt-injection SSRF: only edit an image ALREADY on the page. The URL
-  // must appear as an image-bearing attribute value in the current tagged
-  // document — a bare URL sitting in body copy is NOT enough, so an
-  // attacker-supplied URL can't reach fetchImage this way. session.taggedHtml
-  // is always the ACTIVE document (home or the active subpage) — set at
-  // session init from session.page and kept in sync by persistHtmlChange /
-  // leer_estado's re-tag, so this check is a W1 read-side guard for free: a
-  // URL that only lives on home can never pass membership while page="menu".
-  if (!urlIsPageImage(session.taggedHtml, imagenUrl)) {
+  // Anti prompt-injection SSRF: only edit an image ALREADY on the site. The URL
+  // must appear as an image-bearing attribute value in one of its files — a
+  // bare URL sitting in body copy is NOT enough, so an attacker-supplied URL
+  // can't reach fetchImage this way.
+  //
+  // Len 2.0: en TODOS los ficheros, no en «la página activa», que ya no existe.
+  const inicial = await deps.loadProject(session.projectId, session.userId);
+  if (!inicial) return { response: { ok: false, error: "proyecto no encontrado" } };
+  const conLaImagen = ficherosDelSitio(inicial.data).filter((ruta) =>
+    urlIsPageImage(leerFichero(inicial.data, ruta) ?? "", imagenUrl),
+  );
+  if (conLaImagen.length === 0) {
     return {
       response: {
         ok: false,
-        error: "imagen_url debe ser la URL exacta de una imagen que YA está en la página (no una URL externa ni inventada)",
+        error: "imagen_url debe ser la URL exacta de una imagen que YA está en el sitio (no una URL externa ni inventada)",
       },
     };
   }
@@ -3365,29 +1361,36 @@ async function toolEditarImagen(
   );
   const nuevaUrl = uploaded.url;
 
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-
-  // Swap every occurrence of the exact source URL for the new asset URL over
-  // the current (clean) ACTIVE document — home or the active subpage, per
-  // session.page — then run the shared persist pipeline.
-  const swapped = (activeHtml(row.data, session.page) ?? "").split(imagenUrl).join(nuevaUrl);
-  const persisted = await persistHtmlChange(
-    session,
-    deps,
-    swapped,
-    `Imagen editada: ${instruccion.slice(0, 60)}`,
-  );
-  if (!persisted.ok) {
-    return falloAlGuardar(persisted);
+  // Cada fichero donde estaba, por el camino de guardado de los ficheros. Se
+  // relee la fila en cada uno: el guardado anterior la acaba de cambiar.
+  const cambiados: { ruta: string; html: string; page: string | null; versionPrevia: string | null }[] = [];
+  for (const ruta of conLaImagen) {
+    const row = await deps.loadProject(session.projectId, session.userId);
+    if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+    const antes = leerFichero(row.data, ruta);
+    if (antes === null) continue;
+    const guardado = await guardarFichero(session, deps, row.data, ruta, antes.split(imagenUrl).join(nuevaUrl), {
+      crea: false,
+      etiqueta: `Imagen editada: ${instruccion.slice(0, 60)}`,
+    });
+    if (!guardado.ok) return { response: { ok: false, error: guardado.error } };
+    cambiados.push({ ruta, html: guardado.html, page: guardado.page, versionPrevia: guardado.versionPrevia });
   }
+  // El lienzo pinta UNA página por evento: la que el dueño tiene abierta si
+  // cambió, y si no la primera.
+  const pintada = cambiados.find((c) => c.page === session.page) ?? cambiados[0];
 
   return {
-    response: { ok: true, nueva_url: nuevaUrl },
+    response: {
+      ok: true,
+      nueva_url: nuevaUrl,
+      // Qué ficheros cambiaron: lo que Len tenía leído de ellos ya no vale.
+      ficheros: cambiados.map((c) => rutaRelativa(c.ruta)),
+    },
     action: { tool: "editar_imagen", ok: true, summary: instruccion.slice(0, 60) },
-    updatedHtml: persisted.finalHtml,
-    page: session.page,
-    versionPrevia: persisted.versionPrevia,
+    ...(pintada
+      ? { updatedHtml: pintada.html, page: pintada.page, versionPrevia: pintada.versionPrevia }
+      : {}),
   };
 }
 
@@ -3597,131 +1600,13 @@ async function toolPublicar(
   };
 }
 
-const PREFERENCIA_MIN = 5;
-const PREFERENCIA_MAX = 200;
-// The block always lives at the END of the brief (spec) — the em-dash line is
-// the stable anchor: search/insert against it, never against leading/trailing
-// whitespace, so re-formatting elsewhere in the brief can't break detection.
-const PREFERENCIA_MARKER_LINE = "— Preferencias guardadas por el agente —";
+// ⚰️ `recordar_preferencia` se retiró en H3 (2026-09-25): la memoria son
+// ficheros (/memoria/dueno.md y /memoria/proyecto.md) y su mecánica vive en
+// `lib/agent/preferencias.ts`.
 
-function normalizePreferencia(s: string): string {
-  return s.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-// ⚰️ AQUÍ VIVÍAN `toolGuardarDatoDelNegocio` y `toolRecordarDelNegocio`.
-// Retiradas el 2026-08-31 con el perfil de negocio (ver la lápida de
-// `catalog.ts`). Copiaban a otra tabla lo que el usuario acababa de decir, y
-// eso creaba dos verdades para el mismo dato.
-//
-// `recordar_preferencia`, aquí abajo, NO es su hermana: escribe en
-// `users.agentMemory` y `projects.userBrief` — cómo quiere el usuario que le
-// hablen, que no está escrito en ninguna página y por eso sí necesita un sitio.
-
-// recordar_preferencia — the ONLY tool that writes to the project's userBrief
-// (never to data.html). Spec rule (catalog knowledge, not enforced here):
-// only DURABLE user preferences ("always speak informally", "never use
-// yellow") belong here, never a one-off ask for this turn — the model is
-// trusted to make that call; this tool only owns storage mechanics: marker
-// placement, dedup, and the USER_BRIEF_MAX cap.
-async function toolRecordarPreferencia(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  // Collapse embedded newlines — the block is line-based, so a "\n• " inside
-  // the text would inject pseudo-bullets that later dedup/parse as real ones.
-  const preferencia =
-    typeof args.preferencia === "string"
-      ? args.preferencia.trim().replace(/\s*\n+\s*/g, " ")
-      : "";
-  if (preferencia.length < PREFERENCIA_MIN || preferencia.length > PREFERENCIA_MAX) {
-    return {
-      response: {
-        ok: false,
-        error: `preferencia debe tener entre ${PREFERENCIA_MIN} y ${PREFERENCIA_MAX} caracteres`,
-      },
-    };
-  }
-
-  // ALCANCE. Por defecto «siempre» — a la PERSONA, no al proyecto.
-  //
-  // No es un capricho: MEDIDO el 2026-08-22, el usuario dijo «una cosa
-  // importante para TODAS mis páginas…» y el modelo confirmó «aplica a todas
-  // tus páginas de aquí en adelante» mientras lo guardaba en una columna del
-  // proyecto. La promesa que el modelo hace por su cuenta es la global, así
-  // que el default debe ser la global.
-  //
-  // Los dos fallos no son simétricos: una preferencia global que debió ser
-  // local el usuario la poda; una local que debió ser global es justo el bug
-  // que esto cierra — la repite en cada proyecto nuevo y nunca se entera.
-  const alcance = args.alcance === "esta_pagina" ? "esta_pagina" : "siempre";
-  if (alcance === "siempre") {
-    const res = await deps.rememberAboutUser(session.userId, preferencia);
-    if (!res.ok) {
-      return {
-        response: {
-          ok: false,
-          error:
-            res.reason === "llena"
-              ? `tu memoria de preferencias está llena (máx ${AGENT_MEMORY_MAX} caracteres) — dile al usuario que ya guardaste varias y pregúntale cuál quitar antes de añadir otra`
-              : "no se pudo guardar la preferencia",
-        },
-      };
-    }
-    if (res.yaExistia) return { response: { ok: true, ya_existia: true, alcance } };
-    return {
-      response: { ok: true, alcance, nota: "guardado para TODAS sus páginas, no sólo ésta" },
-      action: { tool: "recordar_preferencia", ok: true, summary: preferencia.slice(0, 60) },
-    };
-  }
-
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-
-  const currentBrief = row.userBrief ?? "";
-  const markerIdx = currentBrief.indexOf(PREFERENCIA_MARKER_LINE);
-  const existingBlock = markerIdx >= 0 ? currentBrief.slice(markerIdx) : "";
-
-  // Dedup, case/whitespace-insensitive, one direction only (spec: an EXISTING
-  // line "ya contiene el texto" nuevo). Never the reverse — a longer refinement
-  // of an existing bullet ("Sé formal, excepto con proveedores VIP" over
-  // "Sé formal") must still be saved, not silently dropped as a duplicate.
-  const normalizedNew = normalizePreferencia(preferencia);
-  const yaExistia = existingBlock
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.startsWith("• "))
-    .some((line) => normalizePreferencia(line.slice(2)).includes(normalizedNew));
-  if (yaExistia) {
-    return { response: { ok: true, ya_existia: true } };
-  }
-
-  const trimmedBase = currentBrief.replace(/\s+$/, "");
-  const nextBrief =
-    markerIdx >= 0
-      ? `${trimmedBase}\n• ${preferencia}`
-      : trimmedBase.length > 0
-        ? `${trimmedBase}\n\n${PREFERENCIA_MARKER_LINE}\n• ${preferencia}`
-        : `${PREFERENCIA_MARKER_LINE}\n• ${preferencia}`;
-
-  if (nextBrief.length > USER_BRIEF_MAX) {
-    return {
-      response: {
-        ok: false,
-        error:
-          `el brief del proyecto ya está lleno (máx ${USER_BRIEF_MAX} caracteres) — díselo al usuario y ofrécele guardarla con alcance="siempre", que usa otro espacio`,
-      },
-    };
-  }
-
-  const saved = await deps.setUserBrief(session.projectId, session.userId, nextBrief);
-  if (!saved) return { response: { ok: false, error: "no se pudo guardar la preferencia" } };
-
-  return {
-    response: { ok: true },
-    action: { tool: "recordar_preferencia", ok: true, summary: preferencia.slice(0, 60) },
-  };
-}
+// ⚰️ `guardar_dato`, `editar_dato` y `quitar_dato` se retiraron en H3
+// (2026-09-25): cada almacén es el fichero /datos/<almacen>.json y se edita
+// con Edit/Write (`guardarDatos` en `lib/agent/herramientas-de-ficheros.ts`).
 
 // conectar_datos_vivos — Task 17, the owner-facing volante for "datos vivos":
 // this is the ONLY way a non-technical owner turns the feature on. Everything
@@ -3734,80 +1619,6 @@ async function toolRecordarPreferencia(
 // and ZERO mutation, always, regardless of intent. deps.fetchSheetRows is
 // only ever called with the ALREADY-RESOLVED csvUrl, never the raw
 // sheet_url the model/user supplied.
-// ── Almacenes de datos ─────────────────────────────────────────────────────
-// El import es PEREZOSO a propósito: `lib/page-data/agente.ts` es `server-only`
-// y este fichero tiene que seguir siendo importable desde vitest sin arrastrar
-// la base de datos. Mismo patrón que usa image-bake.
-
-/** Un nombre de almacén y un objeto de datos, saneados. Los tres tools los
-  * necesitan igual, y validarlos por separado en cada uno es donde se olvida. */
-function argsDeAlmacen(args: Record<string, unknown>): {
-  almacen: string;
-  datos: Record<string, unknown>;
-  id: string;
-} {
-  return {
-    almacen: typeof args.almacen === "string" ? args.almacen.trim() : "",
-    datos:
-      args.datos && typeof args.datos === "object" && !Array.isArray(args.datos)
-        ? (args.datos as Record<string, unknown>)
-        : {},
-    id: typeof args.id === "string" ? args.id.trim() : "",
-  };
-}
-
-async function toolGuardarDato(
-  session: AgentSession,
-  _deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const { almacen, datos } = argsDeAlmacen(args);
-  if (!almacen) return { response: { ok: false, error: "almacen es requerido" } };
-
-  const { agregarDato } = await import("@/lib/page-data/agente");
-  const r = await agregarDato({
-    projectId: session.projectId,
-    userId: session.userId,
-    almacen,
-    doc: datos,
-  });
-  return { response: r.ok ? { ok: true, mensaje: r.mensaje } : { ok: false, error: r.error } };
-}
-
-async function toolEditarDato(
-  session: AgentSession,
-  _deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const { almacen, datos, id } = argsDeAlmacen(args);
-  if (!almacen) return { response: { ok: false, error: "almacen es requerido" } };
-  if (!id) return { response: { ok: false, error: "id es requerido" } };
-
-  const { editarDato } = await import("@/lib/page-data/agente");
-  const r = await editarDato({
-    projectId: session.projectId,
-    userId: session.userId,
-    almacen,
-    id,
-    doc: datos,
-  });
-  return { response: r.ok ? { ok: true, mensaje: r.mensaje } : { ok: false, error: r.error } };
-}
-
-async function toolQuitarDato(
-  session: AgentSession,
-  _deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const { almacen, id } = argsDeAlmacen(args);
-  if (!almacen) return { response: { ok: false, error: "almacen es requerido" } };
-  if (!id) return { response: { ok: false, error: "id es requerido" } };
-
-  const { quitarDato } = await import("@/lib/page-data/agente");
-  const r = await quitarDato({ projectId: session.projectId, almacen, id });
-  return { response: r.ok ? { ok: true, mensaje: r.mensaje } : { ok: false, error: r.error } };
-}
-
 async function toolConectarDatosVivos(
   session: AgentSession,
   deps: AgentDeps,
@@ -3901,228 +1712,10 @@ async function toolConectarDatosVivos(
       claves_detectadas: claves,
       nota:
         claves.length > 0
-          ? `Conecté tu Sheet de valores. Detecté estas claves: ${claves.join(", ")}. Ahora dime en qué parte de la página va cada una y cablea cada una con editar_html usando <span data-ol-live="clave">texto de respaldo</span> — la clave debe coincidir EXACTO con la columna A del Sheet.`
+          ? `Conecté tu Sheet de valores. Detecté estas claves: ${claves.join(", ")}. Ahora cablea cada una con Edit, en la parte de la página donde va, usando <span data-ol-live="clave">texto de respaldo</span> — la clave debe coincidir EXACTO con la columna A del Sheet.`
           : 'Conecté tu Sheet, pero no detecté ninguna clave — revisa que la primera columna tenga el nombre de cada dato (p. ej. "precio_taco") y la segunda su valor.',
     },
     action: { tool: "conectar_datos_vivos", ok: true, summary: "valores" },
-  };
-}
-
-const PAGINA_HOME_ALIASES = new Set(["", "principal", "home"]);
-
-/** De lo que escribe el modelo al slug real, o un error que dice qué hay.
- *
- *  Vive aparte porque lo usan DOS herramientas —`trabajar_en_pagina`, que se
- *  muda, y `leer_estado` con `ver_pagina`, que sólo mira— y dos copias de «qué
- *  significa principal» acabarían discrepando. El orden importa y se conserva:
- *  un slug REAL gana al alias, porque nada impide llamar «principal» a una
- *  subpágina. */
-function resolverPagina(
-  data: ProjectData,
-  raw: string,
-): { ok: true; slug: string | null } | { ok: false; error: string } {
-  if (data.pages?.[raw]) return { ok: true, slug: raw };
-  if (PAGINA_HOME_ALIASES.has(raw.toLowerCase())) return { ok: true, slug: null };
-  const disponibles = ["principal", ...Object.keys(data.pages ?? {})];
-  return {
-    ok: false,
-    error: `la página "${raw}" no existe. Páginas disponibles: ${disponibles.join(", ")}.`,
-  };
-}
-
-// F4 Task 3 — trabajar_en_pagina: words-as-selector. This is the ONLY tool
-// that moves session.page mid-conversation; it never writes to the project
-// (no saveProjectData/snapshotVersion call), it only re-points the session at
-// a different document and re-tags it fresh. Re-loads via deps.loadProject
-// rather than trusting any stale row an earlier tool call in this same turn
-// may have read, so a page created moments ago (crear_pagina) is reachable
-// immediately, and validation reflects the REAL current data.pages, not a
-// cached view — same reasoning as leer_estado's re-tag.
-async function toolTrabajarEnPagina(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const raw = typeof args.pagina === "string" ? args.pagina.trim() : "";
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-
-  // Resolution order — a REAL page slug wins over the home alias: a creator
-  // may legally name a subpage "principal" (it isn't reserved), so match
-  // data.pages FIRST (case-sensitive, same convention as the route's
-  // pageSlugRaw) before falling back to "home"/"principal"/"" → home. Only
-  // when no such page exists does "principal" mean the home document.
-  const elegida = resolverPagina(row.data, raw);
-  if (!elegida.ok) return { response: { ok: false, error: elegida.error } };
-  const resolved = elegida.slug;
-
-  session.page = resolved;
-  reetiquetar(session, activeHtml(row.data, resolved) ?? "");
-  const paginaActiva = resolved ?? "principal";
-
-  return {
-    response: {
-      ok: true,
-      pagina_activa: paginaActiva,
-      // EL DOCUMENTO VA DENTRO, porque el contrato dice que va dentro.
-      //
-      // El esquema de esta herramienta le promete al modelo «usa los nuevos
-      // [data-op-id] que trae la respuesta», y el system prompt le dice que
-      // «la respuesta trae el documento fresco de esa página». No lo traía:
-      // se devolvía ok, pagina_activa y una nota que decía «documento
-      // cargado» — cargado en `session`, que el modelo NO VE (el bucle sólo
-      // le pasa `outcome.response`). Así que tras el cambio de página el
-      // modelo editaba con los op-ids de la anterior: o fallaba, o inventaba
-      // targets, y para recuperarse necesitaba una llamada extra que el
-      // contrato no le pedía.
-      //
-      // Mismo nombre de campo que `leer_estado`, y sale más barato que la
-      // vuelta extra: es el mismo payload, sin repetir toda la conversación.
-      documento: session.taggedHtml,
-      nota: "los data-op-id de `documento` son de ESTA página; los de la anterior ya no valen",
-    },
-    // F4-T8 i18n sweep: `paginaActiva` (response.pagina_activa, above) is
-    // model-facing text and correctly stays "principal" — the model reads
-    // it, not the user. But the action card's `summary` IS user-visible and
-    // rendered verbatim with no i18n, so a bare "principal" leaked untranslated
-    // Spanish for a "home" switch. Use "" as an unambiguous home sentinel
-    // (page slugs are always non-empty — see the not-found branch above) so
-    // agent-action-card.tsx can render a localized "Home" label (×10); any
-    // real slug (including one literally named "principal", the shadowing
-    // case pinned in tools.test.ts) still shows verbatim, same as before.
-    action: { tool: "trabajar_en_pagina", ok: true, summary: resolved ?? "" },
-  };
-}
-
-/**
- * El NOMBRE con el que `trabajar_en_pagina` llega a esta página.
- *
- * Casi siempre es el slug, y "principal" para la Home. La vuelta rara: nada
- * impide llamar «principal» a una subpágina, y `resolverPagina` resuelve el
- * slug REAL antes que el alias — así que en ese sitio decir "principal" lleva a
- * la subpágina, no a la Home. Devolver el alias ocupado mandaría al modelo a
- * editar otro documento, y encima creyendo que hizo lo que dijo.
- */
-function nombreDePagina(data: ProjectData, slug: string | null): string {
-  if (slug !== null) return slug;
-  for (const alias of PAGINA_HOME_ALIASES) {
-    if (alias && !data.pages?.[alias]) return alias;
-  }
-  return "principal";
-}
-
-/**
- * BUSCAR UN TEXTO EN TODO EL SITIO.
- *
- * 🔴 EL PROBLEMA, con el caso real de Jesús (2026-08-31): le pidió al Agente
- * arreglar el logo, el Agente lo arregló en la Home y dejó /nosotros igual —
- * porque no la estaba mirando. Las herramientas de mirar que había son de UNA
- * en UNA: `leer_estado op_id=` abre una sección, `ver_pagina` trae otra página
- * ENTERA. Para «cambia el teléfono en todo el sitio» eso son N vueltas del
- * bucle, y cada vuelta reenvía todo el historial acumulado.
- *
- * 🔴 LOS `op_id` SÓLO VIAJAN PARA LA PÁGINA ACTIVA, y esto no es una limitación
- * que se me olvidara quitar. El etiquetado es un contador en orden de
- * documento, así que la MISMA id existe en todas las páginas: si el modelo
- * recibiera «`f` en /nosotros» y llamara a `editar_pagina target="f"` sin
- * mudarse, la edición caería sobre el elemento `f` de la Home. Sería un cambio
- * en el sitio equivocado, aplicado sin error y reportado como éxito — la
- * avería que este repo persigue. Para las demás páginas viaja el fragmento (que
- * es lo que hace falta para saber que hay que ir) y `op_id: null`;
- * `trabajar_en_pagina` ya devuelve el documento con las ids buenas al llegar.
- */
-async function toolBuscarEnPagina(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const texto = typeof args.texto === "string" ? args.texto.trim() : "";
-  const selector = typeof args.selector === "string" ? args.selector.trim() : "";
-  // LAS DOS PUERTAS SON EXCLUYENTES. Con las dos puestas no hay una respuesta
-  // correcta que dar —¿el texto DENTRO del selector, o la union?— y adivinar
-  // seria contestar a una pregunta que el modelo no hizo.
-  if (texto && selector) {
-    return {
-      response: {
-        ok: false,
-        error: 'manda "texto" O "selector", no los dos: son dos preguntas distintas. "texto" busca contenido; "selector" busca estructura.',
-      },
-    };
-  }
-  if (!selector && texto.length < TEXTO_MINIMO) {
-    return {
-      response: {
-        ok: false,
-        error: `"texto" necesita al menos ${TEXTO_MINIMO} caracteres: con menos casa con media página y no dice nada. Si lo que buscas es una FORMA —las tarjetas, los botones—, usa "selector".`,
-      },
-    };
-  }
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-
-  // LA ACTIVA SE BUSCA SOBRE `session.taggedHtml`, re-etiquetado aquí mismo.
-  // Los op_id que se devuelven tienen que ser los que `editar_pagina` va a
-  // resolver después — o sea, los de la sesión, no una segunda numeración
-  // calculada por su cuenta que casaría por casualidad hasta que dejara de
-  // hacerlo.
-  //
-  // I3: y si lo de disco no es lo que Len creía, se DICE. Ver
-  // `refrescarDesdeDisco`.
-  const cambioEnDisco = refrescarDesdeDisco(session, activeHtml(row.data, session.page) ?? "");
-  const activa = nombreDePagina(row.data, session.page);
-
-  const coincidencias: Coincidencia[] = [];
-  let omitidas = 0;
-  const sumar = (r: { coincidencias: Coincidencia[]; omitidas: number }): void => {
-    const sitio = TOPE_COINCIDENCIAS - coincidencias.length;
-    coincidencias.push(...r.coincidencias.slice(0, Math.max(0, sitio)));
-    omitidas += r.omitidas + Math.max(0, r.coincidencias.length - Math.max(0, sitio));
-  };
-
-  if (selector) {
-    const r = buscarPorSelector(session.taggedHtml, selector, { pagina: activa });
-    if ("error" in r) return { response: { ok: false, error: r.error } };
-    sumar(r);
-  } else {
-    sumar(buscarEnDocumento(session.taggedHtml, texto, { pagina: activa }));
-  }
-
-  // La Home (`null`) y todas las subpáginas, saltándose la activa que ya se
-  // buscó arriba. La Home va en la lista porque `data.pages` son las páginas
-  // EXTRA: dejarla fuera es el mismo fallo que ya se midió el 2026-08-26, un
-  // sitio con una página menos de las que tiene.
-  for (const real of [null, ...Object.keys(row.data.pages ?? {})]) {
-    if (real === session.page) continue;
-    const html = activeHtml(row.data, real) ?? "";
-    if (!html) continue;
-    const etiquetado = tagWithOpIds(html).taggedHtml;
-    const pagina = nombreDePagina(row.data, real);
-    const bruto = selector
-      ? buscarPorSelector(etiquetado, selector, { pagina })
-      : buscarEnDocumento(etiquetado, texto, { pagina });
-    // Un selector que no se entiende ya reventó arriba, sobre la página activa.
-    if ("error" in bruto) continue;
-    const r = bruto;
-    // Sin op_id fuera de la activa. Ver la cabecera de esta función.
-    sumar({ ...r, coincidencias: r.coincidencias.map((c) => ({ ...c, op_id: null })) });
-  }
-
-  return {
-    response: {
-      ok: true,
-      ...(selector ? { selector } : { texto }),
-      pagina_activa: activa,
-      ...(cambioEnDisco ? { cambio_en_disco: cambioEnDisco } : {}),
-      coincidencias,
-      total: coincidencias.length,
-      ...(omitidas > 0 ? { omitidas } : {}),
-      nota:
-        (selector ? "Buscaste por ESTRUCTURA: cada coincidencia es un elemento que casa con el selector, y el fragmento es su texto (o su etiqueta con sus clases si no tiene). " : "") +
-        `Los op_id son de "${activa}", la página activa, y sirven para editar ya. ` +
-        "En las demás páginas op_id viene vacío: ve con trabajar_en_pagina y su respuesta te trae el documento con las ids buenas. " +
-        'donde="cabecera" se arregla con editar_html target="head" y donde="script" con editar_runtime. ' +
-        "No se mira dentro de <style>: el CSS de la plantilla no se edita por op_id.",
-    },
   };
 }
 
@@ -4163,7 +1756,6 @@ const PREGUNTA_MAX = 600;
 
 /** Ocho pasos son ya más de los que caben en los topes del turno; declarar
  *  veinte es escribir un plan que nadie va a poder terminar. */
-const MAX_TAREAS = 8;
 const TAREA_MAX = 120;
 
 /** Lecturas de internet por turno. Cada una son hasta 3 URLs, así que el techo
@@ -4228,110 +1820,44 @@ async function toolLeerDeInternet(
 }
 
 /**
- * DECLARAR EL TRABAJO, para poder contrastarlo después.
- *
- * 🔴 QUÉ PROBLEMA RESUELVE. Un turno de varios pasos —«cámbiame el titular, pon
- * el teléfono nuevo y publícala»— acababa con el modelo enumerando las tres
- * cosas como hechas, y que las tres se hicieran no lo comprobaba nadie: bastaba
- * con que UNA llamada saliera bien para que el texto final hablara en plural.
- *
- * Declarar no hace nada, y ése es el punto: la lista sólo sirve para que al
- * cerrar el bucle pueda comparar lo declarado con lo que se puede DEMOSTRAR —
- * una llamada que movió bytes o escribió en la base. Ver `tareasSinEvidencia`.
+ * TODOWRITE (H2, 2026-09-25): la lista de Claude Code, con su respuesta literal.
+ * La EVIDENCIA de cada «completed» la pone el bucle, que es quien ve lo medido
+ * (`lib/agent/lista-de-tareas.ts`), y la dice en el mensaje hermano, no aquí.
+ * ⚰️ Sustituye a `declarar_tareas` (máximo 8 tareas, estados en español y
+ * `comprobar`): Claude Code no pone máximo ni ese campo.
  */
-async function toolDeclararTareas(
-  _session: AgentSession,
-  _deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  // 🔴 CON ESTADO desde el 2026-09-22 (H02), como la lista de Claude Code: cada
-  // tarea es `{ tarea, estado?, comprobar? }` y el modelo la vuelve a mandar
-  // entera según avanza. Una frase suelta sigue valiendo —es una tarea sin
-  // estado—: el historial y los hábitos del modelo traen listas de frases, y
-  // rechazarlas sería castigarle por algo que ayer era la forma correcta.
-  const crudas = Array.isArray(args.tareas) ? args.tareas : [];
-  const ESTADOS = new Set(["pendiente", "en_curso", "hecha"]);
-  const tareas: TareaDeclarada[] = crudas
-    .map((t): TareaDeclarada | null => {
-      if (typeof t === "string") return { texto: t.trim().slice(0, TAREA_MAX) };
-      if (!t || typeof t !== "object") return null;
-      const o = t as { tarea?: unknown; estado?: unknown; comprobar?: unknown };
-      if (typeof o.tarea !== "string") return null;
-      return {
-        texto: o.tarea.trim().slice(0, TAREA_MAX),
-        ...(typeof o.estado === "string" && ESTADOS.has(o.estado)
-          ? { estado: o.estado as TareaDeclarada["estado"] }
-          : {}),
-        ...(o.comprobar === true ? { comprobar: true } : {}),
-      };
-    })
-    .filter((t): t is TareaDeclarada => t !== null && t.texto.length > 0)
-    .slice(0, MAX_TAREAS);
-  if (tareas.length === 0) {
-    return {
-      response: {
-        ok: false,
-        error: '"tareas" es la lista de lo que vas a hacer, en orden, y vino vacía.',
-      },
-    };
-  }
-  return {
-    response: {
-      ok: true,
-      // La lista como QUEDA la escribe el bucle, que es quien sabe lo medido
-      // (`lib/agent/lista-de-tareas.ts`); esto es lo que mandó el modelo.
-      tareas: tareas.map((t) => t.texto),
-      // Se le dice CÓMO se va a comprobar. Un checklist cuyo criterio el modelo
-      // no conoce es un examen sorpresa, y aquí el criterio no es secreto.
-      nota:
-        `Anotadas ${tareas.length}. Llama otra vez a declarar_tareas con la lista entera según avances: en_curso la que empiezas (una a la vez) y hecha la que terminas. ` +
-        "Una «hecha» sólo se acepta si mientras estaba en curso alguna llamada cambió algo de verdad —o, si es de comprobar, leyó la página—; las que no, te las digo por su nombre. Declarar no hace nada: ahora hazlas.",
-    },
-    tareas,
-  };
+function toolTodoWrite(args: Record<string, unknown>): ToolOutcome {
+  const r = leerTodos(args);
+  if (!r.ok) return { response: { ok: false, error: r.error, tool_result: r.error } };
+  return { response: { ok: true, tool_result: RESULTADO_TODO_WRITE }, tareas: r.tareas };
 }
-
 /**
- * DESHACER LO ÚLTIMO QUE HIZO.
+ * DESHACER LO DE LEN en una página.
  *
- * Los snapshots ya existían —`createVersion` estampa uno en cada escritura del
- * documento, y el panel de Versiones los restaura— pero el Agente no podía
- * llegar a ellos: «deshaz eso» sólo se podía cumplir volviendo a editar hacia
- * atrás a mano, o sea re-escribiendo la página y esperando acertar.
+ * 🔴 H06 · SE DESHACE LO DE LEN, NO LO ÚLTIMO QUE HAYA. Restaurar la versión
+ * anterior a ciegas deshacía lo último guardado FUERA DE QUIEN FUERA (C11 y
+ * C11b de la auditoría del 2026-09-22). La vara es Claude Code, que no descarta
+ * lo que no escribió: se invierte el cambio de Len bloque a bloque sobre el
+ * documento de AHORA (`deshacerSobreLoActual`). Si el dueño tocó LO MISMO, no
+ * hay forma correcta de elegir por él: no se toca nada y el modelo le pregunta.
  *
- * 🔴 SE RESTAURA LA VERSIÓN ANTERIOR A LA ÚLTIMA, no la última. La última ES el
- * estado actual: cada escritura estampa su snapshot DESPUÉS de guardar, así que
- * restaurar la más reciente no deshace nada y le diría al usuario que se
- * deshizo. Es la diferencia entre una herramienta que funciona y una que miente
- * en el 100% de las llamadas.
- *
- * Y sólo dentro del ÁMBITO de la página activa: los snapshots están separados
- * por página (`page = null` es la Home), así que deshacer en /menu no puede
- * pisar la portada.
+ * Len 2.0: la página sale de `file_path`, o de lo último que Len escribió en
+ * este turno, o de la que el dueño tiene abierta. Ya no devuelve un documento
+ * con ids: lo que Len tenía leído de ese fichero deja de valer, y el propio
+ * Edit se lo dirá si intenta editarlo sin releer.
  */
 async function toolRevertirUltimoCambio(
   session: AgentSession,
   deps: AgentDeps,
+  args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
-  const versiones = await deps.listVersions(session.projectId, session.userId, session.page);
+  const inicial = await deps.loadProject(session.projectId, session.userId);
+  if (!inicial) return { response: { ok: false, error: "proyecto no encontrado" } };
+  const pedida = paginaPedida(session, inicial.data, args.file_path, { preferirLoEscrito: true });
+  if (!pedida.ok) return { response: { ok: false, error: pedida.error } };
+  const { page, ruta } = pedida;
+  const versiones = await deps.listVersions(session.projectId, session.userId, page);
 
-  // 🔴 H06 · SE DESHACE LO DE LEN, NO LO ÚLTIMO QUE HAYA.
-  //
-  // Restaurar `versiones[1]` a ciegas deshacía lo último guardado FUERA DE
-  // QUIEN FUERA. El editor sólo guarda versión de una edición de contenido si
-  // pasaron cinco minutos desde la anterior, así que había dos caminos, los dos
-  // malos: con el dueño editando poco después de Len, su texto desaparecía de la
-  // página viva; pasados cinco minutos, se deshacía SU edición y se conservaba
-  // la de Len, contestando `revertido_a: <etiqueta de Len>` (C11 y C11b de la
-  // auditoría del 2026-09-22).
-  //
-  // La vara es Claude Code, que no descarta lo que no escribió: deshace SU
-  // cambio sobre el contenido de ahora. Aquí eso es exacto — la última
-  // escritura de Len es la versión más nueva que escribió el Agente, y la de
-  // debajo es su «antes» — así que su cambio se invierte bloque a bloque sobre
-  // el documento actual (`deshacerSobreLoActual`). Si el dueño tocó LO MISMO,
-  // no hay forma correcta de elegir por él: no se toca nada y el modelo le
-  // pregunta.
   const iLen = ultimaEscrituraDeLen(versiones);
   const delLenV = iLen >= 0 ? versiones[iLen] : undefined;
   const antesV = iLen >= 0 ? versiones[iLen + 1] : undefined;
@@ -4341,8 +1867,8 @@ async function toolRevertirUltimoCambio(
       deps.versionHtml(session.projectId, session.userId, delLenV.id),
       deps.versionHtml(session.projectId, session.userId, antesV.id),
     ]);
-    const enDisco = row ? activeHtml(row.data, session.page) : null;
-    if (enDisco !== null && delLen !== null && antes !== null && stripOpIds(enDisco) !== stripOpIds(delLen)) {
+    const enDisco = row ? activeHtml(row.data, page) : null;
+    if (row && enDisco !== null && delLen !== null && antes !== null && stripOpIds(enDisco) !== stripOpIds(delLen)) {
       const r = deshacerSobreLoActual({ antes, delLen, actual: stripOpIds(enDisco) });
       if (!r.ok) {
         return {
@@ -4355,19 +1881,21 @@ async function toolRevertirUltimoCambio(
           },
         };
       }
-      const persisted = await persistHtmlChange(session, deps, r.html, `Agente: deshacer «${delLenV.label}»`);
-      if (!persisted.ok) return falloAlGuardar(persisted);
+      const guardado = await guardarFichero(session, deps, row.data, ruta, r.html, {
+        crea: false,
+        etiqueta: `Agente: deshacer «${delLenV.label}»`,
+      });
+      if (!guardado.ok) return { response: { ok: false, error: guardado.error } };
       return {
         response: {
           ok: true,
+          fichero: rutaRelativa(ruta),
           revertido_a: antesV.label,
           conservado: "lo que el dueño editó a mano después de tu cambio sigue en la página",
-          documento: session.taggedHtml,
-          nota: "los data-op-id de `documento` son los de la página de ahora; los de antes ya no valen",
         },
-        updatedHtml: persisted.finalHtml,
-        page: session.page,
-        versionPrevia: persisted.versionPrevia,
+        updatedHtml: guardado.html,
+        page,
+        versionPrevia: guardado.versionPrevia,
         action: { tool: "revertir_ultimo_cambio", ok: true, summary: antesV.label },
       };
     }
@@ -4383,19 +1911,16 @@ async function toolRevertirUltimoCambio(
         ok: false,
         error:
           versiones.length === 0
-            ? "esta página no tiene ningún punto de guardado todavía, así que no hay nada a lo que volver."
-            : "esta página sólo tiene un punto de guardado —el estado actual—, así que no hay ningún cambio anterior que deshacer. Dile al usuario que no hay nada que revertir.",
+            ? `${rutaRelativa(ruta)} no tiene ningún punto de guardado todavía, así que no hay nada a lo que volver.`
+            : `${rutaRelativa(ruta)} sólo tiene un punto de guardado —el estado actual—, así que no hay ningún cambio anterior que deshacer. Dile al usuario que no hay nada que revertir.`,
       },
     };
   }
 
   // Se restaura EN CRUDO —sin pasar por el saneador, que podría tocar un
   // documento viejo—, pero si lo que se deshace es de Len, la restauración queda
-  // como escritura SUYA. Si no, su última versión `chat` seguiría siendo la del
-  // cambio que acaba de deshacer, y el turno siguiente leería la diferencia
-  // como una edición a mano del dueño (`cambios-del-dueno.ts`); un segundo
-  // «deshaz» saldría `se_solapan` y le preguntaría por algo que no hizo. La
-  // misma etiqueta que el deshacer con edición del dueño, de arriba.
+  // como escritura SUYA: si no, el turno siguiente leería la diferencia como
+  // una edición a mano del dueño (`cambios-del-dueno.ts`).
   const restaurado = await deps.restoreVersion(
     session.projectId,
     session.userId,
@@ -4406,25 +1931,27 @@ async function toolRevertirUltimoCambio(
     return { response: { ok: false, error: "no se pudo restaurar ese punto de guardado" } };
   }
 
-  // La sesión se queda mirando lo que HAY, no lo que había. Sin esto, el
-  // siguiente `editar_pagina` del mismo turno aplicaría sus ops contra el
-  // documento que acabamos de tirar: los data-op-id son de otro documento.
-  reetiquetar(session, restaurado.html);
-
   return {
-    response: {
-      ok: true,
-      revertido_a: destino.label,
-      documento: session.taggedHtml,
-      nota: "los data-op-id de `documento` son los de la página restaurada; los de antes ya no valen",
-    },
+    response: { ok: true, fichero: rutaRelativa(ruta), revertido_a: destino.label },
     updatedHtml: restaurado.html,
-    page: session.page,
+    page,
     // Restaurar archiva el estado previo, así que este turno TAMBIÉN se
     // puede deshacer: sin esta línea el botón desaparecía justo aquí.
     versionPrevia: restaurado.versionPrevia,
     action: { tool: "revertir_ultimo_cambio", ok: true, summary: destino.label },
   };
+}
+
+/** ToolSearch: busca entre las diferidas, las deja cargadas para las llamadas
+ *  siguientes y devuelve su esquema en el bloque `<functions>` de Claude Code. */
+function toolSearch(session: AgentSession, args: Record<string, unknown>): ToolOutcome {
+  const query = typeof args.query === "string" ? args.query : "";
+  const max = typeof args.max_results === "number" ? args.max_results : 5;
+  const h = session.herramientas;
+  const encontradas = h ? buscarDiferidas(query, max, h.diferidas) : [];
+  for (const d of encontradas) h?.cargadas.add(String(d.name));
+  const tool_result = encontradas.length > 0 ? bloqueDeFunciones(encontradas) : NINGUNA_DIFERIDA;
+  return { response: { ok: true, tool_result } };
 }
 
 export async function runAgentTool(
@@ -4446,15 +1973,13 @@ export async function runAgentTool(
       await deps.saveProjectData(projectId, userId, aplicar);
     },
   };
-  const marcar = (out: ToolOutcome): ToolOutcome => {
-    // El gemelo se engancha AQUÍ, donde `session.taggedHtml` todavía es el de
-    // la página que esta llamada acaba de escribir. Ver el campo `taggedHtml`.
-    const conGemelo: ToolOutcome =
-      out.updatedHtml && session.taggedHtml ? { ...out, taggedHtml: session.taggedHtml } : out;
-    return escrituras > 0 || conGemelo.updatedHtml
-      ? { ...conGemelo, mutoDurable: true }
-      : conGemelo;
-  };
+  const marcar = (out: ToolOutcome): ToolOutcome =>
+    escrituras > 0 || out.updatedHtml ? { ...out, mutoDurable: true } : out;
+  if (name === NOMBRE_TOOL_SEARCH) return toolSearch(session, args);
+  if (session.herramientas?.diferidas.some((d) => d.name === name) && !session.herramientas.cargadas.has(name)) {
+    const error = errorDeNoCargada(name);
+    return { response: { ok: false, error, tool_result: error } };
+  }
   let out: ToolOutcome;
   try {
     out = marcar(await ejecutarHerramienta(session, vigilado, name, args));
@@ -4475,9 +2000,22 @@ function contarConflictos(session: AgentSession, out: ToolOutcome, escrituras: n
   if (error.includes(CONFLICTO_AL_GUARDAR)) {
     const veces = (session.conflictosAlGuardar ?? 0) + 1;
     session.conflictosAlGuardar = veces;
-    return veces < 2
-      ? out
-      : { ...out, response: { ...out.response, error: conflictoRepetido(veces) }, guardarSinSalida: true };
+    if (veces < 2) return out;
+    const repetido = conflictoRepetido(veces);
+    return {
+      ...out,
+      response: {
+        ...out.response,
+        error: repetido,
+        // Las herramientas de ficheros le hablan al modelo por `tool_result`,
+        // no por `error`: si sólo se corrigiera éste, el modelo seguiría leyendo
+        // «vuelve a intentarlo».
+        ...(typeof out.response[CLAVE_TOOL_RESULT] === "string"
+          ? { [CLAVE_TOOL_RESULT]: `<tool_use_error>${repetido}</tool_use_error>` }
+          : {}),
+      },
+      guardarSinSalida: true,
+    };
   }
   if (escrituras > 0 && out.response.ok !== false) session.conflictosAlGuardar = 0;
   return out;
@@ -4489,66 +2027,44 @@ async function ejecutarHerramienta(
   name: string,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
+  if (esHerramientaDeFicheros(name)) {
+    const out = await {
+      Read: toolRead,
+      Edit: toolEdit,
+      Write: toolWrite,
+      Grep: toolGrep,
+      Glob: toolGlob,
+    }[name](session, deps, args);
+    return out;
+  }
   {
     switch (name) {
-      case "leer_estado":
-        return await toolLeerEstado(session, deps, args);
       case "activar_modulo":
         return await toolActivarModulo(session, deps, args);
-      case "editar_texto":
-        return await toolEditarTexto(session, deps, args);
-      case "editar_atributos":
-        return await toolEditarAtributos(session, deps, args);
-      case "editar_html":
-        return await toolEditarHtml(session, deps, args);
-      case "editar_runtime":
-        return await toolEditarRuntime(session, deps, args);
-      // Ya no se le declara al modelo, pero sigue siendo el motor: las
-      // cuatro de arriba delegan aqui, y las pruebas lo ejercitan directo.
-      case "editar_pagina":
-        return await toolEditarPagina(session, deps, args);
-      case "redisenar_pagina":
-        return await toolRedisenarPagina(session, deps, args);
-      case "cambiar_tema":
-        return await toolCambiarTema(session, deps, args);
-      case "aplicar_tematica":
-        return await toolAplicarTematica(session, deps, args);
       case "preparar_marketing":
         return await toolPrepararMarketing(session, deps, args);
-      case "crear_pagina":
-        return await toolCrearPagina(session, deps, args);
       case "elegir_foto":
         return await toolElegirFoto(session, deps, args);
       case "mirar_pagina":
         return await toolMirarPagina(session, deps, args);
+      case "usar_pagina":
+        return await toolUsarPagina(session, deps, args);
       case "editar_imagen":
         return await toolEditarImagen(session, deps, args);
       case "publicar":
         return await toolPublicar(session, deps, args);
       case "proponer_objetivo":
         return await toolProponerObjetivo(session, deps, args);
-      case "recordar_preferencia":
-        return await toolRecordarPreferencia(session, deps, args);
-      case "trabajar_en_pagina":
-        return await toolTrabajarEnPagina(session, deps, args);
-      case "buscar_en_pagina":
-        return await toolBuscarEnPagina(session, deps, args);
       case "preguntar":
         return await toolPreguntar(session, deps, args);
-      case "declarar_tareas":
-        return await toolDeclararTareas(session, deps, args);
+      case NOMBRE_TODO_WRITE:
+        return toolTodoWrite(args);
       case "leer_de_internet":
         return await toolLeerDeInternet(session, deps, args);
       case "revertir_ultimo_cambio":
-        return await toolRevertirUltimoCambio(session, deps);
+        return await toolRevertirUltimoCambio(session, deps, args);
       case "conectar_datos_vivos":
         return await toolConectarDatosVivos(session, deps, args);
-      case "guardar_dato":
-        return await toolGuardarDato(session, deps, args);
-      case "editar_dato":
-        return await toolEditarDato(session, deps, args);
-      case "quitar_dato":
-        return await toolQuitarDato(session, deps, args);
       default:
         return { response: { ok: false, error: "herramienta desconocida" } };
     }

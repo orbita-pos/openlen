@@ -7,6 +7,22 @@ import { multiploDeSalida } from "@/lib/generation/model-policy";
 
 import { SelectorDeModelo } from "./selector-de-modelo";
 
+// LA POLÍTICA DE HOY tiene UN solo modelo para los dos escritores, y entonces
+// el selector no se pinta (`selector-de-modelo-un-modelo.test.tsx`). Las filas
+// se prueban con DOS, como eran hasta el 2026-09-26: V4 Flash —el barato y sin
+// visión— y V4.1 Flash, con sus tarifas de salida de entonces (0,66 y 1,20).
+vi.mock("@/lib/generation/model-policy", async (importOriginal) => {
+  const real = await importOriginal<typeof import("@/lib/generation/model-policy")>();
+  const salida: Record<string, number> = { reasoner: 0.66, visual_critic: 1.2 };
+  return {
+    ...real,
+    modelIdForRole: (r: string) =>
+      r === "reasoner" ? "accounts/fireworks/models/deepseek-v4-flash-0731" : real.modelIdForRole(r as never),
+    displayNameForRole: (r: string) => (r === "reasoner" ? "DeepSeek V4 Flash" : real.displayNameForRole(r as never)),
+    multiploDeSalida: (r: string, entre: readonly string[]) => salida[r]! / Math.min(...entre.map((e) => salida[e]!)),
+  };
+});
+
 // EL SELECTOR DE MODELO DE CREAR. Dos familias de reglas y las dos importan:
 //
 //  1. LO QUE ENSEÑA. La fila de defecto primero con el «(ahora: …)» vivo, y la

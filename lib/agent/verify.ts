@@ -27,10 +27,9 @@ import { documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 // Las frases de «lo que la medición no pudo comprobar», en un solo sitio. Import
 // de valor y sin coste: `aviso-medido` no importa nada — ni la pasarela, ni las
 // herramientas, ni Chromium.
-import { defectosConDireccion, limitesDeLaMedicion, TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
+import { diagnosticosMedidos, limitesDeLaMedicion, TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
 import type { LlamadaADatos } from "@/lib/page-data/sustituto";
 import {
-  notaSpec,
   leerFallos,
   leerSinCorrer,
   PRELUDIO_CENSO_CLIC,
@@ -177,11 +176,6 @@ export interface VisualVerdict {
    *  sin tiempo dentro del techo—. Quien cuenta regresiones tiene que sacarlas
    *  de «comprobadas»: si no, una rota que no se miró saldría «arreglada». */
   guardadasSinCorrer?: readonly string[];
-  /** Los fallos de la promesa que el modelo declaró ESTE turno. Salen crudos
-   *  —además de redactados en `observaciones`— porque de ellos depende que la
-   *  promesa entre o no en la suite: sólo entra la que NACE EN VERDE, y eso no
-   *  se puede leer de una frase en prosa. Vacío/ausente ⇒ se cumplió. */
-  fallosDelTurno?: readonly FalloSpec[];
   /** Las promesas guardadas que el navegador dice que ya no señalan a nada:
    *  se RETIRAN, no acusan. Son los ids de `PruebaGuardada`. */
   retirarPruebas?: readonly string[];
@@ -244,15 +238,10 @@ export interface VerifyParams {
    * comporta exactamente como antes de que la suite existiera.
    */
   guardadas?: readonly PruebaGuardada[] | null;
-  /** LO QUE EL MODELO PROMETIÓ que su código haría, como programa sobre `ui.*`
-   *  (`prueba_js`). Corre en el mismo programa que las guardadas, delante.
-   *
-   *  Sin esto los ojos sólo responden «¿explotó?». Una ruleta que gira y no
-   *  para nunca carga limpia, sale perfecta en la foto y no lanza un error —
-   *  y está rota. Ausente ⇒ se pulsa a ciegas como hasta ahora.
-   *
-   *  ⚰️ Aquí vivía también `spec`, la promesa del DSL retirado el 2026-09-22. */
-  pruebaJs?: string | null;
+  // ⚰️ Aquí vivía `pruebaJs`, LA PROMESA DEL TURNO (`prueba_js`), que corría
+  // delante de las guardadas. Se fue con `editar_runtime` (Len 2.0: Claude Code
+  // no tiene nada así) y ya no la escribía nadie: la ruta pasaba siempre `null`.
+  // Antes, `spec`, la del DSL retirado el 2026-09-22.
   /**
    * EL PROYECTO AL QUE PERTENECE LA PÁGINA, para medir el MISMO documento que
    * el usuario tiene delante en el lienzo.
@@ -447,9 +436,7 @@ interface HechosDelNavegador {
   /** Lo que la página mandó a su almacén y le contestó el sustituto de /api/d
    *  con las reglas del servidor real. Los rechazos son HECHOS de la página. */
   datos: LlamadaADatos[];
-  fallosSpec: FalloSpec[];
-  /** Las promesas GUARDADAS que dejaron de cumplirse. Aparte de `fallosSpec`
-   *  a propósito: otro testigo, otro peso. */
+  /** Las promesas GUARDADAS que dejaron de cumplirse. */
   regresiones: Regresion[];
   /** Por qué no se comprobó ninguna, si no se comprobaron. Ver
    *  `VisualVerdict.regresionesSinComprobar`. */
@@ -496,7 +483,6 @@ function hechosVacios(): HechosDelNavegador {
     dialogos: [],
     soloPublicada: [],
     datos: [],
-    fallosSpec: [],
     regresiones: [],
     regresionesSinComprobar: null,
     guardadasSinCorrer: [],
@@ -808,15 +794,24 @@ async function runVerify(
   // Migradas también AQUÍ, no sólo en quien llama: la migración corre donde se
   // lee, y un llamador que pase la forma vieja no puede dejarlas sin correr.
   const guardadas = migrarSuite(params.guardadas ?? []).suite;
-  const js = params.pruebaJs?.trim() ? params.pruebaJs.trim() : null;
-  const turnoJs = js;
   // Una guardada en formato viejo que no se pudo convertir no tiene quien la
-  // corra: no se ejecuta, y se dice (ver `migrarSuite`).
+  // corra: no se ejecuta, y se dice (ver `migrarSuite`). Se dice AUNQUE no
+  // corra ningún programa: antes sólo se contaba dentro del resultado del
+  // programa, que sin la promesa del turno puede no existir.
   const corribles = guardadas.filter((g) => g.codigo !== undefined);
-  const entradas = [
-    ...(turnoJs !== null ? [{ codigo: turnoJs, propia: true }] : []),
-    ...corribles.map((g) => ({ codigo: g.codigo as string, propia: false })),
-  ];
+  const entradas = corribles.map((g) => ({ codigo: g.codigo as string, propia: false }));
+  const sinConvertir = guardadas.filter((g) => g.codigo === undefined).map((g) => g.id);
+  const sinCorrerPor = (sinTiempo: readonly string[]) => {
+    hechos.guardadasSinCorrer = [...sinConvertir, ...sinTiempo];
+    if (hechos.guardadasSinCorrer.length > 0) {
+      const motivos = [
+        ...(sinConvertir.length ? [`${sinConvertir.length} en el formato viejo que no se pudo convertir`] : []),
+        ...(sinTiempo.length ? [`${sinTiempo.length} sin tiempo dentro del techo`] : []),
+      ];
+      hechos.regresionesSinComprobar = `${hechos.guardadasSinCorrer.length} promesa(s) guardada(s) de esta página no se ejecutaron: ${motivos.join(", ")}`;
+    }
+  };
+  sinCorrerPor([]);
   const conGuion = codigo && entradas.length > 0;
   const image = await render(paraRenderizar, {
     onErrors: (e) => hechos.gritos.push(...e),
@@ -834,25 +829,16 @@ async function runVerify(
           // precondición del clic muerto no acusa jamás.
           behaviorPrelude: PRELUDIO_CENSO_CLIC,
           onBehaviorResult: (b) => {
-            const reparto = repartirFallos(leerFallos(b), corribles, turnoJs !== null);
-            hechos.fallosSpec = reparto.delTurno;
+            const reparto = repartirFallos(leerFallos(b), corribles, false);
             hechos.regresiones = reparto.regresiones;
             hechos.retirarPruebas = reparto.retirar;
             // LAS QUE NO CORRIERON, con su motivo y por su id. «No se miró» y
             // «se miró y está limpia» no son el mismo dato.
-            const desfase = turnoJs !== null ? 1 : 0;
-            const sinTiempo = leerSinCorrer(b)
-              .map((k) => corribles[k - desfase]?.id)
-              .filter((id): id is string => typeof id === "string");
-            const sinConvertir = guardadas.filter((g) => g.codigo === undefined).map((g) => g.id);
-            hechos.guardadasSinCorrer = [...sinConvertir, ...sinTiempo];
-            if (hechos.guardadasSinCorrer.length > 0) {
-              const motivos = [
-                ...(sinConvertir.length ? [`${sinConvertir.length} en el formato viejo que no se pudo convertir`] : []),
-                ...(sinTiempo.length ? [`${sinTiempo.length} sin tiempo dentro del techo`] : []),
-              ];
-              hechos.regresionesSinComprobar = `${hechos.guardadasSinCorrer.length} promesa(s) guardada(s) de esta página no se ejecutaron: ${motivos.join(", ")}`;
-            }
+            sinCorrerPor(
+              leerSinCorrer(b)
+                .map((k) => corribles[k]?.id)
+                .filter((id): id is string => typeof id === "string"),
+            );
           },
         }
       : codigo
@@ -1174,7 +1160,7 @@ function conOtrasPaginas(
 }
 
 function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict {
-  const { gritos, fallosSpec, desbordaMovil, culpable, culpableAncho, culpableOpId, contrastes } = h;
+  const { gritos, desbordaMovil, culpable, culpableAncho, contrastes } = h;
   // LO QUE EL NAVEGADOR GRITÓ. No pasa por el juicio del crítico visual: una
   // excepción es un HECHO, y encima de los que el ojo no puede ver — la captura
   // de una página cuyo JavaScript murió sale idéntica a la de una sana. MEDIDO
@@ -1227,40 +1213,9 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   //
   // El detector ya existía y ya lo cazaba con el número exacto: sólo no llegaba
   // al Agente. Es fail-open como todo lo demás — sin medidor, sin cambios.
-  // LA PROMESA DEL MODELO, ejecutada — Y EN EL CANAL QUE NO ACUSA.
-  //
-  // 🔴 AQUÍ ESTABA EN `issues` CON `broken = true` (hasta el 2026-09-04). Se
-  // baja a `observaciones` por lo que se MIDIÓ, no por gusto: de los 3 fallos
-  // de `prueba` de la corrida de 16 páginas, CERO eran de la página. Eran un
-  // verbo que nos faltaba (`atributo`, para «el botón deja de estar
-  // deshabilitado») y dos pruebas que pulsaban «enviar» sin rellenar campos
-  // `required`, con lo que el navegador ni disparaba el `submit`. Las tres
-  // páginas funcionaban.
-  //
-  // Un comprobador que acierta 0 de 3 no puede declarar rota la página de
-  // nadie. Y las otras cuatro cosas de esta función —el JavaScript que grita,
-  // el desborde a 390px, el contraste leído del píxel, la imagen rota— sí
-  // pueden: son HECHOS del navegador, no la opinión del mismo modelo que
-  // escribió el código. La diferencia entre unas y otra es quién es el testigo.
-  //
-  // Es exactamente lo que hace el `Edit` de Claude Code, que es de donde sale
-  // la regla: cuando la comprobación no casa, FALLA EN SEGURO —no se aplica y
-  // no acusa a nadie— en vez de ensuciar el marcador. Ver [[la-jaula-abierta-y-el-cartel-puesto]].
-  //
-  // NO SE CALLA, que es la otra mitad. `observaciones` sale por la rama
-  // `observado` del bucle: se le dice al usuario, va al texto del turno y con
-  // él al historial, así que el modelo lo lee en el turno siguiente y el
-  // usuario puede pedir el arreglo. Lo que se retira es la ACUSACIÓN, no el
-  // dato. Y va con `notaSpec`, que está escrita para quien lee una persona
-  // (la orden al modelo, `avisoSpec`, se retiró con el DSL el 2026-09-22).
-  if (fallosSpec.length > 0) {
-    verdict.observaciones = [notaSpec(fallosSpec), ...verdict.observaciones];
-    // eslint-disable-next-line no-console
-    console.warn(
-      `[agent-verify] la prueba del modelo falló (NO cuenta como rotura) — ` +
-        fallosSpec.map((f) => `paso ${f.paso}: ${f.mensaje}`).join(" · "),
-    );
-  }
+  // ⚰️ LA PROMESA DEL MODELO (`prueba_js`) se ejecutaba aquí y bajaba a
+  // `observaciones` sin acusar (un comprobador que acertó 0 de 3 el
+  // 2026-09-04). Se fue con `editar_runtime` en Len 2.0: nadie la escribe.
   // SE DESBORDA A LO ANCHO EN EL TELEFONO. Es el otro hecho que el ojo del
   // critico no puede juzgar: la captura se toma del documento COMPLETO, asi que
   // una pagina que se sale 48px de la pantalla sale entera y bien compuesta en
@@ -1303,7 +1258,7 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   // 2026-09-18, que se veía y se usaba perfecto y no guardaba nada; los ojos
   // le dijeron a Len «esa ruta sólo responde publicada, no es un fallo».
   //
-  // Al modelo ya se lo dijo el aviso tras editar (`defectosConDireccion`); si
+  // Al modelo ya se lo dijo el diagnóstico tras editar (`diagnosticosMedidos`); si
   // llega hasta aquí es que sigue, y ahora se le dice al DUEÑO, con la misma
   // redacción que el resto de `issues`: el hecho con su ruta, y ofreciendo.
   const rechazos = [
@@ -1321,7 +1276,7 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   if (desbordaMovil) {
     verdict.issues = [
       culpable
-        ? `En un teléfono (390px de ancho) la página se sale de la pantalla: el bloque \`${culpable}\`${culpableOpId ? ` (data-op-id \`${culpableOpId}\`)` : ""} llega a ${culpableAncho}px, ${culpableAncho - 390}px más de los que caben. Quien la abra desde el móvil verá una barra de desplazamiento horizontal y contenido cortado por el borde. Dime y lo ajusto.`
+        ? `En un teléfono (390px de ancho) la página se sale de la pantalla: el bloque \`${culpable}\` llega a ${culpableAncho}px, ${culpableAncho - 390}px más de los que caben. Quien la abra desde el móvil verá una barra de desplazamiento horizontal y contenido cortado por el borde. Dime y lo ajusto.`
         : "En un teléfono (390px de ancho) algo de la página se sale de la pantalla: quien la abra desde el móvil verá una barra de desplazamiento horizontal y contenido cortado por el borde. Dime y busco qué es y lo ajusto.",
       ...verdict.issues,
     ];
@@ -1338,11 +1293,11 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
       .map((c) => {
         const donde = c.texto ? `«${c.texto}»` : c.etiqueta ? `<${c.etiqueta}>` : "un texto";
         const colores = c.color && c.background ? ` (${c.color} sobre ${c.background})` : "";
-        // LA DIRECCION, igual que en el aviso del desborde. Sin ella el modelo
-        // tiene el ratio y el texto pero no el nodo, que es justo lo que costo
-        // cuatro rondas oscureciendo el velo equivocado el 2026-08-30.
-        const direccion = c.opId ? ` (data-op-id \`${c.opId}\`)` : "";
-        return `${donde}${direccion}${colores} a ${c.contrast.toFixed(2)}:1`;
+        // ⚰️ Aquí iba la DIRECCIÓN, el `data-op-id` del nodo, para que el modelo
+        // lo encontrara (cuatro rondas oscureciendo el velo equivocado el
+        // 2026-08-30). Len 2.0 (T9): la línea le llega por `<new-diagnostics>`
+        // mientras edita, y esto lo lee el DUEÑO: un id no le dice nada.
+        return `${donde}${colores} a ${c.contrast.toFixed(2)}:1`;
       })
       .join("; ");
     // Misma reescritura y mismo reparto que el desborde: los hechos medidos
@@ -1406,7 +1361,6 @@ function conHechos(verdict: VisualVerdict, h: HechosDelNavegador): VisualVerdict
   if (h.regresiones.length > 0) verdict.regresiones = h.regresiones;
   if (h.regresionesSinComprobar) verdict.regresionesSinComprobar = h.regresionesSinComprobar;
   if (h.guardadasSinCorrer.length > 0) verdict.guardadasSinCorrer = h.guardadasSinCorrer;
-  if (h.fallosSpec.length > 0) verdict.fallosDelTurno = h.fallosSpec;
   if (h.retirarPruebas.length > 0) verdict.retirarPruebas = h.retirarPruebas;
   return verdict;
 }
@@ -1647,9 +1601,9 @@ export async function observarPagina(
     // dijera aquí, esta rama callaría lo que los ojos y el aviso sí dicen —la
     // asimetría de siempre—. Misma frase, de la misma función.
     partes.push(
-      ...defectosConDireccion({ llamadasADatos: m.llamadasADatos })
-        .filter((d) => d.clase === "datos")
-        .map((d) => d.frase),
+      ...diagnosticosMedidos({ llamadasADatos: m.llamadasADatos }, "", "")
+        .filter((d) => d.codigo === "almacen")
+        .map((d) => d.mensaje),
     );
     // El aviso de DATO va delante de lo citado, como en el informe de Claude
     // Code («lines below…»): detrás ya se ha leído. Ver

@@ -9,6 +9,7 @@
 // A runtime (value) import of either would transitively load the native
 // @openlen/ai-gateway / @/lib/html-engine .node bindings, which vite/vitest
 // cannot load — see loop.test.ts's header comment for the same constraint.
+import { recordatorioTodoWrite } from "@/lib/agent/ficheros/todo-write";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
@@ -21,11 +22,15 @@ import { ListaDeTareas } from "@/lib/agent/lista-de-tareas";
 // un `Set`.
 import {
   AvisosDelTurno,
-  defectosConDireccion,
+  diagnosticosMedidos,
   medicionLimpia,
   redactarLimites,
   type MedicionCruda,
 } from "@/lib/agent/aviso-medido";
+// Len 2.0 (T9): los diagnósticos anclados a línea. Puros, como los de arriba.
+import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/lib/agent/diagnosticos";
+import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
+import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -261,7 +266,8 @@ export interface AgentLoopArgs {
    * medido vuelva al MODELO y no sólo al usuario.
    *
    * Se llama tras cada tanda de herramientas que TOCÓ el documento, con el
-   * gemelo etiquetado (donde viven los `data-op-id`), y lo que devuelve viaja
+   * gemelo CON POSICIONES (cada `data-op-id` es la línea y la columna de su
+   * etiqueta en el fichero: `etiquetarConPosiciones`), y lo que devuelve viaja
    * en el mismo mensaje que las respuestas de esas herramientas — no dentro de
    * ellas. Es la forma medida en Claude Code: los
    * diagnósticos nuevos son un mensaje HERMANO del resultado, nunca parte de
@@ -273,31 +279,10 @@ export interface AgentLoopArgs {
    * se comporta exactamente como antes de que esto existiera.
    */
   medirParaElModelo?(taggedHtml: string): Promise<MedicionCruda | null>;
-  /**
-   * LA LÍNEA BASE: el documento con el que ARRANCÓ este turno, etiquetado, y de
-   * qué página es.
-   *
-   * Es la pieza que le faltaba a `medirParaElModelo` para poder decir «NUEVO» y
-   * que fuera verdad. Claude Code mide el fichero ANTES de editarlo, dentro de
-   * la propia herramienta, y luego resta; sin
-   * eso, una página que ya venía rota se lo decía una vez por turno aunque el
-   * modelo no la hubiera tocado.
-   *
-   * 🔴 SE MIDE PEREZOSAMENTE Y SÓLO SI HAY ALGO QUE DECIR. Medirla siempre
-   * costaría un render (2,16 s en caliente) en TODOS los turnos que editan; así
-   * se paga sólo en los que iban a emitir un aviso, que son los raros — sobre
-   * el corpus de 48 páginas, una. Claude Code puede permitirse medirla siempre
-   * porque su presupuesto es 500 ms; el nuestro es un Chromium.
-   *
-   * `page` está para no restar entre páginas distintas: los `data-op-id` son
-   * monótonos POR DOCUMENTO, así que el `eaf` de la Home y el de `/tienda` son
-   * nodos distintos con el mismo nombre. Si el turno editó otra página que la
-   * del arranque, no se resta nada.
-   *
-   * Ausente ⇒ no hay línea base y el aviso sale como antes de que esto
-   * existiera.
-   */
-  lineaBase?: { taggedHtml: string; page: string | null };
+  // ⚰️ Aquí vivía `lineaBase`: el documento con el que arrancó el turno, que
+  // pasaba la ruta, y sólo servía para la página del arranque. Len 2.0 (T9) la
+  // saca de cada escritura (`outcome.htmlPrevio`), así que hay base para todas
+  // las páginas que el turno toca.
   // ⚰️ Aquí vivía `restaurarHtml` (KEEP-BEST): devolver el documento al
   // estado previo cuando el ciclo de arreglo no bajaba el número de
   // problemas. `12f6a11e` retiró ese revert —«el usuario le pidió un cambio
@@ -329,8 +314,10 @@ export interface AgentLoopArgs {
    *  motivo que se le devolvió al modelo. Nunca pasan por `runTool`, así que
    *  sin esto no quedaban en el diario del turno (H12-c). Ausente ⇒ nada. */
   onRechazo?(tool: string, args: Record<string, unknown>, motivo: string): void;
-  maxTurns?: number; // default 6
-  maxToolCalls?: number; // default 10
+  /** OPCIONALES, como el `maxTurns` de un agente de Claude Code: sin ellos, el
+   *  turno no topa vueltas ni llamadas (H1, 2026-09-25). */
+  maxTurns?: number;
+  maxToolCalls?: number;
 
   /**
    * EL OBJETIVO: una CONDICIÓN DE PARADA, no una tarea.
@@ -351,8 +338,8 @@ export interface AgentLoopArgs {
    */
   objetivo?: {
     readonly condicion: string;
-    /** Cuántas vueltas EXTRA puede pedir el objetivo. Se suma al presupuesto
-     *  normal del turno y nunca puede pasarse de `ABSOLUTE_MAX_TURNS`. */
+    /** Cuántas vueltas EXTRA puede pedir el objetivo: SU tope, el único que
+     *  queda en el turno (los generales se retiraron en H1, 2026-09-25). */
     readonly maxVueltas: number;
     /**
      * ¿SIGUE PUESTO? Se consulta ANTES de gastar el juez, en cada cierre.
@@ -392,6 +379,12 @@ export interface ResultadoObjetivo {
 
 export interface AgentLoopResult {
   finalText: string;
+  /** H4 · LO QUE VIO EL MODELO EN ESTE TURNO: las llamadas con sus argumentos,
+   *  las respuestas enteras, los avisos del sistema y el texto final. La ruta lo
+   *  guarda (`lib/agent/transcripcion.ts`) y el historial del turno siguiente
+   *  sale de ahí, como la transcripción de Claude Code. El bucle trabaja sobre
+   *  una COPIA de `messages`, así que tiene que devolverlo. */
+  transcripcion?: Message[];
   /** `thinkingTokens` es un SUBCONJUNTO de `outputTokens`, no un extra: lo
    *  afirma el validador del proveedor, que descarta la respuesta si
    *  `thinkingTokens > outputTokens` (`lib/ai/fireworks-client.ts`). Se
@@ -435,10 +428,6 @@ export interface AgentLoopResult {
    *  único rastro era `terminal-error turn — 0 credits`. Distinto de
    *  `topeAlcanzado`, que es quedarse sin cuerda, no reventar. */
   errorCode: AgentErrorCode | null;
-  /** Documentos caducados que la poda retiró del historial en este turno.
-   *  La poda es la única etapa que quita bytes del turno y era la única sin
-   *  ninguna traza: el contador se calculaba y el llamador lo descartaba. */
-  documentosPodados: number;
   /** Cómo acabó el objetivo. Ausente si el turno no llevaba ninguno.
    *
    *  Va en el resultado y NO en un evento nuevo a propósito: esta rebanada es
@@ -462,7 +451,7 @@ export interface AgentLoopResult {
    *  o `null` si no hubo reclamo. Para poder comprobar QUÉ se le dijo al
    *  modelo, no sólo que se le dijo algo. */
   tareasReclamadas: readonly string[] | null;
-  /** La última lista que el modelo declaró con `declarar_tareas`, en su orden;
+  /** La última lista que el modelo declaró con TodoWrite, en su orden;
    *  vacía si no declaró ninguna. */
   tareasDeclaradas: readonly string[];
   /** Las llamadas que el bucle NO ejecutó porque las paró una guarda —nombre
@@ -483,130 +472,24 @@ export interface AgentLoopResult {
   sinCobro?: "rechazos" | "conflicto";
 }
 
-/** Lo que queda en el historial en lugar del documento retirado. Dice POR QUÉ
- *  se fue y qué hacer, porque un hueco sin explicación invita al modelo a
- *  inventarse los ids que ya no ve. */
-export const DOCUMENTO_PODADO =
-  "[documento retirado del historial: sus data-op-id ya no son válidos porque hubo ediciones después. Si necesitas editar, pide leer_estado con incluir_documento=true para obtener el documento fresco.]";
+// ⚰️ LA PODA DE DOCUMENTOS VIEJOS (`podarDocumentosViejos`, `FIN_DEL_DOCUMENTO`,
+// `DOCUMENTO_PODADO`): retiraba del historial los documentos con `data-op-id`
+// caducados —el del contexto y los de `leer_estado incluir_documento`—. Len 2.0
+// no recibe ninguno: lee ficheros con Read, sin ids que caduquen
+// (plans/len-2/ficheros-plan.md, T8c).
 
-/**
- * El corte entre el documento y todo lo demás dentro del bloque de contexto.
- *
- * Es texto que el modelo LEE —dice la verdad sobre lo que acaba y lo que
- * empieza— y a la vez el ancla que permite retirar el documento sin adivinar
- * dónde termina. Un marcador invisible sería más limpio de mirar y menos
- * honesto: aquí no hay nada escondido en el prompt.
- *
- * Vive AQUÍ y no en `context.ts`, que es quien lo escribe, por la regla de la
- * cabecera de este fichero: `loop.ts` no puede importar valores de módulos que
- * arrastren los bindings nativos, y `context.ts` sí los arrastra por su cadena.
- * Así que el bucle es el dueño del par —el marcador y lo que va en su lugar— y
- * el contexto lo importa de aquí. La flecha va en el único sentido que puede.
- */
-export const FIN_DEL_DOCUMENTO = "\n\n=== FIN DEL DOCUMENTO ===\n\n";
-
-/**
- * PODA LOS DOCUMENTOS VIEJOS DEL HISTORIAL — deja SÓLO el último.
- *
- * El bucle reenvía todo lo acumulado en cada vuelta, y `editar_pagina` NO
- * devuelve el documento: el modelo tiene que volver a pedirlo con
- * `leer_estado incluir_documento=true`. La propia instrucción de corrección
- * visual se lo ordena. Así que un turno que edita y luego recibe crítica lleva
- * DOS documentos completos en contexto, y en una página mediana eso son ~22k
- * tokens cada uno.
- *
- * El viejo no es sólo caro, es ENGAÑOSO: tras una edición los data-op-id
- * cambian —lo dice la ficha de la propia herramienta— así que el documento
- * anterior describe un mapa que ya no existe. Retirarlo sale más barato Y más
- * correcto.
- *
- * Medido el 2026-08-28 sobre las páginas reales: el prefijo fijo (prompt de
- * sistema + herramientas) son 13.036 tokens que se repiten en cada vuelta; el
- * documento va de 17k a 308k. El documento es lo que domina, y duplicarlo es
- * lo único de todo esto que no compra nada.
- *
- * Pura a propósito: muta los objetos que recibe y no devuelve nada, igual que
- * el resto del bucle, pero no toca red ni estado — se puede comprobar sola.
- */
-export function podarDocumentosViejos(messages: Message[]): number {
-  // POR RANURA, y ésa es la diferencia con «deja sólo el último de todos».
-  //
-  // El documento ACTIVO —el bloque de contexto y cada `response.documento`— es
-  // una sola ranura: todos describen la misma página con data-op-id, así que
-  // el último manda y los anteriores son mapas caducados.
-  //
-  // 🔴 PERO `pagina_vista.documento` NO ES ESA RANURA. Es «mirar otra página
-  // sin mudarse», y viaja SIN data-op-id a propósito (es para leer, no para
-  // editar). Meterlo en el mismo saco borraría la página B en cuanto llegara un
-  // documento de la página A — dentro del MISMO turno, y justo después de que
-  // el modelo pidiera verla. Así que cada página mirada tiene su propia ranura
-  // y compite sólo consigo misma.
-  const vistas = new Set<string>();
-  const ACTIVO = "\u0000activo";
-  let podados = 0;
-  // De atrás hacia delante: el PRIMERO que encuentra de cada ranura es el
-  // vigente y se queda.
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const mensaje = messages[i];
-    const respuestas = mensaje.functionResponses;
-    if (respuestas) {
-      for (let j = respuestas.length - 1; j >= 0; j--) {
-        const r = respuestas[j].response;
-        const vista = r.pagina_vista;
-        if (vista && typeof vista === "object") {
-          const v = vista as { pagina?: unknown; documento?: unknown };
-          if (typeof v.documento === "string") {
-            const ranura = `mirada:${typeof v.pagina === "string" ? v.pagina : ""}`;
-            if (vistas.has(ranura)) {
-              v.documento = DOCUMENTO_PODADO;
-              podados += 1;
-            } else {
-              vistas.add(ranura);
-            }
-          }
-        }
-        if (typeof r.documento === "string") {
-          if (vistas.has(ACTIVO)) {
-            r.documento = DOCUMENTO_PODADO;
-            podados += 1;
-          } else {
-            vistas.add(ACTIVO);
-          }
-        }
-      }
-    }
-    // EL BLOQUE DE CONTEXTO, que es el documento MÁS VIEJO de todos y el que
-    // más pesa. Se construye una vez al abrir el turno y se reenviaba entero en
-    // cada vuelta del bucle — con sus data-op-id ya caducados en cuanto el
-    // modelo edita algo. Es la misma ranura que `response.documento`: la página
-    // activa, con ids.
-    if (typeof mensaje.content === "string") {
-      const corte = mensaje.content.indexOf(FIN_DEL_DOCUMENTO);
-      if (corte !== -1) {
-        if (vistas.has(ACTIVO)) {
-          mensaje.content = DOCUMENTO_PODADO + mensaje.content.slice(corte);
-          podados += 1;
-        } else {
-          vistas.add(ACTIVO);
-        }
-      }
-    }
-  }
-  return podados;
-}
-
-// 🔴 LOS TOPES, PARA TODOS IGUAL — decisión de Jesús, 2026-09-15:
-// «no importa que se gaste, el chiste es que haga bien el trabajo».
-//
-// Estuvieron un rato en 12/20 sólo para `pro` y 6/10 para `free`, razonando que
-// el plan gratuito no tiene recarga automática y un turno largo se lleva medio
-// saldo. La puerta se retira: el trabajo a medias es peor que el gasto. Un turno
-// que se corta deja la página rota Y cuesta el turno igual.
-//
-// Los ABSOLUTOS suben con ellos y no por simetría: `VUELTAS_POR_DIRECCION` topa
-// contra `ABSOLUTE_MAX_TURNS`, así que con los dos en 12 corregir el rumbo a
-// mitad de faena habría dejado de comprar una sola vuelta — la palanca seguiría
-// ahí sin mover nada, que es el defecto que este fichero ya documenta dos veces.
+// ⚰️ LOS TOPES DEL TURNO (12 vueltas de trabajo / 20 llamadas, y dos absolutos
+// de 16 y 26) se retiraron el 2026-09-25, H1 de `plans/len-2/hipotesis/`. Su
+// historia: 6/10 para `free` y 12/20 para `pro`; «para todos igual» por
+// decisión de Jesús el 2026-09-15 («no importa que se gaste, el chiste es que
+// haga bien el trabajo»); con Len 2.0 se probó 24/40 y se volvió a 12/20 porque
+// el turno llegaba antes al RELOJ de Len-Bench (240 s) que al tope. Ahora, como
+// el bucle principal de Claude Code: no hay tope de pasos. El turno cierra
+// cuando el modelo deja de llamar herramientas, cuando el dueño pulsa Detener
+// o cuando se llena el contexto; el dinero se topa por MES (`CREDITS_BY_PLAN`),
+// y un cuelgue lo corta el reloj de SILENCIO de la ruta, no uno de pared.
+// `maxTurns`/`maxToolCalls` quedan OPCIONALES en `AgentLoopArgs`, como el
+// `maxTurns` de la definición de un agente de Claude Code.
 /**
  * CUÁNTAS PÁGINAS MIRAN LOS OJOS EN UN TURNO.
  *
@@ -617,9 +500,6 @@ export function podarDocumentosViejos(messages: Message[]): number {
  * tope no se calla: la tarjeta lo dice con «4 de 6 páginas».
  */
 const TOPE_PAGINAS_MIRADAS = 4;
-const DEFAULT_MAX_TURNS = 12;
-const DEFAULT_MAX_TOOL_CALLS = 20;
-
 // No-progress guard: the SAME tool call (name + identical args) that has already
 // returned ok:false this many times is refused the next time instead of run
 // again — the model gets a nudge to change approach rather than looping on a
@@ -627,43 +507,13 @@ const DEFAULT_MAX_TOOL_CALLS = 20;
 // repeats are guarded; a call that succeeds is never blocked.
 const FAIL_REPEAT_LIMIT = 2;
 
-// 🔴 Y EL OTRO BUCLE, EL QUE SALE BIEN — medido el 2026-09-11.
-//
-// La guarda de arriba dice en su última línea «a call that succeeds is never
-// blocked», y ahí estaba el hueco: `carrito-se-construye` agota el tope
-// llamando a `editar_runtime` una y otra vez con el MISMO resumen, y cada
-// llamada devuelve ok. Como ninguna falla, `failedSignatures` no se toca nunca
-// y el modelo da vueltas hasta que se le acaba el presupuesto del usuario.
-//
-// Pasa con LOS DOS modelos —Pro repitió 5 veces el mismo `editar_runtime` en la
-// misma corrida— así que no es del modelo: es nuestro. Y no se puede cazar por
-// firma de argumentos como la de arriba, porque el modelo retoca el código en
-// cada vuelta: lo que se repite idéntico es su propio RESUMEN, o sea su
-// intención declarada. Escribir dos veces «el carrito con total y memoria» es
-// la misma tarea hecha dos veces, salga ok o no.
-//
-// 🔴 EL UMBRAL SE MIDE CONTRA EL PRESUPUESTO QUE PROTEGE, NO CONTRA EL GUSTO.
-//
-// Entró en 3 —refusar la CUARTA— razonando que reescribir algo dos o tres veces
-// puede ser trabajo legítimo. Suena bien y era INALCANZABLE: con `maxTurns` en 6,
-// la corrida del 2026-09-11 agotó el tope con `editar_runtime` llamado
-// exactamente 3 veces (más un `leer_estado` y dos `editar_html`). La guarda
-// nunca llegó a dispararse: el presupuesto se acaba antes que el umbral, así que
-// era una puerta que no existe — la misma forma que este repositorio ya
-// documenta en `seven-palettes` y en las cuatro operaciones huérfanas.
-//
-// En 2 se refusa la TERCERA, que cae DENTRO del presupuesto y por tanto puede
-// actuar. No se corta el turno: se le devuelve el mismo empujón que la otra
-// guarda —cambia de enfoque o dile al usuario qué pudiste—, y el brazo de
-// control de su prueba comprueba que resúmenes DISTINTOS siguen pasando, que es
-// el riesgo real de bajarlo.
-const SAME_INTENT_LIMIT = 2;
-
-/** Las que reescriben un artefacto ENTERO, donde la segunda llamada del turno
- *  descarta a la primera. Para éstas la intención es la herramienta y punto: su
- *  resumen es prosa, y la prosa del modelo no se repite aunque el trabajo sí.
- *  Ver la nota larga donde se calcula `intencion`. */
-const REESCRIBEN_TODO = new Set<string>(["editar_runtime"]);
+// ⚰️ «LA MISMA INTENCIÓN» (`SAME_INTENT_LIMIT`, `REESCRIBEN_TODO`): contaba las
+// llamadas por `herramienta + resumen` para cortar el `editar_runtime` que
+// reescribía el script entero una y otra vez (`carrito-se-construye`, medido el
+// 2026-09-11). Len 2.0 no tiene `editar_runtime` —el script se edita con Edit,
+// por trozos— y ninguna herramienta lleva ya `resumen`: la guarda no disparaba
+// nunca. Claude Code no tiene nada así. Queda la de arriba, la de la llamada
+// idéntica que ya falló.
 
 // Injected as a final user turn when a cap is hit and a closeOut stream exists —
 // asks the (tools-disabled) model to close gracefully in the user's language.
@@ -717,13 +567,22 @@ function continuaLoCortado(parcial: string): string {
 }
 
 /**
- * UNA sola continuación por turno, y es una decisión de GASTO, no una constante
- * de estilo. Claude Code corre en un terminal que el usuario está mirando, con
- * su suscripción; Len corre sobre créditos de prepago y sin nadie delante. Con
- * 32k de salida por vuelta, un turno que necesita más de dos no es una edición:
- * es algo desbocado, y seguir alimentándolo es vaciarle el saldo a alguien.
+ * SE CORTÓ PENSANDO, SIN DECIR NADA. El modelo agotó la salida razonando y no
+ * llegó a escribir ni texto ni llamadas: no hay parcial que devolverle. Como
+ * Claude Code, que tiene un caso aparte para la respuesta que sólo pensó, se le
+ * dice que no salió nada y que siga en pasos más pequeños. El razonamiento no se
+ * le devuelve: Fireworks no lo acepta de vuelta como entrada.
  */
-const MAX_CONTINUACIONES = 1;
+const SE_CORTO_PENSANDO =
+  "SISTEMA (el usuario NO escribió esto): tu respuesta anterior se cortó porque agotaste el espacio de salida pensando, y no llegó a salir nada: ni texto ni llamadas. Sigue desde donde ibas, sin disculparte ni resumir, y divide lo que queda en pasos más pequeños: haz ya la siguiente llamada o contesta.";
+
+/**
+ * HASTA TRES continuaciones por turno, como Claude Code. Era UNA, por gasto
+ * (créditos de prepago y nadie delante); el 2026-09-27 Len-Bench enseñó cuatro
+ * turnos muertos por un solo paso desbocado, y Jesús pidió el tope de Claude
+ * Code. Sigue habiendo techo: un modelo que se corta siempre no vacía el saldo.
+ */
+const MAX_CONTINUACIONES = 3;
 
 /**
  * H04 · EL CIERRE, REDACTADO CON LO QUE VIERON LOS OJOS DELANTE.
@@ -742,7 +601,7 @@ const MAX_CONTINUACIONES = 1;
 const CON_LO_QUE_SE_MIDIO =
   "SISTEMA (el usuario NO escribió esto): tu respuesta de arriba ya le llegó al usuario, y DESPUÉS se miró la página que dejaste. Esto es lo que se MIDIÓ:\n";
 const CIERRE_CON_LO_MEDIDO =
-  "\n\nEscríbele AHORA, en su idioma y en dos o tres frases, lo que cambia respecto a lo que le dijiste: qué problema tiene la página, contado con estos hechos. No repitas lo anterior ni copies la lista tal cual. No puedes usar herramientas y NO lo arreglas en este turno: si tiene arreglo, ofrécete a hacerlo cuando te lo pida.";
+  "\n\nEscríbele AHORA, en su idioma y en dos o tres frases, lo que cambia respecto a lo que le dijiste: qué problema tiene la página, contado con estos hechos. No repitas lo anterior ni copies la lista tal cual. No puedes usar herramientas y NO lo arreglas en este turno.";
 
 const WRAP_UP_INSTRUCTION =
   "SISTEMA: Alcanzaste el límite de pasos para este turno y ya no puedes usar herramientas. Cierra hablándole al usuario en SU idioma: resume brevemente qué alcanzaste a hacer y qué quedó pendiente, y dile que te lo pida de nuevo para continuar. No afirmes haber hecho lo que no se aplicó.";
@@ -790,9 +649,26 @@ function buildEvidenceInstruction(
     `SISTEMA (el usuario NO escribió esto): declaraste ${p.todas.length} tarea(s) y sólo tengo evidencia de ${cambios} cambio(s) real(es) — ` +
     "una llamada que movió bytes de la página o escribió en la base. Como no marcaste en qué tarea estabas, NO sé cuál falta: " +
     `revisa ${lista(p.todas)} y haz la que no esté hecha. ` +
-    "Para que pueda decírtela por su nombre, vuelve a llamar a declarar_tareas con el estado de cada una (en_curso al empezarla, hecha al terminarla). " +
+    "Para que pueda decírtela por su nombre, vuelve a llamar a TodoWrite con el estado de cada una (in_progress al empezarla, completed al terminarla). " +
     cierre
   );
+}
+
+/**
+ * SOBRE QUÉ VA UNA LLAMADA, para su tarjeta: el argumento principal, como
+ * Claude Code pinta `Read(index.html)` o `Grep(pattern)`. Antes era
+ * el `resumen` que escribía el modelo; en Len 2.0 ninguna herramienta lo lleva
+ * y la tarjeta enseñaba el nombre crudo («Read»), que el historial le reenviaba
+ * al modelo como resumen. Sin argumento principal, nada: la etiqueta ya dice qué
+ * herramienta es.
+ */
+export function sobreQue(argsDeLaLlamada: Record<string, unknown>): string {
+  const texto = (k: string) => {
+    const v = argsDeLaLlamada[k];
+    return typeof v === "string" && v.trim() !== "" ? v : null;
+  };
+  const rel = (v: string | null) => (v ? v.replace(/^\/+/, "") : null);
+  return texto("resumen") ?? rel(texto("file_path")) ?? texto("pattern") ?? rel(texto("path")) ?? "";
 }
 
 /** Order-stable JSON of a tool call's args, so a repeat with the same values
@@ -808,25 +684,24 @@ function stableStringify(v: unknown): string {
 }
 
 // Product finding: photo hunts (elegir_foto) and mid-chain state re-reads
-// (leer_estado) are read-only — they never mutate the project — but a photo
+// (leer_estado, retired in H3) are read-only — they never mutate the project — but a photo
 // search that takes a few tries was eating the same maxToolCalls budget as
-// real edits. These two are exempt from that counter. They still count
-// toward ABSOLUTE_MAX_TOOL_CALLS below, so a runaway loop can't spin forever
-// just because it's calling exempt tools.
+// real edits. These two are exempt from that counter (which, since H1, only
+// exists when the caller passes `maxToolCalls`).
 //
-// 🔴 `buscar_en_pagina` entra el 2026-09-01, y no es un detalle: la petición
-// que la justifica —«cambia el teléfono», y está en cuatro sitios de tres
-// páginas— gasta buscar + (mudarse + editar) × 3. Si la búsqueda descontara del
-// mismo presupuesto que las ediciones, la herramienta que existe para no dejar
-// el dato viejo a medias sería justo la que hace que el turno se quede sin
-// cuerda antes de terminar. Es el mismo fallo que ya se midió con las fotos
-// (el bug del hero de terror).
+// 🔴 LEN 2.0: Read, Grep y Glob tampoco (plans/len-2/ficheros-plan.md, T8d).
+// Son lo que se hace ANTES de cada Edit —sin leer no se edita, y el
+// `old_string` sale de lo leído—, así que una página cuesta una lectura y una
+// edición en vueltas distintas. Si leer descontara del presupuesto, el contrato
+// que obliga a leer sería el que deja el encargo a medias: «el teléfono en las
+// cuatro páginas» pediría ocho vueltas de trabajo. Es el mismo fallo que ya se
+// midió con las fotos (el bug del hero de terror) y con `trabajar_en_pagina`.
 //
 // `preguntar` entra por lo mismo y por una razón de más: cierra el turno, así
 // que descontarla del presupuesto sería cobrarle al usuario por la vuelta en la
 // que el Agente decide callarse y esperarle. `revertir_ultimo_cambio` NO entra
 // — escribe en la base.
-// `declarar_tareas` tampoco: escribir la lista no hace nada, y cobrarle al
+// TodoWrite tampoco: escribir la lista no hace nada, y cobrarle al
 // usuario una acción por planificar sería cobrarle por el paso que existe para
 // que el turno salga bien.
 /**
@@ -899,52 +774,35 @@ export function repararNombre(
 }
 
 /** Las lecturas que COMPRUEBAN algo de la página: dan por hecha una tarea de
- *  comprobar en curso. `elegir_foto` o `trabajar_en_pagina` no miran la
- *  página, y `declarar_tareas`/`preguntar` no leen nada. */
-const LECTURAS_QUE_COMPRUEBAN = new Set(["leer_estado", "buscar_en_pagina", "mirar_pagina"]);
+ *  comprobar en curso. `Read` y `Grep` leen lo que hay en los ficheros; `Glob`
+ *  sólo lista rutas y `elegir_foto` no mira la página, y
+ *  TodoWrite/`preguntar` no leen nada. `usar_pagina` (H9) es la comprobación
+ *  por excelencia: usa la página. */
+const LECTURAS_QUE_COMPRUEBAN = new Set(["mirar_pagina", "usar_pagina", "Read", "Grep"]);
 
 const READ_ONLY_TOOLS = new Set([
-  "leer_estado",
+  // ⚰️ `leer_estado` estaba aquí; se retiró en H3 (2026-09-25): los almacenes
+  // y la memoria se leen con Read.
   "elegir_foto",
   // Preguntar qué se ve no cambia la página. Como `elegir_foto`, no descuenta
   // presupuesto de acciones: su propio tope por turno es lo que la contiene, y
   // cobrarle una acción al Agente por COMPROBAR antes de editar sería cobrarle
   // justo por el paso que evita la edición equivocada.
   "mirar_pagina",
-  "buscar_en_pagina",
-  /**
-   * 🔴 MUDARSE DE PÁGINA NO CAMBIA NADA — y se cobraba como si sí.
-   *
-   * `toolTrabajarEnPagina` devuelve SÓLO `response`: ni `updatedHtml`, ni
-   * `mutoDurable`, ni una escritura. Cambia qué documento está activo, que es
-   * conocimiento, no una mutación. Estaba fuera de esta lista por omisión, no
-   * por decisión, y la razón de arriba le vale palabra por palabra: cobrarle
-   * por el paso que HACE POSIBLE la edición correcta.
-   *
-   * LO QUE COSTABA, medido 7 de 7 el 2026-09-08. Con «pon el teléfono en TODAS
-   * las páginas» sobre un sitio de cuatro, el protocolo son DOS turnos por
-   * página —mudarse y editar, y no caben en la misma tanda porque las ops
-   * necesitan los `op_id` que devuelve la mudanza—. Nueve turnos contra un tope
-   * de seis: Len editaba tres, se mudaba a la cuarta y se le acababa la cuerda
-   * justo ahí. La secuencia de llamadas lo enseña sin lugar a duda, y su última
-   * acción era siempre `trabajar_en_pagina (servicios)`.
-   *
-   * No es subir el tope: es dejar de contar como trabajo algo que no lo es.
-   * `ABSOLUTE_MAX_TURNS` y `ABSOLUTE_MAX_TOOL_CALLS` siguen acotando el
-   * ping-pong, así que esto no abre la puerta a un turno infinito.
-   *
-   * ⚠️ Claude Code NO decide esto: su bucle principal no lleva
-   * tope —`maxTurns` es opcional por definición de agente— así que el problema
-   * no existe allí. El tope es nuestro, por créditos de prepago, y lo que se
-   * corrige aquí es nuestra propia contabilidad.
-   */
-  "trabajar_en_pagina",
+  // H9: usar la página es una visita aparte; el fichero no cambia.
+  "usar_pagina",
+  // Len 2.0: leer ficheros no cambia nada (ver la nota de arriba).
+  "Read",
+  "Grep",
+  "Glob",
+  // ⚰️ `trabajar_en_pagina` estaba aquí porque mudarse de página no cambiaba
+  // nada y se cobraba como si sí (medido 7 de 7 el 2026-09-08). Len 2.0 no se
+  // muda: cada Edit dice su fichero.
   "preguntar",
-  "declarar_tareas",
+  "TodoWrite",
+  // Cargar una herramienta diferida no cambia nada (H2).
+  "ToolSearch",
 ]);
-// Hard safety net independent of maxToolCalls: counts every tool call,
-// exempt or not. A model stuck in a loop must still die eventually.
-const ABSOLUTE_MAX_TOOL_CALLS = 26;
 /** Cuántas vueltas gana el turno cuando el usuario corrige el rumbo.
  *
  *  POR QUÉ SE LE DA MÁS: corregir a media faena es la señal más barata y más
@@ -953,48 +811,11 @@ const ABSOLUTE_MAX_TOOL_CALLS = 26;
  *  presupuesto para actuar, la hemos leído para nada y le hemos hecho perder
  *  el tiempo dos veces. */
 const VUELTAS_POR_DIRECCION = 2;
-/** Y el techo, para que corregir en bucle no sea barra libre. */
-const ABSOLUTE_MAX_TURNS = 16;
 
-/**
- * 🔴 LOS TOPES DE UN TURNO, Y POR QUÉ YA NO MIRAN EL PLAN.
- *
- * En Claude Code el bucle principal NO lleva tope de pasos —`maxTurns` es un
- * campo OPCIONAL por definición de agente—, lo que
- * acota una sesión larga es el CONTEXTO (y compactando CONTINÚA, no para), y el
- * dinero se topa por MES y por cuenta, con auto-recarga. El turno no se corta
- * nunca por presupuesto.
- *
- * Aquí el tope mensual ya existe (`CREDITS_BY_PLAN`), así que el de turno era un
- * SEGUNDO muro redundante — y era el que partía el trabajo en dos.
- *
- * ⚰️ Durante unas horas esto devolvió 12/20 a `pro` y 6/10 a `free`, para
- * proteger a quien no tiene recarga automática. Jesús lo retiró el mismo día:
- * «no importa que se gaste, el chiste es que haga bien el trabajo». Un turno
- * cortado a la mitad cuesta lo mismo y además deja la página rota.
- *
- * Se conserva la FUNCIÓN, no la puerta: es lo que la ruta pasa al bucle y lo que
- * su prueba de cable sujeta. Sin ella el bucle cae a su defecto y cualquier
- * cambio futuro se queda apagado y verde, que es como se construye una palanca
- * que no mueve nada.
- *
- * 🔴 LOS DOS TOPES VIAJAN JUNTOS Y ESO SE MIDIÓ. `maxTurns` y `maxToolCalls` son
- * muros independientes y el de llamadas es el más bajo en la práctica: una
- * edición por vuelta gasta una llamada por vuelta. Subir sólo las vueltas no
- * cambia NADA — la prueba salió `tool_limit` donde esperaba `turn_limit`.
- */
-export function topesPorPlan(): {
-  readonly maxTurns: number;
-  readonly maxToolCalls: number;
-} {
-  return { maxTurns: DEFAULT_MAX_TURNS, maxToolCalls: DEFAULT_MAX_TOOL_CALLS };
-}
-/** Vueltas sin ver la lista antes de devolvérsela. Claude Code usa 10, con 10 de
- *  separación, sobre sesiones de decenas de turnos; aquí `DEFAULT_MAX_TURNS` son
- *  12, así que ese número seguiría sin dispararse. Con 2 caben ~2 recordatorios en un
- *  turno completo: suficiente para que no pierda la cuenta, poco para que no sea
- *  una regañina en cada tanda. */
-const VUELTAS_SIN_LISTA = 2;
+/** Vueltas sin tocar la lista antes de devolvérsela: las 10 de Claude Code (H2).
+ *  Fueron 2 mientras el turno se cortaba en la vuelta 12 —con 10 no habría
+ *  disparado nunca—; sin tope (H1), el número de Claude Code vuelve a servir. */
+const VUELTAS_SIN_LISTA = 10;
 
 /**
  * 🔴 H12 · LAS VUELTAS DE LLAMADAS RECHAZADAS NO SON TRABAJO.
@@ -1055,10 +876,20 @@ interface PendingCall {
 }
 
 export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult> {
-  let maxTurns = args.maxTurns ?? DEFAULT_MAX_TURNS;
-  const maxToolCalls = args.maxToolCalls ?? DEFAULT_MAX_TOOL_CALLS;
+  let maxTurns = args.maxTurns ?? Infinity;
+  const maxToolCalls = args.maxToolCalls ?? Infinity;
 
   const messages = [...args.messages];
+  /** Lo que el turno añadió a la conversación, más su texto final si no quedó
+   *  como mensaje (la vuelta que cierra no empuja el suyo). Ver
+   *  `AgentLoopResult.transcripcion`. */
+  const transcripcionDelTurno = (texto: string): Message[] => {
+    const propios = messages.slice(args.messages.length);
+    const ultimo = propios.at(-1);
+    const yaEsta = ultimo?.role === "assistant" && !ultimo.functionCalls?.length && ultimo.content.trim() === texto.trim();
+    if (texto.trim() && !yaEsta) propios.push({ role: "assistant", content: texto });
+    return propios;
+  };
   let finalText = "";
   let inputTokens = 0;
   let outputTokens = 0;
@@ -1070,18 +901,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // otherwise the turn cap silently defeats the same read-only exemption
   // maxToolCalls already grants (READ_ONLY_TOOLS), and a photo hunt for a genre
   // the curated catalog lacks dies on turn_limit before the model ever edits
-  // (the terror-hero bug). ABSOLUTE_MAX_TOOL_CALLS still bounds a read-only
-  // chain so it can't spin forever.
+  // (the terror-hero bug).
   let mutatingTurns = 0;
   let toolCalls = 0; // total across the loop (read-only + budgeted) — what the result/done event reports
   let budgetedToolCalls = 0; // excludes READ_ONLY_TOOLS — checked against maxToolCalls
   // No-progress guard state (spans turns within this request): signature -> how
   // many times that exact call has returned ok:false.
   const failedSignatures = new Map<string, number>();
-  // Cuántas veces se ha EJECUTADO ya la misma intención (herramienta + resumen),
-  // salga bien o mal. Ver `SAME_INTENT_LIMIT`: el bucle que nos costó el caso
-  // del carrito es de llamadas que salen OK.
-  const intentosPorIntencion = new Map<string, number>();
   /** Los resúmenes de lo que de VERDAD se aplicó este turno, en orden. No se
    *  fía del texto del modelo: se empuja en el mismo sitio donde se cuenta la
    *  evidencia (hash antes ≠ después, o mutación durable). Es lo que se le
@@ -1126,136 +952,127 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // `mejorCandidato` ya no se leía en ninguna parte; las otras dos sólo
   // alimentaban una segunda pasada que era inalcanzable. Ver el bloque de los
   // ojos, más abajo, para el porqué entero.
-  /** Qué defectos medidos se le han dicho YA al modelo este turno, y el fusible
-   *  del medidor. Vive aquí —y no en la ruta— porque su vida es exactamente la
-   *  de este bucle: una tanda no debe repetirle a la siguiente lo que ya oyó. */
+  /** El fusible del medidor: tres fallos seguidos y no se vuelve a medir este
+   *  turno. Vive aquí —y no en la ruta— porque su vida es la de este bucle. */
   const avisos = new AvisosDelTurno();
-  /** El último documento que se midió. Sin esto, una tanda que sólo lee o que
-   *  cambia AJUSTES volvería a arrancar Chromium sobre la misma página. */
-  let ultimoMedido: string | null = null;
-  /** Los `id` de los defectos que YA traía el documento al empezar el turno.
-   *  `null` mientras no se haya medido; se mide UNA vez y sólo si hace falta. */
-  let idsDeLaBase: ReadonlySet<string> | null = null;
-  /** UN INTENTO DE BASE POR TURNO, salga bien o mal. Si sale mal no se
-   *  reintenta: el fusible de `avisos` cuenta fallos CONSECUTIVOS y una medición
-   *  buena en medio lo pone a cero, así que un reintento por tanda podría pagar
-   *  un arranque de Chrome por cada edición sin que el fusible llegara nunca a
-   *  saltar. Un intento fallido deja el turno sin base, que ya tiene su
-   *  consecuencia escrita: no se habla. */
-  let baseIntentada = false;
+  /** Lo que ya se le entregó al modelo este turno: una tanda no le repite a la
+   *  siguiente lo que ya oyó (el `delivered` del registro de Claude Code). */
+  const entregados = new NuevosDiagnosticos();
+  /** Las páginas que cambiaron desde la última medición, cada una con su última
+   *  versión: tal como la ve Read y su gemelo con posiciones. Len 2.0 edita
+   *  varios ficheros en una tanda, y se miden todos, como Claude Code mira todos
+   *  los que tienen línea base. */
+  const porMedir = new Map<string | null, { html: string; gemelo: string }>();
+  /** El último gemelo medido de cada página. Sin esto, una tanda que sólo lee o
+   *  que cambia AJUSTES volvería a arrancar Chromium sobre la misma página. */
+  const ultimoMedido = new Map<string | null, string>();
+  /** Cómo estaba cada página ANTES de la primera escritura del turno sobre ella
+   *  (`outcome.htmlPrevio`); `null` si el turno la creó. */
+  const previoPorPagina = new Map<string | null, string | null>();
+  /** La línea base medida de cada página, perezosa y UNA vez por página, salga
+   *  bien o mal: si sale mal no se reintenta, que el fusible cuenta fallos
+   *  CONSECUTIVOS y un reintento por tanda podría pagar un Chrome por edición. */
+  const basePorPagina = new Map<string | null, readonly Diagnostico[] | "no-medida">();
+  /** Lo que las escrituras de esta tanda dejaron mal (`outcome.diagnosticos`). */
+  let diagnosticosDeLaTanda: Diagnostico[] = [];
   /**
-   * La línea base, medida al primer defecto y no antes.
+   * La línea base de una página, medida al primer defecto y no antes.
    *
-   * 🔴 SIN LÍNEA BASE NO SE HABLA, y es la regla de Claude Code, no una
-   * cautela mía: sin base no devuelve ningún diagnóstico nuevo. El motivo se
-   * sostiene solo
-   * — el sobre dice «esto salió NUEVO», y sin base eso no se puede saber. Es un
-   * estrechamiento deliberado de lo que había: antes se decía igual, sin poder
-   * distinguir lo que el modelo rompió de lo que se encontró roto.
+   * 🔴 SIN LÍNEA BASE NO SE HABLA de lo medido, y es la regla de Claude Code: el
+   * sobre dice «nuevo», y sin base eso no se puede saber. Medirla siempre
+   * costaría un render (2,16 s en caliente) en todos los turnos que editan; así
+   * se paga sólo en los que iban a decir algo.
    *
-   * En la práctica casi nunca se cae: la base se mide por el MISMO navegador
-   * del turno que acaba de medir el documento editado, así que si una funciona
-   * la otra también.
+   * La base es la del PROPIO fichero: la de la página en su primera escritura
+   * del turno. Una página que el turno creó no traía nada; una de la que no se
+   * sabe cómo estaba («sin-base») se dice entera, como se hacía antes con las
+   * que no eran la del arranque.
    */
-  const lineaBaseIds = async (
-    paginaEditada: string | null,
-  ): Promise<ReadonlySet<string> | "sin-base" | "no-medida"> => {
-    // Nadie la pidió: el aviso sale como salía antes de que la línea base
-    // existiera. Es lo que hace que los llamadores viejos —y las pruebas del
-    // bucle— no cambien de comportamiento por esto.
-    if (!args.lineaBase || !args.medirParaElModelo) return "sin-base";
-    // Otra página que la del arranque: no hay base COMPARABLE. Ver el comentario
-    // de `lineaBase` — restar entre documentos distintos restaría por nombre.
-    if (args.lineaBase.page !== paginaEditada) return "sin-base";
-    if (idsDeLaBase) return idsDeLaBase;
-    if (baseIntentada) return "no-medida";
-    baseIntentada = true;
+  const baseDe = async (page: string | null): Promise<readonly Diagnostico[] | "no-medida" | "sin-base"> => {
+    if (!previoPorPagina.has(page) || !args.medirParaElModelo) return "sin-base";
+    const hecha = basePorPagina.get(page);
+    if (hecha) return hecha;
+    const previo = previoPorPagina.get(page) ?? null;
+    if (previo === null) {
+      basePorPagina.set(page, []);
+      return [];
+    }
     let base: MedicionCruda | null = null;
     try {
-      base = await args.medirParaElModelo(args.lineaBase.taggedHtml);
+      base = await args.medirParaElModelo(etiquetarConPosiciones(previo));
     } catch {
       base = null;
     }
-    if (!base) return "no-medida";
-    idsDeLaBase = new Set(defectosConDireccion(base).map((d) => d.id));
-    return idsDeLaBase;
+    const r = base ? diagnosticosMedidos(base, rutaDePagina(page), previo) : "no-medida";
+    basePorPagina.set(page, r);
+    return r;
   };
   /**
-   * Mide la página recién guardada y devuelve LO NUEVO, listo para viajar.
+   * EL MOMENTO `tsc`: lo que dejaron las escrituras de la tanda y lo que midió
+   * el navegador en las páginas que cambiaron, en UN `<new-diagnostics>` como el
+   * de Claude Code (`lib/agent/diagnosticos.ts`) — sólo lo nuevo, anclado a
+   * línea — más «medido, y limpio» y los límites de la medida, que son nuestros.
    *
    * Devuelve `""` —no `null`— porque su destino es el `content` del mensaje que
    * lleva las respuestas de las herramientas, y ese campo era `""` antes de que
-   * esto existiera: una página sana tiene que dejar el mensaje byte a byte
-   * igual que ayer.
-   *
-   * 🔴 SE MIDE EL GEMELO ETIQUETADO. Sin `taggedHtml` las sondas salen sin
-   * `data-op-id` y el aviso deja de ser accionable: se convierte en «algo se
-   * sale», que es justo el aviso que el modelo no puede arreglar. Por eso se
-   * pide y no se cae al documento visible.
+   * esto existiera: una tanda sana tiene que dejar el mensaje byte a byte igual.
    */
   const medirYRedactar = async (): Promise<string> => {
-    if (!args.medirParaElModelo || !lastMutation?.taggedHtml) return "";
-    // El fusible: tres fallos seguidos y no se vuelve a intentar este turno.
-    if (avisos.apagado) return "";
-    // Ya medido: una tanda que no tocó el documento (ajustes, módulos) no paga
-    // un arranque de navegador por nada.
-    if (lastMutation.taggedHtml === ultimoMedido) return "";
-    ultimoMedido = lastMutation.taggedHtml;
-    let medicion: MedicionCruda | null = null;
-    try {
-      medicion = await args.medirParaElModelo(lastMutation.taggedHtml);
-    } catch {
-      medicion = null;
-    }
-    if (!medicion) {
-      // FAIL-SOFT, y CONTADO. No medir no es medir bien, pero tampoco puede
-      // tumbar un turno: el usuario pidió un cambio y el cambio está hecho.
-      if (avisos.fallo()) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          `[agent] la medición tras editar se apaga este turno tras ${AvisosDelTurno.MAX_FALLOS} fallos seguidos`,
-        );
+    // Lo de las escrituras ya es NUEVO por construcción (se mide contra el
+    // fichero de antes): sólo se quita lo ya entregado.
+    const nuevos: Diagnostico[] = entregados.nuevos(diagnosticosDeLaTanda);
+    diagnosticosDeLaTanda = [];
+    const extras: string[] = [];
+    if (args.medirParaElModelo) {
+      for (const [page, doc] of porMedir) {
+        // El fusible: tres fallos seguidos y no se vuelve a intentar este turno.
+        if (avisos.apagado) break;
+        if (ultimoMedido.get(page) === doc.gemelo) continue;
+        ultimoMedido.set(page, doc.gemelo);
+        let medicion: MedicionCruda | null = null;
+        try {
+          medicion = await args.medirParaElModelo(doc.gemelo);
+        } catch {
+          medicion = null;
+        }
+        if (!medicion) {
+          // FAIL-SOFT, y CONTADO. No medir no es medir bien, pero tampoco puede
+          // tumbar un turno: el usuario pidió un cambio y el cambio está hecho.
+          if (avisos.fallo()) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `[agent] la medición tras editar se apaga este turno tras ${AvisosDelTurno.MAX_FALLOS} fallos seguidos`,
+            );
+          }
+          continue;
+        }
+        avisos.ok();
+        const ruta = rutaDePagina(page);
+        const medidos = diagnosticosMedidos(medicion, ruta, doc.html);
+        if (medidos.length === 0) {
+          // 🔴 MEDIDO, Y LIMPIO, SE DICE: el silencio no es evidencia, y sin esta
+          // frase una condición como «no desborda en móvil» no se cumpliría
+          // nunca (medido el 2026-09-07 con un evaluador aparte). Calla si algún
+          // eje no se midió: no afirma un cero que nadie comprobó.
+          const limpio = medicionLimpia(medicion, ruta);
+          if (limpio) extras.push(limpio);
+        } else {
+          const base = await baseDe(page);
+          // Se pidió base y no se pudo medir ⇒ no se habla del defecto.
+          if (base !== "no-medida") nuevos.push(...entregados.nuevos(medidos, base === "sin-base" ? [] : base));
+        }
+        // LOS LÍMITES DE LA MEDIDA viajan siempre que los haya, también con
+        // «limpio»: decir «0 errores de JavaScript» de una página cuyo botón abre
+        // un `prompt()` que la medición canceló es afirmar de más.
+        const limites = redactarLimites(medicion);
+        if (limites) extras.push(limites);
       }
-      return "";
     }
-    avisos.ok();
-    // LOS LÍMITES DE LA MEDIDA viajan con CUALQUIERA de las tres salidas de
-    // abajo, y también solos.
-    //
-    // 🔴 Sobre todo con «medido, y limpio»: esa frase enumera cuatro ceros, y
-    // decir «0 errores de JavaScript» de una página cuyo botón abre un
-    // `prompt()` que nosotros cancelamos es justo la afirmación de más que ese
-    // bloque existe para no hacer. Su «eso es TODO lo que esta medición mira»
-    // queda ahora dicho con el detalle delante.
-    //
-    // Y van por AQUÍ y no por las observaciones del veredicto porque este canal
-    // lo lee el modelo y no el usuario: al usuario estas dos cosas se las dice
-    // el lienzo, traducidas, cuando pulsa. Ver `redactarLimites`.
-    const limites = redactarLimites(medicion);
-    const con = (texto: string): string =>
-      limites ? (texto ? `${texto}\n${limites}` : limites) : texto;
-    // NADA QUE REPARAR. Se comprueba antes de tocar la línea base para que el
-    // caso normal —la página está bien— no pague un segundo render.
-    //
-    // 🔴 Y AQUÍ YA NO SE DEVUELVE SILENCIO. Si los tres ejes se midieron y los
-    // tres salieron a cero, se DICE: «medido, y limpio». El silencio no es
-    // evidencia de nada, y sin esta frase una condición como «la página no
-    // desborda en móvil» no se podría dar por cumplida jamás — medido el
-    // 2026-09-07 con un evaluador aparte leyendo el transcript.
-    //
-    // `medicionLimpia` calla si algún eje no se midió, así que esto NO puede
-    // afirmar un cero que nadie comprobó.
-    if (defectosConDireccion(medicion).length === 0) return con(medicionLimpia(medicion) ?? "");
-    const base = await lineaBaseIds(lastMutation.page);
-    // Se pidió base y no se pudo medir ⇒ no se habla del DEFECTO. Los límites
-    // sí: no dependen de la línea base —no son un defecto que pueda venir
-    // heredado, son lo que esta medición no ha mirado— así que callarlos aquí
-    // sería perderlos justo cuando el aviso normal no puede salir.
-    if (base === "no-medida") return con("");
-    return con(avisos.nuevos(medicion, base === "sin-base" ? undefined : base) ?? "");
+    porMedir.clear();
+    return [redactarDiagnosticos(nuevos), ...extras].filter(Boolean).join("\n");
   };
 
-  /** Las tareas que el modelo declaró con `declarar_tareas`, con su estado y
+  /** Las tareas que el modelo declaró con TodoWrite, con su estado y
    *  lo que se midió de cada una. Ver `lib/agent/lista-de-tareas.ts`. */
   const lista = new ListaDeTareas();
   /** La lista se reclama UNA vez: si el modelo cierra otra vez sin completarla,
@@ -1305,17 +1122,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     if (lista.vacia || !lista.pendientes().faltan) return "";
     if (vueltasSinLista < VUELTAS_SIN_LISTA) return "";
     vueltasSinLista = 0;
-    return [
-      "<tus-tareas>",
-      lista.usaEstados
-        ? `Tu lista, con el estado de cada una y lo que he medido (${lista.cambios} cambio(s) real(es) en el turno):`
-        : `Declaraste ${lista.textos.length} y tengo evidencia de ${lista.cambios} cambio(s) real(es). Siguen siendo:`,
-      ...lista.lineas(),
-      lista.usaEstados
-        ? "Marca en_curso la que empieces y hecha la que termines, llamando otra vez a declarar_tareas."
-        : "No las marcaste con estado, así que no puedo decirte cuál falta — compruébalo tú antes de cerrar, o márcalas (en_curso / hecha) y te lo diré.",
-      "</tus-tareas>",
-    ].join("\n");
+    // El de Claude Code (H2). Lo medido de cada tarea no va
+    // aquí: va en el aviso de evidencia, cuando marca una sin nada detrás.
+    return recordatorioTodoWrite(lista.estados());
   };
   // ¿Ya se le insistió una vez por cerrar sin llamar a nada? Ver el bloque de
   // `calls.length === 0`.
@@ -1339,9 +1148,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
   /** ¿Escribió algo en la base este request? Ver `AgentLoopResult.mutoDurable`. */
   let mutoDurable = false;
-  /** Cuántos documentos caducados retiró la poda en todo el turno. Ver el
-   *  comentario en la llamada a `podarDocumentosViejos`. */
-  let documentosPodados = 0;
   /** Lo que se escribió ANTES de que una vuelta se cortara por `max_tokens`.
    *  Vacío en el caso normal. Existe porque `finalText` se asigna `= turnText`
    *  y `turnText` se reinicia en cada vuelta: sin esto, una continuación
@@ -1357,6 +1163,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // El arrastre va DELANTE y sin separador: la continuación sigue la frase
     // exactamente donde se cortó, así que pegarlas es reconstruirla.
     finalText: textoArrastrado + finalText,
+    transcripcion: transcripcionDelTurno(textoArrastrado + finalText),
     usage: { inputTokens, outputTokens, cachedTokens, thinkingTokens },
     turns,
     toolCalls,
@@ -1364,7 +1171,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     topeAlcanzado,
     errorCode,
     mutoDurable,
-    documentosPodados,
     aplicado: [...aplicado],
     tareasReclamadas,
     tareasDeclaradas: lista.textos,
@@ -1445,7 +1251,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
     // EL PRESUPUESTO, antes de gastar una llamada de evaluador. Si ya
     // no quedan vueltas, no hay nada que preguntar: el turno cierra igual.
-    if (vueltasDeObjetivo >= obj.maxVueltas || turns >= ABSOLUTE_MAX_TURNS) {
+    if (vueltasDeObjetivo >= obj.maxVueltas) {
       resultadoObjetivo = {
         veredicto: "no_cumplida",
         razon: `se acabó el presupuesto del objetivo tras ${vueltasDeObjetivo} vuelta(s) extra`,
@@ -1663,7 +1469,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         content: `[El usuario te ha escrito mientras trabajabas. Léelo y ajusta antes de tu siguiente paso.]\n${direccion}`,
       });
       args.emit({ type: "direccion", texto: direccion });
-      maxTurns = Math.min(ABSOLUTE_MAX_TURNS, maxTurns + VUELTAS_POR_DIRECCION);
+      maxTurns += VUELTAS_POR_DIRECCION;
     }
     if (mutatingTurns >= maxTurns) {
       return await finishOnCap("turn_limit");
@@ -1770,11 +1576,15 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // Con texto y sin llamadas, en cambio, continuar es seguro: no hay efecto
     // que repetir.
     if (truncado) {
-      if (calls.length === 0 && turnText.trim().length > 0 && continuaciones < MAX_CONTINUACIONES) {
+      if (calls.length === 0 && continuaciones < MAX_CONTINUACIONES) {
         continuaciones += 1;
-        textoArrastrado += turnText;
-        messages.push({ role: "assistant", content: turnText });
-        messages.push({ role: "user", content: continuaLoCortado(turnText) });
+        if (turnText.trim().length > 0) {
+          textoArrastrado += turnText;
+          messages.push({ role: "assistant", content: turnText });
+          messages.push({ role: "user", content: continuaLoCortado(turnText) });
+        } else {
+          messages.push({ role: "user", content: SE_CORTO_PENSANDO });
+        }
         continue;
       }
       // No se puede continuar: ahí sí es el final del turno, y se dice.
@@ -1817,8 +1627,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         pendientes.faltan &&
         !yaSeExigioEvidencia &&
         mutatingTurns < maxTurns &&
-        budgetedToolCalls < maxToolCalls &&
-        toolCalls < ABSOLUTE_MAX_TOOL_CALLS
+        budgetedToolCalls < maxToolCalls
       ) {
         yaSeExigioEvidencia = true;
         // Lo que NOMBRÓ como pendiente: sin estados no nombra ninguna.
@@ -1868,7 +1677,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       //
       // 🔴 Y DESDE EL 2026-09-22, «NADA» INCLUYE LO QUE NO HIZO NADA. La guarda
       // miraba `toolCalls === 0`, así que bastaba una lectura —`leer_estado`,
-      // `buscar_en_pagina`— para que «Listo, cambié X» saliera limpio y
+      // un `Read`— para que «Listo, cambié X» saliera limpio y
       // cobrado sobre una página intacta (G4 de
       // `plans/auditoria-len-vs-claude-code-2026-09-22.md`). Ahora se mira
       // `actuo`: alguna llamada que no es de lectura, que salió bien y que no
@@ -1914,8 +1723,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         args.verifyTurn &&
         lastMutation &&
         mutatingTurns < maxTurns &&
-        budgetedToolCalls < maxToolCalls &&
-        toolCalls < ABSOLUTE_MAX_TOOL_CALLS
+        budgetedToolCalls < maxToolCalls
       ) {
         args.emit({ type: "action", tool: VERIFY_TOOL, status: "running", summary: "" });
         // LAS OTRAS PÁGINAS DEL TURNO. La principal sigue siendo la última
@@ -2204,6 +2012,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     let rechazadasEnLaVuelta = 0;
 
     const functionResponses: { name: string; response: Record<string, unknown> }[] = [];
+    /** Los avisos de evidencia de TodoWrite de esta tanda: van en el mensaje
+     *  hermano, no dentro de su resultado (que es el literal de Claude Code). */
+    const avisosDeLaLista: string[] = [];
     /** La pregunta con la que este turno se cierra, si alguna herramienta la
      *  produjo. Ver el bloque que la consume al salir del bucle de llamadas. */
     let pregunta = "";
@@ -2289,55 +2100,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         continue;
       }
 
-      // LA MISMA INTENCIÓN, YA EJECUTADA VARIAS VECES. Ver `SAME_INTENT_LIMIT`:
-      // la guarda de arriba sólo mira las que fallan, y el bucle que agota el
-      // presupuesto es de llamadas que salen bien.
-      // 🔴 PARA QUIEN REESCRIBE EL ARTEFACTO ENTERO, LA INTENCIÓN ES LA
-      // HERRAMIENTA — la prosa no entra en la clave.
-      //
-      // `editar_runtime` manda «el código COMPLETO que debe quedar, no un
-      // parche» (su propia ficha), y sólo hay UN runtime por página: dos
-      // llamadas en un turno son, por construcción, la segunda tirando a la
-      // primera. Contar su intención por `herramienta + resumen` dejaba que
-      // reformular la frase reiniciara el contador.
-      //
-      // MEDIDO el 2026-09-11 (`carrito-se-construye` ~40%, `contador-se-construye`
-      // 2/6): cuatro llamadas por turno bajo DOS resúmenes, dos de cada uno —
-      // siempre justo por debajo del umbral. El guardia no disparaba nunca y el
-      // turno moría en `turn_limit` habiendo escrito cuatro veces el mismo
-      // fichero. Lo caro no era pensar: era reescribir lo ya escrito.
-      //
-      // Siguen permitiéndose DOS. Una prueba de comportamiento que falla NO
-      // tumba la edición —devuelve ok y un aviso— y la ficha manda «lo arreglas
-      // en ese mismo turno»: escribir, que falle la prueba y arreglar son dos.
-      // La tercera ya no es arreglar, es flailing.
-      //
-      // `editar_pagina` NO entra aquí y es el brazo de control: edita nodos
-      // concretos, así que dos ediciones distintas en un turno son trabajo
-      // distinto y las dos tienen que correr.
-      const intencion = REESCRIBEN_TODO.has(call.name) ? call.name : `${call.name}\u0000${typeof call.args.resumen === "string" ? call.args.resumen : ""}`;
-      if (
-        typeof call.args.resumen === "string" &&
-        call.args.resumen.length > 0 &&
-        (intentosPorIntencion.get(intencion) ?? 0) >= SAME_INTENT_LIMIT
-      ) {
-        const error =
-          `Ya ejecutaste «${call.args.resumen}» ${intentosPorIntencion.get(intencion)} veces en este turno y se aplicó. ` +
-          "Repetirla otra vez no avanza. Si el resultado no es el que esperabas, comprueba la página con leer_estado " +
-          "antes de volver a escribir, cambia de enfoque, o dile al usuario qué quedó hecho y qué no.";
-        rechazos.push({ tool: call.name, motivo: error });
-        rechazadasEnLaVuelta += 1;
-        args.onRechazo?.(call.name, call.args, error);
-        functionResponses.push({ name: call.name, response: { ok: false, error } });
-        continue;
-      }
-
-      // The absolute cap counts every call, exempt or not — a runaway loop
-      // must still die even if it's only calling read-only tools.
-      if (toolCalls >= ABSOLUTE_MAX_TOOL_CALLS) {
-        empujarLoEjecutado();
-        return await finishOnCap("tool_limit");
-      }
       const readOnly = READ_ONLY_TOOLS.has(call.name);
       if (!readOnly) {
         if (budgetedToolCalls >= maxToolCalls) {
@@ -2348,7 +2110,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       }
       toolCalls += 1;
 
-      const summary = typeof call.args.resumen === "string" ? call.args.resumen : call.name;
+      const summary = sobreQue(call.args);
       args.emit({ type: "action", tool: call.name, status: "running", summary });
 
       const outcome = await args.runTool(call.name, call.args);
@@ -2366,9 +2128,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       const descartada = avisoParaElDueno(outcome.response);
       const motivo = motivoDelFallo(outcome.response) ?? descartada;
       if (!ok) failedSignatures.set(sig, (failedSignatures.get(sig) ?? 0) + 1);
-      // Se cuenta SIEMPRE, salga bien o mal: lo que se vigila aquí es que la
-      // misma intención no se ejecute en bucle, no que falle.
-      intentosPorIntencion.set(intencion, (intentosPorIntencion.get(intencion) ?? 0) + 1);
       args.emit({
         type: "action",
         tool: call.name,
@@ -2406,11 +2165,16 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // guardó), y sin esta guarda un turno cuya única edición fue nula
         // pagaba unos ojos sobre una página que nadie tocó.
         if (!nula) {
+          // EL GEMELO CON POSICIONES, hecho aquí y en un solo sitio: lo miden la
+          // medición de la tanda y los ojos del cierre, y cada nodo trae su
+          // línea del fichero (Len 2.0, T9).
+          const tal = sinOpIds(outcome.updatedHtml);
           lastMutation = {
             html: outcome.updatedHtml,
             page: outcome.page ?? null,
-            ...(outcome.taggedHtml ? { taggedHtml: outcome.taggedHtml } : {}),
+            taggedHtml: etiquetarConPosiciones(tal),
           };
+          porMedir.set(lastMutation.page, { html: tal, gemelo: lastMutation.taggedHtml! });
           // El mapa se llena aquí, junto a `lastMutation` y por la misma razón:
           // es el único sitio donde se sabe QUÉ página acaba de cambiar. Se
           // sobrescribe la entrada, así que de cada página queda su ÚLTIMA
@@ -2418,6 +2182,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           ultimaPorPagina.set(outcome.page ?? null, lastMutation);
         }
       }
+      // LA LÍNEA BASE DE CADA PÁGINA: cómo estaba antes de la PRIMERA escritura
+      // del turno sobre ella. Las siguientes no la mueven.
+      if (outcome.htmlPrevio !== undefined && !previoPorPagina.has(outcome.page ?? null)) {
+        previoPorPagina.set(outcome.page ?? null, outcome.htmlPrevio);
+      }
+      // Lo que la escritura dejó mal, para el `<new-diagnostics>` de la tanda.
+      if (outcome.diagnosticos?.length) diagnosticosDeLaTanda.push(...outcome.diagnosticos);
       // Lo durable incluye los cambios de AJUSTES, que no emiten html: módulos,
       // tema, motion, música, 3D, datos vivos. `runAgentTool` los cuenta.
       if (!mutoDurable && (outcome.mutoDurable || outcome.updatedHtml)) {
@@ -2452,27 +2223,23 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       }
 
       if (outcome.pregunta) pregunta = outcome.pregunta;
-      // LA LISTA, POR EL SERVIDOR. Lo que devuelve `declarar_tareas` es la lista
-      // que manda el modelo; la respuesta que vuelve es la que queda tras medir
-      // cada «hecha» nueva — y las que se negaron, por su nombre.
-      let respuesta = outcome.response;
+      // LA LISTA, POR EL SERVIDOR. TodoWrite contesta el literal de Claude Code;
+      // lo medido de cada «completed» nuevo —y las que se negaron, por su
+      // nombre— va en el mensaje hermano (`avisosDeLaLista`).
+      const respuesta = outcome.response;
       if (outcome.tareas) {
+        vueltasSinLista = 0;
         const r = lista.declarar(outcome.tareas);
-        respuesta = {
-          ...outcome.response,
-          tareas: r.tareas,
-          ...(r.sinEvidencia.length > 0
-            ? {
-                sin_evidencia: r.sinEvidencia,
-                aviso_critico:
-                  `NO se marcaron hechas: ${r.sinEvidencia.map((t) => `«${t}»`).join(", ")}. ` +
-                  "Mientras estaban en curso no cambió nada ni se comprobó en la página. " +
-                  "Si ya la hizo una llamada que contó para otra tarea —una misma edición puede cubrir varias—, ponla en_curso y compruébala con una lectura (buscar_en_pagina o leer_estado) antes de marcarla hecha: no la repitas. " +
-                  "Si no está hecha, hazla ahora, o dile al usuario que no se pudo. " +
-                  "Cómo se cuentan las tareas es contabilidad interna: no se la cuentes al usuario.",
-              }
-            : {}),
-        };
+        if (r.sinEvidencia.length > 0) {
+          avisosDeLaLista.push(
+            "<system-reminder>\n" +
+            `NO se marcaron completed: ${r.sinEvidencia.map((t) => `«${t}»`).join(", ")}. ` +
+            "Mientras estaban en curso no cambió nada ni se comprobó en la página. " +
+            "Si ya la hizo una llamada que contó para otra tarea —una misma edición puede cubrir varias—, ponla in_progress y compruébala con una lectura (Read o Grep) antes de marcarla completed: no la repitas. " +
+            "Si no está hecha, hazla ahora, o dile al usuario que no se pudo. " +
+            "Cómo se cuentan las tareas es contabilidad interna: no se la cuentes al usuario.\n</system-reminder>",
+          );
+        }
       }
       // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
       // viene de `declararCambio` (hash antes ≠ hash después); lo durable cubre
@@ -2499,7 +2266,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // El MISMO sitio que cuenta la evidencia guarda su nombre: si se
         // contaran en dos lados, uno se quedaría atrás — que es la clase de
         // fallo que este repositorio ya tiene documentada tres veces.
-        aplicado.push(outcome.action?.summary ?? summary);
+        aplicado.push(outcome.action?.summary ?? (summary || call.name));
         // I6 — y el estado en que la deja. Aquí mismo, por el mismo motivo.
         const rotas = (outcome.response as { referencias_rotas?: unknown }).referencias_rotas;
         rotoPorLaUltima = Array.isArray(rotas) ? rotas.map(String) : [];
@@ -2562,18 +2329,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // mensajes de sistema seguidos se leen como una regañina.
     messages.push({
       role: "user",
-      content: [await medirYRedactar(), recordatorioDeTareas()].filter(Boolean).join("\n\n"),
+      content: [await medirYRedactar(), ...avisosDeLaLista, recordatorioDeTareas()].filter(Boolean).join("\n\n"),
       functionResponses,
     });
-    // Con el documento nuevo ya en el historial, los anteriores sobran: sus
-    // data-op-id murieron en cuanto se aplicó una edición. Se poda DESPUÉS de
-    // empujar, para que el vigente sea siempre el que acaba de entrar.
-    // El contador se calculaba y se TIRABA, así que la poda —lo único que
-    // retira bytes del turno— era la única etapa sin ninguna traza. Se acumula
-    // y la ruta lo saca en la línea de log que ya emite: cero coste, y
-    // `grep "podados"` sobre el diario dice cuánto está ahorrando de verdad.
-    documentosPodados += podarDocumentosViejos(messages);
-
     // H12 · quien insiste en lo que se le rechaza no avanza: se le cierra.
     if (vueltasSoloRechazadas >= VUELTAS_SOLO_RECHAZADAS) return await cerrarSinSalida("rechazos");
     // H12-a · y si guardar ya no puede salir bien, tampoco.

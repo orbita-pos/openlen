@@ -103,14 +103,7 @@ describe("el motivo del fallo cruza los cinco eslabones", () => {
     expect(motivo).toContain("respuesta.aviso_critico");
   });
 
-  // El rechazo se CUENTA llamada a llamada: la herramienta lo deja en la sesión
-  // y el arnés lo anota en cada entrada (`rechazo`), así que «se arregló en la
-  // siguiente» se lee de la secuencia. Hasta el 2026-09-22 lo llevaba además un
-  // contador propio del DSL (`seguimientoDelRechazo`), que se fue con él.
-  it("y el rechazo se CUENTA, llamada a llamada", () => {
-    const tools = lee("lib", "agent", "tools.ts");
-    expect(tools).toContain("session.rechazoPrueba = js.reason");
-    const arnes = lee("lib", "agent", "evals", "promesas.ts");
-    expect(arnes).toContain("rechazo: session.rechazoPrueba");
-  });
+  // ⚰️ «y el rechazo se CUENTA, llamada a llamada» sujetaba el rechazo de
+  // `prueba_js`, que se fue con `editar_runtime` en Len 2.0: Claude Code no
+  // tiene nada así, y el JavaScript se edita como cualquier trozo del fichero.
 });

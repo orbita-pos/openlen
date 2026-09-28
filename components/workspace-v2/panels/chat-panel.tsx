@@ -57,7 +57,7 @@ import { elObjetivoTermino, type VeredictoDeTurno } from "@/lib/agent/objetivo/v
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
-import { historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
+import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { trozosConFormato } from "@/lib/chat/formato-de-len";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
@@ -2765,10 +2765,9 @@ function restoreTurn(s: StoredChatTurn): DesignTurn {
     // F3-T5: a persisted "running" card means the turn died mid-tool-call —
     // nothing will ever flip it to done/error. Restoring it as "running"
     // would show a spinner that spins forever; map it to "error" so a
-    // reload reads as the honest dead state instead.
-    actions: s.actions?.map((a) =>
-      a.status === "running" ? { ...a, status: "error" as const } : a,
-    ),
+    // reload reads as the honest dead state instead. La regla vive en
+    // `accionesAlRecargar`: Len-Bench rehace el historial con la misma.
+    actions: accionesAlRecargar(s.actions),
     noDocChange: s.noDocChange,
     // Guardado como cortado por el servidor: el aviso se compone al pintar,
     // en el idioma de quien lo mira (`AvisoDeTurno`).

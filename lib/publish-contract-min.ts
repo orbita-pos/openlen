@@ -28,6 +28,15 @@ import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 //     modelo obedecía, escribía el enlace, y toda página de negocio local nacía
 //     SIN MAPA. La lista real vive en crates/html-engine/src/sanitize/
 //     elements.rs (`IFRAMES_PERMITIDOS`): host exacto + prefijo de ruta.
+//
+//     ⚠️ Y CORREGIDO OTRA VEZ el 2026-09-25: decía «Cualquier otro se borra al
+//     guardar». Falso para lo que escribe el modelo: la lista la aplica
+//     `sanitizeForPublish`, y Crear, el Chat, Len y `publishToDir` pasan por
+//     `gateReservedMarker`. Un iframe de Spotify llega al release. Lo que sí
+//     lo borra es el «Deshacer» del editor, que guarda el documento entero
+//     saneado. Medido en `lib/publish/el-iframe-del-modelo.test.ts`, que
+//     también mide por qué NO se filtra en la puerta del modelo: su script
+//     crea el mismo iframe en la publicada, así que no sería una frontera.
 //   - `publishToDir` RECHAZA `data-slot-path=`
 //   ⚰️ AQUÍ DECÍA «el horneado de fotos necesita `data-ol-photo`», y era la
 //     razón por la que se conservaba una viñeta que ordenaba dejar un hueco de
@@ -104,10 +113,10 @@ Nada de esto dice QUÉ construir: ni las secciones, ni su orden, ni lo que la p�
 • Google Fonts por \`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\` en el \`<head>\`. Cualquier familia del catálogo vale; carga todas las que uses.
 • Tu CSS propio va en un \`<style>\` dentro del \`<head>\`.
 • NINGÚN JavaScript sobrevive. Todo \`<script>\` —salvo el de Tailwind— y todo atributo \`on*\` se BORRAN antes de guardar el documento. Lo que deba moverse o responder se resuelve sin código: \`<details>\`/\`<summary>\`, un checkbox oculto con \`peer-checked:\`, \`:target\`, \`@keyframes\`, \`transition\`. Un control que sólo funcionaría con un script llega muerto.
-• Los \`<iframe>\` sobreviven SÓLO desde esta lista corta: Google Maps, YouTube y Vimeo. Cualquier otro se borra al guardar. Escríbelos directamente, no hay ninguna transformación al publicar:
+• Los \`<iframe>\` de Google Maps, YouTube y Vimeo sobreviven a todo, también a lo que el dueño edite a mano. Escríbelos directamente, no hay ninguna transformación al publicar:
   – MAPA: \`<iframe src="https://maps.google.com/maps?q=<dirección>&output=embed" loading="lazy">\` — no necesita clave ni cuenta. Si el negocio tiene dirección física, ponlo donde des el contacto: un negocio local sin mapa está a medias.
   – VÍDEO: \`<iframe src="https://www.youtube.com/embed/<ID>">\` o \`https://player.vimeo.com/video/<ID>\`, y SÓLO si el brief te da el enlace — un ID inventado es un reproductor roto.
-  Para cualquier otra cosa (Spotify, Calendly, reservas de terceros), no finjas un embebido: enlaza con un \`<a href>\` honesto.
+  Para cualquier otra cosa (Spotify, Calendly, reservas de terceros), enlaza con un \`<a href>\` honesto: un \`<iframe>\` de otro sitio sobrevive a tu guardado, pero el editor lo borra en cuanto el dueño deshace un cambio a mano, y desaparece sin aviso.
 • LOS FORMULARIOS FUNCIONAN, y son lo único de esta lista que AÑADE algo en vez de quitarlo: al publicar, OpenLen le hornea al \`<form>\` su \`action\`, y lo que el visitante envía llega al correo del dueño y a su bandeja. Escribe un \`<form>\` normal —\`<label>\` + \`<input name="…">\` + \`<button type="submit">\`— y NO le pongas \`action\`, ni \`method\`, ni JavaScript. Un \`onsubmit\` que llame a \`preventDefault()\` o devuelva \`false\` CANCELA el envío de verdad: el visitante ve tu mensaje de gracias, el dueño no recibe nada y ninguno de los dos se entera.
 • Ningún atributo \`data-slot-path=\` en ninguna parte.
 • Todo enlace interno tiene que LLEGAR: si escribes \`href="#precios"\`, la página necesita su \`id="precios"\`. Un ancla a una sección que no existe es un botón muerto, invisible en la captura. Típico: no hay cuentas detrás de estas páginas, así que un «Iniciar sesión» sólo sirve si apunta FUERA, a su URL real.
@@ -256,6 +265,16 @@ export interface FormaDeLaSuperficie {
    * la otra sin que nadie lo decida.
    */
   readonly escribeElHead: boolean;
+  /**
+   * ¿La guía manda sólo en lo que la superficie CREA? Sólo el Agente (H8,
+   * 2026-09-26). «Si la página aún no lo define, escríbelo tú», sobre una
+   * página que ya tiene su diseño y no usa tokens, se cumple reescribiéndola:
+   * en E las tres taquerías hicieron un Write entero y perdieron el lema del
+   * dueño. Con esto el bloque oscuro se escribe en la página que el Agente
+   * crea; en la que ya existe manda cómo está escrita ella (lo dice su prompt).
+   * El Chat no lo enciende: no se ha medido ahí.
+   */
+  readonly laGuiaEsParaLoQueCrea?: boolean;
   /** Bloques que ESTA superficie ya dice mejor por su cuenta. */
   readonly yaLoDiceLaSuperficie?: readonly BloqueDelContrato[];
 }
@@ -274,6 +293,11 @@ const EL_HEAD_YA_EXISTE =
 
 const EL_BLOQUE_OSCURO_SI_FALTA =
   'Si la página aún no lo define, escríbelo tú: `:root[data-ol-mode="dark"] { … }` con esos ' +
+  "tokens en valores oscuros pensados a mano, no una inversión mecánica — ese atributo sobre " +
+  "`<html>` es el que conmuta el editor.";
+
+const EL_BLOQUE_OSCURO_EN_LO_QUE_CREAS =
+  'En una página que creas tú, escríbelo también: `:root[data-ol-mode="dark"] { … }` con esos ' +
   "tokens en valores oscuros pensados a mano, no una inversión mecánica — ese atributo sobre " +
   "`<html>` es el que conmuta el editor.";
 
@@ -353,7 +377,7 @@ export function contratoParaSuperficie(
       "bloque-oscuro",
       'Emite también `:root[data-ol-mode="dark"] { … }`',
       "\n",
-      EL_BLOQUE_OSCURO_SI_FALTA,
+      forma.laGuiaEsParaLoQueCrea ? EL_BLOQUE_OSCURO_EN_LO_QUE_CREAS : EL_BLOQUE_OSCURO_SI_FALTA,
     );
     // …y entonces OFICIO no puede seguir ordenándolo por segunda vez, o el
     // contrato se contradiría a sí mismo a doce líneas de distancia.

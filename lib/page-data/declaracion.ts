@@ -51,21 +51,13 @@ const NOMBRE_RE = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
 
 const BLOQUE_RE = /<script\b[^>]*\bdata-ol-stores\b[^>]*>([\s\S]*?)<\/script>/i;
 
-/** DÓNDE escribe el modelo este bloque, dicho UNA vez. Lo citan la receta de
- *  `guardar_dato` (lib/agent/catalog.ts) y el rechazo de la cabecera
- *  (lib/ai-stream/document-ops.ts), que antes lo decían cada uno a su manera.
- *
- *  🔴 LAS DOS ANCLAS MALAS, las dos MEDIDAS el 2026-09-17:
- *   · la cabecera: rechaza todo `<script>` con cuerpo. La receta mandaba ahí.
- *   · el propio `<body>`: con «como hijo directo del <body>» el modelo apuntó
- *     al id del body, y una op contra el body se rechaza —`op_contra_la_raiz`,
- *     reemplazaría la página entera—. 2 de 5 vueltas tropezaron así.
- *  Por eso la frase nombra el ancla buena Y prohíbe la mala. Y fuera de las
- *  secciones: borrar la tienda no debe llevarse el almacén. */
-export const DONDE_SE_DECLARA_UN_ALMACEN =
-  'con editar_html, op="insert_before" sobre el data-op-id del PRIMER elemento que hay dentro del <body> ' +
-  "—nunca sobre el del propio <body>: una op contra el <body> se rechaza porque reemplazaría la página entera—, " +
-  "fuera de cualquier sección que se pueda borrar";
+// ⚰️ AQUÍ VIVÍA `DONDE_SE_DECLARA_UN_ALMACEN` («con editar_html,
+// op="insert_before" sobre el data-op-id del PRIMER elemento dentro del
+// <body>…»), la frase que compartían la receta de `guardar_dato` y el rechazo
+// de la cabecera. Len 2.0 dejó de citarla (edita con Edit, sin ids) y el
+// rechazo, su último lector, se retiró el 2026-09-25. Lo que se aprendió con
+// ella —el bloque va en el <body> y fuera de cualquier sección que se pueda
+// borrar— lo dice hoy la sección ALMACENES del prompt de Len.
 
 function caducidad(crudo: unknown, modo: ModoVisitante): number | null {
   if (typeof crudo === "string") {
