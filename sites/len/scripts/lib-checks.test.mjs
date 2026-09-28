@@ -9,6 +9,7 @@ import {
   checkAbierto,
   checkIndice,
   catalogToolNames,
+  toolNameConstants,
   checkToolGroups,
   enPalabras,
   mencionaEl,
@@ -66,6 +67,12 @@ test("cada entrada del índice apunta a un id que existe", () => {
 test("catálogo: se leen los nombres de herramientas", () => {
   const src = `  {\n      name: "leer_estado",\n      description: "x",\n  },\n  {\n      name: "editar_texto",\n`;
   assert.deepEqual(catalogToolNames(src), ["leer_estado", "editar_texto"]);
+});
+
+test("catálogo: también los nombres con mayúscula y los de una constante NOMBRE_*", () => {
+  assert.deepEqual(catalogToolNames(`  {\n    name: "Read",\n  },\n`), ["Read"]);
+  const src = `export const NOMBRE_TODO_WRITE = "TodoWrite";\nconst DESCRIPCION = "x";\n`;
+  assert.deepEqual(toolNameConstants(src), ["TodoWrite"]);
 });
 
 test("los grupos de la tarjeta cuadran con el catálogo", () => {

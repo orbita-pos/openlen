@@ -1,9 +1,8 @@
 [
-  { "id": "mirar",   "herramientas": ["mirar_pagina"] },
-  { "id": "leer",    "herramientas": ["leer_estado", "buscar_en_pagina", "leer_de_internet"] },
-  { "id": "editar",  "herramientas": ["editar_texto", "editar_atributos", "editar_html", "editar_runtime", "revertir_ultimo_cambio"] },
-  { "id": "disenar", "herramientas": ["redisenar_pagina", "cambiar_tema", "aplicar_tematica", "crear_pagina", "trabajar_en_pagina"] },
+  { "id": "mirar",   "herramientas": ["mirar_pagina", "usar_pagina"] },
+  { "id": "leer",    "herramientas": ["Read", "Grep", "Glob", "leer_de_internet", "ToolSearch"] },
+  { "id": "editar",  "herramientas": ["Edit", "Write", "revertir_ultimo_cambio"] },
   { "id": "fotos",   "herramientas": ["elegir_foto", "editar_imagen"] },
-  { "id": "datos",   "herramientas": ["activar_modulo", "conectar_datos_vivos", "guardar_dato", "editar_dato", "quitar_dato"] },
-  { "id": "contigo", "herramientas": ["preguntar", "declarar_tareas", "proponer_objetivo", "recordar_preferencia", "preparar_marketing", "publicar"] }
+  { "id": "datos",   "herramientas": ["activar_modulo", "conectar_datos_vivos"] },
+  { "id": "contigo", "herramientas": ["preguntar", "TodoWrite", "proponer_objetivo", "preparar_marketing", "publicar"] }
 ]
