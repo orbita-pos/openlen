@@ -1,0 +1,85 @@
+export const meta = {
+  slug: "len-2-0",
+  title: "Len 2.0: what changed since 1.5, measured",
+  dek: "Len stopped editing your page piece by piece and now works on it the way a programmer works on code. We measured it with a new test bench and with requests neither version had seen.",
+  date: "2026-09-28",
+  category: "Research",
+  topic: "Releases",
+  cover: "primera",
+  readingMinutes: 5,
+  author: "OpenLen team",
+  cifra: { valor: "50 → 83 %", nota: "on the requests 1.5 didn’t get right", commit: "b5d12836" },
+  indice: [
+    { id: "que-cambio", texto: "What changed" },
+    { id: "lo-nuevo", texto: "Everything new" },
+    { id: "como", texto: "How we measured it" },
+    { id: "lo-que-salio", texto: "What came out" },
+    { id: "la-regla", texto: "The rule it didn’t meet" },
+    { id: "abierto", texto: "What is still open" },
+  ],
+}
+
+<h2 id="que-cambio">What changed</h2>
+
+Up to 1.5, Len saw your page as a list of numbered pieces and changed it with a vocabulary of its own: the text of piece 14, the attributes of piece 22. That vocabulary had to be taught to the model every time, and it struggled to use it well. In 2.0 every page is a file, and Len works on it with the tools models already know how to program with: read a file, change an exact piece of text, write a new one and search the whole site. <Fuente commit="adb5a5c1" />
+
+<div className="pull">To change a detail across your whole site, you first have to search your whole site for it.</div>
+
+<h2 id="lo-nuevo">Everything new, in one list</h2>
+
+- **It works on every page as a file**: it reads it, changes the exact text, writes whole new pages and searches the whole site for a detail before changing it.
+- **It has no step limit**: what ends a turn is going silent, not continuing to work.
+- **Before calling it done, it uses the page**: it clicks, types and reloads the way a visitor would, and looks at what happened.
+- **It asks you what it doesn’t know** —a price, a date, opening hours— instead of making it up, and **it tells you what it assumed** and why. It still fails sometimes; we cover that at the end.
+- **It respects the design of the page you already have**: on an existing page, the page is in charge.
+- **It is built not to leave anything half done**, like a “Pay” button that leads nowhere.
+- **It organizes the work in a task list** when a request has several parts, and it doesn’t mark a task done if nothing changed while it was on it.
+- **What your page stores** —a catalog, some reviews, some orders— lives in data files that survive a reload.
+- **It remembers the conversation better**: the server keeps the history, with what it did at each step.
+- **It decides how much to think** based on what the request needs.
+- **If one of its scripts doesn’t work, it knows right away**, with the exact line of the error.
+- **If its answer gets cut off halfway, it retries**, up to three times.
+
+It is all in the 2.0 code. <Fuente commit="adb5a5c1" />
+
+<h2 id="como">How we measured it</h2>
+
+We built a new test bench, Len-Bench. Each request comes with a page, what the owner asks for and a set of checks that **open the published page in a browser** and verify what is there, not what Len says it did. <Fuente ruta="lib/len-bench/graders.ts" /> There are 31 development requests: 12 for **capability**, which 1.5 didn’t get right all three times, and 19 for **regression**, which it already got right and where 2.0 couldn’t get worse.
+
+We ran both versions on the same night, with the same model, three times per request. Separately we kept a **sealed set** of 15 requests that nobody saw while 2.0 was being built, and we opened it only once.
+
+Len-Bench is open source, like the rest of OpenLen. The 31 requests, the checks that grade them and the results of this measurement, run by run and with the whole conversation, are in the repository. <Fuente ruta="lib/agent/evals/resultados/2026-09-27-len-1.5-vs-2.0/README.md" /> The sealed set isn’t, yet: a test whose answers can be seen stops measuring anything. We will publish it when we write the one for the next version; until then, we give its totals.
+
+<h2 id="lo-que-salio">What came out</h2>
+
+<Figura pie={<>Three runs per request, September 27, 2026. The ± is the 95 % interval, paired by request. <Fuente commit="b5d12836" /></>}>
+<table>
+  <thead>
+    <tr><th></th><th>Len 1.5</th><th>Len 2.0</th><th>Difference</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Capability (12 requests)</td><td className="n">50.0 %</td><td className="n">83.3 %</td><td>+33.3 ± 39.4</td></tr>
+    <tr><td>Sealed (15), same criteria</td><td className="n">82.2 %</td><td className="n">95.6 %</td><td>+13.3 ± 16.8</td></tr>
+    <tr><td>Regression (19)</td><td className="n">94.7 %</td><td className="n">98.2 %</td><td>counting fixes</td></tr>
+    <tr><td>Cost per request</td><td className="n">$0.031</td><td className="n">$0.024</td><td>cheaper</td></tr>
+  </tbody>
+</table>
+</Figura>
+
+On capability, <Cifra valor="50 → 83 %" commit="b5d12836">on the requests 1.5 didn’t get right</Cifra>. With 12 requests the margin is wide, and we say so: the interval runs from −6 to +73 points. What does show case by case are three requests that 1.5 failed all three times in every one of our measurements —making the WhatsApp buttons work on all four pages, removing a product everywhere and changing the business name— and that 2.0 gets right all three times.
+
+On the sealed set, the first reading was lower: 62.2 % against 68.9 %. When we reviewed by hand every run that wasn’t perfect, several failed because of the check and not because of Len: an embedded map the check didn’t recognize, or a link to `/nosotros` without a trailing slash that opens the same page. We corrected it the same way for both versions, run by run and with the reason written down. All three readings are in the repository.
+
+On regression, 2.0 measured 91.2 %. Three of its drops had a cause we fixed afterwards: we measured one again and it passed all three times; the other two, we didn’t. The 98.2 % counts them as fixed, which is why we say so next to the number. The fourth drop is still open.
+
+The published code also carries what we fixed after measuring, and the descriptions of its tools written anew. A check run of the 31 requests didn’t show it getting worse, counted the same way.
+
+<h2 id="la-regla">The rule it didn’t meet</h2>
+
+Before measuring we set a rule: 2.0 had to beat 1.5 by at least 25 points on the sealed set. It didn’t: +6.7 on the first reading and +13.3 with the same criteria for both. And it couldn’t have. On the sealed set, 1.5 was already at 75.6 % with the corrected check, so the most it could gain was +24.4, and we worked that out too late. On capability the rule was met, because those requests are, by construction, the ones 1.5 failed.
+
+We leave it written here. For future versions there won’t be a magic number: we will publish the table with the previous version next to it and its margin, and the name gets decided with that in front of us.
+
+<Abierto id="abierto" titulo="What is still open">
+Four things. **It sometimes fills in what’s missing**: in one of three attempts it put in made-up “starter” reviews instead of the owner’s own; it said so, but it put them in. **Once it touched what it wasn’t asked to**: while changing a headline, it deleted a brand line. **A checkout total didn’t survive a very fast reload**, in one of three attempts. And **it is slower**: 232 seconds per request on average, against 148 for 1.5. It is all in the results, case by case. <Fuente commit="b5d12836" />
+</Abierto>

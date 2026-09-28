@@ -47,7 +47,7 @@ export const en: Diccionario = {
     ctaSecundario: "What it can do",
     altCielo: "A painted dawn sky with a thin coral ring of light among the clouds.",
     cielo: {
-      titulo: "Len 1.5",
+      titulo: "Len 2.0",
       texto: "What used to mean hiring someone now means sending a message.",
       cta: "How it works →",
     },
@@ -94,58 +94,55 @@ export const en: Diccionario = {
       ],
     },
     cifras: {
-      antetitulo: "Len 1.0 → Len 1.5",
-      titulo: "What changed since 1.0, measured.",
+      antetitulo: "Len 1.5 → Len 2.0",
+      titulo: "What changed since 1.5, measured.",
       leer: "How we measured it",
       items: [
         {
-          valor: "64 → 67",
-          texto: "of 69 requests solved, with the same battery run against both versions’ code and the same model",
-          commit: "48a3b66b",
+          valor: "50 → 83 %",
+          texto: "on the requests 1.5 didn’t get right: 12 requests, three runs each, both versions on the same night and with the same model",
+          commit: "b5d12836",
         },
         {
-          valor: "3",
-          texto: "1.0 failures that 1.5 no longer has: it ran out of steps, warned about an edit nobody made, and when it hit its limit it neither looked at the page nor said it hadn’t",
-          commit: "48a3b66b",
+          valor: "82 → 96 %",
+          texto: "on 15 sealed requests nobody saw while 2.0 was being built, graded with the same criteria for both versions",
+          commit: "b5d12836",
         },
       ],
-      nota: "One run per request: the difference is small and close to noise. There are 14 more requests, written after 1.0, that its test bench can’t pose; 1.5 solves 13. And one failure both share: they invent the country code for a phone number you give them without one.",
-      notaCommit: "48a3b66b",
+      nota: "With 12 and 15 requests the margin is wide: ±39 and ±17 points. On the 19 that 1.5 already got right, 2.0 doesn’t get worse (98 %, counting fixes we didn’t measure again) and it costs less per request. And one failure it still has: when a detail is missing, it sometimes fills in with made-up reviews.",
+      notaCommit: "b5d12836",
     },
     tarjeta: {
-      antetitulo: "Len 1.5 · September 2026",
-      titulo: "Twenty-seven tools, one developer",
+      antetitulo: "Len 2.0 · September 2026",
+      titulo: "Nineteen tools, one developer",
       texto:
-        "It edits your page node by node, searches the whole site for the detail it is about to change, picks photos and publishes. And it verifies every change by looking at it: a screenshot something describes, and a measurement that depends on no model at all.",
+        "It works on your site the way a programmer works on code: every page is a file it reads, searches and changes precisely. And before handing it over, it uses the page the way a visitor would: it clicks, types, reloads and looks at what happened.",
       como: "How it works →",
       grupos: {
         mirar: {
-          titulo: "Look",
-          nota: "1 tool · 2 modes",
+          titulo: "Look and use",
           texto:
-            "Measure, for free, in a real browser —pixel contrast, mobile overflow, JS errors— or describe the screenshot with vision when it’s needed. The mode is explicit, so cost never depends on how a sentence was phrased.",
+            "It measures the page in a real browser —pixel contrast, mobile overflow, JS errors— and uses it like a visitor: it clicks buttons, fills in forms and reloads to see what changed.",
         },
         leer: {
-          titulo: "Read",
-          texto: "The project’s real state, anything across the whole site, and the web pages you hand it.",
+          titulo: "Read and search",
+          texto:
+            "Every page is a file: it reads it, searches the whole site for the detail it is about to change, reads the web pages you hand it and loads the tools it rarely uses when it needs them.",
         },
         editar: {
-          titulo: "Edit",
-          texto: "Text, attributes, HTML and the page’s JavaScript, node by node; and undo its last change.",
-        },
-        disenar: {
-          titulo: "Design and create",
-          texto: "Theme, style, full redesign, new pages on the site and switching between them.",
+          titulo: "Write",
+          texto: "It changes the exact text that needs changing, writes whole new pages and undoes its last change.",
         },
         fotos: { titulo: "Photos", texto: "Choose and edit images for your line of business." },
         datos: {
           titulo: "Data and modules",
-          texto: "Turn on the chat — a real OpenLen module, not a painted form — and save, edit, remove or connect live data.",
+          texto:
+            "It turns on the chat — a real OpenLen module, not a painted form — and connects live data. What your page stores —a catalog, some reviews, some orders— lives in data files that survive a reload.",
         },
         contigo: {
           titulo: "With you",
           texto:
-            "It asks when unsure, writes down its tasks, remembers your preferences, proposes goals, prepares your marketing and publishes.",
+            "It asks you for the detail it’s missing instead of making it up, organizes the work in a task list, proposes goals, prepares your marketing and publishes.",
         },
       },
     },
@@ -156,13 +153,13 @@ export const en: Diccionario = {
         {
           k: "one",
           t: "Read",
-          p: "The project’s real state — the document, the pages, the modules, whether it is published — not what it remembers from the chat.",
+          p: "The project’s real state — the pages, their data, the modules, whether it is published — not what it remembers from the chat.",
         },
-        { k: "two", t: "Act", p: "It changes the exact node. It never rewrites the whole document to change a sentence." },
+        { k: "two", t: "Act", p: "It changes the exact text. It never rewrites a whole page to change a sentence." },
         {
           k: "three",
           t: "Look",
-          p: "It renders in a real browser and measures: pixel contrast, mobile overflow, JS errors.",
+          p: "It renders in a real browser and measures —pixel contrast, mobile overflow, JS errors— and uses the page like a visitor.",
         },
         { k: "four", t: "Report", p: "What happened, with the evidence. If it couldn’t, it says so — and what was missing." },
       ],

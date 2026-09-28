@@ -644,6 +644,16 @@ a {
   color: #27241f;
   margin: 0 0 20px;
 }
+.prose ul {
+  margin: 0 0 20px;
+  padding-left: 22px;
+}
+.prose li {
+  font-size: 17px;
+  line-height: 1.6;
+  color: #27241f;
+  margin: 0 0 10px;
+}
 .prose h2 {
   font-family: var(--f-texto), system-ui, sans-serif;
   font-weight: 700;

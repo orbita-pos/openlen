@@ -12,6 +12,7 @@ import {
   checkAbierto,
   checkIndice,
   catalogToolNames,
+  toolNameConstants,
   checkToolGroups,
   checkTitularTotal,
   checkNotasDeGrupo,
@@ -56,7 +57,13 @@ for (const [i, p] of mdx.entries()) {
 errors.push(...checkCommits(hashes, isPublicCommit));
 
 const groups = JSON.parse(readFileSync(join(SITE, "data", "herramientas.json"), "utf8"));
-const catalog = catalogToolNames(readFileSync(join(REPO, "lib", "agent", "catalog.ts"), "utf8"));
+const AGENTE = join(REPO, "lib", "agent");
+const catalog = [
+  ...catalogToolNames(readFileSync(join(AGENTE, "catalog.ts"), "utf8")),
+  ...catalogToolNames(readFileSync(join(AGENTE, "ficheros", "declaraciones.ts"), "utf8")),
+  ...toolNameConstants(readFileSync(join(AGENTE, "ficheros", "todo-write.ts"), "utf8")),
+  ...toolNameConstants(readFileSync(join(AGENTE, "ficheros", "tool-search.ts"), "utf8")),
+];
 errors.push(...checkToolGroups(groups, catalog));
 
 // Los diccionarios: ni modelos ni proveedores, y los números que la tarjeta

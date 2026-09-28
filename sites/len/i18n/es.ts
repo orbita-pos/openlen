@@ -45,7 +45,7 @@ export const es = {
     ctaSecundario: "Qué sabe hacer",
     altCielo: "Un cielo pintado al amanecer con un anillo de luz coral entre las nubes.",
     cielo: {
-      titulo: "Len 1.5",
+      titulo: "Len 2.0",
       texto: "Lo que antes era contratar a alguien, ahora es escribirle un mensaje.",
       cta: "Cómo trabaja →",
     },
@@ -92,58 +92,55 @@ export const es = {
       ],
     },
     cifras: {
-      antetitulo: "Len 1.0 → Len 1.5",
-      titulo: "Qué cambió desde el 1.0, medido.",
+      antetitulo: "Len 1.5 → Len 2.0",
+      titulo: "Qué cambió desde el 1.5, medido.",
       leer: "Cómo lo medimos",
       items: [
         {
-          valor: "64 → 67",
-          texto: "encargos resueltos de 69, con la misma batería contra el código de las dos versiones y el mismo modelo",
-          commit: "48a3b66b",
+          valor: "50 → 83 %",
+          texto: "en los encargos que el 1.5 no hacía bien: 12 encargos, tres veces cada uno, las dos versiones la misma noche y con el mismo modelo",
+          commit: "b5d12836",
         },
         {
-          valor: "3",
-          texto: "fallos del 1.0 que el 1.5 ya no tiene: se quedaba sin pasos, avisaba de una edición que nadie hizo y, al topar, ni miraba la página ni decía que no la había mirado",
-          commit: "48a3b66b",
+          valor: "82 → 96 %",
+          texto: "en 15 encargos sellados, que nadie vio mientras se construía el 2.0, calificados con el mismo criterio en las dos versiones",
+          commit: "b5d12836",
         },
       ],
-      nota: "Una corrida por caso: la diferencia es pequeña y está cerca del ruido. Hay 14 encargos más, escritos después del 1.0, que su banco de pruebas no sabe plantear; el 1.5 resuelve 13. Y un fallo que tienen los dos: inventan el prefijo de país de un teléfono que les das sin él.",
-      notaCommit: "48a3b66b",
+      nota: "Con 12 y 15 encargos el margen es ancho: ±39 y ±17 puntos. En los 19 que el 1.5 ya hacía bien, el 2.0 no empeora (98 %, contando arreglos que no volvimos a medir) y cuesta menos por encargo. Y un fallo que le queda: a veces rellena con reseñas inventadas cuando le falta un dato.",
+      notaCommit: "b5d12836",
     },
     tarjeta: {
-      antetitulo: "Len 1.5 · septiembre 2026",
-      titulo: "Veintisiete herramientas, un solo desarrollador",
+      antetitulo: "Len 2.0 · septiembre 2026",
+      titulo: "Diecinueve herramientas, un solo desarrollador",
       texto:
-        "Edita tu página nodo a nodo, busca en todo el sitio el dato que va a cambiar, elige fotos y publica. Y cada cambio lo verifica mirándolo: una captura que alguien describe y una medición que no depende de ningún modelo.",
+        "Trabaja tu sitio como un programador trabaja su código: cada página es un fichero que lee, busca y cambia con precisión. Y antes de entregar, usa la página como la usaría un visitante: pulsa, escribe, recarga y mira qué pasó.",
       como: "Cómo trabaja →",
       grupos: {
         mirar: {
-          titulo: "Mirar",
-          nota: "1 herramienta · 2 modos",
+          titulo: "Mirar y usar",
           texto:
-            "Medir, gratis, en un navegador real —contraste en el píxel, desbordes en móvil, errores de JS— o describir la captura con visión cuando hace falta. El modo es explícito, para que el coste no dependa de cómo se redactó la frase.",
+            "Mide la página en un navegador real —contraste en el píxel, desbordes en móvil, errores de JS— y la usa como un visitante: pulsa botones, llena formularios y recarga para ver qué cambió.",
         },
         leer: {
-          titulo: "Leer",
-          texto: "El estado real del proyecto, cualquier cosa en todo el sitio, y las páginas de internet que le das.",
+          titulo: "Leer y buscar",
+          texto:
+            "Cada página es un fichero: lo lee, busca en todo el sitio el dato que va a cambiar, lee las páginas de internet que le das y carga cuando las necesita las herramientas que usa poco.",
         },
         editar: {
-          titulo: "Editar",
-          texto: "Texto, atributos, HTML y el JavaScript de la página, nodo a nodo; y deshacer su último cambio.",
-        },
-        disenar: {
-          titulo: "Diseñar y crear",
-          texto: "Tema, temática, rediseño completo, páginas nuevas del sitio y cambiar entre ellas.",
+          titulo: "Escribir",
+          texto: "Cambia el texto exacto que hay que cambiar, escribe páginas nuevas enteras y deshace su último cambio.",
         },
         fotos: { titulo: "Fotos", texto: "Elegir y editar imágenes para tu rubro." },
         datos: {
           titulo: "Datos y módulos",
-          texto: "Encender el chat, que es un módulo real de OpenLen y no un formulario pintado, y guardar, editar, quitar o conectar datos vivos.",
+          texto:
+            "Enciende el chat, que es un módulo real de OpenLen y no un formulario pintado, y conecta datos vivos. Lo que guarda tu página —un catálogo, unas reseñas, unos pedidos— vive en ficheros de datos que sobreviven a recargar.",
         },
         contigo: {
           titulo: "Contigo",
           texto:
-            "Pregunta cuando duda, apunta sus tareas, recuerda tus preferencias, propone objetivos, prepara tu marketing y publica.",
+            "Te pregunta el dato que le falta en vez de inventarlo, ordena el trabajo en una lista de tareas, propone objetivos, prepara tu marketing y publica.",
         },
       },
     },
@@ -154,13 +151,13 @@ export const es = {
         {
           k: "uno",
           t: "Lee",
-          p: "El estado real del proyecto —el documento, las páginas, los módulos, si está publicado—, no lo que recuerda de la conversación.",
+          p: "El estado real del proyecto —las páginas, sus datos, los módulos, si está publicado—, no lo que recuerda de la conversación.",
         },
-        { k: "dos", t: "Actúa", p: "Cambia el nodo exacto. Nunca reescribe el documento entero para cambiar una frase." },
+        { k: "dos", t: "Actúa", p: "Cambia el texto exacto. Nunca reescribe una página entera para cambiar una frase." },
         {
           k: "tres",
           t: "Mira",
-          p: "Renderiza en un navegador real y mide: contraste en el píxel, desbordes en móvil, errores de JS.",
+          p: "Renderiza en un navegador real y mide —contraste en el píxel, desbordes en móvil, errores de JS—, y usa la página como un visitante.",
         },
         { k: "cuatro", t: "Cuenta", p: "Lo que pasó, con la evidencia. Si no pudo, lo dice — y qué faltó." },
       ],
