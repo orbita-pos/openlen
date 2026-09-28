@@ -54,6 +54,7 @@ import {
   type ResponsiveImageEntry,
 } from "@/lib/html-engine";
 import { processImage } from "@/lib/images";
+import { OPENLEN_STATIC_HOSTS } from "@/lib/publish/base-host";
 
 const BAKE_WIDTHS = [400, 800, 1400, 2000];
 const WEBP_QUALITY = 82;
@@ -89,12 +90,7 @@ function hostOf(base: string | undefined): string | null {
 }
 
 function allowedRemoteHosts(): Set<string> {
-  const hosts = new Set([
-    "images.unsplash.com",
-    "images.openlen.com",
-    "uploads.openlen.com",
-    "templates.openlen.com",
-  ]);
+  const hosts = new Set(["images.unsplash.com", ...OPENLEN_STATIC_HOSTS]);
   for (const base of [
     process.env.R2_PUBLIC_URL,
     process.env.R2_IMAGES_PUBLIC_URL,

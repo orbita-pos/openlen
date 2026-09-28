@@ -503,7 +503,7 @@ export function repartirFallos(
  * Basta con que falte UNO: media promesa no se puede comprobar.
  *
  * Sólo juzga los selectores por id, que son los que la receta manda usar
- * (`DONDE_SE_DECLARA_UN_ALMACEN` y la ficha de `prueba`). Cualquier otro se deja
+ * (la ficha de `prueba`). Cualquier otro se deja
  * VIVO: retirar una promesa por no saber leer su selector sería perder una
  * comprobación en silencio. Si de verdad ya no señala a nada, lo dirá el
  * navegador con `deLaPrueba`, que es el testigo bueno para eso.

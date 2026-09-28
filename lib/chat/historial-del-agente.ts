@@ -42,6 +42,21 @@ export interface TurnoParaHistorial {
 }
 
 /**
+ * Las acciones de un turno GUARDADO, como las ve quien RECARGA la conversación.
+ *
+ * Una acción que quedó en `running` es un turno que murió a mitad de la
+ * herramienta: nada la pasará nunca a hecha o fallida. Se restaura como
+ * `error`, y así viaja en el historial —como llamada fallida—. En `running`,
+ * `historialParaElAgente` la DESCARTA y Len no sabría que lo intentó.
+ *
+ * Una sola regla para los dos que rehacen una conversación de las filas del
+ * servidor: el panel al recargar (`restoreTurn`) y Len-Bench en cada turno.
+ */
+export function accionesAlRecargar<A extends { readonly status: string }>(acciones: readonly A[] | undefined): A[] | undefined {
+  return acciones?.map((a) => (a.status === "running" ? { ...a, status: "error" as const } : a));
+}
+
+/**
  * LA MARCA DE UN TURNO CORTADO, para el modelo. Sin ella, el historial le
  * enseñaba un turno suyo con llamadas que salieron bien y —en el de producción
  * del 14/09— sin una palabra, y al «¿ya quedó?» siguiente contestaba un Len que

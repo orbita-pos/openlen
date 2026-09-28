@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vereda — Expediciones a pie por la Sierra Norte de Oaxaca</title>
+<meta name="description" content="Travesías a pie entre Benito Juárez, Cuajimoloyas, Latuvi y La Nevería. Bosque de niebla a 3,100 msnm, cabañas comunitarias y guía local con 14 años en el sendero. Grupos de máximo 12.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #FAFAF6;
+    --surface: #F1F2EA;
+    --surface-2: #E7E9DE;
+    --fg: #1B211D;
+    --fg-muted: #545C55;
+    --fg-faint: #616960;
+    --border: rgba(27,33,29,0.08);
+    --border-strong: rgba(27,33,29,0.12);
+    --accent: #3E5C4B;
+    --accent-r: 62,92,75;
+    --accent-ink: #F2F7F3;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --radius-lg: 24px;
+    --font-display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --warn: #A3671C;
+    --danger: #8F2D22;
+  }
+  :root.dark {
+    --bg: #101512;
+    --surface: #161C18;
+    --surface-2: #1D2520;
+    --fg: #ECF1ED;
+    --fg-muted: rgba(236,241,237,0.66);
+    --fg-faint: rgba(236,241,237,0.55);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #8FB8A1;
+    --accent-r: 143,184,161;
+    --accent-ink: #0E1712;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  .display { font-family: var(--font-display); letter-spacing: -0.03em; line-height: 0.96; }
+  .mono { font-family: var(--font-mono); }
+  .hairline { border-color: var(--border); }
+  .hairline-2 { border-color: var(--border-strong); }
+  .lift { transition: transform 120ms ease, box-shadow 120ms ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(0,0,0,0.10); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: rgba(var(--accent-r), 0.92); }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--fg-faint); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .half-tone { opacity: 0.45; }
+  .nav-veil { background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .ph-fog { background: linear-gradient(165deg, rgba(var(--accent-r),0.60), rgba(var(--accent-r),0.30) 48%, var(--surface-2)); }
+  .ph-forest { background: linear-gradient(150deg, rgba(var(--accent-r),0.38), var(--surface-2) 62%, var(--surface)); }
+  .ph-falls { background: linear-gradient(130deg, var(--surface-2), rgba(var(--accent-r),0.22) 55%, var(--surface)); }
+  .ph-village { background: linear-gradient(115deg, rgba(var(--accent-r),0.16), var(--surface) 50%, var(--surface-2)); }
+  .grain::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+    background-image: radial-gradient(rgba(0,0,0,0.045) 1px, transparent 1px);
+    background-size: 28px 28px; opacity: 0.5;
+  }
+  .scrim { background: linear-gradient(to top, rgba(10,14,11,0.72) 0%, rgba(10,14,11,0.26) 48%, rgba(10,14,11,0.38) 100%); }
+  ::selection { background: rgba(var(--accent-r), 0.22); }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .lift, .lift:hover { transition: none; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV STICKY -->
+<header class="nav-veil sticky top-0 z-50 border-b hairline">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+        <path d="M2 20L9 7l4 7 4-9 7 15" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 23c5-2 13-2 18 0" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="1 4"/>
+      </svg>
+      <span class="display text-[20px] font-bold tracking-tight">Vereda</span>
+    </a>
+    <div class="hidden items-center gap-8 text-[13.5px] font-medium text-[color:var(--fg-muted)] md:flex">
+      <a href="#tours" class="hover:text-[color:var(--fg)]">Tours</a>
+      <a href="#itinerario" class="hover:text-[color:var(--fg)]">Itinerario</a>
+      <a href="#guia" class="hover:text-[color:var(--fg)]">El guía</a>
+    </div>
+    <a href="#reservar" class="btn-primary lift inline-flex h-9 items-center rounded-full px-4 text-[13.5px] font-medium">Reserva tu lugar</a>
+  </nav>
+</header>
+
+<!-- HERO FULL-BLEED -->
+<section class="relative flex min-h-[90svh] flex-col overflow-hidden">
+  <div class="ph-fog absolute inset-0" data-ol-photo="hikers mountain trail sunrise fog"></div>
+  <div class="scrim absolute inset-0"></div>
+
+  <div class="relative z-10 mt-auto">
+    <div class="mx-auto max-w-6xl px-5 pt-24">
+      <div class="mono text-[11px] uppercase tracking-[0.24em] text-white/70">Sierra Norte de Oaxaca · Pueblos Mancomunados · a pie desde 2012</div>
+      <h1 class="display mt-4 max-w-3xl text-[46px] font-bold text-white sm:text-[68px] lg:text-[82px]">
+        La sierra se cruza a pie, pueblo por pueblo.
+      </h1>
+      <p class="mt-5 max-w-xl text-[15.5px] leading-relaxed text-white/85">
+        Caminamos entre Benito Juárez, Cuajimoloyas, Latuvi y La Nevería — bosque de niebla a 3,100 msnm, cabañas comunitarias y comida hecha en leña. Grupos de máximo 12 personas.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href="#reservar" class="lift inline-flex h-12 items-center rounded-full bg-[var(--bg)] px-7 text-[14px] font-semibold text-[color:var(--fg)]">Reserva tu lugar</a>
+        <a href="#tours" class="lift inline-flex h-12 items-center rounded-full border border-white/40 px-7 text-[14px] font-medium text-white hover:bg-white/10">Ver fechas</a>
+      </div>
+      <div class="mono mt-5 text-[11px] uppercase tracking-[0.18em] text-white/60 tabular">Salidas confirmadas desde 6 caminantes · salimos aunque llueva</div>
+    </div>
+
+    <!-- Franja próximas salidas -->
+    <div class="mx-auto max-w-6xl px-5 pb-8 pt-10 md:pb-10">
+      <div class="rounded-[var(--radius)] border border-white/25 bg-white/10 p-2 backdrop-blur-md">
+        <div class="grid gap-2 sm:grid-cols-3">
+          <div class="rounded-[var(--radius-sm)] bg-white/10 px-4 py-3">
+            <div class="mono text-[10px] uppercase tracking-[0.16em] text-white/60">Próxima salida</div>
+            <div class="mono mt-1 text-[13px] font-medium text-white tabular">Sáb 18 jul · Ruta de las Nubes</div>
+            <div class="mt-0.5 text-[12px] text-white/70 tabular">quedan 4 lugares</div>
+          </div>
+          <div class="rounded-[var(--radius-sm)] bg-white/10 px-4 py-3">
+            <div class="mono text-[10px] uppercase tracking-[0.16em] text-white/60">Próxima salida</div>
+            <div class="mono mt-1 text-[13px] font-medium text-white tabular">Sáb 25 jul · Cañadas y cascadas</div>
+            <div class="mt-0.5 text-[12px] text-white/70 tabular">quedan 7 lugares</div>
+          </div>
+          <div class="rounded-[var(--radius-sm)] bg-white/10 px-4 py-3">
+            <div class="mono text-[10px] uppercase tracking-[0.16em] text-white/60">Próxima salida</div>
+            <div class="mono mt-1 text-[13px] font-medium text-white tabular">Jue 06 ago · Travesía de cuatro pueblos</div>
+            <div class="mt-0.5 text-[12px] text-white/70 tabular">quedan 2 lugares</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TOURS DESTACADOS -->
+<section id="tours" class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+  <div class="mb-12 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
+    <div>
+      <div class="eyebrow">Tours</div>
+      <h2 class="display mt-3 text-[34px] font-bold sm:text-[46px]">Tres rutas, <span class="half-tone">un mismo bosque.</span></h2>
+    </div>
+    <p class="max-w-sm text-[14px] leading-relaxed text-[color:var(--fg-muted)]">Todas salen del Centro de Oaxaca y duermen en cabañas de los comités comunitarios. Caminas con guía local, siempre.</p>
+  </div>
+
+  <div class="grid gap-5 md:grid-cols-3">
+    <article class="lift flex flex-col overflow-hidden rounded-[var(--radius-lg)] border hairline bg-[var(--surface)]">
+      <div class="ph-forest grain relative aspect-[4/3]" data-ol-photo="cloud forest canopy oaxaca"></div>
+      <div class="flex flex-1 flex-col p-6">
+        <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent)] tabular">2 días · dificultad media</div>
+        <h3 class="display mt-2 text-[26px] font-bold">Ruta de las Nubes</h3>
+        <p class="mt-2 text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">De Benito Juárez a Cuajimoloyas por el filo del cerro: la niebla sube a media mañana y el mirador queda arriba de ella.</p>
+        <div class="mt-auto flex items-end justify-between border-t hairline pt-4">
+          <div class="pt-2 text-[12.5px] text-[color:var(--fg-muted)]">por persona<br><span class="display text-[24px] font-bold text-[color:var(--fg)] tabular">$2,890</span></div>
+          <div class="mono pb-1 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)] tabular">sale sáb 18 jul</div>
+        </div>
+      </div>
+    </article>
+
+    <article class="lift flex flex-col overflow-hidden rounded-[var(--radius-lg)] border hairline bg-[var(--surface)]">
+      <div class="ph-falls grain relative aspect-[4/3]" data-ol-photo="waterfall canyon hikers"></div>
+      <div class="flex flex-1 flex-col p-6">
+        <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent)] tabular">1 día · dificultad ligera</div>
+        <h3 class="display mt-2 text-[26px] font-bold">Cañadas y cascadas</h3>
+        <p class="mt-2 text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Bajada al río de Latuvi entre huertas de durazno; se come trucha al horno de leña y se vuelve antes de que anochezca.</p>
+        <div class="mt-auto flex items-end justify-between border-t hairline pt-4">
+          <div class="pt-2 text-[12.5px] text-[color:var(--fg-muted)]">por persona<br><span class="display text-[24px] font-bold text-[color:var(--fg)] tabular">$1,150</span></div>
+          <div class="mono pb-1 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)] tabular">sale sáb 25 jul</div>
+        </div>
+      </div>
+    </article>
+
+    <article class="lift flex flex-col overflow-hidden rounded-[var(--radius-lg)] border hairline bg-[var(--surface)]">
+      <div class="ph-village grain relative aspect-[4/3]" data-ol-photo="village cabins mountain"></div>
+      <div class="flex flex-1 flex-col p-6">
+        <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent)] tabular">4 días · dificultad alta</div>
+        <h3 class="display mt-2 text-[26px] font-bold">Travesía de cuatro pueblos</h3>
+        <p class="mt-2 text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">La ruta insignia: 41 kilómetros de sendero antiguo uniendo los cuatro pueblos, con tres noches en cabañas y temazcal al final.</p>
+        <div class="mt-auto flex items-end justify-between border-t hairline pt-4">
+          <div class="pt-2 text-[12.5px] text-[color:var(--fg-muted)]">por persona<br><span class="display text-[24px] font-bold text-[color:var(--fg)] tabular">$5,400</span></div>
+          <div class="mono pb-1 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)] tabular">sale jue 06 ago</div>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ITINERARIO DÍA POR DÍA -->
+<section id="itinerario" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="mb-12 grid items-center gap-8 lg:grid-cols-[1.2fr_1fr] lg:gap-16">
+      <div>
+        <div class="eyebrow">Itinerario · Travesía de cuatro pueblos</div>
+        <h2 class="display mt-3 max-w-xl text-[34px] font-bold sm:text-[46px]">Cuatro días, cuarenta y un kilómetros.</h2>
+        <p class="mt-4 max-w-md text-[14px] leading-relaxed text-[color:var(--fg-muted)]">Se camina de mañana, se come en casa de las cocineras del comité y se duerme bajo cobijas de lana. Ningún tramo pasa de seis horas.</p>
+      </div>
+      <div class="ph-village grain relative aspect-[4/3] rounded-[var(--radius-lg)] border hairline" data-ol-photo="camp dinner lanterns night"></div>
+    </div>
+
+    <article class="grid gap-3 border-t hairline py-7 md:grid-cols-[80px_1fr_auto] md:gap-8">
+      <div class="mono text-[13px] font-medium text-[color:var(--accent)] tabular">D·01</div>
+      <div>
+        <h3 class="display text-[22px] font-bold">Oaxaca → Benito Juárez → Cuajimoloyas</h3>
+        <p class="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Salimos 7:30 am de García Vigil; a las 9:40 empieza el sendero en Benito Juárez. Comida en el comedor de doña Herminia y tarde libre en el mirador del cerro.</p>
+      </div>
+      <div class="mono text-[11.5px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)] tabular md:text-right">12.4 km · 3,110 msnm</div>
+    </article>
+
+    <article class="grid gap-3 border-t hairline py-7 md:grid-cols-[80px_1fr_auto] md:gap-8">
+      <div class="mono text-[13px] font-medium text-[color:var(--accent)] tabular">D·02</div>
+      <div>
+        <h3 class="display text-[22px] font-bold">Cuajimoloyas → Latuvi</h3>
+        <p class="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Arrancamos 8:15 am entre huertas de papa y bajamos por la cañada del río. Cena de trucha al horno de leña y temazcal opcional al llegar.</p>
+      </div>
+      <div class="mono text-[11.5px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)] tabular md:text-right">14.8 km · 2,460 msnm</div>
+    </article>
+
+    <article class="grid gap-3 border-t hairline py-7 md:grid-cols-[80px_1fr_auto] md:gap-8">
+      <div class="mono text-[13px] font-medium text-[color:var(--accent)] tabular">D·03</div>
+      <div>
+        <h3 class="display text-[22px] font-bold">Latuvi → La Nevería</h3>
+        <p class="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">El tramo del bosque de niebla: salida 7:50 am con 6 °C, dos puentes de madera y llegada a La Nevería para comer quesadillas de flor de calabaza.</p>
+      </div>
+      <div class="mono text-[11.5px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)] tabular md:text-right">9.6 km · 2,890 msnm</div>
+    </article>
+
+    <article class="grid gap-3 border-t hairline py-7 md:grid-cols-[80px_1fr_auto] md:gap-8">
+      <div class="mono text-[13px] font-medium text-[color:var(--accent)] tabular">D·04</div>
+      <div>
+        <h3 class="display text-[22px] font-bold">La Nevería → Oaxaca</h3>
+        <p class="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Caminata corta al mirador, comida de despedida con el comité y regreso en camioneta. Llegamos al Centro de Oaxaca a las 6:30 pm.</p>
+      </div>
+      <div class="mono text-[11.5px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)] tabular md:text-right">4.2 km · descenso</div>
+    </article>
+  </div>
+</section>
+
+<!-- QUÉ INCLUYE / QUÉ NO -->
+<section class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="mb-12">
+      <div class="eyebrow">Sin letra chica</div>
+      <h2 class="display mt-3 text-[34px] font-bold sm:text-[46px]">Qué incluye tu lugar.</h2>
+    </div>
+    <div class="grid gap-12 md:grid-cols-2 md:gap-16">
+      <div>
+        <div class="mono border-b hairline-2 pb-3 text-[11px] uppercase tracking-[0.2em] text-[color:var(--accent)]">Incluye</div>
+        <ul class="text-[14px] leading-relaxed">
+          <li class="flex items-baseline gap-3 border-b hairline py-3.5"><span class="text-[color:var(--accent)]">✓</span>Guía local certificado, todos los días de la ruta</li>
+          <li class="flex items-baseline gap-3 border-b hairline py-3.5"><span class="text-[color:var(--accent)]">✓</span>Hospedaje en cabañas comunitarias, 3 noches con chimenea</li>
+          <li class="flex items-baseline gap-3 border-b hairline py-3.5"><span class="text-[color:var(--accent)]">✓</span>Las nueve comidas, del desayuno del día 1 a la comida del día 4</li>
+          <li class="flex items-baseline gap-3 border-b hairline py-3.5"><span class="text-[color:var(--accent)]">✓</span>Transporte redondo Oaxaca–sierra en camioneta propia</li>
+          <li class="flex items-baseline gap-3 border-b hairline py-3.5"><span class="text-[color:var(--accent)]">✓</span>Seguro de montaña y radio de comunicación en cada grupo</li>
+          <li class="flex items-baseline gap-3 py-3.5"><span class="text-[color:var(--accent)]">✓</span>Aportación directa al comité de turismo de cada pueblo</li>
+        </ul>
+      </div>
+      <div>
+        <div class="mono border-b hairline-2 pb-3 text-[11px] uppercase tracking-[0.2em] text-[color:var(--fg-faint)]">No incluye</div>
+        <ul class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">
+          <li class="flex items-baseline gap-3 border-b hairline py-3.5"><span class="text-[color:var(--fg-faint)]">—</span>Bolsa de dormir — se renta en Benito Juárez por <span class="tabular">$95</span> la noche</li>
+          <li class="flex items-baseline gap-3 border-b hairline py-3.5"><span class="text-[color:var(--fg-faint)]">—</span>Propinas para cocineras y arrieros</li>
+          <li class="flex items-baseline gap-3 border-b hairline py-3.5"><span class="text-[color:var(--fg-faint)]">—</span>Bebidas fuera de las comidas</li>
+          <li class="flex items-baseline gap-3 border-b hairline py-3.5"><span class="text-[color:var(--fg-faint)]">—</span>Botas, impermeable y lámpara frontal — te mandamos la lista al reservar</li>
+          <li class="flex items-baseline gap-3 py-3.5"><span class="text-[color:var(--fg-faint)]">—</span>Noche de hotel en Oaxaca antes o después de la travesía</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EL GUÍA -->
+<section id="guia" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid items-center gap-10 lg:grid-cols-[1fr_1.2fr] lg:gap-20">
+      <div class="ph-forest grain relative aspect-[4/5] rounded-[var(--radius-lg)] border hairline" data-ol-photo="local guide portrait trail"></div>
+      <div>
+        <div class="eyebrow">El guía</div>
+        <h2 class="display mt-3 text-[38px] font-bold sm:text-[52px]">Everardo Ramos</h2>
+        <div class="mono mt-3 text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent)]">Guía local certificado · NOM-09-TUR · primeros auxilios en zonas agrestes</div>
+        <p class="mt-5 max-w-lg text-[15px] leading-relaxed text-[color:var(--fg-muted)]">
+          Everardo nació en Benito Juárez y aprendió los senderos arreando ganado con su abuelo. Desde 2012 guía las travesías de Vereda: conoce a las cocineras de los cuatro pueblos por nombre, y sabe en qué curva del camino se abre la niebla.
+        </p>
+        <ul class="mt-8 max-w-lg">
+          <li class="flex items-baseline justify-between gap-4 border-b hairline py-3.5">
+            <span class="text-[14px]">Años guiando la Sierra Norte</span>
+            <span class="mono text-[13px] font-medium text-[color:var(--fg)] tabular">14</span>
+          </li>
+          <li class="flex items-baseline justify-between gap-4 border-b hairline py-3.5">
+            <span class="text-[14px]">Travesías completadas</span>
+            <span class="mono text-[13px] font-medium text-[color:var(--fg)] tabular">618</span>
+          </li>
+          <li class="flex items-baseline justify-between gap-4 py-3.5">
+            <span class="text-[14px]">Altitud de su casa</span>
+            <span class="mono text-[13px] font-medium text-[color:var(--fg)] tabular">2,980 msnm</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RESEÑA — cita única -->
+<section class="border-t hairline">
+  <div class="mx-auto max-w-3xl px-5 py-20 text-center md:py-28">
+    <svg class="mx-auto text-[color:var(--accent)]" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 7H6a3 3 0 0 0-3 3v7h7v-7H7c0-1.7 1.3-3 3-3V7zm11 0h-4a3 3 0 0 0-3 3v7h7v-7h-3c0-1.7 1.3-3 3-3V7z" opacity=".35"/></svg>
+    <blockquote class="display mt-6 text-[26px] font-medium italic leading-[1.18] sm:text-[34px]">
+      "Llegamos a Cuajimoloyas con la niebla cerrada y Everardo nos pidió caminar callados el último kilómetro. Nadie sacó el teléfono. Todavía lo platicamos."
+    </blockquote>
+    <figcaption class="mono mt-6 text-[11px] uppercase tracking-[0.2em] text-[color:var(--fg-faint)]">Daniela R. · Guadalajara · travesía de mayo 2026</figcaption>
+  </div>
+</section>
+
+<!-- CTA FINAL — banda de acento -->
+<section id="reservar" class="bg-[var(--accent)] text-[color:var(--accent-ink)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+      <div>
+        <div class="mono text-[11px] uppercase tracking-[0.22em] opacity-70">Temporada de lluvias · la sierra más verde del año</div>
+        <h2 class="display mt-4 max-w-lg text-[36px] font-bold sm:text-[50px]">La próxima salida ya tiene fecha.</h2>
+        <p class="mt-4 max-w-md text-[14.5px] leading-relaxed opacity-85">Se aparta con el 30% y el resto se paga una semana antes de salir. Si la salida no se llena, te movemos de fecha o te devolvemos todo.</p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href="#" class="lift inline-flex h-12 items-center rounded-full bg-[var(--bg)] px-7 text-[14px] font-semibold text-[color:var(--fg)]">Reserva tu lugar</a>
+          <a href="#" class="lift inline-flex h-12 items-center gap-2 rounded-full border border-white/35 px-6 text-[14px] font-medium hover:bg-white/10">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .3-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.5-.2.7-.1l2 .9c.3.2.5.3.6.4 0 .1 0 .7-.3 1.3z"/></svg>
+            WhatsApp
+          </a>
+        </div>
+      </div>
+      <ul class="self-center">
+        <li class="flex items-baseline gap-4 border-b border-white/15 py-4">
+          <span class="mono w-24 shrink-0 text-[12px] font-medium uppercase tracking-[0.1em] tabular">Sáb 18 jul</span>
+          <span class="text-[14px] opacity-90">Ruta de las Nubes · 2 días</span>
+          <span class="mono ml-auto text-[11.5px] opacity-70 tabular">4 lugares</span>
+        </li>
+        <li class="flex items-baseline gap-4 border-b border-white/15 py-4">
+          <span class="mono w-24 shrink-0 text-[12px] font-medium uppercase tracking-[0.1em] tabular">Sáb 25 jul</span>
+          <span class="text-[14px] opacity-90">Cañadas y cascadas · 1 día</span>
+          <span class="mono ml-auto text-[11.5px] opacity-70 tabular">7 lugares</span>
+        </li>
+        <li class="flex items-baseline gap-4 py-4">
+          <span class="mono w-24 shrink-0 text-[12px] font-medium uppercase tracking-[0.1em] tabular">Jue 06 ago</span>
+          <span class="text-[14px] opacity-90">Travesía de cuatro pueblos · 4 días</span>
+          <span class="mono ml-auto text-[11.5px] opacity-70 tabular">2 lugares</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER LOCAL -->
+<footer class="border-t hairline">
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-[12.5px] text-[color:var(--fg-faint)] md:flex-row">
+    <div class="flex items-center gap-2">
+      <svg width="16" height="16" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M2 20L9 7l4 7 4-9 7 15" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="font-medium text-[color:var(--fg-muted)]">Vereda · expediciones a pie</span>
+    </div>
+    <div class="mono text-center text-[11px] uppercase tracking-[0.14em]">García Vigil 512-B, Centro · Oaxaca de Juárez · mar–dom 9:00 am – 7:00 pm</div>
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-[color:var(--fg)]">WhatsApp</a>
+      <a href="#" class="hover:text-[color:var(--fg)]">Instagram</a>
+      <span>© 2026 Vereda</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

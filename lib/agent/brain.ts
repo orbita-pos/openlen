@@ -20,7 +20,9 @@ import { caparEsfuerzo, capacidadDeEsfuerzo, type EsfuerzoAgente } from "./esfue
  * cerebro. Aqui vivia `OPENLEN_AGENT_PROVIDER=gemini`, retirado el 2026-08-28.
  */
 export interface AgentBrainOptions {
-  readonly tools: Record<string, unknown>[];
+  /** Una función cuando la lista CRECE a mitad del turno: las diferidas que el
+   *  modelo carga con ToolSearch (H2) se le ofrecen desde la llamada siguiente. */
+  readonly tools: Record<string, unknown>[] | (() => Record<string, unknown>[]);
   /** Identifica la corrida ante el transporte de Fireworks (presupuesto y bitácora). */
   readonly requestId: string;
   readonly signal?: AbortSignal;
@@ -32,6 +34,10 @@ export interface AgentBrainOptions {
   readonly esfuerzoDelTurno?: EsfuerzoAgente | null;
   /** Su preferencia guardada (`users.agentEffort`). */
   readonly esfuerzoDelUsuario?: EsfuerzoAgente | null;
+  /** Se llama con cada trozo de razonamiento, que NO llega al loop. Es señal de
+   *  vida para el reloj de silencio de la ruta: sin ella, pensar más de 3 min
+   *  seguidos parecía un cuelgue y se cancelaba el turno (E del 26/09, con H5). */
+  readonly alPensar?: () => void;
 }
 
 export interface AgentBrain {
@@ -62,9 +68,13 @@ export interface AgentBrain {
  */
 export async function* asAgentStream(
   source: AsyncIterable<FireworksStreamEvent>,
+  alPensar?: () => void,
 ): AsyncIterable<StreamEvent> {
   for await (const event of source) {
-    if (event.type === "reasoning_delta") continue;
+    if (event.type === "reasoning_delta") {
+      alPensar?.();
+      continue;
+    }
     yield event;
   }
 }
@@ -94,7 +104,7 @@ const TEMPERATURE = 0.2;
 
 export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
   const fireworks = createFireworksStreamClient();
-  const wireTools = toolsForFireworks(options.tools);
+  const wireTools = () => toolsForFireworks(typeof options.tools === "function" ? options.tools() : options.tools);
   const streamOpts = options.signal ? { signal: options.signal } : {};
   // Un turno con imagen adjunta lo corre el PAPEL CON VISION, no el del
   // Agente, y cada papel trae su tarifa. Sin esta bandera se cobraria al precio
@@ -170,7 +180,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
       fireworks.stream(
         {
           messages: messagesForFireworks(messages),
-          ...(withTools ? { tools: wireTools } : {}),
+          ...(withTools ? { tools: wireTools() } : {}),
           ...(images?.length ? { images } : {}),
           maxOutputTokens,
           temperature: TEMPERATURE,
@@ -183,6 +193,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
         },
         streamOpts,
       ),
+      options.alPensar,
       );
     })();
 

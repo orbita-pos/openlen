@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brote — Florería de barrio · Coyoacán, CDMX</title>
+<meta name="description" content="Ramos de temporada armados el mismo día, suscripción semanal y entregas en bici por Coyoacán. Flor mexicana primero.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #FBF8F6;
+    --surface: #F4EEE9;
+    --surface-2: #ECE3DC;
+    --fg: #27201F;
+    --fg-muted: #5F5654;
+    --fg-faint: #6C6361;
+    --border: rgba(39,32,31,0.08);
+    --border-strong: rgba(39,32,31,0.12);
+    --accent: #7C3F58;
+    --accent-r: 124,63,88;
+    --accent-ink: #FBF1F5;
+    --radius: 14px;
+    --radius-sm: 9px;
+    --radius-lg: 22px;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --warn: #A3671C;
+    --danger: #8F2D22;
+  }
+  :root.dark {
+    --bg: #191315;
+    --surface: #211A1C;
+    --surface-2: #2A2124;
+    --fg: #F3EDEF;
+    --fg-muted: rgba(243,237,239,0.66);
+    --fg-faint: rgba(243,237,239,0.56);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #B06A87;
+    --accent-r: 176,106,135;
+    --accent-ink: #2B0F1B;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-feature-settings: "ss01","cv11"; -webkit-font-smoothing: antialiased; }
+  .display { font-family: var(--font-display); font-optical-sizing: auto; letter-spacing: -0.015em; line-height: 0.99; }
+  .mono { font-family: var(--font-mono); }
+  .hairline { border-color: var(--border); }
+  .hairline-2 { border-color: var(--border-strong); }
+  .lift { transition: transform 110ms ease, box-shadow 110ms ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0,0,0,0.09); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: rgba(var(--accent-r), 0.92); }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-faint); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .half-tone { opacity: 0.45; }
+  .ph-petalo { background: linear-gradient(145deg, rgba(var(--accent-r),0.24), var(--surface-2) 52%, var(--surface)); }
+  .ph-hoja { background: linear-gradient(125deg, var(--surface-2), var(--surface) 55%, rgba(var(--accent-r),0.12)); }
+  .grain::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background-image: radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px); background-size: 26px 26px; opacity: 0.5; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="sticky top-0 z-50 border-b hairline backdrop-blur-md" style="background: color-mix(in srgb, var(--bg) 88%, transparent);">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 21V10M12 10c0-4 2.5-6.5 6-7-.5 3.5-3 6-6 7zm0 0C12 6 9.5 3.5 6 3c.5 3.5 3 6 6 7z" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M8 21c1.3-.8 2.6-1.2 4-1.2s2.7.4 4 1.2" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <span class="display text-[19px] font-semibold">Brote</span>
+    </a>
+    <div class="hidden items-center gap-7 text-[13.5px] font-medium text-[color:var(--fg-muted)] md:flex">
+      <a href="#ramos" class="hover:text-[color:var(--fg)]">Ramos</a>
+      <a href="#suscripcion" class="hover:text-[color:var(--fg)]">Suscripción</a>
+      <a href="#visitanos" class="hover:text-[color:var(--fg)]">Visítanos</a>
+    </div>
+    <a href="#visitanos" class="btn-primary lift inline-flex h-9 items-center rounded-full px-4 text-[13.5px] font-medium">Ordena hoy</a>
+  </nav>
+</header>
+
+<!-- HERO SPLIT -->
+<section class="mx-auto max-w-6xl px-5 pb-16 pt-10 md:pb-24 md:pt-16">
+  <div class="grid items-center gap-10 lg:grid-cols-[1fr_1.05fr] lg:gap-14">
+    <div>
+      <div class="mono inline-flex items-center gap-2 rounded-full border hairline bg-[var(--surface)] py-1 pl-2.5 pr-3.5 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-muted)]">
+        <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"></span>
+        Coyoacán · entregas en bici el mismo día
+      </div>
+      <h1 class="display mt-6 text-[42px] font-medium sm:text-[56px] lg:text-[62px]">
+        Flores de temporada, <em class="text-[color:var(--accent)]">armadas hoy</em> <span class="half-tone">en la mañana.</span>
+      </h1>
+      <p class="mt-6 max-w-md text-[15.5px] leading-relaxed text-[color:var(--fg-muted)]">
+        Vamos a Jamaica dos veces por semana y armamos con lo que está en su mejor momento: dalia, nube, cempasúchil en octubre, alcatraz cuando llueve. Flor mexicana primero, siempre.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href="#ramos" class="btn-primary lift inline-flex h-11 items-center gap-1.5 rounded-full px-5 text-[14px] font-medium">
+          Ver los ramos
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#suscripcion" class="lift inline-flex h-11 items-center rounded-full border hairline-2 bg-[var(--surface)] px-5 text-[14px] font-medium">Flores cada lunes</a>
+      </div>
+      <div class="mono mt-7 text-[12px] tracking-wide text-[color:var(--fg-faint)] tabular">Pedidos antes de la 1 pm se entregan el mismo día</div>
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div class="ph-petalo grain relative aspect-[3/4] rounded-[var(--radius-lg)] border hairline" data-ol-photo="flower bouquet dahlias pink"></div>
+      <div class="ph-hoja grain relative mt-10 aspect-[3/4] rounded-[var(--radius-lg)] border hairline" data-ol-photo="florist arranging flowers workshop"></div>
+    </div>
+  </div>
+</section>
+
+<!-- RAMOS -->
+<section id="ramos" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="mb-10 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
+      <div>
+        <div class="eyebrow">Los ramos de esta semana</div>
+        <h2 class="display mt-3 text-[32px] font-medium sm:text-[42px]">Cuatro tamaños, una regla: lo que esté bonito hoy.</h2>
+      </div>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <article class="lift overflow-hidden rounded-[var(--radius)] border hairline bg-[var(--bg)]">
+        <div class="ph-petalo grain relative aspect-square" data-ol-photo="small posy flowers jar"></div>
+        <div class="p-5">
+          <div class="flex items-baseline justify-between">
+            <h3 class="display text-[17px] font-medium">El apapacho</h3>
+            <span class="mono text-[13.5px] font-medium tabular">$260</span>
+          </div>
+          <p class="mt-1.5 text-[13px] leading-relaxed text-[color:var(--fg-muted)]">Chiquito y directo al corazón. Cabe en un vaso.</p>
+        </div>
+      </article>
+      <article class="lift overflow-hidden rounded-[var(--radius)] border hairline bg-[var(--bg)]">
+        <div class="ph-hoja grain relative aspect-square" data-ol-photo="medium bouquet seasonal flowers"></div>
+        <div class="p-5">
+          <div class="flex items-baseline justify-between">
+            <h3 class="display text-[17px] font-medium">El de la mesa</h3>
+            <span class="mono text-[13.5px] font-medium tabular">$480</span>
+          </div>
+          <p class="mt-1.5 text-[13px] leading-relaxed text-[color:var(--fg-muted)]">El clásico de la casa. Dura diez días con cambio de agua.</p>
+        </div>
+      </article>
+      <article class="lift overflow-hidden rounded-[var(--radius)] border hairline bg-[var(--bg)]">
+        <div class="ph-petalo grain relative aspect-square" data-ol-photo="large flower arrangement dramatic"></div>
+        <div class="p-5">
+          <div class="flex items-baseline justify-between">
+            <h3 class="display text-[17px] font-medium">El escándalo</h3>
+            <span class="mono text-[13.5px] font-medium tabular">$890</span>
+          </div>
+          <p class="mt-1.5 text-[13px] leading-relaxed text-[color:var(--fg-muted)]">Para pedir perdón o celebrar en grande. Llega en cubeta.</p>
+        </div>
+      </article>
+      <article class="lift overflow-hidden rounded-[var(--radius)] border hairline bg-[var(--bg)]">
+        <div class="ph-hoja grain relative aspect-square" data-ol-photo="dried flowers arrangement vase"></div>
+        <div class="p-5">
+          <div class="flex items-baseline justify-between">
+            <h3 class="display text-[17px] font-medium">El eterno</h3>
+            <span class="mono text-[13.5px] font-medium tabular">$540</span>
+          </div>
+          <p class="mt-1.5 text-[13px] leading-relaxed text-[color:var(--fg-muted)]">Flor seca de la casa — dura meses y no pide nada.</p>
+        </div>
+      </article>
+    </div>
+    <div class="mt-6 flex flex-col items-start justify-between gap-3 rounded-[var(--radius)] border hairline bg-[var(--bg)] px-5 py-4 sm:flex-row sm:items-center">
+      <div class="text-[13.5px] text-[color:var(--fg-muted)]">¿Evento o boda? Cotizamos con gusto — mándanos fecha y referencia.</div>
+      <a href="#visitanos" class="text-[13.5px] font-medium text-[color:var(--accent)] hover:opacity-80">Ordena por WhatsApp →</a>
+    </div>
+  </div>
+</section>
+
+<!-- SUSCRIPCIÓN -->
+<section id="suscripcion" class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
+      <div>
+        <div class="eyebrow">La suscripción</div>
+        <h2 class="display mt-3 max-w-md text-[32px] font-medium sm:text-[42px]">Flores en tu mesa <span class="half-tone">cada lunes.</span></h2>
+        <p class="mt-5 max-w-md text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]">
+          Llega un ramo de temporada a tu casa u oficina cada lunes antes de las 11. Sin contrato: pausas cuando viajas, cancelas cuando quieras, y el ramo siempre es sorpresa — de eso se trata.
+        </p>
+        <ul class="mono mt-7 max-w-sm divide-y divide-[color:var(--border)] text-[13px] tabular">
+          <li class="flex justify-between py-3.5"><span class="text-[color:var(--fg-muted)]" style="font-family:var(--font-body);">Semanal · ramo de la mesa</span><span class="font-medium">$420 /sem</span></li>
+          <li class="flex justify-between py-3.5"><span class="text-[color:var(--fg-muted)]" style="font-family:var(--font-body);">Quincenal · ramo de la mesa</span><span class="font-medium">$450 /entrega</span></li>
+          <li class="flex justify-between py-3.5"><span class="text-[color:var(--fg-muted)]" style="font-family:var(--font-body);">Oficinas · arreglo grande</span><span class="font-medium">desde $780 /sem</span></li>
+        </ul>
+        <a href="#" class="btn-primary lift mt-7 inline-flex h-11 items-center rounded-full px-6 text-[14px] font-medium">Quiero mis lunes con flores</a>
+      </div>
+      <div class="ph-petalo grain relative aspect-[4/5] rounded-[var(--radius-lg)] border hairline" data-ol-photo="flowers on kitchen table morning"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CITA -->
+<section class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-3xl px-5 py-18 text-center md:py-24" style="padding-top:4.5rem;padding-bottom:4.5rem;">
+    <blockquote class="display text-[24px] font-medium italic leading-[1.25] sm:text-[30px]">
+      "Llevo ocho meses de suscripción y mi lunes cambió de categoría. Hasta mi casero pregunta de dónde son."
+    </blockquote>
+    <figcaption class="mono mt-6 text-[11px] uppercase tracking-[0.2em] text-[color:var(--fg-faint)]">Carolina V. · suscriptora desde noviembre</figcaption>
+  </div>
+</section>
+
+<!-- VISÍTANOS -->
+<section id="visitanos" class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+      <div>
+        <div class="eyebrow">Visítanos</div>
+        <h2 class="display mt-3 text-[32px] font-medium sm:text-[42px]">Miércoles a domingo.<br><span class="half-tone">Los lunes andamos repartiendo.</span></h2>
+        <ul class="mono mt-8 max-w-md divide-y divide-[color:var(--border)] text-[13px] tabular">
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]">Miércoles — Sábado</span><span>10:00 am – 7:00 pm</span></li>
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]">Domingo</span><span>10:00 am – 3:00 pm</span></li>
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]">Lunes y martes</span><span class="text-[color:var(--accent)]">día de mercado y entregas</span></li>
+        </ul>
+        <div class="mt-8 space-y-1.5 text-[14.5px] text-[color:var(--fg-muted)]">
+          <div class="font-medium text-[color:var(--fg)]">Francisco Sosa 118, Coyoacán</div>
+          <div>CDMX · entregas en bici en toda la alcaldía, $45</div>
+        </div>
+        <div class="mt-7 flex flex-wrap gap-3">
+          <a href="#" class="btn-primary lift inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14px] font-medium">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .3-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.5-.2.7-.1l2 .9c.3.2.5.3.6.4 0 .1 0 .7-.3 1.3z"/></svg>
+            Ordena por WhatsApp
+          </a>
+          <a href="#" class="lift inline-flex h-11 items-center rounded-full border hairline-2 bg-[var(--surface)] px-5 text-[14px] font-medium">Cómo llegar</a>
+        </div>
+      </div>
+      <div class="ph-hoja grain relative aspect-[4/3] self-center rounded-[var(--radius-lg)] border hairline lg:aspect-[4/5]" data-ol-photo="flower shop storefront bicycle"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grain relative overflow-hidden rounded-[var(--radius-lg)] border hairline bg-[var(--surface-2)] px-6 py-14 text-center md:py-18">
+      <div class="pointer-events-none absolute inset-0" style="background: radial-gradient(55% 60% at 50% 0%, rgba(var(--accent-r),0.16), transparent 70%);"></div>
+      <h2 class="display relative mx-auto max-w-xl text-[32px] font-medium sm:text-[42px]">Hoy es buen día para llegar con flores.</h2>
+      <p class="relative mx-auto mt-4 max-w-md text-[14.5px] text-[color:var(--fg-muted)]">Pide antes de la 1 pm y llegan hoy mismo, en bici y con nota escrita a mano.</p>
+      <div class="relative mt-8 flex flex-wrap items-center justify-center gap-3">
+        <a href="#" class="btn-primary lift inline-flex h-11 items-center rounded-full px-6 text-[14px] font-medium">Ordena tu ramo</a>
+        <a href="#suscripcion" class="lift inline-flex h-11 items-center rounded-full border hairline-2 bg-[var(--bg)] px-6 text-[14px] font-medium">Flores cada lunes</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER LOCAL -->
+<footer class="border-t hairline">
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-[12.5px] text-[color:var(--fg-faint)] md:flex-row">
+    <div class="flex items-center gap-2">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21V10M12 10c0-4 2.5-6.5 6-7-.5 3.5-3 6-6 7zm0 0C12 6 9.5 3.5 6 3c.5 3.5 3 6 6 7z" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="font-medium text-[color:var(--fg-muted)]">Brote · florería de barrio</span>
+    </div>
+    <div class="mono text-[11px] uppercase tracking-[0.12em]">Francisco Sosa 118, Coyoacán · mié–dom</div>
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-[color:var(--fg)]">Instagram</a>
+      <a href="#" class="hover:text-[color:var(--fg)]">WhatsApp</a>
+      <span>© 2026 Brote</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

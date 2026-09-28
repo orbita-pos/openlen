@@ -13,9 +13,17 @@ import type { EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 // tarifas presume en su cabecera de haber arreglado esa misma forma dos veces.
 // Extraer, no copiar: a partir de aquí la tarifa se LEE del papel.
 export const MODEL_POLICY = Object.freeze({
+  // ⚰️ AQUÍ ESTABA `deepseek-v4-flash-0731` (V4 Flash), y el 2026-09-26 Fireworks
+  // lo SACÓ DE SERVERLESS: sigue en su catálogo («Ready»), pero su ficha ya sólo
+  // ofrece despliegue dedicado y entrenamiento, y la API contesta 404 «not
+  // deployed». Lo cazó Len-Bench a media corrida —su cliente simulado usa este
+  // papel— y `npm run modelos:comprobar` lo confirmó; en producción fallaban en
+  // BLANDO `copy`, `simple_extraction`, `template_autofill` y el evaluador de
+  // objetivos. Pasa a V4.1 Flash, que ya llevaban la visión y el agente, con SU
+  // tarifa (salida 1,82x la de V4). Jesús lo decidió ese mismo día.
   reasoner: Object.freeze({
-    modelId: "accounts/fireworks/models/deepseek-v4-flash-0731",
-    creditRate: "deepseek-flash" as CreditRate,
+    modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
+    creditRate: "deepseek-flash-4p1" as CreditRate,
     // Ver `capturaRuntimeDelPapel` abajo: la capacidad se DECLARA aquí, no se
     // deduce de quién es este papel.
     capturaRuntime: true,
@@ -24,7 +32,7 @@ export const MODEL_POLICY = Object.freeze({
     // lleva en la misma entrada que `id`. Escrito aparte, caducaría en silencio
     // el día que cambie el modelo; `model-policy.test.ts` exige que se
     // correspondan.
-    displayName: "DeepSeek V4 Flash",
+    displayName: "DeepSeek V4.1 Flash",
   }),
   // EL PAPEL CON VISIÓN. Lo piden cuatro operaciones: `agent_visual_verify`
   // (los ojos de Len), `page_write_with_reference` (escribir mirando una
@@ -137,8 +145,15 @@ export const MODEL_POLICY = Object.freeze({
   // AutomationBench 54.8 vs 43.2 · Agent's Last Exam 31.8 vs 25.7 · CyberGym
   // 88.1 vs 83.3). Son sus propios números y NINGUNO mide lo que nos importa:
   // si mantiene el hilo entre turnos con NUESTRO catálogo. Eso lo dice la
-  // batería y nada más. Vuelta atrás: `deepseek-v4-pro-0813` y `deepseek-pro`
-  // en brain.ts, las dos juntas.
+  // batería y nada más.
+  //
+  // ⚰️ AQUÍ DECÍA «Vuelta atrás: `deepseek-v4-pro-0813` y `deepseek-pro` en
+  // brain.ts». Esa vuelta ya no existe: el 2026-09-26 `npm run
+  // modelos:comprobar -- --ademas=…deepseek-v4-pro-0813` da 404 «not deployed»
+  // y el catálogo lo marca `supportsServerless:false`, aunque la página de
+  // precios lo siga listando. Fireworks lo sacó de serverless entre el 23/09 y
+  // el 26/09, con V4 Flash 0731 y otros cuatro. Un modelo de esta tabla se
+  // comprueba preguntándole al proveedor, no leyendo su página de precios.
   agent: Object.freeze({
     modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
     creditRate: "deepseek-flash-4p1" as CreditRate,
@@ -194,6 +209,8 @@ export type ModelOperation =
    *  Y va en el papel BARATO: es una lectura corta con tres salidas, no
    *  redacción. */
   | "condition_evaluation";
+// (`len_bench_cliente`, el dueño simulado de Len-Bench, se fue el 2026-09-27: el
+// dueño es ahora un doble FIJO sin modelo, `lib/len-bench/cliente-simulado.ts`.)
 
 const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effort: FireworksReasoningEffort | null }>> = {
   // Gusto, no razonamiento: elegir modo y acento desde el brief es una lectura
@@ -223,9 +240,8 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   // 16.134 tokens de pensamiento para producir DOS ops, contra 5,2s y SIETE en
   // `none`) era sobre el trabajo, no sobre el modelo.
   //
-  // ARRASTRA AL REDISEÑO a propósito (`lib/agent/redesign.ts` pide esta misma
-  // operación): su comentario dice «reescribir una página entera es el mismo
-  // trabajo que edita el Chat», así que seguirlo es lo que ese fichero pide.
+  // (Arrastraba también al rediseño del Agente, `lib/agent/redesign.ts`, que se
+  // retiró con Len 2.0; hoy la pide el Chat.)
   page_edit: { role: "visual_critic", effort: "none" },
   // `effort: null`, Y NO ES UN OLVIDO: esta fila ya no decide cuánto piensa
   // el turno. Eso vive ahora en la capa de POSTURA (`lib/agent/esfuerzo.ts`),

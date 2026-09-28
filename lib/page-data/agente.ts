@@ -20,6 +20,7 @@ import type { Plan } from "@/lib/limits";
 import { validaDocumento } from "./declaracion";
 import { declaracionDelBorrador } from "./publicada";
 import { bytesDe, cabe, estadoDeCuota, type EstadoDeCuota } from "./cuota";
+import { decidirLote, type Lote } from "./lote";
 import { borrar, bytesUsados, escribir, listar } from "./store";
 
 export type ResultadoAgente =
@@ -158,6 +159,55 @@ export async function editarDato(args: {
     reemplazaId: args.id,
   });
   return { ok: true, mensaje: `Actualizado en «${args.almacen}».` };
+}
+
+/**
+ * UN FICHERO DE DATOS EDITADO, APLICADO ENTERO (H3 de Len 2.x: los almacenes
+ * como `/datos/<almacen>.json`). Las mismas reglas que `agregarDato`,
+ * `editarDato` y `quitarDato` —escribe el DUEÑO, sobre el borrador, validado—,
+ * pero TODO se decide antes de tocar nada (`decidirLote`, puro y probado sin
+ * base), y la cuota una sola vez para el lote.
+ */
+export async function aplicarPlanDeAlmacen(args: {
+  projectId: string;
+  userId: string;
+  almacen: string;
+  plan: Lote;
+}): Promise<ResultadoAgente> {
+  const plan = await planDe(args.userId);
+  if (!plan) return { ok: false, error: "no_autorizado" };
+  const almacen = await almacenDe(args.projectId, args.almacen);
+  if (!almacen) return { ok: false, error: "almacen_no_declarado" };
+
+  const lote = decidirLote({
+    almacen,
+    plan,
+    usados: await bytesUsados(args.projectId),
+    existentes: new Map((await leerDatos({ projectId: args.projectId, almacen: args.almacen })).map((f) => [f.id, f.doc])),
+    lote: args.plan,
+  });
+  if (!lote.ok) return { ok: false, error: lote.error };
+
+  for (const c of lote.cambios) {
+    await escribir({
+      projectId: args.projectId,
+      store: args.almacen,
+      visitorId: null,
+      doc: c.doc,
+      caducaDias: almacen.caducaDias,
+      reemplazaId: c.id,
+    });
+  }
+  for (const doc of lote.altas) {
+    await escribir({ projectId: args.projectId, store: args.almacen, visitorId: null, doc, caducaDias: almacen.caducaDias });
+  }
+  for (const id of lote.bajas) {
+    await borrar({ projectId: args.projectId, store: args.almacen, id, alcance: "todos", visitorId: null });
+  }
+  return {
+    ok: true,
+    mensaje: `«${args.almacen}»: ${lote.cambios.length} cambiada(s), ${lote.altas.length} añadida(s), ${lote.bajas.length} quitada(s).`,
+  };
 }
 
 export async function quitarDato(args: {

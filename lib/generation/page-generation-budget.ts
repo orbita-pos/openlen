@@ -85,7 +85,14 @@ export const FABLE_PRODUCTION_RATES = Object.freeze({
  * La LISTA de quién tiene vía Priority sí es una decisión, no un cálculo, y
  * por eso sigue escrita.
  */
-const CON_VIA_PRIORITY: readonly string[] = ["accounts/fireworks/models/deepseek-v4-flash-0731"];
+// ⚰️ Era `deepseek-v4-flash-0731`, que Fireworks sacó de serverless el
+// 2026-09-26 (ver el papel `reasoner` en `model-policy.ts`). Pasa al modelo que
+// lo sustituyó para que la tabla no quede huérfana —si no, esto lanza al
+// cargar—, pero dicho claro: HOY NINGÚN LLAMADOR PIDE `priority` (grep de
+// `"priority"` fuera de los clientes y de este fichero: cero), y NO está
+// comprobado que V4.1 Flash tenga esa vía. Quien la vuelva a pedir, que lo mire
+// antes en la tabla del proveedor.
+const CON_VIA_PRIORITY: readonly string[] = ["accounts/fireworks/models/deepseek-v4p1-flash"];
 const FACTOR_PRIORITY = 1.25;
 
 /** .66 x 1.25 da 0.8250000000000001 en coma flotante, y una tarifa con cola de

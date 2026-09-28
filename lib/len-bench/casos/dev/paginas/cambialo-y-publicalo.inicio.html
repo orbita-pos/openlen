@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roble & Luz — Fotografía de bodas · Guadalajara</title>
+<meta name="description" content="Fotografía documental de bodas: cero poses forzadas, las fotos que se sienten como ese día. Paquetes claros y entrega en 6 semanas.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #FBFAF7;
+    --surface: #F4F1EA;
+    --surface-2: #ECE7DC;
+    --fg: #23201A;
+    --fg-muted: #5C5749;
+    --fg-faint: #696453;
+    --border: rgba(35,32,26,0.08);
+    --border-strong: rgba(35,32,26,0.12);
+    --accent: #9C7A3C;
+    --accent-r: 156,122,60;
+    --accent-ink: #FBF6EA;
+    --radius: 12px;
+    --radius-sm: 7px;
+    --radius-lg: 18px;
+    --font-display: "Instrument Serif", Georgia, serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --warn: #A3671C;
+    --danger: #8F2D22;
+  }
+  :root.dark {
+    --bg: #171510;
+    --surface: #1F1C16;
+    --surface-2: #28241C;
+    --fg: #F2F0EA;
+    --fg-muted: rgba(242,240,234,0.66);
+    --fg-faint: rgba(242,240,234,0.56);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #C4A263;
+    --accent-r: 196,162,99;
+    --accent-ink: #241B07;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-feature-settings: "ss01","cv11"; -webkit-font-smoothing: antialiased; }
+  .display { font-family: var(--font-display); letter-spacing: 0; line-height: 1.0; }
+  .mono { font-family: var(--font-mono); }
+  .hairline { border-color: var(--border); }
+  .hairline-2 { border-color: var(--border-strong); }
+  .lift { transition: transform 120ms ease, box-shadow 120ms ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0,0,0,0.09); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: rgba(var(--accent-r), 0.92); }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fg-faint); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .half-tone { opacity: 0.45; }
+  .ph-oro { background: linear-gradient(150deg, rgba(var(--accent-r),0.24), var(--surface-2) 52%, var(--surface)); }
+  .ph-lino { background: linear-gradient(125deg, var(--surface-2), var(--surface) 55%, rgba(var(--accent-r),0.11)); }
+  .grain::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background-image: radial-gradient(rgba(0,0,0,0.045) 1px, transparent 1px); background-size: 26px 26px; opacity: 0.5; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="sticky top-0 z-50 border-b hairline backdrop-blur-md" style="background: color-mix(in srgb, var(--bg) 88%, transparent);">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="13" r="3.2" stroke="var(--accent)" stroke-width="1.7"/>
+        <path d="M4 19V9a2 2 0 0 1 2-2h2l2-3h4l2 3h2a2 2 0 0 1 2 2v10z" stroke="var(--accent)" stroke-width="1.7" stroke-linejoin="round"/>
+      </svg>
+      <span class="display text-[20px]">Roble <em class="text-[color:var(--accent)]">&</em> Luz</span>
+    </a>
+    <div class="hidden items-center gap-7 text-[13.5px] font-medium text-[color:var(--fg-muted)] md:flex">
+      <a href="#trabajo" class="hover:text-[color:var(--fg)]">El trabajo</a>
+      <a href="#paquetes" class="hover:text-[color:var(--fg)]">Paquetes</a>
+      <a href="#nosotros" class="hover:text-[color:var(--fg)]">Nosotros</a>
+    </div>
+    <a href="#fecha" class="btn-primary lift inline-flex h-9 items-center rounded-full px-4 text-[13.5px] font-medium">Consulta tu fecha</a>
+  </nav>
+</header>
+
+<!-- HERO · GALERÍA PRIMERO -->
+<section id="trabajo" class="mx-auto max-w-6xl px-5 pb-16 pt-12 md:pb-20 md:pt-14">
+  <div class="mx-auto max-w-2xl text-center">
+    <div class="eyebrow">Fotografía documental de bodas · GDL y a donde nos lleven</div>
+    <h1 class="display mt-5 text-[42px] sm:text-[58px]">
+      Las fotos que se sienten <em class="text-[color:var(--accent)]">como ese día.</em>
+    </h1>
+    <p class="mx-auto mt-5 max-w-lg text-[15px] leading-relaxed text-[color:var(--fg-muted)]">
+      No dirigimos abrazos ni fabricamos risas: estamos donde hay que estar cuando las cosas pasan de verdad. El resultado es tu boda — no la de un moodboard.
+    </p>
+  </div>
+  <div class="mt-10 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+    <div class="ph-oro grain relative aspect-[3/4] rounded-[var(--radius)] border hairline" data-ol-photo="bride laughing candid moment"></div>
+    <div class="ph-lino grain relative aspect-[3/4] rounded-[var(--radius)] border hairline md:mt-9" data-ol-photo="wedding first dance lights"></div>
+    <div class="ph-oro grain relative aspect-[3/4] rounded-[var(--radius)] border hairline" data-ol-photo="grandmother crying ceremony emotional"></div>
+    <div class="ph-lino grain relative aspect-[3/4] rounded-[var(--radius)] border hairline md:mt-9" data-ol-photo="couple golden hour field"></div>
+  </div>
+  <div class="mono mt-6 text-center text-[11.5px] uppercase tracking-[0.16em] text-[color:var(--fg-faint)] tabular">148 bodas desde 2017 · Jalisco, Bajío y destino</div>
+</section>
+
+<!-- PAQUETES — filas editoriales -->
+<section id="paquetes" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-3xl px-5 py-16 md:py-24">
+    <div class="text-center">
+      <div class="eyebrow">Paquetes</div>
+      <h2 class="display mt-4 text-[34px] sm:text-[46px]">Tres formas de tenernos ahí.</h2>
+      <p class="mx-auto mt-3 max-w-md text-[14px] text-[color:var(--fg-muted)]">Todos incluyen galería privada en línea, fotos en alta sin marca de agua y derechos para imprimir donde quieras.</p>
+    </div>
+    <ol class="mt-12">
+      <li class="border-t hairline py-7">
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+          <h3 class="display text-[28px]">Civil e íntima</h3>
+          <span class="mono text-[18px] font-medium tabular">$8,900</span>
+        </div>
+        <p class="mt-2 max-w-lg text-[14px] leading-relaxed text-[color:var(--fg-muted)]">4 horas de cobertura, un fotógrafo. Para el registro civil, la comida en casa y el brindis con los que más importan. 180+ fotos editadas.</p>
+      </li>
+      <li class="border-t hairline py-7">
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+          <h3 class="display text-[28px]">El día completo <span class="mono ml-2 align-middle text-[10px] uppercase tracking-[0.16em] text-[color:var(--accent)]">el más pedido</span></h3>
+          <span class="mono text-[18px] font-medium tabular">$18,500</span>
+        </div>
+        <p class="mt-2 max-w-lg text-[14px] leading-relaxed text-[color:var(--fg-muted)]">10 horas, dos fotógrafos: del getting-ready al último brinco en la pista. 450+ fotos editadas y un adelanto de 40 en la primera semana.</p>
+      </li>
+      <li class="border-y hairline py-7">
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+          <h3 class="display text-[28px]">Dos días y sesión</h3>
+          <span class="mono text-[18px] font-medium tabular">$28,900</span>
+        </div>
+        <p class="mt-2 max-w-lg text-[14px] leading-relaxed text-[color:var(--fg-muted)]">Tornaboda o pre-boda incluida + sesión de pareja en otra locación. Para bodas de fin de semana completo. 650+ fotos y álbum físico de 30×30.</p>
+      </li>
+    </ol>
+    <div class="mono mt-5 text-center text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)]">fuera de ZMG: viáticos al costo, sin sorpresas · apartas con 30%</div>
+  </div>
+</section>
+
+<!-- CÓMO TRABAJAMOS -->
+<section class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-20">
+      <div>
+        <div class="eyebrow">Cómo trabajamos</div>
+        <h2 class="display mt-4 text-[34px] sm:text-[44px]">Estar sin estorbar.</h2>
+        <p class="mt-4 max-w-sm text-[14px] leading-relaxed text-[color:var(--fg-muted)]">La mejor foto de tu boda ocurre cuando olvidas que estamos. Así lo logramos:</p>
+      </div>
+      <ul class="self-center">
+        <li class="flex items-baseline gap-4 border-b hairline py-4">
+          <span class="mono w-8 shrink-0 text-[12px] text-[color:var(--accent)] tabular">01</span>
+          <p class="text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]"><span class="font-semibold text-[color:var(--fg)]">Café previo obligado.</span> Un mes antes nos tomamos un café los cuatro. Si no hay química, te devolvemos el apartado — en serio.</p>
+        </li>
+        <li class="flex items-baseline gap-4 border-b hairline py-4">
+          <span class="mono w-8 shrink-0 text-[12px] text-[color:var(--accent)] tabular">02</span>
+          <p class="text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]"><span class="font-semibold text-[color:var(--fg)]">20 minutos de retratos, no 2 horas.</span> Los formales se hacen rápido y bien — el resto del día es tuyo y nosotros documentamos.</p>
+        </li>
+        <li class="flex items-baseline gap-4 border-b hairline py-4">
+          <span class="mono w-8 shrink-0 text-[12px] text-[color:var(--accent)] tabular">03</span>
+          <p class="text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]"><span class="font-semibold text-[color:var(--fg)]">Entrega en 6 semanas, siempre.</span> Galería completa editada a mano. Si nos tardamos más, te regresamos el 10% por semana — nunca ha pasado.</p>
+        </li>
+        <li class="flex items-baseline gap-4 py-4">
+          <span class="mono w-8 shrink-0 text-[12px] text-[color:var(--accent)] tabular">04</span>
+          <p class="text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]"><span class="font-semibold text-[color:var(--fg)]">Respaldo triple esa misma noche.</span> Dos tarjetas en cámara + disco + nube antes de dormir. Tus fotos no dependen de la suerte.</p>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- NOSOTROS -->
+<section id="nosotros" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid items-center gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-16">
+      <div class="ph-oro grain relative aspect-[4/5] rounded-[var(--radius-lg)] border hairline" data-ol-photo="photographer couple portrait cameras"></div>
+      <div>
+        <div class="eyebrow">Nosotros</div>
+        <h2 class="display mt-4 max-w-md text-[34px] sm:text-[44px]">Sara ve la luz. Emilio ve el momento. <span class="half-tone">Por eso somos dos.</span></h2>
+        <p class="mt-5 max-w-md text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]">
+          Nos conocimos cubriendo la misma boda para estudios distintos y desde 2017 no hemos vuelto a trabajar separados. Sara viene del retrato editorial; Emilio, del fotoperiodismo. Tu boda recibe las dos miradas — la que compone y la que caza.
+        </p>
+        <div class="mono mt-7 grid max-w-sm grid-cols-3 gap-4 border-t hairline pt-5 text-[10.5px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)]">
+          <div><div class="display text-[24px] text-[color:var(--fg)] tabular">148</div>bodas</div>
+          <div><div class="display text-[24px] text-[color:var(--fg)] tabular">9</div>años juntos</div>
+          <div><div class="display text-[24px] text-[color:var(--fg)] tabular">6</div>semanas de entrega</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CITA -->
+<section class="border-t hairline">
+  <div class="mx-auto max-w-3xl px-5 py-18 text-center md:py-24" style="padding-top:4.5rem;padding-bottom:4.5rem;">
+    <blockquote class="display text-[26px] italic leading-[1.25] sm:text-[32px]">
+      "Hay una foto de mi papá viéndome entrar que no supimos que existía hasta la galería. Lloramos otra vez. Eso no se dirige — se caza."
+    </blockquote>
+    <figcaption class="mono mt-6 text-[11px] uppercase tracking-[0.2em] text-[color:var(--fg-faint)]">Andrea y Beto · Hacienda La Magdalena, nov 2025</figcaption>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="fecha" class="bg-[var(--accent)] text-[color:var(--accent-ink)]">
+  <div class="mx-auto grid max-w-6xl gap-8 px-5 py-16 md:grid-cols-[1.2fr_1fr] md:items-center md:py-20">
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.2em] opacity-75 tabular">2026: quedan 7 fechas · 2027: agenda abierta</div>
+      <h2 class="display mt-3 max-w-lg text-[36px] sm:text-[48px]">Cuéntanos tu fecha antes de que alguien más se la lleve.</h2>
+      <p class="mt-3 max-w-md text-[14.5px] leading-relaxed opacity-85">Solo tomamos 24 bodas al año — para editar cada una con calma y llegar enteros a la tuya.</p>
+    </div>
+    <div class="flex flex-col gap-3 md:items-end">
+      <a href="#" class="lift inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--bg)] px-7 text-[14px] font-semibold text-[color:var(--fg)] md:w-auto">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .3-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.5-.2.7-.1l2 .9c.3.2.5.3.6.4 0 .1 0 .7-.3 1.3z"/></svg>
+        Consulta tu fecha
+      </a>
+      <a href="#paquetes" class="lift inline-flex h-12 w-full items-center justify-center rounded-full border border-white/35 px-7 text-[14px] font-medium hover:bg-white/10 md:w-auto">Ver paquetes</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t hairline">
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-[12.5px] text-[color:var(--fg-faint)] md:flex-row">
+    <div class="display text-[16px] text-[color:var(--fg-muted)]">Roble <em class="text-[color:var(--accent)]">&</em> Luz</div>
+    <div class="mono text-[11px] uppercase tracking-[0.14em] tabular">Guadalajara, Jal. · bodas 2026-2027 · respuesta en 24 h</div>
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-[color:var(--fg)]">Instagram</a>
+      <a href="#" class="hover:text-[color:var(--fg)]">WhatsApp</a>
+      <span>© 2026 Roble & Luz</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

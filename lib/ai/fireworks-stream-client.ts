@@ -268,32 +268,21 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             ...(!conEsfuerzo
               ? {}
               : request.esfuerzo !== undefined || request.operation === "agent_turn"
-              ? {
-                  // CON POSTURA VA NÚMERO, `auto` incluido; SIN postura va
-                  // `"none"`. Nunca se omite el campo, y las dos mitades tienen
-                  // motivo medido.
-                  //
-                  // Antes `auto` omitía, y la razón escrita aquí —«es el default
-                  // effort level de Claude Code»— era una lectura equivocada: lo
-                  // que Claude Code omite es el PRESUPUESTO de pensamiento, que
-                  // decide el MODELO, no el NIVEL que eligió la persona. En el eje del nivel resuelve y manda. Y omitir
-                  // costaba: sin campo el proveedor da mediana 237 tokens de
-                  // razonamiento con rango 495 (n=8); con número da lo que se le
-                  // pide, apretado (100 -> 100, rango 13).
+              ? (() => {
+                  // CON POSTURA va lo que diga `presupuestoDeEsfuerzo`: un
+                  // número, o NADA en el nivel por defecto —el
+                  // `{type:"adaptive"}` de Claude Code: el modelo decide cuánto
+                  // piensa (H5, 2026-09-26; el porqué, en `esfuerzo.ts`)—.
                   //
                   // 🔴 Y `null` NO cae a `auto`. `null` es la puerta de
                   // `esfuerzoDisponible` diciendo que este papel NO PIENSA, y
-                  // ahí `auto` mandaría el número del defecto — encendiéndole el
-                  // pensamiento justo al modelo que declaró no tenerlo, que es
-                  // el mando roto que esta capa vino a arreglar. Tampoco se
-                  // omite, por lo que dice el comentario de arriba sobre las
-                  // otras operaciones: sin campo el proveedor piensa por
-                  // ACCIDENTE. Se manda `"none"`, que es apagarlo A PROPÓSITO.
-                  reasoning_effort:
-                    request.esfuerzo == null
-                      ? "none"
-                      : presupuestoDeEsfuerzo(request.esfuerzo, request.maxOutputTokens),
-                }
+                  // ahí `auto` le dejaría pensar justo al modelo que declaró no
+                  // tenerlo. Tampoco se omite: sin campo el proveedor piensa por
+                  // su cuenta. Se manda `"none"`, que es apagarlo A PROPÓSITO.
+                  if (request.esfuerzo == null) return { reasoning_effort: "none" };
+                  const presupuesto = presupuestoDeEsfuerzo(request.esfuerzo, request.maxOutputTokens);
+                  return presupuesto === undefined ? {} : { reasoning_effort: presupuesto };
+                })()
               : { reasoning_effort: reasoningEffortFor(role, request.operation) }),
             temperature: request.temperature,
             max_tokens: request.maxOutputTokens,

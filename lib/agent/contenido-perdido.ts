@@ -128,25 +128,3 @@ export function contenidoPerdido(
   return out;
 }
 
-/**
- * El aviso que se le devuelve al modelo, en su `aviso_critico`.
- *
- * Nombra el target y los números, y dice las DOS salidas: reponerlo, o usar
- * `attrs` si lo que quería era tocar la etiqueta. Un aviso que sólo regaña deja
- * al modelo adivinando qué se espera de él.
- */
-export function avisoContenidoPerdido(perdidos: ContenidoPerdido[]): string {
-  const detalle = perdidos
-    .map(
-      (p) =>
-        `${p.target} (${p.elementosAntes}→${p.elementosDespues} elementos, ${p.textoAntes}→${p.textoDespues} caracteres)`,
-    )
-    .join(" · ");
-
-  return (
-    `Tu \`replace\` VACIÓ lo que reemplazaba: ${detalle}. ` +
-    `\`replace\` sustituye el SUBÁRBOL ENTERO, así que \`new_html\` tiene que traer TODOS los hijos del nodo, no sólo su envoltorio. ` +
-    `Si lo que querías era cambiar una clase o un atributo, NO uses \`replace\`: usa \`op="attrs"\`, que reescribe sólo la etiqueta de apertura y no puede perder contenido. ` +
-    `Repón lo que falta en ESTE MISMO TURNO, o dile al usuario exactamente qué se perdió.`
-  );
-}

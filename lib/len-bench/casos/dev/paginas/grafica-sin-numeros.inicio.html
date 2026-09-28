@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ceniza — Cocina de fuego · San Pedro Garza García</title>
+<meta name="description" content="Siete tiempos a la brasa, leña de encino y una sola mesa de servicio por noche. Martes a sábado, solo cena, solo con reserva.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #151011;
+    --surface: #1D1617;
+    --surface-2: #261D1E;
+    --fg: #F2EBE8;
+    --fg-muted: rgba(242,235,232,0.64);
+    --fg-faint: rgba(242,235,232,0.55);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #C06B7A;
+    --accent-r: 192,107,122;
+    --accent-ink: #2A0E14;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --radius-lg: 16px;
+    --font-display: "Marcellus", Georgia, serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --warn: #D8A23A;
+    --danger: #C4483C;
+  }
+  :root.dark {
+    --bg: #0F0B0C;
+    --surface: #171112;
+    --surface-2: #1F1718;
+    --fg: #F4EEEB;
+    --fg-muted: rgba(244,238,235,0.64);
+    --fg-faint: rgba(244,238,235,0.55);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #CA7886;
+    --accent-r: 202,120,134;
+    --accent-ink: #290D13;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  .display { font-family: var(--font-display); letter-spacing: 0.01em; line-height: 1.04; }
+  .mono { font-family: var(--font-mono); }
+  .hairline { border-color: var(--border); }
+  .hairline-2 { border-color: var(--border-strong); }
+  .lift { transition: transform 120ms ease, box-shadow 120ms ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,0.5); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: rgba(var(--accent-r), 0.9); }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--fg-faint); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .half-tone { opacity: 0.45; }
+  .ph-ember { background: linear-gradient(155deg, rgba(var(--accent-r),0.22), var(--surface-2) 50%, var(--surface)); }
+  .ph-coal { background: linear-gradient(125deg, var(--surface-2), var(--surface) 55%, rgba(var(--accent-r),0.10)); }
+  .ph-smoke { background: linear-gradient(165deg, var(--surface), rgba(var(--accent-r),0.14) 68%, var(--surface-2)); }
+  .grain::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+    background-image: radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px);
+    background-size: 24px 24px; opacity: 0.4;
+  }
+  .scrim-full { background: linear-gradient(to top, rgba(10,6,7,0.78) 0%, rgba(10,6,7,0.35) 45%, rgba(10,6,7,0.55) 100%); }
+</style>
+</head>
+<body>
+
+<!-- HERO FULL-BLEED · nombre centrado -->
+<section class="relative flex min-h-[96svh] flex-col">
+  <div class="ph-ember absolute inset-0" data-ol-photo="fine dining candlelit interior fire"></div>
+  <div class="scrim-full absolute inset-0"></div>
+
+  <!-- Nav overlay -->
+  <header class="relative z-20">
+    <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
+      <div class="mono text-[10.5px] uppercase tracking-[0.24em] text-white/70">San Pedro · NL</div>
+      <div class="hidden items-center gap-8 text-[13px] font-medium text-white/80 md:flex">
+        <a href="#menu" class="hover:text-white">El menú</a>
+        <a href="#fuego" class="hover:text-white">El fuego</a>
+        <a href="#reservar" class="hover:text-white">Reservas</a>
+      </div>
+      <a href="#reservar" class="lift inline-flex h-9 items-center rounded-full border border-white/35 px-4 text-[13px] font-medium text-white hover:bg-white/10">Reservar</a>
+    </nav>
+  </header>
+
+  <!-- Nombre centrado -->
+  <div class="relative z-10 flex flex-1 flex-col items-center justify-center px-5 text-center">
+    <div class="eyebrow !text-white/65">Cocina de fuego · siete tiempos · solo cena</div>
+    <h1 class="display mt-5 text-[72px] text-white sm:text-[110px] lg:text-[132px]" style="line-height: 0.95;">Ceniza</h1>
+    <p class="mt-5 max-w-md text-[15px] leading-relaxed text-white/80">
+      Todo pasa por la brasa: el pan, la cebolla, el pescado del día y el postre. Leña de encino, doce mesas, una sola idea.
+    </p>
+    <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+      <a href="#reservar" class="btn-primary lift inline-flex h-11 items-center rounded-full px-6 text-[14px] font-medium">Reserva tu mesa</a>
+      <a href="#menu" class="lift inline-flex h-11 items-center rounded-full border border-white/35 px-6 text-[14px] font-medium text-white hover:bg-white/10">Ver el menú</a>
+    </div>
+  </div>
+
+  <div class="relative z-10 pb-8 text-center">
+    <div class="mono text-[10.5px] uppercase tracking-[0.24em] text-white/55 tabular">martes — sábado · 6:00 pm – 11:00 pm · solo con reserva</div>
+  </div>
+</section>
+
+<!-- MENÚ DEGUSTACIÓN -->
+<section id="menu" class="border-t hairline">
+  <div class="mx-auto max-w-2xl px-5 py-16 text-center md:py-24">
+    <div class="eyebrow">El menú de esta temporada</div>
+    <h2 class="display mt-4 text-[34px] sm:text-[44px]">Siete tiempos.<br><span class="half-tone">Ninguno sin humo.</span></h2>
+
+    <ol class="mt-12 text-left">
+      <li class="border-t hairline py-5">
+        <div class="flex items-baseline gap-5">
+          <span class="mono w-8 shrink-0 text-[12px] text-[color:var(--accent)] tabular">I</span>
+          <div>
+            <div class="display text-[19px]">Pan de masa madre a la brasa</div>
+            <div class="mt-1 text-[13.5px] text-[color:var(--fg-muted)]">Mantequilla de suero quemado, sal de Cuatro Ciénegas.</div>
+          </div>
+        </div>
+      </li>
+      <li class="border-t hairline py-5">
+        <div class="flex items-baseline gap-5">
+          <span class="mono w-8 shrink-0 text-[12px] text-[color:var(--accent)] tabular">II</span>
+          <div>
+            <div class="display text-[19px]">Cebolla cambray en rescoldo</div>
+            <div class="mt-1 text-[13.5px] text-[color:var(--fg-muted)]">Cuarenta minutos bajo la ceniza, crema de piñón rosa.</div>
+          </div>
+        </div>
+      </li>
+      <li class="border-t hairline py-5">
+        <div class="flex items-baseline gap-5">
+          <span class="mono w-8 shrink-0 text-[12px] text-[color:var(--accent)] tabular">III</span>
+          <div>
+            <div class="display text-[19px]">Aguachile tatemado</div>
+            <div class="mt-1 text-[13.5px] text-[color:var(--fg-muted)]">Camarón del Pacífico, chiles secos pasados por brasa, limón rostizado.</div>
+          </div>
+        </div>
+      </li>
+      <li class="border-t hairline py-5">
+        <div class="flex items-baseline gap-5">
+          <span class="mono w-8 shrink-0 text-[12px] text-[color:var(--accent)] tabular">IV</span>
+          <div>
+            <div class="display text-[19px]">Pesca del día entera</div>
+            <div class="mt-1 text-[13.5px] text-[color:var(--fg-muted)]">A la parrilla con su espina, adobo de chile colorado y hoja santa.</div>
+          </div>
+        </div>
+      </li>
+      <li class="border-t hairline py-5">
+        <div class="flex items-baseline gap-5">
+          <span class="mono w-8 shrink-0 text-[12px] text-[color:var(--accent)] tabular">V</span>
+          <div>
+            <div class="display text-[19px]">Short rib 48 horas</div>
+            <div class="mt-1 text-[13.5px] text-[color:var(--fg-muted)]">Terminado al carbón, puré de coliflor rostizada, jugo de sus huesos.</div>
+          </div>
+        </div>
+      </li>
+      <li class="border-t hairline py-5">
+        <div class="flex items-baseline gap-5">
+          <span class="mono w-8 shrink-0 text-[12px] text-[color:var(--accent)] tabular">VI</span>
+          <div>
+            <div class="display text-[19px]">Queso de rancho y miel ahumada</div>
+            <div class="mt-1 text-[13.5px] text-[color:var(--fg-muted)]">De General Terán, con nuez garapiñada a la sartén de fierro.</div>
+          </div>
+        </div>
+      </li>
+      <li class="border-y hairline py-5">
+        <div class="flex items-baseline gap-5">
+          <span class="mono w-8 shrink-0 text-[12px] text-[color:var(--accent)] tabular">VII</span>
+          <div>
+            <div class="display text-[19px]">Plátano en su cáscara al rescoldo</div>
+            <div class="mt-1 text-[13.5px] text-[color:var(--fg-muted)]">Helado de vainilla de Papantla, polvo de cacao quemado.</div>
+          </div>
+        </div>
+      </li>
+    </ol>
+
+    <div class="mx-auto mt-10 max-w-md rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+      <div class="mono flex items-baseline justify-between text-[13px] tabular">
+        <span class="text-[color:var(--fg-muted)]">Menú de siete tiempos</span>
+        <span class="text-[15px] font-medium">$1,850</span>
+      </div>
+      <div class="mono mt-3 flex items-baseline justify-between border-t hairline pt-3 text-[13px] tabular">
+        <span class="text-[color:var(--fg-muted)]">Maridaje · 5 copas, vino mexicano</span>
+        <span class="text-[15px] font-medium">+$780</span>
+      </div>
+      <div class="mt-4 text-[12.5px] text-[color:var(--fg-faint)]">Versión vegetariana completa disponible — avísanos al reservar.</div>
+    </div>
+  </div>
+</section>
+
+<!-- EL FUEGO -->
+<section id="fuego" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid items-center gap-10 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
+      <div class="ph-coal grain relative aspect-[4/5] rounded-[var(--radius-lg)] border hairline" data-ol-photo="chef grilling open fire embers"></div>
+      <div>
+        <div class="eyebrow">El fuego</div>
+        <h2 class="display mt-4 max-w-md text-[32px] sm:text-[42px]">La parrilla se enciende a las tres. La cocina no tiene estufa.</h2>
+        <p class="mt-5 max-w-md text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]">
+          Andrés Sepúlveda cocinó ocho años en vascos y asadores del sur antes de volver a Monterrey con una certeza: el norte ya sabía cocinar con fuego, solo había que quitarle la prisa. En Ceniza la leña es de encino de la sierra, la brasa se administra por horas y el menú cambia cuando cambia el mercado — no cuando lo dice el calendario.
+        </p>
+        <div class="mono mt-7 grid max-w-sm grid-cols-3 gap-4 border-t hairline pt-5 text-[10.5px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)]">
+          <div><div class="display text-[22px] tracking-normal text-[color:var(--fg)] tabular">12</div>mesas</div>
+          <div><div class="display text-[22px] tracking-normal text-[color:var(--fg)] tabular">0</div>estufas</div>
+          <div><div class="display text-[22px] tracking-normal text-[color:var(--fg)] tabular">2022</div>primer servicio</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GALERÍA -->
+<section class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-12 md:gap-4">
+      <div class="ph-smoke grain relative col-span-2 aspect-[16/10] rounded-[var(--radius)] border hairline md:col-span-5 md:aspect-auto md:h-[300px]" data-ol-photo="plated dish dark elegant"></div>
+      <div class="ph-ember grain relative aspect-square rounded-[var(--radius)] border hairline md:col-span-3 md:aspect-auto md:h-[300px]" data-ol-photo="glowing embers grill close up"></div>
+      <div class="ph-coal grain relative aspect-square rounded-[var(--radius)] border hairline md:col-span-4 md:aspect-auto md:h-[300px]" data-ol-photo="wine pour candlelight table"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CITA ÚNICA -->
+<section class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-3xl px-5 py-20 text-center md:py-24">
+    <blockquote class="display text-[26px] leading-[1.25] sm:text-[32px]">
+      "Pedimos el maridaje sin muchas expectativas. Nos sirvieron un tinto de Parras con el short rib y se hizo un silencio en la mesa que todavía recordamos."
+    </blockquote>
+    <figcaption class="mono mt-6 text-[11px] uppercase tracking-[0.2em] text-[color:var(--fg-faint)]">Alejandra y Bruno · aniversario, marzo 2026</figcaption>
+  </div>
+</section>
+
+<!-- RESERVAS -->
+<section id="reservar" class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+      <div>
+        <div class="eyebrow">Reservas</div>
+        <h2 class="display mt-4 text-[32px] sm:text-[42px]">Doce mesas.<br><span class="half-tone">Una sola entrada por noche.</span></h2>
+        <ul class="mono mt-8 max-w-md divide-y divide-[color:var(--border)] text-[13px] tabular">
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]">Martes — Sábado</span><span>6:00 pm – 11:00 pm</span></li>
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]">Última reserva</span><span>8:30 pm</span></li>
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]">Domingo y lunes</span><span class="text-[color:var(--accent)]">el fuego descansa</span></li>
+        </ul>
+        <div class="mt-8 space-y-1.5 text-[14.5px] text-[color:var(--fg-muted)]">
+          <div class="font-medium text-[color:var(--fg)]">Río Sena 120, Col. del Valle</div>
+          <div>San Pedro Garza García, NL · valet en la puerta</div>
+        </div>
+        <div class="mt-7 flex flex-wrap gap-3">
+          <a href="#" class="btn-primary lift inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14px] font-medium">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .3-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.5-.2.7-.1l2 .9c.3.2.5.3.6.4 0 .1 0 .7-.3 1.3z"/></svg>
+            Reserva por WhatsApp
+          </a>
+          <a href="#" class="lift inline-flex h-11 items-center rounded-full border hairline-2 bg-[var(--surface)] px-5 text-[14px] font-medium">Llámanos</a>
+        </div>
+        <div class="mono mt-6 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)]">grupos de 7+ · escríbenos para la mesa del patio</div>
+      </div>
+      <div class="ph-smoke grain relative aspect-[4/3] self-center rounded-[var(--radius-lg)] border hairline lg:aspect-[4/5]" data-ol-photo="restaurant patio night lanterns"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA MINIMAL -->
+<section class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-3xl px-5 py-20 text-center md:py-28">
+    <div class="eyebrow">Esta semana quedan pocas mesas</div>
+    <h2 class="display mt-5 text-[36px] leading-[1.05] sm:text-[48px]">El fuego ya está encendido.</h2>
+    <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+      <a href="#reservar" class="btn-primary lift inline-flex h-12 items-center rounded-full px-7 text-[14px] font-medium">Reserva tu mesa</a>
+      <a href="#menu" class="lift inline-flex h-12 items-center rounded-full border hairline-2 bg-[var(--bg)] px-7 text-[14px] font-medium">Ver el menú</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER LOCAL -->
+<footer class="border-t hairline">
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-[12.5px] text-[color:var(--fg-faint)] md:flex-row">
+    <div class="display text-[15px] text-[color:var(--fg-muted)]">Ceniza · cocina de fuego</div>
+    <div class="mono text-[11px] uppercase tracking-[0.14em]">Río Sena 120, San Pedro · mar–sáb · solo cena</div>
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-[color:var(--fg)]">Instagram</a>
+      <a href="#" class="hover:text-[color:var(--fg)]">WhatsApp</a>
+      <span>© 2026 Ceniza</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -10,17 +10,21 @@ import {
   type EsfuerzoAgente,
 } from "./esfuerzo";
 
-describe("la postura se traduce a un número, y `auto` resuelve a un nivel", () => {
-  // 🔴 ESTA REGLA SE INVIRTIÓ el 2026-09-11, y la prueba anterior afirmaba lo
-  // contrario («`auto` NO produce número — el campo no se manda»). Aquella era
-  // fiel a una lectura EQUIVOCADA de Claude Code: se tomó el `{type:"adaptive"}`
-  // del eje de PRESUPUESTO por el `auto` del eje de NIVEL. Aquél lo decide el
-  // modelo, no la elección de la persona. En el eje del nivel Claude Code
-  // resuelve (al defecto del modelo, o `high` si no lo tiene) y manda.
-  it("`auto` SÍ produce número: el del nivel al que resuelve", () => {
-    expect(presupuestoDeEsfuerzo("auto", 32_768)).toBe(
-      presupuestoDeEsfuerzo(NIVEL_POR_DEFECTO, 32_768),
-    );
+describe("la postura se traduce a un presupuesto, y el defecto deja decidir al modelo", () => {
+  // 🔴 H5 (2026-09-26). El defecto mandaba 100 y ataba SIEMPRE: en los 1.473
+  // pasos del control de Len-Bench el razonamiento dio p50 100 y máximo 113, y
+  // en 17 peticiones el modelo siguió razonando dentro del texto del dueño.
+  // Claude Code manda `{type:"adaptive"}` en el nivel que sea: el modelo decide.
+  it("🔴 `auto` y `high` no mandan presupuesto: el modelo decide cuánto pensar", () => {
+    expect(presupuestoDeEsfuerzo("auto", 32_768)).toBeUndefined();
+    expect(presupuestoDeEsfuerzo(NIVEL_POR_DEFECTO, 32_768)).toBeUndefined();
+  });
+
+  // BRAZO DE CONTROL: los niveles bajos SÍ atan, que es lo único que este dial
+  // hace de verdad (medido el 11/09: exacto hasta 225).
+  it("`low` y `medium` siguen siendo números pequeños, y en orden", () => {
+    expect(presupuestoDeEsfuerzo("low", 32_768)).toBe(25);
+    expect(presupuestoDeEsfuerzo("medium", 32_768)).toBe(60);
   });
 
   it("resolver: `auto` da el defecto, y un nivel se da a sí mismo", () => {
@@ -28,31 +32,19 @@ describe("la postura se traduce a un número, y `auto` resuelve a un nivel", () 
     for (const n of NIVELES) expect(resolverEsfuerzo(n)).toBe(n);
   });
 
-  it("los cinco niveles suben en orden", () => {
-    const n = (e: EsfuerzoAgente) => presupuestoDeEsfuerzo(e, 32_768);
-    expect(n("low")).toBeLessThan(n("medium"));
-    expect(n("medium")).toBeLessThan(n("high"));
-    expect(n("high")).toBeLessThan(n("xhigh"));
-    expect(n("xhigh")).toBeLessThan(n("max"));
-  });
-
-  // El tope de la escalera es el tope MEDIDO del dial. Por encima de 225 el
-  // proveedor deja de devolver lo que se le pide (desvío −31 y rango 142 en
-  // 300), así que un número mayor no compraría pensamiento sino varianza.
-  it("ningún nivel se sale de la banda medida como fiable (1..225)", () => {
-    for (const n of NIVELES) {
-      const v = presupuestoDeEsfuerzo(n, 32_768);
-      expect(v).toBeGreaterThanOrEqual(1);
-      expect(v).toBeLessThanOrEqual(225);
-    }
+  // Los de arriba, con los números de Claude Code: 1024 es el suelo de todo
+  // presupuesto suyo, y su presupuesto por defecto es el techo de salida
+  // menos uno. Quedan por encima de la banda del modelo sin campo (hasta 691).
+  it("`xhigh` es el suelo de Claude Code y `max` el techo de salida menos uno", () => {
+    expect(presupuestoDeEsfuerzo("xhigh", 32_768)).toBe(1024);
+    expect(presupuestoDeEsfuerzo("max", 32_768)).toBe(32_767);
+    expect(presupuestoDeEsfuerzo("xhigh", 32_768)!).toBeGreaterThan(691);
   });
 
   it("el número se recorta contra el techo de salida (regla de Claude Code)", () => {
     expect(presupuestoDeEsfuerzo("max", 50)).toBe(49);
-  });
-
-  it("BRAZO DE CONTROL: con techo amplio NO se recorta", () => {
-    expect(presupuestoDeEsfuerzo("max", 32_768)).toBe(225);
+    expect(presupuestoDeEsfuerzo("xhigh", 2_048)).toBe(1024);
+    expect(presupuestoDeEsfuerzo("max", 2_048)).toBe(2_047);
   });
 
   it("el suelo es 1 aunque el techo de salida sea absurdo", () => {
@@ -91,10 +83,16 @@ describe("la postura se traduce a un número, y `auto` resuelve a un nivel", () 
 describe("la capacidad de esfuerzo la dice el modelo", () => {
   const MEDIDO = "accounts/fireworks/models/deepseek-v4p1-flash";
 
-  it("un modelo MEDIDO ofrece hasta su tope comprobado", () => {
+  // 🔴 V4.1 Flash llega hasta `high` y no más (2026-09-26): en DeepSeek el
+  // campo sólo pone un TECHO, y con `high` adaptativo (H5) `xhigh` pensaba
+  // MENOS que `high` y `max` era `high` con otro nombre. El porqué entero, en
+  // `DIAL_MEDIDO`.
+  it("un modelo MEDIDO ofrece hasta su tope comprobado — V4.1 Flash, hasta `high`", () => {
     const c = capacidadDeEsfuerzo(MEDIDO);
     expect(c.medido).toBe(true);
-    expect(c.niveles).toEqual(NIVELES);
+    expect(c.niveles).toEqual(["low", "medium", "high"]);
+    expect(c.niveles).not.toContain("xhigh");
+    expect(c.niveles).not.toContain("max");
     expect(c.defecto).toBe("high");
   });
 
@@ -111,13 +109,13 @@ describe("la capacidad de esfuerzo la dice el modelo", () => {
     expect(c.niveles).toContain(c.defecto);
   });
 
-  // BRAZO DE CONTROL de las dos de arriba: si la tabla se vaciara, la primera
-  // pasaria a dar la reserva y su assert de NIVELES fallaria — pero si alguien
-  // "arreglara" eso devolviendo siempre los cinco, la segunda es la que cae.
-  it("las dos ramas dan LISTAS DISTINTAS — si no, la tabla no hace nada", () => {
-    expect(capacidadDeEsfuerzo(MEDIDO).niveles.length).toBeGreaterThan(
-      capacidadDeEsfuerzo("modelo-inventado").niveles.length,
-    );
+  // BRAZO DE CONTROL de las dos de arriba. ⚰️ Aquí comparaba el LARGO de las
+  // dos listas; desde que V4.1 Flash llega sólo a `high`, su lista es la misma
+  // que la reserva, y lo que distingue a la tabla es que dice MEDIDO. Si la
+  // tabla se vaciara, la primera dejaría de estar medida y ésta caería.
+  it("las dos ramas se DISTINGUEN — si no, la tabla no hace nada", () => {
+    expect(capacidadDeEsfuerzo(MEDIDO).medido).toBe(true);
+    expect(capacidadDeEsfuerzo("modelo-inventado").medido).toBe(false);
   });
 });
 
@@ -138,7 +136,15 @@ describe("el recorte al techo del modelo", () => {
 
   it("lo que el modelo SI ofrece pasa intacto", () => {
     expect(caparEsfuerzo("low", SIN_MEDIR)).toBe("low");
-    expect(caparEsfuerzo("max", MEDIDO)).toBe("max");
+    expect(caparEsfuerzo("medium", MEDIDO)).toBe("medium");
+    expect(caparEsfuerzo("high", MEDIDO)).toBe("high");
+  });
+
+  // Quien guardó `xhigh` o `max` con V4.1 Flash no pierde nada: baja a `high`,
+  // que en este modelo es el adaptativo — lo más que el modelo piensa.
+  it("en V4.1 Flash, `xhigh` y `max` guardados bajan a `high`", () => {
+    expect(caparEsfuerzo("xhigh", MEDIDO)).toBe("high");
+    expect(caparEsfuerzo("max", MEDIDO)).toBe("high");
   });
 
   // `auto` no es un peldano: es la instruccion de elegir peldano, y lo que

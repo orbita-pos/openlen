@@ -23,6 +23,7 @@ import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import { getChatMessages } from "@/lib/projects/chat";
+import { titleFromHtml } from "@/lib/projects/titulo-del-html";
 import {
   pageEdgePaths,
   pagesForPublish,
@@ -218,13 +219,6 @@ export interface ProjectFull extends ProjectSummary {
   /** Persisted Chat-tab transcript — seeds the chat on load. Empty array
    *  when the project has never been chatted (column NULL). */
   chatHistory: StoredChatTurn[];
-}
-
-/** Pull the document <title> for the project name. */
-function titleFromHtml(html: string): string | null {
-  const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  const inner = m?.[1]?.trim();
-  return inner && inner.length > 0 ? inner.slice(0, 200) : null;
 }
 
 /** Cheap section count for the project-list cards — counts <section> tags. */

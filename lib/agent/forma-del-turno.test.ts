@@ -5,8 +5,6 @@ const BASE: EntradaDeForma = {
   projectId: "p1",
   systemPrompt: "x".repeat(32000),
   contextBlock: "y".repeat(60000),
-  taggedHtml: '<h1 data-op-id="a">Taller El Norte</h1>',
-  vista: "completa",
   history: [{ content: "hola" }, { content: "adios" }],
   prompt: "pon el titular en azul",
 };
@@ -19,16 +17,6 @@ describe("formaDelTurno", () => {
     expect(f.histChars).toBe(9);
     expect(f.promptChars).toBe(22);
     expect(f.tokensAprox).toBe(Math.ceil((32000 + 60000 + 9 + 22) / 3.5));
-  });
-
-  it("el hash es una etiqueta corta y estable, no el documento", () => {
-    const a = formaDelTurno(BASE);
-    const b = formaDelTurno({ ...BASE });
-    expect(a.docHash).toBe(b.docHash);
-    expect(a.docHash).toHaveLength(16);
-    // Cambiar un byte del documento cambia la etiqueta: es lo que permite decir
-    // «el mismo de antes» entre dos turnos sin arrastrar el documento.
-    expect(formaDelTurno({ ...BASE, taggedHtml: BASE.taggedHtml + " " }).docHash).not.toBe(a.docHash);
   });
 
   it("sin dato de turnos totales, «totales» es lo visible — 0 seria afirmar que no hay conversación", () => {
@@ -57,15 +45,11 @@ describe("formaDelTurno", () => {
     expect(f.conImagen).toBe(false);
   });
 
-  it("la Home se llama «principal», el mismo nombre que usa trabajar_en_pagina", () => {
-    expect(formaDelTurno(BASE).pagina).toBe("principal");
-    expect(formaDelTurno({ ...BASE, activePage: "menu" }).pagina).toBe("menu");
-  });
-
-  it("las tres vistas viajan tal cual: con «indice» el modelo NO vio el HTML", () => {
-    for (const v of ["completa", "recortada", "indice"] as const) {
-      expect(formaDelTurno({ ...BASE, vista: v }).vista).toBe(v);
-    }
+  // Len 2.0: el fichero abierto se nombra por su ruta, la misma que usan Read
+  // y Edit. «principal» era el nombre que pedía `trabajar_en_pagina`.
+  it("el fichero abierto en el editor va con su ruta", () => {
+    expect(formaDelTurno(BASE).fichero).toBe("/index.html");
+    expect(formaDelTurno({ ...BASE, activePage: "menu" }).fichero).toBe("/menu/index.html");
   });
 });
 
@@ -74,7 +58,7 @@ describe("lineaDeForma", () => {
     const linea = lineaDeForma(formaDelTurno(BASE));
     expect(linea).not.toContain("\n");
     expect(linea.startsWith("[agent] forma ")).toBe(true);
-    for (const clave of ["proj", "pagina", "vista", "doc", "dochash", "sys", "ctx", "hist", "tok~", "mem", "brief", "cambios", "degr", "mudo", "pin", "img"]) {
+    for (const clave of ["proj", "fichero", "sys", "ctx", "hist", "tok~", "mem", "brief", "cambios", "degr", "mudo", "pin", "img"]) {
       expect(linea).toMatch(new RegExp(`(^| )${clave.replace("~", "\\~")}=`));
     }
   });
@@ -92,7 +76,7 @@ describe("lineaDeForma", () => {
     const linea = lineaDeForma(
       formaDelTurno({
         ...BASE,
-        taggedHtml: "<h1>Taller El Norte, calle Mayor 3</h1>",
+        contextBlock: "<h1>Taller El Norte, calle Mayor 3</h1>",
         prompt: "mi whatsapp es 600111222, ponlo en el pie",
         userBrief: "el dueño se llama Marta",
         userMemory: "nunca uses amarillo",

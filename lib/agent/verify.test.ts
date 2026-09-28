@@ -328,7 +328,10 @@ test("el desborde en movil rompe el veredicto aunque la foto salga bien", async 
 // llega aqui hecha. Por eso estas pruebas inyectan `overflowCulpritOpId` en el
 // medidor en vez de un resolutor.
 
-test("el aviso lleva el data-op-id que trae la sonda", async () => {
+// ⚠️ Len 2.0 (T10): la dirección ya NO va en este aviso. Lo lee el DUEÑO (la
+// tarjeta y el cierre), y al modelo la línea le llega mientras edita, por
+// `<new-diagnostics>` (ver `diagnosticosMedidos` en aviso-medido.ts).
+test("el aviso al dueño no lleva el id del nodo; sí qué es y cuánto se sale", async () => {
   const v = await verifyEditedPage(PARAMS, {
     render: async () => IMAGE,
     medir: async () => ({
@@ -336,12 +339,12 @@ test("el aviso lleva el data-op-id que trae la sonda", async () => {
       unreadableText: [],
       overflowCulprit: "span.font-display.text-xl",
       overflowCulpritRight: 644,
-      overflowCulpritOpId: "k3",
+      overflowCulpritOpId: "L12C5",
     }),
     provider: providerReturning('{"broken":false,"issues":[]}'),
   });
   assert.equal(v.broken, true);
-  assert.match(v.issues[0]!, /data-op-id `k3`/);
+  assert.doesNotMatch(v.issues[0]!, /data-op-id|L12C5/);
   // La descripcion NO se pierde: el aviso lo lee tambien el dueno, y `k3` no le
   // dice nada a una persona.
   assert.match(v.issues[0]!, /span\.font-display\.text-xl/);
@@ -441,41 +444,6 @@ test("un veredicto ilegible no borra el contraste ni el desborde medidos", async
   assert.match(todo, /se sale de la pantalla/);
 });
 
-// 🔴 SOBREVIVE, PERO YA NO ACUSA (2026-09-04, tarde). Esta prueba afirmaba
-// `broken === true`. La corrida de 16 páginas de esa misma tarde desmintió al
-// comprobador: de 11 pruebas ejecutadas acusó a 3 páginas y acertó en 0 — las
-// tres funcionaban, y el fallo estaba en el vocabulario que le dábamos al
-// modelo (faltaba `atributo`) y en no pedirle que rellenara campos `required`.
-//
-// Un comprobador que acierta 0 de 3 no declara rota la página de nadie: baja a
-// `observaciones`, que el bucle emite igual —al usuario, al texto del turno y
-// con él al historial que lee el modelo— sin llamar rota a la página. Es la
-// regla del `Edit` de Claude Code: cuando la comprobación no casa, falla en
-// SEGURO. Lo que se retira es la acusación, no el dato — y por eso esta prueba
-// se cambia en vez de borrarse.
-test("la prueba que el modelo declaró se DICE, pero no declara rota la página", async () => {
-  const v = await verifyEditedPage(
-    {
-      ...PARAMS,
-      runtime: "window.x=1",
-      pruebaJs: "await ui.clic('#b');",
-    },
-    {
-      render: async (
-        _html,
-        opts?: { onBehaviorResult?: (b: unknown) => void },
-      ) => {
-        opts?.onBehaviorResult?.([[0, "#total sigue en 0 tras pulsar Añadir"]]);
-        return IMAGE;
-      },
-      provider: providerReturning("tampoco es JSON"),
-    },
-  );
-  assert.equal(v.broken, false);
-  assert.equal(v.issues.length, 0);
-  // Y NO SE PIERDE: sale por el canal que informa sin suspender.
-  assert.match(v.observaciones.join(" | "), /#total sigue en 0/);
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LAS PROMESAS GUARDADAS, RECOMPROBADAS (2026-09-18, Tarea 2 de
@@ -503,7 +471,6 @@ test("una promesa GUARDADA que deja de cumplirse sale como regresión", async ()
     {
       ...PARAMS,
       runtime: "window.x=1",
-      pruebaJs: "await ui.clic('#b');",
       guardadas: [CARRITO_GUARDADO] as never,
     },
     {
@@ -512,8 +479,8 @@ test("una promesa GUARDADA que deja de cumplirse sale como regresión", async ()
         opts?: { behaviorProgram?: string; onBehaviorResult?: (b: unknown) => void },
       ) => {
         programa = opts?.behaviorProgram ?? "";
-        // Programa 1 → la primera guardada, que va detrás de la del turno.
-        opts?.onBehaviorResult?.([[1, "#total ya no cambia al pulsar #agregar", null, 1]]);
+        // Programa 0 → la primera guardada: ya no va la promesa del turno delante.
+        opts?.onBehaviorResult?.([[1, "#total ya no cambia al pulsar #agregar", null, 0]]);
         return IMAGE;
       },
       provider: providerReturning("tampoco es JSON"),
@@ -557,29 +524,23 @@ test("una guardada cuyo selector ya no existe se retira, no acusa", async () => 
   assert.equal(v.broken, false);
 });
 
-// CONTRA-PRUEBA: sin guardadas, el turno se comporta EXACTAMENTE como antes de
-// que la suite existiera — ni programa distinto, ni campos nuevos.
-test("CONTRA-PRUEBA: sin promesas guardadas nada cambia", async () => {
+// CONTRA-PRUEBA: sin guardadas no viaja ningún programa ni salen campos de la
+// suite — se pulsa a ciegas, como antes de que la suite existiera.
+test("CONTRA-PRUEBA: sin promesas guardadas no corre ningún programa", async () => {
+  let programa: string | undefined = "sin mirar";
   const v = await verifyEditedPage(
+    { ...PARAMS, runtime: "window.x=1" },
     {
-      ...PARAMS,
-      runtime: "window.x=1",
-      pruebaJs: "await ui.clic('#b');",
-    },
-    {
-      render: async (
-        _html,
-        opts?: { onBehaviorResult?: (b: unknown) => void },
-      ) => {
-        opts?.onBehaviorResult?.([[0, "#x sigue igual"]]);
+      render: async (_html, opts?: { behaviorProgram?: string }) => {
+        programa = opts?.behaviorProgram;
         return IMAGE;
       },
       provider: providerReturning("tampoco es JSON"),
     },
   );
+  assert.equal(programa, undefined);
   assert.equal(v.regresiones, undefined);
   assert.equal(v.retirarPruebas, undefined);
-  assert.match(v.observaciones.join(" | "), /#x sigue igual/);
 });
 
 // CONTROL DE LA REGLA ANTERIOR: los HECHOS del navegador sí siguen acusando.
@@ -587,7 +548,7 @@ test("CONTRA-PRUEBA: sin promesas guardadas nada cambia", async () => {
 // el canal entero y las cuatro medidas de verdad se irían con ella.
 test("pero un hecho del navegador sí: el desborde acusa aunque la prueba no", async () => {
   const v = await verifyEditedPage(
-    { ...PARAMS, runtime: "window.x=1", pruebaJs: "await ui.clic('#b');" },
+    { ...PARAMS, runtime: "window.x=1" },
     {
       render: async (
         _html,
@@ -1643,7 +1604,7 @@ test("los ojos mandan el preludio del censo junto al programa", async () => {
     {
       ...PARAMS,
       runtime: "window.x=1",
-      pruebaJs: "await ui.clic('#b');",
+      guardadas: [CARRITO_GUARDADO] as never,
     },
     {
       render: async (
@@ -1663,136 +1624,15 @@ test("los ojos mandan el preludio del censo junto al programa", async () => {
   assert.match(prelude ?? "", /__olCensoClic/);
 });
 
-// 🔴 LA PRUEBA EN JAVASCRIPT SE EJECUTA, o la ranura es decorativa.
-//
-// Es la mitad que faltaba de `preflight.js`: su contrato no sirve de nada si el
-// programa no corre contra la página viva. Aquí se comprueba que cuando el
-// turno trae `pruebaJs`, lo que viaja al navegador es el programa de
-// `prueba-js.ts` y NO el compilador del DSL.
-test("cuando el turno trae prueba_js, los ojos ejecutan ESE programa", async () => {
-  let programa = "";
-  await verifyEditedPage(
-    {
-      ...PARAMS,
-      runtime: "window.x=1",
-      // Verbos REALES de `ui` (no hay `desplaza` ni `cambia`: para lo del
-      // viewport el modelo escribe DOM normal, que es la gracia de esta ruta).
-      pruebaJs: [
-        'var antes = await ui.texto("#n");',
-        'document.querySelector("#n").scrollIntoView();',
-        'await ui.cambiaDe("#n", antes);',
-      ].join(";"),
-    },
-    {
-      render: async (_html, opts?: { behaviorProgram?: string }) => {
-        programa = opts?.behaviorProgram ?? "";
-        return IMAGE;
-      },
-      provider: providerReturning("tampoco es JSON"),
-    },
-  );
-  // El código del modelo viaja dentro.
-  assert.match(programa, /ui\.cambiaDe/);
-  assert.match(programa, /scrollIntoView/);
-  // Y es el programa JS, no el del DSL: aquél incrusta `PASOS`.
-  assert.equal(programa.includes("var PASOS ="), false);
-  assert.match(programa, /MAX_LLAMADAS/);
-});
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 🔴 LA RANURA JS NO PASA POR `repartirFallos`, Y PASAR ERA EL BUG (2026-09-21).
-//
-// `repartirFallos` corta por índice de paso: hasta `delTurno.length` es del
-// turno, y lo de detrás pertenece a la guardada que ocupe ese tramo. Eso
-// describe al programa del DSL, que concatena `[...delTurno, ...guardadas]`.
-// El de la ranura JS no lo es: corre `programaJs(js)` A SECAS —ni la spec ni
-// las guardadas se ejecutan— y sus `paso` son el número de llamada a `ui.*`.
-//
-// MEDIDO ese día con `repartirFallos(leerFallos([[0,…],[2,…]]), 0, …)`:
-//   · sin guardadas → `delTurno: []`, los fallos AL SUELO.
-//   · con una guardada → los dos salían como regresión suya, una promesa que
-//     ni se ejecutó. Página sana acusada.
-// Y corría en PRODUCCIÓN: la ruta pasa `pruebaJs` desde el 2026-09-04.
-test("con la ranura JS, sus fallos son DEL TURNO y no manchan a una guardada", async () => {
-  let programa = "";
-  const v = await verifyEditedPage(
-    {
-      ...PARAMS,
-      runtime: "window.x=1",
-      pruebaJs: "var t = await ui.texto('#total'); document.querySelector('.add').click();",
-      guardadas: [CARRITO_GUARDADO] as never,
-    },
-    {
-      render: async (
-        _html,
-        opts?: { behaviorProgram?: string; onBehaviorResult?: (b: unknown) => void },
-      ) => {
-        programa = opts?.behaviorProgram ?? "";
-        // Lo que devuelve el programa: [nºLlamadaUi, mensaje, marca, programa].
-        // Los dos son del programa 0, el del turno — aunque el paso 2 caería
-        // fuera del tramo del turno con el reparto viejo por número de paso.
-        opts?.onBehaviorResult?.([
-          [0, "#carrito-total no cambió", null, 0],
-          [2, "el botón no existe", null, 0],
-        ]);
-        return IMAGE;
-      },
-      provider: providerReturning("tampoco es JSON"),
-    },
-  );
-  // Corrió el programa del modelo, no el compilador del DSL.
-  assert.match(programa, /ui\.texto/);
-  assert.equal(/var PASOS =/.test(programa), false);
-  // LOS DOS fallos son del turno. Con el reparto por índice el segundo se
-  // perdía y el primero también (delTurno.length era 0 con la spec descartada).
-  assert.equal(v.fallosDelTurno?.length, 2);
-  assert.match(v.fallosDelTurno?.[0]?.mensaje ?? "", /#carrito-total no cambió/);
-  assert.match(v.fallosDelTurno?.[1]?.mensaje ?? "", /el botón no existe/);
-  // 🔴 Y LA GUARDADA QUEDA LIMPIA: ningún fallo lleva su índice de programa.
-  // Ésta es la mitad que acusaba a una página sana.
-  assert.equal(v.regresiones?.length ?? 0, 0);
-});
 
-// 🔴 CON LA RANURA JS LAS GUARDADAS YA SE COMPRUEBAN (2026-09-22).
-//
-// Hasta hoy con `prueba_js` corría SÓLO su programa y la suite guardada se
-// quedaba sin mirar (se decía en `regresionesSinComprobar`, que al menos no
-// era mentir). Ahora van en el mismo programa, detrás, y un fallo suyo es SU
-// regresión.
-test("con la ranura JS, las guardadas van detrás y su fallo es su regresión", async () => {
-  let programa = "";
-  const v = await verifyEditedPage(
-    {
-      ...PARAMS,
-      runtime: "window.x=1",
-      pruebaJs: "await ui.texto('#total');",
-      guardadas: [CARRITO_GUARDADO] as never,
-    },
-    {
-      render: async (
-        _html,
-        opts?: { behaviorProgram?: string; onBehaviorResult?: (b: unknown) => void },
-      ) => {
-        programa = opts?.behaviorProgram ?? "";
-        opts?.onBehaviorResult?.([[1, "#total ya no cambia", null, 1]]);
-        return IMAGE;
-      },
-      provider: providerReturning("tampoco es JSON"),
-    },
-  );
-  // La guardada viaja en el programa, convertida.
-  assert.match(programa, /#agregar/);
-  assert.equal(v.regresionesSinComprobar ?? undefined, undefined);
-  assert.equal(v.regresiones?.[0]?.id, "p1");
-  assert.equal(v.fallosDelTurno ?? undefined, undefined);
-});
 
 // «NO SE MIRÓ» SIGUE SIN SER «SE MIRÓ Y ESTÁ LIMPIA». Una guardada en el formato
 // viejo que no se pudo convertir no tiene quien la corra: se dice, por su id.
 test("una guardada que no se pudo convertir sale como NO COMPROBADA, con su id", async () => {
   const vieja = { id: "p9", pasos: [{ clic: "#a", entonces: [{ donde: "#b", que: "brilla" }] }], pagina: null, creada: 1 };
   const v = await verifyEditedPage(
-    { ...PARAMS, runtime: "window.x=1", pruebaJs: "await ui.texto('#total');", guardadas: [vieja] as never },
+    { ...PARAMS, runtime: "window.x=1", guardadas: [vieja] as never },
     {
       render: async (_html, opts?: { onBehaviorResult?: (b: unknown) => void }) => {
         opts?.onBehaviorResult?.([]);
@@ -1805,23 +1645,3 @@ test("una guardada que no se pudo convertir sale como NO COMPROBADA, con su id",
   assert.match(v.regresionesSinComprobar ?? "", /formato viejo/);
 });
 
-// CONTRA-PRUEBA: con promesa del turno, las guardadas se ejecutan detrás, así
-// que no hay nada que excusar y el campo no aparece.
-test("CONTRA-PRUEBA: con promesa del turno, las guardadas se comprueban y no se excusa nada", async () => {
-  const v = await verifyEditedPage(
-    {
-      ...PARAMS,
-      runtime: "window.x=1",
-      pruebaJs: "await ui.clic('#b');",
-      guardadas: [CARRITO_GUARDADO] as never,
-    },
-    {
-      render: async (_html, opts?: { onBehaviorResult?: (b: unknown) => void }) => {
-        opts?.onBehaviorResult?.([]);
-        return IMAGE;
-      },
-      provider: providerReturning("tampoco es JSON"),
-    },
-  );
-  assert.equal(v.regresionesSinComprobar ?? undefined, undefined);
-});

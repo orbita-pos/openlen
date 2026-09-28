@@ -135,18 +135,48 @@ export function turnosTotalesDe(historyTotal: unknown): number {
  * Lo leen DOS sitios que tienen que decir lo mismo: la nota que va al modelo
  * (`conversacionRecortada`) y el aviso que va al usuario (en el evento `done`).
  *
- * Los mensajes de respuestas de herramienta TAMBIÉN son role "user" (con
- * contenido vacío): contarlos infla la cuenta y diría que se ven más turnos de
- * los que se ven.
+ * Los mensajes de respuestas de herramienta TAMBIÉN son role "user": contarlos
+ * infla la cuenta y diría que se ven más turnos de los que se ven. En el
+ * historial de la base (H4) no llegan vacíos —traen lo medido tras editar al
+ * lado—, así que se reconocen por sus respuestas, no por su texto.
  */
-export function ventanaVisibleDe(history: readonly MensajeSaneado[]): number {
-  return history.filter((h) => h.role === "user" && h.content.length > 0).length;
+export function ventanaVisibleDe(
+  history: readonly { role: "user" | "assistant"; content: string; functionResponses?: readonly unknown[] }[],
+): number {
+  return history.filter((h) => h.role === "user" && h.content.length > 0 && !(h.functionResponses?.length ?? 0)).length;
 }
 
-/** ¿El turno anterior fue MUDO? El último mensaje del asistente sin
- *  `functionCalls` significa que no tocó nada. Es un hecho estructural, no una
- *  lectura de su prosa. Un historial vacío (primer turno) no dispara nada. */
-export function turnoAnteriorMudoDe(history: readonly MensajeSaneado[]): boolean {
-  const ultimo = [...history].reverse().find((h) => h.role === "assistant");
-  return ultimo ? !("functionCalls" in ultimo) : false;
+/** ¿El turno anterior fue MUDO? Mudo = el asistente respondió a la última
+ *  petición del dueño sin llamar a ninguna herramienta. Es un hecho
+ *  estructural, no una lectura de su prosa. Un historial vacío (primer turno)
+ *  no dispara nada.
+ *
+ *  Mira TODO lo que el asistente hizo desde esa petición, no sólo su último
+ *  mensaje: en el historial del navegador las llamadas iban en ese mensaje,
+ *  pero en la transcripción de la base (H4) el último es el texto final y las
+ *  llamadas van antes.
+ *
+ *  La petición del dueño es un mensaje de usuario SIN respuestas de
+ *  herramienta: las respuestas viajan con lo medido tras editar al lado, y su
+ *  texto no es del dueño (E del 26/09: 122 de 282 peticiones recibieron el
+ *  aviso de mudo tras un turno que sí editó). */
+export function turnoAnteriorMudoDe(
+  history: readonly {
+    role: "user" | "assistant";
+    content: string;
+    functionCalls?: readonly unknown[];
+    functionResponses?: readonly unknown[];
+  }[],
+): boolean {
+  let desde = -1;
+  for (let i = history.length - 1; i >= 0; i--) {
+    const h = history[i]!;
+    if (h.role === "user" && h.content.length > 0 && !(h.functionResponses?.length ?? 0)) {
+      desde = i;
+      break;
+    }
+  }
+  const delTurno = history.slice(desde + 1).filter((h) => h.role === "assistant");
+  if (delTurno.length === 0) return false;
+  return !delTurno.some((h) => (h.functionCalls?.length ?? 0) > 0);
 }

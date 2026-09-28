@@ -12,8 +12,7 @@
 // must produce ZERO fetch and ZERO mutation, not just an error response.
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { tagWithOpIds } from "@/lib/html-ops";
-import { runAgentTool, type AgentDeps, type AgentSession } from "./tools";
+import { runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession } from "./tools";
 import type { ProjectData } from "@/lib/projects/types";
 
 const HTML = `<!doctype html><html><head><title>Taqueria</title><meta name="description" content="x"></head><body><h1 data-x="k">Taqueria</h1></body></html>`;
@@ -79,7 +78,6 @@ function makeDeps(
       store.data = data;
       store.saved.push(data);
     },
-    async redesignDocument() { return { ok: false, error: "no usado en estos tests" }; },
     async snapshotVersion() { return "v1"; },
     async provisionOwnerChat() {},
     async cambiosSinPublicar() { return false; },
@@ -123,7 +121,6 @@ function makeSession(html?: string): AgentSession {
   return {
     projectId: "p1",
     userId: "u1",
-    taggedHtml: tagWithOpIds(html ?? HTML).taggedHtml,
     page: null,
     ownerEmail: "owner@example.com",
     imageEditsThisTurn: 0,
@@ -303,7 +300,7 @@ describe("conectar_datos_vivos", () => {
 // mencione esa hoja, y la de al lado vigila que DATOS VIVOS —que es otra hoja,
 // en otro sitio de `settings`, y sigue viva— se siga reportando. Se llamaban
 // parecido; por eso las dos van juntas.
-describe("leer_estado ya no habla de la hoja de la coleccion", () => {
+describe("el estado ya no habla de la hoja de la coleccion", () => {
   it("aunque el proyecto la traiga heredada en sus ajustes", async () => {
     const { deps } = makeDeps({
       data: {
@@ -313,7 +310,8 @@ describe("leer_estado ya no habla de la hoja de la coleccion", () => {
         settings: { collections: { enabled: true, source: { sheet: GOOD_SHEET_URL } } },
       } as unknown as ProjectData,
     });
-    const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
+    // H3: `leer_estado` se retiró; el estado va en el contexto, y lo arma esto.
+    const out = { response: summarizeProjectState((await deps.loadProject("p1", "u1"))!, null) };
     assert.equal("coleccion_desde_hoja" in out.response, false);
   });
 
@@ -326,7 +324,8 @@ describe("leer_estado ya no habla de la hoja de la coleccion", () => {
         settings: { liveData: { sheetUrl: GOOD_SHEET_URL } },
       } as ProjectData,
     });
-    const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
+    // H3: `leer_estado` se retiró; el estado va en el contexto, y lo arma esto.
+    const out = { response: summarizeProjectState((await deps.loadProject("p1", "u1"))!, null) };
     const estado = out.response as Record<string, { hoja?: string }>;
     assert.equal(estado.datos_vivos?.hoja, GOOD_SHEET_URL);
   });

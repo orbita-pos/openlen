@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>HUERTA — Nutrición real, comida de verdad · Comé como te merecés</title>
+<meta name="description" content="HUERTA cocina comida saludable con ingredientes reales: bowls, smoothies y platos de temporada que llegan listos a tu mesa. De la huerta a tu casa, sin conservantes ni vueltas. Comé como te merecés." />
+<meta property="og:title" content="HUERTA — Comé como te merecés" />
+<meta property="og:description" content="Comida saludable con ingredientes reales, cocinada con cabeza y entregada a tu puerta. Bowls, smoothies y platos de temporada por suscripción." />
+<meta property="og:image" content="https://images.openlen.com/163-grain-bowl-1920.webp" />
+<meta name="theme-color" content="#F6F3E7" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231E3A24'/%3E%3Cpath d='M16 24c0-6 3-11 8-13-1 7-3 11-8 13z' fill='%2358A23A'/%3E%3Cpath d='M16 24c0-5-2-9-6-11 1 6 2 9 6 11z' fill='%2382C45A'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F3E7; --surface:#EFEBDA; --surface-2:#E7E2CD; --cream-deep:#FAF8EF;
+    --ink:#1B2A1B; --ink-soft:#33402F; --muted:#5E6A54; --faint:#8A9279;
+    --line:rgba(27,42,27,0.12); --line-strong:rgba(27,42,27,0.22);
+    --accent:#3F7D2E; --accent-deep:#2C5A1F; --leaf:#82C45A; --carrot:#E0762B; --on-accent:#F6F3E7;
+    --radius:10px; --radius-lg:22px;
+    --display:'Bricolage Grotesque',ui-sans-serif,system-ui,sans-serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  h1,h2,h3,.display{font-family:var(--display);font-weight:600;letter-spacing:-0.02em;line-height:1.02}
+  .eyebrow{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s}
+  .lift:hover{transform:translateY(-5px)}
+  .btn{display:inline-flex;align-items:center;gap:.55rem;height:52px;padding:0 28px;border-radius:999px;font-weight:600;font-size:15px;letter-spacing:.01em;transition:transform .25s,background .25s,color .25s,box-shadow .25s;text-decoration:none;font-family:var(--display)}
+  .btn-primary{background:var(--accent);color:#fff;box-shadow:0 12px 26px -12px rgba(63,125,46,.7)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px);box-shadow:0 18px 34px -14px rgba(63,125,46,.8)}
+  .btn-ghost{border:1.5px solid var(--line-strong);color:var(--ink);background:transparent}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .chip{display:inline-flex;align-items:center;gap:.45rem;height:34px;padding:0 15px;border-radius:999px;border:1px solid var(--line-strong);font-size:13px;color:var(--ink-soft);font-weight:500;background:var(--cream-deep)}
+  .leaf-dot{width:8px;height:8px;border-radius:50%;background:var(--leaf)}
+  .rule{height:1px;background:var(--line)}
+  .pill-num{min-width:46px;height:46px;border-radius:14px;display:grid;place-items:center;border:1.5px solid var(--line-strong);background:var(--cream-deep);color:var(--accent);font-family:var(--display);font-size:18px;font-weight:700}
+  .price-card{background:var(--cream-deep);border:1px solid var(--line);border-radius:var(--radius-lg)}
+  .price-feat{background:var(--accent);color:#fff;border:1px solid var(--accent-deep)}
+  /* Content visible by default; JS hides only to play the scroll-in entrance.
+     No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(20px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+  .grain{background-image:radial-gradient(rgba(27,42,27,.045) 1px,transparent 1px);background-size:4px 4px}
+  .tag{display:inline-flex;align-items:center;gap:.4rem;font-size:12.5px;font-weight:600;color:var(--accent);background:rgba(63,125,46,.1);border-radius:999px;padding:5px 12px}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body class="grain">
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(246,243,231,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:74px">
+      <a href="#top" class="display flex items-center gap-2.5" style="font-size:22px;letter-spacing:.02em;font-weight:700">
+        <span style="position:relative;width:24px;height:24px;display:inline-grid;place-items:center">
+          <svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><path d="M16 26c0-7 3.5-12.5 9-15-1 8-3.5 12.5-9 15z" fill="var(--accent)"/><path d="M16 26c0-5.5-2.2-10-6.5-12.5C10.5 20 12 23.8 16 26z" fill="var(--leaf)"/></svg>
+        </span>HUERTA
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#porque" class="hover:opacity-60 transition">Por qué</a>
+        <a href="#menu" class="hover:opacity-60 transition">La línea</a>
+        <a href="#proceso" class="hover:opacity-60 transition">Cómo lo hacemos</a>
+        <a href="#planes" class="hover:opacity-60 transition">Planes</a>
+      </nav>
+      <a href="#planes" class="btn btn-primary" style="height:44px;padding:0 22px;font-size:14px">Empezar plan</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:64px 24px 28px">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-6 reveal">
+        <span class="tag" style="margin-bottom:20px"><span class="leaf-dot"></span>Cocina semanal · ingredientes reales</span>
+        <h1 style="font-size:clamp(46px,8vw,90px);margin:6px 0 0">
+          Comé como<br>te <span style="color:var(--accent)">merecés.</span>
+        </h1>
+        <p style="font-size:18.5px;color:var(--muted);max-width:42ch;margin:24px 0 32px">
+          Bowls, smoothies y platos de temporada cocinados con comida de verdad. Sin conservantes, sin nombres que no podés pronunciar. De la huerta a tu mesa, todas las semanas.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#planes" class="btn btn-primary">Armar mi plan</a>
+          <a href="#menu" class="btn btn-ghost">Ver la línea</a>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-7 gap-y-3 mt-10 text-[13.5px]" style="color:var(--faint)">
+          <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>100% ingredientes reales</span>
+          <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>Sin conservantes</span>
+          <span class="flex items-center gap-2"><span style="color:var(--accent)">●</span>Entrega refrigerada</span>
+        </div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <div class="relative">
+          <div class="lift overflow-hidden" style="border-radius:32px;aspect-ratio:4/5;box-shadow:0 40px 80px -40px rgba(27,42,27,.55)">
+            <img class="img-cover" src="https://images.openlen.com/163-grain-bowl-1920.webp" alt="Bowl saludable de granos, verduras frescas y semillas, servido con cuidado" loading="eager" width="1080" height="1350">
+          </div>
+          <div class="hidden sm:flex items-center gap-3 lift" style="position:absolute;left:-18px;bottom:30px;background:var(--cream-deep);border:1px solid var(--line);border-radius:18px;padding:14px 18px;box-shadow:0 20px 40px -22px rgba(27,42,27,.5)">
+            <span style="width:40px;height:40px;border-radius:12px;background:rgba(130,196,90,.22);display:grid;place-items:center">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+            </span>
+            <div class="text-[13px]"><div class="display" style="font-size:17px;color:var(--ink)">+8.000</div><div style="color:var(--muted)">familias ya comen mejor</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETAIL STRIP -->
+  <section class="wrap" style="padding:34px 24px">
+    <div class="rule"></div>
+    <div class="flex flex-wrap items-center justify-between gap-y-5 py-6 text-[13.5px]" style="color:var(--muted);letter-spacing:.03em">
+      <span class="flex items-center gap-2"><span class="leaf-dot"></span>De productores locales</span>
+      <span class="flex items-center gap-2"><span class="leaf-dot"></span>Cocinado el mismo día</span>
+      <span class="flex items-center gap-2"><span class="leaf-dot"></span>Nutricionista en cada receta</span>
+      <span class="flex items-center gap-2"><span class="leaf-dot"></span>Envase compostable</span>
+    </div>
+    <div class="rule"></div>
+  </section>
+
+  <!-- POR QUÉ / ingredientes reales -->
+  <section id="porque" class="wrap" style="padding:56px 24px 24px">
+    <div class="grid lg:grid-cols-12 gap-12 items-center">
+      <div class="lg:col-span-5 reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 30px 60px -34px rgba(27,42,27,.5)">
+          <img class="img-cover" src="https://images.openlen.com/178-vegetables-flatlay-1920.webp" alt="Mesa con verduras frescas de estación dispuestas vistas desde arriba" loading="lazy" width="1080" height="1350">
+        </div>
+      </div>
+      <div class="lg:col-span-7 reveal">
+        <span class="eyebrow">Por qué HUERTA</span>
+        <h2 style="font-size:clamp(32px,5vw,52px);margin:14px 0 0">Comida que<br>reconocés en la <span style="color:var(--accent)">etiqueta</span></h2>
+        <p style="color:var(--muted);font-size:17.5px;margin-top:20px;max-width:52ch">Empezamos cansados de leer etiquetas con veinte ingredientes y ningún alimento. Así que hicimos lo contrario: cocinamos con lo que crece, en su temporada, cerca de casa.</p>
+        <div class="grid sm:grid-cols-2 gap-5 mt-10">
+          <div>
+            <div style="width:44px;height:44px;border-radius:13px;background:rgba(130,196,90,.2);display:grid;place-items:center;margin-bottom:14px">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+            </div>
+            <h3 style="font-size:19px;margin:0 0 6px">Ingredientes que se leen</h3>
+            <p class="text-[14.5px]" style="color:var(--muted)">Lista corta y honesta. Si no lo tendrías en tu cocina, no entra en nuestros platos.</p>
+          </div>
+          <div>
+            <div style="width:44px;height:44px;border-radius:13px;background:rgba(224,118,43,.18);display:grid;place-items:center;margin-bottom:14px">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--carrot)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </div>
+            <h3 style="font-size:19px;margin:0 0 6px">Cocinado el mismo día</h3>
+            <p class="text-[14.5px]" style="color:var(--muted)">Lo preparamos por la mañana y sale en frío. Llega fresco, no descongelado.</p>
+          </div>
+          <div>
+            <div style="width:44px;height:44px;border-radius:13px;background:rgba(63,125,46,.16);display:grid;place-items:center;margin-bottom:14px">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            </div>
+            <h3 style="font-size:19px;margin:0 0 6px">Equilibrado por nutricionista</h3>
+            <p class="text-[14.5px]" style="color:var(--muted)">Cada receta pasa por nuestra nutricionista: proteína, fibra y energía en su punto.</p>
+          </div>
+          <div>
+            <div style="width:44px;height:44px;border-radius:13px;background:rgba(130,196,90,.2);display:grid;place-items:center;margin-bottom:14px">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <h3 style="font-size:19px;margin:0 0 6px">De productores cercanos</h3>
+            <p class="text-[14.5px]" style="color:var(--muted)">Compramos a quintas y huertas de la zona. Menos kilómetros, más sabor.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LA LÍNEA / menú -->
+  <section id="menu" class="wrap" style="padding:72px 24px 24px">
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12 reveal">
+      <div>
+        <span class="eyebrow">La línea de esta semana</span>
+        <h2 style="font-size:clamp(32px,5vw,52px);margin-top:12px">Tres formas<br>de comer rico</h2>
+      </div>
+      <p class="text-[14.5px] md:text-right" style="color:var(--muted);max-width:34ch">Rotamos la carta cada semana con lo que está en su mejor momento. Elegí lo que quieras, cambialo cuando quieras.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 24px 50px -32px rgba(27,42,27,.45)"><img class="img-cover" src="https://images.openlen.com/163-grain-bowl-1920.webp" alt="Bowl de granos integrales con verduras asadas y semillas" loading="lazy" width="1080" height="1350"></div>
+        <div class="flex items-baseline justify-between mt-6">
+          <h3 class="display" style="font-size:22px">Bowls de temporada</h3><span class="tag">540 kcal</span>
+        </div>
+        <p class="text-[14.5px] mt-2" style="color:var(--muted)">Base de granos integrales, verduras de la semana, proteína a elección y nuestra salsa de la casa. Tu almuerzo, resuelto.</p>
+      </article>
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 24px 50px -32px rgba(27,42,27,.45)"><img class="img-cover" src="https://images.openlen.com/175-smoothie-1920.webp" alt="Smoothie cremoso de frutas con semillas por encima en un vaso" loading="lazy" width="1080" height="1350"></div>
+        <div class="flex items-baseline justify-between mt-6">
+          <h3 class="display" style="font-size:22px">Smoothies de fruta</h3><span class="tag">220 kcal</span>
+        </div>
+        <p class="text-[14.5px] mt-2" style="color:var(--muted)">Fruta de verdad, sin azúcar añadida ni jugos concentrados. El desayuno o la merienda que tu cuerpo agradece.</p>
+      </article>
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 24px 50px -32px rgba(27,42,27,.45)"><img class="img-cover" src="https://images.openlen.com/181-fruit-bowl-1920.webp" alt="Bowl de frutas frescas variadas y coloridas listo para comer" loading="lazy" width="1080" height="1350"></div>
+        <div class="flex items-baseline justify-between mt-6">
+          <h3 class="display" style="font-size:22px">Bowls de fruta</h3><span class="tag">180 kcal</span>
+        </div>
+        <p class="text-[14.5px] mt-2" style="color:var(--muted)">Frutas de estación cortadas frescas con un toque de semillas y coco. Dulce sin culpa, listo para llevar.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- DE LA HUERTA A TU MESA / proceso -->
+  <section id="proceso" style="background:var(--accent-deep);color:var(--on-accent);margin-top:64px">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="grid lg:grid-cols-12 gap-12 items-center">
+        <div class="lg:col-span-5 reveal">
+          <span class="eyebrow" style="color:var(--leaf)">El proceso</span>
+          <h2 class="display" style="font-size:clamp(32px,5vw,52px);color:#fff;margin:14px 0 0;font-weight:600">De la huerta<br>a tu mesa</h2>
+          <p style="color:rgba(246,243,231,.78);font-size:17.5px;margin-top:20px;max-width:42ch">Cuatro pasos cortos entre la quinta y tu cocina. Sin cadenas de frío eternas ni intermediarios que sobran.</p>
+          <div class="lift overflow-hidden mt-10" style="border-radius:var(--radius-lg);aspect-ratio:16/10;box-shadow:0 30px 60px -34px rgba(0,0,0,.5)">
+            <img class="img-cover" src="https://images.openlen.com/277-washing-vegetables-1920.webp" alt="Manos lavando verduras frescas bajo el agua antes de cocinarlas" loading="lazy" width="1280" height="800">
+          </div>
+        </div>
+        <div class="lg:col-span-7">
+          <div class="grid sm:grid-cols-2 gap-5">
+            <div class="reveal" style="background:rgba(246,243,231,.06);border:1px solid rgba(246,243,231,.14);border-radius:var(--radius-lg);padding:26px">
+              <span class="pill-num" style="background:rgba(246,243,231,.1);border-color:rgba(246,243,231,.2);color:var(--leaf)">01</span>
+              <h3 class="display" style="font-size:20px;color:#fff;margin:16px 0 6px">Cosecha cercana</h3>
+              <p class="text-[14.5px]" style="color:rgba(246,243,231,.74)">Recibimos cada mañana de quintas de la zona. Lo que llega marca la carta de la semana.</p>
+            </div>
+            <div class="reveal" style="background:rgba(246,243,231,.06);border:1px solid rgba(246,243,231,.14);border-radius:var(--radius-lg);padding:26px">
+              <span class="pill-num" style="background:rgba(246,243,231,.1);border-color:rgba(246,243,231,.2);color:var(--leaf)">02</span>
+              <h3 class="display" style="font-size:20px;color:#fff;margin:16px 0 6px">Lavado y prep</h3>
+              <p class="text-[14.5px]" style="color:rgba(246,243,231,.74)">Lavamos, pelamos y cortamos a mano. Nada se procesa de más; el alimento se mantiene entero.</p>
+            </div>
+            <div class="reveal" style="background:rgba(246,243,231,.06);border:1px solid rgba(246,243,231,.14);border-radius:var(--radius-lg);padding:26px">
+              <span class="pill-num" style="background:rgba(246,243,231,.1);border-color:rgba(246,243,231,.2);color:var(--leaf)">03</span>
+              <h3 class="display" style="font-size:20px;color:#fff;margin:16px 0 6px">Cocina del día</h3>
+              <p class="text-[14.5px]" style="color:rgba(246,243,231,.74)">Cocinamos en tandas chicas la misma mañana del envío. Punto justo, frescura intacta.</p>
+            </div>
+            <div class="reveal" style="background:rgba(130,196,90,.16);border:1px solid var(--leaf);border-radius:var(--radius-lg);padding:26px">
+              <span class="pill-num" style="background:var(--leaf);border-color:var(--leaf);color:var(--accent-deep)">04</span>
+              <h3 class="display" style="font-size:20px;color:#fff;margin:16px 0 6px">Entrega en frío</h3>
+              <p class="text-[14.5px]" style="color:rgba(246,243,231,.82)">Sale refrigerado y llega el mismo día a tu puerta. Lo abrís y comés, sin escalas.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLANES / suscripción -->
+  <section id="planes" class="wrap" style="padding:80px 24px 24px">
+    <div class="text-center max-w-2xl mx-auto reveal mb-14">
+      <span class="eyebrow">Planes y suscripción</span>
+      <h2 style="font-size:clamp(32px,5vw,54px);margin-top:14px">Elegí cuánto<br>querés comer mejor</h2>
+      <p style="color:var(--muted);font-size:17.5px;margin-top:16px">Suscripción flexible: pausá, cambiá o cancelá cuando quieras. Sin permanencia, sin letra chica.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6 items-stretch">
+      <div class="price-card lift reveal" style="padding:32px;display:flex;flex-direction:column">
+        <div class="chip" style="align-self:flex-start"><span class="leaf-dot"></span>Para arrancar</div>
+        <h3 class="display" style="font-size:24px;margin:18px 0 4px">Semana Verde</h3>
+        <p class="text-[14px]" style="color:var(--muted)">5 comidas a la semana, ideal para probar.</p>
+        <div class="flex items-baseline gap-1.5" style="margin:22px 0 4px">
+          <span class="display" style="font-size:46px;color:var(--ink)">$32</span><span style="color:var(--faint)">/semana</span>
+        </div>
+        <p class="text-[13px]" style="color:var(--faint)">$6,40 por comida</p>
+        <ul class="text-[14.5px] mt-7 space-y-3" style="color:var(--ink-soft);list-style:none;padding:0;margin:0">
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✓</span>5 bowls o smoothies a elección</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✓</span>Carta semanal rotativa</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✓</span>Una entrega refrigerada</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✓</span>Pausá cuando quieras</li>
+        </ul>
+        <a href="#planes" class="btn btn-ghost mt-8" style="justify-content:center;margin-top:auto">Elegir Semana Verde</a>
+      </div>
+
+      <div class="price-feat lift reveal" style="padding:34px;border-radius:var(--radius-lg);display:flex;flex-direction:column;box-shadow:0 34px 70px -34px rgba(63,125,46,.65)">
+        <div class="chip" style="align-self:flex-start;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.3);color:#fff"><span class="leaf-dot"></span>El más elegido</div>
+        <h3 class="display" style="font-size:24px;margin:18px 0 4px;color:#fff">Mesa Completa</h3>
+        <p class="text-[14px]" style="color:rgba(246,243,231,.82)">10 comidas, para que el almuerzo no sea un problema.</p>
+        <div class="flex items-baseline gap-1.5" style="margin:22px 0 4px">
+          <span class="display" style="font-size:46px;color:#fff">$58</span><span style="color:rgba(246,243,231,.7)">/semana</span>
+        </div>
+        <p class="text-[13px]" style="color:rgba(246,243,231,.7)">$5,80 por comida</p>
+        <ul class="text-[14.5px] mt-7 space-y-3" style="color:rgba(246,243,231,.94);list-style:none;padding:0;margin:0">
+          <li class="flex gap-2.5"><span>✓</span>10 comidas a elección libre</li>
+          <li class="flex gap-2.5"><span>✓</span>Dos entregas a la semana</li>
+          <li class="flex gap-2.5"><span>✓</span>Bowls de fruta incluidos</li>
+          <li class="flex gap-2.5"><span>✓</span>Prioridad en cupos limitados</li>
+        </ul>
+        <a href="#cta" class="btn mt-8" style="justify-content:center;margin-top:auto;background:#fff;color:var(--accent-deep)">Empezar Mesa Completa</a>
+      </div>
+
+      <div class="price-card lift reveal" style="padding:32px;display:flex;flex-direction:column">
+        <div class="chip" style="align-self:flex-start"><span class="leaf-dot"></span>Para la familia</div>
+        <h3 class="display" style="font-size:24px;margin:18px 0 4px">Toda la Casa</h3>
+        <p class="text-[14px]" style="color:var(--muted)">18 comidas, para que coman bien todos.</p>
+        <div class="flex items-baseline gap-1.5" style="margin:22px 0 4px">
+          <span class="display" style="font-size:46px;color:var(--ink)">$96</span><span style="color:var(--faint)">/semana</span>
+        </div>
+        <p class="text-[13px]" style="color:var(--faint)">$5,33 por comida</p>
+        <ul class="text-[14.5px] mt-7 space-y-3" style="color:var(--ink-soft);list-style:none;padding:0;margin:0">
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✓</span>18 comidas para compartir</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✓</span>Porciones aptas para niños</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✓</span>Entrega cuando te quede mejor</li>
+          <li class="flex gap-2.5"><span style="color:var(--accent)">✓</span>Asesoría de nutrición incluida</li>
+        </ul>
+        <a href="#planes" class="btn btn-ghost mt-8" style="justify-content:center;margin-top:auto">Elegir Toda la Casa</a>
+      </div>
+    </div>
+    <p class="text-center text-[13.5px] mt-8 reveal" style="color:var(--faint)">Todos los planes incluyen envase compostable y entrega sin costo en la ciudad.</p>
+  </section>
+
+  <!-- CTA -->
+  <section id="cta" class="wrap" style="padding:48px 24px 24px">
+    <div class="reveal" style="position:relative;overflow:hidden;border-radius:32px;background:var(--surface);border:1px solid var(--line)">
+      <div class="grid lg:grid-cols-2 items-center">
+        <div style="padding:clamp(40px,6vw,72px)">
+          <span class="eyebrow">Empezá esta semana</span>
+          <h2 style="font-size:clamp(32px,5vw,54px);margin:16px 0 0">Tu próxima<br>comida sana,<br><span style="color:var(--accent)">ya en camino</span></h2>
+          <p style="color:var(--muted);font-size:18px;margin:20px 0 30px;max-width:42ch">Armá tu plan en dos minutos, elegí el día de entrega y dejá de pensar en qué cocinar. Sin tarjeta para arrancar.</p>
+          <div class="flex flex-wrap gap-3">
+            <a href="#planes" class="btn btn-primary" style="height:56px;padding:0 32px;font-size:15px">Armar mi plan</a>
+            <a href="#menu" class="btn btn-ghost" style="height:56px;padding:0 30px;font-size:15px">Ver la carta</a>
+          </div>
+          <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-8 text-[13px]" style="color:var(--faint)">
+            <span>Primera entrega gratis</span><span>·</span><span>pausá cuando quieras</span><span>·</span><span>sin permanencia</span>
+          </div>
+        </div>
+        <div class="hidden lg:block" style="height:100%;min-height:380px">
+          <img class="img-cover" src="https://images.openlen.com/179-herbs-spices-1920.webp" alt="Hierbas y especias frescas dispuestas en detalle, llenas de color" width="1080" height="1080" style="height:100%">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:64px 24px 44px">
+    <div class="grid md:grid-cols-4 gap-8">
+      <div class="md:col-span-2">
+        <div class="display flex items-center gap-2.5" style="font-size:24px;letter-spacing:.02em;font-weight:700">
+          <span style="position:relative;width:24px;height:24px;display:inline-grid;place-items:center">
+            <svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><path d="M16 26c0-7 3.5-12.5 9-15-1 8-3.5 12.5-9 15z" fill="var(--accent)"/><path d="M16 26c0-5.5-2.2-10-6.5-12.5C10.5 20 12 23.8 16 26z" fill="var(--leaf)"/></svg>
+          </span>HUERTA
+        </div>
+        <p class="text-[14px] mt-4" style="color:var(--muted);max-width:34ch">Nutrición real para familias. Comida de verdad, cocinada con cabeza y entregada fresca a tu puerta.</p>
+        <div class="flex items-center gap-3 mt-5">
+          <span class="chip" style="height:30px">Sin conservantes</span>
+          <span class="chip" style="height:30px">Envase compostable</span>
+        </div>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Explorá</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#porque" class="hover:opacity-60 transition">Por qué HUERTA</a><br><a href="#menu" class="hover:opacity-60 transition">La línea</a><br><a href="#proceso" class="hover:opacity-60 transition">Cómo lo hacemos</a><br><a href="#planes" class="hover:opacity-60 transition">Planes</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Contacto</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2">hola@huerta.example<br>Lun–Vie · 8:00–18:00<br><a href="#" class="hover:opacity-60 transition">Instagram</a><br><a href="#" class="hover:opacity-60 transition">Zonas de entrega</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:40px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© HUERTA · Nutrición real para tu familia</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, static preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

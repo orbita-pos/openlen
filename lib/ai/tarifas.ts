@@ -65,8 +65,9 @@ const V4_FLASH = { input: 0.22, output: 0.66, cached: 0.007 } as const;
  */
 const V4P1_FLASH = { input: 0.30, output: 1.20, cached: 0.006 } as const;
 
-/** DeepSeek V4 Pro. Hoy no lo corre ningún papel; lo monta a mano
- *  `lib/agent/redesign.ts`, y por eso la fila se queda. */
+/** DeepSeek V4 Pro. Hoy no lo corre ningún papel (lo montaba a mano
+ *  `lib/agent/redesign.ts`, retirado con Len 2.0). Se queda: es la vuelta
+ *  atrás del papel `agent` (ver `model-policy.ts`) y tasa grabaciones viejas. */
 const V4_PRO = { input: 1.32, output: 3.96, cached: 0.044 } as const;
 
 /**

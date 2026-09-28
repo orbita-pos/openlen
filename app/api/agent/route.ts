@@ -9,16 +9,11 @@ import {
   debitCredits,
   creditsForUsage,
 } from "@/lib/credits";
-import {
-  buildOutline,
-  buildScopedView,
-  resolveOpIdByPath,
-  stripOpIds,
-  tagWithOpIds,
-} from "@/lib/html-ops";
+import { stripOpIds } from "@/lib/html-ops";
+import { seleccionDelLienzo } from "@/lib/agent/seleccion-del-lienzo";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
-import { buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { buildFunctionDeclarations, HERRAMIENTAS_DIFERIDAS } from "@/lib/agent/catalog";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { persistPage } from "@/lib/page-engine/persist";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
@@ -31,12 +26,23 @@ import {
   nombreDeFichero,
 } from "@/lib/agent/grabacion";
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
+import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
+import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
+import {
+  historialDesdeLaBase,
+  leidosSembrados,
+  transcripcionParaGuardar,
+  type FilaDelHistorial,
+  type MensajeDelHistorial,
+} from "@/lib/agent/transcripcion";
+import { turnosParaElHistorial } from "@/lib/projects/chat";
+import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
 import { getVersionHtml, listVersions } from "@/lib/projects/versions";
 import { loQueCambioElDueno } from "@/lib/agent/cambios-del-dueno";
 import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
-import { runAgentLoop, topesPorPlan, type AgentErrorCode, type VerifyOutcome } from "@/lib/agent/loop";
+import { runAgentLoop, type AgentErrorCode, type VerifyOutcome } from "@/lib/agent/loop";
 import { VUELTAS_DE_OBJETIVO, evaluarCondicion } from "@/lib/agent/objetivo/evaluar-condicion";
 import { elObjetivoTermino } from "@/lib/agent/objetivo/veredicto";
 import { randomUUID } from "node:crypto";
@@ -48,8 +54,10 @@ import { actualizarSuite, marcarRegresiones, migrarSuite, vivas } from "@/lib/ag
 import type { FalloSpec } from "@/lib/agent/prueba-js";
 import { registrarTurnoDelServidor } from "@/lib/projects/chat";
 import { streamWithRetry } from "@/lib/agent/retry";
+import { conSenales, relojDeSilencio } from "@/lib/agent/reloj-de-silencio";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
 import { observarPagina, verifyEditedPage } from "@/lib/agent/verify";
+import { usarPagina } from "@/lib/agent/usar-pagina";
 import {
   createVisualQualityRendererPool,
   renderVisualQualityViewports,
@@ -89,18 +97,26 @@ import { jsonResponse, sseChannel } from "@/lib/ai/sse";
 //
 // Aqui decia «Provider: Gemini Flash only»; Gemini salio de los cuatro papeles
 // el 2026-08-28. Quien razona lo elige `model-policy.ts`. Las tool calls
-// (leer_estado /
-// editar_pagina / activar_modulo) do the heavy lifting; the model itself
+// (Read / Edit / Write, y las del catálogo) do the heavy lifting; the model itself
 // only needs to reason + dispatch, so there's no Pro tier here (unlike
 // ai-design, which lets the user pick).
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const runtime = "nodejs";
+
+/** H4 · cuántos turnos de la base forman el historial. Los mismos ~12 que
+ *  cabían en la ventana del navegador (36 mensajes); lo que pesa lo acota el
+ *  microcompact (`PRESUPUESTO_DE_RESULTADOS`), no este número. */
+const TURNOS_DEL_HISTORIAL = 12;
 const ENCODER = new TextEncoder();
-// Same ceiling as ai-design — a real agent turn can chain several tool
-// calls (leer_estado → editar_pagina → activar_modulo), so give it the
-// same generous budget rather than a tighter one.
-const STREAM_TIMEOUT_MS = 360_000;
+// ⚰️ Aquí vivía `STREAM_TIMEOUT_MS = 360_000`, un reloj de PARED: el turno se
+// abortaba a los 6 minutos trabajara o no. Retirado con los topes (H1,
+// 2026-09-25): Claude Code no pone plazo a un turno. Lo que corta un cuelgue es
+// el SILENCIO — `relojDeSilencio` se rearma con cada evento del modelo y con
+// cada cosa que se le manda al dueño, y sólo aborta tras `SILENCIO_MS` sin
+// ninguna. 3 minutos: más que cualquier llamada sana al modelo o que los ojos
+// (un arranque de Chromium y una llamada con visión).
+const SILENCIO_MS = 180_000;
 // 🔴 CADA CUÁNTO LATE EL TURNO CUANDO NO TIENE NADA QUE DECIR.
 //
 // El techo de arriba acota un turno ETERNO. Esto acota uno MUDO, que es un
@@ -125,9 +141,10 @@ const MAX_PROMPT_TOKENS = 240_000;
 interface ScopeBody {
   outerHtml?: string;
   hint?: string;
-  /** CSS-selector breadcrumb from the iframe's section-select script. When
-   *  set and it resolves against the tagged document, the request becomes a
-   *  hard-pin (the model must anchor on that op-id) instead of a soft hint. */
+  /** CSS-selector breadcrumb from the iframe's section-select script. When it
+   *  resolves, `seleccionDelLienzo` turns it into LINES of the file (fichero +
+   *  desde–hasta + el texto), como la selección de líneas de Claude Code;
+   *  if it does not, the hint travels alone. The model never sees an id. */
   path?: string;
 }
 
@@ -321,6 +338,12 @@ export async function POST(req: Request): Promise<Response> {
     // que más veces lo abre en un turno.
     observarPagina: (input: Parameters<typeof observarPagina>[0]) =>
       observarPagina(input, { medir: medirDelTurno }),
+    // `usar_pagina` (H9) abre SU navegador por visita y no el del turno: cada
+    // visita tiene que empezar limpia (sin lo guardado por la anterior) y lleva
+    // su propio preludio. El subdominio, para que el sustituto de `/api/d` juzgue
+    // las rutas como la publicada.
+    usarPagina: (input: Omit<Parameters<typeof usarPagina>[0], "sub">) =>
+      usarPagina(subDelProyecto === undefined ? input : { ...input, sub: subDelProyecto }),
   };
   const project = await deps.loadProject(projectId, userId);
   if (!project) return errorJson(404, "project not found");
@@ -333,18 +356,37 @@ export async function POST(req: Request): Promise<Response> {
   // Ver D5 de la spec 2026-09-15.
   const vistaDelTurno = vistaParaMedir(projectId, project, pageSlug);
   const tools = buildFunctionDeclarations(process.env);
+  // LAS DIFERIDAS (H2): el modelo ve sólo su nombre y las carga con ToolSearch.
+  // `tools` sigue siendo la lista ENTERA —la usan el saneado del historial y el
+  // bucle para reconocer un nombre—; al modelo se le ofrecen las del núcleo más
+  // las que ya cargó en este turno.
+  const diferidas = tools.filter((d) => HERRAMIENTAS_DIFERIDAS.has(String(d.name)));
+  const cargadas = new Set<string>();
+  const herramientasDelModelo = () =>
+    tools.filter((d) => !HERRAMIENTAS_DIFERIDAS.has(String(d.name)) || cargadas.has(String(d.name)));
   // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador
   // sólo se acepta un NOMBRE de herramienta que exista, sin argumentos, y un
   // resumen acotado. Vive fuera para que el arnés de evals reproduzca una
   // conversación con el MISMO saneado que aplica esta ruta.
   const turnosTotales = turnosTotalesDe(body?.historyTotal);
-  const history = sanearHistorial(body?.history, new Set(tools.map((d) => String(d.name))));
+  // 🔴 H4 · EL HISTORIAL SALE DE LA BASE, como la transcripción de Claude Code
+  // (`lib/agent/transcripcion.ts`): con los argumentos de cada llamada y sus
+  // resultados, los viejos vaciados con su marca. Lo escribió el servidor; nada
+  // del navegador entra. El del navegador queda sólo para las conversaciones sin
+  // ninguna transcripción todavía (anteriores a H4), con su saneado de siempre.
+  // Fail-soft: si la base no contesta, el turno sigue con el del navegador.
+  const filasDelHistorial: FilaDelHistorial[] = await turnosParaElHistorial(projectId, TURNOS_DEL_HISTORIAL).catch(
+    () => [],
+  );
+  const historialDeLaBase = filasDelHistorial.some((f) => f.transcript) ? historialDesdeLaBase(filasDelHistorial) : null;
+  const history: MensajeDelHistorial[] =
+    historialDeLaBase ?? sanearHistorial(body?.history, new Set(tools.map((d) => String(d.name))));
   const ventanaVisible = ventanaVisibleDe(history);
   const dichoAntes = sanearDichoAntes(body?.dichoAntes);
 
   // Validate the scope payload (optional) — same shape/limits as ai-design.
-  // The hint is a textual fallback; the path (when it resolves after
-  // tagging) unlocks a hard-pin to a specific data-op-id.
+  // The hint is a textual fallback; the path, when it resolves, becomes the
+  // selected lines of the file (`seleccionDelLienzo`), not an id.
   let scopeHint: string | null = null;
   let scopePath: string | null = null;
   if (body?.scope && typeof body.scope === "object") {
@@ -391,57 +433,21 @@ export async function POST(req: Request): Promise<Response> {
   const faltaKey = faltaCredencial(credencialDelTurno());
   if (faltaKey) return errorJson(500, faltaKey);
 
-  // The ACTIVE document — home's data.html or the validated subpage's html.
-  // Same no-taggable-elements 400 as before, now checked against whichever
-  // document is actually active this turn.
+  // The ACTIVE document — home's data.html or the validated subpage's html —
+  // es el fichero que el dueño tiene abierto en el editor. Len 2.0 NO lo recibe
+  // en el contexto: lo lee con Read (plans/len-2/ficheros-plan.md, T8c).
+  //
+  // ⚰️ Aquí se etiquetaba con `data-op-id` para mandárselo al modelo, y una
+  // página sin nada etiquetable se rechazaba con un 400 (`noTaggableElements`).
+  // Con ficheros no hay nada que rechazar: una página vacía es un fichero vacío,
+  // Read lo dice («This file exists and is empty») y Write lo llena,
+  // como en Claude Code.
   const activeHtml = pageSlug ? project.data.pages?.[pageSlug]?.html ?? "" : project.data.html ?? "";
-  // Se DESETIQUETA antes de etiquetar. `tag_with_op_ids` salta —sin contarlo—
-  // el elemento que ya lleva `data-op-id` (`tagger.rs`), así que un documento
-  // ya etiquetado devuelve `taggedCount = 0` y esta ruta lo rechazaba con un
-  // 400 del que no se salía NUNCA: el proyecto quedaba inservible.
-  //
-  // El escape estaba tapado en `persistHtmlChange`, pero eso sólo protege lo
-  // que se guarde de aquí en adelante. Los proyectos que YA tienen ids dentro
-  // necesitan que la puerta sepa curarlos, y hacerla idempotente es más barato
-  // que una migración. Un documento limpio pasa por aquí byte-idéntico.
-  const { taggedHtml, taggedCount } = tagWithOpIds(stripOpIds(activeHtml));
-  if (taggedCount === 0) return errorJson(400, "project html has no taggable elements", "noTaggableElements");
 
-  // EL JAVASCRIPT QUE LA PÁGINA YA TIENE viaja DENTRO del documento que el
-  // modelo recibe, así que no hay que ir a buscarlo a ninguna parte. Este
-  // bloque leía la cápsula de la columna y se la enseñaba aparte; era la
-  // única forma de que Len viera un código que le habíamos sacado del HTML.
-  const runtimeCode = scriptDelDocumento(activeHtml) || null;
-
-  // Hard-pin: only when the client sent BOTH a path and a hint (mirrors
-  // ai-design) AND the path resolves against the freshly tagged document.
-  // Any failure degrades silently to the soft hint.
-  let scopePin: { opId: string; hint: string } | null = null;
-  if (scopePath && scopeHint) {
-    const opId = resolveOpIdByPath(taggedHtml, scopePath);
-    if (opId) scopePin = { opId, hint: scopeHint };
-  }
-
-  // LA VISTA RECORTADA — hallazgo 14.
-  //
-  // `buildScopedView` llevaba meses construido, probado y en soak, y su ÚNICO
-  // llamador de producción era `ai-design` — el Chat, que es la ruta OPT-OUT.
-  // Len, que es la superficie por defecto, calculaba el `scopePin` y lo gastaba
-  // sólo como PISTA DE TEXTO: después mandaba el documento ENTERO igual, en
-  // cada vuelta. Con el mismo techo de 240k que el Chat sortea recortando, Len
-  // se estrellaba con un 413 y sin degradación.
-  //
-  // Cita de su propio comentario en ai-design: «a 200KB doc would blow the
-  // context, but the same request scoped to one section ships in <5KB».
-  //
-  // 🔴 SÓLO VIAJA AL CONTEXTO DEL MODELO. La sesión del turno (más abajo)
-  // sigue llevando el `taggedHtml` COMPLETO, que es contra lo que se aplican
-  // las ops — incluidas las dirigidas a op-ids que sólo salen en el índice.
-  // Confundir esas dos cosas sería recortar el documento de verdad.
-  //
-  // `null` cuando no hay pin o cuando el contenedor no se puede construir:
-  // entonces va el documento entero, exactamente como hasta hoy.
-  const scopedView = scopePin ? buildScopedView(taggedHtml, scopePin.opId) : null;
+  // LO QUE EL DUEÑO SEÑALÓ EN EL LIENZO, como fichero y líneas — como Claude
+  // Code cuenta lo que el usuario selecciona en su IDE. Ver
+  // `lib/agent/seleccion-del-lienzo.ts`.
+  const seleccion = seleccionDelLienzo({ html: activeHtml, page: pageSlug, path: scopePath, hint: scopeHint });
 
   // F5 — los píxeles de la imagen adjunta. Hasta ahora el modelo recibía la
   // URL como TEXTO y colocaba la imagen a ciegas; aquí se fetchea y viaja como
@@ -489,10 +495,10 @@ export async function POST(req: Request): Promise<Response> {
   // colección llegaba VACÍA en el documento —los items se horneaban al
   // publicar— y sin esto el Agente fabricaba tarjetas inventadas.
   //
-  // Ya no hace falta: con un almacén de `lectura`, `leer_estado` le da las filas
-  // directamente, y las de `propio`/`añadir` también. El problema que esto
-  // resolvía —el modelo sin ver lo que la página guarda— lo resuelve ahora la
-  // herramienta, no un bloque cosido al prompt.
+  // Ya no hace falta: cada almacén es el fichero /datos/<almacén>.json (H3) y
+  // Read le da las filas, las de `lectura` y las de `propio`/`añadir`. El
+  // problema que esto resolvía —el modelo sin ver lo que la página guarda— lo
+  // resuelve el fichero, no un bloque cosido al prompt.
   // 🔴 EL OBJETIVO SE LEE UNA VEZ Y LO USAN LOS DOS: el contexto que ve el
   // MODELO (aquí abajo) y el bucle, que se lo pasa al juez. Antes sólo lo leía
   // el bucle, así que Len trabajaba la primera vuelta sin saber a qué se le
@@ -544,15 +550,13 @@ export async function POST(req: Request): Promise<Response> {
   ]);
 
   const argsDelTurno = {
+    diferidas: diferidas.map((d) => String(d.name)),
     state,
-    taggedHtml,
     // La condición de parada, al MODELO. En Claude Code se le inyecta como
     // prompt en cuanto se fija («you will receive a kickoff message»); aquí
     // viaja en el bloque de avisos, que aterriza al final del mensaje del
     // usuario — la posición más saliente del turno.
     objetivo: objetivoActivo ?? null,
-    scopedView,
-    runtime: runtimeCode,
     userBrief: project.userBrief,
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
     // el usuario puede haber guardado algo en OTRA pestaña, en otro proyecto,
@@ -586,38 +590,16 @@ export async function POST(req: Request): Promise<Response> {
     attachedImage: attachedImage
       ? { ...attachedImage, ...(attachedInline ? { visible: true } : {}) }
       : null,
-    scopePin,
-    scopeHint,
-    activePage: pageSlug,
+    seleccion,
     maxPromptTokens: MAX_PROMPT_TOKENS,
   };
-  let built = buildAgentMessages(argsDelTurno);
+  const built = buildAgentMessages(argsDelTurno);
 
-  // EL PLANO B: EL ÍNDICE. Antes de rendirse con un 413.
-  //
-  // El recorte por pin de más arriba sólo entra cuando el usuario SEÑALÓ algo.
-  // Quien escribe «pon los botones en azul» sobre una página enorme no ha
-  // señalado nada, y hasta hoy se llevaba un 413: Len sencillamente no existía
-  // en esa página, sin explicación y sin alternativa. Es el único sitio del
-  // Agente donde el tamaño no degradaba, sólo cerraba la puerta.
-  //
-  // 🔴 SÓLO SE ENTRA AQUÍ CUANDO EL CAMINO NORMAL YA FALLÓ. Un turno que hoy
-  // funciona sale byte a byte idéntico: se mide primero con el documento
-  // completo y esto ni se calcula. Lo que se degrada es un error, no un éxito.
-  //
-  // Medido el 2026-09-01 sobre las 239 páginas del repo: la mayor son 46k
-  // tokens, el 19% del techo, y NINGUNA lo pasa. Esto no es para las páginas
-  // que existen — es para la que alguien haga mañana metiéndolo todo en una.
-  let enPlanoB = false;
-  if (!built.ok && !scopePin) {
-    const indice = buildOutline(taggedHtml);
-    if (indice) {
-      built = buildAgentMessages({ ...argsDelTurno, soloIndice: indice });
-      // Sólo cuenta como plano B si el índice DE VERDAD hizo que cupiera. Si aun
-      // así no cabe, esto es un 413 y no hay turno que proteger.
-      enPlanoB = built.ok;
-    }
-  }
+  // ⚰️ EL PLANO B —mandar sólo el índice de secciones cuando la página no
+  // cabía— se fue con el documento (Len 2.0, T8c): el contexto ya no lleva
+  // ninguna página, así que el tamaño de una no puede tumbar el turno. Una
+  // página enorme se lee por trozos con Read (offset/limit), como en Claude
+  // Code. El 413 queda para un historial que no quepa.
   if (!built.ok) return errorJson(413, "Page too large for an agent turn", "pageTooLarge");
 
   // LA FORMA DEL TURNO, en una línea y SIEMPRE. Ver lib/agent/forma-del-turno.ts
@@ -646,8 +628,6 @@ export async function POST(req: Request): Promise<Response> {
           projectId,
           systemPrompt: built.systemPrompt,
           contextBlock: built.contextBlock,
-          taggedHtml,
-          vista: enPlanoB ? "indice" : scopedView ? "recortada" : "completa",
           history,
           turnosTotales,
           prompt,
@@ -656,7 +636,7 @@ export async function POST(req: Request): Promise<Response> {
           cambios: argsDelTurno.cambios,
           degradaciones: argsDelTurno.degradaciones,
           turnoAnteriorMudo: argsDelTurno.turnoAnteriorMudo,
-          conPin: scopePin !== null,
+          conPin: seleccion !== null,
           conImagen: attachedImage !== null,
           activePage: pageSlug,
         }),
@@ -681,13 +661,25 @@ export async function POST(req: Request): Promise<Response> {
   const agentSession: AgentSession = {
     projectId,
     userId,
-    taggedHtml,
-    // LA BASE EN DISCO contra la que se detecta que otro escritor tocó esta
-    // página mientras el turno pensaba. Sin etiquetar, y con `stripOpIds` por
-    // el mismo motivo que la línea de arriba: un proyecto anterior al
-    // 2026-08-23 puede traer ids horneados, y compararlos crudos daría un falso
-    // positivo en su primer guardado.
-    baseHtml: stripOpIds(activeHtml),
+    herramientas: { diferidas, cargadas },
+    // H3 — la memoria que va en el contexto cuenta como LEÍDA, como el CLAUDE.md
+    // que Claude Code siembra al empezar: se le añade una línea sin un Read.
+    leidos: new Map([
+      // H4 · y lo que el turno anterior dejó leído, si no cambió y sigue a la
+      // vista (lo leído, como lo apunta Claude Code). Las páginas, con el mismo
+      // texto que les daría Read; /memoria va aparte, y /datos se relee.
+      ...(historialDeLaBase
+        ? leidosSembrados(
+            filasDelHistorial.at(-1)?.transcript?.leidos ?? [],
+            historialDeLaBase,
+            (ruta) => {
+              const html = leerFichero(project.data, ruta);
+              return html === null ? null : sinOpIds(html);
+            },
+          )
+        : []),
+      ...memoriaSembrada(userMemory, project.userBrief ?? null),
+    ]),
     // Lo que el usuario acaba de escribir. Sin esto ninguna herramienta puede
     // contrastar lo que el modelo hace con lo que se le pidió — ver `userPrompt`.
     userPrompt: prompt,
@@ -700,11 +692,6 @@ export async function POST(req: Request): Promise<Response> {
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
     busquedasVaciasSeguidas: 0,
-    // EL TURNO ARRANCÓ SIN VER EL HTML, sólo el índice. Mientras esto esté
-    // puesto, `editar_pagina` no deja borrar ni reemplazar una sección que el
-    // modelo no haya abierto — ver `rejectBlindOps`. Es un booleano: el índice
-    // NO entra en la sesión, que sigue llevando el documento completo.
-    entroACiegas: enPlanoB,
     // Lo que el usuario escribió ESTE turno. Lo usa `publicar` para no
     // reclamar un subdominio que el dueño nunca dijo — ver su comentario.
     mensajeDelUsuario: prompt,
@@ -712,8 +699,12 @@ export async function POST(req: Request): Promise<Response> {
   // Quién razona vive en `lib/agent/brain` — el MISMO sitio del que tiran los
   // evals. Tenerlo aquí dentro ya dejó a la batería midiendo Gemini después de
   // que el Agente pasara a DeepSeek, sin que nada fallara.
+  // El razonamiento no llega al loop, pero es vida: lo que el modelo piensa
+  // rearma el reloj de silencio, que se crea más abajo con el stream.
+  const pensando = { vivo: (): void => {} };
   const brain = createAgentBrain({
-    tools,
+    alPensar: () => pensando.vivo(),
+    tools: herramientasDelModelo,
     requestId: projectId,
     signal: upstreamAbort.signal,
     ...(attachedInline ? { attachedImage: { image: attachedInline, anchorMessage: promptMessage } } : {}),
@@ -727,9 +718,15 @@ export async function POST(req: Request): Promise<Response> {
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
       const channel = sseChannel(controller, { latidoMs: LATIDO_MS });
-      const emit = channel.emit;
+      const reloj = relojDeSilencio(SILENCIO_MS, () => upstreamAbort.abort());
+      pensando.vivo = reloj.vivo;
+      // Lo que se le manda al dueño es señal de vida; los latidos del canal no
+      // pasan por aquí (ver `relojDeSilencio`).
+      const emit: typeof channel.emit = (evento, datos) => {
+        reloj.vivo();
+        channel.emit(evento, datos);
+      };
       const close = () => channel.close();
-      const timeout = setTimeout(() => upstreamAbort.abort(), STREAM_TIMEOUT_MS);
       // LO QUE YA ES IRREVERSIBLE. Vive FUERA del try a propósito: si el bucle
       // revienta, `result` no existe y ésta es la única memoria de que el turno
       // ya escribió en la base. Misma idea que `cambioDurable` en el Chat
@@ -754,6 +751,8 @@ export async function POST(req: Request): Promise<Response> {
       // al final. Vive en `lib/agent/registro-del-turno.ts` para que el arnés
       // de evals componga la MISMA fila al juzgar un turno cortado.
       const registro = crearRegistroDelTurno();
+      /** H4 · lo que vio el modelo en este turno (`AgentLoopResult.transcripcion`). */
+      let transcripcionDelTurno: Message[] | null = null;
       // CÓMO QUEDA LA SUITE DE LA PÁGINA al cerrar el turno. Se recoge aquí
       // —como el registro o `mutoDurable`— porque quien lo sabe es el veredicto
       // de los ojos, que ocurre dentro del bucle, y quien lo guarda es la
@@ -813,12 +812,9 @@ export async function POST(req: Request): Promise<Response> {
         const result = await runAgentLoop({
           messages,
           tools,
-          // 🔴 LOS TOPES, EXPLÍCITOS Y NO POR DEFECTO DEL BUCLE. Ver
-          // `topesPorPlan`: el tope de dinero es MENSUAL (`CREDITS_BY_PLAN`), así
-          // que el de turno era un segundo muro redundante. Ya no mira el plan
-          // —decisión de Jesús: «el chiste es que haga bien el trabajo»— pero
-          // sigue viajando desde aquí para que el cable tenga prueba.
-          ...topesPorPlan(),
+          // SIN `maxTurns` NI `maxToolCalls` (H1, 2026-09-25): como el bucle
+          // principal de Claude Code, el turno no topa pasos. El dinero se topa
+          // por MES (`CREDITS_BY_PLAN`); un cuelgue, el reloj de silencio.
           ...(objetivoActivo
             ? {
                 objetivo: {
@@ -881,11 +877,12 @@ export async function POST(req: Request): Promise<Response> {
           },
           // streamWithRetry rides out transient Gemini 503 spikes: it re-opens
           // the stream on a retryable error thrown BEFORE any event (safe — the
-          // model produced nothing yet), and honors upstreamAbort so retries can
-          // never outlive the STREAM_TIMEOUT_MS ceiling. A mid-stream failure
-          // still propagates (no double-applied tool calls).
+          // model produced nothing yet), and honors upstreamAbort so a retry
+          // never outlives the silence clock. A mid-stream failure still
+          // propagates (no double-applied tool calls). Cada evento del modelo
+          // rearma el reloj de silencio.
           openStream: (msgs) => {
-            const s = streamWithRetry(() => brain.openStream(msgs), { signal: upstreamAbort.signal });
+            const s = conSenales(streamWithRetry(() => brain.openStream(msgs), { signal: upstreamAbort.signal }), reloj.vivo);
             // `envuelve` deja pasar cada evento tal cual y se queda una copia:
             // no cambia el orden, ni el contenido, ni el momento en que llega.
             return grabadora ? grabadora.envuelve(s) : s;
@@ -894,7 +891,7 @@ export async function POST(req: Request): Promise<Response> {
           // compose a closing summary when a step-budget cap is hit, so the turn
           // ends with "here's what I did / what's pending" instead of a red error.
           closeOut: (msgs) => {
-            const s = streamWithRetry(() => brain.closeOut(msgs), { signal: upstreamAbort.signal });
+            const s = conSenales(streamWithRetry(() => brain.closeOut(msgs), { signal: upstreamAbort.signal }), reloj.vivo);
             return grabadora ? grabadora.envuelveCierre(s) : s;
           },
           // EL DIARIO SE ESCRIBE AQUÍ, y no dentro de `runAgentTool`, porque
@@ -941,12 +938,9 @@ export async function POST(req: Request): Promise<Response> {
                   const paraMedir = documentoMedible(await inlineOwnAssets(gemelo), vistaDelTurno);
                   return componerMedicion(await medirDelTurno(paraMedir), gemelo);
                 },
-          // LA LÍNEA BASE: el documento con el que arranca el turno, que es el
-          // mismo `taggedHtml` que ve el modelo en su primer mensaje. Con esto
-          // el aviso puede decir «NUEVO» y que sea verdad, en vez de repetirle
-          // en cada turno un defecto que se encontró hecho. El bucle sólo la
-          // mide si hay algo que decir — ver `lineaBaseIds` en `loop.ts`.
-          lineaBase: { taggedHtml, page: pageSlug },
+          // ⚰️ Aquí iba `lineaBase`, el documento del arranque etiquetado con los
+          // ids del motor. Len 2.0 (T9): la base la trae cada escritura
+          // (`htmlPrevio`) y el bucle hace el gemelo con posiciones.
           // F5 — los ojos: tras un turno que mutó el documento, renderiza y
           // verifica rotura visual objetiva. Lo que encuentra SE LE DICE al
           // usuario al cerrar el turno; ya no abre ciclo de arreglo ni revierte
@@ -961,8 +955,8 @@ export async function POST(req: Request): Promise<Response> {
                   // `html` viene saneado —así se persiste—, así que sin esto la
                   // verificación mira una página sin scripts.
                   //
-                  // SE RE-LEE AQUÍ, no se usa `runtimeCode`. Ése se calcula una
-                  // vez ANTES del turno, así que en el turno donde el modelo
+                  // SE RE-LEE AQUÍ, no se usa un código leído ANTES del turno (el
+                  // `runtimeCode` que hubo aquí), así que en el turno donde el modelo
                   // ESCRIBE el JavaScript los ojos miraban una página con el
                   // código viejo — o sin ninguno. Es decir: escribía la ruleta
                   // y se verificaba una página sin ruleta, justo en el único
@@ -973,8 +967,8 @@ export async function POST(req: Request): Promise<Response> {
                   // razón: comprueba lo que se GUARDÓ, no lo que creemos que se
                   // guardó.
                   //
-                  // Y SI LA RE-LECTURA FALLA, NO SE ADIVINA. Caer a
-                  // `runtimeCode` aquí reintroduce exactamente el fallo que
+                  // Y SI LA RE-LECTURA FALLA, NO SE ADIVINA. Caer al código
+                  // de antes del turno reintroduce exactamente el fallo que
                   // esta re-lectura vino a arreglar: aprobar el script NUEVO
                   // mirando el viejo. Cuando no se puede saber qué se guardó,
                   // el turno queda SIN verificar — que es la verdad — en vez de
@@ -1026,8 +1020,8 @@ export async function POST(req: Request): Promise<Response> {
                   // EL GEMELO PASA POR LO MISMO. Es el documento que se MIDE, y
                   // medirlo sin las fotos del dueño daría lecturas de contraste
                   // sobre fondos que en la página real no están vacíos. Nombre
-                  // distinto porque `taggedHtml` ya existe en el ámbito de
-                  // arriba y es OTRO documento: el del principio del turno.
+                  // distinto para no confundirlo con el gemelo de la línea base,
+                  // que es OTRO documento: el del principio del turno.
                   const gemeloParaLosOjos = gemelo ? await inlineOwnAssets(gemelo) : undefined;
                   // Las promesas de ESTA página que siguen teniendo sentido.
                   // Se saca a una constante porque hacen falta dos veces: para
@@ -1069,11 +1063,6 @@ export async function POST(req: Request): Promise<Response> {
                       : {}),
                     ...(gemeloParaLosOjos ? { taggedHtml: gemeloParaLosOjos } : {}),
                     runtime: fresco.code,
-                    // LO QUE EL MODELO PROMETIÓ que su código haría, como
-                    // programa (`prueba_js`). Vive en la sesión; sin ella, los
-                    // ojos pulsan a ciegas y sólo ven lo que EXPLOTA — nunca lo
-                    // que simplemente no cumple.
-                    pruebaJs: agentSession.behaviorJs ?? null,
                     // LAS PROMESAS QUE ESTA PÁGINA YA CUMPLIÓ. Van con la del
                     // turno en el mismo programa del navegador: sin esto, una
                     // edición que se lleva por delante el carrito construido
@@ -1113,22 +1102,13 @@ export async function POST(req: Request): Promise<Response> {
                   // 🔴 NACE EN VERDE: la promesa sólo se guarda si NO falló,
                   // o sea con `fallosDelTurno` vacío. La decisión la toma
                   // `actualizarSuite`; aquí sólo se recoge el hecho.
-                  // LA PROMESA DEL TURNO, la de `prueba_js`: entra en la suite
-                  // si nació en verde.
-                  const codigoDelTurno = agentSession.behaviorJs?.trim() || null;
+                  // ⚰️ La promesa del turno (`prueba_js`, en `agentSession.behaviorJs`)
+                  // entraba aquí en la suite si nacía en verde. Len 2.0 no la
+                  // tiene: la suite sólo recomprueba y retira las guardadas.
                   // Las que NO corrieron no se cuentan como comprobadas: si no,
                   // una rota que no se miró saldría «arreglada».
                   const sinCorrer = new Set(verdict.guardadasSinCorrer ?? []);
                   suiteDelTurno = {
-                    ...(codigoDelTurno
-                      ? {
-                          turno: {
-                            codigo: codigoDelTurno,
-                            fallos: verdict.fallosDelTurno ?? [],
-                            pagina: pageSlug,
-                          },
-                        }
-                      : {}),
                     retirar: [...(verdict.retirarPruebas ?? [])],
                     comprobadas: promesasDeLaPagina.filter((p) => !sinCorrer.has(p.id)).map((p) => p.id),
                     rotas: (verdict.regresiones ?? []).map((r) => r.id),
@@ -1222,6 +1202,7 @@ export async function POST(req: Request): Promise<Response> {
           },
         });
         mutoDurable = mutoDurable || result.mutoDurable;
+        transcripcionDelTurno = result.transcripcion ?? null;
         corte = corteDelTurno({ ...result, mutoDurable });
 
         // 🔴 UN OBJETIVO QUE YA ACABÓ SE BORRA. Si se quedara puesto, cada turno
@@ -1346,10 +1327,6 @@ export async function POST(req: Request): Promise<Response> {
               // y adivinar. Sólo se imprime cuando el modelo pensó, para que un
               // turno sin razonamiento deje la línea igual que antes.
               (thinkingTokens > 0 ? ` / pensados ${thinkingTokens}` : "") +
-              // La poda es lo único que RETIRA bytes del turno y no dejaba
-              // rastro: su contador se calculaba y se tiraba. Sólo se imprime
-              // cuando podó algo, para que la línea normal quede igual que antes.
-              (result.documentosPodados > 0 ? ` / podados ${result.documentosPodados}` : "") +
               // CUANTO SE ACERCO AL TOPE, que es lo que no se podia saber.
               //
               // El tope AGOTADO ya se registra: `finishOnCap` cierra con
@@ -1484,7 +1461,7 @@ export async function POST(req: Request): Promise<Response> {
         corte = corteDelTurno({ terminalError: true, topeAlcanzado: null, errorCode: code, mutoDurable });
         close();
       } finally {
-        clearTimeout(timeout);
+        reloj.parar();
         // EL TURNO SE CIERRA PASE LO QUE PASE. Si no, su fila se queda con la
         // correccion que nadie leera y ocupando sitio en el mapa.
         cerrarTurno(turnoId);
@@ -1507,13 +1484,19 @@ export async function POST(req: Request): Promise<Response> {
           try {
             await registrarTurnoDelServidor(
               projectId,
-              registro.fila({
-                id: turnIdDelCliente ?? turnoId,
-                userText: prompt,
-                page: pageSlug,
-                toolResults: diario.entradas(),
-                corte,
-              }),
+              {
+                ...registro.fila({
+                  id: turnIdDelCliente ?? turnoId,
+                  userText: prompt,
+                  page: pageSlug,
+                  toolResults: diario.entradas(),
+                  corte,
+                }),
+                // H4 · lo que vio el modelo; de aquí sale el historial del turno siguiente.
+                transcript: transcripcionDelTurno
+                  ? transcripcionParaGuardar(transcripcionDelTurno, agentSession.leidos ?? new Map())
+                  : null,
+              },
             );
           } catch (err) {
             console.warn("[agent] no se pudo registrar el turno", err);

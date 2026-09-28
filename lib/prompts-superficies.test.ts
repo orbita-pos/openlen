@@ -11,15 +11,7 @@ import { TOKENS_DEL_CONTRATO } from "./agent/tools";
 // be statically imported straight under vitest, no node:test needed).
 import { generateSystemMessage } from "../app/api/generate/system-prompt";
 import { aiDesignSystemMessage } from "../app/api/templates/ai-design/system-prompt";
-import { redesignPromptFinal } from "./agent/redesign";
 import { conContratoMinimo } from "./publish-contract-min";
-
-/** Una entrada mínima: lo que se mide es el ANDAMIO del prompt, no el brief. */
-const ENTRADA_REDISENO = {
-  html: "<h1>x</h1>",
-  direccion: "más moderna",
-  brief: null,
-};
 
 // ESTE FICHERO SE LLAMABA `design-guidance-seam.test.ts` y su mitad principal
 // era «el guardia de la costura»: vigilaba que las superficies siguieran
@@ -58,14 +50,8 @@ describe("ninguna superficie manda gusto nuestro", () => {
     ["crear", () => generateSystemMessage({})],
     ["editar", () => aiDesignSystemMessage()],
     ["Agente", () => buildAgentSystemPrompt()],
-    // 🔴 EL REDISEÑO FALTABA, y por eso se le escapó a esta guarda lo que la
-    // guarda existe para cazar: interpolaba `DESIGN_GUIDANCE` ENTERA — 32.487
-    // caracteres con el esqueleto de secciones, el orden y la barra de
-    // diseño. O sea, la
-    // definición literal de «gusto nuestro», en la única superficie que esta
-    // lista no miraba. Una lista de superficies escrita a mano no avisa de la
-    // que le falta; ésta ya se llamaba «ninguna superficie».
-    ["rediseño", () => redesignPromptFinal(ENTRADA_REDISENO)],
+    // ⚰️ «rediseño» (`lib/agent/redesign.ts`, `redisenar_pagina`) se retiró con
+    // Len 2.0: un Write hace lo mismo sin un segundo modelo (decisión B8).
   ];
 
   // POR SUSTANCIA, NO POR ENCABEZADO. Esto afirmaba
@@ -154,8 +140,9 @@ describe("ninguna superficie manda gusto nuestro", () => {
   it.each(PROMPTS)("%s sí ofrece el JavaScript del modelo", (_name, getPrompt) => {
     const p = getPrompt().replace(/\s+/g, " ");
     expect(p).toMatch(/SURVIVES publication|sobrevive a la publicación|sobrevive al guardar/i);
-    // La mitad que se olvida: un `on*` se borra al guardar, así que un botón
-    // cableado así nace mudo aunque el script sobreviva entero.
+    // La mitad que se olvida: el editor del dueño borra los `on*` (medido en
+    // lib/publish/el-on-del-modelo.test.ts), así que un botón cableado así se
+    // queda mudo a la primera edición a mano.
     expect(p).toContain("addEventListener");
   });
 
@@ -224,12 +211,11 @@ describe("ninguna superficie manda gusto nuestro", () => {
  * trozo de contrato; el rediseño ahorra cuatro veces más porque además dejó de
  * interpolar `DESIGN_GUIDANCE` entera.
  */
-describe("el contrato mínimo alcanza a las cuatro superficies", () => {
+describe("el contrato mínimo alcanza a las tres superficies", () => {
   const SUPERFICIES: Array<[string, () => string]> = [
     ["crear", () => generateSystemMessage({})],
     ["editar", () => aiDesignSystemMessage()],
     ["Agente", () => buildAgentSystemPrompt()],
-    ["rediseño", () => redesignPromptFinal(ENTRADA_REDISENO)],
   ];
 
   afterEach(() => {
@@ -247,11 +233,7 @@ describe("el contrato mínimo alcanza a las cuatro superficies", () => {
   it.each(SUPERFICIES)("%s vuelve al completo con OPENLEN_MIN_CONTRACT=0", (nombre, getPrompt) => {
     vi.stubEnv("OPENLEN_MIN_CONTRACT", "0");
     const p =
-      nombre === "crear"
-        ? generateSystemMessage({ OPENLEN_MIN_CONTRACT: "0" })
-        : nombre === "rediseño"
-          ? redesignPromptFinal(ENTRADA_REDISENO, { OPENLEN_MIN_CONTRACT: "0" })
-          : getPrompt();
+      nombre === "crear" ? generateSystemMessage({ OPENLEN_MIN_CONTRACT: "0" }) : getPrompt();
     expect(p).toContain("OUTPUT FORMAT — strict rules");
   });
 
@@ -290,11 +272,7 @@ describe("el contrato mínimo alcanza a las cuatro superficies", () => {
     const conMin = getPrompt();
     vi.stubEnv("OPENLEN_MIN_CONTRACT", "0");
     const conCompleto =
-      nombre === "crear"
-        ? generateSystemMessage({ OPENLEN_MIN_CONTRACT: "0" })
-        : nombre === "rediseño"
-          ? redesignPromptFinal(ENTRADA_REDISENO, { OPENLEN_MIN_CONTRACT: "0" })
-          : getPrompt();
+      nombre === "crear" ? generateSystemMessage({ OPENLEN_MIN_CONTRACT: "0" }) : getPrompt();
     expect(conMin.length).toBeLessThan(conCompleto.length);
   });
 
@@ -351,9 +329,8 @@ describe("el contrato dicho para cada superficie", () => {
     expect(aiDesignSystemMessage()).not.toContain(DOCUMENTO_ENTERO);
   });
 
-  it("CONTRA-PRUEBA: crear y el rediseño SÍ la reciben — ahí es verdad", () => {
+  it("CONTRA-PRUEBA: crear SÍ la recibe — ahí es verdad", () => {
     expect(generateSystemMessage({})).toContain(DOCUMENTO_ENTERO);
-    expect(redesignPromptFinal(ENTRADA_REDISENO)).toContain(DOCUMENTO_ENTERO);
   });
 
   // 2. Escribir `href="/servicios"` sólo crea la página en `crear`. En las
@@ -364,11 +341,10 @@ describe("el contrato dicho para cada superficie", () => {
     expect(generateSystemMessage({})).toContain(EL_ENLACE_CREA);
     expect(buildAgentSystemPrompt()).not.toContain(EL_ENLACE_CREA);
     expect(aiDesignSystemMessage()).not.toContain(EL_ENLACE_CREA);
-    expect(redesignPromptFinal(ENTRADA_REDISENO)).not.toContain(EL_ENLACE_CREA);
   });
 
   it("y a las otras se les dice lo que SÍ pasa: la portada con un 200", () => {
-    for (const p of [aiDesignSystemMessage(), redesignPromptFinal(ENTRADA_REDISENO)]) {
+    for (const p of [aiDesignSystemMessage()]) {
       expect(p).toContain("NO crea esa página");
     }
   });
@@ -386,17 +362,10 @@ describe("el contrato dicho para cada superficie", () => {
   it("la lista de <iframe> permitidos se dice UNA vez, no dos", () => {
     for (const [nombre, prompt] of [
       ["agente", buildAgentSystemPrompt()],
-      ["rediseño", redesignPromptFinal(ENTRADA_REDISENO)],
     ] as const) {
       const veces = prompt.split("Google Maps, YouTube y Vimeo").length - 1;
       expect(veces, `${nombre} la dice ${veces} veces`).toBe(1);
     }
-  });
-
-  it("NO SE PERDIÓ: el rediseño conserva la lista y sus formas de URL", () => {
-    const p = redesignPromptFinal(ENTRADA_REDISENO);
-    expect(p).toContain("player.vimeo.com/video/");
-    expect(p).toContain("maps.google.com/maps?q=");
   });
 
   // 3.b LAS «CONDUCTAS», retiradas el 2026-08-23. `bakeBehaviors` no tiene ni
@@ -406,12 +375,22 @@ describe("el contrato dicho para cada superficie", () => {
   //     no existe. No se pierde cobertura — la regla que las cubría sigue
   //     siendo «CONSERVA todo elemento que lleve un atributo data-ol-*».
   it("ninguna superficie nombra ya las conductas", () => {
-    for (const p of [buildAgentSystemPrompt(), redesignPromptFinal(ENTRADA_REDISENO)]) {
+    for (const p of [buildAgentSystemPrompt()]) {
       expect(p).not.toMatch(/conductas?\b/i);
     }
-    const redisenar = buildFunctionDeclarations({}).find((d) => d.name === "redisenar_pagina");
-    expect(redisenar?.description).not.toMatch(/conductas?\b/i);
-    expect(redisenar?.description).toContain("atributos data-ol-*");
+    // Y el Agente ya no ofrece el rediseño con un segundo modelo: Len 2.0 lo
+    // hace con un Write (plans/len-2/ficheros-plan.md, decisión B8).
+    expect(buildFunctionDeclarations({}).find((d) => d.name === "redisenar_pagina")).toBeUndefined();
+  });
+
+  // Len 2.0: un Edit es un trozo, así que lo independiente tiene que ir en la
+  // MISMA vuelta. Es la misma frase que usa Claude Code en
+  // su prompt de sistema, en castellano.
+  it("el Agente pide las llamadas independientes en paralelo, como Claude Code", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("Puedes llamar a varias herramientas en una sola respuesta");
+    expect(p).toContain("haz todas las llamadas independientes en paralelo");
+    expect(p).toContain("NO las llames en paralelo");
   });
 
   it("NO SE PERDIÓ: «las dos mitades» sigue llegando al Agente", () => {
@@ -438,19 +417,21 @@ describe("el contrato dicho para cada superficie", () => {
     }
   });
 
-  it("CONTRA-PRUEBA: crear y el rediseño SÍ las reciben — ahí construyen el <head>", () => {
-    for (const p of [generateSystemMessage({}), redesignPromptFinal(ENTRADA_REDISENO)]) {
+  it("CONTRA-PRUEBA: crear SÍ las recibe — ahí construye el <head>", () => {
+    for (const p of [generateSystemMessage({})]) {
       expect(p).toContain("• Tailwind por CDN:");
       expect(p).toContain("• Tu CSS propio va en un");
     }
   });
 
   it("el bloque oscuro se le ORDENA a quien crea y se le CONDICIONA a quien edita", () => {
-    for (const p of [generateSystemMessage({}), redesignPromptFinal(ENTRADA_REDISENO)]) {
+    for (const p of [generateSystemMessage({})]) {
       expect(p).toContain("Emite también `:root[data-ol-mode=");
     }
+    // El Agente, sólo en la página que crea (H8): en la que ya existe manda ella.
+    expect(buildAgentSystemPrompt()).toContain("En una página que creas tú, escríbelo también");
+    expect(aiDesignSystemMessage()).toContain("Si la página aún no lo define, escríbelo tú");
     for (const p of [buildAgentSystemPrompt(), aiDesignSystemMessage()]) {
-      expect(p).toContain("Si la página aún no lo define, escríbelo tú");
       // …y entonces OFICIO no puede seguir ordenándolo doce líneas más abajo,
       // o el contrato se contradiría a sí mismo dentro del mismo prompt.
       expect(p).not.toContain("Emite igualmente el bloque oscuro");
@@ -473,7 +454,6 @@ describe("el contrato dicho para cada superficie", () => {
       ["crear", generateSystemMessage({})],
       ["chat", aiDesignSystemMessage()],
       ["agente", buildAgentSystemPrompt()],
-      ["rediseño", redesignPromptFinal(ENTRADA_REDISENO)],
     ] as const) {
       for (const token of TOKENS_DEL_CONTRATO) {
         expect(prompt, `${nombre} no nombra ${token}`).toContain(token);
@@ -486,7 +466,6 @@ describe("el contrato dicho para cada superficie", () => {
       generateSystemMessage({}),
       aiDesignSystemMessage(),
       buildAgentSystemPrompt(),
-      redesignPromptFinal(ENTRADA_REDISENO),
     ]) {
       // `--ol-bg` NO contiene la subcadena `--bg`, así que esto distingue.
       for (const pelado of ["--bg", "--fg", "--accent", "--surface", "--border", "--radius"]) {

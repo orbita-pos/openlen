@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DONDE_SE_DECLARA_UN_ALMACEN, leerDeclaracion, validaDocumento } from "./declaracion";
+import { leerDeclaracion, validaDocumento } from "./declaracion";
 
 const bloque = (json: string) =>
   `<html><head><script type="application/json" data-ol-stores>${json}</script></head><body></body></html>`;
@@ -81,14 +81,7 @@ describe("validaDocumento", () => {
   });
 });
 
-// DÓNDE VA EL BLOQUE, dicho una sola vez. MEDIDO el 2026-09-17: con «como hijo
-// directo del <body>» el modelo apuntó al id del PROPIO <body>, y una op
-// contra el <body> se rechaza (`op_contra_la_raiz`: reemplazaría la página
-// entera). La frase tiene que nombrar el ancla buena Y prohibir la mala.
-describe("dónde se declara un almacén", () => {
-  it("apunta al primer elemento DENTRO del body, nunca al body", () => {
-    expect(DONDE_SE_DECLARA_UN_ALMACEN).toContain('op="insert_before"');
-    expect(DONDE_SE_DECLARA_UN_ALMACEN).toContain("PRIMER elemento que hay dentro del <body>");
-    expect(DONDE_SE_DECLARA_UN_ALMACEN).toContain("nunca sobre el del propio <body>");
-  });
-});
+// ⚰️ Aquí se probaba `DONDE_SE_DECLARA_UN_ALMACEN`, la frase de editar_html sobre
+// data-op-id. Se retiró el 2026-09-25 con su último lector; lo que enseñaba
+// —el bloque va en el <body> y fuera de cualquier sección que se pueda borrar—
+// lo vigila ahora la prueba de ALMACENES de lib/agent/catalog.test.ts.

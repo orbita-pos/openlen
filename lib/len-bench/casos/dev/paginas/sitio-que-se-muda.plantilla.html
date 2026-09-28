@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El Paradero — Tacos de guisado desde 1987 · Doctores, CDMX</title>
+<meta name="description" content="Doce cazuelas cada mañana, tortilla hecha a mano y fila que avanza rápido. Lunes a sábado de 8 a 4, Col. Doctores.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #FAF5EC;
+    --surface: #F2EAD9;
+    --surface-2: #E9DEC8;
+    --fg: #262016;
+    --fg-muted: #5F5747;
+    --fg-faint: #6C6454;
+    --border: rgba(38,32,22,0.08);
+    --border-strong: rgba(38,32,22,0.13);
+    --accent: #C43E2F;
+    --accent-r: 196,62,47;
+    --accent-ink: #FDF3EE;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --radius-lg: 16px;
+    --font-display: "Archivo", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --warn: #A3671C;
+    --danger: #8F2D22;
+  }
+  :root.dark {
+    --bg: #191510;
+    --surface: #211C15;
+    --surface-2: #2A241B;
+    --fg: #F2EDE4;
+    --fg-muted: rgba(242,237,228,0.66);
+    --fg-faint: rgba(242,237,228,0.56);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #D8523F;
+    --accent-r: 216,82,63;
+    --accent-ink: #2C0B06;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-feature-settings: "ss01","cv11"; -webkit-font-smoothing: antialiased; }
+  .display { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; line-height: 0.95; }
+  .mono { font-family: var(--font-mono); }
+  .hairline { border-color: var(--border); }
+  .hairline-2 { border-color: var(--border-strong); }
+  .lift { transition: transform 90ms ease, box-shadow 90ms ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.12); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: rgba(var(--accent-r), 0.92); }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-faint); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .half-tone { opacity: 0.45; }
+  .ph-comal { background: linear-gradient(150deg, rgba(var(--accent-r),0.22), var(--surface-2) 52%, var(--surface)); }
+  .ph-masa { background: linear-gradient(125deg, var(--surface-2), var(--surface) 55%, rgba(var(--accent-r),0.10)); }
+  .grain::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background-image: radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px); background-size: 24px 24px; opacity: 0.5; }
+  .dot-leader { border-bottom: 2px dotted var(--border-strong); transform: translateY(-4px); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="sticky top-0 z-50 border-b hairline backdrop-blur-md" style="background: color-mix(in srgb, var(--bg) 87%, transparent);">
+  <nav class="mx-auto flex max-w-5xl items-center justify-between px-5 py-3.5">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3 14a9 4.5 0 0 1 18 0" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M3 14c0 2.5 4 4.5 9 4.5s9-2 9-4.5" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="display text-[18px] uppercase tracking-wide">El Paradero</span>
+    </a>
+    <div class="mono hidden text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-muted)] tabular md:block">L–S · 8:00 am – 4:00 pm · Doctores</div>
+    <a href="#visitanos" class="btn-primary lift inline-flex h-9 items-center rounded-[var(--radius-sm)] px-4 text-[13px] font-semibold uppercase tracking-wide">Ordena</a>
+  </nav>
+</header>
+
+<!-- HERO · EL MENÚ ES EL PIZARRÓN -->
+<section class="mx-auto max-w-5xl px-5 pb-16 pt-10 md:pb-20 md:pt-14">
+  <div class="text-center">
+    <div class="mono inline-flex items-center gap-2 rounded-[var(--radius-sm)] border hairline bg-[var(--surface)] px-3 py-1.5 text-[11px] uppercase tracking-[0.16em] text-[color:var(--fg-muted)]">
+      <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"></span>
+      Doce cazuelas cada mañana · desde 1987
+    </div>
+    <h1 class="display mt-5 text-[44px] uppercase sm:text-[64px]">
+      Tacos de guisado<br><span class="text-[color:var(--accent)]">como en casa de tu abuela,</span><br><span class="half-tone">pero a las 8 am.</span>
+    </h1>
+  </div>
+
+  <!-- El pizarrón -->
+  <div class="mt-10 rounded-[var(--radius-lg)] border-2 hairline-2 bg-[var(--surface)] p-6 sm:p-9">
+    <div class="mb-6 flex flex-wrap items-baseline justify-between gap-2 border-b hairline-2 pb-4">
+      <h2 class="display text-[22px] uppercase">El pizarrón de hoy</h2>
+      <span class="mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)]">tortilla hecha a mano · se acaban ≈ 3 pm</span>
+    </div>
+    <div class="grid gap-x-12 gap-y-1 sm:grid-cols-2">
+      <div class="flex items-baseline gap-3 py-2.5">
+        <span class="text-[15px] font-medium">Chicharrón prensado</span>
+        <span class="dot-leader min-w-6 flex-1"></span>
+        <span class="mono text-[14px] font-medium tabular">$26</span>
+      </div>
+      <div class="flex items-baseline gap-3 py-2.5">
+        <span class="text-[15px] font-medium">Tinga de pollo</span>
+        <span class="dot-leader min-w-6 flex-1"></span>
+        <span class="mono text-[14px] font-medium tabular">$24</span>
+      </div>
+      <div class="flex items-baseline gap-3 py-2.5">
+        <span class="text-[15px] font-medium">Rajas con crema</span>
+        <span class="dot-leader min-w-6 flex-1"></span>
+        <span class="mono text-[14px] font-medium tabular">$24</span>
+      </div>
+      <div class="flex items-baseline gap-3 py-2.5">
+        <span class="text-[15px] font-medium">Mole verde con pollo</span>
+        <span class="dot-leader min-w-6 flex-1"></span>
+        <span class="mono text-[14px] font-medium tabular">$28</span>
+      </div>
+      <div class="flex items-baseline gap-3 py-2.5">
+        <span class="text-[15px] font-medium">Bistec en pasilla</span>
+        <span class="dot-leader min-w-6 flex-1"></span>
+        <span class="mono text-[14px] font-medium tabular">$30</span>
+      </div>
+      <div class="flex items-baseline gap-3 py-2.5">
+        <span class="text-[15px] font-medium">Cochinita de los jueves</span>
+        <span class="dot-leader min-w-6 flex-1"></span>
+        <span class="mono text-[14px] font-medium tabular">$32</span>
+      </div>
+      <div class="flex items-baseline gap-3 py-2.5">
+        <span class="text-[15px] font-medium">Huevo en salsa roja</span>
+        <span class="dot-leader min-w-6 flex-1"></span>
+        <span class="mono text-[14px] font-medium tabular">$22</span>
+      </div>
+      <div class="flex items-baseline gap-3 py-2.5">
+        <span class="text-[15px] font-medium">Frijoles con chorizo</span>
+        <span class="dot-leader min-w-6 flex-1"></span>
+        <span class="mono text-[14px] font-medium tabular">$22</span>
+      </div>
+      <div class="flex items-baseline gap-3 py-2.5">
+        <span class="text-[15px] font-medium">Milanesa en guajillo</span>
+        <span class="dot-leader min-w-6 flex-1"></span>
+        <span class="mono text-[14px] font-medium tabular">$34</span>
+      </div>
+      <div class="flex items-baseline gap-3 py-2.5">
+        <span class="text-[15px] font-medium">Nopales con charales</span>
+        <span class="dot-leader min-w-6 flex-1"></span>
+        <span class="mono text-[14px] font-medium tabular">$26</span>
+      </div>
+    </div>
+    <div class="mt-6 grid gap-x-12 gap-y-1 border-t hairline pt-5 sm:grid-cols-2">
+      <div class="flex items-baseline gap-3 py-1.5">
+        <span class="text-[14px] text-[color:var(--fg-muted)]">Agua del día (horchata · jamaica)</span>
+        <span class="dot-leader min-w-6 flex-1"></span>
+        <span class="mono text-[13px] tabular">$28</span>
+      </div>
+      <div class="flex items-baseline gap-3 py-1.5">
+        <span class="text-[14px] text-[color:var(--fg-muted)]">Consomé de frijol con su taco</span>
+        <span class="dot-leader min-w-6 flex-1"></span>
+        <span class="mono text-[13px] tabular">$18</span>
+      </div>
+    </div>
+    <div class="mt-7 flex flex-col items-center justify-between gap-3 rounded-[var(--radius)] bg-[var(--bg)] border hairline px-5 py-4 sm:flex-row">
+      <span class="text-[13.5px] text-[color:var(--fg-muted)]">Paquete oficina: 5 tacos + agua <span class="mono font-medium text-[color:var(--fg)] tabular">$135</span> — pide antes de la 1 pm.</span>
+      <a href="#visitanos" class="btn-primary lift inline-flex h-10 shrink-0 items-center rounded-[var(--radius-sm)] px-5 text-[13px] font-semibold uppercase tracking-wide">Ordena por WhatsApp</a>
+    </div>
+  </div>
+</section>
+
+<!-- LA COCINA -->
+<section class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-5xl px-5 py-16 md:py-20">
+    <div class="grid items-center gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-14">
+      <div class="ph-comal grain relative aspect-[4/3] rounded-[var(--radius-lg)] border hairline" data-ol-photo="cazuelas guisados mexican market"></div>
+      <div>
+        <div class="eyebrow">La casa</div>
+        <h2 class="display mt-3 max-w-md text-[28px] uppercase sm:text-[36px]">Doña Mary llega a las 5. Las cazuelas, a las 8 en punto.</h2>
+        <p class="mt-4 max-w-md text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]">
+          Empezó su suegra en el 87 con cuatro cazuelas sobre un diablito. Hoy son doce, la tortilla se palmea enfrente de ti y la fila da vuelta a la esquina los viernes — pero avanza rápido, palabra.
+        </p>
+        <div class="mono mt-6 grid max-w-sm grid-cols-3 gap-4 border-t hairline pt-5 text-[10.5px] uppercase tracking-[0.12em] text-[color:var(--fg-faint)]">
+          <div><div class="display text-[22px] text-[color:var(--fg)] tabular">1987</div>abrimos</div>
+          <div><div class="display text-[22px] text-[color:var(--fg)] tabular">12</div>cazuelas</div>
+          <div><div class="display text-[22px] text-[color:var(--fg)] tabular">~700</div>tacos al día</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RESEÑAS -->
+<section class="border-t hairline">
+  <div class="mx-auto max-w-5xl px-5 py-14 md:py-18">
+    <div class="grid gap-4 md:grid-cols-3">
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"El de chicharrón prensado con tortilla recién hecha debería ser patrimonio de la colonia."</blockquote>
+        <figcaption class="mt-3 text-[13px] font-medium">Luis A. · viene desde Narvarte</figcaption>
+      </figure>
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"Jueves de cochinita: llego 7:55 y ya somos diez en la fila. Vale cada minuto."</blockquote>
+        <figcaption class="mt-3 text-[13px] font-medium">Brenda R.</figcaption>
+      </figure>
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"Pedimos para toda la oficina cada semana. Nunca han fallado una orden, y son como 40 tacos."</blockquote>
+        <figcaption class="mt-3 text-[13px] font-medium">Areli M. · despacho de la esquina</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- VISÍTANOS + CTA -->
+<section id="visitanos" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-5xl px-5 py-16 md:py-20">
+    <div class="grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-14">
+      <div>
+        <div class="eyebrow">Visítanos</div>
+        <h2 class="display mt-3 text-[28px] uppercase sm:text-[36px]">Lunes a sábado.<br><span class="half-tone">Hasta que se acaben.</span></h2>
+        <ul class="mono mt-7 max-w-md divide-y divide-[color:var(--border)] text-[13px] tabular">
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]">Lunes — Sábado</span><span>8:00 am – 4:00 pm</span></li>
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]">Jueves</span><span>día de cochinita</span></li>
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]">Domingo</span><span class="text-[color:var(--accent)]">las cazuelas descansan</span></li>
+        </ul>
+        <div class="mt-7 space-y-1.5 text-[14.5px] text-[color:var(--fg-muted)]">
+          <div class="font-medium text-[color:var(--fg)]">Dr. Vértiz 214, Col. Doctores</div>
+          <div>CDMX · a dos cuadras del metro Niños Héroes</div>
+        </div>
+        <div class="mt-6 flex flex-wrap gap-3">
+          <a href="#" class="btn-primary lift inline-flex h-11 items-center gap-2 rounded-[var(--radius-sm)] px-5 text-[13.5px] font-semibold uppercase tracking-wide">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .3-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.5-.2.7-.1l2 .9c.3.2.5.3.6.4 0 .1 0 .7-.3 1.3z"/></svg>
+            Ordena por WhatsApp
+          </a>
+          <a href="#" class="lift inline-flex h-11 items-center rounded-[var(--radius-sm)] border hairline-2 bg-[var(--bg)] px-5 text-[13.5px] font-medium">Cómo llegar</a>
+        </div>
+      </div>
+      <div class="ph-masa grain relative aspect-[4/3] self-center rounded-[var(--radius-lg)] border hairline" data-ol-photo="hands making tortillas comal"></div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER LOCAL -->
+<footer class="border-t hairline">
+  <div class="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-5 py-8 text-[12.5px] text-[color:var(--fg-faint)] md:flex-row">
+    <div class="display text-[13px] uppercase tracking-wide text-[color:var(--fg-muted)]">El Paradero · tacos de guisado</div>
+    <div class="mono text-[11px] uppercase tracking-[0.12em] tabular">Dr. Vértiz 214, Doctores · L-S 8-4</div>
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-[color:var(--fg)]">Instagram</a>
+      <a href="#" class="hover:text-[color:var(--fg)]">WhatsApp</a>
+      <span>© 2026 El Paradero</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

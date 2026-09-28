@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Semilla Abierta, A.C. — Alfabetización y bibliotecas comunitarias en Los Altos de Chiapas</title>
+<meta name="description" content="Abrimos bibliotecas comunitarias y formamos mediadores de lectura en Los Altos de Chiapas desde 2017. Donataria autorizada — tu donativo es deducible.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #FBF9F5;
+    --surface: #F4F0E8;
+    --surface-2: #ECE6DA;
+    --fg: #262019;
+    --fg-muted: #5C5348;
+    --fg-faint: #6B6156;
+    --border: rgba(38,32,25,0.08);
+    --border-strong: rgba(38,32,25,0.12);
+    --accent: #C25B3C;
+    --accent-r: 194,91,60;
+    --accent-ink: #FCF3EE;
+    --radius: 12px;
+    --radius-sm: 7px;
+    --radius-lg: 20px;
+    --font-display: "Lora", Georgia, serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --warn: #9A6A1B;
+    --danger: #8E2F21;
+  }
+  :root.dark {
+    --bg: #17120E;
+    --surface: #1E1813;
+    --surface-2: #272019;
+    --fg: #F0EAE1;
+    --fg-muted: rgba(240,234,225,0.66);
+    --fg-faint: rgba(240,234,225,0.56);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #D97D5C;
+    --accent-r: 217,125,92;
+    --accent-ink: #221008;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  .display { font-family: var(--font-display); letter-spacing: -0.012em; line-height: 1.02; }
+  .mono { font-family: var(--font-mono); }
+  .hairline { border-color: var(--border); }
+  .hairline-2 { border-color: var(--border-strong); }
+  .lift { transition: transform 110ms ease, box-shadow 110ms ease, background-color 110ms ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0,0,0,0.09); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: rgba(var(--accent-r), 0.9); }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-faint); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .half-tone { opacity: 0.45; }
+  .ph-clay { background: linear-gradient(150deg, rgba(var(--accent-r),0.20), var(--surface-2) 55%, var(--surface)); }
+  .ph-paper { background: linear-gradient(125deg, var(--surface-2), var(--surface) 58%, rgba(var(--accent-r),0.10)); }
+  .ph-adobe { background: linear-gradient(160deg, var(--surface), rgba(var(--accent-r),0.14) 62%, var(--surface-2)); }
+  .grain::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+    background-image: radial-gradient(rgba(0,0,0,0.045) 1px, transparent 1px);
+    background-size: 26px 26px; opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="sticky top-0 z-50 border-b hairline backdrop-blur-md" style="background: color-mix(in srgb, var(--bg) 88%, transparent);">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 21.5v-8.3" stroke="var(--accent)" stroke-width="1.7" stroke-linecap="round"/>
+        <path d="M12 13.2c0-4.1 2.9-6.7 7.2-6.7 0 4.3-2.9 6.7-7.2 6.7z" stroke="var(--accent)" stroke-width="1.7" stroke-linejoin="round"/>
+        <path d="M12 13.2c0-3.3-2.3-5.4-5.8-5.4 0 3.5 2.3 5.4 5.8 5.4z" stroke="var(--accent)" stroke-width="1.7" stroke-linejoin="round"/>
+      </svg>
+      <div class="leading-none">
+        <div class="display text-[17px] font-semibold">Semilla Abierta</div>
+        <div class="mono mt-1 text-[9.5px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Los Altos de Chiapas</div>
+      </div>
+    </a>
+    <div class="hidden items-center gap-7 text-[13.5px] font-medium text-[color:var(--fg-muted)] md:flex">
+      <a href="#programas" class="hover:text-[color:var(--fg)]">Programas</a>
+      <a href="#impacto" class="hover:text-[color:var(--fg)]">Impacto</a>
+      <a href="#transparencia" class="hover:text-[color:var(--fg)]">Transparencia</a>
+    </div>
+    <a href="#dona" class="btn-primary lift inline-flex h-9 items-center rounded-full px-5 text-[13.5px] font-medium">Dona</a>
+  </nav>
+</header>
+
+<!-- HERO — misión tipográfica -->
+<section class="mx-auto max-w-6xl px-5 pb-16 pt-14 md:pb-24 md:pt-20">
+  <div class="eyebrow">Alfabetización y bibliotecas comunitarias · desde 2017</div>
+  <h1 class="display mt-6 max-w-4xl text-[38px] font-medium sm:text-[54px] lg:text-[64px]">
+    Abrimos bibliotecas donde <span class="half-tone">nunca hubo una.</span>
+  </h1>
+  <div class="mt-12 border-t hairline pt-8 md:mt-16 md:pt-10">
+    <div class="flex flex-col gap-3 md:flex-row md:items-end md:gap-8">
+      <div class="display tabular text-[clamp(84px,17vw,176px)] font-medium leading-[0.9] text-[color:var(--accent)]">1,842</div>
+      <div class="pb-2 md:pb-5">
+        <div class="eyebrow">Niñas y niños leyendo este año</div>
+        <p class="mt-3 max-w-sm text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]">
+          Lectores activos en 23 bibliotecas comunitarias de Los Altos de Chiapas. Activo quiere decir con préstamos a casa este trimestre — no inscritos en una lista.
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="mt-10 flex flex-wrap items-center gap-3">
+    <a href="#dona" class="btn-primary lift inline-flex h-11 items-center gap-1.5 rounded-full px-6 text-[14px] font-medium">
+      Dona
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <a href="#programas" class="lift inline-flex h-11 items-center rounded-full border hairline-2 bg-[var(--surface)] px-5 text-[14px] font-medium">Conoce los programas</a>
+  </div>
+  <div class="mono mt-7 text-[11.5px] uppercase tracking-[0.12em] text-[color:var(--fg-faint)]">Donataria autorizada SAT · tu donativo es deducible de impuestos</div>
+</section>
+
+<!-- EL PROBLEMA -->
+<section class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
+      <div>
+        <div class="eyebrow">El problema</div>
+        <h2 class="display mt-3 max-w-lg text-[30px] font-medium sm:text-[38px]">Donde no hay libros, leer se queda en la escuela.</h2>
+        <p class="mt-5 max-w-lg text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]">
+          En los municipios donde trabajamos, el aula típica de primaria tiene un estante con menos de 30 títulos y la biblioteca pública más cercana queda a más de una hora de camino. No es falta de interés: cuando el libro llega y alguien lo acompaña, los lectores aparecen. Nuestro trabajo es que llegue, y que haya quien acompañe.
+        </p>
+        <div class="mono mt-7 border-t hairline pt-5 text-[11px] uppercase tracking-[0.12em] text-[color:var(--fg-faint)] tabular">
+          Fuente: diagnóstico propio 2025 · 9 municipios · 41 escuelas visitadas
+        </div>
+      </div>
+      <div class="ph-clay grain relative aspect-[4/3] rounded-[var(--radius-lg)] border hairline lg:aspect-[4/5]" data-ol-photo="children reading library rural"></div>
+    </div>
+  </div>
+</section>
+
+<!-- PROGRAMAS — filas editoriales numeradas -->
+<section id="programas" class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="mb-4 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
+      <div>
+        <div class="eyebrow">Programas</div>
+        <h2 class="display mt-3 text-[30px] font-medium sm:text-[38px]">Tres programas, un mismo camino.</h2>
+      </div>
+      <p class="max-w-sm text-[14px] leading-relaxed text-[color:var(--fg-muted)]">Cada biblioteca la sostiene su comunidad; nosotros ponemos acervo, formación y acompañamiento.</p>
+    </div>
+    <div class="divide-y divide-[color:var(--border)]">
+
+      <article class="grid gap-8 py-12 md:grid-cols-12 md:items-center md:gap-6">
+        <div class="mono text-[13px] font-medium text-[color:var(--accent)] tabular md:col-span-1">01</div>
+        <div class="md:col-span-6 md:pr-8">
+          <h3 class="display text-[24px] font-medium sm:text-[28px]">Bibliotecas comunitarias</h3>
+          <p class="mt-3 max-w-md text-[14px] leading-relaxed text-[color:var(--fg-muted)]">
+            Salas de lectura en casas ejidales, escuelas y patios prestados, administradas por la propia comunidad. Cada una abre al menos cuatro tardes por semana y presta libros a casa desde el primer día.
+          </p>
+          <div class="mono mt-4 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)] tabular">23 salas activas · préstamo a domicilio en todas</div>
+          <a href="#dona" class="mt-4 inline-flex items-center gap-1.5 text-[13.5px] font-medium text-[color:var(--accent)]">
+            Conoce el programa
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+        <div class="ph-paper grain relative aspect-[4/3] rounded-[var(--radius)] border hairline md:col-span-5" data-ol-photo="community library wooden shelves"></div>
+      </article>
+
+      <article class="grid gap-8 py-12 md:grid-cols-12 md:items-center md:gap-6">
+        <div class="ph-adobe grain relative aspect-[4/3] rounded-[var(--radius)] border hairline md:col-span-5 md:col-start-1 md:row-start-1" data-ol-photo="young woman reading circle teaching"></div>
+        <div class="mono text-[13px] font-medium text-[color:var(--accent)] tabular md:col-span-1 md:col-start-7 md:row-start-1">02</div>
+        <div class="md:col-span-6 md:col-start-8 md:row-start-1 md:-ml-6">
+          <h3 class="display text-[24px] font-medium sm:text-[28px]">Mediadores de lectura</h3>
+          <p class="mt-3 max-w-md text-[14px] leading-relaxed text-[color:var(--fg-muted)]">
+            Formamos a jóvenes de las mismas comunidades — de 16 a 24 años — como mediadores: 120 horas de formación, beca mensual y acompañamiento durante todo su primer año al frente de una sala.
+          </p>
+          <div class="mono mt-4 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)] tabular">96 mediadores formados · 71 siguen activos</div>
+          <a href="#dona" class="mt-4 inline-flex items-center gap-1.5 text-[13.5px] font-medium text-[color:var(--accent)]">
+            Conoce el programa
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </article>
+
+      <article class="grid gap-8 py-12 md:grid-cols-12 md:items-center md:gap-6">
+        <div class="mono text-[13px] font-medium text-[color:var(--accent)] tabular md:col-span-1">03</div>
+        <div class="md:col-span-6 md:pr-8">
+          <h3 class="display text-[24px] font-medium sm:text-[28px]">Acervo en lenguas originarias</h3>
+          <p class="mt-3 max-w-md text-[14px] leading-relaxed text-[color:var(--fg-muted)]">
+            Compramos y coeditamos títulos en tsotsil y tseltal para que la primera lectura sea en la lengua de casa. El acervo lo eligen las bibliotecas, no la oficina: dos pedidos al año, título por título.
+          </p>
+          <div class="mono mt-4 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)] tabular">1,375 ejemplares en tsotsil y tseltal · 14 títulos coeditados</div>
+          <a href="#dona" class="mt-4 inline-flex items-center gap-1.5 text-[13.5px] font-medium text-[color:var(--accent)]">
+            Conoce el programa
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+        <div class="ph-clay grain relative aspect-[4/3] rounded-[var(--radius)] border hairline md:col-span-5" data-ol-photo="hands holding open book"></div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- IMPACTO EN NÚMEROS -->
+<section id="impacto" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <div class="eyebrow">Impacto · corte a junio de 2026</div>
+    <div class="mt-8 grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4">
+      <div class="border-l hairline pl-5">
+        <div class="mono tabular text-[34px] font-medium leading-none sm:text-[40px]">23</div>
+        <div class="eyebrow mt-3">Bibliotecas comunitarias</div>
+      </div>
+      <div class="border-l hairline pl-5">
+        <div class="mono tabular text-[34px] font-medium leading-none sm:text-[40px]">1,842</div>
+        <div class="eyebrow mt-3">Lectores activos</div>
+      </div>
+      <div class="border-l hairline pl-5">
+        <div class="mono tabular text-[34px] font-medium leading-none sm:text-[40px]">96</div>
+        <div class="eyebrow mt-3">Mediadores formados</div>
+      </div>
+      <div class="border-l hairline pl-5">
+        <div class="mono tabular text-[34px] font-medium leading-none sm:text-[40px]">9</div>
+        <div class="eyebrow mt-3">Municipios de Los Altos</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CÓMO AYUDAR -->
+<section id="dona" class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="mb-10 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
+      <div>
+        <div class="eyebrow">Cómo ayudar</div>
+        <h2 class="display mt-3 text-[30px] font-medium sm:text-[38px]">Tres formas concretas de sumar.</h2>
+      </div>
+      <p class="max-w-sm text-[14px] leading-relaxed text-[color:var(--fg-muted)]">Sin intermediarios: cada opción dice exactamente qué sostiene tu aportación.</p>
+    </div>
+    <div class="grid gap-4 md:grid-cols-3">
+      <article class="lift flex flex-col rounded-[var(--radius)] border hairline bg-[var(--surface)] p-7">
+        <div class="mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--accent)]">Donativo mensual</div>
+        <h3 class="display mt-3 text-[22px] font-medium tabular">Dona $150 al mes</h3>
+        <p class="mt-2.5 flex-1 text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">
+          $150 mensuales sostienen el acervo de un lector durante un año: préstamos a casa, reposición de ejemplares y un título nuevo cada trimestre.
+        </p>
+        <div class="mt-6 border-t hairline pt-5">
+          <a href="#" class="btn-primary lift inline-flex h-10 w-full items-center justify-center rounded-full text-[13.5px] font-medium">Dona</a>
+        </div>
+      </article>
+      <article class="lift flex flex-col rounded-[var(--radius)] border hairline bg-[var(--surface)] p-7">
+        <div class="mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--accent)]">Tu tiempo</div>
+        <h3 class="display mt-3 text-[22px] font-medium">Voluntariado a distancia</h3>
+        <p class="mt-2.5 flex-1 text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">
+          Catalogación de acervo, corrección de coediciones y acompañamiento en línea a mediadores. Cuatro horas al mes, desde donde estés, con calendario fijo.
+        </p>
+        <div class="mt-6 border-t hairline pt-5">
+          <a href="#" class="lift inline-flex h-10 w-full items-center justify-center rounded-full border hairline-2 bg-[var(--bg)] text-[13.5px] font-medium">Súmate</a>
+        </div>
+      </article>
+      <article class="lift flex flex-col rounded-[var(--radius)] border hairline bg-[var(--surface)] p-7">
+        <div class="mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--accent)]">En especie</div>
+        <h3 class="display mt-3 text-[22px] font-medium">Dona libros del acervo solicitado</h3>
+        <p class="mt-2.5 flex-1 text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">
+          Dos veces al año publicamos la lista exacta de títulos que las bibliotecas pidieron. Compras de esa lista — no de cajas de sobrantes — y nosotros lo hacemos llegar.
+        </p>
+        <div class="mt-6 border-t hairline pt-5">
+          <a href="#" class="lift inline-flex h-10 w-full items-center justify-center rounded-full border hairline-2 bg-[var(--bg)] text-[13.5px] font-medium">Ver el acervo solicitado</a>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- TRANSPARENCIA -->
+<section id="transparencia" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
+      <div>
+        <div class="eyebrow">Transparencia</div>
+        <h2 class="display mt-3 max-w-xs text-[30px] font-medium sm:text-[38px]">Los datos duros, a la vista.</h2>
+        <p class="mt-5 max-w-xs text-[14px] leading-relaxed text-[color:var(--fg-muted)]">La confianza no se pide; se documenta. Todo lo de esta sección es verificable en nuestros informes.</p>
+      </div>
+      <div class="divide-y divide-[color:var(--border)] border-y hairline">
+        <div class="grid gap-1.5 py-6 md:grid-cols-[220px_1fr] md:gap-10">
+          <div class="display text-[20px] font-medium tabular">87¢ de cada peso</div>
+          <p class="text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">van directo a programas. Los 13¢ restantes cubren administración y recaudación — el desglose completo está en el informe anual.</p>
+        </div>
+        <div class="grid gap-1.5 py-6 md:grid-cols-[220px_1fr] md:gap-10">
+          <div class="display text-[20px] font-medium">Donataria autorizada</div>
+          <p class="text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Autorización del SAT vigente desde 2018. Emitimos recibo deducible por cada donativo, único o mensual.</p>
+        </div>
+        <div class="grid gap-1.5 py-6 md:grid-cols-[220px_1fr] md:gap-10">
+          <div class="display text-[20px] font-medium tabular">Informes anuales</div>
+          <p class="text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Estados financieros auditados y reporte de resultados, descargables desde 2019. Auditor externo desde 2021.</p>
+        </div>
+        <div class="grid gap-1.5 py-6 md:grid-cols-[220px_1fr] md:gap-10">
+          <div class="display text-[20px] font-medium tabular">Consejo sin sueldo</div>
+          <p class="text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Las 7 personas del consejo directivo no reciben remuneración alguna. Sus nombres y trayectorias, en el informe.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- UNA HISTORIA CON NOMBRE -->
+<section class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <figure class="mx-auto max-w-3xl text-center">
+      <svg class="mx-auto" width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 21.5v-8.3" stroke="var(--accent)" stroke-width="1.7" stroke-linecap="round"/>
+        <path d="M12 13.2c0-4.1 2.9-6.7 7.2-6.7 0 4.3-2.9 6.7-7.2 6.7z" stroke="var(--accent)" stroke-width="1.7" stroke-linejoin="round"/>
+        <path d="M12 13.2c0-3.3-2.3-5.4-5.8-5.4 0 3.5 2.3 5.4 5.8 5.4z" stroke="var(--accent)" stroke-width="1.7" stroke-linejoin="round"/>
+      </svg>
+      <blockquote class="display mt-7 text-[24px] font-medium leading-snug sm:text-[32px]">
+        "En mi sala los niños ya no preguntan si pueden llevarse el libro a casa. Ya saben que sí. Que el libro sea tuyo unos días — eso no existía cuando yo tenía su edad."
+      </blockquote>
+      <figcaption class="mono mt-7 text-[11px] uppercase tracking-[0.16em] text-[color:var(--fg-faint)] tabular">Rosa, 19 · mediadora de lectura en Chenalhó · generación 2024</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- CTA FINAL — full-bleed coral -->
+<section class="bg-[var(--accent)] text-[color:var(--accent-ink)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 text-center md:py-24">
+    <div class="mono text-[11px] uppercase tracking-[0.16em] opacity-75">Semilla Abierta, A.C. · desde 2017</div>
+    <h2 class="display mx-auto mt-5 max-w-2xl text-[34px] font-medium sm:text-[46px]">Este año caben más lectores.</h2>
+    <p class="mx-auto mt-4 max-w-md text-[14.5px] leading-relaxed opacity-85">
+      Tu donativo compra los libros, forma a quien los acompaña y mantiene la sala abierta cuatro tardes por semana. Deducible de impuestos.
+    </p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="#" class="lift inline-flex h-11 items-center rounded-full bg-[var(--accent-ink)] px-7 text-[14px] font-medium text-[color:var(--accent)]">Dona</a>
+      <a href="#" class="lift inline-flex h-11 items-center rounded-full border px-6 text-[14px] font-medium" style="border-color: color-mix(in srgb, var(--accent-ink) 38%, transparent);">Súmate como voluntario</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER LOCAL -->
+<footer class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-10">
+    <div class="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 21.5v-8.3" stroke="var(--accent)" stroke-width="1.7" stroke-linecap="round"/>
+            <path d="M12 13.2c0-4.1 2.9-6.7 7.2-6.7 0 4.3-2.9 6.7-7.2 6.7z" stroke="var(--accent)" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M12 13.2c0-3.3-2.3-5.4-5.8-5.4 0 3.5 2.3 5.4 5.8 5.4z" stroke="var(--accent)" stroke-width="1.7" stroke-linejoin="round"/>
+          </svg>
+          <span class="display text-[16px] font-semibold">Semilla Abierta, A.C.</span>
+        </div>
+        <p class="mt-3 max-w-xs text-[13px] leading-relaxed text-[color:var(--fg-muted)]">Alfabetización y bibliotecas comunitarias en Los Altos de Chiapas, junto a las comunidades, desde 2017.</p>
+      </div>
+      <div class="text-[13px] leading-relaxed text-[color:var(--fg-muted)]">
+        <div class="eyebrow mb-3">Oficina</div>
+        <div>Real de Guadalupe 38, int. 3 · Barrio de Guadalupe</div>
+        <div>San Cristóbal de las Casas, Chiapas · C.P. 29230</div>
+        <a href="mailto:hola@semillaabierta.org" class="mt-2 inline-block font-medium text-[color:var(--fg)]">hola@semillaabierta.org</a>
+      </div>
+      <div class="text-[13px] text-[color:var(--fg-muted)]">
+        <div class="eyebrow mb-3">Síguenos</div>
+        <div class="flex flex-col gap-1.5">
+          <a href="#" class="hover:text-[color:var(--fg)]">Instagram</a>
+          <a href="#" class="hover:text-[color:var(--fg)]">Facebook</a>
+          <a href="#" class="hover:text-[color:var(--fg)]">Informes anuales</a>
+        </div>
+      </div>
+    </div>
+    <div class="mono mt-9 border-t hairline pt-5 text-[10.5px] uppercase tracking-[0.12em] text-[color:var(--fg-faint)]">
+      Semilla Abierta, A.C. · RFC SAB170512QX3 · CLUNI SAB17051207011 · Donataria autorizada SAT · © 2026
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

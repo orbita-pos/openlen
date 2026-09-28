@@ -17,6 +17,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 import type { ProjectData } from "@/lib/projects/types";
+import type { TranscripcionGuardada } from "@/lib/agent/transcripcion";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Drizzle schema for auth.
@@ -372,6 +373,13 @@ export const projectChatMessages = pgTable(
     toolResults: jsonb("toolResults").$type<
       { tool: string; ok?: boolean; respuesta: Record<string, unknown> }[]
     >(),
+    // LA TRANSCRIPCIÓN DEL TURNO (H4 de Len 2.x, 2026-09-26) — lo que vio el
+    // modelo, con los argumentos y los resultados enteros, más la huella de lo
+    // leído. De aquí sale el historial del turno siguiente, como en Claude Code,
+    // en vez del que manda el navegador. Lo escribe SÓLO el servidor. El tipo
+    // vive en `lib/agent/transcripcion.ts`. NULL = turno anterior a H4, o del
+    // Chat (ai-design): el historial cae a `userText` + `assistantReasoning`.
+    transcript: jsonb("transcript").$type<TranscripcionGuardada>(),
     // 'applied' on insert; flipped to 'reverted' by Undo. 'error' turns are
     // never persisted (transient — they changed nothing).
     status: text("status").notNull(),

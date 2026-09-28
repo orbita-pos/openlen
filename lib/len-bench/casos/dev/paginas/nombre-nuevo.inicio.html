@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SASTRE — Sastrería de autor · Hecho a tu medida</title>
+<meta name="description" content="SASTRE es un taller de sastrería de autor. Trajes a medida cortados a mano, tejidos nobles y un oficio que se mide en milímetros. Hecho a tu medida, hecho para durar. Agenda tu primera cita." />
+<meta property="og:title" content="SASTRE — Sastrería de autor" />
+<meta property="og:description" content="Trajes a medida cortados a mano, tejidos nobles y un oficio que se mide en milímetros. Hecho a tu medida, hecho para durar." />
+<meta property="og:image" content="https://images.openlen.com/43-urban-streetwear-1920.webp" />
+<meta name="theme-color" content="#F4F1EB" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231C1A17'/%3E%3Ctext x='16' y='22' font-family='Georgia,serif' font-size='16' font-style='italic' fill='%23996B3D' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F1EB; --surface:#EBE6DC; --surface-2:#E2DCD0;
+    --ink:#1C1A17; --ink-soft:#322E29; --muted:#67615A; --faint:#8C8479;
+    --line:rgba(28,26,23,0.13); --line-strong:rgba(28,26,23,0.24);
+    --accent:#8A5A2B; --accent-deep:#5E3A18; --navy:#2A3142; --on-accent:#FBF7F0;
+    --radius:3px; --radius-lg:5px;
+    --display:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3,.serif{font-family:var(--display);font-weight:500;letter-spacing:-0.005em;line-height:1.02}
+  .eyebrow{font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 26px}
+  .lift{transition:transform .55s cubic-bezier(.2,.7,.2,1),box-shadow .55s}
+  .lift:hover{transform:translateY(-4px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(.94) contrast(1.02)}
+  .btn{display:inline-flex;align-items:center;gap:.6rem;height:52px;padding:0 28px;border-radius:var(--radius);font-weight:600;font-size:13.5px;letter-spacing:.06em;text-transform:uppercase;transition:transform .25s,background .25s,color .25s,border-color .25s;text-decoration:none}
+  .btn-primary{background:var(--ink);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink);background:transparent}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .rule{height:1px;background:var(--line)}
+  .num{font-family:var(--display);font-style:italic;color:var(--accent);font-weight:500}
+  .underline-link{position:relative}
+  .underline-link::after{content:"";position:absolute;left:0;bottom:-2px;width:0;height:1px;background:var(--accent);transition:width .35s ease}
+  .underline-link:hover::after{width:100%}
+  /* Content is visible by default; only JS hides it to play the scroll-in
+     entrance. No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(20px);transition:opacity .85s ease,transform .85s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+  .weave{background-image:linear-gradient(rgba(28,26,23,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(28,26,23,.028) 1px,transparent 1px);background-size:7px 7px}
+  .tick{display:inline-block;width:1px;height:9px;background:var(--line-strong)}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body class="weave">
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(244,241,235,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:74px">
+      <a href="#top" class="serif" style="font-size:25px;letter-spacing:.32em;font-weight:600;padding-left:.32em">SASTRE</a>
+      <nav class="hidden md:flex items-center gap-10 text-[13.5px]" style="color:var(--ink-soft)">
+        <a href="#oficio" class="underline-link">El oficio</a>
+        <a href="#coleccion" class="underline-link">La colección</a>
+        <a href="#medida" class="underline-link">A medida</a>
+        <a href="#taller" class="underline-link">El taller</a>
+      </nav>
+      <a href="#cita" class="btn btn-primary" style="height:44px;padding:0 22px;font-size:12px">Agendar cita</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="wrap" style="padding:60px 26px 36px">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-6 reveal">
+        <span class="eyebrow">Sastrería de autor · desde 1998</span>
+        <h1 style="font-size:clamp(52px,9vw,108px);margin:20px 0 0">
+          Hecho<br>a tu <em style="font-style:italic;color:var(--accent)">medida.</em>
+        </h1>
+        <p style="font-size:18.5px;color:var(--muted);max-width:40ch;margin:28px 0 34px">
+          Cortamos cada traje a mano, sobre tu cuerpo y tu manera de moverte. Tejidos nobles, paciencia de oficio y un acabado que se mide en milímetros.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#cita" class="btn btn-primary">Agenda tu cita</a>
+          <a href="#coleccion" class="btn btn-ghost">Ver la colección</a>
+        </div>
+        <div class="flex items-center gap-5 mt-11 text-[12.5px]" style="color:var(--faint);letter-spacing:.04em">
+          <span>27 años de oficio</span><span class="tick"></span><span>Corte a mano</span><span class="tick"></span><span>Tejidos italianos e ingleses</span>
+        </div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <div class="relative">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 36px 70px -34px rgba(28,26,23,.55)">
+            <img class="img-cover" src="https://images.openlen.com/43-urban-streetwear-1920.webp" alt="Persona con una prenda hecha a medida en una calle de la ciudad" loading="eager" width="1080" height="1350">
+          </div>
+          <div class="hidden sm:block" style="position:absolute;bottom:24px;left:-24px;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;box-shadow:0 18px 40px -22px rgba(28,26,23,.45)">
+            <div class="serif" style="font-size:30px;line-height:1;color:var(--accent)">38h</div>
+            <div class="text-[12px] mt-1" style="color:var(--muted);letter-spacing:.04em">de trabajo en cada traje</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETAIL STRIP -->
+  <section class="wrap" style="padding:30px 26px">
+    <div class="rule"></div>
+    <div class="flex flex-wrap items-center justify-between gap-y-5 py-6 text-[12px]" style="color:var(--muted);letter-spacing:.14em;text-transform:uppercase">
+      <span>Corte a mano</span><span class="tick"></span><span>Tres pruebas</span><span class="tick"></span><span>Forros de seda</span><span class="tick"></span><span>Ojales cosidos a mano</span><span class="tick"></span><span>Para toda la vida</span>
+    </div>
+    <div class="rule"></div>
+  </section>
+
+  <!-- EL OFICIO / PROCESO -->
+  <section id="oficio" class="wrap" style="padding:60px 26px 24px">
+    <div class="grid lg:grid-cols-12 gap-12 items-start">
+      <div class="lg:col-span-5 reveal">
+        <span class="eyebrow">El oficio</span>
+        <h2 style="font-size:clamp(36px,5.5vw,60px);margin-top:14px">Un traje no<br>se compra.<br><em style="font-style:italic;color:var(--accent)">Se construye.</em></h2>
+        <p style="color:var(--muted);font-size:17px;margin-top:22px;max-width:42ch">Desde la primera medida hasta el último ojal, cada paso pasa por las mismas manos. Sin atajos, sin máquinas que decidan por nosotros.</p>
+        <div class="flex flex-wrap gap-x-10 gap-y-3 mt-10">
+          <div><div class="serif" style="font-size:40px;color:var(--accent);line-height:1">240+</div><div class="text-[12.5px] mt-1" style="color:var(--faint)">puntadas a mano por solapa</div></div>
+          <div><div class="serif" style="font-size:40px;color:var(--accent);line-height:1">3</div><div class="text-[12.5px] mt-1" style="color:var(--faint)">pruebas antes de entregar</div></div>
+        </div>
+      </div>
+      <div class="lg:col-span-7">
+        <div class="grid sm:grid-cols-2 gap-x-10 gap-y-9 reveal">
+          <div style="border-top:1px solid var(--line-strong);padding-top:18px">
+            <div class="flex items-baseline gap-3"><span class="num" style="font-size:21px">01</span><h3 style="font-size:24px">La toma de medidas</h3></div>
+            <p class="text-[14.5px] mt-2.5" style="color:var(--muted)">Más de veinte medidas y un retrato de tu postura. Tomamos nota de cómo te sientas, caminas y cruzas los brazos.</p>
+          </div>
+          <div style="border-top:1px solid var(--line-strong);padding-top:18px">
+            <div class="flex items-baseline gap-3"><span class="num" style="font-size:21px">02</span><h3 style="font-size:24px">El patrón</h3></div>
+            <p class="text-[14.5px] mt-2.5" style="color:var(--muted)">Cortamos un patrón único en papel, solo tuyo. Se archiva con tu nombre para tu próxima pieza.</p>
+          </div>
+          <div style="border-top:1px solid var(--line-strong);padding-top:18px">
+            <div class="flex items-baseline gap-3"><span class="num" style="font-size:21px">03</span><h3 style="font-size:24px">El armado</h3></div>
+            <p class="text-[14.5px] mt-2.5" style="color:var(--muted)">Entretela de crin cosida flotante, hombros modelados al vapor. La estructura que hace que un saco caiga solo.</p>
+          </div>
+          <div style="border-top:1px solid var(--line-strong);padding-top:18px">
+            <div class="flex items-baseline gap-3"><span class="num" style="font-size:21px">04</span><h3 style="font-size:24px">El acabado</h3></div>
+            <p class="text-[14.5px] mt-2.5" style="color:var(--muted)">Ojales y forros cosidos a mano, botones de corozo. Los detalles que solo se notan cuando faltan.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EDITORIAL split -->
+  <section style="background:var(--surface);margin-top:56px">
+    <div class="wrap" style="padding:0">
+      <div class="grid lg:grid-cols-2 items-stretch">
+        <div class="reveal" style="min-height:420px">
+          <div class="overflow-hidden h-full" style="aspect-ratio:auto"><img class="img-cover" src="https://images.openlen.com/41-studio-minimalist-1920.webp" alt="Retrato editorial de un hombre con abrigo de sastre sobre fondo neutro" loading="lazy" width="1280" height="1600" style="min-height:420px"></div>
+        </div>
+        <div class="reveal flex items-center" style="padding:64px 48px">
+          <div style="max-width:46ch">
+            <span class="eyebrow">Nuestra mano</span>
+            <h2 style="font-size:clamp(30px,4.4vw,48px);margin-top:14px">Vestir bien no es<br>llamar la atención.</h2>
+            <p style="color:var(--muted);font-size:17.5px;margin-top:20px">Es entrar a una sala y que nadie sepa por qué pareces más alto, más sereno, más tú. La sastrería bien hecha no se ve: se siente. En el hombro que no te aprieta, en la manga que termina justo donde debe.</p>
+            <p style="color:var(--ink-soft);font-size:17px;margin-top:18px;font-style:italic;font-family:var(--display);font-size:21px">«Un buen traje trabaja para ti durante veinte años. Vale la pena que tarde un mes.»</p>
+            <div class="mt-7 text-[13px]" style="color:var(--faint)">— Marco Iriarte, maestro sastre</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LA COLECCIÓN / galería -->
+  <section id="coleccion" class="wrap" style="padding:76px 26px 24px">
+    <div class="flex items-end justify-between mb-12 reveal">
+      <div>
+        <span class="eyebrow">La colección</span>
+        <h2 style="font-size:clamp(34px,5vw,56px);margin-top:12px">Piezas de<br>esta temporada</h2>
+      </div>
+      <p class="hidden md:block text-[14px]" style="color:var(--muted);max-width:30ch">Tres construcciones de base que adaptamos a tu medida, tu tejido y tu vida.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-7">
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:3/4"><img class="img-cover" src="https://images.openlen.com/48-back-chignon-1920.webp" alt="Retrato de espalda que muestra la caída y el corte limpio de una prenda de seda" loading="lazy" width="1080" height="1440"></div>
+        <div class="flex items-baseline justify-between mt-5" style="border-bottom:1px solid var(--line);padding-bottom:8px">
+          <h3 style="font-size:23px">El de gala</h3><span class="num" style="font-size:16px">desde 1.850 €</span>
+        </div>
+        <p class="text-[14px] mt-3" style="color:var(--muted)">Hechura impecable, líneas limpias y una caída que dura. La pieza de los días que importan.</p>
+      </article>
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:3/4"><img class="img-cover" src="https://images.openlen.com/47-group-three-1920.webp" alt="Tres personas vestidas a medida en tonos crema, mostaza y terracota" loading="lazy" width="1080" height="1440"></div>
+        <div class="flex items-baseline justify-between mt-5" style="border-bottom:1px solid var(--line);padding-bottom:8px">
+          <h3 style="font-size:23px">El de diario</h3><span class="num" style="font-size:16px">desde 1.450 €</span>
+        </div>
+        <p class="text-[14px] mt-3" style="color:var(--muted)">Lana fría italiana, media construcción ligera. Para llevar de lunes a viernes sin pensarlo.</p>
+      </article>
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:3/4"><img class="img-cover" src="https://images.openlen.com/46-athletic-stretch-1920.webp" alt="Figura en movimiento con prenda de tejido elástico que muestra la libertad del corte" loading="lazy" width="1080" height="1440"></div>
+        <div class="flex items-baseline justify-between mt-5" style="border-bottom:1px solid var(--line);padding-bottom:8px">
+          <h3 style="font-size:23px">El de viaje</h3><span class="num" style="font-size:16px">desde 1.650 €</span>
+        </div>
+        <p class="text-[14px] mt-3" style="color:var(--muted)">Tejido con elastano técnico que no se arruga en la maleta. Corte limpio, libertad total.</p>
+      </article>
+    </div>
+    <div class="text-center mt-14 reveal"><a href="#cita" class="btn btn-ghost">Reserva una visita al taller</a></div>
+  </section>
+
+  <!-- A MEDIDA / servicio -->
+  <section id="medida" style="background:var(--ink);color:var(--bg);margin-top:64px">
+    <div class="wrap" style="padding:88px 26px">
+      <div class="grid lg:grid-cols-12 gap-12 items-center">
+        <div class="lg:col-span-5 reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 36px 70px -34px rgba(0,0,0,.6)"><img class="img-cover" src="https://images.openlen.com/45-hand-handbag-1920.webp" alt="Detalle de unas manos sosteniendo un accesorio de piel cosido a mano" loading="lazy" width="1080" height="1350"></div>
+        </div>
+        <div class="lg:col-span-7 reveal">
+          <span class="eyebrow" style="color:#C99A66">A medida</span>
+          <h2 class="serif" style="font-size:clamp(34px,5vw,58px);color:var(--bg);margin:14px 0 0;font-weight:500">Empezamos donde<br>termina la talla.</h2>
+          <p style="color:rgba(244,241,235,.74);font-size:17.5px;margin-top:22px;max-width:48ch">No hay tallas estándar ni «más o menos». Hay tu cuerpo, tu tejido y el tiempo que hace falta para hacerlo bien.</p>
+          <div class="grid sm:grid-cols-2 gap-x-10 gap-y-7 mt-11">
+            <div style="border-top:1px solid rgba(244,241,235,.18);padding-top:16px">
+              <div class="serif" style="font-size:21px;color:#C99A66">Traje completo</div>
+              <p class="text-[14px] mt-2" style="color:rgba(244,241,235,.62)">Saco y pantalón a medida, tres pruebas incluidas. Entrega en cuatro a seis semanas.</p>
+            </div>
+            <div style="border-top:1px solid rgba(244,241,235,.18);padding-top:16px">
+              <div class="serif" style="font-size:21px;color:#C99A66">Camisería</div>
+              <p class="text-[14px] mt-2" style="color:rgba(244,241,235,.62)">Cuellos y puños a tu medida, algodones suizos. Pedido mínimo de tres camisas.</p>
+            </div>
+            <div style="border-top:1px solid rgba(244,241,235,.18);padding-top:16px">
+              <div class="serif" style="font-size:21px;color:#C99A66">Ceremonia</div>
+              <p class="text-[14px] mt-2" style="color:rgba(244,241,235,.62)">Esmoquin y chaqué para el día que se recuerda. Reserva con dos meses de margen.</p>
+            </div>
+            <div style="border-top:1px solid rgba(244,241,235,.18);padding-top:16px">
+              <div class="serif" style="font-size:21px;color:#C99A66">Restauración</div>
+              <p class="text-[14px] mt-2" style="color:rgba(244,241,235,.62)">Reformamos y rejuvenecemos un traje que ya quieres. Lo bueno se arregla, no se tira.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EL TALLER / dónde encontrarnos -->
+  <section id="taller" class="wrap" style="padding:80px 26px 24px">
+    <div class="grid lg:grid-cols-12 gap-12 items-center">
+      <div class="lg:col-span-6 reveal">
+        <span class="eyebrow">El taller</span>
+        <h2 style="font-size:clamp(32px,4.6vw,52px);margin:14px 0 0">En una calle tranquila,<br>detrás de una puerta<br>de roble.</h2>
+        <p style="color:var(--muted);font-size:17.5px;margin-top:22px;max-width:48ch">No tenemos escaparate. Tenemos una mesa de corte, tres maniquíes con tu nombre y café siempre puesto. Se viene con cita y sin prisa.</p>
+        <div class="grid grid-cols-2 gap-x-8 gap-y-7 mt-11" style="max-width:480px">
+          <div style="border-top:1px solid var(--line-strong);padding-top:14px">
+            <div class="text-[11px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:6px">Dónde</div>
+            <p class="text-[15px]" style="color:var(--ink-soft);line-height:1.7">Calle de la Aguja 7, bajo<br>Barrio de las Letras</p>
+          </div>
+          <div style="border-top:1px solid var(--line-strong);padding-top:14px">
+            <div class="text-[11px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:6px">Cuándo</div>
+            <p class="text-[15px]" style="color:var(--ink-soft);line-height:1.7">Mar–Sáb · 10:00–19:00<br>Solo con cita previa</p>
+          </div>
+          <div style="border-top:1px solid var(--line-strong);padding-top:14px">
+            <div class="text-[11px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:6px">Teléfono</div>
+            <p class="text-[15px]" style="color:var(--ink-soft);line-height:1.7">+34 600 271 800</p>
+          </div>
+          <div style="border-top:1px solid var(--line-strong);padding-top:14px">
+            <div class="text-[11px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:6px">Correo</div>
+            <p class="text-[15px]" style="color:var(--ink-soft);line-height:1.7">taller@sastre.example</p>
+          </div>
+        </div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:5/4;box-shadow:0 30px 60px -32px rgba(28,26,23,.5)"><img class="img-cover" src="https://images.openlen.com/42-golden-hour-wheat-1920.webp" alt="Luz cálida de tarde entrando por la ventana del taller de sastrería" loading="lazy" width="1280" height="1024"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA / agenda una cita -->
+  <section id="cita" class="wrap" style="padding:64px 26px 96px">
+    <div class="reveal" style="background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden">
+      <div class="grid lg:grid-cols-12">
+        <div class="lg:col-span-7" style="padding:62px 48px">
+          <span class="eyebrow">Agenda una cita</span>
+          <h2 style="font-size:clamp(34px,5vw,58px);margin:16px 0 0;max-width:16ch">Tu primer traje<br>empieza con una<br><em style="font-style:italic;color:var(--accent)">conversación.</em></h2>
+          <p style="color:var(--muted);font-size:17.5px;margin:22px 0 32px;max-width:46ch">La primera visita es sin compromiso: hablamos de tu vida, tocamos tejidos y tomamos las primeras medidas. Una hora, un café y ninguna presión.</p>
+          <div class="flex flex-wrap gap-3">
+            <a href="#cita" class="btn btn-primary">Reservar mi cita</a>
+            <a href="#coleccion" class="btn btn-ghost">Ver la colección</a>
+          </div>
+          <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-9 text-[12.5px]" style="color:var(--faint);letter-spacing:.04em">
+            <span>Primera visita gratuita</span><span class="tick"></span><span>Sin compromiso</span><span class="tick"></span><span>Respondemos en 24 h</span>
+          </div>
+        </div>
+        <div class="lg:col-span-5 hidden lg:block reveal">
+          <div class="overflow-hidden h-full" style="min-height:100%"><img class="img-cover" src="https://images.openlen.com/42-golden-hour-wheat-1920.webp" alt="Figura caminando a contraluz al atardecer con una prenda fluida" loading="lazy" width="1080" height="1440" style="height:100%"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:36px 26px 48px">
+    <div class="rule" style="margin-bottom:40px"></div>
+    <div class="grid md:grid-cols-4 gap-9">
+      <div class="md:col-span-2">
+        <div class="serif" style="font-size:27px;letter-spacing:.3em;font-weight:600;padding-left:.3em">SASTRE</div>
+        <p class="text-[14px] mt-4" style="color:var(--muted);max-width:36ch">Sastrería de autor. Trajes a medida cortados a mano, tejidos nobles y un oficio que se mide en milímetros. Hecho a tu medida, hecho para durar.</p>
+      </div>
+      <div>
+        <div class="text-[11px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">El taller</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#oficio" class="underline-link">El oficio</a><br><a href="#coleccion" class="underline-link">La colección</a><br><a href="#medida" class="underline-link">Servicio a medida</a><br><a href="#cita" class="underline-link">Agendar cita</a></p>
+      </div>
+      <div>
+        <div class="text-[11px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Encuéntranos</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2">Calle de la Aguja 7<br>Mar–Sáb · 10:00–19:00<br>+34 600 271 800<br><a href="#" class="underline-link">Instagram</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:40px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© SASTRE · Sastrería de autor</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, gallery preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taller Ámbar — Cerámica de uso diario · Tlaquepaque</title>
+<meta name="description" content="Piezas de barro para la mesa de todos los días: torneadas a mano, esmaltes sin plomo, hornada nueva cada tres semanas. Visítanos en Tlaquepaque o pide por WhatsApp.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #FBFAF7;
+    --surface: #F4F1EB;
+    --surface-2: #ECE7DE;
+    --fg: #211E19;
+    --fg-muted: #5B564D;
+    --fg-faint: #6A645A;
+    --border: rgba(33,30,25,0.08);
+    --border-strong: rgba(33,30,25,0.12);
+    --accent: #9C6644;
+    --accent-r: 156,102,68;
+    --accent-ink: #FBF2EC;
+    --radius: 12px;
+    --radius-sm: 7px;
+    --radius-lg: 18px;
+    --font-display: "Inter", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --warn: #A3671C;
+    --danger: #8F2D22;
+  }
+  :root.dark {
+    --bg: #151310;
+    --surface: #1C1916;
+    --surface-2: #242019;
+    --fg: #F0EDE8;
+    --fg-muted: rgba(240,237,232,0.66);
+    --fg-faint: rgba(240,237,232,0.56);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #C08A63;
+    --accent-r: 192,138,99;
+    --accent-ink: #241205;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  .display { font-family: var(--font-display); font-weight: 650; letter-spacing: -0.035em; line-height: 0.96; }
+  .mono { font-family: var(--font-mono); }
+  .hairline { border-color: var(--border); }
+  .hairline-2 { border-color: var(--border-strong); }
+  .lift { transition: transform 110ms ease, box-shadow 110ms ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0,0,0,0.09); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: rgba(var(--accent-r), 0.92); }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-faint); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .half-tone { opacity: 0.45; }
+  .ph-clay { background: linear-gradient(145deg, rgba(var(--accent-r),0.26), var(--surface-2) 52%, var(--surface)); }
+  .ph-glaze { background: linear-gradient(125deg, var(--surface-2), var(--surface) 55%, rgba(var(--accent-r),0.13)); }
+  .ph-kiln { background: linear-gradient(160deg, var(--surface), rgba(var(--accent-r),0.17) 65%, var(--surface-2)); }
+  .grain::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+    background-image: radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
+    background-size: 26px 26px; opacity: 0.5;
+  }
+  .chip {
+    position: absolute; left: 10px; bottom: 10px; z-index: 2;
+    display: flex; align-items: baseline; gap: 8px;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(6px); padding: 6px 12px;
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="sticky top-0 z-50 border-b hairline backdrop-blur-md" style="background: color-mix(in srgb, var(--bg) 88%, transparent);">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M8 4h8c0 3-1 4-1 6s2 3 2 6a5 5 0 0 1-5 5h0a5 5 0 0 1-5-5c0-3 2-4 2-6S8 7 8 4z" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="M8 4h8" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <span class="display text-[18px]">Taller Ámbar</span>
+    </a>
+    <div class="hidden items-center gap-7 text-[13.5px] font-medium text-[color:var(--fg-muted)] md:flex">
+      <a href="#hornada" class="hover:text-[color:var(--fg)]">La hornada</a>
+      <a href="#taller" class="hover:text-[color:var(--fg)]">El taller</a>
+      <a href="#visitanos" class="hover:text-[color:var(--fg)]">Visítanos</a>
+    </div>
+    <a href="#visitanos" class="btn-primary lift inline-flex h-9 items-center rounded-full px-4 text-[13.5px] font-medium">Ordena por WhatsApp</a>
+  </nav>
+</header>
+
+<!-- APERTURA MASONRY — el aparador es el hero -->
+<section class="mx-auto max-w-6xl px-5 pb-16 pt-10 md:pb-24 md:pt-14">
+  <div class="grid gap-10 md:grid-cols-[0.95fr_1.25fr] md:gap-10 lg:gap-14">
+    <div class="md:sticky md:top-20 md:self-start lg:top-24">
+      <div class="mono inline-flex items-center gap-2 rounded-full border hairline bg-[var(--surface)] py-1 pl-2.5 pr-3.5 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-muted)]">
+        <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"></span>
+        Tlaquepaque · hornada nueva cada 3 semanas
+      </div>
+      <h1 class="display mt-6 text-[44px] sm:text-[58px] lg:text-[62px]">
+        Barro para la mesa <span class="text-[color:var(--accent)]">de diario.</span>
+      </h1>
+      <p class="mt-6 max-w-md text-[15.5px] leading-relaxed text-[color:var(--fg-muted)]">
+        Tazas, platos y jarras torneados a mano: esmaltes sin plomo, dos pasadas de horno y piezas que aguantan microondas, lavavajillas y la vida real. Cada una lleva la firma en la base.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href="#hornada" class="btn-primary lift inline-flex h-11 items-center gap-1.5 rounded-full px-5 text-[14px] font-medium">
+          Ver la hornada actual
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#visitanos" class="lift inline-flex h-11 items-center rounded-full border hairline-2 bg-[var(--surface)] px-5 text-[14px] font-medium">Visítanos</a>
+      </div>
+      <div class="mono mt-7 text-[12px] tracking-wide text-[color:var(--fg-faint)] tabular">Envíos a todo México · tirajes de 20-40 piezas</div>
+    </div>
+
+    <!-- Masonry: el aparador -->
+    <div class="grid grid-cols-2 gap-4">
+      <div class="flex flex-col gap-4">
+        <article class="relative">
+          <div class="ph-clay grain relative aspect-[4/5] rounded-[var(--radius-lg)] border hairline" data-ol-photo="handmade ceramic mug speckled"></div>
+          <div class="chip"><span class="text-[12px] font-semibold">Taza de diario</span><span class="mono text-[12px] text-[color:var(--accent)] tabular">$240</span></div>
+        </article>
+        <article class="relative">
+          <div class="ph-kiln grain relative aspect-square rounded-[var(--radius-lg)] border hairline" data-ol-photo="mezcal copitas ceramic pair"></div>
+          <div class="chip"><span class="text-[12px] font-semibold">Set mezcalero</span><span class="mono text-[12px] text-[color:var(--accent)] tabular">$380</span></div>
+        </article>
+        <article class="relative">
+          <div class="ph-glaze grain relative aspect-[4/6] rounded-[var(--radius-lg)] border hairline" data-ol-photo="ceramic pitcher still life"></div>
+          <div class="chip"><span class="text-[12px] font-semibold">Jarra de mesa</span><span class="mono text-[12px] text-[color:var(--accent)] tabular">$580</span></div>
+        </article>
+      </div>
+      <div class="mt-10 flex flex-col gap-4">
+        <article class="relative">
+          <div class="ph-glaze grain relative aspect-square rounded-[var(--radius-lg)] border hairline" data-ol-photo="glazed ceramic bowls stacked"></div>
+          <div class="chip"><span class="text-[12px] font-semibold">Plato hondo</span><span class="mono text-[12px] text-[color:var(--accent)] tabular">$320</span></div>
+        </article>
+        <article class="relative">
+          <div class="ph-kiln grain relative aspect-[4/5] rounded-[var(--radius-lg)] border hairline" data-ol-photo="ceramic vase dried flowers"></div>
+          <div class="chip"><span class="text-[12px] font-semibold">Florero bajo</span><span class="mono text-[12px] text-[color:var(--accent)] tabular">$460</span></div>
+        </article>
+        <article class="relative">
+          <div class="ph-clay grain relative aspect-[4/4.6] rounded-[var(--radius-lg)] border hairline" data-ol-photo="ceramic plates warm light"></div>
+          <div class="chip"><span class="text-[12px] font-semibold">Plato taquero</span><span class="mono text-[12px] text-[color:var(--accent)] tabular">$180</span></div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LA HORNADA — tabla índice -->
+<section id="hornada" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="mb-9 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
+      <div>
+        <div class="eyebrow">Hornada de marzo</div>
+        <h2 class="display mt-3 text-[32px] sm:text-[40px]">El inventario, tal cual.</h2>
+      </div>
+      <p class="max-w-sm text-[14px] leading-relaxed text-[color:var(--fg-muted)]">Tirajes cortos: cuando una pieza se acaba, vuelve — parecida, nunca idéntica — en la siguiente hornada.</p>
+    </div>
+    <div class="overflow-x-auto rounded-[var(--radius-lg)] border hairline bg-[var(--bg)]">
+      <table class="w-full min-w-[640px] text-[13.5px]">
+        <thead>
+          <tr class="mono border-b hairline text-left text-[10.5px] uppercase tracking-[0.16em] text-[color:var(--fg-faint)]">
+            <th class="px-6 py-4 font-medium">Pieza</th>
+            <th class="px-6 py-4 font-medium">Medida</th>
+            <th class="px-6 py-4 font-medium">Esmalte</th>
+            <th class="px-6 py-4 font-medium text-right">Precio</th>
+            <th class="px-6 py-4 font-medium text-right">Quedan</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[color:var(--border)]">
+          <tr class="transition-colors hover:bg-[var(--surface)]">
+            <td class="px-6 py-4 font-semibold">Taza de diario</td>
+            <td class="px-6 py-4 text-[color:var(--fg-muted)]">350 ml</td>
+            <td class="px-6 py-4 text-[color:var(--fg-muted)]">avena moteado</td>
+            <td class="mono px-6 py-4 text-right font-medium tabular">$240</td>
+            <td class="mono px-6 py-4 text-right text-[color:var(--accent)] tabular">7</td>
+          </tr>
+          <tr class="transition-colors hover:bg-[var(--surface)]">
+            <td class="px-6 py-4 font-semibold">Plato hondo</td>
+            <td class="px-6 py-4 text-[color:var(--fg-muted)]">Ø 19 cm</td>
+            <td class="px-6 py-4 text-[color:var(--fg-muted)]">humo</td>
+            <td class="mono px-6 py-4 text-right font-medium tabular">$320</td>
+            <td class="mono px-6 py-4 text-right text-[color:var(--accent)] tabular">12</td>
+          </tr>
+          <tr class="transition-colors hover:bg-[var(--surface)]">
+            <td class="px-6 py-4 font-semibold">Plato taquero</td>
+            <td class="px-6 py-4 text-[color:var(--fg-muted)]">Ø 14 cm</td>
+            <td class="px-6 py-4 text-[color:var(--fg-muted)]">crudo con borde barro</td>
+            <td class="mono px-6 py-4 text-right font-medium tabular">$180</td>
+            <td class="mono px-6 py-4 text-right text-[color:var(--accent)] tabular">18</td>
+          </tr>
+          <tr class="transition-colors hover:bg-[var(--surface)]">
+            <td class="px-6 py-4 font-semibold">Jarra de mesa</td>
+            <td class="px-6 py-4 text-[color:var(--fg-muted)]">1.5 L</td>
+            <td class="px-6 py-4 text-[color:var(--fg-muted)]">avena moteado</td>
+            <td class="mono px-6 py-4 text-right font-medium tabular">$580</td>
+            <td class="mono px-6 py-4 text-right text-[color:var(--accent)] tabular">4</td>
+          </tr>
+          <tr class="transition-colors hover:bg-[var(--surface)]">
+            <td class="px-6 py-4 font-semibold">Set mezcalero</td>
+            <td class="px-6 py-4 text-[color:var(--fg-muted)]">2 copitas + plato</td>
+            <td class="px-6 py-4 text-[color:var(--fg-muted)]">bruñido interior</td>
+            <td class="mono px-6 py-4 text-right font-medium tabular">$380</td>
+            <td class="mono px-6 py-4 text-right text-[color:var(--accent)] tabular">9</td>
+          </tr>
+          <tr class="transition-colors hover:bg-[var(--surface)]">
+            <td class="px-6 py-4 font-semibold">Florero bajo</td>
+            <td class="px-6 py-4 text-[color:var(--fg-muted)]">14 cm alto</td>
+            <td class="px-6 py-4 text-[color:var(--fg-muted)]">humo</td>
+            <td class="mono px-6 py-4 text-right font-medium tabular">$460</td>
+            <td class="mono px-6 py-4 text-right text-[color:var(--accent)] tabular">3</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-5 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+      <div class="text-[13.5px] text-[color:var(--fg-muted)]">¿Quieres apartar de la próxima hornada? Mándanos foto de la pieza que te gustó.</div>
+      <a href="#visitanos" class="text-[13.5px] font-medium text-[color:var(--accent)] hover:opacity-80">Ordena por WhatsApp →</a>
+    </div>
+  </div>
+</section>
+
+<!-- EL TALLER -->
+<section id="taller" class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
+      <div>
+        <div class="eyebrow">El taller</div>
+        <h2 class="display mt-3 max-w-md text-[32px] sm:text-[40px]">Dos hornos, dos manos, <span class="half-tone">tres semanas por pieza.</span></h2>
+        <p class="mt-5 max-w-md text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]">
+          Ámbar empezó en 2020 como un torno en el patio de la abuela. Hoy sigue siendo un taller de una sola ceramista — Regina Ávalos — y una regla que no cambia: nada sale sin pasar dos veces por el horno y una por sus manos, con esmaltes de fórmula propia sin plomo.
+        </p>
+        <div class="mono mt-7 grid max-w-sm grid-cols-3 gap-4 border-t hairline pt-5 text-[10.5px] uppercase tracking-[0.12em] text-[color:var(--fg-faint)]">
+          <div><div class="display text-[22px] tracking-tight text-[color:var(--fg)] tabular">2020</div>el patio</div>
+          <div><div class="display text-[22px] tracking-tight text-[color:var(--fg)] tabular">1,240°</div>segunda quema</div>
+          <div><div class="display text-[22px] tracking-tight text-[color:var(--fg)] tabular">0</div>plomo</div>
+        </div>
+      </div>
+      <div class="ph-kiln grain relative aspect-[4/3] rounded-[var(--radius-lg)] border hairline" data-ol-photo="pottery studio kiln glowing"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CITA ÚNICA -->
+<section class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-3xl px-5 py-18 text-center md:py-24" style="padding-top: 4.5rem; padding-bottom: 4.5rem;">
+    <svg class="mx-auto text-[color:var(--accent)]" width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 7H6a3 3 0 0 0-3 3v7h7v-7H7c0-1.7 1.3-3 3-3V7zm11 0h-4a3 3 0 0 0-3 3v7h7v-7h-3c0-1.7 1.3-3 3-3V7z" opacity=".35"/></svg>
+    <blockquote class="display mt-6 text-[24px] leading-[1.25] sm:text-[30px]">
+      "Pedí la jarra por WhatsApp y llegó a Mérida envuelta como tesoro. El pico de verdad no gotea."
+    </blockquote>
+    <figcaption class="mono mt-6 text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Iker S. · Mérida · pedido #214</figcaption>
+  </div>
+</section>
+
+<!-- VISÍTANOS -->
+<section id="visitanos" class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+      <div>
+        <div class="eyebrow">Visítanos</div>
+        <h2 class="display mt-3 text-[32px] sm:text-[40px]">Miércoles a domingo.<br><span class="half-tone">El torno no para, tú puedes mirar.</span></h2>
+        <ul class="mono mt-8 max-w-md divide-y divide-[color:var(--border)] text-[13px] tabular">
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]">Miércoles — Domingo</span><span>11:00 am – 7:00 pm</span></li>
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]">Lunes y martes</span><span class="text-[color:var(--accent)]">días de horno</span></li>
+        </ul>
+        <div class="mt-8 space-y-1.5 text-[14.5px] text-[color:var(--fg-muted)]">
+          <div class="font-medium text-[color:var(--fg)]">Independencia 214, Centro</div>
+          <div>San Pedro Tlaquepaque, Jalisco · entre el Parián y el Jardín Hidalgo</div>
+        </div>
+        <div class="mt-7 flex flex-wrap gap-3">
+          <a href="#" class="btn-primary lift inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14px] font-medium">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .3-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.5-.2.7-.1l2 .9c.3.2.5.3.6.4 0 .1 0 .7-.3 1.3z"/></svg>
+            Ordena por WhatsApp
+          </a>
+          <a href="#" class="lift inline-flex h-11 items-center rounded-full border hairline-2 bg-[var(--surface)] px-5 text-[14px] font-medium">Cómo llegar</a>
+        </div>
+      </div>
+      <div class="ph-clay grain relative aspect-[4/3] self-center rounded-[var(--radius-lg)] border hairline lg:aspect-[4/5]" data-ol-photo="boutique interior ceramic shelves"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FULL-BLEED -->
+<section class="bg-[var(--accent)] text-[color:var(--accent-ink)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 text-center md:py-20">
+    <div class="mono text-[11px] uppercase tracking-[0.2em] opacity-75">Apartados abiertos</div>
+    <h2 class="display mx-auto mt-4 max-w-2xl text-[34px] sm:text-[46px]">La próxima hornada sale el día 24.</h2>
+    <p class="mx-auto mt-4 max-w-md text-[14.5px] opacity-85">Las jarras vuelan el primer fin de semana — aparta la tuya por WhatsApp.</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="#" class="lift inline-flex h-11 items-center rounded-full bg-[var(--bg)] px-6 text-[14px] font-medium text-[color:var(--fg)]">Aparta tu pieza</a>
+      <a href="#hornada" class="lift inline-flex h-11 items-center rounded-full border border-white/35 px-6 text-[14px] font-medium hover:bg-white/10">Ver el inventario</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER LOCAL -->
+<footer class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-[12.5px] text-[color:var(--fg-faint)] md:flex-row">
+    <div class="flex items-center gap-2">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 4h8c0 3-1 4-1 6s2 3 2 6a5 5 0 0 1-5 5h0a5 5 0 0 1-5-5c0-3 2-4 2-6S8 7 8 4z" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/></svg>
+      <span class="font-medium text-[color:var(--fg-muted)]">Taller Ámbar · cerámica de uso diario</span>
+    </div>
+    <div class="mono text-[11px] uppercase tracking-[0.12em]">Independencia 214, Tlaquepaque · mié–dom</div>
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-[color:var(--fg)]">Instagram</a>
+      <a href="#" class="hover:text-[color:var(--fg)]">WhatsApp</a>
+      <span>© 2026 Taller Ámbar</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

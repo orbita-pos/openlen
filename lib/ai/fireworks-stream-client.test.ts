@@ -157,22 +157,17 @@ describe("transporte de texto en streaming", () => {
     expect(body.messages[2]).toEqual({ role: "tool", tool_call_id: "a", content: '{"ok":true}' });
   });
 
-  // 🔴 ESTA PRUEBA AFIRMABA LO CONTRARIO hasta el 2026-09-11 («`auto` NO manda
-  // reasoning_effort — el campo no viaja»). No se relajó para que pasara: la
-  // regla se invirtió al leer bien Claude Code. Lo que allí se omite es el
-  // PRESUPUESTO de pensamiento, y lo decide el MODELO; el NIVEL que elige la
-  // persona se resuelve (al defecto del modelo, o `high`) y se manda.
-  // Medido, además: omitirlo daba 237 tokens de razonamiento con rango 495.
-  it("`auto` SÍ manda reasoning_effort: el número del nivel al que resuelve", async () => {
+  // 🔴 H5 (2026-09-26): el defecto ya no ata. El 100 que viajaba aquí daba p50
+  // 100 y máximo 113 en los 1.473 pasos del control de Len-Bench. Claude Code
+  // manda `{type:"adaptive"}`: el modelo decide cuánto pensar.
+  it("🔴 `auto` NO manda reasoning_effort: el modelo decide cuánto pensar", async () => {
     const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
     await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "auto" }));
     const enviado = JSON.parse(
       (fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body,
     );
-    expect(typeof enviado.reasoning_effort).toBe("number");
-    expect(enviado.reasoning_effort).toBe(
-      presupuestoDeEsfuerzo(NIVEL_POR_DEFECTO, REQUEST.maxOutputTokens),
-    );
+    expect(enviado).not.toHaveProperty("reasoning_effort");
+    expect(presupuestoDeEsfuerzo(NIVEL_POR_DEFECTO, REQUEST.maxOutputTokens)).toBeUndefined();
   });
 
   it("un nivel explícito manda un NÚMERO, no el nombre", async () => {
@@ -185,11 +180,11 @@ describe("transporte de texto en streaming", () => {
     expect(enviado.reasoning_effort).toBe(60);
   });
 
-  // 🔴 LA PUERTA DEL PAPEL QUE NO PIENSA. Con `auto` resolviendo a un número,
-  // caer a `auto` cuando `esfuerzoDisponible` dice que no encendería el
-  // pensamiento justo al modelo que declaró no tenerlo. `null` es «sin
-  // postura», y tiene que salir `"none"` — apagado A PROPÓSITO. Omitir el campo
-  // tampoco valdría: sin él el proveedor piensa por su cuenta (medido, 237).
+  // 🔴 LA PUERTA DEL PAPEL QUE NO PIENSA. Caer a `auto` cuando
+  // `esfuerzoDisponible` dice que no le dejaría pensar justo al modelo que
+  // declaró no tenerlo. `null` es «sin postura», y tiene que salir `"none"` —
+  // apagado A PROPÓSITO. Omitir el campo no valdría: sin él el proveedor piensa
+  // por su cuenta (medido, 237). Es la diferencia con `auto` de arriba.
   it("`null` NO es `auto`: manda \"none\", ni número ni campo ausente", async () => {
     const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
     await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: null }));
@@ -200,17 +195,16 @@ describe("transporte de texto en streaming", () => {
     expect(enviado.reasoning_effort).toBe("none");
   });
 
-  // BRAZO DE CONTROL de la de arriba: que `auto` mande número no puede
-  // significar que mande CUALQUIER número. Si el defecto se moviera al tope de
-  // la escalera, subir de nivel dejaría de significar nada — que es el bug de
-  // la etiqueta falsa que todo esto vino a arreglar.
-  it("`auto` NO manda el máximo: quedan niveles por encima", async () => {
+  // BRAZO DE CONTROL de la de `auto`: omitir el presupuesto del defecto no
+  // puede volverse omitirlo SIEMPRE. `max`, elegido a mano, viaja como número:
+  // el techo de salida menos uno, el presupuesto por defecto de Claude Code.
+  it("`max` elegido a mano SÍ manda número: el techo de salida menos uno", async () => {
     const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
-    await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "auto" }));
-    const conAuto = JSON.parse(
+    await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "max" }));
+    const enviado = JSON.parse(
       (fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body,
-    ).reasoning_effort;
-    expect(conAuto).toBeLessThan(presupuestoDeEsfuerzo("max", REQUEST.maxOutputTokens));
+    );
+    expect(enviado.reasoning_effort).toBe(REQUEST.maxOutputTokens - 1);
   });
 
   // EL BRAZO DE CONTROL de las dos pruebas de arriba: sin él, un futuro
@@ -359,7 +353,7 @@ describe("cuando el proveedor rechaza el esfuerzo", () => {
   it("REPITE sin el campo en vez de tirarle el turno al usuario", async () => {
     olvidarModelosSinEsfuerzo();
     const { client: c, fetchImpl } = clienteQueRechazaUnaVez();
-    const eventos = await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "high" }));
+    const eventos = await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "medium" }));
 
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     // La primera lo llevaba; la segunda NO.
@@ -372,12 +366,12 @@ describe("cuando el proveedor rechaza el esfuerzo", () => {
   it("marca el modelo: el turno siguiente ya no paga el 400", async () => {
     olvidarModelosSinEsfuerzo();
     const primero = clienteQueRechazaUnaVez();
-    await drain(primero.client.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "high" }));
+    await drain(primero.client.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "medium" }));
 
     // Un cliente nuevo, mismo modelo: no debe volver a mandar el campo.
     const fetchImpl = vi.fn(async () => new Response(chunk({ content: "ok" }, "stop"), { status: 200 }));
     const c = createFireworksStreamClient({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
-    await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "high" }));
+    await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "medium" }));
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(cuerpoDe(fetchImpl, 0)).not.toHaveProperty("reasoning_effort");
   });
@@ -388,7 +382,7 @@ describe("cuando el proveedor rechaza el esfuerzo", () => {
     olvidarModelosSinEsfuerzo();
     const fetchImpl = vi.fn(async () => new Response('{"error":{"message":"Model not found"}}', { status: 404 }));
     const c = createFireworksStreamClient({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
-    const eventos = await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "high" }));
+    const eventos = await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "medium" }));
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(eventos.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error" } });
   });

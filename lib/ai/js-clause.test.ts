@@ -5,7 +5,6 @@ import { SYSTEM_PROMPT, systemPromptFor } from "../../app/api/generate/system-pr
 import { modelRuntimePromptBlock } from "../ai-stream/model-runtime";
 import { SYSTEM_PROMPT as CHAT_SYSTEM_PROMPT } from "../../app/api/templates/ai-design/system-prompt";
 import { buildAgentSystemPrompt } from "../agent/catalog";
-import { buildRedesignPrompt } from "../agent/redesign";
 
 // El JavaScript del modelo ya no tiene interruptor (26/08/2026): estos
 // entornos sólo dirigen el CONTRATO, que es lo que `systemPromptFor` lee.
@@ -46,18 +45,6 @@ describe("con JS libre, las conductas desaparecen del prompt", () => {
 
   it("el Chat recibe exactamente el mismo trato", () => {
     const vivo = swapJsClauses(CHAT_SYSTEM_PROMPT, ["contrato-completo", "conductas", "no-negociable"]);
-    expect(vivo).not.toContain("data-ol-sticky");
-    expect(vivo).toContain("INTERACTIVIDAD — la escribes TÚ");
-  });
-
-  // El rediseño interpola DESIGN_GUIDANCE entera, así que arrastraba el mismo
-  // manual. Las TRES superficies o ninguna: si una sigue enseñando conductas,
-  // el usuario ve una página con marcadores y otra sin ellos según qué botón
-  // pulsó, que es peor que no haber tocado nada.
-  it("el rediseño del Agente también", () => {
-    const crudo = buildRedesignPrompt({ direccion: "más oscuro", html: "<p>x</p>" } as never);
-    expect(crudo, "sanity: el rediseño trae el manual").toContain("data-ol-sticky");
-    const vivo = swapJsClauses(crudo, ["rediseno", "conductas"]);
     expect(vivo).not.toContain("data-ol-sticky");
     expect(vivo).toContain("INTERACTIVIDAD — la escribes TÚ");
   });
@@ -172,30 +159,8 @@ describe("el Chat monta el mismo prompt sin contradicción", () => {
   });
 });
 
-/**
- * EL REDISEÑO DEL AGENTE produce un documento entero y captura su script.
- * El Agente normal también captura runtime desde 86757c05: `editar_pagina`
- * separa un edit con target="runtime" y persiste la cápsula. Por eso tanto la
- * cláusula `rediseno` como la cláusula `agente` pueden voltear.
- */
-describe("el rediseño del Agente", () => {
-  const REDISENO = buildRedesignPrompt({
-    html: "<!doctype html><html><body><h1>hola</h1></body></html>",
-    direccion: "más oscuro",
-    brief: null,
-  });
-
-  it("la marca de su cláusula EXISTE — si no, swapJsClauses lanzaría en caliente", () => {
-    expect(REDISENO).toContain(clauseMarker("rediseno"));
-  });
-
-  it("encendido, deja de prohibir el JavaScript y le ofrece el <script>", () => {
-    const vivo = swapJsClauses(REDISENO, ["rediseno"]) + modelRuntimePromptBlock();
-    expect(vivo).not.toContain("NADA de JavaScript propio");
-    expect(vivo).toContain("<script>");
-  });
-
-  it("el catálogo de Len voltea su cláusula porque editar_pagina captura runtime", () => {
+describe("la cláusula del Agente", () => {
+  it("el catálogo de Len voltea su cláusula: su JavaScript vive en el fichero y se edita con Edit", () => {
     const vivo = buildAgentSystemPrompt();
     expect(vivo).not.toContain(clauseMarker("agente"));
     expect(vivo).toContain("<script>");

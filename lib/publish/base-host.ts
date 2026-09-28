@@ -161,6 +161,15 @@ function recortarPorPalabra(slug: string, maxChars: number): string {
  */
 export const OPENLEN_PAGE_HOSTS: readonly string[] = ["openlen.com", "openlen.app"];
 
+/**
+ * Nuestros hosts ESTÁTICOS: buckets públicos de R2 que sólo sirven ficheros
+ * (fotos del catálogo, subidas de los dueños, cuerpos de plantilla). Una
+ * página publicada los carga como cualquier visitante, y la publicación
+ * hornea desde ellos (`lib/publish/image-bake.ts`). Len-Bench, que no puede ni
+ * resolver producción, los deja pasar: son lo que el visitante VE.
+ */
+export const OPENLEN_STATIC_HOSTS: readonly string[] = ["images.openlen.com", "uploads.openlen.com", "templates.openlen.com"];
+
 /** `.openlen.com`, `.openlen.app`. Derivado, nunca escrito a mano. */
 export const RESERVED_BASE_SUFFIXES: readonly string[] = OPENLEN_PAGE_HOSTS.map(
   (h) => `.${h}`,

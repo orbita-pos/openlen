@@ -5,15 +5,12 @@
 // load. See vitest.config.ts's NB comment on lib/agent for the split.
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { stripOpIds, tagWithOpIds } from "@/lib/html-ops";
-import { lookFromAccent } from "@/lib/palette-gen";
-import { applyTematicaToHtml } from "@/lib/tematicas/apply-server";
-import { TEMATICA_PRESETS } from "@/lib/tematicas/presets";
+import { stripOpIds } from "@/lib/html-ops";
 import { runAgentTool, summarizeProjectState, urlIsPageImage, type AgentDeps, type AgentSession } from "./tools";
 import { CONFLICTO_AL_GUARDAR, realDeps } from "./tools";
 import { loQueCambioElDueno } from "./cambios-del-dueno";
 import { buildFunctionDeclarations } from "./catalog";
-import type { RedesignInput } from "./redesign";
+import { guardarPreferencia } from "./preferencias";
 import type { ProjectData } from "@/lib/projects/types";
 import { CONDICION_MAX, TURNOS_MAXIMOS_CON_OBJETIVO } from "@/lib/agent/objetivo/evaluar-condicion";
 
@@ -95,7 +92,6 @@ function makeDeps(
     editImageResult: EditImageResult;
     uploadUrl: string;
     userBrief: string | null;
-    redesignResult: import("@/lib/agent/redesign").RedesignOutcome;
     generatedRuntime: unknown;
     pageRuntimes: unknown;
     /** Lo que devuelve `cambiosSinPublicar`. Por defecto `false`. */
@@ -124,7 +120,6 @@ function makeDeps(
     fetches: [] as string[],
     uploads: [] as { projectId: string; mime: string; name: string; size: number }[],
     imageEdits: [] as { userId: string; prompt: string }[],
-    redesigns: [] as import("@/lib/agent/redesign").RedesignInput[],
     userBrief: (overrides?.userBrief ?? null) as string | null,
     briefWrites: 0,
     /** La cápsula que el proyecto ya tenía, y lo que el guardado hizo con ella.
@@ -165,14 +160,6 @@ function makeDeps(
       store.data = data;
       store.saved.push(data);
       // A QUÉ PÁGINA dijo el motor que pertenecía. Sin esto no se distingue
-    },
-    async redesignDocument(_u, input) {
-      store.redesigns.push(input);
-      return overrides?.redesignResult ?? {
-        ok: true,
-        html: `<!doctype html><html lang="es"><head><title>Rediseñada</title></head><body><h1>Nuevo diseño</h1></body></html>`,
-        usage: { inputTokens: 10_000, outputTokens: 8_000, cachedTokens: 0 },
-      };
     },
     async snapshotVersion(a) {
       store.versions.push(a.label);
@@ -286,7 +273,6 @@ function makeSession(arg?: string | { page?: string | null; html?: string }): Ag
   return {
     projectId: "p1",
     userId: "u1",
-    taggedHtml: tagWithOpIds(html).taggedHtml,
     page: opts.page ?? null,
     // Desde el 2026-08-25 la página NO entra en la capacidad: cada una guarda su
     // propio JavaScript, así que una sesión sobre /menu puede lo mismo que sobre
@@ -296,30 +282,6 @@ function makeSession(arg?: string | { page?: string | null; html?: string }): Ag
     photoSearchesThisTurn: 0,
     busquedasVaciasSeguidas: 0,
   };
-}
-
-/** First `data-op-id` in document order — head/script/style are never
- *  tagged (see html-ops.test.ts), so for these body-first fixtures this is
- *  always the opening <h1>. */
-function firstOpId(taggedHtml: string): string {
-  const m = /data-op-id="([^"]+)"/.exec(taggedHtml);
-  if (!m) throw new Error("no data-op-id found in taggedHtml");
-  return m[1];
-}
-
-/** El op-id de un elemento de CONTENIDO, nunca el de la raiz.
- *
- *  `firstOpId` devuelve el PRIMER id del documento, que es el del <html> o el
- *  <body> — y desde el 2026-08-22 una op contra la raiz se rechaza, porque
- *  reemplazarla borra la pagina entera del usuario (medido: 8 de 40 turnos del
- *  brazo de control acabaron con el <body> sustituido por un <link>). Los pines
- *  de abajo prueban a QUE PAGINA se escribe, no que se pueda editar la raiz, y
- *  con `firstOpId` dependian sin querer de lo que ahora esta prohibido. */
-function contentOpId(taggedHtml: string): string {
-  const m = /<h1[^>]*data-op-id="([^"]+)"|<p[^>]*data-op-id="([^"]+)"/.exec(taggedHtml);
-  const id = m?.[1] ?? m?.[2];
-  if (!id) throw new Error("no content data-op-id found in taggedHtml");
-  return id;
 }
 
 describe("summarizeProjectState", () => {
@@ -334,27 +296,27 @@ describe("summarizeProjectState", () => {
     assert.equal((s.modulos as Record<string, boolean>).chat, false);
   });
 
-  // LA HOME CUENTA. `data.pages` son las páginas EXTRA, así que esta lista
-  // enseñaba un sitio con una página menos de las que tiene. Medido el
-  // 2026-08-26: en un sitio de dos páginas, a «¿cuántas ves?» el Agente
-  // contestó que una — y contestó bien, porque eso fue lo que le dimos.
-  it("la lista de páginas incluye la Home, no sólo las extra", () => {
+  // LA HOME CUENTA, y con Len 2.0 las páginas son FICHEROS: las mismas rutas
+  // que usan Read, Edit, Write, Grep y Glob. Medido el 2026-08-26: sin la Home,
+  // en un sitio de dos páginas el Agente contestaba que tenía una.
+  it("la lista de ficheros incluye la Home, no sólo las extra", () => {
     const s = summarizeProjectState({
       data: { html: HTML, pages: { nosotros: { html: HTML } } },
       title: "Tacos",
       subdomain: null,
       publishedAt: null,
     });
-    assert.deepEqual(s.paginas, ["principal", "nosotros"]);
+    assert.deepEqual(s.ficheros, ["/index.html", "/nosotros/index.html"]);
+    assert.equal(s.paginas, undefined, "la lista vieja con «principal» ya no va");
   });
 
-  // Y en un sitio de UNA sola página sigue habiendo una página, no cero: un
-  // sitio sin páginas es una frase que no significa nada.
-  it("y un proyecto de una sola página no sale con la lista vacía", () => {
-    const s = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null });
-    assert.deepEqual(s.paginas, ["principal"]);
+  it("y dice qué página tiene abierta el dueño, como el fichero abierto en el IDE", () => {
+    const s = summarizeProjectState(
+      { data: { html: HTML, pages: { nosotros: { html: HTML } } }, title: "Tacos", subdomain: null, publishedAt: null },
+      "nosotros",
+    );
+    assert.equal(s.abierta_en_el_editor, "/nosotros/index.html");
   });
-
   // LA DERIVA ENTRA AL ESTADO. `publicado: true` sólo dice que existe una
   // release en el disco, no que sea ESTA. El dueño enciende el asistente desde
   // la franja de la Bandeja y le pregunta a Len «¿ya contesta?»: con el estado
@@ -514,1544 +476,33 @@ describe("activar_modulo", () => {
   });
 });
 
-// P4 — rediseño total: el tool delega el modelo a deps.redesignDocument y el
-// resultado pasa por el MISMO embudo de persistencia que editar_pagina.
-describe("redisenar_pagina", () => {
-  const CALL = { direccion: "más moderna y oscura", resumen: "rediseño moderno" };
-
-  it("rediseña, persiste por el embudo y deja el Undo (Before AI edit)", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    const out = await runAgentTool(session, deps, "redisenar_pagina", CALL);
-    assert.equal(out.response.ok, true);
-    assert.ok(out.updatedHtml?.includes("Nuevo diseño"));
-    assert.equal(out.action?.tool, "redisenar_pagina");
-    // el embudo corrió: se guardó data y hay snapshot previo + etiquetado
-    assert.equal(store.saved.length, 1);
-    assert.ok(store.versions.some((v) => v === "Before AI edit"));
-    assert.ok(store.versions.some((v) => v.startsWith("Rediseño:")));
-    // el motor recibió el documento ACTUAL (no el etiquetado con op-ids)
-    assert.equal(store.redesigns.length, 1);
-    assert.ok(store.redesigns[0].html.includes("Tacos El Güero") || store.redesigns[0].html.includes("<h1"));
-    assert.ok(!store.redesigns[0].html.includes("data-op-id"));
-    // session re-etiquetada para retoques posteriores
-    assert.ok(session.taggedHtml.includes("Nuevo diseño"));
-  });
-
-  it("UNA por turno — la segunda se rechaza con guía", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    await runAgentTool(session, deps, "redisenar_pagina", CALL);
-    const out = await runAgentTool(session, deps, "redisenar_pagina", CALL);
-    assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /ya rediseñaste/);
-  });
-
-  it("si el modelo falla, no se guarda NADA", async () => {
-    const { deps, store } = makeDeps({ redesignResult: { ok: false, error: "Gemini 503" } });
-    const out = await runAgentTool(makeSession(), deps, "redisenar_pagina", CALL);
-    assert.equal(out.response.ok, false);
-    assert.equal(store.saved.length, 0);
-    assert.equal(store.versions.length, 0);
-  });
-
-  it("un rediseño con data-slot-path se rechaza y no persiste (guard del embudo)", async () => {
-    const { deps, store } = makeDeps({
-      redesignResult: {
-        ok: true,
-        html: '<!doctype html><html><body><div data-slot-path="x">hola</div>' + "x".repeat(2000) + "</body></html>",
-        usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
-      },
-    });
-    const out = await runAgentTool(makeSession(), deps, "redisenar_pagina", CALL);
-    assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /marcador reservado/);
-    assert.equal(store.saved.length, 0);
-  });
-
-  it("sin direccion → error accionable", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "redisenar_pagina", { resumen: "x" });
-    assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /direccion/);
-  });
-
-  // ⚰️ Esta prueba fijaba que el motor de rediseño RECIBÍA los hechos del
-  // perfil de negocio. Su inversa, desde el 2026-08-31: ya no hay perfil que
-  // recibir — y lo que impide que el rediseño pierda el teléfono del dueño
-  // no era ese bloque, sino `facts-kept.ts`, que lo COMPRUEBA en el resultado.
-  it("el motor de rediseño ya NO recibe un bloque de negocio", async () => {
-    const { deps, store } = makeDeps();
-    await runAgentTool(makeSession(), deps, "redisenar_pagina", CALL);
-    assert.ok(!("negocio" in store.redesigns[0]));
-  });
-});
-
-describe("buscar_en_pagina por selector", () => {
-  // LA COMPROBACION QUE IMPORTA: que la puerta nueva sea ALCANZABLE desde la
-  // herramienta, no solo que el modulo funcione. Una funcion perfecta que la
-  // ruta no llama es una funcion que no existe.
-  it("devuelve op_id de los elementos que casan con el selector", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const out = await runAgentTool(session, deps, "buscar_en_pagina", { selector: "h1" });
-    assert.equal(out.response.ok, true);
-    const c = out.response.coincidencias as { op_id: string | null; donde: string }[];
-    assert.ok(c.length >= 1, "no encontro el h1");
-    assert.ok(c[0]!.op_id, "sin op_id no se puede editar lo encontrado");
-    assert.equal(c[0]!.donde, "cuerpo");
-    assert.equal(out.response.selector, "h1");
-  });
-
-  it("texto Y selector a la vez se rechaza: son dos preguntas distintas", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "buscar_en_pagina", {
-      texto: "Tacos",
-      selector: "h1",
-    });
-    assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /no los dos/);
-  });
-
-  it("sin ninguna de las dos, el error apunta a la puerta que falta", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "buscar_en_pagina", {});
-    assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /selector/);
-  });
-
-  it("un selector imposible NO tumba el turno", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "buscar_en_pagina", {
-      selector: "p:has(> strong)",
-    });
-    // Da igual si el parser lo entiende o no: lo que no puede es lanzar.
-    assert.ok(typeof out.response.ok === "boolean");
-  });
-});
-
-describe("el gemelo etiquetado viaja con la mutacion", () => {
-  // POR QUE ESTA PRUEBA. Los ojos MIDEN el gemelo para que cada sonda lea el
-  // `data-op-id` del nodo que mide. Si la salida de la herramienta no lo trae,
-  // toda esa cadena compila y no hace nada: se mediria el guardado, que no
-  // lleva direcciones, y los avisos volverian a describir en vez de localizar.
-  //
-  // Se comprueba aqui —y no en el bucle— porque aqui esta el unico sitio donde
-  // se engancha (`marcar`, en `runAgentTool`), y porque `session.taggedHtml` ya
-  // no vale como fuente: `trabajar_en_pagina` la mueve a OTRA pagina a mitad de
-  // turno. Ver el campo `taggedHtml` de `ToolOutcome`.
-  it("editar_pagina devuelve el gemelo, y es el mismo documento que se guardo", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const target = contentOpId(session.taggedHtml);
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: "<h1>Titular medido</h1>" }],
-      resumen: "un cambio cualquiera",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.ok(out.updatedHtml, "sin updatedHtml no hay mutacion que verificar");
-    assert.ok(out.taggedHtml, "EL GEMELO NO VIAJO: los ojos medirian el guardado");
-    // Es el MISMO documento: quitarle las direcciones da byte a byte lo
-    // guardado. Si esto se rompe, los ojos estarian midiendo otra cosa que la
-    // que el visitante ve.
-    assert.equal(stripOpIds(out.taggedHtml!), out.updatedHtml);
-    assert.match(out.taggedHtml!, /data-op-id=/);
-    assert.doesNotMatch(out.updatedHtml!, /data-op-id=/);
-  });
-
-  it("cambiar de pagina NO contamina el gemelo de la mutacion anterior", async () => {
-    // EL BUG QUE ESTO FIJA, encontrado midiendo el 2026-09-05:
-    // `trabajar_en_pagina` re-etiqueta la sesion con el documento de OTRA
-    // pagina. Antes los ojos leian `session.taggedHtml` al cerrar el turno, asi
-    // que un turno que editaba la Home y luego se asomaba a otra pagina hacia
-    // que se midiera la pagina equivocada.
-    const { deps } = makeDeps({
-      data: { html: HTML, pages: { menu: { html: "<html><body><h1>Menu</h1></body></html>" } } } as ProjectData,
-    });
-    const session = makeSession();
-    const target = contentOpId(session.taggedHtml);
-    const edicion = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: "<h1>Home editada</h1>" }],
-      resumen: "edito la home",
-    });
-    assert.equal(edicion.response.ok, true);
-    const gemeloDeLaMutacion = edicion.taggedHtml;
-    assert.ok(gemeloDeLaMutacion);
-
-    // El modelo se asoma a otra pagina DESPUES de editar.
-    await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "menu" });
-
-    // La sesion ya apunta a la otra pagina...
-    assert.match(session.taggedHtml, /Menu/);
-    // ...pero el gemelo que viaja con la mutacion sigue siendo el de la Home.
-    assert.match(gemeloDeLaMutacion, /Home editada/);
-    assert.doesNotMatch(gemeloDeLaMutacion, /Menu/);
-  });
-});
-
-describe("editar_pagina", () => {
-  const PRUEBA_A = 'var a = await ui.texto("#resultado-a"); await ui.clic("#accion-a"); await ui.cambiaDe("#resultado-a", a);';
-  const PRUEBA_B = 'var b = await ui.texto("#resultado-b"); await ui.clic("#accion-b"); await ui.cambiaDe("#resultado-b", b);';
-
-  async function instalaRuntimeConPruebaA(session: AgentSession, deps: AgentDeps) {
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: "runtime", new_html: "window.estado = 'a';" }],
-      prueba_js: PRUEBA_A,
-      resumen: "conducta A",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorJs, PRUEBA_A);
-  }
-
-  async function instalaCopyA(session: AgentSession, deps: AgentDeps) {
-    const target = contentOpId(session.taggedHtml);
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{
-        op: "replace",
-        target,
-        new_html: '<h1>Cupones</h1><code id="cupon-a">A20</code><code id="cupon-b">B30</code><button data-ol-copy="cupon-a" aria-label="Copiar cupón">Copiar A</button>',
-      }],
-      prueba_js: PRUEBA_A,
-      resumen: "conducta copy A",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorJs, PRUEBA_A);
-  }
-
-  function copyOpId(taggedHtml: string): string {
-    const id = /<button[^>]*data-ol-copy[^>]*data-op-id="([^"]+)"|<button[^>]*data-op-id="([^"]+)"[^>]*data-ol-copy/.exec(taggedHtml);
-    const value = id?.[1] ?? id?.[2];
-    if (!value) throw new Error("no data-op-id found for copy button");
-    return value;
-  }
-
-  it("runtime B sin prueba no reutiliza la prueba A: persiste B, deja la promesa en null y avisa", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    await instalaRuntimeConPruebaA(session, deps);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: "runtime", new_html: "window.estado = 'b';" }],
-      resumen: "conducta B",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.ok(
-      store.data.html.includes("window.estado = 'b';"),
-      "el segundo script no llegó al documento",
-    );
-    assert.equal(session.behaviorJs, null);
-    assert.match(String(out.response.aviso_critico), /prueba/i);
-  });
-
-  it("runtime B con una prueba que no entra no se aplica: A sigue describiendo el runtime A", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    await instalaRuntimeConPruebaA(session, deps);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: "runtime", new_html: "window.estado = 'b';" }],
-      prueba_js: "x".repeat(5000),
-      resumen: "conducta B",
-    });
-
-    assert.equal(out.response.ok, false);
-    assert.match(String(out.response.detalle), /prueba_js.*pasa de/i);
-    assert.equal(store.data.html.includes("window.estado = 'b';"), false);
-    assert.equal(session.behaviorJs, PRUEBA_A);
-  });
-
-  it("una conducta nueva en el markup sin prueba produce aviso_critico", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const target = contentOpId(session.taggedHtml);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{
-        op: "replace",
-        target,
-        new_html: '<div><code id="cupon">TACOS20</code><button data-ol-copy="cupon" aria-label="Copiar cupón">Copiar</button></div>',
-      }],
-      resumen: "copiar cupón",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorJs, null);
-    assert.match(String(out.response.aviso_critico), /prueba/i);
-  });
-
-  it("una edición fallida con prueba B conserva la prueba A", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    await instalaRuntimeConPruebaA(session, deps);
-    const guardadosAntes = store.saved.length;
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: "no-existe", new_html: "<p>nunca persiste</p>" }],
-      prueba_js: PRUEBA_B,
-      resumen: "edición fallida",
-    });
-
-    assert.equal(out.response.ok, false);
-    assert.equal(store.saved.length, guardadosAntes);
-    assert.equal(session.behaviorJs, PRUEBA_A);
-  });
-
-  it("un cambio puramente textual no borra ni reemplaza A aunque reciba prueba B", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    await instalaRuntimeConPruebaA(session, deps);
-    const target = contentOpId(session.taggedHtml);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: "<h1>Nuevo titular</h1>" }],
-      prueba_js: PRUEBA_B,
-      resumen: "sólo texto",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorJs, PRUEBA_A);
-  });
-
-  it("borrar runtime tras A limpia la spec y no exige prueba de lo retirado", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    await instalaRuntimeConPruebaA(session, deps);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "delete", target: "runtime" }],
-      resumen: "retirar conducta",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorJs, null);
-    assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /prueba/i);
-  });
-
-  it("cambiar el valor de data-ol-copy con el mismo conteo limpia A y avisa si falta prueba", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    await instalaCopyA(session, deps);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{
-        op: "replace",
-        target: copyOpId(session.taggedHtml),
-        new_html: '<button data-ol-copy="cupon-b" aria-label="Copiar cupón">Copiar B</button>',
-      }],
-      resumen: "cambiar cupón",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorJs, null);
-    assert.match(String(out.response.aviso_critico), /prueba/i);
-  });
-
-  it("cambiar el valor de data-ol-copy con prueba B reemplaza A sin aviso falso", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    await instalaCopyA(session, deps);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{
-        op: "replace",
-        target: copyOpId(session.taggedHtml),
-        new_html: '<button data-ol-copy="cupon-b" aria-label="Copiar cupón">Copiar B</button>',
-      }],
-      prueba_js: PRUEBA_B,
-      resumen: "cambiar cupón",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorJs, PRUEBA_B);
-    assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /prueba/i);
-  });
-
-  it("retirar una conducta de markup limpia A y avisa que la mutación llegó sin prueba", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    await instalaCopyA(session, deps);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{
-        op: "replace",
-        target: copyOpId(session.taggedHtml),
-        new_html: '<button aria-label="Copiar cupón">Copiar manualmente</button>',
-      }],
-      resumen: "retirar copy",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorJs, null);
-    assert.match(String(out.response.aviso_critico), /prueba/i);
-  });
-
-  // ── 🔴 UNA PRUEBA MANDADA SE HONRA, TOCARA EL TURNO JAVASCRIPT O NO ────────
-  //
-  // La puerta era `cambioConducta` = «escribió runtime» O «cambió la huella de
-  // las CONDUCTAS» — un catálogo RETIRADO el 2026-08-23 que el modelo ya no
-  // emite. O sea, en la práctica: «¿tocaste JavaScript?».
-  //
-  // Y el contrato le dice lo contrario: «cuando el CSS puro ya resuelve
-  // —<details>/<summary>, un checkbox con peer-checked:, :target— prefiérelo».
-  // Así que al modelo que OBEDECE le tirábamos la prueba EN SILENCIO. Misma
-  // forma que los 7 casos de CONDUCTAS que suspendían al Agente por acertar.
-  it("un acordeón de CSS puro, sin una línea de JS, SÍ deja su prueba puesta", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const target = contentOpId(session.taggedHtml);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{
-        op: "replace",
-        target,
-        new_html: '<details id="faq"><summary id="abrir">¿Abren los domingos?</summary><p id="respuesta">Sí, de 10 a 14.</p></details>',
-      }],
-      prueba_js: 'await ui.clic("#abrir"); await ui.visible("#respuesta");',
-      resumen: "faq con details",
-    });
-
-    assert.equal(out.response.ok, true);
-    // NI runtime NI data-ol-*: el turno no toca JavaScript por ningún lado.
-    assert.equal(session.behaviorJs, 'await ui.clic("#abrir"); await ui.visible("#respuesta");');
-  });
-
-  // ── 🔴 EL `<script>` COLADO POR UNA EDICIÓN DE HTML ───────────────────────
-  //
-  // `cambioConducta` = «escribió runtime» O `tocaConducta`, y `tocaConducta`
-  // compara la huella de los 9 marcadores del catálogo de CONDUCTAS (retirado
-  // el 2026-08-23). Un `<script>` crudo metido por `new_html` no mueve
-  // ninguno de los dos: nadie pide prueba, NO SALTA el aviso de que falta, y
-  // el turno sale VERDE con comportamiento nuevo sin comprobar.
-  //
-  // La señal correcta no es un registro de tipos-de-cambio-conocidos: es mirar
-  // lo que de verdad cambió. ¿Ejecuta la página JavaScript que antes no
-  // ejecutaba? Eso se ve en el documento.
-  it("🔴 un <script> metido por new_html cuenta como comportamiento: se pide prueba", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const target = contentOpId(session.taggedHtml);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{
-        op: "replace",
-        target,
-        new_html:
-          '<div><button id="mas">+1</button><b id="n">0</b>' +
-          '<script>document.getElementById("mas").addEventListener("click",function(){' +
-          'document.getElementById("n").textContent="1";});<\/script></div>',
-      }],
-      // SIN prueba, que es el caso entero.
-      resumen: "contador",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.match(
-      String(out.response.aviso_critico ?? ""),
-      /prueba/i,
-      "un <script> nuevo no hizo saltar el aviso: el turno sale verde sin comprobar nada",
-    );
-  });
-
-  // CONTRA-PRUEBA: no se llora por cualquier cosa. Un `<script>` de datos
-  // (JSON-LD) no ejecuta nada, así que tocarlo NO es cambiar el comportamiento
-  // — y pedir prueba ahí sería el aviso que el dueño aprende a ignorar.
-  it("CONTRA-PRUEBA: un <script> de JSON-LD no es comportamiento y no pide prueba", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const target = contentOpId(session.taggedHtml);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{
-        op: "replace",
-        target,
-        new_html:
-          '<div><h2>Horario</h2>' +
-          '<script type="application/ld+json">{"@type":"Store","name":"Mi Negocio"}<\/script></div>',
-      }],
-      resumen: "datos para buscadores",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.equal(
-      /Cambiaste el COMPORTAMIENTO/.test(String(out.response.aviso_critico ?? "")),
-      false,
-      "pidió prueba por un <script> que no ejecuta nada",
-    );
-  });
-
-  it("y si esa prueba viene mal formada, se OYE — antes se callaba sin JS de por medio", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    const target = contentOpId(session.taggedHtml);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: '<details id="faq"><summary>x</summary></details>' }],
-      // Una que no entra —se pasa del tope— también se oye sin JS de por medio:
-      // rechaza la llamada igual que con runtime.
-      prueba_js: "x".repeat(5000),
-      resumen: "faq",
-    });
-
-    assert.equal(out.response.ok, false);
-    assert.equal(out.response.error, "prueba_js_demasiado_grande");
-    assert.equal(store.saved.length, 0);
-  });
-
-  it("cambiar sólo el texto de un control conserva A y no exige otra prueba", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    await instalaCopyA(session, deps);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{
-        op: "replace",
-        target: copyOpId(session.taggedHtml),
-        new_html: '<button data-ol-copy="cupon-a" aria-label="Copiar cupón">Copia tu descuento</button>',
-      }],
-      resumen: "texto del botón",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorJs, PRUEBA_A);
-    assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /prueba/i);
-  });
-
-  it("cambiar una fórmula calc precio*2→precio*3 limpia la spec A y exige prueba", async () => {
-    const calcHtml = '<!doctype html><html><head><title>Cotizador</title><meta name="description" content="x"></head><body><div data-ol-calc><input data-ol-val="precio" type="number" value="10"><output data-ol-out="precio * 2" aria-live="polite">20</output></div></body></html>';
-    const { deps } = makeDeps({ data: { html: calcHtml } });
-    const session = makeSession(calcHtml);
-    session.behaviorJs = PRUEBA_A;
-    const target = /<output[^>]*data-op-id="([^"]+)"/.exec(session.taggedHtml)?.[1];
-    assert.ok(target, "output calc sin data-op-id");
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: '<output data-ol-out="precio * 3" aria-live="polite">30</output>' }],
-      resumen: "cambiar fórmula",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorJs, null);
-    assert.match(String(out.response.aviso_critico), /prueba/i);
-  });
-
-  it("intercambiar a↔b entre #ba/#bb no conserva la spec A", async () => {
-    const html = '<!doctype html><html><head><title>Cupones</title><meta name="description" content="x"></head><body><code id="a">A</code><code id="b">B</code><button id="ba" data-ol-copy="a">Copiar A</button><button id="bb" data-ol-copy="b">Copiar B</button></body></html>';
-    const { deps } = makeDeps({ data: { html } });
-    const session = makeSession(html);
-    session.behaviorJs = 'await ui.clic("#ba");';
-    const ba = /<button[^>]*id="ba"[^>]*data-op-id="([^"]+)"/.exec(session.taggedHtml)?.[1];
-    const bb = /<button[^>]*id="bb"[^>]*data-op-id="([^"]+)"/.exec(session.taggedHtml)?.[1];
-    assert.ok(ba && bb, "controles copy sin data-op-id");
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        { op: "replace", target: ba, new_html: '<button id="ba" data-ol-copy="b">Copiar A</button>' },
-        { op: "replace", target: bb, new_html: '<button id="bb" data-ol-copy="a">Copiar B</button>' },
-      ],
-      resumen: "intercambiar cupones",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorJs, null);
-    assert.match(String(out.response.aviso_critico), /prueba/i);
-  });
-
-  it("applies a replace op, persists, snapshots pre+post, re-tags", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    // Rust's tagWithOpIds appends data-op-id AFTER any pre-existing
-    // attributes (verified against lib/html-ops.test.ts's fixtures), so
-    // locate it order-agnostically rather than assuming it comes first.
-    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: `<h1 data-x="k">Tacos y Más</h1>` }],
-      resumen: "titular nuevo",
-    });
-    assert.equal(out.response.ok, true);
-    assert.ok(out.updatedHtml?.includes("Tacos y Más"));
-    assert.ok(!out.updatedHtml?.includes("data-op-id"));
-    assert.ok(store.data.html.includes("Tacos y Más"));
-    assert.equal(store.versions.length, 2);
-    assert.ok(session.taggedHtml.includes("Tacos y Más"));
-    assert.ok(session.taggedHtml.includes("data-op-id"));
-  });
-
-  // LA DIRECCIÓN DEL DESHACER llega hasta el outcome. Sin este id, el botón del
-  // Chat sólo sabía mandar el documento por `PATCH /html` — que lo sanea y le
-  // quitaba el JavaScript del modelo. Se comprueba que sale el snapshot del
-  // «antes» (el primero), no el del «después».
-  it("el outcome de editar_pagina trae el id de la versión de ANTES", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: `<h1>Otro titular</h1>` }],
-      resumen: "titular nuevo",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(store.versions.length, 2, "esperaba el snapshot de antes y el de después");
-    // El doble numera como la tabla real y `unshift`ea, así que el más viejo
-    // —el «antes»— es el último del array.
-    const antes = store.snapshots[store.snapshots.length - 1];
-    assert.equal(out.versionPrevia, antes.id);
-    assert.ok(
-      antes.html.includes("Tacos"),
-      "la versión a la que apunta el Deshacer no es el documento de antes del turno",
-    );
-  });
-  // 🔴 REGRESIÓN medida en un proyecto REAL el 2026-08-23 (Pomodoro, 60 ids
-  // dentro de `data.html`). Un turno de SÓLO comportamiento no llama a
-  // `applyOps` —que es quien quitaba los ids, por accidente y no por contrato—
-  // y guardaba `session.taggedHtml` entero. El daño no era cosmético: es
-  // PERMANENTE, porque `tag_with_op_ids` salta el elemento que ya lleva id sin
-  // contarlo, y al turno siguiente la ruta responde 400 «no taggable elements»
-  // del que ya no se sale. El proyecto quedaba imposible de editar.
-  it("un edit de SOLO runtime no deja data-op-id en el documento guardado", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
-      edits: [
-        { op: "replace", target: "runtime", new_html: "document.querySelector('h1');" },
-      ],
-      resumen: "solo comportamiento",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal((out.response as { edits_aplicados?: number }).edits_aplicados, 0);
-    assert.ok(!store.data.html.includes("data-op-id"), "data.html se guardo etiquetado");
-    // Lo que de verdad importa: el documento guardado sigue siendo editable.
-    assert.ok(tagWithOpIds(store.data.html).taggedCount > 0, "el proyecto quedo inservible");
-  });
-
-  // La otra mitad del arreglo, y el motivo por el que hace falta desetiquetar
-  // en la puerta: sin esto no hay forma de recuperar un proyecto ya dañado.
-  it("un documento YA etiquetado solo vuelve a ser editable si se desetiqueta", () => {
-    const etiquetado = tagWithOpIds(HTML).taggedHtml;
-    assert.equal(tagWithOpIds(etiquetado).taggedCount, 0);
-    assert.ok(tagWithOpIds(stripOpIds(etiquetado)).taggedCount > 0);
-  });
-
-  // 🔴 LOS AVISOS SE PISABAN. Eran CUATRO claves `aviso_critico` sueltas en el
-  // mismo objeto literal, así que la última ganaba en silencio: un turno que a
-  // la vez descartaba ops contra la raíz y cambiaba el comportamiento sin
-  // `prueba` sólo contaba UNA de las dos cosas. El comentario de
-  // `persistHtmlChange` ya pedía lo contrario — «el modelo sigue viendo TODAS
-  // las razones» — y el código decía otra cosa.
-  it("dos problemas a la vez llegan LOS DOS al modelo", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const raiz = /<body[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)?.[1] ?? "0";
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        { op: "replace", target: "runtime", new_html: "document.title = document.title;" },
-        { op: "replace", target: raiz, new_html: "<body><p>toda la pagina</p></body>" },
-      ],
-      resumen: "dos problemas",
-    });
-    assert.equal(out.response.ok, true);
-    const aviso = (out.response as { aviso_critico?: string }).aviso_critico ?? "";
-    // (a) la op contra la raíz se descartó
-    assert.match(aviso, /raiz|<body>|ENTERA/i);
-    // (b) y cambió el comportamiento sin mandar `prueba`
-    assert.match(aviso, /prueba/i);
-  });
-
-  it("rejects >8 edits without touching the doc", async () => {
-    const { deps, store } = makeDeps();
-    const edits = Array.from({ length: 9 }, () => ({ op: "delete", target: "zz" }));
-    const out = await runAgentTool(makeSession(), deps, "editar_pagina", { edits, resumen: "x" });
-    assert.equal(out.response.ok, false);
-    assert.equal(store.saved.length, 0);
-  });
-  it("returns ok:false on a missing target (model can retry)", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
-      edits: [{ op: "replace", target: "nope", new_html: "<p>x</p>" }],
-      resumen: "x",
-    });
-    assert.equal(out.response.ok, false);
-  });
-  it("blocks new_html carrying data-slot-path", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: `<h1 data-slot-path="x">hack</h1>` }],
-      resumen: "x",
-    });
-    assert.equal(out.response.ok, false);
-    assert.equal(store.saved.length, 0);
-  });
-
-  // INVERTIDA el 2026-08-26. Fijaba que el `<iframe>` del modelo se borrara y
-  // que se le AVISARA de que su mapa había muerto. El aviso era la disculpa por
-  // la amputación: sin amputación no hay nada que disculpar.
-  //
-  // Es el mismo caso que `bakeMapEmbeds`, que existía para volver a meter el
-  // iframe que el saneador acababa de quitar. Ahora el modelo escribe el mapa
-  // y el mapa se queda.
-  it("el <iframe> que escribe el modelo SE QUEDA, y no hay nada que avisar", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "replace",
-          target,
-          new_html: `<h1>Visítanos</h1><iframe src="https://maps.google.com/x"></iframe>`,
-        },
-      ],
-      resumen: "mapa",
-    });
-    assert.equal(out.response.ok, true);
-    assert.ok(store.data.html.includes("<iframe"), "se le borró el mapa al modelo");
-    assert.equal(
-      (out.response as { aviso?: string }).aviso,
-      undefined,
-      "avisó de una pérdida que ya no ocurre",
-    );
-  });
-
-  // INVERTIDA por lo mismo. Este aviso llegó a ofrecerle al modelo una CONDUCTA
-  // o «CSS puro» como alternativa a su propio JavaScript — el catálogo de
-  // recetas existía justo porque no le dejábamos escribir un `<script>`. Las
-  // conductas se retiraron y el script se queda.
-  it("el <script> y el on* que escribe el modelo SE QUEDAN, sin aviso", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "replace",
-          target,
-          new_html: `<h1>Menú</h1><button onclick="open()">Abrir</button><script>wire()</script>`,
-        },
-      ],
-      resumen: "menú",
-    });
-    assert.equal(out.response.ok, true);
-    assert.ok(store.data.html.includes("wire()"), "se le borró el script");
-    assert.ok(store.data.html.includes("onclick"), "se le borró el manejador");
-    assert.equal(
-      (out.response as { aviso?: string }).aviso,
-      undefined,
-      "avisó de una pérdida que ya no ocurre",
-    );
-  });
-
-  it("stays quiet on a clean edit (no aviso to cry wolf with)", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: `<h1>Tacos</h1>` }],
-      resumen: "titular",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal((out.response as { aviso?: string }).aviso, undefined);
-  });
-
-  // Task 16 — validateBehaviors wired into the SAME `aviso` channel a control
-  // mal cableado que llega al documento guardado es otra vez un control
-  // muerto, y el modelo debe enterarse en ESTE turno, no el visitante en la
-  // página publicada.
-  // Gate/request-surfaces Task 3 — the Agent is a fail-CLOSED surface: the
-  // user's page already exists, so refusing an edit costs them the edit, not
-  // the page. Until now a mis-wired conducta saved and only warned, which
-  // meant the visitor could meet the dead control before the model ever
-  // circled back. Now the document is refused and the stored page is
-  // untouched; the same prose still reaches the model, as the error.
-  it("refuses the edit when a data-ol-copy points at a missing id (dead at birth)", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    const before = store.data.html;
-    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        { op: "replace", target, new_html: `<h1>Menú</h1><button data-ol-copy="cupon">Copiar</button>` },
-      ],
-      resumen: "boton copiar",
-    });
-    assert.equal(out.response.ok, false);
-    assert.equal(store.saved.length, 0);
-    assert.equal(store.data.html, before);
-    const error = String((out.response as { error?: string }).error ?? "");
-    // The reason must survive the refusal — a model told only "invalid"
-    // cannot fix anything.
-    assert.match(error, /cupon/);
-    assert.match(error, /nacería muerto/i);
-  });
-
-  it("refuses the edit when a data-ol-countdown value isn't a valid ISO date", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "replace",
-          target,
-          new_html: `<h1>Oferta</h1><div data-ol-countdown="15 de agosto"><span data-ol-cd="days">00</span></div>`,
-        },
-      ],
-      resumen: "countdown",
-    });
-    assert.equal(out.response.ok, false);
-    assert.equal(store.saved.length, 0);
-    assert.match(String((out.response as { error?: string }).error ?? ""), /fecha ISO válida/i);
-  });
-
-  it("una conducta bien cableada con su prueba instala esa spec y no llora lobo", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "replace",
-          target,
-          new_html: `<h1>Tacos</h1><code id="cupon-verano">TACOS20</code><button data-ol-copy="cupon-verano" aria-label="Copiar cupón">Copiar</button>`,
-        },
-      ],
-      prueba_js: PRUEBA_B,
-      resumen: "cupon correcto",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal((out.response as { aviso?: string }).aviso, undefined);
-    assert.equal((out.response as { aviso_critico?: string }).aviso_critico, undefined);
-    assert.equal(session.behaviorJs, PRUEBA_B);
-  });
-
-  // ANTES componía DOS motivos: «te quité el script» + «tu conducta nace
-  // muerta». El primero desapareció el 2026-08-26 — ya no se le quita el
-  // script—, pero el segundo sigue siendo real y es el que importa: un
-  // `data-ol-copy` que apunta a un id que no existe es un botón que nace
-  // mudo. Lo que se conserva es que el rechazo DICE cuál es el id fantasma.
-  it("un control cableado a un id fantasma se rechaza, y el error nombra el id", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    const target = /<h1[^>]*\bdata-op-id="([^"]+)"/.exec(session.taggedHtml)![1];
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "replace",
-          target,
-          new_html: `<h1>Menú</h1><script>wire()</script><button data-ol-copy="ghost">Copiar</button>`,
-        },
-      ],
-      resumen: "compuesto",
-    });
-    assert.equal(out.response.ok, false);
-    assert.equal(store.saved.length, 0);
-    const error = String((out.response as { error?: string }).error ?? "");
-    assert.match(error, /ghost/);
-    assert.match(error, /nacería muerto/i);
-    // Y NO se le reprocha el `<script>`: ya no se le quita, así que
-    // mencionarlo sería mandarle a arreglar algo que no está roto.
-    assert.ok(!/JavaScript/i.test(error), `el error habla de un JS que ya no se toca: ${error}`);
-  });
-
-  // ── op="attrs" y la red que la acompaña (2026-09-02) ──────────────────────
-  //
-  // EL FALLO, en producción: «centra la sección de entradas y quítale los dos
-  // círculos del borde». Len lo entendió bien, pero para quitar una clase sólo
-  // tenía `replace`, que sustituye el SUBÁRBOL — y la tarjeta desapareció con
-  // sus precios dentro. Aquí se prueban las dos mitades de la cura: la op que
-  // lo hace imposible, y la guarda para los `replace` que sigan existiendo.
-  const TARJETA = `<!doctype html><html><head><title>Cumbre</title></head><body>
-    <div data-x="card" class="ticket-stub rounded-2xl bg-white p-8">
-      <p>Early bird</p>
-      <p>$99 <span>$149</span></p>
-      <p>OCT 15, 2026 · VIRTUAL · 9AM–5PM ET</p>
-      <ul><li>Acceso a los 3 tracks</li><li>Grabaciones 12 meses</li><li>Comunidad privada</li></ul>
-      <a href="#comprar">Comprar entrada</a>
-    </div>
-  </body></html>`;
-
-  function tarjetaOpId(taggedHtml: string): string {
-    const m = /<div[^>]*data-x="card"[^>]*data-op-id="([^"]+)"|<div[^>]*data-op-id="([^"]+)"[^>]*data-x="card"/.exec(taggedHtml);
-    const id = m?.[1] ?? m?.[2];
-    if (!id) throw new Error("no se encontró la tarjeta en el documento etiquetado");
-    return id;
-  }
-
-  it('attrs quita una clase y NO toca el contenido — el fallo de producción, imposible', async () => {
-    const { deps } = makeDeps();
-    const session = makeSession({ html: TARJETA });
-    const target = tarjetaOpId(session.taggedHtml);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{
-        op: "attrs",
-        target,
-        attrs: [{ name: "class", value: "rounded-2xl bg-white p-8 mx-auto" }],
-      }],
-      resumen: "centrar la tarjeta y quitarle los círculos",
-    });
-
-    assert.equal(out.response.ok, true);
-    const html = String(out.updatedHtml);
-    // La clase decorativa se fue y la de centrado entró...
-    assert.ok(!/ticket-stub/.test(html), "la clase decorativa sigue ahí");
-    assert.match(html, /mx-auto/);
-    // ...y TODO lo de dentro sigue en su sitio. Esto es lo que `replace` perdía.
-    assert.match(html, /\$99/);
-    assert.match(html, /OCT 15, 2026/);
-    assert.match(html, /Comunidad privada/);
-    assert.match(html, /Comprar entrada/);
-  });
-
-  it("attrs con value null QUITA el atributo", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession({ html: TARJETA });
-    const target = tarjetaOpId(session.taggedHtml);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "attrs", target, attrs: [{ name: "class", value: null }] }],
-      resumen: "quitar la clase entera",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.ok(!/ticket-stub/.test(String(out.updatedHtml)));
-    assert.match(String(out.updatedHtml), /\$99/);
-  });
-
-  it("attrs sobre un target que no es un elemento se rechaza enseñando el camino", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession({ html: TARJETA });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "attrs", target: "styles", attrs: [{ name: "class", value: "x" }] }],
-      resumen: "atributos del CSS",
-    });
-
-    assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /styles/);
-  });
-
-  it("attrs sin lista de atributos se rechaza diciendo qué falta", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession({ html: TARJETA });
-    const target = tarjetaOpId(session.taggedHtml);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "attrs", target }],
-      resumen: "sin attrs",
-    });
-
-    assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /attrs/);
-  });
-
-  // LA RED. `attrs` cierra el camino que causó el fallo, pero los `replace`
-  // legítimos siguen existiendo y un modelo puede seguir truncando uno. Cuando
-  // pase, el turno NO puede cerrar en silencio.
-  it("un replace que vacía el nodo se guarda pero sale con aviso_critico", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession({ html: TARJETA });
-    const target = tarjetaOpId(session.taggedHtml);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: '<div class="rounded-2xl bg-white p-8 mx-auto"></div>' }],
-      resumen: "centrar la tarjeta",
-    });
-
-    assert.equal(out.response.ok, true);
-    const aviso = String(out.response.aviso_critico);
-    assert.match(aviso, /VACI/i);
-    // El aviso tiene que enseñar la salida buena, no sólo regañar.
-    assert.match(aviso, /attrs/);
-    assert.equal(out.response.contenido_perdido, 1);
-  });
-
-  it("un replace que conserva el contenido no dispara la guarda", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession({ html: TARJETA });
-    const target = tarjetaOpId(session.taggedHtml);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{
-        op: "replace",
-        target,
-        new_html: `<div class="rounded-2xl bg-white p-8 mx-auto"><p>Early bird</p><p>$99 <span>$149</span></p><p>OCT 15, 2026 · VIRTUAL · 9AM–5PM ET</p><ul><li>Acceso a los 3 tracks</li><li>Grabaciones 12 meses</li><li>Comunidad privada</li></ul><a href="#comprar">Comprar entrada</a></div>`,
-      }],
-      resumen: "centrar la tarjeta conservándolo todo",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.equal(out.response.contenido_perdido, undefined);
-  });
-});
-
-// ⚰️ RETIRADA con `sanitizeAviso` el 2026-09-05. Fijaba que aquel aviso
-// derivase la nómina de conductas en vez de tener una copia hardcodeada — la
-// propiedad era buena y sigue sujeta para los otros sitios en
-// lib/conductas-heredadas/prose-derivation.test.ts. Lo que ya no existe es el
-// cuarto sitio: el aviso se fue porque no podía dispararse (ver la lápida en
-// tools.ts). Una prueba de conformidad sobre una función borrada no prueba nada.
-describe("cambiar_tema", () => {
-  it("applies an accent bundle, persists through the sanitize pipeline, re-tags", async () => {
-    const { deps, store } = makeDeps({ data: { html: THEMED_HTML } });
-    const session = makeSession();
-    const out = await runAgentTool(session, deps, "cambiar_tema", { accent: "#e8743a" });
-    assert.equal(out.response.ok, true);
-    // The button path is the authority: the accent lands WCAG-nudged by
-    // lookFromAccent (contrast-walked against the derived bg), not raw.
-    const nudged = lookFromAccent("#e8743a").light["--ol-accent"];
-    assert.ok(store.data.html!.includes(`--ol-accent: ${nudged}`));
-    assert.ok(!store.data.html!.includes("data-op-id"));
-    assert.ok(session.taggedHtml.includes("data-op-id"));
-    assert.equal(store.versions.length, 2);
-    assert.ok(out.updatedHtml);
-  });
-  it("rejects a non-hex accent as data", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "cambiar_tema", { accent: "rojo" });
-    assert.equal(out.response.ok, false);
-    assert.equal(store.saved.length, 0);
-  });
-  it("accent without modo keeps the page's current dark mode (button reads modeRef)", async () => {
-    const darkDoc = THEMED_HTML.replace("<html>", `<html data-ol-mode="dark">`);
-    const { deps, store } = makeDeps({ data: { html: darkDoc } });
-    const out = await runAgentTool(makeSession(), deps, "cambiar_tema", { accent: "#e8743a" });
-    assert.equal(out.response.ok, true);
-    assert.match(store.data.html!, /<html[^>]*\sdata-ol-mode="dark"/);
-    const dark = lookFromAccent("#e8743a").dark;
-    assert.ok(store.data.html!.includes(`--ol-accent: ${dark["--ol-accent"]}`));
-    assert.ok(store.data.html!.includes(`--ol-bg: ${dark["--ol-bg"]}`));
-  });
-  it("standalone modo:dark re-derives the bundle from the page's current accent + stamps the attr", async () => {
-    const withAccent = THEMED_HTML.replace("<html>", `<html style="--ol-accent: #e8743a">`);
-    const { deps, store } = makeDeps({ data: { html: withAccent } });
-    const out = await runAgentTool(makeSession(), deps, "cambiar_tema", { modo: "dark" });
-    assert.equal(out.response.ok, true);
-    assert.match(store.data.html!, /<html[^>]*\sdata-ol-mode="dark"/);
-    const dark = lookFromAccent("#e8743a").dark;
-    assert.ok(store.data.html!.includes(`--ol-bg: ${dark["--ol-bg"]}`));
-    assert.ok(store.data.html!.includes(`--ol-accent: ${dark["--ol-accent"]}`));
-  });
-
-  // ── LA PAGINA EN BLANCO ───────────────────────────────────────────────────
-  // MEDIDO el 2026-08-22 en el brazo de CONTROL del experimento: 8 de 40 turnos
-  // de «cambiame la tipografia» acabaron con el <body> reemplazado por el <link>
-  // de la fuente. El documento guardado era `<html><head>…</head><link…></html>`
-  // — sin titular, sin telefono, sin boton. El Chat llevaba el guardian desde
-  // hacia meses; el Agente, que va ENCENDIDO por defecto, no.
-  it("una op contra la RAIZ no se aplica: borraria la pagina entera", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    const raiz = firstOpId(session.taggedHtml); // <html> o <body>
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: raiz, new_html: `<link rel="stylesheet" href="https://x">` }],
-      resumen: "fuente",
-    });
-    assert.equal(out.response.ok, false);
-    assert.equal(out.response.error, "op_contra_la_raiz");
-    // Lo que importa: NO se guardo nada. La pagina del usuario sigue entera.
-    assert.equal(store.saved.length, 0);
-    // Y se le dice al modelo por donde SI se hace.
-    assert.match(String(out.response.como_hacerlo), /target="styles"/);
-  });
-
-  it("si solo UNA op es contra la raiz, el resto del cambio SI se aplica", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    const raiz = firstOpId(session.taggedHtml);
-    const contenido = contentOpId(session.taggedHtml);
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        { op: "replace", target: contenido, new_html: "<h1>Tacos El Güero</h1>" },
-        { op: "replace", target: raiz, new_html: "<style>a{}</style>" },
-      ],
-      resumen: "dos cosas",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(out.response.edits_descartados, 1);
-    // Guardar-y-AVISAR: perder una op en silencio es la degradacion prohibida.
-    assert.match(String(out.response.aviso_critico), /pagina ENTERA/);
-    assert.ok(store.data.html!.includes("Tacos El Güero"));
-  });
-
-  // MEDIDO el 2026-08-22: 171 de las 178 plantillas curadas no dicen var(--ol-*)
-  // en ninguna parte. Sobre ellas esto devolvia `ok:true, tokens_aplicados:1` y
-  // la pagina se quedaba IDENTICA — un cambio reportado que no ocurrio.
-  it("no miente sobre una pagina que no lee tokens: se niega y señala el camino", async () => {
-    const { deps, store } = makeDeps({ data: { html: HTML } });
-    const out = await runAgentTool(makeSession(), deps, "cambiar_tema", { fuente: "editorial" });
-    assert.equal(out.response.ok, false);
-    assert.equal(out.response.error, "sin_tokens");
-    // No basta con negarse: hay que decir como SI se hace, o el usuario queda
-    // encerrado con la respuesta correcta.
-    assert.match(String(out.response.como_hacerlo), /target="styles"/);
-    // Y nada se guardo: la pagina queda byte-intacta.
-    assert.equal(store.saved.length, 0);
-  });
-
-  it("si un rasgo vive y otro no, aplica el que vive y AVISA del muerto", async () => {
-    // Lee el acento pero no la fuente.
-    const medio = HTML.replace("</head>", "<style>a{color:var(--ol-accent)}</style></head>");
-    const { deps, store } = makeDeps({ data: { html: medio } });
-    const out = await runAgentTool(makeSession(), deps, "cambiar_tema", {
-      accent: "#e8743a",
-      fuente: "editorial",
-    });
-    assert.equal(out.response.ok, true);
-    assert.deepEqual(out.response.sin_efecto, ["--ol-font-display"]);
-    assert.match(String(out.response.aviso_critico), /no cambió/);
-    assert.ok(store.data.html!.includes("--ol-accent: "));
-  });
-
-  // La fuente tiene que EXISTIR, no solo estar nombrada: sin su hoja el
-  // navegador cae al generico y el usuario ve Times New Roman.
-  it("carga la hoja de Google de la fuente que acaba de nombrar", async () => {
-    const { deps, store } = makeDeps({ data: { html: THEMED_HTML } });
-    const out = await runAgentTool(makeSession(), deps, "cambiar_tema", { fuente: "editorial" });
-    assert.equal(out.response.ok, true);
-    assert.ok(store.data.html!.includes("fonts.googleapis.com/css2?family=Fraunces"));
-  });
-
-  it("no duplica la hoja si la fuente ya estaba cargada", async () => {
-    const ya = THEMED_HTML.replace(
-      "</head>",
-      `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&display=swap"></head>`,
-    );
-    const { deps, store } = makeDeps({ data: { html: ya } });
-    await runAgentTool(makeSession(), deps, "cambiar_tema", { fuente: "editorial" });
-    assert.equal(store.data.html!.split("family=Fraunces").length - 1, 1);
-  });
-});
-
-describe("aplicar_tematica", () => {
-  it("stamps a kit, persists through sanitize, keeps settings intact, re-tags", async () => {
-    const kit = TEMATICA_PRESETS[0];
-    const { deps, store } = makeDeps({ data: { html: HTML, settings: { languages: ["en"] } } });
-    const session = makeSession();
-    const out = await runAgentTool(session, deps, "aplicar_tematica", { tematica: kit.id });
-    assert.equal(out.response.ok, true);
-    assert.ok(store.data.html!.includes(`data-ol-tematica="${kit.id}"`));
-    assert.ok(store.data.html!.includes("<style data-ol-tematica"));
-    assert.ok(!store.data.html!.includes("data-op-id"));
-    // Testigo de que el kit no pisa OTROS ajustes. Era `motion`, que se
-    // retiró el 2026-08-26; `languages` sirve igual y sigue existiendo.
-    assert.deepEqual(store.data.settings?.languages, ["en"]);
-    assert.equal(store.versions.length, 2);
-    assert.ok(session.taggedHtml.includes("data-op-id"));
-    assert.ok(out.updatedHtml?.includes(`data-ol-tematica="${kit.id}"`));
-  });
-  it('tematica:"quitar" strips a previously applied kit, leaves tokens alone', async () => {
-    const kit = TEMATICA_PRESETS[0];
-    const dressed = applyTematicaToHtml(HTML, kit.id) as { html: string };
-    const { deps, store } = makeDeps({ data: { html: dressed.html } });
-    const out = await runAgentTool(makeSession(), deps, "aplicar_tematica", { tematica: "quitar" });
-    assert.equal(out.response.ok, true);
-    assert.ok(!store.data.html!.includes("data-ol-tematica"));
-    assert.ok(store.data.html!.includes(`--ol-accent: ${kit.tokens["--ol-accent"]}`));
-  });
-  it("rejects an unknown tematica id as data, without saving", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "aplicar_tematica", { tematica: "no-existe" });
-    assert.equal(out.response.ok, false);
-    assert.equal(store.saved.length, 0);
-  });
-});
-
-// ── EL PLANO B NO DEJA DESTRUIR A CIEGAS ──────────────────────────────────
-//
-// Cuando la pagina no cabe en un turno, el modelo entra con SOLO EL INDICE: una
-// linea por seccion, sin un byte de su contenido. Y el indice lista los hijos
-// DIRECTOS de <body>, asi que en una pagina envuelta en un solo <div> —el patron
-// mas comun de pagina generada por IA— ese indice es UNA LINEA, y esa linea es la
-// pagina entera.
-//
-// El prompt le decia que podia «reemplazarla entera» y el unico freno era una
-// frase pidiendole que no inventara. rejectDocumentWideOps no lo para: el
-// envoltorio no es <html> ni <body>. Auditado el 2026-09-01, antes de que esta
-// ruta llegara a correr en produccion.
-describe("el plano B no deja destruir a ciegas", () => {
-  // El envoltorio unico: todo el documento cuelga de un solo <div>.
-  const ENVUELTA =
-    '<html><body><div id="page"><header><h1>Grano Alto</h1></header>' +
-    "<section><h2>Precios</h2><p>Desde 180</p></section>" +
-    "<footer><p>Contacto</p></footer></div></body></html>";
-
-  /** El id del envoltorio: la UNICA linea que veria el modelo en el indice. */
-  function idEnvoltorio(tagged: string): string {
-    const m = /<div[^>]*id="page"[^>]*data-op-id="([^"]+)"/.exec(tagged);
-    if (!m) throw new Error("no se encontro el envoltorio etiquetado");
-    return m[1];
-  }
-  function idSeccion(tagged: string): string {
-    const m = /<section[^>]*data-op-id="([^"]+)"/.exec(tagged);
-    if (!m) throw new Error("no se encontro la seccion etiquetada");
-    return m[1];
-  }
-  function sesionPlanoB() {
-    const session = makeSession({ html: ENVUELTA });
-    session.entroACiegas = true;
-    return session;
-  }
-
-  it("un replace contra una seccion que NO ha abierto se rechaza, y no guarda nada", async () => {
-    const { deps, store } = makeDeps({ data: { html: ENVUELTA } });
-    const session = sesionPlanoB();
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "replace",
-          target: idEnvoltorio(session.taggedHtml),
-          new_html: '<div id="page"><h1>Grano Alto</h1></div>',
-        },
-      ],
-      resumen: "rehacer la pagina",
-    });
-    assert.equal(out.response.ok, false);
-    assert.equal(out.response.error, "seccion_no_abierta");
-    assert.equal(store.saved.length, 0);
-    // Y el documento sigue entero: precios y pie donde estaban.
-    assert.ok(store.data.html!.includes("Precios"));
-    assert.ok(store.data.html!.includes("Contacto"));
-  });
-
-  it("un delete a ciegas tampoco pasa", async () => {
-    const { deps, store } = makeDeps({ data: { html: ENVUELTA } });
-    const session = sesionPlanoB();
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "delete", target: idEnvoltorio(session.taggedHtml) }],
-      resumen: "quitar",
-    });
-    assert.equal(out.response.ok, false);
-    assert.equal(out.response.error, "seccion_no_abierta");
-    assert.equal(store.saved.length, 0);
-  });
-
-  it("insertar antes o despues sigue libre: no destruye nada y es lo que hace util al indice", async () => {
-    const { deps, store } = makeDeps({ data: { html: ENVUELTA } });
-    const session = sesionPlanoB();
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "insert_after",
-          target: idEnvoltorio(session.taggedHtml),
-          new_html: "<section><p>Aviso legal</p></section>",
-        },
-      ],
-      resumen: "aviso",
-    });
-    assert.equal(out.response.ok, true);
-    assert.ok(store.data.html!.includes("Aviso legal"));
-  });
-
-  it("y en cuanto la ABRE con leer_estado, el mismo replace se aplica", async () => {
-    const { deps, store } = makeDeps({ data: { html: ENVUELTA } });
-    const session = sesionPlanoB();
-    const seccion = idSeccion(session.taggedHtml);
-    const leida = await runAgentTool(session, deps, "leer_estado", { op_id: seccion });
-    assert.ok(String((leida.response.seccion as { html?: string } | undefined)?.html).includes("Precios"));
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        { op: "replace", target: seccion, new_html: "<section><h2>Precios</h2><p>Desde 200</p></section>" },
-      ],
-      resumen: "subir el precio",
-    });
-    assert.equal(out.response.ok, true);
-    assert.ok(store.data.html!.includes("Desde 200"));
-  });
-
-  // EL BRAZO DE CONTROL. Fuera del plano B el modelo tiene el documento entero
-  // delante y no hay nada ciego: si esta guarda mordiera aqui, habria roto la
-  // edicion normal, que es el 100% de los turnos que hoy funcionan.
-  it("FUERA del plano B no cambia nada: con el documento delante el replace se aplica", async () => {
-    const { deps, store } = makeDeps({ data: { html: ENVUELTA } });
-    const session = makeSession({ html: ENVUELTA }); // sin soloIndice
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "replace",
-          target: idSeccion(session.taggedHtml),
-          new_html: "<section><h2>Precios</h2><p>Desde 250</p></section>",
-        },
-      ],
-      resumen: "subir el precio",
-    });
-    assert.equal(out.response.ok, true);
-    assert.ok(store.data.html!.includes("Desde 250"));
-  });
-});
-
-
-// ── Y LO VISTO CADUCA EN CUANTO LOS IDS SE MUEVEN ─────────────────────────
-//
-// El agujero (auditado el 2026-09-01). Los `data-op-id` son un contador en
-// orden de documento, asi que cualquier edicion los renumera de la herida hacia
-// abajo. `session.idsVistos` no se vaciaba NUNCA, y eso convertia la guarda de
-// arriba en un portillo que el modelo abria solo, con una edicion legitima:
-//
-//   <body 0><div 1><header 2><h1 3></header>
-//     <section 4><h2 5><p 6>Desde 180</p></section>
-//     <footer 7><p 8>Contacto</p></footer></div></body>
-//
-//   1. abre la seccion 4  -> vistos = {4, 5, 6}
-//   2. borra el 6 (el <p> de dentro: legitimo, lo habia visto)
-//   3. se re-etiqueta      -> AHORA EL <footer> ES EL 6
-//   4. reemplaza el 6      -> pasaba, y se llevaba EL PIE por delante.
-//
-// Medido con el motor real antes de escribir esto.
-describe("lo visto caduca cuando los ids se mueven", () => {
-  const ENVUELTA_IDS =
-    '<html><body><div id="page"><header><h1>Grano Alto</h1></header>' +
-    "<section><h2>Precios</h2><p>Desde 180</p></section>" +
-    "<footer><p>Contacto</p></footer></div></body></html>";
-
-  function idDe(tagged: string, re: RegExp): string {
-    const m = re.exec(tagged);
-    if (!m) throw new Error(`no se encontro el elemento: ${re}`);
-    return m[1]!;
-  }
-  const idSeccion = (t: string) => idDe(t, /<section[^>]*data-op-id="([^"]+)"/);
-  const idParrafoInterno = (t: string) =>
-    idDe(t, /<p[^>]*data-op-id="([^"]+)"[^>]*>Desde 180/);
-  const idHeader = (t: string) => idDe(t, /<header[^>]*data-op-id="([^"]+)"/);
-
-  function sesion() {
-    const session = makeSession({ html: ENVUELTA_IDS });
-    session.entroACiegas = true;
-    return session;
-  }
-
-  // 🔴 REESCRITA EL 2026-09-03, y el motivo importa.
-  //
-  // Antes decia: «un id que se desplazo sobre OTRA seccion deja de valer para
-  // destruir». Sujetaba que la guarda CAZABA el desplazamiento — borrabas un
-  // parrafo, el id pasaba a ser el <footer>, y `rejectBlindOps` impedia
-  // reemplazar un pie que el modelo no habia abierto.
-  //
-  // Con ids estables ese desplazamiento YA NO OCURRE: un id no se reutiliza
-  // jamas (`tagger.rs` acuna por encima del maximo), asi que el id borrado
-  // simplemente deja de existir. El incidente pasa de detectado a IMPOSIBLE, y
-  // esta prueba sujeta eso — que es mas fuerte, no menos.
-  it("un id borrado no aparece en otra seccion: deja de existir, punto", async () => {
-    const { deps, store } = makeDeps({ data: { html: ENVUELTA_IDS } });
-    const session = sesion();
-
-    // 1. Abre la seccion. A partir de aqui ha visto la seccion y sus hijos.
-    const seccion = idSeccion(session.taggedHtml);
-    const borradoId = idParrafoInterno(session.taggedHtml);
-    await runAgentTool(session, deps, "leer_estado", { op_id: seccion });
-
-    // 2. Borra el parrafo de dentro: legitimo, lo tenia delante.
-    const borrado = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "delete", target: borradoId }],
-      resumen: "quitar el precio viejo",
-    });
-    assert.equal(borrado.response.ok, true);
-    assert.ok(!store.data.html!.includes("Desde 180"));
-
-    // 3. LA PROPIEDAD NUEVA: ese id no es ahora otro elemento — no es NINGUNO.
-    const ahora = new RegExp(`<([a-zA-Z0-9-]+)[^>]*data-op-id="${borradoId}"`).exec(
-      session.taggedHtml,
-    );
-    assert.equal(ahora, null, `el id borrado reaparecio: ${session.taggedHtml}`);
-
-    // 4. Y usarlo no destruye nada: falla limpio, con el pie intacto.
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        { op: "replace", target: borradoId, new_html: "<footer><p>Otro</p></footer>" },
-      ],
-      resumen: "cambiar el pie",
-    });
-    assert.equal(out.response.ok, false);
-    assert.ok(store.data.html!.includes("Contacto"));
-    assert.ok(!store.data.html!.includes("Otro"));
-  });
-
-  it("y en cuanto ABRE el pie con su id nuevo, el mismo replace se aplica", async () => {
-    const { deps, store } = makeDeps({ data: { html: ENVUELTA_IDS } });
-    const session = sesion();
-    const seccion = idSeccion(session.taggedHtml);
-    const desplazado = idParrafoInterno(session.taggedHtml);
-    await runAgentTool(session, deps, "leer_estado", { op_id: seccion });
-    await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "delete", target: desplazado }],
-      resumen: "quitar el precio viejo",
-    });
-
-    await runAgentTool(session, deps, "leer_estado", { op_id: desplazado });
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        { op: "replace", target: desplazado, new_html: "<footer><p>Otro</p></footer>" },
-      ],
-      resumen: "cambiar el pie",
-    });
-    assert.equal(out.response.ok, true);
-    assert.ok(store.data.html!.includes("Otro"));
-  });
-
-  // EL BRAZO DE CONTROL, y la razon de que NO se vacie en cada re-etiquetado.
-  //
-  // Una lectura no cambia el documento, asi que la numeracion es la misma y lo
-  // que el modelo abrio SIGUE abierto. Vaciar ahi le obligaria a reabrir cada
-  // seccion en cada lectura — que en el plano B, donde cada lectura cuesta un
-  // viaje, es justo lo que no se puede pagar.
-  it("una lectura que NO cambia el documento no le hace olvidar lo abierto", async () => {
-    const { deps, store } = makeDeps({ data: { html: ENVUELTA_IDS } });
-    const session = sesion();
-    const seccion = idSeccion(session.taggedHtml);
-
-    // Abre la seccion, y despues MIRA otra cosa.
-    await runAgentTool(session, deps, "leer_estado", { op_id: seccion });
-    await runAgentTool(session, deps, "leer_estado", {
-      op_id: idHeader(session.taggedHtml),
-    });
-
-    // La seccion que abrio primero sigue siendo suya.
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "replace",
-          target: seccion,
-          new_html: "<section><h2>Precios</h2><p>Desde 220</p></section>",
-        },
-      ],
-      resumen: "subir el precio",
-    });
-    assert.equal(out.response.ok, true, JSON.stringify(out.response));
-    assert.ok(store.data.html!.includes("Desde 220"));
-  });
-
-  // Cambiar de pagina tambien renumera: los ids de la Home no valen en la nueva.
-  it("cambiar de pagina tambien caduca lo visto", async () => {
-    const { deps } = makeDeps({
-      data: {
-        html: ENVUELTA_IDS,
-        pages: {
-          precios: { title: "Precios", html: "<html><body><main><p>Otra</p></main></body></html>" },
-        },
-      },
-    });
-    const session = sesion();
-    await runAgentTool(session, deps, "leer_estado", {
-      op_id: idSeccion(session.taggedHtml),
-    });
-    assert.ok((session.idsVistos?.size ?? 0) > 0, "sanity: abrio algo");
-
-    await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "precios" });
-    assert.equal(
-      session.idsVistos,
-      undefined,
-      "al mudarse de pagina, los ids de la anterior no pueden seguir contando",
-    );
-  });
-});
-describe("leer_estado", () => {
+// H3 (2026-09-25): `leer_estado` se retiró. El estado del proyecto va en el
+// contexto al empezar —como el `git status` de Claude Code— y lo arma
+// `summarizeProjectState`; los almacenes son ficheros de /datos.
+describe("el estado del proyecto (el que va en el contexto)", () => {
   it("returns fresh module state after a mutation", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
     // El ejemplo era Reservas (retirada el 2026-08-21) y luego Colecciones
-    // (retirada el 2026-08-29). Lo que esta prueba vigila —que `leer_estado`
-    // vea la mutación del turno anterior y no una copia rancia— sigue vivo con
-    // cualquier módulo; hoy el único es `chat`.
+    // (retirada el 2026-08-29). Lo que esta prueba vigila —que el estado vea
+    // la mutación anterior y no una copia rancia— sigue vivo con cualquier
+    // módulo; hoy el único es `chat`.
     await runAgentTool(session, deps, "activar_modulo", { modulo: "chat" });
-    const out = await runAgentTool(session, deps, "leer_estado", {});
-    assert.equal((out.response.modulos as Record<string, boolean>).chat, true);
+    const estado = summarizeProjectState((await deps.loadProject("p1", "u1"))!, null);
+    assert.equal((estado.modulos as Record<string, boolean>).chat, true);
   });
-  it("incluir_documento returns a freshly tagged doc", async () => {
+  it("🔴 `leer_estado` ya no existe: el despachador no la conoce", async () => {
     const { deps } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "leer_estado", { incluir_documento: true });
-    assert.ok(String(out.response.documento).includes("data-op-id"));
-  });
-  // 🔴 MIRAR OTRA PÁGINA SIN MUDARSE — 2026-08-31.
-  //
-  // Hasta hoy el Agente sólo veía la ACTIVA: para saber cómo estaba el navbar
-  // de otra necesitaba `trabajar_en_pagina` + `leer_estado` (dos vueltas del
-  // bucle, cada una reenviando el historial) y otras dos para volver. Jesús lo
-  // reportó como «los links entre páginas fallan y se come muchos tokens»: le
-  // pidió arreglar el logo, se arregló en la Home, y /nosotros quedó igual.
-  //
-  // Es el modelo de v0 y Lovable —bajo demanda, nunca por adelantado—,
-  // comprobado antes de elegirlo.
-  describe("ver_pagina", () => {
-    const conSub: ProjectData = {
-      html: "<html><body><h1>Home</h1></body></html>",
-      pages: {
-        nosotros: {
-          slug: "nosotros",
-          title: "Nosotros",
-          html: '<html><body><header><a href="#">Logo</a></header></body></html>',
-        },
-      },
-    } as ProjectData;
-
-    it("devuelve el documento de OTRA página", async () => {
-      const { deps } = makeDeps({ data: conSub });
-      const out = await runAgentTool(makeSession(), deps, "leer_estado", {
-        ver_pagina: "nosotros",
-      });
-      const vista = out.response.pagina_vista as { pagina: string; documento: string };
-      assert.equal(vista.pagina, "nosotros");
-      assert.ok(vista.documento.includes('href="#"'), "no trae el HTML de la subpágina");
-    });
-
-    it("SIN data-op-id: es para mirar, no para editar", async () => {
-      const { deps } = makeDeps({ data: conSub });
-      const out = await runAgentTool(makeSession(), deps, "leer_estado", {
-        ver_pagina: "nosotros",
-      });
-      const vista = out.response.pagina_vista as { documento: string };
-      assert.ok(!vista.documento.includes("data-op-id"), "vino etiquetado");
-    });
-
-    // 🔴 BRAZO DE CONTROL, y es la propiedad que da nombre a la herramienta: el
-    // foco NO se mueve. Si `ver_pagina` mudara la sesión, el siguiente
-    // `editar_pagina` escribiría en la página equivocada — silenciosamente.
-    it("y NO mueve el foco: la sesión sigue donde estaba", async () => {
-      const { deps } = makeDeps({ data: conSub });
-      const session = makeSession();
-      await runAgentTool(session, deps, "leer_estado", { ver_pagina: "nosotros" });
-      assert.equal(session.page, null, "ver_pagina movió la sesión");
-      const out = await runAgentTool(session, deps, "leer_estado", {});
-      assert.equal(out.response.pagina_activa, "principal");
-    });
-
-    it("una página que no existe dice cuáles hay", async () => {
-      const { deps } = makeDeps({ data: conSub });
-      const out = await runAgentTool(makeSession(), deps, "leer_estado", {
-        ver_pagina: "inventada",
-      });
-      assert.equal(out.response.ok, false);
-      assert.ok(String(out.response.error).includes("nosotros"));
-    });
-
-    it("y sin `ver_pagina` la respuesta es la de siempre", async () => {
-      const { deps } = makeDeps({ data: conSub });
-      const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
-      assert.equal(out.response.pagina_vista, undefined);
-    });
-  });
-
-  it("pagina_activa is 'principal' on home", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
-    assert.equal(out.response.pagina_activa, "principal");
+    assert.equal(out.response.error, "herramienta desconocida");
   });
   // ⚰️ Aquí vivía su gemela: «el bloque negocio viaja en cada leer_estado
-  // cuando hay perfil real». Se fue con el perfil el 2026-08-31, y ésta —que
-  // ya existía como su brazo de control— pasa a ser el invariante entero: el
-  // ESTADO no lleva un bloque `negocio`, nunca.
+  // cuando hay perfil real». Se fue con el perfil el 2026-08-31: el ESTADO no
+  // lleva un bloque `negocio`, nunca.
   it("el ESTADO nunca lleva un bloque `negocio`", async () => {
     const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
-    assert.ok(!("negocio" in out.response));
-  });
-  it("pagina_activa is the slug on a subpage, and incluir_documento re-tags THAT subpage's html", async () => {
-    const data: ProjectData = { html: HTML, pages: { menu: { html: "<html><body><h1>Menú</h1></body></html>" } } };
-    const { deps } = makeDeps({ data });
-    const session = makeSession({ page: "menu", html: data.pages!.menu.html });
-    const out = await runAgentTool(session, deps, "leer_estado", { incluir_documento: true });
-    assert.equal(out.response.pagina_activa, "menu");
-    assert.ok(String(out.response.documento).includes("Menú"));
-    assert.ok(!String(out.response.documento).includes("Tacos El Güero"));
+    const estado = summarizeProjectState((await deps.loadProject("p1", "u1"))!, null);
+    assert.ok(!("negocio" in estado));
   });
 });
 
@@ -2072,117 +523,6 @@ describe("preparar_marketing", () => {
   it("invalid register comes back as data", async () => {
     const { deps } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "preparar_marketing", { registro: "no-existe" });
-    assert.equal(out.response.ok, false);
-  });
-});
-
-describe("crear_pagina", () => {
-  // 🔴 UN MÓDULO RETIRADO NO PUEDE ACABAR EN UNA PÁGINA EN BLANCO.
-  //
-  // El esquema anunciaba modulo="bookings" (Reservas se retiró el 2026-08-21)
-  // y el boundary lo convertía en undefined SIN DECIR NADA. El core contestaba
-  // entonces "se requiere slug, titulo o modulo" —un error de argumentos que
-  // no menciona Reservas— así que el modelo reintentaba con slug y título y
-  // creaba una página genérica vacía, dándole al dueño la apariencia de haber
-  // atendido su petición. Los evals ya castigaban esa mentira; el esquema la
-  // provocaba.
-  it("un modulo retirado se RECHAZA nombrándolo, y no crea nada", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "crear_pagina", {
-      modulo: "bookings",
-      titulo: "Reservas",
-    });
-    assert.equal(out.response.ok, false);
-    // El error tiene que decir QUÉ pasa, no un genérico de argumentos: es lo
-    // único que impide que el modelo reintente y fabrique la página vacía.
-    assert.match(String(out.response.error), /SE RETIRARON|ya no existe|no existe un módulo/i);
-    assert.match(String(out.response.error), /honestidad/i);
-    assert.equal(store.saved.length, 0);
-    assert.equal(Object.keys(store.data.pages ?? {}).length, 0);
-  });
-
-  // 🔴 ESTA PRUEBA SE INVIRTIÓ, no se borró.
-  //
-  // Decía «y collections, que SÍ existe, sigue naciendo con su sección». Era
-  // cierto hasta el 2026-08-29: ese día se retiraron las Colecciones y con
-  // ellas `PAGE_MODULES` entero, o sea que `crear_pagina` YA NO NACE NINGUNA
-  // página de módulo. La prueba se quedó pidiendo lo contrario y llevaba días
-  // en rojo, arrastrando con ella la señal de las otras 610.
-  //
-  // Lo que hay que clavar ahora es lo de al lado: que `collections` se rechace
-  // NOMBRÁNDOSE, igual que `bookings`. Si el rechazo fuera un genérico de
-  // argumentos, el modelo reintentaría y acabaría fabricando la página vacía —
-  // que es el fallo que el test de arriba existe para impedir.
-  it("y collections, que TAMBIÉN se retiró, se rechaza igual", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "crear_pagina", { modulo: "collections" });
-    assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /SE RETIRARON|ya no existe|no existe un módulo/i);
-    assert.equal(store.saved.length, 0);
-  });
-
-  it("creates a page from the home shell and saves, deriving the slug from titulo when absent", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "crear_pagina", { titulo: "Sobre Nosotros" });
-    assert.equal(out.response.ok, true);
-    assert.equal(out.response.slug, "sobre-nosotros");
-    assert.equal(out.action?.tool, "crear_pagina");
-    assert.ok(store.data.pages?.["sobre-nosotros"]);
-    assert.equal(store.saved.length, 1);
-  });
-
-  it("🔴 deja la sesión TRABAJANDO en la página nueva, no en la Home", async () => {
-    // El modo de fallo no era un error, era peor: el modelo llamaba a
-    // `editar_pagina` justo después con los op-ids de la HOME y las ediciones
-    // entraban ahí. «Créame /pricing con tres planes» te metía los planes en
-    // la portada y te dejaba /pricing vacía al lado. Sólo se salvaba si el
-    // modelo encadenaba `trabajar_en_pagina` por su cuenta.
-    const session = makeSession();
-    const { deps } = makeDeps();
-    const out = await runAgentTool(session, deps, "crear_pagina", { slug: "pricing" });
-
-    assert.equal(out.response.ok, true);
-    assert.equal(session.page, "pricing");
-    assert.equal(out.page, "pricing");
-    // Y el documento activo es el nuevo, no el de la Home: sin esto los
-    // op-ids del siguiente `editar_pagina` seguirían apuntando a la portada.
-    assert.ok(session.taggedHtml.includes("data-op-id"));
-    // El shell viene de la Home pero el CONTENIDO no: el párrafo de la
-    // portada no puede estar en la página nueva.
-    assert.ok(!session.taggedHtml.includes("Los mejores del barrio"));
-    // El lienzo del taller sigue al foco.
-    assert.equal(typeof out.updatedHtml, "string");
-    assert.ok((out.updatedHtml ?? "").length > 0);
-  });
-
-  it("y se lo DICE al modelo, para que no describa un cambio en la página equivocada", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "crear_pagina", { slug: "pricing" });
-    assert.equal(out.response.pagina_activa, "pricing");
-    assert.match(String(out.response.nota), /ya no valen|leer_estado/);
-  });
-
-
-  it("surfaces exists/limit/reserved-slug errors as data, without saving", async () => {
-    const { deps: depsExists } = makeDeps({ data: { html: HTML, pages: { menu: { html: "<html>x</html>" } } } });
-    const exists = await runAgentTool(makeSession(), depsExists, "crear_pagina", { slug: "menu" });
-    assert.equal(exists.response.ok, false);
-
-    const { deps: depsReserved, store: storeReserved } = makeDeps();
-    const reserved = await runAgentTool(makeSession(), depsReserved, "crear_pagina", { slug: "cuenta" });
-    assert.equal(reserved.response.ok, false);
-    assert.equal(storeReserved.saved.length, 0);
-
-    const pages: Record<string, { html: string }> = {};
-    for (let i = 0; i < 20; i++) pages[`p${i}`] = { html: "<html>x</html>" };
-    const { deps: depsLimit } = makeDeps({ data: { html: HTML, pages } });
-    const limit = await runAgentTool(makeSession(), depsLimit, "crear_pagina", { slug: "one-more" });
-    assert.equal(limit.response.ok, false);
-  });
-
-  it("no home html comes back as data, not a throw", async () => {
-    const { deps } = makeDeps({ data: { html: "" } });
-    const out = await runAgentTool(makeSession(), deps, "crear_pagina", { slug: "menu" });
     assert.equal(out.response.ok, false);
   });
 });
@@ -2307,6 +647,77 @@ describe("mirar_pagina", () => {
   });
 });
 
+// ── usar_pagina: usarla como un visitante (H9) ──────────────────────────────
+//
+// Lo que corre en Chromium se prueba en `usar-pagina.browser.test.ts`. Aquí,
+// lo de la herramienta: la entrada se comprueba ANTES de abrir el navegador, a
+// qué página va, y que no poder abrirla no se lee como que funciona.
+describe("usar_pagina", () => {
+  const conNavegador = (deps: AgentDeps, visitas: Record<string, unknown>[]) => ({
+    ...deps,
+    usarPagina: async (input: Record<string, unknown>) => {
+      visitas.push(input);
+      return { informe: "1. pulsa «Agregar» → pulsé un <button> «Agregar»." };
+    },
+  });
+
+  it("🔴 una entrada que no valida NO abre el navegador, y dice qué cambiar", async () => {
+    const { deps } = makeDeps();
+    const visitas: Record<string, unknown>[] = [];
+    const out = await runAgentTool(makeSession(), conNavegador(deps, visitas), "usar_pagina", {
+      pasos: [{ pulsa: "Agregar", lee: "Total" }],
+    });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /cada paso hace UNA cosa/);
+    assert.equal(visitas.length, 0);
+  });
+
+  it("devuelve el informe y NO toca la página", async () => {
+    const { deps } = makeDeps();
+    const visitas: Record<string, unknown>[] = [];
+    const out = await runAgentTool(makeSession(), conNavegador(deps, visitas), "usar_pagina", {
+      pasos: [{ pulsa: "Agregar" }],
+    });
+    assert.equal(out.response.ok, true);
+    assert.match(String(out.response.visita), /pulsé un <button>/);
+    assert.equal(out.updatedHtml, undefined);
+    assert.equal(out.mutoDurable, undefined);
+    assert.equal(visitas.length, 1);
+    assert.deepEqual(visitas[0]!.pasos, [{ pulsa: "Agregar" }]);
+    assert.equal(visitas[0]!.ruta, "/index.html");
+  });
+
+  it("🔴 sin file_path visita la última página que escribió en el turno, no la abierta", async () => {
+    const MENU = "<!doctype html><html><body><h1>Menú</h1><button>Pedir</button></body></html>";
+    const { deps } = makeDeps({ data: { html: HTML, pages: { menu: { html: MENU } } } });
+    const visitas: Record<string, unknown>[] = [];
+    const session = makeSession();
+    session.escritos = ["/menu/index.html"];
+    await runAgentTool(session, conNavegador(deps, visitas), "usar_pagina", { pasos: [{ pulsa: "Pedir" }] });
+    assert.equal(visitas[0]!.ruta, "/menu/index.html");
+    assert.equal(visitas[0]!.html, MENU);
+    // CONTROL: sin nada escrito, la que el dueño tiene abierta.
+    const otra: Record<string, unknown>[] = [];
+    await runAgentTool(makeSession(), conNavegador(deps, otra), "usar_pagina", { pasos: [{ pulsa: "Pedir" }] });
+    assert.equal(otra[0]!.ruta, "/index.html");
+  });
+
+  it("sin navegador lo dice, y le recuerda que al cerrar diga que no lo probó", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "usar_pagina", { pasos: [{ pulsa: "Agregar" }] });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /no pudiste probarlo/);
+  });
+
+  it("si la visita revienta, no la da por buena ni por mala", async () => {
+    const { deps } = makeDeps();
+    const roto = { ...deps, usarPagina: async () => { throw new Error("chromium no arrancó"); } };
+    const out = await runAgentTool(makeSession(), roto, "usar_pagina", { pasos: [{ pulsa: "Agregar" }] });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /No lo tomes como que funciona ni como que no/);
+  });
+});
+
 describe("elegir_foto", () => {
   it("returns up to 6 fotos with absolute urls, no action card, no persistence", async () => {
     const { deps, store } = makeDeps();
@@ -2362,9 +773,9 @@ describe("elegir_foto", () => {
     assert.deepEqual(second.response.fotos, []);
     assert.equal(session.photoSearchesThisTurn, 2);
     // First: exploratory (no fallback tools named). Second: pivot.
-    assert.ok(!/cambiar_tema|aplicar_tematica/.test(String(first.response.nota)));
+    assert.ok(!/\bEdit\b/.test(String(first.response.nota)));
     const nota = String(second.response.nota);
-    const nombrada = /cambiar_tema|aplicar_tematica|editar_html/.exec(nota)?.[0];
+    const nombrada = /\bEdit\b/.exec(nota)?.[0];
     assert.ok(nombrada, `la nota de pivote no nombra ninguna salida concreta: ${nota}`);
 
     // 🔴 Y QUE LA HERRAMIENTA NOMBRADA EXISTA DE VERDAD.
@@ -2458,9 +869,9 @@ describe("editar_imagen", () => {
     assert.ok(!store.data.html.includes(IMG_URL));
     // pre-edit + post-edit snapshots.
     assert.equal(store.versions.length, 2);
-    // Re-tagged for the next edit.
-    assert.ok(session.taggedHtml.includes("https://images.openlen.com/edited-123.webp"));
-    assert.ok(session.taggedHtml.includes("data-op-id"));
+    // Len 2.0: dice en qué ficheros cambió, y el lienzo recibe el documento
+    // limpio, sin ids.
+    assert.deepEqual(out.response.ficheros, ["index.html"]);
     assert.ok(!out.updatedHtml?.includes("data-op-id"));
     assert.ok(out.updatedHtml?.includes("edited-123.webp"));
     assert.equal(out.action?.tool, "editar_imagen");
@@ -2721,40 +1132,42 @@ describe("publicar", () => {
 // `negocio-whatsapp-de-paso` ya no exige que se guarde, exige que el número
 // ACABE EN EL DOCUMENTO.
 
-describe("recordar_preferencia — alcance de PROYECTO (alcance:\"esta_pagina\")", () => {
+// H3 (2026-09-25): `recordar_preferencia` se retiró —la memoria son los ficheros
+// /memoria/dueno.md y /memoria/proyecto.md— y su mecánica vive en
+// `lib/agent/preferencias.ts`, que es lo que se prueba aquí.
+describe("guardarPreferencia — alcance de PROYECTO (alcance:\"esta_pagina\")", () => {
   // El alcance por defecto dejo de ser este el 2026-08-22: ahora una
   // preferencia se guarda para la PERSONA salvo que se pida lo contrario. Estas
   // pruebas siguen cubriendo la mecanica del brief —marcador, dedup,
   // refinamiento, tope— y por eso ahora piden el alcance explicitamente.
   it("appends under the agent marker and reports the card", async () => {
     const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+    const out = await guardarPreferencia(makeSession(), deps, {
       alcance: "esta_pagina",
       preferencia: "Siempre hablarle de tú al visitante",
     });
     assert.equal(out.response.ok, true);
     assert.ok(store.userBrief!.includes("— Preferencias guardadas por el agente —"));
     assert.ok(store.userBrief!.includes("• Siempre hablarle de tú al visitante"));
-    assert.equal(out.action?.tool, "recordar_preferencia");
   });
   it("preserves the user's own brief text above the marker", async () => {
     const { deps, store } = makeDeps({ userBrief: "Negocio de tacos al pastor." });
-    await runAgentTool(makeSession(), deps, "recordar_preferencia", { alcance: "esta_pagina", preferencia: "Tono formal" });
+    await guardarPreferencia(makeSession(), deps, { alcance: "esta_pagina", preferencia: "Tono formal" });
     assert.ok(store.userBrief!.startsWith("Negocio de tacos al pastor."));
     assert.ok(store.userBrief!.indexOf("Negocio") < store.userBrief!.indexOf("— Preferencias"));
   });
   it("dedups case-insensitively without writing", async () => {
     const { deps, store } = makeDeps();
-    await runAgentTool(makeSession(), deps, "recordar_preferencia", { alcance: "esta_pagina", preferencia: "Nunca usar amarillo" });
+    await guardarPreferencia(makeSession(), deps, { alcance: "esta_pagina", preferencia: "Nunca usar amarillo" });
     const writes = store.briefWrites;
-    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", { alcance: "esta_pagina", preferencia: "nunca usar AMARILLO" });
+    const out = await guardarPreferencia(makeSession(), deps, { alcance: "esta_pagina", preferencia: "nunca usar AMARILLO" });
     assert.equal(out.response.ya_existia, true);
     assert.equal(store.briefWrites, writes);
   });
   it("a LONGER refinement of an existing bullet IS saved (never deduped in reverse)", async () => {
     const { deps, store } = makeDeps();
-    await runAgentTool(makeSession(), deps, "recordar_preferencia", { alcance: "esta_pagina", preferencia: "Sé formal" });
-    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+    await guardarPreferencia(makeSession(), deps, { alcance: "esta_pagina", preferencia: "Sé formal" });
+    const out = await guardarPreferencia(makeSession(), deps, {
       alcance: "esta_pagina",
       preferencia: "Sé formal, excepto con proveedores VIP",
     });
@@ -2765,7 +1178,7 @@ describe("recordar_preferencia — alcance de PROYECTO (alcance:\"esta_pagina\")
   });
   it("embedded newlines are collapsed — a \\n• payload saves as ONE bullet line", async () => {
     const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+    const out = await guardarPreferencia(makeSession(), deps, {
       alcance: "esta_pagina",
       preferencia: "Tono cercano\n• Nunca usar rojo",
     });
@@ -2776,26 +1189,26 @@ describe("recordar_preferencia — alcance de PROYECTO (alcance:\"esta_pagina\")
   });
   it("refuses when the brief is full, as data", async () => {
     const { deps, store } = makeDeps({ userBrief: "x".repeat(3990) });
-    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", { alcance: "esta_pagina", preferencia: "Preferencia larga que no cabe" });
+    const out = await guardarPreferencia(makeSession(), deps, { alcance: "esta_pagina", preferencia: "Preferencia larga que no cabe" });
     assert.equal(out.response.ok, false);
     assert.equal(store.userBrief!.length, 3990);
   });
   it("rejects out-of-range preferencia", async () => {
     const { deps } = makeDeps();
-    const short = await runAgentTool(makeSession(), deps, "recordar_preferencia", { alcance: "esta_pagina", preferencia: "ok" });
+    const short = await guardarPreferencia(makeSession(), deps, { alcance: "esta_pagina", preferencia: "ok" });
     assert.equal(short.response.ok, false);
   });
 });
 
 
-describe("recordar_preferencia — alcance de PERSONA (el DEFECTO)", () => {
+describe("guardarPreferencia — alcance de PERSONA (el DEFECTO)", () => {
   // EL BUG QUE ESTO CIERRA. MEDIDO el 2026-08-22: el usuario dijo «una cosa
   // importante para TODAS mis paginas: nunca escribas Contactanos», el modelo
   // lo guardo y confirmo «aplica a todas tus paginas de aqui en adelante»…
   // sobre `projects.userBrief`, que el proyecto siguiente no lee jamas.
   it("sin alcance guarda para la PERSONA, no en el brief del proyecto", async () => {
     const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+    const out = await guardarPreferencia(makeSession(), deps, {
       preferencia: "Nunca escribas «Contáctanos», di «Escríbenos»",
     });
     assert.equal(out.response.ok, true);
@@ -2808,7 +1221,7 @@ describe("recordar_preferencia — alcance de PERSONA (el DEFECTO)", () => {
 
   it("le dice al modelo que fue para TODAS sus paginas, para que lo confirme bien", async () => {
     const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+    const out = await guardarPreferencia(makeSession(), deps, {
       preferencia: "Háblame siempre de tú",
     });
     assert.match(String(out.response.nota), /TODAS/);
@@ -2818,7 +1231,7 @@ describe("recordar_preferencia — alcance de PERSONA (el DEFECTO)", () => {
     // Falla hacia lo global: una preferencia global que debio ser local se poda;
     // una local que debio ser global es justo el bug, y es invisible.
     const { deps, store } = makeDeps();
-    await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+    await guardarPreferencia(makeSession(), deps, {
       preferencia: "Nunca uses amarillo",
       alcance: "vete_a_saber",
     });
@@ -2829,7 +1242,7 @@ describe("recordar_preferencia — alcance de PERSONA (el DEFECTO)", () => {
   it("con la memoria LLENA no guarda y lo dice como dato", async () => {
     const { deps, store } = makeDeps();
     deps.rememberAboutUser = async () => ({ ok: false as const, reason: "llena" as const });
-    const out = await runAgentTool(makeSession(), deps, "recordar_preferencia", {
+    const out = await guardarPreferencia(makeSession(), deps, {
       preferencia: "Otra preferencia mas",
     });
     assert.equal(out.response.ok, false);
@@ -2844,429 +1257,6 @@ describe("runAgentTool", () => {
     const out = await runAgentTool(makeSession(), deps, "no_existe", {});
     assert.equal(out.response.ok, false);
     assert.equal(out.response.error, "herramienta desconocida");
-  });
-});
-
-// F4 Task 2 — THE W1 PIN (wrong-slot writes). Fixtures per this describe
-// block: HOME_HTML carries an on-page image (for the editar_imagen
-// membership pin) and no --ol-accent; MENU_HTML carries its OWN --ol-accent
-// (for the cambiar_tema seed pin) and no image. Every pin asserts the
-// UNTOUCHED slot byte-for-byte, not merely that the touched slot changed.
-describe("W1 regression pins (multi-página)", () => {
-  const HOME_IMG_URL = "https://images.openlen.com/home-hero.webp";
-  const HOME_HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><img src="${HOME_IMG_URL}" alt="foto"><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
-  const MENU_ACCENT = "#2266aa";
-  const MENU_HTML = `<!doctype html><html style="--ol-accent: ${MENU_ACCENT}"><head><title>Menú</title><meta name="description" content="Menú"><style>a{color:var(--ol-accent)}body{background:var(--ol-bg)}</style></head><body><h1 data-x="k">Menú</h1><p>Estas son nuestras opciones.</p></body></html>`;
-  const DATA_MP: ProjectData = {
-    html: HOME_HTML,
-    pages: { menu: { html: MENU_HTML, title: "Menú" } },
-  };
-
-  it("PIN: session.page='menu' → editar_pagina escribe SOLO pages.menu.html; data.html byte-intacto", async () => {
-    const { deps, store } = makeDeps({ data: DATA_MP });
-    const session = makeSession({ page: "menu", html: MENU_HTML });
-    const target = contentOpId(session.taggedHtml);
-    await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: "<h1>Tacos al pastor</h1>" }],
-      resumen: "titular menú",
-    });
-    assert.ok(store.data.pages!.menu.html.includes("Tacos al pastor"));
-    assert.equal(store.data.html, HOME_HTML); // byte-intacto
-  });
-
-  // 🔴 EL LÍMITE QUE NO SE ENTERABA. `persistPage` tira el runtime de toda
-  // subpágina —`paginaGuardaRuntime` es esa regla— y esto contestaba
-  // `comportamiento_actualizado: true` igual, porque miraba lo que el modelo
-  // MANDÓ y no lo que se guardó. Len le decía al dueño que le había cableado el
-  // carrito y el botón no hacía nada.
-  //
-  // El control de que esta prueba no es vacía vive arriba: "un edit de SOLO
-  // runtime no deja data-op-id en el documento guardado" hace lo mismo en la
-  // Home y tiene que seguir en verde. Si rechazara de más, ésa se cae.
-  // INVERTIDO el 2026-08-25. Este pin fijaba «un edit de runtime en una
-  // SUBPÁGINA se rechaza», y era cierto — pero fijaba una limitación de
-  // ALMACENAMIENTO (una sola columna para la cápsula) vendida como regla de
-  // producto. Ahora cada página guarda la suya, y lo que hay que clavar es que
-  // el script vaya a SU sitio: uno de /menu en la columna de la Home se llevaría
-  // por delante el de la portada.
-  it("PIN: un edit de runtime en una SUBPÁGINA se guarda COMO SUYO", async () => {
-    const { deps, store } = makeDeps({ data: DATA_MP });
-
-    const out = await runAgentTool(
-      makeSession({ page: "menu", html: MENU_HTML }),
-      deps,
-      "editar_pagina",
-      {
-        edits: [{ op: "replace", target: "runtime", new_html: "document.title='x';" }],
-        resumen: "carrito del menú",
-        prueba_js: 'await ui.clic("#x");',
-      },
-    );
-
-    assert.equal(out.response.ok, true, JSON.stringify(out.response));
-    // El script acaba DENTRO del documento de /menu, y sólo de /menu. Antes
-    // esto miraba a qué COLUMNA se había escrito; ahora se mira el documento,
-    // que es la misma pregunta hecha donde de verdad vive la respuesta.
-    assert.ok(
-      store.data.pages?.menu?.html.includes("document.title='x';"),
-      "el script no llegó al documento de /menu",
-    );
-    assert.ok(
-      !store.data.html.includes("document.title='x';"),
-      "el script de /menu acabó en la portada",
-    );
-    // Y el documento que se escribió sigue siendo el de /menu, no el de la Home.
-    assert.ok(store.data.pages?.menu, "perdió la subpágina");
-  });
-
-  it("PIN: session.page=null → escribe SOLO data.html; pages byte-intactas", async () => {
-    const { deps, store } = makeDeps({ data: DATA_MP });
-    const session = makeSession({ page: null, html: HOME_HTML });
-    const target = contentOpId(session.taggedHtml);
-    await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: "<h1>Bienvenidos</h1>" }],
-      resumen: "titular home",
-    });
-    assert.ok(store.data.html!.includes("Bienvenidos"));
-    assert.equal(store.data.pages!.menu.html, MENU_HTML); // byte-intacta
-  });
-
-  it("PIN: entre VARIAS subpáginas, editar_pagina toca SOLO la activa; la hermana y home byte-intactas", async () => {
-    const ABOUT_HTML = `<!doctype html><html><head><title>Nosotros</title><meta name="description" content="Nosotros"></head><body><h1 data-x="k">Quiénes somos</h1><p>Desde 1998.</p></body></html>`;
-    const dataMulti: ProjectData = {
-      html: HOME_HTML,
-      pages: { menu: { html: MENU_HTML, title: "Menú" }, about: { html: ABOUT_HTML, title: "Nosotros" } },
-    };
-    const { deps, store } = makeDeps({ data: dataMulti });
-    const session = makeSession({ page: "menu", html: MENU_HTML });
-    const target = contentOpId(session.taggedHtml);
-    await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: "<h1>Tacos al pastor</h1>" }],
-      resumen: "titular menú",
-    });
-    assert.ok(store.data.pages!.menu.html.includes("Tacos al pastor"));
-    assert.equal(store.data.pages!.about.html, ABOUT_HTML); // hermana byte-intacta
-    assert.equal(store.data.html, HOME_HTML); // home byte-intacto
-  });
-
-  it("PIN: snapshots llevan page=session.page (pre y post)", async () => {
-    const { deps, store } = makeDeps({ data: DATA_MP });
-    const session = makeSession({ page: "menu", html: MENU_HTML });
-    const target = contentOpId(session.taggedHtml);
-    await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: "<h1>Nuevo titular</h1>" }],
-      resumen: "x",
-    });
-    // Pre-edit ("Before AI edit") + post-edit snapshot, both tagged "menu".
-    assert.equal(store.versionPages.length, 2);
-    assert.deepEqual(store.versionPages, ["menu", "menu"]);
-  });
-
-  it("cambiar_tema sobre subpágina siembra accent/modo DEL doc de la subpágina y persiste ahí", async () => {
-    const { deps, store } = makeDeps({ data: DATA_MP });
-    const session = makeSession({ page: "menu", html: MENU_HTML });
-    const out = await runAgentTool(session, deps, "cambiar_tema", { modo: "dark" });
-    assert.equal(out.response.ok, true);
-    // Seeded from MENU's own --ol-accent, NOT home's (home has none — if this
-    // tool mis-read row.data.html the seed would be missing and ok would be
-    // false, failing this assert first).
-    const dark = lookFromAccent(MENU_ACCENT).dark;
-    assert.ok(store.data.pages!.menu.html.includes(`--ol-accent: ${dark["--ol-accent"]}`));
-    assert.match(store.data.pages!.menu.html, /<html[^>]*\sdata-ol-mode="dark"/);
-    assert.equal(store.data.html, HOME_HTML); // byte-intacto — home untouched
-  });
-
-  it("editar_imagen: membership contra el doc ACTIVO — URL que solo está en home, con page='menu' → ok:false sin fetch", async () => {
-    const { deps, store } = makeDeps({ data: DATA_MP });
-    const session = makeSession({ page: "menu", html: MENU_HTML });
-    const out = await runAgentTool(session, deps, "editar_imagen", {
-      imagen_url: HOME_IMG_URL,
-      instruccion: "quita el fondo",
-    });
-    assert.equal(out.response.ok, false);
-    assert.equal(store.fetches.length, 0);
-    assert.equal(store.saved.length, 0);
-  });
-
-  // Beyond the 5 named pins: closes the "swap" half of the editar_imagen
-  // interface clause (membership above only proves the READ side) — a
-  // successful subpage image edit must write ONLY that subpage's slot.
-  it("editar_imagen happy path on a subpage writes ONLY pages.menu.html; data.html byte-intacto", async () => {
-    const menuWithImg = MENU_HTML.replace(
-      "<body>",
-      `<body><img src="${HOME_IMG_URL.replace("home-hero", "menu-photo")}" alt="menu">`,
-    );
-    const menuImgUrl = HOME_IMG_URL.replace("home-hero", "menu-photo");
-    const { deps, store } = makeDeps({ data: { html: HOME_HTML, pages: { menu: { html: menuWithImg } } } });
-    const session = makeSession({ page: "menu", html: menuWithImg });
-    const out = await runAgentTool(session, deps, "editar_imagen", {
-      imagen_url: menuImgUrl,
-      instruccion: "hazla más cálida",
-    });
-    assert.equal(out.response.ok, true);
-    assert.ok(store.data.pages!.menu.html.includes("edited-123.webp"));
-    assert.ok(!store.data.pages!.menu.html.includes(menuImgUrl));
-    assert.equal(store.data.html, HOME_HTML); // byte-intacto — home untouched
-  });
-});
-
-// F4 Task 3 — trabajar_en_pagina: words-as-selector document switch. Never
-// persists (no saveProjectData/snapshotVersion call ever) — it only moves
-// session.page + re-tags session.taggedHtml against the FRESHLY loaded doc.
-describe("trabajar_en_pagina", () => {
-  const HOME_HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p></body></html>`;
-  const MENU_HTML = `<!doctype html><html><head><title>Menú</title><meta name="description" content="Menú"></head><body><h1 data-x="k">Nuestro Menú</h1><p>Estas son nuestras opciones.</p></body></html>`;
-  const DATA_MP: ProjectData = {
-    html: HOME_HTML,
-    pages: { menu: { html: MENU_HTML, title: "Menú" } },
-  };
-
-  it("switches to an existing subpage: session.page set, taggedHtml re-tagged with THAT page's content", async () => {
-    const { deps, store } = makeDeps({ data: DATA_MP });
-    const session = makeSession({ page: null, html: HOME_HTML });
-    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "menu" });
-    assert.equal(out.response.ok, true);
-    assert.equal(out.response.pagina_activa, "menu");
-    assert.equal(session.page, "menu");
-    assert.ok(session.taggedHtml.includes("Nuestro Menú"));
-    assert.ok(!session.taggedHtml.includes("Tacos El Güero"));
-    assert.ok(session.taggedHtml.includes("data-op-id"));
-    assert.equal(out.action?.tool, "trabajar_en_pagina");
-    // NO persistence — the switch alone never writes or snapshots anything.
-    assert.equal(store.saved.length, 0);
-    assert.equal(store.versions.length, 0);
-  });
-
-  // 🔴 LO QUE EL MODELO VE, NO LO QUE GUARDA EL SERVIDOR.
-  //
-  // El esquema de esta herramienta promete «usa los nuevos [data-op-id] que
-  // trae la respuesta» y el system prompt dice que «la respuesta trae el
-  // documento fresco». No lo traía: sólo ok, pagina_activa y una nota que
-  // decía «documento cargado» — cargado en `session`, que el modelo NO VE (el
-  // bucle sólo le pasa outcome.response). Tras el cambio de página el modelo
-  // editaba con los op-ids de la anterior. Las pruebas de arriba miran
-  // session.taggedHtml, que es justo la mitad que el modelo nunca recibe.
-  it("la RESPUESTA lleva el documento nuevo, no sólo la sesión", async () => {
-    const { deps } = makeDeps({ data: DATA_MP });
-    const session = makeSession({ page: null, html: HOME_HTML });
-
-    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "menu" });
-
-    assert.equal(out.response.documento, session.taggedHtml);
-    assert.ok(String(out.response.documento).includes("Nuestro Menú"));
-    assert.ok(String(out.response.documento).includes("data-op-id"));
-    // Y NO el de la página de la que venimos.
-    assert.ok(!String(out.response.documento).includes("Tacos El Güero"));
-  });
-
-  it("y volviendo a la Home trae el de la Home", async () => {
-    const { deps } = makeDeps({ data: DATA_MP });
-    const session = makeSession({ page: "menu", html: MENU_HTML });
-
-    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "principal" });
-
-    assert.ok(String(out.response.documento).includes("Tacos El Güero"));
-    assert.ok(!String(out.response.documento).includes("Nuestro Menú"));
-  });
-
-  it("un cambio que FALLA no manda documento — no hay página nueva que traer", async () => {
-    const { deps } = makeDeps({ data: DATA_MP });
-    const session = makeSession({ page: null, html: HOME_HTML });
-
-    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "no-existe" });
-
-    assert.equal(out.response.ok, false);
-    assert.equal(out.response.documento, undefined);
-  });
-
-  it('"principal" switches back to home from an active subpage', async () => {
-    const { deps, store } = makeDeps({ data: DATA_MP });
-    const session = makeSession({ page: "menu", html: MENU_HTML });
-    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "principal" });
-    assert.equal(out.response.ok, true);
-    assert.equal(out.response.pagina_activa, "principal");
-    // F4-T8: response.pagina_activa stays "principal" (model-facing), but
-    // action.summary — the user-visible field agent-action-card.tsx renders
-    // — is the "" home sentinel so the panel can localize it instead of
-    // showing a bare Spanish word.
-    assert.equal(out.action?.summary, "");
-    assert.equal(session.page, null);
-    assert.ok(session.taggedHtml.includes("Tacos El Güero"));
-    assert.ok(!session.taggedHtml.includes("Nuestro Menú"));
-    assert.equal(store.saved.length, 0);
-  });
-
-  it('a REAL page slugged "principal" wins over the home alias (reachable, not shadowed)', async () => {
-    // "principal" is NOT reserved, so a creator may legally name a subpage
-    // that. Resolution must match the real page FIRST — otherwise
-    // trabajar_en_pagina("principal") silently opens home → wrong-doc edits.
-    const PRINCIPAL_PAGE = `<!doctype html><html><head><title>Principal Sub</title><meta name="description" content="x"></head><body><h1 data-x="k">Subpágina Principal</h1></body></html>`;
-    const data: ProjectData = {
-      html: HOME_HTML,
-      pages: { principal: { html: PRINCIPAL_PAGE, title: "Principal" } },
-    };
-    const { deps } = makeDeps({ data });
-    const session = makeSession({ page: null, html: HOME_HTML });
-    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "principal" });
-    assert.equal(out.response.ok, true);
-    assert.equal(out.response.pagina_activa, "principal");
-    assert.equal(session.page, "principal"); // the SLUG, not home (null)
-    // F4-T8: action.summary shows the real slug verbatim here — NOT the ""
-    // home sentinel — so this case stays distinguishable from an actual
-    // home switch (see the test above).
-    assert.equal(out.action?.summary, "principal");
-    assert.ok(session.taggedHtml.includes("Subpágina Principal"));
-    assert.ok(!session.taggedHtml.includes("Tacos El Güero")); // NOT the home doc
-  });
-
-  it('"home" and "" are equivalent aliases for principal', async () => {
-    const { deps } = makeDeps({ data: DATA_MP });
-    const s1 = makeSession({ page: "menu", html: MENU_HTML });
-    const out1 = await runAgentTool(s1, deps, "trabajar_en_pagina", { pagina: "home" });
-    assert.equal(out1.response.ok, true);
-    assert.equal(s1.page, null);
-
-    const s2 = makeSession({ page: "menu", html: MENU_HTML });
-    const out2 = await runAgentTool(s2, deps, "trabajar_en_pagina", { pagina: "" });
-    assert.equal(out2.response.ok, true);
-    assert.equal(s2.page, null);
-  });
-
-  it("a nonexistent page comes back ok:false, listing available pages, without touching session.page", async () => {
-    const { deps } = makeDeps({ data: DATA_MP });
-    const session = makeSession({ page: null, html: HOME_HTML });
-    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "contacto" });
-    assert.equal(out.response.ok, false);
-    assert.ok(String(out.response.error).includes("principal"));
-    assert.ok(String(out.response.error).includes("menu"));
-    // Session untouched on failure — still on home, still the home doc.
-    assert.equal(session.page, null);
-    assert.ok(session.taggedHtml.includes("Tacos El Güero"));
-  });
-
-  it("re-loads pages fresh — a page created earlier THIS turn (not in the session's stale view) is reachable", async () => {
-    const { deps, store } = makeDeps({ data: { html: HOME_HTML } });
-    const session = makeSession({ page: null, html: HOME_HTML });
-    // Simulate crear_pagina having run earlier in the same turn: the DB row
-    // now has a "menu" page, but session.page/taggedHtml still reflect home.
-    store.data = { ...store.data, pages: { menu: { html: MENU_HTML, title: "Menú" } } };
-    const out = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "menu" });
-    assert.equal(out.response.ok, true);
-    assert.equal(session.page, "menu");
-    assert.ok(session.taggedHtml.includes("Nuestro Menú"));
-  });
-
-  it("chained: trabajar_en_pagina(menu) then editar_pagina writes pages.menu, not data.html (W1 via the switch)", async () => {
-    const { deps, store } = makeDeps({ data: DATA_MP });
-    const session = makeSession({ page: null, html: HOME_HTML });
-    const switched = await runAgentTool(session, deps, "trabajar_en_pagina", { pagina: "menu" });
-    assert.equal(switched.response.ok, true);
-    const target = contentOpId(session.taggedHtml);
-    const edited = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: "<h1>Tacos al pastor</h1>" }],
-      resumen: "titular menú",
-    });
-    assert.equal(edited.response.ok, true);
-    assert.ok(store.data.pages!.menu.html.includes("Tacos al pastor"));
-    assert.equal(store.data.html, HOME_HTML); // byte-intacto — the switch, not editar_pagina, moved the slot
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BUSCAR EN TODO EL SITIO.
-//
-// Las herramientas de mirar eran de UNA en UNA (`leer_estado op_id=` abre una
-// sección; `ver_pagina` trae otra página entera), así que un dato repetido
-// —un teléfono en el pie de tres páginas y en la meta description— salía
-// arreglado a medias y reportado como hecho. Caso real de Jesús (2026-08-31):
-// pidió arreglar el logo, se arregló en la Home y /nosotros quedó igual.
-describe("buscar_en_pagina", () => {
-  const HOME = `<!doctype html><html><head><title>Taller Bernal</title><meta name="description" content="Llama al 600112233"></head><body><h1>Taller Bernal</h1><p>Teléfono: 600112233</p></body></html>`;
-  const NOSOTROS = `<!doctype html><html><head><title>Nosotros</title></head><body><h1>Quiénes somos</h1><footer><p>600112233</p></footer></body></html>`;
-  const DATA: ProjectData = {
-    html: HOME,
-    pages: { nosotros: { html: NOSOTROS, title: "Nosotros" } },
-  };
-
-  it("encuentra el mismo dato en TODAS las páginas, no sólo en la activa", async () => {
-    const { deps } = makeDeps({ data: DATA });
-    const session = makeSession({ page: null, html: HOME });
-
-    const out = await runAgentTool(session, deps, "buscar_en_pagina", { texto: "600112233" });
-
-    assert.equal(out.response.ok, true);
-    const c = out.response.coincidencias as { pagina: string; donde: string; op_id: string | null }[];
-    // La Home dos veces (cuerpo + meta description) y /nosotros una.
-    assert.deepEqual(
-      [...new Set(c.map((x) => x.pagina))].sort(),
-      ["nosotros", "principal"],
-    );
-    assert.ok(c.some((x) => x.pagina === "principal" && x.donde === "cabecera"));
-  });
-
-  it("🔴 el op_id sólo viaja para la página ACTIVA", async () => {
-    const { deps } = makeDeps({ data: DATA });
-    const session = makeSession({ page: null, html: HOME });
-
-    const out = await runAgentTool(session, deps, "buscar_en_pagina", { texto: "600112233" });
-    const c = out.response.coincidencias as { pagina: string; donde: string; op_id: string | null }[];
-
-    // Fuera de la activa NO hay id: la misma id existe en todas las páginas, y
-    // editar con la de /nosotros sin mudarse cambiaría la Home sin dar error.
-    for (const x of c) {
-      if (x.pagina !== "principal") assert.equal(x.op_id, null, "un op_id de otra página edita la equivocada");
-    }
-    const enCuerpo = c.find((x) => x.pagina === "principal" && x.donde === "cuerpo");
-    assert.ok(enCuerpo?.op_id, "sin id en la activa la herramienta no sirve para editar");
-    // Y ES UN ID DE VERDAD: el que `editar_pagina` va a resolver, o sea uno de
-    // `session.taggedHtml`. Comprobarlo aquí es lo que separa «devuelve algo»
-    // de «devuelve algo que funciona».
-    assert.ok(session.taggedHtml.includes(`data-op-id="${enCuerpo!.op_id}"`));
-  });
-
-  it("y ese op_id EDITA de verdad la línea encontrada", async () => {
-    const { deps, store } = makeDeps({ data: DATA });
-    const session = makeSession({ page: null, html: HOME });
-
-    const out = await runAgentTool(session, deps, "buscar_en_pagina", { texto: "600112233" });
-    const c = out.response.coincidencias as { pagina: string; donde: string; op_id: string | null }[];
-    const target = c.find((x) => x.pagina === "principal" && x.donde === "cuerpo")!.op_id!;
-
-    const editado = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: "<p>Teléfono: 600445566</p>" }],
-      resumen: "teléfono nuevo",
-    });
-
-    assert.equal(editado.response.ok, true);
-    assert.ok(store.data.html.includes("600445566"));
-    assert.ok(!store.data.html.includes("<p>Teléfono: 600112233</p>"));
-  });
-
-  it("buscar no ESCRIBE nada", async () => {
-    const { deps, store } = makeDeps({ data: DATA });
-    await runAgentTool(makeSession({ page: null, html: HOME }), deps, "buscar_en_pagina", {
-      texto: "Taller",
-    });
-    assert.equal(store.saved.length, 0);
-    assert.equal(store.versions.length, 0);
-  });
-
-  it("un texto de una letra se rechaza, y dice por qué", async () => {
-    const { deps } = makeDeps({ data: DATA });
-    const out = await runAgentTool(makeSession({ page: null, html: HOME }), deps, "buscar_en_pagina", {
-      texto: "a",
-    });
-    assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /caracteres/);
-  });
-
-  it("sin coincidencias responde ok con la lista vacía — no es un error", async () => {
-    const { deps } = makeDeps({ data: DATA });
-    const out = await runAgentTool(makeSession({ page: null, html: HOME }), deps, "buscar_en_pagina", {
-      texto: "zanahoria",
-    });
-    assert.equal(out.response.ok, true);
-    assert.deepEqual(out.response.coincidencias, []);
   });
 });
 
@@ -3387,63 +1377,45 @@ describe("leer_de_internet", () => {
   });
 });
 
-describe("declarar_tareas", () => {
-  it("devuelve la lista para que el bucle la compruebe al cerrar", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "declarar_tareas", {
-      tareas: ["cambiar el titular", "poner el teléfono", "publicar"],
-    });
+describe("TodoWrite (H2) — la lista de Claude Code", () => {
+  const todo = (content: string, status: string) => ({ content, status, activeForm: content });
 
+  it("contesta que la guardó y le pasa la lista al bucle, con los estados traducidos", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "TodoWrite", {
+      todos: [todo("cambiar el titular", "in_progress"), todo("poner el teléfono", "pending"), todo("publicar", "completed")],
+    });
     assert.equal(out.response.ok, true);
-    // Una frase suelta es una tarea sin estado (H02): la lista con estados la
-    // lleva el bucle, que es quien sabe lo medido.
+    assert.equal(
+      out.response.tool_result,
+      "List saved. Keep it up to date as you work, and carry on with the task in progress.",
+    );
     assert.deepEqual(out.tareas, [
-      { texto: "cambiar el titular" },
-      { texto: "poner el teléfono" },
-      { texto: "publicar" },
+      { texto: "cambiar el titular", estado: "en_curso" },
+      { texto: "poner el teléfono", estado: "pendiente" },
+      { texto: "publicar", estado: "hecha" },
     ]);
-    // Declarar NO hace nada: es una lista de trabajo, no un cambio.
+    // Apuntar NO hace nada: es una lista de trabajo, no un cambio.
     assert.equal(store.saved.length, 0);
     assert.equal(out.updatedHtml, undefined);
   });
 
-  it("H02 · con estado y de comprobar, como la lista de Claude Code; un estado inventado se ignora", async () => {
+  it("un estado que no es de Claude Code se ignora, y una tarea sin texto no entra", async () => {
     const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "declarar_tareas", {
-      tareas: [
-        { tarea: "contador", estado: "en_curso" },
-        { tarea: "probar que sube", comprobar: true },
-        { tarea: "otra", estado: "casi" },
-      ],
+    const out = await runAgentTool(makeSession(), deps, "TodoWrite", {
+      todos: [todo("contador", "casi"), todo("   ", "pending")],
     });
-    assert.deepEqual(out.tareas, [
-      { texto: "contador", estado: "en_curso" },
-      { texto: "probar que sube", comprobar: true },
-      { texto: "otra" },
-    ]);
+    assert.deepEqual(out.tareas, [{ texto: "contador" }]);
   });
 
-  it("le dice CÓMO se va a comprobar — un checklist con criterio secreto es un examen sorpresa", async () => {
+  it("una lista vacía vale —así se limpia en Claude Code—; sin `todos`, el error de validación", async () => {
     const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "declarar_tareas", { tareas: ["una"] });
-    assert.match(String(out.response.nota), /cambió algo|cambi/i);
-  });
-
-  it("una lista vacía —o de puros huecos— se rechaza", async () => {
-    const { deps } = makeDeps();
-    for (const tareas of [[], ["", "   "], "no soy una lista"]) {
-      const out = await runAgentTool(makeSession(), deps, "declarar_tareas", { tareas });
-      assert.equal(out.response.ok, false, `aceptó ${JSON.stringify(tareas)}`);
-      assert.equal(out.tareas, undefined);
-    }
-  });
-
-  it("corta a 8: declarar veinte pasos es escribir un plan que no cabe en el turno", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "declarar_tareas", {
-      tareas: Array.from({ length: 20 }, (_, i) => `paso ${i}`),
-    });
-    assert.equal(out.tareas?.length, 8);
+    const vacia = await runAgentTool(makeSession(), deps, "TodoWrite", { todos: [] });
+    assert.equal(vacia.response.ok, true);
+    assert.deepEqual(vacia.tareas, []);
+    const sin = await runAgentTool(makeSession(), deps, "TodoWrite", {});
+    assert.equal(sin.response.ok, false);
+    assert.match(String(sin.response.tool_result), /^<tool_use_error>InputValidationError: /);
   });
 });
 
@@ -3487,18 +1459,27 @@ describe("publicar sin subdominio ya no da órdenes de comportamiento", () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REVERTIR — los snapshots existían; lo que faltaba era que el Agente llegara.
+/** Len 2.0: una edición es Read + Edit sobre el fichero, como en Claude Code. */
+async function editarConLen(
+  session: AgentSession,
+  deps: AgentDeps,
+  viejo: string,
+  nuevo: string,
+  ruta = "/index.html",
+) {
+  if (!session.leidos?.has(ruta)) {
+    const leido = await runAgentTool(session, deps, "Read", { file_path: ruta });
+    assert.equal(leido.response.ok, true, String(leido.response.tool_result));
+  }
+  return runAgentTool(session, deps, "Edit", { file_path: ruta, old_string: viejo, new_string: nuevo });
+}
+
 describe("revertir_ultimo_cambio", () => {
-  async function editaDosVeces(session: AgentSession, deps: AgentDeps) {
-    const primera = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Uno</h1>" }],
-      resumen: "uno",
-    });
-    assert.equal(primera.response.ok, true);
-    const segunda = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Dos</h1>" }],
-      resumen: "dos",
-    });
-    assert.equal(segunda.response.ok, true);
+  async function editaDosVeces(session: AgentSession, deps: AgentDeps, ruta = "/index.html", titular = "Tacos El Güero") {
+    const primera = await editarConLen(session, deps, `${titular}</h1>`, "Uno</h1>", ruta);
+    assert.equal(primera.response.ok, true, String(primera.response.tool_result));
+    const segunda = await editarConLen(session, deps, "Uno</h1>", "Dos</h1>", ruta);
+    assert.equal(segunda.response.ok, true, String(segunda.response.tool_result));
   }
 
   it("🔴 vuelve al estado ANTERIOR, no al actual", async () => {
@@ -3516,33 +1497,37 @@ describe("revertir_ultimo_cambio", () => {
     assert.ok(!store.data.html.includes("Dos"));
   });
 
-  it("la respuesta trae el documento restaurado con ids nuevos, y la sesión también", async () => {
+  it("la respuesta dice QUÉ fichero, sin documento con ids, y el lienzo se refresca", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
     await editaDosVeces(session, deps);
 
     const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
 
-    assert.equal(out.response.documento, session.taggedHtml);
-    assert.ok(String(out.response.documento).includes("Uno"));
-    assert.ok(String(out.response.documento).includes("data-op-id"));
-    // Y el lienzo se refresca: sin esto el usuario ve la página vieja.
+    assert.equal(out.response.fichero, "index.html");
+    assert.equal(out.response.documento, undefined);
+    // Sin esto el usuario ve la página vieja.
     assert.ok(String(out.updatedHtml).includes("Uno"));
   });
 
-  it("y editar DESPUÉS de revertir aplica contra el documento restaurado", async () => {
+  it("y editar DESPUÉS de revertir sin releer choca, como en Claude Code: la copia de Len ya no vale", async () => {
     const { deps, store } = makeDeps();
     const session = makeSession();
     await editaDosVeces(session, deps);
     await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
 
-    // Los ids de antes de revertir son de otro documento: si la sesión no se
-    // hubiera re-etiquetado, esto editaría a ciegas o fallaría.
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tres</h1>" }],
-      resumen: "tres",
+    const aCiegas = await runAgentTool(session, deps, "Edit", {
+      file_path: "/index.html",
+      old_string: "Dos</h1>",
+      new_string: "Tres</h1>",
     });
-    assert.equal(out.response.ok, true);
+    assert.equal(aCiegas.response.ok, false);
+    assert.match(String(aCiegas.response.tool_result), /This file changed after you read it/);
+
+    const releido = await runAgentTool(session, deps, "Read", { file_path: "/index.html" });
+    assert.equal(releido.response.ok, true);
+    const out = await runAgentTool(session, deps, "Edit", { file_path: "/index.html", old_string: "Uno</h1>", new_string: "Tres</h1>" });
+    assert.equal(out.response.ok, true, String(out.response.tool_result));
     assert.ok(store.data.html.includes("Tres"));
   });
 
@@ -3560,9 +1545,10 @@ describe("revertir_ultimo_cambio", () => {
     const { deps, store } = makeDeps({
       data: { html: HOME, pages: { menu: { html: MENU, title: "Menú" } } },
     });
-    const session = makeSession({ page: "menu", html: MENU });
-    await editaDosVeces(session, deps);
+    const session = makeSession();
+    await editaDosVeces(session, deps, "/menu/index.html", "Menú");
 
+    // Sin file_path: el último fichero que Len escribió en este turno.
     const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
 
     assert.equal(out.response.ok, true);
@@ -3571,6 +1557,20 @@ describe("revertir_ultimo_cambio", () => {
     // filtro de ámbito es lo que lo sostiene.
     assert.equal(store.data.html, HOME);
     assert.equal(out.page, "menu");
+  });
+
+  it("con file_path deshace en ESE fichero aunque el último escrito sea otro", async () => {
+    const MENU = `<!doctype html><html><head><title>M</title><meta name="description" content="x"></head><body><h1 data-x="k">Menú</h1></body></html>`;
+    const { deps, store } = makeDeps({ data: { html: HTML, pages: { menu: { html: MENU } } } });
+    const session = makeSession();
+    await editaDosVeces(session, deps, "/menu/index.html", "Menú");
+    await editarConLen(session, deps, "Los mejores del barrio.", "Los mejores de Monterrey.");
+
+    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", { file_path: "/menu/index.html" });
+
+    assert.equal(out.response.ok, true, String(out.response.error ?? ""));
+    assert.ok(store.data.pages!.menu.html.includes("Uno"));
+    assert.ok(store.data.html.includes("Los mejores de Monterrey."), "tocó la home");
   });
 
   // RESTAURAR TAMBIÉN SE DESHACE. La fila del «antes de restaurar» ya se creaba;
@@ -3605,12 +1605,8 @@ describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después
   /** Len edita el titular; después el dueño cambia el párrafo a mano. */
   async function lenYLuegoElDueno(opts: { conVersion: boolean; mismoSitio?: boolean }) {
     const { deps, store } = makeDeps();
-    const primera = makeSession();
-    const len = await runAgentTool(primera, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(primera.taggedHtml), new_html: "<h1>Tacos de Len</h1>" }],
-      resumen: "titular de Len",
-    });
-    assert.equal(len.response.ok, true);
+    const len = await editarConLen(makeSession(), deps, "Tacos El Güero</h1>", "Tacos de Len</h1>");
+    assert.equal(len.response.ok, true, String(len.response.tool_result));
     const delDueno = opts.mismoSitio
       ? store.data.html.replace("Tacos de Len", "Tacos del Dueño")
       : store.data.html.replace("Los mejores del barrio.", "Los mejores de Monterrey.");
@@ -3618,9 +1614,8 @@ describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después
     if (opts.conVersion) {
       store.snapshots.unshift({ id: "v-dueno", label: "Edited content", page: null, html: delDueno, source: "manual" });
     }
-    // El turno siguiente arranca con lo que hay AHORA, como la ruta.
-    const session = { ...makeSession(delDueno), baseHtml: delDueno };
-    return { deps, store, session };
+    // El turno siguiente arranca de cero, como la ruta: nada leído.
+    return { deps, store, session: makeSession(delDueno) };
   }
 
   it("🔴 C11 · sin versión del dueño: se va lo de Len y se queda lo suyo", async () => {
@@ -3650,22 +1645,16 @@ describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después
   });
 
   // 🔴 Revisión pre-deploy del 2026-09-22. El deshacer SIN edición a mano
-  // restaura en crudo (`restoreVersion`), y esa restauración no quedaba como
-  // escritura de Len: su última versión `chat` seguía siendo la del cambio que
-  // acababa de deshacer. El turno siguiente comparaba esa versión con la página
-  // y le decía al modelo «EL DUEÑO CAMBIÓ LA PÁGINA A MANO… esto NO lo hiciste
-  // tú» — de lo que hizo él. Y un segundo «deshaz» salía `se_solapan`: Len le
-  // preguntaba al dueño por una edición que nunca hizo.
+  // restaura en crudo (`restoreVersion`), y esa restauración tiene que quedar
+  // como escritura de Len: si no, el turno siguiente le diría al modelo «EL
+  // DUEÑO CAMBIÓ LA PÁGINA A MANO» de lo que hizo él.
   it("🔴 el deshacer de Len no vuelve en el turno siguiente como cambio del dueño", async () => {
     const { deps, store } = makeDeps();
     const session = makeSession();
-    await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tacos de Len</h1>" }],
-      resumen: "titular de Len",
-    });
+    await editarConLen(session, deps, "Tacos El Güero</h1>", "Tacos de Len</h1>");
     const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
     assert.equal(out.response.ok, true);
-    assert.equal(store.data.html, HTML);
+    assert.equal(store.data.html.includes("Tacos de Len"), false);
 
     // Lo que la ruta le cuenta al modelo al abrir el turno siguiente.
     const html = async (id: string) => {
@@ -3681,53 +1670,18 @@ describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después
     assert.deepEqual(bloque, [], "el deshacer de Len llegó al turno siguiente como edición del dueño");
 
     // Y otro «deshaz» no pregunta por una edición a mano que no existe.
-    const siguiente = { ...makeSession(store.data.html), baseHtml: store.data.html };
-    const otra = await runAgentTool(siguiente, deps, "revertir_ultimo_cambio", {});
+    const otra = await runAgentTool(makeSession(store.data.html), deps, "revertir_ultimo_cambio", {});
     assert.equal(otra.response.ok, true, String(otra.response.error ?? ""));
   });
 
   it("BRAZO DE CONTROL: sin edición del dueño, se vuelve al antes de Len como siempre", async () => {
     const { deps, store } = makeDeps();
     const session = makeSession();
-    await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tacos de Len</h1>" }],
-      resumen: "titular de Len",
-    });
+    await editarConLen(session, deps, "Tacos El Güero</h1>", "Tacos de Len</h1>");
     const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
     assert.equal(out.response.ok, true);
-    assert.equal(store.data.html, HTML);
-  });
-});
-
-describe("H09 · el prefijo de país que nadie dio llega al modelo", () => {
-  it("🔴 un tel: con un país inventado vuelve con su aviso crítico", async () => {
-    const { deps } = makeDeps();
-    const session = { ...makeSession(), userPrompt: "pon 33 1234 5678 en el pie" };
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "replace",
-          target: contentOpId(session.taggedHtml),
-          new_html: '<h1><a href="tel:+333312345678">33 1234 5678</a></h1>',
-        },
-      ],
-      resumen: "teléfono",
-    });
-    assert.equal(out.response.ok, true);
-    assert.deepEqual(out.response.prefijos_sin_origen, ["tel:+333312345678"]);
-    assert.match(String(out.response.aviso_critico), /prefijo de país que nadie te dio/);
-  });
-
-  it("BRAZO DE CONTROL: las cifras dictadas no avisan", async () => {
-    const { deps } = makeDeps();
-    const session = { ...makeSession(), userPrompt: "pon 33 1234 5678 en el pie" };
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        { op: "replace", target: contentOpId(session.taggedHtml), new_html: '<h1><a href="tel:3312345678">33 1234 5678</a></h1>' },
-      ],
-      resumen: "teléfono",
-    });
-    assert.equal(out.response.prefijos_sin_origen, undefined);
+    assert.equal(store.data.html.includes("Tacos de Len"), false);
+    assert.ok(store.data.html.includes("Tacos El Güero</h1>"));
   });
 });
 
@@ -3739,15 +1693,10 @@ describe("H12-a · un conflicto al guardar que se repite no se arregla reintenta
       throw new Error(CONFLICTO_AL_GUARDAR);
     },
   });
-  const editar = (session: AgentSession, deps: AgentDeps, texto: string) =>
-    runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: `<h1>${texto}</h1>` }],
-      resumen: "titular",
-    });
 
   it("el primer conflicto sí invita a reintentar: suele ser pasajero", async () => {
     const { deps } = makeDeps();
-    const out = await editar(makeSession(), conDisputa(deps), "Vitalvet");
+    const out = await editarConLen(makeSession(), conDisputa(deps), "Los mejores del barrio.", "Vitalvet");
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /vuelve a intentarlo/);
     // Con UN choque el turno sigue: el bucle no corta.
@@ -3758,23 +1707,22 @@ describe("H12-a · un conflicto al guardar que se repite no se arregla reintenta
     const { deps } = makeDeps();
     const session = makeSession();
     const d = conDisputa(deps);
-    await editar(session, d, "Vitalvet");
-    const segunda = await editar(session, d, "Vitalvet Clínica");
+    await editarConLen(session, d, "Los mejores del barrio.", "Vitalvet");
+    const segunda = await editarConLen(session, d, "Los mejores del barrio.", "Vitalvet Clínica");
     assert.equal(segunda.response.ok, false);
     const error = String(segunda.response.error);
     assert.doesNotMatch(error, /vuelve a intentarlo/);
     assert.match(error, /reintentar no lo arregla/);
     assert.match(error, /2 intentos seguidos/);
-    // Lo que 2 de 3 corridas probaron después: releer y cambiar de herramienta.
     assert.match(error, /ni releer la página, ni cambiar de herramienta/);
-    // 🔴 LA MITAD QUE CORTA (revisión pre-deploy del 2026-09-22). El bucle
-    // cierra el turno por este campo, y ninguna prueba gratis lo miraba: el
-    // doble de `loop.test.ts` lo inyecta él mismo. Sin esta línea, quitarlo
-    // dejaba todo en verde y el corte muerto.
+    // 🔴 Y LO QUE LEE EL MODELO dice lo mismo: el texto de Edit va tal cual por
+    // `tool_result`, así que corregir sólo `error` le seguiría diciendo al
+    // modelo «vuelve a intentarlo».
+    assert.match(String(segunda.response.tool_result), /reintentar no lo arregla/);
+    assert.doesNotMatch(String(segunda.response.tool_result), /vuelve a intentarlo/);
+    // 🔴 LA MITAD QUE CORTA: el bucle cierra el turno por este campo.
     assert.equal(segunda.guardarSinSalida, true, "el segundo choque no le dice al bucle que cierre");
-    // Y NO AFIRMA UNA CAUSA QUE NO CONOCE. El único caso de producción con
-    // choques seguidos (15/09) fue un fallo nuestro, no otra escritura: se dan
-    // las causas posibles, y se dice que no se sabe cuál.
+    // Y NO AFIRMA UNA CAUSA QUE NO CONOCE.
     assert.doesNotMatch(error, /otra escritura (est[aá]|que est[aá]) cambiando/);
     assert.match(error, /no se pudo guardar/);
     assert.match(error, /otra pestaña/);
@@ -3784,168 +1732,11 @@ describe("H12-a · un conflicto al guardar que se repite no se arregla reintenta
   it("BRAZO DE CONTROL: un guardado bueno entre medias pone la cuenta a cero", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
-    await editar(session, conDisputa(deps), "Vitalvet");
-    const buena = await editar(session, deps, "Vitalvet");
-    assert.equal(buena.response.ok, true);
-    const otra = await editar(session, conDisputa(deps), "Vitalvet 24h");
+    await editarConLen(session, conDisputa(deps), "Los mejores del barrio.", "Vitalvet");
+    const buena = await editarConLen(session, deps, "Los mejores del barrio.", "Vitalvet");
+    assert.equal(buena.response.ok, true, String(buena.response.tool_result));
+    const otra = await editarConLen(session, conDisputa(deps), "Vitalvet", "Vitalvet 24h");
     assert.match(String(otra.response.error), /vuelve a intentarlo/);
-  });
-});
-
-describe("editar_pagina: un target inexistente se recupera sin otra vuelta", () => {
-  it("🔴 el error trae el documento fresco y sus data-op-id", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
-      edits: [{ op: "replace", target: "no-existe-este-id", new_html: "<p>x</p>" }],
-      resumen: "apunta a un id muerto",
-    });
-    assert.equal(out.response.ok, false);
-    assert.ok(
-      String(out.response.documento ?? "").includes("data-op-id"),
-      "el error no trae el documento: el modelo tendría que gastar una vuelta en leer_estado",
-    );
-    assert.ok(String(out.response.como_hacerlo ?? "").includes("sin pedir leer_estado"));
-  });
-
-  // BRAZO DE CONTROL: un edit que SÍ aplica no arrastra el documento en la
-  // respuesta. Sería pagar el payload en cada edición correcta — lo contrario
-  // de lo que esto viene a ahorrar.
-  it("pero un edit que aplica NO arrastra el documento", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const doc = await runAgentTool(session, deps, "leer_estado", { incluir_documento: true });
-    const id = /data-op-id="([^"]+)"/.exec(String(doc.response.documento))![1]!;
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: id, new_html: "<p>ok</p>" }],
-      resumen: "edición válida",
-    });
-    // El aserto que importa es el del documento. `ok` se comprueba aparte
-    // porque un edit válido puede traer avisos (meta desfasada, CSS que no
-    // aplica) y eso no es lo que esta prueba vigila.
-    assert.equal(
-      out.response.documento,
-      undefined,
-      `un edit correcto arrastró el documento: ${JSON.stringify(out.response).slice(0, 200)}`,
-    );
-  });
-});
-
-describe("editar_pagina: retirar el JavaScript del modelo", () => {
-  // Ya no hay cápsula que construir: el script es parte del documento, así que
-  // «la página tiene JavaScript» se dice poniéndoselo dentro.
-  const CODIGO_VIVO = "document.title='vivo';";
-  const HTML_VIVO = HTML.replace("</body>", `<script>${CODIGO_VIVO}</script></body>`);
-
-  it("un edit `delete` contra runtime VACÍA la columna", async () => {
-    const { deps, store } = makeDeps({ data: { html: HTML_VIVO } });
-
-    const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
-      edits: [{ op: "delete", target: "runtime" }],
-      resumen: "quitar el carrito",
-    });
-
-    assert.equal(out.response.ok, true);
-    // El script SALE del documento guardado. Antes esto miraba una columna y
-    // la distinción `null` vs `undefined` era la diferencia entre borrarlo y
-    // no tocarlo; ahora borrarlo es quitar bytes del HTML.
-    assert.ok(
-      !store.data.html.includes(CODIGO_VIVO),
-      "el borrado no quitó el script del documento",
-    );
-    assert.equal(
-      (out.response as { comportamiento_retirado?: boolean }).comportamiento_retirado,
-      true,
-    );
-  });
-
-  it("un borrado NO se cuenta como turno sin cambios", async () => {
-    const { deps } = makeDeps({ data: { html: HTML_VIVO } });
-
-    const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
-      edits: [{ op: "delete", target: "runtime" }],
-      resumen: "quitar el carrito",
-    });
-
-    // Quitar el script CAMBIA los bytes del documento, así que ni siquiera hace
-    // falta la salvedad que había antes — cuando el html salía idéntico porque
-    // lo que cambiaba vivía en otra columna.
-    const critico = String((out.response as { aviso_critico?: string }).aviso_critico ?? "");
-    assert.ok(
-      !/NO cambió NADA/.test(critico),
-      `dijo que no cambió nada tras un borrado: ${critico}`,
-    );
-  });
-
-  it("tampoco le exige una `prueba` de lo que acaba de retirar", async () => {
-    const { deps } = makeDeps({ data: { html: HTML_VIVO } });
-
-    const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
-      edits: [{ op: "delete", target: "runtime" }],
-      resumen: "quitar el carrito",
-    });
-
-    const critico = String((out.response as { aviso_critico?: string }).aviso_critico ?? "");
-    assert.ok(!/prueba/.test(critico), `pidió prueba de un comportamiento retirado: ${critico}`);
-  });
-
-  // INVERTIDO el 2026-08-25, y con el MISMO peligro vigilado desde el otro
-  // lado: un borrado desde /menu tiene que vaciar la entrada de /menu. Antes se
-  // rechazaba entero para que ese `null` no llegara nunca a la columna de la
-  // Home; ahora llega, pero llega con el nombre de su página.
-  it("un borrado desde una SUBPÁGINA vacía la SUYA, no la de la Home", async () => {
-    const dataMp: ProjectData = {
-      html: HTML_VIVO,
-      pages: { menu: { html: HTML_VIVO, title: "Menú" } },
-    };
-    const { deps, store } = makeDeps({ data: dataMp });
-
-    const out = await runAgentTool(
-      makeSession({ page: "menu", html: HTML }),
-      deps,
-      "editar_pagina",
-      { edits: [{ op: "delete", target: "runtime" }], resumen: "quitar el carrito" },
-    );
-
-    assert.equal(out.response.ok, true, JSON.stringify(out.response));
-    assert.ok(
-      !store.data.pages?.menu?.html.includes(CODIGO_VIVO),
-      "el borrado no quitó el script de /menu",
-    );
-    assert.ok(
-      store.data.html.includes(CODIGO_VIVO),
-      "un borrado desde /menu se llevó el de la Home",
-    );
-  });
-
-  // ── CONTRA-PRUEBAS ──────────────────────────────────────────────────────
-  it("CONTRA-PRUEBA: un edit `replace` con código sigue REEMPLAZANDO, no borrando", async () => {
-    const { deps, store } = makeDeps({ data: { html: HTML_VIVO } });
-
-    await runAgentTool(makeSession(), deps, "editar_pagina", {
-      edits: [{ op: "replace", target: "runtime", new_html: "document.title='nuevo';" }],
-      resumen: "arreglar el carrito",
-    });
-
-    assert.ok(store.data.html.includes("document.title='nuevo';"), "no llegó al documento");
-  });
-
-  it("CONTRA-PRUEBA: una edición normal PRESERVA el JavaScript (no lo borra)", async () => {
-    const { deps, store } = makeDeps({ data: { html: HTML_VIVO } });
-    // La sesión tiene que llevar el documento VIVO: es el que se edita.
-    const session = makeSession({ html: HTML_VIVO });
-    const target = contentOpId(session.taggedHtml);
-
-    await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: "<h1>Otro titular</h1>" }],
-      resumen: "titular",
-    });
-
-    // El script sigue en el documento. No hace falta re-sellar nada: una
-    // edición del titular no toca el `<script>`, igual que no toca el `<footer>`.
-    assert.ok(
-      store.data.html.includes(CODIGO_VIVO),
-      "una edición normal se llevó el JavaScript",
-    );
   });
 });
 
@@ -3956,14 +1747,7 @@ describe("editar_pagina: retirar el JavaScript del modelo", () => {
 describe("mutoDurable: lo que ya escribió en la base", () => {
   it("una edición del documento lo marca", async () => {
     const { deps } = makeDeps();
-    const session = makeSession();
-    const target = contentOpId(session.taggedHtml);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: "<h1>Otro</h1>" }],
-      resumen: "titular",
-    });
-
+    const out = await editarConLen(makeSession(), deps, "Tacos El Güero</h1>", "Otro</h1>");
     assert.equal(out.mutoDurable, true);
   });
 
@@ -3987,21 +1771,18 @@ describe("mutoDurable: lo que ya escribió en la base", () => {
   // «aplicado» sobre turnos que no tocaron nada — al revés pero igual de falso.
   it("CONTRA-PRUEBA: una lectura NO lo marca", async () => {
     const { deps } = makeDeps();
-
-    const out = await runAgentTool(makeSession(), deps, "leer_estado", {});
-
+    const out = await runAgentTool(makeSession(), deps, "Read", { file_path: "/index.html" });
     assert.equal(out.mutoDurable, undefined);
   });
 
   it("CONTRA-PRUEBA: una herramienta que RECHAZA sin escribir tampoco", async () => {
     const { deps } = makeDeps();
-
-    // Un edit contra la raíz: se rechaza entero y no se guarda nada.
-    const out = await runAgentTool(makeSession(), deps, "editar_pagina", {
-      edits: [{ op: "replace", target: "no-existe-este-id", new_html: "<p>x</p>" }],
-      resumen: "x",
+    // Un Edit sin haber leído: se rechaza entero y no se guarda nada.
+    const out = await runAgentTool(makeSession(), deps, "Edit", {
+      file_path: "/index.html",
+      old_string: "Tacos",
+      new_string: "Tortas",
     });
-
     assert.equal(out.response.ok, false);
     assert.equal(out.mutoDurable, undefined);
   });
@@ -4024,69 +1805,6 @@ describe("mutoDurable: lo que ya escribió en la base", () => {
 // turno de hoy: la próxima página la escribe un modelo que no estuvo en la
 // conversación.
 
-
-// ───────────────────────────────────────────────────────────────────────────
-// `redisenar_pagina` no puede morir por una clave que no usa.
-//
-// El guardia pedía `GEMINI_API_KEY` SIEMPRE, y el rediseño corre por Fireworks
-// desde que `OPENLEN_AGENT_PROVIDER` pasó a opt-out. En una caja sin esa clave
-// —el estado exacto al que apunta la salida de Gemini— la herramienta moría
-// entera con un motivo FALSO: el usuario pedía «rediséñala» y oía «GEMINI_API_KEY
-// no configurada» de algo que no toca Gemini.
-//
-// Se comprueba SIN RED a propósito: sin `FIREWORKS_API_KEY` el cliente corta en
-// `missing_key` antes de abrir un socket.
-describe("redisenar_pagina y la clave que no usa", () => {
-  const ENTRADA: RedesignInput = {
-    html: HTML,
-    direccion: "más moderna y oscura",
-    brief: null,
-  };
-
-  async function conEntorno(
-    env: Record<string, string | undefined>,
-    fn: () => Promise<void>,
-  ) {
-    const previo: Record<string, string | undefined> = {};
-    for (const [k, v] of Object.entries(env)) {
-      previo[k] = process.env[k];
-      if (v === undefined) delete process.env[k];
-      else process.env[k] = v;
-    }
-    try {
-      await fn();
-    } finally {
-      for (const [k, v] of Object.entries(previo)) {
-        if (v === undefined) delete process.env[k];
-        else process.env[k] = v;
-      }
-    }
-  }
-
-  it("el rediseño no pide ninguna clave de Gemini, ponga lo que ponga el entorno", async () => {
-    // Aqui habia tres casos que describian `OPENLEN_AGENT_PROVIDER=gemini`,
-    // incluido un brazo de control que EXIGIA el mensaje «GEMINI_API_KEY no
-    // configurada». Con el proveedor fuera (2026-08-28) ese mensaje no puede
-    // volver a existir, y esto es la guarda: se pone el valor que antes lo
-    // producia y se comprueba que no aparece.
-    await conEntorno(
-      {
-        GEMINI_API_KEY: undefined,
-        FIREWORKS_API_KEY: undefined,
-        OPENLEN_AGENT_PROVIDER: "gemini",
-      },
-      async () => {
-        const r = await realDeps().redesignDocument("u-prueba", ENTRADA);
-        assert.equal(r.ok, false);
-        assert.notEqual(
-          r.ok === false ? r.error : "",
-          "GEMINI_API_KEY no configurada",
-          "volvio el guardia que pedia una clave que esta ruta no usa",
-        );
-      },
-    );
-  });
-});
 
 // ───────────────────────────────────────────────────────────────────────────
 // EL AVISO DE PIVOTAR CUENTA VACÍAS SEGUIDAS, NO BÚSQUEDAS.
@@ -4152,638 +1870,6 @@ describe("el aviso de pivotar cuenta vacías SEGUIDAS", () => {
   });
 });
 
-
-// ── LAS DOS HERRAMIENTAS QUE ESCRIBEN DOCUMENTO LO DECLARAN IGUAL ──────────
-//
-// `editar_pagina` sabía decir «no cambié nada» y `cambiar_tema` no: devolvía
-// `ok: true` con `tokens_aplicados` aunque no hubiera movido un byte. Y ninguna
-// de las dos sabía decir «no lo sé», que es lo que pasa cuando no hay documento
-// anterior con el que comparar. Ahora las dos construyen la respuesta desde el
-// mismo sitio.
-describe("qué le pasó al documento, dicho y no inferido", () => {
-  it("editar_pagina declara CAMBIO con los dos hashes", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "replace",
-          target: contentOpId(session.taggedHtml),
-          new_html: "<h1>Tacos El Mejor</h1>",
-        },
-      ],
-      resumen: "cambiar el titular",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(out.response.cambio, "cambio");
-    assert.match(String(out.response.hash_antes), /^[0-9a-f]{16}$/);
-    assert.match(String(out.response.hash_despues), /^[0-9a-f]{16}$/);
-    assert.notEqual(out.response.hash_antes, out.response.hash_despues);
-  });
-
-  it("y declara SIN_CAMBIO cuando el documento sale idéntico", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    // La ficha cruda NO ha pasado por la puerta de HTML, y la puerta
-    // transforma: la primera escritura de cualquier turno difiere siempre. Así
-    // que se escribe una vez para dejar guardado un documento ya normalizado, y
-    // se mide la SEGUNDA.
-    const edit = (target: string) => ({
-      edits: [{ op: "replace", target, new_html: "<h1>Tacos El Mejor</h1>" }],
-      resumen: "el titular",
-    });
-    const primera = await runAgentTool(
-      session,
-      deps,
-      "editar_pagina",
-      edit(contentOpId(session.taggedHtml)),
-    );
-    assert.equal(primera.response.cambio, "cambio");
-
-    // El MISMO marcado, carácter por carácter: es el fallo medido el 22/08 —
-    // el modelo reproducía el original y cerraba diciendo que lo arregló.
-    const out = await runAgentTool(
-      session,
-      deps,
-      "editar_pagina",
-      edit(contentOpId(session.taggedHtml)),
-    );
-    assert.equal(out.response.ok, true);
-    assert.equal(out.response.cambio, "sin_cambio");
-    assert.equal(out.response.sin_cambios, true);
-    // Y se le DICE al modelo, para que no cierre afirmando un arreglo.
-    assert.match(String(out.response.aviso_critico), /NO cambió NADA/);
-  });
-
-  it("cambiar_tema también lo declara — antes no sabía decirlo", async () => {
-    const { deps } = makeDeps({ data: { html: THEMED_HTML } });
-    const session = makeSession({ html: THEMED_HTML });
-    const out = await runAgentTool(session, deps, "cambiar_tema", { accent: "#ff0055" });
-    assert.equal(out.response.ok, true);
-    assert.ok(
-      out.response.cambio === "cambio" || out.response.cambio === "sin_cambio",
-      `esperaba una de las tres variantes, vino ${String(out.response.cambio)}`,
-    );
-  });
-});
-
-// ── EL ESTADO DESCRIBE EL DOCUMENTO, no sólo el proyecto ───────────────────
-//
-// Contaba título, subdominio, páginas y módulos, y ni una palabra del documento
-// que el Agente va a editar. Así que el modelo descubría los hechos más caros
-// chocándose con ellos: MEDIDO el 2026-08-22, sólo 7 de las 178 plantillas
-// dicen `var(--ol-…)` en su CSS — en las otras 171 `cambiar_tema` no mueve
-// nada, y el modelo gastaba una llamada entera en enterarse de algo que se sabe
-// mirando el CSS.
-describe("el ESTADO cuenta cómo es el documento", () => {
-  const fila = (html: string, pages?: Record<string, { html: string }>) => ({
-    data: { html, ...(pages ? { pages } : {}) },
-    title: "Tacos",
-    subdomain: null,
-    publishedAt: null,
-  });
-
-  it("dice QUÉ tokens lee la página, no si lee alguno", () => {
-    const html =
-      `<html><head><style>body{background:var(--ol-bg);color:var(--ol-fg)}</style></head><body><h1>x</h1></body></html>`;
-    const s = summarizeProjectState(fila(html));
-    assert.deepEqual(s.lee_tokens, ["--ol-bg", "--ol-fg"]);
-  });
-
-  it("y una página que no lee ninguno lo dice con una lista vacía", () => {
-    // 171 de 178 plantillas están así: `cambiar_tema` escribiría el token y la
-    // página se quedaría exactamente igual.
-    const s = summarizeProjectState(fila(HTML));
-    assert.deepEqual(s.lee_tokens, []);
-  });
-
-  it("dice el modo, que es claro salvo que la raíz diga lo contrario", () => {
-    assert.equal(summarizeProjectState(fila(HTML)).modo, "light");
-    const oscuro = `<html data-ol-mode="dark"><body><h1>x</h1></body></html>`;
-    assert.equal(summarizeProjectState(fila(oscuro)).modo, "dark");
-  });
-
-  it("dice la tipografía del titular cuando la página la declara", () => {
-    const conFuente = `<html style="--ol-font-display:'Fraunces',serif"><body><h1>x</h1></body></html>`;
-    assert.deepEqual(summarizeProjectState(fila(conFuente)).fuentes, { titular: "Fraunces" });
-  });
-
-  it("y se calla cuando no hay ninguna declarada — mejor nada que inventada", () => {
-    assert.equal(summarizeProjectState(fila(HTML)).fuentes, undefined);
-  });
-
-  /**
-   * 🔴 Y DESCRIBE LA PÁGINA ACTIVA, no siempre la Home.
-   *
-   * Es el mismo eje por el que ya se habían equivocado los ojos —aprobar el
-   * trabajo mirando otra página— y la lista de páginas: el Agente puede estar
-   * trabajando en /menu, y los rasgos de la portada no dicen nada de ella.
-   */
-  it("describe la página ACTIVA, no la Home", () => {
-    const home = `<html><body><h1>portada</h1></body></html>`;
-    const menu =
-      `<html data-ol-mode="dark"><head><style>a{color:var(--ol-accent)}</style></head><body><h1>menu</h1></body></html>`;
-    const row = fila(home, { menu: { html: menu } });
-
-    const enHome = summarizeProjectState(row);
-    assert.deepEqual(enHome.lee_tokens, []);
-    assert.equal(enHome.modo, "light");
-
-    const enMenu = summarizeProjectState(row, "menu");
-    assert.deepEqual(enMenu.lee_tokens, ["--ol-accent"]);
-    assert.equal(enMenu.modo, "dark");
-  });
-
-  it("un documento vacío no inventa rasgos", () => {
-    const s = summarizeProjectState(fila(""));
-    assert.equal(s.lee_tokens, undefined);
-    assert.equal(s.modo, undefined);
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// LAS DOS GUARDAS QUE BAJARON DEL PROMPT AL CÓDIGO (2026-09-01).
-//
-// Las dos existían como reglas 🔴 del prompt del Agente y nada las hacía
-// cumplir: si el modelo las ignoraba, el usuario perdía trabajo y no se
-// enteraba. Ahora son hechos que la herramienta le devuelve al modelo, y el
-// modelo tiene que responder por ellos.
-// ─────────────────────────────────────────────────────────────────────────────
-describe("secciones_tocadas — el modelo se entera de QUÉ tocó", () => {
-  // 🔴 MEDIDO el 2026-09-02 con una página de 80 secciones: a «borra entera la
-  // sección número 40» el modelo borró la 41 y cerró diciendo que había borrado
-  // la 40. El índice no era ambiguo; se le fue una fila. No se puede impedir que
-  // un modelo lea mal — lo que sí se puede es devolverle por escrito lo que
-  // acaba de tocar, mientras todavía está a tiempo de arreglarlo.
-  const TRES = `<!doctype html><html><head><title>T</title></head><body>` +
-    `<header><h1>Portada</h1></header>` +
-    `<section><h2>Seccion numero 39</h2><p>a</p></section>` +
-    `<section><h2>Seccion numero 40</h2><p>b</p></section>` +
-    `<section><h2>Seccion numero 41</h2><p>c</p></section>` +
-    `</body></html>`;
-
-  function idDeSeccion(tagged: string, titulo: string): string {
-    // El op-id de la <section> que contiene ese encabezado.
-    const i = tagged.indexOf(titulo);
-    const antes = tagged.slice(0, i);
-    const m = [...antes.matchAll(/<section[^>]*data-op-id="([^"]+)"/g)].pop();
-    if (!m) throw new Error("no encontré la sección de " + titulo);
-    return m[1];
-  }
-
-  it("dice por su NOMBRE la sección que se quitó", async () => {
-    const session = makeSession({ html: TRES });
-    const { deps } = makeDeps({ data: { html: TRES } });
-    const target = idDeSeccion(session.taggedHtml, "Seccion numero 41");
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "delete", target }],
-      resumen: "quitar una sección",
-    });
-
-    assert.equal(out.response.ok, true, JSON.stringify(out.response));
-    const tocadas = (out.response as { secciones_tocadas?: string[] }).secciones_tocadas;
-    assert.deepEqual(tocadas, ['quitaste: "Seccion numero 41"']);
-  });
-
-  it("y distingue reemplazar de quitar", async () => {
-    const session = makeSession({ html: TRES });
-    const { deps } = makeDeps({ data: { html: TRES } });
-    const target = idDeSeccion(session.taggedHtml, "Seccion numero 40");
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target, new_html: "<section><h2>Otra cosa</h2></section>" }],
-      resumen: "reemplazar",
-    });
-
-    assert.equal(out.response.ok, true, JSON.stringify(out.response));
-    const tocadas = (out.response as { secciones_tocadas?: string[] }).secciones_tocadas;
-    assert.deepEqual(tocadas, ['reemplazaste: "Seccion numero 40"']);
-  });
-});
-
-describe("guardas de persistHtmlChange", () => {
-  const CON_FORM = `<!doctype html><html><head><title>T</title></head><body><h1>Taller</h1><form><label>Correo<input name="correo"></label><button type="submit">Enviar</button></form></body></html>`;
-
-  // ⚰️ «avisa cuando el turno PISA una edición que entró mientras pensaba»
-  // vivía aquí. Pinaba el comportamiento VIEJO: guardar igual, archivar lo
-  // ajeno como «Tu edición, justo antes de que el Agente la pisara» y pedirle al
-  // modelo que avisara. Se va con I2 (2026-09-14) — ahora el guardado se NIEGA y
-  // nada sale del documento vivo. Lo que queda de aquel caso se comprueba en
-  // «I2 · nunca pisar lo que no se vio», con el mismo montaje: el disco tiene la
-  // edición del otro, la sesión cree tener otra cosa.
-
-  it("NO avisa en el caso corriente: nadie tocó nada mientras tanto", async () => {
-    const session = makeSession();
-    session.baseHtml = HTML;
-    const { deps } = makeDeps({ data: { html: HTML } });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tacos El Güero 2</h1>" }],
-      resumen: "titular",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.equal((out.response as { piso_edicion_del_usuario?: boolean }).piso_edicion_del_usuario, undefined);
-  });
-
-  it("cuenta los formularios que la edición se llevó por delante", async () => {
-    // El caso medido el 2026-08-31: el usuario tenía una sección con su
-    // formulario y el modelo la reescribió sin él «porque es más honesto».
-    const session = makeSession({ html: CON_FORM });
-    const { deps } = makeDeps({ data: { html: CON_FORM } });
-
-    // El `<form>` es hermano del <h1>, así que hay que apuntarle a él: es
-    // exactamente lo que hizo el modelo en el caso real —sustituir el
-    // formulario por un enlace de WhatsApp—.
-    const formOpId = /<form[^>]*data-op-id="([^"]+)"/.exec(session.taggedHtml)?.[1];
-    assert.ok(formOpId, "el fixture tiene que traer un <form> etiquetado");
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{
-        op: "replace",
-        target: formOpId,
-        new_html: '<a href="https://wa.me/34600111222">Escríbenos por WhatsApp</a>',
-      }],
-      resumen: "contacto por whatsapp",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.equal((out.response as { formularios_perdidos?: number }).formularios_perdidos, 1);
-    const critico = String((out.response as { aviso_critico?: string }).aviso_critico ?? "");
-    assert.ok(/formulario/i.test(critico), critico);
-  });
-
-  it("una edición que no toca el formulario no lo cuenta como perdido", async () => {
-    const session = makeSession({ html: CON_FORM });
-    const { deps } = makeDeps({ data: { html: CON_FORM } });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Taller El Norte</h1>" }],
-      resumen: "titular",
-    });
-
-    assert.equal(out.response.ok, true, JSON.stringify(out.response));
-    assert.equal((out.response as { formularios_perdidos?: number }).formularios_perdidos, undefined);
-  });
-});
-
-// ───── LA FOTO DEL DUEÑO, EN EL CAMINO DE EDICIÓN ─────
-//
-// PRUEBA DE CABLE, no de lógica. La lógica ya la sujeta facts-kept.test.ts. Lo
-// que se comprueba aquí es lo ÚNICO que fallaba: que la guarda esté ENCHUFADA a
-// `editar_pagina`. Existía desde el 22/08 — colgada de `redisenar_pagina`, que
-// el Agente no llamó ni una vez en seis turnos seguidos del conductor
-// multiturno. Una guarda en la herramienta equivocada es no tener guarda.
-describe("editar_pagina avisa cuando se lleva por delante la foto del dueño", () => {
-  const FOTO = "https://images.openlen.com/fachada-aurora.webp";
-  const OTRA = "https://images.openlen.com/fachada-nueva.webp";
-  const CON_FOTO = `<!doctype html><html><body><h1>Aurora</h1><section><img src="${FOTO}" alt="Fachada"></section></body></html>`;
-
-  function imgOpId(taggedHtml: string): string {
-    const m = /<img[^>]*data-op-id="([^"]+)"/.exec(taggedHtml);
-    if (!m) throw new Error("no data-op-id found for img");
-    return m[1];
-  }
-
-  it("tapar la foto con un sólido la nombra y pide reponerla", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession({ html: CON_FOTO });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "replace",
-          target: imgOpId(session.taggedHtml),
-          new_html: '<div style="background:#0b1220;height:420px"></div>',
-        },
-      ],
-      resumen: "arreglar contraste del hero",
-    });
-
-    assert.equal(out.response.ok, true);
-    const aviso = String(out.response.aviso_critico ?? "");
-    assert.ok(aviso.includes(FOTO), `el aviso no nombra la foto: ${aviso}`);
-    assert.match(aviso, /reponlo AHORA/i);
-  });
-
-  it("BRAZO DE CONTROL: sustituir la foto NO avisa — se lo pidieron", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession({ html: CON_FOTO });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "attrs",
-          target: imgOpId(session.taggedHtml),
-          attrs: [{ name: "src", value: OTRA }],
-        },
-      ],
-      resumen: "cambiar la foto",
-    });
-
-    assert.equal(out.response.ok, true);
-    const aviso = String(out.response.aviso_critico ?? "");
-    assert.ok(!aviso.includes(FOTO), `lloró al lobo con una sustitución: ${aviso}`);
-  });
-});
-
-// ───── op="text": el verbo que faltaba ─────
-//
-// PRUEBA DE CABLE. La logica la sujeta el crate (tests/ops_apply.rs, siete
-// casos con sus brazos). Aqui se comprueba lo unico que el crate no puede: que
-// el verbo LLEGUE — que `editar_pagina` lo acepte, lo convierta y lo pase al
-// motor. Es la leccion de `attrs`, que estuvo un dia entero dentro del motor
-// sin que nadie se lo ofreciera al modelo, y por tanto no existia.
-describe("editar_pagina acepta op=text y no reescribe el nodo", () => {
-  const CON_CLASE = '<!doctype html><html><body><h1 class="titulo grande">Viejo</h1></body></html>';
-  const CON_HIJOS = '<!doctype html><html><body><section><h2>Titulo</h2><img src="f.webp"></section></body></html>';
-
-  function opIdDe(taggedHtml: string, etiqueta: string): string {
-    const re = new RegExp(`<${etiqueta}[^>]*data-op-id="([^"]+)"`);
-    const m = re.exec(taggedHtml);
-    if (!m) throw new Error(`sin data-op-id para <${etiqueta}>`);
-    return m[1];
-  }
-
-  it("cambia el texto y CONSERVA las clases — lo que replace obligaba a reteclear", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession({ html: CON_CLASE });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "text", target: opIdDe(session.taggedHtml, "h1"), text: "Nuevo" }],
-      resumen: "nuevo titular",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.ok(store.data.html.includes("Nuevo"), store.data.html);
-    assert.ok(!store.data.html.includes("Viejo"), store.data.html);
-    assert.ok(store.data.html.includes('class="titulo grande"'), store.data.html);
-  });
-
-  it("BRAZO DE CONTROL: sobre un nodo con hijos se NIEGA y dice a que id apuntar", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession({ html: CON_HIJOS });
-    const antes = store.data.html;
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "text", target: opIdDe(session.taggedHtml, "section"), text: "Hola" }],
-      resumen: "texto de la seccion",
-    });
-
-    assert.equal(out.response.ok, false);
-    const detalle = JSON.stringify(out.response);
-    assert.match(detalle, /hijo/i);
-    // La pagina no se toco: ni el titulo ni la foto se fueron.
-    assert.equal(store.data.html, antes);
-  });
-
-  it("op=text sin `text` se rechaza antes de llegar al motor", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession({ html: CON_CLASE });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "text", target: opIdDe(session.taggedHtml, "h1") }],
-      resumen: "sin texto",
-    });
-
-    assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /`text`/);
-  });
-});
-
-// ───── IDS ESTABLES: editar dos veces sin releer ─────
-//
-// LA PROPIEDAD DE TERMINAL. Claude Code lo dice al reves en sus instrucciones:
-// «no releas un fichero que acabas de editar». Aqui releer era OBLIGATORIO —
-// `apply_ops` quitaba los ids, se re-etiquetaba desde cero y la numeracion se
-// desplazaba. Cada edicion costaba una vuelta extra, y cada vuelta reenvia el
-// sobre entero (18.580 tokens).
-//
-// 🔴 LA EDICION TIENE QUE DESPLAZAR. Primera version de estas pruebas: un
-// `attrs`, que no mueve la estructura — y entonces re-etiquetar desde cero daba
-// los MISMOS ids por casualidad, asi que pasaban igual con el cambio
-// desconectado. Eran promesas, no pruebas. Con un `insert_before` al principio
-// del documento, la numeracion vieja se corre entera y la diferencia se ve.
-describe("las direcciones sobreviven a una edicion que desplaza", () => {
-  const DOC = '<!doctype html><html><body><h1>uno</h1><p>dos</p><span>tres</span></body></html>';
-
-  function idsDe(html: string): string[] {
-    return [...html.matchAll(/data-op-id="([^"]+)"/g)].map((m) => m[1]);
-  }
-  /** El id del elemento cuyo texto es `texto`, en el documento etiquetado. */
-  function idPorTexto(html: string, texto: string): string {
-    const re = new RegExp(`data-op-id="([^"]+)"[^>]*>${texto}<`);
-    const m = re.exec(html);
-    if (!m) throw new Error(`no encuentro "${texto}" en ${html}`);
-    return m[1];
-  }
-
-  it("insertar al principio NO renumera lo que venia detras", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession({ html: DOC });
-    const idSpanAntes = idPorTexto(session.taggedHtml, "tres");
-    const idH1 = idPorTexto(session.taggedHtml, "uno");
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "insert_before", target: idH1, new_html: "<nav>menu</nav>" }],
-      resumen: "un nav arriba",
-    });
-    assert.equal(out.response.ok, true, JSON.stringify(out.response));
-
-    // El <span> no se toco: su direccion tiene que ser la MISMA. Sin ids
-    // estables se habria corrido, porque ahora tiene un <nav> delante.
-    assert.equal(
-      idPorTexto(session.taggedHtml, "tres"),
-      idSpanAntes,
-      `el span se renumero:\n${session.taggedHtml}`,
-    );
-    // Y el <nav> nuevo estrena id, sin pisar ninguno.
-    const ids = idsDe(session.taggedHtml);
-    assert.equal(new Set(ids).size, ids.length, `ids repetidos: ${ids.join(",")}`);
-  });
-
-  it("SE PUEDE EDITAR OTRA VEZ con un id de ANTES, sin leer_estado en medio", async () => {
-    // Lo unico que importa de todo el cambio. Sin ids estables, tras insertar
-    // un <nav> el id del <p> pasa a ser el del <h1>: el segundo edit escribiria
-    // en el elemento equivocado.
-    const { deps, store } = makeDeps();
-    const session = makeSession({ html: DOC });
-    const idH1 = idPorTexto(session.taggedHtml, "uno");
-    const idParrafo = idPorTexto(session.taggedHtml, "dos");
-
-    const primera = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "insert_before", target: idH1, new_html: "<nav>menu</nav>" }],
-      resumen: "un nav arriba",
-    });
-    assert.equal(primera.response.ok, true, JSON.stringify(primera.response));
-
-    // El MISMO id de antes de la primera edicion, sin releer nada.
-    const segunda = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "text", target: idParrafo, text: "dos bis" }],
-      resumen: "texto al parrafo",
-    });
-    assert.equal(segunda.response.ok, true, JSON.stringify(segunda.response));
-
-    // Y escribio en el PARRAFO, no en otro elemento.
-    assert.match(store.data.html, /<p[^>]*>dos bis<\/p>/, store.data.html);
-    assert.ok(store.data.html.includes("<h1>uno</h1>"), store.data.html);
-    assert.ok(store.data.html.includes("<nav>menu</nav>"), store.data.html);
-  });
-
-  it("BRAZO DE CONTROL: lo que se GUARDA nunca lleva ids", async () => {
-    // La copia con ids es de la sesion. Persistirla rompio un proyecto real el
-    // 2026-08-23: `tag_with_op_ids` salta lo ya etiquetado, asi que al turno
-    // siguiente taggedCount=0 y la ruta responde 400 para siempre.
-    const { deps, store } = makeDeps();
-    const session = makeSession({ html: DOC });
-    const idH1 = idPorTexto(session.taggedHtml, "uno");
-
-    await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "insert_before", target: idH1, new_html: "<nav>menu</nav>" }],
-      resumen: "un nav",
-    });
-
-    assert.ok(!store.data.html.includes("data-op-id"), store.data.html);
-    assert.ok(!session.baseHtml?.includes("data-op-id"), String(session.baseHtml));
-    assert.ok(session.taggedHtml.includes("data-op-id"), session.taggedHtml);
-  });
-});
-
-// ───── El enlace que dice un numero y marca otro ─────
-//
-// PRUEBA DE CABLE. La logica la sujeta enlaces-desfasados.test.ts. Aqui se
-// comprueba lo unico que aquella no puede: que la guarda este ENCHUFADA a
-// `editar_pagina`, que es donde vive el Agente. La leccion de esta misma
-// manana: `hechosPerdidos` existia, estaba medida, y colgaba de la herramienta
-// que el Agente no llama.
-describe("editar_pagina avisa del enlace que dice un dato y lleva a otro", () => {
-  const CON_TEL =
-    '<!doctype html><html><body><a class="cta" href="tel:+528188880000">81 8888 0000</a></body></html>';
-
-  function opIdDe(taggedHtml: string, etiqueta: string): string {
-    const m = new RegExp(`<${etiqueta}[^>]*data-op-id="([^"]+)"`).exec(taggedHtml);
-    if (!m) throw new Error(`sin data-op-id para <${etiqueta}>`);
-    return m[1];
-  }
-
-  it("cambiar SOLO el texto del telefono dispara el aviso", async () => {
-    // El caso exacto de la corrida del escenario `copy`: op=text sobre el <a>,
-    // sin tocar el href.
-    const { deps } = makeDeps({ data: { html: CON_TEL } });
-    const session = makeSession({ html: CON_TEL });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "text", target: opIdDe(session.taggedHtml, "a"), text: "81 1234 5678" }],
-      resumen: "telefono nuevo",
-    });
-
-    assert.equal(out.response.ok, true);
-    const aviso = String(out.response.aviso_critico ?? "");
-    assert.match(aviso, /DICEN un dato y LLEVAN a otro/);
-    assert.ok(aviso.includes("tel:+528188880000"), aviso);
-  });
-
-  it("BRAZO DE CONTROL: cambiar el texto Y el href no avisa", async () => {
-    const { deps } = makeDeps({ data: { html: CON_TEL } });
-    const session = makeSession({ html: CON_TEL });
-    const id = opIdDe(session.taggedHtml, "a");
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        { op: "text", target: id, text: "81 1234 5678" },
-        { op: "attrs", target: id, attrs: [{ name: "href", value: "tel:+528112345678" }] },
-      ],
-      resumen: "telefono nuevo, bien",
-    });
-
-    assert.equal(out.response.ok, true);
-    const aviso = String(out.response.aviso_critico ?? "");
-    assert.ok(!aviso.includes("DICEN un dato"), `lloro al lobo: ${aviso}`);
-  });
-});
-
-// ───── El boton que nace mudo ─────
-//
-// PRUEBA DE CABLE. La logica la sujeta handlers-muertos.test.ts. Aqui, lo unico
-// que aquella no puede: que el detector este ENCHUFADO a `editar_pagina`, y que
-// mire lo que el modelo MANDO — porque en lo guardado el saneador ya se llevo
-// los `on*` y no queda rastro que mirar.
-describe("editar_pagina avisa del manejador en linea que va a morir", () => {
-  const DOC = '<!doctype html><html><body><section><p>hola</p></section></body></html>';
-
-  function opIdDe(taggedHtml: string, etiqueta: string): string {
-    const m = new RegExp(`<${etiqueta}[^>]*data-op-id="([^"]+)"`).exec(taggedHtml);
-    if (!m) throw new Error(`sin data-op-id para <${etiqueta}>`);
-    return m[1];
-  }
-
-  it("un onclick dentro de new_html dispara el aviso", async () => {
-    const { deps } = makeDeps({ data: { html: DOC } });
-    const session = makeSession({ html: DOC });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "replace",
-          target: opIdDe(session.taggedHtml, "p"),
-          new_html: '<button id="add" onclick="anadir()">Anadir</button>',
-        },
-      ],
-      resumen: "un boton",
-    });
-
-    assert.equal(out.response.ok, true);
-    const aviso = String(out.response.aviso_critico ?? "");
-    assert.match(aviso, /manejador\(es\) EN LINEA|EN L[IÍ]NEA/i);
-    assert.ok(aviso.includes("onclick"), aviso);
-    assert.match(aviso, /addEventListener/);
-  });
-
-  it("op=attrs con name onclick tambien lo dispara", async () => {
-    // El otro camino de entrada, que un detector sobre el HTML no veria.
-    const { deps } = makeDeps({ data: { html: DOC } });
-    const session = makeSession({ html: DOC });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "attrs",
-          target: opIdDe(session.taggedHtml, "p"),
-          attrs: [{ name: "onclick", value: "anadir()" }],
-        },
-      ],
-      resumen: "handler por attrs",
-    });
-
-    assert.equal(out.response.ok, true);
-    assert.ok(String(out.response.aviso_critico ?? "").includes("onclick"), JSON.stringify(out.response));
-  });
-
-  it("BRAZO DE CONTROL: addEventListener en el runtime NO avisa", async () => {
-    // La forma CORRECTA de cablear. Si esto sonara, el aviso seria ruido y se
-    // aprenderia a ignorarlo.
-    const { deps } = makeDeps({ data: { html: DOC } });
-    const session = makeSession({ html: DOC });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [
-        {
-          op: "replace",
-          target: "runtime",
-          new_html:
-            'document.getElementById("add").addEventListener("click", function () { window.n = 1; });',
-        },
-      ],
-      resumen: "comportamiento bien cableado",
-      prueba_js: 'await ui.clic("#add"); await ui.visible("#add");',
-    });
-
-    assert.equal(out.response.ok, true);
-    const aviso = String(out.response.aviso_critico ?? "");
-    assert.ok(!aviso.includes("EN LINEA"), `lloro al lobo: ${aviso}`);
-    assert.ok(!aviso.includes("onclick"), `lloro al lobo: ${aviso}`);
-  });
-});
 
 // ─── proponer_objetivo ───────────────────────────────────────────────────────
 //
@@ -4879,533 +1965,3 @@ describe("proponer_objetivo", () => {
 //   (b) guarda su copia, con el script VIEJO, y deshace el comportamiento que
 //       el propio turno acababa de escribir.
 const CON_SCRIPT_VIEJO = `<!doctype html><html><head><title>Decks</title><meta name="description" content="Decks"></head><body><h1>Mis decks</h1><p>Arrastra tus cartas.</p><script>window.estado = 'viejo';</script></body></html>`;
-
-describe("I1 · lo que Len recuerda es lo que se guardó", () => {
-  it("tras editar_runtime, la sesión lleva el script NUEVO, no el viejo", async () => {
-    const session = makeSession({ html: CON_SCRIPT_VIEJO });
-    session.baseHtml = stripOpIds(CON_SCRIPT_VIEJO);
-    const { deps, store } = makeDeps({ data: { html: CON_SCRIPT_VIEJO } });
-
-    const out = await runAgentTool(session, deps, "editar_runtime", {
-      script: "window.estado = 'nuevo';",
-      resumen: "multi-deck",
-    });
-    assert.equal(out.response.ok, true, JSON.stringify(out.response));
-
-    // El disco ya lo hacía bien; lo que fallaba era la memoria de la sesión.
-    assert.ok(store.data.html.includes("'nuevo'"), "el disco tiene que llevar el script nuevo");
-    assert.ok(session.taggedHtml.includes("'nuevo'"), "session.taggedHtml se quedó con el script VIEJO");
-    assert.ok(!session.taggedHtml.includes("'viejo'"), "session.taggedHtml conserva el script viejo");
-    assert.ok(String(session.baseHtml).includes("'nuevo'"), "session.baseHtml se quedó con el script VIEJO");
-    // Y el lienzo del usuario: `updatedHtml` es lo que se le pinta.
-    assert.ok(String(out.updatedHtml ?? "").includes("'nuevo'"), "el lienzo enseñaba el documento de antes del guardado");
-  });
-
-  it("la edición siguiente del mismo turno ni avisa de nadie ni pierde el runtime", async () => {
-    const session = makeSession({ html: CON_SCRIPT_VIEJO });
-    session.baseHtml = stripOpIds(CON_SCRIPT_VIEJO);
-    const { deps, store } = makeDeps({ data: { html: CON_SCRIPT_VIEJO } });
-
-    const r1 = await runAgentTool(session, deps, "editar_runtime", {
-      script: "window.estado = 'nuevo';",
-      resumen: "multi-deck",
-    });
-    assert.equal(r1.response.ok, true, JSON.stringify(r1.response));
-
-    const r2 = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Mis decks de Yu-Gi-Oh</h1>" }],
-      resumen: "titular",
-    });
-    assert.equal(r2.response.ok, true, JSON.stringify(r2.response));
-
-    assert.equal(
-      (r2.response as { piso_edicion_del_usuario?: boolean }).piso_edicion_del_usuario,
-      undefined,
-      "falso positivo: nadie más escribió, fue el propio Agente",
-    );
-    assert.ok(
-      !store.versions.some((l) => /antes de que el Agente la pisara/i.test(l)),
-      `archivó el guardado del PROPIO Agente como edición ajena: ${JSON.stringify(store.versions)}`,
-    );
-    assert.ok(store.data.html.includes("'nuevo'"), "el runtime nuevo se perdió en la edición siguiente");
-    assert.ok(store.data.html.includes("Yu-Gi-Oh"), "la edición de titular no llegó al disco");
-  });
-});
-
-// ───── I2 · NUNCA PISAR LO QUE NO SE VIO ─────
-//
-// Hasta hoy, si el documento en disco había cambiado desde la base de la
-// sesión, el Agente GUARDABA IGUAL: archivaba lo que había con una etiqueta
-// especial y le pedía al modelo que avisara. La edición ajena salía del
-// documento vivo y el usuario tenía que ir a Versiones a rescatarla.
-//
-// La vara es Claude Code: «…» — se NIEGA, no escribe.
-//
-// Aquí se niega Y se entrega el documento fresco en la misma respuesta, que es
-// el patrón que `editar_pagina` ya usaba para un op-id inexistente: sin él, el
-// modelo gasta una vuelta entera del bucle en pedir lo que ya le podíamos dar.
-describe("I2 · nunca pisar lo que no se vio", () => {
-  it("si otro escribió desde la base de Len, la edición se RECHAZA y el disco queda intacto", async () => {
-    const enDisco = HTML.replace("Los mejores del barrio.", "Abrimos domingos.");
-    const session = makeSession();
-    session.baseHtml = HTML;
-    const { deps, store } = makeDeps({ data: { html: enDisco } });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tacos El Güero 2</h1>" }],
-      resumen: "titular",
-    });
-
-    assert.equal(out.response.ok, false, JSON.stringify(out.response));
-    // El disco es de quien escribió último, byte a byte.
-    assert.equal(store.data.html, enDisco, "se pisó la edición ajena en vez de rechazar la escritura");
-    assert.equal(store.saved.length, 0, "no debería haberse guardado nada");
-    assert.deepEqual(store.versions, [], "no hay nada que archivar si no se pisa nada");
-    // Y el documento FRESCO viaja con el error, para que reaplique sin otra vuelta.
-    const doc = String((out.response as { documento?: string }).documento ?? "");
-    assert.ok(doc.includes("Abrimos domingos."), "el error no trae el documento fresco");
-    assert.ok(doc.includes("data-op-id"), "el documento fresco tiene que venir etiquetado");
-  });
-
-  it("y el modelo REAPLICA en el mismo turno, sobre lo que el otro escribió", async () => {
-    const enDisco = HTML.replace("Los mejores del barrio.", "Abrimos domingos.");
-    const session = makeSession();
-    session.baseHtml = HTML;
-    const { deps, store } = makeDeps({ data: { html: enDisco } });
-
-    const rechazo = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tacos El Güero 2</h1>" }],
-      resumen: "titular",
-    });
-    assert.equal(rechazo.response.ok, false);
-
-    // Segundo intento, con los ids del documento que acaba de recibir.
-    const fresco = String((rechazo.response as { documento?: string }).documento ?? "");
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(fresco), new_html: "<h1>Tacos El Güero 2</h1>" }],
-      resumen: "titular",
-    });
-
-    assert.equal(out.response.ok, true, JSON.stringify(out.response));
-    assert.ok(store.data.html.includes("Tacos El Güero 2"), "la edición de Len no llegó");
-    assert.ok(store.data.html.includes("Abrimos domingos."), "la edición del otro escritor se perdió igualmente");
-  });
-
-  it("BRAZO DE CONTROL: sin otro escritor, se guarda como siempre", async () => {
-    const session = makeSession();
-    session.baseHtml = HTML;
-    const { deps, store } = makeDeps({ data: { html: HTML } });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tacos El Güero 2</h1>" }],
-      resumen: "titular",
-    });
-
-    assert.equal(out.response.ok, true, JSON.stringify(out.response));
-    assert.equal((out.response as { piso_edicion_del_usuario?: boolean }).piso_edicion_del_usuario, undefined);
-    assert.ok(store.data.html.includes("Tacos El Güero 2"));
-  });
-});
-
-// ───── I3 · NUNCA ADOPTAR EL DISCO EN SILENCIO ─────
-//
-// `leer_estado` (con `op_id` o con `incluir_documento`) y `buscar_en_pagina`
-// re-etiquetan la sesión con lo que haya en disco. Eso está bien —es el
-// documento de verdad—, pero se hacía SIN COMPARARLO con lo que Len creía
-// tener: si otro escritor había quitado algo, Len lo absorbía, dejaba de poder
-// detectarlo (su base pasaba a ser la del otro) y el modelo no se enteraba
-// nunca. La pérdida quedaba sin dueño y sin aviso.
-//
-// La vara, otra vez, es Claude Code: cuando un fichero cambia en disco se lo
-// dice al modelo —que suele ser deliberado y lo tome como el estado actual en
-// vez de revertirlo— CON el diff. El hecho viaja; la decisión es del modelo.
-describe("I3 · nunca adoptar el disco en silencio", () => {
-  const OTRO = HTML.replace("Los mejores del barrio.", "Abrimos domingos.");
-
-  it("leer_estado con incluir_documento dice que la página cambió por debajo", async () => {
-    const session = makeSession();
-    session.baseHtml = stripOpIds(HTML);
-    const { deps } = makeDeps({ data: { html: OTRO } });
-
-    const out = await runAgentTool(session, deps, "leer_estado", { incluir_documento: true });
-    assert.ok(String(out.response.documento ?? "").includes("data-op-id"), JSON.stringify(out.response));
-
-    const aviso = String((out.response as { cambio_en_disco?: string }).cambio_en_disco ?? "");
-    assert.ok(aviso.length > 0, "no avisó de que el documento había cambiado por debajo");
-    assert.ok(/cambió|cambio/i.test(aviso), aviso);
-    // Y la sesión SÍ se muda al documento fresco: adoptarlo está bien, lo que
-    // no vale es adoptarlo callando.
-    assert.ok(String(session.baseHtml).includes("Abrimos domingos."));
-  });
-
-  it("buscar_en_pagina también lo dice", async () => {
-    const session = makeSession();
-    session.baseHtml = stripOpIds(HTML);
-    const { deps } = makeDeps({ data: { html: OTRO } });
-
-    const out = await runAgentTool(session, deps, "buscar_en_pagina", { texto: "Tacos" });
-    assert.equal(out.response.ok, true, JSON.stringify(out.response));
-    assert.ok(
-      String((out.response as { cambio_en_disco?: string }).cambio_en_disco ?? "").length > 0,
-      "no avisó de que el documento había cambiado por debajo",
-    );
-  });
-
-  it("BRAZO DE CONTROL: si el disco es lo que Len creía, no dice nada", async () => {
-    const session = makeSession();
-    session.baseHtml = stripOpIds(HTML);
-    const { deps } = makeDeps({ data: { html: HTML } });
-
-    const out = await runAgentTool(session, deps, "leer_estado", { incluir_documento: true });
-    assert.ok(String(out.response.documento ?? "").includes("data-op-id"));
-    assert.equal((out.response as { cambio_en_disco?: string }).cambio_en_disco, undefined);
-  });
-
-  it("y tras el aviso deja de avisar: la base es ya la del disco", async () => {
-    const session = makeSession();
-    session.baseHtml = stripOpIds(HTML);
-    const { deps } = makeDeps({ data: { html: OTRO } });
-
-    const primera = await runAgentTool(session, deps, "leer_estado", { incluir_documento: true });
-    assert.ok(String((primera.response as { cambio_en_disco?: string }).cambio_en_disco ?? "").length > 0);
-
-    const segunda = await runAgentTool(session, deps, "leer_estado", { incluir_documento: true });
-    assert.equal((segunda.response as { cambio_en_disco?: string }).cambio_en_disco, undefined);
-  });
-});
-
-// ───── I5 · EL DIAGNÓSTICO LLEGA EN EL MISMO TURNO ─────
-//
-// `persistPage` ya DETECTABA que la edición dejaba el `<script>` apuntando a
-// elementos que ya no existen (`runtime_stale`): lo calcula, lo guarda en
-// `data.degradations` y con eso se pinta el modal del usuario. Al MODELO le
-// llegaba por `lib/agent/context.ts`, que lee `project.data.degradations` UNA
-// vez, al montar el turno — o sea, en el turno SIGUIENTE.
-//
-// Ése es el turno 1 del caso de Jesús: Len rompió el script, el sistema lo
-// supo, el usuario vio el modal, y Len cerró con «Listo, ya puedes tener varios
-// decks». Se enteró un turno tarde.
-//
-// Claude Code entrega los diagnósticos nuevos de una edición en la SIGUIENTE
-// llamada al modelo del MISMO turno. Aquí es aún más barato:
-// el cálculo es síncrono y de esta misma llamada, así que viaja DENTRO de la
-// respuesta de la herramienta.
-describe("I5 · el diagnóstico llega en el mismo turno", () => {
-  const CON_CARRITO = `<!doctype html><html><head><title>Tienda</title><meta name="description" content="Tienda"></head><body><h1>Tienda</h1><div id="carrito">0</div><p>Compra ya.</p><script>document.getElementById('carrito').textContent = '1';</script></body></html>`;
-
-  it("borrar el elemento que el script busca se dice en la MISMA respuesta", async () => {
-    const session = makeSession({ html: CON_CARRITO });
-    session.baseHtml = stripOpIds(CON_CARRITO);
-    const { deps, store } = makeDeps({ data: { html: CON_CARRITO } });
-
-    const carritoId = /<div[^>]*id="carrito"[^>]*data-op-id="([^"]+)"|<div[^>]*data-op-id="([^"]+)"[^>]*id="carrito"/.exec(session.taggedHtml);
-    const target = carritoId?.[1] ?? carritoId?.[2];
-    assert.ok(target, `el fixture tiene que traer el #carrito etiquetado: ${session.taggedHtml}`);
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "delete", target }],
-      resumen: "quitar el carrito",
-    });
-
-    assert.equal(out.response.ok, true, JSON.stringify(out.response));
-    // El guardado SÍ lo registró — eso ya funcionaba.
-    assert.ok(
-      (store.data.degradations ?? []).some((d) => d.code === "runtime_stale"),
-      "el guardado ni siquiera lo registró",
-    );
-    // Lo que faltaba: decírselo al modelo AHORA.
-    const critico = String((out.response as { aviso_critico?: string }).aviso_critico ?? "");
-    assert.ok(/carrito/.test(critico), `el aviso no nombra el elemento roto: ${critico}`);
-    assert.ok(
-      (out.response as { referencias_rotas?: string[] }).referencias_rotas?.includes("carrito"),
-      JSON.stringify(out.response),
-    );
-  });
-
-  it("BRAZO DE CONTROL: una edición que no rompe el script no avisa de nada", async () => {
-    const session = makeSession({ html: CON_CARRITO });
-    session.baseHtml = stripOpIds(CON_CARRITO);
-    const { deps } = makeDeps({ data: { html: CON_CARRITO } });
-
-    const out = await runAgentTool(session, deps, "editar_pagina", {
-      edits: [{ op: "replace", target: contentOpId(session.taggedHtml), new_html: "<h1>Tienda El Norte</h1>" }],
-      resumen: "titular",
-    });
-
-    assert.equal(out.response.ok, true, JSON.stringify(out.response));
-    assert.equal((out.response as { referencias_rotas?: string[] }).referencias_rotas, undefined);
-  });
-});
-
-// ── 🔴 LA PRUEBA EN JAVASCRIPT, EN EL AGENTE — la forma de `preflight.js` ────
-//
-// Claude Code resuelve algo parecido: cuando su sistema de artefactos necesita
-// comprobar COMPORTAMIENTO sobre una página viva al publicar, reserva un
-// `preflight.js` — un módulo JavaScript con tope de tamaño y una función por
-// defecto, que corre contra las páginas abiertas; si no cumple, la publicación
-// se rechaza. JavaScript libre con contrato acotado, y NO un mini-lenguaje de
-// pasos y expectativas.
-//
-// OpenLen ya tenía esa pieza desde el 2026-09-04 (`lib/agent/prueba-js.ts`,
-// con su tope de bytes, su techo de pared y su `MAX_LLAMADAS_UI`), y estaba
-// enchufada en CREAR — pero NO en el Agente, que es donde `sin_accion` se come
-// el 56% de las llamadas a `editar_runtime` en producción.
-//
-// 🔴 RANURA RESERVADA, no el mismo campo a veces JS: `preflight.js` es un
-// nombre reservado con su contrato, no «index.html que a veces es otra cosa».
-// Aquí es `prueba_js`, aparte de `prueba`.
-describe("prueba_js — la promesa del Agente", () => {
-  const CONTADOR = 'var n = await ui.texto("#n"); await ui.desplaza("#n"); await ui.cambiaDe("#n", n);';
-
-  it("🔴 una prueba en JavaScript se acepta y viaja en la sesión", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const out = await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").textContent = "1";',
-      prueba_js: CONTADOR,
-      resumen: "contador",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorJs, CONTADOR);
-  });
-
-  // 🔴 QUIEN MANDÓ `prueba_js` MANDÓ PRUEBA. El aviso de «cambiaste el
-  // comportamiento SIN prueba» miraba sólo la ranura del DSL, así que a un
-  // turno que sí prometía por la otra le decía lo contrario —y la tarjeta del
-  // dueño salía en ámbar por una promesa que existía—.
-  it("🔴 con `prueba_js` aceptada no se le dice que no mandó prueba", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const out = await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").textContent = "1";',
-      prueba_js: CONTADOR,
-      resumen: "contador",
-    });
-    assert.equal(out.response.ok, true);
-    assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /SIN mandar/);
-  });
-
-  it("CONTRA-PRUEBA: sin prueba, el aviso sigue saliendo", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const out = await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").textContent = "1";',
-      resumen: "contador",
-    });
-    assert.equal(out.response.ok, true);
-    assert.match(String(out.response.aviso_critico ?? ""), /SIN mandar `prueba_js`/);
-  });
-
-  // 🔴 EL CONTRATO SE HACE CUMPLIR, y ANTES de aplicar nada (2026-09-22). Una
-  // prueba que no valida es entrada mal formada como cualquier otra: la
-  // llamada entera se rechaza y el modelo la reenvía. Guardar el cambio sin su
-  // prueba dejaba un runtime nuevo con la promesa VIEJA en la mano.
-  it("🔴 una prueba que pasa del tope rechaza la llamada: no se guarda NADA", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    const antes = session.taggedHtml;
-    const out = await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").textContent = "1";',
-      prueba_js: "x".repeat(5 * 1024),
-      resumen: "contador",
-    });
-    assert.equal(out.response.ok, false);
-    assert.equal(out.response.error, "prueba_js_demasiado_grande");
-    assert.match(String(out.response.detalle ?? ""), /No se guardó nada/);
-    assert.equal(store.saved.length, 0);
-    assert.equal(session.taggedHtml, antes);
-    assert.equal(session.behaviorJs ?? null, null);
-    // La batería lo cuenta: el motivo sigue viajando en la sesión.
-    assert.equal(session.rechazoPrueba, "demasiado_grande");
-    // Y no se tocó el comportamiento, que es lo que lee el juez de la batería.
-    assert.notEqual(out.cambioConducta, true);
-  });
-
-  // ⚰️ EL DSL, RETIRADO (2026-09-22). Un modelo con historial viejo que siga
-  // mandando `prueba` no puede creer que prometió: un parámetro que ya no
-  // existe rechaza la llamada, igual que una prueba que no valida.
-  it("🔴 una `prueba` del DSL retirado rechaza la llamada, y se dice por qué", async () => {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    const out = await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").textContent = "1";',
-      prueba: [{ clic: "#b", entonces: [{ donde: "#n", que: "cambia" }] }],
-      resumen: "contador",
-    });
-    assert.equal(out.response.ok, false);
-    assert.equal(out.response.error, "prueba_retirada");
-    assert.match(String(out.response.detalle ?? ""), /`prueba` ya no existe/);
-    assert.match(String(out.response.como_hacerlo ?? ""), /prueba_js/);
-    assert.equal(store.saved.length, 0);
-    assert.equal(session.behaviorJs ?? null, null);
-    assert.equal(session.rechazoPrueba, "prueba_retirada");
-  });
-
-  // El rechazo es de la llamada que lo trajo: la siguiente, bien formada, no
-  // lo hereda — o la batería contaría dos rechazos donde hubo uno.
-  it("CONTRA-PRUEBA: la llamada siguiente, bien formada, no hereda el rechazo", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").textContent = "1";',
-      prueba_js: "x".repeat(5 * 1024),
-      resumen: "contador",
-    });
-    const out = await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").textContent = "1";',
-      prueba_js: 'ui.desplaza("#n"); ui.cambia("#n");',
-      resumen: "contador",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(session.rechazoPrueba, null);
-  });
-});
-
-// 🔴 EL RESULTADO DICE SI SE TOCÓ COMPORTAMIENTO, con la misma decisión que
-// pide `prueba`. Lo lee el arnés: sin esto exigía promesa a cualquier edición,
-// y la batería del 2026-09-22 acusó a 32 turnos que sólo cambiaron un texto.
-describe("cambioConducta — el dato que lee el arnés", () => {
-  it("🔴 reescribir el runtime SÍ cambia el comportamiento", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const out = await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").textContent = "1";',
-      resumen: "contador",
-    });
-    assert.equal(out.cambioConducta, true);
-    // Y no viaja al modelo: es del arnés.
-    assert.equal("cambioConducta" in out.response, false);
-  });
-
-  it("…y cambiar un texto NO", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const out = await runAgentTool(session, deps, "editar_texto", {
-      ediciones: [{ target: contentOpId(session.taggedHtml), texto: "Hola de nuevo" }],
-      resumen: "titular",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(out.cambioConducta, false);
-  });
-});
-
-describe("la promesa del turno sobrevive a lo que no la sustituye", () => {
-  const PROGRAMA = 'ui.desplaza("#n"); ui.cambia("#n");';
-
-  it("🔴 un editar_texto posterior SIN prueba no borra la promesa JS", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").textContent = "1";',
-      prueba_js: PROGRAMA,
-      resumen: "contador",
-    });
-    assert.equal(session.behaviorJs, PROGRAMA);
-    // Un retoque de copy, sin prueba de ninguna clase. Y APLICADO: apuntando a
-    // `"h1"` en vez de a un op-id, la edición fallaba y esto pasaba sin haber
-    // retocado nada.
-    const retoque = await runAgentTool(session, deps, "editar_texto", {
-      ediciones: [{ target: contentOpId(session.taggedHtml), texto: "Hola de nuevo" }],
-      resumen: "titular",
-    });
-    assert.equal(retoque.response.ok, true);
-    assert.equal(
-      session.behaviorJs,
-      PROGRAMA,
-      "un cambio puramente textual borro la promesa JS — la regla que el DSL si tiene",
-    );
-  });
-
-  it("🔴 una `prueba_js` posterior SÍ la sustituye: manda la última declarada", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").textContent = "1";',
-      prueba_js: PROGRAMA,
-      resumen: "contador",
-    });
-    const NUEVA = 'var n = await ui.texto("#n"); await ui.clic("#n"); await ui.cambiaDe("#n", n);';
-    await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").addEventListener("click", function () {});',
-      prueba_js: NUEVA,
-      resumen: "ahora al pulsar",
-    });
-    // Manda la ÚLTIMA declarada: resucitar la vieja es la avería de
-    // `la-promesa-vieja-tapaba-el-ultimo-cambio`, arreglada en 086e7ff6.
-    assert.equal(session.behaviorJs, NUEVA);
-  });
-});
-
-// 🔴 UNA PROMESA DESCRIBE EL RUNTIME QUE HAY (2026-09-22).
-//
-// Aquí chocaban dos reglas medidas: «una prueba rechazada no se lleva por
-// delante la promesa que sí valía» y «un comportamiento nuevo sin promesa nueva
-// deja FUERA la vieja». Chocaban porque la llamada se aplicaba a medias —runtime
-// nuevo, prueba descartada— y para una promesa que describe un runtime que ya no
-// está no hay respuesta buena. Con la prueba validada ANTES de aplicar, las dos
-// se cumplen a la vez: la llamada mal formada no cambia nada, y la bien formada
-// que cambia el comportamiento sin prometer retira la vieja
-// ([[la-promesa-vieja-tapaba-el-ultimo-cambio]]) y se lo dice al modelo.
-describe("la promesa sigue al runtime que hay, nunca a uno que ya no está", () => {
-  const PROGRAMA = 'var n = await ui.texto("#n"); await ui.desplaza("#n"); await ui.cambiaDe("#n", n);';
-
-  async function conPromesa() {
-    const { deps, store } = makeDeps();
-    const session = makeSession();
-    await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").textContent = "1";',
-      prueba_js: PROGRAMA,
-      resumen: "contador",
-    });
-    assert.equal(session.behaviorJs, PROGRAMA);
-    return { deps, store, session };
-  }
-
-  it("🔴 una prueba que no valida no deja un runtime nuevo con la promesa vieja: no cambia NADA", async () => {
-    const { deps, store, session } = await conPromesa();
-    const guardadas = store.saved.length;
-    const html = session.taggedHtml;
-    const out = await runAgentTool(session, deps, "editar_runtime", {
-      script: 'var b=document.createElement("button"); b.addEventListener("click", function(){});',
-      prueba_js: "x".repeat(5 * 1024),
-      resumen: "pestanas",
-    });
-    assert.equal(out.response.ok, false);
-    assert.equal(store.saved.length, guardadas);
-    assert.equal(session.taggedHtml, html);
-    // Sigue en pie, y con razón: describe el runtime que sigue ahí.
-    assert.equal(session.behaviorJs, PROGRAMA);
-  });
-
-  it("🔴 un runtime nuevo SIN prueba retira la vieja, y se le DICE", async () => {
-    const { deps, session } = await conPromesa();
-    const out = await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").addEventListener("click", function () {});',
-      resumen: "ahora al pulsar",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorJs ?? null, null);
-    assert.match(String(out.response.aviso_critico ?? ""), /promesa anterior .* ya no cuenta/);
-  });
-
-  it("CONTRA-PRUEBA: sin promesa previa, el aviso no habla de una que no hubo", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const out = await runAgentTool(session, deps, "editar_runtime", {
-      script: 'document.getElementById("n").textContent = "1";',
-      resumen: "contador",
-    });
-    assert.match(String(out.response.aviso_critico ?? ""), /SIN mandar `prueba_js`/);
-    assert.doesNotMatch(String(out.response.aviso_critico ?? ""), /promesa anterior/);
-  });
-
-  it("quitar el runtime quita la promesa: no queda nada que prometer", async () => {
-    const { deps, session } = await conPromesa();
-    const out = await runAgentTool(session, deps, "editar_runtime", {
-      script: "",
-      resumen: "quitar el contador",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(session.behaviorJs ?? null, null);
-  });
-});

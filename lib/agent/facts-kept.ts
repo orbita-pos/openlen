@@ -24,9 +24,10 @@ export interface HechoPerdido {
   readonly valor: string;
 }
 
-/** Cuántos se le nombran al modelo. Con seis ya sabe qué reponer; una lista más
- *  larga es la que se hojea en vez de leerse. */
-const MAX_NOMBRADOS = 6;
+// ⚰️ Los `aviso*` que redactaban esto para el `aviso_critico` de las
+// herramientas viejas se fueron con ellas (Len 2.0, T9): lo que detecta este
+// fichero vuelve como diagnóstico anclado a línea desde
+// `lib/agent/diagnosticos-de-la-escritura.ts`.
 
 function urlsDeImagen(html: string): string[] {
   const out = new Set<string>();
@@ -98,14 +99,6 @@ export function hechosPerdidos(antes: string, despues: string): HechoPerdido[] {
 }
 
 /**
- * El aviso PARA EL MODELO, en el mismo turno.
- *
- * No se rechaza el rediseño: la página nueva es lo que el usuario pidió y
- * tirarla entera por una foto sería peor que la pérdida. Se le nombra lo que
- * falta y se le dice que lo reponga AHORA — que es lo que ya se hace con las
- * conductas mal cableadas (`aviso_critico`), y funciona.
- */
-/**
  * LO MISMO, PERO PARA UNA EDICIÓN — donde SUSTITUIR es una petición normal.
  *
  * POR QUÉ NO VALE `hechosPerdidos` TAL CUAL. En un rediseño, que una foto
@@ -143,24 +136,6 @@ export function hechosPerdidosNetos(antes: string, despues: string): HechoPerdid
     telefono: telefonos(despues).length,
   };
   return perdidos.filter((p) => despuesPorTipo[p.tipo] < antesPorTipo[p.tipo]);
-}
-
-/**
- * El aviso de la EDICIÓN. Hermano de `avisoHechosPerdidos`, con otra doctrina.
- *
- * No se rechaza la edición y no se le acusa: quitar la foto pudo ser justo lo
- * que le pidieron. Se le nombra lo que ya no está y se le dan las DOS salidas
- * — reponerlo, o decírselo al usuario —, que es la misma forma que ya tiene el
- * aviso de los formularios perdidos y funciona.
- */
-export function avisoHechosPerdidosEnEdicion(perdidos: readonly HechoPerdido[]): string {
-  const lista = perdidos
-    .slice(0, MAX_NOMBRADOS)
-    .map((p) => `${p.tipo}: ${p.valor}`)
-    .join(" · ");
-  const resto =
-    perdidos.length > MAX_NOMBRADOS ? ` (y ${perdidos.length - MAX_NOMBRADOS} más)` : "";
-  return `Esta edición ha QUITADO ${perdidos.length} dato(s) real(es) del dueño que la página SÍ tenía: ${lista}${resto}. No son decoración: una foto o un enlace que desaparece es trabajo suyo borrado, y la dirección no te la puedes re-inventar. Si quitarlo NO era lo que te pidieron —pasa al arreglar el contraste: se tapa o se sustituye la imagen que estorba, y con ella se va la foto que el dueño quería—, reponlo AHORA, en este mismo turno, con la URL EXACTA. Si SÍ era lo que te pidieron, DÍSELO al usuario en tu respuesta.`;
 }
 
 /**
@@ -202,17 +177,3 @@ export function metaDesfasada(html: string): string[] {
   return fuera;
 }
 
-/** El aviso PARA EL MODELO cuando la meta se quedó atrás. */
-export function avisoMetaDesfasada(viejos: readonly string[]): string {
-  return `La <meta name="description"> sigue anunciando ${viejos.join(" y ")}, y eso ya NO está en la página. Ese es el texto que enseña Google: ahí quedaría un dato muerto que le cuesta clientes al dueño. Corrígela AHORA, en este mismo turno, con un edit target="head" que lleve la <meta name="description"> completa y actualizada.`;
-}
-
-export function avisoHechosPerdidos(perdidos: readonly HechoPerdido[]): string {
-  const lista = perdidos
-    .slice(0, MAX_NOMBRADOS)
-    .map((p) => `${p.tipo}: ${p.valor}`)
-    .join(" · ");
-  const resto =
-    perdidos.length > MAX_NOMBRADOS ? ` (y ${perdidos.length - MAX_NOMBRADOS} más)` : "";
-  return `El rediseño PERDIÓ ${perdidos.length} dato(s) REAL(es) del dueño que sí estaban en la página anterior: ${lista}${resto}. No son decoración: una foto o un enlace que desaparece es trabajo suyo borrado, y no puedes re-inventarlos. Repónlos AHORA, en este mismo turno, con editar_texto o editar_html (pide leer_estado incluir_documento=true para tener ids frescos) — colócalos donde encajen en el diseño nuevo, con la URL EXACTA. Y NO le digas al usuario que el rediseño está listo hasta que estén de vuelta.`;
-}

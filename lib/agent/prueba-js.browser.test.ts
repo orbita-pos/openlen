@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import puppeteer from "puppeteer";
 import { leerFallos, leerVacuas, programaJs, programaSinAccionesJs, VENTANA_PRUEBA_MS } from "./prueba-js";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
-import { brazoSinAcciones } from "./evals/brazo-sin-acciones";
+import { brazoSinAcciones } from "./brazo-sin-acciones";
 
 async function correr(html: string, codigo: string) {
   const browser = await puppeteer.launch({ headless: true });

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  avisoContenidoPerdido,
   contenidoPerdido,
   medirFragmento,
 } from "./contenido-perdido";
@@ -95,15 +94,3 @@ describe("medirFragmento", () => {
   });
 });
 
-describe("el aviso", () => {
-  it("nombra el nodo, los números y las dos salidas", () => {
-    const aviso = avisoContenidoPerdido([
-      { target: "4h", elementosAntes: 12, elementosDespues: 1, textoAntes: 180, textoDespues: 0 },
-    ]);
-    expect(aviso).toContain("4h");
-    expect(aviso).toContain("12→1");
-    // La salida de fondo: si querías tocar una clase, no era `replace`.
-    expect(aviso).toContain('op="attrs"');
-    expect(aviso).toContain("ESTE MISMO TURNO");
-  });
-});

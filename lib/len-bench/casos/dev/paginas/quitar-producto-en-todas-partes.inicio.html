@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ÁMBAR — Fragancia y cuidado del hogar · aromas que se quedan</title>
+<meta name="description" content="ÁMBAR es una casa de fragancia y cuidado del hogar. Aceites, jabones y brumas de formulación lenta, con aromas cálidos de ámbar, miel y madera. Hechos en pequeños lotes para vivir la casa con calma." />
+<meta property="og:title" content="ÁMBAR — Fragancia y cuidado del hogar" />
+<meta property="og:description" content="Aceites, jabones y brumas de formulación lenta, con aromas cálidos de ámbar, miel y madera. Pequeños lotes, ingredientes honestos." />
+<meta property="og:image" content="https://images.openlen.com/146-oil-bottle-1920.webp" />
+<meta name="theme-color" content="#FAF3E7" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FAF3E7'/%3E%3Cpath d='M16 5c4 0 7 3.4 7 8.2 0 3.6-2.2 6.6-4.4 9.4-1.1 1.5-1.8 2.7-2.6 4.4-.8-1.7-1.5-2.9-2.6-4.4C11.2 19.8 9 16.8 9 13.2 9 8.4 12 5 16 5z' fill='%23C9821F'/%3E%3Ccircle cx='16' cy='13' r='2.6' fill='%23FAF3E7'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAF3E7; --surface:#F3E7D2; --surface-2:#EDDCC0; --deep:#2A2017;
+    --ink:#2A2017; --ink-soft:#43352A; --muted:#7B6A57; --faint:#9C8A74;
+    --line:rgba(42,32,23,0.12); --line-strong:rgba(42,32,23,0.20);
+    --accent:#C9821F; --accent-deep:#A0640F; --honey:#E0A93B; --gold:#D99B2E; --on-accent:#FFF8EC;
+    --radius:8px; --radius-lg:18px;
+    --display:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  h1,h2,h3,.serif{font-family:var(--display);font-weight:500;letter-spacing:0;line-height:1.04}
+  .eyebrow{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+  .lift{transition:transform .55s cubic-bezier(.2,.7,.2,1),box-shadow .55s}
+  .lift:hover{transform:translateY(-5px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block}
+  .btn{display:inline-flex;align-items:center;gap:.55rem;height:50px;padding:0 28px;border-radius:999px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,background .25s,color .25s,border-color .25s;text-decoration:none}
+  .btn-primary{background:var(--accent);color:var(--on-accent);box-shadow:0 12px 28px -14px rgba(160,100,15,.7)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .rule{height:1px;background:var(--line)}
+  .price{font-family:var(--display);color:var(--accent-deep);font-size:20px;font-weight:600}
+  .stars{color:var(--honey);letter-spacing:.12em;font-size:14px}
+  .pill{display:inline-flex;align-items:center;gap:.4rem;height:30px;padding:0 14px;border-radius:999px;border:1px solid var(--line-strong);font-size:12.5px;color:var(--ink-soft);font-weight:500;background:rgba(255,255,255,.35)}
+  .swatch{width:13px;height:13px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(42,32,23,.18)}
+  /* Content is visible by default; only JS hides it to play the scroll-in
+     entrance. No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+  .grain{background-image:radial-gradient(rgba(42,32,23,.035) 1px,transparent 1px);background-size:4px 4px}
+  .glow{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:0}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body class="grain">
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40" style="background:rgba(250,243,231,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:74px">
+      <a href="#top" class="serif flex items-center gap-2.5" style="font-size:26px;letter-spacing:.16em;font-weight:600">
+        <span style="position:relative;width:18px;height:22px;display:inline-block">
+          <svg viewBox="0 0 32 32" width="18" height="22" aria-hidden="true"><path d="M16 3c5 0 8.5 4 8.5 9.6 0 4.2-2.6 7.8-5.2 11.1C17.9 25.5 17 27 16 29c-1-2-1.9-3.5-3.3-5.3C10.1 20.4 7.5 16.8 7.5 12.6 7.5 7 11 3 16 3z" fill="var(--accent)"/><circle cx="16" cy="12.4" r="3" fill="var(--bg)"/></svg>
+        </span>ÁMBAR
+      </a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#coleccion" class="hover:opacity-60 transition">La colección</a>
+        <a href="#aromas" class="hover:opacity-60 transition">Aromas</a>
+        <a href="#ritual" class="hover:opacity-60 transition">El ritual</a>
+        <a href="#resenas" class="hover:opacity-60 transition">Reseñas</a>
+      </nav>
+      <a href="#comprar" class="btn btn-primary" style="height:42px;padding:0 22px;font-size:13.5px">Comprar</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" class="relative wrap" style="padding:68px 24px 28px">
+    <div class="glow" style="width:380px;height:380px;top:-40px;right:2%;background:rgba(224,169,59,.35)"></div>
+    <div class="grid lg:grid-cols-12 gap-10 items-center relative" style="z-index:1">
+      <div class="lg:col-span-6 reveal">
+        <span class="eyebrow">Fragancia &amp; cuidado del hogar</span>
+        <h1 style="font-size:clamp(50px,8.5vw,104px);margin:18px 0 0">
+          Aromas que<br><em style="font-style:italic;color:var(--accent)">se quedan</em><br>en la casa.
+        </h1>
+        <p style="font-size:18px;color:var(--muted);max-width:38ch;margin:26px 0 32px">
+          Aceites, jabones y brumas de formulación lenta. Ámbar, miel y madera en pequeños lotes, con ingredientes que reconocés. Para vivir tu casa con calma.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#coleccion" class="btn btn-primary">Ver la colección</a>
+          <a href="#ritual" class="btn btn-ghost">El ritual ÁMBAR</a>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-7 gap-y-3 mt-10 text-[13px]" style="color:var(--faint)">
+          <span class="flex items-center gap-2"><span style="color:var(--honey)">●</span>Lotes pequeños</span>
+          <span class="flex items-center gap-2"><span style="color:var(--honey)">●</span>Sin parabenos ni sulfatos</span>
+          <span class="flex items-center gap-2"><span style="color:var(--honey)">●</span>Envío en 48 h</span>
+        </div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;box-shadow:0 36px 70px -36px rgba(42,32,23,.5);background:var(--surface)">
+          <img class="img-cover" src="https://images.openlen.com/146-oil-bottle-1920.webp" alt="Frasco alto de vidrio con aceite dorado de ÁMBAR sobre una superficie suave en tonos crema y oliva" loading="eager" width="1080" height="1350">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DETAIL STRIP -->
+  <section class="wrap" style="padding:38px 24px">
+    <div class="rule"></div>
+    <div class="flex flex-wrap items-center justify-between gap-y-5 py-6 text-[13px]" style="color:var(--muted);letter-spacing:.04em">
+      <span>· Formulación lenta</span><span>· Cera de soja y aceites vegetales</span><span>· Envases recargables</span><span>· Hecho a mano</span><span>· Cruelty-free</span>
+    </div>
+    <div class="rule"></div>
+  </section>
+
+  <!-- COLECCIÓN -->
+  <section id="coleccion" class="wrap" style="padding:54px 24px 24px">
+    <div class="flex items-end justify-between mb-12 reveal">
+      <div>
+        <span class="eyebrow">La colección</span>
+        <h2 style="font-size:clamp(34px,5.5vw,58px);margin-top:10px">Cuatro piezas<br>para empezar</h2>
+      </div>
+      <p class="hidden md:block text-[14px]" style="color:var(--muted);max-width:30ch">Cada producto comparte la misma base de ámbar y miel, para que toda la casa suene a lo mismo.</p>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;background:var(--surface)"><img class="img-cover" src="https://images.openlen.com/141-soap-bar-1920.webp" alt="Pastilla de jabón sólido sobre una jabonera de cerámica en tonos avena y terracota" loading="lazy" width="1080" height="1350"></div>
+        <div class="flex items-baseline justify-between mt-5 gap-3">
+          <h3 style="font-size:23px">Jabón de ámbar</h3><span class="price">$9</span>
+        </div>
+        <p class="text-[14px] mt-1.5" style="color:var(--muted)">Aceite de oliva y manteca de karité. Espuma cremosa, aroma cálido que dura.</p>
+        <div class="stars mt-3" aria-label="5 de 5 estrellas">★★★★★ <span style="color:var(--faint);font-family:var(--body);font-size:12px">128</span></div>
+      </article>
+
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;background:var(--surface)"><img class="img-cover" src="https://images.openlen.com/147-honey-jar-1920.webp" alt="Frasco redondo de vidrio con bálsamo dorado de miel sobre un pedestal suave en tonos miel" loading="lazy" width="1080" height="1350"></div>
+        <div class="flex items-baseline justify-between mt-5 gap-3">
+          <h3 style="font-size:23px">Bálsamo de miel</h3><span class="price">$16</span>
+        </div>
+        <p class="text-[14px] mt-1.5" style="color:var(--muted)">Bálsamo multiusos para manos y labios. Miel, cera de abeja y un toque de ámbar.</p>
+        <div class="stars mt-3" aria-label="5 de 5 estrellas">★★★★★ <span style="color:var(--faint);font-family:var(--body);font-size:12px">94</span></div>
+      </article>
+
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;background:var(--surface)"><img class="img-cover" src="https://images.openlen.com/138-perfume-bottle-1920.webp" alt="Frasco facetado de vidrio con bruma de hogar flotando sobre un pedestal suave" loading="lazy" width="1080" height="1350"></div>
+        <div class="flex items-baseline justify-between mt-5 gap-3">
+          <h3 style="font-size:23px">Bruma de hogar</h3><span class="price">$22</span>
+        </div>
+        <p class="text-[14px] mt-1.5" style="color:var(--muted)">Para textiles y aire. Madera, ámbar y un fondo de cítrico seco. Un toque y la casa cambia.</p>
+        <div class="stars mt-3" aria-label="4 y media de 5 estrellas">★★★★<span style="opacity:.4">★</span> <span style="color:var(--faint);font-family:var(--body);font-size:12px">211</span></div>
+      </article>
+
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5;background:var(--surface)"><img class="img-cover" src="https://images.openlen.com/140-cosmetic-tube-1920.webp" alt="Tubo cosmético de crema de manos sobre un pedestal en tonos crema y ámbar" loading="lazy" width="1080" height="1350"></div>
+        <div class="flex items-baseline justify-between mt-5 gap-3">
+          <h3 style="font-size:23px">Crema de manos</h3><span class="price">$14</span>
+        </div>
+        <p class="text-[14px] mt-1.5" style="color:var(--muted)">Absorción rápida, sin rastro graso. Karité, glicerina vegetal y nuestro ámbar de siempre.</p>
+        <div class="stars mt-3" aria-label="5 de 5 estrellas">★★★★★ <span style="color:var(--faint);font-family:var(--body);font-size:12px">76</span></div>
+      </article>
+
+    </div>
+    <div class="text-center mt-14 reveal"><a href="#comprar" class="btn btn-ghost">Ver la tienda completa</a></div>
+  </section>
+
+  <!-- AROMAS / INGREDIENTES -->
+  <section id="aromas" style="background:var(--surface);margin-top:56px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="grid lg:grid-cols-12 gap-12 items-start">
+        <div class="lg:col-span-5 reveal">
+          <span class="eyebrow">Aromas &amp; ingredientes</span>
+          <h2 style="font-size:clamp(32px,5vw,52px);margin-top:12px">Tres notas,<br>una misma alma</h2>
+          <p style="color:var(--muted);font-size:17px;margin-top:18px;max-width:42ch">Todo en ÁMBAR parte del mismo acorde. Lo construimos con ingredientes que se nombran sin letra pequeña.</p>
+          <div class="flex flex-wrap gap-2.5 mt-8">
+            <span class="pill"><span class="swatch" style="background:var(--accent)"></span>Ámbar</span>
+            <span class="pill"><span class="swatch" style="background:var(--honey)"></span>Miel</span>
+            <span class="pill"><span class="swatch" style="background:#8C6A3F"></span>Madera de cedro</span>
+            <span class="pill"><span class="swatch" style="background:#C7B27A"></span>Vainilla</span>
+          </div>
+        </div>
+        <div class="lg:col-span-7 grid sm:grid-cols-3 gap-5">
+          <div class="reveal" style="background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-lg);padding:26px">
+            <div class="serif" style="font-size:34px;color:var(--accent)">01</div>
+            <h3 style="font-size:21px;margin:10px 0 6px">Salida</h3>
+            <p class="text-[14px]" style="color:var(--muted)">Cítrico seco y bergamota. El primer minuto, fresco y luminoso.</p>
+          </div>
+          <div class="reveal" style="background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-lg);padding:26px">
+            <div class="serif" style="font-size:34px;color:var(--accent)">02</div>
+            <h3 style="font-size:21px;margin:10px 0 6px">Corazón</h3>
+            <p class="text-[14px]" style="color:var(--muted)">Miel y un dejo de flor de azahar. La parte cálida que reconocés.</p>
+          </div>
+          <div class="reveal" style="background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-lg);padding:26px">
+            <div class="serif" style="font-size:34px;color:var(--accent)">03</div>
+            <h3 style="font-size:21px;margin:10px 0 6px">Fondo</h3>
+            <p class="text-[14px]" style="color:var(--muted)">Ámbar, cedro y vainilla. Lo que se queda en la ropa y en el aire.</p>
+          </div>
+          <div class="reveal sm:col-span-3 flex flex-wrap items-center gap-x-8 gap-y-4 mt-1" style="border-top:1px solid var(--line);padding-top:24px">
+            <div><div class="serif" style="font-size:34px;color:var(--accent-deep)">96%</div><div class="text-[13px]" style="color:var(--faint)">de origen natural</div></div>
+            <div><div class="serif" style="font-size:34px;color:var(--accent-deep)">0</div><div class="text-[13px]" style="color:var(--faint)">parabenos y sulfatos</div></div>
+            <div><div class="serif" style="font-size:34px;color:var(--accent-deep)">12</div><div class="text-[13px]" style="color:var(--faint)">ingredientes, ni uno más</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EL RITUAL -->
+  <section id="ritual" class="wrap" style="padding:88px 24px">
+    <div class="grid lg:grid-cols-12 gap-12 items-center">
+      <div class="lg:col-span-6 reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:5/4;box-shadow:0 30px 60px -34px rgba(42,32,23,.45);background:var(--surface)"><img class="img-cover" src="https://images.openlen.com/176-tea-setup-1920.webp" alt="Escena editorial de un ritual tranquilo con tetera de cerámica y una taza de té sobre tonos cálidos" loading="lazy" width="1280" height="1024"></div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <span class="eyebrow">El ritual ÁMBAR</span>
+        <h2 style="font-size:clamp(32px,5vw,54px);margin:14px 0 0">Un gesto pequeño,<br>repetido cada día</h2>
+        <p style="color:var(--muted);font-size:17.5px;margin-top:20px;max-width:48ch">No hace falta nada especial. Una bruma sobre las sábanas antes de dormir, el bálsamo al cerrar el día, el jabón en la mañana. La casa empieza a oler a la tuya.</p>
+        <div class="grid gap-5 mt-9">
+          <div class="flex gap-4">
+            <span class="serif" style="min-width:44px;height:44px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line-strong);color:var(--accent);font-size:18px">1</span>
+            <div><h3 style="font-size:19px;margin:4px 0 4px">Empezá por la mañana</h3><p class="text-[14.5px]" style="color:var(--muted)">El jabón de ámbar deja la piel suave y la casa con un fondo cálido para el resto del día.</p></div>
+          </div>
+          <div class="flex gap-4">
+            <span class="serif" style="min-width:44px;height:44px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line-strong);color:var(--accent);font-size:18px">2</span>
+            <div><h3 style="font-size:19px;margin:4px 0 4px">Refrescá los espacios</h3><p class="text-[14.5px]" style="color:var(--muted)">Dos toques de bruma en cortinas y textiles. El aroma vuelve cada vez que pasás cerca.</p></div>
+          </div>
+          <div class="flex gap-4">
+            <span class="serif" style="min-width:44px;height:44px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line-strong);color:var(--accent);font-size:18px">3</span>
+            <div><h3 style="font-size:19px;margin:4px 0 4px">Cerrá el día</h3><p class="text-[14.5px]" style="color:var(--muted)">El bálsamo de miel en manos antes de dormir. La señal de que el día terminó.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESEÑAS -->
+  <section id="resenas" style="background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="max-w-2xl reveal mb-12">
+        <span class="eyebrow">Reseñas</span>
+        <h2 style="font-size:clamp(32px,5vw,52px);margin-top:12px">4.9 de 5, de gente<br>que repite</h2>
+        <p style="color:var(--muted);font-size:17px;margin-top:16px">Más de 2.400 valoraciones verificadas. Esto es lo que dicen quienes ya tienen ÁMBAR en casa.</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-5">
+        <figure class="reveal" style="background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-lg);padding:28px">
+          <div class="stars" aria-label="5 de 5 estrellas">★★★★★</div>
+          <blockquote class="serif" style="font-size:22px;line-height:1.35;margin:14px 0 0;color:var(--ink)">«La bruma de hogar es lo primero que noto al entrar. Toda visita pregunta qué es.»</blockquote>
+          <figcaption class="flex items-center gap-3 mt-6">
+            <span style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--honey))"></span>
+            <span class="text-[13px]"><span style="color:var(--ink);font-weight:600">Lucía M.</span><br><span style="color:var(--faint)">Compra verificada</span></span>
+          </figcaption>
+        </figure>
+        <figure class="reveal" style="background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-lg);padding:28px">
+          <div class="stars" aria-label="5 de 5 estrellas">★★★★★</div>
+          <blockquote class="serif" style="font-size:22px;line-height:1.35;margin:14px 0 0;color:var(--ink)">«El jabón dura muchísimo y la piel queda suave. Ya van tres recompras.»</blockquote>
+          <figcaption class="flex items-center gap-3 mt-6">
+            <span style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--honey),var(--accent-deep))"></span>
+            <span class="text-[13px]"><span style="color:var(--ink);font-weight:600">Andrés R.</span><br><span style="color:var(--faint)">Compra verificada</span></span>
+          </figcaption>
+        </figure>
+        <figure class="reveal" style="background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-lg);padding:28px">
+          <div class="stars" aria-label="5 de 5 estrellas">★★★★★</div>
+          <blockquote class="serif" style="font-size:22px;line-height:1.35;margin:14px 0 0;color:var(--ink)">«Regalé el bálsamo de miel y terminé comprando uno para mí. Aroma honesto, nada empalagoso.»</blockquote>
+          <figcaption class="flex items-center gap-3 mt-6">
+            <span style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--gold))"></span>
+            <span class="text-[13px]"><span style="color:var(--ink);font-weight:600">Paula V.</span><br><span style="color:var(--faint)">Compra verificada</span></span>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA COMPRAR -->
+  <section id="comprar" style="background:var(--deep);color:var(--bg)">
+    <div class="wrap relative" style="padding:92px 24px">
+      <div class="glow" style="width:420px;height:300px;top:-60px;left:50%;transform:translateX(-50%);background:rgba(201,130,31,.4)"></div>
+      <div class="relative text-center" style="z-index:1">
+        <span class="eyebrow" style="color:var(--honey)">Empezá tu ritual</span>
+        <h2 class="serif" style="font-size:clamp(38px,7vw,76px);color:var(--bg);margin:16px auto 0;max-width:16ch;font-weight:500">Llevá ÁMBAR<br>a tu casa</h2>
+        <p style="color:rgba(250,243,231,.74);font-size:18px;margin:22px auto 34px;max-width:46ch">Probá el set de inicio con los cuatro favoritos. Si no es lo que esperabas, te devolvemos el dinero en 30 días.</p>
+        <div class="flex flex-wrap gap-3 justify-center">
+          <a href="#comprar" class="btn btn-primary" style="height:54px;padding:0 32px;font-size:15px">Comprar el set · $52<span style="font-size:18px;line-height:1">→</span></a>
+          <a href="#coleccion" class="btn btn-ghost" style="height:54px;padding:0 30px;font-size:15px;color:var(--bg);border-color:rgba(250,243,231,.3)">Comprar individual</a>
+        </div>
+        <div class="flex flex-wrap items-center justify-center gap-x-7 gap-y-2 mt-9 text-[13px]" style="color:rgba(250,243,231,.6)">
+          <span>Envío gratis desde $40</span><span>·</span><span>devolución en 30 días</span><span>·</span><span>pago seguro</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="wrap" style="padding:56px 24px 44px">
+    <div class="grid md:grid-cols-5 gap-8">
+      <div class="md:col-span-2">
+        <div class="serif flex items-center gap-2.5" style="font-size:26px;letter-spacing:.14em;font-weight:600">
+          <svg viewBox="0 0 32 32" width="18" height="22" aria-hidden="true"><path d="M16 3c5 0 8.5 4 8.5 9.6 0 4.2-2.6 7.8-5.2 11.1C17.9 25.5 17 27 16 29c-1-2-1.9-3.5-3.3-5.3C10.1 20.4 7.5 16.8 7.5 12.6 7.5 7 11 3 16 3z" fill="var(--accent)"/><circle cx="16" cy="12.4" r="3" fill="var(--bg)"/></svg>
+          ÁMBAR
+        </div>
+        <p class="text-[14px] mt-4" style="color:var(--muted);max-width:34ch">Fragancia y cuidado del hogar de formulación lenta. Pequeños lotes, ingredientes honestos, aromas que se quedan.</p>
+        <div class="flex items-center gap-2.5 mt-5">
+          <span class="pill" style="height:28px">Cruelty-free</span>
+          <span class="pill" style="height:28px">Recargable</span>
+        </div>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Tienda</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#coleccion" class="hover:opacity-60">La colección</a><br><a href="#comprar" class="hover:opacity-60">Set de inicio</a><br><a href="#aromas" class="hover:opacity-60">Recargas</a><br><a href="#comprar" class="hover:opacity-60">Tarjeta regalo</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Casa</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#aromas" class="hover:opacity-60">Ingredientes</a><br><a href="#ritual" class="hover:opacity-60">El ritual</a><br><a href="#resenas" class="hover:opacity-60">Reseñas</a><br><a href="#" class="hover:opacity-60">Nuestra historia</a></p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:14px">Ayuda</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:2"><a href="#" class="hover:opacity-60">Envíos y devoluciones</a><br><a href="#" class="hover:opacity-60">Preguntas frecuentes</a><br><a href="#" class="hover:opacity-60">Contacto</a><br><a href="#" class="hover:opacity-60">Instagram</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:38px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© ÁMBAR · Fragancia y cuidado del hogar</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, static preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>

@@ -168,7 +168,8 @@ describe("POST /api/generate", () => {
   // 🔴 UN TURNO NO PUEDE DURAR PARA SIEMPRE (hallazgo 10, mitad servidor).
   //
   // Chat y Agente ya tenían techo (`STREAM_TIMEOUT_MS` sobre su
-  // `upstreamAbort`). Crear era la única de las tres SIN él — y es la
+  // `upstreamAbort`; el del Agente es de silencio desde el 2026-09-25, ver
+  // `lib/agent/reloj-de-silencio.ts`). Crear era la única de las tres SIN él — y es la
   // superficie donde el usuario mira una pantalla en blanco. Peor: el
   // keepalive de `progress` cada 5s existe A PROPÓSITO para que el watchdog
   // del navegador no salte durante el «pensar» inicial, así que cada ping

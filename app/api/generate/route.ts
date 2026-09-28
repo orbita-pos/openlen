@@ -47,9 +47,11 @@ export const dynamic = "force-dynamic";
 /**
  * EL TECHO ABSOLUTO DEL TURNO.
  *
- * Chat y Agente ya lo tienen (los dos, `STREAM_TIMEOUT_MS` sobre su
- * `upstreamAbort`). Crear era la única de las tres SIN él — y es justo la
- * superficie donde el usuario mira una pantalla en blanco esperando.
+ * El Chat lo tiene (`STREAM_TIMEOUT_MS` sobre su `upstreamAbort`). El Agente
+ * lo tuvo hasta el 2026-09-25 y lo cambió por un reloj de SILENCIO
+ * (`lib/agent/reloj-de-silencio.ts`, H1 de Len 2.0): un turno que trabaja no
+ * se corta, uno callado sí. Crear era la única de las tres SIN ninguno — y es
+ * justo la superficie donde el usuario mira una pantalla en blanco esperando.
  *
  * Sin techo, un proveedor que acepta la conexión y deja de mandar bytes deja
  * la generación corriendo indefinidamente. Y el cliente tampoco la corta: el

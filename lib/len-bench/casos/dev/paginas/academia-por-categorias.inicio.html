@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Norte FC — Academia de fútbol infantil · Tijuana</title>
+<meta name="description" content="Fútbol para niñas y niños de 4 a 14 años: grupos por edad, entrenadores certificados y una regla — que amen el juego antes que ganarlo. Primera clase gratis.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #F9FBF8;
+    --surface: #EFF4EE;
+    --surface-2: #E4EDE3;
+    --fg: #1C231C;
+    --fg-muted: #556055;
+    --fg-faint: #616C61;
+    --border: rgba(28,35,28,0.08);
+    --border-strong: rgba(28,35,28,0.12);
+    --accent: #2F7D3B;
+    --accent-r: 47,125,59;
+    --accent-ink: #EFF9F0;
+    --radius: 12px;
+    --radius-sm: 7px;
+    --radius-lg: 18px;
+    --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --warn: #A3671C;
+    --danger: #8F2D22;
+  }
+  :root.dark {
+    --bg: #111611;
+    --surface: #181E18;
+    --surface-2: #202820;
+    --fg: #EDF1ED;
+    --fg-muted: rgba(237,241,237,0.66);
+    --fg-faint: rgba(237,241,237,0.56);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #6BB077;
+    --accent-r: 107,176,119;
+    --accent-ink: #0D2312;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-feature-settings: "ss01","cv11"; -webkit-font-smoothing: antialiased; }
+  .display { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.025em; line-height: 0.97; }
+  .mono { font-family: var(--font-mono); }
+  .hairline { border-color: var(--border); }
+  .hairline-2 { border-color: var(--border-strong); }
+  .lift { transition: transform 100ms ease, box-shadow 100ms ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.09); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: rgba(var(--accent-r), 0.92); }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-faint); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .half-tone { opacity: 0.45; }
+  .ph-pasto { background: linear-gradient(145deg, rgba(var(--accent-r),0.24), var(--surface-2) 52%, var(--surface)); }
+  .ph-gis { background: linear-gradient(125deg, var(--surface-2), var(--surface) 55%, rgba(var(--accent-r),0.11)); }
+  .grain::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background-image: radial-gradient(rgba(0,0,0,0.045) 1px, transparent 1px); background-size: 26px 26px; opacity: 0.5; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="sticky top-0 z-50 border-b hairline backdrop-blur-md" style="background: color-mix(in srgb, var(--bg) 88%, transparent);">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke="var(--accent)" stroke-width="1.9"/>
+        <path d="M12 8l3.4 2.5-1.3 4h-4.2l-1.3-4L12 8z" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round"/>
+      </svg>
+      <span class="display text-[18px]">Norte FC</span>
+    </a>
+    <div class="hidden items-center gap-7 text-[13.5px] font-medium text-[color:var(--fg-muted)] md:flex">
+      <a href="#categorias" class="hover:text-[color:var(--fg)]">Categorías</a>
+      <a href="#metodo" class="hover:text-[color:var(--fg)]">Nuestro método</a>
+      <a href="#costos" class="hover:text-[color:var(--fg)]">Costos</a>
+    </div>
+    <a href="#visita" class="btn-primary lift inline-flex h-9 items-center rounded-full px-4 text-[13.5px] font-semibold">Clase gratis</a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="mx-auto max-w-6xl px-5 pb-16 pt-10 md:pb-24 md:pt-16">
+  <div class="grid items-center gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-14">
+    <div>
+      <div class="mono inline-flex items-center gap-2 rounded-full border hairline bg-[var(--surface)] py-1 pl-2.5 pr-3.5 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-muted)]">
+        <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"></span>
+        Niñas y niños 4-14 · Otay, Tijuana
+      </div>
+      <h1 class="display mt-6 text-[42px] sm:text-[56px] lg:text-[62px]">
+        Que amen el juego <span class="text-[color:var(--accent)]">antes que ganarlo.</span>
+      </h1>
+      <p class="mt-6 max-w-md text-[15.5px] leading-relaxed text-[color:var(--fg-muted)]">
+        Academia de fútbol formativo: grupos chicos por edad, entrenadores certificados y minutos de juego para TODOS — no solo para los que ya la dominan. Los cracks salen solos; los que aman el balón, se hacen aquí.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href="#visita" class="btn-primary lift inline-flex h-11 items-center gap-1.5 rounded-full px-5 text-[14px] font-semibold">
+          Agenda su clase gratis
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#categorias" class="lift inline-flex h-11 items-center rounded-full border hairline-2 bg-[var(--surface)] px-5 text-[14px] font-medium">Ver categorías</a>
+      </div>
+      <div class="mono mt-7 text-[12px] tracking-wide text-[color:var(--fg-faint)] tabular">214 jugadores activos · 9 entrenadores certificados · desde 2018</div>
+    </div>
+    <div class="ph-pasto grain relative aspect-[4/5] rounded-[var(--radius-lg)] border hairline" data-ol-photo="kids soccer training cones field"></div>
+  </div>
+</section>
+
+<!-- CATEGORÍAS -->
+<section id="categorias" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-5xl px-5 py-16 md:py-24">
+    <div class="mb-10 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
+      <div>
+        <div class="eyebrow">Categorías 2026</div>
+        <h2 class="display mt-3 text-[32px] sm:text-[42px]">Cada edad, su cancha.</h2>
+      </div>
+      <p class="max-w-sm text-[14px] leading-relaxed text-[color:var(--fg-muted)]">Máximo 14 por grupo. Las niñas entrenan integradas hasta los 10 y hay rama femenil desde 2011s.</p>
+    </div>
+    <div class="mono overflow-x-auto rounded-[var(--radius-lg)] border hairline bg-[var(--bg)] text-[12.5px] tabular">
+      <table class="w-full min-w-[560px]">
+        <thead>
+          <tr class="border-b hairline text-left text-[10.5px] uppercase tracking-[0.16em] text-[color:var(--fg-faint)]">
+            <th class="px-5 py-3.5 font-medium">Categoría</th>
+            <th class="px-5 py-3.5 font-medium">Nacidos en</th>
+            <th class="px-5 py-3.5 font-medium">Entrena</th>
+            <th class="px-5 py-3.5 font-medium text-right">Cupo</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[color:var(--border)] text-[color:var(--fg-muted)]">
+          <tr><td class="px-5 py-3.5 font-semibold text-[color:var(--fg)]" style="font-family:var(--font-body);">Semillita</td><td class="px-5 py-3.5">2021 – 2022</td><td class="px-5 py-3.5">mar y jue · 4:00 pm</td><td class="px-5 py-3.5 text-right text-[color:var(--accent)]">6 lugares</td></tr>
+          <tr><td class="px-5 py-3.5 font-semibold text-[color:var(--fg)]" style="font-family:var(--font-body);">Cachorros</td><td class="px-5 py-3.5">2018 – 2020</td><td class="px-5 py-3.5">mar y jue · 5:00 pm</td><td class="px-5 py-3.5 text-right text-[color:var(--accent)]">3 lugares</td></tr>
+          <tr><td class="px-5 py-3.5 font-semibold text-[color:var(--fg)]" style="font-family:var(--font-body);">Infantil</td><td class="px-5 py-3.5">2015 – 2017</td><td class="px-5 py-3.5">lun, mié y vie · 5:00 pm</td><td class="px-5 py-3.5 text-right text-[color:var(--accent)]">lista de espera</td></tr>
+          <tr><td class="px-5 py-3.5 font-semibold text-[color:var(--fg)]" style="font-family:var(--font-body);">Juvenil</td><td class="px-5 py-3.5">2012 – 2014</td><td class="px-5 py-3.5">lun, mié y vie · 6:30 pm</td><td class="px-5 py-3.5 text-right text-[color:var(--accent)]">8 lugares</td></tr>
+          <tr><td class="px-5 py-3.5 font-semibold text-[color:var(--fg)]" style="font-family:var(--font-body);">Femenil</td><td class="px-5 py-3.5">2011 – 2016</td><td class="px-5 py-3.5">mar y jue · 6:30 pm · sáb 9 am</td><td class="px-5 py-3.5 text-right text-[color:var(--accent)]">11 lugares</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mono mt-4 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)]">sábados · partidos de liga municipal para infantil en adelante</div>
+  </div>
+</section>
+
+<!-- MÉTODO -->
+<section id="metodo" class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="mx-auto max-w-xl text-center">
+      <div class="eyebrow">Nuestro método</div>
+      <h2 class="display mt-3 text-[32px] sm:text-[42px]">Tres cosas que aquí no se negocian.</h2>
+    </div>
+    <div class="mt-11 grid gap-4 md:grid-cols-3">
+      <div class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-7">
+        <div class="mono text-[12px] font-medium text-[color:var(--accent)] tabular">01</div>
+        <h3 class="display mt-3 text-[20px]">Todos juegan</h3>
+        <p class="mt-2 text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Mínimo medio partido para cada jugador en liga, sin importar el marcador. Se desarrolla jugando, no mirando desde la banca.</p>
+      </div>
+      <div class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-7">
+        <div class="mono text-[12px] font-medium text-[color:var(--accent)] tabular">02</div>
+        <h3 class="display mt-3 text-[20px]">Papás en la porra, no en la cancha</h3>
+        <p class="mt-2 text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Se aplaude a los dos equipos y las instrucciones las da el entrenador. Firma nuestro código el primer día — y funciona.</p>
+      </div>
+      <div class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-7">
+        <div class="mono text-[12px] font-medium text-[color:var(--accent)] tabular">03</div>
+        <h3 class="display mt-3 text-[20px]">La escuela va primero</h3>
+        <p class="mt-2 text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Boleta con promedio bajo = plática con el entrenador, no castigo. El fútbol es la zanahoria, no la excusa.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COSTOS -->
+<section id="costos" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-2xl px-5 py-16 md:py-24">
+    <div class="text-center">
+      <div class="eyebrow">Costos 2026</div>
+      <h2 class="display mt-3 text-[32px] sm:text-[42px]">Claros desde el primer día.</h2>
+    </div>
+    <ul class="mono mt-10 divide-y divide-[color:var(--border)] text-[13px] tabular">
+      <li class="flex items-baseline justify-between py-4">
+        <span class="text-[14.5px] font-medium text-[color:var(--fg)]" style="font-family:var(--font-body);">Mensualidad · 2 entrenos/semana</span>
+        <span class="text-[15px] font-medium">$790</span>
+      </li>
+      <li class="flex items-baseline justify-between py-4">
+        <span class="text-[14.5px] font-medium text-[color:var(--fg)]" style="font-family:var(--font-body);">Mensualidad · 3 entrenos/semana</span>
+        <span class="text-[15px] font-medium">$980</span>
+      </li>
+      <li class="flex items-baseline justify-between py-4">
+        <span class="text-[14.5px] font-medium text-[color:var(--fg)]" style="font-family:var(--font-body);">Inscripción anual (incluye seguro)</span>
+        <span class="text-[15px] font-medium">$650</span>
+      </li>
+      <li class="flex items-baseline justify-between py-4">
+        <span class="text-[14.5px] font-medium text-[color:var(--fg)]" style="font-family:var(--font-body);">Uniforme completo de juego</span>
+        <span class="text-[15px] font-medium">$780</span>
+      </li>
+      <li class="flex items-baseline justify-between py-4">
+        <span class="text-[14.5px] font-medium text-[color:var(--fg)]" style="font-family:var(--font-body);">Hermanos · segundo en adelante</span>
+        <span class="text-[15px] font-medium text-[color:var(--accent)]">−20%</span>
+      </li>
+    </ul>
+    <div class="mt-6 rounded-[var(--radius)] border hairline bg-[var(--bg)] p-5 text-center">
+      <p class="text-[13.5px] text-[color:var(--fg-muted)]">Hay <span class="font-semibold text-[color:var(--fg)]">4 becas deportivas</span> por temporada para familias que lo necesiten. Pregunta sin pena — para eso están.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOTOS + RESEÑAS -->
+<section class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-12 md:gap-4">
+      <div class="ph-pasto grain relative col-span-2 aspect-[16/10] rounded-[var(--radius)] border hairline md:col-span-5 md:aspect-auto md:h-[280px]" data-ol-photo="children celebrating goal team"></div>
+      <div class="ph-gis grain relative aspect-square rounded-[var(--radius)] border hairline md:col-span-3 md:aspect-auto md:h-[280px]" data-ol-photo="coach teaching kids drill"></div>
+      <div class="ph-pasto grain relative aspect-square rounded-[var(--radius)] border hairline md:col-span-4 md:aspect-auto md:h-[280px]" data-ol-photo="girls soccer team huddle"></div>
+    </div>
+    <div class="mt-10 grid gap-4 md:grid-cols-3">
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"Mi hijo era el que nunca jugaba en su otra escuela. Aquí jugó medio partido desde el primer sábado. Otro niño."</blockquote>
+        <figcaption class="mt-3 text-[13px] font-medium">Papá de Iker · Cachorros</figcaption>
+      </figure>
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"La rama femenil fue la razón de cambiarnos. Mi hija entrena en serio, no de adorno — y el profe Beto se sabe el nombre de todas."</blockquote>
+        <figcaption class="mt-3 text-[13px] font-medium">Mamá de Regina · Femenil</figcaption>
+      </figure>
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"El código de papás debería existir en todas las ligas. Cero gritos desde la malla; los niños juegan mejor y uno sufre menos."</blockquote>
+        <figcaption class="mt-3 text-[13px] font-medium">Papá de Santi y Emi · Infantil</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="visita" class="bg-[var(--accent)] text-[color:var(--accent-ink)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 text-center md:py-20">
+    <div class="mono text-[11px] uppercase tracking-[0.2em] opacity-75">La primera clase es gratis · trae agua y tenis</div>
+    <h2 class="display mx-auto mt-4 max-w-2xl text-[34px] sm:text-[46px]">Tráelo un martes. Si no sale feliz, no vuelvas.</h2>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="#" class="lift inline-flex h-11 items-center rounded-full bg-[var(--bg)] px-6 text-[14px] font-semibold text-[color:var(--fg)]">Agenda su clase gratis</a>
+      <a href="#categorias" class="lift inline-flex h-11 items-center rounded-full border border-white/35 px-6 text-[14px] font-medium hover:bg-white/10">Ver categorías</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER LOCAL -->
+<footer class="border-t hairline">
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-[12.5px] text-[color:var(--fg-faint)] md:flex-row">
+    <div class="flex items-center gap-2">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="var(--accent)" stroke-width="2.2"/></svg>
+      <span class="display text-[13px] text-[color:var(--fg-muted)]">Norte FC · fútbol formativo</span>
+    </div>
+    <div class="mono text-[11px] uppercase tracking-[0.12em] tabular">Unidad Deportiva Otay, cancha 4 · Tijuana · L-S</div>
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-[color:var(--fg)]">Instagram</a>
+      <a href="#" class="hover:text-[color:var(--fg)]">WhatsApp</a>
+      <span>© 2026 Norte FC</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -9,9 +9,21 @@
 
 import type { Message } from "@/lib/ai-gateway";
 import type { FireworksStreamMessage, FireworksStreamToolCall } from "@/lib/ai/fireworks-stream-client";
+import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * El contenido de una respuesta de herramienta. Las de ficheros (Len 2.0)
+ * devuelven TEXTO, como el `tool_result` de Claude Code, y va tal cual: por
+ * `JSON.stringify` el `cat -n` de Read llegaría con cada salto de línea
+ * escapado. Las demás siguen yendo como objeto serializado.
+ */
+function contenidoDeRespuesta(response: Record<string, unknown>): string {
+  const texto = response[CLAVE_TOOL_RESULT];
+  return typeof texto === "string" ? texto : JSON.stringify(response);
 }
 
 /** Baja a minúsculas los `type` del esquema, en toda su profundidad. */
@@ -59,10 +71,10 @@ export function messagesForFireworks(messages: readonly Message[]): FireworksStr
         // proveedor rechace el turno entero. Baja a texto: el modelo pierde la
         // etiqueta, no el dato.
         if (!call) {
-          out.push({ role: "user", content: `${response.name}: ${JSON.stringify(response.response)}` });
+          out.push({ role: "user", content: `${response.name}: ${contenidoDeRespuesta(response.response)}` });
           return;
         }
-        out.push({ role: "tool", content: JSON.stringify(response.response), toolCallId: call.id });
+        out.push({ role: "tool", content: contenidoDeRespuesta(response.response), toolCallId: call.id });
       });
       // 🔴 Y EL `content` DEL MENSAJE, QUE NO ES DECORACIÓN.
       //

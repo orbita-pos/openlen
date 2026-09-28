@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { avisoEnlacesDesfasados, enlacesDesfasados } from "./enlaces-desfasados";
+import { enlacesDesfasados } from "./enlaces-desfasados";
 
 // DOS BRAZOS EN TODO. Que cace el enlace torcido (si no, es la guarda que no
 // existía) y que CALLE en los que están bien (si no, es la guarda que llora al
@@ -61,14 +61,4 @@ describe("un enlace que dice un número y marca otro", () => {
     expect(enlacesDesfasados(sana)).toEqual([]);
   });
 
-  it("el aviso nombra el enlace y DICE con qué verbo se arregla", () => {
-    const a = avisoEnlacesDesfasados([
-      { tipo: "tel", texto: "81 1234 5678", href: "tel:+528188880000" },
-    ]);
-    expect(a).toContain("81 1234 5678");
-    expect(a).toContain("tel:+528188880000");
-    // Lo que no es obvio y por eso se dice: son DOS ops sobre el mismo elemento.
-    expect(a).toMatch(/op="text"/);
-    expect(a).toMatch(/op="attrs"/);
-  });
 });

@@ -36,8 +36,8 @@ export interface EnlaceDesfasado {
   readonly href: string;
 }
 
-/** Cuántos se le nombran al modelo. Con cuatro ya sabe qué arreglar. */
-const MAX_NOMBRADOS = 4;
+// ⚰️ `avisoEnlacesDesfasados` se fue con las herramientas viejas (Len 2.0, T9):
+// vuelve como diagnóstico desde `lib/agent/diagnosticos-de-la-escritura.ts`.
 
 /** Mínimo de dígitos para que un texto cuente como número de teléfono. Por
  *  debajo son horarios («9 a 19»), precios o un «24/7», y avisar de eso enseña
@@ -99,25 +99,3 @@ export function enlacesDesfasados(html: string): EnlaceDesfasado[] {
   return salida;
 }
 
-/**
- * El aviso PARA EL MODELO, en el mismo turno.
- *
- * Se avisa, no se rechaza: la edición que hizo es correcta en lo que hizo — le
- * falta la otra mitad. Y se le dice CON QUÉ arreglarlo, porque el verbo no es
- * obvio: el texto se cambia con `text` y el destino con `attrs`, y son dos ops
- * distintas sobre el mismo elemento.
- */
-export function avisoEnlacesDesfasados(lista: readonly EnlaceDesfasado[]): string {
-  const nombrados = lista
-    .slice(0, MAX_NOMBRADOS)
-    .map((e) => `«${e.texto}» → ${e.href}`)
-    .join(" · ");
-  const resto = lista.length > MAX_NOMBRADOS ? ` (y ${lista.length - MAX_NOMBRADOS} más)` : "";
-  return (
-    `${lista.length} enlace(s) DICEN un dato y LLEVAN a otro: ${nombrados}${resto}. ` +
-    `La página enseña lo nuevo y el botón sigue marcando lo viejo — es invisible en una captura y ` +
-    `no se nota hasta que alguien llama a un número muerto. Cambiar el texto de un enlace NO cambia ` +
-    `su destino: son dos ops sobre el mismo elemento, op="text" para lo que se lee y op="attrs" ` +
-    `sobre href para adónde va. Arréglalo AHORA, en este mismo turno.`
-  );
-}

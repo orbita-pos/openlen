@@ -1,10 +1,22 @@
 import { describe, expect, it } from "vitest";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
-import { runAgentLoop, topesPorPlan, type AgentStreamEvent } from "./loop";
+import { runAgentLoop, type AgentStreamEvent } from "./loop";
+import { etiquetarConPosiciones } from "./ficheros/posiciones";
 
+// Repite el ÚLTIMO guion cuando se acaba: así una prueba con \`maxTurns\` llega
+// al tope sin escribir doce vueltas. Desde H1 (2026-09-25) el bucle no topa por
+// defecto, así que una prueba SIN tope cuyo último guion llama herramientas
+// daría vueltas para siempre —sólo microtareas: ni el testTimeout la para, y el
+// proceso muere sin memoria—. A las 200 repeticiones, falla con su nombre.
+const REPETICIONES_MAXIMAS = 200;
 function scripted(...turns: StreamEvent[][]): (messages: Message[]) => AsyncIterable<StreamEvent> {
   let i = 0;
   return () => {
+    if (i > REPETICIONES_MAXIMAS) {
+      const prueba = expect.getState().currentTestName ?? "(sin nombre)";
+      console.warn(`[scripted] SIN FIN en «${prueba}»`);
+      throw new Error(`scripted: el guion se repitió ${REPETICIONES_MAXIMAS} veces y el bucle no terminó en «${prueba}» — ¿falta un maxTurns o un último guion que cierre?`);
+    }
     const turn = turns[Math.min(i, turns.length - 1)];
     i += 1;
     return (async function* () { for (const ev of turn) yield ev; })();
@@ -235,7 +247,7 @@ describe("runAgentLoop", () => {
 
   it("caps runaway loops at maxTurns", async () => {
     const events: AgentStreamEvent[] = [];
-    // editar_pagina is a mutating tool — leer_estado/elegir_foto are read-only
+    // editar_pagina is a mutating tool — Read/elegir_foto are read-only
     // and exempt from maxTurns, so they'd defeat this test's premise.
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 3,
@@ -265,7 +277,7 @@ describe("runAgentLoop", () => {
       openStream: scripted(
         [{ type: "function_call", name: "elegir_foto", args: {} }, done],
         [{ type: "function_call", name: "elegir_foto", args: {} }, done],
-        [{ type: "function_call", name: "leer_estado", args: {} }, done],
+        [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, done],
         [{ type: "text_delta", text: "No hay fotos de terror; oscurecí el tema." }, done],
       ),
       runTool: async () => ({ response: { ok: true } }),
@@ -299,7 +311,7 @@ describe("runAgentLoop", () => {
 
   it("caps runaway loops at maxToolCalls", async () => {
     const events: AgentStreamEvent[] = [];
-    // editar_pagina is a budgeted (non-read-only) tool — leer_estado/elegir_foto
+    // editar_pagina is a budgeted (non-read-only) tool — Read/elegir_foto
     // are exempt from maxToolCalls (F3-T5) so they'd defeat this test's premise.
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [], maxToolCalls: 1,
@@ -349,72 +361,75 @@ describe("runAgentLoop", () => {
     expect(r.terminalError).toBe(false);
   });
 
-  // 🔴 BUSCAR TAMPOCO GASTA PRESUPUESTO — 2026-09-01.
+  // 🔴 LEER NO GASTA PRESUPUESTO — Len 2.0 (plans/len-2/ficheros-plan.md, T8d).
   //
-  // El turno que justifica `buscar_en_pagina` es «cambia el teléfono» sobre un
-  // dato repetido en tres páginas: buscar + (mudarse + editar) × 3. Si la
-  // búsqueda descontara del presupuesto de ediciones, la herramienta que existe
-  // para no dejar el dato viejo a medias sería la que hace que el turno se
-  // quede sin cuerda antes de terminar — el mismo fallo que ya se midió con las
-  // fotos, justo aquí arriba.
-  it("buscar_en_pagina tampoco cuenta: buscar y luego arreglar las tres páginas cabe", async () => {
+  // En Claude Code, Read, Grep y Glob son lo que se hace ANTES de cada Edit: sin
+  // leer no se edita. Si leer descontara del presupuesto de acciones, el
+  // contrato que obliga a leer sería justo el que deja el encargo a medias —
+  // el mismo fallo que ya se midió con las fotos, aquí arriba.
+  it("Read, Grep y Glob no cuentan: buscar, leer y arreglar tres páginas cabe", async () => {
     const seen: string[] = [];
     const events: AgentStreamEvent[] = [];
+    const fc = (name: string, args: Record<string, unknown> = {}): StreamEvent => ({ type: "function_call", name, args });
     const r = await runAgentLoop({
-      messages: [{ role: "user", content: "cambia el teléfono" }], tools: [], maxToolCalls: 6,
+      messages: [{ role: "user", content: "cambia el teléfono" }], tools: [], maxToolCalls: 3,
       openStream: scripted(
-        [
-          { type: "function_call", name: "buscar_en_pagina", args: { texto: "600112233" } },
-          { type: "function_call", name: "editar_pagina", args: {} },
-          { type: "function_call", name: "trabajar_en_pagina", args: { pagina: "nosotros" } },
-          { type: "function_call", name: "editar_pagina", args: {} },
-          { type: "function_call", name: "trabajar_en_pagina", args: { pagina: "contacto" } },
-          { type: "function_call", name: "editar_pagina", args: {} },
-          done,
-        ],
+        [fc("Glob", { pattern: "**/*.html" }), fc("Grep", { pattern: "600112233" }), done],
+        [fc("Read", { file_path: "/index.html" }), fc("Read", { file_path: "/nosotros/index.html" }), fc("Read", { file_path: "/contacto/index.html" }), done],
+        [fc("Edit", { file_path: "/index.html" }), fc("Edit", { file_path: "/nosotros/index.html" }), fc("Edit", { file_path: "/contacto/index.html" }), done],
         [{ type: "text_delta", text: "Cambiado en las tres páginas." }, done],
       ),
       runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
       emit: (e) => events.push(e),
     });
-    // Las seis corrieron: sólo las cinco no exentas tocan el presupuesto de 6.
-    expect(seen).toHaveLength(6);
-    expect(seen[0]).toBe("buscar_en_pagina");
+    // Las ocho corrieron: sólo las tres Edit tocan el presupuesto de 3.
+    expect(seen).toHaveLength(8);
     expect(r.finalText).toBe("Cambiado en las tres páginas.");
     expect(events.some((e) => e.type === "error")).toBe(false);
     expect(r.terminalError).toBe(false);
   });
 
-  it("F3-T5: an absolute cap of 20 total tool calls still terminates a runaway loop, mixing exempt and budgeted tools", async () => {
+  // LA TARJETA DICE SOBRE QUÉ, como Claude Code pinta `Read(index.html)` o
+  // `Grep(pattern)`: el argumento principal de la llamada. Sin `resumen` en
+  // ninguna herramienta (Len 2.0), la tarjeta en marcha enseñaba el nombre
+  // crudo —«Read»— y el historial se lo reenviaba al modelo como resumen.
+  it("la tarjeta en marcha dice el fichero o el patrón, no el nombre de la herramienta", async () => {
     const events: AgentStreamEvent[] = [];
+    const fc = (name: string, args: Record<string, unknown>): StreamEvent => ({ type: "function_call", name, args });
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [fc("Read", { file_path: "/menu/index.html" }), fc("Grep", { pattern: "600 11" }), fc("Glob", { pattern: "*/index.html" }), fc("mirar_pagina", {}), done],
+        [{ type: "text_delta", text: "Listo." }, done],
+      ),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+    });
+    const enMarcha = events.filter((e) => e.type === "action" && e.status === "running") as { tool: string; summary: string }[];
+    expect(enMarcha.map((e) => e.summary)).toEqual(["menu/index.html", "600 11", "*/index.html", ""]);
+  });
+
+  it("H1: sin topes (el defecto, como Claude Code), una tanda de 27 llamadas mezcladas corre ENTERA", async () => {
+    // Hasta el 2026-09-25 un tope ABSOLUTO de 26 cortaba la 27ª. Len 2.0 lo
+    // retira con los demás: el bucle principal de Claude Code no topa pasos, y
+    // lo que acota un atasco son las guardas (la misma llamada fallida, tres
+    // tandas rechazadas) y el botón de Detener.
     const seen: string[] = [];
-    // 27 calls in one turn, alternating exempt (elegir_foto) and budgeted
-    // (editar_pagina) — 14 exempt + 13 budgeted. Los presupuestados no llegan
-    // solos a `maxToolCalls` con este orden; es el tope ABSOLUTO (26, cuenta
-    // TODO) el que tiene que parar la 27ª.
-    //
-    // El número subió de 20 a 26 el 2026-09-15, con los defectos: si el
-    // absoluto no se separa del presupuestado, deja de ser una red de seguridad
-    // independiente y se convierte en el mismo muro dos veces.
     const calls: StreamEvent[] = Array.from({ length: 27 }, (_, i): StreamEvent => ({
       type: "function_call",
       name: i % 2 === 0 ? "elegir_foto" : "editar_pagina",
-      args: {},
+      args: { n: i },
     }));
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: scripted([...calls, done]),
+      openStream: scripted([...calls, done], [{ type: "text_delta", text: "Listo." }, done]),
       runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
-      emit: (e) => events.push(e),
+      emit: () => {},
     });
-    // Sólo 26 de las 27 llegaron a correr antes de que el tope absoluto parara
-    // el bucle.
-    expect(seen).toHaveLength(26);
-    expect(r.toolCalls).toBe(26);
-    expect(events.some((e) => e.type === "error")).toBe(true);
-    expect(r.terminalError).toBe(true);
-    const err = events.find((e) => e.type === "error") as { message: string; code?: string };
-    expect(err.code).toBe("tool_limit");
+    expect(seen).toHaveLength(27);
+    expect(r.toolCalls).toBe(27);
+    expect(r.topeAlcanzado).toBeNull();
+    expect(r.terminalError).toBe(false);
   });
 
   it("A: hitting a cap with a closeOut streams a graceful summary instead of a red error", async () => {
@@ -516,89 +531,13 @@ describe("runAgentLoop", () => {
     expect(r.finalText).toContain("enfoque");
   });
 
-  // 🔴 CAMBIÓ EL 2026-09-11, y esta prueba decía lo contrario a propósito hasta
-  // hoy: «a succeeding call is never treated as a no-progress loop». Era verdad
-  // como POLÍTICA y falso como protección — el bucle que agota el presupuesto
-  // del usuario es justo de llamadas que salen bien. Medido sobre
-  // `carrito-se-construye`: `editar_runtime` con el mismo resumen hasta topar,
-  // con los DOS modelos, sin que `failedSignatures` se tocara una sola vez.
-  //
-  // Las dos guardas siguen siendo DOS y distintas, que es lo que esta prueba
-  // conserva: la de fallos mira la firma completa de argumentos y refusa la
-  // tercera FALLIDA; ésta mira la INTENCIÓN (herramienta + resumen), porque el
-  // modelo retoca el código en cada vuelta y la firma nunca repite.
-  it("B: una llamada que SALE BIEN tampoco es gratis si repite la misma intención", async () => {
-    const seen: string[] = [];
-    const okArgs = { edits: [{ op: "replace", target: "op-1", new_html: "<p>y</p>" }], resumen: "z" };
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: scripted(
-        [
-          { type: "function_call", name: "editar_pagina", args: okArgs },
-          { type: "function_call", name: "editar_pagina", args: okArgs },
-          { type: "function_call", name: "editar_pagina", args: okArgs },
-          done,
-        ],
-        [{ type: "text_delta", text: "Listo." }, done],
-      ),
-      runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
-      emit: () => {},
-    });
-    // Corren DOS; la tercera con la misma intención se refusa. El umbral cae
-    // dentro del presupuesto de turnos a propósito — ver `SAME_INTENT_LIMIT`.
-    expect(seen).toEqual(["editar_pagina", "editar_pagina"]);
-  });
-
-  // 🔴 LA INTENCIÓN NO PUEDE VIVIR EN LA PROSA DEL MODELO, y este caso es el
-  // que lo mide. `editar_runtime` manda «el código COMPLETO que debe quedar, no
-  // un parche» —lo dice su propia ficha— así que dos llamadas en un turno son,
-  // por construcción, la segunda tirando a la primera: no hay escenario donde
-  // llamarla cuatro veces sea más correcto que llamarla una con el contenido
-  // final.
-  //
-  // MEDIDO en producción el 2026-09-11 (`carrito-se-construye` y
-  // `contador-se-construye`, ~40% y 2/6): el modelo la llama CUATRO veces por
-  // turno bajo DOS resúmenes distintos, dos de cada uno — siempre justo por
-  // debajo de `SAME_INTENT_LIMIT`, que cuenta por `herramienta + resumen`.
-  // Reformular la frase reinicia el contador, el guardia no dispara nunca, y el
-  // turno muere en `turn_limit` habiendo escrito cuatro veces el mismo fichero.
-  //
-  // Se permiten DOS a propósito: una prueba de comportamiento que falla NO
-  // tumba la edición (devuelve ok + aviso) y la ficha manda «lo arreglas en ese
-  // mismo turno». Escribir, que falle la prueba y arreglar son dos. La tercera
-  // ya es flailing.
-  it("B2: reformular el resumen NO reinicia el contador de editar_runtime", async () => {
-    const seen: string[] = [];
-    const rt = (resumen: string) => ({
-      type: "function_call" as const,
-      name: "editar_runtime",
-      args: { script: "x", resumen },
-    });
-    await runAgentLoop({
-      messages: [{ role: "user", content: "hazme un carrito" }], tools: [],
-      openStream: scripted(
-        [
-          rt("carrito con agregar, cantidades, quitar"),
-          rt("carrito con agregar, cantidades, quitar"),
-          // El modelo reformula. Mismo fichero, otras palabras.
-          rt("carrito funcional: agregar, cantidades, total"),
-          rt("carrito funcional: agregar, cantidades, total"),
-          done,
-        ],
-        [{ type: "text_delta", text: "Listo." }, done],
-      ),
-      runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
-      emit: () => {},
-    });
-    expect(seen).toEqual(["editar_runtime", "editar_runtime"]);
-  });
-
   // 🔴 CAMBIÓ EL 2026-09-10. Antes, `max_tokens` mataba el turno SIEMPRE y al
   // usuario le llegaba «intenta un pedido más corto» por una edición legítima.
-  // Ahora una vuelta cortada CON texto y SIN llamadas se continúa una vez, como
-  // hace Claude Code (`<interrupted-output>`). Este caso sigue
-  // guardando el final: cuando ya no se puede continuar, es un error terminal.
-  it("se corta dos veces: continúa una y entonces sí termina en truncated", async () => {
+  // Ahora una vuelta cortada CON texto y SIN llamadas se continúa, como
+  // hace Claude Code (`<interrupted-output>`), hasta 3 veces (27/09: era 1).
+  // Este caso sigue guardando el final: cuando ya no se puede continuar, es un
+  // error terminal.
+  it("se corta cuatro veces: continúa tres y entonces sí termina en truncated", async () => {
     const events: AgentStreamEvent[] = [];
     let opened = 0;
     const r = await runAgentLoop({
@@ -614,14 +553,14 @@ describe("runAgentLoop", () => {
       runTool: async () => { throw new Error("must not run"); },
       emit: (e) => events.push(e),
     });
-    // Una continuación, no más: la segunda vez ya no se puede.
-    expect(opened).toBe(2);
-    expect(r.turns).toBe(2);
+    // Tres continuaciones, no más: la cuarta vez ya no se puede.
+    expect(opened).toBe(4);
+    expect(r.turns).toBe(4);
     const err = events.find((e) => e.type === "error");
     expect(err).toBeDefined();
     expect((err as { message: string }).message).toContain("espacio");
     // Accumulated usage is still returned rather than discarded.
-    expect(r.usage.outputTokens).toBe(40);
+    expect(r.usage.outputTokens).toBe(80);
     expect(r.terminalError).toBe(true);
     expect((err as { code?: string }).code).toBe("truncated");
   });
@@ -669,6 +608,65 @@ describe("runAgentLoop", () => {
     // No es un error: continuar es el camino normal, no una avería.
     expect(events.find((e) => e.type === "error")).toBeUndefined();
     expect(r.terminalError).toBe(false);
+  });
+
+  // 🔴 2026-09-27 (Len-Bench): cuatro turnos murieron así. El modelo gastó los
+  // 32.768 tokens de salida PENSANDO y no escribió nada, y como la continuación
+  // exigía texto, el turno moría con `truncated`. Claude Code tiene un caso para
+  // esto —la respuesta que sólo pensó se reintenta, y hasta 3 veces—: aquí se
+  // le avisa de que no salió nada y se le pide que siga en pasos más pequeños.
+  it("se cortó SÓLO pensando: se reintenta y el turno sigue, en vez de morir", async () => {
+    const events: AgentStreamEvent[] = [];
+    const vistos: string[] = [];
+    let opened = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: (msgs) => {
+        opened += 1;
+        vistos.push(JSON.stringify(msgs));
+        const primera = opened === 1;
+        return (async function* () {
+          if (primera) {
+            yield { type: "usage", inputTokens: 100, outputTokens: 32768, cachedTokens: 0, thinkingTokens: 32768 } as StreamEvent;
+            yield { type: "done", stopReason: { kind: "max_tokens" } } as StreamEvent;
+          } else {
+            yield { type: "text_delta", text: "Listo." } as StreamEvent;
+            yield { type: "done", stopReason: { kind: "end_turn" } } as StreamEvent;
+          }
+        })();
+      },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(opened).toBeGreaterThanOrEqual(2);
+    // Se le dice que no salió nada, sin fingir que el usuario lo escribió.
+    expect(vistos[1]).toContain("no llegó a salir nada");
+    expect(vistos[1]).toContain("el usuario NO escribió esto");
+    expect(events.find((e) => e.type === "error")).toBeUndefined();
+    expect(r.terminalError).toBe(false);
+    expect(r.finalText).toContain("Listo.");
+  });
+
+  // BRAZO DE CONTROL: el reintento tiene TECHO. Un modelo que se corta pensando
+  // una y otra vez no puede vaciar los créditos: tras 3 reintentos, como Claude
+  // Code, el turno termina en `truncated`.
+  it("se corta pensando SIEMPRE: tres reintentos y entonces sí termina en truncated", async () => {
+    const events: AgentStreamEvent[] = [];
+    let opened = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: () => {
+        opened += 1;
+        return (async function* () {
+          yield { type: "done", stopReason: { kind: "max_tokens" } } as StreamEvent;
+        })();
+      },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(opened).toBe(4);
+    expect((events.find((e) => e.type === "error") as { code?: string })?.code).toBe("truncated");
+    expect(r.terminalError).toBe(true);
   });
 
   it("NO continúa si la tanda traía llamadas: repetirlas podría aplicar dos veces", async () => {
@@ -894,25 +892,22 @@ describe("runAgentLoop", () => {
     expect("versionPrevia" in html).toBe(false);
   });
 
-  it("F4-T4: a mid-turn trabajar_en_pagina switch means later html events carry the NEW page, not the turn's starting one", async () => {
+  it("F4-T4: each html event carries the page its write landed on, not the turn's starting one", async () => {
     const events: AgentStreamEvent[] = [];
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],
       openStream: scripted(
         [
-          { type: "function_call", name: "editar_pagina", args: {} },
-          { type: "function_call", name: "trabajar_en_pagina", args: { pagina: "menu" } },
-          { type: "function_call", name: "editar_pagina", args: {} },
+          { type: "function_call", name: "Edit", args: { file_path: "/index.html" } },
+          { type: "function_call", name: "Edit", args: { file_path: "/menu/index.html" } },
           done,
         ],
         [{ type: "text_delta", text: "Listo, cambié ambos." }, done],
       ),
-      runTool: async (name) => {
-        if (name === "trabajar_en_pagina") return { response: { ok: true, pagina_activa: "menu" } };
-        // First editar_pagina call writes home (page: null); the second — after
-        // the switch — writes menu. A real runAgentTool derives this from
-        // session.page; the script just plays back what that would produce.
-        const page = name === "editar_pagina" && events.some((e) => e.type === "html") ? "menu" : null;
+      runTool: async (_name, args) => {
+        // Len 2.0 no tiene página activa: cada Edit dice su fichero, y la
+        // herramienta devuelve la página en la que escribió.
+        const page = args.file_path === "/menu/index.html" ? "menu" : null;
         return { response: { ok: true }, updatedHtml: `<!doctype html><html><body>${page ?? "home"}</body></html>`, page };
       },
       emit: (e) => events.push(e),
@@ -930,19 +925,19 @@ describe("runAgentLoop", () => {
 // tercera y cerrar enumerando las tres como hechas. No hace falta que el modelo
 // mienta — basta con que se despiste, y bastaba con que UNA llamada saliera bien
 // para que el texto final hablara en plural.
-describe("runAgentLoop — declarar_tareas", () => {
+describe("runAgentLoop — TodoWrite (antes declarar_tareas)", () => {
   const declara = (n: number) => ({
     type: "function_call" as const,
-    name: "declarar_tareas",
+    name: "TodoWrite",
     args: { tareas: Array.from({ length: n }, (_, i) => `tarea ${i + 1}`) },
   });
   const edita = { type: "function_call" as const, name: "editar_pagina", args: {} };
 
   /** El doble: `declarar_tareas` devuelve la lista, `editar_pagina` cambia algo
-   *  de verdad, y `leer_estado` sale bien SIN cambiar nada — que es justo el
+   *  de verdad, y `Read` sale bien SIN cambiar nada — que es justo el
    *  `ok:true` que no debe contar como evidencia. */
   const runTool = async (name: string, args: Record<string, unknown>) => {
-    if (name === "declarar_tareas") return { response: { ok: true }, tareas: (args.tareas as string[]).map((texto) => ({ texto })) };
+    if (name === "TodoWrite") return { response: { ok: true }, tareas: (args.tareas as string[]).map((texto) => ({ texto })) };
     if (name === "editar_pagina") {
       return {
         response: { ok: true, cambio: "cambio" },
@@ -968,89 +963,91 @@ describe("runAgentLoop — declarar_tareas", () => {
    * tocó la lista y, pasado un umbral, se la vuelve a enseñar al modelo.
    * ESTADO devuelto al contexto, no una frase en el prompt.
    */
-  it("🔴 con tareas pendientes, la lista se le devuelve en el mensaje hermano", async () => {
+  // H2 (2026-09-25): el recordatorio es el de Claude Code, con
+  // su cadencia —10 vueltas sin tocar la lista—, con la lista y sus estados.
+  const conEstados = {
+    type: "function_call" as const,
+    name: "TodoWrite",
+    args: {},
+  };
+  const leer = { type: "function_call" as const, name: "Read", args: { file_path: "/index.html" } };
+  const runToolConEstados = async (name: string) => {
+    if (name === "TodoWrite") {
+      return {
+        response: { ok: true, tool_result: "List saved." },
+        tareas: [
+          { texto: "tarea 1", estado: "en_curso" as const },
+          { texto: "tarea 2", estado: "pendiente" as const },
+          { texto: "tarea 3", estado: "pendiente" as const },
+        ],
+      };
+    }
+    return { response: { ok: true } };
+  };
+  const recordatorios = async (vueltasLeyendo: number) => {
     const streams: Message[][] = [];
     const stream = scripted(
-      [declara(3), edita, done],
-      [edita, done],
-      [edita, done],
-      [{ type: "text_delta", text: "Hechas." }, done],
+      [conEstados, done],
+      ...Array.from({ length: vueltasLeyendo }, () => [leer, done]),
+      [{ type: "text_delta", text: "Sigo." }, done],
     );
     await runAgentLoop({
       messages: [{ role: "user", content: "tres cosas" }], tools: [],
       openStream: (m) => { streams.push([...m]); return stream(m); },
-      runTool,
+      runTool: runToolConEstados,
       emit: () => {},
     });
-    const dichos = streams
-      .flat()
-      .map((m) => (typeof m.content === "string" ? m.content : ""))
-      .filter((c) => c.includes("<tus-tareas>"));
-    expect(dichos.length, "nunca se le devolvió la lista").toBeGreaterThan(0);
+    return [
+      ...new Set(
+        streams
+          .flat()
+          .map((m) => (typeof m.content === "string" ? m.content : ""))
+          .filter((c) => c.includes("You have not updated the task list (TodoWrite) for a while")),
+      ),
+    ];
+  };
+
+  it("🔴 con tareas pendientes, a las 10 vueltas sin tocarla la lista vuelve en el mensaje hermano, como en Claude Code", async () => {
+    const dichos = await recordatorios(9);
+    expect(dichos.length, "nunca se le devolvió la lista").toBe(1);
     const texto = dichos[0]!;
-    // La lista ENTERA, con sus nombres.
-    expect(texto).toContain("1. tarea 1");
-    expect(texto).toContain("3. tarea 3");
-    // Y el recuento, sin inventarse cuál falta: se asignan por orden y el
-    // propio `tareasSinEvidencia` dice que no hay forma de saberlo.
-    expect(texto).toMatch(/Declaraste 3 y tengo evidencia de \d+/);
-    expect(texto).toContain("no puedo decirte cuál falta");
+    expect(texto).toContain("<system-reminder>");
+    expect(texto).toContain("The list as it is now:");
+    expect(texto).toContain("1. [in_progress] tarea 1");
+    expect(texto).toContain("3. [pending] tarea 3");
   });
 
-  // …y no es una regañina en cada tanda: con 6 turnos de tope, el hueco de 2
-  // vueltas deja como mucho un par de recordatorios en un turno entero.
-  it("no se le repite en cada vuelta", async () => {
-    const streams: Message[][] = [];
-    const stream = scripted(
-      [declara(3), edita, done],
-      [edita, done],
-      [edita, done],
-      [{ type: "text_delta", text: "Hechas." }, done],
-    );
-    await runAgentLoop({
-      messages: [{ role: "user", content: "tres cosas" }], tools: [],
-      openStream: (m) => { streams.push([...m]); return stream(m); },
-      runTool,
-      emit: () => {},
-    });
-    const cuantos = new Set(
-      streams.flat().map((m) => (typeof m.content === "string" ? m.content : "")).filter((c) => c.includes("<tus-tareas>")),
-    ).size;
-    expect(cuantos).toBeLessThanOrEqual(2);
+  it("antes de las 10, no; y no se repite en cada vuelta", async () => {
+    expect(await recordatorios(7)).toHaveLength(0);
+    expect(await recordatorios(15)).toHaveLength(1);
   });
 
   /**
-   * 🔴 MUDARSE DE PÁGINA NO GASTA TURNO — la aritmética del fallo 7 de 7.
+   * 🔴 LEER NO GASTA VUELTA — la aritmética del fallo 7 de 7, con ficheros.
    *
-   * El protocolo son DOS turnos por página: mudarse y editar, y no caben en la
-   * misma tanda porque las ops necesitan los `op_id` que devuelve la mudanza.
-   * Con la mudanza contando como turno de mutación, cuatro páginas piden nueve
-   * turnos contra un tope de seis — y Len editaba tres, se mudaba a la cuarta y
-   * se quedaba sin cuerda ahí mismo, con `trabajar_en_pagina (servicios)` como
-   * última acción en las siete corridas.
+   * Con Len 2.0 cada página es Read y luego Edit: Edit exige haber leído, y el
+   * `old_string` sale de lo leído, así que no caben en la misma tanda. Si la
+   * lectura contara como vuelta de trabajo, «el teléfono en las cuatro» pediría
+   * ocho contra el tope — la cuenta que antes pagaba `trabajar_en_pagina`.
    *
-   * Esta prueba fija la CUENTA, no el número: cuatro páginas tienen que caber en
-   * el presupuesto por defecto.
+   * Esta prueba fija la CUENTA: con tope 5, cuatro páginas caben.
    */
-  it("🔴 cuatro páginas caben: mudarse no cuenta como turno de trabajo", async () => {
-    const muda = { type: "function_call" as const, name: "trabajar_en_pagina", args: {} };
+  it("🔴 cuatro páginas caben: leer no cuenta como vuelta de trabajo", async () => {
+    const lee = { type: "function_call" as const, name: "Read", args: {} };
     const stream = scripted(
-      [edita, done],            // Home
-      [muda, done],             // → equipo
-      [edita, done],
-      [muda, done],             // → contacto
-      [edita, done],
-      [muda, done],             // → servicios
-      [edita, done],            // …y la cuarta, que antes no llegaba
+      [lee, done], [edita, done],
+      [lee, done], [edita, done],
+      [lee, done], [edita, done],
+      [lee, done], [edita, done],
       [{ type: "text_delta", text: "Las cuatro." }, done],
     );
     const r = await runAgentLoop({
-      messages: [{ role: "user", content: "el teléfono en todas" }], tools: [],
+      messages: [{ role: "user", content: "el teléfono en todas" }], tools: [], maxTurns: 5,
       openStream: stream,
       runTool,
       emit: () => {},
     });
-    expect(r.finalText, "se quedó sin turnos antes de la cuarta página").toBe("Las cuatro.");
+    expect(r.finalText, "se quedó sin vueltas antes de la cuarta página").toBe("Las cuatro.");
     expect(r.topeAlcanzado ?? null).toBeNull();
   });
 
@@ -1100,7 +1097,7 @@ describe("runAgentLoop — declarar_tareas", () => {
     const streams: Message[][] = [];
     const lista = (estados: Record<string, string>) => ({
       type: "function_call" as const,
-      name: "declarar_tareas",
+      name: "TodoWrite",
       args: { tareas: ["A", "B", "C"].map((t) => ({ tarea: t, ...(estados[t] ? { estado: estados[t] } : {}) })) },
     });
     const stream = scripted(
@@ -1113,7 +1110,7 @@ describe("runAgentLoop — declarar_tareas", () => {
       messages: [{ role: "user", content: "tres cosas" }], tools: [],
       openStream: (m) => { streams.push([...m]); return stream(m); },
       runTool: async (name, args) =>
-        name === "declarar_tareas"
+        name === "TodoWrite"
           ? {
               response: { ok: true },
               tareas: (args.tareas as { tarea: string; estado?: "pendiente" | "en_curso" | "hecha" }[]).map((t) => ({
@@ -1136,11 +1133,11 @@ describe("runAgentLoop — declarar_tareas", () => {
     expect(reclamo).toContain("no se la cuentes al usuario");
   });
 
-  it("🔴 marcar hecha sin nada detrás vuelve al modelo como aviso, en la misma respuesta", async () => {
+  it("🔴 marcar completed sin nada detrás vuelve al modelo como aviso, en el mensaje hermano (H2)", async () => {
     const vistos: Message[][] = [];
     const stream = scripted(
-      [{ type: "function_call", name: "declarar_tareas", args: {} }, done],
-      [{ type: "function_call", name: "declarar_tareas", args: { marcar: true } }, done],
+      [{ type: "function_call", name: "TodoWrite", args: {} }, done],
+      [{ type: "function_call", name: "TodoWrite", args: { marcar: true } }, done],
       [{ type: "text_delta", text: "No pude con el teléfono." }, done],
     );
     await runAgentLoop({
@@ -1154,16 +1151,18 @@ describe("runAgentLoop — declarar_tareas", () => {
       }),
       emit: () => {},
     });
-    const respuesta = vistos[2]!.flatMap((m) => m.functionResponses ?? []).at(-1)!.response;
-    expect(respuesta.sin_evidencia).toEqual(["titular", "teléfono"]);
-    expect(String(respuesta.aviso_critico)).toContain("NO se marcaron hechas");
+    // El resultado de TodoWrite es el literal de Claude Code; el aviso viaja al
+    // lado, en un <system-reminder>, como sus diagnósticos.
+    const hermano = vistos[2]!.filter((m) => m.role === "user" && m.functionResponses).at(-1)!;
+    expect(String(hermano.content)).toContain("<system-reminder>");
+    expect(String(hermano.content)).toContain("NO se marcaron completed: «titular», «teléfono»");
   });
 
   it("un ok:true que no cambió nada NO es evidencia", async () => {
     const streams: Message[][] = [];
     const stream = scripted(
       // Dos lecturas que salen bien y no mueven un byte.
-      [declara(2), { type: "function_call", name: "leer_estado", args: {} }, { type: "function_call", name: "leer_estado", args: {} }, done],
+      [declara(2), { type: "function_call", name: "Read", args: { file_path: "/index.html" } }, { type: "function_call", name: "Read", args: { file_path: "/index.html" } }, done],
       [{ type: "text_delta", text: "Listo." }, done],
       [edita, edita, done],
       [{ type: "text_delta", text: "Hechas." }, done],
@@ -1370,11 +1369,11 @@ describe("runAgentLoop — verifyTurn", () => {
     expect(r.finalText).toBe("¡Hola!");
   });
 
-  // EL GEMELO LLEGA A LOS OJOS. Sin esto, la herramienta lo trae y el bucle lo
-  // tira, que es la forma silenciosa de que todo el cambio no haga nada: los
-  // ojos medirian el documento guardado —sin `data-op-id`— y los avisos
-  // volverian a describir el culpable en vez de localizarlo.
-  it("el gemelo etiquetado de la mutacion llega a los ojos", async () => {
+  // EL GEMELO LLEGA A LOS OJOS. Len 2.0 (T9): lo hace el bucle —el gemelo CON
+  // POSICIONES de lo guardado—, en un solo sitio, así que ninguna herramienta
+  // puede olvidarse de traerlo. Sin él los ojos medirían el documento guardado
+  // y lo que encuentren no traería línea.
+  it("el gemelo con posiciones de la mutación llega a los ojos", async () => {
     let visto: { html: string; taggedHtml?: string } | null = null;
     await runAgentLoop({
       messages: [{ role: "user", content: "cambia el hero" }], tools: [],
@@ -1382,29 +1381,16 @@ describe("runAgentLoop — verifyTurn", () => {
       runTool: async () => ({
         response: { ok: true },
         updatedHtml: "<!doctype html><html><body>v2</body></html>",
-        taggedHtml: '<!doctype html><html><body data-op-id="1">v2</body></html>',
       }),
       verifyTurn: async (info) => { visto = info; return { estado: "bien" as const }; },
       emit: () => {},
     });
     expect(visto).not.toBeNull();
-    expect(visto!.taggedHtml).toContain('data-op-id="1"');
+    expect(visto!.taggedHtml).toBe(etiquetarConPosiciones("<!doctype html><html><body>v2</body></html>"));
+    expect(visto!.taggedHtml).toContain('<body data-op-id="L1C22">');
     // Y el guardado sigue viajando aparte: es lo que se FOTOGRAFIA.
     expect(visto!.html).toContain("v2");
     expect(visto!.html).not.toContain("data-op-id");
-  });
-
-  it("sin gemelo, los ojos reciben solo el guardado — como antes", async () => {
-    let visto: { html: string; taggedHtml?: string } | null = null;
-    await runAgentLoop({
-      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-      openStream: editThenClose(),
-      runTool: okEdit,
-      verifyTurn: async (info) => { visto = info; return { estado: "bien" as const }; },
-      emit: () => {},
-    });
-    expect(visto!.taggedHtml).toBeUndefined();
-    expect(visto!.html).toContain("v2");
   });
 
   it("verifica tras mutar; ok → cierra con la card en 'ok'", async () => {
@@ -1792,7 +1778,7 @@ describe("runAgentLoop: la mutación durable sobrevive al fallo terminal", () =>
       messages: [{ role: "user", content: "¿qué tiene mi página?" }],
       tools: [],
       openStream: scripted(
-        [{ type: "function_call", name: "leer_estado", args: {} }, usage(10), done],
+        [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, usage(10), done],
         [errorTerminal],
       ),
       runTool: async () => ({ response: { ok: true, resumen: "una home" } }),
@@ -2194,24 +2180,28 @@ function mirando(
 }
 
 describe("runAgentLoop — lo medido vuelve al modelo", () => {
-  // Una tanda que edita, con su gemelo etiquetado: es la condición para medir.
+  // Una tanda que edita: es la condición para medir. Len 2.0 (T9): el bucle
+  // hace el GEMELO CON POSICIONES de lo guardado, así que cada nodo que el
+  // navegador señala trae su línea del fichero.
   const edita = (): StreamEvent[] => [
-    { type: "function_call", name: "editar_pagina", args: {} },
+    { type: "function_call", name: "Edit", args: {} },
     done,
   ];
+  const VISIBLE = '<html>\n<body>\n<div class="grid">x</div>\n</body>\n</html>';
+  const GEMELO = etiquetarConPosiciones(VISIBLE);
   const herramientaQueEdita = async () => ({
     response: { ok: true },
-    action: { tool: "editar_pagina", ok: true, summary: "editado" },
-    updatedHtml: "<html>visible</html>",
-    taggedHtml: '<html data-op-id="bs">etiquetado</html>',
-    page: null,
+    action: { tool: "Edit", ok: true, summary: "editado" },
+    updatedHtml: VISIBLE,
+    page: null as string | null,
   });
   const desbordado = {
     mobileOverflow: true,
-    overflowCulprit: '<div class="grid">',
+    overflowCulprit: "div.grid",
     overflowCulpritRight: 482,
     overflowCulpritKind: "caja" as const,
-    overflowCulpritOpId: "bs",
+    // La línea y la columna del <div> en el fichero: su id en el gemelo.
+    overflowCulpritOpId: "L3C1",
   };
 
   it("🔴 viaja en el content del mensaje, NO dentro del resultado de la herramienta", async () => {
@@ -2227,14 +2217,15 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
     const segunda = vistos[1] ?? [];
     const conRespuestas = segunda.find((m) => m.functionResponses);
     expect(conRespuestas).toBeDefined();
-    // El aviso está en el sobre...
-    expect(conRespuestas?.content).toContain("data-op-id=bs");
+    // El aviso está en el sobre, anclado a su línea...
+    expect(conRespuestas?.content).toContain("<new-diagnostics>");
+    expect(conRespuestas?.content).toContain("/index.html:\n  ⚠ [Line 3:1]");
     expect(conRespuestas?.content).toContain("482px");
     // ...y NO dentro de la respuesta de la herramienta, que es suya.
     expect(JSON.stringify(conRespuestas?.functionResponses)).not.toContain("482px");
   });
 
-  it("se le mide el GEMELO etiquetado, que es donde viven las direcciones", async () => {
+  it("se le mide el GEMELO CON POSICIONES, que es donde viven las líneas", async () => {
     const medidos: string[] = [];
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }],
@@ -2247,7 +2238,8 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
         return null;
       },
     });
-    expect(medidos).toEqual(['<html data-op-id="bs">etiquetado</html>']);
+    expect(medidos).toEqual([GEMELO]);
+    expect(GEMELO).toContain('<div data-op-id="L3C1" class="grid">');
   });
 
   it("sin la dependencia el mensaje sale byte a byte como antes", async () => {
@@ -2452,7 +2444,7 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
       }),
     });
     const contenido = (vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "";
-    expect(contenido).toContain("<medido-tras-editar>");
+    expect(contenido).toContain("<new-diagnostics>");
     expect(contenido).toContain("403 origen_invalido");
     expect(contenido).toContain("`/api/d/<almacén>`, sin subdominio");
     expect(contenido).not.toContain("no encontró defectos");
@@ -2575,13 +2567,7 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
       // Cada tanda entrega un documento DISTINTO, así que sí se vuelve a medir.
       runTool: async () => {
         n += 1;
-        return {
-          response: { ok: true },
-          action: { tool: "editar_pagina", ok: true, summary: "e" },
-          updatedHtml: `<html>v${n}</html>`,
-          taggedHtml: `<html data-op-id="bs">v${n}</html>`,
-          page: null,
-        };
+        return { ...(await herramientaQueEdita()), updatedHtml: VISIBLE.replace(">x<", `>x${n}<`) };
       },
       emit: () => {},
       medirParaElModelo: async () => desbordado,
@@ -2591,33 +2577,36 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
     const ultima = vistos.at(-1) ?? [];
     const sobres = ultima.filter((m) => m.functionResponses).map((m) => m.content);
     expect(sobres).toHaveLength(2);
-    expect(sobres.filter((c) => c && c.includes("data-op-id=bs"))).toHaveLength(1);
+    expect(sobres.filter((c) => c && c.includes("[Line 3:1]"))).toHaveLength(1);
   });
 
   // ── LA LÍNEA BASE ───────────────────────────────────────────────────────
   //
   // La forma de Claude Code: se mide ANTES de editar y sólo se reporta la
-  // diferencia. Sin esto, una página que ya venía rota se lo decía una vez por
-  // cada turno que la editara, aunque el modelo no la hubiera tocado.
+  // diferencia. Len 2.0 (T9): la base es la de CADA fichero —cómo estaba antes
+  // de la primera escritura del turno sobre él, que la herramienta trae en
+  // `htmlPrevio`—, no sólo la de la página con la que arrancó el turno.
   describe("la línea base", () => {
-    const BASE = '<html data-op-id="bs">antes</html>';
-    const conBase = { taggedHtml: BASE, page: null };
+    const BASE = '<html>\n<body>\n<div class="grid">antes</div>\n</body>\n</html>';
+    const GEMELO_BASE = etiquetarConPosiciones(BASE);
+    const conBase = async () => ({ ...(await herramientaQueEdita()), htmlPrevio: BASE });
+    const sobresDe = (vistos: Message[][]) =>
+      (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content as string);
 
-    it("🔴 un defecto que YA venía en el documento NO se le dice", async () => {
+    it("🔴 un defecto que YA venía en el fichero NO se le dice", async () => {
       const vistos: Message[][] = [];
       await runAgentLoop({
         messages: [{ role: "user", content: "cambia el título" }],
         tools: [],
         openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
-        runTool: herramientaQueEdita,
+        runTool: conBase,
         emit: () => {},
-        // La misma medida para el documento editado Y para la base: el
-        // desborde estaba ahí antes de que el modelo tocara nada.
+        // La misma medida para lo guardado Y para la base: el desborde estaba
+        // ahí antes de que el modelo tocara nada.
         medirParaElModelo: async () => desbordado,
-        lineaBase: conBase,
       });
-      const sobres = (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content);
-      expect(sobres.join("")).not.toContain("data-op-id=bs");
+      const sobres = sobresDe(vistos);
+      expect(sobres.join("")).not.toContain("[Line 3:1]");
       expect(sobres.every((c) => c === "")).toBe(true);
     });
 
@@ -2627,13 +2616,11 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
         messages: [{ role: "user", content: "x" }],
         tools: [],
         openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
-        runTool: herramientaQueEdita,
+        runTool: conBase,
         emit: () => {},
-        medirParaElModelo: async (html) => (html === BASE ? {} : desbordado),
-        lineaBase: conBase,
+        medirParaElModelo: async (html) => (html === GEMELO_BASE ? {} : desbordado),
       });
-      const sobres = (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content);
-      expect(sobres.join("")).toContain("data-op-id=bs");
+      expect(sobresDe(vistos).join("")).toContain("[Line 3:1]");
     });
 
     it("🔴 la base NO se mide cuando la página salió bien — es el caso normal y no paga render", async () => {
@@ -2642,15 +2629,14 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
         messages: [{ role: "user", content: "x" }],
         tools: [],
         openStream: scripted(edita(), [{ type: "text_delta", text: "ok" }, done]),
-        runTool: herramientaQueEdita,
+        runTool: conBase,
         emit: () => {},
         medirParaElModelo: async (html) => {
           medidos.push(html);
           return {};
         },
-        lineaBase: conBase,
       });
-      expect(medidos).toEqual(['<html data-op-id="bs">etiquetado</html>']);
+      expect(medidos).toEqual([GEMELO]);
     });
 
     it("la base se mide UNA vez aunque haya varias tandas con defecto", async () => {
@@ -2662,22 +2648,15 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
         openStream: scripted(edita(), edita(), [{ type: "text_delta", text: "ok" }, done]),
         runTool: async () => {
           n += 1;
-          return {
-            response: { ok: true },
-            action: { tool: "editar_pagina", ok: true, summary: "e" },
-            updatedHtml: `<html>v${n}</html>`,
-            taggedHtml: `<html data-op-id="b${n}">v${n}</html>`,
-            page: null,
-          };
+          return { ...(await herramientaQueEdita()), updatedHtml: VISIBLE.replace(">x<", `>x${n}<`), htmlPrevio: BASE };
         },
         emit: () => {},
         medirParaElModelo: async (html) => {
           medidos.push(html);
-          return html === BASE ? {} : { ...desbordado, overflowCulpritOpId: `b${n}` };
+          return html === GEMELO_BASE ? {} : desbordado;
         },
-        lineaBase: conBase,
       });
-      expect(medidos.filter((h) => h === BASE)).toHaveLength(1);
+      expect(medidos.filter((h) => h === GEMELO_BASE)).toHaveLength(1);
     });
 
     it("🔴 una base que falla NO se reintenta tanda tras tanda", async () => {
@@ -2689,48 +2668,49 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
         openStream: scripted(edita(), edita(), [{ type: "text_delta", text: "ok" }, done]),
         runTool: async () => {
           n += 1;
-          return {
-            response: { ok: true },
-            action: { tool: "editar_pagina", ok: true, summary: "e" },
-            updatedHtml: `<html>v${n}</html>`,
-            taggedHtml: `<html data-op-id="b${n}">v${n}</html>`,
-            page: null,
-          };
+          return { ...(await herramientaQueEdita()), updatedHtml: VISIBLE.replace(">x<", `>x${n}<`), htmlPrevio: BASE };
         },
         emit: () => {},
-        // La base no se puede medir NUNCA; el documento editado sí.
+        // La base no se puede medir NUNCA; lo guardado sí.
         medirParaElModelo: async (html) => {
           medidos.push(html);
-          return html === BASE ? null : { ...desbordado, overflowCulpritOpId: `b${n}` };
+          return html === GEMELO_BASE ? null : desbordado;
         },
-        lineaBase: conBase,
       });
-      expect(medidos.filter((h) => h === BASE)).toHaveLength(1);
+      expect(medidos.filter((h) => h === GEMELO_BASE)).toHaveLength(1);
     });
 
-    it("🔴 si el turno editó OTRA página no se resta nada: los op-id son por documento", async () => {
+    it("🔴 cada fichero se resta contra SU base, no contra la de otra página", async () => {
       const vistos: Message[][] = [];
+      const MENU_ANTES = '<html>\n<body>\n<div class="grid">menú viejo</div>\n</body>\n</html>';
       await runAgentLoop({
         messages: [{ role: "user", content: "x" }],
         tools: [],
-        openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
-        // El turno arrancó en la Home (`page: null`) y editó `/tienda`.
-        runTool: async () => ({
-          response: { ok: true },
-          action: { tool: "editar_pagina", ok: true, summary: "e" },
-          updatedHtml: "<html>v</html>",
-          taggedHtml: '<html data-op-id="bs">etiquetado</html>',
-          page: "tienda",
-        }),
+        openStream: mirando(
+          vistos,
+          scripted(
+            [
+              { type: "function_call", name: "Edit", args: { file_path: "/index.html" } },
+              { type: "function_call", name: "Edit", args: { file_path: "/menu/index.html" } },
+              done,
+            ],
+            [{ type: "text_delta", text: "ok" }, done],
+          ),
+        ),
+        runTool: async (_n, a) =>
+          a.file_path === "/menu/index.html"
+            ? { ...(await herramientaQueEdita()), page: "menu", htmlPrevio: MENU_ANTES }
+            : { ...(await herramientaQueEdita()), htmlPrevio: BASE },
         emit: () => {},
-        medirParaElModelo: async () => desbordado,
-        lineaBase: conBase,
+        // La Home venía limpia; /menu ya se desbordaba.
+        medirParaElModelo: async (html) => (html === GEMELO_BASE ? {} : desbordado),
       });
-      const sobres = (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content);
-      expect(sobres.join("")).toContain("data-op-id=bs");
+      const sobre = sobresDe(vistos).join("");
+      expect(sobre).toContain("/index.html:\n  ⚠ [Line 3:1]");
+      expect(sobre).not.toContain("/menu/index.html:");
     });
 
-    it("🔴 se pidió base y no se pudo medir ⇒ no se habla: sin base, «NUEVO» no se puede saber", async () => {
+    it("sin `htmlPrevio` no se sabe cómo estaba: lo medido se dice entero", async () => {
       const vistos: Message[][] = [];
       await runAgentLoop({
         messages: [{ role: "user", content: "x" }],
@@ -2738,12 +2718,55 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
         openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
         runTool: herramientaQueEdita,
         emit: () => {},
-        medirParaElModelo: async (html) => (html === BASE ? null : desbordado),
-        lineaBase: conBase,
+        medirParaElModelo: async () => desbordado,
       });
-      const sobres = (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content);
-      expect(sobres.join("")).not.toContain("data-op-id=bs");
+      expect(sobresDe(vistos).join("")).toContain("[Line 3:1]");
     });
+
+    it("🔴 se pidió base y no se pudo medir ⇒ no se habla: sin base, «nuevo» no se puede saber", async () => {
+      const vistos: Message[][] = [];
+      await runAgentLoop({
+        messages: [{ role: "user", content: "x" }],
+        tools: [],
+        openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
+        runTool: conBase,
+        emit: () => {},
+        medirParaElModelo: async (html) => (html === GEMELO_BASE ? null : desbordado),
+      });
+      expect(sobresDe(vistos).join("")).not.toContain("[Line 3:1]");
+    });
+  });
+
+  // LO QUE DEJÓ LA ESCRITURA —un enlace que marca otro número, una red social
+  // que nadie dio— viaja en el MISMO sobre que lo medido, y una sola vez.
+  it("🔴 los diagnósticos de la escritura van en el `<new-diagnostics>` de la tanda, una vez", async () => {
+    const vistos: Message[][] = [];
+    const diag = {
+      ruta: "/index.html",
+      linea: 3,
+      columna: 1,
+      gravedad: "Warning" as const,
+      mensaje: "El enlace dice «55 1111 2222» y lleva a tel:5599998888",
+      codigo: "enlace-desfasado",
+      fuente: "openlen",
+    };
+    let n = 0;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(edita(), edita(), [{ type: "text_delta", text: "ok" }, done])),
+      runTool: async () => {
+        n += 1;
+        return { ...(await herramientaQueEdita()), updatedHtml: VISIBLE.replace(">x<", `>x${n}<`), diagnosticos: [diag] };
+      },
+      emit: () => {},
+    });
+    const sobres = (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content as string);
+    expect(sobres[0]).toBe(
+      "<new-diagnostics>Problems that appeared with this change:\n\n/index.html:\n  ⚠ [Line 3:1] El enlace dice «55 1111 2222» y lleva a tel:5599998888 [enlace-desfasado] (openlen)</new-diagnostics>",
+    );
+    // La segunda tanda lo trae otra vez y ya no se repite: se le entregó.
+    expect(sobres[1]).toBe("");
   });
 });
 
@@ -3022,78 +3045,11 @@ describe("el texto de varias vueltas", () => {
 // Los dos fallos que la batería del 2026-09-11 destapó en `carrito-se-construye`
 // y `tope-no-miente`, y los dos son NUESTROS: se reprodujeron con Pro y con
 // v4.1 Flash. Ver los comentarios de `SAME_INTENT_LIMIT` y de `finishOnCap`.
-describe("la misma intención, repetida, no gasta el turno entero", () => {
-  const mismaLlamada = (): StreamEvent[] => [
-    { type: "function_call", name: "editar_runtime", args: { codigo: "x", resumen: "el carrito con total" } },
-    done,
-  ];
-
-  it("a la TERCERA se le refusa y se le dice que cambie de enfoque, sin cortar el turno", async () => {
-    const ejecutadas: string[] = [];
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "ponme un carrito" }],
-      tools: [],
-      maxTurns: 8,
-      openStream: scripted(
-        mismaLlamada(), mismaLlamada(), mismaLlamada(), mismaLlamada(),
-        [{ type: "text_delta", text: "Lo dejé a medias." }, done],
-      ),
-      runTool: async (name, args) => {
-        ejecutadas.push(String((args as { resumen?: string }).resumen));
-        return { response: { ok: true, cambio: "cambio" }, updatedHtml: "<html></html>" };
-      },
-      emit: () => {},
-    });
-    // Se ejecutan DOS; la tercera ni llega a la herramienta. El umbral cae
-    // DENTRO del presupuesto de turnos — en 3 era inalcanzable, medido.
-    expect(ejecutadas).toHaveLength(2);
-    // Y el turno NO muere: cierra por su cuenta.
-    expect(r.terminalError).toBe(false);
-  });
-
-  // 🔴 ESTE BRAZO CAMBIÓ DE HERRAMIENTA el 2026-09-11, y su sustancia NO: sigue
-  // afirmando que cuatro resúmenes DISTINTOS son trabajo y no bucle.
-  //
-  // Lo que cambia es sobre QUÉ lo afirma. Usaba `editar_runtime`, y eso resultó
-  // ser el ejemplo equivocado: esa herramienta construye
-  // `{op:"replace", target:"runtime"}` (`tools.ts:2374`) — un reemplazo de UN
-  // solo destino—, así que «el carrito», «el menú», «el filtro» y «la galería»
-  // no son cuatro trabajos sino cuatro reescrituras del MISMO fichero, y salvo
-  // que el modelo reenvíe todo cada vez, las tres primeras se pierden. La
-  // prueba tampoco ejercitaba la herramienta real: pasaba `codigo`, y la real
-  // exige `script`, o sea que `editar_runtime` era sólo una ETIQUETA para
-  // probar el guardia del bucle.
-  //
-  // `editar_pagina` sí edita nodos concretos, así que ahí cuatro resúmenes
-  // distintos son cuatro trabajos de verdad y la afirmación original se sostiene
-  // sin apoyarse en una semántica que no era.
-  it("BRAZO DE CONTROL: resúmenes DISTINTOS no se tocan — son trabajo, no bucle", async () => {
-    const ejecutadas: string[] = [];
-    const turno = (resumen: string): StreamEvent[] => [
-      {
-        type: "function_call",
-        name: "editar_pagina",
-        args: { edits: [{ op: "replace", target: "op-1", new_html: "<p>x</p>" }], resumen },
-      },
-      done,
-    ];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "haz cuatro cosas" }],
-      tools: [],
-      maxTurns: 8,
-      openStream: scripted(
-        turno("el carrito"), turno("el menú"), turno("el filtro"), turno("la galería"),
-        [{ type: "text_delta", text: "Hechas." }, done],
-      ),
-      runTool: async (_n, args) => {
-        ejecutadas.push(String((args as { resumen?: string }).resumen));
-        return { response: { ok: true, cambio: "cambio" }, updatedHtml: "<html></html>" };
-      },
-      emit: () => {},
-    });
-    expect(ejecutadas).toHaveLength(4);
-  });
-});
+// ⚰️ «LA MISMA INTENCIÓN, REPETIDA» (`SAME_INTENT_LIMIT`, `REESCRIBEN_TODO`): la
+// guarda contaba llamadas por `herramienta + resumen` para cortar el
+// `editar_runtime` en bucle. Len 2.0 no tiene `editar_runtime` y ninguna
+// herramienta lleva ya `resumen`, así que no disparaba nunca. Claude Code no
+// tiene nada así; la de llamadas que FALLAN igual sigue (FAIL_REPEAT_LIMIT).
 
 describe("al cerrar por tope se le devuelven los HECHOS, no se le pide memoria", () => {
   it("el cierre lleva la lista de lo que SÍ se aplicó", async () => {
@@ -3125,12 +3081,15 @@ describe("al cerrar por tope se le devuelven los HECHOS, no se le pide memoria",
 
   it("y si no se aplicó NADA, el cierre lo dice tal cual en vez de callarlo", async () => {
     const cierres: string[] = [];
+    // Un Edit que FALLA: gasta la vuelta y no aplica nada. (Hasta H1 esto era
+    // una cadena de `leer_estado` que cortaba el tope absoluto de 26; las
+    // lecturas no cuentan para `maxTurns` y el absoluto ya no existe.)
     await runAgentLoop({
       messages: [{ role: "user", content: "haz tres cosas" }],
       tools: [],
       maxTurns: 1,
-      openStream: scripted([{ type: "function_call", name: "leer_estado", args: {} }, done]),
-      runTool: async () => ({ response: { ok: true } }),
+      openStream: scripted([{ type: "function_call", name: "Edit", args: { file_path: "/index.html", old_string: "x", new_string: "y" } }, done]),
+      runTool: async () => ({ response: { ok: false, error: "old_string is not in the file." } }),
       closeOut: (msgs) => {
         cierres.push(String(msgs[msgs.length - 1]?.content ?? ""));
         return (async function* () { yield { type: "text_delta", text: "No alcancé." } as StreamEvent; })();
@@ -3251,80 +3210,62 @@ describe("I6 · al cerrar por tope se dice si la página quedó rota", () => {
 // deja como estaba para el plan gratuito, que no tiene auto-recarga: ahí el
 // muro del mes es un muro de verdad y gastarse medio saldo en un turno sí es
 // una pérdida.
-describe("E2 · turnosPorPlan", () => {
-  it("los topes son 12/20 para TODOS — ya no hay puerta por plan", () => {
-    expect(topesPorPlan()).toEqual({ maxTurns: 12, maxToolCalls: 20 });
-  });
-
-  it("🔴 los DOS topes suben juntos — subir sólo las vueltas no movería nada", () => {
-    // El de herramientas es el más bajo de los dos en la práctica: una edición
-    // por vuelta gasta una llamada por vuelta. Con 12 vueltas y 10 llamadas el
-    // corte seguiría llegando en la 10.
-    const pro = topesPorPlan();
-    expect(pro.maxToolCalls).toBeGreaterThanOrEqual(pro.maxTurns);
-  });
-
-  it("y el bucle de verdad honra las 12 vueltas de un pro", async () => {
-    let mutaciones = 0;
-    // Cada vuelta declara una intención DISTINTA: si se repitiera el mismo
-    // `resumen`, quien pararía el turno sería el guarda de intención repetida
-    // (`SAME_INTENT_LIMIT`, 2026-09-11) y esta prueba estaría midiendo ése en
-    // vez del tope. Se comprueba abajo que el motivo del corte es el tope.
+describe("H1 · sin tope de vueltas, como Claude Code (2026-09-25)", () => {
+  // El bucle cierra cuando el modelo deja de llamar herramientas, cuando el
+  // dueño pulsa Detener (la señal de la ruta) o cuando se llena el contexto.
+  // `maxTurns`/`maxToolCalls` quedan OPCIONALES, como el `maxTurns` de la
+  // definición de un agente de Claude Code: quien los pasa, los tiene.
+  const mutaCadaVuelta = (hasta: number) => {
     let vuelta = 0;
-    const openStream = () => {
+    return () => {
       vuelta += 1;
+      const n = vuelta;
       return (async function* () {
-        yield { type: "function_call", name: "editar_pagina", args: { resumen: `sección ${vuelta}` } } as StreamEvent;
+        if (n <= hasta) {
+          yield { type: "function_call", name: "Edit", args: { file_path: "/index.html", old_string: `v${n - 1}`, new_string: `v${n}` } } as StreamEvent;
+        } else {
+          yield { type: "text_delta", text: "Hecho todo." } as StreamEvent;
+        }
         yield done;
       })();
     };
+  };
+  const mutar = (cuenta: { n: number }) => async () => {
+    cuenta.n += 1;
+    return {
+      response: { ok: true, cambio: "cambio" },
+      updatedHtml: `<html>v${cuenta.n}</html>`,
+      action: { tool: "Edit", ok: true, summary: `v${cuenta.n}` },
+    };
+  };
+
+  it("sin topes, 40 vueltas que mutan corren TODAS y el turno cierra cuando el modelo para", async () => {
+    const cuenta = { n: 0 };
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "hazme el sitio entero" }],
       tools: [],
-      ...topesPorPlan(),
-      openStream,
-      runTool: async () => {
-        mutaciones += 1;
-        return {
-          response: { ok: true, cambio: "cambio" },
-          updatedHtml: `<html>v${mutaciones}</html>`,
-          action: { tool: "editar_pagina", ok: true, summary: `sección ${mutaciones}` },
-        };
-      },
+      openStream: mutaCadaVuelta(40),
+      runTool: mutar(cuenta),
       emit: () => {},
     });
-    expect(r.topeAlcanzado).toBe("turn_limit");
-    // 12 vueltas que mutan, no 6. El tope ABSOLUTO sigue siendo el techo.
-    expect(mutaciones).toBe(12);
+    expect(cuenta.n).toBe(40);
+    expect(r.topeAlcanzado).toBeNull();
+    expect(r.terminalError).toBe(false);
+    expect(r.finalText).toContain("Hecho todo.");
   });
 
-  it("y el corte llega en la 12, no antes", async () => {
-    let mutaciones = 0;
-    let vuelta = 0;
-    const openStream = () => {
-      vuelta += 1;
-      return (async function* () {
-        yield { type: "function_call", name: "editar_pagina", args: { resumen: `sección ${vuelta}` } } as StreamEvent;
-        yield done;
-      })();
-    };
+  it("y `maxTurns` sigue siendo opcional: si quien llama lo pasa, se honra", async () => {
+    const cuenta = { n: 0 };
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "hazme el sitio entero" }],
       tools: [],
-      ...topesPorPlan(),
-      openStream,
-      runTool: async () => {
-        mutaciones += 1;
-        return {
-          response: { ok: true, cambio: "cambio" },
-          updatedHtml: `<html>v${mutaciones}</html>`,
-          action: { tool: "editar_pagina", ok: true, summary: `sección ${mutaciones}` },
-        };
-      },
+      maxTurns: 3,
+      openStream: mutaCadaVuelta(40),
+      runTool: mutar(cuenta),
       emit: () => {},
     });
     expect(r.topeAlcanzado).toBe("turn_limit");
-    expect(mutaciones).toBe(12);
+    expect(cuenta.n).toBe(3);
   });
 });
 
@@ -3499,7 +3440,7 @@ describe("H01 · H03 — una edición nula no es un hecho, y leer no es actuar",
   it("BRAZO DE CONTROL: una herramienta que actúa sin tocar la página no recibe insistencia", async () => {
     const vistos: Message[][] = [];
     const stream = scripted(
-      [{ type: "function_call", name: "recordar_preferencia", args: { preferencia: "tutéame" } }, done],
+      [{ type: "function_call", name: "Edit", args: { file_path: "/memoria/dueno.md", old_string: "", new_string: "• Tutéame" } }, done],
       [{ type: "text_delta", text: "Anotado." }, done],
     );
     const r = await runAgentLoop({
@@ -3582,30 +3523,39 @@ describe("H05 — un turno que topa dice que no se miró", () => {
 });
 
 describe("H12 — lo que rechazan las guardas se cuenta y no quema el turno", () => {
-  const misma: StreamEvent[] = [
-    { type: "function_call", name: "editar_runtime", args: { resumen: "carrito", script: "x" } },
+  // La guarda que queda: la MISMA llamada que ya falló dos veces se rechaza.
+  const falla: StreamEvent[] = [
+    { type: "function_call", name: "Edit", args: { file_path: "/index.html", old_string: "carro", new_string: "x" } },
     done,
   ];
+  const fallo = async () => ({ response: { ok: false, error: "old_string is not in the file." } });
 
   it("🔴 cada llamada rechazada se avisa con su motivo, para el diario", async () => {
     const rechazadas: { tool: string; motivo: string }[] = [];
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: scripted(misma, misma, misma, [{ type: "text_delta", text: "Lo dejo así." }, done]),
-      runTool: async () => ({ response: { ok: true, cambio: "cambio" }, updatedHtml: "<p/>", page: null }),
+      openStream: scripted(falla, falla, falla, [{ type: "text_delta", text: "Lo dejo así." }, done]),
+      runTool: fallo,
       onRechazo: (tool, _a, motivo) => rechazadas.push({ tool, motivo }),
       emit: () => {},
     });
-    expect(rechazadas.map((r) => r.tool)).toEqual(["editar_runtime"]);
-    expect(rechazadas[0]!.motivo).toContain("Repetirla otra vez no avanza");
+    expect(rechazadas.map((r) => r.tool)).toEqual(["Edit"]);
+    expect(rechazadas[0]!.motivo).toContain("NO la repitas");
   });
 
   it("🔴 quien insiste tres vueltas en lo rechazado cierra con los hechos delante, sin tope", async () => {
     let cierre = "";
+    const hecho: StreamEvent[] = [
+      { type: "function_call", name: "Edit", args: { file_path: "/index.html", old_string: "a", new_string: "b" } },
+      done,
+    ];
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: scripted(misma),
-      runTool: async () => ({ response: { ok: true, cambio: "cambio" }, action: { tool: "editar_runtime", ok: true, summary: "carrito" }, updatedHtml: "<p/>", page: null }),
+      openStream: scripted(hecho, falla),
+      runTool: async (_n, a) =>
+        a.old_string === "a"
+          ? { response: { ok: true, cambio: "cambio" }, action: { tool: "Edit", ok: true, summary: "carrito" }, updatedHtml: "<p/>", page: null }
+          : fallo(),
       closeOut: (m) => {
         cierre = String(m.at(-1)?.content ?? "");
         return (async function* () { yield { type: "text_delta" as const, text: "Quedó el carrito; no pude más." }; })();
@@ -3616,7 +3566,8 @@ describe("H12 — lo que rechazan las guardas se cuenta y no quema el turno", ()
     expect(cierre).toContain("«carrito»");
     expect(r.topeAlcanzado).toBeNull();
     expect(r.terminalError).toBe(false);
-    expect(r.turns).toBe(5);
+    // Una buena, dos que fallan y tres rechazadas.
+    expect(r.turns).toBe(6);
     // 🔴 Y NO SE COBRA (revisión pre-deploy del 2026-09-22). Este turno acababa
     // antes en el tope, y el tope no se cobra (regla del 2026-07-07). Cerrarlo
     // con elegancia no puede cambiar quién paga por un modelo que insiste.
@@ -3667,7 +3618,7 @@ describe("H04 — el cierre se redacta con lo medido delante", () => {
 });
 
 describe("auditoría 2026-09-22 · G1–G6", () => {
-  const tools = ["declarar_tareas", "editar_texto", "leer_estado", "editar_runtime"].map((name) => ({ name }));
+  const tools = ["TodoWrite", "editar_texto", "leer_estado", "editar_runtime"].map((name) => ({ name }));
   const llama = (name: string, args: Record<string, unknown>): StreamEvent[] => [
     { type: "function_call", name, args },
     usage(10),
@@ -3705,13 +3656,13 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
     await runAgentLoop({
       messages: [{ role: "user", content: "el titular y el teléfono" }], tools,
       openStream: grabando(scripted(
-        llama("declarar_tareas", { tareas: ["titular", "teléfono"] }),
+        llama("TodoWrite", { tareas: ["titular", "teléfono"] }),
         llama("editar_texto", { resumen: "titular" }),
         llama("editar_texto", { resumen: "teléfono" }),
         dice("Listo: cambié el titular y el teléfono."),
       ), vistos),
       runTool: async (n, a) =>
-        n === "declarar_tareas"
+        n === "TodoWrite"
           ? { response: { ok: true }, tareas: (a.tareas as string[]).map((texto) => ({ texto })) }
           : a.resumen === "teléfono" ? nula("teléfono") : real("titular"),
       emit: () => {},
@@ -3725,13 +3676,13 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
     await runAgentLoop({
       messages: [{ role: "user", content: "tres cosas" }], tools,
       openStream: grabando(scripted(
-        llama("declarar_tareas", { tareas: ["A titular", "B teléfono", "C botón"] }),
+        llama("TodoWrite", { tareas: ["A titular", "B teléfono", "C botón"] }),
         llama("editar_texto", { resumen: "A titular" }),
         llama("editar_texto", { resumen: "C botón" }),
         dice("Hecho todo."),
       ), vistos),
       runTool: async (n, a) =>
-        n === "declarar_tareas" ? { response: { ok: true }, tareas: (a.tareas as string[]).map((texto) => ({ texto })) } : real(String(a.resumen)),
+        n === "TodoWrite" ? { response: { ok: true }, tareas: (a.tareas as string[]).map((texto) => ({ texto })) } : real(String(a.resumen)),
       emit: () => {},
     });
     const reclamo = vistos.map(ultimoDelUsuario).find(esReclamo);
@@ -3747,29 +3698,30 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
   // explicándole al dueño la contabilidad de las tareas. La salida es comprobarla
   // en la página con ella en curso, y el aviso tiene que decirlo — y decir que
   // eso no es para el dueño.
-  it("🔴 C07 · la tarea que hizo la misma llamada se confirma leyendo, y la contabilidad no va al dueño", async () => {
+  for (const lectura of ["Grep", "Read"] as const)
+  it(`🔴 C07 · la tarea que hizo la misma llamada se confirma leyendo (${lectura}), y la contabilidad no va al dueño`, async () => {
     const vistos: Message[][] = [];
     const lista = (titular: string, telefono?: string) => ({
       tareas: [{ tarea: "titular", estado: titular }, { tarea: "teléfono", ...(telefono ? { estado: telefono } : {}) }],
     });
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "el titular y el teléfono" }],
-      tools: [...tools, { name: "buscar_en_pagina" }],
+      tools: [...tools, { name: lectura }],
       openStream: grabando(scripted(
-        llama("declarar_tareas", lista("en_curso")),
+        llama("TodoWrite", lista("en_curso")),
         llama("editar_texto", { resumen: "titular y teléfono" }),
-        llama("declarar_tareas", lista("hecha", "hecha")),
+        llama("TodoWrite", lista("hecha", "hecha")),
         [
-          { type: "function_call", name: "declarar_tareas", args: lista("hecha", "en_curso") },
-          { type: "function_call", name: "buscar_en_pagina", args: { texto: "33 1234 5678" } },
+          { type: "function_call", name: "TodoWrite", args: lista("hecha", "en_curso") },
+          { type: "function_call", name: lectura, args: lectura === "Grep" ? { pattern: "33 1234 5678" } : { file_path: "/index.html" } },
           usage(10),
           done,
         ],
-        llama("declarar_tareas", lista("hecha", "hecha")),
+        llama("TodoWrite", lista("hecha", "hecha")),
         dice("Listo: el titular y el teléfono."),
       ), vistos),
       runTool: async (n, a) =>
-        n === "declarar_tareas"
+        n === "TodoWrite"
           ? {
               response: { ok: true },
               tareas: (a.tareas as { tarea: string; estado?: "pendiente" | "en_curso" | "hecha" }[]).map((t) => ({
@@ -3777,16 +3729,16 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
                 ...(t.estado ? { estado: t.estado } : {}),
               })),
             }
-          : n === "buscar_en_pagina"
-            ? { response: { ok: true, coincidencias: 1 } }
+          : n === lectura
+            ? { response: { ok: true } }
             : real(String(a.resumen)),
       emit: () => {},
     });
     const avisos = vistos
       .at(-1)!
-      .flatMap((m) => m.functionResponses ?? [])
-      .map((f) => String((f.response as { aviso_critico?: unknown }).aviso_critico ?? ""))
-      .filter(Boolean);
+      .filter((m) => m.role === "user" && m.functionResponses)
+      .map((m) => String(m.content))
+      .filter((c) => c.includes("NO se marcaron completed"));
     expect(avisos, "el rechazo de «teléfono» no le llegó al modelo").toHaveLength(1);
     expect(avisos[0]).toContain("«teléfono»");
     expect(avisos[0], "el aviso no le dice cómo probar la que ya hizo").toMatch(/compru[eé]bala con una lectura/);
@@ -3806,7 +3758,7 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "¿sale el teléfono en el pie?" }], tools,
       openStream: grabando(scripted(
-        llama("leer_estado", {}),
+        llama("Read", { file_path: "/index.html" }),
         dice("Sí: el pie dice 33 1234 5678."),
         // Tras la insistencia, cierra sin escribir nada más.
         [usage(3), done],
@@ -3913,7 +3865,7 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
     await runAgentLoop({
       messages: [{ role: "user", content: "pon el titular Vitalvet" }], tools,
       openStream: grabando(scripted(
-        llama("leer_estado", {}),
+        llama("Read", { file_path: "/index.html" }),
         dice("Listo, cambié el titular a Vitalvet."),
       ), vistos),
       runTool: async () => ({ response: { ok: true } }),
@@ -3926,12 +3878,13 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
   it("G5 · las llamadas rechazadas no se comen las vueltas del turno", async () => {
     let reales = 0;
     const r = await runAgentLoop({
-      messages: [{ role: "user", content: "hazme un carrito" }], tools,
-      openStream: scripted(llama("editar_runtime", { resumen: "carrito", codigo: "x" })),
+      messages: [{ role: "user", content: "hazme un carrito" }], tools: [...tools, { name: "Edit" }],
+      // La misma llamada, que falla igual: a la tercera la rechaza la guarda.
+      openStream: scripted(llama("Edit", { file_path: "/index.html", old_string: "carro", new_string: "carrito" })),
       closeOut: () => (async function* () { yield { type: "text_delta" as const, text: "cierre" }; })(),
       runTool: async () => {
         reales += 1;
-        return { response: { ok: true, cambio: "cambio" }, updatedHtml: "<p/>", page: null };
+        return { response: { ok: false, error: "old_string is not in the file." } };
       },
       emit: () => {},
     });
@@ -4037,6 +3990,11 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
       emit: (e) => events.push(e),
     });
     expect(recibido, "el modelo nunca leía el veredicto antes de hablar").toContain("ilegible a 1.00:1");
+    // H4 (2026-09-26): lo medido se DICE —decisión de Jesús del 04/09—, pero el
+    // cierre ya no le pide al modelo que ofrezca arreglarlo: ofrecer trabajo que
+    // nadie pidió es ensanchar el alcance («Delivering work» de Claude Code).
+    expect(recibido).toContain("qué problema tiene la página");
+    expect(recibido).not.toMatch(/ofr[eé]cete/);
     const iVeredicto = events.findIndex((e) => e.type === "action" && e.tool === "verificar_diseno" && e.status === "warning");
     const iUltimoTexto = events.map((e) => e.type).lastIndexOf("text");
     expect(iVeredicto).toBeGreaterThanOrEqual(0);
@@ -4044,5 +4002,40 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
     expect(r.finalText, "el final era «perfecto» con la lista de defectos pegada debajo").not.toMatch(
       /perfecto[\s\S]*- el titular \(#fff sobre #fff\)/,
     );
+  });
+});
+
+// H4, parte 3: la ruta guarda lo que vio el modelo en este turno para
+// reconstruir el historial del siguiente desde la base, como Claude Code. El
+// bucle trabaja sobre una COPIA de los mensajes, así que lo tiene que devolver.
+describe("H4 — el bucle devuelve la transcripción del turno", () => {
+  it("las llamadas con sus argumentos, las respuestas enteras y el texto final", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "system", content: "s" }, { role: "user", content: "pon el titular Vitalvet" }],
+      tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, done],
+        [{ type: "text_delta", text: "Listo, el titular dice Vitalvet." }, done],
+      ),
+      runTool: async () => ({ response: { ok: true, tool_result: "1\t<h1>Hola</h1>" } }),
+      emit: () => {},
+    });
+    const t = r.transcripcion ?? [];
+    // Nada de lo que llegó de fuera: sólo lo del turno.
+    expect(t.some((m) => m.content === "pon el titular Vitalvet")).toBe(false);
+    expect(t[0]!.functionCalls![0]).toEqual({ name: "Read", args: { file_path: "/index.html" } });
+    expect(t[1]!.functionResponses![0]!.response.tool_result).toBe("1\t<h1>Hola</h1>");
+    expect(t.at(-1)).toEqual({ role: "assistant", content: "Listo, el titular dice Vitalvet." });
+  });
+
+  it("CONTRA-PRUEBA: un turno sin texto final no inventa un mensaje vacío", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: scripted([done]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect((r.transcripcion ?? []).every((m) => m.content.trim() !== "" || m.functionCalls || m.functionResponses)).toBe(true);
   });
 });

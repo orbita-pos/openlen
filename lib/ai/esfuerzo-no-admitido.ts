@@ -32,8 +32,8 @@
  * error nuestro: se marca y se deja de mandar.
  *
  * `valor` = el campo existe pero lo que mandamos no vale. Eso es un DEFECTO
- * NUESTRO. Hoy no puede pasar —`presupuestoDeEsfuerzo` devuelve siempre un
- * entero ≥ 1— así que si pasa, alguien rompió esa garantía. Se reintenta igual
+ * NUESTRO. Hoy no puede pasar —`presupuestoDeEsfuerzo` devuelve un entero ≥ 1
+ * o nada— así que si pasa, alguien rompió esa garantía. Se reintenta igual
  * para no tirarle el turno al usuario, pero NO se marca el modelo: marcarlo
  * escondería nuestro bug detrás de una capacidad inventada del proveedor, y el
  * turno siguiente saldría sin pensamiento para siempre por una errata.

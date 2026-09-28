@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voltio — Electricista y plomería urgente 24/7 · Guadalajara</title>
+<meta name="description" content="Cortos, fugas, boilers y contactos: llegamos hoy mismo en zona GDL. Diagnóstico $250 que se descuenta del trabajo. Garantía por escrito de 6 meses.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --bg: #FAFAF7;
+    --surface: #F1F1EA;
+    --surface-2: #E8E8DE;
+    --fg: #1E2024;
+    --fg-muted: #565A61;
+    --fg-faint: #63676E;
+    --border: rgba(30,32,36,0.08);
+    --border-strong: rgba(30,32,36,0.13);
+    --accent: #E5A50A;
+    --accent-r: 229,165,10;
+    --accent-ink: #241A02;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --radius-lg: 15px;
+    --font-display: "Inter", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --warn: #A3671C;
+    --danger: #B3261E;
+  }
+  :root.dark {
+    --bg: #151512;
+    --surface: #1D1D19;
+    --surface-2: #262620;
+    --fg: #F1F1EC;
+    --fg-muted: rgba(241,241,236,0.66);
+    --fg-faint: rgba(241,241,236,0.56);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #F0B62B;
+    --accent-r: 240,182,43;
+    --accent-ink: #211703;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-feature-settings: "ss01","cv11"; -webkit-font-smoothing: antialiased; }
+  .display { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.03em; line-height: 0.97; }
+  .mono { font-family: var(--font-mono); }
+  .hairline { border-color: var(--border); }
+  .hairline-2 { border-color: var(--border-strong); }
+  .lift { transition: transform 90ms ease, box-shadow 90ms ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.10); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: rgba(var(--accent-r), 0.9); }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-faint); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .half-tone { opacity: 0.45; }
+  .ph-obra { background: linear-gradient(145deg, rgba(var(--accent-r),0.22), var(--surface-2) 52%, var(--surface)); }
+  .ph-tablero { background: linear-gradient(125deg, var(--surface-2), var(--surface) 55%, rgba(var(--accent-r),0.11)); }
+  .grain::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background-image: radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px); background-size: 24px 24px; opacity: 0.5; }
+  .chip { display: inline-flex; align-items: center; border: 1px solid var(--border-strong); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 500; background: var(--surface); }
+</style>
+</head>
+<body>
+
+<!-- NAV · EL TELÉFONO MANDA -->
+<header class="sticky top-0 z-50 border-b hairline backdrop-blur-md" style="background: color-mix(in srgb, var(--bg) 88%, transparent);">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M13 2L5 13h5l-1 9 8-11h-5l1-9z" fill="var(--accent)" stroke="var(--accent-ink)" stroke-width="0.6" stroke-linejoin="round"/>
+      </svg>
+      <span class="display text-[18px]">Voltio</span>
+    </a>
+    <div class="mono hidden text-[11px] uppercase tracking-[0.12em] text-[color:var(--fg-muted)] lg:block">electricidad · plomería · boilers · GDL</div>
+    <a href="#" class="btn-primary lift inline-flex h-10 items-center gap-2 rounded-[var(--radius-sm)] px-4 text-[14px] font-bold tabular">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.3 15.3 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.58 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .57 3.6 1 1 0 0 1-.25 1z"/></svg>
+      33 1907 4482
+    </a>
+  </nav>
+</header>
+
+<!-- HERO DIRECTO -->
+<section class="mx-auto max-w-6xl px-5 pb-14 pt-10 md:pb-20 md:pt-14">
+  <div class="grid items-center gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-14">
+    <div>
+      <div class="mono inline-flex items-center gap-2 rounded-[var(--radius-sm)] border hairline bg-[var(--surface)] px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-muted)]">
+        <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"></span>
+        Zona metropolitana de GDL · urgencias 24/7
+      </div>
+      <h1 class="display mt-6 text-[40px] sm:text-[54px] lg:text-[58px]">
+        ¿Corto, fuga o boiler muerto? <span class="text-[color:var(--fg)] underline decoration-[var(--accent)] decoration-[6px] underline-offset-4">Llegamos hoy.</span>
+      </h1>
+      <p class="mt-6 max-w-md text-[15.5px] leading-relaxed text-[color:var(--fg-muted)]">
+        Electricista y plomero certificados en la misma llamada. Diagnóstico por $250 que se descuenta del trabajo, precio cerrado ANTES de empezar y garantía por escrito de 6 meses.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href="#" class="btn-primary lift inline-flex h-12 items-center gap-2 rounded-[var(--radius-sm)] px-6 text-[15px] font-bold tabular">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.3 15.3 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.58 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .57 3.6 1 1 0 0 1-.25 1z"/></svg>
+          Marca: 33 1907 4482
+        </a>
+        <a href="#" class="lift inline-flex h-12 items-center gap-2 rounded-[var(--radius-sm)] border hairline-2 bg-[var(--surface)] px-6 text-[14px] font-semibold">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .3-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.5-.2.7-.1l2 .9c.3.2.5.3.6.4 0 .1 0 .7-.3 1.3z"/></svg>
+          WhatsApp con foto de tu falla
+        </a>
+      </div>
+      <div class="mono mt-6 text-[12px] tracking-wide text-[color:var(--fg-faint)] tabular">Respuesta en menos de 15 min · si es urgencia nocturna, también contestamos</div>
+    </div>
+    <div class="relative">
+      <div class="ph-tablero grain relative aspect-[4/5] rounded-[var(--radius-lg)] border hairline" data-ol-photo="electrician working panel tools"></div>
+      <div class="absolute -bottom-5 -left-3 w-[215px] rounded-[var(--radius)] border hairline bg-[var(--bg)] p-4 shadow-[0_14px_36px_rgba(0,0,0,0.12)] sm:-left-6">
+        <div class="eyebrow">El responsable</div>
+        <div class="display mt-1.5 text-[16px]">Beto Aguirre</div>
+        <div class="mono mt-1 text-[11px] text-[color:var(--fg-muted)] tabular">DC-3 vigente · 16 años de oficio · él contesta el teléfono</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICIOS PRECIO DESDE -->
+<section class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-3xl px-5 py-16 md:py-22">
+    <div class="text-center">
+      <div class="eyebrow">Servicios y precios</div>
+      <h2 class="display mt-3 text-[30px] sm:text-[40px]">"Desde" de verdad, no de anzuelo.</h2>
+      <p class="mx-auto mt-3 max-w-md text-[14px] text-[color:var(--fg-muted)]">El precio exacto te lo damos en sitio, cerrado y antes de tocar nada. Si no te late, pagas solo el diagnóstico y tan amigos.</p>
+    </div>
+    <ul class="mono mt-10 divide-y divide-[color:var(--border)] text-[13px] tabular">
+      <li class="flex items-baseline justify-between py-4"><span class="text-[14.5px] font-semibold text-[color:var(--fg)]" style="font-family:var(--font-body);">Diagnóstico a domicilio</span><span class="text-[15px] font-bold">$250 <span class="text-[10.5px] font-normal text-[color:var(--accent)]" style="filter:brightness(0.7);">se descuenta</span></span></li>
+      <li class="flex items-baseline justify-between py-4"><span class="text-[14.5px] font-semibold text-[color:var(--fg)]" style="font-family:var(--font-body);">Corto circuito / pastilla botada</span><span class="text-[15px] font-medium">desde $480</span></li>
+      <li class="flex items-baseline justify-between py-4"><span class="text-[14.5px] font-semibold text-[color:var(--fg)]" style="font-family:var(--font-body);">Fuga de agua (visible)</span><span class="text-[15px] font-medium">desde $550</span></li>
+      <li class="flex items-baseline justify-between py-4"><span class="text-[14.5px] font-semibold text-[color:var(--fg)]" style="font-family:var(--font-body);">Boiler: reparación / instalación</span><span class="text-[15px] font-medium">desde $690 / $1,450</span></li>
+      <li class="flex items-baseline justify-between py-4"><span class="text-[14.5px] font-semibold text-[color:var(--fg)]" style="font-family:var(--font-body);">Contactos, apagadores y lámparas</span><span class="text-[15px] font-medium">desde $220 c/u</span></li>
+      <li class="flex items-baseline justify-between py-4"><span class="text-[14.5px] font-semibold text-[color:var(--fg)]" style="font-family:var(--font-body);">Cambio de tablero / centro de carga</span><span class="text-[15px] font-medium">desde $3,800</span></li>
+      <li class="flex items-baseline justify-between py-4"><span class="text-[14.5px] font-semibold text-[color:var(--fg)]" style="font-family:var(--font-body);">Destape de drenaje</span><span class="text-[15px] font-medium">desde $850</span></li>
+    </ul>
+    <div class="mt-6 rounded-[var(--radius)] border-2 border-[color:rgba(var(--accent-r),0.5)] bg-[var(--bg)] p-5 text-center">
+      <p class="text-[14px] font-semibold">Garantía por escrito: 6 meses en mano de obra.</p>
+      <p class="mt-1 text-[13px] text-[color:var(--fg-muted)]">Si la falla regresa, regresamos sin costo. El papelito habla — y te lo llevas firmado.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ZONA -->
+<section class="border-t hairline">
+  <div class="mx-auto max-w-4xl px-5 py-14 text-center md:py-18">
+    <div class="eyebrow">Zona de cobertura</div>
+    <h2 class="display mt-3 text-[26px] sm:text-[34px]">Si vives aquí, llegamos hoy.</h2>
+    <div class="mt-7 flex flex-wrap items-center justify-center gap-2.5">
+      <span class="chip">Providencia</span><span class="chip">Chapalita</span><span class="chip">Americana</span><span class="chip">Ladrón de Guevara</span><span class="chip">Zapopan centro</span><span class="chip">Valle Real</span><span class="chip">Santa Tere</span><span class="chip">Country</span><span class="chip">Jardines del Bosque</span>
+    </div>
+    <p class="mono mt-5 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)]">¿otra colonia? pregunta — si nos da el tiempo del día, vamos</p>
+  </div>
+</section>
+
+<!-- TRABAJOS RECIENTES -->
+<section class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <div class="mb-8">
+      <div class="eyebrow">Trabajos de esta semana</div>
+      <h2 class="display mt-3 text-[28px] sm:text-[36px]">Así se ve lo bien hecho.</h2>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-3">
+      <figure>
+        <div class="ph-obra grain relative aspect-[4/3] rounded-[var(--radius)] border hairline" data-ol-photo="electrical panel organized wiring"></div>
+        <figcaption class="mono mt-3 text-[11px] uppercase tracking-[0.12em] text-[color:var(--fg-faint)]">Tablero nuevo · Chapalita · 4 h</figcaption>
+      </figure>
+      <figure>
+        <div class="ph-tablero grain relative aspect-[4/3] rounded-[var(--radius)] border hairline" data-ol-photo="water heater installation new"></div>
+        <figcaption class="mono mt-3 text-[11px] uppercase tracking-[0.12em] text-[color:var(--fg-faint)]">Boiler de paso · Providencia · mismo día</figcaption>
+      </figure>
+      <figure>
+        <div class="ph-obra grain relative aspect-[4/3] rounded-[var(--radius)] border hairline" data-ol-photo="plumber fixing pipe under sink"></div>
+        <figcaption class="mono mt-3 text-[11px] uppercase tracking-[0.12em] text-[color:var(--fg-faint)]">Fuga en cocina · Santa Tere · 90 min</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- RESEÑAS -->
+<section class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <div class="eyebrow text-center">Vecinos que ya nos hablaron</div>
+    <div class="mt-8 grid gap-4 md:grid-cols-3">
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"Se fue la luz de media casa un domingo 9 pm. Beto llegó en 40 minutos, encontró el falso contacto y me cobró lo que dijo por teléfono."</blockquote>
+        <figcaption class="mt-3 text-[13px] font-semibold">Gerardo M. · Providencia</figcaption>
+      </figure>
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"Tres plomeros antes no encontraron la fuga. Estos llegaron con detector, la ubicaron en 20 minutos y rompieron SOLO un azulejo."</blockquote>
+        <figcaption class="mt-3 text-[13px] font-semibold">Lupita R. · Chapalita</figcaption>
+      </figure>
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"Les mandé foto del boiler por WhatsApp, me dijeron el probable problema y el rango de precio ANTES de venir. Así da gusto."</blockquote>
+        <figcaption class="mt-3 text-[13px] font-semibold">Fam. Ornelas · Zapopan centro</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- CTA URGENCIA -->
+<section class="bg-[var(--accent)] text-[color:var(--accent-ink)]">
+  <div class="mx-auto max-w-6xl px-5 py-14 text-center md:py-18">
+    <h2 class="display mx-auto max-w-2xl text-[32px] sm:text-[44px]">¿Es urgente? No leas más abajo.</h2>
+    <div class="mt-7 flex flex-wrap items-center justify-center gap-3">
+      <a href="#" class="lift inline-flex h-13 items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--bg)] px-7 py-3.5 text-[16px] font-bold text-[color:var(--fg)] tabular">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.3 15.3 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.58 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .57 3.6 1 1 0 0 1-.25 1z"/></svg>
+        33 1907 4482
+      </a>
+      <div class="mono w-full text-[11px] uppercase tracking-[0.18em] opacity-75 sm:w-auto">24/7 · urgencia nocturna +$300, avisado desde antes</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER LOCAL -->
+<footer class="border-t hairline">
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-[12.5px] text-[color:var(--fg-faint)] md:flex-row">
+    <div class="flex items-center gap-2">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2L5 13h5l-1 9 8-11h-5l1-9z" fill="var(--accent)"/></svg>
+      <span class="font-semibold text-[color:var(--fg-muted)]">Voltio · electricidad y plomería</span>
+    </div>
+    <div class="mono text-[11px] uppercase tracking-[0.12em] tabular">GDL y Zapopan · 24/7 · garantía escrita 6 meses</div>
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-[color:var(--fg)]">WhatsApp</a>
+      <a href="#" class="hover:text-[color:var(--fg)]">Facebook</a>
+      <span>© 2026 Voltio</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
