@@ -46,9 +46,9 @@ How to keep it:
 
 Examples of when to use it:
 
-User: "Make me three pages, Home, Menu and Contact, with the same header and footer, and the WhatsApp button on all of them."
+User: "Make me three pages, Home, Menu and Contact, with the same header and footer, and the WhatsApp button on all of them. Then check they look right on a phone."
 Assistant: creates the list (Home page; Menu page; Contact page; same header and footer on the three; WhatsApp button on each page; check the three pages on a phone) and starts with the first.
-Why: several pages, and a change that has to reach all of them. The list keeps a page from being forgotten. The last task was not asked for: the assistant added it because a job like this is only finished when it has been seen working.
+Why: several pages, and a change that has to reach all of them. The list keeps a page from being forgotten. Every task comes from the request, the phone check included: the owner asked for it at the end.
 
 User: "We changed our name from Café Luna to Luna Tostadores, update it on the site."
 Assistant: first searches with Grep and finds the old name 11 times across 4 pages, the page titles and the footer included. Then creates one task per page and goes through them.
