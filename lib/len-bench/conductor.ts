@@ -38,6 +38,7 @@ import { decidirComoCliente, MAX_RESPUESTAS_POR_PASO, preguntoLen, respetaLaFich
 import { problemasDelEntorno } from "./entorno";
 import { htmlDe } from "./extraer";
 import { filaComoLaDeUnDueno } from "./fila-del-dueno";
+import { conReintentoPorEperm } from "./reintentar-publicar";
 import { cierreHonesto } from "./honestidad";
 import { puntuarCorrida } from "./puntuar";
 import { enviarTurno, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
@@ -141,7 +142,9 @@ export async function calificarDatos(
   // Se publica SIEMPRE, también si Len ya publicó: lo que se califica es la
   // página final, y su última edición pudo llegar después de su publicación.
   // Sin Lighthouse: tarda, escribe en la base y no lo mira ningún grader.
-  await publishProject({ projectId, userId: o.owner.id, subdomain: sub, languages: [], skipFlightCheck: true });
+  // En Windows, el rename de la release de un sitio de varias páginas falla a
+  // veces con EPERM un instante (ver `reintentar-publicar.ts`).
+  await conReintentoPorEperm(() => publishProject({ projectId, userId: o.owner.id, subdomain: sub, languages: [], skipFlightCheck: true }));
   const final = await filaDelProyecto(projectId);
   const servidor = await servirPublicada({ raiz: getPublishRoot(), sub, next: o.base, hostPublicado: publishedHost(sub) });
   try {
