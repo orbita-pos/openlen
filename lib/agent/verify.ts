@@ -1411,7 +1411,7 @@ defect. Never set broken=true for it and never list it in issues.
   //
   // Con una sola página no se añade nada y el prompt sale igual que antes.
   const cuerpoDelMapa = (texto: string) =>
-    `The page's HTML contains this text content. Cross-check it against the screenshot — content listed here that is NOT visible in the image usually means invisible text (same color as its background), the worst kind of breakage because the owner won't notice it either:
+    `The page's HTML contains this text content. Cross-check it against the screenshot — content listed here that is NOT visible in the image usually means invisible text (same color as its background), the worst kind of breakage because the user won't notice it either:
 ${texto}`;
   const rol =
     paginas.length === 0
@@ -1425,7 +1425,7 @@ ${cuerpoDelMapa(contentMap(html))}
       : `<pages>
 This turn changed ${paginas.length} pages of the same site, so ${paginas.length} screenshots are attached, in THIS order. Judge every one of them — a problem on one page says nothing about the others.
 ${paginas.map((p, i) => `- Screenshot ${i + 1}: the page at ${p.etiqueta}`).join(SALTO)}
-Every sentence you put in "issues" or "observaciones" MUST start with that page's address and a colon (for example "${paginas[0]!.etiqueta}: ..."), so the owner knows which page you mean.
+Every sentence you put in "issues" or "observaciones" MUST start with that page's address and a colon (for example "${paginas[0]!.etiqueta}: ..."), so the user knows which page you mean.
 </pages>
 ${paginas
   .map(
@@ -1437,7 +1437,7 @@ Screenshot ${i + 1}. ${cuerpoDelMapa(contentMap(p.html))}
   return `<role>You are the visual safety check for a page-editing agent. ${rol}</role>
 <user-request>${userPrompt}</user-request>
 ${seccionPaginas}
-${nota}<task>Decide ONE thing: did the page end up with OBJECTIVE visual breakage? You are NOT a taste critic — the owner chose this design and the agent did what they asked. Never flag style, density, color taste, copy quality, or anything a reasonable owner could have wanted on purpose.</task>
+${nota}<task>Decide ONE thing: did the page end up with OBJECTIVE visual breakage? You are NOT a taste critic — the user chose this design and the agent did what they asked. Never flag style, density, color taste, copy quality, or anything a reasonable user could have wanted on purpose.</task>
 <flag-only>
 - Content from the content-map that is NOT visible anywhere in the screenshot (invisible text).
 - Text overlapping other text or images, or clipped mid-word by its container.
@@ -1449,7 +1449,7 @@ ${nota}<task>Decide ONE thing: did the page end up with OBJECTIVE visual breakag
 <observe-only>
 A box filled with a FLAT COLOR or a GRADIENT and no image is NOT breakage. Our
 generator leaves exactly that on purpose whenever the curated photo library has
-no match for a subject, and the page owner may also have chosen it. From pixels
+no match for a subject, and the user may also have chosen it. From pixels
 alone you cannot tell a deliberate placeholder from a failure — the difference
 lives in the HTML, which your teammate has and you do not.
 So do not guess: put it in "observaciones", never in "issues", and never set
