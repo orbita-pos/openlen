@@ -25,6 +25,40 @@ describe("la lista de tareas, con estado y medida", () => {
     ]);
   });
 
+  // 🔴 El turno de producción del 2026-09-28 y su repetición en Len-Bench: el
+  // modelo escribió una página con «Radio» en curso, hizo las 5 ediciones de
+  // enlazar SIN pasar «Enlazar» a en curso, y marcó las dos hechas de golpe. Los
+  // 6 cambios contaban todos para «Radio», «Enlazar» se negaba, y al cerrar se
+  // reabría el turno: el dueño leía el resumen DOS veces.
+  it("🔴 las que se marcan hechas de golpe se cubren con lo que cambió desde la lista anterior", () => {
+    const l = new ListaDeTareas();
+    l.declarar([{ texto: "Radio", estado: "en_curso" }, { texto: "Enlazar" }, { texto: "Comprobar" }]);
+    for (let i = 0; i < 6; i++) l.anotarCambio();
+    const r = l.declarar([
+      { texto: "Radio", estado: "hecha" },
+      { texto: "Enlazar", estado: "hecha" },
+      { texto: "Comprobar", estado: "en_curso" },
+    ]);
+    expect(r.sinEvidencia).toEqual([]);
+    expect(l.pendientes().nombradas).toEqual(["Comprobar"]);
+  });
+
+  it("BRAZO DE CONTROL: lo que sobró en una lista anterior no cubre una marcada después sin nada detrás", () => {
+    const l = new ListaDeTareas();
+    l.declarar([{ texto: "Radio", estado: "en_curso" }, { texto: "Enlazar" }]);
+    for (let i = 0; i < 6; i++) l.anotarCambio();
+    l.declarar([{ texto: "Radio", estado: "hecha" }, { texto: "Enlazar" }]);
+    const r = l.declarar([{ texto: "Radio", estado: "hecha" }, { texto: "Enlazar", estado: "hecha" }]);
+    expect(r.sinEvidencia).toEqual(["Enlazar"]);
+  });
+
+  it("BRAZO DE CONTROL: sin ningún cambio, marcar varias hechas de golpe sigue sin aceptarse", () => {
+    const l = new ListaDeTareas();
+    l.declarar([{ texto: "A", estado: "en_curso" }, { texto: "B" }]);
+    const r = l.declarar([{ texto: "A", estado: "hecha" }, { texto: "B", estado: "hecha" }]);
+    expect(r.sinEvidencia).toEqual(["A", "B"]);
+  });
+
   it("🔴 una tarea de COMPROBAR se da por hecha con una lectura", () => {
     const l = new ListaDeTareas();
     l.declarar([{ texto: "contador", estado: "en_curso" }, { texto: "probar que sube", comprobar: true }]);
