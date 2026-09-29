@@ -100,10 +100,14 @@ const ActionSchema = z.object({
       : resto,
   );
 
-/** Tarjetas que se guardan por turno. Por encima de lo que el bucle produce
- *  (26 llamadas como mucho, más las de los ojos): recortar aquí es una red, no
- *  algo que un turno normal toque. */
-const MAX_TARJETAS_GUARDADAS = 40;
+/** Tarjetas que se guardan por turno. Era 40 «por encima de lo que el bucle
+ *  produce (26 llamadas como mucho)», y Len 2.0 quitó ese tope: el 2026-09-28
+ *  un turno de producción hizo 93 llamadas, se guardaron 40 y al recargar la
+ *  lista acababa en una tarjeta roja de la mitad del turno. El bucle ya no
+ *  tiene techo, así que la red no sale de él sino del TAMAÑO de la fila: cada
+ *  campo de la tarjeta ya viene recortado, y mil tarjetas normales ocupan lo
+ *  que una transcripción (`TOPE_TRANSCRIPCION`). */
+const MAX_TARJETAS_GUARDADAS = 1000;
 
 const TurnSchema = z.object({
   id: z.string().min(1).max(100),
@@ -127,9 +131,10 @@ const TurnSchema = z.object({
   // producción, 2 de los 22 turnos con tarjetas de los 14 días anteriores
   // pasaban de 12). Por encima de lo que el bucle puede producir se recorta,
   // como el `summary`; sólo lo que no puede venir de un turno se rechaza.
+  // Y sin `.max()`: sin tope de pasos, ningún número de tarjetas es imposible,
+  // y el `.max(200)` que quedaba habría repetido el 400 de arriba.
   actions: z
     .array(ActionSchema)
-    .max(200)
     .transform((a) => a.slice(0, MAX_TARJETAS_GUARDADAS))
     .optional(),
   noDocChange: z.boolean().optional(),
