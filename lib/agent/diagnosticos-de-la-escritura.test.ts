@@ -116,6 +116,13 @@ describe("diagnosticosDeLaEscritura: lo que antes era un aviso_critico, anclado 
     expect(escritura({ antes: conCdn, despues: conCdn.replace("<canvas", "<p>hola</p><canvas") }).map((d) => d.codigo)).not.toContain("script-que-se-borra");
   });
 
+  it("un enlace que cae en la portada, y sólo si lo puso ESTA escritura", () => {
+    const despues = pagina('<nav><a href="menu.html">Menú</a></nav>');
+    const d = escritura({ despues }).find((x) => x.codigo === "enlace-que-no-llega");
+    expect(d?.mensaje).toContain("/menu");
+    expect(escritura({ antes: despues, despues: despues.replace("</nav>", "<p>hola</p></nav>") }).map((x) => x.codigo)).not.toContain("enlace-que-no-llega");
+  });
+
   it("el país de un teléfono que nadie dio", () => {
     const despues = pagina('<a href="https://wa.me/525512345678">WhatsApp</a>');
     const ds = escritura({ despues, fuentes: ["mi whatsapp es 5512345678"] });

@@ -369,6 +369,8 @@ export default defineConfig({
       "lib/agent/datos-inventados.test.ts",
       // La librería que en el lienzo va y publicada no. Núcleo puro — LISTA BLANCA.
       "lib/agent/librerias-que-no-cargan.test.ts",
+      // El enlace que cae en la portada. Núcleo puro — LISTA BLANCA.
+      "lib/agent/enlaces-que-no-llegan.test.ts",
       // Lo medido que vuelve al modelo tras editar. `include` es LISTA BLANCA:
       // sin esta línea la prueba existiría y no correría nunca.
       "lib/agent/aviso-medido.test.ts",

@@ -27,6 +27,7 @@ import { contenidoPerdido } from "@/lib/agent/contenido-perdido";
 import { datosInventados } from "@/lib/agent/datos-inventados";
 import { enlacesDesfasados } from "@/lib/agent/enlaces-desfasados";
 import { enlacesInventados } from "@/lib/agent/enlaces-inventados";
+import { enlacesQueNoLlegan } from "@/lib/agent/enlaces-que-no-llegan";
 import { hechosPerdidosNetos, metaDesfasada } from "@/lib/agent/facts-kept";
 import { jsQueNoCompila } from "@/lib/agent/js-que-no-compila";
 import { etiquetasDe, libreriasQueNoCargan } from "@/lib/agent/librerias-que-no-cargan";
@@ -192,6 +193,20 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
           "Error",
           "js-no-compila",
           `El navegador no puede leer este <script> (${x.mensaje}): no corre NINGUNA línea de él, y la página se queda sin todo lo que hacía.`,
+        ),
+      );
+    }
+    for (const x of enlacesQueNoLlegan(html)) {
+      fuera.push(
+        diag(
+          posicionDelHref(html, x.href),
+          "Warning",
+          x.tipo === "ancla-muerta" ? "ancla-muerta" : "enlace-que-no-llega",
+          x.tipo === "ancla-muerta"
+            ? `El enlace a ${x.href} no lleva a ningún sitio: la página no tiene ningún elemento con id="${x.href.slice(1)}". Al tocarlo no pasa nada. Pon ese id en la sección a la que apunta, o cambia el enlace.`
+            : x.tipo === "sin-esquema"
+              ? `El enlace «${x.href}» no lleva esquema, así que es una ruta de ESTE sitio: el servidor contesta con la portada y el visitante se queda donde estaba. ${x.sugerido ? `Escríbelo entero: ${x.sugerido}` : "Escribe la dirección completa, con https://."}`
+              : `El enlace «${x.href}» cae en la portada: las páginas del sitio se enlazan con su ruta, que es ${x.sugerido}. ${x.tipo === "relativa" ? "Una ruta sin «/» delante sólo funciona desde la portada." : "No existe ningún fichero .html con ese nombre."}`,
         ),
       );
     }
