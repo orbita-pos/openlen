@@ -11,7 +11,9 @@
 // nada, y lo que cambia solo se marca como tal.
 import { describe, expect, it } from "vitest";
 
-import { usarPagina, type PasoDeUso } from "./usar-pagina";
+import { lanzarChromium } from "@/lib/ai/visual-quality-renderer";
+
+import { PRELUDIO_DE_USO, usarPagina, type PasoDeUso } from "./usar-pagina";
 
 const marco = (cuerpo: string) =>
   `<!doctype html><html><head><meta charset="utf-8"><title>Prueba</title>
@@ -190,6 +192,57 @@ describe("usar_pagina — un control que no es único o no existe no se pulsa al
     const informe = await visitar(tienda, [{ pulsa: "Comprar ahora" }]);
     expect(informe).toContain("no hay ningún control visible que diga «Comprar ahora»");
     expect(informe).toContain("«Agregar»");
+  }, 90_000);
+});
+
+describe("usar_pagina — la página con scroll suave", () => {
+  // 🔴 El turno de producción del 2026-09-28: la página traía
+  // `html{scroll-behavior:smooth}`, así que llevar el control a la vista era un
+  // desplazamiento ANIMADO. El mousedown caía en el enlace y el mouseup, 20 ms
+  // después, ya en otra cosa: el `click` iba a la sección y el informe decía
+  // «no cambió nada» sobre un script que funcionaba. En la portada, 21 de 25
+  // clics volvieron así, y el modelo persiguió el fantasma 11 minutos.
+  //
+  // Medido en esa página: el desplazamiento suave dura ~900 ms; `quieta()` mira
+  // el TEXTO, que no cambia al desplazarse, y la da por quieta a los ~400 ms.
+  // Puppeteer salta entonces al control sin cancelar la animación, que sigue
+  // 50 px hasta SU destino durante el clic. Reproducirlo de punta a punta
+  // depende de esos tiempos (en una página sencilla los dos destinos coinciden
+  // y el clic entra); lo que se sujeta aquí es la causa: tras acercar el
+  // control, la página ya no se mueve.
+  const pagina = (suave: boolean) =>
+    marco(`
+    ${suave ? "<style>html{scroll-behavior:smooth}</style>" : ""}
+    <div style="height:3000px">Arriba</div>
+    <a href="#reportes">Reportar</a>
+    <div style="height:3000px" id="reportes">Abajo</div>`);
+
+  const desplazamientoTrasAcercar = async (html: string) => {
+    const browser = await lanzarChromium();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1280, height: 900 });
+      // `setContent` no navega, así que el preludio no se instalaría con
+      // `evaluateOnNewDocument`: se pone tras cargar (aquí no hay oyentes que cazar).
+      await page.setContent(html, { waitUntil: "load" });
+      await page.evaluate(PRELUDIO_DE_USO);
+      await page.evaluate(`window.__olUsar.control("Reportar", "")`);
+      await page.evaluate(`window.__olUsar.antesDeActuar()`);
+      const justo = (await page.evaluate("scrollY")) as number;
+      await new Promise((r) => setTimeout(r, 300));
+      return { justo, luego: (await page.evaluate("scrollY")) as number };
+    } finally {
+      await browser.close();
+    }
+  };
+
+  it("🔴 tras llevar el control a la vista, la página ya no se mueve (con scroll suave también)", async () => {
+    const control = await desplazamientoTrasAcercar(pagina(false));
+    const suave = await desplazamientoTrasAcercar(pagina(true));
+    expect(control.justo).toBeGreaterThan(2000);
+    expect(control.luego).toBe(control.justo);
+    expect(suave.justo).toBe(control.justo);
+    expect(suave.luego).toBe(suave.justo);
   }, 90_000);
 });
 
