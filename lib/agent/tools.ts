@@ -614,6 +614,11 @@ export interface AgentSession {
    *  del mismo turno lo quitara: los avisos de procedencia lo cuentan como
    *  fuente (E del 26/09, oficina-y-whatsapp). */
   alEmpezar?: Map<string, string>;
+  /** Todo el sitio como estaba al empezar el turno —cada página, sus almacenes
+   *  y su memoria—, en un solo texto. Es fuente para los avisos de procedencia:
+   *  un precio o un enlace que ya estaba en OTRA página no lo inventó Len al
+   *  copiarlo (H13). Se toma en la primera escritura del turno. */
+  sitioAlEmpezar?: string;
 }
 
 export interface ToolOutcome {

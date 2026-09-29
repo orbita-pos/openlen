@@ -97,6 +97,16 @@ describe("diagnosticosDeLaEscritura: lo que antes era un aviso_critico, anclado 
     expect(ds[0]!.mensaje).toContain("tacosdonbeto");
   });
 
+  it("una reseña y un precio que nadie dio (H13), anclados a su línea", () => {
+    const despues = pagina("<blockquote>«El mejor bar de vinos de la ciudad, sin ninguna duda» — Carmen P.</blockquote>\n<p>Copa de la casa: $95</p>");
+    const ds = escritura({ despues, fuentes: ["pon reseñas y la carta"] });
+    expect(ds.map((d) => d.codigo).sort()).toEqual(["precio-inventado", "resena-inventada"]);
+    expect(ds.find((d) => d.codigo === "resena-inventada")!.mensaje).toContain("El mejor bar de vinos");
+    // Brazo de control: lo mismo, dado por el usuario, calla.
+    const dados = escritura({ despues, fuentes: ["mi reseña: el mejor bar de vinos de la ciudad, sin ninguna duda. La copa a 95 pesos"] });
+    expect(dados.filter((d) => /-inventad[oa]$/.test(d.codigo ?? ""))).toEqual([]);
+  });
+
   it("el país de un teléfono que nadie dio", () => {
     const despues = pagina('<a href="https://wa.me/525512345678">WhatsApp</a>');
     const ds = escritura({ despues, fuentes: ["mi whatsapp es 5512345678"] });

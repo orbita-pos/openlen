@@ -365,6 +365,8 @@ export default defineConfig({
       "lib/agent/registro-del-turno.test.ts",
       // El prefijo de país que nadie dio (H09). Núcleo puro — LISTA BLANCA.
       "lib/agent/prefijo-inventado.test.ts",
+      // Precios, cifras y reseñas que nadie dio (H13). Núcleo puro — LISTA BLANCA.
+      "lib/agent/datos-inventados.test.ts",
       // Lo medido que vuelve al modelo tras editar. `include` es LISTA BLANCA:
       // sin esta línea la prueba existiría y no correría nunca.
       "lib/agent/aviso-medido.test.ts",

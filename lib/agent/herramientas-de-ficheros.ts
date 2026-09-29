@@ -126,6 +126,12 @@ async function virtualesDe(session: AgentSession, deps: AgentDeps, userBrief: st
 
 const SIN_VIRTUALES: Virtuales = { almacenes: new Map(), memoria: new Map() };
 
+/** Todas las páginas, los almacenes y la memoria del sitio, en un solo texto. */
+function textoDelSitio(data: ProjectData, v: Virtuales): string {
+  const paginas = ficherosDelSitio(data).map((ruta) => leerFichero(data, ruta) ?? "");
+  return [...paginas, ...[...v.almacenes.values()].map((a) => a.texto), ...v.memoria.values()].join("\n");
+}
+
 function sitioDe(data: ProjectData, session: AgentSession, v: Virtuales = SIN_VIRTUALES): SitioBuscable {
   return {
     contenido: (ruta) => {
@@ -289,6 +295,9 @@ async function aplicarPlan(
     return await guardarMemoria(session, deps, v.memoria, plan, herramienta, detalle);
   }
   const etiqueta = `${herramienta} ${detalle}`;
+  // El sitio de ANTES de la primera escritura del turno: lo que ya decía en
+  // cualquier página es de su usuario, y los avisos de procedencia lo cuentan.
+  session.sitioAlEmpezar ??= textoDelSitio(data, v);
   const guardado = await guardarFichero(session, deps, data, plan.ruta, plan.contenido, { crea: plan.crea, etiqueta });
   if (!guardado.ok) return { response: respuesta(fallo(guardado.error)) };
 
@@ -318,7 +327,7 @@ async function aplicarPlan(
         ruta: plan.ruta,
         antes: guardado.previo === null ? null : sinOpIds(guardado.previo),
         despues: sinOpIds(guardado.html),
-        fuentes: [session.userPrompt, session.brief, alEmpezar.get(plan.ruta)],
+        fuentes: [session.userPrompt, session.brief, alEmpezar.get(plan.ruta), session.sitioAlEmpezar],
         ...(edit ? { edit } : {}),
         referenciasRotas: guardado.referenciasRotas,
       }),

@@ -9,9 +9,10 @@
  * `<new-diagnostics>` hermano del resultado (ver `diagnosticos.ts`).
  *
  * Dos familias, y la diferencia importa para no repetir lo que ya venía mal:
- *   · las que hablan DE ESTA ESCRITURA —un dato que se fue, una red social que
- *     nadie dio, un Edit que vació lo que reemplazaba, el script que busca lo
- *     que ya no está—: nuevas por construcción;
+ *   · las que hablan DE ESTA ESCRITURA —un dato que se fue, una red social o
+ *     un precio, una cifra o una reseña que nadie dio, un Edit que vació lo que
+ *     reemplazaba, el script que busca lo que ya no está—: nuevas por
+ *     construcción;
  *   · las que hablan DEL FICHERO —un enlace que dice un número y marca otro, la
  *     meta que anuncia un dato muerto, una regla CSS que no aplica nunca—: se
  *     miden antes y después, y sólo sale lo que no estaba (la línea base).
@@ -23,6 +24,7 @@
  * Puro: sólo analizadores puros. Lo prueba vitest.
  */
 import { contenidoPerdido } from "@/lib/agent/contenido-perdido";
+import { datosInventados } from "@/lib/agent/datos-inventados";
 import { enlacesDesfasados } from "@/lib/agent/enlaces-desfasados";
 import { enlacesInventados } from "@/lib/agent/enlaces-inventados";
 import { hechosPerdidosNetos, metaDesfasada } from "@/lib/agent/facts-kept";
@@ -112,6 +114,21 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
         "Warning",
         "prefijo-inventado",
         `${x.href} lleva +${x.prefijo} delante de ${x.dictado}, y ese país no lo dio nadie: si lo adivinas, sus clientes llaman a otro país. En un tel: deja las cifras que te dieron; si es un wa.me, pregúntale de qué país es el número.`,
+      ),
+    );
+  }
+  for (const x of datosInventados(fuentes)) {
+    const aguja = x.texto.replace(/…$/, "").slice(0, 40);
+    deEstaEscritura.push(
+      diag(
+        posicionDe(e.despues, aguja),
+        "Warning",
+        x.tipo === "precio" ? "precio-inventado" : x.tipo === "cifra" ? "cifra-inventada" : "resena-inventada",
+        x.tipo === "precio"
+          ? `El precio ${x.texto} no sale de lo que dijo el usuario ni de su sitio: puesto por ti, aparenta ser el suyo. Si no te lo dio, pregúntaselo; si lo calculaste, dilo al cerrar.`
+          : x.tipo === "cifra"
+            ? `«${x.texto}» afirma algo de su negocio que nadie dio: el visitante lo lee como cierto. Quítalo o pregúntale el dato real.`
+            : `La reseña «${x.texto}» no sale de lo que dio el usuario ni de su sitio: presentada como de un cliente, es inventada, y cambiar las palabras de una reseña real también lo es. Quítala, o pídele las suyas.`,
       ),
     );
   }
