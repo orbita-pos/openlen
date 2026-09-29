@@ -42,6 +42,9 @@ interface Tarea {
   readonly comprobar: boolean;
   /** Llamadas que cambiaron algo mientras esta tarea estaba en curso. */
   cambios: number;
+  /** Las de `cambios` hechas desde la última vez que el modelo mandó la lista:
+   *  su sobrante cubre a las que marque hechas en esa MISMA lista (ver `declarar`). */
+  ventana: number;
   /** Lecturas que salieron bien mientras esta tarea estaba en curso y que
    *  cuentan: ver `anotarLectura`. */
   lecturas: number;
@@ -78,6 +81,7 @@ export class ListaDeTareas {
     const previas = new Map(this.tareas.map((t) => [clave(t.texto), t]));
     const nuevas: Tarea[] = [];
     const porConfirmar: Tarea[] = [];
+    let sobrante = 0;
     for (const d of lista) {
       const previa = previas.get(clave(d.texto));
       const tarea: Tarea = {
@@ -86,25 +90,39 @@ export class ListaDeTareas {
         comprobar: d.comprobar ?? previa?.comprobar ?? false,
         cambios: previa?.cambios ?? 0,
         lecturas: previa?.lecturas ?? 0,
+        ventana: 0,
       };
       const pedido = d.estado ?? tarea.estado;
       if (pedido !== "pendiente") this.conEstados = true;
       if (pedido === "hecha" && tarea.estado !== "hecha") {
-        if (tarea.cambios > 0 || tarea.lecturas > 0) tarea.estado = "hecha";
-        else porConfirmar.push(tarea);
+        if (tarea.cambios > 0 || tarea.lecturas > 0) {
+          tarea.estado = "hecha";
+          sobrante += Math.max(0, (previa?.ventana ?? 0) - 1);
+        } else porConfirmar.push(tarea);
       } else {
         tarea.estado = pedido;
       }
       nuevas.push(tarea);
     }
-    // LAS QUE SE MARCAN HECHAS SIN NADA DETRÁS. Si hay cambios sueltos —hechos
-    // sin ninguna tarea en curso— para todas, se aceptan: la cuenta cuadra. Si
-    // no hay para todas, no se acepta ninguna, porque no hay forma de saber
-    // cuál es la que falta.
+    // LAS QUE SE MARCAN HECHAS SIN NADA DETRÁS. Las cubren, si alcanzan para
+    // todas, los cambios que no se sabe de cuál son: los sueltos —hechos sin
+    // ninguna tarea en curso— y el SOBRANTE de las que se cierran en esta misma
+    // lista, más allá del que cada una necesita para sí.
+    //
+    // 🔴 LO SEGUNDO, por el turno de producción del 2026-09-28 y su repetición
+    // en Len-Bench: con «Radio» en curso el modelo hizo también las 5 ediciones
+    // de «Enlazar», y marcó las dos hechas de golpe. Los 6 cambios eran de
+    // «Radio», «Enlazar» se negaba y al cerrar se reabría el turno: el dueño
+    // leía el resumen DOS veces. Lo que cambió entre dos listas es de las que se
+    // cierran en la segunda. Lo que sobró en una lista anterior NO cubre las de
+    // después, y sin ningún cambio no se acepta nada: sigue cerrado H02.
+    //
+    // Si no alcanzan para todas, no se acepta ninguna, porque no hay forma de
+    // saber cuál es la que falta.
     const sinEvidencia: string[] = [];
     if (porConfirmar.length > 0) {
-      if (this.sueltos >= porConfirmar.length) {
-        this.sueltos -= porConfirmar.length;
+      if (sobrante + this.sueltos >= porConfirmar.length) {
+        this.sueltos -= Math.max(0, porConfirmar.length - sobrante);
         for (const t of porConfirmar) t.estado = "hecha";
       } else {
         for (const t of porConfirmar) sinEvidencia.push(t.texto);
@@ -118,8 +136,10 @@ export class ListaDeTareas {
   anotarCambio(): void {
     this.cambiosTotales += 1;
     const enCurso = this.tareas.find((t) => t.estado === "en_curso");
-    if (enCurso) enCurso.cambios += 1;
-    else this.sueltos += 1;
+    if (enCurso) {
+      enCurso.cambios += 1;
+      enCurso.ventana += 1;
+    } else this.sueltos += 1;
   }
 
   /**
