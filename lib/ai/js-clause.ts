@@ -216,7 +216,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       // YouTube y de Vimeo, «sólo si el brief te da el enlace», y qué hacer con
       // Spotify o Calendly—, y el Agente conserva ese bloque. Aquí sólo estaba
       // la mitad corta, dicha por segunda vez.
-      "COBRAR SÍ SE PUEDE, y sin servidor: si el dueño te da su enlace de pago de Stripe, cablea el botón con `<a href=\"https://buy.stripe.com/…\">`. NUNCA te inventes esa dirección — si no la tiene, explícale que la crea en su panel de Stripe y déjale el botón apuntando a donde te diga. " +
+      "COBRAR SÍ SE PUEDE, y sin servidor: si el usuario te da su enlace de pago de Stripe, cablea el botón con `<a href=\"https://buy.stripe.com/…\">`. NUNCA te inventes esa dirección — si no la tiene, explícale que la crea en su panel de Stripe y déjale el botón apuntando a donde te diga. " +
       // 🔴 `/api/d/<almacén>`, SIN subdominio (2026-09-18). Decía
       // `/api/d/<sub>/<almacén>`, y un borrador no sabe con qué subdominio se
       // publicará: en producción Len puso «carrito» en ese hueco y el carrito
@@ -230,7 +230,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       // VISITANTE, no el dueño: añade, ve su carrito crecer, recarga, y no hay
       // nada. Lo caza `comprobarAvisoAlVisitante` corriendo la misma página con
       // el almacén lleno y comparando lo que se ve.
-      "MIRA LA RESPUESTA DEL SERVIDOR: el POST puede decir que NO —507 si el dueño ha llenado su cuota, 413 si el documento pasa de 16 KB, y la red puede fallar—. Si no vuelve `ok`, díselo al visitante EN LA PÁGINA y no le dejes el cambio pintado como guardado (deshazlo, o píntalo sólo cuando el servidor conteste bien). Pintar primero y no mirar la respuesta es la forma de que alguien pierda su carrito sin enterarse.",
+      "MIRA LA RESPUESTA DEL SERVIDOR: el POST puede decir que NO —507 si el usuario ha llenado su cuota, 413 si el documento pasa de 16 KB, y la red puede fallar—. Si no vuelve `ok`, díselo al visitante EN LA PÁGINA y no le dejes el cambio pintado como guardado (deshazlo, o píntalo sólo cuando el servidor conteste bien). Pintar primero y no mirar la respuesta es la forma de que alguien pierda su carrito sin enterarse.",
   },
 
 

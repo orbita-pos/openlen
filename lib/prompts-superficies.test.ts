@@ -88,10 +88,11 @@ describe("ninguna superficie manda gusto nuestro", () => {
   // que un enlace de sesión SÍ puede aparecer legítimamente, justo lo contrario
   // de la regla a la que acompañaba.
   //
-  // Se comprueba en INGLÉS a propósito: el Agente nombra los módulos retirados
-  // en español y DEBE hacerlo — «Reservas, Pedidos … SE RETIRARON» es la frase
-  // que le impide fingir que activó uno. Lo que no puede aparecer es la ficha
-  // en inglés que los presenta como maquinaria disponible.
+  // Se comprueba la ficha en INGLÉS que los presenta como maquinaria
+  // disponible. El prompt del Agente ya no los nombra ni en español
+  // (auditoría del 2026-09-29: Claude Code no enumera lo que no existe); que
+  // no finja haber activado uno lo sujetan dos puertas de código, el enum de
+  // `activar_modulo` y `INSISTE_SIN_EFECTO`.
   const RETIRADOS = [
     "Members module", "Bookings module", "Orders module",
     "Comments module", "Broadcast module",

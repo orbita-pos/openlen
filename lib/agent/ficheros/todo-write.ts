@@ -40,6 +40,7 @@ How to keep it:
 - Exactly ONE task is in_progress while you work: never none, never two. Set it to in_progress BEFORE you start on it, and finish it before you start another.
 - Update the list as you go. Mark each task completed the MOMENT it is done; do not leave them all for the end.
 - A task is completed ONLY when it is fully done and the page works as asked. It is NOT completed if part of it is missing, if an error is still unsolved, or if you could not find the page, the section or the data it needs. If you are stuck, leave it in_progress and add a task that says what is blocking it.
+- The list is checked against what you actually did: every call that changed something counts for the task that is in_progress at that moment, and a task marked completed with nothing behind it is not accepted — a <system-reminder> names it. If a task turns out to be impossible or already done, say so when you close instead of counting it as done.
 - Add the tasks you discover on the way, and remove the ones that stop making sense.
 - Write concrete tasks, small enough to act on, whose names say clearly what changes. Split a big job into steps.
 - Each task is ALWAYS written in two forms: content says what to do ("Add the Contact page") and activeForm what is happening while it runs ("Adding the Contact page").

@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   AGENT_MODULES,
-  MODULE_NOMBRE,
   buildAgentSystemPrompt,
   buildFunctionDeclarations,
   HERRAMIENTAS_DIFERIDAS,
@@ -113,8 +112,11 @@ describe("buildFunctionDeclarations", () => {
   // 4 de 12 páginas entregaban un formulario que cancelaba su propio envío.
   it("el prompt dice la VERDAD sobre los formularios", () => {
     const p = buildAgentSystemPrompt();
-    // La conducta, en REGLAS DURAS: ofrécelo, no lo desaconsejes.
-    expect(p).toContain("LOS FORMULARIOS SÍ FUNCIONAN");
+    // La conducta, en LO QUE HAY Y LO QUE NO: ofrécelo, no lo desaconsejes.
+    // Dicho en llano desde la auditoría del 2026-09-29: el «SÍ» contestaba a
+    // una regla vieja que el modelo nunca vio.
+    expect(p).toContain("Los formularios funcionan");
+    expect(p).toContain("ofrece el formulario; el WhatsApp o el chat, además, no en su lugar");
     // La mecánica, en el contrato: el destino lo pone el publicador.
     expect(p).toMatch(/hornea al `<form>` su `action`/);
     expect(p).toMatch(/NO le pongas `action`/);
@@ -229,16 +231,17 @@ describe("buildAgentSystemPrompt", () => {
   // construidas» y quince líneas más abajo, en el mismo prompt, decía que
   // Reservas y Cuentas SE RETIRARON. Las dos frases viajaban juntas al modelo y
   // la primera es la que suena a promesa: el usuario pide reservas, el Agente
-  // ya leyó que son una feature real. La lista se deriva ahora de
-  // `AGENT_MODULES`; esto sujeta que siga derivándose.
-  it("la frase de apertura nombra EXACTAMENTE los módulos que existen", () => {
+  // ya leyó que son una feature real. Desde la auditoría del 2026-09-29 la
+  // apertura no nombra ningún módulo: los que existen van en su bloque, que se
+  // deriva de `AGENT_MODULES` (ver «cada módulo que el prompt enumera…»).
+  it("la frase de apertura no ofrece ningún módulo retirado", () => {
     const p = buildAgentSystemPrompt();
     // Hasta el primer encabezado (TONO:). Medía hasta «REGLAS DURAS», que H4
     // (2026-09-26) renombró a «CÓMO TRABAJAR»; sin el ancla, la «apertura» era
     // el prompt entero.
     expect(p.indexOf("TONO:")).toBeGreaterThan(0);
     const abre = p.slice(0, p.indexOf("TONO:")).toLowerCase();
-    expect(abre).toContain(AGENT_MODULES.map((m) => MODULE_NOMBRE[m]).join(" y "));
+    expect(abre).toContain("eres len");
     for (const retirado of ["reservas", "cuentas", "pedidos", "comentarios", "broadcast", "miembros"]) {
       expect(abre, `la apertura sigue ofreciendo ${retirado}, que se retiró`).not.toContain(retirado);
     }
@@ -317,8 +320,9 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("La página tiene que funcionar SIN él");
     // LA FRONTERA ES EL SERVIDOR, NO EL CATÁLOGO. Es la frase que sustituye a
     // las cinco de arriba, y la que decide si el Agente construye un carrito o
-    // se niega. Lo que NO se puede sigue dicho, y es poco y concreto.
-    expect(p).toContain("LA FRONTERA NO ES TU CATÁLOGO DE HERRAMIENTAS");
+    // se niega. Lo que NO se puede sigue dicho, y es poco y concreto. En llano
+    // desde el 2026-09-29, sin el «NO ES» que contestaba a la regla vieja.
+    expect(p).toContain("no lo limita tu lista de herramientas, sino si necesita un servidor");
     expect(p).toContain("LO QUE DE VERDAD NO SE PUEDE");
     expect(p).toContain("no hay pasarela");
     // EL CARRITO SE NOMBRA COMO POSIBLE, Y EN AFIRMATIVO.
@@ -330,13 +334,13 @@ describe("buildAgentSystemPrompt", () => {
     // volvió a negarse — esta vez diciendo que podría hacerlo pero que sería
     // «una maqueta muerta». Un ejemplo dentro de una lista de peros ENSEÑA el
     // pero, no el ejemplo.
-    expect(p).toContain("UN CARRITO SE CONSTRUYE");
-    expect(p).toContain("NUNCA TE NIEGUES A CONSTRUIR ALGO PORQUE SU ESTADO SEA LOCAL");
+    expect(p).toMatch(/Un carrito \(botones que añaden/);
+    expect(p).toContain("los construyes tú, aunque lo que guarden se quede en el navegador");
     expect(p).not.toContain("maqueta muerta\"");
     // Y el dato que dijo mal: localStorage NO se pierde al cerrar la pestaña.
     expect(p).toContain("SOBREVIVE a cerrar la pestaña");
-    // Discutirle el negocio al dueño es la otra mitad de la negativa.
-    expect(p).toContain("NO DISCUTAS EL NEGOCIO DEL DUEÑO");
+    // Discutirle el negocio al usuario es la otra mitad de la negativa.
+    expect(p).toContain("hazlo sin discutirle su negocio");
     expect(p).not.toContain("INTERACCIÓN CON JAVASCRIPT");
   });
 
@@ -350,10 +354,12 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("Todo lo demás que viva en el navegador lo construyes TÚ");
     expect(p).toContain("activar_modulo");
     for (const m of AGENT_MODULES) expect(p).toContain(m);
-    // Len 2.0 no trabaja con ids: el marcador reservado sigue prohibido, el
-    // otro ya ni se nombra.
+    // Len 2.0 no trabaja con ids: ninguno de los dos marcadores se nombra.
+    // `data-slot-path` sigue prohibido, pero desde el 2026-09-29 lo dice la
+    // puerta y no el prompt: Write y Edit lo rechazan con su error
+    // (herramientas-de-ficheros.test.ts, «marcador reservado»).
     expect(p).not.toContain("data-op-id");
-    expect(p).toContain("data-slot-path");
+    expect(p).not.toContain("data-slot-path");
   });
 
   it("🔴 el prompt no nombra ninguna herramienta retirada", () => {
@@ -549,11 +555,12 @@ describe("lo que el Agente cree que puede", () => {
     // MEDIDO: el usuario tenía una sección de reseñas, se topó con un límite, y
     // el Agente le reescribió el formulario para que abriera WhatsApp. Nadie se
     // lo pidió, y su diagnóstico del límite era correcto — bastaba con decirlo.
-    expect(p).toMatch(/NO SUSTITUYAS LO QUE YA FUNCIONA/);
-    // La regla vecina («no discutas el negocio del dueño») cubre lo que el
-    // usuario PIDE; ésta cubre lo que YA ESTÁ construido. Se comprueban las dos
-    // porque la segunda se coló justo por el hueco entre ambas.
-    expect(p).toMatch(/NO DISCUTAS EL NEGOCIO DEL DUEÑO/);
+    expect(p).toContain("no pongas tu alternativa en lugar de lo que ya funciona");
+    // La otra mitad (no discutirle el negocio) cubre lo que el usuario PIDE;
+    // ésta cubre lo que YA ESTÁ construido. Desde el 2026-09-29 van en la
+    // MISMA regla, y se comprueban las dos porque la segunda se coló justo por
+    // el hueco entre ambas cuando eran dos.
+    expect(p).toContain("hazlo sin discutirle su negocio");
   });
 
   it("sabe que la navegación es de TODO el sitio, no de una página", () => {
@@ -565,7 +572,7 @@ describe("lo que el Agente cree que puede", () => {
   });
 
   it("y comprueba lo que no controla ANTES de construirlo", () => {
-    expect(buildAgentSystemPrompt()).toMatch(/COMPRUEBA ANTES DE CONSTRUIR/);
+    expect(buildAgentSystemPrompt()).toContain("Antes de construir algo que depende de lo que no controlas");
   });
 
   // ⚰️ AQUÍ SE EXIGÍA que el prompt siguiera diciendo «el BOTÓN FLOTANTE DE
@@ -617,7 +624,10 @@ describe("el prompt enseña la conducta buena, no narra la mala", () => {
     const texto = p();
     const abiertos = (texto.match(/<ejemplo>/g) ?? []).length;
     const cerrados = (texto.match(/<\/ejemplo>/g) ?? []).length;
-    expect(abiertos, "se quedó sin ejemplos: la regla volvió a ser sólo un NO").toBeGreaterThanOrEqual(7);
+    // 6 desde la auditoría del 2026-09-29: salieron el del estudio de tatuajes
+    // (su regla se juntó con la de las reseñas, que conserva el suyo) y el de
+    // los formularios (el dato que enseñaba va ahora en la propia frase).
+    expect(abiertos, "se quedó sin ejemplos: la regla volvió a ser sólo un NO").toBeGreaterThanOrEqual(6);
     expect(cerrados, "hay un <ejemplo> sin cerrar").toBe(abiertos);
   });
 
@@ -630,7 +640,7 @@ describe("el prompt enseña la conducta buena, no narra la mala", () => {
     // «Delivering work» de Claude Code dentro.
     expect(texto.indexOf("CÓMO TRABAJAR:")).toBeGreaterThan(0);
     expect(texto.indexOf("TONO:")).toBeLessThan(texto.indexOf("CÓMO TRABAJAR:"));
-    expect(texto).toContain("Responde SIEMPRE en el idioma del usuario");
+    expect(texto).toContain("Responde en el idioma en que te escribe el usuario");
   });
 });
 
