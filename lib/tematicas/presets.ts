@@ -37,7 +37,9 @@
 //   - Specificity is tuned to beat the canonize-at-runtime force rules
 //     (`html,body,[data-ol-bg-carrier]{background-color:var(--ol-bg)
 //     !important}`) — transparency rules pair !important with an attribute
-//     selector so they win on specificity, not order.
+//     selector so they win on specificity, not order. The editor stopped
+//     injecting those rules on 2026-09-29, but a page saved before
+//     2026-08-26 can still carry them in its own <style data-ol-force>.
 //
 // Client-safe: no node imports.
 // ─────────────────────────────────────────────────────────────────────────────

@@ -59,6 +59,7 @@ import {
   PropertiesPanel,
   type InspectSelection,
   type PageMeta,
+  type TemaDePagina,
 } from "@/components/workspace-v2/panels/properties-panel";
 import { lookFromAccent } from "@/lib/palette-gen";
 import {
@@ -262,6 +263,21 @@ function readThemeBaseline(m: Record<string, unknown>): {
       "--ol-space-scale": num(a.spaceScale),
     },
     mode: m.mode === "dark" ? "dark" : "light",
+  };
+}
+
+// Lo que la página deja cambiar desde el panel, tal como lo midió el iframe
+// (`descubrirTema`). Un iframe viejo no lo manda: undefined, y el panel enseña
+// todo como antes.
+function leerTemaDePagina(v: unknown): TemaDePagina | undefined {
+  if (!v || typeof v !== "object") return undefined;
+  const o = v as Record<string, unknown>;
+  return {
+    colores: o.colores === true,
+    fuentes: o.fuentes === true,
+    radio: o.radio === true,
+    letra: o.letra === true,
+    densidad: o.densidad === true,
   };
 }
 
@@ -1017,11 +1033,13 @@ function NewV2Inner() {
             radiusScale: typeof m.radiusScale === "number" ? m.radiusScale : null,
             displayFont: typeof m.displayFont === "string" ? m.displayFont : null,
             hasFontPair: !!m.hasFontPair,
+            tema: leerTemaDePagina(m.tema),
           });
           // Snapshot the page's original theme tokens from the FIRST meta of
           // this project load — the "Original" reset re-applies these resolved
-          // values (never blank-clears, which would break the canonize force-
-          // CSS on legacy pages where --ol-bg/--ol-fg are pinned inline only).
+          // values (never blank-clears: a page saved before 2026-08-26 can
+          // carry --ol-bg/--ol-fg only inline, read by its own persisted
+          // data-ol-force sheet).
           setOriginalTheme((prev) => prev ?? readThemeBaseline(m));
         }
       }
@@ -2754,8 +2772,8 @@ function NewV2Inner() {
     [applyLookForMode, activeLook],
   );
   // "Original" reset — drop the active Look and re-apply the page's captured
-  // baseline (re-applies resolved values rather than blank-clearing, which
-  // would break canonize's force-CSS on legacy pages).
+  // baseline (re-applies resolved values rather than blank-clearing — see the
+  // snapshot in the page-meta handler).
   const resetTheme = useCallback(() => {
     setActiveLook(null);
     scanController.pulse(() => applyLookForMode(null, modeRef.current));

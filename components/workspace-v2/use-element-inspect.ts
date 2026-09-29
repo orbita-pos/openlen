@@ -325,6 +325,403 @@ ${CORE_SRC}
     };
   }
 
+  // EL TEMA SIGUE LOS NOMBRES DE LA PAGINA (2026-09-29).
+  //
+  // Los controles de Tema escriben --ol-*: es lo que leen nuestras propias
+  // hojas (la tematica, la re-tinta) y las paginas nacidas del normalizador.
+  // Pero la pagina que escribe Len usa SUS nombres -medido el 29/09: 33 de 66
+  // con --bg, --ink, --paper, --radius, --display...- y escribir solo --ol-*
+  // en ella era hablarle a nadie. El lienzo lo pintaba gracias a un CSS
+  // forzado que no se guardaba, y la pagina guardada seguia igual.
+  //
+  // Lo resuelven dos skills de Claude Code: artifact-design,
+  // «respeta lo que ya existe: el sistema propio del proyecto», y
+  // design-sync, «…», con su corolario:
+  // nombrar lo que no existe «sale sin estilo y sin avisar».
+  //
+  // Asi que antes de escribir se mira COMO esta cableada la pagina, no como se
+  // llaman sus variables: que variable pinta el fondo del body, cual su texto,
+  // cual los botones, cuales las esquinas, cual la letra de los titulos. Se
+  // escribe en esa ademas de en --ol-*, con el mismo valor. Y lo que la pagina
+  // no tiene en una variable se dice, no se finge.
+  var OL_DE = {
+    bg: '--ol-bg', surface: '--ol-surface', fg: '--ol-fg', border: '--ol-border',
+    accent: '--ol-accent', fontDisplay: '--ol-font-display', fontBody: '--ol-font-body'
+  };
+  var PAPEL_DE = {};
+  for (var olk in OL_DE) PAPEL_DE[OL_DE[olk]] = olk;
+  // La red, cuando el cableado no dice nada: los nombres que ya conecta el
+  // normalizador (crates/html-engine/src/normalize/color.rs). Solo cuentan si
+  // la pagina los usa de verdad y valen un color.
+  var NOMBRES_RED = {
+    bg: ['--bg', '--background', '--page', '--canvas'],
+    surface: ['--surface', '--card', '--panel', '--elevated'],
+    fg: ['--fg', '--foreground', '--text', '--ink'],
+    border: ['--border', '--line', '--hairline', '--rule', '--divider', '--stroke'],
+    accent: ['--accent']
+  };
+
+  // Las hojas que NO son de la pagina: las del editor, y la de una tematica,
+  // que lee --ol-* por su cuenta y haria creer que la pagina tambien.
+  function hojaAjena(sheet) {
+    var n = sheet.ownerNode;
+    if (!n || !n.getAttributeNames) return false;
+    if (n.hasAttribute('data-ol-tematica')) return true;
+    var nombres = n.getAttributeNames();
+    for (var i = 0; i < nombres.length; i++) {
+      if (nombres[i].indexOf('data-openlen') === 0) return true;
+    }
+    return false;
+  }
+
+  function reglasDeLaPagina() {
+    var out = [];
+    function recorrer(lista, oscuro) {
+      for (var i = 0; i < lista.length; i++) {
+        var r = lista[i];
+        if (!r) continue;
+        if (r.type === 1) {
+          out.push({ sel: r.selectorText || '', style: r.style, oscuro: oscuro });
+        } else if (r.cssRules) {
+          var cond = r.conditionText || (r.media && r.media.mediaText) || '';
+          recorrer(r.cssRules, oscuro || /prefers-color-scheme\\s*:\\s*dark/i.test(cond));
+        }
+      }
+    }
+    var sheets = document.styleSheets;
+    for (var i = 0; i < sheets.length; i++) {
+      if (hojaAjena(sheets[i])) continue;
+      var rules;
+      try { rules = sheets[i].cssRules; } catch (_) { continue; }
+      if (rules) recorrer(rules, false);
+    }
+    return out;
+  }
+
+  function esRaiz(sel) {
+    var partes = sel.split(',');
+    for (var i = 0; i < partes.length; i++) {
+      var p = partes[i].trim();
+      if (p === ':root' || p === 'html') return true;
+    }
+    return false;
+  }
+
+  function primeraVar(valor) {
+    var m = /var\\(\\s*(--[\\w-]+)/.exec(valor || '');
+    return m ? m[1] : null;
+  }
+
+  // La variable es el valor ENTERO: background: var(--bg). Envuelta
+  // -hsl(var(--x)), rgba(var(--x), .5), un degradado- el valor que escribe el
+  // Tema no encaja, y escribirlo rompe la regla en vez de cambiarla.
+  function varEntera(valor) {
+    var m = /^\\s*var\\(\\s*(--[\\w-]+)\\s*(?:,[^()]*)?\\)\\s*(?:!\\s*important)?\\s*$/i.exec(valor || '');
+    return m ? m[1] : null;
+  }
+
+  function valorDe(style, props) {
+    for (var i = 0; i < props.length; i++) {
+      var v = style.getPropertyValue(props[i]);
+      if (v && v.indexOf('var(') > -1) return v;
+    }
+    return '';
+  }
+
+  // La variable que pinta una propiedad de unos elementos: la ultima regla que
+  // casa gana, como en la cascada (sin contar la especificidad), y el style
+  // del propio elemento manda sobre las reglas. Las reglas del modo oscuro no
+  // cuentan: describen la otra cara, no la que se ve.
+  function varQuePinta(els, props, reglas, extraer) {
+    var hallada = null;
+    for (var i = 0; i < reglas.length; i++) {
+      var r = reglas[i];
+      if (r.oscuro || /dark/i.test(r.sel)) continue;
+      var v = valorDe(r.style, props);
+      if (!v) continue;
+      var casa = false;
+      for (var j = 0; j < els.length && !casa; j++) {
+        try { casa = els[j].matches(r.sel); } catch (_) {}
+      }
+      if (casa) hallada = extraer(v);
+    }
+    for (var k = 0; k < els.length; k++) {
+      var iv = els[k].style ? valorDe(els[k].style, props) : '';
+      if (iv) hallada = extraer(iv);
+    }
+    return hallada;
+  }
+
+  var cacheTema = null;
+  function descubrirTema() {
+    if (cacheTema) return cacheTema;
+    cacheTema = calcularTema();
+    // Vale lo que dura una tarea: la siguiente vuelve a mirar, porque Tailwind
+    // por CDN genera sus reglas despues de cargar.
+    setTimeout(function () { cacheTema = null; }, 0);
+    return cacheTema;
+  }
+
+  function calcularTema() {
+    var reglas = reglasDeLaPagina();
+    var raiz = {};
+    var usado = {};
+    for (var i = 0; i < reglas.length; i++) {
+      var r = reglas[i];
+      var texto = r.style.cssText || '';
+      var re = /var\\(\\s*(--[\\w-]+)/g;
+      var m;
+      while ((m = re.exec(texto))) usado[m[1]] = true;
+      if (r.oscuro || !esRaiz(r.sel)) continue;
+      for (var j = 0; j < r.style.length; j++) {
+        var n = r.style[j];
+        if (n.indexOf('--') === 0) raiz[n] = r.style.getPropertyValue(n).trim();
+      }
+    }
+
+    function llegaA(nombre, ol) {
+      var n = nombre;
+      for (var i = 0; i < 6 && n; i++) {
+        if (n === ol) return true;
+        if (n.indexOf('--ol-') === 0) return false;
+        n = primeraVar(raiz[n] || '');
+      }
+      return false;
+    }
+
+    // Que hacer con la variable que la pagina usa para un papel: si ya lleva
+    // a --ol-* (una pagina nacida del normalizador), basta con --ol-*; si no,
+    // es un alias -siempre que su valor declarado encaje con lo que se va a
+    // escribir en ella-.
+    function papel(nombrePapel, v, tipo) {
+      var ol = OL_DE[nombrePapel];
+      var p = { ok: false, ol: false, alias: [] };
+      if (usado[ol]) { p.ok = true; p.ol = true; }
+      if (!v) return p;
+      if (llegaA(v, ol)) { p.ok = true; p.ol = true; return p; }
+      if (v.indexOf('--ol-') === 0) return p;
+      var declarado = raiz[v];
+      if (!declarado) return p;
+      var encaja = false;
+      try { encaja = CSS.supports(tipo, declarado); } catch (_) {}
+      if (!encaja) return p;
+      p.ok = true;
+      p.alias.push(v);
+      return p;
+    }
+
+    function porNombre(nombrePapel) {
+      var lista = NOMBRES_RED[nombrePapel] || [];
+      for (var i = 0; i < lista.length; i++) {
+        if (usado[lista[i]] && raiz[lista[i]] !== undefined) return lista[i];
+      }
+      return null;
+    }
+
+    var root = document.documentElement;
+    var body = document.body;
+    var carrier = body ? findBgCarrier() : null;
+    var fondo = [root];
+    if (body) fondo.push(body);
+    if (carrier && carrier !== body) fondo.push(carrier);
+
+    var vBg = null;
+    // El portador del fondo pinta encima del body, y el body encima de <html>.
+    for (var f = 0; f < fondo.length; f++) {
+      var vf = varQuePinta([fondo[f]], ['background-color', 'background'], reglas, varEntera);
+      if (vf) vBg = vf;
+    }
+    var vFg = varQuePinta(body ? [root, body] : [root], ['color'], reglas, varEntera);
+    var t = {};
+    t.bg = papel('bg', vBg || porNombre('bg'), 'color');
+    t.fg = papel('fg', vFg || porNombre('fg'), 'color');
+    t.surface = papel('surface', porNombre('surface'), 'color');
+    t.border = papel('border', porNombre('border'), 'color');
+
+    // EL ACENTO es el color de los botones. Vota cada boton por la variable
+    // que pinta su fondo; las que ya son fondo, texto, superficie o borde no
+    // cuentan, que un boton oscuro no convierta el texto en acento.
+    var tomadas = {};
+    var ps = ['bg', 'fg', 'surface', 'border'];
+    for (var q = 0; q < ps.length; q++) {
+      for (var a = 0; a < t[ps[q]].alias.length; a++) tomadas[t[ps[q]].alias[a]] = true;
+    }
+    var botones = document.querySelectorAll('button, input[type=submit], [role=button], a[class]');
+    var votos = {};
+    var mejor = null;
+    for (var b = 0; b < botones.length && b < 60; b++) {
+      var vb = varQuePinta([botones[b]], ['background-color', 'background'], reglas, varEntera);
+      if (!vb || tomadas[vb]) continue;
+      votos[vb] = (votos[vb] || 0) + 1;
+      if (!mejor || votos[vb] > votos[mejor]) mejor = vb;
+    }
+    t.accent = papel('accent', mejor || porNombre('accent'), 'color');
+    // El triplete para rgba(): si la pagina tiene el suyo junto al acento
+    // (--accent-r, --accent-rgb) y vale un triplete, se escribe con el.
+    t.accentTrio = [];
+    for (var ta = 0; ta < t.accent.alias.length; ta++) {
+      var sufijos = ['-r', '-rgb'];
+      for (var s = 0; s < sufijos.length; s++) {
+        var nt = t.accent.alias[ta] + sufijos[s];
+        if (/^\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*$/.test(raiz[nt] || '')) t.accentTrio.push(nt);
+      }
+    }
+
+    var primeraFamilia = function (v) { return /^\\s*var\\(/.test(v) ? primeraVar(v) : null; };
+    t.fontBody = papel('fontBody', varQuePinta(body ? [root, body] : [root], ['font-family', 'font'], reglas, primeraFamilia), 'font-family');
+    var titulos = [];
+    var hs = document.querySelectorAll('h1, h2');
+    for (var h = 0; h < hs.length && h < 6; h++) titulos.push(hs[h]);
+    t.fontDisplay = papel('fontDisplay', titulos.length ? varQuePinta(titulos, ['font-family', 'font'], reglas, primeraFamilia) : null, 'font-family');
+
+    // LAS ESQUINAS: el control escribe un FACTOR. En --ol-* lo multiplica el
+    // calc de --ol-radius; en los nombres de la pagina se escribe cada radio
+    // como calc(<su valor declarado> * factor). Todas las que usa
+    // border-radius, no solo la mas comun: «cuadrado» que deja las tarjetas
+    // redondas no es cuadrado.
+    t.radio = [];
+    var vistosRadio = {};
+    var propsRadio = ['border-radius', 'border-top-left-radius', 'border-top-right-radius', 'border-bottom-left-radius', 'border-bottom-right-radius'];
+    for (var rr = 0; rr < reglas.length; rr++) {
+      if (reglas[rr].oscuro) continue;
+      for (var pr = 0; pr < propsRadio.length; pr++) {
+        var vr = reglas[rr].style.getPropertyValue(propsRadio[pr]);
+        if (!vr || vr.indexOf('var(') < 0) continue;
+        var rv = /var\\(\\s*(--[\\w-]+)/g;
+        var mr;
+        while ((mr = rv.exec(vr))) {
+          var nr = mr[1];
+          if (vistosRadio[nr] || nr.indexOf('--ol-') === 0) continue;
+          vistosRadio[nr] = true;
+          var base = raiz[nr];
+          if (!base || base.indexOf('var(') > -1) continue;
+          var esLongitud = false;
+          try { esLongitud = CSS.supports('border-radius', base); } catch (_) {}
+          if (esLongitud) t.radio.push({ nombre: nr, base: base });
+        }
+      }
+    }
+    t.radioOk = !!usado['--ol-r-scale'] || t.radio.length > 0;
+    t.letra = !!usado['--ol-text-scale'];
+    t.densidad = !!usado['--ol-space-scale'];
+
+    // EL MODO OSCURO de la pagina: el interruptor que lo enciende, leido de
+    // sus reglas. Una clase o un atributo sobre la raiz -:root.dark,
+    // [data-theme="dark"], el [data-ol-mode="dark"] del normalizador- en una
+    // regla que redefine variables. Uno que solo dependa del sistema operativo
+    // (@media) no se puede encender desde el editor: no cuenta.
+    t.interruptores = [];
+    var vistosInt = {};
+    var todosLosSelectores = '';
+    for (var ri = 0; ri < reglas.length; ri++) {
+      var sel = reglas[ri].sel;
+      todosLosSelectores += sel + '\\n';
+      if (!/dark/i.test(sel)) continue;
+      var declaraVars = false;
+      for (var di = 0; di < reglas[ri].style.length; di++) {
+        if (reglas[ri].style[di].indexOf('--') === 0) { declaraVars = true; break; }
+      }
+      if (!declaraVars) continue;
+      var partes = sel.split(',');
+      for (var pi = 0; pi < partes.length; pi++) {
+        var mp = /^(?::root|html)?((?:\\.[\\w-]+|\\[[^\\]]+\\])+)$/.exec(partes[pi].trim());
+        if (!mp) continue;
+        var rc = /\\.([\\w-]+)|\\[\\s*([\\w-]+)\\s*(?:=\\s*["']?([^"'\\]]*)["']?\\s*)?\\]/g;
+        var mc;
+        while ((mc = rc.exec(mp[1]))) {
+          var it = null;
+          if (mc[1] && /dark/i.test(mc[1])) it = { tipo: 'clase', nombre: mc[1] };
+          else if (mc[2] && (/dark/i.test(mc[3] || '') || (!mc[3] && /dark/i.test(mc[2])))) {
+            it = { tipo: 'attr', nombre: mc[2], valor: mc[3] || '' };
+          }
+          if (!it) continue;
+          var clave = it.tipo + ':' + it.nombre;
+          if (vistosInt[clave]) continue;
+          vistosInt[clave] = true;
+          t.interruptores.push(it);
+        }
+      }
+    }
+    // Un atributo con cara clara explicita (el patron de artifact-design:
+    // :root:not([data-theme="light"]) dentro de la media query) se apaga
+    // poniendole «light», no quitandolo: quitado, un sistema en oscuro
+    // volveria a encender el oscuro.
+    for (var ii = 0; ii < t.interruptores.length; ii++) {
+      var itr = t.interruptores[ii];
+      if (itr.tipo !== 'attr') continue;
+      var reClaro = new RegExp('\\\\[\\\\s*' + itr.nombre + '\\\\s*=\\\\s*["\\']?light["\\']?\\\\s*\\\\]', 'i');
+      if (reClaro.test(todosLosSelectores)) itr.claro = 'light';
+    }
+    return t;
+  }
+
+  function ponerModo(oscuro) {
+    var root = document.documentElement;
+    if (oscuro) root.setAttribute('data-ol-mode', 'dark');
+    else root.removeAttribute('data-ol-mode');
+    var ints = descubrirTema().interruptores;
+    for (var i = 0; i < ints.length; i++) {
+      var it = ints[i];
+      if (it.tipo === 'clase') {
+        if (oscuro) root.classList.add(it.nombre);
+        else root.classList.remove(it.nombre);
+      } else if (it.nombre !== 'data-ol-mode') {
+        if (oscuro) root.setAttribute(it.nombre, it.valor);
+        else if (it.claro) root.setAttribute(it.nombre, it.claro);
+        else root.removeAttribute(it.nombre);
+      }
+    }
+  }
+
+  // Escribe un token del Tema: el --ol-* y, con el mismo valor, la variable
+  // que la pagina lee para ese papel. Vacio quita los dos, y vuelve lo que la
+  // pagina declara.
+  function escribirToken(t, k, v) {
+    var root = document.documentElement;
+    var vacio = v === null || v === '';
+    if (vacio) root.style.removeProperty(k);
+    else root.style.setProperty(k, v);
+    if (k === '--ol-accent' && !vacio) {
+      var trip = hexTriplet(v);
+      if (trip) {
+        root.style.setProperty('--ol-accent-r', trip);
+        for (var a = 0; a < t.accentTrio.length; a++) root.style.setProperty(t.accentTrio[a], trip);
+      }
+    }
+    if (k === '--ol-r-scale') {
+      for (var r = 0; r < t.radio.length; r++) {
+        if (vacio) root.style.removeProperty(t.radio[r].nombre);
+        else root.style.setProperty(t.radio[r].nombre, 'calc(' + t.radio[r].base + ' * ' + v + ')');
+      }
+      return;
+    }
+    var p = PAPEL_DE[k];
+    if (!p || !t[p]) return;
+    for (var i = 0; i < t[p].alias.length; i++) {
+      if (vacio) root.style.removeProperty(t[p].alias[i]);
+      else root.style.setProperty(t[p].alias[i], v);
+    }
+  }
+
+  // Lo que vale ahora un papel: lo que escribio el Tema en --ol-*, o si no lo
+  // que la pagina resuelve por la variable que de verdad lee.
+  function leerPapel(nombrePapel) {
+    try {
+      var root = document.documentElement;
+      var ol = OL_DE[nombrePapel];
+      var v = root.style.getPropertyValue(ol);
+      if (v && v.trim()) return v.trim();
+      var p = descubrirTema()[nombrePapel];
+      var nombre = p.ol ? ol : (p.alias[0] || null);
+      if (!nombre) return null;
+      v = root.style.getPropertyValue(nombre) || getComputedStyle(root).getPropertyValue(nombre);
+      v = (v || '').trim();
+      return v || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // The global corner-radius scale (Tier 3). Tries the inline value on
   // <html> first (where a control edit lands), then the computed value
   // (where the born-canonical :root default lives). null when absent.
@@ -342,89 +739,34 @@ ${CORE_SRC}
     }
   }
 
-  // The global display font (Tier 3) — same read pattern as the radius
-  // scale. Returns the first family name (de-quoted), or null when absent.
+  // The global display font (Tier 3). Returns the first family name
+  // (de-quoted), or null when absent.
   function readDisplayFont() {
-    try {
-      var root = document.documentElement;
-      var v = root.style.getPropertyValue('--ol-font-display');
-      if (!v) v = getComputedStyle(root).getPropertyValue('--ol-font-display');
-      v = (v || '').trim();
-      if (!v) return null;
-      var first = v.split(',')[0].trim().replace(/^['"]|['"]$/g, '');
-      return first || null;
-    } catch (_) {
-      return null;
-    }
+    var v = leerPapel('fontDisplay');
+    if (!v) return null;
+    var first = v.split(',')[0].trim().replace(/^['"]|['"]$/g, '');
+    return first || null;
   }
 
-  // The global accent color (Tier 3) — same read pattern as the others.
-  // Returns the hex value, or null when absent.
-  function readAccent() {
-    try {
-      var root = document.documentElement;
-      var v = root.style.getPropertyValue('--ol-accent');
-      if (!v) v = getComputedStyle(root).getPropertyValue('--ol-accent');
-      v = (v || '').trim();
-      return v || null;
-    } catch (_) {
-      return null;
-    }
-  }
+  function readAccent() { return leerPapel('accent'); }
+  function readBg() { return leerPapel('bg'); }
+  function readFg() { return leerPapel('fg'); }
+  function readSurface() { return leerPapel('surface'); }
+  function readBorder() { return leerPapel('border'); }
 
-  // Global background + text colors (Tier 4) — same read pattern as accent.
-  function readBg() {
-    try {
-      var root = document.documentElement;
-      var v = root.style.getPropertyValue('--ol-bg');
-      if (!v) v = getComputedStyle(root).getPropertyValue('--ol-bg');
-      v = (v || '').trim();
-      return v || null;
-    } catch (_) {
-      return null;
-    }
-  }
-  function readFg() {
-    try {
-      var root = document.documentElement;
-      var v = root.style.getPropertyValue('--ol-fg');
-      if (!v) v = getComputedStyle(root).getPropertyValue('--ol-fg');
-      v = (v || '').trim();
-      return v || null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function readSurface() {
-    try {
-      var root = document.documentElement;
-      var v = root.style.getPropertyValue('--ol-surface');
-      if (!v) v = getComputedStyle(root).getPropertyValue('--ol-surface');
-      v = (v || '').trim();
-      return v || null;
-    } catch (_) {
-      return null;
-    }
-  }
-  function readBorder() {
-    try {
-      var root = document.documentElement;
-      var v = root.style.getPropertyValue('--ol-border');
-      if (!v) v = getComputedStyle(root).getPropertyValue('--ol-border');
-      v = (v || '').trim();
-      return v || null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  // Current light/dark mode (Tier 4) — the data-ol-mode attribute on <html>.
+  // Current light/dark mode (Tier 4): el data-ol-mode que pone el Tema, o el
+  // interruptor propio de la pagina si ya viene encendido.
   function readMode() {
     try {
-      return document.documentElement.getAttribute('data-ol-mode') === 'dark'
-        ? 'dark'
-        : 'light';
+      var root = document.documentElement;
+      if (root.getAttribute('data-ol-mode') === 'dark') return 'dark';
+      var ints = descubrirTema().interruptores;
+      for (var i = 0; i < ints.length; i++) {
+        var it = ints[i];
+        if (it.tipo === 'clase' && root.classList.contains(it.nombre)) return 'dark';
+        if (it.tipo === 'attr' && it.nombre !== 'data-ol-mode' && root.getAttribute(it.nombre) === it.valor) return 'dark';
+      }
+      return 'light';
     } catch (_) {
       return 'light';
     }
@@ -460,13 +802,12 @@ ${CORE_SRC}
     }
   }
 
-  // Read an --ol-* token's AUTHORED value: the value DECLARED in the page's
-  // born-canonical :root token blocks (<style data-ol-*>), independent of any
-  // inline <html> override a Look applied. A Look sets inline custom props on
-  // <html> and PERSISTS them, so the live/computed value drifts to the Look
-  // after a save+reload — but the authored :root blocks are never rewritten,
-  // so they stay the page's true original. Returns null when no :root rule
-  // declares the token (legacy pages whose color was only ever inline).
+  // Read a token's AUTHORED value: the value DECLARED in the page's :root
+  // rules, independent of any inline <html> override a Look applied. A Look
+  // sets inline custom props on <html> and PERSISTS them, so the live/computed
+  // value drifts to the Look after a save+reload — but the authored :root
+  // blocks are never rewritten, so they stay the page's true original.
+  // Returns null when no :root rule declares the token.
   function readAuthoredVar(name) {
     try {
       var found = null;
@@ -478,15 +819,9 @@ ${CORE_SRC}
         for (var j = 0; j < rules.length; j++) {
           var r = rules[j];
           if (!r || r.type !== 1) continue; // CSSRule.STYLE_RULE
-          var parts = (r.selectorText || '').split(',');
-          var isRoot = false;
-          for (var k = 0; k < parts.length; k++) {
-            var p = parts[k].trim();
-            // Exact :root / html only — excludes :root[data-ol-mode="dark"]
-            // (its values are the dark look, not the light baseline).
-            if (p === ':root' || p === 'html') { isRoot = true; break; }
-          }
-          if (!isRoot) continue;
+          // Exact :root / html only — excludes :root[data-ol-mode="dark"]
+          // (its values are the dark look, not the light baseline).
+          if (!esRaiz(r.selectorText || '')) continue;
           var v = r.style.getPropertyValue(name);
           if (v && v.trim()) found = v.trim(); // last declaration wins (cascade)
         }
@@ -503,22 +838,30 @@ ${CORE_SRC}
     var f = parseFloat(v);
     return isNaN(f) ? null : f;
   }
+  // El valor declarado de un papel, por la variable que la pagina lee.
+  function autorado(nombrePapel) {
+    var p = descubrirTema()[nombrePapel];
+    if (p.ol) return readAuthoredVar(OL_DE[nombrePapel]);
+    if (p.alias.length) return readAuthoredVar(p.alias[0]);
+    return null;
+  }
   // The page's AUTHORED theme baseline — what "Original" (↺) re-applies. Read
   // strictly from the :root token blocks so it stays the page's true original
   // even after a Look is applied + persisted + reloaded (the Look only writes
   // inline <html> overrides, never these blocks). A token NOT declared in :root
   // is left null → the reset REMOVES that override rather than pinning a Look
-  // value. Exception: --ol-bg / --ol-fg fall back to the live value, because on
-  // legacy (non-canonical) pages canonize pins those two inline-only with no
-  // :root block, and dropping them would blank the page background.
+  // value. Exception: bg / fg fall back to the live value, because a page
+  // saved before 2026-08-26 can carry --ol-bg / --ol-fg only inline, next to
+  // a persisted data-ol-force sheet that reads them — dropping them would
+  // blank the page background.
   function readAuthored() {
     return {
-      accent: readAuthoredVar('--ol-accent'),
-      bg: readAuthoredVar('--ol-bg') || readBg(),
-      surface: readAuthoredVar('--ol-surface'),
-      fg: readAuthoredVar('--ol-fg') || readFg(),
-      border: readAuthoredVar('--ol-border'),
-      displayFont: readAuthoredVar('--ol-font-display'),
+      accent: autorado('accent'),
+      bg: autorado('bg') || readBg(),
+      surface: autorado('surface'),
+      fg: autorado('fg') || readFg(),
+      border: autorado('border'),
+      displayFont: autorado('fontDisplay'),
       radiusScale: authoredNum('--ol-r-scale'),
       typeScale: authoredNum('--ol-text-scale'),
       spaceScale: authoredNum('--ol-space-scale'),
@@ -532,6 +875,7 @@ ${CORE_SRC}
     }
     var icon = document.head.querySelector('link[rel~="icon"]');
     var titleEl = document.head.querySelector('title');
+    var t = descubrirTema();
     return {
       title: titleEl ? (titleEl.textContent || '') : '',
       description: content('meta[name="description"]'),
@@ -547,8 +891,18 @@ ${CORE_SRC}
       fg: readFg(),
       border: readBorder(),
       mode: readMode(),
-      hasDark: !!document.querySelector('style[data-ol-modes]'),
+      hasDark: t.interruptores.length > 0,
       hasFontPair: !!document.querySelector('link[data-ol-fonts]'),
+      // Lo que la pagina de verdad deja cambiar desde el panel: un control
+      // cuyo papel no esta en ninguna variable que la pagina lea no cambiaria
+      // nada en la pagina guardada, asi que el panel lo esconde y lo dice.
+      tema: {
+        colores: t.bg.ok || t.fg.ok || t.surface.ok || t.border.ok || t.accent.ok,
+        fuentes: t.fontDisplay.ok || t.fontBody.ok,
+        radio: t.radioOk,
+        letra: t.letra,
+        densidad: t.densidad,
+      },
       // The page's authored theme — the "Original" reset baseline. Distinct
       // from the live tokens above (which reflect any applied Look).
       authored: readAuthored(),
@@ -658,21 +1012,35 @@ ${CORE_SRC}
   // Es UN elemento, solo que fuera del body, asi que no tiene ruta posicional y
   // viaja por su propia operacion.
   //
-  // Se mandan SOLO los dos atributos que este inspector toca. El lang, la clase
+  // Se mandan SOLO los atributos que este inspector toca. El lang, la clase
   // que puso el normalizador y lo demas se quedan donde estan: mandar el
   // conjunto entero convertiria un cambio de acento en una reescritura de la
   // raiz.
-  function postRaiz() {
+  //
+  // Con conModo, ademas, el interruptor oscuro PROPIO de la pagina (su clase
+  // o su atributo, ver ponerModo): sin el, el lienzo se ve oscuro y la pagina
+  // guardada no lo esta.
+  function postRaiz(conModo) {
     var root = document.documentElement;
     var estilo = root.getAttribute('style');
     var modo = root.getAttribute('data-ol-mode');
+    var attrs = {
+      style: estilo === null ? null : estilo,
+      'data-ol-mode': modo === null ? null : modo
+    };
+    if (conModo) {
+      var ints = descubrirTema().interruptores;
+      for (var i = 0; i < ints.length; i++) {
+        var nombre = ints[i].tipo === 'clase' ? 'class' : ints[i].nombre;
+        var v = root.getAttribute(nombre);
+        // Una clase que se queda vacia se quita: class="" no es de nadie.
+        attrs[nombre] = v === null || (nombre === 'class' && !v.trim()) ? null : v;
+      }
+    }
     post({
       type: 'openlen:edit',
       op: 'attrs_raiz',
-      attrs: {
-        style: estilo === null ? null : estilo,
-        'data-ol-mode': modo === null ? null : modo
-      },
+      attrs: attrs,
       source: 'props'
     });
   }
@@ -1150,24 +1518,19 @@ ${CORE_SRC}
   // Apply a whole theme preset at once — a {token: value} bundle — with a
   // single reclean + repost so the "look" lands atomically.
   function applyThemeBundle(tokens) {
-    var root = document.documentElement;
+    var t = descubrirTema();
+    var conModo = false;
     for (var k in tokens) {
       if (!Object.prototype.hasOwnProperty.call(tokens, k)) continue;
       var v = tokens[k];
       if (k === 'data-ol-mode') {
-        if (v) root.setAttribute('data-ol-mode', v);
-        else root.removeAttribute('data-ol-mode');
-      } else if (v === null || v === '') {
-        root.style.removeProperty(k);
+        ponerModo(v === 'dark');
+        conModo = true;
       } else {
-        root.style.setProperty(k, v);
-        if (k === '--ol-accent') {
-          var trip = hexTriplet(v);
-          if (trip) root.style.setProperty('--ol-accent-r', trip);
-        }
+        escribirToken(t, k, v);
       }
     }
-    postRaiz();
+    postRaiz(conModo);
     postPageMeta();
   }
 
@@ -1478,7 +1841,7 @@ ${CORE_SRC}
   // mismo modelo que el font-link de temáticas) y las familias aterrizan como
   // inline vars en <html>. Strings vacíos = quitar el par (vuelve el autorado).
   function applyFonts(displayCss, bodyCss, href) {
-    var root = document.documentElement;
+    var t = descubrirTema();
     var old = document.querySelectorAll('link[data-ol-fonts]');
     for (var i = 0; i < old.length; i++) old[i].remove();
     if (href) {
@@ -1488,10 +1851,8 @@ ${CORE_SRC}
       l.setAttribute('data-ol-fonts', '');
       (document.head || document.documentElement).appendChild(l);
     }
-    if (displayCss) root.style.setProperty('--ol-font-display', displayCss);
-    else root.style.removeProperty('--ol-font-display');
-    if (bodyCss) root.style.setProperty('--ol-font-body', bodyCss);
-    else root.style.removeProperty('--ol-font-body');
+    escribirToken(t, '--ol-font-display', displayCss);
+    escribirToken(t, '--ol-font-body', bodyCss);
     // Dos ediciones: la hoja de la tipografia y los tokens que la nombran.
     var puesto = document.querySelector('link[data-ol-fonts]');
     postCabeza(puesto ? puesto.outerHTML : '', 'data-ol-fonts');
@@ -1500,23 +1861,17 @@ ${CORE_SRC}
   }
 
   function applyTheme(prop, value) {
-    var root = document.documentElement;
-    // The light/dark toggle is an attribute on <html>, not a CSS variable.
+    // The light/dark toggle is an attribute on <html>, not a CSS variable:
+    // el data-ol-mode del Tema y el interruptor propio de la pagina.
     if (prop === 'data-ol-mode') {
-      if (value) root.setAttribute('data-ol-mode', value);
-      else root.removeAttribute('data-ol-mode');
-      postRaiz();
+      ponerModo(value === 'dark');
+      postRaiz(true);
       postPageMeta();
       return;
     }
-    if (value === null || value === '') root.style.removeProperty(prop);
-    else root.style.setProperty(prop, value);
-    // The accent control sets the hex; keep --ol-accent-r (the rgb triplet
-    // the rewritten rgba() glows use) in sync from it.
-    if (prop === '--ol-accent' && value) {
-      var trip = hexTriplet(value);
-      if (trip) root.style.setProperty('--ol-accent-r', trip);
-    }
+    // The accent control sets the hex; escribirToken keeps --ol-accent-r (the
+    // rgb triplet the rgba() glows use) in sync from it.
+    escribirToken(descubrirTema(), prop, value);
     postRaiz();
     postPageMeta();
   }
@@ -1617,17 +1972,11 @@ ${CORE_SRC}
     }
   });
 
-  // Canonize-at-runtime — makes --ol-bg + --ol-fg AUTHORITATIVE on ANY HTML
-  // (legacy / Tailwind utility / hardcoded). Reads body's computed bg + fg,
-  // pins them as :root tokens (only if not already set), and injects an
-  // override stylesheet that forces html/body to read them via var(). After
-  // this runs, clicking a Theme palette actually re-tints the page, even on
-  // pre-canonical templates. data-ol-force persists in saved HTML: no lleva
-  // marcador de inspector, asi que ninguna edicion lo quita.
   // Find the topmost element under <html> that carries a non-transparent
   // background — body for most pages, but for Tailwind-style templates the
   // bg lives on a wrapper div (<body><div class="bg-white min-h-screen">…).
-  // Returns body as a safe fallback.
+  // Returns body as a safe fallback. Lo usa descubrirTema para saber que
+  // variable pinta el fondo que se ve.
   function findBgCarrier() {
     if (rgbToHex(getComputedStyle(document.body).backgroundColor)) return document.body;
     var cur = document.body.firstElementChild;
@@ -1643,39 +1992,22 @@ ${CORE_SRC}
     return document.body;
   }
 
-  // Tag the carrier so we can target it from a single CSS rule by attribute
-  // (works without knowing its tag / class chain).
-  function canonizeAtRuntime() {
-    if (!document.body) return;
-    if (document.querySelector('style[data-ol-force]')) return;
-    var root = document.documentElement;
-    var carrier = findBgCarrier();
-    var bg = root.style.getPropertyValue('--ol-bg');
-    var fg = root.style.getPropertyValue('--ol-fg');
-    if (!bg) bg = rgbToHex(getComputedStyle(carrier).backgroundColor);
-    if (!fg) fg = rgbToHex(getComputedStyle(document.body).color);
-    // Can't determine the page's current palette — leave it alone (no force
-    // CSS, no token set; the page renders as it always has).
-    if (!bg || !fg) return;
-    root.style.setProperty('--ol-bg', bg);
-    root.style.setProperty('--ol-fg', fg);
-    carrier.setAttribute('data-ol-bg-carrier', '');
-    var s = document.createElement('style');
-    s.setAttribute('data-ol-force', '');
-    // Force three layers: html (root), body (default carrier), and the
-    // detected actual carrier (catches the Tailwind wrapper pattern).
-    s.textContent =
-      'html,body,[data-ol-bg-carrier]{background-color:var(--ol-bg) !important;}' +
-      'html,body{color:var(--ol-fg) !important;}';
-    document.head.appendChild(s);
-    // NADA que mandar aqui — canonize runs on every load purely as an
-    // in-editor aid (it's idempotent + guarded by data-ol-force), so persisting
-    // it would fire an unsolicited save just from VIEWING a legacy/pasted
-    // project. The canonized state is captured naturally on the first real edit.
-  }
-  canonizeAtRuntime();
+  // ⚰️ canonizeAtRuntime, retirado el 2026-09-29. Fijaba --ol-bg / --ol-fg
+  // inline en <html> e inyectaba un <style data-ol-force> con !important que
+  // obligaba a html, body y al portador del fondo a leerlos. Asi un Look
+  // «funcionaba» en cualquier pagina... en el LIENZO: ese CSS no viaja en
+  // ninguna edicion desde que el taller manda cambios (2026-08-26), de modo que
+  // la pagina guardada seguia igual. Medido el 29/09: una pagina con --bg y
+  // --ink se veia oscura en el taller y clara publicada (memoria
+  // el-tema-pinta-lo-que-no-guarda). Ahora el Tema escribe en la variable que
+  // la pagina lee (descubrirTema), y donde no hay ninguna el panel lo dice.
+  // Una pagina guardada ANTES de aquello puede llevar su data-ol-force dentro:
+  // esa hoja es suya, y descubrirTema la lee como cualquier otra.
 
   postPageMeta();
+  // Tailwind por CDN escribe sus reglas despues de cargar: el primer informe
+  // puede no verlas. Uno mas cuando la pagina termina.
+  window.addEventListener('load', function () { setTimeout(postPageMeta, 50); });
 })();
 `;
 

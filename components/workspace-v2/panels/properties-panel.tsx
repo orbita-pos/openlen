@@ -187,6 +187,19 @@ export interface PageMeta {
    *  pages that never authored a --ol-font-display token — without this,
    *  those pages could never show the pair as removable. */
   hasFontPair?: boolean;
+  /** Lo que la página de verdad deja cambiar desde el panel: el iframe mira
+   *  qué variables lee (`descubrirTema` en use-element-inspect.ts). Un control
+   *  cuyo papel no está en ninguna no cambiaría nada en la página guardada,
+   *  así que se esconde y se dice. Ausente = iframe viejo: se enseña todo. */
+  tema?: TemaDePagina;
+}
+
+export interface TemaDePagina {
+  colores: boolean;
+  fuentes: boolean;
+  radio: boolean;
+  letra: boolean;
+  densidad: boolean;
 }
 
 interface PropertiesPanelProps {
@@ -1271,6 +1284,7 @@ function PageView({
         <ThemeSection
           mode={pageMeta.mode ?? "light"}
           hasDark={!!pageMeta.hasDark}
+          colores={pageMeta.tema?.colores ?? true}
           onApplyLook={onApplyLook}
           onApplyLookForMode={onApplyLookForMode}
           onApplyMode={onApplyThemeMode}
@@ -1567,58 +1581,86 @@ function DesignSection({
     // "" quita el override inline → la cascada del :root autorado vuelve.
     onReset: () => onApplyThemeToken(prop, authored ?? ""),
   });
+  // Cada dial, sólo si la página lee lo que escribe. Lo que falta se nombra y
+  // se le manda a Len, que sí puede cambiarlo en el código de la página.
+  const tema = pageMeta.tema;
+  const hay = {
+    letra: tema?.letra ?? true,
+    densidad: tema?.densidad ?? true,
+    radio: tema?.radio ?? true,
+    fuentes: tema?.fuentes ?? true,
+  };
+  const faltan = [
+    !hay.letra && t("design.typeScale"),
+    !hay.densidad && t("design.density"),
+    !hay.radio && t("design.corners"),
+    !hay.fuentes && t("design.fonts"),
+  ].filter((x): x is string => !!x);
   return (
     <Section label={t("design.title")} icon={<SlidersHorizontal size={11} />}>
-      <StepRow
-        label={t("design.typeScale")}
-        options={TYPE_SCALE_STEPS.map((s) => s.label)}
-        activeIndex={nearestScaleIndex(pageMeta.typeScale, TYPE_SCALE_STEPS)}
-        onPick={(i) => onApplyThemeToken("--ol-text-scale", String(TYPE_SCALE_STEPS[i].value))}
-        reset={dialReset("--ol-text-scale", authoredScales?.typeScale, pageMeta.typeScale)}
-      />
-      <StepRow
-        label={t("design.density")}
-        options={SPACE_SCALE_STEPS.map((s) => t(`spacing.densities.${s.label}`))}
-        activeIndex={nearestScaleIndex(pageMeta.spaceScale, SPACE_SCALE_STEPS)}
-        onPick={(i) => onApplyThemeToken("--ol-space-scale", String(SPACE_SCALE_STEPS[i].value))}
-        reset={dialReset("--ol-space-scale", authoredScales?.spaceScale, pageMeta.spaceScale)}
-      />
-      <StepRow
-        label={t("design.corners")}
-        options={RADIUS_SCALE_STEPS.map((s) => t(`style.cornersSteps.${s.label}`))}
-        activeIndex={nearestScaleIndex(pageMeta.radiusScale, RADIUS_SCALE_STEPS)}
-        onPick={(i) => onApplyThemeToken("--ol-r-scale", String(RADIUS_SCALE_STEPS[i].value))}
-        reset={dialReset("--ol-r-scale", authoredScales?.radiusScale, pageMeta.radiusScale)}
-      />
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-[10.5px] fg-faint flex-1">{t("design.fonts")}</span>
-          <ProvenanceReset
-            dirty={
-              (pageMeta.hasFontPair ?? false) ||
-              (!!pageMeta.displayFont &&
-                !!authoredScales?.displayFont &&
-                pageMeta.displayFont !== firstFontFamily(authoredScales.displayFont))
-            }
-            title={t("was.resetControl")}
-            onReset={() => onApplyFontPair?.(null)}
-          />
+      {hay.letra && (
+        <StepRow
+          label={t("design.typeScale")}
+          options={TYPE_SCALE_STEPS.map((s) => s.label)}
+          activeIndex={nearestScaleIndex(pageMeta.typeScale, TYPE_SCALE_STEPS)}
+          onPick={(i) => onApplyThemeToken("--ol-text-scale", String(TYPE_SCALE_STEPS[i].value))}
+          reset={dialReset("--ol-text-scale", authoredScales?.typeScale, pageMeta.typeScale)}
+        />
+      )}
+      {hay.densidad && (
+        <StepRow
+          label={t("design.density")}
+          options={SPACE_SCALE_STEPS.map((s) => t(`spacing.densities.${s.label}`))}
+          activeIndex={nearestScaleIndex(pageMeta.spaceScale, SPACE_SCALE_STEPS)}
+          onPick={(i) => onApplyThemeToken("--ol-space-scale", String(SPACE_SCALE_STEPS[i].value))}
+          reset={dialReset("--ol-space-scale", authoredScales?.spaceScale, pageMeta.spaceScale)}
+        />
+      )}
+      {hay.radio && (
+        <StepRow
+          label={t("design.corners")}
+          options={RADIUS_SCALE_STEPS.map((s) => t(`style.cornersSteps.${s.label}`))}
+          activeIndex={nearestScaleIndex(pageMeta.radiusScale, RADIUS_SCALE_STEPS)}
+          onPick={(i) => onApplyThemeToken("--ol-r-scale", String(RADIUS_SCALE_STEPS[i].value))}
+          reset={dialReset("--ol-r-scale", authoredScales?.radiusScale, pageMeta.radiusScale)}
+        />
+      )}
+      {hay.fuentes && (
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10.5px] fg-faint flex-1">{t("design.fonts")}</span>
+            <ProvenanceReset
+              dirty={
+                (pageMeta.hasFontPair ?? false) ||
+                (!!pageMeta.displayFont &&
+                  !!authoredScales?.displayFont &&
+                  pageMeta.displayFont !== firstFontFamily(authoredScales.displayFont))
+              }
+              title={t("was.resetControl")}
+              onReset={() => onApplyFontPair?.(null)}
+            />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {FONT_PAIRS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                title={p.name}
+                onClick={() => onApplyFontPair?.(p)}
+                className="h-8 px-2 rounded-md border bd bg-app hover:bg-hover transition text-[11px] fg-muted hover:fg"
+                style={{ fontFamily: p.displayCss }}
+              >
+                Aa <span className="text-[9.5px] fg-faint">{p.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {FONT_PAIRS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              title={p.name}
-              onClick={() => onApplyFontPair?.(p)}
-              className="h-8 px-2 rounded-md border bd bg-app hover:bg-hover transition text-[11px] fg-muted hover:fg"
-              style={{ fontFamily: p.displayCss }}
-            >
-              Aa <span className="text-[9.5px] fg-faint">{p.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      )}
+      {faltan.length > 0 && (
+        <p className="text-[10.5px] fg-faint leading-snug">
+          {t("design.pideleALen", { que: faltan.join(", ") })}
+        </p>
+      )}
     </Section>
   );
 }
@@ -1632,6 +1674,7 @@ function DesignSection({
 function ThemeSection({
   mode,
   hasDark,
+  colores,
   originalAccent,
   onApplyLook,
   onApplyLookForMode,
@@ -1642,6 +1685,9 @@ function ThemeSection({
 }: {
   mode: "light" | "dark";
   hasDark: boolean;
+  /** Falso cuando ningún color de la página sale de una variable que lea: un
+   *  Look no cambiaría nada en la página guardada, así que no se ofrece. */
+  colores: boolean;
   originalAccent?: string;
   onApplyLook: (tokens: Record<string, string>) => void;
   onApplyLookForMode?: (
@@ -1737,7 +1783,9 @@ function ThemeSection({
 
   return (
     <Section label={t("theme.title")} icon={<PaletteIcon size={11} />}>
-      {!expanded ? (
+      {!colores ? (
+        <p className="text-[10.5px] fg-faint leading-snug">{t("theme.sinVariables")}</p>
+      ) : !expanded ? (
         <div className="flex flex-wrap gap-x-1.5 gap-y-3 pt-0.5">
           {originalBead}
           {logoBead}
