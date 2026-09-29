@@ -373,7 +373,10 @@ export const PRELUDIO_DE_USO = `
   function antesDeActuar() {
     var el = R.elegido;
     if (!el) return null;
-    el.scrollIntoView({ block: "center", inline: "center" });
+    // "instant": con \`html{scroll-behavior:smooth}\` el desplazamiento se animaba
+    // ~900 ms y el clic caía con la página aún moviéndose (el mouseup en otra
+    // cosa, el clic a la sección). Así lo hace el propio Puppeteer.
+    el.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
     var campo = /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) && !/^(button|submit|reset|image)$/i.test(el.type || "");
     return campo ? { escucha: escuchaCampo(el), propia: false, campo: true } : { escucha: escucha(el), propia: accionPropia(el) };
   }
