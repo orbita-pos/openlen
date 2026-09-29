@@ -367,6 +367,8 @@ export default defineConfig({
       "lib/agent/prefijo-inventado.test.ts",
       // Precios, cifras y reseñas que nadie dio (H13). Núcleo puro — LISTA BLANCA.
       "lib/agent/datos-inventados.test.ts",
+      // La librería que en el lienzo va y publicada no. Núcleo puro — LISTA BLANCA.
+      "lib/agent/librerias-que-no-cargan.test.ts",
       // Lo medido que vuelve al modelo tras editar. `include` es LISTA BLANCA:
       // sin esta línea la prueba existiría y no correría nunca.
       "lib/agent/aviso-medido.test.ts",

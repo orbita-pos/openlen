@@ -29,6 +29,8 @@ import { enlacesDesfasados } from "@/lib/agent/enlaces-desfasados";
 import { enlacesInventados } from "@/lib/agent/enlaces-inventados";
 import { hechosPerdidosNetos, metaDesfasada } from "@/lib/agent/facts-kept";
 import { jsQueNoCompila } from "@/lib/agent/js-que-no-compila";
+import { etiquetasDe, libreriasQueNoCargan } from "@/lib/agent/librerias-que-no-cargan";
+import { LIBRERIAS } from "@/lib/librerias";
 import { prefijosInventados } from "@/lib/agent/prefijo-inventado";
 import { claveDeDiagnostico, posicionDe, posicionEnIndice, type Diagnostico } from "@/lib/agent/diagnosticos";
 import { reglasQueNuncaAplican } from "@/lib/document/css-wiring";
@@ -191,6 +193,44 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
           "js-no-compila",
           `El navegador no puede leer este <script> (${x.mensaje}): no corre NINGUNA línea de él, y la página se queda sin todo lo que hacía.`,
         ),
+      );
+    }
+    for (const x of libreriasQueNoCargan(html)) {
+      fuera.push(
+        x.tipo === "script-ajeno"
+          ? diag(
+              posicionDe(html, x.src),
+              "Error",
+              "script-que-se-borra",
+              `<script src="${x.src}"> se borra al publicar: sólo sobreviven las librerías de libs.openlen.com y Tailwind. En el lienzo funciona; en la página publicada, lo que dependa de él se queda muerto.${x.sustituta ? ` Usa la nuestra: ${etiquetasDe(x.sustituta)}` : " Escribe eso en tu propio <script> o quítalo."}`,
+            )
+          : x.tipo === "con-integrity"
+            ? diag(
+                posicionDe(html, x.url),
+                "Error",
+                "libreria-bloqueada",
+                `${x.url} lleva integrity o crossorigin, y libs.openlen.com no manda CORS: el navegador BLOQUEA la librería y tu código falla con «no está definido». Quita los dos atributos.`,
+              )
+            : x.tipo === "fuera-del-catalogo"
+              ? diag(
+                  posicionDe(html, x.url),
+                  "Warning",
+                  "libreria-que-no-existe",
+                  `${x.url} no es ninguna ruta del catálogo, y lo más probable es que dé 404. Copia la etiqueta exacta: ${LIBRERIAS.map((l) => `${l.nombre} ${l.version}`).join(", ")}.`,
+                )
+              : x.tipo === "sin-cargar"
+                ? diag(
+                    posicionDe(html, x.global),
+                    "Error",
+                    "libreria-sin-cargar",
+                    `Tu script usa ${x.global} y la página no carga ${x.libreria.nombre}: en cuanto corra falla con «${x.global} is not defined» y se para entero. Añade en el <head>: ${etiquetasDe(x.libreria, x.faltan)}`,
+                  )
+                : diag(
+                    posicionDe(html, "new Swiper"),
+                    "Warning",
+                    "libreria-sin-hoja",
+                    `Usas ${x.libreria.nombre} sin su hoja de estilos: el carrusel se apila en vertical y la página parece rota. Añade en el <head>: <link rel="stylesheet" href="${x.css}">`,
+                  ),
       );
     }
     for (const r of reglasQueNuncaAplican(html, todoElJsDelDocumento(html))) {

@@ -107,6 +107,15 @@ describe("diagnosticosDeLaEscritura: lo que antes era un aviso_critico, anclado 
     expect(dados.filter((d) => /-inventad[oa]$/.test(d.codigo ?? ""))).toEqual([]);
   });
 
+  it("un <script src> que se borra al publicar, y sólo si lo puso ESTA escritura", () => {
+    const conCdn = pagina('<canvas id="g"></canvas>', '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>');
+    const ds = escritura({ despues: conCdn, fuentes: ["ponme una gráfica"] });
+    expect(ds.map((d) => d.codigo)).toContain("script-que-se-borra");
+    expect(ds.find((d) => d.codigo === "script-que-se-borra")!.mensaje).toContain("https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js");
+    // Línea base: si ya venía en la página, no lo puso esta escritura.
+    expect(escritura({ antes: conCdn, despues: conCdn.replace("<canvas", "<p>hola</p><canvas") }).map((d) => d.codigo)).not.toContain("script-que-se-borra");
+  });
+
   it("el país de un teléfono que nadie dio", () => {
     const despues = pagina('<a href="https://wa.me/525512345678">WhatsApp</a>');
     const ds = escritura({ despues, fuentes: ["mi whatsapp es 5512345678"] });

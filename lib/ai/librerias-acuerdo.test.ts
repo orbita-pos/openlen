@@ -208,3 +208,31 @@ test("y el texto suelto sigue tumbando la tanda entera", () => {
   assert.equal(laCabeceraAcepta(`<title>Hola</title> y además esto`), false);
   assert.equal(laCabeceraAcepta(`basura<title>Hola</title>`), false);
 });
+
+// LA QUINTA LISTA. `scriptSobreviveAlPublicar` (lib/agent/librerias-que-no-cargan.ts)
+// decide si Len recibe el aviso «este <script> se borra al publicar». Si dice
+// otra cosa que el saneador, el aviso miente en una dirección o en la otra:
+// calla ante un CDN que se borra, o manda quitar uno que sobrevive.
+test("el aviso de Len dice lo mismo que el saneador REAL", async () => {
+  const { scriptSobreviveAlPublicar } = await import("../agent/librerias-que-no-cargan");
+  for (const src of [
+    "https://cdn.tailwindcss.com",
+    "https://cdn.tailwindcss.com?plugins=forms,typography",
+    "https://cdn.tailwindcss.com/3.4.16",
+    ...LIBRERIAS.flatMap((l) => l.scripts.map((s) => s.url)),
+    `https://${LIBRERIAS_HOST}/chart.js/5.0.0/chart.umd.min.js`,
+    "https://cdn.jsdelivr.net/npm/chart.js",
+    "https://unpkg.com/swiper/swiper-bundle.min.js",
+    "http://cdn.tailwindcss.com",
+    "https://cdn.tailwindcss.com.evil.example/x.js",
+    "https://evil.example/cdn.tailwindcss.com/x.js",
+    `https://${LIBRERIAS_HOST}`,
+    "/app.js",
+  ]) {
+    assert.equal(
+      scriptSobreviveAlPublicar(src),
+      sobreviveAlPublicar(doc(`<script src="${src}"></script>`)),
+      `${src}: el aviso de Len y el saneador no coinciden`,
+    );
+  }
+});
