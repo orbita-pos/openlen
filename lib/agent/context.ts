@@ -90,7 +90,7 @@ export function cambiosDelDuenoBlock(lineas: readonly string[]): string {
   if (lineas.length === 0) return "";
   return `EL DUEÑO CAMBIÓ LA PÁGINA A MANO desde tu último cambio en ella — esto NO lo hiciste tú:
 ${lineas.map((l) => `- ${l}`).join("\n")}
-Respeta lo que puso: los ficheros ya lo llevan. Si tu conversación dice otra cosa, manda la página. Y si te preguntan qué cambió, esto es lo que cambió el dueño, no tú.
+Respeta lo que puso: los ficheros ya lo llevan. Si tu conversación dice otra cosa, manda la página. Y si te preguntan qué cambió, esto es lo que cambió el usuario, no tú.
 
 `;
 }
@@ -189,7 +189,7 @@ export function avisosDelTurno(args: {
   // mismo cierra diciendo «ya está» y se come una vuelta de evaluador para nada
   // — que es exactamente lo que el juez existe para no permitir.
   const meta = args.objetivo?.condicion.trim()
-    ? `OBJETIVO ACTIVO — el dueño pidió que no pares hasta esto:
+    ? `OBJETIVO ACTIVO — el usuario pidió que no pares hasta esto:
 «${args.objetivo.condicion.trim()}»
 Lo comprueba un evaluador APARTE que lee este turno, no tú: decir que está hecho no lo da por cumplido. Trabaja hasta que la evidencia esté en el turno.
 
@@ -321,7 +321,7 @@ ${dicho.map((d) => `- «${d}»`).join("\n")}
       : "";
   const recorteBlock =
     rec && rec.totales > rec.visibles
-      ? `NOTA SOBRE LA CONVERSACIÓN: ves los últimos ${rec.visibles} turnos, pero esta charla lleva ${rec.totales}. Si te preguntan por algo anterior a lo que ves, DILO («de eso ya no me acuerdo») en vez de contestar con el turno más viejo que tengas a mano — eso es equivocarse con seguridad, que es la peor forma. Lo que sí sobrevive entero es el registro de cambios de más abajo${dicho.length > 0 ? ", y lo que el dueño te dijo, que va justo aquí debajo" : ""}.
+      ? `NOTA SOBRE LA CONVERSACIÓN: ves los últimos ${rec.visibles} turnos, pero esta charla lleva ${rec.totales}. Si te preguntan por algo anterior a lo que ves, DILO («de eso ya no me acuerdo») en vez de contestar con el turno más viejo que tengas a mano — eso es equivocarse con seguridad, que es la peor forma. Lo que sí sobrevive entero es el registro de cambios de más abajo${dicho.length > 0 ? ", y lo que el usuario te dijo, que va justo aquí debajo" : ""}.
 
 ${dichoBlock}`
       : dichoBlock;

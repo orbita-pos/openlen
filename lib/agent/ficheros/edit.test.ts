@@ -63,7 +63,7 @@ describe("Edit: qué comprueba antes de tocar nada, en su orden", () => {
     const r = planearEdit({ file_path: "/index.html", old_string: "Gorra — $250", new_string: "Gorra — $300" }, sitio({ "/index.html": ahora }), leido("/index.html", PAGINA));
     expect(r).toMatchObject({
       ok: false,
-      resultado: { error: "This file changed after you read it (the owner may have edited it). Read it again before changing it." },
+      resultado: { error: "This file changed after you read it (the user may have edited it). Read it again before changing it." },
     });
   });
 

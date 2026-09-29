@@ -40,7 +40,7 @@ describe("Write", () => {
     const r = planearWrite({ file_path: "/index.html", content: "nuevo" }, sitio({ "/index.html": "lo del dueño" }), leido("/index.html", "viejo"));
     expect(r).toMatchObject({
       ok: false,
-      resultado: { error: "This file changed after you read it (the owner may have edited it). Read it again before changing it." },
+      resultado: { error: "This file changed after you read it (the user may have edited it). Read it again before changing it." },
     });
   });
 

@@ -99,7 +99,7 @@ const SIN_OCULTAR_EN =
 // un modelo que ve su `onclick` guardado y funcionando aprende que la regla
 // era falsa.
 const CABLEADO_ES =
-  "Cablea los manejadores con `addEventListener` DENTRO del script, no con atributos `onclick=` (ni ningún `on*`): tu guardado los conserva, pero el editor los borra cuando el dueño retoca ese elemento a mano o deshace un cambio, y el botón se queda mudo sin que nadie lo note.";
+  "Cablea los manejadores con `addEventListener` DENTRO del script, no con atributos `onclick=` (ni ningún `on*`): tu guardado los conserva, pero el editor los borra cuando el usuario retoca ese elemento a mano o deshace un cambio, y el botón se queda mudo sin que nadie lo note.";
 
 // EL SEGUNDO PUNTO CIEGO MEDIDO del JavaScript del modelo, y el que no lanza:
 // una clase que el script pone y que nadie define en el CSS deja el control
@@ -223,7 +223,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       // no guardó nada. La ruta sin subdominio lo saca del host
       // (`app/api/d/[sub]/route.ts`). Y lo de `propio` es el otro medio fallo
       // de ese día: un POST por producto, que se reemplazaban entre sí.
-      "GUARDAR TAMBIÉN: declara un almacén en la página (el bloque data-ol-stores) y tu JavaScript escribe y lee con fetch a /api/d/<almacén> —relativa y SIN subdominio: el servidor sabe de qué página viene— — un carrito que sobrevive a recargas, un menú que mantiene el dueño, reseñas que dejan los visitantes. GET devuelve {documentos:[{id,doc}]}; POST con el documento en JSON lo guarda. En un almacén \"propio\" cada visitante tiene UN solo documento y cada POST lo REEMPLAZA: el carrito va ENTERO en un campo de tipo lista, con un POST por cambio —nunca uno por producto, que se pisan y sólo queda el último—, y se lee con GET al cargar la página. " +
+      "GUARDAR TAMBIÉN: declara un almacén en la página (el bloque data-ol-stores) y tu JavaScript escribe y lee con fetch a /api/d/<almacén> —relativa y SIN subdominio: el servidor sabe de qué página viene— — un carrito que sobrevive a recargas, un menú que mantiene el usuario, reseñas que dejan los visitantes. GET devuelve {documentos:[{id,doc}]}; POST con el documento en JSON lo guarda. En un almacén \"propio\" cada visitante tiene UN solo documento y cada POST lo REEMPLAZA: el carrito va ENTERO en un campo de tipo lista, con un POST por cambio —nunca uno por producto, que se pisan y sólo queda el último—, y se lee con GET al cargar la página. " +
       // 🔴 EL «NO» DEL SERVIDOR (2026-09-19). Todo lo de arriba enseña a
       // guardar; nada decía qué hacer cuando la respuesta no es buena, y el
       // JavaScript del modelo pinta primero y no mira. El resultado lo ve el

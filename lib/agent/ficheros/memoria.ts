@@ -76,7 +76,7 @@ export function lineasNuevas(
   if (faltan.length > 0) {
     return {
       ok: false,
-      error: `${ruta} only grows: removing or changing what is already saved is the owner's decision, and they do it from the editor. These saved lines are missing from your version: ${faltan.map((l) => `«${l}»`).join(", ")}. Put them back and only add new lines; if the owner wants one gone, tell them where to remove it.`,
+      error: `${ruta} only grows: removing or changing what is already saved is the user's decision, and they do it from the editor. These saved lines are missing from your version: ${faltan.map((l) => `«${l}»`).join(", ")}. Put them back and only add new lines; if the user wants one gone, tell them where to remove it.`,
     };
   }
   const nuevas: string[] = [];

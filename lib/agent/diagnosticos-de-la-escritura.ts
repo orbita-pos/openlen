@@ -101,7 +101,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
         posicionDelHref(e.despues, x.href),
         "Warning",
         "enlace-inventado",
-        `El enlace a ${x.red} «${x.handle}» no sale de la página ni de lo que dijo el dueño: si lo dedujiste del nombre del negocio, es una cuenta inventada que manda al visitante al perfil de otra persona. Déjalo en href="#" y pregúntale cuál es la suya.`,
+        `El enlace a ${x.red} «${x.handle}» no sale de la página ni de lo que dijo el usuario: si lo dedujiste del nombre del negocio, es una cuenta inventada que manda al visitante al perfil de otra persona. Déjalo en href="#" y pregúntale cuál es la suya.`,
       ),
     );
   }
@@ -122,7 +122,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
           dondeFueElEdit,
           "Warning",
           "dato-perdido",
-          `Esta escritura quitó ${h.tipo === "imagen" ? "la imagen" : h.tipo === "enlace" ? "el enlace" : "el teléfono"} ${h.valor}, que la página tenía: es un dato real del dueño. Si no te lo pidieron, repónlo con el valor exacto; si sí, díselo al usuario.`,
+          `Esta escritura quitó ${h.tipo === "imagen" ? "la imagen" : h.tipo === "enlace" ? "el enlace" : "el teléfono"} ${h.valor}, que la página tenía: es un dato real del usuario. Si no te lo pidieron, repónlo con el valor exacto; si sí, díselo al usuario.`,
         ),
       );
     }

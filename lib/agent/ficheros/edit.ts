@@ -55,7 +55,7 @@ const NOTA_CAMBIADO_EN_DISCO =
   " (note: the file had changed since your last Read of it. Your edit applied, but other parts differ from what you saw: Read it again before an edit that depends on what is around it.)";
 export const NO_LEIDO = "You have not read this file in this conversation. Read it before changing it.";
 export const CAMBIADO_DESDE_LA_LECTURA =
-  "This file changed after you read it (the owner may have edited it). Read it again before changing it.";
+  "This file changed after you read it (the user may have edited it). Read it again before changing it.";
 
 export function planearEdit(entrada: EntradaEdit, sitio: SitioLegible, leidos: Leidos): PlanDeEdit {
   const { old_string: viejo, new_string: nuevo } = entrada;

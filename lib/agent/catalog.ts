@@ -131,7 +131,7 @@ export function buildFunctionDeclarations(
 const FILE_PATH_OPCIONAL = {
   type: "STRING",
   description:
-    "The page file, e.g. /index.html or /menu/index.html. Omit it to use the page the owner has open in the editor.",
+    "The page file, e.g. /index.html or /menu/index.html. Omit it to use the page the user has open in the editor.",
 };
 
 /**

@@ -958,9 +958,9 @@ async function toolActivarModulo(
     // La salvedad de la release vieja va como CONDICIÓN, no como hecho: una
     // página publicada antes de que el widget supiera preguntar sigue con su
     // burbuja, y desde aquí no se sabe de qué fecha es la que hay en el disco.
-    aviso = `Apagarlo tiene efecto YA: el ${nombre} deja de atender a los visitantes en el momento, y la burbuja se retira sola de la página publicada en cuanto alguien vuelve a cargarla. NO digas que hay que publicar para apagarlo. Si el dueño dice que la sigue viendo, es que su página se publicó hace tiempo: entonces sí, que vuelva a publicar.`;
+    aviso = `Apagarlo tiene efecto YA: el ${nombre} deja de atender a los visitantes en el momento, y la burbuja se retira sola de la página publicada en cuanto alguien vuelve a cargarla. NO digas que hay que publicar para apagarlo. Si el usuario dice que la sigue viendo, es que su página se publicó hace tiempo: entonces sí, que vuelva a publicar.`;
   } else if (!visible && publicada) {
-    aviso = `Guardado, pero la página publicada NO cambia sola: los visitantes no lo verán hasta que el dueño vuelva a publicar. Díselo así («el ${nombre} saldrá en tu página cuando vuelvas a publicar») y NO afirmes que ya aparece ni que ya contesta.`;
+    aviso = `Guardado, pero la página publicada NO cambia sola: los visitantes no lo verán hasta que el usuario vuelva a publicar. Díselo así («el ${nombre} saldrá en tu página cuando vuelvas a publicar») y NO afirmes que ya aparece ni que ya contesta.`;
   } else if (!publicada && encender) {
     aviso = `Guardado. La página todavía no está publicada, así que nadie lo ve aún: saldrá cuando la publique. Díselo así y NO afirmes que ya aparece ni que ya contesta a los visitantes.`;
   }
@@ -1441,7 +1441,7 @@ async function toolProponerObjetivo(
       response: {
         ok: false,
         motivo:
-          "ya hay una propuesta de objetivo esperando la decisión del dueño; sigue trabajando, y si la aprueba te llegará",
+          "ya hay una propuesta de objetivo esperando la decisión del usuario; sigue trabajando, y si la aprueba te llegará",
       },
     };
   }
@@ -1876,7 +1876,7 @@ async function toolRevertirUltimoCambio(
             ok: false,
             error:
               r.motivo === "se_solapan"
-                ? `Después de tu último cambio («${delLenV.label}») la página se editó a mano, y esa edición toca lo mismo que tú: deshacer se llevaría también lo del dueño. NO lo deshagas por tu cuenta: pregúntale con preguntar si quiere deshacer también su edición o dejarlo como está.`
+                ? `Después de tu último cambio («${delLenV.label}») la página se editó a mano, y esa edición toca lo mismo que tú: deshacer se llevaría también lo del usuario. NO lo deshagas por tu cuenta: pregúntale con preguntar si quiere deshacer también su edición o dejarlo como está.`
                 : `tu último cambio («${delLenV.label}») no movió nada de la página: no hay nada tuyo que deshacer.`,
           },
         };
@@ -1891,7 +1891,7 @@ async function toolRevertirUltimoCambio(
           ok: true,
           fichero: rutaRelativa(ruta),
           revertido_a: antesV.label,
-          conservado: "lo que el dueño editó a mano después de tu cambio sigue en la página",
+          conservado: "lo que el usuario editó a mano después de tu cambio sigue en la página",
         },
         updatedHtml: guardado.html,
         page,

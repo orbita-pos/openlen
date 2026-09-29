@@ -887,11 +887,11 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
           if (e.cancelado) {
             detalle.push(`el script de la página CANCELÓ el envío del formulario (preventDefault). Llevaba: ${campos}.`);
             notas.add(
-              "(nota: un formulario cuyo envío cancela el script no le llega al dueño en la página publicada: OpenLen le pone su destino al publicar, y el `preventDefault` lo anula.)",
+              "(nota: un formulario cuyo envío cancela el script no le llega al usuario en la página publicada: OpenLen le pone su destino al publicar, y el `preventDefault` lo anula.)",
             );
           } else {
             detalle.push(`envió el formulario${e.porScript ? " (por script)" : ""} con: ${campos}.`);
-            notas.add("(nota: en esta visita los formularios no se mandan; publicada, lo que envía un visitante llega al correo del dueño y a su Bandeja.)");
+            notas.add("(nota: en esta visita los formularios no se mandan; publicada, lo que envía un visitante llega al correo del usuario y a su Bandeja.)");
           }
         }
         detalle.push(...ev.dialogos);

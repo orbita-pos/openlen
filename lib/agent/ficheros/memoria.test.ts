@@ -18,13 +18,13 @@ describe("la memoria como ficheros (H3): sólo se AÑADE", () => {
     expect(lineasNuevas("", "• Háblale de tú\n", RUTA_MEMORIA_DUENO)).toEqual({ ok: true, nuevas: ["Háblale de tú"] });
   });
 
-  it("🔴 quitar o cambiar una línea guardada es decisión del DUEÑO: error, y no se guarda nada", () => {
+  it("🔴 quitar o cambiar una línea guardada es decisión del USUARIO: error, y no se guarda nada", () => {
     const antes = "• Háblale de tú\n• Nunca uses amarillo";
     const r = lineasNuevas(antes, "• Háblale de usted\n• Nunca uses amarillo", RUTA_MEMORIA_DUENO);
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.error).toContain("«• Háblale de tú»");
-      expect(r.error).toContain("owner");
+      expect(r.error).toContain("the user's decision");
     }
   });
 

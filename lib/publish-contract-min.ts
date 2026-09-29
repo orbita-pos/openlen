@@ -113,18 +113,18 @@ Nada de esto dice QUÉ construir: ni las secciones, ni su orden, ni lo que la p�
 • Google Fonts por \`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\` en el \`<head>\`. Cualquier familia del catálogo vale; carga todas las que uses.
 • Tu CSS propio va en un \`<style>\` dentro del \`<head>\`.
 • NINGÚN JavaScript sobrevive. Todo \`<script>\` —salvo el de Tailwind— y todo atributo \`on*\` se BORRAN antes de guardar el documento. Lo que deba moverse o responder se resuelve sin código: \`<details>\`/\`<summary>\`, un checkbox oculto con \`peer-checked:\`, \`:target\`, \`@keyframes\`, \`transition\`. Un control que sólo funcionaría con un script llega muerto.
-• Los \`<iframe>\` de Google Maps, YouTube y Vimeo sobreviven a todo, también a lo que el dueño edite a mano. Escríbelos directamente, no hay ninguna transformación al publicar:
+• Los \`<iframe>\` de Google Maps, YouTube y Vimeo sobreviven a todo, también a lo que el usuario edite a mano. Escríbelos directamente, no hay ninguna transformación al publicar:
   – MAPA: \`<iframe src="https://maps.google.com/maps?q=<dirección>&output=embed" loading="lazy">\` — no necesita clave ni cuenta. Si el negocio tiene dirección física, ponlo donde des el contacto: un negocio local sin mapa está a medias.
   – VÍDEO: \`<iframe src="https://www.youtube.com/embed/<ID>">\` o \`https://player.vimeo.com/video/<ID>\`, y SÓLO si el brief te da el enlace — un ID inventado es un reproductor roto.
-  Para cualquier otra cosa (Spotify, Calendly, reservas de terceros), enlaza con un \`<a href>\` honesto: un \`<iframe>\` de otro sitio sobrevive a tu guardado, pero el editor lo borra en cuanto el dueño deshace un cambio a mano, y desaparece sin aviso.
-• LOS FORMULARIOS FUNCIONAN, y son lo único de esta lista que AÑADE algo en vez de quitarlo: al publicar, OpenLen le hornea al \`<form>\` su \`action\`, y lo que el visitante envía llega al correo del dueño y a su bandeja. Escribe un \`<form>\` normal —\`<label>\` + \`<input name="…">\` + \`<button type="submit">\`— y NO le pongas \`action\`, ni \`method\`, ni JavaScript. Un \`onsubmit\` que llame a \`preventDefault()\` o devuelva \`false\` CANCELA el envío de verdad: el visitante ve tu mensaje de gracias, el dueño no recibe nada y ninguno de los dos se entera.
+  Para cualquier otra cosa (Spotify, Calendly, reservas de terceros), enlaza con un \`<a href>\` honesto: un \`<iframe>\` de otro sitio sobrevive a tu guardado, pero el editor lo borra en cuanto el usuario deshace un cambio a mano, y desaparece sin aviso.
+• LOS FORMULARIOS FUNCIONAN, y son lo único de esta lista que AÑADE algo en vez de quitarlo: al publicar, OpenLen le hornea al \`<form>\` su \`action\`, y lo que el visitante envía llega al correo del usuario y a su bandeja. Escribe un \`<form>\` normal —\`<label>\` + \`<input name="…">\` + \`<button type="submit">\`— y NO le pongas \`action\`, ni \`method\`, ni JavaScript. Un \`onsubmit\` que llame a \`preventDefault()\` o devuelva \`false\` CANCELA el envío de verdad: el visitante ve tu mensaje de gracias, el usuario no recibe nada y ninguno de los dos se entera.
 • Ningún atributo \`data-slot-path=\` en ninguna parte.
 • Todo enlace interno tiene que LLEGAR: si escribes \`href="#precios"\`, la página necesita su \`id="precios"\`. Un ancla a una sección que no existe es un botón muerto, invisible en la captura. Típico: no hay cuentas detrás de estas páginas, así que un «Iniciar sesión» sólo sirve si apunta FUERA, a su URL real.
 
 IMÁGENES
 • Ilustraciones, marcas e iconos: SVG en línea.
 • Todo SVG en línea y toda imagen llevan \`class="max-w-full h-auto"\`. Sin eso un ancho fijo NO encoge, y dentro de una tarjeta se sale del móvil aunque el resto de la página quepa.
-• Entrega la página TERMINADA: nada de huecos a la espera de una imagen que llegue después, porque no llega ninguna. Donde iría una fotografía, resuelve tú el área — una ilustración en SVG, una composición, lo que le siente. El dueño puede cambiar después cualquier área de imagen por una foto suya desde la biblioteca del editor.
+• Entrega la página TERMINADA: nada de huecos a la espera de una imagen que llegue después, porque no llega ninguna. Donde iría una fotografía, resuelve tú el área — una ilustración en SVG, una composición, lo que le siente. El usuario puede cambiar después cualquier área de imagen por una foto suya desde la biblioteca del editor.
 • Ninguna URL de imagen externa (unsplash, picsum, placehold.co…), ni siquiera una que venga en el encargo: un servidor que no controlamos es un 404 en la página publicada, y eso el visitante sí lo ve.
 
 ENLACES
@@ -134,7 +134,7 @@ ENLACES
 • MÁS DE UNA PÁGINA: casi todo cabe en una con secciones (\`#seccion\`), y ésa es la respuesta por defecto. Cuando el brief pida páginas de verdad, el enlace del menú lleva una ruta relativa de UN tramo —\`href="/servicios"\`— y esa página se crea; el texto del enlace es su título. Minúsculas, sin acentos ni espacios, cuatro como mucho además de la portada.
 
 COLOR, FORMA Y TIPOGRAFÍA — vocabulario obligatorio
-Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en \`:root\` y usada con \`var()\`. Nunca repitas un color literal por la página. Los nombres llevan el prefijo \`--ol-\`: son los que escriben los controles de Tema del editor, así que una página que los use responde al selector de su dueño en vez de quedarse sorda.
+Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en \`:root\` y usada con \`var()\`. Nunca repitas un color literal por la página. Los nombres llevan el prefijo \`--ol-\`: son los que escriben los controles de Tema del editor, así que una página que los use responde al selector del usuario en vez de quedarse sorda.
   Fondo  : --ol-bg · --ol-surface · --ol-surface-2
   Texto  : --ol-fg · --ol-fg-muted · --ol-fg-faint
   Línea  : --ol-border · --ol-border-strong
