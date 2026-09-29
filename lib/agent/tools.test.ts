@@ -1624,7 +1624,7 @@ describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después
     assert.equal(out.response.ok, true, String(out.response.error ?? ""));
     assert.ok(store.data.html.includes("Los mejores de Monterrey."), "se llevó la edición del dueño");
     assert.ok(!store.data.html.includes("Tacos de Len"), "no deshizo lo de Len");
-    assert.match(String(out.response.conservado), /dueño/);
+    assert.match(String(out.response.conservado), /lo que el usuario editó a mano/);
   });
 
   it("🔴 C11b · con la versión del dueño encima: tampoco se deshace SU edición", async () => {
