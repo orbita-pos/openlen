@@ -224,6 +224,8 @@
     "analyticsEnabled": "已启用分析",
     "analyticsDisabled": "已停用分析",
     "saveError": "无法保存更改。",
+    "editsRejected": "最后一次修改没有保存：编辑期间页面已经变了。现在显示的是已保存的版本，请再改一次。",
+    "undoFailed": "无法撤销。",
     "moduleWhatsapp": "WhatsApp",
     "whatsappNeedNumber": "请先填写 WhatsApp 号码",
     "modulePageCreated": "页面已创建",

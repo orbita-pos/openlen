@@ -224,6 +224,8 @@
     "analyticsEnabled": "アナリティクスを有効にしました",
     "analyticsDisabled": "アナリティクスを無効にしました",
     "saveError": "変更を保存できませんでした。",
+    "editsRejected": "最後の変更は保存されませんでした。編集中にページが変わっていました。保存済みの版を表示しています。もう一度変更してください。",
+    "undoFailed": "元に戻せませんでした。",
     "moduleWhatsapp": "WhatsApp",
     "whatsappNeedNumber": "先にWhatsApp番号を追加してください",
     "modulePageCreated": "ページを作成しました",

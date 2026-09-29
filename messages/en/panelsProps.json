@@ -128,7 +128,8 @@
     "typeScale": "Type size",
     "density": "Density",
     "corners": "Corners",
-    "fonts": "Fonts"
+    "fonts": "Fonts",
+    "pideleALen": "This page can't change these from here: {que}. Ask Len in the chat."
   },
   "privacy": {
     "title": "Privacy",
@@ -168,6 +169,7 @@
     "title": "Looks",
     "darkMode": "Dark mode",
     "noDark": "No dark mode for this template",
+    "sinVariables": "This page's colors can't be changed from here. Ask Len in the chat.",
     "reset": "Original",
     "more": "More",
     "less": "Less",

@@ -224,6 +224,8 @@
     "analyticsEnabled": "Analytics enabled",
     "analyticsDisabled": "Analytics disabled",
     "saveError": "Couldn't save the change.",
+    "editsRejected": "Your last change wasn’t saved: the page had changed while you were editing. Showing the saved version — please make it again.",
+    "undoFailed": "Couldn’t undo.",
     "moduleWhatsapp": "WhatsApp",
     "whatsappNeedNumber": "Add a WhatsApp number first",
     "modulePageCreated": "Page created",

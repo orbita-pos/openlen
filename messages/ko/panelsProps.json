@@ -128,7 +128,8 @@
     "typeScale": "글자 크기",
     "density": "밀도",
     "corners": "모서리",
-    "fonts": "글꼴"
+    "fonts": "글꼴",
+    "pideleALen": "이 페이지는 여기에서 바꿀 수 없습니다: {que}. 채팅에서 Len에게 요청하세요."
   },
   "privacy": {
     "title": "개인정보 보호",
@@ -168,6 +169,7 @@
     "title": "룩",
     "darkMode": "다크 모드",
     "noDark": "이 템플릿은 다크 모드를 지원하지 않습니다",
+    "sinVariables": "이 페이지의 색상은 여기에서 바꿀 수 없습니다. 채팅에서 Len에게 요청하세요.",
     "reset": "원래대로",
     "more": "더 보기",
     "less": "접기",

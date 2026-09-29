@@ -128,7 +128,8 @@
     "typeScale": "字号",
     "density": "密度",
     "corners": "圆角",
-    "fonts": "字体"
+    "fonts": "字体",
+    "pideleALen": "此页面无法在这里更改：{que}。请在聊天中让 Len 来改。"
   },
   "privacy": {
     "title": "隐私",
@@ -168,6 +169,7 @@
     "title": "风格",
     "darkMode": "深色模式",
     "noDark": "此模板没有深色模式",
+    "sinVariables": "此页面的颜色无法在这里更改。请在聊天中让 Len 来改。",
     "reset": "还原",
     "more": "更多",
     "less": "收起",

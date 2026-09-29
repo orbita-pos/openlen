@@ -128,7 +128,8 @@
     "typeScale": "Dimensione testo",
     "density": "Densità",
     "corners": "Angoli",
-    "fonts": "Font"
+    "fonts": "Font",
+    "pideleALen": "Questa pagina non permette di cambiare da qui: {que}. Chiedilo a Len nella chat."
   },
   "privacy": {
     "title": "Privacy",
@@ -168,6 +169,7 @@
     "title": "Stili",
     "darkMode": "Modalità scura",
     "noDark": "Questo modello non ha la modalità scura",
+    "sinVariables": "I colori di questa pagina non si possono cambiare da qui. Chiedilo a Len nella chat.",
     "reset": "Originale",
     "more": "Altri",
     "less": "Meno",

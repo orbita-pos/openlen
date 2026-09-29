@@ -224,6 +224,8 @@
     "analyticsEnabled": "Statistiques activées",
     "analyticsDisabled": "Statistiques désactivées",
     "saveError": "Impossible d'enregistrer la modification.",
+    "editsRejected": "La dernière modification n’a pas été enregistrée : la page avait changé pendant que vous modifiiez. Voici la version enregistrée ; refaites-la.",
+    "undoFailed": "Impossible d’annuler.",
     "moduleWhatsapp": "WhatsApp",
     "whatsappNeedNumber": "Ajoutez d'abord un numéro WhatsApp",
     "modulePageCreated": "Page créée",

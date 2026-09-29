@@ -128,7 +128,8 @@
     "typeScale": "Schriftgröße",
     "density": "Dichte",
     "corners": "Ecken",
-    "fonts": "Schriftarten"
+    "fonts": "Schriftarten",
+    "pideleALen": "Auf dieser Seite lässt sich hier nicht ändern: {que}. Bitte Len im Chat darum."
   },
   "privacy": {
     "title": "Datenschutz",
@@ -168,6 +169,7 @@
     "title": "Looks",
     "darkMode": "Dunkelmodus",
     "noDark": "Diese Vorlage hat keinen Dunkelmodus",
+    "sinVariables": "Die Farben dieser Seite lassen sich hier nicht ändern. Bitte Len im Chat darum.",
     "reset": "Original",
     "more": "Mehr",
     "less": "Weniger",

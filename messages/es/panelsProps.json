@@ -128,7 +128,8 @@
     "typeScale": "Letra",
     "density": "Densidad",
     "corners": "Esquinas",
-    "fonts": "Fuentes"
+    "fonts": "Fuentes",
+    "pideleALen": "Esta página no deja cambiar desde aquí: {que}. Pídeselo a Len en el chat."
   },
   "privacy": {
     "title": "Privacidad",
@@ -168,6 +169,7 @@
     "title": "Estilos",
     "darkMode": "Modo oscuro",
     "noDark": "Esta plantilla no tiene modo oscuro",
+    "sinVariables": "Esta página no tiene sus colores preparados para cambiarlos desde aquí. Pídeselo a Len en el chat.",
     "reset": "Original",
     "more": "Más",
     "less": "Menos",

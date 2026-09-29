@@ -128,7 +128,8 @@
     "typeScale": "Taille du texte",
     "density": "Densité",
     "corners": "Coins",
-    "fonts": "Polices"
+    "fonts": "Polices",
+    "pideleALen": "Cette page ne permet pas de modifier ici : {que}. Demandez-le à Len dans le chat."
   },
   "privacy": {
     "title": "Confidentialité",
@@ -168,6 +169,7 @@
     "title": "Styles",
     "darkMode": "Mode sombre",
     "noDark": "Ce modèle n'a pas de mode sombre",
+    "sinVariables": "Les couleurs de cette page ne se modifient pas d'ici. Demandez-le à Len dans le chat.",
     "reset": "Original",
     "more": "Plus",
     "less": "Moins",

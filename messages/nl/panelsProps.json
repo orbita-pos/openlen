@@ -134,7 +134,8 @@
     "typeScale": "Tekstgrootte",
     "density": "Dichtheid",
     "corners": "Hoeken",
-    "fonts": "Lettertypen"
+    "fonts": "Lettertypen",
+    "pideleALen": "Op deze pagina kun je hier niet wijzigen: {que}. Vraag het Len in de chat."
   },
   "privacy": {
     "title": "Privacy",
@@ -174,6 +175,7 @@
     "title": "Looks",
     "darkMode": "Donkere modus",
     "noDark": "Dit sjabloon heeft geen donkere modus",
+    "sinVariables": "De kleuren van deze pagina kun je hier niet wijzigen. Vraag het Len in de chat.",
     "reset": "Origineel",
     "more": "Meer",
     "less": "Minder",

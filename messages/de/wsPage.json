@@ -224,6 +224,8 @@
     "analyticsEnabled": "Analytics aktiviert",
     "analyticsDisabled": "Analytics deaktiviert",
     "saveError": "Die Änderung konnte nicht gespeichert werden.",
+    "editsRejected": "Die letzte Änderung wurde nicht gespeichert: Die Seite hatte sich beim Bearbeiten geändert. Wir zeigen die gespeicherte Version – bitte wiederhole sie.",
+    "undoFailed": "Rückgängig machen fehlgeschlagen.",
     "moduleWhatsapp": "WhatsApp",
     "whatsappNeedNumber": "Füge zuerst eine WhatsApp-Nummer hinzu",
     "modulePageCreated": "Seite erstellt",

@@ -224,6 +224,8 @@
     "analyticsEnabled": "Analytics ingeschakeld",
     "analyticsDisabled": "Analytics uitgeschakeld",
     "saveError": "Kon de wijziging niet opslaan.",
+    "editsRejected": "Je laatste wijziging is niet opgeslagen: de pagina was veranderd terwijl je bewerkte. We tonen de opgeslagen versie — doe het opnieuw.",
+    "undoFailed": "Ongedaan maken is mislukt.",
     "moduleWhatsapp": "WhatsApp",
     "whatsappNeedNumber": "Voeg eerst een WhatsApp-nummer toe",
     "modulePageCreated": "Pagina gemaakt",

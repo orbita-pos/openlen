@@ -224,6 +224,8 @@
     "analyticsEnabled": "Analíticas activadas",
     "analyticsDisabled": "Analíticas desactivadas",
     "saveError": "No se pudo guardar el cambio.",
+    "editsRejected": "No se guardó el último cambio: la página había cambiado mientras editabas. Te enseñamos la versión guardada; vuelve a hacerlo.",
+    "undoFailed": "No se pudo deshacer.",
     "moduleWhatsapp": "WhatsApp",
     "whatsappNeedNumber": "Primero pon un número de WhatsApp",
     "modulePageCreated": "Página creada",

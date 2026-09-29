@@ -224,6 +224,8 @@
     "analyticsEnabled": "분석을 켰습니다",
     "analyticsDisabled": "분석을 껐습니다",
     "saveError": "변경 사항을 저장하지 못했습니다.",
+    "editsRejected": "마지막 변경 사항이 저장되지 않았습니다. 편집하는 동안 페이지가 바뀌었습니다. 저장된 버전을 보여 드리니 다시 변경해 주세요.",
+    "undoFailed": "실행 취소하지 못했습니다.",
     "moduleWhatsapp": "WhatsApp",
     "whatsappNeedNumber": "먼저 WhatsApp 번호를 추가하세요",
     "modulePageCreated": "페이지를 만들었습니다",
