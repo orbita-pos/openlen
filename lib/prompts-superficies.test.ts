@@ -70,13 +70,56 @@ describe("ninguna superficie manda gusto nuestro", () => {
   // falso en el token, así que la prueba pasaba en verde mientras la función
   // que dice proteger llevaba meses muerta. Una prueba que fija el nombre
   // equivocado no es cobertura: es la mentira, sujeta.
-  it.each(PROMPTS)("%s exige el vocabulario de tokens", (_name, getPrompt) => {
+  //
+  // 🔴 Y LEN YA NO, desde el 2026-09-29 (OK de Jesús). El Tema descubre qué
+  // variables lee la página y escribe en ésas, y conmuta su propio interruptor
+  // oscuro (`el-tema-sigue-a-la-pagina.browser.test.ts`): el prefijo `--ol-`
+  // protegía al editor de un defecto suyo, no al modelo de uno propio. Crear y
+  // el Chat lo siguen recibiendo hasta que se mida Crear.
+  const CON_VOCABULARIO_OL = PROMPTS.filter(([n]) => n !== "Agente");
+  it.each(CON_VOCABULARIO_OL)("%s exige el vocabulario de tokens", (_name, getPrompt) => {
     const p = getPrompt();
     expect(p, "sin --ol-accent los controles de acento del editor no tienen a qué agarrarse").toContain("--ol-accent");
     expect(p, "sin var() el color se repite a mano y el tema no se puede cambiar").toContain("var()");
     expect(p, "sin el selector del editor la página no puede voltear a oscuro").toContain(
       ':root[data-ol-mode="dark"]',
     );
+  });
+
+  it("Len: sus colores en variables de :root, con SUS nombres, y el oscuro con el interruptor que elija", () => {
+    const p = buildAgentSystemPrompt();
+    // Lo que el Tema sí necesita: los colores en variables.
+    expect(p, "sin var() el color se repite a mano y el tema no se puede cambiar").toContain("usada con `var()`");
+    expect(p).toContain("con los nombres que tú elijas");
+    // …y cómo las encuentra, que es contrato de NUESTRA API, no gusto.
+    expect(p).toContain("las encuentran por cómo las usa la página");
+    // El interruptor oscuro, cualquiera sobre <html>; la media query sola no.
+    expect(p).toContain("bajo una clase o un atributo de `<html>`");
+    expect(p).toContain("`prefers-color-scheme` no lo puede encender");
+    // Lo que ya no recibe.
+    expect(p).not.toContain("vocabulario obligatorio");
+    expect(p).not.toContain("el prefijo `--ol-`");
+    expect(p).not.toContain(':root[data-ol-mode="dark"]');
+    expect(p).not.toContain("--ol-");
+  });
+
+  it("Len: los <iframe> sobreviven todos, y su script va donde él quiera", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("Los `<iframe>` que escribes sobreviven a todo");
+    // Existían porque el editor borraba el iframe y el <script> anidado al
+    // retocar a mano; ya no (`el-editor-no-borra-el-codigo.browser.test.ts`).
+    expect(p).not.toContain("Spotify");
+    expect(p).not.toContain("al final del body");
+    // El orden que sí importa: la librería antes que su código.
+    expect(p).toContain("Van en el <head>, antes de tu propio <script>");
+  });
+
+  it("CONTRA-PRUEBA: Crear y el Chat las siguen recibiendo hasta medir Crear", () => {
+    for (const p of [generateSystemMessage({}), aiDesignSystemMessage()]) {
+      expect(p).toContain("Spotify, Calendly");
+      expect(p).toContain("vocabulario obligatorio");
+    }
+    expect(generateSystemMessage({})).toContain("Tu propio <script> va al final del body");
   });
 
   // NINGÚN PROMPT OFRECE UN MECANISMO RETIRADO COMO SI SIGUIERA VIVO.
@@ -138,13 +181,16 @@ describe("ninguna superficie manda gusto nuestro", () => {
   // esto, quitar las conductas dejaría a `editar` sin conductas Y sin
   // JavaScript: un modelo que no puede construir NINGUNA interactividad, que es
   // peor que el punto de partida.
-  it.each(PROMPTS)("%s sí ofrece el JavaScript del modelo", (_name, getPrompt) => {
+  it.each(PROMPTS)("%s sí ofrece el JavaScript del modelo", (name, getPrompt) => {
     const p = getPrompt().replace(/\s+/g, " ");
     expect(p).toMatch(/SURVIVES publication|sobrevive a la publicación|sobrevive al guardar/i);
-    // La mitad que se olvida: el editor del dueño borra los `on*` (medido en
-    // lib/publish/el-on-del-modelo.test.ts), así que un botón cableado así se
-    // queda mudo a la primera edición a mano.
-    expect(p).toContain("addEventListener");
+    // «Usa `addEventListener`, no `onclick`» existía porque el editor borraba
+    // los `on*` al retocar a mano. Desde el 2026-09-29 no los borra
+    // (lib/publish/el-on-del-modelo.test.ts), así que Len ya no la recibe: una
+    // regla que protegía a la plataforma de un defecto suyo. Crear y el Chat
+    // la siguen teniendo hasta medir Crear.
+    if (name === "Agente") expect(p).not.toContain("addEventListener");
+    else expect(p).toContain("addEventListener");
   });
 
   const GUSTO = [
@@ -360,11 +406,14 @@ describe("el contrato dicho para cada superficie", () => {
   //    2026-09-04: su regla 5 traía la mitad corta y el contrato la completa,
   //    en las líneas 1146 y 1163 del golden. Las dos superficies van juntas
   //    aquí para que una limpieza futura no arregle una y deje la otra.
+  //    Desde el 2026-09-29 Len ya no recibe una LISTA de permitidos —todo
+  //    `<iframe>` sobrevive, también a la mano del usuario—, así que se cuenta
+  //    la forma del mapa, que es lo que queda de aquel bloque.
   it("la lista de <iframe> permitidos se dice UNA vez, no dos", () => {
     for (const [nombre, prompt] of [
       ["agente", buildAgentSystemPrompt()],
     ] as const) {
-      const veces = prompt.split("Google Maps, YouTube y Vimeo").length - 1;
+      const veces = prompt.split("maps.google.com/maps?q=").length - 1;
       expect(veces, `${nombre} la dice ${veces} veces`).toBe(1);
     }
   });
@@ -430,7 +479,7 @@ describe("el contrato dicho para cada superficie", () => {
       expect(p).toContain("Emite también `:root[data-ol-mode=");
     }
     // El Agente, sólo en la página que crea (H8): en la que ya existe manda ella.
-    expect(buildAgentSystemPrompt()).toContain("En una página que creas tú, escríbelo también");
+    expect(buildAgentSystemPrompt()).toContain("En una página que creas tú, escribe también su versión oscura");
     expect(aiDesignSystemMessage()).toContain("Si la página aún no lo define, escríbelo tú");
     for (const p of [buildAgentSystemPrompt(), aiDesignSystemMessage()]) {
       // …y entonces OFICIO no puede seguir ordenándolo doce líneas más abajo,
@@ -450,11 +499,14 @@ describe("el contrato dicho para cada superficie", () => {
   //    Esta prueba ata el texto del contrato a `TOKENS_DEL_CONTRATO`, que es
   //    la lista contra la que `cambiar_tema` decide si se niega. Mientras las
   //    dos tengan que coincidir aquí, no pueden volver a derivar en silencio.
+  //
+  //    Len salió de las dos el 2026-09-29: el Tema ya escribe en los nombres
+  //    de la página, así que a él no se le ordena ningún espacio de nombres
+  //    (ver «Len: sus colores en variables de :root, con SUS nombres» arriba).
   it("el vocabulario que el contrato ordena es el que el editor LEE", () => {
     for (const [nombre, prompt] of [
       ["crear", generateSystemMessage({})],
       ["chat", aiDesignSystemMessage()],
-      ["agente", buildAgentSystemPrompt()],
     ] as const) {
       for (const token of TOKENS_DEL_CONTRATO) {
         expect(prompt, `${nombre} no nombra ${token}`).toContain(token);
@@ -463,11 +515,7 @@ describe("el contrato dicho para cada superficie", () => {
   });
 
   it("y ya no ordena el espacio de nombres que nadie lee", () => {
-    for (const prompt of [
-      generateSystemMessage({}),
-      aiDesignSystemMessage(),
-      buildAgentSystemPrompt(),
-    ]) {
+    for (const prompt of [generateSystemMessage({}), aiDesignSystemMessage()]) {
       // `--ol-bg` NO contiene la subcadena `--bg`, así que esto distingue.
       for (const pelado of ["--bg", "--fg", "--accent", "--surface", "--border", "--radius"]) {
         expect(prompt).not.toContain(pelado);

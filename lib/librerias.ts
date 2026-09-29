@@ -183,8 +183,22 @@ export function esUrlDeLibreria(url: string): boolean {
  * el motivo de que sea mínimo está medido — ver `prompt-as-cage-measured`. Esto
  * añade lo justo para que la capacidad exista: qué hay, la etiqueta exacta que
  * hay que copiar, y la regla de que no se inventan otras.
+ *
+ * `dondeVaElScript`: Len decide dónde va su propio `<script>` (2026-09-29).
+ * Crear y el Chat siguen oyendo «al final del body», como su cláusula de
+ * JavaScript, hasta que se mida Crear — ver `agente` en lib/ai/js-clause.ts.
  */
-export function bloqueDeLibrerias(): string {
+export function bloqueDeLibrerias(
+  opciones: { dondeVaElScript?: "final-del-body" | "libre" } = {},
+): string {
+  // El porqué real de la regla es el ORDEN: la librería tiene que estar
+  // cargada cuando el código de la página corre. «Al final del body» lo
+  // sostenía además el editor, que borraba un <script> anidado en cuanto el
+  // usuario retocaba su sección; eso ya no pasa.
+  const orden =
+    opciones.dondeVaElScript === "libre"
+      ? "- Van en el <head>, antes de tu propio <script>: así la librería ya está cargada cuando tu código corre."
+      : "- Van en el <head>. Tu propio <script> va al final del body, así que la librería ya está cargada cuando tu código corre.";
   // Los dos atributos van JUNTOS o no va ninguno, y sólo si el origen manda
   // CORS — ver `ORIGEN_MANDA_CORS`. Un `integrity` sin
   // `Access-Control-Allow-Origin` no es «menos garantía»: es la librería
@@ -213,7 +227,7 @@ ${fichas}
 
 Reglas:
 - Copia la etiqueta EXACTA, tal y como está escrita aquí arriba. NO le añadas integrity ni crossorigin: este origen no manda cabeceras CORS, y cualquiera de los dos atributos hace que el navegador BLOQUEE la librería y tu código muera con "no está definido".
-- Van en el <head>. Tu propio <script> va al final del body, así que la librería ya está cargada cuando tu código corre.
+${orden}
 - ${LIBRERIAS_HOST} es el ÚNICO origen de librerías que sobrevive al publicar. Un <script> a jsdelivr, unpkg, cdnjs o cualquier otro CDN se borra y la página queda con la función muerta.
 - No las metas "por si acaso": una gráfica con datos inventados es peor que no tener gráfica. Úsalas cuando la página de verdad las pida.`;
 }

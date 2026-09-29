@@ -325,7 +325,9 @@ describe("buildAgentMessages", () => {
       // tiene. Al cablear el mínimo aquí (2026-09-01) ese encabezado desaparece
       // y la sustancia se queda, que es lo que importa: que el modelo sepa que
       // su JavaScript sobrevive y que tiene que escribir las DOS mitades.
-      expect(sentSystem.content).toContain("addEventListener");
+      // Sin «usa `addEventListener`, no `onclick`» desde el 2026-09-29: el
+      // editor ya no borra los `on*` (lib/publish/el-on-del-modelo.test.ts).
+      expect(sentSystem.content).not.toContain("addEventListener");
       expect(sentSystem.content).toContain("LAS DOS MITADES");
       expect(sentSystem.content).not.toContain("data-ol-sticky");
 

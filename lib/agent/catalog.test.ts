@@ -314,7 +314,11 @@ describe("buildAgentSystemPrompt", () => {
     }
     expect(p).not.toContain("data-ol-sticky");
     expect(p).toContain("<script>");
-    expect(p).toContain("addEventListener");
+    // Sin «usa `addEventListener`, no `onclick`» desde el 2026-09-29: el
+    // editor ya no borra los `on*` (lib/publish/el-on-del-modelo.test.ts), así
+    // que la regla protegía a la plataforma, no al modelo.
+    expect(p).not.toContain("addEventListener");
+    expect(p).not.toContain("onclick=");
     // POR SUSTANCIA, NO POR ENCABEZADO — ver el mismo cambio en context.test.ts.
     expect(p).toContain("LAS DOS MITADES");
     expect(p).toContain("La página tiene que funcionar SIN él");
@@ -383,9 +387,12 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("Lo que añades a una página que ya existe se escribe como ella");
     expect(p).toContain("sus textos se quedan tal cual, palabra por palabra");
     expect(p).toContain("GUÍA DE DISEÑO (para las páginas que creas tú y para el rediseño que te pidan;");
-    expect(p).toContain("En una página que creas tú, escríbelo también");
+    // El bloque oscuro, sólo en lo que crea (desde el 2026-09-29, con el
+    // interruptor que Len elija: ver `vocabulario-ol` en publish-contract-min).
+    expect(p).toContain("En una página que creas tú, escribe también su versión oscura");
     // La orden que empujaba a convertir la página entera ya no está.
     expect(p).not.toContain("Si la página aún no lo define, escríbelo tú");
+    expect(p).not.toContain("Si la página aún no la tiene, escribe tú su versión oscura");
   });
   // MOTION, MÚSICA Y 3D salieron de esta lista el 2026-08-26 con sus
   // herramientas. Lo que sigue vigilado es que el prompt conozca las que

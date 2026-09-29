@@ -778,7 +778,9 @@ const MODULE_SETTINGS_KEY: Record<AgentModule, "chat" | "assistant"> = {
  *  desde el 2026-09-04 para que `prompts-superficies.test.ts` pueda atar el
  *  vocabulario que el CONTRATO ordena a esta lista: derivaron en silencio una
  *  vez y el precio fue que toda página nueva naciera sorda al selector de Tema.
- *  (La leía también `cambiar_tema`, retirada con Len 2.0: el selector sigue.) */
+ *  (La leía también `cambiar_tema`, retirada con Len 2.0: el selector sigue.)
+ *  Desde el 2026-09-29 sólo ata Crear y el Chat: el Tema escribe también en
+ *  los nombres propios de la página, y a Len ya no se le ordena `--ol-*`. */
 export const TOKENS_DEL_CONTRATO = [
   "--ol-bg",
   "--ol-fg",

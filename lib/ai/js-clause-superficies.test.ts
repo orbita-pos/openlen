@@ -79,7 +79,11 @@ describe("y todas saben cómo se pone un mapa que de verdad funciona", () => {
 describe("las cinco superficies ofrecen las librerias", () => {
   for (const [nombre, prompt] of superficies()) {
     it(`${nombre} — trae el bloque, y una sola vez`, () => {
-      const bloque = bloqueDeLibrerias();
+      // Len decide dónde va su <script> desde el 2026-09-29: su bloque dice
+      // sólo el orden que importa (la librería antes que su código).
+      const bloque = nombre.startsWith("len")
+        ? bloqueDeLibrerias({ dondeVaElScript: "libre" })
+        : bloqueDeLibrerias();
       expect(prompt).toContain(bloque);
       expect(prompt.split(bloque).length - 1).toBe(1);
     });

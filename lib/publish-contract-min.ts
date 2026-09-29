@@ -277,6 +277,56 @@ export interface FormaDeLaSuperficie {
   readonly laGuiaEsParaLoQueCrea?: boolean;
   /** Bloques que ESTA superficie ya dice mejor por su cuenta. */
   readonly yaLoDiceLaSuperficie?: readonly BloqueDelContrato[];
+  /** Reglas que ESTA superficie ya no recibe — ver `ReglaRetirada`. */
+  readonly retira?: readonly ReglaRetirada[];
+}
+
+/**
+ * REGLAS QUE PROTEGÍAN A LA PLATAFORMA DE UN DEFECTO SUYO — 2026-09-29.
+ *
+ * La regla de Jesús: OpenLen se adapta a Len, no al revés (memoria
+ * `openlen-se-adapta-a-len`). Dos frases del contrato no protegían al modelo
+ * de un fallo SUYO, sino al editor de uno NUESTRO, y los dos se arreglaron:
+ *
+ *   - `vocabulario-ol`: «los nombres llevan el prefijo `--ol-`», con su lista y
+ *     el `:root[data-ol-mode="dark"]` obligatorio. Existía porque el Tema sólo
+ *     sabía escribir `--ol-*`; ahora descubre qué variables lee la página y
+ *     escribe en ésas, y conmuta su propio interruptor oscuro
+ *     (`el-tema-sigue-a-la-pagina.browser.test.ts`). Lo que se queda es lo que
+ *     el Tema de verdad necesita —los colores en variables de `:root`— y lo
+ *     que pide Claude Code en `artifact-design`: un sistema de tokens propio.
+ *   - `iframes-que-borraba-el-editor`: «Spotify, Calendly… enlázalos, porque
+ *     el editor borra el `<iframe>` en cuanto el usuario deshace». El editor ya
+ *     manda sólo lo que cambió (`el-iframe-del-modelo.test.ts`).
+ *
+ * Sólo Len, con el OK de Jesús. Crear y el Chat las siguen recibiendo hasta
+ * que se mida Crear: es la regla para tocar Crear.
+ */
+export type ReglaRetirada = "vocabulario-ol" | "iframes-que-borraba-el-editor";
+
+const LOS_IFRAMES_SOBREVIVEN =
+  "• Los `<iframe>` que escribes sobreviven a todo: al guardar, al publicar y a lo que el " +
+  "usuario edite a mano. Escríbelos directamente, no hay ninguna transformación al publicar:";
+
+/** El bloque COLOR sin el espacio de nombres `--ol-`. `creas` = la guía manda
+ *  sólo en lo que la superficie crea (`laGuiaEsParaLoQueCrea`). */
+function colorConSusNombres(creas: boolean): string {
+  const oscuro = creas
+    ? "En una página que creas tú, escribe también su versión oscura"
+    : "Si la página aún no la tiene, escribe tú su versión oscura";
+  return (
+    "COLOR, FORMA Y TIPOGRAFÍA\n" +
+    "Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en `:root` y " +
+    "usada con `var()`, con los nombres que tú elijas. Nunca repitas un color literal por la página: " +
+    "nada de literales `#rrggbb` fuera de los bloques `:root`. Los controles de Tema del editor " +
+    "escriben en esas variables —las encuentran por cómo las usa la página: el fondo y el color del " +
+    "`body`, el fondo de los botones, los `border-radius`, la letra del `body` y de los titulares—, " +
+    "así que un color escrito a mano en una regla no lo pueden cambiar.\n" +
+    `${oscuro}: un bloque que redefine esas variables con valores oscuros pensados a mano —no una ` +
+    "inversión mecánica— bajo una clase o un atributo de `<html>` (`:root.dark`, " +
+    '`:root[data-theme="dark"]`…). Es lo que enciende el conmutador del editor; uno que sólo dependa ' +
+    "de `prefers-color-scheme` no lo puede encender."
+  );
 }
 
 const RESPUESTA_NO_ES_EL_DOCUMENTO =
@@ -413,6 +463,41 @@ export function contratoParaSuperficie(
       "ENLACES\n• Cualquier dirección que traiga el brief",
       "COLOR, FORMA Y TIPOGRAFÍA",
       "",
+    );
+  }
+  const retira = forma.retira ?? [];
+  if (retira.includes("iframes-que-borraba-el-editor")) {
+    // La primera línea decía «Maps, YouTube y Vimeo sobreviven a todo», que
+    // sin la de Spotify debajo se lee como «los demás no». Sobreviven todos.
+    out = corta(
+      out,
+      quien,
+      "iframes",
+      "• Los `<iframe>` de Google Maps, YouTube y Vimeo sobreviven a todo",
+      "\n",
+      LOS_IFRAMES_SOBREVIVEN,
+    );
+    out = corta(out, quien, "spotify", "  Para cualquier otra cosa (Spotify, Calendly", "\n", "");
+  }
+  if (retira.includes("vocabulario-ol")) {
+    // Va DESPUÉS del ajuste del bloque oscuro de arriba, que lanza si no
+    // encuentra su línea: éste sustituye la sección entera, con esa línea ya
+    // cambiada dentro.
+    out = corta(
+      out,
+      quien,
+      "vocabulario-ol",
+      "COLOR, FORMA Y TIPOGRAFÍA — vocabulario obligatorio",
+      "\n\nTAMAÑO",
+      colorConSusNombres(!!forma.laGuiaEsParaLoQueCrea),
+    );
+    out = corta(
+      out,
+      quien,
+      "separadores-ol",
+      "a la alfa baja de `--ol-border`",
+      ".",
+      "a la alfa baja de tu color de borde",
     );
   }
   return out;

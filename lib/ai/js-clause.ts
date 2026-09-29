@@ -88,16 +88,19 @@ const SIN_OCULTAR_EN =
 // `crates/html-engine/src/publish/seal.rs`). Publicado y abierto en Chromium,
 // el `onclick` del modelo FUNCIONA.
 //
-// LA RAZÓN VIVA es otra, y basta: los borra la MANO DEL DUEÑO. El editor manda
-// desde el navegador lo que tocó y eso se sanea —`aplicarEdiciones` sanea el
-// fragmento; el `PATCH /html` del documento entero (deshacer) lo sanea entero
-// y sólo le devuelve los `<script>` (`conservarScripts`)—. Así que un botón
-// con `onclick` funciona el día que se publica y se queda mudo la primera vez
-// que el dueño le cambia el texto, sin error y sin que nadie lo note; el
-// cableado con `addEventListener` desde el script sobrevive a eso. Se sigue
-// recomendando lo mismo, pero ya no se le miente al modelo sobre el porqué:
-// un modelo que ve su `onclick` guardado y funcionando aprende que la regla
-// era falsa.
+// LA RAZÓN que quedaba era la MANO DEL USUARIO: el editor mandaba desde el
+// navegador el elemento que tocó, entero, y eso se saneaba; y Deshacer mandaba
+// el documento entero y se saneaba entero. Un botón con `onclick` funcionaba el
+// día que se publicaba y se quedaba mudo la primera vez que el usuario le
+// cambiaba el texto.
+//
+// 🔴 YA NO ES VERDAD, desde el 2026-09-29: el editor manda lo que cambió —el
+// texto de antes y el de después, unos atributos— y Deshacer restaura la copia
+// del servidor (`lib/page-engine/cambiar-texto.ts`,
+// `el-editor-no-borra-el-codigo.browser.test.ts`). Len ya no recibe esta
+// frase (cláusula `agente`). Crear y el Chat SÍ, todavía, y con un porqué que
+// ya no es cierto: quitarla ahí espera a medir las páginas de Crear, que es la
+// regla para tocar Crear.
 const CABLEADO_ES =
   "Cablea los manejadores con `addEventListener` DENTRO del script, no con atributos `onclick=` (ni ningún `on*`): tu guardado los conserva, pero el editor los borra cuando el usuario retoca ese elemento a mano o deshace un cambio, y el botón se queda mudo sin que nadie lo note.";
 
@@ -206,8 +209,19 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       // ⚰️ Decía «Ponlo TODO en UN `<script>`… para poder cambiarlo después de
       // una pieza con target="runtime"». Len 2.0 (2026-09-24) edita el script
       // como cualquier otro trozo del fichero, con Edit: esa razón ya no existe.
-      "- Puedes escribir el JavaScript de la página, y sobrevive al guardar. Ponlo en un `<script>` al final del body. " +
-      `${CABLEADO_ES} ` +
+      "- Puedes escribir el JavaScript de la página, y sobrevive al guardar. " +
+      // ⚰️ Aquí iba «Ponlo en un `<script>` al final del body», retirado para
+      // Len el 2026-09-29 con el OK de Jesús. Existía por el mismo defecto que
+      // `CABLEADO_ES`: un `<script>` dentro de una sección se iba con el saneo
+      // en cuanto el usuario retocaba esa sección a mano. El editor ya manda
+      // sólo lo que cambió (`el-editor-no-borra-el-codigo.browser.test.ts`),
+      // así que dónde va el script lo decide Len, como cualquier desarrollador.
+      // ⚰️ Aquí iba `CABLEADO_ES` («usa `addEventListener`, no `onclick`»),
+      // retirado para Len el 2026-09-29: existía porque el editor borraba los
+      // `on*` al retocar a mano o deshacer, y el editor ya no lo hace (ver
+      // `lib/page-engine/cambiar-texto.ts`). Una regla que protege a la
+      // plataforma de un defecto suyo no va en el prompt: se arregla la
+      // plataforma (memoria `openlen-se-adapta-a-len`).
       `${DOS_MITADES_ES} ` +
       `La página tiene que funcionar SIN él. ${SIN_OCULTAR_ES} ` +
       "Cuando el CSS puro alcanza (`<details>`/`<summary>`, checkbox + `peer-checked:`, `:target`, `scroll-snap`), prefiérelo. " +
