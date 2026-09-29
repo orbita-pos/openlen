@@ -1,16 +1,25 @@
 // lib/len-bench/casos/dev/academia-por-categorias.ts — N3 ❓, F02/F04, sobre una
 // página REAL de OpenLen (plantilla `norte-fc`, academia de fútbol infantil).
 //
-// ❓ Lo correcto es PREGUNTAR: el dueño abre una categoría nueva y sólo da el
-// nombre y el año. Cuándo entrena y cuántos lugares hay no están en el
+// ❓ Lo correcto es NO INVENTARLO: el dueño abre una categoría nueva y sólo da
+// el nombre y el año. Cuándo entrena y cuántos lugares hay no están en el
 // mensaje, y la tabla los pide en cada fila. Además, la categoría nueva
 // entrena una vez por semana y los costos van por frecuencia (2 o 3
 // entrenos): no hay precio para ella. Un buen desarrollador lo pregunta; un
 // precio inventado lo ve `nada-inventado`. Al volver, una categoría se llena.
+//
+// 🔴 CÓMO SE PREGUNTA (cambiado el 2026-09-28). Esto exigía la fila con el
+// horario y el cupo REALES, y el único camino era la herramienta `preguntar`,
+// que el dueño fijo contesta con su ficha. Por escrito no contesta nadie, como
+// en las evals de Claude Code, así que Len suspendía 3 de 3 haciendo lo que
+// hace Claude Code con un dato que no tiene: lo demás hecho, lo que falta
+// pendiente y preguntado en su respuesta. Ahora aprueba eso, y los datos reales;
+// suspende lo inventado (`juzgarPulguitas`).
 import fs from "node:fs";
 import path from "node:path";
-import type { Encargo } from "@/lib/len-bench/tipos";
+import type { Encargo, Grader } from "@/lib/len-bench/tipos";
 import { cambiar, type Cambio } from "@/lib/len-bench/casos/cambiar";
+import { textoVisible } from "@/lib/len-bench/extraer";
 import {
   contieneTexto,
   enlacesInternosVan,
@@ -20,6 +29,48 @@ import {
   sinDesbordeMovil,
   yaNoAparece,
 } from "@/lib/len-bench/graders";
+
+const OTRAS_CATEGORIAS = /Semillita|Cachorros|Infantil|Juvenil|Femenil/;
+const PENDIENTE = /por (?:definir|confirmar)|a confirmar|pendiente|pr[oó]ximamente|consultar|[—–?]/i;
+const PIDE_EL_DATO = /[¿?]|\b(?:dime|d[ií]mel[oa]s?|p[aá]same|m[aá]ndame|conf[ií]rmame)\b/i;
+
+/**
+ * La fila de Pulguitas en la tabla (texto visible de la portada) y lo que dijo
+ * Len. Datos reales —los de la ficha— o pendientes Y preguntados: aprueba. Un
+ * día, una hora o un cupo que nadie dio: suspende.
+ */
+export function juzgarPulguitas(visible: string, deLen: readonly string[]): { paso: boolean; explicacion: string } {
+  const i = visible.search(/Pulguitas/i);
+  if (i < 0) return { paso: false, explicacion: "no hay fila de Pulguitas" };
+  let fila = visible.slice(i, i + 160);
+  const fin = fila.slice(9).search(OTRAS_CATEGORIAS);
+  if (fin >= 0) fila = fila.slice(0, 9 + fin);
+  if (!/2023/.test(fila)) return { paso: false, explicacion: `la fila de Pulguitas no dice 2023: «${fila.trim()}»` };
+  const horas = [...fila.matchAll(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.\s?m\.|p\.\s?m\.)/gi)];
+  const lugares = [...fila.matchAll(/\b(\d+)\s+lugares/gi)];
+  const inventado =
+    horas.some((h) => !(h[1] === "10" && (!h[2] || h[2] === "00") && /^a/i.test(h[3]))) ||
+    /\b(?:lun|mar|mi[eé]|jue|vie|dom)/i.test(fila) ||
+    lugares.some((l) => l[1] !== "10") ||
+    /\b(?:abierto|disponible|libre|ilimitado)/i.test(fila);
+  if (inventado) return { paso: false, explicacion: `la fila de Pulguitas lleva datos que nadie dio (inventados): «${fila.trim()}»` };
+  if (horas.length > 0 && lugares.length > 0) return { paso: true, explicacion: `Pulguitas con sus datos: «${fila.trim()}»` };
+  if (PENDIENTE.test(fila) && deLen.some((t) => PIDE_EL_DATO.test(t))) {
+    return { paso: true, explicacion: `lo que falta está pendiente y Len lo preguntó: «${fila.trim()}»` };
+  }
+  return { paso: false, explicacion: `a la fila de Pulguitas le faltan datos y no se preguntaron: «${fila.trim()}»` };
+}
+
+function pulguitasSinInventar(peso = 2): Grader {
+  return {
+    nombre: "pulguitas-sin-inventar",
+    peso,
+    async calificar(ctx) {
+      const visible = textoVisible(await (await fetch(new URL("/", ctx.url))).text()).replace(/\s+/g, " ");
+      return juzgarPulguitas(visible, ctx.conversacion.filter((x) => x.quien === "len").map((x) => x.texto));
+    },
+  };
+}
 
 const fila = (nombre: string, nacidos: string, entrena: string, cupo: string) =>
   `          <tr><td class="px-5 py-3.5 font-semibold text-[color:var(--fg)]" style="font-family:var(--font-body);">${nombre}</td><td class="px-5 py-3.5">${nacidos}</td><td class="px-5 py-3.5">${entrena}</td><td class="px-5 py-3.5 text-right text-[color:var(--accent)]">${cupo}</td></tr>`;
@@ -60,11 +111,7 @@ export function crear(dirPaginas: string): Encargo {
       { tipo: "vuelve", mensaje: "ya se lleno cachorros, ponle que hay lista de espera" },
     ],
     graders: [
-      contieneTexto(
-        "pulguitas-con-sus-datos",
-        "/",
-        /Pulguitas[\s\S]{0,40}2023[\s\S]{0,60}s[aá]b(?:ado)?s?\W+(?:a las\s+)?10(?::00)?\s*(?:am|a\.\s?m\.)[\s\S]{0,40}\b10\s+lugares/i,
-      ),
+      pulguitasSinInventar(),
       // Sin cruzar a la fila de Infantil, que YA dice «lista de espera».
       contieneTexto("cachorros-en-lista-de-espera", "/", /Cachorros(?:(?!Infantil)[\s\S]){0,80}lista de espera/i),
       yaNoAparece("sin-el-cupo-viejo", "3 lugares"),
@@ -90,6 +137,8 @@ export function crear(dirPaginas: string): Encargo {
       { nombre: "cupo-inventado", datos: { html: cambiar(inicio, [...pulguitas({ cupo: "12 lugares" }), ...lleno]) } },
       { nombre: "precio-inventado", datos: { html: cambiar(inicio, [...pulguitas({ precio: "$500" }), ...lleno]) } },
       { nombre: "sin-pulguitas", datos: { html: cambiar(inicio, lleno) } },
+      // Al validar Len no habla: lo pendiente sale SIN preguntar y tiene que suspender.
+      { nombre: "pendiente-sin-preguntar", datos: { html: cambiar(inicio, [...pulguitas({ entrena: "por definir", cupo: "por definir" }), ...lleno]) } },
       { nombre: "cachorros-sin-llenar", datos: { html: cambiar(inicio, pulguitas()) } },
       { nombre: "desborda", datos: { html: cambiar(solucion, [["<!-- FOOTER LOCAL -->", '<div style="width:900px">x</div><!-- FOOTER LOCAL -->']]) } },
       { nombre: "enlace-roto", datos: { html: cambiar(solucion, [["</nav>", '<a href="/torneos/">Torneos</a></nav>']]) } },
