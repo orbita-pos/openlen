@@ -97,11 +97,28 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
     expect(vi.mocked(appendChatMessage).mock.calls[0]![1].actions).toHaveLength(14);
   });
 
-  it("uno desmesurado se RECORTA a 40 en vez de tirar el turno", async () => {
-    const res = await guardar(turno(tarjetas(45)));
+  // 🔴 El turno de producción del 2026-09-28 (Len 2.0, sin tope de pasos) hizo
+  // 93 llamadas; se guardaron 40 y, al recargar, la lista acababa en la tarjeta
+  // roja de la llamada 40 aunque el turno terminó bien.
+  it("🔴 un turno de 93 tarjetas se guarda entero, la última incluida", async () => {
+    const res = await guardar(turno(tarjetas(93)));
     expect(res.status).toBe(200);
     const guardadas = vi.mocked(appendChatMessage).mock.calls[0]![1].actions!;
-    expect(guardadas).toHaveLength(40);
+    expect(guardadas).toHaveLength(93);
+    expect(guardadas.at(-1)!.summary).toBe("paso 93");
+  });
+
+  it("uno de más de 200 tarjetas ya no tira el turno con un 400", async () => {
+    const res = await guardar(turno(tarjetas(250)));
+    expect(res.status).toBe(200);
+    expect(vi.mocked(appendChatMessage).mock.calls[0]![1].actions).toHaveLength(250);
+  });
+
+  it("uno desmesurado se RECORTA a 1000 en vez de tirar el turno", async () => {
+    const res = await guardar(turno(tarjetas(1005)));
+    expect(res.status).toBe(200);
+    const guardadas = vi.mocked(appendChatMessage).mock.calls[0]![1].actions!;
+    expect(guardadas).toHaveLength(1000);
     expect(guardadas[0]!.summary).toBe("paso 1");
   });
 
