@@ -34,6 +34,8 @@ import {
 } from "@/lib/html-ops";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { applyHeadOp } from "@/lib/ai-stream/document-ops";
+import { cambiarTexto, type CambioDeTexto } from "./cambiar-texto";
+import { conservarContenido, llevaMarcas } from "./conservar-contenido";
 
 /** Las cuatro operaciones que el motor de ops sabe hacer, que resultan ser
  *  exactamente las que el taller necesita: escribir un texto o cambiar unos
@@ -179,12 +181,30 @@ export interface EdicionDeElemento {
   readonly html?: string;
 }
 
+/**
+ * EL TEXTO DE UN ELEMENTO, y nada más: el `Edit` de Claude Code.
+ *
+ * Existe por lo que hacía el `replace`: para cambiar un texto viajaba el
+ * elemento entero tal y como estaba en pantalla, y el saneo del fragmento le
+ * quitaba al botón su `onclick`, a la sección sus iframes y su `<script>`. Aquí
+ * del navegador vienen dos textos —el que había y el que va— y el elemento
+ * sale del documento GUARDADO. Ver `cambiar-texto.ts`.
+ */
+export interface TextoDeElemento extends CambioDeTexto {
+  readonly op: "texto";
+  /** Ruta posicional del elemento que CONTIENE el nodo de texto (su padre). */
+  readonly path: string;
+  readonly tag: string;
+  readonly hijos: readonly string[];
+}
+
 export type Edicion =
   | EdicionDeElemento
   | AtributosRaiz
   | NodosCabeza
   | Mover
-  | AtributosDeElemento;
+  | AtributosDeElemento
+  | TextoDeElemento;
 
 export type MotivoRechazo =
   /** La ruta no encuentra ningún elemento en el documento guardado. */
@@ -198,7 +218,12 @@ export type MotivoRechazo =
   /** El motor de ops no pudo aplicarla. */
   | "op_fallo"
   /** El documento no tiene `<html>` — no debería pasar nunca. */
-  | "sin_raiz";
+  | "sin_raiz"
+  /** El texto que se editó no está en el documento guardado: lo cambió otra
+   *  pestaña, Len, o el JavaScript de la página en pantalla. */
+  | "texto_no_encontrado"
+  /** Está más de una vez en el elemento y la edición no dice cuál. */
+  | "texto_ambiguo";
 
 export type ResultadoEdiciones =
   | { readonly ok: true; readonly html: string; readonly aplicadas: number }
@@ -377,22 +402,74 @@ function reescribirAtributos(
  * volver a sacarlos —un `<td>` suelto ni siquiera sobreviviría al parseo—.
  *
  * Así que en vez de rehacer medio saneador se acota la operación a lo que
- * realmente necesita: el `style`, que es lo que la re-tinta escribe, y los
- * `data-*`, que es donde anota para poder deshacerse. Ninguno de los dos puede
- * ejecutar nada. Un `onclick` o un `href` no entran por aquí — y no en
- * silencio: el lote se rechaza entero y el usuario se entera.
+ * realmente necesita. Al principio era sólo la re-tinta: el `style` y los
+ * `data-*` donde anota para poder deshacerse. Desde el 2026-09-29 es también
+ * todo lo que el inspector cambia de UN elemento —el estilo, ocultar, el
+ * enlace de un botón, el texto alternativo, la foto—, que antes viajaba como
+ * el elemento entero y perdía por el camino el `onclick` que el modelo le
+ * había puesto. Es el `Edit` de Claude Code: se nombra lo que cambia y lo demás
+ * sale del documento guardado.
+ *
+ * Un `onclick` no entra por aquí nunca, y no en silencio: el lote se rechaza
+ * entero y el usuario se entera. Un `href` o un `src` sí, pero no con un
+ * esquema que ejecute (`URL_QUE_EJECUTA`).
  *
  * Si algún día hace falta `class`, se añade aquí a mano y se ve en el diff.
  */
 function atributoNoPermitido(
   attrs: Readonly<Record<string, string | null>>,
 ): string | null {
-  for (const nombre of Object.keys(attrs)) {
+  for (const [nombre, valor] of Object.entries(attrs)) {
     if (nombre === "style") continue;
     if (/^data-[a-zA-Z][\w-]*$/.test(nombre)) continue;
+    if (ATRIBUTOS_DE_TEXTO.has(nombre)) continue;
+    if (ATRIBUTOS_URL.has(nombre)) {
+      if (valor !== null && urlQueEjecuta(valor)) return `${nombre} con un esquema que ejecuta código`;
+      continue;
+    }
     return nombre;
   }
   return null;
+}
+
+/** Texto plano: ninguno se interpreta como código ni como dirección. */
+const ATRIBUTOS_DE_TEXTO = new Set(["alt", "title", "target", "rel"]);
+/** Direcciones: se aceptan si no ejecutan (ver `urlQueEjecuta`). */
+const ATRIBUTOS_URL = new Set(["href", "src"]);
+
+/**
+ * ¿Ejecutaría código esta dirección puesta en un `href` o un `src`?
+ *
+ * La decide el MISMO saneador que el resto de ediciones, no una lista de aquí:
+ * se le enseña un `<a>` con la dirección y se mira si se la quitó. Dos listas de
+ * esquemas peligrosos serían dos verdades que derivan.
+ *
+ * Antes se hace lo que hace el parser de URL del navegador y el saneador no:
+ * quitar los espacios y controles de los bordes y los tabuladores y saltos de
+ * dentro. MEDIDO el 2026-09-29: el saneador deja pasar `java\tscript:x`, y el
+ * navegador lo lee como `javascript:x`. Con la limpieza, lo que se juzga es lo
+ * que el navegador va a leer.
+ *
+ * Las entidades no hacen falta: el valor llega del DOM, ya decodificado, y se
+ * escribe con el `&` escapado (`escaparValor`), así que el navegador lo vuelve
+ * a leer exactamente como aquí se juzgó.
+ */
+function urlQueEjecuta(valor: string): boolean {
+  const comoLaLee = valor.replace(/^[\u0000- ]+|[\u0000- ]+$/g, "").replace(/[\t\n\r]/g, "");
+  const r = sanitizeForPublish(`<a href="${escaparValor(comoLaLee)}"></a>`);
+  return r.html === null || r.removed.dangerousUrls > 0;
+}
+
+/**
+ * Un valor del DOM, listo para ir entre comillas dobles.
+ *
+ * El motor escapa las comillas al escribir el atributo, pero no el `&`. Sin
+ * esto, un valor que en el DOM era `jav&#x61;script:` (texto literal) se
+ * escribiría tal cual y el navegador lo DECODIFICARÍA al leerlo: otra dirección
+ * distinta de la que se juzgó.
+ */
+function escaparValor(valor: string): string {
+  return valor.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
 
 /** Los atributos de `<html>`, que es el mismo gesto sobre el documento entero:
@@ -534,7 +611,10 @@ export function aplicarEdiciones(
         ops.push({
           type: "attrs",
           target: opId,
-          attrs: pares.map(([name, value]) => ({ name, value })),
+          attrs: pares.map(([name, value]) => ({
+            name,
+            value: value === null ? null : escaparValor(value),
+          })),
         });
       }
       if (ops.length > 0) {
@@ -552,6 +632,35 @@ export function aplicarEdiciones(
         actual = stripOpIds(r.html);
       }
       i = j - 1;
+      continue;
+    }
+
+    if (e.op === "texto") {
+      const { taggedHtml } = tagWithOpIds(actual);
+      const opId = resolverAncla(taggedHtml, e.path, e.tag, e.hijos);
+      if (typeof opId !== "string") {
+        return { ok: false, motivo: opId.motivo, indice: i, detalle: opId.detalle };
+      }
+      const cuerpo = elementoDe(taggedHtml, opId);
+      if (cuerpo === null) {
+        return { ok: false, motivo: "ruta_no_resuelve", indice: i, detalle: opId };
+      }
+      // El elemento se reescribe con SUS bytes y un solo tramo cambiado: ni un
+      // byte del navegador entra en el documento, salvo el texto, escapado.
+      const cambio = cambiarTexto(cuerpo, e);
+      if (!cambio.ok) {
+        return { ok: false, motivo: cambio.motivo, indice: i, detalle: cambio.detalle };
+      }
+      const r = applyOps(taggedHtml, [{ type: "replace", target: opId, newHtml: cambio.html }]);
+      if (r.html === null || r.appliedCount === 0) {
+        return {
+          ok: false,
+          motivo: "op_fallo",
+          indice: i,
+          detalle: r.errors.map((x) => x.reason).join("; ") || "sin efecto",
+        };
+      }
+      actual = stripOpIds(r.html);
       continue;
     }
 
@@ -651,6 +760,26 @@ export function aplicarEdiciones(
     const opId = resolverAncla(taggedHtml, e.path, e.tag, e.hijos);
     if (typeof opId !== "string") {
       return { ok: false, motivo: opId.motivo, indice: i, detalle: opId.detalle };
+    }
+
+    // LO QUE YA ESTABA dentro del elemento lo pone el servidor, no el
+    // navegador: ver `conservar-contenido.ts`. Sólo tiene sentido al
+    // REEMPLAZAR — una inserción no tiene contenido guardado que conservar.
+    if (necesitaHtml && llevaMarcas(fragmento)) {
+      const ancla = e.op === "replace" ? elementoDe(taggedHtml, opId) : null;
+      if (ancla === null) {
+        return {
+          ok: false,
+          motivo: "fragmento_rechazado",
+          indice: i,
+          detalle: "una marca de conservar fuera de un reemplazo",
+        };
+      }
+      const conservado = conservarContenido(fragmento, ancla, (id) => elementoDe(taggedHtml, id));
+      if (!conservado.ok) {
+        return { ok: false, motivo: "otro_elemento", indice: i, detalle: conservado.detalle };
+      }
+      fragmento = conservado.html;
     }
 
     const r = applyOps(taggedHtml, [

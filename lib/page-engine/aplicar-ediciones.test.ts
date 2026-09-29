@@ -730,3 +730,237 @@ describe("la tanda de atributos pasa por el motor, no por un regex", () => {
     expect(r.html).toContain("c: 3");
   });
 });
+
+// EL `Edit` DE CLAUDE CODE, en el taller (2026-09-29). Del navegador viajan el
+// texto que había y el que va; el elemento sale del documento GUARDADO. Con el
+// `replace`, cambiarle el texto a un botón le quitaba el `onclick` del modelo.
+describe("el texto viaja solo, como old_string/new_string", () => {
+  const TIENDA =
+    "<!doctype html><html><head><title>t</title></head><body>" +
+    '<main><section id="tienda"><h2>Tienda</h2>' +
+    '<button class="btn" onclick="agregar(1)">Agregar</button>' +
+    '<p>Envío <strong onclick="info()">gratis</strong> desde $500</p>' +
+    '<iframe src="https://open.spotify.com/embed/track/x"></iframe>' +
+    "<script>function agregar(n){}</script>" +
+    "</section></main></body></html>";
+  const seccion = "main:nth-of-type(1) > section:nth-of-type(1)";
+
+  it("cambiar el texto de un botón le deja el onclick", () => {
+    const r = aplicarEdiciones(TIENDA, [
+      {
+        op: "texto",
+        modo: "elemento",
+        path: `${seccion} > button:nth-of-type(1)`,
+        tag: "button",
+        hijos: [],
+        antes: "Agregar",
+        despues: "Añadir",
+      },
+    ]);
+    expect(r.ok, r.ok ? "" : `${r.motivo}: ${r.detalle}`).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain('<button class="btn" onclick="agregar(1)">Añadir</button>');
+  });
+
+  it("un trozo de un párrafo con marcas: el resto, byte a byte", () => {
+    const r = aplicarEdiciones(TIENDA, [
+      {
+        op: "texto",
+        modo: "nodo",
+        path: `${seccion} > p:nth-of-type(1)`,
+        tag: "p",
+        hijos: ["strong"],
+        antes: " desde $500",
+        despues: " desde $400",
+      },
+    ]);
+    expect(r.ok, r.ok ? "" : `${r.motivo}: ${r.detalle}`).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain('<p>Envío <strong onclick="info()">gratis</strong> desde $400</p>');
+    // Lo que el replace se llevaba por delante, aquí sigue:
+    expect(r.html).toContain('<iframe src="https://open.spotify.com/embed/track/x"></iframe>');
+    expect(r.html).toContain("<script>function agregar(n){}</script>");
+  });
+
+  it("si el texto guardado ya no es el que se editó, rechaza el lote", () => {
+    const r = aplicarEdiciones(TIENDA, [
+      {
+        op: "texto",
+        modo: "elemento",
+        path: `${seccion} > button:nth-of-type(1)`,
+        tag: "button",
+        hijos: [],
+        antes: "Agregado ✓",
+        despues: "Añadir",
+      },
+    ]);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.motivo).toBe("texto_no_encontrado");
+  });
+});
+
+describe("los atributos que cambia el inspector, sin que viaje el elemento", () => {
+  const DOC_BOTON =
+    "<!doctype html><html><head><title>t</title></head><body>" +
+    '<main><section style="padding:2rem"><a class="btn" onclick="track()" href="/">Pedir</a>' +
+    '<img src="/a.jpg" alt="vieja"></section></main></body></html>';
+  const seccion = "main:nth-of-type(1) > section:nth-of-type(1)";
+
+  it("el fondo de la sección cambia y el onclick de dentro sigue", () => {
+    const r = aplicarEdiciones(DOC_BOTON, [
+      { op: "atributos", path: seccion, tag: "section", hijos: ["a", "img"], attrs: { style: "padding:2rem; background-color: #111" } },
+    ]);
+    expect(r.ok, r.ok ? "" : `${r.motivo}: ${r.detalle}`).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain("background-color: #111");
+    expect(r.html).toContain('onclick="track()"');
+  });
+
+  it("el enlace, el texto alternativo y la foto entran; el onclick de la apertura se queda", () => {
+    const r = aplicarEdiciones(DOC_BOTON, [
+      {
+        op: "atributos",
+        path: `${seccion} > a:nth-of-type(1)`,
+        tag: "a",
+        hijos: [],
+        attrs: { href: "https://wa.me/5233?text=hola&x=1", target: "_blank", rel: "noopener noreferrer" },
+      },
+      { op: "atributos", path: `${seccion} > img:nth-of-type(1)`, tag: "img", hijos: [], attrs: { src: "/b.jpg", alt: "nueva" } },
+    ]);
+    expect(r.ok, r.ok ? "" : `${r.motivo}: ${r.detalle}`).toBe(true);
+    if (!r.ok) return;
+    // El `&` va escapado: el navegador lo vuelve a leer como `&`.
+    expect(r.html).toContain('href="https://wa.me/5233?text=hola&amp;x=1"');
+    expect(r.html).toContain('onclick="track()"');
+    expect(r.html).toContain('src="/b.jpg"');
+    expect(r.html).toContain('alt="nueva"');
+  });
+
+  it("un onclick sigue sin poder entrar por aquí", () => {
+    const r = aplicarEdiciones(DOC_BOTON, [
+      { op: "atributos", path: `${seccion} > a:nth-of-type(1)`, tag: "a", hijos: [], attrs: { onclick: "robar()" } },
+    ]);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.motivo).toBe("fragmento_rechazado");
+  });
+
+  it.each([
+    ["javascript:robar()"],
+    ["  JaVaScRiPt:robar()"],
+    // El saneador solo no lo ve; el navegador quita el tabulador y lo ejecuta.
+    ["java\tscript:robar()"],
+    ["vbscript:x"],
+  ])("un href que ejecuta (%j) se rechaza", (href) => {
+    const r = aplicarEdiciones(DOC_BOTON, [
+      { op: "atributos", path: `${seccion} > a:nth-of-type(1)`, tag: "a", hijos: [], attrs: { href } },
+    ]);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.motivo).toBe("fragmento_rechazado");
+  });
+
+  it("una entidad que llega como texto literal se escribe escapada, no se decodifica", () => {
+    // En el DOM el valor ES `jav&#x61;script:x`, con el `&` literal. Escrito
+    // tal cual, el navegador lo decodificaría a `javascript:x`.
+    const r = aplicarEdiciones(DOC_BOTON, [
+      { op: "atributos", path: `${seccion} > a:nth-of-type(1)`, tag: "a", hijos: [], attrs: { href: "jav&#x61;script:x" } },
+    ]);
+    expect(r.ok, r.ok ? "" : `${r.motivo}: ${r.detalle}`).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain('href="jav&amp;#x61;script:x"');
+  });
+});
+
+// LOS CAMBIOS DE FORMA: el marcado nuevo viene del navegador; lo que ya estaba
+// dentro, del documento guardado (ver conservar-contenido.ts).
+describe("lo que ya estaba dentro lo pone el servidor, también al cambiar la forma", () => {
+  const CARRITO =
+    "<!doctype html><html><head><title>t</title></head><body><main>" +
+    '<section class="menu"><h2>Menú</h2><button onclick="agregar(1)">Agregar</button>' +
+    '<iframe src="https://open.spotify.com/embed/x"></iframe><script>function agregar(n){}</script></section>' +
+    "</main></body></html>";
+  const seccion = "main:nth-of-type(1) > section:nth-of-type(1)";
+
+  it("imagen junto al texto: la columna es nueva, el contenido sale guardado con su onclick", () => {
+    const r = aplicarEdiciones(CARRITO, [
+      {
+        op: "replace",
+        path: seccion,
+        tag: "section",
+        hijos: ["h2", "button", "iframe", "script"],
+        html:
+          '<section class="menu ol-split"><div><ol-conservar></ol-conservar></div>' +
+          '<div class="ol-split-media"><img src="/foto.jpg" alt=""></div></section>',
+      },
+    ]);
+    expect(r.ok, r.ok ? "" : `${r.motivo}: ${r.detalle}`).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain(
+      '<section class="menu ol-split"><div><h2>Menú</h2><button onclick="agregar(1)">Agregar</button>' +
+        '<iframe src="https://open.spotify.com/embed/x"></iframe><script>function agregar(n){}</script></div>' +
+        '<div class="ol-split-media"><img src="/foto.jpg" alt=""></div></section>',
+    );
+  });
+
+  it("quitarla: sale el contenido de la columna nº 0, guardado", () => {
+    const PARTIDA = CARRITO.replace(
+      '<section class="menu">',
+      '<section class="menu ol-split"><div>',
+    ).replace("</script></section>", '</script></div><div class="ol-split-media"><img src="/f.jpg"></div></section>');
+    const r = aplicarEdiciones(PARTIDA, [
+      {
+        op: "replace",
+        path: seccion,
+        tag: "section",
+        hijos: ["div", "div"],
+        html: '<section class="menu"><ol-conservar data-hijo="0"></ol-conservar></section>',
+      },
+    ]);
+    expect(r.ok, r.ok ? "" : `${r.motivo}: ${r.detalle}`).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).toContain(CARRITO.slice(CARRITO.indexOf("<section"), CARRITO.indexOf("</main>")));
+  });
+
+  it("el marcado nuevo SÍ se sanea: un onclick nuevo no entra", () => {
+    const r = aplicarEdiciones(CARRITO, [
+      {
+        op: "replace",
+        path: seccion,
+        tag: "section",
+        hijos: ["h2", "button", "iframe", "script"],
+        html: '<section class="menu" onclick="robar()"><ol-conservar></ol-conservar></section>',
+      },
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.html).not.toContain("robar");
+    expect(r.html).toContain('onclick="agregar(1)"');
+  });
+
+  it("un hijo que no existe rechaza el lote, y una marca en una inserción también", () => {
+    const hijoMalo = aplicarEdiciones(CARRITO, [
+      {
+        op: "replace",
+        path: seccion,
+        tag: "section",
+        hijos: ["h2", "button", "iframe", "script"],
+        html: '<section><ol-conservar data-hijo="9"></ol-conservar></section>',
+      },
+    ]);
+    expect(hijoMalo.ok).toBe(false);
+    const enInsercion = aplicarEdiciones(CARRITO, [
+      {
+        op: "insert_after",
+        path: seccion,
+        tag: "section",
+        hijos: ["h2", "button", "iframe", "script"],
+        html: "<section><ol-conservar></ol-conservar></section>",
+      },
+    ]);
+    expect(enInsercion.ok).toBe(false);
+    if (enInsercion.ok) return;
+    expect(enInsercion.motivo).toBe("fragmento_rechazado");
+  });
+});

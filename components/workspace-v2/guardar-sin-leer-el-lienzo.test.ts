@@ -93,3 +93,30 @@ describe("ningún camino de guardado lee el DOM vivo", () => {
     ).toBe(false);
   });
 });
+
+/**
+ * Y LO QUE SÍ SE MANDA ES SÓLO LO QUE CAMBIÓ (2026-09-29).
+ *
+ * No leer el documento entero no bastaba: el texto y el inspector mandaban el
+ * ELEMENTO tocado entero, leído de la pantalla, y el servidor tenía que sanearlo
+ * — se llevaba el `onclick` que el modelo le había puesto al botón, los iframes
+ * y el `<script>` de dentro. Ahora mandan lo que cambió, como el `Edit` de
+ * Claude Code: el texto de antes y el de después (`op: 'texto'`), o unos
+ * atributos (`op: 'atributos'`). El `replace` queda para los cambios de FORMA,
+ * que llevan su contenido guardado con `<ol-conservar>`.
+ */
+describe("el editor manda lo que cambió, no el elemento", () => {
+  it("el editor de texto sólo manda textos", () => {
+    const src = fuente("components", "workspace-v2", "use-inline-edit.ts");
+    expect(src).toContain("op: 'texto'");
+    expect(src, "el editor de texto volvió a mandar el elemento entero").not.toContain("op: 'replace'");
+  });
+
+  it("el inspector sólo reemplaza en los cambios de forma, y siempre conservando lo guardado", () => {
+    const src = fuente("components", "workspace-v2", "use-element-inspect.ts");
+    const reemplazos = (src.match(/op: 'replace'/g) ?? []).length;
+    // Uno solo: el de `postReemplazo`, que exige su función de marcar.
+    expect(reemplazos).toBe(1);
+    expect(src).toMatch(/function postReemplazo\(desc, el, marcar\)/);
+  });
+});

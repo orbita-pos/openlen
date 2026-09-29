@@ -104,7 +104,8 @@ import {
 // Parent contract:
 //   IN  { type: "openlen:set-mode", editMode: boolean, selectMode: boolean }
 //   OUT { type: "openlen:iframe-ready" }      (parent responds with set-mode)
-//   OUT { type: "openlen:html-changed", outerHtml, source: "inline-edit" }
+//   OUT { type: "openlen:edit", op: "texto", path, tag, hijos, modo, antes,
+//         despues, ocurrencia, source: "inline-edit" }   (ver postTexto)
 
 import {
   STYLE_PROPS,
@@ -255,83 +256,65 @@ ${CORE_SRC}
     } catch (err) { /* TreeWalker unavailable — bail */ }
   }
 
-  // Serialize the live document stripped of ALL inline-edit instrumentation —
-  // overlay, temp run-wrappers (unwrapped, not deleted, so the text survives),
-  // and editable/hidden markers. The parent strips the OTHER scripts' markers.
-  function captureClean() {
-    var clone = document.documentElement.cloneNode(true);
-    clone.querySelectorAll('[data-openlen-inline-edit]').forEach(function (n) { n.remove(); });
-    // Subsystem B ghost clones are transient editor twins — drop them wholesale
-    // (the editable span lives inside) so a capture mid-ghost can't duplicate
-    // content. Normally removed on finishEdit before any capture.
-    clone.querySelectorAll('[data-openlen-edit-ghost]').forEach(function (n) { n.remove(); });
-    clone.querySelectorAll('[data-openlen-edit-overlay]').forEach(function (n) { n.remove(); });
-    // Unwrap temp run-wrappers: replace each with its children so the run text
-    // is preserved exactly (a stale wrapper must never reach the saved HTML).
-    clone.querySelectorAll('[data-openlen-edit-wrap]').forEach(function (n) {
-      var parent = n.parentNode;
-      if (!parent) { return; }
-      while (n.firstChild) { parent.insertBefore(n.firstChild, n); }
-      parent.removeChild(n);
-    });
-    clone.querySelectorAll('[data-openlen-editable]').forEach(function (n) { n.removeAttribute('data-openlen-editable'); });
-    clone.querySelectorAll('[data-openlen-edit-hidden]').forEach(function (n) { n.removeAttribute('data-openlen-edit-hidden'); });
-    return '<!doctype html>\\n' + clone.outerHTML;
-  }
-
-  // EL ELEMENTO QUE CAMBIÓ, limpio — no el documento entero.
+  // EL TEXTO QUE CAMBIÓ, y nada más — el Edit de Claude Code.
   //
-  // captureClean() de arriba clona el documento VIVO, y ésa es la práctica que
-  // obliga a congelar el JavaScript del modelo mientras se edita: con el script
-  // corriendo, todo lo que hubiera hecho (un filtro que escondió media rejilla,
-  // un modal abierto) se persistiría como la página del usuario.
+  // Aquí se clonaba el elemento tocado y se mandaba su outerHTML. El servidor
+  // tiene que sanear lo que llega del navegador, así que el onclick que el
+  // modelo le había puesto al botón se quedaba por el camino, y con él los
+  // iframes y el <script> del elemento; y lo que el JavaScript de la página
+  // hubiera hecho en pantalla viajaba dentro y se guardaba. Medido el
+  // 2026-09-29: cambiarle el texto a un botón lo dejaba mudo.
   //
-  // Esto clona SÓLO el elemento tocado. Lo que el script haya hecho en el resto
-  // de la página no viaja, porque el resto de la página no se manda.
-  function capturarElemento(el) {
-    var clone = el.cloneNode(true);
-    clone.querySelectorAll('[data-openlen-edit-ghost]').forEach(function (n) { n.remove(); });
-    clone.querySelectorAll('[data-openlen-edit-overlay]').forEach(function (n) { n.remove(); });
-    clone.querySelectorAll('[data-openlen-edit-wrap]').forEach(function (n) {
-      var parent = n.parentNode;
-      if (!parent) { return; }
-      while (n.firstChild) { parent.insertBefore(n.firstChild, n); }
-      parent.removeChild(n);
-    });
-    clone.querySelectorAll('[data-openlen-editable]').forEach(function (n) { n.removeAttribute('data-openlen-editable'); });
-    clone.querySelectorAll('[data-openlen-edit-hidden]').forEach(function (n) { n.removeAttribute('data-openlen-edit-hidden'); });
-    // querySelectorAll no incluye la raíz, y la raíz es justo el elemento que se
-    // estaba editando: es el que MÁS probable lleva estas dos marcas.
-    clone.removeAttribute('data-openlen-editable');
-    clone.removeAttribute('data-openlen-edit-hidden');
-    return clone.outerHTML;
-  }
-
-  // Post the edit to the parent SYNCHRONOUSLY. inline-edit only posts on commit
-  // (Enter / blur-out / mode-off / run-switch) — never per keystroke — so there
-  // is nothing to debounce here. Critically, a synchronous post is what lets a
-  // commit-on-exit reach the parent BEFORE its listener teardown + srcDoc
-  // re-derive when the user toggles edit mode off (otherwise the edit is lost).
+  // Edit no reenvía el fichero: nombra lo que había y lo que va. Esto manda
+  // el texto de ANTES y el de DESPUÉS, y la ruta del elemento que lo contiene;
+  // el elemento sale del documento guardado. Si el texto guardado ya no es el
+  // que se editó, el servidor lo rechaza y el taller lo dice.
+  //
+  // Se manda SINCRÓNICAMENTE, al confirmar (Enter, salir del campo, apagar el
+  // modo edición, pasar a otro texto) y nunca por tecla: así llega al padre
+  // ANTES de que desmonte sus oyentes al apagar el modo edición.
   //
   // SE LLAMA DESPUÉS DEL DESMONTAJE, y el orden no es casual: el clon fantasma
   // y el envoltorio de run son HERMANOS temporales del elemento real, así que
   // mientras están puestos desplazan los índices que buildEditPath cuenta.
-  function postEdicion(el) {
-    if (!el || !el.parentElement) return;
+  function postTexto(padre, modo, antes, despues, ocurrencia) {
+    if (!padre || !padre.parentElement) return;
     try {
       window.parent.postMessage(
         {
           type: 'openlen:edit',
-          op: 'replace',
-          path: buildEditPath(el),
-          tag: el.tagName.toLowerCase(),
-          hijos: editChildTags(el),
-          html: capturarElemento(el),
+          op: 'texto',
+          path: buildEditPath(padre),
+          tag: padre.tagName.toLowerCase(),
+          hijos: editChildTags(padre),
+          modo: modo,
+          antes: antes,
+          despues: despues,
+          ocurrencia: ocurrencia,
           source: 'inline-edit'
         },
         '*'
       );
     } catch (_) {}
+  }
+
+  // Cuál de los hermanos de texto IGUALES es el editado: cuántos van delante
+  // con el mismo texto de ANTES. El servidor lo usa cuando ese texto aparece
+  // dos veces en el elemento (el old_string que no es único).
+  function ocurrenciaDe(nodo, antes) {
+    var n = 0;
+    for (var c = nodo.parentNode ? nodo.parentNode.firstChild : null; c; c = c.nextSibling) {
+      if (c === nodo) return n;
+      if (c.nodeType === 3 && c.data === antes) n++;
+    }
+    return 0;
+  }
+
+  // Un nodo de texto cambiado, entre otros hijos de su elemento. Tras el
+  // desmontaje, así que su padre es ya el de verdad y no el envoltorio.
+  function postNodo(nodo, antes, despues) {
+    if (!nodo || !nodo.parentNode) return;
+    postTexto(nodo.parentNode, 'nodo', antes, despues, ocurrenciaDe(nodo, antes));
   }
 
   // ── Overlay editor state ────────────────────────────────────────────────
@@ -602,7 +585,7 @@ ${CORE_SRC}
         var cloneTn = nodeAtPath(clone, path);
         if (cloneTn && cloneTn.nodeType === 3) {
           // strip page editor markers from the clone so it can't capture clicks
-          // or be mistaken for editable; tag it for captureClean removal.
+          // or be mistaken for editable; the ghost tag marks it as ours.
           clone.setAttribute('data-openlen-edit-ghost', '');
           try {
             var marked = clone.querySelectorAll('[data-openlen-editable]');
@@ -949,17 +932,19 @@ ${CORE_SRC}
     if (ghost) {
       var gNewText = overlay.textContent;
       var gChanged = false;
-      if (commit && gNewText !== snapshot && textNode) {
-        textNode.data = gNewText; // surgical: the single real run/text node
+      var gTn = textNode;
+      var gAntes = gTn ? gTn.data : '';
+      if (commit && gNewText !== snapshot && gTn) {
+        gTn.data = gNewText; // surgical: the single real run/text node
         gChanged = true;
       }
-      var gTocado = ghost.realAncestor;
       try { ghost.clone.remove(); } catch (_g) {}
       try { ghost.realAncestor.removeAttribute('data-openlen-edit-hidden'); } catch (_h) {}
       ghost = null;
       editable = null; overlay = null; mode = null; textNode = null;
       posTarget = null; anchorNode = null; snapshot = ''; lastRectKey = ''; borderAdjustX = 0;
-      if (gChanged) postEdicion(gTocado);
+      // El fantasma edita UN nodo real, en los dos modos: es un cambio de nodo.
+      if (gChanged) postNodo(gTn, gAntes, gNewText);
       return;
     }
 
@@ -969,6 +954,10 @@ ${CORE_SRC}
     var tn = textNode;
     var newText = ov.textContent;
     var changed = false;
+    // El texto de ANTES, leído antes de escribir el nuevo: es el old_string.
+    // En modo elemento el elemento no tiene hijos elemento, así que su
+    // textContent es exactamente su texto.
+    var antes = m === 'run' && tn ? tn.data : el.textContent;
 
     if (commit && newText !== snapshot) {
       if (m === 'run' && tn) {
@@ -995,7 +984,9 @@ ${CORE_SRC}
     editable = null; overlay = null; mode = null; textNode = null;
     posTarget = null; anchorNode = null; snapshot = ''; lastRectKey = ''; borderAdjustX = 0;
 
-    if (changed) postEdicion(el);
+    if (!changed) return;
+    if (m === 'run' && tn) postNodo(tn, antes, newText);
+    else postTexto(el, 'elemento', antes, newText, 0);
   }
 
   function isEditMode() {

@@ -188,3 +188,34 @@ describe("qué edición sustituye a cuál", () => {
     expect(claveDeEdicion({ op: "cabeza", html: "<title>a</title>" })).toBeNull();
   });
 });
+
+describe("el texto, como old_string/new_string", () => {
+  const base = {
+    op: "texto",
+    path: "main:nth-of-type(1) > p:nth-of-type(1)",
+    tag: "p",
+    hijos: ["strong"],
+    modo: "nodo",
+    antes: " desde $500",
+    despues: " desde $400",
+  };
+
+  it("se lee con sus dos textos y su modo", () => {
+    expect(leerEdicion({ ...base, ocurrencia: 1 })).toEqual({ ...base, ocurrencia: 1 });
+  });
+
+  it("sin modo válido, o sin uno de los dos textos, no es una edición", () => {
+    expect(leerEdicion({ ...base, modo: "run" })).toBeNull();
+    expect(leerEdicion({ ...base, antes: undefined })).toBeNull();
+    expect(leerEdicion({ ...base, despues: 3 })).toBeNull();
+  });
+
+  it("una ocurrencia que no es un índice se ignora, no se inventa", () => {
+    expect(leerEdicion({ ...base, ocurrencia: -1 })).toEqual(base);
+    expect(leerEdicion({ ...base, ocurrencia: "0" })).toEqual(base);
+  });
+
+  it("y NO se colapsa con la siguiente: cada una parte del texto que dejó la anterior", () => {
+    expect(claveDeEdicion(leerEdicion(base)!)).toBeNull();
+  });
+});

@@ -134,10 +134,14 @@ ${CORE_SRC}
     restoreProps(el, props);
     // The reset may drop a bg the re-ink pass compensated for — put the
     // original colors back or light text strands on a restored light bg.
+    var restaurados = [];
     for (var ri = 0; ri < props.length; ri++) {
-      if (props[ri].indexOf('background') === 0) { olRestoreReinkIn(el); break; }
+      if (props[ri].indexOf('background') === 0) { restaurados = olRestoreReinkIn(el); break; }
     }
-    postEdicion(el);
+    // Solo los atributos que cambian, como el Edit de Claude Code: el
+    // elemento entero viajaba y el saneo se llevaba los onclick de dentro.
+    postAtributos(el, ['style', STASH_ATTR]);
+    postTocados(restaurados);
     if (selected === el) postSelected(el);
   }
 
@@ -597,21 +601,25 @@ ${CORE_SRC}
     }
   }
 
-  // UN ELEMENTO, no el documento entero.
+  // LOS CAMBIOS DE FORMA, y solo ellos. Todo lo que el inspector cambia de UN
+  // elemento sin tocar su forma —estilo, fondo, ocultar, enlace, texto
+  // alternativo, fotos— viaja como atributos (postAtributos), que es el Edit de
+  // Claude Code: se nombra lo que cambia y lo demas sale del documento guardado.
   //
-  // Clonar el documento VIVO para guardar es la practica que obligaba a
-  // congelar el JavaScript del modelo mientras se edita: con el script
-  // corriendo, todo lo que hubiera hecho se persistia como la pagina del
-  // usuario. Esto manda solo el elemento que el inspector toco.
+  // Quedan tres gestos que SI cambian la forma y dejan dentro lo que ya habia:
+  // convertir un boton en enlace, poner una imagen junto al texto de una
+  // seccion y quitarla. De esos se manda el marcado NUEVO, y donde va lo que ya
+  // estaba, una marca <ol-conservar> que el servidor sustituye por los bytes
+  // guardados (lib/page-engine/conservar-contenido.ts). Antes viajaba el
+  // elemento entero y el saneo se llevaba los onclick, los iframes y el
+  // <script> de todo lo de dentro.
   //
-  // Se usa en los cambios de UN elemento (una propiedad, un estilo, un fondo,
-  // ocultar, un enlace). Los cambios GLOBALES tienen su propia operacion, cada
-  // uno la que le toca: el tema y la tematica escriben atributos de <html>
-  // (postRaiz / postRaizTematica), las hojas y los metadatos van a la cabeza
-  // (postCabeza), y la re-tinta manda solo atributos (postAtributos). Ninguno
-  // necesita el documento entero.
-  function postEdicion(el) {
-    if (!el || !el.parentElement) return;
+  // La descripcion (ruta, etiqueta, hijos) se toma ANTES de cambiar nada: el
+  // servidor la resuelve contra el documento guardado, que aun tiene la forma
+  // de antes. Tomada despues, la etiqueta o los hijos ya no casaban y el
+  // guardado se rechazaba.
+  function postReemplazo(desc, el, marcar) {
+    if (!desc || !el) return;
     var clone = el.cloneNode(true);
     for (var i = 0; i < EDITOR_NODE_ATTRS.length; i++) {
       clone.removeAttribute(EDITOR_NODE_ATTRS[i]);
@@ -624,15 +632,25 @@ ${CORE_SRC}
     clone.querySelectorAll('[data-openlen-inspect-selected]').forEach(function (n) {
       n.removeAttribute('data-openlen-inspect-selected');
     });
+    marcar(clone);
     post({
       type: 'openlen:edit',
       op: 'replace',
-      path: buildEditPath(el),
-      tag: el.tagName.toLowerCase(),
-      hijos: editChildTags(el),
+      path: desc.path,
+      tag: desc.tag,
+      hijos: desc.hijos,
       html: clone.outerHTML,
       source: 'props'
     });
+  }
+
+  // Vacia un nodo del clon y deja en su lugar la marca de lo guardado: el
+  // contenido del elemento reemplazado, o el de su hijo n (contado desde 0).
+  function conservarEn(nodo, hijo) {
+    while (nodo.firstChild) nodo.removeChild(nodo.firstChild);
+    var marca = document.createElement('ol-conservar');
+    if (typeof hijo === 'number') marca.setAttribute('data-hijo', String(hijo));
+    nodo.appendChild(marca);
   }
 
   // EL ELEMENTO RAIZ. El selector de tema no cambia nada del cuerpo: escribe en
@@ -702,15 +720,16 @@ ${CORE_SRC}
 
   // UNOS ATRIBUTOS, sin que viaje el subarbol.
   //
-  // postEdicion manda el outerHTML leido del DOM VIVO: si el JavaScript del
-  // modelo le hizo algo a un descendiente -una clase, un hidden, una fila
-  // filtrada- eso entra dentro y se persiste. Cuando lo unico que cambia son
+  // Mandar el outerHTML leido del DOM VIVO metia dentro lo que el JavaScript
+  // del modelo hubiera hecho a un descendiente -una clase, un hidden, una fila
+  // filtrada- y el saneo se llevaba sus onclick. Cuando lo unico que cambia son
   // unos atributos del propio elemento, el subarbol no tiene por que viajar:
   // el servidor lo saca del documento guardado y de aqui salen solo los
   // nombres y los valores.
   //
-  // Es lo que hace barata la re-tinta de una tematica, que toca decenas de
-  // elementos y de cada uno cambia dos atributos.
+  // Nacio para la re-tinta de una tematica, que toca decenas de elementos y de
+  // cada uno cambia dos atributos. Desde el 2026-09-29 la usa todo lo que el
+  // inspector cambia de un elemento sin cambiar su forma.
   function postAtributos(el, nombres) {
     if (!el || !el.parentElement) return;
     var attrs = {};
@@ -769,7 +788,7 @@ ${CORE_SRC}
         else el.removeAttribute('rel');
       }
     }
-    postEdicion(el);
+    postAtributos(el, name === 'target' ? ['target', 'rel'] : [name]);
     if (selected === el) postSelected(el);
   }
 
@@ -785,6 +804,8 @@ ${CORE_SRC}
     var el = resolvePath(path);
     if (!el || el.tagName.toLowerCase() !== 'button') return;
     if (el.closest && el.closest('form')) return;
+    // Como el <button> que el documento guardado todavia tiene.
+    var desc = descriptorDe(el);
     var a = document.createElement('a');
     for (var i = 0; i < el.attributes.length; i++) {
       var at = el.attributes[i];
@@ -804,7 +825,8 @@ ${CORE_SRC}
       selected = a;
       postSelected(a);
     }
-    postEdicion(a);
+    // El <a> es nuevo; lo de dentro es lo que el boton ya tenia, guardado.
+    postReemplazo(desc, a, function (clon) { conservarEn(clon); });
   }
 
   function applyPageMeta(field, value) {
@@ -870,7 +892,7 @@ ${CORE_SRC}
     stashProp(el, prop);
     if (value) el.style.setProperty(prop, value);
     else el.style.removeProperty(prop);
-    postEdicion(el);
+    postAtributos(el, ['style', STASH_ATTR]);
     if (selected === el) postSelected(el);
   }
 
@@ -890,6 +912,7 @@ ${CORE_SRC}
       ? ['background-color', 'background-image']
       : ['background-image', 'background-size', 'background-position', 'background-repeat'];
     for (var bi = 0; bi < bgProps.length; bi++) stashProp(el, bgProps[bi]);
+    var tocadosBg = [];
     if (kind === 'color') {
       if (value) {
         el.style.setProperty('background-color', value);
@@ -910,7 +933,7 @@ ${CORE_SRC}
       el.style.setProperty('background-position', 'center');
       el.style.setProperty('background-repeat', 'no-repeat');
       if (leg && typeof leg.ink === 'string' && leg.ink && typeof leg.groundLum === 'number') {
-        olReinkScoped(el, leg.groundLum, leg.ink);
+        tocadosBg = olReinkScoped(el, leg.groundLum, leg.ink);
       }
     } else if (kind === 'gradient' && value) {
       // The editor passes a full CSS gradient string — set it directly (no
@@ -918,7 +941,7 @@ ${CORE_SRC}
       // covers it) and size/position are irrelevant for gradients.
       el.style.setProperty('background-image', value);
       if (leg && typeof leg.ink === 'string' && leg.ink && typeof leg.groundLum === 'number') {
-        olReinkScoped(el, leg.groundLum, leg.ink);
+        tocadosBg = olReinkScoped(el, leg.groundLum, leg.ink);
       }
     } else if (kind === 'clear') {
       el.style.removeProperty('background-image');
@@ -928,9 +951,13 @@ ${CORE_SRC}
       // A bg drop may have re-inked this subtree's text for the removed
       // ground — put the original colors back or light text strands on a
       // light page.
-      olRestoreReinkIn(el);
+      tocadosBg = olRestoreReinkIn(el);
     }
-    postEdicion(el);
+    // El fondo de una seccion viajaba como la seccion ENTERA, y el saneo se
+    // llevaba los onclick, los iframes y el <script> de todo lo de dentro.
+    // Ahora viajan el style del elemento y los del texto re-entintado.
+    postAtributos(el, ['style', STASH_ATTR]);
+    postTocados(tocadosBg);
     if (selected === el) postSelected(el);
   }
 
@@ -960,17 +987,19 @@ ${CORE_SRC}
     if (altA !== null) b.setAttribute('alt', altA);
     else b.removeAttribute('alt');
     // DOS elementos intercambiados son DOS ediciones. Las rutas no cambian
-    // -cada uno sigue donde estaba-; lo que cambia es que hay en cada sitio.
-    postEdicion(a);
-    postEdicion(b);
+    // -cada uno sigue donde estaba-; lo que cambia es que hay en cada sitio,
+    // y eso son dos atributos de cada uno.
+    postAtributos(a, ['src', 'alt']);
+    postAtributos(b, ['src', 'alt']);
+    // El encaje en el marco solo escribe el style (encaje-en-el-marco.ts).
     if (marcoA) {
       trasCargar(a, function () {
-        if (ajustarAlMarco(a, marcoA, false)) postEdicion(a);
+        if (ajustarAlMarco(a, marcoA, false)) postAtributos(a, ['style']);
       });
     }
     if (marcoB) {
       trasCargar(b, function () {
-        if (ajustarAlMarco(b, marcoB, false)) postEdicion(b);
+        if (ajustarAlMarco(b, marcoB, false)) postAtributos(b, ['style']);
       });
     }
   }
@@ -993,10 +1022,14 @@ ${CORE_SRC}
     var descSeccion = descriptorDe(seccionDeEl);
     if (media && media.parentElement && media.parentElement.classList.contains('ol-split')) {
       var container = media.parentElement;
+      // Como lo tiene el documento guardado: con sus dos columnas.
+      var descContainer = descriptorDe(container);
+      var hijosAntes = Array.prototype.slice.call(container.children);
       container.removeChild(media);
       // Unwrap OUR classless copy wrapper so the section returns to its
       // original markup; an authored cell (carries classes) is left alone.
       var copy = container.firstElementChild;
+      var desenvuelta = false;
       if (
         copy &&
         copy.tagName === 'DIV' &&
@@ -1005,11 +1038,24 @@ ${CORE_SRC}
       ) {
         while (copy.firstChild) container.insertBefore(copy.firstChild, copy);
         container.removeChild(copy);
+        desenvuelta = true;
       }
       container.classList.remove('ol-split');
       if (!container.getAttribute('class')) container.removeAttribute('class');
       // Deshacer la particion no borra: deja el contenedor con otro contenido.
-      postEdicion(container);
+      // Ese contenido es el que la columna ya tenia, guardado; si la columna
+      // se queda, cada hijo que queda lleva dentro lo suyo, guardado.
+      var vivos = Array.prototype.slice.call(container.children);
+      postReemplazo(descContainer, container, function (clon) {
+        if (desenvuelta) {
+          conservarEn(clon, hijosAntes.indexOf(copy));
+          return;
+        }
+        for (var h = 0; h < vivos.length; h++) {
+          var idx = hijosAntes.indexOf(vivos[h]);
+          if (idx !== -1 && clon.children[h]) conservarEn(clon.children[h], idx);
+        }
+      });
     } else if (el.tagName === 'IMG' || el.tagName === 'VIDEO') {
       // Real media element (dropped <img> or a video/motion hero) → remove it,
       // and drop the host section if that leaves it with no text or media.
@@ -1035,9 +1081,11 @@ ${CORE_SRC}
       el.style.removeProperty('background-size');
       el.style.removeProperty('background-position');
       el.style.removeProperty('background-repeat');
-      olRestoreReinkIn(el);
-      // Quitar el relleno no borra el elemento: lo deja sin fondo.
-      postEdicion(el);
+      var restaurados = olRestoreReinkIn(el);
+      // Quitar el relleno no borra el elemento: lo deja sin fondo. Y eso es su
+      // style, no su subarbol.
+      postAtributos(el, ['style']);
+      postTocados(restaurados);
     }
     if (selected && !selected.isConnected) {
       selected = null;
@@ -1080,7 +1128,7 @@ ${CORE_SRC}
     } else {
       el.removeAttribute('data-ol-hidden');
     }
-    postEdicion(el);
+    postAtributos(el, ['data-ol-hidden']);
     if (selected === el) postSelected(el);
   }
 
@@ -1186,8 +1234,11 @@ ${CORE_SRC}
   }
   // Scoped restore — undoes a per-section re-ink pass (bg clear / re-drop /
   // image removal) without touching the rest of the page.
+  // DEVUELVE lo que toco, como olReinkForWorld: de cada uno viajan sus dos
+  // atributos (postTocados), no el subarbol.
   function olRestoreReinkIn(rootEl) {
-    if (!rootEl || !rootEl.querySelectorAll) return;
+    var tocados = [];
+    if (!rootEl || !rootEl.querySelectorAll) return tocados;
     var list = [rootEl];
     var els = rootEl.querySelectorAll('[data-ol-reink]');
     for (var i = 0; i < els.length; i++) list.push(els[i]);
@@ -1198,7 +1249,9 @@ ${CORE_SRC}
       if (prev) el.style.color = prev;
       else el.style.removeProperty('color');
       el.removeAttribute('data-ol-reink');
+      tocados.push(el);
     }
+    return tocados;
   }
   // Tambien DEVUELVE lo que toco — ver olRestoreReink.
   function olReinkForWorld(tokens) {
@@ -1270,6 +1323,8 @@ ${CORE_SRC}
     var container = splitContainer(el);
     if (!container) return;
     if (container.classList && container.classList.contains('ol-split')) return;
+    // Como lo tiene el documento guardado: con sus hijos de antes.
+    var desc = descriptorDe(container);
     ensureSplitStyle();
     var copy = document.createElement('div');
     while (container.firstChild) copy.appendChild(container.firstChild);
@@ -1284,9 +1339,17 @@ ${CORE_SRC}
     if (side === 'left') container.insertBefore(media, copy);
     else container.appendChild(media);
     container.classList.add('ol-split');
-    // El contenedor nuevo ocupa el sitio que tenia el elemento, asi que su
-    // ruta es la que el servidor tiene que resolver.
-    postEdicion(container);
+    // La hoja de las dos columnas, que no vive en el cuerpo: sin ella la
+    // pagina publicada no las pinta. Va ANTES que el elemento, como la de
+    // ocultar (applyHide).
+    var hojaSplit = document.querySelector('style[data-ol-split-style]');
+    if (hojaSplit) postCabeza(hojaSplit.outerHTML, 'data-ol-split-style');
+    // Las columnas son nuevas; lo de la columna de texto es lo que el
+    // contenedor ya tenia, guardado.
+    var idxCopia = side === 'left' ? 1 : 0;
+    postReemplazo(desc, container, function (clon) {
+      if (clon.children[idxCopia]) conservarEn(clon.children[idxCopia]);
+    });
     if (selected === el) postSelected(el);
   }
 
@@ -1298,10 +1361,12 @@ ${CORE_SRC}
   // any prior pass within the subtree first, so a re-drop re-measures the true
   // originals. Same data-ol-reink stash as the world pass (persists in saved
   // HTML by design).
+  // DEVUELVE lo que toco (lo restaurado y lo re-entintado), para que viajen
+  // sus atributos y no el subarbol.
   function olReinkScoped(rootEl, groundLum, ink) {
-    if (!rootEl || typeof groundLum !== 'number') return;
+    if (!rootEl || typeof groundLum !== 'number') return [];
     // Re-drops re-measure from the true originals.
-    olRestoreReinkIn(rootEl);
+    var tocados = olRestoreReinkIn(rootEl);
     var all = rootEl.querySelectorAll('*');
     var list = [rootEl];
     for (var q = 0; q < all.length; q++) list.push(all[q]);
@@ -1329,7 +1394,9 @@ ${CORE_SRC}
         el.setAttribute('data-ol-reink', el.style.color || '');
       }
       el.style.setProperty('color', ink, 'important');
+      if (tocados.indexOf(el) === -1) tocados.push(el);
     }
+    return tocados;
   }
 
   // LA TEMATICA, la edicion mas ancha del inspector — y la ultima que quedaba

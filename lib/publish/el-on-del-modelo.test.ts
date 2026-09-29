@@ -8,13 +8,16 @@
 // usa la misma puerta, y la CSP que los bloqueaba en el navegador se retiró el
 // 2026-08-26 (cabecera de `crates/html-engine/src/publish/seal.rs`).
 //
-// Lo que SÍ los borra es la MANO DEL DUEÑO: el editor manda desde el navegador
-// lo que tocó, eso es entrada no fiable y se sanea (`aplicarEdiciones` sanea el
-// fragmento; el `PATCH /html` del documento entero —deshacer— lo sanea entero y
-// sólo le devuelve los `<script>`). Así que un botón con `onclick` funciona el
-// día que se publica y se queda mudo la primera vez que el dueño le cambia el
-// texto; uno cableado con `addEventListener` desde el script no. Ésa es la
-// razón viva para recomendar `addEventListener`, y la que dice el prompt ahora.
+// Lo que SÍ los borraba, hasta el 2026-09-29, era la MANO DEL USUARIO: el
+// editor mandaba desde el navegador el elemento que tocó, entero, y eso se
+// saneaba; y Deshacer mandaba la página entera y se saneaba entera. Un botón con
+// `onclick` funcionaba el día que se publicaba y se quedaba mudo la primera vez
+// que el usuario le cambiaba el texto. Por eso el prompt le prohibía al modelo
+// los `onclick`: una regla para esquivar un defecto NUESTRO.
+//
+// Ahora el editor manda lo que cambió —el texto de antes y el de después, unos
+// atributos—, como el `Edit` de Claude Code, y Deshacer restaura la copia que
+// guarda el servidor. Las pruebas de abajo exigen que el `onclick` sobreviva.
 //
 // Run: npx tsx --require ./scripts/test-node-server-only-shim.cjs --test lib/publish/el-on-del-modelo.test.ts
 import { describe, it, before, after } from "node:test";
@@ -34,10 +37,9 @@ process.env.PUBLISH_ROOT = root;
 import { publishToDir } from "./filesystem";
 import { generateHtmlStream, type PageStreamProvider } from "@/lib/ai-stream/generate";
 import type { StreamEvent } from "@/lib/ai-gateway";
-import { applyOps, sanitizeForPublish, tagWithOpIds } from "@/lib/html-engine";
+import { applyOps, tagWithOpIds } from "@/lib/html-engine";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { aplicarEdiciones } from "@/lib/page-engine/aplicar-ediciones";
-import { conservarScripts } from "@/lib/page-engine/conservar-scripts";
 import { runAgentTool, type AgentDeps, type AgentSession } from "@/lib/agent/tools";
 import type { ProjectData } from "@/lib/projects/types";
 
@@ -145,42 +147,58 @@ describe("lo que escribe el MODELO conserva su onclick", () => {
   });
 });
 
-describe("lo que SÍ lo borra: la mano del dueño en el editor", () => {
-  // El dueño le cambia el texto al botón en el lienzo. El iframe manda el
-  // outerHTML de lo que tocó —con su atributo— y el servidor lo sanea.
-  const editarTexto = (documento: string, id: "b" | "c", texto: string) => {
-    const boton = new RegExp(`<button id="${id}"[^>]*>[^<]*</button>`).exec(documento)![0];
-    const nth = id === "b" ? 1 : 2;
-    return aplicarEdiciones(documento, [
+describe("y la mano del usuario en el editor tampoco lo borra (2026-09-29)", () => {
+  // Hasta hoy el editor mandaba el elemento tocado ENTERO y el servidor lo
+  // saneaba: cambiarle el texto al botón le quitaba el onclick. Ahora manda lo
+  // que cambió —como el `Edit` de Claude Code— y el resto sale del guardado.
+  const editarTexto = (documento: string, id: "b" | "c", antes: string, despues: string) =>
+    aplicarEdiciones(documento, [
       {
-        op: "replace",
-        path: `button:nth-of-type(${nth})`,
+        op: "texto",
+        modo: "elemento",
+        path: `button:nth-of-type(${id === "b" ? 1 : 2})`,
         tag: "button",
         hijos: [],
-        html: boton.replace(/>[^<]*</, `>${texto}<`),
+        antes,
+        despues,
       },
     ]);
-  };
 
-  it("editar el texto del botón le quita el onclick; al cableado desde el script no le pasa nada", () => {
-    const b = editarTexto(CON_ONCLICK, "b", "Pulsa ya");
+  it("editar el texto del botón le deja el onclick, y al cableado desde el script tampoco le pasa nada", () => {
+    const b = editarTexto(CON_ONCLICK, "b", "Pulsa", "Pulsa ya");
     assert.ok(b.ok, b.ok ? "" : b.detalle);
-    assert.ok(b.html.includes(">Pulsa ya</button>"), "la edición no llegó");
-    assert.ok(!b.html.includes("onclick"), "el onclick sobrevivió a la edición del dueño");
+    assert.ok(b.html.includes(`<button id="b" ${ONCLICK}>Pulsa ya</button>`), "el onclick no sobrevivió a la edición");
 
-    const c = editarTexto(CON_ONCLICK, "c", "Pulsa también ya");
+    const c = editarTexto(CON_ONCLICK, "c", "Pulsa también", "Pulsa también ya");
     assert.ok(c.ok, c.ok ? "" : c.detalle);
     assert.ok(c.html.includes(`addEventListener("click"`), "el script es del documento guardado");
     assert.ok(c.html.includes(`<button id="c">Pulsa también ya</button>`));
   });
 
-  it("guardar el documento entero (deshacer) también: se le devuelven los <script>, no los on*", () => {
-    const saneado = sanitizeForPublish(CON_ONCLICK).html!;
-    const guardado = conservarScripts(CON_ONCLICK, saneado);
-    assert.ok(!guardado.includes("onclick"));
-    assert.ok(guardado.includes(`addEventListener("click"`));
+  it("cambiarle el estilo tampoco: viajan los atributos, no el elemento", () => {
+    const r = aplicarEdiciones(CON_ONCLICK, [
+      { op: "atributos", path: "button:nth-of-type(1)", tag: "button", hijos: [], attrs: { style: "color: red" } },
+    ]);
+    assert.ok(r.ok, r.ok ? "" : r.detalle);
+    assert.ok(r.html.includes(ONCLICK));
+    assert.ok(r.html.includes(`style="color: red"`));
+  });
+
+  it("lo que SÍ se sigue saneando es el marcado NUEVO del navegador: un onclick que traiga no entra", () => {
+    const r = aplicarEdiciones(PREVIA, [
+      {
+        op: "replace",
+        path: "button:nth-of-type(1)",
+        tag: "button",
+        hijos: [],
+        html: BOTON_CON_ONCLICK,
+      },
+    ]);
+    assert.ok(r.ok, r.ok ? "" : r.detalle);
+    assert.ok(!r.html.includes("onclick"), "un onclick nuevo del navegador entró");
   });
 });
+
 
 describe("publicado y abierto en Chromium", () => {
   let browser: Browser;
@@ -218,14 +236,14 @@ describe("publicado y abierto en Chromium", () => {
     assert.equal(r.c, "pulsado");
   });
 
-  it("tras una edición del dueño, el del onclick se queda MUDO y el del script no", async () => {
+  it("tras editar el texto de los DOS botones, los dos siguen funcionando en la publicada", async () => {
     const editado = aplicarEdiciones(CON_ONCLICK, [
-      { op: "replace", path: "button:nth-of-type(1)", tag: "button", hijos: [], html: `<button id="b" ${ONCLICK}>Pulsa ya</button>` },
-      { op: "replace", path: "button:nth-of-type(2)", tag: "button", hijos: [], html: `<button id="c">Pulsa también ya</button>` },
+      { op: "texto", modo: "elemento", path: "button:nth-of-type(1)", tag: "button", hijos: [], antes: "Pulsa", despues: "Pulsa ya" },
+      { op: "texto", modo: "elemento", path: "button:nth-of-type(2)", tag: "button", hijos: [], antes: "Pulsa también", despues: "Pulsa también ya" },
     ]);
-    assert.ok(editado.ok);
-    const r = await pulsar("ondueno", editado.html);
-    assert.equal(r.b, "sin pulsar", "el botón del onclick debería haberse quedado mudo");
+    assert.ok(editado.ok, editado.ok ? "" : editado.detalle);
+    const r = await pulsar("onusuario", editado.html);
+    assert.equal(r.b, "pulsado", "el botón del onclick se quedó mudo tras la edición");
     assert.equal(r.c, "pulsado");
   });
 });

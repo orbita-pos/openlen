@@ -63,6 +63,28 @@ export function leerEdicion(data: unknown): Edicion | null {
     };
   }
 
+  // EL TEXTO VIAJA SOLO (2026-09-29): dos cadenas y la ruta del elemento que
+  // las contiene. No hay marcado que limpiar — el texto se escapa al aplicarse.
+  if (d.op === "texto") {
+    if (typeof d.path !== "string" || !d.path) return null;
+    if (typeof d.tag !== "string" || !d.tag) return null;
+    if (!Array.isArray(d.hijos)) return null;
+    if (d.modo !== "nodo" && d.modo !== "elemento") return null;
+    if (typeof d.antes !== "string" || typeof d.despues !== "string") return null;
+    return {
+      op: "texto",
+      path: d.path,
+      tag: d.tag,
+      hijos: d.hijos.filter((x): x is string => typeof x === "string"),
+      modo: d.modo,
+      antes: d.antes,
+      despues: d.despues,
+      ...(typeof d.ocurrencia === "number" && Number.isInteger(d.ocurrencia) && d.ocurrencia >= 0
+        ? { ocurrencia: d.ocurrencia }
+        : {}),
+    };
+  }
+
   if (d.op === "mover") {
     if (typeof d.path !== "string" || !d.path) return null;
     if (typeof d.destino !== "string" || !d.destino) return null;

@@ -33,7 +33,8 @@ import { createServer, type Server } from "node:http";
 
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
-import { aplicarEdiciones } from "@/lib/page-engine/aplicar-ediciones";
+import { aplicarEdiciones, type Edicion } from "@/lib/page-engine/aplicar-ediciones";
+import { leerEdicion } from "./leer-edicion";
 
 /** Un SVG como data-URL: da tamaño intrínseco sin salir a la red. */
 function foto(w: number, h: number, color: string): string {
@@ -221,23 +222,13 @@ describe("cambiar la foto no mueve el marco", () => {
 
       // Y AHORA LO QUE DE VERDAD SE GUARDA: las ediciones que salieron por
       // `openlen:edit`, aplicadas al documento con el motor real.
-      const ediciones = (await page.evaluate("window.__ediciones")) as Array<{
-        path: string;
-        tag: string;
-        hijos: string[];
-        html: string;
-      }>;
+      // Por la MISMA frontera que el taller (leerEdicion): el inyector manda
+      // lo que cambió —en un <img>, sus atributos—, no el elemento.
+      const ediciones = (await page.evaluate("window.__ediciones")) as unknown[];
       expect(ediciones.length, "el inyector no mandó ninguna edición").toBeGreaterThan(0);
-      const r = aplicarEdiciones(
-        DOC,
-        ediciones.map((e) => ({
-          op: "replace" as const,
-          path: e.path,
-          tag: e.tag,
-          hijos: e.hijos,
-          html: e.html,
-        })),
-      );
+      const leidas = ediciones.map(leerEdicion);
+      expect(leidas.every((e) => e !== null), "una edición no pasó la frontera").toBe(true);
+      const r = aplicarEdiciones(DOC, leidas as Edicion[]);
       expect(r.ok, r.ok ? "" : `${r.motivo}: ${r.detalle}`).toBe(true);
       if (!r.ok) return;
       expect(etiqueta(r.html, "v1"), "v1 no guardó el encaje").toContain("object-fit: cover");

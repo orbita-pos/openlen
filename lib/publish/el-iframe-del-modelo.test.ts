@@ -10,10 +10,11 @@
 // Crear, el Chat y Len guardan por `gateReservedMarker`, y `publishToDir` usa la
 // misma puerta. Un iframe de Spotify llega al release.
 //
-// Lo que SÍ lo borra, como a los `on*` (ver `el-on-del-modelo.test.ts`), es el
-// editor del dueño: «Deshacer» manda el documento de antes ENTERO por
-// `PATCH /html`, que lo sanea, y `conservarScripts` sólo le devuelve los
-// `<script>`. Los tres de la lista sobreviven también a eso.
+// Lo que SÍ lo borraba, como a los `on*` (ver `el-on-del-modelo.test.ts`), era
+// el editor del usuario: «Deshacer» mandaba el documento de antes ENTERO por
+// `PATCH /html`, que lo saneaba, y un retoque de la sección mandaba la sección
+// entera. Desde el 2026-09-29 viaja lo que cambió y Deshacer restaura la copia
+// del servidor: el de Spotify se queda.
 //
 // Y la pregunta de seguridad —¿filtrar iframes en la puerta del modelo?— tiene
 // aquí su respuesta medida: el script del modelo sobrevive y corre en la
@@ -39,10 +40,9 @@ process.env.PUBLISH_ROOT = root;
 import { publishToDir } from "./filesystem";
 import { generateHtmlStream, type PageStreamProvider } from "@/lib/ai-stream/generate";
 import type { StreamEvent } from "@/lib/ai-gateway";
-import { applyOps, sanitizeForPublish, tagWithOpIds } from "@/lib/html-engine";
+import { applyOps, tagWithOpIds } from "@/lib/html-engine";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { aplicarEdiciones } from "@/lib/page-engine/aplicar-ediciones";
-import { conservarScripts } from "@/lib/page-engine/conservar-scripts";
 import { runAgentTool, type AgentDeps, type AgentSession } from "@/lib/agent/tools";
 import type { ProjectData } from "@/lib/projects/types";
 
@@ -157,31 +157,57 @@ describe("lo que escribe el MODELO conserva su iframe de fuera de la lista", () 
   });
 });
 
-describe("lo que SÍ lo borra: el editor del dueño", () => {
-  it("«Deshacer» guarda el documento entero: se va el de Spotify, se queda el de YouTube", () => {
-    // `doUndo` (app/[locale]/new/page.tsx) → `PATCH /html` con `html` → saneado
-    // entero → `conservarScripts`. Lo mismo que hace la ruta, en el mismo orden.
-    const saneado = sanitizeForPublish(CON_SPOTIFY).html!;
-    const guardado = conservarScripts(CON_SPOTIFY, saneado);
-    assert.ok(!tiene(guardado, SPOTIFY), "el de Spotify sobrevivió al saneado del editor");
-    assert.ok(tiene(guardado, YOUTUBE), "el de la lista no debería perderse");
-  });
-
-  it("y un fragmento del editor que lo traiga, igual", () => {
+describe("y el editor del usuario tampoco lo borra (2026-09-29)", () => {
+  // Hasta hoy «Deshacer» mandaba el documento entero y se saneaba entero, y un
+  // retoque de la sección mandaba la sección entera: los dos se llevaban el
+  // de Spotify. Ahora viaja lo que cambió y Deshacer restaura la copia que
+  // guarda el servidor (model-runtime-e2e.test.ts lo mide con la base).
+  it("cambiar el titular de la sección lo deja", () => {
     const r = aplicarEdiciones(CON_SPOTIFY, [
       {
-        op: "replace",
-        path: "section:nth-of-type(1)",
-        tag: "section",
-        hijos: ["h2", "iframe"],
-        html: SECCION_CON_SPOTIFY.replace("Escúchanos", "Escúchanos ya"),
+        op: "texto",
+        modo: "elemento",
+        path: "section:nth-of-type(1) > h2:nth-of-type(1)",
+        tag: "h2",
+        hijos: [],
+        antes: "Escúchanos",
+        despues: "Escúchanos ya",
       },
     ]);
     assert.ok(r.ok, r.ok ? "" : r.detalle);
     assert.ok(r.html.includes("Escúchanos ya"), "la edición no llegó");
-    assert.ok(!tiene(r.html, SPOTIFY));
+    assert.ok(tiene(r.html, SPOTIFY), "el de Spotify no sobrevivió");
+  });
+
+  it("y el fondo de la sección, que viaja como atributos, también", () => {
+    const r = aplicarEdiciones(CON_SPOTIFY, [
+      {
+        op: "atributos",
+        path: "section:nth-of-type(1)",
+        tag: "section",
+        hijos: ["h2", "iframe"],
+        attrs: { style: "background-color: #111" },
+      },
+    ]);
+    assert.ok(r.ok, r.ok ? "" : r.detalle);
+    assert.ok(tiene(r.html, SPOTIFY));
+  });
+
+  it("lo que se sigue saneando es un iframe NUEVO que traiga el navegador", () => {
+    const r = aplicarEdiciones(PREVIA, [
+      {
+        op: "replace",
+        path: "section:nth-of-type(1)",
+        tag: "section",
+        hijos: ["h2"],
+        html: SECCION_CON_SPOTIFY,
+      },
+    ]);
+    assert.ok(r.ok, r.ok ? "" : r.detalle);
+    assert.ok(!tiene(r.html, SPOTIFY), "un iframe nuevo del navegador entró");
   });
 });
+
 
 describe("¿y si la puerta del modelo filtrara iframes?", () => {
   let browser: Browser;

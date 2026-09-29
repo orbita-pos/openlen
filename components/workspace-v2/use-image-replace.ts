@@ -508,8 +508,14 @@ ${CORE_SRC}
     openReplaceFor(found.el);
   }
 
+  // COMO SE GUARDA el ultimo cambio que hizo performSwap. Lo decide quien sabe
+  // que cambio: cambiar la foto de un <img> son dos atributos; cambiar un
+  // icono o un hueco por una foto es un elemento nuevo en su sitio.
+  var comoGuardar = null;
+
   function performSwap(kind, path, payload) {
     var target;
+    comoGuardar = null;
     try {
       target = document.querySelector('body > ' + path);
       if (!target) target = document.querySelector(path);
@@ -517,6 +523,11 @@ ${CORE_SRC}
       return null;
     }
     if (!target) return null;
+    // COMO LO TIENE EL DOCUMENTO GUARDADO, antes de tocarlo. Cuando el cambio
+    // pone un elemento NUEVO en su sitio, la ruta y la firma del nuevo no
+    // existen en el guardado: con ellas, el servidor rechazaba el cambio o —si
+    // habia otra imagen en esa posicion— lo aplicaba sobre ELLA.
+    var descAntes = descriptorDe(target);
 
     if (kind === 'icon' && payload && typeof payload.svgMarkup === 'string') {
       // Parse new SVG, preserve outer attributes (class/style/data-*) from
@@ -535,6 +546,7 @@ ${CORE_SRC}
       if (target.hasAttribute('width')) newSvg.setAttribute('width', target.getAttribute('width'));
       if (target.hasAttribute('height')) newSvg.setAttribute('height', target.getAttribute('height'));
       target.parentNode.replaceChild(newSvg, target);
+      comoGuardar = { reemplazo: descAntes };
       return newSvg;
     }
 
@@ -548,9 +560,12 @@ ${CORE_SRC}
         target.setAttribute('src', url);
         if (alt) target.setAttribute('alt', alt);
         newImage = target;
+        // Otra foto en el mismo <img>: dos atributos, no el elemento.
+        comoGuardar = { atributos: ['src', 'alt'] };
+        // El encaje en el marco solo escribe el style (encaje-en-el-marco.ts).
         if (marco) {
           trasCargar(target, function () {
-            if (ajustarAlMarco(target, marco, false)) postEdicion(target);
+            if (ajustarAlMarco(target, marco, false)) postAtributos(target, ['style']);
           });
         }
       } else {
@@ -576,11 +591,13 @@ ${CORE_SRC}
         }
         target.parentNode.replaceChild(img, target);
         newImage = img;
+        comoGuardar = { reemplazo: descAntes };
         // Y la red por debajo: si al elemento viejo lo media una regla CSS que
-        // a un <img> no le aplica, copiar el estilo en linea no basta.
+        // a un <img> no le aplica, copiar el estilo en linea no basta. Llega
+        // DESPUES del reemplazo, asi que el <img> ya esta en el guardado.
         if (marcoPrevio) {
           trasCargar(img, function () {
-            if (ajustarAlMarco(img, marcoPrevio, false)) postEdicion(img);
+            if (ajustarAlMarco(img, marcoPrevio, false)) postAtributos(img, ['style']);
           });
         }
       }
@@ -613,6 +630,8 @@ ${CORE_SRC}
       if (sourceEl) sourceEl.setAttribute('src', vurl);
       else target.setAttribute('src', vurl);
       try { target.load(); } catch (_) {}
+      // Un atributo: el del <source>, si lo hay, o el del propio <video>.
+      comoGuardar = { atributos: ['src'], en: sourceEl || target };
       return target;
     }
 
@@ -694,13 +713,39 @@ ${CORE_SRC}
     }
   }
 
-  // UN ELEMENTO, no el documento entero. postClean, aqui abajo, clona el
-  // documento VIVO — la practica que obliga a congelar el JavaScript del modelo
-  // mientras se edita, porque con el script corriendo se persistiria lo que el
-  // script hizo. Un intercambio de imagen o un redimensionado tocan UN elemento
-  // y se pueden nombrar: no hace falta mandar la pagina entera.
-  function postEdicion(el, source) {
+  // COMO LO TIENE EL DOCUMENTO GUARDADO: ruta, etiqueta y firma, tomadas antes
+  // de cambiar nada.
+  function descriptorDe(el) {
+    if (!el || !el.parentElement) return null;
+    return { path: buildEditPath(el), tag: el.tagName.toLowerCase(), hijos: editChildTags(el) };
+  }
+
+  // SOLO LO QUE CAMBIA, como el Edit de Claude Code. Otra foto en un <img>, un
+  // redimensionado o el encaje en el marco son atributos del propio elemento:
+  // viajan sus nombres y valores, y el resto sale del documento guardado.
+  function postAtributos(el, nombres, source) {
     if (!el || !el.parentElement) return;
+    var attrs = {};
+    for (var i = 0; i < nombres.length; i++) attrs[nombres[i]] = el.getAttribute(nombres[i]);
+    try {
+      window.parent.postMessage({
+        type: 'openlen:edit',
+        op: 'atributos',
+        path: buildEditPath(el),
+        tag: el.tagName.toLowerCase(),
+        hijos: editChildTags(el),
+        attrs: attrs,
+        source: source || 'replace'
+      }, '*');
+    } catch (_) {}
+  }
+
+  // UN ELEMENTO NUEVO en el sitio de otro: el icono cambiado, o la foto que
+  // ocupa el hueco de un <div>. Lo nuevo viaja entero —no hay nada guardado que
+  // conservar dentro—, pero descrito como lo que SUSTITUYE (desc), que es lo
+  // que el documento guardado tiene en ese sitio.
+  function postReemplazo(desc, el, source) {
+    if (!desc || !el || !el.parentElement) return;
     var clone = el.cloneNode(true);
     for (var i = 0; i < EDITOR_NODE_ATTRS.length; i++) {
       clone.removeAttribute(EDITOR_NODE_ATTRS[i]);
@@ -714,9 +759,9 @@ ${CORE_SRC}
       window.parent.postMessage({
         type: 'openlen:edit',
         op: 'replace',
-        path: buildEditPath(el),
-        tag: el.tagName.toLowerCase(),
-        hijos: editChildTags(el),
+        path: desc.path,
+        tag: desc.tag,
+        hijos: desc.hijos,
         html: clone.outerHTML,
         source: source || 'replace'
       }, '*');
@@ -795,7 +840,8 @@ ${CORE_SRC}
     document.body.removeAttribute('data-openlen-resizing');
     try { resizeGrip.releasePointerCapture(e.pointerId); } catch (_) {}
     positionGrip(el);
-    postEdicion(el, 'resize');
+    // El asa solo escribe el style (anchura, y el alto o el encaje).
+    postAtributos(el, ['style'], 'resize');
   }
 
   function onParentMessage(e) {
@@ -808,7 +854,10 @@ ${CORE_SRC}
       clearHover();
       // La edicion se manda ANTES de enseñar la pastilla, para que el elemento
       // serializado no la lleve dentro si el usuario guarda al instante.
-      postEdicion(newTarget);
+      var como = comoGuardar;
+      comoGuardar = null;
+      if (como && como.atributos) postAtributos(como.en || newTarget, como.atributos);
+      else if (como && como.reemplazo) postReemplazo(como.reemplazo, newTarget);
       if (data.kind !== 'video') showCopyChip(newTarget, data.kind);
     } else {
       try {
