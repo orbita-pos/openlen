@@ -528,6 +528,8 @@ export default defineConfig({
       "lib/projects/settings-patch.test.ts",
       "lib/projects/create-page.test.ts",
       "lib/projects/paginas-declaradas.test.ts",
+      // Las copias de ANTES no entran en el registro que ve el Agente.
+      "lib/projects/cambios-para-el-agente.test.ts",
       "lib/projects/construir-paginas-declaradas.test.ts",
       "lib/projects/inline-own-assets.test.ts",
       "lib/projects/assets-config.test.ts",

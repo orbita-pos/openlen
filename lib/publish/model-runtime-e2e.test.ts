@@ -177,7 +177,16 @@ describe("el script vive en el documento, y por eso llega", () => {
  * conserva una parte de sí mismo.
  */
 describe("editar, restaurar, duplicar, remixar — el script no se cae", () => {
-  it("guardar por la pestaña Contenido conserva el script de esa página", async () => {
+  /**
+   * EL DOCUMENTO ENTERO YA NO SE ACEPTA (2026-09-29).
+   *
+   * Aquí se guardaba por la pestaña Contenido mandando el documento entero —
+   * una foto del DOM vivo— y `conservarScripts` le devolvía los `<script>` que
+   * el saneo le quitaba. Los `onclick` y los iframes no volvían. Su último
+   * usuario era el Deshacer del taller, que ahora restaura la copia que guarda
+   * el servidor (ver la prueba de abajo).
+   */
+  it("el cuerpo con el documento entero se rechaza: sólo viajan ediciones", async () => {
     const { PATCH } = await import("../../app/api/projects/[id]/html/route");
     const res = await PATCH(
       new Request("http://localhost/api/projects/x/html", {
@@ -190,22 +199,16 @@ describe("editar, restaurar, duplicar, remixar — el script no se cae", () => {
       }),
       { params: Promise.resolve({ id: PID }) },
     );
-    expect(res.status, await res.text().catch(() => "")).toBe(200);
-
-    await publicar(SUB);
-    const html = vivo(SUB, "menu");
-    expect(html).toContain("Menu nuevo");
-    expect(html, "la edición se llevó el script").toContain(MENU);
+    expect(res.status).toBe(400);
   });
 
   /**
    * GUARDAR POR EDICIONES — el camino de v0, con base de datos de verdad.
    *
-   * La prueba de arriba manda el DOCUMENTO ENTERO, que es como guardaba el
-   * taller: una foto del DOM vivo. Funciona gracias a `conservarScripts`, que
-   * le devuelve al documento los `<script>` que el saneador acababa de
-   * quitarle — un remiendo necesario porque la página hace el viaje de ida y
-   * vuelta por el navegador en CADA edición.
+   * El taller guardaba mandando el DOCUMENTO ENTERO, una foto del DOM vivo, y
+   * `conservarScripts` le devolvía los `<script>` que el saneador le quitaba —
+   * un remiendo necesario porque la página hacía el viaje de ida y vuelta por
+   * el navegador en CADA edición. Ese camino ya no existe (la de arriba).
    *
    * Ésta manda QUÉ CAMBIÓ. El documento no sale de la base, así que no hay
    * nada que remendar: el script no puede perderse ni duplicarse porque nadie
@@ -243,6 +246,59 @@ describe("editar, restaurar, duplicar, remixar — el script no se cae", () => {
       html.split(MENU).length - 1,
       "el script quedó duplicado",
     ).toBe(1);
+  });
+
+  /**
+   * DESHACER EN EL TALLER, como `/rewind` en Claude Code: el servidor guarda
+   * una copia ANTES de aplicar las ediciones y Deshacer restaura ESA copia. El
+   * documento no viaja por el navegador, así que no se sanea y vuelve byte a
+   * byte — con su script, sus `onclick` y sus iframes.
+   */
+  it("cada lote guarda la copia de antes, y restaurarla devuelve el documento exacto", async () => {
+    const { eq } = await import("drizzle-orm");
+    const { PATCH } = await import("../../app/api/projects/[id]/html/route");
+    const { POST } = await import("../../app/api/projects/[id]/versions/[vid]/restore/route");
+    const leer = async () =>
+      (
+        await db
+          .select({ data: schema.projects.data })
+          .from(schema.projects)
+          .where(eq(schema.projects.id, PID))
+      )[0]?.data?.pages?.menu?.html;
+    const antes = await leer();
+    expect(antes).toContain("Menu por ediciones");
+
+    const res = await PATCH(
+      new Request("http://localhost/api/projects/x/html", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          page: "menu",
+          edits: [
+            {
+              op: "texto",
+              modo: "elemento",
+              path: "h1:nth-of-type(1)",
+              tag: "h1",
+              hijos: [],
+              antes: "Menu por ediciones",
+              despues: "Menu que se deshace",
+            },
+          ],
+        }),
+      }),
+      { params: Promise.resolve({ id: PID }) },
+    );
+    expect(res.status, await res.clone().text().catch(() => "")).toBe(200);
+    const { versionPrevia } = (await res.json()) as { versionPrevia: string | null };
+    expect(versionPrevia, "el servidor no guardó la copia de antes").toBeTruthy();
+    expect(await leer()).toContain("Menu que se deshace");
+
+    const deshecho = await POST(new Request("http://localhost/x", { method: "POST" }), {
+      params: Promise.resolve({ id: PID, vid: versionPrevia as string }),
+    });
+    expect(deshecho.status).toBe(200);
+    expect(await leer(), "Deshacer no devolvió el documento exacto").toBe(antes);
   });
 
   /**

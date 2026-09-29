@@ -1,7 +1,13 @@
 /**
  * LOS `<script>` NO VIENEN DEL NAVEGADOR: SE EMPALMAN DESDE LO GUARDADO.
  *
- * EL PROBLEMA. El editor guarda serializando el DOM VIVO
+ * ⚰️ EL EDITOR YA NO LO USA (2026-09-29). Su último camino con el documento
+ * entero —el Deshacer del taller por `PATCH /html`— se retiró: el editor manda
+ * lo que cambió y Deshacer restaura la copia del servidor, así que no hay nada
+ * que empalmar. Lo sigue usando `from-template`, que sanea la plantilla curada
+ * y le devuelve aquí sus scripts. Lo de abajo cuenta por qué nació.
+ *
+ * EL PROBLEMA. El editor guardaba serializando el DOM VIVO
  * (`captureClean` en use-inline-edit.ts manda `document.documentElement
  * .outerHTML`). Ese cuerpo llega por la red desde el navegador del usuario, así
  * que es entrada NO FIABLE y `PATCH /html` la sanea — lo cual borra los

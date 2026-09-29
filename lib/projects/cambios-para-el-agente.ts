@@ -15,8 +15,10 @@ export function cambiosParaElAgente(
   return (
     versiones
       // El «Before AI edit» es el respaldo que se guarda ANTES de cada cambio;
-      // contarlo como cambio duplicaría el registro entero.
-      .filter((v) => v.label && !/^Before AI edit/i.test(v.label))
+      // contarlo como cambio duplicaría el registro entero. Lo mismo el
+      // «Before manual edit», su hermano del taller (2026-09-29): la copia que
+      // el Deshacer restaura, no un cambio del usuario.
+      .filter((v) => v.label && !/^Before (AI|manual) edit/i.test(v.label))
       .map((v) => ({ label: v.label, page: v.page, createdAt: v.createdAt }))
   );
 }

@@ -5,19 +5,24 @@ import { db, schema } from "@/lib/db";
 import type { ProjectData } from "@/lib/projects/types";
 import { validatePageSlug } from "@/lib/projects/site-pages";
 import { createVersion } from "@/lib/projects/versions";
-import { sanitizeForPublish } from "@/lib/html-engine";
-import { conservarScripts } from "@/lib/page-engine/conservar-scripts";
 import { aplicarEdiciones, type Edicion } from "@/lib/page-engine/aplicar-ediciones";
 import { MAX_HTML_BYTES } from "@/lib/projects/limites-html";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PATCH /api/projects/[id]/html — overwrite one of the project's documents:
-// `data.html` (home) or, with `page`, `data.pages[slug].html`.
+// PATCH /api/projects/[id]/html — the editor's hand edits, applied to one of
+// the project's documents: `data.html` (home) or, with `page`,
+// `data.pages[slug].html`.
 //
-// Used by the Design panel on flat (template-clone / paste) projects to
-// persist token swaps (accent color, fonts) without going through the
-// orchestrator. The handler only swaps the html inside the JSONB envelope;
-// everything else in `data` (meta, plan, cost, …) is preserved verbatim.
+// Only EDITS travel — what changed, never the document. That is Claude Code's
+// `Edit`: the browser names the old text and the new, or a few attributes, and
+// everything else comes from the SAVED document. The whole-document body (`html`)
+// is gone since 2026-09-29: its last caller was the editor's Undo, which now
+// restores the copy this route keeps (see `versionPrevia` below), and it
+// sanitized the WHOLE page — every `onclick` the model wrote, every iframe
+// outside the allow-list — on each undo.
+//
+// The handler only swaps the html inside the JSONB envelope; everything else in
+// `data` (meta, plan, cost, …) is preserved verbatim.
 //
 // Version snapshots + the concurrent-edit guard apply to BOTH scopes — each
 // document keeps its own timeline (projectVersions.page).
@@ -54,20 +59,15 @@ const MAX_EDICIONES = 500;
 const IDLE_CHECKPOINT_MS = 5 * 60 * 1000;
 
 interface PatchBody {
-  /** EL CAMINO VIEJO: una foto del DOM vivo, el documento entero.
-   *
-   *  Sigue aquí mientras quede algún inyector sin migrar. Su problema es el
-   *  que sostiene toda esta obra: para producirla hay que leer la página de
-   *  vuelta desde la pantalla, y con el JavaScript del modelo corriendo eso
-   *  persiste lo que el script hizo — un filtro que escondió media rejilla se
-   *  guarda como el documento del usuario. Por eso el taller lo congela. */
-  html?: string;
-  /** EL CAMINO NUEVO: qué cambió, no cómo quedó la pantalla.
+  /** Qué cambió, no cómo quedó la pantalla.
    *
    *  Se aplican en orden contra el documento GUARDADO, así que el script del
    *  modelo puede hacer lo que quiera en el lienzo — no se lee nunca. Es lo
    *  que hace v0 en su Design Mode: serializa las ediciones, no el DOM.
-   *  Mutuamente excluyente con `html`. */
+   *
+   *  ⚰️ Aquí había también `html`, el documento entero: el camino viejo, que
+   *  saneaba la página completa y sólo le devolvía los `<script>`. Ver la
+   *  cabecera. */
   edits?: Edicion[];
   /** Distinguishes inline-text edits (default — idle-checkpointed) from
    *  structural mutations (reorder, replace) which always snapshot so the
@@ -95,43 +95,15 @@ export async function PATCH(
   const { id } = await params;
 
   const body = (await req.json().catch(() => null)) as PatchBody | null;
-  const porEdiciones = Array.isArray(body?.edits);
-  if (!body || (!porEdiciones && typeof body.html !== "string")) {
-    return json(
-      { error: "invalid_body", message: "html string or edits array is required" },
-      400,
-    );
+  if (!body || !Array.isArray(body.edits)) {
+    return json({ error: "invalid_body", message: "edits array is required" }, 400);
   }
-  if (porEdiciones && (body.edits!.length === 0 || body.edits!.length > MAX_EDICIONES)) {
+  const edits = body.edits;
+  if (edits.length === 0 || edits.length > MAX_EDICIONES) {
     return json(
       { error: "invalid_body", message: `edits must be 1..${MAX_EDICIONES}` },
       400,
     );
-  }
-  // El saneo del camino viejo. El nuevo sanea cada FRAGMENTO dentro de
-  // `aplicarEdiciones` — el documento no se reescribe entero, así que no hay
-  // un documento entero que sanear.
-  let saneado = "";
-  if (!porEdiciones) {
-    const rawHtml = body.html!;
-    if (Buffer.byteLength(rawHtml, "utf8") > MAX_HTML_BYTES) {
-      return json(
-        { error: "too_large", message: "HTML must be under 8 MB" },
-        413,
-      );
-    }
-    const sanitized = sanitizeForPublish(rawHtml);
-    if (sanitized.html === null) {
-      return json(
-        {
-          error: "invalid_html",
-          message:
-            "HTML contains editor-mode markers (data-slot-path). Save the rendered output instead.",
-        },
-        400,
-      );
-    }
-    saneado = sanitized.html;
   }
   const rows = await db
     .select({
@@ -165,33 +137,23 @@ export async function PATCH(
   const guardado =
     (page ? existing.data?.pages?.[page]?.html : existing.data?.html) ?? "";
 
-  let html: string;
-  if (porEdiciones) {
-    // LAS EDICIONES SE APLICAN AL DOCUMENTO GUARDADO. No hay empalme que hacer:
-    // el `<script>` del modelo nunca sale de la base, así que no puede
-    // perderse ni duplicarse. Ésa es toda la diferencia con el camino de
-    // abajo, y es la razón de existir de este camino.
-    const r = aplicarEdiciones(guardado, body.edits!);
-    if (!r.ok) {
-      // 409, no 400: la petición era válida: el DOCUMENTO cambió debajo. El
-      // cliente tiene que recargar y volver a intentarlo, no reformular.
-      // Se rechaza el LOTE ENTERO — media edición guardada es peor que ninguna,
-      // porque el usuario ve parte de su trabajo y no sabe qué falta.
-      return json(
-        { error: "edits_stale", motivo: r.motivo, indice: r.indice, detalle: r.detalle },
-        409,
-      );
-    }
-    html = r.html;
-  } else {
-    // EL EMPALME del camino viejo. Va aquí, después de resolver a QUÉ documento
-    // pertenece la edición: los scripts que se restauran son los de ESE
-    // documento, no los de la Home. El cuerpo llega del navegador, así que se
-    // sanea sin excepción; pero el documento GUARDADO sí lleva el `<script>`
-    // del modelo, y sin este empalme la primera edición de un titular mataba el
-    // carrito. El código sale de la base, nunca de la petición.
-    // Ver lib/page-engine/conservar-scripts.ts.
-    html = conservarScripts(guardado, saneado);
+  // LAS EDICIONES SE APLICAN AL DOCUMENTO GUARDADO. El `<script>` del modelo,
+  // sus `onclick` y sus iframes nunca salen de la base, así que no pueden
+  // perderse ni duplicarse.
+  const r = aplicarEdiciones(guardado, edits);
+  if (!r.ok) {
+    // 409, no 400: la petición era válida: el DOCUMENTO cambió debajo. El
+    // cliente tiene que recargar y volver a intentarlo, no reformular.
+    // Se rechaza el LOTE ENTERO — media edición guardada es peor que ninguna,
+    // porque el usuario ve parte de su trabajo y no sabe qué falta.
+    return json(
+      { error: "edits_stale", motivo: r.motivo, indice: r.indice, detalle: r.detalle },
+      409,
+    );
+  }
+  const html = r.html;
+  if (Buffer.byteLength(html, "utf8") > MAX_HTML_BYTES) {
+    return json({ error: "too_large", message: "HTML must be under 8 MB" }, 413);
   }
 
   // Concurrency guard. If another writer changed the project since the client
@@ -221,6 +183,30 @@ export async function PATCH(
         console.error("[projects/html] conflict snapshot failed", err);
       }
     }
+  }
+
+  // LA COPIA DE ANTES, para Deshacer. Es el `fileHistoryTrackEdit` de Claude
+  // Code: antes de modificar un fichero guarda su copia, y `/rewind` restaura
+  // ESA copia — nunca una que le mande quien pide deshacer. Aquí el Deshacer
+  // del taller mandaba la página entera desde el navegador, y había que
+  // sanearla entera: cada Deshacer le quitaba a la página todos sus `onclick`.
+  // Ahora el taller restaura esta versión (`POST …/versions/<id>/restore`),
+  // igual que el Deshacer del Chat con su «Before AI edit».
+  //
+  // Blanda: si no se puede escribir, el cambio se guarda igual y el taller
+  // dice que no hay Deshacer, en vez de ofrecer uno que no existe.
+  let versionPrevia: string | null = null;
+  try {
+    versionPrevia = await createVersion({
+      projectId: id,
+      html: guardado,
+      label: "Before manual edit",
+      source: "manual",
+      page,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[projects/html] pre-edit snapshot failed", err);
   }
 
   // Preserve everything else in `data` (notably data.settings — the Phase 2
@@ -320,14 +306,11 @@ export async function PATCH(
     console.error("[projects/html] version snapshot failed", err);
   }
 
-  // El documento va en la respuesta cuando se guardó por ediciones: el cliente
-  // no lo tiene —él sólo mandó QUÉ cambió— y lo necesita para que el resto de
-  // la aplicación (la pestaña de código, el Chat, publicar) vea lo mismo que el
-  // lienzo. Por el camino viejo el cliente ya lo tenía: él lo mandó.
-  return json(
-    { ok: true, updatedAt: now.toISOString(), ...(porEdiciones ? { html } : {}) },
-    200,
-  );
+  // El documento va en la respuesta: el cliente no lo tiene —él sólo mandó QUÉ
+  // cambió— y lo necesita para que el resto de la aplicación (la pestaña de
+  // código, el Chat, publicar) vea lo mismo que el lienzo. Y la copia de antes,
+  // que es lo que su Deshacer restaura.
+  return json({ ok: true, updatedAt: now.toISOString(), html, versionPrevia }, 200);
 }
 
 function json(body: unknown, status: number): Response {

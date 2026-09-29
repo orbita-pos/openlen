@@ -51,6 +51,8 @@ import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholde
 import { StartLanding } from "@/components/workspace-v2/start-landing";
 import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
+import { ejecutarUndo } from "@/components/workspace-v2/panels/undo-turn";
+import { planDeDeshacerDelTaller } from "@/components/workspace-v2/deshacer-del-taller";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
 import { PreviewArea, type Lente } from "@/components/workspace-v2/preview-area";
 import {
@@ -1331,13 +1333,27 @@ function NewV2Inner() {
     | { kind: "done"; text: string }
     | null
   >(null);
-  // One-step undo for direct-manipulation commits (drops, trash, toolbar).
-  // The html-changed listener stashes the PREVIOUS document before applying
-  // any edit; "Deshacer" restores it, persists, and remounts the iframe via
-  // the docKey epoch (a state push alone is skipped while editing).
+  // DESHACER UN PASO en el taller, como `/rewind` en Claude Code: se restaura
+  // una copia que el SERVIDOR hizo antes de aplicar el cambio, nunca un
+  // documento que mande el navegador.
+  //
+  // Antes se guardaba aquí el documento de antes y Deshacer lo mandaba entero
+  // por `PATCH /html`. Esa ruta tenía que sanearlo —viene del navegador—, así
+  // que cada Deshacer le quitaba a la página TODOS sus `onclick` y los iframes
+  // fuera de lista (medido el 2026-09-29: 2 → 0).
+  //
+  // Ahora el punto de deshacer es un LOTE de ediciones. Si aún no salió,
+  // deshacer es tirarlo; si ya salió, el servidor contestó con el id de la
+  // copia de antes (`versionPrevia`) y se restaura ésa.
   const loadedProjectRef = useRef(loadedProject);
   loadedProjectRef.current = loadedProject;
-  const undoRef = useRef<{ html: string; page: string | null } | null>(null);
+  const undoRef = useRef<{ page: string | null; lote: number } | null>(null);
+  /** El lote que se está llenando: sube cada vez que uno SALE hacia el servidor. */
+  const loteRef = useRef(0);
+  /** Lote enviado → id de la copia de antes que guardó el servidor (o null). */
+  const copiasRef = useRef(new Map<number, string | null>());
+  /** El envío en curso, para que Deshacer espere a su respuesta. */
+  const envioRef = useRef<Promise<unknown> | null>(null);
   const pendingPillRef = useRef<string | null>(null);
   // Timestamp of the last local edit/undo — refetchProject's anti-clobber
   // guard reads it (see its comment).
@@ -1801,77 +1817,96 @@ function NewV2Inner() {
     setAnclaPendiente({ id, nonce: anclaNonceRef.current });
   }, []);
 
+  /**
+   * Manda un lote de ediciones. Resuelve con si se guardó y, si se guardó, el
+   * id de la copia de ANTES que el servidor hizo (lo que restaura Deshacer).
+   *
+   * 🔴 UN RECHAZO SE DICE. Hasta el 2026-09-29 un 409 dejaba el estado en
+   * reposo y nada más: el lienzo seguía enseñando un cambio que no estaba
+   * guardado, y al recargar desaparecía. Así se perdían en silencio poner una
+   * imagen junto al texto o convertir un botón en enlace. Ahora se avisa y el
+   * lienzo vuelve a lo guardado — lo que hace un `Edit` que falla en Claude
+   * Code: devuelve su error, nunca «hecho».
+   */
   const persistDoc = useCallback(
     (p: {
       projectId: string;
-      /** El camino viejo: el documento entero. */
-      html?: string;
-      /** El camino nuevo: qué cambió. Excluyente con `html`. */
-      edits?: readonly Edicion[];
+      /** Qué cambió. El documento entero ya no viaja (ver la ruta). */
+      edits: readonly Edicion[];
       source: string;
       page: string | null;
-    }): Promise<void> => {
+    }): Promise<{ ok: true; versionPrevia: string | null } | { ok: false }> => {
       setSavingStatus("saving");
+      const noSeGuardo = () => {
+        setSavingStatus("idle");
+        flashDropError(t("toast.editsRejected"));
+        setDescarteEpoch((n) => n + 1);
+        return { ok: false as const };
+      };
       return fetch(`/api/projects/${p.projectId}/html`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          ...(p.edits ? { edits: p.edits } : { html: p.html }),
+          edits: p.edits,
           source: p.source,
           baseUpdatedAt: projectUpdatedAtRef.current,
           ...(p.page ? { page: p.page } : {}),
         }),
       })
         .then(async (r) => {
-          setSavingStatus(r.ok ? "saved" : "idle");
-          if (r.ok) {
-            // Nudge other tabs of this project to refetch the new HTML.
-            syncChannelRef.current?.postMessage({ projectId: p.projectId });
-            // Advance the concurrency base to the version the server just
-            // wrote — so this tab's own next save isn't read as a clobber.
-            const saved = (await r.json().catch(() => null)) as
-              | { updatedAt?: string; html?: string }
-              | null;
-            if (saved?.updatedAt) {
-              projectUpdatedAtRef.current = new Date(saved.updatedAt).getTime();
-            }
-            // Guardando por ediciones, el cliente NO tiene el documento nuevo —
-            // él sólo mandó qué cambió. Llega en la respuesta, y sin meterlo
-            // aquí la pestaña de código, el Chat y publicar seguirían viendo la
-            // versión anterior mientras el lienzo enseña la nueva.
-            const htmlNuevo = typeof saved?.html === "string" ? saved.html : null;
-            // Y SIN RECARGAR EL LIENZO. El documento que vuelve es el resultado
-            // de las ediciones que el usuario acaba de hacer AHÍ: la pantalla ya
-            // lo enseña. Re-derivar sería tirar el iframe abajo para volver a
-            // pintar lo mismo — un parpadeo en blanco por cada «Aplicar».
-            // Va en el MISMO commit que el documento nuevo, que es lo que hace
-            // que la supresión llegue a tiempo de taparlo.
-            if (htmlNuevo && p.edits) setSuppressReload((n) => n + 1);
-            setLoadedProject((prev) => {
-              if (!prev || prev.id !== p.projectId) return prev;
-              const conBandera = { ...prev, hasUnpublishedChanges: !!prev.subdomain };
-              if (!htmlNuevo) return conBandera;
-              return p.page && conBandera.pages[p.page]
-                ? {
-                    ...conBandera,
-                    pages: {
-                      ...conBandera.pages,
-                      [p.page]: { ...conBandera.pages[p.page], html: htmlNuevo },
-                    },
-                  }
-                : { ...conBandera, html: htmlNuevo };
-            });
-            if (savedFlashRef.current !== null)
-              window.clearTimeout(savedFlashRef.current);
-            savedFlashRef.current = window.setTimeout(
-              () => setSavingStatus("idle"),
-              1600,
-            );
+          if (!r.ok) return noSeGuardo();
+          setSavingStatus("saved");
+          // Nudge other tabs of this project to refetch the new HTML.
+          syncChannelRef.current?.postMessage({ projectId: p.projectId });
+          // Advance the concurrency base to the version the server just
+          // wrote — so this tab's own next save isn't read as a clobber.
+          const saved = (await r.json().catch(() => null)) as
+            | { updatedAt?: string; html?: string; versionPrevia?: string | null }
+            | null;
+          if (saved?.updatedAt) {
+            projectUpdatedAtRef.current = new Date(saved.updatedAt).getTime();
           }
+          // Guardando por ediciones, el cliente NO tiene el documento nuevo —
+          // él sólo mandó qué cambió. Llega en la respuesta, y sin meterlo
+          // aquí la pestaña de código, el Chat y publicar seguirían viendo la
+          // versión anterior mientras el lienzo enseña la nueva.
+          const htmlNuevo = typeof saved?.html === "string" ? saved.html : null;
+          // Y SIN RECARGAR EL LIENZO. El documento que vuelve es el resultado
+          // de las ediciones que el usuario acaba de hacer AHÍ: la pantalla ya
+          // lo enseña. Re-derivar sería tirar el iframe abajo para volver a
+          // pintar lo mismo — un parpadeo en blanco por cada «Aplicar».
+          // Va en el MISMO commit que el documento nuevo, que es lo que hace
+          // que la supresión llegue a tiempo de taparlo.
+          if (htmlNuevo) setSuppressReload((n) => n + 1);
+          setLoadedProject((prev) => {
+            if (!prev || prev.id !== p.projectId) return prev;
+            const conBandera = { ...prev, hasUnpublishedChanges: !!prev.subdomain };
+            if (!htmlNuevo) return conBandera;
+            return p.page && conBandera.pages[p.page]
+              ? {
+                  ...conBandera,
+                  pages: {
+                    ...conBandera.pages,
+                    [p.page]: { ...conBandera.pages[p.page], html: htmlNuevo },
+                  },
+                }
+              : { ...conBandera, html: htmlNuevo };
+          });
+          if (savedFlashRef.current !== null)
+            window.clearTimeout(savedFlashRef.current);
+          savedFlashRef.current = window.setTimeout(
+            () => setSavingStatus("idle"),
+            1600,
+          );
+          return {
+            ok: true as const,
+            versionPrevia: typeof saved?.versionPrevia === "string" ? saved.versionPrevia : null,
+          };
         })
-        .catch(() => setSavingStatus("idle"));
+        // Sin respuesta tampoco se guardó: se dice igual.
+        .catch(noSeGuardo);
     },
-    [],
+    [flashDropError, t],
   );
   /**
    * Manda el montón de ediciones y lo vacía.
@@ -1887,19 +1922,30 @@ function NewV2Inner() {
     if (!projectId) return;
     const lote = pendientesRef.current;
     if (lote.length === 0) return;
+    // Este lote sale; lo que llegue desde ahora es del siguiente.
+    const idLote = loteRef.current;
+    loteRef.current += 1;
     pendientesRef.current = [];
     setPendientes(0);
     enviandoRef.current = true;
     setAplicandoLote(true);
+    const envio = persistDoc({
+      projectId,
+      edits: lote,
+      source: "inline-edit",
+      page: activeSitePageRef.current,
+    });
+    envioRef.current = envio;
     try {
-      await persistDoc({
-        projectId,
-        edits: lote,
-        source: "inline-edit",
-        page: activeSitePageRef.current,
-      });
+      const r = await envio;
+      // La copia de antes de ESTE lote, por si se deshace. Sólo hace falta la
+      // del último: Deshacer es de un paso.
+      copiasRef.current.clear();
+      copiasRef.current.set(idLote, r.ok ? r.versionPrevia : null);
+      if (!r.ok && undoRef.current?.lote === idLote) undoRef.current = null;
     } finally {
       enviandoRef.current = false;
+      envioRef.current = null;
       setAplicandoLote(false);
     }
     // Si llegaron más mientras ésta viajaba, se van detrás — nunca a la vez.
@@ -1957,47 +2003,67 @@ function NewV2Inner() {
     return aplicarPendientesRef.current?.() ?? Promise.resolve();
   }, []);
 
-  // "Deshacer" — restore the pre-edit snapshot the html-changed listener
-  // stashed, persist it, and remount the iframe (docKey epoch) so the canvas
-  // reflects it even mid-editing (a doc push alone is skipped while editing).
-  const doUndo = useCallback(() => {
+  // DESHACER UN PASO — la última tanda de ediciones.
+  //
+  // Si la tanda aún no salió, deshacer es tirarla y volver a lo guardado: el
+  // servidor no la ha visto. Si ya salió, el servidor guardó una copia de ANTES
+  // de aplicarla y se restaura ésa, con la misma ruta que el Deshacer del Chat
+  // (`ejecutarUndo`): lo que se pinta es lo que devuelve el servidor, y sólo
+  // cuando lo ha confirmado. El documento no viaja: si viajara habría que
+  // sanearlo, y eso le quitaba a la página sus `onclick` (ver `undoRef`).
+  const doUndo = useCallback(async () => {
     const u = undoRef.current;
     const projectId = loadedIdRef.current;
     if (!u || !projectId) return;
     undoRef.current = null;
     lastLocalEditAtRef.current = Date.now();
     setDropNotice(null);
-    // Deshacer se lleva por delante lo que aún no se ha aplicado: restaura el
-    // documento de ANTES, así que las ediciones pendientes ya no describen nada
-    // que exista.
+    // Lo que aún no se ha aplicado se va en los dos casos: o es la propia
+    // tanda que se deshace, o son cambios hechos DESPUÉS sobre un documento
+    // que va a dejar de existir.
     pendientesRef.current = [];
     setPendientes(0);
-    setLoadedProject((prev) => {
-      if (!prev || prev.id !== projectId) return prev;
-      if (u.page && prev.pages[u.page]) {
-        return {
-          ...prev,
-          pages: {
-            ...prev.pages,
-            [u.page]: { ...prev.pages[u.page], html: u.html },
-          },
-        };
-      }
-      if (u.page) return prev;
-      return { ...prev, html: u.html };
-    });
-    setUndoEpoch((n) => n + 1);
-    void persistDoc({
-      projectId,
-      html: u.html,
-      source: "props",
-      page: u.page,
-    });
-  }, [persistDoc]);
+    // Si su lote está en vuelo, se espera a que el servidor diga qué copia hizo.
+    if (u.lote !== loteRef.current && envioRef.current) {
+      await envioRef.current.catch(() => undefined);
+    }
+    const plan = planDeDeshacerDelTaller(u, loteRef.current, copiasRef.current);
+    if (plan.kind === "descartar") {
+      setDescarteEpoch((n) => n + 1);
+      return;
+    }
+    if (plan.kind === "sin-copia") {
+      flashDropError(t("toast.undoFailed"));
+      return;
+    }
+    await ejecutarUndo(
+      { kind: "restaurar", page: plan.page, versionId: plan.versionId },
+      {
+        projectId,
+        fetchImpl: fetch,
+        pintar: (html, page) => {
+          setLoadedProject((prev) => {
+            if (!prev || prev.id !== projectId) return prev;
+            if (page) {
+              return prev.pages[page]
+                ? { ...prev, pages: { ...prev.pages, [page]: { ...prev.pages[page], html } } }
+                : prev;
+            }
+            return { ...prev, html };
+          });
+          setUndoEpoch((n) => n + 1);
+        },
+        marcarRevertido: () => {},
+        marcarFallo: () => flashDropError(t("toast.undoFailed")),
+      },
+    );
+  }, [flashDropError, t]);
   doUndoRef.current = doUndo;
   useEffect(() => {
     if (!loadedProject) return;
     const projectId = loadedProject.id;
+    // El mapa no se reasigna nunca: se guarda aquí para vaciarlo al salir.
+    const copias = copiasRef.current;
 
     const onMessage = (e: MessageEvent) => {
       if (!e.data) return;
@@ -2110,14 +2176,15 @@ function NewV2Inner() {
         // deshacer por TANDA, no por gesto: los gestos que caen dentro de la
         // misma ventana de 400 ms se guardan juntos, así que también se
         // deshacen juntos.
+        //
+        // Ya no se guarda aquí el documento: el punto de deshacer es el LOTE en
+        // el que cae esta edición, y la copia de antes la hace el servidor al
+        // aplicarlo (ver `undoRef`).
         if (pendientesRef.current.length === 0) {
-          const pagina = activeSitePageRef.current;
-          const antes = pagina
-            ? loadedProjectRef.current?.pages[pagina]?.html
-            : loadedProjectRef.current?.html;
-          if (typeof antes === "string" && antes) {
-            undoRef.current = { html: antes, page: pagina ?? null };
-          }
+          undoRef.current = {
+            page: activeSitePageRef.current ?? null,
+            lote: loteRef.current,
+          };
         }
         // Escribir el mismo titular tres veces es UNA edición, no tres: la
         // última gana. Sólo para las que son idempotentes por naturaleza —
@@ -2199,6 +2266,7 @@ function NewV2Inner() {
       }
       // Undo snapshots don't survive a project switch.
       undoRef.current = null;
+      copias.clear();
       pendingPillRef.current = null;
     };
     // Intentionally NOT depending on loadedProject.subdomain: it flips null→value
@@ -2466,6 +2534,7 @@ function NewV2Inner() {
       pendingInsertRef.current = null;
       setDropNotice(null);
       undoRef.current = null;
+      copiasRef.current.clear();
       pendingPillRef.current = null;
     }
     prevActivePageRef.current = activeSitePage;
