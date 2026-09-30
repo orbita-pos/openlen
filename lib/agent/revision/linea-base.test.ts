@@ -86,8 +86,8 @@ describe("las dos fotos del diff, por el mismo guardado", () => {
   });
 
   it("🔴 con el guardado DE VERDAD y un formulario estampado, la tanda se sigue demostrando", async () => {
-    // Hoy `stampFormIds` re-serializa y la tanda sale con ` >` en vez de ` />`;
-    // la prueba vale igual el día que deje de hacerlo.
+    // Antes de `186a4d8d`, `stampFormIds` re-serializaba y la tanda salía con
+    // ` >`; ahora sale con ` />`. La prueba vale con las dos.
     const guardada = await comoLoGuarda(CRUDA);
     expect(guardada).toMatch(/<meta property="og:image" content="[^"]*" \/?>/);
     const sin = sinLoQueAnadeElHead(guardada);

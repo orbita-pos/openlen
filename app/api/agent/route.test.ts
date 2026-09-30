@@ -1320,7 +1320,7 @@ describe("POST /api/agent — la revisión del turno (H14)", () => {
 
   it("🔴 lo que la plataforma añade al guardar no le llega al revisor como obra del turno", async () => {
     // Como en Len-Bench: la página de partida en crudo, y la de ahora pasada por
-    // el guardado de verdad (tarjeta social, id del formulario, re-serializada).
+    // el guardado de verdad (tarjeta social e id del formulario).
     const cruda =
       "<!doctype html>\n<html><head><title>FUERO</title></head><body>\n<!-- HERO -->\n<h1>Hola</h1>\n<form><input name=\"n\"></form>\n</body></html>";
     const guardada = await comoLoGuarda(cruda.replace("<h1>Hola</h1>", "<h1>Hecho a mano</h1>"));
@@ -1331,8 +1331,8 @@ describe("POST /api/agent — la revisión del turno (H14)", () => {
     });
     await revision!.revisar({ modo: "una_pasada", cierre: "" });
     const { tarea } = subagentes[0];
-    // Sólo las líneas que cambian: el comentario puede seguir como contexto el
-    // día que el guardado deje de re-serializar la página.
+    // Sólo las líneas que cambian: el comentario sigue como contexto, porque el
+    // guardado ya no re-serializa la página (`186a4d8d`).
     const cambiadas = tarea.split("\n").filter((l) => /^[-+]/.test(l) && !/^(---|\+\+\+) /.test(l));
     expect(cambiadas).toEqual(["-<h1>Hola</h1>", "+<h1>Hecho a mano</h1>"]);
     for (const ruido of ["og:image", "data-ol-form-id"]) expect(tarea).not.toContain(ruido);

@@ -10,8 +10,9 @@
 //   · completa el `<head>` (`ensurePageMeta`: descripción, `og:*`,
 //     `twitter:card`, favicon);
 //   · estampa `data-ol-form-id` en cada formulario sin él, con un id
-//     ALEATORIO, y al estampar re-serializa el documento entero
-//     (`stampFormIds`: «pierde comentarios, normaliza `/>`»).
+//     ALEATORIO. Hasta `186a4d8d` además re-serializaba el documento entero
+//     al estampar (se iban los comentarios, cambiaban los `/>`); ya sólo
+//     empalma el atributo.
 //
 // Medido el 29/09 en la primera pasada pagada (ficha H14): de 7 hallazgos, 3
 // culpaban a Len de eso —los `og:*` de la portada y de las páginas nuevas, la
@@ -21,8 +22,8 @@
 //
 // El arreglo es comparar lo mismo con lo mismo: la foto de antes pasa por el
 // mismo guardado (`comoLoGuarda`) y queda como la habría dejado la plataforma
-// sin que nadie la tocara. `ensurePageMeta` es idempotente y la re-serialización
-// es la misma en los dos lados, así que se anulan. El id de formulario no se
+// sin que nadie la tocara. `ensurePageMeta` es idempotente, así que lo que
+// añade se anula entre los dos lados. El id de formulario no se
 // anula —es aleatorio—, y por eso sale de las DOS fotos, como `sinOpIds`: es
 // identidad de la plataforma, no algo que Len decida. Una página NUEVA no
 // tiene con qué anularse: le sale lo que se demuestra que puso `ensurePageMeta`
@@ -75,10 +76,10 @@ export function sinLoQueAnadeElHead(html: string): string {
   return partirElHead(html).sin;
 }
 
-/** Para comparar, `<meta …/>` y `<meta … >` son la misma etiqueta. Hoy hace
- *  falta: si al guardar se estampó un formulario, el parser re-serializa DESPUÉS
- *  de `ensurePageMeta` y sus ` />` salen como ` >` (medido con `comoLoGuarda`).
- *  Si `stampFormIds` deja de re-serializar, esto sobra pero no estorba. */
+/** Para comparar, `<meta …/>` y `<meta … >` son la misma etiqueta. Lo piden
+ *  las páginas guardadas antes de `186a4d8d`: al estampar un formulario, el
+ *  parser re-serializaba DESPUÉS de `ensurePageMeta` y sus ` />` quedaron
+ *  guardados como ` >` (medido con `comoLoGuarda`). */
 const cierreDeVacias = (html: string) => html.replace(/<(meta|link)\b([^>]*?)\s*\/?>/gi, "<$1$2>");
 
 /** La página sin la tanda demostrada, y qué etiqueta era cada una de la tanda
