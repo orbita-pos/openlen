@@ -976,44 +976,9 @@ async function toolActivarModulo(
   };
 }
 
-
-
-
-async function toolPrepararMarketing(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const registro = args.registro;
-  if (typeof registro !== "string" || registro.length === 0) {
-    return { response: { ok: false, error: "registro es requerido" } };
-  }
-  const combinar = args.combinar === true;
-
-  const patchBody: SettingsPatchBody = { marketing: { register: registro, match: combinar } };
-  const validation = validateSettingsPatch(patchBody, session.projectId);
-  if (!validation.ok) {
-    return { response: { ok: false, error: validation.message ?? "patch inválido" } };
-  }
-
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-
-  const outcome = applySettingsPatch(row.data, validation.body);
-  if ("error" in outcome) {
-    return { response: { ok: false, error: outcome.error } };
-  }
-  // I4 — igual que arriba: el patch se re-aplica sobre el `data` de ahora.
-  await deps.saveProjectData(session.projectId, session.userId, (actual) => {
-    const fresco = applySettingsPatch(actual, validation.body);
-    return "error" in fresco ? actual : fresco.nextData;
-  });
-
-  return {
-    response: { ok: true, registro, combinar, pestana: "marketing" },
-    action: { tool: "preparar_marketing", ok: true, summary: registro },
-  };
-}
+// ⚰️ `preparar_marketing` se retiró en Len 2.1 (2026-09-30): 0 llamadas en toda
+// la historia de producción. Fijaba el rubro del Marketing Kit, que la pestaña
+// Marketing elige sola (`marketing-view.tsx`).
 
 // Runaway backstop for a read-only tool: the loop exempts elegir_foto from the
 // action budget AND (now) from the turn cap, so the ONLY thing bounding a
@@ -1977,8 +1942,6 @@ async function ejecutarHerramienta(
     switch (name) {
       case "activar_modulo":
         return await toolActivarModulo(session, deps, args);
-      case "preparar_marketing":
-        return await toolPrepararMarketing(session, deps, args);
       case "elegir_foto":
         return await toolElegirFoto(session, deps, args);
       case "mirar_pagina":

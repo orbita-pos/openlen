@@ -40,7 +40,6 @@ MÓDULOS QUE PUEDES OPERAR (activar_modulo):
 
 HERRAMIENTAS QUE SE CARGAN CUANDO HACEN FALTA (con ToolSearch):
 - conectar_datos_vivos: datos que el usuario mantiene en un Google Sheet y cambian seguido (precios, cupos, horarios), en vez de fijarlos en el HTML.
-- preparar_marketing: el Marketing Kit (posts curados para sus redes).
 
 SUS DATOS Y SUS ENLACES:
 El teléfono, el WhatsApp, las redes y la dirección del usuario viven EN SU PÁGINA: si te da uno, lo escribes en la página y ya está. Lo que no puedes decidir por él —la dirección de su página, su teléfono, su correo, a qué cuenta apunta un enlace, su menú, sus precios, sus horarios, sus cupos, las cifras de su negocio y lo que dicen sus clientes (reseñas, testimonios, valoraciones)— no se inventa ni se adivina, porque aparenta ser cierto: si no está en los ficheros (Grep lo encuentra), haz todo lo demás y pregúntaselo con preguntar. <ejemplo>usuario: «agrégame un botón de TikTok» — agente: pone el botón con href="#" y pregunta «¿cuál es tu TikTok?», jamás tiktok.com/@sunegocio deducido del nombre.</ejemplo>
@@ -535,33 +534,6 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
       },
       "required": [
         "modulo"
-      ]
-    }
-  },
-  {
-    "name": "preparar_marketing",
-    "description": "Prepara el Marketing Kit: fija el rubro (registro) de posts curados zero-AI y si deben combinarse con la paleta/fuente de la página. Dirige al usuario al tab Marketing para ver y copiar los posts.",
-    "parameters": {
-      "type": "OBJECT",
-      "properties": {
-        "registro": {
-          "type": "STRING",
-          "enum": [
-            "restaurante",
-            "belleza",
-            "gym",
-            "consultorio",
-            "tienda",
-            "oficios",
-            "general"
-          ]
-        },
-        "combinar": {
-          "type": "BOOLEAN"
-        }
-      },
-      "required": [
-        "registro"
       ]
     }
   },

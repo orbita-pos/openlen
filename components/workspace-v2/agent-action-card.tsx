@@ -107,7 +107,8 @@ export const KNOWN_TOOLS = new Set([
   // `editar_pagina` y sus cuatro puertas, `cambiar_tema`, `aplicar_tematica`,
   // `crear_pagina`, `trabajar_en_pagina`, `buscar_en_pagina` y
   // `redisenar_pagina`. Claude Code no cubre esto (no pinta
-  // conversaciones viejas con otro catálogo): decisión nuestra.
+  // conversaciones viejas con otro catálogo): decisión nuestra. Por lo mismo
+  // sigue `preparar_marketing`, retirada en Len 2.1.
   "editar_pagina",
   "editar_texto",
   "editar_atributos",

@@ -510,18 +510,14 @@ describe("el estado del proyecto (el que va en el contexto)", () => {
 // y una escena WebGL— y el modelo ahora los escribe dentro del documento,
 // pudiendo hacer EL que la página pide en vez de uno de cuatro.
 
-describe("preparar_marketing", () => {
-  it("sets register+match and points at the marketing tab", async () => {
+// LA LÁPIDA de `preparar_marketing` (Len 2.1, 2026-09-30): si el modelo la
+// llama igual —desde un historial viejo, o de memoria— no escribe nada.
+describe("preparar_marketing, retirada", () => {
+  it("ya no existe: no escribe ajustes", async () => {
     const { deps, store } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "preparar_marketing", { registro: "general", combinar: true });
-    assert.equal(out.response.ok, true);
-    assert.equal(store.data.settings?.marketing?.register, "general");
-    assert.equal(out.response.pestana, "marketing");
-  });
-  it("invalid register comes back as data", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "preparar_marketing", { registro: "no-existe" });
     assert.equal(out.response.ok, false);
+    assert.equal(store.data.settings?.marketing, undefined);
   });
 });
 
@@ -1754,11 +1750,10 @@ describe("mutoDurable: lo que ya escribió en la base", () => {
   it("un cambio de AJUSTES lo marca aunque no emita html", async () => {
     const { deps } = makeDeps();
 
-    // Era `cambiar_motion`, retirada el 2026-08-26. `preparar_marketing` sirve
-    // igual: escribe ajustes y no emite documento, que es lo que se mide.
-    const out = await runAgentTool(makeSession(), deps, "preparar_marketing", {
-      registro: "general",
-    });
+    // Era `cambiar_motion`, retirada el 2026-08-26, y después
+    // `preparar_marketing`, retirada en Len 2.1. `activar_modulo` sirve igual:
+    // escribe ajustes y no emite documento, que es lo que se mide.
+    const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
 
     assert.equal(out.response.ok, true, JSON.stringify(out.response));
     assert.equal(out.updatedHtml, undefined, "no debería emitir documento");

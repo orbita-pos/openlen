@@ -38,6 +38,8 @@ const RETIRADAS = [
   "redisenar_pagina",
   "cambiar_tema",
   "aplicar_tematica",
+  // Len 2.1 (2026-09-30): 0 llamadas en la historia de producción.
+  "preparar_marketing",
 ] as const;
 
 describe("buildFunctionDeclarations", () => {
@@ -53,7 +55,6 @@ describe("buildFunctionDeclarations", () => {
       // Carga las diferidas (H2).
       "ToolSearch",
       "activar_modulo",
-      "preparar_marketing",
       "mirar_pagina",
       // H9: usarla, no sólo mirarla. Cargada desde el principio.
       "usar_pagina",
@@ -71,9 +72,7 @@ describe("buildFunctionDeclarations", () => {
   it("H2 · las diferidas existen TODAS en el catálogo (una que no, sería una palanca a ninguna parte)", () => {
     const names = new Set(buildFunctionDeclarations().map((d) => String(d.name)));
     for (const n of HERRAMIENTAS_DIFERIDAS) expect(names.has(n), n).toBe(true);
-    expect([...HERRAMIENTAS_DIFERIDAS].sort()).toEqual(
-      ["conectar_datos_vivos", "preparar_marketing"],
-    );
+    expect([...HERRAMIENTAS_DIFERIDAS].sort()).toEqual(["conectar_datos_vivos"]);
   });
 
   it("🔴 ninguna descripción nombra una herramienta retirada, ni data-op-id, ni prueba_js", () => {
@@ -129,11 +128,11 @@ describe("buildFunctionDeclarations", () => {
   // JavaScript prohibido —una coreografía de scroll, un reproductor flotante y
   // una escena WebGL— y el modelo ahora escribe la animación, el reproductor y
   // el canvas dentro del documento, pudiendo hacer EL que la página pide.
-  it("preparar_marketing requires registro as a string enum", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "preparar_marketing") as any;
-    expect(d.parameters.properties.registro.type).toBe("STRING");
-    expect(Array.isArray(d.parameters.properties.registro.enum)).toBe(true);
-    expect(d.parameters.required).toEqual(["registro"]);
+  // LA LÁPIDA de `preparar_marketing` (Len 2.1, 2026-09-30): 0 llamadas en la
+  // historia de producción, y la pestaña Marketing elige el rubro sola. Esta
+  // prueba sujetaba su esquema; ahora sujeta que no vuelva.
+  it("preparar_marketing ya no está en el catálogo", () => {
+    expect(buildFunctionDeclarations().some((x) => x.name === "preparar_marketing")).toBe(false);
   });
   it("elegir_foto exposes busqueda + estilo as optional strings, nothing required", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "elegir_foto") as any;
@@ -407,9 +406,11 @@ describe("buildAgentSystemPrompt", () => {
   // MOTION, MÚSICA Y 3D salieron de esta lista el 2026-08-26 con sus
   // herramientas. Lo que sigue vigilado es que el prompt conozca las que
   // quedan y todos los presets de tema.
-  it("carries the settings-tool knowledge that queda: preparar_marketing", () => {
+  // Y el prompt tampoco la nombra: una herramienta que ni está cargada ni se
+  // puede cargar, anunciada, es una palanca a ninguna parte.
+  it("el prompt ya no nombra preparar_marketing (retirada en Len 2.1)", () => {
     const p = buildAgentSystemPrompt();
-    expect(p).toContain("preparar_marketing");
+    expect(p).not.toContain("preparar_marketing");
   });
   // El permiso de images.openlen.com vive desde el 2026-09-26 en la descripción
   // de `elegir_foto` (siempre cargada): la sección FOTOS del prompt repetía la

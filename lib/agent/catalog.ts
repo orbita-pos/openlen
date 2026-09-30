@@ -18,7 +18,6 @@
 // y los atajos de tema (cambiar_tema, aplicar_tematica: el CSS es un fichero
 // más). El porqué, medido: en `encargo-grande`, `editar_runtime` le exigió
 // reteclear 8.845 caracteres para quitar la gorra y se dejó las zapatillas.
-import { POST_REGISTER } from "@/lib/marketing/post-templates/admin-schemas";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import { DECLARACION_TOOL_SEARCH } from "@/lib/agent/ficheros/tool-search";
 import { DECLARACION_TODO_WRITE } from "@/lib/agent/ficheros/todo-write";
@@ -59,15 +58,15 @@ const OPENLEN_IMAGE_STYLES = [
   "travel-editorial", "wedding-editorial", "music-editorial", "gaming-editorial",
 ] as const;
 
-const MARKETING_REGISTERS = POST_REGISTER.options;
 // The valid `idiomas` codes for publicar — generated from the same list the
 // publish endpoint validates against, so a new locale lands in the prompt
 // automatically (never a hardcoded copy that could drift).
 const PUBLISH_LOCALE_CODES = PUBLISH_LOCALES.map((l) => l.code);
 
-// ⚰️ Aquí vivía `SETTINGS_TOOL_KNOWLEDGE`, la ficha de preparar_marketing en el prompt.
-// Desde H4 (2026-09-26) la herramienta es diferida y su descripción dice lo mismo;
-// el prompt sólo la nombra en «HERRAMIENTAS QUE SE CARGAN CUANDO HACEN FALTA».
+// ⚰️ Aquí vivía `SETTINGS_TOOL_KNOWLEDGE`, la ficha de preparar_marketing en el prompt,
+// y después la propia herramienta, diferida desde H4 (2026-09-26). Se retiró en
+// Len 2.1 (2026-09-30): 0 llamadas en toda la historia de producción, y sólo
+// dejaba elegido de antemano el rubro que la pestaña Marketing ya elige sola.
 
 /**
  * Cómo se llama cada módulo en prosa.
@@ -132,8 +131,8 @@ const FILE_PATH_OPCIONAL = {
     "The page file, e.g. /index.html or /menu/index.html. Omit it to use the page the user has open in the editor.",
 };
 
-/** LAS DIFERIDAS (H2, 2026-09-25): el modelo ve sólo su nombre y las carga con ToolSearch. Desde el 30/09 quedan las dos que nadie pidió en 958 turnos grabados de Len 2.0; las que un usuario pide con palabras (deshacer, editar una imagen, un módulo, leer una URL) van cargadas, porque ToolSearch se llamó 2 veces en esos 958 turnos. */
-export const HERRAMIENTAS_DIFERIDAS: ReadonlySet<string> = new Set(["conectar_datos_vivos", "preparar_marketing"]);
+/** LAS DIFERIDAS (H2, 2026-09-25): el modelo ve sólo su nombre y las carga con ToolSearch. Desde el 30/09 queda la que nadie pidió en 958 turnos grabados de Len 2.0 ni en la historia de producción; las que un usuario pide con palabras (deshacer, editar una imagen, un módulo, leer una URL) van cargadas, porque ToolSearch se llamó 2 veces en esos 958 turnos. `preparar_marketing` se retiró ese mismo día. */
+export const HERRAMIENTAS_DIFERIDAS: ReadonlySet<string> = new Set(["conectar_datos_vivos"]);
 
 function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
   return [
@@ -152,19 +151,6 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
           numero: { type: "STRING" },
         },
         required: ["modulo"],
-      },
-    },
-    {
-      name: "preparar_marketing",
-      description:
-        "Prepara el Marketing Kit: fija el rubro (registro) de posts curados zero-AI y si deben combinarse con la paleta/fuente de la página. Dirige al usuario al tab Marketing para ver y copiar los posts.",
-      parameters: {
-        type: "OBJECT",
-        properties: {
-          registro: { type: "STRING", enum: [...MARKETING_REGISTERS] },
-          combinar: { type: "BOOLEAN" },
-        },
-        required: ["registro"],
       },
     },
     {
@@ -367,7 +353,6 @@ ${moduleLines}
 
 HERRAMIENTAS QUE SE CARGAN CUANDO HACEN FALTA (con ToolSearch):
 - conectar_datos_vivos: datos que el usuario mantiene en un Google Sheet y cambian seguido (precios, cupos, horarios), en vez de fijarlos en el HTML.
-- preparar_marketing: el Marketing Kit (posts curados para sus redes).
 
 SUS DATOS Y SUS ENLACES:
 El teléfono, el WhatsApp, las redes y la dirección del usuario viven EN SU PÁGINA: si te da uno, lo escribes en la página y ya está. Lo que no puedes decidir por él —la dirección de su página, su teléfono, su correo, a qué cuenta apunta un enlace, su menú, sus precios, sus horarios, sus cupos, las cifras de su negocio y lo que dicen sus clientes (reseñas, testimonios, valoraciones)— no se inventa ni se adivina, porque aparenta ser cierto: si no está en los ficheros (Grep lo encuentra), haz todo lo demás y pregúntaselo con preguntar. <ejemplo>usuario: «agrégame un botón de TikTok» — agente: pone el botón con href="#" y pregunta «¿cuál es tu TikTok?», jamás tiktok.com/@sunegocio deducido del nombre.</ejemplo>
