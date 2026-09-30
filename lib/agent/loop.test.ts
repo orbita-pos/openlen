@@ -2955,6 +2955,207 @@ describe("el objetivo", () => {
   });
 });
 
+// ─── H14 · LOS SEGUNDOS OJOS ─────────────────────────────────────────────────
+//
+// El hook de `Stop` de Claude Code: al cerrar, otro revisor lee el diff del
+// turno y, si marca algo, el turno NO cierra y Len lo recibe. Quién revisa
+// viene inyectado —aquí, uno falso—, así que todo el mecanismo se prueba sin
+// gastar una llamada.
+describe("la revisión del turno (H14)", () => {
+  type Revisar = NonNullable<Parameters<typeof runAgentLoop>[0]["revision"]>["revisar"];
+  const hallazgo = {
+    file: "/index.html",
+    line: 12,
+    summary: "the brand phrase was removed",
+    failure_scenario: "the home page no longer says «Hecho a mano»",
+    angulo: "quitado" as const,
+    veredicto: "CONFIRMED" as const,
+  };
+  const resultado = (hallazgos: (typeof hallazgo)[]) => ({
+    modo: "completa" as const,
+    hallazgos,
+    candidatos: hallazgos.length,
+    refutados: 0,
+    fallos: 0,
+    llamadas: 5,
+    uso: { inputTokens: 9000, outputTokens: 900, cachedTokens: 8000, thinkingTokens: 0 },
+  });
+  /** Un revisor falso que apunta cuántas veces y con qué se le llamó. */
+  const revisor = (responde: Revisar) => {
+    const llamadas: Parameters<Revisar>[0][] = [];
+    return {
+      llamadas,
+      revisar: (async (o) => {
+        llamadas.push(o);
+        return responde(o);
+      }) as Revisar,
+    };
+  };
+  /** `escribe` vueltas que editan la página, y luego cierra hablando. Los pasos
+   *  del turno son `escribe + 1`. */
+  const trabaja = (escribe: number, dice = "Listo, cambié el titular.") =>
+    scripted(
+      ...Array.from({ length: escribe }, (_, i): StreamEvent[] => [
+        { type: "function_call", name: "Edit", args: { n: i }, thoughtSignature: "s" },
+        usage(10),
+        done,
+      ]),
+      [{ type: "text_delta", text: dice }, usage(10), done],
+    );
+  const escribeLaPagina = async () => ({
+    response: { ok: true, cambio: "cambio" },
+    action: { tool: "Edit", ok: true, summary: "" },
+    updatedHtml: "<h1>nuevo</h1>",
+    page: null,
+  });
+  const base = (revision?: { revisar: Revisar }, eventos: AgentStreamEvent[] = []) => ({
+    messages: [{ role: "user" as const, content: "cambia el titular" }],
+    tools: [],
+    runTool: escribeLaPagina,
+    emit: (e: AgentStreamEvent) => eventos.push(e),
+    ...(revision ? { revision } : {}),
+  });
+
+  it("con hallazgos el turno NO cierra: Len los recibe y se le invoca otra vez", async () => {
+    const vistos: Message[][] = [];
+    const rev = revisor(async () => resultado([hallazgo]));
+    const flujo = trabaja(4);
+    const con = await runAgentLoop({ ...base(rev), openStream: (m) => (vistos.push([...m]), flujo(m)) });
+    const sin = await runAgentLoop({ ...base(), openStream: trabaja(4) });
+    expect(con.turns).toBe(sin.turns + 1);
+    const ultimo = vistos.at(-1)!;
+    // Lo que dijo al cerrar, y detrás el aviso, con el hallazgo como línea de diagnóstico.
+    expect(ultimo.at(-2)).toEqual({ role: "assistant", content: "Listo, cambié el titular." });
+    const aviso = String(ultimo.at(-1)!.content);
+    expect(aviso).toMatch(/^SISTEMA \(el usuario NO escribió esto\)/);
+    expect(aviso).toContain("/index.html:\n  [Line 12] the brand phrase was removed — the home page no longer says «Hecho a mano» (lo quitado · confirmado)");
+    expect(aviso).toContain("consejo, no un veredicto");
+    expect(aviso).toContain("No deshagas nada que el usuario haya pedido");
+  });
+
+  it("🔴 UNA vez por turno: la segunda vez que cierra, cierra", async () => {
+    const rev = revisor(async () => resultado([hallazgo]));
+    const r = await runAgentLoop({ ...base(rev), openStream: trabaja(4) });
+    expect(rev.llamadas).toHaveLength(1);
+    expect(r.revision).toMatchObject({ modo: "completa", hallazgos: [hallazgo] });
+  });
+
+  it("sin hallazgos cierra a la primera, y la revisión queda en el resultado", async () => {
+    const rev = revisor(async () => resultado([]));
+    const con = await runAgentLoop({ ...base(rev), openStream: trabaja(4) });
+    const sin = await runAgentLoop({ ...base(), openStream: trabaja(4) });
+    expect(con.turns).toBe(sin.turns);
+    expect(con.revision).toMatchObject({ hallazgos: [], llamadas: 5 });
+  });
+
+  it("🔴 lo paga la casa: su uso NO entra en el del turno", async () => {
+    // Sin hallazgos el turno es el mismo, así que cualquier diferencia de uso
+    // sería la de la revisión (9.000 de entrada) colada en la cuenta del usuario.
+    const con = await runAgentLoop({ ...base(revisor(async () => resultado([]))), openStream: trabaja(4) });
+    const sin = await runAgentLoop({ ...base(), openStream: trabaja(4) });
+    expect(con.usage).toEqual(sin.usage);
+    expect(con.revision).toMatchObject({ uso: { inputTokens: 9000 } });
+  });
+
+  it("el revisor recibe el modo según los pasos y lo que Len dijo al cerrar", async () => {
+    const rev = revisor(async () => resultado([]));
+    await runAgentLoop({ ...base(rev), openStream: trabaja(4, "Hecho: titular nuevo.") });
+    await runAgentLoop({ ...base(rev), openStream: trabaja(9) });
+    expect(rev.llamadas).toEqual([
+      { modo: "una_pasada", cierre: "Hecho: titular nuevo." },
+      { modo: "completa", cierre: "Listo, cambié el titular." },
+    ]);
+  });
+
+  it("🔴 hasta 4 pasos no se revisa: un cambio de título no dispara nada", async () => {
+    const rev = revisor(async () => resultado([hallazgo]));
+    const r = await runAgentLoop({ ...base(rev), openStream: trabaja(3) });
+    expect(r.turns).toBe(4);
+    expect(rev.llamadas).toHaveLength(0);
+    expect(r.revision).toBeUndefined();
+  });
+
+  it("🔴 un turno largo que no escribió ninguna página no se revisa", async () => {
+    const rev = revisor(async () => resultado([hallazgo]));
+    const r = await runAgentLoop({
+      ...base(rev),
+      runTool: async () => ({ response: { ok: true }, action: { tool: "Read", ok: true, summary: "" } }),
+      openStream: trabaja(6),
+    });
+    expect(r.turns).toBeGreaterThanOrEqual(5);
+    expect(rev.llamadas).toHaveLength(0);
+  });
+
+  it("con el diff vacío (`null`) no se revisa nada, y no se dice que sí", async () => {
+    const eventos: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({ ...base(revisor(async () => null), eventos), openStream: trabaja(4) });
+    expect(r.revision).toBeUndefined();
+    expect(eventos.filter((e) => e.type === "revision").map((e) => (e as { estado: string }).estado)).toEqual(["running", "omitida"]);
+  });
+
+  it("🔴 si el revisor revienta, el turno CIERRA y queda dicho", async () => {
+    const eventos: AgentStreamEvent[] = [];
+    const sin = await runAgentLoop({ ...base(), openStream: trabaja(4) });
+    const r = await runAgentLoop({
+      ...base(
+        revisor(async () => {
+          throw new Error("fireworks 503");
+        }),
+        eventos,
+      ),
+      openStream: trabaja(4),
+    });
+    expect(r.turns).toBe(sin.turns);
+    expect(r.terminalError).toBe(false);
+    expect(r.revision).toEqual({ modo: "una_pasada", error: "fireworks 503" });
+    expect(eventos.filter((e) => e.type === "revision").map((e) => (e as { estado: string }).estado)).toEqual(["running", "error"]);
+  });
+
+  it("los eventos: `running` al empezar y `done` con cuántos hallazgos llegaron", async () => {
+    const eventos: AgentStreamEvent[] = [];
+    await runAgentLoop({ ...base(revisor(async () => resultado([hallazgo, hallazgo])), eventos), openStream: trabaja(4) });
+    expect(eventos.filter((e) => e.type === "revision")).toEqual([
+      { type: "revision", estado: "running", modo: "una_pasada" },
+      { type: "revision", estado: "done", modo: "una_pasada", hallazgos: 2 },
+    ]);
+  });
+
+  it("si tras el aviso cierra sin decir nada, el cierre es lo que el usuario ya leyó", async () => {
+    const rev = revisor(async () => resultado([hallazgo]));
+    const r = await runAgentLoop({
+      ...base(rev),
+      openStream: scripted(
+        ...Array.from({ length: 4 }, (): StreamEvent[] => [
+          { type: "function_call", name: "Edit", args: {}, thoughtSignature: "s" },
+          usage(10),
+          done,
+        ]),
+        [{ type: "text_delta", text: "Listo." }, usage(10), done],
+        [usage(10), done],
+      ),
+    });
+    expect(r.finalText).toBe("Listo.");
+  });
+
+  it("🔴 va ANTES que el objetivo: el evaluador juzga después de que Len vea los hallazgos", async () => {
+    const orden: string[] = [];
+    const r = await runAgentLoop({
+      ...base(revisor(async () => (orden.push("revision"), resultado([hallazgo])))),
+      openStream: trabaja(4),
+      objetivo: {
+        condicion: "c",
+        maxVueltas: 2,
+        evaluar: async () => {
+          orden.push("objetivo");
+          return { ok: true as const, resultado: { veredicto: "cumplida" as const, razon: "sí" } };
+        },
+      },
+    });
+    expect(orden).toEqual(["revision", "objetivo"]);
+    expect(r.objetivo?.vueltasExtra).toBe(0);
+  });
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // EL TEXTO DE DOS VUELTAS SE PEGABA SIN \n\nARADOR.
 //

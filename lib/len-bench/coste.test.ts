@@ -40,6 +40,21 @@ describe("usdDeGrabacion / usdDeProyecto", () => {
       usdDeTurno({ entrada: 500, cacheada: 0, salida: 10 }, T());
     expect(usdDeGrabacion(g as never)).toBeCloseTo(esperado, 12);
   });
+  it("🔴 y la revisión de H14, que va aparte de las vueltas: si no, su brazo se mediría gratis", () => {
+    const id = MODEL_POLICY.agent.modelId;
+    const revision = { modo: "completa", hallazgos: [], uso: { inputTokens: 30000, cachedTokens: 20000, outputTokens: 2000, thinkingTokens: 0 } };
+    const sin = grabacion(id, [[uso(1000, 0, 100)]]);
+    const con = { ...sin, revision };
+    expect(usdDeGrabacion(con as never) - usdDeGrabacion(sin as never)).toBeCloseTo(
+      usdDeTurno({ entrada: 30000, cacheada: 20000, salida: 2000 }, T()),
+      12,
+    );
+    // Una revisión que cayó no trae uso: no suma nada.
+    expect(usdDeGrabacion({ ...sin, revision: { modo: "completa", error: "503" } } as never)).toBeCloseTo(
+      usdDeGrabacion(sin as never),
+      12,
+    );
+  });
   it("sólo lee las grabaciones de ESE proyecto", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lb-coste-"));
     const id = MODEL_POLICY.agent.modelId;

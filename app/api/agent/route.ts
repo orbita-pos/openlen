@@ -28,6 +28,10 @@ import {
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
+import { normalizarFinales } from "@/lib/agent/ficheros/read";
+import { diffDelTurno } from "@/lib/agent/revision/diff-del-turno";
+import { MENSAJES_ANTERIORES, revisarTurno } from "@/lib/agent/revision/revisar-turno";
+import { correrSubagente, declaracionesDeSoloLectura } from "@/lib/agent/subagente";
 import {
   historialDesdeLaBase,
   leidosSembrados,
@@ -42,7 +46,7 @@ import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
 import { getVersionHtml, listVersions } from "@/lib/projects/versions";
 import { loQueCambioElDueno } from "@/lib/agent/cambios-del-dueno";
 import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
-import { runAgentLoop, type AgentErrorCode, type VerifyOutcome } from "@/lib/agent/loop";
+import { runAgentLoop, type AgentErrorCode, type AgentLoopResult, type VerifyOutcome } from "@/lib/agent/loop";
 import { VUELTAS_DE_OBJETIVO, evaluarCondicion } from "@/lib/agent/objetivo/evaluar-condicion";
 import { elObjetivoTermino } from "@/lib/agent/objetivo/veredicto";
 import { randomUUID } from "node:crypto";
@@ -736,6 +740,9 @@ export async function POST(req: Request): Promise<Response> {
        *  Vive fuera del try por lo mismo que `mutoDurable`: lo lee el `finally`
        *  al escribir la fila. Ver `corteDelTurno`. */
       let corte: AgentErrorCode | null = null;
+      /** H14 · cómo fue la revisión, para la grabación. Fuera del try por lo
+       *  mismo que `mutoDurable`: quien graba es el `finally`. */
+      let revisionDelTurno: AgentLoopResult["revision"] | null = null;
       // EL REGISTRO DEL TURNO, del lado del SERVIDOR. Los tres viven fuera del
       // try por el mismo motivo que `mutoDurable`: quien los vuelca es el
       // `finally`, y el turno que hay que poder leer después es el que revienta.
@@ -841,6 +848,89 @@ export async function POST(req: Request): Promise<Response> {
                     return fila?.data.settings?.objetivo?.condicion === objetivoActivo.condicion;
                   },
                   evaluar: (o: { condicion: string; transcript: string }) => evaluarCondicion(o),
+                },
+              }
+            : {}),
+          // H14 · LOS SEGUNDOS OJOS: el mismo modelo revisa lo que cambió el
+          // turno, con la receta de `/code-review` de Claude Code. APAGADA salvo
+          // `OPENLEN_REVISION=1`: es el brazo de la medición (con y sin, en el
+          // mismo lote), y se retira con la decisión, sea cual sea.
+          //
+          // El diff sale de lo que el turno escribió (`escritos`), cómo estaba
+          // cada página al empezar (`alEmpezar`; si falta, la creó el turno) y
+          // cómo está ahora en la base. Sólo PÁGINAS, y eso lo decide
+          // `leerFichero`, que no lee otra cosa: /datos y /memoria no guardan
+          // su «antes», y sin él saldrían «creados» enteros.
+          // Cada revisor es un subagente de SOLO LECTURA con su propia sesión
+          // (sin lo que Len leyó), el mismo modelo y la misma postura; sus
+          // streams rearman el reloj de silencio, que si no mataría el turno.
+          // Lo paga la casa, como los ojos: no entra en `result.usage`.
+          ...(process.env.OPENLEN_REVISION === "1"
+            ? {
+                revision: {
+                  revisar: async ({ modo, cierre }: { modo: "una_pasada" | "completa"; cierre: string }) => {
+                    const empezo = Date.now();
+                    const fila = await deps.loadProject(projectId, userId);
+                    if (!fila) return null;
+                    const ficheros = [...(agentSession.escritos ?? [])]
+                      .reverse()
+                      .flatMap((ruta) => {
+                        const ahora = leerFichero(fila.data, ruta);
+                        if (ahora === null) return [];
+                        const antes = agentSession.alEmpezar?.get(ruta);
+                        return [
+                          {
+                            ruta,
+                            antes: antes === undefined ? null : normalizarFinales(antes),
+                            despues: normalizarFinales(sinOpIds(ahora)),
+                          },
+                        ];
+                      });
+                    const diff = diffDelTurno(ficheros);
+                    if (!diff) return null;
+                    const soloLectura = declaracionesDeSoloLectura(tools);
+                    const cerebro = createAgentBrain({
+                      alPensar: () => reloj.vivo(),
+                      tools: soloLectura,
+                      requestId: projectId,
+                      signal: upstreamAbort.signal,
+                      esfuerzoDelTurno,
+                      esfuerzoDelUsuario,
+                    });
+                    const r = await revisarTurno({
+                      modo,
+                      peticion: agentSession.userPrompt ?? prompt,
+                      // Lo que el usuario escribió antes, de la base y sólo lo
+                      // suyo: el que da las reseñas en un turno y Len las pone
+                      // en otro no pidió «en éste» lo que se escribe con ellas.
+                      anteriores: filasDelHistorial.map((f) => f.userText).slice(-MENSAJES_ANTERIORES),
+                      diff,
+                      cierre,
+                      correr: (sistema, mensajes) => {
+                        // UNA sesión por revisor, que empieza sin nada leído
+                        // y recuerda lo que lee él (no lo que leyó Len).
+                        const sesion: AgentSession = { ...agentSession, leidos: new Map() };
+                        return correrSubagente({
+                          sistema,
+                          mensajes,
+                          declaraciones: soloLectura,
+                          openStream: (m) =>
+                            conSenales(streamWithRetry(() => cerebro.openStream(m), { signal: upstreamAbort.signal }), reloj.vivo),
+                          closeOut: (m) =>
+                            conSenales(streamWithRetry(() => cerebro.closeOut(m), { signal: upstreamAbort.signal }), reloj.vivo),
+                          leer: (name, args) => runAgentTool(sesion, deps, name, args),
+                        });
+                      },
+                    });
+                    revisionDelTurno = r;
+                    console.log(
+                      `[agent] revision modo=${r.modo} candidatos=${r.candidatos} hallazgos=${r.hallazgos.length}` +
+                        ` refutados=${r.refutados} fallos=${r.fallos} llamadas=${r.llamadas}` +
+                        ` in ${r.uso.inputTokens} (cached ${r.uso.cachedTokens}) / out ${r.uso.outputTokens}` +
+                        ` ms=${Date.now() - empezo}`,
+                    );
+                    return r;
+                  },
                 },
               }
             : {}),
@@ -1203,6 +1293,11 @@ export async function POST(req: Request): Promise<Response> {
         });
         mutoDurable = mutoDurable || result.mutoDurable;
         transcripcionDelTurno = result.transcripcion ?? null;
+        // Y si el revisor cayó, se dice: el turno cerró igual (cae hacia parar).
+        revisionDelTurno = result.revision ?? revisionDelTurno;
+        if (result.revision && "error" in result.revision) {
+          console.warn(`[agent] revision modo=${result.revision.modo} cayó: ${result.revision.error}`);
+        }
         corte = corteDelTurno({ ...result, mutoDurable });
 
         // 🔴 UN OBJETIVO QUE YA ACABÓ SE BORRA. Si se quedara puesto, cada turno
@@ -1513,7 +1608,10 @@ export async function POST(req: Request): Promise<Response> {
         // JSON no serializa, se dice por consola y se sigue.
         if (grabadora && !grabadora.vacia) {
           try {
-            const grabado = grabadora.resultado({ modelId: brain.modelId, requestId: projectId });
+            const grabado = {
+              ...grabadora.resultado({ modelId: brain.modelId, requestId: projectId }),
+              ...(revisionDelTurno ? { revision: revisionDelTurno } : {}),
+            };
             const { writeFile, mkdir } = await import("node:fs/promises");
             const { join } = await import("node:path");
             await mkdir(dirGrabacion!, { recursive: true });

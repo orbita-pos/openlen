@@ -32,6 +32,13 @@ import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/li
 import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
 import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { esAdjuntoDelManual } from "@/lib/agent/ficheros/manual";
+// H14: puro también (la receta y cuándo se revisa); quién revisa viene inyectado.
+import {
+  avisoDeRevision,
+  modoDeRevision,
+  type ModoDeRevision,
+  type ResultadoRevision,
+} from "@/lib/agent/revision/revisar-turno";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -140,6 +147,12 @@ export type AgentStreamEvent =
   // tarjeta se queda viejo en cuanto alguien toca la constante, y entonces le
   // habríamos prometido al usuario un precio que no es.
   | { type: "confirm"; action: "objetivo"; condicion: string; turnosMaximos: number }
+  // H14 · LOS SEGUNDOS OJOS. `running` al empezar —la revisión se come la
+  // espera del turno y no puede parecer un cuelgue—; al acabar, `done` con
+  // cuántos hallazgos llegaron a Len, `omitida` si el diff salió vacío (no se
+  // revisó nada, y no se dice que sí) o `error` si el revisor cayó. Pintarla
+  // en los diez idiomas queda para después: el panel ignora lo que no conoce.
+  | { type: "revision"; estado: "running" | "done" | "omitida" | "error"; modo: ModoDeRevision; hallazgos?: number }
   | { type: "done"; turns: number; toolCalls: number }
   | { type: "error"; message: string; code?: AgentErrorCode };
 
@@ -368,6 +381,27 @@ export interface AgentLoopArgs {
       | { ok: false; motivo: string }
     >;
   };
+
+  /**
+   * H14 · LOS SEGUNDOS OJOS: el mismo modelo revisa lo que el turno cambió, con
+   * la receta de `/code-review` de Claude Code (`lib/agent/revision/`).
+   *
+   * Es el hook de `Stop` de Claude Code, y por eso corre en `cerrarTurno`: si
+   * hay hallazgos, el turno NO cierra y Len los recibe (`avisoDeRevision`); si
+   * no, cierra. UNA vez por turno, sólo si el turno escribió alguna página y
+   * según sus pasos (`modoDeRevision`): un cambio de título no dispara nada.
+   *
+   * INYECTADO, como `objetivo.evaluar`: el diff, la petición y quién revisa son
+   * de la ruta; aquí sólo cuándo y qué se hace con lo que vuelve. Devuelve
+   * `null` si no hay nada que revisar (el diff salió vacío). Si lanza, el turno
+   * cierra: el fallo cae hacia parar, como el del objetivo.
+   *
+   * La paga la casa, como los ojos: su uso NO entra en `usage`; va aparte, en
+   * `AgentLoopResult.revision`.
+   */
+  revision?: {
+    revisar(o: { readonly modo: ModoDeRevision; readonly cierre: string }): Promise<ResultadoRevision | null>;
+  };
 }
 
 /** Cómo acabó el objetivo, si había uno. */
@@ -471,6 +505,10 @@ export interface AgentLoopResult {
    * cambiar quién paga sin que nadie lo decida. Ausente = se cobra como siempre.
    */
   sinCobro?: "rechazos" | "conflicto";
+  /** Cómo fue la revisión de H14, si corrió; con `error` si el revisor cayó.
+   *  Ausente si no tocaba o si el diff salió vacío. Su uso es de la casa y NO
+   *  está en `usage`: se graba aparte para medirla. */
+  revision?: ResultadoRevision | { readonly modo: ModoDeRevision; readonly error: string };
 }
 
 // ⚰️ LA PODA DE DOCUMENTOS VIEJOS (`podarDocumentosViejos`, `FIN_DEL_DOCUMENTO`,
@@ -1138,7 +1176,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   let dichoAntesDelAviso: {
     readonly vuelta: number;
     readonly texto: string;
-    readonly tipo: "insistencia" | "reclamo";
+    readonly tipo: "insistencia" | "reclamo" | "revision";
   } | null = null;
   /** ¿ALGUNA LLAMADA HIZO ALGO? Una que no es de lectura, que salió bien y que
    *  no fue una edición nula. Es lo que decide la insistencia de abajo: hasta
@@ -1183,6 +1221,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     tareasDeclaradas: lista.textos,
     rechazos: [...rechazos],
     ...(resultadoObjetivo ? { objetivo: resultadoObjetivo } : {}),
+    ...(resultadoRevision ? { revision: resultadoRevision } : {}),
   });
 
   /**
@@ -1204,6 +1243,48 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   /** Vueltas EXTRA que el objetivo ha pedido ya. */
   let vueltasDeObjetivo = 0;
   let resultadoObjetivo: ResultadoObjetivo | undefined;
+
+  // ── H14 · LOS SEGUNDOS OJOS ──────────────────────────────────────────────
+  let yaSeReviso = false;
+  let resultadoRevision: AgentLoopResult["revision"];
+
+  /**
+   * ¿El turno sigue porque la revisión encontró algo? UNA vez por turno, y sólo
+   * cuando toca: escribió alguna página, tiene pasos para ello y le queda
+   * presupuesto para actuar (la regla del reclamo y de los ojos: no se le pide
+   * a nadie lo que ya no puede hacer).
+   */
+  const revisar = async (): Promise<boolean> => {
+    if (!args.revision || yaSeReviso) return false;
+    const modo = modoDeRevision(turns);
+    if (!modo || ultimaPorPagina.size === 0) return false;
+    if (mutatingTurns >= maxTurns || budgetedToolCalls >= maxToolCalls) return false;
+    yaSeReviso = true;
+    args.emit({ type: "revision", estado: "running", modo });
+    let r: ResultadoRevision | null;
+    try {
+      r = await args.revision.revisar({ modo, cierre: textoArrastrado + finalText });
+    } catch (e) {
+      // 🔴 EL FALLO CAE HACIA PARAR, como el del objetivo: el trabajo del turno
+      // ya está hecho, y un revisor caído no es motivo para gastar más.
+      resultadoRevision = { modo, error: e instanceof Error ? e.message : String(e) };
+      args.emit({ type: "revision", estado: "error", modo });
+      return false;
+    }
+    if (!r) {
+      args.emit({ type: "revision", estado: "omitida", modo });
+      return false;
+    }
+    resultadoRevision = r;
+    args.emit({ type: "revision", estado: "done", modo, hallazgos: r.hallazgos.length });
+    if (r.hallazgos.length === 0) return false;
+    // Lo que dijo al cerrar YA le llegó al usuario: si la vuelta siguiente cierra
+    // sin escribir nada, es lo que queda como cierre (ver `dichoAntesDelAviso`).
+    dichoAntesDelAviso = { vuelta: turns, texto: finalText, tipo: "revision" };
+    messages.push({ role: "assistant", content: finalText });
+    messages.push({ role: "user", content: avisoDeRevision(r.hallazgos) });
+    return true;
+  };
 
   /** Lo que el evaluador puede leer: el turno tal y como ocurrió.
    *
@@ -1239,6 +1320,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    * decisión escrita en N sitios y una se queda atrás.
    */
   const cerrarTurno = async (): Promise<AgentLoopResult | null> => {
+    // H14, ANTES que el objetivo: lo que la revisión encuentre se arregla o se
+    // dice antes de que el evaluador juzgue si la condición se cumplió.
+    if (await revisar()) return null;
     const obj = args.objetivo;
     if (!obj) return buildResult(false);
 

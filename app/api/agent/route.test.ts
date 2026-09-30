@@ -98,6 +98,9 @@ vi.mock("@/lib/style-match/scrape/validate-url", () => ({
 }));
 vi.mock("@/lib/agent/catalog", () => ({
   buildFunctionDeclarations: mocks.buildFunctionDeclarations,
+  // Vacío: ninguna prueba de aquí mide las diferidas. Hace falta en cuanto una
+  // pasa declaraciones (las de H14), porque la ruta las filtra con esto.
+  HERRAMIENTAS_DIFERIDAS: new Set<string>(),
 }));
 vi.mock("@/lib/agent/context", () => ({
   buildAgentMessages: mocks.buildAgentMessages,
@@ -1219,5 +1222,170 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     await readEvents(await pedir());
     const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { mensajes: unknown[] } | null }])[1];
     expect(fila.transcript?.mensajes).toEqual([{ role: "assistant", content: "listo" }]);
+  });
+});
+
+// ─── H14 · LOS SEGUNDOS OJOS, CABLEADOS ──────────────────────────────────────
+//
+// Lo que se comprueba aquí es lo que sólo sabe la ruta: el interruptor, de dónde
+// sale el diff (lo que el turno escribió, cómo estaba y cómo está en la base) y
+// que cada revisor sea un subagente de SOLO LECTURA con su propia sesión. El
+// mecanismo del bucle y la receta tienen sus propias pruebas.
+describe("POST /api/agent — la revisión del turno (H14)", () => {
+  type Revision = NonNullable<AgentLoopArgs["revision"]>;
+  const ANTES = "<!doctype html>\n<html><body>\n<h1>Hola</h1>\n</body></html>";
+  const AHORA = "<!doctype html>\n<html><body>\n<h1>Hecho a mano</h1>\n</body></html>";
+  /** Lo que le llegó a cada subagente (su `runAgentLoop`, que aquí es el doble). */
+  let subagentes: { sistema: string; tarea: string; tools: string[] }[] = [];
+
+  /**
+   * Arranca un turno cuyo bucle «escribe» por la sesión de la ruta —como haría
+   * Edit— y devuelve la revisión que la ruta le pasó. Los subagentes también
+   * corren `runAgentLoop`, así que el doble los distingue por su prompt.
+   */
+  async function capturar(escribe: (s: Record<string, unknown>) => void): Promise<Revision | undefined> {
+    let capturada: Revision | undefined;
+    mocks.runAgentTool.mockImplementation(async (s: Record<string, unknown>) => {
+      escribe(s);
+      return { response: { ok: true } };
+    });
+    mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
+      const msgs = args.messages as { role: string; content: string }[];
+      if (msgs[0]?.role === "system") {
+        subagentes.push({
+          sistema: msgs[0].content,
+          tarea: msgs[1].content,
+          tools: (args.tools as { name: string }[]).map((t) => t.name),
+        });
+        return { finalText: "[]", usage: { inputTokens: 5, outputTokens: 2, cachedTokens: 1, thinkingTokens: 0 }, terminalError: false };
+      }
+      capturada = args.revision as Revision | undefined;
+      await (args.runTool as (n: string, a: Record<string, unknown>) => Promise<unknown>)("Edit", {});
+      return { turns: 1, toolCalls: 1, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "cambia el titular" }),
+        }),
+      ),
+    );
+    return capturada;
+  }
+  const escribeLaHome = (s: Record<string, unknown>) => {
+    s.escritos = ["/index.html"];
+    s.alEmpezar = new Map([["/index.html", ANTES]]);
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    subagentes = [];
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    vi.stubEnv("OPENLEN_REVISION", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({ title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null, data: { html: AHORA } });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+    mocks.buildFunctionDeclarations.mockReturnValue(
+      ["Read", "Edit", "Write", "Grep", "Glob", "publicar"].map((name) => ({ name })) as never,
+    );
+    // `clearAllMocks` no borra lo que otra prueba le puso a un doble.
+    mocks.turnosParaElHistorial.mockResolvedValue([]);
+  });
+
+  it("🔴 APAGADA por defecto: sin `OPENLEN_REVISION=1` el bucle no la recibe", async () => {
+    vi.stubEnv("OPENLEN_REVISION", "");
+    expect(await capturar(escribeLaHome)).toBeUndefined();
+  });
+
+  it("el diff sale de lo que el turno escribió, cómo estaba al empezar y cómo está en la base", async () => {
+    const revision = await capturar(escribeLaHome);
+    const r = await revision!.revisar({ modo: "una_pasada", cierre: "Listo, titular nuevo." });
+    expect(r).toMatchObject({ modo: "una_pasada", hallazgos: [], llamadas: 1, fallos: 0 });
+    expect(subagentes).toHaveLength(1);
+    const { tarea } = subagentes[0];
+    expect(tarea).toContain("<user_request>\ncambia el titular\n</user_request>");
+    expect(tarea).toContain("--- a/index.html\n+++ b/index.html");
+    expect(tarea).toContain("-<h1>Hola</h1>\n+<h1>Hecho a mano</h1>");
+    expect(tarea).toContain("<agent_closing_message>\nListo, titular nuevo.\n</agent_closing_message>");
+  });
+
+  it("🔴 cada revisor sólo tiene Read, Grep y Glob, y lee con SU sesión, no con la de Len", async () => {
+    let sesionDeLen: Record<string, unknown> | null = null;
+    const revision = await capturar((s) => {
+      sesionDeLen = s;
+      escribeLaHome(s);
+      s.leidos = new Map([["/index.html", { instantanea: "x" }]]);
+    });
+    await revision!.revisar({ modo: "completa", cierre: "" });
+    expect(subagentes).toHaveLength(4);
+    expect(subagentes.every((a) => a.tools.join() === "Read,Grep,Glob")).toBe(true);
+    expect(mocks.createAgentBrain).toHaveBeenLastCalledWith(
+      expect.objectContaining({ tools: [{ name: "Read" }, { name: "Grep" }, { name: "Glob" }] }),
+    );
+    // Las lecturas de los subagentes, por la puerta que les dio la ruta.
+    type Leer = (n: string, a: Record<string, unknown>) => Promise<unknown>;
+    const [primero, segundo] = mocks.runAgentLoop.mock.calls
+      .filter((c) => (c[0] as { messages: { role: string }[] }).messages[0]?.role === "system")
+      .map((c) => (c[0] as { runTool: Leer }).runTool);
+    mocks.runAgentTool.mockResolvedValue({ response: { ok: true } });
+    const sesionDe = async (leer: Leer) => {
+      await leer("Read", { file_path: "/index.html" });
+      return mocks.runAgentTool.mock.calls.at(-1)![0] as Record<string, unknown>;
+    };
+    const sesion = await sesionDe(primero);
+    expect(sesion).not.toBe(sesionDeLen);
+    expect((sesion.leidos as Map<string, unknown>).size).toBe(0);
+    expect(sesion.projectId).toBe((sesionDeLen as unknown as Record<string, unknown>).projectId);
+    // UNA por revisor: la suya recuerda lo que lee él, y no la comparte.
+    expect(await sesionDe(primero)).toBe(sesion);
+    expect(await sesionDe(segundo)).not.toBe(sesion);
+  });
+
+  it("🔴 el revisor ve lo que el USUARIO escribió antes, de la base, y nada de lo de Len", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([
+      { userText: "pon una sección de reseñas", assistantReasoning: "¿Me pasas las reseñas? LEN-DIJO-ESTO", transcript: null },
+      { userText: "Lucía M.: «Me abrieron un vino que no conocía»", assistantReasoning: "", transcript: null },
+    ]);
+    const revision = await capturar(escribeLaHome);
+    await revision!.revisar({ modo: "una_pasada", cierre: "" });
+    const { tarea } = subagentes[0];
+    expect(tarea).toContain("[1] pon una sección de reseñas\n[2] Lucía M.: «Me abrieron un vino que no conocía»");
+    expect(tarea).not.toContain("LEN-DIJO-ESTO");
+  });
+
+  it("una página que el turno CREÓ entra entera como añadida", async () => {
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: ANTES, pages: { menu: { html: "<h1>Menú</h1>" } } },
+    });
+    const revision = await capturar((s) => {
+      s.escritos = ["/menu/index.html"];
+      s.alEmpezar = new Map();
+    });
+    await revision!.revisar({ modo: "una_pasada", cierre: "" });
+    expect(subagentes[0].tarea).toContain("--- /dev/null\n+++ b/menu/index.html\n@@ -0,0 +1,1 @@\n+<h1>Menú</h1>");
+  });
+
+  it("🔴 sólo PÁGINAS: /datos y /memoria no guardan su «antes» y saldrían «creadas» enteras", async () => {
+    const revision = await capturar((s) => {
+      s.escritos = ["/datos/productos.json", "/memoria/proyecto.md", "/index.html"];
+      s.alEmpezar = new Map([["/index.html", ANTES]]);
+    });
+    await revision!.revisar({ modo: "una_pasada", cierre: "" });
+    expect(subagentes[0].tarea).not.toContain("datos");
+    expect(subagentes[0].tarea).not.toContain("memoria");
+    expect(subagentes[0].tarea).toContain("+++ b/index.html");
+  });
+
+  it("si lo escrito quedó como estaba, el diff está vacío: `null` y nadie revisa", async () => {
+    mocks.loadProject.mockResolvedValue({ title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null, data: { html: ANTES } });
+    const revision = await capturar(escribeLaHome);
+    expect(await revision!.revisar({ modo: "completa", cierre: "" })).toBeNull();
+    expect(subagentes).toHaveLength(0);
   });
 });

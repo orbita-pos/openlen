@@ -26,6 +26,7 @@
 // «no reproduce», que es de los más caros de diagnosticar.
 
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
+import type { AgentLoopResult } from "@/lib/agent/loop";
 
 // CÓMO SE USA, en tres pasos:
 //
@@ -85,6 +86,12 @@ export interface TurnoGrabado {
    *  Va aparte porque es otra llamada con otras reglas — y grabarlo mezclado
    *  con los `turnos` haría que el replay se lo comiera como una vuelta más. */
   readonly cierre?: StreamEvent[];
+  /** H14 · lo que devolvió la revisión, si corrió: lo que se mide del brazo
+   *  (hallazgos, fallos, uso). Aparte de `turnos` por lo mismo que `cierre`: sus
+   *  llamadas son de otros agentes, y un replay que se las comiera como vueltas
+   *  de Len divergiría. Para reproducir el turno se inyecta un revisor que
+   *  devuelva esto. */
+  readonly revision?: NonNullable<AgentLoopResult["revision"]>;
 }
 
 export interface Grabadora {
