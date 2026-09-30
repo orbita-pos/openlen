@@ -321,7 +321,14 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).not.toContain("onclick=");
     // POR SUSTANCIA, NO POR ENCABEZADO — ver el mismo cambio en context.test.ts.
     expect(p).toContain("LAS DOS MITADES");
-    expect(p).toContain("La página tiene que funcionar SIN él");
+    // Sin «La página tiene que funcionar SIN él» ni «prefiere el CSS puro»
+    // desde el 2026-09-29: nacieron cuando la plataforma tiraba el script, y
+    // ya no lo tira. «No escondas contenido» se queda, con el porqué que es
+    // verdad hoy: que el script del propio modelo falle.
+    expect(p).not.toContain("funcionar SIN él");
+    expect(p).not.toContain("CSS puro");
+    expect(p).toContain("si el script falla, la página llega en blanco");
+    expect(p).not.toContain("si el script se descarta");
     // LA FRONTERA ES EL SERVIDOR, NO EL CATÁLOGO. Es la frase que sustituye a
     // las cinco de arriba, y la que decide si el Agente construye un carrito o
     // se niega. Lo que NO se puede sigue dicho, y es poco y concreto. En llano

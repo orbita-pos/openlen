@@ -70,6 +70,17 @@ const SIN_OCULTAR_ES =
 const SIN_OCULTAR_EN =
   "Never hide content in CSS and reveal it from the script: if the script is dropped, the page ships blank.";
 
+// La misma regla para Len, con el porqué que hoy es verdad (2026-09-29). «Si el
+// script se descarta» hablaba de la plataforma, y la plataforma ya no descarta
+// nada: la cápsula murió el 26/08 y el editor dejó de borrar código el 29/09
+// (`deb2acc8`). Lo que sigue pasando es que el script del propio modelo FALLE,
+// y entonces lo escondido no se ve nunca. Es un fallo suyo, no nuestro, y por
+// eso la regla se queda (memoria `openlen-se-adapta-a-len`). Claude Code la
+// tiene igual, en su skill `artifact-design`: «la página completa en reposo; nada se queda en `opacity: 0` esperando a un observador».
+// Crear y el Chat conservan la versión de arriba hasta medir Crear.
+const SIN_OCULTAR_LEN =
+  "Nunca escondas contenido con CSS para revelarlo desde el script: si el script falla, la página llega en blanco.";
+
 // MEDIDO en la corrida del 21/08: de 6 páginas con JavaScript, la del carrito
 // cableó sus botones con `onclick="addToCart(1)"` y NINGÚN `addEventListener`.
 // El script sobrevivió entero y el carrito quedó mudo: «agregar» no hacía nada.
@@ -223,8 +234,18 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       // plataforma de un defecto suyo no va en el prompt: se arregla la
       // plataforma (memoria `openlen-se-adapta-a-len`).
       `${DOS_MITADES_ES} ` +
-      `La página tiene que funcionar SIN él. ${SIN_OCULTAR_ES} ` +
-      "Cuando el CSS puro alcanza (`<details>`/`<summary>`, checkbox + `peer-checked:`, `:target`, `scroll-snap`), prefiérelo. " +
+      // ⚰️ Aquí iba «La página tiene que funcionar SIN él», retirado para Len el
+      // 2026-09-29 con el OK de Jesús. Nació cuando la plataforma tiraba el
+      // script (la cápsula, el editor), y ya no lo tira. Además chocaba con
+      // LO QUE HAY Y LO QUE NO, que le pide construir en JavaScript el carrito,
+      // la calculadora o el juego. `artifact-design` no pide nada parecido.
+      `${SIN_OCULTAR_LEN} ` +
+      // ⚰️ Aquí iba «Cuando el CSS puro alcanza (`<details>`…), prefiérelo»,
+      // retirado el mismo día y por lo mismo: venía de cuando el JavaScript no
+      // sobrevivía (las conductas). `artifact-design` no lo tiene. El único dato
+      // a su favor (04/09, memoria `el-sobre-no-era-la-causa`): un FAQ salió
+      // con `<details>` en 2 de 2. Es estilo, no un fallo; lo vigila Len-Bench.
+      // Crear y el Chat conservan las dos frases hasta medir Crear.
       // ⚰️ AQUÍ ESTABA LA LISTA DE `<iframe>` PERMITIDOS, retirada el 2026-09-04.
       // No se pierde: el contrato la trae más completa —las formas de URL de
       // YouTube y de Vimeo, «sólo si el brief te da el enlace», y qué hacer con
