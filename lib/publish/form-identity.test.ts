@@ -52,6 +52,65 @@ describe("stampFormIds", () => {
     expect(r.ids[0]).toBe("fabc123456789");
   });
 
+  // EL FALLO: al estampar, el documento entero salía de `dom.toString()` — sin
+  // comentarios, con `<x/>` vuelto `<x></x>` y los `<meta … />` sin su barra —
+  // y el primer guardado de cualquier página con un formulario reescribía
+  // código que el modelo escribió y la edición no tocaba. Estampar es poner UN
+  // atributo: quitándolo, tiene que quedar el original byte a byte.
+  it("estampar no cambia ni un byte fuera del atributo", () => {
+    const html =
+      `<!doctype html>\n<html lang="es">\n<head>\n` +
+      `  <meta charset="utf-8" />\n  <meta name="viewport" content="width=device-width" />\n` +
+      `  <!-- el modelo dejó esto aquí -->\n  <title>t</title>\n</head>\n<body>\n` +
+      `  <h1>Hola<br/>mundo</h1>\n  <img src="a.png" alt="" />\n` +
+      `  <!-- <form>un formulario comentado no es un formulario</form> -->\n` +
+      `  <form class='caja  ancha' action="/enviar?a=1&amp;b=2" novalidate>\n` +
+      `    <input name="email" required/><br/>\n    <button>Enviar</button>\n  </form>\n` +
+      `  <FORM data-x=sin-comillas><input name="otro"></FORM>\n` +
+      `</body>\n</html>\n`;
+    const r = stampFormIds(html);
+    expect(r.stamped).toBe(2);
+
+    let sinIds = r.html;
+    for (const id of r.ids) {
+      expect(sinIds.split(` ${FORM_ID_ATTR}="${id}"`)).toHaveLength(2);
+      sinIds = sinIds.replace(` ${FORM_ID_ATTR}="${id}"`, "");
+    }
+    expect(sinIds).toBe(html);
+    // Lo que el round-trip se comía, dicho sin depender de la resta de arriba.
+    expect(r.html).toContain(`<meta charset="utf-8" />`);
+    expect(r.html).toContain("<!-- el modelo dejó esto aquí -->");
+    expect(r.html).toContain("<h1>Hola<br/>mundo</h1>");
+    expect(readFormIds(r.html)).toEqual(r.ids);
+  });
+
+  // Re-estampar un duplicado cambia el VALOR y nada más: ni la posición del
+  // atributo ni el resto de la etiqueta.
+  it("un duplicado se re-estampa en su sitio, sin tocar el resto", () => {
+    const viejo = `${FORM_ID_ATTR}="fabc123456789"`;
+    const dup = DOC(
+      `<form class="a" ${viejo}><input name="a"/></form><!-- copia -->` +
+        `<form class="b" ${viejo} data-y='z'><input name="b"/></form>`,
+    );
+    const r = stampFormIds(dup);
+    expect(r.stamped).toBe(1);
+    const segundo = dup.lastIndexOf(viejo);
+    expect(r.html).toBe(
+      dup.slice(0, segundo) + `${FORM_ID_ATTR}="${r.ids[1]}"` + dup.slice(segundo + viejo.length),
+    );
+    expect(readFormIds(r.html)).toEqual(r.ids);
+  });
+
+  // Un atributo vacío no es identidad: se rellena ESE, no se añade otro — con
+  // dos, el navegador lee el primero y el editor pediría el ajuste sin id.
+  it("un id vacío se rellena en su sitio, sin añadir un segundo atributo", () => {
+    const html = DOC(`<form ${FORM_ID_ATTR}="" class="c"><input name="e"></form>`);
+    const r = stampFormIds(html);
+    expect(r.stamped).toBe(1);
+    expect(r.html).toBe(DOC(`<form ${FORM_ID_ATTR}="${r.ids[0]}" class="c"><input name="e"></form>`));
+    expect(readFormIds(r.html)).toEqual(r.ids);
+  });
+
   it("readFormIds conserva el hueco de un formulario sin estampar", () => {
     const mixto = DOC(`<form ${FORM_ID_ATTR}="fdeadbeef001"></form><form></form>`);
     expect(readFormIds(mixto)).toEqual(["fdeadbeef001", ""]);

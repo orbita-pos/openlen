@@ -27,7 +27,7 @@
 // clave heredada por índice.
 
 import { randomBytes } from "node:crypto";
-import { parse } from "node-html-parser";
+import { parse, type HTMLElement } from "node-html-parser";
 
 /** El identificador estable, en el propio `<form>`. `data-ol-*` porque el
  *  prompt de rediseño ya ordena conservar intacto todo elemento que lo lleve. */
@@ -69,12 +69,58 @@ export interface StampResult {
   readonly stamped: number;
 }
 
+/** `[desde, hasta)` del html original se sustituye por `texto`. */
+interface Empalme {
+  readonly desde: number;
+  readonly hasta: number;
+  readonly texto: string;
+}
+
+// La gramática con la que el parser lee los atributos (`rawAttributes` en
+// node-html-parser), copiada tal cual: localizar el atributo con OTRA podría
+// tocar uno distinto del que después lee `readFormIds`.
+const ATRIBUTO = /([a-zA-Z()[\]#@$.?:][a-zA-Z0-9-._:()[\]#]*)(?:\s*=\s*((?:'[^']*')|(?:"[^"]*")|\S+))?/g;
+
+/**
+ * Dónde poner `id` en la etiqueta de apertura de `form`, sobre el texto
+ * ORIGINAL. El parser da la posición de origen del `<` (`range[0]`) y los
+ * atributos sin tocar (`rawAttrs`, que empieza tras UN blanco).
+ *
+ * Si la etiqueta ya trae el atributo (vacío o duplicado), se sustituye ESE —
+ * el primero, que es el que leen tanto el navegador como el parser cuando no
+ * está vacío. Si no, se inserta justo tras el nombre de la etiqueta: ahí no
+ * puede cambiar cómo se lee ningún otro atributo, ni con valores sin comillas
+ * ni con un `/>` al final.
+ */
+function empalmeDelId(html: string, form: HTMLElement, id: string): Empalme {
+  const trasNombre = form.range[0] + 1 + form.rawTagName.length;
+  const desdeAtributos = trasNombre + 1;
+  if (
+    html.slice(form.range[0], trasNombre) !== `<${form.rawTagName}` ||
+    (form.rawAttrs !== "" && !html.startsWith(form.rawAttrs, desdeAtributos))
+  ) {
+    // No debería pasar nunca — el parser no retoca las etiquetas que lee. Si
+    // pasa, mejor fallar que estampar a ciegas: `preparePage` lo registra y
+    // el formulario sigue por la ruta heredada por índice.
+    throw new Error(`stampFormIds: la etiqueta <${form.rawTagName}> no está donde dice el parser`);
+  }
+  const atributo = `${FORM_ID_ATTR}="${id}"`;
+  for (const m of form.rawAttrs.matchAll(ATRIBUTO)) {
+    if (m[1]!.toLowerCase() !== FORM_ID_ATTR) continue;
+    const desde = desdeAtributos + m.index!;
+    return { desde, hasta: desde + m[0].length, texto: atributo };
+  }
+  return { desde: trasNombre, hasta: trasNombre, texto: ` ${atributo}` };
+}
+
 /**
  * Da identidad a los formularios que no la tengan. Idempotente.
  *
- * Con 0 estampados devuelve el html ORIGINAL, jamás `dom.toString()`: el
- * round-trip del parser no es identidad (pierde comentarios, normaliza `/>`) y
- * una página no debe degradarse por pasar por aquí sin trabajo que hacer.
+ * NUNCA `dom.toString()`: el round-trip del parser no es identidad (pierde
+ * comentarios, normaliza `/>`, re-entrecomilla los atributos) y el código de la
+ * página es el que escribió el modelo, no el que el parser sabe reescribir. Se
+ * empalma el atributo en el texto original y ningún otro byte cambia; con 0
+ * estampados sale el mismo string.
  */
 export function stampFormIds(html: string): StampResult {
   if (!html.includes("<form")) return { html, ids: [], stamped: 0 };
@@ -89,7 +135,7 @@ export function stampFormIds(html: string): StampResult {
 
   const vistos = new Set<string>();
   const ids: string[] = [];
-  let stamped = 0;
+  const empalmes: Empalme[] = [];
   for (const f of forms) {
     const actual = f.getAttribute(FORM_ID_ATTR)?.trim() ?? "";
     // Un duplicado se re-estampa: dos formularios con el mismo id resolverían
@@ -102,14 +148,22 @@ export function stampFormIds(html: string): StampResult {
     }
     let id = nuevoId();
     while (vistos.has(id)) id = nuevoId();
-    f.setAttribute(FORM_ID_ATTR, id);
+    empalmes.push(empalmeDelId(html, f, id));
     vistos.add(id);
     ids.push(id);
-    stamped++;
   }
 
-  if (stamped === 0) return { html, ids, stamped: 0 };
-  return { html: dom.toString(), ids, stamped };
+  if (empalmes.length === 0) return { html, ids, stamped: 0 };
+  // Cada formulario tiene su propia etiqueta de apertura, así que los empalmes
+  // no se solapan; basta coserlos en orden de documento.
+  empalmes.sort((a, b) => a.desde - b.desde);
+  let out = "";
+  let cursor = 0;
+  for (const e of empalmes) {
+    out += html.slice(cursor, e.desde) + e.texto;
+    cursor = e.hasta;
+  }
+  return { html: out + html.slice(cursor), ids, stamped: empalmes.length };
 }
 
 /**
