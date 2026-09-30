@@ -401,6 +401,8 @@ export default defineConfig({
       "lib/agent/direcciones.test.ts",
       // Len 2.1: la fila del turno se guarda a medida que pasa, sin martillear.
       "lib/agent/avance-del-turno.test.ts",
+      // Len 2.1: el aviso de que Len terminó sin nadie mirando.
+      "lib/agent/aviso-del-turno.test.ts",
       // Internet: fetch de URL a texto. El fetcher se inyecta, así que no toca
       // la red ni el binding nativo — pero `include` es LISTA BLANCA y sin esta
       // línea no correría nunca.

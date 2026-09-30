@@ -9,6 +9,10 @@ export const emailChannel: NotificationChannel = {
   isEnabled: (prefs) => prefs.emailEnabled,
 
   async send(event: NotificationEvent): Promise<DeliveryResult> {
+    // Len 2.1: el aviso de turno terminado es SÓLO push. Un correo por cada
+    // turno que termina sin nadie mirando sería ruido, y quien lo necesita de
+    // verdad —la app móvil— vive de push.
+    if (event.type === "len_turno") return "skipped";
     // Resolve recipient's platform email + display name
     const userRows = await db
       .select({ email: schema.users.email, name: schema.users.name })

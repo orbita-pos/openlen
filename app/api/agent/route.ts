@@ -58,6 +58,7 @@ import {
   registrarTurnoDelServidor,
 } from "@/lib/projects/chat";
 import { crearAvance } from "@/lib/agent/avance-del-turno";
+import { avisoDelTurno } from "@/lib/agent/aviso-del-turno";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { conSenales, relojDeSilencio } from "@/lib/agent/reloj-de-silencio";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
@@ -657,6 +658,9 @@ export async function POST(req: Request): Promise<Response> {
    *  turno (ver `cancel()` abajo): sólo se apunta, para el registro y para
    *  avisar al usuario cuando termine sin nadie mirando. */
   let clienteSeFue = false;
+  /** Lo paró alguien a propósito (■, o el plazo de Len-Bench): entonces no se
+   *  avisa de que terminó, porque quien lo paró ya lo sabe. */
+  let canceladoAProposito = false;
   const agentSession: AgentSession = {
     projectId,
     userId,
@@ -852,7 +856,13 @@ export async function POST(req: Request): Promise<Response> {
       // cerrar su caja de texto sin quedarse esperando.
       // `abortar` es la única forma de parar el turno desde fuera: la usa
       // `POST /api/agent/cancelar` (el ■ del panel y el plazo de Len-Bench).
-      abrirTurno(turnoId, userId, Date.now(), { abortar: () => upstreamAbort.abort(), filaId });
+      abrirTurno(turnoId, userId, Date.now(), {
+        abortar: () => {
+          canceladoAProposito = true;
+          upstreamAbort.abort();
+        },
+        filaId,
+      });
       emit("turno", { turnoId });
 
       const dirGrabacion = directorioDeGrabacion();
@@ -1484,9 +1494,25 @@ export async function POST(req: Request): Promise<Response> {
         // EL TURNO SE CIERRA PASE LO QUE PASE. Si no, su fila se queda con la
         // correccion que nadie leera y ocupando sitio en el mapa.
         cerrarTurno(turnoId);
-        // CUÁNTOS TURNOS TERMINAN SIN NADIE MIRANDO, contado desde el día uno:
-        // es lo que dirá si hace falta avisar (y cuánto) sin adivinarlo.
+        // CUÁNTOS TURNOS TERMINAN SIN NADIE MIRANDO, contado desde el día uno.
         if (clienteSeFue) console.log(`[agent] turno terminado sin cliente turno=${turnoId}`);
+        // 🔴 LEN 2.1 · Y SE LE AVISA (diagnóstico §4.4 punto 5). Es la otra mitad
+        // de «cierra, Len sigue, te aviso». Sólo si el turno hizo algo y nadie
+        // lo paró a propósito: quien pulsó ■ ya sabe que acabó. Por push (el
+        // correo lo salta), con la clave de la fila para no repetir. El módulo
+        // se carga sólo aquí: la inmensa mayoría de turnos no lo necesita.
+        // FAIL-SOFT: un aviso que no sale no le cuesta el turno a nadie.
+        if (clienteSeFue && !canceladoAProposito && registro.hayAlgo(mutoDurable)) {
+          try {
+            const { scheduleNotification } = await import("@/lib/notifications/dispatch");
+            await scheduleNotification(
+              avisoDelTurno({ projectId, userId, texto: registro.texto, tarjetas: registro.tarjetas }),
+              `len-turno:${filaId}`,
+            );
+          } catch (err) {
+            console.warn("[agent] no se pudo avisar del turno terminado", err);
+          }
+        }
         // Y EL NAVEGADOR TAMBIÉN. Un Chromium por turno que nadie cierra es una
         // fuga con nombre y apellidos en una caja de 4 GB. Va aquí, con el
         // cierre del turno, por el mismo motivo: el turno que revienta es

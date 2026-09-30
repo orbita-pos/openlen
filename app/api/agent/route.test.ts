@@ -61,6 +61,8 @@ const mocks = vi.hoisted(() => ({
   verifyEditedPage: vi.fn(),
   leerDireccion: vi.fn(() => null as string | null),
   abrirTurno: vi.fn(),
+  // Len 2.1: el aviso de turno terminado sin nadie mirando.
+  scheduleNotification: vi.fn(async () => {}),
   createPool: vi.fn(),
   renderViewports: vi.fn(async () => ({ desktop: "d", mobile: "m" })),
   poolRender: vi.fn(async () => ({ desktop: "pool-d", mobile: "pool-m" })),
@@ -151,6 +153,7 @@ vi.mock("@/lib/agent/tools", () => ({
 // El almacen de correcciones a media faena. Se dobla para poder DECIDIR que
 // lee el bucle: el turno real se abre y se cierra dentro del mismo `POST`, asi
 // que con el almacen de verdad no hay ventana para meter nada desde fuera.
+vi.mock("@/lib/notifications/dispatch", () => ({ scheduleNotification: mocks.scheduleNotification }));
 vi.mock("@/lib/agent/direcciones", () => ({
   abrirTurno: mocks.abrirTurno,
   cerrarTurno: vi.fn(),
@@ -1260,9 +1263,11 @@ describe("POST /api/agent — el turno no muere con el cliente", () => {
     mocks.creditsForUsage.mockReturnValue(7);
   });
 
-  /** El bucle se queda a medias hasta que la prueba lo suelta. */
+  /** El bucle se queda a medias hasta que la prueba lo suelta. `soltar`
+   *  espera a que el bucle haya arrancado: la ruta lo llama tras la puerta de
+   *  créditos, unos ticks después del primer evento. */
   function bucleRetenido() {
-    let soltar!: () => void;
+    let soltar: (() => void) | undefined;
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
       args.emit({ type: "text", text: "trabajando" });
       await new Promise<void>((r) => (soltar = r));
@@ -1272,7 +1277,12 @@ describe("POST /api/agent — el turno no muere con el cliente", () => {
         terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
       };
     });
-    return { soltar: () => soltar() };
+    return {
+      soltar: async () => {
+        for (let i = 0; i < 200 && !soltar; i++) await new Promise((r) => setTimeout(r, 0));
+        soltar!();
+      },
+    };
   }
 
   const pedir = () =>
@@ -1299,10 +1309,46 @@ describe("POST /api/agent — el turno no muere con el cliente", () => {
 
     expect(senalDelModelo().aborted).toBe(false);
 
-    bucle.soltar();
+    await bucle.soltar();
     await vi.waitFor(() => expect(mocks.registrarTurnoDelServidor).toHaveBeenCalled());
     expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 7);
     expect(senalDelModelo().aborted).toBe(false);
+  });
+
+  it("🔴 y al terminar sin nadie mirando, se le AVISA (por la clave de su fila)", async () => {
+    const bucle = bucleRetenido();
+    const lector = (await pedir()).body!.getReader();
+    await lector.read();
+    await lector.cancel();
+    await bucle.soltar();
+    await vi.waitFor(() => expect(mocks.scheduleNotification).toHaveBeenCalled());
+    const [evento, clave] = mocks.scheduleNotification.mock.calls[0] as unknown as [
+      { type: string; recipientUserId: string; preview: string },
+      string,
+    ];
+    expect(evento).toMatchObject({ type: "len_turno", recipientUserId: "u1", preview: "trabajando" });
+    expect(clave).toMatch(/^len-turno:/);
+  });
+
+  it("BRAZO DE CONTROL: con el cliente delante hasta el final, no se avisa", async () => {
+    const bucle = bucleRetenido();
+    const res = await pedir();
+    await bucle.soltar();
+    await readEvents(res);
+    await vi.waitFor(() => expect(mocks.registrarTurnoDelServidor).toHaveBeenCalled());
+    expect(mocks.scheduleNotification).not.toHaveBeenCalled();
+  });
+
+  it("parado a propósito (■) y con el cliente fuera, tampoco: quien lo paró ya lo sabe", async () => {
+    const bucle = bucleRetenido();
+    const lector = (await pedir()).body!.getReader();
+    await lector.read();
+    const extra = (mocks.abrirTurno.mock.calls.at(-1) as unknown as [string, string, number, { abortar: () => void }])[3];
+    extra.abortar();
+    await lector.cancel();
+    await bucle.soltar();
+    await vi.waitFor(() => expect(mocks.registrarTurnoDelServidor).toHaveBeenCalled());
+    expect(mocks.scheduleNotification).not.toHaveBeenCalled();
   });
 
   it("BRAZO DE CONTROL: el `abortar` que la ruta deja en el almacén SÍ para el modelo", async () => {
@@ -1319,7 +1365,7 @@ describe("POST /api/agent — el turno no muere con el cliente", () => {
     extra.abortar();
     expect(senalDelModelo().aborted).toBe(true);
 
-    bucle.soltar();
+    await bucle.soltar();
     await lector.cancel();
   });
 });

@@ -1,7 +1,7 @@
 import webpush from "web-push";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import type { NotificationChannel, NotificationEvent } from "../types";
+import type { LenTurnoEvent, NotificationChannel, NotificationEvent } from "../types";
 
 // ── VAPID setup ────────────────────────────────────────────────────────────────
 // Called lazily on first use so Next.js build / dev without keys don't crash.
@@ -70,6 +70,31 @@ export async function sendPushToUser(
   return { sent, failed };
 }
 
+// ── Len 2.1 · el turno terminó sin nadie mirando ──────────────────────────────
+
+/** Sin prosa nuestra: el servidor no sabe el idioma de quien lo lee. «Len» es
+ *  un nombre, el título es el del proyecto, y el cuerpo es lo último que dijo
+ *  Len, que ya habla el idioma del usuario. ❓ si terminó preguntando. */
+interface PushPayload {
+  readonly title: string;
+  readonly body: string;
+  readonly url: string;
+}
+
+async function avisoDeLen(event: LenTurnoEvent): Promise<PushPayload> {
+  const filas = await db
+    .select({ title: schema.projects.title })
+    .from(schema.projects)
+    .where(eq(schema.projects.id, event.projectId))
+    .limit(1);
+  const proyecto = filas[0]?.title?.trim();
+  return {
+    title: proyecto ? `Len · ${proyecto}` : "Len",
+    body: `${event.pregunta ? "❓ " : ""}${event.preview}`.trim(),
+    url: `/new?project=${event.projectId}`,
+  };
+}
+
 // ── Channel object ─────────────────────────────────────────────────────────────
 
 export const webPushChannel: NotificationChannel = {
@@ -79,7 +104,9 @@ export const webPushChannel: NotificationChannel = {
 
   async send(event: NotificationEvent) {
     const payload =
-      event.type === "chat_message"
+      event.type === "len_turno"
+        ? await avisoDeLen(event)
+        : event.type === "chat_message"
         ? {
             title: event.senderName,
             body: event.preview,
