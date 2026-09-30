@@ -39,8 +39,7 @@
       "redisenar_pagina": "Pagina wordt herontworpen",
       "guardar_dato": "Opslaan in je gegevens",
       "editar_dato": "Je gegevens bijwerken",
-      "quitar_dato": "Verwijderen uit je gegevens",
-      "proponer_objetivo": "Stelt een doel voor"
+      "quitar_dato": "Verwijderen uit je gegevens"
     },
     "action": {
       "home": "Home",
@@ -63,12 +62,7 @@
       "limit": "Je hebt de limiet voor gepubliceerde pagina's van je abonnement bereikt.",
       "invalid": "Publiceren mislukt. Controleer het subdomein en probeer opnieuw.",
       "checking": "Controleren…",
-      "langsFailed": "{langs} kon niet worden vertaald — publiceer opnieuw om het nogmaals te proberen.",
-      "goalTitle": "Een doel nastreven",
-      "goalHow": "Len blijft werken tot het gehaald is. Iemand anders controleert het, niet Len.",
-      "goalCost": "Dit kan tot {turnos} beurten kosten in plaats van 1.",
-      "goalApprove": "Goedkeuren",
-      "goalSet": "Doel ingesteld"
+      "langsFailed": "{langs} kon niet worden vertaald — publiceer opnieuw om het nogmaals te proberen."
     },
     "ventana": "Len ziet de laatste {visibles} berichten van dit gesprek, van {totales}. Wat daarvoor kwam onthoudt het niet meer — herhaal het als het nodig is, of begin een nieuw gesprek.",
     "errors": {
@@ -80,13 +74,7 @@
       "no_credits": "Je credits zijn op. Je pagina is opgeslagen en je kunt hem nu publiceren. Ze worden elke 30 dagen vernieuwd — of tik bovenaan op je saldo en stap over op Pro om vandaag verder te werken.",
       "no_credits_at": "Je credits zijn op. Je pagina is opgeslagen en je kunt hem nu publiceren. Ze komen terug op {date} — of tik bovenaan op je saldo en stap over op Pro om vandaag verder te werken."
     },
-    "cortado": "⚠️ Deze beurt werd afgebroken voordat hij klaar was ({reason}). Wat al gedaan was, is opgeslagen op de pagina.",
-    "objetivo": {
-      "cumplida": "Doel behaald: {condicion}",
-      "imposible": "Dit doel kan zo niet worden behaald, dus ik heb het verwijderd: {condicion}",
-      "no_cumplida": "Nog niet — het doel blijft staan. Zeg maar dat ik doorga.",
-      "sin_evaluador": "Ik kon je doel deze beurt niet controleren, dus het blijft staan."
-    }
+    "cortado": "⚠️ Deze beurt werd afgebroken voordat hij klaar was ({reason}). Wat al gedaan was, is opgeslagen op de pagina."
   },
   "defaultProjectName": "Prijzenpagina",
   "chatDraft": {

@@ -60,7 +60,6 @@ describe("buildFunctionDeclarations", () => {
       "elegir_foto",
       "editar_imagen",
       "publicar",
-      "proponer_objetivo",
       "leer_de_internet",
       "TodoWrite",
       "preguntar",
@@ -73,7 +72,7 @@ describe("buildFunctionDeclarations", () => {
     const names = new Set(buildFunctionDeclarations().map((d) => String(d.name)));
     for (const n of HERRAMIENTAS_DIFERIDAS) expect(names.has(n), n).toBe(true);
     expect([...HERRAMIENTAS_DIFERIDAS].sort()).toEqual(
-      ["activar_modulo", "conectar_datos_vivos", "editar_imagen", "leer_de_internet", "preparar_marketing", "proponer_objetivo", "revertir_ultimo_cambio"],
+      ["activar_modulo", "conectar_datos_vivos", "editar_imagen", "leer_de_internet", "preparar_marketing", "revertir_ultimo_cambio"],
     );
   });
 
@@ -659,40 +658,6 @@ describe("el prompt enseña la conducta buena, no narra la mala", () => {
     expect(texto.indexOf("CÓMO TRABAJAR:")).toBeGreaterThan(0);
     expect(texto.indexOf("TONO:")).toBeLessThan(texto.indexOf("CÓMO TRABAJAR:"));
     expect(texto).toContain("Responde en el idioma en que te escribe el usuario");
-  });
-});
-
-/**
- * 🔴 LA REGLA TIENE QUE ESTAR DONDE EL MODELO LA LEE.
- *
- * Claude Code se lo dice al modelo en la descripción de la herramienta que
- * propone objetivos: si el usuario lo rechaza no se le avisa, así que no hay
- * que preguntar por la decisión ni volver a proponer la misma condición con
- * otras palabras.
- *
- * Aquí esa regla vivió sólo en un comentario de `tools.ts` —que el modelo no
- * lee— y se perdió del todo al reescribir ese comentario el 2026-09-09. Es la
- * forma exacta de «la frase verdadera en otra superficie»: la regla escrita
- * donde no manda.
- *
- * Sin ella, un rechazo se lee como silencio: Len puede volver a proponer lo
- * mismo el turno siguiente, o gastar el turno preguntando por una decisión que
- * no le corresponde.
- */
-describe("la descripción de proponer_objetivo dice qué hacer si NO la aprueban", () => {
-  const desc = () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "proponer_objetivo");
-    if (!d) throw new Error("proponer_objetivo desapareció del catálogo");
-    return d.description;
-  };
-
-  it("avisa de que un rechazo no se notifica", () => {
-    expect(desc()).toMatch(/no te vas a enterar/i);
-  });
-
-  it("y de que no se re-propone ni reescrita", () => {
-    expect(desc()).toMatch(/no vuelvas a proponer/i);
-    expect(desc()).toMatch(/reescrita/i);
   });
 });
 

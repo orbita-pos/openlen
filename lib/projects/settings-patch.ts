@@ -22,10 +22,6 @@ const MAX_URL = 2000;
  *  `app/api/agent/route.ts` AL CONSUMIR; aquí se recorta AL ESCRIBIR, que es
  *  donde el tope pertenece. */
 const MAX_ASSISTANT_FACTS = 4000;
-// ⚰️ Aquí vivía `const MAX_CONDICION = 500` con un comentario que decía «es el
-// MISMO que el de la herramienta». Un comentario no es un compilador: ahora es
-// literalmente el mismo número, importado.
-import { CONDICION_MAX as MAX_CONDICION } from "@/lib/agent/objetivo/condicion";
 
 interface PatchBody {
   /** Index of the <form> being configured (document order). */
@@ -68,18 +64,6 @@ interface PatchBody {
     facts?: string;
     tone?: string;
   };
-  /**
-   * EL OBJETIVO que el dueño aprueba en la tarjeta de Len.
-   *
-   * Entra por aquí y no por un endpoint propio porque este fichero ES el
-   * embudo: «shared by the PATCH route (button path) and the agent (tool-call
-   * path)», que es exactamente la forma de esto — Len lo propone, el dueño lo
-   * aprueba con un toque.
-   *
-   * `null` lo BORRA. Es como el dueño cancela un objetivo que ya no quiere,
-   * sin tener que esperar a que se cumpla.
-   */
-  objetivo?: { condicion: string } | null;
 }
 
 export type SettingsPatchBody = PatchBody;
@@ -158,28 +142,6 @@ export function validateSettingsPatch(
       }
     }
   }
-  // 🔴 EL OBJETIVO TAMBIÉN CRUZA POR AQUÍ, y faltaba.
-  //
-  // `applySettingsPatch` sabía ponerlo y borrarlo desde el primer día, pero esta
-  // puerta —que corre ANTES y decide si la petición sigue— no lo nombraba, así
-  // que toda escritura del objetivo salía 400 sin llegar jamás al que sabía
-  // aplicarla. La tarjeta de aprobación de Len nunca llegó a funcionar: mandaba
-  // el PATCH, recibía 400 y volvía a su estado inicial sin decir nada. Medido
-  // contra el dev real el 2026-09-08.
-  //
-  // La misma decisión —«qué claves acepto»— vivía en dos sitios y una se quedó
-  // atrás. Aquí no se puede extraer a una sola: son dos preguntas distintas
-  // (¿es válido? / ¿cómo se funde?). Lo que las ata es esta prueba.
-  const hasObjetivo = "objetivo" in body;
-  if (hasObjetivo) {
-    const o = body.objetivo;
-    // `null` es la CANCELACIÓN del dueño, no un cuerpo inválido.
-    if (o !== null) {
-      if (!o || typeof o !== "object" || typeof o.condicion !== "string") {
-        return { ok: false, message: "objetivo must be null or { condicion: string }" };
-      }
-    }
-  }
   const hasMarketing = "marketing" in body;
   if (hasMarketing) {
     const m = body.marketing;
@@ -214,13 +176,12 @@ export function validateSettingsPatch(
     !hasAnalyticsToggle &&
     !hasChat &&
     !hasAssistant &&
-    !hasMarketing &&
-    !hasObjetivo
+    !hasMarketing
   ) {
     return {
       ok: false,
       message:
-        "expected formIndex+patch OR analyticsDisabled OR chat OR assistant OR marketing OR objetivo",
+        "expected formIndex+patch OR analyticsDisabled OR chat OR assistant OR marketing",
     };
   }
   if (hasFormPatch) {
@@ -317,18 +278,6 @@ export function applySettingsPatch(
   }
 
   const nextSettings = { ...data.settings, forms };
-  // EL OBJETIVO. `null` lo borra —así lo cancela el dueño sin esperar a que se
-  // cumpla— y un texto lo pone, reemplazando al que hubiera: una a la vez.
-  if ("objetivo" in body) {
-    if (body.objetivo === null) {
-      delete nextSettings.objetivo;
-    } else if (body.objetivo) {
-      const condicion = body.objetivo.condicion.trim().slice(0, MAX_CONDICION);
-      if (condicion) {
-        nextSettings.objetivo = { condicion, creadoEn: new Date().toISOString() };
-      }
-    }
-  }
   if (hasAnalyticsToggle) {
     nextSettings.analyticsDisabled = body.analyticsDisabled === true;
   }

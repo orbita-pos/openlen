@@ -31,7 +31,6 @@ import {
 import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/lib/agent/diagnosticos";
 import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
 import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
-import { esAdjuntoDelManual } from "@/lib/agent/ficheros/manual";
 // H14: puro también (la receta y cuándo se revisa); quién revisa viene inyectado.
 import {
   avisoDeRevision,
@@ -139,15 +138,6 @@ export type AgentStreamEvent =
   // publish itself. The panel renders a confirm card whose button hits the
   // real publish endpoint — the user's tap is the only thing that publishes.
   | { type: "confirm"; action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean }
-  // La propuesta de OBJETIVO. Misma puerta que publicar —el modelo propone, el
-  // usuario aprueba— y por la misma razón: perseguir una condición le va a
-  // costar turnos, y un turno es dinero suyo.
-  //
-  // `turnosMaximos` viaja EN EL EVENTO y no lo escribe el cliente: es el
-  // número que el servidor va a hacer cumplir. Un coste escrito a mano en la
-  // tarjeta se queda viejo en cuanto alguien toca la constante, y entonces le
-  // habríamos prometido al usuario un precio que no es.
-  | { type: "confirm"; action: "objetivo"; condicion: string; turnosMaximos: number }
   // H14 · LOS SEGUNDOS OJOS. `running` al empezar —la revisión se come la
   // espera del turno y no puede parecer un cuelgue—; al acabar, `done` con
   // cuántos hallazgos llegaron a Len, `omitida` si el diff salió vacío (no se
@@ -335,55 +325,6 @@ export interface AgentLoopArgs {
   maxToolCalls?: number;
 
   /**
-   * EL OBJETIVO: una CONDICIÓN DE PARADA, no una tarea.
-   *
-   * Copiado del mecanismo de Claude Code: el turno NO
-   * termina mientras un evaluador APARTE no confirme que la condición se
-   * cumplió. Allí la comprobación vive en la ranura de los Stop hooks y un «no
-   * cumplida» impide que el turno cierre; aquí es lo mismo, en `cerrarTurno`.
-   *
-   * 🔴 EL EVALUADOR VIENE INYECTADO, como `verifyTurn` y `medirParaElModelo`,
-   * y por la misma razón: así el mecanismo entero —seguir, parar, los topes, el
-   * evaluador reventando— se prueba sin gastar una sola llamada.
-   *
-   * 🔴 Y LLEVA PRESUPUESTO, que es lo que Claude Code NO necesita. El suyo corre
-   * en un terminal que el usuario está mirando, con su suscripción. Éste corre
-   * sobre créditos prepago, sin nadie delante. «Seguir hasta que se cumpla» sin
-   * tope es una forma de vaciarle el saldo a alguien mientras duerme.
-   */
-  objetivo?: {
-    readonly condicion: string;
-    /** Cuántas vueltas EXTRA puede pedir el objetivo: SU tope, el único que
-     *  queda en el turno (los generales se retiraron en H1, 2026-09-25). */
-    readonly maxVueltas: number;
-    /**
-     * ¿SIGUE PUESTO? Se consulta ANTES de gastar el juez, en cada cierre.
-     *
-     * 🔴 LA VARA ES CLAUDE CODE. Allí el objetivo no es un dato copiado al
-     * arrancar el turno: es un hook de `Stop` en un registro, y `/goal clear` lo
-     * QUITA de ese registro. Además, en cada punto de decisión relee el estado
-     * vivo y se retira si cambió. O sea: cancelar surte efecto en el turno EN
-     * CURSO.
-     *
-     * Nosotros lo congelábamos al arrancar, así que un dueño que cancelaba a
-     * media faena seguía PAGANDO hasta `maxVueltas` llamadas de evaluador por
-     * algo que acababa de abandonar. Esto es una lectura de base: cero llamadas
-     * de modelo, y ahorra dinero en vez de gastarlo.
-     *
-     * Ausente ⇒ el bucle se comporta igual que antes de que existiera.
-     */
-    sigueVigente?(): Promise<boolean>;
-    /** El juez. Recibe el transcript del turno y la condición. */
-    evaluar(o: {
-      readonly condicion: string;
-      readonly transcript: string;
-    }): Promise<
-      | { ok: true; resultado: { veredicto: "cumplida" | "no_cumplida" | "imposible"; razon: string } }
-      | { ok: false; motivo: string }
-    >;
-  };
-
-  /**
    * H14 · LOS SEGUNDOS OJOS: el mismo modelo revisa lo que el turno cambió, con
    * la receta de `/code-review` de Claude Code (`lib/agent/revision/`).
    *
@@ -407,15 +348,6 @@ export interface AgentLoopArgs {
     revisar(o: { readonly modo: ModoDeRevision; readonly cierre: string }): Promise<ResultadoRevision | null>;
   };
 }
-
-/** Cómo acabó el objetivo, si había uno. */
-export interface ResultadoObjetivo {
-  readonly veredicto: "cumplida" | "no_cumplida" | "imposible" | "sin_evaluador";
-  readonly razon: string;
-  /** Vueltas EXTRA que el objetivo pidió. 0 = se cumplió a la primera. */
-  readonly vueltasExtra: number;
-}
-
 export interface AgentLoopResult {
   finalText: string;
   /** H4 · LO QUE VIO EL MODELO EN ESTE TURNO: las llamadas con sus argumentos,
@@ -467,11 +399,6 @@ export interface AgentLoopResult {
    *  único rastro era `terminal-error turn — 0 credits`. Distinto de
    *  `topeAlcanzado`, que es quedarse sin cuerda, no reventar. */
   errorCode: AgentErrorCode | null;
-  /** Cómo acabó el objetivo. Ausente si el turno no llevaba ninguno.
-   *
-   *  Va en el resultado y NO en un evento nuevo a propósito: esta rebanada es
-   *  de servidor y se mide en el arnés. Pintarlo es la siguiente. */
-  objetivo?: ResultadoObjetivo;
   /** Alguna herramienta ESCRIBIÓ en la base durante este request.
    *
    *  Va junto a `terminalError` a propósito: la combinación de los dos es el
@@ -1224,7 +1151,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     tareasReclamadas,
     tareasDeclaradas: lista.textos,
     rechazos: [...rechazos],
-    ...(resultadoObjetivo ? { objetivo: resultadoObjetivo } : {}),
     ...(resultadoRevision ? { revision: resultadoRevision } : {}),
   });
 
@@ -1242,11 +1168,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    * apertura de la siguiente.
    */
   let algunaVueltaYaDijoAlgo = false;
-
-  // ── EL OBJETIVO ──────────────────────────────────────────────────────────
-  /** Vueltas EXTRA que el objetivo ha pedido ya. */
-  let vueltasDeObjetivo = 0;
-  let resultadoObjetivo: ResultadoObjetivo | undefined;
 
   // ── H14 · LOS SEGUNDOS OJOS ──────────────────────────────────────────────
   let yaSeReviso = false;
@@ -1269,7 +1190,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     try {
       r = await args.revision.revisar({ modo, cierre: textoArrastrado + finalText });
     } catch (e) {
-      // 🔴 EL FALLO CAE HACIA PARAR, como el del objetivo: el trabajo del turno
+      // 🔴 EL FALLO CAE HACIA PARAR: el trabajo del turno
       // ya está hecho, y un revisor caído no es motivo para gastar más.
       resultadoRevision = { modo, error: e instanceof Error ? e.message : String(e) };
       args.emit({ type: "revision", estado: "error", modo });
@@ -1290,33 +1211,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     return true;
   };
 
-  /** Lo que el evaluador puede leer: el turno tal y como ocurrió.
-   *
-   *  Los RESULTADOS DE HERRAMIENTA van dentro, y son el punto entero — medido
-   *  el 2026-09-07: con sólo el relato del agente, un evaluador aparte se niega
-   *  (con razón) a dar nada por cumplido. */
-  const transcriptDelTurno = (): string =>
-    messages
-      // El manual de la plataforma (/AGENTS.md) va como mensaje de usuario
-      // porque así lo adjunta el arnés, pero no lo dijo el usuario: son
-      // instrucciones, y el evaluador lo leería como una petición más.
-      .filter((m) => !(m.role === "user" && typeof m.content === "string" && esAdjuntoDelManual(m.content)))
-      .map((m) => {
-        const quien = m.role === "user" ? "USUARIO" : "AGENTE";
-        const texto = typeof m.content === "string" ? m.content : "";
-        const respuestas = m.functionResponses
-          ? m.functionResponses
-              .map((f) => `HERRAMIENTA ${f.name} → ${JSON.stringify(f.response)}`)
-              .join("\n")
-          : "";
-        return [texto ? `${quien}: ${texto}` : "", respuestas].filter(Boolean).join("\n");
-      })
-      .filter(Boolean)
-      .join("\n");
-
   /**
    * EL EMBUDO DE CIERRE. Devuelve el resultado si el turno termina, o `null`
-   * si NO puede terminar todavía porque el objetivo no se ha cumplido.
+   * si NO puede terminar todavía porque la revisión encontró algo.
    *
    * 🔴 EXISTE PORQUE LA SALIDA ERA TRES. El turno acababa en tres
    * `return buildResult(false)` distintos, y colgar la comprobación de los tres
@@ -1324,77 +1221,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    * decisión escrita en N sitios y una se queda atrás.
    */
   const cerrarTurno = async (): Promise<AgentLoopResult | null> => {
-    // H14, ANTES que el objetivo: lo que la revisión encuentre se arregla o se
-    // dice antes de que el evaluador juzgue si la condición se cumplió.
     if (await revisar()) return null;
-    const obj = args.objetivo;
-    if (!obj) return buildResult(false);
-
-    // ¿LO CANCELÓ EL DUEÑO MIENTRAS TRABAJÁBAMOS? Se mira ANTES QUE EL
-    // PRESUPUESTO a propósito: si ya no hay objetivo, decir «se acabó el
-    // presupuesto del objetivo» sería un veredicto sobre algo que no existe.
-    // El turno cierra sin evaluar y sin dejar `resultadoObjetivo` — no había
-    // objetivo cuando cerró, y eso es exactamente lo que se cuenta.
-    if (obj.sigueVigente) {
-      let vigente = true;
-      try {
-        vigente = await obj.sigueVigente();
-      } catch {
-        // FAIL-SOFT HACIA CONSERVARLO. Si la lectura falla, el objetivo se
-        // queda: perder el del dueño por una avería NUESTRA sería castigarle
-        // por nuestro fallo — la misma regla que `sin_evaluador` en la ruta.
-        vigente = true;
-      }
-      if (!vigente) return buildResult(false);
-    }
-
-    // EL PRESUPUESTO, antes de gastar una llamada de evaluador. Si ya
-    // no quedan vueltas, no hay nada que preguntar: el turno cierra igual.
-    if (vueltasDeObjetivo >= obj.maxVueltas) {
-      resultadoObjetivo = {
-        veredicto: "no_cumplida",
-        razon: `se acabó el presupuesto del objetivo tras ${vueltasDeObjetivo} vuelta(s) extra`,
-        vueltasExtra: vueltasDeObjetivo,
-      };
-      return buildResult(false);
-    }
-
-    const juicio = await obj.evaluar({ condicion: obj.condicion, transcript: transcriptDelTurno() });
-
-    // 🔴 EL FALLO CAE HACIA PARAR. Si el evaluador revienta no se sigue
-    // trabajando «por si acaso»: eso gastaría créditos del usuario contra una
-    // condición que nadie está comprobando. Claude Code hace lo mismo — «Goal
-    // cleared after an unrecoverable error».
-    if (!juicio.ok) {
-      resultadoObjetivo = {
-        veredicto: "sin_evaluador",
-        razon: juicio.motivo,
-        vueltasExtra: vueltasDeObjetivo,
-      };
-      return buildResult(false);
-    }
-
-    const { veredicto, razon } = juicio.resultado;
-    if (veredicto === "cumplida" || veredicto === "imposible") {
-      resultadoObjetivo = { veredicto, razon, vueltasExtra: vueltasDeObjetivo };
-      return buildResult(false);
-    }
-
-    // NO CUMPLIDA: el turno NO termina. Se le dice POR QUÉ —el `reason` del
-    // evaluador, igual que Claude Code devuelve «no cumplida» con su razón— y el
-    // bucle vuelve al principio, que es «se le invoca otra vez».
-    vueltasDeObjetivo += 1;
-    resultadoObjetivo = { veredicto: "no_cumplida", razon, vueltasExtra: vueltasDeObjetivo };
-    messages.push({
-      role: "user",
-      content:
-        `SISTEMA (el usuario NO escribió esto): todavía no. Un evaluador leyó este turno y la condición NO se cumple.\n` +
-        `Condición: ${obj.condicion}\n` +
-        `Por qué: ${razon}\n` +
-        "Sigue trabajando hacia esa condición. Si crees que ya está y el evaluador no lo ve, es que falta la EVIDENCIA: " +
-        "usa la herramienta que la produzca en vez de volver a afirmarlo.",
-    });
-    return null;
+    return buildResult(false);
   };
 
   // A budget cap was hit. If a tools-disabled closeOut stream is available, let
@@ -1981,7 +1809,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // —`parseVisualVerdict` convierte un `broken:true` sin issues en
           // `broken:false`— pero `verifyTurn` es una dependencia inyectada.
           finalText = turnText;
-          // EL EMBUDO. Si hay objetivo y no se cumple, esto devuelve null y el
+          // EL EMBUDO. Si la revisión encontró algo, esto devuelve null y el
           // turno NO termina: se vuelve al principio del bucle, que es invocar
           // otra vez al modelo.
           const cierre = await cerrarTurno();
@@ -2055,7 +1883,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
             ...(nota ? { observacion: nota } : {}),
             ...cobertura,
           });
-          // EL EMBUDO. Si hay objetivo y no se cumple, esto devuelve null y el
+          // EL EMBUDO. Si la revisión encontró algo, esto devuelve null y el
           // turno NO termina: se vuelve al principio del bucle, que es invocar
           // otra vez al modelo.
           const cierre = await cerrarTurno();
@@ -2095,7 +1923,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       }
       finalText = turnText;
       // Igual que la rama de error: por el constructor, no a mano.
-      // EL EMBUDO. Si hay objetivo y no se cumple, esto devuelve null y el
+      // EL EMBUDO. Si la revisión encontró algo, esto devuelve null y el
       // turno NO termina: se vuelve al principio del bucle, que es invocar
       // otra vez al modelo.
       const cierre = await cerrarTurno();
@@ -2305,18 +2133,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // el modelo pueda leer como «ya está hecho».
         functionResponses.push({
           name: call.name,
-          response:
-            outcome.confirm.action === "publicar"
-              ? {
-                  ok: true,
-                  estado: "esperando_confirmacion_del_usuario",
-                  subdominio: outcome.confirm.subdominio,
-                }
-              : {
-                  ok: true,
-                  estado: "esperando_aprobacion_del_usuario",
-                  condicion: outcome.confirm.condicion,
-                },
+          response: {
+            ok: true,
+            estado: "esperando_confirmacion_del_usuario",
+            subdominio: outcome.confirm.subdominio,
+          },
         });
         continue;
       }

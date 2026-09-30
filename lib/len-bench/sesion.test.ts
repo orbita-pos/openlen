@@ -72,7 +72,6 @@ describe("tarjetaDePublicar", () => {
   it("lee la tarjeta de publicar que Len dejó en el turno (la última)", () => {
     expect(
       tarjetaDePublicar([
-        { nombre: "confirm", datos: { type: "confirm", action: "objetivo", condicion: "x" } },
         { nombre: "text", datos: { type: "text", text: "toca Publicar" } },
         { nombre: "confirm", datos: { type: "confirm", action: "publicar", subdominio: "robleyluz", idiomas: [], republicar: false } },
       ]),

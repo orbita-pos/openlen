@@ -142,7 +142,6 @@ export const HERRAMIENTAS_DIFERIDAS: ReadonlySet<string> = new Set([
   "activar_modulo",
   "conectar_datos_vivos",
   "preparar_marketing",
-  "proponer_objetivo",
   "editar_imagen",
   "revertir_ultimo_cambio",
   "leer_de_internet",
@@ -272,25 +271,6 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
           subdominio: { type: "STRING" },
           idiomas: { type: "ARRAY", items: { type: "STRING" } },
         },
-      },
-    },
-    {
-      name: "proponer_objetivo",
-      description:
-        "Propone una CONDICIÓN DE PARADA para este trabajo: algo verificable que, mientras no se cumpla, hace que sigas trabajando en vez de cerrar el turno. NUNCA la fija por su cuenta: aparece una tarjeta y el usuario la aprueba con un toque — tú sigues trabajando mientras tanto, no esperes. " +
-        "PROPÓNLA SÓLO si el usuario pidió un RESULTADO con final comprobable («que la página no se salga en móvil», «que las cuatro páginas tengan el teléfono nuevo») Y el trabajo va a llevar varios turnos. No para un encargo de un paso, y JAMÁS para ampliar lo que pidió: la condición tiene que seguirse de su petición. " +
-        "🔴 QUIEN LA COMPRUEBA NO ERES TÚ: es otro que sólo lee la conversación — no puede ejecutar nada ni abrir ficheros, y NO se cree tu palabra. Así que la condición tiene que decir UN estado final y CÓMO se ve que se cumplió, con lo que dejan las herramientas («Grep del teléfono viejo no encuentra ningún fichero»). Máximo 500 caracteres: el usuario tiene que poder leerla entera en la tarjeta. " +
-        "Una sola activa a la vez; aprobar una nueva reemplaza la anterior. " +
-        // 🔴 LA CLÁUSULA DEL RECHAZO. Claude Code se la dice al modelo en su
-        // propia descripción —si la rechazan no se le avisa—, y aquí sólo vivía
-        // en un comentario de `tools.ts`, que el modelo no lee.
-        "Si el usuario NO la aprueba no te vas a enterar: no preguntes qué pasó con la tarjeta y no vuelvas a proponer la misma condición ni una reescrita. Sigue con el trabajo.",
-      parameters: {
-        type: "OBJECT",
-        properties: {
-          condicion: { type: "STRING" },
-        },
-        required: ["condicion"],
       },
     },
     {

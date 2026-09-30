@@ -39,8 +39,7 @@
       "redisenar_pagina": "Rediseñando la página",
       "guardar_dato": "Guardando en tus datos",
       "editar_dato": "Actualizando tus datos",
-      "quitar_dato": "Quitando de tus datos",
-      "proponer_objetivo": "Proponiendo un objetivo"
+      "quitar_dato": "Quitando de tus datos"
     },
     "action": {
       "home": "Inicio",
@@ -63,12 +62,7 @@
       "limit": "Alcanzaste el límite de páginas publicadas de tu plan.",
       "invalid": "No se pudo publicar. Revisa el subdominio e inténtalo de nuevo.",
       "checking": "Verificando…",
-      "langsFailed": "{langs} no se pudo traducir — vuelve a publicar para reintentarlo.",
-      "goalTitle": "Perseguir un objetivo",
-      "goalHow": "Len trabajará hasta que se cumpla. Lo comprueba otro, no él.",
-      "goalCost": "Puede costar hasta {turnos} turnos en vez de 1.",
-      "goalApprove": "Aprobar",
-      "goalSet": "Objetivo puesto"
+      "langsFailed": "{langs} no se pudo traducir — vuelve a publicar para reintentarlo."
     },
     "ventana": "Len ve los últimos {visibles} mensajes de esta conversación, de {totales}. De lo anterior ya no se acuerda: si hace falta, recuérdaselo o empieza una conversación nueva.",
     "errors": {
@@ -80,13 +74,7 @@
       "no_credits": "Te quedaste sin créditos. Tu página está guardada y puedes publicarla ahora. Se renuevan cada 30 días — o toca tu saldo arriba y pásate a Pro para seguir hoy.",
       "no_credits_at": "Te quedaste sin créditos. Tu página está guardada y puedes publicarla ahora. Vuelven el {date} — o toca tu saldo arriba y pásate a Pro para seguir hoy."
     },
-    "cortado": "⚠️ Este turno se cortó antes de terminar ({reason}). Lo que ya había hecho quedó guardado en la página.",
-    "objetivo": {
-      "cumplida": "Objetivo cumplido: {condicion}",
-      "imposible": "Ese objetivo no se puede cumplir tal y como está escrito, así que lo he quitado: {condicion}",
-      "no_cumplida": "Todavía no — el objetivo sigue puesto. Dime que siga.",
-      "sin_evaluador": "No pude comprobar tu objetivo en este turno, así que sigue puesto."
-    }
+    "cortado": "⚠️ Este turno se cortó antes de terminar ({reason}). Lo que ya había hecho quedó guardado en la página."
   },
   "defaultProjectName": "Página de precios",
   "chatDraft": {

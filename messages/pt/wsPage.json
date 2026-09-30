@@ -39,8 +39,7 @@
       "redisenar_pagina": "Redesenhando a página",
       "guardar_dato": "Salvando nos seus dados",
       "editar_dato": "Atualizando seus dados",
-      "quitar_dato": "Removendo dos seus dados",
-      "proponer_objetivo": "Propondo um objetivo"
+      "quitar_dato": "Removendo dos seus dados"
     },
     "action": {
       "home": "Início",
@@ -63,12 +62,7 @@
       "limit": "Você atingiu o limite de páginas publicadas do seu plano.",
       "invalid": "Não foi possível publicar. Verifique o subdomínio e tente novamente.",
       "checking": "Verificando…",
-      "langsFailed": "{langs} não pôde ser traduzida — publique novamente para tentar de novo.",
-      "goalTitle": "Perseguir um objetivo",
-      "goalHow": "Len vai trabalhar até que seja cumprido. Quem verifica é outro, não ele.",
-      "goalCost": "Pode custar até {turnos} turnos em vez de 1.",
-      "goalApprove": "Aprovar",
-      "goalSet": "Objetivo definido"
+      "langsFailed": "{langs} não pôde ser traduzida — publique novamente para tentar de novo."
     },
     "ventana": "Len vê as últimas {visibles} mensagens desta conversa, de {totales}. Do que veio antes já não se lembra: lembre-o se for preciso, ou comece uma conversa nova.",
     "errors": {
@@ -80,13 +74,7 @@
       "no_credits": "Você ficou sem créditos. A sua página está salva e você pode publicá-la agora. Eles renovam a cada 30 dias — ou toque no seu saldo acima e assine o Pro para continuar hoje.",
       "no_credits_at": "Você ficou sem créditos. A sua página está salva e você pode publicá-la agora. Eles voltam em {date} — ou toque no seu saldo acima e assine o Pro para continuar hoje."
     },
-    "cortado": "⚠️ Este turno foi interrompido antes de terminar ({reason}). O que já estava feito ficou guardado na página.",
-    "objetivo": {
-      "cumplida": "Objetivo cumprido: {condicion}",
-      "imposible": "Esse objetivo não pode ser cumprido tal como está escrito, por isso removi-o: {condicion}",
-      "no_cumplida": "Ainda não — o objetivo continua ativo. Diz-me para continuar.",
-      "sin_evaluador": "Não consegui verificar o teu objetivo neste turno, por isso continua ativo."
-    }
+    "cortado": "⚠️ Este turno foi interrompido antes de terminar ({reason}). O que já estava feito ficou guardado na página."
   },
   "defaultProjectName": "Página de Preços",
   "chatDraft": {

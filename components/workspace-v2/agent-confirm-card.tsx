@@ -12,12 +12,7 @@ import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 // (for a new claim) then the publish POST. The card is one-shot: after a
 // successful publish or a cancel it goes inert.
 
-export type AgentConfirm =
-  | { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean }
-  // La propuesta de OBJETIVO. Misma puerta que publicar: Len propone, el dueño
-  // aprueba. Y por la misma razón — perseguir una condición le cuesta TURNOS, y
-  // un turno es dinero suyo.
-  | { action: "objetivo"; condicion: string; turnosMaximos: number };
+export type AgentConfirm = { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean };
 
 type CardState =
   | { kind: "idle" }
@@ -32,96 +27,6 @@ type CardState =
   | { kind: "error"; text: string };
 
 const BASE_HOST = PUBLISHED_BASE_HOST;
-
-/**
- * LA TARJETA DEL OBJETIVO.
- *
- * 🔴 ENSEÑA LO QUE PUEDE COSTAR, y el número NO está escrito aquí: viaja en el
- * evento desde el servidor (`turnosMaximos`), que es el mismo que el bucle va
- * a hacer cumplir. Escribirlo en el texto sería prometer un precio que se queda
- * viejo el día que alguien toque la constante.
- *
- * En TURNOS y no en créditos porque en créditos no se puede: el cobro sale del
- * uso real del turno (`creditsForUsage`) y no se sabe de antemano. Decir un
- * número inventado sería peor que decir la unidad honesta.
- */
-export function TarjetaObjetivo({
-  projectId,
-  condicion,
-  turnosMaximos,
-  onPuesto,
-}: {
-  projectId: string;
-  condicion: string;
-  turnosMaximos: number;
-  /** EL OBJETIVO QUEDÓ PUESTO. Sin esto la aprobación guardaba en el servidor y
-   *  no se lo decía a NADIE: el taller seguía con su `settings` viejo y la ficha
-   *  del compositor —la única forma de ver y cancelar el objetivo— no aparecía
-   *  hasta recargar la página. */
-  onPuesto?: (o: { condicion: string; creadoEn: string }) => void;
-}) {
-  const t = useTranslations("wsPage");
-  const [estado, setEstado] = useState<"idle" | "guardando" | "puesto" | "cancelado">("idle");
-
-  const aprobar = useCallback(async () => {
-    setEstado("guardando");
-    try {
-      const r = await fetch(`/api/projects/${projectId}/settings`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ objetivo: { condicion } }),
-      });
-      if (!r.ok) {
-        setEstado("idle");
-        return;
-      }
-      // EL `creadoEn` LO PONE EL SERVIDOR, y se lee de su respuesta en vez de
-      // fabricar aquí un `new Date()`: la ruta devuelve el `settings` ya
-      // fusionado justo para esto. Si por lo que sea no viniera, se avisa igual
-      // con la hora local — la ficha vale más que su fecha exacta, y la verdad
-      // se relee del servidor en la siguiente carga.
-      const cuerpo = (await r.json().catch(() => null)) as
-        | { settings?: { objetivo?: { condicion: string; creadoEn: string } } }
-        | null;
-      const puesto = cuerpo?.settings?.objetivo;
-      onPuesto?.(puesto ?? { condicion, creadoEn: new Date().toISOString() });
-      setEstado("puesto");
-    } catch {
-      setEstado("idle");
-    }
-  }, [projectId, condicion, onPuesto]);
-
-  if (estado === "cancelado") return null;
-
-  return (
-    <div className="agent-confirm">
-      <div className="agent-confirm__head">
-        <Globe className="agent-confirm__icon" />
-        <span>{t("agent.confirm.goalTitle")}</span>
-      </div>
-      {/* La condición ENTERA y literal. El tope de 500 existe justo para que
-          quepa aquí: aprobar algo que no se puede leer no es aprobar. */}
-      <p className="agent-confirm__url">{condicion}</p>
-      <p className="agent-confirm__note">{t("agent.confirm.goalHow")}</p>
-      <p className="agent-confirm__note">{t("agent.confirm.goalCost", { turnos: turnosMaximos })}</p>
-      {estado === "puesto" ? (
-        <p className="agent-confirm__note">
-          <Check className="agent-confirm__icon" /> {t("agent.confirm.goalSet")}
-        </p>
-      ) : (
-        <div className="agent-confirm__actions">
-          <button type="button" onClick={aprobar} disabled={estado === "guardando"}>
-            {estado === "guardando" ? <Loader className="agent-confirm__icon" /> : null}
-            {t("agent.confirm.goalApprove")}
-          </button>
-          <button type="button" onClick={() => setEstado("cancelado")}>
-            {t("agent.confirm.cancel")}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function AgentConfirmCard({
   projectId,

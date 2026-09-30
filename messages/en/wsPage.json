@@ -39,8 +39,7 @@
       "redisenar_pagina": "Redesigning the page",
       "guardar_dato": "Saving to your data",
       "editar_dato": "Updating your data",
-      "quitar_dato": "Removing from your data",
-      "proponer_objetivo": "Proposing a goal"
+      "quitar_dato": "Removing from your data"
     },
     "action": {
       "home": "Home",
@@ -63,12 +62,7 @@
       "limit": "You've hit your plan's published-pages limit.",
       "invalid": "Couldn't publish. Check the subdomain and try again.",
       "checking": "Checking…",
-      "langsFailed": "{langs} could not be translated — publish again to retry.",
-      "goalTitle": "Pursue a goal",
-      "goalHow": "Len will keep working until it is met. Someone else checks it, not Len.",
-      "goalCost": "This can cost up to {turnos} turns instead of 1.",
-      "goalApprove": "Approve",
-      "goalSet": "Goal set"
+      "langsFailed": "{langs} could not be translated — publish again to retry."
     },
     "ventana": "Len sees the last {visibles} messages of this conversation, out of {totales}. It no longer remembers what came before — remind it if it matters, or start a new conversation.",
     "errors": {
@@ -80,13 +74,7 @@
       "no_credits": "You're out of credits. Your page is saved and you can publish it now. They renew every 30 days — or tap your balance above to go Pro and keep working today.",
       "no_credits_at": "You're out of credits. Your page is saved and you can publish it now. They come back on {date} — or tap your balance above to go Pro and keep working today."
     },
-    "cortado": "⚠️ This turn was cut short before finishing ({reason}). What was already done is saved on the page.",
-    "objetivo": {
-      "cumplida": "Goal met: {condicion}",
-      "imposible": "That goal can't be met as written, so I've dropped it: {condicion}",
-      "no_cumplida": "Not there yet — the goal stays on. Tell me to keep going.",
-      "sin_evaluador": "I couldn't check your goal this turn, so it stays on."
-    }
+    "cortado": "⚠️ This turn was cut short before finishing ({reason}). What was already done is saved on the page."
   },
   "defaultProjectName": "Pricing Page",
   "chatDraft": {

@@ -39,8 +39,7 @@
       "redisenar_pagina": "正在重新设计页面",
       "guardar_dato": "正在保存到你的数据",
       "editar_dato": "正在更新你的数据",
-      "quitar_dato": "正在从数据中移除",
-      "proponer_objetivo": "正在提议一个目标"
+      "quitar_dato": "正在从数据中移除"
     },
     "action": {
       "home": "首页",
@@ -63,12 +62,7 @@
       "limit": "你已达到套餐的已发布页面上限。",
       "invalid": "发布失败。请检查子域名后重试。",
       "checking": "检查中…",
-      "langsFailed": "未能翻译 {langs}——重新发布可再试一次。",
-      "goalTitle": "追求一个目标",
-      "goalHow": "Len 会一直工作直到达成。核实的不是它自己，而是另一方。",
-      "goalCost": "可能最多花费 {turnos} 轮，而不是 1 轮。",
-      "goalApprove": "批准",
-      "goalSet": "目标已设定"
+      "langsFailed": "未能翻译 {langs}——重新发布可再试一次。"
     },
     "ventana": "Len 只看到这次对话最近的 {visibles} 条消息，共 {totales} 条。更早的内容它已经不记得了：需要的话请再说一次，或者开一个新对话。",
     "errors": {
@@ -80,13 +74,7 @@
       "no_credits": "你的额度已用完。你的页面已保存，现在就可以发布。额度每 30 天恢复一次——或点击上方余额升级到 Pro，今天就能继续。",
       "no_credits_at": "你的额度已用完。你的页面已保存，现在就可以发布。额度将于 {date} 恢复——或点击上方余额升级到 Pro，今天就能继续。"
     },
-    "cortado": "⚠️ 这一轮还没做完就中断了（{reason}）。已经做的部分已保存到页面上。",
-    "objetivo": {
-      "cumplida": "目标已达成：{condicion}",
-      "imposible": "这个目标按现在的写法无法达成，我已经取消它：{condicion}",
-      "no_cumplida": "还没有——目标仍然有效。告诉我继续。",
-      "sin_evaluador": "这一轮我无法检查你的目标，所以它仍然有效。"
-    }
+    "cortado": "⚠️ 这一轮还没做完就中断了（{reason}）。已经做的部分已保存到页面上。"
   },
   "defaultProjectName": "价格页面",
   "chatDraft": {

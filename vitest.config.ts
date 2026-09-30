@@ -414,8 +414,6 @@ export default defineConfig({
       // what spend credits and are NEVER in the test suite / CI).
       // Las guardas del experimento de los dos sobres: que el brazo de CONTROL
       // no sea en secreto igual al de tratamiento. `include` es LISTA BLANCA.
-      "lib/agent/objetivo/evaluar-condicion.test.ts",
-      "lib/agent/objetivo/veredicto.test.ts",
       "lib/theme-derive.test.ts",
       "lib/palette-gen-look.test.ts",
       "lib/theme-presets.test.ts",

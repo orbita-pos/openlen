@@ -12,13 +12,11 @@ import { loQueCambioElDueno } from "./cambios-del-dueno";
 import { buildFunctionDeclarations } from "./catalog";
 import { guardarPreferencia } from "./preferencias";
 import type { ProjectData } from "@/lib/projects/types";
-import { CONDICION_MAX, TURNOS_MAXIMOS_CON_OBJETIVO } from "@/lib/agent/objetivo/evaluar-condicion";
 
 /** Estrecha un ToolOutcome a la tarjeta de PUBLICAR.
  *
- *  Desde que `proponer_objetivo` existe, `confirm` es una UNIÓN y leerle
- *  `subdominio` a secas ya no compila — que es el tipo haciendo su trabajo:
- *  estas pruebas son todas de publicar, y ahora lo dicen. */
+ *  `confirm` fue una UNIÓN mientras existió `proponer_objetivo` (retirada el
+ *  30/09); el ayudante se queda porque estas pruebas son todas de publicar. */
 function pub(o: { confirm?: { action: string } & Record<string, unknown> }) {
   return o.confirm?.action === "publicar"
     ? (o.confirm as unknown as {
@@ -1867,85 +1865,6 @@ describe("el aviso de pivotar cuenta vacías SEGUIDAS", () => {
       );
     }
     assert.equal(session.busquedasVaciasSeguidas, 0);
-  });
-});
-
-
-// ─── proponer_objetivo ───────────────────────────────────────────────────────
-//
-// La misma puerta que publicar: PROPONE y no actúa. Perseguir una condición le
-// cuesta TURNOS al usuario, y un turno es dinero suyo — fijarla sin su toque
-// sería gastarle el saldo por una decisión que no tomó.
-describe("proponer_objetivo", () => {
-  it("propone: devuelve la tarjeta y un estado de ESPERA, nunca «ya está puesto»", async () => {
-    const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "proponer_objetivo", {
-      condicion: "el pie muestra el teléfono 33 1234 5678",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(out.response.estado, "esperando_aprobacion_del_usuario");
-    assert.equal(out.confirm?.action, "objetivo");
-    // Y NO lo ha guardado: eso lo hace el toque del dueño.
-    assert.equal(store.data.settings?.objetivo, undefined);
-  });
-
-  // 🔴 EL NÚMERO DE LA TARJETA SALE DEL SERVIDOR. Si se escribiera en el texto
-  // del cliente, el día que alguien suba el tope la tarjeta seguiría
-  // prometiendo el precio viejo — le habríamos cobrado al usuario más de lo que
-  // aprobó.
-  it("la tarjeta lleva lo que puede costar, en turnos", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "proponer_objetivo", { condicion: "x y z" });
-    const c = out.confirm as unknown as { turnosMaximos: number };
-    assert.equal(c.turnosMaximos, TURNOS_MAXIMOS_CON_OBJETIVO);
-    assert.ok(c.turnosMaximos > 1, "una tarjeta que promete 1 turno no está avisando de nada");
-  });
-
-  it("una condición vacía no llega a tarjeta", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "proponer_objetivo", { condicion: "   " });
-    assert.equal(out.response.ok, false);
-    assert.equal(out.confirm, undefined);
-  });
-
-  // El tope es del USUARIO: tiene que poder leerla ENTERA antes de aprobarla.
-  it("una condición más larga que el tope tampoco", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "proponer_objetivo", {
-      condicion: "x".repeat(CONDICION_MAX + 1),
-    });
-    assert.equal(out.response.ok, false);
-    assert.equal(out.confirm, undefined);
-  });
-
-  // ⚰️ AQUÍ SE EXIGÍA LO CONTRARIO: «con uno ya activo, no lo pisa». Era nuestro,
-  // no de Claude Code, y Claude Code contesta esto de plano: al proponer, la
-  // ÚNICA guarda sobre un objetivo existente es que haya una propuesta SIN
-  // DECIDIR; el objetivo activo no se comprueba. Y al aprobar, el nuevo
-  // supersede al anterior a propósito: un solo objetivo activo a la vez, y el
-  // recién aprobado sustituye al que había.
-  //
-  // Bloqueábamos el eje equivocado, y le costaba al dueño no poder cambiar de
-  // objetivo sin cancelar el anterior a mano primero.
-  it("con uno ya activo SÍ propone: aprobar el nuevo reemplaza al viejo", async () => {
-    const { deps, store } = makeDeps();
-    store.data.settings = { ...(store.data.settings ?? {}), objetivo: { condicion: "el de antes", creadoEn: "2026-09-07T00:00:00.000Z" } };
-    const out = await runAgentTool(makeSession(), deps, "proponer_objetivo", { condicion: "otro" });
-    assert.equal(out.response.ok, true);
-    assert.ok(out.confirm, "sin tarjeta el dueño no puede aprobar el reemplazo");
-  });
-
-  // 🔴 LO QUE SÍ BLOQUEA, y es el eje de Claude Code: una propuesta que el dueño
-  // todavía no ha decidido. Dos tarjetas a la vez le hacen elegir entre cosas
-  // que se pisan, y la segunda taparía a la primera.
-  it("pero NO propone una segunda sin que el dueño haya decidido la primera", async () => {
-    const { deps } = makeDeps();
-    const sesion = makeSession();
-    const primera = await runAgentTool(sesion, deps, "proponer_objetivo", { condicion: "la primera" });
-    assert.equal(primera.response.ok, true);
-    const segunda = await runAgentTool(sesion, deps, "proponer_objetivo", { condicion: "la segunda" });
-    assert.equal(segunda.response.ok, false);
-    assert.equal(segunda.confirm, undefined);
   });
 });
 

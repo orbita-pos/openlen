@@ -22,7 +22,6 @@ import {
 } from "react";
 import {
   Crosshair,
-  Target,
   ImageIcon,
   Detener,
   Loader,
@@ -37,7 +36,7 @@ import { ReplaceAssetModal } from "../replace-asset-modal";
 import { AgentActionCard, type AgentAction } from "../agent-action-card";
 
 export type { HistoryEntry } from "@/lib/chat/historial-del-agente";
-import { AgentConfirmCard, TarjetaObjetivo, type AgentConfirm } from "../agent-confirm-card";
+import { AgentConfirmCard, type AgentConfirm } from "../agent-confirm-card";
 import {
   ejecutarUndo,
   mismaPagina,
@@ -46,14 +45,11 @@ import {
 } from "./undo-turn";
 import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "./turno-cerrado";
 import { MandoEsfuerzo } from "./mando-esfuerzo";
-import { cancelarObjetivo, ponerObjetivo } from "./objetivo-activo";
-import { CONDICION_MAX } from "@/lib/agent/objetivo/condicion";
 import {
   NIVEL_POR_DEFECTO,
   type EsfuerzoAgente,
   type NivelEsfuerzo,
 } from "@/lib/agent/esfuerzo";
-import { elObjetivoTermino, type VeredictoDeTurno } from "@/lib/agent/objetivo/veredicto";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
@@ -83,12 +79,6 @@ export interface AttachedImage {
 }
 
 interface ChatPanelProps {
-  /** La condición de parada activa del proyecto, si la hay. Viene de
-   *  `projects.data.settings.objetivo` y persiste entre sesiones. */
-  objetivo?: { condicion: string; creadoEn: string } | null;
-  /** La aprobó el dueño (o la canceló, con `null`). Sube al taller, que es
-   *  quien tiene `settings`. */
-  onObjetivoChange?: (o: { condicion: string; creadoEn: string } | null) => void;
   /** When provided (a flat project is loaded), the chat operates the real
    *  AI design surface — Gemini streaming + per-turn Undo. */
   flatProjectId?: string;
@@ -162,8 +152,6 @@ export function ChatPanel({
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
   sitePages = [],
-  objetivo = null,
-  onObjetivoChange,
 }: ChatPanelProps) {
   if (flatProjectId && onFlatHtmlUpdate) {
     return (
@@ -183,8 +171,6 @@ export function ChatPanel({
         onToggleSectionSelect={onToggleSectionSelect}
         scopedSelection={scopedSelection}
         onClearScope={onClearScope}
-        objetivo={objetivo}
-        onObjetivoChange={onObjetivoChange}
         onAutofill={onAutofill}
         pendingDraft={pendingDraft}
         pendingDraftAutoSend={pendingDraftAutoSend}
@@ -389,14 +375,7 @@ function AIDesignChat({
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
   sitePages = [],
-  objetivo = null,
-  onObjetivoChange,
 }: {
-  objetivo?: { condicion: string; creadoEn: string } | null;
-  /** Sube el objetivo nuevo (o `null` al cancelarlo) al dueño del proyecto, que
-   *  es quien tiene `settings`. Sin esto la ficha no aparecería hasta recargar:
-   *  la tarjeta de aprobación guardaba y no se lo decía a nadie. */
-  onObjetivoChange?: (o: { condicion: string; creadoEn: string } | null) => void;
   projectId: string;
   projectHtml: string;
   page?: string | null;
@@ -1137,8 +1116,6 @@ function AIDesignChat({
         let huboCambioReal: boolean | null = null;
 
         let topeAlcanzado: "turn_limit" | "tool_limit" | null = null;
-        /** Cómo acabó el objetivo, si el turno llevaba uno. */
-        let desenlaceObjetivo: { veredicto: VeredictoDeTurno; condicion: string } | null = null;
         /** Cuántos turnos vio Len de cuántos tiene la charla. Presente sólo
          *  cuando de verdad se quedó algo fuera de la ventana. */
         let ventana: { visibles: number; totales: number } | null = null;
@@ -1390,20 +1367,6 @@ function AIDesignChat({
                       republicar: c.republicar === true,
                     },
                   });
-                } else if (c.action === "objetivo" && typeof c.condicion === "string") {
-                  // La propuesta de OBJETIVO. `turnosMaximos` viene del
-                  // SERVIDOR y no se calcula aquí: es el número que el bucle va
-                  // a hacer cumplir, y la tarjeta se lo enseña al dueño antes de
-                  // que apruebe. Un coste calculado en el cliente se despegaría
-                  // del real sin que nadie se enterara.
-                  updateTurn(turnId, {
-                    confirm: {
-                      action: "objetivo",
-                      condicion: c.condicion,
-                      turnosMaximos:
-                        typeof c.turnosMaximos === "number" ? c.turnosMaximos : 1,
-                    },
-                  });
                 }
               } else if (evName === "done") {
                 // Terminal — always finalizes the turn, even when it trails
@@ -1427,24 +1390,6 @@ function AIDesignChat({
                   typeof (v as { totales?: unknown }).totales === "number"
                 ) {
                   ventana = v as { visibles: number; totales: number };
-                }
-                // CÓMO ACABÓ EL OBJETIVO. Viene el código y la cuenta; la frase
-                // se compone abajo, en el idioma del usuario.
-                const ob = (payload as { objetivo?: unknown } | null)?.objetivo;
-                if (ob && typeof ob === "object") {
-                  const ver = (ob as { veredicto?: unknown }).veredicto;
-                  if (
-                    ver === "cumplida" || ver === "no_cumplida" ||
-                    ver === "imposible" || ver === "sin_evaluador"
-                  ) {
-                    desenlaceObjetivo = {
-                      veredicto: ver,
-                      condicion:
-                        typeof (ob as { condicion?: unknown }).condicion === "string"
-                          ? (ob as { condicion: string }).condicion
-                          : "",
-                    };
-                  }
                 }
                 break agentOuter;
               } else if (evName === "error") {
@@ -1525,27 +1470,6 @@ function AIDesignChat({
           // immediately inside finish(); a turn with no `html` event at all
           // (leer_estado/charla) has no pending paint, so this is the bare
           // "close the busy state" pass the brief calls for.
-          // EL DESENLACE DEL OBJETIVO — la frase, en el idioma del usuario.
-          //
-          // 🔴 Y LA FICHA SE QUITA AQUÍ. Con `cumplida`/`imposible` el servidor
-          // ya borró `settings.objetivo` de la base; si el cliente no se entera,
-          // la ficha del compositor se queda anunciando un objetivo que no
-          // existe hasta que el dueño recargue. La regla de qué veredictos
-          // terminan es la MISMA que usa la ruta (`elObjetivoTermino`), leída de
-          // un solo sitio: dos copias es como se pierde una.
-          const notaObjetivo = desenlaceObjetivo
-            ? tAgent(`objetivo.${desenlaceObjetivo.veredicto}`, {
-                condicion: desenlaceObjetivo.condicion,
-              })
-            : null;
-          if (desenlaceObjetivo && elObjetivoTermino(desenlaceObjetivo.veredicto)) {
-            onObjetivoChange?.(null);
-          }
-          // Y EN VIVO, no sólo en lo guardado. El aviso de corte se pinta por su
-          // propio componente; éste es texto del turno, así que se añade al
-          // mismo sitio donde se ha ido escribiendo. Sin esto el dueño no vería
-          // cómo acabó su objetivo hasta recargar la conversación.
-          if (notaObjetivo) appendReasoning(turnId, `\n\n${notaObjetivo}`);
 
           scanController.finish();
           updateTurn(turnId, {
@@ -1598,16 +1522,12 @@ function AIDesignChat({
             // El aviso viaja a la transcripción: al recargar, el turno tiene
             // que seguir contando que se cortó. Sin esto el usuario ve un turno
             // aplicado y limpio sobre un trabajo a medias.
-            // El desenlace del objetivo viaja DENTRO del texto del turno, igual
-            // que el aviso de corte: es la única forma de que siga contándose al
-            // recargar la conversación sin inventarse una columna nueva.
             assistantReasoning: [
               accumulatedReasoning,
               lineaGuardadaDelCierre(cierre, {
                 avisoDeTope,
                 plantillaDeCorte: (reason) => tAgent("cortado", { reason }),
               }),
-              notaObjetivo,
             ]
               .filter(Boolean)
               .join("\n\n"),
@@ -1849,7 +1769,6 @@ function AIDesignChat({
               onRetry={handleRetry}
               onCancel={handleCancel}
               onPublished={handlePublished}
-              onObjetivoPuesto={onObjetivoChange}
               hideAIBubble={t.id === latest?.id && showThinkingDots}
             />
           ))
@@ -1891,23 +1810,6 @@ function AIDesignChat({
           void send(draft);
         }}
         onStop={() => abortRef.current?.abort()}
-        objetivo={objetivo}
-        onPonerObjetivo={async (condicion) => {
-          // La puerta del dueño escribe por la MISMA ruta que la tarjeta de
-          // aprobación, así que reemplazar un objetivo anterior lo hace el
-          // servidor igual que allí. Y el objetivo que sube es el que ÉL guardó
-          // —con su `creadoEn`—, no el que mandamos.
-          const r = await ponerObjetivo({ projectId, condicion });
-          if (r.ok) onObjetivoChange?.(r.objetivo);
-          return r.ok;
-        }}
-        onCancelarObjetivo={async () => {
-          const r = await cancelarObjetivo({ projectId });
-          // Sólo si el servidor lo confirmó. Un 401/404/500 resuelve el `fetch`
-          // sin lanzar, así que fiarse de que no hubo excepción sería decirle al
-          // usuario que su objetivo está cancelado con el objetivo puesto.
-          if (r.ok) onObjetivoChange?.(null);
-        }}
         sending={sending}
         textareaRef={taRef}
         sectionSelectMode={sectionSelectMode}
@@ -2004,7 +1906,6 @@ function TurnView({
   onRetry,
   onCancel,
   onPublished,
-  onObjetivoPuesto,
   hideAIBubble,
 }: {
   turn: DesignTurn;
@@ -2016,9 +1917,6 @@ function TurnView({
   onRetry: (turn: DesignTurn) => void;
   onCancel: () => void;
   onPublished: (url: string) => void;
-  /** El dueño aprobó la condición: sube para que la ficha del compositor
-   *  aparezca YA, sin esperar a una recarga. */
-  onObjetivoPuesto?: (o: { condicion: string; creadoEn: string }) => void;
   hideAIBubble: boolean;
 }) {
   const t = useTranslations("panelsChat");
@@ -2105,20 +2003,7 @@ function TurnView({
               />
             </div>
             {turn.confirm && (
-              turn.confirm.action === "objetivo" ? (
-                <TarjetaObjetivo
-                  projectId={projectId}
-                  condicion={turn.confirm.condicion}
-                  turnosMaximos={turn.confirm.turnosMaximos}
-                  onPuesto={onObjetivoPuesto}
-                />
-              ) : (
-                <AgentConfirmCard
-                  projectId={projectId}
-                  confirm={turn.confirm}
-                  onPublished={onPublished}
-                />
-              )
+              <AgentConfirmCard projectId={projectId} confirm={turn.confirm} onPublished={onPublished} />
             )}
           </div>
         </div>
@@ -2354,9 +2239,6 @@ function Composer({
   attachedImage = null,
   onAttachImage,
   onClearAttachedImage,
-  objetivo = null,
-  onCancelarObjetivo,
-  onPonerObjetivo,
   esfuerzo = "auto",
   esfuerzoNiveles = ["low", "medium", "high"],
   esfuerzoResuelveA = NIVEL_POR_DEFECTO,
@@ -2379,14 +2261,6 @@ function Composer({
   attachedImage?: AttachedImage | null;
   onAttachImage?: () => void;
   onClearAttachedImage?: () => void;
-  /** LA CONDICIÓN DE PARADA QUE LEN PERSIGUE, si hay una. `null` = ninguna.
-   *  Persiste entre sesiones, así que puede llegar puesta al abrir el taller. */
-  objetivo?: { condicion: string; creadoEn: string } | null;
-  /** Puede devolver promesa: la ficha espera a que resuelva antes de soltar el
-   *  botón, y no se esconde sola. */
-  onCancelarObjetivo?: () => void | Promise<void>;
-  /** Pone la condición que ESCRIBIÓ el dueño. Devuelve si se guardó. */
-  onPonerObjetivo?: (condicion: string) => Promise<boolean>;
   /** CUÁNTO PIENSA LEN. `auto` no es un peldaño de la escalera: es «elige tú»,
    *  y por eso se pinta aparte y AL FINAL, igual que en Claude Code (la
    *  escalera son los cinco niveles; `auto` se añade suelto). */
@@ -2407,18 +2281,6 @@ function Composer({
   const locale = useLocale();
   const [cancelando, setCancelando] = useState(false);
   const [esfuerzoAbierto, setEsfuerzoAbierto] = useState(false);
-  const [ponerAbierto, setPonerAbierto] = useState(false);
-  const [borradorObjetivo, setBorradorObjetivo] = useState("");
-  const [poniendo, setPoniendo] = useState(false);
-  // La condición ENTERA más desde cuándo. `creadoEn` está en el tipo desde el
-  // principio «para poder decirle al usuario desde cuándo lo persigue» y hasta
-  // hoy no lo leía nadie: éste es su primer consumidor.
-  const tituloDelObjetivo = objetivo
-    ? `${objetivo.condicion}
-${t("composer.goalSince", {
-        fecha: new Date(objetivo.creadoEn).toLocaleDateString(locale),
-      })}`
-    : undefined;
   return (
     <div className="shrink-0 px-3 pb-3">
       {scopedSelection && (
@@ -2455,99 +2317,6 @@ ${t("composer.goalSince", {
             onClick={onClearAttachedImage}
             aria-label={t("composer.removeImage")}
             className="shrink-0 inline-flex h-4 w-4 items-center justify-center rounded hover:bg-[color:var(--accent)]/20 transition"
-          >
-            <X size={10} />
-          </button>
-        </div>
-      )}
-      {/* LA PUERTA DEL DUEÑO. Claude Code deja dicho cuál es la invariante:
-          «…» — se puede
-          apagar que el MODELO proponga, no lo que el usuario escribe. Aquí no se
-          porta la tecla (su usuario vive en un terminal, el nuestro no) sino la
-          forma: su condición, un gesto, cero llamadas de modelo. */}
-      {ponerAbierto && (
-        <div className="mb-1.5 flex items-center gap-1.5 rounded-md ring-1 ring-[color:var(--accent)]/40 bg-accent-soft px-2 py-1.5 fade-in">
-          <Target size={12} className="shrink-0 text-accent" />
-          <input
-            autoFocus
-            value={borradorObjetivo}
-            onChange={(e) => setBorradorObjetivo(e.target.value.slice(0, CONDICION_MAX))}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") setPonerAbierto(false);
-              if (e.key === "Enter") e.currentTarget.form?.requestSubmit();
-            }}
-            maxLength={CONDICION_MAX}
-            placeholder={t("composer.goalPlaceholder")}
-            aria-label={t("composer.setGoal")}
-            className="min-w-0 flex-1 bg-transparent text-[11px] outline-none placeholder:fg-faint"
-          />
-          <button
-            type="button"
-            disabled={poniendo || borradorObjetivo.trim().length === 0}
-            onClick={async () => {
-              if (poniendo) return;
-              setPoniendo(true);
-              try {
-                // No se cierra hasta que el servidor confirme: si falla, el
-                // texto sigue ahí y verlo es el aviso.
-                const ok = await onPonerObjetivo?.(borradorObjetivo);
-                if (ok) {
-                  setBorradorObjetivo("");
-                  setPonerAbierto(false);
-                }
-              } finally {
-                setPoniendo(false);
-              }
-            }}
-            className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium text-accent hover:bg-[color:var(--accent)]/20 transition disabled:opacity-40"
-          >
-            {t("composer.goalConfirm")}
-          </button>
-        </div>
-      )}
-      {/* EL OBJETIVO ACTIVO — la tercera ficha de esta barra, y la primera que el
-          usuario no puso él. Vive aquí y no dentro del turno que lo propuso
-          porque un objetivo PERSISTE entre sesiones: la tarjeta de aprobación se
-          queda enterrada en el historial y el usuario puede volver mañana con
-          Len todavía persiguiéndolo. Si no se ve, no se puede quitar. */}
-      {objetivo && (
-        <div className="mb-1.5 inline-flex items-center gap-1.5 max-w-full rounded-md ring-1 ring-[color:var(--accent)]/40 bg-accent-soft px-2 py-1 text-[11px] text-accent ui-small fade-in">
-          <Target size={11} />
-          <span className="font-medium shrink-0">{t("composer.goal")}</span>
-          {/* Truncada aquí y ENTERA en el `title`: el tope de 500 existe para
-              que quepa en la tarjeta de aprobación, que es donde se decide.
-              Esto es un recordatorio, no una aprobación. */}
-          <span className="truncate min-w-0" title={tituloDelObjetivo}>
-            {objetivo.condicion}
-          </span>
-          <button
-            type="button"
-            onClick={async () => {
-              // NO ES OPTIMISTA. La ficha no se va hasta que el servidor
-              // confirme — la regla de `undo-turn.ts`: no se dice hecho antes
-              // de saberlo. Si falla, la ficha SIGUE ahí, y verla es el aviso.
-              if (cancelando) return;
-              setCancelando(true);
-              try {
-                await onCancelarObjetivo?.();
-              } finally {
-                setCancelando(false);
-              }
-            }}
-            // 🔴 SE PUEDE CANCELAR TAMBIÉN CON EL TURNO CORRIENDO.
-            //
-            // Esto estuvo deshabilitado mientras corría, y era un parche sobre un
-            // defecto nuestro: la ruta congelaba `settings.objetivo` al arrancar,
-            // así que cancelar no detenía las vueltas ya presupuestadas y la
-            // ficha se habría ido mintiendo. El defecto está arreglado —la ruta
-            // RELEE el objetivo antes de gastar el juez (`sigueVigente`)— así que
-            // cancelar significa lo que dice y deja de gastar en el acto. Es lo
-            // que hace Claude Code: su `/goal` es `immediate: true` y su hook de
-            // `Stop` sale del registro al momento.
-            disabled={cancelando}
-            aria-label={t("composer.cancelGoal")}
-            title={t("composer.cancelGoal")}
-            className="shrink-0 inline-flex h-4 w-4 items-center justify-center rounded hover:bg-[color:var(--accent)]/20 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
           >
             <X size={10} />
           </button>
@@ -2603,26 +2372,6 @@ ${t("composer.goalSince", {
                 onAbrir={setEsfuerzoAbierto}
                 t={t}
               />
-            )}
-            {onPonerObjetivo && (
-              <button
-                type="button"
-                aria-label={t("composer.setGoal")}
-                title={t("composer.setGoalTitle")}
-                onClick={() => setPonerAbierto((v) => !v)}
-                // 🔴 NO SE DESHABILITA CON EL TURNO CORRIENDO, igual que la X:
-                // es la puerta que no se apaga. Y sigue disponible con un
-                // objetivo ya puesto —poner otro lo reemplaza, que es lo que
-                // hace Claude Code: una propuesta nueva, aprobada o fijada a
-                // mano, sustituye a la actual.
-                className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition ${
-                  ponerAbierto || objetivo
-                    ? "bg-[var(--accent-strong)] text-white shadow-coral"
-                    : "fg-faint hover:fg hover:bg-hover"
-                }`}
-              >
-                <Target size={13} />
-              </button>
             )}
             {onToggleSectionSelect && (
               <button

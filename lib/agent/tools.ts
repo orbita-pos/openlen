@@ -42,7 +42,6 @@ import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshace
 import type { TareaDeclarada } from "@/lib/agent/lista-de-tareas";
 import { vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
-import { CONDICION_MAX, TURNOS_MAXIMOS_CON_OBJETIVO } from "@/lib/agent/objetivo/evaluar-condicion";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import { getUserMemory, rememberAboutUser } from "@/lib/agent/user-memory";
 import { leerDeInternet } from "@/lib/agent/internet";
@@ -552,17 +551,6 @@ export interface AgentSession {
   conflictosAlGuardar?: number;
   // ⚰️ `behaviorJs` (la promesa de `prueba_js`) y `rechazoPrueba` se fueron con
   // `editar_runtime` en Len 2.0: ninguna herramienta los escribía ya.
-  /**
-   * YA PROPUSO UN OBJETIVO Y EL DUEÑO NO HA DECIDIDO.
-   *
-   * 🔴 ES EL EJE DE CLAUDE CODE, y no el que teníamos. Allí la única guarda
-   * sobre un objetivo existente es una propuesta sin decidir; del objetivo
-   * activo no comprueba NADA, porque aprobar el nuevo supersede al viejo.
-   *
-   * Lo que no puede pasar es pintarle DOS tarjetas a la vez: le harían elegir
-   * entre cosas que se pisan, y la segunda taparía a la primera.
-   */
-  objetivoPropuestoSinDecidir?: boolean;
   // ⚰️ `entroACiegas` e `idsVistos` eran del plano B (sólo el índice en el
   // contexto): se fueron con él (T8c).
   /** elegir_foto calls so far this request. Read-only + exempt from the action
@@ -704,8 +692,7 @@ export interface ToolOutcome {
    *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única
    *  vía que llama al endpoint real (spec §4.4). */
   confirm?:
-    | { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean }
-    | { action: "objetivo"; condicion: string; turnosMaximos: number };
+    | { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean };
   /** La herramienta ESCRIBIÓ en la base. No lo pone cada herramienta a mano:
    *  lo estampa `runAgentTool` contando las llamadas reales a
    *  `saveProjectData`, así que ninguna futura puede olvidarse.
@@ -1403,64 +1390,6 @@ async function toolEditarImagen(
 
 const MAX_PUBLISH_LOCALES = 9;
 
-// proponer_objetivo — LA MISMA PUERTA QUE PUBLICAR, y por la misma razón:
-// propone y no actúa. Perseguir una condición le cuesta TURNOS al usuario, y un
-// turno es dinero suyo; fijarla sin su toque sería gastarle el saldo por una
-// decisión que no tomó.
-//
-// NO BLOQUEA: devuelve la tarjeta y el bucle sigue trabajando. Es lo que exige
-// Claude Code —la propuesta se pinta al lado del trabajo y el modelo sigue
-// mientras se resuelve— y lo que nuestro confirm de publicar ya hacía.
-async function toolProponerObjetivo(
-  session: AgentSession,
-  // ⚰️ Ya no lee el proyecto: la guarda dejó de mirar el objetivo ACTIVO. Se
-  // marca con `_` como las otras tools que no tocan la base, para que no parezca
-  // que aquí queda una lectura.
-  _deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const condicion = typeof args.condicion === "string" ? args.condicion.trim() : "";
-  if (!condicion) {
-    return { response: { ok: false, motivo: "la condición viene vacía" } };
-  }
-  if (condicion.length > CONDICION_MAX) {
-    // El tope es del USUARIO, no del modelo: tiene que poder leerla entera en
-    // la tarjeta antes de aprobarla.
-    return {
-      response: {
-        ok: false,
-        motivo: `la condición pasa de ${CONDICION_MAX} caracteres (tiene ${condicion.length}); dila más corta`,
-      },
-    };
-  }
-  // 🔴 UNA TARJETA SIN DECIDIR A LA VEZ — y el eje es ÉSE, no el objetivo activo.
-  //
-  // ⚰️ Aquí se leía el proyecto y se RECHAZABA si ya había un objetivo activo.
-  // Era nuestro. Claude Code no comprueba el objetivo activo al proponer:
-  // aprobar el nuevo supersede al viejo a propósito —un solo objetivo activo a
-  // la vez, y el recién aprobado sustituye al que había—. Bloquear el eje equivocado le costaba al dueño no poder
-  // cambiar de objetivo sin cancelar el anterior a mano.
-  //
-  // Lo que SÍ bloquea, allí y aquí: una propuesta que el dueño todavía no ha
-  // decidido. Dos tarjetas a la vez le hacen elegir entre cosas que se pisan.
-  if (session.objetivoPropuestoSinDecidir) {
-    return {
-      response: {
-        ok: false,
-        motivo:
-          "ya hay una propuesta de objetivo esperando la decisión del usuario; sigue trabajando, y si la aprueba te llegará",
-      },
-    };
-  }
-  session.objetivoPropuestoSinDecidir = true;
-  return {
-    // Estado FIJO de espera, nunca un payload que pueda leerse como «ya está
-    // puesto». Igual que publicar.
-    response: { ok: true, estado: "esperando_aprobacion_del_usuario", condicion },
-    confirm: { action: "objetivo", condicion, turnosMaximos: TURNOS_MAXIMOS_CON_OBJETIVO },
-  };
-}
-
 // publicar — the publish GATE. This tool NEVER calls publishProject; it only
 // resolves which subdomain + languages a publish WOULD use and hands that back
 // as a `confirm` payload. The panel turns that into a card whose button hits
@@ -2060,8 +1989,6 @@ async function ejecutarHerramienta(
         return await toolEditarImagen(session, deps, args);
       case "publicar":
         return await toolPublicar(session, deps, args);
-      case "proponer_objetivo":
-        return await toolProponerObjetivo(session, deps, args);
       case "preguntar":
         return await toolPreguntar(session, deps, args);
       case NOMBRE_TODO_WRITE:

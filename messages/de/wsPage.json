@@ -39,8 +39,7 @@
       "redisenar_pagina": "Seite wird neu gestaltet",
       "guardar_dato": "Wird in deinen Daten gespeichert",
       "editar_dato": "Deine Daten werden aktualisiert",
-      "quitar_dato": "Wird aus deinen Daten entfernt",
-      "proponer_objetivo": "Schlägt ein Ziel vor"
+      "quitar_dato": "Wird aus deinen Daten entfernt"
     },
     "action": {
       "home": "Startseite",
@@ -63,12 +62,7 @@
       "limit": "Du hast das Limit veröffentlichter Seiten deines Tarifs erreicht.",
       "invalid": "Veröffentlichen fehlgeschlagen. Prüfe die Subdomain und versuch es erneut.",
       "checking": "Prüfe…",
-      "langsFailed": "{langs} konnte nicht übersetzt werden — erneut veröffentlichen, um es nochmal zu versuchen.",
-      "goalTitle": "Ein Ziel verfolgen",
-      "goalHow": "Len arbeitet weiter, bis es erfüllt ist. Geprüft wird es von jemand anderem, nicht von Len.",
-      "goalCost": "Das kann bis zu {turnos} Runden statt 1 kosten.",
-      "goalApprove": "Genehmigen",
-      "goalSet": "Ziel gesetzt"
+      "langsFailed": "{langs} konnte nicht übersetzt werden — erneut veröffentlichen, um es nochmal zu versuchen."
     },
     "ventana": "Len sieht die letzten {visibles} von {totales} Nachrichten dieser Unterhaltung. An alles davor erinnert es sich nicht mehr — erinnere es bei Bedarf daran oder beginne eine neue Unterhaltung.",
     "errors": {
@@ -80,13 +74,7 @@
       "no_credits": "Deine Credits sind aufgebraucht. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Sie erneuern sich alle 30 Tage — oder tippe oben auf dein Guthaben und wechsle zu Pro, um heute weiterzuarbeiten.",
       "no_credits_at": "Deine Credits sind aufgebraucht. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Sie kommen am {date} zurück — oder tippe oben auf dein Guthaben und wechsle zu Pro, um heute weiterzuarbeiten."
     },
-    "cortado": "⚠️ Dieser Zug brach vorzeitig ab ({reason}). Was bereits erledigt war, ist auf der Seite gespeichert.",
-    "objetivo": {
-      "cumplida": "Ziel erreicht: {condicion}",
-      "imposible": "Dieses Ziel lässt sich so, wie es formuliert ist, nicht erreichen — ich habe es entfernt: {condicion}",
-      "no_cumplida": "Noch nicht — das Ziel bleibt aktiv. Sag mir, dass ich weitermachen soll.",
-      "sin_evaluador": "Ich konnte dein Ziel in dieser Runde nicht prüfen, es bleibt also aktiv."
-    }
+    "cortado": "⚠️ Dieser Zug brach vorzeitig ab ({reason}). Was bereits erledigt war, ist auf der Seite gespeichert."
   },
   "defaultProjectName": "Preisseite",
   "chatDraft": {

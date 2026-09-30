@@ -47,8 +47,6 @@ import { getVersionHtml, listVersions } from "@/lib/projects/versions";
 import { loQueCambioElDueno } from "@/lib/agent/cambios-del-dueno";
 import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
 import { runAgentLoop, type AgentErrorCode, type AgentLoopResult, type VerifyOutcome } from "@/lib/agent/loop";
-import { VUELTAS_DE_OBJETIVO, evaluarCondicion } from "@/lib/agent/objetivo/evaluar-condicion";
-import { elObjetivoTermino } from "@/lib/agent/objetivo/veredicto";
 import { randomUUID } from "node:crypto";
 
 import { abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
@@ -503,11 +501,6 @@ export async function POST(req: Request): Promise<Response> {
   // Read le da las filas, las de `lectura` y las de `propio`/`añadir`. El
   // problema que esto resolvía —el modelo sin ver lo que la página guarda— lo
   // resuelve el fichero, no un bloque cosido al prompt.
-  // 🔴 EL OBJETIVO SE LEE UNA VEZ Y LO USAN LOS DOS: el contexto que ve el
-  // MODELO (aquí abajo) y el bucle, que se lo pasa al juez. Antes sólo lo leía
-  // el bucle, así que Len trabajaba la primera vuelta sin saber a qué se le
-  // estaba midiendo — el objetivo no le guiaba, le corregía.
-  const objetivoActivo = project.data.settings?.objetivo;
 
   // 🔴 LAS TRES LECTURAS DE PERFIL SALEN JUNTAS, no en fila.
   //
@@ -556,11 +549,6 @@ export async function POST(req: Request): Promise<Response> {
   const argsDelTurno = {
     diferidas: diferidas.map((d) => String(d.name)),
     state,
-    // La condición de parada, al MODELO. En Claude Code se le inyecta como
-    // prompt en cuanto se fija («you will receive a kickoff message»); aquí
-    // viaja en el bloque de avisos, que aterriza al final del mensaje del
-    // usuario — la posición más saliente del turno.
-    objetivo: objetivoActivo ?? null,
     userBrief: project.userBrief,
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
     // el usuario puede haber guardado algo en OTRA pestaña, en otro proyecto,
@@ -808,49 +796,12 @@ export async function POST(req: Request): Promise<Response> {
           close();
           return;
         }
-        // EL OBJETIVO ACTIVO, si el dueño aprobó uno. El bucle no cerrará el
-        // turno mientras un evaluador APARTE no lo confirme.
-        //
-        // 🔴 EL PRESUPUESTO LO PONE EL SERVIDOR, no el objetivo guardado ni el
-        // modelo: quien propone la condición no puede fijarse a sí mismo cuánto
-        // puede gastar. `VUELTAS_DE_OBJETIVO` es la única fuente, y es también
-        // el número que la tarjeta de aprobación le enseñó al usuario.
-        // Ya leído arriba, junto al contexto del modelo: una sola fuente.
         const result = await runAgentLoop({
           messages,
           tools,
           // SIN `maxTurns` NI `maxToolCalls` (H1, 2026-09-25): como el bucle
           // principal de Claude Code, el turno no topa pasos. El dinero se topa
           // por MES (`CREDITS_BY_PLAN`); un cuelgue, el reloj de silencio.
-          ...(objetivoActivo
-            ? {
-                objetivo: {
-                  condicion: objetivoActivo.condicion,
-                  maxVueltas: VUELTAS_DE_OBJETIVO,
-                  // 🔴 EL OBJETIVO SE RELEE, NO SE CONGELA.
-                  //
-                  // Esta línea de arriba (`objetivoActivo`) es una FOTO del
-                  // arranque del turno. Sin esto, un dueño que cancelaba desde
-                  // la ficha del compositor seguía pagando hasta dos vueltas de
-                  // evaluador por un objetivo que ya había quitado — y la ficha
-                  // ya no estaba, así que ni siquiera veía por qué.
-                  //
-                  // Claude Code no tiene ese problema porque su
-                  // objetivo es un hook de `Stop` en un registro vivo, y relee
-                  // el estado en cada punto de decisión. Esto es lo mismo con
-                  // nuestra forma: una lectura de la base, cero modelo.
-                  //
-                  // CAMBIADO cuenta como quitado, igual que allí («v.condition
-                  // !== n.condition»): si el dueño aprobó otro objetivo a media
-                  // faena, el de este turno ya no es el suyo.
-                  sigueVigente: async () => {
-                    const fila = await deps.loadProject(projectId, userId);
-                    return fila?.data.settings?.objetivo?.condicion === objetivoActivo.condicion;
-                  },
-                  evaluar: (o: { condicion: string; transcript: string }) => evaluarCondicion(o),
-                },
-              }
-            : {}),
           // H14 · LOS SEGUNDOS OJOS: el mismo modelo revisa lo que cambió el
           // turno, con la receta de `/code-review` de Claude Code. APAGADA salvo
           // `OPENLEN_REVISION=1`: es el brazo de la medición (con y sin, en el
@@ -1299,37 +1250,6 @@ export async function POST(req: Request): Promise<Response> {
         }
         corte = corteDelTurno({ ...result, mutoDurable });
 
-        // 🔴 UN OBJETIVO QUE YA ACABÓ SE BORRA. Si se quedara puesto, cada turno
-        // siguiente volvería a evaluarlo —una llamada más— y podría bloquear el
-        // cierre por una condición que ya se cumplió o que ya sabemos imposible.
-        // Se le cobraría al usuario por perseguir algo terminado.
-        //
-        // `no_cumplida` y `sin_evaluador` NO lo borran: la primera es «sigue
-        // pendiente» y la segunda es una avería nuestra — perder el objetivo del
-        // dueño porque nuestro juez falló sería castigarle por nuestro fallo.
-        // 🔴 LA REGLA VIENE DE UN SOLO SITIO. Estaba escrita aquí a mano, y el
-        // cliente necesita LA MISMA para quitar la ficha del compositor en el
-        // mismo instante. Dos copias es como se pierde una.
-        if (result.objetivo && elObjetivoTermino(result.objetivo.veredicto)) {
-          try {
-            const fila = await deps.loadProject(projectId, userId);
-            if (fila?.data.settings?.objetivo) {
-              // I4 — el objetivo se retira del `data` de AHORA, no del que se
-              // leyó: borrar una ficha cumplida no puede revertir el turno.
-              await deps.saveProjectData(projectId, userId, (actual) => {
-                if (!actual.settings?.objetivo) return actual;
-                const { objetivo: _cumplido, ...resto } = actual.settings;
-                return { ...actual, settings: resto };
-              });
-            }
-          } catch (err) {
-            // No tumba el turno: el trabajo está hecho y cobrado. Lo peor de un
-            // borrado fallido es una evaluación de más el turno que viene.
-            // eslint-disable-next-line no-console
-            console.error("[agent] no se pudo borrar el objetivo terminado: %o", err);
-          }
-        }
-
         // LA SUITE DE LA PÁGINA, guardada. Dos cosas a la vez y en este orden:
         // se retiran las promesas que el navegador declaró sin sentido —su
         // selector ya no señala a nada— y entra la del turno SI nació en verde.
@@ -1515,32 +1435,6 @@ export async function POST(req: Request): Promise<Response> {
           // usuario, como el aviso de tope. Ver [[error-del-servidor-como-dato-no-prosa]].
           ...(turnosTotales > ventanaVisible
             ? { ventana: { visibles: ventanaVisible, totales: turnosTotales } }
-            : {}),
-          // 🔴 EL DESENLACE DEL OBJETIVO, AL USUARIO. Se calculaba y se TIRABA:
-          // sólo servía para borrar la fila de arriba. Dos averías salían de ahí.
-          //
-          //  1. Con `cumplida`/`imposible` el servidor borra el objetivo y el
-          //     cliente no se enteraba: la ficha del compositor se quedaba en
-          //     pantalla anunciando un objetivo que ya no existe, hasta recargar.
-          //  2. El dueño nunca sabía cómo acabó. El peor caso es `imposible`: le
-          //     gastamos vueltas de pago, un evaluador dictaminó que su condición
-          //     no se puede cumplir, se la borramos, y no le dijimos nada.
-          //
-          // Es lo que Claude Code enseña como tres líneas del
-          // transcript: «Goal achieved», «Goal not yet met — continuing» y
-          // «Goal could not be achieved».
-          //
-          // CÓDIGO, NO PROSA: la `razon` del juez viene en el idioma de SU
-          // prompt (español), así que mandarla rompería los otros nueve. Va el
-          // veredicto y la cuenta de vueltas; la frase la compone el cliente.
-          ...(result.objetivo
-            ? {
-                objetivo: {
-                  veredicto: result.objetivo.veredicto,
-                  vueltasExtra: result.objetivo.vueltasExtra,
-                  condicion: objetivoActivo?.condicion ?? "",
-                },
-              }
             : {}),
         });
         close();

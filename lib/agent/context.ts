@@ -160,21 +160,6 @@ ${lineas.join("\n")}
 export function avisosDelTurno(args: {
   turnoAnteriorMudo?: boolean;
   degradaciones?: readonly DegradacionConocida[];
-  /**
-   * LA CONDICIÓN DE PARADA ACTIVA, si la hay.
-   *
-   * 🔴 LEN TRABAJABA A CIEGAS. La condición aparecía en UN solo sitio de todo
-   * `lib/agent/`: la llamada al evaluador, y el mensaje que se le manda DESPUÉS
-   * de que el juez le diga que no. Ni `brain.ts` ni este fichero la nombraban.
-   * O sea que la primera vuelta —la pagada— se gastaba sin que el modelo supiera
-   * a qué se le estaba midiendo: el objetivo no le guiaba, le corregía.
-   *
-   * LA VARA: en Claude Code, en cuanto el objetivo se fija se le inyecta al
-   * modelo como prompt, y su resultado de herramienta se lo promete — «…». Lo sabe desde el principio.
-   *
-   * Ausente/`null` ⇒ salida byte-idéntica.
-   */
-  objetivo?: { readonly condicion: string } | null;
 }): string {
   const mudo = args.turnoAnteriorMudo
     ? `AVISO: tu turno anterior NO llamó a ninguna herramienta, así que la página NO cambió — hagas lo que hagas ahora, no des por hecho lo que dijiste que habías hecho. Si el usuario te pidió un cambio y sigue sin aplicarse, aplícalo AHORA con la herramienta de edición que toque.
@@ -182,25 +167,11 @@ export function avisosDelTurno(args: {
 `
     : "";
   const roto = degradacionesBlock(args.degradaciones ?? []);
-  // EL OBJETIVO VA EL ÚLTIMO del bloque, y el bloque va al final del mensaje del
-  // usuario: es la posición más saliente que hay, y esto es lo que manda sobre
-  // cuándo puede parar.
-  //
-  // Se le dice también QUIÉN lo comprueba. Sin eso, un modelo que se cree a sí
-  // mismo cierra diciendo «ya está» y se come una vuelta de evaluador para nada
-  // — que es exactamente lo que el juez existe para no permitir.
-  const meta = args.objetivo?.condicion.trim()
-    ? `OBJETIVO ACTIVO — el usuario pidió que no pares hasta esto:
-«${args.objetivo.condicion.trim()}»
-Lo comprueba un evaluador APARTE que lee este turno, no tú: decir que está hecho no lo da por cumplido. Trabaja hasta que la evidencia esté en el turno.
-
-`
-    : "";
-  if (!mudo && !roto && !meta) return "";
+  if (!mudo && !roto) return "";
   return `
 
 SISTEMA (el usuario NO escribió esto):
-${mudo}${roto}${meta}`;
+${mudo}${roto}`;
 }
 
 /**
@@ -357,9 +328,6 @@ export interface BuildAgentMessagesArgs {
   state: Record<string, unknown>;
   /** Ver buildAgentContext.turnoAnteriorMudo. */
   turnoAnteriorMudo?: boolean;
-  /** Ver avisosDelTurno.objetivo — la condición de parada activa del proyecto.
-   *  Ausente/`null` ⇒ salida byte-idéntica. */
-  objetivo?: { readonly condicion: string } | null;
   /** Ver buildAgentContext.userMemory. */
   userMemory?: string | null;
   /** Ver buildAgentContext.cambios. */
@@ -430,7 +398,6 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   const avisos = avisosDelTurno({
     turnoAnteriorMudo: args.turnoAnteriorMudo,
     degradaciones: args.degradaciones,
-    objetivo: args.objetivo,
   });
   // H4: con los resultados enteros en el historial, el techo cuenta también las
   // llamadas y sus respuestas, no sólo el texto (ver `textoDelHistorial`).

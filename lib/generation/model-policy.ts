@@ -198,17 +198,7 @@ export type ModelOperation =
   | "template_autofill"
   /** Escribir una página MIRANDO una referencia adjunta. Papel con visión: al
    *  razonador nunca se le manda una imagen. */
-  | "page_write_with_reference"
-  /** JUZGAR SI UNA CONDICIÓN SE CUMPLIÓ, leyendo el transcript de un turno.
-   *
-   *  🔴 VA EN OTRO PAPEL QUE EL ACTOR, y eso es el punto entero. Len corre en
-   *  `agent`; si el mismo papel juzgara su propio turno estaríamos pidiéndole
-   *  al que ya decidió que estaba hecho que confirme que lo está. Claude Code
-   *  razona igual: el agente evaluado es justo quien ya decidió darlo por hecho.
-   *
-   *  Y va en el papel BARATO: es una lectura corta con tres salidas, no
-   *  redacción. */
-  | "condition_evaluation";
+  | "page_write_with_reference";
 // (`len_bench_cliente`, el dueño simulado de Len-Bench, se fue el 2026-09-27: el
 // dueño es ahora un doble FIJO sin modelo, `lib/len-bench/cliente-simulado.ts`.)
 
@@ -266,7 +256,6 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   // La ruta de Gemini ya lo pedía con `thinkingBudget: 0`, así que `none` no es
   // una apuesta, es la misma decisión escrita en el otro idioma.
   template_autofill: { role: "reasoner", effort: "none" },
-  condition_evaluation: { role: "reasoner", effort: "none" },
 };
 
 export function reasoningEffortFor(role: ModelRole, operation: ModelOperation): FireworksReasoningEffort {
