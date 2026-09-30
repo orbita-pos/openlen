@@ -149,6 +149,34 @@ describe("diagnosticosDeLaEscritura: lo que antes era un aviso_critico, anclado 
     expect(ds[0]!.mensaje).toContain(".titulo");
   });
 
+  // LAS DOS MITADES (paso 6 de 2.5): la otra cara de la regla muerta.
+  it("una clase NUEVA que el script pone y nada usa: Warning donde la pone", () => {
+    const antes = pagina('<nav class="menu">x</nav>', "<style>.menu{display:none}</style>");
+    const despues = pagina(
+      '<nav class="menu">x</nav>\n<script>\ndocument.querySelector(".menu").classList.toggle("open");\n</script>',
+      "<style>.menu{display:none}</style>",
+    );
+    const ds = escritura({ antes, despues });
+    expect(ds.map((d) => d.codigo)).toEqual(["clase-sin-estilo"]);
+    // En la clase misma: `document.querySelector(".menu").classList.toggle("` son 50.
+    expect(ds[0]).toMatchObject({ linea: 7, columna: 51, gravedad: "Warning" });
+    expect(ds[0]!.mensaje).toContain("«open»");
+  });
+
+  it("con su CSS escrito, nada; y lo que ya estaba antes de esta escritura no se repite", () => {
+    const con = pagina('<nav class="menu">x</nav><script>m.classList.toggle("open")</script>', "<style>.menu.open{display:block}</style>");
+    expect(escritura({ antes: pagina("<p>x</p>"), despues: con })).toEqual([]);
+    const sin = pagina('<nav class="menu">x</nav><script>m.classList.toggle("open")</script>');
+    expect(escritura({ antes: sin, despues: sin.replace("x</nav>", "y</nav>") })).toEqual([]);
+  });
+
+  it("un color de la página en su tailwind.config: Tailwind lo conoce con ese extend", () => {
+    const head =
+      '<script src="https://cdn.tailwindcss.com"></script><script>tailwind.config = { theme: { extend: { colors: { marca: "#123456" } } } }</script>';
+    const despues = pagina('<p id="p">x</p><script>p.classList.add("bg-marca")</script>', head);
+    expect(escritura({ antes: pagina("<p>x</p>", head), despues })).toEqual([]);
+  });
+
   it("🔴 el script que busca un elemento que ya no existe: Error en la línea donde lo busca", () => {
     const despues = pagina('<p>x</p>\n<script>\nconst c = document.getElementById("carrito");\nc.textContent = "0";\n</script>');
     const ds = escritura({ despues, referenciasRotas: ["carrito"] });

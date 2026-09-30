@@ -14,8 +14,9 @@
  *     reemplazaba, el script que busca lo que ya no está—: nuevas por
  *     construcción;
  *   · las que hablan DEL FICHERO —un enlace que dice un número y marca otro, la
- *     meta que anuncia un dato muerto, una regla CSS que no aplica nunca—: se
- *     miden antes y después, y sólo sale lo que no estaba (la línea base).
+ *     meta que anuncia un dato muerto, una regla CSS que no aplica nunca, una
+ *     clase que el script pone y nada usa—: se miden antes y después, y sólo
+ *     sale lo que no estaba (la línea base).
  *
  * La base se compara sin la posición (ver `claveDeDiagnostico`): el mensaje ya
  * nombra lo concreto, y con la posición cualquier línea añadida arriba volvería
@@ -34,8 +35,10 @@ import { etiquetasDe, libreriasQueNoCargan } from "@/lib/agent/librerias-que-no-
 import { LIBRERIAS } from "@/lib/librerias";
 import { prefijosInventados } from "@/lib/agent/prefijo-inventado";
 import { claveDeDiagnostico, posicionDe, posicionEnIndice, type Diagnostico } from "@/lib/agent/diagnosticos";
-import { reglasQueNuncaAplican } from "@/lib/document/css-wiring";
+import { clasesQueElScriptPoneSinEstilo, reglasQueNuncaAplican } from "@/lib/document/css-wiring";
+import { clasesQueConoceTailwind } from "@/lib/document/clases-de-tailwind";
 import { todoElJsDelDocumento } from "@/lib/page-engine/conservar-scripts";
+import { extractTwConfig } from "@/lib/publish/tw-config";
 
 export interface Escritura {
   /** El fichero, con su ruta del sitio. */
@@ -255,6 +258,25 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
           "Warning",
           "regla-muerta",
           `La regla \`${r.selector}\` no puede aplicar nunca: pide ${r.ausentes.map((c) => `.${c}`).join(", ")} y ninguna etiqueta lo lleva (sí existe ${r.presentes.map((c) => `.${c}`).join(", ")}). El estilo está escrito y el elemento también, pero no se tocan.`,
+        ),
+      );
+    }
+    // La otra mitad del mismo fallo: el estado que el script pone y que ningún
+    // estilo pinta. Tailwind lo contesta su compilador, con el `theme.extend`
+    // de la página (el mismo que se hornea al publicar).
+    const conoceTailwind = (clases: readonly string[]) => clasesQueConoceTailwind(clases, extractTwConfig(html).extend);
+    for (const x of clasesQueElScriptPoneSinEstilo(html, conoceTailwind)) {
+      fuera.push(
+        diag(
+          posicionEnIndice(html, x.indice),
+          "Warning",
+          "clase-sin-estilo",
+          // Sólo lo comprobado: que PONERLA no cambia nada. «El control está
+          // mudo» no se puede afirmar — en la pasada por las plantillas, un
+          // botón ponía `amt-on` (inerte) y además se pintaba con estilos en
+          // línea, así que funcionaba. Lo que pasa en pantalla lo mira
+          // `usar_pagina`, no esto.
+          `Tu script pone la clase «${x.clase}» y nada la usa: ninguna regla del CSS de la página la nombra, Tailwind no la conoce y el script no la lee. Ponerla no cambia nada en pantalla. Si es el estado de un control (abierto, activo, elegido…), le falta su CSS; si sobra, quítala.`,
         ),
       );
     }
