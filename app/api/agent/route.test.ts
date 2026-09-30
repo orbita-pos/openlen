@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentLoopArgs } from "@/lib/agent/loop";
 import type { VisualVerdict } from "@/lib/agent/verify";
 import { documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
+import { comoLoGuarda } from "@/lib/agent/revision/linea-base";
 
 /**
  * EL VEREDICTO DE LOS OJOS, TIPADO — para que un campo nuevo rompa el
@@ -1312,6 +1313,26 @@ describe("POST /api/agent — la revisión del turno (H14)", () => {
     expect(tarea).toContain("--- a/index.html\n+++ b/index.html");
     expect(tarea).toContain("-<h1>Hola</h1>\n+<h1>Hecho a mano</h1>");
     expect(tarea).toContain("<agent_closing_message>\nListo, titular nuevo.\n</agent_closing_message>");
+  });
+
+  it("🔴 lo que la plataforma añade al guardar no le llega al revisor como obra del turno", async () => {
+    // Como en Len-Bench: la página de partida en crudo, y la de ahora pasada por
+    // el guardado de verdad (tarjeta social, id del formulario, re-serializada).
+    const cruda =
+      "<!doctype html>\n<html><head><title>FUERO</title></head><body>\n<!-- HERO -->\n<h1>Hola</h1>\n<form><input name=\"n\"></form>\n</body></html>";
+    const guardada = await comoLoGuarda(cruda.replace("<h1>Hola</h1>", "<h1>Hecho a mano</h1>"));
+    mocks.loadProject.mockResolvedValue({ title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null, data: { html: guardada } });
+    const revision = await capturar((s) => {
+      s.escritos = ["/index.html"];
+      s.alEmpezar = new Map([["/index.html", cruda]]);
+    });
+    await revision!.revisar({ modo: "una_pasada", cierre: "" });
+    const { tarea } = subagentes[0];
+    // Sólo las líneas que cambian: el comentario puede seguir como contexto el
+    // día que el guardado deje de re-serializar la página.
+    const cambiadas = tarea.split("\n").filter((l) => /^[-+]/.test(l) && !/^(---|\+\+\+) /.test(l));
+    expect(cambiadas).toEqual(["-<h1>Hola</h1>", "+<h1>Hecho a mano</h1>"]);
+    for (const ruido of ["og:image", "data-ol-form-id"]) expect(tarea).not.toContain(ruido);
   });
 
   it("🔴 cada revisor sólo tiene Read, Grep y Glob, y lee con SU sesión, no con la de Len", async () => {

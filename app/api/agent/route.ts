@@ -28,8 +28,8 @@ import {
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
-import { normalizarFinales } from "@/lib/agent/ficheros/read";
 import { diffDelTurno } from "@/lib/agent/revision/diff-del-turno";
+import { ficherosDelTurno } from "@/lib/agent/revision/linea-base";
 import { MENSAJES_ANTERIORES, revisarTurno } from "@/lib/agent/revision/revisar-turno";
 import { correrSubagente, declaracionesDeSoloLectura } from "@/lib/agent/subagente";
 import {
@@ -858,7 +858,8 @@ export async function POST(req: Request): Promise<Response> {
           //
           // El diff sale de lo que el turno escribió (`escritos`), cómo estaba
           // cada página al empezar (`alEmpezar`; si falta, la creó el turno) y
-          // cómo está ahora en la base. Sólo PÁGINAS, y eso lo decide
+          // cómo está ahora en la base, las dos por el mismo guardado
+          // (`lib/agent/revision/linea-base.ts`). Sólo PÁGINAS, y eso lo decide
           // `leerFichero`, que no lee otra cosa: /datos y /memoria no guardan
           // su «antes», y sin él saldrían «creados» enteros.
           // Cada revisor es un subagente de SOLO LECTURA con su propia sesión
@@ -872,21 +873,16 @@ export async function POST(req: Request): Promise<Response> {
                     const empezo = Date.now();
                     const fila = await deps.loadProject(projectId, userId);
                     if (!fila) return null;
-                    const ficheros = [...(agentSession.escritos ?? [])]
+                    const paginas = [...(agentSession.escritos ?? [])]
                       .reverse()
                       .flatMap((ruta) => {
                         const ahora = leerFichero(fila.data, ruta);
                         if (ahora === null) return [];
-                        const antes = agentSession.alEmpezar?.get(ruta);
-                        return [
-                          {
-                            ruta,
-                            antes: antes === undefined ? null : normalizarFinales(antes),
-                            despues: normalizarFinales(sinOpIds(ahora)),
-                          },
-                        ];
+                        return [{ ruta, antes: agentSession.alEmpezar?.get(ruta) ?? null, despues: ahora }];
                       });
-                    const diff = diffDelTurno(ficheros);
+                    // Las dos fotos por el MISMO guardado: si no, lo que la
+                    // plataforma añade al guardar sale como obra del turno.
+                    const diff = diffDelTurno(await ficherosDelTurno(paginas));
                     if (!diff) return null;
                     const soloLectura = declaracionesDeSoloLectura(tools);
                     const cerebro = createAgentBrain({
