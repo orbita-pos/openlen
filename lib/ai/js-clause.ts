@@ -124,6 +124,10 @@ const CABLEADO_ES =
 // Agente RETIRA esa viñeta del contrato —sus REGLAS DURAS ya decían todo lo
 // demás— y ésta era lo ÚNICO que el contrato aportaba y su regla no. Una frase
 // medida no puede perderse al quitar una duplicación.
+//
+// Desde el 2026-09-29 Len ya no la recibe: se la dice el diagnóstico
+// `clase-sin-estilo` después de escribir (ver la cláusula `agente`). Crear y el
+// Chat sí, hasta medir Crear.
 const DOS_MITADES_ES =
   "Escribe SIEMPRE LAS DOS MITADES: el comportamiento y el CSS del estado que ese comportamiento activa — una clase que el script pone y que nadie define en el CSS deja el control mudo, se ejecuta y no se nota.";
 const CABLEADO_EN =
@@ -233,7 +237,14 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       // `lib/page-engine/cambiar-texto.ts`). Una regla que protege a la
       // plataforma de un defecto suyo no va en el prompt: se arregla la
       // plataforma (memoria `openlen-se-adapta-a-len`).
-      `${DOS_MITADES_ES} ` +
+      // ⚰️ Aquí iba `DOS_MITADES_ES` («escribe SIEMPRE LAS DOS MITADES»),
+      // retirado para Len el 2026-09-29 (paso 6 de 2.5): lo hace cumplir el
+      // diagnóstico `clase-sin-estilo` (`clasesQueElScriptPoneSinEstilo` en
+      // `lib/document/css-wiring.ts`), que le llega tras cada escritura, igual
+      // que Claude Code no le pide en el prompt que su código compile y se lo
+      // dice el diagnóstico. Pasada gratis: 1 aviso en 1.291 escrituras de Len
+      // y 3 en 280 plantillas, los 4 comprobados en Chromium.
+      // Crear y el Chat la conservan hasta medir Crear.
       // ⚰️ Aquí iba «La página tiene que funcionar SIN él», retirado para Len el
       // 2026-09-29 con el OK de Jesús. Nació cuando la plataforma tiraba el
       // script (la cápsula, el editor), y ya no lo tira. Además chocaba con

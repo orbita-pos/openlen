@@ -320,7 +320,9 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).not.toContain("addEventListener");
     expect(p).not.toContain("onclick=");
     // POR SUSTANCIA, NO POR ENCABEZADO — ver el mismo cambio en context.test.ts.
-    expect(p).toContain("LAS DOS MITADES");
+    // «LAS DOS MITADES» ya no va en el prompt desde el 2026-09-29: la hace
+    // cumplir el diagnóstico `clase-sin-estilo` (prompts-superficies.test.ts).
+    expect(p).not.toContain("LAS DOS MITADES");
     // Sin «La página tiene que funcionar SIN él» ni «prefiere el CSS puro»
     // desde el 2026-09-29: nacieron cuando la plataforma tiraba el script, y
     // ya no lo tira. «No escondas contenido» se queda, con el porqué que es

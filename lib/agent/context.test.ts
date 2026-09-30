@@ -328,7 +328,9 @@ describe("buildAgentMessages", () => {
       // Sin «usa `addEventListener`, no `onclick`» desde el 2026-09-29: el
       // editor ya no borra los `on*` (lib/publish/el-on-del-modelo.test.ts).
       expect(sentSystem.content).not.toContain("addEventListener");
-      expect(sentSystem.content).toContain("LAS DOS MITADES");
+      // «LAS DOS MITADES» se movió al diagnóstico `clase-sin-estilo` el
+      // 2026-09-29 (ver prompts-superficies.test.ts): ya no va en el prompt.
+      expect(sentSystem.content).not.toContain("LAS DOS MITADES");
       expect(sentSystem.content).not.toContain("data-ol-sticky");
 
       // Len 2.0: el JavaScript ya no tiene herramienta propia (`editar_runtime`

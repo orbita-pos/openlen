@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "./agent/catalog";
 import { TOKENS_DEL_CONTRATO } from "./agent/tools";
+import { diagnosticosDeLaEscritura } from "./agent/diagnosticos-de-la-escritura";
 // NOT imported from the route.ts files themselves: a Next.js `route.ts` file
 // may only export the recognized route-handler bindings (GET/POST/runtime/…)
 // — Next's generated .next/types/app/api/**/route.ts type-checks the
@@ -443,8 +444,16 @@ describe("el contrato dicho para cada superficie", () => {
     expect(p).toContain("NO las llames en paralelo");
   });
 
-  it("NO SE PERDIÓ: «las dos mitades» sigue llegando al Agente", () => {
-    expect(buildAgentSystemPrompt()).toContain("Escribe SIEMPRE LAS DOS MITADES");
+  // SE MOVIÓ, NO SE PERDIÓ (2026-09-29, paso 6 de 2.5). La frase medida salió
+  // del prompt de Len porque ahora la hace cumplir un diagnóstico, como Claude
+  // Code no le pide al modelo que compile y se lo dice el LSP. Si alguien
+  // quita el diagnóstico, esta prueba tiene que caer: la regla no puede
+  // quedarse en ninguno de los dos sitios.
+  it("«las dos mitades»: fuera del prompt del Agente, y la caza el diagnóstico", () => {
+    expect(buildAgentSystemPrompt()).not.toContain("LAS DOS MITADES");
+    const html = '<!doctype html><html><head><style>.menu{display:none}</style></head><body><nav class="menu"></nav><script>m.classList.toggle("open")</script></body></html>';
+    const ds = diagnosticosDeLaEscritura({ ruta: "/index.html", antes: null, despues: html, fuentes: [] });
+    expect(ds.map((d) => d.codigo)).toContain("clase-sin-estilo");
   });
 
   it("NO SE PERDIÓ: el Agente conserva la lista de <iframe> y sus formas de URL", () => {
