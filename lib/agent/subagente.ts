@@ -32,8 +32,9 @@ export function declaracionesDeSoloLectura(declaraciones: readonly Record<string
   return declaraciones.filter((d) => HERRAMIENTAS_DE_SOLO_LECTURA.has(String(d.name)));
 }
 
-/** Vueltas (llamadas al modelo) antes de pedirle que conteste. Se mide en la
- *  primera pasada por las grabaciones (paso 6). */
+/** Vueltas (llamadas al modelo) antes de pedirle que conteste, si quien lo
+ *  lanza no dice otra cosa (`maxVueltas`). En la primera pasada pagada de H14
+ *  los revisores dieron unas 6 de media (deducido de los tokens, no contado). */
 export const MAX_VUELTAS_DEL_SUBAGENTE = 8;
 
 export const CONTESTA_YA =
@@ -54,15 +55,19 @@ export async function correrSubagente(o: {
   closeOut(messages: Message[]): AsyncIterable<StreamEvent>;
   /** Ejecuta una lectura sobre el sitio, con su propia sesión. */
   leer(name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
+  /** Vueltas con herramientas antes de pedirle que conteste. Cada vuelta
+   *  piensa y reenvía todo lo anterior: es lo que alarga la espera. */
+  readonly maxVueltas?: number;
 }): Promise<Corrida> {
   const tools = declaracionesDeSoloLectura(o.declaraciones);
+  const maxVueltas = o.maxVueltas ?? MAX_VUELTAS_DEL_SUBAGENTE;
   let vueltas = 0;
   const r = await runAgentLoop({
     messages: [{ role: "system", content: o.sistema }, ...o.mensajes.map((content): Message => ({ role: "user", content }))],
     tools,
     openStream: (messages) => {
       vueltas += 1;
-      return vueltas <= MAX_VUELTAS_DEL_SUBAGENTE
+      return vueltas <= maxVueltas
         ? o.openStream(messages)
         : o.closeOut([...messages, { role: "user", content: CONTESTA_YA }]);
     },
@@ -75,6 +80,6 @@ export async function correrSubagente(o: {
     emit: () => {},
   });
   const uso = r.usage;
-  if (r.terminalError) return { ok: false, motivo: r.errorCode ?? r.topeAlcanzado ?? "error", uso };
-  return { ok: true, texto: r.finalText, uso };
+  if (r.terminalError) return { ok: false, motivo: r.errorCode ?? r.topeAlcanzado ?? "error", uso, vueltas };
+  return { ok: true, texto: r.finalText, uso, vueltas };
 }

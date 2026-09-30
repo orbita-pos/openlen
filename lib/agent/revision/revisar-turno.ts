@@ -20,6 +20,7 @@
 // veredicto y luego el puesto que le dio su buscador. Es una aproximación, y se
 // dice.
 
+import type { NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import {
   ANGULOS_EN_ORDEN,
   MAX_POR_BUSCADOR,
@@ -51,10 +52,11 @@ const sumar = (a: Uso, b: Uso): Uso => ({
 });
 
 /** Lo que devuelve una llamada de revisión: el texto final del revisor, o por
- *  qué no lo hay. El uso va en los dos casos: una llamada caída también cuesta. */
+ *  qué no lo hay. El uso va en los dos casos: una llamada caída también cuesta.
+ *  `vueltas`, cuántas veces llamó al modelo, es para medir la espera. */
 export type Corrida =
-  | { readonly ok: true; readonly texto: string; readonly uso: Uso }
-  | { readonly ok: false; readonly motivo: string; readonly uso: Uso };
+  | { readonly ok: true; readonly texto: string; readonly uso: Uso; readonly vueltas?: number }
+  | { readonly ok: false; readonly motivo: string; readonly uso: Uso; readonly vueltas?: number };
 
 /** Corre UN revisor: su prompt de sistema y sus mensajes de usuario, en orden
  *  (la tarea común primero, su encargo al final: ver `SISTEMA_DEL_REVISOR`). */
@@ -62,17 +64,48 @@ export type Correr = (sistema: string, mensajes: readonly string[]) => Promise<C
 
 export type ModoDeRevision = "una_pasada" | "completa";
 
+/**
+ * Qué receta se usa en los turnos grandes: `por_pasos` es la de la ficha (una
+ * pasada de 5 a 9 pasos y la completa desde 10: el esfuerzo medio de Claude
+ * Code en los grandes); `una_pasada` es siempre la pasada única, el esfuerzo
+ * BAJO de `/code-review` («1 diff pass → no verify → ≤4 findings»).
+ */
+export type Receta = "por_pasos" | "una_pasada";
+
 /** Desde cuántos pasos (llamadas al modelo en el turno) se revisa. Un cambio de
  *  título no dispara nada (ficha H14, c9 §3–§4). */
 export const PASOS_PARA_UNA_PASADA = 5;
 export const PASOS_PARA_LA_COMPLETA = 10;
 
 /** Qué revisión le toca a un turno de `pasos` pasos; `null` si ninguna. */
-export function modoDeRevision(pasos: number): ModoDeRevision | null {
-  if (pasos >= PASOS_PARA_LA_COMPLETA) return "completa";
-  if (pasos >= PASOS_PARA_UNA_PASADA) return "una_pasada";
-  return null;
+export function modoDeRevision(pasos: number, receta: Receta = "por_pasos"): ModoDeRevision | null {
+  if (pasos < PASOS_PARA_UNA_PASADA) return null;
+  if (receta === "una_pasada") return "una_pasada";
+  return pasos >= PASOS_PARA_LA_COMPLETA ? "completa" : "una_pasada";
 }
+
+/**
+ * LOS TRES AJUSTES DEL COSTE Y LA ESPERA. La primera pasada pagada (29/09, ficha
+ * H14) midió $0,53 y 883 s en un turno grande con la receta completa: el 60 %
+ * fue pensar (los revisores heredaban el esfuerzo de Len, `auto` = alto) y el
+ * resto, leer; cada revisor dio unas 6 vueltas (deducido de los tokens), y los
+ * 7 verificadores no tumbaron nada. Cada ajuste ataca una de esas partes.
+ *
+ * Los valores de aquí son los que ya se midieron. Los nuevos se miden en la
+ * herramienta de la pasada (`--receta`, `--esfuerzo`, `--vueltas`) y, si
+ * compensan, se cambian aquí: una línea cada uno.
+ */
+export interface AjustesDeRevision {
+  readonly receta: Receta;
+  /** Cuánto piensa cada revisor. `null` = el de Len, que es lo que hace Claude
+   *  Code: sus subagentes (Explore, Plan) heredan el del principal. */
+  readonly esfuerzo: NivelEsfuerzo | null;
+  /** Vueltas de cada revisor antes de pedirle que conteste; `null` = el tope
+   *  del subagente (`MAX_VUELTAS_DEL_SUBAGENTE`). */
+  readonly vueltas: number | null;
+}
+
+export const AJUSTES_DE_REVISION: AjustesDeRevision = { receta: "por_pasos", esfuerzo: null, vueltas: null };
 
 /** El «≤8 findings» del esfuerzo medio. */
 export const MAX_HALLAZGOS = 8;

@@ -3008,7 +3008,7 @@ describe("la revisión del turno (H14)", () => {
     updatedHtml: "<h1>nuevo</h1>",
     page: null,
   });
-  const base = (revision?: { revisar: Revisar }, eventos: AgentStreamEvent[] = []) => ({
+  const base = (revision?: { revisar: Revisar; receta?: "por_pasos" | "una_pasada" }, eventos: AgentStreamEvent[] = []) => ({
     messages: [{ role: "user" as const, content: "cambia el titular" }],
     tools: [],
     runTool: escribeLaPagina,
@@ -3065,6 +3065,12 @@ describe("la revisión del turno (H14)", () => {
       { modo: "una_pasada", cierre: "Hecho: titular nuevo." },
       { modo: "completa", cierre: "Listo, cambié el titular." },
     ]);
+  });
+
+  it("con la receta `una_pasada`, un turno grande también se revisa en una pasada", async () => {
+    const rev = revisor(async () => resultado([]));
+    await runAgentLoop({ ...base({ ...rev, receta: "una_pasada" }), openStream: trabaja(9) });
+    expect(rev.llamadas).toEqual([{ modo: "una_pasada", cierre: "Listo, cambié el titular." }]);
   });
 
   it("🔴 hasta 4 pasos no se revisa: un cambio de título no dispara nada", async () => {

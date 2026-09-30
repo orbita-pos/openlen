@@ -32,7 +32,11 @@ const base = { peticion: "cambia el titular", diff: "--- a/index.html\n+++ b/ind
 
 describe("cuándo se revisa", () => {
   it("hasta 4 pasos nada; de 5 a 9 una pasada; de 10 en adelante la completa", () => {
-    expect([1, 4, 5, 9, 10, 40].map(modoDeRevision)).toEqual([null, null, "una_pasada", "una_pasada", "completa", "completa"]);
+    expect([1, 4, 5, 9, 10, 40].map((p) => modoDeRevision(p))).toEqual([null, null, "una_pasada", "una_pasada", "completa", "completa"]);
+  });
+
+  it("con la receta `una_pasada` (el esfuerzo bajo de Claude Code) nunca hay receta completa, y la puerta de pasos no cambia", () => {
+    expect([1, 4, 5, 9, 10, 40].map((p) => modoDeRevision(p, "una_pasada"))).toEqual([null, null, "una_pasada", "una_pasada", "una_pasada", "una_pasada"]);
   });
 });
 

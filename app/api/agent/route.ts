@@ -30,7 +30,7 @@ import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { diffDelTurno } from "@/lib/agent/revision/diff-del-turno";
 import { ficherosDelTurno } from "@/lib/agent/revision/linea-base";
-import { MENSAJES_ANTERIORES, revisarTurno } from "@/lib/agent/revision/revisar-turno";
+import { AJUSTES_DE_REVISION, MENSAJES_ANTERIORES, revisarTurno } from "@/lib/agent/revision/revisar-turno";
 import { correrSubagente, declaracionesDeSoloLectura } from "@/lib/agent/subagente";
 import {
   historialDesdeLaBase,
@@ -869,6 +869,7 @@ export async function POST(req: Request): Promise<Response> {
           ...(process.env.OPENLEN_REVISION === "1"
             ? {
                 revision: {
+                  receta: AJUSTES_DE_REVISION.receta,
                   revisar: async ({ modo, cierre }: { modo: "una_pasada" | "completa"; cierre: string }) => {
                     const empezo = Date.now();
                     const fila = await deps.loadProject(projectId, userId);
@@ -890,7 +891,8 @@ export async function POST(req: Request): Promise<Response> {
                       tools: soloLectura,
                       requestId: projectId,
                       signal: upstreamAbort.signal,
-                      esfuerzoDelTurno,
+                      // Cuánto piensa el revisor: el de Len salvo que el ajuste diga otro.
+                      esfuerzoDelTurno: AJUSTES_DE_REVISION.esfuerzo ?? esfuerzoDelTurno,
                       esfuerzoDelUsuario,
                     });
                     const r = await revisarTurno({
@@ -915,6 +917,7 @@ export async function POST(req: Request): Promise<Response> {
                           closeOut: (m) =>
                             conSenales(streamWithRetry(() => cerebro.closeOut(m), { signal: upstreamAbort.signal }), reloj.vivo),
                           leer: (name, args) => runAgentTool(sesion, deps, name, args),
+                          ...(AJUSTES_DE_REVISION.vueltas !== null ? { maxVueltas: AJUSTES_DE_REVISION.vueltas } : {}),
                         });
                       },
                     });

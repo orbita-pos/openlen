@@ -9,6 +9,7 @@ import type { AgentLoopArgs } from "@/lib/agent/loop";
 import type { VisualVerdict } from "@/lib/agent/verify";
 import { documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { comoLoGuarda } from "@/lib/agent/revision/linea-base";
+import { AJUSTES_DE_REVISION } from "@/lib/agent/revision/revisar-turno";
 
 /**
  * EL VEREDICTO DE LOS OJOS, TIPADO — para que un campo nuevo rompa el
@@ -1305,6 +1306,8 @@ describe("POST /api/agent — la revisión del turno (H14)", () => {
 
   it("el diff sale de lo que el turno escribió, cómo estaba al empezar y cómo está en la base", async () => {
     const revision = await capturar(escribeLaHome);
+    // La receta la manda el ajuste, el único sitio donde se cambia.
+    expect(revision!.receta).toBe(AJUSTES_DE_REVISION.receta);
     const r = await revision!.revisar({ modo: "una_pasada", cierre: "Listo, titular nuevo." });
     expect(r).toMatchObject({ modo: "una_pasada", hallazgos: [], llamadas: 1, fallos: 0 });
     expect(subagentes).toHaveLength(1);

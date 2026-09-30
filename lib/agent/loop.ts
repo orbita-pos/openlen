@@ -37,6 +37,7 @@ import {
   avisoDeRevision,
   modoDeRevision,
   type ModoDeRevision,
+  type Receta,
   type ResultadoRevision,
 } from "@/lib/agent/revision/revisar-turno";
 
@@ -400,6 +401,9 @@ export interface AgentLoopArgs {
    * `AgentLoopResult.revision`.
    */
   revision?: {
+    /** Qué receta toca en los turnos grandes (`AJUSTES_DE_REVISION`); sin ella,
+     *  la de la ficha, por pasos. */
+    readonly receta?: Receta;
     revisar(o: { readonly modo: ModoDeRevision; readonly cierre: string }): Promise<ResultadoRevision | null>;
   };
 }
@@ -1256,7 +1260,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    */
   const revisar = async (): Promise<boolean> => {
     if (!args.revision || yaSeReviso) return false;
-    const modo = modoDeRevision(turns);
+    const modo = modoDeRevision(turns, args.revision.receta);
     if (!modo || ultimaPorPagina.size === 0) return false;
     if (mutatingTurns >= maxTurns || budgetedToolCalls >= maxToolCalls) return false;
     yaSeReviso = true;

@@ -46,7 +46,7 @@ describe("el subagente de solo lectura", () => {
         return { response: { ok: true, tool_result: "1\t<h1>x</h1>" } };
       },
     });
-    expect(r).toEqual({ ok: true, texto: "[]", uso: { inputTokens: 200, outputTokens: 12, cachedTokens: 80, thinkingTokens: 0 } });
+    expect(r).toEqual({ ok: true, texto: "[]", uso: { inputTokens: 200, outputTokens: 12, cachedTokens: 80, thinkingTokens: 0 }, vueltas: 2 });
     expect(leidas).toEqual(["Read /index.html"]);
     // Contexto limpio: su prompt y sus mensajes, en orden, y nada más.
     expect(g.vistos[0]).toEqual([
@@ -133,6 +133,25 @@ describe("el subagente de solo lectura", () => {
     expect(cierres).toHaveLength(1);
     expect(cierres[0].at(-1)).toEqual({ role: "user", content: CONTESTA_YA });
     expect(r.ok && r.texto).toContain('"line": 3');
+  });
+
+  it("quien lo lanza puede toparlo antes (`maxVueltas`), y la respuesta dice cuántas vueltas dio", async () => {
+    const g = guion(llama("Grep", { pattern: "x" }));
+    const r = await correrSubagente({
+      sistema: "s",
+      mensajes: ["t"],
+      declaraciones,
+      openStream: g.abrir,
+      closeOut: () =>
+        (async function* () {
+          yield* dice("[]");
+        })(),
+      leer: async () => ({ response: { ok: true } }),
+      maxVueltas: 2,
+    });
+    expect(g.llamadas).toBe(2);
+    // Las 2 con herramientas y la de contestar.
+    expect(r).toMatchObject({ ok: true, texto: "[]", vueltas: 3 });
   });
 
   it("si el modelo se cae, no es una respuesta: `ok: false` con el motivo, y el uso que hubo", async () => {
