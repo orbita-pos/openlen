@@ -22,6 +22,7 @@ import { REGRESION } from "@/lib/len-bench/casos/dev/regresion";
 import { cargarEncargos, type Juego } from "@/lib/len-bench/casos/cargar";
 import { avisosDelEncargo } from "@/lib/len-bench/avisos";
 import { MAX_RESPUESTAS_POR_PASO } from "@/lib/len-bench/cliente-simulado";
+import { centimosDelEstimado, estimadoExcedeTope } from "@/lib/len-bench/coste";
 import type { ResultadoDeCaso, ResultadoDeCorrida } from "@/lib/len-bench/tipos";
 
 // MEDIDO en el humo del 2026-09-23 (taqueria-menu-whatsapp, 1 corrida): $0,0125
@@ -67,10 +68,13 @@ async function main(): Promise<number> {
 
   const turnos = encargos.reduce((s, e) => s + e.guion.length * (1 + MAX_RESPUESTAS_POR_PASO), 0) * runs;
   const estimado = turnos * USD_POR_TURNO_ESTIMADO * MARGEN_NO_GRABADO;
+  // En céntimos y hacia arriba: ver `estimadoExcedeTope`. Se imprime la MISMA
+  // cifra que se compara, así que declarar lo que se lee siempre pasa.
+  const estimadoImpreso = (centimosDelEstimado(estimado) / 100).toFixed(2);
   console.log(`Len-Bench · juego=${juego} · ${encargos.length} encargo(s) × ${runs} corrida(s)`);
-  console.log(`Estimado PESIMISTA: ~$${estimado.toFixed(2)} (hasta ${turnos} turnos × $${USD_POR_TURNO_ESTIMADO} × margen ${MARGEN_NO_GRABADO})`);
+  console.log(`Estimado PESIMISTA: ~$${estimadoImpreso} (hasta ${turnos} turnos × $${USD_POR_TURNO_ESTIMADO} × margen ${MARGEN_NO_GRABADO})`);
   console.log(`Tope de gasto: $${tope.toFixed(2)}`);
-  if (estimado > tope) throw new Error(`RECHAZADO: el estimado ($${estimado.toFixed(2)}) excede el tope. Decláralo: --budget-usd=${(estimado + 0.01).toFixed(2)}`);
+  if (estimadoExcedeTope(estimado, tope)) throw new Error(`RECHAZADO: el estimado ($${estimadoImpreso}) excede el tope. Decláralo: --budget-usd=${estimadoImpreso}`);
   if (arg("--yes") === undefined) {
     console.log("Esto GASTA dinero real del proveedor. Vuelve a correr con --yes.");
     return 0;

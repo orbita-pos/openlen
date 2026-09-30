@@ -6,7 +6,13 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { rateFor, usdDeTurno } from "@/lib/ai/tarifas-eval";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
-import { tarifaDelModelo, usdDeGrabacion, usdDeProyecto } from "./coste";
+import {
+  centimosDelEstimado,
+  estimadoExcedeTope,
+  tarifaDelModelo,
+  usdDeGrabacion,
+  usdDeProyecto,
+} from "./coste";
 
 const T = () => rateFor(MODEL_POLICY.agent.modelId);
 
@@ -48,5 +54,34 @@ describe("usdDeGrabacion / usdDeProyecto", () => {
     const r = usdDeProyecto(dir, "proyectoA");
     expect(r.grabaciones).toBe(1);
     expect(r.usd).toBeCloseTo(usdDeTurno({ entrada: 1000, cacheada: 0, salida: 0 }, T()), 12);
+  });
+});
+
+// El estimado del corredor es `turnos × 0,01 × 1,5`, y así se calcula aquí:
+// con la MISMA aritmética de coma flotante, no con el número ya limpio.
+const estimadoDe = (turnos: number) => turnos * 0.01 * 1.5;
+
+describe("el estimado contra el tope, en céntimos", () => {
+  // El caso del 2026-09-30: 4 encargos, 5 pasos, 20 turnos → 0,30000000000000004.
+  it("🔴 un tope IGUAL al estimado que se imprime pasa", () => {
+    expect(estimadoDe(20)).toBeGreaterThan(0.3); // el ruido existe
+    expect(estimadoExcedeTope(estimadoDe(20), 0.3)).toBe(false);
+  });
+
+  // CONTRA-PRUEBA: el arreglo no puede dejar pasar un tope que SÍ se queda corto.
+  it("un tope un céntimo por debajo sigue rechazándose", () => {
+    expect(estimadoExcedeTope(estimadoDe(20), 0.29)).toBe(true);
+  });
+
+  // 3 turnos = 0,045, que `toFixed(2)` imprime 0,04: el pesimista salía a la baja.
+  it("el medio céntimo se redondea hacia ARRIBA", () => {
+    expect(centimosDelEstimado(estimadoDe(3))).toBe(5);
+    expect(estimadoExcedeTope(estimadoDe(3), 0.04)).toBe(true);
+    expect(estimadoExcedeTope(estimadoDe(3), 0.05)).toBe(false);
+  });
+
+  it("y el ruido de la coma flotante no inventa un céntimo", () => {
+    expect(centimosDelEstimado(estimadoDe(20))).toBe(30);
+    expect(centimosDelEstimado(estimadoDe(36))).toBe(54);
   });
 });

@@ -9,9 +9,11 @@
 // Los precios salen de lib/ai/tarifas-eval.ts, lo mismo que usan los demás
 // corredores de pago: aquí no se escribe una sola cifra.
 //
-// ⚠️ Lo que NO está aquí: las llamadas de los ojos (visión) y las del juez del
-// objetivo no pasan por la grabadora. Por eso el tope de gasto del corredor
-// multiplica esta cifra por un margen, en vez de fiarse de ella a secas.
+// ⚠️ Lo que NO está aquí: las llamadas con visión (`describir`, que Len pide
+// cuando quiere) no pasan por la grabadora. Por eso el tope de gasto del
+// corredor multiplica esta cifra por un margen, en vez de fiarse de ella a
+// secas. (Hasta Len 2.1 también los ojos al cerrar y el juez del objetivo:
+// los ojos ya no llaman a la visión y el objetivo se retiró.)
 
 import fs from "node:fs";
 import path from "node:path";
@@ -59,4 +61,25 @@ export function usdDeProyecto(dir: string, projectId: string): { usd: number; gr
     grabaciones++;
   }
   return { usd, grabaciones };
+}
+
+/**
+ * EL ESTIMADO, EN CÉNTIMOS Y HACIA ARRIBA.
+ *
+ * El corredor comparaba `turnos × 0,01 × 1,5 > tope` en coma flotante, y 20
+ * turnos dan 0,30000000000000004: MAYOR que 0,30. Así que el tope que el propio
+ * corredor imprimía («~$0.30») se rechazaba y pedía 0,31 (humo de contratos,
+ * 2026-09-30). Y al revés con los medios céntimos: 3 turnos dan 0,045, que
+ * `toFixed(2)` imprime como 0,04 — el estimado PESIMISTA salía redondeado a la
+ * baja. Se cuenta en céntimos enteros, redondeando hacia arriba, con una
+ * holgura de 1e-9 para que el ruido de la coma flotante no invente un céntimo.
+ */
+export function centimosDelEstimado(usd: number): number {
+  return Math.ceil(usd * 100 - 1e-9);
+}
+
+/** ¿El estimado pasa del tope declarado? En céntimos: el tope lo teclea una
+ *  persona con dos decimales, y así es como se compara. */
+export function estimadoExcedeTope(estimadoUsd: number, topeUsd: number): boolean {
+  return centimosDelEstimado(estimadoUsd) > Math.round(topeUsd * 100);
 }
