@@ -121,6 +121,24 @@ test("og card: the ellipsis never cuts a word nor overruns the line", () => {
   for (const ln of lines) assert.ok(ln.length <= 22, `line too long: ${ln}`);
 });
 
+// Real titles from the repo's templates: 26 of the 118 that get an ellipsis
+// left a separator hanging in front of it ("bodas ·…", "Order,…", "topic.…").
+test("og card: no separator is left hanging before the ellipsis", () => {
+  const card = (title: string) => cardLines(ensurePageMeta(DOC("", NO_IMAGE_BODY), { title }));
+  assert.deepEqual(card("Roble & Luz — Fotografía de bodas · Guadalajara"), [
+    "Roble & Luz —",
+    "Fotografía de bodas…",
+  ]);
+  assert.deepEqual(card("Daybreak Coffee — Roasted to Order, Shipped in 48 Hours"), [
+    "Daybreak Coffee —",
+    "Roasted to Order…",
+  ]);
+  assert.deepEqual(card("Roundtable — One day. One topic. Operational depth."), [
+    "Roundtable — One day.",
+    "One topic…",
+  ]);
+});
+
 test("og card: idempotent with a long, wrapped title", () => {
   const title = "Herencias y sucesiones — FUERO · Estudio jurídico";
   const once = ensurePageMeta(DOC("", NO_IMAGE_BODY), { title });

@@ -373,6 +373,8 @@ function wrapTitle(text: string, maxChars: number, maxLines: number): string[] {
       last = last.slice(0, last.lastIndexOf(" "));
     }
     if (last.length > maxChars - 1) last = last.slice(0, maxChars - 1).trim();
+    // No separator left hanging in front of it ("bodas ·…", "Order,…").
+    last = last.replace(/[\s,;:.·•|/–—-]+$/, "");
     lines[lines.length - 1] = `${last}…`;
   }
   return lines.length ? lines : [text.slice(0, maxChars)];
