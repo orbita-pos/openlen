@@ -114,7 +114,7 @@ export const en: Diccionario = {
     },
     tarjeta: {
       antetitulo: "Len 2.0 · September 2026",
-      titulo: "Nineteen tools, one developer",
+      titulo: "Fifteen tools, one developer",
       texto:
         "It works on your site the way a programmer works on code: every page is a file it reads, searches and changes precisely. And before handing it over, it uses the page the way a visitor would: it clicks, types, reloads and looks at what happened.",
       como: "How it works →",
@@ -127,7 +127,7 @@ export const en: Diccionario = {
         leer: {
           titulo: "Read and search",
           texto:
-            "Every page is a file: it reads it, searches the whole site for the detail it is about to change, reads the web pages you hand it and loads the tools it rarely uses when it needs them.",
+            "Every page is a file: it reads it, searches the whole site for the detail it is about to change and reads the web pages you hand it.",
         },
         editar: {
           titulo: "Write",
@@ -137,12 +137,12 @@ export const en: Diccionario = {
         datos: {
           titulo: "Data and modules",
           texto:
-            "It turns on the chat — a real OpenLen module, not a painted form — and connects live data. What your page stores —a catalog, some reviews, some orders— lives in data files that survive a reload.",
+            "It turns on the chat — a real OpenLen module, not a painted form. What your page stores —a catalog, some reviews, some orders— lives in data files that survive a reload.",
         },
         contigo: {
           titulo: "With you",
           texto:
-            "It asks you for the detail it’s missing instead of making it up, organizes the work in a task list, proposes goals, prepares your marketing and publishes.",
+            "It asks you for the detail it’s missing instead of making it up, organizes the work in a task list and publishes.",
         },
       },
     },
