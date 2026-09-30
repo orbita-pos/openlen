@@ -74,7 +74,8 @@ describe("las superficies hornean lo mismo, o está declarado", () => {
     // La ampliación del 2026-09-15, sujeta con nombres concretos: sin esto,
     // alguien podría estrechar el patrón otra vez y el guardián seguiría verde
     // vigilando un tercio de la tubería.
-    for (const n of ["wirePublishedForms", "applyLiveData", "injectAnalyticsSnippet", "sealRelease", "stripOpIds"]) {
+    // (`applyLiveData` estaba en esta lista; se fue con datos vivos en Len 2.1.)
+    for (const n of ["wirePublishedForms", "injectAnalyticsSnippet", "sealRelease", "stripOpIds"]) {
       expect(publicar.has(n), `el extractor ya no ve ${n}`).toBe(true);
     }
   });

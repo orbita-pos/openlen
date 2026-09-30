@@ -43,16 +43,12 @@ Edit, then `systemctl restart openlen-app`. Full reference: `infra/app/env.examp
 - **`BROADCAST_POSTAL_ADDRESS`** — CAN-SPAM postal address stamped into every
   Broadcast email. The Send route returns 503 until this is set (required only
   to use the Broadcast module).
-- **`OPENLEN_INTERNAL_SECRET`** — machine-to-machine secret for the datos-vivos
-  hourly refresh (`POST /api/internal/live-republish`, localhost-only). Generate
-  with `openssl rand -base64 32`. The route is **fail-closed**: unset ⇒ every
-  call 401s and the hourly Sheet refresh never runs (pages freeze at
-  last-publish values). After setting it, install + enable the timer (bundled by
-  `install-app.sh`): `systemctl enable --now openlen-live-republish.timer`.
-  Without both, `conectar_datos_vivos` still bakes current Sheet values at
-  publish, but the "se actualiza sola cada hora" promise is dark.
+- **`OPENLEN_INTERNAL_SECRET`** — machine-to-machine secret for the internal
+  routes (localhost-only). Generate with `openssl rand -base64 32`. They are
+  **fail-closed**: unset ⇒ every call 401s. (Nació para el refresco horario de
+  datos vivos, retirado en Len 2.1.)
 
-  El MISMO secreto abre `POST /api/internal/republish-templates` (2026-09-02),
+  Abre `POST /api/internal/republish-templates` (2026-09-02),
   que reconcilia la galería con las fuentes que el deploy deja en
   `/opt/openlen-app/templates-starter/`. **No tiene timer: se corre a mano,
   después de un deploy que lleve plantillas editadas.** No se puede hacer desde
@@ -118,6 +114,16 @@ Does: local `next build` → tar → scp to the box → `billing:migrate` →
 rebuild the Rust `.node` crates on the box → atomic swap → restart
 `openlen-app`. Slowest part is the crate rebuild (~5–15 min on the CX22).
 To skip the rebuild when crates are unchanged: `$env:OPENLEN_SKIP_CRATES_REBUILD=1`.
+
+**Una sola vez, en el primer deploy de Len 2.1** (datos vivos se retiró): el
+timer horario sigue instalado en la caja y, sin la ruta, fallaría cada hora.
+Tras el deploy, en la caja:
+
+```bash
+systemctl disable --now openlen-live-republish.timer
+rm /etc/systemd/system/openlen-live-republish.service /etc/systemd/system/openlen-live-republish.timer
+systemctl daemon-reload
+```
 
 **Rollback** (if a deploy goes bad):
 ```bash

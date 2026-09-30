@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { sendChatNotificationEmail, sendLiveSheetBrokenEmail } from "@/lib/email";
+import { sendChatNotificationEmail } from "@/lib/email";
 import type { NotificationChannel, NotificationEvent, DeliveryResult } from "../types";
 
 export const emailChannel: NotificationChannel = {
@@ -35,24 +35,16 @@ export const emailChannel: NotificationChannel = {
     const projectTitle = projectRows[0]?.title ?? event.projectId;
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com";
 
-    // Throws on Resend error → caller can retry (both branches)
-    if (event.type === "chat_message") {
-      await sendChatNotificationEmail({
-        to: email,
-        ownerName,
-        senderName: event.senderName,
-        messageBody: event.preview,
-        deskUrl: `${siteUrl}/inbox`,
-        projectTitle,
-      });
-    } else {
-      await sendLiveSheetBrokenEmail({
-        to: email,
-        projectTitle,
-        missingCount: event.missingCount,
-        editorUrl: `${siteUrl}/new?project=${event.projectId}`,
-      });
-    }
+    // Throws on Resend error → caller can retry. (Hasta Len 2.1 había otra
+    // rama, la del Sheet de datos vivos que dejó de leerse.)
+    await sendChatNotificationEmail({
+      to: email,
+      ownerName,
+      senderName: event.senderName,
+      messageBody: event.preview,
+      deskUrl: `${siteUrl}/inbox`,
+      projectTitle,
+    });
 
     return "sent";
   },

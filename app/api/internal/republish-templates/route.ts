@@ -16,7 +16,7 @@ import {
 // con lo que sirve R2. Disparado a mano con curl desde la caja, NO expuesto
 // públicamente.
 //
-// CORRE EN PROCESO, igual que /api/internal/live-republish y por el mismo
+// CORRE EN PROCESO, igual que /api/internal/republish y por el mismo
 // motivo: `upsertTemplate` → `findTemplateHtmlIssue` → `sanitizeForPublish`
 // arrastra los crates nativos (.node), que esbuild no puede empaquetar en un
 // .mjs standalone (ver scripts/build-cron.mjs). Aquí el server ya los tiene
@@ -27,7 +27,7 @@ import {
 //
 // LA AUTENTICACIÓN NO PUEDE SER `requireAdmin`: es de SESIÓN (auth() +
 // users.role), así que no se puede automatizar sin una cookie. `x-internal-secret`
-// es el mismo mecanismo que systemd ya usa para el timer de datos vivos.
+// es el mismo mecanismo que usaba el timer de datos vivos (retirado en Len 2.1).
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 300; // 19 subidas a R2 + 19 upserts

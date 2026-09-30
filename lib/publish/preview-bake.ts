@@ -6,7 +6,7 @@
 // Scope: exactly the module UI bakes (collections grid, assistant, comments,
 // bookings, chat, video lightbox, WhatsApp FAB) with the SAME
 // gates, ordering and stacking as publishToDir — deliberately excluding the
-// impure/publish-only steps (asset/font migration, live-data fetch, analytics,
+// impure/publish-only steps (asset/font migration, analytics,
 // canonical/SEO, CSP seal, sign-in link wiring). Widget runtimes fetch their
 // APIs from the visitor's browser; on an unpublished draft those calls no-op
 // and the widget renders its static shell, which is what a preview needs.

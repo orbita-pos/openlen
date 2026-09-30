@@ -15,7 +15,7 @@
  *
  * TAMPOCO SE PODÍA BUNDLEAR LA CLI. `upsertTemplate` → `findTemplateHtmlIssue`
  * → `sanitizeForPublish` arrastra el crate nativo, el mismo muro que
- * `scripts/build-cron.mjs` documenta para `live-republish.ts`: esbuild no puede
+ * `scripts/build-cron.mjs` documenta (nació con el `live-republish.ts` de datos vivos): esbuild no puede
  * empaquetar un `.node` en un `.mjs` standalone.
  *
  * La salida es la que ya se usó allí: correr EN PROCESO con la app, donde los

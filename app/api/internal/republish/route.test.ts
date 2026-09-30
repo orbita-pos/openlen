@@ -3,7 +3,8 @@
 // Guard + contrato de la ruta interna de republicación selectiva (backfill
 // ops). Mockea la DB y lib/projects: la cadena de imports arrastra el binding
 // nativo @openlen/html-engine que vitest no puede cargar (mismo criterio que
-// live-republish/route.test.ts). Los caminos 401/400 regresan antes de tocar
+// el viejo live-republish/route.test.ts, retirado en Len 2.1). Los caminos
+// 401/400 regresan antes de tocar
 // cualquier dependencia.
 import { describe, it, expect, vi, beforeEach } from "vitest";
 

@@ -196,8 +196,8 @@ export async function runJob(jobId: string): Promise<void> {
   const event = payload as unknown as NotificationEvent;
 
   // 1. Presence re-check — if staff is live on the Desk, skip silently. This
-  //    is a CHAT-ONLY optimization: for live_sheet_broken the owner must hear
-  //    about a broken data source even if staff happens to be online.
+  //    is a CHAT-ONLY optimization: any other event (today, `len_turno`) must
+  //    reach the owner even if staff happens to be online.
   if (event.type === "chat_message") {
     const agentIds = await listAgentUserIds(event.projectId);
     if (hub.isProjectStaffOnline(event.projectId, event.recipientUserId, agentIds)) {

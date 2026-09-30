@@ -885,10 +885,8 @@ export async function publishProject(
   // ⚰️ Aquí se leían los items del catálogo para hornearlos. Se va con el
   // horneado el 2026-08-29: un catálogo es ahora un almacén de `lectura`, y sus
   // filas las mete `horneaLectura` unas líneas más arriba.
-  // Datos vivos: la URL del Sheet vive en settings.liveData (tipado formal en
-  // lib/projects/types.ts). Ausente = sin Sheet configurado, y applyLiveData
-  // ya trata eso como no-op.
-  const liveDataCfg = project.data?.settings?.liveData ?? null;
+  // ⚰️ Aquí se leía `settings.liveData`, la hoja de datos vivos, para
+  // hornearla. Se retiró con la función en Len 2.1 (2026-09-30).
 
   // ⚰️ Aquí se buscaba el perfil del negocio para hornear la banda «Mis
   // plataformas». Se va con ella el 2026-08-29: era su único consumidor, así
@@ -910,7 +908,6 @@ export async function publishProject(
       assistant: project.data?.settings?.assistant?.enabled
         ? { enabled: true, businessName: project.title || v.value }
         : undefined,
-      liveData: liveDataCfg,
       chat: project.data?.settings?.chat?.enabled
         ? {
             enabled: true,

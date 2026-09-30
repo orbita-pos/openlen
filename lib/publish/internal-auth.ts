@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 
-/** Guard compartido de las rutas internas máquina-a-máquina (live-republish,
+/** Guard compartido de las rutas internas máquina-a-máquina (nació con live-republish,
  *  republish). Fail-closed: sin OPENLEN_INTERNAL_SECRET en el entorno, SIEMPRE
  *  rechaza. Comparación de tiempo constante; longitudes distintas rechazan sin
  *  comparar (timingSafeEqual lanza sobre buffers desiguales). */

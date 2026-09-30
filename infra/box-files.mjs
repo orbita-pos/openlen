@@ -51,8 +51,8 @@ export const BOX_FILES = [
   // `infra:drift` reventara con ENOENT en vez de comparar nada — una guarda
   // que revienta no vigila.
   { repo: "infra/edge/openlen-edge.service", box: "/etc/systemd/system/openlen-edge.service" },
-  { repo: "infra/app/openlen-live-republish.service", box: "/etc/systemd/system/openlen-live-republish.service" },
-  { repo: "infra/app/openlen-live-republish.timer", box: "/etc/systemd/system/openlen-live-republish.timer" },
+  // Datos vivos salió en Len 2.1 (2026-09-30), como Reservas: sus dos unidades
+  // se borran del repo y, en el deploy, de la caja (DEPLOY_RUNBOOK §1).
   { repo: "infra/app/openlen-notifications-drain.service", box: "/etc/systemd/system/openlen-notifications-drain.service" },
   { repo: "infra/app/openlen-notifications-drain.timer", box: "/etc/systemd/system/openlen-notifications-drain.timer" },
 ];

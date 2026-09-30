@@ -55,9 +55,6 @@ export const SOLO_AL_PUBLICAR: Readonly<Record<string, string>> = {
   injectAnalyticsSnippet:
     "el latido que cuenta visitas. Fuera de la publicada contaría al dueño " +
     "mirando su propia página como si fuera tráfico.",
-  applyLiveData:
-    "sustituye las filas de datos vivos leídas de la base. Se ve lo último " +
-    "guardado, que es justo lo que el dueño está editando.",
 
   // ── No cambian lo que se ve ──────────────────────────────────────────────
   bakeMediaPreconnect:

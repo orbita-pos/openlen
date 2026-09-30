@@ -126,8 +126,9 @@ function emit(n: Node, out: Cell[]): void {
       // se conoce antes de empezar. Es la forma de CEL, y es la razón de que el
       // lenguaje siga sin ser Turing-completo.
       //
-      // No se DESENROLLA en la ingestión a propósito: OpenLen ya tiene listas
-      // que vienen de una Google Sheet (Datos Vivos), y desenrollar ataría la
+      // No se DESENROLLA en la ingestión a propósito: OpenLen tiene listas que
+      // crecen solas (los almacenes de /datos; hasta Len 2.1 también las de una
+      // Google Sheet, Datos Vivos), y desenrollar ataría la
       // fórmula al largo que la lista tenía el día que se ingirió — el día que
       // crezca, la página mentiría en silencio. `MAX_NODES` además reventaría
       // con cualquier lista mediana.

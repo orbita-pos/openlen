@@ -64,10 +64,8 @@ install -m 644 "${SCRIPT_DIR}/openlen-backup.timer"   /etc/systemd/system/openle
 # caida de verdad habria parecido lo mismo de siempre.
 install -m 644 "${SCRIPT_DIR}/openlen-analytics-rollup.service"  /etc/systemd/system/openlen-analytics-rollup.service 2>/dev/null || true
 install -m 644 "${SCRIPT_DIR}/openlen-analytics-rollup.timer"    /etc/systemd/system/openlen-analytics-rollup.timer   2>/dev/null || true
-# Datos vivos — hourly self-refresh: curls the internal republish endpoint so
-# pages bound to a Google Sheet pick up cell edits (needs OPENLEN_INTERNAL_SECRET).
-install -m 644 "${SCRIPT_DIR}/openlen-live-republish.service"    /etc/systemd/system/openlen-live-republish.service   2>/dev/null || true
-install -m 644 "${SCRIPT_DIR}/openlen-live-republish.timer"      /etc/systemd/system/openlen-live-republish.timer     2>/dev/null || true
+# (Datos vivos y su timer horario, openlen-live-republish, se retiraron en
+# Len 2.1, 2026-09-30.)
 # DR frío — nightly system backup (uploads + DB + /etc/openlen + manifest).
 install -m 644 "${SCRIPT_DIR}/openlen-backup-system.service"    /etc/systemd/system/openlen-backup-system.service    2>/dev/null || true
 install -m 644 "${SCRIPT_DIR}/openlen-backup-system.timer"      /etc/systemd/system/openlen-backup-system.timer      2>/dev/null || true
@@ -86,7 +84,6 @@ systemctl enable openlen-app.service
 # Enable manually with: systemctl enable --now openlen-backup.timer
 # The rollup timer is safe to enable once the app env is set:
 #   systemctl enable --now openlen-analytics-rollup.timer
-#   systemctl enable --now openlen-live-republish.timer     # needs OPENLEN_INTERNAL_SECRET set
 
 echo
 echo "✓ App scaffolding installed."

@@ -2,7 +2,8 @@
 //
 // Se mockea `@/lib/templates/store` porque su cadena de imports llega a
 // `admin-schemas` → `sanitizeForPublish` → el binding nativo @openlen/html-engine,
-// que vitest no puede cargar (mismo motivo que el test de live-republish).
+// que vitest no puede cargar (el mismo motivo que tenía el de live-republish,
+// retirado con datos vivos en Len 2.1).
 // `findTemplateHtmlIssue` se mockea por lo mismo; su comportamiento real ya lo
 // cubren las pruebas de admin-schemas.
 import { describe, it, expect, vi, beforeEach } from "vitest";

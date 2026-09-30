@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { transformEnabled, liveDataEnabled, thumbnailsEnabled } from "./kill-switches";
+import { transformEnabled, thumbnailsEnabled } from "./kill-switches";
 
 // ⚰️ El describe de OPENLEN_BEHAVIORS/CAROUSEL se fue el 2026-08-31 con sus dos
 // predicados: gobernaban horneados que salieron de publicar el 2026-08-26, y su
@@ -17,15 +17,8 @@ describe("kill-switches — OPENLEN_TRANSFORM", () => {
   });
 });
 
-// Datos vivos (Task 1, spec 2026-07-14): mismo contrato que los de arriba —
-// "0" apaga, todo lo demás enciende (default ON).
-describe("kill-switches — OPENLEN_LIVE_DATA", () => {
-  it('"0" apaga; ausente o cualquier otro valor enciende', () => {
-    expect(liveDataEnabled({})).toBe(true);
-    expect(liveDataEnabled({ OPENLEN_LIVE_DATA: "0" })).toBe(false);
-    expect(liveDataEnabled({ OPENLEN_LIVE_DATA: "1" })).toBe(true);
-  });
-});
+// ⚰️ Aquí se probaba `OPENLEN_LIVE_DATA`, la palanca de datos vivos, retirada
+// con la función en Len 2.1 (2026-09-30).
 
 // La miniatura (2026-09-13). Mismo contrato que los de arriba, y con la misma
 // prueba, que es el punto: un interruptor que no se comprueba es un interruptor

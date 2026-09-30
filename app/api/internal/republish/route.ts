@@ -7,7 +7,7 @@ import { internalSecretOk } from "@/lib/publish/internal-auth";
 // Republicación selectiva por ids — herramienta de OPS para backfills (p.ej.
 // tras re-escribir project.data.html en la DB, las páginas publicadas
 // necesitan re-hornearse al disco del box). Corre EN PROCESO igual que
-// live-republish (crates nativos ya cargados). Solo toca proyectos que YA
+// el viejo live-republish de datos vivos (crates nativos ya cargados). Solo toca proyectos que YA
 // están publicados: nunca publica un borrador ni reclama subdominios.
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;

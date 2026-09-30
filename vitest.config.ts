@@ -459,11 +459,6 @@ export default defineConfig({
       "lib/publish/tw-config.test.ts",
       "lib/publish/design-stash-strip.test.ts",
       "lib/transform/**/*.test.ts",
-      // Datos vivos (spec 2026-07-14) — el directorio aún no existe (Task 1
-      // solo prepara el terreno). Listado por adelantado porque el include
-      // de este repo es per-file: sin esta entrada, los tests que Task 2+
-      // agreguen bajo lib/live/ correrían silenciosamente en ningún lado.
-      "lib/live/**/*.test.ts",
       "lib/publish/chat-widget.test.ts",
       "lib/chat/**/*.test.ts",
       "lib/community/**/*.test.ts",
@@ -477,10 +472,6 @@ export default defineConfig({
       // so it never loads the native html-engine binding.
       "app/api/admin/explore-seed/route.test.ts",
       "app/api/admin/templates/[id]/route.test.ts",
-      // Route guard for the internal live-republish trigger (Task 12). Mocks
-      // lib/live/deps for the same reason — its import chain reaches the
-      // native html-engine binding via lib/projects.ts.
-      "app/api/internal/live-republish/route.test.ts",
       "app/api/internal/republish-templates/route.test.ts",
       "app/api/internal/republish/route.test.ts",
       // Fail-closed pin for one of the three edit surfaces on the html gate.

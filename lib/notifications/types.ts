@@ -7,14 +7,9 @@ export interface ChatMessageEvent {
   preview: string;
 }
 
-export interface LiveSheetBrokenEvent {
-  type: "live_sheet_broken";
-  projectId: string;
-  recipientUserId: string;
-  sheetUrl: string;
-  /** 0 = the sheet stopped returning rows entirely ("dejó de leerse"). */
-  missingCount: number;
-}
+// ⚰️ Aquí vivía `LiveSheetBrokenEvent` (`live_sheet_broken`, «tu Sheet dejó de
+// leerse»), el aviso de datos vivos. Se retiró con la función en Len 2.1
+// (2026-09-30); en producción quedaban 17 avisos, todos ya enviados.
 
 /** LEN 2.1 · un turno de Len terminó SIN NADIE MIRANDO: el cliente se fue y
  *  el turno siguió (ver `lib/agent/aviso-del-turno.ts`). Sólo push: un correo
@@ -30,7 +25,7 @@ export interface LenTurnoEvent {
   pregunta: boolean;
 }
 
-export type NotificationEvent = ChatMessageEvent | LiveSheetBrokenEvent | LenTurnoEvent;
+export type NotificationEvent = ChatMessageEvent | LenTurnoEvent;
 
 export interface NotificationPrefs {
   webPushEnabled: boolean;

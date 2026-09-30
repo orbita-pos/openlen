@@ -8,7 +8,7 @@
 // mismo orden: logo → asistente y chat → sello. Queda fuera, a propósito:
 //   · formularios (`wirePublishedForms`): cada envío sería un lead real;
 //   · analítica y tira de rastreo: contarían al dueño;
-//   · fuentes e imágenes a disco, datos vivos, idiomas: tocan red o disco.
+//   · fuentes e imágenes a disco, idiomas: tocan red o disco.
 // Esas diferencias las enumera la spec, y el lienzo avisa de las que se notan.
 //
 // ⚠️ NO SE PUEDE IMPORTAR EN EL CLIENTE: `sealRelease` e `injectLogoIntoHtml`

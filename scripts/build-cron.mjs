@@ -23,16 +23,11 @@ const common = {
 const targets = [
   { entry: "scripts/analytics/rollup-daily.ts", out: ".next/standalone/cron/analytics-rollup.mjs" },
   { entry: "scripts/notifications-drain.ts", out: ".next/standalone/cron/notifications-drain.mjs" },
-  // NB (datos vivos, Task 12): scripts/live-republish.ts NO se bundlea aquí a
-  // propósito — importa publishProject, que arrastra los crates nativos
-  // (.node) cuyo `require` relativo esbuild no puede empaquetar en un .mjs
-  // standalone. La entrega en prod usa la opción (a): systemd
-  // (infra/app/openlen-live-republish.timer) hace curl a
-  // POST /api/internal/live-republish (app/api/internal/live-republish/route.ts),
-  // que corre EN PROCESO con la app — los crates nativos ya están cargados, sin
-  // bundling. El núcleo (lib/live/republish.ts) está probado; el script
-  // (scripts/live-republish.ts) corre vía `npm run live:republish` (tsx) solo
-  // para dev/prueba manual, nunca en prod.
+  // NB: lo que llama a publishProject NO se bundlea aquí — arrastra los crates
+  // nativos (.node), cuyo `require` relativo esbuild no puede empaquetar en un
+  // .mjs standalone. Esas tareas corren EN PROCESO con la app, detrás de una
+  // ruta interna (app/api/internal/republish*), con los crates ya cargados.
+  // (Así se hacía el refresco horario de datos vivos, retirado en Len 2.1.)
 ];
 
 for (const t of targets) {

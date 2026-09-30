@@ -20,7 +20,6 @@ import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
 import { widgetApiBase } from "@/lib/publish/base-host";
-import { applyLiveData } from "@/lib/live";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeMediaPreconnect } from "@/lib/publish/video-embed";
 import { optOutOfEmailObfuscation } from "@/lib/publish/cloudflare-email";
@@ -172,12 +171,6 @@ export interface PublishParams {
    *  page/locale variant. The owner's business brain never ships — the widget
    *  calls back to /api/assistant/<sub> which reads it server-side. */
   assistant?: AssistantBake;
-  /** Datos vivos (settings.liveData). When set, every publish rebakes the
-   *  page's `data-ol-live` markers from the owner's Google Sheet (cached,
-   *  never-throw — a stale/unreachable Sheet just leaves the HTML
-   *  unchanged). Absent/null → the markers are left as-is (no Sheet
-   *  configured). */
-  liveData?: { sheetUrl: string } | null;
   /** Pedidos por WhatsApp (settings.orders). When enabled with a usable number,
    *  collection cards bake «Agregar» buttons and the cart runtime is injected
    *  into every document that carries them. */
@@ -426,9 +419,6 @@ interface BakeDocumentCtx {
   assistant?: AssistantBake;
   /** Collections module. When enabled, the owner's item list is baked as STATIC
    *  HTML (grid/list of cards) at the placeholder, or appended. */
-  /** Datos vivos. When set, every `data-ol-live` marker is rebaked from the
-   *  owner's Google Sheet (cached, never-throw). */
-  liveData?: { sheetUrl: string } | null;
   /** WhatsApp button. When enabled with a usable number, a floating FAB is baked
    *  (suppressed if the profile contact widget is already present). */
   /** Pedidos por WhatsApp — cart over the collections buttons. */
@@ -534,17 +524,10 @@ async function bakeDocument(
   // permanente; ese limpiador se retiró el 2026-09-05. No es una regresión: un
   // placeholder de Colecciones sólo puede existir en una página que ya lo
   // llevaba de antes, y no queda nada capaz de poner uno nuevo.
-  // Datos vivos — rellena los marcadores data-ol-live desde el Google Sheet
-  // del dueño en cada publicación (applyLiveData es never-throw + kill-switch
-  // interno OPENLEN_LIVE_DATA). El valor va como texto ESCAPADO, así que es
-  // seguro tras el sanitizer. Fallback interno → migratedHtml sin cambios.
-  try {
-    const live = await applyLiveData(migratedHtml, ctx.liveData?.sheetUrl ?? null);
-    migratedHtml = live.html;
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn("[publishToDir] live data bake failed; publishing without it", err);
-  }
+  // ⚰️ Aquí se horneaban los datos vivos (`applyLiveData`): los marcadores
+  // `data-ol-live` se rellenaban desde el Google Sheet del dueño en cada
+  // publicación. Se retiró con la función en Len 2.1 (2026-09-30). Un marcador
+  // que quede en una página vieja se publica con su texto de respaldo.
 
   // Move LocalFs uploads to the subdomain's shared assets dir and rewrite
   // their URLs so the web tier serves them directly.
@@ -889,7 +872,6 @@ export async function publishToDir(
     analyticsEnabled: params.analyticsEnabled ?? true,
     logoUrl: params.logoUrl,
     assistant: params.assistant,
-    liveData: params.liveData,
     orders: params.orders,
     chat: params.chat,
   };

@@ -103,11 +103,12 @@ describe("CollectionsSettings sale del tipo de proyecto", () => {
   });
 
   // El módulo muerto tenía una hoja de cálculo propia que dejaba la colección
-  // de SOLO LECTURA. DATOS VIVOS ES OTRA COSA, vive en otro sitio de
-  // `settings`, y sigue viva: se llamaban parecido, que es justo por lo que
-  // esto se comprueba.
-  it("pero Datos vivos —que es otra hoja— sigue en pie", () => {
-    expect(leer("lib/projects/types.ts")).toMatch(/liveData\?: \{ sheetUrl: string \}/);
-    expect(existsSync(join(raiz, "lib/live/republish.ts"))).toBe(true);
+  // de SOLO LECTURA. Datos vivos era OTRA hoja, en otro sitio de `settings`, y
+  // esta prueba sujetaba que siguiera en pie. En Len 2.1 (2026-09-30) se retiró
+  // entera —0 de 118 proyectos la usaban— y la prueba pasa a lápida.
+  it("y Datos vivos —la otra hoja— tampoco vuelve", () => {
+    expect(leer("lib/projects/types.ts")).not.toMatch(/liveData\?: \{ sheetUrl: string \}/);
+    expect(existsSync(join(raiz, "lib/live"))).toBe(false);
+    expect(existsSync(join(raiz, "app/api/internal/live-republish"))).toBe(false);
   });
 });

@@ -57,8 +57,6 @@
     "i18n:gate": "npm run i18n:parity && npm run i18n:placeholders && npm run i18n:compile",
     "publish-host:gate": "tsx --env-file=.env.local scripts/qa/publish-host-gate.mjs",
     "pagina-viva:gate": "tsx --require ./scripts/test-node-server-only-shim.cjs scripts/qa/pagina-viva-born100-gate.mjs",
-    "live:ssrf": "tsx --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/qa/live-data-ssrf-gate.mts",
-    "live:republish": "tsx --env-file-if-exists=.env.local --tsconfig tsconfig.eval.json scripts/live-republish.ts",
     "transform:backfill": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/transform-backfill.ts",
     "cron:bundle": "node scripts/build-cron.mjs",
     "versions:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/versions-migrate.ts",

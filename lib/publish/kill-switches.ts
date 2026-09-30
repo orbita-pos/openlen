@@ -36,11 +36,8 @@ export function transformEnabled(env: EnvLike = process.env): boolean {
   return env.OPENLEN_TRANSFORM !== "0";
 }
 
-/** Datos vivos (spec 2026-07-14) — página publicada mostrando datos de un
- *  Google Sheet público, refrescados en horario. */
-export function liveDataEnabled(env: EnvLike = process.env): boolean {
-  return env.OPENLEN_LIVE_DATA !== "0";
-}
+// ⚰️ Aquí vivía `liveDataEnabled` (`OPENLEN_LIVE_DATA=0`), la palanca de datos
+// vivos. Se retiró con la función en Len 2.1 (2026-09-30).
 
 /**
  * Los objetivos de op `styles` y `head` (2026-08-22) — el CSS y la hoja de

@@ -106,19 +106,10 @@ export const webPushChannel: NotificationChannel = {
     const payload =
       event.type === "len_turno"
         ? await avisoDeLen(event)
-        : event.type === "chat_message"
-        ? {
+        : {
             title: event.senderName,
             body: event.preview,
             url: "/inbox?conv=" + event.conversationId,
-          }
-        : {
-            title: "Tu Sheet dejó de leerse",
-            body:
-              event.missingCount > 0
-                ? `${event.missingCount} datos de tu Sheet ya no se encuentran`
-                : "Tu página conservó el último valor",
-            url: `/new?project=${event.projectId}`,
           };
 
     const { sent, failed } = await sendPushToUser(event.recipientUserId, payload);

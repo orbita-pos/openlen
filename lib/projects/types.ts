@@ -91,11 +91,9 @@ export interface ProjectSettings {
   assistant?: AssistantSettings;
   /** Private chat module: per-project visitor chat. Absent = off. */
   chat?: ChatSettings;
-  /** Datos vivos: la página se rellena desde un Google Sheet público del dueño
-   *  en cada publicación/republicación programada. `sheetUrl` es la URL normal
-   *  del Sheet (compartido como "cualquiera con el link"); OpenLen lee su
-   *  export CSV público. Absent = sin datos vivos. Ver lib/live/. */
-  liveData?: { sheetUrl: string };
+  // ⚰️ Aquí vivía `liveData` (con su `sheetUrl`), la hoja de datos vivos.
+  // Se retiró con la función en Len 2.1 (2026-09-30); en producción no la tenía
+  // ningún proyecto. Una fila vieja que la lleve no rompe nada: nadie la lee.
   /** Marketing Kit tab state (register = user-picked giro). */
   marketing?: { register?: string; match?: boolean };
 }
