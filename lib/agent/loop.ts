@@ -31,6 +31,7 @@ import {
 import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/lib/agent/diagnosticos";
 import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
 import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
+import { esAdjuntoDelManual } from "@/lib/agent/ficheros/manual";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -1205,6 +1206,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    *  (con razón) a dar nada por cumplido. */
   const transcriptDelTurno = (): string =>
     messages
+      // El manual de la plataforma (/AGENTS.md) va como mensaje de usuario
+      // porque así lo adjunta el arnés, pero no lo dijo el usuario: son
+      // instrucciones, y el evaluador lo leería como una petición más.
+      .filter((m) => !(m.role === "user" && typeof m.content === "string" && esAdjuntoDelManual(m.content)))
       .map((m) => {
         const quien = m.role === "user" ? "USUARIO" : "AGENTE";
         const texto = typeof m.content === "string" ? m.content : "";

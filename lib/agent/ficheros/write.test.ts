@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { coercerEntradaWrite, planearWrite } from "./write";
 import type { Leidos } from "./read";
+import { MANUAL_SOLO_LECTURA } from "./manual";
 
 // El contrato de Write de Claude Code: ver plans/len-2/ficheros-plan.md §A.
 
@@ -15,6 +16,11 @@ function leido(ruta: string, contenido: string): Leidos {
 }
 
 describe("Write", () => {
+  it("🔴 /AGENTS.md es de solo lectura, aunque se haya leído", () => {
+    const r = planearWrite({ file_path: "/AGENTS.md", content: "otra cosa" }, sitio({ "/AGENTS.md": "# manual" }), leido("/AGENTS.md", "# manual"));
+    expect(r).toMatchObject({ ok: false, resultado: { error: MANUAL_SOLO_LECTURA } });
+  });
+
   it("un fichero nuevo se crea sin haber leído nada", () => {
     const r = planearWrite({ file_path: "/nosotros/index.html", content: "<h1>Nosotros</h1>" }, sitio({ "/index.html": "x" }), new Map());
     if (!r.ok) throw new Error(r.resultado.texto);

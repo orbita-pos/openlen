@@ -6,12 +6,14 @@ import {
   buildAgentSystemPrompt,
   buildFunctionDeclarations,
   HERRAMIENTAS_DIFERIDAS,
+  instruccionesDeLen,
 } from "./catalog";
 import { clauseMarker } from "@/lib/ai/js-clause";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 
 const SALTO = String.fromCharCode(10);
+
 
 /** Lo que Len 2.0 ya NO le ofrece al modelo (plans/len-2/ficheros-plan.md):
  *  el vocabulario propio por ids, la mudanza de página, el rediseño con un
@@ -111,7 +113,7 @@ describe("buildFunctionDeclarations", () => {
   // les cuelga un `onsubmit`. La tercera es la que se midió el 2026-09-05:
   // 4 de 12 páginas entregaban un formulario que cancelaba su propio envío.
   it("el prompt dice la VERDAD sobre los formularios", () => {
-    const p = buildAgentSystemPrompt();
+    const p = instruccionesDeLen();
     // La conducta, en LO QUE HAY Y LO QUE NO: ofrécelo, no lo desaconsejes.
     // Dicho en llano desde la auditoría del 2026-09-29: el «SÍ» contestaba a
     // una regla vieja que el modelo nunca vio.
@@ -221,7 +223,7 @@ describe("buildAgentSystemPrompt", () => {
   // MISMO en todas: el Agente no tiene por qué saber en qué documento está para
   // saber si puede escribir JavaScript.
   it("el prompt le ofrece escribir JavaScript, esté en la página que esté", () => {
-    const p = buildAgentSystemPrompt();
+    const p = instruccionesDeLen();
     expect(p).toContain("<script>");
     expect(p).not.toContain("OpenLen NO ejecuta JavaScript de la página");
   });
@@ -281,7 +283,7 @@ describe("buildAgentSystemPrompt", () => {
   });
 
   it("voltea agente + contrato completo + CONDUCTAS sin anexar otro contrato", () => {
-    const p = buildAgentSystemPrompt();
+    const p = instruccionesDeLen();
 
     for (const id of ["agente", "contrato-completo", "conductas"] as const) {
       expect(p).not.toContain(clauseMarker(id));
@@ -392,7 +394,7 @@ describe("buildAgentSystemPrompt", () => {
   // H8 (2026-09-26): en E las tres taquerías reescribieron con Write una página
   // que ya tenía su diseño, para cumplir la guía, y perdieron el lema del dueño.
   it("H8 · la página que ya existe manda: se edita a su manera, la guía es para lo que Len crea", () => {
-    const p = buildAgentSystemPrompt();
+    const p = instruccionesDeLen();
     expect(p).toContain("Lo que añades a una página que ya existe se escribe como ella");
     expect(p).toContain("sus textos se quedan tal cual, palabra por palabra");
     expect(p).toContain("GUÍA DE DISEÑO (para las páginas que creas tú y para el rediseño que te pidan;");
@@ -494,7 +496,7 @@ describe("buildAgentSystemPrompt", () => {
     expect(p.toLowerCase()).not.toContain("collections");
   });
   it("carries the link rule: user URLs verbatim, absolute, never invented, /<slug> for internal pages", () => {
-    const p = buildAgentSystemPrompt();
+    const p = instruccionesDeLen();
     expect(p).toContain("ENLACES");
     expect(p).toContain("VERBATIM");
     // The empty-destination fallback — an invented link is worse than none.
@@ -703,7 +705,7 @@ describe("la descripción de proponer_objetivo dice qué hacer si NO la aprueban
 // cadena de prompt. Esto la ata al componente.
 describe("la vista «Datos» que el prompt nombra existe", () => {
   it("el lienzo ofrece la lente y en español se llama «Datos»", () => {
-    expect(buildAgentSystemPrompt()).toContain("la vista «Datos»");
+    expect(instruccionesDeLen()).toContain("la vista «Datos»");
     const lienzo = readFileSync(
       join(process.cwd(), "components/workspace-v2/preview-area.tsx"),
       "utf8",
@@ -725,7 +727,7 @@ describe("la vista «Datos» que el prompt nombra existe", () => {
 // (editar_html sobre un data-op-id) ya no existe en su camino.
 describe("dónde se declara un almacén", () => {
   it("la receta de ALMACENES lo manda al body y con Edit, y su fichero es /datos/<almacén>.json", () => {
-    const p = buildAgentSystemPrompt();
+    const p = instruccionesDeLen();
     const seccion = p.slice(p.indexOf("ALMACENES (los datos de la página, en /datos)")).split(SALTO + SALTO)[0];
     expect(seccion).toContain("data-ol-stores");
     expect(seccion).toContain("<body>");

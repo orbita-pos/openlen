@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { coercerEntradaEdit, planearEdit } from "./edit";
 import type { Leidos } from "./read";
+import { MANUAL_SOLO_LECTURA } from "./manual";
 
 // El contrato de Edit de Claude Code: ver plans/len-2/ficheros-plan.md §A.
 
@@ -18,6 +19,15 @@ function leido(ruta: string, contenido: string): Leidos {
 const PAGINA = `<ul>\n  <li>Gorra — $250</li>\n  <li>Zapatillas — $1200</li>\n</ul>`;
 
 describe("Edit: qué comprueba antes de tocar nada, en su orden", () => {
+  it("🔴 primero: /AGENTS.md es de solo lectura, aunque se haya leído", () => {
+    const r = planearEdit(
+      { file_path: "/AGENTS.md", old_string: "# manual", new_string: "# otro" },
+      sitio({ "/AGENTS.md": "# manual" }),
+      leido("/AGENTS.md", "# manual"),
+    );
+    expect(r).toMatchObject({ ok: false, resultado: { error: MANUAL_SOLO_LECTURA } });
+  });
+
   it("old_string igual a new_string", () => {
     const r = planearEdit({ file_path: "/index.html", old_string: "a", new_string: "a" }, sitio({ "/index.html": "a" }), leido("/index.html", "a"));
     expect(r).toMatchObject({ ok: false, resultado: { error: "old_string and new_string are identical: there is nothing to change." } });

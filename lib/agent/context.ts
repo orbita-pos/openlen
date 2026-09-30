@@ -15,6 +15,7 @@ import { avisoDeDiferidas } from "@/lib/agent/ficheros/tool-search";
 import { todayLine } from "@/lib/ai/today-line";
 import type { Message } from "@/lib/ai-gateway";
 import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
+import { adjuntoDelManual } from "@/lib/agent/manual-de-la-plataforma";
 import { textoDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO } from "@/lib/agent/ficheros/memoria";
 
@@ -434,13 +435,19 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   // H4: con los resultados enteros en el historial, el techo cuenta también las
   // llamadas y sus respuestas, no sólo el texto (ver `textoDelHistorial`).
   const historyText = textoDelHistorial(args.history);
+  // EL MANUAL DE LA PLATAFORMA (/AGENTS.md, paso 7 de 2.5): lo adjunta el arnés
+  // justo después del prompt de sistema, como Claude Code sus ficheros de
+  // instrucciones. No cambia entre peticiones, así que va en el prefijo fijo y
+  // se lee de caché; el contexto, que sí cambia, sigue en el último mensaje.
+  const manual = adjuntoDelManual();
   // Los avisos cuentan para el techo: son parte del turno, no un extra que
-  // aparece después de haber decidido que cabía.
-  if (estimateContextTokens(contextBlock + historyText + args.prompt + avisos, systemPrompt) > args.maxPromptTokens) {
+  // aparece después de haber decidido que cabía. El manual también.
+  if (estimateContextTokens(manual + contextBlock + historyText + args.prompt + avisos, systemPrompt) > args.maxPromptTokens) {
     return { ok: false, reason: "too_large" };
   }
   const messages: Message[] = [
     { role: "system", content: systemPrompt },
+    { role: "user", content: manual },
     ...args.history,
     { role: "user", content: `${args.diferidas?.length ? `${avisoDeDiferidas(args.diferidas)}
 

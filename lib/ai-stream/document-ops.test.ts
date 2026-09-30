@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Op } from "@/lib/html-ops";
-import { buildAgentSystemPrompt, buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { instruccionesDeLen, buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { LIBRERIAS, LIBRERIAS_HOST } from "@/lib/librerias";
 import {
   HEAD_OP_TARGET,
@@ -353,7 +353,7 @@ describe("paridad del contrato de objetivos reservados", () => {
   it("al Agente no se le enseña ningún objetivo: edita el fichero", () => {
     const patron = new RegExp(`target=\\\\?"(${RESERVED_TARGETS.join("|")})\\b`);
     expect(JSON.stringify(buildFunctionDeclarations({ OPENLEN_DOC_OPS: "1" }))).not.toMatch(patron);
-    expect(buildAgentSystemPrompt()).not.toMatch(patron);
+    expect(instruccionesDeLen()).not.toMatch(patron);
     // Y el patrón sí caza lo que busca: si no, la prueba pasaría por ciega.
     expect(reservedTargetsBlock()).toMatch(patron);
   });

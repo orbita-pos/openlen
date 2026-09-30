@@ -3,6 +3,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { avisosDelTurno, buildAgentContext, buildAgentMessages, estimateContextTokens } from "./context";
 import { buildFunctionDeclarations } from "./catalog";
+import { esAdjuntoDelManual } from "./ficheros/manual";
+import type { MensajeDelHistorial } from "./transcripcion";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
 import { todayLine } from "@/lib/ai/today-line";
 
@@ -318,7 +320,14 @@ describe("buildAgentMessages", () => {
 
       const sentSystem = result.messages[0];
       expect(sentSystem).toEqual({ role: "system", content: result.systemPrompt });
-      expect(sentSystem.content).toContain("<script>");
+      // El JavaScript es de la plataforma: desde el paso 7 de 2.5 va en el
+      // manual (/AGENTS.md) que el arnés adjunta detrás del system. Lo que el
+      // modelo lee son los dos, así que lo que NO debe decir se mira en ambos.
+      const manual = result.messages[1];
+      expect(manual.role).toBe("user");
+      expect(esAdjuntoDelManual(manual.content)).toBe(true);
+      expect(manual.content).toContain("<script>");
+      const loQueLee = `${sentSystem.content}\n${manual.content}`;
       // POR SUSTANCIA, NO POR ENCABEZADO. Esto afirmaba
       // `INTERACTIVIDAD — la escribes TÚ`, que es el TÍTULO de la cláusula
       // `conductas` — la que sustituye un bloque que el contrato mínimo ya no
@@ -327,11 +336,11 @@ describe("buildAgentMessages", () => {
       // su JavaScript sobrevive y que tiene que escribir las DOS mitades.
       // Sin «usa `addEventListener`, no `onclick`» desde el 2026-09-29: el
       // editor ya no borra los `on*` (lib/publish/el-on-del-modelo.test.ts).
-      expect(sentSystem.content).not.toContain("addEventListener");
+      expect(loQueLee).not.toContain("addEventListener");
       // «LAS DOS MITADES» se movió al diagnóstico `clase-sin-estilo` el
       // 2026-09-29 (ver prompts-superficies.test.ts): ya no va en el prompt.
-      expect(sentSystem.content).not.toContain("LAS DOS MITADES");
-      expect(sentSystem.content).not.toContain("data-ol-sticky");
+      expect(loQueLee).not.toContain("LAS DOS MITADES");
+      expect(loQueLee).not.toContain("data-ol-sticky");
 
       // Len 2.0: el JavaScript ya no tiene herramienta propia (`editar_runtime`
       // pedía «el código COMPLETO»); se edita como cualquier trozo del fichero,
@@ -339,7 +348,7 @@ describe("buildAgentMessages", () => {
       const descripciones = buildFunctionDeclarations()
         .map((declaration) => String((declaration as { description?: unknown }).description ?? ""))
         .join("\n");
-      const inputEfectivo = `${sentSystem.content}\n${descripciones}`;
+      const inputEfectivo = `${loQueLee}\n${descripciones}`;
       expect(inputEfectivo).not.toContain("CONDUCTA (data-ol-calc y las demás)");
       for (const name of BEHAVIOR_ORDER) {
         expect(inputEfectivo, `quedó el marcador declarativo de ${name}`).not.toContain(BEHAVIORS[name].marker);
@@ -401,8 +410,31 @@ describe("buildAgentMessages", () => {
     expect(ultimo.content.indexOf(result.contextBlock)).toBeLessThan(
       ultimo.content.lastIndexOf("Añade un filtro interactivo"),
     );
-    // Y no queda un segundo mensaje de usuario suelto con el contexto.
-    expect(result.messages.filter((m) => m.role === "user")).toHaveLength(1);
+    // Y no queda un segundo mensaje de usuario suelto con el contexto: el
+    // único otro es el manual de la plataforma, que no lleva el contexto.
+    const usuario = result.messages.filter((m) => m.role === "user");
+    expect(usuario).toHaveLength(2);
+    expect(esAdjuntoDelManual(usuario[0].content)).toBe(true);
+    expect(usuario[0].content).not.toContain(result.contextBlock);
+  });
+
+  // EL MANUAL DE LA PLATAFORMA (/AGENTS.md, paso 7 de 2.5): justo detrás del
+  // system y ANTES del historial, como Claude Code sus ficheros de
+  // instrucciones. Así no cambia entre peticiones y se lee de caché; el
+  // contexto, que sí cambia, sigue en el último mensaje.
+  it("adjunta el manual detrás del system, igual en cada petición", () => {
+    const pedir = (prompt: string, history: MensajeDelHistorial[]) =>
+      buildAgentMessages({ state: { publicado: false }, userBrief: null, prompt, history, maxPromptTokens: 100_000 });
+    const a = pedir("Añade un filtro", []);
+    const b = pedir("Ahora ponlo en dos columnas", [
+      { role: "user", content: "Añade un filtro" },
+      { role: "assistant", content: "Filtro añadido." },
+    ]);
+    if (!a.ok || !b.ok) throw new Error("el fixture no debe exceder el presupuesto");
+    expect(a.messages[1]).toEqual(b.messages[1]);
+    expect(a.messages[1].content).toContain("Contents of /AGENTS.md");
+    expect(a.messages[1].content).toContain("ALMACENES (los datos de la página, en /datos)");
+    expect(a.systemPrompt).not.toContain("ALMACENES (los datos de la página, en /datos)");
   });
 
   // El historial conserva su orden y sigue estando ANTES de la petición nueva.
@@ -420,15 +452,18 @@ describe("buildAgentMessages", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("el fixture no debe exceder el presupuesto");
 
+    // system, el manual, el historial y el turno.
     expect(result.messages.map((m) => m.role)).toEqual([
       "system",
+      "user",
       "user",
       "assistant",
       "user",
     ]);
-    expect(result.messages[1].content).toBe("Añade un filtro");
-    expect(result.messages[2].content).toBe("Filtro añadido.");
-    expect(result.messages[3].content).toContain(result.contextBlock);
+    expect(esAdjuntoDelManual(result.messages[1].content)).toBe(true);
+    expect(result.messages[2].content).toBe("Añade un filtro");
+    expect(result.messages[3].content).toBe("Filtro añadido.");
+    expect(result.messages[4].content).toContain(result.contextBlock);
   });
 });
 

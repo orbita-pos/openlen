@@ -45,6 +45,8 @@ import {
 import type { AlmacenDeclarado } from "@/lib/page-data/declaracion";
 import { AVISO_VISITANTES, llevaTextoDeVisitantes } from "@/lib/page-data/vista-del-agente";
 import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO, alcanceDeRuta, lineasNuevas } from "@/lib/agent/ficheros/memoria";
+import { RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
+import { buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { PREFERENCIA_MAX, PREFERENCIA_MIN, guardarPreferencia } from "@/lib/agent/preferencias";
 
 /** Los nombres, como en Claude Code: es lo que el modelo ya sabe usar. */
@@ -135,6 +137,9 @@ function textoDelSitio(data: ProjectData, v: Virtuales): string {
 function sitioDe(data: ProjectData, session: AgentSession, v: Virtuales = SIN_VIRTUALES): SitioBuscable {
   return {
     contenido: (ruta) => {
+      // El manual de la plataforma: Read lo abre por su ruta, pero no está en
+      // `ficheros`, así que Grep y Glob no lo ven (`lib/agent/ficheros/manual.ts`).
+      if (ruta === RUTA_MANUAL) return buildManualDeLaPlataforma();
       const datos = v.almacenes.get(ruta);
       if (datos) return datos.texto;
       const memoria = v.memoria.get(ruta);

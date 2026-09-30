@@ -377,6 +377,7 @@ export default defineConfig({
       "lib/agent/retry.test.ts",
       "lib/agent/reloj-de-silencio.test.ts",
       "lib/agent/context.test.ts",
+      "lib/agent/manual-de-la-plataforma.test.ts",
       "lib/agent/facts-kept.test.ts",
       "lib/agent/contenido-perdido.test.ts",
       // Lo puro de la prueba declarada: leer lo que devuelve el navegador, la

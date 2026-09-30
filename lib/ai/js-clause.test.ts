@@ -4,7 +4,7 @@ import { swapJsClauses, clauseMarker } from "./js-clause";
 import { SYSTEM_PROMPT, systemPromptFor } from "../../app/api/generate/system-prompt";
 import { modelRuntimePromptBlock } from "../ai-stream/model-runtime";
 import { SYSTEM_PROMPT as CHAT_SYSTEM_PROMPT } from "../../app/api/templates/ai-design/system-prompt";
-import { buildAgentSystemPrompt } from "../agent/catalog";
+import { instruccionesDeLen } from "../agent/catalog";
 
 // El JavaScript del modelo ya no tiene interruptor (26/08/2026): estos
 // entornos sólo dirigen el CONTRATO, que es lo que `systemPromptFor` lee.
@@ -161,7 +161,7 @@ describe("el Chat monta el mismo prompt sin contradicción", () => {
 
 describe("la cláusula del Agente", () => {
   it("el catálogo de Len voltea su cláusula: su JavaScript vive en el fichero y se edita con Edit", () => {
-    const vivo = buildAgentSystemPrompt();
+    const vivo = instruccionesDeLen();
     expect(vivo).not.toContain(clauseMarker("agente"));
     expect(vivo).toContain("<script>");
   });
@@ -177,12 +177,12 @@ describe("cómo se le enseña a guardar en un almacén", () => {
   const superficies: [string, string][] = [
     ["Crear", systemPromptFor(DEFECTO)],
     ["Chat", CHAT_SYSTEM_PROMPT],
-    ["Agente", buildAgentSystemPrompt()],
+    ["Agente", instruccionesDeLen()],
   ];
   // Sin esto la guarda podría pasar en vacío: medido el 2026-09-18, sólo el
   // prompt del Agente trae la cláusula (Crear y Chat usan el contrato mínimo).
   it("el Agente la lleva — si no, las de abajo no comprueban nada", () => {
-    expect(buildAgentSystemPrompt()).toContain("GUARDAR TAMBIÉN");
+    expect(instruccionesDeLen()).toContain("GUARDAR TAMBIÉN");
   });
   it.each(superficies)("%s: la ruta va sin subdominio", (_, prompt) => {
     if (!prompt.includes("GUARDAR TAMBIÉN")) return;

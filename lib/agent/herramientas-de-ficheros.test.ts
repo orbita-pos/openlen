@@ -362,6 +362,41 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
     assert.equal(texto(out), "index.html\nmenu/index.html");
   });
 
+  // /AGENTS.md, EL MANUAL DE LA PLATAFORMA (paso 7 de 2.5): el fichero
+  // «gestionado» de Claude Code. Read lo abre por su ruta; Grep y Glob no lo
+  // ven, porque vive fuera del proyecto; Edit y Write lo rechazan.
+  it("Read abre /AGENTS.md: el manual de la plataforma", async () => {
+    const { deps } = makeDeps({ html: HOME });
+    const out = await runAgentTool(makeSession(), deps, "Read", { file_path: "/AGENTS.md" });
+    assert.equal(out.response.ok, true);
+    assert.ok(texto(out).startsWith("1\t# OpenLen: cómo funciona la plataforma"));
+    assert.match(texto(out), /ALMACENES \(los datos de la página, en \/datos\)/);
+  });
+
+  it("🔴 un Grep por todo el sitio encuentra la página, no los ejemplos del manual", async () => {
+    const { deps } = makeDeps({ html: HOME });
+    // El manual nombra `data-ol-stores` en su receta de ALMACENES; la página no
+    // declara ninguno. Si el Grep lo encontrara, Len creería que sí.
+    const out = await runAgentTool(makeSession(), deps, "Grep", { pattern: "data-ol-stores", output_mode: "files_with_matches" });
+    assert.doesNotMatch(texto(out), /AGENTS\.md/);
+    const glob = await runAgentTool(makeSession(), deps, "Glob", { pattern: "**/*" });
+    assert.doesNotMatch(texto(glob), /AGENTS\.md/);
+  });
+
+  it("🔴 Edit y Write no tocan /AGENTS.md, y el rechazo dice dónde sí se escribe", async () => {
+    const { deps, store } = makeDeps({ html: HOME });
+    const s = makeSession();
+    await runAgentTool(s, deps, "Read", { file_path: "/AGENTS.md" });
+    const edit = await runAgentTool(s, deps, "Edit", { file_path: "/AGENTS.md", old_string: "# OpenLen", new_string: "# Otra cosa" });
+    const write = await runAgentTool(s, deps, "Write", { file_path: "/AGENTS.md", content: "nada" });
+    for (const out of [edit, write]) {
+      assert.equal(out.response.ok, false);
+      assert.match(JSON.stringify(out.response), /read-only/);
+      assert.match(JSON.stringify(out.response), /\/memoria\/dueno\.md/);
+    }
+    assert.equal(store.saved, 0, "no se guardó nada");
+  });
+
   // H3: `leer_estado` se retiró; el estado va en el contexto al empezar, como el
   // `git status` de Claude Code, y es esto lo que lo arma.
   it("el estado del contexto lista los ficheros y la página abierta, sin documento", () => {

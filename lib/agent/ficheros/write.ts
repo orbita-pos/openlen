@@ -15,6 +15,7 @@ import { paginaDeRuta, resolverRuta } from "./sitio";
 import { normalizarFinales, type Leidos, type SitioLegible } from "./read";
 import { CAMBIADO_DESDE_LA_LECTURA, NO_LEIDO, NOTA_ESTADO_AL_DIA, type PlanDeEdit } from "./edit";
 import { fallo } from "./resultado";
+import { MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "./manual";
 
 export interface EntradaWrite {
   readonly file_path: string;
@@ -61,6 +62,7 @@ function paginaQueQuisoCrear(ruta: string): string | undefined {
 
 export function planearWrite(entrada: EntradaWrite, sitio: SitioLegible, leidos: Leidos): PlanDeEdit {
   const ruta = resolverRuta(entrada.file_path);
+  if (ruta === RUTA_MANUAL) return { ok: false, resultado: fallo(MANUAL_SOLO_LECTURA) };
   const crudo = sitio.contenido(ruta);
 
   if (crudo === null) {

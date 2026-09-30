@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { systemPromptFor } from "@/app/api/generate/system-prompt";
 import { aiDesignSystemMessage } from "@/app/api/templates/ai-design/system-prompt";
-import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
+import { instruccionesDeLen } from "@/lib/agent/catalog";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { LIBRERIAS, bloqueDeLibrerias } from "@/lib/librerias";
 
@@ -43,7 +43,7 @@ function superficies(): [string, string][] {
     ["crear (contrato mínimo)", systemPromptFor({})],
     ["crear (contrato completo)", systemPromptFor({ OPENLEN_MIN_CONTRACT: "0" })],
     ["chat (ai-design)", aiDesignSystemMessage()],
-    ["len (agente)", buildAgentSystemPrompt()],
+    ["len (agente)", instruccionesDeLen()],
   ];
 }
 

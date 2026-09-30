@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildAgentSystemPrompt, buildFunctionDeclarations } from "./agent/catalog";
+import { instruccionesDeLen, buildFunctionDeclarations } from "./agent/catalog";
 import { TOKENS_DEL_CONTRATO } from "./agent/tools";
 import { diagnosticosDeLaEscritura } from "./agent/diagnosticos-de-la-escritura";
 // NOT imported from the route.ts files themselves: a Next.js `route.ts` file
@@ -50,7 +50,7 @@ describe("ninguna superficie manda gusto nuestro", () => {
   const PROMPTS: Array<[string, () => string]> = [
     ["crear", () => generateSystemMessage({})],
     ["editar", () => aiDesignSystemMessage()],
-    ["Agente", () => buildAgentSystemPrompt()],
+    ["Agente", () => instruccionesDeLen()],
     // ⚰️ «rediseño» (`lib/agent/redesign.ts`, `redisenar_pagina`) se retiró con
     // Len 2.0: un Write hace lo mismo sin un segundo modelo (decisión B8).
   ];
@@ -88,7 +88,7 @@ describe("ninguna superficie manda gusto nuestro", () => {
   });
 
   it("Len: sus colores en variables de :root, con SUS nombres, y el oscuro con el interruptor que elija", () => {
-    const p = buildAgentSystemPrompt();
+    const p = instruccionesDeLen();
     // Lo que el Tema sí necesita: los colores en variables.
     expect(p, "sin var() el color se repite a mano y el tema no se puede cambiar").toContain("usada con `var()`");
     expect(p).toContain("con los nombres que tú elijas");
@@ -105,7 +105,7 @@ describe("ninguna superficie manda gusto nuestro", () => {
   });
 
   it("Len: los <iframe> sobreviven todos, y su script va donde él quiera", () => {
-    const p = buildAgentSystemPrompt();
+    const p = instruccionesDeLen();
     expect(p).toContain("Los `<iframe>` que escribes sobreviven a todo");
     // Existían porque el editor borraba el iframe y el <script> anidado al
     // retocar a mano; ya no (`el-editor-no-borra-el-codigo.browser.test.ts`).
@@ -263,7 +263,7 @@ describe("el contrato mínimo alcanza a las tres superficies", () => {
   const SUPERFICIES: Array<[string, () => string]> = [
     ["crear", () => generateSystemMessage({})],
     ["editar", () => aiDesignSystemMessage()],
-    ["Agente", () => buildAgentSystemPrompt()],
+    ["Agente", () => instruccionesDeLen()],
   ];
 
   afterEach(() => {
@@ -370,7 +370,7 @@ describe("el contrato dicho para cada superficie", () => {
   //    usuario. El contrato le decía que empezara por `<` y acabara en
   //    `</html>`, contradiciendo su propio bloque TONO 130 líneas más arriba.
   it("el Agente NO recibe que su respuesta sea el documento entero", () => {
-    expect(buildAgentSystemPrompt()).not.toContain(DOCUMENTO_ENTERO);
+    expect(instruccionesDeLen()).not.toContain(DOCUMENTO_ENTERO);
   });
 
   it("el Chat tampoco: sólo el Modo B devuelve documento, así que no se afirma", () => {
@@ -387,7 +387,7 @@ describe("el contrato dicho para cada superficie", () => {
   //    a cometer el fallo que otra de sus propias viñetas advierte.
   it("sólo `crear` recibe que un enlace CREA la página", () => {
     expect(generateSystemMessage({})).toContain(EL_ENLACE_CREA);
-    expect(buildAgentSystemPrompt()).not.toContain(EL_ENLACE_CREA);
+    expect(instruccionesDeLen()).not.toContain(EL_ENLACE_CREA);
     expect(aiDesignSystemMessage()).not.toContain(EL_ENLACE_CREA);
   });
 
@@ -412,7 +412,7 @@ describe("el contrato dicho para cada superficie", () => {
   //    la forma del mapa, que es lo que queda de aquel bloque.
   it("la lista de <iframe> permitidos se dice UNA vez, no dos", () => {
     for (const [nombre, prompt] of [
-      ["agente", buildAgentSystemPrompt()],
+      ["agente", instruccionesDeLen()],
     ] as const) {
       const veces = prompt.split("maps.google.com/maps?q=").length - 1;
       expect(veces, `${nombre} la dice ${veces} veces`).toBe(1);
@@ -426,7 +426,7 @@ describe("el contrato dicho para cada superficie", () => {
   //     no existe. No se pierde cobertura — la regla que las cubría sigue
   //     siendo «CONSERVA todo elemento que lleve un atributo data-ol-*».
   it("ninguna superficie nombra ya las conductas", () => {
-    for (const p of [buildAgentSystemPrompt()]) {
+    for (const p of [instruccionesDeLen()]) {
       expect(p).not.toMatch(/conductas?\b/i);
     }
     // Y el Agente ya no ofrece el rediseño con un segundo modelo: Len 2.0 lo
@@ -438,7 +438,7 @@ describe("el contrato dicho para cada superficie", () => {
   // MISMA vuelta. Es la misma frase que usa Claude Code en
   // su prompt de sistema, en castellano.
   it("el Agente pide las llamadas independientes en paralelo, como Claude Code", () => {
-    const p = buildAgentSystemPrompt();
+    const p = instruccionesDeLen();
     expect(p).toContain("Puedes llamar a varias herramientas en una sola respuesta");
     expect(p).toContain("haz todas las llamadas independientes en paralelo");
     expect(p).toContain("NO las llames en paralelo");
@@ -450,14 +450,14 @@ describe("el contrato dicho para cada superficie", () => {
   // quita el diagnóstico, esta prueba tiene que caer: la regla no puede
   // quedarse en ninguno de los dos sitios.
   it("«las dos mitades»: fuera del prompt del Agente, y la caza el diagnóstico", () => {
-    expect(buildAgentSystemPrompt()).not.toContain("LAS DOS MITADES");
+    expect(instruccionesDeLen()).not.toContain("LAS DOS MITADES");
     const html = '<!doctype html><html><head><style>.menu{display:none}</style></head><body><nav class="menu"></nav><script>m.classList.toggle("open")</script></body></html>';
     const ds = diagnosticosDeLaEscritura({ ruta: "/index.html", antes: null, despues: html, fuentes: [] });
     expect(ds.map((d) => d.codigo)).toContain("clase-sin-estilo");
   });
 
   it("NO SE PERDIÓ: el Agente conserva la lista de <iframe> y sus formas de URL", () => {
-    const p = buildAgentSystemPrompt();
+    const p = instruccionesDeLen();
     expect(p).toContain("player.vimeo.com/video/");
     expect(p).toContain("maps.google.com/maps?q=");
   });
@@ -468,7 +468,7 @@ describe("el contrato dicho para cada superficie", () => {
   //    construye ningún `<head>`: recibe uno hecho, y la única forma de
   //    "obedecer" sería duplicar el script y la hoja que ya estaban.
   it("las superficies que EDITAN no reciben la orden de construir el <head>", () => {
-    for (const p of [buildAgentSystemPrompt(), aiDesignSystemMessage()]) {
+    for (const p of [instruccionesDeLen(), aiDesignSystemMessage()]) {
       expect(p).not.toContain("• Tailwind por CDN:");
       expect(p).not.toContain("• Tu CSS propio va en un");
       // Y lo que SÍ reciben: dónde viven esas tres cosas, sin ordenar crearlas.
@@ -488,9 +488,9 @@ describe("el contrato dicho para cada superficie", () => {
       expect(p).toContain("Emite también `:root[data-ol-mode=");
     }
     // El Agente, sólo en la página que crea (H8): en la que ya existe manda ella.
-    expect(buildAgentSystemPrompt()).toContain("En una página que creas tú, escribe también su versión oscura");
+    expect(instruccionesDeLen()).toContain("En una página que creas tú, escribe también su versión oscura");
     expect(aiDesignSystemMessage()).toContain("Si la página aún no lo define, escríbelo tú");
-    for (const p of [buildAgentSystemPrompt(), aiDesignSystemMessage()]) {
+    for (const p of [instruccionesDeLen(), aiDesignSystemMessage()]) {
       // …y entonces OFICIO no puede seguir ordenándolo doce líneas más abajo,
       // o el contrato se contradiría a sí mismo dentro del mismo prompt.
       expect(p).not.toContain("Emite igualmente el bloque oscuro");
@@ -540,7 +540,7 @@ describe("el contrato dicho para cada superficie", () => {
   //    ajuste no LANCE por ese camino, que es como se rompe un prompt entero.
   it("con el contrato completo el prompt sigue construyéndose", () => {
     vi.stubEnv("OPENLEN_MIN_CONTRACT", "0");
-    expect(() => buildAgentSystemPrompt()).not.toThrow();
+    expect(() => instruccionesDeLen()).not.toThrow();
     expect(() => aiDesignSystemMessage()).not.toThrow();
   });
 });

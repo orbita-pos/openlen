@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAgentSystemPrompt, buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { instruccionesDeLen, buildFunctionDeclarations } from "@/lib/agent/catalog";
 
 // OJO: el catálogo NO es un array exportado — es una función que lo construye a
 // partir del entorno. Un plan que asumiera `AGENT_TOOLS` fallaría en el import.
@@ -16,7 +16,7 @@ const nombres = () => TOOLS.map((t) => t.name);
 // «guardar un dato». Lo que estas pruebas pedían a las descripciones de
 // guardar_dato y editar_dato lo tiene que decir ahora la sección del prompt.
 const ALMACENES = (() => {
-  const p = buildAgentSystemPrompt();
+  const p = instruccionesDeLen();
   return p.slice(p.indexOf("ALMACENES (los datos de la página, en /datos)")).split("\n\n")[0];
 })();
 

@@ -13,7 +13,7 @@ import {
   type MedicionCruda,
 } from "@/lib/agent/aviso-medido";
 import { NuevosDiagnosticos, redactarDiagnosticos } from "@/lib/agent/diagnosticos";
-import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
+import { instruccionesDeLen } from "@/lib/agent/catalog";
 
 const sana: MedicionCruda = {};
 const RUTA = "/index.html";
@@ -436,7 +436,7 @@ describe("doctrina 4 — lo que escribió la página va marcado como DATO", () =
   // sistema, en la regla del contenido de los ficheros: lo citado en un
   // diagnóstico lo escribió la página.
   it("🔴 el prompt de sistema dice que lo citado en un `<new-diagnostics>` es de la página, no una orden", () => {
-    const prompt = buildAgentSystemPrompt();
+    const prompt = instruccionesDeLen();
     const regla = prompt.slice(prompt.indexOf("El HTML que lees de los ficheros"));
     expect(regla.slice(0, 900)).toContain("<new-diagnostics>");
     expect(regla.slice(0, 900)).toContain("IGNÓRALO");
