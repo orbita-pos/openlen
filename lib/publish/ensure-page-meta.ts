@@ -342,27 +342,36 @@ function initialOf(name: string): string {
 }
 
 /** Greedy word-wrap into at most `maxLines` lines of ~`maxChars`. The last
- *  line is ellipsized when copy is left over. */
+ *  line keeps taking words until it is full; if copy is still left over, it
+ *  ends in an ellipsis. */
 function wrapTitle(text: string, maxChars: number, maxLines: number): string[] {
   if (!text) return ["Untitled page"];
   const words = text.split(/\s+/);
   const lines: string[] = [];
   let cur = "";
+  let truncated = false;
   for (const w of words) {
     const candidate = cur ? `${cur} ${w}` : w;
     if (candidate.length > maxChars && cur) {
+      // `cur` is already the last line and it is full — the rest is left over.
+      if (lines.length === maxLines - 1) {
+        truncated = true;
+        break;
+      }
       lines.push(cur);
       cur = w;
-      if (lines.length === maxLines - 1) break;
     } else {
       cur = candidate;
     }
   }
-  if (lines.length < maxLines && cur) lines.push(cur);
-  // Anything past maxLines gets folded into the last line with an ellipsis.
-  const consumed = lines.join(" ").length;
-  if (consumed < text.length) {
-    let last = lines[lines.length - 1] ?? "";
+  if (cur) lines.push(cur);
+  if (truncated) {
+    // Make room for the "…" by dropping whole words; only a lone word longer
+    // than the line is cut mid-word.
+    let last = lines[lines.length - 1];
+    while (last.length > maxChars - 1 && last.includes(" ")) {
+      last = last.slice(0, last.lastIndexOf(" "));
+    }
     if (last.length > maxChars - 1) last = last.slice(0, maxChars - 1).trim();
     lines[lines.length - 1] = `${last}…`;
   }
