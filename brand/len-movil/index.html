@@ -1,0 +1,1685 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Len en el móvil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* ── tokens ─────────────────────────────────────────────────────────────
+   Len es NARANJA y la app es alegre: crema de fondo, rosa y amarillo de
+   acento (a lo dots). Todo sigue el tema, la llamada también. Sobre el
+   naranja el texto va en tinta oscura: el blanco no se lee (2,3:1).
+   La página del usuario (.lp) tiene sus colores y no cambia.            */
+:root{
+  --len:#FF8A1E; --len-a:#FFB23E; --len-c:#F26A0F; --on-len:#2B1405;
+  --pink:#FF7FB0; --sun:#FFD84D; --pink-soft:#FFE4EF; --sun-soft:#FFF4CC; --peach-soft:#FFEBD9;
+  --ok:#1FA967; --bad:#E5484D; --gold:#FFC53D; --drop:#5DB2FF; --wa:#128C4A;
+  --desk:#F8EFE6; --desk-ink:#2B1A10; --desk-muted:#85705F; --desk-line:#EEDDCD; --desk-panel:#FFFFFF;
+  --lm-bg:#FFF8F0; --lm-panel:#FFFFFF; --lm-ink:#2B1A10; --lm-muted:#85705F; --lm-line:#F2E1D1; --lm-soft:#FFF0E2;
+  --ao:.6; --marker:rgba(255,216,77,.9);
+  --glass:#FFFBF5; --eye:#2B1405; --card:#FFFFFF; --card-line:#EFDCCB; --fill-2:#F6E4D4; --muted:#85705F; --ink:#2B1A10; --bg:#FFF8F0;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --desk:#0E0805; --desk-ink:#FFF1E6; --desk-muted:#B09A8A; --desk-line:#2E2019; --desk-panel:#18100B;
+  --lm-bg:#140C08; --lm-panel:#1E140E; --lm-ink:#FFF1E6; --lm-muted:#B09A8A; --lm-line:#33241B; --lm-soft:#2A1B12;
+  --pink-soft:rgba(255,127,176,.16); --sun-soft:rgba(255,216,77,.12); --peach-soft:rgba(255,138,30,.15);
+  --ao:.34; --marker:rgba(255,138,30,.42);
+  --glass:#2A1A10; --eye:#FFFFFF; --card:#24170F; --card-line:#3D2A1E; --fill-2:#3D2A1E; --muted:#B09A8A; --ink:#FFF1E6; --bg:#140C08;
+  --bad:#FF6B6B;
+  color-scheme:dark;
+}
+/* La cara de cara.js viene en coral y no se toca (la comparte len-chat).
+   Aquí se pinta de naranja: cara.js escribe los colores como ATRIBUTOS
+   (stop-color, fill), y cualquier regla CSS manda sobre un atributo. */
+.lm-screen .len linearGradient stop:nth-child(1){stop-color:var(--len-a)}
+.lm-screen .len linearGradient stop:nth-child(2){stop-color:var(--len)}
+.lm-screen .len linearGradient stop:nth-child(3){stop-color:var(--len-c)}
+.lm-screen .len linearGradient[id^="ls-"] stop{stop-color:var(--len)}
+.lm-screen [data-st="error"] .len linearGradient[id^="lg-"] stop{stop-color:#B8A89E}
+.lm-screen .len [fill="#FF5A36"]{fill:var(--len)}
+.lm-screen .len .wave,.lm-screen .len .rays line{stroke:var(--len)}
+.lm-screen .len .q,.lm-screen .len .wl.hot{fill:var(--len)}
+.lm-screen .len .conf>:nth-child(3){fill:var(--pink)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;min-height:100%}
+body{background:var(--desk);color:var(--desk-ink);font:14px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+svg{display:block}
+@keyframes lmSpin{to{transform:rotate(360deg)}}
+@keyframes lmBlink{50%{opacity:0}}
+@keyframes lmShim{from{background-position:100% 0}to{background-position:-150% 0}}
+@keyframes lmRing{0%{transform:scale(.92);opacity:.85}100%{transform:scale(1.95);opacity:0}}
+@keyframes lmNudge{0%,70%,100%{transform:none}78%{transform:translateY(-5px)}86%{transform:none}92%{transform:translateY(-2px)}}
+@keyframes lmBar{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+
+/* ── escritorio: panel + teléfono ───────────────────────────────────── */
+.lm-desk{min-height:100vh;display:flex;align-items:center;justify-content:center;gap:56px;padding:20px 16px}
+@media (max-width:860px){.lm-desk{flex-direction:column-reverse;gap:22px}}
+.lm-panel{width:300px;max-width:100%}
+.lm-panel h1{font-size:22px;letter-spacing:-.02em;margin:0}
+.lm-lead{color:var(--desk-muted);margin:4px 0 6px}
+.lm-panel h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--desk-muted);margin:18px 0 8px;font-weight:600}
+.lm-scenes,.lm-toggles{display:grid;gap:6px}
+.lm-scenes button{display:grid;grid-template-columns:28px 1fr;align-items:center;text-align:left;border:1px solid var(--desk-line);background:var(--desk-panel);border-radius:12px;padding:8px 12px;cursor:pointer;font-weight:500}
+.lm-scenes small{grid-column:2;color:var(--desk-muted);font-weight:400;font-size:12px;line-height:1.3}
+.lm-scenes kbd{font:11px ui-monospace,Menlo,Consolas,monospace;color:var(--desk-muted);border:1px solid var(--desk-line);border-radius:5px;width:19px;text-align:center;grid-row:span 2}
+.lm-scenes button[aria-pressed="true"]{border-color:var(--len);box-shadow:0 0 0 3px rgba(255,138,30,.14)}
+.lm-toggles button{display:flex;justify-content:space-between;gap:12px;border:1px solid var(--desk-line);background:var(--desk-panel);border-radius:12px;padding:8px 12px;cursor:pointer}
+.lm-toggles b{font-weight:600}
+.lm-foot{color:var(--desk-muted);font-size:12.5px;margin:16px 0 0}
+
+.lm-slot{width:calc(412px * var(--k,1));height:calc(866px * var(--k,1));flex:none}
+.lm-scaler{width:412px;height:866px;transform:scale(var(--k,1));transform-origin:0 0}
+.lm-phone{width:412px;height:866px;padding:11px;border-radius:64px;background:linear-gradient(145deg,#2c231f,#0b0807);box-shadow:inset 0 0 0 1.5px #4a3d37,inset 0 0 0 4px #0b0807,0 50px 90px -30px rgba(60,25,10,.55),0 20px 40px -20px rgba(0,0,0,.4)}
+.lm-screen{position:relative;width:390px;height:844px;border-radius:53px;overflow:hidden;isolation:isolate;background:#000;font-family:Inter,ui-sans-serif,system-ui,sans-serif;-webkit-user-select:none;user-select:none}
+.lm-screen input,.lm-screen select{-webkit-user-select:text;user-select:text}
+
+/* barra de estado, isla, indicador de inicio */
+.lm-sb{position:absolute;top:0;left:0;right:0;height:50px;z-index:90;display:flex;justify-content:space-between;align-items:center;padding:4px 30px 0 46px;font:600 16px/1 Inter,sans-serif;color:var(--sbc);pointer-events:none;transition:color .3s}
+.lm-screen[data-sb="light"]{--sbc:#fff}
+.lm-screen[data-sb="dark"]{--sbc:#111}
+.lm-sb-ic{display:flex;gap:6px;align-items:center}
+.lm-island{position:absolute;top:11px;left:50%;width:122px;height:35px;margin-left:-61px;border-radius:20px;background:#000;z-index:95;pointer-events:none}
+.lm-home{position:absolute;bottom:8px;left:50%;width:136px;height:5px;margin-left:-68px;border-radius:3px;background:var(--sbc);z-index:90;pointer-events:none;opacity:.85}
+
+/* capas */
+.lm-layer{position:absolute;inset:0;visibility:hidden;opacity:0;transition:opacity .35s ease,visibility 0s linear .35s}
+.lm-layer.is-on{visibility:visible;opacity:1;transition:opacity .35s ease}
+.lm-lock{z-index:10}
+.lm-app{z-index:20}
+.lm-stage{z-index:30}
+.lm-incoming{z-index:40}
+
+/* ── bloqueo ───────────────────────────────────────────────────────── */
+.lm-lock{color:#fff;background:
+  radial-gradient(80% 50% at 100% 100%,#FFD84D 0%,rgba(255,216,77,0) 72%),
+  radial-gradient(85% 55% at 0% 64%,#FF6FAE 0%,rgba(255,111,174,0) 72%),
+  linear-gradient(180deg,#E4501C 0%,#F2742A 48%,#F7963F 100%)}
+.lm-lock-date{margin-top:88px;text-align:center;font:600 19px Inter,sans-serif;opacity:.92}
+.lm-lock-time{text-align:center;font:600 96px/1 Inter,sans-serif;letter-spacing:-.045em;margin-top:2px}
+.lm-lock-foot{position:absolute;bottom:46px;left:46px;right:46px;display:flex;justify-content:space-between}
+.lm-lock-btn{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);display:grid;place-items:center}
+.lm-lock-btn svg{width:22px;height:22px}
+
+/* ── aviso ─────────────────────────────────────────────────────────── */
+.lm-notif{position:absolute;top:54px;left:9px;right:9px;z-index:80;display:flex;gap:11px;align-items:center;padding:12px 14px;border-radius:26px;background:rgba(246,241,238,.82);-webkit-backdrop-filter:blur(26px) saturate(1.8);backdrop-filter:blur(26px) saturate(1.8);color:#1E1612;box-shadow:0 12px 34px rgba(0,0,0,.28);transform:translateY(-200px) scale(.96);opacity:0;transition:transform .55s cubic-bezier(.2,.9,.25,1.12),opacity .3s;cursor:pointer}
+.lm-notif.is-on{transform:none;opacity:1}
+.lm-notif.is-low{top:262px;transform:translateY(40px) scale(.96)}
+.lm-notif.is-low.is-on{transform:none}
+.lm-n-icon{width:40px;height:40px;border-radius:10px;background:#fff;display:grid;place-items:center;flex:none;box-shadow:0 0 0 .5px rgba(0,0,0,.1)}
+.lm-n-icon svg{width:27px;height:27px}
+.lm-n-txt{flex:1;min-width:0}
+.lm-n-head{display:flex;justify-content:space-between;font-size:12.5px;color:#6f615b}
+.lm-n-title{font-weight:600;font-size:15px;line-height:1.25;margin-top:1px}
+.lm-n-body{font-size:14.5px;line-height:1.3}
+.lm-hud,.lm-toast{position:absolute;left:50%;z-index:85;opacity:0;background:rgba(30,22,18,.9);color:#fff;border-radius:999px;padding:9px 15px;font:600 13px Inter,sans-serif;display:flex;gap:8px;align-items:center;pointer-events:none;white-space:nowrap;transition:.35s cubic-bezier(.2,.9,.3,1.2)}
+.lm-hud{top:56px;transform:translate(-50%,-16px)}
+.lm-toast{bottom:44px;transform:translate(-50%,16px)}
+.lm-hud.is-on,.lm-toast.is-on{opacity:1;transform:translate(-50%,0)}
+.lm-hud svg,.lm-toast svg{width:16px;height:16px}
+
+/* ── el aura: tres manchas de color que se mueven despacio detrás de todo ── */
+.lm-aura{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.lm-aura i{position:absolute;border-radius:50%;filter:blur(48px);opacity:var(--ao);will-change:transform}
+.lm-aura i:nth-child(1){width:330px;height:330px;left:-130px;top:-70px;background:var(--len-a);animation:lmDrift1 17s ease-in-out infinite alternate}
+.lm-aura i:nth-child(2){width:300px;height:300px;right:-140px;top:250px;background:var(--pink);animation:lmDrift2 21s ease-in-out infinite alternate}
+.lm-aura i:nth-child(3){width:330px;height:330px;left:-60px;bottom:-170px;background:var(--sun);animation:lmDrift3 19s ease-in-out infinite alternate}
+.lm-aura.is-soft{--ao:.34}
+:root[data-theme="dark"] .lm-aura.is-soft{--ao:.2}
+@keyframes lmDrift1{to{transform:translate(110px,120px) scale(1.18)}}
+@keyframes lmDrift2{to{transform:translate(-90px,-110px) scale(.86)}}
+@keyframes lmDrift3{to{transform:translate(120px,-60px) scale(1.12)}}
+.len-reduced .lm-aura i,.len-reduced .lm-halo i{animation:none}
+
+/* ── la superficie de marca: la llamada, «Len trabajando» y la hoja de Len ──
+   De día, naranja a pantalla completa (como dots); en modo oscuro, negro.
+   Sobre el naranja Len va en BLANCO (naranja sobre naranja desaparece); sobre
+   el negro vuelve a su naranja. Lo de dentro pinta con estas variables:
+   --m-ink/--m-dim el texto, --m-glass lo translúcido, --m-solid el botón
+   principal, --m-card lo que va en tarjeta (mis burbujas, el campo de texto).
+   .lm-m sólo trae las variables (la cara que vuela la usa); .lm-marca pinta. */
+.lm-m{
+  --m-bg:radial-gradient(110% 55% at 28% 0%,rgba(255,238,220,.62),rgba(255,238,220,0) 62%),linear-gradient(180deg,#FF9C48 0%,#FA7A1F 36%,#F2640F 70%,#E8560A 100%);
+  --m-ink:#fff; --m-dim:rgba(255,255,255,.82); --m-faint:rgba(255,255,255,.42); --m-ring:rgba(255,255,255,.8);
+  --m-glass:rgba(255,255,255,.2); --m-solid:#fff; --m-solid-ink:#C4460A;
+  --m-key-bg:#fff; --m-key:#B93F08; --m-card:#fff; --m-card-ink:#2B1A10;
+  --m-on:#fff; --m-on-ink:#2B1405;
+  --m-prop:#fff; --m-err:#F4C9AE; --m-shadow:rgba(140,40,0,.2);
+  --m-halo:conic-gradient(from 20deg,#fff,rgba(255,214,170,.9),#fff,rgba(255,170,190,.85),#fff); --m-halo-o:.42;
+  --m-a1:#FFD2A6; --m-a2:#FF5E3A; --m-a3:#FFB23E; --ao:.5;
+  --m-r1:#fff; --m-r2:#fff; --m-r3:#FFE4CC;
+  --lm-panel:#fff; --lm-ink:#2B1A10; --lm-muted:#9A5A2E; --lm-line:transparent; --lm-soft:#FFE9D6;
+  --eye:#2B1405; --glass:rgba(255,255,255,.24); --card:#fff; --card-line:#FFE0C8; --fill-2:#FBE3D0; --muted:#A0826E; --ink:#2B1A10; --bg:#fff;
+}
+:root[data-theme="dark"] .lm-m{
+  --m-bg:radial-gradient(95% 50% at 50% 26%,rgba(255,120,30,.14),rgba(255,120,30,0) 70%),linear-gradient(180deg,#15100C 0%,#070504 100%);
+  --m-ink:#FFF1E6; --m-dim:rgba(255,241,230,.66); --m-faint:rgba(255,241,230,.22); --m-ring:var(--len);
+  --m-glass:rgba(255,241,230,.1); --m-solid:var(--len); --m-solid-ink:#2B1405;
+  --m-key-bg:var(--len); --m-key:#2B1405; --m-card:#2A1C14; --m-card-ink:#FFF1E6;
+  --m-on:#FFF1E6; --m-on-ink:#2B1405;
+  --m-prop:var(--len); --m-err:#8C7F78; --m-shadow:transparent;
+  --m-halo:conic-gradient(from 20deg,var(--len),var(--pink),var(--sun),var(--len-a),var(--len)); --m-halo-o:.3;
+  --m-a1:#FF8A1E; --m-a2:#FF4F7B; --m-a3:#F26A0F; --ao:.16;
+  --m-r1:var(--len-a); --m-r2:var(--len); --m-r3:var(--len-c);
+  --lm-panel:#24170F; --lm-ink:#FFF1E6; --lm-muted:#B09A8A; --lm-line:#3D2A1E; --lm-soft:#2A1B12;
+  --eye:#fff; --glass:#2A1A10; --card:#24170F; --card-line:#3D2A1E; --fill-2:#3D2A1E; --muted:#B09A8A; --ink:#FFF1E6; --bg:#140C08;
+}
+.lm-marca{color:var(--m-ink);background:var(--m-bg)}
+.lm-marca .lm-aura i:nth-child(1){background:var(--m-a1)}
+.lm-marca .lm-aura i:nth-child(2){background:var(--m-a2)}
+.lm-marca .lm-aura i:nth-child(3){background:var(--m-a3)}
+.lm-m .len linearGradient[id^="lg-"] stop:nth-child(1){stop-color:var(--m-r1)}
+.lm-m .len linearGradient[id^="lg-"] stop:nth-child(2){stop-color:var(--m-r2)}
+.lm-m .len linearGradient[id^="lg-"] stop:nth-child(3){stop-color:var(--m-r3)}
+.lm-m [data-st="error"] .len linearGradient[id^="lg-"] stop{stop-color:var(--m-err)}
+.lm-m .len .q{fill:var(--m-prop)}
+.lm-m .len .wave,.lm-m .len .rays line{stroke:var(--m-prop)}
+.lm-screen .len linearGradient stop{transition:stop-color .5s}
+
+.lm-face-host{width:100%;height:100%;cursor:pointer}
+.lm-inc-top,.lm-stage-top{position:absolute;left:0;right:0;text-align:center;display:grid;gap:4px}
+.lm-inc-top{top:104px}
+.lm-inc-top b{font:600 36px/1.1 Inter,sans-serif;letter-spacing:-.02em}
+.lm-inc-top span{font-size:17px;color:var(--m-dim)}
+.lm-inc-face{position:absolute;left:50%;top:292px;width:180px;height:180px;margin-left:-90px}
+.lm-rings{position:absolute;inset:0;pointer-events:none}
+.lm-rings i{position:absolute;left:50%;top:50%;width:152px;height:152px;margin:-76px 0 0 -76px;border-radius:50%;border:2px solid var(--m-ring);opacity:0;animation:lmRing 2.4s cubic-bezier(.2,.7,.3,1) infinite}
+.lm-rings i:nth-child(2){animation-delay:.8s}.lm-rings i:nth-child(3){animation-delay:1.6s}
+.lm-inc-actions{position:absolute;left:0;right:0;bottom:86px;display:flex;justify-content:center;gap:88px}
+.lm-round{display:grid;justify-items:center;gap:9px;background:none;border:0;cursor:pointer;color:var(--m-ink);font-size:13.5px;font-weight:500;padding:0}
+.lm-round span{width:72px;height:72px;border-radius:50%;display:grid;place-items:center}
+.lm-round svg{width:30px;height:30px}
+.lm-decline span{background:var(--m-glass);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.lm-accept span{background:var(--m-solid);color:var(--m-solid-ink);box-shadow:0 14px 30px -12px rgba(120,30,0,.5);animation:lmNudge 1.6s ease-in-out infinite}
+.lm-hang span{background:#FF3B30;color:#fff;box-shadow:0 12px 28px -12px rgba(120,20,0,.55)}
+
+.lm-stage-top{top:64px}
+.lm-stage-top b{font:600 17px Inter,sans-serif}
+.lm-stage-top span{font-size:14px;color:var(--m-dim);font-variant-numeric:tabular-nums}
+.lm-stage-face{position:absolute;left:50%;top:200px;width:180px;height:180px;margin-left:-90px;transition:transform .6s cubic-bezier(.3,1.25,.4,1)}
+.lm-stage.has-res .lm-stage-face{transform:translateY(-96px) scale(.6)}
+/* el halo: un brillo blanco y durazno que gira y se hincha con cada palabra */
+.lm-halo{position:absolute;inset:-38px;opacity:var(--m-halo-o);pointer-events:none}
+.lm-halo i{position:absolute;inset:0;border-radius:50%;background:var(--m-halo);filter:blur(28px);animation:lmSpin 9s linear infinite}
+.lm-talker{position:absolute;inset:0;transform-origin:50% 90%}
+.lm-subs{position:absolute;top:448px;left:26px;right:26px;margin:0;text-align:center;font:600 24px/1.36 Inter,sans-serif;letter-spacing:-.015em;min-height:4.08em;text-shadow:0 1px 14px var(--m-shadow);transition:opacity .25s,top .6s cubic-bezier(.3,1.2,.4,1)}
+.lm-stage.has-res .lm-subs{top:464px}
+.lm-w{display:inline-block;opacity:.34;transform:translateY(5px);transition:opacity .22s,transform .35s cubic-bezier(.3,1.6,.5,1)}
+.lm-w.is-said{opacity:1;transform:none}
+/* lo importante se vuelve una etiqueta blanca, con el texto en naranja oscuro */
+.lm-w.is-key{background:linear-gradient(var(--m-key-bg),var(--m-key-bg)) no-repeat 0 0/0% 100%;border-radius:8px;padding:0 5px;margin:0 -1px;transition:opacity .22s,transform .35s cubic-bezier(.3,1.6,.5,1),background-size .4s .06s ease-out,color .2s .12s,text-shadow .2s}
+.lm-w.is-key.is-said{background-size:100% 100%;color:var(--m-key);text-shadow:none}
+.lm-voice{position:absolute;top:586px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:8px 14px 8px 12px;border-radius:999px;border:0;background:var(--m-glass);color:var(--m-ink);font:500 13px Inter,sans-serif;cursor:pointer;white-space:nowrap;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:opacity .25s,background .2s}
+.lm-voice svg{width:17px;height:17px}
+.lm-voice[data-st="on"]{background:var(--m-key-bg);color:var(--m-key)}
+.lm-voice[data-st="silent"]{cursor:default;color:var(--m-dim)}
+.lm-subs.is-out,.lm-voice.is-out,.lm-res.is-out{opacity:0}
+.lm-answers{position:absolute;left:24px;right:24px;top:640px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lm-ans{height:52px;border-radius:18px;border:0;background:var(--m-glass);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:var(--m-ink);font:600 15px Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.lm-ans svg{width:19px;height:19px}
+.lm-ans.is-pri{background:var(--m-solid);color:var(--m-solid-ink);box-shadow:0 12px 26px -12px rgba(120,30,0,.5)}
+.lm-ans.is-link{grid-column:span 2;height:auto;background:none;-webkit-backdrop-filter:none;backdrop-filter:none;color:var(--m-dim);font-weight:500;padding:8px}
+/* abajo, como dots: Audio · Colgar · Silenciar. En la llamada el botón Audio
+   hace de permiso de voz, así que la pastilla «Oír a Len» sobra ahí. */
+.lm-call-actions{position:absolute;left:0;right:0;bottom:50px;display:flex;justify-content:center;gap:34px}
+.lm-stage:not([data-mode="call"]) .lm-call-actions{display:none}
+.lm-stage[data-mode="call"] .lm-voice{display:none}
+.lm-call-actions .lm-round{font-size:12.5px;gap:8px}
+.lm-call-actions .lm-round span{width:66px;height:66px}
+.lm-call-actions .lm-round svg{width:27px;height:27px}
+.lm-rb span{background:var(--m-glass);color:var(--m-ink);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:background .2s,color .2s}
+.lm-rb.is-on span{background:var(--m-on);color:var(--m-on-ink)}
+.lm-skip{position:absolute;left:0;right:0;bottom:40px;text-align:center;font-size:13px;color:var(--m-dim);transition:opacity .3s}
+.lm-marca .lm-rj figcaption{background:var(--m-card);padding:2px 7px;border-radius:999px;color:var(--bad)}
+
+/* ── lo que Len hizo, a la vista mientras te lo cuenta ─────────────── */
+.lm-res{position:absolute;left:0;right:0;top:262px;height:188px;display:grid;align-content:start;justify-items:center;gap:10px;pointer-events:none;transition:opacity .25s}
+.lm-cards{display:flex;justify-content:center;align-items:flex-start}
+.lm-rc{margin:0 -5px;display:grid;gap:7px;justify-items:center;opacity:0;transform:translateY(28px) scale(.6);transition:opacity .25s,transform .6s cubic-bezier(.3,1.5,.5,1)}
+.lm-rc.is-in{opacity:1;transform:rotate(var(--r,0deg))}
+.lm-rc:nth-child(1){--r:-7deg}.lm-rc:nth-child(2){--r:1.5deg;z-index:1}.lm-rc:nth-child(3){--r:7deg}
+.lm-rc figcaption{font:600 12.5px Inter,sans-serif;color:var(--lm-ink);background:var(--lm-panel);padding:3px 10px;border-radius:999px;box-shadow:0 0 0 1px var(--lm-line)}
+.lm-thumb{border-radius:14px;overflow:hidden;background:#FBF6EE;box-shadow:0 0 0 4px var(--lm-panel),0 14px 28px -12px rgba(90,40,10,.45)}
+/* una sola fila, siempre: si se parte en dos, la segunda pisa el subtítulo */
+.lm-pills{display:flex;gap:6px;flex-wrap:nowrap;justify-content:center;padding:0 12px}
+.lm-pill{display:inline-flex;align-items:center;gap:5px;font:600 12px Inter,sans-serif;white-space:nowrap;padding:4px 10px 4px 5px;border-radius:999px;background:var(--lm-panel);color:var(--lm-ink);box-shadow:0 0 0 1px var(--lm-line);opacity:0;transform:scale(.6);transition:opacity .2s,transform .45s cubic-bezier(.3,1.6,.5,1)}
+.lm-pill.is-in{opacity:1;transform:none}
+.lm-ok-ic{width:17px;height:17px;padding:4px;border-radius:50%;background:var(--ok);color:#fff;box-sizing:border-box;flex:none}
+.lm-ba2{display:flex;align-items:center;gap:10px;margin-top:12px}
+.lm-ba2 .lm-rc{margin:0}
+.lm-ba2 .is-before.is-in{opacity:.78}
+.lm-ba2 .is-before .lm-thumb{filter:saturate(.55)}
+.lm-ba2-arrow{color:var(--len)}
+.lm-ba2-arrow svg{width:22px;height:22px}
+.lm-rej{display:flex;gap:8px;justify-content:center;margin-top:44px}
+.lm-rj{margin:0;display:grid;gap:7px;justify-items:center;opacity:0;transform:translateY(18px) scale(.7);transition:opacity .2s,transform .5s cubic-bezier(.3,1.5,.5,1)}
+.lm-rj.is-in{opacity:1;transform:none}
+.lm-rj-img{position:relative;width:64px;height:64px;border-radius:14px;background:var(--lm-soft);box-shadow:0 0 0 3px var(--lm-panel),0 10px 20px -10px rgba(90,40,10,.5);overflow:hidden}
+.lm-rj-ph{position:absolute;inset:0;background:center/cover;transition:filter .4s}
+.is-blur .lm-rj-ph{filter:blur(2.4px);transform:scale(1.12)}
+.is-dark .lm-rj-ph{filter:brightness(.3) saturate(.6)}
+.lm-rj-img b{position:absolute;inset:0;display:grid;place-items:center;font:800 11px Inter,sans-serif;color:rgba(255,255,255,.9);transform:rotate(-24deg);letter-spacing:.04em;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.lm-rj-img i{position:absolute;right:4px;top:4px;width:20px;height:20px;border-radius:50%;background:var(--bad);color:#fff;display:grid;place-items:center;transform:scale(0);transition:transform .4s cubic-bezier(.3,1.7,.5,1)}
+.lm-rj-img i svg{width:11px;height:11px}
+.lm-rj figcaption{font:600 11.5px Inter,sans-serif;color:var(--bad);opacity:0;transform:translateY(-4px);transition:opacity .3s,transform .3s}
+.lm-rj.is-no i{transform:scale(1)}
+.lm-rj.is-no figcaption{opacity:1;transform:none}
+.lm-rj.is-no .lm-rj-ph{filter:grayscale(.7)}
+.lm-rj.is-no.is-blur .lm-rj-ph{filter:blur(2.4px) grayscale(.7)}
+.lm-rj.is-no.is-dark .lm-rj-ph{filter:brightness(.3) grayscale(.7)}
+.lm-rj.is-more .lm-rj-img{display:grid;place-items:center;width:46px;font:700 15px Inter,sans-serif;color:var(--lm-muted)}
+.lm-conf{position:absolute;z-index:70;pointer-events:none}
+.lm-stage[data-mode="call"] .lm-skip,.lm-stage[data-talk="0"] .lm-skip{opacity:0}
+.lm-stage.is-away{opacity:0!important;transition:opacity .42s ease!important}
+
+/* ── la entrega: captura → página real ─────────────────────────────── */
+.lm-cap{position:absolute;left:0;top:0;width:390px;height:844px;z-index:60;overflow:hidden;pointer-events:none;will-change:transform,clip-path;background:#FBF6EE}
+.lm-cap .lm-pagehost{overflow:hidden}
+.lm-cap.is-photo .lm-pagehost{filter:saturate(.35) sepia(.28) contrast(.96) brightness(1.04)}
+.lm-ghost{position:absolute;z-index:62;pointer-events:none}
+.lm-xray{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2}
+.lm-xray-win{position:absolute;left:0;right:0;top:-180px;height:180px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,transparent,#000 40%,#000 80%,transparent);mask-image:linear-gradient(to bottom,transparent,#000 40%,#000 80%,transparent)}
+.lm-xray-grid{position:absolute;left:0;right:0;top:0;height:calc(180px + var(--d,1100px));background:repeating-linear-gradient(to right,rgba(255,138,30,.17) 0 1px,transparent 1px 28px),repeating-linear-gradient(to bottom,rgba(255,138,30,.17) 0 1px,transparent 1px 28px)}
+.lm-xray-line{position:absolute;left:0;right:0;top:-17px;height:34px;-webkit-mask-image:linear-gradient(to right,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(to right,transparent,#000 7%,#000 93%,transparent)}
+.lm-xray-line::before{content:"";position:absolute;left:0;right:0;top:50%;height:1.5px;background:#fff;box-shadow:0 0 9px 1.5px rgba(255,170,70,.95)}
+.lm-xray-line::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,transparent,rgba(255,138,30,.22) 45%,rgba(255,138,30,.3) 52%,transparent)}
+.lm-flash{position:absolute;inset:0;pointer-events:none;border-radius:53px;box-shadow:inset 0 0 0 2px #FF8A1E,inset 0 0 60px rgba(255,138,30,.2);opacity:0}
+
+/* ── la app: Len trabajando ────────────────────────────────────────── */
+.lm-work{position:absolute;inset:0;padding:62px 30px 44px;display:flex;flex-direction:column;align-items:center}
+.lm-work-top{text-align:center;display:grid;gap:1px}
+.lm-work-top b{font-size:15px;font-weight:600}
+.lm-work-top span{font-size:12.5px;color:var(--m-dim)}
+.lm-work>:not(.lm-aura){position:relative}
+.lm-work-face{width:96px;height:96px;margin:30px 0 20px}
+.lm-work-title{font:600 24px/1.2 Inter,sans-serif;letter-spacing:-.02em;margin:0 0 16px;text-align:center}
+.lm-work .lm-steps{width:100%;max-width:290px}
+/* la tarjeta en vivo: lo que Len está haciendo AHORA, con su resultado, no sólo su nombre */
+.lm-live-card{width:100%;max-width:318px;height:152px;flex:none;border-radius:24px;color:var(--lm-ink);background:color-mix(in srgb,var(--lm-panel) 80%,transparent);box-shadow:0 0 0 1px var(--lm-line),0 18px 40px -24px rgba(120,50,10,.4);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding:14px 16px;margin:0 0 20px;overflow:hidden;opacity:0;transform:translateY(8px) scale(.98);transition:opacity .3s,transform .45s cubic-bezier(.3,1.3,.5,1)}
+.lm-live-card.is-on{opacity:1;transform:none}
+.lm-live-cap{margin:0 0 11px;font:600 11.5px Inter,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--lm-muted);display:flex;align-items:center;gap:7px}
+.lm-live-cap::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--len);box-shadow:0 0 0 3px color-mix(in srgb,var(--len) 25%,transparent)}
+.lm-tags{display:flex;flex-wrap:wrap;gap:7px}
+.lm-tags span{font:600 14px Inter,sans-serif;padding:7px 12px;border-radius:999px;background:var(--peach-soft);opacity:0;transform:translateY(6px) scale(.6);transition:opacity .2s,transform .45s cubic-bezier(.3,1.6,.5,1)}
+.lm-tags span:nth-child(3n+2){background:var(--pink-soft)}
+.lm-tags span:nth-child(3n){background:var(--sun-soft)}
+.lm-tags span.is-in{opacity:1;transform:none}
+.lm-type{margin:0;font:400 30px/1.08 "Instrument Serif",serif;letter-spacing:-.01em;min-height:2.16em}
+.lm-type i{display:inline-block;width:2px;height:.85em;background:var(--len);margin-left:2px;vertical-align:-.08em;animation:lmBlink .9s steps(1) infinite}
+.lm-type-sub{margin:6px 0 0;font-size:13px;color:var(--lm-muted);opacity:0;transition:opacity .4s}
+.lm-type-sub.is-in{opacity:1}
+.lm-pics{display:flex;gap:10px;padding-top:2px}
+.lm-pics img{width:84px;height:84px;object-fit:cover;border-radius:14px;box-shadow:0 0 0 3px var(--lm-panel),0 10px 18px -10px rgba(90,40,10,.5);opacity:0;transform:translateY(16px) scale(.6);transition:opacity .2s,transform .5s cubic-bezier(.3,1.5,.5,1)}
+.lm-pics img.is-in{opacity:1;transform:rotate(var(--r))}
+.lm-pics img:nth-child(1){--r:-4deg}.lm-pics img:nth-child(2){--r:3deg}.lm-pics img:nth-child(3){--r:-2deg}
+.lm-rev{display:flex;gap:16px;align-items:center}
+.lm-rev-ph{position:relative;flex:none;border-radius:12px;overflow:hidden}
+.lm-rev-ph .lm-thumb{border-radius:12px;box-shadow:0 0 0 1px var(--lm-line)}
+.lm-rev-scan{position:absolute;left:0;right:0;top:0;height:2px;background:var(--len);box-shadow:0 0 10px 2px rgba(255,138,30,.7);animation:lmScan 1.5s ease-in-out infinite alternate}
+@keyframes lmScan{to{transform:translateY(94px)}}
+.lm-checks{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.lm-checks li{display:flex;gap:8px;align-items:center;font:500 14px Inter,sans-serif;opacity:0;transform:translateX(-8px);transition:opacity .3s,transform .4s cubic-bezier(.3,1.4,.5,1)}
+.lm-checks li.is-in{opacity:1;transform:none}
+.lm-work-foot{margin-top:auto;width:100%;display:grid;gap:14px;text-align:center}
+.lm-work-foot p{margin:0;color:var(--m-dim);font-size:14px;line-height:1.45}
+.lm-steps{list-style:none;margin:0;padding:0;display:grid;gap:13px}
+.lm-steps li{display:grid;grid-template-columns:22px 1fr;gap:11px;align-items:start;font-size:15px;line-height:1.35;color:var(--m-dim);transition:color .3s}
+.lm-steps li i{width:20px;height:20px;border-radius:50%;border:1.6px solid var(--m-faint);display:grid;place-items:center;font:700 12px/1 Inter,sans-serif;font-style:normal;color:var(--m-solid-ink)}
+.lm-steps li i svg{width:12px;height:12px}
+.lm-steps li.is-doing,.lm-steps li.is-done,.lm-steps li.is-fail{color:var(--m-ink)}
+.lm-steps li.is-doing i{border-color:var(--m-ring);border-right-color:transparent;animation:lmSpin .8s linear infinite}
+.lm-steps li.is-done i{background:var(--m-solid);border-color:var(--m-solid)}
+.lm-steps li.is-fail i{background:var(--bad);border-color:var(--bad);color:#fff}
+.lm-steps li small{display:block;color:var(--m-dim);font-size:12.5px;line-height:1.4;margin-top:3px}
+.lm-steps.is-sm{gap:10px}
+.lm-steps.is-sm li{font-size:14px}
+
+/* ── la app: la página, su barra y la hoja de Len ──────────────────── */
+.lm-app[data-mode="work"] .lm-pagehost,.lm-app[data-mode="work"] .lm-bar,.lm-app[data-mode="work"] .lm-sheet{visibility:hidden}
+.lm-app[data-mode="page"] .lm-work{visibility:hidden}
+.lm-pagehost{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;background:#FBF6EE;padding:98px 0 290px;scrollbar-width:none}
+.lm-pagehost::-webkit-scrollbar{display:none}
+.lm-xhost{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+.lm-bar{position:absolute;top:0;left:0;right:0;z-index:3;height:98px;padding:47px 16px 0;display:flex;align-items:center;gap:10px;background:color-mix(in srgb,var(--lm-panel) 80%,transparent);-webkit-backdrop-filter:blur(20px) saturate(1.5);backdrop-filter:blur(20px) saturate(1.5);border-bottom:.5px solid var(--lm-line);color:var(--lm-ink);transition:opacity .35s}
+.lm-bar.is-hidden{opacity:0;pointer-events:none}
+.lm-bar-face{width:32px;height:32px;flex:none}
+.lm-bar-t{display:grid;line-height:1.25;min-width:0;flex:1}
+.lm-bar-t b{font-size:15px;font-weight:600}
+.lm-bar-t span{font-size:12px;color:var(--lm-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lm-chip-st{font:600 12px Inter,sans-serif;padding:5px 10px;border-radius:999px;background:var(--lm-soft);color:var(--lm-muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.lm-chip-st.is-live{background:rgba(31,169,103,.14);color:var(--ok)}
+.lm-chip-st.is-live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok)}
+
+.lm-sheet{position:absolute;left:0;right:0;bottom:0;z-index:4;border-radius:30px 30px 0 0;padding:8px 20px 34px;box-shadow:0 -18px 50px rgba(60,20,0,.28);transform:translateY(105%);transition:transform .5s cubic-bezier(.2,.85,.25,1)}
+.lm-sheet.is-on{transform:none}
+.lm-grab{display:block;width:40px;height:5px;border-radius:3px;background:var(--m-faint);margin:0 auto 12px;border:0;padding:0;cursor:pointer}
+.lm-who{display:flex;align-items:center;gap:10px;min-height:36px}
+.lm-who-face{width:34px;height:34px;flex:none}
+.lm-who-t{display:grid;line-height:1.25;flex:1;min-width:0}
+.lm-who-t b{font-size:15px;font-weight:600}
+.lm-who-t span{font-size:13px;color:var(--m-dim)}
+.lm-live{background:linear-gradient(90deg,var(--m-dim) 35%,var(--m-faint) 50%,var(--m-dim) 65%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;animation:lmShim 1.7s linear infinite}
+.lm-min-cta,.lm-x{display:none}
+.lm-min-cta{height:38px;padding:0 16px;border-radius:999px;border:0;background:var(--m-solid);color:var(--m-solid-ink);font:600 14px Inter,sans-serif;align-items:center;cursor:pointer}
+.lm-x{width:32px;height:32px;border-radius:50%;border:0;background:var(--m-glass);place-items:center;cursor:pointer;color:var(--m-ink)}
+.lm-x svg{width:15px;height:15px}
+.lm-sheet[data-kind="direct"] .lm-x{display:grid}
+.lm-sheet.is-min .lm-body{display:none}
+.lm-sheet.is-min .lm-min-cta{display:inline-flex}
+.lm-sheet.is-min{padding-bottom:30px}
+.lm-sheet[data-kind="publicada"] .lm-who{display:none}
+
+.lm-msg{font-size:17px;line-height:1.42;margin:14px 0 0;letter-spacing:-.005em}
+.lm-next{font-size:14px;line-height:1.45;color:var(--m-ink);margin:12px 0 0;background:var(--m-glass);border-radius:16px;padding:11px 14px}
+.lm-next b{font-weight:700}
+.lm-actions{display:grid;gap:10px;margin-top:18px}
+.lm-btn{height:54px;border-radius:18px;border:0;display:flex;align-items:center;justify-content:center;gap:9px;font:600 16px Inter,sans-serif;cursor:pointer;transition:transform .12s,opacity .2s;width:100%}
+.lm-btn:active{transform:scale(.98)}
+.lm-btn svg{width:20px;height:20px}
+.lm-pri{background:var(--m-solid);color:var(--m-solid-ink);box-shadow:0 12px 26px -14px rgba(90,25,0,.55)}
+.lm-sec{background:var(--m-glass);color:var(--m-ink)}
+.lm-wa{background:var(--wa);color:#fff}
+.lm-progress{height:6px;border-radius:3px;background:var(--m-glass);overflow:hidden;margin:18px 0 6px}
+.lm-progress i{display:block;width:40%;height:100%;border-radius:3px;background:var(--m-solid);animation:lmBar 1.1s cubic-bezier(.4,0,.2,1) infinite}
+.lm-pub{text-align:center}
+.lm-pub-face{width:84px;height:84px;margin:22px auto 16px}
+.lm-pub-t{font:italic 400 36px/1.05 "Instrument Serif",serif;margin:0;letter-spacing:-.01em}
+.lm-url{margin:14px auto 0;display:inline-flex;align-items:center;gap:8px;background:var(--m-glass);border-radius:999px;padding:5px 5px 5px 13px;font-size:14px;font-weight:500}
+.lm-url svg{width:15px;height:15px}
+.lm-url button{border:0;background:var(--m-solid);color:var(--m-solid-ink);border-radius:999px;padding:6px 12px;font-weight:600;font-size:13px;cursor:pointer}
+.lm-og-cap{font-size:12.5px;color:var(--m-dim);margin:16px 0 6px;text-align:left}
+.lm-og{display:flex;gap:10px;align-items:center;background:var(--m-glass);border-radius:14px;padding:8px;text-align:left}
+.lm-og-img{width:64px;height:64px;border-radius:9px;background:center/cover;flex:none}
+.lm-og div{display:grid;line-height:1.3;min-width:0}
+.lm-og b{font-size:14px}
+.lm-og span{font-size:13px;color:var(--m-dim)}
+.lm-og small{font-size:12px;color:var(--m-dim);opacity:.8}
+
+.lm-ba{display:flex;align-items:center;gap:10px;margin-top:14px}
+.lm-ba figure{margin:0;display:grid;gap:6px}
+.lm-ba figcaption{font-size:12px;color:var(--m-dim);font-weight:500}
+.lm-mini{width:132px;border-radius:12px;overflow:hidden;box-shadow:0 0 0 3px var(--m-card);background:#FBF6EE}
+.lm-ba-arrow{color:var(--m-dim)}
+.lm-ba-arrow svg{width:18px;height:18px}
+
+.lm-thread{max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:12px 0 2px;scrollbar-width:none}
+.lm-thread::-webkit-scrollbar{display:none}
+.lm-len{font-size:16px;line-height:1.45;max-width:94%}
+.lm-me{align-self:flex-end;max-width:82%;background:var(--m-card);color:var(--m-card-ink);border-radius:20px 20px 6px 20px;padding:10px 14px;font-size:15.5px;line-height:1.4}
+.lm-vn{display:flex;align-items:center;gap:10px;padding:7px 14px 7px 7px}
+.lm-vn-play{width:32px;height:32px;border-radius:50%;border:0;background:var(--len);color:var(--on-len);display:grid;place-items:center;cursor:pointer;flex:none}
+.lm-vn-play svg{width:14px;height:14px}
+.lm-vn-bars{display:flex;align-items:center;gap:2px;height:28px}
+.lm-vn-bars i{width:3px;border-radius:2px;background:var(--lm-muted);opacity:.5;transition:background .15s,opacity .15s}
+.lm-vn-bars i.is-on{background:var(--len);opacity:1}
+.lm-vn-d{font-size:12.5px;color:var(--lm-muted);font-variant-numeric:tabular-nums}
+.lm-vn-tr{align-self:flex-end;max-width:82%;font-size:13px;line-height:1.4;color:var(--m-dim);margin-top:-4px;text-align:right}
+.lm-photo{padding:4px}
+.lm-photo img{display:block;width:150px;height:110px;object-fit:cover;border-radius:16px}
+.lm-workcard{border:1px solid var(--m-faint);border-radius:18px;padding:14px}
+.lm-worknote{margin:12px 0 0;font-size:13px;color:var(--m-dim)}
+.lm-link{border:0;background:none;padding:0;color:var(--m-ink);text-decoration:underline;text-decoration-color:var(--m-faint);text-decoration-thickness:2px;text-underline-offset:3px;font:600 13px Inter,sans-serif;cursor:pointer}
+.lm-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.lm-chips:empty{display:none}
+.lm-chip{border:0;background:var(--m-glass);color:var(--m-ink);border-radius:999px;padding:9px 14px;font:500 14px Inter,sans-serif;cursor:pointer;display:inline-flex;gap:7px;align-items:center}
+.lm-chip svg{width:16px;height:16px}
+.lm-comp{display:flex;gap:8px;align-items:center;margin-top:12px}
+.lm-field{flex:1;position:relative;height:50px;border-radius:25px;background:var(--m-card);color:var(--m-card-ink);overflow:hidden}
+.lm-field input{width:100%;height:100%;border:0;background:transparent;padding:0 18px;font:16px Inter,sans-serif;color:var(--m-card-ink);outline:none}
+.lm-field input::placeholder{color:var(--lm-muted)}
+.lm-rec{position:absolute;inset:0;display:none;align-items:center;gap:9px;padding:0 16px}
+.lm-field.is-rec .lm-rec{display:flex}
+.lm-field.is-rec input{visibility:hidden}
+.lm-rec-dot{width:9px;height:9px;border-radius:50%;background:var(--bad);animation:lmBlink 1s steps(1) infinite;flex:none}
+.lm-rec-t{font:500 14px Inter,sans-serif;font-variant-numeric:tabular-nums;min-width:30px}
+.lm-rec-wave{flex:1;display:flex;align-items:center;gap:2px;height:26px;overflow:hidden;min-width:0}
+.lm-rec-wave i{flex:1;max-width:3px;min-width:2px;border-radius:2px;background:var(--len);height:12%;transition:height .08s}
+.lm-rec-hint{font-size:12.5px;color:var(--lm-muted);white-space:nowrap}
+.lm-mic{width:50px;height:50px;border-radius:50%;border:0;background:var(--m-solid);color:var(--m-solid-ink);display:grid;place-items:center;cursor:pointer;flex:none;touch-action:none;transition:transform .2s,box-shadow .2s}
+.lm-mic svg{width:22px;height:22px}
+.lm-mic.is-rec{transform:scale(1.16);box-shadow:0 0 0 8px var(--m-faint)}
+
+/* ── la página de ejemplo: Panadería Luna, en móvil ────────────────── */
+.lp{--c:#FBF6EE;--i:#2B1D14;--m:#6F5A4B;--t:#B5541C;--l:#EADFD0;--rad:18px;background:var(--c);color:var(--i);font:15px/1.55 Inter,sans-serif}
+.lp h1,.lp h2,.lp-logo{font-family:"Instrument Serif",serif;font-weight:400;letter-spacing:-.01em}
+.lp-pad{padding:0 20px}
+.lp-nav{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 14px}
+.lp-logo{font-size:26px;line-height:1}
+.lp-logo i{color:var(--t)}
+.lp-btn{display:inline-flex;align-items:center;background:var(--i);color:var(--c);border-radius:999px;padding:11px 18px;font-size:14px;font-weight:600;white-space:nowrap}
+.lp-sm{padding:8px 14px;font-size:13px}
+.lp-alt{background:transparent;color:var(--i);box-shadow:inset 0 0 0 1px var(--l)}
+.lp-hero{padding:4px 20px 38px}
+.lp-heroimg{aspect-ratio:4/3.5;border-radius:calc(var(--rad) + 6px);background:#E2C9A5 center/cover}
+.lp-eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--t);font-weight:600}
+.lp-hero .lp-eyebrow{margin-top:22px}
+.lp-hero h1{font-size:46px;line-height:1.02;margin:10px 0 12px}
+.lp-hero p{color:var(--m);margin:0}
+.lp-cta{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+.lp-panes{padding:38px 0;border-top:1px solid var(--l)}
+.lp h2{font-size:38px;line-height:1.05;margin:0}
+.lp-sub{color:var(--m);margin:6px 0 0}
+.lp-cards{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:18px 20px 4px;scrollbar-width:none}
+.lp-cards::-webkit-scrollbar{display:none}
+.lp-card{flex:0 0 64%;scroll-snap-align:start;background:#fff;border:1px solid var(--l);border-radius:var(--rad);padding:12px}
+.lp-card h3{margin:0 0 3px;font-size:16px}
+.lp-card p{margin:0 0 8px;color:var(--m);font-size:13.5px;line-height:1.45}
+.lp-card b{font-size:15px}
+.lp-sw{height:112px;border-radius:12px;margin-bottom:12px}
+.lp-sw1{background:linear-gradient(135deg,#F6D9A9,#E7A96A)}.lp-sw2{background:linear-gradient(135deg,#EFD2A6,#C98C4F)}.lp-sw3{background:linear-gradient(135deg,#D9B98E,#8F5F36)}
+.lp-hoy{margin-top:24px}
+.lp-hoy h3{margin:0 0 10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--t)}
+.lp-hoy ul{list-style:none;margin:0;padding:0;display:flex;gap:8px;flex-wrap:wrap}
+.lp-hoy li{background:#fff;border:1px dashed var(--t);border-radius:999px;padding:6px 13px;font-size:14px}
+.lp-hoy li b{color:var(--t);margin-left:6px}
+.lp-enc{background:#F4EADB;padding:38px 20px}
+.lp-encimg{aspect-ratio:16/10;border-radius:22px;background:#E2C9A5 center/cover;margin-bottom:20px}
+.lp-enc h2{margin-top:8px}
+.lp-form{display:grid;gap:12px;margin-top:18px}
+.lp-form label{display:grid;gap:5px;font-size:12.5px;font-weight:600;color:var(--m)}
+.lp-form input,.lp-form select{font:inherit;font-size:15px;font-weight:400;border:1px solid var(--l);background:#fff;border-radius:10px;padding:11px 12px;color:var(--i);width:100%}
+.lp-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.lp-form .lp-btn{justify-self:start;margin-top:4px}
+.lp-visit{padding:38px 20px}
+.lp-visit p{color:var(--m);margin:12px 0 0;line-height:1.8}
+.lp-map{height:190px;border-radius:20px;margin-top:18px;position:relative;overflow:hidden;background:
+  linear-gradient(90deg,transparent 48%,#fff 48%,#fff 52%,transparent 52%) 0 0/110px 100%,
+  linear-gradient(0deg,transparent 46%,#fff 46%,#fff 54%,transparent 54%) 0 0/100% 84px,#E9DFD1}
+.lp-map::after{content:"";position:absolute;left:52%;top:38%;width:22px;height:22px;border-radius:50% 50% 50% 0;background:var(--t);transform:rotate(-45deg);box-shadow:0 6px 12px rgba(0,0,0,.2)}
+.lp-map.is-photo{background:center/cover}
+.lp-map.is-photo::after{display:none}
+.lp-foot{padding:22px 20px;font-size:12.5px;color:var(--m);border-top:1px solid var(--l)}
+.lp-new{animation:lpNew 1.1s cubic-bezier(.2,.7,.2,1) both}
+@keyframes lpNew{from{filter:blur(16px) saturate(.5);opacity:.35;transform:scale(1.04)}to{filter:none;opacity:1;transform:none}}
+.lp-hit{animation:lpHit 1.9s ease both}
+@keyframes lpHit{0%{box-shadow:0 0 0 0 rgba(255,138,30,0)}18%,72%{box-shadow:0 0 0 3px #FF8A1E,0 0 0 9px rgba(255,138,30,.18)}100%{box-shadow:0 0 0 0 rgba(255,138,30,0)}}
+</style>
+</head>
+<body>
+<div class="lm-desk">
+  <aside class="lm-panel">
+    <h1>Len en el móvil</h1>
+    <p class="lm-lead">Sin editor. Te avisa, te enseña tu página y le dices qué sigue.</p>
+    <h2>Escenas</h2>
+    <div class="lm-scenes">
+      <button data-scene="trabajando"><kbd>1</kbd>Len trabajando<small>con la app abierta, al terminar te llama</small></button>
+      <button data-scene="aviso"><kbd>2</kbd>Aviso<small>teléfono bloqueado</small></button>
+      <button data-scene="llamada"><kbd>3</kbd>Llamada</button>
+      <button data-scene="entrega"><kbd>4</kbd>Entrega<small>la captura se vuelve la página</small></button>
+      <button data-scene="publicar"><kbd>5</kbd>Publicar</button>
+      <button data-scene="dirigir"><kbd>6</kbd>Dirigir<small>nota de voz o texto</small></button>
+      <button data-scene="pregunta"><kbd>7</kbd>Pregunta<small>algo falla y Len te pregunta</small></button>
+    </div>
+    <h2>Ajustes</h2>
+    <div class="lm-toggles">
+      <button id="t-voice">Voz de Len <b></b></button>
+      <button id="t-silent">Teléfono <b></b></button>
+      <button id="t-ask">Len se atora al buscar <b></b></button>
+      <button id="t-theme">Tema <b></b></button>
+      <button id="t-reduced">Movimiento <b></b></button>
+    </div>
+    <p class="lm-foot">Un toque durante la entrega la salta. La voz es la del navegador (es-MX), sólo para sentirlo.</p>
+  </aside>
+
+  <div class="lm-slot"><div class="lm-scaler"><div class="lm-phone" id="lm-phone">
+    <div class="lm-screen" id="lm-screen" data-sb="light">
+
+      <section class="lm-layer lm-lock" id="lm-lock">
+        <div class="lm-lock-date">martes, 29 de septiembre</div>
+        <div class="lm-lock-time">9:41</div>
+        <div class="lm-lock-foot"><span class="lm-lock-btn" data-ic="torch"></span><span class="lm-lock-btn" data-ic="cam"></span></div>
+      </section>
+
+      <section class="lm-layer lm-app" id="lm-app" data-mode="work">
+        <div class="lm-work lm-m lm-marca" id="lm-work">
+          <div class="lm-aura is-soft"><i></i><i></i><i></i></div>
+          <div class="lm-work-top"><b>Panadería Luna</b><span>Página nueva</span></div>
+          <div class="lm-work-face" id="lm-work-face"></div>
+          <h2 class="lm-work-title" id="lm-work-title"></h2>
+          <div class="lm-live-card" id="lm-live"></div>
+          <ol class="lm-steps" id="lm-work-steps"></ol>
+          <div class="lm-work-foot" id="lm-work-foot"></div>
+        </div>
+
+        <div class="lm-pagehost" id="lm-page">
+          <div class="lp" id="lp">
+            <nav class="lp-nav"><div class="lp-logo">Luna <i>panadería</i></div><span class="lp-btn lp-sm">Pedir ahora</span></nav>
+            <section class="lp-hero">
+              <div class="lp-heroimg" id="lp-heroimg"></div>
+              <div class="lp-eyebrow">Horno de leña · desde 1998</div>
+              <h1>Pan hecho a mano, cada mañana</h1>
+              <p>Masa madre de veinte horas, harina de molino y el mismo horno de siempre. Abrimos a las 7:00 con el pan todavía caliente.</p>
+              <div class="lp-cta"><span class="lp-btn">Ver los panes</span><span class="lp-btn lp-alt">Cómo llegar</span></div>
+            </section>
+            <section class="lp-panes">
+              <div class="lp-pad"><h2>Nuestros panes</h2><p class="lp-sub">Lo que sale del horno cada día.</p></div>
+              <div class="lp-cards">
+                <article class="lp-card"><div class="lp-sw lp-sw1"></div><h3>Concha de vainilla</h3><p>Suave, con su costra de azúcar.</p><b>$14</b></article>
+                <article class="lp-card"><div class="lp-sw lp-sw2"></div><h3>Bolillo</h3><p>Crujiente por fuera, tierno por dentro.</p><b>$5</b></article>
+                <article class="lp-card"><div class="lp-sw lp-sw3"></div><h3>Hogaza de masa madre</h3><p>Fermentación lenta, miga abierta.</p><b>$85</b></article>
+              </div>
+              <div class="lp-hoy lp-pad"><h3>Hoy en el horno</h3><ul><li>Rol de canela<b>$22</b></li><li>Chocolatín<b>$26</b></li><li>Pan de elote<b>$18</b></li></ul></div>
+            </section>
+            <section class="lp-enc">
+              <div class="lp-encimg" id="lp-encimg"></div>
+              <div class="lp-eyebrow">Encargos</div>
+              <h2>Encarga tu pastel</h2>
+              <p class="lp-sub">Pide con dos días de anticipación.</p>
+              <form class="lp-form" onsubmit="return false">
+                <label>Nombre<input placeholder="Tu nombre" tabindex="-1"></label>
+                <div class="lp-two"><label>Fecha<input placeholder="dd/mm" tabindex="-1"></label>
+                  <label>Pastel<select tabindex="-1"><option>Chocolate</option><option>Tres leches</option><option>Zanahoria</option></select></label></div>
+                <label>Teléfono<input placeholder="Para confirmarte" tabindex="-1"></label>
+                <span class="lp-btn">Enviar encargo</span>
+              </form>
+            </section>
+            <section class="lp-visit">
+              <h2>Visítanos</h2>
+              <p>Calle de la Luna 12, Centro<br>Lunes a sábado · 7:00 – 20:00<br>Domingo · 8:00 – 14:00</p>
+              <div class="lp-map" id="lp-map"></div>
+            </section>
+            <footer class="lp-foot">© Panadería Luna · Hecha con OpenLen</footer>
+          </div>
+        </div>
+
+        <div class="lm-xhost" id="lm-xhost"></div>
+
+        <header class="lm-bar" id="lm-bar">
+          <div class="lm-bar-face" id="lm-bar-face"></div>
+          <div class="lm-bar-t"><b>Panadería Luna</b><span id="lm-bar-url">panaderia-luna.openlen.app</span></div>
+          <span class="lm-chip-st" id="lm-bar-chip">Vista previa</span>
+        </header>
+
+        <div class="lm-sheet lm-m lm-marca" id="lm-sheet" data-kind="listo">
+          <button class="lm-grab" data-act="grab" aria-label="Encoger o abrir"></button>
+          <div class="lm-who">
+            <div class="lm-who-face" id="lm-sheet-face"></div>
+            <div class="lm-who-t"><b>Len</b><span id="lm-who-s"></span></div>
+            <button class="lm-min-cta" id="lm-min-cta" data-act="mincta"></button>
+            <button class="lm-x" data-act="back" aria-label="Cerrar" data-ic="x"></button>
+          </div>
+          <div class="lm-body" id="lm-body"></div>
+        </div>
+      </section>
+
+      <section class="lm-layer lm-stage lm-m lm-marca" id="lm-stage" data-mode="open" data-talk="0">
+        <div class="lm-aura"><i></i><i></i><i></i></div>
+        <div class="lm-stage-top"><b>Len</b><span id="lm-stage-sub"></span></div>
+        <div class="lm-stage-face"><div class="lm-halo" id="lm-halo"><i></i></div><div class="lm-talker" id="lm-talker"><div class="lm-face-host" id="lm-stage-face"></div></div></div>
+        <div class="lm-res" id="lm-res"></div>
+        <p class="lm-subs" id="lm-subs" aria-live="polite"></p>
+        <button class="lm-voice" id="lm-voice"></button>
+        <div class="lm-answers" id="lm-answers"></div>
+        <div class="lm-call-actions">
+          <button class="lm-round lm-rb" id="lm-audio"><span></span>Audio</button>
+          <button class="lm-round lm-hang" id="lm-hang"><span data-ic="phoneDown"></span>Colgar</button>
+          <button class="lm-round lm-rb" id="lm-mute"><span></span>Silenciar</button>
+        </div>
+        <div class="lm-skip">Toca para saltar</div>
+      </section>
+
+      <section class="lm-layer lm-incoming lm-m lm-marca" id="lm-incoming">
+        <div class="lm-aura"><i></i><i></i><i></i></div>
+        <div class="lm-inc-top"><b>Len</b><span id="lm-inc-sub">Tu página está lista</span></div>
+        <div class="lm-inc-face"><div class="lm-rings"><i></i><i></i><i></i></div><div class="lm-face-host" id="lm-inc-face"></div></div>
+        <div class="lm-inc-actions">
+          <button class="lm-round lm-decline" id="lm-decline"><span data-ic="x"></span>Ahora no</button>
+          <button class="lm-round lm-accept" id="lm-accept"><span data-ic="phone"></span>Contestar</button>
+        </div>
+      </section>
+
+      <div class="lm-notif" id="lm-notif" role="button" tabindex="0">
+        <div class="lm-n-icon" data-ic="mark"></div>
+        <div class="lm-n-txt">
+          <div class="lm-n-head"><span>OpenLen</span><span>ahora</span></div>
+          <div class="lm-n-title" id="lm-n-title"></div>
+          <div class="lm-n-body" id="lm-n-body"></div>
+        </div>
+      </div>
+      <div class="lm-hud" id="lm-hud"></div>
+      <div class="lm-toast" id="lm-toast"></div>
+      <div class="lm-sb"><span>9:41</span><span class="lm-sb-ic" data-ic="sb"></span></div>
+      <div class="lm-island"></div>
+      <div class="lm-home"></div>
+    </div>
+  </div></div></div>
+</div>
+
+<script src="../len-cara/cara.js"></script>
+<script>
+"use strict";
+/* ───────── utilidades ───────── */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const U = (id, w) => `https://images.unsplash.com/photo-${id}?w=${w}&q=72&auto=format&fit=crop`;
+const PH = { loaves: "1509440159596-0249088772ff", croissant: "1555507036-ab1f4038808a", sourdough: "1586444248902-2f64eddc13df", cake: "1578985545062-69928b1d9587", shop: "1517433670267-08bbd4be890f" };
+Object.values(PH).forEach((id) => { new Image().src = U(id, 800); new Image().src = U(id, 300); });
+const HERO = [PH.sourdough, PH.loaves, PH.croissant];
+
+const SCREEN = $("#lm-screen"), PHONE = $("#lm-phone"), PAGE = $("#lm-page");
+const W = 390, H = 844;
+let K = 1;
+
+/* ───────── iconos (pocos) ───────── */
+const S2 = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+const PHONE_P = "M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z";
+const I = {
+  mic: `<svg viewBox="0 0 24 24" ${S2}><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></svg>`,
+  send: `<svg viewBox="0 0 24 24" ${S2} stroke-width="2.4"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg>`,
+  check: `<svg viewBox="0 0 24 24" ${S2} stroke-width="3.4"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`,
+  x: `<svg viewBox="0 0 24 24" ${S2} stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
+  phone: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="${PHONE_P}"/></svg>`,
+  phoneDown: `<svg viewBox="0 0 24 24" fill="currentColor"><g transform="rotate(135 12 12)"><path d="${PHONE_P}"/></g></svg>`,
+  spk: `<svg viewBox="0 0 24 24" ${S2}><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" stroke="none"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>`,
+  spkOff: `<svg viewBox="0 0 24 24" ${S2}><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" stroke="none"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>`,
+  micOff: `<svg viewBox="0 0 24 24" ${S2}><path d="M15 9.4V5.5a3 3 0 0 0-5.7-1.3M9 9v2.5a3 3 0 0 0 4.7 2.5M5 11a7 7 0 0 0 11.4 5.4M19 11a7 7 0 0 1-.7 3M12 18v3.5M3 3l18 18"/></svg>`,
+  bellOff: `<svg viewBox="0 0 24 24" ${S2}><path d="M8.7 3.7A6 6 0 0 1 18 8.5c0 3 .7 4.9 1.5 6M6.3 6.6C6.1 7.2 6 7.8 6 8.5c0 5-2 6.5-2 6.5h11M10.3 19a2 2 0 0 0 3.4 0M3 3l18 18"/></svg>`,
+  img: `<svg viewBox="0 0 24 24" ${S2}><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg>`,
+  globe: `<svg viewBox="0 0 24 24" ${S2}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>`,
+  arrowR: `<svg viewBox="0 0 24 24" ${S2}><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
+  play: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"/></svg>`,
+  torch: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8 3h8v3l-2 4v10a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V10L8 6z"/><path d="M12 13v2"/></svg>`,
+  cam: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8h3l1.5-2.5h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`,
+  wa: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3a.5.5 0 0 0 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .1-1.3c0-.1-.2-.2-.5-.3z"/></svg>`,
+  mark: `<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lm-mk" x1="14" y1="11" x2="52" y2="55" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB23E"/><stop offset=".52" stop-color="#FF8A1E"/><stop offset="1" stop-color="#F26A0F"/></linearGradient></defs><circle cx="32" cy="32" r="19.5" fill="none" stroke="url(#lm-mk)" stroke-width="15"/></svg>`,
+  sb: `<svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.2c2.3 0 4.4.9 6 2.4l1.1-1.2A10.2 10.2 0 0 0 8 .6 10.2 10.2 0 0 0 .9 3.4L2 4.6a8.6 8.6 0 0 1 6-2.4zm0 3.3c1.4 0 2.7.5 3.7 1.4l1.1-1.2A7 7 0 0 0 8 3.9a7 7 0 0 0-4.8 1.8l1.1 1.2c1-.9 2.3-1.4 3.7-1.4zm0 3.3c.6 0 1.1.2 1.5.6L8 11 6.5 9.4c.4-.4.9-.6 1.5-.6z"/></svg><svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="20" height="9" rx="2" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".45"/></svg>`,
+};
+$$("[data-ic]").forEach((e) => (e.innerHTML = I[e.dataset.ic]));
+
+/* ───────── estado ───────── */
+const S = {
+  voiceOK: false, silent: false, ask: false, muted: false,
+  where: "lock",          // "app" = la app abierta · "lock" = el usuario se fue
+  published: false, dirty: false,
+  applied: new Set(), asked: new Set(), heroN: 0,
+  thread: [], job: null, last: null, prevKind: "listo",
+};
+
+/* ───────── las caras: una por sitio, cada una con su cerebro ───────── */
+// el estado va también al host (data-st): así el CSS la pinta gris en «error»,
+// que es lo que cara.js hace con sus atributos y aquí el naranja taparía
+function face(host, opts) {
+  host.dataset.st = opts.state;
+  return LenCara.create(host, { ...opts, onchange: (s) => (host.dataset.st = s) });
+}
+const F = {
+  work: face($("#lm-work-face"), { props: "compact", state: "pensando" }),
+  stage: face($("#lm-stage-face"), { props: "compact", state: "reposo" }),
+  inc: face($("#lm-inc-face"), { props: "compact", state: "avisando" }),
+  bar: face($("#lm-bar-face"), { props: "none", state: "reposo" }),
+  sheet: face($("#lm-sheet-face"), { props: "none", state: "reposo" }),
+};
+Object.values(F).forEach((c) => c.host.addEventListener("click", (e) => { e.stopPropagation(); c.poke(); }));
+
+/* ───────── tiempo: todo lo pendiente muere al cambiar de escena ───────── */
+let RUN = 0, TM = [], ANIMS = [];
+const later = (fn, ms) => { const R = RUN; const id = setTimeout(() => { TM = TM.filter((x) => x !== id); if (R === RUN) fn(); }, ms); TM.push(id); return id; };
+const wait = (ms) => new Promise((r) => later(r, ms));
+const anim = (el, kf, o) => { const a = el.animate(kf, o); ANIMS.push(a); return a; };
+
+/* ───────── capas ───────── */
+const L = { lock: $("#lm-lock"), app: $("#lm-app"), stage: $("#lm-stage"), incoming: $("#lm-incoming") };
+const show = (n, on = true) => L[n].classList.toggle("is-on", on);
+const only = (...ns) => { for (const k in L) show(k, ns.includes(k)); };
+const sb = (m) => (SCREEN.dataset.sb = m);
+const dark = () => document.documentElement.dataset.theme === "dark";
+const appSb = () => sb(dark() ? "light" : "dark");
+function rel(el) {
+  const s = SCREEN.getBoundingClientRect(), r = el.getBoundingClientRect();
+  return { x: (r.left - s.left) / K, y: (r.top - s.top) / K, w: r.width / K, h: r.height / K };
+}
+
+function haptic() {
+  if (LenCara.reduced) return;
+  PHONE.animate([{ transform: "none" }, { transform: "translateX(-3px) rotate(-.35deg)" }, { transform: "translateX(3px) rotate(.35deg)" }, { transform: "translateX(-2px)" }, { transform: "none" }], { duration: 320 });
+}
+function flashMsg(id, html) {
+  const h = $(id); h.innerHTML = html; h.classList.add("is-on");
+  clearTimeout(h._t); h._t = setTimeout(() => h.classList.remove("is-on"), 1700);
+}
+const hud = (html) => flashMsg("#lm-hud", html);
+const toast = (html) => flashMsg("#lm-toast", html);
+
+/* ───────── el aviso ───────── */
+function notify({ title, body, onTap }) {
+  const n = $("#lm-notif");
+  $("#lm-n-title").textContent = title; $("#lm-n-body").textContent = body;
+  n.onclick = (e) => { e.stopPropagation(); hideNotif(); onTap && onTap(); };
+  n.classList.remove("is-on"); n.classList.toggle("is-low", L.lock.classList.contains("is-on"));
+  void n.offsetWidth; n.classList.add("is-on");
+  haptic();
+}
+const hideNotif = () => $("#lm-notif").classList.remove("is-on");
+
+/* ───────── la voz (la del navegador; sólo con permiso y sin silencio) ───────── */
+const speech = {
+  voices: [],
+  can: () => "speechSynthesis" in window,
+  load() { if (this.can()) this.voices = speechSynthesis.getVoices(); },
+  pick() {
+    const v = this.voices;
+    return v.find((x) => /^es[-_]MX/i.test(x.lang)) || v.find((x) => /^es[-_](US|419)/i.test(x.lang)) || v.find((x) => /^es/i.test(x.lang)) || null;
+  },
+  speak(text, { onWord, onEnd } = {}) {
+    if (!this.can()) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text), v = this.pick();
+    if (v) u.voice = v;
+    u.lang = v ? v.lang : "es-MX"; u.rate = 1.05; u.pitch = 1.08;
+    if (onWord) u.onboundary = (e) => { if (!e.name || e.name === "word") onWord(e.charIndex); };
+    u.onend = u.onerror = () => onEnd && onEnd();
+    speechSynthesis.speak(u);
+  },
+  stop() { if (this.can()) speechSynthesis.cancel(); },
+};
+speech.load();
+if (speech.can()) speechSynthesis.addEventListener("voiceschanged", () => speech.load());
+const voiceOn = () => S.voiceOK && !S.silent && speech.can();
+
+function paintVoice() {
+  const b = $("#lm-voice");
+  b.hidden = !speech.can();
+  if (S.silent) { b.dataset.st = "silent"; b.innerHTML = `${I.bellOff}<span>En silencio · sólo subtítulos</span>`; }
+  else if (S.voiceOK) { b.dataset.st = "on"; b.innerHTML = `${I.spk}<span>Voz activada</span>`; }
+  else { b.dataset.st = "ask"; b.innerHTML = `${I.spkOff}<span>Oír a Len</span>`; }
+  // en la llamada el permiso es el botón «Audio», como en dots: encendido = lo oyes
+  const a = $("#lm-audio");
+  a.classList.toggle("is-on", voiceOn());
+  $("span", a).innerHTML = S.voiceOK && !S.silent ? I.spk : I.spkOff;
+  paintPanel();
+}
+function toggleVoice(e) {
+  e.stopPropagation();
+  if (S.silent) { hud(`${I.bellOff}El teléfono está en silencio`); return; }
+  S.voiceOK = !S.voiceOK;
+  if (!S.voiceOK) speech.stop();
+  else if (CUR && CUR.i < CUR.words.length - 1) speech.speak(CUR.words.slice(CUR.i + 1).join(" "));
+  paintVoice();
+}
+$("#lm-voice").onclick = toggleVoice;
+$("#lm-audio").onclick = toggleVoice;
+// silenciar = Len deja de oírte (tu micro), no el teléfono
+function paintMute() {
+  const m = $("#lm-mute");
+  m.classList.toggle("is-on", S.muted);
+  $("span", m).innerHTML = S.muted ? I.micOff : I.mic;
+}
+$("#lm-mute").onclick = (e) => {
+  e.stopPropagation();
+  S.muted = !S.muted; paintMute();
+  hud(S.muted ? `${I.micOff}Len no te oye` : `${I.mic}Len te oye`);
+};
+
+/* ───────── hablar: subtítulos palabra a palabra + la cara al ritmo ─────────
+   Manda el reloj propio; si la voz trae eventos de palabra, mandan ellos.
+   Una palabra entre *asteriscos* se subraya con marcador y dispara, en
+   orden, su cue: así lo que Len hizo aparece JUSTO cuando lo nombra.     */
+let skipTalk = null, CUR = null;
+function talk() {
+  if (LenCara.reduced) return;
+  $("#lm-talker").animate([{ transform: "none" }, { transform: "translateY(-3px) scale(1.035,.97)", offset: .35 }, { transform: "none" }], { duration: 240, easing: "ease-out" });
+  $("#lm-halo").animate([{ opacity: .6, transform: "scale(1)" }, { opacity: 1, transform: "scale(1.16)", offset: .3 }, { opacity: .6, transform: "scale(1)" }], { duration: 460, easing: "ease-out" });
+}
+function say(raw, { face, at = {}, cues = [] } = {}) {
+  const R = RUN, el = $("#lm-subs");
+  const keys = [];
+  const words = raw.split(/\s+/).filter(Boolean).map((w, j) => (w.includes("*") ? (keys.push(j), w.replace(/\*/g, "")) : w));
+  const text = words.join(" ");
+  el.innerHTML = words.map((w, j) => `<span class="lm-w${keys.includes(j) ? " is-key" : ""}">${esc(w)}</span>`).join(" ");
+  const spans = $$(".lm-w", el);
+  const starts = []; let p = 0;
+  for (const w of words) { const s = text.indexOf(w, p); starts.push(s); p = s + w.length; }
+  const cue = (j) => { const n = keys.indexOf(j); if (n >= 0 && cues[n]) cues[n](); };
+  return new Promise((resolve) => {
+    let i = -1, tDone = false, vDone = true, byVoice = false, over = false;
+    CUR = { words, i: -1 };
+    const mark = (k) => {
+      k = Math.min(k, words.length - 1); if (k <= i) return;
+      for (let j = i + 1; j <= k; j++) { spans[j].classList.add("is-said"); if (at[j] && face) face.set(at[j]); cue(j); }
+      i = k; CUR.i = i; talk();
+    };
+    const end = (now) => {
+      if (over || R !== RUN) return;
+      if (!now && !(tDone && vDone)) return;
+      over = true; skipTalk = null;
+      spans.forEach((s) => s.classList.add("is-said"));
+      for (let j = i + 1; j < words.length; j++) cue(j); // saltado: lo que faltaba sale igual
+      i = words.length - 1;
+      if (now) { speech.stop(); resolve(); } else later(resolve, 420);
+    };
+    skipTalk = () => end(true);
+    const step = (k) => {
+      if (over) return;
+      if (byVoice || k >= words.length) { tDone = true; end(); return; }
+      mark(k);
+      const w = words[k];
+      later(() => step(k + 1), 110 + w.length * 55 + (/[.!?…]$/.test(w) ? 320 : /[,;:]$/.test(w) ? 160 : 0));
+    };
+    if (voiceOn()) {
+      vDone = false;
+      speech.speak(text, {
+        onWord: (ci) => { if (R !== RUN || over) return; byVoice = true; let k = 0; while (k + 1 < starts.length && starts[k + 1] <= ci) k++; mark(k); },
+        onEnd: () => { if (R !== RUN) return; vDone = tDone = true; end(); },
+      });
+    }
+    step(0);
+    later(() => { vDone = tDone = true; end(); }, 2500 + text.length * 140);
+  });
+}
+
+/* ───────── la llamada en curso (o la entrada desde el aviso) ───────── */
+let stageSkipped = false;
+async function stage({ mode = "open", lines, sub = "Panadería Luna" }) {
+  const R = RUN;
+  stageSkipped = false;
+  L.stage.classList.remove("is-away"); F.stage.host.style.visibility = "";
+  L.stage.dataset.mode = mode; L.stage.dataset.talk = "1";
+  if (mode === "call") { S.muted = false; paintMute(); }
+  $("#lm-answers").innerHTML = ""; $("#lm-subs").innerHTML = "";
+  RES.innerHTML = ""; L.stage.classList.remove("has-res");
+  $("#lm-subs").classList.remove("is-out"); $("#lm-voice").classList.remove("is-out"); RES.classList.remove("is-out");
+  $("#lm-stage-sub").textContent = mode === "call" ? "0:00" : sub;
+  if (mode === "call") {
+    let s = 0;
+    const tick = () => { if (!L.stage.classList.contains("is-on")) return; s++; $("#lm-stage-sub").textContent = fmt(s); later(tick, 1000); };
+    later(tick, 1000);
+  }
+  paintVoice();
+  only("stage"); sb("light"); hideNotif();
+  for (const ln of lines) {
+    if (stageSkipped || R !== RUN) break;
+    if (ln.s) F.stage.set(ln.s);
+    if (ln.res) { RES.innerHTML = ln.res(); L.stage.classList.add("has-res"); }
+    await say(ln.t, { face: F.stage, at: ln.at, cues: ln.cues });
+    if (ln.hold && !stageSkipped) await wait(ln.hold);
+  }
+  L.stage.dataset.talk = "0";
+}
+
+/* ───────── los resultados: lo que Len hizo, sacado de la página y de su revisión ─────────
+   Nada se inventa ni cuesta otra llamada: son las secciones que escribió, las fotos
+   que descartó y las comprobaciones que ya corre (contraste, desbordes, errores). */
+const RES = $("#lm-res");
+const pop = (sel) => () => { const e = $(sel, RES); if (e) e.classList.add("is-in"); };
+const popAll = (sel, cls = "is-in", gap = 90) => () => $$(sel, RES).forEach((e, k) => later(() => e.classList.add(cls), k * gap));
+// una miniatura recortada de un trozo de la página: w de ancho, h de alto, desde arriba
+function thumb(el, w, h) {
+  const ew = el.offsetWidth || W, s = w / ew;
+  const c = el.cloneNode(true);
+  c.removeAttribute("id"); $$("[id]", c).forEach((e) => e.removeAttribute("id"));
+  c.classList.remove("lp-new", "lp-hit"); c.style.width = ew + "px"; c.style.margin = "0";
+  return `<div class="lm-thumb" style="width:${w}px;height:${h}px"><div class="lp" style="width:${ew}px;transform:scale(${s});transform-origin:0 0">${c.outerHTML}</div></div>`;
+}
+const CHECKS = ["Todo cabe en la pantalla", "Se lee bien", "Sin errores"];
+const okIc = () => I.check.replace("<svg ", '<svg class="lm-ok-ic" ');
+function resFirst() {
+  const secs = [[".lp-panes", "Tus panes"], [".lp-enc", "Encargos"], [".lp-visit", "Cómo llegar"]];
+  return `<div class="lm-cards">${secs.map(([s, l]) => `<figure class="lm-rc">${thumb($(s, PAGE), 98, 118)}<figcaption>${l}</figcaption></figure>`).join("")}</div>
+    <div class="lm-pills">${["En celular", "Todo cabe", "Se lee bien"].map((t) => `<span class="lm-pill">${okIc()}${t}</span>`).join("")}</div>`;
+}
+const resBA = () => `<div class="lm-ba2">
+  <figure class="lm-rc is-before is-in">${S.last.beforeT}<figcaption>Antes</figcaption></figure>
+  <span class="lm-ba2-arrow">${I.arrowR}</span>
+  <figure class="lm-rc lm-ba2-after">${S.last.afterT}<figcaption>Ahora</figcaption></figure></div>`;
+const REJ = [[PH.loaves, "Borrosa", "blur"], [PH.croissant, "Muy oscura", "dark"], [PH.sourdough, "Con marca", "mark"], [PH.shop, "No es pan", ""]];
+const resRejects = () => `<div class="lm-rej">${REJ.map(([id, why, fx]) => `<figure class="lm-rj is-${fx || "no-fx"}"><div class="lm-rj-img"><div class="lm-rj-ph" style="background-image:url(${U(id, 300)})"></div>${fx === "mark" ? "<b>© stock</b>" : ""}<i>${I.x}</i></div><figcaption>${why}</figcaption></figure>`).join("")}
+  <figure class="lm-rj is-more"><div class="lm-rj-img">+8</div><figcaption>&nbsp;</figcaption></figure></div>`;
+L.stage.addEventListener("click", (e) => {
+  if (e.target.closest("button") || DELIV) return;
+  if (skipTalk) { stageSkipped = true; skipTalk(); }
+});
+$("#lm-hang").onclick = (e) => { e.stopPropagation(); stageSkipped = true; if (skipTalk) skipTalk(); };
+
+/* ───────── Rayo X (el de producción, de scan-overlay.tsx, en WAAPI) ───────── */
+const EASE_X = "cubic-bezier(.45,.05,.55,.95)";
+function xray(host, dur, iterations, z) {
+  const x = document.createElement("div");
+  x.className = "lm-xray"; if (z) x.style.zIndex = z;
+  x.innerHTML = '<div class="lm-xray-win"><div class="lm-xray-grid"></div></div><div class="lm-xray-line"></div>';
+  host.append(x);
+  const D = (host === SCREEN ? H : host.clientHeight) + 200;
+  x.style.setProperty("--d", D + "px");
+  const o = { duration: dur, easing: EASE_X, iterations, fill: "forwards" };
+  const anims = [
+    anim($(".lm-xray-win", x), [{ transform: "translateY(0)" }, { transform: `translateY(${D}px)` }], o),
+    anim($(".lm-xray-grid", x), [{ transform: "translateY(0)" }, { transform: `translateY(${-D}px)` }], o),
+    anim($(".lm-xray-line", x), [{ transform: "translateY(0)" }, { transform: `translateY(${D}px)` }], o),
+  ];
+  return { el: x, anims, D };
+}
+function flash() {
+  const f = document.createElement("div"); f.className = "lm-flash"; f.style.zIndex = 61;
+  SCREEN.append(f);
+  const a = anim(f, [{ opacity: 0 }, { opacity: 1, offset: .25 }, { opacity: 0 }], { duration: 900, easing: "ease-out" });
+  a.onfinish = () => f.remove();
+}
+// confeti naranja, rosa y amarillo que sale de la cara: sólo al publicar
+function confetti(host) {
+  if (LenCara.reduced || !host) return;
+  const r = rel(host), cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+  const cols = ["#fff", "var(--pink)", "var(--sun)", "var(--len-a)"]; // la hoja es naranja: nada de confeti naranja
+  for (let k = 0; k < 28; k++) {
+    const p = document.createElement("i"), a = -Math.PI / 2 + (Math.random() - .5) * Math.PI * 1.6, d = 80 + Math.random() * 120, rot = (Math.random() - .5) * 720;
+    const w = 6 + Math.random() * 5;
+    p.className = "lm-conf";
+    Object.assign(p.style, { left: cx + "px", top: cy + "px", width: w + "px", height: (k % 3 ? w * 1.6 : w) + "px", background: cols[k % 4], borderRadius: k % 3 ? "2px" : "50%" });
+    SCREEN.append(p);
+    const dx = Math.cos(a) * d, dy = Math.sin(a) * d;
+    const an = anim(p, [
+      { transform: "translate(-50%,-50%) scale(.3)", opacity: 1 },
+      { transform: `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) rotate(${rot}deg)`, opacity: 1, offset: .5 },
+      { transform: `translate(calc(-50% + ${dx * 1.15}px),calc(-50% + ${dy + 160}px)) rotate(${rot * 1.8}deg)`, opacity: 0 },
+    ], { duration: 1300 + Math.random() * 500, easing: "cubic-bezier(.15,.7,.3,1)", fill: "forwards" });
+    an.onfinish = () => p.remove();
+  }
+}
+let LOOP = null;
+function pageLoop(on) {
+  if (LOOP) { LOOP.el.remove(); LOOP.anims.forEach((a) => a.cancel()); LOOP = null; }
+  if (on && !LenCara.reduced) LOOP = xray($("#lm-xhost"), 1600, Infinity);
+}
+
+/* ───────── la entrega: < 2 s, se salta con un toque ─────────
+   La captura (una copia quieta y en sepia de la página) sale de la cara,
+   crece a pantalla completa, y el Rayo X la va convirtiendo en la página
+   real, que ya está debajo y se puede recorrer. La cara vuela a la barra. */
+let DELIV = null;
+function deliver() {
+  const R = RUN;
+  return new Promise((resolve) => {
+    const bar = $("#lm-bar");
+    L.app.dataset.mode = "page"; PAGE.scrollTop = 0;
+    bar.classList.add("is-hidden"); sheetShow(false);
+    show("app");
+    $("#lm-subs").classList.add("is-out"); $("#lm-voice").classList.add("is-out"); RES.classList.add("is-out");
+    L.stage.dataset.talk = "0";
+
+    const cap = document.createElement("div");
+    cap.className = "lm-cap is-photo";
+    const copy = PAGE.cloneNode(true);
+    copy.removeAttribute("id"); $$("[id]", copy).forEach((e) => e.removeAttribute("id"));
+    cap.append(copy); SCREEN.append(cap);
+    const parts = [cap], mine = [];
+    let done = false;
+
+    const finish = () => {
+      if (done || R !== RUN) return;
+      done = true; DELIV = null;
+      mine.forEach((a) => a.cancel()); parts.forEach((e) => e.remove());
+      only("app"); appSb();
+      L.stage.classList.remove("is-away"); F.stage.host.style.visibility = "";
+      bar.classList.remove("is-hidden");
+      F.bar.set("terminado"); later(() => F.bar.set("reposo"), 2600);
+      flash();
+      resolve();
+    };
+    DELIV = { skip: finish };
+
+    if (LenCara.reduced) {
+      cap.classList.remove("is-photo");
+      mine.push(anim(cap, [{ opacity: 0 }, { opacity: 1 }], { duration: 240, fill: "forwards" }));
+      mine[0].onfinish = finish;
+      return;
+    }
+
+    const fc = rel(F.stage.host);
+    const fx = fc.x + fc.w / 2 - W / 2, fy = fc.y + fc.h / 2 - H / 2;
+    const frame = "0 0 0 16px #fff, 0 50px 90px rgba(0,0,0,.55)";
+    const grow = anim(cap, [
+      { transform: `translate(${fx}px,${fy}px) scale(.05) rotate(-12deg)`, opacity: 0, borderRadius: "120px", boxShadow: frame, easing: "cubic-bezier(.2,.9,.3,1.2)" },
+      { transform: `translate(0px,${fy + 250}px) scale(.4) rotate(-3deg)`, opacity: 1, borderRadius: "46px", boxShadow: frame, offset: .38, easing: "ease-in-out" },
+      { transform: `translate(0px,${fy + 240}px) scale(.42) rotate(-1.5deg)`, opacity: 1, borderRadius: "44px", boxShadow: frame, offset: .5, easing: "cubic-bezier(.7,0,.2,1)" },
+      { transform: "none", opacity: 1, borderRadius: "0px", boxShadow: "0 0 0 0 #fff, 0 0 0 rgba(0,0,0,0)" },
+    ], { duration: 1000, fill: "forwards" });
+    mine.push(grow);
+
+    // la cara se va a la barra
+    const g = F.stage.host.cloneNode(true);
+    g.removeAttribute("id"); g.className = "lm-ghost lm-m"; // sale con los colores de la llamada…
+    Object.assign(g.style, { left: fc.x + "px", top: fc.y + "px", width: fc.w + "px", height: fc.h + "px", opacity: 0 });
+    SCREEN.append(g); parts.push(g);
+    const tb = rel($("#lm-bar-face"));
+    const gdx = tb.x + tb.w / 2 - (fc.x + fc.w / 2), gdy = tb.y + tb.h / 2 - (fc.y + fc.h / 2), gs = tb.w / fc.w;
+    mine.push(anim(g, [
+      { opacity: 0, transform: "none" }, { opacity: 0, transform: "none", offset: .48 }, { opacity: 1, transform: "none", offset: .5 },
+      { opacity: 1, transform: `translate(${gdx}px,${gdy}px) scale(${gs})` },
+    ], { duration: 1000, easing: "cubic-bezier(.7,0,.2,1)", fill: "forwards" }));
+    mine.push(anim(F.stage.host, [{ opacity: 1 }, { opacity: 1, offset: .5 }, { opacity: 0, offset: .5 }, { opacity: 0 }], { duration: 1000, fill: "forwards" }));
+    later(() => { L.stage.classList.add("is-away"); g.classList.remove("lm-m"); }, 500); // …y en el vuelo toma los de la barra
+
+    grow.onfinish = () => {
+      if (done || R !== RUN) return;
+      only("app"); appSb();
+      const xr = xray(SCREEN, 720, 1, 61);
+      parts.push(xr.el); mine.push(...xr.anims);
+      mine.push(anim(cap, [{ clipPath: "inset(0px 0 0 0)" }, { clipPath: `inset(${xr.D}px 0 0 0)` }], { duration: 720, easing: EASE_X, fill: "forwards" }));
+      xr.anims[2].onfinish = finish;
+    };
+  });
+}
+SCREEN.addEventListener("pointerdown", () => { if (DELIV) DELIV.skip(); }, true);
+
+/* ───────── Len te llama (sólo con la app abierta) ───────── */
+function ring({ state = "avisando", sub = "Tu página está lista", onAnswer, onDecline }) {
+  $("#lm-inc-sub").textContent = sub;
+  F.inc.set(state); show("incoming"); sb("light");
+  const buzz = () => { if (!L.incoming.classList.contains("is-on")) return; haptic(); later(buzz, 1500); };
+  buzz();
+  $("#lm-accept").onclick = () => { show("incoming", false); onAnswer(); };
+  $("#lm-decline").onclick = () => { show("incoming", false); appSb(); onDecline && onDecline(); };
+}
+
+/* ───────── la primera página: Len trabajando ───────── */
+const FIRST = [["Leí lo que me contaste", "pensando", "leer"], ["Escribiendo los textos", "escribiendo", "textos"], ["Buscando fotos de pan", "buscando", "fotos"], ["Revisando cómo se ve en el celular", "mirando", "revisar"]];
+const mkSteps = (arr) => arr.map(([t, face, live]) => ({ t, face, live, st: "todo" }));
+
+/* la tarjeta en vivo: cada paso enseña lo que está saliendo, no sólo su nombre */
+const LIVE = {
+  leer(box, now) {
+    box.innerHTML = `<p class="lm-live-cap">Lo que entendí</p><div class="lm-tags">${["Panadería", "Horno de leña", "Pasteles por encargo", "En el Centro", "Abre a las 7"].map((t) => `<span>${t}</span>`).join("")}</div>`;
+    $$(".lm-tags span", box).forEach((s, k) => (now ? s.classList.add("is-in") : later(() => s.classList.add("is-in"), 180 + k * 260)));
+  },
+  textos(box, now) {
+    const h = "Pan hecho a mano, cada mañana";
+    box.innerHTML = `<p class="lm-live-cap">El título</p><p class="lm-type"><span></span><i></i></p><p class="lm-type-sub">Masa madre de veinte horas y el mismo horno de siempre.</p>`;
+    const sp = $(".lm-type span", box), sub = $(".lm-type-sub", box);
+    if (now) { sp.textContent = h; sub.classList.add("is-in"); return; }
+    let k = 0;
+    const tick = () => { sp.textContent = h.slice(0, ++k); if (k < h.length) later(tick, 38 + Math.random() * 30); else later(() => sub.classList.add("is-in"), 150); };
+    later(tick, 250);
+  },
+  fotos(box, now) {
+    box.innerHTML = `<p class="lm-live-cap">Escogí 3 de 14</p><div class="lm-pics">${HERO.map((id) => `<img src="${U(id, 300)}" alt="">`).join("")}</div>`;
+    $$("img", box).forEach((im, k) => (now ? im.classList.add("is-in") : later(() => im.classList.add("is-in"), 250 + k * 380)));
+  },
+  revisar(box, now) {
+    box.innerHTML = `<p class="lm-live-cap">Probándola en un celular</p><div class="lm-rev"><div class="lm-rev-ph">${thumb($(".lp-hero", PAGE), 62, 94)}<i class="lm-rev-scan"></i></div>
+      <ul class="lm-checks">${CHECKS.map((t) => `<li>${okIc()}${t}</li>`).join("")}</ul></div>`;
+    $$(".lm-checks li", box).forEach((li, k) => (now ? li.classList.add("is-in") : later(() => li.classList.add("is-in"), 450 + k * 420)));
+  },
+};
+function live(kind, now) {
+  const box = $("#lm-live");
+  if (now) { LIVE[kind](box, true); box.classList.add("is-on"); return; }
+  box.classList.remove("is-on");
+  later(() => { LIVE[kind](box); box.classList.add("is-on"); }, 200);
+}
+function stepHTML(s) {
+  const ic = s.st === "done" ? I.check : s.st === "fail" ? "!" : "";
+  return `<li class="is-${s.st}"><i>${ic}</i><span>${esc(s.t)}${s.detail ? `<small>${esc(s.detail)}</small>` : ""}</span></li>`;
+}
+function paintWork(steps, done) {
+  $("#lm-work-title").textContent = done ? "Tu página está lista" : "Len está haciendo tu página";
+  $("#lm-work-steps").innerHTML = steps.map(stepHTML).join("");
+  $("#lm-work-foot").innerHTML = done
+    ? `<button class="lm-btn lm-pri" data-act="see">Ver mi página</button>`
+    : `<p>Tarda unos minutos. Puedes cerrar la app:<br>te aviso cuando esté.</p><button class="lm-btn lm-sec" data-act="close">Cerrar la app</button>`;
+}
+const FIRST_NOTIF = { title: "Oye, ya está tu página", body: "Panadería Luna quedó lista. Tócala para verla." };
+async function firstCreation() {
+  const R = RUN;
+  S.where = "app"; L.app.dataset.mode = "work"; only("app"); appSb();
+  const steps = mkSteps(FIRST);
+  paintWork(steps, false);
+  F.work.set("escuchando"); $("#lm-live").classList.remove("is-on");
+  await wait(700);
+  for (const s of steps) {
+    s.st = "doing"; F.work.set(s.face); paintWork(steps, false); live(s.live);
+    await wait(2400);
+    s.st = "done"; paintWork(steps, false);
+  }
+  paintWork(steps, true); F.work.set("terminado");
+  if (S.where === "app") { await wait(800); callFirst(); }
+  else notify({ ...FIRST_NOTIF, onTap: () => firstTalk("open") });
+}
+function callFirst() {
+  ring({
+    onAnswer: () => firstTalk("call"),
+    onDecline: () => later(() => notify({ title: "Tu página está lista", body: "Tócala para verla cuando quieras.", onTap: () => firstTalk("open") }), 500),
+  });
+}
+async function firstTalk(mode) {
+  S.where = "app";
+  await stage({ mode, lines: [
+    { s: "saludando", t: "¡Hey! Ya quedó tu página de Panadería Luna.", at: { 1: "terminado" } },
+    { s: "mirando", t: "Tiene tus *panes*, un formulario para encargar *pasteles* y cómo *llegar*.",
+      res: resFirst, cues: [1, 2, 3].map((k) => pop(`.lm-rc:nth-child(${k})`)) },
+    { s: "revisando", t: "La probé en un *celular*: todo *cabe* y se *lee* bien.",
+      cues: [1, 2, 3].map((k) => pop(`.lm-pill:nth-child(${k})`)), hold: 250 },
+    { s: "terminado", t: "Mira…", hold: 120 },
+  ] });
+  await deliver();
+  sheet("listo"); F.sheet.set("terminado");
+}
+
+/* ───────── la página ───────── */
+function paintBar() {
+  const c = $("#lm-bar-chip");
+  c.className = "lm-chip-st" + (S.published ? " is-live" : "");
+  c.textContent = S.published ? (S.dirty ? "Cambios sin publicar" : "Publicada") : "Vista previa";
+}
+function resetPage() {
+  Object.assign(S, { published: false, dirty: false, heroN: 0, thread: [], job: null, last: null, prevKind: "listo" });
+  S.applied.clear(); S.asked.clear();
+  const h = $("#lp-heroimg"); h.style.backgroundImage = `url(${U(HERO[0], 800)})`; h.className = "lp-heroimg";
+  const m = $("#lp-map"); m.className = "lp-map"; m.style.backgroundImage = "";
+  $("#lp-encimg").style.backgroundImage = `url(${U(PH.cake, 800)})`;
+  paintBar();
+}
+function pageMode() {
+  S.where = "app"; L.app.dataset.mode = "page"; PAGE.scrollTop = 0;
+  only("app"); appSb(); $("#lm-bar").classList.remove("is-hidden");
+  F.bar.set("reposo"); F.sheet.set("reposo");
+}
+const offsetIn = (el) => (el.getBoundingClientRect().top - PAGE.getBoundingClientRect().top) / K + PAGE.scrollTop;
+let AUTOSCROLL = 0;
+async function scrollToEl(el) {
+  const y = Math.max(0, offsetIn(el) - 140);
+  if (Math.abs(y - PAGE.scrollTop) < 30) return;
+  AUTOSCROLL = performance.now() + 900;
+  PAGE.scrollTo({ top: y, behavior: LenCara.reduced ? "auto" : "smooth" });
+  await wait(550);
+}
+function hit(el) {
+  el.classList.remove("lp-new", "lp-hit"); void el.offsetWidth; el.classList.add("lp-hit");
+  setTimeout(() => el.classList.remove("lp-hit"), 2000);
+}
+function mini(el) {
+  const w = el.offsetWidth || 350, h = el.offsetHeight || 200, s = 132 / w;
+  const c = el.cloneNode(true);
+  c.removeAttribute("id"); c.classList.remove("lp-new", "lp-hit");
+  c.style.width = w + "px"; c.style.margin = "0";
+  return `<div class="lm-mini" style="height:${Math.round(h * s)}px"><div class="lp" style="width:${w}px;transform:scale(${s});transform-origin:0 0;background:transparent">${c.outerHTML}</div></div>`;
+}
+
+/* ───────── los cambios que Len sabe hacer en este mock ───────── */
+const CH = {
+  portada: {
+    chip: "Otra foto en la portada",
+    voice: "Cambia la foto de la portada por una de pan recién horneado",
+    reply: "Va. Busco una foto de pan recién horneado y la pongo en la portada.",
+    steps: [["Buscando fotos de pan recién horneado", "buscando"], ["Poniéndola en la portada", "escribiendo"], ["Revisando cómo se ve en el celular", "mirando"]],
+    done: "Cambié la foto de la portada por una de pan recién horneado.",
+    notif: "Ya cambié la foto de la portada",
+    line: "Listo, ya cambié la foto de la *portada*.",
+    canAsk: true,
+    fail: "Busqué «pan recién horneado»: 12 fotos, ninguna pasó mi revisión.",
+    q1: "No encontré una foto de pan recién horneado que se vea bien.",
+    question: "¿Me mandas una tuya, o busco otra cosa?",
+    qnotif: "No encontré una buena foto de pan recién horneado. ¿Me mandas una tuya?",
+    el: () => $("#lp-heroimg"),
+    sec: () => $(".lp-hero", PAGE),
+    apply() { S.heroN = (S.heroN + 1) % HERO.length || 1; this.el().style.backgroundImage = `url(${U(HERO[S.heroN], 800)})`; },
+  },
+  local: {
+    chip: "Sí, sigue con eso",
+    voice: "Pon una foto de mi local donde dice Visítanos",
+    reply: "Va. Pongo una foto de tu local en «Visítanos».",
+    steps: [["Buscando una foto de tu fachada", "buscando"], ["Poniéndola en «Visítanos»", "escribiendo"], ["Revisando cómo se ve en el celular", "mirando"]],
+    done: "Puse una foto de tu local en «Visítanos».",
+    notif: "Ya puse la foto de tu local",
+    line: "Listo, ya puse la foto de tu *local*.",
+    el: () => $("#lp-map"),
+    sec: () => $(".lp-visit", PAGE),
+    apply() { const e = this.el(); e.classList.add("is-photo"); e.style.backgroundImage = `url(${U(PH.shop, 800)})`; },
+  },
+};
+const nextChange = () => ["portada", "local"].find((id) => !S.applied.has(id)) || "portada";
+const NEXT_TXT = "una foto de tu local en «Visítanos»";
+
+/* ───────── la hoja de Len ───────── */
+let SHEET = "listo";
+const sheetShow = (on) => $("#lm-sheet").classList.toggle("is-on", on);
+const MINCTA = { listo: ["Publicar", "publish"], cambio: ["Publicar", "publish"], publicada: ["Compartir", "wa"] };
+function sheetMin(on) {
+  const sh = $("#lm-sheet");
+  if (on && !MINCTA[SHEET]) return;
+  sh.classList.toggle("is-min", on);
+  const m = MINCTA[SHEET];
+  $("#lm-min-cta").textContent = m ? (SHEET === "cambio" && S.published && !S.dirty ? "Compartir" : m[0]) : "";
+}
+const actsHTML = (again) => `<div class="lm-actions">
+  ${S.published && !S.dirty ? "" : `<button class="lm-btn lm-pri" data-act="publish">${S.published ? "Publicar el cambio" : "Publicar"}</button>`}
+  <button class="lm-btn lm-sec" data-act="direct">${I.mic}<span>${again ? "Pedir otro cambio" : "Pedir un cambio"}</span></button>
+</div>`;
+const RENDER = {
+  listo: () => `<p class="lm-msg">Le puse tus panes, un formulario para encargar pasteles y cómo llegar.</p>
+    <p class="lm-next"><b>Lo siguiente que haría:</b> ${NEXT_TXT}.</p>${actsHTML(false)}`,
+  cambio: () => `<p class="lm-msg">${esc(S.last.done)}</p>
+    <div class="lm-ba"><figure>${S.last.before}<figcaption>Antes</figcaption></figure><span class="lm-ba-arrow">${I.arrowR}</span><figure>${S.last.after}<figcaption>Ahora</figcaption></figure></div>${actsHTML(true)}`,
+  publicando: () => `<p class="lm-msg">Publicando tu página…</p><div class="lm-progress"><i></i></div>`,
+  publicada: () => `<div class="lm-pub"><div class="lm-pub-face" id="lm-pub-face"></div>
+    <h3 class="lm-pub-t">Listo, ya está publicada.</h3>
+    <div class="lm-url">${I.globe}<span>panaderia-luna.openlen.app</span><button data-act="copy">Copiar</button></div>
+    <div id="lm-og" hidden><p class="lm-og-cap">Así la verán en WhatsApp</p>
+      <div class="lm-og"><div class="lm-og-img" style="background-image:url(${U(HERO[S.heroN], 300)})"></div><div><b>Panadería Luna</b><span>Pan hecho a mano, cada mañana</span><small>panaderia-luna.openlen.app</small></div></div></div>
+    </div>
+    <div class="lm-actions"><button class="lm-btn lm-wa" data-act="wa">${I.wa}<span>Compartir por WhatsApp</span></button>
+    <button class="lm-btn lm-sec" data-act="direct">${I.mic}<span>Pedir un cambio</span></button></div>`,
+  direct: () => `<div class="lm-thread" id="lm-thread">${threadHTML()}</div>
+    <div class="lm-chips" id="lm-chips">${chipsHTML()}</div>
+    <div class="lm-comp">
+      <div class="lm-field" id="lm-field">
+        <input id="lm-input" type="text" placeholder="Escribe o mantén el micro" autocomplete="off" enterkeyhint="send">
+        <div class="lm-rec"><i class="lm-rec-dot"></i><span class="lm-rec-t" id="lm-rec-t">0:00</span><div class="lm-rec-wave" id="lm-rec-wave"></div><span class="lm-rec-hint" id="lm-rec-hint"></span></div>
+      </div>
+      <button class="lm-mic" id="lm-mic" aria-label="Mantén para grabar"></button>
+    </div>`,
+};
+function whoStatus() {
+  const s = $("#lm-who-s");
+  let t, live = false;
+  if (S.job && S.job.waiting) t = "Tiene una pregunta";
+  else if (S.job) { t = "Trabajando en tu página…"; live = true; }
+  else t = { listo: "Tu página, en vista previa", cambio: "Listo", publicando: "Publicando…", direct: "Te escucho" }[SHEET] || "";
+  s.textContent = t; s.classList.toggle("lm-live", live || SHEET === "publicando");
+}
+function sheet(kind) {
+  if (kind !== "direct" && kind !== "publicando") S.prevKind = kind;
+  SHEET = kind;
+  const sh = $("#lm-sheet");
+  sh.dataset.kind = kind; sh.classList.remove("is-min");
+  if (kind === "direct") {
+    if (!S.thread.length) {
+      S.thread.push({ who: "len", kind: "text", text: "¿Qué le cambio? Dímelo como se lo dirías a alguien." });
+      if (!S.applied.has("local")) S.thread.push({ who: "len", kind: "text", text: `Lo siguiente que haría yo: ${NEXT_TXT}.` });
+    } else if (!S.job && S.thread.at(-1).kind === "work") S.thread.push({ who: "len", kind: "text", text: "¿Algo más?" });
+  }
+  $("#lm-body").innerHTML = RENDER[kind]();
+  if (kind === "publicada") {
+    const f = LenCara.create($("#lm-pub-face"), { state: "publicado" });
+    later(() => f.set("terminado"), 3800);
+  }
+  if (kind === "direct") { wireComposer(); const th = $("#lm-thread"); th.scrollTop = th.scrollHeight; }
+  whoStatus(); sheetShow(true);
+}
+let lastY = 0;
+PAGE.addEventListener("scroll", () => {
+  const y = PAGE.scrollTop;
+  if (performance.now() > AUTOSCROLL && $("#lm-sheet").classList.contains("is-on")) {
+    if (y > lastY + 4 && y > 80) sheetMin(true);
+    else if (y < lastY - 14 || y < 20) sheetMin(false);
+  }
+  lastY = y;
+}, { passive: true });
+
+/* ───────── publicar y compartir ───────── */
+async function publish() {
+  sheet("publicando"); F.sheet.set("pensando"); F.bar.set("pensando");
+  await wait(1400);
+  S.published = true; S.dirty = false; paintBar();
+  F.bar.set("publicado"); later(() => F.bar.set("reposo"), 3800);
+  sheet("publicada"); haptic();
+  later(() => confetti($("#lm-pub-face")), 120); // sólo al publicar de verdad, no al volver a la hoja
+  if (voiceOn()) speech.speak("Listo, ya está publicada.");
+}
+function shareWA() {
+  if (SHEET !== "publicada") sheet("publicada");
+  const og = $("#lm-og"); if (og) og.hidden = false;
+  toast(`${I.wa}Abriendo WhatsApp…`);
+}
+
+/* ───────── la conversación: sin código, los cambios en palabras ───────── */
+function threadHTML() { return S.thread.map(itemHTML).join(""); }
+function itemHTML(it) {
+  if (it.kind === "text") return it.who === "me" ? `<div class="lm-me">${esc(it.text)}</div>` : `<div class="lm-len">${esc(it.text)}</div>`;
+  if (it.kind === "voice") return `<div class="lm-me lm-vn"><button class="lm-vn-play" data-act="play" aria-label="Escuchar">${I.play}</button><div class="lm-vn-bars">${it.bars.map((h) => `<i style="height:${h}%"></i>`).join("")}</div><span class="lm-vn-d">${fmt(it.dur)}</span></div>
+    <div class="lm-vn-tr">${it.trans ? `«${esc(it.trans)}»` : '<span class="lm-live">Transcribiendo…</span>'}</div>`;
+  if (it.kind === "photo") return `<div class="lm-me lm-photo"><img src="${it.src}" alt="Tu foto"></div>`;
+  if (it.kind === "work") return `<div class="lm-workcard"><ol class="lm-steps is-sm">${it.steps.map(stepHTML).join("")}</ol>${it.running ? `<p class="lm-worknote">Puedes cerrar la app, te aviso. <button class="lm-link" data-act="close">Cerrar la app</button></p>` : ""}</div>`;
+  if (it.kind === "ask") return `<div class="lm-len">${esc(it.text)}</div>${it.open ? `<div class="lm-chips"><button class="lm-chip" data-act="photo">${I.img}Mandar una foto</button><button class="lm-chip" data-act="other">Busca otra</button></div>` : ""}`;
+  return "";
+}
+function chipsHTML() {
+  if (S.job) return "";
+  return ["local", "portada"].filter((id) => !S.applied.has(id)).map((id) => `<button class="lm-chip" data-act="chip" data-ch="${id}">${esc(CH[id].chip)}</button>`).join("");
+}
+function refreshThread() {
+  whoStatus();
+  const th = SHEET === "direct" && $("#lm-thread");
+  if (!th) return;
+  th.innerHTML = threadHTML(); $("#lm-chips").innerHTML = chipsHTML();
+  th.scrollTop = th.scrollHeight;
+}
+function playNote(b) {
+  const bars = $$("i", b.parentElement);
+  bars.forEach((i) => i.classList.remove("is-on"));
+  bars.forEach((i, k) => setTimeout(() => i.classList.add("is-on"), k * 110));
+  setTimeout(() => bars.forEach((i) => i.classList.remove("is-on")), bars.length * 110 + 500);
+}
+
+/* ───────── la nota de voz: mantén para grabar, desliza para cancelar;
+   un toque corto la deja grabando sola y el botón pasa a «enviar» ───────── */
+let rec = null;
+function paintMic() {
+  const inp = $("#lm-input"), mic = $("#lm-mic"); if (!mic) return;
+  mic.innerHTML = (inp && inp.value.trim()) || (rec && rec.locked) ? I.send : I.mic;
+}
+function wireComposer() {
+  const inp = $("#lm-input"), mic = $("#lm-mic");
+  const sendText = () => { const t = inp.value.trim(); if (!t) return; inp.value = ""; paintMic(); request({ text: t }); };
+  inp.oninput = paintMic;
+  inp.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); sendText(); } };
+  mic.onpointerdown = (e) => {
+    if (inp.value.trim()) return;
+    e.preventDefault();
+    if (rec) { if (rec.locked) rec.sendOnUp = true; return; }
+    mic.setPointerCapture(e.pointerId);
+    startRec(e.clientX);
+  };
+  mic.onpointermove = (e) => {
+    if (!rec || rec.locked) return;
+    const dx = Math.min(0, (e.clientX - rec.x0) / K), hint = $("#lm-rec-hint");
+    hint.style.transform = `translateX(${dx * .6}px)`; hint.style.opacity = Math.max(0, 1 + dx / 140);
+    if (dx < -120) cancelRec();
+  };
+  mic.onpointerup = () => {
+    if (!rec) return;
+    if (rec.locked) { if (rec.sendOnUp) sendRec(); return; }
+    if (performance.now() - rec.t0 < 350) lockRec(); else sendRec();
+  };
+  mic.onclick = () => { if (inp.value.trim()) sendText(); };
+  paintMic();
+}
+function startRec(x0) {
+  $("#lm-field").classList.add("is-rec"); $("#lm-mic").classList.add("is-rec");
+  const wave = $("#lm-rec-wave"); wave.innerHTML = "<i></i>".repeat(22);
+  const bars = $$("i", wave), hint = $("#lm-rec-hint");
+  hint.textContent = "‹ Desliza para cancelar"; hint.style.transform = ""; hint.style.opacity = 1;
+  rec = { t0: performance.now(), x0, locked: false, hist: [] };
+  let v = .3;
+  rec.iv = setInterval(() => {
+    $("#lm-rec-t").textContent = fmt((performance.now() - rec.t0) / 1000);
+    v = Math.max(.1, Math.min(1, v * .72 + Math.random() * .35 + (Math.random() < .18 ? .3 : 0)));
+    rec.hist.push(v);
+    const tail = rec.hist.slice(-bars.length), off = bars.length - tail.length;
+    bars.forEach((b, i) => (b.style.height = i < off ? "12%" : Math.round(16 + tail[i - off] * 84) + "%"));
+  }, 90);
+  F.sheet.set("escuchando");
+}
+function stopRec() {
+  if (!rec) return;
+  clearInterval(rec.iv); rec = null;
+  const f = $("#lm-field"), m = $("#lm-mic");
+  if (f) f.classList.remove("is-rec");
+  if (m) m.classList.remove("is-rec");
+  paintMic();
+}
+function lockRec() {
+  rec.locked = true;
+  $("#lm-rec-hint").innerHTML = '<button class="lm-link" data-act="reccancel">Cancelar</button>';
+  $("#lm-rec-hint").style.transform = ""; $("#lm-rec-hint").style.opacity = 1;
+  paintMic();
+}
+function cancelRec() {
+  stopRec(); F.sheet.set("reposo");
+  const f = $("#lm-field");
+  if (f && !LenCara.reduced) f.animate([{ transform: "none" }, { transform: "translateX(-6px)" }, { transform: "translateX(5px)" }, { transform: "none" }], { duration: 260 });
+}
+function sendRec() {
+  if (!rec) return;
+  const dur = Math.max(1, (performance.now() - rec.t0) / 1000), hist = rec.hist.slice();
+  stopRec();
+  const bars = Array.from({ length: 28 }, (_, i) => Math.round(22 + (hist[Math.floor(i * hist.length / 28)] ?? .3) * 78));
+  const id = nextChange();
+  const it = { who: "me", kind: "voice", dur, bars, trans: null };
+  S.thread.push(it); refreshThread();
+  later(() => { it.trans = CH[id].voice; refreshThread(); request({ id, pushed: true }); }, 900);
+}
+
+/* ───────── pedirle algo a Len ───────── */
+function request({ text, id, pushed }) {
+  if (text) S.thread.push({ who: "me", kind: "text", text });
+  if (S.job) {
+    S.thread.push({ who: "len", kind: "text", text: "Anotado. Lo hago en cuanto termine esto." });
+    refreshThread(); return;
+  }
+  startJob(id || nextChange(), { typed: !!text && !id });
+}
+async function startJob(id, { typed = false, from = 0, resume = false } = {}) {
+  const ch = CH[id];
+  if (!resume) {
+    S.job = { id, before: mini(ch.el()), beforeT: thumb(ch.sec(), 100, 124), item: { kind: "work", running: true, steps: mkSteps(ch.steps) } };
+    refreshThread();
+    F.sheet.set("pensando"); await wait(900);
+    S.thread.push({ who: "len", kind: "text", text: typed ? "Va, me pongo con eso." : ch.reply });
+    S.thread.push(S.job.item);
+  }
+  S.job.item.running = true; S.job.waiting = false;
+  refreshThread();
+  if (S.where === "app") pageLoop(true);
+  const steps = S.job.item.steps;
+  for (let i = from; i < steps.length; i++) {
+    const s = steps[i];
+    s.st = "doing"; F.sheet.set(s.face); refreshThread();
+    await wait(1800);
+    if (i === 0 && S.ask && ch.canAsk && !S.asked.has(id)) { askFail(id, i); return; }
+    s.st = "done"; refreshThread();
+  }
+  const { before, beforeT } = S.job;
+  S.job.item.running = false;
+  const finishJob = () => {
+    ch.apply(); S.applied.add(id);
+    if (S.published) S.dirty = true;
+    S.last = { done: ch.done, before, after: mini(ch.el()), beforeT, afterT: thumb(ch.sec(), 112, 138) };
+    S.job = null; paintBar();
+  };
+  if (S.where === "app") {
+    const el = ch.el();
+    pageLoop(false); sheetMin(false);
+    await scrollToEl(el);
+    finishJob();
+    el.classList.remove("lp-new"); void el.offsetWidth; el.classList.add("lp-new");
+    const xr = xray($("#lm-xhost"), 1000, 1);
+    later(() => xr.el.remove(), 1050);
+    later(() => hit(el), 1100);
+    F.sheet.set("terminado"); F.bar.set("terminado"); later(() => F.bar.set("reposo"), 2600);
+    sheet("cambio");
+  } else {
+    finishJob();
+    notify({ title: ch.notif, body: "Toca para ver cómo quedó.", onTap: () => openChange(id) });
+  }
+}
+async function openChange(id) {
+  const ch = CH[id];
+  S.where = "app";
+  await stage({ mode: "open", lines: [
+    { s: "terminado", t: ch.line, res: resBA, cues: [pop(".lm-ba2-after")], hold: 350 },
+    { s: "mirando", t: "Mira…", hold: 120 },
+  ] });
+  await deliver();
+  sheet("cambio"); F.sheet.set("terminado");
+  const el = ch.el();
+  await wait(300); await scrollToEl(el); hit(el);
+}
+
+/* ───────── cuando algo falla: el fallo queda a la vista, y Len pregunta ───────── */
+function askFail(id, i) {
+  const ch = CH[id], st = S.job.item.steps[i];
+  st.st = "fail"; st.detail = ch.fail;
+  S.job.item.running = false; S.job.waiting = true;
+  S.asked.add(id);
+  S.thread.push({ who: "len", kind: "ask", text: `${ch.q1} ${ch.question}`, open: true, id, i });
+  pageLoop(false);
+  F.sheet.set("error"); later(() => F.sheet.set("preguntando"), 1500);
+  refreshThread();
+  if (S.where === "app") haptic();
+  else notify({ title: "Len tiene una pregunta", body: ch.qnotif, onTap: () => askStage(id) });
+}
+async function askStage(id) {
+  const ch = CH[id];
+  S.where = "app";
+  // los resultados de la búsqueda, con el porqué de cada descarte: Len enseña su trabajo
+  await stage({ mode: "open", lines: [
+    { s: "buscando", t: "Revisé *doce* fotos de pan recién horneado y *ninguna* me convenció.", res: resRejects,
+      cues: [popAll(".lm-rj", "is-in", 90), () => { popAll(".lm-rj:not(.is-more)", "is-no", 260)(); F.stage.set("error"); }], hold: 500 },
+    { s: "preguntando", t: ch.question },
+  ] });
+  F.stage.set("preguntando");
+  $("#lm-answers").innerHTML = `<button class="lm-ans is-pri" data-act="photo">${I.img}Mandar una foto</button><button class="lm-ans" data-act="other">Busca otra</button><button class="lm-ans is-link" data-act="seepage">Ver la página</button>`;
+}
+function fromStage() {
+  if (!L.stage.classList.contains("is-on")) return;
+  pageMode();
+  sheet("direct");
+}
+function answer(kind) {
+  const it = [...S.thread].reverse().find((x) => x.kind === "ask" && x.open);
+  if (!it || !S.job) return;
+  it.open = false;
+  if (kind === "photo") {
+    S.thread.push({ who: "me", kind: "photo", src: U(PH.loaves, 300) });
+    S.thread.push({ who: "len", kind: "text", text: "¡Gracias! Uso tu foto." });
+  } else {
+    S.thread.push({ who: "me", kind: "text", text: "Busca otra" });
+    S.thread.push({ who: "len", kind: "text", text: "Va, busco pan dulce recién horneado." });
+  }
+  // la tarjeta del trabajo baja bajo tu respuesta, con el fallo dentro y a la vista
+  S.thread.splice(S.thread.indexOf(S.job.item), 1); S.thread.push(S.job.item);
+  S.job.item.steps.splice(it.i + 1, 0, kind === "photo"
+    ? { t: "Usando tu foto", face: "escribiendo", st: "todo" }
+    : { t: "Buscando pan dulce recién horneado", face: "buscando", st: "todo" });
+  if (SHEET !== "direct") sheet("direct"); else refreshThread();
+  startJob(it.id, { from: it.i + 1, resume: true });
+}
+
+/* ───────── cerrar la app: Len sigue; al terminar, te avisa ───────── */
+function closeApp() {
+  S.where = "lock"; pageLoop(false); hideNotif(); stopRec();
+  only("lock"); sb("light");
+}
+
+/* ───────── acciones (un solo oyente) ───────── */
+const ACT = {
+  close: closeApp,
+  see: () => firstTalk("open"),
+  publish,
+  wa: shareWA,
+  direct: () => sheet("direct"),
+  back: () => { stopRec(); sheet(S.prevKind === "cambio" && !S.last ? "listo" : S.prevKind); },
+  copy: () => toast(`${I.check}Enlace copiado`),
+  chip: (b) => request({ text: CH[b.dataset.ch].chip, id: b.dataset.ch }),
+  photo: () => { fromStage(); answer("photo"); },
+  other: () => { fromStage(); answer("other"); },
+  seepage: fromStage,
+  grab: () => sheetMin(!$("#lm-sheet").classList.contains("is-min")),
+  mincta: () => { const m = $("#lm-min-cta").textContent; sheetMin(false); (m === "Compartir" ? shareWA : publish)(); },
+  reccancel: cancelRec,
+  play: playNote,
+};
+SCREEN.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-act]");
+  if (b) { e.stopPropagation(); ACT[b.dataset.act](b); return; }
+  const sh = e.target.closest(".lm-sheet");
+  if (sh && sh.classList.contains("is-min")) sheetMin(false);
+});
+
+/* ───────── escenas ───────── */
+function reset() {
+  RUN++; TM.forEach(clearTimeout); TM = [];
+  ANIMS.forEach((a) => a.cancel()); ANIMS = [];
+  speech.stop(); skipTalk = null; DELIV = null; LOOP = null; stopRec();
+  $$(".lm-cap,.lm-ghost,.lm-xray,.lm-flash,.lm-conf").forEach((e) => e.remove());
+  hideNotif(); sheetShow(false);
+  $("#lm-sheet").classList.remove("is-min");
+  $("#lm-subs").innerHTML = ""; $("#lm-answers").innerHTML = ""; RES.innerHTML = ""; L.stage.classList.remove("has-res");
+  L.stage.classList.remove("is-away"); F.stage.host.style.visibility = "";
+  $("#lm-bar").classList.remove("is-hidden");
+}
+function base() { reset(); resetPage(); }
+const SCENES = {
+  trabajando() { base(); firstCreation(); },
+  aviso() {
+    base(); S.where = "lock"; only("lock"); sb("light");
+    later(() => notify({ ...FIRST_NOTIF, onTap: () => firstTalk("open") }), 900);
+  },
+  llamada() {
+    base(); S.where = "app"; L.app.dataset.mode = "work"; only("app"); appSb();
+    paintWork(mkSteps(FIRST).map((s) => ({ ...s, st: "done" })), true); F.work.set("terminado"); live("revisar", true);
+    later(callFirst, 500);
+  },
+  entrega() {
+    base(); S.where = "app";
+    (async () => {
+      await stage({ mode: "open", lines: [{ s: "mirando", t: "Mira…", hold: 100 }] });
+      await deliver();
+      sheet("listo"); F.sheet.set("terminado");
+    })();
+  },
+  publicar() { base(); pageMode(); sheet("listo"); },
+  dirigir() { base(); pageMode(); sheet("direct"); },
+  pregunta() {
+    base(); S.ask = true; paintPanel();
+    pageMode();
+    const ch = CH.portada;
+    S.thread = [
+      { who: "len", kind: "text", text: "¿Qué le cambio? Dímelo como se lo dirías a alguien." },
+      { who: "me", kind: "voice", dur: 3.6, bars: Array.from({ length: 28 }, (_, i) => Math.round(26 + 70 * Math.abs(Math.sin(i * 1.7) * Math.cos(i * .6)))), trans: ch.voice },
+      { who: "len", kind: "text", text: ch.reply },
+    ];
+    S.job = { id: "portada", before: mini(ch.el()), beforeT: thumb(ch.sec(), 100, 124), item: { kind: "work", running: true, steps: mkSteps(ch.steps) } };
+    S.job.item.steps[0].st = "doing";
+    S.thread.push(S.job.item);
+    SHEET = "direct";
+    closeApp();
+    later(() => askFail("portada", 0), 900);
+  },
+};
+function go(name) {
+  $$(".lm-scenes button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.scene === name)));
+  SCENES[name]();
+}
+$$(".lm-scenes button").forEach((b) => (b.onclick = () => go(b.dataset.scene)));
+addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest("input,select,textarea")) return;
+  const names = Object.keys(SCENES), n = +e.key;
+  if (n >= 1 && n <= names.length) go(names[n - 1]);
+});
+
+/* ───────── ajustes ───────── */
+function paintPanel() {
+  $("#t-voice b").textContent = S.voiceOK ? "permitida" : "sin permiso";
+  $("#t-silent b").textContent = S.silent ? "en silencio" : "con sonido";
+  $("#t-ask b").textContent = S.ask ? "sí" : "no";
+  $("#t-theme b").textContent = dark() ? "oscuro" : "claro";
+  $("#t-reduced b").textContent = LenCara.reduced ? "reducido" : "normal";
+}
+$("#t-voice").onclick = () => { S.voiceOK = !S.voiceOK; if (!S.voiceOK) speech.stop(); paintVoice(); };
+$("#t-silent").onclick = () => {
+  S.silent = !S.silent;
+  if (S.silent) speech.stop();
+  hud(S.silent ? `${I.bellOff}Modo silencio` : `${I.spk}Con sonido`);
+  paintVoice();
+};
+$("#t-ask").onclick = () => { S.ask = !S.ask; paintPanel(); };
+$("#t-theme").onclick = () => {
+  document.documentElement.dataset.theme = dark() ? "light" : "dark";
+  // la app sigue el tema; la llamada y el bloqueo tienen su fondo propio
+  const top = L.app.classList.contains("is-on") && ![L.stage, L.incoming].some((l) => l.classList.contains("is-on"));
+  if (top) appSb();
+  paintPanel();
+};
+$("#t-reduced").onclick = () => { LenCara.setReduced(!LenCara.reduced); paintPanel(); };
+
+/* ───────── el teléfono cabe en la ventana ───────── */
+function fit() {
+  const narrow = innerWidth < 860;
+  K = Math.min(1, (innerWidth - 32) / 412, (innerHeight - (narrow ? 24 : 40)) / 866);
+  document.documentElement.style.setProperty("--k", K.toFixed(4));
+}
+addEventListener("resize", fit);
+fit();
+
+if (matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.dataset.theme = "dark";
+paintPanel(); paintVoice(); paintMute();
+go("aviso");
+</script>
+</body>
+</html>
