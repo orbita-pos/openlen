@@ -46,9 +46,9 @@
       "visualOk": "sem falhas medidas",
       "visualIssues": "com problemas",
       "visualNoLook": "não verificado",
-      "visualOkSinMedida": "apenas a captura",
+      "visualOkSinMedida": "apenas o JavaScript",
       "visualCobertura": "Verifica se algo transborda no celular, se há texto ilegível e se o JavaScript falha. Não diz se a página está bonita: isso é você quem julga.",
-      "visualCoberturaSinMedida": "A captura e os erros de JavaScript foram verificados. O transbordo no celular e o contraste não foram medidos desta vez.",
+      "visualCoberturaSinMedida": "Os erros de JavaScript foram verificados. O transbordo no celular e o contraste não foram medidos desta vez.",
       "visualPaginas": "{miradas} de {tocadas} páginas",
       "visualPaginasParcial": "Foram verificadas {miradas} das {tocadas} páginas alteradas neste turno; as restantes não."
     },

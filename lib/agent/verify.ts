@@ -266,11 +266,20 @@ export interface VerifyParams {
    * día: de las 13 reglas de `RUNTIME_MANDA_PRUEBA`, ninguna tenía un caso que
    * pudiera cazarla, y ésta era una de las cuatro causas.
    *
-   * No inventa una salida nueva: devuelve `conHechos(fallbackVerdict(), hechos)`,
-   * que es LA MISMA forma que ya sale por las cuatro salidas tempranas (sin
-   * captura, turno abortado, proveedor caído, JSON ilegible). Todo el que
-   * consume un veredicto ya sabe tratarla, y `fallback: true` + `conMedida`
-   * dicen con precisión lo que pasó: nadie opinó, pero sí se midió.
+   * 🔴 Y DESDE LEN 2.1 (2026-09-30) ES COMO MIRA LA RUTA DEL AGENTE: la
+   * lectura de producción (`plans/len-2/corridas/2026-09-30-m5-lectura-produccion`)
+   * no encontró un solo «roto» de la visión desde el 06/09, y sus tres
+   * afirmaciones concretas desde entonces fueron falsas y le llegaron al usuario
+   * en la tarjeta.
+   *
+   * Sale por EL MISMO CIERRE que el veredicto con visión —los hechos de las
+   * otras páginas, el recuento, los límites, la línea del journal— y con
+   * `fallback: false`: no llamar al crítico es una decisión, no una avería.
+   * `fallback: true` sigue queriendo decir lo de siempre, que no se pudo mirar
+   * (sin captura, turno abortado). Hasta hoy devolvía
+   * `conHechos(fallbackVerdict(), hechos)` a secas: se dejaba fuera lo medido
+   * en las otras páginas del turno, y la ruta lo habría leído como «no mirado».
+   * Nadie lo pasaba, así que nadie lo vio.
    */
   sinVision?: boolean;
   /**
@@ -903,7 +912,10 @@ async function runVerify(
     //
     // La puerta de tamaño también es como la suya: una captura enorme no se
     // manda, y no mandarla sin decirlo sería el mismo silencio con otro disfraz.
-    if (!suImagen || suImagen.dataBase64.length > TOPE_BASE64_CAPTURA) {
+    // Sin visión la captura no viaja a ningún sitio, así que su tamaño no
+    // decide nada: una página grande perdería sus hechos por una puerta que
+    // sólo existe para no mandarle al crítico lo que no cabe.
+    if (!suImagen || (!params.sinVision && suImagen.dataBase64.length > TOPE_BASE64_CAPTURA)) {
       noMiradas.push(
         suImagen
           ? `${etiqueta}: la captura pesaba demasiado y no se le pudo enseñar al crítico`
@@ -915,11 +927,42 @@ async function runVerify(
   }
   if (signal.aborted) return conHechos(fallbackVerdict(), hechos);
 
+  // EL CIERRE, UNO PARA LOS DOS CAMINOS. Con visión y sin ella el veredicto
+  // termina igual: los hechos del navegador delante, los de las otras páginas
+  // rotulados, el recuento de lo mirado y la línea del journal, que es el
+  // único registro de los ojos en producción (la lectura del 30/09 salió de
+  // ahí: el veredicto no se guarda en la base).
+  const cerrar = (
+    verdict: VisualVerdict,
+    /** Lo que vino del MODELO, antes de que `conHechos` le anteponga los
+     *  hechos del navegador: es lo único que distingue sus frases (ya
+     *  rotuladas por él) de las que compone el servidor. Ver `conOtrasPaginas`. */
+    delModelo: { issues: readonly string[]; observaciones: readonly string[] },
+  ): VisualVerdict => {
+    conHechos(verdict, hechos);
+    conOtrasPaginas(verdict, etiquetaDePagina(params.page ?? null), extras, delModelo);
+    // LO QUE DE VERDAD SE MIRÓ: la principal más las extra que llegaron a tener
+    // captura. Las que se cayeron ya dejaron su motivo en `limites`.
+    verdict.paginasMiradas = 1 + extras.length;
+    verdict.limites.push(...noMiradas);
+    // eslint-disable-next-line no-console
+    console.log(
+      `[agent-verify] broken=${verdict.broken} issues=${JSON.stringify(verdict.issues.join("; "))}` +
+        (params.sinVision ? " (sin visión)" : ""),
+    );
+    return verdict;
+  };
+
   // LA PUERTA DE «SÓLO HECHOS». Va AQUÍ y no antes: todo lo de arriba —el
   // render, la prueba declarada, las regresiones de la suite, el desborde, el
   // contraste del píxel— es gratis y es justo lo que se viene a buscar. Lo
   // único que se salta es la llamada que cuesta. Ver `sinVision`.
-  if (params.sinVision) return conHechos(fallbackVerdict(), hechos);
+  if (params.sinVision) {
+    return cerrar(
+      { broken: false, issues: [], observaciones: [], limites: [], conMedida: false, fallback: false },
+      { issues: [], observaciones: [] },
+    );
+  }
 
   // AQUI SE APAGABAN LOS OJOS ENTEROS. Este bloque exigia `GEMINI_API_KEY` y
   // devolvia fallback sin ella — por una credencial que el proveedor por
@@ -982,25 +1025,11 @@ async function runVerify(
     logFallback("malformed JSON verdict");
     return conHechos(fallbackVerdict(), hechos);
   }
-  // Lo que vino del MODELO, antes de que `conHechos` le anteponga los hechos
-  // del navegador: es lo único que distingue sus frases (ya rotuladas por él)
-  // de las que compone el servidor. Ver `conOtrasPaginas`.
-  const delModelo = {
+  verdict.usage = usage;
+  return cerrar(verdict, {
     issues: [...verdict.issues],
     observaciones: [...verdict.observaciones],
-  };
-  conHechos(verdict, hechos);
-  conOtrasPaginas(verdict, etiquetaDePagina(params.page ?? null), extras, delModelo);
-  // LO QUE DE VERDAD SE MIRÓ: la principal más las extra que llegaron a tener
-  // captura. Las que se cayeron ya dejaron su motivo en `limites`.
-  verdict.paginasMiradas = 1 + extras.length;
-  verdict.limites.push(...noMiradas);
-  verdict.usage = usage;
-  // eslint-disable-next-line no-console
-  console.log(
-    `[agent-verify] broken=${verdict.broken} issues=${JSON.stringify(verdict.issues.join("; "))}`,
-  );
-  return verdict;
+  });
 }
 
 /**

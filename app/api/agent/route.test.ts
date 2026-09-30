@@ -496,6 +496,37 @@ describe("POST /api/agent — los ojos y lo que se guardó", () => {
     expect(r).toEqual({ estado: "bien", conMedida: false });
   });
 
+  // 🔴 LEN 2.1: LOS OJOS MIDEN, NO OPINAN. La lectura de producción del
+  // 2026-09-30 no encontró un «roto» de la visión desde el 06/09 y sí tres
+  // afirmaciones falsas en la tarjeta del usuario. Si esto se cae, vuelve a
+  // pagarse una llamada con visión por turno para nada medido.
+  it("pide los ojos SIN la llamada de visión", async () => {
+    const verifyTurn = await capturarVerifyTurn();
+    await verifyTurn({ html: "<h1>Hola</h1>", page: null });
+    expect(mocks.verifyEditedPage).toHaveBeenCalledOnce();
+    expect(mocks.verifyEditedPage.mock.calls[0]![0].sinVision).toBe(true);
+  });
+
+  // Lo roto se pregunta ANTES que el fallback: un hecho que el navegador vio
+  // antes de que la captura se cayera no se tira como «no mirado».
+  it("un fallback con un hecho medido sale como roto, no como no_mirado", async () => {
+    const verifyTurn = await capturarVerifyTurn();
+    mocks.verifyEditedPage.mockResolvedValue(
+      veredicto({
+        fallback: true,
+        broken: true,
+        issues: ["El JavaScript de la página falla (al cargarla o al usar sus controles): boom"],
+      }),
+    );
+
+    const r = await verifyTurn({ html: "<h1>Hola</h1>", page: null });
+
+    expect(r).toEqual({
+      estado: "roto",
+      critique: "- El JavaScript de la página falla (al cargarla o al usar sus controles): boom",
+    });
+  });
+
   it("y una rotura sale como roto, con la crítica", async () => {
     const verifyTurn = await capturarVerifyTurn();
     mocks.loadProject.mockResolvedValue({

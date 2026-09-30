@@ -1003,11 +1003,13 @@ export async function POST(req: Request): Promise<Response> {
           // ids del motor. Len 2.0 (T9): la base la trae cada escritura
           // (`htmlPrevio`) y el bucle hace el gemelo con posiciones.
           // F5 — los ojos: tras un turno que mutó el documento, renderiza y
-          // verifica rotura visual objetiva. Lo que encuentra SE LE DICE al
-          // usuario al cerrar el turno; ya no abre ciclo de arreglo ni revierte
-          // nada (`12f6a11e`) — corrige él, pidiéndoselo a Len por el chat. El
-          // costo del render+visión corre por la casa (no entra en result.usage
-          // — el usuario no paga la QA). Kill-switch: OPENLEN_AGENT_VISION=0.
+          // MIDE (JavaScript que grita, desborde a 390 px, contraste del píxel,
+          // la suite de la página). Lo que encuentra SE LE DICE al usuario al
+          // cerrar el turno; ya no abre ciclo de arreglo ni revierte nada
+          // (`12f6a11e`) — corrige él, pidiéndoselo a Len por el chat. Desde
+          // Len 2.1 SIN la llamada de visión (ver `sinVision` abajo). El render
+          // corre por la casa. `OPENLEN_AGENT_VISION=0` apaga la comprobación
+          // ENTERA, medida incluida: el nombre es de cuando los ojos eran eso.
           verifyTurn:
             process.env.OPENLEN_AGENT_VISION === "0"
               ? undefined
@@ -1137,11 +1139,18 @@ export async function POST(req: Request): Promise<Response> {
                     // que empezó el turno. Una corrección a media faena lo
                     // cambia — ver el envoltorio de `leerDireccion`.
                     userPrompt: agentSession.userPrompt ?? prompt,
-                    // Aqui se fijaba a mano "gemini-2.5-flash" —con su propio
-                    // interruptor, OPENLEN_AGENT_VISION_MODEL— para esquivar la
-                    // latencia de 3.5. Hoy quien mira lo elige
-                    // `operation: "agent_visual_verify"` en la politica de
-                    // modelos, que es una sola fuente en vez de tres.
+                    // 🔴 SIN LA LLAMADA DE VISIÓN (Len 2.1, 2026-09-30). La
+                    // lectura de producción de ese día
+                    // (`plans/len-2/corridas/2026-09-30-m5-lectura-produccion`):
+                    // desde el 06/09 la visión no dio un solo «roto» que no
+                    // diera ya la medida, y sus tres afirmaciones concretas
+                    // —un dibujo mal atribuido, un teléfono mal leído, el
+                    // contenido `.reveal` que la captura no baja a ver— fueron
+                    // falsas y le llegaron al usuario en la tarjeta. Su único
+                    // acierto comprobado (31/08) lo causaba una pieza de la
+                    // plataforma ya retirada (`db2109f3`). La medida se queda
+                    // entera: es gratis y es la que caza.
+                    sinVision: true,
                   },
                   // EL NAVEGADOR DEL TURNO. Sin esto cada pasada abría el suyo:
                   // ~2,6 s de arranque por mirada, medido. Ver `medirDelTurno`.
@@ -1211,9 +1220,11 @@ export async function POST(req: Request): Promise<Response> {
                       ? { ...base, paginasMiradas: verdict.paginasMiradas }
                       : base;
                   };
-                  if (verdict.fallback) {
-                    return conRegresiones({ estado: "no_mirado", motivo: "la verificación visual no pudo correr" });
-                  }
+                  // LO ROTO VA ANTES QUE EL FALLBACK. `conHechos` deja
+                  // `broken: true` también en un veredicto de fallback cuando
+                  // el navegador vio algo (una excepción gritada antes de que
+                  // la captura se cayera), y preguntar primero por `fallback`
+                  // tiraba ese hecho al suelo como «no mirado».
                   if (verdict.broken) {
                     return conRegresiones({
                       estado: "roto",
@@ -1225,6 +1236,9 @@ export async function POST(req: Request): Promise<Response> {
                       // segunda pasada desde el 2026-09-04.
                       critique: verdict.issues.map((i) => `- ${i}`).join("\n"),
                     });
+                  }
+                  if (verdict.fallback) {
+                    return conRegresiones({ estado: "no_mirado", motivo: "la verificación visual no pudo correr" });
                   }
                   // 🔴 OBSERVADO — lo que se ve y no se puede llamar defecto
                   // desde la captura. Va DESPUÉS de `broken` a propósito: los

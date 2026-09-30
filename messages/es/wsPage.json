@@ -46,9 +46,9 @@
       "visualOk": "sin fallos medidos",
       "visualIssues": "con problemas",
       "visualNoLook": "sin comprobar",
-      "visualOkSinMedida": "solo la captura",
+      "visualOkSinMedida": "solo el JavaScript",
       "visualCobertura": "Comprueba si algo se sale en el móvil, si hay texto que no se lee y si el JavaScript falla. No dice si la página se ve bien: eso lo juzgas tú.",
-      "visualCoberturaSinMedida": "Se miró la captura y los errores de JavaScript. El desborde en el móvil y el contraste no se comprobaron esta vez.",
+      "visualCoberturaSinMedida": "Se revisaron los errores de JavaScript. El desborde en el móvil y el contraste no se comprobaron esta vez.",
       "visualPaginas": "{miradas} de {tocadas} páginas",
       "visualPaginasParcial": "Se miraron {miradas} de las {tocadas} páginas que cambiaron en este turno; las demás no se comprobaron."
     },

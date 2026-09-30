@@ -1590,6 +1590,91 @@ test("lo que compone el servidor sí lleva la dirección de su página", async (
   );
 });
 
+// ── SIN VISIÓN: como mira la ruta del Agente desde Len 2.1 ──────────────────
+// La lectura de producción del 2026-09-30 no encontró un «roto» de la visión
+// desde el 06/09. Lo que queda es la medida, y tiene que llegar ENTERA: hasta
+// ese día `sinVision` salía antes de juntar las otras páginas del turno, y
+// nadie lo vio porque nadie lo pasaba.
+
+/** Un proveedor que no debe llamarse: si lo llaman, la prueba se cae. */
+const PROVEEDOR_PROHIBIDO = {
+  stream: () => {
+    throw new Error("sin visión no se llama al proveedor");
+  },
+};
+
+test("sin visión: no se llama al crítico, y lo medido manda", async () => {
+  const v = await verifyEditedPage(
+    { ...PARAMS, sinVision: true },
+    {
+      render: async () => IMAGE,
+      medir: async () => ({ unreadableText: [{ contrast: 1.34 }] }),
+      provider: PROVEEDOR_PROHIBIDO,
+    },
+  );
+  assert.equal(v.broken, true);
+  assert.match(v.issues[0]!, /1\.34:1/);
+  assert.deepEqual(v.observaciones, []);
+});
+
+// No llamar al crítico es una DECISIÓN, no una avería: una página limpia y
+// medida sale entera, no como el «no se pudo mirar» de una captura caída.
+test("sin visión: una página limpia y medida no sale como fallback", async () => {
+  const v = await verifyEditedPage(
+    { ...PARAMS, sinVision: true },
+    { render: async () => IMAGE, medir: async () => ({ unreadableText: [] }), provider: PROVEEDOR_PROHIBIDO },
+  );
+  assert.equal(v.broken, false);
+  assert.equal(v.fallback, false);
+  assert.equal(v.conMedida, true);
+  assert.equal(v.paginasMiradas, 1);
+});
+
+// CONTRA-PRUEBA: sin captura sigue siendo «no se pudo mirar», con visión o sin ella.
+test("sin visión: sin captura sigue siendo fallback", async () => {
+  const v = await verifyEditedPage(
+    { ...PARAMS, sinVision: true },
+    { render: async () => null, medir: async () => ({ unreadableText: [] }), provider: PROVEEDOR_PROHIBIDO },
+  );
+  assert.equal(v.fallback, true);
+});
+
+test("🔴 sin visión: lo medido en la OTRA página del turno llega, con su dirección", async () => {
+  const v = await verifyEditedPage(
+    { ...PARAMS, page: null, sinVision: true, otrasPaginas: [{ html: VIAJES, page: "viajes" }] },
+    {
+      render: async () => IMAGE,
+      medir: async (html: string) =>
+        html.includes("Viajes") ? { unreadableText: [{ contrast: 1.34 }] } : { unreadableText: [] },
+      provider: PROVEEDOR_PROHIBIDO,
+    },
+  );
+  assert.equal(v.broken, true, "el hecho de /viajes se quedó fuera");
+  assert.ok(
+    v.issues.some((i) => i.startsWith("/viajes: ")),
+    `ningún issue rotulado con su página: ${JSON.stringify(v.issues)}`,
+  );
+  assert.equal(v.paginasMiradas, 2);
+});
+
+// La puerta de tamaño existe para no mandarle al crítico lo que no cabe. Sin
+// crítico no hay a quién mandarle nada, así que no puede costarle sus hechos
+// a una página grande.
+test("sin visión: una captura enorme de la otra página no le quita sus hechos", async () => {
+  const gorda: InlineImage = { mimeType: "image/jpeg", dataBase64: "a".repeat(1_400_001) };
+  const v = await verifyEditedPage(
+    { ...PARAMS, page: null, sinVision: true, otrasPaginas: [{ html: VIAJES, page: "viajes" }] },
+    {
+      render: async (html: string) => (html.includes("Viajes") ? gorda : IMAGE),
+      medir: async (html: string) =>
+        html.includes("Viajes") ? { unreadableText: [{ contrast: 1.34 }] } : { unreadableText: [] },
+      provider: PROVEEDOR_PROHIBIDO,
+    },
+  );
+  assert.equal(v.broken, true);
+  assert.equal(v.paginasMiradas, 2);
+});
+
 // 🔴 EL PRELUDIO VIAJA, O LA PRECONDICIÓN QUEDA A OSCURAS.
 //
 // El censo de manejadores no puede vivir en el programa: `programaSuiteJs` corre

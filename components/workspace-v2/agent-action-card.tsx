@@ -187,9 +187,11 @@ export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTransl
       return `${t("agent.action.visualPaginas", { miradas, tocadas })} · ${base}`;
     };
     if (action.summary === "ok") return conCuenta(t("agent.action.visualOk"));
-    // SE MIRÓ LA CAPTURA, PERO EL MEDIDOR NO CONTESTÓ. Ni «sin problemas» —que
-    // afirmaría un desborde y un contraste que nadie midió— ni «sin comprobar»,
-    // que negaría la mirada que sí hubo. Ver `VerifyOutcome` en loop.ts.
+    // SE LEYÓ EL JAVASCRIPT, PERO EL MEDIDOR NO CONTESTÓ. Ni «sin problemas»
+    // —que afirmaría un desborde y un contraste que nadie midió— ni «sin
+    // comprobar», que negaría lo que sí se leyó. Hasta Len 2.1 decía «solo la
+    // captura»: la miraba un modelo con visión, que ya no la mira nadie. Ver
+    // `VerifyOutcome` en loop.ts.
     if (action.summary === "ok-sin-medida") return conCuenta(t("agent.action.visualOkSinMedida"));
     if (action.summary === "issues") return conCuenta(t("agent.action.visualIssues"));
     // NADIE MIRÓ. Los ojos fallan abiertos (Chrome caído, sin key, timeout), y

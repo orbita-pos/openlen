@@ -1639,7 +1639,7 @@ describe("runAgentLoop — verifyTurn", () => {
   // CONTRA-PRUEBA, y es la que evita el peor arreglo posible. `conMedida` es
   // OPCIONAL: hay implementaciones de `verifyTurn` que no lo mandan (el arnés
   // de evals, los dobles). Si la degradación se disparara con `!conMedida`,
-  // todas ellas enseñarían «solo la captura» de turnos que sí midieron — un
+  // todas ellas enseñarían «solo el JavaScript» de turnos que sí midieron — un
   // aviso permanente y falso. Sólo degrada un `false` EXPLÍCITO.
   it("un verifyTurn que no manda conMedida sigue saliendo 'ok'", async () => {
     expect(await tarjetasDe({ estado: "bien" })).toEqual([
