@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cara de Len</title>
+<style>
+:root{
+  --bg:#F7F3F1; --panel:#FFFFFF; --ink:#1E1612; --muted:#7B6B64; --line:#EADFDA;
+  --glass:#FFF1EA; --eye:#2A1A13; --card:#FFFFFF; --card-line:#E3D6D0; --fill-2:#EBDFD9;
+  --coral:#FF5A36; --coral-soft:rgba(255,90,54,.10); --ok:#1FA967; --drop:#5DB2FF; --gold:#FFB547;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#0F0A08; --panel:#18110E; --ink:#F5ECE8; --muted:#A08E87; --line:#2A1F1B;
+  --glass:#26170F; --eye:#FFFFFF; --card:#221915; --card-line:#3B2C26; --fill-2:#3A2B25;
+  --coral-soft:rgba(255,90,54,.15);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1040px;margin:0 auto;padding:28px 16px 64px}
+header{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px}
+h1{font-size:20px;margin:0;letter-spacing:-.01em}
+header p{margin:2px 0 0;color:var(--muted)}
+.toggles{display:flex;gap:6px;flex-wrap:wrap}
+.tg{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:12.5px;cursor:pointer}
+.tg b{font-weight:600}
+.tg:hover{border-color:var(--card-line)}
+
+.stage{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px;height:460px;display:grid;place-items:center;overflow:hidden}
+.stage::before{content:"";position:absolute;inset:0;background:radial-gradient(380px 280px at 50% 44%,var(--coral-soft),transparent 70%);pointer-events:none}
+#big{width:180px;height:180px;margin-top:-56px}
+.caption{position:absolute;left:20px;right:20px;bottom:16px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.caption strong{font-size:15px}
+.caption span{color:var(--muted)}
+.caption code{margin-left:auto;font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted);background:var(--bg);border:1px solid var(--line);padding:3px 8px;border-radius:8px}
+
+.row{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 8px}
+.states{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.st{appearance:none;text-align:left;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:12px;padding:9px 12px;font:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:border-color .15s,box-shadow .15s}
+.st kbd{font:11px ui-monospace,Menlo,Consolas,monospace;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 5px}
+.st:hover{border-color:var(--card-line)}
+.st[aria-pressed="true"]{border-color:var(--coral);box-shadow:0 0 0 3px var(--coral-soft)}
+.demo{appearance:none;border:0;background:var(--ink);color:var(--bg);border-radius:999px;padding:8px 14px;font:inherit;font-weight:600;font-size:13px;cursor:pointer}
+.demo.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+
+.contexts{display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-top:14px}
+@media (max-width:720px){.contexts{grid-template-columns:1fr}}
+.ctx{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;min-height:150px;position:relative}
+.ctx h3{margin:0 0 12px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.bubble-user{margin-left:auto;max-width:78%;width:fit-content;background:var(--bg);border:1px solid var(--line);border-radius:14px 14px 4px 14px;padding:8px 12px;margin-bottom:14px}
+.chatrow{display:flex;gap:10px;align-items:center}
+#small{width:28px;height:28px;flex:none}
+.who{font-weight:600;font-size:13px}
+.status{color:var(--muted)}
+.status.live{background:linear-gradient(90deg,var(--muted) 0%,var(--muted) 40%,var(--ink) 50%,var(--muted) 60%,var(--muted) 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shimmer 1.8s linear infinite}
+@keyframes shimmer{from{background-position:100% 0}to{background-position:-150% 0}}
+.empty{display:grid;place-items:center;text-align:center;gap:10px;padding:18px 0 6px}
+#mid{width:72px;height:72px;margin:6px 0 8px}
+.empty p{margin:0;color:var(--muted)}
+#big,#mid,#small{cursor:pointer}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Cara de Len</h1>
+      <p>Pruebas de animación · motor en <code>cara.js</code>, sin librerías · teclas 1–0 y letras</p>
+    </div>
+    <div class="toggles">
+      <button class="tg" id="t-theme">Tema: <b>claro</b></button>
+      <button class="tg" id="t-eyes">Ojos: <b>tinta</b></button>
+      <button class="tg" id="t-speed">Velocidad: <b>1×</b></button>
+      <button class="tg" id="t-reduced">Movimiento reducido: <b>no</b></button>
+    </div>
+  </header>
+
+  <section class="stage">
+    <div id="big"></div>
+    <div class="caption">
+      <strong id="cap-name"></strong><span id="cap-desc"></span><code id="cap-when"></code>
+    </div>
+  </section>
+
+  <div class="row">
+    <button class="demo" data-demo="turno">▶ Un turno de Len</button>
+    <button class="demo alt" data-demo="publicar">▶ Publicar</button>
+    <button class="demo alt" data-demo="mal">▶ Algo sale mal</button>
+  </div>
+  <section class="states" id="states"></section>
+
+  <section class="contexts">
+    <div class="ctx">
+      <h3>En el chat · 28 px</h3>
+      <div class="bubble-user">Ponle fotos de pan recién hecho a la portada</div>
+      <div class="chatrow">
+        <div id="small"></div>
+        <div><div class="who">Len</div><div class="status" id="chat-status"></div></div>
+      </div>
+    </div>
+    <div class="ctx">
+      <h3>Chat vacío · 72 px</h3>
+      <div class="empty">
+        <div id="mid"></div>
+        <p>¿Qué le hacemos hoy a tu página?</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="cara.js"></script>
+<script>
+const INFO = [
+  ["reposo", "1", "Reposo", "Nada pasa: respira, parpadea y te sigue con la mirada. Haz clic en él.", "—", "Len está listo"],
+  ["saludando", "H", "Saludando", "Abres el chat: guiño, meneo y «¡Hola!».", "abrir el chat", "¡Hola! Soy Len"],
+  ["escuchando", "2", "Escuchando", "Escribes en el chat: se inclina hacia ti y asiente.", "foco en el campo de texto", "Len te escucha…"],
+  ["pensando", "3", "Pensando", "Espera al modelo: nube con tres puntos, mira arriba.", "esperando al modelo", "Len está pensando…"],
+  ["escribiendo", "4", "Escribiendo", "Edita la página: lee a saltos el documento que se escribe.", "editar la página", "Len está editando tu página…"],
+  ["buscando", "5", "Buscando", "La lente se vuelve lupa y barre de lado a lado.", "elegir_foto · leer_de_internet", "Len está buscando fotos…"],
+  ["mirando", "6", "Mirando", "Revisa lo que hizo: recorre la página de arriba abajo.", "mirar_pagina (los ojos)", "Len está revisando cómo quedó…"],
+  ["revisando", "R", "Revisando", "Otros ojos: un Len pequeño revisa el trabajo con él.", "revisión con ojos limpios (H14)", "Len está revisando su trabajo…"],
+  ["preguntando", "7", "Preguntando", "Necesita algo de ti: ladea la cabeza.", "preguntar", "Len tiene una pregunta"],
+  ["avisando", "A", "Avisando", "Te trae algo: salta para llamarte y mira la propuesta.", "Len en segundo plano (futuro)", "Len tiene algo para ti"],
+  ["terminado", "8", "Terminado", "Fin del turno: ojos felices y un saltito.", "fin del turno", "Listo"],
+  ["publicado", "9", "Publicado", "Salta con ojos de estrella.", "publicar", "¡Tu página está publicada!"],
+  ["error", "0", "Error", "No pudo: ojos caídos, temblor y una gota.", "fallo de herramienta", "Algo no salió bien"],
+  ["dormido", "Z", "Dormido", "Nadie lo usa: se duerme solo a los 25 s. Mueve el ratón y despierta.", "25 s sin actividad", "Len está descansando"],
+  ["logo", "L", "Logo", "El logo exacto, apagado. De aquí despierta.", "marca en reposo", "OpenLen"],
+];
+const LIVE = new Set(["escuchando", "pensando", "escribiendo", "buscando", "mirando", "revisando"]);
+
+// Tres caras, cada una con su cerebro; se mandan juntas.
+const big = LenCara.create(document.getElementById("big"), { state: "logo", onchange: paintUI });
+const mid = LenCara.create(document.getElementById("mid"), { state: "logo" });
+const small = LenCara.create(document.getElementById("small"), { state: "logo", props: "none" });
+const CARAS = [big, mid, small];
+let autoSlept = false;
+const setAll = (s) => { autoSlept = false; CARAS.forEach((c) => c.set(s)); };
+CARAS.forEach((c) => c.host.addEventListener("click", () => CARAS.forEach((x) => x.poke())));
+
+const statesEl = document.getElementById("states");
+const BTN = {};
+for (const [id, key, label] of INFO) {
+  const b = document.createElement("button");
+  b.className = "st"; b.innerHTML = `<span>${label}</span><kbd>${key}</kbd>`;
+  b.onclick = () => { stopDemo(); setAll(id); };
+  statesEl.appendChild(b); BTN[id] = b;
+}
+function paintUI(id) {
+  const i = INFO.find((r) => r[0] === id);
+  document.getElementById("cap-name").textContent = i[2];
+  document.getElementById("cap-desc").textContent = i[3];
+  document.getElementById("cap-when").textContent = i[4];
+  const cs = document.getElementById("chat-status");
+  cs.textContent = i[5]; cs.classList.toggle("live", LIVE.has(id));
+  for (const k in BTN) BTN[k].setAttribute("aria-pressed", String(k === id));
+}
+paintUI("logo");
+addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const r = INFO.find((x) => x[1].toLowerCase() === e.key.toLowerCase());
+  if (r) { stopDemo(); setAll(r[0]); }
+});
+
+let demoTimers = [];
+function stopDemo() { demoTimers.forEach(clearTimeout); demoTimers = []; }
+const DEMOS = {
+  turno: [["saludando", 1800], ["escuchando", 2200], ["pensando", 2400], ["buscando", 2800], ["escribiendo", 3200], ["mirando", 2600], ["revisando", 3000], ["terminado", 2600], ["reposo", 0]],
+  publicar: [["pensando", 1300], ["publicado", 4200], ["reposo", 0]],
+  mal: [["escribiendo", 1800], ["error", 3000], ["preguntando", 2800], ["reposo", 0]],
+};
+document.querySelectorAll("[data-demo]").forEach((b) => (b.onclick = () => {
+  stopDemo(); let at = 0;
+  for (const [s, ms] of DEMOS[b.dataset.demo]) { demoTimers.push(setTimeout(() => setAll(s), at)); at += ms / LenCara.speed; }
+  demoTimers.push(setTimeout(() => { demoTimers = []; }, at + 10));
+}));
+
+const root = document.documentElement;
+const $ = (id) => document.getElementById(id);
+function setTheme(t) { root.dataset.theme = t; $("t-theme").querySelector("b").textContent = t === "dark" ? "oscuro" : "claro"; }
+setTheme(matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+$("t-theme").onclick = () => setTheme(root.dataset.theme === "dark" ? "light" : "dark");
+$("t-eyes").onclick = () => {
+  const c = root.dataset.eyes === "coral" ? "" : "coral";
+  if (c) root.dataset.eyes = c; else delete root.dataset.eyes;
+  $("t-eyes").querySelector("b").textContent = c ? "coral" : "tinta";
+};
+$("t-speed").onclick = () => {
+  LenCara.setSpeed(LenCara.speed === 1 ? 0.3 : 1);
+  $("t-speed").querySelector("b").textContent = LenCara.speed === 1 ? "1×" : "0.3×";
+};
+const paintReduced = () => ($("t-reduced").querySelector("b").textContent = LenCara.reduced ? "sí" : "no");
+paintReduced();
+$("t-reduced").onclick = () => { LenCara.setReduced(!LenCara.reduced); paintReduced(); };
+
+// despierta y saluda
+setTimeout(() => { if (big.state === "logo") setAll("saludando"); }, 900);
+setTimeout(() => { if (big.state === "saludando") setAll("reposo"); }, 3000);
+
+// se duerme solo si nadie hace nada; despierta al moverte
+let lastActivity = performance.now();
+const activity = () => {
+  lastActivity = performance.now();
+  if (big.state === "dormido" && autoSlept) setAll("reposo");
+};
+["pointermove", "pointerdown", "keydown"].forEach((ev) => addEventListener(ev, activity));
+setInterval(() => {
+  if (big.state === "reposo" && !demoTimers.length && performance.now() - lastActivity > 25000) {
+    setAll("dormido"); autoSlept = true;
+  }
+}, 500);
+</script>
+</body>
+</html>
