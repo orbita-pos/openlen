@@ -85,7 +85,22 @@ export async function enviarTurno(o: {
   readonly timeoutMs: number;
 }): Promise<EventoSse[]> {
   const abort = new AbortController();
-  const reloj = setTimeout(() => abort.abort(), o.timeoutMs);
+  /** El id que la ruta manda en el primer evento: con él se pide parar. */
+  let turnoId: string | null = null;
+  // 🔴 EL PLAZO PARA EL TURNO, NO SÓLO LA LECTURA (Len 2.1). La ruta ya no corta
+  // el turno cuando el cliente se va, así que abortar el `fetch` dejaría a Len
+  // trabajando —y gastando— detrás de una corrida que ya pasó a la siguiente.
+  // Primero se le pide parar, como el ■ del panel; luego se deja de leer.
+  const reloj = setTimeout(async () => {
+    if (turnoId) {
+      await fetch(`${o.base}/api/agent/cancelar`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: o.cookie },
+        body: JSON.stringify({ turnoId }),
+      }).catch(() => {});
+    }
+    abort.abort();
+  }, o.timeoutMs);
   try {
     const r = await fetch(`${o.base}/api/agent`, {
       method: "POST",
@@ -101,7 +116,12 @@ export async function enviarTurno(o: {
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      eventos.push(...lector.empujar(dec.decode(value, { stream: true })));
+      const nuevos = lector.empujar(dec.decode(value, { stream: true }));
+      for (const e of nuevos) {
+        const id = (e.datos as { turnoId?: unknown } | null)?.turnoId;
+        if (e.nombre === "turno" && typeof id === "string") turnoId = id;
+      }
+      eventos.push(...nuevos);
     }
     eventos.push(...lector.empujar(dec.decode() + "\n\n"));
     return eventos;

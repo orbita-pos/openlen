@@ -646,6 +646,10 @@ export async function POST(req: Request): Promise<Response> {
   // (POST /api/agent/dirigir) y necesita saber a que turno va.
   const turnoId = randomUUID();
   const upstreamAbort = new AbortController();
+  /** El cliente cerró la conexión a media faena. Desde 2.1 eso NO para el
+   *  turno (ver `cancel()` abajo): sólo se apunta, para el registro y para
+   *  avisar al usuario cuando termine sin nadie mirando. */
+  let clienteSeFue = false;
   const agentSession: AgentSession = {
     projectId,
     userId,
@@ -771,7 +775,9 @@ export async function POST(req: Request): Promise<Response> {
       // PRIMERO DE TODO, antes incluso de comprobar creditos: si el turno se
       // muere por cualquier motivo, el taller ya sabe a que id iba y puede
       // cerrar su caja de texto sin quedarse esperando.
-      abrirTurno(turnoId, userId);
+      // `abortar` es la única forma de parar el turno desde fuera: la usa
+      // `POST /api/agent/cancelar` (el ■ del panel y el plazo de Len-Bench).
+      abrirTurno(turnoId, userId, Date.now(), { abortar: () => upstreamAbort.abort() });
       emit("turno", { turnoId });
 
       const dirGrabacion = directorioDeGrabacion();
@@ -1396,6 +1402,9 @@ export async function POST(req: Request): Promise<Response> {
             console.warn("[agent] no se pudo registrar el turno", err);
           }
         }
+        // CUÁNTOS TURNOS TERMINAN SIN NADIE MIRANDO, contado desde el día uno:
+        // es lo que dirá si hace falta avisar (y cuánto) sin adivinarlo.
+        if (clienteSeFue) console.log(`[agent] turno terminado sin cliente turno=${turnoId}`);
         // Y EL NAVEGADOR TAMBIÉN. Un Chromium por turno que nadie cierra es una
         // fuga con nombre y apellidos en una caja de 4 GB. Va aquí, con el
         // cierre del turno, por el mismo motivo: el turno que revienta es
@@ -1422,8 +1431,22 @@ export async function POST(req: Request): Promise<Response> {
         }
       }
     },
+    // 🔴 EL TURNO NO MUERE CON EL CLIENTE (Len 2.1).
+    //
+    // Hasta aquí esto abortaba el modelo, así que cerrar la pestaña, perder la
+    // red o que el móvil se durmiera mataba el turno a media faena
+    // (diagnóstico de 2.1, §3.1). La vara es Claude Code: el trabajo pertenece a
+    // la sesión, no a la vista; al desconectarse, «if the session still exists
+    // it keeps running». El canal ya descarta en silencio lo que no puede
+    // escribir (`lib/ai/sse.ts`), así que el bucle sigue y la fila se escribe
+    // igual en el `finally`.
+    //
+    // Parar es una petición aparte: `POST /api/agent/cancelar`. Y lo que acota
+    // un turno sin nadie delante es el reloj de silencio (un cuelgue) y el
+    // techo de dinero del turno, no la conexión.
     cancel() {
-      upstreamAbort.abort();
+      clienteSeFue = true;
+      console.log(`[agent] el cliente se fue; el turno sigue turno=${turnoId}`);
     },
   });
 

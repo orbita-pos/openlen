@@ -24,8 +24,13 @@ export const MAX_DIRECCION = 2000;
 /** Turnos que se guardan a la vez. Un turno que muera sin cerrar deja su fila;
  *  el tope y la caducidad impiden que eso crezca sin fin. */
 const MAX_ABIERTOS = 200;
-/** Un turno no dura más que el tope del stream. Pasado eso, su fila es basura. */
-const CADUCA_MS = 10 * 60 * 1000;
+/** Cuándo una fila se da por basura. NO es la duración de un turno: desde
+ *  2.1 el turno sigue aunque el cliente se vaya, y lo acotan el techo de
+ *  dinero y el reloj de silencio, no el reloj de pared. Medido el 28/09: un
+ *  turno de producción duró 25 minutos, y con los 10 de antes se habría
+ *  quedado sin poder dirigirse ni cancelarse a la mitad. `cerrarTurno` corre
+ *  SIEMPRE en el `finally`, así que esto sólo barre lo que deje un fallo raro. */
+const CADUCA_MS = 2 * 60 * 60 * 1000;
 
 interface TurnoAbierto {
   readonly userId: string;
@@ -33,6 +38,9 @@ interface TurnoAbierto {
   /** En cola: si el usuario escribe dos veces antes de la siguiente vuelta, se
    *  leen las dos, en orden. Perder la primera sería peor que juntarlas. */
   readonly pendientes: string[];
+  /** Para el cancelar EXPLÍCITO (`cancelar`). Desde 2.1 cerrar la conexión ya
+   *  no corta el turno, así que ésta es la única forma de pararlo. */
+  readonly abortar?: () => void;
 }
 
 // 🔴 EN `globalThis`, NO en un `const` del módulo. MEDIDO el 2026-09-03 con el
@@ -64,10 +72,21 @@ function barrer(ahora: number): void {
   }
 }
 
-/** El turno empieza y queda disponible para recibir correcciones. */
-export function abrirTurno(turnoId: string, userId: string, ahora = Date.now()): void {
+/** El turno empieza y queda disponible para recibir correcciones y para que
+ *  lo cancelen (`abortar`). */
+export function abrirTurno(
+  turnoId: string,
+  userId: string,
+  ahora = Date.now(),
+  extra: { readonly abortar?: () => void } = {},
+): void {
   barrer(ahora);
-  abiertos.set(turnoId, { userId, abiertoEn: ahora, pendientes: [] });
+  abiertos.set(turnoId, {
+    userId,
+    abiertoEn: ahora,
+    pendientes: [],
+    ...(extra.abortar ? { abortar: extra.abortar } : {}),
+  });
 }
 
 export type ResultadoDirigir = "ok" | "no_existe" | "ajeno" | "vacio";
@@ -108,6 +127,27 @@ export function leerDireccion(turnoId: string): string | null {
   const juntas = turno.pendientes.join("\n");
   turno.pendientes.length = 0;
   return juntas;
+}
+
+export type ResultadoCancelar = "ok" | "no_existe" | "ajeno";
+
+/**
+ * PARAR EL TURNO A PROPÓSITO (■, o el plazo de Len-Bench).
+ *
+ * Hasta 2.1 cancelar era cerrar la conexión: el `cancel()` del stream abortaba
+ * el modelo. Eso también mataba el turno cuando se cerraba la pestaña, se caía
+ * la red o se dormía el móvil (diagnóstico de 2.1, §3.1). Ahora la conexión es
+ * sólo la vista, y parar es una petición aparte, como `dirigir`.
+ *
+ * Mismo control de dueño que `dirigir`, y por lo mismo: el id viaja al cliente
+ * por el SSE. Parar no borra la fila: el `finally` del turno la cierra.
+ */
+export function cancelar(turnoId: string, userId: string): ResultadoCancelar {
+  const turno = abiertos.get(turnoId);
+  if (!turno) return "no_existe";
+  if (turno.userId !== userId) return "ajeno";
+  turno.abortar?.();
+  return "ok";
 }
 
 /** El turno terminó. Se llama SIEMPRE, también cuando revienta. */

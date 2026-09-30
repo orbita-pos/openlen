@@ -58,6 +58,7 @@ const mocks = vi.hoisted(() => ({
   verifyCapsule: vi.fn(),
   verifyEditedPage: vi.fn(),
   leerDireccion: vi.fn(() => null as string | null),
+  abrirTurno: vi.fn(),
   createPool: vi.fn(),
   renderViewports: vi.fn(async () => ({ desktop: "d", mobile: "m" })),
   poolRender: vi.fn(async () => ({ desktop: "pool-d", mobile: "pool-m" })),
@@ -141,7 +142,7 @@ vi.mock("@/lib/agent/tools", () => ({
 // lee el bucle: el turno real se abre y se cierra dentro del mismo `POST`, asi
 // que con el almacen de verdad no hay ventana para meter nada desde fuera.
 vi.mock("@/lib/agent/direcciones", () => ({
-  abrirTurno: vi.fn(),
+  abrirTurno: mocks.abrirTurno,
   cerrarTurno: vi.fn(),
   leerDireccion: mocks.leerDireccion,
   MAX_DIRECCION: 2000,
@@ -1222,5 +1223,93 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     await readEvents(await pedir());
     const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { mensajes: unknown[] } | null }])[1];
     expect(fila.transcript?.mensajes).toEqual([{ role: "assistant", content: "listo" }]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEN 2.1 · EL TURNO NO MUERE CON EL CLIENTE (diagnóstico §3.1, §4.4 punto 1).
+//
+// Cerrar la pestaña, perder la red o que el móvil se duerma cerraba el stream,
+// y el `cancel()` del stream abortaba el modelo. Ahora la conexión es la vista:
+// el turno sigue, termina y deja su fila. Parar es `POST /api/agent/cancelar`,
+// que llega a la ruta por el `abortar` que ésta deja en el almacén.
+describe("POST /api/agent — el turno no muere con el cliente", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<html><body><h1>hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "pro", balance: 5_000, allotment: 15_000, refillsAt: null });
+    mocks.creditsForUsage.mockReturnValue(7);
+  });
+
+  /** El bucle se queda a medias hasta que la prueba lo suelta. */
+  function bucleRetenido() {
+    let soltar!: () => void;
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.emit({ type: "text", text: "trabajando" });
+      await new Promise<void>((r) => (soltar = r));
+      return {
+        finalText: "listo", turns: 3, toolCalls: 2,
+        usage: { inputTokens: 1_000, outputTokens: 100, cachedTokens: 0, thinkingTokens: 0 },
+        terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
+      };
+    });
+    return { soltar: () => soltar() };
+  }
+
+  const pedir = () =>
+    POST(
+      new Request("http://localhost/api/agent", {
+        method: "POST",
+        body: JSON.stringify({ projectId: "p1", prompt: "hazme la página de servicios" }),
+      }),
+    );
+
+  /** La señal que la ruta le dio al cerebro: abortarla es parar el modelo. */
+  const senalDelModelo = () =>
+    (mocks.createAgentBrain.mock.calls.at(-1) as unknown as [{ signal: AbortSignal }])[0].signal;
+
+  it("🔴 cerrar la conexión NO aborta el modelo: el turno termina, cobra y deja su fila", async () => {
+    const bucle = bucleRetenido();
+    const res = await pedir();
+    const lector = res.body!.getReader();
+    await lector.read();
+    await lector.cancel();
+    for (let i = 0; i < 50 && mocks.runAgentLoop.mock.calls.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 0));
+    }
+
+    expect(senalDelModelo().aborted).toBe(false);
+
+    bucle.soltar();
+    await vi.waitFor(() => expect(mocks.registrarTurnoDelServidor).toHaveBeenCalled());
+    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 7);
+    expect(senalDelModelo().aborted).toBe(false);
+  });
+
+  it("BRAZO DE CONTROL: el `abortar` que la ruta deja en el almacén SÍ para el modelo", async () => {
+    const bucle = bucleRetenido();
+    const res = await pedir();
+    const lector = res.body!.getReader();
+    await lector.read();
+
+    const [turnoId, userId, , extra] = mocks.abrirTurno.mock.calls.at(-1) as unknown as [
+      string, string, number, { abortar: () => void },
+    ];
+    expect(userId).toBe("u1");
+    expect(turnoId).toBeTypeOf("string");
+    extra.abortar();
+    expect(senalDelModelo().aborted).toBe(true);
+
+    bucle.soltar();
+    await lector.cancel();
   });
 });

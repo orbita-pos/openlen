@@ -1082,6 +1082,9 @@ function AIDesignChat({
         // pre-flight home-only block that used to live here is gone.
         const abort = new AbortController();
         abortRef.current = abort;
+        // El id del turno ANTERIOR no puede quedarse aquí: el ■ de este turno,
+        // pulsado antes de que llegue su evento `turno`, pararía otro.
+        turnoIdRef.current = null;
         let accumulatedReasoning = "";
         // LO QUE ESCRIBISTE A MEDIA FAENA, para que sobreviva a un F5.
         //
@@ -1653,6 +1656,21 @@ function AIDesignChat({
   );
 
   const handleCancel = useCallback(() => {
+    // 🔴 PARAR ES UNA PETICIÓN, NO CERRAR LA CONEXIÓN (Len 2.1). El servidor
+    // ya no corta el turno cuando el cliente se va —así sobrevive a una
+    // pestaña cerrada o a la red caída—, de modo que el ■ tiene que pedírselo
+    // (`POST /api/agent/cancelar`). Sin esto, el ■ sólo dejaría de MIRAR y el
+    // turno seguiría gastando detrás. `keepalive` para que la petición salga
+    // aunque la pestaña se cierre justo después.
+    const turnoId = turnoIdRef.current;
+    if (turnoId) {
+      void fetch("/api/agent/cancelar", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ turnoId }),
+        keepalive: true,
+      }).catch(() => {});
+    }
     // Aborting triggers the catch branch in `send`, which marks the turn
     // as error with text "Cancelled." and reverts any partial iframe drip.
     abortRef.current?.abort();
@@ -1809,7 +1827,7 @@ function AIDesignChat({
           }
           void send(draft);
         }}
-        onStop={() => abortRef.current?.abort()}
+        onStop={handleCancel}
         sending={sending}
         textareaRef={taRef}
         sectionSelectMode={sectionSelectMode}

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   _vaciarTodo,
   abrirTurno,
+  cancelar,
   cerrarTurno,
   dirigir,
   leerDireccion,
@@ -71,9 +72,17 @@ describe("corregirle el rumbo al Agente a media faena", () => {
   it("un turno caducado no acepta correcciones", () => {
     // Un turno que muere sin cerrar dejaria su fila para siempre.
     abrirTurno("viejo", "u1", 1_000_000);
-    abrirTurno("nuevo", "u1", 1_000_000 + 11 * 60 * 1000);
+    abrirTurno("nuevo", "u1", 1_000_000 + 2 * 60 * 60 * 1000 + 60_000);
     expect(dirigir("viejo", "u1", "hola")).toBe("no_existe");
     expect(dirigir("nuevo", "u1", "hola")).toBe("ok");
+  });
+
+  it("🔴 un turno de 25 minutos sigue siendo dirigible (el de producción del 28/09)", () => {
+    // Con la caducidad de 10 minutos de antes, abrir otro turno a los 25
+    // barría éste: ni corregirlo ni pararlo a la mitad.
+    abrirTurno("largo", "u1", 1_000_000);
+    abrirTurno("otro", "u2", 1_000_000 + 25 * 60 * 1000);
+    expect(dirigir("largo", "u1", "sigue")).toBe("ok");
   });
 
   it("BRAZO DE CONTROL: dos turnos a la vez no se pisan", () => {
@@ -83,5 +92,36 @@ describe("corregirle el rumbo al Agente a media faena", () => {
     dirigir("b", "u2", "para b");
     expect(leerDireccion("a")).toBe("para a");
     expect(leerDireccion("b")).toBe("para b");
+  });
+});
+
+describe("parar el turno a propósito (■)", () => {
+  it("cancelar llama a lo que aborta el turno, una vez", () => {
+    let veces = 0;
+    abrirTurno("t1", "u1", Date.now(), { abortar: () => (veces += 1) });
+    expect(cancelar("t1", "u1")).toBe("ok");
+    expect(veces).toBe(1);
+  });
+
+  it("🔴 un turno AJENO no se puede parar", () => {
+    let veces = 0;
+    abrirTurno("t1", "u1", Date.now(), { abortar: () => (veces += 1) });
+    expect(cancelar("t1", "otro")).toBe("ajeno");
+    expect(veces).toBe(0);
+  });
+
+  it("un turno que no existe, o que ya cerró, no se para", () => {
+    expect(cancelar("fantasma", "u1")).toBe("no_existe");
+    abrirTurno("t1", "u1", Date.now(), { abortar: () => {} });
+    cerrarTurno("t1");
+    expect(cancelar("t1", "u1")).toBe("no_existe");
+  });
+
+  it("cancelar no lo cierra: el turno sigue en el mapa hasta su `finally`", () => {
+    // Quien cierra es la ruta, al terminar de escribir la fila. Si cancelar lo
+    // quitara, una corrección enviada entre medias daría 404.
+    abrirTurno("t1", "u1", Date.now(), { abortar: () => {} });
+    cancelar("t1", "u1");
+    expect(dirigir("t1", "u1", "ya da igual")).toBe("ok");
   });
 });
