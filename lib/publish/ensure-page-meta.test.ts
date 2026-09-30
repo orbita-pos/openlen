@@ -77,6 +77,74 @@ test("og:image falls back to a base64 branded card when there's no image", () =>
   assert.ok(og.startsWith("data:image/svg+xml;base64,"), `got: ${og.slice(0, 40)}`);
 });
 
+/** The title lines drawn on the default og:image card, read back out of its
+ *  base64 SVG. The first `<text>` is the initial on the coral disc — skipped. */
+function cardLines(html: string): string[] {
+  const og = metaContent(html, "property", "og:image") ?? "";
+  const b64 = og.replace(/^data:image\/svg\+xml;base64,/, "");
+  assert.notEqual(b64, og, `expected the base64 card, got: ${og.slice(0, 40)}`);
+  const svg = Buffer.from(b64, "base64").toString("utf8");
+  return [...svg.matchAll(/<text\b[^>]*>([^<]*)<\/text>/g)]
+    .slice(1)
+    .map((m) => m[1].replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"));
+}
+
+const NO_IMAGE_BODY = "<h1>Hola</h1><p>Una página sin ninguna imagen para que salga la tarjeta.</p>";
+
+// Regression: the second line was only the word that overflowed the first,
+// then "…" — "Herencias y sucesiones" / "—…" — with room left for more.
+test("og card: the last line keeps filling before it ellipsizes", () => {
+  const card = (title: string) => cardLines(ensurePageMeta(DOC("", NO_IMAGE_BODY), { title }));
+  assert.deepEqual(card("Herencias y sucesiones — FUERO · Estudio jurídico"), [
+    "Herencias y sucesiones",
+    "— FUERO · Estudio…",
+  ]);
+  assert.deepEqual(card("Derecho de familia — FUERO · Estudio jurídico"), [
+    "Derecho de familia —",
+    "FUERO · Estudio…",
+  ]);
+});
+
+test("og card: a title that fits in two lines gets no ellipsis", () => {
+  const out = ensurePageMeta(DOC("", NO_IMAGE_BODY), { title: "Derecho de familia — FUERO" });
+  assert.deepEqual(cardLines(out), ["Derecho de familia —", "FUERO"]);
+});
+
+test("og card: the ellipsis never cuts a word nor overruns the line", () => {
+  // The second line fills to exactly 22 chars with copy left over: the "…"
+  // must replace the last whole word, not its last letter.
+  const out = ensurePageMeta(DOC("", NO_IMAGE_BODY), {
+    title: "Herencias y sucesiones Herencias y sucesiones más",
+  });
+  const lines = cardLines(out);
+  assert.deepEqual(lines, ["Herencias y sucesiones", "Herencias y…"]);
+  for (const ln of lines) assert.ok(ln.length <= 22, `line too long: ${ln}`);
+});
+
+// Real titles from the repo's templates: 26 of the 118 that get an ellipsis
+// left a separator hanging in front of it ("bodas ·…", "Order,…", "topic.…").
+test("og card: no separator is left hanging before the ellipsis", () => {
+  const card = (title: string) => cardLines(ensurePageMeta(DOC("", NO_IMAGE_BODY), { title }));
+  assert.deepEqual(card("Roble & Luz — Fotografía de bodas · Guadalajara"), [
+    "Roble & Luz —",
+    "Fotografía de bodas…",
+  ]);
+  assert.deepEqual(card("Daybreak Coffee — Roasted to Order, Shipped in 48 Hours"), [
+    "Daybreak Coffee —",
+    "Roasted to Order…",
+  ]);
+  assert.deepEqual(card("Roundtable — One day. One topic. Operational depth."), [
+    "Roundtable — One day.",
+    "One topic…",
+  ]);
+});
+
+test("og card: idempotent with a long, wrapped title", () => {
+  const title = "Herencias y sucesiones — FUERO · Estudio jurídico";
+  const once = ensurePageMeta(DOC("", NO_IMAGE_BODY), { title });
+  assert.equal(ensurePageMeta(once, { title }), once);
+});
+
 test("relative / api-asset images are NOT used for og:image", () => {
   const out = ensurePageMeta(
     DOC("", '<img src="/assets/local.webp"><h1>Hi</h1><p>Body copy goes here for the description.</p>'),
