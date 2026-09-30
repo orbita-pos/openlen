@@ -132,20 +132,8 @@ const FILE_PATH_OPCIONAL = {
     "The page file, e.g. /index.html or /menu/index.html. Omit it to use the page the user has open in the editor.",
 };
 
-/**
- * LAS DIFERIDAS (H2, 2026-09-25): el modelo ve sólo su nombre y las carga con
- * ToolSearch, como las poco usadas de Claude Code. Son las que en 1.574 llamadas
- * grabadas de Len-Bench se usaron dos veces o ninguna. Todas las demás van
- * cargadas desde el principio.
- */
-export const HERRAMIENTAS_DIFERIDAS: ReadonlySet<string> = new Set([
-  "activar_modulo",
-  "conectar_datos_vivos",
-  "preparar_marketing",
-  "editar_imagen",
-  "revertir_ultimo_cambio",
-  "leer_de_internet",
-]);
+/** LAS DIFERIDAS (H2, 2026-09-25): el modelo ve sólo su nombre y las carga con ToolSearch. Desde el 30/09 quedan las dos que nadie pidió en 958 turnos grabados de Len 2.0; las que un usuario pide con palabras (deshacer, editar una imagen, un módulo, leer una URL) van cargadas, porque ToolSearch se llamó 2 veces en esos 958 turnos. */
+export const HERRAMIENTAS_DIFERIDAS: ReadonlySet<string> = new Set(["conectar_datos_vivos", "preparar_marketing"]);
 
 function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
   return [
@@ -371,6 +359,7 @@ Cada página es un fichero: /index.html es la portada y /<slug>/index.html cada 
 LO QUE HAY Y LO QUE NO:
 - Si algo YA EXISTE como módulo, enciéndelo en vez de maquetarlo: un chat de atención es activar_modulo con "chat". Todo lo demás que viva en el navegador lo construyes TÚ.
 - Lo que puede hacer una página no lo limita tu lista de herramientas, sino si necesita un servidor. Un carrito (botones que añaden, cantidades, un total que se recalcula y localStorage para que siga ahí cuando el visitante vuelva), un filtro, un configurador de precios, un buscador dentro de la página, una calculadora o un juego son JavaScript de la página: los construyes tú, aunque lo que guarden se quede en el navegador, y al cerrar dices hasta dónde llega según dónde lo guardaste.
+- Fotos: elegir_foto busca una foto NUEVA en el catálogo propio; editar_imagen edita con IA una que YA está en el sitio, una por turno.
 - Eres el operador de SU página, no un chatbot general: lo ajeno a su página o a su negocio, dilo con gracia y vuelve a ella. JAMÁS inventes datos del mundo real (marcadores, precios de mercado, noticias).
 
 MÓDULOS QUE PUEDES OPERAR (activar_modulo):
@@ -379,8 +368,6 @@ ${moduleLines}
 HERRAMIENTAS QUE SE CARGAN CUANDO HACEN FALTA (con ToolSearch):
 - conectar_datos_vivos: datos que el usuario mantiene en un Google Sheet y cambian seguido (precios, cupos, horarios), en vez de fijarlos en el HTML.
 - preparar_marketing: el Marketing Kit (posts curados para sus redes).
-- editar_imagen: editar con IA una imagen que YA está en el sitio, una por turno. Para una foto NUEVA, elegir_foto.
-- leer_de_internet: leer una URL que te dé el usuario, en vez de pedirle que te copie el texto.
 
 SUS DATOS Y SUS ENLACES:
 El teléfono, el WhatsApp, las redes y la dirección del usuario viven EN SU PÁGINA: si te da uno, lo escribes en la página y ya está. Lo que no puedes decidir por él —la dirección de su página, su teléfono, su correo, a qué cuenta apunta un enlace, su menú, sus precios, sus horarios, sus cupos, las cifras de su negocio y lo que dicen sus clientes (reseñas, testimonios, valoraciones)— no se inventa ni se adivina, porque aparenta ser cierto: si no está en los ficheros (Grep lo encuentra), haz todo lo demás y pregúntaselo con preguntar. <ejemplo>usuario: «agrégame un botón de TikTok» — agente: pone el botón con href="#" y pregunta «¿cuál es tu TikTok?», jamás tiktok.com/@sunegocio deducido del nombre.</ejemplo>

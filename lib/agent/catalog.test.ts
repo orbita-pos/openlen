@@ -72,7 +72,7 @@ describe("buildFunctionDeclarations", () => {
     const names = new Set(buildFunctionDeclarations().map((d) => String(d.name)));
     for (const n of HERRAMIENTAS_DIFERIDAS) expect(names.has(n), n).toBe(true);
     expect([...HERRAMIENTAS_DIFERIDAS].sort()).toEqual(
-      ["activar_modulo", "conectar_datos_vivos", "editar_imagen", "leer_de_internet", "preparar_marketing", "revertir_ultimo_cambio"],
+      ["conectar_datos_vivos", "preparar_marketing"],
     );
   });
 
