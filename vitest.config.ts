@@ -378,9 +378,6 @@ export default defineConfig({
       "lib/agent/reloj-de-silencio.test.ts",
       "lib/agent/context.test.ts",
       "lib/agent/manual-de-la-plataforma.test.ts",
-      // H14, los segundos ojos: la receta, la revisión y el subagente de solo
-      // lectura que la corre. Puros, con el bucle guionado. LISTA BLANCA.
-      "lib/agent/revision/**/*.test.ts",
       "lib/agent/subagente.test.ts",
       "lib/agent/facts-kept.test.ts",
       "lib/agent/contenido-perdido.test.ts",

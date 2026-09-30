@@ -31,14 +31,6 @@ import {
 import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/lib/agent/diagnosticos";
 import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
 import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
-// H14: puro también (la receta y cuándo se revisa); quién revisa viene inyectado.
-import {
-  avisoDeRevision,
-  modoDeRevision,
-  type ModoDeRevision,
-  type Receta,
-  type ResultadoRevision,
-} from "@/lib/agent/revision/revisar-turno";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -138,12 +130,6 @@ export type AgentStreamEvent =
   // publish itself. The panel renders a confirm card whose button hits the
   // real publish endpoint — the user's tap is the only thing that publishes.
   | { type: "confirm"; action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean }
-  // H14 · LOS SEGUNDOS OJOS. `running` al empezar —la revisión se come la
-  // espera del turno y no puede parecer un cuelgue—; al acabar, `done` con
-  // cuántos hallazgos llegaron a Len, `omitida` si el diff salió vacío (no se
-  // revisó nada, y no se dice que sí) o `error` si el revisor cayó. Pintarla
-  // en los diez idiomas queda para después: el panel ignora lo que no conoce.
-  | { type: "revision"; estado: "running" | "done" | "omitida" | "error"; modo: ModoDeRevision; hallazgos?: number }
   | { type: "done"; turns: number; toolCalls: number }
   | { type: "error"; message: string; code?: AgentErrorCode };
 
@@ -323,30 +309,6 @@ export interface AgentLoopArgs {
    *  turno no topa vueltas ni llamadas (H1, 2026-09-25). */
   maxTurns?: number;
   maxToolCalls?: number;
-
-  /**
-   * H14 · LOS SEGUNDOS OJOS: el mismo modelo revisa lo que el turno cambió, con
-   * la receta de `/code-review` de Claude Code (`lib/agent/revision/`).
-   *
-   * Es el hook de `Stop` de Claude Code, y por eso corre en `cerrarTurno`: si
-   * hay hallazgos, el turno NO cierra y Len los recibe (`avisoDeRevision`); si
-   * no, cierra. UNA vez por turno, sólo si el turno escribió alguna página y
-   * según sus pasos (`modoDeRevision`): un cambio de título no dispara nada.
-   *
-   * INYECTADO, como `objetivo.evaluar`: el diff, la petición y quién revisa son
-   * de la ruta; aquí sólo cuándo y qué se hace con lo que vuelve. Devuelve
-   * `null` si no hay nada que revisar (el diff salió vacío). Si lanza, el turno
-   * cierra: el fallo cae hacia parar, como el del objetivo.
-   *
-   * La paga la casa, como los ojos: su uso NO entra en `usage`; va aparte, en
-   * `AgentLoopResult.revision`.
-   */
-  revision?: {
-    /** Qué receta toca en los turnos grandes (`AJUSTES_DE_REVISION`); sin ella,
-     *  la de la ficha, por pasos. */
-    readonly receta?: Receta;
-    revisar(o: { readonly modo: ModoDeRevision; readonly cierre: string }): Promise<ResultadoRevision | null>;
-  };
 }
 export interface AgentLoopResult {
   finalText: string;
@@ -436,10 +398,6 @@ export interface AgentLoopResult {
    * cambiar quién paga sin que nadie lo decida. Ausente = se cobra como siempre.
    */
   sinCobro?: "rechazos" | "conflicto";
-  /** Cómo fue la revisión de H14, si corrió; con `error` si el revisor cayó.
-   *  Ausente si no tocaba o si el diff salió vacío. Su uso es de la casa y NO
-   *  está en `usage`: se graba aparte para medirla. */
-  revision?: ResultadoRevision | { readonly modo: ModoDeRevision; readonly error: string };
 }
 
 // ⚰️ LA PODA DE DOCUMENTOS VIEJOS (`podarDocumentosViejos`, `FIN_DEL_DOCUMENTO`,
@@ -1107,7 +1065,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   let dichoAntesDelAviso: {
     readonly vuelta: number;
     readonly texto: string;
-    readonly tipo: "insistencia" | "reclamo" | "revision";
+    readonly tipo: "insistencia" | "reclamo";
   } | null = null;
   /** ¿ALGUNA LLAMADA HIZO ALGO? Una que no es de lectura, que salió bien y que
    *  no fue una edición nula. Es lo que decide la insistencia de abajo: hasta
@@ -1115,8 +1073,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    *  un `leer_estado` seguido de «Listo, cambié el titular» salía limpio y
    *  cobrado (G4 de la auditoría). */
   let actuo = false;
-  /** ¿PUEDE actuar? Si todo lo que se le declaró es de lectura —el subagente
-   *  revisor de H14: Read, Grep y Glob—, no hay cambio que «aplicar AHORA», y
+  /** ¿PUEDE actuar? Si todo lo que se le declaró es de lectura —un subagente
+   *  de sólo lectura: Read, Grep y Glob—, no hay cambio que «aplicar AHORA», y
    *  la insistencia le pediría lo imposible. Sin declaraciones el bucle no
    *  limita los nombres (las pruebas), así que ahí sí puede. */
   const puedeActuar =
@@ -1151,7 +1109,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     tareasReclamadas,
     tareasDeclaradas: lista.textos,
     rechazos: [...rechazos],
-    ...(resultadoRevision ? { revision: resultadoRevision } : {}),
   });
 
   /**
@@ -1169,61 +1126,17 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    */
   let algunaVueltaYaDijoAlgo = false;
 
-  // ── H14 · LOS SEGUNDOS OJOS ──────────────────────────────────────────────
-  let yaSeReviso = false;
-  let resultadoRevision: AgentLoopResult["revision"];
-
   /**
-   * ¿El turno sigue porque la revisión encontró algo? UNA vez por turno, y sólo
-   * cuando toca: escribió alguna página, tiene pasos para ello y le queda
-   * presupuesto para actuar (la regla del reclamo y de los ojos: no se le pide
-   * a nadie lo que ya no puede hacer).
-   */
-  const revisar = async (): Promise<boolean> => {
-    if (!args.revision || yaSeReviso) return false;
-    const modo = modoDeRevision(turns, args.revision.receta);
-    if (!modo || ultimaPorPagina.size === 0) return false;
-    if (mutatingTurns >= maxTurns || budgetedToolCalls >= maxToolCalls) return false;
-    yaSeReviso = true;
-    args.emit({ type: "revision", estado: "running", modo });
-    let r: ResultadoRevision | null;
-    try {
-      r = await args.revision.revisar({ modo, cierre: textoArrastrado + finalText });
-    } catch (e) {
-      // 🔴 EL FALLO CAE HACIA PARAR: el trabajo del turno
-      // ya está hecho, y un revisor caído no es motivo para gastar más.
-      resultadoRevision = { modo, error: e instanceof Error ? e.message : String(e) };
-      args.emit({ type: "revision", estado: "error", modo });
-      return false;
-    }
-    if (!r) {
-      args.emit({ type: "revision", estado: "omitida", modo });
-      return false;
-    }
-    resultadoRevision = r;
-    args.emit({ type: "revision", estado: "done", modo, hallazgos: r.hallazgos.length });
-    if (r.hallazgos.length === 0) return false;
-    // Lo que dijo al cerrar YA le llegó al usuario: si la vuelta siguiente cierra
-    // sin escribir nada, es lo que queda como cierre (ver `dichoAntesDelAviso`).
-    dichoAntesDelAviso = { vuelta: turns, texto: finalText, tipo: "revision" };
-    messages.push({ role: "assistant", content: finalText });
-    messages.push({ role: "user", content: avisoDeRevision(r.hallazgos) });
-    return true;
-  };
-
-  /**
-   * EL EMBUDO DE CIERRE. Devuelve el resultado si el turno termina, o `null`
-   * si NO puede terminar todavía porque la revisión encontró algo.
+   * EL EMBUDO DE CIERRE: la única salida del turno. Aquí colgaban el objetivo
+   * (retirado el 30/09: 0 usos en 1.963 turnos grabados y 0 en producción) y
+   * la revisión de H14 (aparcada el 29/09 y retirada el 30/09).
    *
    * 🔴 EXISTE PORQUE LA SALIDA ERA TRES. El turno acababa en tres
    * `return buildResult(false)` distintos, y colgar la comprobación de los tres
    * es exactamente la forma del hallazgo que este repo ya pagó: la misma
    * decisión escrita en N sitios y una se queda atrás.
    */
-  const cerrarTurno = async (): Promise<AgentLoopResult | null> => {
-    if (await revisar()) return null;
-    return buildResult(false);
-  };
+  const cerrarTurno = async (): Promise<AgentLoopResult> => buildResult(false);
 
   // A budget cap was hit. If a tools-disabled closeOut stream is available, let
   // the model compose a graceful closing message — emitted as normal `text`, so
@@ -1809,12 +1722,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // —`parseVisualVerdict` convierte un `broken:true` sin issues en
           // `broken:false`— pero `verifyTurn` es una dependencia inyectada.
           finalText = turnText;
-          // EL EMBUDO. Si la revisión encontró algo, esto devuelve null y el
-          // turno NO termina: se vuelve al principio del bucle, que es invocar
-          // otra vez al modelo.
-          const cierre = await cerrarTurno();
-          if (cierre) return cierre;
-          continue;
+          return await cerrarTurno();
         }
         // OBSERVADO: se vio algo, y no es un defecto afirmable. Contexto para
         // el cierre, no una orden — y NUNCA un ciclo de arreglo. Ver el
@@ -1883,12 +1791,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
             ...(nota ? { observacion: nota } : {}),
             ...cobertura,
           });
-          // EL EMBUDO. Si la revisión encontró algo, esto devuelve null y el
-          // turno NO termina: se vuelve al principio del bucle, que es invocar
-          // otra vez al modelo.
-          const cierre = await cerrarTurno();
-          if (cierre) return cierre;
-          continue;
+          return await cerrarTurno();
         }
         // Se miró y está bien.
         // `no_mirado` NO dispara ciclo de arreglo: no hay crítica que dar y
@@ -1923,12 +1826,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       }
       finalText = turnText;
       // Igual que la rama de error: por el constructor, no a mano.
-      // EL EMBUDO. Si la revisión encontró algo, esto devuelve null y el
-      // turno NO termina: se vuelve al principio del bucle, que es invocar
-      // otra vez al modelo.
-      const cierre = await cerrarTurno();
-      if (cierre) return cierre;
-      continue;
+      return await cerrarTurno();
     }
 
     // A turn counts toward maxTurns only if it did something other than

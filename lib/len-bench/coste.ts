@@ -12,11 +12,6 @@
 // ⚠️ Lo que NO está aquí: las llamadas de los ojos (visión) y las del juez del
 // objetivo no pasan por la grabadora. Por eso el tope de gasto del corredor
 // multiplica esta cifra por un margen, en vez de fiarse de ella a secas.
-//
-// La revisión de H14 SÍ está: la grabación guarda su uso (`revision.uso`), y
-// corre en el mismo modelo que el turno. Tiene que contar: lo que mata la
-// hipótesis es que cueste más de +$0,02 por encargo, y sin esto su brazo se
-// mediría gratis.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -50,10 +45,6 @@ export function usdDeGrabacion(g: TurnoGrabado): number {
         usd += usdDeTurno({ entrada: ev.inputTokens, cacheada: ev.cachedTokens, salida: ev.outputTokens }, tarifa);
       }
     }
-  }
-  if (g.revision && "uso" in g.revision) {
-    const u = g.revision.uso;
-    usd += usdDeTurno({ entrada: u.inputTokens, cacheada: u.cachedTokens, salida: u.outputTokens }, tarifa);
   }
   return usd;
 }

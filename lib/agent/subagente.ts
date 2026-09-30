@@ -1,7 +1,8 @@
 // lib/agent/subagente.ts — un subagente de SOLO LECTURA sobre el mismo bucle de Len.
 //
-// H14 (paso 8 de Len 2.5). En Claude Code los revisores de `/code-review` son
-// subagentes: el MISMO bucle, con su propio prompt, contexto limpio y sólo las
+// Nació con H14 (paso 8 de Len 2.5, retirada el 30/09) y se queda como primitivo
+// para la idea de Jesús del subagente para tareas difíciles. En Claude Code los
+// revisores de `/code-review` son subagentes: el MISMO bucle, con su propio prompt, contexto limpio y sólo las
 // herramientas que les tocan. Aquí igual: `runAgentLoop` con un prompt de
 // sistema, sus mensajes y Read, Grep y Glob sobre el sitio. Nunca la conversación
 // de Len. Es la base de la idea de Jesús del subagente para las tareas
@@ -21,7 +22,21 @@
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { ToolOutcome } from "@/lib/agent/tools";
 import { runAgentLoop } from "@/lib/agent/loop";
-import type { Corrida } from "@/lib/agent/revision/revisar-turno";
+
+/** Lo que gastó: la misma forma que `AgentLoopResult.usage`. */
+export interface Uso {
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly cachedTokens: number;
+  readonly thinkingTokens: number;
+}
+
+/** Cómo acabó una corrida del subagente: su texto, o por qué no lo hay. El uso
+ *  va en los dos casos (una llamada caída también cuesta); `vueltas`, cuántas
+ *  veces llamó al modelo, es para medir la espera. */
+export type Corrida =
+  | { readonly ok: true; readonly texto: string; readonly uso: Uso; readonly vueltas?: number }
+  | { readonly ok: false; readonly motivo: string; readonly uso: Uso; readonly vueltas?: number };
 
 /** Lo que puede usar: leer, buscar y listar. Nada que escriba. */
 export const HERRAMIENTAS_DE_SOLO_LECTURA: ReadonlySet<string> = new Set(["Read", "Grep", "Glob"]);
