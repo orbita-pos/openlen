@@ -54,6 +54,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
+import { fusionarConversacion } from "@/lib/chat/fusionar-conversacion";
 import { trozosConFormato } from "@/lib/chat/formato-de-len";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
@@ -315,6 +316,10 @@ interface DesignTurn {
   /** Total HTML chars received from the stream so far. Surfaced in the
    *  streaming footer as forward-motion proof. */
   streamedChars?: number;
+  /** LEN 2.1 · el turno sigue trabajando EN EL SERVIDOR y esta vista no tiene
+   *  su stream: vino así al cargar (otra pestaña, el móvil) o esta pestaña lo
+   *  perdió por el camino. El panel relee su fila hasta que cierra. */
+  enServidor?: boolean;
 }
 
 const QUICK_PROMPT_KEYS: ReadonlyArray<string> = [
@@ -499,6 +504,14 @@ function AIDesignChat({
   // EL TURNO EN MARCHA, para poder corregirle el rumbo. Lo manda el servidor
   // como primer evento del SSE; sin el no hay a donde escribir.
   const turnoIdRef = useRef<string | null>(null);
+  // LEN 2.1 · EL TURNO QUE SIGUE EN EL SERVIDOR sin stream en esta vista (el id
+  // de su fila). Mientras haya uno, el compositor está ocupado igual que con un
+  // turno propio: ■ lo para y lo escrito lo corrige, con el `turnoId` que
+  // devuelve su fila.
+  const [reenganche, setReenganche] = useState<string | null>(null);
+  // El turno que ESTA pestaña lee por su stream: la convergencia no puede
+  // pisarlo con la fila del servidor, que va unos segundos por detrás.
+  const enVueloRef = useRef<string | null>(null);
 
   // Bumps every 15s so "Applied · 12s ago" stays accurate without
   // per-message timers.
@@ -541,10 +554,10 @@ function AIDesignChat({
   // in the streaming footer refreshes live. Cheaper than a global ticker
   // — only runs when there's something to count.
   useEffect(() => {
-    if (!sending) return;
+    if (!sending && !reenganche) return;
     const id = window.setInterval(() => setNowTick((n) => n + 1), 1000);
     return () => window.clearInterval(id);
-  }, [sending]);
+  }, [sending, reenganche]);
 
   // 🔴 AQUÍ NO SE ABORTA NADA AL DESMONTAR, Y ES A PROPÓSITO.
   //
@@ -592,7 +605,9 @@ function AIDesignChat({
   const initialChatRef = useRef(initialChat);
   initialChatRef.current = initialChat;
   const initialChatSig = (initialChat ?? [])
-    .map((s) => `${s.id}:${s.status}`)
+    // `enCurso` y `cortado` viajan con `status: "applied"`: sin ellos en la
+    // firma, un turno que termina en el servidor no volvería a converger.
+    .map((s) => `${s.id}:${s.status}:${s.enCurso ? "c" : ""}${s.cortado ? "x" : ""}`)
     .join("|");
   const chatSeededRef = useRef(false);
   useEffect(() => {
@@ -602,24 +617,19 @@ function AIDesignChat({
       return;
     }
     const server = initialChatRef.current ?? [];
-    setTurns((prev) => {
-      const prevById = new Map(prev.map((t) => [t.id, t]));
-      const serverIds = new Set(server.map((s) => s.id));
-      // Server turns first (chronological, the authority). Keep the local
-      // DesignTurn where we have it — it carries preEditHtml for in-session
-      // Undo — but take status from the server (another tab may have undone
-      // it). Restore turns we've never seen.
-      const merged: DesignTurn[] = server.map((s) => {
-        const local = prevById.get(s.id);
-        return local ? { ...local, status: s.status } : restoreTurn(s);
-      });
-      // Local turns the server hasn't got yet — the in-flight streaming turn,
-      // or one whose append POST is still landing. Append after.
-      for (const t of prev) {
-        if (!serverIds.has(t.id)) merged.push(t);
-      }
-      return merged;
-    });
+    // Server turns first (chronological, the authority). Keep the local
+    // DesignTurn where we have it — it carries preEditHtml for in-session
+    // Undo — but take status from the server (another tab may have undone
+    // it). Restore turns we've never seen. Desde Len 2.1 la regla entera —el
+    // turno en vuelo y los que siguen en el servidor— vive en
+    // `fusionarConversacion`, con sus pruebas.
+    setTurns((prev) =>
+      fusionarConversacion(prev, server, {
+        enVuelo: enVueloRef.current,
+        restaurar: restoreTurn,
+        conEstado: (local, s) => ({ ...local, status: s.status }),
+      }),
+    );
   }, [initialChatSig]);
 
   // External draft push (post-swap "Update copy?" chip flow). Apply once,
@@ -689,6 +699,87 @@ function AIDesignChat({
       ),
     );
   }, []);
+
+  /** LEN 2.1 · Este turno sigue en el servidor y esta vista ya no tiene su
+   *  stream: se pinta en marcha y se relee su fila (efecto de abajo). */
+  const seguirEnElServidor = useCallback((id: string) => {
+    setTurns((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status: "streaming", enServidor: true } : t)),
+    );
+    setReenganche(id);
+  }, []);
+
+  // LEN 2.1 · UN TURNO QUE LLEGA EN CURSO DESDE EL SERVIDOR —al cargar, o por
+  // la convergencia con otra pestaña— se sigue desde su fila. Uno a la vez: el
+  // compositor sólo puede corregir o parar uno.
+  useEffect(() => {
+    if (reenganche) return;
+    const pendiente = turns.find((x) => x.enServidor && x.status === "streaming");
+    if (pendiente) setReenganche(pendiente.id);
+  }, [turns, reenganche]);
+
+  // LEN 2.1 · RELEER LA FILA cada ~3 s hasta que el turno cierra (decisión de
+  // Jesús, 30/09: releer la fila, sin un stream que reenganchar). Al cerrar se
+  // refresca el proyecto: la página nueva y la conversación ya asentada.
+  useEffect(() => {
+    if (!reenganche) return;
+    const fila = reenganche;
+    let vivo = true;
+    const terminar = () => {
+      turnoIdRef.current = null;
+      setReenganche(null);
+      onChatChangeRef.current?.();
+      notifyCreditBalanceChanged();
+    };
+    const leer = async () => {
+      let r: Response;
+      try {
+        r = await fetch(`/api/agent/turno/${encodeURIComponent(fila)}`, { cache: "no-store" });
+      } catch {
+        return; // sin red todavía: se vuelve a intentar en la siguiente vuelta
+      }
+      if (!vivo) return;
+      if (r.status === 404) {
+        // El servidor nunca llegó a abrir la fila (o el turno no produjo
+        // nada): ahora sí es el error de red de siempre.
+        setTurns((prev) =>
+          prev.map((x) =>
+            x.id === fila ? { ...x, status: "error", enServidor: false, errorText: t("errors.network") } : x,
+          ),
+        );
+        terminar();
+        return;
+      }
+      if (!r.ok) return;
+      const cuerpo = (await r.json().catch(() => null)) as { turno?: StoredChatTurn; turnoId?: string } | null;
+      if (!vivo || !cuerpo?.turno) return;
+      const turno = cuerpo.turno;
+      if (turno.enCurso) {
+        if (cuerpo.turnoId) turnoIdRef.current = cuerpo.turnoId;
+        setTurns((prev) =>
+          prev.map((x) =>
+            x.id === fila
+              ? {
+                  ...x,
+                  userText: turno.userText,
+                  assistantReasoning: turno.assistantReasoning,
+                  actions: accionesAlRecargar(turno.actions),
+                }
+              : x,
+          ),
+        );
+        return;
+      }
+      setTurns((prev) => prev.map((x) => (x.id === fila ? restoreTurn(turno) : x)));
+      terminar();
+    };
+    void leer();
+    const reloj = window.setInterval(() => void leer(), 3000);
+    return () => {
+      vivo = false;
+      window.clearInterval(reloj);
+    };
+  }, [reenganche, t]);
 
   // Append a settled turn to the server transcript (append-only log), then
   // signal the parent — it refetches + BroadcastChannels other tabs into sync.
@@ -983,7 +1074,9 @@ function AIDesignChat({
   const send = useCallback(
     async (rawPrompt: string, imageOverride?: AttachedImage | null) => {
       const prompt = rawPrompt.trim();
-      if (!prompt || sending) return;
+      // Con un turno aún trabajando en el servidor, otro turno sobre la misma
+      // página serían dos agentes editándola a la vez: se corrige o se para.
+      if (!prompt || sending || reenganche) return;
       if (prompt.length > 2000) return;
 
       // imageOverride lets Retry re-send the failed turn's original image;
@@ -1085,6 +1178,10 @@ function AIDesignChat({
         // El id del turno ANTERIOR no puede quedarse aquí: el ■ de este turno,
         // pulsado antes de que llegue su evento `turno`, pararía otro.
         turnoIdRef.current = null;
+        enVueloRef.current = turnId;
+        /** Llegó el `done`: el turno terminó y lo dijo. Sin él y sin `error`,
+         *  el stream se cortó por el camino y el turno sigue en el servidor. */
+        let llegoElDone = false;
         let accumulatedReasoning = "";
         // LO QUE ESCRIBISTE A MEDIA FAENA, para que sobreviva a un F5.
         //
@@ -1372,6 +1469,7 @@ function AIDesignChat({
                   });
                 }
               } else if (evName === "done") {
+                llegoElDone = true;
                 // Terminal — always finalizes the turn, even when it trails
                 // an `error` event (the loop can emit both in one turn).
                 // `mutoDurable`: alguna herramienta ya escribió en la base.
@@ -1435,6 +1533,17 @@ function AIDesignChat({
               turnImage,
               abort,
             });
+            return;
+          }
+
+          // 🔴 LEN 2.1 · EL STREAM SE CORTÓ, EL TURNO NO. Sin `done` y sin
+          // `error`, la conexión murió por el camino (un proxy, la red, el
+          // móvil dormido) y el turno sigue en el servidor: se sigue desde su
+          // fila en vez de pintarlo en rojo e invitar a «Reintentar», que lo
+          // aplicaría dos veces.
+          if (!llegoElDone && errorMessage === null) {
+            scanController.cancel();
+            seguirEnElServidor(turnId);
             return;
           }
 
@@ -1573,14 +1682,14 @@ function AIDesignChat({
               errorText: t("errors.cancelled"),
             });
           } else {
-            updateTurn(turnId, {
-              status: "error",
-              errorText:
-                err instanceof Error ? err.message : t("errors.network"),
-            });
+            // 🔴 LEN 2.1: la red se cayó, pero el turno ya no muere con ella.
+            // Se sigue desde su fila; si el servidor no llegó a abrirla, la
+            // lectura lo dice (404) y entonces sí es un error de red.
+            seguirEnElServidor(turnId);
           }
         } finally {
           if (abortRef.current === abort) abortRef.current = null;
+          if (enVueloRef.current === turnId) enVueloRef.current = null;
           setSending(false);
         }
         return;
@@ -1612,8 +1721,10 @@ function AIDesignChat({
       onLocalUpdate,
       persistTurn,
       projectId,
+      reenganche,
       runAiDesignTurn,
       scopedSelection,
+      seguirEnElServidor,
       sending,
       t,
       tAgent,
@@ -1762,7 +1873,7 @@ function AIDesignChat({
   // would render empty, so swap it for the typing-dots bubble instead.
   const latest = turns[turns.length - 1];
   const showThinkingDots =
-    sending &&
+    (sending || reenganche !== null) &&
     latest &&
     latest.status === "streaming" &&
     latest.assistantReasoning.length === 0 &&
@@ -1776,7 +1887,7 @@ function AIDesignChat({
         className="flex-1 overflow-y-auto nice-scroll px-3 py-3 space-y-3"
       >
         {turns.length === 0 ? (
-          <EmptyState onPick={(p) => setDraft(p)} disabled={sending} />
+          <EmptyState onPick={(p) => setDraft(p)} disabled={sending || reenganche !== null} />
         ) : (
           turns.map((t) => (
             <TurnView
@@ -1800,8 +1911,9 @@ function AIDesignChat({
         onSubmit={() => {
           // EL BOTON SIGUE A LA CAJA. Con el turno corriendo, lo que escribes
           // no abre otro turno: corrige el que hay. Sin texto no se llega aqui
-          // — ahi el boton es el cuadrado y llama a `onStop`.
-          if (sending) {
+          // — ahi el boton es el cuadrado y llama a `onStop`. Vale igual para
+          // un turno que sigue en el servidor (Len 2.1).
+          if (sending || reenganche) {
             const texto = draft.trim();
             const turnoId = turnoIdRef.current;
             if (!texto || !turnoId) return;
@@ -1829,7 +1941,7 @@ function AIDesignChat({
           void send(draft);
         }}
         onStop={handleCancel}
-        sending={sending}
+        sending={sending || reenganche !== null}
         textareaRef={taRef}
         sectionSelectMode={sectionSelectMode}
         onToggleSectionSelect={onToggleSectionSelect}
@@ -2519,7 +2631,10 @@ function restoreTurn(s: StoredChatTurn): DesignTurn {
     userText: s.userText,
     attachedImage: s.attachedImage,
     assistantReasoning: s.assistantReasoning,
-    status: s.status,
+    // Len 2.1: sigue trabajando en el servidor. Se pinta en marcha, contando
+    // desde que empezó, y el panel relee su fila hasta que cierra.
+    status: s.enCurso ? "streaming" : s.status,
+    ...(s.enCurso ? { enServidor: true, startedAt: s.appliedAt } : {}),
     errorText: s.errorText,
     // No HTML snapshot persisted — empty preEditHtml hides the inline Undo.
     preEditHtml: "",

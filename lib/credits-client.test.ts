@@ -157,8 +157,13 @@ describe("el refresco del saldo sigue cableado tras un turno bueno", () => {
     const classicEnd = source.indexOf("} catch (err) {", classicStart);
     const agentStart = source.indexOf("// Turn concluded well");
     const agentEnd = source.indexOf("} catch (err) {", agentStart);
+    // Len 2.1: la TERCERA ruta que termina bien es el turno seguido desde su
+    // fila (el cliente perdió el stream o volvió después): al cerrar, también
+    // cambió el saldo.
+    const reengancheStart = source.indexOf("// LEN 2.1 · RELEER LA FILA");
+    const reengancheEnd = source.indexOf("const leer = async", reengancheStart);
 
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(3);
     expect(source).toContain('from "@/lib/credits-client";');
     // Las DOS ramas de error del panel (Agente y ai-design clásico) tienen que
     // pasar por el muro compartido; si una vuelve a mostrar el `message` del
@@ -175,6 +180,11 @@ describe("el refresco del saldo sigue cableado tras un turno bueno", () => {
     expect(agentEnd).toBeGreaterThan(agentStart);
     expect(
       source.slice(agentStart, agentEnd).match(/notifyCreditBalanceChanged\(\);/g),
+    ).toHaveLength(1);
+    expect(reengancheStart).toBeGreaterThan(-1);
+    expect(reengancheEnd).toBeGreaterThan(reengancheStart);
+    expect(
+      source.slice(reengancheStart, reengancheEnd).match(/notifyCreditBalanceChanged\(\);/g),
     ).toHaveLength(1);
   });
 });
