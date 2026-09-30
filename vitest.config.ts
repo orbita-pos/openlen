@@ -399,6 +399,8 @@ export default defineConfig({
       // Corregirle el rumbo al Agente a media faena. Nucleo puro (un Map),
       // pero `include` es LISTA BLANCA y sin esta linea no correria nunca.
       "lib/agent/direcciones.test.ts",
+      // Len 2.1: la fila del turno se guarda a medida que pasa, sin martillear.
+      "lib/agent/avance-del-turno.test.ts",
       // Internet: fetch de URL a texto. El fetcher se inyecta, así que no toca
       // la red ni el binding nativo — pero `include` es LISTA BLANCA y sin esta
       // línea no correría nunca.
@@ -494,6 +496,8 @@ export default defineConfig({
       // credits — the sanitize/normalize/behaviour passes are the real ones.
       "app/api/templates/ai-design/route.test.ts",
       "app/api/agent/route.test.ts",
+      // Len 2.1: volver a mirar un turno que sigue trabajando sin cliente.
+      "app/api/agent/turno/[fila]/route.test.ts",
       "app/api/usage/route.test.ts",
       // Task 5 — the fill surface that had no gate at all. Mocks fillTemplate
       // so the test drives the route's gate, not the filler's own sanitizer.
@@ -541,6 +545,8 @@ export default defineConfig({
       // pudo cazar el truncado a milisegundos que tumbó las ediciones en
       // producción el 2026-09-15. Sin esta línea no correría — lista BLANCA.
       "lib/projects/escribir-data.pg.test.ts",
+      // Len 2.1: la fila del turno en curso, contra Postgres (sólo base local).
+      "lib/projects/chat-en-curso.pg.test.ts",
       "lib/projects/escritores-de-data.test.ts",
       "lib/notifications/**/*.test.ts",
     ],

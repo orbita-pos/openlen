@@ -368,4 +368,9 @@ export interface StoredChatTurn {
    *  después de haber cambiado algo. Lo escribe el servidor
    *  (`corteDelTurno`); al recargar se avisa y el historial lo marca. */
   cortado?: boolean;
+  /** LEN 2.1 · el turno SIGUE TRABAJANDO en el servidor. La fila se crea al
+   *  empezar (`status: en_curso`) y se va llenando, porque el turno ya no
+   *  muere con el cliente; quien la lee puede volver a engancharse
+   *  (`GET /api/agent/turno/<fila>`). Se lee con `status: "applied"`. */
+  enCurso?: boolean;
 }

@@ -51,7 +51,13 @@ import { crearDiarioDelTurno } from "@/lib/agent/diario-del-turno";
 import { corteDelTurno, crearRegistroDelTurno } from "@/lib/agent/registro-del-turno";
 import { actualizarSuite, marcarRegresiones, migrarSuite, vivas } from "@/lib/agent/pruebas-de-la-pagina";
 import type { FalloSpec } from "@/lib/agent/prueba-js";
-import { registrarTurnoDelServidor } from "@/lib/projects/chat";
+import {
+  abrirFilaDelTurno,
+  avanceDelTurno,
+  quitarFilaDelTurno,
+  registrarTurnoDelServidor,
+} from "@/lib/projects/chat";
+import { crearAvance } from "@/lib/agent/avance-del-turno";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { conSenales, relojDeSilencio } from "@/lib/agent/reloj-de-silencio";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
@@ -760,6 +766,74 @@ export async function POST(req: Request): Promise<Response> {
         rotas: string[];
       };
       let suiteDelTurno: SuiteDelTurno | null = null;
+      // LEN 2.1 · LA FILA DEL TURNO, ABIERTA MIENTRAS TRABAJA (diagnóstico
+      // §4.4 punto 2). El turno ya no muere con el cliente, así que quien
+      // vuelva a mirarlo —otra pestaña, el móvil, la misma tras perder la red—
+      // lo encuentra en su fila: se abre `en_curso` pasada la puerta de
+      // créditos, se va llenando (`avance`, como mucho cada 2 s) y se cierra
+      // ANTES del `done` (`cerrarFila`), para que la fila ya esté completa
+      // cuando el cliente se entera de que acabó.
+      const filaId = turnIdDelCliente ?? turnoId;
+      /** Lo que el usuario escribió a media faena, con la misma forma que el
+       *  panel (`↳`): si no está el panel, la fila la escribe el servidor. */
+      const correcciones: string[] = [];
+      const textoDelUsuario = () => [prompt, ...correcciones.map((c) => `↳ ${c}`)].join("\n");
+      let filaAbierta = false;
+      let filaCerrada = false;
+      const avance = crearAvance(async () => {
+        try {
+          await avanceDelTurno(projectId, filaId, {
+            userText: textoDelUsuario(),
+            assistantReasoning: registro.texto,
+            actions: registro.tarjetas,
+          });
+        } catch (err) {
+          console.warn("[agent] no se pudo guardar el avance del turno", err);
+        }
+      });
+      /**
+       * 🔴 LA FILA DEL TURNO, PASE LO QUE PASE, y UNA vez: la llaman el final
+       * bueno y el malo antes de avisar al cliente, y el `finally` por si
+       * ninguno llegó.
+       *
+       * Se escribe SIEMPRE que el turno haya hecho algo — texto, tarjeta o
+       * escritura durable. Un turno que no produjo nada (un rechazo temprano)
+       * no merece fila, y la que se abrió al empezar se quita.
+       *
+       * FAIL-SOFT y del todo: registrar el turno no puede costarle el turno a
+       * nadie. La verdad de lo que falló va en el diario (`toolResults`); ver
+       * el comentario de `registrarTurnoDelServidor`.
+       */
+      const cerrarFila = async (): Promise<void> => {
+        if (filaCerrada) return;
+        filaCerrada = true;
+        await avance.parar();
+        if (registro.hayAlgo(mutoDurable)) {
+          try {
+            await registrarTurnoDelServidor(projectId, {
+              ...registro.fila({
+                id: filaId,
+                userText: textoDelUsuario(),
+                page: pageSlug,
+                toolResults: diario.entradas(),
+                corte,
+              }),
+              // H4 · lo que vio el modelo; de aquí sale el historial del turno siguiente.
+              transcript: transcripcionDelTurno
+                ? transcripcionParaGuardar(transcripcionDelTurno, agentSession.leidos ?? new Map())
+                : null,
+            });
+          } catch (err) {
+            console.warn("[agent] no se pudo registrar el turno", err);
+          }
+        } else if (filaAbierta) {
+          try {
+            await quitarFilaDelTurno(projectId, filaId);
+          } catch (err) {
+            console.warn("[agent] no se pudo quitar la fila vacía del turno", err);
+          }
+        }
+      };
       // EL GRABADOR DE TURNOS. Apagado salvo que `OPENLEN_AGENT_RECORD_DIR`
       // diga dónde escribir — OPT-IN de verdad, porque el fixture lleva dentro
       // el HTML de la página y el mensaje del usuario. Sin la variable no se
@@ -778,7 +852,7 @@ export async function POST(req: Request): Promise<Response> {
       // cerrar su caja de texto sin quedarse esperando.
       // `abortar` es la única forma de parar el turno desde fuera: la usa
       // `POST /api/agent/cancelar` (el ■ del panel y el plazo de Len-Bench).
-      abrirTurno(turnoId, userId, Date.now(), { abortar: () => upstreamAbort.abort() });
+      abrirTurno(turnoId, userId, Date.now(), { abortar: () => upstreamAbort.abort(), filaId });
       emit("turno", { turnoId });
 
       const dirGrabacion = directorioDeGrabacion();
@@ -800,6 +874,13 @@ export async function POST(req: Request): Promise<Response> {
         // sea menos (`techoDelTurno`). El bucle lo pregunta antes de cada
         // llamada al modelo; al pasarlo, cierra contando lo hecho.
         const techo = techoDelTurno(creditState);
+        // La fila, abierta: desde aquí el turno se puede volver a mirar.
+        try {
+          await abrirFilaDelTurno(projectId, { id: filaId, userText: prompt, page: pageSlug, attachedImage });
+          filaAbierta = true;
+        } catch (err) {
+          console.warn("[agent] no se pudo abrir la fila del turno", err);
+        }
         const result = await runAgentLoop({
           messages,
           tools,
@@ -833,6 +914,8 @@ export async function POST(req: Request): Promise<Response> {
             // los ojos necesitan las dos mitades para juzgar. El marbete dice
             // cuál manda, que es lo único que el texto suelto no puede decir.
             if (direccion) {
+              correcciones.push(direccion);
+              avance.tocar();
               const corregido = `${agentSession.userPrompt ?? ""}\n\n[Corrección posterior del usuario — manda sobre lo anterior] ${direccion}`;
               agentSession.userPrompt = corregido;
               // La misma corrección, para quien lee el OTRO campo: `publicar`
@@ -1157,6 +1240,7 @@ export async function POST(req: Request): Promise<Response> {
           // ni el momento en que llega al cliente.
           emit: (ev) => {
             registro.observar(ev);
+            if (ev.type === "text" || ev.type === "action") avance.tocar();
             emit(ev.type, ev);
           },
           onMutacion: () => {
@@ -1351,6 +1435,9 @@ export async function POST(req: Request): Promise<Response> {
         // `closeOut` redacta el cierre elegante no se emite ningún evento
         // `error`»— y no salía de la ruta: lo leían las evals y nadie más. El
         // usuario veía un turno verde y limpio sobre una faena a medias.
+        // LA FILA, CERRADA ANTES DE AVISAR: quien lea la conversación al recibir
+        // el `done` —el panel, Len-Bench— tiene que encontrarla ya completa.
+        await cerrarFila();
         emit("done", {
           turns: result.turns,
           toolCalls: result.toolCalls,
@@ -1378,55 +1465,25 @@ export async function POST(req: Request): Promise<Response> {
       } catch (err) {
         console.error("[agent] stream failed", err);
         const code: AgentErrorCode = "upstream";
+        corte = corteDelTurno({ terminalError: true, topeAlcanzado: null, errorCode: code, mutoDurable });
+        // La fila, cerrada antes de avisar, como en el final bueno.
+        await cerrarFila();
         emit("error", { message: err instanceof Error ? err.message : "Unknown error", code });
         // Y aquí también: el bucle reventó, pero si ya había escrito, el cambio
         // es igual de durable. El `done` cierra el turno con el aviso en vez de
         // dejar un rojo sobre una página que sí cambió.
         if (mutoDurable) emit("done", { turns: 0, toolCalls: 0, mutoDurable: true });
-        corte = corteDelTurno({ terminalError: true, topeAlcanzado: null, errorCode: code, mutoDurable });
         close();
       } finally {
         reloj.parar();
+        // 🔴 LA FILA DEL TURNO, TAMBIÉN AQUÍ, por si ningún final llegó a
+        // cerrarla (`cerrarFila` es idempotente). ANTES de sacar el turno del
+        // mapa: mientras el mapa lo tiene, una fila `en_curso` se lee como viva
+        // (`turnoDeLaFila`); fuera de él, como huérfana y cortada.
+        await cerrarFila();
         // EL TURNO SE CIERRA PASE LO QUE PASE. Si no, su fila se queda con la
         // correccion que nadie leera y ocupando sitio en el mapa.
         cerrarTurno(turnoId);
-        // 🔴 Y LA FILA DEL TURNO, TAMBIÉN PASE LO QUE PASE.
-        //
-        // Se escribe SIEMPRE que el turno haya hecho algo — texto, tarjeta o
-        // escritura durable. Un turno que no produjo nada (sin créditos, un
-        // rechazo temprano) no merece fila.
-        //
-        // El `status` va como `applied` a propósito, y es la única parte de
-        // esto que no copia a Claude Code todavía: la fila significa hoy «esto se
-        // aplicó», y marcar el turno cortado necesita interfaz que aún no
-        // existe. La verdad de lo que falló va en el diario, que es lo que no
-        // había. Ver el comentario de `registrarTurnoDelServidor`.
-        //
-        // FAIL-SOFT y del todo: registrar el turno no puede costarle el turno a
-        // nadie ni ensuciar una respuesta ya cerrada. El stream ya se cerró
-        // cuando esto corre.
-        if (registro.hayAlgo(mutoDurable)) {
-          try {
-            await registrarTurnoDelServidor(
-              projectId,
-              {
-                ...registro.fila({
-                  id: turnIdDelCliente ?? turnoId,
-                  userText: prompt,
-                  page: pageSlug,
-                  toolResults: diario.entradas(),
-                  corte,
-                }),
-                // H4 · lo que vio el modelo; de aquí sale el historial del turno siguiente.
-                transcript: transcripcionDelTurno
-                  ? transcripcionParaGuardar(transcripcionDelTurno, agentSession.leidos ?? new Map())
-                  : null,
-              },
-            );
-          } catch (err) {
-            console.warn("[agent] no se pudo registrar el turno", err);
-          }
-        }
         // CUÁNTOS TURNOS TERMINAN SIN NADIE MIRANDO, contado desde el día uno:
         // es lo que dirá si hace falta avisar (y cuánto) sin adivinarlo.
         if (clienteSeFue) console.log(`[agent] turno terminado sin cliente turno=${turnoId}`);

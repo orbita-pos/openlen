@@ -74,6 +74,10 @@ const mocks = vi.hoisted(() => ({
   // turnos de verdad en la base local (fallaban en silencio: «p1» no existe).
   turnosParaElHistorial: vi.fn(async (): Promise<unknown[]> => []),
   registrarTurnoDelServidor: vi.fn(async () => {}),
+  // Len 2.1: la fila del turno se abre al empezar y se va llenando.
+  abrirFilaDelTurno: vi.fn(async () => {}),
+  avanceDelTurno: vi.fn(async () => {}),
+  quitarFilaDelTurno: vi.fn(async () => {}),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -118,6 +122,9 @@ vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }))
 vi.mock("@/lib/projects/chat", () => ({
   turnosParaElHistorial: mocks.turnosParaElHistorial,
   registrarTurnoDelServidor: mocks.registrarTurnoDelServidor,
+  abrirFilaDelTurno: mocks.abrirFilaDelTurno,
+  avanceDelTurno: mocks.avanceDelTurno,
+  quitarFilaDelTurno: mocks.quitarFilaDelTurno,
 }));
 vi.mock("@/lib/collections/catalog-block", () => ({ collectionCatalogBlock: () => "" }));
 vi.mock("@/lib/collections/store", () => ({ listPublishedItems: vi.fn() }));
@@ -1394,5 +1401,111 @@ describe("POST /api/agent — el techo de dinero del turno", () => {
     mocks.creditsForUsage.mockReturnValue(3_140);
     await pedir();
     expect(mocks.debitCredits).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEN 2.1 · LA FILA DEL TURNO, ABIERTA MIENTRAS TRABAJA (diagnóstico §4.4
+// punto 2). Quien vuelve a mirar un turno que sigue sin cliente lo encuentra en
+// su fila; y quien recibe el `done` tiene que encontrarla ya cerrada.
+describe("POST /api/agent — la fila del turno se abre al empezar y se cierra antes del done", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<html><body><h1>hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "pro", balance: 5_000, allotment: 15_000, refillsAt: null });
+    mocks.creditsForUsage.mockReturnValue(3);
+  });
+
+  const TURNO = "0b8c2a52-3a1e-4f7e-9c11-7d2f5a1b9e00";
+  const pedir = () =>
+    POST(
+      new Request("http://localhost/api/agent", {
+        method: "POST",
+        body: JSON.stringify({ projectId: "p1", prompt: "cambia el título", turnId: TURNO }),
+      }),
+    );
+  const limpio = (texto = "Listo.") => async (args: AgentLoopArgs) => {
+    if (texto) args.emit({ type: "text", text: texto });
+    return {
+      finalText: texto, turns: 1, toolCalls: 0,
+      usage: { inputTokens: 10, outputTokens: 5, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
+    };
+  };
+
+  it("se abre EN CURSO, con el id del cliente, pasada la puerta de créditos", async () => {
+    mocks.runAgentLoop.mockImplementation(limpio());
+    await readEvents(await pedir());
+    expect(mocks.abrirFilaDelTurno).toHaveBeenCalledWith(
+      "p1",
+      expect.objectContaining({ id: TURNO, userText: "cambia el título", page: null }),
+    );
+    // Y el almacén sabe qué fila escribe el turno: es como se distingue una
+    // fila viva de una huérfana.
+    const extra = (mocks.abrirTurno.mock.calls.at(-1) as unknown as [string, string, number, { filaId?: string }])[3];
+    expect(extra.filaId).toBe(TURNO);
+  });
+
+  it("sin créditos no se abre fila", async () => {
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 0, allotment: 2_000, refillsAt: null });
+    mocks.noCreditsMessage.mockReturnValue("sin créditos");
+    await readEvents(await pedir());
+    expect(mocks.abrirFilaDelTurno).not.toHaveBeenCalled();
+    expect(mocks.quitarFilaDelTurno).not.toHaveBeenCalled();
+  });
+
+  it("🔴 cuando llega el `done`, la fila YA está cerrada", async () => {
+    mocks.runAgentLoop.mockImplementation(limpio());
+    const lector = (await pedir()).body!.getReader();
+    const dec = new TextDecoder();
+    let leido = "";
+    while (!leido.includes("event: done")) {
+      const { done, value } = await lector.read();
+      if (done) break;
+      leido += dec.decode(value, { stream: true });
+    }
+    expect(leido).toContain("event: done");
+    expect(mocks.registrarTurnoDelServidor).toHaveBeenCalledTimes(1);
+    const fila = (mocks.registrarTurnoDelServidor.mock.calls[0] as unknown as [string, { id: string; status: string }])[1];
+    expect(fila.id).toBe(TURNO);
+    expect(fila.status).toBe("applied");
+    await lector.cancel();
+  });
+
+  it("un turno que no produjo nada no deja fila: la abierta se quita", async () => {
+    mocks.runAgentLoop.mockImplementation(limpio(""));
+    await readEvents(await pedir());
+    expect(mocks.registrarTurnoDelServidor).not.toHaveBeenCalled();
+    expect(mocks.quitarFilaDelTurno).toHaveBeenCalledWith("p1", TURNO);
+  });
+
+  it("lo que el usuario escribió a media faena va en la fila, con la forma del panel", async () => {
+    mocks.leerDireccion.mockReturnValueOnce("sólo el botón");
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.leerDireccion?.();
+      return limpio()(args);
+    });
+    await readEvents(await pedir());
+    const fila = (mocks.registrarTurnoDelServidor.mock.calls[0] as unknown as [string, { userText: string }])[1];
+    expect(fila.userText).toBe("cambia el título\n↳ sólo el botón");
+  });
+
+  it("si el bucle revienta, la fila se cierra igual y una sola vez", async () => {
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.emit({ type: "text", text: "empiezo" });
+      throw new Error("Fireworks se cayó");
+    });
+    const eventos = await readEvents(await pedir());
+    expect(eventos.some((e) => e.event === "error")).toBe(true);
+    expect(mocks.registrarTurnoDelServidor).toHaveBeenCalledTimes(1);
   });
 });

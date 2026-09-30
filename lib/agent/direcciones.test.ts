@@ -7,6 +7,7 @@ import {
   cerrarTurno,
   dirigir,
   leerDireccion,
+  turnoDeLaFila,
   MAX_DIRECCION,
 } from "./direcciones";
 
@@ -123,5 +124,23 @@ describe("parar el turno a propósito (■)", () => {
     abrirTurno("t1", "u1", Date.now(), { abortar: () => {} });
     cancelar("t1", "u1");
     expect(dirigir("t1", "u1", "ya da igual")).toBe("ok");
+  });
+});
+
+describe("¿sigue vivo el turno de esta fila?", () => {
+  it("devuelve el turno que escribe la fila, mientras está abierto", () => {
+    abrirTurno("t1", "u1", Date.now(), { filaId: "fila-1" });
+    expect(turnoDeLaFila("fila-1", "u1")).toBe("t1");
+    cerrarTurno("t1");
+    expect(turnoDeLaFila("fila-1", "u1")).toBeNull();
+  });
+
+  it("🔴 la fila de otro usuario no existe", () => {
+    abrirTurno("t1", "u1", Date.now(), { filaId: "fila-1" });
+    expect(turnoDeLaFila("fila-1", "otro")).toBeNull();
+  });
+
+  it("una fila que nadie escribe (el servidor se reinició) no tiene turno", () => {
+    expect(turnoDeLaFila("huerfana", "u1")).toBeNull();
   });
 });

@@ -41,6 +41,9 @@ interface TurnoAbierto {
   /** Para el cancelar EXPLÍCITO (`cancelar`). Desde 2.1 cerrar la conexión ya
    *  no corta el turno, así que ésta es la única forma de pararlo. */
   readonly abortar?: () => void;
+  /** La fila de la conversación que escribe este turno (el id que eligió el
+   *  cliente). Con ella se sabe si una fila `en_curso` sigue viva. */
+  readonly filaId?: string;
 }
 
 // 🔴 EN `globalThis`, NO en un `const` del módulo. MEDIDO el 2026-09-03 con el
@@ -78,7 +81,7 @@ export function abrirTurno(
   turnoId: string,
   userId: string,
   ahora = Date.now(),
-  extra: { readonly abortar?: () => void } = {},
+  extra: { readonly abortar?: () => void; readonly filaId?: string } = {},
 ): void {
   barrer(ahora);
   abiertos.set(turnoId, {
@@ -86,6 +89,7 @@ export function abrirTurno(
     abiertoEn: ahora,
     pendientes: [],
     ...(extra.abortar ? { abortar: extra.abortar } : {}),
+    ...(extra.filaId ? { filaId: extra.filaId } : {}),
   });
 }
 
@@ -148,6 +152,24 @@ export function cancelar(turnoId: string, userId: string): ResultadoCancelar {
   if (turno.userId !== userId) return "ajeno";
   turno.abortar?.();
   return "ok";
+}
+
+/**
+ * ¿QUÉ TURNO VIVO ESCRIBE ESTA FILA? Su id, o `null` si ninguno en ESTE
+ * proceso.
+ *
+ * Es cómo se distingue una fila `en_curso` que sigue trabajando de una que se
+ * quedó huérfana: el servidor se reinició a mitad (un deploy) y su `finally`
+ * no llegó a cerrarla. Con UN proceso —el despliegue de hoy— el mapa es la
+ * verdad. ⚠️ Con dos instancias dejaría de serlo, igual que `dirigir`.
+ *
+ * Mismo control de dueño que todo lo demás: la fila de otro no existe.
+ */
+export function turnoDeLaFila(filaId: string, userId: string): string | null {
+  for (const [id, t] of abiertos) {
+    if (t.filaId === filaId && t.userId === userId) return id;
+  }
+  return null;
 }
 
 /** El turno terminó. Se llama SIEMPRE, también cuando revienta. */
