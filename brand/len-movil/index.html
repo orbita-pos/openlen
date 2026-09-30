@@ -30,6 +30,7 @@
   --ao:.34; --marker:rgba(255,138,30,.42);
   --glass:#2A1A10; --eye:#FFFFFF; --card:#24170F; --card-line:#3D2A1E; --fill-2:#3D2A1E; --muted:#B09A8A; --ink:#FFF1E6; --bg:#140C08;
   --bad:#FF6B6B;
+  --hp:#F3E8E0; --shade-rim:rgba(255,255,255,.5);
   color-scheme:dark;
 }
 /* La cara de cara.js viene en coral y no se toca (la comparte len-chat).
@@ -444,6 +445,43 @@ svg{display:block}
 .lm-mic svg{width:22px;height:22px}
 .lm-mic.is-rec{transform:scale(1.16);box-shadow:0 0 0 8px var(--m-faint)}
 
+/* ── tu Len: cómo se ve (sólo eso; trabaja igual) ────────────────────
+   Un selector de personaje, como los de dots: la cara grande arriba, los
+   personajes con nombre en fila, y abajo la mezcla (cabeza + cara).     */
+.lm-looks{z-index:36}
+.lk-top{position:absolute;top:52px;left:16px;right:16px;display:grid;grid-template-columns:40px 1fr 40px;align-items:center;text-align:center}
+.lk-top div{display:grid;gap:1px}
+.lk-top b{font:600 17px Inter,sans-serif}
+.lk-top span{font-size:12.5px;color:var(--m-dim)}
+.lk-close{width:36px;height:36px;border-radius:50%;border:0;background:var(--m-glass);color:var(--m-ink);display:grid;place-items:center;cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.lk-close svg{width:15px;height:15px}
+.lk-hero{position:absolute;left:50%;top:170px;width:156px;height:156px;margin-left:-78px;touch-action:pan-y;cursor:pointer}
+.lk-hero .lm-halo{inset:-34px}
+.lk-floor{position:absolute;left:50%;bottom:-16px;width:112px;height:16px;margin-left:-56px;border-radius:50%;background:radial-gradient(closest-side,rgba(110,35,0,.3),rgba(110,35,0,0))}
+:root[data-theme="dark"] .lk-floor{background:radial-gradient(closest-side,rgba(255,138,30,.22),rgba(255,138,30,0))}
+.lk-arrow{position:absolute;top:226px;width:44px;height:44px;border-radius:50%;border:0;background:var(--m-glass);color:var(--m-ink);display:grid;place-items:center;cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:transform .15s}
+.lk-arrow:active{transform:scale(.92)}
+.lk-arrow svg{width:20px;height:20px}
+.lk-prev{left:20px}.lk-prev svg{transform:scaleX(-1)}
+.lk-next{right:20px}
+.lk-name{position:absolute;top:346px;left:0;right:0;margin:0;text-align:center;font:italic 400 50px/1 "Instrument Serif",serif;letter-spacing:-.01em}
+.lk-tag{position:absolute;top:402px;left:24px;right:24px;margin:0;text-align:center;font-size:15px;color:var(--m-dim)}
+.lk-type{display:inline-block;margin-right:5px;padding:2px 10px;border-radius:999px;background:var(--m-key-bg);color:var(--m-key);font-weight:700}
+.lk-cards{position:absolute;top:430px;left:0;right:0;display:flex;gap:9px;overflow-x:auto;padding:14px 24px 6px;scrollbar-width:none}
+.lk-cards::-webkit-scrollbar,.lk-opts::-webkit-scrollbar{display:none}
+.lk-card{flex:none;width:76px;display:grid;justify-items:center;gap:5px;padding:22px 0 9px;border:0;border-radius:20px;background:var(--m-glass);color:var(--m-ink);cursor:pointer;font:600 12.5px Inter,sans-serif;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:box-shadow .2s,transform .25s cubic-bezier(.3,1.5,.5,1)}
+.lk-card:active{transform:scale(.95)}
+.lk-card[aria-pressed="true"]{box-shadow:inset 0 0 0 2.5px var(--m-ink);transform:translateY(-3px)}
+.lk-card-face{width:44px;height:44px;pointer-events:none}
+.lk-mix{position:absolute;top:566px;left:0;right:0;display:grid;gap:10px}
+.lk-row>span{display:block;padding:0 24px 5px;font:600 11px Inter,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--m-dim)}
+.lk-opts{display:flex;gap:7px;overflow-x:auto;padding:2px 24px;scrollbar-width:none}
+.lk-opt{flex:none;width:48px;height:48px;border-radius:16px;border:0;background:var(--m-glass);display:grid;place-items:center;cursor:pointer;padding:2px 4px;transition:box-shadow .2s,transform .15s}
+.lk-opt:active{transform:scale(.92)}
+.lk-opt svg{width:38px;height:44px}
+.lk-opt[aria-pressed="true"]{box-shadow:inset 0 0 0 2.5px var(--m-ink)}
+.lk-done{position:absolute;left:24px;right:24px;bottom:40px;width:auto}
+
 /* ── la página de ejemplo: Panadería Luna, en móvil ────────────────── */
 .lp{--c:#FBF6EE;--i:#2B1D14;--m:#6F5A4B;--t:#B5541C;--l:#EADFD0;--rad:18px;background:var(--c);color:var(--i);font:15px/1.55 Inter,sans-serif}
 .lp h1,.lp h2,.lp-logo{font-family:"Instrument Serif",serif;font-weight:400;letter-spacing:-.01em}
@@ -514,9 +552,11 @@ svg{display:block}
       <button data-scene="publicar"><kbd>5</kbd>Publicar</button>
       <button data-scene="dirigir"><kbd>6</kbd>Dirigir<small>nota de voz o texto</small></button>
       <button data-scene="pregunta"><kbd>7</kbd>Pregunta<small>algo falla y Len te pregunta</small></button>
+      <button data-scene="look"><kbd>8</kbd>Tu Len<small>lentes, sombrero… (o toca su cara en la barra)</small></button>
     </div>
     <h2>Ajustes</h2>
     <div class="lm-toggles">
+      <button id="t-look">Look de Len <b></b></button>
       <button id="t-voice">Voz de Len <b></b></button>
       <button id="t-silent">Teléfono <b></b></button>
       <button id="t-ask">Len se atora al buscar <b></b></button>
@@ -633,6 +673,25 @@ svg{display:block}
         </div>
       </section>
 
+      <section class="lm-layer lm-looks lm-m lm-marca" id="lm-looks">
+        <div class="lm-aura"><i></i><i></i><i></i></div>
+        <header class="lk-top">
+          <button class="lk-close" data-act="lookclose" aria-label="Cerrar" data-ic="x"></button>
+          <div><b>Tu Len</b><span>Cambia cómo se ve. Trabaja igual.</span></div>
+        </header>
+        <div class="lk-hero" id="lk-hero"><div class="lm-halo"><i></i></div><div class="lk-floor"></div><div class="lm-face-host" id="lk-face"></div></div>
+        <button class="lk-arrow lk-prev" data-act="lookprev" aria-label="Anterior" data-ic="arrowR"></button>
+        <button class="lk-arrow lk-next" data-act="looknext" aria-label="Siguiente" data-ic="arrowR"></button>
+        <h2 class="lk-name">Len</h2>
+        <p class="lk-tag" id="lk-tag"></p>
+        <div class="lk-cards" id="lk-cards"></div>
+        <div class="lk-mix">
+          <div class="lk-row"><span>Cabeza</span><div class="lk-opts" id="lk-head"></div></div>
+          <div class="lk-row"><span>Cara</span><div class="lk-opts" id="lk-facex"></div></div>
+        </div>
+        <button class="lm-btn lm-pri lk-done" data-act="lookdone">Listo</button>
+      </section>
+
       <div class="lm-notif" id="lm-notif" role="button" tabindex="0">
         <div class="lm-n-icon" data-ic="mark"></div>
         <div class="lm-n-txt">
@@ -693,8 +752,31 @@ const I = {
 };
 $$("[data-ic]").forEach((e) => (e.innerHTML = I[e.dataset.ic]));
 
+/* ───────── tu Len: los tipos (sólo cambia cómo se ve) ─────────
+   El catálogo vive en cara.js (lo comparte la página «Elige tu Len», y la
+   llave de guardado también: lo que eliges allí, lo lleva aquí). Len se llama
+   Len siempre; «Chef» o «Michi» es el tipo, no un nombre. */
+const LOOKS = LenCara.LOOKS;
+const LOOK_KEY = "len-look";
+function loadLook() {
+  try {
+    const v = JSON.parse(localStorage.getItem(LOOK_KEY));
+    if (v && typeof v === "object") return { cabeza: LenCara.HEAD[v.cabeza] ? v.cabeza : "", cara: LenCara.FACE[v.cara] ? v.cara : "" };
+  } catch {}
+  return { cabeza: "", cara: "" };
+}
+function saveLook(l) { try { localStorage.setItem(LOOK_KEY, JSON.stringify(l)); } catch {} }
+const presetOf = (l) => LOOKS.find((p) => p.cabeza === l.cabeza && p.cara === l.cara);
+function lookName(l) {
+  const p = presetOf(l);
+  if (p) return { name: p.name, tag: p.tag };
+  const parts = [LenCara.HEAD[l.cabeza], LenCara.FACE[l.cara]].filter(Boolean).map((s, i) => (i ? s.toLowerCase() : s));
+  return { name: "Tu mezcla", tag: parts.join(" y ") + "." };
+}
+
 /* ───────── estado ───────── */
 const S = {
+  look: loadLook(),
   voiceOK: false, silent: false, ask: false, muted: false,
   where: "lock",          // "app" = la app abierta · "lock" = el usuario se fue
   published: false, dirty: false,
@@ -707,7 +789,7 @@ const S = {
 // que es lo que cara.js hace con sus atributos y aquí el naranja taparía
 function face(host, opts) {
   host.dataset.st = opts.state;
-  return LenCara.create(host, { ...opts, onchange: (s) => (host.dataset.st = s) });
+  return LenCara.create(host, { look: S.look, ...opts, onchange: (s) => (host.dataset.st = s) });
 }
 const F = {
   work: face($("#lm-work-face"), { props: "compact", state: "pensando" }),
@@ -717,6 +799,8 @@ const F = {
   sheet: face($("#lm-sheet-face"), { props: "none", state: "reposo" }),
 };
 Object.values(F).forEach((c) => c.host.addEventListener("click", (e) => { e.stopPropagation(); c.poke(); }));
+// su cara en la barra es su «perfil»: tocarla abre «Tu Len»
+F.bar.host.addEventListener("click", () => setTimeout(openLooks, 220));
 
 /* ───────── tiempo: todo lo pendiente muere al cambiar de escena ───────── */
 let RUN = 0, TM = [], ANIMS = [];
@@ -725,7 +809,7 @@ const wait = (ms) => new Promise((r) => later(r, ms));
 const anim = (el, kf, o) => { const a = el.animate(kf, o); ANIMS.push(a); return a; };
 
 /* ───────── capas ───────── */
-const L = { lock: $("#lm-lock"), app: $("#lm-app"), stage: $("#lm-stage"), incoming: $("#lm-incoming") };
+const L = { lock: $("#lm-lock"), app: $("#lm-app"), stage: $("#lm-stage"), incoming: $("#lm-incoming"), looks: $("#lm-looks") };
 const show = (n, on = true) => L[n].classList.toggle("is-on", on);
 const only = (...ns) => { for (const k in L) show(k, ns.includes(k)); };
 const sb = (m) => (SCREEN.dataset.sb = m);
@@ -1294,7 +1378,7 @@ function sheet(kind) {
   }
   $("#lm-body").innerHTML = RENDER[kind]();
   if (kind === "publicada") {
-    const f = LenCara.create($("#lm-pub-face"), { state: "publicado" });
+    const f = LenCara.create($("#lm-pub-face"), { state: "publicado", look: S.look });
     later(() => f.set("terminado"), 3800);
   }
   if (kind === "direct") { wireComposer(); const th = $("#lm-thread"); th.scrollTop = th.scrollHeight; }
@@ -1556,8 +1640,98 @@ function closeApp() {
   only("lock"); sb("light");
 }
 
+/* ───────── tu Len: el selector ─────────
+   Se prueba en un borrador; sólo «Listo» se lo pone a todas las caras. */
+let LK = null;
+const PK = { face: null, t: 0 };
+function buildLooks() {
+  PK.face = LenCara.create($("#lk-face"), { props: "none", state: "reposo" });
+  $("#lk-cards").innerHTML = LOOKS.map((p) => `<button class="lk-card" data-act="lookpick" data-id="${p.id}"><div class="lk-card-face"></div><span>${esc(p.name)}</span></button>`).join("");
+  $$(".lk-card").forEach((c) => {
+    const p = LOOKS.find((x) => x.id === c.dataset.id);
+    LenCara.create($(".lk-card-face", c), { props: "none", state: "reposo", look: p });
+  });
+  const opt = (act, id, name, svg) => `<button class="lk-opt" data-act="${act}" data-id="${id}" aria-label="${esc(name)}" title="${esc(name)}">${svg}</button>`;
+  $("#lk-head").innerHTML = ["", ...Object.keys(LenCara.HEAD)].map((id) => opt("lookhead", id, LenCara.HEAD[id] || "Nada", LenCara.icon(id, ""))).join("");
+  $("#lk-facex").innerHTML = ["", ...Object.keys(LenCara.FACE)].map((id) => opt("lookface", id, LenCara.FACE[id] || "Nada", LenCara.icon("", id))).join("");
+  // deslizar la cara grande cambia de personaje; un toque le hace cosquillas
+  const hero = $("#lk-hero");
+  let x0 = null;
+  hero.addEventListener("pointerdown", (e) => { x0 = e.clientX; });
+  hero.addEventListener("pointerup", (e) => {
+    if (x0 == null) return;
+    const dx = (e.clientX - x0) / K; x0 = null;
+    if (Math.abs(dx) > 36) stepLook(dx < 0 ? 1 : -1); else PK.face.poke();
+  });
+}
+function center(box, el, smooth = true) {
+  if (!el) return;
+  box.scrollTo({ left: el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2, behavior: smooth && !LenCara.reduced ? "smooth" : "auto" });
+}
+function paintLooks(animate) {
+  const d = LK.draft, p = presetOf(d), n = lookName(d);
+  PK.face.setLook(d, animate);
+  $("#lk-tag").innerHTML = `<b class="lk-type">${esc(n.name)}</b> ${esc(n.tag)}`;
+  $$(".lk-card").forEach((c) => c.setAttribute("aria-pressed", String(!!p && c.dataset.id === p.id)));
+  $$('[data-act="lookhead"]').forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === d.cabeza)));
+  $$('[data-act="lookface"]').forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === d.cara)));
+  center($("#lk-cards"), p && $(`.lk-card[data-id="${p.id}"]`), animate);
+  center($("#lk-head"), $(`[data-act="lookhead"][aria-pressed="true"]`), animate);
+  center($("#lk-facex"), $(`[data-act="lookface"][aria-pressed="true"]`), animate);
+}
+function openLooks() {
+  if (LK) return;
+  if (!PK.face) buildLooks();
+  LK = { draft: { ...S.look }, sb: SCREEN.dataset.sb };
+  show("looks"); sb("light"); hideNotif();
+  paintLooks(false);
+  hello(PK.face);
+}
+// saluda con el look nuevo y vuelve a lo que estaba haciendo
+function hello(f, back = "reposo") {
+  f.set("saludando");
+  clearTimeout(f._hello);
+  f._hello = setTimeout(() => { if (f.state === "saludando") f.set(back); }, 1300);
+}
+function tryLook(next) {
+  if (next.cabeza === LK.draft.cabeza && next.cara === LK.draft.cara) { PK.face.poke(); return; }
+  LK.draft = { cabeza: next.cabeza, cara: next.cara };
+  paintLooks(true);
+  hello(PK.face);
+  if (!LenCara.reduced) $(".lk-type").animate([{ opacity: 0, transform: "translateY(10px) scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 380, easing: "cubic-bezier(.3,1.4,.5,1)" });
+}
+function stepLook(dir) {
+  const p = presetOf(LK.draft), i = p ? LOOKS.indexOf(p) : 0;
+  tryLook(LOOKS[(i + dir + LOOKS.length) % LOOKS.length]);
+}
+function wearAll(l) {
+  Object.values(F).forEach((c) => c.setLook(l));
+  // la que se ve saluda con su look nuevo
+  if (L.app.classList.contains("is-on")) {
+    if ($("#lm-sheet").classList.contains("is-on")) hello(F.sheet, F.sheet.state === "saludando" ? "reposo" : F.sheet.state);
+    hello(F.bar, F.bar.state === "saludando" ? "reposo" : F.bar.state);
+  }
+}
+function closeLooks(apply) {
+  if (!LK) return;
+  const was = LK; LK = null;
+  show("looks", false); SCREEN.dataset.sb = was.sb;
+  if (!apply) return;
+  const changed = was.draft.cabeza !== S.look.cabeza || was.draft.cara !== S.look.cara;
+  S.look = { ...was.draft }; saveLook(S.look); paintPanel();
+  if (changed) setTimeout(() => { wearAll(S.look); haptic(); }, 200);
+}
+
 /* ───────── acciones (un solo oyente) ───────── */
 const ACT = {
+  looks: openLooks,
+  lookpick: (b) => tryLook(LOOKS.find((p) => p.id === b.dataset.id)),
+  lookhead: (b) => tryLook({ ...LK.draft, cabeza: b.dataset.id }),
+  lookface: (b) => tryLook({ ...LK.draft, cara: b.dataset.id }),
+  lookprev: () => stepLook(-1),
+  looknext: () => stepLook(1),
+  lookdone: () => closeLooks(true),
+  lookclose: () => closeLooks(false),
   close: closeApp,
   see: () => firstTalk("open"),
   publish,
@@ -1588,6 +1762,7 @@ function reset() {
   speech.stop(); skipTalk = null; DELIV = null; LOOP = null; stopRec();
   $$(".lm-cap,.lm-ghost,.lm-xray,.lm-flash,.lm-conf").forEach((e) => e.remove());
   hideNotif(); sheetShow(false);
+  LK = null; show("looks", false);
   $("#lm-sheet").classList.remove("is-min");
   $("#lm-subs").innerHTML = ""; $("#lm-answers").innerHTML = ""; RES.innerHTML = ""; L.stage.classList.remove("has-res");
   L.stage.classList.remove("is-away"); F.stage.host.style.visibility = "";
@@ -1631,6 +1806,7 @@ const SCENES = {
     closeApp();
     later(() => askFail("portada", 0), 900);
   },
+  look() { base(); pageMode(); sheet("listo"); later(openLooks, 450); },
 };
 function go(name) {
   $$(".lm-scenes button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.scene === name)));
@@ -1639,12 +1815,16 @@ function go(name) {
 $$(".lm-scenes button").forEach((b) => (b.onclick = () => go(b.dataset.scene)));
 addEventListener("keydown", (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest("input,select,textarea")) return;
+  if (LK && e.key === "ArrowLeft") return stepLook(-1);
+  if (LK && e.key === "ArrowRight") return stepLook(1);
+  if (LK && e.key === "Escape") return closeLooks(false);
   const names = Object.keys(SCENES), n = +e.key;
   if (n >= 1 && n <= names.length) go(names[n - 1]);
 });
 
 /* ───────── ajustes ───────── */
 function paintPanel() {
+  $("#t-look b").textContent = lookName(S.look).name;
   $("#t-voice b").textContent = S.voiceOK ? "permitida" : "sin permiso";
   $("#t-silent b").textContent = S.silent ? "en silencio" : "con sonido";
   $("#t-ask b").textContent = S.ask ? "sí" : "no";
@@ -1659,6 +1839,13 @@ $("#t-silent").onclick = () => {
   paintVoice();
 };
 $("#t-ask").onclick = () => { S.ask = !S.ask; paintPanel(); };
+// el siguiente personaje, puesto ya en todas las caras (para ver cada escena con él)
+$("#t-look").onclick = () => {
+  const p = presetOf(S.look), i = p ? LOOKS.indexOf(p) : 0, n = LOOKS[(i + 1) % LOOKS.length];
+  S.look = { cabeza: n.cabeza, cara: n.cara }; saveLook(S.look);
+  wearAll(S.look); paintPanel();
+  if (LK) { LK.draft = { ...S.look }; paintLooks(true); hello(PK.face); }
+};
 $("#t-theme").onclick = () => {
   document.documentElement.dataset.theme = dark() ? "light" : "dark";
   // la app sigue el tema; la llamada y el bloqueo tienen su fondo propio
