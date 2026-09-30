@@ -62,7 +62,7 @@ const catalog = [
   ...catalogToolNames(readFileSync(join(AGENTE, "catalog.ts"), "utf8")),
   ...catalogToolNames(readFileSync(join(AGENTE, "ficheros", "declaraciones.ts"), "utf8")),
   ...toolNameConstants(readFileSync(join(AGENTE, "ficheros", "todo-write.ts"), "utf8")),
-  ...toolNameConstants(readFileSync(join(AGENTE, "ficheros", "tool-search.ts"), "utf8")),
+  // ⚰️ `ficheros/tool-search.ts` (ToolSearch) se retiró en Len 2.1 (2026-09-30).
 ];
 errors.push(...checkToolGroups(groups, catalog));
 

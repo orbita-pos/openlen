@@ -1722,7 +1722,7 @@ describe("runAgentLoop: la mutación durable sobrevive al fallo terminal", () =>
     expect(mutaciones).toHaveLength(1);
   });
 
-  // Los cambios de AJUSTES (módulos, tema, motion, música, 3D, datos vivos) son
+  // Los cambios de AJUSTES (hoy, los módulos) son
   // igual de durables y NO emiten html. `updatedHtml` sola los habría perdido.
   it("un cambio de AJUSTES cuenta igual, aunque no emita html", async () => {
     const r = await runAgentLoop({

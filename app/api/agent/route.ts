@@ -14,7 +14,7 @@ import { stripOpIds } from "@/lib/html-ops";
 import { seleccionDelLienzo } from "@/lib/agent/seleccion-del-lienzo";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
-import { buildFunctionDeclarations, HERRAMIENTAS_DIFERIDAS } from "@/lib/agent/catalog";
+import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { persistPage } from "@/lib/page-engine/persist";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
@@ -361,15 +361,8 @@ export async function POST(req: Request): Promise<Response> {
   // para que sea el mismo documento que el taller le está enseñando al usuario.
   // Ver D5 de la spec 2026-09-15.
   const vistaDelTurno = vistaParaMedir(projectId, project, pageSlug);
+  // Todas cargadas: las diferidas y ToolSearch (H2) se retiraron en Len 2.1.
   const tools = buildFunctionDeclarations(process.env);
-  // LAS DIFERIDAS (H2): el modelo ve sólo su nombre y las carga con ToolSearch.
-  // `tools` sigue siendo la lista ENTERA —la usan el saneado del historial y el
-  // bucle para reconocer un nombre—; al modelo se le ofrecen las del núcleo más
-  // las que ya cargó en este turno.
-  const diferidas = tools.filter((d) => HERRAMIENTAS_DIFERIDAS.has(String(d.name)));
-  const cargadas = new Set<string>();
-  const herramientasDelModelo = () =>
-    tools.filter((d) => !HERRAMIENTAS_DIFERIDAS.has(String(d.name)) || cargadas.has(String(d.name)));
   // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador
   // sólo se acepta un NOMBRE de herramienta que exista, sin argumentos, y un
   // resumen acotado. Vive fuera para que el arnés de evals reproduzca una
@@ -551,7 +544,6 @@ export async function POST(req: Request): Promise<Response> {
   ]);
 
   const argsDelTurno = {
-    diferidas: diferidas.map((d) => String(d.name)),
     state,
     userBrief: project.userBrief,
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
@@ -664,7 +656,6 @@ export async function POST(req: Request): Promise<Response> {
   const agentSession: AgentSession = {
     projectId,
     userId,
-    herramientas: { diferidas, cargadas },
     // H3 — la memoria que va en el contexto cuenta como LEÍDA, como el CLAUDE.md
     // que Claude Code siembra al empezar: se le añade una línea sin un Read.
     leidos: new Map([
@@ -707,7 +698,7 @@ export async function POST(req: Request): Promise<Response> {
   const pensando = { vivo: (): void => {} };
   const brain = createAgentBrain({
     alPensar: () => pensando.vivo(),
-    tools: herramientasDelModelo,
+    tools,
     requestId: projectId,
     signal: upstreamAbort.signal,
     ...(attachedInline ? { attachedImage: { image: attachedInline, anchorMessage: promptMessage } } : {}),

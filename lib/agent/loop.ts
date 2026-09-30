@@ -750,8 +750,7 @@ const READ_ONLY_TOOLS = new Set([
   // muda: cada Edit dice su fichero.
   "preguntar",
   "TodoWrite",
-  // Cargar una herramienta diferida no cambia nada (H2).
-  "ToolSearch",
+  // ⚰️ Aquí iba `ToolSearch` (H2), retirada con las diferidas en Len 2.1.
 ]);
 /** Cuántas vueltas gana el turno cuando el usuario corrige el rumbo.
  *
@@ -2052,7 +2051,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // Lo que la escritura dejó mal, para el `<new-diagnostics>` de la tanda.
       if (outcome.diagnosticos?.length) diagnosticosDeLaTanda.push(...outcome.diagnosticos);
       // Lo durable incluye los cambios de AJUSTES, que no emiten html: módulos,
-      // tema, motion, música, 3D, datos vivos. `runAgentTool` los cuenta.
+      // hoy, los módulos (`activar_modulo`). `runAgentTool` los cuenta.
       if (!mutoDurable && (outcome.mutoDurable || outcome.updatedHtml)) {
         mutoDurable = true;
         args.onMutacion?.();

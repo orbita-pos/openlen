@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import * as catalogo from "./catalog";
 import {
   AGENT_MODULES,
   buildAgentSystemPrompt,
   buildFunctionDeclarations,
-  HERRAMIENTAS_DIFERIDAS,
   instruccionesDeLen,
 } from "./catalog";
 import { clauseMarker } from "@/lib/ai/js-clause";
@@ -40,6 +40,10 @@ const RETIRADAS = [
   "aplicar_tematica",
   // Len 2.1 (2026-09-30): 0 llamadas en la historia de producción.
   "preparar_marketing",
+  // Len 2.1 (2026-09-30): «datos vivos» se retiró entero, y sin diferidas
+  // ToolSearch no tenía nada que cargar.
+  "conectar_datos_vivos",
+  "ToolSearch",
 ] as const;
 
 describe("buildFunctionDeclarations", () => {
@@ -52,8 +56,6 @@ describe("buildFunctionDeclarations", () => {
       "Write",
       "Grep",
       "Glob",
-      // Carga las diferidas (H2).
-      "ToolSearch",
       "activar_modulo",
       "mirar_pagina",
       // H9: usarla, no sólo mirarla. Cargada desde el principio.
@@ -65,14 +67,17 @@ describe("buildFunctionDeclarations", () => {
       "TodoWrite",
       "preguntar",
       "revertir_ultimo_cambio",
-      "conectar_datos_vivos",
     ]);
   });
 
-  it("H2 · las diferidas existen TODAS en el catálogo (una que no, sería una palanca a ninguna parte)", () => {
-    const names = new Set(buildFunctionDeclarations().map((d) => String(d.name)));
-    for (const n of HERRAMIENTAS_DIFERIDAS) expect(names.has(n), n).toBe(true);
-    expect([...HERRAMIENTAS_DIFERIDAS].sort()).toEqual(["conectar_datos_vivos"]);
+  // LA LÁPIDA DE H2 (Len 2.1, 2026-09-30). Las diferidas y ToolSearch se
+  // retiraron: ToolSearch se llamó 2 veces en 958 turnos grabados y 1 en toda
+  // producción, y las dos últimas diferidas se fueron ese día. Sin diferidas,
+  // una herramienta para cargarlas sería una palanca a ninguna parte.
+  it("sin diferidas ni ToolSearch: todo va cargado", () => {
+    expect("HERRAMIENTAS_DIFERIDAS" in catalogo).toBe(false);
+    expect(buildFunctionDeclarations().some((d) => d.name === "ToolSearch")).toBe(false);
+    expect(buildAgentSystemPrompt()).not.toContain("ToolSearch");
   });
 
   it("🔴 ninguna descripción nombra una herramienta retirada, ni data-op-id, ni prueba_js", () => {
@@ -194,22 +199,11 @@ describe("buildFunctionDeclarations", () => {
     // The user-tap gate must be conveyed to the model.
     expect(String(d.description).toLowerCase()).toContain("usuario");
   });
-  it("conectar_datos_vivos requires sheet_url + intent, intent enum is valores", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "conectar_datos_vivos") as any;
-    expect(d.parameters.type).toBe("OBJECT");
-    expect(d.parameters.properties.sheet_url.type).toBe("STRING");
-    // INVERTIDA el 2026-08-29: `lista` sincronizaba hacia una colección y se va
-    // con ellas. `valores` hidrata los data-ol-live y es independiente.
-    expect(d.parameters.properties.intent.enum).toEqual(["valores"]);
-    expect(d.parameters.required).toEqual(["sheet_url", "intent"]);
-    // La lista blanca SSRF hay que decírsela al modelo, no sólo aplicarla en
-    // silencio: si no sabe qué enlaces valen, propone uno que va a ser
-    // rechazado y gasta el turno.
-    expect(String(d.description)).toContain("docs.google.com");
-    // «solo lectura» se cae el 2026-08-29: era la consecuencia de sincronizar
-    // HACIA una colección (la colección quedaba de solo lectura). Sin
-    // colecciones no hay nada que quede de solo lectura.
-    expect(String(d.description).toLowerCase()).not.toContain("solo lectura");
+  // LA LÁPIDA de «datos vivos» (Len 2.1, 2026-09-30): 0 llamadas en la historia
+  // de producción y 0 de 118 proyectos con una hoja conectada. Se retiró la
+  // función entera, y ésta era su única puerta.
+  it("conectar_datos_vivos ya no está en el catálogo", () => {
+    expect(buildFunctionDeclarations().some((x) => x.name === "conectar_datos_vivos")).toBe(false);
   });
 });
 
@@ -259,15 +253,13 @@ describe("buildAgentSystemPrompt", () => {
   it("cada herramienta que el prompt describe está DECLARADA", () => {
     const p = buildAgentSystemPrompt();
     const declaradas = new Set(buildFunctionDeclarations().map((d) => String(d.name)));
-    // Desde H4 (2026-09-26) el bloque es el de las diferidas: se nombran para
-    // que el modelo sepa cuándo cargarlas con ToolSearch.
-    const bloque = bloqueDe(p, "HERRAMIENTAS QUE SE CARGAN CUANDO HACEN FALTA");
-    const fichas = [...bloque.matchAll(/^- ([a-z_]+):/gm)].map((m) => m[1]);
-    expect(fichas.length).toBeGreaterThan(0);
-    for (const t of fichas) {
-      expect(declaradas, `el prompt describe ${t}, que no se declara`).toContain(t);
-      // El encabezado promete que se cargan con ToolSearch: tienen que ser diferidas.
-      expect(HERRAMIENTAS_DIFERIDAS.has(t!), `${t} no es diferida`).toBe(true);
+    // Desde H4 (2026-09-26) el único bloque que describía herramientas era el
+    // de las diferidas, y se fue con ellas en Len 2.1: el prompt ya no describe
+    // ninguna. Lo que queda por vigilar es que no vuelva un bloque así con
+    // fichas de herramientas que no existen.
+    expect(p).not.toContain("HERRAMIENTAS QUE SE CARGAN CUANDO HACEN FALTA");
+    for (const m of p.matchAll(/^- ([a-z]+_[a-z_]+):/gm)) {
+      expect(declaradas, `el prompt describe ${m[1]}, que no se declara`).toContain(m[1]);
     }
   });
 
@@ -473,22 +465,15 @@ describe("buildAgentSystemPrompt", () => {
   // ser un aviso honesto a ser una mentira — y una prueba que la exigía la
   // habría mantenido viva.
 
-  // INVERTIDA en parte el 2026-08-29. Lo que el prompt tiene que seguir
-  // llevando es la lista blanca SSRF y los marcadores data-ol-live; lo que se
-  // cae con las colecciones es `intent="lista"` y el «solo lectura» que era su
-  // consecuencia.
-  // H4 (2026-09-26): la herramienta es diferida (H2) y su ficha larga salió del
-  // prompt: el prompt la NOMBRA para que se cargue, y lo que hay que saber para
-  // usarla lo dice su descripción, que es lo que el modelo lee al cargarla.
-  it("carries the conectar_datos_vivos knowledge: SSRF allowlist, valores only", () => {
+  // INVERTIDA dos veces: el 2026-08-29 se cayó `intent="lista"` con las
+  // colecciones, y en Len 2.1 (2026-09-30) la herramienta entera con «datos
+  // vivos». Lo que el prompt no puede volver a llevar es ni la herramienta, ni
+  // sus marcadores, ni el vocabulario de la colección.
+  it("el prompt ya no lleva datos vivos ni colecciones", () => {
     const p = buildAgentSystemPrompt();
-    const d = JSON.stringify(buildFunctionDeclarations().find((x) => x.name === "conectar_datos_vivos"));
-    expect(p).toContain("conectar_datos_vivos");
-    expect(d).toContain("docs.google.com");
-    expect(d).toContain("data-ol-live");
+    expect(p).not.toContain("conectar_datos_vivos");
+    expect(p).not.toContain("data-ol-live");
     expect(p).not.toContain('intent="lista"');
-    expect(d).not.toContain('"lista"');
-    expect(d.toLowerCase()).not.toContain("colección");
     // `solo lectura` a secas NO sirve como aserción: el prompt lo usa para
     // otras cosas legítimas —leer no muta, la búsqueda de fotos
     // tampoco—. Lo que no puede quedar es el vocabulario de la colección.
@@ -529,16 +514,9 @@ describe("buildAgentSystemPrompt", () => {
     expect([...AGENT_MODULES]).toEqual(["chat", "assistant"]);
   });
 
-  it("datos vivos conserva «valores» y pierde «lista»", () => {
-    // `lista` sincronizaba filas HACIA una colección; `valores` hidrata los
-    // data-ol-live de la página y no toca colecciones — es independiente y
-    // sobrevive. Matar la herramienta entera se habría llevado una capacidad
-    // viva por delante.
-    const t = buildFunctionDeclarations().find((d) => d.name === "conectar_datos_vivos") as {
-      parameters: { properties: { intent: { enum: string[] } } };
-    };
-    expect(t.parameters.properties.intent.enum).toEqual(["valores"]);
-  });
+  // ⚰️ Aquí vivía «datos vivos conserva valores y pierde lista» (2026-08-29).
+  // Len 2.1 se llevó la herramienta entera: ver «conectar_datos_vivos ya no
+  // está en el catálogo».
 
   it("ninguna descripción de herramienta ofrece colecciones", () => {
     const todo = buildFunctionDeclarations()

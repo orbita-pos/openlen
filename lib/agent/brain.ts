@@ -20,9 +20,10 @@ import { caparEsfuerzo, capacidadDeEsfuerzo, type EsfuerzoAgente } from "./esfue
  * cerebro. Aqui vivia `OPENLEN_AGENT_PROVIDER=gemini`, retirado el 2026-08-28.
  */
 export interface AgentBrainOptions {
-  /** Una función cuando la lista CRECE a mitad del turno: las diferidas que el
-   *  modelo carga con ToolSearch (H2) se le ofrecen desde la llamada siguiente. */
-  readonly tools: Record<string, unknown>[] | (() => Record<string, unknown>[]);
+  /** Las declaraciones que se le ofrecen al modelo. (Hasta Len 2.1 podía ser una
+   *  función, para que la lista CRECIERA con lo que cargaba ToolSearch; se fue
+   *  con las diferidas.) */
+  readonly tools: Record<string, unknown>[];
   /** Identifica la corrida ante el transporte de Fireworks (presupuesto y bitácora). */
   readonly requestId: string;
   readonly signal?: AbortSignal;
@@ -104,7 +105,7 @@ const TEMPERATURE = 0.2;
 
 export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
   const fireworks = createFireworksStreamClient();
-  const wireTools = () => toolsForFireworks(typeof options.tools === "function" ? options.tools() : options.tools);
+  const wireTools = toolsForFireworks(options.tools);
   const streamOpts = options.signal ? { signal: options.signal } : {};
   // Un turno con imagen adjunta lo corre el PAPEL CON VISION, no el del
   // Agente, y cada papel trae su tarifa. Sin esta bandera se cobraria al precio
@@ -180,7 +181,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
       fireworks.stream(
         {
           messages: messagesForFireworks(messages),
-          ...(withTools ? { tools: wireTools() } : {}),
+          ...(withTools ? { tools: wireTools } : {}),
           ...(images?.length ? { images } : {}),
           maxOutputTokens,
           temperature: TEMPERATURE,

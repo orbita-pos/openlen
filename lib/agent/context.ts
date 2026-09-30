@@ -11,7 +11,6 @@
 // (from catalog) is pure TS too — no native — so importing it here keeps that
 // invariant.
 
-import { avisoDeDiferidas } from "@/lib/agent/ficheros/tool-search";
 import { todayLine } from "@/lib/ai/today-line";
 import type { Message } from "@/lib/ai-gateway";
 import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
@@ -319,10 +318,9 @@ export function estimateContextTokens(userContent: string, systemPrompt: string)
 }
 
 export interface BuildAgentMessagesArgs {
-  /** Los nombres de las herramientas DIFERIDAS (H2): van delante, en el
-   *  `<system-reminder>` de Claude Code, para que el modelo sepa que existen y
-   *  las cargue con ToolSearch. Ausente o vacía ⇒ ningún aviso. */
-  diferidas?: readonly string[];
+  // ⚰️ Aquí iba `diferidas`: los nombres de las herramientas diferidas (H2),
+  // anunciados en un `<system-reminder>` para cargarlas con ToolSearch. Se
+  // retiraron con ToolSearch en Len 2.1 (2026-09-30): todo va cargado.
   /** summarizeProjectState(...) output — the caller computes it (it needs the
    *  DB row); this module stays free of @/lib/agent/tools' native imports. */
   state: Record<string, unknown>;
@@ -416,9 +414,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     { role: "system", content: systemPrompt },
     { role: "user", content: manual },
     ...args.history,
-    { role: "user", content: `${args.diferidas?.length ? `${avisoDeDiferidas(args.diferidas)}
-
-` : ""}${contextBlock}${PETICION_DEL_USUARIO}${args.prompt}${avisos}` },
+    { role: "user", content: `${contextBlock}${PETICION_DEL_USUARIO}${args.prompt}${avisos}` },
   ];
   return { ok: true, messages, systemPrompt, contextBlock };
 }

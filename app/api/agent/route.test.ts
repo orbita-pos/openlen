@@ -108,9 +108,6 @@ vi.mock("@/lib/style-match/scrape/validate-url", () => ({
 }));
 vi.mock("@/lib/agent/catalog", () => ({
   buildFunctionDeclarations: mocks.buildFunctionDeclarations,
-  // Vacío: ninguna prueba de aquí mide las diferidas. Hace falta en cuanto una
-  // pasa declaraciones (las de H14), porque la ruta las filtra con esto.
-  HERRAMIENTAS_DIFERIDAS: new Set<string>(),
 }));
 vi.mock("@/lib/agent/context", () => ({
   buildAgentMessages: mocks.buildAgentMessages,

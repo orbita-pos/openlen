@@ -32,7 +32,7 @@ describe("cierreDeTurno", () => {
     });
   });
 
-  // Un cambio de AJUSTES (módulo, tema, motion, música, 3D, datos vivos) es
+  // Un cambio de AJUSTES (hoy, un módulo) es
   // igual de durable y NO emite documento: el cliente sólo lo sabe porque el
   // servidor se lo dice.
   it("un cambio de AJUSTES cuenta aunque no haya documento nuevo", () => {

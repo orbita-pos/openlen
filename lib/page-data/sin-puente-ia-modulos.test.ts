@@ -108,7 +108,6 @@ describe("CollectionsSettings sale del tipo de proyecto", () => {
   // esto se comprueba.
   it("pero Datos vivos —que es otra hoja— sigue en pie", () => {
     expect(leer("lib/projects/types.ts")).toMatch(/liveData\?: \{ sheetUrl: string \}/);
-    expect(leer("lib/agent/tools.ts")).toMatch(/settings\?\.liveData\?\.sheetUrl/);
     expect(existsSync(join(raiz, "lib/live/republish.ts"))).toBe(true);
   });
 });

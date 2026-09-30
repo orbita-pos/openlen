@@ -17,13 +17,6 @@
 import type { AlmacenDeclarado } from "@/lib/page-data/declaracion";
 import type { FilaDeAlmacen, PlanDeAlmacen } from "@/lib/agent/ficheros/datos";
 import { NOMBRE_TODO_WRITE, RESULTADO_TODO_WRITE, leerTodos } from "@/lib/agent/ficheros/todo-write";
-import {
-  NINGUNA_DIFERIDA,
-  NOMBRE_TOOL_SEARCH,
-  bloqueDeFunciones,
-  buscarDiferidas,
-  errorDeNoCargada,
-} from "@/lib/agent/ficheros/tool-search";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
@@ -45,7 +38,6 @@ import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import { getUserMemory, rememberAboutUser } from "@/lib/agent/user-memory";
 import { leerDeInternet } from "@/lib/agent/internet";
-import { fetchSheet, resolveSheetCsvUrl } from "@/lib/live/sheet-source";
 import { activeHtml } from "@/lib/page-engine/persist";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import { leerCambiosSinPublicar, setProjectUserBrief } from "@/lib/projects";
@@ -60,7 +52,6 @@ import {
 } from "@/lib/projects/settings-patch";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
-import { liveDataEnabled } from "@/lib/publish/kill-switches";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import {
   AGENT_MODULES,
@@ -206,18 +197,8 @@ export interface AgentDeps {
    *  write path) — realDeps wires this to setProjectUserBrief. Returns false
    *  when the project isn't the caller's (mirrors that function's contract). */
   setUserBrief(projectId: string, userId: string, value: string): Promise<boolean>;
-  /** conectar_datos_vivos — reads a Google Sheet's rows from its
-   *  ALREADY-RESOLVED export CSV URL (resolveSheetCsvUrl's output). The tool
-   *  calls resolveSheetCsvUrl itself FIRST and only ever passes this dep the
-   *  resolved URL — never the raw user-supplied one — so the SSRF allowlist
-   *  (docs.google.com only) can't be bypassed by an injected fake in tests.
-   *  realDeps wires this to fetchSheet(csvUrl).then(d => d.rows). */
-  fetchSheetRows(csvUrl: string): Promise<Record<string, string>[]>;
-  // ⚰️ Aquí vivían `setCollectionSheetSource`, `syncCollection` y
-  // `clearCollectionSource`: sincronizaban un Google Sheet HACIA una colección.
-  // Se van el 2026-08-29 con las colecciones — `conectar_datos_vivos` conserva
-  // su otro modo, `valores`, que hidrata los data-ol-live y nunca dependió de
-  // ellas.
+  // ⚰️ Aquí vivía `fetchSheetRows`, la lectura del Google Sheet de
+  // `conectar_datos_vivos`. Se fue con «datos vivos» en Len 2.1 (2026-09-30).
   /** Memoria de la PERSONA, no del proyecto: sobrevive a cambiar de página y
    *  de proyecto. Ver lib/agent/user-memory.ts. */
   rememberAboutUser(
@@ -473,10 +454,6 @@ export function realDeps(): AgentDeps {
     async setUserBrief(projectId, userId, value) {
       return setProjectUserBrief(projectId, userId, value);
     },
-    async fetchSheetRows(csvUrl) {
-      const data = await fetchSheet(csvUrl);
-      return data.rows;
-    },
     async rememberAboutUser(userId, preferencia) {
       return rememberAboutUser(userId, preferencia);
     },
@@ -509,9 +486,6 @@ export function realDeps(): AgentDeps {
 export interface AgentSession {
   projectId: string;
   userId: string;
-  /** Las herramientas DIFERIDAS del turno y las que el modelo ya cargó con
-   *  ToolSearch (H2). Ausente ⇒ todas cargadas (pruebas, caminos viejos). */
-  herramientas?: { readonly diferidas: readonly Record<string, unknown>[]; readonly cargadas: Set<string> };
   // ⚰️ Aquí vivían `taggedHtml` (el documento activo con ids, contra el que se
   // aplicaban las ops) y `baseHtml` (contra qué comparar si otro escribió). Len
   // 2.0 edita ficheros (plans/len-2/ficheros-plan.md): cada herramienta lee la
@@ -701,8 +675,8 @@ export interface ToolOutcome {
    *  como fallo puro: el bucle lo necesita para que el cliente cierre el turno
    *  «aplicado con aviso» —conservando Undo y transcripción— en vez de pintar
    *  un error rojo sobre una página que sí cambió. `updatedHtml` sólo cubre las
-   *  que tocan el documento; los cambios de AJUSTES (módulos, tema, motion,
-   *  música, 3D, datos vivos) son igual de durables y no emiten html. */
+   *  que tocan el documento; los cambios de AJUSTES (hoy, los módulos) son
+   *  igual de durables y no emiten html. */
   mutoDurable?: boolean;
   /**
    * CIERRA EL TURNO CON ESTA PREGUNTA. La escribe `preguntar`, y también las
@@ -795,11 +769,6 @@ export function summarizeProjectState(
   for (const m of AGENT_MODULES) {
     modulos[m] = row.data.settings?.[MODULE_SETTINGS_KEY[m]]?.enabled === true;
   }
-  // `datos_vivos` faltaba: se podía CONECTAR una hoja y después ni el Agente ni
-  // el usuario tenían forma de saber cuál era — «¿qué hoja tengo conectada?»
-  // no tenía respuesta. (Quitarla SÍ tiene botón desde el 2026-08-22:
-  // DELETE /api/projects/[id]/collections/source, en el banner del panel.)
-  const sheetUrl = row.data.settings?.liveData?.sheetUrl;
   // ⚰️ AQUÍ SE LEÍA UNA SEGUNDA HOJA: la de la COLECCIÓN
   // (`settings.collections.source.sheet`), que la dejaba de SOLO LECTURA.
   // Existía para que el Agente supiera por qué recibía un 409 al añadir un
@@ -810,10 +779,8 @@ export function summarizeProjectState(
   // `/collections/source` que el propio comentario citaba para desconectarla.
   // Nada podía volver a poner ese campo, así que la rama nunca se tomaba.
   //
-  // DATOS VIVOS —`settings.liveData.sheetUrl`, justo arriba— NO es esto y
-  // sigue vivo: es otra hoja, en otro sitio de `settings`, y la rellena
-  // `applyLiveData` en cada publicación. Se llamaban parecido y hacían cosas
-  // distintas; ésa es exactamente la razón de escribirlo aquí.
+  // (Y la OTRA hoja, la de datos vivos —`settings.liveData`, que se leía aquí
+  // al lado—, se retiró con su función en Len 2.1, el 2026-09-30.)
   const publicado = row.publishedAt !== null;
   return {
     titulo: row.title,
@@ -839,7 +806,6 @@ export function summarizeProjectState(
     // el IDE» de Claude Code: puede que la petición sea sobre ésa, o no.
     abierta_en_el_editor: rutaDePagina(page),
     modulos,
-    ...(sheetUrl ? { datos_vivos: { hoja: sheetUrl } } : {}),
   };
 }
 
@@ -857,10 +823,9 @@ function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: strin
   }
 }
 
-// Shared by activar_modulo and conectar_datos_vivos (intent="lista", which
-// must silently ensure the Collections module is on before a Sheet connect —
-// cero-fricción means the owner never has to know "activar módulo" is a
-// separate step). validate -> apply -> chat-provision-if-needed -> save, the
+// The settings write of activar_modulo (it was shared with
+// conectar_datos_vivos, retired in Len 2.1). validate -> apply ->
+// chat-provision-if-needed -> save, the
 // SAME pipeline the button/route path uses (applySettingsPatch may do more
 // than flip a boolean — e.g. members' auto-page birth, reconcileModuleSettings'
 // cross-module cascade — so every settings write funnels through here rather
@@ -1509,116 +1474,9 @@ async function toolPublicar(
 // (2026-09-25): cada almacén es el fichero /datos/<almacen>.json y se edita
 // con Edit/Write (`guardarDatos` en `lib/agent/herramientas-de-ficheros.ts`).
 
-// conectar_datos_vivos — Task 17, the owner-facing volante for "datos vivos":
-// this is the ONLY way a non-technical owner turns the feature on. Everything
-// else (bake, cron, cache, read-only Collection guard) is already built and
-// dormant without this tool.
-//
-// SECURITY (non-negotiable): resolveSheetCsvUrl runs FIRST, before touching
-// any dep. It is the sole SSRF allowlist (docs.google.com only, see
-// lib/live/sheet-source.ts) — a null result means the tool does ZERO fetch
-// and ZERO mutation, always, regardless of intent. deps.fetchSheetRows is
-// only ever called with the ALREADY-RESOLVED csvUrl, never the raw
-// sheet_url the model/user supplied.
-async function toolConectarDatosVivos(
-  session: AgentSession,
-  deps: AgentDeps,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  const sheetUrl = typeof args.sheet_url === "string" ? args.sheet_url.trim() : "";
-  const intent = args.intent;
-  if (!sheetUrl) {
-    return { response: { ok: false, error: "sheet_url es requerida" } };
-  }
-  // Sólo `valores` desde el 2026-08-29: `lista` sincronizaba filas HACIA una
-  // colección, y las colecciones se retiraron. Esto hidrata los data-ol-live de
-  // la página y nunca dependió de ellas.
-  //
-  // 🔴 Y EL MENSAJE SEGUÍA OFRECIENDO «lista». El código la rechazaba y el
-  // error decía «intent debe ser "lista" o "valores"»: al modelo se le negaba
-  // un valor y en la misma frase se le invitaba a repetirlo, así que reintenta
-  // hasta gastar el turno. Un error dice qué SÍ vale — y cuando algo se retiró,
-  // por qué, o el modelo lo lee como un fallo pasajero.
-  if (intent !== "valores") {
-    return {
-      response: {
-        ok: false,
-        error:
-          intent === "lista"
-            ? 'intent="lista" se retiró con las Colecciones: ya no hay a dónde sincronizar filas. El único intent es "valores" — valores sueltos del texto de la página desde un Sheet de dos columnas (clave | valor).'
-            : 'intent debe ser "valores"',
-      },
-    };
-  }
-
-  // SSRF gate FIRST — see the function's header comment. A hostile host
-  // (loopback, metadata, a lookalike subdomain) never produces a csvUrl, so
-  // it can never reach fetchSheetRows below.
-  const csvUrl = resolveSheetCsvUrl(sheetUrl);
-  if (!csvUrl) {
-    return {
-      response: {
-        ok: false,
-        error:
-          'Ese enlace no es un Google Sheet público — compártelo como "cualquiera con el link" y pásame la URL.',
-      },
-    };
-  }
-
-  if (!liveDataEnabled()) {
-    return {
-      response: {
-        ok: false,
-        error: "Datos vivos está apagado en este momento — no puedo conectar un Sheet ahora mismo.",
-      },
-    };
-  }
-
-  let rows: Record<string, string>[];
-  try {
-    rows = await deps.fetchSheetRows(csvUrl);
-  } catch (err) {
-    return { response: { ok: false, error: `no se pudo leer el Sheet: ${String(err)}` } };
-  }
-
-  // intent === "valores": persist settings.liveData.sheetUrl directly — the
-  // publish baker (applyLiveData) hydrates every data-ol-live marker from it
-  // on the next publish/republish. MVP scope (spec Task 17): this tool does
-  // NOT insert the markers into the HTML itself — that's editar_pagina,
-  // chained by the model in the same turn once it knows the detected keys.
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
-
-  // The "clave" a data-ol-live marker addresses is column A of a 2-column
-  // Sheet (see lib/live/sheet-source.ts's `values` Map + bake-values.ts) —
-  // i.e. the FIRST value of each mapped row, not the header names.
-  const claves = Array.from(
-    new Set(
-      rows
-        .map((r) => Object.values(r)[0])
-        .filter((v): v is string => typeof v === "string" && v.trim().length > 0),
-    ),
-  );
-
-  // I4 — la fusión ocurre sobre el `data` de ahora, no sobre el que se leyó
-  // antes de ir a buscar la hoja por la red.
-  await deps.saveProjectData(session.projectId, session.userId, (actual) => ({
-    ...actual,
-    settings: { ...(actual.settings ?? {}), liveData: { sheetUrl } },
-  }));
-
-  return {
-    response: {
-      ok: true,
-      claves_detectadas: claves,
-      nota:
-        claves.length > 0
-          ? `Conecté tu Sheet de valores. Detecté estas claves: ${claves.join(", ")}. Ahora cablea cada una con Edit, en la parte de la página donde va, usando <span data-ol-live="clave">texto de respaldo</span> — la clave debe coincidir EXACTO con la columna A del Sheet.`
-          : 'Conecté tu Sheet, pero no detecté ninguna clave — revisa que la primera columna tenga el nombre de cada dato (p. ej. "precio_taco") y la segunda su valor.',
-    },
-    action: { tool: "conectar_datos_vivos", ok: true, summary: "valores" },
-  };
-}
+// ⚰️ `conectar_datos_vivos` se retiró en Len 2.1 (2026-09-30) con la función
+// entera de «datos vivos»: 0 llamadas en la historia de producción y 0 de 118
+// proyectos con una hoja conectada. Era la única forma de encenderla.
 
 /**
  * PREGUNTAR, y callarse hasta que conteste.
@@ -1843,18 +1701,6 @@ async function toolRevertirUltimoCambio(
   };
 }
 
-/** ToolSearch: busca entre las diferidas, las deja cargadas para las llamadas
- *  siguientes y devuelve su esquema en el bloque `<functions>` de Claude Code. */
-function toolSearch(session: AgentSession, args: Record<string, unknown>): ToolOutcome {
-  const query = typeof args.query === "string" ? args.query : "";
-  const max = typeof args.max_results === "number" ? args.max_results : 5;
-  const h = session.herramientas;
-  const encontradas = h ? buscarDiferidas(query, max, h.diferidas) : [];
-  for (const d of encontradas) h?.cargadas.add(String(d.name));
-  const tool_result = encontradas.length > 0 ? bloqueDeFunciones(encontradas) : NINGUNA_DIFERIDA;
-  return { response: { ok: true, tool_result } };
-}
-
 export async function runAgentTool(
   session: AgentSession,
   deps: AgentDeps,
@@ -1876,11 +1722,6 @@ export async function runAgentTool(
   };
   const marcar = (out: ToolOutcome): ToolOutcome =>
     escrituras > 0 || out.updatedHtml ? { ...out, mutoDurable: true } : out;
-  if (name === NOMBRE_TOOL_SEARCH) return toolSearch(session, args);
-  if (session.herramientas?.diferidas.some((d) => d.name === name) && !session.herramientas.cargadas.has(name)) {
-    const error = errorDeNoCargada(name);
-    return { response: { ok: false, error, tool_result: error } };
-  }
   let out: ToolOutcome;
   try {
     out = marcar(await ejecutarHerramienta(session, vigilado, name, args));
@@ -1960,8 +1801,6 @@ async function ejecutarHerramienta(
         return await toolLeerDeInternet(session, deps, args);
       case "revertir_ultimo_cambio":
         return await toolRevertirUltimoCambio(session, deps, args);
-      case "conectar_datos_vivos":
-        return await toolConectarDatosVivos(session, deps, args);
       default:
         return { response: { ok: false, error: "herramienta desconocida" } };
     }

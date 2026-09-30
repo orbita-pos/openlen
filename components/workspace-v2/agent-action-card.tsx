@@ -108,7 +108,8 @@ export const KNOWN_TOOLS = new Set([
   // `crear_pagina`, `trabajar_en_pagina`, `buscar_en_pagina` y
   // `redisenar_pagina`. Claude Code no cubre esto (no pinta
   // conversaciones viejas con otro catálogo): decisión nuestra. Por lo mismo
-  // sigue `preparar_marketing`, retirada en Len 2.1.
+  // siguen `preparar_marketing`, `conectar_datos_vivos` y `ToolSearch`,
+  // retiradas en Len 2.1.
   "editar_pagina",
   "editar_texto",
   "editar_atributos",
@@ -135,7 +136,8 @@ export const KNOWN_TOOLS = new Set([
   "leer_de_internet",
   "declarar_tareas",
   "preguntar",
-  // H2 (2026-09-25): cargar una herramienta diferida, como en Claude Code.
+  // H2 (2026-09-25): cargar una herramienta diferida. Retirada en Len 2.1;
+  // se queda por el historial.
   "ToolSearch",
   // La lista de Claude Code, que sustituye a declarar_tareas (H2). Ésa se queda
   // arriba: el historial de turnos viejos la sigue nombrando.

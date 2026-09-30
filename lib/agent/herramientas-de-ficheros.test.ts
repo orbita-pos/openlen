@@ -57,7 +57,6 @@ function makeDeps(data: ProjectData) {
     uploadAsset: noUsada,
     editImage: noUsada,
     setUserBrief: noUsada,
-    fetchSheetRows: noUsada,
     rememberAboutUser: noUsada,
     listVersions: noUsada,
     restoreVersion: noUsada,
@@ -480,35 +479,23 @@ describe("Len 2.0 — las que se quedan, sin página activa", () => {
   });
 });
 
-describe("H2 · ToolSearch y las diferidas, contra el despachador de verdad", () => {
-  const diferidas = [
-    { name: "revertir_ultimo_cambio", description: "Deshace TU último cambio guardado en una página.", parameters: { type: "OBJECT", properties: {} } },
-    { name: "editar_imagen", description: "Edita una imagen de la página con IA.", parameters: { type: "OBJECT", properties: {} } },
-  ];
-  const sesionConDiferidas = () => ({ ...makeSession(), herramientas: { diferidas, cargadas: new Set<string>() } });
-
-  it("sin cargarla, falla con InputValidationError y dice cómo cargarla; ToolSearch la trae y ya corre", async () => {
-    const { deps } = makeDepsCompletos({ html: HOME });
-    const session = sesionConDiferidas();
-    const antes = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
-    assert.equal(antes.response.ok, false);
-    assert.match(texto(antes), /^<tool_use_error>InputValidationError: revertir_ultimo_cambio is a deferred tool/);
-
-    const busca = await runAgentTool(session, deps, "ToolSearch", { query: "select:revertir_ultimo_cambio" });
-    assert.equal(busca.response.ok, true);
-    assert.ok(texto(busca).startsWith('<functions>\n<function>{"description":"Deshace TU último cambio'));
-    assert.ok(session.herramientas.cargadas.has("revertir_ultimo_cambio"));
-
-    const despues = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
-    assert.doesNotMatch(texto(despues), /InputValidationError/);
+// LA LÁPIDA DE H2 (Len 2.1, 2026-09-30): ToolSearch y las diferidas se
+// retiraron. Si el modelo la llama igual —de memoria, o desde un historial
+// viejo—, el despachador no la conoce, y una herramienta que antes era
+// diferida corre a la primera, sin «cargarla».
+describe("H2 retirada · ToolSearch ya no existe y nada está diferido", () => {
+  it("llamar a ToolSearch no carga nada: el despachador no la conoce", async () => {
+    const { deps } = makeDeps({ html: HOME });
+    const r = await runAgentTool(makeSession(), deps, "ToolSearch", { query: "select:revertir_ultimo_cambio" });
+    assert.equal(r.response.ok, false);
+    assert.equal(r.response.error, "herramienta desconocida");
+    assert.doesNotMatch(JSON.stringify(r.response), /<functions>/);
   });
 
-  it("una consulta sin coincidencias lo dice y no carga nada", async () => {
-    const { deps } = makeDeps({ html: HOME });
-    const session = sesionConDiferidas();
-    const r = await runAgentTool(session, deps, "ToolSearch", { query: "select:NoExiste" });
-    assert.equal(texto(r), "No deferred tool matches that query.");
-    assert.equal(session.herramientas.cargadas.size, 0);
+  it("revertir_ultimo_cambio corre sin cargar nada antes", async () => {
+    const { deps } = makeDepsCompletos({ html: HOME });
+    const r = await runAgentTool(makeSession(), deps, "revertir_ultimo_cambio", {});
+    assert.doesNotMatch(JSON.stringify(r.response), /InputValidationError|deferred tool|herramienta desconocida/);
   });
 });
 

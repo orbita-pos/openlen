@@ -241,13 +241,6 @@ function makeDeps(
       store.briefWrites += 1;
       return true;
     },
-    // Task 17 (conectar_datos_vivos) — unused by this file's tests (see
-    // live-data-tool.test.ts), stubbed only so the AgentDeps shape is
-    // satisfied; a call here means a test is missing coverage, not that
-    // these are meant to do anything real.
-    async fetchSheetRows() {
-      throw new Error("fetchSheetRows not stubbed in this test");
-    },
     // Memoria de la PERSONA. El doble la registra en vez de lanzar porque
     // `recordar_preferencia` la usa por DEFECTO desde el 2026-08-22: un stub
     // que lanzara convertiría el camino normal de la herramienta en un fallo.
