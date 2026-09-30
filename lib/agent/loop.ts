@@ -1146,6 +1146,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    *  un `leer_estado` seguido de «Listo, cambié el titular» salía limpio y
    *  cobrado (G4 de la auditoría). */
   let actuo = false;
+  /** ¿PUEDE actuar? Si todo lo que se le declaró es de lectura —el subagente
+   *  revisor de H14: Read, Grep y Glob—, no hay cambio que «aplicar AHORA», y
+   *  la insistencia le pediría lo imposible. Sin declaraciones el bucle no
+   *  limita los nombres (las pruebas), así que ahí sí puede. */
+  const puedeActuar =
+    args.tools.length === 0 || args.tools.some((t) => !READ_ONLY_TOOLS.has(String((t as { name?: unknown }).name ?? "")));
 
   /** ¿Escribió algo en la base este request? Ver `AgentLoopResult.mutoDurable`. */
   let mutoDurable = false;
@@ -1694,7 +1700,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // lista y no hay evidencia, el reclamo le nombra lo que falta, que es
       // mejor aviso que éste. Y si ya se le reclamó, no se le insiste encima —
       // dos avisos por lo mismo es la discusión que el reclamo ya prohíbe.
-      if (!actuo && !yaSeInsistio && !yaSeExigioEvidencia && turnText.trim().length > 0) {
+      if (puedeActuar && !actuo && !yaSeInsistio && !yaSeExigioEvidencia && turnText.trim().length > 0) {
         yaSeInsistio = true;
         dichoAntesDelAviso = { vuelta: turns, texto: turnText, tipo: "insistencia" };
         messages.push({ role: "assistant", content: turnText });
