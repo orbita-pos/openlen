@@ -1118,7 +1118,7 @@ function AIDesignChat({
         // turno con dos edits, uno vacío y otro real, sí cambió la página.
         let huboCambioReal: boolean | null = null;
 
-        let topeAlcanzado: "turn_limit" | "tool_limit" | null = null;
+        let topeAlcanzado: "turn_limit" | "tool_limit" | "budget_limit" | null = null;
         /** Cuántos turnos vio Len de cuántos tiene la charla. Presente sólo
          *  cuando de verdad se quedó algo fuera de la ventana. */
         let ventana: { visibles: number; totales: number } | null = null;
@@ -1382,7 +1382,8 @@ function AIDesignChat({
                 // cierre elegante, así que NO hay evento `error` y el turno
                 // llegaba aquí pintado de verde sobre una faena a medias.
                 const tope = (payload as { topeAlcanzado?: unknown } | null)?.topeAlcanzado;
-                if (tope === "turn_limit" || tope === "tool_limit") topeAlcanzado = tope;
+                // `budget_limit` (Len 2.1): el techo de DINERO del turno.
+                if (tope === "turn_limit" || tope === "tool_limit" || tope === "budget_limit") topeAlcanzado = tope;
                 // LA CONVERSACIÓN NO CABE ENTERA. Vienen los dos números y la
                 // frase se compone aquí, en el idioma del usuario — el servidor
                 // manda datos, no prosa.
@@ -2562,6 +2563,7 @@ function strField(payload: unknown, key: string): string {
 const AGENT_ERROR_CODE_KEYS: Record<AgentErrorCode, true> = {
   turn_limit: true,
   tool_limit: true,
+  budget_limit: true,
   cancelled: true,
   truncated: true,
   upstream: true,

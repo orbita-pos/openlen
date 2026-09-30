@@ -40,6 +40,8 @@ const mocks = vi.hoisted(() => ({
   runAgentTool: vi.fn(),
   debitCredits: vi.fn(),
   creditsForUsage: vi.fn(),
+  // Len 2.1: el techo del turno. Por defecto, uno que ninguna prueba alcanza.
+  techoDelTurno: vi.fn(() => 1_000_000),
   loadProject: vi.fn(),
   // La deriva del proyecto: la ruta la pide para el ESTADO («publicado» a secas
   // no distingue una release al día de la de anteayer). Aquí es un doble que
@@ -80,6 +82,7 @@ vi.mock("@/lib/credits", () => ({
   noCreditsMessage: mocks.noCreditsMessage,
   debitCredits: mocks.debitCredits,
   creditsForUsage: mocks.creditsForUsage,
+  techoDelTurno: mocks.techoDelTurno,
 }));
 vi.mock("@/lib/agent/brain", () => ({
   createAgentBrain: mocks.createAgentBrain,
@@ -1311,5 +1314,85 @@ describe("POST /api/agent — el turno no muere con el cliente", () => {
 
     bucle.soltar();
     await lector.cancel();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEN 2.1 · EL TECHO DE DINERO DEL TURNO. El bucle decide CUÁNDO parar; la ruta
+// pone el número (el del plan o el saldo) y decide qué se cobra al llegar.
+describe("POST /api/agent — el techo de dinero del turno", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<html><body><h1>hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "pro", balance: 5_000, allotment: 15_000, refillsAt: null });
+    mocks.techoDelTurno.mockReturnValue(3_000);
+  });
+
+  const pedir = async () =>
+    readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "hazme la tienda entera" }),
+        }),
+      ),
+    );
+
+  const alTecho = {
+    finalText: "Paré al llegar al tope de gasto.", turns: 9, toolCalls: 14,
+    usage: { inputTokens: 900_000, outputTokens: 60_000, cachedTokens: 0, thinkingTokens: 0 },
+    terminalError: true, topeAlcanzado: "budget_limit", errorCode: null, mutoDurable: true,
+  };
+
+  it("el techo sale del plan y del saldo, y el bucle lo pregunta con la cuenta del cobro", async () => {
+    let excede: AgentLoopArgs["excedePresupuesto"];
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      excede = args.excedePresupuesto;
+      return { ...alTecho, terminalError: false, topeAlcanzado: null };
+    });
+    mocks.creditsForUsage.mockImplementation((i: number) => i);
+    await pedir();
+
+    expect(mocks.techoDelTurno).toHaveBeenCalledWith(expect.objectContaining({ plan: "pro", balance: 5_000 }));
+    const uso = (i: number) => ({ inputTokens: i, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 });
+    expect(excede!(uso(2_999))).toBe(false);
+    expect(excede!(uso(3_000))).toBe(true);
+    // Sin gasto no se pregunta: el suelo de 1 de `creditsForUsage` no puede
+    // cerrar un turno que no ha empezado.
+    expect(excede!({ inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 })).toBe(false);
+  });
+
+  it("🔴 al llegar al techo se cobra lo gastado, HASTA el techo (no 0 como los otros topes)", async () => {
+    mocks.runAgentLoop.mockResolvedValue(alTecho);
+    mocks.creditsForUsage.mockReturnValue(3_140);
+    const eventos = await pedir();
+
+    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 3_000);
+    // Y el cliente se entera de por qué paró.
+    expect(eventos.find((e) => e.event === "done")!.data.topeAlcanzado).toBe("budget_limit");
+  });
+
+  it("si lo gastado no llega al techo (el saldo era el límite), se cobra lo gastado", async () => {
+    mocks.techoDelTurno.mockReturnValue(800);
+    mocks.runAgentLoop.mockResolvedValue(alTecho);
+    mocks.creditsForUsage.mockReturnValue(650);
+    await pedir();
+    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 650);
+  });
+
+  it("BRAZO DE CONTROL: el tope de PASOS sigue sin cobrarse", async () => {
+    mocks.runAgentLoop.mockResolvedValue({ ...alTecho, topeAlcanzado: "turn_limit" });
+    mocks.creditsForUsage.mockReturnValue(3_140);
+    await pedir();
+    expect(mocks.debitCredits).not.toHaveBeenCalled();
   });
 });

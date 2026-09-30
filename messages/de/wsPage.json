@@ -68,6 +68,7 @@
     "errors": {
       "turn_limit": "Der Agent hat sein Schritte-Limit pro Zug erreicht.",
       "tool_limit": "Der Agent hat sein Aktionslimit pro Zug erreicht.",
+      "budget_limit": "Len hat an der Ausgabengrenze für einen Zug angehalten. Was erledigt ist, ist gespeichert; bitte ihn weiterzumachen, wenn du mehr willst.",
       "cancelled": "Der Zug wurde abgebrochen.",
       "truncated": "Die Antwort ist ausgegangen – versuche eine kürzere Anfrage.",
       "upstream": "Beim Modell ist ein Problem aufgetreten – versuche es erneut.",

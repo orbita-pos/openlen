@@ -42,14 +42,16 @@ import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
 // emits it before this loop ever runs. Unlike the others it's never shown
 // to the user: the panel intercepts it and falls back to classic ai-design
 // silently, so it has no `wsPage.agent.errors.agent_off` translation.
-/** Los dos códigos que significan «se acabó la cuerda», no «se rompió algo».
+/** Los códigos que significan «se acabó la cuerda», no «se rompió algo».
  *  Subconjunto de AgentErrorCode a propósito: `AgentLoopResult.topeAlcanzado`
- *  no puede llevar `upstream` ni `cancelled`, que sí son fallos. */
-export type TopeCode = Extract<AgentErrorCode, "turn_limit" | "tool_limit">;
+ *  no puede llevar `upstream` ni `cancelled`, que sí son fallos.
+ *  `budget_limit` (Len 2.1) es el techo de DINERO del turno, no de pasos. */
+export type TopeCode = Extract<AgentErrorCode, "turn_limit" | "tool_limit" | "budget_limit">;
 
 export type AgentErrorCode =
   | "turn_limit"
   | "tool_limit"
+  | "budget_limit"
   | "cancelled"
   | "truncated"
   | "upstream"
@@ -309,6 +311,21 @@ export interface AgentLoopArgs {
    *  turno no topa vueltas ni llamadas (H1, 2026-09-25). */
   maxTurns?: number;
   maxToolCalls?: number;
+  /**
+   * LEN 2.1 · EL TECHO DE DINERO DEL TURNO. Se pregunta ANTES de cada llamada
+   * al modelo con lo gastado hasta ahí; `true` cierra el turno con el cierre
+   * honesto del tope (`finishOnCap("budget_limit")`).
+   *
+   * POR QUÉ. H1 quitó los topes de vueltas y el saldo sólo se miraba al
+   * arrancar, así que dentro del turno no había ningún límite de dinero; y el
+   * débito se recorta en 0, así que el exceso lo pagaba OpenLen (diagnóstico de
+   * 2.1, §3.1). Sin cliente delante —el turno ya no muere con él— no hay ni un ■
+   * que lo pare. Es el `maxBudgetUsd` del SDK de Claude Code.
+   *
+   * La cuenta en créditos la hace quien llama (la tarifa es del cerebro, no del
+   * bucle). Ausente ⇒ sin techo, como las evals y las pruebas.
+   */
+  excedePresupuesto?(gastado: AgentLoopResult["usage"]): boolean;
 }
 export interface AgentLoopResult {
   finalText: string;
@@ -533,6 +550,11 @@ const CIERRE_CON_LO_MEDIDO =
 
 const WRAP_UP_INSTRUCTION =
   "SISTEMA: Alcanzaste el límite de pasos para este turno y ya no puedes usar herramientas. Cierra hablándole al usuario en SU idioma: resume brevemente qué alcanzaste a hacer y qué quedó pendiente, y dile que te lo pida de nuevo para continuar. No afirmes haber hecho lo que no se aplicó.";
+
+/** El mismo cierre, para el techo de DINERO del turno (Len 2.1): lo que cambia
+ *  es el porqué, que el usuario tiene que poder entender. */
+const WRAP_UP_PRESUPUESTO =
+  "SISTEMA: Llegaste al tope de gasto de este turno y ya no puedes usar herramientas. Cierra hablándole al usuario en SU idioma: resume brevemente qué alcanzaste a hacer y qué quedó pendiente, y dile que te pida que sigas si quiere continuar. No afirmes haber hecho lo que no se aplicó.";
 
 // ⚰️ Aquí vivía `buildVisualFixInstruction`, que redactaba «SISTEMA
 // (verificación visual automática — el usuario NO escribió esto)» y le mandaba
@@ -1268,7 +1290,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         : "";
       for await (const ev of args.closeOut([
         ...messages,
-        { role: "user", content: WRAP_UP_INSTRUCTION + hechosDelTurno + estadoDeLaPagina + noSeMiro },
+        {
+          role: "user",
+          content:
+            (code === "budget_limit" ? WRAP_UP_PRESUPUESTO : WRAP_UP_INSTRUCTION) +
+            hechosDelTurno + estadoDeLaPagina + noSeMiro,
+        },
       ])) {
         if (ev.type === "text_delta") {
           wrapText += ev.text;
@@ -1286,7 +1313,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         return buildResult(true, code);
       }
     }
-    args.emit({ type: "error", message: "El agente alcanzó su límite de pasos", code });
+    args.emit({
+      type: "error",
+      message: code === "budget_limit" ? "El agente llegó al tope de gasto del turno" : "El agente alcanzó su límite de pasos",
+      code,
+    });
     return buildResult(true, code);
   };
 
@@ -1313,6 +1344,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
     if (mutatingTurns >= maxTurns) {
       return await finishOnCap("turn_limit");
+    }
+    // LEN 2.1 · EL TECHO DE DINERO, antes de cada llamada al modelo: es el
+    // único momento en que parar no deja una herramienta a medias. Lo que ya
+    // se hizo queda guardado y el cierre lo cuenta.
+    if (args.excedePresupuesto?.({ inputTokens, outputTokens, cachedTokens, thinkingTokens })) {
+      return await finishOnCap("budget_limit");
     }
     turns += 1;
 

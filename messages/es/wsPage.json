@@ -68,6 +68,7 @@
     "errors": {
       "turn_limit": "El agente alcanzó su límite de pasos por turno.",
       "tool_limit": "El agente alcanzó su límite de acciones por turno.",
+      "budget_limit": "Len paró al llegar al tope de gasto de un turno. Lo hecho quedó guardado; si quieres que siga, pídeselo.",
       "cancelled": "El turno fue cancelado.",
       "truncated": "La respuesta se quedó sin espacio — intenta un pedido más corto.",
       "upstream": "El modelo tuvo un problema — inténtalo de nuevo.",

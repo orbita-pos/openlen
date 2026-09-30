@@ -8,6 +8,7 @@ import {
   noCreditsMessage,
   debitCredits,
   creditsForUsage,
+  techoDelTurno,
 } from "@/lib/credits";
 import { stripOpIds } from "@/lib/html-ops";
 import { seleccionDelLienzo } from "@/lib/agent/seleccion-del-lienzo";
@@ -795,9 +796,19 @@ export async function POST(req: Request): Promise<Response> {
           close();
           return;
         }
+        // LEN 2.1 · EL TECHO DE DINERO DEL TURNO: el del plan o el saldo, lo que
+        // sea menos (`techoDelTurno`). El bucle lo pregunta antes de cada
+        // llamada al modelo; al pasarlo, cierra contando lo hecho.
+        const techo = techoDelTurno(creditState);
         const result = await runAgentLoop({
           messages,
           tools,
+          // Con la MISMA cuenta que el cobro de abajo. Sin gasto todavía no se
+          // pregunta: `creditsForUsage` tiene un suelo de 1 y un saldo mínimo
+          // cerraría el turno antes de empezar.
+          excedePresupuesto: (g) =>
+            g.inputTokens + g.outputTokens > 0 &&
+            creditsForUsage(g.inputTokens, g.outputTokens, brain.creditRate(), g.cachedTokens) >= techo,
           // SIN `maxTurns` NI `maxToolCalls` (H1, 2026-09-25): como el bucle
           // principal de Claude Code, el turno no topa pasos. El dinero se topa
           // por MES (`CREDITS_BY_PLAN`); un cuelgue, el reloj de silencio.
@@ -1275,6 +1286,20 @@ export async function POST(req: Request): Promise<Response> {
               ` / vueltas=${result.turns} llamadas=${result.toolCalls}`,
           );
           await debitCredits(userId, credits);
+        } else if (result.topeAlcanzado === "budget_limit") {
+          // 🔴 AL TECHO SE COBRA LO GASTADO, HASTA EL TECHO (Jesús, 2026-09-30).
+          //
+          // Los demás topes cobran 0 (la regla del 07/07: «el usuario no recibió
+          // nada utilizable»). Éste no: lo hecho hasta el techo queda guardado y
+          // el cierre lo cuenta. Cobrar 0 convertiría el techo en un pase gratis
+          // de hasta 30 créditos cada vez. Lo que pase del techo —la última
+          // llamada y el cierre— lo paga la casa: el techo es la promesa.
+          const cobrado = Math.min(credits, techo);
+          console.log(
+            `[agent] tope de gasto — ${cobrado} credits (gastado ${credits}, techo ${techo})` +
+              ` / vueltas=${result.turns} llamadas=${result.toolCalls} motivo=budget_limit`,
+          );
+          await debitCredits(userId, cobrado);
         } else if (!result.terminalError && result.sinCobro) {
           // 🔴 CERRADO CON ELEGANCIA, SIN COBRO (revisión pre-deploy del
           // 2026-09-22). El bucle redacta el cierre de dos turnos que antes

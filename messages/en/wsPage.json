@@ -68,6 +68,7 @@
     "errors": {
       "turn_limit": "The agent hit its per-turn step limit.",
       "tool_limit": "The agent hit its per-turn action limit.",
+      "budget_limit": "Len stopped at the spending limit for a single turn. What it did is saved; ask it to keep going if you want more.",
       "cancelled": "The turn was cancelled.",
       "truncated": "The response ran out of room — try a shorter request.",
       "upstream": "The model had a problem — try again.",

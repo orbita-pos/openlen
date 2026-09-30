@@ -3854,3 +3854,76 @@ describe("H4 — el bucle devuelve la transcripción del turno", () => {
     expect((r.transcripcion ?? []).every((m) => m.content.trim() !== "" || m.functionCalls || m.functionResponses)).toBe(true);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEN 2.1 · EL TECHO DE DINERO DEL TURNO (diagnóstico §3.1, §4.4 punto 4).
+//
+// Sin topes de vueltas desde H1 y sin cliente delante desde que el turno no
+// muere con él, lo único que acota un turno que trabaja es esto. La cuenta en
+// créditos es de la ruta; aquí se prueba CUÁNDO se pregunta y cómo se cierra.
+describe("el techo de dinero del turno", () => {
+  const dosEdiciones = () =>
+    scripted(
+      [{ type: "function_call", name: "editar_pagina", args: { n: 1 } }, usage(50), done],
+      [{ type: "function_call", name: "editar_pagina", args: { n: 2 } }, usage(50), done],
+      [{ type: "text_delta", text: "Listo, todo hecho." }, usage(5), done],
+    );
+
+  it("🔴 pasado el techo, el turno cierra con su propio cierre y `budget_limit`", async () => {
+    const vistos: number[] = [];
+    const instrucciones: string[] = [];
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hazme la tienda entera" }], tools: [],
+      openStream: dosEdiciones(),
+      closeOut: (m) => {
+        instrucciones.push(String(m.at(-1)?.content ?? ""));
+        return scripted([{ type: "text_delta", text: "Paré al llegar al tope de gasto." }, usage(5), done])(m);
+      },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+      excedePresupuesto: (g) => {
+        vistos.push(g.outputTokens);
+        return g.outputTokens >= 100;
+      },
+    });
+    expect(r.topeAlcanzado).toBe("budget_limit");
+    expect(r.terminalError).toBe(true);
+    // Cierre elegante: texto, no la tarjeta roja.
+    expect(events.some((e) => e.type === "error")).toBe(false);
+    expect(r.finalText).toContain("tope de gasto");
+    // Se le dice POR QUÉ para: el gasto, no los pasos.
+    expect(instrucciones[0]).toContain("tope de gasto");
+    expect(instrucciones[0]).not.toContain("límite de pasos");
+    // Se pregunta ANTES de cada llamada, con lo acumulado: 0, 50 y 100.
+    expect(vistos).toEqual([0, 50, 100]);
+  });
+
+  it("sin texto de cierre, el error lleva el código `budget_limit`", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: dosEdiciones(),
+      closeOut: scripted([done]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+      excedePresupuesto: (g) => g.outputTokens >= 50,
+    });
+    const err = events.find((e) => e.type === "error") as { code?: string } | undefined;
+    expect(err?.code).toBe("budget_limit");
+    expect(r.topeAlcanzado).toBe("budget_limit");
+  });
+
+  it("BRAZO DE CONTROL: por debajo del techo el turno termina como siempre", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: dosEdiciones(),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+      excedePresupuesto: () => false,
+    });
+    expect(r.topeAlcanzado).toBeNull();
+    expect(r.terminalError).toBe(false);
+    expect(r.finalText).toBe("Listo, todo hecho.");
+  });
+});

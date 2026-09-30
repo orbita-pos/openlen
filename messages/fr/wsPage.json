@@ -68,6 +68,7 @@
     "errors": {
       "turn_limit": "L'agent a atteint sa limite d'étapes par tour.",
       "tool_limit": "L'agent a atteint sa limite d'actions par tour.",
+      "budget_limit": "Len s'est arrêté à la limite de dépense d'un tour. Ce qu'il a fait est enregistré ; demandez-lui de continuer si vous voulez la suite.",
       "cancelled": "Le tour a été annulé.",
       "truncated": "La réponse a manqué d'espace — essayez une demande plus courte.",
       "upstream": "Le modèle a rencontré un problème — réessayez.",

@@ -68,6 +68,7 @@
     "errors": {
       "turn_limit": "De agent heeft de limiet van stappen per beurt bereikt.",
       "tool_limit": "De agent heeft de limiet van acties per beurt bereikt.",
+      "budget_limit": "Len is gestopt bij de bestedingslimiet van één beurt. Wat gedaan is, is opgeslagen; vraag Len om door te gaan als je meer wilt.",
       "cancelled": "De beurt is geannuleerd.",
       "truncated": "Het antwoord had geen ruimte meer — probeer een kortere aanvraag.",
       "upstream": "Het model had een probleem — probeer het opnieuw.",
