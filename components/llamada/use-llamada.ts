@@ -1,0 +1,220 @@
+"use client";
+// La llamada: micro → WebRTC con GPT-Live (vía /api/voz/sesion) → eventos al
+// puente y a los subtítulos. Todo lo que tiene lógica vive en módulos probados
+// (puente-a-len, topes, eventos-de-voz); aquí sólo se conectan.
+import { useCallback, useEffect, useRef, useState } from "react";
+import { crearLectorSse } from "@/lib/len-bench/sse";
+import { despacharEventoDeVoz } from "./eventos-de-voz";
+import { crearPuenteALen, type EventoParaLaVoz, type TarjetaDeLlamada } from "./puente-a-len";
+import { crearTopes, MAX_LLAMADA_MS, SILENCIO_MS } from "./topes";
+
+export type AvisoDeLlamada = "sinMicro" | "sinVoz" | "cortada" | "colgadaSilencio" | "colgadaDuracion";
+type Fase = "lista" | "conectando" | "en_llamada" | "terminada";
+
+/** Un hueco de más de 1,2 s entre fragmentos abre una frase nueva en el subtítulo. */
+const HUECO_MS = 1200;
+
+export function useLlamada(o: { projectId: string; idioma: string }) {
+  const [fase, setFase] = useState<Fase>("lista");
+  const [aviso, setAviso] = useState<AvisoDeLlamada | null>(null);
+  const [lineaLen, setLineaLen] = useState("");
+  const [lineaTu, setLineaTu] = useState("");
+  const [trabajando, setTrabajando] = useState(false);
+  const [tarjetas, setTarjetas] = useState<TarjetaDeLlamada[]>([]);
+  const [micro, setMicro] = useState(true);
+  const [audio, setAudio] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const r = useRef<{
+    pc?: RTCPeerConnection;
+    dc?: RTCDataChannel;
+    stream?: MediaStream;
+    topes?: ReturnType<typeof crearTopes>;
+    sesionId?: string | null;
+    segundos?: number | null;
+    finLen: number;
+    finTu: number;
+    cerrada: boolean;
+  }>({ finLen: -1e9, finTu: -1e9, cerrada: true });
+
+  const enviar = useCallback((e: object) => {
+    const dc = r.current.dc;
+    if (dc?.readyState === "open") dc.send(JSON.stringify(e));
+  }, []);
+
+  const cerrarTodo = useCallback((motivo: string) => {
+    const s = r.current;
+    if (s.cerrada) return;
+    s.cerrada = true;
+    s.topes?.parar();
+    try {
+      s.pc?.close();
+    } catch {
+      /* ya cerrada */
+    }
+    s.stream?.getTracks().forEach((p) => p.stop());
+    const cuerpo = JSON.stringify({ sesionId: s.sesionId ?? null, segundos: s.segundos ?? null, motivo });
+    navigator.sendBeacon?.("/api/voz/uso", new Blob([cuerpo], { type: "application/json" }));
+    setFase("terminada");
+    setTrabajando(false);
+  }, []);
+
+  const colgar = useCallback(() => {
+    if (r.current.dc?.readyState === "open") {
+      enviar({ type: "session.close" });
+      setTimeout(() => cerrarTodo("colgada"), 3000);
+    } else cerrarTodo("colgada");
+  }, [enviar, cerrarTodo]);
+
+  const llamar = useCallback(async () => {
+    setAviso(null);
+    setTarjetas([]);
+    setLineaLen("");
+    setLineaTu("");
+    setFase("conectando");
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      setAviso("sinMicro");
+      setFase("lista");
+      return;
+    }
+    const s = r.current;
+    Object.assign(s, { stream, finLen: -1e9, finTu: -1e9, cerrada: false, segundos: null, sesionId: null });
+    const pc = new RTCPeerConnection();
+    s.pc = pc;
+    pc.ontrack = (ev) => {
+      if (audioRef.current) audioRef.current.srcObject = ev.streams[0] ?? null;
+    };
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+        setAviso("cortada");
+        cerrarTodo("conexion_perdida");
+      }
+    };
+    stream.getTracks().forEach((p) => pc.addTrack(p, stream));
+    const dc = pc.createDataChannel("oai-events");
+    s.dc = dc;
+
+    const zonaHoraria = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const puente = crearPuenteALen({
+      async pedirALen(prompt, alEvento) {
+        const res = await fetch("/api/agent", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ projectId: o.projectId, prompt, zonaHoraria }),
+        });
+        if (!res.ok || !res.body) throw new Error(`/api/agent respondió ${res.status}`);
+        const lector = crearLectorSse();
+        const dec = new TextDecoder();
+        const reader = res.body.getReader();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          for (const e of lector.empujar(dec.decode(value, { stream: true }))) alEvento(e);
+        }
+        for (const e of lector.empujar(dec.decode() + "\n\n")) alEvento(e);
+      },
+      async dirigir(turnoId, texto) {
+        await fetch("/api/agent/dirigir", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ turnoId, texto }),
+        });
+      },
+      enviarALaVoz: (e: EventoParaLaVoz) => enviar(e),
+      mostrarTarjeta: (t) => setTarjetas((ts) => [...ts, t]),
+      alCambiarEstado: (si) => {
+        setTrabajando(si);
+        s.topes?.lenTrabajando(si);
+      },
+    });
+
+    let saludo = "";
+    dc.onmessage = (m) => {
+      let e: unknown;
+      try {
+        e = JSON.parse(String(m.data));
+      } catch {
+        return;
+      }
+      despacharEventoDeVoz(e, {
+        empezo: () => enviar({ type: "session.instructions.append", delegation_id: null, content: saludo }),
+        oyo: (delta, inicio) => {
+          s.topes?.actividad();
+          puente.oir(delta);
+          setLineaTu((l) => (inicio - s.finTu > HUECO_MS ? delta : l + delta));
+          s.finTu = inicio;
+        },
+        dijo: (delta, inicio) => {
+          s.topes?.actividad();
+          setLineaLen((l) => (inicio - s.finLen > HUECO_MS ? delta : l + delta));
+          s.finLen = inicio;
+        },
+        delego: (id) => void puente.delegar(id),
+        uso: (seg) => {
+          s.segundos = seg;
+        },
+        cerro: (motivo, seg) => {
+          if (seg !== null) s.segundos = seg;
+          cerrarTodo(motivo ?? "cerrada");
+        },
+        error: () => {
+          /* un error de un comando no cierra la sesión; se ve en el log del servidor */
+        },
+      });
+    };
+
+    try {
+      const oferta = await pc.createOffer();
+      await pc.setLocalDescription(oferta);
+      const res = await fetch("/api/voz/sesion", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ projectId: o.projectId, sdp: oferta.sdp, idioma: o.idioma }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const j = (await res.json()) as { sdp: string; sesionId: string | null; saludo: string };
+      saludo = j.saludo;
+      s.sesionId = j.sesionId;
+      await pc.setRemoteDescription({ type: "answer", sdp: j.sdp });
+    } catch {
+      setAviso("sinVoz");
+      cerrarTodo("no_abrio");
+      setFase("lista");
+      return;
+    }
+    s.topes = crearTopes({
+      silencioMs: SILENCIO_MS,
+      maxMs: MAX_LLAMADA_MS,
+      alColgar: (m) => {
+        setAviso(m === "silencio" ? "colgadaSilencio" : "colgadaDuracion");
+        colgar();
+      },
+    });
+    setFase("en_llamada");
+  }, [o.projectId, o.idioma, enviar, cerrarTodo, colgar]);
+
+  // Los efectos van FUERA del actualizador de estado: en modo estricto React lo
+  // llama dos veces, y mandaría el evento dos veces.
+  const alternarMicro = useCallback(() => {
+    enviar({ type: micro ? "session.input_audio.mute" : "session.input_audio.unmute" });
+    setMicro(!micro);
+  }, [micro, enviar]);
+
+  const alternarAudio = useCallback(() => {
+    if (audioRef.current) audioRef.current.muted = audio;
+    setAudio(!audio);
+  }, [audio]);
+
+  useEffect(() => {
+    const alSalir = () => enviar({ type: "session.close" });
+    window.addEventListener("beforeunload", alSalir);
+    return () => {
+      window.removeEventListener("beforeunload", alSalir);
+      cerrarTodo("desmontada");
+    };
+  }, [enviar, cerrarTodo]);
+
+  return { fase, aviso, lineaLen, lineaTu, trabajando, tarjetas, micro, audio, llamar: () => void llamar(), colgar, alternarMicro, alternarAudio, audioRef };
+}
