@@ -1,8 +1,8 @@
-// Desliza para cerrar (Jesús, 01/10): la hoja de Len, «Tus páginas» y la
-// llamada siguen al dedo; al soltar, si pasó del umbral o fue un tirón,
-// terminan el gesto, y si no, vuelven a su sitio. El lienzo está escalado
-// (lienzo.ts): el dedo se mueve en px del teléfono y la capa en px del
-// lienzo, por eso se divide entre la escala.
+// Desliza para cerrar (Jesús, 01/10): la hoja de Len, «Tus páginas», la
+// llamada y el chat (éste, hacia la derecha) siguen al dedo; al soltar, si
+// pasó del umbral o fue un tirón, terminan el gesto, y si no, vuelven a su
+// sitio. El lienzo está escalado (lienzo.ts): el dedo se mueve en px del
+// teléfono y la capa en px del lienzo, por eso se divide entre la escala.
 //
 // Es un ref de función (React 19 limpia con lo que devuelve): la hoja y la
 // llamada entran y salen del DOM, y un efecto con dependencias fijas se
@@ -11,12 +11,12 @@ import { useCallback, useLayoutEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 
 export interface Deslizar {
-  /** hacia dónde se cierra: «abajo» la quita o la encoge; «arriba» la abre */
-  hacia: "abajo" | "arriba";
+  /** hacia dónde se cierra: «abajo» la quita o la encoge; «arriba» la abre; «derecha» la quita (el chat) */
+  hacia: "abajo" | "arriba" | "derecha";
   /** lo que pasa al completar el gesto (cerrar, encoger, abrir) */
   alSoltar: () => void;
-  /** px del lienzo que se mueve la capa al completar: por defecto, su alto.
-   *  Con «arriba» se mide DESPUÉS de abrir (lo que creció). */
+  /** px del lienzo que se mueve la capa al completar: por defecto, su alto
+   *  (su ancho hacia la derecha). Con «arriba» se mide DESPUÉS de abrir (lo que creció). */
   recorrido?: (el: HTMLElement) => number;
 }
 
@@ -27,6 +27,8 @@ const SUBE = 0.4; // al abrir sube con resistencia: si siguiera al dedo, dejarí
 const VUELTA = "transform .32s cubic-bezier(.2,.85,.25,1)";
 const SALIDA = "transform .22s cubic-bezier(.4,0,1,1)";
 
+const vertical = (hacia: Deslizar["hacia"]) => hacia !== "derecha";
+
 export function useDeslizar(op: Deslizar) {
   const ultimo = useRef(op);
   useLayoutEffect(() => {
@@ -35,7 +37,10 @@ export function useDeslizar(op: Deslizar) {
 
   return useCallback((el: HTMLElement | null) => {
     if (!el) return;
-    el.style.touchAction = "none"; // si no, Chrome se queda el gesto (recargar, desplazar)
+    // Vertical: Chrome no se queda nada (ni recargar ni desplazar). Hacia la
+    // derecha: el hilo del chat sí se desplaza en vertical, así que sólo se
+    // le quita lo horizontal.
+    el.style.touchAction = vertical(ultimo.current.hacia) ? "none" : "pan-y";
     let inicio: { id: number; x: number; y: number } | null = null;
     let arrastrando = false;
     let escala = 1;
@@ -48,7 +53,8 @@ export function useDeslizar(op: Deslizar) {
       return hacia === "arriba" ? d * SUBE : d;
     };
     const poner = (d: number) => {
-      el.style.transform = `translateY(${ultimo.current.hacia === "abajo" ? d : -d}px)`;
+      const { hacia } = ultimo.current;
+      el.style.transform = hacia === "derecha" ? `translateX(${d}px)` : `translateY(${hacia === "abajo" ? d : -d}px)`;
     };
     const tragarClic = () => {
       const tragar = (e: Event) => {
@@ -68,8 +74,8 @@ export function useDeslizar(op: Deslizar) {
     // Al terminar: React pinta el nuevo estado YA (flushSync) y la capa queda
     // donde el dedo la dejó, sin salto.
     const completar = (d: number) => {
-      const { hacia, alSoltar, recorrido = (x) => x.offsetHeight } = ultimo.current;
-      if (hacia === "abajo") {
+      const { hacia, alSoltar, recorrido = (x) => (vertical(hacia) ? x.offsetHeight : x.offsetWidth) } = ultimo.current;
+      if (hacia !== "arriba") {
         el.style.transition = SALIDA;
         poner(recorrido(el));
         let hecho = false;
@@ -101,6 +107,8 @@ export function useDeslizar(op: Deslizar) {
 
     const baja = (e: PointerEvent) => {
       if (inicio || (e.pointerType === "mouse" && e.button !== 0)) return;
+      // Lo que tiene su propio gesto (el micrófono, el campo de texto) no arrastra la capa.
+      if ((e.target as Element | null)?.closest?.("[data-no-deslizar]")) return;
       inicio = { id: e.pointerId, x: e.clientX, y: e.clientY };
       arrastrando = false;
       crudo = 0;
@@ -108,14 +116,15 @@ export function useDeslizar(op: Deslizar) {
     };
     const mueve = (e: PointerEvent) => {
       if (!inicio || e.pointerId !== inicio.id) return;
-      const dy = e.clientY - inicio.y;
-      const dx = e.clientX - inicio.x;
+      const vert = vertical(ultimo.current.hacia);
+      const d1 = vert ? e.clientY - inicio.y : e.clientX - inicio.x; // a lo largo del gesto
+      const d2 = vert ? e.clientX - inicio.x : e.clientY - inicio.y; // de través
       if (!arrastrando) {
-        if (Math.abs(dx) >= ARRANQUE && Math.abs(dx) > Math.abs(dy)) {
-          inicio = null; // de lado: no es esto
+        if (Math.abs(d2) >= ARRANQUE && Math.abs(d2) > Math.abs(d1)) {
+          inicio = null; // de través: no es esto
           return;
         }
-        if (Math.abs(dy) < ARRANQUE) return;
+        if (Math.abs(d1) < ARRANQUE) return;
         arrastrando = true;
         escala = el.getBoundingClientRect().width / el.offsetWidth || 1;
         try {
@@ -125,7 +134,7 @@ export function useDeslizar(op: Deslizar) {
         }
         el.style.transition = "none";
       }
-      crudo = (dy / escala) * (ultimo.current.hacia === "abajo" ? 1 : -1);
+      crudo = (d1 / escala) * (ultimo.current.hacia === "arriba" ? -1 : 1);
       poner(visible(crudo));
       muestras.push({ t: e.timeStamp, d: crudo });
       while (muestras.length > 2 && e.timeStamp - muestras[0].t > 100) muestras.shift();
@@ -139,8 +148,8 @@ export function useDeslizar(op: Deslizar) {
       const a = muestras[0];
       const b = muestras.at(-1);
       const velocidad = a && b && b.t > a.t ? (b.d - a.d) / (b.t - a.t) : 0;
-      const { hacia, recorrido = (x) => x.offsetHeight } = ultimo.current;
-      const umbral = hacia === "abajo" ? Math.min(recorrido(el) * 0.3, 120) : 40;
+      const { hacia, recorrido = (x) => (vertical(hacia) ? x.offsetHeight : x.offsetWidth) } = ultimo.current;
+      const umbral = hacia !== "arriba" ? Math.min(recorrido(el) * 0.3, 120) : 40;
       const basta = crudo > umbral || (crudo > 20 && velocidad > TIRON);
       if (e.type === "pointerup" && basta) completar(visible(crudo));
       else volver();

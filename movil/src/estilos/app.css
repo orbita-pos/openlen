@@ -38,3 +38,12 @@ a.nx-act { text-decoration: none; }
    quedaba una rayita blanca que parpadeaba al moverla. */
 .app-lienzo .lm-sheet::after { content: ""; position: absolute; left: 0; right: 0; top: calc(100% - 3px); height: 420px; background: #E8560A; }
 :root[data-theme="dark"] .app-lienzo .lm-sheet::after { background: #070504; }
+/* El chat (pieza 2). La cabecera y el pie del prototipo dejan sitio para el
+   iPhone (46 px arriba, 30 abajo); aquí, lo que pida el teléfono, como la barra. */
+.app-lienzo .ch-top { padding-top: calc(var(--app-arriba) + 6px); }
+.app-lienzo .ch-log { padding-top: calc(var(--app-arriba) + 78px); padding-bottom: calc(92px + var(--app-abajo)); touch-action: pan-y; }
+.app-lienzo .lm-chat.has-pip .ch-log { padding-top: calc(var(--app-arriba) + 190px); }
+.app-lienzo .ch-foot { padding-bottom: calc(12px + var(--app-abajo)); }
+/* lo que dice Len puede traer saltos de línea (una lista): se respetan */
+.app-lienzo .is-len .ch-b { white-space: pre-line; }
+.app-lienzo .ch-plus:disabled { opacity: .4; }
