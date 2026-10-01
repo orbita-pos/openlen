@@ -428,6 +428,10 @@ export const formSubmissions = pgTable(
       cid?: string;
     }>(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    // Visto POR FORMULARIO (plans/len-resultados/diseno.md §6). Un formulario
+    // está visto si tiene esto O si llegó antes de `users.lastSeenLeadsAt`: la
+    // regla vive en `lib/resultados/visto.ts` (`condicionSinVer`), y sólo ahí.
+    seenAt: timestamp("seenAt", { mode: "date" }),
   },
   (table) => [
     index("formSubmissions_projectId_createdAt_idx").on(

@@ -66,6 +66,7 @@
     "chat:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/chat-migrate.ts",
     "privatechat:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/privatechat-migrate.ts",
     "inbox:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/inbox-migrate.ts",
+    "formularios-visto:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/formularios-visto-migrate.ts",
     "publish-hash:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/publish-hash-migrate.ts",
     "diario:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/diario-turno-migrate.ts",
     "transcripcion:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/transcripcion-migrate.ts",

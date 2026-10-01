@@ -2,12 +2,13 @@
 //   chat  = conversations with visitor messages newer than the owner's last
 //           read (reuses the existing aReadAt/bReadAt receipts; one
 //           conversation counts once, WhatsApp semantics).
-//   leads = form submissions newer than users.lastSeenLeadsAt (null = all).
+//   leads = form submissions not seen: no seenAt and newer than users.lastSeenLeadsAt (lib/resultados/visto.ts).
 // Spec: docs/superpowers/specs/2026-07-16-inbox-badge-design.md
 
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { listAgentProjectIds } from "@/lib/chat/agents";
+import { condicionSinVer, ultimaVistaDeFormularios } from "@/lib/resultados/visto";
 import { resolveChatUniverse, type ChatUniverseDeps } from "./universe";
 
 export interface InboxBadgeCounts {
@@ -49,12 +50,7 @@ export async function countInboxBadge(
 }
 
 async function countNewLeads(userId: string): Promise<number> {
-  const userRows = await db
-    .select({ lastSeenLeadsAt: schema.users.lastSeenLeadsAt })
-    .from(schema.users)
-    .where(eq(schema.users.id, userId))
-    .limit(1);
-  const lastSeen = userRows[0]?.lastSeenLeadsAt ?? null;
+  const lastSeen = await ultimaVistaDeFormularios(userId);
   const rows = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(schema.formSubmissions)
@@ -62,12 +58,7 @@ async function countNewLeads(userId: string): Promise<number> {
       schema.projects,
       eq(schema.formSubmissions.projectId, schema.projects.id),
     )
-    .where(
-      and(
-        eq(schema.projects.userId, userId),
-        lastSeen ? gt(schema.formSubmissions.createdAt, lastSeen) : undefined,
-      ),
-    );
+    .where(and(eq(schema.projects.userId, userId), condicionSinVer(lastSeen)));
   return rows[0]?.n ?? 0;
 }
 

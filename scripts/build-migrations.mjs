@@ -107,6 +107,10 @@ const targets = [
   // 🔴 OBLIGATORIA por lo mismo que el diario: `getChatMessages` hace
   // `select()` de la tabla entera, y Drizzle selecciona la columna declarada.
   "transcripcion-migrate",
+  // `formSubmissions.seenAt` — el visto por formulario (plans/len-resultados/).
+  // Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código: `ver_formularios`
+  // y el globito la leen, y sin ella cada consulta falla.
+  "formularios-visto-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE
