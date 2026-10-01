@@ -13,12 +13,16 @@ import { loQueDijoLen } from "../hoja";
 import { SinRed } from "./sin-red";
 import { Selector } from "./selector";
 import { Llamada, type TarjetaGuardada } from "../llamada/llamada";
+import { useDeslizar } from "../deslizar";
+import { useAtras } from "../atras";
 
 const ULTIMO = "len-proyecto";
 type Tamano = "cel" | "tab" | "pc";
 const ANCHO: Record<Tamano, number> = { cel: 390, tab: 820, pc: 1280 };
 // Como el prototipo: el botón lleva el icono del tamaño de ahora.
 const ICONO_DEL_TAMANO: Record<Tamano, NombreDeIcono> = { cel: "dvCel", tab: "dvTab", pc: "dvPc" };
+// Al encoger la hoja sólo se esconde su cuerpo: eso es lo que baja (o sube al abrirla).
+const cuerpoDeLaHoja = (el: HTMLElement) => el.querySelector<HTMLElement>(".lm-body")?.offsetHeight ?? 0;
 
 export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: ClienteDeOpenLen; idioma: string; onSalir: () => void }) {
   const t = useTranslations("movil.principal");
@@ -35,6 +39,9 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const [hojaMin, setHojaMin] = useState(false);
   const [llamada, setLlamada] = useState(false);
   const [deLaLlamada, setDeLaLlamada] = useState<TarjetaGuardada[]>([]);
+  useAtras(selector, () => setSelector(false));
+  useAtras(menu, () => setMenu(false));
+  const deslizarHoja = useDeslizar({ hacia: hojaMin ? "arriba" : "abajo", alSoltar: () => setHojaMin(!hojaMin), recorrido: cuerpoDeLaHoja });
 
   const cargar = useCallback(async () => {
     setSinRed(false);
@@ -151,7 +158,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         {selector ? (
           <Selector proyectos={lista} actual={id} onElegir={(x) => { setId(x); setSelector(false); }} onCerrar={() => setSelector(false)} onSalir={onSalir} />
         ) : (
-          <div className={`lm-sheet lm-m lm-marca is-on${hojaMin ? " is-min" : ""}`} data-kind="listo">
+          <div ref={deslizarHoja} className={`lm-sheet lm-m lm-marca is-on${hojaMin ? " is-min" : ""}`} data-kind="listo">
             <button type="button" className="lm-grab" aria-label={t("encoger")} onClick={() => setHojaMin(!hojaMin)} />
             <div className="lm-who">
               <Cara estado={dicho?.enCurso ? "pensando" : "reposo"} className="lm-who-face" />

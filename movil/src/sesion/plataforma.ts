@@ -39,6 +39,17 @@ export const plataforma = {
       fn(e.url);
     });
   },
+  /** App instalada: con algo abierto, atrás lo cierra (atras.ts, por el
+   *  historial). Sin nada abierto, la app se va al fondo: lo que hace
+   *  @capacitor/app por su cuenta con el historial vacío es NADA, y atrás
+   *  quedaba muerto en la pantalla principal. */
+  atrasEnElTelefono(): void {
+    if (enWeb) return;
+    void AppNativa.addListener("backButton", ({ canGoBack }) => {
+      if (canGoBack) window.history.back();
+      else void AppNativa.minimizeApp();
+    });
+  },
   nombreDelTelefono(): string {
     return enWeb ? "Navegador de la PC" : `Android (${navigator.userAgent.match(/Android [\d.]+/)?.[0] ?? "?"})`;
   },

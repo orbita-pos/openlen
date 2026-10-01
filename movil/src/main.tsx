@@ -7,6 +7,7 @@ import { Textos } from "./textos";
 import { idiomaDelTelefono } from "./config";
 import { medidasDelLienzo } from "./lienzo";
 import { aplicarTema, temaGuardado } from "./tema";
+import { plataforma } from "./sesion/plataforma";
 import { PantallaPrincipal } from "./pantallas/principal";
 import { clienteDeMuestra } from "./muestra";
 
@@ -16,6 +17,7 @@ const muestra = import.meta.env.DEV && new URLSearchParams(location.search).has(
 
 // El tema: naranja por defecto; el oscuro, si se eligió en «Tus páginas» (ver tema.ts).
 aplicarTema(temaGuardado());
+plataforma.atrasEnElTelefono();
 
 function Lienzo() {
   const [m, setM] = useState(() => medidasDelLienzo(innerWidth, innerHeight));

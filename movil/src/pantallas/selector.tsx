@@ -4,19 +4,21 @@ import { useState } from "react";
 import { useTranslations } from "use-intl";
 import type { ProyectoEnLista } from "../api/proyectos";
 import { aplicarTema, temaGuardado, type Tema } from "../tema";
+import { useDeslizar } from "../deslizar";
 
 export function Selector({ proyectos, actual, onElegir, onCerrar, onSalir }: {
   proyectos: ProyectoEnLista[]; actual: string | null; onElegir: (id: string) => void; onCerrar: () => void; onSalir: () => void;
 }) {
   const t = useTranslations("movil.principal");
   const [tema, setTema] = useState<Tema>(temaGuardado);
+  const deslizar = useDeslizar({ hacia: "abajo", alSoltar: onCerrar });
   const cambiarTema = () => {
     const otro: Tema = tema === "dark" ? "light" : "dark";
     aplicarTema(otro);
     setTema(otro);
   };
   return (
-    <div className="lm-sheet lm-m lm-marca is-on" data-kind="listo" role="dialog" aria-label={t("tusPaginas")}>
+    <div ref={deslizar} className="lm-sheet lm-m lm-marca is-on" data-kind="listo" role="dialog" aria-label={t("tusPaginas")}>
       <button type="button" className="lm-grab" onClick={onCerrar} aria-label={t("encoger")} />
       <div className="lm-body">
         <p className="lm-msg">{t("tusPaginas")}</p>

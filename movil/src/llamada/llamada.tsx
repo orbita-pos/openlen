@@ -12,6 +12,8 @@ import { Icono } from "../iconos";
 import { palabrasDelSubtitulo } from "./subtitulo";
 import { escucharNivel } from "./halo";
 import { TarjetaDeLaApp } from "./tarjetas";
+import { useDeslizar } from "../deslizar";
+import { useAtras } from "../atras";
 
 export interface TarjetaGuardada {
   clave: string;
@@ -30,6 +32,13 @@ export function Llamada({ cliente, projectId, idioma, onTerminar }: {
   const [ahora, setAhora] = useState(Date.now());
   const halo = useRef<HTMLDivElement>(null);
   const arrancada = useRef(false);
+  // Deslizar la llamada hacia abajo la hace pequeña, como el botón de minimizar.
+  const deslizar = useDeslizar({ hacia: "abajo", alSoltar: () => setPequena(true) });
+  // Atrás, en grande, la hace pequeña; en «Llamando…», cuelga como su único
+  // botón (sin esto, Chrome saldría de la app y la llamada moriría igual).
+  // Pequeña no se queda nada: atrás es de lo que hay debajo.
+  const grande = ll.fase !== "terminada" && !(pequena && ll.fase === "en_llamada");
+  useAtras(grande, () => (ll.fase === "en_llamada" ? setPequena(true) : onTerminar([])));
 
   useEffect(() => {
     if (arrancada.current) return;
@@ -94,7 +103,7 @@ export function Llamada({ cliente, projectId, idioma, onTerminar }: {
     );
   } else {
     pantalla = (
-      <section className={`lm-layer lm-stage lm-m lm-marca is-on${ll.tarjetas.length ? " has-res" : ""}`} data-mode="call" data-talk={ll.lineaLen ? "1" : "0"}>
+      <section ref={deslizar} className={`lm-layer lm-stage lm-m lm-marca is-on${ll.tarjetas.length ? " has-res" : ""}`} data-mode="call" data-talk={ll.lineaLen ? "1" : "0"}>
         <div className="lm-aura"><i /><i /><i /></div>
         <div className="lm-stage-top"><b>Len</b><span>{crono}</span></div>
         <button type="button" className="lm-callmin" aria-label={t("minimizar")} onClick={() => setPequena(true)}><Icono nombre="shrink" /></button>

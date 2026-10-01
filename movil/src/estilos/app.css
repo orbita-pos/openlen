@@ -25,3 +25,16 @@ body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; -webkit-tap-hig
 /* correo y WhatsApp del borrador son enlaces con la piel de botón (.nx-act) */
 a.nx-act { text-decoration: none; }
 .app-boton-salir { position: absolute; right: 16px; bottom: 16px; }
+/* «Tus páginas» y la hoja de Len se turnan en el mismo sitio: la que entra
+   sube desde abajo, para que al cerrar una deslizando la otra no salga de golpe. */
+.app-lienzo .lm-sheet { animation: app-sube .45s cubic-bezier(.2,.85,.25,1); }
+@keyframes app-sube { from { transform: translateY(105%); } }
+/* Al subir la hoja encogida con el dedo, se levanta entera y el hueco de abajo
+   dejaba ver la página en blanco (Jesús, 01/10: «ese blanco se ve feo»). Este
+   faldón cuelga debajo (en reposo, fuera de la pantalla), del color con el que
+   TERMINA el degradado de --m-bg (prototipo.css): con el degradado entero
+   empezaba claro bajo el borde oscuro y se notaba el corte. Se mete 3 px bajo
+   la hoja: con el lienzo escalado y la hoja en fracciones de píxel, a tope
+   quedaba una rayita blanca que parpadeaba al moverla. */
+.app-lienzo .lm-sheet::after { content: ""; position: absolute; left: 0; right: 0; top: calc(100% - 3px); height: 420px; background: #E8560A; }
+:root[data-theme="dark"] .app-lienzo .lm-sheet::after { background: #070504; }
