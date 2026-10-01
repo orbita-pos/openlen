@@ -16,4 +16,6 @@ export const RUTAS_DE_LA_APP: readonly { fichero: string; metodos: readonly stri
   { fichero: "app/api/projects/[id]/publish/route.ts", metodos: ["POST"] },
   { fichero: "app/api/subdomains/check/route.ts", metodos: ["POST"] },
   { fichero: "app/api/movil/llave/route.ts", metodos: ["POST", "DELETE"] },
+  // Pieza 2: la foto que le mandas a Len en el chat.
+  { fichero: "app/api/upload/route.ts", metodos: ["POST"] },
 ];

@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { auth } from "@/auth";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import {
   fallbackFormatForMime,
   OpenLenImageError,
@@ -108,9 +109,11 @@ interface UploadResponse {
   placeholder?: UploadPlaceholder;
 }
 
-export async function POST(req: Request): Promise<Response> {
-  const session = await auth();
-  if (!session?.user?.id) {
+// La app del teléfono sube aquí la foto que le manda a Len en el chat (pieza
+// 2): por eso acepta la llave además de la sesión, y lleva la CORS de la app.
+export const POST = paraLaApp(async (req: Request): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
+  if (!userId) {
     return json({ error: "unauthorized" }, 401);
   }
 
@@ -169,8 +172,8 @@ export async function POST(req: Request): Promise<Response> {
   // token. Still gates the heavy work below (decode + variant fan-out + storage
   // writes). Video has its own, much lower bucket — 50 MB each.
   const rate = isVideo
-    ? consumeToken(`upload-video:${session.user.id}`, RATE_LIMITS.uploadVideo)
-    : consumeToken(`upload:${session.user.id}`, RATE_LIMITS.upload);
+    ? consumeToken(`upload-video:${userId}`, RATE_LIMITS.uploadVideo)
+    : consumeToken(`upload:${userId}`, RATE_LIMITS.upload);
   if (!rate.allowed) {
     return rateLimitedResponse(rate, isVideo ? "videos" : "imágenes");
   }
@@ -295,7 +298,9 @@ export async function POST(req: Request): Promise<Response> {
       : undefined,
   };
   return json(body, 200);
-}
+});
+
+export const OPTIONS = respuestaPrevia;
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
