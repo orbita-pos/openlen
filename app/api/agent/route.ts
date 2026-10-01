@@ -40,6 +40,8 @@ import { turnosParaElHistorial } from "@/lib/projects/chat";
 import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
+import { ZONA_SIN_DATO, zonaValida } from "@/lib/resultados/zona";
+import { guardarZona, leerZona } from "@/lib/resultados/zona-guardada";
 import { getVersionHtml, listVersions } from "@/lib/projects/versions";
 import { loQueCambioElDueno } from "@/lib/agent/cambios-del-dueno";
 import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
@@ -212,6 +214,9 @@ export async function POST(req: Request): Promise<Response> {
     /** EL ESFUERZO DE ESTE TURNO, fijado por el cliente al ENVIAR. Ver
      *  `esfuerzoDelTurno` más abajo: se manda por turno, no se lee en vivo. */
     esfuerzo?: unknown;
+    /** La zona IANA del navegador (plans/len-resultados/diseno.md §7). Se
+     *  sanea con `zonaValida`: entra de fuera. */
+    zonaHoraria?: unknown;
   } | null;
 
   const projectId = typeof body?.projectId === "string" ? body.projectId.trim() : "";
@@ -235,6 +240,9 @@ export async function POST(req: Request): Promise<Response> {
   // las capas hasta la preferencia guardada, que es la degradación correcta.
   const esfuerzoCrudo = typeof body?.esfuerzo === "string" ? body.esfuerzo.trim().toLowerCase() : "";
   const esfuerzoDelTurno = ESFUERZOS.find((e) => e === esfuerzoCrudo) ?? null;
+  // LA HORA DEL USUARIO (plans/len-resultados/diseno.md §7). Se sanea: entra de
+  // fuera. Basura -> null -> la zona guardada.
+  const zonaDelCuerpo = zonaValida(body?.zonaHoraria);
 
   const turnIdRaw = typeof body?.turnId === "string" ? body.turnId.trim() : "";
   const turnIdDelCliente =
@@ -689,7 +697,14 @@ export async function POST(req: Request): Promise<Response> {
     // Lo que el usuario escribió ESTE turno. Lo usa `publicar` para no
     // reclamar un subdominio que el dueño nunca dijo — ver su comentario.
     mensajeDelUsuario: prompt,
+    // Leer la guardada tampoco tumba el turno: si la base falla, se cuenta en
+    // UTC y la herramienta lo dice.
+    zonaHoraria: zonaDelCuerpo ?? (await leerZona(session.user.id).catch(() => null)) ?? ZONA_SIN_DATO,
   };
+  // Se guarda para las rutinas, que corren sin navegador. Nunca tumba el turno.
+  if (zonaDelCuerpo) {
+    void guardarZona(session.user.id, zonaDelCuerpo).catch((e) => console.error("[agent] zona", e));
+  }
   // Quién razona vive en `lib/agent/brain` — el MISMO sitio del que tiran los
   // evals. Tenerlo aquí dentro ya dejó a la batería midiendo Gemini después de
   // que el Agente pasara a DeepSeek, sin que nada fallara.

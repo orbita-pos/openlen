@@ -581,6 +581,10 @@ export interface AgentSession {
    *  un precio o un enlace que ya estaba en OTRA página no lo inventó Len al
    *  copiarlo (H13). Se toma en la primera escritura del turno. */
   sitioAlEmpezar?: string;
+  /** La zona del usuario (IANA). La manda el panel con cada turno; sin ella,
+   *  la guardada; sin ninguna, `ZONA_SIN_DATO`. Las herramientas de resultados
+   *  cuentan «hoy» en esta zona (plans/len-resultados/diseno.md §7). */
+  zonaHoraria?: string;
 }
 
 export interface ToolOutcome {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // El tipo REAL de los ojos, no una copia a mano. Aquí vivía la firma escrita
 // dos veces —`{ html, page }`— y al añadirle `soloDeterminista` al bucle esta
@@ -80,6 +80,9 @@ const mocks = vi.hoisted(() => ({
   abrirFilaDelTurno: vi.fn(async () => {}),
   avanceDelTurno: vi.fn(async () => {}),
   quitarFilaDelTurno: vi.fn(async () => {}),
+  // Len sabe de tus resultados: la zona del usuario se guarda y se lee.
+  guardarZona: vi.fn(async () => {}),
+  leerZona: vi.fn(async (): Promise<string | null> => null),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -117,6 +120,10 @@ vi.mock("@/lib/agent/user-memory", () => ({ getUserMemoryBounded: mocks.getUserM
 // la preferencia de esfuerzo guardada — el mismo agujero que ya cubre el
 // mock de arriba para la memoria de usuario, un módulo después.
 vi.mock("@/lib/agent/esfuerzo-guardado", () => ({ getEsfuerzoGuardado: mocks.getEsfuerzoGuardado }));
+vi.mock("@/lib/resultados/zona-guardada", () => ({
+  guardarZona: mocks.guardarZona,
+  leerZona: mocks.leerZona,
+}));
 vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }));
 vi.mock("@/lib/projects/chat", () => ({
   turnosParaElHistorial: mocks.turnosParaElHistorial,
@@ -341,6 +348,57 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
     expect(mocks.createAgentBrain).toHaveBeenCalledWith(
       expect.objectContaining({ esfuerzoDelUsuario: "high" }),
     );
+  });
+
+  // LA HORA DEL USUARIO (plans/len-resultados/diseno.md §7): la del navegador
+  // manda, se guarda para las rutinas y llega a la sesión de las herramientas.
+  describe("la zona horaria del turno", () => {
+    /** El bucle de mentira llama a UNA herramienta: así se ve la sesión que le llega. */
+    function zonaQueLlegaALasHerramientas(): string | undefined {
+      return (mocks.runAgentTool.mock.calls[0]?.[0] as { zonaHoraria?: string } | undefined)?.zonaHoraria;
+    }
+    beforeEach(() => {
+      mocks.runAgentTool.mockResolvedValue({ response: { ok: true } });
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        await args.runTool("leer_estado", {});
+        return { turns: 1, toolCalls: 1, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+      });
+    });
+    // `clearAllMocks` no quita implementaciones: se devuelven como estaban
+    // para que no se cuelen a los `describe` de después.
+    afterEach(() => {
+      mocks.runAgentTool.mockReset();
+      mocks.runAgentLoop.mockReset();
+      mocks.leerZona.mockReset().mockResolvedValue(null);
+    });
+    async function turno(cuerpo: Record<string, unknown>) {
+      await readEvents(
+        await POST(new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "hola", ...cuerpo }),
+        })),
+      );
+    }
+
+    it("la del navegador se guarda y llega a la sesión", async () => {
+      await turno({ zonaHoraria: "America/Mexico_City" });
+      expect(mocks.guardarZona).toHaveBeenCalledWith("u1", "America/Mexico_City");
+      expect(zonaQueLlegaALasHerramientas()).toBe("America/Mexico_City");
+    });
+
+    it("basura no se guarda: se usa la guardada", async () => {
+      mocks.leerZona.mockResolvedValue("Europe/Madrid");
+      await turno({ zonaHoraria: "Marte/Base" });
+      expect(mocks.guardarZona).not.toHaveBeenCalled();
+      expect(zonaQueLlegaALasHerramientas()).toBe("Europe/Madrid");
+    });
+
+    it("sin ninguna, UTC; y si leer la guardada falla, el turno sigue", async () => {
+      mocks.leerZona.mockRejectedValue(new Error("la base no contesta"));
+      await turno({});
+      expect(mocks.runAgentLoop).toHaveBeenCalled();
+      expect(zonaQueLlegaALasHerramientas()).toBe("UTC");
+    });
   });
 });
 

@@ -1255,6 +1255,9 @@ function AIDesignChat({
               // VEÍA al pulsar enviar, y cambiar el mando a media respuesta no
               // reescribe con qué esfuerzo corrió lo que ya salió.
               esfuerzo,
+              // LA HORA DEL USUARIO: «hoy» es su día, no el de UTC
+              // (plans/len-resultados/diseno.md §7).
+              zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone,
               // Same value + same conditional shape ai-design sends below —
               // absent/empty means home, cloned for parity.
               ...(turnPage ? { page: turnPage } : {}),
