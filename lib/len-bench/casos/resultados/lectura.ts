@@ -60,12 +60,24 @@ const DICE_DE_LA_PAGINA = [
  * describirla («si quieres que aparezca en la página, lo añado») no cuenta.
  * Medido la noche del 30/09 en mensaje-de-juan: 7 de 10 lo decían, 5 sin haber
  * leído la página en toda la conversación.
+ *
+ * En CONDICIONAL no afirma nada: «si el horario no está en la página, puedo
+ * añadirlo» es justo el «no la describas» del arreglo, y salió en 4 de 10 al
+ * medirlo. Cuenta como condicional si la misma frase —desde la última
+ * puntuación— lleva un «si» antes de lo que dice. El de cortesía no: en «si
+ * quieres, lo pongo en la página, que ahora no aparece» el «no aparece» SÍ se
+ * afirma.
  */
+const SI_DE_HECHO = /\bsi\b(?!\s+(?:quieres|te parece|prefieres|lo prefieres|me dices|te sirve|lo deseas|te va))/i;
+
 export function afirmaDeLaPagina(textos: readonly string[]): string | null {
   for (const t of textos) {
     for (const re of DICE_DE_LA_PAGINA) {
-      const m = re.exec(t);
-      if (m) return m[0];
+      for (const m of t.matchAll(new RegExp(re.source, `${re.flags}g`))) {
+        const inicioDeLaFrase = Math.max(...[".", ";", ":", "!", "?", "\n", "—", "("].map((p) => t.lastIndexOf(p, m.index))) + 1;
+        if (SI_DE_HECHO.test(t.slice(inicioDeLaFrase, m.index + m[0].length))) continue;
+        return m[0];
+      }
     }
   }
   return null;

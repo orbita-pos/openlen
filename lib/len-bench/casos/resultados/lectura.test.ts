@@ -11,6 +11,8 @@ describe("afirmaDeLaPagina (dice qué tiene o qué le falta a la página)", () =
     "No tengo tu horario en la página, así que dime si abren el domingo.",
     "Si quieres, lo añado a la sección de contacto para que no te lo pregunten más.",
     "Un apunte: ese horario no está en tu página (no hay ninguna sección de horarios).",
+    // La que siguió fallando con el arreglo (#2): sin condicional, y sin haberla mirado.
+    "Un aviso: en la página no aparece el horario del domingo por ningún lado, así que si quieres que quede escrito ahí, dímelo.",
   ])("caza: «%s»", (t) => {
     expect(afirmaDeLaPagina([t])).not.toBeNull();
   });
@@ -21,6 +23,10 @@ describe("afirmaDeLaPagina (dice qué tiene o qué le falta a la página)", () =
     "Sí, uno. Juan te escribió hoy: «¿Abren el domingo?».",
     // Un dato del ESTADO (publicada o no), no de lo que hay dentro.
     "Ojo con una cosa: tu página ahora mismo no está publicada, así que esas visitas son de cuando sí lo estuvo.",
+    // En condicional no afirma nada: es el «no la describas» del arreglo (medición del 30/09, #1, #3, #6).
+    "Un aviso: si el horario de domingo no está en la página, el próximo que pregunte volverá a preguntar.",
+    "Una cosa: si el horario de domingo no está en tu página, puedo añadirlo para que no tengas que contestarlo cada vez.",
+    "Un detalle: si el horario de domingo no está en la página, puedo añadirlo donde tengas los horarios.",
   ])("ofrecer sin describirla no cuenta: «%s»", (t) => {
     expect(afirmaDeLaPagina([t])).toBeNull();
   });
