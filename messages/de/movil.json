@@ -25,7 +25,9 @@
     "encoger": "Einklappen oder öffnen",
     "tusPaginas": "Deine Seiten",
     "salir": "Abmelden",
-    "vistaNoCarga": "Ich konnte deine Seite nicht laden. Der Anruf funktioniert trotzdem."
+    "vistaNoCarga": "Ich konnte deine Seite nicht laden. Der Anruf funktioniert trotzdem.",
+    "modoOscuro": "Dunkler Modus",
+    "modoClaro": "Heller Modus"
   },
   "vacio": {
     "sinPaginas": "Du hast noch keine Seiten: Erstell eine auf openlen.app."

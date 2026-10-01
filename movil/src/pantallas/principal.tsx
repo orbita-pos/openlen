@@ -113,7 +113,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
               className="app-vista"
               src={vista}
               title={p?.title ?? "Vista previa"}
-              style={tamano === "cel" ? undefined : { width: ANCHO[tamano], transform: `scale(${390 / ANCHO[tamano]})`, transformOrigin: "0 0", height: `calc((100% - 98px) * ${ANCHO[tamano] / 390})` }}
+              style={tamano === "cel" ? undefined : { width: ANCHO[tamano], transform: `scale(${390 / ANCHO[tamano]})`, transformOrigin: "0 0", height: `calc((100% - var(--app-barra)) * ${ANCHO[tamano] / 390})` }}
               onError={() => setVistaFallo(true)}
             />
           ) : vistaFallo ? (

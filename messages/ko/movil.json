@@ -25,7 +25,9 @@
     "encoger": "접기 또는 펼치기",
     "tusPaginas": "내 페이지",
     "salir": "로그아웃",
-    "vistaNoCarga": "페이지를 불러오지 못했어요. 통화는 계속 쓸 수 있어요."
+    "vistaNoCarga": "페이지를 불러오지 못했어요. 통화는 계속 쓸 수 있어요.",
+    "modoOscuro": "다크 모드",
+    "modoClaro": "라이트 모드"
   },
   "vacio": {
     "sinPaginas": "아직 페이지가 없어요. openlen.app에서 만들어 보세요."

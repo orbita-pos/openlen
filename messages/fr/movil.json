@@ -25,7 +25,9 @@
     "encoger": "Réduire ou ouvrir",
     "tusPaginas": "Vos pages",
     "salir": "Se déconnecter",
-    "vistaNoCarga": "Je n’ai pas pu charger votre page. L’appel fonctionne toujours."
+    "vistaNoCarga": "Je n’ai pas pu charger votre page. L’appel fonctionne toujours.",
+    "modoOscuro": "Mode sombre",
+    "modoClaro": "Mode clair"
   },
   "vacio": {
     "sinPaginas": "Vous n’avez pas encore de page : créez-en une sur openlen.app."

@@ -25,7 +25,9 @@
     "encoger": "Recolher ou abrir",
     "tusPaginas": "Suas páginas",
     "salir": "Sair",
-    "vistaNoCarga": "Não consegui carregar sua página. A ligação continua funcionando."
+    "vistaNoCarga": "Não consegui carregar sua página. A ligação continua funcionando.",
+    "modoOscuro": "Modo escuro",
+    "modoClaro": "Modo claro"
   },
   "vacio": {
     "sinPaginas": "Você ainda não tem páginas: crie uma em openlen.app."

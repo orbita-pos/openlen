@@ -25,7 +25,9 @@
     "encoger": "Collapse or expand",
     "tusPaginas": "Your pages",
     "salir": "Sign out",
-    "vistaNoCarga": "I couldn't load your page. Calls still work."
+    "vistaNoCarga": "I couldn't load your page. Calls still work.",
+    "modoOscuro": "Dark mode",
+    "modoClaro": "Light mode"
   },
   "vacio": {
     "sinPaginas": "You don't have any pages yet: create one at openlen.app."

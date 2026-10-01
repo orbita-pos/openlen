@@ -25,7 +25,9 @@
     "encoger": "Encoger o abrir",
     "tusPaginas": "Tus páginas",
     "salir": "Salir",
-    "vistaNoCarga": "No pude cargar tu página. La llamada sigue funcionando."
+    "vistaNoCarga": "No pude cargar tu página. La llamada sigue funcionando.",
+    "modoOscuro": "Modo oscuro",
+    "modoClaro": "Modo claro"
   },
   "vacio": {
     "sinPaginas": "Aún no tienes páginas: créala en openlen.app."

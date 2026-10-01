@@ -25,7 +25,9 @@
     "encoger": "閉じる・開く",
     "tusPaginas": "あなたのページ",
     "salir": "ログアウト",
-    "vistaNoCarga": "ページを読み込めませんでした。通話は使えます。"
+    "vistaNoCarga": "ページを読み込めませんでした。通話は使えます。",
+    "modoOscuro": "ダークモード",
+    "modoClaro": "ライトモード"
   },
   "vacio": {
     "sinPaginas": "まだページがありません。openlen.app で作成してください。"

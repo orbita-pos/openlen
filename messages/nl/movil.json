@@ -25,7 +25,9 @@
     "encoger": "Inklappen of openen",
     "tusPaginas": "Je pagina’s",
     "salir": "Uitloggen",
-    "vistaNoCarga": "Ik kon je pagina niet laden. Bellen werkt nog wel."
+    "vistaNoCarga": "Ik kon je pagina niet laden. Bellen werkt nog wel.",
+    "modoOscuro": "Donkere modus",
+    "modoClaro": "Lichte modus"
   },
   "vacio": {
     "sinPaginas": "Je hebt nog geen pagina’s: maak er een op openlen.app."

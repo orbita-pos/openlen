@@ -6,6 +6,7 @@ import { App } from "./app";
 import { Textos } from "./textos";
 import { idiomaDelTelefono } from "./config";
 import { medidasDelLienzo } from "./lienzo";
+import { aplicarTema, temaGuardado } from "./tema";
 import { PantallaPrincipal } from "./pantallas/principal";
 import { clienteDeMuestra } from "./muestra";
 
@@ -13,11 +14,8 @@ import { clienteDeMuestra } from "./muestra";
 // servidor. En el build `import.meta.env.DEV` es false y Vite poda la muestra.
 const muestra = import.meta.env.DEV && new URLSearchParams(location.search).has("muestra");
 
-// El tema sigue al teléfono: el prototipo pinta el oscuro con :root[data-theme="dark"].
-const oscuro = window.matchMedia("(prefers-color-scheme: dark)");
-const tema = () => (document.documentElement.dataset.theme = oscuro.matches ? "dark" : "light");
-tema();
-oscuro.addEventListener("change", tema);
+// El tema: naranja por defecto; el oscuro, si se eligió en «Tus páginas» (ver tema.ts).
+aplicarTema(temaGuardado());
 
 function Lienzo() {
   const [m, setM] = useState(() => medidasDelLienzo(innerWidth, innerHeight));
@@ -27,7 +25,7 @@ function Lienzo() {
     return () => removeEventListener("resize", r);
   }, []);
   return (
-    <div className="app-lienzo" style={{ height: m.alto, transform: `scale(${m.escala})` }}>
+    <div className="app-lienzo" style={{ height: m.alto, left: m.izquierda, transform: `scale(${m.escala})` }}>
       <div className="lm-screen">
         {muestra ? <PantallaPrincipal cliente={clienteDeMuestra} idioma={idiomaDelTelefono()} onSalir={() => {}} /> : <App />}
       </div>
