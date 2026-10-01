@@ -1683,3 +1683,21 @@ export const usageEvents = pgTable(
     index("usageEvents_user_ts_idx").on(table.userId, table.ts),
   ],
 );
+
+// La app del teléfono (docs/superpowers/specs/2026-10-01-len-movil-pieza-1-design.md).
+// Se guarda la HUELLA del código y de la llave, nunca el secreto.
+export const movilCodigos = pgTable("movilCodigos", {
+  huella: text("huella").primaryKey(),
+  userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  estado: text("estado").notNull(),
+  creadoEn: timestamp("creadoEn", { mode: "date" }).notNull().defaultNow(),
+  usadoEn: timestamp("usadoEn", { mode: "date" }),
+});
+
+export const movilLlaves = pgTable("movilLlaves", {
+  huella: text("huella").primaryKey(),
+  userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  nombre: text("nombre"),
+  creadoEn: timestamp("creadoEn", { mode: "date" }).notNull().defaultNow(),
+  ultimoUso: timestamp("ultimoUso", { mode: "date" }),
+}, (t) => [index("movilLlaves_userId_idx").on(t.userId)]);

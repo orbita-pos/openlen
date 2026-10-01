@@ -71,6 +71,12 @@ export default defineConfig({
       "components/llamada/**/*.test.ts",
       "components/llamada/**/*.test.tsx",
       "app/api/voz/**/*.test.ts",
+      // La app de Len (docs/superpowers/specs/2026-10-01-len-movil-pieza-1-design.md).
+      "lib/movil/**/*.test.ts",
+      "lib/login/**/*.test.ts",
+      "app/api/movil/**/*.test.ts",
+      "movil/src/**/*.test.ts",
+      "movil/src/**/*.test.tsx",
       // Len-Bench (plans/len-2/diseno.md). Las piezas puras de la vara; lo
       // que abre Chromium o habla con el servidor se prueba con
       // `bench:len:validar`, que es su prueba en rojo y en verde.
