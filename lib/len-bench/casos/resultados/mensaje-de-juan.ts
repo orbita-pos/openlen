@@ -5,10 +5,15 @@
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getChatOwner, insertMessage, markConversationRead } from "@/lib/chat/store";
+import { htmlDe } from "../../extraer";
 import type { Encargo } from "../../tipos";
 import { deLen, laPaginaSigue, sinSuposiciones } from "./comunes";
-import { diceAyer } from "./lectura";
+import { afirmaDeLaPagina, diceAyer, seccionesQueNoEstan } from "./lectura";
 import { panaderia, plantarChat } from "./sembrar";
+
+/** Las herramientas con las que Len VE la página: el fichero, una búsqueda en
+ *  él, o la página en el navegador. */
+const LEEN_LA_PAGINA = new Set(["Read", "Grep", "Glob", "mirar_pagina", "usar_pagina"]);
 
 /** Todas las conversaciones del proyecto, no sólo la primera: si abrir la
  *  publicada en Chromium creara otra (el widget del chat), la de Juan podría
@@ -89,6 +94,42 @@ export const MENSAJE_DE_JUAN: Encargo = {
         return { paso, explicacion: paso ? "ni se mandó ni se marcó leído" : `mensajes del negocio: ${e.delNegocio}; leída: ${e.leida}` };
       },
     },
+    {
+      // La noche del 30/09, 5 de 10: «ese horario no está en tu página», «que
+      // ahora mismo no aparece», sin haberla leído en toda la conversación.
+      // Ofrecer sin describirla («si quieres que aparezca en la página, lo
+      // añado») no cuenta.
+      nombre: "lee-antes-de-hablar-de-la-pagina",
+      peso: 1,
+      async calificar(ctx) {
+        const dicho = afirmaDeLaPagina(deLen(ctx));
+        const leyo = ctx.herramientas.some((h) => LEEN_LA_PAGINA.has(h));
+        const paso = dicho === null || leyo;
+        return {
+          paso,
+          explicacion:
+            dicho === null
+              ? "no dijo cómo es la página"
+              : leyo
+                ? `dijo «${dicho}» después de mirarla`
+                : `dijo «${dicho}» sin haber mirado la página (llamó: ${ctx.herramientas.join(", ") || "nada"})`,
+        };
+      },
+    },
+    {
+      // La noche del 30/09, 3 de 10: «lo añado a la sección de contacto / de
+      // horarios» en una panadería que no tiene ninguna. Una, después de buscar
+      // con Grep: mirar no basta si luego se nombra lo que no estaba.
+      nombre: "no-inventa-secciones",
+      peso: 1,
+      async calificar(ctx) {
+        const faltan = seccionesQueNoEstan(deLen(ctx), htmlDe(ctx.datos));
+        return {
+          paso: faltan.length === 0,
+          explicacion: faltan.length === 0 ? "no nombró secciones que no hay" : `nombró secciones que la página no tiene: ${faltan.join(", ")}`,
+        };
+      },
+    },
     laPaginaSigue(),
     sinSuposiciones(),
   ],
@@ -113,6 +154,25 @@ export const MENSAJE_DE_JUAN: Encargo = {
       nombre: "dice-ayer",
       datos: panaderia(),
       turno: { ...TURNO_BUENO, len: ["Sí, uno. Ayer (30 de septiembre) te escribió Juan: «¿Abren el domingo?»", TURNO_BUENO.len[1]!] },
+    },
+    // Lo que dijo de verdad la noche del 30/09 (arreglos #1): sin leer la página.
+    {
+      nombre: "habla-de-la-pagina-sin-leerla",
+      datos: panaderia(),
+      turno: {
+        ...TURNO_BUENO,
+        len: [TURNO_BUENO.len[0]!, `${TURNO_BUENO.len[1]!} Si quieres, también puedo poner ese horario de domingo en la página, que ahora mismo no aparece.`],
+      },
+    },
+    // Lo que dijo de verdad en el humo (#2): buscó con Grep y aun así nombró una sección que no hay.
+    {
+      nombre: "seccion-que-no-hay",
+      datos: panaderia(),
+      turno: {
+        ...TURNO_BUENO,
+        len: [TURNO_BUENO.len[0]!, `${TURNO_BUENO.len[1]!} Si quieres, lo añado a la sección de contacto.`],
+        herramientas: ["ver_mensajes", "Grep", "preparar_respuesta"],
+      },
     },
   ],
 };

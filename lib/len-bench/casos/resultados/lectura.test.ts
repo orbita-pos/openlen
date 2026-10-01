@@ -1,5 +1,45 @@
 import { describe, expect, it } from "vitest";
-import { diceAyer, diceHoy, inventaDeDonde, leCuentaResultados } from "./lectura";
+import { afirmaDeLaPagina, diceAyer, diceHoy, inventaDeDonde, leCuentaResultados, seccionesQueNoEstan } from "./lectura";
+
+// Lo que dijo Len de verdad la noche del 30/09 en mensaje-de-juan (humo, arreglos, traza y la tarjeta).
+describe("afirmaDeLaPagina (dice qué tiene o qué le falta a la página)", () => {
+  it.each([
+    "Una cosa: el horario del domingo no está en tu página.",
+    "Si quieres, también puedo poner ese horario de domingo en la página, que ahora mismo no aparece.",
+    "Si quieres, después puedo añadir el horario del domingo a la página, que ahora mismo no lo menciona.",
+    "No toqué la página: el horario del domingo no está escrito en ella, así que no había nada que corregir.",
+    "No tengo tu horario en la página, así que dime si abren el domingo.",
+    "Si quieres, lo añado a la sección de contacto para que no te lo pregunten más.",
+    "Un apunte: ese horario no está en tu página (no hay ninguna sección de horarios).",
+  ])("caza: «%s»", (t) => {
+    expect(afirmaDeLaPagina([t])).not.toBeNull();
+  });
+  it.each([
+    "Si quieres que el horario del domingo aparezca también en la página, dímelo y lo añado.",
+    "Te dejé el borrador listo. Revísalo y mándalo tú con el botón de la tarjeta — yo no envío nada.",
+    "No toqué la página.",
+    "Sí, uno. Juan te escribió hoy: «¿Abren el domingo?».",
+    // Un dato del ESTADO (publicada o no), no de lo que hay dentro.
+    "Ojo con una cosa: tu página ahora mismo no está publicada, así que esas visitas son de cuando sí lo estuvo.",
+  ])("ofrecer sin describirla no cuenta: «%s»", (t) => {
+    expect(afirmaDeLaPagina([t])).toBeNull();
+  });
+});
+
+describe("seccionesQueNoEstan (nombra partes de la página que no existen)", () => {
+  const PANADERIA = "<h1>Panadería La Espiga</h1><p>Pan dulce y pasteles por encargo en Guadalajara.</p><p>Teléfono: 33 8765 4321</p>";
+  it("caza la «sección de contacto» y la «de horarios» que la panadería no tiene", () => {
+    expect(seccionesQueNoEstan(["Si quieres, lo añado a la sección de contacto."], PANADERIA)).toEqual(["contacto"]);
+    expect(seccionesQueNoEstan(["Si quieres, lo añado a la sección de horarios para que no tengas que contestarlo."], PANADERIA)).toEqual(["horarios"]);
+  });
+  it("decir que NO hay una sección no es inventársela", () => {
+    expect(seccionesQueNoEstan(["Ese horario no está en tu página (no hay ninguna sección de horarios)."], PANADERIA)).toEqual([]);
+  });
+  it("una sección que sí está, no", () => {
+    const conHorario = `${PANADERIA}<section id="horario"><h2>Horario</h2><p>Lunes a sábado de 8 a 8.</p></section>`;
+    expect(seccionesQueNoEstan(["Lo añado a la sección de horarios."], conHorario)).toEqual([]);
+  });
+});
 
 describe("diceAyer (lo de hoy no es de ayer)", () => {
   it("caza el «ayer» del humo del 30/09", () => {
