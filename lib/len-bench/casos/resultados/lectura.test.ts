@@ -11,6 +11,8 @@ describe("afirmaDeLaPagina (dice qué tiene o qué le falta a la página)", () =
     "No tengo tu horario en la página, así que dime si abren el domingo.",
     "Si quieres, lo añado a la sección de contacto para que no te lo pregunten más.",
     "Un apunte: ese horario no está en tu página (no hay ninguna sección de horarios).",
+    // «Miré si…» no es un condicional: dice lo que comprobó (30/09, regla de Claude Code, #4).
+    "Miré también si el horario estaba en tu página y no aparece por ningún lado, así que no toqué nada.",
     // La que siguió fallando con el arreglo (#2): sin condicional, y sin haberla mirado.
     "Un aviso: en la página no aparece el horario del domingo por ningún lado, así que si quieres que quede escrito ahí, dímelo.",
   ])("caza: «%s»", (t) => {
@@ -21,6 +23,8 @@ describe("afirmaDeLaPagina (dice qué tiene o qué le falta a la página)", () =
     "Te dejé el borrador listo. Revísalo y mándalo tú con el botón de la tarjeta — yo no envío nada.",
     "No toqué la página.",
     "Sí, uno. Juan te escribió hoy: «¿Abren el domingo?».",
+    // Proponer una sección NUEVA no describe la página.
+    "Si quieres, te añado una sección de horarios con el domingo de 9 a 2 incluido.",
     // Un dato del ESTADO (publicada o no), no de lo que hay dentro.
     "Ojo con una cosa: tu página ahora mismo no está publicada, así que esas visitas son de cuando sí lo estuvo.",
     // En condicional no afirma nada: es el «no la describas» del arreglo (medición del 30/09, #1, #3, #6).
@@ -40,6 +44,11 @@ describe("seccionesQueNoEstan (nombra partes de la página que no existen)", () 
   });
   it("decir que NO hay una sección no es inventársela", () => {
     expect(seccionesQueNoEstan(["Ese horario no está en tu página (no hay ninguna sección de horarios)."], PANADERIA)).toEqual([]);
+  });
+  it("proponer UNA sección nueva tampoco (medición del 30/09, #4, #9, #10); «la sección de» sí da por hecho que existe", () => {
+    expect(seccionesQueNoEstan(["Si quieres, te añado una sección de horarios con el domingo de 9 a 2."], PANADERIA)).toEqual([]);
+    expect(seccionesQueNoEstan(["Puedo crear una nueva sección de horarios."], PANADERIA)).toEqual([]);
+    expect(seccionesQueNoEstan(["Si quieres, lo añado a la sección de horarios para que no tengas que contestarlo."], PANADERIA)).toEqual(["horarios"]);
   });
   it("una sección que sí está, no", () => {
     const conHorario = `${PANADERIA}<section id="horario"><h2>Horario</h2><p>Lunes a sábado de 8 a 8.</p></section>`;

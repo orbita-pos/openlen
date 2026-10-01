@@ -50,8 +50,9 @@ const DICE_DE_LA_PAGINA = [
   new RegExp(String.raw`\bno\s+${VERBO_QUE_NIEGA}[^.\n]{0,30}?\ben\s+ella\b`, "iu"),
   // «No tengo tu horario en la página»
   new RegExp(String.raw`\bno\s+tengo\b[^.\n]{0,30}?\b(?:en|de)\s+(?:tu|la)\s+${PAGINA}\b`, "i"),
-  // Nombrar una parte: «la sección de contacto», «el apartado de horarios»
-  /\b(?:secci[oó]n|apartado)\b/i,
+  // Nombrar una parte: «la sección de contacto», «el apartado de horarios». No
+  // proponer una NUEVA: «te añado una sección de horarios» (30/09, #4, #9, #10).
+  /(?<!\b(?:una|un|otra|nueva|nuevo)\s+)\b(?:secci[oó]n|apartado)\b/i,
 ];
 
 /**
@@ -68,7 +69,10 @@ const DICE_DE_LA_PAGINA = [
  * quieres, lo pongo en la página, que ahora no aparece» el «no aparece» SÍ se
  * afirma.
  */
-const SI_DE_HECHO = /\bsi\b(?!\s+(?:quieres|te parece|prefieres|lo prefieres|me dices|te sirve|lo deseas|te va))/i;
+// Tampoco el de «miré si estaba en tu página y no aparece»: eso dice lo que
+// comprobó, y es justo lo que hay que contrastar con lo que de verdad miró.
+const SI_DE_HECHO =
+  /(?<!\b(?:mir[eé]|busqu[eé]|comprob[eé]|revis[eé]|vi|ver|mirar|buscar|comprobar|revisar)(?:\s+\p{L}+)?\s+)\bsi\b(?!\s+(?:quieres|te parece|prefieres|lo prefieres|me dices|te sirve|lo deseas|te va))/iu;
 
 export function afirmaDeLaPagina(textos: readonly string[]): string | null {
   for (const t of textos) {
@@ -94,7 +98,9 @@ const sinAcentos = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLo
  */
 export function seccionesQueNoEstan(textos: readonly string[], html: string): string[] {
   const pagina = sinAcentos(html);
-  const nombra = /\b(ningun[ao]?\s+|no\s+hay\s+(?:una\s+|un\s+)?|sin\s+)?(?:secci[oó]n(?:es)?|apartados?)\s+(?:de\s+(?:l[oa]s?\s+)?)?(\p{L}+)/giu;
+  // Lo que no da por hecho que existe: negarla («ninguna sección de…») o
+  // proponer una NUEVA («una sección de horarios», 30/09, #4, #9, #10).
+  const nombra = /\b(ningun[ao]?\s+|no\s+hay\s+(?:una\s+|un\s+)?|sin\s+|una\s+(?:nueva\s+)?|un\s+(?:nuevo\s+)?|otra\s+|nueva\s+)?(?:secci[oó]n(?:es)?|apartados?)\s+(?:de\s+(?:l[oa]s?\s+)?)?(\p{L}+)/giu;
   const faltan: string[] = [];
   for (const t of textos) {
     for (const m of t.matchAll(nombra)) {
