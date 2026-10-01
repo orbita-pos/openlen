@@ -72,7 +72,14 @@ import {
 } from "@/lib/agent/herramientas-de-ficheros";
 import { ficherosDelSitio, leerFichero, rutaDePagina, rutaRelativa } from "@/lib/agent/ficheros/sitio";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
-import { toolVerFormularios, toolVerMensajes, toolVerVisitas, type ResultadosDeps } from "@/lib/agent/resultados";
+import {
+  toolPrepararRespuesta,
+  toolVerFormularios,
+  toolVerMensajes,
+  toolVerVisitas,
+  type RespuestaPreparada,
+  type ResultadosDeps,
+} from "@/lib/agent/resultados";
 
 // editar_imagen: the source image must decode as one of the formats Gemini's
 // image edit accepts, and stays under the same 6MB cap the ai-edit-image route
@@ -698,7 +705,10 @@ export interface ToolOutcome {
    *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única
    *  vía que llama al endpoint real (spec §4.4). */
   confirm?:
-    | { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean };
+    | { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean }
+    // El borrador de respuesta (plans/len-resultados/): la tarjeta sólo manda
+    // si el usuario toca.
+    | RespuestaPreparada;
   /** La herramienta ESCRIBIÓ en la base. No lo pone cada herramienta a mano:
    *  lo estampa `runAgentTool` contando las llamadas reales a
    *  `saveProjectData`, así que ninguna futura puede olvidarse.
@@ -1839,6 +1849,8 @@ async function ejecutarHerramienta(
         return await toolVerFormularios(session, deps, args);
       case "ver_mensajes":
         return await toolVerMensajes(session, deps, args);
+      case "preparar_respuesta":
+        return await toolPrepararRespuesta(session, deps, args);
       default:
         return { response: { ok: false, error: "herramienta desconocida" } };
     }

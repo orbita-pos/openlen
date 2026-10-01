@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AgentDeps, AgentSession } from "@/lib/agent/tools";
-import { NOTA_DE_VISITANTES, toolVerFormularios, toolVerMensajes, toolVerVisitas, type ResultadosDeps } from "./resultados";
+import {
+  NOTA_DE_VISITANTES,
+  toolPrepararRespuesta,
+  toolVerFormularios,
+  toolVerMensajes,
+  toolVerVisitas,
+  type ResultadosDeps,
+} from "./resultados";
 
 const cuenta = (vistas: number) => ({ vistas, personas: vistas, clics: 0 });
 const visitas = {
@@ -79,5 +86,39 @@ describe("ver_mensajes", () => {
     const { session, deps } = montar({ conversacion });
     const out = await toolVerMensajes(session, deps, { cuales: "una", id: "c1" });
     expect(out.response).toMatchObject({ ok: true, con: "Juan", nota: NOTA_DE_VISITANTES });
+  });
+});
+
+describe("preparar_respuesta", () => {
+  it("chat: deja una tarjeta con «Enviar» y NO manda nada", async () => {
+    const conversacion = vi.fn().mockResolvedValue({ id: "c1", con: "Juan", mensajes: [] });
+    const { session, deps } = montar({ conversacion });
+    const out = await toolPrepararRespuesta(session, deps, { para: "chat", id: "c1", texto: "Sí, abrimos el domingo de 9 a 2." });
+    expect(out.confirm).toEqual({
+      action: "responder", para: "chat", id: "c1", con: "Juan", texto: "Sí, abrimos el domingo de 9 a 2.",
+      botones: ["enviar"], correo: null, whatsapp: null,
+    });
+    expect(out.mutoDurable).toBeUndefined();
+  });
+  it("formulario con correo y teléfono con lada: correo, WhatsApp y copiar; abrirlo NO lo marca visto", async () => {
+    const formulario = vi.fn().mockResolvedValue({ id: "f1", fecha: "", pagina: null, datos: {}, contacto: { nombre: "María", correo: "maria@ejemplo.com", telefono: "+52 33 1234 5678" } });
+    const { session, deps } = montar({ formulario });
+    const out = await toolPrepararRespuesta(session, deps, { para: "formulario", id: "f1", texto: "Hola María" });
+    expect(formulario).toHaveBeenCalledWith("p1", "America/Mexico_City", "f1", { marcarVisto: false });
+    expect(out.confirm).toMatchObject({ botones: ["correo", "whatsapp", "copiar"], correo: "maria@ejemplo.com", whatsapp: "523312345678" });
+  });
+  it("teléfono sin lada: sin WhatsApp", async () => {
+    const formulario = vi.fn().mockResolvedValue({ id: "f1", fecha: "", pagina: null, datos: {}, contacto: { nombre: null, correo: null, telefono: "33 1234 5678" } });
+    const { session, deps } = montar({ formulario });
+    const out = await toolPrepararRespuesta(session, deps, { para: "formulario", id: "f1", texto: "Hola" });
+    expect(out.confirm).toMatchObject({ botones: ["copiar"], whatsapp: null });
+  });
+  it("un id que no es de esta página es un error", async () => {
+    const { session, deps } = montar({ conversacion: vi.fn().mockResolvedValue(null) });
+    expect((await toolPrepararRespuesta(session, deps, { para: "chat", id: "x", texto: "hola" })).response.ok).toBe(false);
+  });
+  it("sin texto es un error", async () => {
+    const { session, deps } = montar({});
+    expect((await toolPrepararRespuesta(session, deps, { para: "chat", id: "c1", texto: " " })).response.ok).toBe(false);
   });
 });

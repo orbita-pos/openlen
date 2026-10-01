@@ -13,6 +13,7 @@ import { recordatorioTodoWrite } from "@/lib/agent/ficheros/todo-write";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
+import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { avisoParaElDueno, motivoDelFallo } from "@/lib/agent/motivo-del-fallo";
 import { avisoDeRegresion, type Regresion } from "@/lib/agent/pruebas-de-la-pagina";
 // De VALOR y a propósito, como `aviso-medido` abajo: no importa nada.
@@ -132,6 +133,8 @@ export type AgentStreamEvent =
   // publish itself. The panel renders a confirm card whose button hits the
   // real publish endpoint — the user's tap is the only thing that publishes.
   | { type: "confirm"; action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean }
+  // El borrador de respuesta (plans/len-resultados/): la tarjeta lo manda sólo si el usuario toca.
+  | ({ type: "confirm" } & RespuestaPreparada)
   | { type: "done"; turns: number; toolCalls: number }
   | { type: "error"; message: string; code?: AgentErrorCode };
 
@@ -2067,11 +2070,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // el modelo pueda leer como «ya está hecho».
         functionResponses.push({
           name: call.name,
-          response: {
-            ok: true,
-            estado: "esperando_confirmacion_del_usuario",
-            subdominio: outcome.confirm.subdominio,
-          },
+          response:
+            outcome.confirm.action === "publicar"
+              ? { ok: true, estado: "esperando_confirmacion_del_usuario", subdominio: outcome.confirm.subdominio }
+              : {
+                  ok: true,
+                  estado: "borrador_en_una_tarjeta_nada_enviado",
+                  nota: "El borrador está en una tarjeta con su botón. NO se ha mandado nada: dile al usuario que lo revise y lo mande él. Nunca digas que ya se envió.",
+                },
         });
         continue;
       }

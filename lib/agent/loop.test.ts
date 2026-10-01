@@ -797,6 +797,41 @@ describe("runAgentLoop", () => {
     expect(r.terminalError).toBe(false);
   });
 
+  // EL BORRADOR DE RESPUESTA (plans/len-resultados/): mismo camino que publicar,
+  // otra espera. El modelo lee «nada enviado», nunca algo que suene a hecho.
+  it("el borrador de preparar_respuesta sale como confirm y el modelo lee que NADA se envió", async () => {
+    const events: AgentStreamEvent[] = [];
+    const callsSeen: Message[][] = [];
+    const stream = scripted(
+      [{ type: "function_call", name: "preparar_respuesta", args: { para: "chat", id: "c1", texto: "Sí, abrimos el domingo" } }, done],
+      [{ type: "text_delta", text: "Te dejé el borrador; revísalo y mándalo con «Enviar»." }, done],
+    );
+    const borrador = {
+      action: "responder" as const, para: "chat" as const, id: "c1", con: "Juan", texto: "Sí, abrimos el domingo",
+      botones: ["enviar" as const], correo: null, whatsapp: null,
+    };
+    await runAgentLoop({
+      messages: [{ role: "user", content: "dile que sí" }], tools: [],
+      openStream: (messages) => {
+        callsSeen.push([...messages]);
+        return stream(messages);
+      },
+      runTool: async () => ({
+        response: { ok: true },
+        action: { tool: "preparar_respuesta", ok: true, summary: "Juan" },
+        confirm: borrador,
+      }),
+      emit: (e) => events.push(e),
+    });
+
+    expect(events.find((e) => e.type === "confirm")).toEqual({ type: "confirm", ...borrador });
+    const frTurn = callsSeen[1].find((m) => m.functionResponses);
+    const fr = (frTurn as { functionResponses: { name: string; response: Record<string, unknown> }[] })
+      .functionResponses[0];
+    expect(fr.response.estado).toBe("borrador_en_una_tarjeta_nada_enviado");
+    expect(fr.response).not.toHaveProperty("subdominio");
+  });
+
   it("emits html events when a tool updates the doc", async () => {
     const events: AgentStreamEvent[] = [];
     await runAgentLoop({

@@ -336,6 +336,22 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
         },
       },
     },
+    {
+      name: "preparar_respuesta",
+      description:
+        "Prepara una respuesta a un mensaje del chat o a un formulario, para que el USUARIO la mande con un botón. NO manda nada: deja el borrador en una tarjeta. Úsala cuando el usuario te pide contestar («dile que sí», «respóndele que…»). "
+        + 'para: "chat" o "formulario". id: el de la conversación o el formulario (sale de ver_mensajes o ver_formularios). texto: el mensaje tal cual lo leerá el visitante, en el idioma en que él escribió. '
+        + "Después dile al usuario que revise el borrador y lo mande él; nunca digas que ya se envió.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          para: { type: "STRING", enum: ["chat", "formulario"] },
+          id: { type: "STRING" },
+          texto: { type: "STRING" },
+        },
+        required: ["para", "id", "texto"],
+      },
+    },
     // ⚰️ Aquí iba `conectar_datos_vivos`, la última diferida. Se retiró en Len
     // 2.1 (2026-09-30) con la función entera de «datos vivos»: 0 llamadas en la
     // historia de producción y 0 de 118 proyectos con una hoja conectada.

@@ -72,6 +72,8 @@ describe("buildFunctionDeclarations", () => {
       "ver_visitas",
       "ver_formularios",
       "ver_mensajes",
+      // Y el borrador: no manda nada, deja una tarjeta con su botón.
+      "preparar_respuesta",
     ]);
   });
 

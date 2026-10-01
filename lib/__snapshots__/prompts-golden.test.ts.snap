@@ -789,6 +789,33 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         }
       }
     }
+  },
+  {
+    "name": "preparar_respuesta",
+    "description": "Prepara una respuesta a un mensaje del chat o a un formulario, para que el USUARIO la mande con un botón. NO manda nada: deja el borrador en una tarjeta. Úsala cuando el usuario te pide contestar («dile que sí», «respóndele que…»). para: \\"chat\\" o \\"formulario\\". id: el de la conversación o el formulario (sale de ver_mensajes o ver_formularios). texto: el mensaje tal cual lo leerá el visitante, en el idioma en que él escribió. Después dile al usuario que revise el borrador y lo mande él; nunca digas que ya se envió.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "para": {
+          "type": "STRING",
+          "enum": [
+            "chat",
+            "formulario"
+          ]
+        },
+        "id": {
+          "type": "STRING"
+        },
+        "texto": {
+          "type": "STRING"
+        }
+      },
+      "required": [
+        "para",
+        "id",
+        "texto"
+      ]
+    }
   }
 ]"
 `;

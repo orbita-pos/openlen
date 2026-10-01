@@ -17,6 +17,7 @@ import type { ResumenDeVisitas } from "@/lib/resultados/visitas";
 import type { FiltroDeFormularios, FormularioAbierto, ResumenDeFormularios } from "@/lib/resultados/formularios";
 import type { ConversacionAbierta, FiltroDeMensajes, ResumenDeMensajes } from "@/lib/resultados/mensajes";
 import { fechaValida, ZONA_SIN_DATO } from "@/lib/resultados/zona";
+import { numeroDeWhatsApp } from "@/lib/resultados/enlaces-de-respuesta";
 
 export interface ResultadosDeps {
   visitas(projectId: string, zona: string, rango: { desde?: string; hasta?: string }): Promise<ResumenDeVisitas>;
@@ -143,5 +144,58 @@ export async function toolVerMensajes(session: AgentSession, deps: AgentDeps, ar
       nota: NOTA_DE_VISITANTES,
     },
     action: { tool: "ver_mensajes", ok: true, summary: "" },
+  };
+}
+
+export type BotonDeRespuesta = "enviar" | "correo" | "whatsapp" | "copiar";
+export interface RespuestaPreparada {
+  action: "responder";
+  para: "chat" | "formulario";
+  id: string;
+  con: string | null;
+  texto: string;
+  botones: BotonDeRespuesta[];
+  correo: string | null;
+  whatsapp: string | null;
+}
+
+const MAX_TEXTO = 2000;
+
+/**
+ * EL BORRADOR QUE NO SE MANDA SOLO (plans/len-resultados/diseno.md §5). Va por
+ * el mismo camino que `publicar`: un `confirm` que pinta una tarjeta; sólo el
+ * toque del usuario manda. Esta herramienta NO escribe en la base ni marca
+ * nada: ni el chat como leído ni el formulario como visto.
+ */
+export async function toolPrepararRespuesta(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
+  if (!deps.resultados) return sinDeps;
+  const para = args.para === "chat" || args.para === "formulario" ? args.para : null;
+  const id = typeof args.id === "string" ? args.id.trim() : "";
+  const texto = typeof args.texto === "string" ? args.texto.trim() : "";
+  if (!para) return error('"para" es "chat" o "formulario".');
+  if (!id) return error('Falta el "id" de la conversación o del formulario (sale de ver_mensajes o ver_formularios).');
+  if (!texto) return error('"texto" es el mensaje tal cual lo leerá el visitante, y vino vacío.');
+  if (texto.length > MAX_TEXTO) return error(`"texto" pasa de ${MAX_TEXTO} caracteres: acórtalo.`);
+  const zona = zonaDe(session);
+
+  let confirm: RespuestaPreparada;
+  if (para === "chat") {
+    const c = await deps.resultados.conversacion(session.projectId, zona, id);
+    if (!c) return error(`No hay ninguna conversación «${id}» en esta página.`);
+    confirm = { action: "responder", para, id, con: c.con, texto, botones: ["enviar"], correo: null, whatsapp: null };
+  } else {
+    const f = await deps.resultados.formulario(session.projectId, zona, id, { marcarVisto: false });
+    if (!f) return error(`No hay ningún formulario «${id}» en esta página.`);
+    const whatsapp = f.contacto.telefono ? numeroDeWhatsApp(f.contacto.telefono) : null;
+    const botones: BotonDeRespuesta[] = [];
+    if (f.contacto.correo) botones.push("correo");
+    if (whatsapp) botones.push("whatsapp");
+    botones.push("copiar");
+    confirm = { action: "responder", para, id, con: f.contacto.nombre ?? f.contacto.correo, texto, botones, correo: f.contacto.correo, whatsapp };
+  }
+  return {
+    response: { ok: true },
+    action: { tool: "preparar_respuesta", ok: true, summary: confirm.con ?? "" },
+    confirm,
   };
 }

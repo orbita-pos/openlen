@@ -57,6 +57,7 @@ export default defineConfig({
       // Len sabe de tus resultados (plans/len-resultados/).
       "lib/resultados/zona.test.ts",
       "lib/resultados/contacto.test.ts",
+      "lib/resultados/enlaces-de-respuesta.test.ts",
       // 🔴 CONTRA POSTGRES, sólo base local (`exigirBaseLocal`), como
       // `escribir-data.pg.test.ts`. Sin su línea no corren ni a mano: vitest
       // contesta «No test files found» — lista BLANCA.

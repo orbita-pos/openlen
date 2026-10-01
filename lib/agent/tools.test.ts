@@ -16,8 +16,8 @@ import type { ProjectData } from "@/lib/projects/types";
 /** Estrecha un ToolOutcome a la tarjeta de PUBLICAR.
  *
  *  `confirm` fue una UNIÓN mientras existió `proponer_objetivo` (retirada el
- *  30/09); el ayudante se queda porque estas pruebas son todas de publicar. */
-function pub(o: { confirm?: { action: string } & Record<string, unknown> }) {
+ *  30/09), y vuelve a serlo con `preparar_respuesta` (plans/len-resultados/). */
+function pub(o: { confirm?: { action: string } }) {
   return o.confirm?.action === "publicar"
     ? (o.confirm as unknown as {
         action: string;
