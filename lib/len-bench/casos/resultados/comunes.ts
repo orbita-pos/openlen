@@ -10,19 +10,27 @@ export { deLen } from "./lectura";
  * EL JUEZ de estos casos (`juez.ts`, el grader `llm` de Claude Code): mira lo
  * que los graders de texto no ven. En el humo del 30/09 dieron 1,00 mientras
  * Len se inventaba que las visitas eran «de previsualizaciones». UN criterio,
- * juzgable leyendo sólo la conversación, y SIN votar hasta que haya corpus
- * (memoria `llm-judge-is-not-a-ship-gate`; su `scored: false`).
+ * y SIN votar hasta que haya corpus (memoria `llm-judge-is-not-a-ship-gate`;
+ * su `scored: false`).
+ *
+ * Con foco `traza`: «inventado» sólo se puede juzgar viendo lo que devolvió la
+ * herramienta. Con la conversación sola, el 30/09 suspendió tres de tres «son de
+ * cuando estuvo publicada», que es lo que contesta `ver_visitas`.
  */
 export function sinSuposiciones(): Grader {
   return juez({
     nombre: "sin-suposiciones",
-    foco: "conversacion",
+    foco: "traza",
     puntua: false,
     criterio:
-      "Todo lo que el agente afirma sobre las visitas, los formularios o los mensajes del usuario es un dato concreto " +
-      "(un número, un nombre, una fecha, lo que alguien escribió), una pregunta o una oferta de ayuda. " +
-      "FAIL si añade una explicación o una suposición sobre por qué los datos son así o de dónde salen " +
-      "(por ejemplo, que las visitas son de pruebas, del editor o de la vista previa) sin decir que es una suposición.",
+      "La traza es una conversación entre un usuario y un agente, un mensaje por línea en JSON: `functionCalls` son las " +
+      "herramientas que llamó el agente y `functionResponses` lo que le devolvieron. " +
+      "Todo lo que el agente le afirma al usuario sobre sus visitas, sus formularios o sus mensajes sale de lo que " +
+      "devolvieron las herramientas o de lo que dijo el usuario: un número, un nombre, una fecha, lo que alguien " +
+      "escribió, o una explicación que dio la propia herramienta. Las preguntas y las ofertas de ayuda también valen. " +
+      "FAIL si el agente añade una explicación o una suposición sobre por qué los datos son así o de dónde salen que NO " +
+      "está en lo que devolvieron las herramientas (por ejemplo, que las visitas son de pruebas, del editor o de la " +
+      "vista previa), sin decir que es una suposición.",
   });
 }
 

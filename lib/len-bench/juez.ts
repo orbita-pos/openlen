@@ -10,7 +10,8 @@
 //
 // Lo que se copia, tal cual lo hacen ellos:
 //   - UN criterio por grader, escrito por el autor del caso.
-//   - El juez ve una sola cosa (`foco`): por defecto el último mensaje.
+//   - El juez ve una sola cosa (`foco`): por defecto el último mensaje, o la
+//     TRAZA del encargo (su `trace`), CON lo que devolvió cada herramienta.
 //   - Contesta UNA palabra, PASS o FAIL; un voto es PASS si dice PASS y no FAIL.
 //   - TRES votos y gana la mayoría: el juez es ruidoso y votar lo reduce.
 //   - Su gasto se cuenta APARTE (`gastoDelJuez`), y es un grader DE PAGO: el
@@ -21,6 +22,7 @@
 import { callModel } from "@/lib/style-match/autofill/model-call";
 import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import { rateFor, usdDeTurno } from "@/lib/ai/tarifas-eval";
+import { historialDesdeLaBase, type FilaDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import type { ContextoDeCalificacion, Grader } from "./tipos";
 
 /** Votos por grader. Los de Claude Code: `Em=3`. */
@@ -33,11 +35,36 @@ const LARGO_MAXIMO = 24_000;
 const SISTEMA = "Eres un juez de evaluación estricto y escueto para trazas de un agente.";
 const PIDE = "Responde con exactamente una palabra: PASS o FAIL.";
 
-export type FocoDelJuez = "ultimo_mensaje" | "conversacion";
+/**
+ * Sus focos son `trace`, `last_message`, `files`, `mock_calls` o un fichero;
+ * aquí, los dos que tienen sentido en una conversación con Len.
+ *
+ * ⚰️ Hubo un foco «conversacion»: los textos del dueño y de Len, SIN las
+ * herramientas. Ellos no lo tienen, y el 30/09 se vio por qué: el juez suspendió
+ * tres veces de tres «estas visitas son de cuando estuvo publicada», que es
+ * literalmente lo que contesta `ver_visitas`, porque no veía la herramienta y lo
+ * leyó como una explicación inventada (corridas/2026-10-01-resultados-arreglos/).
+ */
+export type FocoDelJuez = "ultimo_mensaje" | "traza";
 const NOMBRE_DEL_FOCO: Record<FocoDelJuez, string> = {
   ultimo_mensaje: "último mensaje",
-  conversacion: "conversación",
+  traza: "traza",
 };
+
+/**
+ * LA TRAZA DEL ENCARGO desde las filas que escribió el servidor: el pedido del
+ * dueño y, por cada turno, lo que vio el modelo —sus llamadas con los
+ * argumentos y lo que devolvió cada herramienta— (la transcripción de H4). Su
+ * `trace` es la transcripción del proceso hijo, `stream-json` entero.
+ *
+ * Por `historialDesdeLaBase`, la MISMA función que arma el historial del turno
+ * siguiente, pero SIN presupuesto: aquél vacía los resultados viejos para que
+ * quepan en el contexto del modelo; el juez tiene que ver lo que pasó. Lo largo
+ * lo recorta `recortar` por el medio, como el suyo.
+ */
+export function trazaDeLasFilas(filas: readonly FilaDelHistorial[]): MensajeDelHistorial[] {
+  return historialDesdeLaBase(filas, Infinity);
+}
 
 /** Una llamada al modelo del juez: el texto que contestó y lo que costó. */
 export type LlamarAlJuez = (sistema: string, usuario: string) => Promise<{ texto: string; usd: number }>;
@@ -64,10 +91,11 @@ const llamarDeVerdad: LlamarAlJuez = async (sistema, usuario) => {
   return { texto: r.raw, usd };
 };
 
-/** El texto que ve el juez, según el foco. */
-export function textoDelFoco(ctx: Pick<ContextoDeCalificacion, "conversacion">, foco: FocoDelJuez): string {
+/** El texto que ve el juez, según el foco. La traza, un mensaje por línea en
+ *  JSON, como la suya (`trace.map(JSON).join("\n")`). */
+export function textoDelFoco(ctx: Pick<ContextoDeCalificacion, "conversacion" | "traza">, foco: FocoDelJuez): string {
   if (foco === "ultimo_mensaje") return [...ctx.conversacion].reverse().find((x) => x.quien === "len")?.texto ?? "";
-  return ctx.conversacion.map((x) => `${x.quien === "len" ? "Agente" : "Usuario"}: ${x.texto}`).join("\n\n");
+  return ctx.traza.map((m) => JSON.stringify(m)).join("\n");
 }
 
 /** Un voto: PASS si lo dice y no dice también FAIL (su `/\bPASS\b/i && !/\bFAIL\b/i`). */

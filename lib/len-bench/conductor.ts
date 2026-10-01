@@ -22,7 +22,7 @@ import {
   restoreAgentMemory,
   snapshotAgentMemory,
 } from "@/lib/len-bench/proyecto-de-eval";
-import { getChatMessages } from "@/lib/projects/chat";
+import { CHAT_LIMIT, getChatMessages, turnosParaElHistorial } from "@/lib/projects/chat";
 import { accionesAlRecargar, historialParaElAgente } from "@/lib/chat/historial-del-agente";
 import { publishProject } from "@/lib/projects";
 import { getPublishRoot } from "@/lib/publish/filesystem";
@@ -40,7 +40,7 @@ import { htmlDe } from "./extraer";
 import { filaComoLaDeUnDueno } from "./fila-del-dueno";
 import { conReintentoPorEperm } from "./reintentar-publicar";
 import { cierreHonesto } from "./honestidad";
-import { gastoDelJuez } from "./juez";
+import { gastoDelJuez, trazaDeLasFilas } from "./juez";
 import { puntuarCorrida } from "./puntuar";
 import { enviarTurno, herramientasDeLen, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
 import { servirPublicada } from "./servidor-publicada";
@@ -158,6 +158,12 @@ export async function calificarDatos(
   // veces con EPERM un instante (ver `reintentar-publicar.ts`).
   await conReintentoPorEperm(() => publishProject({ projectId, userId: o.owner.id, subdomain: sub, languages: [], skipFlightCheck: true }));
   const final = await filaDelProyecto(projectId);
+  // LA TRAZA para el juez (su foco `trace`): lo que vio el modelo en cada turno,
+  // con lo que devolvió cada herramienta, de las filas que escribió el
+  // servidor. La fila se cierra ANTES de que el stream acabe (`cerrarFila` en
+  // app/api/agent/route.ts), así que aquí ya están todas. Al validar no hay
+  // turnos: sale vacía.
+  const traza = trazaDeLasFilas(await turnosParaElHistorial(projectId, CHAT_LIMIT));
   const servidor = await servirPublicada({ raiz: getPublishRoot(), sub, next: o.base, hostPublicado: publishedHost(sub) });
   try {
     const ctx = {
@@ -170,6 +176,7 @@ export async function calificarDatos(
       inicio: e.inicio,
       publicadaPorLen,
       conversacion: extra.conversacion,
+      traza,
       herramientas: extra.herramientas ?? [],
       tarjetas: extra.tarjetas ?? [],
       zona: extra.zona ?? ZONA_POR_DEFECTO,

@@ -13,6 +13,7 @@
 // estrena sin corpus: corre, se reporta y no vota.
 
 import type { Browser } from "puppeteer";
+import type { MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import type { ProjectData } from "@/lib/projects/types";
 
 export type Nivel = "N1" | "N2" | "N3";
@@ -56,6 +57,11 @@ export interface ContextoDeCalificacion {
   /** `true` si fue LEN quien publicó durante el encargo. */
   readonly publicadaPorLen: boolean;
   readonly conversacion: readonly Intercambio[];
+  /** EL ENCARGO COMO LO VIO EL MODELO, de las filas que escribió el servidor:
+   *  el pedido del dueño, las llamadas con sus argumentos y lo que devolvió cada
+   *  herramienta (`trazaDeLasFilas`, juez.ts). Lo que ve el juez con foco
+   *  `traza`. Vacía al validar: no hay turnos. */
+  readonly traza: readonly MensajeDelHistorial[];
   /** Nombres de las herramientas que Len llamó (eventos `action`), en orden, sin repetir. */
   readonly herramientas: readonly string[];
   /** Los eventos `confirm` del encargo (publicar, responder…). */

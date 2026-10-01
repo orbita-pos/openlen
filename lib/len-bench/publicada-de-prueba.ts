@@ -119,7 +119,8 @@ export async function calificarCon(
       inicio: o.inicio ?? { html: INICIO_TAQUERIA },
       publicadaPorLen: o.publicadaPorLen ?? false,
       conversacion: o.conversacion ?? [],
-      // Los de resultados (plans/len-resultados/): ningún grader de página los lee.
+      // Los de resultados (plans/len-resultados/) y la traza del juez: ningún grader de página los lee.
+      traza: [],
       herramientas: [],
       tarjetas: [],
       zona: "America/Mexico_City",

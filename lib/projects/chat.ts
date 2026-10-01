@@ -18,7 +18,8 @@ function columnasDelPanel() {
   return columnas;
 }
 
-const CHAT_LIMIT = 50;
+/** Filas que se guardan por proyecto (`appendChatMessage` poda el resto). */
+export const CHAT_LIMIT = 50;
 
 /** LEN 2.1 · el turno sigue trabajando en el servidor. Es texto en la base, como
  *  `cortado`: no hace falta migración. Lo escribe y lo cierra SÓLO el servidor. */
