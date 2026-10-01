@@ -64,6 +64,7 @@ export default defineConfig({
       "lib/resultados/visto.pg.test.ts",
       "lib/resultados/visitas.pg.test.ts",
       "lib/resultados/formularios.pg.test.ts",
+      "lib/resultados/mensajes.pg.test.ts",
       // Len-Bench (plans/len-2/diseno.md). Las piezas puras de la vara; lo
       // que abre Chromium o habla con el servidor se prueba con
       // `bench:len:validar`, que es su prueba en rojo y en verde.
