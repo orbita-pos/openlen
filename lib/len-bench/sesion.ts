@@ -194,3 +194,15 @@ export function textoDeLen(eventos: readonly EventoSse[]): string {
     .map((e) => String((e.datos as { text?: unknown } | null)?.text ?? ""))
     .join("");
 }
+
+/** Las herramientas que Len llamó en el turno, sin repetir y en el orden de la
+ *  primera llamada: el `tool` de sus eventos `action` (el bucle emite uno al
+ *  empezar cada llamada y otro al acabarla). */
+export function herramientasDeLen(eventos: readonly EventoSse[]): string[] {
+  const vistas: string[] = [];
+  for (const e of eventos) {
+    const tool = (e.datos as { tool?: unknown } | null)?.tool;
+    if (e.nombre === "action" && typeof tool === "string" && !vistas.includes(tool)) vistas.push(tool);
+  }
+  return vistas;
+}

@@ -7,7 +7,7 @@
 // real de Auth.js, y que el nombre y el secreto salen como los saca Auth.js.
 import { decode } from "next-auth/jwt";
 import { describe, expect, it } from "vitest";
-import { acunarCookie, nombreDeCookie, secretoDeAuth, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
+import { acunarCookie, herramientasDeLen, nombreDeCookie, secretoDeAuth, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
 
 const SECRETO = "secreto-de-prueba-de-treinta-y-dos-bytes";
 
@@ -65,6 +65,20 @@ describe("textoDeLen", () => {
         { nombre: "text", datos: { type: "text", text: "la" } },
       ]),
     ).toBe("Hola");
+  });
+});
+
+describe("herramientasDeLen", () => {
+  it("el `tool` de los eventos `action`, una vez cada una y en el orden en que empezó", () => {
+    expect(
+      herramientasDeLen([
+        { nombre: "action", datos: { type: "action", tool: "ver_mensajes", status: "running" } },
+        { nombre: "text", datos: { type: "text", text: "Juan te escribió" } },
+        { nombre: "action", datos: { type: "action", tool: "ver_mensajes", status: "done" } },
+        { nombre: "action", datos: { type: "action", tool: "preparar_respuesta", status: "running" } },
+        { nombre: "confirm", datos: { type: "confirm", action: "responder", tool: "no-es-una-accion" } },
+      ]),
+    ).toEqual(["ver_mensajes", "preparar_respuesta"]);
   });
 });
 

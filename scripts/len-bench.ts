@@ -9,12 +9,8 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { eq, sql } from "drizzle-orm";
-import { db, schema } from "@/lib/db";
-import { resolveEvalUser } from "@/lib/len-bench/proyecto-de-eval";
-import { CENTICREDITOS_POR_CREDITO } from "@/lib/credits";
-import { apagarEnEsteProceso, BASE_LEN_BENCH, DIR_CORRIDAS, DIR_GRABACIONES, exigirBaseLocal } from "@/lib/len-bench/entorno";
-import { acunarCookie, comprobarSesion } from "@/lib/len-bench/sesion";
+import { BASE_LEN_BENCH, DIR_CORRIDAS, DIR_GRABACIONES } from "@/lib/len-bench/entorno";
+import { arrancarCorredor, TIMEOUT_TURNO_MS } from "@/lib/len-bench/arranque";
 import { correrEncargo } from "@/lib/len-bench/conductor";
 import { lanzarNavegador } from "@/lib/len-bench/navegador";
 import { resumenPorVia, resumirCaso, salidaDeLaSuite } from "@/lib/len-bench/puntuar";
@@ -22,26 +18,19 @@ import { REGRESION } from "@/lib/len-bench/casos/dev/regresion";
 import { cargarEncargos, type Juego } from "@/lib/len-bench/casos/cargar";
 import { avisosDelEncargo } from "@/lib/len-bench/avisos";
 import { MAX_RESPUESTAS_POR_PASO } from "@/lib/len-bench/cliente-simulado";
-import { centimosDelEstimado, estimadoExcedeTope } from "@/lib/len-bench/coste";
+import {
+  centimosDelEstimado,
+  estimadoExcedeTope,
+  MARGEN_NO_GRABADO,
+  TOPE_POR_DEFECTO_USD,
+  USD_POR_TURNO_ESTIMADO,
+} from "@/lib/len-bench/coste";
 import type { ResultadoDeCaso, ResultadoDeCorrida } from "@/lib/len-bench/tipos";
 
-// MEDIDO en el humo del 2026-09-23 (taqueria-menu-whatsapp, 1 corrida): $0,0125
-// en 3 turnos = $0,0042 por turno, cliente simulado incluido. Pero aquella
-// partida era una página de 1 KB, y las de verdad de OpenLen pesan decenas de
-// KB: el turno que las lee y las edita paga esos tokens. Se deja en ~2,4× lo
-// medido hasta medirlo con partidas reales. Mejor sobrar que drenar la cuenta.
-const USD_POR_TURNO_ESTIMADO = 0.01;
-// Las grabaciones sólo cuentan el papel `agent`; los ojos y el juez no pasan
-// por ellas. El tope se aplica sobre la cifra grabada × este margen.
-const MARGEN_NO_GRABADO = 1.5;
-const TOPE_POR_DEFECTO_USD = 0.3;
-const SALDO_MINIMO_CREDITOS = 5_000;
-// El reloj de Len-Bench NO puede ser más estricto que producción: con 240 s se
-// abortó un turno de 34 pasos que seguía trabajando (humo 2 de Len 2.0) y se
-// culpó al tope, cuando la ruta le daba 6 min. Aquí queda sólo un tope de
-// seguridad que un turno sano no toca —20 min, ~170 pasos a ~7 s—, y el plazo
-// que manda es el de la ruta (V2 de plans/len-2/hipotesis/, en los dos brazos).
-const TIMEOUT_TURNO_MS = 1_200_000;
+// El estimado (`USD_POR_TURNO_ESTIMADO`, `MARGEN_NO_GRABADO`) y el tope por
+// defecto viven en lib/len-bench/coste.ts, y el arranque (identidad de eval,
+// saldo, cookie, reloj del turno) en lib/len-bench/arranque.ts: los usa también
+// scripts/len-bench-disparos.ts, y dos copias podían dejar de decir lo mismo.
 
 function arg(n: string): string | undefined {
   const a = process.argv.find((x) => x === n || x.startsWith(`${n}=`));
@@ -80,17 +69,7 @@ async function main(): Promise<number> {
     return 0;
   }
 
-  apagarEnEsteProceso(process.cwd());
-  await exigirBaseLocal();
-  const owner = await resolveEvalUser();
-  // El saldo de la identidad de eval, repuesto: sin créditos la ruta rechaza el
-  // turno y la corrida mediría un 402, no a Len.
-  await db
-    .update(schema.users)
-    .set({ credits: sql`GREATEST(${schema.users.credits}, ${SALDO_MINIMO_CREDITOS * CENTICREDITOS_POR_CREDITO})` })
-    .where(eq(schema.users.id, owner.id));
-  const cookie = await acunarCookie({ userId: owner.id, email: owner.email, entorno: process.env });
-  await comprobarSesion(base, cookie, owner.id);
+  const { owner, cookie } = await arrancarCorredor(base);
 
   const navegador = await lanzarNavegador();
   const dirGrabaciones = path.resolve(DIR_GRABACIONES);

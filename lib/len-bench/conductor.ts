@@ -42,7 +42,7 @@ import { conReintentoPorEperm } from "./reintentar-publicar";
 import { cierreHonesto } from "./honestidad";
 import { gastoDelJuez } from "./juez";
 import { puntuarCorrida } from "./puntuar";
-import { enviarTurno, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
+import { enviarTurno, herramientasDeLen, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
 import { servirPublicada } from "./servidor-publicada";
 import type { Desenlace, Encargo, Intercambio, ResultadoDeCorrida, ResultadoDeGrader } from "./tipos";
 
@@ -264,9 +264,8 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
         turnosDeLen++;
         const texto = textoDeLen(eventos);
         conversacion.push({ quien: "dueno", texto: mensaje }, { quien: "len", texto });
+        for (const h of herramientasDeLen(eventos)) if (!herramientas.includes(h)) herramientas.push(h);
         for (const ev of eventos) {
-          const d = ev.datos as { tool?: unknown } | null;
-          if (ev.nombre === "action" && typeof d?.tool === "string" && !herramientas.includes(d.tool)) herramientas.push(d.tool);
           if (ev.nombre === "confirm" && ev.datos && typeof ev.datos === "object") tarjetas.push(ev.datos as Record<string, unknown>);
         }
         const err = eventos.find((x) => x.nombre === "error")?.datos as { code?: string; message?: string } | undefined;

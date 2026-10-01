@@ -64,6 +64,54 @@ export function usdDeProyecto(dir: string, projectId: string): { usd: number; gr
 }
 
 /**
+ * El coste de un proyecto en cuanto su grabación esté en el disco.
+ *
+ * La ruta CIERRA el stream antes de escribir la grabación (app/api/agent/
+ * route.ts: `close()` en el cuerpo del turno, la grabación en su `finally`).
+ * Quien lee el coste justo al acabar un turno lee 0 o un JSON a medio
+ * escribir. El conductor no lo nota: lee después de publicar y calificar. El
+ * corredor de disparos, con un solo turno, sí. Si la grabación no aparece en
+ * el plazo, se cuenta el estimado y se DICE: el tope de gasto se mira sobre
+ * esta cifra y no puede quedarse corto en silencio.
+ */
+export async function esperarUsdDeProyecto(
+  dir: string,
+  projectId: string,
+  o: { plazoMs: number; pausaMs: number } = { plazoMs: 30_000, pausaMs: 500 },
+): Promise<{ usd: number; aviso?: string }> {
+  const hasta = Date.now() + o.plazoMs;
+  for (;;) {
+    try {
+      const r = usdDeProyecto(dir, projectId);
+      if (r.grabaciones > 0) return { usd: r.usd };
+    } catch (e) {
+      // A medio escribir, se vuelve a mirar. Cualquier otra cosa —un modelo
+      // sin tarifa— falla ruidosa, como en el informe.
+      if (!(e instanceof SyntaxError)) throw e;
+    }
+    if (Date.now() > hasta) {
+      return {
+        usd: USD_POR_TURNO_ESTIMADO,
+        aviso: `no apareció la grabación del turno en ${o.plazoMs / 1000} s: se cuenta el estimado ($${USD_POR_TURNO_ESTIMADO})`,
+      };
+    }
+    await new Promise((r) => setTimeout(r, o.pausaMs));
+  }
+}
+
+// MEDIDO en el humo del 2026-09-23 (taqueria-menu-whatsapp, 1 corrida): $0,0125
+// en 3 turnos = $0,0042 por turno, cliente simulado incluido. Pero aquella
+// partida era una página de 1 KB, y las de verdad de OpenLen pesan decenas de
+// KB: el turno que las lee y las edita paga esos tokens. Se deja en ~2,4× lo
+// medido hasta medirlo con partidas reales. Mejor sobrar que drenar la cuenta.
+export const USD_POR_TURNO_ESTIMADO = 0.01;
+// Las grabaciones sólo cuentan el papel `agent`; los ojos no pasan por ellas
+// (el juez sí se suma, aparte: `usdJuez`). El tope se aplica sobre la cifra
+// grabada × este margen.
+export const MARGEN_NO_GRABADO = 1.5;
+export const TOPE_POR_DEFECTO_USD = 0.3;
+
+/**
  * EL ESTIMADO, EN CÉNTIMOS Y HACIA ARRIBA.
  *
  * El corredor comparaba `turnos × 0,01 × 1,5 > tope` en coma flotante, y 20

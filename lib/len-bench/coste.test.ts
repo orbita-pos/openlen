@@ -8,8 +8,10 @@ import { rateFor, usdDeTurno } from "@/lib/ai/tarifas-eval";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
 import {
   centimosDelEstimado,
+  esperarUsdDeProyecto,
   estimadoExcedeTope,
   tarifaDelModelo,
+  USD_POR_TURNO_ESTIMADO,
   usdDeGrabacion,
   usdDeProyecto,
 } from "./coste";
@@ -54,6 +56,42 @@ describe("usdDeGrabacion / usdDeProyecto", () => {
     const r = usdDeProyecto(dir, "proyectoA");
     expect(r.grabaciones).toBe(1);
     expect(r.usd).toBeCloseTo(usdDeTurno({ entrada: 1000, cacheada: 0, salida: 0 }, T()), 12);
+  });
+});
+
+describe("esperarUsdDeProyecto — la ruta graba DESPUÉS de cerrar el stream", () => {
+  const id = MODEL_POLICY.agent.modelId;
+  const rapido = { plazoMs: 400, pausaMs: 20 };
+  const usd1000 = () => usdDeTurno({ entrada: 1000, cacheada: 0, salida: 0 }, T());
+
+  it("espera a que aparezca la grabación y la cuenta", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lb-espera-"));
+    setTimeout(() => fs.writeFileSync(path.join(dir, "2026-a-p1.json"), JSON.stringify(grabacion(id, [[uso(1000, 0, 0)]]))), 60);
+    const r = await esperarUsdDeProyecto(dir, "p1", rapido);
+    expect(r.aviso).toBeUndefined();
+    expect(r.usd).toBeCloseTo(usd1000(), 12);
+  });
+
+  it("un JSON a medio escribir se vuelve a mirar, no se cuenta como roto", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lb-espera-"));
+    const f = path.join(dir, "2026-a-p1.json");
+    const entero = JSON.stringify(grabacion(id, [[uso(1000, 0, 0)]]));
+    fs.writeFileSync(f, entero.slice(0, 20));
+    setTimeout(() => fs.writeFileSync(f, entero), 60);
+    expect((await esperarUsdDeProyecto(dir, "p1", rapido)).usd).toBeCloseTo(usd1000(), 12);
+  });
+
+  it("si no aparece, cuenta el estimado y lo DICE: el tope no se puede quedar corto en silencio", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lb-espera-"));
+    const r = await esperarUsdDeProyecto(dir, "p1", rapido);
+    expect(r.usd).toBe(USD_POR_TURNO_ESTIMADO);
+    expect(r.aviso).toMatch(/no apareció la grabación del turno/);
+  });
+
+  it("un modelo sin tarifa no se espera: falla ruidoso, como en el informe", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lb-espera-"));
+    fs.writeFileSync(path.join(dir, "2026-a-p1.json"), JSON.stringify(grabacion("accounts/fireworks/models/otro", [[uso(1, 0, 0)]])));
+    await expect(esperarUsdDeProyecto(dir, "p1", rapido)).rejects.toThrow(/no tiene tarifa/);
   });
 });
 

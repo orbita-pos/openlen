@@ -42,6 +42,7 @@
     "evals:pages": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/evals-pages.ts",
     "bench:len": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/len-bench.ts",
     "bench:len:validar": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/len-bench-validar.ts",
+    "bench:len:disparos": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/len-bench-disparos.ts",
     "bench:len:servidor": "tsx --tsconfig tsconfig.eval.json scripts/len-bench-servidor.ts",
     "bench:len:repartir": "tsx --tsconfig tsconfig.eval.json scripts/len-bench-repartir.ts",
     "bench:len:ver": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/len-bench-ver.ts",
