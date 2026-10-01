@@ -66,6 +66,10 @@ export default defineConfig({
       "lib/resultados/visitas.pg.test.ts",
       "lib/resultados/formularios.pg.test.ts",
       "lib/resultados/mensajes.pg.test.ts",
+      // Hablar con Len por voz (docs/superpowers/specs/2026-09-30-len-voz-design.md).
+      "lib/voz/**/*.test.ts",
+      "components/llamada/**/*.test.ts",
+      "app/api/voz/**/*.test.ts",
       // Len-Bench (plans/len-2/diseno.md). Las piezas puras de la vara; lo
       // que abre Chromium o habla con el servidor se prueba con
       // `bench:len:validar`, que es su prueba en rojo y en verde.
