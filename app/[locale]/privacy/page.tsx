@@ -33,7 +33,7 @@ export default async function PrivacyPage({
   return (
     <LegalPage
       title={es ? "Aviso de privacidad" : "Privacy Policy"}
-      updated={es ? "Última actualización: 13 de septiembre de 2026" : "Last updated: September 13, 2026"}
+      updated={es ? "Última actualización: 30 de septiembre de 2026" : "Last updated: September 30, 2026"}
     >
       {es ? (
         <>
@@ -185,6 +185,15 @@ export default async function PrivacyPage({
             a sus términos de API. Si editas una imagen con IA, esa imagen y tu
             instrucción se envían a <strong>OpenAI</strong> con la misma finalidad.
             No tomamos ninguna decisión automatizada con efectos jurídicos sobre ti.
+          </p>
+          <p>
+            <strong>Len y tus resultados.</strong> Si le pides a Len que revise tus
+            visitas, tus formularios o los mensajes de tu chat, Len los lee para
+            contestarte. Los mensajes y formularios contienen datos que tus
+            visitantes te dieron (por ejemplo su nombre, su correo o su teléfono):
+            se procesan con nuestro proveedor de IA (ver subencargados) sólo para
+            esa respuesta, sin la IP ni el navegador del visitante, y quedan en la
+            conversación de Len de tu proyecto.
           </p>
 
           <h2>Analítica</h2>
@@ -559,6 +568,15 @@ export default async function PrivacyPage({
             If you edit an image with AI, that image and your instruction are sent
             to <strong>OpenAI</strong> for the same purpose. We make no automated
             decision producing legal effects concerning you.
+          </p>
+          <p>
+            <strong>Len and your results.</strong> If you ask Len to review your
+            visits, form submissions or chat messages, Len reads them to answer
+            you. Messages and submissions contain data your visitors gave you (for
+            example their name, email or phone): they are processed by our AI
+            provider (see subprocessors) only for that answer, without the
+            visitor&apos;s IP or browser, and they stay in your project&apos;s Len
+            conversation.
           </p>
 
           <h2>Analytics</h2>

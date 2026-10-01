@@ -33,7 +33,7 @@ export default async function SubprocessorsPage({
   return (
     <LegalPage
       title={es ? "Subprocesadores" : "Subprocessors"}
-      updated={es ? "Última actualización: 30 de mayo de 2026" : "Last updated: May 30, 2026"}
+      updated={es ? "Última actualización: 30 de septiembre de 2026" : "Last updated: September 30, 2026"}
     >
       {es ? (
         <>
@@ -101,8 +101,11 @@ export default async function SubprocessorsPage({
             <li>
               <strong>Fireworks AI</strong> (api.fireworks.ai) — generación y
               edición de páginas con IA, y revisión por visión. Datos: el texto
-              del brief del usuario, el HTML de la página, y capturas e imágenes
-              de referencia. Región: Estados Unidos.
+              del brief del usuario, el HTML de la página, capturas e imágenes
+              de referencia y, cuando el usuario le pide a Len revisarlos, los
+              mensajes del chat y los envíos de formularios de su página (sin la
+              IP ni el navegador del visitante). Fireworks no guarda lo que
+              recibe con modelos abiertos. Región: Estados Unidos.
             </li>
             <li>
               <strong>OpenAI</strong> (api.openai.com) — edición de imágenes con
@@ -233,8 +236,11 @@ export default async function SubprocessorsPage({
             <li>
               <strong>Fireworks AI</strong> (api.fireworks.ai) — AI page
               generation and editing, and vision review. Data: the user&apos;s
-              brief text, page HTML, and reference screenshots and images.
-              Region: United States.
+              brief text, page HTML, reference screenshots and images and, when
+              the user asks Len to review them, the chat messages and form
+              submissions of their page (without the visitor&apos;s IP or
+              browser). Fireworks does not store what it receives for open
+              models. Region: United States.
             </li>
             <li>
               <strong>OpenAI</strong> (api.openai.com) — AI image editing. Data:
