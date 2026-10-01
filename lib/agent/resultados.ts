@@ -34,6 +34,11 @@ export const NOTA_DE_VISITANTES =
 
 const NOTA_ZONA = `No sé la zona horaria del usuario: los días van en ${ZONA_SIN_DATO}. Si das un «hoy», dilo.`;
 const NOTA_SIN_PUBLICAR = "La página no está publicada y no tiene visitas registradas: díselo así, sin dar los ceros como si fueran un resultado.";
+/** Medido el 30/09, 3 de 3: con `publicada: false` y visitas, Len se inventó
+ *  que eran «de previsualizaciones». El contador va SÓLO en la publicada
+ *  (`injectAnalyticsSnippet`, desde `publishToDir`): se dice, y no queda hueco. */
+const NOTA_DESPUBLICADA =
+  "Sólo cuenta la página publicada: el editor y la vista previa no suman visitas. Estas son de cuando estuvo publicada; ahora no lo está. No le des otra explicación.";
 
 const zonaDe = (s: AgentSession) => s.zonaHoraria ?? ZONA_SIN_DATO;
 const error = (texto: string): ToolOutcome => ({ response: { ok: false, error: texto } });
@@ -60,15 +65,16 @@ export async function toolVerVisitas(session: AgentSession, deps: AgentDeps, arg
     deps.loadProject(session.projectId, session.userId),
   ]);
   const publicada = Boolean(proyecto?.subdomain);
-  // Sólo con cero visitas: una página que estuvo publicada y se despublicó
-  // conserva su historial, y esos números son reales.
+  // Sin publicar, la nota dice la verdad de cada caso: sin visitas, que no hay
+  // nada que contar; con visitas, que son de cuando estuvo publicada (los
+  // números son reales y no se tapan).
   const sinNada = r.ultimos30.vistas === 0 && r.rango.total.vistas === 0;
   return {
     response: {
       ok: true,
       zona: r.zona,
       publicada,
-      ...(!publicada && sinNada ? { nota_publicada: NOTA_SIN_PUBLICAR } : {}),
+      ...(publicada ? {} : { nota_publicada: sinNada ? NOTA_SIN_PUBLICAR : NOTA_DESPUBLICADA }),
       hoy: r.hoy,
       ayer: r.ayer,
       ultimos_7_dias: r.ultimos7,
