@@ -56,6 +56,20 @@
       "visualPaginas": "{miradas} van {tocadas} pagina's",
       "visualPaginasParcial": "{miradas} van de {tocadas} pagina's die in deze beurt zijn gewijzigd, zijn gecontroleerd; de rest niet."
     },
+    "respuesta": {
+      "titulo": "Concept voor {con}",
+      "tituloSinNombre": "Conceptantwoord",
+      "nota": "Er wordt niets verstuurd tot je tikt.",
+      "enviar": "Versturen",
+      "enviando": "Versturen…",
+      "enviado": "✓ Verstuurd",
+      "correo": "Beantwoorden per e-mail",
+      "whatsapp": "Beantwoorden via WhatsApp",
+      "copiar": "Kopiëren",
+      "copiado": "✓ Gekopieerd",
+      "asunto": "Antwoord op je bericht",
+      "error": "Versturen lukte niet. Probeer het opnieuw."
+    },
     "confirm": {
       "publishTitle": "Je pagina publiceren",
       "publish": "Publiceren",

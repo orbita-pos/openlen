@@ -37,6 +37,8 @@ import { AgentActionCard, type AgentAction } from "../agent-action-card";
 
 export type { HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { AgentConfirmCard, type AgentConfirm } from "../agent-confirm-card";
+import { AgentReplyCard, type EtiquetasDeRespuesta } from "../agent-reply-card";
+import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import {
   ejecutarUndo,
   mismaPagina,
@@ -299,6 +301,9 @@ interface DesignTurn {
    *  `done` (it finalizes to applied but the card stays tappable). Local-only,
    *  never persisted (F2-T11 decision) — see the `persistTurn` comment for why. */
   confirm?: AgentConfirm;
+  /** El borrador de `preparar_respuesta` (plans/len-resultados/): una tarjeta
+   *  que sólo manda si el usuario toca. Local, como `confirm`: no se guarda. */
+  respuesta?: RespuestaPreparada;
   /** Agent-mode: the turn finished without any `html` event (answer-only or
    *  settings-only) — no document changed, so the footer suppresses the
    *  Applied/Undo affordances. F2-T11: persisted, so a restored turn suppresses
@@ -1471,6 +1476,33 @@ function AIDesignChat({
                     },
                   });
                 }
+                // El borrador de respuesta (plans/len-resultados/). Se sanea
+                // campo a campo: viene del stream, y un botón desconocido no
+                // se pinta.
+                if (c.action === "responder") {
+                  const r = payload as Partial<RespuestaPreparada>;
+                  if (
+                    (r.para === "chat" || r.para === "formulario") &&
+                    typeof r.id === "string" &&
+                    typeof r.texto === "string" &&
+                    Array.isArray(r.botones)
+                  ) {
+                    updateTurn(turnId, {
+                      respuesta: {
+                        action: "responder",
+                        para: r.para,
+                        id: r.id,
+                        con: typeof r.con === "string" ? r.con : null,
+                        texto: r.texto,
+                        botones: r.botones.filter((b): b is RespuestaPreparada["botones"][number] =>
+                          ["enviar", "correo", "whatsapp", "copiar"].includes(String(b)),
+                        ),
+                        correo: typeof r.correo === "string" ? r.correo : null,
+                        whatsapp: typeof r.whatsapp === "string" ? r.whatsapp : null,
+                      },
+                    });
+                  }
+                }
               } else if (evName === "done") {
                 llegoElDone = true;
                 // Terminal — always finalizes the turn, even when it trails
@@ -2054,6 +2086,25 @@ function TurnView({
   hideAIBubble: boolean;
 }) {
   const t = useTranslations("panelsChat");
+  const tAgent = useTranslations("wsPage.agent");
+  // Los textos de la tarjeta del borrador van por props (ver `AgentReplyCard`).
+  const etiquetasDeRespuesta = useMemo<EtiquetasDeRespuesta>(
+    () => ({
+      titulo: (con) => tAgent("respuesta.titulo", { con }),
+      tituloSinNombre: tAgent("respuesta.tituloSinNombre"),
+      nota: tAgent("respuesta.nota"),
+      enviar: tAgent("respuesta.enviar"),
+      enviando: tAgent("respuesta.enviando"),
+      enviado: tAgent("respuesta.enviado"),
+      correo: tAgent("respuesta.correo"),
+      whatsapp: tAgent("respuesta.whatsapp"),
+      copiar: tAgent("respuesta.copiar"),
+      copiado: tAgent("respuesta.copiado"),
+      asunto: tAgent("respuesta.asunto"),
+      error: tAgent("respuesta.error"),
+    }),
+    [tAgent],
+  );
   // DE QUÉ PÁGINA FUE ESTE TURNO.
   //
   // La charla es una sola para todo el sitio, así que en un sitio de tres
@@ -2139,6 +2190,7 @@ function TurnView({
             {turn.confirm && (
               <AgentConfirmCard projectId={projectId} confirm={turn.confirm} onPublished={onPublished} />
             )}
+            {turn.respuesta && <AgentReplyCard respuesta={turn.respuesta} labels={etiquetasDeRespuesta} />}
           </div>
         </div>
       )}

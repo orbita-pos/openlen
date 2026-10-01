@@ -1,4 +1,4 @@
-import { insertMessage } from "@/lib/chat/store";
+import { insertMessage, markConversationRead } from "@/lib/chat/store";
 import { hub } from "@/lib/chat/hub";
 import { json, requireOwnerForConversation } from "../../_shared";
 
@@ -29,6 +29,14 @@ export async function POST(
   // agents reply AS the business (ownerChatUserId) — keeps the conversation 2-participant
   const m = await insertMessage(conversationId, ctx.ownerChatUserId, text);
   hub.publish(conversationId, { type: "message", message: m });
+  // Contestar es haber leído (plans/len-resultados/diseno.md §6): el visitante
+  // ve el visto, como cuando el negocio abre la conversación. No fatal, como en
+  // `../messages/route.ts`: el mensaje ya salió.
+  const leido = new Date();
+  try {
+    await markConversationRead(ctx.projectId, conversationId, ctx.ownerChatUserId, leido);
+    hub.publish(conversationId, { type: "read", userId: ctx.ownerChatUserId, readAt: leido.toISOString() });
+  } catch { /* non-fatal */ }
   return json(
     {
       message: {

@@ -56,6 +56,20 @@
       "visualPaginas": "{miradas} von {tocadas} Seiten",
       "visualPaginasParcial": "Von den {tocadas} in diesem Zug geänderten Seiten wurden {miradas} geprüft; die übrigen nicht."
     },
+    "respuesta": {
+      "titulo": "Entwurf für {con}",
+      "tituloSinNombre": "Antwortentwurf",
+      "nota": "Nichts wird gesendet, bis du tippst.",
+      "enviar": "Senden",
+      "enviando": "Wird gesendet…",
+      "enviado": "✓ Gesendet",
+      "correo": "Per E-Mail antworten",
+      "whatsapp": "Auf WhatsApp antworten",
+      "copiar": "Kopieren",
+      "copiado": "✓ Kopiert",
+      "asunto": "Antwort auf deine Nachricht",
+      "error": "Senden fehlgeschlagen. Versuch es nochmal."
+    },
     "confirm": {
       "publishTitle": "Deine Seite veröffentlichen",
       "publish": "Veröffentlichen",

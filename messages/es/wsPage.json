@@ -56,6 +56,20 @@
       "visualPaginas": "{miradas} de {tocadas} páginas",
       "visualPaginasParcial": "Se miraron {miradas} de las {tocadas} páginas que cambiaron en este turno; las demás no se comprobaron."
     },
+    "respuesta": {
+      "titulo": "Borrador para {con}",
+      "tituloSinNombre": "Borrador de respuesta",
+      "nota": "Nada se manda hasta que lo pulses.",
+      "enviar": "Enviar",
+      "enviando": "Enviando…",
+      "enviado": "✓ Enviado",
+      "correo": "Responder por correo",
+      "whatsapp": "Responder por WhatsApp",
+      "copiar": "Copiar",
+      "copiado": "✓ Copiado",
+      "asunto": "Respuesta a tu mensaje",
+      "error": "No se pudo enviar. Inténtalo de nuevo."
+    },
     "confirm": {
       "publishTitle": "Publicar tu página",
       "publish": "Publicar",

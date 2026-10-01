@@ -56,6 +56,20 @@
       "visualPaginas": "{tocadas} 个页面中的 {miradas} 个",
       "visualPaginasParcial": "本轮修改的 {tocadas} 个页面中检查了 {miradas} 个，其余未检查。"
     },
+    "respuesta": {
+      "titulo": "给 {con} 的草稿",
+      "tituloSinNombre": "回复草稿",
+      "nota": "点按前不会发送任何内容。",
+      "enviar": "发送",
+      "enviando": "正在发送…",
+      "enviado": "✓ 已发送",
+      "correo": "通过邮件回复",
+      "whatsapp": "通过 WhatsApp 回复",
+      "copiar": "复制",
+      "copiado": "✓ 已复制",
+      "asunto": "回复你的消息",
+      "error": "发送失败，请重试。"
+    },
     "confirm": {
       "publishTitle": "发布你的页面",
       "publish": "发布",

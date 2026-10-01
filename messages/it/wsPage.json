@@ -56,6 +56,20 @@
       "visualPaginas": "{miradas} di {tocadas} pagine",
       "visualPaginasParcial": "Sono state controllate {miradas} delle {tocadas} pagine modificate in questo turno; le altre no."
     },
+    "respuesta": {
+      "titulo": "Bozza per {con}",
+      "tituloSinNombre": "Bozza di risposta",
+      "nota": "Non si invia nulla finché non tocchi.",
+      "enviar": "Invia",
+      "enviando": "Invio…",
+      "enviado": "✓ Inviato",
+      "correo": "Rispondi via email",
+      "whatsapp": "Rispondi su WhatsApp",
+      "copiar": "Copia",
+      "copiado": "✓ Copiato",
+      "asunto": "Risposta al tuo messaggio",
+      "error": "Invio non riuscito. Riprova."
+    },
     "confirm": {
       "publishTitle": "Pubblica la tua pagina",
       "publish": "Pubblica",

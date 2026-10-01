@@ -56,6 +56,20 @@
       "visualPaginas": "{miradas} sur {tocadas} pages",
       "visualPaginasParcial": "{miradas} des {tocadas} pages modifiées pendant ce tour ont été vérifiées ; les autres non."
     },
+    "respuesta": {
+      "titulo": "Brouillon pour {con}",
+      "tituloSinNombre": "Brouillon de réponse",
+      "nota": "Rien n'est envoyé tant que vous n'appuyez pas.",
+      "enviar": "Envoyer",
+      "enviando": "Envoi…",
+      "enviado": "✓ Envoyé",
+      "correo": "Répondre par e-mail",
+      "whatsapp": "Répondre sur WhatsApp",
+      "copiar": "Copier",
+      "copiado": "✓ Copié",
+      "asunto": "Réponse à votre message",
+      "error": "Envoi impossible. Réessayez."
+    },
     "confirm": {
       "publishTitle": "Publier votre page",
       "publish": "Publier",

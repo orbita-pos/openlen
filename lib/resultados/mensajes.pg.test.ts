@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { exigirBaseLocal } from "@/lib/len-bench/entorno";
-import { createGuestChatUser, getOrCreateConversation, getOrCreateOwnerChatUser, insertMessage } from "@/lib/chat/store";
+import { createGuestChatUser, getOrCreateConversation, getOrCreateOwnerChatUser, insertMessage, markConversationRead } from "@/lib/chat/store";
 import { leerConversacion, resumirMensajes } from "./mensajes";
 
 const USUARIO = "prueba-mensajes-user";
@@ -61,5 +61,18 @@ describe("leerConversacion", () => {
   });
   it("una conversación de otro proyecto no existe", async () => {
     expect(await leerConversacion("otro-proyecto", MX, conversacion)).toBeNull();
+  });
+});
+
+// Lo que hace la bandeja al contestar (app/api/inbox/[conversationId]/reply):
+// el negocio escribe y la conversación queda leída. Va AL FINAL: cambia el estado.
+describe("contestar deja la conversación leída", () => {
+  it("tras el mensaje del negocio y su lectura, no queda nada sin leer", async () => {
+    const duenio = await getOrCreateOwnerChatUser(PROYECTO, USUARIO, { displayName: "Panadería" });
+    await insertMessage(conversacion, duenio.id, "Sí, abrimos el domingo");
+    await markConversationRead(PROYECTO, conversacion, duenio.id, new Date());
+    const r = await resumirMensajes(PROYECTO, MX, { cuales: "sin_leer" });
+    expect(r).toMatchObject({ mensajesSinLeer: 0, conversacionesSinLeer: 0, conversaciones: 1 });
+    expect((await leerConversacion(PROYECTO, MX, conversacion))?.mensajes.at(-1)).toMatchObject({ de: "negocio" });
   });
 });

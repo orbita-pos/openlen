@@ -56,6 +56,20 @@
       "visualPaginas": "{tocadas} ページ中 {miradas} ページ",
       "visualPaginasParcial": "このターンで変更した {tocadas} ページのうち {miradas} ページを確認しました。残りは未確認です。"
     },
+    "respuesta": {
+      "titulo": "{con} への下書き",
+      "tituloSinNombre": "返信の下書き",
+      "nota": "タップするまで送信されません。",
+      "enviar": "送信",
+      "enviando": "送信中…",
+      "enviado": "✓ 送信済み",
+      "correo": "メールで返信",
+      "whatsapp": "WhatsAppで返信",
+      "copiar": "コピー",
+      "copiado": "✓ コピーしました",
+      "asunto": "メッセージへの返信",
+      "error": "送信できませんでした。もう一度お試しください。"
+    },
     "confirm": {
       "publishTitle": "ページを公開",
       "publish": "公開",

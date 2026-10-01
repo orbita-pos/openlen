@@ -56,6 +56,20 @@
       "visualPaginas": "{tocadas}개 중 {miradas}개 페이지",
       "visualPaginasParcial": "이번 턴에 변경한 {tocadas}개 페이지 중 {miradas}개를 확인했습니다. 나머지는 확인하지 않았습니다."
     },
+    "respuesta": {
+      "titulo": "{con}에게 보낼 초안",
+      "tituloSinNombre": "답장 초안",
+      "nota": "누를 때까지 아무것도 보내지 않아요.",
+      "enviar": "보내기",
+      "enviando": "보내는 중…",
+      "enviado": "✓ 보냄",
+      "correo": "이메일로 답장",
+      "whatsapp": "WhatsApp로 답장",
+      "copiar": "복사",
+      "copiado": "✓ 복사됨",
+      "asunto": "메시지에 대한 답장",
+      "error": "보내지 못했어요. 다시 시도해 주세요."
+    },
     "confirm": {
       "publishTitle": "페이지 게시",
       "publish": "게시",

@@ -56,6 +56,20 @@
       "visualPaginas": "{miradas} de {tocadas} páginas",
       "visualPaginasParcial": "Foram verificadas {miradas} das {tocadas} páginas alteradas neste turno; as restantes não."
     },
+    "respuesta": {
+      "titulo": "Rascunho para {con}",
+      "tituloSinNombre": "Rascunho de resposta",
+      "nota": "Nada é enviado até você tocar.",
+      "enviar": "Enviar",
+      "enviando": "Enviando…",
+      "enviado": "✓ Enviado",
+      "correo": "Responder por e-mail",
+      "whatsapp": "Responder no WhatsApp",
+      "copiar": "Copiar",
+      "copiado": "✓ Copiado",
+      "asunto": "Resposta à sua mensagem",
+      "error": "Não foi possível enviar. Tente de novo."
+    },
     "confirm": {
       "publishTitle": "Publicar sua página",
       "publish": "Publicar",

@@ -56,6 +56,20 @@
       "visualPaginas": "{miradas} of {tocadas} pages",
       "visualPaginasParcial": "{miradas} of the {tocadas} pages changed in this turn were checked; the rest were not."
     },
+    "respuesta": {
+      "titulo": "Draft for {con}",
+      "tituloSinNombre": "Draft reply",
+      "nota": "Nothing is sent until you tap.",
+      "enviar": "Send",
+      "enviando": "Sending…",
+      "enviado": "✓ Sent",
+      "correo": "Reply by email",
+      "whatsapp": "Reply on WhatsApp",
+      "copiar": "Copy",
+      "copiado": "✓ Copied",
+      "asunto": "Reply to your message",
+      "error": "Couldn't send it. Try again."
+    },
     "confirm": {
       "publishTitle": "Publish your page",
       "publish": "Publish",
