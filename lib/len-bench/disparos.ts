@@ -1,29 +1,28 @@
 // lib/len-bench/disparos.ts — LAS PRUEBAS DE DISPARO: ¿llama Len a una
 // herramienta cuando toca, y SÓLO cuando toca?
 //
-// Como el `/plugin eval` de Claude Code (su «trigger test»), visto el
-// 30/09/2026. Lo que se toma:
+// Como el `/plugin eval` de Claude Code (su «trigger test»), el 30/09/2026. Lo
+// que se copia, tal cual:
 //   - Una carpeta por skill —aquí, por HERRAMIENTA— con consultas `*.md`. Cada
 //     una lleva un frontmatter con `query` (texto, no vacío) y `should_trigger`
 //     (booleano). Lo que va debajo son NOTAS (su `notes`): no las ve nadie más
 //     que quien lee el caso.
-//   - Recomiendan al menos 5 (`tl=5`) y AVISAN si hay menos; no paran.
+//   - Recomiendan al menos 5 y AVISAN si hay menos; no paran.
 //   - Un fichero roto no tumba la carpeta: se avisa y se sigue con los demás.
 //   - Pasa si lo que hizo el modelo === `should_trigger`; una consulta que
 //     revienta cuenta como FALLO, con el error de motivo.
 //   - El informe: «[PASS   ] fichero — expected trigger, got skip», el motivo
 //     debajo de cada fallo y «N/M trigger tests passed». Sale ≠ 0 si falla
 //     alguna.
-// Lo que NO se copia: su evaluador aún no está conectado (`nl=async()=>null`,
-// «Model evaluation not yet wired up»); recibe la descripción de la skill y la
-// consulta. Aquí no se le pregunta a nadie si llamaría: se corre UN turno de
-// verdad y se mira si llamó. Eso lo hace scripts/len-bench-disparos.ts; esto
+// Lo que NO se copia: su `/plugin eval` todavía no corre las pruebas de disparo
+// (sólo valida las consultas). Aquí no se le pregunta a nadie si llamaría: se
+// corre UN turno de verdad y se mira si llamó. Eso lo hace scripts/len-bench-disparos.ts; esto
 // es la parte pura (más la lectura de la carpeta).
 
 import fs from "node:fs";
 import path from "node:path";
 
-/** Las que recomiendan como mínimo: su `tl=5`. */
+/** Las que recomiendan como mínimo. */
 export const MINIMO_DE_CONSULTAS = 5;
 
 export interface ConsultaDeDisparo {
@@ -33,7 +32,7 @@ export interface ConsultaDeDisparo {
   readonly notas?: string;
 }
 
-/** Su `Yk`: el bloque entre dos `---`, al principio del fichero. */
+/** El frontmatter: el bloque entre dos `---`, al principio del fichero. */
 const FRONTMATTER = /^---[ \t]*\n([\s\S]*?)\n---[ \t]*(?:\n|$)/;
 
 const ESPERADO = "(se esperaba ---\\nquery: …\\nshould_trigger: …\\n---)";
@@ -95,9 +94,9 @@ export function leerFrontmatter(bloque: string): { ok: true; campos: Record<stri
   return { ok: true, campos };
 }
 
-/** Una consulta, o el aviso que la deja fuera (su `k.push(...)`). */
+/** Una consulta, o el aviso que la deja fuera. */
 export function leerConsulta(fichero: string, texto: string): { ok: true; consulta: ConsultaDeDisparo } | { ok: false; aviso: string } {
-  // Su `GS`: sin BOM y con saltos de línea de Unix. En Windows el fichero
+  // Como el suyo: sin BOM y con saltos de línea de Unix. En Windows el fichero
   // puede salir del checkout con CRLF.
   const limpio = texto.replace(/^﻿/, "").replace(/\r\n?/g, "\n");
   const fm = FRONTMATTER.exec(limpio);
@@ -118,7 +117,7 @@ export function leerConsulta(fichero: string, texto: string): { ok: true; consul
   return { ok: true, consulta: { fichero, query: query as string, shouldTrigger: debe as boolean, ...(notas ? { notas } : {}) } };
 }
 
-/** Las consultas de UNA carpeta, en orden de nombre, y sus avisos (su `Jg`). */
+/** Las consultas de UNA carpeta, en orden de nombre, y sus avisos. */
 export function cargarConsultas(dir: string): { consultas: ConsultaDeDisparo[]; avisos: string[] } {
   let ficheros: string[];
   try {
@@ -216,7 +215,7 @@ export function lineaDeTotal(c: { pasan: number; fallan: number; saltadas: numbe
   return `${c.pasan}/${c.pasan + c.fallan} pruebas de disparo pasaron${saltadas}.`;
 }
 
-/** El informe de una herramienta, con la forma del suyo (`il`). */
+/** El informe de una herramienta, con la forma del suyo. */
 export function informe(h: InformeDeHerramienta): string {
   const l: string[] = [`Evaluando ${h.herramienta} (${h.dir})`, ""];
   for (const a of h.avisos) l.push(`! ${a}`);

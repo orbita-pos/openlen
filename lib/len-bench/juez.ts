@@ -1,5 +1,5 @@
 // lib/len-bench/juez.ts — EL JUEZ: el grader `llm` de las evals de Claude Code,
-// visto el 30/09/2026.
+// copiado el 30/09/2026.
 //
 // Por qué existe: en el humo de resultados del 30/09 los graders de texto
 // dieron 1,00 mientras Len decía cosas falsas («esas visitas son de
@@ -25,9 +25,9 @@ import { rateFor, usdDeTurno } from "@/lib/ai/tarifas-eval";
 import { historialDesdeLaBase, type FilaDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import type { ContextoDeCalificacion, Grader } from "./tipos";
 
-/** Votos por grader. Los de Claude Code: `Em=3`. */
+/** Votos por grader, los mismos que Claude Code. */
 export const VOTOS_DEL_JUEZ = 3;
-/** Más que esto, y el juez se vuelve ruidoso: lo avisa (`bm=8000`). */
+/** Más que esto, y el juez se vuelve ruidoso: lo avisa, como el suyo. */
 export const LARGO_RUIDOSO = 8_000;
 /** Lo que se le enseña como mucho; el resto se elide del MEDIO. */
 const LARGO_MAXIMO = 24_000;
@@ -70,7 +70,7 @@ export function trazaDeLasFilas(filas: readonly FilaDelHistorial[]): MensajeDelH
 export type LlamarAlJuez = (sistema: string, usuario: string) => Promise<{ texto: string; usd: number }>;
 
 let gastado = 0;
-/** Lo que ha costado el juez en este proceso, en dólares (su `judgeCostUsd`). */
+/** Lo que ha costado el juez en este proceso, en dólares (ellos también lo dan aparte). */
 export function gastoDelJuez(): number {
   return gastado;
 }
@@ -92,13 +92,13 @@ const llamarDeVerdad: LlamarAlJuez = async (sistema, usuario) => {
 };
 
 /** El texto que ve el juez, según el foco. La traza, un mensaje por línea en
- *  JSON, como la suya (`trace.map(JSON).join("\n")`). */
+ *  JSON, como la suya. */
 export function textoDelFoco(ctx: Pick<ContextoDeCalificacion, "conversacion" | "traza">, foco: FocoDelJuez): string {
   if (foco === "ultimo_mensaje") return [...ctx.conversacion].reverse().find((x) => x.quien === "len")?.texto ?? "";
   return ctx.traza.map((m) => JSON.stringify(m)).join("\n");
 }
 
-/** Un voto: PASS si lo dice y no dice también FAIL (su `/\bPASS\b/i && !/\bFAIL\b/i`). */
+/** Un voto: PASS si lo dice y no dice también FAIL, como el suyo. */
 export function votoDe(respuesta: string): boolean {
   return /\bPASS\b/i.test(respuesta) && !/\bFAIL\b/i.test(respuesta);
 }
