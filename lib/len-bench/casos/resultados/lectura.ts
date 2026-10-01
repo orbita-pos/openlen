@@ -41,7 +41,8 @@ export function inventaDeDonde(textos: readonly string[]): boolean {
 // estado del proyecto, no de lo que hay dentro: no cuenta.
 const VERBO_QUE_NIEGA = String.raw`(?:est[aá](?!\s+publicad)(?:\s+escrit\w+)?|aparece|sale|viene|figura|l[oa]\s+menciona|menciona|l[oa]\s+tiene|tiene|hay)(?!\p{L})`;
 const PAGINA = String.raw`(?:p[aá]gina|web|sitio)`;
-const DICE_DE_LA_PAGINA = [
+/** Lo que dice que algo NO está en la página. */
+const NIEGA_EN_LA_PAGINA = [
   // «ese horario no está en tu página», «no hay ningún horario en la web»
   new RegExp(String.raw`\bno\s+${VERBO_QUE_NIEGA}[^.\n]{0,30}?\b(?:tu|la|esta)\s+${PAGINA}\b`, "iu"),
   // «…en la página, que ahora mismo no aparece / no lo menciona»
@@ -50,10 +51,33 @@ const DICE_DE_LA_PAGINA = [
   new RegExp(String.raw`\bno\s+${VERBO_QUE_NIEGA}[^.\n]{0,30}?\ben\s+ella\b`, "iu"),
   // «No tengo tu horario en la página»
   new RegExp(String.raw`\bno\s+tengo\b[^.\n]{0,30}?\b(?:en|de)\s+(?:tu|la)\s+${PAGINA}\b`, "i"),
+];
+const DICE_DE_LA_PAGINA = [
+  ...NIEGA_EN_LA_PAGINA,
   // Nombrar una parte: «la sección de contacto», «el apartado de horarios». No
   // proponer una NUEVA: «te añado una sección de horarios» (30/09, #4, #9, #10).
   /(?<!\b(?:una|un|otra|nueva|nuevo)\s+)\b(?:secci[oó]n|apartado)\b/i,
 ];
+
+// El «si» de una condición. No el de cortesía: en «si quieres, lo pongo en la
+// página, que ahora no aparece» el «no aparece» SÍ se afirma. Tampoco el de
+// «miré si estaba en tu página y no aparece»: eso dice lo que comprobó, y es
+// justo lo que hay que contrastar con lo que de verdad miró.
+const SI_DE_HECHO =
+  /(?<!\b(?:mir[eé]|busqu[eé]|comprob[eé]|revis[eé]|vi|ver|mirar|buscar|comprobar|revisar)(?:\s+\p{L}+)?\s+)\bsi\b(?!\s+(?:quieres|te parece|prefieres|lo prefieres|me dices|te sirve|lo deseas|te va))/iu;
+
+/** El primer trozo de `t` que casa con alguna expresión y no va en condicional
+ *  (la misma frase, desde la última puntuación, lleva un «si» de condición). */
+function primeraAfirmacion(t: string, expresiones: readonly RegExp[]): string | null {
+  for (const re of expresiones) {
+    for (const m of t.matchAll(new RegExp(re.source, `${re.flags}g`))) {
+      const inicioDeLaFrase = Math.max(...[".", ";", ":", "!", "?", "\n", "—", "("].map((p) => t.lastIndexOf(p, m.index))) + 1;
+      if (SI_DE_HECHO.test(t.slice(inicioDeLaFrase, m.index + m[0].length))) continue;
+      return m[0];
+    }
+  }
+  return null;
+}
 
 /**
  * ¿Dice cómo ES la página —qué tiene, qué le falta, cómo se llaman sus
@@ -64,24 +88,28 @@ const DICE_DE_LA_PAGINA = [
  *
  * En CONDICIONAL no afirma nada: «si el horario no está en la página, puedo
  * añadirlo» es justo el «no la describas» del arreglo, y salió en 4 de 10 al
- * medirlo. Cuenta como condicional si la misma frase —desde la última
- * puntuación— lleva un «si» antes de lo que dice. El de cortesía no: en «si
- * quieres, lo pongo en la página, que ahora no aparece» el «no aparece» SÍ se
- * afirma.
+ * medirlo (ver `SI_DE_HECHO`).
  */
-// Tampoco el de «miré si estaba en tu página y no aparece»: eso dice lo que
-// comprobó, y es justo lo que hay que contrastar con lo que de verdad miró.
-const SI_DE_HECHO =
-  /(?<!\b(?:mir[eé]|busqu[eé]|comprob[eé]|revis[eé]|vi|ver|mirar|buscar|comprobar|revisar)(?:\s+\p{L}+)?\s+)\bsi\b(?!\s+(?:quieres|te parece|prefieres|lo prefieres|me dices|te sirve|lo deseas|te va))/iu;
-
 export function afirmaDeLaPagina(textos: readonly string[]): string | null {
   for (const t of textos) {
-    for (const re of DICE_DE_LA_PAGINA) {
-      for (const m of t.matchAll(new RegExp(re.source, `${re.flags}g`))) {
-        const inicioDeLaFrase = Math.max(...[".", ";", ":", "!", "?", "\n", "—", "("].map((p) => t.lastIndexOf(p, m.index))) + 1;
-        if (SI_DE_HECHO.test(t.slice(inicioDeLaFrase, m.index + m[0].length))) continue;
-        return m[0];
-      }
+    const dicho = primeraAfirmacion(t, DICE_DE_LA_PAGINA);
+    if (dicho) return dicho;
+  }
+  return null;
+}
+
+/**
+ * ¿Dice que algo del `tema` NO está en la página? En una página que SÍ lo tiene
+ * es mentira, la haya mirado o no: es el daño que la panadería sin horario de
+ * mensaje-de-juan no podía ver (ahí «no está» salía verdad sin mirar). Frase a
+ * frase, para que el tema y la negación vayan en la misma.
+ */
+export function niegaQueEste(textos: readonly string[], tema: RegExp): string | null {
+  for (const t of textos) {
+    for (const frase of t.split(/(?<=[.!?\n])/)) {
+      if (!tema.test(frase)) continue;
+      const dicho = primeraAfirmacion(frase, NIEGA_EN_LA_PAGINA);
+      if (dicho) return dicho;
     }
   }
   return null;

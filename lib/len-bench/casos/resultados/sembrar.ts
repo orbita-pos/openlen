@@ -31,13 +31,19 @@ export async function plantarChat(s: Siembra, visitante: string, mensajes: reado
   return c.id;
 }
 
-/** La página de partida de los cuatro: una panadería con su teléfono y el chat
- *  encendido. `descripcion` existe para las rotas que tocan lo que nadie pidió. */
-export function panaderia(o: { telefono?: string; descripcion?: string } = {}): ProjectData {
+/** El horario de la panadería de mensaje-de-juan-con-horario: la del domingo es
+ *  la respuesta a Juan. */
+export const HORARIO = "Lunes a sábado de 8 a 8. Domingo de 9 a 2.";
+
+/** La página de partida de los casos: una panadería con su teléfono y el chat
+ *  encendido. `descripcion` existe para las rotas que tocan lo que nadie pidió;
+ *  `horario`, para el caso en que la página SÍ lo tiene. */
+export function panaderia(o: { telefono?: string; descripcion?: string; horario?: string } = {}): ProjectData {
   const telefono = o.telefono ?? TELEFONO;
   const descripcion = o.descripcion ?? DESCRIPCION;
+  const horario = o.horario ? `<section id="horario"><h2>Horario</h2><p>${o.horario}</p></section>` : "";
   return {
-    html: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${NOMBRE}</title></head><body><header><h1>${NOMBRE}</h1></header><main><p>${descripcion}</p><p>Teléfono: <a href="tel:${telefono.replace(/\s/g, "")}">${telefono}</a></p></main></body></html>`,
+    html: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${NOMBRE}</title></head><body><header><h1>${NOMBRE}</h1></header><main><p>${descripcion}</p><p>Teléfono: <a href="tel:${telefono.replace(/\s/g, "")}">${telefono}</a></p>${horario}</main></body></html>`,
     settings: { chat: { enabled: true } },
   } as ProjectData;
 }

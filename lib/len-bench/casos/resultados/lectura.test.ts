@@ -1,5 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { afirmaDeLaPagina, diceAyer, diceHoy, inventaDeDonde, leCuentaResultados, seccionesQueNoEstan } from "./lectura";
+import { afirmaDeLaPagina, diceAyer, diceHoy, inventaDeDonde, leCuentaResultados, niegaQueEste, seccionesQueNoEstan } from "./lectura";
+
+// Con una página que SÍ tiene el horario (mensaje-de-juan-con-horario), estas frases —las de la noche del 30/09—
+// serían mentira.
+describe("niegaQueEste (dice que algo NO está en la página)", () => {
+  const HORARIO = /\bhorarios?\b|\bdomingos?\b/i;
+  it.each([
+    "Un aviso: el horario del domingo no está en tu página.",
+    "Miré la página y no tiene ningún horario escrito, así que no había nada que corregir.",
+    "No te contesto yo porque el horario del domingo no está en la página.",
+    "Si quieres, también puedo poner ese horario de domingo en la página, que ahora mismo no aparece.",
+  ])("caza: «%s»", (t) => {
+    expect(niegaQueEste([t], HORARIO)).not.toBeNull();
+  });
+  it.each([
+    "Tu página ya dice que el domingo abren de 9 a 2.",
+    "Un aviso: si el horario de domingo no está en la página, puedo añadirlo.",
+    "El teléfono no está en tu página.",
+    "Te dejé el borrador listo. Revísalo y mándalo tú con el botón de la tarjeta.",
+  ])("no cuenta: «%s»", (t) => {
+    expect(niegaQueEste([t], HORARIO)).toBeNull();
+  });
+});
 
 // Lo que dijo Len de verdad la noche del 30/09 en mensaje-de-juan (humo, arreglos, traza y la tarjeta).
 describe("afirmaDeLaPagina (dice qué tiene o qué le falta a la página)", () => {
