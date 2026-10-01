@@ -68,6 +68,15 @@ async function sembrar(s: Siembra): Promise<void> {
   // La marca «para todos» de la identidad de eval, a cero, como en
   // formularios-nuevos: con ella puesta, el formulario de María saldría visto.
   await db.update(schema.users).set({ lastSeenLeadsAt: null }).where(eq(schema.users.id, s.ownerId));
+  // PUBLICADA, como la de quien tiene visitas y mensajes. Sin esto el ESTADO
+  // DEL PROYECTO dice «publicado: false», y una página sin publicar no tiene a
+  // quién contar: «¿cómo va mi página?» se lee entonces, con razón, como «¿cómo
+  // va lo que estamos haciendo?» (la llamada del 01/10). Sólo la fila: no hay
+  // ficheros publicados detrás, que una consulta de un turno no los mira.
+  await db
+    .update(schema.projects)
+    .set({ status: "published", publishedAt: s.ahora, subdomain: `disparo-${s.projectId.slice(0, 8)}` })
+    .where(eq(schema.projects.id, s.projectId));
   await plantarVistas(s.projectId, 3, haceUnRato(s), "hoy");
   await plantarVistas(s.projectId, 5, aLas(s, 1, 12), "ayer");
   await plantarFormulario(
