@@ -15,7 +15,7 @@
 import type { Encargo, Intercambio, ResultadoDeGrader, TurnoDeValidacion } from "./tipos";
 
 export function revisarCaso(
-  e: Pick<Encargo, "graders" | "solucion" | "rotas">,
+  e: Pick<Encargo, "graders" | "solucion" | "rotas" | "solucionTurno">,
   r: {
     readonly solucion: readonly ResultadoDeGrader[];
     /** La partida y cada rota, con lo que sacó cada grader. */
@@ -24,7 +24,11 @@ export function revisarCaso(
 ): { ok: boolean; problemas: string[] } {
   const problemas: string[] = [];
   for (const rota of e.rotas) {
-    if (JSON.stringify(rota.datos) === JSON.stringify(e.solucion)) {
+    // En los casos de resultados (plans/len-resultados/) la rota se distingue
+    // por lo que Len diría (`turno`) o por lo que se planta después
+    // (`despues`), no por la página: sólo es idéntica si nada de eso cambia.
+    const mismoTurno = JSON.stringify(rota.turno ?? null) === JSON.stringify(e.solucionTurno ?? null);
+    if (JSON.stringify(rota.datos) === JSON.stringify(e.solucion) && mismoTurno && !rota.despues) {
       problemas.push(`la rota «${rota.nombre}» es IDÉNTICA a la solución: su cambio no encontró el texto que buscaba`);
     }
   }

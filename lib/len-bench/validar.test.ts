@@ -80,6 +80,24 @@ describe("revisarCaso — las reglas 2, 3 y 4, y que las rotas rompan algo", () 
     expect(r.ok).toBe(false);
     expect(r.problemas[0]).toMatch(/la rota «roto» es IDÉNTICA a la solución/);
   });
+  // Casos de resultados (plans/len-resultados/): la rota se distingue por lo
+  // que Len DICE o por lo que se planta después, no por la página.
+  it("con la misma página pero otro turno de Len, o un estado plantado después, NO es idéntica", () => {
+    const bien = { len: ["Hoy llevas 3."], herramientas: ["ver_visitas"], tarjetas: [] };
+    const sinRojos = { solucion: [res("datos", true)], variantes: [{ nombre: "inicio", graders: [res("datos", false), res("enlaces", false), res("sigue-lo-demas", false)] }] };
+    const conTurno = revisarCaso(
+      { ...caso, solucionTurno: bien, rotas: [{ nombre: "de-memoria", datos: { html: "<p>bien</p>" }, turno: { ...bien, herramientas: [] } }] },
+      sinRojos,
+    );
+    expect(conTurno.problemas.join(" ")).not.toMatch(/IDÉNTICA/);
+    const conDespues = revisarCaso(
+      { ...caso, solucionTurno: bien, rotas: [{ nombre: "lo-mando-solo", datos: { html: "<p>bien</p>" }, turno: bien, despues: async () => {} }] },
+      sinRojos,
+    );
+    expect(conDespues.problemas.join(" ")).not.toMatch(/IDÉNTICA/);
+    const igual = revisarCaso({ ...caso, solucionTurno: bien, rotas: [{ nombre: "roto", datos: { html: "<p>bien</p>" }, turno: bien }] }, sinRojos);
+    expect(igual.problemas.join(" ")).toMatch(/la rota «roto» es IDÉNTICA/);
+  });
 });
 
 describe("publicadaAlValidar — «y publícalo» sin Len que publique", () => {
