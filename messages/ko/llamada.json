@@ -1,0 +1,21 @@
+{
+  "titulo": "Len과 통화",
+  "llamar": "Len에게 전화하기",
+  "conectando": "연결 중…",
+  "enLlamada": "통화 중",
+  "lenMirando": "Len이 확인하는 중…",
+  "audio": "오디오",
+  "silenciar": "음소거",
+  "activarMicro": "마이크 켜기",
+  "colgar": "끊기",
+  "sinMicro": "말하려면 마이크가 필요해요.",
+  "sinVoz": "지금은 말할 수 없어요. 메시지를 보내 주세요.",
+  "irAlChat": "채팅으로 가기",
+  "cortada": "통화가 끊겼어요. Len은 작업을 계속했고 끝나면 알려 드릴게요.",
+  "colgadaSilencio": "한동안 대화가 없어서 끊었어요.",
+  "colgadaDuracion": "통화가 10분에 도달했어요.",
+  "terminada": "통화 종료",
+  "llamarOtraVez": "다시 전화하기",
+  "textoDeLen": "Len의 답변",
+  "visitas": { "titulo": "방문 · 최근 7일", "personas": "{n}명", "hoy": "오늘: {n}", "llegan": "{origen}: 10명 중 {n}명" }
+}

@@ -1,0 +1,21 @@
+{
+  "titulo": "Gesprek met Len",
+  "llamar": "Len bellen",
+  "conectando": "Verbinden…",
+  "enLlamada": "In gesprek",
+  "lenMirando": "Len kijkt even…",
+  "audio": "Audio",
+  "silenciar": "Dempen",
+  "activarMicro": "Microfoon aan",
+  "colgar": "Ophangen",
+  "sinMicro": "Ik heb de microfoon nodig om te praten.",
+  "sinVoz": "Ik kan nu niet praten, stuur me een bericht.",
+  "irAlChat": "Naar de chat",
+  "cortada": "Het gesprek is weggevallen. Len ging door en laat het je weten.",
+  "colgadaSilencio": "Ik heb opgehangen omdat we een tijdje niet praatten.",
+  "colgadaDuracion": "Het gesprek heeft 10 minuten bereikt.",
+  "terminada": "Gesprek beëindigd",
+  "llamarOtraVez": "Opnieuw bellen",
+  "textoDeLen": "Wat Len zei",
+  "visitas": { "titulo": "Bezoeken · afgelopen 7 dagen", "personas": "{n} mensen", "hoy": "Vandaag: {n}", "llegan": "{origen}: {n} van de 10" }
+}

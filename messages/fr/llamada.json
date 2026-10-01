@@ -1,0 +1,21 @@
+{
+  "titulo": "Appel avec Len",
+  "llamar": "Appeler Len",
+  "conectando": "Connexion…",
+  "enLlamada": "En appel",
+  "lenMirando": "Len vérifie…",
+  "audio": "Audio",
+  "silenciar": "Couper le micro",
+  "activarMicro": "Activer le micro",
+  "colgar": "Raccrocher",
+  "sinMicro": "J'ai besoin du micro pour parler.",
+  "sinVoz": "Je ne peux pas parler pour l'instant, écris-moi.",
+  "irAlChat": "Aller au chat",
+  "cortada": "L'appel a coupé. Len a continué ta demande et te préviendra.",
+  "colgadaSilencio": "J'ai raccroché car on ne parlait plus depuis un moment.",
+  "colgadaDuracion": "L'appel a atteint 10 minutes.",
+  "terminada": "Appel terminé",
+  "llamarOtraVez": "Rappeler",
+  "textoDeLen": "Ce qu'a dit Len",
+  "visitas": { "titulo": "Visites · 7 derniers jours", "personas": "{n} personnes", "hoy": "Aujourd'hui : {n}", "llegan": "{origen} : {n} sur 10" }
+}

@@ -1,0 +1,21 @@
+{
+  "titulo": "Call with Len",
+  "llamar": "Call Len",
+  "conectando": "Connecting…",
+  "enLlamada": "On a call",
+  "lenMirando": "Len is checking…",
+  "audio": "Audio",
+  "silenciar": "Mute",
+  "activarMicro": "Unmute",
+  "colgar": "Hang up",
+  "sinMicro": "I need the microphone to talk.",
+  "sinVoz": "I can't talk right now, write to me instead.",
+  "irAlChat": "Go to chat",
+  "cortada": "The call dropped. Len kept working and will let you know.",
+  "colgadaSilencio": "I hung up because we hadn't talked for a while.",
+  "colgadaDuracion": "The call reached 10 minutes.",
+  "terminada": "Call ended",
+  "llamarOtraVez": "Call again",
+  "textoDeLen": "What Len said",
+  "visitas": { "titulo": "Visits · last 7 days", "personas": "{n} people", "hoy": "Today: {n}", "llegan": "{origen}: {n} out of 10" }
+}

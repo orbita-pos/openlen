@@ -1,0 +1,21 @@
+{
+  "titulo": "Lenとの通話",
+  "llamar": "Lenに電話する",
+  "conectando": "接続中…",
+  "enLlamada": "通話中",
+  "lenMirando": "Lenが確認しています…",
+  "audio": "音声",
+  "silenciar": "ミュート",
+  "activarMicro": "マイクをオン",
+  "colgar": "切る",
+  "sinMicro": "話すにはマイクが必要です。",
+  "sinVoz": "今は話せません。メッセージを送ってください。",
+  "irAlChat": "チャットへ",
+  "cortada": "通話が切れました。Lenは作業を続けていて、終わったらお知らせします。",
+  "colgadaSilencio": "しばらく会話がなかったので切りました。",
+  "colgadaDuracion": "通話が10分に達しました。",
+  "terminada": "通話終了",
+  "llamarOtraVez": "もう一度かける",
+  "textoDeLen": "Lenの回答",
+  "visitas": { "titulo": "訪問数・過去7日間", "personas": "{n}人", "hoy": "今日: {n}", "llegan": "{origen}: 10人中{n}人" }
+}

@@ -194,6 +194,16 @@ import jaInbox from "../messages/ja/inbox.json";
 import koInbox from "../messages/ko/inbox.json";
 import zhInbox from "../messages/zh/inbox.json";
 import nlInbox from "../messages/nl/inbox.json";
+import enLlamada from "../messages/en/llamada.json";
+import esLlamada from "../messages/es/llamada.json";
+import ptLlamada from "../messages/pt/llamada.json";
+import frLlamada from "../messages/fr/llamada.json";
+import deLlamada from "../messages/de/llamada.json";
+import itLlamada from "../messages/it/llamada.json";
+import jaLlamada from "../messages/ja/llamada.json";
+import koLlamada from "../messages/ko/llamada.json";
+import zhLlamada from "../messages/zh/llamada.json";
+import nlLlamada from "../messages/nl/llamada.json";
 
 import enExplore from "../messages/en/explore.json";
 import esExplore from "../messages/es/explore.json";
@@ -226,6 +236,7 @@ const MESSAGES = {
     modalsDomain: enModalsDomain,
     modalsDeploy: enModalsDeploy,
     inbox: enInbox,
+    llamada: enLlamada,
     explore: enExplore,
   },
   es: {
@@ -247,6 +258,7 @@ const MESSAGES = {
     modalsDomain: esModalsDomain,
     modalsDeploy: esModalsDeploy,
     inbox: esInbox,
+    llamada: esLlamada,
     explore: esExplore,
   },
   pt: {
@@ -268,6 +280,7 @@ const MESSAGES = {
     modalsDomain: ptModalsDomain,
     modalsDeploy: ptModalsDeploy,
     inbox: ptInbox,
+    llamada: ptLlamada,
     explore: ptExplore,
   },
   fr: {
@@ -289,6 +302,7 @@ const MESSAGES = {
     modalsDomain: frModalsDomain,
     modalsDeploy: frModalsDeploy,
     inbox: frInbox,
+    llamada: frLlamada,
     explore: frExplore,
   },
   de: {
@@ -310,6 +324,7 @@ const MESSAGES = {
     modalsDomain: deModalsDomain,
     modalsDeploy: deModalsDeploy,
     inbox: deInbox,
+    llamada: deLlamada,
     explore: deExplore,
   },
   it: {
@@ -331,6 +346,7 @@ const MESSAGES = {
     modalsDomain: itModalsDomain,
     modalsDeploy: itModalsDeploy,
     inbox: itInbox,
+    llamada: itLlamada,
     explore: itExplore,
   },
   ja: {
@@ -352,6 +368,7 @@ const MESSAGES = {
     modalsDomain: jaModalsDomain,
     modalsDeploy: jaModalsDeploy,
     inbox: jaInbox,
+    llamada: jaLlamada,
     explore: jaExplore,
   },
   ko: {
@@ -373,6 +390,7 @@ const MESSAGES = {
     modalsDomain: koModalsDomain,
     modalsDeploy: koModalsDeploy,
     inbox: koInbox,
+    llamada: koLlamada,
     explore: koExplore,
   },
   zh: {
@@ -394,6 +412,7 @@ const MESSAGES = {
     modalsDomain: zhModalsDomain,
     modalsDeploy: zhModalsDeploy,
     inbox: zhInbox,
+    llamada: zhLlamada,
     explore: zhExplore,
   },
   nl: {
@@ -415,6 +434,7 @@ const MESSAGES = {
     modalsDomain: nlModalsDomain,
     modalsDeploy: nlModalsDeploy,
     inbox: nlInbox,
+    llamada: nlLlamada,
     explore: nlExplore,
   },
 } as const;

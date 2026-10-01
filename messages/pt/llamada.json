@@ -1,0 +1,21 @@
+{
+  "titulo": "Ligação com o Len",
+  "llamar": "Ligar para o Len",
+  "conectando": "Conectando…",
+  "enLlamada": "Em ligação",
+  "lenMirando": "O Len está verificando…",
+  "audio": "Áudio",
+  "silenciar": "Silenciar",
+  "activarMicro": "Ativar microfone",
+  "colgar": "Desligar",
+  "sinMicro": "Preciso do microfone para falar.",
+  "sinVoz": "Agora não consigo falar, me escreva.",
+  "irAlChat": "Ir para o chat",
+  "cortada": "A ligação caiu. O Len continuou com o seu pedido e vai te avisar.",
+  "colgadaSilencio": "Desliguei porque ficamos um tempo sem falar.",
+  "colgadaDuracion": "A ligação chegou a 10 minutos.",
+  "terminada": "Ligação encerrada",
+  "llamarOtraVez": "Ligar de novo",
+  "textoDeLen": "O que o Len disse",
+  "visitas": { "titulo": "Visitas · últimos 7 dias", "personas": "{n} pessoas", "hoy": "Hoje: {n}", "llegan": "{origen}: {n} de cada 10" }
+}

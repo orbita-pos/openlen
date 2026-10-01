@@ -1,0 +1,21 @@
+{
+  "titulo": "与 Len 通话",
+  "llamar": "呼叫 Len",
+  "conectando": "正在连接…",
+  "enLlamada": "通话中",
+  "lenMirando": "Len 正在查看…",
+  "audio": "音频",
+  "silenciar": "静音",
+  "activarMicro": "打开麦克风",
+  "colgar": "挂断",
+  "sinMicro": "我需要麦克风才能说话。",
+  "sinVoz": "我现在没法说话，给我发消息吧。",
+  "irAlChat": "去聊天",
+  "cortada": "通话中断了。Len 仍在处理，完成后会通知你。",
+  "colgadaSilencio": "我们有一会儿没说话，我就挂断了。",
+  "colgadaDuracion": "通话已达到 10 分钟。",
+  "terminada": "通话结束",
+  "llamarOtraVez": "再次呼叫",
+  "textoDeLen": "Len 说了什么",
+  "visitas": { "titulo": "访问量 · 最近 7 天", "personas": "{n} 人", "hoy": "今天：{n}", "llegan": "{origen}：每 10 人中有 {n} 人" }
+}

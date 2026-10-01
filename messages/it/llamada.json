@@ -1,0 +1,21 @@
+{
+  "titulo": "Chiamata con Len",
+  "llamar": "Chiama Len",
+  "conectando": "Connessione…",
+  "enLlamada": "In chiamata",
+  "lenMirando": "Len sta controllando…",
+  "audio": "Audio",
+  "silenciar": "Silenzia",
+  "activarMicro": "Attiva microfono",
+  "colgar": "Riattacca",
+  "sinMicro": "Mi serve il microfono per parlare.",
+  "sinVoz": "Ora non posso parlare, scrivimi.",
+  "irAlChat": "Vai alla chat",
+  "cortada": "La chiamata è caduta. Len ha continuato e ti avviserà.",
+  "colgadaSilencio": "Ho riattaccato perché non parlavamo da un po'.",
+  "colgadaDuracion": "La chiamata ha raggiunto i 10 minuti.",
+  "terminada": "Chiamata terminata",
+  "llamarOtraVez": "Richiama",
+  "textoDeLen": "Cosa ha detto Len",
+  "visitas": { "titulo": "Visite · ultimi 7 giorni", "personas": "{n} persone", "hoy": "Oggi: {n}", "llegan": "{origen}: {n} su 10" }
+}
