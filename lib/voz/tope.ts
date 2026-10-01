@@ -19,3 +19,6 @@ export function crearTopeDiario(max: number, ahora: () => Date = () => new Date(
 }
 
 export const topeDeLlamadas = crearTopeDiario(Number(process.env.OPENLEN_VOZ_LLAMADAS_DIA) || 20);
+
+/** Las notas de voz del chat (pieza 2): la misma red de DEV que las llamadas. */
+export const topeDeNotas = crearTopeDiario(Number(process.env.OPENLEN_VOZ_NOTAS_DIA) || 100);
