@@ -72,7 +72,10 @@ export interface Grader {
   readonly peso: number;
   /** Ausente = vota. `false` = corre, se reporta y NO entra en el score. */
   readonly puntua?: false;
-  calificar(ctx: ContextoDeCalificacion): Promise<{ paso: boolean; explicacion: string }>;
+  /** Llama a un modelo y CUESTA (el juez, `juez.ts`): el validador, que corre a
+   *  $0, lo salta y lo dice — los `llm` de Claude Code son «paid graders». */
+  readonly pago?: true;
+  calificar(ctx: ContextoDeCalificacion): Promise<{ paso: boolean; explicacion: string; votos?: readonly boolean[] }>;
 }
 
 export interface ResultadoDeGrader {
@@ -81,6 +84,8 @@ export interface ResultadoDeGrader {
   readonly peso: number;
   readonly explicacion: string;
   readonly puntua: boolean;
+  /** Los votos del juez, si lo hubo (su `judge_votes`). */
+  readonly votos?: readonly boolean[];
 }
 
 /** Lo que un caso de RESULTADOS planta en la base antes del primer turno
@@ -155,8 +160,11 @@ export interface ResultadoDeCorrida {
   readonly turnosDeLen: number;
   /** Lo que se le cobró al dueño, en créditos. */
   readonly creditos: number;
-  /** Lo que costó de verdad: el papel `agent` (grabaciones) + el cliente simulado. */
+  /** Lo que costó de verdad: el papel `agent` (grabaciones) + el cliente simulado
+   *  + el juez, si lo hubo. */
   readonly usd: number;
+  /** Lo que costó el juez, aparte (su `judge_cost_usd`). Ya va dentro de `usd`. */
+  readonly usdJuez?: number;
   readonly segundos: number;
   readonly sub: string;
   /** Lo que se dijeron el dueño simulado y Len. Es lo que se lee para saber

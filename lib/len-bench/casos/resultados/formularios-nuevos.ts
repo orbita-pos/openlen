@@ -4,7 +4,7 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { Encargo } from "../../tipos";
-import { deLen, laPaginaSigue, preguntoAlServidor } from "./comunes";
+import { deLen, laPaginaSigue, preguntoAlServidor, sinSuposiciones } from "./comunes";
 import { aLas, haceUnRato, panaderia, plantarFormulario } from "./sembrar";
 
 const TURNO_BUENO = {
@@ -43,6 +43,7 @@ export const FORMULARIOS_NUEVOS: Encargo = {
       },
     },
     laPaginaSigue(),
+    sinSuposiciones(),
   ],
   solucion: panaderia(),
   solucionTurno: TURNO_BUENO,

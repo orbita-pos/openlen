@@ -62,6 +62,8 @@ async function main(): Promise<number> {
         herramientas: turno?.herramientas ?? [],
         tarjetas: turno?.tarjetas ?? [],
         zona: siembra.zona,
+        // Validar es a $0: el juez (de pago) no se corre aquí, se dice.
+        saltarPagados: "validación sin modelo ($0)",
       })).graders;
     } finally {
       await deleteThrowawayProject(id);
@@ -79,7 +81,7 @@ async function main(): Promise<number> {
       ]) {
         variantes.push({ nombre, graders: await con(e, datos, nombre, turno, despues) });
       }
-      const { ok, problemas } = revisarCaso(e, { solucion, variantes });
+      const { ok, problemas, avisos } = revisarCaso(e, { solucion, variantes });
       if (!ok) malos++;
       console.log(`${ok ? "✔" : "✘"} ${e.id}`);
       for (const [nombre, graders] of [["solucion", solucion] as const, ...variantes.map((v) => [v.nombre, v.graders] as const)]) {
@@ -87,6 +89,7 @@ async function main(): Promise<number> {
         console.log(`    ${nombre.padEnd(22)} ${rojos.length === 0 ? "todos en verde" : `rojo: ${rojos.join(", ")}`}`);
       }
       for (const p of problemas) console.log(`    ${p}`);
+      for (const a of avisos) console.log(`    ⚠ ${a}`);
     }
   } finally {
     await navegador.close();

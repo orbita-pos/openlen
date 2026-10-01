@@ -198,7 +198,11 @@ export type ModelOperation =
   | "template_autofill"
   /** Escribir una página MIRANDO una referencia adjunta. Papel con visión: al
    *  razonador nunca se le manda una imagen. */
-  | "page_write_with_reference";
+  | "page_write_with_reference"
+  /** El JUEZ de Len-Bench (`lib/len-bench/juez.ts`): el grader `llm` de las
+   *  evals de Claude Code — un criterio, PASS o FAIL, tres votos. Sólo lo llama
+   *  el banco, nunca un usuario. */
+  | "len_bench_juez";
 // (`len_bench_cliente`, el dueño simulado de Len-Bench, se fue el 2026-09-27: el
 // dueño es ahora un doble FIJO sin modelo, `lib/len-bench/cliente-simulado.ts`.)
 
@@ -256,6 +260,10 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   // La ruta de Gemini ya lo pedía con `thinkingBudget: 0`, así que `none` no es
   // una apuesta, es la misma decisión escrita en el otro idioma.
   template_autofill: { role: "reasoner", effort: "none" },
+  // El juez de Len-Bench: leer un mensaje y decir PASS o FAIL contra UN
+  // criterio. Texto, así que el razonador; y sin pensar, porque contestar una
+  // palabra no mejora discurriendo — lo que reduce el ruido son los tres votos.
+  len_bench_juez: { role: "reasoner", effort: "none" },
 };
 
 export function reasoningEffortFor(role: ModelRole, operation: ModelOperation): FireworksReasoningEffort {

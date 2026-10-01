@@ -6,7 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getChatOwner, insertMessage, markConversationRead } from "@/lib/chat/store";
 import type { Encargo } from "../../tipos";
-import { deLen, laPaginaSigue } from "./comunes";
+import { deLen, laPaginaSigue, sinSuposiciones } from "./comunes";
 import { diceAyer } from "./lectura";
 import { panaderia, plantarChat } from "./sembrar";
 
@@ -90,6 +90,7 @@ export const MENSAJE_DE_JUAN: Encargo = {
       },
     },
     laPaginaSigue(),
+    sinSuposiciones(),
   ],
   solucion: panaderia(),
   solucionTurno: TURNO_BUENO,

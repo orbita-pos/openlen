@@ -2,7 +2,7 @@
 // hora del dueño (plans/len-resultados/diseno.md §9). Lo que se mide: que
 // pregunte al servidor y diga 3, exacto, y no el día de UTC.
 import type { Encargo } from "../../tipos";
-import { deLen, laPaginaSigue, preguntoAlServidor } from "./comunes";
+import { deLen, laPaginaSigue, preguntoAlServidor, sinSuposiciones } from "./comunes";
 import { diceHoy, inventaDeDonde } from "./lectura";
 import { aLas, haceUnRato, panaderia, plantarVistas } from "./sembrar";
 
@@ -43,6 +43,7 @@ export const VISITAS_DE_HOY: Encargo = {
       },
     },
     laPaginaSigue(),
+    sinSuposiciones(),
   ],
   solucion: panaderia(),
   solucionTurno: TURNO_BUENO,

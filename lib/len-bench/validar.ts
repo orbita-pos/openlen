@@ -21,8 +21,11 @@ export function revisarCaso(
     /** La partida y cada rota, con lo que sacó cada grader. */
     readonly variantes: readonly { readonly nombre: string; readonly graders: readonly ResultadoDeGrader[] }[];
   },
-): { ok: boolean; problemas: string[] } {
+): { ok: boolean; problemas: string[]; avisos: string[] } {
   const problemas: string[] = [];
+  /** Lo que no bloquea pero hay que saber: hoy, los graders de pago (el juez),
+   *  que a $0 no se corren — como los `llm` de Claude Code con su tope. */
+  const avisos: string[] = [];
   for (const rota of e.rotas) {
     // En los casos de resultados (plans/len-resultados/) la rota se distingue
     // por lo que Len diría (`turno`) o por lo que se planta después
@@ -37,6 +40,10 @@ export function revisarCaso(
   }
   const suspendio = new Set(r.variantes.flatMap((v) => v.graders.filter((g) => g.puntua && !g.paso).map((g) => g.nombre)));
   for (const g of e.graders) {
+    if (g.pago) {
+      avisos.push(`${g.nombre} es de pago (llama a un modelo): no se valida a $0`);
+      continue;
+    }
     if (g.puntua !== false && !suspendio.has(g.nombre)) {
       problemas.push(`regla 3 — ${g.nombre} nunca se vio en rojo (ni en la partida ni en las rotas)`);
     }
@@ -44,7 +51,7 @@ export function revisarCaso(
   if (faltaLoQueSigue(e)) {
     problemas.push("regla 4 — no declara lo que NO se pidió tocar: ningún grader «sigue-…» que vote (el que no vota no cuenta)");
   }
-  return { ok: problemas.length === 0, problemas };
+  return { ok: problemas.length === 0, problemas, avisos };
 }
 
 /**

@@ -32,7 +32,7 @@ describe("revisarCaso — las reglas 2, 3 y 4, y que las rotas rompan algo", () 
         { nombre: "roto", graders: [res("datos", true), res("enlaces", false), res("sigue-lo-demas", false)] },
       ],
     });
-    expect(r).toEqual({ ok: true, problemas: [] });
+    expect(r).toEqual({ ok: true, problemas: [], avisos: [] });
   });
   it("regla 2: la solución que suspende un grader que vota, con la explicación del grader", () => {
     const r = revisarCaso(caso, {
@@ -143,5 +143,22 @@ describe("conversacionAlValidar con un turno de validación", () => {
   });
   it("sin turno, como siempre: sólo el dueño", () => {
     expect(conversacionAlValidar({ guion: [{ tipo: "pide", mensaje: "hola" }] })).toEqual([{ quien: "dueno", texto: "hola" }]);
+  });
+});
+
+// El juez (`juez.ts`) es de pago, como los `llm` de Claude Code: el validador,
+// que corre a $0, lo salta. No es «nunca en rojo»: es «no se corrió», y se dice.
+describe("revisarCaso — los graders de pago no se validan a $0", () => {
+  it("un juez que vota no cuenta como «nunca en rojo», y queda un aviso", () => {
+    const juez: Grader = { ...grader("sin-suposiciones"), pago: true };
+    const r = revisarCaso(
+      { ...caso, graders: [...caso.graders, juez] },
+      {
+        solucion: [res("datos", true), res("enlaces", true), res("sin-suposiciones", false, "saltado: validación a $0", false)],
+        variantes: [{ nombre: "inicio", graders: [res("datos", false), res("enlaces", false), res("sigue-lo-demas", false)] }],
+      },
+    );
+    expect(r.ok).toBe(true);
+    expect(r.avisos).toEqual(["sin-suposiciones es de pago (llama a un modelo): no se valida a $0"]);
   });
 });

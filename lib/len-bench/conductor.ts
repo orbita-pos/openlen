@@ -40,6 +40,7 @@ import { htmlDe } from "./extraer";
 import { filaComoLaDeUnDueno } from "./fila-del-dueno";
 import { conReintentoPorEperm } from "./reintentar-publicar";
 import { cierreHonesto } from "./honestidad";
+import { gastoDelJuez } from "./juez";
 import { puntuarCorrida } from "./puntuar";
 import { enviarTurno, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
 import { servirPublicada } from "./servidor-publicada";
@@ -134,6 +135,9 @@ export async function calificarDatos(
     herramientas?: readonly string[];
     tarjetas?: readonly Record<string, unknown>[];
     zona?: string;
+    /** Por qué NO se corren los graders de pago (el juez): el validador va a
+     *  $0. Se reportan saltados y sin voto, como su «skipped: cost ceiling». */
+    saltarPagados?: string;
   },
 ): Promise<{ graders: ResultadoDeGrader[]; sub: string }> {
   exigirEntorno();
@@ -194,6 +198,10 @@ export async function calificarDatos(
     }
     const graders: ResultadoDeGrader[] = [];
     for (const g of e.graders) {
+      if (g.pago && extra.saltarPagados) {
+        graders.push({ nombre: g.nombre, peso: g.peso, puntua: false, paso: false, explicacion: `saltado: ${extra.saltarPagados}` });
+        continue;
+      }
       try {
         const r = await g.calificar(ctx);
         graders.push({ nombre: g.nombre, peso: g.peso, puntua: g.puntua !== false, ...r });
@@ -222,6 +230,7 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
   const t0 = Date.now();
   const memoria = await snapshotAgentMemory(o.owner.id);
   const saldo0 = await creditos(o.owner.id);
+  const juez0 = gastoDelJuez();
   const projectId = await createThrowawayProject(o.owner.id, `len-bench-${e.id}`, e.inicio, filaComoLaDeUnDueno(e.inicio));
   // Casos de resultados (plans/len-resultados/): la zona que manda el panel, lo
   // que Len llamó y las tarjetas que dejó, para los graders de la CONVERSACIÓN.
@@ -324,6 +333,7 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
   }
   const saldo1 = await creditos(o.owner.id);
   const agente = usdDeProyecto(o.dirGrabaciones, projectId);
+  const usdJuez = gastoDelJuez() - juez0;
   return {
     graders,
     score: puntuarCorrida(graders),
@@ -331,7 +341,10 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
     ...(error ? { error } : {}),
     turnosDeLen,
     creditos: (saldo0 - saldo1) / CENTICREDITOS_POR_CREDITO,
-    usd: agente.usd + usdCliente,
+    // El juez va DENTRO del total, para que el tope lo cubra, y aparte en
+    // `usdJuez` (su `judge_cost_usd`).
+    usd: agente.usd + usdCliente + usdJuez,
+    ...(usdJuez > 0 ? { usdJuez } : {}),
     segundos: (Date.now() - t0) / 1000,
     sub,
     conversacion,
