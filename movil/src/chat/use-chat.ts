@@ -228,9 +228,34 @@ export function useChat(o: OpcionesDelChat) {
     return hiloCompleto([hiloDesdeElHistorial(o.historial, ahora), locales, delTurno], diaLocal);
   }, [o.historial, locales, vivo, reenganche]);
 
+  // Para la llamada (use-llamada: seguirEncargo): si llamas con Len
+  // trabajando, la voz sabe en qué, y lo que le pides corrige ese turno.
+  const trabajando = (vivo !== null && !vivo.terminado) || reenganche !== null;
+  const turnoIdEnCurso = vivo?.turnoId ?? reenganche?.turnoId ?? null;
+  const pedido = useMemo(() => {
+    for (let i = elementos.length - 1; i >= 0; i--) {
+      const e = elementos[i];
+      if (e.tipo === "tu") return e.texto;
+      if (e.tipo === "voz") return e.transcripcion ?? "";
+    }
+    return "";
+  }, [elementos]);
+  const encargo = useMemo(() => (trabajando ? { turnoId: turnoIdEnCurso, pedido } : null), [trabajando, turnoIdEnCurso, pedido]);
+  // Lo último que dijo Len en el turno: al terminar, la llamada lo cuenta. Se
+  // guarda aparte porque al acabar un turno reenganchado su texto se va antes
+  // de que llegue la conversación releída.
+  const ultimoTexto = useRef("");
+  useLayoutEffect(() => {
+    const t = vivo?.texto || reenganche?.texto;
+    if (t) ultimoTexto.current = t;
+  });
+  const dichoAlTerminar = useCallback(() => ultimoTexto.current, []);
+
   return {
     elementos,
-    trabajando: (vivo !== null && !vivo.terminado) || reenganche !== null,
+    trabajando,
+    encargo,
+    dichoAlTerminar,
     avance: vivo?.avance ?? null,
     pregunta: vivo ? vivo.pregunta : terminaEnPregunta(o.historial),
     mandar,

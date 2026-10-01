@@ -231,6 +231,8 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           projectId={id}
           idioma={idioma}
           onPequena={setConPip}
+          encargo={chat.encargo}
+          dichoAlTerminar={chat.dichoAlTerminar}
           onTerminar={(tarjetas, segundos) => {
             setLlamada(false);
             setConPip(false);

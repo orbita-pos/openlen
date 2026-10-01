@@ -85,23 +85,42 @@ export function tarjetaDeConfirmacion(d: Record<string, unknown>): TarjetaDeLlam
   return null;
 }
 
+/** Lo que Len ya está haciendo FUERA de la llamada (lo pediste por el chat). */
+export interface EncargoDeFuera {
+  /** El turno en curso, para corregirlo; null mientras aún no se sabe. */
+  turnoId: string | null;
+  /** Lo que la persona pidió, tal cual. */
+  pedido: string;
+}
+
+/** Para la voz, al empezar (o en cuanto aparece): sin esto, si llamabas con Len
+ *  trabajando, no sabía en qué (Jesús, 01/10). */
+export function contextoDelEncargo(e: EncargoDeFuera): string {
+  return `Ahora mismo Len está trabajando en algo que la persona le pidió por el chat: «${recortarParaLaVoz(e.pedido, 300)}». Si pregunta qué está haciendo Len, díselo con tus palabras. Lo que pida ahora sobre eso le llega a Len como corrección de ese mismo encargo: no hace falta abrir otro.`;
+}
+
 export function crearPuenteALen(deps: DepsDelPuente) {
   let oido = "";
   let turnoId: string | null = null;
   let enCurso = false;
+  let deFuera: EncargoDeFuera | null = null;
 
-  const voz = (type: EventoParaLaVoz["type"], delegation_id: string, content: string) =>
+  const voz = (type: EventoParaLaVoz["type"], delegation_id: string | null, content: string) =>
     deps.enviarALaVoz({ type, delegation_id, content });
 
   async function delegar(delegationId: string): Promise<void> {
     const pedido = oido.trim();
     oido = "";
 
-    if (enCurso) {
-      // Con Len trabajando, lo nuevo corrige el encargo en vez de abrir otro.
-      if (turnoId && pedido) {
-        await deps.dirigir(turnoId, pedido).catch(() => {});
+    if (enCurso || deFuera) {
+      // Con Len trabajando —en lo que pidió la llamada o en lo del chat—, lo
+      // nuevo corrige ese encargo en vez de abrir otro sobre la misma página.
+      const id = enCurso ? turnoId : (deFuera?.turnoId ?? null);
+      if (id && pedido) {
+        await deps.dirigir(id, pedido).catch(() => {});
         voz("session.thinking.append", delegationId, `La persona corrigió el encargo mientras Len trabaja: «${pedido}». Len ya lo tiene; espera su resultado.`);
+      } else if (pedido) {
+        voz("session.commentary.append", delegationId, "Len acaba de empezar y todavía no puede recibir correcciones: pide a la persona que lo repita en un momento.");
       }
       return;
     }
@@ -180,6 +199,21 @@ export function crearPuenteALen(deps: DepsDelPuente) {
       oido += delta;
     },
     delegar,
-    trabajando: () => enCurso,
+    trabajando: () => enCurso || deFuera !== null,
+    /** El encargo que Len hace fuera de la llamada; null cuando no hay. Se
+     *  puede volver a llamar (p. ej. cuando llega el id del turno). */
+    seguirEncargo(e: EncargoDeFuera | null) {
+      deFuera = e;
+    },
+    /** Terminó el encargo de fuera: la voz lo cuenta, como contexto general. */
+    terminoEncargo(texto: string) {
+      if (!deFuera) return;
+      deFuera = null;
+      voz(
+        "session.commentary.append",
+        null,
+        `Len terminó lo que la persona le pidió por el chat. Resultado (dilo corto y con tus palabras; números y nombres tal cual): ${recortarParaLaVoz(texto) || "Len terminó sin decir nada."}`,
+      );
+    },
   };
 }

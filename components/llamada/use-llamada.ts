@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { crearLectorSse } from "@/lib/len-bench/sse";
 import { clienteDeLaWeb, type ClienteDeOpenLen } from "./cliente";
 import { despacharEventoDeVoz } from "./eventos-de-voz";
-import { crearPuenteALen, type EventoParaLaVoz, type TarjetaDeLlamada } from "./puente-a-len";
+import { contextoDelEncargo, crearPuenteALen, type EncargoDeFuera, type EventoParaLaVoz, type TarjetaDeLlamada } from "./puente-a-len";
 import { crearTopes, MAX_LLAMADA_MS, SILENCIO_MS } from "./topes";
 
 export type AvisoDeLlamada = "sinMicro" | "sinVoz" | "cortada" | "colgadaSilencio" | "colgadaDuracion";
@@ -42,10 +42,17 @@ export function useLlamada(o: { projectId: string; idioma: string; cliente?: Cli
     topes?: ReturnType<typeof crearTopes>;
     sesionId?: string | null;
     segundos?: number | null;
+    puente?: ReturnType<typeof crearPuenteALen>;
+    /** Lo que Len hace fuera de la llamada (el chat de la app); ver `seguirEncargo`. */
+    encargo: EncargoDeFuera | null;
+    /** Len trabaja en algo que pidió ESTA llamada. */
+    propio: boolean;
+    /** La voz ya saludó: un encargo que aparece después se le cuenta aparte. */
+    empezada: boolean;
     finLen: number;
     finTu: number;
     cerrada: boolean;
-  }>({ finLen: -1e9, finTu: -1e9, cerrada: true });
+  }>({ encargo: null, propio: false, empezada: false, finLen: -1e9, finTu: -1e9, cerrada: true });
 
   const enviar = useCallback((e: object) => {
     const dc = r.current.dc;
@@ -93,7 +100,7 @@ export function useLlamada(o: { projectId: string; idioma: string; cliente?: Cli
       return;
     }
     const s = r.current;
-    Object.assign(s, { stream, finLen: -1e9, finTu: -1e9, cerrada: false, segundos: null, sesionId: null });
+    Object.assign(s, { stream, finLen: -1e9, finTu: -1e9, cerrada: false, segundos: null, sesionId: null, propio: false, empezada: false });
     const pc = new RTCPeerConnection();
     s.pc = pc;
     pc.ontrack = (ev) => {
@@ -139,10 +146,14 @@ export function useLlamada(o: { projectId: string; idioma: string; cliente?: Cli
       enviarALaVoz: (e: EventoParaLaVoz) => enviar(e),
       mostrarTarjeta: (t) => setTarjetas((ts) => [...ts, t]),
       alCambiarEstado: (si) => {
-        setTrabajando(si);
-        s.topes?.lenTrabajando(si);
+        s.propio = si;
+        const ocupado = si || s.encargo !== null;
+        setTrabajando(ocupado);
+        s.topes?.lenTrabajando(ocupado);
       },
     });
+    s.puente = puente;
+    puente.seguirEncargo(s.encargo);
 
     let saludo = "";
     dc.onmessage = (m) => {
@@ -153,7 +164,12 @@ export function useLlamada(o: { projectId: string; idioma: string; cliente?: Cli
         return;
       }
       despacharEventoDeVoz(e, {
-        empezo: () => enviar({ type: "session.instructions.append", delegation_id: null, content: saludo }),
+        empezo: () => {
+          // Si Len ya trabaja en algo del chat, la voz lo sabe desde el saludo.
+          const contexto = s.encargo ? `\n\n${contextoDelEncargo(s.encargo)}` : "";
+          enviar({ type: "session.instructions.append", delegation_id: null, content: saludo + contexto });
+          s.empezada = true;
+        },
         oyo: (delta, inicio) => {
           s.topes?.actividad();
           puente.oir(delta);
@@ -206,6 +222,8 @@ export function useLlamada(o: { projectId: string; idioma: string; cliente?: Cli
         colgar();
       },
     });
+    // Esperar a que Len termine lo del chat no es silencio: no cuelga por eso.
+    if (s.propio || s.encargo) s.topes.lenTrabajando(true);
     setFase("en_llamada");
     setInicio(Date.now());
   }, [o.projectId, o.idioma, enviar, cerrarTodo, colgar]);
@@ -222,6 +240,32 @@ export function useLlamada(o: { projectId: string; idioma: string; cliente?: Cli
     setAudio(!audio);
   }, [audio]);
 
+  // LO QUE LEN HACE FUERA DE LA LLAMADA (el chat de la app; la web no lo usa).
+  // Llamar con Len trabajando: la voz sabe en qué, lo que pides lo corrige en
+  // vez de abrir otro trabajo, y al terminar te lo cuenta (Jesús, 01/10).
+  const seguirEncargo = useCallback(
+    (e: EncargoDeFuera | null) => {
+      const s = r.current;
+      const nuevo = e !== null && s.encargo === null;
+      s.encargo = e;
+      s.puente?.seguirEncargo(e);
+      const ocupado = s.propio || e !== null;
+      setTrabajando(ocupado);
+      s.topes?.lenTrabajando(ocupado);
+      if (nuevo && e && s.empezada) enviar({ type: "session.instructions.append", delegation_id: null, content: contextoDelEncargo(e) });
+    },
+    [enviar],
+  );
+
+  const terminoEncargo = useCallback((texto: string) => {
+    const s = r.current;
+    if (!s.encargo) return;
+    s.encargo = null;
+    s.puente?.terminoEncargo(texto);
+    setTrabajando(s.propio);
+    s.topes?.lenTrabajando(s.propio);
+  }, []);
+
   useEffect(() => {
     const alSalir = () => enviar({ type: "session.close" });
     window.addEventListener("beforeunload", alSalir);
@@ -231,5 +275,5 @@ export function useLlamada(o: { projectId: string; idioma: string; cliente?: Cli
     };
   }, [enviar, cerrarTodo]);
 
-  return { fase, aviso, lineaLen, lineaTu, trabajando, tarjetas, micro, audio, vozDeLen, inicio, llamar: () => void llamar(), colgar, alternarMicro, alternarAudio, audioRef };
+  return { fase, aviso, lineaLen, lineaTu, trabajando, tarjetas, micro, audio, vozDeLen, inicio, llamar: () => void llamar(), colgar, alternarMicro, alternarAudio, audioRef, seguirEncargo, terminoEncargo };
 }

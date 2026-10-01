@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { EventoSse } from "@/lib/len-bench/sse";
-import { AVISO_DE_ESPERA_MS, crearPuenteALen, fraseDeAvance, recortarParaLaVoz, type DepsDelPuente, type EventoParaLaVoz, type TarjetaDeLlamada } from "./puente-a-len";
+import { AVISO_DE_ESPERA_MS, contextoDelEncargo, crearPuenteALen, fraseDeAvance, recortarParaLaVoz, type DepsDelPuente, type EventoParaLaVoz, type TarjetaDeLlamada } from "./puente-a-len";
 
 function preparar(eventos: EventoSse[], o: { rechaza?: Error; espera?: Promise<void> } = {}) {
   const voz: EventoParaLaVoz[] = [];
@@ -146,5 +146,54 @@ describe("fraseDeAvance", () => {
     expect(fraseDeAvance("ver_visitas")).toMatch(/visitas/);
     expect(fraseDeAvance("Edit")).toMatch(/cambiando la página/);
     expect(fraseDeAvance("TodoWrite")).toBeNull();
+  });
+});
+
+// Llamas con Len ya trabajando en algo que pediste por el chat (Jesús, 01/10:
+// «no sabe de lo que está trabajando»): la llamada lo sabe, lo que pides lo
+// corrige, y al terminar te lo cuenta.
+describe("el encargo de fuera de la llamada", () => {
+  it("el contexto para la voz nombra lo que se pidió", () => {
+    expect(contextoDelEncargo({ turnoId: "t9", pedido: "Pon el botón verde" })).toContain("«Pon el botón verde»");
+  });
+
+  it("con un encargo en curso, lo que pides lo corrige (dirigir) y no abre otro trabajo", async () => {
+    const { deps, voz, puente } = preparar([turno, done]);
+    puente.seguirEncargo({ turnoId: "t9", pedido: "Pon el botón verde" });
+    expect(puente.trabajando()).toBe(true);
+    puente.oir("mejor azul");
+    await puente.delegar("d1");
+    expect(deps.dirigir).toHaveBeenCalledWith("t9", "mejor azul");
+    expect(deps.pedirALen).not.toHaveBeenCalled();
+    expect(voz.at(-1)).toMatchObject({ type: "session.thinking.append", delegation_id: "d1" });
+  });
+
+  it("si aún no se sabe el id del turno, no se pierde en silencio: la voz pide que lo repita", async () => {
+    const { deps, voz, puente } = preparar([]);
+    puente.seguirEncargo({ turnoId: null, pedido: "Pon el botón verde" });
+    puente.oir("mejor azul");
+    await puente.delegar("d1");
+    expect(deps.dirigir).not.toHaveBeenCalled();
+    expect(deps.pedirALen).not.toHaveBeenCalled();
+    expect(voz.at(-1)).toMatchObject({ type: "session.commentary.append", delegation_id: "d1" });
+  });
+
+  it("al terminar, la voz lo cuenta (contexto general, sin delegación) y vuelve a abrir trabajos nuevos", async () => {
+    const { deps, voz, puente } = preparar([turno, done]);
+    puente.seguirEncargo({ turnoId: "t9", pedido: "Pon el botón verde" });
+    puente.terminoEncargo("Listo: el botón ya es **verde**.");
+    const fin = voz.at(-1)!;
+    expect(fin).toMatchObject({ type: "session.commentary.append", delegation_id: null });
+    expect(fin.content).toContain("Listo: el botón ya es verde.");
+    expect(puente.trabajando()).toBe(false);
+    puente.oir("¿cómo va mi página?");
+    await puente.delegar("d2");
+    expect(deps.pedirALen).toHaveBeenCalledWith("¿cómo va mi página?", expect.any(Function));
+  });
+
+  it("terminar sin encargo no dice nada", () => {
+    const { voz, puente } = preparar([]);
+    puente.terminoEncargo("algo");
+    expect(voz).toEqual([]);
   });
 });

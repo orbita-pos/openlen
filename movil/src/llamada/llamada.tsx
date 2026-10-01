@@ -3,7 +3,7 @@
 // cronómetro, la cara con el halo que late con la voz real, subtítulo con los
 // números en pastilla, tarjetas y Audio · Colgar · Silenciar. Pequeña: la
 // píldora flotante del prototipo (.lm-pip) mientras ves tu página.
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "use-intl";
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import { useLlamada } from "@/components/llamada/use-llamada";
@@ -14,11 +14,11 @@ import { escucharNivel } from "./halo";
 import { TarjetaDeLaApp } from "./tarjetas";
 import { useDeslizar } from "../deslizar";
 import { useAtras } from "../atras";
-import type { TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
+import type { EncargoDeFuera, TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
 
 const reloj = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
 
-export function Llamada({ cliente, projectId, idioma, onTerminar, onPequena }: {
+export function Llamada({ cliente, projectId, idioma, onTerminar, onPequena, encargo = null, dichoAlTerminar }: {
   cliente: ClienteDeOpenLen;
   projectId: string;
   idioma: string;
@@ -26,13 +26,39 @@ export function Llamada({ cliente, projectId, idioma, onTerminar, onPequena }: {
   onTerminar: (tarjetas: TarjetaDeLlamada[], segundos: number | null) => void;
   /** La llamada pequeña flota sobre lo que haya debajo (el chat le deja sitio). */
   onPequena?: (si: boolean) => void;
+  /** Lo que Len hace ahora desde el chat (useChat): la llamada lo sigue. */
+  encargo?: EncargoDeFuera | null;
+  /** Lo que dijo Len al acabar ese encargo, para contarlo en la llamada. */
+  dichoAlTerminar?: () => string;
 }) {
   const t = useTranslations("movil.llamada");
   const tl = useTranslations("llamada");
   const ll = useLlamada({ projectId, idioma, cliente });
+  // Llamar con Len trabajando en algo del chat: la voz sabe en qué, lo que
+  // pides lo corrige y, al terminar, te lo cuenta (use-llamada: seguirEncargo).
+  const { seguirEncargo, terminoEncargo } = ll;
+  const habiaEncargo = useRef(false);
+  const dicho = useRef(dichoAlTerminar);
+  useLayoutEffect(() => {
+    dicho.current = dichoAlTerminar;
+  });
+  useEffect(() => {
+    if (encargo) seguirEncargo(encargo);
+    else if (habiaEncargo.current) terminoEncargo(dicho.current?.() ?? "");
+    habiaEncargo.current = encargo !== null;
+  }, [encargo, seguirEncargo, terminoEncargo]);
   const [pequena, setPequena] = useState(false);
   const [ahora, setAhora] = useState(Date.now());
   const halo = useRef<HTMLDivElement>(null);
+  // Si lo que dice no cabe encima de los botones, se ve lo último y arriba se
+  // desvanece: la clase sólo cuando de verdad se corta, o desvanecería la
+  // primera línea de una frase corta.
+  const subs = useRef<HTMLParagraphElement>(null);
+  const [subsLargos, setSubsLargos] = useState(false);
+  useLayoutEffect(() => {
+    const p = subs.current;
+    setSubsLargos(!!p && p.scrollHeight > p.clientHeight + 1);
+  }, [ll.lineaLen, ll.lineaTu]);
   const arrancada = useRef(false);
   // Deslizar la llamada hacia abajo la hace pequeña, como el botón de minimizar.
   const deslizar = useDeslizar({ hacia: "abajo", alSoltar: () => setPequena(true) });
@@ -120,11 +146,14 @@ export function Llamada({ cliente, projectId, idioma, onTerminar, onPequena }: {
         <div className="lm-res">
           {ll.tarjetas.map((x, i) => <TarjetaDeLaApp key={`${i}-${x.tipo}`} x={x} cliente={cliente} projectId={projectId} idioma={idioma} />)}
         </div>
-        <p className="lm-subs" aria-live="polite">
-          {palabras.map((w, i) => (
-            <span key={i} className={`lm-w is-said${w.clave ? " is-key" : ""}`}>{w.texto} </span>
-          ))}
-          {ll.lineaTu && <span className="lm-you"><b>{t("tu")}</b>{ll.lineaTu}</span>}
+        <p className={`lm-subs${subsLargos ? " app-subs-largos" : ""}`} ref={subs} aria-live="polite">
+          {/* Un solo bloque dentro: el párrafo lo alinea abajo y, si no cabe, se ve lo último (app.css). */}
+          <span className="app-subs">
+            {palabras.map((w, i) => (
+              <span key={i} className={`lm-w is-said${w.clave ? " is-key" : ""}`}>{w.texto} </span>
+            ))}
+            {ll.lineaTu && <span className="lm-you"><b>{t("tu")}</b>{ll.lineaTu}</span>}
+          </span>
         </p>
         <div className="lm-call-actions">
           <button type="button" className={`lm-round lm-rb${ll.audio ? " is-on" : ""}`} onClick={ll.alternarAudio}><span><Icono nombre={icAudio} /></span>{tl("audio")}</button>
