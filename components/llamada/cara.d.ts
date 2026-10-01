@@ -6,5 +6,10 @@ interface MotorDeCara {
   set(estado: string): void;
 }
 interface Window {
-  LenCara?: { create(host: HTMLElement, o: { props: "all" | "compact" | "none" }): MotorDeCara };
+  LenCara?: {
+    create(
+      host: HTMLElement,
+      o: { props: "all" | "compact" | "none"; state?: string; onchange?: (estado: string) => void },
+    ): MotorDeCara;
+  };
 }

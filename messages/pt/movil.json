@@ -2,6 +2,60 @@
   "entrar": {
     "listo": "Pronto. Volte para o app.",
     "volver": "Voltar para o app",
-    "enlaceRoto": "Este link não funciona. Volte para o app e toque em “Entrar” de novo."
+    "enlaceRoto": "Este link não funciona. Volte para o app e toque em “Entrar” de novo.",
+    "titulo": "Len",
+    "lema": "Sua página, no seu bolso.",
+    "boton": "Entrar",
+    "esperando": "Termine de entrar no navegador…",
+    "caducado": "Esse link expirou. Toque em “Entrar” de novo."
+  },
+  "principal": {
+    "vistaPrevia": "Pré-visualização",
+    "publicada": "Publicada",
+    "sinPublicar": "Não publicada",
+    "otrosTamanos": "Ver em outro tamanho",
+    "verEn": "Ver sua página no",
+    "cel": "Celular",
+    "tab": "Tablet",
+    "pc": "Computador",
+    "estado": "Sua página, em pré-visualização",
+    "trabajando": "Trabalhando na sua página…",
+    "sinMensaje": "Me ligue e peça o que quiser.",
+    "llamar": "Ligar para o Len",
+    "encoger": "Recolher ou abrir",
+    "tusPaginas": "Suas páginas",
+    "salir": "Sair",
+    "vistaNoCarga": "Não consegui carregar sua página. A ligação continua funcionando."
+  },
+  "vacio": {
+    "sinPaginas": "Você ainda não tem páginas: crie uma em openlen.app."
+  },
+  "red": {
+    "sinRed": "Não consigo chegar ao OpenLen.",
+    "reintentar": "Tentar de novo"
+  },
+  "llamada": {
+    "llamando": "Ligando…",
+    "minimizar": "Deixar a ligação pequena",
+    "agrandar": "Ligação em tela cheia",
+    "microAjustes": "Ative o microfone em Configurações → Apps → Len → Permissões."
+  },
+  "tarjetas": {
+    "visitas": "Visitas · últimos 7 dias",
+    "personas": "{n} pessoas",
+    "hoy": "hoje",
+    "llegan": "{origen}: {n} de 10",
+    "toques": "{n} toques",
+    "borrador": "Rascunho para {con}",
+    "borradorSinNombre": "Rascunho",
+    "enviar": "Enviar",
+    "enviando": "Enviando…",
+    "enviado": "Enviado",
+    "nota": "Nada é enviado até você tocar.",
+    "error": "Não deu para enviar. Tente de novo.",
+    "publicar": "Publicar",
+    "publicando": "Publicando…",
+    "publicadaEn": "Publicada em {url}",
+    "noPublicada": "Não deu para publicar."
   }
 }

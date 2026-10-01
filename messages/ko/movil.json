@@ -2,6 +2,60 @@
   "entrar": {
     "listo": "완료됐어요. 앱으로 돌아가세요.",
     "volver": "앱으로 돌아가기",
-    "enlaceRoto": "이 링크는 사용할 수 없어요. 앱으로 돌아가서 「로그인」을 다시 눌러 주세요."
+    "enlaceRoto": "이 링크는 사용할 수 없어요. 앱으로 돌아가서 「로그인」을 다시 눌러 주세요.",
+    "titulo": "Len",
+    "lema": "내 페이지를 주머니 속에.",
+    "boton": "로그인",
+    "esperando": "브라우저에서 로그인을 마쳐 주세요…",
+    "caducado": "링크가 만료됐어요. 「로그인」을 다시 눌러 주세요."
+  },
+  "principal": {
+    "vistaPrevia": "미리보기",
+    "publicada": "게시됨",
+    "sinPublicar": "게시 안 됨",
+    "otrosTamanos": "다른 크기로 보기",
+    "verEn": "페이지 보기 크기",
+    "cel": "휴대폰",
+    "tab": "태블릿",
+    "pc": "컴퓨터",
+    "estado": "내 페이지, 미리보기 중",
+    "trabajando": "페이지 작업 중이에요…",
+    "sinMensaje": "전화로 무엇이든 부탁하세요.",
+    "llamar": "Len에게 전화하기",
+    "encoger": "접기 또는 펼치기",
+    "tusPaginas": "내 페이지",
+    "salir": "로그아웃",
+    "vistaNoCarga": "페이지를 불러오지 못했어요. 통화는 계속 쓸 수 있어요."
+  },
+  "vacio": {
+    "sinPaginas": "아직 페이지가 없어요. openlen.app에서 만들어 보세요."
+  },
+  "red": {
+    "sinRed": "OpenLen에 연결할 수 없어요.",
+    "reintentar": "다시 시도"
+  },
+  "llamada": {
+    "llamando": "전화 거는 중…",
+    "minimizar": "통화 작게 보기",
+    "agrandar": "통화 전체 화면",
+    "microAjustes": "설정 → 앱 → Len → 권한에서 마이크를 켜 주세요."
+  },
+  "tarjetas": {
+    "visitas": "방문 · 최근 7일",
+    "personas": "{n}명",
+    "hoy": "오늘",
+    "llegan": "{origen}: 10명 중 {n}명",
+    "toques": "{n}번 탭",
+    "borrador": "{con}님에게 보낼 초안",
+    "borradorSinNombre": "초안",
+    "enviar": "보내기",
+    "enviando": "보내는 중…",
+    "enviado": "보냄",
+    "nota": "누르기 전까지는 아무것도 보내지 않아요.",
+    "error": "보내지 못했어요. 다시 시도해 주세요.",
+    "publicar": "게시하기",
+    "publicando": "게시 중…",
+    "publicadaEn": "{url}에 게시됐어요",
+    "noPublicada": "게시하지 못했어요."
   }
 }

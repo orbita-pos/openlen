@@ -2,6 +2,60 @@
   "entrar": {
     "listo": "完了しました。アプリに戻ってください。",
     "volver": "アプリに戻る",
-    "enlaceRoto": "このリンクは使えません。アプリに戻って、もう一度「ログイン」をタップしてください。"
+    "enlaceRoto": "このリンクは使えません。アプリに戻って、もう一度「ログイン」をタップしてください。",
+    "titulo": "Len",
+    "lema": "あなたのページを、ポケットに。",
+    "boton": "ログイン",
+    "esperando": "ブラウザでログインを完了してください…",
+    "caducado": "リンクの有効期限が切れました。もう一度「ログイン」をタップしてください。"
+  },
+  "principal": {
+    "vistaPrevia": "プレビュー",
+    "publicada": "公開中",
+    "sinPublicar": "未公開",
+    "otrosTamanos": "別のサイズで見る",
+    "verEn": "ページの表示サイズ",
+    "cel": "スマホ",
+    "tab": "タブレット",
+    "pc": "パソコン",
+    "estado": "あなたのページ（プレビュー）",
+    "trabajando": "ページを作業中です…",
+    "sinMensaje": "電話で何でも頼んでください。",
+    "llamar": "Lenに電話する",
+    "encoger": "閉じる・開く",
+    "tusPaginas": "あなたのページ",
+    "salir": "ログアウト",
+    "vistaNoCarga": "ページを読み込めませんでした。通話は使えます。"
+  },
+  "vacio": {
+    "sinPaginas": "まだページがありません。openlen.app で作成してください。"
+  },
+  "red": {
+    "sinRed": "OpenLen に接続できません。",
+    "reintentar": "再試行"
+  },
+  "llamada": {
+    "llamando": "発信中…",
+    "minimizar": "通話を小さくする",
+    "agrandar": "通話を全画面にする",
+    "microAjustes": "設定 → アプリ → Len → 権限 でマイクをオンにしてください。"
+  },
+  "tarjetas": {
+    "visitas": "訪問数・過去7日間",
+    "personas": "{n}人",
+    "hoy": "今日",
+    "llegan": "{origen}: 10人中{n}人",
+    "toques": "{n}回タップ",
+    "borrador": "{con}さんへの下書き",
+    "borradorSinNombre": "下書き",
+    "enviar": "送信",
+    "enviando": "送信中…",
+    "enviado": "送信済み",
+    "nota": "タップするまで何も送信されません。",
+    "error": "送信できませんでした。もう一度お試しください。",
+    "publicar": "公開する",
+    "publicando": "公開中…",
+    "publicadaEn": "{url} で公開しました",
+    "noPublicada": "公開できませんでした。"
   }
 }

@@ -1,0 +1,12 @@
+/* La app sin el marco del teléfono del prototipo: el lienzo ES la pantalla.
+   lienzo.ts calcula la escala (ancho del teléfono / 390) y el alto estirado;
+   las posiciones en px del prototipo siguen valiendo dentro. */
+html, body, #raiz { margin: 0; height: 100%; overflow: hidden; background: #000; }
+body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+.app-lienzo { position: fixed; top: 0; left: 0; width: 390px; transform-origin: 0 0; }
+.app-lienzo > .lm-screen { width: 390px; height: 100%; border-radius: 0; }
+/* la vista previa real: un iframe que llena el hueco entre la barra y el borde */
+.app-vista { position: absolute; top: 98px; left: 0; right: 0; bottom: 0; border: 0; width: 100%; height: calc(100% - 98px); background: #fff; }
+.lm-pagehost.app-con-iframe { padding: 0; overflow: hidden; }
+.app-aviso { position: absolute; left: 24px; right: 24px; top: 46%; text-align: center; font: 500 15px/1.4 Inter, sans-serif; color: var(--lm-muted); }
+.app-boton-salir { position: absolute; right: 16px; bottom: 16px; }

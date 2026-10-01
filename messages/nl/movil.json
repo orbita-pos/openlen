@@ -2,6 +2,60 @@
   "entrar": {
     "listo": "Klaar. Ga terug naar de app.",
     "volver": "Terug naar de app",
-    "enlaceRoto": "Deze link werkt niet. Ga terug naar de app en tik nog eens op ‘Inloggen’."
+    "enlaceRoto": "Deze link werkt niet. Ga terug naar de app en tik nog eens op ‘Inloggen’.",
+    "titulo": "Len",
+    "lema": "Je pagina, in je broekzak.",
+    "boton": "Inloggen",
+    "esperando": "Rond het inloggen af in de browser…",
+    "caducado": "Die link is verlopen. Tik nog eens op ‘Inloggen’."
+  },
+  "principal": {
+    "vistaPrevia": "Voorbeeld",
+    "publicada": "Online",
+    "sinPublicar": "Niet gepubliceerd",
+    "otrosTamanos": "Bekijk in een ander formaat",
+    "verEn": "Bekijk je pagina op",
+    "cel": "Telefoon",
+    "tab": "Tablet",
+    "pc": "Computer",
+    "estado": "Je pagina, als voorbeeld",
+    "trabajando": "Ik werk aan je pagina…",
+    "sinMensaje": "Bel me en vraag wat je wilt.",
+    "llamar": "Len bellen",
+    "encoger": "Inklappen of openen",
+    "tusPaginas": "Je pagina’s",
+    "salir": "Uitloggen",
+    "vistaNoCarga": "Ik kon je pagina niet laden. Bellen werkt nog wel."
+  },
+  "vacio": {
+    "sinPaginas": "Je hebt nog geen pagina’s: maak er een op openlen.app."
+  },
+  "red": {
+    "sinRed": "Ik kan OpenLen niet bereiken.",
+    "reintentar": "Opnieuw proberen"
+  },
+  "llamada": {
+    "llamando": "Bellen…",
+    "minimizar": "Gesprek klein maken",
+    "agrandar": "Gesprek op volledig scherm",
+    "microAjustes": "Zet de microfoon aan via Instellingen → Apps → Len → Rechten."
+  },
+  "tarjetas": {
+    "visitas": "Bezoeken · afgelopen 7 dagen",
+    "personas": "{n} mensen",
+    "hoy": "vandaag",
+    "llegan": "{origen}: {n} van de 10",
+    "toques": "{n} tikken",
+    "borrador": "Concept voor {con}",
+    "borradorSinNombre": "Concept",
+    "enviar": "Versturen",
+    "enviando": "Versturen…",
+    "enviado": "Verstuurd",
+    "nota": "Er gaat niets weg tot je erop tikt.",
+    "error": "Versturen is niet gelukt. Probeer het opnieuw.",
+    "publicar": "Publiceren",
+    "publicando": "Publiceren…",
+    "publicadaEn": "Online op {url}",
+    "noPublicada": "Publiceren is niet gelukt."
   }
 }

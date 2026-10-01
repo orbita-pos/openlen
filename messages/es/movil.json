@@ -2,6 +2,60 @@
   "entrar": {
     "listo": "Listo. Vuelve a la app.",
     "volver": "Volver a la app",
-    "enlaceRoto": "Este enlace no sirve. Vuelve a la app y toca «Entrar» otra vez."
+    "enlaceRoto": "Este enlace no sirve. Vuelve a la app y toca «Entrar» otra vez.",
+    "titulo": "Len",
+    "lema": "Tu página, en tu bolsillo.",
+    "boton": "Entrar",
+    "esperando": "Termina de entrar en el navegador…",
+    "caducado": "Ese enlace caducó. Toca «Entrar» otra vez."
+  },
+  "principal": {
+    "vistaPrevia": "Vista previa",
+    "publicada": "Publicada",
+    "sinPublicar": "Sin publicar",
+    "otrosTamanos": "Ver en otro tamaño",
+    "verEn": "Ver tu página en",
+    "cel": "Celular",
+    "tab": "Tableta",
+    "pc": "Compu",
+    "estado": "Tu página, en vista previa",
+    "trabajando": "Trabajando en tu página…",
+    "sinMensaje": "Pídeme lo que quieras por llamada.",
+    "llamar": "Llamar a Len",
+    "encoger": "Encoger o abrir",
+    "tusPaginas": "Tus páginas",
+    "salir": "Salir",
+    "vistaNoCarga": "No pude cargar tu página. La llamada sigue funcionando."
+  },
+  "vacio": {
+    "sinPaginas": "Aún no tienes páginas: créala en openlen.app."
+  },
+  "red": {
+    "sinRed": "No llego a OpenLen.",
+    "reintentar": "Reintentar"
+  },
+  "llamada": {
+    "llamando": "Llamando…",
+    "minimizar": "Hacer pequeña la llamada",
+    "agrandar": "Llamada en pantalla completa",
+    "microAjustes": "Activa el micrófono en Ajustes → Apps → Len → Permisos."
+  },
+  "tarjetas": {
+    "visitas": "Visitas · últimos 7 días",
+    "personas": "{n} personas",
+    "hoy": "hoy",
+    "llegan": "{origen}: {n} de 10",
+    "toques": "{n} toques",
+    "borrador": "Borrador para {con}",
+    "borradorSinNombre": "Borrador",
+    "enviar": "Enviar",
+    "enviando": "Enviando…",
+    "enviado": "Enviado",
+    "nota": "Nada se manda hasta que lo pulses.",
+    "error": "No se pudo mandar. Prueba otra vez.",
+    "publicar": "Publicar",
+    "publicando": "Publicando…",
+    "publicadaEn": "Publicada en {url}",
+    "noPublicada": "No se pudo publicar."
   }
 }

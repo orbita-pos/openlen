@@ -2,6 +2,60 @@
   "entrar": {
     "listo": "Done. Go back to the app.",
     "volver": "Back to the app",
-    "enlaceRoto": "This link doesn't work. Go back to the app and tap “Sign in” again."
+    "enlaceRoto": "This link doesn't work. Go back to the app and tap “Sign in” again.",
+    "titulo": "Len",
+    "lema": "Your page, in your pocket.",
+    "boton": "Sign in",
+    "esperando": "Finish signing in in the browser…",
+    "caducado": "That link expired. Tap “Sign in” again."
+  },
+  "principal": {
+    "vistaPrevia": "Preview",
+    "publicada": "Live",
+    "sinPublicar": "Not published",
+    "otrosTamanos": "View at another size",
+    "verEn": "View your page on",
+    "cel": "Phone",
+    "tab": "Tablet",
+    "pc": "Computer",
+    "estado": "Your page, in preview",
+    "trabajando": "Working on your page…",
+    "sinMensaje": "Call me and ask for anything.",
+    "llamar": "Call Len",
+    "encoger": "Collapse or expand",
+    "tusPaginas": "Your pages",
+    "salir": "Sign out",
+    "vistaNoCarga": "I couldn't load your page. Calls still work."
+  },
+  "vacio": {
+    "sinPaginas": "You don't have any pages yet: create one at openlen.app."
+  },
+  "red": {
+    "sinRed": "I can't reach OpenLen.",
+    "reintentar": "Try again"
+  },
+  "llamada": {
+    "llamando": "Calling…",
+    "minimizar": "Make the call small",
+    "agrandar": "Full-screen call",
+    "microAjustes": "Turn on the microphone in Settings → Apps → Len → Permissions."
+  },
+  "tarjetas": {
+    "visitas": "Visits · last 7 days",
+    "personas": "{n} people",
+    "hoy": "today",
+    "llegan": "{origen}: {n} out of 10",
+    "toques": "{n} taps",
+    "borrador": "Draft for {con}",
+    "borradorSinNombre": "Draft",
+    "enviar": "Send",
+    "enviando": "Sending…",
+    "enviado": "Sent",
+    "nota": "Nothing is sent until you tap it.",
+    "error": "Couldn't send it. Try again.",
+    "publicar": "Publish",
+    "publicando": "Publishing…",
+    "publicadaEn": "Live at {url}",
+    "noPublicada": "Couldn't publish."
   }
 }

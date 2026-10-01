@@ -2,6 +2,60 @@
   "entrar": {
     "listo": "C’est fait. Retournez dans l’app.",
     "volver": "Retour à l’app",
-    "enlaceRoto": "Ce lien ne fonctionne pas. Retournez dans l’app et touchez « Se connecter » à nouveau."
+    "enlaceRoto": "Ce lien ne fonctionne pas. Retournez dans l’app et touchez « Se connecter » à nouveau.",
+    "titulo": "Len",
+    "lema": "Votre page, dans votre poche.",
+    "boton": "Se connecter",
+    "esperando": "Terminez la connexion dans le navigateur…",
+    "caducado": "Ce lien a expiré. Touchez « Se connecter » à nouveau."
+  },
+  "principal": {
+    "vistaPrevia": "Aperçu",
+    "publicada": "En ligne",
+    "sinPublicar": "Non publiée",
+    "otrosTamanos": "Voir dans une autre taille",
+    "verEn": "Voir votre page sur",
+    "cel": "Téléphone",
+    "tab": "Tablette",
+    "pc": "Ordinateur",
+    "estado": "Votre page, en aperçu",
+    "trabajando": "Je travaille sur votre page…",
+    "sinMensaje": "Appelez-moi et demandez-moi ce que vous voulez.",
+    "llamar": "Appeler Len",
+    "encoger": "Réduire ou ouvrir",
+    "tusPaginas": "Vos pages",
+    "salir": "Se déconnecter",
+    "vistaNoCarga": "Je n’ai pas pu charger votre page. L’appel fonctionne toujours."
+  },
+  "vacio": {
+    "sinPaginas": "Vous n’avez pas encore de page : créez-en une sur openlen.app."
+  },
+  "red": {
+    "sinRed": "Je n’arrive pas à joindre OpenLen.",
+    "reintentar": "Réessayer"
+  },
+  "llamada": {
+    "llamando": "Appel en cours…",
+    "minimizar": "Réduire l’appel",
+    "agrandar": "Appel en plein écran",
+    "microAjustes": "Activez le micro dans Paramètres → Applications → Len → Autorisations."
+  },
+  "tarjetas": {
+    "visitas": "Visites · 7 derniers jours",
+    "personas": "{n} personnes",
+    "hoy": "auj.",
+    "llegan": "{origen} : {n} sur 10",
+    "toques": "{n} touches",
+    "borrador": "Brouillon pour {con}",
+    "borradorSinNombre": "Brouillon",
+    "enviar": "Envoyer",
+    "enviando": "Envoi…",
+    "enviado": "Envoyé",
+    "nota": "Rien ne part tant que vous n’appuyez pas.",
+    "error": "Impossible d’envoyer. Réessayez.",
+    "publicar": "Publier",
+    "publicando": "Publication…",
+    "publicadaEn": "En ligne sur {url}",
+    "noPublicada": "Impossible de publier."
   }
 }

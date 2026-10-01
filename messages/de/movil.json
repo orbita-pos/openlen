@@ -2,6 +2,60 @@
   "entrar": {
     "listo": "Fertig. Zurück zur App.",
     "volver": "Zurück zur App",
-    "enlaceRoto": "Dieser Link funktioniert nicht. Geh zurück zur App und tippe noch einmal auf „Anmelden“."
+    "enlaceRoto": "Dieser Link funktioniert nicht. Geh zurück zur App und tippe noch einmal auf „Anmelden“.",
+    "titulo": "Len",
+    "lema": "Deine Seite, in deiner Tasche.",
+    "boton": "Anmelden",
+    "esperando": "Schließ die Anmeldung im Browser ab…",
+    "caducado": "Dieser Link ist abgelaufen. Tippe noch einmal auf „Anmelden“."
+  },
+  "principal": {
+    "vistaPrevia": "Vorschau",
+    "publicada": "Online",
+    "sinPublicar": "Nicht veröffentlicht",
+    "otrosTamanos": "In anderer Größe ansehen",
+    "verEn": "Deine Seite ansehen auf",
+    "cel": "Handy",
+    "tab": "Tablet",
+    "pc": "Computer",
+    "estado": "Deine Seite, in der Vorschau",
+    "trabajando": "Ich arbeite an deiner Seite…",
+    "sinMensaje": "Ruf mich an und frag, was du willst.",
+    "llamar": "Len anrufen",
+    "encoger": "Einklappen oder öffnen",
+    "tusPaginas": "Deine Seiten",
+    "salir": "Abmelden",
+    "vistaNoCarga": "Ich konnte deine Seite nicht laden. Der Anruf funktioniert trotzdem."
+  },
+  "vacio": {
+    "sinPaginas": "Du hast noch keine Seiten: Erstell eine auf openlen.app."
+  },
+  "red": {
+    "sinRed": "Ich erreiche OpenLen nicht.",
+    "reintentar": "Erneut versuchen"
+  },
+  "llamada": {
+    "llamando": "Anruf läuft…",
+    "minimizar": "Anruf verkleinern",
+    "agrandar": "Anruf im Vollbild",
+    "microAjustes": "Aktiviere das Mikrofon unter Einstellungen → Apps → Len → Berechtigungen."
+  },
+  "tarjetas": {
+    "visitas": "Besuche · letzte 7 Tage",
+    "personas": "{n} Personen",
+    "hoy": "heute",
+    "llegan": "{origen}: {n} von 10",
+    "toques": "{n} Klicks",
+    "borrador": "Entwurf für {con}",
+    "borradorSinNombre": "Entwurf",
+    "enviar": "Senden",
+    "enviando": "Wird gesendet…",
+    "enviado": "Gesendet",
+    "nota": "Nichts wird gesendet, bevor du tippst.",
+    "error": "Senden hat nicht geklappt. Versuch es noch einmal.",
+    "publicar": "Veröffentlichen",
+    "publicando": "Wird veröffentlicht…",
+    "publicadaEn": "Online unter {url}",
+    "noPublicada": "Veröffentlichen hat nicht geklappt."
   }
 }

@@ -2,6 +2,60 @@
   "entrar": {
     "listo": "Fatto. Torna all’app.",
     "volver": "Torna all’app",
-    "enlaceRoto": "Questo link non funziona. Torna all’app e tocca «Accedi» di nuovo."
+    "enlaceRoto": "Questo link non funziona. Torna all’app e tocca «Accedi» di nuovo.",
+    "titulo": "Len",
+    "lema": "La tua pagina, in tasca.",
+    "boton": "Accedi",
+    "esperando": "Finisci l’accesso nel browser…",
+    "caducado": "Quel link è scaduto. Tocca «Accedi» di nuovo."
+  },
+  "principal": {
+    "vistaPrevia": "Anteprima",
+    "publicada": "Online",
+    "sinPublicar": "Non pubblicata",
+    "otrosTamanos": "Vedi in un’altra misura",
+    "verEn": "Vedi la tua pagina su",
+    "cel": "Telefono",
+    "tab": "Tablet",
+    "pc": "Computer",
+    "estado": "La tua pagina, in anteprima",
+    "trabajando": "Sto lavorando alla tua pagina…",
+    "sinMensaje": "Chiamami e chiedimi quello che vuoi.",
+    "llamar": "Chiama Len",
+    "encoger": "Riduci o apri",
+    "tusPaginas": "Le tue pagine",
+    "salir": "Esci",
+    "vistaNoCarga": "Non sono riuscito a caricare la tua pagina. La chiamata funziona comunque."
+  },
+  "vacio": {
+    "sinPaginas": "Non hai ancora pagine: creane una su openlen.app."
+  },
+  "red": {
+    "sinRed": "Non riesco a raggiungere OpenLen.",
+    "reintentar": "Riprova"
+  },
+  "llamada": {
+    "llamando": "Chiamata in corso…",
+    "minimizar": "Rimpicciolisci la chiamata",
+    "agrandar": "Chiamata a schermo intero",
+    "microAjustes": "Attiva il microfono in Impostazioni → App → Len → Autorizzazioni."
+  },
+  "tarjetas": {
+    "visitas": "Visite · ultimi 7 giorni",
+    "personas": "{n} persone",
+    "hoy": "oggi",
+    "llegan": "{origen}: {n} su 10",
+    "toques": "{n} tocchi",
+    "borrador": "Bozza per {con}",
+    "borradorSinNombre": "Bozza",
+    "enviar": "Invia",
+    "enviando": "Invio…",
+    "enviado": "Inviato",
+    "nota": "Non parte nulla finché non lo tocchi.",
+    "error": "Non sono riuscito a inviarlo. Riprova.",
+    "publicar": "Pubblica",
+    "publicando": "Pubblicazione…",
+    "publicadaEn": "Online su {url}",
+    "noPublicada": "Non sono riuscito a pubblicare."
   }
 }
