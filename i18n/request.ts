@@ -204,6 +204,16 @@ import jaLlamada from "../messages/ja/llamada.json";
 import koLlamada from "../messages/ko/llamada.json";
 import zhLlamada from "../messages/zh/llamada.json";
 import nlLlamada from "../messages/nl/llamada.json";
+import enMovil from "../messages/en/movil.json";
+import esMovil from "../messages/es/movil.json";
+import ptMovil from "../messages/pt/movil.json";
+import frMovil from "../messages/fr/movil.json";
+import deMovil from "../messages/de/movil.json";
+import itMovil from "../messages/it/movil.json";
+import jaMovil from "../messages/ja/movil.json";
+import koMovil from "../messages/ko/movil.json";
+import zhMovil from "../messages/zh/movil.json";
+import nlMovil from "../messages/nl/movil.json";
 
 import enExplore from "../messages/en/explore.json";
 import esExplore from "../messages/es/explore.json";
@@ -237,6 +247,7 @@ const MESSAGES = {
     modalsDeploy: enModalsDeploy,
     inbox: enInbox,
     llamada: enLlamada,
+    movil: enMovil,
     explore: enExplore,
   },
   es: {
@@ -259,6 +270,7 @@ const MESSAGES = {
     modalsDeploy: esModalsDeploy,
     inbox: esInbox,
     llamada: esLlamada,
+    movil: esMovil,
     explore: esExplore,
   },
   pt: {
@@ -281,6 +293,7 @@ const MESSAGES = {
     modalsDeploy: ptModalsDeploy,
     inbox: ptInbox,
     llamada: ptLlamada,
+    movil: ptMovil,
     explore: ptExplore,
   },
   fr: {
@@ -303,6 +316,7 @@ const MESSAGES = {
     modalsDeploy: frModalsDeploy,
     inbox: frInbox,
     llamada: frLlamada,
+    movil: frMovil,
     explore: frExplore,
   },
   de: {
@@ -325,6 +339,7 @@ const MESSAGES = {
     modalsDeploy: deModalsDeploy,
     inbox: deInbox,
     llamada: deLlamada,
+    movil: deMovil,
     explore: deExplore,
   },
   it: {
@@ -347,6 +362,7 @@ const MESSAGES = {
     modalsDeploy: itModalsDeploy,
     inbox: itInbox,
     llamada: itLlamada,
+    movil: itMovil,
     explore: itExplore,
   },
   ja: {
@@ -369,6 +385,7 @@ const MESSAGES = {
     modalsDeploy: jaModalsDeploy,
     inbox: jaInbox,
     llamada: jaLlamada,
+    movil: jaMovil,
     explore: jaExplore,
   },
   ko: {
@@ -391,6 +408,7 @@ const MESSAGES = {
     modalsDeploy: koModalsDeploy,
     inbox: koInbox,
     llamada: koLlamada,
+    movil: koMovil,
     explore: koExplore,
   },
   zh: {
@@ -413,6 +431,7 @@ const MESSAGES = {
     modalsDeploy: zhModalsDeploy,
     inbox: zhInbox,
     llamada: zhLlamada,
+    movil: zhMovil,
     explore: zhExplore,
   },
   nl: {
@@ -435,6 +454,7 @@ const MESSAGES = {
     modalsDeploy: nlModalsDeploy,
     inbox: nlInbox,
     llamada: nlLlamada,
+    movil: nlMovil,
     explore: nlExplore,
   },
 } as const;

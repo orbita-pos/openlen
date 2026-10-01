@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import NextAuth from "next-auth";
 import authConfig from "@/auth.config";
 import { routing } from "@/i18n/routing";
+import { destinoDelLogin } from "@/lib/login/destino";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Middleware = next-intl locale routing + Auth.js route guard, composed.
@@ -30,7 +31,7 @@ const locales = routing.locales as readonly string[];
 // the middleware's edge bundle and break `next build`.
 const { auth } = NextAuth(authConfig);
 
-const PROTECTED = ["/new", "/projects", "/inbox", "/llamada"];
+const PROTECTED = ["/new", "/projects", "/inbox", "/llamada", "/movil"];
 
 function localeFromPath(pathname: string): string {
   const seg = pathname.split("/")[1];
@@ -80,7 +81,7 @@ const authMiddleware = auth((req) => {
     // locale-aware redirect/router, which re-prefixes it. A prefixed value here
     // would double up (/en/new → /en/en/new → 404). Matches every other caller
     // (projects/page.tsx, use-template-button, …) which pass bare paths.
-    loginUrl.searchParams.set("next", pathWithoutLocale(req.nextUrl.pathname));
+    loginUrl.searchParams.set("next", destinoDelLogin(pathWithoutLocale(req.nextUrl.pathname), req.nextUrl.search));
     return fixRedirectHost(NextResponse.redirect(loginUrl));
   }
   return fixRedirectHost(intlMiddleware(req));
