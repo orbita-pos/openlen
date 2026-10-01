@@ -42,12 +42,21 @@ describe("ver_visitas", () => {
     const out = await toolVerVisitas(session, deps, {});
     expect(String(out.response.nota_zona)).toContain("UTC");
   });
-  it("página sin publicar: lo dice en vez de dar ceros mudos", async () => {
-    const { session, deps } = montar({ visitas: vi.fn().mockResolvedValue(visitas) });
+  it("página sin publicar y sin visitas: lo dice en vez de dar ceros mudos", async () => {
+    const cero = cuenta(0);
+    const vacia = { ...visitas, hoy: cero, ayer: cero, ultimos7: cero, ultimos30: cero, rango: { ...visitas.rango, total: cero } };
+    const { session, deps } = montar({ visitas: vi.fn().mockResolvedValue(vacia) });
     (deps.loadProject as ReturnType<typeof vi.fn>).mockResolvedValue({ subdomain: null });
     const out = await toolVerVisitas(session, deps, {});
     expect(out.response.publicada).toBe(false);
     expect(String(out.response.nota_publicada)).toContain("no está publicada");
+  });
+  it("sin publicar pero CON visitas (se despublicó): los números son reales y no se tapan", async () => {
+    const { session, deps } = montar({ visitas: vi.fn().mockResolvedValue(visitas) });
+    (deps.loadProject as ReturnType<typeof vi.fn>).mockResolvedValue({ subdomain: null });
+    const out = await toolVerVisitas(session, deps, {});
+    expect(out.response).toMatchObject({ publicada: false, hoy: cuenta(3) });
+    expect(out.response).not.toHaveProperty("nota_publicada");
   });
   // «Error = dato» no se prueba aquí: `runAgentTool` ya convierte lo que una
   // herramienta lanza en `{ ok: false, error }`, como para todas las demás.
