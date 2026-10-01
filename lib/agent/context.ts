@@ -211,6 +211,8 @@ export function buildAgentContext(args: {
   /** Inyectable sólo para las pruebas: sin esto el bloque HOY cambiaría cada
    *  día y ninguna prueba podría fijarlo. */
   now?: Date;
+  /** La zona del usuario (IANA): el HOY es SU día, no el de UTC. */
+  zona?: string;
   state: Record<string, unknown>;
   /** El turno ANTERIOR no llamó a ninguna herramienta: la pagina quedo
    *  intacta. Medido el 2026-08-22 — el Agente responde «Listo, ya lo
@@ -270,7 +272,7 @@ export function buildAgentContext(args: {
   // El día lo dice `todayLine`, que es la única fuente para todas las
   // superficies. La regla de "posterior a hoy" se queda aquí: es del Agente,
   // porque lo que él escribe son plazos que nacen vencidos.
-  const hoy = `${todayLine(args.now).trimEnd()} Además: cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.\n\n`;
+  const hoy = `${todayLine(args.now, args.zona).trimEnd()} Además: cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.\n\n`;
 
   // EL AVISO DE QUE NO LO VE TODO. MEDIDO el 2026-08-22: a «¿qué fue LO
   // PRIMERO que te pedí en esta conversación?» contestó nombrando el turno más
@@ -324,6 +326,9 @@ export interface BuildAgentMessagesArgs {
   /** summarizeProjectState(...) output — the caller computes it (it needs the
    *  DB row); this module stays free of @/lib/agent/tools' native imports. */
   state: Record<string, unknown>;
+  /** La zona del usuario (IANA), la misma de `AgentSession.zonaHoraria`: el HOY
+   *  del contexto es SU día (plans/len-resultados/diseno.md §7). */
+  zona?: string;
   /** Ver buildAgentContext.turnoAnteriorMudo. */
   turnoAnteriorMudo?: boolean;
   /** Ver buildAgentContext.userMemory. */
@@ -381,6 +386,7 @@ export const PETICION_DEL_USUARIO = "LO QUE TE PIDE EL USUARIO AHORA:\n";
 export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMessagesResult {
   const systemPrompt = buildAgentSystemPrompt();
   const contextBlock = buildAgentContext({
+    zona: args.zona,
     state: args.state,
     userBrief: args.userBrief,
     turnoAnteriorMudo: args.turnoAnteriorMudo,

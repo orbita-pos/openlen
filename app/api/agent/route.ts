@@ -551,7 +551,14 @@ export async function POST(req: Request): Promise<Response> {
     ),
   ]);
 
+  // LA ZONA DEL TURNO, resuelta UNA vez y antes del contexto: el HOY que lee
+  // Len y el «hoy» que cuentan sus herramientas tienen que ser el mismo día.
+  // Con el HOY en UTC, a las 19:25 de México Len llamó «ayer» a un mensaje de
+  // ese día (plans/len-2/corridas/2026-10-01-resultados-humo). Leer la
+  // guardada tampoco tumba el turno: si la base falla, UTC, y la herramienta lo dice.
+  const zonaDelTurno = zonaDelCuerpo ?? (await leerZona(session.user.id).catch(() => null)) ?? ZONA_SIN_DATO;
   const argsDelTurno = {
+    zona: zonaDelTurno,
     state,
     userBrief: project.userBrief,
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
@@ -697,9 +704,7 @@ export async function POST(req: Request): Promise<Response> {
     // Lo que el usuario escribió ESTE turno. Lo usa `publicar` para no
     // reclamar un subdominio que el dueño nunca dijo — ver su comentario.
     mensajeDelUsuario: prompt,
-    // Leer la guardada tampoco tumba el turno: si la base falla, se cuenta en
-    // UTC y la herramienta lo dice.
-    zonaHoraria: zonaDelCuerpo ?? (await leerZona(session.user.id).catch(() => null)) ?? ZONA_SIN_DATO,
+    zonaHoraria: zonaDelTurno,
   };
   // Se guarda para las rutinas, que corren sin navegador. Nunca tumba el turno.
   if (zonaDelCuerpo) {

@@ -7,6 +7,7 @@ import { esAdjuntoDelManual } from "./ficheros/manual";
 import type { MensajeDelHistorial } from "./transcripcion";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
 import { todayLine } from "@/lib/ai/today-line";
+import { fechaLocal } from "@/lib/resultados/zona";
 
 // El bloque HOY se compone desde `todayLine`, la fuente unica. Fijarlo como
 // literal es lo que dejo al Agente y a la puerta de generar diciendo cosas
@@ -163,6 +164,24 @@ describe("buildAgentContext", () => {
     const userBrief = "Panadería artesanal";
     const esperado = `${HOY(new Date("2026-08-18T12:00:00Z"))}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(state, null, 2)}\n\nPROJECT BRIEF — /memoria/proyecto.md (persistente — aplica a toda petición):\n${userBrief}\n\n`;
     expect(buildAgentContext({ state, userBrief, now: new Date("2026-08-18T12:00:00Z") })).toBe(esperado);
+  });
+
+  // MEDIDO el 30/09 (corridas/2026-10-01-resultados-humo): a las 19:25 de
+  // México el HOY decía el 1 de octubre (UTC) y Len llamó «ayer» a un mensaje
+  // de ese día. La zona del turno manda.
+  it("HOY es el día del usuario, con su zona", () => {
+    const now = new Date("2026-10-01T01:25:00Z");
+    expect(buildAgentContext({ state: {}, userBrief: null, now, zona: "America/Mexico_City" })).toContain("HOY ES 2026-09-30");
+  });
+  it("buildAgentMessages hace llegar la zona hasta el HOY", () => {
+    // Una zona cuya fecha NO sea la de UTC ahora mismo, o la prueba no prueba
+    // nada: UTC+14 va un día por delante desde las 10:00 UTC y UTC−11 uno por
+    // detrás hasta las 11:00 UTC; entre las dos cubren las 24 horas.
+    const utc = new Date().toISOString().slice(0, 10);
+    const zona = fechaLocal(new Date(), "Pacific/Kiritimati") !== utc ? "Pacific/Kiritimati" : "Pacific/Pago_Pago";
+    expect(fechaLocal(new Date(), zona)).not.toBe(utc);
+    const r = buildAgentMessages({ state: {}, userBrief: null, history: [], prompt: "hola", maxPromptTokens: 60_000, zona });
+    expect(JSON.stringify(r)).toContain(`HOY ES ${fechaLocal(new Date(), zona)}`);
   });
 });
 

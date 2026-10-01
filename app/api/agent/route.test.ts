@@ -386,6 +386,15 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
       expect(zonaQueLlegaALasHerramientas()).toBe("America/Mexico_City");
     });
 
+    // El HOY del contexto y el «hoy» de las herramientas, el mismo día: con el
+    // HOY en UTC, Len llamó «ayer» a un mensaje de hoy (humo del 30/09).
+    it("la MISMA zona llega al contexto, que es de donde sale el HOY de Len", async () => {
+      mocks.leerZona.mockResolvedValue("Europe/Madrid");
+      await turno({});
+      expect(mocks.buildAgentMessages).toHaveBeenCalledWith(expect.objectContaining({ zona: "Europe/Madrid" }));
+      expect(zonaQueLlegaALasHerramientas()).toBe("Europe/Madrid");
+    });
+
     it("basura no se guarda: se usa la guardada", async () => {
       mocks.leerZona.mockResolvedValue("Europe/Madrid");
       await turno({ zonaHoraria: "Marte/Base" });
