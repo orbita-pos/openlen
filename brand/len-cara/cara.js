@@ -22,6 +22,10 @@
      LenCara.icon(cabeza, cara) → un SVG quieto, para los botones de elegir.
    Va dentro del cuerpo: salta, se aplasta y gira con él. Lo de la cara sigue la
    mirada (está EN la cara); lo de la cabeza se queda un poco atrás en los saltos.
+
+   Cuerpo blando (Jesús, 2026-10-01, elegido en una maqueta): respira en reposo
+   y cada salto o toque acaba en un rebote de gelatina. Se probaron también
+   boca, brillo en los ojos y orejitas, y los descartó: sin boca se ve más bot.
    ───────────────────────────────────────────────────────────────────────── */
 (function () {
   "use strict";
@@ -71,6 +75,9 @@
 
   function ambient(p, t, k = 1) {
     if (REDUCED) return;
+    // respira: se estira un poco hacia arriba y vuelve (el cuerpo blando)
+    const br = Math.sin(TAU * t / 3.4);
+    p.body.sy *= 1 + k * 0.018 * br; p.body.sx *= 1 - k * 0.014 * br;
     p.body.tx += k * 0.42 * Math.sin(TAU * t / 18.29 - 3.07);
     p.body.ty += k * 0.40 * Math.sin(TAU * t / 7.835 - 0.83);
     p.body.rot += k * 1.9 * Math.sin(TAU * t / 13.71 + 2.27);
@@ -711,6 +718,7 @@
       const q = (s) => host.querySelector(s);
       this.svg = q("svg"); this.body = q(".body"); this.ring = q(".ring"); this.glass = q(".glass");
       this.clip = q(".clip"); this.eyeL = q(".eye-l"); this.eyeR = q(".eye-r");
+      this.jel = { sx: 1, sy: 1, vx: 0, vy: 0 };
       this.scan = q(".scan"); this.rays = q(".rays");
       this.grad = q(`#lg-${u}`); this.stops = [...this.grad.querySelectorAll("stop")];
       this.props = [...host.querySelectorAll(".prop")];
@@ -827,8 +835,16 @@
       this.glass.setAttribute("r", (inner + 0.5).toFixed(3));
       this.glass.style.opacity = b.glass.toFixed(3);
       this.clip.setAttribute("r", (inner + 0.2).toFixed(3));
+      // cuerpo blando: el estirar y aplastar de la pose llega por un muelle con
+      // poco freno, así que cada salto o toque acaba en un rebote de gelatina
+      const J = this.jel;
+      if (REDUCED || dt <= 0) { J.sx = b.sx; J.sy = b.sy; J.vx = J.vy = 0; }
+      else {
+        J.vx += (520 * (b.sx - J.sx) - 13 * J.vx) * dt; J.sx += J.vx * dt;
+        J.vy += (520 * (b.sy - J.sy) - 13 * J.vy) * dt; J.sy += J.vy * dt;
+      }
       this.body.setAttribute("transform",
-        `translate(${b.tx.toFixed(3)} ${b.ty.toFixed(3)}) rotate(${b.rot.toFixed(3)} 32 32) translate(32 59) scale(${b.sx.toFixed(4)} ${b.sy.toFixed(4)}) translate(-32 -59)`);
+        `translate(${b.tx.toFixed(3)} ${b.ty.toFixed(3)}) rotate(${b.rot.toFixed(3)} 32 32) translate(32 59) scale(${J.sx.toFixed(4)} ${J.sy.toFixed(4)}) translate(-32 -59)`);
 
       const rx = Math.max(0, inner - 9.4), ry = Math.max(0, inner - 6.6);
       let g0 = this.g[0], g1 = this.g[1]; const m = Math.hypot(g0, g1); if (m > 1) { g0 /= m; g1 /= m; }
