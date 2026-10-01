@@ -35,6 +35,8 @@ export const ICONO = {
 } as const;
 export type NombreDeIcono = keyof typeof ICONO;
 
+// `display: contents`: el svg cuenta como hijo directo del botón, como en el
+// prototipo (el menú de tamaños es una rejilla icono · nombre · px).
 export function Icono({ nombre }: { nombre: NombreDeIcono }) {
-  return <span aria-hidden dangerouslySetInnerHTML={{ __html: ICONO[nombre] }} />;
+  return <span aria-hidden style={{ display: "contents" }} dangerouslySetInnerHTML={{ __html: ICONO[nombre] }} />;
 }

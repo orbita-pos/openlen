@@ -6,6 +6,12 @@ import { App } from "./app";
 import { Textos } from "./textos";
 import { idiomaDelTelefono } from "./config";
 import { medidasDelLienzo } from "./lienzo";
+import { PantallaPrincipal } from "./pantallas/principal";
+import { clienteDeMuestra } from "./muestra";
+
+// SÓLO DEV: `?muestra=1` pinta la principal con datos fijos, sin entrar ni
+// servidor. En el build `import.meta.env.DEV` es false y Vite poda la muestra.
+const muestra = import.meta.env.DEV && new URLSearchParams(location.search).has("muestra");
 
 // El tema sigue al teléfono: el prototipo pinta el oscuro con :root[data-theme="dark"].
 const oscuro = window.matchMedia("(prefers-color-scheme: dark)");
@@ -23,7 +29,7 @@ function Lienzo() {
   return (
     <div className="app-lienzo" style={{ height: m.alto, transform: `scale(${m.escala})` }}>
       <div className="lm-screen">
-        <App />
+        {muestra ? <PantallaPrincipal cliente={clienteDeMuestra} idioma={idiomaDelTelefono()} onSalir={() => {}} /> : <App />}
       </div>
     </div>
   );
