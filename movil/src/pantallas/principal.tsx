@@ -8,13 +8,16 @@ import { publishedHost } from "@/lib/publish/base-host";
 import { BASE } from "../config";
 import { Cara } from "../cara";
 import { Icono, type NombreDeIcono } from "../iconos";
-import { enlaceDeVistaPrevia, leerProyecto, leerTurno, listarProyectos, SinRed as ErrorSinRed, type ProyectoAbierto, type ProyectoEnLista } from "../api/proyectos";
+import type { StoredChatTurn } from "@/lib/projects/types";
+import { enlaceDeVistaPrevia, leerProyecto, listarProyectos, SinRed as ErrorSinRed, type ProyectoAbierto, type ProyectoEnLista } from "../api/proyectos";
 import { loQueDijoLen } from "../hoja";
 import { SinRed } from "./sin-red";
 import { Selector } from "./selector";
-import { Llamada, type TarjetaGuardada } from "../llamada/llamada";
+import { Llamada } from "../llamada/llamada";
 import { useDeslizar } from "../deslizar";
 import { useAtras } from "../atras";
+import { useChat } from "../chat/use-chat";
+import { PantallaChat } from "../chat/chat";
 
 const ULTIMO = "len-proyecto";
 type Tamano = "cel" | "tab" | "pc";
@@ -23,10 +26,14 @@ const ANCHO: Record<Tamano, number> = { cel: 390, tab: 820, pc: 1280 };
 const ICONO_DEL_TAMANO: Record<Tamano, NombreDeIcono> = { cel: "dvCel", tab: "dvTab", pc: "dvPc" };
 // Al encoger la hoja sólo se esconde su cuerpo: eso es lo que baja (o sube al abrirla).
 const cuerpoDeLaHoja = (el: HTMLElement) => el.querySelector<HTMLElement>(".lm-body")?.offsetHeight ?? 0;
+// Una sola lista vacía: con `?? []` en cada render, el chat creería que la
+// conversación cambió cada vez y tiraría lo que acabas de mandar.
+const SIN_HISTORIAL: StoredChatTurn[] = [];
 
 export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: ClienteDeOpenLen; idioma: string; onSalir: () => void }) {
   const t = useTranslations("movil.principal");
   const tv = useTranslations("movil.vacio");
+  const tc = useTranslations("movil.chat");
   const [lista, setLista] = useState<ProyectoEnLista[] | null>(null);
   const [sinRed, setSinRed] = useState(false);
   const [id, setId] = useState<string | null>(() => localStorage.getItem(ULTIMO));
@@ -38,7 +45,9 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const [selector, setSelector] = useState(false);
   const [hojaMin, setHojaMin] = useState(false);
   const [llamada, setLlamada] = useState(false);
-  const [deLaLlamada, setDeLaLlamada] = useState<TarjetaGuardada[]>([]);
+  const [chatAbierto, setChatAbierto] = useState(false);
+  const [conPip, setConPip] = useState(false);
+  const [recarga, setRecarga] = useState(0);
   useAtras(selector, () => setSelector(false));
   useAtras(menu, () => setMenu(false));
   const deslizarHoja = useDeslizar({ hacia: hojaMin ? "arriba" : "abajo", alSoltar: () => setHojaMin(!hojaMin), recorrido: cuerpoDeLaHoja });
@@ -92,18 +101,25 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
 
   const dicho = p ? loQueDijoLen(p.historial) : null;
 
-  // Si cuelgas con Len trabajando: la hoja relee el turno hasta que termina.
-  useEffect(() => {
-    if (!dicho?.enCurso || !id) return;
-    const reloj = setInterval(() => {
-      void leerTurno(cliente, dicho.fila)
-        .then((r) => {
-          if (!r.turno.enCurso) void leerProyecto(cliente, id).then(setP).catch(() => {});
-        })
-        .catch(() => {});
-    }, 4000);
-    return () => clearInterval(reloj);
-  }, [cliente, id, dicho?.enCurso, dicho?.fila]);
+  // Al acabar un turno (o volver de uno cortado): la conversación nueva y la
+  // vista previa recargada, para que «Ver en tu página» enseñe el cambio.
+  const recargar = useCallback(() => {
+    if (!id) return;
+    void leerProyecto(cliente, id).then(setP).catch(() => {});
+    setRecarga((n) => n + 1);
+  }, [cliente, id]);
+
+  // El chat (pieza 2). Si cuelgas o cierras con Len trabajando, el chat se
+  // vuelve a enganchar al turno (lo que antes hacía aquí la hoja).
+  const chat = useChat({
+    cliente,
+    base: BASE,
+    projectId: id,
+    idioma,
+    historial: p?.historial ?? SIN_HISTORIAL,
+    alCambiarLaPagina: recargar,
+    textoDeFotoSola: tc("fotoSola"),
+  });
 
   if (sinRed) return <SinRed onReintentar={() => void cargar()} />;
   if (lista && lista.length === 0) return <p className="app-aviso">{tv("sinPaginas")}</p>;
@@ -117,6 +133,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         <div className={`lm-pagehost app-con-iframe${tamano !== "cel" ? " is-dv" : ""}`}>
           {vista && !vistaFallo ? (
             <iframe
+              key={recarga}
               className="app-vista"
               src={vista}
               title={p?.title ?? "Vista previa"}
@@ -161,21 +178,22 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           <div ref={deslizarHoja} className={`lm-sheet lm-m lm-marca is-on${hojaMin ? " is-min" : ""}`} data-kind="listo">
             <button type="button" className="lm-grab" aria-label={t("encoger")} onClick={() => setHojaMin(!hojaMin)} />
             <div className="lm-who">
-              <Cara estado={dicho?.enCurso ? "pensando" : "reposo"} className="lm-who-face" />
+              <Cara estado={chat.trabajando ? "pensando" : "reposo"} className="lm-who-face" />
               <div className="lm-who-t">
                 <b>Len</b>
-                <span className={dicho?.enCurso ? "lm-live" : undefined}>{dicho?.enCurso ? t("trabajando") : t("estado")}</span>
+                <span className={chat.trabajando ? "lm-live" : undefined}>{chat.trabajando ? t("trabajando") : t("estado")}</span>
               </div>
             </div>
             <div className="lm-body">
               <p className="lm-msg">{dicho?.texto || t("sinMensaje")}</p>
-              {deLaLlamada.map((x) => (
-                <div key={x.clave}>{x.nodo}</div>
-              ))}
               <div className="lm-actions">
                 <button type="button" className="lm-btn lm-pri" onClick={() => setLlamada(true)}>
                   <Icono nombre="phone" />
                   <span>{t("llamar")}</span>
+                </button>
+                <button type="button" className="lm-btn lm-sec" onClick={() => setChatAbierto(true)}>
+                  <Icono nombre="mic" />
+                  <span>{tc("pedirCambio")}</span>
                 </button>
               </div>
             </div>
@@ -183,15 +201,31 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         )}
       </section>
 
+      <PantallaChat
+        abierto={chatAbierto}
+        chat={chat}
+        cliente={cliente}
+        projectId={id}
+        idioma={idioma}
+        conPip={llamada && conPip}
+        onCerrar={() => setChatAbierto(false)}
+        onLlamar={() => setLlamada(true)}
+        onVerPagina={() => setChatAbierto(false)}
+      />
+
       {llamada && (
         <Llamada
           cliente={cliente}
           projectId={id}
           idioma={idioma}
-          onTerminar={(guardadas) => {
+          onPequena={setConPip}
+          onTerminar={(tarjetas, segundos) => {
             setLlamada(false);
-            setDeLaLlamada(guardadas);
-            void leerProyecto(cliente, id).then(setP).catch(() => {});
+            setConPip(false);
+            // Lo que pasó en la llamada queda en el chat (prototipo: «te lo dejo en el chat»).
+            chat.agregarLlamada(segundos, tarjetas);
+            if (segundos !== null || tarjetas.length) setChatAbierto(true);
+            recargar();
           }}
         />
       )}

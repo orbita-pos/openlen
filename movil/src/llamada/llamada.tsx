@@ -14,16 +14,18 @@ import { escucharNivel } from "./halo";
 import { TarjetaDeLaApp } from "./tarjetas";
 import { useDeslizar } from "../deslizar";
 import { useAtras } from "../atras";
-
-export interface TarjetaGuardada {
-  clave: string;
-  nodo: ReactNode;
-}
+import type { TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
 
 const reloj = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
 
-export function Llamada({ cliente, projectId, idioma, onTerminar }: {
-  cliente: ClienteDeOpenLen; projectId: string; idioma: string; onTerminar: (g: TarjetaGuardada[]) => void;
+export function Llamada({ cliente, projectId, idioma, onTerminar, onPequena }: {
+  cliente: ClienteDeOpenLen;
+  projectId: string;
+  idioma: string;
+  /** Al colgar: lo que Len enseñó y cuánto duró (null si no llegó a contestar). Van al chat. */
+  onTerminar: (tarjetas: TarjetaDeLlamada[], segundos: number | null) => void;
+  /** La llamada pequeña flota sobre lo que haya debajo (el chat le deja sitio). */
+  onPequena?: (si: boolean) => void;
 }) {
   const t = useTranslations("movil.llamada");
   const tl = useTranslations("llamada");
@@ -38,7 +40,7 @@ export function Llamada({ cliente, projectId, idioma, onTerminar }: {
   // botón (sin esto, Chrome saldría de la app y la llamada moriría igual).
   // Pequeña no se queda nada: atrás es de lo que hay debajo.
   const grande = ll.fase !== "terminada" && !(pequena && ll.fase === "en_llamada");
-  useAtras(grande, () => (ll.fase === "en_llamada" ? setPequena(true) : onTerminar([])));
+  useAtras(grande, () => (ll.fase === "en_llamada" ? setPequena(true) : onTerminar([], null)));
 
   useEffect(() => {
     if (arrancada.current) return;
@@ -60,10 +62,14 @@ export function Llamada({ cliente, projectId, idioma, onTerminar }: {
 
   useEffect(() => {
     if (ll.fase !== "terminada") return;
-    onTerminar(ll.tarjetas.map((x, i) => ({ clave: `${i}-${x.tipo}`, nodo: <TarjetaDeLaApp x={x} cliente={cliente} projectId={projectId} idioma={idioma} /> })));
+    onTerminar(ll.tarjetas, ll.inicio ? (Date.now() - ll.inicio) / 1000 : null);
     // Al terminar, una vez.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ll.fase]);
+
+  useEffect(() => {
+    onPequena?.(pequena && ll.fase === "en_llamada");
+  }, [onPequena, pequena, ll.fase]);
 
   // «Llamando…» con la cara de la llamada entrante del prototipo («avisando»);
   // «saludando» es de un momento y, fijo, deja la cara girada.
@@ -97,7 +103,7 @@ export function Llamada({ cliente, projectId, idioma, onTerminar }: {
         <div className="lm-inc-face"><div className="lm-rings"><i /><i /><i /></div><Cara estado={cara} className="lm-face-host" props="compact" /></div>
         {ll.aviso === "sinMicro" && <p className="app-aviso">{t("microAjustes")}</p>}
         <div className="lm-inc-actions">
-          <button type="button" className="lm-round lm-decline" onClick={() => onTerminar([])}><span><Icono nombre="x" /></span>{tl("colgar")}</button>
+          <button type="button" className="lm-round lm-decline" onClick={() => onTerminar([], null)}><span><Icono nombre="x" /></span>{tl("colgar")}</button>
         </div>
       </section>
     );
