@@ -56,12 +56,14 @@ export default defineConfig({
       "lib/analytics/**/*.test.ts",
       // Len sabe de tus resultados (plans/len-resultados/).
       "lib/resultados/zona.test.ts",
+      "lib/resultados/contacto.test.ts",
       // 🔴 CONTRA POSTGRES, sólo base local (`exigirBaseLocal`), como
       // `escribir-data.pg.test.ts`. Sin su línea no corren ni a mano: vitest
       // contesta «No test files found» — lista BLANCA.
       "lib/resultados/zona-guardada.pg.test.ts",
       "lib/resultados/visto.pg.test.ts",
       "lib/resultados/visitas.pg.test.ts",
+      "lib/resultados/formularios.pg.test.ts",
       // Len-Bench (plans/len-2/diseno.md). Las piezas puras de la vara; lo
       // que abre Chromium o habla con el servidor se prueba con
       // `bench:len:validar`, que es su prueba en rojo y en verde.
