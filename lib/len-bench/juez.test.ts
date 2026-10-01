@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { PRESUPUESTO_DE_RESULTADOS, RESULTADO_VACIADO, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import type { ContextoDeCalificacion } from "./tipos";
-import { gastoDelJuez, juez, LARGO_RUIDOSO, promptDelJuez, textoDelFoco, trazaDeLasFilas, VOTOS_DEL_JUEZ, votoDe } from "./juez";
+import { gastoDelJuez, juez, promptDelJuez, textoDelFoco, trazaDeLasFilas, VOTOS_DEL_JUEZ, votoDe } from "./juez";
 
 const ctx = (len: string[], dueno = "¿cómo van las visitas?") =>
   ({
@@ -68,9 +68,14 @@ describe("juez", () => {
     expect(gastoDelJuez() - antes).toBeCloseTo(0.003, 6);
   });
 
-  it("con una entrada larga lo avisa: los jueces son ruidosos", async () => {
-    const r = await juez({ nombre: "x", criterio: CRITERIO }, responde("PASS")).calificar(ctx(["a".repeat(LARGO_RUIDOSO + 1)]));
-    expect(r.explicacion).toMatch(/entrada larga.*ruidosos/);
+  it("no avisa de entradas largas: el suyo sólo lo hace cuando juzga un fichero, y aquí no hay ese foco", async () => {
+    const r = await juez({ nombre: "x", criterio: CRITERIO }, responde("PASS")).calificar(ctx(["a".repeat(20_000)]));
+    expect(r.explicacion).toBe("votos del juez: PASS PASS PASS");
+  });
+
+  it("guarda lo que vio el juez (su `evidence`): sin eso, la traza de una corrida no se puede volver a leer", async () => {
+    const r = await juez({ nombre: "x", criterio: CRITERIO, foco: "traza" }, responde("PASS")).calificar({ traza: TRAZA } as unknown as ContextoDeCalificacion);
+    expect(r.evidencia).toBe(TRAZA.map((m) => JSON.stringify(m)).join("\n"));
   });
 
   it("es de pago, y se estrena sin votar si el caso lo dice", () => {
@@ -102,6 +107,24 @@ describe("lo que ve el juez", () => {
     expect(p).toContain("Criterio:\nNo inventa.");
     expect(p).toContain("Salida del agente (último mensaje):\nHoy 3.");
     expect(p.endsWith("Responde con exactamente una palabra: PASS o FAIL.")).toBe(true);
+  });
+
+  it("una traza de más de 24 mensajes: los 12 primeros y los 12 últimos, y lo dice, como la suya", () => {
+    const larga: MensajeDelHistorial[] = Array.from({ length: 30 }, (_, i) => ({ role: i % 2 ? "assistant" : "user", content: `m${i}` }));
+    const lineas = textoDelFoco({ traza: larga } as unknown as ContextoDeCalificacion, "traza").split("\n");
+    expect(lineas).toHaveLength(25);
+    expect(lineas[0]).toBe(JSON.stringify(larga[0]));
+    expect(lineas[12]).toBe("[…6 mensajes omitidos…]");
+    expect(lineas[24]).toBe(JSON.stringify(larga[29]));
+  });
+
+  it("le enseña hasta 100.000 caracteres: los 80.000 primeros y los 20.000 últimos", () => {
+    const texto = `${"a".repeat(80_000)}${"b".repeat(5_000)}${"c".repeat(20_000)}`;
+    const p = promptDelJuez("x", "traza", texto);
+    expect(p).toContain(`${"a".repeat(80_000)}\n[…5000 caracteres omitidos…]\n${"c".repeat(20_000)}`);
+    expect(p).not.toContain("bb");
+    // Hasta el tope, entero.
+    expect(promptDelJuez("x", "traza", "a".repeat(100_000))).toContain("a".repeat(100_000));
   });
 });
 

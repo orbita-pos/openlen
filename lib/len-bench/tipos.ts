@@ -81,7 +81,7 @@ export interface Grader {
   /** Llama a un modelo y CUESTA (el juez, `juez.ts`): el validador, que corre a
    *  $0, lo salta y lo dice — los `llm` de Claude Code son «paid graders». */
   readonly pago?: true;
-  calificar(ctx: ContextoDeCalificacion): Promise<{ paso: boolean; explicacion: string; votos?: readonly boolean[] }>;
+  calificar(ctx: ContextoDeCalificacion): Promise<{ paso: boolean; explicacion: string; votos?: readonly boolean[]; evidencia?: string }>;
 }
 
 export interface ResultadoDeGrader {
@@ -92,6 +92,9 @@ export interface ResultadoDeGrader {
   readonly puntua: boolean;
   /** Los votos del juez, si lo hubo (su `judge_votes`). */
   readonly votos?: readonly boolean[];
+  /** Lo que vio el juez, ya recortado (su `evidence`): la traza de una corrida
+   *  no se guarda en ningún otro sitio, y el proyecto se borra al acabar. */
+  readonly evidencia?: string;
 }
 
 /** Lo que un caso de RESULTADOS planta en la base antes del primer turno

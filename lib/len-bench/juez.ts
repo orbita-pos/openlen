@@ -16,7 +16,11 @@
 //   - TRES votos y gana la mayoría: el juez es ruidoso y votar lo reduce.
 //   - Su gasto se cuenta APARTE (`gastoDelJuez`), y es un grader DE PAGO: el
 //     validador, que corre a $0, lo salta y lo dice.
-//   - Con entradas largas (más de 8.000 caracteres) lo avisa: «…».
+//   - Lo que vio el juez se guarda con el resultado (`evidencia`, su `evidence`).
+//   - Lo largo se recorta igual que el suyo: la traza, por mensajes (12 y 12);
+//     el texto, a 100.000 caracteres (80.000 del principio y 20.000 del final).
+//     Su aviso de «entrada larga» sólo sale cuando juzga un FICHERO, y aquí no
+//     hay ese foco.
 // Y lo que dice la memoria `llm-judge-is-not-a-ship-gate`: un juez se estrena
 // SIN votar (`puntua: false`, su `scored: false`) hasta que haya corpus.
 import { callModel } from "@/lib/style-match/autofill/model-call";
@@ -27,10 +31,12 @@ import type { ContextoDeCalificacion, Grader } from "./tipos";
 
 /** Votos por grader, los mismos que Claude Code. */
 export const VOTOS_DEL_JUEZ = 3;
-/** Más que esto, y el juez se vuelve ruidoso: lo avisa, como el suyo. */
-export const LARGO_RUIDOSO = 8_000;
-/** Lo que se le enseña como mucho; el resto se elide del MEDIO. */
-const LARGO_MAXIMO = 24_000;
+/** Lo que se le enseña como mucho, como el suyo: el principio y el final, y el
+ *  medio se omite. */
+const LARGO_MAXIMO = 100_000;
+const LARGO_DEL_FINAL = 20_000;
+/** Mensajes de la traza que se le enseñan enteros por cada punta. */
+const MENSAJES_POR_PUNTA = 12;
 
 const SISTEMA = "Eres un juez de evaluación estricto y escueto para trazas de un agente.";
 const PIDE = "Responde con exactamente una palabra: PASS o FAIL.";
@@ -82,8 +88,9 @@ const llamarDeVerdad: LlamarAlJuez = async (sistema, usuario) => {
     operation: "len_bench_juez",
     requestId: "len-bench-juez",
     maxOutputTokens: 16,
-    // Con temperatura cero los tres votos saldrían iguales y votar no serviría.
-    temperature: 0.7,
+    // El suyo no la fija: va con la de la API por defecto, 1. Con cero, los
+    // tres votos saldrían iguales y votar no serviría.
+    temperature: 1,
   });
   if (!r.ok) throw new Error(`el juez no contestó (${r.kind}): ${r.message}`);
   const tarifa = rateFor(modelIdForRole(roleForOperation("len_bench_juez")));
@@ -92,10 +99,16 @@ const llamarDeVerdad: LlamarAlJuez = async (sistema, usuario) => {
 };
 
 /** El texto que ve el juez, según el foco. La traza, un mensaje por línea en
- *  JSON, como la suya. */
+ *  JSON y, si es larga, sus 12 primeros y sus 12 últimos, como la suya. */
 export function textoDelFoco(ctx: Pick<ContextoDeCalificacion, "conversacion" | "traza">, foco: FocoDelJuez): string {
   if (foco === "ultimo_mensaje") return [...ctx.conversacion].reverse().find((x) => x.quien === "len")?.texto ?? "";
-  return ctx.traza.map((m) => JSON.stringify(m)).join("\n");
+  const lineas = ctx.traza.map((m) => JSON.stringify(m));
+  if (lineas.length <= 2 * MENSAJES_POR_PUNTA) return lineas.join("\n");
+  return [
+    ...lineas.slice(0, MENSAJES_POR_PUNTA),
+    `[…${lineas.length - 2 * MENSAJES_POR_PUNTA} mensajes omitidos…]`,
+    ...lineas.slice(-MENSAJES_POR_PUNTA),
+  ].join("\n");
 }
 
 /** Un voto: PASS si lo dice y no dice también FAIL, como el suyo. */
@@ -105,8 +118,8 @@ export function votoDe(respuesta: string): boolean {
 
 function recortar(texto: string): string {
   if (texto.length <= LARGO_MAXIMO) return texto;
-  const mitad = Math.floor(LARGO_MAXIMO / 2);
-  return `${texto.slice(0, mitad)}\n[…${texto.length - LARGO_MAXIMO} caracteres omitidos…]\n${texto.slice(-mitad)}`;
+  const principio = LARGO_MAXIMO - LARGO_DEL_FINAL;
+  return `${texto.slice(0, principio)}\n[…${texto.length - LARGO_MAXIMO} caracteres omitidos…]\n${texto.slice(-LARGO_DEL_FINAL)}`;
 }
 
 /** El prompt del juez: el suyo, con la misma forma. */
@@ -143,10 +156,7 @@ export function juez(
         votos.push(votoDe(r.texto));
       }
       const paso = votos.filter(Boolean).length > votos.length / 2;
-      const ruidoso = texto.length > LARGO_RUIDOSO
-        ? ` — ojo: entrada larga (${texto.length} caracteres); los jueces son ruidosos con entradas largas, mejor un grader determinista`
-        : "";
-      return { paso, explicacion: `votos del juez: ${votos.map((v) => (v ? "PASS" : "FAIL")).join(" ")}${ruidoso}`, votos };
+      return { paso, explicacion: `votos del juez: ${votos.map((v) => (v ? "PASS" : "FAIL")).join(" ")}`, votos, evidencia: recortar(texto) };
     },
   };
 }
