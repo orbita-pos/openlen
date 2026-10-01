@@ -7,6 +7,7 @@ import { db, schema } from "@/lib/db";
 import { getChatOwner, insertMessage, markConversationRead } from "@/lib/chat/store";
 import type { Encargo } from "../../tipos";
 import { deLen, laPaginaSigue } from "./comunes";
+import { diceAyer } from "./lectura";
 import { panaderia, plantarChat } from "./sembrar";
 
 /** Todas las conversaciones del proyecto, no sólo la primera: si abrir la
@@ -60,6 +61,17 @@ export const MENSAJE_DE_JUAN: Encargo = {
       },
     },
     {
+      // Juan escribe al sembrar, o sea HOY. Humo del 30/09, 3 de 3: «ayer (30 de
+      // septiembre)» a las 19:25 del 30, con el HOY de Len en UTC.
+      nombre: "dice-bien-el-dia",
+      peso: 1,
+      async calificar(ctx) {
+        const primero = deLen(ctx)[0] ?? "";
+        const paso = primero !== "" && !diceAyer(primero);
+        return { paso, explicacion: paso ? "no llamó «ayer» a lo de hoy" : `primer mensaje: «${primero.slice(0, 160)}»` };
+      },
+    },
+    {
       nombre: "borrador-con-boton",
       peso: 2,
       async calificar(ctx) {
@@ -95,5 +107,11 @@ export const MENSAJE_DE_JUAN: Encargo = {
     },
     { nombre: "sin-nombre", datos: panaderia(), turno: { len: ["Tienes un mensaje nuevo.", "Te dejé el borrador."], herramientas: ["ver_mensajes", "preparar_respuesta"], tarjetas: [] } },
     { nombre: "toco-la-pagina", datos: panaderia({ descripcion: "Pan dulce artesanal." }), turno: TURNO_BUENO },
+    // Lo que dijo de verdad en el humo del 30/09.
+    {
+      nombre: "dice-ayer",
+      datos: panaderia(),
+      turno: { ...TURNO_BUENO, len: ["Sí, uno. Ayer (30 de septiembre) te escribió Juan: «¿Abren el domingo?»", TURNO_BUENO.len[1]!] },
+    },
   ],
 };

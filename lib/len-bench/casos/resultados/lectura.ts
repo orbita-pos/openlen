@@ -21,6 +21,21 @@ export function diceHoy(textos: readonly string[], n: number, enLetra: string): 
   return textos.some((t) => detras.test(t) || delante.test(t));
 }
 
+/** ¿Llamó «ayer» a algo de HOY? Medido en el humo del 30/09, 3 de 3: con el HOY
+ *  en UTC, «ayer (30 de septiembre) te escribió Juan» a las 19:25 del 30. */
+export function diceAyer(texto: string): boolean {
+  return /\bayer\b/i.test(texto);
+}
+
+/** ¿Se inventó DE DÓNDE salen las visitas? Medido en el humo del 30/09, 3 de 3:
+ *  «esas visitas son de previsualizaciones» (falso: el contador sólo va en la
+ *  publicada). Busca la AFIRMACIÓN, no la palabra: «el editor y la vista
+ *  previa no suman visitas» es verdad y no cuenta. */
+export function inventaDeDonde(textos: readonly string[]): boolean {
+  const afirma = /\b(?:son|vienen|salen|eran|serían|provienen)\b[^.\n]{0,40}\b(?:previsualizaci\w*|(?:la )?vista previa|del editor|de pruebas)\b/i;
+  return textos.some((t) => afirma.test(t));
+}
+
 /** Contarle sus resultados sin que los pida: nombrar a quien escribió, o
  *  hablar de mensajes o formularios nuevos, o de visitas. «tus visitantes» NO
  *  cuenta —es una forma normal de hablar de una página—, ni «el mensaje de

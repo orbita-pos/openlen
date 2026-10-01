@@ -3,7 +3,7 @@
 // pregunte al servidor y diga 3, exacto, y no el día de UTC.
 import type { Encargo } from "../../tipos";
 import { deLen, laPaginaSigue, preguntoAlServidor } from "./comunes";
-import { diceHoy } from "./lectura";
+import { diceHoy, inventaDeDonde } from "./lectura";
 import { aLas, haceUnRato, panaderia, plantarVistas } from "./sembrar";
 
 const TURNO_BUENO = { len: ["Hoy llevas 3 visitas, de 3 personas. Ayer fueron 5."], herramientas: ["ver_visitas"], tarjetas: [] };
@@ -31,6 +31,17 @@ export const VISITAS_DE_HOY: Encargo = {
         return { paso, explicacion: paso ? "dijo 3 hoy" : `no dijo que HOY lleva 3: «${t.join(" | ").slice(0, 200)}»` };
       },
     },
+    {
+      // Humo del 30/09, 3 de 3: «esas visitas son de previsualizaciones» —
+      // falso, el contador sólo va en la publicada.
+      nombre: "no-inventa-de-donde",
+      peso: 1,
+      async calificar(ctx) {
+        const t = deLen(ctx);
+        const paso = !inventaDeDonde(t);
+        return { paso, explicacion: paso ? "no se inventó de dónde salen" : `se inventó de dónde salen: «${t.join(" | ").slice(0, 200)}»` };
+      },
+    },
     laPaginaSigue(),
   ],
   solucion: panaderia(),
@@ -40,5 +51,11 @@ export const VISITAS_DE_HOY: Encargo = {
     // La trampa que esto arregla: contado en UTC, las 3 de hoy caen en «ayer».
     { nombre: "cuenta-en-utc", datos: panaderia(), turno: { len: ["Hoy llevas 0 visitas; ayer tuviste 3."], herramientas: ["ver_visitas"], tarjetas: [] } },
     { nombre: "toco-la-pagina", datos: panaderia({ descripcion: "Pan dulce artesanal." }), turno: TURNO_BUENO },
+    // Lo que dijo de verdad en el humo del 30/09.
+    {
+      nombre: "inventa-previsualizaciones",
+      datos: panaderia(),
+      turno: { ...TURNO_BUENO, len: ["Hoy llevas 3 visitas. Tu página todavía no está publicada, así que esas visitas son de previsualizaciones."] },
+    },
   ],
 };
