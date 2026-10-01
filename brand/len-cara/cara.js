@@ -16,6 +16,12 @@
 
    props: "all" = todos los accesorios · "compact" = encogidos junto al anillo y
    sin los que van debajo (para el chat) · "none" = sólo la cara.
+
+   look: lo que Len lleva puesto, aparte del estado — { cabeza, cara }.
+     c.setLook({ cabeza: "chef", cara: "lentes" }) · LenCara.HEAD / FACE (id → nombre)
+     LenCara.icon(cabeza, cara) → un SVG quieto, para los botones de elegir.
+   Va dentro del cuerpo: salta, se aplasta y gira con él. Lo de la cara sigue la
+   mirada (está EN la cara); lo de la cabeza se queda un poco atrás en los saltos.
    ───────────────────────────────────────────────────────────────────────── */
 (function () {
   "use strict";
@@ -234,6 +240,198 @@
     }
     return s;
   }
+  /* ───────── el look: lo que se pone ─────────
+     En el espacio del anillo: centro (32,32), borde de fuera r=27 SIEMPRE (el
+     grosor cambia hacia dentro), así que la coronilla está en y=5 en todos los
+     estados. slot: "head" encima del anillo · "back" detrás (las orejas asoman
+     por fuera) · "face" delante de los ojos · "face-back" detrás de los ojos. */
+  let LKN = 0;
+  // luz arriba a la izquierda: cada pieza lleva su brillo y su sombra, y los
+  // sombreros una sombra de contacto (el filtro) que los asienta en la cabeza
+  const HI = (d, w = 1.6, o = 0.3) => `<path d="${d}" fill="none" stroke="#fff" stroke-opacity="${o}" stroke-width="${w}" stroke-linecap="round"/>`;
+  const PUFF = "M21.4 3.5C14.2 2.6 12.8-8 19.8-9.6C20.4-16.4 28.4-18 32-12.8C35.6-18 43.6-16.4 44.2-9.6C51.2-8 49.8 2.6 42.6 3.5Z";
+  const HORN = `<path d="M16.6 6.2C10.6 5 5.4.6 3.6-7.8C3.2-9.8 2.2-12 .6-13.2C4.8-12.8 8.4-9.6 10.4-5.6C12-2.4 14.6-.4 18 .6Z" fill="#F4E6CC"/>
+      <path d="M6.6-5.6L9.4-7.2M8.8-2.6L11.8-3.8M11.8.2L14.6-1" stroke="#D5BE96" stroke-width="1" stroke-linecap="round"/>`;
+  const HEAD = {
+    chef: { name: "Gorro de chef", svg: (k) => `<g transform="rotate(-6 32 8)">
+      <clipPath id="cf-${k}"><path d="${PUFF}"/></clipPath>
+      <path class="lk-wf" d="${PUFF}"/>
+      <rect class="lk-wsh" clip-path="url(#cf-${k})" x="10" y="-1.4" width="44" height="6"/>
+      <path class="lk-wo" d="${PUFF}"/>
+      <path class="lk-wl" d="M26.5-4.8V2.4M32-6.4V2.4M37.5-4.8V2.4"/>
+      <rect class="lk-wf lk-wo" x="20" y="2.2" width="24" height="7.6" rx="2.4"/>
+      <rect class="lk-wsh" x="21" y="6.8" width="22" height="2.2" rx="1.1"/></g>` },
+    vaquero: { name: "Sombrero", svg: () => `<g transform="rotate(-9 32 8)">
+      <path d="M19.8 10.5C18.8-1 19.8-9.4 25.2-10.6C28.6-8.6 35.4-8.6 38.8-10.6C44.2-9.4 45.2-1 44.2 10.5Z" fill="#A86A3A"/>
+      <path d="M38.6-10C43.2-8.4 44.8-1.4 44 8.5H40.6C41.2-1 40.8-6.4 38.6-10Z" fill="#8C5530"/>
+      ${HI("M22.4 6.5C21.9-.6 22.4-6.4 25-9", 1.8, 0.22)}
+      <path d="M27.6-9.4C29.8-6 34.2-6 36.4-9.4" fill="none" stroke="#7A4524" stroke-width="1.1" stroke-linecap="round"/>
+      <path d="M19.5 1.6C27 3.3 37 3.3 44.5 1.6L44.4 5.4C37 7 27 7 19.6 5.4Z" fill="#3E2412"/>
+      <circle cx="39.4" cy="4.3" r="1.3" fill="#FFC53D"/>
+      <path d="M3.5 1C8 7.6 19 10 32 10C45 10 56 7.6 60.5 1C59.5 7.6 49 13.2 32 13.2C15 13.2 4.5 7.6 3.5 1Z" fill="#86502A"/>
+      ${HI("M7.4 5.2C13 8.6 21 10 30 10.1", 1, 0.2)}</g>` },
+    gorra: { name: "Gorra", svg: () => `<g transform="rotate(-4 32 10)">
+      <path d="M42 10.4C49.5 8.4 59 8.8 65 12.4C63.8 14.6 56.6 15.2 49.6 14.4C45.6 14 42.8 12.9 42 10.4Z" fill="#E0508A"/>
+      <path d="M44 12.6C50 13.6 58 13.6 63.6 13.4C61 14.8 55.4 15 49.6 14.4C47.2 14.1 45.3 13.5 44 12.6Z" fill="#B93A6E"/>
+      <path d="M15.2 11.8C14.2-1.2 22-4.6 32-4.6C42-4.6 49.8-1.2 48.8 11.8C38 9.6 26 9.6 15.2 11.8Z" fill="#FF6FA5"/>
+      <path d="M41-3.4C46.4-1 49.4 3.6 48.8 11.8C46.8 11.4 44.8 11 42.8 10.8C43.4 4.6 42.8.2 41-3.4Z" fill="#EC5C98"/>
+      <path d="M32-4.4C30.2 1 29.6 6 30 9.6" fill="none" stroke="#E0508A" stroke-width=".9"/>
+      ${HI("M18.2 1.4C19.2-1.4 21.8-3 25-3.7", 1.5, 0.4)}
+      <circle cx="23.4" cy="5.4" r="2.2" fill="none" stroke="#fff" stroke-width="1.4"/>
+      <path d="M15.2 11.8C26 9.6 38 9.6 48.8 11.8" fill="none" stroke="#C94579" stroke-width="1.2"/>
+      <circle cx="32" cy="-4.6" r="1.9" fill="#E0508A"/></g>` },
+    lana: { name: "Gorro de lana", svg: () => `<g>
+      <g fill="#FF7FB0"><circle cx="32" cy="-9.4" r="4.4"/><circle cx="28.8" cy="-10.6" r="2.3"/><circle cx="35.2" cy="-10.8" r="2.3"/><circle cx="32" cy="-13.2" r="2.4"/></g>
+      <circle cx="30.2" cy="-11.8" r="1.3" fill="#fff" opacity=".45"/>
+      <path d="M13.4 12C12.2-2.4 21.8-7.6 32-7.6C42.2-7.6 51.8-2.4 50.6 12Z" fill="#FFD24D"/>
+      <path d="M42.4-5.2C48.4-2 51.4 3.6 50.6 12H45.8C46.4 4.6 45.2-1.6 42.4-5.2Z" fill="#F7C336"/>
+      <path d="M14.6 1.8C26-.8 38-.8 49.4 1.8" fill="none" stroke="#FF7FB0" stroke-width="2.6"/>
+      <path d="M17.2-2.4C26-4.4 38-4.4 46.8-2.4" fill="none" stroke="#fff" stroke-width="1.2" stroke-opacity=".85"/>
+      <path d="M11.6 8.4C25 5.4 39 5.4 52.4 8.4L52.8 15.2C39 12.4 25 12.4 11.2 15.2Z" fill="#F6B92B"/>
+      <path d="M16 7.6V13.8M20.5 6.9V13.1M25 6.4V12.6M29.5 6.2V12.4M34.5 6.2V12.4M39 6.4V12.6M43.5 6.9V13.1M48 7.6V13.8" stroke="#DF9A14" stroke-width=".9" stroke-linecap="round"/></g>` },
+    boina: { name: "Boina", svg: () => `<g transform="rotate(-12 30 7)">
+      <path d="M30-3.2C30.2-6 31.6-7.2 33.6-7.4" fill="none" stroke="#C93A43" stroke-width="2.2" stroke-linecap="round"/>
+      <ellipse cx="30" cy="3.6" rx="19.5" ry="7.4" fill="#E5484D"/>
+      <path d="M40.6-2.8C46.6-1 49.8 1.8 49.4 4.8C48.8 8 42.8 10.4 34.4 11C40.8 8.4 43.4 3.2 40.6-2.8Z" fill="#CC3942"/>
+      <path d="M13.6 7.6C22 11.4 38 11.4 46.4 7.6" fill="none" stroke="#B02E37" stroke-width="2.4" stroke-linecap="round"/>
+      <ellipse cx="23" cy=".6" rx="7.5" ry="2.3" fill="#fff" opacity=".24"/></g>` },
+    fiesta: { name: "Gorro de fiesta", svg: (k) => `<g transform="rotate(16 38 7)">
+      <clipPath id="fz-${k}"><path d="M29.5 7.5L38-18L46.5 7.5Z"/></clipPath>
+      <path d="M29.5 7.5L38-18L46.5 7.5Z" fill="#FFD24D"/>
+      <path clip-path="url(#fz-${k})" d="M24 2L52-8M24-6L52-16M24 10L52 0" stroke="#FF6FA5" stroke-width="3.2"/>
+      <path clip-path="url(#fz-${k})" d="M41-18L50 8H43.4Z" fill="#E8A91A" opacity=".35"/>
+      <circle cx="35.4" cy="-3.2" r=".85" fill="#5DB2FF"/><circle cx="40.6" cy="-8.6" r=".75" fill="#fff"/><circle cx="41.4" cy="1.6" r=".85" fill="#fff"/><circle cx="36.8" cy="-11" r=".7" fill="#5DB2FF"/>
+      <rect x="28.6" y="5.4" width="18.8" height="3.6" rx="1.8" fill="#fff"/>
+      <g fill="#FF6FA5"><circle cx="38" cy="-18.6" r="2.6"/><circle cx="36.2" cy="-19.8" r="1.6"/><circle cx="39.8" cy="-19.8" r="1.6"/><circle cx="38" cy="-21" r="1.6"/></g></g>` },
+    corona: { name: "Corona", svg: () => `<g transform="rotate(-10 32 8)">
+      <path d="M20.2 9.5L19.2-2.6L25.8 2.6L32-7L38.2 2.6L44.8-2.6L43.8 9.5Z" fill="#FFC53D" stroke="#DB930E" stroke-width=".9" stroke-linejoin="round"/>
+      <path d="M21 8.6L20.4.2L24.4 3.6ZM32-5.2L27.4 2.2L32 1.4Z" fill="#FFE39A"/>
+      <path d="M38.8 3.4L43.8-.6L43 8.6Z" fill="#E9A51C"/>
+      <rect x="20" y="5.6" width="24" height="3.9" rx="1" fill="#F2AA1C"/>
+      <circle cx="32" cy="7.55" r="1.35" fill="#FF4F8B"/><circle cx="25.6" cy="7.55" r="1" fill="#5DB2FF"/><circle cx="38.4" cy="7.55" r="1" fill="#5DB2FF"/>
+      <circle cx="19.2" cy="-2.9" r="1.5" fill="#FFE08A"/><circle cx="32" cy="-7.4" r="1.7" fill="#FFE08A"/><circle cx="44.8" cy="-2.9" r="1.5" fill="#FFE08A"/></g>` },
+    mago: { name: "Sombrero de mago", svg: () => `<g transform="rotate(-6 32 8)">
+      <ellipse cx="32" cy="9.6" rx="21.5" ry="4.4" fill="#4A31B8"/>
+      <path d="M19.5 8.5C22-2 25-12 30-19C32.5-22.5 36-24.5 41-23C37.5-21.5 35.4-19 34.6-15C33.6-8 38 2 44.5 8.5Z" fill="#5B3FD6"/>
+      <path d="M34.6-15C33.6-8 38 2 44.5 8.5H39.6C35.6 2.6 33.4-6 34.6-15Z" fill="#4C33C0"/>
+      ${HI("M20.8 5.2C22.8-1.8 25-8.4 28.6-14", 1.6, 0.24)}
+      <path d="M20.8 4.4C28 6.2 36 6.2 43.4 4.4L44.3 7.8C36 9.8 28 9.8 19.8 7.8Z" fill="#FFC53D"/>
+      <path d="M27.4-3.8A3.2 3.2 0 1 0 30.2 1.4A2.6 2.6 0 0 1 27.4-3.8Z" fill="#FFD24D"/>
+      <path d="${STAR}" transform="translate(35.2 -8) scale(.62)" fill="#FFD24D"/>
+      <path d="${STAR}" transform="translate(31.6 -15) scale(.42)" fill="#fff"/></g>` },
+    vikingo: { name: "Casco vikingo", svg: () => `<g>
+      ${HORN}<g transform="translate(64 0) scale(-1 1)">${HORN}</g>
+      <path d="M13.6 13C13-1 22-7 32-7C42-7 51-1 50.4 13Z" fill="#A7B0BA"/>
+      <path d="M41.6-4.6C47.6-1.4 51 4.6 50.4 13H45.6C46.2 5 45.2-.6 41.6-4.6Z" fill="#8F99A4"/>
+      <path d="M30.4-6.9H33.6V10H30.4Z" fill="#8F99A4"/>
+      ${HI("M17.6 6.4C18.4 1 21.6-2.6 26-4.4", 1.5, 0.5)}
+      <path d="M12.4 10C25 7.2 39 7.2 51.6 10L51.8 15C39 12.2 25 12.2 12.2 15Z" fill="#7B8591"/>
+      <g fill="#CBD2D9"><circle cx="16.4" cy="11.4" r=".8"/><circle cx="22.2" cy="10.4" r=".8"/><circle cx="28" cy="9.9" r=".8"/><circle cx="36" cy="9.9" r=".8"/><circle cx="41.8" cy="10.4" r=".8"/><circle cx="47.6" cy="11.4" r=".8"/></g></g>` },
+    birrete: { name: "Birrete", svg: () => `<g transform="rotate(-8 32 4)">
+      <path d="M18.6-1.2V7C24 9.8 40 9.8 45.4 7V-1.2Z" fill="#221C30"/>
+      <path class="lk-rim" d="M32-9.6L56-2.6L32 4.4L8-2.6Z" fill="#3A3150"/>
+      <path d="M32-9.6L56-2.6L32 4.4Z" fill="#2B2440"/>
+      <path d="M32-2.6L50.8-.6V7.4" fill="none" stroke="#FFC53D" stroke-width="1.1" stroke-linecap="round"/>
+      <path d="M49.5 6.8H52.1L52.8 12.6H48.8Z" fill="#FFC53D"/>
+      <circle cx="32" cy="-2.6" r="1.4" fill="#FFC53D"/></g>` },
+    santa: { name: "Gorro navideño", svg: () => `<g>
+      <path d="M13 9.5C12.5-2 21-9 31-9.5C41-10 51-5 56.5 8.8C54 6 51.5 5 49.5 5.4C50.6 6.6 51 7.6 51 8.6Z" fill="#E5484D"/>
+      <path d="M44-6.8C50.4-3.8 54.6 1.6 56.5 8.8C54 6 51.5 5 49.5 5.4C48.4 1 46.6-3 44-6.8Z" fill="#C2333C"/>
+      ${HI("M16.6 3C18.4-3.4 23-7 28.4-8.2", 1.6, 0.3)}
+      <path class="lk-wf lk-wo" d="M11.8 9.6C25 5.8 39 5.8 52.2 9.6L52.6 15.2C39 11.6 25 11.6 11.4 15.2Z"/>
+      <circle class="lk-wf lk-wo" cx="57.6" cy="11" r="3.9"/></g>` },
+    pirata: { name: "Pañuelo pirata", svg: () => `<g>
+      <path d="M51 13.4C54.6 14.6 57.6 17 59.4 20.6C56.6 20.4 53.8 18.8 51.6 16.6Z" fill="#B82F38"/>
+      <path d="M51.4 12.6C55.4 12 59.2 12.8 62.2 15C59.6 16.2 56 16 52.6 15Z" fill="#D63E47"/>
+      <path d="M13.6 14C12.8 1 21.6-4.6 32-4.6C42.4-4.6 51.2 1 50.4 14C39 11 25 11 13.6 14Z" fill="#E5484D"/>
+      <path d="M42-2.6C47.8.4 51 6 50.4 14C48.6 13.4 46.6 12.9 44.6 12.6C45.4 6.6 44.6 1.6 42-2.6Z" fill="#CC3942"/>
+      <g fill="#fff"><circle cx="21.6" cy="3.4" r="1.1"/><circle cx="28.4" cy="-1.4" r="1.1"/><circle cx="36" cy="1.6" r="1.1"/><circle cx="26.4" cy="8" r="1.1"/><circle cx="41" cy="7" r="1"/><circle cx="33" cy="-3" r=".7"/><circle cx="17.4" cy="9.6" r=".8"/></g>
+      <circle cx="51" cy="13.2" r="2.8" fill="#D63E47"/></g>` },
+    flor: { name: "Flor", svg: () => `<g transform="translate(50.6 12.6) rotate(-18)">
+      <path d="M-2 3.4C-5.6 6.4-9.4 6.2-11.4 4C-8.6 2.6-5.6 2.4-2 3.4Z" fill="#3DBB7A"/>
+      ${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="0" cy="-3.8" rx="2.9" ry="3.9" fill="#FF9EC4" transform="rotate(${a})"/>`).join("")}
+      ${[36, 108, 180, 252, 324].map((a) => `<ellipse cx="0" cy="-2.6" rx="1" ry="1.8" fill="#FFC4DB" transform="rotate(${a})"/>`).join("")}
+      <circle r="2.4" fill="#FFD24D"/><circle cx="-.7" cy="-.7" r=".8" fill="#fff" opacity=".65"/></g>` },
+    michi: { name: "Orejas de gato", slot: "back", svg: (k, u) => `<g stroke="url(#lg-${u})" stroke-width="2.4" stroke-linejoin="round" fill="url(#lg-${u})">
+      <path d="M14.7 15.3L12.4-.6L25.4 8.9Z"/><path class="lk-ear-in" d="M15.2 10.6L14.2 2.6L21.2 6.6Z"/>
+      <g class="lk-ear-r"><path d="M49.3 15.3L51.6-.6L38.6 8.9Z"/><path class="lk-ear-in" d="M48.8 10.6L49.8 2.6L42.8 6.6Z"/></g></g>` },
+    audifonos: { name: "Audífonos", svg: () => `<g>
+      <path d="M3.4 31A28.6 28.6 0 0 1 60.6 31" fill="none" class="lk-hp-s" stroke-width="3.6" stroke-linecap="round"/>
+      ${HI("M8.6 14.6A28.6 28.6 0 0 1 22.2 4.1", 1.1, 0.3)}
+      <rect class="lk-hp2" x="4.6" y="24" width="6" height="16" rx="3"/><rect class="lk-hp" x="-1.4" y="21.5" width="8.6" height="21" rx="4.3"/>
+      <rect class="lk-hp2" x="53.4" y="24" width="6" height="16" rx="3"/><rect class="lk-hp" x="56.8" y="21.5" width="8.6" height="21" rx="4.3"/>
+      <rect x=".6" y="24.5" width="2" height="8" rx="1" fill="#fff" opacity=".28"/><rect x="58.8" y="24.5" width="2" height="8" rx="1" fill="#fff" opacity=".28"/></g>` },
+    mono: { name: "Moño", svg: () => `<g transform="translate(47.5 10.5) rotate(36)">
+      <path d="M0 0C-2.4-5.6-10.2-7-10.2 0C-10.2 7-2.4 5.6 0 0ZM0 0C2.4-5.6 10.2-7 10.2 0C10.2 7 2.4 5.6 0 0Z" fill="#FF4F8B"/>
+      <g fill="#fff" opacity=".85"><circle cx="-6.4" cy="-1.8" r=".95"/><circle cx="-4.4" cy="2.4" r=".75"/><circle cx="6.4" cy="-1.8" r=".95"/><circle cx="4.4" cy="2.4" r=".75"/><circle cx="-8.4" cy="1.4" r=".6"/><circle cx="8.4" cy="1.4" r=".6"/></g>
+      <path d="M-2.2-.4C-4.6-3-7.6-3.4-8.4-.6M2.2-.4C4.6-3 7.6-3.4 8.4-.6" fill="none" stroke="#D93570" stroke-width=".9" stroke-linecap="round"/>
+      <rect x="-2.6" y="-2.8" width="5.2" height="5.6" rx="2" fill="#D93570"/></g>` },
+  };
+  const FACE = {
+    lentes: { name: "Lentes", slot: "face", svg: () => `<g fill="none" class="lk-frame" stroke-width="1.4" stroke-linecap="round">
+      <path d="M21.1 31.6L9 30M42.9 31.6L55 30M31.4 31.2Q32 30.2 32.6 31.2"/>
+      <circle cx="26.4" cy="32.5" r="5.35"/><circle cx="37.6" cy="32.5" r="5.35"/>
+      <path d="M23.1 30.1Q23.9 28.6 25.5 28.2M34.3 30.1Q35.1 28.6 36.7 28.2" stroke="#fff" stroke-opacity=".7" stroke-width="1"/></g>` },
+    // cristal oscuro con el reflejo del atardecer abajo: se ve sobre crema, naranja y negro
+    sol: { name: "Lentes de sol", slot: "face-back", svg: (k) => `<g>
+      <linearGradient id="sg-${k}" x1="0" y1="27" x2="0" y2="38.5" gradientUnits="userSpaceOnUse">
+        <stop offset="0" style="stop-color:var(--shade,#1C120D)"/><stop offset=".55" style="stop-color:var(--shade,#1C120D)"/><stop offset="1" style="stop-color:#8A2E62"/></linearGradient>
+      <path d="M8.5 28.2L19.8 28.8M55.5 28.2L44.2 28.8" class="lk-shade-s" stroke-width="1.8" stroke-linecap="round"/>
+      <path class="lk-shade" fill="url(#sg-${k})" d="M19.9 27.4H31.3C31.9 27.4 32.2 27.9 32.1 28.5L31.4 34.5C31.1 36.9 29.7 38.1 27.6 38.1H24.7C22.5 38.1 21.1 36.9 20.7 34.6L19.5 28.6C19.4 27.9 19.5 27.4 19.9 27.4ZM44.1 27.4H32.7C32.1 27.4 31.8 27.9 31.9 28.5L32.6 34.5C32.9 36.9 34.3 38.1 36.4 38.1H39.3C41.5 38.1 42.9 36.9 43.3 34.6L44.5 28.6C44.6 27.9 44.5 27.4 44.1 27.4Z"/>
+      <path d="M22.4 36.2L28.6 29.6M35.6 36.2L41.8 29.6" stroke="#fff" stroke-opacity=".16" stroke-width="2.2" stroke-linecap="round"/></g>` },
+    rubor: { name: "Chapitas", slot: "face-back", svg: () => `<g class="lk-blush">
+      <ellipse cx="20.4" cy="39.6" rx="3.5" ry="2.1"/><ellipse cx="43.6" cy="39.6" rx="3.5" ry="2.1"/></g>` },
+    bigote: { name: "Bigote", slot: "face", svg: () => `<path class="lk-stache" d="M32 40.2C30 38.6 26.8 38.8 25 40.6C23.4 42.2 21.2 42.4 19.6 41.2C20.4 44.4 24 45.4 27 44.2C29.2 43.4 31 42.2 32 41.4C33 42.2 34.8 43.4 37 44.2C40 45.4 43.6 44.4 44.4 41.2C42.8 42.4 40.6 42.2 39 40.6C37.2 38.8 34 38.6 32 40.2Z"/>` },
+    // el cordón pasa POR ENCIMA del ojo que queda libre, nunca por delante
+    parche: { name: "Parche", slot: "face", svg: () => `<g>
+      <path d="M33.6 28.4L15.5 21.2M41.8 36L50.5 41.5" class="lk-strap" fill="none" stroke-width="1.3" stroke-linecap="round"/>
+      <ellipse class="lk-patch" cx="37.6" cy="32.6" rx="4.9" ry="5.7" transform="rotate(-12 37.6 32.6)"/></g>` },
+    gato: { name: "Bigotes de gato", slot: "face", svg: () => `<g class="lk-whisk" fill="none" stroke-width=".9" stroke-linecap="round">
+      <path d="M22.8 38.4L15.2 36.8M23 40.2L15.4 41.4M41.2 38.4L48.8 36.8M41 40.2L48.6 41.4"/>
+      <path d="M30.7 37.9Q32 37.4 33.3 37.9L32 39.3Z" fill="#FF7FB0" stroke="none"/></g>` },
+  };
+  /* los TIPOS: una cabeza + una cara, con su etiqueta. Len se llama Len siempre;
+     «Chef» o «Michi» dicen qué lleva puesto, no le cambian el nombre. */
+  const LOOKS = [
+    { id: "clasico", name: "Clásico", tag: "El de siempre.", cabeza: "", cara: "" },
+    { id: "profe", name: "Profe", tag: "Con lentes redonditos.", cabeza: "", cara: "lentes" },
+    { id: "chef", name: "Chef", tag: "Recién salido del horno.", cabeza: "chef", cara: "" },
+    { id: "michi", name: "Michi", tag: "Miau.", cabeza: "michi", cara: "gato" },
+    { id: "cool", name: "Cool", tag: "Nada lo despeina.", cabeza: "", cara: "sol" },
+    { id: "vaquero", name: "Vaquero", tag: "Yija.", cabeza: "vaquero", cara: "" },
+    { id: "mago", name: "Mago", tag: "Con estrellitas y todo.", cabeza: "mago", cara: "" },
+    { id: "dj", name: "DJ", tag: "Con su música puesta.", cabeza: "audifonos", cara: "" },
+    { id: "pirata", name: "Pirata", tag: "Al abordaje.", cabeza: "pirata", cara: "parche" },
+    { id: "invierno", name: "Invierno", tag: "Calientito, calientito.", cabeza: "lana", cara: "rubor" },
+    { id: "vikingo", name: "Vikingo", tag: "Con cuernos y sin miedo.", cabeza: "vikingo", cara: "" },
+    { id: "artista", name: "Artista", tag: "Boina y bigote, como debe ser.", cabeza: "boina", cara: "bigote" },
+    { id: "graduado", name: "Graduado", tag: "Birrete y todo.", cabeza: "birrete", cara: "lentes" },
+    { id: "fiesta", name: "Fiesta", tag: "Todo lo celebra.", cabeza: "fiesta", cara: "" },
+    { id: "skater", name: "Skater", tag: "Gorra de lado.", cabeza: "gorra", cara: "" },
+    { id: "primavera", name: "Primavera", tag: "Con flor en la cabeza.", cabeza: "flor", cara: "rubor" },
+    { id: "navidad", name: "Navidad", tag: "Jo, jo, jo.", cabeza: "santa", cara: "rubor" },
+    { id: "rey", name: "Rey", tag: "Con corona, por si acaso.", cabeza: "corona", cara: "" },
+    { id: "monito", name: "Moñito", tag: "Con su detallito.", cabeza: "mono", cara: "rubor" },
+    { id: "bigoton", name: "Bigotón", tag: "Serio, pero no tanto.", cabeza: "", cara: "bigote" },
+  ];
+  const SHADOW = (u) => `<filter id="lsh-${u}" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="1.1" stdDeviation=".5" flood-color="#5A1E00" flood-opacity=".26"/></filter>`;
+  const lookItem = (id) => HEAD[id] || FACE[id] || null;
+  const slotOf = (id) => { const it = lookItem(id); return it ? it.slot || "head" : null; };
+  // un botón de elegir: el anillo quieto, dos ojos y lo que lleve puesto
+  function icon(cabeza, cara) {
+    const u = "i" + (++UID), k = u + "-" + (++LKN);
+    const put = (slot) => [cabeza, cara].filter((id) => slotOf(id) === slot).map((id) => lookItem(id).svg(k, u)).join("");
+    const eye = (x) => eyePath(E(x), x, 32.5, 1, 0);
+    return `<svg class="len len-ic" viewBox="-4 -21 72 84" aria-hidden="true" data-cara="${cara || ""}">
+  <defs><linearGradient id="lg-${u}" gradientUnits="userSpaceOnUse" x1="14" y1="11" x2="52" y2="55">${STOPS}</linearGradient>
+  <clipPath id="face-${u}"><circle cx="32" cy="32" r="17.2"/></clipPath>${SHADOW(u)}</defs>
+  ${put("back")}<circle class="glass" cx="32" cy="32" r="17.5"/>
+  <circle cx="32" cy="32" r="22" fill="none" stroke="url(#lg-${u})" stroke-width="10"/>
+  <g clip-path="url(#face-${u})">${put("face-back")}<path class="eye" d="${eye(26.4)}"/><path class="eye" d="${eye(37.6)}"/>${put("face")}</g>
+  <g filter="url(#lsh-${u})">${put("head")}</g>
+</svg>`;
+  }
+
   function template(u, mode) {
     const C = mode === "compact";
     const fit = (p) => {
@@ -250,6 +448,7 @@
       <stop offset="0" stop-color="#FF5A36" stop-opacity="0"/><stop offset="1" stop-color="#FF5A36" stop-opacity=".35"/>
     </linearGradient>
     <clipPath id="face-${u}"><circle class="clip" cx="32" cy="32" r="17"/></clipPath>
+    ${SHADOW(u)}
     <clipPath id="scr-${u}"><rect x="12" y="64" width="40" height="24" rx="3"/></clipPath>
   </defs>
 
@@ -277,9 +476,15 @@
     <g class="prop" data-p="buscando">
       <line class="handle" x1="50.5" y1="50.5" x2="60" y2="60" stroke="url(#lg-${u})" stroke-width="6.4" stroke-linecap="round" pathLength="1"/>
     </g>
+    <g class="look" data-slot="back"></g>
     <circle class="glass" cx="32" cy="32" r="17"/>
     <circle class="ring" cx="32" cy="32" r="22" fill="none" stroke="url(#lg-${u})" stroke-width="10"/>
-    <g clip-path="url(#face-${u})"><path class="eye eye-l"/><path class="eye eye-r"/></g>
+    <g clip-path="url(#face-${u})">
+      <g class="gz"><g class="look" data-slot="face-back"></g></g>
+      <path class="eye eye-l"/><path class="eye eye-r"/>
+      <g class="gz"><g class="look" data-slot="face"></g></g>
+    </g>
+    <g class="hat"><g class="look" data-slot="head" filter="url(#lsh-${u})"></g></g>
     <g class="prop" data-p="error"><g transform="translate(56 10)">
       <path class="drop" d="M0 -3.4C1.5 -1.2 2.6 .3 2.6 1.5A2.6 2.6 0 0 1 -2.6 1.5C-2.6 .3 -1.5 -1.2 0 -3.4Z"/>
     </g></g>
@@ -450,7 +655,37 @@
 .len .badge2{animation:lcPing 1.6s ease-in-out infinite}
 @keyframes lcPing{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
 
-.len-reduced .len .prop,.len-reduced .len .prop *{animation:none!important}
+/* el look: ponerse (cae y rebota), quitarse (sube y se va) */
+.len .eye{transition:fill .25s}
+.len[data-cara="sol"] .eye{fill:#fff}
+.len .look .lk{transform-box:fill-box;transform-origin:50% 100%}
+.len .look[data-slot^="face"] .lk{transform-origin:50% 50%}
+.len .lk.lk-in{animation:lkIn .5s cubic-bezier(.34,1.56,.64,1) both}
+.len .look[data-slot="head"] .lk.lk-in,.len .look[data-slot="back"] .lk.lk-in{animation:lkDrop .62s cubic-bezier(.3,1.2,.5,1) both}
+.len .lk.lk-off{animation:lkOut .24s ease-in both}
+@keyframes lkIn{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
+@keyframes lkDrop{0%{opacity:0;transform:translateY(-16px) scale(.8)}45%{opacity:1;transform:translateY(1.5px) scale(1.05,.9)}70%{transform:translateY(-1px) scale(.98,1.03)}100%{transform:none}}
+@keyframes lkOut{to{opacity:0;transform:translateY(-7px) scale(.85)}}
+.len .lk-wf{fill:var(--lk-white,#fff)}
+.len .lk-wo{stroke:var(--lk-white-line,#E6D2C2);stroke-width:.8}
+.len .lk-wo:not(.lk-wf){fill:none}
+.len .lk-wsh{fill:var(--lk-white-sh,#F4E7DB)}
+.len .lk-wl{fill:none;stroke:var(--lk-white-line,#E6D2C2);stroke-width:.9;stroke-linecap:round}
+.len .lk-rim{stroke:var(--lk-rim,rgba(255,255,255,.14));stroke-width:.7}
+.len .lk-stache{fill:var(--eye,#2A1A13)}
+.len .lk-strap{stroke:var(--eye,#2A1A13)}
+.len .lk-patch{fill:var(--shade,#1C120D);stroke:var(--shade-rim,rgba(255,255,255,.14));stroke-width:.6}
+.len .lk-whisk{stroke:var(--eye,#2A1A13);opacity:.75}
+.len .lk-hp{fill:var(--hp,#2E2833)} .len .lk-hp-s{stroke:var(--hp,#2E2833)} .len .lk-hp2{fill:var(--hp2,#FF7FB0)}
+.len .lk-frame{stroke:var(--eye,#2A1A13)}
+.len .lk-shade{stroke:var(--shade-rim,rgba(255,255,255,.14));stroke-width:.6}
+.len .lk-shade-s{stroke:var(--shade,#1C120D)}
+.len .lk-blush{fill:var(--blush,#FF7FB0);opacity:.62}
+.len .lk-ear-in{fill:var(--blush,#FF7FB0);stroke:none}
+.len .lk-ear-r{transform-box:fill-box;transform-origin:40% 95%;animation:lkTwitch 5.3s ease-in-out infinite}
+@keyframes lkTwitch{0%,84%,100%{transform:none}87%{transform:rotate(11deg)}90%{transform:rotate(-4deg)}93%{transform:rotate(6deg)}96%{transform:none}}
+
+.len-reduced .len .prop,.len-reduced .len .prop *,.len-reduced .len .look *{animation:none!important}
 `;
   function injectCSS() {
     if (document.getElementById("len-cara-css")) return;
@@ -479,6 +714,11 @@
       this.scan = q(".scan"); this.rays = q(".rays");
       this.grad = q(`#lg-${u}`); this.stops = [...this.grad.querySelectorAll("stop")];
       this.props = [...host.querySelectorAll(".prop")];
+      this.u = u; this.slots = {};
+      host.querySelectorAll(".look").forEach((g) => (this.slots[g.dataset.slot] = g));
+      this.gz = [...host.querySelectorAll(".gz")]; this.hat = q(".hat");
+      this.lagY = 0; this.lookO = 1; this.look = { cabeza: "", cara: "" };
+      this.setLook(opts.look, false);
       this.g = [0, 0];
       this.state = null; this.enter = 0; this.t0 = -9; this.from = null; this.P = null; this.target = null;
       this.transP = 1; this.transBlink = 0;
@@ -493,6 +733,28 @@
     poke() {
       if (this.state === "dormido") { this.set("reposo"); return; }
       this.pokeAt = T;
+    }
+    // { cabeza, cara } — cada slot cambia por separado: lo que no cambia no se mueve
+    setLook(look, animate = true) {
+      look = look || {};
+      const want = { head: "", back: "", face: "", "face-back": "" };
+      const cab = HEAD[look.cabeza] ? look.cabeza : "", car = FACE[look.cara] ? look.cara : "";
+      if (cab) want[slotOf(cab)] = cab;
+      if (car) want[slotOf(car)] = car;
+      for (const slot in want) {
+        const box = this.slots[slot], id = want[slot];
+        if ((box.dataset.id || "") === id) continue;
+        box.dataset.id = id;
+        for (const old of [...box.children]) {
+          if (!animate || REDUCED) { old.remove(); continue; }
+          if (old.classList.contains("lk-off")) continue;
+          old.classList.add("lk-off"); setTimeout(() => old.remove(), 260);
+        }
+        if (id) box.insertAdjacentHTML("beforeend", `<g class="lk${animate ? " lk-in" : ""}" data-lk="${id}">${lookItem(id).svg(this.u + "-" + (++LKN), this.u)}</g>`);
+      }
+      this.svg.dataset.cabeza = cab; this.svg.dataset.cara = car;
+      this.look = { cabeza: cab, cara: car };
+      if (animate) applyRate(this.svg);
     }
     set(name) {
       if (!ST[name]) return;
@@ -576,6 +838,22 @@
       this.eyeL.setAttribute("d", eyePath(P.L, 32 + (P.L.x - 32) * spread + gx, P.L.y + gy, ov * (1 + 0.06 * g0), bl));
       this.eyeR.setAttribute("d", eyePath(P.R, 32 + (P.R.x - 32) * spread + gx, P.R.y + gy, ov * (1 - 0.06 * g0), bl));
 
+      // el look: lo de la cara va con la mirada; lo de la cabeza llega tarde a los saltos
+      // (al subir se aprieta contra la cabeza, al caer flota) · en «logo» no lleva nada
+      if (this.look.cara) {
+        const t = `translate(${gx.toFixed(3)} ${gy.toFixed(3)})`;
+        this.gz.forEach((g) => g.setAttribute("transform", t));
+      }
+      if (this.look.cabeza) {
+        this.lagY += (b.ty - this.lagY) * (1 - Math.exp(-dt * 14));
+        const off = REDUCED ? 0 : clamp((this.lagY - b.ty) * 0.9, -3.2, 1);
+        this.hat.setAttribute("transform", `translate(0 ${off.toFixed(3)})`);
+      } else this.lagY = b.ty;
+      if (Math.abs(b.glass - this.lookO) >= 0.002) {
+        this.lookO = b.glass;
+        for (const k in this.slots) this.slots[k].style.opacity = b.glass.toFixed(3);
+      }
+
       this.grad.setAttribute("gradientTransform", `rotate(${this.gradA.toFixed(2)} 32 32)`);
       if (Math.abs(b.desat - this.desat) >= 0.002) {
         this.desat = b.desat;
@@ -616,6 +894,10 @@
   window.LenCara = {
     create: (host, opts) => new Cara(host, opts),
     STATES: Object.keys(ST),
+    HEAD: Object.fromEntries(Object.entries(HEAD).map(([k, v]) => [k, v.name])),
+    FACE: Object.fromEntries(Object.entries(FACE).map(([k, v]) => [k, v.name])),
+    LOOKS: LOOKS.map((l) => ({ ...l })),
+    icon,
     get speed() { return SPEED; },
     get reduced() { return REDUCED; },
     setSpeed(x) { SPEED = x; applyRate(document.body); },

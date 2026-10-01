@@ -30,6 +30,7 @@
   --ao:.34; --marker:rgba(255,138,30,.42);
   --glass:#2A1A10; --eye:#FFFFFF; --card:#24170F; --card-line:#3D2A1E; --fill-2:#3D2A1E; --muted:#B09A8A; --ink:#FFF1E6; --bg:#140C08;
   --bad:#FF6B6B;
+  --hp:#F3E8E0; --shade-rim:rgba(255,255,255,.5);
   color-scheme:dark;
 }
 /* La cara de cara.js viene en coral y no se toca (la comparte len-chat).
@@ -86,6 +87,9 @@ svg{display:block}
 .lm-sb-ic{display:flex;gap:6px;align-items:center}
 .lm-island{position:absolute;top:11px;left:50%;width:122px;height:35px;margin-left:-61px;border-radius:20px;background:#000;z-index:95;pointer-events:none}
 .lm-home{position:absolute;bottom:8px;left:50%;width:136px;height:5px;margin-left:-68px;border-radius:3px;background:var(--sbc);z-index:90;pointer-events:none;opacity:.85}
+/* la barrita de abajo: tocarla es salir de la app, como en el iPhone (Len sigue y te avisa) */
+.lm-home.is-exit{pointer-events:auto;cursor:pointer}
+.lm-home.is-exit::before{content:"";position:absolute;inset:-14px -30px}
 
 /* capas */
 .lm-layer{position:absolute;inset:0;visibility:hidden;opacity:0;transition:opacity .35s ease,visibility 0s linear .35s}
@@ -150,7 +154,7 @@ svg{display:block}
   --m-key-bg:#fff; --m-key:#B93F08; --m-card:#fff; --m-card-ink:#2B1A10;
   --m-on:#fff; --m-on-ink:#2B1405;
   --m-prop:#fff; --m-err:#F4C9AE; --m-shadow:rgba(140,40,0,.2);
-  --m-halo:conic-gradient(from 20deg,#fff,rgba(255,214,170,.9),#fff,rgba(255,170,190,.85),#fff); --m-halo-o:.42;
+  --m-halo:conic-gradient(from 20deg,#FFD54A,#FF8FB8,#FFC53D,#FF7AA8,#FFD54A); --m-halo-o:.42; /* amarillo y rosa: en blanco, al latir con cada palabra parecía el flash de una cámara */
   --m-a1:#FFD2A6; --m-a2:#FF5E3A; --m-a3:#FFB23E; --ao:.5;
   --m-r1:#fff; --m-r2:#fff; --m-r3:#FFE4CC;
   --lm-panel:#fff; --lm-ink:#2B1A10; --lm-muted:#9A5A2E; --lm-line:transparent; --lm-soft:#FFE9D6;
@@ -336,8 +340,6 @@ svg{display:block}
 .lm-steps li.is-done i{background:var(--m-solid);border-color:var(--m-solid)}
 .lm-steps li.is-fail i{background:var(--bad);border-color:var(--bad);color:#fff}
 .lm-steps li small{display:block;color:var(--m-dim);font-size:12.5px;line-height:1.4;margin-top:3px}
-.lm-steps.is-sm{gap:10px}
-.lm-steps.is-sm li{font-size:14px}
 
 /* ── la app: la página, su barra y la hoja de Len ──────────────────── */
 .lm-app[data-mode="work"] .lm-pagehost,.lm-app[data-mode="work"] .lm-bar,.lm-app[data-mode="work"] .lm-sheet{visibility:hidden}
@@ -364,11 +366,8 @@ svg{display:block}
 .lm-who-t b{font-size:15px;font-weight:600}
 .lm-who-t span{font-size:13px;color:var(--m-dim)}
 .lm-live{background:linear-gradient(90deg,var(--m-dim) 35%,var(--m-faint) 50%,var(--m-dim) 65%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;animation:lmShim 1.7s linear infinite}
-.lm-min-cta,.lm-x{display:none}
+.lm-min-cta{display:none}
 .lm-min-cta{height:38px;padding:0 16px;border-radius:999px;border:0;background:var(--m-solid);color:var(--m-solid-ink);font:600 14px Inter,sans-serif;align-items:center;cursor:pointer}
-.lm-x{width:32px;height:32px;border-radius:50%;border:0;background:var(--m-glass);place-items:center;cursor:pointer;color:var(--m-ink)}
-.lm-x svg{width:15px;height:15px}
-.lm-sheet[data-kind="direct"] .lm-x{display:grid}
 .lm-sheet.is-min .lm-body{display:none}
 .lm-sheet.is-min .lm-min-cta{display:inline-flex}
 .lm-sheet.is-min{padding-bottom:30px}
@@ -407,31 +406,109 @@ svg{display:block}
 .lm-ba-arrow{color:var(--m-dim)}
 .lm-ba-arrow svg{width:18px;height:18px}
 
-.lm-thread{max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:12px 0 2px;scrollbar-width:none}
-.lm-thread::-webkit-scrollbar{display:none}
-.lm-len{font-size:16px;line-height:1.45;max-width:94%}
-.lm-me{align-self:flex-end;max-width:82%;background:var(--m-card);color:var(--m-card-ink);border-radius:20px 20px 6px 20px;padding:10px 14px;font-size:15.5px;line-height:1.4}
-.lm-vn{display:flex;align-items:center;gap:10px;padding:7px 14px 7px 7px}
-.lm-vn-play{width:32px;height:32px;border-radius:50%;border:0;background:var(--len);color:var(--on-len);display:grid;place-items:center;cursor:pointer;flex:none}
+/* ── el chat: una conversación de mensajería, como dots ─────────────
+   Burbujas y nada más: ni pasos ni herramientas (eso es de la web).
+   Mientras Len trabaja: «escribiendo» y una línea en palabras bajo su
+   nombre. Lo que hizo llega como mensaje, con su tarjeta. De día claro;
+   en modo oscuro, negro. Entra deslizándose desde la derecha.          */
+.lm-chat{z-index:25;
+  --c-bg:linear-gradient(180deg,#FFF8F2 0%,#FFEFE3 100%); --c-bg-solid:#FFF6EE;
+  --c-ink:#2B1A10; --c-dim:#8A7465; --c-line:rgba(120,60,20,.13);
+  --c-len:#FFFFFF; --c-len-ink:#2B1A10; --c-len-shadow:0 1px 1.5px rgba(90,40,10,.06),0 8px 22px -14px rgba(90,40,10,.35);
+  --c-me:linear-gradient(160deg,#F26A0F 0%,#DD5210 100%); --c-me-ink:#fff;
+  --c-top:color-mix(in srgb,#FFF8F2 80%,transparent); --c-field:#FFFFFF; --c-chip:#FFFFFF;
+  --lm-panel:#fff; --lm-ink:#2B1A10; --lm-muted:#8A7465; --lm-line:transparent; --lm-soft:#FFEEE2;
+  color:var(--c-ink);background:var(--c-bg)}
+:root[data-theme="dark"] .lm-chat{
+  --c-bg:linear-gradient(180deg,#0F0A07 0%,#060403 100%); --c-bg-solid:#0B0705;
+  --c-ink:#FFF1E6; --c-dim:#A89282; --c-line:rgba(255,241,230,.1);
+  --c-len:#211610; --c-len-ink:#FFF1E6; --c-len-shadow:none;
+  --c-top:color-mix(in srgb,#0F0A07 82%,transparent); --c-field:#1C130D; --c-chip:#1C130D;
+  --lm-panel:#2A1C14; --lm-ink:#FFF1E6; --lm-muted:#B09A8A; --lm-soft:#2A1B12}
+.lm-layer.lm-chat{opacity:1;transform:translateX(100%);transition:transform .42s cubic-bezier(.2,.85,.25,1),visibility 0s linear .42s}
+.lm-layer.lm-chat.is-on{transform:none;transition:transform .42s cubic-bezier(.2,.85,.25,1)}
+.len-reduced .lm-layer.lm-chat{transition:none}
+
+.ch-top{position:absolute;top:0;left:0;right:0;z-index:3;padding:46px 8px 8px;display:grid;grid-template-columns:44px 1fr 44px;align-items:start;background:var(--c-top);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);border-bottom:.5px solid var(--c-line)}
+.ch-btn{width:40px;height:40px;margin-top:5px;border-radius:50%;border:0;background:transparent;color:var(--c-ink);display:grid;place-items:center;cursor:pointer}
+.ch-btn svg{width:23px;height:23px}
+/* centrado, como dots: la cara arriba y su nombre montado debajo. Sin el nombre del proyecto;
+   la línea de estado sólo aparece cuando hay algo que decir (trabajando, o con una pregunta) */
+.ch-who{display:grid;justify-items:center;min-width:0}
+.ch-face{width:44px;height:44px;cursor:pointer}
+.ch-name{position:relative;margin-top:-7px;padding:2px 11px;border-radius:999px;background:var(--c-me);color:#fff;font:700 12px/1.35 Inter,sans-serif;box-shadow:0 0 0 2.5px var(--c-bg-solid)}
+.ch-st{max-width:250px;max-height:0;opacity:0;font-size:11.5px;line-height:14px;color:var(--c-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:max-height .3s ease,opacity .3s ease,margin-top .3s ease}
+.ch-st.is-on{max-height:16px;opacity:1;margin-top:3px}
+.ch-live{animation:chPulse 1.4s ease-in-out infinite}
+@keyframes chPulse{50%{opacity:.45}}
+
+.ch-log{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;padding:112px 14px 150px;display:flex;flex-direction:column;scrollbar-width:none}
+.ch-log::-webkit-scrollbar{display:none}
+.ch-day{align-self:center;margin:6px 0 4px;font:600 11.5px Inter,sans-serif;color:var(--c-dim)}
+.ch-row{display:flex;flex-direction:column;max-width:80%;margin-top:12px}
+.ch-row.is-cont{margin-top:3px}
+.ch-row.is-len{align-self:flex-start;align-items:flex-start}
+.ch-row.is-me{align-self:flex-end;align-items:flex-end}
+.ch-row.is-card{max-width:92%}
+.ch-row.is-new{animation:chIn .38s cubic-bezier(.3,1.4,.5,1) both}
+.ch-row.is-me.is-new{transform-origin:100% 100%}
+.ch-row.is-len.is-new{transform-origin:0 100%}
+@keyframes chIn{from{opacity:0;transform:translateY(10px) scale(.94)}to{opacity:1;transform:none}}
+.ch-b{padding:9px 14px;border-radius:20px;font-size:16px;line-height:1.38;letter-spacing:-.005em;overflow-wrap:anywhere}
+.is-len .ch-b,.ch-card{background:var(--c-len);color:var(--c-len-ink);box-shadow:var(--c-len-shadow);border-bottom-left-radius:6px}
+.is-me .ch-b{background:var(--c-me);color:var(--c-me-ink);font-weight:500;border-bottom-right-radius:6px}
+.ch-rcpt{margin-top:3px;font-size:11px;color:var(--c-dim)}
+.ch-tr{margin-top:4px;max-width:250px;font-size:12.5px;line-height:1.4;color:var(--c-dim);text-align:right}
+.ch-typing{display:flex;gap:4px;padding:14px 16px}
+.ch-typing i{width:7px;height:7px;border-radius:50%;background:var(--c-dim);animation:chDot 1.2s ease-in-out infinite}
+.ch-typing i:nth-child(2){animation-delay:.15s}.ch-typing i:nth-child(3){animation-delay:.3s}
+@keyframes chDot{0%,60%,100%{transform:none;opacity:.4}30%{transform:translateY(-4px);opacity:1}}
+.ch-photo{padding:0;overflow:hidden}
+.ch-photo img{display:block;width:180px;height:132px;object-fit:cover}
+/* la nota de voz, mía: dentro de la burbuja naranja */
+.ch-b.lm-vn{display:flex;align-items:center;gap:10px;padding:7px 14px 7px 7px}
+.lm-vn-play{width:32px;height:32px;border-radius:50%;border:0;background:#fff;color:#DD5210;display:grid;place-items:center;cursor:pointer;flex:none}
 .lm-vn-play svg{width:14px;height:14px}
 .lm-vn-bars{display:flex;align-items:center;gap:2px;height:28px}
-.lm-vn-bars i{width:3px;border-radius:2px;background:var(--lm-muted);opacity:.5;transition:background .15s,opacity .15s}
-.lm-vn-bars i.is-on{background:var(--len);opacity:1}
-.lm-vn-d{font-size:12.5px;color:var(--lm-muted);font-variant-numeric:tabular-nums}
-.lm-vn-tr{align-self:flex-end;max-width:82%;font-size:13px;line-height:1.4;color:var(--m-dim);margin-top:-4px;text-align:right}
-.lm-photo{padding:4px}
-.lm-photo img{display:block;width:150px;height:110px;object-fit:cover;border-radius:16px}
-.lm-workcard{border:1px solid var(--m-faint);border-radius:18px;padding:14px}
-.lm-worknote{margin:12px 0 0;font-size:13px;color:var(--m-dim)}
-.lm-link{border:0;background:none;padding:0;color:var(--m-ink);text-decoration:underline;text-decoration-color:var(--m-faint);text-decoration-thickness:2px;text-underline-offset:3px;font:600 13px Inter,sans-serif;cursor:pointer}
-.lm-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.lm-chips:empty{display:none}
-.lm-chip{border:0;background:var(--m-glass);color:var(--m-ink);border-radius:999px;padding:9px 14px;font:500 14px Inter,sans-serif;cursor:pointer;display:inline-flex;gap:7px;align-items:center}
-.lm-chip svg{width:16px;height:16px}
-.lm-comp{display:flex;gap:8px;align-items:center;margin-top:12px}
-.lm-field{flex:1;position:relative;height:50px;border-radius:25px;background:var(--m-card);color:var(--m-card-ink);overflow:hidden}
-.lm-field input{width:100%;height:100%;border:0;background:transparent;padding:0 18px;font:16px Inter,sans-serif;color:var(--m-card-ink);outline:none}
-.lm-field input::placeholder{color:var(--lm-muted)}
+.lm-vn-bars i{width:3px;border-radius:2px;background:#fff;opacity:.45;transition:opacity .15s}
+.lm-vn-bars i.is-on{opacity:1}
+.lm-vn-d{font-size:12.5px;color:rgba(255,255,255,.88);font-variant-numeric:tabular-nums}
+/* las tarjetas de Len: Antes/Ahora, las fotos que descartó, su página */
+.ch-card{border-radius:20px;border-bottom-left-radius:6px;padding:8px;display:grid;gap:8px}
+.ch-card-act{height:40px;border:0;border-radius:14px;background:var(--lm-soft);color:var(--c-len-ink);font:600 14px Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
+.ch-card-act svg{width:18px;height:18px}
+.ch-ba{display:flex;align-items:center;gap:8px;padding:4px 4px 0}
+.ch-ba figure{margin:0;display:grid;gap:6px;justify-items:center}
+.ch-ba figcaption{font-size:11.5px;font-weight:600;color:var(--c-dim)}
+.ch-ba .lm-thumb{box-shadow:0 0 0 1px var(--c-line)}
+.ch-ba-arrow{color:var(--len)}
+.ch-ba-arrow svg{width:20px;height:20px}
+.ch-card .lm-rej{margin:0;padding:6px 4px 2px;gap:6px}
+.ch-card .lm-rj-img{width:52px;height:52px;border-radius:12px;box-shadow:none}
+.ch-card .lm-rj.is-more .lm-rj-img{width:36px;font-size:13px}
+.ch-page{display:flex;gap:11px;align-items:center;padding:2px 8px 2px 2px;cursor:pointer}
+.ch-page .lm-thumb{box-shadow:none;border-radius:12px}
+.ch-page div{display:grid;line-height:1.3;min-width:0}
+.ch-page b{font-size:14.5px}
+.ch-page span{font-size:12.5px;color:var(--c-dim)}
+
+/* el pie: respuestas rápidas + escribir, siempre abajo */
+.ch-foot{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:10px 12px 30px;background:linear-gradient(to top,var(--c-bg-solid) 72%,transparent)}
+.ch-qr{display:flex;gap:7px;overflow-x:auto;padding:0 2px 9px;scrollbar-width:none}
+.ch-qr:empty{display:none}
+.ch-qr::-webkit-scrollbar{display:none}
+.ch-qr button{flex:none;display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border:1px solid var(--c-line);border-radius:999px;background:var(--c-chip);color:var(--c-ink);font:500 14px Inter,sans-serif;cursor:pointer}
+.ch-qr svg{width:16px;height:16px}
+.ch-plus{width:40px;height:40px;flex:none;border:0;border-radius:50%;background:var(--c-chip);color:var(--c-ink);box-shadow:0 0 0 1px var(--c-line);display:grid;place-items:center;cursor:pointer}
+.ch-plus svg{width:20px;height:20px}
+.lm-comp{display:flex;gap:8px;align-items:center}
+.lm-field{flex:1;position:relative;height:44px;border-radius:22px;background:var(--c-field);color:var(--c-ink);box-shadow:0 0 0 1px var(--c-line);overflow:hidden}
+.lm-field input{width:100%;height:100%;border:0;background:transparent;padding:0 16px;font:16px Inter,sans-serif;color:var(--c-ink);outline:none}
+.lm-field input::placeholder{color:var(--c-dim)}
+.lm-link{border:0;background:none;padding:0;color:var(--c-ink);text-decoration:underline;text-decoration-color:var(--len);text-decoration-thickness:2px;text-underline-offset:3px;font:600 13px Inter,sans-serif;cursor:pointer}
+.lm-chat .lm-mic{width:44px;height:44px;background:var(--c-me);color:#fff}
+.lm-chat .lm-mic svg{width:20px;height:20px}
+.lm-chat .lm-mic.is-rec{box-shadow:0 0 0 8px rgba(242,106,15,.18)}
 .lm-rec{position:absolute;inset:0;display:none;align-items:center;gap:9px;padding:0 16px}
 .lm-field.is-rec .lm-rec{display:flex}
 .lm-field.is-rec input{visibility:hidden}
@@ -443,6 +520,43 @@ svg{display:block}
 .lm-mic{width:50px;height:50px;border-radius:50%;border:0;background:var(--m-solid);color:var(--m-solid-ink);display:grid;place-items:center;cursor:pointer;flex:none;touch-action:none;transition:transform .2s,box-shadow .2s}
 .lm-mic svg{width:22px;height:22px}
 .lm-mic.is-rec{transform:scale(1.16);box-shadow:0 0 0 8px var(--m-faint)}
+
+/* ── tu Len: cómo se ve (sólo eso; trabaja igual) ────────────────────
+   Un selector de personaje, como los de dots: la cara grande arriba, los
+   personajes con nombre en fila, y abajo la mezcla (cabeza + cara).     */
+.lm-looks{z-index:36}
+.lk-top{position:absolute;top:52px;left:16px;right:16px;display:grid;grid-template-columns:40px 1fr 40px;align-items:center;text-align:center}
+.lk-top div{display:grid;gap:1px}
+.lk-top b{font:600 17px Inter,sans-serif}
+.lk-top span{font-size:12.5px;color:var(--m-dim)}
+.lk-close{width:36px;height:36px;border-radius:50%;border:0;background:var(--m-glass);color:var(--m-ink);display:grid;place-items:center;cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.lk-close svg{width:15px;height:15px}
+.lk-hero{position:absolute;left:50%;top:170px;width:156px;height:156px;margin-left:-78px;touch-action:pan-y;cursor:pointer}
+.lk-hero .lm-halo{inset:-34px}
+.lk-floor{position:absolute;left:50%;bottom:-16px;width:112px;height:16px;margin-left:-56px;border-radius:50%;background:radial-gradient(closest-side,rgba(110,35,0,.3),rgba(110,35,0,0))}
+:root[data-theme="dark"] .lk-floor{background:radial-gradient(closest-side,rgba(255,138,30,.22),rgba(255,138,30,0))}
+.lk-arrow{position:absolute;top:226px;width:44px;height:44px;border-radius:50%;border:0;background:var(--m-glass);color:var(--m-ink);display:grid;place-items:center;cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:transform .15s}
+.lk-arrow:active{transform:scale(.92)}
+.lk-arrow svg{width:20px;height:20px}
+.lk-prev{left:20px}.lk-prev svg{transform:scaleX(-1)}
+.lk-next{right:20px}
+.lk-name{position:absolute;top:346px;left:0;right:0;margin:0;text-align:center;font:italic 400 50px/1 "Instrument Serif",serif;letter-spacing:-.01em}
+.lk-tag{position:absolute;top:402px;left:24px;right:24px;margin:0;text-align:center;font-size:15px;color:var(--m-dim)}
+.lk-type{display:inline-block;margin-right:5px;padding:2px 10px;border-radius:999px;background:var(--m-key-bg);color:var(--m-key);font-weight:700}
+.lk-cards{position:absolute;top:430px;left:0;right:0;display:flex;gap:9px;overflow-x:auto;padding:14px 24px 6px;scrollbar-width:none}
+.lk-cards::-webkit-scrollbar,.lk-opts::-webkit-scrollbar{display:none}
+.lk-card{flex:none;width:76px;display:grid;justify-items:center;gap:5px;padding:22px 0 9px;border:0;border-radius:20px;background:var(--m-glass);color:var(--m-ink);cursor:pointer;font:600 12.5px Inter,sans-serif;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:box-shadow .2s,transform .25s cubic-bezier(.3,1.5,.5,1)}
+.lk-card:active{transform:scale(.95)}
+.lk-card[aria-pressed="true"]{box-shadow:inset 0 0 0 2.5px var(--m-ink);transform:translateY(-3px)}
+.lk-card-face{width:44px;height:44px;pointer-events:none}
+.lk-mix{position:absolute;top:566px;left:0;right:0;display:grid;gap:10px}
+.lk-row>span{display:block;padding:0 24px 5px;font:600 11px Inter,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--m-dim)}
+.lk-opts{display:flex;gap:7px;overflow-x:auto;padding:2px 24px;scrollbar-width:none}
+.lk-opt{flex:none;width:48px;height:48px;border-radius:16px;border:0;background:var(--m-glass);display:grid;place-items:center;cursor:pointer;padding:2px 4px;transition:box-shadow .2s,transform .15s}
+.lk-opt:active{transform:scale(.92)}
+.lk-opt svg{width:38px;height:44px}
+.lk-opt[aria-pressed="true"]{box-shadow:inset 0 0 0 2.5px var(--m-ink)}
+.lk-done{position:absolute;left:24px;right:24px;bottom:40px;width:auto}
 
 /* ── la página de ejemplo: Panadería Luna, en móvil ────────────────── */
 .lp{--c:#FBF6EE;--i:#2B1D14;--m:#6F5A4B;--t:#B5541C;--l:#EADFD0;--rad:18px;background:var(--c);color:var(--i);font:15px/1.55 Inter,sans-serif}
@@ -512,18 +626,20 @@ svg{display:block}
       <button data-scene="llamada"><kbd>3</kbd>Llamada</button>
       <button data-scene="entrega"><kbd>4</kbd>Entrega<small>la captura se vuelve la página</small></button>
       <button data-scene="publicar"><kbd>5</kbd>Publicar</button>
-      <button data-scene="dirigir"><kbd>6</kbd>Dirigir<small>nota de voz o texto</small></button>
+      <button data-scene="dirigir"><kbd>6</kbd>Chat<small>escríbele o mándale una nota de voz</small></button>
       <button data-scene="pregunta"><kbd>7</kbd>Pregunta<small>algo falla y Len te pregunta</small></button>
+      <button data-scene="look"><kbd>8</kbd>Tu Len<small>lentes, sombrero… (o toca su cara en la barra)</small></button>
     </div>
     <h2>Ajustes</h2>
     <div class="lm-toggles">
+      <button id="t-look">Look de Len <b></b></button>
       <button id="t-voice">Voz de Len <b></b></button>
       <button id="t-silent">Teléfono <b></b></button>
       <button id="t-ask">Len se atora al buscar <b></b></button>
       <button id="t-theme">Tema <b></b></button>
       <button id="t-reduced">Movimiento <b></b></button>
     </div>
-    <p class="lm-foot">Un toque durante la entrega la salta. La voz es la del navegador (es-MX), sólo para sentirlo.</p>
+    <p class="lm-foot">Para salir de la app, toca la barrita de abajo del teléfono: Len sigue y te avisa. Un toque durante la entrega la salta. La voz es la del navegador (es-MX), sólo para sentirlo.</p>
   </aside>
 
   <div class="lm-slot"><div class="lm-scaler"><div class="lm-phone" id="lm-phone">
@@ -601,9 +717,28 @@ svg{display:block}
             <div class="lm-who-face" id="lm-sheet-face"></div>
             <div class="lm-who-t"><b>Len</b><span id="lm-who-s"></span></div>
             <button class="lm-min-cta" id="lm-min-cta" data-act="mincta"></button>
-            <button class="lm-x" data-act="back" aria-label="Cerrar" data-ic="x"></button>
           </div>
           <div class="lm-body" id="lm-body"></div>
+        </div>
+      </section>
+
+      <section class="lm-layer lm-chat" id="lm-chat">
+        <header class="ch-top">
+          <button class="ch-btn" data-act="chatback" aria-label="Volver a tu página" data-ic="back"></button>
+          <div class="ch-who"><div class="ch-face" id="ch-face"></div><b class="ch-name">Len</b><span class="ch-st" id="ch-st"></span></div>
+          <button class="ch-btn" data-act="chatcall" aria-label="Llamar a Len" data-ic="phone"></button>
+        </header>
+        <div class="ch-log" id="ch-log" aria-live="polite"></div>
+        <div class="ch-foot">
+          <div class="ch-qr" id="ch-qr"></div>
+          <div class="lm-comp">
+            <button class="ch-plus" data-act="attach" aria-label="Mandar una foto" data-ic="plus"></button>
+            <div class="lm-field" id="lm-field">
+              <input id="lm-input" type="text" placeholder="Mensaje" autocomplete="off" enterkeyhint="send">
+              <div class="lm-rec"><i class="lm-rec-dot"></i><span class="lm-rec-t" id="lm-rec-t">0:00</span><div class="lm-rec-wave" id="lm-rec-wave"></div><span class="lm-rec-hint" id="lm-rec-hint"></span></div>
+            </div>
+            <button class="lm-mic" id="lm-mic" aria-label="Mantén para grabar"></button>
+          </div>
         </div>
       </section>
 
@@ -631,6 +766,25 @@ svg{display:block}
           <button class="lm-round lm-decline" id="lm-decline"><span data-ic="x"></span>Ahora no</button>
           <button class="lm-round lm-accept" id="lm-accept"><span data-ic="phone"></span>Contestar</button>
         </div>
+      </section>
+
+      <section class="lm-layer lm-looks lm-m lm-marca" id="lm-looks">
+        <div class="lm-aura"><i></i><i></i><i></i></div>
+        <header class="lk-top">
+          <button class="lk-close" data-act="lookclose" aria-label="Cerrar" data-ic="x"></button>
+          <div><b>Tu Len</b><span>Cambia cómo se ve. Trabaja igual.</span></div>
+        </header>
+        <div class="lk-hero" id="lk-hero"><div class="lm-halo"><i></i></div><div class="lk-floor"></div><div class="lm-face-host" id="lk-face"></div></div>
+        <button class="lk-arrow lk-prev" data-act="lookprev" aria-label="Anterior" data-ic="arrowR"></button>
+        <button class="lk-arrow lk-next" data-act="looknext" aria-label="Siguiente" data-ic="arrowR"></button>
+        <h2 class="lk-name">Len</h2>
+        <p class="lk-tag" id="lk-tag"></p>
+        <div class="lk-cards" id="lk-cards"></div>
+        <div class="lk-mix">
+          <div class="lk-row"><span>Cabeza</span><div class="lk-opts" id="lk-head"></div></div>
+          <div class="lk-row"><span>Cara</span><div class="lk-opts" id="lk-facex"></div></div>
+        </div>
+        <button class="lm-btn lm-pri lk-done" data-act="lookdone">Listo</button>
       </section>
 
       <div class="lm-notif" id="lm-notif" role="button" tabindex="0">
@@ -684,6 +838,8 @@ const I = {
   img: `<svg viewBox="0 0 24 24" ${S2}><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg>`,
   globe: `<svg viewBox="0 0 24 24" ${S2}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>`,
   arrowR: `<svg viewBox="0 0 24 24" ${S2}><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
+  back: `<svg viewBox="0 0 24 24" ${S2} stroke-width="2.4"><path d="M15 5l-7 7 7 7"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" ${S2} stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>`,
   play: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"/></svg>`,
   torch: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8 3h8v3l-2 4v10a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V10L8 6z"/><path d="M12 13v2"/></svg>`,
   cam: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8h3l1.5-2.5h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`,
@@ -693,13 +849,37 @@ const I = {
 };
 $$("[data-ic]").forEach((e) => (e.innerHTML = I[e.dataset.ic]));
 
+/* ───────── tu Len: los tipos (sólo cambia cómo se ve) ─────────
+   El catálogo vive en cara.js (lo comparte la página «Elige tu Len», y la
+   llave de guardado también: lo que eliges allí, lo lleva aquí). Len se llama
+   Len siempre; «Chef» o «Michi» es el tipo, no un nombre. */
+const LOOKS = LenCara.LOOKS;
+const LOOK_KEY = "len-look";
+function loadLook() {
+  try {
+    const v = JSON.parse(localStorage.getItem(LOOK_KEY));
+    if (v && typeof v === "object") return { cabeza: LenCara.HEAD[v.cabeza] ? v.cabeza : "", cara: LenCara.FACE[v.cara] ? v.cara : "" };
+  } catch {}
+  return { cabeza: "", cara: "" };
+}
+function saveLook(l) { try { localStorage.setItem(LOOK_KEY, JSON.stringify(l)); } catch {} }
+const presetOf = (l) => LOOKS.find((p) => p.cabeza === l.cabeza && p.cara === l.cara);
+function lookName(l) {
+  const p = presetOf(l);
+  if (p) return { name: p.name, tag: p.tag };
+  const parts = [LenCara.HEAD[l.cabeza], LenCara.FACE[l.cara]].filter(Boolean).map((s, i) => (i ? s.toLowerCase() : s));
+  return { name: "Tu mezcla", tag: parts.join(" y ") + "." };
+}
+
 /* ───────── estado ───────── */
 const S = {
+  look: loadLook(),
   voiceOK: false, silent: false, ask: false, muted: false,
   where: "lock",          // "app" = la app abierta · "lock" = el usuario se fue
   published: false, dirty: false,
   applied: new Set(), asked: new Set(), heroN: 0,
   thread: [], job: null, last: null, prevKind: "listo",
+  pendingPhoto: false,    // mandaste una foto y Len pregunta dónde va
 };
 
 /* ───────── las caras: una por sitio, cada una con su cerebro ───────── */
@@ -707,7 +887,7 @@ const S = {
 // que es lo que cara.js hace con sus atributos y aquí el naranja taparía
 function face(host, opts) {
   host.dataset.st = opts.state;
-  return LenCara.create(host, { ...opts, onchange: (s) => (host.dataset.st = s) });
+  return LenCara.create(host, { look: S.look, ...opts, onchange: (s) => (host.dataset.st = s) });
 }
 const F = {
   work: face($("#lm-work-face"), { props: "compact", state: "pensando" }),
@@ -715,8 +895,11 @@ const F = {
   inc: face($("#lm-inc-face"), { props: "compact", state: "avisando" }),
   bar: face($("#lm-bar-face"), { props: "none", state: "reposo" }),
   sheet: face($("#lm-sheet-face"), { props: "none", state: "reposo" }),
+  chat: face($("#ch-face"), { props: "none", state: "reposo" }),
 };
 Object.values(F).forEach((c) => c.host.addEventListener("click", (e) => { e.stopPropagation(); c.poke(); }));
+// su cara en la barra (y arriba en el chat) es su «perfil»: tocarla abre «Tu Len»
+[F.bar, F.chat].forEach((c) => c.host.addEventListener("click", () => setTimeout(openLooks, 220)));
 
 /* ───────── tiempo: todo lo pendiente muere al cambiar de escena ───────── */
 let RUN = 0, TM = [], ANIMS = [];
@@ -725,8 +908,17 @@ const wait = (ms) => new Promise((r) => later(r, ms));
 const anim = (el, kf, o) => { const a = el.animate(kf, o); ANIMS.push(a); return a; };
 
 /* ───────── capas ───────── */
-const L = { lock: $("#lm-lock"), app: $("#lm-app"), stage: $("#lm-stage"), incoming: $("#lm-incoming") };
-const show = (n, on = true) => L[n].classList.toggle("is-on", on);
+const L = { lock: $("#lm-lock"), app: $("#lm-app"), chat: $("#lm-chat"), stage: $("#lm-stage"), incoming: $("#lm-incoming"), looks: $("#lm-looks") };
+const show = (n, on = true) => { L[n].classList.toggle("is-on", on); syncHome(); };
+// la barrita de abajo sale de la app sólo cuando estás en ella (no en una llamada ni en «Tu Len»)
+function syncHome() {
+  const on = (n) => L[n].classList.contains("is-on");
+  $(".lm-home").classList.toggle("is-exit", on("app") && !on("stage") && !on("incoming") && !on("looks"));
+}
+$(".lm-home").addEventListener("click", (e) => {
+  if (!e.currentTarget.classList.contains("is-exit")) return;
+  e.stopPropagation(); closeApp();
+});
 const only = (...ns) => { for (const k in L) show(k, ns.includes(k)); };
 const sb = (m) => (SCREEN.dataset.sb = m);
 const dark = () => document.documentElement.dataset.theme === "dark";
@@ -935,7 +1127,13 @@ L.stage.addEventListener("click", (e) => {
   if (e.target.closest("button") || DELIV) return;
   if (skipTalk) { stageSkipped = true; skipTalk(); }
 });
-$("#lm-hang").onclick = (e) => { e.stopPropagation(); stageSkipped = true; if (skipTalk) skipTalk(); };
+// colgar: corta lo que dice y, si la llamada la abriste tú desde el chat, vuelves a él
+let HUNG = false, onHang = null;
+$("#lm-hang").onclick = (e) => {
+  e.stopPropagation(); stageSkipped = true; HUNG = true;
+  if (skipTalk) skipTalk();
+  if (onHang) { const r = onHang; onHang = null; r(); }
+};
 
 /* ───────── Rayo X (el de producción, de scan-overlay.tsx, en WAAPI) ───────── */
 const EASE_X = "cubic-bezier(.45,.05,.55,.95)";
@@ -1166,7 +1364,8 @@ function paintBar() {
   c.textContent = S.published ? (S.dirty ? "Cambios sin publicar" : "Publicada") : "Vista previa";
 }
 function resetPage() {
-  Object.assign(S, { published: false, dirty: false, heroN: 0, thread: [], job: null, last: null, prevKind: "listo" });
+  Object.assign(S, { published: false, dirty: false, heroN: 0, thread: [], job: null, last: null, prevKind: "listo", pendingPhoto: false, toldClose: false });
+  SEEN = 0;
   S.applied.clear(); S.asked.clear();
   const h = $("#lp-heroimg"); h.style.backgroundImage = `url(${U(HERO[0], 800)})`; h.className = "lp-heroimg";
   const m = $("#lp-map"); m.className = "lp-map"; m.style.backgroundImage = "";
@@ -1263,41 +1462,25 @@ const RENDER = {
     </div>
     <div class="lm-actions"><button class="lm-btn lm-wa" data-act="wa">${I.wa}<span>Compartir por WhatsApp</span></button>
     <button class="lm-btn lm-sec" data-act="direct">${I.mic}<span>Pedir un cambio</span></button></div>`,
-  direct: () => `<div class="lm-thread" id="lm-thread">${threadHTML()}</div>
-    <div class="lm-chips" id="lm-chips">${chipsHTML()}</div>
-    <div class="lm-comp">
-      <div class="lm-field" id="lm-field">
-        <input id="lm-input" type="text" placeholder="Escribe o mantén el micro" autocomplete="off" enterkeyhint="send">
-        <div class="lm-rec"><i class="lm-rec-dot"></i><span class="lm-rec-t" id="lm-rec-t">0:00</span><div class="lm-rec-wave" id="lm-rec-wave"></div><span class="lm-rec-hint" id="lm-rec-hint"></span></div>
-      </div>
-      <button class="lm-mic" id="lm-mic" aria-label="Mantén para grabar"></button>
-    </div>`,
 };
 function whoStatus() {
   const s = $("#lm-who-s");
   let t, live = false;
   if (S.job && S.job.waiting) t = "Tiene una pregunta";
   else if (S.job) { t = "Trabajando en tu página…"; live = true; }
-  else t = { listo: "Tu página, en vista previa", cambio: "Listo", publicando: "Publicando…", direct: "Te escucho" }[SHEET] || "";
+  else t = { listo: "Tu página, en vista previa", cambio: "Listo", publicando: "Publicando…" }[SHEET] || "";
   s.textContent = t; s.classList.toggle("lm-live", live || SHEET === "publicando");
 }
 function sheet(kind) {
-  if (kind !== "direct" && kind !== "publicando") S.prevKind = kind;
+  if (kind !== "publicando") S.prevKind = kind;
   SHEET = kind;
   const sh = $("#lm-sheet");
   sh.dataset.kind = kind; sh.classList.remove("is-min");
-  if (kind === "direct") {
-    if (!S.thread.length) {
-      S.thread.push({ who: "len", kind: "text", text: "¿Qué le cambio? Dímelo como se lo dirías a alguien." });
-      if (!S.applied.has("local")) S.thread.push({ who: "len", kind: "text", text: `Lo siguiente que haría yo: ${NEXT_TXT}.` });
-    } else if (!S.job && S.thread.at(-1).kind === "work") S.thread.push({ who: "len", kind: "text", text: "¿Algo más?" });
-  }
   $("#lm-body").innerHTML = RENDER[kind]();
   if (kind === "publicada") {
-    const f = LenCara.create($("#lm-pub-face"), { state: "publicado" });
+    const f = LenCara.create($("#lm-pub-face"), { state: "publicado", look: S.look });
     later(() => f.set("terminado"), 3800);
   }
-  if (kind === "direct") { wireComposer(); const th = $("#lm-thread"); th.scrollTop = th.scrollHeight; }
   whoStatus(); sheetShow(true);
 }
 let lastY = 0;
@@ -1315,6 +1498,8 @@ async function publish() {
   sheet("publicando"); F.sheet.set("pensando"); F.bar.set("pensando");
   await wait(1400);
   S.published = true; S.dirty = false; paintBar();
+  if (!S.thread.length) seedThread();
+  S.thread.push({ who: "len", kind: "text", text: "¡Listo, ya está publicada!" }, { who: "len", kind: "link" });
   F.bar.set("publicado"); later(() => F.bar.set("reposo"), 3800);
   sheet("publicada"); haptic();
   later(() => confetti($("#lm-pub-face")), 120); // sólo al publicar de verdad, no al volver a la hoja
@@ -1326,27 +1511,114 @@ function shareWA() {
   toast(`${I.wa}Abriendo WhatsApp…`);
 }
 
-/* ───────── la conversación: sin código, los cambios en palabras ───────── */
-function threadHTML() { return S.thread.map(itemHTML).join(""); }
-function itemHTML(it) {
-  if (it.kind === "text") return it.who === "me" ? `<div class="lm-me">${esc(it.text)}</div>` : `<div class="lm-len">${esc(it.text)}</div>`;
-  if (it.kind === "voice") return `<div class="lm-me lm-vn"><button class="lm-vn-play" data-act="play" aria-label="Escuchar">${I.play}</button><div class="lm-vn-bars">${it.bars.map((h) => `<i style="height:${h}%"></i>`).join("")}</div><span class="lm-vn-d">${fmt(it.dur)}</span></div>
-    <div class="lm-vn-tr">${it.trans ? `«${esc(it.trans)}»` : '<span class="lm-live">Transcribiendo…</span>'}</div>`;
-  if (it.kind === "photo") return `<div class="lm-me lm-photo"><img src="${it.src}" alt="Tu foto"></div>`;
-  if (it.kind === "work") return `<div class="lm-workcard"><ol class="lm-steps is-sm">${it.steps.map(stepHTML).join("")}</ol>${it.running ? `<p class="lm-worknote">Puedes cerrar la app, te aviso. <button class="lm-link" data-act="close">Cerrar la app</button></p>` : ""}</div>`;
-  if (it.kind === "ask") return `<div class="lm-len">${esc(it.text)}</div>${it.open ? `<div class="lm-chips"><button class="lm-chip" data-act="photo">${I.img}Mandar una foto</button><button class="lm-chip" data-act="other">Busca otra</button></div>` : ""}`;
+/* ───────── el chat: como escribirle a alguien ─────────
+   Burbujas, y lo que Len hizo llega como mensaje con su tarjeta. Nada de
+   pasos ni herramientas: mientras trabaja, «escribiendo» y una línea en
+   palabras bajo su nombre. Un fallo se queda en la conversación (su
+   mensaje y las fotos que descartó, con el porqué); tu respuesta va debajo
+   y no lo reescribe. */
+const chatOn = () => L.chat.classList.contains("is-on");
+let SEEN = 0; // cuántos mensajes ya viste: sólo los nuevos entran con su saltito
+function seedThread() {
+  S.thread.push(
+    { kind: "day", text: "Hoy 9:41" },
+    { who: "len", kind: "text", text: "¡Hey! Ya quedó tu página." },
+    { who: "len", kind: "page" },
+    { who: "len", kind: "text", text: "¿Qué le cambio? Dímelo como se lo dirías a alguien." },
+  );
+  if (!S.applied.has("local")) S.thread.push({ who: "len", kind: "text", text: `Lo siguiente que haría yo: ${NEXT_TXT}.` });
+}
+function openChat() {
+  if (!S.thread.length) seedThread();
+  show("chat"); appSb(); hideNotif();
+  F.chat.set(S.job ? (S.job.waiting ? "preguntando" : "pensando") : "reposo");
+  renderChat();
+}
+function closeChat() {
+  stopRec(); show("chat", false); appSb();
+}
+const rejectsStatic = () => resRejects().replace(/class="lm-rj /g, 'class="lm-rj is-in is-no ');
+function bubble(it) {
+  switch (it.kind) {
+    case "text": case "ask": return `<div class="ch-b">${esc(it.text)}</div>`;
+    case "voice": return `<div class="ch-b lm-vn"><button class="lm-vn-play" data-act="play" aria-label="Escuchar">${I.play}</button><div class="lm-vn-bars">${it.bars.map((h) => `<i style="height:${h}%"></i>`).join("")}</div><span class="lm-vn-d">${fmt(it.dur)}</span></div>
+      <div class="ch-tr">${it.trans ? `«${esc(it.trans)}»` : '<span class="ch-live">Transcribiendo…</span>'}</div>`;
+    case "photo": return `<div class="ch-b ch-photo"><img src="${it.src}" alt="Tu foto"></div>`;
+    case "page": return `<div class="ch-card"><div class="ch-page" data-act="chatback">${thumb($(".lp-hero", PAGE), 60, 76)}<div><b>Panadería Luna</b><span>Tu página · vista previa</span></div></div></div>`;
+    case "change": return `<div class="ch-card"><div class="ch-ba"><figure>${it.beforeT}<figcaption>Antes</figcaption></figure><span class="ch-ba-arrow">${I.arrowR}</span><figure>${it.afterT}<figcaption>Ahora</figcaption></figure></div>
+      <button class="ch-card-act" data-act="seechange" data-ch="${it.id}">Ver en tu página</button></div>`;
+    case "rejects": return `<div class="ch-card">${rejectsStatic()}</div>`;
+    case "link": return `<div class="ch-card"><div class="ch-page"><div class="lm-og-img" style="background-image:url(${U(HERO[S.heroN], 300)})"></div><div><b>Panadería Luna</b><span>panaderia-luna.openlen.app</span></div></div>
+      <button class="ch-card-act" data-act="wa">${I.wa}Compartir por WhatsApp</button></div>`;
+  }
   return "";
 }
-function chipsHTML() {
+const CARDS = new Set(["page", "change", "rejects", "link"]);
+function renderChat() {
+  const log = $("#ch-log");
+  const lastMe = S.thread.map((x) => x.who).lastIndexOf("me");
+  let html = "", prev = null;
+  S.thread.forEach((it, k) => {
+    if (it.kind === "day") { html += `<div class="ch-day">${esc(it.text)}</div>`; prev = null; return; }
+    const cls = [`ch-row is-${it.who}`, prev === it.who && "is-cont", k >= SEEN && "is-new", CARDS.has(it.kind) && "is-card"].filter(Boolean).join(" ");
+    const leido = k === lastMe && (k < S.thread.length - 1 || S.job) ? '<span class="ch-rcpt">Leído</span>' : "";
+    html += `<div class="${cls}">${bubble(it)}${leido}</div>`;
+    prev = it.who;
+  });
+  if (S.job && !S.job.waiting) {
+    html += `<div class="ch-row is-len${prev === "len" ? " is-cont" : ""}"><div class="ch-b ch-typing" aria-label="Len está escribiendo"><i></i><i></i><i></i></div></div>`;
+  }
+  log.innerHTML = html;
+  SEEN = S.thread.length;
+  $("#ch-qr").innerHTML = quickReplies();
+  chatStatus();
+  log.scrollTop = log.scrollHeight;
+}
+// bajo su nombre, sólo cuando hay algo que decir: lo que está haciendo, o que tiene una pregunta
+function chatStatus() {
+  const s = $("#ch-st");
+  let t = "", live = false;
+  if (S.job && S.job.waiting) t = "Tiene una pregunta";
+  else if (S.job) {
+    const st = S.job.steps.find((x) => x.st === "doing");
+    t = st ? st.t.charAt(0).toLowerCase() + st.t.slice(1) + "…" : "escribiendo…"; live = true;
+  }
+  if (t) s.textContent = t; s.classList.toggle("is-on", !!t); s.classList.toggle("ch-live", live);
+}
+// respuestas rápidas: las de su pregunta, dónde va tu foto, o lo que sigue
+function quickReplies() {
+  if (S.job && S.job.waiting) return `<button data-act="photo">${I.img}Mandar una foto</button><button data-act="other">Busca otra</button>`;
   if (S.job) return "";
-  return ["local", "portada"].filter((id) => !S.applied.has(id)).map((id) => `<button class="lm-chip" data-act="chip" data-ch="${id}">${esc(CH[id].chip)}</button>`).join("");
+  if (S.pendingPhoto) return `<button data-act="chip" data-ch="portada">En la portada</button><button data-act="chip" data-ch="local">En «Visítanos»</button>`;
+  return ["local", "portada"].filter((id) => !S.applied.has(id)).map((id) => `<button data-act="chip" data-ch="${id}">${esc(CH[id].chip)}</button>`).join("");
 }
 function refreshThread() {
   whoStatus();
-  const th = SHEET === "direct" && $("#lm-thread");
-  if (!th) return;
-  th.innerHTML = threadHTML(); $("#lm-chips").innerHTML = chipsHTML();
-  th.scrollTop = th.scrollHeight;
+  if (chatOn()) renderChat();
+}
+// el «+»: mandarle una foto. Si te preguntó, es tu respuesta; si no, te pregunta dónde va
+function attach() {
+  if (S.job && S.job.waiting) return answer("photo");
+  S.thread.push({ who: "me", kind: "photo", src: U(PH.loaves, 300) });
+  refreshThread();
+  if (S.job) { later(() => { S.thread.push({ who: "len", kind: "text", text: "Anotado. En cuanto termine esto, te pregunto dónde va." }); refreshThread(); }, 700); return; }
+  later(() => { S.thread.push({ who: "len", kind: "text", text: "¡Qué buena foto! ¿Dónde la pongo?" }); S.pendingPhoto = true; F.chat.set("preguntando"); refreshThread(); }, 700);
+}
+// «Ver en tu página»: sales del chat y la página te enseña el cambio
+async function seeChange(id) {
+  closeChat();
+  const el = CH[id].el();
+  await wait(450); await scrollToEl(el); hit(el);
+}
+// el teléfono de arriba: le llamas tú; al colgar vuelves al chat
+async function callFromChat() {
+  const R = RUN;
+  stopRec(); HUNG = false;
+  await stage({ mode: "call", lines: [{ s: "saludando", t: "¡Hola! Te escucho. ¿Qué le cambiamos a tu página?", at: { 1: "escuchando" } }] });
+  if (R !== RUN) return;
+  if (!HUNG) await new Promise((r) => (onHang = r));
+  if (R !== RUN) return;
+  only("app", "chat"); appSb(); renderChat();
 }
 function playNote(b) {
   const bars = $$("i", b.parentElement);
@@ -1402,7 +1674,7 @@ function startRec(x0) {
     const tail = rec.hist.slice(-bars.length), off = bars.length - tail.length;
     bars.forEach((b, i) => (b.style.height = i < off ? "12%" : Math.round(16 + tail[i - off] * 84) + "%"));
   }, 90);
-  F.sheet.set("escuchando");
+  F.chat.set("escuchando");
 }
 function stopRec() {
   if (!rec) return;
@@ -1419,7 +1691,7 @@ function lockRec() {
   paintMic();
 }
 function cancelRec() {
-  stopRec(); F.sheet.set("reposo");
+  stopRec(); F.chat.set("reposo");
   const f = $("#lm-field");
   if (f && !LenCara.reduced) f.animate([{ transform: "none" }, { transform: "translateX(-6px)" }, { transform: "translateX(5px)" }, { transform: "none" }], { duration: 260 });
 }
@@ -1431,47 +1703,56 @@ function sendRec() {
   const id = nextChange();
   const it = { who: "me", kind: "voice", dur, bars, trans: null };
   S.thread.push(it); refreshThread();
-  later(() => { it.trans = CH[id].voice; refreshThread(); request({ id, pushed: true }); }, 900);
+  later(() => { it.trans = CH[id].voice; refreshThread(); request({ id }); }, 900);
 }
 
 /* ───────── pedirle algo a Len ───────── */
-function request({ text, id, pushed }) {
+function request({ text, id, own = false }) {
   if (text) S.thread.push({ who: "me", kind: "text", text });
   if (S.job) {
     S.thread.push({ who: "len", kind: "text", text: "Anotado. Lo hago en cuanto termine esto." });
     refreshThread(); return;
   }
-  startJob(id || nextChange(), { typed: !!text && !id });
+  startJob(id || nextChange(), { typed: !!text && !id, own });
 }
-async function startJob(id, { typed = false, from = 0, resume = false } = {}) {
+const OWN_STEPS = [["Poniendo tu foto", "escribiendo"], ["Revisando cómo se ve en el celular", "mirando"]];
+async function startJob(id, { typed = false, from = 0, resume = false, own = false } = {}) {
   const ch = CH[id];
   if (!resume) {
-    S.job = { id, before: mini(ch.el()), beforeT: thumb(ch.sec(), 100, 124), item: { kind: "work", running: true, steps: mkSteps(ch.steps) } };
+    S.job = { id, own, before: mini(ch.el()), beforeT: thumb(ch.sec(), 100, 124), steps: mkSteps(own ? OWN_STEPS : ch.steps) };
     refreshThread();
-    F.sheet.set("pensando"); await wait(900);
-    S.thread.push({ who: "len", kind: "text", text: typed ? "Va, me pongo con eso." : ch.reply });
-    S.thread.push(S.job.item);
+    F.sheet.set("pensando"); F.chat.set("pensando"); await wait(900);
+    // que puedes irte lo dice Len, con sus palabras y una sola vez (no una línea bajo cada mensaje)
+    const tell = S.toldClose ? "" : " Si quieres, cierra la app: te aviso cuando acabe.";
+    S.toldClose = true;
+    S.thread.push({ who: "len", kind: "text", text: (own ? "Va, pongo tu foto ahí." : typed ? "Va, me pongo con eso." : ch.reply) + tell });
   }
-  S.job.item.running = true; S.job.waiting = false;
+  S.job.waiting = false;
   refreshThread();
   if (S.where === "app") pageLoop(true);
-  const steps = S.job.item.steps;
+  const steps = S.job.steps;
   for (let i = from; i < steps.length; i++) {
     const s = steps[i];
-    s.st = "doing"; F.sheet.set(s.face); refreshThread();
+    s.st = "doing"; F.sheet.set(s.face); F.chat.set(s.face); refreshThread();
     await wait(1800);
-    if (i === 0 && S.ask && ch.canAsk && !S.asked.has(id)) { askFail(id, i); return; }
+    if (i === 0 && S.ask && ch.canAsk && !S.job.own && !S.asked.has(id)) { askFail(id, i); return; }
     s.st = "done"; refreshThread();
   }
   const { before, beforeT } = S.job;
-  S.job.item.running = false;
   const finishJob = () => {
     ch.apply(); S.applied.add(id);
     if (S.published) S.dirty = true;
     S.last = { done: ch.done, before, after: mini(ch.el()), beforeT, afterT: thumb(ch.sec(), 112, 138) };
+    // en el chat, lo que hizo llega como mensaje con su Antes/Ahora
+    S.thread.push({ who: "len", kind: "text", text: ch.done }, { who: "len", kind: "change", id, beforeT, afterT: S.last.afterT });
     S.job = null; paintBar();
   };
-  if (S.where === "app") {
+  if (S.where === "app" && chatOn()) {
+    // estás en el chat: te lo cuenta ahí; la página de detrás ya cambió
+    pageLoop(false);
+    finishJob(); sheet("cambio"); refreshThread();
+    F.chat.set("terminado"); F.sheet.set("terminado"); F.bar.set("terminado"); later(() => F.bar.set("reposo"), 2600);
+  } else if (S.where === "app") {
     const el = ch.el();
     pageLoop(false); sheetMin(false);
     await scrollToEl(el);
@@ -1500,17 +1781,21 @@ async function openChange(id) {
   await wait(300); await scrollToEl(el); hit(el);
 }
 
-/* ───────── cuando algo falla: el fallo queda a la vista, y Len pregunta ───────── */
+/* ───────── cuando algo falla: se queda en la conversación, y Len pregunta ───────── */
 function askFail(id, i) {
-  const ch = CH[id], st = S.job.item.steps[i];
-  st.st = "fail"; st.detail = ch.fail;
-  S.job.item.running = false; S.job.waiting = true;
+  const ch = CH[id];
+  S.job.steps[i].st = "fail"; S.job.waiting = true;
   S.asked.add(id);
-  S.thread.push({ who: "len", kind: "ask", text: `${ch.q1} ${ch.question}`, open: true, id, i });
+  S.thread.push(
+    { who: "len", kind: "text", text: ch.q1 },
+    { who: "len", kind: "rejects" },
+    { who: "len", kind: "ask", text: ch.question, open: true, id, i },
+  );
   pageLoop(false);
-  F.sheet.set("error"); later(() => F.sheet.set("preguntando"), 1500);
+  F.sheet.set("error"); F.chat.set("error");
+  later(() => { F.sheet.set("preguntando"); F.chat.set("preguntando"); }, 1500);
   refreshThread();
-  if (S.where === "app") haptic();
+  if (S.where === "app") { haptic(); if (!chatOn()) openChat(); }
   else notify({ title: "Len tiene una pregunta", body: ch.qnotif, onTap: () => askStage(id) });
 }
 async function askStage(id) {
@@ -1525,28 +1810,23 @@ async function askStage(id) {
   F.stage.set("preguntando");
   $("#lm-answers").innerHTML = `<button class="lm-ans is-pri" data-act="photo">${I.img}Mandar una foto</button><button class="lm-ans" data-act="other">Busca otra</button><button class="lm-ans is-link" data-act="seepage">Ver la página</button>`;
 }
+// de la voz al chat: tu respuesta queda escrita bajo su pregunta
 function fromStage() {
   if (!L.stage.classList.contains("is-on")) return;
-  pageMode();
-  sheet("direct");
+  pageMode(); sheet(S.prevKind || "listo");
+  openChat();
 }
 function answer(kind) {
   const it = [...S.thread].reverse().find((x) => x.kind === "ask" && x.open);
   if (!it || !S.job) return;
   it.open = false;
-  if (kind === "photo") {
-    S.thread.push({ who: "me", kind: "photo", src: U(PH.loaves, 300) });
-    S.thread.push({ who: "len", kind: "text", text: "¡Gracias! Uso tu foto." });
-  } else {
-    S.thread.push({ who: "me", kind: "text", text: "Busca otra" });
-    S.thread.push({ who: "len", kind: "text", text: "Va, busco pan dulce recién horneado." });
-  }
-  // la tarjeta del trabajo baja bajo tu respuesta, con el fallo dentro y a la vista
-  S.thread.splice(S.thread.indexOf(S.job.item), 1); S.thread.push(S.job.item);
-  S.job.item.steps.splice(it.i + 1, 0, kind === "photo"
+  if (kind === "photo") S.thread.push({ who: "me", kind: "photo", src: U(PH.loaves, 300) }, { who: "len", kind: "text", text: "¡Gracias! Uso tu foto." });
+  else S.thread.push({ who: "me", kind: "text", text: "Busca otra" }, { who: "len", kind: "text", text: "Va, busco pan dulce recién horneado." });
+  // un paso NUEVO detrás del que falló: el fallo no se reescribe
+  S.job.steps.splice(it.i + 1, 0, kind === "photo"
     ? { t: "Usando tu foto", face: "escribiendo", st: "todo" }
     : { t: "Buscando pan dulce recién horneado", face: "buscando", st: "todo" });
-  if (SHEET !== "direct") sheet("direct"); else refreshThread();
+  if (!chatOn()) openChat(); else refreshThread();
   startJob(it.id, { from: it.i + 1, resume: true });
 }
 
@@ -1556,19 +1836,115 @@ function closeApp() {
   only("lock"); sb("light");
 }
 
+/* ───────── tu Len: el selector ─────────
+   Se prueba en un borrador; sólo «Listo» se lo pone a todas las caras. */
+let LK = null;
+const PK = { face: null, t: 0 };
+function buildLooks() {
+  PK.face = LenCara.create($("#lk-face"), { props: "none", state: "reposo" });
+  $("#lk-cards").innerHTML = LOOKS.map((p) => `<button class="lk-card" data-act="lookpick" data-id="${p.id}"><div class="lk-card-face"></div><span>${esc(p.name)}</span></button>`).join("");
+  $$(".lk-card").forEach((c) => {
+    const p = LOOKS.find((x) => x.id === c.dataset.id);
+    LenCara.create($(".lk-card-face", c), { props: "none", state: "reposo", look: p });
+  });
+  const opt = (act, id, name, svg) => `<button class="lk-opt" data-act="${act}" data-id="${id}" aria-label="${esc(name)}" title="${esc(name)}">${svg}</button>`;
+  $("#lk-head").innerHTML = ["", ...Object.keys(LenCara.HEAD)].map((id) => opt("lookhead", id, LenCara.HEAD[id] || "Nada", LenCara.icon(id, ""))).join("");
+  $("#lk-facex").innerHTML = ["", ...Object.keys(LenCara.FACE)].map((id) => opt("lookface", id, LenCara.FACE[id] || "Nada", LenCara.icon("", id))).join("");
+  // deslizar la cara grande cambia de personaje; un toque le hace cosquillas
+  const hero = $("#lk-hero");
+  let x0 = null;
+  hero.addEventListener("pointerdown", (e) => { x0 = e.clientX; });
+  hero.addEventListener("pointerup", (e) => {
+    if (x0 == null) return;
+    const dx = (e.clientX - x0) / K; x0 = null;
+    if (Math.abs(dx) > 36) stepLook(dx < 0 ? 1 : -1); else PK.face.poke();
+  });
+}
+function center(box, el, smooth = true) {
+  if (!el) return;
+  box.scrollTo({ left: el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2, behavior: smooth && !LenCara.reduced ? "smooth" : "auto" });
+}
+function paintLooks(animate) {
+  const d = LK.draft, p = presetOf(d), n = lookName(d);
+  PK.face.setLook(d, animate);
+  $("#lk-tag").innerHTML = `<b class="lk-type">${esc(n.name)}</b> ${esc(n.tag)}`;
+  $$(".lk-card").forEach((c) => c.setAttribute("aria-pressed", String(!!p && c.dataset.id === p.id)));
+  $$('[data-act="lookhead"]').forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === d.cabeza)));
+  $$('[data-act="lookface"]').forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === d.cara)));
+  center($("#lk-cards"), p && $(`.lk-card[data-id="${p.id}"]`), animate);
+  center($("#lk-head"), $(`[data-act="lookhead"][aria-pressed="true"]`), animate);
+  center($("#lk-facex"), $(`[data-act="lookface"][aria-pressed="true"]`), animate);
+}
+function openLooks() {
+  if (LK) return;
+  if (!PK.face) buildLooks();
+  LK = { draft: { ...S.look }, sb: SCREEN.dataset.sb };
+  show("looks"); sb("light"); hideNotif();
+  paintLooks(false);
+  hello(PK.face);
+}
+// saluda con el look nuevo y vuelve a lo que estaba haciendo
+function hello(f, back = "reposo") {
+  f.set("saludando");
+  clearTimeout(f._hello);
+  f._hello = setTimeout(() => { if (f.state === "saludando") f.set(back); }, 1300);
+}
+function tryLook(next) {
+  if (next.cabeza === LK.draft.cabeza && next.cara === LK.draft.cara) { PK.face.poke(); return; }
+  LK.draft = { cabeza: next.cabeza, cara: next.cara };
+  paintLooks(true);
+  hello(PK.face);
+  if (!LenCara.reduced) $(".lk-type").animate([{ opacity: 0, transform: "translateY(10px) scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 380, easing: "cubic-bezier(.3,1.4,.5,1)" });
+}
+function stepLook(dir) {
+  const p = presetOf(LK.draft), i = p ? LOOKS.indexOf(p) : 0;
+  tryLook(LOOKS[(i + dir + LOOKS.length) % LOOKS.length]);
+}
+function wearAll(l) {
+  Object.values(F).forEach((c) => c.setLook(l));
+  // la que se ve saluda con su look nuevo
+  if (L.app.classList.contains("is-on")) {
+    if ($("#lm-sheet").classList.contains("is-on")) hello(F.sheet, F.sheet.state === "saludando" ? "reposo" : F.sheet.state);
+    hello(F.bar, F.bar.state === "saludando" ? "reposo" : F.bar.state);
+  }
+}
+function closeLooks(apply) {
+  if (!LK) return;
+  const was = LK; LK = null;
+  show("looks", false); SCREEN.dataset.sb = was.sb;
+  if (!apply) return;
+  const changed = was.draft.cabeza !== S.look.cabeza || was.draft.cara !== S.look.cara;
+  S.look = { ...was.draft }; saveLook(S.look); paintPanel();
+  if (changed) setTimeout(() => { wearAll(S.look); haptic(); }, 200);
+}
+
 /* ───────── acciones (un solo oyente) ───────── */
 const ACT = {
+  looks: openLooks,
+  lookpick: (b) => tryLook(LOOKS.find((p) => p.id === b.dataset.id)),
+  lookhead: (b) => tryLook({ ...LK.draft, cabeza: b.dataset.id }),
+  lookface: (b) => tryLook({ ...LK.draft, cara: b.dataset.id }),
+  lookprev: () => stepLook(-1),
+  looknext: () => stepLook(1),
+  lookdone: () => closeLooks(true),
+  lookclose: () => closeLooks(false),
   close: closeApp,
   see: () => firstTalk("open"),
   publish,
-  wa: shareWA,
-  direct: () => sheet("direct"),
-  back: () => { stopRec(); sheet(S.prevKind === "cambio" && !S.last ? "listo" : S.prevKind); },
+  wa: () => { if (chatOn()) closeChat(); shareWA(); },
+  direct: openChat,
+  chatback: closeChat,
+  chatcall: callFromChat,
+  seechange: (b) => seeChange(b.dataset.ch),
+  attach,
   copy: () => toast(`${I.check}Enlace copiado`),
-  chip: (b) => request({ text: CH[b.dataset.ch].chip, id: b.dataset.ch }),
+  chip: (b) => {
+    const own = S.pendingPhoto; S.pendingPhoto = false;
+    request({ text: own ? b.textContent.trim() : CH[b.dataset.ch].chip, id: b.dataset.ch, own });
+  },
   photo: () => { fromStage(); answer("photo"); },
   other: () => { fromStage(); answer("other"); },
-  seepage: fromStage,
+  seepage: () => { if (!L.stage.classList.contains("is-on")) return; pageMode(); sheet(S.prevKind || "listo"); },
   grab: () => sheetMin(!$("#lm-sheet").classList.contains("is-min")),
   mincta: () => { const m = $("#lm-min-cta").textContent; sheetMin(false); (m === "Compartir" ? shareWA : publish)(); },
   reccancel: cancelRec,
@@ -1588,6 +1964,7 @@ function reset() {
   speech.stop(); skipTalk = null; DELIV = null; LOOP = null; stopRec();
   $$(".lm-cap,.lm-ghost,.lm-xray,.lm-flash,.lm-conf").forEach((e) => e.remove());
   hideNotif(); sheetShow(false);
+  LK = null; show("looks", false); show("chat", false); onHang = null;
   $("#lm-sheet").classList.remove("is-min");
   $("#lm-subs").innerHTML = ""; $("#lm-answers").innerHTML = ""; RES.innerHTML = ""; L.stage.classList.remove("has-res");
   L.stage.classList.remove("is-away"); F.stage.host.style.visibility = "";
@@ -1614,23 +1991,22 @@ const SCENES = {
     })();
   },
   publicar() { base(); pageMode(); sheet("listo"); },
-  dirigir() { base(); pageMode(); sheet("direct"); },
+  dirigir() { base(); pageMode(); sheet("listo"); later(openChat, 350); },
   pregunta() {
     base(); S.ask = true; paintPanel();
-    pageMode();
+    pageMode(); sheet("listo");
     const ch = CH.portada;
-    S.thread = [
-      { who: "len", kind: "text", text: "¿Qué le cambio? Dímelo como se lo dirías a alguien." },
+    seedThread();
+    S.thread.push(
       { who: "me", kind: "voice", dur: 3.6, bars: Array.from({ length: 28 }, (_, i) => Math.round(26 + 70 * Math.abs(Math.sin(i * 1.7) * Math.cos(i * .6)))), trans: ch.voice },
       { who: "len", kind: "text", text: ch.reply },
-    ];
-    S.job = { id: "portada", before: mini(ch.el()), beforeT: thumb(ch.sec(), 100, 124), item: { kind: "work", running: true, steps: mkSteps(ch.steps) } };
-    S.job.item.steps[0].st = "doing";
-    S.thread.push(S.job.item);
-    SHEET = "direct";
+    );
+    S.job = { id: "portada", before: mini(ch.el()), beforeT: thumb(ch.sec(), 100, 124), steps: mkSteps(ch.steps) };
+    S.job.steps[0].st = "doing";
     closeApp();
     later(() => askFail("portada", 0), 900);
   },
+  look() { base(); pageMode(); sheet("listo"); later(openLooks, 450); },
 };
 function go(name) {
   $$(".lm-scenes button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.scene === name)));
@@ -1639,12 +2015,16 @@ function go(name) {
 $$(".lm-scenes button").forEach((b) => (b.onclick = () => go(b.dataset.scene)));
 addEventListener("keydown", (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest("input,select,textarea")) return;
+  if (LK && e.key === "ArrowLeft") return stepLook(-1);
+  if (LK && e.key === "ArrowRight") return stepLook(1);
+  if (LK && e.key === "Escape") return closeLooks(false);
   const names = Object.keys(SCENES), n = +e.key;
   if (n >= 1 && n <= names.length) go(names[n - 1]);
 });
 
 /* ───────── ajustes ───────── */
 function paintPanel() {
+  $("#t-look b").textContent = lookName(S.look).name;
   $("#t-voice b").textContent = S.voiceOK ? "permitida" : "sin permiso";
   $("#t-silent b").textContent = S.silent ? "en silencio" : "con sonido";
   $("#t-ask b").textContent = S.ask ? "sí" : "no";
@@ -1659,6 +2039,13 @@ $("#t-silent").onclick = () => {
   paintVoice();
 };
 $("#t-ask").onclick = () => { S.ask = !S.ask; paintPanel(); };
+// el siguiente personaje, puesto ya en todas las caras (para ver cada escena con él)
+$("#t-look").onclick = () => {
+  const p = presetOf(S.look), i = p ? LOOKS.indexOf(p) : 0, n = LOOKS[(i + 1) % LOOKS.length];
+  S.look = { cabeza: n.cabeza, cara: n.cara }; saveLook(S.look);
+  wearAll(S.look); paintPanel();
+  if (LK) { LK.draft = { ...S.look }; paintLooks(true); hello(PK.face); }
+};
 $("#t-theme").onclick = () => {
   document.documentElement.dataset.theme = dark() ? "light" : "dark";
   // la app sigue el tema; la llamada y el bloqueo tienen su fondo propio
@@ -1678,7 +2065,7 @@ addEventListener("resize", fit);
 fit();
 
 if (matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.dataset.theme = "dark";
-paintPanel(); paintVoice(); paintMute();
+paintPanel(); paintVoice(); paintMute(); wireComposer();
 go("aviso");
 </script>
 </body>
