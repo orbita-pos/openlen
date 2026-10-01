@@ -2,6 +2,10 @@
 // Las tarjetas que salen mientras Len habla. Visitas: los números de
 // /api/voz/visitas, que son los de `ver_visitas`. Borrador y publicar: las
 // MISMAS tarjetas del chat (el toque del usuario es lo único que manda o publica).
+// Esas dos pintan con clases que sólo existen dentro de `.workspace-v2` (los
+// tokens de app/[locale]/new/tokens.css, que la página de la llamada carga):
+// sin ese envoltorio, la caja del borrador heredaba el blanco de la pantalla y
+// el texto de Len no se veía (llamadas del 01/10).
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AgentConfirmCard } from "@/components/workspace-v2/agent-confirm-card";
@@ -69,11 +73,11 @@ export function TarjetasDeLaLlamada({ projectId, tarjetas }: { projectId: string
             <p className="whitespace-pre-wrap">{x.texto}</p>
           </div>
         ) : x.tipo === "respuesta" ? (
-          <div key={i} className="rounded-2xl bg-white p-2 shadow-lg">
+          <div key={i} className="workspace-v2 rounded-2xl p-2 shadow-lg">
             <AgentReplyCard respuesta={x.respuesta} labels={etiquetas} />
           </div>
         ) : (
-          <div key={i} className="rounded-2xl bg-white p-2 shadow-lg">
+          <div key={i} className="workspace-v2 rounded-2xl p-2 shadow-lg">
             <AgentConfirmCard projectId={projectId} confirm={x.confirm} onPublished={() => {}} />
           </div>
         ),

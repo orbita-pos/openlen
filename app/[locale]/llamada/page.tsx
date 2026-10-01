@@ -3,6 +3,9 @@ import { redirect } from "@/i18n/navigation";
 import { auth } from "@/auth";
 import { esDuenoDelProyecto } from "@/lib/voz/dueno";
 import { PantallaDeLlamada } from "@/components/llamada/pantalla-de-llamada";
+// Las tarjetas del chat (borrador y publicar) pintan con los tokens del
+// workspace; /new los carga igual, desde su page.tsx.
+import "../new/tokens.css";
 
 // Hablar con Len por voz. Protegida en el middleware; esto es la segunda puerta,
 // la que además comprueba que el proyecto es tuyo.

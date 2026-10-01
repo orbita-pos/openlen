@@ -69,6 +69,7 @@ export default defineConfig({
       // Hablar con Len por voz (docs/superpowers/specs/2026-09-30-len-voz-design.md).
       "lib/voz/**/*.test.ts",
       "components/llamada/**/*.test.ts",
+      "components/llamada/**/*.test.tsx",
       "app/api/voz/**/*.test.ts",
       // Len-Bench (plans/len-2/diseno.md). Las piezas puras de la vara; lo
       // que abre Chromium o habla con el servidor se prueba con
