@@ -38,7 +38,7 @@ export interface OpcionesDelChat {
   historial: StoredChatTurn[];
   /** Al acabar un turno: releer la página (conversación y vista previa). */
   alCambiarLaPagina: () => void;
-  /** Lo que se le manda a Len con una foto sin texto. */
+  /** Lo que se le manda a Len con una foto sin texto: que diga dónde la pondría antes de ponerla. */
   textoDeFotoSola: string;
 }
 
@@ -122,9 +122,13 @@ export function useChat(o: OpcionesDelChat) {
   );
 
   const mandar = useCallback(
-    (texto: string, foto?: Blob) => {
+    (escrito: string, foto?: Blob) => {
       const k = nuevaClave("tu");
       if (foto) fotos.current.set(k, foto);
+      // La foto sola va con lo que la app le pide a Len de tu parte («¿dónde
+      // la pondrías?…»), y tu burbuja lo enseña ya: es lo que el servidor
+      // guarda como tu mensaje, y al releer no cambia.
+      const texto = escrito || (foto ? op.current.textoDeFotoSola : "");
       setLocales((ls) => [...ls, { clave: k, t: Date.now(), tipo: "tu", texto, foto: foto ? URL.createObjectURL(foto) : undefined, estado: "enviando" }]);
       void enviar(k, texto, foto);
     },

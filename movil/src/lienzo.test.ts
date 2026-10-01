@@ -16,6 +16,13 @@ describe("el lienzo del prototipo en un teléfono de verdad", () => {
     expect(m.izquierda).toBe(0);
   });
 
+  it("de pie con el teclado abierto (384 × 330): sigue llenando el ancho, sólo más bajo", () => {
+    const m = medidasDelLienzo(384, 330, false);
+    expect(m.escala).toBeCloseTo(384 / 390, 5);
+    expect(m.alto).toBe(Math.round(330 / (384 / 390)));
+    expect(m.izquierda).toBe(0);
+  });
+
   it("más bajo que 700 (el teléfono acostado): manda el alto y el lienzo va centrado", () => {
     const m = medidasDelLienzo(800, 400);
     expect(m.escala).toBeCloseTo(400 / 700, 5);

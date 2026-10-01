@@ -24,18 +24,31 @@ const VISITAS = { vistas: 312, personas: 241, hoy: 27, porDia: [31, 38, 44, 71, 
 
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms * RITMO.x));
 
-function turnoDeMentira(prompt: string): Response {
-  const dicho = `Listo: ${prompt.charAt(0).toLowerCase()}${prompt.slice(1, 80)}.\n\nYa lo ves en tu página.`;
-  const eventos: [string, unknown, number][] = [
-    ["turno", { turnoId: "muestra-vivo" }, 60],
-    ["action", { tool: "Read", status: "running", summary: "" }, 500],
-    ["action", { tool: "Edit", status: "running", summary: "" }, 1300],
-    ["html", { html: "", page: null }, 300],
-    ["action", { tool: "mirar_pagina", status: "running", summary: "" }, 1300],
-    ["text", { text: dicho.slice(0, 20) }, 500],
-    ["text", { text: dicho.slice(20) }, 250],
-    ["done", { turns: 1, toolCalls: 3 }, 100],
-  ];
+function turnoDeMentira(prompt: string, foto?: string): Response {
+  // Con una foto, Len pregunta dónde la pone antes de ponerla (Jesús, 01/10):
+  // mira la página, pregunta, y no la cambia.
+  const dicho = foto
+    ? "¡Buena foto! Puede ir en la portada, en lugar de la que hay, o en «Visítanos», junto al mapa.\n\n¿Dónde la pongo?"
+    : `Listo: ${prompt.charAt(0).toLowerCase()}${prompt.slice(1, 80)}.\n\nYa lo ves en tu página.`;
+  const eventos: [string, unknown, number][] = foto
+    ? [
+        ["turno", { turnoId: "muestra-vivo" }, 60],
+        ["action", { tool: "Read", status: "running", summary: "" }, 900],
+        ["action", { tool: "mirar_pagina", status: "running", summary: "" }, 1200],
+        ["text", { text: dicho }, 500],
+        ["action", { tool: "preguntar", status: "done", summary: "" }, 50],
+        ["done", { turns: 1, toolCalls: 3 }, 100],
+      ]
+    : [
+        ["turno", { turnoId: "muestra-vivo" }, 60],
+        ["action", { tool: "Read", status: "running", summary: "" }, 500],
+        ["action", { tool: "Edit", status: "running", summary: "" }, 1300],
+        ["html", { html: "", page: null }, 300],
+        ["action", { tool: "mirar_pagina", status: "running", summary: "" }, 1300],
+        ["text", { text: dicho.slice(0, 20) }, 500],
+        ["text", { text: dicho.slice(20) }, 250],
+        ["done", { turns: 1, toolCalls: 3 }, 100],
+      ];
   const enc = new TextEncoder();
   const cuerpo = new ReadableStream<Uint8Array>({
     async start(c) {
@@ -43,7 +56,15 @@ function turnoDeMentira(prompt: string): Response {
         await espera(ms);
         c.enqueue(enc.encode(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`));
       }
-      HISTORIAL.push({ id: `t${HISTORIAL.length + 1}`, userText: prompt, assistantReasoning: dicho, status: "applied", appliedAt: Date.now() });
+      HISTORIAL.push({
+        id: `t${HISTORIAL.length + 1}`,
+        // Como el servidor: lo que se le mandó a Len es tu mensaje (con la foto sola, lo que la app le pidió de tu parte).
+        userText: prompt,
+        ...(foto ? { attachedImage: { url: foto }, noDocChange: true, actions: [{ tool: "preguntar", status: "done" as const, summary: "" }] } : {}),
+        assistantReasoning: dicho,
+        status: "applied",
+        appliedAt: Date.now(),
+      });
       c.close();
     },
   });
@@ -56,7 +77,10 @@ export const clienteDeMuestra: ClienteDeOpenLen = {
     if (ruta.startsWith("/api/projects/m1/preview")) return Response.json({ enabled: true, token: "muestra" });
     if (ruta === "/api/projects/m1") return Response.json({ project: { ...PROYECTOS[0], chatHistory: [...HISTORIAL] } });
     if (ruta.startsWith("/api/voz/visitas")) return Response.json(VISITAS);
-    if (ruta === "/api/agent") return turnoDeMentira(String((JSON.parse(String(init?.body ?? "{}")) as { prompt?: unknown }).prompt ?? ""));
+    if (ruta === "/api/agent") {
+      const b = JSON.parse(String(init?.body ?? "{}")) as { prompt?: unknown; attachedImage?: { url?: unknown } };
+      return turnoDeMentira(String(b.prompt ?? ""), typeof b.attachedImage?.url === "string" ? b.attachedImage.url : undefined);
+    }
     if (ruta === "/api/agent/dirigir") return Response.json({ ok: true, maximo: 2000 });
     if (ruta === "/api/upload") return Response.json({ url: FOTO });
     if (ruta === "/api/voz/nota") {

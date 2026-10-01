@@ -19,16 +19,21 @@ const muestra = import.meta.env.DEV && new URLSearchParams(location.search).has(
 aplicarTema(temaGuardado());
 plataforma.atrasEnElTelefono();
 
+// Acostado lo dice la pantalla, no la ventana: con el teclado abierto la
+// ventana queda más ancha que alta y la app se achicaba entera.
+const acostado = () => (screen.orientation?.type ?? (innerWidth > innerHeight ? "landscape" : "portrait")).startsWith("landscape");
+
 function Lienzo() {
-  const [m, setM] = useState(() => medidasDelLienzo(innerWidth, innerHeight));
+  const [m, setM] = useState(() => medidasDelLienzo(innerWidth, innerHeight, acostado()));
   useEffect(() => {
-    const r = () => setM(medidasDelLienzo(innerWidth, innerHeight));
+    const r = () => setM(medidasDelLienzo(innerWidth, innerHeight, acostado()));
     addEventListener("resize", r);
     return () => removeEventListener("resize", r);
   }, []);
   return (
     <div className="app-lienzo" style={{ height: m.alto, left: m.izquierda, transform: `scale(${m.escala})` }}>
-      <div className="lm-screen">
+      {/* De pie y más bajo que 600: es el teclado (app.css encoge la cabecera del chat). */}
+      <div className={`lm-screen${m.izquierda === 0 && m.alto < 600 ? " con-teclado" : ""}`}>
         {muestra ? <PantallaPrincipal cliente={clienteDeMuestra} idioma={idiomaDelTelefono()} onSalir={() => {}} /> : <App />}
       </div>
     </div>

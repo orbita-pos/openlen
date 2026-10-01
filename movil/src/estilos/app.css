@@ -47,3 +47,24 @@ a.nx-act { text-decoration: none; }
 /* lo que dice Len puede traer saltos de línea (una lista): se respetan */
 .app-lienzo .is-len .ch-b { white-space: pre-line; }
 .app-lienzo .ch-plus:disabled { opacity: .4; }
+/* El campo es un textarea (ver chat.tsx): lo mismo que el input del prototipo. */
+.app-lienzo .lm-field textarea { display: block; width: 100%; height: 100%; border: 0; background: transparent; padding: 12px 16px; font: 16px/20px Inter, sans-serif; color: var(--c-ink); outline: none; resize: none; overflow: hidden; }
+.app-lienzo .lm-field textarea::placeholder { color: var(--c-dim); }
+.app-lienzo .lm-field.is-rec textarea { visibility: hidden; }
+/* La foto elegida espera arriba del campo, alineada con él (el «+» mide 40 y
+   deja 8), con su × para quitarla. El hilo deja sitio al pie, que creció. */
+.app-adjunta { position: relative; width: 76px; height: 76px; margin: 0 0 8px 48px; border-radius: 14px; overflow: hidden; box-shadow: 0 0 0 1px var(--c-line), 0 8px 18px -10px rgba(60,20,0,.45); }
+.app-adjunta img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.app-adjunta button { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.app-adjunta button svg { width: 12px; height: 12px; }
+.app-lienzo .lm-chat.con-adjunta .ch-log { padding-bottom: calc(176px + var(--app-abajo)); }
+/* Con el teclado abierto (main.tsx: .con-teclado) el hilo se queda con poco
+   sitio: la cabecera se encoge en una fila, la cara pequeña junto a «Len»,
+   como WhatsApp. */
+.app-lienzo .con-teclado .ch-top { padding-top: calc(var(--app-arriba) + 2px); padding-bottom: 2px; align-items: center; }
+.app-lienzo .con-teclado .ch-btn { margin-top: 0; }
+.app-lienzo .con-teclado .ch-who { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 6px; }
+.app-lienzo .con-teclado .ch-face { width: 28px; height: 28px; }
+.app-lienzo .con-teclado .ch-name { margin-top: 0; }
+.app-lienzo .con-teclado .ch-st { flex-basis: 100%; text-align: center; }
+.app-lienzo .con-teclado .ch-log { padding-top: calc(var(--app-arriba) + 50px); }

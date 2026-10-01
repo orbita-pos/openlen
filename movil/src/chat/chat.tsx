@@ -38,6 +38,10 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const tp = useTranslations("movil.principal");
   const tl = useTranslations("movil.llamada");
   const [texto, setTexto] = useState("");
+  // La foto elegida espera arriba del campo (como WhatsApp) hasta que la
+  // mandas con tu mensaje (Jesús, 01/10: mandarla al elegirla «no le gustará
+  // a la gente»).
+  const [adjunta, setAdjunta] = useState<{ foto: Blob; url: string } | null>(null);
   const [micro, setMicro] = useState<Micro>({ fase: "quieto" });
   const microRef = useRef<Micro>({ fase: "quieto" });
   const [arrastre, setArrastre] = useState(0);
@@ -70,6 +74,25 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   useEffect(() => {
     vistos.current = chat.elementos.length;
   });
+  // Al abrirse el teclado el hilo encoge por abajo: si estabas al final, se
+  // queda al final (lo último no se esconde detrás del campo).
+  useEffect(() => {
+    const l = log.current;
+    if (!l) return;
+    let alFinal = true;
+    const alMover = () => {
+      alFinal = l.scrollHeight - l.scrollTop - l.clientHeight < 40;
+    };
+    const ro = new ResizeObserver(() => {
+      if (alFinal) l.scrollTop = l.scrollHeight;
+    });
+    l.addEventListener("scroll", alMover, { passive: true });
+    ro.observe(l);
+    return () => {
+      ro.disconnect();
+      l.removeEventListener("scroll", alMover);
+    };
+  }, []);
 
   const gesto = (g: Gesto) => {
     const r = conGesto(microRef.current, g);
@@ -87,14 +110,25 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
     else if (r.efecto === "enviar") void enviarNota();
   };
 
+  const quitarAdjunta = () => {
+    if (adjunta) URL.revokeObjectURL(adjunta.url);
+    setAdjunta(null);
+  };
   const mandarTexto = () => {
     const x = texto.trim();
-    if (!x) return;
+    if (!x && !adjunta) return;
     setTexto("");
-    chat.mandar(x);
+    chat.mandar(x, adjunta?.foto);
+    quitarAdjunta();
   };
+  // Con la foto puesta, el pie crece: lo último del hilo no debe quedar debajo.
+  useEffect(() => {
+    const l = log.current;
+    if (l) l.scrollTop = l.scrollHeight;
+  }, [adjunta]);
 
-  const hayTexto = texto.trim().length > 0;
+  // Con texto o con una foto puesta, el botón envía (no graba).
+  const hayTexto = texto.trim().length > 0 || adjunta !== null;
   const grabando = micro.fase === "grabando";
   const fija = micro.fase === "grabando" && micro.fijo;
   const avance = claveDeAvance(chat.avance);
@@ -110,9 +144,11 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
       previo = null;
       const c = cualDia(e.dia, hoy);
       const etiqueta = c === "hoy" ? t("hoy") : c === "ayer" ? t("ayer") : new Date(`${e.dia}T12:00:00`).toLocaleDateString(idioma, { weekday: "long", day: "numeric", month: "long" });
+      // Como el prototipo («Hoy 9:41»): el día y la hora del primer mensaje de ese día.
+      const hora = new Date(e.t).toLocaleTimeString(idioma, { hour: "numeric", minute: "2-digit" });
       return (
         <div key={e.clave} className="ch-day">
-          {etiqueta}
+          {etiqueta} {hora}
         </div>
       );
     }
@@ -148,7 +184,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   });
 
   return (
-    <section ref={deslizar} className={`lm-layer lm-chat${abierto ? " is-on" : ""}${conPip ? " has-pip" : ""}`} aria-hidden={!abierto}>
+    <section ref={deslizar} className={`lm-layer lm-chat${abierto ? " is-on" : ""}${conPip ? " has-pip" : ""}${adjunta ? " con-adjunta" : ""}`} aria-hidden={!abierto}>
       <header className="ch-top">
         <button type="button" className="ch-btn" aria-label={t("volver")} onClick={onCerrar}>
           <Icono nombre="back" />
@@ -177,6 +213,15 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
       </div>
 
       <div className="ch-foot" data-no-deslizar>
+        {adjunta && (
+          <div className="app-adjunta">
+            {/* eslint-disable-next-line @next/next/no-img-element -- la app es Vite, no hay next/image */}
+            <img src={adjunta.url} alt="" />
+            <button type="button" aria-label={t("quitarFoto")} onClick={quitarAdjunta}>
+              <Icono nombre="x" />
+            </button>
+          </div>
+        )}
         <div className="lm-comp">
           <input
             ref={archivo}
@@ -187,23 +232,26 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
               const f = e.target.files?.[0];
               e.target.value = "";
               if (!f) return;
-              chat.mandar(texto.trim(), f);
-              setTexto("");
+              if (adjunta) URL.revokeObjectURL(adjunta.url);
+              setAdjunta({ foto: f, url: URL.createObjectURL(f) });
             }}
           />
           <button type="button" className="ch-plus" aria-label={t("mandarFoto")} disabled={chat.trabajando || grabando} onClick={() => archivo.current?.click()}>
             <Icono nombre="plus" />
           </button>
           <div className={`lm-field${grabando ? " is-rec" : ""}`}>
-            <input
-              type="text"
+            {/* textarea y no input: en un <input> Chrome pone encima del
+                teclado su barra negra de autocompletar (contraseñas,
+                direcciones), que se comía el poco sitio que deja el teclado. */}
+            <textarea
+              rows={1}
               placeholder={t("mensaje")}
               autoComplete="off"
               enterKeyHint="send"
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
+                if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   mandarTexto();
                 }

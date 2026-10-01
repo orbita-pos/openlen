@@ -45,12 +45,21 @@ export function useDeslizar(op: Deslizar) {
     let arrastrando = false;
     let escala = 1;
     let crudo = 0; // px del lienzo hacia donde cierra, sin resistencia
+    let tope = 0; // px del lienzo hasta donde termina el gesto (se mide al empezar a arrastrar)
     let muestras: { t: number; d: number }[] = [];
 
+    const recorridoDe = (x: HTMLElement) => {
+      const { hacia, recorrido } = ultimo.current;
+      return recorrido ? recorrido(x) : vertical(hacia) ? x.offsetHeight : x.offsetWidth;
+    };
     const visible = (d: number) => {
       const { hacia } = ultimo.current;
       if (d < 0) return d * CONTRA;
-      return hacia === "arriba" ? d * SUBE : d;
+      if (hacia === "arriba") return d * SUBE;
+      // Más allá de donde termina el gesto, se resiste: si siguiera al dedo, al
+      // soltar tendría que volver hacia atrás (Jesús, 01/10: «sube un poco y
+      // después baja»).
+      return d > tope ? tope + (d - tope) * CONTRA : d;
     };
     const poner = (d: number) => {
       const { hacia } = ultimo.current;
@@ -68,16 +77,18 @@ export function useDeslizar(op: Deslizar) {
       el.style.transition = VUELTA;
       el.style.transform = "";
       setTimeout(() => {
-        if (!arrastrando) el.style.transition = "";
+        if (arrastrando) return;
+        el.style.transition = "";
+        el.style.willChange = "";
       }, 340);
     };
     // Al terminar: React pinta el nuevo estado YA (flushSync) y la capa queda
     // donde el dedo la dejó, sin salto.
     const completar = (d: number) => {
-      const { hacia, alSoltar, recorrido = (x) => (vertical(hacia) ? x.offsetHeight : x.offsetWidth) } = ultimo.current;
+      const { hacia, alSoltar } = ultimo.current;
       if (hacia !== "arriba") {
         el.style.transition = SALIDA;
-        poner(recorrido(el));
+        poner(tope);
         let hecho = false;
         const fin = (e?: TransitionEvent) => {
           if (hecho || (e && (e.target !== el || e.propertyName !== "transform"))) return;
@@ -88,6 +99,7 @@ export function useDeslizar(op: Deslizar) {
           el.style.transform = "";
           void el.offsetHeight;
           el.style.transition = "";
+          el.style.willChange = "";
         };
         el.addEventListener("transitionend", fin);
         setTimeout(fin, 280);
@@ -95,12 +107,13 @@ export function useDeslizar(op: Deslizar) {
         flushSync(alSoltar);
         // Ya abierta, la capa creció hacia arriba: se coloca donde estaba y sube.
         el.style.transition = "none";
-        el.style.transform = `translateY(${recorrido(el) - d}px)`;
+        el.style.transform = `translateY(${recorridoDe(el) - d}px)`;
         void el.offsetHeight;
         el.style.transition = VUELTA;
         el.style.transform = "";
         setTimeout(() => {
           el.style.transition = "";
+          el.style.willChange = "";
         }, 340);
       }
     };
@@ -127,6 +140,10 @@ export function useDeslizar(op: Deslizar) {
         if (Math.abs(d1) < ARRANQUE) return;
         arrastrando = true;
         escala = el.getBoundingClientRect().width / el.offsetWidth || 1;
+        tope = recorridoDe(el);
+        // Su propia capa mientras dura el gesto: así el teléfono la mueve sin
+        // volver a pintar su sombra en cada cuadro (en un Galaxy A07 se trababa).
+        el.style.willChange = "transform";
         try {
           el.setPointerCapture(e.pointerId); // que el dedo no se lo quede la vista previa (un iframe)
         } catch {
@@ -148,8 +165,8 @@ export function useDeslizar(op: Deslizar) {
       const a = muestras[0];
       const b = muestras.at(-1);
       const velocidad = a && b && b.t > a.t ? (b.d - a.d) / (b.t - a.t) : 0;
-      const { hacia, recorrido = (x) => (vertical(hacia) ? x.offsetHeight : x.offsetWidth) } = ultimo.current;
-      const umbral = hacia !== "arriba" ? Math.min(recorrido(el) * 0.3, 120) : 40;
+      const { hacia } = ultimo.current;
+      const umbral = hacia !== "arriba" ? Math.min(tope * 0.3, 120) : 40;
       const basta = crudo > umbral || (crudo > 20 && velocidad > TIRON);
       if (e.type === "pointerup" && basta) completar(visible(crudo));
       else volver();

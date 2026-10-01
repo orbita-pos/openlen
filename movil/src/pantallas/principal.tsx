@@ -24,8 +24,20 @@ type Tamano = "cel" | "tab" | "pc";
 const ANCHO: Record<Tamano, number> = { cel: 390, tab: 820, pc: 1280 };
 // Como el prototipo: el botón lleva el icono del tamaño de ahora.
 const ICONO_DEL_TAMANO: Record<Tamano, NombreDeIcono> = { cel: "dvCel", tab: "dvTab", pc: "dvPc" };
-// Al encoger la hoja sólo se esconde su cuerpo: eso es lo que baja (o sube al abrirla).
-const cuerpoDeLaHoja = (el: HTMLElement) => el.querySelector<HTMLElement>(".lm-body")?.offsetHeight ?? 0;
+// Al encoger la hoja sólo se esconde su cuerpo: lo que encoge es lo que baja
+// (o sube al abrirla). Se mide escondiéndolo un instante, no con su alto: el
+// margen de arriba del mensaje sobresale del cuerpo (14 px que no cuenta su
+// offsetHeight), y la hoja daba un salto al terminar de bajar.
+const cuerpoDeLaHoja = (el: HTMLElement) => {
+  const cuerpo = el.querySelector<HTMLElement>(".lm-body");
+  if (!cuerpo) return 0;
+  const antes = el.offsetHeight;
+  const como = cuerpo.style.display;
+  cuerpo.style.display = "none";
+  const despues = el.offsetHeight;
+  cuerpo.style.display = como;
+  return antes - despues;
+};
 // Una sola lista vacía: con `?? []` en cada render, el chat creería que la
 // conversación cambió cada vez y tiraría lo que acabas de mandar.
 const SIN_HISTORIAL: StoredChatTurn[] = [];
