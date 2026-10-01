@@ -67,6 +67,24 @@ export function fraseDeAvance(herramienta: string): string | null {
   return AVANCES[herramienta] ?? null;
 }
 
+/** La tarjeta que pide un `confirm` del turno: el borrador o «Publicar». La
+ *  usan la llamada y el chat de la app: una sola lectura del evento. */
+export function tarjetaDeConfirmacion(d: Record<string, unknown>): TarjetaDeLlamada | null {
+  if (d.action === "responder") return { tipo: "respuesta", respuesta: d as unknown as RespuestaPreparada };
+  if (d.action === "publicar" && typeof d.subdominio === "string") {
+    return {
+      tipo: "publicar",
+      confirm: {
+        action: "publicar",
+        subdominio: d.subdominio,
+        idiomas: Array.isArray(d.idiomas) ? d.idiomas.filter((x): x is string => typeof x === "string") : [],
+        republicar: d.republicar === true,
+      },
+    };
+  }
+  return null;
+}
+
 export function crearPuenteALen(deps: DepsDelPuente) {
   let oido = "";
   let turnoId: string | null = null;
@@ -120,18 +138,9 @@ export function crearPuenteALen(deps: DepsDelPuente) {
             avisadas.add(f);
             voz("session.thinking.append", delegationId, f);
           }
-        } else if (e.nombre === "confirm" && d.action === "responder") {
-          confirmaciones.push({ tipo: "respuesta", respuesta: d as unknown as RespuestaPreparada });
-        } else if (e.nombre === "confirm" && d.action === "publicar" && typeof d.subdominio === "string") {
-          confirmaciones.push({
-            tipo: "publicar",
-            confirm: {
-              action: "publicar",
-              subdominio: d.subdominio,
-              idiomas: Array.isArray(d.idiomas) ? d.idiomas.filter((x): x is string => typeof x === "string") : [],
-              republicar: d.republicar === true,
-            },
-          });
+        } else if (e.nombre === "confirm") {
+          const tarjeta = tarjetaDeConfirmacion(d);
+          if (tarjeta) confirmaciones.push(tarjeta);
         } else if (e.nombre === "error") error = typeof d.message === "string" ? d.message : "error desconocido";
         else if (e.nombre === "done") cerrado = true;
       });
