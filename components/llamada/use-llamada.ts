@@ -4,6 +4,7 @@
 // (puente-a-len, topes, eventos-de-voz); aquí sólo se conectan.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { crearLectorSse } from "@/lib/len-bench/sse";
+import { clienteDeLaWeb, type ClienteDeOpenLen } from "./cliente";
 import { despacharEventoDeVoz } from "./eventos-de-voz";
 import { crearPuenteALen, type EventoParaLaVoz, type TarjetaDeLlamada } from "./puente-a-len";
 import { crearTopes, MAX_LLAMADA_MS, SILENCIO_MS } from "./topes";
@@ -14,7 +15,15 @@ type Fase = "lista" | "conectando" | "en_llamada" | "terminada";
 /** Un hueco de más de 1,2 s entre fragmentos abre una frase nueva en el subtítulo. */
 const HUECO_MS = 1200;
 
-export function useLlamada(o: { projectId: string; idioma: string }) {
+export function useLlamada(o: { projectId: string; idioma: string; cliente?: ClienteDeOpenLen }) {
+  const cliente = o.cliente ?? clienteDeLaWeb;
+  // El cliente va en una ref y no en las dependencias: si cambiara entre
+  // renders, `cerrarTodo` cambiaría con él y la limpieza del efecto de abajo
+  // colgaría la llamada en curso. Se lee al usarlo: siempre es el último.
+  const clienteRef = useRef(cliente);
+  useEffect(() => {
+    clienteRef.current = cliente;
+  }, [cliente]);
   const [fase, setFase] = useState<Fase>("lista");
   const [aviso, setAviso] = useState<AvisoDeLlamada | null>(null);
   const [lineaLen, setLineaLen] = useState("");
@@ -23,6 +32,8 @@ export function useLlamada(o: { projectId: string; idioma: string }) {
   const [tarjetas, setTarjetas] = useState<TarjetaDeLlamada[]>([]);
   const [micro, setMicro] = useState(true);
   const [audio, setAudio] = useState(true);
+  const [vozDeLen, setVozDeLen] = useState<MediaStream | null>(null);
+  const [inicio, setInicio] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const r = useRef<{
     pc?: RTCPeerConnection;
@@ -53,7 +64,9 @@ export function useLlamada(o: { projectId: string; idioma: string }) {
     }
     s.stream?.getTracks().forEach((p) => p.stop());
     const cuerpo = JSON.stringify({ sesionId: s.sesionId ?? null, segundos: s.segundos ?? null, motivo });
-    navigator.sendBeacon?.("/api/voz/uso", new Blob([cuerpo], { type: "application/json" }));
+    clienteRef.current.avisarAlCerrar("/api/voz/uso", cuerpo);
+    setVozDeLen(null);
+    setInicio(null);
     setFase("terminada");
     setTrabajando(false);
   }, []);
@@ -85,6 +98,7 @@ export function useLlamada(o: { projectId: string; idioma: string }) {
     s.pc = pc;
     pc.ontrack = (ev) => {
       if (audioRef.current) audioRef.current.srcObject = ev.streams[0] ?? null;
+      setVozDeLen(ev.streams[0] ?? null);
     };
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
@@ -99,7 +113,7 @@ export function useLlamada(o: { projectId: string; idioma: string }) {
     const zonaHoraria = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const puente = crearPuenteALen({
       async pedirALen(prompt, alEvento) {
-        const res = await fetch("/api/agent", {
+        const res = await clienteRef.current.pedir("/api/agent", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ projectId: o.projectId, prompt, zonaHoraria }),
@@ -116,7 +130,7 @@ export function useLlamada(o: { projectId: string; idioma: string }) {
         for (const e of lector.empujar(dec.decode() + "\n\n")) alEvento(e);
       },
       async dirigir(turnoId, texto) {
-        await fetch("/api/agent/dirigir", {
+        await clienteRef.current.pedir("/api/agent/dirigir", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ turnoId, texto }),
@@ -168,7 +182,7 @@ export function useLlamada(o: { projectId: string; idioma: string }) {
     try {
       const oferta = await pc.createOffer();
       await pc.setLocalDescription(oferta);
-      const res = await fetch("/api/voz/sesion", {
+      const res = await clienteRef.current.pedir("/api/voz/sesion", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ projectId: o.projectId, sdp: oferta.sdp, idioma: o.idioma }),
@@ -193,6 +207,7 @@ export function useLlamada(o: { projectId: string; idioma: string }) {
       },
     });
     setFase("en_llamada");
+    setInicio(Date.now());
   }, [o.projectId, o.idioma, enviar, cerrarTodo, colgar]);
 
   // Los efectos van FUERA del actualizador de estado: en modo estricto React lo
@@ -216,5 +231,5 @@ export function useLlamada(o: { projectId: string; idioma: string }) {
     };
   }, [enviar, cerrarTodo]);
 
-  return { fase, aviso, lineaLen, lineaTu, trabajando, tarjetas, micro, audio, llamar: () => void llamar(), colgar, alternarMicro, alternarAudio, audioRef };
+  return { fase, aviso, lineaLen, lineaTu, trabajando, tarjetas, micro, audio, vozDeLen, inicio, llamar: () => void llamar(), colgar, alternarMicro, alternarAudio, audioRef };
 }
