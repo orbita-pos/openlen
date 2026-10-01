@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { auth } from "@/auth";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import {
   ProjectNotFoundError,
   publishProject,
@@ -34,12 +36,12 @@ const PublishBodySchema = z.object({
   languages: z.array(z.string().min(2).max(5)).max(9).optional(),
 });
 
-export async function POST(
+export const POST = paraLaApp(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> },
-): Promise<Response> {
-  const session = await auth();
-  if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
+): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
+  if (!userId) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
 
   let body: unknown;
@@ -59,7 +61,7 @@ export async function POST(
   try {
     const result = await publishProject({
       projectId: id,
-      userId: session.user.id,
+      userId: userId,
       subdomain: parsed.data.subdomain,
       languages: parsed.data.languages,
     });
@@ -81,7 +83,7 @@ export async function POST(
     console.error("[publish] unexpected error:", err);
     return json({ error: "publish_failed" }, 500);
   }
-}
+});
 
 export async function DELETE(
   _req: Request,
@@ -113,3 +115,5 @@ function json(body: unknown, status: number): Response {
     headers: { "Content-Type": "application/json" },
   });
 }
+
+export const OPTIONS = respuestaPrevia;

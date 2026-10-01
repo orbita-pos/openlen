@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { auth } from "@/auth";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { db, schema } from "@/lib/db";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { getUserPlan } from "@/lib/limits";
@@ -30,9 +31,9 @@ const BodySchema = z.object({
   subdomain: z.string().min(1).max(63),
 });
 
-export async function POST(req: Request): Promise<Response> {
-  const session = await auth();
-  if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
+export const POST = paraLaApp(async (req: Request): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
+  if (!userId) return json({ error: "unauthorized" }, 401);
 
   let body: unknown;
   try {
@@ -54,7 +55,7 @@ export async function POST(req: Request): Promise<Response> {
   // the reason. We DON'T count a slot already claimed by ANY of their
   // projects, because re-publishing under the same name shouldn't trip the
   // cap. The actual claim flow re-checks this with project-context.
-  const plan = await getUserPlan(session.user.id);
+  const plan = await getUserPlan(userId);
   const cap = subdomainLimitForPlan(plan);
   const ownedRows = await db
     .select({
@@ -63,7 +64,7 @@ export async function POST(req: Request): Promise<Response> {
     .from(schema.projects)
     .where(
       and(
-        eq(schema.projects.userId, session.user.id),
+        eq(schema.projects.userId, userId),
         isNotNull(schema.projects.subdomain),
       ),
     );
@@ -82,12 +83,12 @@ export async function POST(req: Request): Promise<Response> {
     .where(eq(schema.projects.subdomain, v.value))
     .limit(1);
   const row = taken[0];
-  if (row && row.userId !== session.user.id) {
+  if (row && row.userId !== userId) {
     return json({ available: false, reason: "taken" }, 200);
   }
 
   return json({ available: true }, 200);
-}
+});
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
@@ -95,3 +96,5 @@ function json(body: unknown, status: number): Response {
     headers: { "Content-Type": "application/json" },
   });
 }
+
+export const OPTIONS = respuestaPrevia;

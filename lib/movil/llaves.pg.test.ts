@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { exigirBaseLocal } from "@/lib/len-bench/entorno";
-import { borrarLlave, canjearCodigo, crearCodigo, usuarioDeLaLlave } from "./llaves";
+import { borrarLlave, canjearCodigo, correoDelUsuario, crearCodigo, usuarioDeLaLlave } from "./llaves";
 import { huella } from "./secreto";
 
 const USUARIO = "prueba-movil-user";
@@ -54,5 +54,10 @@ describe("las llaves del teléfono", () => {
 
   it("una llave inventada no es de nadie", async () => {
     expect(await usuarioDeLaLlave("x".repeat(43))).toBeNull();
+  });
+
+  it("el correo del usuario sale de la base (con la llave no hay sesión que lo traiga)", async () => {
+    expect(await correoDelUsuario(USUARIO)).toBe(`${USUARIO}@ejemplo.invalido`);
+    expect(await correoDelUsuario("nadie-con-este-id")).toBeNull();
   });
 });

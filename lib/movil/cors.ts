@@ -28,7 +28,11 @@ export function conCors(req: Request, res: Response): Response {
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 }
 
-export function paraLaApp<C>(h: (req: Request, ctx: C) => Promise<Response>): (req: Request, ctx: C) => Promise<Response> {
+// Dos firmas: un manejador que sólo recibe la petición queda igual de llamable
+// (`GET(req)`), y uno con contexto (`{ params }`) lo conserva tipado.
+export function paraLaApp(h: (req: Request) => Promise<Response>): (req: Request) => Promise<Response>;
+export function paraLaApp<C>(h: (req: Request, ctx: C) => Promise<Response>): (req: Request, ctx: C) => Promise<Response>;
+export function paraLaApp<C>(h: (req: Request, ctx?: C) => Promise<Response>): (req: Request, ctx?: C) => Promise<Response> {
   return async (req, ctx) => conCors(req, await h(req, ctx));
 }
 

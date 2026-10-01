@@ -16,7 +16,8 @@
 // usan las demás rutas. Un 403 confirmaría que ese turno EXISTE, que ya es más
 // de lo que un extraño debería poder averiguar probando ids.
 
-import { auth } from "@/auth";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { dirigir, MAX_DIRECCION } from "@/lib/agent/direcciones";
 
 export const runtime = "nodejs";
@@ -29,9 +30,8 @@ function json(cuerpo: unknown, status = 200): Response {
   });
 }
 
-export async function POST(req: Request): Promise<Response> {
-  const session = await auth();
-  const userId = session?.user?.id;
+export const POST = paraLaApp(async (req: Request): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
   if (!userId) return json({ error: "no_autenticado" }, 401);
 
   let cuerpo: unknown;
@@ -54,4 +54,6 @@ export async function POST(req: Request): Promise<Response> {
   // El bucle la recogerá entre vueltas. No se espera a que lo haga: bloquear
   // aquí ataría la respuesta del taller a la velocidad del modelo.
   return json({ ok: true, maximo: MAX_DIRECCION });
-}
+});
+
+export const OPTIONS = respuestaPrevia;

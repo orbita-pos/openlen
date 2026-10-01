@@ -3,7 +3,8 @@
 // El orden es el de los costes: primero lo gratis (interruptor, sesión, cuerpo,
 // dueño) y el tope y OpenAI al final, para que un proyecto ajeno o un cuerpo
 // roto no gasten ni una llamada del tope.
-import { auth } from "@/auth";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { esDuenoDelProyecto } from "@/lib/voz/dueno";
 import { abrirSesionDeVoz } from "@/lib/voz/sesion";
 import { topeDeLlamadas } from "@/lib/voz/tope";
@@ -16,10 +17,9 @@ function json(cuerpo: unknown, status = 200): Response {
   return new Response(JSON.stringify(cuerpo), { status, headers: { "content-type": "application/json" } });
 }
 
-export async function POST(req: Request): Promise<Response> {
+export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   if (process.env.OPENLEN_VOZ?.trim() !== "1") return json({ error: "voz_apagada" }, 503);
-  const session = await auth();
-  const userId = session?.user?.id;
+  const userId = await usuarioDeLaPeticion(req);
   if (!userId) return json({ error: "no_autenticado" }, 401);
 
   const b = (await req.json().catch(() => null)) as { projectId?: unknown; sdp?: unknown; idioma?: unknown } | null;
@@ -41,4 +41,6 @@ export async function POST(req: Request): Promise<Response> {
   }
   console.log(`[voz] abierta ${r.sesionId ?? "?"} usuario=${userId} proyecto=${projectId} idioma=${idioma} voz=${config.voz}`);
   return json({ sdp: r.sdp, sesionId: r.sesionId, saludo: config.saludo });
-}
+});
+
+export const OPTIONS = respuestaPrevia;

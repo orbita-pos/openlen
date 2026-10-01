@@ -1,6 +1,8 @@
 import { insertMessage, markConversationRead } from "@/lib/chat/store";
 import { hub } from "@/lib/chat/hub";
 import { json, requireOwnerForConversation } from "../../_shared";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,12 +10,12 @@ export const dynamic = "force-dynamic";
 const MAX_BODY = 4000;
 
 /** POST /api/inbox/[conversationId]/reply — owner sends a message as the business. */
-export async function POST(
+export const POST = paraLaApp(async (
   req: Request,
   { params }: { params: Promise<{ conversationId: string }> },
-): Promise<Response> {
+): Promise<Response> => {
   const { conversationId } = await params;
-  const ctx = await requireOwnerForConversation(conversationId);
+  const ctx = await requireOwnerForConversation(conversationId, await usuarioDeLaPeticion(req));
   if ("error" in ctx) return json({ error: ctx.error === 401 ? "unauthorized" : "not_found" }, ctx.error);
 
   let parsed: { body?: unknown };
@@ -49,4 +51,6 @@ export async function POST(
     },
     200,
   );
-}
+});
+
+export const OPTIONS = respuestaPrevia;

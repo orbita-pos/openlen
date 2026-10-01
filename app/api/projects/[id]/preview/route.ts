@@ -1,5 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { db, schema } from "@/lib/db";
 import { generatePreviewToken, hashPasscode } from "@/lib/projects/preview";
 import { actualizarData } from "@/lib/projects/escribir-data";
@@ -71,17 +73,17 @@ async function writePreview(
   }
 }
 
-export async function GET(
-  _req: Request,
+export const GET = paraLaApp(async (
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
-): Promise<Response> {
-  const session = await auth();
-  if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
+): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
+  if (!userId) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
-  const data = await loadOwnedData(id, session.user.id);
+  const data = await loadOwnedData(id, userId);
   if (!data) return json({ error: "not_found" }, 404);
   return json(stateOf(data.preview), 200);
-}
+});
 
 interface PostBody {
   rotate?: boolean;
@@ -91,17 +93,17 @@ interface PostBody {
   passcode?: string | null;
 }
 
-export async function POST(
+export const POST = paraLaApp(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> },
-): Promise<Response> {
-  const session = await auth();
-  if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
+): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
+  if (!userId) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
 
   const raw = await req.json().catch(() => ({}));
   const body: PostBody = raw && typeof raw === "object" ? (raw as PostBody) : {};
-  const data = await loadOwnedData(id, session.user.id);
+  const data = await loadOwnedData(id, userId);
   if (!data) return json({ error: "not_found" }, 404);
 
   const prev = data.preview;
@@ -130,10 +132,10 @@ export async function POST(
     }
   }
 
-  const ok = await writePreview(id, session.user.id, next);
+  const ok = await writePreview(id, userId, next);
   if (!ok) return json({ error: "db_update_failed" }, 500);
   return json(stateOf(next), 200);
-}
+});
 
 /** The client-facing shape — never leaks the passcode hash, just whether one
  *  is set. `token` is the owner's own. */
@@ -174,3 +176,5 @@ function json(body: unknown, status: number): Response {
     headers: { "content-type": "application/json" },
   });
 }
+
+export const OPTIONS = respuestaPrevia;

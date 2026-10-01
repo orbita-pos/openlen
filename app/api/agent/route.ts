@@ -1,4 +1,6 @@
-import { auth } from "@/auth";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { componerMedicion } from "@/lib/agent/aviso-medido";
@@ -165,7 +167,7 @@ const SCOPE_OUTER_MAX = 50_000;
 const ATTACHED_URL_MAX = 2_000;
 const ATTACHED_ALT_MAX = 300;
 
-export async function POST(req: Request): Promise<Response> {
+export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // F4 Task 7 — emergency kill-switch: OPENLEN_AGENT=0 refuses BEFORE any
   // auth/credit/stream work, in the SAME coded-SSE-error shape (F2-T10)
   // every other agent error uses — a 200 stream with a single `error`
@@ -188,8 +190,8 @@ export async function POST(req: Request): Promise<Response> {
     });
   }
 
-  const session = await auth();
-  if (!session?.user?.id) return errorJson(401, "unauthorized");
+  const userId = await usuarioDeLaPeticion(req);
+  if (!userId) return errorJson(401, "unauthorized");
 
   const body = (await req.json().catch(() => null)) as {
     projectId?: string;
@@ -260,7 +262,6 @@ export async function POST(req: Request): Promise<Response> {
   // slug inválido no se convierte en Home ni siquiera durante el saneamiento
   // del historial, y las declaraciones se construyen una sola vez con la
   // misma capacidad que recibirán prompt y sesión.
-  const userId = session.user.id;
   // `observarPagina` se enchufa AQUÍ y no dentro de `realDeps()` a propósito:
   // vive en verify.ts, que arrastra el render de Chromium, y `lib/agent/tools`
   // lo importan muchas pruebas que no quieren ese grafo detrás.
@@ -530,9 +531,9 @@ export async function POST(req: Request): Promise<Response> {
   //
   // Las versiones se leen UNA vez y alimentan dos cosas: el registro de cambios
   // y lo que el dueño cambió a mano desde el último turno de Len (H07).
-  const versionesDelProyecto = listVersions({ projectId, userId: session.user.id }).catch(() => []);
+  const versionesDelProyecto = listVersions({ projectId, userId: userId }).catch(() => []);
   const [userMemory, esfuerzoDelUsuario, cambios, cambiosDelDueno] = await Promise.all([
-    getUserMemoryBounded(session.user.id),
+    getUserMemoryBounded(userId),
     getEsfuerzoGuardado(userId),
     versionesDelProyecto.then(cambiosParaElAgente),
     // 🔴 H07 · ENTRE TURNOS, LEN SE ENTERA DE LO QUE EL DUEÑO TOCÓ. Una lectura
@@ -556,7 +557,7 @@ export async function POST(req: Request): Promise<Response> {
   // Con el HOY en UTC, a las 19:25 de México Len llamó «ayer» a un mensaje de
   // ese día (plans/len-2/corridas/2026-10-01-resultados-humo). Leer la
   // guardada tampoco tumba el turno: si la base falla, UTC, y la herramienta lo dice.
-  const zonaDelTurno = zonaDelCuerpo ?? (await leerZona(session.user.id).catch(() => null)) ?? ZONA_SIN_DATO;
+  const zonaDelTurno = zonaDelCuerpo ?? (await leerZona(userId).catch(() => null)) ?? ZONA_SIN_DATO;
   const argsDelTurno = {
     zona: zonaDelTurno,
     state,
@@ -668,6 +669,8 @@ export async function POST(req: Request): Promise<Response> {
   /** Lo paró alguien a propósito (■, o el plazo de Len-Bench): entonces no se
    *  avisa de que terminó, porque quien lo paró ya lo sabe. */
   let canceladoAProposito = false;
+  // Desde la app del teléfono no hay sesión que traiga el correo: se lee de la base.
+  const ownerEmail = await correoDelUsuario(userId).catch(() => null);
   const agentSession: AgentSession = {
     projectId,
     userId,
@@ -697,7 +700,7 @@ export async function POST(req: Request): Promise<Response> {
     // TODA edición del Agente. El sembrado de marca que viajaba a su lado se
     // fue con el perfil el 2026-08-31.
     brief: project.brief ?? null,
-    ownerEmail: session.user.email ?? null,
+    ownerEmail,
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
     busquedasVaciasSeguidas: 0,
@@ -708,7 +711,7 @@ export async function POST(req: Request): Promise<Response> {
   };
   // Se guarda para las rutinas, que corren sin navegador. Nunca tumba el turno.
   if (zonaDelCuerpo) {
-    void guardarZona(session.user.id, zonaDelCuerpo).catch((e) => console.error("[agent] zona", e));
+    void guardarZona(userId, zonaDelCuerpo).catch((e) => console.error("[agent] zona", e));
   }
   // Quién razona vive en `lib/agent/brain` — el MISMO sitio del que tiran los
   // evals. Tenerlo aquí dentro ya dejó a la batería midiendo Gemini después de
@@ -1590,7 +1593,7 @@ export async function POST(req: Request): Promise<Response> {
       "x-accel-buffering": "no",
     },
   });
-}
+});
 
 /** El cuerpo vive en lib/ai/sse; el nombre local se queda porque lo usan
  *  decenas de sitios y renombrarlos no aclara nada. */
@@ -1610,3 +1613,5 @@ export async function POST(req: Request): Promise<Response> {
 function errorJson(status: number, message: string, code?: string): Response {
   return jsonResponse(code ? { error: message, code } : { error: message }, status);
 }
+
+export const OPTIONS = respuestaPrevia;

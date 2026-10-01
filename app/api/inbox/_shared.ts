@@ -9,6 +9,7 @@ import {
   getOrCreateOwnerChatUser,
 } from "@/lib/chat/store";
 import { resolveProjectAccess } from "@/lib/chat/agents";
+import { correoDelUsuario } from "@/lib/movil/llaves";
 
 export function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
@@ -26,10 +27,25 @@ export interface OwnerContext {
 /** Gate every inbox sub-route: Auth.js session → project ownership → privacy. */
 export async function requireOwnerForConversation(
   conversationId: string,
+  // La app del teléfono ya sabe quién es (por su llave, lib/movil/quien.ts) y
+  // lo pasa la ruta. Sin él —las demás rutas del inbox—, la sesión de siempre.
+  quien?: string | null,
 ): Promise<OwnerContext | { error: 401 | 404 }> {
-  // 1. Auth.js session
-  const session = await auth();
-  if (!session?.user?.id) return { error: 401 };
+  // 1. Who: the caller-resolved user, or the Auth.js session
+  let userId: string;
+  let email: string | null;
+  if (quien === undefined) {
+    const session = await auth();
+    if (!session?.user?.id) return { error: 401 };
+    userId = session.user.id;
+    email = session.user.email ?? null;
+  } else {
+    if (!quien) return { error: 401 };
+    userId = quien;
+    // Sin sesión no hay correo a mano: se lee, para que el usuario del chat del
+    // dueño se cree igual que desde la web.
+    email = await correoDelUsuario(quien);
+  }
 
   // 2. Load the conversation to learn its projectId
   const convRows = await db
@@ -44,7 +60,7 @@ export async function requireOwnerForConversation(
   const { projectId } = conv;
 
   // 3. Verify the session user has access: owner OR active agent
-  const access = await resolveProjectAccess(projectId, session.user.id);
+  const access = await resolveProjectAccess(projectId, userId);
   if (!access) return { error: 404 };
 
   // Load project title for owner chat_user provisioning
@@ -60,8 +76,8 @@ export async function requireOwnerForConversation(
   //    owner chat_user so conversations stay 2-participant.
   const { id: ownerChatUserId } = await getOrCreateOwnerChatUser(
     projectId,
-    session.user.id,
-    { displayName: project.title, email: session.user.email ?? null },
+    userId,
+    { displayName: project.title, email },
   );
 
   // 5. Privacy gate: the owner must be a PARTICIPANT of THIS conversation.
@@ -74,5 +90,5 @@ export async function requireOwnerForConversation(
   );
   if (!participation) return { error: 404 };
 
-  return { userId: session.user.id, projectId, ownerChatUserId };
+  return { userId, projectId, ownerChatUserId };
 }

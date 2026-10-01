@@ -18,7 +18,7 @@ beforeEach(() => {
 
 describe("/api/movil/llave", () => {
   it("canjea el código por la llave, con CORS para la app", async () => {
-    const r = await POST(post({ codigo: "c".repeat(43), estado: ESTADO, nombre: "Pixel" }), undefined);
+    const r = await POST(post({ codigo: "c".repeat(43), estado: ESTADO, nombre: "Pixel" }));
     expect(r.status).toBe(200);
     expect(await r.json()).toEqual({ llave: LLAVE });
     expect(mocks.canjear).toHaveBeenCalledWith("c".repeat(43), ESTADO, "Pixel");
@@ -27,24 +27,24 @@ describe("/api/movil/llave", () => {
 
   it("un código que no vale → 401", async () => {
     mocks.canjear.mockResolvedValue(null);
-    const r = await POST(post({ codigo: "c".repeat(43), estado: ESTADO }), undefined);
+    const r = await POST(post({ codigo: "c".repeat(43), estado: ESTADO }));
     expect(r.status).toBe(401);
   });
 
   it("datos mal formados → 400 sin tocar la base", async () => {
-    const r = await POST(post({ codigo: 5, estado: "corto" }), undefined);
+    const r = await POST(post({ codigo: 5, estado: "corto" }));
     expect(r.status).toBe(400);
     expect(mocks.canjear).not.toHaveBeenCalled();
   });
 
   it("salir borra la llave de la cabecera", async () => {
-    const r = await DELETE(new Request("http://x/api/movil/llave", { method: "DELETE", headers: { authorization: `Bearer ${LLAVE}` } }), undefined);
+    const r = await DELETE(new Request("http://x/api/movil/llave", { method: "DELETE", headers: { authorization: `Bearer ${LLAVE}` } }));
     expect(r.status).toBe(204);
     expect(mocks.borrar).toHaveBeenCalledWith(LLAVE);
   });
 
   it("salir sin llave → 401", async () => {
-    const r = await DELETE(new Request("http://x/api/movil/llave", { method: "DELETE" }), undefined);
+    const r = await DELETE(new Request("http://x/api/movil/llave", { method: "DELETE" }));
     expect(r.status).toBe(401);
   });
 

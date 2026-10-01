@@ -1,4 +1,5 @@
-import { auth } from "@/auth";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { listProjects } from "@/lib/projects";
 import { getProjectStatsForUser } from "@/lib/analytics/queries";
 
@@ -8,19 +9,18 @@ export const dynamic = "force-dynamic";
 // GET /api/projects — the signed-in user's projects (newest first) with the
 // last-7-day stats merged in. Powers both the /projects dashboard data and
 // the in-workspace Projects section.
-export async function GET(): Promise<Response> {
-  const session = await auth();
-  if (!session?.user?.id) {
+export const GET = paraLaApp(async (req: Request): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
+  if (!userId) {
     return json({ error: "unauthorized" }, 401);
   }
-  const userId = session.user.id;
   const [projects, statsMap] = await Promise.all([
     listProjects(userId),
     getProjectStatsForUser(userId, 7),
   ]);
   const withStats = projects.map((p) => ({ ...p, stats: statsMap.get(p.id) }));
   return json({ projects: withStats }, 200);
-}
+});
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
@@ -28,3 +28,5 @@ function json(body: unknown, status: number): Response {
     headers: { "Content-Type": "application/json" },
   });
 }
+
+export const OPTIONS = respuestaPrevia;

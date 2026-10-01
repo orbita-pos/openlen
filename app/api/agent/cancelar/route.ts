@@ -12,7 +12,8 @@
 // el turno no existe O no es tuyo, para no confirmar a un extraño qué ids
 // existen. La comprobación vive en el almacén (`lib/agent/direcciones.ts`).
 
-import { auth } from "@/auth";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { cancelar } from "@/lib/agent/direcciones";
 
 export const runtime = "nodejs";
@@ -25,9 +26,8 @@ function json(cuerpo: unknown, status = 200): Response {
   });
 }
 
-export async function POST(req: Request): Promise<Response> {
-  const session = await auth();
-  const userId = session?.user?.id;
+export const POST = paraLaApp(async (req: Request): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
   if (!userId) return json({ error: "no_autenticado" }, 401);
 
   let cuerpo: unknown;
@@ -47,4 +47,6 @@ export async function POST(req: Request): Promise<Response> {
   // cierra con `cancelled` y el turno termina como un ■ de siempre (0 créditos,
   // y la fila como cortada si ya había cambiado algo).
   return json({ ok: true });
-}
+});
+
+export const OPTIONS = respuestaPrevia;

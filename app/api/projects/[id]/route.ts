@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { auth } from "@/auth";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import {
   deleteProject,
   getProject,
@@ -14,17 +16,17 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/projects/[id] — load one full project (404 when not yours).
-export async function GET(
-  _req: Request,
+export const GET = paraLaApp(async (
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
-): Promise<Response> {
-  const session = await auth();
-  if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
+): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
+  if (!userId) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
-  const project = await getProject(id, session.user.id);
+  const project = await getProject(id, userId);
   if (!project) return json({ error: "not_found" }, 404);
   return json({ project }, 200);
-}
+});
 
 // PATCH /api/projects/[id] — accepts title, status, and/or userBrief. Apply
 // only the fields present in the body so the client doesn't have to send all.
@@ -139,3 +141,5 @@ function json(body: unknown, status: number): Response {
     headers: { "Content-Type": "application/json" },
   });
 }
+
+export const OPTIONS = respuestaPrevia;

@@ -21,7 +21,8 @@
 // AUTORIZACIÓN: sesión + dueño del proyecto de la fila. 404 si no existe o no
 // es tuya, sin distinguir.
 
-import { auth } from "@/auth";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { turnoDeLaFila } from "@/lib/agent/direcciones";
 import { leerTurnoDelUsuario, marcarCortadaSiSigueEnCurso } from "@/lib/projects/chat";
 
@@ -35,12 +36,11 @@ function json(cuerpo: unknown, status = 200): Response {
   });
 }
 
-export async function GET(
-  _req: Request,
+export const GET = paraLaApp(async (
+  req: Request,
   { params }: { params: Promise<{ fila: string }> },
-): Promise<Response> {
-  const session = await auth();
-  const userId = session?.user?.id;
+): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
   if (!userId) return json({ error: "no_autenticado" }, 401);
 
   const { fila } = await params;
@@ -62,4 +62,6 @@ export async function GET(
   }
   const { enCurso: _sigue, ...resto } = turno;
   return json({ turno: { ...resto, cortado: true } });
-}
+});
+
+export const OPTIONS = respuestaPrevia;

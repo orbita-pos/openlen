@@ -14,6 +14,9 @@ vi.mock("@/lib/chat/store", () => ({
   markConversationRead: mocks.markConversationRead,
 }));
 vi.mock("@/lib/chat/hub", () => ({ hub: { publish: mocks.publish } }));
+// Quién contesta lo decide la sesión o la llave del teléfono (lib/movil/quien);
+// aquí no se prueba eso, sino lo que pasa después.
+vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: async () => "u1" }));
 vi.mock("../../_shared", () => ({
   requireOwnerForConversation: mocks.requireOwnerForConversation,
   json: (cuerpo: unknown, status: number) => new Response(JSON.stringify(cuerpo), { status }),

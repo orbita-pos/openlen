@@ -43,3 +43,10 @@ export async function usuarioDeLaLlave(llave: string, ahora: Date = new Date()):
 export async function borrarLlave(llave: string): Promise<void> {
   await db.delete(l).where(eq(l.huella, huella(llave)));
 }
+
+/** El correo del usuario. Con la llave del teléfono no hay sesión que lo
+ *  traiga, y Len lo usa (`ownerEmail`) y el chat del dueño también. */
+export async function correoDelUsuario(userId: string): Promise<string | null> {
+  const u = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, userId)).limit(1);
+  return u[0]?.email ?? null;
+}
