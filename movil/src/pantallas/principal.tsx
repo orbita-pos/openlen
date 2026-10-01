@@ -54,15 +54,34 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Sólo una página de TU lista: la recordada puede ya no existir (borrada,
+  // otra cuenta, la muestra) y pedirla daba 404. Y lo que llegue tarde de la
+  // página anterior se tira: un 404 viejo ponía «No pude cargar tu página».
   useEffect(() => {
-    if (!id) return;
+    if (!id || !lista?.some((x) => x.id === id)) return;
+    let vigente = true;
     localStorage.setItem(ULTIMO, id);
     setP(null);
     setVista(null);
     setVistaFallo(false);
-    void leerProyecto(cliente, id).then(setP).catch((e) => e instanceof ErrorSinRed && setSinRed(true));
-    void enlaceDeVistaPrevia(cliente, BASE, id).then(setVista).catch(() => setVistaFallo(true));
-  }, [cliente, id]);
+    void leerProyecto(cliente, id)
+      .then((x) => {
+        if (vigente) setP(x);
+      })
+      .catch((e) => {
+        if (vigente && e instanceof ErrorSinRed) setSinRed(true);
+      });
+    void enlaceDeVistaPrevia(cliente, BASE, id)
+      .then((x) => {
+        if (vigente) setVista(x);
+      })
+      .catch(() => {
+        if (vigente) setVistaFallo(true);
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [cliente, id, lista]);
 
   const dicho = p ? loQueDijoLen(p.historial) : null;
 

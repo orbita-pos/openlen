@@ -56,7 +56,9 @@ export function Llamada({ cliente, projectId, idioma, onTerminar }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ll.fase]);
 
-  const cara = ll.fase !== "en_llamada" ? (ll.aviso ? "error" : "saludando") : ll.trabajando ? "pensando" : ll.lineaLen ? "avisando" : "escuchando";
+  // «Llamando…» con la cara de la llamada entrante del prototipo («avisando»);
+  // «saludando» es de un momento y, fijo, deja la cara girada.
+  const cara = ll.fase !== "en_llamada" ? (ll.aviso ? "error" : "avisando") : ll.trabajando ? "pensando" : ll.lineaLen ? "avisando" : "escuchando";
   const crono = ll.inicio ? reloj(ahora - ll.inicio) : "";
   const palabras = palabrasDelSubtitulo(ll.lineaLen);
   // Como el prototipo: Audio encendido = oyes a Len; Silenciar encendido = Len no te oye.
