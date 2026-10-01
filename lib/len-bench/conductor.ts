@@ -45,6 +45,10 @@ import { enviarTurno, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./ses
 import { servirPublicada } from "./servidor-publicada";
 import type { Desenlace, Encargo, Intercambio, ResultadoDeCorrida, ResultadoDeGrader } from "./tipos";
 
+/** La zona del dueño si el caso no dice otra: la que manda el panel de un
+ *  usuario en México (plans/len-resultados/diseno.md §7). */
+export const ZONA_POR_DEFECTO = "America/Mexico_City";
+
 export interface OpcionesDelConductor {
   readonly base: string;
   readonly cookie: string;
@@ -126,6 +130,10 @@ export async function calificarDatos(
     publicadaPorLen?: boolean;
     /** Ver `OpcionesDelConductor.capturasEn`. */
     capturasEn?: string;
+    /** Casos de resultados: lo que Len llamó y las tarjetas que dejó. */
+    herramientas?: readonly string[];
+    tarjetas?: readonly Record<string, unknown>[];
+    zona?: string;
   },
 ): Promise<{ graders: ResultadoDeGrader[]; sub: string }> {
   exigirEntorno();
@@ -158,6 +166,9 @@ export async function calificarDatos(
       inicio: e.inicio,
       publicadaPorLen,
       conversacion: extra.conversacion,
+      herramientas: extra.herramientas ?? [],
+      tarjetas: extra.tarjetas ?? [],
+      zona: extra.zona ?? ZONA_POR_DEFECTO,
       navegador: o.navegador,
       leerEnvios: async () =>
         (
@@ -212,6 +223,11 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
   const memoria = await snapshotAgentMemory(o.owner.id);
   const saldo0 = await creditos(o.owner.id);
   const projectId = await createThrowawayProject(o.owner.id, `len-bench-${e.id}`, e.inicio, filaComoLaDeUnDueno(e.inicio));
+  // Casos de resultados (plans/len-resultados/): la zona que manda el panel, lo
+  // que Len llamó y las tarjetas que dejó, para los graders de la CONVERSACIÓN.
+  const zona = e.zona ?? ZONA_POR_DEFECTO;
+  const herramientas: string[] = [];
+  const tarjetas: Record<string, unknown>[] = [];
   const conversacion: Intercambio[] = [];
   let turnosDeLen = 0;
   let usdCliente = 0;
@@ -220,6 +236,7 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
   let sub = "";
   let graders: ResultadoDeGrader[] = [];
   try {
+    if (e.sembrar) await e.sembrar({ projectId, ownerId: o.owner.id, zona, ahora: new Date() });
     guion: for (const paso of e.guion) {
       let mensaje = paso.mensaje;
       for (let i = 0; i <= MAX_RESPUESTAS_POR_PASO; i++) {
@@ -231,12 +248,18 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
           base: o.base,
           cookie: o.cookie,
           // `esfuerzo: "auto"`: lo que manda el panel de un usuario nuevo.
-          cuerpo: { projectId, prompt: mensaje, turnId: crypto.randomUUID(), history, historyTotal, dichoAntes, esfuerzo: "auto" },
+          // `zonaHoraria`: la del navegador, como la manda el panel.
+          cuerpo: { projectId, prompt: mensaje, turnId: crypto.randomUUID(), history, historyTotal, dichoAntes, esfuerzo: "auto", zonaHoraria: zona },
           timeoutMs: o.timeoutTurnoMs,
         });
         turnosDeLen++;
         const texto = textoDeLen(eventos);
         conversacion.push({ quien: "dueno", texto: mensaje }, { quien: "len", texto });
+        for (const ev of eventos) {
+          const d = ev.datos as { tool?: unknown } | null;
+          if (ev.nombre === "action" && typeof d?.tool === "string" && !herramientas.includes(d.tool)) herramientas.push(d.tool);
+          if (ev.nombre === "confirm" && ev.datos && typeof ev.datos === "object") tarjetas.push(ev.datos as Record<string, unknown>);
+        }
         const err = eventos.find((x) => x.nombre === "error")?.datos as { code?: string; message?: string } | undefined;
         if (err?.code === "no_credits" || err?.code === "agent_off") {
           throw new ErrorDeMontaje(`la ruta rechazó el turno con «${err.code}»: ${err.message ?? ""}`.trim());
@@ -282,7 +305,13 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
         mensaje = d.decision.mensaje;
       }
     }
-    const cal = await calificarDatos(e, projectId, o, { conversacion, ...(o.capturasEn ? { capturasEn: o.capturasEn } : {}) });
+    const cal = await calificarDatos(e, projectId, o, {
+      conversacion,
+      herramientas,
+      tarjetas,
+      zona,
+      ...(o.capturasEn ? { capturasEn: o.capturasEn } : {}),
+    });
     graders = cal.graders;
     sub = cal.sub;
   } catch (err) {

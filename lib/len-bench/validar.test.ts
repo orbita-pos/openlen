@@ -109,3 +109,21 @@ describe("conversacionAlValidar — lo que el dueño ya dijo", () => {
     ]);
   });
 });
+
+// Len sabe de tus resultados (plans/len-resultados/): casos que se califican
+// por lo que Len DIJO, no por la página. Al validar no hay Len, así que la
+// variante trae lo que diría.
+describe("conversacionAlValidar con un turno de validación", () => {
+  it("intercala lo que dice Len tras cada mensaje del dueño", () => {
+    const guion = [{ tipo: "pide", mensaje: "¿me escribió alguien?" }, { tipo: "pide", mensaje: "dile que sí" }] as const;
+    expect(conversacionAlValidar({ guion }, { len: ["Sí, Juan.", "Te dejé el borrador."], herramientas: [], tarjetas: [] })).toEqual([
+      { quien: "dueno", texto: "¿me escribió alguien?" },
+      { quien: "len", texto: "Sí, Juan." },
+      { quien: "dueno", texto: "dile que sí" },
+      { quien: "len", texto: "Te dejé el borrador." },
+    ]);
+  });
+  it("sin turno, como siempre: sólo el dueño", () => {
+    expect(conversacionAlValidar({ guion: [{ tipo: "pide", mensaje: "hola" }] })).toEqual([{ quien: "dueno", texto: "hola" }]);
+  });
+});

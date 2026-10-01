@@ -119,6 +119,10 @@ export async function calificarCon(
       inicio: o.inicio ?? { html: INICIO_TAQUERIA },
       publicadaPorLen: o.publicadaPorLen ?? false,
       conversacion: o.conversacion ?? [],
+      // Los de resultados (plans/len-resultados/): ningún grader de página los lee.
+      herramientas: [],
+      tarjetas: [],
+      zona: "America/Mexico_City",
       // Los graders que no abren Chromium no lo tocan; los que sí, lo reciben.
       navegador: o.navegador ?? (null as unknown as Browser),
       leerEnvios: o.leerEnvios ?? (async () => []),

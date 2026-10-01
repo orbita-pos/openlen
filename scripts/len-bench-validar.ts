@@ -12,12 +12,12 @@
 
 import { createThrowawayProject, deleteThrowawayProject, resolveEvalUser } from "@/lib/len-bench/proyecto-de-eval";
 import { apagarEnEsteProceso, BASE_LEN_BENCH, exigirBaseLocal } from "@/lib/len-bench/entorno";
-import { calificarDatos } from "@/lib/len-bench/conductor";
+import { calificarDatos, ZONA_POR_DEFECTO } from "@/lib/len-bench/conductor";
 import { lanzarNavegador } from "@/lib/len-bench/navegador";
 import { conversacionAlValidar, publicadaAlValidar, revisarCaso } from "@/lib/len-bench/validar";
 import { cargarEncargos, type Juego } from "@/lib/len-bench/casos/cargar";
 import { avisosDelEncargo } from "@/lib/len-bench/avisos";
-import type { Encargo, ResultadoDeGrader } from "@/lib/len-bench/tipos";
+import type { Encargo, ResultadoDeGrader, Siembra, TurnoDeValidacion } from "@/lib/len-bench/tipos";
 import type { ProjectData } from "@/lib/projects/types";
 
 async function main(): Promise<number> {
@@ -42,12 +42,26 @@ async function main(): Promise<number> {
   const owner = await resolveEvalUser();
   const navegador = await lanzarNavegador();
 
-  async function con(e: Encargo, datos: ProjectData, etiqueta: string): Promise<ResultadoDeGrader[]> {
+  // Los casos de resultados (plans/len-resultados/) siembran la base y se
+  // califican por lo que Len diría (`turno`): al validar no hay Len.
+  async function con(
+    e: Encargo,
+    datos: ProjectData,
+    etiqueta: string,
+    turno?: TurnoDeValidacion,
+    despues?: (s: Siembra) => Promise<void>,
+  ): Promise<ResultadoDeGrader[]> {
     const id = await createThrowawayProject(owner.id, `len-bench-validar-${e.id}-${etiqueta}`, datos);
     try {
+      const siembra: Siembra = { projectId: id, ownerId: owner.id, zona: e.zona ?? ZONA_POR_DEFECTO, ahora: new Date() };
+      if (e.sembrar) await e.sembrar(siembra);
+      if (despues) await despues(siembra);
       return (await calificarDatos(e, id, { base: BASE_LEN_BENCH, owner, navegador, conservar: false }, {
-        conversacion: conversacionAlValidar(e),
+        conversacion: conversacionAlValidar(e, turno),
         publicadaPorLen: publicadaAlValidar(e, etiqueta),
+        herramientas: turno?.herramientas ?? [],
+        tarjetas: turno?.tarjetas ?? [],
+        zona: siembra.zona,
       })).graders;
     } finally {
       await deleteThrowawayProject(id);
@@ -57,10 +71,13 @@ async function main(): Promise<number> {
   let malos = 0;
   try {
     for (const e of encargos) {
-      const solucion = await con(e, e.solucion, "solucion");
+      const solucion = await con(e, e.solucion, "solucion", e.solucionTurno);
       const variantes: { nombre: string; graders: ResultadoDeGrader[] }[] = [];
-      for (const [nombre, datos] of [["inicio", e.inicio] as const, ...e.rotas.map((r) => [r.nombre, r.datos] as const)]) {
-        variantes.push({ nombre, graders: await con(e, datos, nombre) });
+      for (const [nombre, datos, turno, despues] of [
+        ["inicio", e.inicio, undefined, undefined] as const,
+        ...e.rotas.map((r) => [r.nombre, r.datos, r.turno, r.despues] as const),
+      ]) {
+        variantes.push({ nombre, graders: await con(e, datos, nombre, turno, despues) });
       }
       const { ok, problemas } = revisarCaso(e, { solucion, variantes });
       if (!ok) malos++;

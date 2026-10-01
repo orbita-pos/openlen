@@ -12,7 +12,7 @@
 //
 // Puro: lo que cuesta (publicar, servir, abrir Chromium) lo hace el script.
 
-import type { Encargo, Intercambio, ResultadoDeGrader } from "./tipos";
+import type { Encargo, Intercambio, ResultadoDeGrader, TurnoDeValidacion } from "./tipos";
 
 export function revisarCaso(
   e: Pick<Encargo, "graders" | "solucion" | "rotas">,
@@ -74,7 +74,15 @@ export function publicadaAlValidar(e: Pick<Encargo, "publicaLen">, variante: str
  * que el dueño dicta en el mensaje (existencias, una fecha) salía como cifra
  * INVENTADA en la solución (`sin-cifras-inventadas`, 23/09). Las respuestas
  * del cliente simulado no están: salen de la ficha, que ya cuenta como dada.
+ *
+ * Con `turno` (casos de resultados, plans/len-resultados/), detrás de cada
+ * mensaje del dueño va lo que diría Len en esa variante: esos casos se
+ * califican por lo que Len DIJO, no por la página.
  */
-export function conversacionAlValidar(e: Pick<Encargo, "guion">): Intercambio[] {
-  return e.guion.map((p) => ({ quien: "dueno", texto: p.mensaje }));
+export function conversacionAlValidar(e: Pick<Encargo, "guion">, turno?: TurnoDeValidacion): Intercambio[] {
+  return e.guion.flatMap((p, i): Intercambio[] => {
+    const dueno: Intercambio = { quien: "dueno", texto: p.mensaje };
+    const len = turno?.len[i];
+    return len === undefined ? [dueno] : [dueno, { quien: "len", texto: len }];
+  });
 }

@@ -76,6 +76,10 @@ export interface CuerpoDelTurno {
    */
   readonly esfuerzo: string;
   readonly page?: string;
+  /** La zona IANA del navegador, como la manda el panel (plans/len-resultados/
+   *  diseno.md §7). Sin ella, la ruta usaría la guardada de la identidad de
+   *  eval, que otra corrida pudo cambiar: el mismo problema que `esfuerzo`. */
+  readonly zonaHoraria?: string;
 }
 
 export async function enviarTurno(o: {

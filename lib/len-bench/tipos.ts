@@ -56,6 +56,12 @@ export interface ContextoDeCalificacion {
   /** `true` si fue LEN quien publicó durante el encargo. */
   readonly publicadaPorLen: boolean;
   readonly conversacion: readonly Intercambio[];
+  /** Nombres de las herramientas que Len llamó (eventos `action`), en orden, sin repetir. */
+  readonly herramientas: readonly string[];
+  /** Los eventos `confirm` del encargo (publicar, responder…). */
+  readonly tarjetas: readonly Record<string, unknown>[];
+  /** La zona del dueño en esta corrida. */
+  readonly zona: string;
   readonly navegador: Browser;
   /** Los envíos de formulario que llegaron a la base para este proyecto. */
   readonly leerEnvios: () => Promise<readonly Record<string, string>[]>;
@@ -77,6 +83,23 @@ export interface ResultadoDeGrader {
   readonly puntua: boolean;
 }
 
+/** Lo que un caso de RESULTADOS planta en la base antes del primer turno
+ *  (plans/len-resultados/): visitas, formularios, mensajes. En la hora del dueño. */
+export interface Siembra {
+  readonly projectId: string;
+  readonly ownerId: string;
+  readonly zona: string;
+  readonly ahora: Date;
+}
+
+/** Al validar no hay Len: lo que diría y haría en esta variante, para los
+ *  graders que califican la CONVERSACIÓN y no la página. */
+export interface TurnoDeValidacion {
+  readonly len: readonly string[];
+  readonly herramientas: readonly string[];
+  readonly tarjetas: readonly Record<string, unknown>[];
+}
+
 export interface Encargo {
   readonly id: string;
   readonly nivel: Nivel;
@@ -90,10 +113,23 @@ export interface Encargo {
   readonly solucion: ProjectData;
   /** Variantes rotas plantadas. Entre `inicio` y éstas, cada grader que vota
    *  tiene que suspender al menos una vez. */
-  readonly rotas: readonly { readonly nombre: string; readonly datos: ProjectData }[];
+  readonly rotas: readonly {
+    readonly nombre: string;
+    readonly datos: ProjectData;
+    /** Lo que diría y haría Len en esta rota (casos de resultados). */
+    readonly turno?: TurnoDeValidacion;
+    /** Estado roto plantado DESPUÉS de sembrar (p. ej. un mensaje que «se mandó solo»). */
+    readonly despues?: (s: Siembra) => Promise<void>;
+  }[];
   /** El dueño pide publicar («…y publícalo»): la solución cuenta como publicada
    *  por Len al validar (ver `publicadaAlValidar`). */
   readonly publicaLen?: boolean;
+  /** Casos de resultados: se planta tras crear el proyecto y antes del primer turno. */
+  readonly sembrar?: (s: Siembra) => Promise<void>;
+  /** La zona del dueño que manda el panel con cada turno. Por omisión, `America/Mexico_City`. */
+  readonly zona?: string;
+  /** Lo que diría y haría Len en la solución (ver `TurnoDeValidacion`). */
+  readonly solucionTurno?: TurnoDeValidacion;
 }
 
 /**
