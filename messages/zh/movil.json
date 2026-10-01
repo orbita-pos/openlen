@@ -38,7 +38,8 @@
     "llamando": "正在呼叫…",
     "minimizar": "缩小通话",
     "agrandar": "全屏通话",
-    "microAjustes": "请在 设置 → 应用 → Len → 权限 中打开麦克风。"
+    "microAjustes": "请在 设置 → 应用 → Len → 权限 中打开麦克风。",
+    "tu": "你"
   },
   "tarjetas": {
     "visitas": "访问量 · 最近 7 天",
@@ -56,6 +57,11 @@
     "publicar": "发布",
     "publicando": "正在发布…",
     "publicadaEn": "已发布到 {url}",
-    "noPublicada": "发布失败。"
+    "noPublicada": "发布失败。",
+    "correo": "通过邮件回复",
+    "whatsapp": "通过 WhatsApp 回复",
+    "copiar": "复制",
+    "copiado": "✓ 已复制",
+    "asunto": "回复你的消息"
   }
 }

@@ -38,7 +38,8 @@
     "llamando": "Calling…",
     "minimizar": "Make the call small",
     "agrandar": "Full-screen call",
-    "microAjustes": "Turn on the microphone in Settings → Apps → Len → Permissions."
+    "microAjustes": "Turn on the microphone in Settings → Apps → Len → Permissions.",
+    "tu": "You"
   },
   "tarjetas": {
     "visitas": "Visits · last 7 days",
@@ -56,6 +57,11 @@
     "publicar": "Publish",
     "publicando": "Publishing…",
     "publicadaEn": "Live at {url}",
-    "noPublicada": "Couldn't publish."
+    "noPublicada": "Couldn't publish.",
+    "correo": "Reply by email",
+    "whatsapp": "Reply on WhatsApp",
+    "copiar": "Copy",
+    "copiado": "✓ Copied",
+    "asunto": "Reply to your message"
   }
 }

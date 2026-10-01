@@ -38,7 +38,8 @@
     "llamando": "Llamando…",
     "minimizar": "Hacer pequeña la llamada",
     "agrandar": "Llamada en pantalla completa",
-    "microAjustes": "Activa el micrófono en Ajustes → Apps → Len → Permisos."
+    "microAjustes": "Activa el micrófono en Ajustes → Apps → Len → Permisos.",
+    "tu": "Tú"
   },
   "tarjetas": {
     "visitas": "Visitas · últimos 7 días",
@@ -56,6 +57,11 @@
     "publicar": "Publicar",
     "publicando": "Publicando…",
     "publicadaEn": "Publicada en {url}",
-    "noPublicada": "No se pudo publicar."
+    "noPublicada": "No se pudo publicar.",
+    "correo": "Responder por correo",
+    "whatsapp": "Responder por WhatsApp",
+    "copiar": "Copiar",
+    "copiado": "✓ Copiado",
+    "asunto": "Respuesta a tu mensaje"
   }
 }

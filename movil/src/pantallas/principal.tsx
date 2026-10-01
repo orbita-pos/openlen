@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
+import { publishedHost } from "@/lib/publish/base-host";
 import { BASE } from "../config";
 import { Cara } from "../cara";
 import { Icono, type NombreDeIcono } from "../iconos";
@@ -82,7 +83,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   if (lista && lista.length === 0) return <p className="app-aviso">{tv("sinPaginas")}</p>;
   if (!lista || !id) return null;
 
-  const direccion = p?.subdomain ? `${p.subdomain}.openlen.app` : t("sinPublicar");
+  const direccion = p?.subdomain ? publishedHost(p.subdomain) : t("sinPublicar");
 
   return (
     <>

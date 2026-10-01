@@ -38,7 +38,8 @@
     "llamando": "Bellen…",
     "minimizar": "Gesprek klein maken",
     "agrandar": "Gesprek op volledig scherm",
-    "microAjustes": "Zet de microfoon aan via Instellingen → Apps → Len → Rechten."
+    "microAjustes": "Zet de microfoon aan via Instellingen → Apps → Len → Rechten.",
+    "tu": "Jij"
   },
   "tarjetas": {
     "visitas": "Bezoeken · afgelopen 7 dagen",
@@ -56,6 +57,11 @@
     "publicar": "Publiceren",
     "publicando": "Publiceren…",
     "publicadaEn": "Online op {url}",
-    "noPublicada": "Publiceren is niet gelukt."
+    "noPublicada": "Publiceren is niet gelukt.",
+    "correo": "Beantwoorden per e-mail",
+    "whatsapp": "Beantwoorden via WhatsApp",
+    "copiar": "Kopiëren",
+    "copiado": "✓ Gekopieerd",
+    "asunto": "Antwoord op je bericht"
   }
 }

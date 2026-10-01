@@ -38,7 +38,8 @@
     "llamando": "전화 거는 중…",
     "minimizar": "통화 작게 보기",
     "agrandar": "통화 전체 화면",
-    "microAjustes": "설정 → 앱 → Len → 권한에서 마이크를 켜 주세요."
+    "microAjustes": "설정 → 앱 → Len → 권한에서 마이크를 켜 주세요.",
+    "tu": "나"
   },
   "tarjetas": {
     "visitas": "방문 · 최근 7일",
@@ -56,6 +57,11 @@
     "publicar": "게시하기",
     "publicando": "게시 중…",
     "publicadaEn": "{url}에 게시됐어요",
-    "noPublicada": "게시하지 못했어요."
+    "noPublicada": "게시하지 못했어요.",
+    "correo": "이메일로 답장",
+    "whatsapp": "WhatsApp로 답장",
+    "copiar": "복사",
+    "copiado": "✓ 복사됨",
+    "asunto": "메시지에 대한 답장"
   }
 }

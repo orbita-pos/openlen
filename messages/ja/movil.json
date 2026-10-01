@@ -38,7 +38,8 @@
     "llamando": "発信中…",
     "minimizar": "通話を小さくする",
     "agrandar": "通話を全画面にする",
-    "microAjustes": "設定 → アプリ → Len → 権限 でマイクをオンにしてください。"
+    "microAjustes": "設定 → アプリ → Len → 権限 でマイクをオンにしてください。",
+    "tu": "あなた"
   },
   "tarjetas": {
     "visitas": "訪問数・過去7日間",
@@ -56,6 +57,11 @@
     "publicar": "公開する",
     "publicando": "公開中…",
     "publicadaEn": "{url} で公開しました",
-    "noPublicada": "公開できませんでした。"
+    "noPublicada": "公開できませんでした。",
+    "correo": "メールで返信",
+    "whatsapp": "WhatsAppで返信",
+    "copiar": "コピー",
+    "copiado": "✓ コピーしました",
+    "asunto": "メッセージへの返信"
   }
 }

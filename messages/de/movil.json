@@ -38,7 +38,8 @@
     "llamando": "Anruf läuft…",
     "minimizar": "Anruf verkleinern",
     "agrandar": "Anruf im Vollbild",
-    "microAjustes": "Aktiviere das Mikrofon unter Einstellungen → Apps → Len → Berechtigungen."
+    "microAjustes": "Aktiviere das Mikrofon unter Einstellungen → Apps → Len → Berechtigungen.",
+    "tu": "Du"
   },
   "tarjetas": {
     "visitas": "Besuche · letzte 7 Tage",
@@ -56,6 +57,11 @@
     "publicar": "Veröffentlichen",
     "publicando": "Wird veröffentlicht…",
     "publicadaEn": "Online unter {url}",
-    "noPublicada": "Veröffentlichen hat nicht geklappt."
+    "noPublicada": "Veröffentlichen hat nicht geklappt.",
+    "correo": "Per E-Mail antworten",
+    "whatsapp": "Auf WhatsApp antworten",
+    "copiar": "Kopieren",
+    "copiado": "✓ Kopiert",
+    "asunto": "Antwort auf deine Nachricht"
   }
 }

@@ -38,7 +38,8 @@
     "llamando": "Chiamata in corso…",
     "minimizar": "Rimpicciolisci la chiamata",
     "agrandar": "Chiamata a schermo intero",
-    "microAjustes": "Attiva il microfono in Impostazioni → App → Len → Autorizzazioni."
+    "microAjustes": "Attiva il microfono in Impostazioni → App → Len → Autorizzazioni.",
+    "tu": "Tu"
   },
   "tarjetas": {
     "visitas": "Visite · ultimi 7 giorni",
@@ -56,6 +57,11 @@
     "publicar": "Pubblica",
     "publicando": "Pubblicazione…",
     "publicadaEn": "Online su {url}",
-    "noPublicada": "Non sono riuscito a pubblicare."
+    "noPublicada": "Non sono riuscito a pubblicare.",
+    "correo": "Rispondi via email",
+    "whatsapp": "Rispondi su WhatsApp",
+    "copiar": "Copia",
+    "copiado": "✓ Copiato",
+    "asunto": "Risposta al tuo messaggio"
   }
 }

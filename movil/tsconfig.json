@@ -14,5 +14,5 @@
     "baseUrl": ".",
     "paths": { "@/*": ["../*"] }
   },
-  "include": ["src", "../components/llamada/cara.d.ts"]
+  "include": ["src", "../components/llamada/cara.d.ts", "../lib/document/tailwind-interno.d.ts"]
 }

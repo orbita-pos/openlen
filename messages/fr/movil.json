@@ -38,7 +38,8 @@
     "llamando": "Appel en cours…",
     "minimizar": "Réduire l’appel",
     "agrandar": "Appel en plein écran",
-    "microAjustes": "Activez le micro dans Paramètres → Applications → Len → Autorisations."
+    "microAjustes": "Activez le micro dans Paramètres → Applications → Len → Autorisations.",
+    "tu": "Vous"
   },
   "tarjetas": {
     "visitas": "Visites · 7 derniers jours",
@@ -56,6 +57,11 @@
     "publicar": "Publier",
     "publicando": "Publication…",
     "publicadaEn": "En ligne sur {url}",
-    "noPublicada": "Impossible de publier."
+    "noPublicada": "Impossible de publier.",
+    "correo": "Répondre par e-mail",
+    "whatsapp": "Répondre sur WhatsApp",
+    "copiar": "Copier",
+    "copiado": "✓ Copié",
+    "asunto": "Réponse à votre message"
   }
 }
