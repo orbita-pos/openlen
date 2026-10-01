@@ -150,6 +150,11 @@ export const KNOWN_TOOLS = new Set([
   "guardar_dato",
   "editar_dato",
   "quitar_dato",
+  // Len sabe de tus resultados (plans/len-resultados/).
+  "ver_visitas",
+  "ver_formularios",
+  "ver_mensajes",
+  "preparar_respuesta",
 ]);
 
 // F4-T8 i18n sweep: `summary` is otherwise an opaque identifier (a module

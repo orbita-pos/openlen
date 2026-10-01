@@ -39,7 +39,11 @@
       "redisenar_pagina": "Seite wird neu gestaltet",
       "guardar_dato": "Wird in deinen Daten gespeichert",
       "editar_dato": "Deine Daten werden aktualisiert",
-      "quitar_dato": "Wird aus deinen Daten entfernt"
+      "quitar_dato": "Wird aus deinen Daten entfernt",
+      "ver_visitas": "Besuche ansehen",
+      "ver_formularios": "Formulare ansehen",
+      "ver_mensajes": "Nachrichten ansehen",
+      "preparar_respuesta": "Antwort vorbereiten"
     },
     "action": {
       "home": "Startseite",

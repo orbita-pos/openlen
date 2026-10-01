@@ -39,7 +39,11 @@
       "redisenar_pagina": "Redesigning the page",
       "guardar_dato": "Saving to your data",
       "editar_dato": "Updating your data",
-      "quitar_dato": "Removing from your data"
+      "quitar_dato": "Removing from your data",
+      "ver_visitas": "Checking your visits",
+      "ver_formularios": "Checking your form submissions",
+      "ver_mensajes": "Checking your messages",
+      "preparar_respuesta": "Drafting your reply"
     },
     "action": {
       "home": "Home",

@@ -39,7 +39,11 @@
       "redisenar_pagina": "Refonte de la page",
       "guardar_dato": "Enregistrement dans vos données",
       "editar_dato": "Mise à jour de vos données",
-      "quitar_dato": "Suppression de vos données"
+      "quitar_dato": "Suppression de vos données",
+      "ver_visitas": "Consultation de vos visites",
+      "ver_formularios": "Consultation de vos formulaires",
+      "ver_mensajes": "Consultation de vos messages",
+      "preparar_respuesta": "Préparation de votre réponse"
     },
     "action": {
       "home": "Accueil",

@@ -67,6 +67,11 @@ describe("buildFunctionDeclarations", () => {
       "TodoWrite",
       "preguntar",
       "revertir_ultimo_cambio",
+      // Len sabe de tus resultados (plans/len-resultados/): una por fuente,
+      // siempre cargadas, como los conectores de Grok, dots y Claude.
+      "ver_visitas",
+      "ver_formularios",
+      "ver_mensajes",
     ]);
   });
 

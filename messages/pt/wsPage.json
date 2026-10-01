@@ -39,7 +39,11 @@
       "redisenar_pagina": "Redesenhando a página",
       "guardar_dato": "Salvando nos seus dados",
       "editar_dato": "Atualizando seus dados",
-      "quitar_dato": "Removendo dos seus dados"
+      "quitar_dato": "Removendo dos seus dados",
+      "ver_visitas": "Vendo suas visitas",
+      "ver_formularios": "Vendo seus formulários",
+      "ver_mensajes": "Vendo suas mensagens",
+      "preparar_respuesta": "Preparando sua resposta"
     },
     "action": {
       "home": "Início",

@@ -418,6 +418,8 @@ export default defineConfig({
       // la red ni el binding nativo — pero `include` es LISTA BLANCA y sin esta
       // línea no correría nunca.
       "lib/agent/internet.test.ts",
+      // Len sabe de tus resultados: las herramientas, con dobles (plans/len-resultados/).
+      "lib/agent/resultados.test.ts",
       // ⚰️ Aquí estaba "lib/agent/business.test.ts", que NO EXISTE — el fichero
       // se fue con el perfil de negocio y la entrada se quedó. vitest ignora en
       // silencio un patrón sin match, así que no rompía nada: sólo APARENTABA

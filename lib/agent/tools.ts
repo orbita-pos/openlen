@@ -72,6 +72,7 @@ import {
 } from "@/lib/agent/herramientas-de-ficheros";
 import { ficherosDelSitio, leerFichero, rutaDePagina, rutaRelativa } from "@/lib/agent/ficheros/sitio";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
+import { toolVerFormularios, toolVerMensajes, toolVerVisitas, type ResultadosDeps } from "@/lib/agent/resultados";
 
 // editar_imagen: the source image must decode as one of the formats Gemini's
 // image edit accepts, and stays under the same 6MB cap the ai-edit-image route
@@ -105,6 +106,9 @@ export interface AgentDeps {
   /** H3 — el aviso de cuota que daba `leer_estado`, o `null` con sitio de
    *  sobra. Se pide sólo al leer un fichero de /datos. */
   avisoDeCuota?(projectId: string, userId: string): Promise<string | null>;
+  /** Len sabe de tus resultados (plans/len-resultados/): visitas, formularios y
+   *  mensajes, contados por el servidor. Opcional: sin él las herramientas lo dicen. */
+  resultados?: ResultadosDeps;
   loadProject(projectId: string, userId: string): Promise<{
     data: ProjectData;
     title: string;
@@ -330,6 +334,30 @@ export function realDeps(): AgentDeps {
       const { avisoDeCuotaParaElModelo } = await import("@/lib/page-data/cuota");
       const cuota = await cuotaDelProyecto({ projectId, userId });
       return cuota ? avisoDeCuotaParaElModelo(cuota) : null;
+    },
+    // Len sabe de tus resultados. Import perezoso: las consultas tiran de la
+    // base y del chat, server-only.
+    resultados: {
+      async visitas(projectId, zona, rango) {
+        const { resumirVisitas } = await import("@/lib/resultados/visitas");
+        return resumirVisitas(projectId, zona, rango);
+      },
+      async formularios(projectId, userId, zona, filtro) {
+        const { resumirFormularios } = await import("@/lib/resultados/formularios");
+        return resumirFormularios(projectId, userId, zona, filtro);
+      },
+      async formulario(projectId, zona, id, opciones) {
+        const { abrirFormulario } = await import("@/lib/resultados/formularios");
+        return abrirFormulario(projectId, zona, id, opciones);
+      },
+      async mensajes(projectId, zona, filtro) {
+        const { resumirMensajes } = await import("@/lib/resultados/mensajes");
+        return resumirMensajes(projectId, zona, filtro);
+      },
+      async conversacion(projectId, zona, id) {
+        const { leerConversacion } = await import("@/lib/resultados/mensajes");
+        return leerConversacion(projectId, zona, id);
+      },
     },
     async loadProject(projectId, userId) {
       const rows = await db
@@ -1805,6 +1833,12 @@ async function ejecutarHerramienta(
         return await toolLeerDeInternet(session, deps, args);
       case "revertir_ultimo_cambio":
         return await toolRevertirUltimoCambio(session, deps, args);
+      case "ver_visitas":
+        return await toolVerVisitas(session, deps, args);
+      case "ver_formularios":
+        return await toolVerFormularios(session, deps, args);
+      case "ver_mensajes":
+        return await toolVerMensajes(session, deps, args);
       default:
         return { response: { ok: false, error: "herramienta desconocida" } };
     }

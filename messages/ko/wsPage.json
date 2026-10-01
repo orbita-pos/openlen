@@ -39,7 +39,11 @@
       "redisenar_pagina": "페이지 재디자인 중",
       "guardar_dato": "데이터에 저장하는 중",
       "editar_dato": "데이터를 업데이트하는 중",
-      "quitar_dato": "데이터에서 삭제하는 중"
+      "quitar_dato": "데이터에서 삭제하는 중",
+      "ver_visitas": "방문 수 확인 중",
+      "ver_formularios": "양식 확인 중",
+      "ver_mensajes": "메시지 확인 중",
+      "preparar_respuesta": "답장 준비 중"
     },
     "action": {
       "home": "홈",

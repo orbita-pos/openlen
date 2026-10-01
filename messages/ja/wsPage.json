@@ -39,7 +39,11 @@
       "redisenar_pagina": "ページを再デザイン中",
       "guardar_dato": "データに保存しています",
       "editar_dato": "データを更新しています",
-      "quitar_dato": "データから削除しています"
+      "quitar_dato": "データから削除しています",
+      "ver_visitas": "訪問数を確認中",
+      "ver_formularios": "フォームを確認中",
+      "ver_mensajes": "メッセージを確認中",
+      "preparar_respuesta": "返信を準備中"
     },
     "action": {
       "home": "ホーム",
