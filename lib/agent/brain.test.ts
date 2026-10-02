@@ -72,13 +72,28 @@ describe("el cerebro del Agente", () => {
     expect(fireworksStream.mock.calls[0][0].tools).toBeUndefined();
   });
 
-  it("descarta el canal de pensamiento y deja pasar lo demás", async () => {
+  // 🔴 H15 (01/10): el razonamiento LLEGA al loop, para que vuelva al modelo en
+  // el paso siguiente. En UN evento por respuesta y byte a byte, como el
+  // `translate.ts` de DeepSeek junta el canal entero en un bloque (y así la
+  // grabación no se llena de trocitos). Al dueño no: el loop no lo emite.
+  it("🔴 junta el razonamiento en UN evento entero antes del done, y lo demás pasa igual", async () => {
     fireworksStream.mockImplementation(async function* () {
-      yield { type: "reasoning_delta", text: "pensando en voz alta" };
+      yield { type: "reasoning_delta", text: "pensando " };
+      yield { type: "reasoning_delta", text: "en voz alta" };
       yield { type: "text_delta", text: "listo" };
+      yield { type: "done", stopReason: { kind: "end_turn" } };
     });
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
-    expect(await drain(brain.openStream([USER]))).toEqual([{ type: "text_delta", text: "listo" }]);
+    expect(await drain(brain.openStream([USER]))).toEqual([
+      { type: "text_delta", text: "listo" },
+      { type: "reasoning", text: "pensando en voz alta" },
+      { type: "done", stopReason: { kind: "end_turn" } },
+    ]);
+  });
+
+  it("una respuesta que no pensó no trae evento de razonamiento", async () => {
+    const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
+    expect(await drain(brain.openStream([USER]))).toEqual([{ type: "text_delta", text: "f" }]);
   });
 });
 
@@ -268,10 +283,10 @@ describe("el razonamiento es señal de vida para el reloj de silencio", () => {
       vi.useRealTimers();
     }
   }
-  it("🔴 pensar más que el reloj NO cancela el turno, y el razonamiento sigue sin llegar al loop", async () => {
+  it("🔴 pensar más que el reloj NO cancela el turno, y el razonamiento llega al loop en un solo evento", async () => {
     const { callado, salida } = await correr(true);
     expect(callado).not.toHaveBeenCalled();
-    expect(salida).toEqual([{ type: "text_delta", text: "listo" }]);
+    expect(salida).toEqual([{ type: "text_delta", text: "listo" }, { type: "reasoning", text: "pienso".repeat(5) }]);
   });
   it("BRAZO DE CONTROL: sin la señal, el mismo razonamiento dispara el reloj", async () => {
     const { callado } = await correr(false);

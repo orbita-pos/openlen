@@ -137,6 +137,27 @@ describe("puente del Agente al cable de Fireworks", () => {
     ]);
   });
 
+  // 🔴 H15 (01/10), como el arnés de DeepSeek: el razonamiento de cada paso
+  // vuelve con SU mensaje del asistente, con llamadas o sin ellas.
+  it("🔴 el razonamiento de cada paso viaja con su mensaje del asistente", () => {
+    const wire = messagesForFireworks([
+      { role: "user", content: "cambia la marca" },
+      { role: "assistant", content: "voy", reasoning: "primero busco dónde sale", functionCalls: [{ name: "Grep", args: {} }] },
+      { role: "user", content: "", functionResponses: [{ name: "Grep", response: { ok: true } }] },
+      { role: "assistant", content: "listo", reasoning: "ya no queda ninguna" },
+    ]);
+    expect(wire[1]).toMatchObject({ role: "assistant", content: "voy", reasoning: "primero busco dónde sale" });
+    expect(wire[3]).toEqual({ role: "assistant", content: "listo", reasoning: "ya no queda ninguna" });
+  });
+
+  it("un razonamiento vacío no añade campo", () => {
+    const wire = messagesForFireworks([
+      { role: "user", content: "hola" },
+      { role: "assistant", content: "hola", reasoning: "" },
+    ]);
+    expect(wire[1]).toEqual({ role: "assistant", content: "hola" });
+  });
+
   it("las imágenes de un mensaje de usuario viajan con él", () => {
     const foto = { mimeType: "image/jpeg", dataBase64: "AAAA" };
     const wire = messagesForFireworks([

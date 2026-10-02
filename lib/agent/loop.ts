@@ -518,8 +518,12 @@ function continuaLoCortado(parcial: string): string {
  * SE CORTÓ PENSANDO, SIN DECIR NADA. El modelo agotó la salida razonando y no
  * llegó a escribir ni texto ni llamadas: no hay parcial que devolverle. Como
  * Claude Code, que tiene un caso aparte para la respuesta que sólo pensó, se le
- * dice que no salió nada y que siga en pasos más pequeños. El razonamiento no se
- * le devuelve: Fireworks no lo acepta de vuelta como entrada.
+ * dice que no salió nada y que siga en pasos más pequeños.
+ *
+ * ⚰️ Aquí decía «el razonamiento no se le devuelve: Fireworks no lo acepta de
+ * vuelta como entrada». Era falso: la sonda del 01/10 midió que Fireworks pinta
+ * el `reasoning_content` devuelto entero (+57 tokens). Desde H15, lo que alcanzó
+ * a pensar vuelve antes de este aviso.
  */
 const SE_CORTO_PENSANDO =
   "SISTEMA (el usuario NO escribió esto): tu respuesta anterior se cortó porque agotaste el espacio de salida pensando, y no llegó a salir nada: ni texto ni llamadas. Sigue desde donde ibas, sin disculparte ni resumir, y divide lo que queda en pasos más pequeños: haz ya la siguiente llamada o contesta.";
@@ -1356,6 +1360,16 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     turns += 1;
 
     let turnText = "";
+    /** H15 · lo que el modelo PENSÓ en esta vuelta. Viaja en cada mensaje del
+     *  asistente que la vuelta empuja (`delAsistente`), como lo hace el arnés de
+     *  DeepSeek, y nunca se emite al dueño. */
+    let turnReasoning = "";
+    const delAsistente = (content: string, functionCalls?: PendingCall[]): Message => ({
+      role: "assistant",
+      content,
+      ...(turnReasoning ? { reasoning: turnReasoning } : {}),
+      ...(functionCalls ? { functionCalls } : {}),
+    });
     const calls: PendingCall[] = [];
     let sawError = false;
     /** La vuelta topó con `max_tokens`. Se decide DESPUÉS del stream: puede ser
@@ -1400,6 +1414,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         turnText += ev.text;
         algunaVueltaYaDijoAlgo = true;
         args.emit({ type: "text", text: ev.text });
+      } else if (ev.type === "reasoning") {
+        turnReasoning += ev.text;
       } else if (ev.type === "function_call") {
         calls.push({
           name: ev.name,
@@ -1459,9 +1475,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         continuaciones += 1;
         if (turnText.trim().length > 0) {
           textoArrastrado += turnText;
-          messages.push({ role: "assistant", content: turnText });
+          messages.push(delAsistente(turnText));
           messages.push({ role: "user", content: continuaLoCortado(turnText) });
         } else {
+          // H15: lo que alcanzó a pensar vuelve con el aviso, como conserva el
+          // arnés de DeepSeek lo que sí llegó de una respuesta cortada. Así
+          // «sigue desde donde ibas» tiene de dónde seguir.
+          if (turnReasoning) messages.push(delAsistente(""));
           messages.push({ role: "user", content: SE_CORTO_PENSANDO });
         }
         continue;
@@ -1512,7 +1532,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // Lo que NOMBRÓ como pendiente: sin estados no nombra ninguna.
         tareasReclamadas = [...pendientes.nombradas];
         dichoAntesDelAviso = { vuelta: turns, texto: turnText, tipo: "reclamo" };
-        messages.push({ role: "assistant", content: turnText });
+        messages.push(delAsistente(turnText));
         messages.push({
           role: "user",
           content: buildEvidenceInstruction(pendientes, lista.cambios),
@@ -1571,7 +1591,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       if (puedeActuar && !actuo && !yaSeInsistio && !yaSeExigioEvidencia && turnText.trim().length > 0) {
         yaSeInsistio = true;
         dichoAntesDelAviso = { vuelta: turns, texto: turnText, tipo: "insistencia" };
-        messages.push({ role: "assistant", content: turnText });
+        messages.push(delAsistente(turnText));
         messages.push({ role: "user", content: toolCalls === 0 ? INSISTE_SIN_HERRAMIENTAS : INSISTE_SIN_EFECTO });
         continue;
       }
@@ -1906,11 +1926,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
      */
     const empujarLoEjecutado = () => {
       if (functionResponses.length === 0) return;
-      messages.push({
-        role: "assistant",
-        content: turnText,
-        functionCalls: calls.slice(0, functionResponses.length),
-      });
+      messages.push(delAsistente(turnText, calls.slice(0, functionResponses.length)));
       messages.push({ role: "user", content: "", functionResponses });
     };
 
@@ -2171,7 +2187,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       return buildResult(false);
     }
 
-    messages.push({ role: "assistant", content: turnText, functionCalls: calls });
+    messages.push(delAsistente(turnText, calls));
     // 🔴 LO MEDIDO VIAJA AQUÍ, no dentro del resultado de `editar_pagina`.
     //
     // El resultado de la herramienta es SUYO: dice si guardó y qué guardó. Lo

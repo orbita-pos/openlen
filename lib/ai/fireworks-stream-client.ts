@@ -60,6 +60,8 @@ export interface FireworksStreamMessage {
   readonly toolCalls?: readonly FireworksStreamToolCall[];
   /** Turno de usuario: las imágenes que van pegadas a ESTE mensaje. */
   readonly images?: readonly InlineImage[];
+  /** Turno del asistente: su razonamiento, que vuelve como `reasoning_content`. */
+  readonly reasoning?: string;
 }
 
 export interface FireworksStreamRequest {
@@ -195,6 +197,13 @@ function wireMessage(message: FireworksStreamMessage): Record<string, unknown> {
   return {
     role: "assistant",
     content: message.content,
+    // H15 (01/10). DeepSeek lo exige con herramientas y Fireworks avisa de que,
+    // sin él, el modelo pierde su razonamiento anterior: la plantilla de V4.1
+    // pinta el paso como `<think></think>`. Medido con la sonda del 01/10:
+    // Fireworks lo renderiza entero (+57 tokens). Como el arnés de DeepSeek, va
+    // en todo asistente que pensó, con llamadas o sin ellas, y si no pensó no
+    // hay campo.
+    ...(message.reasoning ? { reasoning_content: message.reasoning } : {}),
     ...(message.toolCalls?.length
       ? {
           tool_calls: message.toolCalls.map((call) => ({

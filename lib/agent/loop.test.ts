@@ -3962,3 +3962,97 @@ describe("el techo de dinero del turno", () => {
     expect(r.finalText).toBe("Listo, todo hecho.");
   });
 });
+
+// ── H15 · LEN RECUERDA LO QUE PENSÓ (01/10) ──────────────────────────────────
+//
+// Len tiraba su razonamiento entre pasos: cada vuelta trabajaba sin el porqué de
+// las anteriores, y Fireworks le pintaba cada paso como `<think></think>`. El
+// arnés de DeepSeek (con el que se evaluó V4.1) lo devuelve en CADA mensaje del
+// asistente que pensó, con llamadas o sin ellas, y conserva lo pensado de una
+// respuesta cortada por tope. Al dueño no se le enseña.
+describe("H15 · el razonamiento vuelve al modelo dentro del turno", () => {
+  const pensado = (text: string): StreamEvent => ({ type: "reasoning", text });
+  const razonamientos = (m: Message[]) => m.filter((x) => x.role === "assistant").map((x) => x.reasoning);
+
+  it("🔴 cada mensaje del asistente lleva el razonamiento de SU vuelta", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [pensado("busco la marca"), { type: "function_call", name: "activar_modulo", args: { modulo: "members" } }, usage(5), done],
+      [pensado("ahora el pie"), { type: "function_call", name: "activar_modulo", args: { modulo: "bookings" } }, usage(5), done],
+      [{ type: "text_delta", text: "Listo." }, usage(5), done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "activa las dos" }], tools: [],
+      openStream: (m) => { vistos.push(m.map((x) => ({ ...x }))); return guion(m); },
+      runTool: async (name) => ({ response: { ok: true }, action: { tool: name, ok: true, summary: name } }),
+      emit: () => {},
+    });
+    expect(r.terminalError).toBe(false);
+    expect(vistos).toHaveLength(3);
+    expect(razonamientos(vistos[1]!)).toEqual(["busco la marca"]);
+    expect(razonamientos(vistos[2]!)).toEqual(["busco la marca", "ahora el pie"]);
+  });
+
+  it("🔴 también el paso de sólo texto al que se le insiste", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [pensado("creo que ya está"), { type: "text_delta", text: "¡Claro! Lo agrego. Listo." }, done],
+      [{ type: "function_call", name: "editar_pagina", args: {} }, done],
+      [{ type: "text_delta", text: "Ahora sí." }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "agregame un link" }], tools: [], maxTurns: 6,
+      openStream: (m) => { vistos.push(m.map((x) => ({ ...x }))); return guion(m); },
+      runTool: async () => ({ response: { ok: true }, mutoDurable: true }),
+      emit: () => {},
+    });
+    expect(razonamientos(vistos[1]!)).toEqual(["creo que ya está"]);
+  });
+
+  it("🔴 se cortó pensando: lo que pensó vuelve con el aviso, para seguir donde iba", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [pensado("el titular va en el h1, y luego"), usage(32_768), { type: "done", stopReason: { kind: "max_tokens" } }],
+      [{ type: "text_delta", text: "Listo." }, done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: (m) => { vistos.push(m.map((x) => ({ ...x }))); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: () => {},
+    });
+    expect(r.terminalError).toBe(false);
+    const asistente = vistos[1]!.find((x) => x.role === "assistant");
+    expect(asistente).toEqual({ role: "assistant", content: "", reasoning: "el titular va en el h1, y luego" });
+    expect(vistos[1]!.at(-1)!.content).toContain("no llegó a salir nada");
+  });
+
+  it("una vuelta que no pensó no lleva el campo", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [{ type: "function_call", name: "activar_modulo", args: { modulo: "members" } }, done],
+      [{ type: "text_delta", text: "Listo." }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: (m) => { vistos.push(m.map((x) => ({ ...x }))); return guion(m); },
+      runTool: async (name) => ({ response: { ok: true }, action: { tool: name, ok: true, summary: name } }),
+      emit: () => {},
+    });
+    expect(vistos[1]!.find((x) => x.role === "assistant")).not.toHaveProperty("reasoning");
+  });
+
+  it("al dueño no le llega ni una letra de lo pensado", async () => {
+    const eventos: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [pensado("SECRETO-PENSADO"), { type: "function_call", name: "activar_modulo", args: { modulo: "members" } }, done],
+        [pensado("SECRETO-PENSADO"), { type: "text_delta", text: "Listo." }, done],
+      ),
+      runTool: async (name) => ({ response: { ok: true }, action: { tool: name, ok: true, summary: name } }),
+      emit: (e) => eventos.push(e),
+    });
+    expect(JSON.stringify(eventos)).not.toContain("SECRETO-PENSADO");
+  });
+});

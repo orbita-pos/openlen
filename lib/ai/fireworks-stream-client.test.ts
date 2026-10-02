@@ -157,6 +157,32 @@ describe("transporte de texto en streaming", () => {
     expect(body.messages[2]).toEqual({ role: "tool", tool_call_id: "a", content: '{"ok":true}' });
   });
 
+  // 🔴 H15 (01/10): como el arnés de DeepSeek (`serializeAssistant`, nota
+  // `2026-08-19-deepseek-reasoning-passback-every-turn`): el asistente que pensó
+  // lleva su `reasoning_content`, haya llamado herramientas o no; el que no
+  // pensó no lleva el campo. Sin él, Fireworks le pinta `<think></think>`.
+  it("🔴 el asistente que pensó lleva su reasoning_content; el que no, ningún campo", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "ok" }, "stop"));
+    await drain(c.stream({
+      ...REQUEST,
+      tools: [{ type: "function", function: { name: "leer_estado" } }],
+      messages: [
+        { role: "user", content: "activa reservas" },
+        { role: "assistant", content: "", reasoning: "leo primero", toolCalls: [{ id: "a", name: "leer_estado", argumentsJson: "{}" }] },
+        { role: "tool", content: '{"ok":true}', toolCallId: "a" },
+        { role: "assistant", content: "¿cuál?", reasoning: "falta saber cuál" },
+        { role: "user", content: "la primera" },
+        { role: "assistant", content: "hecho", reasoning: "" },
+      ],
+    }));
+    const body = JSON.parse((fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body);
+    expect(body.messages[1]).toMatchObject({ role: "assistant", reasoning_content: "leo primero" });
+    expect(body.messages[3]).toEqual({ role: "assistant", content: "¿cuál?", reasoning_content: "falta saber cuál" });
+    expect(body.messages[5]).toEqual({ role: "assistant", content: "hecho" });
+    expect(body.messages[0]).not.toHaveProperty("reasoning_content");
+    expect(body.messages[2]).not.toHaveProperty("reasoning_content");
+  });
+
   // 🔴 H5 (2026-09-26): el defecto ya no ata. El 100 que viajaba aquí daba p50
   // 100 y máximo 113 en los 1.473 pasos del control de Len-Bench. Claude Code
   // manda `{type:"adaptive"}`: el modelo decide cuánto pensar.

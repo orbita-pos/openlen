@@ -60,24 +60,38 @@ export interface AgentBrain {
 }
 
 /**
- * El loop conoce los eventos del gateway y nada más. DeepSeek añade
- * uno —el pensamiento por canal aparte— que aquí se DESCARTA a propósito: el
- * Agente narra lo que hace en `text`, y volcarle al usuario la cadena de
- * pensamiento cruda del modelo es ruido, no transparencia. Con `page_edit` en
- * esfuerzo `none` ese canal ni siquiera se abre; el descarte existe para que
- * encenderlo algún día no cambie lo que la gente ve.
+ * El loop conoce los eventos del gateway y nada más. DeepSeek manda el
+ * pensamiento por un canal aparte, en trozos.
+ *
+ * 🔴 H15 (01/10): ya NO se descarta. Len lo tiraba, y cada paso trabajaba sin el
+ * porqué de los anteriores. Aquí se juntan los trozos y salen como UN evento
+ * `reasoning` con el texto entero, justo antes del `done`, como el `translate.ts`
+ * del arnés de DeepSeek junta el canal en un bloque. El loop lo devuelve al
+ * modelo en el paso siguiente. Al dueño sigue sin llegarle: el Agente narra en
+ * `text`, y la cadena cruda de pensamiento es ruido, no transparencia.
+ *
+ * Cada trozo sigue avisando a `alPensar`, que es la señal de vida del reloj de
+ * silencio: el evento junto llega al final, y pensar 3 minutos seguidos no puede
+ * parecer un cuelgue.
  */
 export async function* asAgentStream(
   source: AsyncIterable<FireworksStreamEvent>,
   alPensar?: () => void,
 ): AsyncIterable<StreamEvent> {
+  let pensado = "";
   for await (const event of source) {
     if (event.type === "reasoning_delta") {
       alPensar?.();
+      pensado += event.text;
       continue;
+    }
+    if (event.type === "done" && pensado) {
+      yield { type: "reasoning", text: pensado };
+      pensado = "";
     }
     yield event;
   }
+  if (pensado) yield { type: "reasoning", text: pensado };
 }
 
 // 16k se quedaba corto y el turno moría truncado: el caso del interruptor de

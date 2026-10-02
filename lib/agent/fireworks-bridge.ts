@@ -51,6 +51,13 @@ export function toolsForFireworks(declarations: readonly Record<string, unknown>
     }));
 }
 
+/** Lo que el asistente pensó en ese paso (H15). Sólo del asistente y sólo si
+ *  pensó algo: un campo vacío no dice nada y cambiaría el cable de todos los
+ *  turnos que no piensan. */
+function razonamiento(message: Message): { reasoning?: string } {
+  return message.role === "assistant" && message.reasoning ? { reasoning: message.reasoning } : {};
+}
+
 /**
  * Convierte la conversación del Agente al cable.
  *
@@ -104,13 +111,14 @@ export function messagesForFireworks(messages: readonly Message[]): FireworksStr
         argumentsJson: JSON.stringify(call.args ?? {}),
       }));
       pending = calls;
-      out.push({ role: "assistant", content: message.content, toolCalls: calls });
+      out.push({ role: "assistant", content: message.content, ...razonamiento(message), toolCalls: calls });
       return;
     }
     pending = [];
     out.push({
       role: message.role,
       content: message.content,
+      ...razonamiento(message),
       // La foto del dueño va pegada a SU mensaje (como una imagen pegada en
       // Claude Code) y el cable la pinta ahí.
       ...(message.role === "user" && message.images?.length ? { images: message.images } : {}),

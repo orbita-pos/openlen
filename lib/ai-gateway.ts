@@ -58,6 +58,10 @@ export interface Message {
    *  dueño adjuntó. Viajan con él en cada llamada, como una imagen pegada en
    *  Claude Code. Nunca se guardan: la transcripción sólo guarda texto. */
   images?: readonly InlineImage[];
+  /** Asistente: lo que el modelo PENSÓ en ese paso, entero y tal cual llegó.
+   *  Vuelve al modelo en los pasos siguientes del turno (H15, como el arnés de
+   *  DeepSeek); al dueño no se le enseña, y no se guarda en la base. */
+  reasoning?: string;
 }
 
 /** A reference image attached to a request. Rendered as a native Gemini
@@ -140,6 +144,10 @@ export type StreamEvent =
       thinkingTokens: number;
     }
   | { type: "done"; stopReason: StopReason }
+  /** Lo que el modelo pensó en esta respuesta, ENTERO y en un solo evento
+   *  (`asAgentStream` junta los trozos). El loop lo devuelve al modelo con el
+   *  mensaje del asistente (H15) y nunca se lo emite al dueño. */
+  | { type: "reasoning"; text: string }
   | {
       type: "function_call";
       name: string;

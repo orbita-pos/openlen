@@ -106,6 +106,18 @@ describe("transcripcionParaGuardar y leidosSembrados — lo leído dura la conve
     );
     expect(JSON.stringify(t)).not.toContain("AAAA");
   });
+
+  // H15 es la fase 1: lo pensado vuelve DENTRO del turno. Guardarlo para los
+  // turnos siguientes (la fase 2) es otra decisión de Jesús: que no entre por la
+  // puerta de atrás de la transcripción.
+  it("no guarda el razonamiento: entre turnos no vuelve (fase 2 sin decidir)", () => {
+    const t = transcripcionParaGuardar(
+      [{ role: "user", content: "x" }, { role: "assistant", content: "listo", reasoning: "PENSADO-DEL-PASO" }],
+      new Map(),
+    );
+    expect(JSON.stringify(t)).not.toContain("PENSADO-DEL-PASO");
+    expect(t.mensajes[1]).toEqual({ role: "assistant", content: "listo" });
+  });
 });
 
 // El aviso de «el turno anterior fue mudo» miraba el ÚLTIMO mensaje del
