@@ -87,17 +87,20 @@ function Explorador({
     };
   }, [projectId]);
 
+  // Mientras llega la lista, o si no llega, el árbol enseña al menos la página
+  // abierta: ésa ya la tenemos, y la lente nunca enseña menos que antes.
   const arbol = useMemo(
     () =>
       typeof lista === "string"
-        ? []
+        ? arbolDeFicheros([{ ruta: rutaActual }])
         : arbolDeFicheros([...lista.ficheros.map((f) => ({ ruta: f.ruta })), ...lista.perezosos.map((ruta) => ({ ruta, perezoso: true }))]),
-    [lista],
+    [lista, rutaActual],
   );
   // Las carpetas abiertas se deciden UNA vez, al llegar la lista; luego mandan los clics.
+  // Al llegar la lista DE VERDAD, no con el árbol provisional de una sola página.
   useEffect(() => {
-    if (arbol.length > 0 && abiertas === null) setAbiertas(abiertasAlEntrar(arbol, elegido));
-  }, [arbol, abiertas, elegido]);
+    if (typeof lista !== "string" && abiertas === null) setAbiertas(abiertasAlEntrar(arbol, elegido));
+  }, [lista, arbol, abiertas, elegido]);
 
   const pedirPerezoso = (ruta: string) => {
     const ya = perezosos[ruta];
@@ -131,7 +134,8 @@ function Explorador({
   const pintar = (nodos: readonly NodoDelArbol[], nivel: number): ReactNode => (
     <ul>
       {nodos.map((n) => {
-        const abierta = abiertas?.has(n.ruta) ?? false;
+        // Sin decisión todavía (la lista no llegó), abierta la que lleva a la elegida.
+        const abierta = abiertas?.has(n.ruta) ?? elegido.startsWith(`${n.ruta}/`);
         const sangria = { paddingLeft: 8 + nivel * 12 };
         return (
           <li key={n.ruta}>
@@ -264,14 +268,15 @@ function Bloque({
       {/* El código NUNCA se interpreta: va como texto dentro de <code>. Es la
           misma regla que el resto del taller — lo que el modelo escribe no se
           ejecuta fuera de su cápsula. */}
-      <pre className="overflow-x-auto p-3 text-[11.5px] leading-[1.55]">
-        <code className="block font-mono whitespace-pre">
+      {/* LAS LÍNEAS BAJAN, no se van a la derecha (Jesús, 02/10): el «ajuste
+          de línea» de VS Code. Una línea larga —un HTML en una sola fila— se
+          parte por donde haga falta, y su número queda en la primera fila. */}
+      <pre className="p-3 text-[11.5px] leading-[1.55]">
+        <code className="block font-mono">
           {lineas.map((linea, i) => (
-            <span key={i} className="block">
-              <span className="inline-block w-9 select-none pr-3 text-right fg-faint tabular">
-                {i + 1}
-              </span>
-              {linea || " "}
+            <span key={i} className="flex">
+              <span className="w-9 shrink-0 select-none pr-3 text-right fg-faint tabular">{i + 1}</span>
+              <span className="min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:anywhere]">{linea || " "}</span>
             </span>
           ))}
         </code>
