@@ -72,6 +72,9 @@ import {
 } from "@/lib/agent/herramientas-de-ficheros";
 import { ficherosDelSitio, leerFichero, rutaDePagina, rutaRelativa } from "@/lib/agent/ficheros/sitio";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
+import { NOMBRE_BASH } from "@/lib/agent/terminal/declaracion";
+import { toolBash } from "@/lib/agent/terminal/herramienta";
+import type { TerminalDeLen } from "@/lib/agent/terminal/terminal";
 import {
   toolPrepararRespuesta,
   toolVerFormularios,
@@ -616,6 +619,11 @@ export interface AgentSession {
    *  un precio o un enlace que ya estaba en OTRA página no lo inventó Len al
    *  copiarlo (H13). Se toma en la primera escritura del turno. */
   sitioAlEmpezar?: string;
+  /** F1 · la terminal de este turno (`lib/agent/terminal/`), si Len la usó, y
+   *  cómo estaban sus ficheros tras el último comando: contra eso se decide
+   *  qué cambió en el siguiente. Se cierra al acabar el turno. */
+  terminal?: TerminalDeLen;
+  fotoDeLaTerminal?: Record<string, string>;
   /** La zona del usuario (IANA). La manda el panel con cada turno; sin ella,
    *  la guardada; sin ninguna, `ZONA_SIN_DATO`. Las herramientas de resultados
    *  cuentan «hoy» en esta zona (plans/len-resultados/diseno.md §7). */
@@ -700,6 +708,15 @@ export interface ToolOutcome {
    *  `crear_pagina` no lo trae: una página que acaba de nacer no tiene «antes»
    *  al que volver, y `restaurar_version` tampoco — ya es un viaje al pasado. */
   versionPrevia?: string | null;
+  /** F1 · las OTRAS páginas que escribió la misma llamada (un `sed -i` de la
+   *  terminal sobre varias): el bucle hace con cada una lo mismo que con
+   *  `updatedHtml`/`page`/`htmlPrevio`/`versionPrevia`. */
+  masPaginas?: readonly {
+    readonly html: string;
+    readonly page: string | null;
+    readonly htmlPrevio?: string | null;
+    readonly versionPrevia?: string | null;
+  }[];
   /** El gate de publicación (publicar). Presente ⇒ el loop emite un evento
    *  `confirm` y le pasa al modelo un estado "esperando_confirmacion". La
    *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única
@@ -1811,6 +1828,7 @@ async function ejecutarHerramienta(
   name: string,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
+  if (name === NOMBRE_BASH) return await toolBash(session, deps, args);
   if (esHerramientaDeFicheros(name)) {
     const out = await {
       Read: toolRead,

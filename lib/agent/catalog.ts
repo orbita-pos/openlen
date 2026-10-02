@@ -27,6 +27,7 @@ import { DECLARACION_TODO_WRITE } from "@/lib/agent/ficheros/todo-write";
 // cuando producción publica en .app desde el 2026-08-23.
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { DECLARACIONES_DE_FICHEROS } from "@/lib/agent/ficheros/declaraciones";
+import { DECLARACION_BASH, SUSTITUIDAS_POR_LA_TERMINAL, terminalEncendida } from "@/lib/agent/terminal/declaracion";
 import { RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
 import { buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 
@@ -117,7 +118,10 @@ export function buildFunctionDeclarations(
   const fuera = new Set<string>();
   if (capacidades.mirarPagina === false) fuera.add("mirar_pagina");
   if (capacidades.usarPagina === false) fuera.add("usar_pagina");
-  const declaraciones = buildTodasLasDeclaraciones();
+  // F1 (plans/len-agente-2026): con la terminal, `bash` entra y Grep y Glob salen.
+  const conTerminal = terminalEncendida(_env);
+  if (conTerminal) for (const n of SUSTITUIDAS_POR_LA_TERMINAL) fuera.add(n);
+  const declaraciones = [...buildTodasLasDeclaraciones(), ...(conTerminal ? [DECLARACION_BASH] : [])];
   return fuera.size === 0 ? declaraciones : declaraciones.filter((d) => !fuera.has(String(d.name)));
 }
 

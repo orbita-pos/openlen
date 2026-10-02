@@ -2062,6 +2062,19 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       if (outcome.htmlPrevio !== undefined && !previoPorPagina.has(outcome.page ?? null)) {
         previoPorPagina.set(outcome.page ?? null, outcome.htmlPrevio);
       }
+      // F1 (plans/len-agente-2026): un comando de la terminal puede escribir
+      // VARIAS páginas. Cada una, igual que la primera: al lienzo, a medir, y
+      // con su línea base.
+      for (const otra of outcome.masPaginas ?? []) {
+        args.emit({ type: "html", html: otra.html, page: otra.page, ...(otra.versionPrevia ? { versionPrevia: otra.versionPrevia } : {}) });
+        if (!nula) {
+          const tal = sinOpIds(otra.html);
+          lastMutation = { html: otra.html, page: otra.page, taggedHtml: etiquetarConPosiciones(tal) };
+          porMedir.set(otra.page, { html: tal, gemelo: lastMutation.taggedHtml! });
+          ultimaPorPagina.set(otra.page, lastMutation);
+        }
+        if (otra.htmlPrevio !== undefined && !previoPorPagina.has(otra.page)) previoPorPagina.set(otra.page, otra.htmlPrevio);
+      }
       // Lo que la escritura dejó mal, para el `<new-diagnostics>` de la tanda.
       if (outcome.diagnosticos?.length) diagnosticosDeLaTanda.push(...outcome.diagnosticos);
       // Lo durable incluye los cambios de AJUSTES, que no emiten html: módulos,

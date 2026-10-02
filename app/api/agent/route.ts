@@ -66,6 +66,7 @@ import { avisoDelTurno } from "@/lib/agent/aviso-del-turno";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { conSenales, relojDeSilencio } from "@/lib/agent/reloj-de-silencio";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
+import { cerrarTerminalDeLaSesion } from "@/lib/agent/terminal/herramienta";
 import { observarPagina, verifyEditedPage } from "@/lib/agent/verify";
 import { usarPagina } from "@/lib/agent/usar-pagina";
 import {
@@ -1524,6 +1525,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         close();
       } finally {
         reloj.parar();
+        // La terminal del turno (F1, plans/len-agente-2026), si se usó: su hilo
+        // muere con el turno. Nunca tumba el cierre.
+        await cerrarTerminalDeLaSesion(agentSession).catch(() => undefined);
         // 🔴 LA FILA DEL TURNO, TAMBIÉN AQUÍ, por si ningún final llegó a
         // cerrarla (`cerrarFila` es idempotente). ANTES de sacar el turno del
         // mapa: mientras el mapa lo tiene, una fila `en_curso` se lee como viva

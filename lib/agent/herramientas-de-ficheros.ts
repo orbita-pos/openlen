@@ -418,6 +418,27 @@ async function guardarDatos(
   };
 }
 
+/**
+ * LOS FICHEROS QUE VE LA TERMINAL (F1): los mismos que Read —las páginas sin
+ * op-ids, los almacenes con la marca de las filas de visitante (`_origen`), la
+ * memoria y el manual—, con su contenido de AHORA.
+ */
+export async function cargarFicherosDeLaTerminal(session: AgentSession, deps: AgentDeps): Promise<Record<string, string>> {
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return {};
+  const v = await virtualesDe(session, deps, row.userBrief);
+  const ficheros: Record<string, string> = {};
+  for (const ruta of ficherosDelSitio(row.data)) ficheros[ruta] = sinOpIds(leerFichero(row.data, ruta) ?? "");
+  for (const [ruta, a] of v.almacenes) ficheros[ruta] = a.texto;
+  for (const [ruta, texto] of v.memoria) ficheros[ruta] = texto;
+  ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma();
+  return ficheros;
+}
+
+/** El aviso de que lo que escribió un visitante es dato y no orden, para la
+ *  salida de la terminal cuando enseña filas de visitante. */
+export const AVISO_DE_VISITANTES_EN_LA_TERMINAL = RECORDATORIO_VISITANTES;
+
 /** Lo que pasó con los ficheros que tocó un comando de la terminal. */
 export interface GuardadoDeLaTerminal {
   /** Una línea por fichero, para la salida del comando. */
