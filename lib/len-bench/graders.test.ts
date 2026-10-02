@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
   contieneTexto,
   datosDeLaFicha,
+  enCadaPagina,
   enElFichero,
   enlacesInternosVan,
   enlaceWhatsApp,
@@ -302,6 +303,17 @@ describe("paginas-que-existen", () => {
     const conMenu = { html: SOLUCION_TAQUERIA, pages: { menu: { html: "<h1>Menú</h1>" } } };
     expect((await calificarCon(paginasQueExisten(["menu"]), conMenu)).paso).toBe(true);
     expect((await calificarCon(paginasQueExisten(["menu"]), sol)).paso).toBe(false);
+  });
+});
+
+describe("en-cada-pagina", () => {
+  const sitio = (contacto: string) => ({ html: SOLUCION_TAQUERIA, pages: { menu: { html: `<title>Menú · Taquería El Farol</title>${MENU_TAQUERIA}` }, contacto: { html: contacto } } });
+  it("verde si cada página lo tiene, aunque sea en el <title>; rojo nombrando la que no", async () => {
+    expect((await calificarCon(enCadaPagina("nombre-en-cada-pagina", /El Farol/), sitio("<h1>Contacto · El Farol</h1>"))).paso).toBe(true);
+    const r = await calificarCon(enCadaPagina("nombre-en-cada-pagina", /El Farol/), sitio("<h1>Contacto</h1>"));
+    expect(r.paso).toBe(false);
+    expect(r.explicacion).toContain("/contacto/");
+    expect(r.explicacion).not.toContain("/menu/");
   });
 });
 

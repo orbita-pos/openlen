@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marejada — Hostal frente al break · Sayulita, Nayarit</title>
+<meta name="description" content="Dorms y privadas a 90 pasos de la ola. Tablas en renta, desayuno de la casa y cero televisores. Sayulita, Nayarit.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #F9FAF8;
+    --surface: #EFF3F1;
+    --surface-2: #E4ECE9;
+    --fg: #1D2422;
+    --fg-muted: #57615E;
+    --fg-faint: #636D6A;
+    --border: rgba(29,36,34,0.08);
+    --border-strong: rgba(29,36,34,0.12);
+    --accent: #2E7A8C;
+    --accent-r: 46,122,140;
+    --accent-ink: #EDF7F9;
+    --radius: 14px;
+    --radius-sm: 9px;
+    --radius-lg: 22px;
+    --font-display: "Space Grotesk", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --warn: #A3671C;
+    --danger: #8F2D22;
+  }
+  :root.dark {
+    --bg: #101716;
+    --surface: #17201E;
+    --surface-2: #1F2A28;
+    --fg: #ECF1F0;
+    --fg-muted: rgba(236,241,240,0.66);
+    --fg-faint: rgba(236,241,240,0.56);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #64AFC2;
+    --accent-r: 100,175,194;
+    --accent-ink: #0A1E24;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-feature-settings: "ss01","cv11"; -webkit-font-smoothing: antialiased; }
+  .display { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.025em; line-height: 0.98; }
+  .mono { font-family: var(--font-mono); }
+  .hairline { border-color: var(--border); }
+  .hairline-2 { border-color: var(--border-strong); }
+  .lift { transition: transform 100ms ease, box-shadow 100ms ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0,0,0,0.09); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: rgba(var(--accent-r), 0.92); }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fg-faint); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .half-tone { opacity: 0.45; }
+  .ph-ola { background: linear-gradient(150deg, rgba(var(--accent-r),0.28), var(--surface-2) 52%, var(--surface)); }
+  .ph-arena { background: linear-gradient(125deg, var(--surface-2), var(--surface) 55%, rgba(var(--accent-r),0.12)); }
+  .grain::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background-image: radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px); background-size: 26px 26px; opacity: 0.5; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="sticky top-0 z-50 border-b hairline backdrop-blur-md" style="background: color-mix(in srgb, var(--bg) 88%, transparent);">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3 15c2-4 4-6 6-6 3 0 3.5 4 6 4 1.7 0 3.3-1.3 6-4-2 5-5 8-9 8-4.5 0-7.5-1-9-2z" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round"/>
+      </svg>
+      <span class="display text-[18px]">Marejada</span>
+    </a>
+    <div class="hidden items-center gap-7 text-[13.5px] font-medium text-[color:var(--fg-muted)] md:flex">
+      <a href="#cuartos" class="hover:text-[color:var(--fg)]">Cuartos</a>
+      <a href="#lacasa" class="hover:text-[color:var(--fg)]">La casa</a>
+      <a href="#surf" class="hover:text-[color:var(--fg)]">Surf</a>
+    </div>
+    <a href="#reservar" class="btn-primary lift inline-flex h-9 items-center rounded-full px-4 text-[13.5px] font-medium">Reserva tu cama</a>
+  </nav>
+</header>
+
+<!-- HERO EDITORIAL SPLIT -->
+<section class="mx-auto max-w-6xl px-5 pb-16 pt-10 md:pb-24 md:pt-14">
+  <div class="grid items-stretch gap-8 lg:grid-cols-[1fr_1.1fr] lg:gap-14">
+    <div class="ph-ola grain relative order-2 aspect-[4/5] rounded-[var(--radius-lg)] border hairline lg:order-1 lg:aspect-auto" data-ol-photo="surfer walking beach board sunset"></div>
+    <div class="order-1 flex flex-col justify-center lg:order-2">
+      <div class="mono inline-flex w-fit items-center gap-2 rounded-full border hairline bg-[var(--surface)] py-1 pl-2.5 pr-3.5 text-[11px] uppercase tracking-[0.16em] text-[color:var(--fg-muted)]">
+        <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"></span>
+        Sayulita · a 90 pasos del break
+      </div>
+      <h1 class="display mt-6 text-[42px] sm:text-[56px] lg:text-[60px]">
+        Despiertas, cruzas la calle, <span class="text-[color:var(--accent)]">ya estás en el agua.</span>
+      </h1>
+      <p class="mt-6 max-w-md text-[15px] leading-relaxed text-[color:var(--fg-muted)]">
+        Hostal de doce camas y cuatro privadas: tablas en renta abajo, desayuno de la casa a las 7:30 y una terraza donde todos acaban contando la misma ola. Sin tele. El mar es mejor canal.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href="#cuartos" class="btn-primary lift inline-flex h-11 items-center gap-1.5 rounded-full px-5 text-[14px] font-medium">
+          Ver cuartos y precios
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#surf" class="lift inline-flex h-11 items-center rounded-full border hairline-2 bg-[var(--surface)] px-5 text-[14px] font-medium">Tablas y clases</a>
+      </div>
+      <div class="mono mt-7 text-[12px] tracking-wide text-[color:var(--fg-faint)] tabular">Desayuno incluido · lockers con candado · check-in 2 pm</div>
+    </div>
+  </div>
+</section>
+
+<!-- CUARTOS -->
+<section id="cuartos" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-3xl px-5 py-16 md:py-24">
+    <div class="text-center">
+      <div class="eyebrow">Cuartos</div>
+      <h2 class="display mt-3 text-[32px] sm:text-[42px]">Del dorm a la terraza.</h2>
+      <p class="mx-auto mt-3 max-w-md text-[14px] text-[color:var(--fg-muted)]">Precios por noche, temporada regular. Semana Santa y diciembre suben — y se llenan desde un mes antes.</p>
+    </div>
+    <ul class="mt-10">
+      <li class="flex flex-wrap items-baseline gap-3 border-t hairline py-5">
+        <div class="min-w-0 flex-1">
+          <div class="display text-[20px]">Cama en dorm mixto</div>
+          <div class="mt-1 text-[13.5px] text-[color:var(--fg-muted)]">6 camas por cuarto, ventilador de techo, locker grande y cortina propia.</div>
+        </div>
+        <span class="mono text-[16px] font-medium tabular">$380<span class="text-[11px] text-[color:var(--fg-faint)]"> /noche</span></span>
+      </li>
+      <li class="flex flex-wrap items-baseline gap-3 border-t hairline py-5">
+        <div class="min-w-0 flex-1">
+          <div class="display text-[20px]">Dorm de mujeres</div>
+          <div class="mt-1 text-[13.5px] text-[color:var(--fg-muted)]">4 camas, baño propio del cuarto y espejo de verdad.</div>
+        </div>
+        <span class="mono text-[16px] font-medium tabular">$420<span class="text-[11px] text-[color:var(--fg-faint)]"> /noche</span></span>
+      </li>
+      <li class="flex flex-wrap items-baseline gap-3 border-t hairline py-5">
+        <div class="min-w-0 flex-1">
+          <div class="display text-[20px]">Privada matrimonial</div>
+          <div class="mt-1 text-[13.5px] text-[color:var(--fg-muted)]">Cama queen, baño privado, ventana al patio de las buganvilias.</div>
+        </div>
+        <span class="mono text-[16px] font-medium tabular">$980<span class="text-[11px] text-[color:var(--fg-faint)]"> /noche</span></span>
+      </li>
+      <li class="flex flex-wrap items-baseline gap-3 border-y hairline py-5">
+        <div class="min-w-0 flex-1">
+          <div class="display text-[20px]">Privada con terraza</div>
+          <div class="mt-1 text-[13.5px] text-[color:var(--fg-muted)]">La del tercer piso: hamaca, vista al pueblo y el pedacito de mar que vale todo.</div>
+        </div>
+        <span class="mono text-[16px] font-medium tabular">$1,350<span class="text-[11px] text-[color:var(--fg-faint)]"> /noche</span></span>
+      </li>
+    </ul>
+    <div class="mt-6 text-center">
+      <a id="reservar" href="#" class="btn-primary lift inline-flex h-11 items-center gap-2 rounded-full px-6 text-[14px] font-medium">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .3-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.5-.2.7-.1l2 .9c.3.2.5.3.6.4 0 .1 0 .7-.3 1.3z"/></svg>
+        Reserva por WhatsApp
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- LA CASA -->
+<section id="lacasa" class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
+      <div>
+        <div class="eyebrow">La casa</div>
+        <h2 class="display mt-3 max-w-md text-[32px] sm:text-[42px]">Terraza arriba, tablas abajo, <span class="half-tone">arena en todas partes.</span></h2>
+        <p class="mt-5 max-w-md text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]">
+          Cocina compartida con lo básico y café de olla siempre caliente, terraza con hamacas para el atardecer, y una regla de oro: silencio de 11 pm a 7 am — porque las mejores olas son a las 7:30.
+        </p>
+        <ul class="mono mt-7 max-w-sm divide-y divide-[color:var(--border)] text-[12.5px]">
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]" style="font-family:var(--font-body);">Desayuno de la casa</span><span>7:30 – 9:30 am · incluido</span></li>
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]" style="font-family:var(--font-body);">Cocina compartida</span><span>abierta hasta las 10 pm</span></li>
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]" style="font-family:var(--font-body);">Regadera de tablas y wetsuits</span><span>en el patio</span></li>
+          <li class="flex justify-between py-3"><span class="text-[color:var(--fg-muted)]" style="font-family:var(--font-body);">Silencio</span><span>11 pm – 7 am</span></li>
+        </ul>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="ph-arena grain relative aspect-[3/4] rounded-[var(--radius)] border hairline" data-ol-photo="hostel terrace hammocks sunset"></div>
+        <div class="ph-ola grain relative mt-8 aspect-[3/4] rounded-[var(--radius)] border hairline" data-ol-photo="surfboards rack colorful wall"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SURF -->
+<section id="surf" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-20">
+      <div>
+        <div class="eyebrow">Surf</div>
+        <h2 class="display mt-3 text-[32px] sm:text-[42px]">La ola de Sayulita perdona. <span class="half-tone">Aprovéchala.</span></h2>
+        <p class="mt-4 max-w-sm text-[14px] leading-relaxed text-[color:var(--fg-muted)]">Break de arena, ola suave y larga — la mejor escuela del Pacífico para tu primera vez. Los huéspedes tienen precio de casa en todo.</p>
+      </div>
+      <ul class="self-center">
+        <li class="flex items-baseline gap-4 border-b hairline py-4">
+          <span class="display text-[19px]">Renta de tabla · softboard</span>
+          <span class="flex-1"></span>
+          <span class="mono text-[13px] font-medium tabular">$250 /día</span>
+        </li>
+        <li class="flex items-baseline gap-4 border-b hairline py-4">
+          <span class="display text-[19px]">Renta de tabla · fibra</span>
+          <span class="flex-1"></span>
+          <span class="mono text-[13px] font-medium tabular">$350 /día</span>
+        </li>
+        <li class="flex items-baseline gap-4 border-b hairline py-4">
+          <span class="display text-[19px]">Clase de surf · grupo de 4</span>
+          <span class="flex-1"></span>
+          <span class="mono text-[13px] font-medium tabular">$650 · 90 min</span>
+        </li>
+        <li class="flex items-baseline gap-4 border-b hairline py-4">
+          <span class="display text-[19px]">Clase privada</span>
+          <span class="flex-1"></span>
+          <span class="mono text-[13px] font-medium tabular">$1,100 · 90 min</span>
+        </li>
+        <li class="flex items-baseline gap-4 py-4">
+          <span class="display text-[19px]">Guardado de tabla propia</span>
+          <span class="flex-1"></span>
+          <span class="mono text-[13px] font-medium tabular">gratis</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- RESEÑAS -->
+<section class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <div class="eyebrow text-center">Libro de la terraza</div>
+    <div class="mt-8 grid gap-4 md:grid-cols-3">
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"Vine tres noches y me quedé once. Paré mi primera ola el segundo día y nadie me dejó pagar la cerveza esa noche."</blockquote>
+        <figcaption class="mt-3 text-[13px] font-medium">Tomás · Buenos Aires</figcaption>
+      </figure>
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"El dorm de mujeres es lo más limpio que he visto en tres meses de mochila. Y el café de olla, mi despertador oficial."</blockquote>
+        <figcaption class="mt-3 text-[13px] font-medium">Léa · Montreal</figcaption>
+      </figure>
+      <figure class="rounded-[var(--radius)] border hairline bg-[var(--surface)] p-6">
+        <blockquote class="text-[14px] leading-relaxed text-[color:var(--fg-muted)]">"La privada de la terraza vale cada peso: hamaca, atardecer y el ruido del pueblo abajo. Volvemos en noviembre."</blockquote>
+        <figcaption class="mt-3 text-[13px] font-medium">Dani y Chuy · GDL</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FULL-BLEED -->
+<section class="bg-[var(--accent)] text-[color:var(--accent-ink)]">
+  <div class="mx-auto max-w-6xl px-5 py-16 text-center md:py-20">
+    <div class="mono text-[11px] uppercase tracking-[0.2em] opacity-75">El swell del sur llega en mayo</div>
+    <h2 class="display mx-auto mt-4 max-w-2xl text-[34px] sm:text-[46px]">La ola no te va a esperar para siempre.</h2>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="#" class="lift inline-flex h-11 items-center rounded-full bg-[var(--bg)] px-6 text-[14px] font-semibold text-[color:var(--fg)]">Reserva tu cama</a>
+      <a href="#cuartos" class="lift inline-flex h-11 items-center rounded-full border border-white/35 px-6 text-[14px] font-medium hover:bg-white/10">Ver cuartos</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER LOCAL -->
+<footer class="border-t hairline">
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-[12.5px] text-[color:var(--fg-faint)] md:flex-row">
+    <div class="flex items-center gap-2">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 15c2-4 4-6 6-6 3 0 3.5 4 6 4 1.7 0 3.3-1.3 6-4-2 5-5 8-9 8-4.5 0-7.5-1-9-2z" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/></svg>
+      <span class="font-medium text-[color:var(--fg-muted)]">Marejada · hostal frente al break</span>
+    </div>
+    <div class="mono text-[11px] uppercase tracking-[0.12em]">Calle Pelícanos 12, Sayulita, Nay. · check-in 2 pm</div>
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-[color:var(--fg)]">Instagram</a>
+      <a href="#" class="hover:text-[color:var(--fg)]">WhatsApp</a>
+      <span>© 2026 Marejada</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

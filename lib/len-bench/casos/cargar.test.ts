@@ -6,6 +6,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { cargarEncargos } from "./cargar";
 import { faltaLoQueSigue } from "../validar";
+import { problemasDeLaWeb } from "../web-sustituta";
 
 describe("cargarEncargos", () => {
   it("el juego dev va en el repo y se carga sin nada fuera de él", async () => {
@@ -16,6 +17,15 @@ describe("cargarEncargos", () => {
   it("regla 4 en todo dev: cada caso declara lo que NO se pidió tocar (sin correr nada)", async () => {
     const sinDeclarar = (await cargarEncargos("dev")).filter((e) => faltaLoQueSigue(e)).map((e) => e.id);
     expect(sinDeclarar).toEqual([]);
+  }, 30_000);
+  it("el juego agente: regla 4 en cada caso, y ningún resultado de su web lleva a una página que no tiene", async () => {
+    const agente = await cargarEncargos("agente");
+    expect(agente.length).toBeGreaterThan(0);
+    expect(agente.filter((e) => faltaLoQueSigue(e)).map((e) => e.id)).toEqual([]);
+    expect(agente.flatMap((e) => (e.web ? problemasDeLaWeb(e.web).map((p) => `${e.id}: ${p}`) : []))).toEqual([]);
+    // Ningún id repetido con dev: los resultados se comparan por id.
+    const dev = new Set((await cargarEncargos("dev")).map((e) => e.id));
+    expect(agente.map((e) => e.id).filter((id) => dev.has(id))).toEqual([]);
   }, 30_000);
   it("un juego privado que no está dice QUÉ fichero buscó", async () => {
     const raiz = fs.mkdtempSync(path.join(os.tmpdir(), "lb-juegos-"));

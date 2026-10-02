@@ -8,13 +8,15 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Encargo } from "../tipos";
 
-export type Juego = "dev" | "pendientes" | "sellado" | "resultados";
+export type Juego = "dev" | "pendientes" | "sellado" | "resultados" | "agente";
 
 export async function cargarEncargos(juego: Juego, raiz = process.cwd()): Promise<Encargo[]> {
   if (juego === "dev") return (await import("./dev")).ENCARGOS;
   // Len sabe de tus resultados (plans/len-resultados/): en el repo, como dev,
   // pero APARTE para que dev siga siendo comparable con M1.
   if (juego === "resultados") return (await import("./resultados")).ENCARGOS;
+  // La terminal y la búsqueda (plans/len-agente-2026/): aparte por lo mismo.
+  if (juego === "agente") return (await import("./agente")).ENCARGOS;
   const ruta = path.resolve(raiz, "plans", "len-2", juego, "index.ts");
   try {
     return ((await import(pathToFileURL(ruta).href)) as { ENCARGOS: Encargo[] }).ENCARGOS;

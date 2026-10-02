@@ -1117,6 +1117,28 @@ export function enElFichero(nombre: string, ruta: string, patron: RegExp, peso =
 }
 
 /**
+ * El patrón está en CADA página publicada, en lo que se lee (el <title>
+ * incluido). «Cámbialo en todo el sitio» también es que ninguna página se
+ * quede sin el nombre nuevo: `ya-no-aparece` ve que el viejo se fue, y esto que
+ * el nuevo llegó a todas, y no porque la marca de alguna se borrara.
+ */
+export function enCadaPagina(nombre: string, patron: RegExp, peso = 2): Grader {
+  return {
+    nombre,
+    peso,
+    async calificar(ctx) {
+      const sin: string[] = [];
+      for (const ruta of rutasPublicadas(ctx)) {
+        if (!patron.test(textoVisible((await servido(ctx, ruta)).body).replace(/\s+/g, " "))) sin.push(ruta);
+      }
+      return sin.length === 0
+        ? { paso: true, explicacion: `las ${rutasPublicadas(ctx).length} páginas cumplen ${patron}` }
+        : { paso: false, explicacion: `no cumplen ${patron}: ${sin.join(", ")}` };
+    },
+  };
+}
+
+/**
  * Lo contrario, en UNA ruta: ese texto ya no está ahí. Para partir un sitio:
  * «los precios se van a /consultas/» es también que la home deja de tenerlos
  * (si no, crear las páginas y dejar la home entera aprobaba).
