@@ -15,7 +15,7 @@
  * cuenta al usuario como hallazgo y no lo hace (en las descripciones).
  *
  * Topes por turno, los de la hoja de ruta: 10 consultas y 5 páginas. Cada
- * consulta hecha de verdad cuesta 1 crédito (`buscar.ts`); leer una página no
+ * consulta hecha de verdad cuesta 1,5 créditos (`buscar.ts`); leer una página no
  * cuesta nada, es nuestro servidor.
  */
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";

@@ -138,8 +138,16 @@ export function webDePrueba(dir: string, projectId: string): WebDelCaso {
 
 // ── Lo que usa el servidor ──────────────────────────────────────────────────
 
-/** Una consulta a Exa cuesta ~$0,005–0,007 (plans/len-agente-2026, D2); un crédito es ~$0,01. */
-export const CENTICREDITOS_POR_CONSULTA = 100;
+/**
+ * Lo que cuesta UNA consulta, en centicréditos (un crédito es ~$0,01 de coste
+ * bruto; el margen va en el precio del plan, como en todo lo demás). Leído en
+ * exa.ai/pricing el 2026-10-02: la búsqueda «Auto» son $7 cada 1.000 (hasta 10
+ * resultados) y, a falta de que lo diga explícito, el fragmento de cada fuente
+ * se cuenta como «Contents», $1 cada 1.000 páginas: 8 × $0,001. ~$0,015, así que
+ * 1,5 créditos (Jesús, 02/10). La primera cifra (1 crédito, de la hoja de ruta)
+ * se quedaba medio céntimo corta en cada búsqueda.
+ */
+export const CENTICREDITOS_POR_CONSULTA = 150;
 
 export function webDelServidor(debit: (userId: string, centicreditos: number) => Promise<unknown>): WebDeps {
   const dirDePrueba = process.env.OPENLEN_WEB_DE_PRUEBA_DIR?.trim();

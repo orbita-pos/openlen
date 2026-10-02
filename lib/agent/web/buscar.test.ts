@@ -94,10 +94,10 @@ describe("webDelServidor — de dónde sale la web", () => {
     red.mockRestore();
   });
 
-  it("fuera de Len-Bench, lo buscado se cobra: 1 crédito por consulta", async () => {
+  it("fuera de Len-Bench, lo buscado se cobra: 1,5 créditos por consulta", async () => {
     delete process.env.OPENLEN_WEB_DE_PRUEBA_DIR;
     const debit = vi.fn(async () => undefined);
     await webDelServidor(debit).cobrar("u1", 3);
-    expect(debit).toHaveBeenCalledWith("u1", 300);
+    expect(debit).toHaveBeenCalledWith("u1", 450);
   });
 });
