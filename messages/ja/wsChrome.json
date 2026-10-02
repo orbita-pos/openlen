@@ -129,7 +129,11 @@
       "copy": "コピー",
       "copied": "コピーしました",
       "document": "HTML ドキュメント",
-      "lines": "行"
+      "lines": "行",
+      "files": "ファイル",
+      "loading": "読み込み中…",
+      "loadError": "ファイルを読み込めませんでした。",
+      "readOnly": "読み取り専用 · 開いたときに計算されます"
     },
     "terminal": {
       "title": "Len のターミナル",

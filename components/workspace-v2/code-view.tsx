@@ -17,15 +17,21 @@
 // editor, validación, y decidir qué gana cuando el usuario y el modelo tocan la
 // misma línea. Copiar cubre el 90% de la razón por la que alguien lo abre.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { esDeSoloLectura } from "@/lib/agent/terminal/ficheros";
+import { abiertasAlEntrar, arbolDeFicheros, type NodoDelArbol } from "@/lib/workspace-v2/arbol-de-ficheros";
 
-import { Check, Copy, X } from "./icons";
+import { Check, ChevronDown, ChevronRight, Copy, FileText, X } from "./icons";
 import { IconBtn } from "./ui";
 
 interface CodeViewProps {
-  /** El documento guardado, saneado. */
+  /** El documento de la página abierta, tal como está en el lienzo. */
   readonly html: string;
-  /** El JavaScript del modelo, si la página tiene. Null = no hay. */
+  /** Con proyecto, el explorador de TODOS sus ficheros (los mismos que ve Len
+   *  en su terminal). Sin él —la vista previa de una plantilla—, sólo `html`. */
+  readonly projectId?: string | null;
+  /** La ruta del fichero de la página abierta (`/index.html`, `/menu/index.html`). */
+  readonly rutaActual?: string;
   readonly onClose: () => void;
   readonly labels: {
     readonly title: string;
@@ -34,7 +40,160 @@ interface CodeViewProps {
     readonly copied: string;
     readonly document: string;
     readonly lines: string;
+    readonly files: string;
+    readonly loading: string;
+    readonly loadError: string;
+    readonly readOnly: string;
   };
+}
+
+interface ListaDeFicheros {
+  readonly ficheros: readonly { readonly ruta: string; readonly contenido: string }[];
+  readonly perezosos: readonly string[];
+}
+
+/**
+ * EL EXPLORADOR, como el de VS Code: el árbol a la izquierda (arriba en el
+ * móvil) y el fichero elegido a la derecha. Sólo lectura, con copiar. Los de
+ * `/resultados`, `/bandeja`, `/catalogo` y `/.versiones` se piden al abrirlos:
+ * cuestan consultas. La página abierta se enseña como está en el lienzo, que es
+ * lo que el usuario está viendo; lo demás, como está guardado.
+ */
+function Explorador({
+  projectId,
+  rutaActual,
+  htmlActual,
+  labels,
+}: {
+  projectId: string;
+  rutaActual: string;
+  htmlActual: string;
+  labels: CodeViewProps["labels"];
+}) {
+  const [lista, setLista] = useState<ListaDeFicheros | "cargando" | "error">("cargando");
+  const [elegido, setElegido] = useState(rutaActual);
+  const [perezosos, setPerezosos] = useState<Readonly<Record<string, string | "cargando" | "error">>>({});
+  const [abiertas, setAbiertas] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    setLista("cargando");
+    fetch(`/api/projects/${encodeURIComponent(projectId)}/ficheros`, { cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<ListaDeFicheros>) : Promise.reject(new Error(String(r.status)))))
+      .then((j) => vivo && setLista(j))
+      .catch(() => vivo && setLista("error"));
+    return () => {
+      vivo = false;
+    };
+  }, [projectId]);
+
+  const arbol = useMemo(
+    () =>
+      typeof lista === "string"
+        ? []
+        : arbolDeFicheros([...lista.ficheros.map((f) => ({ ruta: f.ruta })), ...lista.perezosos.map((ruta) => ({ ruta, perezoso: true }))]),
+    [lista],
+  );
+  // Las carpetas abiertas se deciden UNA vez, al llegar la lista; luego mandan los clics.
+  useEffect(() => {
+    if (arbol.length > 0 && abiertas === null) setAbiertas(abiertasAlEntrar(arbol, elegido));
+  }, [arbol, abiertas, elegido]);
+
+  const pedirPerezoso = (ruta: string) => {
+    const ya = perezosos[ruta];
+    if (ya !== undefined && ya !== "error") return;
+    setPerezosos((p) => ({ ...p, [ruta]: "cargando" }));
+    fetch(`/api/projects/${encodeURIComponent(projectId)}/ficheros?ruta=${encodeURIComponent(ruta)}`, { cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<{ contenido: string }>) : Promise.reject(new Error(String(r.status)))))
+      .then((j) => setPerezosos((p) => ({ ...p, [ruta]: j.contenido })))
+      .catch(() => setPerezosos((p) => ({ ...p, [ruta]: "error" })));
+  };
+
+  const elegir = (n: NodoDelArbol) => {
+    setElegido(n.ruta);
+    if (n.perezoso) pedirPerezoso(n.ruta);
+  };
+  const plegar = (ruta: string) =>
+    setAbiertas((a) => {
+      const nuevas = new Set(a ?? []);
+      if (nuevas.has(ruta)) nuevas.delete(ruta);
+      else nuevas.add(ruta);
+      return nuevas;
+    });
+
+  const contenido: string | "cargando" | "error" =
+    elegido === rutaActual
+      ? htmlActual
+      : typeof lista === "string"
+        ? lista
+        : (lista.ficheros.find((f) => f.ruta === elegido)?.contenido ?? perezosos[elegido] ?? "cargando");
+
+  const pintar = (nodos: readonly NodoDelArbol[], nivel: number): ReactNode => (
+    <ul>
+      {nodos.map((n) => {
+        const abierta = abiertas?.has(n.ruta) ?? false;
+        const sangria = { paddingLeft: 8 + nivel * 12 };
+        return (
+          <li key={n.ruta}>
+            {n.tipo === "carpeta" ? (
+              <button
+                type="button"
+                aria-expanded={abierta}
+                onClick={() => plegar(n.ruta)}
+                style={sangria}
+                className="flex w-full items-center gap-1 py-0.5 pr-2 text-left fg-muted hover:fg hover:bg-hover"
+              >
+                {abierta ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                <span className="truncate">{n.nombre}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                aria-current={n.ruta === elegido ? "true" : undefined}
+                onClick={() => elegir(n)}
+                style={sangria}
+                className={`flex w-full items-center gap-1.5 py-0.5 pr-2 text-left ${
+                  n.ruta === elegido ? "bg-hover fg" : "fg-muted hover:fg hover:bg-hover"
+                }`}
+              >
+                <FileText size={12} />
+                <span className="truncate">{n.nombre}</span>
+              </button>
+            )}
+            {n.tipo === "carpeta" && abierta && pintar(n.hijos, nivel + 1)}
+          </li>
+        );
+      })}
+    </ul>
+  );
+
+  return (
+    <div className="flex h-full min-h-0 flex-col md:flex-row">
+      <nav
+        aria-label={labels.files}
+        className="max-h-44 shrink-0 overflow-auto nice-scroll border-b bd py-1 text-[12px] md:max-h-none md:w-56 md:border-b-0 md:border-r"
+      >
+        <div className="px-3 py-1 text-[10.5px] uppercase tracking-wide fg-faint ui-small">{labels.files}</div>
+        {lista === "cargando" && <p className="px-3 py-1 fg-muted">{labels.loading}</p>}
+        {lista === "error" && <p className="px-3 py-1 fg-muted">{labels.loadError}</p>}
+        {pintar(arbol, 0)}
+      </nav>
+      <div className="min-h-0 min-w-0 flex-1 overflow-auto nice-scroll">
+        {contenido === "cargando" ? (
+          <p className="p-3 text-[12px] fg-muted">{labels.loading}</p>
+        ) : contenido === "error" ? (
+          <p className="p-3 text-[12px] fg-muted">{labels.loadError}</p>
+        ) : (
+          <Bloque
+            etiqueta={elegido.replace(/^\//, "")}
+            {...(esDeSoloLectura(elegido) ? { nota: labels.readOnly } : {})}
+            codigo={contenido}
+            labels={labels}
+          />
+        )}
+      </div>
+    </div>
+  );
 }
 
 /** Copiar al portapapeles con respaldo: `navigator.clipboard` no existe en
@@ -121,7 +280,7 @@ function Bloque({
   );
 }
 
-export function CodeView({ html, onClose, labels }: CodeViewProps) {
+export function CodeView({ html, projectId, rutaActual = "/index.html", onClose, labels }: CodeViewProps) {
   const cierreRef = useRef<HTMLDivElement>(null);
 
   // Escape cierra, como cualquier panel superpuesto. Se engancha al documento
@@ -145,14 +304,20 @@ export function CodeView({ html, onClose, labels }: CodeViewProps) {
           </IconBtn>
         </div>
       </div>
-      <div className="flex-1 overflow-auto nice-scroll">
-        {/* UN SOLO BLOQUE. Enseñaba el documento y, aparte, «el script» —
-            porque el JavaScript vivía en otra columna y el HTML que veías NO
-            era lo que se publicaba. Desde el 2026-08-26 el `<script>` es parte
-            del documento: lo que ves aquí es, byte a byte, lo que se guarda y
-            lo que se sirve. */}
-        <Bloque etiqueta={labels.document} codigo={html} labels={labels} />
-      </div>
+      {projectId ? (
+        <div className="min-h-0 flex-1">
+          <Explorador projectId={projectId} rutaActual={rutaActual} htmlActual={html} labels={labels} />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-auto nice-scroll">
+          {/* UN SOLO BLOQUE. Enseñaba el documento y, aparte, «el script» —
+              porque el JavaScript vivía en otra columna y el HTML que veías NO
+              era lo que se publicaba. Desde el 2026-08-26 el `<script>` es parte
+              del documento: lo que ves aquí es, byte a byte, lo que se guarda y
+              lo que se sirve. */}
+          <Bloque etiqueta={labels.document} codigo={html} labels={labels} />
+        </div>
+      )}
     </div>
   );
 }

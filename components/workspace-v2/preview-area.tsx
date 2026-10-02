@@ -20,6 +20,7 @@ import {
   X,
 } from "./icons";
 import { CodeView } from "./code-view";
+import { rutaDePagina } from "@/lib/agent/ficheros/sitio";
 import { Database, Maximize, Terminal as TerminalIcon } from "lucide-react";
 import { DatosView } from "./datos-view";
 import { TerminalView } from "./terminal-view";
@@ -1018,6 +1019,8 @@ export function PreviewArea({
         {lente === "codigo" && (
           <CodeView
             html={doc}
+            projectId={previewUrl ? null : projectId}
+            rutaActual={rutaDePagina(pagina)}
             onClose={() => setLente("pagina")}
             labels={{
               title: t("preview.code.title"),
@@ -1026,6 +1029,10 @@ export function PreviewArea({
               copied: t("preview.code.copied"),
               document: t("preview.code.document"),
               lines: t("preview.code.lines"),
+              files: t("preview.code.files"),
+              loading: t("preview.code.loading"),
+              loadError: t("preview.code.loadError"),
+              readOnly: t("preview.code.readOnly"),
             }}
           />
         )}

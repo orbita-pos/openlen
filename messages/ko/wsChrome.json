@@ -129,7 +129,11 @@
       "copy": "복사",
       "copied": "복사됨",
       "document": "HTML 문서",
-      "lines": "줄"
+      "lines": "줄",
+      "files": "파일",
+      "loading": "불러오는 중…",
+      "loadError": "파일을 읽을 수 없습니다.",
+      "readOnly": "읽기 전용 · 열 때 계산됩니다"
     },
     "terminal": {
       "title": "Len의 터미널",

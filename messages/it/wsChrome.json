@@ -129,7 +129,11 @@
       "copy": "Copia",
       "copied": "Copiato",
       "document": "Documento HTML",
-      "lines": "righe"
+      "lines": "righe",
+      "files": "File",
+      "loading": "Caricamento…",
+      "loadError": "Impossibile leggere i file.",
+      "readOnly": "Sola lettura · calcolato all’apertura"
     },
     "terminal": {
       "title": "Il terminale di Len",

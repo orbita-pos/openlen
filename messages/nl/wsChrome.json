@@ -137,7 +137,11 @@
       "copy": "Kopiëren",
       "copied": "Gekopieerd",
       "document": "HTML-document",
-      "lines": "regels"
+      "lines": "regels",
+      "files": "Bestanden",
+      "loading": "Laden…",
+      "loadError": "De bestanden konden niet worden gelezen.",
+      "readOnly": "Alleen-lezen · berekend bij openen"
     },
     "terminal": {
       "title": "Lens terminal",

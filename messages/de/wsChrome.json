@@ -129,7 +129,11 @@
       "copy": "Kopieren",
       "copied": "Kopiert",
       "document": "HTML-Dokument",
-      "lines": "Zeilen"
+      "lines": "Zeilen",
+      "files": "Dateien",
+      "loading": "Wird geladen…",
+      "loadError": "Die Dateien konnten nicht gelesen werden.",
+      "readOnly": "Schreibgeschützt · wird beim Öffnen berechnet"
     },
     "terminal": {
       "title": "Lens Terminal",
