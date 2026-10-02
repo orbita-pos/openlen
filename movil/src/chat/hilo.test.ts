@@ -156,9 +156,24 @@ describe("marcar y sinLoEnviado", () => {
     expect(r[1]).toMatchObject({ transcripcion: "hola", estado: "transcribiendo" });
     expect(r[2]).toBe(ls[2]);
   });
-  it("lo ya enviado se quita (ya está en la conversación guardada); lo que falló, no", () => {
-    const r = sinLoEnviado([...marcar(ls, "m1", { estado: "ok" }), { clave: "m2", t: 4, tipo: "tu", texto: "c", estado: "noSeEnvio" }]);
-    expect(r.map((e) => e.clave)).toEqual(["v1", "l1", "m2"]);
+  it("marca en qué turno quedó lo que mandaste", () => {
+    expect(marcar(ls, "m1", { estado: "ok", fila: "f1" })[0]).toMatchObject({ estado: "ok", fila: "f1" });
+    expect(marcar(ls, "v1", { estado: "ok", fila: "f1", correccion: true })[1]).toMatchObject({ fila: "f1", correccion: true });
+  });
+  it("lo enviado se quita cuando la conversación releída trae SU turno; lo que falló, no", () => {
+    const enviados = [...marcar(ls, "m1", { estado: "ok", fila: "f1" }), { clave: "m2", t: 4, tipo: "tu" as const, texto: "c", estado: "noSeEnvio" as const }];
+    expect(sinLoEnviado(enviados, [turno({ id: "f1", userText: "a" })]).map((e) => e.clave)).toEqual(["v1", "l1", "m2"]);
+  });
+  it("🔴 la conversación que se pidió ANTES de tu mensaje no lo trae: tu mensaje se queda (el «1» que desaparecía, 01/10)", () => {
+    // El turno anterior acaba → la app relee; mandas «1» antes de que llegue
+    // la respuesta, y la respuesta (sin tu turno) llega después.
+    const enviado = marcar([{ clave: "m1", t: 1, tipo: "tu", texto: "1", estado: "enviando" }], "m1", { estado: "ok", fila: "f2" });
+    expect(sinLoEnviado(enviado, [turno({ id: "f1", userText: "Aquí tienes una foto" })])).toEqual(enviado);
+  });
+  it("una corrección se queda hasta que su turno se cierra: abierto, la fila aún puede no traerla", () => {
+    const corregido = marcar([{ clave: "m1", t: 1, tipo: "tu", texto: "1", estado: "enviando" }], "m1", { estado: "ok", fila: "f2", correccion: true });
+    expect(sinLoEnviado(corregido, [turno({ id: "f2", userText: "1", enCurso: true })])).toEqual(corregido);
+    expect(sinLoEnviado(corregido, [turno({ id: "f2", userText: "1\n↳ 1" })])).toEqual([]);
   });
 });
 

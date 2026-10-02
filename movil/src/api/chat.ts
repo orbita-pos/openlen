@@ -9,7 +9,8 @@ export type FinDelTurno = "terminado" | "cortado" | "sinRed" | { status: number 
 
 export async function mandarALen(
   c: ClienteDeOpenLen,
-  cuerpo: { projectId: string; prompt: string; foto?: string },
+  /** `turnId`: el id de la fila — el servidor guarda el turno con él, como en la web, y la app sabe cuándo la conversación ya lo trae. */
+  cuerpo: { projectId: string; prompt: string; foto?: string; turnId?: string },
   alEvento: (e: EventoSse) => void,
 ): Promise<FinDelTurno> {
   let res: Response;
@@ -21,6 +22,7 @@ export async function mandarALen(
         projectId: cuerpo.projectId,
         prompt: cuerpo.prompt,
         zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        ...(cuerpo.turnId ? { turnId: cuerpo.turnId } : {}),
         ...(cuerpo.foto ? { attachedImage: { url: cuerpo.foto } } : {}),
       }),
     });

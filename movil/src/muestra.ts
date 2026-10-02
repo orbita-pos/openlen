@@ -24,7 +24,10 @@ const VISITAS = { vistas: 312, personas: 241, hoy: 27, porDia: [31, 38, 44, 71, 
 
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms * RITMO.x));
 
-function turnoDeMentira(prompt: string, foto?: string): Response {
+/** Lo que le escribes al turno que corre; va a su fila con «↳», como en el servidor. */
+let correcciones: string[] = [];
+
+function turnoDeMentira(prompt: string, foto?: string, turnId?: string): Response {
   // Con una foto, Len pregunta dónde la pone antes de ponerla (Jesús, 01/10):
   // mira la página, pregunta, y no la cambia.
   const dicho = foto
@@ -57,14 +60,16 @@ function turnoDeMentira(prompt: string, foto?: string): Response {
         c.enqueue(enc.encode(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`));
       }
       HISTORIAL.push({
-        id: `t${HISTORIAL.length + 1}`,
+        // Como el servidor: la fila lleva el id que mandó la app.
+        id: turnId ?? `t${HISTORIAL.length + 1}`,
         // Como el servidor: lo que se le mandó a Len es tu mensaje (con la foto sola, lo que la app le pidió de tu parte).
-        userText: prompt,
+        userText: [prompt, ...correcciones.map((c) => `↳ ${c}`)].join("\n"),
         ...(foto ? { attachedImage: { url: foto }, noDocChange: true, actions: [{ tool: "preguntar", status: "done" as const, summary: "" }] } : {}),
         assistantReasoning: dicho,
         status: "applied",
         appliedAt: Date.now(),
       });
+      correcciones = [];
       c.close();
     },
   });
@@ -78,10 +83,18 @@ export const clienteDeMuestra: ClienteDeOpenLen = {
     if (ruta === "/api/projects/m1") return Response.json({ project: { ...PROYECTOS[0], chatHistory: [...HISTORIAL] } });
     if (ruta.startsWith("/api/voz/visitas")) return Response.json(VISITAS);
     if (ruta === "/api/agent") {
-      const b = JSON.parse(String(init?.body ?? "{}")) as { prompt?: unknown; attachedImage?: { url?: unknown } };
-      return turnoDeMentira(String(b.prompt ?? ""), typeof b.attachedImage?.url === "string" ? b.attachedImage.url : undefined);
+      const b = JSON.parse(String(init?.body ?? "{}")) as { prompt?: unknown; attachedImage?: { url?: unknown }; turnId?: unknown };
+      return turnoDeMentira(
+        String(b.prompt ?? ""),
+        typeof b.attachedImage?.url === "string" ? b.attachedImage.url : undefined,
+        typeof b.turnId === "string" ? b.turnId : undefined,
+      );
     }
-    if (ruta === "/api/agent/dirigir") return Response.json({ ok: true, maximo: 2000 });
+    if (ruta === "/api/agent/dirigir") {
+      const b = JSON.parse(String(init?.body ?? "{}")) as { texto?: unknown };
+      correcciones.push(String(b.texto ?? ""));
+      return Response.json({ ok: true, maximo: 2000 });
+    }
     if (ruta === "/api/upload") return Response.json({ url: FOTO });
     if (ruta === "/api/voz/nota") {
       await espera(900);

@@ -38,6 +38,12 @@ describe("mandarALen", () => {
     expect(cuerpo.attachedImage).toBeUndefined();
   });
 
+  it("el turno lleva el id de su fila: el servidor guarda la conversación con él", async () => {
+    const { c, pedir } = cliente(async () => trozos(""));
+    await mandarALen(c, { projectId: "p1", prompt: "x", turnId: "f1" }, () => {});
+    expect(JSON.parse(String(pedir.mock.calls[0]![1]!.body)).turnId).toBe("f1");
+  });
+
   it("con foto, va como attachedImage", async () => {
     const { c, pedir } = cliente(async () => trozos(""));
     await mandarALen(c, { projectId: "p1", prompt: "x", foto: "https://x/f.jpg" }, () => {});

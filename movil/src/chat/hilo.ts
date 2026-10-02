@@ -8,9 +8,17 @@ import type { EventoSse } from "@/lib/len-bench/sse";
 
 export type EstadoLocal = "ok" | "enviando" | "noSeEnvio" | "noSeSubio" | "transcribiendo" | "noSeEntendio";
 
+/** En qué turno quedó lo que mandaste: el que empezó (su fila de la
+ *  conversación) o, si Len ya trabajaba, el que corrigió. Lo que no ha salido
+ *  no tiene. */
+interface Enviado {
+  fila?: string;
+  correccion?: boolean;
+}
+
 export type ElementoDelHilo =
-  | { clave: string; t: number; tipo: "tu"; texto: string; foto?: string; estado: EstadoLocal }
-  | { clave: string; t: number; tipo: "voz"; url: string; barras: number[]; segundos: number; transcripcion: string | null; estado: EstadoLocal }
+  | ({ clave: string; t: number; tipo: "tu"; texto: string; foto?: string; estado: EstadoLocal } & Enviado)
+  | ({ clave: string; t: number; tipo: "voz"; url: string; barras: number[]; segundos: number; transcripcion: string | null; estado: EstadoLocal } & Enviado)
   | { clave: string; t: number; tipo: "len"; texto: string }
   | { clave: string; t: number; tipo: "verEnTuPagina" }
   | { clave: string; t: number; tipo: "fallo" }
@@ -20,6 +28,9 @@ export type ElementoDelHilo =
   | { clave: string; t: number; tipo: "dia"; dia: string };
 
 export interface TurnoEnVivo {
+  /** La fila de la conversación: el id que la app le da al turno al mandarlo. */
+  fila: string | null;
+  /** El del servidor, para corregirle el rumbo (`dirigir`): no es el de la fila. */
   turnoId: string | null;
   texto: string;
   /** La herramienta que corre (o la última que corrió): la línea bajo su nombre. */
@@ -70,8 +81,8 @@ export function terminaEnPregunta(turnos: StoredChatTurn[]): boolean {
   return !!u && !u.enCurso && (u.actions ?? []).some((a) => a.tool === "preguntar");
 }
 
-export function turnoNuevo(): TurnoEnVivo {
-  return { turnoId: null, texto: "", avance: null, pregunta: false, tarjetas: [], cambioLaPagina: false, error: false, terminado: false };
+export function turnoNuevo(fila: string | null = null): TurnoEnVivo {
+  return { fila, turnoId: null, texto: "", avance: null, pregunta: false, tarjetas: [], cambioLaPagina: false, error: false, terminado: false };
 }
 
 /** Un evento del stream de /api/agent (los de `AgentStreamEvent` en lib/agent/loop.ts). */
@@ -142,21 +153,32 @@ export function cualDia(dia: string, hoy: string): "hoy" | "ayer" | "otro" {
   return ayer.toISOString().slice(0, 10) === dia ? "ayer" : "otro";
 }
 
-export function marcar(ls: ElementoDelHilo[], clave: string, c: { estado?: EstadoLocal; transcripcion?: string }): ElementoDelHilo[] {
+export function marcar(
+  ls: ElementoDelHilo[],
+  clave: string,
+  c: { estado?: EstadoLocal; transcripcion?: string } & Enviado,
+): ElementoDelHilo[] {
+  const enviado = { ...(c.fila !== undefined ? { fila: c.fila } : {}), ...(c.correccion ? { correccion: true } : {}) };
   return ls.map((e) => {
     if (e.clave !== clave) return e;
-    if (e.tipo === "tu") return c.estado ? { ...e, estado: c.estado } : e;
+    if (e.tipo === "tu") return { ...e, ...(c.estado ? { estado: c.estado } : {}), ...enviado };
     if (e.tipo === "voz") {
-      return { ...e, ...(c.estado ? { estado: c.estado } : {}), ...(c.transcripcion !== undefined ? { transcripcion: c.transcripcion } : {}) };
+      return { ...e, ...(c.estado ? { estado: c.estado } : {}), ...(c.transcripcion !== undefined ? { transcripcion: c.transcripcion } : {}), ...enviado };
     }
     return e;
   });
 }
 
-/** Lo que ya salió está en la conversación guardada (releída al acabar el
- *  turno): se quita de lo local. Lo que falló se queda, con su «Reintentar». */
-export function sinLoEnviado(ls: ElementoDelHilo[]): ElementoDelHilo[] {
-  return ls.filter((e) => !((e.tipo === "tu" || e.tipo === "voz") && e.estado === "ok"));
+/** Lo que ya salió y la conversación releída YA TRAE se quita de lo local:
+ *  desde ahí lo pinta ella. Por su fila, no por «ya salió»: la conversación
+ *  que se pidió al acabar el turno anterior puede llegar DESPUÉS de que
+ *  mandes otro, y no lo trae (el «1» que desaparecía, 01/10). Una corrección
+ *  espera a que su turno se cierre: el servidor la escribe en la fila
+ *  (`↳ …`) a ratos mientras trabaja y entera al cerrar. Lo que falló se
+ *  queda, con su «Reintentar». */
+export function sinLoEnviado(ls: ElementoDelHilo[], conversacion: StoredChatTurn[]): ElementoDelHilo[] {
+  const traida = (e: Enviado) => conversacion.some((t) => t.id === e.fila && (!e.correccion || !t.enCurso));
+  return ls.filter((e) => !((e.tipo === "tu" || e.tipo === "voz") && e.estado === "ok" && traida(e)));
 }
 
 // La herramienta → la frase bajo su nombre (movil.chat.avance.*). `summary`

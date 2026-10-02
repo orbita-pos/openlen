@@ -4,9 +4,9 @@
 // aunque cierres el chat, y la hoja enseña lo mismo. Habla por api/chat.ts;
 // la forma del hilo la decide hilo.ts.
 //
-// Lo que le escribes con Len trabajando va como corrección («dirigir») y, como
-// en la web, sólo se ve mientras el turno corre: el servidor no la guarda en
-// la conversación.
+// Lo que le escribes con Len trabajando va como corrección («dirigir») sin
+// pararlo; el servidor la escribe en la fila de ese turno, debajo de tu
+// mensaje, con «↳» (`textoDelUsuario` en app/api/agent/route.ts).
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import type { TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
@@ -49,7 +49,7 @@ export function useChat(o: OpcionesDelChat) {
   const op = useRef(o);
   const [locales, setLocales] = useState<ElementoDelHilo[]>([]);
   const [vivo, setVivo] = useState<TurnoEnVivo | null>(null);
-  const [reenganche, setReenganche] = useState<{ turnoId: string | null; texto: string } | null>(null);
+  const [reenganche, setReenganche] = useState<{ fila: string; turnoId: string | null; texto: string } | null>(null);
   const vivoRef = useRef(vivo);
   const reengancheRef = useRef(reenganche);
   const localesRef = useRef(locales);
@@ -71,17 +71,18 @@ export function useChat(o: OpcionesDelChat) {
     notas.current.clear();
   }, [o.projectId]);
 
-  // Releída la conversación (al acabar un turno), lo enviado ya está en ella.
+  // Releída la conversación (al acabar un turno): lo enviado que ya trae, lo
+  // pinta ella.
   useEffect(() => {
     setVivo((v) => (v?.terminado ? null : v));
-    setLocales(sinLoEnviado);
+    setLocales((ls) => sinLoEnviado(ls, o.historial));
   }, [o.historial]);
 
-  const correr = useCallback(async (prompt: string, foto?: string): Promise<boolean> => {
+  const correr = useCallback(async (prompt: string, fila: string, foto?: string): Promise<boolean> => {
     const { cliente, projectId } = op.current;
     if (!projectId) return false;
-    setVivo(turnoNuevo());
-    const fin = await mandarALen(cliente, { projectId, prompt, foto }, (e) => setVivo((v) => (v ? conEvento(v, e) : v)));
+    setVivo(turnoNuevo(fila));
+    const fin = await mandarALen(cliente, { projectId, prompt, foto, turnId: fila }, (e) => setVivo((v) => (v ? conEvento(v, e) : v)));
     if (fin === "sinRed" || typeof fin === "object") {
       setVivo(null);
       return false;
@@ -102,8 +103,9 @@ export function useChat(o: OpcionesDelChat) {
       if ((v && !v.terminado) || r) {
         // Len trabaja: lo que escribes le corrige el rumbo, sin pararlo.
         const turnoId = v?.turnoId ?? r?.turnoId ?? null;
+        const fila = v?.fila ?? r?.fila;
         const ok = turnoId ? await dirigirA(cliente, turnoId, texto) : false;
-        setLocales((ls) => marcar(ls, k, { estado: ok ? "ok" : "noSeEnvio" }));
+        setLocales((ls) => marcar(ls, k, ok ? { estado: "ok", fila, correccion: true } : { estado: "noSeEnvio" }));
         return;
       }
       let url: string | undefined;
@@ -115,8 +117,11 @@ export function useChat(o: OpcionesDelChat) {
           return;
         }
       }
-      setLocales((ls) => marcar(ls, k, { estado: "ok" }));
-      if (!(await correr(texto || textoDeFotoSola, url))) setLocales((ls) => marcar(ls, k, { estado: "noSeEnvio" }));
+      // El id de la fila lo pone la app, como la web: así sabe cuándo la
+      // conversación releída ya trae este mensaje.
+      const fila = crypto.randomUUID();
+      setLocales((ls) => marcar(ls, k, { estado: "ok", fila }));
+      if (!(await correr(texto || textoDeFotoSola, fila, url))) setLocales((ls) => marcar(ls, k, { estado: "noSeEnvio" }));
     },
     [correr],
   );
@@ -206,7 +211,7 @@ export function useChat(o: OpcionesDelChat) {
       void leerTurno(op.current.cliente, filaEnCurso)
         .then((r) => {
           if (!vigente) return;
-          if (r.turno.enCurso) setReenganche({ turnoId: r.turnoId ?? null, texto: r.turno.assistantReasoning });
+          if (r.turno.enCurso) setReenganche({ fila: filaEnCurso, turnoId: r.turnoId ?? null, texto: r.turno.assistantReasoning });
           else {
             setReenganche(null);
             op.current.alCambiarLaPagina();

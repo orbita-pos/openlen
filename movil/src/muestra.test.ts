@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { EventoSse } from "@/lib/len-bench/sse";
-import { mandarALen, transcribir } from "./api/chat";
+import { dirigirA, mandarALen, transcribir } from "./api/chat";
 import { leerProyecto } from "./api/proyectos";
 import { clienteDeMuestra, RITMO } from "./muestra";
 
@@ -23,6 +23,19 @@ describe("la muestra (sólo dev)", () => {
     const despues = (await leerProyecto(clienteDeMuestra, "m1")).historial;
     expect(despues).toHaveLength(antes + 1);
     expect(despues.at(-1)!.userText).toBe("Pon el horario");
+  });
+
+  it("como el servidor: la fila lleva el id que mandó la app, y lo que corriges a media faena va en tu mensaje con «↳»", async () => {
+    RITMO.x = 0;
+    let empezo: (id: string) => void = () => {};
+    const turnoId = new Promise<string>((r) => (empezo = r));
+    const turno = mandarALen(clienteDeMuestra, { projectId: "m1", prompt: "1", turnId: "f-muestra" }, (e) => {
+      if (e.nombre === "turno") empezo(String((e.datos as { turnoId: string }).turnoId));
+    });
+    await dirigirA(clienteDeMuestra, await turnoId, "1");
+    await turno;
+    const fila = (await leerProyecto(clienteDeMuestra, "m1")).historial.at(-1)!;
+    expect(fila).toMatchObject({ id: "f-muestra", userText: "1\n↳ 1" });
   });
 
   it("transcribe una nota de mentira", async () => {
