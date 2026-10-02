@@ -162,6 +162,13 @@ function preparar() {
     if (url.endsWith(`/api/projects/${PROYECTO}/terminal`)) {
       return Promise.resolve(new Response(JSON.stringify(HISTORIAL), { headers: { "content-type": "application/json" } }));
     }
+    if (url.endsWith(`/api/projects/${PROYECTO}/ficheros`) && init?.method === "PUT") {
+      // Editar a mano (la #18), de mentira: devuelve lo mandado como guardado.
+      // El de verdad (camino de la terminal, guardas, «cambió desde que lo
+      // abriste») lo prueban las de node:test en herramientas-de-ficheros.test.ts.
+      const { contenido } = JSON.parse(String(init.body)) as { contenido: string };
+      return Promise.resolve(new Response(JSON.stringify({ contenido }), { headers: { "content-type": "application/json" } }));
+    }
     if (url.endsWith(`/api/projects/${PROYECTO}/ficheros`)) {
       return Promise.resolve(new Response(JSON.stringify(FICHEROS()), { headers: { "content-type": "application/json" } }));
     }

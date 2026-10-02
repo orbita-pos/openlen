@@ -35,7 +35,7 @@ describe("codigoNuevo — la terminal del usuario no mete código que el sitio n
     ["un <svg> con onload", PAGINA.replace("</h1>", "</h1><svg onload=robar()></svg>")],
     ["un ON en mayúsculas", PAGINA.replace("<h1>", '<h1 ONMOUSEOVER="robar()">')],
   ])("%s no se guarda", (_, despues) => {
-    expect(codigoNuevo(despues, SITIO)).toMatch(/cannot add or change the page's JavaScript/);
+    expect(codigoNuevo(despues, SITIO)).toMatch(/JavaScript .* cannot be added or changed by hand/);
   });
 
   it("lo activo se compara sin disfraces y en orden estable", () => {

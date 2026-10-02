@@ -651,14 +651,16 @@ export async function guardarFichero(
   // Lo que escribe la terminal del USUARIO lleva su nombre en Versiones: ni
   // «Before AI edit» ni origen `chat`, que dirían que lo hizo Len.
   const delUsuario = session.autor === "usuario";
+  // Y desde dónde: su terminal o el editor de la lente «Código» (la #18).
+  const [nombre, previa] = session.desde === "editor" ? ["Code editor", "Before code edit"] : ["Terminal", "Before terminal edit"];
   const guardado = await persistPage(
     {
       projectId: session.projectId,
       userId: session.userId,
       page,
       html: preparado.html,
-      label: delUsuario ? `Terminal: ${opts.etiqueta.replace(/^\S+\s/, "")}` : opts.etiqueta,
-      ...(delUsuario ? { etiquetaPrevia: "Before terminal edit", fuente: "manual" as const } : {}),
+      label: delUsuario ? `${nombre}: ${opts.etiqueta.replace(/^\S+\s/, "")}` : opts.etiqueta,
+      ...(delUsuario ? { etiquetaPrevia: previa, fuente: "manual" as const } : {}),
     },
     deps,
   );

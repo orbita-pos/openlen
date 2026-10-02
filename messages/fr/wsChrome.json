@@ -199,6 +199,18 @@
       "quitar": "Retirer le commentaire",
       "enElMensaje": "part avec votre prochain message",
       "tope": "10 commentaires attendent déjà : envoyez d’abord le message."
+    },
+    "editar": {
+      "editar": "Modifier",
+      "guardar": "Enregistrer",
+      "guardando": "Enregistrement…",
+      "descartar": "Abandonner",
+      "cargando": "Chargement…",
+      "cambio": "Ce fichier a changé pendant que vous le modifiiez (Len, l’éditeur ou votre terminal). Rien n’a été enregistré.",
+      "cargarAhora": "Charger l’actuel",
+      "rechazado": "Non enregistré :",
+      "error": "Impossible d’enregistrer.",
+      "nota": "Enregistré comme votre version ; Len le verra à son prochain tour."
     }
   },
   "placeholder": {

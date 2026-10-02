@@ -207,6 +207,18 @@
       "quitar": "Remover o comentário",
       "enElMensaje": "vai na sua próxima mensagem",
       "tope": "Já há 10 comentários esperando: envie a mensagem primeiro."
+    },
+    "editar": {
+      "editar": "Editar",
+      "guardar": "Salvar",
+      "guardando": "Salvando…",
+      "descartar": "Descartar",
+      "cargando": "Carregando…",
+      "cambio": "Este arquivo mudou enquanto você o editava (Len, o editor ou seu terminal). Nada foi salvo.",
+      "cargarAhora": "Carregar o atual",
+      "rechazado": "Não foi salvo:",
+      "error": "Não foi possível salvar.",
+      "nota": "Fica salvo como sua versão; o Len verá no próximo turno."
     }
   },
   "placeholder": {

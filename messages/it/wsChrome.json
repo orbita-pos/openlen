@@ -199,6 +199,18 @@
       "quitar": "Rimuovi il commento",
       "enElMensaje": "va nel tuo prossimo messaggio",
       "tope": "Ci sono già 10 commenti in attesa: invia prima il messaggio."
+    },
+    "editar": {
+      "editar": "Modifica",
+      "guardar": "Salva",
+      "guardando": "Salvataggio…",
+      "descartar": "Scarta",
+      "cargando": "Caricamento…",
+      "cambio": "Questo file è cambiato mentre lo modificavi (Len, l’editor o il tuo terminale). Non è stato salvato nulla.",
+      "cargarAhora": "Carica quello attuale",
+      "rechazado": "Non salvato:",
+      "error": "Impossibile salvare.",
+      "nota": "Si salva come tua versione; Len lo vedrà al prossimo turno."
     }
   },
   "placeholder": {

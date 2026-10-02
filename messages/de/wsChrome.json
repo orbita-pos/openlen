@@ -199,6 +199,18 @@
       "quitar": "Kommentar entfernen",
       "enElMensaje": "geht mit deiner nächsten Nachricht",
       "tope": "Es warten schon 10 Kommentare: schick zuerst die Nachricht."
+    },
+    "editar": {
+      "editar": "Bearbeiten",
+      "guardar": "Speichern",
+      "guardando": "Wird gespeichert…",
+      "descartar": "Verwerfen",
+      "cargando": "Wird geladen…",
+      "cambio": "Diese Datei hat sich geändert, während du sie bearbeitet hast (Len, der Editor oder dein Terminal). Es wurde nichts gespeichert.",
+      "cargarAhora": "Aktuelle Fassung laden",
+      "rechazado": "Nicht gespeichert:",
+      "error": "Konnte nicht speichern.",
+      "nota": "Wird als deine Version gespeichert; Len sieht es in seinem nächsten Durchlauf."
     }
   },
   "placeholder": {

@@ -12,10 +12,11 @@ import { runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession 
 import type { ProjectData } from "@/lib/projects/types";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
-import { guardarLoDeLaTerminal } from "./herramientas-de-ficheros";
+import { cargarFicherosDeLaTerminal, guardarLoDeLaTerminal } from "./herramientas-de-ficheros";
 import { cerrarTerminalDeLaSesion } from "./terminal/herramienta";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "./terminal/cambios-del-comando";
 import { cerrarLasTerminalesDelUsuario, ejecutarEnLaTerminalDelUsuario } from "./terminal/terminal-del-usuario";
+import { guardarAMano } from "./terminal/editar-a-mano";
 
 const HOME = `<!doctype html>
 <html lang="es">
@@ -1154,7 +1155,7 @@ describe("la terminal DEL USUARIO (la #17 de plans/len-agente-2026/notas/fase-5-
         const r = await correr(deps, command);
         assert.notEqual(r.exitCode, 0, command);
         assert.equal(r.cambio, false, command);
-        assert.match(r.salida, /cannot add or change the page's JavaScript/, command);
+        assert.match(r.salida, /JavaScript .* cannot be added or changed by hand/, command);
         assert.equal(store.data.html, CON_SCRIPT, command);
       }
     } finally {
@@ -1188,5 +1189,51 @@ describe("la terminal DEL USUARIO (la #17 de plans/len-agente-2026/notas/fase-5-
     } finally {
       await cerrarLasTerminalesDelUsuario();
     }
+  });
+});
+
+describe("editar a mano en la lente «Código» (la #18 de plans/len-agente-2026/notas/fase-5-taller.md)", () => {
+  const CON_SCRIPT = HOME.replace("</body>", '<button onclick="abrir()">Reserva</button><script>function abrir(){}</script></body>');
+
+  it("se guarda por el camino de la terminal, con la versión a nombre del editor", async () => {
+    const { deps, store } = makeDepsCompletos({ html: HOME });
+    const r = await guardarAMano("p-editor", "u1", "/index.html", HOME.replace("Tienda Brote", "Tienda Brote Sayulita"), HOME, deps);
+    assert.equal(r.ok, true, JSON.stringify(r));
+    assert.match(store.data.html, /Tienda Brote Sayulita/);
+    if (r.ok) assert.match(r.contenido, /Tienda Brote Sayulita/);
+    const [despues, antes] = store.snapshots;
+    assert.equal(despues?.label, "Code editor: index.html");
+    assert.equal(despues?.source, "manual");
+    assert.equal(antes?.label, "Before code edit");
+  });
+
+  it("🔴 si cambió desde que lo abriste, no lo pisa: devuelve lo de ahora", async () => {
+    const { deps, store } = makeDepsCompletos({ html: HOME });
+    const viejo = HOME.replace("Tienda Brote", "Tienda Vieja");
+    const r = await guardarAMano("p-editor", "u1", "/index.html", HOME.replace("Tienda Brote", "Otra"), viejo, deps);
+    assert.deepEqual(r, { ok: false, motivo: "cambio", actual: HOME });
+    assert.equal(store.data.html, HOME);
+    assert.equal(store.snapshots.length, 0);
+  });
+
+  it("valen las guardas de la terminal: ni JavaScript nuevo ni el manual", async () => {
+    const { deps, store } = makeDepsCompletos({ html: CON_SCRIPT });
+    const js = await guardarAMano("p-editor", "u1", "/index.html", CON_SCRIPT.replace("</body>", "<script>alert(1)</script></body>"), CON_SCRIPT, deps);
+    assert.equal(js.ok, false);
+    if (!js.ok && js.motivo === "rechazado") assert.match(js.detalle, /JavaScript .* cannot be added or changed by hand/);
+    else assert.fail(JSON.stringify(js));
+    assert.equal(store.data.html, CON_SCRIPT);
+    const ficheros = await cargarFicherosDeLaTerminal(
+      { projectId: "p-editor", userId: "u1", page: null, ownerEmail: null, imageEditsThisTurn: 0, photoSearchesThisTurn: 0, busquedasVaciasSeguidas: 0 },
+      deps,
+    );
+    const manual = await guardarAMano("p-editor", "u1", "/AGENTS.md", "otro manual", ficheros["/AGENTS.md"]!, deps);
+    assert.equal(manual.ok, false);
+    assert.equal(!manual.ok && manual.motivo, "rechazado");
+  });
+
+  it("un fichero que no existe no se crea desde aquí", async () => {
+    const { deps } = makeDepsCompletos({ html: HOME });
+    assert.deepEqual(await guardarAMano("p-editor", "u1", "/nuevo/index.html", "<p>x</p>", "", deps), { ok: false, motivo: "no_existe" });
   });
 });

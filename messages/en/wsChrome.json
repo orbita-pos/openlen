@@ -199,6 +199,18 @@
       "quitar": "Remove comment",
       "enElMensaje": "goes with your next message",
       "tope": "10 comments are already waiting: send the message first."
+    },
+    "editar": {
+      "editar": "Edit",
+      "guardar": "Save",
+      "guardando": "Saving…",
+      "descartar": "Discard",
+      "cargando": "Loading…",
+      "cambio": "This file changed while you were editing it (Len, the editor or your terminal). Nothing was saved.",
+      "cargarAhora": "Load the current one",
+      "rechazado": "Not saved:",
+      "error": "Couldn't save.",
+      "nota": "Saved as your version; Len will see it on its next turn."
     }
   },
   "placeholder": {

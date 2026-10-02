@@ -44,8 +44,9 @@ import { colorearLineas, lenguajeDe, type Lenguaje } from "@/lib/workspace-v2/co
 
 import { copiar } from "./copiar";
 import { claveDeLinea, DebajoDeLaLinea, NumeroComentable, useComentarLineas, type EtiquetasDeComentar } from "./comentar-linea";
+import { EditorDeFichero, type EtiquetasDelEditor } from "./editor-de-fichero";
 import { LineaColoreada } from "./linea-coloreada";
-import { Check, ChevronDown, ChevronRight, Copy, FileText, Search, X } from "./icons";
+import { Check, ChevronDown, ChevronRight, Copy, FileText, Pencil, Search, X } from "./icons";
 import { IconBtn } from "./ui";
 
 interface CodeViewProps {
@@ -62,6 +63,8 @@ interface CodeViewProps {
   readonly labels: {
     /** Comentar una línea para el siguiente mensaje (la #8). */
     readonly comentar: EtiquetasDeComentar;
+    /** Editar el fichero a mano (la #18). */
+    readonly editar: EtiquetasDelEditor;
     readonly title: string;
     readonly close: string;
     readonly copy: string;
@@ -137,17 +140,19 @@ function Explorador({
   const [salto, setSalto] = useState<{ readonly linea: number; readonly n: number } | null>(null);
   const buscador = useRef<HTMLInputElement>(null);
 
+  // Tras guardar a mano (la #18) se vuelve a pedir, sin pasar por «cargando».
+  const [recarga, setRecarga] = useState(0);
   useEffect(() => {
     let vivo = true;
-    setLista("cargando");
+    if (recarga === 0) setLista("cargando");
     fetch(`/api/projects/${encodeURIComponent(projectId)}/ficheros`, { cache: "no-store" })
       .then((r) => (r.ok ? (r.json() as Promise<ListaDeFicheros>) : Promise.reject(new Error(String(r.status)))))
       .then((j) => vivo && setLista(j))
-      .catch(() => vivo && setLista("error"));
+      .catch(() => vivo && recarga === 0 && setLista("error"));
     return () => {
       vivo = false;
     };
-  }, [projectId]);
+  }, [projectId, recarga]);
 
   // Mientras llega la lista, o si no llega, el árbol enseña al menos la página
   // abierta: ésa ya la tenemos, y la lente nunca enseña menos que antes.
@@ -170,7 +175,8 @@ function Explorador({
     setPerezosos((p) => ({ ...p, [ruta]: "cargando" }));
     fetch(`/api/projects/${encodeURIComponent(projectId)}/ficheros?ruta=${encodeURIComponent(ruta)}`, { cache: "no-store" })
       .then((r) => (r.ok ? (r.json() as Promise<{ contenido: string }>) : Promise.reject(new Error(String(r.status)))))
-      .then((j) => setPerezosos((p) => ({ ...p, [ruta]: j.contenido })))
+      // Sin `contenido`, error: si no, se quedaría sin valor y se volvería a pedir sin fin.
+      .then((j) => setPerezosos((p) => ({ ...p, [ruta]: typeof j.contenido === "string" ? j.contenido : "error" })))
       .catch(() => setPerezosos((p) => ({ ...p, [ruta]: "error" })));
   };
 
@@ -395,7 +401,13 @@ function Explorador({
           </p>
         ) : (
           <Bloque
+            // Otro fichero, otro bloque: lo que se editaba era del anterior.
+            key={elegido}
             comentar={{ projectId, ruta: elegido }}
+            // A mano sólo lo que se guarda (la #18): no lo que se calcula al abrirlo.
+            {...(typeof lista !== "string" && !esDeSoloLectura(elegido) && lista.ficheros.some((f) => f.ruta === elegido)
+              ? { editar: { projectId, ruta: elegido, onGuardado: () => setRecarga((n) => n + 1) } }
+              : {})}
             etiqueta={elegido.replace(/^\//, "")}
             {...(esDeSoloLectura(elegido) ? { nota: labels.readOnly } : {})}
             codigo={contenido}
@@ -523,10 +535,13 @@ function Bloque({
   lenguaje,
   salto = null,
   comentar: donde = null,
+  editar = null,
   labels,
 }: {
   /** El fichero de un proyecto: sus líneas se pueden comentar (la #8). */
   comentar?: { readonly projectId: string; readonly ruta: string } | null;
+  /** Y se puede editar a mano (la #18). */
+  editar?: { readonly projectId: string; readonly ruta: string; readonly onGuardado: () => void } | null;
   etiqueta: string;
   nota?: string;
   codigo: string;
@@ -540,6 +555,7 @@ function Bloque({
   const lineas = useMemo(() => colorearLineas(codigo, lenguaje), [codigo, lenguaje]);
   const crudas = useMemo(() => codigo.split("\n"), [codigo]);
   const comentar = useComentarLineas(donde?.projectId, donde?.ruta ?? null);
+  const [editando, setEditando] = useState(false);
   useEffect(() => {
     if (!copiado) return;
     const t = setTimeout(() => setCopiado(false), 1600);
@@ -576,14 +592,36 @@ function Bloque({
           {copiado ? <Check size={11} /> : <Copy size={11} />}
           {copiado ? labels.copied : labels.copy}
         </button>
+        {editar && !editando && (
+          <button
+            type="button"
+            onClick={() => setEditando(true)}
+            className="inline-flex items-center gap-1 rounded-md border bd px-2 py-1 text-[11px] fg-muted hover:fg hover:bg-hover transition ui-small"
+          >
+            <Pencil size={11} />
+            {labels.editar.editar}
+          </button>
+        )}
       </header>
+      {editar && editando && (
+        <EditorDeFichero
+          projectId={editar.projectId}
+          ruta={editar.ruta}
+          labels={labels.editar}
+          onCerrar={() => setEditando(false)}
+          onGuardado={() => {
+            setEditando(false);
+            editar.onGuardado();
+          }}
+        />
+      )}
       {/* El código NUNCA se interpreta: va como texto dentro de <code>. Es la
           misma regla que el resto del taller — lo que el modelo escribe no se
           ejecuta fuera de su cápsula. */}
       {/* LAS LÍNEAS BAJAN, no se van a la derecha (Jesús, 02/10): el «ajuste
           de línea» de VS Code. Una línea larga —un HTML en una sola fila— se
           parte por donde haga falta, y su número queda en la primera fila. */}
-      <pre className="p-3 text-[11.5px] leading-[1.55]">
+      <pre className={`p-3 text-[11.5px] leading-[1.55]${editando ? " hidden" : ""}`}>
         <code className="block font-mono">
           {lineas.map((linea, i) => (
             <Fragment key={i}>

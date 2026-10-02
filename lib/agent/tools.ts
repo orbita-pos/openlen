@@ -538,6 +538,9 @@ export interface AgentSession {
    * se etiqueta como suya, no como «Before AI edit».
    */
   autor?: "usuario";
+  /** Con `autor: "usuario"`, DESDE DÓNDE: su terminal (ausente) o el editor de
+   *  la lente «Código» (la #18). Sólo cambia cómo se llama su versión. */
+  desde?: "editor";
   // ⚰️ Aquí vivían `taggedHtml` (el documento activo con ids, contra el que se
   // aplicaban las ops) y `baseHtml` (contra qué comparar si otro escribió). Len
   // 2.0 edita ficheros (plans/len-2/ficheros-plan.md): cada herramienta lee la

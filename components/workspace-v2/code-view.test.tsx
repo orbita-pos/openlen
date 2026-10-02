@@ -42,6 +42,18 @@ const labels = {
     enElMensaje: "va en tu próximo mensaje",
     tope: "Ya hay 10 comentarios esperando",
   },
+  editar: {
+    editar: "Editar",
+    guardar: "Guardar",
+    guardando: "Guardando…",
+    descartar: "Descartar",
+    cargando: "Cargando…",
+    cambio: "Este archivo cambió mientras lo editabas. No se guardó nada.",
+    cargarAhora: "Cargar lo de ahora",
+    rechazado: "No se guardó:",
+    error: "No se pudo guardar.",
+    nota: "Se guarda como tu versión.",
+  },
 };
 
 const LISTA = {
@@ -279,5 +291,88 @@ describe("CodeView — comentar una línea para el siguiente mensaje (la #8)", (
     // Quitarlo lo saca de la cola.
     act(() => el.querySelector<HTMLButtonElement>("[data-comentario-pendiente] button")!.click());
     expect(comentariosDelChat.lista("p1")).toHaveLength(0);
+  });
+});
+
+describe("CodeView — editar a mano (la #18)", () => {
+  async function abrirMenu(respuestaDelPut: () => Response) {
+    const llamadas: { url: string; init?: RequestInit }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        llamadas.push({ url, ...(init ? { init } : {}) });
+        if (init?.method === "PUT") return respuestaDelPut();
+        if (url.includes("?ruta=")) return new Response(JSON.stringify({ contenido: '{"hoy":12}' }));
+        return new Response(JSON.stringify(LISTA));
+      }),
+    );
+    const onClose = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const root = createRoot(el);
+    roots.push(root);
+    await act(async () => {
+      root.render(
+        <CodeView html="<h1>Lienzo</h1>" projectId="p1" rutaActual="/index.html" peticion={{ ruta: "/menu/index.html", n: 1 }} onClose={onClose} labels={labels} />,
+      );
+    });
+    const editar = [...el.querySelectorAll("button")].find((b) => b.textContent === "Editar")!;
+    await act(async () => editar.click());
+    const area = el.querySelector<HTMLTextAreaElement>("[data-editor-de-fichero] textarea")!;
+    return { el, area, llamadas, onClose };
+  }
+  const escribirEn = (area: HTMLTextAreaElement, texto: string) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!;
+    act(() => {
+      setter.call(area, texto);
+      area.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  };
+
+  it("empieza por lo GUARDADO, Ctrl+S guarda con su base y vuelve a la vista; Escape no cierra la lente", async () => {
+    const { el, area, llamadas, onClose } = await abrirMenu(() => new Response(JSON.stringify({ contenido: "<h1>Carta</h1>\n" })));
+    expect(area.value).toBe("<h1>Menú</h1>");
+    expect(tecla(area, "Escape").defaultPrevented).toBe(true);
+    expect(onClose).not.toHaveBeenCalled();
+    escribirEn(area, "<h1>Carta</h1>");
+    await act(async () => {
+      area.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true, bubbles: true, cancelable: true }));
+    });
+    const put = llamadas.find((l) => l.init?.method === "PUT")!;
+    expect(put.url).toBe("/api/projects/p1/ficheros");
+    expect(JSON.parse(String(put.init!.body))).toEqual({ ruta: "/menu/index.html", contenido: "<h1>Carta</h1>", base: "<h1>Menú</h1>" });
+    expect(el.querySelector("[data-editor-de-fichero]")).toBeNull();
+    // Y se vuelve a pedir la lista, para enseñar lo guardado.
+    expect(llamadas.filter((l) => !l.init?.method).length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("🔴 si cambió mientras lo editabas, no se guarda nada y se puede cargar lo de ahora", async () => {
+    const { el, area } = await abrirMenu(() => new Response(JSON.stringify({ error: "cambio", actual: "<h1>Menú de Len</h1>" }), { status: 409 }));
+    escribirEn(area, "<h1>Carta</h1>");
+    await act(async () => [...el.querySelectorAll("button")].find((b) => b.textContent === "Guardar")!.click());
+    expect(el.textContent).toContain("Este archivo cambió mientras lo editabas");
+    act(() => [...el.querySelectorAll("button")].find((b) => b.textContent === "Cargar lo de ahora")!.click());
+    expect(el.querySelector<HTMLTextAreaElement>("[data-editor-de-fichero] textarea")!.value).toBe("<h1>Menú de Len</h1>");
+  });
+
+  it("lo que una guarda rechaza dice por qué; lo que se calcula al abrirlo no tiene «Editar»", async () => {
+    const { el, area } = await abrirMenu(
+      () => new Response(JSON.stringify({ error: "rechazado", detalle: "menu/index.html: not saved — JavaScript…" }), { status: 422 }),
+    );
+    escribirEn(area, "<h1>Carta</h1><script>x()</script>");
+    await act(async () => [...el.querySelectorAll("button")].find((b) => b.textContent === "Guardar")!.click());
+    expect(el.textContent).toContain("No se guardó:");
+    expect(el.textContent).toContain("menu/index.html: not saved — JavaScript…");
+
+    const otro = document.createElement("div");
+    document.body.appendChild(otro);
+    const root = createRoot(otro);
+    roots.push(root);
+    await act(async () => {
+      root.render(
+        <CodeView html="<h1>Lienzo</h1>" projectId="p1" rutaActual="/index.html" peticion={{ ruta: "/resultados/visitas.json", n: 1 }} onClose={() => {}} labels={labels} />,
+      );
+    });
+    expect([...otro.querySelectorAll("button")].some((b) => b.textContent === "Editar")).toBe(false);
   });
 });

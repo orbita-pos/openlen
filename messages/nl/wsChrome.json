@@ -207,6 +207,18 @@
       "quitar": "Opmerking verwijderen",
       "enElMensaje": "gaat mee met je volgende bericht",
       "tope": "Er wachten al 10 opmerkingen: stuur eerst het bericht."
+    },
+    "editar": {
+      "editar": "Bewerken",
+      "guardar": "Opslaan",
+      "guardando": "Opslaan…",
+      "descartar": "Verwerpen",
+      "cargando": "Laden…",
+      "cambio": "Dit bestand is gewijzigd terwijl je het bewerkte (Len, de editor of je terminal). Er is niets opgeslagen.",
+      "cargarAhora": "Huidige versie laden",
+      "rechazado": "Niet opgeslagen:",
+      "error": "Opslaan is mislukt.",
+      "nota": "Wordt opgeslagen als jouw versie; Len ziet het bij de volgende beurt."
     }
   },
   "placeholder": {

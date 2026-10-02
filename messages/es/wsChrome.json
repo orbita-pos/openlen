@@ -199,6 +199,18 @@
       "quitar": "Quitar el comentario",
       "enElMensaje": "va en tu próximo mensaje",
       "tope": "Ya hay 10 comentarios esperando: manda el mensaje primero."
+    },
+    "editar": {
+      "editar": "Editar",
+      "guardar": "Guardar",
+      "guardando": "Guardando…",
+      "descartar": "Descartar",
+      "cargando": "Cargando…",
+      "cambio": "Este archivo cambió mientras lo editabas (Len, el editor o tu terminal). No se guardó nada.",
+      "cargarAhora": "Cargar lo de ahora",
+      "rechazado": "No se guardó:",
+      "error": "No se pudo guardar.",
+      "nota": "Se guarda como tu versión; Len lo verá en su próximo turno."
     }
   },
   "placeholder": {

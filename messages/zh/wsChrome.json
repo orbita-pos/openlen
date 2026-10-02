@@ -199,6 +199,18 @@
       "quitar": "删除评论",
       "enElMensaje": "会随你的下一条消息发送",
       "tope": "已有 10 条评论在等待：请先发送消息。"
+    },
+    "editar": {
+      "editar": "编辑",
+      "guardar": "保存",
+      "guardando": "正在保存…",
+      "descartar": "放弃",
+      "cargando": "正在加载…",
+      "cambio": "你编辑期间这个文件被改动了（Len、编辑器或你的终端）。没有保存任何内容。",
+      "cargarAhora": "加载当前内容",
+      "rechazado": "未保存：",
+      "error": "无法保存。",
+      "nota": "会保存为你的版本；Len 会在下一轮看到。"
     }
   },
   "placeholder": {

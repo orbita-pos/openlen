@@ -1,4 +1,5 @@
-// Los ficheros del proyecto, para el explorador de la lente «Código». SÓLO LECTURA.
+// Los ficheros del proyecto, para el explorador de la lente «Código». El GET, sólo lectura;
+// el PUT guarda lo editado a mano (la #18, abajo).
 //
 // Es el MISMO árbol que ve Len en su terminal (F1 y F5 de plans/len-agente-2026):
 // sale de `cargarFicherosDeLaTerminal` (páginas, `/datos`, `/memoria`,
@@ -21,6 +22,7 @@ import { realDeps, type AgentSession } from "@/lib/agent/tools";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { soloLecturaDeLaTerminal } from "@/lib/agent/terminal/solo-lectura";
 import { RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
+import { guardarAMano } from "@/lib/agent/terminal/editar-a-mano";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -72,4 +74,48 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     .filter(([r]) => r !== RUTA_MANUAL)
     .map(([r, contenido]) => ({ ruta: r, contenido }));
   return json({ ficheros, perezosos: soloLectura.rutas });
+}
+
+/** Un fichero más grande que esto no se edita a mano en el navegador. */
+const MAX_FICHERO = 2_000_000;
+
+/**
+ * PUT — guardar un fichero editado a mano en la lente «Código» (la #18 de
+ * plans/len-agente-2026/notas/fase-5-taller.md), por el mismo camino que la
+ * terminal del usuario (`lib/agent/terminal/editar-a-mano.ts`).
+ *
+ *   { ruta, contenido, base } → 200 { contenido }            (lo que quedó guardado)
+ *                               409 { error: "cambio", actual } (cambió desde que lo abriste)
+ *                               422 { error: "rechazado", detalle }
+ *                               404 si no existe, 400 sin los tres, 413 si es enorme
+ */
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  const { id } = await params;
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return json({ error: "unauthorized" }, 401);
+  const propio = await db
+    .select({ id: schema.projects.id })
+    .from(schema.projects)
+    .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
+    .limit(1);
+  if (propio.length === 0) return json({ error: "not_found" }, 404);
+
+  let cuerpo: { ruta?: unknown; contenido?: unknown; base?: unknown };
+  try {
+    cuerpo = (await req.json()) as typeof cuerpo;
+  } catch {
+    return json({ error: "sin_cuerpo" }, 400);
+  }
+  const { ruta, contenido, base } = cuerpo;
+  if (typeof ruta !== "string" || !ruta.startsWith("/") || typeof contenido !== "string" || typeof base !== "string") {
+    return json({ error: "sin_cuerpo" }, 400);
+  }
+  if (contenido.length > MAX_FICHERO) return json({ error: "demasiado_grande" }, 413);
+
+  const r = await guardarAMano(id, userId, ruta, contenido, base);
+  if (r.ok) return json({ contenido: r.contenido });
+  if (r.motivo === "cambio") return json({ error: "cambio", actual: r.actual }, 409);
+  if (r.motivo === "rechazado") return json({ error: "rechazado", detalle: r.detalle }, 422);
+  return json({ error: "not_found" }, 404);
 }

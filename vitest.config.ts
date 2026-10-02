@@ -519,6 +519,8 @@ export default defineConfig({
       "app/api/projects/[id]/apply-template/route.test.ts",
       // La terminal del usuario (la #17 de plans/len-agente-2026/notas/fase-5-taller.md).
       "app/api/projects/[id]/terminal/route.test.ts",
+      // Editar a mano en la lente «Código» (la #18).
+      "app/api/projects/[id]/ficheros/route.test.ts",
       // Same, for the Chat surface. Mocks only the model, DB, auth and
       // credits — the sanitize/normalize/behaviour passes are the real ones.
       "app/api/templates/ai-design/route.test.ts",

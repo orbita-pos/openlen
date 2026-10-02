@@ -77,5 +77,6 @@ export function activoDelSitio(paginas: Iterable<string>): Set<string> {
 /** Por qué no se guarda, o null si todo lo activo de la página ya estaba en el sitio. */
 export function codigoNuevo(despues: string, delSitio: ReadonlySet<string>): string | null {
   if (loActivo(despues).every((a) => delSitio.has(a))) return null;
-  return "your terminal cannot add or change the page's JavaScript (scripts, on… attributes, javascript: links, iframes) — that is Len's job: ask in the chat.";
+  // Sin «tu terminal»: lo dicen también el editor de la lente «Código» (la #18).
+  return "the page's JavaScript (scripts, on… attributes, javascript: links, iframes) cannot be added or changed by hand — that is Len's job: ask in the chat.";
 }
