@@ -829,6 +829,22 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
     }
   });
 
+  it("un comando que sólo lee dice «sin_cambio», como Read: no cuenta como que Len actuó", async () => {
+    const { deps } = makeDeps({ html: HOME });
+    const session = makeSession();
+    try {
+      const cat = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "cat /index.html > /tmp/copia; wc -c /tmp/copia" }));
+      assert.equal(cat.response.ok, true, texto(cat));
+      assert.equal(cat.response.cambio, "sin_cambio");
+      // A la tarjeta no va: leer no es un aviso.
+      assert.equal(cat.action?.cambio, undefined);
+      const sed = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "sed -i 's#</body>#<p>Hola</p></body>#' /index.html" }));
+      assert.equal(sed.response.cambio, "cambio", texto(sed));
+    } finally {
+      await cerrarTerminalDeLaSesion(session);
+    }
+  });
+
   it("data-slot-path se rechaza también desde la terminal, y la página no cambia", async () => {
     const { deps, store } = makeDeps({ html: HOME });
     const session = makeSession();

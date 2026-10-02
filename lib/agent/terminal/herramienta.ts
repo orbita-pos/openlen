@@ -101,7 +101,10 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
       ok,
       ...(ok ? {} : { error: `exit code ${salida.exitCode}` }),
       [CLAVE_TOOL_RESULT]: texto,
-      ...(cambio ? { cambio } : {}),
+      // Sin escrituras, el comando sólo leyó: lo dice, como Read, para que un
+      // `cat` no cuente como «Len actuó» y deje pasar un «listo» sin cambio
+      // (la guarda de `actuo` en loop.ts). A la tarjeta no va: no es un aviso.
+      cambio: cambio ?? "sin_cambio",
     },
     action: { tool: NOMBRE_BASH, ok, summary: recorte(command), ...(cambio ? { cambio } : {}) },
     terminal: { command, salida: texto, exitCode: salida.exitCode },
