@@ -44,7 +44,9 @@
       "ver_visitas": "Mirando tus visitas",
       "ver_formularios": "Mirando tus formularios",
       "ver_mensajes": "Mirando tus mensajes",
-      "preparar_respuesta": "Preparando tu respuesta"
+      "preparar_respuesta": "Preparando tu respuesta",
+      "web_search": "Buscando en internet",
+      "web_fetch": "Leyendo una página web"
     },
     "action": {
       "home": "Inicio",

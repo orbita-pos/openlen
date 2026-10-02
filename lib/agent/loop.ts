@@ -637,11 +637,17 @@ export function sobreQue(argsDeLaLlamada: Record<string, unknown>): string {
   };
   const rel = (v: string | null) => (v ? v.replace(/^\/+/, "") : null);
   const comando = texto("command");
+  // F2: lo que se busca (`web_search`) y la página que se lee (`web_fetch`).
+  const consultas = Array.isArray(argsDeLaLlamada.queries)
+    ? argsDeLaLlamada.queries.filter((q): q is string => typeof q === "string" && q.trim() !== "").join(" · ") || null
+    : null;
   return (
     texto("resumen") ??
     rel(texto("file_path")) ??
     texto("pattern") ??
     rel(texto("path")) ??
+    consultas?.slice(0, 60) ??
+    texto("url")?.slice(0, 60) ??
     (comando ? resumenDelComando(comando) : "")
   );
 }
@@ -780,7 +786,20 @@ const READ_ONLY_TOOLS = new Set([
 /** Las lecturas que pueden correr a la vez (F1): no cambian ni la página ni
  *  nada del proyecto. `preguntar` y `TodoWrite` no: no leen, y `preguntar`
  *  cierra el turno. */
-const EN_PARALELO = new Set(["Read", "Grep", "Glob", "mirar_pagina", "usar_pagina", "ver_visitas", "ver_formularios", "ver_mensajes"]);
+// F2: `web_search` y `web_fetch` tampoco tocan el proyecto. Como `ver_visitas`,
+// NO van en READ_ONLY_TOOLS: buscar y contestar con lo encontrado es el trabajo.
+const EN_PARALELO = new Set([
+  "Read",
+  "Grep",
+  "Glob",
+  "mirar_pagina",
+  "usar_pagina",
+  "ver_visitas",
+  "ver_formularios",
+  "ver_mensajes",
+  "web_search",
+  "web_fetch",
+]);
 
 /** Cuántas vueltas gana el turno cuando el usuario corrige el rumbo.
  *

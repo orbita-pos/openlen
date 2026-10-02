@@ -44,7 +44,9 @@
       "ver_visitas": "Vendo suas visitas",
       "ver_formularios": "Vendo seus formulários",
       "ver_mensajes": "Vendo suas mensagens",
-      "preparar_respuesta": "Preparando sua resposta"
+      "preparar_respuesta": "Preparando sua resposta",
+      "web_search": "Pesquisando na internet",
+      "web_fetch": "Lendo uma página da web"
     },
     "action": {
       "home": "Início",

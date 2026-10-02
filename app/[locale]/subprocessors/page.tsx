@@ -33,7 +33,7 @@ export default async function SubprocessorsPage({
   return (
     <LegalPage
       title={es ? "Subprocesadores" : "Subprocessors"}
-      updated={es ? "Última actualización: 30 de septiembre de 2026" : "Last updated: September 30, 2026"}
+      updated={es ? "Última actualización: 2 de octubre de 2026" : "Last updated: October 2, 2026"}
     >
       {es ? (
         <>
@@ -111,6 +111,13 @@ export default async function SubprocessorsPage({
               <strong>OpenAI</strong> (api.openai.com) — edición de imágenes con
               IA. Datos: la imagen que el usuario edita y su instrucción de
               texto. Región: Estados Unidos.
+            </li>
+            <li>
+              <strong>Exa</strong> (api.exa.ai) — búsqueda en internet, cuando
+              Len busca algo que necesita para tu página (un horario, un precio,
+              una dirección). Datos: el texto de cada búsqueda que escribe Len,
+              que puede incluir el nombre de tu negocio o de otros; ni tu correo
+              ni el contenido de tu página. Región: Estados Unidos.
             </li>
           </ul>
 
@@ -246,6 +253,13 @@ export default async function SubprocessorsPage({
               <strong>OpenAI</strong> (api.openai.com) — AI image editing. Data:
               the image the user is editing and their text instruction. Region:
               United States.
+            </li>
+            <li>
+              <strong>Exa</strong> (api.exa.ai) — web search, when Len looks up
+              something your page needs (opening hours, a price, an address).
+              Data: the text of each search Len writes, which may include the
+              name of your business or of others; neither your email nor your
+              page&apos;s content. Region: United States.
             </li>
           </ul>
 

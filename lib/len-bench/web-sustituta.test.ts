@@ -2,7 +2,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { WebDelCaso } from "./tipos";
-import { buscarEnLaWeb, leerDeLaWeb, problemasDeLaWeb, textoDeLaWeb } from "./web-sustituta";
+import { buscarEnLaWeb, ficheroDeLaWeb, leerDeLaWeb, problemasDeLaWeb, textoDeLaWeb, webASerializable, webDeSerializable } from "./web-sustituta";
 
 const MUSEO = { titulo: "Museo de la Sal Vieja — Visita", url: "https://museosalvieja.es/visita", fragmento: "Martes a domingo, de 10:00 a 17:30.", fecha: "2026-03-02" };
 const BLOG = { titulo: "Qué ver en el norte", url: "https://blog.example/norte", fragmento: "abre de 9 a 17 h", fecha: "2019-07-14" };
@@ -61,5 +61,27 @@ describe("problemasDeLaWeb", () => {
     expect(problemasDeLaWeb(rota)).toEqual([
       "el resultado «Museo de la Sal Vieja — Visita» lleva a https://museosalvieja.es/visita, que no está en sus páginas",
     ]);
+  });
+});
+
+describe("la web del caso, en JSON (F2: la deja el conductor, la lee el servidor)", () => {
+  it("ida y vuelta: las reglas siguen casando igual, con sus banderas", () => {
+    const web: WebDelCaso = {
+      busquedas: [{ si: /horario|abre/i, resultados: [{ titulo: "Museo", url: "https://museo.example/", fragmento: "De 10 a 18", fecha: "2026-06-01" }] }],
+      paginas: { "https://museo.example/": "<h1>Horario</h1>" },
+    };
+    const vuelta = webDeSerializable(JSON.parse(JSON.stringify(webASerializable(web))));
+    expect(buscarEnLaWeb(vuelta, "¿A qué hora ABRE?")).toEqual(web.busquedas[0]!.resultados);
+    expect(leerDeLaWeb(vuelta, "https://museo.example")).toBe("<h1>Horario</h1>");
+  });
+
+  it("lo que no tiene la forma es una web vacía, y una regla rota se salta", () => {
+    expect(webDeSerializable(null)).toEqual({ busquedas: [], paginas: {} });
+    expect(webDeSerializable({ busquedas: [{ fuente: "(", banderas: "", resultados: [] }], paginas: {} }).busquedas).toEqual([]);
+  });
+
+  it("un nombre de fichero por proyecto, sin nada que lo saque de la carpeta", () => {
+    expect(ficheroDeLaWeb("plans/len-2/web/", "abc-123")).toBe("plans/len-2/web/abc-123.json");
+    expect(ficheroDeLaWeb("plans/len-2/web", "../../etc")).toBe("plans/len-2/web/______etc.json");
   });
 });

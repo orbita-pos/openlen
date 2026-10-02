@@ -12,14 +12,11 @@
 // expresión que casa con la consulta da sus resultados, y si no casa ninguna, la
 // búsqueda no encuentra nada, como un buscador al que se le pregunta otra cosa.
 //
-// Lo que NO hace todavía, a propósito: nadie la consulta. Len no tiene con qué
-// buscar hasta F2, y una palanca que no llega a ningún sitio se lee como una
-// alternativa que existe (memoria `la-palanca-que-no-vuelve-a-ningun-sitio`).
-// En F2 se enchufan juntos el aviso al servidor de Len-Bench, el conductor que
-// deja la web de cada proyecto donde ese servidor la lea, y `web_search` /
-// `web_fetch` respondiendo desde aquí. Hasta entonces, los casos con web son la
-// línea base «sin F2», y sus graders ya cuentan lo publicado en esta web como
-// dato DADO (`textoDeLaWeb`).
+// DESDE F2 la consultan `web_search` y `web_fetch` en el servidor de Len-Bench:
+// el conductor deja la web de cada proyecto en `DIR_WEB/<proyecto>.json`
+// (`webASerializable`, lib/len-bench/entorno.ts) y `lib/agent/web/buscar.ts` la
+// lee con `OPENLEN_WEB_DE_PRUEBA_DIR`. Ni una petición sale a la red. Los
+// graders siguen contando lo publicado en esta web como dato DADO (`textoDeLaWeb`).
 
 import { textoVisible } from "./extraer";
 import type { ResultadoDeBusqueda, WebDelCaso } from "./tipos";
@@ -53,6 +50,43 @@ export function textoDeLaWeb(web: WebDelCaso | undefined): string {
   if (!web) return "";
   const resultados = web.busquedas.flatMap((b) => b.resultados.map((r) => `${r.titulo}\n${r.fragmento}`));
   return [...resultados, ...Object.values(web.paginas).map(textoVisible)].join("\n");
+}
+
+/** El fichero donde vive la web de un proyecto: UNA regla para quien la escribe
+ *  (el conductor) y quien la lee (el servidor, `lib/agent/web/buscar.ts`). */
+export function ficheroDeLaWeb(dir: string, projectId: string): string {
+  return `${dir.replace(/[\\/]+$/, "")}/${projectId.replace(/[^\w-]/g, "_")}.json`;
+}
+
+/** La web de un caso, como JSON: el conductor la deja así para el servidor de
+ *  Len-Bench (`lib/agent/web/buscar.ts` la lee). Las expresiones viajan como
+ *  fuente y banderas. */
+export interface WebSerializada {
+  readonly busquedas: readonly { readonly fuente: string; readonly banderas: string; readonly resultados: readonly ResultadoDeBusqueda[] }[];
+  readonly paginas: Readonly<Record<string, string>>;
+}
+
+export function webASerializable(web: WebDelCaso): WebSerializada {
+  return {
+    busquedas: web.busquedas.map((b) => ({ fuente: b.si.source, banderas: b.si.flags, resultados: b.resultados })),
+    paginas: web.paginas,
+  };
+}
+
+/** Lo contrario; lo que no tenga la forma, no cuenta (una web vacía). */
+export function webDeSerializable(x: unknown): WebDelCaso {
+  const w = x as Partial<WebSerializada> | null;
+  if (!w || !Array.isArray(w.busquedas) || typeof w.paginas !== "object" || w.paginas === null) return { busquedas: [], paginas: {} };
+  return {
+    busquedas: w.busquedas.flatMap((b) => {
+      try {
+        return [{ si: new RegExp(b.fuente, b.banderas), resultados: Array.isArray(b.resultados) ? b.resultados : [] }];
+      } catch {
+        return [];
+      }
+    }),
+    paginas: Object.fromEntries(Object.entries(w.paginas).filter((e): e is [string, string] => typeof e[1] === "string")),
+  };
 }
 
 /** Lo que tiene mal la web de un caso, en palabras: un resultado que lleva a una página que no existe. */

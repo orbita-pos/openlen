@@ -140,7 +140,11 @@ export const KNOWN_TOOLS = new Set([
   "publicar",
   "trabajar_en_pagina",
   "buscar_en_pagina",
+  // Retirada en F2 (plans/len-agente-2026); se queda por el historial.
   "leer_de_internet",
+  // F2: buscar y leer en internet, como DeepSeek.
+  "web_search",
+  "web_fetch",
   "declarar_tareas",
   "preguntar",
   // H2 (2026-09-25): cargar una herramienta diferida. Retirada en Len 2.1;

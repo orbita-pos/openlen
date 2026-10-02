@@ -44,7 +44,9 @@
       "ver_visitas": "Consultation de vos visites",
       "ver_formularios": "Consultation de vos formulaires",
       "ver_mensajes": "Consultation de vos messages",
-      "preparar_respuesta": "Préparation de votre réponse"
+      "preparar_respuesta": "Préparation de votre réponse",
+      "web_search": "Recherche sur le web",
+      "web_fetch": "Lecture d’une page web"
     },
     "action": {
       "home": "Accueil",

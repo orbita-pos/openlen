@@ -44,7 +44,9 @@
       "ver_visitas": "Checking your visits",
       "ver_formularios": "Checking your form submissions",
       "ver_mensajes": "Checking your messages",
-      "preparar_respuesta": "Drafting your reply"
+      "preparar_respuesta": "Drafting your reply",
+      "web_search": "Searching the web",
+      "web_fetch": "Reading a web page"
     },
     "action": {
       "home": "Home",

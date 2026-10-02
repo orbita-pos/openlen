@@ -15,7 +15,15 @@ describe("variablesApagadas", () => {
     expect(v).toContain("R2_ACCOUNT_ID");
     expect(v).toContain("R2_PUBLISHED_BUCKET");
     expect(v).toContain("CLOUDFLARE_API_TOKEN");
-    expect(v.every((n) => n.startsWith("R2_") || n.startsWith("CLOUDFLARE_") || n.startsWith("RESEND_"))).toBe(true);
+    expect(v.every((n) => n.startsWith("R2_") || n.startsWith("CLOUDFLARE_") || n.startsWith("RESEND_") || n.startsWith("EXA_"))).toBe(true);
+  });
+  it("🔴 y la de Exa (F2): una corrida no busca de verdad, que gasta y da otra cosa cada día", () => {
+    expect(variablesApagadas(RAIZ)).toContain("EXA_API_KEY");
+    const env = entornoDeLenBench({ EXA_API_KEY: "de-verdad" }, RAIZ);
+    expect(env.EXA_API_KEY).toBe("");
+    expect(env.OPENLEN_WEB_DE_PRUEBA_DIR).toBe(path.join(RAIZ, "plans", "len-2", "web"));
+    expect(problemasDelEntorno(env, RAIZ)).toEqual([]);
+    expect(problemasDelEntorno({ ...env, OPENLEN_WEB_DE_PRUEBA_DIR: undefined }, RAIZ).join(" ")).toMatch(/web del caso/);
   });
   it("y la de Resend: cada formulario enviado en Len-Bench mandaba un correo de verdad", () => {
     // /api/f/<sub> → notifyOwner → sendLeadNotificationEmail → Resend, al

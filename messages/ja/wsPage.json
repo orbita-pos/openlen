@@ -44,7 +44,9 @@
       "ver_visitas": "訪問数を確認中",
       "ver_formularios": "フォームを確認中",
       "ver_mensajes": "メッセージを確認中",
-      "preparar_respuesta": "返信を準備中"
+      "preparar_respuesta": "返信を準備中",
+      "web_search": "ウェブを検索中",
+      "web_fetch": "ウェブページを読んでいます"
     },
     "action": {
       "home": "ホーム",

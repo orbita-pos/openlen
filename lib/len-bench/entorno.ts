@@ -19,12 +19,16 @@ export const RAIZ_LEN_BENCH = path.join("plans", "len-2");
 export const DIR_PUBLICADAS = path.join(RAIZ_LEN_BENCH, "publicadas");
 export const DIR_GRABACIONES = path.join(RAIZ_LEN_BENCH, "grabaciones");
 export const DIR_CORRIDAS = path.join(RAIZ_LEN_BENCH, "corridas");
+/** F2: la web fija de cada caso (`web-sustituta.ts`), donde la lee el servidor. */
+export const DIR_WEB = path.join(RAIZ_LEN_BENCH, "web");
 export const PUERTO_LEN_BENCH = 3007;
 export const BASE_LEN_BENCH = `http://localhost:${PUERTO_LEN_BENCH}`;
 
 // Sin RESEND_API_KEY, lib/email.ts escribe el aviso en el log del servidor y no
-// manda nada; el grader lee la bandeja en la base, no el correo.
-const PREFIJOS = ["R2_", "CLOUDFLARE_", "RESEND_"] as const;
+// manda nada; el grader lee la bandeja en la base, no el correo. Y sin
+// EXA_API_KEY (F2) una corrida no puede buscar de verdad aunque la web de
+// prueba faltara: buscar en Exa gasta y da otra cosa cada día.
+const PREFIJOS = ["R2_", "CLOUDFLARE_", "RESEND_", "EXA_"] as const;
 
 function tsDe(dir: string, out: string[] = []): string[] {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -58,6 +62,8 @@ export function entornoDeLenBench(base: Readonly<Entorno>, raizRepo: string): En
   for (const k of Object.keys(env)) if (PREFIJOS.some((p) => k.startsWith(p))) env[k] = "";
   env.PUBLISH_ROOT = path.join(raizRepo, DIR_PUBLICADAS);
   env.OPENLEN_AGENT_RECORD_DIR = path.join(raizRepo, DIR_GRABACIONES);
+  // F2: `web_search` y `web_fetch` leen la web fija del caso, nunca la red.
+  env.OPENLEN_WEB_DE_PRUEBA_DIR = path.join(raizRepo, DIR_WEB);
   // El «ápice» de la publicada. Lo que la página manda a la app —el `action`
   // de los formularios (lib/publish/forms.ts) y la base del widget
   // (lib/publish/base-host.ts)— se hornea al publicar con esta variable, y sin
@@ -82,7 +88,7 @@ export function entornoDeLenBench(base: Readonly<Entorno>, raizRepo: string): En
 export function problemasDelEntorno(env: Readonly<Entorno>, raizRepo: string): string[] {
   const p: string[] = [];
   for (const [k, v] of Object.entries(env)) {
-    if (PREFIJOS.some((pre) => k.startsWith(pre)) && v) p.push(`${k} tiene valor: tocaría R2/Cloudflare/Resend de producción`);
+    if (PREFIJOS.some((pre) => k.startsWith(pre)) && v) p.push(`${k} tiene valor: tocaría un servicio de producción (R2, Cloudflare, Resend o Exa)`);
   }
   if (env.NEXT_PUBLIC_SITE_URL !== BASE_LEN_BENCH) {
     p.push(`NEXT_PUBLIC_SITE_URL es «${env.NEXT_PUBLIC_SITE_URL ?? "(sin definir → https://openlen.com)"}», no ${BASE_LEN_BENCH}: los formularios irían a producción`);
@@ -92,6 +98,9 @@ export function problemasDelEntorno(env: Readonly<Entorno>, raizRepo: string): s
   }
   if (env.OPENLEN_AGENT_RECORD_DIR !== path.join(raizRepo, DIR_GRABACIONES)) {
     p.push(`OPENLEN_AGENT_RECORD_DIR es «${env.OPENLEN_AGENT_RECORD_DIR ?? "(sin definir)"}»: el coste saldría 0`);
+  }
+  if (env.OPENLEN_WEB_DE_PRUEBA_DIR !== path.join(raizRepo, DIR_WEB)) {
+    p.push(`OPENLEN_WEB_DE_PRUEBA_DIR es «${env.OPENLEN_WEB_DE_PRUEBA_DIR ?? "(sin definir)"}», no ${DIR_WEB}: Len no tendría la web del caso`);
   }
   return p;
 }

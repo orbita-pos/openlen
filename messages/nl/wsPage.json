@@ -44,7 +44,9 @@
       "ver_visitas": "Bezoeken bekijken",
       "ver_formularios": "Formulieren bekijken",
       "ver_mensajes": "Berichten bekijken",
-      "preparar_respuesta": "Antwoord voorbereiden"
+      "preparar_respuesta": "Antwoord voorbereiden",
+      "web_search": "Zoekt op het web",
+      "web_fetch": "Leest een webpagina"
     },
     "action": {
       "home": "Home",

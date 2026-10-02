@@ -36,7 +36,7 @@ import { capturarPublicada } from "./capturas";
 import { usdDeProyecto } from "./coste";
 import { rutasPublicadas } from "./graders";
 import { decidirComoCliente, MAX_RESPUESTAS_POR_PASO, preguntoLen, respetaLaFicha } from "./cliente-simulado";
-import { problemasDelEntorno } from "./entorno";
+import { DIR_WEB, problemasDelEntorno } from "./entorno";
 import { htmlDe } from "./extraer";
 import { filaComoLaDeUnDueno } from "./fila-del-dueno";
 import { conReintentoPorEperm } from "./reintentar-publicar";
@@ -47,7 +47,7 @@ import { puntuarCorrida } from "./puntuar";
 import { enviarTurno, herramientasDeLen, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
 import { servirPublicada } from "./servidor-publicada";
 import type { Desenlace, Encargo, Intercambio, ResultadoDeCorrida, ResultadoDeGrader } from "./tipos";
-import { textoDeLaWeb } from "./web-sustituta";
+import { ficheroDeLaWeb, textoDeLaWeb, webASerializable } from "./web-sustituta";
 
 /** La zona del dueño si el caso no dice otra: la que manda el panel de un
  *  usuario en México (plans/len-resultados/diseno.md §7). */
@@ -243,6 +243,13 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
   const saldo0 = await creditos(o.owner.id);
   const juez0 = gastoDelJuez();
   const projectId = await createThrowawayProject(o.owner.id, `len-bench-${e.id}`, e.inicio, filaComoLaDeUnDueno(e.inicio));
+  // F2: la web del caso, donde la lee el servidor de Len-Bench
+  // (lib/agent/web/buscar.ts). Sin web no hay fichero: buscar no encuentra nada.
+  if (e.web) {
+    const dirDeLaWeb = path.join(process.cwd(), DIR_WEB);
+    fs.mkdirSync(dirDeLaWeb, { recursive: true });
+    fs.writeFileSync(ficheroDeLaWeb(dirDeLaWeb, projectId), JSON.stringify(webASerializable(e.web)));
+  }
   // Casos de resultados (plans/len-resultados/): la zona que manda el panel, lo
   // que Len llamó y las tarjetas que dejó, para los graders de la CONVERSACIÓN.
   const zona = e.zona ?? ZONA_POR_DEFECTO;

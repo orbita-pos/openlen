@@ -83,6 +83,8 @@ export default defineConfig({
       "lib/len-bench/**/*.test.ts",
       // La terminal de Len (plans/len-agente-2026, F1).
       "lib/agent/terminal/**/*.test.ts",
+      // Buscar y leer en internet (plans/len-agente-2026, F2).
+      "lib/agent/web/**/*.test.ts",
       // Lo que cambió en el turno, fichero a fichero (la lente «Cambios»).
       "lib/agent/cambios-del-turno.test.ts",
       // `include` es una LISTA BLANCA: un .test.ts fuera de ella NO corre, y
@@ -436,7 +438,6 @@ export default defineConfig({
       // Internet: fetch de URL a texto. El fetcher se inyecta, así que no toca
       // la red ni el binding nativo — pero `include` es LISTA BLANCA y sin esta
       // línea no correría nunca.
-      "lib/agent/internet.test.ts",
       // Len sabe de tus resultados: las herramientas, con dobles (plans/len-resultados/).
       "lib/agent/resultados.test.ts",
       // ⚰️ Aquí estaba "lib/agent/business.test.ts", que NO EXISTE — el fichero

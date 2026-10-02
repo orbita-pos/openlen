@@ -44,7 +44,9 @@
       "ver_visitas": "Controllo delle visite",
       "ver_formularios": "Controllo dei moduli",
       "ver_mensajes": "Controllo dei messaggi",
-      "preparar_respuesta": "Preparazione della risposta"
+      "preparar_respuesta": "Preparazione della risposta",
+      "web_search": "Cerca sul web",
+      "web_fetch": "Legge una pagina web"
     },
     "action": {
       "home": "Home",

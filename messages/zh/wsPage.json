@@ -44,7 +44,9 @@
       "ver_visitas": "查看访问量",
       "ver_formularios": "查看表单",
       "ver_mensajes": "查看消息",
-      "preparar_respuesta": "准备回复"
+      "preparar_respuesta": "准备回复",
+      "web_search": "正在搜索网络",
+      "web_fetch": "正在读取网页"
     },
     "action": {
       "home": "首页",

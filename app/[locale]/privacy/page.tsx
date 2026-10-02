@@ -33,7 +33,7 @@ export default async function PrivacyPage({
   return (
     <LegalPage
       title={es ? "Aviso de privacidad" : "Privacy Policy"}
-      updated={es ? "Última actualización: 30 de septiembre de 2026" : "Last updated: September 30, 2026"}
+      updated={es ? "Última actualización: 2 de octubre de 2026" : "Last updated: October 2, 2026"}
     >
       {es ? (
         <>
@@ -362,7 +362,8 @@ export default async function PrivacyPage({
               que se requiera tu consentimiento adicional): Cloudflare (CDN),
               Hetzner (alojamiento del servidor de aplicación y de la base de
               datos), Fireworks AI (generación con IA), OpenAI (edición de
-              imágenes con IA), Resend (correo transaccional) e{" "}
+              imágenes con IA), Exa (búsqueda en internet cuando Len busca algo),
+              Resend (correo transaccional) e{" "}
               <strong>InariWatch</strong> (<code>@inariwatch/capture</code>,
               monitoreo de errores). InariWatch es un producto hermano del mismo
               operador, por lo que la captura de errores es de primera parte y no
@@ -396,7 +397,8 @@ export default async function PrivacyPage({
             Algunos de nuestros proveedores tratan datos fuera de tu país. El
             servidor de aplicación está en <strong>Alemania</strong> (Hetzner). La
             generación de páginas con IA usa Fireworks AI, la edición de imágenes
-            con IA usa OpenAI, los correos usan Resend y el cobro de suscripciones
+            con IA usa OpenAI, la búsqueda en internet usa Exa, los correos usan
+            Resend y el cobro de suscripciones
             usa Polar, todos en{" "}
             <strong>Estados Unidos</strong>. Para los destinatarios en Estados
             Unidos, estas transferencias se amparan en las{" "}
@@ -734,8 +736,9 @@ export default async function PrivacyPage({
               <strong>Processors</strong> (process data on OpenLen&apos;s behalf, no
               additional consent required): Cloudflare (CDN), Hetzner
               (application-server and database hosting), Fireworks AI (AI
-              generation), OpenAI (AI image editing), Resend (transactional
-              email), and <strong>InariWatch</strong> (
+              generation), OpenAI (AI image editing), Exa (web search when Len
+              looks something up), Resend (transactional email), and{" "}
+              <strong>InariWatch</strong> (
               <code>@inariwatch/capture</code>, error monitoring). InariWatch is a
               sister product of the same operator, so error capture is first-party,
               not an independent third party.
@@ -765,8 +768,9 @@ export default async function PrivacyPage({
           <p>
             Some of our providers process data outside your country. The
             application server is in <strong>Germany</strong> (Hetzner). AI page
-            generation uses Fireworks AI, AI image editing uses OpenAI, email uses
-            Resend, and subscription billing uses Polar, all in the{" "}
+            generation uses Fireworks AI, AI image editing uses OpenAI, web search
+            uses Exa, email uses Resend, and subscription billing uses Polar, all in
+            the{" "}
             <strong>United States</strong>. For
             recipients in the United States, these transfers are covered by the
             European Commission&apos;s <strong>Standard Contractual Clauses</strong>{" "}

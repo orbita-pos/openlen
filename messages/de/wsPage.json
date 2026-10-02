@@ -44,7 +44,9 @@
       "ver_visitas": "Besuche ansehen",
       "ver_formularios": "Formulare ansehen",
       "ver_mensajes": "Nachrichten ansehen",
-      "preparar_respuesta": "Antwort vorbereiten"
+      "preparar_respuesta": "Antwort vorbereiten",
+      "web_search": "Suche im Web",
+      "web_fetch": "Liest eine Webseite"
     },
     "action": {
       "home": "Startseite",
