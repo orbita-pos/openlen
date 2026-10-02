@@ -115,10 +115,13 @@ function escribir(input: HTMLInputElement, texto: string) {
   });
 }
 
-function tecla(el: Element, key: string, extra: KeyboardEventInit = {}) {
+function tecla(el: EventTarget, key: string, extra: KeyboardEventInit = {}, atendida = false) {
+  const e = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...extra });
+  if (atendida) e.preventDefault();
   act(() => {
-    el.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, ...extra }));
+    el.dispatchEvent(e);
   });
+  return e;
 }
 
 describe("CodeView — buscar en los archivos (la #11)", () => {
@@ -170,8 +173,12 @@ describe("CodeView — buscar en los archivos (la #11)", () => {
     tecla(input, "Enter");
     expect(elegido(div)).toBe("menu/index.html");
 
-    tecla(input, "Escape");
+    expect(tecla(input, "Escape").defaultPrevented).toBe(true);
     expect(input.value).toBe("");
+    expect(onClose).not.toHaveBeenCalled();
+    // Como en /new, donde React escucha en el propio `document`: la tecla llega
+    // al oyente de la lente aunque el buscador la parara, y manda la marca.
+    tecla(document, "Escape", {}, true);
     expect(onClose).not.toHaveBeenCalled();
     tecla(input, "Escape");
     expect(onClose).toHaveBeenCalledTimes(1);

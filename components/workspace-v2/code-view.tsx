@@ -250,6 +250,7 @@ function Explorador({
       if (r) abrirResultado(r.ruta, r.linea);
     } else if (e.key === "Escape" && consulta) {
       // Escape borra la búsqueda; sólo con el buscador vacío cierra la lente.
+      e.preventDefault();
       e.stopPropagation();
       setConsulta("");
     }
@@ -592,10 +593,13 @@ export function CodeView({ html, projectId, rutaActual = "/index.html", peticion
   const cierreRef = useRef<HTMLDivElement>(null);
 
   // Escape cierra, como cualquier panel superpuesto. Se engancha al documento
-  // porque el foco puede estar en el <pre> o en el botón de copiar.
+  // porque el foco puede estar en el <pre> o en el botón de copiar. Un Escape
+  // que ya atendió el buscador (`preventDefault`) no cierra: en /new React
+  // escucha en el propio `document`, y su `stopPropagation` no frena a este
+  // oyente, que está en el mismo nodo.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !e.defaultPrevented) onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
