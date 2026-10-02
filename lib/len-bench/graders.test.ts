@@ -11,11 +11,13 @@ import {
   enCadaPagina,
   enElFichero,
   enlacesInternosVan,
+  enlacesVanASuPagina,
   enlaceWhatsApp,
   formularioPide,
   lenPublico,
   mapaDe,
   nadaInventado,
+  ningunEnlaceRoto,
   noContieneTexto,
   paginasQueExisten,
   botonesDeCorreoVan,
@@ -303,6 +305,50 @@ describe("paginas-que-existen", () => {
     const conMenu = { html: SOLUCION_TAQUERIA, pages: { menu: { html: "<h1>Menú</h1>" } } };
     expect((await calificarCon(paginasQueExisten(["menu"]), conMenu)).paso).toBe(true);
     expect((await calificarCon(paginasQueExisten(["menu"]), sol)).paso).toBe(false);
+  });
+});
+
+describe("ningun-enlace-roto y enlaces-van-a-su-pagina — revisar los enlaces de un sitio", () => {
+  const pag = (cuerpo: string) => `<!doctype html><html><body>${cuerpo}</body></html>`;
+  const sitio = (enlaces: string) => ({
+    html: pag(`<nav>${enlaces}</nav><section id="unete">Únete</section>`),
+    pages: {
+      carreras: { html: pag(`<nav>${enlaces}</nav><h1>Carreras</h1>`) },
+      entrenos: { html: pag(`<nav>${enlaces}</nav><li id="larga">La larga</li>`) },
+    },
+  });
+  const BIEN =
+    '<a href="/carreras/">Carreras</a><a href="/entrenos/#larga">La larga</a><a href="/#unete">Únete</a><a href="#">Instagram</a><a href="https://strava.com/x">Strava</a>';
+  const A_SU_PAGINA = enlacesVanASuPagina([
+    { texto: /^Carreras$/, ruta: "/carreras/" },
+    { texto: /^La larga$/, ruta: "/entrenos/" },
+  ]);
+  it("verde con todos bien: un `#` y uno de fuera no son páginas del sitio", async () => {
+    expect((await calificarCon(ningunEnlaceRoto(), sitio(BIEN))).paso).toBe(true);
+    expect((await calificarCon(A_SU_PAGINA, sitio(BIEN))).paso).toBe(true);
+  });
+  it("rojo con el que YA venía roto en la partida: aquí no hay línea base (el de siempre no lo ve: brazo de control)", async () => {
+    const roto = sitio(BIEN.replace('href="/carreras/"', 'href="/carrera/"'));
+    const r = await calificarCon(ningunEnlaceRoto(), roto, { inicio: roto });
+    expect(r.paso).toBe(false);
+    expect(r.explicacion).toContain("/carrera/");
+    expect((await calificarCon(enlacesInternosVan(), roto, { inicio: roto })).paso).toBe(true);
+  });
+  it("rojo con un ancla que no está en OTRA página", async () => {
+    const r = await calificarCon(ningunEnlaceRoto(), sitio(BIEN.replace("/entrenos/#larga", "/entrenos/#la-larga")));
+    expect(r.paso).toBe(false);
+    expect(r.explicacion).toContain("/entrenos/ no tiene ese id");
+  });
+  it("enlaces-van-a-su-pagina: borrar el roto no es arreglarlo, y llevarlo a otra página tampoco", async () => {
+    const borrado = await calificarCon(A_SU_PAGINA, sitio(BIEN.replace('<a href="/carreras/">Carreras</a>', "")));
+    expect(borrado.paso).toBe(false);
+    expect(borrado.explicacion).toContain("ningún enlace dice");
+    expect((await calificarCon(ningunEnlaceRoto(), sitio(BIEN.replace('<a href="/carreras/">Carreras</a>', "")))).paso).toBe(true);
+    const aOtra = await calificarCon(A_SU_PAGINA, sitio(BIEN.replace('href="/carreras/"', 'href="/entrenos/"')));
+    expect(aOtra.paso).toBe(false);
+    expect(aOtra.explicacion).toContain("no a /carreras/");
+    // Sin la barra final es la misma página.
+    expect((await calificarCon(A_SU_PAGINA, sitio(BIEN.replace('href="/carreras/"', 'href="/carreras"')))).paso).toBe(true);
   });
 });
 

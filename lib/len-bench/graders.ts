@@ -1005,6 +1005,81 @@ export function enlacesInternosVan(peso = 2): Grader {
 }
 
 /**
+ * NINGÚN enlace interno del sitio lleva a una página que no existe ni a un
+ * ancla que no está en su página, tampoco los que ya venían rotos. Es
+ * `enlaces-internos-van` SIN línea base, para el encargo que pide justo eso:
+ * «revisa que ningún enlace lleve a una página que no existe y arréglalos»
+ * (plans/len-agente-2026, F0). Y mira el ancla también cuando va a OTRA página
+ * (`/entrenos/#la-larga`), que aquél no mira. Un `href="#"` no lleva a ninguna
+ * página: es un botón sin destino, y ése lo cuenta `enlaces-internos-van`.
+ */
+export function ningunEnlaceRoto(peso = 3): Grader {
+  return {
+    nombre: "ningun-enlace-roto",
+    peso,
+    async calificar(ctx) {
+      const home = (await servido(ctx, "/")).body;
+      const rotos: string[] = [];
+      for (const ruta of rutasPublicadas(ctx)) {
+        const { body } = await servido(ctx, ruta);
+        for (const { href } of enlacesDe(body)) {
+          if (href === null || href === "" || href === "#" || /^(tel:|mailto:|javascript:)/i.test(href)) continue;
+          if (href.startsWith("#")) {
+            if (!tieneId(body, decodeURIComponent(href.slice(1)))) rotos.push(`${ruta} → ${href} (no hay ese id)`);
+            continue;
+          }
+          const destino = new URL(href, new URL(ruta, ctx.url));
+          if (destino.origin !== new URL(ctx.url).origin) continue;
+          const r = await servido(ctx, destino.pathname);
+          if (r.status !== 200 || (destino.pathname !== "/" && r.body === home)) {
+            rotos.push(`${ruta} → ${href}`);
+            continue;
+          }
+          const id = decodeURIComponent(destino.hash.slice(1));
+          if (id !== "" && !tieneId(r.body, id)) rotos.push(`${ruta} → ${href} (${destino.pathname} no tiene ese id)`);
+        }
+      }
+      return rotos.length === 0
+        ? { paso: true, explicacion: "ningún enlace interno lleva a una página o a un ancla que no existe" }
+        : { paso: false, explicacion: `rotos: ${[...new Set(rotos)].join("; ")}` };
+    },
+  };
+}
+
+/**
+ * Los enlaces cuyo texto casa con `texto` van a la página `ruta` (el ancla no
+ * cuenta), en todas las páginas, y hay al menos uno de cada. Arreglar un enlace
+ * roto es llevarlo a donde decía ir: borrarlo deja `ningun-enlace-roto` en
+ * verde y al visitante sin camino.
+ */
+export function enlacesVanASuPagina(destinos: readonly { readonly texto: RegExp; readonly ruta: string }[], peso = 3): Grader {
+  return {
+    nombre: "enlaces-van-a-su-pagina",
+    peso,
+    async calificar(ctx) {
+      const mal: string[] = [];
+      const vistos = new Map<RegExp, number>();
+      for (const ruta of rutasPublicadas(ctx)) {
+        const base = new URL(ruta, ctx.url);
+        for (const a of enlacesDe((await servido(ctx, ruta)).body)) {
+          const d = destinos.find((x) => x.texto.test(a.texto));
+          if (!d) continue;
+          vistos.set(d.texto, (vistos.get(d.texto) ?? 0) + 1);
+          const u = a.href ? new URL(a.href, base) : null;
+          // Con la barra final puesta: `/carreras` abre la misma página que `/carreras/`.
+          const camino = u && u.origin === base.origin ? (/\/$|\.[a-z0-9]+$/i.test(u.pathname) ? u.pathname : `${u.pathname}/`) : null;
+          if (camino !== d.ruta) mal.push(`«${a.texto.slice(0, 40)}» en ${ruta} va a ${a.href ?? "ningún sitio"}, no a ${d.ruta}`);
+        }
+      }
+      const faltan = destinos.filter((d) => !vistos.has(d.texto)).map((d) => `ningún enlace dice ${d.texto}`);
+      return mal.length === 0 && faltan.length === 0
+        ? { paso: true, explicacion: `cada enlace va a su página: ${destinos.map((d) => d.ruta).join(", ")}` }
+        : { paso: false, explicacion: [...faltan, ...mal].join("; ") };
+    },
+  };
+}
+
+/**
  * El texto que casa con `texto` SE LEE en el móvil (390 px), medido como lo
  * miden los ojos de Len: se apaga el texto, se fotografía lo que hay debajo
  * —la foto de verdad, que el Chromium de Len-Bench sí carga— y se compara en

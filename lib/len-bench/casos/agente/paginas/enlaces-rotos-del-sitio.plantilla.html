@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vuelta — Club de corredores · Condesa, CDMX</title>
+<meta name="description" content="Corremos martes, jueves y domingo. Todos los pasos son bienvenidos, nadie se queda atrás y el café después es sagrado. Correr con nosotros es gratis.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #0E0D0C;
+    --surface: #161413;
+    --surface-2: #1E1C1A;
+    --fg: #F3F1EE;
+    --fg-muted: rgba(243,241,238,0.64);
+    --fg-faint: rgba(243,241,238,0.55);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #FF5A1F;
+    --accent-r: 255,90,31;
+    --accent-ink: #240A01;
+    --radius: 9px;
+    --radius-sm: 5px;
+    --radius-lg: 14px;
+    --font-display: "Archivo", Impact, sans-serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --warn: #E2B93B;
+    --danger: #E5484D;
+  }
+  :root.dark {
+    --bg: #0A0908;
+    --surface: #121110;
+    --surface-2: #1A1817;
+    --fg: #F5F3F0;
+    --fg-muted: rgba(245,243,240,0.64);
+    --fg-faint: rgba(245,243,240,0.55);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #FF6B35;
+    --accent-r: 255,107,53;
+    --accent-ink: #230A02;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-feature-settings: "ss01","cv11"; -webkit-font-smoothing: antialiased; }
+  .display { font-family: var(--font-display); font-weight: 900; text-transform: uppercase; letter-spacing: -0.008em; line-height: 0.9; }
+  .mono { font-family: var(--font-mono); }
+  .hairline { border-color: var(--border); }
+  .hairline-2 { border-color: var(--border-strong); }
+  .lift { transition: transform 90ms ease, box-shadow 90ms ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0,0,0,0.5); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: rgba(var(--accent-r), 0.9); }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fg-faint); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .half-tone { opacity: 0.45; }
+  .ph-asfalto { background: linear-gradient(150deg, rgba(var(--accent-r),0.18), var(--surface-2) 50%, var(--surface)); }
+  .ph-alba { background: linear-gradient(125deg, var(--surface-2), var(--surface) 55%, rgba(var(--accent-r),0.10)); }
+  .grain::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 24px 24px; opacity: 0.4; }
+  .scrim-run { background: linear-gradient(to top, rgba(8,7,6,0.82) 0%, rgba(8,7,6,0.30) 50%, rgba(8,7,6,0.45) 100%); }
+</style>
+</head>
+<body>
+
+<!-- HERO FULL-BLEED ACCIÓN -->
+<section class="relative flex min-h-[94svh] flex-col">
+  <div class="ph-asfalto absolute inset-0" data-ol-photo="runners group dawn city street"></div>
+  <div class="scrim-run absolute inset-0"></div>
+
+  <header class="relative z-20">
+    <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
+      <a href="#" class="flex items-center gap-2.5 text-white">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" stroke="var(--accent)" stroke-width="2.2"/>
+          <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+        <span class="display text-[17px] tracking-wide">Vuelta</span>
+      </a>
+      <div class="hidden items-center gap-7 text-[13px] font-medium text-white/80 md:flex">
+        <a href="#entrenos" class="hover:text-white">Entrenos</a>
+        <a href="#carreras" class="hover:text-white">Carreras</a>
+        <a href="#reglas" class="hover:text-white">La manada</a>
+      </div>
+      <a href="#unete" class="btn-primary lift inline-flex h-9 items-center rounded-[var(--radius-sm)] px-4 text-[13px] font-semibold uppercase tracking-wide">Únete</a>
+    </nav>
+  </header>
+
+  <div class="relative z-10 mt-auto">
+    <div class="mx-auto max-w-6xl px-5 pb-12 md:pb-16">
+      <div class="mono text-[11px] uppercase tracking-[0.22em] text-white/70">Condesa · martes · jueves · domingo</div>
+      <h1 class="display mt-4 text-[64px] text-white sm:text-[96px] lg:text-[116px]">
+        Corre con<br><span class="text-[color:var(--accent)]">alguien.</span>
+      </h1>
+      <p class="mt-5 max-w-md text-[15px] leading-relaxed text-white/85">
+        Solo también se puede — pero a las 6:30 de un martes de lluvia, la diferencia entre salir y no salir es saber que la manada te está esperando.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href="#unete" class="btn-primary lift inline-flex h-11 items-center rounded-[var(--radius-sm)] px-6 text-[13.5px] font-semibold uppercase tracking-wide">Ven este martes</a>
+        <a href="#entrenos" class="lift inline-flex h-11 items-center rounded-[var(--radius-sm)] border border-white/35 px-6 text-[13.5px] font-medium text-white hover:bg-white/10">Ver entrenos</a>
+      </div>
+      <div class="mono mt-6 text-[11px] uppercase tracking-[0.18em] text-white/55 tabular">correr con nosotros es gratis · 180+ corredores activos · desde 2021</div>
+    </div>
+  </div>
+</section>
+
+<!-- ENTRENOS -->
+<section id="entrenos" class="border-t hairline">
+  <div class="mx-auto max-w-5xl px-5 py-16 md:py-24">
+    <div class="mb-10 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
+      <div>
+        <div class="eyebrow">La semana</div>
+        <h2 class="display mt-3 text-[32px] sm:text-[44px]">Tres citas fijas.</h2>
+      </div>
+      <p class="max-w-sm text-[14px] leading-relaxed text-[color:var(--fg-muted)]">Cada entreno tiene grupos por paso — del 4:30 al 7:30 min/km. Nadie corre solo y nadie se queda atrás.</p>
+    </div>
+    <ul class="mono text-[13px] tabular">
+      <li class="grid gap-2 border-t hairline py-5 sm:grid-cols-[110px_1fr_auto] sm:items-baseline sm:gap-6">
+        <span class="font-medium text-[color:var(--accent)]">MAR 6:30</span>
+        <div><span class="text-[16px] font-semibold" style="font-family:var(--font-body);">Intervalos</span><span class="ml-3 text-[12px] text-[color:var(--fg-faint)]">Parque México · 8×400 a 10×800 según bloque</span></div>
+        <span class="text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)]">60 min</span>
+      </li>
+      <li class="grid gap-2 border-t hairline py-5 sm:grid-cols-[110px_1fr_auto] sm:items-baseline sm:gap-6">
+        <span class="font-medium text-[color:var(--accent)]">JUE 20:00</span>
+        <div><span class="text-[16px] font-semibold" style="font-family:var(--font-body);">Rodada nocturna</span><span class="ml-3 text-[12px] text-[color:var(--fg-faint)]">salida del kiosco · 6-8 km tranquilos, luces obligatorias</span></div>
+        <span class="text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)]">45 min</span>
+      </li>
+      <li class="grid gap-2 border-y hairline py-5 sm:grid-cols-[110px_1fr_auto] sm:items-baseline sm:gap-6">
+        <span class="font-medium text-[color:var(--accent)]">DOM 7:00</span>
+        <div><span class="text-[16px] font-semibold" style="font-family:var(--font-body);">La larga</span><span class="ml-3 text-[12px] text-[color:var(--fg-faint)]">12-24 km por Reforma · el café después es sagrado</span></div>
+        <span class="text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)]">hasta 2:30 h</span>
+      </li>
+    </ul>
+    <div class="mt-7 grid gap-4 sm:grid-cols-2">
+      <div class="rounded-[var(--radius-lg)] border hairline bg-[var(--surface)] p-6">
+        <div class="display text-[18px]">Correr es gratis</div>
+        <p class="mt-2 text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Llegas, te presentas, corres. La playera del club ($350) es opcional — pero nadie ha resistido más de un mes sin ella.</p>
+      </div>
+      <div class="rounded-[var(--radius-lg)] border hairline bg-[var(--surface)] p-6">
+        <div class="display text-[18px]">Plan con coach · $890/mes</div>
+        <p class="mt-2 text-[13.5px] leading-relaxed text-[color:var(--fg-muted)]">Para tu primer 21K o bajar tu marca: plan semanal personalizado con la coach Sandra, ajustado cada domingo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CARRERAS -->
+<section id="carreras" class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-5xl px-5 py-16 md:py-24">
+    <div class="eyebrow">A dónde vamos juntos</div>
+    <h2 class="display mt-3 text-[32px] sm:text-[44px]">Las próximas.</h2>
+    <div class="mono mt-9 overflow-x-auto rounded-[var(--radius-lg)] border hairline bg-[var(--bg)] text-[12.5px] tabular">
+      <table class="w-full min-w-[520px]">
+        <thead>
+          <tr class="border-b hairline text-left text-[10.5px] uppercase tracking-[0.16em] text-[color:var(--fg-faint)]">
+            <th class="px-5 py-3.5 font-medium">Fecha</th>
+            <th class="px-5 py-3.5 font-medium">Carrera</th>
+            <th class="px-5 py-3.5 font-medium">Distancia</th>
+            <th class="px-5 py-3.5 font-medium text-right">Vamos</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[color:var(--border)] text-[color:var(--fg-muted)]">
+          <tr><td class="px-5 py-3.5">10 AGO</td><td class="px-5 py-3.5 text-[color:var(--fg)]">21K Bosque de Tlalpan</td><td class="px-5 py-3.5">21.1 km</td><td class="px-5 py-3.5 text-right text-[color:var(--accent)]">34 inscritos</td></tr>
+          <tr><td class="px-5 py-3.5">14 SEP</td><td class="px-5 py-3.5 text-[color:var(--fg)]">Carrera del Grito</td><td class="px-5 py-3.5">10 km</td><td class="px-5 py-3.5 text-right text-[color:var(--accent)]">61 inscritos</td></tr>
+          <tr><td class="px-5 py-3.5">30 NOV</td><td class="px-5 py-3.5 text-[color:var(--fg)]">Maratón de la CDMX*</td><td class="px-5 py-3.5">42.2 km</td><td class="px-5 py-3.5 text-right text-[color:var(--accent)]">18 valientes</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mono mt-4 text-[11px] uppercase tracking-[0.14em] text-[color:var(--fg-faint)]">*los del maratón entrenan la larga extendida desde julio · porras garantizadas para todos</div>
+  </div>
+</section>
+
+<!-- LA MANADA -->
+<section id="reglas" class="border-t hairline">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-24">
+    <div class="grid items-center gap-10 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
+      <div class="ph-alba grain relative aspect-[4/3] rounded-[var(--radius-lg)] border hairline" data-ol-photo="running group coffee after race"></div>
+      <div>
+        <div class="eyebrow">La manada</div>
+        <h2 class="display mt-3 max-w-md text-[32px] sm:text-[44px]">Tres reglas. <span class="half-tone">Cero estrellas.</span></h2>
+        <ul class="mt-8 max-w-md space-y-5">
+          <li class="flex gap-4">
+            <span class="mono mt-1 text-[13px] font-medium text-[color:var(--accent)] tabular">01</span>
+            <p class="text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]"><span class="font-semibold text-[color:var(--fg)]">Nadie se queda atrás.</span> El último de cada grupo siempre corre acompañado — barrer es un honor, no un castigo.</p>
+          </li>
+          <li class="flex gap-4">
+            <span class="mono mt-1 text-[13px] font-medium text-[color:var(--accent)] tabular">02</span>
+            <p class="text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]"><span class="font-semibold text-[color:var(--fg)]">Tu paso es tu paso.</span> Aquí se aplaude igual el 4:30 que el 7:30. La marca que importa es contra la tuya de hace tres meses.</p>
+          </li>
+          <li class="flex gap-4">
+            <span class="mono mt-1 text-[13px] font-medium text-[color:var(--accent)] tabular">03</span>
+            <p class="text-[14.5px] leading-relaxed text-[color:var(--fg-muted)]"><span class="font-semibold text-[color:var(--fg)]">El café es parte del entreno.</span> Domingo sin sobremesa no cuenta como larga.</p>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CITA -->
+<section class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto max-w-3xl px-5 py-18 text-center md:py-24" style="padding-top:4.5rem;padding-bottom:4.5rem;">
+    <div class="mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--accent)] tabular">de 0 a 21K · 11 meses</div>
+    <blockquote class="mt-4 text-[22px] font-medium leading-[1.3] sm:text-[26px]">
+      "Llegué sin poder correr 2 km seguidos y con pena de que me vieran. El grupo del 7:00 me adoptó el primer martes. En agosto corro mi primer medio."
+    </blockquote>
+    <figcaption class="mono mt-6 text-[11px] uppercase tracking-[0.2em] text-[color:var(--fg-faint)]">Pau G. · grupo 7:00 · playera del club desde la semana 3</figcaption>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="unete" class="border-t hairline">
+  <div class="mx-auto max-w-3xl px-5 py-20 text-center md:py-28">
+    <h2 class="display text-[44px] leading-[0.95] sm:text-[64px]">El martes<br>te <span class="text-[color:var(--accent)]">esperamos.</span></h2>
+    <p class="mx-auto mt-5 max-w-md text-[14.5px] text-[color:var(--fg-muted)]">6:30 am, kiosco del Parque México. Di que es tu primera vez y la manada hace el resto. No se paga nada — solo se llega.</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="#" class="btn-primary lift inline-flex h-12 items-center gap-2 rounded-[var(--radius-sm)] px-7 text-[14px] font-semibold uppercase tracking-wide">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .3-3.4-.7-2.9-1.2-4.7-4.1-4.9-4.3-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.5-.2.7-.1l2 .9c.3.2.5.3.6.4 0 .1 0 .7-.3 1.3z"/></svg>
+        Únete al grupo de WhatsApp
+      </a>
+      <a href="#entrenos" class="lift inline-flex h-12 items-center rounded-[var(--radius-sm)] border hairline-2 bg-[var(--surface)] px-7 text-[14px] font-medium">Ver entrenos</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t hairline bg-[var(--surface)]">
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-[12.5px] text-[color:var(--fg-faint)] md:flex-row">
+    <div class="flex items-center gap-2">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="var(--accent)" stroke-width="2.4"/></svg>
+      <span class="display text-[12px] tracking-wide text-[color:var(--fg-muted)]">Vuelta</span>
+    </div>
+    <div class="mono text-[11px] uppercase tracking-[0.14em] tabular">kiosco del Parque México, Condesa · mar 6:30 · jue 20:00 · dom 7:00</div>
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-[color:var(--fg)]">Instagram</a>
+      <a href="#" class="hover:text-[color:var(--fg)]">Strava</a>
+      <span>© 2026 Vuelta</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
