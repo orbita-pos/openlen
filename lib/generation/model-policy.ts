@@ -167,6 +167,14 @@ export const MODEL_POLICY = Object.freeze({
     // papel («¿este modelo/turno piensa, sí o no?»); el NIVEL lo elige el
     // usuario en la capa de arriba y sólo importa si esta capa dice que sí.
     piensa: true,
+    // EL MODELO DEL AGENTE VE IMÁGENES —hoy es el mismo que el papel con
+    // visión— y razona con ellas: medido en Fireworks el 2026-10-01 (una foto
+    // en un mensaje ANTERIOR, con y sin esfuerzo, la describió bien). Con esto,
+    // una vuelta con fotos en la conversación sigue siendo del agente, con su
+    // esfuerzo, como Claude Code razona con la imagen pegada delante. Si el
+    // papel pasa a un modelo SIN visión, esto va a `false` y esas vueltas
+    // vuelven al papel con visión (`operacionDeLaVuelta`, `lib/agent/brain.ts`).
+    veImagenes: true,
   }),
 });
 

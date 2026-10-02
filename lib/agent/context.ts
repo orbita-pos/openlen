@@ -319,6 +319,11 @@ export function estimateContextTokens(userContent: string, systemPrompt: string)
   return Math.ceil((userContent.length + systemPrompt.length) / 3.5);
 }
 
+/** Lo que cuenta una foto de la conversación para el techo. Medido en Fireworks
+ *  el 2026-10-01: ~945 tokens una foto de 1672×941 (las del teléfono que ve Len
+ *  son de 800 px y cuestan menos). Redondeado hacia arriba. */
+export const TOKENS_POR_FOTO = 1_000;
+
 export interface BuildAgentMessagesArgs {
   // ⚰️ Aquí iba `diferidas`: los nombres de las herramientas diferidas (H2),
   // anunciados en un `<system-reminder>` para cargarlas con ToolSearch. Se
@@ -413,7 +418,13 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   const manual = adjuntoDelManual();
   // Los avisos cuentan para el techo: son parte del turno, no un extra que
   // aparece después de haber decidido que cabía. El manual también.
-  if (estimateContextTokens(manual + contextBlock + historyText + args.prompt + avisos, systemPrompt) > args.maxPromptTokens) {
+  // Y las fotos (A): viajan pegadas a su mensaje en todas las vueltas, así que
+  // ocupan contexto como en Claude Code. La del turno cuenta si se vio.
+  const fotos = args.history.reduce((n, m) => n + (m.images?.length ?? 0), 0) + (args.attachedImage?.visible ? 1 : 0);
+  if (
+    estimateContextTokens(manual + contextBlock + historyText + args.prompt + avisos, systemPrompt) + fotos * TOKENS_POR_FOTO >
+    args.maxPromptTokens
+  ) {
     return { ok: false, reason: "too_large" };
   }
   const messages: Message[] = [

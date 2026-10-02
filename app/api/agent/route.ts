@@ -14,8 +14,6 @@ import {
 } from "@/lib/credits";
 import { stripOpIds } from "@/lib/html-ops";
 import { seleccionDelLienzo } from "@/lib/agent/seleccion-del-lienzo";
-import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
-import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { persistPage } from "@/lib/page-engine/persist";
@@ -38,6 +36,7 @@ import {
   type FilaDelHistorial,
   type MensajeDelHistorial,
 } from "@/lib/agent/transcripcion";
+import { conseguirFotos } from "@/lib/agent/fotos-de-la-conversacion";
 import { turnosParaElHistorial } from "@/lib/projects/chat";
 import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
@@ -386,10 +385,8 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   const filasDelHistorial: FilaDelHistorial[] = await turnosParaElHistorial(projectId, TURNOS_DEL_HISTORIAL).catch(
     () => [],
   );
-  const historialDeLaBase = filasDelHistorial.some((f) => f.transcript) ? historialDesdeLaBase(filasDelHistorial) : null;
-  const history: MensajeDelHistorial[] =
-    historialDeLaBase ?? sanearHistorial(body?.history, new Set(tools.map((d) => String(d.name))));
-  const ventanaVisible = ventanaVisibleDe(history);
+  // El historial se ARMA más abajo, después de conseguir las fotos de la
+  // conversación (A): sin ellas, la foto de un turno anterior no tendría dónde ir.
   const dichoAntes = sanearDichoAntes(body?.dichoAntes);
 
   // Validate the scope payload (optional) — same shape/limits as ai-design.
@@ -457,27 +454,32 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // `lib/agent/seleccion-del-lienzo.ts`.
   const seleccion = seleccionDelLienzo({ html: activeHtml, page: pageSlug, path: scopePath, hint: scopeHint });
 
-  // F5 — los píxeles de la imagen adjunta. Hasta ahora el modelo recibía la
-  // URL como TEXTO y colocaba la imagen a ciegas; aquí se fetchea y viaja como
-  // inlineData en el primer turno, así el modelo la VE (colores, orientación,
-  // contenido). SSRF: validateUrl bloquea loopback/RFC-1918/link-local ANTES
-  // del fetch, y redirect:"error" impide que un host público rebote la
-  // petición a uno interno después de validar. Best-effort: si falla, el turno
-  // sigue texto-solo exactamente como antes.
-  let attachedInline: InlineImage | null = null;
-  if (attachedImage) {
-    const valid = await validateUrl(attachedImage.url);
-    if (valid.ok) {
-      // El `signal` no es decorativo: esto corre ANTES de abrir el SSE, así
-      // que sin plazo propio ni señal del request una URL que no responde deja
-      // el turno colgado y al usuario mirando la nada. El tope de 4 MB vive
-      // dentro y ahora corta el stream en vez de medir al final.
-      attachedInline = await fetchImageAsInlineData(attachedImage.url, {
-        redirect: "error",
-        signal: req.signal,
-      });
-    }
+  // 🔴 LAS FOTOS DE LA CONVERSACIÓN (A, 2026-10-01), como en Claude Code: la de
+  // este turno y la de cada turno que Len ve, conseguidas en paralelo y pegadas
+  // a TU mensaje (`Message.images`), así viajan en todas las vueltas y en los
+  // turnos siguientes. Antes (F5) la de este turno iba sólo en la primera
+  // vuelta y la de los anteriores no iba nunca: «la nueva no me llegó».
+  //
+  // Las subidas propias en disco (dev) se leen del disco; las demás, con la
+  // defensa SSRF de siempre (`validateUrl` + sin redirecciones + 4 MB). El
+  // `signal` no es decorativo: esto corre ANTES de abrir el SSE, y una URL que
+  // no responde dejaría el turno colgado. Una foto que no llega es `null`: la
+  // nota lo dice y el turno sigue. Ver `lib/agent/fotos-de-la-conversacion.ts`.
+  const fotos = await conseguirFotos(
+    [attachedImage?.url, ...filasDelHistorial.map((f) => f.attachedImage?.url)].filter((u): u is string => !!u),
+    { origen: req.url, signal: req.signal },
+  );
+  const attachedInline: InlineImage | null = attachedImage ? (fotos.get(attachedImage.url) ?? null) : null;
+  if (fotos.size > 0) {
+    const vistas = [...fotos.values()].filter(Boolean).length;
+    console.log(`[agent] fotos de la conversación — ${vistas} de ${fotos.size} cargadas`);
   }
+  const historialDeLaBase = filasDelHistorial.some((f) => f.transcript)
+    ? historialDesdeLaBase(filasDelHistorial, undefined, fotos)
+    : null;
+  const history: MensajeDelHistorial[] =
+    historialDeLaBase ?? sanearHistorial(body?.history, new Set(tools.map((d) => String(d.name))));
+  const ventanaVisible = ventanaVisibleDe(history);
 
   const state = summarizeProjectState(
     {
@@ -651,11 +653,10 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   }
 
   const messages = built.messages;
-  // El mensaje del prompt del usuario — la referencia exacta contra la que
-  // openStream decide adjuntar los píxeles (el gateway ancla images al ÚLTIMO
-  // mensaje user, y solo el primer turno termina en el prompt; los turnos
-  // posteriores terminan en functionResponses y el closeOut en su instrucción).
-  const promptMessage = messages[messages.length - 1];
+  // LA FOTO DE ESTE TURNO, PEGADA A TU MENSAJE (A): viaja en todas las vueltas
+  // y en el cierre, como una imagen pegada en Claude Code. Antes se anclaba a
+  // la primera vuelta y en la segunda Len ya no la tenía delante.
+  if (attachedInline) messages[messages.length - 1] = { ...messages[messages.length - 1]!, images: [attachedInline] };
 
   // LA DIRECCION A LA QUE SE LE PUEDE CORREGIR EL RUMBO. El SSE es de una sola
   // via, asi que la correccion del usuario entra por otra peticion
@@ -724,7 +725,6 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
     tools,
     requestId: projectId,
     signal: upstreamAbort.signal,
-    ...(attachedInline ? { attachedImage: { image: attachedInline, anchorMessage: promptMessage } } : {}),
     // Las DOS capas de esfuerzo, en el orden que resuelve `esfuerzoEfectivo`:
     // el pin de ESTE turno gana sobre la preferencia guardada de la PERSONA, y
     // `null` en las dos significa que nunca eligió, que resuelve a "auto".

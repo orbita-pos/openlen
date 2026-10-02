@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { avisosDelTurno, buildAgentContext, buildAgentMessages, estimateContextTokens } from "./context";
+import { TOKENS_POR_FOTO, avisosDelTurno, buildAgentContext, buildAgentMessages, estimateContextTokens } from "./context";
 import { buildFunctionDeclarations } from "./catalog";
 import { esAdjuntoDelManual } from "./ficheros/manual";
 import type { MensajeDelHistorial } from "./transcripcion";
@@ -317,6 +317,17 @@ describe("buildAgentMessages", () => {
     ];
     expect(buildAgentMessages({ ...base, history: conResultado(1_000) }).ok).toBe(true); // brazo de control
     expect(buildAgentMessages({ ...base, history: conResultado(400_000) })).toEqual({ ok: false, reason: "too_large" });
+  });
+
+  // A (2026-10-01): las fotos viajan pegadas a tu mensaje en todas las vueltas
+  // y ocupan contexto como en Claude Code; el techo las cuenta (~945 tokens una
+  // foto de 1672×941, medido en Fireworks).
+  it("cada foto de la conversación cuenta para el techo", () => {
+    const base = { state: {}, userBrief: null, prompt: "sigue", maxPromptTokens: 60_000 };
+    const foto = { mimeType: "image/jpeg", dataBase64: "A" };
+    expect(buildAgentMessages({ ...base, history: [{ role: "user", content: "x", images: [foto] }] }).ok).toBe(true); // brazo de control
+    const muchas = Array.from({ length: Math.ceil(60_000 / TOKENS_POR_FOTO) + 1 }, () => foto);
+    expect(buildAgentMessages({ ...base, history: [{ role: "user", content: "x", images: muchas }] })).toEqual({ ok: false, reason: "too_large" });
   });
 
   it("el mensaje system real de Len le ofrece el JavaScript", () => {

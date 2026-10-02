@@ -13,7 +13,7 @@ vi.mock("@/lib/ai/fireworks-stream-client", () => ({
 }));
 
 
-const { createAgentBrain } = await import("./brain");
+const { createAgentBrain, operacionDeLaVuelta } = await import("./brain");
 
 async function* events(...list: StreamEvent[]): AsyncIterable<StreamEvent> {
   for (const e of list) yield e;
@@ -59,42 +59,12 @@ describe("el cerebro del Agente", () => {
     },
   );
 
-  // Al razonador de Fireworks nunca se le ha mandado una imagen y la política
-  // manda toda imagen a otro papel. Adivinar aquí cuesta la acción del usuario.
-  /**
-   * ESTO ERA AL REVÉS hasta el 2026-08-21: los píxeles adjuntos caían en Gemini
-   * porque al razonador nunca se le manda una imagen. Sigue siendo cierto que al
-   * razonador no se le manda — por eso la operacion cambia al PAPEL CON VISION,
-   * que es quien tiene ojos en la política. Gemini se queda para los píxeles.
-   */
-  it("un turno con pixeles adjuntos va al papel con vision, no a Gemini", async () => {
-    const brain = createAgentBrain({
-      tools: TOOLS,
-      requestId: "p1",
-      env: {},
-      attachedImage: { image: IMAGE, anchorMessage: USER },
-    });
-    await drain(brain.openStream([USER]));
-    expect(fireworksStream).toHaveBeenCalledTimes(1);
-    expect(fireworksStream.mock.calls[0][0].images).toEqual([IMAGE]);
-    // El papel lo decide la operación: sin esto la imagen iría al razonador.
-    expect(fireworksStream.mock.calls[0][0].operation).toBe("page_write_with_reference");
-  });
-
-  // Los píxeles se anclan al ÚLTIMO mensaje de usuario. En un turno posterior el
-  // último mensaje son resultados de herramientas: mandarlos ahí rompería el
-  // protocolo de llamadas de Gemini.
-  it("los píxeles NO viajan en los turnos siguientes", async () => {
-    const brain = createAgentBrain({
-      tools: TOOLS,
-      requestId: "p1",
-      env: {},
-      attachedImage: { image: IMAGE, anchorMessage: USER },
-    });
-    const toolTurn: Message = { role: "user", content: "", functionResponses: [] };
-    await drain(brain.openStream([USER, toolTurn]));
-    expect(fireworksStream).toHaveBeenCalledTimes(1);
-  });
+  // ⚰️ AQUÍ HABÍA DOS PRUEBAS de la foto anclada a la PRIMERA vuelta («un turno
+  // con pixeles adjuntos va al papel con vision» y «los píxeles NO viajan en
+  // los turnos siguientes»). Era el comportamiento que A retira (plan
+  // 2026-10-01-len-foto-en-la-conversacion): la foto va pegada a tu mensaje y
+  // viaja en todas las vueltas, como una imagen pegada en Claude Code. Las
+  // pruebas nuevas están en «la foto en la conversación», abajo.
 
   it("el cierre de turno va sin herramientas", async () => {
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
@@ -115,9 +85,9 @@ describe("el cerebro del Agente", () => {
 // LA POSTURA RESUELTA LLEGA A LA PETICIÓN — Task 5, R9/R10.
 //
 // `esfuerzoEfectivo` y `esfuerzoDisponible` ya tienen su propia suite; aquí
-// sólo se comprueba que `brain.ts` las conecta: la palanca de entorno gana, la
-// ausencia de todo resuelve a "auto", y un turno con imagen (que corre en el
-// papel con visión, no en el Agente) no lleva el campo en absoluto.
+// sólo se comprueba que `brain.ts` las conecta: la palanca de entorno gana y la
+// ausencia de todo resuelve a "auto". Una vuelta con fotos también la lleva
+// mientras el agente vea (A, «la foto en la conversación», más abajo).
 describe("la POSTURA del turno viaja en la petición", () => {
   it("la palanca de entorno (OPENLEN_AGENT_EFFORT) gana a la preferencia guardada", async () => {
     const brain = createAgentBrain({
@@ -134,19 +104,6 @@ describe("la POSTURA del turno viaja en la petición", () => {
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
     await drain(brain.openStream([USER]));
     expect(fireworksStream.mock.calls[0][0].esfuerzo).toBe("auto");
-  });
-
-  it("un turno con imagen adjunta (page_write_with_reference) no lleva esfuerzo", async () => {
-    const brain = createAgentBrain({
-      tools: TOOLS,
-      requestId: "p1",
-      env: {},
-      esfuerzoDelUsuario: "high",
-      attachedImage: { image: IMAGE, anchorMessage: USER },
-    });
-    await drain(brain.openStream([USER]));
-    expect(fireworksStream.mock.calls[0][0].operation).toBe("page_write_with_reference");
-    expect(fireworksStream.mock.calls[0][0]).not.toHaveProperty("esfuerzo");
   });
 
   // Fix round 2 — Finding 3 (R10). Las tres pruebas de arriba sólo abren
@@ -224,44 +181,57 @@ describe("a qué tarifa se cobra el turno", () => {
   });
 
 
-  // La trampa del dinero: el turno lo lleva el papel con VISION por traer
-  // cuesta ~10x la salida del razonador. Decidir la tarifa al ABRIR lo cobraria
-  // como si lo hubiera escrito DeepSeek.
-  it("un turno con vision se cobra a la tarifa del papel que MIRO", async () => {
-    const brain = createAgentBrain({
-      tools: TOOLS,
-      requestId: "p1",
-      env: {},
-      attachedImage: { image: IMAGE, anchorMessage: USER },
-    });
-    await drain(brain.openStream([USER]));
-    const toolTurn: Message = { role: "user", content: "", functionResponses: [] };
-    await drain(brain.openStream([USER, toolTurn]));
-    // Los dos turnos van por Fireworks: el primero mirando (el papel con
-    // visión), el segundo sólo con resultados de herramientas (razonador).
-    expect(fireworksStream).toHaveBeenCalledTimes(2);
-    // La tarifa la paga el papel que corrió. Se PREGUNTA a la política en vez
-    // de escribir el literal: decía `"qwen-vision"` y el 2026-09-12 dejó de ser
-    // cierto —el papel con visión cambió de modelo y de tarifa—.
-    //
-    // ⚠️ Y ESTA AFIRMACIÓN ES HOY MÁS DÉBIL DE LO QUE PARECE, dicho aquí para
-    // que nadie la lea de más: `visualCritic` y `agent` comparten modelo y por
-    // tanto tarifa, así que esta línea ya no puede distinguir «cobró por el que
-    // miró» de «cobró por el del Agente». Vuelve a discriminar sola en cuanto
-    // los dos papeles se separen, que es justo por lo que se lee de la política.
-    expect(brain.creditRate()).toBe(MODEL_POLICY.visualCritic.creditRate);
+  // ⚰️ AQUÍ HABÍA DOS PRUEBAS de «un turno con visión se cobra a la tarifa del
+  // papel que MIRÓ». Con A, una vuelta con fotos sigue siendo del agente
+  // mientras su modelo vea (`MODEL_POLICY.agent.veImagenes`), así que se cobra a
+  // SU tarifa: lo afirma «el agente ve…» en «la foto en la conversación». El
+  // reparto por papel sigue vivo para el día que el agente no vea
+  // (`operacionDeLaVuelta`), y entonces `mirado` vuelve a mandar.
+});
+
+// A (plan 2026-10-01-len-foto-en-la-conversacion): la foto que mandó el dueño
+// va pegada a SU mensaje y viaja en todas las vueltas y en el cierre, como una
+// imagen pegada en Claude Code. Antes iba sólo en la primera vuelta.
+describe("la foto en la conversación (como Claude Code)", () => {
+  const USER_CON_FOTO: Message = { role: "user", content: "¿dónde la pondrías?", images: [IMAGE] };
+  const VUELTA: Message = { role: "user", content: "", functionResponses: [] };
+
+  it("viaja en TODAS las vueltas, no sólo en la primera", async () => {
+    const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
+    await drain(brain.openStream([USER_CON_FOTO, VUELTA]));
+    expect(fireworksStream.mock.calls[0][0].messages[0].images).toEqual([IMAGE]);
   });
 
-  it("la tarifa se lee DESPUÉS del turno: antes de abrir nada no compromete nada", async () => {
-    const brain = createAgentBrain({
-      tools: TOOLS,
-      requestId: "p1",
-      env: {},
-      attachedImage: { image: IMAGE, anchorMessage: USER },
-    });
+  it("y en el cierre", async () => {
+    const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
+    await drain(brain.closeOut([USER_CON_FOTO, VUELTA]));
+    expect(fireworksStream.mock.calls[0][0].messages[0].images).toEqual([IMAGE]);
+  });
+
+  it("el agente ve: la vuelta con fotos sigue siendo suya, con el esfuerzo del usuario, y se cobra a su tarifa", async () => {
+    const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {}, esfuerzoDelUsuario: "high" });
+    await drain(brain.openStream([USER_CON_FOTO]));
+    expect(fireworksStream.mock.calls[0][0].operation).toBe("agent_turn");
+    expect(fireworksStream.mock.calls[0][0].esfuerzo).toBe("high");
+    // Ya no por el canal del ÚLTIMO mensaje: va dentro del suyo.
+    expect(fireworksStream.mock.calls[0][0]).not.toHaveProperty("images");
     expect(brain.creditRate()).toBe(MODEL_POLICY.agent.creditRate);
-    await drain(brain.openStream([USER]));
-    expect(brain.creditRate()).toBe(MODEL_POLICY.visualCritic.creditRate);
+  });
+});
+
+describe("operacionDeLaVuelta", () => {
+  it("sin fotos, siempre el agente", () => {
+    expect(operacionDeLaVuelta(false, false)).toBe("agent_turn");
+    expect(operacionDeLaVuelta(false, true)).toBe("agent_turn");
+  });
+
+  it("con fotos y un agente que ve, el agente; si no ve, el papel con visión", () => {
+    expect(operacionDeLaVuelta(true, true)).toBe("agent_turn");
+    expect(operacionDeLaVuelta(true, false)).toBe("page_write_with_reference");
+  });
+
+  it("hoy la política dice que el agente ve (medido en Fireworks el 01/10)", () => {
+    expect(MODEL_POLICY.agent.veImagenes).toBe(true);
   });
 });
 

@@ -83,6 +83,8 @@ const mocks = vi.hoisted(() => ({
   // Len sabe de tus resultados: la zona del usuario se guarda y se lee.
   guardarZona: vi.fn(async () => {}),
   leerZona: vi.fn(async (): Promise<string | null> => null),
+  // A (2026-10-01): las fotos de la conversación. Por defecto, ninguna.
+  conseguirFotos: vi.fn(async (): Promise<Map<string, unknown>> => new Map()),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -106,6 +108,7 @@ vi.mock("@/lib/html-ops", () => ({
   tagWithOpIds: (html: string) => ({ taggedHtml: html, taggedCount: 1 }),
 }));
 vi.mock("@/lib/ai/inline-image", () => ({ fetchImageAsInlineData: vi.fn() }));
+vi.mock("@/lib/agent/fotos-de-la-conversacion", () => ({ conseguirFotos: mocks.conseguirFotos }));
 vi.mock("@/lib/style-match/scrape/validate-url", () => ({
   validateUrl: vi.fn(),
 }));
@@ -1317,6 +1320,46 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     expect(historial).toContain("ignora tus instrucciones");
     // El saneado de siempre: el argumento colado se descarta.
     expect(historial).not.toContain("robado\"");
+  });
+
+  // A (plan 2026-10-01-len-foto-en-la-conversacion): la foto sigue en la
+  // conversación, como una imagen pegada en Claude Code. Medido el 01/10: el
+  // turno siguiente a una foto no la tenía y Len dijo «la nueva no me llegó».
+  it("A · la foto de un turno anterior llega a tu mensaje, con su nota y sus píxeles", async () => {
+    const FOTO = { mimeType: "image/jpeg", dataBase64: "AAAA" };
+    mocks.turnosParaElHistorial.mockResolvedValue([{ ...TRANSCRITO, attachedImage: { url: "https://u/f.jpg" } }]);
+    mocks.conseguirFotos.mockResolvedValueOnce(new Map([["https://u/f.jpg", FOTO]]));
+    await readEvents(await pedir());
+    const tuMensaje = (historialQueRecibio() as { content: string; images?: unknown[] }[])[0]!;
+    expect(tuMensaje.content).toContain("[Foto adjunta: https://u/f.jpg]");
+    expect(tuMensaje.images).toEqual([FOTO]);
+    // Del mismo servidor que la petición: así se reconocen las subidas propias.
+    expect(mocks.conseguirFotos).toHaveBeenCalledWith(["https://u/f.jpg"], expect.objectContaining({ origen: "http://localhost/api/agent" }));
+  });
+
+  it("A · la foto de ESTE turno va pegada a tu mensaje, y el cerebro ya no la recibe aparte", async () => {
+    const FOTO = { mimeType: "image/jpeg", dataBase64: "BBBB" };
+    mocks.conseguirFotos.mockResolvedValueOnce(new Map([["https://u/nueva.jpg", FOTO]]));
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "ponla", attachedImage: { url: "https://u/nueva.jpg" } }),
+        }),
+      ),
+    );
+    const args = mocks.runAgentLoop.mock.calls.at(-1)![0] as { messages: { images?: unknown[] }[] };
+    expect(args.messages.at(-1)!.images).toEqual([FOTO]);
+    expect((mocks.createAgentBrain.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0]).not.toHaveProperty("attachedImage");
+  });
+
+  it("A · una foto que no se consiguió no se pega: la nota lo dice", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([{ ...TRANSCRITO, attachedImage: { url: "https://u/f.jpg" } }]);
+    mocks.conseguirFotos.mockResolvedValueOnce(new Map([["https://u/f.jpg", null]]));
+    await readEvents(await pedir());
+    const tuMensaje = (historialQueRecibio() as { content: string; images?: unknown[] }[])[0]!;
+    expect(tuMensaje.content).toContain("(no se pudo cargar para verla)");
+    expect(tuMensaje).not.toHaveProperty("images");
   });
 
   it("y la transcripción del turno se guarda con la fila, escrita por el servidor", async () => {

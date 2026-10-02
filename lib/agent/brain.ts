@@ -1,4 +1,4 @@
-import type { InlineImage, Message, StreamEvent } from "@/lib/ai-gateway";
+import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import { createFireworksStreamClient, type FireworksStreamEvent } from "@/lib/ai/fireworks-stream-client";
 import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-bridge";
 import { MODEL_POLICY, esfuerzoDisponible, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
@@ -27,9 +27,9 @@ export interface AgentBrainOptions {
   /** Identifica la corrida ante el transporte de Fireworks (presupuesto y bitácora). */
   readonly requestId: string;
   readonly signal?: AbortSignal;
-  /** Píxeles adjuntos y el mensaje al que van pegados. Un turno con imagen lo
-   *  lleva el papel con vision: al razonador nunca se le manda una. */
-  readonly attachedImage?: { image: InlineImage; anchorMessage: Message };
+  // ⚰️ Aquí iba `attachedImage` (los píxeles y el mensaje al que se anclaban
+  // en la PRIMERA vuelta). Con A (2026-10-01) la foto va pegada a tu mensaje
+  // (`Message.images`) y viaja en todas las vueltas: la pega la ruta.
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** Lo que el usuario eligió PARA ESTE TURNO (el equivalente de `/effort`). */
   readonly esfuerzoDelTurno?: EsfuerzoAgente | null;
@@ -51,8 +51,8 @@ export interface AgentBrain {
   readonly modelId: string;
   /** A qué tarifa se le cobra al usuario, LEÍDA DESPUÉS del turno.
    *
-   *  Es una funcion y no un campo porque un turno con imagen adjunta corre en
-   *  OTRO PAPEL, con su propia tarifa: decidir la tarifa al abrir cobraria ese
+   *  Es una funcion y no un campo porque una vuelta con fotos PUEDE correr en
+   *  OTRO PAPEL (si el agente no ve, `operacionDeLaVuelta`), con su propia tarifa: decidir la tarifa al abrir cobraria ese
    *  turno al precio del que no corrio. Vive con el cerebro y no con la
    *  ruta porque cobrar a la tarifa del proveedor que NO corrió es justo el
    *  error que este archivo hace imposible. */
@@ -103,13 +103,25 @@ const CLOSEOUT_MAX_OUTPUT_TOKENS = 2_048;
 // DeepSeek no le manda NINGUNA (`transform.ts:527-544`, `request.ts:124`).
 const TEMPERATURE = 0.2;
 
+/** Qué operación corre una vuelta: la del agente, salvo que la conversación
+ *  traiga fotos y el modelo del agente NO las vea — entonces, el papel con
+ *  visión (sin esfuerzo, como era antes de A). Con un agente que ve, la foto
+ *  no le quita el razonamiento: Claude Code razona con la imagen delante. */
+export function operacionDeLaVuelta(
+  conFotos: boolean,
+  agenteVe: boolean = MODEL_POLICY.agent.veImagenes,
+): "agent_turn" | "page_write_with_reference" {
+  return conFotos && !agenteVe ? "page_write_with_reference" : "agent_turn";
+}
+
 export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
   const fireworks = createFireworksStreamClient();
   const wireTools = toolsForFireworks(options.tools);
   const streamOpts = options.signal ? { signal: options.signal } : {};
-  // Un turno con imagen adjunta lo corre el PAPEL CON VISION, no el del
-  // Agente, y cada papel trae su tarifa. Sin esta bandera se cobraria al precio
-  // del que no corrio — la misma clase de error que `lib/credits.ts` documenta.
+  // Una vuelta con fotos y un agente que NO ve la corre el PAPEL CON VISION
+  // (`operacionDeLaVuelta`), y cada papel trae su tarifa. Sin esta bandera se
+  // cobraria al precio del que no corrio — la misma clase de error que
+  // `lib/credits.ts` documenta. Hoy el agente ve, así que no se enciende.
   //
   // ⚠️ HOY LOS DOS CUESTAN LO MISMO (desde el 2026-09-12 comparten modelo), asi
   // que este reparto no cambia ni un centimo. Se queda porque la pregunta que
@@ -166,30 +178,25 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
     console.warn(`[agent/brain] ${disponibilidad.motivo} — este turno va sin pensamiento.`);
   }
 
-  const viaFireworks = (
-    messages: Message[],
-    withTools: boolean,
-    maxOutputTokens: number,
-    images?: InlineImage[],
-  ) =>
+  const viaFireworks = (messages: Message[], withTools: boolean, maxOutputTokens: number) =>
     ((): ReturnType<typeof asAgentStream> => {
-      if (images?.length) mirado = true;
-      // Con píxeles adjuntos la operación cambia de papel: al razonador NUNCA
-      // se le manda una imagen, y quien mira es el papel con vision.
-      const operation = images?.length ? "page_write_with_reference" : "agent_turn";
+      // LAS FOTOS VAN DENTRO DE SU MENSAJE (`Message.images`) y viajan en todas
+      // las vueltas, como una imagen pegada en Claude Code. Quién corre la
+      // vuelta lo decide la política: con un agente que ve, él mismo.
+      const operation = operacionDeLaVuelta(messages.some((m) => m.images?.length));
+      if (operation !== "agent_turn") mirado = true;
       return asAgentStream(
       fireworks.stream(
         {
           messages: messagesForFireworks(messages),
           ...(withTools ? { tools: wireTools } : {}),
-          ...(images?.length ? { images } : {}),
           maxOutputTokens,
           temperature: TEMPERATURE,
           requestId: options.requestId,
           operation,
-          // La POSTURA sólo tiene sentido para `agent_turn`: con imagen adjunta
-          // el turno corre en el papel con vision, y ese papel mantiene el
-          // valor de la tabla, no el elegido por el usuario para el Agente.
+          // La POSTURA sólo tiene sentido para `agent_turn`: si una vuelta con
+          // fotos va al papel con visión (agente que no ve), ese papel mantiene
+          // el valor de la tabla, no el elegido por el usuario para el Agente.
           ...(operation === "agent_turn" ? { esfuerzo } : {}),
         },
         streamOpts,
@@ -209,18 +216,11 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
     // El papel que MIRA y el que razona son dos, y cada uno trae la suya.
     creditRate: () =>
       mirado ? MODEL_POLICY.visualCritic.creditRate : MODEL_POLICY.agent.creditRate,
-    openStream: (messages) => {
-      // Los píxeles adjuntos van SÓLO en el turno cuyo último mensaje es el
-      // prompt del usuario (el gateway los ancla ahí); mezclarlos con un mensaje
-      // de functionResponses rompería el protocolo de llamadas a herramientas.
-      const attached =
-        options.attachedImage && messages[messages.length - 1] === options.attachedImage.anchorMessage
-          ? [options.attachedImage.image]
-          : undefined;
-      // Con imagen adjunta va al papel con vision, por el mismo
-      // transporte y con las mismas herramientas.
-      return viaFireworks(messages, true, LOOP_MAX_OUTPUT_TOKENS, attached);
-    },
+    // ⚰️ Aquí la foto se anclaba SÓLO a la vuelta cuyo último mensaje era el
+    // prompt (por el canal de `request.images`, que la pega al último mensaje
+    // de usuario y no puede ir junto a resultados de herramientas). Con A va
+    // dentro de tu mensaje y ese problema no existe.
+    openStream: (messages) => viaFireworks(messages, true, LOOP_MAX_OUTPUT_TOKENS),
     closeOut: (messages) => viaFireworks(messages, false, CLOSEOUT_MAX_OUTPUT_TOKENS),
   };
 }
