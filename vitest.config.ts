@@ -307,6 +307,9 @@ export default defineConfig({
       "lib/agent/diario-del-turno.test.ts",
       // H4 parte 3: el historial desde la base, con su microcompact.
       "lib/agent/transcripcion.test.ts",
+      // A · las fotos de la conversación (del almacén en dev, de internet si
+      // no). `include` es LISTA BLANCA: sin esta línea no correría.
+      "lib/agent/fotos-de-la-conversacion.test.ts",
       // `include` es LISTA BLANCA: sin esta línea la prueba existe y NO corre.
       "lib/agent/motivo-del-fallo.test.ts",
       // La suite de la página: nace en verde y muere con su selector. LISTA
