@@ -159,3 +159,35 @@
   outline-offset: 2px;
   cursor: text;
 }
+
+/* ─── Colores de sintaxis del taller (la #15 de plans/len-agente-2026/notas/
+   fase-5-taller.md; el escáner es lib/workspace-v2/colorear.ts). En claro, los
+   700 de Tailwind; en oscuro, los 300: los dos por encima de 4,5:1 sobre su
+   fondo. El comentario y la puntuación, con el gris atenuado de siempre. ─── */
+.workspace-v2 {
+  --sx-etq: #9a3412;
+  --sx-atr: #6d28d9;
+  --sx-val: #047857;
+  --sx-pal: #1d4ed8;
+  --sx-num: #b45309;
+  --sx-pro: #0369a1;
+  --sx-tit: #9a3412;
+}
+.dark .workspace-v2 {
+  --sx-etq: #fdba74;
+  --sx-atr: #c4b5fd;
+  --sx-val: #6ee7b7;
+  --sx-pal: #93c5fd;
+  --sx-num: #fcd34d;
+  --sx-pro: #7dd3fc;
+  --sx-tit: #fdba74;
+}
+.workspace-v2 .sx-etq { color: var(--sx-etq); }
+.workspace-v2 .sx-atr { color: var(--sx-atr); }
+.workspace-v2 .sx-val { color: var(--sx-val); }
+.workspace-v2 .sx-com { color: var(--fg-faint); font-style: italic; }
+.workspace-v2 .sx-pal { color: var(--sx-pal); }
+.workspace-v2 .sx-num { color: var(--sx-num); }
+.workspace-v2 .sx-pro { color: var(--sx-pro); }
+.workspace-v2 .sx-pun { color: var(--fg-faint); }
+.workspace-v2 .sx-tit { color: var(--sx-tit); font-weight: 600; }

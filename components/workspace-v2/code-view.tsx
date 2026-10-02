@@ -39,7 +39,10 @@ import {
 import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
 import { buscarEnFicheros, type FicheroBuscable, type ResultadosDeBusqueda } from "@/lib/workspace-v2/buscar-en-ficheros";
 
+import { colorearLineas, lenguajeDe, type Lenguaje } from "@/lib/workspace-v2/colorear";
+
 import { copiar } from "./copiar";
+import { LineaColoreada } from "./linea-coloreada";
 import { Check, ChevronDown, ChevronRight, Copy, FileText, Search, X } from "./icons";
 import { IconBtn } from "./ui";
 
@@ -390,6 +393,7 @@ function Explorador({
             etiqueta={elegido.replace(/^\//, "")}
             {...(esDeSoloLectura(elegido) ? { nota: labels.readOnly } : {})}
             codigo={contenido}
+            lenguaje={lenguajeDe(elegido)}
             salto={salto}
             labels={labels}
           />
@@ -510,18 +514,21 @@ function Bloque({
   etiqueta,
   nota,
   codigo,
+  lenguaje,
   salto = null,
   labels,
 }: {
   etiqueta: string;
   nota?: string;
   codigo: string;
+  /** Con qué colores se pinta (la #15); null, sin color. */
+  lenguaje: Lenguaje | null;
   /** Una línea a la que ir (un resultado de la búsqueda): se centra y se resalta. */
   salto?: { readonly linea: number; readonly n: number } | null;
   labels: CodeViewProps["labels"];
 }) {
   const [copiado, setCopiado] = useState(false);
-  const lineas = codigo.split("\n");
+  const lineas = useMemo(() => colorearLineas(codigo, lenguaje), [codigo, lenguaje]);
   useEffect(() => {
     if (!copiado) return;
     const t = setTimeout(() => setCopiado(false), 1600);
@@ -570,7 +577,9 @@ function Bloque({
           {lineas.map((linea, i) => (
             <span key={i} data-linea={i + 1} className={`flex${salto?.linea === i + 1 ? " bg-accent-soft" : ""}`}>
               <span className="w-9 shrink-0 select-none pr-3 text-right fg-faint tabular">{i + 1}</span>
-              <span className="min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:anywhere]">{linea || " "}</span>
+              <span className="min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:anywhere]">
+                <LineaColoreada trozos={linea} />
+              </span>
             </span>
           ))}
         </code>
@@ -614,7 +623,7 @@ export function CodeView({ html, projectId, rutaActual = "/index.html", peticion
               era lo que se publicaba. Desde el 2026-08-26 el `<script>` es parte
               del documento: lo que ves aquí es, byte a byte, lo que se guarda y
               lo que se sirve. */}
-          <Bloque etiqueta={labels.document} codigo={html} labels={labels} />
+          <Bloque etiqueta={labels.document} codigo={html} lenguaje="html" labels={labels} />
         </div>
       )}
     </div>

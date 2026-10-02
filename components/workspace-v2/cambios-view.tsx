@@ -5,9 +5,15 @@
 // Es la pestaña de revisión de DeepSeek (`2026-09-15-changed-file-diff-preview.md`
 // de `deepseek-harness`): una por turno, con los ficheros a elegir, la
 // comparación del principio con el final del turno, los números de línea de
-// los dos lados, vista unificada o lado a lado y las líneas partidas o no. Sin
-// colores de sintaxis: allí también se dejaron para cuando hagan falta. Aquí
+// los dos lados, vista unificada o lado a lado y las líneas partidas o no. Aquí
 // los ficheros van a la izquierda, como en la lente «Código».
+//
+// CON COLORES DE SINTAXIS desde la #15 (la nota de DeepSeek del 15/09 los dejaba
+// fuera; el README actual de su paquete ya los usa). Como allí, el fondo dice
+// quitada o añadida, el signo lleva su color y el código, los suyos. A
+// diferencia de allí, que colorea cada trozo por su cuenta, aquí se colorea el
+// fichero ENTERO de antes y el de después (están en la foto), así que una línea
+// dentro de un `<script>` sabe que lo está.
 //
 // SÓLO LECTURA, y todo como TEXTO: ni el código ni lo que escribió un
 // visitante se interpretan nunca.
@@ -17,8 +23,10 @@ import { useTranslations } from "next-intl";
 
 import type { CambiosDeUnTurno, PeticionDeCambios } from "@/lib/workspace-v2/cambios-en-vivo";
 import { diffDeFichero, filasLadoALado, type LineaDelDiff, type TrozoDelDiff } from "@/lib/workspace-v2/diff-de-ficheros";
+import { colorearLineas, lenguajeDe, type Trozo } from "@/lib/workspace-v2/colorear";
 
 import { cuentasDe, MasMenos } from "./ficheros-del-turno";
+import { LineaColoreada } from "./linea-coloreada";
 import { X } from "./icons";
 import { IconBtn, Segmented } from "./ui";
 
@@ -29,15 +37,33 @@ type Vista = "unificada" | "lado";
 
 const FONDO: Record<LineaDelDiff["tipo"], string> = {
   igual: "fg-muted",
-  quitada: "bg-red-500/10 text-red-800 dark:text-red-200",
-  anadida: "bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
+  quitada: "bg-red-500/10 fg",
+  anadida: "bg-emerald-500/10 fg",
 };
 const SIGNO: Record<LineaDelDiff["tipo"], string> = { igual: " ", quitada: "−", anadida: "+" };
+const COLOR_DEL_SIGNO: Record<LineaDelDiff["tipo"], string> = {
+  igual: "",
+  quitada: "text-red-600 dark:text-red-400",
+  anadida: "text-emerald-600 dark:text-emerald-400",
+};
 
-function Texto({ texto, ajustar }: { texto: string; ajustar: boolean }) {
+/** El fichero de antes y el de después, ya coloreados y partidos en líneas. */
+interface Colores {
+  readonly antes: readonly (readonly Trozo[])[];
+  readonly despues: readonly (readonly Trozo[])[];
+}
+
+/** Los colores de una línea del diff, del lado que le toca; null si no cuadran con su texto. */
+function trozosDe(l: LineaDelDiff, colores: Colores | null): readonly Trozo[] | null {
+  if (!colores) return null;
+  const linea = l.tipo === "anadida" ? colores.despues[(l.despues ?? 0) - 1] : colores.antes[(l.antes ?? 0) - 1];
+  return linea && linea.map((t) => t.texto).join("") === l.texto ? linea : null;
+}
+
+function Texto({ texto, trozos, ajustar }: { texto: string; trozos: readonly Trozo[] | null; ajustar: boolean }) {
   return (
     <span className={`min-w-0 flex-1 pr-3 ${ajustar ? "whitespace-pre-wrap [overflow-wrap:anywhere]" : "whitespace-pre"}`}>
-      {texto || " "}
+      {trozos ? <LineaColoreada trozos={trozos} /> : texto || " "}
     </span>
   );
 }
@@ -55,28 +81,34 @@ function Plegadas({ n }: { n: number }) {
   );
 }
 
-function Unificada({ lineas, ajustar }: { lineas: readonly LineaDelDiff[]; ajustar: boolean }) {
+interface PropsDeLineas {
+  lineas: readonly LineaDelDiff[];
+  colores: Colores | null;
+  ajustar: boolean;
+}
+
+function Unificada({ lineas, colores, ajustar }: PropsDeLineas) {
   return (
     <>
       {lineas.map((l, k) => (
         <div key={k} className={`flex ${FONDO[l.tipo]}`}>
           <Numero n={l.antes} />
           <Numero n={l.despues} />
-          <span className="w-4 shrink-0 select-none text-center">{SIGNO[l.tipo]}</span>
-          <Texto texto={l.texto} ajustar={ajustar} />
+          <span className={`w-4 shrink-0 select-none text-center ${COLOR_DEL_SIGNO[l.tipo]}`}>{SIGNO[l.tipo]}</span>
+          <Texto texto={l.texto} trozos={trozosDe(l, colores)} ajustar={ajustar} />
         </div>
       ))}
     </>
   );
 }
 
-function LadoALado({ lineas, ajustar }: { lineas: readonly LineaDelDiff[]; ajustar: boolean }) {
+function LadoALado({ lineas, colores, ajustar }: PropsDeLineas) {
   const media = (l: LineaDelDiff | null, lado: "antes" | "despues") =>
     l ? (
       <div className={`flex min-w-0 ${l.tipo === "igual" ? FONDO.igual : FONDO[l.tipo]}`}>
         <Numero n={l[lado]} />
-        <span className="w-4 shrink-0 select-none text-center">{l.tipo === "igual" ? " " : SIGNO[l.tipo]}</span>
-        <Texto texto={l.texto} ajustar={ajustar} />
+        <span className={`w-4 shrink-0 select-none text-center ${COLOR_DEL_SIGNO[l.tipo]}`}>{l.tipo === "igual" ? " " : SIGNO[l.tipo]}</span>
+        <Texto texto={l.texto} trozos={trozosDe(l, colores)} ajustar={ajustar} />
       </div>
     ) : (
       <div className="bg-hover" />
@@ -150,6 +182,12 @@ export function CambiosView({
     [elegido],
   );
   const pintado = useMemo(() => (diff ? recortar(diff.trozos) : null), [diff]);
+  const colores = useMemo<Colores | null>(() => {
+    if (elegido?.tipo !== "texto") return null;
+    const lenguaje = lenguajeDe(elegido.ruta);
+    if (!lenguaje) return null;
+    return { antes: colorearLineas(elegido.antes ?? "", lenguaje), despues: colorearLineas(elegido.despues ?? "", lenguaje) };
+  }, [elegido]);
   const Lineas = vista === "unificada" ? Unificada : LadoALado;
 
   return (
@@ -256,7 +294,7 @@ export function CambiosView({
                   {pintado.trozos.map((tr, i) => (
                     <Fragment key={i}>
                       {tr.saltadas > 0 && <Plegadas n={tr.saltadas} />}
-                      <Lineas lineas={tr.lineas} ajustar={ajustar} />
+                      <Lineas lineas={tr.lineas} colores={colores} ajustar={ajustar} />
                     </Fragment>
                   ))}
                   {!pintado.recortado && diff.saltadasAlFinal > 0 && <Plegadas n={diff.saltadasAlFinal} />}

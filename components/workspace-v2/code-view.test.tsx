@@ -212,3 +212,13 @@ describe("CodeView — la marca de «cambiado» en el árbol (la #19)", () => {
     expect(div.querySelectorAll("nav button[aria-expanded] .opacity-40")).toHaveLength(2);
   });
 });
+
+describe("CodeView — colores de sintaxis (la #15)", () => {
+  it("un HTML se pinta con sus colores y un fichero sin lenguaje conocido, sin ellos; el texto no cambia", async () => {
+    const { el, render } = await pintar({ ruta: "/menu/index.html", n: 10 });
+    expect([...el.querySelectorAll("section .sx-etq")].map((s) => s.textContent)).toEqual(["h1", "h1"]);
+    expect(el.querySelector("section code")!.textContent).toContain("<h1>Menú</h1>");
+    await render({ ruta: "/datos/reservas.json", n: 11 });
+    expect([...el.querySelectorAll("section .sx-pro")].map((s) => s.textContent)).toEqual(['"nombre"']);
+  });
+});
