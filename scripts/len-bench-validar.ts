@@ -73,7 +73,7 @@ async function main(): Promise<number> {
   let malos = 0;
   try {
     for (const e of encargos) {
-      const solucion = await con(e, e.solucion, "solucion", e.solucionTurno);
+      const solucion = await con(e, e.solucion, "solucion", e.solucionTurno, e.solucionDespues);
       const variantes: { nombre: string; graders: ResultadoDeGrader[] }[] = [];
       for (const [nombre, datos, turno, despues] of [
         ["inicio", e.inicio, undefined, undefined] as const,

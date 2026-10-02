@@ -1192,6 +1192,64 @@ export function enElFichero(nombre: string, ruta: string, patron: RegExp, peso =
 }
 
 /**
+ * Lo que tiene que verse DENTRO de una tabla de la página ya pintada: la
+ * `<table>` (o `role="table"`) cuyo texto casa con `cabecera`, y en ella cada
+ * patrón. Dentro de la tabla y no en la página, a propósito: las filas de un
+ * almacén horneadas en un `<tbody>` son `<div>`, que el navegador saca FUERA
+ * de la tabla al leer el HTML, y el visitante ve los productos sueltos encima
+ * de una tabla vacía (`lib/publish/bake-lectura.ts`).
+ */
+export function enLaTabla(nombre: string, ruta: string, cabecera: RegExp, filas: readonly RegExp[], peso = 3): Grader {
+  return {
+    nombre,
+    peso,
+    async calificar(ctx) {
+      const page = await abrir(ctx, ruta);
+      try {
+        let tabla: string | undefined;
+        // Hasta 5 s: el JS de la página pinta después de cargar.
+        for (let t = 0; t < 10; t++) {
+          const tablas = await page
+            .evaluate(() => Array.from(document.querySelectorAll('table, [role="table"]')).map((x) => (x as HTMLElement).innerText.replace(/\s+/g, " ")))
+            .catch(() => [] as string[]);
+          tabla = tablas.find((x) => cabecera.test(x));
+          if (tabla !== undefined && filas.every((re) => re.test(tabla!))) break;
+          await new Promise((r) => setTimeout(r, 500));
+        }
+        if (tabla === undefined) return { paso: false, explicacion: `${ruta}: no hay ninguna tabla con ${cabecera}` };
+        const faltan = filas.filter((re) => !re.test(tabla!));
+        return faltan.length === 0
+          ? { paso: true, explicacion: `${ruta}: la tabla tiene ${filas.length} filas que casan` }
+          : { paso: false, explicacion: `${ruta}: a la tabla le faltan ${faltan.join(", ")} (tiene: «${tabla.slice(0, 160)}»)` };
+      } finally {
+        await cerrarPestana(page);
+      }
+    },
+  };
+}
+
+/**
+ * Lo que tiene que salir de un ALMACÉN no está escrito en el HTML del proyecto
+ * —ni a la vista, ni en un atributo, ni en un arreglo de JavaScript—: el
+ * borrador que guarda la base, antes de que publicar hornee las filas. Junto a
+ * `en-la-tabla` (se ve) dice de dónde sale lo que se ve: si no está en el
+ * fichero y el visitante lo lee, vino del almacén.
+ */
+export function noEscritoEnElProyecto(nombre: string, valores: readonly string[], peso = 3): Grader {
+  return {
+    nombre,
+    peso,
+    async calificar(ctx) {
+      const fichero = textoDelFichero(htmlDe(ctx.datos));
+      const escritos = valores.filter((v) => apareceEnTexto(v, fichero));
+      return escritos.length === 0
+        ? { paso: true, explicacion: `ninguno está escrito en el HTML del proyecto: ${valores.map((v) => `«${v}»`).join(", ")}` }
+        : { paso: false, explicacion: `siguen escritos en el HTML del proyecto: ${escritos.map((v) => `«${v}»`).join(", ")}` };
+    },
+  };
+}
+
+/**
  * El patrón está en CADA página publicada, en lo que se lee (el <title>
  * incluido). «Cámbialo en todo el sitio» también es que ninguna página se
  * quede sin el nombre nuevo: `ya-no-aparece` ve que el viejo se fue, y esto que

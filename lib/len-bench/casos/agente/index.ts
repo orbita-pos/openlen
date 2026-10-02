@@ -11,7 +11,8 @@ import path from "node:path";
 import type { Encargo } from "@/lib/len-bench/tipos";
 import { crear as sitioQueSeRenombra } from "./sitio-que-se-renombra";
 import { crear as enlacesRotosDelSitio } from "./enlaces-rotos-del-sitio";
+import { crear as tablaADatos } from "./tabla-a-datos";
 
 const DIR = path.resolve("lib/len-bench/casos/agente/paginas");
 
-export const ENCARGOS: Encargo[] = [sitioQueSeRenombra(DIR), enlacesRotosDelSitio(DIR)];
+export const ENCARGOS: Encargo[] = [sitioQueSeRenombra(DIR), enlacesRotosDelSitio(DIR), tablaADatos(DIR)];

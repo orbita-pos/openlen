@@ -98,6 +98,16 @@ describe("revisarCaso — las reglas 2, 3 y 4, y que las rotas rompan algo", () 
     const igual = revisarCaso({ ...caso, solucionTurno: bien, rotas: [{ nombre: "roto", datos: { html: "<p>bien</p>" }, turno: bien }] }, sinRojos);
     expect(igual.problemas.join(" ")).toMatch(/la rota «roto» es IDÉNTICA/);
   });
+  // tabla-a-datos (plans/len-agente-2026): la solución planta las filas de un
+  // almacén; la misma página SIN ellas es otra variante.
+  it("con la misma página y sin lo que planta la solución (`solucionDespues`), NO es idéntica; con lo mismo, sí", () => {
+    const sinRojos = { solucion: [res("datos", true)], variantes: [{ nombre: "inicio", graders: [res("datos", false), res("enlaces", false), res("sigue-lo-demas", false)] }] };
+    const filas = async () => {};
+    const sinFilas = revisarCaso({ ...caso, solucionDespues: filas, rotas: [{ nombre: "almacen-vacio", datos: { html: "<p>bien</p>" } }] }, sinRojos);
+    expect(sinFilas.problemas.join(" ")).not.toMatch(/IDÉNTICA/);
+    const lasMismas = revisarCaso({ ...caso, solucionDespues: filas, rotas: [{ nombre: "roto", datos: { html: "<p>bien</p>" }, despues: filas }] }, sinRojos);
+    expect(lasMismas.problemas.join(" ")).toMatch(/la rota «roto» es IDÉNTICA/);
+  });
 });
 
 describe("publicadaAlValidar — «y publícalo» sin Len que publique", () => {
