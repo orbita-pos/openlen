@@ -870,7 +870,9 @@ export function PreviewArea({
           })}
         </div>
       )}
-      {vistaLimitada && (
+      {/* Habla de los límites de la VISTA PREVIA: sólo en su lente. Encima de
+          Código, Datos o Terminal parecía que eran ellas las limitadas. */}
+      {vistaLimitada && lente === "pagina" && (
         <div
           role="status"
           className="relative z-10 shrink-0 h-8 flex items-center justify-center px-3 text-[11.5px] bg-elev fg-muted border-b bd ui-small fade-in"
