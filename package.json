@@ -147,6 +147,7 @@
     "culori": "^4.0.2",
     "drizzle-orm": "^0.45.2",
     "jszip": "^3.10.1",
+    "just-bash": "3.6.0",
     "lucide-react": "^1.16.0",
     "next": "15.5.23",
     "next-auth": "5.0.0-beta.32",
