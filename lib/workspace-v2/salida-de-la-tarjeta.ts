@@ -61,6 +61,30 @@ export interface SalidaPlegada {
   readonly hayMas: boolean;
 }
 
+/** En la lente «Terminal» caben más: las 16 de la terminal de DeepSeek fuera del chat. */
+export const LINEAS_EN_LA_LENTE = 16;
+
+export interface CabezaYCola {
+  /** Las primeras, que se ven. */
+  readonly cabeza: readonly string[];
+  /** Cuántas quedan plegadas en medio; 0, ninguna (se ve todo). */
+  readonly ocultas: number;
+  /** Las últimas, que también se ven: en una terminal el final suele ser el resultado. */
+  readonly cola: readonly string[];
+}
+
+/**
+ * EL PLEGADO DE LA LENTE (la #14): por encima del tope, la mitad de arriba y la
+ * de abajo, y en medio cuántas faltan — como el bloque de terminal de DeepSeek
+ * (mitad de arriba redondeada hacia arriba). Hasta el tope, todo.
+ */
+export function cabezaYCola(lineas: readonly string[], max: number = LINEAS_EN_LA_LENTE): CabezaYCola {
+  const ocultas = lineas.length - max;
+  if (ocultas <= 0) return { cabeza: lineas, ocultas: 0, cola: [] };
+  const arriba = Math.ceil(max / 2);
+  return { cabeza: lineas.slice(0, arriba), ocultas, cola: lineas.slice(lineas.length - (max - arriba)) };
+}
+
 export function plegarSalida(salida: string): SalidaPlegada {
   // La última línea ya dice el código, y la tarjeta lo pinta aparte (como la lente).
   const cuerpo = salida.replace(/\n?\[Command finished with exit code -?\d+\]\s*$/, "").replace(/\s+$/, "");

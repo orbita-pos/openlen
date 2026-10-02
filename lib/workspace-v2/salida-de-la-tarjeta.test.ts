@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
-import { LINEAS_PLEGADAS, plegarSalida, salidaDelComando } from "./salida-de-la-tarjeta";
+import { cabezaYCola, LINEAS_EN_LA_LENTE, LINEAS_PLEGADAS, plegarSalida, salidaDelComando } from "./salida-de-la-tarjeta";
 
 const c = (command: string, salida: string | null = `${command}\n[Command finished with exit code 0]`) => ({
   command,
@@ -57,6 +57,29 @@ describe("plegarSalida — las tres líneas de Claude Code y lo que queda", () =
   it("sin nada impreso, ninguna línea", () => {
     expect(plegarSalida("[Command finished with exit code 0]").lineas).toEqual([]);
     expect(plegarSalida("").lineas).toEqual([]);
+  });
+});
+
+describe("cabezaYCola — el plegado de la lente, como el bloque de terminal de DeepSeek", () => {
+  const n = (k: number) => Array.from({ length: k }, (_, i) => String(i + 1));
+
+  it("hasta el tope, todo y nada oculto", () => {
+    expect(cabezaYCola(n(LINEAS_EN_LA_LENTE))).toEqual({ cabeza: n(LINEAS_EN_LA_LENTE), ocultas: 0, cola: [] });
+    expect(cabezaYCola([])).toEqual({ cabeza: [], ocultas: 0, cola: [] });
+  });
+
+  it("por encima, la mitad arriba, la mitad abajo y cuántas faltan en medio", () => {
+    const p = cabezaYCola(n(30));
+    expect(p.cabeza).toEqual(n(8));
+    expect(p.ocultas).toBe(14);
+    expect(p.cola).toEqual(["23", "24", "25", "26", "27", "28", "29", "30"]);
+  });
+
+  it("con un tope impar, la de arriba se lleva la sobrante", () => {
+    const p = cabezaYCola(n(10), 5);
+    expect(p.cabeza).toEqual(["1", "2", "3"]);
+    expect(p.cola).toEqual(["9", "10"]);
+    expect(p.ocultas).toBe(5);
   });
 });
 

@@ -14,9 +14,11 @@
 // Todo va como TEXTO dentro de <pre>: ni el comando ni su salida se interpretan
 // nunca (la salida puede traer HTML de la página o filas de visitantes).
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { X } from "./icons";
+import { cabezaYCola, plegarSalida } from "@/lib/workspace-v2/salida-de-la-tarjeta";
+import { copiar } from "./copiar";
+import { Check, Copy, X } from "./icons";
 import { IconBtn } from "./ui";
 import type { TerminalDeLen } from "./use-terminal-de-len";
 
@@ -33,6 +35,11 @@ interface TerminalViewProps {
     readonly enVivo: string;
     readonly sinSalida: string;
     readonly codigo: (n: number) => string;
+    readonly copiar: string;
+    readonly copiado: string;
+    /** «N líneas más», en medio de una salida plegada. */
+    readonly ocultas: (n: number) => string;
+    readonly plegar: string;
   };
 }
 
@@ -49,21 +56,59 @@ function Comando({
 }) {
   // La última línea ya dice el código de salida («[Command finished with exit
   // code N]»): se quita del cuerpo y se pinta aparte, con el acento si no es 0.
-  const cuerpo = (salida ?? "").replace(/\n?\[Command finished with exit code -?\d+\]\s*$/, "");
+  const lineas = useMemo(() => (salida === null ? [] : plegarSalida(salida).lineas), [salida]);
+  // PLEGADA SI ES LARGA (la #14 de plans/len-agente-2026/notas/fase-5-taller.md),
+  // como el bloque de terminal de DeepSeek: las 8 primeras, cuántas faltan, y
+  // las 8 últimas. Antes cada salida tenía su propia caja con scroll dentro de
+  // la lente, que también tiene scroll: dos ruedas para leer una cosa.
+  const { cabeza, ocultas, cola } = cabezaYCola(lineas);
+  const [entera, setEntera] = useState(false);
+  // COPIAR, sólo lo que imprimió: ni el `$`, ni el comando, ni la línea del código.
+  const texto = lineas.join("\n");
+  const [copiado, setCopiado] = useState(false);
+  useEffect(() => {
+    if (!copiado) return;
+    const t = setTimeout(() => setCopiado(false), 1600);
+    return () => clearTimeout(t);
+  }, [copiado]);
   const falla = exitCode !== null && exitCode !== 0;
+  const caja = "whitespace-pre-wrap break-words";
   return (
     <div className="border-b bd px-3 py-2.5 last:border-b-0">
-      <pre className="whitespace-pre-wrap break-words font-mono text-[11.5px] leading-[1.55]">
-        <span className="select-none text-accent">$ </span>
-        <span className="fg">{command}</span>
-      </pre>
+      <div className="flex items-start gap-2">
+        <pre className="min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-[11.5px] leading-[1.55]">
+          <span className="select-none text-accent">$ </span>
+          <span className="fg">{command}</span>
+        </pre>
+        {texto && (
+          <button
+            type="button"
+            onClick={() => void copiar(texto).then(setCopiado)}
+            className="shrink-0 inline-flex items-center gap-1 rounded-md border bd px-1.5 py-0.5 text-[10.5px] fg-faint hover:fg hover:bg-hover transition ui-small"
+          >
+            {copiado ? <Check size={10} /> : <Copy size={10} />}
+            {copiado ? labels.copiado : labels.copiar}
+          </button>
+        )}
+      </div>
       {salida === null ? (
         <p className="mt-1 text-[11px] fg-faint ui-small">{labels.sinSalida}</p>
       ) : (
-        cuerpo && (
-          <pre className="mt-1 max-h-[22rem] overflow-auto nice-scroll whitespace-pre-wrap break-words font-mono text-[11px] leading-[1.5] fg-muted">
-            {cuerpo}
-          </pre>
+        lineas.length > 0 && (
+          <div className="mt-1 font-mono text-[11px] leading-[1.5] fg-muted">
+            <pre className={caja}>{(entera || ocultas === 0 ? lineas : cabeza).join("\n")}</pre>
+            {ocultas > 0 && (
+              <button
+                type="button"
+                aria-expanded={entera}
+                onClick={() => setEntera((x) => !x)}
+                className="my-0.5 text-[10.5px] text-accent hover:underline ui-small"
+              >
+                {entera ? labels.plegar : labels.ocultas(ocultas)}
+              </button>
+            )}
+            {ocultas > 0 && !entera && <pre className={caja}>{cola.join("\n")}</pre>}
+          </div>
         )
       )}
       {falla && (

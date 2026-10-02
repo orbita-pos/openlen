@@ -146,7 +146,9 @@
       "error": "Impossible de charger les commandes précédentes.",
       "enVivo": "Ce tour",
       "sinSalida": "Aucune sortie enregistrée.",
-      "codigo": "Terminé avec le code {n}"
+      "codigo": "Terminé avec le code {n}",
+      "ocultas": "{count, plural, one {··· # ligne de plus} other {··· # lignes de plus}}",
+      "plegar": "Replier"
     },
     "cambios": {
       "title": "Ce qui a changé pendant ce tour",

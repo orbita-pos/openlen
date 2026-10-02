@@ -154,7 +154,9 @@
       "error": "Não foi possível carregar os comandos anteriores.",
       "enVivo": "Este turno",
       "sinSalida": "Sem saída salva.",
-      "codigo": "Terminou com o código {n}"
+      "codigo": "Terminou com o código {n}",
+      "ocultas": "{count, plural, one {··· mais # linha} other {··· mais # linhas}}",
+      "plegar": "Recolher"
     },
     "cambios": {
       "title": "O que mudou neste turno",

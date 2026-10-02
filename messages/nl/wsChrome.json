@@ -154,7 +154,9 @@
       "error": "Eerdere opdrachten konden niet worden geladen.",
       "enVivo": "Deze beurt",
       "sinSalida": "Geen opgeslagen uitvoer.",
-      "codigo": "Gestopt met code {n}"
+      "codigo": "Gestopt met code {n}",
+      "ocultas": "{count, plural, one {··· nog # regel} other {··· nog # regels}}",
+      "plegar": "Inklappen"
     },
     "cambios": {
       "title": "Wat er in deze beurt veranderde",

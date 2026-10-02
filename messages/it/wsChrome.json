@@ -146,7 +146,9 @@
       "error": "Impossibile caricare i comandi precedenti.",
       "enVivo": "Questo turno",
       "sinSalida": "Nessun output salvato.",
-      "codigo": "Terminato con codice {n}"
+      "codigo": "Terminato con codice {n}",
+      "ocultas": "{count, plural, one {··· # altra riga} other {··· altre # righe}}",
+      "plegar": "Comprimi"
     },
     "cambios": {
       "title": "Cosa è cambiato in questo turno",

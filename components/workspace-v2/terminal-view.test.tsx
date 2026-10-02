@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Arnés manual de react-dom + act(), como `agent-reply-card.test.tsx`: en el
 // repo no hay @testing-library. Los textos llegan por props.
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { TerminalView } from "./terminal-view";
@@ -21,6 +21,10 @@ const labels = {
   enVivo: "Este turno",
   sinSalida: "Sin salida guardada.",
   codigo: (n: number) => `Terminó con el código ${n}`,
+  copiar: "Copiar",
+  copiado: "Copiado",
+  ocultas: (n: number) => `··· ${n} líneas más`,
+  plegar: "Plegar",
 };
 
 const base: TerminalDeLen = { encendida: true, turnos: [], enVivo: [], cargando: false, error: false, recargar: () => {} };
@@ -76,6 +80,55 @@ describe("TerminalView", () => {
     expect(el.querySelector("img")).toBeNull();
     expect(el.querySelector("h1")).toBeNull();
     expect(el.textContent).toContain('<img src=x onerror="alert(1)">');
+  });
+
+  it("una salida larga va plegada: las 8 primeras, cuántas faltan y las 8 últimas; «Plegar» la vuelve a plegar", () => {
+    const lineas = Array.from({ length: 30 }, (_, i) => `linea-${i + 1}`);
+    const el = pintar({
+      ...base,
+      enVivo: [{ command: "cat -n /x", salida: `${lineas.join("\n")}\n[Command finished with exit code 0]`, exitCode: 0 }],
+    });
+    const texto = () => el.textContent ?? "";
+    // El del comando, el de arriba y el de abajo.
+    const [, arriba, abajo] = [...el.querySelectorAll("pre")].map((p) => p.textContent);
+    expect(arriba).toBe(lineas.slice(0, 8).join("\n"));
+    expect(abajo).toBe(lineas.slice(22).join("\n"));
+    expect(texto()).toContain("··· 14 líneas más");
+
+    const boton = () => el.querySelector<HTMLButtonElement>("button[aria-expanded]")!;
+    act(() => boton().click());
+    expect(boton().getAttribute("aria-expanded")).toBe("true");
+    expect(texto()).toContain("linea-15");
+    expect(texto()).toContain("Plegar");
+    act(() => boton().click());
+    expect(texto()).not.toContain("linea-15");
+  });
+
+  it("hasta 16 líneas, todas y sin pliegue", () => {
+    const el = pintar({
+      ...base,
+      enVivo: [{ command: "ls", salida: `${Array.from({ length: 16 }, (_, i) => `f${i}`).join("\n")}\n[Command finished with exit code 0]`, exitCode: 0 }],
+    });
+    expect(el.textContent).toContain("f15");
+    expect(el.querySelector("button[aria-expanded]")).toBeNull();
+  });
+
+  it("Copiar copia sólo lo que imprimió: ni el comando ni la línea del código", async () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const el = pintar({
+      ...base,
+      enVivo: [{ command: "grep -rn Marea /", salida: "/a:1:Marea\n/b:2:Marea\n[Command finished with exit code 0]", exitCode: 0 }],
+    });
+    const copiar = [...el.querySelectorAll("button")].find((b) => b.textContent === "Copiar")!;
+    await act(async () => copiar.click());
+    expect(writeText).toHaveBeenCalledWith("/a:1:Marea\n/b:2:Marea");
+    expect(el.textContent).toContain("Copiado");
+  });
+
+  it("sin nada impreso no hay nada que copiar", () => {
+    const el = pintar({ ...base, enVivo: [{ command: "true", salida: "[Command finished with exit code 0]", exitCode: 0 }] });
+    expect([...el.querySelectorAll("button")].some((b) => b.textContent === "Copiar")).toBe(false);
   });
 
   it("vacía: dice si la terminal está apagada o si Len aún no la usó", () => {

@@ -1073,6 +1073,10 @@ export function PreviewArea({
               enVivo: t("preview.terminal.enVivo"),
               sinSalida: t("preview.terminal.sinSalida"),
               codigo: (n: number) => t("preview.terminal.codigo", { n }),
+              copiar: t("preview.code.copy"),
+              copiado: t("preview.code.copied"),
+              ocultas: (count: number) => t("preview.terminal.ocultas", { count }),
+              plegar: t("preview.terminal.plegar"),
             }}
           />
         )}

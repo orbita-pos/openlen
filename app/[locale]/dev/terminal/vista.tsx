@@ -55,6 +55,12 @@ const HISTORIAL = {
           salida: "Ana Ruiz\nMarco Díaz\n[Command finished with exit code 0]",
           exitCode: 0,
         },
+        // Una salida LARGA (la #14): plegada, las 8 primeras y las 8 últimas.
+        {
+          command: "cat -n /clases/index.html",
+          salida: `${Array.from({ length: 30 }, (_, i) => `${String(i + 1).padStart(6)}\t${i === 0 ? "<!doctype html>" : i === 29 ? "</html>" : `  <p>Línea ${i + 1} de la página de clases</p>`}`).join("\n")}\n[Command finished with exit code 0]`,
+          exitCode: 0,
+        },
       ],
     },
   ],

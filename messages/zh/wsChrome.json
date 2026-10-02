@@ -146,7 +146,9 @@
       "error": "无法加载之前的命令。",
       "enVivo": "本轮",
       "sinSalida": "没有保存的输出。",
-      "codigo": "退出代码 {n}"
+      "codigo": "退出代码 {n}",
+      "ocultas": "{count, plural, other {··· 还有 # 行}}",
+      "plegar": "收起"
     },
     "cambios": {
       "title": "本轮更改了什么",

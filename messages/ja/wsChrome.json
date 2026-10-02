@@ -146,7 +146,9 @@
       "error": "以前のコマンドを読み込めませんでした。",
       "enVivo": "このターン",
       "sinSalida": "保存された出力はありません。",
-      "codigo": "終了コード {n}"
+      "codigo": "終了コード {n}",
+      "ocultas": "{count, plural, other {··· あと # 行}}",
+      "plegar": "折りたたむ"
     },
     "cambios": {
       "title": "このターンで変わったこと",

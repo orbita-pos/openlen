@@ -146,7 +146,9 @@
       "error": "이전 명령을 불러오지 못했습니다.",
       "enVivo": "이번 턴",
       "sinSalida": "저장된 출력이 없습니다.",
-      "codigo": "종료 코드 {n}"
+      "codigo": "종료 코드 {n}",
+      "ocultas": "{count, plural, other {··· #줄 더 보기}}",
+      "plegar": "접기"
     },
     "cambios": {
       "title": "이번 턴에서 바뀐 것",
