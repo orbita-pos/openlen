@@ -101,7 +101,8 @@
       "mas": "{count, plural, other {+# 行}}",
       "todo": "すべて表示",
       "menos": "折りたたむ"
-    }
+    },
+    "abrirFichero": "ファイルを開く"
   },
   "defaultProjectName": "料金ページ",
   "chatDraft": {

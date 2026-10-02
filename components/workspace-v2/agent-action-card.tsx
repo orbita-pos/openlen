@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, Check, ChevronDown, ChevronRight, Loader } from "./icons";
+import { AlertTriangle, Check, ChevronDown, ChevronRight, ExternalLink, Loader } from "./icons";
 import { SalidaEnLaTarjeta, type DondeEstaLaSalida } from "./salida-en-la-tarjeta";
 
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
+import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 
 export interface AgentAction {
   tool: string;
@@ -278,10 +279,13 @@ export function coberturaTitle(
 export function AgentActionCard({
   action,
   terminal,
+  onAbrirFichero,
 }: {
   action: AgentAction;
   /** Sólo para las de `bash`: dónde está su salida, para desplegarla aquí. */
   terminal?: DondeEstaLaSalida;
+  /** Con él, la tarjeta de un fichero (Read, Edit, Write) lo abre en el taller. */
+  onAbrirFichero?: (ruta: string) => void;
 }) {
   const t = useTranslations("wsPage");
   const [abierta, setAbierta] = useState(false);
@@ -355,6 +359,23 @@ export function AgentActionCard({
       ) : null}
     </>
   );
+  // LA RUTA ABRE SU FICHERO (la #9): la tarjeta de Read, Edit y Write lleva al
+  // fichero en el taller —en «Cambios» si cambió en ese turno, en «Código» si
+  // no—, como una ruta del chat en el escritorio de Claude Code.
+  const ruta = onAbrirFichero ? rutaDeLaTarjeta(action) : null;
+  if (ruta && onAbrirFichero && action.status !== "running") {
+    return (
+      <button
+        type="button"
+        onClick={() => onAbrirFichero(ruta)}
+        title={titulo || t("agent.abrirFichero")}
+        className="group flex w-full items-center gap-2 rounded-lg border bd bg-app px-2.5 py-1.5 text-left text-[11px] hover:bg-hover"
+      >
+        {fila}
+        <ExternalLink size={11} className="ml-auto shrink-0 fg-faint opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
+      </button>
+    );
+  }
   if (!desplegable) {
     return (
       <div

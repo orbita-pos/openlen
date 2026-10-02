@@ -101,7 +101,8 @@
       "mas": "{count, plural, one {+# line} other {+# lines}}",
       "todo": "Show all",
       "menos": "Show less"
-    }
+    },
+    "abrirFichero": "Open the file"
   },
   "defaultProjectName": "Pricing Page",
   "chatDraft": {

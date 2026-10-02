@@ -101,7 +101,8 @@
       "mas": "{count, plural, one {+# linha} other {+# linhas}}",
       "todo": "Ver tudo",
       "menos": "Ver menos"
-    }
+    },
+    "abrirFichero": "Abrir o arquivo"
   },
   "defaultProjectName": "Página de Preços",
   "chatDraft": {

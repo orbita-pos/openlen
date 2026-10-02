@@ -134,7 +134,8 @@
       "files": "文件",
       "loading": "加载中…",
       "loadError": "无法读取文件。",
-      "readOnly": "只读 · 打开时计算"
+      "readOnly": "只读 · 打开时计算",
+      "noEsta": "已不在项目中。"
     },
     "terminal": {
       "title": "Len 的终端",

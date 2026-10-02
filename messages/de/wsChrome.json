@@ -134,7 +134,8 @@
       "files": "Dateien",
       "loading": "Wird geladen…",
       "loadError": "Die Dateien konnten nicht gelesen werden.",
-      "readOnly": "Schreibgeschützt · wird beim Öffnen berechnet"
+      "readOnly": "Schreibgeschützt · wird beim Öffnen berechnet",
+      "noEsta": "ist nicht mehr im Projekt."
     },
     "terminal": {
       "title": "Lens Terminal",

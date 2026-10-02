@@ -19,6 +19,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { esDeSoloLectura } from "@/lib/agent/terminal/ficheros";
+import type { PeticionDeCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import { abiertasAlEntrar, arbolDeFicheros, type NodoDelArbol } from "@/lib/workspace-v2/arbol-de-ficheros";
 
 import { Check, ChevronDown, ChevronRight, Copy, FileText, X } from "./icons";
@@ -32,6 +33,8 @@ interface CodeViewProps {
   readonly projectId?: string | null;
   /** La ruta del fichero de la página abierta (`/index.html`, `/menu/index.html`). */
   readonly rutaActual?: string;
+  /** Una ruta pulsada en el Chat (la #9): la lente se abre con ese fichero elegido. */
+  readonly peticion?: PeticionDeCodigo | null;
   readonly onClose: () => void;
   readonly labels: {
     readonly title: string;
@@ -44,6 +47,7 @@ interface CodeViewProps {
     readonly loading: string;
     readonly loadError: string;
     readonly readOnly: string;
+    readonly noEsta: string;
   };
 }
 
@@ -63,15 +67,17 @@ function Explorador({
   projectId,
   rutaActual,
   htmlActual,
+  peticion,
   labels,
 }: {
   projectId: string;
   rutaActual: string;
   htmlActual: string;
+  peticion: PeticionDeCodigo | null;
   labels: CodeViewProps["labels"];
 }) {
   const [lista, setLista] = useState<ListaDeFicheros | "cargando" | "error">("cargando");
-  const [elegido, setElegido] = useState(rutaActual);
+  const [elegido, setElegido] = useState(peticion?.ruta ?? rutaActual);
   const [perezosos, setPerezosos] = useState<Readonly<Record<string, string | "cargando" | "error">>>({});
   const [abiertas, setAbiertas] = useState<Set<string> | null>(null);
 
@@ -116,6 +122,32 @@ function Explorador({
     setElegido(n.ruta);
     if (n.perezoso) pedirPerezoso(n.ruta);
   };
+
+  // UNA RUTA PULSADA EN EL CHAT con la lente ya abierta: ese fichero, y abiertas
+  // las carpetas que llevan a él. (Si la lente se abre con ella, ya la trae el
+  // estado inicial.)
+  const nPeticion = peticion?.n ?? 0;
+  const atendida = useRef(nPeticion);
+  useEffect(() => {
+    if (!peticion || nPeticion <= atendida.current) return;
+    atendida.current = nPeticion;
+    setElegido(peticion.ruta);
+    setAbiertas((a) => {
+      if (a === null) return a;
+      const nuevas = new Set(a);
+      for (let i = peticion.ruta.indexOf("/", 1); i > 0; i = peticion.ruta.indexOf("/", i + 1)) {
+        nuevas.add(peticion.ruta.slice(0, i));
+      }
+      return nuevas;
+    });
+  }, [nPeticion, peticion]);
+  // Un fichero de los que se calculan al abrirlos, elegido sin pasar por el
+  // árbol (desde el Chat): se pide igual que con un clic.
+  const esperaPerezoso =
+    typeof lista !== "string" && lista.perezosos.includes(elegido) && perezosos[elegido] === undefined;
+  useEffect(() => {
+    if (esperaPerezoso) pedirPerezoso(elegido);
+  });
   const plegar = (ruta: string) =>
     setAbiertas((a) => {
       const nuevas = new Set(a ?? []);
@@ -124,12 +156,15 @@ function Explorador({
       return nuevas;
     });
 
-  const contenido: string | "cargando" | "error" =
+  const contenido: string | "cargando" | "error" | "no-esta" =
     elegido === rutaActual
       ? htmlActual
       : typeof lista === "string"
         ? lista
-        : (lista.ficheros.find((f) => f.ruta === elegido)?.contenido ?? perezosos[elegido] ?? "cargando");
+        : (lista.ficheros.find((f) => f.ruta === elegido)?.contenido ??
+          perezosos[elegido] ??
+          // Pedido desde el Chat y ya no está (una página borrada después): se dice.
+          (lista.perezosos.includes(elegido) ? "cargando" : "no-esta"));
 
   const pintar = (nodos: readonly NodoDelArbol[], nivel: number): ReactNode => (
     <ul>
@@ -187,6 +222,10 @@ function Explorador({
           <p className="p-3 text-[12px] fg-muted">{labels.loading}</p>
         ) : contenido === "error" ? (
           <p className="p-3 text-[12px] fg-muted">{labels.loadError}</p>
+        ) : contenido === "no-esta" ? (
+          <p className="p-3 text-[12px] fg-muted">
+            <span className="font-mono">{elegido.replace(/^\//, "")}</span> · {labels.noEsta}
+          </p>
         ) : (
           <Bloque
             etiqueta={elegido.replace(/^\//, "")}
@@ -285,7 +324,7 @@ function Bloque({
   );
 }
 
-export function CodeView({ html, projectId, rutaActual = "/index.html", onClose, labels }: CodeViewProps) {
+export function CodeView({ html, projectId, rutaActual = "/index.html", peticion = null, onClose, labels }: CodeViewProps) {
   const cierreRef = useRef<HTMLDivElement>(null);
 
   // Escape cierra, como cualquier panel superpuesto. Se engancha al documento
@@ -311,7 +350,7 @@ export function CodeView({ html, projectId, rutaActual = "/index.html", onClose,
       </div>
       {projectId ? (
         <div className="min-h-0 flex-1">
-          <Explorador projectId={projectId} rutaActual={rutaActual} htmlActual={html} labels={labels} />
+          <Explorador projectId={projectId} rutaActual={rutaActual} htmlActual={html} peticion={peticion} labels={labels} />
         </div>
       ) : (
         <div className="flex-1 overflow-auto nice-scroll">

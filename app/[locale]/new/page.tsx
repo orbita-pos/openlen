@@ -108,6 +108,8 @@ import { useEditorSound } from "@/lib/use-editor-sound";
 import { useIsMobile } from "@/components/workspace-v2/use-is-mobile";
 import { formConfigKey, listSitePages } from "@/lib/projects/site-pages";
 import { esperarAQueSeCalme } from "@/lib/workspace-v2/esperar-a-que-se-calme";
+import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
+import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import type { SitePage } from "@/lib/projects/types";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { AddressBar } from "@/components/workspace-v2/address-bar";
@@ -816,6 +818,28 @@ function NewV2Inner() {
   useEffect(() => {
     if (isMobile && aiGenState.kind === "generating") setLeftCollapsed(true);
   }, [isMobile, aiGenState.kind]);
+  // Mobile, otra vez: el Chat tapa el lienzo, así que cuando pide abrir una
+  // lente —una fila de la tarjeta de cambios, una ruta (la #9 de
+  // plans/len-agente-2026)— el panel se aparta. Si no, la lente se abría DETRÁS.
+  const proyectoAbierto = loadedProject?.id ?? null;
+  useEffect(() => {
+    if (!isMobile || !proyectoAbierto) return;
+    let cambios = cambiosEnVivo.peticion(proyectoAbierto)?.n ?? 0;
+    let codigo = abrirEnElCodigo.peticion(proyectoAbierto)?.n ?? 0;
+    const fuera = [
+      cambiosEnVivo.subscribe(() => {
+        const n = cambiosEnVivo.peticion(proyectoAbierto)?.n ?? 0;
+        if (n > cambios) setLeftCollapsed(true);
+        cambios = n;
+      }),
+      abrirEnElCodigo.subscribe(() => {
+        const n = abrirEnElCodigo.peticion(proyectoAbierto)?.n ?? 0;
+        if (n > codigo) setLeftCollapsed(true);
+        codigo = n;
+      }),
+    ];
+    return () => fuera.forEach((f) => f());
+  }, [isMobile, proyectoAbierto]);
   const [genSlow, setGenSlow] = useState(false);
   const startAiGeneration = useCallback(
     (prompt: string) => {

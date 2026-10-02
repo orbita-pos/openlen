@@ -26,6 +26,7 @@ import { DatosView } from "./datos-view";
 import { TerminalView } from "./terminal-view";
 import { CambiosView } from "./cambios-view";
 import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
+import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import { useTerminalDeLen } from "./use-terminal-de-len";
 import { IconBtn, Segmented } from "./ui";
 import { injectDropPlace } from "./use-drop-place";
@@ -320,6 +321,25 @@ export function PreviewArea({
   }, [nPeticion, peticionDeCambios, setLente]);
   useEffect(() => {
     if (lente !== "cambios") setPeticionVigente(null);
+  }, [lente]);
+  // Y LO MISMO CON «CÓDIGO» (la #9): una ruta pulsada en el Chat de un fichero
+  // que ese turno no cambió abre la lente con ese fichero elegido.
+  const peticionDeCodigo = useSyncExternalStore(
+    abrirEnElCodigo.subscribe,
+    () => (projectId ? abrirEnElCodigo.peticion(projectId) : null),
+    () => null,
+  );
+  const nPeticionDeCodigo = peticionDeCodigo?.n ?? 0;
+  const peticionDeCodigoAtendida = useRef(nPeticionDeCodigo);
+  const [peticionDeCodigoVigente, setPeticionDeCodigoVigente] = useState<typeof peticionDeCodigo>(null);
+  useEffect(() => {
+    if (nPeticionDeCodigo <= peticionDeCodigoAtendida.current || !hayCodigo) return;
+    peticionDeCodigoAtendida.current = nPeticionDeCodigo;
+    setPeticionDeCodigoVigente(peticionDeCodigo);
+    setLente("codigo");
+  }, [nPeticionDeCodigo, peticionDeCodigo, hayCodigo, setLente]);
+  useEffect(() => {
+    if (lente !== "codigo") setPeticionDeCodigoVigente(null);
   }, [lente]);
   // Al abrirla se relee el historial: los turnos que acabaron mientras estaba
   // cerrada ya tienen su transcripción guardada.
@@ -1066,8 +1086,10 @@ export function PreviewArea({
             html={doc}
             projectId={previewUrl ? null : projectId}
             rutaActual={rutaDePagina(pagina)}
+            peticion={peticionDeCodigoVigente}
             onClose={() => setLente("pagina")}
             labels={{
+              noEsta: t("preview.code.noEsta"),
               title: t("preview.code.title"),
               close: t("preview.code.close"),
               copy: t("preview.code.copy"),

@@ -18,6 +18,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type RefObject,
 } from "react";
 import {
@@ -57,11 +58,12 @@ import type { SitePageSummary } from "@/lib/projects/site-pages";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { fusionarConversacion } from "@/lib/chat/fusionar-conversacion";
-import { trozosConFormato } from "@/lib/chat/formato-de-len";
+import { TextoDeLen } from "../texto-de-len";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
 import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
-import { cambiosEnVivo, esFicheroCambiado } from "@/lib/workspace-v2/cambios-en-vivo";
+import { cambiosEnVivo, esFicheroCambiado, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
+import { abrirEnElCodigo, abrirFicheroDelTurno, rutasDelTurno } from "@/lib/workspace-v2/abrir-fichero";
 import { FicherosDelTurnoEnVivo } from "../ficheros-del-turno";
 import { seccionesCambiadas, tipoDeOp, agruparCambios, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
@@ -70,6 +72,9 @@ import type { OpDescrita } from "@/lib/agent/ops-descritas";
  *  leer el payload para que un renombrado allí rompa aquí la compilación en vez
  *  de dejar el campo leyéndose `undefined` para siempre. */
 type EventoHtmlDelAgente = Extract<AgentStreamEvent, { type: "html" }>;
+
+/** Sin turnos con cambios (y en el servidor, donde el almacén no existe). */
+const SIN_CAMBIOS: readonly CambiosDeUnTurno[] = [];
 
 export interface ScopedSelection {
   hint: string;
@@ -2135,6 +2140,29 @@ function TurnView({
     }),
     [tAgent],
   );
+  // LAS RUTAS DE ESTE TURNO ABREN SU FICHERO (la #9 de plans/len-agente-2026/
+  // notas/fase-5-taller.md): las de sus tarjetas y las que Len nombra entre
+  // comillas de código, si el turno las leyó o las cambió. Las cambiadas salen
+  // de la foto del turno (`cambiosEnVivo`), que vive lo que la pestaña.
+  const turnosConCambios = useSyncExternalStore(
+    cambiosEnVivo.subscribe,
+    () => cambiosEnVivo.turnos(projectId),
+    () => SIN_CAMBIOS,
+  );
+  const rutas = useMemo(
+    () =>
+      rutasDelTurno(
+        turn.actions,
+        turnosConCambios.find((x) => x.turnId === turn.id)?.ficheros.map((f) => f.ruta) ?? [],
+      ),
+    [turn.actions, turn.id, turnosConCambios],
+  );
+  const abrirFichero = useCallback(
+    (ruta: string) => {
+      abrirFicheroDelTurno(projectId, turn.id, ruta, { cambios: cambiosEnVivo, codigo: abrirEnElCodigo });
+    },
+    [projectId, turn.id],
+  );
   // DE QUÉ PÁGINA FUE ESTE TURNO.
   //
   // La charla es una sola para todo el sitio, así que en un sitio de tres
@@ -2201,6 +2229,7 @@ function TurnView({
                   <AgentActionCard
                     key={`${a.tool}-${i}`}
                     action={a}
+                    onAbrirFichero={abrirFichero}
                     // La de la terminal sabe qué comando del turno es: con eso
                     // encuentra su salida (`salida-de-la-tarjeta.ts`).
                     {...(a.tool === "bash"
@@ -2213,7 +2242,7 @@ function TurnView({
             <div className="inline-block max-w-full rounded-2xl px-3 py-2 text-left bg-elev border bd">
               {turn.assistantReasoning.length > 0 && (
                 <div className="text-[12.5px] fg leading-relaxed whitespace-pre-wrap break-words">
-                  <TextoDeLen texto={turn.assistantReasoning} />
+                  <TextoDeLen texto={turn.assistantReasoning} rutas={rutas} onAbrir={abrirFichero} />
                 </div>
               )}
               <TurnFooter
@@ -2234,30 +2263,6 @@ function TurnView({
         </div>
       )}
     </div>
-  );
-}
-
-/** Lo que Len escribe, con su **negrita**, `código` y *cursiva* pintados en
- *  vez de con las marcas a la vista. Cada trozo es texto que React escapa. */
-function TextoDeLen({ texto }: { texto: string }) {
-  return (
-    <>
-      {trozosConFormato(texto).map((t, i) =>
-        t.tipo === "negrita" ? (
-          <strong key={i} className="font-semibold">
-            {t.texto}
-          </strong>
-        ) : t.tipo === "codigo" ? (
-          <code key={i} className="font-mono text-[11.5px] rounded px-1 border bd">
-            {t.texto}
-          </code>
-        ) : t.tipo === "cursiva" ? (
-          <em key={i}>{t.texto}</em>
-        ) : (
-          t.texto
-        ),
-      )}
-    </>
   );
 }
 

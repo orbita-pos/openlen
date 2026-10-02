@@ -142,7 +142,8 @@
       "files": "Bestanden",
       "loading": "Laden…",
       "loadError": "De bestanden konden niet worden gelezen.",
-      "readOnly": "Alleen-lezen · berekend bij openen"
+      "readOnly": "Alleen-lezen · berekend bij openen",
+      "noEsta": "staat niet meer in het project."
     },
     "terminal": {
       "title": "Lens terminal",

@@ -101,7 +101,8 @@
       "mas": "{count, plural, one {+# regel} other {+# regels}}",
       "todo": "Alles tonen",
       "menos": "Minder tonen"
-    }
+    },
+    "abrirFichero": "Bestand openen"
   },
   "defaultProjectName": "Prijzenpagina",
   "chatDraft": {

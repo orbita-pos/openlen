@@ -11,7 +11,9 @@ import "../../new/tokens.css";
 import { PreviewArea, type Lente } from "@/components/workspace-v2/preview-area";
 import { FicherosDelTurnoEnVivo } from "@/components/workspace-v2/ficheros-del-turno";
 import { AgentActionCard, type AgentAction } from "@/components/workspace-v2/agent-action-card";
+import { TextoDeLen } from "@/components/workspace-v2/texto-de-len";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
+import { abrirEnElCodigo, abrirFicheroDelTurno, rutasDelTurno } from "@/lib/workspace-v2/abrir-fichero";
 import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
 
@@ -60,11 +62,40 @@ const HISTORIAL = {
 
 // Las tarjetas que el Chat habría pintado para el turno «t1»: lo que guarda
 // la tarjeta de cada comando es su resumen (`herramienta.ts`).
-const TARJETAS: AgentAction[] = HISTORIAL.turnos[0]!.comandos.map((c) =>
+const TARJETAS: AgentAction[] = HISTORIAL.turnos[0]!.comandos.map((c): AgentAction =>
   c.exitCode === 0
     ? { tool: "bash", status: "done", summary: resumenDelComando(c.command) }
     : { tool: "bash", status: "error", summary: resumenDelComando(c.command), motivo: `exit code ${c.exitCode}` },
-);
+).concat([
+  // La #9: las de ficheros abren el suyo. Éstos cambiaron en «t1»: van a «Cambios».
+  { tool: "Edit", status: "done", summary: "contacto/index.html: «Calle Marea 12» → «Calle Gaviotas 7»" },
+  { tool: "Write", status: "done", summary: "clases/index.html (página nueva)" },
+]);
+
+// Y un turno que sólo LEYÓ («t2»): sus rutas van a «Código».
+const TARJETAS_T2: AgentAction[] = [{ tool: "Read", status: "done", summary: "datos/reservas.json" }];
+
+// Lo que Len escribió. `index.html` es la ruta de la portada (casa exacta), no
+// un nombre suelto; `notas.txt` no lo leyó ni lo cambió nadie: se queda en texto.
+const TEXTO_T1 =
+  "Listo: cambié la dirección en `contacto/index.html`, en `menu/index.html` y en `index.html`, y creé `clases/index.html`. También lo apunté en `memoria/proyecto.md`; `notas.txt` no hacía falta.";
+const TEXTO_T2 = "El sábado reservaron **Ana Ruiz** y **Marco Díaz** (lo saqué de `datos/reservas.json`).";
+
+const rutasDe = (turnId: string, tarjetas: readonly AgentAction[]) =>
+  rutasDelTurno(tarjetas, cambiosEnVivo.turnos(PROYECTO).find((x) => x.turnId === turnId)?.ficheros.map((f) => f.ruta) ?? []);
+const abrir = (turnId: string, ruta: string) =>
+  abrirFicheroDelTurno(PROYECTO, turnId, ruta, { cambios: cambiosEnVivo, codigo: abrirEnElCodigo });
+
+// Lo que la lente «Código» pide al abrirse (`/api/projects/[id]/ficheros`).
+const FICHEROS = () => ({
+  ficheros: [
+    { ruta: "/index.html", contenido: INDEX_DESPUES },
+    { ruta: "/contacto/index.html", contenido: CONTACTO("Calle Gaviotas 7") },
+    { ruta: "/clases/index.html", contenido: CLASES },
+    { ruta: "/datos/reservas.json", contenido: RESERVAS_DESPUES },
+  ],
+  perezosos: [],
+});
 
 let preparado = false;
 function preparar() {
@@ -75,6 +106,9 @@ function preparar() {
     const url = typeof entrada === "string" ? entrada : entrada instanceof URL ? entrada.href : entrada.url;
     if (url.endsWith(`/api/projects/${PROYECTO}/terminal`)) {
       return Promise.resolve(new Response(JSON.stringify(HISTORIAL), { headers: { "content-type": "application/json" } }));
+    }
+    if (url.endsWith(`/api/projects/${PROYECTO}/ficheros`)) {
+      return Promise.resolve(new Response(JSON.stringify(FICHEROS()), { headers: { "content-type": "application/json" } }));
     }
     return original(entrada, init);
   };
@@ -164,21 +198,36 @@ export function VistaDeLaTerminal({ oscuro, cambios }: { oscuro: boolean; cambio
     <div className={oscuro ? "dark" : ""} style={{ width: "100vw", height: "100vh" }}>
       <div className="workspace-v2 flex h-full">
         {/* El pie de un turno del Chat, con su tarjeta: pulsar una fila abre la lente. */}
-        <aside className="hidden w-80 shrink-0 flex-col justify-end gap-2 border-r bd bg-app p-3 md:flex">
-          {/* Las tarjetas de sus comandos: se despliegan con la salida, que
-              sale del historial falso de arriba (el turno «t1»). */}
+        <aside className="hidden w-80 shrink-0 flex-col justify-end gap-2 overflow-auto border-r bd bg-app p-3 md:flex">
+          {/* El turno «t1»: las tarjetas de sus comandos se despliegan con la
+              salida (del historial falso de arriba); las de ficheros, y las
+              rutas del texto, abren el fichero (la #9). */}
           <div className="space-y-1">
             {TARJETAS.map((a, i) => (
               <AgentActionCard
                 key={i}
                 action={a}
+                onAbrirFichero={(ruta) => abrir("t1", ruta)}
                 {...(a.tool === "bash" ? { terminal: { projectId: PROYECTO, turnId: "t1", indice: i } } : {})}
               />
             ))}
           </div>
           <div className="inline-block max-w-full rounded-2xl border bd bg-elev px-3 py-2">
-            <p className="text-[12.5px] fg leading-relaxed">Listo: cambié la dirección en las tres páginas, creé la página de clases y apunté la mudanza.</p>
+            <p className="text-[12.5px] fg leading-relaxed">
+              <TextoDeLen texto={TEXTO_T1} rutas={rutasDe("t1", TARJETAS)} onAbrir={(ruta) => abrir("t1", ruta)} />
+            </p>
             <FicherosDelTurnoEnVivo projectId={PROYECTO} turnId="t1" />
+          </div>
+          {/* El turno «t2» sólo leyó: sus rutas van a «Código». */}
+          <div className="space-y-1">
+            {TARJETAS_T2.map((a, i) => (
+              <AgentActionCard key={i} action={a} onAbrirFichero={(ruta) => abrir("t2", ruta)} />
+            ))}
+          </div>
+          <div className="inline-block max-w-full rounded-2xl border bd bg-elev px-3 py-2">
+            <p className="text-[12.5px] fg leading-relaxed">
+              <TextoDeLen texto={TEXTO_T2} rutas={rutasDe("t2", TARJETAS_T2)} onAbrir={(ruta) => abrir("t2", ruta)} />
+            </p>
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">

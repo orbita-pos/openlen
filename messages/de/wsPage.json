@@ -101,7 +101,8 @@
       "mas": "{count, plural, one {+# Zeile} other {+# Zeilen}}",
       "todo": "Alles anzeigen",
       "menos": "Weniger anzeigen"
-    }
+    },
+    "abrirFichero": "Datei öffnen"
   },
   "defaultProjectName": "Preisseite",
   "chatDraft": {

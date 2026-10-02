@@ -101,7 +101,8 @@
       "mas": "{count, plural, one {+# ligne} other {+# lignes}}",
       "todo": "Tout voir",
       "menos": "Voir moins"
-    }
+    },
+    "abrirFichero": "Ouvrir le fichier"
   },
   "defaultProjectName": "Page de tarifs",
   "chatDraft": {

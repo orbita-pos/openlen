@@ -134,7 +134,8 @@
       "files": "Archivos",
       "loading": "Cargando…",
       "loadError": "No se pudieron leer los archivos.",
-      "readOnly": "Sólo lectura · se calcula al abrirlo"
+      "readOnly": "Sólo lectura · se calcula al abrirlo",
+      "noEsta": "ya no está en el proyecto."
     },
     "terminal": {
       "title": "La terminal de Len",

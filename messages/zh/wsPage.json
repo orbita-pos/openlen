@@ -101,7 +101,8 @@
       "mas": "{count, plural, other {+# 行}}",
       "todo": "显示全部",
       "menos": "收起"
-    }
+    },
+    "abrirFichero": "打开文件"
   },
   "defaultProjectName": "价格页面",
   "chatDraft": {

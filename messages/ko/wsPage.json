@@ -101,7 +101,8 @@
       "mas": "{count, plural, other {+#줄}}",
       "todo": "모두 보기",
       "menos": "접기"
-    }
+    },
+    "abrirFichero": "파일 열기"
   },
   "defaultProjectName": "가격 페이지",
   "chatDraft": {

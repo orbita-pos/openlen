@@ -134,7 +134,8 @@
       "files": "Files",
       "loading": "Loading…",
       "loadError": "Couldn't read the files.",
-      "readOnly": "Read-only · computed when opened"
+      "readOnly": "Read-only · computed when opened",
+      "noEsta": "is no longer in the project."
     },
     "terminal": {
       "title": "Len's terminal",
