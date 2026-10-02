@@ -7,6 +7,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 import { CodeView } from "./code-view";
+import { comentariosDelChat } from "@/lib/workspace-v2/comentarios-de-lineas";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -32,6 +33,15 @@ const labels = {
   sinContenido: (n: number) => `${n} sólo por nombre.`,
   marcaNuevo: "Nuevo en esta sesión",
   marcaCambiado: "Cambió en esta sesión",
+  comentar: {
+    comentarLinea: (n: number) => `Comentar la línea ${n}`,
+    placeholder: "Dile a Len qué cambiar aquí…",
+    anadir: "Añadir al mensaje",
+    cancelar: "Cancelar",
+    quitar: "Quitar el comentario",
+    enElMensaje: "va en tu próximo mensaje",
+    tope: "Ya hay 10 comentarios esperando",
+  },
 };
 
 const LISTA = {
@@ -227,5 +237,47 @@ describe("CodeView — colores de sintaxis (la #15)", () => {
     expect(el.querySelector("section code")!.textContent).toContain("<h1>Menú</h1>");
     await render({ ruta: "/datos/reservas.json", n: 11 });
     expect([...el.querySelectorAll("section .sx-pro")].map((s) => s.textContent)).toEqual(['"nombre"']);
+  });
+});
+
+describe("CodeView — comentar una línea para el siguiente mensaje (la #8)", () => {
+  const escribirEn = (area: HTMLTextAreaElement, texto: string) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!;
+    act(() => {
+      setter.call(area, texto);
+      area.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  };
+
+  it("el número abre la caja; Enter lo deja esperando el mensaje, con el código de esa línea; Escape no cierra la lente", async () => {
+    comentariosDelChat.vaciar("p1");
+    const onClose = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const root = createRoot(el);
+    roots.push(root);
+    await act(async () => {
+      root.render(<CodeView html="<h1>Lienzo</h1>" projectId="p1" rutaActual="/index.html" peticion={null} onClose={onClose} labels={labels} />);
+    });
+    act(() => el.querySelector<HTMLButtonElement>('[data-comentar-linea="1"]')!.click());
+    const area = el.querySelector<HTMLTextAreaElement>("[data-caja-de-comentario] textarea")!;
+    expect(document.activeElement).toBe(area);
+    // Escape la cierra, y no cierra la lente.
+    expect(tecla(area, "Escape").defaultPrevented).toBe(true);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(el.querySelector("[data-caja-de-comentario]")).toBeNull();
+
+    act(() => el.querySelector<HTMLButtonElement>('[data-comentar-linea="1"]')!.click());
+    const otra = el.querySelector<HTMLTextAreaElement>("[data-caja-de-comentario] textarea")!;
+    escribirEn(otra, "pon un título más corto");
+    tecla(otra, "Enter");
+    expect(comentariosDelChat.lista("p1")).toMatchObject([
+      { ruta: "/index.html", linea: 1, codigo: "<h1>Lienzo</h1>", texto: "pon un título más corto" },
+    ]);
+    expect(el.querySelector("[data-caja-de-comentario]")).toBeNull();
+    expect(el.querySelector("[data-comentario-pendiente]")!.textContent).toContain("pon un título más corto");
+    // Quitarlo lo saca de la cola.
+    act(() => el.querySelector<HTMLButtonElement>("[data-comentario-pendiente] button")!.click());
+    expect(comentariosDelChat.lista("p1")).toHaveLength(0);
   });
 });

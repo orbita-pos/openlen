@@ -87,6 +87,7 @@ import {
 import { medirUnaVezPorDocumento } from "@/lib/ai/medir-una-vez";
 import { recordAgentEyes } from "@/lib/ai/quality-metrics";
 import { jsonResponse, sseChannel } from "@/lib/ai/sse";
+import { MAX_PROMPT } from "@/lib/workspace-v2/comentarios-de-lineas";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/agent — the OpenLen Agent's agentic loop (F1 Task 9).
@@ -255,7 +256,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
       ? turnIdRaw
       : null;
   if (!projectId) return errorJson(400, "projectId is required");
-  if (prompt.length === 0 || prompt.length > 2000) return errorJson(400, "prompt must be 1–2000 chars");
+  // El tope es el del mensaje ENTERO: lo que escribes sigue en 2.000 en la caja,
+  // y los comentarios de líneas van dentro (la #8, `comentarios-de-lineas.ts`).
+  if (prompt.length === 0 || prompt.length > MAX_PROMPT) return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`);
   // F4 Task 1 — multi-page base: page slug, validated CLONED from
   // app/api/templates/ai-design/route.ts (read that file first if editing
   // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in

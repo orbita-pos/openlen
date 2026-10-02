@@ -126,5 +126,10 @@
     "anadidaSinNombre": "Deel van de pagina toegevoegd",
     "quitadaSinNombre": "Deel van de pagina verwijderd",
     "cambiadaSinNombre": "Deel van de pagina gewijzigd"
+  },
+  "comentarios": {
+    "titulo": "Opmerkingen bij de code",
+    "deAntes": "vóór de beurt",
+    "quitar": "Opmerking verwijderen"
   }
 }

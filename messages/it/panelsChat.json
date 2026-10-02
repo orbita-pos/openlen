@@ -126,5 +126,10 @@
     "anadidaSinNombre": "Aggiunta una parte della pagina",
     "quitadaSinNombre": "Rimossa una parte della pagina",
     "cambiadaSinNombre": "Modificata una parte della pagina"
+  },
+  "comentarios": {
+    "titulo": "Commenti sul codice",
+    "deAntes": "prima del turno",
+    "quitar": "Rimuovi il commento"
   }
 }

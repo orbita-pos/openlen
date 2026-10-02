@@ -198,7 +198,16 @@
       "verMenos": "Ver menos",
       "recortado": "Mostrando as primeiras {n} linhas."
     },
-    "vistaLimitada": "Visualização limitada: formulários, dados salvos no navegador e novas janelas não funcionam aqui. Publicada, sim."
+    "vistaLimitada": "Visualização limitada: formulários, dados salvos no navegador e novas janelas não funcionam aqui. Publicada, sim.",
+    "comentar": {
+      "linea": "Comentar a linha {n}",
+      "placeholder": "Diga ao Len o que mudar aqui…",
+      "anadir": "Adicionar à mensagem",
+      "cancelar": "Cancelar",
+      "quitar": "Remover o comentário",
+      "enElMensaje": "vai na sua próxima mensagem",
+      "tope": "Já há 10 comentários esperando: envie a mensagem primeiro."
+    }
   },
   "placeholder": {
     "ai": {

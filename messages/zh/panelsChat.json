@@ -126,5 +126,10 @@
     "anadidaSinNombre": "新增了页面的一部分",
     "quitadaSinNombre": "移除了页面的一部分",
     "cambiadaSinNombre": "修改了页面的一部分"
+  },
+  "comentarios": {
+    "titulo": "对代码的评论",
+    "deAntes": "本轮之前",
+    "quitar": "删除评论"
   }
 }

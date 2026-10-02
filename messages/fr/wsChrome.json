@@ -190,7 +190,16 @@
       "verMenos": "Voir moins",
       "recortado": "Affichage des {n} premières lignes."
     },
-    "vistaLimitada": "Aperçu limité : les formulaires, le stockage du navigateur et les nouvelles fenêtres ne fonctionnent pas ici. Une fois publiée, si."
+    "vistaLimitada": "Aperçu limité : les formulaires, le stockage du navigateur et les nouvelles fenêtres ne fonctionnent pas ici. Une fois publiée, si.",
+    "comentar": {
+      "linea": "Commenter la ligne {n}",
+      "placeholder": "Dites à Len quoi changer ici…",
+      "anadir": "Ajouter au message",
+      "cancelar": "Annuler",
+      "quitar": "Retirer le commentaire",
+      "enElMensaje": "part avec votre prochain message",
+      "tope": "10 commentaires attendent déjà : envoyez d’abord le message."
+    }
   },
   "placeholder": {
     "ai": {

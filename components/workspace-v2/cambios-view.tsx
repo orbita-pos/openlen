@@ -33,6 +33,7 @@ import { colorearLineas, lenguajeDe, type Trozo } from "@/lib/workspace-v2/color
 
 import { cuentasDe, MasMenos } from "./ficheros-del-turno";
 import { useIsMobile } from "./use-is-mobile";
+import { claveDeLinea, DebajoDeLaLinea, NumeroComentable, useComentarLineas, type EtiquetasDeComentar } from "./comentar-linea";
 import { LineaColoreada } from "./linea-coloreada";
 import { X } from "./icons";
 import { IconBtn, Segmented } from "./ui";
@@ -92,28 +93,61 @@ interface PropsDeLineas {
   lineas: readonly LineaDelDiff[];
   colores: Colores | null;
   ajustar: boolean;
+  /** Comentar una línea para el siguiente mensaje (la #8): la de ahora, o la de
+   *  antes si se quitó. */
+  comentar: ReturnType<typeof useComentarLineas>;
+  etiquetas: EtiquetasDeComentar;
 }
 
-function Unificada({ lineas, colores, ajustar }: PropsDeLineas) {
+/** De qué lado se comenta una línea: la quitada sólo existe en el fichero de antes. */
+function dondeSeComenta(l: LineaDelDiff): { n: number | null; deAntes: boolean } {
+  return l.tipo === "quitada" ? { n: l.antes, deAntes: true } : { n: l.despues, deAntes: false };
+}
+
+function NumeroDeLaLinea({ l, lado, comentar, etiquetas }: { l: LineaDelDiff; lado: "antes" | "despues" } & Pick<PropsDeLineas, "comentar" | "etiquetas">) {
+  const { n, deAntes } = dondeSeComenta(l);
+  const esEste = (lado === "antes") === deAntes;
+  if (!comentar.activo || !esEste || n === null) return <Numero n={l[lado]} />;
+  return (
+    <NumeroComentable
+      n={n}
+      conComentario={comentar.deLaLinea(n, deAntes).length > 0}
+      onComentar={() => comentar.abrir(claveDeLinea(n, deAntes))}
+      label={etiquetas.comentarLinea(n)}
+      className="w-10 pr-2"
+    />
+  );
+}
+
+function Debajo({ l, comentar, etiquetas }: { l: LineaDelDiff } & Pick<PropsDeLineas, "comentar" | "etiquetas">) {
+  const { n, deAntes } = dondeSeComenta(l);
+  if (!comentar.activo || n === null) return null;
+  return <DebajoDeLaLinea comentar={comentar} linea={n} deAntes={deAntes} codigo={l.texto} labels={etiquetas} />;
+}
+
+function Unificada({ lineas, colores, ajustar, comentar, etiquetas }: PropsDeLineas) {
   return (
     <>
       {lineas.map((l, k) => (
-        <div key={k} className={`flex ${FONDO[l.tipo]}`}>
-          <Numero n={l.antes} />
-          <Numero n={l.despues} />
-          <span className={`w-4 shrink-0 select-none text-center ${COLOR_DEL_SIGNO[l.tipo]}`}>{SIGNO[l.tipo]}</span>
-          <Texto texto={l.texto} trozos={trozosDe(l, colores)} ajustar={ajustar} />
-        </div>
+        <Fragment key={k}>
+          <div className={`flex ${FONDO[l.tipo]}`}>
+            <NumeroDeLaLinea l={l} lado="antes" comentar={comentar} etiquetas={etiquetas} />
+            <NumeroDeLaLinea l={l} lado="despues" comentar={comentar} etiquetas={etiquetas} />
+            <span className={`w-4 shrink-0 select-none text-center ${COLOR_DEL_SIGNO[l.tipo]}`}>{SIGNO[l.tipo]}</span>
+            <Texto texto={l.texto} trozos={trozosDe(l, colores)} ajustar={ajustar} />
+          </div>
+          <Debajo l={l} comentar={comentar} etiquetas={etiquetas} />
+        </Fragment>
       ))}
     </>
   );
 }
 
-function LadoALado({ lineas, colores, ajustar }: PropsDeLineas) {
+function LadoALado({ lineas, colores, ajustar, comentar, etiquetas }: PropsDeLineas) {
   const media = (l: LineaDelDiff | null, lado: "antes" | "despues") =>
     l ? (
       <div className={`flex min-w-0 ${l.tipo === "igual" ? FONDO.igual : FONDO[l.tipo]}`}>
-        <Numero n={l[lado]} />
+        <NumeroDeLaLinea l={l} lado={lado} comentar={comentar} etiquetas={etiquetas} />
         <span className={`w-4 shrink-0 select-none text-center ${COLOR_DEL_SIGNO[l.tipo]}`}>{l.tipo === "igual" ? " " : SIGNO[l.tipo]}</span>
         <Texto texto={l.texto} trozos={trozosDe(l, colores)} ajustar={ajustar} />
       </div>
@@ -123,10 +157,15 @@ function LadoALado({ lineas, colores, ajustar }: PropsDeLineas) {
   return (
     <>
       {filasLadoALado(lineas).map((f, k) => (
-        <div key={k} className="grid grid-cols-2">
-          {media(f.izquierda, "antes")}
-          <div className="grid min-w-0 border-l bd">{media(f.derecha, "despues")}</div>
-        </div>
+        <Fragment key={k}>
+          <div className="grid grid-cols-2">
+            {media(f.izquierda, "antes")}
+            <div className="grid min-w-0 border-l bd">{media(f.derecha, "despues")}</div>
+          </div>
+          {/* La de la izquierda sólo si se quitó; una igual se comenta a la derecha. */}
+          {f.izquierda?.tipo === "quitada" && <Debajo l={f.izquierda} comentar={comentar} etiquetas={etiquetas} />}
+          {f.derecha && <Debajo l={f.derecha} comentar={comentar} etiquetas={etiquetas} />}
+        </Fragment>
       ))}
     </>
   );
@@ -152,10 +191,13 @@ function recorte(s: string): string {
 export function CambiosView({
   turnos,
   peticion,
+  projectId = null,
   onClose,
 }: {
   turnos: readonly CambiosDeUnTurno[];
   peticion: PeticionDeCambios | null;
+  /** Con proyecto, sus líneas se pueden comentar para el siguiente mensaje (la #8). */
+  projectId?: string | null;
   onClose: () => void;
 }) {
   const t = useTranslations("wsChrome");
@@ -175,7 +217,9 @@ export function CambiosView({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      // Un Escape ya atendido (la caja de un comentario) no cierra: en /new
+      // React escucha en el propio `document`.
+      if (e.key === "Escape" && !e.defaultPrevented) onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -197,6 +241,19 @@ export function CambiosView({
     return { antes: colorearLineas(elegido.antes ?? "", lenguaje), despues: colorearLineas(elegido.despues ?? "", lenguaje) };
   }, [elegido]);
   const Lineas = vista === "unificada" || estrecho ? Unificada : LadoALado;
+  const comentar = useComentarLineas(projectId, elegido?.ruta ?? null);
+  const etiquetas = useMemo<EtiquetasDeComentar>(
+    () => ({
+      comentarLinea: (n) => t("preview.comentar.linea", { n }),
+      placeholder: t("preview.comentar.placeholder"),
+      anadir: t("preview.comentar.anadir"),
+      cancelar: t("preview.comentar.cancelar"),
+      quitar: t("preview.comentar.quitar"),
+      enElMensaje: t("preview.comentar.enElMensaje"),
+      tope: t("preview.comentar.tope"),
+    }),
+    [t],
+  );
   // En el móvil no hay lista: con más de un fichero, se elige en la cabecera.
   const conSelector = estrecho && cuentas.length > 1;
 
@@ -334,7 +391,7 @@ export function CambiosView({
                   {pintado.trozos.map((tr, i) => (
                     <Fragment key={i}>
                       {tr.saltadas > 0 && <Plegadas n={tr.saltadas} />}
-                      <Lineas lineas={tr.lineas} colores={colores} ajustar={ajustar} />
+                      <Lineas lineas={tr.lineas} colores={colores} ajustar={ajustar} comentar={comentar} etiquetas={etiquetas} />
                     </Fragment>
                   ))}
                   {!pintado.recortado && diff.saltadasAlFinal > 0 && <Plegadas n={diff.saltadasAlFinal} />}

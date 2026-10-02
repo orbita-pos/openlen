@@ -22,6 +22,7 @@ import {
   type RefObject,
 } from "react";
 import {
+  ChatIcon,
   Crosshair,
   ImageIcon,
   Detener,
@@ -63,6 +64,13 @@ import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-contr
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
 import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
 import { leerCambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
+import {
+  MAX_PROMPT,
+  MAX_TEXTO_ESCRITO,
+  comentariosDelChat,
+  textoConComentarios,
+  type ComentarioDeLinea,
+} from "@/lib/workspace-v2/comentarios-de-lineas";
 import { duracionLegible, procesoDelTurno } from "@/lib/workspace-v2/proceso-del-turno";
 import { ProcesoPlegable } from "../proceso-plegable";
 import { cambiosEnVivo, esFicheroCambiado, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
@@ -78,6 +86,7 @@ type EventoHtmlDelAgente = Extract<AgentStreamEvent, { type: "html" }>;
 
 /** Sin turnos con cambios (y en el servidor, donde el almacén no existe). */
 const SIN_CAMBIOS: readonly CambiosDeUnTurno[] = [];
+const SIN_COMENTARIOS: readonly ComentarioDeLinea[] = [];
 
 export interface ScopedSelection {
   hint: string;
@@ -1092,13 +1101,34 @@ function AIDesignChat({
     [appendReasoning, onLocalUpdate, persistTurn, projectId, t, updateTurn],
   );
 
+  // LOS COMENTARIOS DE LÍNEAS que esperan el siguiente mensaje (la #8): los
+  // añaden las lentes «Código» y «Cambios»; aquí se enseñan y se mandan.
+  const comentarios = useSyncExternalStore(
+    comentariosDelChat.subscribe,
+    () => comentariosDelChat.lista(projectId),
+    () => SIN_COMENTARIOS,
+  );
+
   const send = useCallback(
-    async (rawPrompt: string, imageOverride?: AttachedImage | null) => {
-      const prompt = rawPrompt.trim();
+    async (
+      rawPrompt: string,
+      imageOverride?: AttachedImage | null,
+      /** Desde el compositor: los comentarios de líneas que esperan van DENTRO
+       *  del mensaje (la #8). Reintentar no los pasa: su texto ya los lleva. */
+      opciones?: { readonly comentarios: readonly ComentarioDeLinea[] },
+    ) => {
+      const escrito = rawPrompt.trim();
+      // Lo que escribes tiene su tope; con los comentarios, el del mensaje entero.
+      if (escrito.length > (opciones ? MAX_TEXTO_ESCRITO : MAX_PROMPT)) return;
+      const comentarios = opciones?.comentarios ?? [];
+      const prompt = textoConComentarios(escrito, comentarios, {
+        titulo: t("comentarios.titulo"),
+        deAntes: t("comentarios.deAntes"),
+      });
       // Con un turno aún trabajando en el servidor, otro turno sobre la misma
       // página serían dos agentes editándola a la vez: se corrige o se para.
       if (!prompt || sending || reenganche) return;
-      if (prompt.length > 2000) return;
+      if (comentarios.length > 0) comentariosDelChat.vaciar(projectId);
 
       // imageOverride lets Retry re-send the failed turn's original image;
       // undefined = use the live composer image, null = explicitly none.
@@ -2014,8 +2044,10 @@ function AIDesignChat({
               .catch(() => {});
             return;
           }
-          void send(draft);
+          void send(draft, undefined, { comentarios });
         }}
+        comentarios={comentarios}
+        onQuitarComentario={(id) => comentariosDelChat.quitar(projectId, id)}
         onStop={handleCancel}
         sending={sending || reenganche !== null}
         textareaRef={taRef}
@@ -2482,7 +2514,8 @@ function ThinkingBubble() {
   );
 }
 
-function Composer({
+// Exportado sólo para /dev/terminal, que lo pinta con datos de ejemplo.
+export function Composer({
   value,
   onChange,
   onSubmit,
@@ -2502,10 +2535,15 @@ function Composer({
   esfuerzoResuelveA = NIVEL_POR_DEFECTO,
   onEsfuerzoChange,
   agentMode = false,
+  comentarios = SIN_COMENTARIOS,
+  onQuitarComentario,
 }: {
   value: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
+  /** Los comentarios de líneas que van con este mensaje (la #8), como fichas. */
+  comentarios?: readonly ComentarioDeLinea[];
+  onQuitarComentario?: (id: number) => void;
   /** Detener el turno en marcha. Se llama cuando la caja esta VACIA y el turno
    *  corre: sin nada que decir, lo unico que se puede querer es parar. */
   onStop?: () => void;
@@ -2539,8 +2577,35 @@ function Composer({
   const locale = useLocale();
   const [cancelando, setCancelando] = useState(false);
   const [esfuerzoAbierto, setEsfuerzoAbierto] = useState(false);
+  // Con comentarios esperando se puede mandar sin escribir nada más.
+  const hayQueMandar = value.trim().length > 0 || comentarios.length > 0;
   return (
     <div className="shrink-0 px-3 pb-3">
+      {comentarios.length > 0 && (
+        <div className="mb-1.5 flex flex-wrap gap-1.5" data-comentarios-del-mensaje="">
+          {comentarios.map((c) => (
+            <div
+              key={c.id}
+              title={c.texto}
+              className="inline-flex max-w-full items-center gap-1.5 rounded-md ring-1 ring-[color:var(--accent)]/40 bg-accent-soft px-2 py-1 text-[11px] text-accent ui-small fade-in"
+            >
+              <ChatIcon size={11} />
+              <span className="shrink-0 font-mono text-[10.5px]">
+                {c.ruta.replace(/^\/+/, "")}:{c.linea}
+              </span>
+              <span className="min-w-0 truncate fg-muted">{c.texto}</span>
+              <button
+                type="button"
+                onClick={() => onQuitarComentario?.(c.id)}
+                aria-label={t("comentarios.quitar")}
+                className="shrink-0 inline-flex h-4 w-4 items-center justify-center rounded hover:bg-[color:var(--accent)]/20 transition"
+              >
+                <X size={10} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       {scopedSelection && (
         <div className="mb-1.5 inline-flex items-center gap-1.5 max-w-full rounded-md ring-1 ring-[color:var(--accent)]/40 bg-accent-soft px-2 py-1 text-[11px] text-accent ui-small fade-in">
           <Crosshair size={11} />
@@ -2695,7 +2760,7 @@ function Composer({
           <button
             type="button"
             onClick={sending && !value.trim() ? onStop : onSubmit}
-            disabled={!sending && !value.trim()}
+            disabled={!sending && !hayQueMandar}
             aria-label={
               sending
                 ? value.trim()
@@ -2704,7 +2769,7 @@ function Composer({
                 : t("composer.send")
             }
             className={`inline-flex items-center justify-center gap-1 h-7 rounded-md text-[11.5px] font-medium transition ${
-              value.trim()
+              value.trim() || (!sending && hayQueMandar)
                 ? "px-2.5 bg-[var(--accent-strong)] text-white shadow-coral hover:brightness-105"
                 : sending
                   ? "w-7 bg-hover fg hover:brightness-110"

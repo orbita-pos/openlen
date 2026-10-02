@@ -5,7 +5,7 @@
 // se contesta aquí, y un comando «en vivo» empujado al mismo almacén que usa el
 // Chat. Sólo existe en desarrollo.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import "../../new/tokens.css";
@@ -15,6 +15,8 @@ import { AgentActionCard, type AgentAction } from "@/components/workspace-v2/age
 import { TextoDeLen } from "@/components/workspace-v2/texto-de-len";
 import { ProcesoPlegable } from "@/components/workspace-v2/proceso-plegable";
 import { duracionLegible } from "@/lib/workspace-v2/proceso-del-turno";
+import { Composer } from "@/components/workspace-v2/panels/chat-panel";
+import { comentariosDelChat, textoConComentarios } from "@/lib/workspace-v2/comentarios-de-lineas";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import { cambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import { abrirEnElCodigo, abrirFicheroDelTurno, rutasDelTurno } from "@/lib/workspace-v2/abrir-fichero";
@@ -244,6 +246,14 @@ export function VistaDeLaTerminal({ oscuro, cambios }: { oscuro: boolean; cambio
   const tc = useTranslations("panelsChat");
   const locale = useLocale();
   const [t1Cerrado, setT1Cerrado] = useState(false);
+  const [borrador, setBorrador] = useState("");
+  const [mandado, setMandado] = useState<string | null>(null);
+  const cajaRef = useRef<HTMLTextAreaElement>(null);
+  const comentarios = useSyncExternalStore(
+    comentariosDelChat.subscribe,
+    () => comentariosDelChat.lista(PROYECTO),
+    () => comentariosDelChat.lista(PROYECTO),
+  );
   // Los datos de ejemplo, DESPUÉS de montar y antes de pintar el lienzo: rellenar
   // los almacenes mientras se pinta avisaba a otros componentes a media pintura,
   // y en el servidor no hay ninguno que enseñar.
@@ -306,6 +316,31 @@ export function VistaDeLaTerminal({ oscuro, cambios }: { oscuro: boolean; cambio
               <TextoDeLen texto={TEXTO_T2} rutas={rutasDe("t2", TARJETAS_T2)} onAbrir={(ruta) => abrir("t2", ruta)} />
             </p>
           </div>
+          {/* La #8: el compositor de verdad, con los comentarios que esperan.
+              Mandar enseña aquí debajo el mensaje que le llegaría a Len. */}
+          <Composer
+            value={borrador}
+            onChange={setBorrador}
+            onSubmit={() => {
+              setMandado(
+                textoConComentarios(borrador, comentariosDelChat.lista(PROYECTO), {
+                  titulo: tc("comentarios.titulo"),
+                  deAntes: tc("comentarios.deAntes"),
+                }),
+              );
+              comentariosDelChat.vaciar(PROYECTO);
+              setBorrador("");
+            }}
+            sending={false}
+            textareaRef={cajaRef}
+            comentarios={comentarios}
+            onQuitarComentario={(id) => comentariosDelChat.quitar(PROYECTO, id)}
+          />
+          {mandado && (
+            <pre className="whitespace-pre-wrap break-words rounded-md border bd bg-elev p-2 font-mono text-[10.5px] fg-muted" data-mandado="">
+              {mandado}
+            </pre>
+          )}
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
           <PreviewArea doc={DOC} lente={lente} onLente={setLente} projectId={PROYECTO} docKey={PROYECTO} />

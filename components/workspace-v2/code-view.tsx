@@ -18,6 +18,7 @@
 // misma línea. Copiar cubre el 90% de la razón por la que alguien lo abre.
 
 import {
+  Fragment,
   useEffect,
   useMemo,
   useRef,
@@ -42,6 +43,7 @@ import { buscarEnFicheros, type FicheroBuscable, type ResultadosDeBusqueda } fro
 import { colorearLineas, lenguajeDe, type Lenguaje } from "@/lib/workspace-v2/colorear";
 
 import { copiar } from "./copiar";
+import { claveDeLinea, DebajoDeLaLinea, NumeroComentable, useComentarLineas, type EtiquetasDeComentar } from "./comentar-linea";
 import { LineaColoreada } from "./linea-coloreada";
 import { Check, ChevronDown, ChevronRight, Copy, FileText, Search, X } from "./icons";
 import { IconBtn } from "./ui";
@@ -58,6 +60,8 @@ interface CodeViewProps {
   readonly peticion?: PeticionDeCodigo | null;
   readonly onClose: () => void;
   readonly labels: {
+    /** Comentar una línea para el siguiente mensaje (la #8). */
+    readonly comentar: EtiquetasDeComentar;
     readonly title: string;
     readonly close: string;
     readonly copy: string;
@@ -391,6 +395,7 @@ function Explorador({
           </p>
         ) : (
           <Bloque
+            comentar={{ projectId, ruta: elegido }}
             etiqueta={elegido.replace(/^\//, "")}
             {...(esDeSoloLectura(elegido) ? { nota: labels.readOnly } : {})}
             codigo={contenido}
@@ -517,8 +522,11 @@ function Bloque({
   codigo,
   lenguaje,
   salto = null,
+  comentar: donde = null,
   labels,
 }: {
+  /** El fichero de un proyecto: sus líneas se pueden comentar (la #8). */
+  comentar?: { readonly projectId: string; readonly ruta: string } | null;
   etiqueta: string;
   nota?: string;
   codigo: string;
@@ -530,6 +538,8 @@ function Bloque({
 }) {
   const [copiado, setCopiado] = useState(false);
   const lineas = useMemo(() => colorearLineas(codigo, lenguaje), [codigo, lenguaje]);
+  const crudas = useMemo(() => codigo.split("\n"), [codigo]);
+  const comentar = useComentarLineas(donde?.projectId, donde?.ruta ?? null);
   useEffect(() => {
     if (!copiado) return;
     const t = setTimeout(() => setCopiado(false), 1600);
@@ -576,12 +586,27 @@ function Bloque({
       <pre className="p-3 text-[11.5px] leading-[1.55]">
         <code className="block font-mono">
           {lineas.map((linea, i) => (
-            <span key={i} data-linea={i + 1} className={`flex${salto?.linea === i + 1 ? " bg-accent-soft" : ""}`}>
-              <span className="w-9 shrink-0 select-none pr-3 text-right fg-faint tabular">{i + 1}</span>
-              <span className="min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:anywhere]">
-                <LineaColoreada trozos={linea} />
+            <Fragment key={i}>
+              <span data-linea={i + 1} className={`flex${salto?.linea === i + 1 ? " bg-accent-soft" : ""}`}>
+                {comentar.activo ? (
+                  <NumeroComentable
+                    n={i + 1}
+                    conComentario={comentar.deLaLinea(i + 1, false).length > 0}
+                    onComentar={() => comentar.abrir(claveDeLinea(i + 1, false))}
+                    label={labels.comentar.comentarLinea(i + 1)}
+                    className="w-9 pr-3"
+                  />
+                ) : (
+                  <span className="w-9 shrink-0 select-none pr-3 text-right fg-faint tabular">{i + 1}</span>
+                )}
+                <span className="min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:anywhere]">
+                  <LineaColoreada trozos={linea} />
+                </span>
               </span>
-            </span>
+              {comentar.activo && (
+                <DebajoDeLaLinea comentar={comentar} linea={i + 1} deAntes={false} codigo={crudas[i] ?? ""} labels={labels.comentar} />
+              )}
+            </Fragment>
           ))}
         </code>
       </pre>

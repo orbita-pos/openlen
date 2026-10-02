@@ -1107,7 +1107,12 @@ export function PreviewArea({
         )}
 
         {lente === "cambios" && hayCambios && (
-          <CambiosView turnos={turnosConCambios} peticion={peticionVigente} onClose={() => setLente("pagina")} />
+          <CambiosView
+            turnos={turnosConCambios}
+            peticion={peticionVigente}
+            projectId={previewUrl ? null : projectId}
+            onClose={() => setLente("pagina")}
+          />
         )}
 
         {lente === "codigo" && (
@@ -1118,6 +1123,15 @@ export function PreviewArea({
             peticion={peticionDeCodigoVigente}
             onClose={() => setLente("pagina")}
             labels={{
+              comentar: {
+                comentarLinea: (n: number) => t("preview.comentar.linea", { n }),
+                placeholder: t("preview.comentar.placeholder"),
+                anadir: t("preview.comentar.anadir"),
+                cancelar: t("preview.comentar.cancelar"),
+                quitar: t("preview.comentar.quitar"),
+                enElMensaje: t("preview.comentar.enElMensaje"),
+                tope: t("preview.comentar.tope"),
+              },
               noEsta: t("preview.code.noEsta"),
               buscar: t("preview.code.buscar"),
               limpiar: t("preview.code.limpiar"),

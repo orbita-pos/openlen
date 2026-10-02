@@ -190,7 +190,16 @@
       "verMenos": "收起",
       "recortado": "仅显示前 {n} 行。"
     },
-    "vistaLimitada": "受限预览:此处表单、浏览器存储和新窗口无法使用。发布后即可正常使用。"
+    "vistaLimitada": "受限预览:此处表单、浏览器存储和新窗口无法使用。发布后即可正常使用。",
+    "comentar": {
+      "linea": "评论第 {n} 行",
+      "placeholder": "告诉 Len 这里要改什么…",
+      "anadir": "添加到消息",
+      "cancelar": "取消",
+      "quitar": "删除评论",
+      "enElMensaje": "会随你的下一条消息发送",
+      "tope": "已有 10 条评论在等待：请先发送消息。"
+    }
   },
   "placeholder": {
     "ai": {

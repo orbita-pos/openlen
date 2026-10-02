@@ -126,5 +126,10 @@
     "anadidaSinNombre": "Adicionou uma parte da página",
     "quitadaSinNombre": "Removeu uma parte da página",
     "cambiadaSinNombre": "Alterou uma parte da página"
+  },
+  "comentarios": {
+    "titulo": "Comentários no código",
+    "deAntes": "antes do turno",
+    "quitar": "Remover o comentário"
   }
 }

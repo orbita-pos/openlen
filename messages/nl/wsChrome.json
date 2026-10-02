@@ -198,7 +198,16 @@
       "verMenos": "Minder tonen",
       "recortado": "De eerste {n} regels worden getoond."
     },
-    "vistaLimitada": "Beperkte weergave: formulieren, browseropslag en nieuwe vensters werken hier niet. Gepubliceerd wel."
+    "vistaLimitada": "Beperkte weergave: formulieren, browseropslag en nieuwe vensters werken hier niet. Gepubliceerd wel.",
+    "comentar": {
+      "linea": "Reageren op regel {n}",
+      "placeholder": "Vertel Len wat hier moet veranderen…",
+      "anadir": "Aan bericht toevoegen",
+      "cancelar": "Annuleren",
+      "quitar": "Opmerking verwijderen",
+      "enElMensaje": "gaat mee met je volgende bericht",
+      "tope": "Er wachten al 10 opmerkingen: stuur eerst het bericht."
+    }
   },
   "placeholder": {
     "ai": {

@@ -63,6 +63,7 @@ import { describeBehaviorIssues } from "@/lib/conductas-heredadas/validate";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
 import { todayLine } from "@/lib/ai/today-line";
 import { CHAT_HISTORY_TURNS } from "@/lib/chat/history-window";
+import { MAX_PROMPT } from "@/lib/workspace-v2/comentarios-de-lineas";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/templates/ai-design — conversational AI page redesign.
@@ -255,8 +256,9 @@ export async function POST(req: Request): Promise<Response> {
   if (!projectId) return errorJson(400, "projectId is required");
 
   const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
-  if (prompt.length === 0 || prompt.length > 2000) {
-    return errorJson(400, "prompt must be 1–2000 chars");
+  // El del mensaje ENTERO, como /api/agent: con los comentarios de líneas dentro (la #8).
+  if (prompt.length === 0 || prompt.length > MAX_PROMPT) {
+    return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`);
   }
 
   const currentHtml = typeof body.currentHtml === "string" ? body.currentHtml : "";

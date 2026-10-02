@@ -190,7 +190,16 @@
       "verMenos": "Mostra meno",
       "recortado": "Vengono mostrate le prime {n} righe."
     },
-    "vistaLimitada": "Anteprima limitata: moduli, dati salvati nel browser e nuove finestre qui non funzionano. Pubblicata, sì."
+    "vistaLimitada": "Anteprima limitata: moduli, dati salvati nel browser e nuove finestre qui non funzionano. Pubblicata, sì.",
+    "comentar": {
+      "linea": "Commenta la riga {n}",
+      "placeholder": "Di’ a Len cosa cambiare qui…",
+      "anadir": "Aggiungi al messaggio",
+      "cancelar": "Annulla",
+      "quitar": "Rimuovi il commento",
+      "enElMensaje": "va nel tuo prossimo messaggio",
+      "tope": "Ci sono già 10 commenti in attesa: invia prima il messaggio."
+    }
   },
   "placeholder": {
     "ai": {

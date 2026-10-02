@@ -190,7 +190,16 @@
       "verMenos": "Show less",
       "recortado": "Showing the first {n} lines."
     },
-    "vistaLimitada": "Limited view: forms, browser storage and new windows don't work here. They do once published."
+    "vistaLimitada": "Limited view: forms, browser storage and new windows don't work here. They do once published.",
+    "comentar": {
+      "linea": "Comment on line {n}",
+      "placeholder": "Tell Len what to change here…",
+      "anadir": "Add to message",
+      "cancelar": "Cancel",
+      "quitar": "Remove comment",
+      "enElMensaje": "goes with your next message",
+      "tope": "10 comments are already waiting: send the message first."
+    }
   },
   "placeholder": {
     "ai": {

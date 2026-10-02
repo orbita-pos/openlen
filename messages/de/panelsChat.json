@@ -126,5 +126,10 @@
     "anadidaSinNombre": "Teil der Seite hinzugefügt",
     "quitadaSinNombre": "Teil der Seite entfernt",
     "cambiadaSinNombre": "Teil der Seite geändert"
+  },
+  "comentarios": {
+    "titulo": "Kommentare zum Code",
+    "deAntes": "vor dem Durchlauf",
+    "quitar": "Kommentar entfernen"
   }
 }

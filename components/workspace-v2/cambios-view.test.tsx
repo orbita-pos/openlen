@@ -11,6 +11,7 @@ vi.mock("next-intl", () => ({
 }));
 
 import { CambiosView } from "./cambios-view";
+import { comentariosDelChat } from "@/lib/workspace-v2/comentarios-de-lineas";
 import type { CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -91,5 +92,36 @@ describe("CambiosView — en el móvil (la #16)", () => {
     });
     expect(el.textContent).toContain("dos <b>");
     expect(el.textContent).not.toContain("Calle Gaviotas 7");
+  });
+});
+
+describe("CambiosView — comentar una línea (la #8)", () => {
+  it("una línea quitada se comenta como la de ANTES, con su código", () => {
+    comentariosDelChat.vaciar("p1");
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const root = createRoot(el);
+    roots.push(root);
+    act(() =>
+      root.render(
+        <CambiosView turnos={[TURNO]} peticion={{ turnId: "t1", ruta: "/contacto/index.html", n: 1 }} projectId="p1" onClose={() => {}} />,
+      ),
+    );
+    // La 5 de antes (quitada) y la 5 de ahora (añadida) son dos líneas distintas.
+    const quitada = [...el.querySelectorAll<HTMLButtonElement>('[data-comentar-linea="5"]')];
+    expect(quitada).toHaveLength(2);
+    act(() => quitada[0]!.click());
+    const area = el.querySelector<HTMLTextAreaElement>("[data-caja-de-comentario] textarea")!;
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!;
+    act(() => {
+      setter.call(area, "¿por qué se quitó?");
+      area.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    act(() => {
+      area.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    });
+    expect(comentariosDelChat.lista("p1")).toMatchObject([
+      { ruta: "/contacto/index.html", linea: 5, deAntes: true, codigo: "<address>Calle Marea 12</address>", texto: "¿por qué se quitó?" },
+    ]);
   });
 });

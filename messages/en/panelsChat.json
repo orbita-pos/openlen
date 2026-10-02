@@ -126,5 +126,10 @@
     "anadidaSinNombre": "Added part of the page",
     "quitadaSinNombre": "Removed part of the page",
     "cambiadaSinNombre": "Changed part of the page"
+  },
+  "comentarios": {
+    "titulo": "Comments on the code",
+    "deAntes": "before the turn",
+    "quitar": "Remove comment"
   }
 }

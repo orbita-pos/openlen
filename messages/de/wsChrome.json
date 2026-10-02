@@ -190,7 +190,16 @@
       "verMenos": "Weniger anzeigen",
       "recortado": "Die ersten {n} Zeilen werden angezeigt."
     },
-    "vistaLimitada": "Eingeschränkte Ansicht: Formulare, Browser-Speicher und neue Fenster funktionieren hier nicht. Veröffentlicht schon."
+    "vistaLimitada": "Eingeschränkte Ansicht: Formulare, Browser-Speicher und neue Fenster funktionieren hier nicht. Veröffentlicht schon.",
+    "comentar": {
+      "linea": "Zeile {n} kommentieren",
+      "placeholder": "Sag Len, was hier geändert werden soll…",
+      "anadir": "Zur Nachricht hinzufügen",
+      "cancelar": "Abbrechen",
+      "quitar": "Kommentar entfernen",
+      "enElMensaje": "geht mit deiner nächsten Nachricht",
+      "tope": "Es warten schon 10 Kommentare: schick zuerst die Nachricht."
+    }
   },
   "placeholder": {
     "ai": {
