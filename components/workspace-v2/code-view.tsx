@@ -17,10 +17,26 @@
 // editor, validación, y decidir qué gana cuando el usuario y el modelo tocan la
 // misma línea. Copiar cubre el 90% de la razón por la que alguien lo abre.
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from "react";
 import { esDeSoloLectura } from "@/lib/agent/terminal/ficheros";
 import type { PeticionDeCodigo } from "@/lib/workspace-v2/abrir-fichero";
-import { abiertasAlEntrar, arbolDeFicheros, type NodoDelArbol } from "@/lib/workspace-v2/arbol-de-ficheros";
+import {
+  abiertasAlEntrar,
+  arbolDeFicheros,
+  carpetasConMarca,
+  marcasDeCambios,
+  type MarcaDeCambio,
+  type NodoDelArbol,
+} from "@/lib/workspace-v2/arbol-de-ficheros";
+import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
 import { buscarEnFicheros, type FicheroBuscable, type ResultadosDeBusqueda } from "@/lib/workspace-v2/buscar-en-ficheros";
 
 import { copiar } from "./copiar";
@@ -58,8 +74,14 @@ interface CodeViewProps {
     readonly sinResultados: (consulta: string) => string;
     readonly masCoincidencias: (n: number) => string;
     readonly sinContenido: (n: number) => string;
+    // La marca del árbol (la #19).
+    readonly marcaNuevo: string;
+    readonly marcaCambiado: string;
   };
 }
+
+/** Sin turnos con cambios (y en el servidor, donde el almacén no existe). */
+const SIN_CAMBIOS: readonly CambiosDeUnTurno[] = [];
 
 interface ListaDeFicheros {
   readonly ficheros: readonly { readonly ruta: string; readonly contenido: string }[];
@@ -179,6 +201,16 @@ function Explorador({
     ];
   }, [lista, rutaActual, htmlActual, perezosos]);
   const resultados = useMemo(() => buscarEnFicheros(buscables, consulta), [buscables, consulta]);
+
+  // LO QUE CAMBIÓ EN ESTA PESTAÑA (la #19), con la misma foto que la lente
+  // «Cambios»: un punto junto al fichero y, atenuado, junto a sus carpetas.
+  const turnosConCambios = useSyncExternalStore(
+    cambiosEnVivo.subscribe,
+    () => cambiosEnVivo.turnos(projectId),
+    () => SIN_CAMBIOS,
+  );
+  const marcas = useMemo(() => marcasDeCambios(turnosConCambios), [turnosConCambios]);
+  const carpetasMarcadas = useMemo(() => carpetasConMarca(marcas), [marcas]);
   /** Los resultados en el orden de las flechas: primero los nombres, después las líneas. */
   const enOrden = useMemo(
     () => [
@@ -262,6 +294,9 @@ function Explorador({
               >
                 {abierta ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 <span className="truncate">{n.nombre}</span>
+                {carpetasMarcadas.has(n.ruta) && (
+                  <span aria-hidden className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)] opacity-40" />
+                )}
               </button>
             ) : (
               <button
@@ -275,6 +310,7 @@ function Explorador({
               >
                 <FileText size={12} />
                 <span className="truncate">{n.nombre}</span>
+                <MarcaDelFichero marca={marcas.get(n.ruta)} labels={labels} />
               </button>
             )}
             {n.tipo === "carpeta" && abierta && pintar(n.hijos, nivel + 1)}
@@ -360,6 +396,22 @@ function Explorador({
         )}
       </div>
     </div>
+  );
+}
+
+/** El punto de un fichero que cambió en esta pestaña: verde si es nuevo, del
+ *  acento si cambió. El color no basta: lleva su texto (título y lector). */
+function MarcaDelFichero({ marca, labels }: { marca: MarcaDeCambio | undefined; labels: CodeViewProps["labels"] }) {
+  if (!marca) return null;
+  const texto = marca === "nuevo" ? labels.marcaNuevo : labels.marcaCambiado;
+  return (
+    <span title={texto} className="ml-auto flex shrink-0 items-center">
+      <span
+        aria-hidden
+        className={`h-1.5 w-1.5 rounded-full ${marca === "nuevo" ? "bg-emerald-500" : "bg-[var(--accent)]"}`}
+      />
+      <span className="sr-only">{texto}</span>
+    </span>
   );
 }
 

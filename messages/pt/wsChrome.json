@@ -150,7 +150,9 @@
       "enFicheros": "Dentro dos arquivos",
       "sinResultados": "Nada corresponde a «{q}».",
       "masCoincidencias": "{count, plural, one {E mais # ocorrência.} other {E mais # ocorrências.}}",
-      "sinContenido": "{count, plural, one {# arquivo calculado ao abrir só é buscado pelo nome.} other {# arquivos calculados ao abrir só são buscados pelo nome.}}"
+      "sinContenido": "{count, plural, one {# arquivo calculado ao abrir só é buscado pelo nome.} other {# arquivos calculados ao abrir só são buscados pelo nome.}}",
+      "marcaNuevo": "Novo nesta sessão",
+      "marcaCambiado": "Mudou nesta sessão"
     },
     "terminal": {
       "title": "O terminal do Len",

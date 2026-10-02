@@ -3,6 +3,7 @@
  * carpetas, como el explorador de VS Code. Son las mismas que ve Len en su
  * terminal (`/api/projects/[id]/ficheros`). Puro: lo prueba vitest.
  */
+import type { FicheroCambiado } from "@/lib/agent/cambios-del-turno";
 import { esDeSoloLectura } from "@/lib/agent/terminal/ficheros";
 
 export interface NodoDelArbol {
@@ -68,4 +69,39 @@ export function abiertasAlEntrar(arbol: readonly NodoDelArbol[], elegido: string
   };
   recorrer(arbol);
   return abiertas;
+}
+
+export type MarcaDeCambio = "nuevo" | "cambiado";
+
+/**
+ * LA MARCA DE «CAMBIADO» EN EL ÁRBOL (la #19 de plans/len-agente-2026/notas/
+ * fase-5-taller.md): qué ficheros cambió algún turno de esta pestaña, sacado de
+ * la misma foto que pinta la lente «Cambios» (`cambiosEnVivo`), del turno más
+ * viejo al más nuevo. Cuenta la SESIÓN, no el último turno: uno creado en un
+ * turno y retocado en otro sigue siendo nuevo; uno creado y luego borrado no se
+ * marca (tampoco está en el árbol).
+ */
+export function marcasDeCambios(
+  turnos: readonly { readonly ficheros: readonly FicheroCambiado[] }[],
+): ReadonlyMap<string, MarcaDeCambio> {
+  const marcas = new Map<string, MarcaDeCambio>();
+  for (const turno of turnos) {
+    for (const f of turno.ficheros) {
+      const nuevo = f.tipo === "texto" ? f.antes === null : f.nuevo;
+      const borrado = f.tipo === "texto" ? f.despues === null : f.borrado;
+      if (borrado) marcas.delete(f.ruta);
+      else if (nuevo) marcas.set(f.ruta, "nuevo");
+      else if (!marcas.has(f.ruta)) marcas.set(f.ruta, "cambiado");
+    }
+  }
+  return marcas;
+}
+
+/** Las carpetas con algún fichero marcado dentro, a cualquier profundidad. */
+export function carpetasConMarca(marcas: ReadonlyMap<string, MarcaDeCambio>): ReadonlySet<string> {
+  const carpetas = new Set<string>();
+  for (const ruta of marcas.keys()) {
+    for (let i = ruta.indexOf("/", 1); i > 0; i = ruta.indexOf("/", i + 1)) carpetas.add(ruta.slice(0, i));
+  }
+  return carpetas;
 }

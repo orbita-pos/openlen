@@ -150,7 +150,9 @@
       "enFicheros": "In de bestanden",
       "sinResultados": "Niets komt overeen met ‘{q}’.",
       "masCoincidencias": "{count, plural, one {En nog # treffer.} other {En nog # treffers.}}",
-      "sinContenido": "{count, plural, one {# bestand dat bij het openen wordt berekend, wordt alleen op naam gezocht.} other {# bestanden die bij het openen worden berekend, worden alleen op naam gezocht.}}"
+      "sinContenido": "{count, plural, one {# bestand dat bij het openen wordt berekend, wordt alleen op naam gezocht.} other {# bestanden die bij het openen worden berekend, worden alleen op naam gezocht.}}",
+      "marcaNuevo": "Nieuw in deze sessie",
+      "marcaCambiado": "Gewijzigd in deze sessie"
     },
     "terminal": {
       "title": "Lens terminal",

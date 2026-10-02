@@ -1101,6 +1101,8 @@ export function PreviewArea({
               sinResultados: (q: string) => t("preview.code.sinResultados", { q }),
               masCoincidencias: (count: number) => t("preview.code.masCoincidencias", { count }),
               sinContenido: (count: number) => t("preview.code.sinContenido", { count }),
+              marcaNuevo: t("preview.code.marcaNuevo"),
+              marcaCambiado: t("preview.code.marcaCambiado"),
               title: t("preview.code.title"),
               close: t("preview.code.close"),
               copy: t("preview.code.copy"),

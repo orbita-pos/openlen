@@ -7,6 +7,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 import { CodeView } from "./code-view";
+import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -29,6 +30,8 @@ const labels = {
   sinResultados: (q: string) => `Nada coincide con «${q}».`,
   masCoincidencias: (n: number) => `Y ${n} más.`,
   sinContenido: (n: number) => `${n} sólo por nombre.`,
+  marcaNuevo: "Nuevo en esta sesión",
+  marcaCambiado: "Cambió en esta sesión",
 };
 
 const LISTA = {
@@ -178,5 +181,34 @@ describe("CodeView — buscar en los archivos (la #11)", () => {
     const { el } = await pintar(null);
     tecla(document.body, "F", { ctrlKey: true, shiftKey: true });
     expect(document.activeElement).toBe(buscador(el));
+  });
+});
+
+describe("CodeView — la marca de «cambiado» en el árbol (la #19)", () => {
+  it("un punto con su texto junto a cada fichero que cambió en la pestaña, y atenuado junto a sus carpetas", async () => {
+    cambiosEnVivo.guardar("p-marcas", {
+      turnId: "t1",
+      pedido: "x",
+      ficheros: [
+        { ruta: "/menu/index.html", tipo: "texto", antes: "<h1>Menu</h1>", despues: "<h1>Menú</h1>" },
+        { ruta: "/datos/reservas.json", tipo: "texto", antes: null, despues: "[]" },
+      ],
+    });
+    const div = document.createElement("div");
+    document.body.appendChild(div);
+    const root = createRoot(div);
+    roots.push(root);
+    await act(async () => {
+      root.render(<CodeView html="<h1>Lienzo</h1>" projectId="p-marcas" rutaActual="/index.html" onClose={() => {}} labels={labels} />);
+    });
+    const marcadas = [...div.querySelectorAll("nav [title]")].map((m) => [m.closest("button")!.querySelector(".truncate")!.textContent, m.getAttribute("title")]);
+    expect(marcadas).toEqual([
+      ["reservas.json", "Nuevo en esta sesión"],
+      ["index.html", "Cambió en esta sesión"],
+    ]);
+    // La portada no cambió: sin marca. Las carpetas de los marcados, con su punto.
+    const portada = [...div.querySelectorAll("nav button")].find((b) => b.textContent === "index.html" && !b.closest("ul ul"));
+    expect(portada?.querySelector("[title]")).toBeFalsy();
+    expect(div.querySelectorAll("nav button[aria-expanded] .opacity-40")).toHaveLength(2);
   });
 });

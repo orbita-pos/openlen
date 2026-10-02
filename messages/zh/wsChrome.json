@@ -142,7 +142,9 @@
       "enFicheros": "文件内容",
       "sinResultados": "没有与“{q}”匹配的内容。",
       "masCoincidencias": "{count, plural, other {还有 # 处匹配。}}",
-      "sinContenido": "{count, plural, other {# 个打开时才计算的文件只按名称搜索。}}"
+      "sinContenido": "{count, plural, other {# 个打开时才计算的文件只按名称搜索。}}",
+      "marcaNuevo": "本次会话新建",
+      "marcaCambiado": "本次会话已更改"
     },
     "terminal": {
       "title": "Len 的终端",

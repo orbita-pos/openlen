@@ -142,7 +142,9 @@
       "enFicheros": "In den Dateien",
       "sinResultados": "Nichts passt zu „{q}“.",
       "masCoincidencias": "{count, plural, one {Und # weiterer Treffer.} other {Und # weitere Treffer.}}",
-      "sinContenido": "{count, plural, one {# Datei, die beim Öffnen berechnet wird, wird nur nach Namen durchsucht.} other {# Dateien, die beim Öffnen berechnet werden, werden nur nach Namen durchsucht.}}"
+      "sinContenido": "{count, plural, one {# Datei, die beim Öffnen berechnet wird, wird nur nach Namen durchsucht.} other {# Dateien, die beim Öffnen berechnet werden, werden nur nach Namen durchsucht.}}",
+      "marcaNuevo": "Neu in dieser Sitzung",
+      "marcaCambiado": "In dieser Sitzung geändert"
     },
     "terminal": {
       "title": "Lens Terminal",

@@ -142,7 +142,9 @@
       "enFicheros": "ファイルの中",
       "sinResultados": "「{q}」に一致するものはありません。",
       "masCoincidencias": "{count, plural, other {ほかに # 件。}}",
-      "sinContenido": "{count, plural, other {開いたときに計算される # 個のファイルは名前でのみ検索します。}}"
+      "sinContenido": "{count, plural, other {開いたときに計算される # 個のファイルは名前でのみ検索します。}}",
+      "marcaNuevo": "このセッションで新規",
+      "marcaCambiado": "このセッションで変更"
     },
     "terminal": {
       "title": "Len のターミナル",

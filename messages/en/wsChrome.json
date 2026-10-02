@@ -142,7 +142,9 @@
       "enFicheros": "Inside the files",
       "sinResultados": "Nothing matches “{q}”.",
       "masCoincidencias": "{count, plural, one {And # more match.} other {And # more matches.}}",
-      "sinContenido": "{count, plural, one {# file computed when opened is only searched by name.} other {# files computed when opened are only searched by name.}}"
+      "sinContenido": "{count, plural, one {# file computed when opened is only searched by name.} other {# files computed when opened are only searched by name.}}",
+      "marcaNuevo": "New in this session",
+      "marcaCambiado": "Changed in this session"
     },
     "terminal": {
       "title": "Len's terminal",

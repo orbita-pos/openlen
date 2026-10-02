@@ -142,7 +142,9 @@
       "enFicheros": "Dans les fichiers",
       "sinResultados": "Rien ne correspond à « {q} ».",
       "masCoincidencias": "{count, plural, one {Et # résultat de plus.} other {Et # résultats de plus.}}",
-      "sinContenido": "{count, plural, one {# fichier calculé à l'ouverture n'est cherché que par son nom.} other {# fichiers calculés à l'ouverture ne sont cherchés que par leur nom.}}"
+      "sinContenido": "{count, plural, one {# fichier calculé à l'ouverture n'est cherché que par son nom.} other {# fichiers calculés à l'ouverture ne sont cherchés que par leur nom.}}",
+      "marcaNuevo": "Nouveau dans cette session",
+      "marcaCambiado": "Modifié dans cette session"
     },
     "terminal": {
       "title": "Le terminal de Len",
