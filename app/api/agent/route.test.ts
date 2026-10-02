@@ -85,9 +85,16 @@ const mocks = vi.hoisted(() => ({
   leerZona: vi.fn(async (): Promise<string | null> => null),
   // A (2026-10-01): las fotos de la conversación. Por defecto, ninguna.
   conseguirFotos: vi.fn(async (): Promise<Map<string, unknown>> => new Map()),
+  // La foto de los ficheros del turno (la lente «Cambios»). Por defecto, un
+  // proyecto vacío: ningún cambio y ningún evento.
+  cargarFicherosDeLaTerminal: vi.fn(async (): Promise<Record<string, string>> => ({})),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
+vi.mock("@/lib/agent/herramientas-de-ficheros", async (real) => ({
+  ...(await real<typeof import("@/lib/agent/herramientas-de-ficheros")>()),
+  cargarFicherosDeLaTerminal: mocks.cargarFicherosDeLaTerminal,
+}));
 vi.mock("@/lib/credits", () => ({
   getCreditState: mocks.getCreditState,
   noCreditsMessage: mocks.noCreditsMessage,
@@ -414,6 +421,63 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
       await turno({});
       expect(mocks.runAgentLoop).toHaveBeenCalled();
       expect(zonaQueLlegaALasHerramientas()).toBe("UTC");
+    });
+  });
+
+  // LA LENTE «CAMBIOS» (la forma de DeepSeek): una foto de los ficheros al
+  // empezar y otra al acabar, y lo cambiado en un evento antes del `done`.
+  describe("lo que cambió en el turno", () => {
+    const orden: string[] = [];
+    beforeEach(() => {
+      orden.length = 0;
+      mocks.runAgentTool.mockImplementation(async () => {
+        orden.push("herramienta");
+        return { response: { ok: true } };
+      });
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        await args.runTool("Edit", {});
+        return { turns: 1, toolCalls: 1, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+      });
+    });
+    afterEach(() => {
+      mocks.runAgentTool.mockReset();
+      mocks.runAgentLoop.mockReset();
+      mocks.cargarFicherosDeLaTerminal.mockReset().mockResolvedValue({});
+    });
+    const turno = async () =>
+      readEvents(
+        await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "hola" }) })),
+      );
+
+    it("la herramienta espera a la foto del principio, y `cambios` llega antes del `done` sólo con lo cambiado", async () => {
+      mocks.cargarFicherosDeLaTerminal
+        .mockImplementationOnce(async () => {
+          // Lenta a propósito: si la herramienta no la esperara, escribiría antes.
+          await new Promise((r) => setTimeout(r, 30));
+          orden.push("foto-antes");
+          return { "/index.html": "<h1>Hola</h1>\n", "/memoria/dueno.md": "- vende surf\n", "/AGENTS.md": "manual" };
+        })
+        .mockImplementationOnce(async () => {
+          orden.push("foto-despues");
+          return { "/index.html": "<h1>Oleaje</h1>\n", "/memoria/dueno.md": "- vende surf\n", "/AGENTS.md": "manual" };
+        });
+      const eventos = await turno();
+      expect(orden).toEqual(["foto-antes", "herramienta", "foto-despues"]);
+      const nombres = eventos.map((e) => e.event);
+      expect(nombres).toContain("cambios");
+      expect(nombres.indexOf("cambios")).toBeLessThan(nombres.indexOf("done"));
+      expect(eventos.find((e) => e.event === "cambios")?.data).toEqual({
+        ficheros: [{ ruta: "/index.html", tipo: "texto", antes: "<h1>Hola</h1>\n", despues: "<h1>Oleaje</h1>\n" }],
+      });
+    });
+
+    it("sin cambios no hay evento, y si la foto falla el turno sigue sin tarjeta", async () => {
+      expect((await turno()).map((e) => e.event)).not.toContain("cambios");
+      mocks.cargarFicherosDeLaTerminal.mockRejectedValueOnce(new Error("la base no contesta"));
+      const eventos = await turno();
+      expect(eventos.map((e) => e.event)).toContain("done");
+      expect(eventos.map((e) => e.event)).not.toContain("cambios");
+      expect(orden).toEqual(["herramienta", "herramienta"]);
     });
   });
 });

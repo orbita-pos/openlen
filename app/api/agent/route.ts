@@ -67,6 +67,8 @@ import { streamWithRetry } from "@/lib/agent/retry";
 import { conSenales, relojDeSilencio } from "@/lib/agent/reloj-de-silencio";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
 import { cerrarTerminalDeLaSesion } from "@/lib/agent/terminal/herramienta";
+import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
+import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
 import { observarPagina, verifyEditedPage } from "@/lib/agent/verify";
 import { usarPagina } from "@/lib/agent/usar-pagina";
 import {
@@ -892,6 +894,8 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
 
       const dirGrabacion = directorioDeGrabacion();
       const grabadora = dirGrabacion ? creaGrabadora(messages) : null;
+      // El aviso de lo que cambió en el turno; se arma con la foto del principio, abajo.
+      let emitirCambios = async (): Promise<void> => {};
 
       try {
         const creditState = await getCreditState(userId);
@@ -909,6 +913,27 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         // sea menos (`techoDelTurno`). El bucle lo pregunta antes de cada
         // llamada al modelo; al pasarlo, cierra contando lo hecho.
         const techo = techoDelTurno(creditState);
+        // LOS CAMBIOS DEL TURNO, la foto del principio (`cambios-del-turno.ts`,
+        // la forma de DeepSeek): los ficheros del proyecto ANTES de que Len
+        // escriba nada. Se saca a la vez que la fila y la primera llamada al
+        // modelo, y las herramientas la esperan (`runTool`, abajo): así no
+        // retrasa el turno y nunca llega tarde. Si falla, no hay tarjeta.
+        const fotoAntes = cargarFicherosDeLaTerminal(agentSession, deps).catch((err: unknown) => {
+          console.warn("[agent] no se pudo sacar la foto de los ficheros al empezar", err);
+          return null;
+        });
+        // Y la de AHORA, comparada con aquélla: el evento `cambios` va antes del
+        // `done`, sólo con lo que cambió. Nunca tumba el cierre del turno.
+        emitirCambios = async () => {
+          try {
+            const antes = await fotoAntes;
+            if (!antes) return;
+            const ficheros = cambiosEntreFotos(antes, await cargarFicherosDeLaTerminal(agentSession, deps));
+            if (ficheros.length > 0) emit("cambios", { ficheros });
+          } catch (err) {
+            console.warn("[agent] no se pudieron calcular los cambios del turno", err);
+          }
+        };
         // La fila, abierta: desde aquí el turno se puede volver a mirar.
         try {
           await abrirFilaDelTurno(projectId, { id: filaId, userText: prompt, page: pageSlug, attachedImage });
@@ -992,6 +1017,8 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           // propio diario por tamaño, así que un documento de 42 KB entra como
           // `[43008 bytes]` y no como 42 KB en la fila.
           runTool: async (name, args) => {
+            // Nada se escribe antes de la foto del principio.
+            await fotoAntes;
             const outcome = await runAgentTool(agentSession, deps, name, args);
             diario.anotar(name, outcome.response, args);
             return outcome;
@@ -1487,6 +1514,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         // LA FILA, CERRADA ANTES DE AVISAR: quien lea la conversación al recibir
         // el `done` —el panel, Len-Bench— tiene que encontrarla ya completa.
         await cerrarFila();
+        // Lo que cambió, antes del `done`: el cliente lo engancha a este turno.
+        // Sin llamadas a herramientas no pudo cambiar nada y no se mira.
+        if (result.toolCalls > 0) await emitirCambios();
         emit("done", {
           turns: result.turns,
           toolCalls: result.toolCalls,
@@ -1521,7 +1551,10 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         // Y aquí también: el bucle reventó, pero si ya había escrito, el cambio
         // es igual de durable. El `done` cierra el turno con el aviso en vez de
         // dejar un rojo sobre una página que sí cambió.
-        if (mutoDurable) emit("done", { turns: 0, toolCalls: 0, mutoDurable: true });
+        if (mutoDurable) {
+          await emitirCambios();
+          emit("done", { turns: 0, toolCalls: 0, mutoDurable: true });
+        }
         close();
       } finally {
         reloj.parar();
