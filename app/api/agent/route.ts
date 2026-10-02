@@ -1526,8 +1526,10 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
       } finally {
         reloj.parar();
         // La terminal del turno (F1, plans/len-agente-2026), si se usó: su hilo
-        // muere con el turno. Nunca tumba el cierre.
-        await cerrarTerminalDeLaSesion(agentSession).catch(() => undefined);
+        // muere con el turno. Nunca tumba el cierre, y no se ESPERA: con el
+        // `await` el cierre del navegador de abajo llegaba tarde (lo cazó
+        // route.test.ts, «el navegador del turno se cierra al acabar»).
+        void cerrarTerminalDeLaSesion(agentSession).catch(() => undefined);
         // 🔴 LA FILA DEL TURNO, TAMBIÉN AQUÍ, por si ningún final llegó a
         // cerrarla (`cerrarFila` es idempotente). ANTES de sacar el turno del
         // mapa: mientras el mapa lo tiene, una fila `en_curso` se lee como viva
