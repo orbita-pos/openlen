@@ -330,6 +330,41 @@ describe("buildAgentMessages", () => {
     expect(buildAgentMessages({ ...base, history: [{ role: "user", content: "x", images: muchas }] })).toEqual({ ok: false, reason: "too_large" });
   });
 
+  // 🔴 H15 fase 2 (02/10): lo pensado de turnos viejos vuelve en el historial y
+  // cuenta para el techo. Con presión, se va PRIMERO lo pensado más viejo —como
+  // la compactación de DeepSeek, cuyo resumen deja fuera el razonamiento— en vez
+  // de rechazar un turno que sin ello cabe.
+  it("🔴 con presión, se va primero lo pensado más viejo y el turno sigue", () => {
+    const base = { state: {}, userBrief: null, prompt: "sigue", maxPromptTokens: 60_000 };
+    const history: MensajeDelHistorial[] = [
+      { role: "user", content: "primero" },
+      { role: "assistant", content: "hecho 1", reasoning: "v".repeat(220_000) },
+      { role: "user", content: "luego" },
+      { role: "assistant", content: "hecho 2", reasoning: "NUEVO-PENSADO" },
+    ];
+    const r = buildAgentMessages({ ...base, history });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const deLen = r.messages.filter((m) => m.role === "assistant");
+    expect(deLen[0]).toEqual({ role: "assistant", content: "hecho 1" });
+    expect(deLen[1]).toEqual({ role: "assistant", content: "hecho 2", reasoning: "NUEVO-PENSADO" });
+  });
+
+  it("sin presión, lo pensado viaja entero", () => {
+    const base = { state: {}, userBrief: null, prompt: "sigue", maxPromptTokens: 60_000 };
+    const r = buildAgentMessages({ ...base, history: [{ role: "user", content: "x" }, { role: "assistant", content: "y", reasoning: "VIEJO-PENSADO" }] });
+    expect(r.ok && r.messages.find((m) => m.role === "assistant")?.reasoning).toBe("VIEJO-PENSADO");
+  });
+
+  it("y si ni sin lo pensado cabe, too_large como siempre", () => {
+    const base = { state: {}, userBrief: null, prompt: "sigue", maxPromptTokens: 60_000 };
+    const history: MensajeDelHistorial[] = [
+      { role: "user", content: "x".repeat(400_000) },
+      { role: "assistant", content: "y", reasoning: "z".repeat(10_000) },
+    ];
+    expect(buildAgentMessages({ ...base, history })).toEqual({ ok: false, reason: "too_large" });
+  });
+
   it("el mensaje system real de Len le ofrece el JavaScript", () => {
     // ⚰️ Aquí se encendía además `OPENLEN_MODEL_JS`, borrado el 2026-08-26 y sin
     // ningún lector en producción: la prueba ya afirmaba lo que afirma hoy —que

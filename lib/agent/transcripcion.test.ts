@@ -6,6 +6,7 @@ import {
   RESULTADO_VACIADO,
   historialDesdeLaBase,
   leidosSembrados,
+  textoDelHistorial,
   transcripcionParaGuardar,
   type FilaDelHistorial,
 } from "./transcripcion";
@@ -107,16 +108,50 @@ describe("transcripcionParaGuardar y leidosSembrados — lo leído dura la conve
     expect(JSON.stringify(t)).not.toContain("AAAA");
   });
 
-  // H15 es la fase 1: lo pensado vuelve DENTRO del turno. Guardarlo para los
-  // turnos siguientes (la fase 2) es otra decisión de Jesús: que no entre por la
-  // puerta de atrás de la transcripción.
-  it("no guarda el razonamiento: entre turnos no vuelve (fase 2 sin decidir)", () => {
+  // 🔴 H15 fase 2 (02/10, Jesús): lo pensado se guarda con la conversación y
+  // vuelve en los turnos siguientes, como en el arnés de DeepSeek (el
+  // razonamiento es contenido duradero del mensaje del asistente). Sólo del
+  // asistente y sólo si pensó algo.
+  it("🔴 guarda lo pensado de cada paso de Len, y sólo el suyo", () => {
     const t = transcripcionParaGuardar(
-      [{ role: "user", content: "x" }, { role: "assistant", content: "listo", reasoning: "PENSADO-DEL-PASO" }],
+      [
+        { role: "user", content: "x", reasoning: "NO-ES-DE-LEN" },
+        { role: "assistant", content: "voy", reasoning: "PENSADO-1", functionCalls: [{ name: "Read", args: {} }] },
+        { role: "user", content: "", functionResponses: [{ name: "Read", response: { ok: true } }] },
+        { role: "assistant", content: "listo", reasoning: "" },
+      ],
       new Map(),
     );
-    expect(JSON.stringify(t)).not.toContain("PENSADO-DEL-PASO");
-    expect(t.mensajes[1]).toEqual({ role: "assistant", content: "listo" });
+    expect(t.mensajes[0]).toEqual({ role: "user", content: "x" });
+    expect(t.mensajes[1]).toMatchObject({ role: "assistant", reasoning: "PENSADO-1" });
+    expect(t.mensajes[3]).toEqual({ role: "assistant", content: "listo" });
+  });
+});
+
+describe("H15 fase 2 · lo pensado en los turnos siguientes", () => {
+  const fila = (pensado: string) => ({
+    userText: "cambia la marca",
+    assistantReasoning: "",
+    transcript: {
+      mensajes: [
+        { role: "user" as const, content: "cambia la marca" },
+        { role: "assistant" as const, content: "Hecho.", reasoning: pensado },
+      ],
+      leidos: [],
+    },
+  });
+
+  it("🔴 el historial de la base trae lo pensado con su mensaje", () => {
+    const h = historialDesdeLaBase([fila("la marca sale en el logo y en el pie")]);
+    expect(h.find((m) => m.role === "assistant")).toEqual({
+      role: "assistant",
+      content: "Hecho.",
+      reasoning: "la marca sale en el logo y en el pie",
+    });
+  });
+
+  it("🔴 el techo lo cuenta: textoDelHistorial lo incluye", () => {
+    expect(textoDelHistorial(historialDesdeLaBase([fila("PENSADO-QUE-OCUPA")]))).toContain("PENSADO-QUE-OCUPA");
   });
 });
 

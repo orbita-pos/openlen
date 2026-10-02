@@ -422,16 +422,38 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   // Y las fotos (A): viajan pegadas a su mensaje en todas las vueltas, así que
   // ocupan contexto como en Claude Code. La del turno cuenta si se vio.
   const fotos = args.history.reduce((n, m) => n + (m.images?.length ?? 0), 0) + (args.attachedImage?.visible ? 1 : 0);
-  if (
-    estimateContextTokens(manual + contextBlock + historyText + args.prompt + avisos, systemPrompt) + fotos * TOKENS_POR_FOTO >
-    args.maxPromptTokens
-  ) {
+  const fijo = manual + contextBlock + args.prompt + avisos;
+  const cabe = (caracteresDelHistorial: number) =>
+    Math.ceil((fijo.length + caracteresDelHistorial + systemPrompt.length) / 3.5) + fotos * TOKENS_POR_FOTO <=
+    args.maxPromptTokens;
+  // 🔴 H15 fase 2 (02/10): CON PRESIÓN, SE VA PRIMERO LO PENSADO MÁS VIEJO. Lo
+  // pensado de turnos anteriores vuelve en el historial (como en el arnés de
+  // DeepSeek) y cuenta para el techo. Si no cabe, antes de rechazar el turno se
+  // le quita a los mensajes más viejos, uno a uno: es lo que hace la compactación
+  // de DeepSeek, cuyo resumen guarda el texto y deja fuera el razonamiento. El
+  // mensaje se queda; sólo pierde lo pensado. Si ni así cabe, `too_large` como
+  // siempre. La cuenta es lineal (`estimateContextTokens`): quitar lo pensado
+  // baja el historial en su longitud más el salto que lo separa.
+  let caracteres = historyText.length;
+  let history = args.history;
+  if (!cabe(caracteres)) {
+    const podado = [...args.history];
+    for (let i = 0; i < podado.length && !cabe(caracteres); i++) {
+      const m = podado[i]!;
+      if (!m.reasoning) continue;
+      caracteres -= m.reasoning.length + 1;
+      const { reasoning: _quitado, ...sinPensar } = m;
+      podado[i] = sinPensar;
+    }
+    history = podado;
+  }
+  if (!cabe(caracteres)) {
     return { ok: false, reason: "too_large" };
   }
   const messages: Message[] = [
     { role: "system", content: systemPrompt },
     { role: "user", content: manual },
-    ...args.history,
+    ...history,
     { role: "user", content: `${contextBlock}${PETICION_DEL_USUARIO}${args.prompt}${avisos}` },
   ];
   return { ok: true, messages, systemPrompt, contextBlock };

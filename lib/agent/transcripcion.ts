@@ -47,13 +47,15 @@ export const TOPE_TRANSCRIPCION = 400_000;
 export type MensajeDelHistorial = Omit<Message, "role"> & { role: "user" | "assistant" };
 
 /** Todo lo que el historial pone delante del modelo, como texto: el contenido,
- *  los argumentos de cada llamada y cada respuesta tal y como viaja. Es lo que
- *  cuenta el techo de contexto. */
+ *  lo pensado (H15), los argumentos de cada llamada y cada respuesta tal y como
+ *  viaja. Es lo que cuenta el techo de contexto. Lo pensado ocupa exactamente
+ *  su longitud más un salto: quitarlo baja la cuenta en eso (`context.ts`). */
 export function textoDelHistorial(historial: readonly MensajeDelHistorial[]): string {
   return historial
     .map((m) =>
       [
         m.content,
+        ...(m.reasoning ? [m.reasoning] : []),
         ...(m.functionCalls ?? []).map((c) => JSON.stringify(c.args ?? {})),
         ...(m.functionResponses ?? []).map((r) => {
           const t = r.response[CLAVE_TOOL_RESULT];
@@ -99,11 +101,14 @@ function vaciada(response: Record<string, unknown>): Record<string, unknown> {
   return { ...(typeof response.ok === "boolean" ? { ok: response.ok } : {}), [CLAVE_TOOL_RESULT]: RESULTADO_VACIADO };
 }
 
-/** Sólo los cuatro campos de `Message`: nada más se guarda ni se reenvía. */
+/** Sólo estos campos de `Message`: nada más se guarda ni se reenvía. Lo pensado
+ *  por Len (H15 fase 2, 02/10) se guarda con su mensaje y vuelve en los turnos
+ *  siguientes, como en el arnés de DeepSeek; las fotos no (las pone la ruta). */
 function limpio<M extends Message | MensajeDelHistorial>(m: M): M {
   return {
     role: m.role,
     content: typeof m.content === "string" ? m.content : "",
+    ...(m.role === "assistant" && typeof m.reasoning === "string" && m.reasoning ? { reasoning: m.reasoning } : {}),
     ...(m.functionCalls?.length ? { functionCalls: m.functionCalls.map((c) => ({ name: c.name, args: c.args ?? {} })) } : {}),
     ...(m.functionResponses?.length
       ? { functionResponses: m.functionResponses.map((r) => ({ name: r.name, response: r.response ?? {} })) }
