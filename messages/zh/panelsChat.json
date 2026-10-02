@@ -19,6 +19,10 @@
     "imageSent": "图片已发送",
     "homePage": "首页"
   },
+  "proceso": {
+    "completadoEn": "用时 <d>{duracion}</d> 完成",
+    "completado": "已完成"
+  },
   "streaming": {
     "writingPage": "正在编写页面 · {chars}",
     "designing": "正在为你设计页面…",

@@ -63,6 +63,8 @@ import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-contr
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
 import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
 import { leerCambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
+import { duracionLegible, procesoDelTurno } from "@/lib/workspace-v2/proceso-del-turno";
+import { ProcesoPlegable } from "../proceso-plegable";
 import { cambiosEnVivo, esFicheroCambiado, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
 import { abrirEnElCodigo, abrirFicheroDelTurno, rutasDelTurno } from "@/lib/workspace-v2/abrir-fichero";
 import { FicherosDelTurnoEnVivo } from "../ficheros-del-turno";
@@ -2178,6 +2180,26 @@ function TurnView({
   // ruido en el caso corriente, que es un sitio de una página.
   const paginaDelTurno = turn.page ?? paginaActual;
   const deOtraPagina = !mismaPagina(turn.page, paginaActual);
+  // LOS PASOS DEL TURNO TERMINADO, PLEGADOS (la #13), como DeepSeek: la regla
+  // en `lib/workspace-v2/proceso-del-turno.ts`.
+  const locale = useLocale();
+  const proceso = procesoDelTurno({
+    status: turn.status,
+    enServidor: turn.enServidor,
+    cortado: turn.cortado,
+    avisoTurno: turn.avisoTurno,
+    pasos: turn.actions?.length ?? 0,
+    startedAt: turn.startedAt,
+    appliedAt: turn.appliedAt,
+  });
+  const tituloDelProceso = !proceso.plegable
+    ? null
+    : proceso.duracionMs === null
+      ? t("proceso.completado")
+      : t.rich("proceso.completadoEn", {
+          duracion: duracionLegible(proceso.duracionMs, locale),
+          d: (trozo) => <span className="font-mono tabular-nums">{trozo}</span>,
+        });
   return (
     <div className="space-y-2">
       {deOtraPagina && (
@@ -2228,20 +2250,22 @@ function TurnView({
           </span>
           <div className="min-w-0 max-w-[85%] space-y-1.5">
             {turn.actions && turn.actions.length > 0 && (
-              <div className="space-y-1">
-                {turn.actions.map((a, i) => (
-                  <AgentActionCard
-                    key={`${a.tool}-${i}`}
-                    action={a}
-                    onAbrirFichero={abrirFichero}
-                    // La de la terminal sabe qué comando del turno es: con eso
-                    // encuentra su salida (`salida-de-la-tarjeta.ts`).
-                    {...(a.tool === "bash"
-                      ? { terminal: { projectId, turnId: turn.id, indice: indiceEntreLasDeLaTerminal(turn.actions!, i) } }
-                      : {})}
-                  />
-                ))}
-              </div>
+              <ProcesoPlegable plegable={proceso.plegable} titulo={tituloDelProceso}>
+                <div className="space-y-1">
+                  {turn.actions.map((a, i) => (
+                    <AgentActionCard
+                      key={`${a.tool}-${i}`}
+                      action={a}
+                      onAbrirFichero={abrirFichero}
+                      // La de la terminal sabe qué comando del turno es: con eso
+                      // encuentra su salida (`salida-de-la-tarjeta.ts`).
+                      {...(a.tool === "bash"
+                        ? { terminal: { projectId, turnId: turn.id, indice: indiceEntreLasDeLaTerminal(turn.actions!, i) } }
+                        : {})}
+                    />
+                  ))}
+                </div>
+              </ProcesoPlegable>
             )}
             <div className="inline-block max-w-full rounded-2xl px-3 py-2 text-left bg-elev border bd">
               {turn.assistantReasoning.length > 0 && (

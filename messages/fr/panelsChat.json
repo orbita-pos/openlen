@@ -19,6 +19,10 @@
     "imageSent": "Image envoyée",
     "homePage": "Accueil"
   },
+  "proceso": {
+    "completadoEn": "Terminé en <d>{duracion}</d>",
+    "completado": "Terminé"
+  },
   "streaming": {
     "writingPage": "Rédaction de la page · {chars}",
     "designing": "Conception de votre page…",

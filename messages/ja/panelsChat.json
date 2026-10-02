@@ -19,6 +19,10 @@
     "imageSent": "画像を送信しました",
     "homePage": "ホーム"
   },
+  "proceso": {
+    "completadoEn": "<d>{duracion}</d>で完了",
+    "completado": "完了"
+  },
   "streaming": {
     "writingPage": "ページを作成中 · {chars}",
     "designing": "ページをデザインしています…",

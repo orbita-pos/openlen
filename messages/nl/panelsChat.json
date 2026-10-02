@@ -19,6 +19,10 @@
     "imageSent": "Afbeelding verstuurd",
     "homePage": "Home"
   },
+  "proceso": {
+    "completadoEn": "Voltooid in <d>{duracion}</d>",
+    "completado": "Voltooid"
+  },
   "streaming": {
     "writingPage": "Pagina schrijven · {chars}",
     "designing": "Je pagina ontwerpen…",

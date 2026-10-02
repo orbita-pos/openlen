@@ -19,6 +19,10 @@
     "imageSent": "이미지 전송됨",
     "homePage": "홈"
   },
+  "proceso": {
+    "completadoEn": "<d>{duracion}</d> 만에 완료",
+    "completado": "완료"
+  },
   "streaming": {
     "writingPage": "페이지 작성 중 · {chars}",
     "designing": "페이지를 디자인하는 중…",

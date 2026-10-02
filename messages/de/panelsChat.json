@@ -19,6 +19,10 @@
     "imageSent": "Bild gesendet",
     "homePage": "Startseite"
   },
+  "proceso": {
+    "completadoEn": "Abgeschlossen in <d>{duracion}</d>",
+    "completado": "Abgeschlossen"
+  },
   "streaming": {
     "writingPage": "Seite wird geschrieben · {chars}",
     "designing": "Deine Seite wird gestaltet…",

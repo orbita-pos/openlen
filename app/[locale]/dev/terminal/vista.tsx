@@ -6,12 +6,15 @@
 // Chat. Sólo existe en desarrollo.
 
 import { useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 
 import "../../new/tokens.css";
 import { PreviewArea, type Lente } from "@/components/workspace-v2/preview-area";
 import { FicherosDelTurnoEnVivo } from "@/components/workspace-v2/ficheros-del-turno";
 import { AgentActionCard, type AgentAction } from "@/components/workspace-v2/agent-action-card";
 import { TextoDeLen } from "@/components/workspace-v2/texto-de-len";
+import { ProcesoPlegable } from "@/components/workspace-v2/proceso-plegable";
+import { duracionLegible } from "@/lib/workspace-v2/proceso-del-turno";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import { cambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import { abrirEnElCodigo, abrirFicheroDelTurno, rutasDelTurno } from "@/lib/workspace-v2/abrir-fichero";
@@ -238,6 +241,9 @@ const DOC = `<!doctype html><html><head><style>body{font-family:system-ui;margin
 
 export function VistaDeLaTerminal({ oscuro, cambios }: { oscuro: boolean; cambios: boolean }) {
   const [lente, setLente] = useState<Lente>(cambios ? "cambios" : "terminal");
+  const tc = useTranslations("panelsChat");
+  const locale = useLocale();
+  const [t1Cerrado, setT1Cerrado] = useState(false);
   // Los datos de ejemplo, DESPUÉS de montar y antes de pintar el lienzo: rellenar
   // los almacenes mientras se pinta avisaba a otros componentes a media pintura,
   // y en el servidor no hay ninguno que enseñar.
@@ -255,16 +261,31 @@ export function VistaDeLaTerminal({ oscuro, cambios }: { oscuro: boolean; cambio
           {/* El turno «t1»: las tarjetas de sus comandos se despliegan con la
               salida (del historial falso de arriba); las de ficheros, y las
               rutas del texto, abren el fichero (la #9). */}
-          <div className="space-y-1">
-            {TARJETAS.map((a, i) => (
-              <AgentActionCard
-                key={i}
-                action={a}
-                onAbrirFichero={(ruta) => abrir("t1", ruta)}
-                {...(a.tool === "bash" ? { terminal: { projectId: PROYECTO, turnId: "t1", indice: i } } : {})}
-              />
-            ))}
-          </div>
+          {/* La #13: corriendo, los pasos a la vista; al terminar, detrás de
+              «Completado en …», como en TurnView. El botón lo termina. */}
+          {!t1Cerrado && (
+            <button type="button" onClick={() => setT1Cerrado(true)} className="self-start text-[10.5px] text-accent hover:underline">
+              (ejemplo) terminar el turno
+            </button>
+          )}
+          <ProcesoPlegable
+            plegable={t1Cerrado}
+            titulo={tc.rich("proceso.completadoEn", {
+              duracion: duracionLegible(64_000, locale),
+              d: (trozo) => <span className="font-mono tabular-nums">{trozo}</span>,
+            })}
+          >
+            <div className="space-y-1">
+              {TARJETAS.map((a, i) => (
+                <AgentActionCard
+                  key={i}
+                  action={a}
+                  onAbrirFichero={(ruta) => abrir("t1", ruta)}
+                  {...(a.tool === "bash" ? { terminal: { projectId: PROYECTO, turnId: "t1", indice: i } } : {})}
+                />
+              ))}
+            </div>
+          </ProcesoPlegable>
           <div className="inline-block max-w-full rounded-2xl border bd bg-elev px-3 py-2">
             <p className="text-[12.5px] fg leading-relaxed">
               <TextoDeLen texto={TEXTO_T1} rutas={rutasDe("t1", TARJETAS)} onAbrir={(ruta) => abrir("t1", ruta)} />
@@ -272,11 +293,14 @@ export function VistaDeLaTerminal({ oscuro, cambios }: { oscuro: boolean; cambio
             <FicherosDelTurnoEnVivo projectId={PROYECTO} turnId="t1" />
           </div>
           {/* El turno «t2» sólo leyó: sus rutas van a «Código». */}
-          <div className="space-y-1">
-            {TARJETAS_T2.map((a, i) => (
-              <AgentActionCard key={i} action={a} onAbrirFichero={(ruta) => abrir("t2", ruta)} />
-            ))}
-          </div>
+          {/* Recargado: se sabe que cerró, no cuándo empezó. La fila, sin duración. */}
+          <ProcesoPlegable plegable titulo={tc("proceso.completado")}>
+            <div className="space-y-1">
+              {TARJETAS_T2.map((a, i) => (
+                <AgentActionCard key={i} action={a} onAbrirFichero={(ruta) => abrir("t2", ruta)} />
+              ))}
+            </div>
+          </ProcesoPlegable>
           <div className="inline-block max-w-full rounded-2xl border bd bg-elev px-3 py-2">
             <p className="text-[12.5px] fg leading-relaxed">
               <TextoDeLen texto={TEXTO_T2} rutas={rutasDe("t2", TARJETAS_T2)} onAbrir={(ruta) => abrir("t2", ruta)} />
