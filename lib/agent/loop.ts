@@ -32,6 +32,7 @@ import {
 import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/lib/agent/diagnosticos";
 import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
 import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
+import { terminalEncendida } from "@/lib/agent/terminal/declaracion";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -759,6 +760,11 @@ const READ_ONLY_TOOLS = new Set([
   "TodoWrite",
   // ⚰️ Aquí iba `ToolSearch` (H2), retirada con las diferidas en Len 2.1.
 ]);
+/** Las lecturas que pueden correr a la vez (F1): no cambian ni la página ni
+ *  nada del proyecto. `preguntar` y `TodoWrite` no: no leen, y `preguntar`
+ *  cierra el turno. */
+const EN_PARALELO = new Set(["Read", "Grep", "Glob", "mirar_pagina", "usar_pagina", "ver_visitas", "ver_formularios", "ver_mensajes"]);
+
 /** Cuántas vueltas gana el turno cuando el usuario corrige el rumbo.
  *
  *  POR QUÉ SE LE DA MÁS: corregir a media faena es la señal más barata y más
@@ -1925,6 +1931,26 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       messages.push({ role: "user", content: "", functionResponses });
     };
 
+    // F1 (plans/len-agente-2026), detrás de la palanca de la terminal: las
+    // LECTURAS del principio de la vuelta se lanzan a la vez, como en el arnés
+    // de DeepSeek, y sus resultados se procesan abajo en el orden del modelo.
+    // Sólo las de ANTES de la primera llamada que no es lectura: un Read detrás
+    // de un Edit tiene que ver lo editado. Y no la que el freno de «ya falló
+    // dos veces» no dejaría correr.
+    const adelantadas = new Map<(typeof calls)[number], Promise<ToolOutcome>>();
+    if (terminalEncendida()) {
+      for (const original of calls) {
+        const r = declaradas.length ? repararNombre(original.name, declaradas) : { arreglado: original.name };
+        if (!("arreglado" in r) || !EN_PARALELO.has(r.arreglado)) break;
+        const llamada = r.arreglado === original.name ? original : { ...original, name: r.arreglado };
+        if ((failedSignatures.get(`${llamada.name}\u0000${stableStringify(llamada.args)}`) ?? 0) >= FAIL_REPEAT_LIMIT) break;
+        const p = args.runTool(llamada.name, llamada.args);
+        // Si el bucle sale antes de esperarla, su fallo no tumba el proceso.
+        p.catch(() => undefined);
+        adelantadas.set(original, p);
+      }
+    }
+
     for (const original of calls) {
       // LA ERRATA SE ARREGLA ANTES DE COBRAR. El presupuesto se descuenta más
       // abajo, así que reparar aquí es lo que hace que un fallo de tecleo no
@@ -1988,7 +2014,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       const summary = sobreQue(call.args);
       args.emit({ type: "action", tool: call.name, status: "running", summary });
 
-      const outcome = await args.runTool(call.name, call.args);
+      const outcome = await (adelantadas.get(original) ?? args.runTool(call.name, call.args));
       if (!readOnly) ejecutadasDeTrabajo += 1;
       if (outcome.guardarSinSalida) guardarSinSalida = true;
       const ok = outcome.response.ok !== false;

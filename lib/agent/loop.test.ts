@@ -4056,3 +4056,65 @@ describe("H15 · el razonamiento vuelve al modelo dentro del turno", () => {
     expect(JSON.stringify(eventos)).not.toContain("SECRETO-PENSADO");
   });
 });
+
+describe("F1 · las lecturas del principio de la vuelta, en paralelo detrás de la palanca de la terminal", () => {
+  const vuelta = [
+    { type: "function_call", name: "Read", args: { file_path: "/a" } },
+    { type: "function_call", name: "Read", args: { file_path: "/b" } },
+    { type: "function_call", name: "Edit", args: { file_path: "/c" } },
+    { type: "function_call", name: "Read", args: { file_path: "/d" } },
+    usage(10),
+    done,
+  ] as StreamEvent[];
+
+  async function correr(palanca: string | undefined) {
+    const antes = process.env.OPENLEN_TERMINAL;
+    if (palanca === undefined) delete process.env.OPENLEN_TERMINAL;
+    else process.env.OPENLEN_TERMINAL = palanca;
+    const log: string[] = [];
+    let enVuelo = 0;
+    let maxEnVuelo = 0;
+    let respuestas: string[] = [];
+    const guion = scripted(vuelta, [{ type: "text_delta", text: "fin" }, usage(1), done]);
+    try {
+      await runAgentLoop({
+        messages: [{ role: "user", content: "x" }],
+        tools: [],
+        openStream: (messages) => {
+          const ultima = messages[messages.length - 1];
+          if (ultima?.functionResponses) respuestas = ultima.functionResponses.map((f) => String(f.response.tool_result));
+          return guion(messages);
+        },
+        runTool: async (name, a) => {
+          enVuelo++;
+          maxEnVuelo = Math.max(maxEnVuelo, enVuelo);
+          log.push(`empieza ${name} ${String(a.file_path)}`);
+          await new Promise((r) => setTimeout(r, 20));
+          enVuelo--;
+          log.push(`acaba ${name} ${String(a.file_path)}`);
+          return { response: { ok: true, tool_result: `${name} ${String(a.file_path)}` } };
+        },
+        emit: () => undefined,
+      });
+    } finally {
+      if (antes === undefined) delete process.env.OPENLEN_TERMINAL;
+      else process.env.OPENLEN_TERMINAL = antes;
+    }
+    return { log, maxEnVuelo, respuestas };
+  }
+
+  it("con la palanca: las dos lecturas del principio a la vez; el Edit y la lectura de detrás, en serie después; las respuestas, en el orden del modelo", async () => {
+    const { log, maxEnVuelo, respuestas } = await correr("1");
+    expect(maxEnVuelo).toBe(2);
+    expect(log.slice(0, 2)).toEqual(["empieza Read /a", "empieza Read /b"]);
+    expect(log.indexOf("empieza Edit /c")).toBeGreaterThan(log.indexOf("acaba Read /b"));
+    expect(log.indexOf("empieza Read /d")).toBeGreaterThan(log.indexOf("acaba Edit /c"));
+    expect(respuestas).toEqual(["Read /a", "Read /b", "Edit /c", "Read /d"]);
+  });
+
+  it("sin la palanca, todo en serie como hoy (brazo de control)", async () => {
+    const { maxEnVuelo, respuestas } = await correr(undefined);
+    expect(maxEnVuelo).toBe(1);
+    expect(respuestas).toEqual(["Read /a", "Read /b", "Edit /c", "Read /d"]);
+  });
+});
