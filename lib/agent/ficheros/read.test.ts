@@ -142,15 +142,14 @@ describe("Read", () => {
     expect(leidos.get("/index.html")).toMatchObject({ offset: 1, limit: 850, vistaParcial: true });
   });
 
-  it("líneas tan largas que no se pueden paginar por línea: corta por caracteres y lo dice", () => {
+  // ⚰️ Aquí se afirmaba que una línea de 120.000 caracteres se paginaba POR
+  // CARACTERES (llegaban 85.000 con un cartel de vista parcial). Desde B
+  // (01/10/2026, «como DeepSeek») cada línea se corta a 2.000 antes de contar,
+  // así que esa línea llega cortada y entera en una sola lectura.
+  it("líneas tan largas que no se podían paginar por línea: ahora llegan cortadas a 2.000", () => {
     const una = "z".repeat(120_000);
     const r = ejecutarRead({ file_path: "/index.html" }, sitio({ "/index.html": una }), new Map());
-    const [cuerpo, cartel] = r.texto.split("\n\n");
-    // floor(25000 · 4 · 0,85) = 85.000 caracteres.
-    expect(cuerpo).toBe("1\t" + "z".repeat(85_000));
-    expect(cartel).toBe(
-      "[Partial view — /index.html: the first 85000 of 120000 characters (the file is 30000 tokens; one Read returns up to 25000). Its lines are too long to split by line: Grep for the section you need, or Read with offset/limit to go through it. What you are looking for may be elsewhere: do NOT base your answer on this excerpt alone.]",
-    );
+    expect(r.texto).toBe(`1\t${"z".repeat(2000)}... (line truncated to 2000 chars)`);
   });
 
   it("los finales de línea CRLF se leen como LF", () => {
@@ -158,5 +157,52 @@ describe("Read", () => {
     const r = ejecutarRead({ file_path: "/index.html" }, sitio({ "/index.html": "a\r\nb\r\n" }), leidos);
     expect(r.texto).toBe("1\ta\n2\tb\n3\t");
     expect(leidos.get("/index.html")?.instantanea).toBe("a\nb\n");
+  });
+});
+
+// B (01/10/2026, decidido por Jesús: «como DeepSeek»). El arnés de DeepSeek
+// corta cada línea a 2.000 caracteres al leer (`read-render.ts`,
+// READ_MAX_LINE_LENGTH). Medido el 01/10: un favicon en base64 metido en una
+// línea de 7.290 caracteres costó 20 vueltas a Len en el turno fbc761a9.
+describe("Read corta las líneas largas, como DeepSeek", () => {
+  const AVISO = "... (line truncated to 2000 chars)";
+
+  it("una línea de más de 2.000 caracteres se corta, con el aviso de DeepSeek", () => {
+    const larga = `<head>${"x".repeat(5000)}</head>`;
+    const r = ejecutarRead({ file_path: "/index.html" }, sitio({ "/index.html": `<html>\n${larga}\n</html>` }), new Map());
+    expect(r.texto).toBe(`1\t<html>\n2\t${larga.slice(0, 2000)}${AVISO}\n3\t</html>`);
+  });
+
+  it("una de 2.000 justos queda entera", () => {
+    const justa = "y".repeat(2000);
+    const r = ejecutarRead({ file_path: "/index.html" }, sitio({ "/index.html": justa }), new Map());
+    expect(r.texto).toBe(`1\t${justa}`);
+  });
+
+  it("el base64 de la línea larga ya no llega al modelo", () => {
+    const linea = `<script data-ol-radius>${"a".repeat(6000)}</script><link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0i">`;
+    const r = ejecutarRead({ file_path: "/index.html" }, sitio({ "/index.html": linea }), new Map());
+    expect(r.texto).not.toContain("base64,");
+  });
+
+  it("🔴 cortar no deja la lectura como vista parcial: se puede editar el fichero igual", () => {
+    const leidos: Leidos = new Map();
+    const fichero = `${"z".repeat(3000)}\n<h1>Lume</h1>`;
+    ejecutarRead({ file_path: "/index.html" }, sitio({ "/index.html": fichero }), leidos);
+    expect(leidos.get("/index.html")).toEqual({ instantanea: fichero, offset: 1, limit: undefined });
+  });
+
+  it("no parte un carácter en dos: si el corte cae en medio de un emoji, se queda fuera entero", () => {
+    const linea = `${"a".repeat(1999)}😀${"b".repeat(10)}`;
+    const r = ejecutarRead({ file_path: "/index.html" }, sitio({ "/index.html": linea }), new Map());
+    expect(r.texto).toBe(`1\t${"a".repeat(1999)}${AVISO}`);
+  });
+
+  // Bajo el tope de bytes de siempre (256 KB, que no cambia): antes se paginaba
+  // por caracteres y llegaban ~100.000.
+  it("una página entera en una sola línea gigante ya no se pagina por caracteres: llega su principio, cortado", () => {
+    const linea = "q".repeat(200_000);
+    const r = ejecutarRead({ file_path: "/index.html" }, sitio({ "/index.html": linea }), new Map());
+    expect(r.texto).toBe(`1\t${"q".repeat(2000)}${AVISO}`);
   });
 });

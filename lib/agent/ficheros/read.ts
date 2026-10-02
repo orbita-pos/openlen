@@ -51,6 +51,28 @@ export interface EntradaRead {
   readonly limit?: number;
 }
 
+/** Lo más larga que llega una línea al modelo. Lo que pasa se corta y se avisa,
+ *  como en el arnés de DeepSeek (`read-render.ts`, READ_MAX_LINE_LENGTH), con su
+ *  mismo aviso: V4.1 se evaluó con ese arnés. Decidido por Jesús el 2026-10-01
+ *  tras el turno fbc761a9: un favicon en base64, dentro de una línea de 7.290
+ *  caracteres que escribe OpenLen, le costó 20 vueltas a Len. Medido ese día en
+ *  la base de desarrollo: oculta el 40 % de los caracteres de las páginas — dos
+ *  tercios, bloques `data-ol-*` de OpenLen; uno, CSS/HTML del modelo en líneas
+ *  largas (29 % de las páginas). Jesús eligió el corte tal cual sabiéndolo.
+ *  Claude Code NO corta (medido en su arnés): esto es de DeepSeek. */
+export const TOPE_DE_LINEA = 2000;
+const AVISO_DE_CORTE = `... (line truncated to ${TOPE_DE_LINEA} chars)`;
+
+/** La línea tal cual, o su principio y el aviso si pasa del tope. Sin partir un
+ *  carácter en dos: si el corte cae en medio de un par sustituto, se queda fuera. */
+export function cortarLinea(linea: string): string {
+  if (linea.length <= TOPE_DE_LINEA) return linea;
+  let principio = linea.slice(0, TOPE_DE_LINEA);
+  const ultimo = principio.charCodeAt(principio.length - 1);
+  if (ultimo >= 0xd800 && ultimo <= 0xdbff) principio = principio.slice(0, -1);
+  return `${principio}${AVISO_DE_CORTE}`;
+}
+
 /** Número, tabulador y la línea tal cual; sin relleno y sin el `\r` final,
  *  como lo enseña Claude Code. */
 export function formatoCatN(contenido: string, primeraLinea: number): string {
@@ -120,7 +142,11 @@ export function ejecutarRead(entrada: EntradaRead, sitio: SitioLegible, leidos: 
   const lineas = entero.split("\n");
   const desde = offset === 0 ? 0 : offset - 1;
   const hasta = limit === undefined ? lineas.length : desde + limit;
-  const tramo = lineas.slice(desde, hasta);
+  // Cada línea, cortada ANTES de contar: los topes de tokens y la paginación
+  // miden lo que de verdad le llega al modelo (como DeepSeek, que corta la línea
+  // y después aplica su tope de salida). Lo apuntado como leído sigue siendo el
+  // fichero ENTERO: cortar no hace la vista parcial ni impide editar.
+  const tramo = lineas.slice(desde, hasta).map(cortarLinea);
   let contenido = tramo.join("\n");
   // Una línea mal numerada engaña al modelo: Claude Code numeraría un offset=0
   // desde 0. Aquí se numera desde 1, que es la línea que de verdad es.
@@ -167,6 +193,10 @@ export function ejecutarRead(entrada: EntradaRead, sitio: SitioLegible, leidos: 
  * El auto-paginado de una lectura entera que no cabe, como en Claude Code: primero por
  * líneas (las que caben en proporción, con un 15 % de margen, y un 30 % menos
  * hasta seis veces); si ni una línea cabe, por caracteres.
+ *
+ * ⚠️ Desde B (01/10/2026) las líneas llegan aquí ya cortadas a `TOPE_DE_LINEA`,
+ * así que la rama «por caracteres» no se alcanza: una línea de 2.034 caracteres
+ * siempre cabe en 25.000 tokens. Se queda como red por si el tope de línea cambia.
  */
 function paginar(
   todo: string,
