@@ -12,6 +12,7 @@ import { runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession 
 import type { ProjectData } from "@/lib/projects/types";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
+import { guardarLoDeLaTerminal } from "./herramientas-de-ficheros";
 
 const HOME = `<!doctype html>
 <html lang="es">
@@ -691,5 +692,72 @@ describe("H3 · la memoria como ficheros: sólo se AÑADE", () => {
     });
     assert.equal(out.response.ok, true, texto(out));
     assert.equal(estado.brief, "Taquería en Guadalajara\n\n— Preferencias guardadas por el agente —\n• El tono es formal");
+  });
+});
+
+describe("guardarLoDeLaTerminal — lo que escribe la terminal, por el camino de Write (F1 de plans/len-agente-2026)", () => {
+  const CONTACTO = MENU.replace("<h1>Menú</h1>", "<h1>Contacto</h1>");
+  const sitio = (): ProjectData => ({ html: HOME, pages: { menu: { html: MENU }, contacto: { html: CONTACTO } } });
+  const antes = { "/index.html": HOME, "/menu/index.html": MENU, "/contacto/index.html": CONTACTO, "/AGENTS.md": "manual" };
+
+  it("un `sed -i` sobre tres páginas: tres guardados y TRES versiones, una por fichero", async () => {
+    const { deps, store } = makeDeps(sitio());
+    const cambios = (["/contacto/index.html", "/index.html", "/menu/index.html"] as const).map((ruta) => ({
+      tipo: "escrito" as const,
+      ruta,
+      contenido: antes[ruta].replace("</body>", "<p>Calle Gaviotas 7</p></body>"),
+      crea: false,
+    }));
+    const r = await guardarLoDeLaTerminal(makeSession(), deps, cambios, antes);
+    assert.equal(r.rechazado, false, r.notas.join("\n"));
+    assert.equal(r.escrituras.length, 3);
+    // Como cada Write: la versión nueva, con su etiqueta, y el «antes» para deshacer.
+    const nuevas = store.versions.filter((x) => x.label.startsWith("bash "));
+    assert.deepEqual(nuevas.map((x) => x.page), ["contacto", null, "menu"]);
+    assert.equal(store.versions.length - nuevas.length, 3);
+    assert.deepEqual(r.notas, ["contacto/index.html: saved.", "index.html: saved.", "menu/index.html: saved."]);
+    assert.match(store.data.pages?.menu?.html ?? "", /Calle Gaviotas 7/);
+    assert.match(r.enLaTerminal["/index.html"] ?? "", /Calle Gaviotas 7/);
+  });
+
+  it("el manual, un borrado y un data-slot-path NO se guardan, y vuelven a la terminal como estaban", async () => {
+    const { deps, store } = makeDeps(sitio());
+    const r = await guardarLoDeLaTerminal(
+      makeSession(),
+      deps,
+      [
+        { tipo: "escrito", ruta: "/AGENTS.md", contenido: "otro manual", crea: false },
+        { tipo: "escrito", ruta: "/index.html", contenido: HOME.replace("<h1>", '<h1 data-slot-path="x">'), crea: false },
+        { tipo: "borrado", ruta: "/menu/index.html" },
+      ],
+      antes,
+    );
+    assert.equal(r.rechazado, true);
+    assert.equal(r.escrituras.length, 0);
+    assert.equal(store.versions.length, 0);
+    assert.equal(store.data.html, HOME);
+    assert.equal(r.enLaTerminal["/AGENTS.md"], "manual");
+    assert.equal(r.enLaTerminal["/index.html"], HOME);
+    assert.equal(r.enLaTerminal["/menu/index.html"], MENU);
+    assert.match(r.notas[0]!, /^AGENTS\.md: not saved — .*read-only.*It is back as it was\.$/);
+    assert.match(r.notas[1]!, /^index\.html: not saved — .*data-slot-path/);
+    assert.match(r.notas[2]!, /^menu\/index\.html: not saved — the terminal cannot delete/);
+  });
+
+  it("un fichero nuevo fuera de las páginas no se guarda y desaparece; una página nueva, sí", async () => {
+    const { deps, store } = makeDeps(sitio());
+    const r = await guardarLoDeLaTerminal(
+      makeSession(),
+      deps,
+      [
+        { tipo: "escrito", ruta: "/notas.txt", contenido: "x", crea: true },
+        { tipo: "escrito", ruta: "/clases/index.html", contenido: MENU.replace("<h1>Menú</h1>", "<h1>Clases</h1>"), crea: true },
+      ],
+      antes,
+    );
+    assert.equal(r.enLaTerminal["/notas.txt"], null);
+    assert.match(r.notas[0]!, /^notas\.txt: not saved — .*only has pages.*It was removed\.$/);
+    assert.equal(r.notas[1], "clases/index.html: saved (new page).");
+    assert.match(store.data.pages?.clases?.html ?? "", /<h1>Clases<\/h1>/);
   });
 });

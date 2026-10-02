@@ -45,7 +45,8 @@ import {
 import type { AlmacenDeclarado } from "@/lib/page-data/declaracion";
 import { AVISO_VISITANTES, llevaTextoDeVisitantes } from "@/lib/page-data/vista-del-agente";
 import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO, alcanceDeRuta, lineasNuevas } from "@/lib/agent/ficheros/memoria";
-import { RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
+import { MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
+import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { PREFERENCIA_MAX, PREFERENCIA_MIN, guardarPreferencia } from "@/lib/agent/preferencias";
 
@@ -284,7 +285,7 @@ async function aplicarPlan(
   data: ProjectData,
   v: Virtuales,
   plan: PlanDeEdit,
-  herramienta: "Edit" | "Write",
+  herramienta: "Edit" | "Write" | "bash",
   /** Sobre qué fichero y qué cambio. La tarjeta lo pone detrás de su etiqueta
    *  localizada («Editando la página»), así que no repite la herramienta; la
    *  versión sí la nombra, porque en el panel de Versiones no hay nada delante. */
@@ -351,7 +352,7 @@ async function guardarMemoria(
   deps: AgentDeps,
   memoria: ReadonlyMap<string, string>,
   plan: Extract<PlanDeEdit, { ok: true }>,
-  herramienta: "Edit" | "Write",
+  herramienta: "Edit" | "Write" | "bash",
   detalle: string,
 ): Promise<ToolOutcome> {
   const alcance = alcanceDeRuta(plan.ruta)!;
@@ -391,7 +392,7 @@ async function guardarDatos(
   deps: AgentDeps,
   almacenes: Almacenes,
   plan: Extract<PlanDeEdit, { ok: true }>,
-  herramienta: "Edit" | "Write",
+  herramienta: "Edit" | "Write" | "bash",
   detalle: string,
 ): Promise<ToolOutcome> {
   const nombre = almacenDeRuta(plan.ruta)!;
@@ -415,6 +416,87 @@ async function guardarDatos(
     action: { tool: herramienta, ok: true, summary: detalle, cambio },
     ...(vacio ? {} : { mutoDurable: true }),
   };
+}
+
+/** Lo que pasó con los ficheros que tocó un comando de la terminal. */
+export interface GuardadoDeLaTerminal {
+  /** Una línea por fichero, para la salida del comando. */
+  readonly notas: string[];
+  /** Alguno no se pudo guardar: el comando no hizo lo que se le pidió. */
+  readonly rechazado: boolean;
+  /** Cómo tiene que quedar cada uno EN LA TERMINAL: lo que se guardó de verdad
+   *  (la página tras su puerta, el almacén con los ids de la base) o, si no se
+   *  guardó, lo de antes (`null`: no existía). Un solo mundo. */
+  readonly enLaTerminal: Record<string, string | null>;
+  /** El resultado de cada escritura que fue bien, en orden. */
+  readonly escrituras: ToolOutcome[];
+}
+
+/**
+ * LO QUE ESCRIBIÓ LA TERMINAL (F1 de plans/len-agente-2026), por el camino de
+ * Write: cada fichero cambiado se guarda ENTERO con `aplicarPlan` —la puerta
+ * de la página, `data-slot-path` rechazado, una versión por fichero, los
+ * diagnósticos—, y los de `/datos` y `/memoria` con sus reglas. Sin el «léelo
+ * antes» de Write: en una terminal el fichero se lee y se escribe en el mismo
+ * comando (`sed -i`), como en la de DeepSeek. Lo que no se guarda —el manual,
+ * borrar un fichero del sitio, lo que su puerta rechaza— vuelve a la terminal
+ * como estaba.
+ */
+export async function guardarLoDeLaTerminal(
+  session: AgentSession,
+  deps: AgentDeps,
+  cambios: readonly CambioDeLaTerminal[],
+  antes: Readonly<Record<string, string>>,
+): Promise<GuardadoDeLaTerminal> {
+  const notas: string[] = [];
+  const enLaTerminal: Record<string, string | null> = {};
+  const escrituras: ToolOutcome[] = [];
+  let rechazado = false;
+  const deshacer = (ruta: string, motivo: string) => {
+    rechazado = true;
+    const previo = Object.hasOwn(antes, ruta) ? antes[ruta]! : null;
+    enLaTerminal[ruta] = previo;
+    notas.push(`${rutaRelativa(ruta)}: not saved — ${motivo} ${previo === null ? "It was removed." : "It is back as it was."}`);
+  };
+  for (const c of cambios) {
+    if (c.tipo === "borrado") {
+      deshacer(c.ruta, "the terminal cannot delete files of the site (a page is removed by the user, in the editor).");
+      continue;
+    }
+    if (c.ruta === RUTA_MANUAL) {
+      deshacer(c.ruta, MANUAL_SOLO_LECTURA);
+      continue;
+    }
+    // El proyecto de AHORA en cada fichero: el anterior del mismo comando ya cambió el sitio.
+    const row = await deps.loadProject(session.projectId, session.userId);
+    if (!row) {
+      deshacer(c.ruta, "the project was not found.");
+      continue;
+    }
+    const v = await virtualesDe(session, deps, row.userBrief);
+    const plan: PlanDeEdit = {
+      ok: true,
+      ruta: c.ruta,
+      contenido: c.contenido,
+      crea: c.crea,
+      respuesta: () => `Saved ${rutaRelativa(c.ruta)}.`,
+    };
+    const detalle = `${rutaRelativa(c.ruta)}${c.crea && paginaDeRuta(c.ruta) ? " (página nueva)" : ""}`;
+    const o = await aplicarPlan(session, deps, row.data, v, plan, "bash", detalle);
+    if (o.response.ok === false) {
+      deshacer(c.ruta, `${String(o.response.error ?? "it was rejected").replace(/\.?$/, ".")}`);
+      continue;
+    }
+    escrituras.push(o);
+    if (o.updatedHtml !== undefined) {
+      enLaTerminal[c.ruta] = sinOpIds(o.updatedHtml);
+    } else {
+      const ahora = await virtualesDe(session, deps, (await deps.loadProject(session.projectId, session.userId))?.userBrief ?? null);
+      enLaTerminal[c.ruta] = ahora.almacenes.get(c.ruta)?.texto ?? ahora.memoria.get(c.ruta) ?? c.contenido;
+    }
+    notas.push(`${rutaRelativa(c.ruta)}: saved${c.crea && paginaDeRuta(c.ruta) ? " (new page)" : ""}.`);
+  }
+  return { notas, rechazado, enLaTerminal, escrituras };
 }
 
 function conDiagnosticos(ds: ToolOutcome["diagnosticos"]): Pick<ToolOutcome, "diagnosticos"> {
