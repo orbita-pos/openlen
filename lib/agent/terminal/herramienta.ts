@@ -19,6 +19,7 @@ import {
 } from "@/lib/agent/herramientas-de-ficheros";
 import { cambiosDeLaTerminal, salidaDeLaTerminal } from "./ficheros";
 import { NOMBRE_BASH, terminalEncendida } from "./declaracion";
+import { esFalloDeLaTerminal } from "./codigo-de-salida";
 import { TerminalDeLen } from "./terminal";
 import { soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
 
@@ -89,7 +90,9 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
 
   const escrituras = guardado?.escrituras ?? [];
   const paginas = escrituras.filter((o) => o.updatedHtml !== undefined);
-  const ok = salida.exitCode === 0;
+  // Un guardado rechazado es fallo siempre; el código del comando, según quién
+  // lo puso: un `grep` que no encuentra nada contesta, no falla (`codigo-de-salida.ts`).
+  const ok = !guardado?.rechazado && !esFalloDeLaTerminal(command, r.exitCode);
   const cambio = escrituras.length === 0 ? undefined : escrituras.some((o) => o.response.cambio === "cambio") ? "cambio" : "sin_cambio";
   const diagnosticos = escrituras.flatMap((o) => o.diagnosticos ?? []);
   const [primera, ...resto] = paginas;

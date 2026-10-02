@@ -813,6 +813,22 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
     }
   });
 
+  it("un grep que no encuentra nada contesta, no falla (la regla de Claude Code); detrás de && sí", async () => {
+    const { deps } = makeDeps({ html: HOME });
+    const session = makeSession();
+    try {
+      const nada = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "grep -c 'no está' /index.html" }));
+      assert.equal(nada.response.ok, true, texto(nada));
+      assert.equal(nada.action?.ok, true);
+      // Lo que lee el modelo no cambia: la línea de DeepSeek con su código.
+      assert.match(texto(nada), /^0\n\[Command finished with exit code 1\]$/);
+      const ambiguo = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "cd / && grep -c 'no está' /index.html" }));
+      assert.equal(ambiguo.response.ok, false);
+    } finally {
+      await cerrarTerminalDeLaSesion(session);
+    }
+  });
+
   it("data-slot-path se rechaza también desde la terminal, y la página no cambia", async () => {
     const { deps, store } = makeDeps({ html: HOME });
     const session = makeSession();
