@@ -155,3 +155,46 @@ describe("turnoAnteriorMudoDe — con el historial del navegador y con el de la 
     expect(turnoAnteriorMudoDe([])).toBe(false);
   });
 });
+
+// A (plan 2026-10-01-len-foto-en-la-conversacion): la foto que mandó el dueño
+// sigue en la conversación, pegada a SU mensaje de ese turno y con una nota de
+// dónde vive — como una imagen pegada en Claude Code. Antes el historial se
+// rehacía sin ella y Len decía «la nueva no me llegó».
+describe("la foto sigue en la conversación (como Claude Code)", () => {
+  const FOTO = { mimeType: "image/jpeg", dataBase64: "AAAA" };
+  const conFoto = (url: string, alt?: string): FilaDelHistorial => ({
+    ...fila("¿dónde la pondrías?", [{ role: "assistant", content: "1. En la portada" }]),
+    attachedImage: alt ? { url, alt } : { url },
+  });
+
+  it("tu mensaje de ese turno lleva la nota con la dirección y los píxeles", () => {
+    const h = historialDesdeLaBase([conFoto("https://u/f.jpg")], undefined, new Map([["https://u/f.jpg", FOTO]]));
+    expect(h[0]).toEqual({ role: "user", content: "¿dónde la pondrías?\n\n[Foto adjunta: https://u/f.jpg]", images: [FOTO] });
+    expect(h[1]).toEqual({ role: "assistant", content: "1. En la portada" });
+  });
+
+  it("con texto alt, la nota lo lleva", () => {
+    const h = historialDesdeLaBase([conFoto("https://u/f.jpg", "mi tienda")], undefined, new Map([["https://u/f.jpg", FOTO]]));
+    expect(h[0]!.content).toBe("¿dónde la pondrías?\n\n[Foto adjunta: https://u/f.jpg — «mi tienda»]");
+  });
+
+  it("si no se pudo descargar, la nota lo dice y la dirección se queda", () => {
+    const h = historialDesdeLaBase([conFoto("https://u/f.jpg")], undefined, new Map([["https://u/f.jpg", null]]));
+    expect(h[0]).toEqual({ role: "user", content: "¿dónde la pondrías?\n\n[Foto adjunta: https://u/f.jpg (no se pudo cargar para verla)]" });
+  });
+
+  it("un turno sin foto queda exactamente igual que antes", () => {
+    expect(historialDesdeLaBase([fila("hola", null, "¡Hola!")], undefined, new Map())).toEqual([
+      { role: "user", content: "hola" },
+      { role: "assistant", content: "¡Hola!" },
+    ]);
+  });
+
+  it("🔴 los píxeles nunca se guardan: la transcripción del turno sólo lleva texto", () => {
+    const t = transcripcionParaGuardar(
+      [{ role: "user", content: "mira", images: [FOTO] }, { role: "assistant", content: "la vi" }],
+      new Map(),
+    );
+    expect(JSON.stringify(t)).not.toContain("AAAA");
+  });
+});

@@ -26,7 +26,7 @@
  */
 import { createHash } from "node:crypto";
 
-import type { Message } from "@/lib/ai-gateway";
+import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
 
@@ -83,6 +83,8 @@ export interface FilaDelHistorial {
   readonly userText: string;
   readonly assistantReasoning: string;
   readonly transcript: TranscripcionGuardada | null;
+  /** La foto que el dueño adjuntó a ese turno (columna `attachedImage`). */
+  readonly attachedImage?: { readonly url: string; readonly alt?: string } | null;
 }
 
 const huella = (texto: string) => createHash("sha1").update(normalizarFinales(texto)).digest("hex");
@@ -151,15 +153,43 @@ export function transcripcionParaGuardar(mensajes: readonly Message[], leidos: L
   return { mensajes: limpios, leidos: lecturas };
 }
 
+/** Las fotos conseguidas al empezar el turno, por dirección: sus píxeles, o
+ *  `null` si no se pudieron descargar. */
+export type FotosDeLaConversacion = ReadonlyMap<string, InlineImage | null>;
+
+/** La nota que va con la foto en tu mensaje: dónde vive, para que Len la pueda
+ *  poner con su dirección exacta en cualquier turno. Es lo que hace Claude Code
+ *  al pegar una imagen (anota dónde la guardó), con palabras nuestras. */
+export function notaDeLaFoto(foto: { url: string; alt?: string }, vista: boolean): string {
+  const alt = foto.alt ? ` — «${foto.alt}»` : "";
+  return `[Foto adjunta: ${foto.url}${alt}${vista ? "" : " (no se pudo cargar para verla)"}]`;
+}
+
+/** Tu mensaje de un turno pasado: el texto y, si mandaste foto, su nota y sus
+ *  píxeles. Sin foto, el mensaje de siempre, byte a byte. */
+function mensajeDelDueno(f: FilaDelHistorial, fotos: FotosDeLaConversacion): MensajeDelHistorial {
+  if (!f.attachedImage) return { role: "user", content: f.userText };
+  const pixeles = fotos.get(f.attachedImage.url) ?? null;
+  return {
+    role: "user",
+    content: `${f.userText}\n\n${notaDeLaFoto(f.attachedImage, pixeles !== null)}`,
+    ...(pixeles ? { images: [pixeles] } : {}),
+  };
+}
+
 /** El historial de la conversación desde las filas (de la más vieja a la más
- *  reciente), con el microcompact aplicado. */
+ *  reciente), con el microcompact aplicado. La foto de cada turno va pegada a
+ *  tu mensaje, como una imagen pegada en Claude Code: sigue en la conversación
+ *  mientras ese turno esté en lo que Len ve. Los píxeles los consigue la ruta
+ *  (`fotos`); aquí no se descarga nada. */
 export function historialDesdeLaBase(
   filas: readonly FilaDelHistorial[],
   presupuesto: number = PRESUPUESTO_DE_RESULTADOS,
+  fotos: FotosDeLaConversacion = new Map(),
 ): MensajeDelHistorial[] {
   const mensajes: MensajeDelHistorial[] = [];
   for (const f of filas) {
-    mensajes.push({ role: "user", content: f.userText });
+    mensajes.push(mensajeDelDueno(f, fotos));
     if (f.transcript?.mensajes.length) {
       // Del bucle sólo salen mensajes de usuario y de asistente; uno de sistema
       // no tiene sitio en un historial y no se reenvía.

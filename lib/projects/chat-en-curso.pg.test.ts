@@ -136,4 +136,13 @@ describe("la fila del turno en curso, contra Postgres", () => {
     expect(leida?.assistantReasoning).toBe("Hecho.");
     expect(leida?.enCurso).toBeUndefined();
   });
+
+  it("A · el historial del modelo trae la foto de cada turno", async () => {
+    await abrirFilaDelTurno(PROYECTO, { id: "fila-foto", userText: "¿dónde la pondrías?", page: null, attachedImage: { url: "https://u/f.jpg" } });
+    await registrarTurnoDelServidor(PROYECTO, { ...final("fila-foto", "1. En la portada"), userText: "¿dónde la pondrías?" });
+    const historial = await turnosParaElHistorial(PROYECTO, 10);
+    expect(historial.find((f) => f.userText === "¿dónde la pondrías?")?.attachedImage).toEqual({ url: "https://u/f.jpg" });
+    // Y un turno sin foto la trae vacía, no inventada.
+    expect(historial.find((f) => f.assistantReasoning === "Hecho.")?.attachedImage).toBeNull();
+  });
 });

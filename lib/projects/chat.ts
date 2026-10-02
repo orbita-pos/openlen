@@ -50,6 +50,8 @@ export async function turnosParaElHistorial(projectId: string, cuantos: number):
       userText: schema.projectChatMessages.userText,
       assistantReasoning: schema.projectChatMessages.assistantReasoning,
       transcript: schema.projectChatMessages.transcript,
+      // La foto del turno sigue en la conversación (`historialDesdeLaBase`).
+      attachedImage: schema.projectChatMessages.attachedImage,
     })
     .from(schema.projectChatMessages)
     // Un turno que sigue trabajando no es historia todavía: si otra pestaña
@@ -67,6 +69,7 @@ export async function turnosParaElHistorial(projectId: string, cuantos: number):
     userText: r.userText,
     assistantReasoning: r.assistantReasoning,
     transcript: r.transcript ?? null,
+    attachedImage: r.attachedImage ?? null,
   }));
 }
 
