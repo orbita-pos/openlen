@@ -108,7 +108,13 @@ export function messagesForFireworks(messages: readonly Message[]): FireworksStr
       return;
     }
     pending = [];
-    out.push({ role: message.role, content: message.content });
+    out.push({
+      role: message.role,
+      content: message.content,
+      // La foto del dueño va pegada a SU mensaje (como una imagen pegada en
+      // Claude Code) y el cable la pinta ahí.
+      ...(message.role === "user" && message.images?.length ? { images: message.images } : {}),
+    });
   });
 
   return out;

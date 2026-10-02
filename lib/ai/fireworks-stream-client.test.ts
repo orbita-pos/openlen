@@ -316,6 +316,27 @@ describe("varias imágenes en un turno", () => {
     const cuerpo = cuerpoDe(fetchImpl) as { messages: { role: string; content: unknown }[] };
     expect(cuerpo.messages.filter((m) => m.role === "user").pop()?.content).toBe("haz el hero azul");
   });
+
+  it("una imagen pegada a SU mensaje viaja en él, aunque no sea el último", async () => {
+    // La foto que el dueño mandó en un turno anterior sigue en la conversación,
+    // como una imagen pegada en Claude Code (plan de A, Task 1).
+    const { client: c, fetchImpl } = client(chunk({ content: "ok" }, "stop"));
+    await drain(c.stream({
+      ...REQUEST,
+      messages: [
+        { role: "system", content: "eres Len" },
+        { role: "user", content: "aquí tienes una foto", images: [IMG("foto")] },
+        { role: "assistant", content: "¿dónde la pongo?" },
+        { role: "user", content: "1" },
+      ],
+    }));
+    const cuerpo = cuerpoDe(fetchImpl) as { messages: { role: string; content: unknown }[] };
+    expect(cuerpo.messages[1]!.content).toEqual([
+      { type: "text", text: "aquí tienes una foto" },
+      { type: "image_url", image_url: { url: "data:image/jpeg;base64,foto" } },
+    ]);
+    expect(cuerpo.messages[3]!.content).toBe("1");
+  });
 });
 
 // ─── LA DEGRADACION SILENCIOSA ──────────────────────────────────────────────

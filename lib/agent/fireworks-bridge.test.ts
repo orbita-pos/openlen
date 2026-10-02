@@ -136,4 +136,14 @@ describe("puente del Agente al cable de Fireworks", () => {
       { role: "assistant", content: "hola" },
     ]);
   });
+
+  it("las imágenes de un mensaje de usuario viajan con él", () => {
+    const foto = { mimeType: "image/jpeg", dataBase64: "AAAA" };
+    const wire = messagesForFireworks([
+      { role: "user", content: "mira", images: [foto] },
+      { role: "assistant", content: "la vi" },
+    ]);
+    expect(wire[0]).toEqual({ role: "user", content: "mira", images: [foto] });
+    expect(wire[1]).toEqual({ role: "assistant", content: "la vi" });
+  });
 });

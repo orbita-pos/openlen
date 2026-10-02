@@ -54,6 +54,10 @@ export interface Message {
   functionCalls?: FunctionCall[];
   /** User turn: resultados de herramientas de vuelta al modelo. */
   functionResponses?: FunctionResponse[];
+  /** Las imágenes pegadas a ESTE mensaje (sólo de usuario) — la foto que el
+   *  dueño adjuntó. Viajan con él en cada llamada, como una imagen pegada en
+   *  Claude Code. Nunca se guardan: la transcripción sólo guarda texto. */
+  images?: readonly InlineImage[];
 }
 
 /** A reference image attached to a request. Rendered as a native Gemini

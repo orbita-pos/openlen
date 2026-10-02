@@ -58,6 +58,8 @@ export interface FireworksStreamMessage {
   readonly toolCallId?: string;
   /** Turno del asistente: las llamadas que emitió, para poder repetirlo. */
   readonly toolCalls?: readonly FireworksStreamToolCall[];
+  /** Turno de usuario: las imágenes que van pegadas a ESTE mensaje. */
+  readonly images?: readonly InlineImage[];
 }
 
 export interface FireworksStreamRequest {
@@ -172,7 +174,8 @@ function withImages(message: Record<string, unknown>, images: readonly InlineIma
   return {
     ...message,
     content: [
-      { type: "text", text: String(message.content ?? "") },
+      // Un mensaje que ya lleva sus imágenes llega como lista: se le suman.
+      ...(Array.isArray(message.content) ? message.content : [{ type: "text", text: String(message.content ?? "") }]),
       ...(images.length === 1
         ? [bloque(images[0])]
         : images.flatMap((image, i) => [
@@ -185,7 +188,10 @@ function withImages(message: Record<string, unknown>, images: readonly InlineIma
 
 function wireMessage(message: FireworksStreamMessage): Record<string, unknown> {
   if (message.role === "tool") return { role: "tool", tool_call_id: message.toolCallId, content: message.content };
-  if (message.role !== "assistant") return { role: message.role, content: message.content };
+  if (message.role !== "assistant") {
+    const base = { role: message.role, content: message.content };
+    return message.role === "user" && message.images?.length ? withImages(base, message.images) : base;
+  }
   return {
     role: "assistant",
     content: message.content,
