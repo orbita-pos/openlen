@@ -110,7 +110,9 @@ async function main(): Promise<number> {
         if (conservar && r.sub) subs.push(r.sub);
         console.log(
           // El juez, dentro del total y dicho aparte (su `judge_cost_usd`).
-          `  ${e.id} #${i + 1}: score=${r.score.toFixed(2)} ${r.desenlace} turnos=${r.turnosDeLen} $${r.usd.toFixed(3)}${r.usdJuez ? ` (juez $${r.usdJuez.toFixed(3)})` : ""} ` +
+          // Pasos y `Edit` fallidos: lo que se espera que baje con la terminal (plans/len-agente-2026, F1).
+          `  ${e.id} #${i + 1}: score=${r.score.toFixed(2)} ${r.desenlace} turnos=${r.turnosDeLen} pasos=${r.pasos ?? "?"} edit✗=${r.editFallidos ?? "?"} ` +
+            `$${r.usd.toFixed(3)}${r.usdJuez ? ` (juez $${r.usdJuez.toFixed(3)})` : ""} ` +
             `${r.creditos.toFixed(2)} cr ${r.segundos.toFixed(0)} s${conservar && r.sub ? ` sub=${r.sub}` : ""}${r.error ? `\n      error: ${r.error}` : ""}`,
         );
       }

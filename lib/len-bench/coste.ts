@@ -51,16 +51,18 @@ export function usdDeGrabacion(g: TurnoGrabado): number {
   return usd;
 }
 
+/** Las grabaciones de los turnos de ESE proyecto. Las usan el coste y los pasos (`pasos.ts`). */
+export function grabacionesDeProyecto(dir: string, projectId: string): TurnoGrabado[] {
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith(".json") && f.includes(projectId))
+    .map((f) => JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")) as TurnoGrabado);
+}
+
 export function usdDeProyecto(dir: string, projectId: string): { usd: number; grabaciones: number } {
-  if (!fs.existsSync(dir)) return { usd: 0, grabaciones: 0 };
-  let usd = 0;
-  let grabaciones = 0;
-  for (const f of fs.readdirSync(dir)) {
-    if (!f.endsWith(".json") || !f.includes(projectId)) continue;
-    usd += usdDeGrabacion(JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")) as TurnoGrabado);
-    grabaciones++;
-  }
-  return { usd, grabaciones };
+  const gs = grabacionesDeProyecto(dir, projectId);
+  return { usd: gs.reduce((s, g) => s + usdDeGrabacion(g), 0), grabaciones: gs.length };
 }
 
 /**

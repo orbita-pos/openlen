@@ -175,6 +175,12 @@ export interface ResultadoDeCorrida {
   /** Lo que costó el juez, aparte (su `judge_cost_usd`). Ya va dentro de `usd`. */
   readonly usdJuez?: number;
   readonly segundos: number;
+  /** Llamadas al modelo de todo el encargo, el cierre por tope incluido (`pasos.ts`).
+   *  Ausente en las corridas de antes del 01/10/2026. */
+  readonly pasos?: number;
+  /** Los `Edit` que volvieron con `ok:false` («no leído», texto no encontrado…).
+   *  Ausente si la corrida no llegó a calificarse: sale de la traza. */
+  readonly editFallidos?: number;
   readonly sub: string;
   /** Lo que se dijeron el dueño simulado y Len. Es lo que se lee para saber
    *  POR QUÉ falló un caso (fase 2): sin ella, `resultados.json` sólo dice que

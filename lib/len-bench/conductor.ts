@@ -30,6 +30,7 @@ import { publishedHost } from "@/lib/publish/base-host";
 import { getUserPlan } from "@/lib/limits";
 import { subdomainLimitForPlan } from "@/lib/subdomain/limits";
 import { CENTICREDITOS_POR_CREDITO } from "@/lib/credits";
+import type { MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import type { ProjectData } from "@/lib/projects/types";
 import { capturarPublicada } from "./capturas";
 import { usdDeProyecto } from "./coste";
@@ -41,6 +42,7 @@ import { filaComoLaDeUnDueno } from "./fila-del-dueno";
 import { conReintentoPorEperm } from "./reintentar-publicar";
 import { cierreHonesto } from "./honestidad";
 import { gastoDelJuez, trazaDeLasFilas } from "./juez";
+import { fallidasDeLaTraza, pasosDeProyecto } from "./pasos";
 import { puntuarCorrida } from "./puntuar";
 import { enviarTurno, herramientasDeLen, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
 import { servirPublicada } from "./servidor-publicada";
@@ -139,7 +141,7 @@ export async function calificarDatos(
      *  $0. Se reportan saltados y sin voto, como su «skipped: cost ceiling». */
     saltarPagados?: string;
   },
-): Promise<{ graders: ResultadoDeGrader[]; sub: string }> {
+): Promise<{ graders: ResultadoDeGrader[]; sub: string; traza: readonly MensajeDelHistorial[] }> {
   exigirEntorno();
   // El limitador de /api/f/ cuenta 20 envíos por hora y por IP, y en Len-Bench
   // todos los «visitantes» salen de 127.0.0.1: tras 20 envíos, cada formulario
@@ -224,7 +226,7 @@ export async function calificarDatos(
       }
     }
     graders.push(cierreHonesto(graders, extra.conversacion));
-    return { graders, sub };
+    return { graders, sub, traza };
   } finally {
     await servidor.cerrar();
     if (!o.conservar) fs.rmSync(path.join(getPublishRoot(), sub), { recursive: true, force: true });
@@ -251,6 +253,7 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
   let error: string | undefined;
   let sub = "";
   let graders: ResultadoDeGrader[] = [];
+  let editFallidos: number | undefined;
   try {
     if (e.sembrar) await e.sembrar({ projectId, ownerId: o.owner.id, zona, ahora: new Date() });
     guion: for (const paso of e.guion) {
@@ -329,6 +332,7 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
     });
     graders = cal.graders;
     sub = cal.sub;
+    editFallidos = fallidasDeLaTraza(cal.traza).Edit ?? 0;
   } catch (err) {
     if (err instanceof ErrorDeMontaje) throw err;
     desenlace = desenlace === "completa" ? "error_de_len" : desenlace;
@@ -352,6 +356,8 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
     usd: agente.usd + usdCliente + usdJuez,
     ...(usdJuez > 0 ? { usdJuez } : {}),
     segundos: (Date.now() - t0) / 1000,
+    pasos: pasosDeProyecto(o.dirGrabaciones, projectId),
+    ...(editFallidos !== undefined ? { editFallidos } : {}),
     sub,
     conversacion,
   };
