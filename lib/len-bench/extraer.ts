@@ -206,9 +206,11 @@ export function numerosDe(texto: string): string[] {
 /**
  * Las cifras con las que una página AFIRMA algo del negocio: «desde 2019»,
  * «4.800 viajeros», «4,9 en 1.240 reseñas», «98 %». Es el fallo de producción
- * del 19–21/09 (la agencia de viajes). Fuera quedan los teléfonos, los precios
- * y las horas, que ya suspende `nada-inventado`, y los dígitos sueltos («Paso
- * 1», «3 tacos»), que no afirman nada del negocio y lo llenarían de ruido.
+ * del 19–21/09 (la agencia de viajes). Fuera quedan los teléfonos y los
+ * precios, que ya suspende `nada-inventado`; las horas, que no mira ninguno de
+ * los dos (un caso que pide un horario lleva el suyo: `horario-del-museo`), y
+ * los dígitos sueltos («Paso 1», «3 tacos»), que no afirman nada del negocio y
+ * lo llenarían de ruido.
  */
 export function cifrasDe(texto: string): string[] {
   const sinLoDeOtro = texto

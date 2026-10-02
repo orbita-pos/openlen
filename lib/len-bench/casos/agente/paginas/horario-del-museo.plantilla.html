@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" >
+<meta name="viewport" content="width=device-width,initial-scale=1" >
+<title>REMANSO — Hotel boutique frente al mar</title>
+<meta name="description" content="REMANSO es un hotel boutique frente al mar: quince habitaciones, calma absoluta y gastronomía de cercanía. Spa, terraza y mar abierto. Reserva tu estancia." >
+<meta property="og:title" content="REMANSO — Hotel boutique frente al mar" >
+<meta property="og:description" content="Quince habitaciones, calma absoluta y gastronomía de cercanía, con el mar a un paso. Reserva tu estancia." >
+<meta property="og:image" content="https://images.openlen.com/234-villa-with-pool-1920.webp" >
+<meta name="theme-color" content="#FAF5EC" >
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23223A3A'/%3E%3Ctext x='16' y='22' font-family='Georgia,serif' font-size='17' fill='%23C9A77B' text-anchor='middle'%3ER%3C/text%3E%3C/svg%3E" >
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAF5EC; --surface:#F1E9DA; --surface-2:#E8DECB;
+    --ink:#23302E; --ink-soft:#39443F; --muted:#69716A; --faint:#8C918A;
+    --line:rgba(35,48,46,0.12); --line-strong:rgba(35,48,46,0.22);
+    --accent:#3E7C76; --accent-deep:#2A5B56; --sand:#C9A77B; --on-accent:#FAF5EC;
+    --radius:6px; --radius-lg:18px;
+    --display:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+    --body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  h1,h2,h3,.serif{font-family:var(--display);font-weight:500;letter-spacing:-0.005em;line-height:1.04}
+  .eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  .lift{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s}
+  .lift:hover{transform:translateY(-4px)}
+  .img-cover{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(1.03) contrast(1.02);transition:transform .6s cubic-bezier(.2,.7,.2,1)}
+  .lift{box-shadow:inset 0 0 0 1px var(--line)}
+  .lift:hover .img-cover{transform:scale(1.04)}
+  .eyebrow-line::after{content:"";display:block;width:34px;height:2px;background:var(--sand);margin-top:10px;border-radius:2px}
+  @media(max-width:640px){#top .hero-media{aspect-ratio:4/3 !important;min-height:0 !important;height:auto !important}}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;height:50px;padding:0 26px;border-radius:999px;font-weight:600;font-size:14.5px;letter-spacing:.01em;transition:transform .25s,background .25s,color .25s;text-decoration:none}
+  .btn-primary{background:var(--accent);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line-strong);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg)}
+  .rule{height:1px;background:var(--line)}
+  /* Content is visible by default; only JS hides it to play the scroll-in
+     entrance. No JS / crawlers / static preview → always visible. */
+  .js .reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .js .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}.lift:hover{transform:none}}
+</style>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+
+  
+  <header class="sticky top-0 z-40" style="background:rgba(250,245,236,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)">
+    <div class="wrap flex items-center justify-between" style="height:72px">
+      <a href="#top" class="serif" style="font-size:24px;letter-spacing:.2em;font-weight:600">REMANSO</a>
+      <nav class="hidden md:flex items-center gap-9 text-[14px]" style="color:var(--ink-soft)">
+        <a href="#habitaciones" class="hover:opacity-60 transition">Habitaciones</a>
+        <a href="#spa" class="hover:opacity-60 transition">Spa &amp; mesa</a>
+        <a href="#lugar" class="hover:opacity-60 transition">El lugar</a>
+        <a href="#reservar" class="hover:opacity-60 transition">Reservar</a>
+      </nav>
+      <a href="#reservar" class="btn btn-primary" style="height:42px;padding:0 20px;font-size:13.5px">Reservar estancia</a>
+    </div>
+  </header>
+
+  
+  <section id="top" class="wrap" style="padding:88px 24px 32px">
+    <div class="grid lg:grid-cols-12 gap-8 items-stretch">
+      <div class="lg:col-span-6 reveal flex flex-col justify-center">
+        <span class="eyebrow eyebrow-line">Hotel boutique · frente al mar</span>
+        <h1 style="font-size:clamp(48px,8.4vw,98px);margin:14px 0 0">
+          El mar,<br><em style="font-style:italic;color:var(--accent)">la calma</em><br>y nada más.
+        </h1>
+        <p style="font-size:18px;color:var(--muted);max-width:36ch;margin:24px 0 30px">
+          Quince habitaciones frente al agua, gastronomía de cercanía y el silencio justo. Un remanso para desaparecer unos días.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#reservar" class="btn btn-primary">Reservar estancia</a>
+          <a href="#habitaciones" class="btn btn-ghost">Ver habitaciones</a>
+        </div>
+        <div class="flex items-center gap-6 mt-9 text-[13px]" style="color:var(--faint)">
+          <span>15 habitaciones</span><span style="width:1px;height:16px;background:var(--line-strong)"></span><span>Cala de Sant Vicent</span>
+        </div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <div class="lift hero-media overflow-hidden" style="border-radius:var(--radius-lg);height:100%;min-height:560px;box-shadow:0 30px 60px -30px rgba(35,48,46,.5),inset 0 0 0 1px var(--line)">
+          <img class="img-cover" src="https://images.openlen.com/234-villa-with-pool-1920.webp" alt="Editorial architecture photograph of a modern villa with glass walls and a turquoise pool" loading="eager" width="1080" height="1350">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  
+  <section class="wrap" style="padding:56px 24px">
+    <div class="rule"></div>
+    <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-5 py-7" style="color:var(--ink-soft);font-size:13.5px;text-transform:uppercase;letter-spacing:.12em">
+      <span class="inline-flex items-center gap-2.5"><span style="width:5px;height:5px;border-radius:999px;background:var(--sand);flex:none"></span>Piscina infinita</span>
+      <span class="inline-flex items-center gap-2.5"><span style="width:5px;height:5px;border-radius:999px;background:var(--sand);flex:none"></span>Spa &amp; sauna</span>
+      <span class="inline-flex items-center gap-2.5"><span style="width:5px;height:5px;border-radius:999px;background:var(--sand);flex:none"></span>Cocina de cercanía</span>
+      <span class="inline-flex items-center gap-2.5"><span style="width:5px;height:5px;border-radius:999px;background:var(--sand);flex:none"></span>Acceso directo a la cala</span>
+      <span class="inline-flex items-center gap-2.5"><span style="width:5px;height:5px;border-radius:999px;background:var(--sand);flex:none"></span>Solo adultos</span>
+    </div>
+    <div class="rule"></div>
+  </section>
+
+  
+  <section id="habitaciones" class="wrap" style="padding:72px 24px 24px">
+    <div class="flex items-end justify-between mb-10 reveal">
+      <div>
+        <span class="eyebrow">Las habitaciones</span>
+        <h2 style="font-size:clamp(34px,5vw,56px);margin-top:12px">Quince formas<br>de no hacer nada</h2>
+      </div>
+      <p class="hidden md:block text-[14px]" style="color:var(--muted);max-width:32ch">Cada habitación mira al mar o al jardín. Lino, madera clara y baños de piedra. Sin televisión, a propósito.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5"><img class="img-cover" src="https://images.openlen.com/203-hotel-room-1920.webp" alt="Editorial interior photograph of a calm boutique hotel room with a neatly made bed" loading="lazy" width="900" height="1125"></div>
+        <div class="flex items-baseline justify-between mt-6">
+          <h3 style="font-size:23px;letter-spacing:-0.01em">Habitación Cala</h3><span class="serif" style="color:var(--accent);font-size:19px">190€</span>
+        </div>
+        <p class="text-[14.5px] mt-1.5" style="color:var(--muted)">Vistas al mar abierto, cama de lino, ducha de lluvia y una terraza pequeña para el café de la mañana.</p>
+      </article>
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5"><img class="img-cover" src="https://images.openlen.com/187-hotel-lobby-1920.webp" alt="Editorial interior photograph of an elegant boutique hotel lobby with a velvet sofa and greenery" loading="lazy" width="900" height="1125"></div>
+        <div class="flex items-baseline justify-between mt-6">
+          <h3 style="font-size:23px;letter-spacing:-0.01em">Suite Jardín</h3><span class="serif" style="color:var(--accent);font-size:19px">260€</span>
+        </div>
+        <p class="text-[14.5px] mt-1.5" style="color:var(--muted)">Salón de estar con sofá de terciopelo, ventanales al jardín mediterráneo y bañera exenta de piedra.</p>
+      </article>
+      <article class="reveal">
+        <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:4/5"><img class="img-cover" src="https://images.openlen.com/205-rooftop-lounge-1920.webp" alt="Editorial interior photograph of a rooftop terrace lounge with outdoor sofas and string lights" loading="lazy" width="900" height="1125"></div>
+        <div class="flex items-baseline justify-between mt-6">
+          <h3 style="font-size:23px;letter-spacing:-0.01em">Ático Horizonte</h3><span class="serif" style="color:var(--accent);font-size:19px">340€</span>
+        </div>
+        <p class="text-[14.5px] mt-1.5" style="color:var(--muted)">La planta alta entera: terraza privada con tumbonas, atardeceres sobre el agua y cielo despejado de noche.</p>
+      </article>
+    </div>
+    <div class="text-center mt-12 reveal"><a href="#reservar" class="btn btn-ghost">Consultar disponibilidad</a></div>
+  </section>
+
+  
+  <section id="spa" style="background:var(--surface);margin-top:48px">
+    <div class="wrap" style="padding:80px 24px">
+      <div class="grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-5 reveal">
+          <span class="eyebrow">Experiencias &amp; spa</span>
+          <h2 style="font-size:clamp(30px,4.5vw,48px);margin:14px 0 0">El cuerpo,<br>también, descansa.</h2>
+          <p style="color:var(--ink-soft);font-size:17.5px;margin-top:20px;max-width:46ch">Sala de tratamientos con vistas, sauna finlandesa, baño de vapor y rituales con aceites de la zona. Reserva una sesión y deja que el día se ralentice solo.</p>
+          <div class="grid grid-cols-2 gap-6 mt-9" style="max-width:420px">
+            <div><div class="serif" style="font-size:34px;color:var(--accent)">06</div><div class="text-[13px]" style="color:var(--faint)">tratamientos de autor</div></div>
+            <div><div class="serif" style="font-size:34px;color:var(--accent)">07–22h</div><div class="text-[13px]" style="color:var(--faint)">spa abierto cada día</div></div>
+          </div>
+        </div>
+        <div class="lg:col-span-7 reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:16/10"><img class="img-cover" src="https://images.openlen.com/200-spa-interior-1920.webp" alt="Editorial interior photograph of a serene spa treatment room with a daybed and folded towels" loading="lazy" width="1280" height="880"></div>
+        </div>
+      </div>
+
+      <div class="rule" style="margin:64px 0"></div>
+
+      <div class="grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-6 order-2 lg:order-1 reveal">
+          <div class="lift overflow-hidden" style="border-radius:var(--radius-lg);aspect-ratio:3/2"><img class="img-cover" src="https://images.openlen.com/251-hotel-facade-1920.webp" alt="Editorial architecture photograph of a modern boutique hotel facade with a refined entrance" loading="lazy" width="1280" height="880"></div>
+        </div>
+        <div class="lg:col-span-6 order-1 lg:order-2 reveal">
+          <span class="eyebrow">Gastronomía</span>
+          <h2 style="font-size:clamp(30px,4.5vw,48px);margin:14px 0 0">De la lonja<br>a tu mesa.</h2>
+          <p style="color:var(--ink-soft);font-size:17.5px;margin-top:20px;max-width:46ch">Pescado de la subasta de la mañana, verdura de huertos vecinos y aceite de un solo molino. Una carta corta que cambia con lo que hay. Desayuno en la terraza, cena bajo las estrellas.</p>
+          <div class="flex flex-wrap gap-3 mt-8">
+            <a href="#reservar" class="btn btn-ghost">Reservar mesa de cena</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  
+  <section id="lugar" class="wrap" style="padding:80px 24px">
+    <div class="grid lg:grid-cols-12 gap-10 items-center">
+      <div class="lg:col-span-6 reveal">
+        <span class="eyebrow">El lugar</span>
+        <h2 style="font-size:clamp(30px,4.5vw,48px);margin:14px 0 0">Al final de un<br>camino de pinos.</h2>
+        <p style="color:var(--ink-soft);font-size:17.5px;margin-top:22px;max-width:50ch">REMANSO está en una cala recogida del norte de la isla, lejos del ruido y cerca del agua. Quince minutos de la última carretera, un sendero entre pinos y, de pronto, el mar abierto.</p>
+        <div class="grid sm:grid-cols-2 gap-6 mt-10">
+          <div>
+            <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:8px">Dónde</div>
+            <p class="text-[14.5px]" style="color:var(--ink-soft);line-height:1.8">Cala de Sant Vicent<br>07810 · Islas Baleares</p>
+          </div>
+          <div>
+            <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:8px">Cómo llegar</div>
+            <p class="text-[14.5px]" style="color:var(--ink-soft);line-height:1.8">45 min del aeropuerto<br>Traslado privado bajo reserva</p>
+          </div>
+        </div>
+      </div>
+      <div class="lg:col-span-6 reveal">
+        <div class="lift overflow-hidden relative" style="border-radius:var(--radius-lg);aspect-ratio:5/4">
+          <img class="img-cover" src="https://images.openlen.com/234-villa-with-pool-1920.webp" alt="Editorial architecture photograph of a modern villa with glass walls and a turquoise pool" loading="lazy" width="1080" height="1350" style="object-position:50% 78%">
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(35,48,46,0) 38%,rgba(35,48,46,.42) 100%)"></div>
+          <div class="serif" style="position:absolute;left:22px;bottom:18px;color:var(--bg);font-size:15px;letter-spacing:.04em;opacity:.92">Cala de Sant Vicent</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  
+  <section style="background:var(--surface)">
+    <div class="wrap" style="padding:80px 24px">
+      <div class="max-w-xl reveal">
+        <span class="eyebrow">Opiniones</span>
+        <h2 style="font-size:clamp(30px,4.5vw,46px);margin-top:12px">Lo que se llevan<br>quienes vuelven.</h2>
+      </div>
+      <div class="grid md:grid-cols-3 gap-6 mt-12">
+        <figure class="card reveal" style="padding:28px">
+          <div style="color:var(--sand);font-size:13px;letter-spacing:.32em">★★★★★</div>
+          <div style="height:1px;background:var(--line);margin:14px 0 16px"></div>
+          <blockquote class="serif" style="font-size:21px;line-height:1.35;color:var(--ink)">«Tres días sin mirar el teléfono. El silencio era casi un servicio más.»</blockquote>
+          <figcaption class="text-[13.5px] mt-5" style="color:var(--faint)">Marta &amp; Leo · luna de miel</figcaption>
+        </figure>
+        <figure class="card reveal" style="padding:28px">
+          <div style="color:var(--sand);font-size:13px;letter-spacing:.32em">★★★★★</div>
+          <div style="height:1px;background:var(--line);margin:14px 0 16px"></div>
+          <blockquote class="serif" style="font-size:21px;line-height:1.35;color:var(--ink)">«El desayuno frente al mar y la cena bajo las estrellas. No falta absolutamente nada.»</blockquote>
+          <figcaption class="text-[13.5px] mt-5" style="color:var(--faint)">Inés R. · cuarta visita</figcaption>
+        </figure>
+        <figure class="card reveal" style="padding:28px">
+          <div style="color:var(--sand);font-size:13px;letter-spacing:.32em">★★★★★</div>
+          <div style="height:1px;background:var(--line);margin:14px 0 16px"></div>
+          <blockquote class="serif" style="font-size:21px;line-height:1.35;color:var(--ink)">«Pequeño, cuidado y de verdad tranquilo. El spa al atardecer es otro mundo.»</blockquote>
+          <figcaption class="text-[13.5px] mt-5" style="color:var(--faint)">Daniel M. · escapada de pareja</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  
+  <section id="reservar" style="background:var(--ink);color:var(--bg)">
+    <div class="wrap" style="padding:84px 24px">
+      <div class="grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-6 reveal">
+          <span class="eyebrow" style="color:var(--sand)">Reservas</span>
+          <h2 class="serif" style="font-size:clamp(36px,5vw,58px);color:var(--bg);margin:14px 0 0;font-weight:500">Tu remanso<br>te espera.</h2>
+          <p style="color:rgba(250,245,236,.72);font-size:17.5px;margin-top:20px;max-width:42ch">Elige fechas y habitación. Te confirmamos al instante y preparamos tu llegada hasta el último detalle.</p>
+          <div class="flex flex-wrap gap-8 mt-9 text-[14px]" style="color:rgba(250,245,236,.8)">
+            <div><div style="color:var(--sand);font-weight:600;margin-bottom:2px">Recepción</div>09:00–21:00 cada día</div>
+            <div><div style="color:var(--sand);font-weight:600;margin-bottom:2px">Dónde</div>Cala de Sant Vicent</div>
+            <div><div style="color:var(--sand);font-weight:600;margin-bottom:2px">Reservas</div>hola@remanso.example</div>
+          </div>
+        </div>
+        <div class="lg:col-span-6 reveal">
+          <div style="background:var(--bg);color:var(--ink);border-radius:var(--radius-lg);padding:30px"><form>
+            <div class="serif" style="font-size:22px;margin-bottom:4px">Reservar estancia</div>
+            <p class="text-[13.5px]" style="color:var(--muted);margin-bottom:20px">Escríbenos y te respondemos con la disponibilidad.</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div><label class="text-[12px]" style="color:var(--faint)">Entrada</label><input type="text" name="entrada" placeholder="Vie · 12 jun" style="height:46px;border:1px solid var(--line-strong);border-radius:var(--radius);margin-top:6px;display:flex;align-items:center;padding:0 14px;color:var(--ink-soft);font-size:14px;width:100%;background:transparent;outline:none;font-family:inherit"></div>
+              <div><label class="text-[12px]" style="color:var(--faint)">Salida</label><input type="text" name="salida" placeholder="Dom · 14 jun" style="height:46px;border:1px solid var(--line-strong);border-radius:var(--radius);margin-top:6px;display:flex;align-items:center;padding:0 14px;color:var(--ink-soft);font-size:14px;width:100%;background:transparent;outline:none;font-family:inherit"></div>
+              <div><label class="text-[12px]" style="color:var(--faint)">Habitación</label><input type="text" name="habitacion" placeholder="Habitación Cala" style="height:46px;border:1px solid var(--line-strong);border-radius:var(--radius);margin-top:6px;display:flex;align-items:center;padding:0 14px;color:var(--ink-soft);font-size:14px;width:100%;background:transparent;outline:none;font-family:inherit"></div>
+              <div><label class="text-[12px]" style="color:var(--faint)">Huéspedes</label><input type="text" name="huespedes" placeholder="2 adultos" style="height:46px;border:1px solid var(--line-strong);border-radius:var(--radius);margin-top:6px;display:flex;align-items:center;padding:0 14px;color:var(--ink-soft);font-size:14px;width:100%;background:transparent;outline:none;font-family:inherit"></div>
+            </div>
+            <button type="submit" class="btn btn-primary w-full mt-4" style="justify-content:center;width:100%;border:0;cursor:pointer;font-family:inherit">Confirmar estancia</button>
+            <p class="text-[12px] text-center mt-3" style="color:var(--faint)">Confirmación instantánea · cancelación flexible</p>
+          </form></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  
+  <footer class="wrap" style="padding:56px 24px 40px">
+    <div class="grid md:grid-cols-4 gap-8">
+      <div class="md:col-span-2">
+        <div class="serif" style="font-size:26px;letter-spacing:.18em;font-weight:600">REMANSO</div>
+        <p class="text-[14px] mt-3" style="color:var(--muted);max-width:36ch">Hotel boutique frente al mar. Quince habitaciones, calma absoluta y gastronomía de cercanía.</p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Visítanos</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9">Cala de Sant Vicent<br>07810 · Islas Baleares<br>+34 600 000 000</p>
+      </div>
+      <div>
+        <div class="text-[12px] uppercase tracking-widest" style="color:var(--faint);margin-bottom:12px">Síguenos</div>
+        <p class="text-[14px]" style="color:var(--ink-soft);line-height:1.9"><a href="#" class="hover:opacity-60">Instagram</a><br><a href="#" class="hover:opacity-60">Estancias largas</a><br><a href="#" class="hover:opacity-60">Eventos privados</a></p>
+      </div>
+    </div>
+    <div class="rule" style="margin:36px 0 18px"></div>
+    <div class="flex flex-col sm:flex-row justify-between gap-3 text-[12.5px]" style="color:var(--faint)">
+      <span>© REMANSO · Hotel boutique frente al mar</span>
+      <span>Hecho con OpenLen</span>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var els=document.querySelectorAll('.reveal');
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){io.observe(el)});
+      // Safety net: reveal everything after a beat in case the observer never
+      // fires (no scroll, short viewport, gallery preview).
+      setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+    })();
+  </script>
+</body>
+</html>
