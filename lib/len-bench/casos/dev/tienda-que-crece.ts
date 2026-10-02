@@ -37,6 +37,15 @@ const FILA_SET = (p: string) => `bruñido interior</td>
             <td class="mono px-6 py-4 text-right font-medium tabular">${p}</td>`;
 const FIN = "        </tbody>";
 
+/** Las dos piezas nuevas, cada una con su precio y lo que queda, EN CUALQUIER
+ *  ORDEN. Exigía el plato antes que la taza (`[\s\S]*`), y el dueño no pidió
+ *  orden: el 2026-10-02 (H15, brazo F2) Len puso cada pieza junto a las de su
+ *  tipo —la taza tras la de diario, el plato tras el taquero—, con los datos
+ *  bien (comprobado en la captura), y suspendió. El texto visible llega en una
+ *  línea (`contieneTexto`), así que `.` alcanza toda la página. */
+export const EXISTENCIAS_NUEVAS =
+  /^(?=.*Plato extendido.{0,80}\$\s?360.{0,10}\b6\b)(?=.*Taza espresso.{0,80}\$\s?190.{0,10}\b10\b)/i;
+
 export function crear(dirPaginas: string): Encargo {
   const inicio = fs.readFileSync(path.join(dirPaginas, "tienda-que-crece.inicio.html"), "utf8");
   const PLATO = fila("Plato extendido", "Ø 28 cm", "humo", "$360", "6");
@@ -81,7 +90,7 @@ export function crear(dirPaginas: string): Encargo {
     ],
     graders: [
       datosDeLaFicha(["pieza_1", "precio_1", "pieza_2", "precio_2", "set_mezcalero_ya_con_la_subida"]),
-      contieneTexto("existencias-nuevas", "/", /Plato extendido.{0,80}\$\s?360.{0,10}\b6\b[\s\S]*Taza espresso.{0,80}\$\s?190.{0,10}\b10\b/i),
+      contieneTexto("existencias-nuevas", "/", EXISTENCIAS_NUEVAS),
       contieneTexto("jarra-agotada", "/", /Jarra de mesa.{0,120}agotad/i),
       yaNoAparece("sin-precio-viejo", "$380"),
       // Tres vueltas sobre la jarra, el set y dos nuevas: las demás piezas,
