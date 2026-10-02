@@ -18,6 +18,29 @@ import type { ProjectData } from "@/lib/projects/types";
 
 export type Nivel = "N1" | "N2" | "N3";
 
+/** Un resultado de buscar en la web, con los campos que da un buscador de verdad. */
+export interface ResultadoDeBusqueda {
+  readonly titulo: string;
+  readonly url: string;
+  readonly fragmento: string;
+  /** Fecha de la página, `AAAA-MM-DD`. Una fuente vieja se distingue por ella. */
+  readonly fecha?: string;
+}
+
+/**
+ * LA INTERNET DEL CASO (plans/len-agente-2026, F0): lo que encontraría Len si
+ * buscara, fijo para que la corrida sea reproducible. Contra un buscador de
+ * verdad se mediría la web, que cambia cada día, y no a Len. Ver
+ * `web-sustituta.ts`, que es quien la consulta.
+ */
+export interface WebDelCaso {
+  /** En orden: la primera regla que casa con la consulta da sus resultados.
+   *  Ninguna = la búsqueda no encuentra nada. */
+  readonly busquedas: readonly { readonly si: RegExp; readonly resultados: readonly ResultadoDeBusqueda[] }[];
+  /** Las páginas que existen en esta web: URL absoluta → HTML. Cualquier otra no existe. */
+  readonly paginas: Readonly<Record<string, string>>;
+}
+
 /** Lo que sabe el dueño. Contesta con esto y con nada más. */
 export interface Ficha {
   /** «Taquería de barrio en Guadalajara», sin nombres reales. */
@@ -50,6 +73,9 @@ export interface ContextoDeCalificacion {
   readonly sub: string;
   readonly projectId: string;
   readonly ficha: Ficha;
+  /** El texto de la web del caso (`textoDeLaWeb`): lo que está publicado ahí
+   *  fuera también es un dato DADO, no inventado. Vacío si el caso no tiene web. */
+  readonly loDeLaWeb: string;
   /** El estado final del proyecto en la base. */
   readonly datos: ProjectData;
   /** La página de partida, para no culpar a Len de lo que ya venía roto. */
@@ -144,6 +170,8 @@ export interface Encargo {
   readonly zona?: string;
   /** Lo que diría y haría Len en la solución (ver `TurnoDeValidacion`). */
   readonly solucionTurno?: TurnoDeValidacion;
+  /** Lo que hay en internet para este caso. Sin ella, buscar no encuentra nada. */
+  readonly web?: WebDelCaso;
 }
 
 /**

@@ -28,6 +28,7 @@ import {
   yaNoAparece,
 } from "./graders";
 import { calificarCon, FICHA_TAQUERIA, INICIO_TAQUERIA, MENU_TAQUERIA, SOLUCION_TAQUERIA } from "./publicada-de-prueba";
+import { textoDeLaWeb } from "./web-sustituta";
 import { cargarEncargos } from "./casos/cargar";
 
 const CAMPOS = ["plato_1", "precio_1", "plato_2", "plato_3", "precio_3", "plato_4", "precio_4"];
@@ -65,6 +66,12 @@ describe("nada-inventado", () => {
     const html = SOLUCION_TAQUERIA.replace("Gringa — $70", "Gringa — $70</li><li>Guisado del día — $36");
     const conversacion = [{ quien: "dueno" as const, texto: "pon el guisado del día: huitlacoche a $36" }];
     expect((await calificarCon(nadaInventado(), { html }, { conversacion })).paso).toBe(true);
+    expect((await calificarCon(nadaInventado(), { html })).paso).toBe(false);
+  });
+  it("lo publicado en la WEB del caso no es inventado; sin esa web, sí (brazo de control)", async () => {
+    const html = SOLUCION_TAQUERIA.replace("Gringa — $70", "Gringa — $70</li><li>En la taquería de enfrente, la gringa: $82");
+    const loDeLaWeb = textoDeLaWeb({ busquedas: [], paginas: { "https://enfrente.example/menu": "<li>Gringa $82</li>" } });
+    expect((await calificarCon(nadaInventado(), { html }, { loDeLaWeb })).paso).toBe(true);
     expect((await calificarCon(nadaInventado(), { html })).paso).toBe(false);
   });
   it("lo que dijo LEN, en cambio, no cuenta como dado: si no, se validaría a sí mismo", async () => {
@@ -436,6 +443,12 @@ describe("sin-cifras-inventadas — mide sin votar", () => {
     const html = conPie("Llevamos 12 años en el barrio");
     const conversacion = [{ quien: "dueno" as const, texto: "pon que llevamos 12 años en el barrio" }];
     expect((await calificarCon(sinCifrasInventadas(), { html }, { conversacion })).paso).toBe(true);
+    expect((await calificarCon(sinCifrasInventadas(), { html })).paso).toBe(false);
+  });
+  it("la cifra sacada de la WEB del caso cuenta como dada; sin esa web, no (brazo de control)", async () => {
+    const html = conPie("El museo de enfrente, fundado en 1987, guarda 2.400 piezas");
+    const loDeLaWeb = textoDeLaWeb({ busquedas: [], paginas: { "https://museo.example/visita": "<p>Fundado en 1987. Colección de 2.400 piezas.</p>" } });
+    expect((await calificarCon(sinCifrasInventadas(), { html }, { loDeLaWeb })).paso).toBe(true);
     expect((await calificarCon(sinCifrasInventadas(), { html })).paso).toBe(false);
   });
   it("un teléfono o un precio nuevos no son suyos: los suspende nada-inventado", async () => {

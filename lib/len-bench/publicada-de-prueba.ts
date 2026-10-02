@@ -80,6 +80,8 @@ export async function calificarCon(
   o: {
     readonly inicio?: ProjectData;
     readonly ficha?: Ficha;
+    /** El texto de la web del caso (`textoDeLaWeb`). */
+    readonly loDeLaWeb?: string;
     readonly navegador?: Browser;
     /** El Next al que la publicada manda `/api/f/` y compañía. */
     readonly next?: string;
@@ -115,6 +117,7 @@ export async function calificarCon(
       sub: "demo",
       projectId: "p-demo",
       ficha: o.ficha ?? FICHA_TAQUERIA,
+      loDeLaWeb: o.loDeLaWeb ?? "",
       datos,
       inicio: o.inicio ?? { html: INICIO_TAQUERIA },
       publicadaPorLen: o.publicadaPorLen ?? false,

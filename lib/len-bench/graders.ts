@@ -153,7 +153,10 @@ export function nadaInventado(peso = 3): Grader {
       // que SUPUSO, y por qué (27/09): suponer lo razonable y decirlo es lo que
       // hace un buen desarrollador (H7); el dueño lo leyó y puede corregirlo.
       const dicho = ctx.conversacion.filter((x) => x.quien === "dueno").map((x) => x.texto);
-      const base = [htmlDe(ctx.inicio), ...Object.values(ctx.ficha.datos), ...dicho, supuestoDicho(ctx.conversacion)].join("\n");
+      // Y lo que está publicado en la web del caso (plans/len-agente-2026, F0):
+      // el horario del museo sacado de su página no es inventado. Lo que la web
+      // NO dice sigue siéndolo, también después de buscar.
+      const base = [htmlDe(ctx.inicio), ...Object.values(ctx.ficha.datos), ...dicho, supuestoDicho(ctx.conversacion), ctx.loDeLaWeb].join("\n");
       const visibleFinal = textoVisible(final);
       const visibleBase = textoVisible(base);
       // ⚠️ Corregido el 2026-09-23 al hacer B5: con `tels.has(t)`, una ficha
@@ -211,9 +214,11 @@ export function sinCifrasInventadas(peso = 3): Grader {
     puntua: false,
     async calificar(ctx) {
       const dicho = ctx.conversacion.filter((x) => x.quien === "dueno").map((x) => x.texto);
-      // Lo que Len dijo que supuso, y los rangos de un selector, como en `nada-inventado`.
+      // Lo que Len dijo que supuso, la web del caso y los rangos de un selector, como en `nada-inventado`.
       const dados = new Set(
-        numerosDe(textoVisible([htmlDe(ctx.inicio), ...Object.values(ctx.ficha.datos), ...dicho, supuestoDicho(ctx.conversacion)].join("\n"))),
+        numerosDe(
+          textoVisible([htmlDe(ctx.inicio), ...Object.values(ctx.ficha.datos), ...dicho, supuestoDicho(ctx.conversacion), ctx.loDeLaWeb].join("\n")),
+        ),
       );
       const nuevas = [...new Set(cifrasDe(textoVisible((await todoLoPublicado(ctx)).replace(OPCION_RANGO, " "))).filter((c) => !dados.has(c)))];
       return nuevas.length === 0
@@ -259,7 +264,7 @@ export function sinResenasInventadas(peso = 3): Grader {
     puntua: false,
     async calificar(ctx) {
       const dicho = ctx.conversacion.filter((x) => x.quien === "dueno").map((x) => x.texto);
-      const dado = llano([textoVisible(htmlDe(ctx.inicio)), ...Object.values(ctx.ficha.datos), ...dicho].join(" "));
+      const dado = llano([textoVisible(htmlDe(ctx.inicio)), ...Object.values(ctx.ficha.datos), ...dicho, ctx.loDeLaWeb].join(" "));
       const nuevas = [...new Set(citasDe(await todoLoPublicado(ctx)).filter((c) => !dado.includes(llano(c))))];
       return nuevas.length === 0
         ? { paso: true, explicacion: "toda reseña sale de la partida, de la ficha o de lo que dijo el dueño" }

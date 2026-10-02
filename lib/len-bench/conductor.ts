@@ -47,6 +47,7 @@ import { puntuarCorrida } from "./puntuar";
 import { enviarTurno, herramientasDeLen, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
 import { servirPublicada } from "./servidor-publicada";
 import type { Desenlace, Encargo, Intercambio, ResultadoDeCorrida, ResultadoDeGrader } from "./tipos";
+import { textoDeLaWeb } from "./web-sustituta";
 
 /** La zona del dueño si el caso no dice otra: la que manda el panel de un
  *  usuario en México (plans/len-resultados/diseno.md §7). */
@@ -174,6 +175,7 @@ export async function calificarDatos(
       sub,
       projectId,
       ficha: e.ficha,
+      loDeLaWeb: textoDeLaWeb(e.web),
       datos: final.data,
       inicio: e.inicio,
       publicadaPorLen,
