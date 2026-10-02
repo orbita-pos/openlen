@@ -68,7 +68,13 @@ describe("summaryLabel (F4-T8 i18n mapping)", () => {
 // nunca tuvo etiqueta, así que al usuario le salía `conectar_datos_vivos` en
 // crudo. Una lista a mano no avisa de lo que le falta — este guardia sí.
 describe("toda herramienta que deja tarjeta tiene NOMBRE", () => {
-  const declaradas = buildFunctionDeclarations().map((d) => String(d.name));
+  // CON Y SIN las palancas: `bash` sólo existe con OPENLEN_TERMINAL=1, y por mirar
+  // sólo el catálogo de siempre su tarjeta salió con el nombre crudo.
+  const declaradas = [
+    ...new Set(
+      [...buildFunctionDeclarations({}), ...buildFunctionDeclarations({ OPENLEN_TERMINAL: "1" })].map((d) => String(d.name)),
+    ),
+  ];
 
   it.each(declaradas)("%s está en KNOWN_TOOLS", (name) => {
     expect(KNOWN_TOOLS.has(name), `${name} enseñaría su nombre crudo`).toBe(true);

@@ -8,6 +8,7 @@
       "Write": "Seite wird geschrieben",
       "Grep": "Website wird durchsucht",
       "Glob": "Seiten werden aufgelistet",
+      "bash": "Terminal",
       "ToolSearch": "Werkzeug wird gesucht",
       "TodoWrite": "Arbeit wird geplant",
       "editar_pagina": "Seite wird bearbeitet",
@@ -93,7 +94,14 @@
       "no_credits": "Deine Credits sind aufgebraucht. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Sie erneuern sich alle 30 Tage — oder tippe oben auf dein Guthaben und wechsle zu Pro, um heute weiterzuarbeiten.",
       "no_credits_at": "Deine Credits sind aufgebraucht. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Sie kommen am {date} zurück — oder tippe oben auf dein Guthaben und wechsle zu Pro, um heute weiterzuarbeiten."
     },
-    "cortado": "⚠️ Dieser Zug brach vorzeitig ab ({reason}). Was bereits erledigt war, ist auf der Seite gespeichert."
+    "cortado": "⚠️ Dieser Zug brach vorzeitig ab ({reason}). Was bereits erledigt war, ist auf der Seite gespeichert.",
+    "terminal": {
+      "cargando": "Ausgabe wird geladen…",
+      "vacia": "(keine Ausgabe)",
+      "mas": "{count, plural, one {+# Zeile} other {+# Zeilen}}",
+      "todo": "Alles anzeigen",
+      "menos": "Weniger anzeigen"
+    }
   },
   "defaultProjectName": "Preisseite",
   "chatDraft": {

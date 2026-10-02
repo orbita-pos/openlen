@@ -8,6 +8,7 @@
       "Write": "正在写入页面",
       "Grep": "正在搜索你的网站",
       "Glob": "正在列出你的页面",
+      "bash": "终端",
       "ToolSearch": "正在查找工具",
       "TodoWrite": "正在规划工作",
       "editar_pagina": "正在编辑页面",
@@ -93,7 +94,14 @@
       "no_credits": "你的额度已用完。你的页面已保存，现在就可以发布。额度每 30 天恢复一次——或点击上方余额升级到 Pro，今天就能继续。",
       "no_credits_at": "你的额度已用完。你的页面已保存，现在就可以发布。额度将于 {date} 恢复——或点击上方余额升级到 Pro，今天就能继续。"
     },
-    "cortado": "⚠️ 这一轮还没做完就中断了（{reason}）。已经做的部分已保存到页面上。"
+    "cortado": "⚠️ 这一轮还没做完就中断了（{reason}）。已经做的部分已保存到页面上。",
+    "terminal": {
+      "cargando": "正在加载输出…",
+      "vacia": "(无输出)",
+      "mas": "{count, plural, other {+# 行}}",
+      "todo": "显示全部",
+      "menos": "收起"
+    }
   },
   "defaultProjectName": "价格页面",
   "chatDraft": {

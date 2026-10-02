@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, Check, Loader } from "./icons";
+import { AlertTriangle, Check, ChevronDown, ChevronRight, Loader } from "./icons";
+import { SalidaEnLaTarjeta, type DondeEstaLaSalida } from "./salida-en-la-tarjeta";
 
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 
@@ -101,6 +103,10 @@ export const KNOWN_TOOLS = new Set([
   "Write",
   "Grep",
   "Glob",
+  // F1 (plans/len-agente-2026): la terminal, detrás de OPENLEN_TERMINAL=1. Faltó
+  // aquí desde que existe y la tarjeta decía «bash» crudo: la guarda de la
+  // prueba sólo miraba el catálogo SIN la palanca.
+  "bash",
   // ⚠️ RETIRADAS DEL CATÁLOGO con Len 2.0 y que SIGUEN AQUÍ a propósito: las
   // conversaciones guardadas (`projectChatMessages.actions`) las nombran, y sin
   // su etiqueta el historial de un dueño enseñaría el nombre crudo. Son
@@ -269,13 +275,27 @@ export function coberturaTitle(
   return visto ? visto.trim() : undefined;
 }
 
-export function AgentActionCard({ action }: { action: AgentAction }) {
+export function AgentActionCard({
+  action,
+  terminal,
+}: {
+  action: AgentAction;
+  /** Sólo para las de `bash`: dónde está su salida, para desplegarla aquí. */
+  terminal?: DondeEstaLaSalida;
+}) {
   const t = useTranslations("wsPage");
+  const [abierta, setAbierta] = useState(false);
   const label = KNOWN_TOOLS.has(action.tool)
     ? t(`agent.tool.${action.tool}`)
     : action.tool;
   const summary = summaryLabel(action, t);
   const cobertura = coberturaTitle(action, t);
+  // LA DE LA TERMINAL SE DESPLIEGA (la #5 de plans/len-agente-2026/notas/
+  // fase-5-taller.md): plegada, el comando en una línea; abierta, el comando
+  // entero y lo que imprimió, como Claude Code y DeepSeek. Mientras corre no hay
+  // nada que desplegar: la salida llega al acabar.
+  const esTerminal = action.tool === "bash";
+  const desplegable = esTerminal && terminal !== undefined && action.status !== "running";
   // El motivo se trunca en la línea, así que el texto entero vive en el
   // `title`. Y ahí GANA a la cobertura: ésta describe un vistazo que salió
   // bien, y si la tarjeta es roja no hubo tal vistazo.
@@ -288,11 +308,8 @@ export function AgentActionCard({ action }: { action: AgentAction }) {
       ? action.motivo?.trim()
       : undefined;
   const titulo = motivo || cobertura;
-  return (
-    <div
-      className="flex items-center gap-2 rounded-lg border bd bg-app px-2.5 py-1.5 text-[11px]"
-      {...(titulo ? { title: titulo } : {})}
-    >
+  const fila = (
+    <>
       {action.status === "running" ? (
         <Loader size={13} className="shrink-0 animate-spin text-[var(--accent)]" />
       ) : action.status === "done" ? (
@@ -322,7 +339,7 @@ export function AgentActionCard({ action }: { action: AgentAction }) {
           SIEMPRE que se llamara a esa herramienta, y sólo en esos idiomas. */}
       <span className="font-medium fg shrink-0 max-w-full break-words">{label}</span>
       {summary ? (
-        <span className="fg-faint truncate min-w-0">{summary}</span>
+        <span className={`fg-faint truncate min-w-0${esTerminal ? " font-mono" : ""}`}>{summary}</span>
       ) : null}
       {action.status === "error" ? (
         <span className="fg-faint shrink-0">{t("agent.failed")}</span>
@@ -336,6 +353,32 @@ export function AgentActionCard({ action }: { action: AgentAction }) {
           {motivo}
         </span>
       ) : null}
+    </>
+  );
+  if (!desplegable) {
+    return (
+      <div
+        className="flex items-center gap-2 rounded-lg border bd bg-app px-2.5 py-1.5 text-[11px]"
+        {...(titulo ? { title: titulo } : {})}
+      >
+        {fila}
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-lg border bd bg-app text-[11px]" {...(titulo ? { title: titulo } : {})}>
+      <button
+        type="button"
+        aria-expanded={abierta}
+        onClick={() => setAbierta((x) => !x)}
+        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left hover:bg-hover rounded-lg"
+      >
+        {fila}
+        <span className="ml-auto shrink-0 fg-faint">{abierta ? <ChevronDown size={12} /> : <ChevronRight size={12} />}</span>
+      </button>
+      {abierta && (
+        <SalidaEnLaTarjeta donde={terminal} resumen={action.summary} fallo={action.status === "error"} />
+      )}
     </div>
   );
 }

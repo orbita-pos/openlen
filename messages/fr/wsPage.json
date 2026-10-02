@@ -8,6 +8,7 @@
       "Write": "Écriture de la page",
       "Grep": "Recherche dans votre site",
       "Glob": "Liste de vos pages",
+      "bash": "Terminal",
       "ToolSearch": "Recherche d’un outil",
       "TodoWrite": "Organisation du travail",
       "editar_pagina": "Modification de la page",
@@ -93,7 +94,14 @@
       "no_credits": "Vous n'avez plus de crédits. Votre page est enregistrée et vous pouvez la publier maintenant. Ils se renouvellent tous les 30 jours — ou touchez votre solde en haut et passez à Pro pour continuer aujourd'hui.",
       "no_credits_at": "Vous n'avez plus de crédits. Votre page est enregistrée et vous pouvez la publier maintenant. Ils reviennent le {date} — ou touchez votre solde en haut et passez à Pro pour continuer aujourd'hui."
     },
-    "cortado": "⚠️ Ce tour s’est interrompu avant la fin ({reason}). Ce qui était déjà fait est enregistré sur la page."
+    "cortado": "⚠️ Ce tour s’est interrompu avant la fin ({reason}). Ce qui était déjà fait est enregistré sur la page.",
+    "terminal": {
+      "cargando": "Chargement de la sortie…",
+      "vacia": "(aucune sortie)",
+      "mas": "{count, plural, one {+# ligne} other {+# lignes}}",
+      "todo": "Tout voir",
+      "menos": "Voir moins"
+    }
   },
   "defaultProjectName": "Page de tarifs",
   "chatDraft": {

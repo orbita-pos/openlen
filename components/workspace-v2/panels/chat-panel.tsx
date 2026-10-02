@@ -357,6 +357,11 @@ let agentKilledThisSession = false;
 // (`upsertAction`) and `send()`'s local accumulator, which needs the same
 // final list (independent of React's render/flush timing) to hand to
 // `persistTurn` once the turn settles.
+/** Cuántas tarjetas de la terminal van antes de la `i`-ésima: su posición entre ellas. */
+function indiceEntreLasDeLaTerminal(actions: readonly AgentAction[], i: number): number {
+  return actions.slice(0, i).filter((a) => a.tool === "bash").length;
+}
+
 function upsertActionInto(
   actions: AgentAction[] | undefined,
   action: AgentAction,
@@ -1432,6 +1437,7 @@ function AIDesignChat({
                     command,
                     salida,
                     exitCode: typeof exitCode === "number" ? exitCode : -1,
+                    turnId,
                   });
                 }
               } else if (evName === "cambios") {
@@ -2192,7 +2198,15 @@ function TurnView({
             {turn.actions && turn.actions.length > 0 && (
               <div className="space-y-1">
                 {turn.actions.map((a, i) => (
-                  <AgentActionCard key={`${a.tool}-${i}`} action={a} />
+                  <AgentActionCard
+                    key={`${a.tool}-${i}`}
+                    action={a}
+                    // La de la terminal sabe qué comando del turno es: con eso
+                    // encuentra su salida (`salida-de-la-tarjeta.ts`).
+                    {...(a.tool === "bash"
+                      ? { terminal: { projectId, turnId: turn.id, indice: indiceEntreLasDeLaTerminal(turn.actions!, i) } }
+                      : {})}
+                  />
                 ))}
               </div>
             )}

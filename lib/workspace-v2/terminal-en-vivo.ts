@@ -15,6 +15,8 @@ export interface ComandoEnVivo {
   readonly command: string;
   readonly salida: string;
   readonly exitCode: number;
+  /** El turno del Chat que lo corrió: con él, la tarjeta de `bash` encuentra su salida. */
+  readonly turnId?: string;
 }
 
 /** Tope por proyecto: la lente no es un registro infinito. */

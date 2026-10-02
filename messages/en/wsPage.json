@@ -8,6 +8,7 @@
       "Write": "Writing the page",
       "Grep": "Searching your site",
       "Glob": "Listing your pages",
+      "bash": "Terminal",
       "ToolSearch": "Looking up a tool",
       "TodoWrite": "Planning the work",
       "editar_pagina": "Editing the page",
@@ -93,7 +94,14 @@
       "no_credits": "You're out of credits. Your page is saved and you can publish it now. They renew every 30 days — or tap your balance above to go Pro and keep working today.",
       "no_credits_at": "You're out of credits. Your page is saved and you can publish it now. They come back on {date} — or tap your balance above to go Pro and keep working today."
     },
-    "cortado": "⚠️ This turn was cut short before finishing ({reason}). What was already done is saved on the page."
+    "cortado": "⚠️ This turn was cut short before finishing ({reason}). What was already done is saved on the page.",
+    "terminal": {
+      "cargando": "Loading the output…",
+      "vacia": "(no output)",
+      "mas": "{count, plural, one {+# line} other {+# lines}}",
+      "todo": "Show all",
+      "menos": "Show less"
+    }
   },
   "defaultProjectName": "Pricing Page",
   "chatDraft": {

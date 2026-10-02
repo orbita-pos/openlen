@@ -20,13 +20,9 @@ import {
 import { cambiosDeLaTerminal, salidaDeLaTerminal } from "./ficheros";
 import { NOMBRE_BASH, terminalEncendida } from "./declaracion";
 import { esFalloDeLaTerminal } from "./codigo-de-salida";
+import { resumenDelComando } from "./resumen-del-comando";
 import { TerminalDeLen } from "./terminal";
 import { soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
-
-function recorte(s: string): string {
-  const una = s.replace(/\s+/g, " ").trim();
-  return una.length > 60 ? `${una.slice(0, 60)}…` : una;
-}
 
 export async function toolBash(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   if (!terminalEncendida()) {
@@ -106,7 +102,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
       // (la guarda de `actuo` en loop.ts). A la tarjeta no va: no es un aviso.
       cambio: cambio ?? "sin_cambio",
     },
-    action: { tool: NOMBRE_BASH, ok, summary: recorte(command), ...(cambio ? { cambio } : {}) },
+    action: { tool: NOMBRE_BASH, ok, summary: resumenDelComando(command), ...(cambio ? { cambio } : {}) },
     terminal: { command, salida: texto, exitCode: salida.exitCode },
     ...(primera
       ? {

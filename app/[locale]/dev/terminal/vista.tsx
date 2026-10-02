@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
 import "../../new/tokens.css";
 import { PreviewArea, type Lente } from "@/components/workspace-v2/preview-area";
 import { FicherosDelTurnoEnVivo } from "@/components/workspace-v2/ficheros-del-turno";
+import { AgentActionCard, type AgentAction } from "@/components/workspace-v2/agent-action-card";
+import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
 
@@ -26,7 +28,7 @@ const HISTORIAL = {
         {
           command: "grep -rn 'Calle Marea 12' /",
           salida:
-            "/index.html:88:      <p class=\"text-sm\">Calle Marea 12, Sayulita</p>\n/menu/index.html:41:  <footer>Calle Marea 12</footer>\n/contacto/index.html:23:        <address>Calle Marea 12, Sayulita, Nay.</address>\n[Command finished with exit code 0]",
+            "/index.html:88:      <p class=\"text-sm\">Calle Marea 12, Sayulita</p>\n/index.html:131:      <a href=\"https://maps.google.com/?q=Calle+Marea+12\">Cómo llegar</a>\n/menu/index.html:41:  <footer>Calle Marea 12</footer>\n/contacto/index.html:23:        <address>Calle Marea 12, Sayulita, Nay.</address>\n/contacto/index.html:58:  <iframe title=\"Mapa: Calle Marea 12\" src=\"https://maps.google.com/maps?q=Calle+Marea+12&output=embed\"></iframe>\n/memoria/proyecto.md:3:- La escuela está en Calle Marea 12.\n[Command finished with exit code 0]",
           exitCode: 0,
         },
         {
@@ -55,6 +57,14 @@ const HISTORIAL = {
     },
   ],
 };
+
+// Las tarjetas que el Chat habría pintado para el turno «t1»: lo que guarda
+// la tarjeta de cada comando es su resumen (`herramienta.ts`).
+const TARJETAS: AgentAction[] = HISTORIAL.turnos[0]!.comandos.map((c) =>
+  c.exitCode === 0
+    ? { tool: "bash", status: "done", summary: resumenDelComando(c.command) }
+    : { tool: "bash", status: "error", summary: resumenDelComando(c.command), motivo: `exit code ${c.exitCode}` },
+);
 
 let preparado = false;
 function preparar() {
@@ -155,6 +165,17 @@ export function VistaDeLaTerminal({ oscuro, cambios }: { oscuro: boolean; cambio
       <div className="workspace-v2 flex h-full">
         {/* El pie de un turno del Chat, con su tarjeta: pulsar una fila abre la lente. */}
         <aside className="hidden w-80 shrink-0 flex-col justify-end gap-2 border-r bd bg-app p-3 md:flex">
+          {/* Las tarjetas de sus comandos: se despliegan con la salida, que
+              sale del historial falso de arriba (el turno «t1»). */}
+          <div className="space-y-1">
+            {TARJETAS.map((a, i) => (
+              <AgentActionCard
+                key={i}
+                action={a}
+                {...(a.tool === "bash" ? { terminal: { projectId: PROYECTO, turnId: "t1", indice: i } } : {})}
+              />
+            ))}
+          </div>
           <div className="inline-block max-w-full rounded-2xl border bd bg-elev px-3 py-2">
             <p className="text-[12.5px] fg leading-relaxed">Listo: cambié la dirección en las tres páginas, creé la página de clases y apunté la mudanza.</p>
             <FicherosDelTurnoEnVivo projectId={PROYECTO} turnId="t1" />

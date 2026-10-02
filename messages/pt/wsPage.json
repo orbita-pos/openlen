@@ -8,6 +8,7 @@
       "Write": "Escrevendo a página",
       "Grep": "Buscando no seu site",
       "Glob": "Listando suas páginas",
+      "bash": "Terminal",
       "ToolSearch": "Procurando uma ferramenta",
       "TodoWrite": "Organizando o trabalho",
       "editar_pagina": "Editando a página",
@@ -93,7 +94,14 @@
       "no_credits": "Você ficou sem créditos. A sua página está salva e você pode publicá-la agora. Eles renovam a cada 30 dias — ou toque no seu saldo acima e assine o Pro para continuar hoje.",
       "no_credits_at": "Você ficou sem créditos. A sua página está salva e você pode publicá-la agora. Eles voltam em {date} — ou toque no seu saldo acima e assine o Pro para continuar hoje."
     },
-    "cortado": "⚠️ Este turno foi interrompido antes de terminar ({reason}). O que já estava feito ficou guardado na página."
+    "cortado": "⚠️ Este turno foi interrompido antes de terminar ({reason}). O que já estava feito ficou guardado na página.",
+    "terminal": {
+      "cargando": "Carregando a saída…",
+      "vacia": "(sem saída)",
+      "mas": "{count, plural, one {+# linha} other {+# linhas}}",
+      "todo": "Ver tudo",
+      "menos": "Ver menos"
+    }
   },
   "defaultProjectName": "Página de Preços",
   "chatDraft": {

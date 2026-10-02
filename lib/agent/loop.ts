@@ -33,6 +33,7 @@ import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/li
 import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
 import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { terminalEncendida } from "@/lib/agent/terminal/declaracion";
+import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -623,6 +624,10 @@ function buildEvidenceInstruction(
  * y la tarjeta enseñaba el nombre crudo («Read»), que el historial le reenviaba
  * al modelo como resumen. Sin argumento principal, nada: la etiqueta ya dice qué
  * herramienta es.
+ *
+ * El `command` de `bash`, con el MISMO resumen que pone la herramienta al acabar
+ * (`resumenDelComando`): si no, la tarjeta iba vacía mientras corría y cambiaba
+ * de forma al terminar.
  */
 export function sobreQue(argsDeLaLlamada: Record<string, unknown>): string {
   const texto = (k: string) => {
@@ -630,7 +635,14 @@ export function sobreQue(argsDeLaLlamada: Record<string, unknown>): string {
     return typeof v === "string" && v.trim() !== "" ? v : null;
   };
   const rel = (v: string | null) => (v ? v.replace(/^\/+/, "") : null);
-  return texto("resumen") ?? rel(texto("file_path")) ?? texto("pattern") ?? rel(texto("path")) ?? "";
+  const comando = texto("command");
+  return (
+    texto("resumen") ??
+    rel(texto("file_path")) ??
+    texto("pattern") ??
+    rel(texto("path")) ??
+    (comando ? resumenDelComando(comando) : "")
+  );
 }
 
 /** Order-stable JSON of a tool call's args, so a repeat with the same values
