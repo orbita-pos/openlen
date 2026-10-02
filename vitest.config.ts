@@ -81,6 +81,8 @@ export default defineConfig({
       // que abre Chromium o habla con el servidor se prueba con
       // `bench:len:validar`, que es su prueba en rojo y en verde.
       "lib/len-bench/**/*.test.ts",
+      // La terminal de Len (plans/len-agente-2026, F1).
+      "lib/agent/terminal/**/*.test.ts",
       // `include` es una LISTA BLANCA: un .test.ts fuera de ella NO corre, y
       // pasa desapercibido porque `npm test` sale verde igual.
       "lib/page-data/**/*.test.ts",
