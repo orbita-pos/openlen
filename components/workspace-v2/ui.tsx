@@ -168,6 +168,9 @@ interface SegmentedProps<T extends string> {
   options: SegmentedOption<T>[];
   size?: "xs" | "sm" | "md";
   className?: string;
+  /** En pantallas estrechas, sólo el icono (la etiqueta sigue como nombre
+   *  accesible y como título). Para filas que con su texto no caben en un móvil. */
+  soloIconoEnMovil?: boolean;
 }
 
 export function Segmented<T extends string>({
@@ -176,6 +179,7 @@ export function Segmented<T extends string>({
   options,
   size = "md",
   className = "",
+  soloIconoEnMovil = false,
 }: SegmentedProps<T>) {
   // `xs` existe para la BARRA DE ESTADO, que mide 28px: un `sm` (28px de
   // botón + relleno + borde) no cabría dentro de su propia barra.
@@ -195,14 +199,15 @@ export function Segmented<T extends string>({
             key={o.value}
             type="button"
             onClick={() => onChange(o.value)}
-            aria-label={o.ariaLabel}
+            aria-label={o.ariaLabel ?? (soloIconoEnMovil && o.icon ? o.label : undefined)}
+            title={soloIconoEnMovil && o.icon ? o.label : undefined}
             aria-pressed={active}
             className={`inline-flex items-center gap-1.5 ${sizes[size]} ${size === "xs" ? "px-1.5" : "px-2.5"} rounded-md font-medium transition ${
               active ? "seg-active" : "fg-muted hover:fg"
             }`}
           >
             {o.icon && <o.icon size={ICONO_BARRA} />}
-            {o.label && <span>{o.label}</span>}
+            {o.label && <span className={soloIconoEnMovil && o.icon ? "hidden sm:inline" : undefined}>{o.label}</span>}
           </button>
         );
       })}

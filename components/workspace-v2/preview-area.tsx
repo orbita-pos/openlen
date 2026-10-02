@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
   ChevronDown,
@@ -21,9 +21,11 @@ import {
 } from "./icons";
 import { CodeView } from "./code-view";
 import { rutaDePagina } from "@/lib/agent/ficheros/sitio";
-import { Database, Maximize, Terminal as TerminalIcon } from "lucide-react";
+import { Database, FileDiff, Maximize, Terminal as TerminalIcon } from "lucide-react";
 import { DatosView } from "./datos-view";
 import { TerminalView } from "./terminal-view";
+import { CambiosView } from "./cambios-view";
+import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
 import { useTerminalDeLen } from "./use-terminal-de-len";
 import { IconBtn, Segmented } from "./ui";
 import { injectDropPlace } from "./use-drop-place";
@@ -199,8 +201,11 @@ function injectCanvasScrollbar(html: string): string {
 }
 
 /** Las formas de mirar el mismo proyecto. «terminal» (F6a): los comandos de
- *  Len, sólo cuando la terminal está encendida o el proyecto ya tiene alguno. */
-export type Lente = "pagina" | "codigo" | "datos" | "terminal";
+ *  Len, sólo cuando la terminal está encendida o el proyecto ya tiene alguno.
+ *  «cambios»: lo que cambió cada turno de esta sesión, fichero a fichero. */
+export type Lente = "pagina" | "codigo" | "datos" | "terminal" | "cambios";
+
+const SIN_TURNOS: readonly CambiosDeUnTurno[] = [];
 
 export function PreviewArea({
   lente,
@@ -276,6 +281,19 @@ export function PreviewArea({
   const terminal = useTerminalDeLen(hayDatos ? projectId : null);
   const hayTerminal =
     hayDatos && (terminal.encendida || terminal.turnos.length > 0 || terminal.enVivo.length > 0);
+  // LO QUE CAMBIÓ EN CADA TURNO (la forma de DeepSeek): sólo se ofrece cuando
+  // un turno de esta sesión cambió algún fichero. Lo trae el Chat.
+  const turnosConCambios = useSyncExternalStore(
+    cambiosEnVivo.subscribe,
+    () => (projectId ? cambiosEnVivo.turnos(projectId) : SIN_TURNOS),
+    () => SIN_TURNOS,
+  );
+  const peticionDeCambios = useSyncExternalStore(
+    cambiosEnVivo.subscribe,
+    () => (projectId ? cambiosEnVivo.peticion(projectId) : null),
+    () => null,
+  );
+  const hayCambios = hayDatos && turnosConCambios.length > 0;
   // Y SI LA LENTE ABIERTA DEJA DE EXISTIR, se vuelve a la página. Pasa de
   // verdad: con Código abierto se pincha una plantilla de la galería, llega un
   // `previewUrl` y el visor se quedaba enseñando el documento anterior — código
@@ -284,7 +302,25 @@ export function PreviewArea({
     if (lente === "codigo" && !hayCodigo) setLente("pagina");
     if (lente === "datos" && !hayDatos) setLente("pagina");
     if (lente === "terminal" && !hayTerminal && !terminal.cargando) setLente("pagina");
-  }, [lente, hayCodigo, hayDatos, hayTerminal, terminal.cargando]);
+    if (lente === "cambios" && !hayCambios) setLente("pagina");
+  }, [lente, hayCodigo, hayDatos, hayTerminal, terminal.cargando, hayCambios]);
+  // Una fila de la tarjeta del turno pide la lente «Cambios»: se abre. La
+  // propia lente sigue la petición hasta su fichero.
+  // Sólo una petición NUEVA: al volver a montarse, la de antes ya se atendió.
+  // Y vale mientras la lente siga abierta: abierta a mano después, enseña el
+  // último turno, no el de una tarjeta pulsada hace rato.
+  const nPeticion = peticionDeCambios?.n ?? 0;
+  const peticionAtendida = useRef(nPeticion);
+  const [peticionVigente, setPeticionVigente] = useState<typeof peticionDeCambios>(null);
+  useEffect(() => {
+    if (nPeticion <= peticionAtendida.current) return;
+    peticionAtendida.current = nPeticion;
+    setPeticionVigente(peticionDeCambios);
+    setLente("cambios");
+  }, [nPeticion, peticionDeCambios, setLente]);
+  useEffect(() => {
+    if (lente !== "cambios") setPeticionVigente(null);
+  }, [lente]);
   // Al abrirla se relee el historial: los turnos que acabaron mientras estaba
   // cerrada ya tienen su transcripción guardada.
   const recargarTerminal = terminal.recargar;
@@ -741,6 +777,8 @@ export function PreviewArea({
           {hayCodigo && (
             <Segmented<Lente>
               size="sm"
+              // Cinco lentes con su nombre no caben en un móvil: allí, el icono.
+              soloIconoEnMovil
               value={lente}
               onChange={setLente}
               options={[
@@ -751,6 +789,9 @@ export function PreviewArea({
                   : []),
                 ...(hayTerminal
                   ? [{ value: "terminal" as const, label: t("preview.lente.terminal"), icon: TerminalIcon }]
+                  : []),
+                ...(hayCambios
+                  ? [{ value: "cambios" as const, label: t("preview.lente.cambios"), icon: FileDiff }]
                   : []),
               ]}
             />
@@ -1014,6 +1055,10 @@ export function PreviewArea({
               codigo: (n: number) => t("preview.terminal.codigo", { n }),
             }}
           />
+        )}
+
+        {lente === "cambios" && hayCambios && (
+          <CambiosView turnos={turnosConCambios} peticion={peticionVigente} onClose={() => setLente("pagina")} />
         )}
 
         {lente === "codigo" && (

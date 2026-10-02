@@ -80,7 +80,8 @@
       "pagina": "Anteprima",
       "codigo": "Codice",
       "datos": "Dati",
-      "terminal": "Terminale"
+      "terminal": "Terminale",
+      "cambios": "Modifiche"
     },
     "toolbar": {
       "editPage": "Modifica pagina (⌘E)",
@@ -145,6 +146,26 @@
       "enVivo": "Questo turno",
       "sinSalida": "Nessun output salvato.",
       "codigo": "Terminato con codice {n}"
+    },
+    "cambios": {
+      "title": "Cosa è cambiato in questo turno",
+      "close": "Chiudi",
+      "files": "File",
+      "turno": "Turno",
+      "vacio": "Nessun turno di questa sessione ha ancora modificato file.",
+      "tarjeta": "{count, plural, one {# file modificato} other {# file modificati}}",
+      "abrir": "Vedi le modifiche di questo file",
+      "nuevo": "nuovo",
+      "borrado": "eliminato",
+      "grande": "Questo file è troppo grande per confrontarlo qui.",
+      "grandeCorto": "troppo grande",
+      "sinCambios": "{count, plural, one {# riga invariata} other {# righe invariate}}",
+      "unificada": "Unificata",
+      "ladoALado": "Affiancata",
+      "ajustar": "A capo automatico",
+      "verMas": "Mostra altri {count}",
+      "verMenos": "Mostra meno",
+      "recortado": "Vengono mostrate le prime {n} righe."
     },
     "vistaLimitada": "Anteprima limitata: moduli, dati salvati nel browser e nuove finestre qui non funzionano. Pubblicata, sì."
   },

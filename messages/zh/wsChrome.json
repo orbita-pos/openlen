@@ -80,7 +80,8 @@
       "pagina": "预览",
       "codigo": "代码",
       "datos": "数据",
-      "terminal": "终端"
+      "terminal": "终端",
+      "cambios": "更改"
     },
     "toolbar": {
       "editPage": "编辑页面（⌘E）",
@@ -145,6 +146,26 @@
       "enVivo": "本轮",
       "sinSalida": "没有保存的输出。",
       "codigo": "退出代码 {n}"
+    },
+    "cambios": {
+      "title": "本轮更改了什么",
+      "close": "关闭",
+      "files": "文件",
+      "turno": "轮次",
+      "vacio": "本次会话中还没有轮次更改过文件。",
+      "tarjeta": "{count, plural, other {已更改 # 个文件}}",
+      "abrir": "查看此文件的更改",
+      "nuevo": "新建",
+      "borrado": "已删除",
+      "grande": "此文件太大，无法在此比较。",
+      "grandeCorto": "过大",
+      "sinCambios": "{count, plural, other {# 行未更改}}",
+      "unificada": "统一",
+      "ladoALado": "并排",
+      "ajustar": "自动换行",
+      "verMas": "再显示 {count} 个",
+      "verMenos": "收起",
+      "recortado": "仅显示前 {n} 行。"
     },
     "vistaLimitada": "受限预览:此处表单、浏览器存储和新窗口无法使用。发布后即可正常使用。"
   },

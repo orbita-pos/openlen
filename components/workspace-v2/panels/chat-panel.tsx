@@ -61,6 +61,8 @@ import { trozosConFormato } from "@/lib/chat/formato-de-len";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
 import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
+import { cambiosEnVivo, esFicheroCambiado } from "@/lib/workspace-v2/cambios-en-vivo";
+import { FicherosDelTurnoEnVivo } from "../ficheros-del-turno";
 import { seccionesCambiadas, tipoDeOp, agruparCambios, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 
@@ -1432,6 +1434,13 @@ function AIDesignChat({
                     exitCode: typeof exitCode === "number" ? exitCode : -1,
                   });
                 }
+              } else if (evName === "cambios") {
+                // Lo que cambió en el turno, fichero a fichero (la forma de
+                // DeepSeek): para la tarjeta de su pie y la lente «Cambios».
+                // Vive lo que la pestaña; al recargar no hay tarjeta.
+                const ficheros = (payload as { ficheros?: unknown } | null)?.ficheros;
+                const validos = Array.isArray(ficheros) ? ficheros.filter(esFicheroCambiado) : [];
+                if (validos.length > 0) cambiosEnVivo.guardar(projectId, { turnId, pedido: prompt, ficheros: validos });
               } else if (evName === "html") {
                 const html = strField(payload, "html");
                 if (html) {
@@ -2201,6 +2210,7 @@ function TurnView({
                 onCancel={onCancel}
                 hasText={turn.assistantReasoning.length > 0}
               />
+              <FicherosDelTurnoEnVivo projectId={projectId} turnId={turn.id} />
             </div>
             {turn.confirm && (
               <AgentConfirmCard projectId={projectId} confirm={turn.confirm} onPublished={onPublished} />

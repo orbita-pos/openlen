@@ -672,6 +672,8 @@ describe("la vista «Datos» que el prompt nombra existe", () => {
       datos: "Datos",
       // F6a: la terminal de Len, sólo con la palanca o comandos guardados.
       terminal: "Terminal",
+      // Lo que cambió en cada turno de la sesión, fichero a fichero.
+      cambios: "Cambios",
     });
   });
 });

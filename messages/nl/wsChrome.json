@@ -88,7 +88,8 @@
       "pagina": "Voorbeeld",
       "codigo": "Code",
       "datos": "Gegevens",
-      "terminal": "Terminal"
+      "terminal": "Terminal",
+      "cambios": "Wijzigingen"
     },
     "toolbar": {
       "editPage": "Pagina bewerken (⌘E)",
@@ -153,6 +154,26 @@
       "enVivo": "Deze beurt",
       "sinSalida": "Geen opgeslagen uitvoer.",
       "codigo": "Gestopt met code {n}"
+    },
+    "cambios": {
+      "title": "Wat er in deze beurt veranderde",
+      "close": "Sluiten",
+      "files": "Bestanden",
+      "turno": "Beurt",
+      "vacio": "Geen enkele beurt in deze sessie heeft al bestanden gewijzigd.",
+      "tarjeta": "{count, plural, one {# bestand gewijzigd} other {# bestanden gewijzigd}}",
+      "abrir": "Bekijk de wijzigingen van dit bestand",
+      "nuevo": "nieuw",
+      "borrado": "verwijderd",
+      "grande": "Dit bestand is te groot om hier te vergelijken.",
+      "grandeCorto": "te groot",
+      "sinCambios": "{count, plural, one {# ongewijzigde regel} other {# ongewijzigde regels}}",
+      "unificada": "Samengevoegd",
+      "ladoALado": "Naast elkaar",
+      "ajustar": "Regels afbreken",
+      "verMas": "Nog {count} tonen",
+      "verMenos": "Minder tonen",
+      "recortado": "De eerste {n} regels worden getoond."
     },
     "vistaLimitada": "Beperkte weergave: formulieren, browseropslag en nieuwe vensters werken hier niet. Gepubliceerd wel."
   },

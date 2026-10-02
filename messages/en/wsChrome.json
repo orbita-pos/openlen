@@ -80,7 +80,8 @@
       "pagina": "Preview",
       "codigo": "Code",
       "datos": "Data",
-      "terminal": "Terminal"
+      "terminal": "Terminal",
+      "cambios": "Changes"
     },
     "toolbar": {
       "editPage": "Edit page (⌘E)",
@@ -145,6 +146,26 @@
       "enVivo": "This turn",
       "sinSalida": "No saved output.",
       "codigo": "Exited with code {n}"
+    },
+    "cambios": {
+      "title": "What changed in this turn",
+      "close": "Close",
+      "files": "Files",
+      "turno": "Turn",
+      "vacio": "No turn in this session has changed files yet.",
+      "tarjeta": "{count, plural, one {# file changed} other {# files changed}}",
+      "abrir": "View this file's changes",
+      "nuevo": "new",
+      "borrado": "deleted",
+      "grande": "This file is too large to compare here.",
+      "grandeCorto": "too large",
+      "sinCambios": "{count, plural, one {# unchanged line} other {# unchanged lines}}",
+      "unificada": "Unified",
+      "ladoALado": "Side by side",
+      "ajustar": "Wrap lines",
+      "verMas": "Show {count} more",
+      "verMenos": "Show less",
+      "recortado": "Showing the first {n} lines."
     },
     "vistaLimitada": "Limited view: forms, browser storage and new windows don't work here. They do once published."
   },

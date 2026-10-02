@@ -80,7 +80,8 @@
       "pagina": "プレビュー",
       "codigo": "コード",
       "datos": "データ",
-      "terminal": "ターミナル"
+      "terminal": "ターミナル",
+      "cambios": "変更"
     },
     "toolbar": {
       "editPage": "ページを編集（⌘E）",
@@ -145,6 +146,26 @@
       "enVivo": "このターン",
       "sinSalida": "保存された出力はありません。",
       "codigo": "終了コード {n}"
+    },
+    "cambios": {
+      "title": "このターンで変わったこと",
+      "close": "閉じる",
+      "files": "ファイル",
+      "turno": "ターン",
+      "vacio": "このセッションでファイルを変更したターンはまだありません。",
+      "tarjeta": "{count, plural, other {#個のファイルを変更}}",
+      "abrir": "このファイルの変更を見る",
+      "nuevo": "新規",
+      "borrado": "削除",
+      "grande": "このファイルは大きすぎるため、ここでは比較できません。",
+      "grandeCorto": "大きすぎ",
+      "sinCambios": "{count, plural, other {変更のない#行}}",
+      "unificada": "統合",
+      "ladoALado": "左右に並べる",
+      "ajustar": "折り返し",
+      "verMas": "さらに{count}件表示",
+      "verMenos": "表示を減らす",
+      "recortado": "最初の{n}行を表示しています。"
     },
     "vistaLimitada": "制限付きプレビュー:ここではフォーム、ブラウザのストレージ、新しいウィンドウは動作しません。公開後は動作します。"
   },

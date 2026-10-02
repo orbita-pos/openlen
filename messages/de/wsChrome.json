@@ -80,7 +80,8 @@
       "pagina": "Vorschau",
       "codigo": "Code",
       "datos": "Daten",
-      "terminal": "Terminal"
+      "terminal": "Terminal",
+      "cambios": "Änderungen"
     },
     "toolbar": {
       "editPage": "Seite bearbeiten (⌘E)",
@@ -145,6 +146,26 @@
       "enVivo": "Dieser Durchgang",
       "sinSalida": "Keine gespeicherte Ausgabe.",
       "codigo": "Beendet mit Code {n}"
+    },
+    "cambios": {
+      "title": "Was sich in dieser Runde geändert hat",
+      "close": "Schließen",
+      "files": "Dateien",
+      "turno": "Runde",
+      "vacio": "In dieser Sitzung hat noch keine Runde Dateien geändert.",
+      "tarjeta": "{count, plural, one {# Datei geändert} other {# Dateien geändert}}",
+      "abrir": "Änderungen dieser Datei ansehen",
+      "nuevo": "neu",
+      "borrado": "gelöscht",
+      "grande": "Diese Datei ist zu groß, um sie hier zu vergleichen.",
+      "grandeCorto": "zu groß",
+      "sinCambios": "{count, plural, one {# unveränderte Zeile} other {# unveränderte Zeilen}}",
+      "unificada": "Einheitlich",
+      "ladoALado": "Nebeneinander",
+      "ajustar": "Zeilen umbrechen",
+      "verMas": "{count} weitere anzeigen",
+      "verMenos": "Weniger anzeigen",
+      "recortado": "Die ersten {n} Zeilen werden angezeigt."
     },
     "vistaLimitada": "Eingeschränkte Ansicht: Formulare, Browser-Speicher und neue Fenster funktionieren hier nicht. Veröffentlicht schon."
   },

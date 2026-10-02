@@ -80,7 +80,8 @@
       "pagina": "Aperçu",
       "codigo": "Code",
       "datos": "Données",
-      "terminal": "Terminal"
+      "terminal": "Terminal",
+      "cambios": "Modifications"
     },
     "toolbar": {
       "editPage": "Modifier la page (⌘E)",
@@ -145,6 +146,26 @@
       "enVivo": "Ce tour",
       "sinSalida": "Aucune sortie enregistrée.",
       "codigo": "Terminé avec le code {n}"
+    },
+    "cambios": {
+      "title": "Ce qui a changé pendant ce tour",
+      "close": "Fermer",
+      "files": "Fichiers",
+      "turno": "Tour",
+      "vacio": "Aucun tour de cette session n'a encore modifié de fichiers.",
+      "tarjeta": "{count, plural, one {# fichier modifié} other {# fichiers modifiés}}",
+      "abrir": "Voir les modifications de ce fichier",
+      "nuevo": "nouveau",
+      "borrado": "supprimé",
+      "grande": "Ce fichier est trop volumineux pour être comparé ici.",
+      "grandeCorto": "trop volumineux",
+      "sinCambios": "{count, plural, one {# ligne inchangée} other {# lignes inchangées}}",
+      "unificada": "Unifiée",
+      "ladoALado": "Côte à côte",
+      "ajustar": "Retour à la ligne",
+      "verMas": "Voir {count} de plus",
+      "verMenos": "Voir moins",
+      "recortado": "Affichage des {n} premières lignes."
     },
     "vistaLimitada": "Aperçu limité : les formulaires, le stockage du navigateur et les nouvelles fenêtres ne fonctionnent pas ici. Une fois publiée, si."
   },

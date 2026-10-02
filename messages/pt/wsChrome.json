@@ -88,7 +88,8 @@
       "pagina": "Pré-visualização",
       "codigo": "Código",
       "datos": "Dados",
-      "terminal": "Terminal"
+      "terminal": "Terminal",
+      "cambios": "Mudanças"
     },
     "toolbar": {
       "editPage": "Editar página (⌘E)",
@@ -153,6 +154,26 @@
       "enVivo": "Este turno",
       "sinSalida": "Sem saída salva.",
       "codigo": "Terminou com o código {n}"
+    },
+    "cambios": {
+      "title": "O que mudou neste turno",
+      "close": "Fechar",
+      "files": "Arquivos",
+      "turno": "Turno",
+      "vacio": "Nenhum turno desta sessão alterou arquivos ainda.",
+      "tarjeta": "{count, plural, one {# arquivo alterado} other {# arquivos alterados}}",
+      "abrir": "Ver as mudanças deste arquivo",
+      "nuevo": "novo",
+      "borrado": "apagado",
+      "grande": "Este arquivo é grande demais para comparar aqui.",
+      "grandeCorto": "grande demais",
+      "sinCambios": "{count, plural, one {# linha sem mudanças} other {# linhas sem mudanças}}",
+      "unificada": "Unificada",
+      "ladoALado": "Lado a lado",
+      "ajustar": "Quebrar linhas",
+      "verMas": "Ver mais {count}",
+      "verMenos": "Ver menos",
+      "recortado": "Mostrando as primeiras {n} linhas."
     },
     "vistaLimitada": "Visualização limitada: formulários, dados salvos no navegador e novas janelas não funcionam aqui. Publicada, sim."
   },
