@@ -19,6 +19,7 @@ import { extname, resolve, sep } from "node:path";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
+import { NO_CABE } from "./transcripcion";
 
 /** El mismo tope que una foto bajada por internet. */
 const TOPE_BYTES = 4 * 1024 * 1024;
@@ -80,6 +81,48 @@ async function unaFoto(url: string, f: FuentesDeFotos): Promise<InlineImage | nu
   const valida = await validateUrl(url);
   if (!valida.ok) return null;
   return fetchImageAsInlineData(url, { redirect: "error", signal: f.signal });
+}
+
+/** Lo que cabe de imagen en UNA petición, en caracteres de base64 (lo que viaja):
+ *  20 MiB, el presupuesto por defecto del arnés de DeepSeek para imágenes en
+ *  línea (`DEFAULT_MAX_INLINE_REQUEST_IMAGE_BYTES`). Su otro tope, 600 imágenes,
+ *  aquí no se alcanza: Len ve 12 turnos. */
+export const PRESUPUESTO_FOTOS_BYTES = 20 * 1024 * 1024;
+
+/**
+ * LAS FOTOS QUE CABEN EN LA PETICIÓN, como DeepSeek (`requiredImageOffload` y su
+ * nota «durable image offload»): si las de la conversación no caben juntas, las
+ * MÁS VIEJAS pierden los píxeles —no el turno—. Se recorre de la más nueva a la
+ * más vieja; a partir de la primera que no cabe, ella y todas las anteriores van
+ * `NO_CABE` (lo que se quita es el principio de la conversación, nunca un hueco
+ * en medio). Su nota conserva la dirección (`notaDeLaFoto`).
+ *
+ * Lo que NO se copia: DeepSeek no devuelve nunca una imagen quitada, para no
+ * mover el principio de la conversación y conservar la caché. Aquí lo que Len ve
+ * ya se desliza solo (los últimos turnos) y Fireworks no cacheó la foto
+ * (medido el 2026-10-01), así que no hay caché que proteger.
+ *
+ * @param masNuevaPrimero direcciones de la más nueva a la más vieja (la del turno, primero).
+ */
+export function fotosQueCaben(
+  masNuevaPrimero: readonly string[],
+  fotos: ReadonlyMap<string, InlineImage | null>,
+  presupuesto: number = PRESUPUESTO_FOTOS_BYTES,
+): Map<string, InlineImage | null | typeof NO_CABE> {
+  const salida = new Map<string, InlineImage | null | typeof NO_CABE>(fotos);
+  let usado = 0;
+  let agotado = false;
+  for (const url of new Set(masNuevaPrimero)) {
+    const foto = fotos.get(url);
+    if (!foto) continue;
+    if (!agotado && usado + foto.dataBase64.length <= presupuesto) {
+      usado += foto.dataBase64.length;
+      continue;
+    }
+    agotado = true;
+    salida.set(url, NO_CABE);
+  }
+  return salida;
 }
 
 /** Dirección → píxeles (o `null`), en paralelo y una vez por dirección. */

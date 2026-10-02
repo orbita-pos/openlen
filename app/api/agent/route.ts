@@ -30,13 +30,14 @@ import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
+  NO_CABE,
   historialDesdeLaBase,
   leidosSembrados,
   transcripcionParaGuardar,
   type FilaDelHistorial,
   type MensajeDelHistorial,
 } from "@/lib/agent/transcripcion";
-import { conseguirFotos } from "@/lib/agent/fotos-de-la-conversacion";
+import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversacion";
 import { turnosParaElHistorial } from "@/lib/projects/chat";
 import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
@@ -465,14 +466,23 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // `signal` no es decorativo: esto corre ANTES de abrir el SSE, y una URL que
   // no responde dejaría el turno colgado. Una foto que no llega es `null`: la
   // nota lo dice y el turno sigue. Ver `lib/agent/fotos-de-la-conversacion.ts`.
-  const fotos = await conseguirFotos(
-    [attachedImage?.url, ...filasDelHistorial.map((f) => f.attachedImage?.url)].filter((u): u is string => !!u),
-    { origen: req.url, signal: req.signal },
+  // De la más nueva a la más vieja: la del turno primero. Si no caben juntas en
+  // la petición, las más viejas van sin píxeles y con su dirección, como DeepSeek
+  // (`fotosQueCaben`); el turno sigue.
+  const masNuevaPrimero = [attachedImage?.url, ...[...filasDelHistorial].reverse().map((f) => f.attachedImage?.url)].filter(
+    (u): u is string => !!u,
   );
-  const attachedInline: InlineImage | null = attachedImage ? (fotos.get(attachedImage.url) ?? null) : null;
+  const fotos = fotosQueCaben(masNuevaPrimero, await conseguirFotos(masNuevaPrimero, { origen: req.url, signal: req.signal }));
+  const pixelesDe = (url: string): InlineImage | null => {
+    const f = fotos.get(url);
+    return f && f !== NO_CABE ? f : null;
+  };
+  const attachedInline: InlineImage | null = attachedImage ? pixelesDe(attachedImage.url) : null;
   if (fotos.size > 0) {
-    const vistas = [...fotos.values()].filter(Boolean).length;
-    console.log(`[agent] fotos de la conversación — ${vistas} de ${fotos.size} cargadas`);
+    const valores = [...fotos.values()];
+    const vistas = valores.filter((f) => f && f !== NO_CABE).length;
+    const noCaben = valores.filter((f) => f === NO_CABE).length;
+    console.log(`[agent] fotos de la conversación — ${vistas} de ${fotos.size} a la vista${noCaben ? `, ${noCaben} sin píxeles por no caber` : ""}`);
   }
   const historialDeLaBase = filasDelHistorial.some((f) => f.transcript)
     ? historialDesdeLaBase(filasDelHistorial, undefined, fotos)

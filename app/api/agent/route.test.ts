@@ -108,7 +108,11 @@ vi.mock("@/lib/html-ops", () => ({
   tagWithOpIds: (html: string) => ({ taggedHtml: html, taggedCount: 1 }),
 }));
 vi.mock("@/lib/ai/inline-image", () => ({ fetchImageAsInlineData: vi.fn() }));
-vi.mock("@/lib/agent/fotos-de-la-conversacion", () => ({ conseguirFotos: mocks.conseguirFotos }));
+// Sólo se dobla la descarga: el presupuesto (`fotosQueCaben`) es puro y va el real.
+vi.mock("@/lib/agent/fotos-de-la-conversacion", async (real) => ({
+  ...(await real<typeof import("@/lib/agent/fotos-de-la-conversacion")>()),
+  conseguirFotos: mocks.conseguirFotos,
+}));
 vi.mock("@/lib/style-match/scrape/validate-url", () => ({
   validateUrl: vi.fn(),
 }));
@@ -1351,6 +1355,24 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     const args = mocks.runAgentLoop.mock.calls.at(-1)![0] as { messages: { images?: unknown[] }[] };
     expect(args.messages.at(-1)!.images).toEqual([FOTO]);
     expect((mocks.createAgentBrain.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0]).not.toHaveProperty("attachedImage");
+  });
+
+  it("A · fotos que no caben juntas (20 MiB, como DeepSeek): la más vieja va sin píxeles y el turno sigue", async () => {
+    // Dos fotos de 11 MiB de base64: juntas pasan del presupuesto.
+    const grande = (n: string) => ({ mimeType: "image/jpeg", dataBase64: n.repeat(11 * 1024 * 1024) });
+    mocks.turnosParaElHistorial.mockResolvedValue([
+      { ...TRANSCRITO, userText: "la vieja", attachedImage: { url: "https://u/vieja.jpg" } },
+      { ...TRANSCRITO, userText: "la nueva", attachedImage: { url: "https://u/nueva.jpg" } },
+    ]);
+    mocks.conseguirFotos.mockResolvedValueOnce(new Map([["https://u/vieja.jpg", grande("V")], ["https://u/nueva.jpg", grande("N")]]));
+    const eventos = await readEvents(await pedir());
+    expect(eventos.some((e) => e.event === "error")).toBe(false);
+    const mensajes = historialQueRecibio() as { content: string; images?: unknown[] }[];
+    const vieja = mensajes.find((m) => m.content.startsWith("la vieja"))!;
+    const nueva = mensajes.find((m) => m.content.startsWith("la nueva"))!;
+    expect(vieja.images).toBeUndefined();
+    expect(vieja.content).toContain("no cabía con las demás");
+    expect(nueva.images).toHaveLength(1);
   });
 
   it("A · una foto que no se consiguió no se pega: la nota lo dice", async () => {

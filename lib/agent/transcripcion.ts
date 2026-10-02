@@ -153,27 +153,41 @@ export function transcripcionParaGuardar(mensajes: readonly Message[], leidos: L
   return { mensajes: limpios, leidos: lecturas };
 }
 
-/** Las fotos conseguidas al empezar el turno, por dirección: sus píxeles, o
- *  `null` si no se pudieron descargar. */
-export type FotosDeLaConversacion = ReadonlyMap<string, InlineImage | null>;
+/** Una foto que se consiguió pero NO cabe en esta petición con las más nuevas
+ *  (`fotosQueCaben`): va sin píxeles, con su dirección. */
+export const NO_CABE = "no-cabe";
+
+/** Las fotos de la conversación, por dirección: sus píxeles; `null` si no se
+ *  pudieron descargar; `NO_CABE` si no caben con las más nuevas. */
+export type FotosDeLaConversacion = ReadonlyMap<string, InlineImage | null | typeof NO_CABE>;
 
 /** La nota que va con la foto en tu mensaje: dónde vive, para que Len la pueda
  *  poner con su dirección exacta en cualquier turno. Es lo que hace Claude Code
- *  al pegar una imagen (anota dónde la guardó), con palabras nuestras. */
-export function notaDeLaFoto(foto: { url: string; alt?: string }, vista: boolean): string {
+ *  al pegar una imagen (anota dónde la guardó), con palabras nuestras. Sin la
+ *  foto a la vista, la nota dice por qué —como el texto que deja DeepSeek
+ *  cuando quita una imagen para caber—, y la dirección se queda: Len la puede
+ *  seguir poniendo sin que se la vuelvan a mandar. */
+export function notaDeLaFoto(foto: { url: string; alt?: string }, estado: "vista" | "no-cargo" | typeof NO_CABE): string {
   const alt = foto.alt ? ` — «${foto.alt}»` : "";
-  return `[Foto adjunta: ${foto.url}${alt}${vista ? "" : " (no se pudo cargar para verla)"}]`;
+  const porque =
+    estado === "vista"
+      ? ""
+      : estado === NO_CABE
+        ? " (no está a la vista: no cabía con las demás; la dirección sirve igual)"
+        : " (no se pudo cargar para verla)";
+  return `[Foto adjunta: ${foto.url}${alt}${porque}]`;
 }
 
 /** Tu mensaje de un turno pasado: el texto y, si mandaste foto, su nota y sus
  *  píxeles. Sin foto, el mensaje de siempre, byte a byte. */
 function mensajeDelDueno(f: FilaDelHistorial, fotos: FotosDeLaConversacion): MensajeDelHistorial {
   if (!f.attachedImage) return { role: "user", content: f.userText };
-  const pixeles = fotos.get(f.attachedImage.url) ?? null;
+  const foto = fotos.get(f.attachedImage.url) ?? null;
+  const estado = foto === NO_CABE ? NO_CABE : foto ? "vista" : "no-cargo";
   return {
     role: "user",
-    content: `${f.userText}\n\n${notaDeLaFoto(f.attachedImage, pixeles !== null)}`,
-    ...(pixeles ? { images: [pixeles] } : {}),
+    content: `${f.userText}\n\n${notaDeLaFoto(f.attachedImage, estado)}`,
+    ...(foto && foto !== NO_CABE ? { images: [foto] } : {}),
   };
 }
 

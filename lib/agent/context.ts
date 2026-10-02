@@ -319,10 +319,11 @@ export function estimateContextTokens(userContent: string, systemPrompt: string)
   return Math.ceil((userContent.length + systemPrompt.length) / 3.5);
 }
 
-/** Lo que cuenta una foto de la conversación para el techo. Medido en Fireworks
- *  el 2026-10-01: ~945 tokens una foto de 1672×941 (las del teléfono que ve Len
- *  son de 800 px y cuestan menos). Redondeado hacia arriba. */
-export const TOKENS_POR_FOTO = 1_000;
+/** Lo que cuenta una foto de la conversación para el techo: el TOPE por imagen
+ *  de DeepSeek V4.1 (su calculadora publicada, en el arnés de DeepSeek:
+ *  `image-tokens.ts`, `MAX_IMAGE_TOKENS`). Cuadra con lo medido en Fireworks el
+ *  2026-10-01: 945 una foto de 1672×941; una de 800 px, ~280. */
+export const TOKENS_POR_FOTO = 1_024;
 
 export interface BuildAgentMessagesArgs {
   // ⚰️ Aquí iba `diferidas`: los nombres de las herramientas diferidas (H2),

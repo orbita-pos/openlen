@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Message } from "@/lib/ai-gateway";
 import {
+  NO_CABE,
   RESULTADO_VACIADO,
   historialDesdeLaBase,
   leidosSembrados,
@@ -181,6 +182,14 @@ describe("la foto sigue en la conversación (como Claude Code)", () => {
   it("si no se pudo descargar, la nota lo dice y la dirección se queda", () => {
     const h = historialDesdeLaBase([conFoto("https://u/f.jpg")], undefined, new Map([["https://u/f.jpg", null]]));
     expect(h[0]).toEqual({ role: "user", content: "¿dónde la pondrías?\n\n[Foto adjunta: https://u/f.jpg (no se pudo cargar para verla)]" });
+  });
+
+  it("si no cabía con las demás (presupuesto de imagen, como DeepSeek), va sin píxeles y la nota lo dice; la dirección se queda", () => {
+    const h = historialDesdeLaBase([conFoto("https://u/f.jpg")], undefined, new Map([["https://u/f.jpg", NO_CABE]]));
+    expect(h[0]).toEqual({
+      role: "user",
+      content: "¿dónde la pondrías?\n\n[Foto adjunta: https://u/f.jpg (no está a la vista: no cabía con las demás; la dirección sirve igual)]",
+    });
   });
 
   it("un turno sin foto queda exactamente igual que antes", () => {
