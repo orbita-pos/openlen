@@ -111,6 +111,17 @@ function preparar() {
   const original = window.fetch.bind(window);
   window.fetch = (entrada, init) => {
     const url = typeof entrada === "string" ? entrada : entrada instanceof URL ? entrada.href : entrada.url;
+    if (url.endsWith(`/api/projects/${PROYECTO}/terminal`) && init?.method === "POST") {
+      // Tu terminal (la #17), de mentira: aquí no hay servidor con sesión. La de
+      // verdad la prueban las de node:test en herramientas-de-ficheros.test.ts.
+      const { command } = JSON.parse(String(init.body)) as { command: string };
+      const salida = command.trim().startsWith("ls")
+        ? "AGENTS.md\nclases\ncontacto\ndatos\nindex.html\nresultados\n[Command finished with exit code 0]"
+        : `(ejemplo: aquí no corre «${command}»)\n[Command finished with exit code 0]`;
+      return new Promise((r) =>
+        setTimeout(() => r(new Response(JSON.stringify({ command, salida, exitCode: 0, cambio: false }), { headers: { "content-type": "application/json" } })), 500),
+      );
+    }
     if (url.endsWith(`/api/projects/${PROYECTO}/terminal`)) {
       return Promise.resolve(new Response(JSON.stringify(HISTORIAL), { headers: { "content-type": "application/json" } }));
     }

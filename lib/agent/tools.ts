@@ -530,6 +530,13 @@ export function realDeps(): AgentDeps {
 export interface AgentSession {
   projectId: string;
   userId: string;
+  /**
+   * QUIÉN ESCRIBE. Ausente = Len. `"usuario"` = la terminal del usuario (la #17
+   * de plans/len-agente-2026/notas/fase-5-taller.md): lo que guarda no puede
+   * meter código que el sitio no tenía (`javascript-del-usuario.ts`) y su versión
+   * se etiqueta como suya, no como «Before AI edit».
+   */
+  autor?: "usuario";
   // ⚰️ Aquí vivían `taggedHtml` (el documento activo con ids, contra el que se
   // aplicaban las ops) y `baseHtml` (contra qué comparar si otro escribió). Len
   // 2.0 edita ficheros (plans/len-2/ficheros-plan.md): cada herramienta lee la

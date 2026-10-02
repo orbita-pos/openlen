@@ -6,6 +6,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { TerminalView } from "./terminal-view";
 import type { TerminalDeLen } from "./use-terminal-de-len";
+import type { TerminalDelUsuario } from "./use-terminal-del-usuario";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 // jsdom no tiene scrollIntoView y la vista baja al último comando.
@@ -25,6 +26,11 @@ const labels = {
   copiado: "Copiado",
   ocultas: (n: number) => `··· ${n} líneas más`,
   plegar: "Plegar",
+  tuya: "Tu terminal",
+  escribe: "Escribe un comando y pulsa Intro",
+  nota: "Len no ve lo que escribes aquí; lo que cambies en los archivos, sí.",
+  corriendo: "Corriendo…",
+  noCorrio: (motivo: string) => `No se pudo ejecutar (${motivo}).`,
 };
 
 const base: TerminalDeLen = { encendida: true, turnos: [], enVivo: [], cargando: false, error: false, recargar: () => {} };
@@ -134,5 +140,100 @@ describe("TerminalView", () => {
   it("vacía: dice si la terminal está apagada o si Len aún no la usó", () => {
     expect(pintar(base).textContent).toContain(labels.vacio);
     expect(pintar({ ...base, encendida: false }).textContent).toContain(labels.apagada);
+  });
+});
+
+describe("TerminalView — tu terminal (la #17)", () => {
+  function conTuya(tuya: TerminalDelUsuario, onClose = () => {}) {
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const root = createRoot(el);
+    roots.push(root);
+    const render = (t: TerminalDelUsuario) =>
+      act(() => root.render(<TerminalView terminal={base} tuya={t} onClose={onClose} labels={labels} />));
+    render(tuya);
+    return { el, render };
+  }
+  const escribir = (input: HTMLInputElement, texto: string) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+    act(() => {
+      setter.call(input, texto);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  };
+  const tecla = (el: EventTarget, key: string, atendida = false) => {
+    const e = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+    if (atendida) e.preventDefault();
+    act(() => {
+      el.dispatchEvent(e);
+    });
+    return e;
+  };
+
+  it("sin ella, sólo lectura y sin línea para escribir", () => {
+    const el = pintar(base);
+    expect(el.textContent).toContain("Sólo lectura");
+    expect(el.querySelector("input")).toBeNull();
+  });
+
+  it("con ella: la línea, la nota de que Len no la ve, y Enter ejecuta", () => {
+    const ejecutar = vi.fn(async () => {});
+    const { el } = conTuya({ comandos: [], corriendo: false, ejecutar });
+    expect(el.textContent).not.toContain("Sólo lectura");
+    expect(el.textContent).toContain(labels.nota);
+    const input = el.querySelector("input")!;
+    escribir(input, "ls /");
+    act(() => {
+      el.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    expect(ejecutar).toHaveBeenCalledWith("ls /");
+    expect(input.value).toBe("");
+  });
+
+  it("tus comandos van en su propio bloque: corriendo, con su salida o con por qué no corrió", () => {
+    const { el } = conTuya({
+      corriendo: true,
+      ejecutar: async () => {},
+      comandos: [
+        { n: 1, command: "pwd", salida: "/\n[Command finished with exit code 0]", exitCode: 0 },
+        { n: 2, command: "cat /x", salida: null, exitCode: null, error: "apagada" },
+        { n: 3, command: "sleep 1", salida: null, exitCode: null },
+      ],
+    });
+    expect(el.textContent).toContain("Tu terminal");
+    expect(el.textContent).toContain("$ pwd");
+    expect(el.textContent).toContain("No se pudo ejecutar (apagada).");
+    expect(el.textContent).toContain("Corriendo…");
+  });
+
+  it("las flechas recorren lo que escribiste; Escape borra la línea y no cierra", () => {
+    const onClose = vi.fn();
+    const { el } = conTuya(
+      {
+        corriendo: false,
+        ejecutar: async () => {},
+        comandos: [
+          { n: 1, command: "ls /", salida: "", exitCode: 0 },
+          { n: 2, command: "pwd", salida: "/", exitCode: 0 },
+        ],
+      },
+      onClose,
+    );
+    const input = el.querySelector("input")!;
+    tecla(input, "ArrowUp");
+    expect(input.value).toBe("pwd");
+    tecla(input, "ArrowUp");
+    expect(input.value).toBe("ls /");
+    tecla(input, "ArrowDown");
+    expect(input.value).toBe("pwd");
+    expect(tecla(input, "Escape").defaultPrevented).toBe(true);
+    expect(input.value).toBe("");
+    expect(onClose).not.toHaveBeenCalled();
+    // Como en /new, donde React escucha en el propio `document`: la tecla llega
+    // al oyente de la lente aunque la línea la parara, y manda la marca.
+    tecla(document, "Escape", true);
+    expect(onClose).not.toHaveBeenCalled();
+    tecla(input, "Escape");
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

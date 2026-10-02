@@ -157,7 +157,12 @@
       "sinSalida": "Sin salida guardada.",
       "codigo": "Terminó con el código {n}",
       "ocultas": "{count, plural, one {··· # línea más} other {··· # líneas más}}",
-      "plegar": "Plegar"
+      "plegar": "Plegar",
+      "tuya": "Tu terminal",
+      "escribe": "Escribe un comando y pulsa Intro",
+      "nota": "Len no ve lo que escribes aquí; lo que cambies en los archivos, sí.",
+      "corriendo": "Corriendo…",
+      "noCorrio": "No se pudo ejecutar ({motivo})."
     },
     "cambios": {
       "title": "Lo que cambió en el turno",

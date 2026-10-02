@@ -165,7 +165,12 @@
       "sinSalida": "Sem saída salva.",
       "codigo": "Terminou com o código {n}",
       "ocultas": "{count, plural, one {··· mais # linha} other {··· mais # linhas}}",
-      "plegar": "Recolher"
+      "plegar": "Recolher",
+      "tuya": "Seu terminal",
+      "escribe": "Digite um comando e pressione Enter",
+      "nota": "O Len não vê o que você digita aqui; o que você muda nos arquivos, sim.",
+      "corriendo": "Executando…",
+      "noCorrio": "Não foi possível executar ({motivo})."
     },
     "cambios": {
       "title": "O que mudou neste turno",

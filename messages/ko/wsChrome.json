@@ -157,7 +157,12 @@
       "sinSalida": "저장된 출력이 없습니다.",
       "codigo": "종료 코드 {n}",
       "ocultas": "{count, plural, other {··· #줄 더 보기}}",
-      "plegar": "접기"
+      "plegar": "접기",
+      "tuya": "내 터미널",
+      "escribe": "명령을 입력하고 Enter를 누르세요",
+      "nota": "여기서 입력한 내용은 Len이 보지 못합니다. 파일에서 바꾼 내용은 봅니다.",
+      "corriendo": "실행 중…",
+      "noCorrio": "실행하지 못했습니다({motivo})."
     },
     "cambios": {
       "title": "이번 턴에서 바뀐 것",

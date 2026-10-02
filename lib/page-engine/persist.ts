@@ -47,6 +47,12 @@ export interface PersistPageInput {
    * trabajo normal. Ausente ⇒ «Before AI edit», como siempre.
    */
   readonly etiquetaPrevia?: string;
+  /**
+   * De dónde viene la versión posterior. Ausente ⇒ `chat` (la escribió Len).
+   * `manual`, para lo que escribió el usuario: su terminal (la #17 de
+   * plans/len-agente-2026/notas/fase-5-taller.md). Versiones lo pinta distinto.
+   */
+  readonly fuente?: "chat" | "manual";
   /** Qué hacer con el JavaScript del modelo en este guardado. Ausente =
    *  `preservar`, que es lo correcto por defecto: la inmensa mayoría de los
    *  turnos no tocan el comportamiento. */
@@ -437,7 +443,7 @@ export async function persistPage(
     projectId: input.projectId,
     html: input.html,
     label: input.label,
-    source: "chat",
+    source: input.fuente ?? "chat",
     page: input.page,
     ...(input.isBaseline !== undefined ? { isBaseline: input.isBaseline } : {}),
   });

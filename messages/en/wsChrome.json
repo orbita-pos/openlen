@@ -157,7 +157,12 @@
       "sinSalida": "No saved output.",
       "codigo": "Exited with code {n}",
       "ocultas": "{count, plural, one {··· # more line} other {··· # more lines}}",
-      "plegar": "Collapse"
+      "plegar": "Collapse",
+      "tuya": "Your terminal",
+      "escribe": "Type a command and press Enter",
+      "nota": "Len doesn't see what you type here; what you change in the files, it does.",
+      "corriendo": "Running…",
+      "noCorrio": "Couldn't run it ({motivo})."
     },
     "cambios": {
       "title": "What changed in this turn",

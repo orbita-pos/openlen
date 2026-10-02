@@ -157,7 +157,12 @@
       "sinSalida": "Nessun output salvato.",
       "codigo": "Terminato con codice {n}",
       "ocultas": "{count, plural, one {··· # altra riga} other {··· altre # righe}}",
-      "plegar": "Comprimi"
+      "plegar": "Comprimi",
+      "tuya": "Il tuo terminale",
+      "escribe": "Scrivi un comando e premi Invio",
+      "nota": "Len non vede ciò che scrivi qui; ciò che cambi nei file, sì.",
+      "corriendo": "In esecuzione…",
+      "noCorrio": "Impossibile eseguirlo ({motivo})."
     },
     "cambios": {
       "title": "Cosa è cambiato in questo turno",

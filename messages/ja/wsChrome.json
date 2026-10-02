@@ -157,7 +157,12 @@
       "sinSalida": "保存された出力はありません。",
       "codigo": "終了コード {n}",
       "ocultas": "{count, plural, other {··· あと # 行}}",
-      "plegar": "折りたたむ"
+      "plegar": "折りたたむ",
+      "tuya": "あなたのターミナル",
+      "escribe": "コマンドを入力して Enter",
+      "nota": "ここで入力した内容は Len には見えません。ファイルへの変更は見えます。",
+      "corriendo": "実行中…",
+      "noCorrio": "実行できませんでした（{motivo}）。"
     },
     "cambios": {
       "title": "このターンで変わったこと",

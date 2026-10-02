@@ -165,7 +165,12 @@
       "sinSalida": "Geen opgeslagen uitvoer.",
       "codigo": "Gestopt met code {n}",
       "ocultas": "{count, plural, one {··· nog # regel} other {··· nog # regels}}",
-      "plegar": "Inklappen"
+      "plegar": "Inklappen",
+      "tuya": "Jouw terminal",
+      "escribe": "Typ een commando en druk op Enter",
+      "nota": "Len ziet niet wat je hier typt; wat je in de bestanden verandert wel.",
+      "corriendo": "Bezig…",
+      "noCorrio": "Kon niet worden uitgevoerd ({motivo})."
     },
     "cambios": {
       "title": "Wat er in deze beurt veranderde",

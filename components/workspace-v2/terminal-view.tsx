@@ -8,22 +8,28 @@
 // que hizo; quien no programa no tiene por qué abrirla. Es la misma razón que el
 // visor de código: una caja negra es una razón para no usarte.
 //
-// SÓLO LECTURA a propósito. Que el usuario escriba comandos es F6b, y es una
-// decisión de Jesús (D1), no de esta vista.
+// LA TERMINAL DEL USUARIO, abajo (la #17 de plans/len-agente-2026/notas/
+// fase-5-taller.md; Jesús: «las decisiones, como DeepSeek»). Como allí, una
+// terminal TUYA aparte de la de Len: sus comandos no van a la conversación ni
+// los ve el modelo; lo que cambien en los ficheros, sí. Sin `tuya` —la terminal
+// apagada en el servidor— la lente sigue siendo de sólo lectura.
 //
 // Todo va como TEXTO dentro de <pre>: ni el comando ni su salida se interpretan
 // nunca (la salida puede traer HTML de la página o filas de visitantes).
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 
 import { cabezaYCola, plegarSalida } from "@/lib/workspace-v2/salida-de-la-tarjeta";
 import { copiar } from "./copiar";
-import { Check, Copy, X } from "./icons";
+import { Check, Copy, Loader, X } from "./icons";
 import { IconBtn } from "./ui";
 import type { TerminalDeLen } from "./use-terminal-de-len";
+import type { TerminalDelUsuario } from "./use-terminal-del-usuario";
 
 interface TerminalViewProps {
   readonly terminal: TerminalDeLen;
+  /** La terminal del usuario; sin ella, la lente es de sólo lectura. */
+  readonly tuya?: TerminalDelUsuario;
   readonly onClose: () => void;
   readonly labels: {
     readonly title: string;
@@ -40,6 +46,12 @@ interface TerminalViewProps {
     /** «N líneas más», en medio de una salida plegada. */
     readonly ocultas: (n: number) => string;
     readonly plegar: string;
+    // La terminal del usuario (la #17).
+    readonly tuya: string;
+    readonly escribe: string;
+    readonly nota: string;
+    readonly corriendo: string;
+    readonly noCorrio: (motivo: string) => string;
   };
 }
 
@@ -47,11 +59,17 @@ function Comando({
   command,
   salida,
   exitCode,
+  corriendo = false,
+  error,
   labels,
 }: {
   command: string;
   salida: string | null;
   exitCode: number | null;
+  /** De la terminal del usuario: todavía no ha vuelto. */
+  corriendo?: boolean;
+  /** De la terminal del usuario: no llegó a correr. */
+  error?: string;
   labels: TerminalViewProps["labels"];
 }) {
   // La última línea ya dice el código de salida («[Command finished with exit
@@ -91,7 +109,14 @@ function Comando({
           </button>
         )}
       </div>
-      {salida === null ? (
+      {corriendo ? (
+        <p className="mt-1 flex items-center gap-1.5 text-[11px] fg-faint ui-small">
+          <Loader size={11} className="animate-spin" />
+          {labels.corriendo}
+        </p>
+      ) : error ? (
+        <p className="mt-1 text-[11px] text-accent ui-small">{labels.noCorrio(error)}</p>
+      ) : salida === null ? (
         <p className="mt-1 text-[11px] fg-faint ui-small">{labels.sinSalida}</p>
       ) : (
         lineas.length > 0 && (
@@ -124,31 +149,60 @@ function fecha(iso: string): string {
   return d.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
 }
 
-export function TerminalView({ terminal, onClose, labels }: TerminalViewProps) {
+export function TerminalView({ terminal, tuya, onClose, labels }: TerminalViewProps) {
   const { turnos, enVivo, encendida, cargando, error } = terminal;
   const finalRef = useRef<HTMLDivElement>(null);
+  const [linea, setLinea] = useState("");
+  // Las flechas recorren lo que ya escribiste, del último hacia atrás.
+  const [atras, setAtras] = useState(0);
 
+  // Un Escape que ya atendió la línea (`preventDefault`) no cierra: en /new
+  // React escucha en el propio `document`, así que su `stopPropagation` no
+  // frena a este oyente, que está en el mismo nodo.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !e.defaultPrevented) onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
   // Como una terminal: lo último, abajo y a la vista. Cada comando nuevo baja.
+  const tuyos = tuya?.comandos ?? [];
   const total = turnos.reduce((n, t) => n + t.comandos.length, 0) + enVivo.length;
+  const salidasTuyas = tuyos.filter((c) => c.salida !== null || c.error).length;
   useEffect(() => {
     finalRef.current?.scrollIntoView({ block: "end" });
-  }, [total]);
+  }, [total, tuyos.length, salidasTuyas]);
 
-  const vacia = total === 0;
+  const vacia = total === 0 && tuyos.length === 0;
+
+  const teclaEnLaLinea = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      const siguiente = Math.max(0, Math.min(tuyos.length, atras + (e.key === "ArrowUp" ? 1 : -1)));
+      setAtras(siguiente);
+      setLinea(siguiente === 0 ? "" : tuyos[tuyos.length - siguiente]!.command);
+    } else if (e.key === "Escape" && linea) {
+      // Escape borra la línea; sólo con la línea vacía cierra la lente.
+      e.preventDefault();
+      e.stopPropagation();
+      setLinea("");
+      setAtras(0);
+    }
+  };
+  const enviar = () => {
+    if (!tuya || tuya.corriendo || !linea.trim()) return;
+    void tuya.ejecutar(linea);
+    setLinea("");
+    setAtras(0);
+  };
 
   return (
     <div className="absolute inset-0 z-30 flex flex-col bg-app">
       <div className="flex items-center gap-2 border-b bd px-3 py-2">
         <span className="text-[12px] font-medium fg ui-small">{labels.title}</span>
-        <span className="text-[10.5px] fg-faint ui-small">{labels.soloLectura}</span>
+        {!tuya && <span className="text-[10.5px] fg-faint ui-small">{labels.soloLectura}</span>}
         <div className="ml-auto">
           <IconBtn label={labels.close} size="sm" onClick={onClose}>
             <X size={12} />
@@ -184,8 +238,55 @@ export function TerminalView({ terminal, onClose, labels }: TerminalViewProps) {
             ))}
           </section>
         )}
+        {tuyos.length > 0 && (
+          <section className="min-w-0">
+            <header className="sticky top-0 z-10 flex items-center gap-2 border-b bd bg-elev px-3 py-1.5">
+              <span className="text-[11px] font-medium fg-muted ui-small">{labels.tuya}</span>
+            </header>
+            {tuyos.map((c) => (
+              <Comando
+                key={c.n}
+                command={c.command}
+                salida={c.salida}
+                exitCode={c.exitCode}
+                corriendo={c.salida === null && !c.error}
+                {...(c.error ? { error: c.error } : {})}
+                labels={labels}
+              />
+            ))}
+          </section>
+        )}
         <div ref={finalRef} />
       </div>
+      {tuya && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            enviar();
+          }}
+          className="border-t bd px-3 py-2"
+        >
+          <label className="flex items-center gap-1.5 font-mono text-[11.5px]">
+            <span className="select-none text-accent">$</span>
+            <input
+              value={linea}
+              onChange={(e) => {
+                setLinea(e.target.value);
+                setAtras(0);
+              }}
+              onKeyDown={teclaEnLaLinea}
+              placeholder={labels.escribe}
+              aria-label={labels.escribe}
+              spellCheck={false}
+              autoComplete="off"
+              autoCapitalize="off"
+              className="min-w-0 flex-1 bg-transparent fg placeholder:fg-faint focus:outline-none"
+            />
+            {tuya.corriendo && <Loader size={11} className="shrink-0 animate-spin fg-faint" />}
+          </label>
+          <p className="mt-1 text-[10.5px] fg-faint ui-small">{labels.nota}</p>
+        </form>
+      )}
     </div>
   );
 }

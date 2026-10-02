@@ -14,6 +14,7 @@ import { preparePage } from "@/lib/page-engine/prepare";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
 import { guardarLoDeLaTerminal } from "./herramientas-de-ficheros";
 import { cerrarTerminalDeLaSesion } from "./terminal/herramienta";
+import { cerrarLasTerminalesDelUsuario, ejecutarEnLaTerminalDelUsuario } from "./terminal/terminal-del-usuario";
 
 const HOME = `<!doctype html>
 <html lang="es">
@@ -1091,5 +1092,84 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
     const { deps } = makeDeps({ html: HOME });
     const out = await runAgentTool(makeSession(), deps, "bash", { command: "ls /" });
     assert.equal(out.response.ok, false);
+  });
+});
+
+describe("la terminal DEL USUARIO (la #17 de plans/len-agente-2026/notas/fase-5-taller.md)", () => {
+  const conTerminal = async <T>(f: () => Promise<T>): Promise<T> => {
+    const antes = process.env.OPENLEN_TERMINAL;
+    process.env.OPENLEN_TERMINAL = "1";
+    try {
+      return await f();
+    } finally {
+      if (antes === undefined) delete process.env.OPENLEN_TERMINAL;
+      else process.env.OPENLEN_TERMINAL = antes;
+    }
+  };
+  const correr = (deps: AgentDeps, command: string, proyecto = "p-usuario") =>
+    conTerminal(() => ejecutarEnLaTerminalDelUsuario(proyecto, "u1", command, deps));
+  const CON_SCRIPT = HOME.replace("</body>", '<button onclick="abrir()">Reserva</button><script>function abrir(){}</script></body>');
+
+  it("un sed -i se guarda, con la versión a nombre de la terminal y no de Len", async () => {
+    const { deps, store } = makeDepsCompletos({ html: HOME });
+    try {
+      const r = await correr(deps, "sed -i 's/Tienda Brote/Tienda Brote Sayulita/' /index.html");
+      assert.equal(r.exitCode, 0, r.salida);
+      assert.equal(r.cambio, true);
+      assert.match(store.data.html, /Tienda Brote Sayulita/);
+      const [despues, antes] = store.snapshots;
+      assert.equal(despues?.label, "Terminal: index.html");
+      assert.equal(despues?.source, "manual");
+      assert.equal(antes?.label, "Before terminal edit");
+    } finally {
+      await cerrarLasTerminalesDelUsuario();
+    }
+  });
+
+  it("no mete código que el sitio no tenía, y la página se queda como estaba", async () => {
+    const { deps, store } = makeDepsCompletos({ html: CON_SCRIPT });
+    try {
+      for (const command of [
+        "sed -i 's#</body>#<script>alert(1)</script></body>#' /index.html",
+        "sed -i 's/abrir()\"/robar()\"/' /index.html",
+        "sed -i 's#<h1>#<h1 onmouseover=\"robar()\">#' /index.html",
+      ]) {
+        const r = await correr(deps, command);
+        assert.notEqual(r.exitCode, 0, command);
+        assert.equal(r.cambio, false, command);
+        assert.match(r.salida, /cannot add or change the page's JavaScript/, command);
+        assert.equal(store.data.html, CON_SCRIPT, command);
+      }
+    } finally {
+      await cerrarLasTerminalesDelUsuario();
+    }
+  });
+
+  it("copiar una página entera sí se guarda: su código ya estaba en el sitio", async () => {
+    const { deps, store } = makeDepsCompletos({ html: CON_SCRIPT });
+    try {
+      const r = await correr(deps, "mkdir -p /promo && cp /index.html /promo/index.html");
+      assert.equal(r.exitCode, 0, r.salida);
+      assert.match(store.data.pages?.promo?.html ?? "", /onclick="abrir\(\)"/);
+    } finally {
+      await cerrarLasTerminalesDelUsuario();
+    }
+  });
+
+  it("persiste entre comandos y se pone al día si otro cambió la página mientras tanto", async () => {
+    const { deps, store } = makeDepsCompletos({ html: HOME, pages: { menu: { html: MENU } } });
+    try {
+      await correr(deps, "cd /menu");
+      assert.match((await correr(deps, "pwd")).salida, /^\/menu\n/);
+      // Len (o el editor) cambia la home entre dos comandos del usuario.
+      store.data = { ...store.data, html: HOME.replace("Tienda Brote", "Tienda Brote de Len") };
+      assert.match((await correr(deps, "grep -c 'de Len' /index.html")).salida, /^1\n/);
+      // Y un sed -i sobre ella parte de lo de Len, no de su copia vieja.
+      await correr(deps, "sed -i 's/Gorra/Gorra azul/' /index.html");
+      assert.match(store.data.html, /Tienda Brote de Len/);
+      assert.match(store.data.html, /Gorra azul/);
+    } finally {
+      await cerrarLasTerminalesDelUsuario();
+    }
   });
 });

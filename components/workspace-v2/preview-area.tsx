@@ -28,6 +28,7 @@ import { CambiosView } from "./cambios-view";
 import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
 import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import { useTerminalDeLen } from "./use-terminal-de-len";
+import { useTerminalDelUsuario } from "./use-terminal-del-usuario";
 import { IconBtn, Segmented } from "./ui";
 import { injectDropPlace } from "./use-drop-place";
 import { injectPageLinks } from "./use-page-links";
@@ -280,6 +281,8 @@ export function PreviewArea({
   // LA TERMINAL DE LEN (F6a). Sólo se ofrece si existe algo que enseñar: la
   // palanca encendida en el servidor o comandos ya guardados en este proyecto.
   const terminal = useTerminalDeLen(hayDatos ? projectId : null);
+  // LA TUYA (la #17): sólo con la terminal encendida en el servidor.
+  const terminalTuya = useTerminalDelUsuario(hayDatos && terminal.encendida ? projectId : null);
   const hayTerminal =
     hayDatos && (terminal.encendida || terminal.turnos.length > 0 || terminal.enVivo.length > 0);
   // LO QUE CAMBIÓ EN CADA TURNO (la forma de DeepSeek): sólo se ofrece cuando
@@ -1062,8 +1065,14 @@ export function PreviewArea({
         {lente === "terminal" && hayTerminal && (
           <TerminalView
             terminal={terminal}
+            {...(terminal.encendida ? { tuya: terminalTuya } : {})}
             onClose={() => setLente("pagina")}
             labels={{
+              tuya: t("preview.terminal.tuya"),
+              escribe: t("preview.terminal.escribe"),
+              nota: t("preview.terminal.nota"),
+              corriendo: t("preview.terminal.corriendo"),
+              noCorrio: (motivo: string) => t("preview.terminal.noCorrio", { motivo }),
               title: t("preview.terminal.title"),
               close: t("preview.terminal.close"),
               soloLectura: t("preview.terminal.soloLectura"),

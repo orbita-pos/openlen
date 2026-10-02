@@ -48,6 +48,7 @@ import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO, alcanceDeRuta, lineasNuevas 
 import { MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
 import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/terminal/ajustes";
+import { activoDelSitio, codigoNuevo } from "@/lib/agent/terminal/javascript-del-usuario";
 import { buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { PREFERENCIA_MAX, PREFERENCIA_MIN, guardarPreferencia } from "@/lib/agent/preferencias";
 
@@ -476,6 +477,12 @@ export async function guardarLoDeLaTerminal(
   const enLaTerminal: Record<string, string | null> = {};
   const escrituras: ToolOutcome[] = [];
   let rechazado = false;
+  // LA TERMINAL DEL USUARIO no mete código que el sitio no tenía: lo activo de
+  // cada página que escribe tiene que estar ya en alguna página guardada.
+  const delSitio =
+    session.autor === "usuario"
+      ? activoDelSitio(Object.entries(antes).filter(([r]) => paginaDeRuta(r) !== null).map(([, html]) => html))
+      : null;
   const deshacer = (ruta: string, motivo: string) => {
     rechazado = true;
     const previo = Object.hasOwn(antes, ruta) ? antes[ruta]! : null;
@@ -502,6 +509,13 @@ export async function guardarLoDeLaTerminal(
       enLaTerminal[c.ruta] = g.texto;
       notas.push([`${rutaRelativa(c.ruta)}: saved.`, ...g.notas.map((n) => `  ${n}`)].join("\n"));
       continue;
+    }
+    if (delSitio && paginaDeRuta(c.ruta) !== null) {
+      const motivo = codigoNuevo(c.contenido, delSitio);
+      if (motivo) {
+        deshacer(c.ruta, motivo);
+        continue;
+      }
     }
     // El proyecto de AHORA en cada fichero: el anterior del mismo comando ya cambió el sitio.
     const row = await deps.loadProject(session.projectId, session.userId);
@@ -634,8 +648,18 @@ export async function guardarFichero(
     };
   }
 
+  // Lo que escribe la terminal del USUARIO lleva su nombre en Versiones: ni
+  // «Before AI edit» ni origen `chat`, que dirían que lo hizo Len.
+  const delUsuario = session.autor === "usuario";
   const guardado = await persistPage(
-    { projectId: session.projectId, userId: session.userId, page, html: preparado.html, label: opts.etiqueta },
+    {
+      projectId: session.projectId,
+      userId: session.userId,
+      page,
+      html: preparado.html,
+      label: delUsuario ? `Terminal: ${opts.etiqueta.replace(/^\S+\s/, "")}` : opts.etiqueta,
+      ...(delUsuario ? { etiquetaPrevia: "Before terminal edit", fuente: "manual" as const } : {}),
+    },
     deps,
   );
   if (!guardado.ok) return { ok: false, error: guardado.error };

@@ -157,7 +157,12 @@
       "sinSalida": "没有保存的输出。",
       "codigo": "退出代码 {n}",
       "ocultas": "{count, plural, other {··· 还有 # 行}}",
-      "plegar": "收起"
+      "plegar": "收起",
+      "tuya": "你的终端",
+      "escribe": "输入命令后按回车",
+      "nota": "Len 看不到你在这里输入的内容；但能看到你对文件的修改。",
+      "corriendo": "正在运行…",
+      "noCorrio": "无法运行（{motivo}）。"
     },
     "cambios": {
       "title": "本轮更改了什么",

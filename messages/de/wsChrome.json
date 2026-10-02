@@ -157,7 +157,12 @@
       "sinSalida": "Keine gespeicherte Ausgabe.",
       "codigo": "Beendet mit Code {n}",
       "ocultas": "{count, plural, one {··· # weitere Zeile} other {··· # weitere Zeilen}}",
-      "plegar": "Einklappen"
+      "plegar": "Einklappen",
+      "tuya": "Dein Terminal",
+      "escribe": "Befehl eingeben und Enter drücken",
+      "nota": "Len sieht nicht, was du hier eingibst – was du an den Dateien änderst, schon.",
+      "corriendo": "Läuft…",
+      "noCorrio": "Konnte nicht ausgeführt werden ({motivo})."
     },
     "cambios": {
       "title": "Was sich in dieser Runde geändert hat",
