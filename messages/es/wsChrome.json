@@ -79,7 +79,8 @@
     "lente": {
       "pagina": "Vista previa",
       "codigo": "Código",
-      "datos": "Datos"
+      "datos": "Datos",
+      "terminal": "Terminal"
     },
     "toolbar": {
       "editPage": "Editar página (⌘E)",
@@ -129,6 +130,17 @@
       "copied": "Copiado",
       "document": "Documento HTML",
       "lines": "líneas"
+    },
+    "terminal": {
+      "title": "La terminal de Len",
+      "close": "Cerrar",
+      "soloLectura": "Sólo lectura",
+      "vacio": "Len todavía no ha usado la terminal en este proyecto.",
+      "apagada": "La terminal de Len está apagada en este servidor.",
+      "error": "No se pudieron cargar los comandos anteriores.",
+      "enVivo": "Este turno",
+      "sinSalida": "Sin salida guardada.",
+      "codigo": "Terminó con el código {n}"
     },
     "vistaLimitada": "Vista limitada: aquí no funcionan formularios, datos guardados en el navegador ni ventanas nuevas. Publicada, sí."
   },

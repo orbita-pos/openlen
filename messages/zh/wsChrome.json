@@ -79,7 +79,8 @@
     "lente": {
       "pagina": "预览",
       "codigo": "代码",
-      "datos": "数据"
+      "datos": "数据",
+      "terminal": "终端"
     },
     "toolbar": {
       "editPage": "编辑页面（⌘E）",
@@ -129,6 +130,17 @@
       "copied": "已复制",
       "document": "HTML 文档",
       "lines": "行"
+    },
+    "terminal": {
+      "title": "Len 的终端",
+      "close": "关闭",
+      "soloLectura": "只读",
+      "vacio": "Len 还没有在这个项目中使用终端。",
+      "apagada": "此服务器上 Len 的终端已关闭。",
+      "error": "无法加载之前的命令。",
+      "enVivo": "本轮",
+      "sinSalida": "没有保存的输出。",
+      "codigo": "退出代码 {n}"
     },
     "vistaLimitada": "受限预览:此处表单、浏览器存储和新窗口无法使用。发布后即可正常使用。"
   },

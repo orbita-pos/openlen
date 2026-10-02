@@ -79,7 +79,8 @@
     "lente": {
       "pagina": "プレビュー",
       "codigo": "コード",
-      "datos": "データ"
+      "datos": "データ",
+      "terminal": "ターミナル"
     },
     "toolbar": {
       "editPage": "ページを編集（⌘E）",
@@ -129,6 +130,17 @@
       "copied": "コピーしました",
       "document": "HTML ドキュメント",
       "lines": "行"
+    },
+    "terminal": {
+      "title": "Len のターミナル",
+      "close": "閉じる",
+      "soloLectura": "読み取り専用",
+      "vacio": "Len はこのプロジェクトでまだターミナルを使っていません。",
+      "apagada": "このサーバーでは Len のターミナルはオフです。",
+      "error": "以前のコマンドを読み込めませんでした。",
+      "enVivo": "このターン",
+      "sinSalida": "保存された出力はありません。",
+      "codigo": "終了コード {n}"
     },
     "vistaLimitada": "制限付きプレビュー:ここではフォーム、ブラウザのストレージ、新しいウィンドウは動作しません。公開後は動作します。"
   },

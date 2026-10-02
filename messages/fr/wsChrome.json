@@ -79,7 +79,8 @@
     "lente": {
       "pagina": "Aperçu",
       "codigo": "Code",
-      "datos": "Données"
+      "datos": "Données",
+      "terminal": "Terminal"
     },
     "toolbar": {
       "editPage": "Modifier la page (⌘E)",
@@ -129,6 +130,17 @@
       "copied": "Copié",
       "document": "Document HTML",
       "lines": "lignes"
+    },
+    "terminal": {
+      "title": "Le terminal de Len",
+      "close": "Fermer",
+      "soloLectura": "Lecture seule",
+      "vacio": "Len n’a pas encore utilisé le terminal dans ce projet.",
+      "apagada": "Le terminal de Len est désactivé sur ce serveur.",
+      "error": "Impossible de charger les commandes précédentes.",
+      "enVivo": "Ce tour",
+      "sinSalida": "Aucune sortie enregistrée.",
+      "codigo": "Terminé avec le code {n}"
     },
     "vistaLimitada": "Aperçu limité : les formulaires, le stockage du navigateur et les nouvelles fenêtres ne fonctionnent pas ici. Une fois publiée, si."
   },

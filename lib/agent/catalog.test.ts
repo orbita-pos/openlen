@@ -670,6 +670,8 @@ describe("la vista «Datos» que el prompt nombra existe", () => {
       pagina: "Vista previa",
       codigo: "Código",
       datos: "Datos",
+      // F6a: la terminal de Len, sólo con la palanca o comandos guardados.
+      terminal: "Terminal",
     });
   });
 });

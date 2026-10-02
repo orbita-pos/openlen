@@ -804,6 +804,8 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
       const out = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "echo hola > /AGENTS.md" }));
       assert.equal(out.response.ok, false);
       assert.match(texto(out), /AGENTS\.md: not saved — .*read-only.*\n\[Command finished with exit code 1\]$/);
+      // F6a · la lente «Terminal» recibe el comando y lo MISMO que leyó el modelo.
+      assert.deepEqual(out.terminal, { command: "echo hola > /AGENTS.md", salida: texto(out), exitCode: 1 });
       const cat = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "head -c 60 /AGENTS.md" }));
       assert.doesNotMatch(texto(cat), /^hola/);
     } finally {

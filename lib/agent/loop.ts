@@ -130,6 +130,10 @@ export type AgentStreamEvent =
   // sólo el PRIMER id es «antes del turno»; quien lo consuma se queda con
   // ése, no con el último.
   | { type: "html"; html: string; page: string | null; versionPrevia?: string | null }
+  // F6a · UN COMANDO DE LA TERMINAL y su salida, la misma que leyó el modelo,
+  // para la lente «Terminal» del lienzo. Sólo lo emite `bash`; sin la palanca
+  // (`OPENLEN_TERMINAL`) no sale nunca y el cable es el de antes.
+  | { type: "terminal"; command: string; salida: string; exitCode: number }
   // The publish gate (Task 7): the model prepared a publish but MUST NOT
   // publish itself. The panel renders a confirm card whose button hits the
   // real publish endpoint — the user's tap is the only thing that publishes.
@@ -2046,6 +2050,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // fue bien, así que el evento de un `done` sale igual que antes.
         ...(motivo ? { motivo } : {}),
       });
+      if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
 
       if (outcome.updatedHtml) {
         args.emit({

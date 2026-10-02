@@ -79,7 +79,8 @@
     "lente": {
       "pagina": "미리보기",
       "codigo": "코드",
-      "datos": "데이터"
+      "datos": "데이터",
+      "terminal": "터미널"
     },
     "toolbar": {
       "editPage": "페이지 편집 (⌘E)",
@@ -129,6 +130,17 @@
       "copied": "복사됨",
       "document": "HTML 문서",
       "lines": "줄"
+    },
+    "terminal": {
+      "title": "Len의 터미널",
+      "close": "닫기",
+      "soloLectura": "읽기 전용",
+      "vacio": "Len이 아직 이 프로젝트에서 터미널을 사용하지 않았습니다.",
+      "apagada": "이 서버에서는 Len의 터미널이 꺼져 있습니다.",
+      "error": "이전 명령을 불러오지 못했습니다.",
+      "enVivo": "이번 턴",
+      "sinSalida": "저장된 출력이 없습니다.",
+      "codigo": "종료 코드 {n}"
     },
     "vistaLimitada": "제한된 미리보기: 여기서는 양식, 브라우저 저장소, 새 창이 작동하지 않습니다. 게시하면 작동합니다."
   },

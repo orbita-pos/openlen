@@ -79,7 +79,8 @@
     "lente": {
       "pagina": "Vorschau",
       "codigo": "Code",
-      "datos": "Daten"
+      "datos": "Daten",
+      "terminal": "Terminal"
     },
     "toolbar": {
       "editPage": "Seite bearbeiten (⌘E)",
@@ -129,6 +130,17 @@
       "copied": "Kopiert",
       "document": "HTML-Dokument",
       "lines": "Zeilen"
+    },
+    "terminal": {
+      "title": "Lens Terminal",
+      "close": "Schließen",
+      "soloLectura": "Nur lesen",
+      "vacio": "Len hat das Terminal in diesem Projekt noch nicht benutzt.",
+      "apagada": "Lens Terminal ist auf diesem Server ausgeschaltet.",
+      "error": "Frühere Befehle konnten nicht geladen werden.",
+      "enVivo": "Dieser Durchgang",
+      "sinSalida": "Keine gespeicherte Ausgabe.",
+      "codigo": "Beendet mit Code {n}"
     },
     "vistaLimitada": "Eingeschränkte Ansicht: Formulare, Browser-Speicher und neue Fenster funktionieren hier nicht. Veröffentlicht schon."
   },

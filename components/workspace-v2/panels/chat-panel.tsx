@@ -60,6 +60,7 @@ import { fusionarConversacion } from "@/lib/chat/fusionar-conversacion";
 import { trozosConFormato } from "@/lib/chat/formato-de-len";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
+import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
 import { seccionesCambiadas, tipoDeOp, agruparCambios, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 
@@ -1417,6 +1418,20 @@ function AIDesignChat({
                   finalActions = upsertActionInto(finalActions, action);
                 }
 
+              } else if (evName === "terminal") {
+                // F6a · un comando de la terminal de Len, para la lente
+                // «Terminal» del lienzo. No toca el turno ni su tarjeta: la
+                // tarjeta de `bash` ya llegó como `action`.
+                const command = strField(payload, "command");
+                const salida = strField(payload, "salida");
+                const exitCode = (payload as { exitCode?: unknown } | null)?.exitCode;
+                if (command) {
+                  terminalEnVivo.empujar(projectId, {
+                    command,
+                    salida,
+                    exitCode: typeof exitCode === "number" ? exitCode : -1,
+                  });
+                }
               } else if (evName === "html") {
                 const html = strField(payload, "html");
                 if (html) {

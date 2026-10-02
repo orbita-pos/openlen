@@ -87,7 +87,8 @@
     "lente": {
       "pagina": "Voorbeeld",
       "codigo": "Code",
-      "datos": "Gegevens"
+      "datos": "Gegevens",
+      "terminal": "Terminal"
     },
     "toolbar": {
       "editPage": "Pagina bewerken (⌘E)",
@@ -137,6 +138,17 @@
       "copied": "Gekopieerd",
       "document": "HTML-document",
       "lines": "regels"
+    },
+    "terminal": {
+      "title": "Lens terminal",
+      "close": "Sluiten",
+      "soloLectura": "Alleen lezen",
+      "vacio": "Len heeft de terminal in dit project nog niet gebruikt.",
+      "apagada": "Lens terminal staat uit op deze server.",
+      "error": "Eerdere opdrachten konden niet worden geladen.",
+      "enVivo": "Deze beurt",
+      "sinSalida": "Geen opgeslagen uitvoer.",
+      "codigo": "Gestopt met code {n}"
     },
     "vistaLimitada": "Beperkte weergave: formulieren, browseropslag en nieuwe vensters werken hier niet. Gepubliceerd wel."
   },

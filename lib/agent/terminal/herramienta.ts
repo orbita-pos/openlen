@@ -85,6 +85,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
       ...(cambio ? { cambio } : {}),
     },
     action: { tool: NOMBRE_BASH, ok, summary: recorte(command), ...(cambio ? { cambio } : {}) },
+    terminal: { command, salida: texto, exitCode: salida.exitCode },
     ...(primera
       ? {
           updatedHtml: primera.updatedHtml!,

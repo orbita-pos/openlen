@@ -20,8 +20,10 @@ import {
   X,
 } from "./icons";
 import { CodeView } from "./code-view";
-import { Database, Maximize } from "lucide-react";
+import { Database, Maximize, Terminal as TerminalIcon } from "lucide-react";
 import { DatosView } from "./datos-view";
+import { TerminalView } from "./terminal-view";
+import { useTerminalDeLen } from "./use-terminal-de-len";
 import { IconBtn, Segmented } from "./ui";
 import { injectDropPlace } from "./use-drop-place";
 import { injectPageLinks } from "./use-page-links";
@@ -195,8 +197,9 @@ function injectCanvasScrollbar(html: string): string {
   return html.slice(0, idx) + CANVAS_SCROLLBAR_STYLE + html.slice(idx);
 }
 
-/** Las tres formas de mirar el mismo documento. */
-export type Lente = "pagina" | "codigo" | "datos";
+/** Las formas de mirar el mismo proyecto. «terminal» (F6a): los comandos de
+ *  Len, sólo cuando la terminal está encendida o el proyecto ya tiene alguno. */
+export type Lente = "pagina" | "codigo" | "datos" | "terminal";
 
 export function PreviewArea({
   lente,
@@ -267,6 +270,11 @@ export function PreviewArea({
   // hay nada que enseñar, ni proyecto del que leer datos.
   const hayCodigo = !previewUrl && doc.length > 0;
   const hayDatos = hayCodigo && !!projectId;
+  // LA TERMINAL DE LEN (F6a). Sólo se ofrece si existe algo que enseñar: la
+  // palanca encendida en el servidor o comandos ya guardados en este proyecto.
+  const terminal = useTerminalDeLen(hayDatos ? projectId : null);
+  const hayTerminal =
+    hayDatos && (terminal.encendida || terminal.turnos.length > 0 || terminal.enVivo.length > 0);
   // Y SI LA LENTE ABIERTA DEJA DE EXISTIR, se vuelve a la página. Pasa de
   // verdad: con Código abierto se pincha una plantilla de la galería, llega un
   // `previewUrl` y el visor se quedaba enseñando el documento anterior — código
@@ -274,7 +282,14 @@ export function PreviewArea({
   useEffect(() => {
     if (lente === "codigo" && !hayCodigo) setLente("pagina");
     if (lente === "datos" && !hayDatos) setLente("pagina");
-  }, [lente, hayCodigo, hayDatos]);
+    if (lente === "terminal" && !hayTerminal && !terminal.cargando) setLente("pagina");
+  }, [lente, hayCodigo, hayDatos, hayTerminal, terminal.cargando]);
+  // Al abrirla se relee el historial: los turnos que acabaron mientras estaba
+  // cerrada ya tienen su transcripción guardada.
+  const recargarTerminal = terminal.recargar;
+  useEffect(() => {
+    if (lente === "terminal") recargarTerminal();
+  }, [lente, recargarTerminal]);
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeLocalRef = useRef<HTMLIFrameElement | null>(null);
   const [fitScale, setFitScale] = useState(1);
@@ -733,6 +748,9 @@ export function PreviewArea({
                 ...(hayDatos
                   ? [{ value: "datos" as const, label: t("preview.lente.datos"), icon: Database }]
                   : []),
+                ...(hayTerminal
+                  ? [{ value: "terminal" as const, label: t("preview.lente.terminal"), icon: TerminalIcon }]
+                  : []),
               ]}
             />
           )}
@@ -973,6 +991,24 @@ export function PreviewArea({
               cuota: (porcentaje: number) => tPage("datos.cuota", { porcentaje }),
               cuotaCerca: tPage("datos.cuotaCerca"),
               cuotaLlena: tPage("datos.cuotaLlena"),
+            }}
+          />
+        )}
+
+        {lente === "terminal" && hayTerminal && (
+          <TerminalView
+            terminal={terminal}
+            onClose={() => setLente("pagina")}
+            labels={{
+              title: t("preview.terminal.title"),
+              close: t("preview.terminal.close"),
+              soloLectura: t("preview.terminal.soloLectura"),
+              vacio: t("preview.terminal.vacio"),
+              apagada: t("preview.terminal.apagada"),
+              error: t("preview.terminal.error"),
+              enVivo: t("preview.terminal.enVivo"),
+              sinSalida: t("preview.terminal.sinSalida"),
+              codigo: (n: number) => t("preview.terminal.codigo", { n }),
             }}
           />
         )}

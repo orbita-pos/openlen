@@ -79,7 +79,8 @@
     "lente": {
       "pagina": "Preview",
       "codigo": "Code",
-      "datos": "Data"
+      "datos": "Data",
+      "terminal": "Terminal"
     },
     "toolbar": {
       "editPage": "Edit page (⌘E)",
@@ -129,6 +130,17 @@
       "copied": "Copied",
       "document": "HTML document",
       "lines": "lines"
+    },
+    "terminal": {
+      "title": "Len's terminal",
+      "close": "Close",
+      "soloLectura": "Read-only",
+      "vacio": "Len hasn't used the terminal in this project yet.",
+      "apagada": "Len's terminal is off on this server.",
+      "error": "Couldn't load earlier commands.",
+      "enVivo": "This turn",
+      "sinSalida": "No saved output.",
+      "codigo": "Exited with code {n}"
     },
     "vistaLimitada": "Limited view: forms, browser storage and new windows don't work here. They do once published."
   },

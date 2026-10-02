@@ -79,7 +79,8 @@
     "lente": {
       "pagina": "Anteprima",
       "codigo": "Codice",
-      "datos": "Dati"
+      "datos": "Dati",
+      "terminal": "Terminale"
     },
     "toolbar": {
       "editPage": "Modifica pagina (⌘E)",
@@ -129,6 +130,17 @@
       "copied": "Copiato",
       "document": "Documento HTML",
       "lines": "righe"
+    },
+    "terminal": {
+      "title": "Il terminale di Len",
+      "close": "Chiudi",
+      "soloLectura": "Sola lettura",
+      "vacio": "Len non ha ancora usato il terminale in questo progetto.",
+      "apagada": "Il terminale di Len è spento su questo server.",
+      "error": "Impossibile caricare i comandi precedenti.",
+      "enVivo": "Questo turno",
+      "sinSalida": "Nessun output salvato.",
+      "codigo": "Terminato con codice {n}"
     },
     "vistaLimitada": "Anteprima limitata: moduli, dati salvati nel browser e nuove finestre qui non funzionano. Pubblicata, sì."
   },

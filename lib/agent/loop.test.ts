@@ -46,6 +46,34 @@ describe("runAgentLoop", () => {
     expect(events.some((e) => e.type === "text")).toBe(true);
   });
 
+  it("F6a · un bash con `terminal` emite el evento terminal justo detrás de su tarjeta; sin él, no", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "busca Marejada" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "bash", args: { command: "grep -rn Marejada /" } }, { type: "function_call", name: "Read", args: { file_path: "/index.html" } }, usage(10), done],
+        [{ type: "text_delta", text: "Está en la portada." }, usage(5), done],
+      ),
+      runTool: async (name) =>
+        name === "bash"
+          ? {
+              response: { ok: true, tool_result: "/index.html:3:Marejada\n[Command finished with exit code 0]" },
+              action: { tool: "bash", ok: true, summary: "grep -rn Marejada /" },
+              terminal: { command: "grep -rn Marejada /", salida: "/index.html:3:Marejada\n[Command finished with exit code 0]", exitCode: 0 },
+            }
+          : { response: { ok: true, tool_result: "1\t<h1>" }, action: { tool: name, ok: true, summary: "/index.html" } },
+      emit: (e) => events.push(e),
+    });
+    const tipos = events.filter((e) => e.type === "action" || e.type === "terminal").map((e) => (e.type === "action" ? `${e.tool}:${e.status}` : e.type));
+    expect(tipos).toEqual(["bash:running", "bash:done", "terminal", "Read:running", "Read:done"]);
+    expect(events.find((e) => e.type === "terminal")).toEqual({
+      type: "terminal",
+      command: "grep -rn Marejada /",
+      salida: "/index.html:3:Marejada\n[Command finished with exit code 0]",
+      exitCode: 0,
+    });
+  });
+
   it("one tool call → functionResponse turn → final text", async () => {
     const events: AgentStreamEvent[] = [];
     const seen: string[] = [];
