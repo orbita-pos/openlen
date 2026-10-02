@@ -143,7 +143,14 @@
       "loading": "Carregando…",
       "loadError": "Não foi possível ler os arquivos.",
       "readOnly": "Somente leitura · calculado ao abrir",
-      "noEsta": "não está mais no projeto."
+      "noEsta": "não está mais no projeto.",
+      "buscar": "Buscar nos arquivos",
+      "limpiar": "Limpar a busca",
+      "porNombre": "Por nome",
+      "enFicheros": "Dentro dos arquivos",
+      "sinResultados": "Nada corresponde a «{q}».",
+      "masCoincidencias": "{count, plural, one {E mais # ocorrência.} other {E mais # ocorrências.}}",
+      "sinContenido": "{count, plural, one {# arquivo calculado ao abrir só é buscado pelo nome.} other {# arquivos calculados ao abrir só são buscados pelo nome.}}"
     },
     "terminal": {
       "title": "O terminal do Len",

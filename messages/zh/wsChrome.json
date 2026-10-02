@@ -135,7 +135,14 @@
       "loading": "加载中…",
       "loadError": "无法读取文件。",
       "readOnly": "只读 · 打开时计算",
-      "noEsta": "已不在项目中。"
+      "noEsta": "已不在项目中。",
+      "buscar": "在文件中搜索",
+      "limpiar": "清除搜索",
+      "porNombre": "按名称",
+      "enFicheros": "文件内容",
+      "sinResultados": "没有与“{q}”匹配的内容。",
+      "masCoincidencias": "{count, plural, other {还有 # 处匹配。}}",
+      "sinContenido": "{count, plural, other {# 个打开时才计算的文件只按名称搜索。}}"
     },
     "terminal": {
       "title": "Len 的终端",

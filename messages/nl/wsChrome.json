@@ -143,7 +143,14 @@
       "loading": "Laden…",
       "loadError": "De bestanden konden niet worden gelezen.",
       "readOnly": "Alleen-lezen · berekend bij openen",
-      "noEsta": "staat niet meer in het project."
+      "noEsta": "staat niet meer in het project.",
+      "buscar": "Zoeken in de bestanden",
+      "limpiar": "Zoekopdracht wissen",
+      "porNombre": "Op naam",
+      "enFicheros": "In de bestanden",
+      "sinResultados": "Niets komt overeen met ‘{q}’.",
+      "masCoincidencias": "{count, plural, one {En nog # treffer.} other {En nog # treffers.}}",
+      "sinContenido": "{count, plural, one {# bestand dat bij het openen wordt berekend, wordt alleen op naam gezocht.} other {# bestanden die bij het openen worden berekend, worden alleen op naam gezocht.}}"
     },
     "terminal": {
       "title": "Lens terminal",

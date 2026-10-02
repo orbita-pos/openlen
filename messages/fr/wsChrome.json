@@ -135,7 +135,14 @@
       "loading": "Chargement…",
       "loadError": "Impossible de lire les fichiers.",
       "readOnly": "Lecture seule · calculé à l’ouverture",
-      "noEsta": "n'est plus dans le projet."
+      "noEsta": "n'est plus dans le projet.",
+      "buscar": "Rechercher dans les fichiers",
+      "limpiar": "Effacer la recherche",
+      "porNombre": "Par nom",
+      "enFicheros": "Dans les fichiers",
+      "sinResultados": "Rien ne correspond à « {q} ».",
+      "masCoincidencias": "{count, plural, one {Et # résultat de plus.} other {Et # résultats de plus.}}",
+      "sinContenido": "{count, plural, one {# fichier calculé à l'ouverture n'est cherché que par son nom.} other {# fichiers calculés à l'ouverture ne sont cherchés que par leur nom.}}"
     },
     "terminal": {
       "title": "Le terminal de Len",

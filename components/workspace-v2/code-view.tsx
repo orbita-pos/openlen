@@ -17,13 +17,14 @@
 // editor, validación, y decidir qué gana cuando el usuario y el modelo tocan la
 // misma línea. Copiar cubre el 90% de la razón por la que alguien lo abre.
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { esDeSoloLectura } from "@/lib/agent/terminal/ficheros";
 import type { PeticionDeCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import { abiertasAlEntrar, arbolDeFicheros, type NodoDelArbol } from "@/lib/workspace-v2/arbol-de-ficheros";
+import { buscarEnFicheros, type FicheroBuscable, type ResultadosDeBusqueda } from "@/lib/workspace-v2/buscar-en-ficheros";
 
 import { copiar } from "./copiar";
-import { Check, ChevronDown, ChevronRight, Copy, FileText, X } from "./icons";
+import { Check, ChevronDown, ChevronRight, Copy, FileText, Search, X } from "./icons";
 import { IconBtn } from "./ui";
 
 interface CodeViewProps {
@@ -49,6 +50,14 @@ interface CodeViewProps {
     readonly loadError: string;
     readonly readOnly: string;
     readonly noEsta: string;
+    // Buscar (la #11).
+    readonly buscar: string;
+    readonly limpiar: string;
+    readonly porNombre: string;
+    readonly enFicheros: string;
+    readonly sinResultados: (consulta: string) => string;
+    readonly masCoincidencias: (n: number) => string;
+    readonly sinContenido: (n: number) => string;
   };
 }
 
@@ -56,6 +65,17 @@ interface ListaDeFicheros {
   readonly ficheros: readonly { readonly ruta: string; readonly contenido: string }[];
   readonly perezosos: readonly string[];
 }
+
+/** Abiertas, además, las carpetas que llevan a un fichero elegido sin pasar por
+ *  el árbol (desde el Chat o desde una búsqueda). */
+const conCarpetasHasta =
+  (ruta: string) =>
+  (a: Set<string> | null): Set<string> | null => {
+    if (a === null) return a;
+    const nuevas = new Set(a);
+    for (let i = ruta.indexOf("/", 1); i > 0; i = ruta.indexOf("/", i + 1)) nuevas.add(ruta.slice(0, i));
+    return nuevas;
+  };
 
 /**
  * EL EXPLORADOR, como el de VS Code: el árbol a la izquierda (arriba en el
@@ -81,6 +101,12 @@ function Explorador({
   const [elegido, setElegido] = useState(peticion?.ruta ?? rutaActual);
   const [perezosos, setPerezosos] = useState<Readonly<Record<string, string | "cargando" | "error">>>({});
   const [abiertas, setAbiertas] = useState<Set<string> | null>(null);
+  // BUSCAR (la #11): lo escrito, cuál de los resultados está activo con las
+  // flechas, y la línea a la que saltar al abrir un resultado de contenido.
+  const [consulta, setConsulta] = useState("");
+  const [activo, setActivo] = useState(0);
+  const [salto, setSalto] = useState<{ readonly linea: number; readonly n: number } | null>(null);
+  const buscador = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let vivo = true;
@@ -121,8 +147,11 @@ function Explorador({
 
   const elegir = (n: NodoDelArbol) => {
     setElegido(n.ruta);
+    setSalto(null);
     if (n.perezoso) pedirPerezoso(n.ruta);
   };
+
+  const abrirCarpetasHasta = (ruta: string) => setAbiertas(conCarpetasHasta(ruta));
 
   // UNA RUTA PULSADA EN EL CHAT con la lente ya abierta: ese fichero, y abiertas
   // las carpetas que llevan a él. (Si la lente se abre con ella, ya la trae el
@@ -133,15 +162,63 @@ function Explorador({
     if (!peticion || nPeticion <= atendida.current) return;
     atendida.current = nPeticion;
     setElegido(peticion.ruta);
-    setAbiertas((a) => {
-      if (a === null) return a;
-      const nuevas = new Set(a);
-      for (let i = peticion.ruta.indexOf("/", 1); i > 0; i = peticion.ruta.indexOf("/", i + 1)) {
-        nuevas.add(peticion.ruta.slice(0, i));
-      }
-      return nuevas;
-    });
+    setSalto(null);
+    setAbiertas(conCarpetasHasta(peticion.ruta));
   }, [nPeticion, peticion]);
+
+  // LO QUE SE BUSCA: cada fichero con lo que se enseña de él (la página abierta,
+  // como está en el lienzo); los que se calculan al abrirlos, sólo si ya se abrieron.
+  const buscables = useMemo<FicheroBuscable[]>(() => {
+    if (typeof lista === "string") return [{ ruta: rutaActual, contenido: htmlActual }];
+    return [
+      ...lista.ficheros.map((f) => ({ ruta: f.ruta, contenido: f.ruta === rutaActual ? htmlActual : f.contenido })),
+      ...lista.perezosos.map((ruta) => {
+        const p = perezosos[ruta];
+        return { ruta, contenido: p === undefined || p === "cargando" || p === "error" ? null : p };
+      }),
+    ];
+  }, [lista, rutaActual, htmlActual, perezosos]);
+  const resultados = useMemo(() => buscarEnFicheros(buscables, consulta), [buscables, consulta]);
+  /** Los resultados en el orden de las flechas: primero los nombres, después las líneas. */
+  const enOrden = useMemo(
+    () => [
+      ...resultados.porNombre.map((ruta) => ({ ruta, linea: null as number | null })),
+      ...resultados.enFicheros.flatMap((f) => f.lineas.map((l) => ({ ruta: f.ruta, linea: l.linea as number | null }))),
+    ],
+    [resultados],
+  );
+  const abrirResultado = (ruta: string, linea: number | null) => {
+    setElegido(ruta);
+    setSalto(linea === null ? null : { linea, n: Date.now() });
+    abrirCarpetasHasta(ruta);
+    if (typeof lista !== "string" && lista.perezosos.includes(ruta)) pedirPerezoso(ruta);
+  };
+  // Ctrl/Cmd+Mayús+F lleva al buscador, como en VS Code y en Lovable.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        buscador.current?.focus();
+        buscador.current?.select();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+  const teclaEnElBuscador = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (enOrden.length === 0) return;
+      setActivo((a) => (a + (e.key === "ArrowDown" ? 1 : enOrden.length - 1)) % enOrden.length);
+    } else if (e.key === "Enter") {
+      const r = enOrden[Math.min(activo, enOrden.length - 1)];
+      if (r) abrirResultado(r.ruta, r.linea);
+    } else if (e.key === "Escape" && consulta) {
+      // Escape borra la búsqueda; sólo con el buscador vacío cierra la lente.
+      e.stopPropagation();
+      setConsulta("");
+    }
+  };
   // Un fichero de los que se calculan al abrirlos, elegido sin pasar por el
   // árbol (desde el Chat): se pide igual que con un clic.
   const esperaPerezoso =
@@ -214,9 +291,54 @@ function Explorador({
         className="max-h-44 shrink-0 overflow-auto nice-scroll border-b bd py-1 text-[12px] md:max-h-none md:w-56 md:border-b-0 md:border-r"
       >
         <div className="px-3 py-1 text-[10.5px] uppercase tracking-wide fg-faint ui-small">{labels.files}</div>
-        {lista === "cargando" && <p className="px-3 py-1 fg-muted">{labels.loading}</p>}
-        {lista === "error" && <p className="px-3 py-1 fg-muted">{labels.loadError}</p>}
-        {pintar(arbol, 0)}
+        <div className="px-2 pb-1.5">
+          <label className="flex items-center gap-1.5 rounded-md border bd bg-app px-2 py-1 focus-within:border-[color:var(--accent)]">
+            <Search size={11} className="shrink-0 fg-faint" />
+            <input
+              ref={buscador}
+              type="text"
+              value={consulta}
+              onChange={(e) => {
+                setConsulta(e.target.value);
+                setActivo(0);
+              }}
+              onKeyDown={teclaEnElBuscador}
+              placeholder={labels.buscar}
+              aria-label={labels.buscar}
+              spellCheck={false}
+              className="min-w-0 flex-1 bg-transparent text-[12px] fg placeholder:fg-faint focus:outline-none"
+            />
+            {consulta && (
+              <button
+                type="button"
+                aria-label={labels.limpiar}
+                onClick={() => {
+                  setConsulta("");
+                  buscador.current?.focus();
+                }}
+                className="shrink-0 fg-faint hover:fg"
+              >
+                <X size={10} />
+              </button>
+            )}
+          </label>
+        </div>
+        {consulta.trim() ? (
+          <ResultadosDeLaBusqueda
+            resultados={resultados}
+            consulta={consulta.trim()}
+            activo={enOrden[Math.min(activo, enOrden.length - 1)] ?? null}
+            elegido={elegido}
+            onAbrir={abrirResultado}
+            labels={labels}
+          />
+        ) : (
+          <>
+            {lista === "cargando" && <p className="px-3 py-1 fg-muted">{labels.loading}</p>}
+            {lista === "error" && <p className="px-3 py-1 fg-muted">{labels.loadError}</p>}
+            {pintar(arbol, 0)}
+          </>
+        )}
       </nav>
       <div className="min-h-0 min-w-0 flex-1 overflow-auto nice-scroll">
         {contenido === "cargando" ? (
@@ -232,6 +354,7 @@ function Explorador({
             etiqueta={elegido.replace(/^\//, "")}
             {...(esDeSoloLectura(elegido) ? { nota: labels.readOnly } : {})}
             codigo={contenido}
+            salto={salto}
             labels={labels}
           />
         )}
@@ -240,15 +363,109 @@ function Explorador({
   );
 }
 
+/**
+ * LOS RESULTADOS, en el sitio del árbol mientras hay algo escrito: primero los
+ * ficheros cuyo nombre casa y después las líneas, agrupadas por fichero (la
+ * cabecera de cada grupo abre el fichero en su primera coincidencia). Lo que
+ * casó va resaltado; el activo de las flechas, marcado.
+ */
+function ResultadosDeLaBusqueda({
+  resultados,
+  consulta,
+  activo,
+  elegido,
+  onAbrir,
+  labels,
+}: {
+  resultados: ResultadosDeBusqueda;
+  consulta: string;
+  activo: { readonly ruta: string; readonly linea: number | null } | null;
+  elegido: string;
+  onAbrir: (ruta: string, linea: number | null) => void;
+  labels: CodeViewProps["labels"];
+}) {
+  const esActivo = (ruta: string, linea: number | null) => activo?.ruta === ruta && activo.linea === linea;
+  const fila = (marcada: boolean) =>
+    `flex w-full items-center gap-1.5 py-0.5 pr-2 text-left ${marcada ? "bg-hover fg" : "fg-muted hover:fg hover:bg-hover"}`;
+  const titulo = "px-3 pt-1.5 pb-0.5 text-[10px] uppercase tracking-wide fg-faint ui-small";
+  const nada = resultados.porNombre.length === 0 && resultados.enFicheros.length === 0;
+  return (
+    <div className="pb-1">
+      {nada && <p className="px-3 py-1 fg-muted">{labels.sinResultados(consulta)}</p>}
+      {resultados.porNombre.length > 0 && (
+        <>
+          <div className={titulo}>{labels.porNombre}</div>
+          <ul>
+            {resultados.porNombre.map((ruta) => (
+              <li key={ruta}>
+                <button
+                  type="button"
+                  aria-current={ruta === elegido ? "true" : undefined}
+                  onClick={() => onAbrir(ruta, null)}
+                  className={`${fila(esActivo(ruta, null))} pl-3`}
+                >
+                  <FileText size={12} />
+                  <span className="truncate">{ruta.replace(/^\//, "")}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {resultados.enFicheros.length > 0 && (
+        <>
+          <div className={titulo}>{labels.enFicheros}</div>
+          <ul>
+            {resultados.enFicheros.map((f) => (
+              <li key={f.ruta}>
+                <button type="button" onClick={() => onAbrir(f.ruta, f.lineas[0]!.linea)} className={`${fila(false)} pl-3`}>
+                  <FileText size={12} />
+                  <span className="truncate">{f.ruta.replace(/^\//, "")}</span>
+                  <span className="ml-auto shrink-0 tabular-nums fg-faint">{f.lineas.length}</span>
+                </button>
+                <ul>
+                  {f.lineas.map((l) => (
+                    <li key={l.linea}>
+                      <button
+                        type="button"
+                        onClick={() => onAbrir(f.ruta, l.linea)}
+                        className={`${fila(esActivo(f.ruta, l.linea))} pl-4 font-mono text-[11px]`}
+                      >
+                        <span className="w-7 shrink-0 select-none text-right tabular-nums fg-faint">{l.linea}</span>
+                        <span className="min-w-0 truncate whitespace-pre">
+                          {l.antes}
+                          <mark className="rounded-sm bg-accent-soft text-accent">{l.casa}</mark>
+                          {l.despues}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {resultados.mas > 0 && <p className="px-3 pt-1 text-[11px] fg-faint ui-small">{labels.masCoincidencias(resultados.mas)}</p>}
+      {resultados.sinContenido > 0 && (
+        <p className="px-3 pt-1 text-[11px] fg-faint ui-small">{labels.sinContenido(resultados.sinContenido)}</p>
+      )}
+    </div>
+  );
+}
+
 function Bloque({
   etiqueta,
   nota,
   codigo,
+  salto = null,
   labels,
 }: {
   etiqueta: string;
   nota?: string;
   codigo: string;
+  /** Una línea a la que ir (un resultado de la búsqueda): se centra y se resalta. */
+  salto?: { readonly linea: number; readonly n: number } | null;
   labels: CodeViewProps["labels"];
 }) {
   const [copiado, setCopiado] = useState(false);
@@ -258,9 +475,21 @@ function Bloque({
     const t = setTimeout(() => setCopiado(false), 1600);
     return () => clearTimeout(t);
   }, [copiado]);
+  // A la línea del resultado, UNA vez por salto: si el contenido llega después
+  // (un fichero que se calcula al abrirlo), cuando llegue. Y no otra vez cada vez
+  // que el lienzo cambie mientras se mira.
+  const seccion = useRef<HTMLElement>(null);
+  const saltado = useRef<number | null>(null);
+  useEffect(() => {
+    if (!salto || saltado.current === salto.n) return;
+    const el = seccion.current?.querySelector(`[data-linea="${salto.linea}"]`);
+    if (!el) return;
+    saltado.current = salto.n;
+    el.scrollIntoView?.({ block: "center" });
+  }, [salto, codigo]);
 
   return (
-    <section className="min-w-0">
+    <section ref={seccion} className="min-w-0">
       <header className="sticky top-0 z-10 flex items-center gap-2 border-b bd bg-elev px-3 py-1.5">
         <span className="text-[11px] font-medium fg-muted ui-small">{etiqueta}</span>
         <span className="text-[10.5px] fg-faint tabular ui-small">
@@ -287,7 +516,7 @@ function Bloque({
       <pre className="p-3 text-[11.5px] leading-[1.55]">
         <code className="block font-mono">
           {lineas.map((linea, i) => (
-            <span key={i} className="flex">
+            <span key={i} data-linea={i + 1} className={`flex${salto?.linea === i + 1 ? " bg-accent-soft" : ""}`}>
               <span className="w-9 shrink-0 select-none pr-3 text-right fg-faint tabular">{i + 1}</span>
               <span className="min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:anywhere]">{linea || " "}</span>
             </span>

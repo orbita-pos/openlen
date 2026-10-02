@@ -135,7 +135,14 @@
       "loading": "Loading…",
       "loadError": "Couldn't read the files.",
       "readOnly": "Read-only · computed when opened",
-      "noEsta": "is no longer in the project."
+      "noEsta": "is no longer in the project.",
+      "buscar": "Search the files",
+      "limpiar": "Clear the search",
+      "porNombre": "By name",
+      "enFicheros": "Inside the files",
+      "sinResultados": "Nothing matches “{q}”.",
+      "masCoincidencias": "{count, plural, one {And # more match.} other {And # more matches.}}",
+      "sinContenido": "{count, plural, one {# file computed when opened is only searched by name.} other {# files computed when opened are only searched by name.}}"
     },
     "terminal": {
       "title": "Len's terminal",

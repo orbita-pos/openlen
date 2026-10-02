@@ -135,7 +135,14 @@
       "loading": "Cargando…",
       "loadError": "No se pudieron leer los archivos.",
       "readOnly": "Sólo lectura · se calcula al abrirlo",
-      "noEsta": "ya no está en el proyecto."
+      "noEsta": "ya no está en el proyecto.",
+      "buscar": "Buscar en los archivos",
+      "limpiar": "Borrar la búsqueda",
+      "porNombre": "Por nombre",
+      "enFicheros": "Dentro de los archivos",
+      "sinResultados": "Nada coincide con «{q}».",
+      "masCoincidencias": "{count, plural, one {Y # coincidencia más.} other {Y # coincidencias más.}}",
+      "sinContenido": "{count, plural, one {# archivo que se calcula al abrirlo sólo se busca por nombre.} other {# archivos que se calculan al abrirlos sólo se buscan por nombre.}}"
     },
     "terminal": {
       "title": "La terminal de Len",

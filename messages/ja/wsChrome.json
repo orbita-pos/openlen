@@ -135,7 +135,14 @@
       "loading": "読み込み中…",
       "loadError": "ファイルを読み込めませんでした。",
       "readOnly": "読み取り専用 · 開いたときに計算されます",
-      "noEsta": "はもうプロジェクトにありません。"
+      "noEsta": "はもうプロジェクトにありません。",
+      "buscar": "ファイル内を検索",
+      "limpiar": "検索をクリア",
+      "porNombre": "名前",
+      "enFicheros": "ファイルの中",
+      "sinResultados": "「{q}」に一致するものはありません。",
+      "masCoincidencias": "{count, plural, other {ほかに # 件。}}",
+      "sinContenido": "{count, plural, other {開いたときに計算される # 個のファイルは名前でのみ検索します。}}"
     },
     "terminal": {
       "title": "Len のターミナル",

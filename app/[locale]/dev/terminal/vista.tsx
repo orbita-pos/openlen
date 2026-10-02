@@ -100,7 +100,8 @@ const FICHEROS = () => ({
     { ruta: "/clases/index.html", contenido: CLASES },
     { ruta: "/datos/reservas.json", contenido: RESERVAS_DESPUES },
   ],
-  perezosos: [],
+  // Se calcula al abrirlo: hasta entonces, la búsqueda sólo lo encuentra por nombre.
+  perezosos: ["/resultados/visitas.json"],
 });
 
 let preparado = false;
@@ -115,6 +116,9 @@ function preparar() {
     }
     if (url.endsWith(`/api/projects/${PROYECTO}/ficheros`)) {
       return Promise.resolve(new Response(JSON.stringify(FICHEROS()), { headers: { "content-type": "application/json" } }));
+    }
+    if (url.includes(`/api/projects/${PROYECTO}/ficheros?ruta=`)) {
+      return Promise.resolve(new Response(JSON.stringify({ contenido: '{\n  "hoy": 12,\n  "semana": 81\n}\n' }), { headers: { "content-type": "application/json" } }));
     }
     return original(entrada, init);
   };

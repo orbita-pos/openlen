@@ -1094,6 +1094,13 @@ export function PreviewArea({
             onClose={() => setLente("pagina")}
             labels={{
               noEsta: t("preview.code.noEsta"),
+              buscar: t("preview.code.buscar"),
+              limpiar: t("preview.code.limpiar"),
+              porNombre: t("preview.code.porNombre"),
+              enFicheros: t("preview.code.enFicheros"),
+              sinResultados: (q: string) => t("preview.code.sinResultados", { q }),
+              masCoincidencias: (count: number) => t("preview.code.masCoincidencias", { count }),
+              sinContenido: (count: number) => t("preview.code.sinContenido", { count }),
               title: t("preview.code.title"),
               close: t("preview.code.close"),
               copy: t("preview.code.copy"),

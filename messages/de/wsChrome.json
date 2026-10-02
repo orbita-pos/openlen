@@ -135,7 +135,14 @@
       "loading": "Wird geladen…",
       "loadError": "Die Dateien konnten nicht gelesen werden.",
       "readOnly": "Schreibgeschützt · wird beim Öffnen berechnet",
-      "noEsta": "ist nicht mehr im Projekt."
+      "noEsta": "ist nicht mehr im Projekt.",
+      "buscar": "In den Dateien suchen",
+      "limpiar": "Suche löschen",
+      "porNombre": "Nach Name",
+      "enFicheros": "In den Dateien",
+      "sinResultados": "Nichts passt zu „{q}“.",
+      "masCoincidencias": "{count, plural, one {Und # weiterer Treffer.} other {Und # weitere Treffer.}}",
+      "sinContenido": "{count, plural, one {# Datei, die beim Öffnen berechnet wird, wird nur nach Namen durchsucht.} other {# Dateien, die beim Öffnen berechnet werden, werden nur nach Namen durchsucht.}}"
     },
     "terminal": {
       "title": "Lens Terminal",

@@ -135,7 +135,14 @@
       "loading": "불러오는 중…",
       "loadError": "파일을 읽을 수 없습니다.",
       "readOnly": "읽기 전용 · 열 때 계산됩니다",
-      "noEsta": "파일이 더 이상 프로젝트에 없습니다."
+      "noEsta": "파일이 더 이상 프로젝트에 없습니다.",
+      "buscar": "파일에서 검색",
+      "limpiar": "검색 지우기",
+      "porNombre": "이름",
+      "enFicheros": "파일 안",
+      "sinResultados": "“{q}”와 일치하는 항목이 없습니다.",
+      "masCoincidencias": "{count, plural, other {그 외 #건.}}",
+      "sinContenido": "{count, plural, other {열 때 계산되는 파일 #개는 이름으로만 검색합니다.}}"
     },
     "terminal": {
       "title": "Len의 터미널",
