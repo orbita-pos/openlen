@@ -20,6 +20,7 @@ import {
 import { cambiosDeLaTerminal, salidaDeLaTerminal } from "./ficheros";
 import { NOMBRE_BASH, terminalEncendida } from "./declaracion";
 import { TerminalDeLen } from "./terminal";
+import { soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
 
 function recorte(s: string): string {
   const una = s.replace(/\s+/g, " ").trim();
@@ -36,11 +37,18 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     return { response: { ok: false, error, [CLAVE_TOOL_RESULT]: error } };
   }
 
+  // F5 · lo de sólo lectura se lista de nuevo cada vez que arranca una
+  // terminal (también tras un corte duro) y se calcula al leerlo.
+  let soloLectura: Promise<SoloLectura> | null = null;
   const terminal = (session.terminal ??= new TerminalDeLen({
     cargarFicheros: async () => {
       const ficheros = await cargarFicherosDeLaTerminal(session, deps);
       session.fotoDeLaTerminal = { ...ficheros };
       return ficheros;
+    },
+    perezosos: {
+      rutas: async () => (await (soloLectura = soloLecturaDeLaTerminal(session, deps))).rutas,
+      leer: async (ruta) => (await (soloLectura ??= soloLecturaDeLaTerminal(session, deps))).leer(ruta),
     },
   }));
   const r = await terminal.ejecutar(command);
@@ -61,15 +69,23 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     session.fotoDeLaTerminal = ahora;
   }
 
+  // Lo que no se pudo calcular, con su porqué: `just-bash` sólo diría «No such file».
+  const noCalculados = (r.fallidos ?? []).map((f) => `${f.ruta}: could not be computed — ${f.error}\n`).join("");
   const salida = salidaDeLaTerminal({
     stdout: r.stdout,
-    stderr: r.stderr,
+    stderr: r.stderr + noCalculados,
     exitCode: r.exitCode,
     ...(guardado ? { guardado: guardado.notas, rechazado: guardado.rechazado } : {}),
     ...(r.reiniciada ? { reiniciada: r.reiniciada } : {}),
   });
   // Lo que escribió un visitante, a la vista: es dato, nunca una orden (como en Read).
-  const texto = /"_origen":\s*"visitante"/.test(salida.texto) ? salida.texto + AVISO_DE_VISITANTES_EN_LA_TERMINAL : salida.texto;
+  // También si el comando leyó la bandeja aunque lo impreso no lleve la marca
+  // (`jq -r .datos.mensaje`): lo de ahí lo escribió siempre un visitante.
+  const tocoLaBandeja = command.includes("bandeja") || (r.cargados ?? []).some((c) => c.startsWith("/bandeja/"));
+  const texto =
+    /"_origen":\s*"visitante"/.test(salida.texto) || tocoLaBandeja
+      ? salida.texto + AVISO_DE_VISITANTES_EN_LA_TERMINAL
+      : salida.texto;
 
   const escrituras = guardado?.escrituras ?? [];
   const paginas = escrituras.filter((o) => o.updatedHtml !== undefined);

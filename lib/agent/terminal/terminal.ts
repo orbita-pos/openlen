@@ -30,6 +30,10 @@ export interface SalidaDeUnComando {
   readonly ficheros: Readonly<Record<string, string>> | null;
   /** Lo que se dice si la terminal se reinició. */
   readonly reiniciada?: string;
+  /** F5 · los ficheros perezosos (de sólo lectura) que ESTE comando hizo cargar. */
+  readonly cargados?: readonly string[];
+  /** F5 · los que no se pudieron calcular, con el porqué (`just-bash` sólo dice «No such file»). */
+  readonly fallidos?: readonly { readonly ruta: string; readonly error: string }[];
 }
 
 class CorteDuro extends Error {}
@@ -39,12 +43,20 @@ type Respuesta = { id: number; ok: boolean; error?: string } & Record<string, un
 export class TerminalDeLen {
   private hilo: Worker | null = null;
   private siguiente = 0;
+  private cargados: string[] = [];
+  private fallidos: { ruta: string; error: string }[] = [];
   private readonly pendientes = new Map<number, { resolve: (r: Respuesta) => void; reject: (e: Error) => void }>();
 
   constructor(
     private readonly o: {
       /** Los ficheros del proyecto, tal como están AHORA (se piden al arrancar y tras un reinicio). */
       readonly cargarFicheros: () => Promise<Record<string, string>>;
+      /** F5 · los ficheros de sólo lectura, que se calculan cuando un comando
+       *  los lee por primera vez (ver la cabecera de `trabajador.mjs`). */
+      readonly perezosos?: {
+        readonly rutas: () => Promise<readonly string[]>;
+        readonly leer: (ruta: string) => Promise<string>;
+      };
       readonly limiteMs?: number;
       readonly margenMs?: number;
     },
@@ -57,6 +69,10 @@ export class TerminalDeLen {
   private async arrancar(): Promise<void> {
     const hilo = new Worker(RUTA_DEL_TRABAJADOR);
     hilo.on("message", (m: Respuesta) => {
+      if (typeof m.perezoso === "number") {
+        void this.servirPerezoso(hilo, m.perezoso, String(m.ruta ?? ""));
+        return;
+      }
       const p = this.pendientes.get(m.id);
       if (!p) return;
       this.pendientes.delete(m.id);
@@ -69,7 +85,22 @@ export class TerminalDeLen {
       this.fallarTodo(new Error("la terminal se cerró"));
     });
     this.hilo = hilo;
-    await this.pedir({ tipo: "iniciar", ficheros: await this.o.cargarFicheros(), limiteMs: this.limite });
+    const [ficheros, perezosos] = await Promise.all([this.o.cargarFicheros(), this.o.perezosos?.rutas() ?? []]);
+    await this.pedir({ tipo: "iniciar", ficheros, perezosos, limiteMs: this.limite });
+  }
+
+  /** Un fichero de sólo lectura que el hilo necesita: se calcula aquí y se le devuelve. */
+  private async servirPerezoso(hilo: Worker, pid: number, ruta: string): Promise<void> {
+    this.cargados.push(ruta);
+    try {
+      if (!this.o.perezosos) throw new Error(`${ruta}: not available`);
+      const contenido = await this.o.perezosos.leer(ruta);
+      hilo.postMessage({ tipo: "perezoso", pid, ruta, contenido });
+    } catch (e) {
+      const error = e instanceof Error ? e.message : String(e);
+      this.fallidos.push({ ruta, error });
+      hilo.postMessage({ tipo: "perezoso", pid, ruta, error });
+    }
   }
 
   private fallarTodo(e: Error): void {
@@ -102,6 +133,8 @@ export class TerminalDeLen {
 
   async ejecutar(command: string): Promise<SalidaDeUnComando> {
     if (!this.hilo) await this.arrancar();
+    this.cargados = [];
+    this.fallidos = [];
     try {
       const r = await this.pedir({ tipo: "exec", command }, this.limite + (this.o.margenMs ?? MARGEN_MS));
       return {
@@ -109,6 +142,8 @@ export class TerminalDeLen {
         stderr: String(r.stderr ?? ""),
         exitCode: Number(r.exitCode ?? 1),
         ficheros: (r.ficheros as Record<string, string>) ?? null,
+        ...(this.cargados.length > 0 ? { cargados: [...this.cargados] } : {}),
+        ...(this.fallidos.length > 0 ? { fallidos: [...this.fallidos] } : {}),
       };
     } catch (e) {
       if (!(e instanceof CorteDuro)) throw e;

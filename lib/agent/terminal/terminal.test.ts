@@ -1,7 +1,10 @@
 // lib/agent/terminal/terminal.test.ts — la terminal de Len de verdad: el hilo y just-bash.
 // @vitest-environment node
 import { afterEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { AVISO_DE_REINICIO, TerminalDeLen } from "./terminal";
+import { DE_SOLO_LECTURA } from "./ficheros";
 
 const SITIO = {
   "/index.html": "<h1>Marejada</h1>\n<p>Calle Pelícanos 12</p>\n",
@@ -85,4 +88,76 @@ describe("TerminalDeLen", () => {
     expect(r.stdout).toBe("manual\n");
     expect(r.exitCode).not.toBe(0);
   }, 20_000);
+
+  describe("F5 · los ficheros de sólo lectura", () => {
+    const FORMULARIOS = '{"_origen":"visitante","id":"f1","de":"Ana","datos":{"mensaje":"¿Abren el sábado?"}}\n';
+    function conPerezosos() {
+      const leidos: string[] = [];
+      const { t } = terminal({
+        perezosos: {
+          rutas: async () => ["/bandeja/formularios.jsonl", "/resultados/visitas.json"],
+          leer: async (ruta) => {
+            leidos.push(ruta);
+            if (ruta === "/bandeja/formularios.jsonl") return FORMULARIOS;
+            throw new Error("la base no contesta");
+          },
+        },
+      });
+      return { t, leidos };
+    }
+
+    it("existen desde el principio, pero sólo se calculan cuando un comando los lee", async () => {
+      const { t, leidos } = conPerezosos();
+      const ls = await t.ejecutar("ls /bandeja /resultados");
+      expect(ls.stdout).toContain("formularios.jsonl");
+      expect(ls.stdout).toContain("visitas.json");
+      expect(leidos).toEqual([]);
+      const jq = await t.ejecutar("jq -r '.de' /bandeja/formularios.jsonl");
+      expect(jq.stdout).toBe("Ana\n");
+      expect(jq.cargados).toEqual(["/bandeja/formularios.jsonl"]);
+      // Cargado una vez, se queda: el comando siguiente no lo pide otra vez.
+      const otra = await t.ejecutar("wc -l < /bandeja/formularios.jsonl");
+      expect(otra.stdout.trim()).toBe("1");
+      expect(otra.cargados).toBeUndefined();
+      expect(leidos).toEqual(["/bandeja/formularios.jsonl"]);
+      // No son del proyecto: no vuelven en `ficheros` (y no se guardarían).
+      expect(Object.keys(otra.ficheros ?? {}).some((r) => DE_SOLO_LECTURA.test(r))).toBe(false);
+    }, 20_000);
+
+    it("si su cálculo falla, el comando falla y lo dice; la terminal sigue", async () => {
+      const { t } = conPerezosos();
+      const r = await t.ejecutar("cat /resultados/visitas.json");
+      expect(r.exitCode).not.toBe(0);
+      expect(r.fallidos).toEqual([{ ruta: "/resultados/visitas.json", error: "la base no contesta" }]);
+      expect((await t.ejecutar("echo sigue")).stdout).toBe("sigue\n");
+    }, 20_000);
+
+    it("nadie los escribe: >, >>, sed -i, rm, mv, cp encima, mkdir dentro y un enlace simbólico — todo EROFS, y siguen iguales", async () => {
+      const { t } = conPerezosos();
+      const intentos = [
+        "echo x > /bandeja/formularios.jsonl",
+        "echo x >> /bandeja/formularios.jsonl",
+        "sed -i 's/Ana/Eva/' /bandeja/formularios.jsonl",
+        "rm /bandeja/formularios.jsonl",
+        "mv /bandeja/formularios.jsonl /robado.jsonl",
+        "echo y > /tmp/y; cp /tmp/y /bandeja/formularios.jsonl",
+        "mkdir /bandeja/nueva",
+        "echo z > /bandeja/nuevo.txt",
+        "ln -s /bandeja/formularios.jsonl /atajo && echo w > /atajo",
+        "ln -s /bandeja /carpeta && echo w > /carpeta/otro.txt",
+      ];
+      for (const c of intentos) {
+        const r = await t.ejecutar(c);
+        expect(r.exitCode, c).not.toBe(0);
+      }
+      const despues = await t.ejecutar("cat /bandeja/formularios.jsonl; ls /bandeja");
+      expect(despues.stdout).toBe(FORMULARIOS + "formularios.jsonl\n");
+      expect(Object.hasOwn((await t.ejecutar("true")).ficheros ?? {}, "/robado.jsonl")).toBe(false);
+    }, 60_000);
+
+    it("el hilo y ficheros.ts usan la MISMA regla de sólo lectura", () => {
+      const hilo = readFileSync(path.join(__dirname, "trabajador.mjs"), "utf8");
+      expect(hilo).toContain(`const SOLO_LECTURA = ${DE_SOLO_LECTURA.toString()};`);
+    });
+  });
 });

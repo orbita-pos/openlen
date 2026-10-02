@@ -19,8 +19,17 @@
  *  y tirar. Lo que se escribe ahí no se guarda en ninguna parte. */
 const DEL_SISTEMA = /^\/(?:tmp|bin|usr|dev|proc)(?:\/|$)/;
 
+/** F5 · las carpetas de SÓLO LECTURA: resultados, bandeja, catálogo de fotos y
+ *  versiones. Se calculan al leerlas (`solo-lectura.ts`) y nadie las escribe:
+ *  el hilo contesta EROFS (`trabajador.mjs`, con la misma expresión). */
+export const DE_SOLO_LECTURA = /^\/(?:resultados|bandeja|catalogo|\.versiones)(?:\/|$)/;
+
+export function esDeSoloLectura(ruta: string): boolean {
+  return DE_SOLO_LECTURA.test(ruta);
+}
+
 export function esDelProyecto(ruta: string): boolean {
-  return !DEL_SISTEMA.test(ruta);
+  return !DEL_SISTEMA.test(ruta) && !DE_SOLO_LECTURA.test(ruta);
 }
 
 /** Lo que cambió en los ficheros del proyecto entre dos fotos del árbol. */

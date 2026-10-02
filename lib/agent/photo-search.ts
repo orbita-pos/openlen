@@ -76,6 +76,15 @@ function extractEntries(manifest: unknown): ManifestEntry[] {
   return out;
 }
 
+/** EL CATÁLOGO ENTERO, para `/catalogo/fotos.jsonl` de la terminal (F5 de
+ *  plans/len-agente-2026): las mismas entradas que filtra `searchCuratedPhotos`,
+ *  sin filtro ni tope, en el orden del manifiesto. */
+export function todasLasFotosCuradas(
+  manifest: unknown,
+): { url: string; estilo: string; alt: string; id: string; familia: string[] }[] {
+  return extractEntries(manifest).map((e) => ({ url: e.url, estilo: e.style, alt: e.alt, id: e.id, familia: e.family }));
+}
+
 /** Mirrors the OpenLenTab client filter (style exact-match, term substring
  *  against `${alt} ${id} ${family.join(" ")}`) but case/accent-insensitive,
  *  and defensive against a malformed manifest (returns [] rather than
