@@ -47,6 +47,7 @@ import { AVISO_VISITANTES, llevaTextoDeVisitantes } from "@/lib/page-data/vista-
 import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO, alcanceDeRuta, lineasNuevas } from "@/lib/agent/ficheros/memoria";
 import { MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
 import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
+import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/terminal/ajustes";
 import { buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { PREFERENCIA_MAX, PREFERENCIA_MIN, guardarPreferencia } from "@/lib/agent/preferencias";
 
@@ -432,6 +433,8 @@ export async function cargarFicherosDeLaTerminal(session: AgentSession, deps: Ag
   for (const [ruta, a] of v.almacenes) ficheros[ruta] = a.texto;
   for (const [ruta, texto] of v.memoria) ficheros[ruta] = texto;
   ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma();
+  // F5 · los ajustes del proyecto, escribibles por sus caminos (`ajustes.ts`).
+  ficheros[RUTA_AJUSTES] = textoDeAjustes(row);
   return ficheros;
 }
 
@@ -486,6 +489,18 @@ export async function guardarLoDeLaTerminal(
     }
     if (c.ruta === RUTA_MANUAL) {
       deshacer(c.ruta, MANUAL_SOLO_LECTURA);
+      continue;
+    }
+    if (c.ruta === RUTA_AJUSTES) {
+      const g = await guardarAjustes(session, deps, c.contenido);
+      if (!g.ok) {
+        deshacer(c.ruta, g.motivo);
+        continue;
+      }
+      if (g.incompleto) rechazado = true;
+      escrituras.push(...g.escrituras);
+      enLaTerminal[c.ruta] = g.texto;
+      notas.push([`${rutaRelativa(c.ruta)}: saved.`, ...g.notas.map((n) => `  ${n}`)].join("\n"));
       continue;
     }
     // El proyecto de AHORA en cada fichero: el anterior del mismo comando ya cambió el sitio.

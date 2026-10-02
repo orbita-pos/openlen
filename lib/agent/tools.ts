@@ -40,7 +40,7 @@ import { getUserMemory, rememberAboutUser } from "@/lib/agent/user-memory";
 import { leerDeInternet } from "@/lib/agent/internet";
 import { activeHtml } from "@/lib/page-engine/persist";
 import { actualizarData } from "@/lib/projects/escribir-data";
-import { leerCambiosSinPublicar, setProjectUserBrief } from "@/lib/projects";
+import { leerCambiosSinPublicar, renameProject, setProjectUserBrief } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { validateSubdomain } from "@/lib/subdomain/validate";
@@ -211,6 +211,9 @@ export interface AgentDeps {
    *  write path) — realDeps wires this to setProjectUserBrief. Returns false
    *  when the project isn't the caller's (mirrors that function's contract). */
   setUserBrief(projectId: string, userId: string, value: string): Promise<boolean>;
+  /** F5 · el título del proyecto, con el mismo `renameProject` de
+   *  `PATCH /api/projects/[id]`. Lo usa `/ajustes/proyecto.json` de la terminal. */
+  renombrarProyecto?(projectId: string, userId: string, title: string): Promise<boolean>;
   // ⚰️ Aquí vivía `fetchSheetRows`, la lectura del Google Sheet de
   // `conectar_datos_vivos`. Se fue con «datos vivos» en Len 2.1 (2026-09-30).
   /** Memoria de la PERSONA, no del proyecto: sobrevive a cambiar de página y
@@ -491,6 +494,9 @@ export function realDeps(): AgentDeps {
     },
     async setUserBrief(projectId, userId, value) {
       return setProjectUserBrief(projectId, userId, value);
+    },
+    async renombrarProyecto(projectId, userId, title) {
+      return renameProject(projectId, userId, title);
     },
     async rememberAboutUser(userId, preferencia) {
       return rememberAboutUser(userId, preferencia);
@@ -929,7 +935,7 @@ async function activateModulePatch(
   return { ok: true, outcome };
 }
 
-async function toolActivarModulo(
+export async function toolActivarModulo(
   session: AgentSession,
   deps: AgentDeps,
   args: Record<string, unknown>,

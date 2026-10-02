@@ -31,6 +31,7 @@ The files:
 - /datos/<store>.json holds the rows of each store the pages declare.
 - /memoria/dueno.md and /memoria/proyecto.md are the memory (lines can only be added).
 - /AGENTS.md is the platform manual (read-only).
+- /ajustes/proyecto.json holds the project's title, languages and modules ({"titulo", "idiomas", "modulos": {"chat", "assistant"}}). Writing it changes the title or turns a module on or off, exactly like activar_modulo; the languages are chosen when publishing and cannot be changed here. Publishing is always the user's tap.
 - /tmp is scratch space that lasts this turn and is never saved.
 
 Read-only, computed when first read:

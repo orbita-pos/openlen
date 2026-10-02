@@ -980,6 +980,81 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
     });
   });
 
+  describe("F5 · /ajustes/proyecto.json", () => {
+    function conAjustes() {
+      const base = makeDeps({ html: HOME, settings: { languages: ["en"], chat: { enabled: false } } } as ProjectData);
+      const store = base.store as typeof base.store & { title: string };
+      store.title = "Brote";
+      const deps = {
+        ...base.deps,
+        async loadProject() {
+          return { data: store.data, title: store.title, subdomain: null, publishedAt: null, userBrief: null };
+        },
+        async renombrarProyecto(_p: string, _u: string, title: string) {
+          store.title = title;
+          return true;
+        },
+      } as unknown as AgentDeps;
+      return { deps, store };
+    }
+    const escribir = (json: string) => `printf '%s\\n' '${json}' > /ajustes/proyecto.json`;
+
+    it("se lee como está el proyecto", async () => {
+      const { deps } = conAjustes();
+      const session = makeSession();
+      try {
+        const out = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "jq -c . /ajustes/proyecto.json" }));
+        assert.match(texto(out), /^\{"titulo":"Brote","idiomas":\["en"\],"modulos":\{"chat":false,"assistant":false\}\}\n/);
+      } finally {
+        await cerrarTerminalDeLaSesion(session);
+      }
+    });
+
+    it("el título va por renameProject y el asistente por activar_modulo, con su aviso", async () => {
+      const { deps, store } = conAjustes();
+      const session = makeSession();
+      try {
+        const out = await conTerminal(() =>
+          runAgentTool(session, deps, "bash", {
+            command: escribir('{"titulo":"Brote Verde","idiomas":["en"],"modulos":{"chat":false,"assistant":true}}'),
+          }),
+        );
+        assert.equal(out.response.ok, true, texto(out));
+        assert.equal(store.title, "Brote Verde");
+        assert.equal(store.data.settings?.assistant?.enabled, true);
+        assert.match(texto(out), /ajustes\/proyecto\.json: saved\.\n {2}title: "Brote Verde"\.\n {2}assistant: on\. Guardado\. La página todavía no está publicada/);
+        const despues = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "jq -c .modulos /ajustes/proyecto.json" }));
+        assert.match(texto(despues), /^\{"chat":false,"assistant":true\}\n/);
+      } finally {
+        await cerrarTerminalDeLaSesion(session);
+      }
+    });
+
+    it("lo que no cumple el esquema, o cambia los idiomas, se rechaza y el fichero vuelve como estaba", async () => {
+      const { deps, store } = conAjustes();
+      const session = makeSession();
+      try {
+        for (const [json, motivo] of [
+          ['{"titulo":"X","idiomas":["en"],"modulos":{"chat":false,"assistant":false},"publicar":true}', /does not match its schema/],
+          ['{"titulo":"","idiomas":["en"],"modulos":{"chat":false,"assistant":false}}', /titulo/],
+          ['{"titulo":"Brote","idiomas":["en","fr"],"modulos":{"chat":false,"assistant":false}}', /languages are chosen when publishing/],
+          ["no es json", /not valid JSON/],
+        ] as const) {
+          const out = await conTerminal(() => runAgentTool(session, deps, "bash", { command: escribir(json) }));
+          assert.equal(out.response.ok, false, json);
+          assert.match(texto(out), motivo);
+          assert.match(texto(out), /It is back as it was\./);
+        }
+        assert.equal(store.title, "Brote");
+        assert.equal(store.saved, 0);
+        const cat = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "jq -r .titulo /ajustes/proyecto.json" }));
+        assert.match(texto(cat), /^Brote\n/);
+      } finally {
+        await cerrarTerminalDeLaSesion(session);
+      }
+    });
+  });
+
   it("sin la palanca, no hay bash (brazo de control de la medición)", async () => {
     const { deps } = makeDeps({ html: HOME });
     const out = await runAgentTool(makeSession(), deps, "bash", { command: "ls /" });
