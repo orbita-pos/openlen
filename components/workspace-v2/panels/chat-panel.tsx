@@ -62,6 +62,7 @@ import { TextoDeLen } from "../texto-de-len";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
 import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
+import { leerCambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import { cambiosEnVivo, esFicheroCambiado, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
 import { abrirEnElCodigo, abrirFicheroDelTurno, rutasDelTurno } from "@/lib/workspace-v2/abrir-fichero";
 import { FicherosDelTurnoEnVivo } from "../ficheros-del-turno";
@@ -1437,12 +1438,15 @@ function AIDesignChat({
                 const command = strField(payload, "command");
                 const salida = strField(payload, "salida");
                 const exitCode = (payload as { exitCode?: unknown } | null)?.exitCode;
+                // La #10 · lo que cambió en los ficheros, para la lente y la tarjeta.
+                const cambios = leerCambiosDelComando((payload as { cambios?: unknown } | null)?.cambios);
                 if (command) {
                   terminalEnVivo.empujar(projectId, {
                     command,
                     salida,
                     exitCode: typeof exitCode === "number" ? exitCode : -1,
                     turnId,
+                    ...(cambios ? { cambios } : {}),
                   });
                 }
               } else if (evName === "cambios") {

@@ -17,6 +17,7 @@
  * Puro: lo usa la ruta y lo prueban sin base.
  */
 import { NOMBRE_BASH } from "./declaracion";
+import { CLAVE_CAMBIOS_DEL_COMANDO, leerCambiosDelComando, type CambiosDelComando } from "./cambios-del-comando";
 
 /** Lo que de un mensaje guardado hace falta aquí. */
 export interface MensajeConLlamadas {
@@ -31,6 +32,8 @@ export interface ComandoDeLaTerminal {
   readonly salida: string | null;
   /** Sacado de la última línea de la salida; null si no se puede leer. */
   readonly exitCode: number | null;
+  /** Lo que cambió, por fichero (la #10). Ausente si no cambió nada o no se guardó. */
+  readonly cambios?: CambiosDelComando;
 }
 
 /** La última línea de la salida de DeepSeek: «[Command finished with exit code N]». */
@@ -62,7 +65,8 @@ export function comandosDeLaTranscripcion(mensajes: readonly MensajeConLlamadas[
       if (!command) return;
       const respuesta = respuestas[j];
       const salida = respuesta?.name === NOMBRE_BASH ? textoDeLaRespuesta(respuesta.response) : null;
-      comandos.push({ command, salida, exitCode: salida === null ? null : codigoDeSalida(salida) });
+      const cambios = respuesta?.name === NOMBRE_BASH ? leerCambiosDelComando(respuesta.response?.[CLAVE_CAMBIOS_DEL_COMANDO]) : null;
+      comandos.push({ command, salida, exitCode: salida === null ? null : codigoDeSalida(salida), ...(cambios ? { cambios } : {}) });
     });
   }
   return comandos;

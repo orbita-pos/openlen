@@ -75,6 +75,7 @@ import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { NOMBRE_BASH } from "@/lib/agent/terminal/declaracion";
 import { toolBash } from "@/lib/agent/terminal/herramienta";
 import type { TerminalDeLen } from "@/lib/agent/terminal/terminal";
+import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import {
   toolPrepararRespuesta,
   toolVerFormularios,
@@ -732,8 +733,14 @@ export interface ToolOutcome {
   }[];
   /** F6a · el comando de la terminal y lo que imprimió, tal cual lo leyó el
    *  modelo: el bucle lo emite como evento `terminal` para la lente
-   *  «Terminal» del lienzo. Sólo lo pone `bash`. */
-  terminal?: { readonly command: string; readonly salida: string; readonly exitCode: number };
+   *  «Terminal» del lienzo. Sólo lo pone `bash`. `cambios`, lo que cambió por
+   *  fichero (la #10), sólo para la pantalla. */
+  terminal?: {
+    readonly command: string;
+    readonly salida: string;
+    readonly exitCode: number;
+    readonly cambios?: CambiosDelComando;
+  };
   /** El gate de publicación (publicar). Presente ⇒ el loop emite un evento
    *  `confirm` y le pasa al modelo un estado "esperando_confirmacion". La
    *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única

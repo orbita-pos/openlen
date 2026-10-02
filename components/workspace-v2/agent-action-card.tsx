@@ -398,7 +398,12 @@ export function AgentActionCard({
         <span className="ml-auto shrink-0 fg-faint">{abierta ? <ChevronDown size={12} /> : <ChevronRight size={12} />}</span>
       </button>
       {abierta && (
-        <SalidaEnLaTarjeta donde={terminal} resumen={action.summary} fallo={action.status === "error"} />
+        <SalidaEnLaTarjeta
+          donde={terminal}
+          resumen={action.summary}
+          fallo={action.status === "error"}
+          {...(onAbrirFichero ? { onAbrirFichero } : {})}
+        />
       )}
     </div>
   );

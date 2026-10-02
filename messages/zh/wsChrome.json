@@ -162,7 +162,13 @@
       "escribe": "输入命令后按回车",
       "nota": "Len 看不到你在这里输入的内容；但能看到你对文件的修改。",
       "corriendo": "正在运行…",
-      "noCorrio": "无法运行（{motivo}）。"
+      "noCorrio": "无法运行（{motivo}）。",
+      "creado": "新建",
+      "actualizado": "已更新",
+      "borrado": "已删除",
+      "masLineas": "{count, plural, other {… 还有 # 行}}",
+      "masFicheros": "{count, plural, other {… 另有 # 个文件已更改}}",
+      "abrirFichero": "打开文件"
     },
     "cambios": {
       "title": "本轮更改了什么",

@@ -14,12 +14,15 @@
 // más cercano a esa posición. Puro: lo prueba vitest.
 
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
+import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 
 export interface ComandoConSalida {
   readonly command: string;
   /** Lo que imprimió, tal como lo leyó el modelo. Null: no se guardó. */
   readonly salida: string | null;
   readonly exitCode: number | null;
+  /** Lo que cambió en los ficheros (la #10). */
+  readonly cambios?: CambiosDelComando;
 }
 
 export function salidaDelComando<T extends ComandoConSalida>(

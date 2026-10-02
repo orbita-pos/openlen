@@ -21,6 +21,7 @@ import { useTranslations } from "next-intl";
 
 import { plegarSalida, salidaDelComando, type ComandoConSalida } from "@/lib/workspace-v2/salida-de-la-tarjeta";
 import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
+import { CambiosDelComandoView } from "./cambios-del-comando";
 
 interface TurnoGuardado {
   readonly id: string;
@@ -53,12 +54,15 @@ export function SalidaEnLaTarjeta({
   donde,
   resumen,
   fallo,
+  onAbrirFichero,
 }: {
   donde: DondeEstaLaSalida;
   /** `action.summary`: el resumen con el que se confirma la pareja. */
   resumen: string;
   /** La tarjeta salió roja: el código va en rojo, no atenuado. */
   fallo: boolean;
+  /** Abre en el taller un fichero que cambió el comando (la #9). */
+  onAbrirFichero?: (ruta: string) => void;
 }) {
   const t = useTranslations("wsPage");
   const tc = useTranslations("wsChrome");
@@ -148,6 +152,22 @@ export function SalidaEnLaTarjeta({
         <p className={`mt-1 text-[10.5px] ${fallo ? "text-red-600 dark:text-red-400" : "fg-faint"}`}>
           {tc("preview.terminal.codigo", { n: codigo })}
         </p>
+      )}
+      {/* La #10 · lo que cambió en los ficheros; aquí, sólo las cabeceras. */}
+      {comando?.cambios && (
+        <CambiosDelComandoView
+          cambios={comando.cambios}
+          conLineas={false}
+          onAbrir={onAbrirFichero}
+          labels={{
+            creado: tc("preview.terminal.creado"),
+            actualizado: tc("preview.terminal.actualizado"),
+            borrado: tc("preview.terminal.borrado"),
+            masLineas: (n) => tc("preview.terminal.masLineas", { count: n }),
+            masFicheros: (n) => tc("preview.terminal.masFicheros", { count: n }),
+            abrir: tc("preview.terminal.abrirFichero"),
+          }}
+        />
       )}
     </div>
   );

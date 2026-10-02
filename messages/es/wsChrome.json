@@ -162,7 +162,13 @@
       "escribe": "Escribe un comando y pulsa Intro",
       "nota": "Len no ve lo que escribes aquí; lo que cambies en los archivos, sí.",
       "corriendo": "Corriendo…",
-      "noCorrio": "No se pudo ejecutar ({motivo})."
+      "noCorrio": "No se pudo ejecutar ({motivo}).",
+      "creado": "Creado",
+      "actualizado": "Actualizado",
+      "borrado": "Borrado",
+      "masLineas": "{count, plural, one {… # línea más} other {… # líneas más}}",
+      "masFicheros": "{count, plural, one {… # archivo más cambiado} other {… # archivos más cambiados}}",
+      "abrirFichero": "Abrir el archivo"
     },
     "cambios": {
       "title": "Lo que cambió en el turno",

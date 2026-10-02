@@ -170,7 +170,13 @@
       "escribe": "Typ een commando en druk op Enter",
       "nota": "Len ziet niet wat je hier typt; wat je in de bestanden verandert wel.",
       "corriendo": "Bezig…",
-      "noCorrio": "Kon niet worden uitgevoerd ({motivo})."
+      "noCorrio": "Kon niet worden uitgevoerd ({motivo}).",
+      "creado": "Aangemaakt",
+      "actualizado": "Bijgewerkt",
+      "borrado": "Verwijderd",
+      "masLineas": "{count, plural, one {… nog # regel} other {… nog # regels}}",
+      "masFicheros": "{count, plural, one {… nog # bestand gewijzigd} other {… nog # bestanden gewijzigd}}",
+      "abrirFichero": "Bestand openen"
     },
     "cambios": {
       "title": "Wat er in deze beurt veranderde",

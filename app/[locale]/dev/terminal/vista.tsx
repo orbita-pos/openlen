@@ -13,11 +13,33 @@ import { FicherosDelTurnoEnVivo } from "@/components/workspace-v2/ficheros-del-t
 import { AgentActionCard, type AgentAction } from "@/components/workspace-v2/agent-action-card";
 import { TextoDeLen } from "@/components/workspace-v2/texto-de-len";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
+import { cambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import { abrirEnElCodigo, abrirFicheroDelTurno, rutasDelTurno } from "@/lib/workspace-v2/abrir-fichero";
 import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
 
 const PROYECTO = "demo-terminal";
+
+// La #10: lo que cambió cada comando, calculado con la función DE VERDAD sobre
+// un sitio de ejemplo (en el servidor sale de la foto de la terminal).
+const pagina = (cuerpo: string) => `<!doctype html>\n<html>\n<body>\n${cuerpo}\n</body>\n</html>\n`;
+const SITIO: Record<string, string> = {
+  "/index.html": pagina(
+    '  <h1>Escuela de surf Marejada</h1>\n  <p class="text-sm">Calle Marea 12, Sayulita</p>\n  <a href="https://maps.google.com/?q=Calle+Marea+12">Cómo llegar</a>',
+  ),
+  "/menu/index.html": pagina("  <h1>Clases</h1>\n  <footer>Calle Marea 12</footer>"),
+  "/contacto/index.html": pagina("  <h1>Contacto</h1>\n  <address>Calle Marea 12, Sayulita, Nay.</address>"),
+};
+const conGaviotas = (sitio: Record<string, string>) =>
+  Object.fromEntries(Object.entries(sitio).map(([r, t]) => [r, t.replaceAll("Calle Marea 12", "Calle Gaviotas 7")]));
+// Y uno grande para tu terminal: 7 ficheros (se ven 5) y uno de 60 líneas (se ven 40).
+const SITIO_GRANDE: Record<string, string> = {
+  ...SITIO,
+  "/clases/index.html": pagina(Array.from({ length: 60 }, (_, i) => `  <p>Clase ${i + 1}: Calle Marea 12</p>`).join("\n")),
+  "/precios/index.html": pagina("  <p>Calle Marea 12</p>"),
+  "/blog/index.html": pagina("  <p>Calle Marea 12</p>"),
+  "/faq/index.html": pagina("  <p>Calle Marea 12</p>"),
+};
 
 const HISTORIAL = {
   encendida: true,
@@ -37,6 +59,7 @@ const HISTORIAL = {
           command: "sed -i 's/Calle Marea 12/Calle Gaviotas 7/g' /index.html /menu/index.html /contacto/index.html",
           salida: "contacto/index.html: saved.\nindex.html: saved.\nmenu/index.html: saved.\n[Command finished with exit code 0]",
           exitCode: 0,
+          cambios: cambiosDelComando(SITIO, conGaviotas(SITIO)),
         },
         {
           command: "echo nota >> /AGENTS.md",
@@ -115,11 +138,20 @@ function preparar() {
       // Tu terminal (la #17), de mentira: aquí no hay servidor con sesión. La de
       // verdad la prueban las de node:test en herramientas-de-ficheros.test.ts.
       const { command } = JSON.parse(String(init.body)) as { command: string };
+      const sed = command.includes("sed -i");
       const salida = command.trim().startsWith("ls")
         ? "AGENTS.md\nclases\ncontacto\ndatos\nindex.html\nresultados\n[Command finished with exit code 0]"
-        : `(ejemplo: aquí no corre «${command}»)\n[Command finished with exit code 0]`;
+        : sed
+          ? `${Object.keys(SITIO_GRANDE)
+              .sort()
+              .map((r) => `${r.slice(1)}: saved.`)
+              .join("\n")}\n[Command finished with exit code 0]`
+          : `(ejemplo: aquí no corre «${command}»)\n[Command finished with exit code 0]`;
+      // Con un `sed -i`, lo que habría cambiado (la #10).
+      const cambios = sed ? cambiosDelComando(SITIO_GRANDE, conGaviotas(SITIO_GRANDE)) : null;
+      const cuerpo = JSON.stringify({ command, salida, exitCode: 0, cambio: sed, ...(cambios ? { cambios } : {}) });
       return new Promise((r) =>
-        setTimeout(() => r(new Response(JSON.stringify({ command, salida, exitCode: 0, cambio: false }), { headers: { "content-type": "application/json" } })), 500),
+        setTimeout(() => r(new Response(cuerpo, { headers: { "content-type": "application/json" } })), 500),
       );
     }
     if (url.endsWith(`/api/projects/${PROYECTO}/terminal`)) {

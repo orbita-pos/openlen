@@ -162,7 +162,13 @@
       "escribe": "Befehl eingeben und Enter drücken",
       "nota": "Len sieht nicht, was du hier eingibst – was du an den Dateien änderst, schon.",
       "corriendo": "Läuft…",
-      "noCorrio": "Konnte nicht ausgeführt werden ({motivo})."
+      "noCorrio": "Konnte nicht ausgeführt werden ({motivo}).",
+      "creado": "Erstellt",
+      "actualizado": "Geändert",
+      "borrado": "Gelöscht",
+      "masLineas": "{count, plural, one {… # weitere Zeile} other {… # weitere Zeilen}}",
+      "masFicheros": "{count, plural, one {… # weitere Datei geändert} other {… # weitere Dateien geändert}}",
+      "abrirFichero": "Datei öffnen"
     },
     "cambios": {
       "title": "Was sich in dieser Runde geändert hat",

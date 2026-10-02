@@ -24,6 +24,7 @@ import { realDeps, type AgentDeps, type AgentSession } from "@/lib/agent/tools";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { cerrarTerminalDeLaSesion, toolBash } from "./herramienta";
+import type { CambiosDelComando } from "./cambios-del-comando";
 
 /** Sin un comando en este tiempo, la terminal se cierra (su hilo muere). */
 export const TERMINAL_INACTIVA_MS = 10 * 60_000;
@@ -46,6 +47,8 @@ export interface ComandoDelUsuario {
   readonly exitCode: number;
   /** Cambió algún fichero: el lienzo tiene que volver a leer el proyecto. */
   readonly cambio: boolean;
+  /** Lo que cambió, por fichero (la #10), para la lente. */
+  readonly cambios?: CambiosDelComando;
 }
 
 export function ejecutarEnLaTerminalDelUsuario(
@@ -100,7 +103,13 @@ async function correr(a: Abierta, deps: AgentDeps, command: string): Promise<Com
       const texto = out.response[CLAVE_TOOL_RESULT] ?? out.response.error ?? "";
       return { command, salida: String(texto), exitCode: 1, cambio: false };
     }
-    return { command, salida: out.terminal.salida, exitCode: out.terminal.exitCode, cambio };
+    return {
+      command,
+      salida: out.terminal.salida,
+      exitCode: out.terminal.exitCode,
+      cambio,
+      ...(out.terminal.cambios ? { cambios: out.terminal.cambios } : {}),
+    };
   } finally {
     a.reloj = setTimeout(() => void cerrar(a), TERMINAL_INACTIVA_MS);
     a.reloj.unref?.();

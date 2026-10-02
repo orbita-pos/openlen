@@ -162,7 +162,13 @@
       "escribe": "Scrivi un comando e premi Invio",
       "nota": "Len non vede ciò che scrivi qui; ciò che cambi nei file, sì.",
       "corriendo": "In esecuzione…",
-      "noCorrio": "Impossibile eseguirlo ({motivo})."
+      "noCorrio": "Impossibile eseguirlo ({motivo}).",
+      "creado": "Creato",
+      "actualizado": "Aggiornato",
+      "borrado": "Eliminato",
+      "masLineas": "{count, plural, one {… # altra riga} other {… altre # righe}}",
+      "masFicheros": "{count, plural, one {… # altro file modificato} other {… altri # file modificati}}",
+      "abrirFichero": "Apri il file"
     },
     "cambios": {
       "title": "Cosa è cambiato in questo turno",

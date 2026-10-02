@@ -162,7 +162,13 @@
       "escribe": "Type a command and press Enter",
       "nota": "Len doesn't see what you type here; what you change in the files, it does.",
       "corriendo": "Running…",
-      "noCorrio": "Couldn't run it ({motivo})."
+      "noCorrio": "Couldn't run it ({motivo}).",
+      "creado": "Created",
+      "actualizado": "Updated",
+      "borrado": "Deleted",
+      "masLineas": "{count, plural, one {… # more line} other {… # more lines}}",
+      "masFicheros": "{count, plural, one {… # more file changed} other {… # more files changed}}",
+      "abrirFichero": "Open the file"
     },
     "cambios": {
       "title": "What changed in this turn",

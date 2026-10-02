@@ -170,7 +170,13 @@
       "escribe": "Digite um comando e pressione Enter",
       "nota": "O Len não vê o que você digita aqui; o que você muda nos arquivos, sim.",
       "corriendo": "Executando…",
-      "noCorrio": "Não foi possível executar ({motivo})."
+      "noCorrio": "Não foi possível executar ({motivo}).",
+      "creado": "Criado",
+      "actualizado": "Atualizado",
+      "borrado": "Excluído",
+      "masLineas": "{count, plural, one {… mais # linha} other {… mais # linhas}}",
+      "masFicheros": "{count, plural, one {… mais # arquivo alterado} other {… mais # arquivos alterados}}",
+      "abrirFichero": "Abrir o arquivo"
     },
     "cambios": {
       "title": "O que mudou neste turno",

@@ -29,6 +29,7 @@ import { createHash } from "node:crypto";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
+import { CLAVE_CAMBIOS_DEL_COMANDO } from "@/lib/agent/terminal/cambios-del-comando";
 
 /** La misma marca que usa Claude Code. */
 export const RESULTADO_VACIADO = "[Earlier tool result removed to save space]";
@@ -154,8 +155,28 @@ export function transcripcionParaGuardar(mensajes: readonly Message[], leidos: L
     ...(l.vistaParcial ? { vistaParcial: true as const } : {}),
   }));
   let limpios = mensajes.map(limpio);
+  // Lo que sólo es para la pantalla se va ANTES que nada de lo que lee el
+  // modelo: que la lente pierda un diff, no que Len pierda un resultado.
+  if (JSON.stringify(limpios).length > TOPE_TRANSCRIPCION) limpios = sinLoDeLaPantalla(limpios);
   if (JSON.stringify(limpios).length > TOPE_TRANSCRIPCION) limpios = microcompactar(limpios, TOPE_TRANSCRIPCION / 2);
   return { mensajes: limpios, leidos: lecturas };
+}
+
+/** Las respuestas sin lo que el modelo no lee: los cambios de cada `bash` (la #10). */
+function sinLoDeLaPantalla<M extends Message>(mensajes: M[]): M[] {
+  return mensajes.map((m) =>
+    m.functionResponses?.some((r) => CLAVE_CAMBIOS_DEL_COMANDO in r.response)
+      ? {
+          ...m,
+          functionResponses: m.functionResponses.map((r) => {
+            if (!(CLAVE_CAMBIOS_DEL_COMANDO in r.response)) return r;
+            const resto = { ...r.response };
+            delete resto[CLAVE_CAMBIOS_DEL_COMANDO];
+            return { name: r.name, response: resto };
+          }),
+        }
+      : m,
+  );
 }
 
 /** Una foto que se consiguió pero NO cabe en esta petición con las más nuevas

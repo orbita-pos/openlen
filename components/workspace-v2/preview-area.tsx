@@ -26,7 +26,7 @@ import { DatosView } from "./datos-view";
 import { TerminalView } from "./terminal-view";
 import { CambiosView } from "./cambios-view";
 import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
-import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
+import { abrirEnElCodigo, abrirFicheroDelTurno } from "@/lib/workspace-v2/abrir-fichero";
 import { useTerminalDeLen } from "./use-terminal-de-len";
 import { useTerminalDelUsuario } from "./use-terminal-del-usuario";
 import { IconBtn, Segmented } from "./ui";
@@ -1067,7 +1067,23 @@ export function PreviewArea({
             terminal={terminal}
             {...(terminal.encendida ? { tuya: terminalTuya } : {})}
             onClose={() => setLente("pagina")}
+            // La #10 · la ruta de un fichero que cambió un comando: en «Cambios»
+            // si ese turno está en la sesión; si no (o es tu terminal), en «Código».
+            {...(projectId
+              ? {
+                  onAbrirFichero: (ruta: string, turnId: string | null) => {
+                    if (turnId) abrirFicheroDelTurno(projectId, turnId, ruta, { cambios: cambiosEnVivo, codigo: abrirEnElCodigo });
+                    else abrirEnElCodigo.abrir(projectId, ruta);
+                  },
+                }
+              : {})}
             labels={{
+              creado: t("preview.terminal.creado"),
+              actualizado: t("preview.terminal.actualizado"),
+              borrado: t("preview.terminal.borrado"),
+              masLineas: (count: number) => t("preview.terminal.masLineas", { count }),
+              masFicheros: (count: number) => t("preview.terminal.masFicheros", { count }),
+              abrir: t("preview.terminal.abrirFichero"),
               tuya: t("preview.terminal.tuya"),
               escribe: t("preview.terminal.escribe"),
               nota: t("preview.terminal.nota"),

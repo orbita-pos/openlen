@@ -162,7 +162,13 @@
       "escribe": "Tapez une commande et appuyez sur Entrée",
       "nota": "Len ne voit pas ce que vous tapez ici ; ce que vous changez dans les fichiers, si.",
       "corriendo": "Exécution…",
-      "noCorrio": "Impossible de l'exécuter ({motivo})."
+      "noCorrio": "Impossible de l'exécuter ({motivo}).",
+      "creado": "Créé",
+      "actualizado": "Modifié",
+      "borrado": "Supprimé",
+      "masLineas": "{count, plural, one {… # ligne de plus} other {… # lignes de plus}}",
+      "masFicheros": "{count, plural, one {… # autre fichier modifié} other {… # autres fichiers modifiés}}",
+      "abrirFichero": "Ouvrir le fichier"
     },
     "cambios": {
       "title": "Ce qui a changé pendant ce tour",

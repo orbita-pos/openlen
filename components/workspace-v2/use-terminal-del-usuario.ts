@@ -13,6 +13,8 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 
+import { leerCambiosDelComando, type CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
+
 export interface ComandoTuyo {
   readonly n: number;
   readonly command: string;
@@ -21,6 +23,8 @@ export interface ComandoTuyo {
   readonly exitCode: number | null;
   /** No llegó a correr (red, terminal apagada…): se dice en vez de la salida. */
   readonly error?: string;
+  /** Lo que cambió en los ficheros (la #10). */
+  readonly cambios?: CambiosDelComando;
 }
 
 const porProyecto = new Map<string, readonly ComandoTuyo[]>();
@@ -71,12 +75,25 @@ export function useTerminalDelUsuario(projectId: string | null): TerminalDelUsua
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ command }),
         });
-        const j = (await r.json().catch(() => ({}))) as { salida?: string; exitCode?: number; cambio?: boolean; error?: string };
+        const j = (await r.json().catch(() => ({}))) as {
+          salida?: string;
+          exitCode?: number;
+          cambio?: boolean;
+          cambios?: unknown;
+          error?: string;
+        };
         if (!r.ok || typeof j.salida !== "string") {
           poner(projectId, { n: yo, command, salida: null, exitCode: null, error: j.error ?? String(r.status) });
           return;
         }
-        poner(projectId, { n: yo, command, salida: j.salida, exitCode: typeof j.exitCode === "number" ? j.exitCode : null });
+        const cambios = leerCambiosDelComando(j.cambios);
+        poner(projectId, {
+          n: yo,
+          command,
+          salida: j.salida,
+          exitCode: typeof j.exitCode === "number" ? j.exitCode : null,
+          ...(cambios ? { cambios } : {}),
+        });
         if (j.cambio && typeof BroadcastChannel !== "undefined") {
           const canal = new BroadcastChannel("openlen-project-sync");
           canal.postMessage({ projectId });

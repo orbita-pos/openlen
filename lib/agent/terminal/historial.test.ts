@@ -2,6 +2,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { codigoDeSalida, comandosDeLaTranscripcion, type MensajeConLlamadas } from "./historial";
+import { CLAVE_CAMBIOS_DEL_COMANDO, cambiosDelComando } from "./cambios-del-comando";
 
 describe("comandosDeLaTranscripcion", () => {
   it("empareja cada bash con su respuesta por posición, saltándose las demás herramientas", () => {
@@ -31,6 +32,23 @@ describe("comandosDeLaTranscripcion", () => {
       { command: "grep -rn Marejada /", salida: "/index.html:3:Marejada\n[Command finished with exit code 0]", exitCode: 0 },
       { command: "cat /AGENTS.md > /x", salida: "rechazado\n[Command finished with exit code 1]", exitCode: 1 },
     ]);
+  });
+
+  it("lo que cambió cada comando (la #10) vuelve con él; si no tiene la forma, no", () => {
+    const cambios = cambiosDelComando({ "/index.html": "<p>a</p>\n" }, { "/index.html": "<p>b</p>\n" })!;
+    const mensajes: MensajeConLlamadas[] = [
+      { role: "assistant", functionCalls: [{ name: "bash", args: { command: "sed -i s/a/b/ /index.html" } }, { name: "bash", args: { command: "ls" } }] },
+      {
+        role: "user",
+        functionResponses: [
+          { name: "bash", response: { tool_result: "[Command finished with exit code 0]", [CLAVE_CAMBIOS_DEL_COMANDO]: cambios } },
+          { name: "bash", response: { tool_result: "[Command finished with exit code 0]", [CLAVE_CAMBIOS_DEL_COMANDO]: { roto: true } } },
+        ],
+      },
+    ];
+    const [sed, ls] = comandosDeLaTranscripcion(mensajes);
+    expect(sed!.cambios).toEqual(cambios);
+    expect(ls).not.toHaveProperty("cambios");
   });
 
   it("una salida vaciada por el microcompact se enseña como quedó; sin respuesta, null", () => {

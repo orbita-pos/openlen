@@ -11,12 +11,16 @@
 // `GET /api/projects/[id]/terminal`, y `sinLosYaGuardados` quita de aquí lo que
 // esa ruta ya devuelve, para no enseñarlo dos veces.
 
+import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
+
 export interface ComandoEnVivo {
   readonly command: string;
   readonly salida: string;
   readonly exitCode: number;
   /** El turno del Chat que lo corrió: con él, la tarjeta de `bash` encuentra su salida. */
   readonly turnId?: string;
+  /** Lo que cambió en los ficheros (la #10). */
+  readonly cambios?: CambiosDelComando;
 }
 
 /** Tope por proyecto: la lente no es un registro infinito. */

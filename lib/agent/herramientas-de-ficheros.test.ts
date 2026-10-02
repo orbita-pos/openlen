@@ -14,6 +14,7 @@ import { preparePage } from "@/lib/page-engine/prepare";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
 import { guardarLoDeLaTerminal } from "./herramientas-de-ficheros";
 import { cerrarTerminalDeLaSesion } from "./terminal/herramienta";
+import { CLAVE_CAMBIOS_DEL_COMANDO } from "./terminal/cambios-del-comando";
 import { cerrarLasTerminalesDelUsuario, ejecutarEnLaTerminalDelUsuario } from "./terminal/terminal-del-usuario";
 
 const HOME = `<!doctype html>
@@ -789,9 +790,25 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
       assert.equal(out.page, "contacto");
       assert.deepEqual(out.masPaginas?.map((p) => p.page), [null, "menu"]);
       assert.match(texto(out), /contacto\/index\.html: saved\.\nindex\.html: saved\.\nmenu\/index\.html: saved\.\n\[Command finished with exit code 0\]$/);
+      // La #10 · lo que cambió, por fichero, para la pantalla: en el evento y en
+      // la respuesta guardada, y nada de ello en lo que lee el modelo.
+      const cambios = out.terminal?.cambios;
+      assert.deepEqual(cambios?.ficheros.map((f) => [f.ruta, f.tipo]), [
+        ["/contacto/index.html", "actualizado"],
+        ["/index.html", "actualizado"],
+        ["/menu/index.html", "actualizado"],
+      ]);
+      for (const f of cambios!.ficheros) {
+        assert.ok(f.trozos.some((t) => t.lineas.some((l) => l.tipo === "anadida" && l.texto.includes("Calle Gaviotas 7"))), f.ruta);
+      }
+      assert.deepEqual(out.response[CLAVE_CAMBIOS_DEL_COMANDO], cambios);
+      assert.doesNotMatch(texto(out), /actualizado|anadida|trozos/);
       // Un solo mundo: lo que guardó la puerta es lo que ve el siguiente comando, y lo que ve Read.
       const cat = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "grep -c 'Calle Gaviotas 7' /index.html /menu/index.html /contacto/index.html" }));
       assert.match(texto(cat), /\/index\.html:1/);
+      // Un comando que sólo lee no cambió nada.
+      assert.equal(cat.terminal?.cambios, undefined);
+      assert.equal(CLAVE_CAMBIOS_DEL_COMANDO in cat.response, false);
       assert.match(store.data.pages?.contacto?.html ?? "", /Calle Gaviotas 7/);
     } finally {
       await cerrarTerminalDeLaSesion(session);

@@ -162,7 +162,13 @@
       "escribe": "명령을 입력하고 Enter를 누르세요",
       "nota": "여기서 입력한 내용은 Len이 보지 못합니다. 파일에서 바꾼 내용은 봅니다.",
       "corriendo": "실행 중…",
-      "noCorrio": "실행하지 못했습니다({motivo})."
+      "noCorrio": "실행하지 못했습니다({motivo}).",
+      "creado": "생성됨",
+      "actualizado": "수정됨",
+      "borrado": "삭제됨",
+      "masLineas": "{count, plural, other {… #줄 더}}",
+      "masFicheros": "{count, plural, other {… 파일 #개 더 변경됨}}",
+      "abrirFichero": "파일 열기"
     },
     "cambios": {
       "title": "이번 턴에서 바뀐 것",

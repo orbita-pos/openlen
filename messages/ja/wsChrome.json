@@ -162,7 +162,13 @@
       "escribe": "コマンドを入力して Enter",
       "nota": "ここで入力した内容は Len には見えません。ファイルへの変更は見えます。",
       "corriendo": "実行中…",
-      "noCorrio": "実行できませんでした（{motivo}）。"
+      "noCorrio": "実行できませんでした（{motivo}）。",
+      "creado": "作成",
+      "actualizado": "更新",
+      "borrado": "削除",
+      "masLineas": "{count, plural, other {… あと # 行}}",
+      "masFicheros": "{count, plural, other {… ほかに # 件のファイルを変更}}",
+      "abrirFichero": "ファイルを開く"
     },
     "cambios": {
       "title": "このターンで変わったこと",

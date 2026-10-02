@@ -7,6 +7,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { TerminalView } from "./terminal-view";
 import type { TerminalDeLen } from "./use-terminal-de-len";
 import type { TerminalDelUsuario } from "./use-terminal-del-usuario";
+import { cambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 // jsdom no tiene scrollIntoView y la vista baja al último comando.
@@ -31,6 +32,12 @@ const labels = {
   nota: "Len no ve lo que escribes aquí; lo que cambies en los archivos, sí.",
   corriendo: "Corriendo…",
   noCorrio: (motivo: string) => `No se pudo ejecutar (${motivo}).`,
+  creado: "Creado",
+  actualizado: "Actualizado",
+  borrado: "Borrado",
+  masLineas: (n: number) => `… ${n} líneas más`,
+  masFicheros: (n: number) => `… ${n} archivos más cambiados`,
+  abrir: "Abrir el archivo",
 };
 
 const base: TerminalDeLen = { encendida: true, turnos: [], enVivo: [], cargando: false, error: false, recargar: () => {} };
@@ -140,6 +147,44 @@ describe("TerminalView", () => {
   it("vacía: dice si la terminal está apagada o si Len aún no la usó", () => {
     expect(pintar(base).textContent).toContain(labels.vacio);
     expect(pintar({ ...base, encendida: false }).textContent).toContain(labels.apagada);
+  });
+});
+
+describe("TerminalView — lo que cambió cada comando (la #10)", () => {
+  const largo = Array.from({ length: 60 }, (_, i) => `<p>${i + 1}</p>`).join("\n") + "\n";
+  const antes = { "/index.html": "<h1>Hola</h1>\n<p>Calle Marea 12</p>\n", "/clases/index.html": largo };
+  const despues = { "/index.html": "<h1>Hola</h1>\n<p>Calle Gaviotas 7</p>\n", "/clases/index.html": largo.replaceAll("<p>", "<p class=x>") };
+  const cambios = cambiosDelComando(antes, despues)!;
+
+  it("debajo de la salida, cada fichero con su tipo, su ruta, +N −M y sus líneas, hasta 40; la ruta abre el fichero con su turno", () => {
+    const abrir = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const root = createRoot(el);
+    roots.push(root);
+    const terminal: TerminalDeLen = {
+      ...base,
+      turnos: [
+        {
+          id: "t1",
+          pedido: "Cambia la dirección",
+          creado: "2026-10-02T09:12:00.000Z",
+          comandos: [{ command: "sed -i …", salida: "index.html: saved.\n[Command finished with exit code 0]", exitCode: 0, cambios }],
+        },
+      ],
+    };
+    act(() => root.render(<TerminalView terminal={terminal} onClose={() => {}} onAbrirFichero={abrir} labels={labels} />));
+    const bloque = el.querySelector("[data-cambios-del-comando]")!;
+    expect(bloque.textContent).toContain("Actualizadoindex.html+1 −1");
+    expect(bloque.textContent).toContain("<p>Calle Gaviotas 7</p>");
+    expect(bloque.textContent).toContain("Actualizadoclases/index.html+60 −60");
+    expect(bloque.textContent).toContain(labels.masLineas(120 - 40));
+    act(() => (bloque.querySelector("button") as HTMLButtonElement).click());
+    expect(abrir).toHaveBeenCalledWith("/clases/index.html", "t1");
+  });
+
+  it("sin cambios, nada debajo", () => {
+    expect(pintar({ ...base, enVivo: [{ command: "ls", salida: "x\n[Command finished with exit code 0]", exitCode: 0 }] }).querySelector("[data-cambios-del-comando]")).toBeNull();
   });
 });
 

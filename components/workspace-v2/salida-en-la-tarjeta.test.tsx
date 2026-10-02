@@ -14,6 +14,7 @@ vi.mock("next-intl", () => ({
 import { AgentActionCard, type AgentAction } from "./agent-action-card";
 import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
+import { cambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -93,6 +94,33 @@ describe("la tarjeta de la terminal en el Chat", () => {
     });
     expect(el.textContent).toContain("preview.terminal.sinSalida");
     expect(el.textContent).not.toContain("/index.html");
+  });
+
+  it("lo que cambió el comando (la #10): sólo las cabeceras, y la ruta abre el fichero", () => {
+    const SED = "sed -i 's/a/b/' /index.html";
+    const cambios = cambiosDelComando({ "/index.html": "<p>a</p>\n" }, { "/index.html": "<p>b</p>\n" })!;
+    terminalEnVivo.empujar("p-cambios", { command: SED, salida: "index.html: saved.\n[Command finished with exit code 0]", exitCode: 0, turnId: "t1", cambios });
+    const abrir = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const root = createRoot(el);
+    roots.push(root);
+    act(() =>
+      root.render(
+        <AgentActionCard
+          action={{ tool: "bash", status: "done", summary: resumenDelComando(SED) }}
+          terminal={{ projectId: "p-cambios", turnId: "t1", indice: 0 }}
+          onAbrirFichero={abrir}
+        />,
+      ),
+    );
+    act(() => el.querySelector<HTMLButtonElement>("button[aria-expanded]")!.click());
+    const bloque = el.querySelector("[data-cambios-del-comando]")!;
+    expect(bloque.textContent).toContain("preview.terminal.actualizadoindex.html+1 −1");
+    // Condensada, como el estilo «condensed» de Claude Code: sin las líneas.
+    expect(bloque.textContent).not.toContain("<p>b</p>");
+    act(() => bloque.querySelector<HTMLButtonElement>("button")!.click());
+    expect(abrir).toHaveBeenCalledWith("/index.html");
   });
 
   it("mientras corre no se despliega, y las demás herramientas siguen siendo una fila", () => {

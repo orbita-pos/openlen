@@ -25,13 +25,17 @@ import { Check, Copy, Loader, X } from "./icons";
 import { IconBtn } from "./ui";
 import type { TerminalDeLen } from "./use-terminal-de-len";
 import type { TerminalDelUsuario } from "./use-terminal-del-usuario";
+import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
+import { CambiosDelComandoView, type EtiquetasDeLosCambios } from "./cambios-del-comando";
 
 interface TerminalViewProps {
   readonly terminal: TerminalDeLen;
   /** La terminal del usuario; sin ella, la lente es de sólo lectura. */
   readonly tuya?: TerminalDelUsuario;
   readonly onClose: () => void;
-  readonly labels: {
+  /** La ruta de un fichero que cambió un comando (la #10), con el turno que lo corrió; null, tu terminal. */
+  readonly onAbrirFichero?: (ruta: string, turnId: string | null) => void;
+  readonly labels: EtiquetasDeLosCambios & {
     readonly title: string;
     readonly close: string;
     readonly soloLectura: string;
@@ -61,11 +65,16 @@ function Comando({
   exitCode,
   corriendo = false,
   error,
+  cambios,
+  onAbrir,
   labels,
 }: {
   command: string;
   salida: string | null;
   exitCode: number | null;
+  /** Lo que cambió en los ficheros (la #10). */
+  cambios?: CambiosDelComando | undefined;
+  onAbrir?: ((ruta: string) => void) | undefined;
   /** De la terminal del usuario: todavía no ha vuelto. */
   corriendo?: boolean;
   /** De la terminal del usuario: no llegó a correr. */
@@ -139,6 +148,7 @@ function Comando({
       {falla && (
         <p className="mt-1 font-mono text-[10.5px] text-accent">{labels.codigo(exitCode)}</p>
       )}
+      {cambios && <CambiosDelComandoView cambios={cambios} conLineas onAbrir={onAbrir} labels={labels} />}
     </div>
   );
 }
@@ -149,7 +159,7 @@ function fecha(iso: string): string {
   return d.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
 }
 
-export function TerminalView({ terminal, tuya, onClose, labels }: TerminalViewProps) {
+export function TerminalView({ terminal, tuya, onClose, onAbrirFichero, labels }: TerminalViewProps) {
   const { turnos, enVivo, encendida, cargando, error } = terminal;
   const finalRef = useRef<HTMLDivElement>(null);
   const [linea, setLinea] = useState("");
@@ -223,7 +233,15 @@ export function TerminalView({ terminal, tuya, onClose, labels }: TerminalViewPr
               <span className="ml-auto shrink-0 text-[10.5px] fg-faint tabular ui-small">{fecha(turno.creado)}</span>
             </header>
             {turno.comandos.map((c, i) => (
-              <Comando key={i} command={c.command} salida={c.salida} exitCode={c.exitCode} labels={labels} />
+              <Comando
+                key={i}
+                command={c.command}
+                salida={c.salida}
+                exitCode={c.exitCode}
+                cambios={c.cambios}
+                onAbrir={onAbrirFichero && ((ruta) => onAbrirFichero(ruta, turno.id))}
+                labels={labels}
+              />
             ))}
           </section>
         ))}
@@ -234,7 +252,15 @@ export function TerminalView({ terminal, tuya, onClose, labels }: TerminalViewPr
               <span className="text-[11px] font-medium fg-muted ui-small">{labels.enVivo}</span>
             </header>
             {enVivo.map((c, i) => (
-              <Comando key={i} command={c.command} salida={c.salida} exitCode={c.exitCode} labels={labels} />
+              <Comando
+                key={i}
+                command={c.command}
+                salida={c.salida}
+                exitCode={c.exitCode}
+                cambios={c.cambios}
+                onAbrir={onAbrirFichero && ((ruta) => onAbrirFichero(ruta, c.turnId ?? null))}
+                labels={labels}
+              />
             ))}
           </section>
         )}
@@ -251,6 +277,8 @@ export function TerminalView({ terminal, tuya, onClose, labels }: TerminalViewPr
                 exitCode={c.exitCode}
                 corriendo={c.salida === null && !c.error}
                 {...(c.error ? { error: c.error } : {})}
+                cambios={c.cambios}
+                onAbrir={onAbrirFichero && ((ruta) => onAbrirFichero(ruta, null))}
                 labels={labels}
               />
             ))}

@@ -11,6 +11,8 @@ import {
   type FilaDelHistorial,
 } from "./transcripcion";
 import { turnoAnteriorMudoDe, ventanaVisibleDe } from "./historial-saneado";
+import { CLAVE_TOOL_RESULT } from "./ficheros/resultado";
+import { CLAVE_CAMBIOS_DEL_COMANDO } from "./terminal/cambios-del-comando";
 
 // H4, parte 3 (plans/len-2/hipotesis/H4-alcance-prompt-e-historial.md): el
 // historial sale de la BASE, escrito por el servidor, con los argumentos de
@@ -106,6 +108,34 @@ describe("transcripcionParaGuardar y leidosSembrados — lo leído dura la conve
       new Map(),
     );
     expect(JSON.stringify(t)).not.toContain("AAAA");
+  });
+
+  // La #10 (plans/len-agente-2026): lo que cambió cada `bash` es sólo de la pantalla.
+  const bash = (n: number, relleno: number): Message[] => [
+    { role: "assistant", content: "", functionCalls: [{ name: "bash", args: { command: `sed -i ${n}` } }] },
+    {
+      role: "user",
+      content: "",
+      functionResponses: [
+        {
+          name: "bash",
+          response: { ok: true, tool_result: `salida ${n}`, [CLAVE_CAMBIOS_DEL_COMANDO]: { ficheros: [], masFicheros: 0, r: "x".repeat(relleno) } },
+        },
+      ],
+    },
+  ];
+  const salidas = (mensajes: readonly Message[]) =>
+    mensajes.flatMap((m) => m.functionResponses ?? []).map((r) => r.response[CLAVE_TOOL_RESULT]);
+
+  it("si cabe, los cambios de cada `bash` se guardan: la lente los lee tras recargar", () => {
+    const t = transcripcionParaGuardar(bash(1, 10), new Map());
+    expect(t.mensajes[1]!.functionResponses![0]!.response).toHaveProperty(CLAVE_CAMBIOS_DEL_COMANDO);
+  });
+
+  it("🔴 si no cabe, se van los cambios de cada `bash` antes que vaciar nada que lea el modelo", () => {
+    const t = transcripcionParaGuardar([...bash(1, 150_000), ...bash(2, 150_000), ...bash(3, 150_000)], new Map());
+    expect(JSON.stringify(t)).not.toContain(CLAVE_CAMBIOS_DEL_COMANDO);
+    expect(salidas(t.mensajes)).toEqual(["salida 1", "salida 2", "salida 3"]);
   });
 
   // 🔴 H15 fase 2 (02/10, Jesús): lo pensado se guarda con la conversación y

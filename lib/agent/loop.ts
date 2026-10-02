@@ -34,6 +34,7 @@ import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
 import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { terminalEncendida } from "@/lib/agent/terminal/declaracion";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
+import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -134,7 +135,7 @@ export type AgentStreamEvent =
   // F6a · UN COMANDO DE LA TERMINAL y su salida, la misma que leyó el modelo,
   // para la lente «Terminal» del lienzo. Sólo lo emite `bash`; sin la palanca
   // (`OPENLEN_TERMINAL`) no sale nunca y el cable es el de antes.
-  | { type: "terminal"; command: string; salida: string; exitCode: number }
+  | { type: "terminal"; command: string; salida: string; exitCode: number; cambios?: CambiosDelComando }
   // The publish gate (Task 7): the model prepared a publish but MUST NOT
   // publish itself. The panel renders a confirm card whose button hits the
   // real publish endpoint — the user's tap is the only thing that publishes.

@@ -18,6 +18,7 @@ import {
   type GuardadoDeLaTerminal,
 } from "@/lib/agent/herramientas-de-ficheros";
 import { cambiosDeLaTerminal, salidaDeLaTerminal } from "./ficheros";
+import { CLAVE_CAMBIOS_DEL_COMANDO, cambiosDelComando, type CambiosDelComando } from "./cambios-del-comando";
 import { NOMBRE_BASH, terminalEncendida } from "./declaracion";
 import { esFalloDeLaTerminal } from "./codigo-de-salida";
 import { resumenDelComando } from "./resumen-del-comando";
@@ -51,6 +52,9 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   const r = await terminal.ejecutar(command);
 
   let guardado: GuardadoDeLaTerminal | null = null;
+  // Lo que cambió, por fichero, para la pantalla (la #10): la foto de antes
+  // contra lo que de verdad quedó, ya deshecho lo que las guardas rechazaron.
+  let delComando: CambiosDelComando | null = null;
   if (r.ficheros) {
     const antes = session.fotoDeLaTerminal ?? {};
     const cambios = cambiosDeLaTerminal(antes, r.ficheros);
@@ -62,6 +66,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
         else ahora[ruta] = contenido;
       }
       await terminal.poner(guardado.enLaTerminal);
+      delComando = cambiosDelComando(antes, ahora);
     }
     session.fotoDeLaTerminal = ahora;
   }
@@ -101,9 +106,11 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
       // `cat` no cuente como «Len actuó» y deje pasar un «listo» sin cambio
       // (la guarda de `actuo` en loop.ts). A la tarjeta no va: no es un aviso.
       cambio: cambio ?? "sin_cambio",
+      // Para la lente y la tarjeta, nunca para el modelo: no es `tool_result`.
+      ...(delComando ? { [CLAVE_CAMBIOS_DEL_COMANDO]: delComando } : {}),
     },
     action: { tool: NOMBRE_BASH, ok, summary: resumenDelComando(command), ...(cambio ? { cambio } : {}) },
-    terminal: { command, salida: texto, exitCode: salida.exitCode },
+    terminal: { command, salida: texto, exitCode: salida.exitCode, ...(delComando ? { cambios: delComando } : {}) },
     ...(primera
       ? {
           updatedHtml: primera.updatedHtml!,
