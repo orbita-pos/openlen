@@ -39,6 +39,30 @@ This shell interprets commands, it does not run programs: there is no network (n
 
 Output longer than ${MAX_SALIDA.toLocaleString("en-US")} characters is cut, keeping the beginning; the last line always says the exit code. Commands are cheap: run one, read what it prints, and adjust.`;
 
+/**
+ * El prompt y las descripciones nombran Grep y Glob en ocho frases. Con la
+ * terminal, esas herramientas no existen: nombrarlas es mandar al modelo a
+ * algo que no tiene. Cada frase se dice con `bash`, y nada más cambia (sin la
+ * palanca, el prompt sale byte a byte como antes y su golden no se toca).
+ */
+const PARA_LA_TERMINAL: readonly (readonly [string, string])[] = [
+  ["(Read, Grep, Glob)", "(Read o bash)"],
+  [
+    "Grep para buscar en todo el sitio y Glob para listar ficheros.",
+    "y bash, una terminal sobre los mismos ficheros, para buscar en todo el sitio (grep -rn), listarlos (find) o cambiar muchos a la vez (sed -i).",
+  ],
+  ["buscar con Grep", "buscar con grep"],
+  ["con Grep", "con grep en bash"],
+  ["(Grep lo encuentra)", "(grep lo encuentra)"],
+  // Las de las descripciones y los ejemplos, en inglés.
+  ["Glob tells you which files exist.", "ls and find (in bash) tell you which files exist."],
+  ["with Grep", "with grep in bash"],
+];
+
+export function paraLaTerminal(texto: string): string {
+  return PARA_LA_TERMINAL.reduce((t, [de, a]) => t.split(de).join(a), texto);
+}
+
 export const DECLARACION_BASH: Record<string, unknown> = {
   name: NOMBRE_BASH,
   description: DESCRIPCION,
