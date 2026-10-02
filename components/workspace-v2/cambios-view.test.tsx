@@ -15,10 +15,20 @@ import type { CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+// jsdom no tiene matchMedia; `useIsMobile` lo pregunta. Ancho de escritorio salvo que la prueba diga otra cosa.
+let movil = false;
+window.matchMedia = ((query: string) => ({
+  matches: movil && query === "(max-width: 767px)",
+  media: query,
+  addEventListener: () => {},
+  removeEventListener: () => {},
+})) as unknown as typeof window.matchMedia;
+
 const roots: Root[] = [];
 afterEach(() => {
   roots.splice(0).forEach((r) => act(() => r.unmount()));
   document.body.innerHTML = "";
+  movil = false;
 });
 
 const TURNO: CambiosDeUnTurno = {
@@ -58,5 +68,28 @@ describe("CambiosView — colores de sintaxis", () => {
     const el = pintar("/notas.txt");
     expect(el.querySelector('[class^="sx-"], [class*=" sx-"]')).toBeNull();
     expect(el.textContent).toContain("dos <b>");
+  });
+});
+
+describe("CambiosView — en el móvil (la #16)", () => {
+  it("en el escritorio, la lista de ficheros y la vista lado a lado", () => {
+    const el = pintar("/contacto/index.html");
+    expect(el.querySelector("select[aria-label='preview.cambios.files']")).toBeNull();
+    expect(el.textContent).toContain("preview.cambios.ladoALado");
+  });
+
+  it("el fichero se elige en un selector de la cabecera, como DeepSeek, y sólo la vista unificada", () => {
+    movil = true;
+    const el = pintar("/contacto/index.html");
+    const selector = el.querySelector<HTMLSelectElement>("select[aria-label='preview.cambios.files']")!;
+    expect([...selector.options].map((o) => o.textContent)).toEqual(["contacto/index.html  +2 −2", "notas.txt  +1 −1"]);
+    expect(el.textContent).not.toContain("preview.cambios.ladoALado");
+    // Elegir otro lo enseña.
+    act(() => {
+      selector.value = "/notas.txt";
+      selector.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(el.textContent).toContain("dos <b>");
+    expect(el.textContent).not.toContain("Calle Gaviotas 7");
   });
 });

@@ -8,6 +8,12 @@
 // los dos lados, vista unificada o lado a lado y las líneas partidas o no. Aquí
 // los ficheros van a la izquierda, como en la lente «Código».
 //
+// EN EL MÓVIL (la #16 de plans/len-agente-2026/notas/fase-5-taller.md), el diff a
+// todo el ancho y sin lista: los ficheros, en un selector en la cabecera del
+// fichero, que es como lo hace DeepSeek en todos los anchos (su pestaña de
+// revisión, «a file selector in its header») y como lo deja Cursor en iOS. Y
+// sólo la vista unificada: lado a lado, dos columnas en 375px no se leen.
+//
 // CON COLORES DE SINTAXIS desde la #15 (la nota de DeepSeek del 15/09 los dejaba
 // fuera; el README actual de su paquete ya los usa). Como allí, el fondo dice
 // quitada o añadida, el signo lleva su color y el código, los suyos. A
@@ -26,6 +32,7 @@ import { diffDeFichero, filasLadoALado, type LineaDelDiff, type TrozoDelDiff } f
 import { colorearLineas, lenguajeDe, type Trozo } from "@/lib/workspace-v2/colorear";
 
 import { cuentasDe, MasMenos } from "./ficheros-del-turno";
+import { useIsMobile } from "./use-is-mobile";
 import { LineaColoreada } from "./linea-coloreada";
 import { X } from "./icons";
 import { IconBtn, Segmented } from "./ui";
@@ -157,6 +164,7 @@ export function CambiosView({
   const [vista, setVista] = useState<Vista>("unificada");
   // Partidas por defecto, como la lente «Código» (Jesús, 02/10).
   const [ajustar, setAjustar] = useState(true);
+  const estrecho = useIsMobile();
 
   // Una fila pulsada en la tarjeta de un turno manda: ese turno, ese fichero.
   useEffect(() => {
@@ -188,7 +196,9 @@ export function CambiosView({
     if (!lenguaje) return null;
     return { antes: colorearLineas(elegido.antes ?? "", lenguaje), despues: colorearLineas(elegido.despues ?? "", lenguaje) };
   }, [elegido]);
-  const Lineas = vista === "unificada" ? Unificada : LadoALado;
+  const Lineas = vista === "unificada" || estrecho ? Unificada : LadoALado;
+  // En el móvil no hay lista: con más de un fichero, se elige en la cabecera.
+  const conSelector = estrecho && cuentas.length > 1;
 
   return (
     <div className="absolute inset-0 z-30 flex flex-col bg-app">
@@ -226,7 +236,7 @@ export function CambiosView({
         <div className="flex min-h-0 flex-1 flex-col md:flex-row">
           <nav
             aria-label={t("preview.cambios.files")}
-            className="max-h-40 shrink-0 overflow-auto nice-scroll border-b bd py-1 text-[12px] md:max-h-none md:w-64 md:border-b-0 md:border-r"
+            className="hidden shrink-0 overflow-auto nice-scroll border-r bd py-1 text-[12px] md:block md:w-64"
           >
             <div className="px-3 py-1 text-[10.5px] uppercase tracking-wide fg-faint ui-small">
               {t("preview.cambios.tarjeta", { count: cuentas.length })}
@@ -258,22 +268,52 @@ export function CambiosView({
           <div className="min-h-0 min-w-0 flex-1 overflow-auto nice-scroll">
             {elegido && (
               <header className="sticky top-0 z-10 flex flex-wrap items-center gap-x-2 gap-y-1 border-b bd bg-elev px-3 py-1.5">
-                <span className="min-w-0 truncate font-mono text-[11px] font-medium fg-muted">{elegido.ruta.replace(/^\//, "")}</span>
-                {cuenta?.nuevo && <span className="text-[10.5px] text-emerald-600 dark:text-emerald-400 ui-small">{t("preview.cambios.nuevo")}</span>}
-                {cuenta?.borrado && <span className="text-[10.5px] text-red-600 dark:text-red-400 ui-small">{t("preview.cambios.borrado")}</span>}
-                <span className="text-[10.5px] ui-small">
-                  <MasMenos anadidas={cuenta?.anadidas ?? null} quitadas={cuenta?.quitadas ?? null} />
-                </span>
+                {/* En el móvil no hay lista: el fichero se elige aquí. */}
+                {conSelector ? (
+                  <select
+                    aria-label={t("preview.cambios.files")}
+                    value={elegido.ruta}
+                    onChange={(e) => setRuta(e.target.value)}
+                    className="min-w-0 max-w-full truncate rounded-md border bd bg-app px-1.5 py-0.5 font-mono text-[11px] fg"
+                  >
+                    {cuentas.map((c) => (
+                      <option key={c.ruta} value={c.ruta}>
+                        {/* Lo mismo que dice la fila de la lista del escritorio. */}
+                        {[
+                          c.ruta.replace(/^\//, ""),
+                          c.nuevo ? t("preview.cambios.nuevo") : null,
+                          c.borrado ? t("preview.cambios.borrado") : null,
+                          c.grande ? t("preview.cambios.grandeCorto") : null,
+                          c.anadidas !== null && c.quitadas !== null ? `+${c.anadidas} −${c.quitadas}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join("  ")}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="min-w-0 truncate font-mono text-[11px] font-medium fg-muted">{elegido.ruta.replace(/^\//, "")}</span>
+                )}
+                {!conSelector && cuenta?.nuevo && <span className="text-[10.5px] text-emerald-600 dark:text-emerald-400 ui-small">{t("preview.cambios.nuevo")}</span>}
+                {!conSelector && cuenta?.borrado && <span className="text-[10.5px] text-red-600 dark:text-red-400 ui-small">{t("preview.cambios.borrado")}</span>}
+                {/* Con el selector, las marcas y las cuentas ya van en él. */}
+                {!conSelector && (
+                  <span className="text-[10.5px] ui-small">
+                    <MasMenos anadidas={cuenta?.anadidas ?? null} quitadas={cuenta?.quitadas ?? null} />
+                  </span>
+                )}
                 <div className="ml-auto flex items-center gap-1.5">
-                  <Segmented<Vista>
-                    size="xs"
-                    value={vista}
-                    onChange={setVista}
-                    options={[
-                      { value: "unificada", label: t("preview.cambios.unificada") },
-                      { value: "lado", label: t("preview.cambios.ladoALado") },
-                    ]}
-                  />
+                  {!estrecho && (
+                    <Segmented<Vista>
+                      size="xs"
+                      value={vista}
+                      onChange={setVista}
+                      options={[
+                        { value: "unificada", label: t("preview.cambios.unificada") },
+                        { value: "lado", label: t("preview.cambios.ladoALado") },
+                      ]}
+                    />
+                  )}
                   <button
                     type="button"
                     aria-pressed={ajustar}

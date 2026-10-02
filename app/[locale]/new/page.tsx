@@ -821,25 +821,44 @@ function NewV2Inner() {
   // Mobile, otra vez: el Chat tapa el lienzo, así que cuando pide abrir una
   // lente —una fila de la tarjeta de cambios, una ruta (la #9 de
   // plans/len-agente-2026)— el panel se aparta. Si no, la lente se abría DETRÁS.
+  //
+  // Y AL CERRAR ESA LENTE SE VUELVE AL CHAT (la #16), como DeepSeek: en el móvil
+  // su panel se abre a pantalla completa y al salir se ve otra vez la
+  // conversación (`2026-09-07-sidebar-responsive-tab-info.md`). Sin esto, cerrar
+  // el diff dejaba en la página y había que volver a abrir el Chat a mano.
   const proyectoAbierto = loadedProject?.id ?? null;
+  const volverAlChat = useRef(false);
   useEffect(() => {
     if (!isMobile || !proyectoAbierto) return;
     let cambios = cambiosEnVivo.peticion(proyectoAbierto)?.n ?? 0;
     let codigo = abrirEnElCodigo.peticion(proyectoAbierto)?.n ?? 0;
+    const apartar = () => {
+      setLeftCollapsed(true);
+      volverAlChat.current = true;
+    };
     const fuera = [
       cambiosEnVivo.subscribe(() => {
         const n = cambiosEnVivo.peticion(proyectoAbierto)?.n ?? 0;
-        if (n > cambios) setLeftCollapsed(true);
+        if (n > cambios) apartar();
         cambios = n;
       }),
       abrirEnElCodigo.subscribe(() => {
         const n = abrirEnElCodigo.peticion(proyectoAbierto)?.n ?? 0;
-        if (n > codigo) setLeftCollapsed(true);
+        if (n > codigo) apartar();
         codigo = n;
       }),
     ];
     return () => fuera.forEach((f) => f());
   }, [isMobile, proyectoAbierto]);
+  useEffect(() => {
+    if (lente !== "pagina" || !volverAlChat.current) return;
+    volverAlChat.current = false;
+    if (isMobile) setLeftCollapsed(false);
+  }, [lente, isMobile]);
+  // Abierto a mano entretanto, ya no hay a dónde volver.
+  useEffect(() => {
+    if (!leftCollapsed) volverAlChat.current = false;
+  }, [leftCollapsed]);
   const [genSlow, setGenSlow] = useState(false);
   const startAiGeneration = useCallback(
     (prompt: string) => {
