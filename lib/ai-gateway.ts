@@ -35,11 +35,10 @@ export type Role = "system" | "user" | "assistant";
 export interface FunctionCall {
   name: string;
   args: Record<string, unknown>;
-  /** Gemini 3 thought signature attached to this call. MUST be echoed back
-   *  verbatim in the `functionCalls` entry when this assistant turn is
-   *  replayed in a later request, or the API 400s with "Function call is
-   *  missing a thought_signature". */
-  thoughtSignature?: string;
+  // ⚰️ Aquí vivía `thoughtSignature`, la firma de pensamiento de Gemini 3 que
+  // había que devolver tal cual (`27d88e0f`). Sin emisor desde el paso a
+  // DeepSeek (`942bf678`, 28/08); lo pensado vuelve ahora por `Message.reasoning`
+  // (H15, 01/10).
 }
 
 export interface FunctionResponse {
@@ -152,7 +151,6 @@ export type StreamEvent =
       type: "function_call";
       name: string;
       args: Record<string, unknown>;
-      thoughtSignature?: string;
     };
 
 export type StopReason =

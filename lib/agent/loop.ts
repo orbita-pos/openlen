@@ -825,10 +825,6 @@ const GUARDAR_YA_CHOCO =
 interface PendingCall {
   name: string;
   args: Record<string, unknown>;
-  /** Gemini 3 thought signature, echoed verbatim into the replayed
-   *  assistant turn's `functionCalls` entry — see lib/ai-gateway.ts's
-   *  `FunctionCall.thoughtSignature` doc comment. */
-  thoughtSignature?: string;
 }
 
 export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult> {
@@ -1420,7 +1416,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         calls.push({
           name: ev.name,
           args: ev.args,
-          ...(ev.thoughtSignature ? { thoughtSignature: ev.thoughtSignature } : {}),
         });
       } else if (ev.type === "usage") {
         inputTokens += ev.inputTokens;

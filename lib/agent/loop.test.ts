@@ -51,7 +51,7 @@ describe("runAgentLoop", () => {
     const seen: string[] = [];
     const callsSeen: Message[][] = [];
     const scriptedStream = scripted(
-      [{ type: "function_call", name: "activar_modulo", args: { modulo: "members" }, thoughtSignature: "sig-1" }, usage(10, 30), done],
+      [{ type: "function_call", name: "activar_modulo", args: { modulo: "members" } }, usage(10, 30), done],
       [{ type: "text_delta", text: "Listo, activé cuentas." }, usage(8, 20), done],
     );
     const r = await runAgentLoop({
@@ -77,7 +77,7 @@ describe("runAgentLoop", () => {
     const secondCallMessages = callsSeen[1];
     expect(secondCallMessages.length).toBeGreaterThan(callsSeen[0].length);
     const assistantTurn = secondCallMessages.find((m) => m.role === "assistant");
-    expect(assistantTurn?.functionCalls?.[0]?.thoughtSignature).toBe("sig-1");
+    expect(assistantTurn?.functionCalls?.[0]).toEqual({ name: "activar_modulo", args: { modulo: "members" } });
     const functionResponseTurn = secondCallMessages.find((m) => m.functionResponses);
     expect(functionResponseTurn).toBeDefined();
   });
@@ -2054,7 +2054,7 @@ describe("la llamada mal escrita se repara, no se cobra", () => {
       messages: [{ role: "user", content: "cambia el titular" }],
       tools: DECLARADAS,
       openStream: scripted(
-        [{ type: "function_call", name: nombre, args: { ediciones: [{ target: "2f", texto: "Hola" }], resumen: "titular" }, thoughtSignature: "s" }, usage(10), done],
+        [{ type: "function_call", name: nombre, args: { ediciones: [{ target: "2f", texto: "Hola" }], resumen: "titular" } }, usage(10), done],
         [{ type: "text_delta", text: "Hecho." }, usage(5), done],
       ),
       runTool: async (n) => { vistos.push(n); return { response: { ok: true } }; },
@@ -2086,7 +2086,7 @@ describe("la llamada mal escrita se repara, no se cobra", () => {
       messages: [{ role: "user", content: "haz algo" }],
       tools: DECLARADAS,
       openStream: scripted(
-        [{ type: "function_call", name: "inventar_universo", args: {}, thoughtSignature: "s" }, usage(10), done],
+        [{ type: "function_call", name: "inventar_universo", args: {} }, usage(10), done],
         [{ type: "text_delta", text: "Perdón." }, usage(5), done],
       ),
       runTool: async (n) => { vistos.push(n); return { response: { ok: true } }; },
@@ -2104,7 +2104,7 @@ describe("la llamada mal escrita se repara, no se cobra", () => {
   it("y al modelo se le devuelve una corrección legible, con la más parecida", async () => {
     const vueltas: Message[][] = [];
     const guion = scripted(
-      [{ type: "function_call", name: "editar_texxxto", args: {}, thoughtSignature: "s" }, usage(10), done],
+      [{ type: "function_call", name: "editar_texxxto", args: {} }, usage(10), done],
       [{ type: "text_delta", text: "ok" }, usage(5), done],
     );
     await runAgentLoop({
@@ -2144,8 +2144,8 @@ describe("al agotar el tope, el cierre ve lo que YA se ejecutó", () => {
       tools: DECLARADAS,
       maxToolCalls: 1,
       openStream: scripted([
-        { type: "function_call", name: "editar_texto", args: { resumen: "titular" }, thoughtSignature: "s1" },
-        { type: "function_call", name: "editar_html", args: { resumen: "seccion" }, thoughtSignature: "s2" },
+        { type: "function_call", name: "editar_texto", args: { resumen: "titular" } },
+        { type: "function_call", name: "editar_html", args: { resumen: "seccion" } },
         usage(10),
         done,
       ]),
@@ -2176,8 +2176,8 @@ describe("al agotar el tope, el cierre ve lo que YA se ejecutó", () => {
       tools: DECLARADAS,
       maxToolCalls: 1,
       openStream: scripted([
-        { type: "function_call", name: "editar_texto", args: { resumen: "a" }, thoughtSignature: "s1" },
-        { type: "function_call", name: "editar_html", args: { resumen: "b" }, thoughtSignature: "s2" },
+        { type: "function_call", name: "editar_texto", args: { resumen: "a" } },
+        { type: "function_call", name: "editar_html", args: { resumen: "b" } },
         usage(10),
         done,
       ]),
