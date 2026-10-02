@@ -155,6 +155,19 @@ describe("TerminalDeLen", () => {
       expect(Object.hasOwn((await t.ejecutar("true")).ficheros ?? {}, "/robado.jsonl")).toBe(false);
     }, 60_000);
 
+    it("sed -i y tee sobre uno de sólo lectura dicen «Read-only file system», no «No such file»", async () => {
+      const { t } = conPerezosos();
+      const sed = await t.ejecutar("sed -i 's/Ana/Eva/' /bandeja/formularios.jsonl");
+      expect(sed.exitCode).not.toBe(0);
+      expect(sed.stderr).toBe("sed: /bandeja/formularios.jsonl: Read-only file system\n");
+      // Relativa, después de un `cd` en el mismo comando.
+      const tee = await t.ejecutar("cd /bandeja && echo x | tee formularios.jsonl");
+      expect(tee.stderr).toBe("tee: formularios.jsonl: Read-only file system\n");
+      // Lo que de verdad no existe sigue diciendo lo suyo.
+      const nada = await t.ejecutar("sed -i 's/a/b/' /bandeja/no-existe.jsonl");
+      expect(nada.stderr).toContain("No such file or directory");
+    }, 20_000);
+
     it("el hilo y ficheros.ts usan la MISMA regla de sólo lectura", () => {
       const hilo = readFileSync(path.join(__dirname, "trabajador.mjs"), "utf8");
       expect(hilo).toContain(`const SOLO_LECTURA = ${DE_SOLO_LECTURA.toString()};`);
