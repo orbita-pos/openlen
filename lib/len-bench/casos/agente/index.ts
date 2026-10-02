@@ -14,7 +14,8 @@ import { crear as enlacesRotosDelSitio } from "./enlaces-rotos-del-sitio";
 import { crear as tablaADatos } from "./tabla-a-datos";
 import { crear as horarioDelMuseo } from "./horario-del-museo";
 import { crear as precioDeLaCompetenciaEnLaWeb } from "./precio-de-la-competencia-en-la-web";
+import { crear as datoQueNoEstaEnLaWeb } from "./dato-que-no-esta-en-la-web";
 
 const DIR = path.resolve("lib/len-bench/casos/agente/paginas");
 
-export const ENCARGOS: Encargo[] = [sitioQueSeRenombra(DIR), enlacesRotosDelSitio(DIR), tablaADatos(DIR), horarioDelMuseo(DIR), precioDeLaCompetenciaEnLaWeb(DIR)];
+export const ENCARGOS: Encargo[] = [sitioQueSeRenombra(DIR), enlacesRotosDelSitio(DIR), tablaADatos(DIR), horarioDelMuseo(DIR), precioDeLaCompetenciaEnLaWeb(DIR), datoQueNoEstaEnLaWeb(DIR)];
