@@ -1,14 +1,20 @@
 /**
  * TODO COMO FICHERO, la parte de SÓLO LECTURA (F5 de plans/len-agente-2026).
  *
- * En la terminal de Len, además de las páginas, los datos y la memoria:
+ * En la terminal de Len, además de las páginas, los datos y la memoria, bajo
+ * `/.openlen` (oculta, como el `.git` de DeepSeek: un `grep -r /` del sitio no
+ * entra, ni calcula nada, ni mezcla lo que escribió un visitante con las páginas):
  *
- *   /resultados/visitas.json     lo mismo que devuelve `ver_visitas` sin argumentos
- *   /bandeja/formularios.jsonl   un formulario por línea (90 días, los 50 más recientes), entero
- *   /bandeja/mensajes.jsonl      una conversación del chat por línea, con sus mensajes
- *   /catalogo/fotos.jsonl        el catálogo «Imágenes by OpenLen» entero (el de `elegir_foto`)
- *   /.versiones/indice.jsonl     las versiones guardadas de cada página, de la más nueva a la más vieja
- *   /.versiones/<id>/…           cada una, en la MISMA ruta que su página (`diff /.versiones/<id>/index.html /index.html`)
+ *   /.openlen/resultados/visitas.json     lo mismo que devuelve `ver_visitas` sin argumentos
+ *   /.openlen/bandeja/formularios.jsonl   un formulario por línea (90 días, los 50 más recientes), entero
+ *   /.openlen/bandeja/mensajes.jsonl      una conversación del chat por línea, con sus mensajes
+ *   /.openlen/catalogo/fotos.jsonl        el catálogo «Imágenes by OpenLen» entero (el de `elegir_foto`)
+ *   /.openlen/versiones/indice.jsonl      las versiones guardadas de cada página, de la más nueva a la más vieja
+ *   /.openlen/versiones/<id>/…            cada una, en la MISMA ruta que su página
+ *                                         (`diff /.openlen/versiones/<id>/index.html /index.html`)
+ *
+ * Cuando el sitio cambia en el turno, se vuelven a listar y a calcular
+ * (`refrescarPerezosos`): una versión guardada sale en el comando siguiente.
  *
  * NO se guardan en ningún sitio: se calculan cuando un comando los lee por
  * primera vez (ficheros perezosos, ver `trabajador.mjs`), con las MISMAS
@@ -30,11 +36,15 @@ import { todasLasFotosCuradas } from "@/lib/agent/photo-search";
 import { ficherosDelSitio, paginaDeRuta, rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { fechaLocal, restarDias, ZONA_SIN_DATO } from "@/lib/resultados/zona";
 
-export const RUTA_VISITAS = "/resultados/visitas.json";
-export const RUTA_FORMULARIOS = "/bandeja/formularios.jsonl";
-export const RUTA_MENSAJES = "/bandeja/mensajes.jsonl";
-export const RUTA_FOTOS = "/catalogo/fotos.jsonl";
-export const RUTA_INDICE_DE_VERSIONES = "/.versiones/indice.jsonl";
+/** La carpeta oculta de lo que no es el sitio (la regla, en `ficheros.ts`). */
+export const CARPETA_DE_SOLO_LECTURA = "/.openlen";
+export const CARPETA_BANDEJA = `${CARPETA_DE_SOLO_LECTURA}/bandeja/`;
+export const RUTA_VISITAS = `${CARPETA_DE_SOLO_LECTURA}/resultados/visitas.json`;
+export const RUTA_FORMULARIOS = `${CARPETA_BANDEJA}formularios.jsonl`;
+export const RUTA_MENSAJES = `${CARPETA_BANDEJA}mensajes.jsonl`;
+export const RUTA_FOTOS = `${CARPETA_DE_SOLO_LECTURA}/catalogo/fotos.jsonl`;
+const CARPETA_VERSIONES = `${CARPETA_DE_SOLO_LECTURA}/versiones`;
+export const RUTA_INDICE_DE_VERSIONES = `${CARPETA_VERSIONES}/indice.jsonl`;
 
 /** Cuántos días de bandeja se ven (el detalle de visitas también llega a 90). */
 export const DIAS_DE_BANDEJA = 90;
@@ -70,7 +80,7 @@ export async function soloLecturaDeLaTerminal(session: AgentSession, deps: Agent
       continue;
     }
     for (const v of lista.slice(0, VERSIONES_POR_PAGINA)) {
-      const fichero = `/.versiones/${v.id}${rutaDePagina(page)}`;
+      const fichero = `${CARPETA_VERSIONES}/${v.id}${rutaDePagina(page)}`;
       versiones.set(fichero, v.id);
       indice.push({ fichero, pagina: rutaDePagina(page), etiqueta: v.label, origen: v.source ?? null });
     }

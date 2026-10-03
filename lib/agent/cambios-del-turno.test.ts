@@ -33,7 +33,7 @@ describe("cambiosEntreFotos — lo que cambió entre el principio y el final del
     const despues = {
       ...ANTES,
       "/AGENTS.md": "otro\n",
-      "/bandeja/formularios.jsonl": "{}\n",
+      "/.openlen/bandeja/formularios.jsonl": "{}\n",
       "/tmp/x": "y",
     };
     expect(cambiosEntreFotos(ANTES, despues)).toEqual([]);

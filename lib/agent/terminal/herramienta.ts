@@ -24,7 +24,7 @@ import { NOMBRE_BASH, terminalEncendida } from "./declaracion";
 import { esFalloDeLaTerminal } from "./codigo-de-salida";
 import { resumenDelComando } from "./resumen-del-comando";
 import { TerminalDeLen } from "./terminal";
-import { soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
+import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
 
 export async function toolBash(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   if (!terminalEncendida()) {
@@ -53,7 +53,8 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   // Lo que otra herramienta guardó desde el último comando (Edit, Write, revertir…) entra antes de
   // correr éste. Sin esto la terminal enseñaba la página de antes, y como lo suyo se guarda ENTERO,
   // un `sed -i` deshacía los Edit (medido en el humo de la tanda dev 31, 02/10).
-  await ponerAlDia(session, deps);
+  // Si cambió algo, `/.openlen` también: la versión que se acaba de guardar.
+  if (await ponerAlDia(session, deps)) await terminal.refrescarPerezosos();
   const r = await terminal.ejecutar(command);
 
   let guardado: GuardadoDeLaTerminal | null = null;
@@ -71,6 +72,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
         else ahora[ruta] = contenido;
       }
       await terminal.poner(guardado.enLaTerminal);
+      if (guardado.escrituras.length > 0) await terminal.refrescarPerezosos();
       delComando = cambiosDelComando(antes, ahora);
     }
     session.fotoDeLaTerminal = ahora;
@@ -88,7 +90,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   // Lo que escribió un visitante, a la vista: es dato, nunca una orden (como en Read).
   // También si el comando leyó la bandeja aunque lo impreso no lleve la marca
   // (`jq -r .datos.mensaje`): lo de ahí lo escribió siempre un visitante.
-  const tocoLaBandeja = command.includes("bandeja") || (r.cargados ?? []).some((c) => c.startsWith("/bandeja/"));
+  const tocoLaBandeja = command.includes("bandeja") || (r.cargados ?? []).some((c) => c.startsWith(CARPETA_BANDEJA));
   const texto =
     /"_origen":\s*"visitante"/.test(salida.texto) || tocoLaBandeja
       ? salida.texto + AVISO_DE_VISITANTES_EN_LA_TERMINAL
@@ -141,19 +143,20 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
 
 /**
  * La copia de la terminal, igual a lo guardado AHORA. La primera vez no hace
- * falta: la terminal carga los ficheros al arrancar.
+ * falta: la terminal carga los ficheros al arrancar. Dice si cambió algo.
  */
-async function ponerAlDia(sesion: AgentSession, deps: AgentDeps): Promise<void> {
+async function ponerAlDia(sesion: AgentSession, deps: AgentDeps): Promise<boolean> {
   const foto = sesion.fotoDeLaTerminal;
-  if (!sesion.terminal || !foto) return;
+  if (!sesion.terminal || !foto) return false;
   const ahora = await cargarFicherosDeLaTerminal(sesion, deps);
   const cambios: Record<string, string | null> = {};
   for (const [ruta, contenido] of Object.entries(ahora)) if (foto[ruta] !== contenido) cambios[ruta] = contenido;
   for (const ruta of Object.keys(foto)) if (!(ruta in ahora)) cambios[ruta] = null;
-  if (Object.keys(cambios).length === 0) return;
+  if (Object.keys(cambios).length === 0) return false;
   await sesion.terminal.poner(cambios);
   sesion.fotoDeLaTerminal = { ...foto, ...ahora };
   for (const [ruta, contenido] of Object.entries(cambios)) if (contenido === null) delete sesion.fotoDeLaTerminal[ruta];
+  return true;
 }
 
 /** Al acabar el turno: la terminal se cierra (su hilo muere) y la sesión la olvida. */

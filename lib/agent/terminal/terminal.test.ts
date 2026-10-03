@@ -95,10 +95,10 @@ describe("TerminalDeLen", () => {
       const leidos: string[] = [];
       const { t } = terminal({
         perezosos: {
-          rutas: async () => ["/bandeja/formularios.jsonl", "/resultados/visitas.json"],
+          rutas: async () => ["/.openlen/bandeja/formularios.jsonl", "/.openlen/resultados/visitas.json"],
           leer: async (ruta) => {
             leidos.push(ruta);
-            if (ruta === "/bandeja/formularios.jsonl") return FORMULARIOS;
+            if (ruta === "/.openlen/bandeja/formularios.jsonl") return FORMULARIOS;
             throw new Error("la base no contesta");
           },
         },
@@ -108,63 +108,105 @@ describe("TerminalDeLen", () => {
 
     it("existen desde el principio, pero sólo se calculan cuando un comando los lee", async () => {
       const { t, leidos } = conPerezosos();
-      const ls = await t.ejecutar("ls /bandeja /resultados");
+      const ls = await t.ejecutar("ls /.openlen/bandeja /.openlen/resultados");
       expect(ls.stdout).toContain("formularios.jsonl");
       expect(ls.stdout).toContain("visitas.json");
       expect(leidos).toEqual([]);
-      const jq = await t.ejecutar("jq -r '.de' /bandeja/formularios.jsonl");
+      const jq = await t.ejecutar("jq -r '.de' /.openlen/bandeja/formularios.jsonl");
       expect(jq.stdout).toBe("Ana\n");
-      expect(jq.cargados).toEqual(["/bandeja/formularios.jsonl"]);
+      expect(jq.cargados).toEqual(["/.openlen/bandeja/formularios.jsonl"]);
       // Cargado una vez, se queda: el comando siguiente no lo pide otra vez.
-      const otra = await t.ejecutar("wc -l < /bandeja/formularios.jsonl");
+      const otra = await t.ejecutar("wc -l < /.openlen/bandeja/formularios.jsonl");
       expect(otra.stdout.trim()).toBe("1");
       expect(otra.cargados).toBeUndefined();
-      expect(leidos).toEqual(["/bandeja/formularios.jsonl"]);
+      expect(leidos).toEqual(["/.openlen/bandeja/formularios.jsonl"]);
       // No son del proyecto: no vuelven en `ficheros` (y no se guardarían).
       expect(Object.keys(otra.ficheros ?? {}).some((r) => DE_SOLO_LECTURA.test(r))).toBe(false);
     }, 20_000);
 
+    // Pregunta 3 de INFORME-NOCHE, resuelta como DeepSeek: lo que no es el sitio
+    // vive en una carpeta oculta, como su `.git`. Medido el 02/10: en la raíz,
+    // `grep -rn X /` calculaba la bandeja, el catálogo y las visitas, y mezclaba
+    // lo que escribió un visitante con las páginas.
+    it("una búsqueda del sitio no los toca: grep -r / ni los calcula ni los enseña; find y ls -a sí los ven", async () => {
+      const { t, leidos } = conPerezosos();
+      const grep = await t.ejecutar("grep -rn Ana /");
+      expect(grep.stdout).not.toContain(".openlen");
+      expect(leidos).toEqual([]);
+      expect((await t.ejecutar("find / -name '*.jsonl'")).stdout).toContain("/.openlen/bandeja/formularios.jsonl");
+      expect((await t.ejecutar("ls -a /")).stdout).toContain(".openlen");
+      expect(leidos).toEqual([]);
+    }, 20_000);
+
+    it("refrescarPerezosos: tras cambiar el sitio se lee lo de ahora (rutas nuevas, quitadas y recalculadas), y siguen sin escribirse", async () => {
+      let version = 1;
+      const leidos: string[] = [];
+      const { t } = terminal({
+        perezosos: {
+          rutas: async () => [
+            "/.openlen/versiones/indice.jsonl",
+            ...(version === 2 ? ["/.openlen/versiones/v2/index.html"] : []),
+          ],
+          leer: async (ruta) => {
+            leidos.push(ruta);
+            return ruta.endsWith("indice.jsonl") ? `v${version}\n` : "<h1>v2</h1>\n";
+          },
+        },
+      });
+      await t.refrescarPerezosos(); // sin arrancar: no hace nada
+      expect((await t.ejecutar("cat /.openlen/versiones/indice.jsonl")).stdout).toBe("v1\n");
+      version = 2;
+      await t.refrescarPerezosos();
+      expect((await t.ejecutar("cat /.openlen/versiones/indice.jsonl")).stdout).toBe("v2\n");
+      expect((await t.ejecutar("cat /.openlen/versiones/v2/index.html")).stdout).toBe("<h1>v2</h1>\n");
+      version = 3;
+      await t.refrescarPerezosos();
+      expect((await t.ejecutar("ls /.openlen/versiones")).stdout).toBe("indice.jsonl\n");
+      expect((await t.ejecutar("echo x > /.openlen/versiones/indice.jsonl")).exitCode).not.toBe(0);
+      expect((await t.ejecutar("cat /.openlen/versiones/indice.jsonl")).stdout).toBe("v3\n");
+    }, 20_000);
+
     it("si su cálculo falla, el comando falla y lo dice; la terminal sigue", async () => {
       const { t } = conPerezosos();
-      const r = await t.ejecutar("cat /resultados/visitas.json");
+      const r = await t.ejecutar("cat /.openlen/resultados/visitas.json");
       expect(r.exitCode).not.toBe(0);
-      expect(r.fallidos).toEqual([{ ruta: "/resultados/visitas.json", error: "la base no contesta" }]);
+      expect(r.fallidos).toEqual([{ ruta: "/.openlen/resultados/visitas.json", error: "la base no contesta" }]);
       expect((await t.ejecutar("echo sigue")).stdout).toBe("sigue\n");
     }, 20_000);
 
     it("nadie los escribe: >, >>, sed -i, rm, mv, cp encima, mkdir dentro y un enlace simbólico — todo EROFS, y siguen iguales", async () => {
       const { t } = conPerezosos();
       const intentos = [
-        "echo x > /bandeja/formularios.jsonl",
-        "echo x >> /bandeja/formularios.jsonl",
-        "sed -i 's/Ana/Eva/' /bandeja/formularios.jsonl",
-        "rm /bandeja/formularios.jsonl",
-        "mv /bandeja/formularios.jsonl /robado.jsonl",
-        "echo y > /tmp/y; cp /tmp/y /bandeja/formularios.jsonl",
-        "mkdir /bandeja/nueva",
-        "echo z > /bandeja/nuevo.txt",
-        "ln -s /bandeja/formularios.jsonl /atajo && echo w > /atajo",
-        "ln -s /bandeja /carpeta && echo w > /carpeta/otro.txt",
+        "echo x > /.openlen/bandeja/formularios.jsonl",
+        "echo x >> /.openlen/bandeja/formularios.jsonl",
+        "sed -i 's/Ana/Eva/' /.openlen/bandeja/formularios.jsonl",
+        "rm /.openlen/bandeja/formularios.jsonl",
+        "mv /.openlen/bandeja/formularios.jsonl /robado.jsonl",
+        "echo y > /tmp/y; cp /tmp/y /.openlen/bandeja/formularios.jsonl",
+        "mkdir /.openlen/bandeja/nueva",
+        "echo z > /.openlen/bandeja/nuevo.txt",
+        "ln -s /.openlen/bandeja/formularios.jsonl /atajo && echo w > /atajo",
+        "ln -s /.openlen/bandeja /carpeta && echo w > /carpeta/otro.txt",
       ];
       for (const c of intentos) {
         const r = await t.ejecutar(c);
         expect(r.exitCode, c).not.toBe(0);
       }
-      const despues = await t.ejecutar("cat /bandeja/formularios.jsonl; ls /bandeja");
+      const despues = await t.ejecutar("cat /.openlen/bandeja/formularios.jsonl; ls /.openlen/bandeja");
       expect(despues.stdout).toBe(FORMULARIOS + "formularios.jsonl\n");
       expect(Object.hasOwn((await t.ejecutar("true")).ficheros ?? {}, "/robado.jsonl")).toBe(false);
     }, 60_000);
 
     it("sed -i y tee sobre uno de sólo lectura dicen «Read-only file system», no «No such file»", async () => {
       const { t } = conPerezosos();
-      const sed = await t.ejecutar("sed -i 's/Ana/Eva/' /bandeja/formularios.jsonl");
+      const sed = await t.ejecutar("sed -i 's/Ana/Eva/' /.openlen/bandeja/formularios.jsonl");
       expect(sed.exitCode).not.toBe(0);
-      expect(sed.stderr).toBe("sed: /bandeja/formularios.jsonl: Read-only file system\n");
+      expect(sed.stderr).toBe("sed: /.openlen/bandeja/formularios.jsonl: Read-only file system\n");
       // Relativa, después de un `cd` en el mismo comando.
-      const tee = await t.ejecutar("cd /bandeja && echo x | tee formularios.jsonl");
+      const tee = await t.ejecutar("cd /.openlen/bandeja && echo x | tee formularios.jsonl");
       expect(tee.stderr).toBe("tee: formularios.jsonl: Read-only file system\n");
       // Lo que de verdad no existe sigue diciendo lo suyo.
-      const nada = await t.ejecutar("sed -i 's/a/b/' /bandeja/no-existe.jsonl");
+      const nada = await t.ejecutar("sed -i 's/a/b/' /.openlen/bandeja/no-existe.jsonl");
       expect(nada.stderr).toContain("No such file or directory");
     }, 20_000);
 

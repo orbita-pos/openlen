@@ -9,8 +9,8 @@ const RUTAS = [
   { ruta: "/datos/reservas.json" },
   { ruta: "/memoria/dueno.md" },
   { ruta: "/ajustes/proyecto.json" },
-  { ruta: "/bandeja/formularios.jsonl", perezoso: true },
-  { ruta: "/.versiones/v1/index.html", perezoso: true },
+  { ruta: "/.openlen/bandeja/formularios.jsonl", perezoso: true },
+  { ruta: "/.openlen/versiones/v1/index.html", perezoso: true },
 ];
 
 const plano = (ns: readonly NodoDelArbol[], sangria = ""): string[] =>
@@ -19,13 +19,14 @@ const plano = (ns: readonly NodoDelArbol[], sangria = ""): string[] =>
 describe("arbolDeFicheros", () => {
   it("por carpetas, carpetas primero y por nombre, como el explorador de VS Code", () => {
     expect(plano(arbolDeFicheros(RUTAS))).toEqual([
-      ".versiones/ [sólo lectura]",
-      "  v1/ [sólo lectura]",
-      "    index.html (perezoso) [sólo lectura]",
+      ".openlen/ [sólo lectura]",
+      "  bandeja/ [sólo lectura]",
+      "    formularios.jsonl (perezoso) [sólo lectura]",
+      "  versiones/ [sólo lectura]",
+      "    v1/ [sólo lectura]",
+      "      index.html (perezoso) [sólo lectura]",
       "ajustes/",
       "  proyecto.json",
-      "bandeja/ [sólo lectura]",
-      "  formularios.jsonl (perezoso) [sólo lectura]",
       "datos/",
       "  reservas.json",
       "memoria/",
@@ -39,7 +40,9 @@ describe("arbolDeFicheros", () => {
   it("las carpetas de sólo lectura empiezan plegadas, salvo la que lleva al fichero elegido", () => {
     const arbol = arbolDeFicheros(RUTAS);
     expect([...abiertasAlEntrar(arbol, "/index.html")].sort()).toEqual(["/ajustes", "/datos", "/memoria", "/menu"]);
-    expect(abiertasAlEntrar(arbol, "/bandeja/formularios.jsonl").has("/bandeja")).toBe(true);
+    const elegido = abiertasAlEntrar(arbol, "/.openlen/bandeja/formularios.jsonl");
+    expect(elegido.has("/.openlen") && elegido.has("/.openlen/bandeja")).toBe(true);
+    expect(elegido.has("/.openlen/versiones")).toBe(false);
   });
 });
 

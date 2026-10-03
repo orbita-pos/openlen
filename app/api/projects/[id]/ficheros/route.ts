@@ -3,13 +3,13 @@
 //
 // Es el MISMO árbol que ve Len en su terminal (F1 y F5 de plans/len-agente-2026):
 // sale de `cargarFicherosDeLaTerminal` (páginas, `/datos`, `/memoria`,
-// `/ajustes`) y de `soloLecturaDeLaTerminal` (`/resultados`, `/bandeja`,
-// `/catalogo`, `/.versiones`), así que el dueño y Len ven lo mismo, sin una
+// `/ajustes`) y de `soloLecturaDeLaTerminal` (`/.openlen`: resultados, bandeja,
+// catálogo y versiones), así que el dueño y Len ven lo mismo, sin una
 // segunda lista que se desfase. Fuera `/AGENTS.md`: es el manual de la
 // plataforma, no un fichero del proyecto del dueño.
 //
 //   GET                  → { ficheros: [{ ruta, contenido }], perezosos: [ruta] }
-//   GET ?ruta=/bandeja/… → { ruta, contenido }   (los de sólo lectura se calculan al pedirlos)
+//   GET ?ruta=/.openlen/… → { ruta, contenido }   (los de sólo lectura se calculan al pedirlos)
 //
 // 401 sin sesión, 404 si el proyecto no es tuyo — el mismo par que las demás
 // rutas de proyecto (ver la cabecera de `datos/route.ts`).

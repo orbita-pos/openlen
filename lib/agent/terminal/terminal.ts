@@ -158,6 +158,17 @@ export class TerminalDeLen {
     }
   }
 
+  /**
+   * F5 · lo de sólo lectura, con las rutas y el contenido de AHORA: lo ya leído
+   * se olvida y se vuelve a calcular al leerlo. Se pide cuando el sitio cambió
+   * (una versión nueva). Sin arrancar no hace nada: al arrancar ya se listan.
+   */
+  async refrescarPerezosos(): Promise<void> {
+    if (!this.hilo || !this.o.perezosos) return;
+    const perezosos = await this.o.perezosos.rutas();
+    await this.pedir({ tipo: "perezosos", perezosos });
+  }
+
   /** Deja ficheros como quedaron de verdad (`null`: que no exista). */
   async poner(ficheros: Readonly<Record<string, string | null>>): Promise<void> {
     if (!this.hilo || Object.keys(ficheros).length === 0) return;

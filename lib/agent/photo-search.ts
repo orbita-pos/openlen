@@ -76,7 +76,7 @@ function extractEntries(manifest: unknown): ManifestEntry[] {
   return out;
 }
 
-/** EL CATÁLOGO ENTERO, para `/catalogo/fotos.jsonl` de la terminal (F5 de
+/** EL CATÁLOGO ENTERO, para `/.openlen/catalogo/fotos.jsonl` de la terminal (F5 de
  *  plans/len-agente-2026): las mismas entradas que filtra `searchCuratedPhotos`,
  *  sin filtro ni tope, en el orden del manifiesto. */
 export function todasLasFotosCuradas(

@@ -112,7 +112,7 @@ const conCarpetasHasta =
 /**
  * EL EXPLORADOR, como el de VS Code: el árbol a la izquierda (arriba en el
  * móvil) y el fichero elegido a la derecha. Sólo lectura, con copiar. Los de
- * `/resultados`, `/bandeja`, `/catalogo` y `/.versiones` se piden al abrirlos:
+ * `/.openlen` (resultados, bandeja, catálogo y versiones) se piden al abrirlos:
  * cuestan consultas. La página abierta se enseña como está en el lienzo, que es
  * lo que el usuario está viendo; lo demás, como está guardado.
  */

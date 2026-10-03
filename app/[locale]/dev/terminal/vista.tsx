@@ -129,7 +129,7 @@ const FICHEROS = () => ({
     { ruta: "/datos/reservas.json", contenido: RESERVAS_DESPUES },
   ],
   // Se calcula al abrirlo: hasta entonces, la búsqueda sólo lo encuentra por nombre.
-  perezosos: ["/resultados/visitas.json"],
+  perezosos: ["/.openlen/resultados/visitas.json"],
 });
 
 let preparado = false;

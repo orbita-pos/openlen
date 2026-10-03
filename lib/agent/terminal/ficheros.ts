@@ -19,10 +19,11 @@
  *  y tirar. Lo que se escribe ahí no se guarda en ninguna parte. */
 const DEL_SISTEMA = /^\/(?:tmp|bin|usr|dev|proc)(?:\/|$)/;
 
-/** F5 · las carpetas de SÓLO LECTURA: resultados, bandeja, catálogo de fotos y
- *  versiones. Se calculan al leerlas (`solo-lectura.ts`) y nadie las escribe:
- *  el hilo contesta EROFS (`trabajador.mjs`, con la misma expresión). */
-export const DE_SOLO_LECTURA = /^\/(?:resultados|bandeja|catalogo|\.versiones)(?:\/|$)/;
+/** F5 · la carpeta de SÓLO LECTURA, `/.openlen` (resultados, bandeja, catálogo
+ *  de fotos y versiones). Se calcula al leerla (`solo-lectura.ts`) y nadie la
+ *  escribe: el hilo contesta EROFS (`trabajador.mjs`, con la misma expresión).
+ *  Oculta, como el `.git` de DeepSeek: una búsqueda del sitio no entra en ella. */
+export const DE_SOLO_LECTURA = /^\/\.openlen(?:\/|$)/;
 
 export function esDeSoloLectura(ruta: string): boolean {
   return DE_SOLO_LECTURA.test(ruta);
