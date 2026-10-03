@@ -68,6 +68,12 @@ describe("POST /api/voz/nota", () => {
     expect(mocks.auth).not.toHaveBeenCalled();
   });
 
+  // 🔴 Encendida por defecto (2026-10-03): sin la variable, la nota se transcribe.
+  it("sin la variable, la voz está encendida", async () => {
+    delete process.env.OPENLEN_VOZ;
+    expect((await POST(pide())).status).toBe(200);
+  });
+
   it("sin sesión ni llave: 401", async () => {
     mocks.auth.mockResolvedValue(null);
     expect((await POST(pide())).status).toBe(401);

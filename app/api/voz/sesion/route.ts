@@ -18,7 +18,9 @@ function json(cuerpo: unknown, status = 200): Response {
 }
 
 export const POST = paraLaApp(async (req: Request): Promise<Response> => {
-  if (process.env.OPENLEN_VOZ?.trim() !== "1") return json({ error: "voz_apagada" }, 503);
+  // ENCENDIDA POR DEFECTO desde el 2026-10-03 (Jesús: «todo tiene que estar
+  // encendido»): OPT-OUT, como los kill-switches; sólo el literal "0" la apaga.
+  if (process.env.OPENLEN_VOZ?.trim() === "0") return json({ error: "voz_apagada" }, 503);
   const userId = await usuarioDeLaPeticion(req);
   if (!userId) return json({ error: "no_autenticado" }, 401);
 

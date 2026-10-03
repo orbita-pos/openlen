@@ -41,7 +41,7 @@ describe("POST /api/voz/sesion", () => {
     expect(mocks.abrir.mock.calls[0]![0].config.voz).toBe("marin");
   });
 
-  it("el interruptor apagado (o con otro valor) rechaza antes de mirar nada", async () => {
+  it("el interruptor apagado rechaza antes de mirar nada", async () => {
     process.env.OPENLEN_VOZ = "0";
     const r = await POST(pide(bueno));
     expect(r.status).toBe(503);
@@ -49,8 +49,14 @@ describe("POST /api/voz/sesion", () => {
     expect(mocks.auth).not.toHaveBeenCalled();
   });
 
-  it("acepta el interruptor con espacios alrededor (cmd los deja)", async () => {
-    process.env.OPENLEN_VOZ = "1 ";
+  it("acepta el apagado con espacios alrededor (cmd los deja)", async () => {
+    process.env.OPENLEN_VOZ = "0 ";
+    expect((await POST(pide(bueno))).status).toBe(503);
+  });
+
+  // 🔴 Encendida por defecto (2026-10-03): sin la variable, la llamada se abre.
+  it("sin la variable, la voz está encendida", async () => {
+    delete process.env.OPENLEN_VOZ;
     expect((await POST(pide(bueno))).status).toBe(200);
   });
 
