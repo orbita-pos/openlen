@@ -389,9 +389,6 @@ export default defineConfig({
       // Lo que el dueño cambió a mano desde el último turno de Len (H07). Núcleo
       // puro — `include` es LISTA BLANCA.
       "lib/agent/cambios-del-dueno.test.ts",
-      // La lista de tareas con estado, medida por el servidor (H02). Núcleo
-      // puro — `include` es LISTA BLANCA.
-      "lib/agent/lista-de-tareas.test.ts",
       // La fila del turno y la decisión de si se cortó (H05). Núcleo puro —
       // `include` es LISTA BLANCA.
       "lib/agent/registro-del-turno.test.ts",

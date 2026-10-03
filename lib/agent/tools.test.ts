@@ -1415,45 +1415,17 @@ describe("web_search y web_fetch (F2)", () => {
   });
 });
 
-describe("TodoWrite (H2) — la lista de Claude Code", () => {
-  const todo = (content: string, status: string) => ({ content, status, activeForm: content });
-
-  it("contesta que la guardó y le pasa la lista al bucle, con los estados traducidos", async () => {
+// ⚰️ TodoWrite (H2) se retiró en F4 (plans/len-agente-2026). La lápida: el
+// nombre ya no lo ejecuta nada, y no guarda ni cambia la página.
+describe("TodoWrite, retirada (F4)", () => {
+  it("es una herramienta desconocida: no apunta nada ni cambia la página", async () => {
     const { deps, store } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "TodoWrite", {
-      todos: [todo("cambiar el titular", "in_progress"), todo("poner el teléfono", "pending"), todo("publicar", "completed")],
+      todos: [{ content: "cambiar el titular", status: "in_progress", activeForm: "cambiando el titular" }],
     });
-    assert.equal(out.response.ok, true);
-    assert.equal(
-      out.response.tool_result,
-      "List saved. Keep it up to date as you work, and carry on with the task in progress.",
-    );
-    assert.deepEqual(out.tareas, [
-      { texto: "cambiar el titular", estado: "en_curso" },
-      { texto: "poner el teléfono", estado: "pendiente" },
-      { texto: "publicar", estado: "hecha" },
-    ]);
-    // Apuntar NO hace nada: es una lista de trabajo, no un cambio.
+    assert.equal(out.response.ok, false);
     assert.equal(store.saved.length, 0);
     assert.equal(out.updatedHtml, undefined);
-  });
-
-  it("un estado que no es de Claude Code se ignora, y una tarea sin texto no entra", async () => {
-    const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "TodoWrite", {
-      todos: [todo("contador", "casi"), todo("   ", "pending")],
-    });
-    assert.deepEqual(out.tareas, [{ texto: "contador" }]);
-  });
-
-  it("una lista vacía vale —así se limpia en Claude Code—; sin `todos`, el error de validación", async () => {
-    const { deps } = makeDeps();
-    const vacia = await runAgentTool(makeSession(), deps, "TodoWrite", { todos: [] });
-    assert.equal(vacia.response.ok, true);
-    assert.deepEqual(vacia.tareas, []);
-    const sin = await runAgentTool(makeSession(), deps, "TodoWrite", {});
-    assert.equal(sin.response.ok, false);
-    assert.match(String(sin.response.tool_result), /^<tool_use_error>InputValidationError: /);
   });
 });
 

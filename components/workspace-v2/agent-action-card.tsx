@@ -150,8 +150,8 @@ export const KNOWN_TOOLS = new Set([
   // H2 (2026-09-25): cargar una herramienta diferida. Retirada en Len 2.1;
   // se queda por el historial.
   "ToolSearch",
-  // La lista de Claude Code, que sustituye a declarar_tareas (H2). Ésa se queda
-  // arriba: el historial de turnos viejos la sigue nombrando.
+  // La lista de Claude Code, que sustituyó a declarar_tareas (H2). Retirada en
+  // F4 (plans/len-agente-2026); se queda, como aquélla, por el historial.
   "TodoWrite",
   "revertir_ultimo_cambio",
   "verificar_diseno",

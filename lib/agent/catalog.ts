@@ -19,7 +19,6 @@
 // más). El porqué, medido: en `encargo-grande`, `editar_runtime` le exigió
 // reteclear 8.845 caracteres para quitar la gorra y se dejó las zapatillas.
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
-import { DECLARACION_TODO_WRITE } from "@/lib/agent/ficheros/todo-write";
 import { DECLARACION_WEB_FETCH, DECLARACION_WEB_SEARCH } from "@/lib/agent/web/herramientas";
 // El dominio de publicación NO se escribe a mano en ningún sitio: CLAUDE.md lo
 // prohíbe y `base-host.ts` es la única fuente. Aquí estaba cableado
@@ -267,7 +266,8 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     // ⚰️ Sustituyen a `leer_de_internet` (3 URLs, 4.000 caracteres de texto).
     DECLARACION_WEB_SEARCH,
     DECLARACION_WEB_FETCH,
-    DECLARACION_TODO_WRITE,
+    // ⚰️ Aquí iba TodoWrite, la lista de tareas. Retirada en F4
+    // (plans/len-agente-2026), como Claude Code con los modelos nuevos.
     // Como `ask_user_question` de DeepSeek (packages/interaction/tool-ask-user
     // @639ed01): UNA frase, sin lista de datos. La lista que había («un
     // teléfono, un precio, un horario» entre lo que «SÓLO él puede dar»)

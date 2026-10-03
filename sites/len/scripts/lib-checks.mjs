@@ -65,8 +65,8 @@ export function checkIndice(src, file) {
 
 // Desde Len 2.0 el catálogo no está en un solo fichero: las cinco de ficheros
 // (Read, Edit…) se declaran en `lib/agent/ficheros/declaraciones.ts`, con
-// mayúscula, y TodoWrite y ToolSearch llevan su nombre en una constante
-// `NOMBRE_*`. Leer sólo `catalog.ts` dejaba fuera siete herramientas de 19.
+// mayúscula, y las de internet (`lib/agent/web/herramientas.ts`) llevan su
+// nombre en una constante `NOMBRE_*`, como TodoWrite y ToolSearch antes de irse. Leer sólo `catalog.ts` dejaba fuera siete herramientas de 19.
 export function catalogToolNames(catalogSrc) {
   return [...catalogSrc.matchAll(/^\s+name:\s*"([A-Za-z_]+)",?\s*$/gm)].map((m) => m[1]);
 }

@@ -61,8 +61,10 @@ const AGENTE = join(REPO, "lib", "agent");
 const catalog = [
   ...catalogToolNames(readFileSync(join(AGENTE, "catalog.ts"), "utf8")),
   ...catalogToolNames(readFileSync(join(AGENTE, "ficheros", "declaraciones.ts"), "utf8")),
-  ...toolNameConstants(readFileSync(join(AGENTE, "ficheros", "todo-write.ts"), "utf8")),
-  // ⚰️ `ficheros/tool-search.ts` (ToolSearch) se retiró en Len 2.1 (2026-09-30).
+  // F2: `web_search` y `web_fetch` llevan su nombre en una constante.
+  ...toolNameConstants(readFileSync(join(AGENTE, "web", "herramientas.ts"), "utf8")),
+  // ⚰️ `ficheros/tool-search.ts` (ToolSearch) se retiró en Len 2.1 (2026-09-30), y
+  // `ficheros/todo-write.ts` (TodoWrite) en F4 de plans/len-agente-2026.
 ];
 errors.push(...checkToolGroups(groups, catalog));
 

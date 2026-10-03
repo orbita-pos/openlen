@@ -9,15 +9,12 @@
 // A runtime (value) import of either would transitively load the native
 // @openlen/ai-gateway / @/lib/html-engine .node bindings, which vite/vitest
 // cannot load — see loop.test.ts's header comment for the same constraint.
-import { recordatorioTodoWrite } from "@/lib/agent/ficheros/todo-write";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { avisoParaElDueno, motivoDelFallo } from "@/lib/agent/motivo-del-fallo";
 import { avisoDeRegresion, type Regresion } from "@/lib/agent/pruebas-de-la-pagina";
-// De VALOR y a propósito, como `aviso-medido` abajo: no importa nada.
-import { ListaDeTareas } from "@/lib/agent/lista-de-tareas";
 // Import de VALOR a propósito, y no viola la regla de arriba: `aviso-medido` no
 // importa nada — ni la pasarela, ni las herramientas, ni Chromium. Es texto y
 // un `Set`.
@@ -402,13 +399,9 @@ export interface AgentLoopResult {
    *  para quien juzga el turno desde fuera (el arnés de evals), que hasta el
    *  2026-09-22 sólo podía leer el relato. */
   aplicado: readonly string[];
-  /** Las tareas que el reclamo de evidencia nombró como pendientes al cerrar,
-   *  o `null` si no hubo reclamo. Para poder comprobar QUÉ se le dijo al
-   *  modelo, no sólo que se le dijo algo. */
-  tareasReclamadas: readonly string[] | null;
-  /** La última lista que el modelo declaró con TodoWrite, en su orden;
-   *  vacía si no declaró ninguna. */
-  tareasDeclaradas: readonly string[];
+  // ⚰️ Aquí iban `tareasReclamadas` y `tareasDeclaradas`, lo que el reclamo de
+  // la lista de tareas nombraba al cerrar. Se fueron con TodoWrite (F4 de
+  // plans/len-agente-2026): sin la herramienta, nada declaraba tareas.
   /** Las llamadas que el bucle NO ejecutó porque las paró una guarda —nombre
    *  inexistente, fallo repetido, misma intención— con el motivo que se le
    *  devolvió al modelo. Nunca pasan por `runTool`, así que ningún diario las
@@ -578,45 +571,13 @@ const WRAP_UP_PRESUPUESTO =
 // Barrida el mismo día. Que corrige el usuario y no la tubería lo sujeta
 // `loop.test.ts` («le inyectamos un arreglo que el usuario no pidió»).
 
-/**
- * EL RECLAMO DE TAREAS AL CERRAR — la lista vive en `lib/agent/lista-de-tareas.ts`.
- *
- * 🔴 DOS REDACCIONES, y la diferencia es lo que se SABE. Con estados, las que
- * no están hechas se nombran: cada una lleva el suyo, y una «hecha» sin nada
- * detrás no se aceptó. Sin estados sólo se puede contar, y hasta el 2026-09-22
- * se nombraba «la cola de la lista» — con A y C hechas, le decía que faltaba C
- * (G2 de la auditoría). Ahora se le enseña la lista entera y se le dice que no
- * se sabe cuál es.
- */
-function buildEvidenceInstruction(
-  p: { readonly nombradas: readonly string[]; readonly todas: readonly string[] },
-  cambios: number,
-): string {
-  const lista = (ts: readonly string[]) => ts.map((t) => `«${t}»`).join(", ");
-  // 🔴 «COMPRUÉBALA, NO LA REPITAS» (revisión pre-deploy del 2026-09-22). Una
-  // misma llamada hace a menudo el trabajo de dos tareas y el cambio cuenta sólo
-  // para la que estaba en curso: «haz AHORA las que falten» a secas empujaba a
-  // repetir una que ya estaba —un segundo teléfono en el pie—. Y la contabilidad
-  // se quedaba en la boca del modelo: en la batería se la explicó al dueño.
-  const cierre =
-    "Haz AHORA las que falten con la herramienta que corresponda; si alguna ya la hizo una llamada que contó para otra tarea, ponla en_curso y compruébala con una lectura en vez de repetirla. " +
-    "Si alguna no se puede hacer, o ya estaba hecha, dile al usuario EXACTAMENTE eso al cerrar — lo que no vale es enumerarlas todas como hechas. " +
-    "Cómo se cuentan las tareas es contabilidad interna: no se la cuentes al usuario.";
-  if (p.nombradas.length > 0) {
-    return (
-      `SISTEMA (el usuario NO escribió esto): de las ${p.todas.length} tarea(s) que declaraste, sin terminar se quedan: ${lista(p.nombradas)}. ` +
-      `Sólo tengo evidencia de ${cambios} cambio(s) real(es) en este turno, y a éstas no se les ha medido ninguno mientras estaban en curso (o no las marcaste hechas). ` +
-      cierre
-    );
-  }
-  return (
-    `SISTEMA (el usuario NO escribió esto): declaraste ${p.todas.length} tarea(s) y sólo tengo evidencia de ${cambios} cambio(s) real(es) — ` +
-    "una llamada que movió bytes de la página o escribió en la base. Como no marcaste en qué tarea estabas, NO sé cuál falta: " +
-    `revisa ${lista(p.todas)} y haz la que no esté hecha. ` +
-    "Para que pueda decírtela por su nombre, vuelve a llamar a TodoWrite con el estado de cada una (in_progress al empezarla, completed al terminarla). " +
-    cierre
-  );
-}
+// ⚰️ AQUÍ VIVÍA `buildEvidenceInstruction`, EL RECLAMO DE TAREAS AL CERRAR:
+// si el modelo cerraba con tareas de TodoWrite sin evidencia detrás, se le
+// nombraban y se le devolvía una vuelta. Se fue con TodoWrite (F4 de
+// plans/len-agente-2026, como Claude Code con los modelos nuevos): sin la
+// herramienta no hay lista que reclamar. Lo que la lista sujetaba lo dice el
+// prompt («Termina todo lo pedido», «di qué dejaste fuera») y la insistencia
+// de abajo sigue cazando el «listo» sin cambio.
 
 /**
  * SOBRE QUÉ VA UNA LLAMADA, para su tarjeta: el argumento principal, como
@@ -682,9 +643,6 @@ function stableStringify(v: unknown): string {
 // que descontarla del presupuesto sería cobrarle al usuario por la vuelta en la
 // que el Agente decide callarse y esperarle. `revertir_ultimo_cambio` NO entra
 // — escribe en la base.
-// TodoWrite tampoco: escribir la lista no hace nada, y cobrarle al
-// usuario una acción por planificar sería cobrarle por el paso que existe para
-// que el turno salga bien.
 /**
  * LA LLAMADA MAL ESCRITA.
  *
@@ -754,13 +712,6 @@ export function repararNombre(
   return { sugerido: masParecida(nombre, declaradas) };
 }
 
-/** Las lecturas que COMPRUEBAN algo de la página: dan por hecha una tarea de
- *  comprobar en curso. `Read` y `Grep` leen lo que hay en los ficheros; `Glob`
- *  sólo lista rutas y `elegir_foto` no mira la página, y
- *  TodoWrite/`preguntar` no leen nada. `usar_pagina` (H9) es la comprobación
- *  por excelencia: usa la página. */
-const LECTURAS_QUE_COMPRUEBAN = new Set(["mirar_pagina", "usar_pagina", "Read", "Grep"]);
-
 const READ_ONLY_TOOLS = new Set([
   // ⚰️ `leer_estado` estaba aquí; se retiró en H3 (2026-09-25): los almacenes
   // y la memoria se leen con Read.
@@ -780,12 +731,11 @@ const READ_ONLY_TOOLS = new Set([
   // nada y se cobraba como si sí (medido 7 de 7 el 2026-09-08). Len 2.0 no se
   // muda: cada Edit dice su fichero.
   "preguntar",
-  "TodoWrite",
-  // ⚰️ Aquí iba `ToolSearch` (H2), retirada con las diferidas en Len 2.1.
+  // ⚰️ Aquí iba `ToolSearch` (H2), retirada con las diferidas en Len 2.1, y
+  // `TodoWrite`, retirada en F4 (plans/len-agente-2026).
 ]);
 /** Las lecturas que pueden correr a la vez (F1): no cambian ni la página ni
- *  nada del proyecto. `preguntar` y `TodoWrite` no: no leen, y `preguntar`
- *  cierra el turno. */
+ *  nada del proyecto. `preguntar` no: cierra el turno. */
 // F2: `web_search` y `web_fetch` tampoco tocan el proyecto. Como `ver_visitas`,
 // NO van en READ_ONLY_TOOLS: buscar y contestar con lo encontrado es el trabajo.
 const EN_PARALELO = new Set([
@@ -809,11 +759,6 @@ const EN_PARALELO = new Set([
  *  presupuesto para actuar, la hemos leído para nada y le hemos hecho perder
  *  el tiempo dos veces. */
 const VUELTAS_POR_DIRECCION = 2;
-
-/** Vueltas sin tocar la lista antes de devolvérsela: las 10 de Claude Code (H2).
- *  Fueron 2 mientras el turno se cortaba en la vuelta 12 —con 10 no habría
- *  disparado nunca—; sin tope (H1), el número de Claude Code vuelve a servir. */
-const VUELTAS_SIN_LISTA = 10;
 
 /**
  * 🔴 H12 · LAS VUELTAS DE LLAMADAS RECHAZADAS NO SON TRABAJO.
@@ -1066,72 +1011,23 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     return [redactarDiagnosticos(nuevos), ...extras].filter(Boolean).join("\n");
   };
 
-  /** Las tareas que el modelo declaró con TodoWrite, con su estado y
-   *  lo que se midió de cada una. Ver `lib/agent/lista-de-tareas.ts`. */
-  const lista = new ListaDeTareas();
-  /** La lista se reclama UNA vez: si el modelo cierra otra vez sin completarla,
-   *  se le deja cerrar y que lo diga él. Insistir dos veces es quemarle el
-   *  presupuesto al usuario en una discusión. */
-  let yaSeExigioEvidencia = false;
-  /** Lo que ese reclamo nombró. Ver `AgentLoopResult.tareasReclamadas`. */
-  let tareasReclamadas: string[] | null = null;
   /** Ver `AgentLoopResult.rechazos`. */
   const rechazos: { tool: string; motivo: string }[] = [];
   /** Vueltas seguidas en las que las guardas rechazaron TODAS las llamadas. */
   let vueltasSoloRechazadas = 0;
   /** Ver `CONFLICTO_SIN_SALIDA`. */
   let guardarSinSalida = false;
-  /** Vueltas desde que se le devolvió la lista. Ver `recordatorioDeTareas`. */
-  let vueltasSinLista = 0;
-
-  /**
-   * LA LISTA, DE VUELTA DELANTE — el recordatorio que Claude Code sí tiene.
-   *
-   * 🔴 EL FALLO QUE CIERRA, MEDIDO 7 DE 7. Con «pon este teléfono en el pie de
-   * TODAS las páginas» sobre un sitio de cuatro, Len edita TRES y cierra. Cinco
-   * corridas el 2026-09-08 más dos el 2026-09-07, y siempre la misma página
-   * fuera. No es azar y no es presupuesto: son cuatro ediciones idénticas con
-   * seis turnos disponibles.
-   *
-   * LA CAUSA es que declara la lista UNA vez y no vuelve a verla nunca. Vive en
-   * nuestro servidor (`tareas`), no en su contexto. Al cerrar se le reclama —una
-   * sola vez— y para entonces ya no queda casi presupuesto.
-   *
-   * LO QUE HACE CLAUDE CODE: cuenta las vueltas desde que se tocó la lista y
-   * desde el último recordatorio, y cuando los dos pasan de su umbral le
-   * REINYECTA la lista al modelo, con su contenido. No es una frase en el
-   * prompt de sistema: es ESTADO devuelto al contexto.
-   *
-   * ⚠️ EL UMBRAL NO SE PORTA. Los suyos son 10 y 10, sobre sesiones de decenas
-   * de turnos; aquí el tope son 6, así que copiar el número sería no disparar
-   * JAMÁS. Se porta la proporción.
-   *
-   * 🔴 Y CON SU ESTADO, desde el 2026-09-22 (H02). Claude Code puede enseñar
-   * estado porque lo mantiene el MODELO; ahora aquí también, y además medido:
-   * cada tarea lleva lo que el servidor contó mientras estaba en curso. Si el
-   * modelo no usa estados, se le devuelve la lista y el recuento, y que decida
-   * él: inventarse un «te falta la 4» sería afirmar lo que no se midió.
-   */
-  const recordatorioDeTareas = (): string => {
-    if (lista.vacia || !lista.pendientes().faltan) return "";
-    if (vueltasSinLista < VUELTAS_SIN_LISTA) return "";
-    vueltasSinLista = 0;
-    // El de Claude Code (H2). Lo medido de cada tarea no va
-    // aquí: va en el aviso de evidencia, cuando marca una sin nada detrás.
-    return recordatorioTodoWrite(lista.estados());
-  };
   // ¿Ya se le insistió una vez por cerrar sin llamar a nada? Ver el bloque de
   // `calls.length === 0`.
   let yaSeInsistio = false;
-  /** Lo que el modelo dijo en la vuelta a la que se le devolvió un aviso —la
-   *  insistencia o el reclamo de tareas—, y en qué vuelta. Ese texto YA le llegó
+  /** Lo que el modelo dijo en la vuelta a la que se le devolvió la
+   *  insistencia, y en qué vuelta. Ese texto YA le llegó
    *  al dueño; si la vuelta INMEDIATAMENTE siguiente cierra sin escribir nada,
    *  es lo que queda como cierre. Más tarde ya no: entre medias pudo pasar de
    *  todo, y resucitarlo sería devolver un «listo» anterior al trabajo. */
   let dichoAntesDelAviso: {
     readonly vuelta: number;
     readonly texto: string;
-    readonly tipo: "insistencia" | "reclamo";
   } | null = null;
   /** ¿ALGUNA LLAMADA HIZO ALGO? Una que no es de lectura, que salió bien y que
    *  no fue una edición nula. Es lo que decide la insistencia de abajo: hasta
@@ -1172,8 +1068,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     errorCode,
     mutoDurable,
     aplicado: [...aplicado],
-    tareasReclamadas,
-    tareasDeclaradas: lista.textos,
     rechazos: [...rechazos],
   });
 
@@ -1305,15 +1199,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // nombrar ninguno de los dos.
       //
       // Lo que se le devuelve ahora es ESTADO, que es lo que hace Claude Code con
-      // su recordatorio de tareas —y lo que ya dice el comentario de
-      // `recordatorioDeTareas` unas líneas más arriba—: la lista de lo que de
+      // su recordatorio de tareas: la lista de lo que de
       // verdad se aplicó, contada donde se cuenta la evidencia. Lo que el
       // usuario pidió y no está en esa lista es lo pendiente, y eso el modelo sí
       // puede derivarlo porque tiene el pedido delante.
       //
       // ⚠️ NO se le dice «te falta X». Eso exigiría casar cada petición con cada
-      // llamada, y este fichero ya explica en `recordatorioDeTareas` por qué no
-      // se puede: la asignación es por ORDEN y sería inventarse el emparejamiento.
+      // llamada, y la asignación sería por ORDEN: inventarse el emparejamiento.
       // Se le dan los hechos y decide él.
       const hechosDelTurno = hechosAplicados();
       // 🔴 I6 · Y EN QUÉ ESTADO SE LA DEJAS. Quedarse sin presupuesto a mitad
@@ -1431,7 +1323,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
      * honesta, lo que dice al por fin actuar— se le enseña entero al cerrar la
      * vuelta: ocultar una rectificación dejaría en pie el «listo» que corrige.
      */
-    const retener = dichoAntesDelAviso?.tipo === "insistencia" && dichoAntesDelAviso.vuelta === turns - 1;
+    const retener = dichoAntesDelAviso !== null && dichoAntesDelAviso.vuelta === turns - 1;
     let retenido = "";
 
     for await (const ev of args.openStream(messages)) {
@@ -1551,32 +1443,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         turnText = dichoAntesDelAviso.texto;
       }
 
-      // LA LISTA DE TAREAS, ANTES QUE LOS OJOS. No tiene sentido juzgar cómo
-      // quedó la página si media petición no se ha hecho todavía: primero se
-      // completa el trabajo, y lo que se verifica es el resultado final.
-      //
-      // Se reclama UNA vez y sólo con presupuesto para actuar — pedirle que
-      // termine algo que ya no puede hacer sería gastarle una vuelta al usuario
-      // para llegar al mismo sitio, que es la misma regla que la de los ojos.
-      const pendientes = lista.pendientes();
-      if (
-        pendientes.faltan &&
-        !yaSeExigioEvidencia &&
-        mutatingTurns < maxTurns &&
-        budgetedToolCalls < maxToolCalls
-      ) {
-        yaSeExigioEvidencia = true;
-        // Lo que NOMBRÓ como pendiente: sin estados no nombra ninguna.
-        tareasReclamadas = [...pendientes.nombradas];
-        dichoAntesDelAviso = { vuelta: turns, texto: turnText, tipo: "reclamo" };
-        messages.push(delAsistente(turnText));
-        messages.push({
-          role: "user",
-          content: buildEvidenceInstruction(pendientes, lista.cambios),
-        });
-        continue;
-      }
-
       // 🔴 ANUNCIÓ LA EDICIÓN Y NO LA HIZO. Se le pide UNA vez, aquí mismo.
       //
       // MEDIDO en producción el 2026-08-31, dos veces en tres minutos: a
@@ -1621,13 +1487,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // publicar SÍ actuaron —el brazo de control de su prueba lo sujeta— y
       // una lectura o una edición nula no.
       //
-      // Y VA DESPUÉS DEL RECLAMO DE TAREAS, no antes: si el modelo declaró una
-      // lista y no hay evidencia, el reclamo le nombra lo que falta, que es
-      // mejor aviso que éste. Y si ya se le reclamó, no se le insiste encima —
-      // dos avisos por lo mismo es la discusión que el reclamo ya prohíbe.
-      if (puedeActuar && !actuo && !yaSeInsistio && !yaSeExigioEvidencia && turnText.trim().length > 0) {
+      // ⚰️ Iba DESPUÉS DEL RECLAMO DE TAREAS y no se sumaba a él; el reclamo se
+      // fue con TodoWrite (F4 de plans/len-agente-2026).
+      if (puedeActuar && !actuo && !yaSeInsistio && turnText.trim().length > 0) {
         yaSeInsistio = true;
-        dichoAntesDelAviso = { vuelta: turns, texto: turnText, tipo: "insistencia" };
+        dichoAntesDelAviso = { vuelta: turns, texto: turnText };
         messages.push(delAsistente(turnText));
         messages.push({ role: "user", content: toolCalls === 0 ? INSISTE_SIN_HERRAMIENTAS : INSISTE_SIN_EFECTO });
         continue;
@@ -1933,9 +1797,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     let rechazadasEnLaVuelta = 0;
 
     const functionResponses: { name: string; response: Record<string, unknown> }[] = [];
-    /** Los avisos de evidencia de TodoWrite de esta tanda: van en el mensaje
-     *  hermano, no dentro de su resultado (que es el literal de Claude Code). */
-    const avisosDeLaLista: string[] = [];
     /** La pregunta con la que este turno se cierra, si alguna herramienta la
      *  produjo. Ver el bloque que la consume al salir del bucle de llamadas. */
     let pregunta = "";
@@ -2170,24 +2031,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       }
 
       if (outcome.pregunta) pregunta = outcome.pregunta;
-      // LA LISTA, POR EL SERVIDOR. TodoWrite contesta el literal de Claude Code;
-      // lo medido de cada «completed» nuevo —y las que se negaron, por su
-      // nombre— va en el mensaje hermano (`avisosDeLaLista`).
       const respuesta = outcome.response;
-      if (outcome.tareas) {
-        vueltasSinLista = 0;
-        const r = lista.declarar(outcome.tareas);
-        if (r.sinEvidencia.length > 0) {
-          avisosDeLaLista.push(
-            "<system-reminder>\n" +
-            `NO se marcaron completed: ${r.sinEvidencia.map((t) => `«${t}»`).join(", ")}. ` +
-            "Mientras estaban en curso no cambió nada ni se comprobó en la página. " +
-            "Si ya la hizo una llamada que contó para otra tarea —una misma edición puede cubrir varias—, ponla in_progress y compruébala con una lectura (Read o Grep) antes de marcarla completed: no la repitas. " +
-            "Si no está hecha, hazla ahora, o dile al usuario que no se pudo. " +
-            "Cómo se cuentan las tareas es contabilidad interna: no se la cuentes al usuario.\n</system-reminder>",
-          );
-        }
-      }
       // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
       // viene de `declararCambio` (hash antes ≠ hash después); lo durable cubre
       // las que no tocan el documento — módulos, páginas, almacenes.
@@ -2209,7 +2053,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           ? Boolean(outcome.mutoDurable || outcome.updatedHtml)
           : cambioDeclarado !== "sin_cambio";
       if (esEvidencia) {
-        lista.anotarCambio();
         // El MISMO sitio que cuenta la evidencia guarda su nombre: si se
         // contaran en dos lados, uno se quedaría atrás — que es la clase de
         // fallo que este repositorio ya tiene documentada tres veces.
@@ -2218,9 +2061,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         const rotas = (outcome.response as { referencias_rotas?: unknown }).referencias_rotas;
         rotoPorLaUltima = Array.isArray(rotas) ? rotas.map(String) : [];
       }
-
-      // Una lectura que salió bien cuenta para una tarea de COMPROBAR en curso.
-      if (!esEvidencia && ok && LECTURAS_QUE_COMPRUEBAN.has(call.name)) lista.anotarLectura();
 
       functionResponses.push({ name: call.name, response: respuesta });
     }
@@ -2270,13 +2110,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     //
     // Y va DESPUÉS del `assistant`, así que el modelo lo lee en su siguiente
     // paso —el que iba a dar de todas formas—: cero llamadas nuevas.
-    vueltasSinLista += 1;
-    // El recordatorio viaja en el MISMO mensaje hermano que lo medido, no en uno
-    // propio: es más contexto para el paso que el modelo iba a dar igual, y dos
-    // mensajes de sistema seguidos se leen como una regañina.
     messages.push({
       role: "user",
-      content: [await medirYRedactar(), ...avisosDeLaLista, recordatorioDeTareas()].filter(Boolean).join("\n\n"),
+      content: await medirYRedactar(),
       functionResponses,
     });
     // H12 · quien insiste en lo que se le rechaza no avanza: se le cierra.

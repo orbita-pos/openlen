@@ -982,25 +982,15 @@ describe("runAgentLoop", () => {
   });
 });
 
-// ── declarar_tareas: la lista, pasada por la EVIDENCIA ──────────────────────
+// ── TodoWrite, retirada (F4 de plans/len-agente-2026) ────────────────────────
 //
-// 🔴 El fallo de los turnos largos: hacer la primera, perder el hilo a la
-// tercera y cerrar enumerando las tres como hechas. No hace falta que el modelo
-// mienta — basta con que se despiste, y bastaba con que UNA llamada saliera bien
-// para que el texto final hablara en plural.
-describe("runAgentLoop — TodoWrite (antes declarar_tareas)", () => {
-  const declara = (n: number) => ({
-    type: "function_call" as const,
-    name: "TodoWrite",
-    args: { tareas: Array.from({ length: n }, (_, i) => `tarea ${i + 1}`) },
-  });
+// ⚰️ Aquí vivían las pruebas de la lista de tareas pasada por la EVIDENCIA: el
+// recordatorio a las 10 vueltas, el reclamo al cerrar y el aviso de «completed»
+// sin nada detrás. Se fueron con la herramienta (Claude Code la quitó a los
+// modelos nuevos; Len la usaba en el 1,4 % de los pasos). Queda la lápida.
+describe("runAgentLoop — TodoWrite, retirada (F4)", () => {
   const edita = { type: "function_call" as const, name: "editar_pagina", args: {} };
-
-  /** El doble: `declarar_tareas` devuelve la lista, `editar_pagina` cambia algo
-   *  de verdad, y `Read` sale bien SIN cambiar nada — que es justo el
-   *  `ok:true` que no debe contar como evidencia. */
-  const runTool = async (name: string, args: Record<string, unknown>) => {
-    if (name === "TodoWrite") return { response: { ok: true }, tareas: (args.tareas as string[]).map((texto) => ({ texto })) };
+  const runTool = async (name: string) => {
     if (name === "editar_pagina") {
       return {
         response: { ok: true, cambio: "cambio" },
@@ -1010,79 +1000,20 @@ describe("runAgentLoop — TodoWrite (antes declarar_tareas)", () => {
     return { response: { ok: true } };
   };
 
-  /**
-   * 🔴 LA LISTA VUELVE DELANTE — el fallo que esto cierra, medido 7 de 7.
-   *
-   * «Pon este teléfono en el pie de TODAS las páginas» sobre un sitio de cuatro:
-   * Len edita TRES y cierra, siempre dejando la misma fuera. Cinco corridas el
-   * 2026-09-08 más dos el 2026-09-07, con el presupuesto de PRODUCCIÓN (el caso
-   * no pone `maxTurns` y la ruta tampoco: los dos caen en 6).
-   *
-   * La causa no es el presupuesto —son cuatro ediciones idénticas con seis
-   * turnos— sino que declara la lista UNA vez y no vuelve a verla: vive en el
-   * servidor, no en su contexto.
-   *
-   * Es lo que hace Claude Code: cuenta las vueltas desde la última vez que se
-   * tocó la lista y, pasado un umbral, se la vuelve a enseñar al modelo.
-   * ESTADO devuelto al contexto, no una frase en el prompt.
-   */
-  // H2 (2026-09-25): el recordatorio es el de Claude Code, con
-  // su cadencia —10 vueltas sin tocar la lista—, con la lista y sus estados.
-  const conEstados = {
-    type: "function_call" as const,
-    name: "TodoWrite",
-    args: {},
-  };
-  const leer = { type: "function_call" as const, name: "Read", args: { file_path: "/index.html" } };
-  const runToolConEstados = async (name: string) => {
-    if (name === "TodoWrite") {
-      return {
-        response: { ok: true, tool_result: "List saved." },
-        tareas: [
-          { texto: "tarea 1", estado: "en_curso" as const },
-          { texto: "tarea 2", estado: "pendiente" as const },
-          { texto: "tarea 3", estado: "pendiente" as const },
-        ],
-      };
-    }
-    return { response: { ok: true } };
-  };
-  const recordatorios = async (vueltasLeyendo: number) => {
-    const streams: Message[][] = [];
-    const stream = scripted(
-      [conEstados, done],
-      ...Array.from({ length: vueltasLeyendo }, () => [leer, done]),
-      [{ type: "text_delta", text: "Sigo." }, done],
-    );
-    await runAgentLoop({
-      messages: [{ role: "user", content: "tres cosas" }], tools: [],
-      openStream: (m) => { streams.push([...m]); return stream(m); },
-      runTool: runToolConEstados,
+  it("🔴 llamarla es llamar a un nombre que no existe: se rechaza y no hace nada", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "tres cosas" }],
+      tools: [{ name: "Read" }, { name: "editar_pagina" }],
+      openStream: scripted(
+        [{ type: "function_call", name: "TodoWrite", args: { todos: [{ content: "a", status: "in_progress", activeForm: "a" }] } }, done],
+        [edita, done],
+        [{ type: "text_delta", text: "Hecho." }, done],
+      ),
+      runTool,
       emit: () => {},
     });
-    return [
-      ...new Set(
-        streams
-          .flat()
-          .map((m) => (typeof m.content === "string" ? m.content : ""))
-          .filter((c) => c.includes("You have not updated the task list (TodoWrite) for a while")),
-      ),
-    ];
-  };
-
-  it("🔴 con tareas pendientes, a las 10 vueltas sin tocarla la lista vuelve en el mensaje hermano, como en Claude Code", async () => {
-    const dichos = await recordatorios(9);
-    expect(dichos.length, "nunca se le devolvió la lista").toBe(1);
-    const texto = dichos[0]!;
-    expect(texto).toContain("<system-reminder>");
-    expect(texto).toContain("The list as it is now:");
-    expect(texto).toContain("1. [in_progress] tarea 1");
-    expect(texto).toContain("3. [pending] tarea 3");
-  });
-
-  it("antes de las 10, no; y no se repite en cada vuelta", async () => {
-    expect(await recordatorios(7)).toHaveLength(0);
-    expect(await recordatorios(15)).toHaveLength(1);
+    expect(r.rechazos.map((x) => x.tool)).toContain("TodoWrite");
+    expect(r.finalText).toBe("Hecho.");
   });
 
   /**
@@ -1112,189 +1043,6 @@ describe("runAgentLoop — TodoWrite (antes declarar_tareas)", () => {
     });
     expect(r.finalText, "se quedó sin vueltas antes de la cuarta página").toBe("Las cuatro.");
     expect(r.topeAlcanzado ?? null).toBeNull();
-  });
-
-  it("con evidencia para todas, cierra sin decir nada", async () => {
-    const streams: Message[][] = [];
-    const stream = scripted(
-      [declara(2), edita, edita, done],
-      [{ type: "text_delta", text: "Hechas las dos." }, done],
-    );
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "dos cosas" }], tools: [],
-      openStream: (m) => { streams.push([...m]); return stream(m); },
-      runTool,
-      emit: () => {},
-    });
-    expect(r.finalText).toBe("Hechas las dos.");
-    expect(streams.length).toBe(2); // sin vuelta extra
-  });
-
-  it("🔴 si falta evidencia, no le deja cerrar: se le nombran las que faltan", async () => {
-    const streams: Message[][] = [];
-    const stream = scripted(
-      [declara(3), edita, done],
-      [{ type: "text_delta", text: "Listo, hice las tres." }, done],
-      [edita, edita, done],
-      [{ type: "text_delta", text: "Ahora sí las tres." }, done],
-    );
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "tres cosas" }], tools: [],
-      openStream: (m) => { streams.push([...m]); return stream(m); },
-      runTool,
-      emit: () => {},
-    });
-    const reclamo = [...streams[2]!].reverse().find((m) => m.role === "user")!.content;
-    expect(reclamo).toContain("declaraste 3");
-    expect(reclamo).toContain("1 cambio");
-    // SIN ESTADOS no se sabe cuál falta (H02, 2026-09-22): se le enseñan
-    // todas por su nombre y se le dice que no se sabe. Nombrar «la 2 y la 3»
-    // era casar por orden, y con A y C hechas señalaba C.
-    expect(reclamo).toContain("«tarea 2»");
-    expect(reclamo).toContain("«tarea 3»");
-    expect(reclamo).toContain("NO sé cuál falta");
-    expect(r.finalText).toBe("Ahora sí las tres.");
-  });
-
-  it("🔴 G2b · con estados, el reclamo nombra EXACTAMENTE la que falta", async () => {
-    const streams: Message[][] = [];
-    const lista = (estados: Record<string, string>) => ({
-      type: "function_call" as const,
-      name: "TodoWrite",
-      args: { tareas: ["A", "B", "C"].map((t) => ({ tarea: t, ...(estados[t] ? { estado: estados[t] } : {}) })) },
-    });
-    const stream = scripted(
-      [lista({ A: "en_curso" }), edita, done],
-      [lista({ A: "hecha", C: "en_curso" }), edita, done],
-      [lista({ A: "hecha", C: "hecha" }), done],
-      [{ type: "text_delta", text: "Hecho todo." }, done],
-    );
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "tres cosas" }], tools: [],
-      openStream: (m) => { streams.push([...m]); return stream(m); },
-      runTool: async (name, args) =>
-        name === "TodoWrite"
-          ? {
-              response: { ok: true },
-              tareas: (args.tareas as { tarea: string; estado?: "pendiente" | "en_curso" | "hecha" }[]).map((t) => ({
-                texto: t.tarea,
-                ...(t.estado ? { estado: t.estado } : {}),
-              })),
-            }
-          : runTool(name, args),
-      emit: () => {},
-    });
-    expect(r.tareasReclamadas).toEqual(["B"]);
-    const reclamo = streams.map((m) => [...m].reverse().find((x) => x.role === "user")?.content ?? "").find((c) =>
-      String(c).includes("sin terminar se quedan"),
-    );
-    expect(reclamo).toContain("«B»");
-    expect(reclamo).not.toContain("«C»");
-    // Comprobar antes que repetir, y la contabilidad fuera de la boca del
-    // modelo (revisión pre-deploy del 2026-09-22).
-    expect(reclamo).toMatch(/compru[eé]bala con una lectura en vez de repetirla/);
-    expect(reclamo).toContain("no se la cuentes al usuario");
-  });
-
-  it("🔴 marcar completed sin nada detrás vuelve al modelo como aviso, en el mensaje hermano (H2)", async () => {
-    const vistos: Message[][] = [];
-    const stream = scripted(
-      [{ type: "function_call", name: "TodoWrite", args: {} }, done],
-      [{ type: "function_call", name: "TodoWrite", args: { marcar: true } }, done],
-      [{ type: "text_delta", text: "No pude con el teléfono." }, done],
-    );
-    await runAgentLoop({
-      messages: [{ role: "user", content: "dos cosas" }], tools: [],
-      openStream: (m) => { vistos.push([...m]); return stream(m); },
-      runTool: async (_name, args) => ({
-        response: { ok: true },
-        tareas: args.marcar
-          ? [{ texto: "titular", estado: "hecha" as const }, { texto: "teléfono", estado: "hecha" as const }]
-          : [{ texto: "titular" }, { texto: "teléfono" }],
-      }),
-      emit: () => {},
-    });
-    // El resultado de TodoWrite es el literal de Claude Code; el aviso viaja al
-    // lado, en un <system-reminder>, como sus diagnósticos.
-    const hermano = vistos[2]!.filter((m) => m.role === "user" && m.functionResponses).at(-1)!;
-    expect(String(hermano.content)).toContain("<system-reminder>");
-    expect(String(hermano.content)).toContain("NO se marcaron completed: «titular», «teléfono»");
-  });
-
-  it("un ok:true que no cambió nada NO es evidencia", async () => {
-    const streams: Message[][] = [];
-    const stream = scripted(
-      // Dos lecturas que salen bien y no mueven un byte.
-      [declara(2), { type: "function_call", name: "Read", args: { file_path: "/index.html" } }, { type: "function_call", name: "Read", args: { file_path: "/index.html" } }, done],
-      [{ type: "text_delta", text: "Listo." }, done],
-      [edita, edita, done],
-      [{ type: "text_delta", text: "Hechas." }, done],
-    );
-    await runAgentLoop({
-      messages: [{ role: "user", content: "dos cosas" }], tools: [],
-      openStream: (m) => { streams.push([...m]); return stream(m); },
-      runTool,
-      emit: () => {},
-    });
-    const reclamo = [...streams[2]!].reverse().find((m) => m.role === "user")!.content;
-    expect(reclamo).toContain("0 cambio");
-  });
-
-  it("se reclama UNA vez: si vuelve a cerrar sin completarla, se le deja", async () => {
-    const streams: Message[][] = [];
-    const stream = scripted(
-      [declara(3), edita, done],
-      [{ type: "text_delta", text: "Hechas." }, done],
-      [{ type: "text_delta", text: "Dos quedaron pendientes, te lo digo." }, done],
-    );
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "tres cosas" }], tools: [],
-      openStream: (m) => { streams.push([...m]); return stream(m); },
-      runTool,
-      emit: () => {},
-    });
-    // Tres streams, no cuatro: insistir dos veces es quemarle el presupuesto al
-    // usuario en una discusión.
-    expect(streams.length).toBe(3);
-    expect(r.finalText).toContain("pendientes");
-    expect(r.terminalError).toBe(false);
-  });
-
-  it("sin presupuesto para terminarlas, NO se reclama", async () => {
-    const streams: Message[][] = [];
-    const stream = scripted(
-      [declara(3), edita, done],
-      [{ type: "text_delta", text: "Hechas." }, done],
-    );
-    const r = await runAgentLoop({
-      // El presupuesto de acciones se agota con la única edición del primer
-      // turno. (`maxTurns: 1` no serviría: mataría el turno entero antes de
-      // llegar al cierre, que es otro camino.)
-      messages: [{ role: "user", content: "tres cosas" }], tools: [], maxToolCalls: 1,
-      openStream: (m) => { streams.push([...m]); return stream(m); },
-      runTool,
-      emit: () => {},
-    });
-    // Pedirle que termine algo que ya no puede hacer es gastarle una vuelta al
-    // usuario para llegar al mismo sitio.
-    expect(streams.length).toBe(2);
-    expect(r.finalText).toBe("Hechas.");
-  });
-
-  it("declarar no gasta presupuesto de acciones", async () => {
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "dos cosas" }], tools: [], maxToolCalls: 2,
-      openStream: scripted(
-        [declara(2), edita, edita, done],
-        [{ type: "text_delta", text: "Hechas." }, done],
-      ),
-      runTool,
-      emit: () => {},
-    });
-    // Con `declarar_tareas` contando, las dos ediciones habrían reventado el
-    // tope de 2 y el turno cerraría en rojo.
-    expect(r.finalText).toBe("Hechas.");
-    expect(r.terminalError).toBe(false);
   });
 });
 
@@ -3496,7 +3244,7 @@ describe("H04 — el cierre se redacta con lo medido delante", () => {
 });
 
 describe("auditoría 2026-09-22 · G1–G6", () => {
-  const tools = ["TodoWrite", "editar_texto", "leer_estado", "editar_runtime"].map((name) => ({ name }));
+  const tools = ["editar_texto", "leer_estado", "editar_runtime"].map((name) => ({ name }));
   const llama = (name: string, args: Record<string, unknown>): StreamEvent[] => [
     { type: "function_call", name, args },
     usage(10),
@@ -3524,106 +3272,9 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
       ?.content as string ?? "";
   const grabando = (stream: (m: Message[]) => AsyncIterable<StreamEvent>, vistos: Message[][]) =>
     (m: Message[]) => { vistos.push([...m]); return stream(m); };
-  /** El reclamo del CIERRE, no el recordatorio `<tus-tareas>` de mitad de turno:
-   *  los dos dicen «tengo evidencia», y confundirlos dio G1 y G2 en verde falso
-   *  la primera vez que se corrieron. */
-  const esReclamo = (t: string) => t.includes("sólo tengo evidencia") && !t.includes("<tus-tareas>");
-
-  it("G1 · una edición nula no cuenta como tarea hecha", async () => {
-    const vistos: Message[][] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "el titular y el teléfono" }], tools,
-      openStream: grabando(scripted(
-        llama("TodoWrite", { tareas: ["titular", "teléfono"] }),
-        llama("editar_texto", { resumen: "titular" }),
-        llama("editar_texto", { resumen: "teléfono" }),
-        dice("Listo: cambié el titular y el teléfono."),
-      ), vistos),
-      runTool: async (n, a) =>
-        n === "TodoWrite"
-          ? { response: { ok: true }, tareas: (a.tareas as string[]).map((texto) => ({ texto })) }
-          : a.resumen === "teléfono" ? nula("teléfono") : real("titular"),
-      emit: () => {},
-    });
-    const reclamo = vistos.map(ultimoDelUsuario).find(esReclamo);
-    expect(reclamo, "cerró con «cambié el titular y el teléfono» sin un solo reclamo").toBeDefined();
-  });
-
-  it("G2 · el reclamo no señala como pendiente una tarea que sí se hizo", async () => {
-    const vistos: Message[][] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "tres cosas" }], tools,
-      openStream: grabando(scripted(
-        llama("TodoWrite", { tareas: ["A titular", "B teléfono", "C botón"] }),
-        llama("editar_texto", { resumen: "A titular" }),
-        llama("editar_texto", { resumen: "C botón" }),
-        dice("Hecho todo."),
-      ), vistos),
-      runTool: async (n, a) =>
-        n === "TodoWrite" ? { response: { ok: true }, tareas: (a.tareas as string[]).map((texto) => ({ texto })) } : real(String(a.resumen)),
-      emit: () => {},
-    });
-    const reclamo = vistos.map(ultimoDelUsuario).find(esReclamo);
-    expect(reclamo, "nadie reclamó la tarea que faltaba").toBeDefined();
-    // Lo único que se sabe es que hay 2 cambios para 3 tareas. «C» se hizo:
-    // nombrarla como la que falta es afirmar un emparejamiento inventado.
-    expect(reclamo, "el reclamo nombraba «C botón», que sí se hizo").not.toMatch(/se quedan:[^.]*«C botón»/);
-  });
-
-  // 🔴 Revisión pre-deploy del 2026-09-22. Un `editar_html` puso el titular Y el
-  // teléfono; el cambio contó para «titular», que era la que estaba en curso, y
-  // «teléfono» se rechazó como hecha. En la batería (C07) el modelo acabó
-  // explicándole al dueño la contabilidad de las tareas. La salida es comprobarla
-  // en la página con ella en curso, y el aviso tiene que decirlo — y decir que
-  // eso no es para el dueño.
-  for (const lectura of ["Grep", "Read"] as const)
-  it(`🔴 C07 · la tarea que hizo la misma llamada se confirma leyendo (${lectura}), y la contabilidad no va al dueño`, async () => {
-    const vistos: Message[][] = [];
-    const lista = (titular: string, telefono?: string) => ({
-      tareas: [{ tarea: "titular", estado: titular }, { tarea: "teléfono", ...(telefono ? { estado: telefono } : {}) }],
-    });
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "el titular y el teléfono" }],
-      tools: [...tools, { name: lectura }],
-      openStream: grabando(scripted(
-        llama("TodoWrite", lista("en_curso")),
-        llama("editar_texto", { resumen: "titular y teléfono" }),
-        llama("TodoWrite", lista("hecha", "hecha")),
-        [
-          { type: "function_call", name: "TodoWrite", args: lista("hecha", "en_curso") },
-          { type: "function_call", name: lectura, args: lectura === "Grep" ? { pattern: "33 1234 5678" } : { file_path: "/index.html" } },
-          usage(10),
-          done,
-        ],
-        llama("TodoWrite", lista("hecha", "hecha")),
-        dice("Listo: el titular y el teléfono."),
-      ), vistos),
-      runTool: async (n, a) =>
-        n === "TodoWrite"
-          ? {
-              response: { ok: true },
-              tareas: (a.tareas as { tarea: string; estado?: "pendiente" | "en_curso" | "hecha" }[]).map((t) => ({
-                texto: t.tarea,
-                ...(t.estado ? { estado: t.estado } : {}),
-              })),
-            }
-          : n === lectura
-            ? { response: { ok: true } }
-            : real(String(a.resumen)),
-      emit: () => {},
-    });
-    const avisos = vistos
-      .at(-1)!
-      .filter((m) => m.role === "user" && m.functionResponses)
-      .map((m) => String(m.content))
-      .filter((c) => c.includes("NO se marcaron completed"));
-    expect(avisos, "el rechazo de «teléfono» no le llegó al modelo").toHaveLength(1);
-    expect(avisos[0]).toContain("«teléfono»");
-    expect(avisos[0], "el aviso no le dice cómo probar la que ya hizo").toMatch(/compru[eé]bala con una lectura/);
-    expect(avisos[0], "el aviso no dice que la contabilidad no es para el dueño").toContain("no se la cuentes al usuario");
-    expect(r.tareasReclamadas, "la reclamó como pendiente después de comprobarla").toBeNull();
-    expect(r.finalText).toBe("Listo: el titular y el teléfono.");
-  });
+  // ⚰️ G1, G2 y C07 medían el reclamo de la lista de tareas al cerrar (una
+  // edición nula no la daba por hecha; no nombraba la que sí se hizo; la que
+  // hizo la misma llamada se confirmaba leyendo). Se fueron con TodoWrite (F4).
 
   // 🔴 Revisión pre-deploy del 2026-09-22. Desde G4 la insistencia salta también
   // tras una simple lectura, y el aviso le pedía al modelo «repítela tal cual»

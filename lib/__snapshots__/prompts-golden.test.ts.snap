@@ -673,46 +673,6 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
-    "name": "TodoWrite",
-    "description": "Keeps a task list for the job you are doing on this website. The user sees it, so it tells them where you are, and it keeps you from leaving part of their request undone.\\n\\nUse it on your own initiative, without waiting to be asked, when:\\n- The request has three or more distinct steps, or touches several pages (for example: \\"add a Contact page, link it from the menu and put the new phone number in the footer\\").\\n- The job is not trivial: it needs some planning or several operations, even if the user asked for it in one line.\\n- The user asks for several things in one message, numbered or separated by commas, or asks you to keep a list.\\n- New instructions arrive in the middle of the work: add them as tasks straight away.\\n\\nDo not use it when:\\n- There is a single small change (\\"make the title bigger\\", \\"change the phone number\\").\\n- The job takes fewer than three easy steps, so a list would organise nothing.\\n- It is a question or a conversation, with nothing to build.\\nIn those cases just do the job.\\n\\nHow to keep it:\\n- Each task has a status: pending (not started), in_progress (being done now) or completed (done).\\n- Exactly ONE task is in_progress while you work: never none, never two. Set it to in_progress BEFORE you start on it, and finish it before you start another.\\n- Update the list as you go. Mark each task completed the MOMENT it is done; do not leave them all for the end.\\n- A task is completed ONLY when it is fully done and the page works as asked. It is NOT completed if part of it is missing, if an error is still unsolved, or if you could not find the page, the section or the data it needs. If you are stuck, leave it in_progress and add a task that says what is blocking it.\\n- The list is checked against what you actually did: every call that changed something counts for the task that is in_progress at that moment, and a task marked completed with nothing behind it is not accepted — a <system-reminder> names it. If a task turns out to be impossible or already done, say so when you close instead of counting it as done.\\n- Add the tasks you discover on the way, and remove the ones that stop making sense.\\n- Write concrete tasks, small enough to act on, whose names say clearly what changes. Split a big job into steps.\\n- Each task is ALWAYS written in two forms: content says what to do (\\"Add the Contact page\\") and activeForm what is happening while it runs (\\"Adding the Contact page\\").\\n\\nExamples of when to use it:\\n\\nUser: \\"Make me three pages, Home, Menu and Contact, with the same header and footer, and the WhatsApp button on all of them. Then check they look right on a phone.\\"\\nAssistant: creates the list (Home page; Menu page; Contact page; same header and footer on the three; WhatsApp button on each page; check the three pages on a phone) and starts with the first.\\nWhy: several pages, and a change that has to reach all of them. The list keeps a page from being forgotten. Every task comes from the request, the phone check included: the user asked for it at the end.\\n\\nUser: \\"We changed our name from Café Luna to Luna Tostadores, update it on the site.\\"\\nAssistant: first searches with Grep and finds the old name 11 times across 4 pages, the page titles and the footer included. Then creates one task per page and goes through them.\\nWhy: searching first showed how big the job was. With one task per page, no copy of the old name is left behind.\\n\\nUser: \\"I need a booking form, a price list, a photo gallery and a map to find us.\\"\\nAssistant: creates a list with one task per part, split where needed (for the form: its fields, where the bookings arrive, the message the customer sees after sending), and starts with the form.\\nWhy: several things asked at once, separated by commas. The list turns a long request into steps that can be ticked off.\\n\\nUser: \\"On the phone the page feels slow and cluttered. Can you improve it?\\"\\nAssistant: first looks at the page on a phone and reads it, then lists what it found (a hero image that is too heavy, a menu that does not fold, three sections that say the same thing, a button that overflows) and works through the list.\\nWhy: the request was open. Looking first turned it into concrete tasks, and the list makes sure every problem found gets fixed.\\n\\nExamples of when not to use it:\\n\\nUser: \\"The croissant now costs 2.50.\\"\\nAssistant: finds the price with Grep, changes it with Edit wherever it appears, and says so. No list.\\nWhy: one change, even if it appears in two places. A list adds nothing.\\n\\nUser: \\"Make the title of the home page bigger.\\"\\nAssistant: changes the size with Edit and says so. No list.\\nWhy: one change, in one place of one page.\\n\\nUser: \\"What does the Publish button do?\\"\\nAssistant: answers. No list.\\nWhy: it is a question; there is nothing to build.\\n\\nUser: \\"Is my page published already?\\"\\nAssistant: checks and answers. No list.\\nWhy: a question with a direct answer; there are no steps to follow.\\n\\nWhen in doubt, use it. Keeping the list is how the user sees that you are taking care of every part of what they asked, and how you make sure you finish all of it.",
-    "parameters": {
-      "type": "OBJECT",
-      "properties": {
-        "todos": {
-          "type": "ARRAY",
-          "description": "The whole list, as it should be after this change",
-          "items": {
-            "type": "OBJECT",
-            "properties": {
-              "content": {
-                "type": "STRING"
-              },
-              "status": {
-                "type": "STRING",
-                "enum": [
-                  "pending",
-                  "in_progress",
-                  "completed"
-                ]
-              },
-              "activeForm": {
-                "type": "STRING"
-              }
-            },
-            "required": [
-              "content",
-              "status",
-              "activeForm"
-            ]
-          }
-        }
-      },
-      "required": [
-        "todos"
-      ]
-    }
-  },
-  {
     "name": "preguntar",
     "description": "Hazle al usuario una pregunta corta cuando te falte una confirmación, una elección o un dato para seguir. En cuanto la llamas, el turno TERMINA: no hagas nada más después, porque no habrá después; su respuesta abre el turno siguiente. texto: la pregunta tal cual la va a leer. Es lo único que verá, así que no la repitas luego en tu respuesta.",
     "parameters": {

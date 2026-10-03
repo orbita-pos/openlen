@@ -65,7 +65,7 @@ describe("buildFunctionDeclarations", () => {
       "publicar",
       "web_search",
       "web_fetch",
-      "TodoWrite",
+      // ⚰️ TodoWrite, retirada en F4 (plans/len-agente-2026).
       "preguntar",
       "revertir_ultimo_cambio",
       // Len sabe de tus resultados (plans/len-resultados/): una por fuente,

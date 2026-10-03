@@ -16,7 +16,6 @@
 
 import type { AlmacenDeclarado } from "@/lib/page-data/declaracion";
 import type { FilaDeAlmacen, PlanDeAlmacen } from "@/lib/agent/ficheros/datos";
-import { NOMBRE_TODO_WRITE, RESULTADO_TODO_WRITE, leerTodos } from "@/lib/agent/ficheros/todo-write";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
@@ -32,7 +31,6 @@ import { stripOpIds } from "@/lib/html-ops";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import { debitCredits } from "@/lib/credits";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
-import type { TareaDeclarada } from "@/lib/agent/lista-de-tareas";
 import { vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
@@ -802,16 +800,6 @@ export interface ToolOutcome {
    * QUÉ se dice.
    */
   pregunta?: string;
-  /**
-   * LAS TAREAS QUE EL MODELO DECLARÓ este turno, en su orden. Las escribe
-   * TodoWrite y las consume el bucle, que al cerrar comprueba que cada
-   * una tenga detrás una llamada con evidencia de haber movido algo.
-   *
-   * Es una lista de trabajo, no una promesa: declararlas no las hace, y ése es
-   * justamente el punto — sirven para poder contrastar lo que el modelo dice
-   * que hizo con lo que se puede demostrar.
-   */
-  tareas?: readonly TareaDeclarada[];
   /**
    * ¿ESTA EDICIÓN CAMBIÓ EL COMPORTAMIENTO de la página? Es la MISMA decisión
    * con la que se le pide `prueba` al modelo (`cambioConducta`, sin contar el
@@ -1608,26 +1596,13 @@ async function toolPreguntar(
  *  modelo pensando en voz alta, y eso va en su texto normal. */
 const PREGUNTA_MAX = 600;
 
-/** Ocho pasos son ya más de los que caben en los topes del turno; declarar
- *  veinte es escribir un plan que nadie va a poder terminar. */
-const TAREA_MAX = 120;
-
 // ⚰️ Aquí vivía `leer_de_internet` (hasta 3 URLs, 4.000 caracteres de texto,
 // 2 llamadas por turno). Lo sustituyen `web_search` y `web_fetch` (F2 de
 // plans/len-agente-2026), en `lib/agent/web/`.
 
-/**
- * TODOWRITE (H2, 2026-09-25): la lista de Claude Code, con su respuesta literal.
- * La EVIDENCIA de cada «completed» la pone el bucle, que es quien ve lo medido
- * (`lib/agent/lista-de-tareas.ts`), y la dice en el mensaje hermano, no aquí.
- * ⚰️ Sustituye a `declarar_tareas` (máximo 8 tareas, estados en español y
- * `comprobar`): Claude Code no pone máximo ni ese campo.
- */
-function toolTodoWrite(args: Record<string, unknown>): ToolOutcome {
-  const r = leerTodos(args);
-  if (!r.ok) return { response: { ok: false, error: r.error, tool_result: r.error } };
-  return { response: { ok: true, tool_result: RESULTADO_TODO_WRITE }, tareas: r.tareas };
-}
+// ⚰️ Aquí vivía TodoWrite (H2, 2026-09-25), la lista de tareas de Claude Code.
+// Retirada en F4 (plans/len-agente-2026): Claude Code se la quitó a los modelos
+// nuevos y Len la usaba en el 1,4 % de los pasos.
 /**
  * DESHACER LO DE LEN en una página.
  *
@@ -1834,8 +1809,6 @@ async function ejecutarHerramienta(
         return await toolPublicar(session, deps, args);
       case "preguntar":
         return await toolPreguntar(session, deps, args);
-      case NOMBRE_TODO_WRITE:
-        return toolTodoWrite(args);
       case NOMBRE_WEB_SEARCH:
         return await toolWebSearch(session, deps, args);
       case NOMBRE_WEB_FETCH:
