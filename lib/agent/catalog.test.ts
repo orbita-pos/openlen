@@ -649,7 +649,13 @@ describe("el prompt enseña la conducta buena, no narra la mala", () => {
     // «Delivering work» de Claude Code dentro.
     expect(texto.indexOf("HOW TO WORK:")).toBeGreaterThan(0);
     expect(texto.indexOf("TONE:")).toBeLessThan(texto.indexOf("HOW TO WORK:"));
-    expect(texto).toContain("Reply in the language the user writes to you in");
+    // «Reply in the language…» lo leía el modelo como la respuesta FINAL: con el
+    // prompt en inglés, los avisos de en medio del turno salían en inglés en 4 de
+    // 9 corridas (plans/len-2/corridas/2026-10-03-traduccion-repetir; con el
+    // prompt en español, 0 de 237 tramos). La frase dice que TODO llega al
+    // usuario, y el idioma como lo dice DeepSeek en su arnés («the language of
+    // the user's current request»).
+    expect(texto).toContain("Everything you say reaches the user as you say it, not only your final answer: use the language of their current request");
   });
 });
 
