@@ -128,9 +128,21 @@ function recorta(texto: string, max = 42): string {
   return limpio.length > max ? `${limpio.slice(0, max - 1)}…` : limpio;
 }
 
+/** El texto como se LEE: un `<br>` separa palabras. `textContent` se los come
+ *  y «Bernal<br>Reformas<br>Integrales» salía «BernalReformasIntegrales» en la
+ *  tarjeta de cambios (plans/new-chat/, visto en el taller el 03/10). */
+function visibleText(el: Element): string {
+  let out = "";
+  el.childNodes.forEach((n) => {
+    if (n.nodeType === 3) out += n.textContent ?? "";
+    else if (n.nodeType === 1) out += (n as Element).tagName === "BR" ? " " : visibleText(n as Element);
+  });
+  return out;
+}
+
 function etiquetaDe(el: Element): string {
   const encabezado = el.querySelector("h1, h2, h3, h4, h5, h6");
-  const texto = encabezado?.textContent ?? "";
+  const texto = encabezado ? visibleText(encabezado) : "";
   if (texto.trim()) return recorta(texto);
   const id = el.getAttribute("id");
   if (id?.trim()) return recorta(`#${id}`);

@@ -13,6 +13,14 @@ describe("seccionesCambiadas", () => {
     expect(seccionesCambiadas(doc(HERO, PRECIOS), doc(HERO, PRECIOS))).toEqual([]);
   });
 
+  it("un <br> del encabezado separa palabras en la etiqueta", () => {
+    const antes = "<body><header>x</header><section><h1>Bernal<br>Reformas<br>Integrales</h1><a>Ver servicios</a></section></body>";
+    const despues = "<body><header>x</header><section><h1>Bernal<br>Reformas<br>Integrales</h1><a>Pide presupuesto</a></section></body>";
+    expect(seccionesCambiadas(antes, despues)).toEqual([
+      { tipo: "cambiada", etiqueta: "Bernal Reformas Integrales", indice: 1 },
+    ]);
+  });
+
   it("una sección editada sale como cambiada, con su encabezado por etiqueta", () => {
     const despues = doc(HERO, PRECIOS.replace("Desde 40€", "Desde 45€"));
     expect(seccionesCambiadas(doc(HERO, PRECIOS), despues)).toEqual([
