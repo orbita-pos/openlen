@@ -52,8 +52,11 @@ export function ChatHeader({
 
   return (
     <div className="flex h-11 shrink-0 items-center gap-1.5 border-b bd pl-4 pr-2.5 text-[13px]">
-      <b className="font-semibold">{t("newChat.header.title")}</b>
-      <span className="fg-muted">{t("newChat.header.withLen")}</span>
+      {/* Una sola frase con la parte en negrita marcada: el orden lo pone cada
+          idioma («Chat con Len», «Len とチャット»). */}
+      <span className="fg-muted">
+        {t.rich("newChat.header.line", { b: (chunks) => <b className="font-semibold fg">{chunks}</b> })}
+      </span>
       <span className="ml-auto" />
       <button
         type="button"

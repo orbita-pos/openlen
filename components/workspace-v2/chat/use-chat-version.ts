@@ -168,6 +168,11 @@ export function useFloatBox(): [FloatBox | null, (b: FloatBox) => void] {
       stored = null;
     }
     setBox(fitFloatBox(stored ?? defaultFloatBox(vw, vh), vw, vh));
+    // Si la ventana cambia de tamaño, la caja se vuelve a encajar: si no, al
+    // estrecharla el chat flotante se quedaba medio fuera de la pantalla.
+    const refit = () => setBox((b) => (b ? fitFloatBox(b, window.innerWidth, window.innerHeight) : b));
+    window.addEventListener("resize", refit);
+    return () => window.removeEventListener("resize", refit);
   }, []);
   const set = (b: FloatBox) => {
     const next = fitFloatBox(b, window.innerWidth, window.innerHeight);

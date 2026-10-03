@@ -46,14 +46,22 @@ export function TurnClose({
   vote: TurnFeedback | undefined;
   onUndo: (turn: DesignTurn) => void;
   onRetry: (turn: DesignTurn) => void;
-  onRate: (rating: "up" | "down", reasons?: readonly FeedbackReason[], note?: string | null) => void;
-  onClearRate: () => void;
+  /** Devuelve si el servidor guardó el voto: «Gracias» sólo entonces. */
+  onRate: (rating: "up" | "down", reasons?: readonly FeedbackReason[], note?: string | null) => Promise<boolean>;
+  onClearRate: () => Promise<boolean>;
 }) {
   const t = useTranslations("panelsChat");
   const tAgent = useTranslations("wsPage.agent");
   const locale = useLocale();
   const [form, setForm] = useState(false);
-  const [thanks, setThanks] = useState(false);
+  // Lo que se dice junto a los pulgares: «Gracias» cuando el servidor guardó el
+  // voto, y que no se pudo cuando no (antes decía «Gracias» aunque el guardado
+  // fallara, y el voto volvía atrás en silencio).
+  const [said, setSaid] = useState<"thanks" | "failed" | null>(null);
+  const tell = (ok: boolean) => {
+    setSaid(ok ? "thanks" : "failed");
+    if (ok) window.setTimeout(() => setSaid((s) => (s === "thanks" ? null : s)), 2400);
+  };
 
   if (turn.status === "streaming") return null;
 
@@ -81,18 +89,24 @@ export function TurnClose({
       : null,
   ].filter((x): x is string => x !== null);
 
-  const up = () => {
-    if (vote?.rating === "up") return onClearRate();
-    onRate("up");
+  const up = async () => {
+    setSaid(null);
+    if (vote?.rating === "up") {
+      if (!(await onClearRate())) setSaid("failed");
+      return;
+    }
     setForm(false);
-    setThanks(true);
-    window.setTimeout(() => setThanks(false), 2400);
+    tell(await onRate("up"));
   };
-  const down = () => {
-    if (vote?.rating === "down" && !form) return onClearRate();
-    onRate("down", vote?.rating === "down" ? vote.reasons : [], vote?.rating === "down" ? vote.note : null);
-    setThanks(false);
+  const down = async () => {
+    setSaid(null);
+    if (vote?.rating === "down" && !form) {
+      if (!(await onClearRate())) setSaid("failed");
+      return;
+    }
     setForm(true);
+    const ok = await onRate("down", vote?.rating === "down" ? vote.reasons : [], vote?.rating === "down" ? vote.note : null);
+    if (!ok) setSaid("failed");
   };
 
   const plan = turn.status === "applied" && !turn.noDocChange ? planDeUndo(turn, currentPage) : null;
@@ -138,7 +152,8 @@ export function TurnClose({
             {stats.join(" · ")}
           </span>
         )}
-        {thanks && <span className="text-[11.5px] fg-faint">{t("newChat.feedback.thanks")}</span>}
+        {said === "thanks" && <span className="text-[11.5px] fg-faint">{t("newChat.feedback.thanks")}</span>}
+        {said === "failed" && <span className="text-[11.5px] nc-bad">{t("newChat.feedback.failed")}</span>}
         <FeedbackButtons vote={vote} onUp={up} onDown={down} />
       </div>
       {plan?.kind === "imposible" && plan.motivo === "otra-pagina" && (
@@ -165,11 +180,11 @@ export function TurnClose({
       {form && (
         <FeedbackForm
           initial={vote}
-          onSend={(reasons, note) => {
-            onRate("down", reasons, note);
-            setForm(false);
-            setThanks(true);
-            window.setTimeout(() => setThanks(false), 2400);
+          onSend={async (reasons, note) => {
+            const ok = await onRate("down", reasons, note);
+            // Si falla, el formulario se queda abierto con lo escrito.
+            if (ok) setForm(false);
+            tell(ok);
           }}
           onCancel={() => setForm(false)}
         />

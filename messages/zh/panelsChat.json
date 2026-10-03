@@ -138,8 +138,7 @@
   },
   "newChat": {
     "header": {
-      "title": "聊天",
-      "withLen": "与 Len",
+      "line": "与 Len <b>聊天</b>",
       "conversations": "对话",
       "newChat": "重新开始",
       "newChatHint": "保存这段对话并开始新的对话。Len 不会记得它；你的记忆和页面备注会保留。",
@@ -225,6 +224,7 @@
       "up": "有帮助",
       "down": "没有帮助",
       "thanks": "谢谢你告诉我们。",
+      "failed": "无法保存你的评价，请再试一次。",
       "title": "哪里出了问题？",
       "reasons": {
         "made_up": "编造了信息",

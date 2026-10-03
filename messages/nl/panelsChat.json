@@ -138,8 +138,7 @@
   },
   "newChat": {
     "header": {
-      "title": "Chat",
-      "withLen": "met Len",
+      "line": "<b>Chat</b> met Len",
       "conversations": "Gesprekken",
       "newChat": "Opnieuw beginnen",
       "newChatHint": "Bewaart dit gesprek en begint een nieuw. Len onthoudt het niet; je geheugen en de notities van de pagina blijven.",
@@ -225,6 +224,7 @@
       "up": "Dit hielp",
       "down": "Dit hielp niet",
       "thanks": "Bedankt dat je het laat weten.",
+      "failed": "Je stem kon niet worden opgeslagen. Probeer het opnieuw.",
       "title": "Wat ging er mis?",
       "reasons": {
         "made_up": "Verzon gegevens",

@@ -232,8 +232,8 @@ function AgentChatView({
                 onRetry={chat.handleRetry}
                 onPublished={chat.handlePublished}
                 onConfirmSettled={settle}
-                onRate={(rating, reasons, note) => void feedback.rate(turn.id, rating, reasons ?? [], note ?? null)}
-                onClearRate={() => void feedback.clear(turn.id)}
+                onRate={(rating, reasons, note) => feedback.rate(turn.id, rating, reasons ?? [], note ?? null)}
+                onClearRate={() => feedback.clear(turn.id)}
               />
             </div>
           ))

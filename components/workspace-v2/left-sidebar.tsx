@@ -467,7 +467,11 @@ export function LeftSidebar({
         </button>
       </div>
       )}
-      <div key={`${entryMode}:${mode}:${newChat ? "new" : "old"}`} className="flex-1 min-h-0 fade-slide">
+      {/* Sin `fade-slide` mientras el chat flota: su animación deja un
+          `transform` (la matriz identidad, no `none`) y un `transform` en un
+          antepasado atrapa al `position: fixed` del chat flotante dentro de
+          este div de ancho 0, debajo del lienzo. Cambiar la clase no remonta. */}
+      <div key={`${entryMode}:${mode}:${newChat ? "new" : "old"}`} className={`flex-1 min-h-0 ${chatOut ? "" : "fade-slide"}`}>
         {entryMode === "paste" ? (
           <PastePanel />
         ) : entryMode === "ai" ? (

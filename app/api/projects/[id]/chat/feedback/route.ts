@@ -30,11 +30,13 @@ const PostSchema = z.object({
     .array(z.string().max(40))
     .max(FEEDBACK_REASONS.length * 2)
     .optional(),
-  // Se recorta, no se rechaza, como los textos de la ruta del chat.
+  // Se recorta, no se rechaza, como los textos de la ruta del chat. Y `null`
+  // vale como «sin nota»: es lo que devuelve el GET, y un cliente que reenvía
+  // lo que leyó no debería perder el voto por eso (un 👍 daba 400).
   note: z
     .string()
     .transform((s) => s.slice(0, FEEDBACK_NOTE_MAX))
-    .optional(),
+    .nullish(),
 });
 
 const DeleteSchema = z.object({ turnId: z.string().min(1).max(100) });

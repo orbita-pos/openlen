@@ -138,8 +138,7 @@
   },
   "newChat": {
     "header": {
-      "title": "Chat",
-      "withLen": "mit Len",
+      "line": "<b>Chat</b> mit Len",
       "conversations": "Unterhaltungen",
       "newChat": "Neu anfangen",
       "newChatHint": "Speichert diese Unterhaltung und beginnt eine neue. Len erinnert sich nicht daran; dein Gedächtnis und die Notizen der Seite bleiben.",
@@ -225,6 +224,7 @@
       "up": "Hat geholfen",
       "down": "Hat nicht geholfen",
       "thanks": "Danke für dein Feedback.",
+      "failed": "Deine Bewertung konnte nicht gespeichert werden. Versuch es noch einmal.",
       "title": "Was ist schiefgelaufen?",
       "reasons": {
         "made_up": "Hat Daten erfunden",

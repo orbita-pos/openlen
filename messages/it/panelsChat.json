@@ -138,8 +138,7 @@
   },
   "newChat": {
     "header": {
-      "title": "Chat",
-      "withLen": "con Len",
+      "line": "<b>Chat</b> con Len",
       "conversations": "Conversazioni",
       "newChat": "Ricomincia da capo",
       "newChatHint": "Salva questa conversazione e ne inizia un'altra. Len non la ricorderà; la tua memoria e le note della pagina restano.",
@@ -225,6 +224,7 @@
       "up": "Mi è stato utile",
       "down": "Non mi è stato utile",
       "thanks": "Grazie per avercelo detto.",
+      "failed": "Non è stato possibile salvare il tuo voto. Riprova.",
       "title": "Cosa non ha funzionato?",
       "reasons": {
         "made_up": "Ha inventato dati",

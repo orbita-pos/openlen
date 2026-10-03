@@ -106,8 +106,9 @@ export function LenTurn({
   onRetry: (turn: DesignTurn) => void;
   onPublished: (url: string) => void;
   onConfirmSettled: (turnId: string) => void;
-  onRate: (rating: "up" | "down", reasons?: readonly FeedbackReason[], note?: string | null) => void;
-  onClearRate: () => void;
+  /** Devuelve si el servidor guardó el voto: «Gracias» sólo entonces. */
+  onRate: (rating: "up" | "down", reasons?: readonly FeedbackReason[], note?: string | null) => Promise<boolean>;
+  onClearRate: () => Promise<boolean>;
 }) {
   const t = useTranslations("panelsChat");
   // LAS RUTAS DE ESTE TURNO ABREN SU FICHERO (la #9): las de sus pasos y las que

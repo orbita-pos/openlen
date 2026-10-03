@@ -39,7 +39,11 @@ export function useTurnFeedback(projectId: string) {
         const r = await fetch(`/api/projects/${projectId}/chat/feedback`, {
           method: next ? "POST" : "DELETE",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(next ? { turnId, ...next } : { turnId }),
+          body: JSON.stringify(
+            next
+              ? { turnId, rating: next.rating, reasons: next.reasons, ...(next.note ? { note: next.note } : {}) }
+              : { turnId },
+          ),
         });
         if (!r.ok) throw new Error(String(r.status));
         return true;
