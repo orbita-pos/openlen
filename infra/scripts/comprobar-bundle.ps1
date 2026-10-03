@@ -79,6 +79,40 @@ if ($faltan.Count -gt 0) {
 Write-Host ("    completo: {0} ficheros en .next/server, 0 ausencias anomalas" -f $total) -ForegroundColor Green
 
 # ───────────────────────────────────────────────────────────────────────
+# GUARDA C · EL STANDALONE NO LLEVA EL REPOSITORIO NI SUS CLAVES
+#
+# MEDIDO el 2026-10-03: el standalone del deploy del 28/09 llevaba el repo
+# ENTERO en su raiz (19.520 ficheros), con `.env.local`, `infra/.env.production`
+# y `.git`. La causa: una ruta leia una carpeta con una variable dentro
+# (`join(process.cwd(), process.env.X ?? ...)`), y el tracer, al no saber cual,
+# copio todo lo que cuelga de process.cwd(). Ni A ni B lo ven: el bundle estaba
+# completo y arrancaba.
+#
+# Y no es solo peso. El servidor de Next carga el `.env.local` de su carpeta al
+# arrancar (`loadEnvConfig` en base-server.js): lo que el portatil tuviera ahi y
+# /etc/openlen/openlen.env no pisara quedaba VIVO en produccion.
+#
+# Se mira la existencia, nunca el contenido. CLAUDE.md, plans/ y .claude/ son el
+# canario: no los lee ninguna ruta, asi que si estan es que se colo el repo.
+# ───────────────────────────────────────────────────────────────────────
+Write-Host "[C] Comprobando que el standalone NO lleva el repositorio ni claves..." -ForegroundColor Cyan
+
+$raizStandalone = (Resolve-Path ".next/standalone").Path
+$prohibidos = New-Object System.Collections.ArrayList
+foreach ($f in Get-ChildItem $raizStandalone -Force -Filter ".env*" -File -ErrorAction SilentlyContinue) {
+  [void]$prohibidos.Add($f.Name)
+}
+foreach ($rel in @(".git", "infra", "CLAUDE.md", "plans", ".claude")) {
+  if (Test-Path (Join-Path $raizStandalone $rel)) { [void]$prohibidos.Add($rel) }
+}
+if ($prohibidos.Count -gt 0) {
+  Write-Host "    El standalone lleva lo que no debe:" -ForegroundColor Red
+  $prohibidos | ForEach-Object { Write-Host "      $_" -ForegroundColor Red }
+  throw "BUNDLE CON EL REPO DENTRO: alguna ruta lee una carpeta con una ruta dinamica y el tracer copio todo. Busca en el .nft.json de cada ruta cual lleva CLAUDE.md. NO se despliega."
+}
+Write-Host "    limpio: ni .env, ni .git, ni el repositorio" -ForegroundColor Green
+
+# ───────────────────────────────────────────────────────────────────────
 # GUARDA B · EL BUNDLE ARRANCA DE VERDAD
 #
 # La guarda A compara inventarios; esta ejecuta. Es la que habria evitado la
@@ -175,4 +209,4 @@ try {
   Remove-Item -Force -ErrorAction SilentlyContinue $logOut, $logErr
 }
 
-Write-Host "Bundle verificado: completo y arranca." -ForegroundColor Green
+Write-Host "Bundle verificado: completo, limpio y arranca." -ForegroundColor Green

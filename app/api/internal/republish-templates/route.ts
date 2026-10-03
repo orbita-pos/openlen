@@ -60,7 +60,15 @@ export async function POST(req: Request) {
   const idsPedidos = Array.isArray(body.ids) && body.ids.length > 0 ? body.ids : undefined;
   const todas = body.todas === true;
 
-  const dir = join(process.cwd(), process.env.OPENLEN_TEMPLATES_DIR ?? DIR_POR_DEFECTO);
+  // 🔴 RUTA FIJA, a propósito (2026-10-03). Aquí había
+  // `join(process.cwd(), process.env.OPENLEN_TEMPLATES_DIR ?? DIR_POR_DEFECTO)`:
+  // con una variable dentro, el trazador del standalone no sabía qué carpeta se
+  // leería y metía TODO lo que cuelga de process.cwd() — el repositorio entero
+  // (19.520 ficheros), con `.env.local`, `infra/.env.production` y `.git`. Y el
+  // servidor de Next carga el `.env.local` de su carpeta al arrancar, así que lo
+  // del portátil que no pisara /etc/openlen/openlen.env quedaba vivo en
+  // producción. Nadie ponía esa variable: era una palanca sin destino.
+  const dir = join(process.cwd(), DIR_POR_DEFECTO);
 
   let nombres: string[];
   try {

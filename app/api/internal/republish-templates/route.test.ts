@@ -72,7 +72,6 @@ const registro = (id: string, html: string) => ({
 
 describe("POST /api/internal/republish-templates", () => {
   beforeEach(() => {
-    delete process.env.OPENLEN_TEMPLATES_DIR;
     process.env.OPENLEN_INTERNAL_SECRET = SECRETO;
     vi.restoreAllMocks();
     vi.clearAllMocks();
