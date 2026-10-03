@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   checkParity,
   extractCommits,
+  extractRutas,
+  checkRutas,
   checkCifrasSinCommit,
   checkCommits,
   checkDenylist,
@@ -153,4 +155,21 @@ test("una nota escrita a mano tiene que cuadrar; sin nota no se comprueba", () =
   assert.match(checkNotasDeGrupo(TARJETA, "i18n/es.ts", dos, "es")[0], /la nota de «mirar»/);
   const falta = [...GRUPOS, { id: "fotos", herramientas: ["x"] }];
   assert.match(checkNotasDeGrupo(TARJETA, "i18n/es.ts", falta, "es")[0], /está en el JSON y no en la tarjeta/);
+});
+
+test("rutas: cada <Fuente ruta> con su commit si lo lleva, y sin ruta no cuenta", () => {
+  assert.deepEqual(
+    extractRutas('<Fuente ruta="lib/a.ts" /> y <Fuente ruta="lib/b.ts" commit="d07a8152" /> y <Fuente commit="616c054b" />'),
+    [{ ruta: "lib/a.ts" }, { ruta: "lib/b.ts", commit: "d07a8152" }],
+  );
+});
+
+test("rutas: sin commit tiene que estar en master; con commit, en ese commit", () => {
+  const hay = { "origin/master": ["lib/a.ts"], d07a8152: ["lib/b.ts"] };
+  const existe = (ref, ruta) => (hay[ref] ?? []).includes(ruta);
+  assert.deepEqual(checkRutas([{ ruta: "lib/a.ts" }, { ruta: "lib/b.ts", commit: "d07a8152" }], existe, "x.mdx"), []);
+  const mal = checkRutas([{ ruta: "lib/b.ts" }, { ruta: "lib/a.ts", commit: "d07a8152" }], existe, "x.mdx");
+  assert.equal(mal.length, 2);
+  assert.match(mal[0], /x\.mdx: cita lib\/b\.ts en master y ahí no existe/);
+  assert.match(mal[1], /cita lib\/a\.ts en d07a8152/);
 });

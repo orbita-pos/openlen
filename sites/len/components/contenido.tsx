@@ -2,6 +2,14 @@ import type { ReactNode } from "react";
 import { REPO } from "@/lib/seo";
 
 export function Fuente({ commit, ruta }: { commit?: string; ruta?: string }) {
+  // Las dos: el fichero TAL COMO ESTABA en ese commit. Un artículo con fecha
+  // cita lo que había entonces, aunque después se borrara de `master`.
+  if (commit && ruta)
+    return (
+      <a className="src" href={`${REPO}/blob/${commit}/${ruta}`}>
+        {ruta}
+      </a>
+    );
   if (commit)
     return (
       <a className="src" href={`${REPO}/commit/${commit}`}>

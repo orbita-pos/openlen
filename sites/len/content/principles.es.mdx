@@ -6,7 +6,7 @@
 
 **Por qué.** Un agente que reporta éxito sobre trabajo que no ocurrió es peor que uno que falla a la vista: nadie va a revisar lo que le dijeron que estaba hecho. Nos ha pasado. La puerta de aprobar un objetivo devolvía 400 en silencio y la tarjeta volvía a su sitio como si nada — meses de una función que parecía no gustarle a nadie. <Fuente commit="4834a64d" />
 
-**Cómo lo comprobamos.** Con una familia de casos de su batería <Fuente ruta="lib/agent/evals/cases.ts" />, no con uno: `tope-no-miente` pregunta qué cuenta Len cuando se queda sin pasos y `tres-tareas-una-imposible` qué cuenta cuando una de las tres no se puede hacer. Otros le piden lo que no existe —una pasarela de cobro, un blog con base de datos, una temática que no está en el catálogo— y lo suspenden si dice que lo hizo. Otros vigilan el dato inventado: un correo o una cuenta que nadie le dio no pueden acabar en la página publicada. Y por debajo hay una guarda que no gasta modelo: si un turno cierra sin haber llamado a ninguna herramienta, se le dice que la página no ha cambiado y que no vuelva a decir que lo hizo hasta llamarla. <Fuente ruta="lib/agent/loop.ts" />
+**Cómo lo comprobamos.** Con una familia de casos de Len-Bench, no con uno. Unos piden lo que no se puede —cobrar con tarjeta dentro de la página en `pago-con-tarjeta`, poner lo que cobra el café de enfrente sin que nadie tenga el dato en `precio-de-la-competencia`— y suspenden un botón de pagar que no hace nada o un precio inventado. <Fuente ruta="lib/len-bench/casos/dev/pago-con-tarjeta.ts" /> Otros vigilan el dato inventado: en `taqueria-menu-whatsapp`, `tour-nuevo-sin-datos` y `resenas-que-no-dio` los datos no vienen en el mensaje, y lo que se califica son los de la ficha del dueño —los que da si se los preguntan—, no los que Len se invente. <Fuente ruta="lib/len-bench/casos/dev/tour-nuevo-sin-datos.ts" /> Lo que todavía no vota es que lo diga: si Len no hace nada y se calla, aprueba. Un medidor aparte ya mira si el cierre dice que terminó cuando algo suspendió, sin puntuar hasta tener datos. <Fuente ruta="lib/len-bench/honestidad.ts" /> (Hasta Len 2.0 lo comprobaba otra batería, con `tope-no-miente` y `tres-tareas-una-imposible`. <Fuente ruta="lib/agent/evals/cases.ts" commit="d07a8152" />) Y por debajo hay una guarda que no gasta modelo: si un turno cierra sin haber llamado a ninguna herramienta, se le dice que la página no ha cambiado y que no vuelva a decir que lo hizo hasta llamarla. <Fuente ruta="lib/agent/loop.ts" />
 </section>
 
 <section className="principio">
@@ -39,13 +39,13 @@ Y por eso, desde el 8 de septiembre, ya no es la única puerta: el dueño escrib
 
 <section className="principio">
 ## Evidencia, no veredictos
-<EstadoPrincipio estado="vigilado">Vigilado en su batería</EstadoPrincipio>
+<EstadoPrincipio estado="vigilado">Vigilado por sus pruebas</EstadoPrincipio>
 
 **Qué promete.** Entre Len y tu página no hay un juez. Len pide datos y recibe datos: una medición que puede decir «no puedo determinarlo», o una descripción de la captura cuando hace falta — y el modo es explícito, para que el coste no dependa de cómo se redactó una frase. <Fuente commit="4ffafd26" />
 
 **Por qué.** Un veredicto que el agente no puede comprobar ni discutir convierte un falso positivo en horas de trabajo destructivo. Lo contamos entero en <a href="/es/research/evidence-not-verdicts/">Evidencia, no veredictos</a>.
 
-**Cómo lo comprobamos.** El caso `aurora-marcador-no-es-rotura` <Fuente ruta="lib/agent/evals/cases.ts" />: un cambio de titular tiene que seguir siendo un cambio de titular.
+**Cómo lo comprobamos.** Con pruebas que no gastan modelo: `mirar_pagina` con `tipo="medir"` devuelve la medida y no toca la página <Fuente ruta="lib/agent/tools.test.ts" />, y cuando el navegador no puede afirmar nada —una foto o un velo debajo del texto— lo dice, en vez de callarse como si estuviera bien. <Fuente ruta="lib/agent/verify.ts" /> El caso `aurora-marcador-no-es-rotura` —un cambio de titular tiene que seguir siendo un cambio de titular— era de la batería anterior a Len 2.0 <Fuente ruta="lib/agent/evals/cases.ts" commit="d07a8152" />, y en Len-Bench todavía no tiene pareja.
 </section>
 
 <section className="principio">

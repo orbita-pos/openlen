@@ -31,6 +31,30 @@ export function extractCommits(src) {
   return [...src.matchAll(/commit="([0-9a-f]{7,40})"/g)].map((m) => m[1]);
 }
 
+// ── Las rutas que cita cada <Fuente> ─────────────────────────────────────────
+//
+// Sin `commit`, el enlace va a `master`: el fichero tiene que existir ALLÍ, o es
+// un 404 público. Pasó: ocho citas a `lib/agent/evals/cases.ts`, que se borró
+// con Len 2.0, siguieron publicadas porque nada miraba la ruta, sólo el commit.
+// Con `commit`, tiene que existir en ESE commit (`components/contenido.tsx`).
+
+/** Cada `<Fuente ruta=…>`, con su commit si lo lleva. */
+export function extractRutas(src) {
+  return [...src.matchAll(/<Fuente\b([^>]*)>/g)].flatMap((m) => {
+    const ruta = /\bruta="([^"]+)"/.exec(m[1])?.[1];
+    const commit = /\bcommit="([0-9a-f]{7,40})"/.exec(m[1])?.[1];
+    if (!ruta) return [];
+    return [commit ? { ruta, commit } : { ruta }];
+  });
+}
+
+/** `existe(ref, ruta)`: ¿está la ruta en esa referencia de git? */
+export function checkRutas(rutas, existe, file) {
+  return rutas
+    .filter((r) => !existe(r.commit ?? "origin/master", r.ruta))
+    .map((r) => `${file}: cita ${r.ruta} ${r.commit ? `en ${r.commit}` : "en master"} y ahí no existe — el enlace sería un 404`);
+}
+
 export function checkCifrasSinCommit(src, file) {
   return [...src.matchAll(/<(?:Cifra|CifraGrande)\b[^>]*>/g)]
     .filter((m) => !/commit="[0-9a-f]{7,40}"/.test(m[0]))

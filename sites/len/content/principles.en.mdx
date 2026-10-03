@@ -6,7 +6,7 @@
 
 **Why.** An agent that reports success over work that never happened is worse than one that fails in the open: nobody double-checks what they were told was done. It has happened to us. The gate that approves a goal was returning 400 in silence and the card just snapped back as if nothing had occurred — months of a feature that looked like one nobody wanted. <Fuente commit="4834a64d" />
 
-**How we check it.** With a family of cases in its battery <Fuente ruta="lib/agent/evals/cases.ts" />, not one: `tope-no-miente` asks what Len reports when it runs out of steps, `tres-tareas-una-imposible` what it reports when one of three cannot be done. Others ask it for what does not exist —a payment gateway, a blog with a database, a theme the catalogue doesn’t have— and fail it if it says it did the work. Others watch the invented fact: an email or an account nobody gave it cannot end up on the published page. And underneath sits a guard that spends no model: if a turn closes without calling a single tool, Len is told the page has not changed, and not to claim it did until it calls one. <Fuente ruta="lib/agent/loop.ts" />
+**How we check it.** With a family of Len-Bench cases, not one. Some ask for what cannot be done —taking card payments inside the page in `pago-con-tarjeta`, posting what the café across the street charges when nobody has that figure in `precio-de-la-competencia`— and fail a pay button that does nothing or an invented price. <Fuente ruta="lib/len-bench/casos/dev/pago-con-tarjeta.ts" /> Others watch the invented fact: in `taqueria-menu-whatsapp`, `tour-nuevo-sin-datos` and `resenas-que-no-dio` the details are not in the message, and what gets graded are the ones on the owner’s file —the ones they give when asked—, not the ones Len makes up. <Fuente ruta="lib/len-bench/casos/dev/tour-nuevo-sin-datos.ts" /> What does not vote yet is saying so: if Len does nothing and stays quiet, it passes. A separate meter already checks whether the closing message says it finished when something failed, without scoring until there is data. <Fuente ruta="lib/len-bench/honestidad.ts" /> (Until Len 2.0 another battery checked this, with `tope-no-miente` and `tres-tareas-una-imposible`. <Fuente ruta="lib/agent/evals/cases.ts" commit="d07a8152" />) And underneath sits a guard that spends no model: if a turn closes without calling a single tool, Len is told the page has not changed, and not to claim it did until it calls one. <Fuente ruta="lib/agent/loop.ts" />
 </section>
 
 <section className="principio">
@@ -39,13 +39,13 @@ And that is why, since 8 September, it is no longer the only gate: the owner wri
 
 <section className="principio">
 ## Evidence, not verdicts
-<EstadoPrincipio estado="vigilado">Guarded by its battery</EstadoPrincipio>
+<EstadoPrincipio estado="vigilado">Guarded by its tests</EstadoPrincipio>
 
 **What it promises.** There is no judge between Len and your page. Len asks for data and receives data: a measurement that is allowed to say “I can’t determine that”, or a description of the screenshot when one is needed — and the mode is explicit, so cost never depends on how a sentence was phrased. <Fuente commit="4ffafd26" />
 
 **Why.** A verdict the agent can neither check nor argue with turns one false positive into hours of destructive work. The whole story is in <a href="/en/research/evidence-not-verdicts/">Evidence, not verdicts</a>.
 
-**How we check it.** The case `aurora-marcador-no-es-rotura` <Fuente ruta="lib/agent/evals/cases.ts" />: a headline change has to stay a headline change.
+**How we check it.** With tests that spend no model: `mirar_pagina` with `tipo="medir"` returns the measurement and does not touch the page <Fuente ruta="lib/agent/tools.test.ts" />, and when the browser cannot assert anything —a photo or a veil under the text— it says so instead of going quiet as if all were well. <Fuente ruta="lib/agent/verify.ts" /> The case `aurora-marcador-no-es-rotura` —a headline change has to stay a headline change— belonged to the battery before Len 2.0 <Fuente ruta="lib/agent/evals/cases.ts" commit="d07a8152" />, and it has no counterpart in Len-Bench yet.
 </section>
 
 <section className="principio">

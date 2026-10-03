@@ -46,7 +46,7 @@ And three more rules, each with its own fix:
 
 - A verdict the loop **cannot act on** must never open a loop: only measured breakage spends the user’s budget. <Fuente commit="bb3dd6f7" />
 - A repair cycle that doesn’t lower the number is **reverted**. The loop used to stop, but it stopped *inside the damage*: it kept whatever the last repair had left behind, because nothing undid it. <Fuente commit="0b70aac1" />
-- The regression joins the test battery, under its own name: `aurora-marcador-no-es-rotura`. <Fuente ruta="lib/agent/evals/cases.ts" />
+- The regression joins the test battery, under its own name: `aurora-marcador-no-es-rotura`. <Fuente ruta="lib/agent/evals/cases.ts" commit="d07a8152" />
 
 <Abierto id="abierto" titulo="What’s still open">
 The vision critic is still not measured against real conversations: we know this particular case no longer gets past it, not how many others do. And the underlying asymmetry isn’t going anywhere —describing costs money and measuring doesn’t— so every time the explicit mode is chosen badly, someone pays.

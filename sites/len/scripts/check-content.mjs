@@ -6,6 +6,8 @@ import { execFileSync } from "node:child_process";
 import {
   checkParity,
   extractCommits,
+  extractRutas,
+  checkRutas,
   checkCifrasSinCommit,
   checkCommits,
   checkDenylist,
@@ -39,6 +41,16 @@ function isPublicCommit(hash) {
   return /^\s*origin\/master\s*$/m.test(out);
 }
 
+/** ¿Existe `ruta` en la referencia `ref` (`origin/master` o un commit)? */
+function existeEn(ref, ruta) {
+  try {
+    execFileSync("git", ["cat-file", "-e", `${ref}:${ruta}`], { cwd: REPO, stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const mdx = walk(CONTENT).filter((p) => p.endsWith(".mdx"));
 const rel = mdx.map((p) => relative(CONTENT, p).replaceAll("\\", "/"));
 const errors = [...checkParity(rel)];
@@ -51,6 +63,7 @@ for (const [i, p] of mdx.entries()) {
     ...checkDenylist(src, rel[i]),
     ...checkAbierto(src, rel[i]),
     ...checkIndice(src, rel[i]),
+    ...checkRutas(extractRutas(src), existeEn, rel[i]),
   );
   hashes.push(...extractCommits(src));
 }
