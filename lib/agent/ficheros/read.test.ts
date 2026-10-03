@@ -113,7 +113,7 @@ describe("Read", () => {
     const grande = "x".repeat(300 * 1024);
     const r = ejecutarRead({ file_path: "/index.html" }, sitio({ "/index.html": grande }), new Map());
     expect(r.error).toBe(
-      "This file is 300KB and a Read without limit returns at most 256KB. Read it in parts with offset and limit, or use Grep to find the part you need.",
+      "This file is 300KB and a Read without limit returns at most 256KB. Read it in parts with offset and limit, or search the site for the part you need.",
     );
   });
 
@@ -125,7 +125,7 @@ describe("Read", () => {
       new Map(),
     );
     expect(r.error).toBe(
-      "This file is 30000 tokens long and one Read returns at most 25000. Read it in parts with offset and limit, or use Grep to find the part you need.",
+      "This file is 30000 tokens long and one Read returns at most 25000. Read it in parts with offset and limit, or search the site for the part you need.",
     );
   });
 

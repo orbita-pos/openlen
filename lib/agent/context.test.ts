@@ -49,11 +49,12 @@ describe("buildAgentContext", () => {
     expect(s).toContain("IMAGEN ADJUNTA");
     expect(s).toContain("https://images.openlen.com/foo.webp");
     expect(s).toContain("Foto de taco");
-    // Se coloca cambiando un `src` en el fichero: eso es Edit. El bloque tiene
-    // que nombrar la puerta que existe: mandarlo a una herramienta retirada
-    // (`editar_atributos`) es mandarlo a una llamada que falla.
-    expect(s).toContain("con Edit");
+    // Se coloca cambiando un `src` en el fichero. Mandarlo a una herramienta
+    // retirada (`editar_atributos`) es mandarlo a una llamada que falla, y desde
+    // F4 tampoco nombra Edit: en el brazo «sólo terminal» se escribe con bash.
+    expect(s).toContain("colócala usando esta URL EXACTA");
     expect(s).not.toContain("editar_atributos");
+    expect(s).not.toMatch(/\bEdit\b/);
   });
 
   /**

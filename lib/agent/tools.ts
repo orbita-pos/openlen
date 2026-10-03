@@ -1065,7 +1065,7 @@ const MAX_BUSQUEDAS_VACIAS_SEGUIDAS = 2;
 // change approach. Named tools so the model has a concrete next move.
 const PHOTO_PIVOT_NOTE =
   "El catálogo curado «Imágenes by OpenLen» es acotado y no tiene fotos de esto. NO sigas buscando variantes y NUNCA inventes una URL. "
-  + "Deja el hueco con un degradado de la paleta usando Edit — es exactamente lo que hace la generación cuando no encuentra pareja, "
+  + "Deja el hueco con un degradado de la paleta — es exactamente lo que hace la generación cuando no encuentra pareja, "
   + "y una caja neutra es mejor que una foto que miente sobre el negocio del usuario. "
   + "Después SIGUE con el resto de lo que te pidió: quedarte sin una foto no cancela lo demás ni te obliga a pedir permiso para continuar. "
   + "En tu respuesta di qué foto no había y qué pusiste en su lugar.";

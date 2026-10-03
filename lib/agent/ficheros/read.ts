@@ -104,7 +104,7 @@ const TIRADA =
   "This Read was not needed: the file has not changed since your last Read of it. Use what that earlier Read returned.";
 
 function demasiadosTokens(tokens: number): string {
-  return `This file is ${tokens} tokens long and one Read returns at most ${TOPE_DE_TOKENS}. Read it in parts with offset and limit, or use Grep to find the part you need.`;
+  return `This file is ${tokens} tokens long and one Read returns at most ${TOPE_DE_TOKENS}. Read it in parts with offset and limit, or search the site for the part you need.`;
 }
 
 export function ejecutarRead(entrada: EntradaRead, sitio: SitioLegible, leidos: Leidos): Resultado {
@@ -134,7 +134,7 @@ export function ejecutarRead(entrada: EntradaRead, sitio: SitioLegible, leidos: 
     const bytes = Buffer.byteLength(crudo, "utf8");
     if (bytes > TOPE_DE_BYTES) {
       return fallo(
-        `This file is ${formatoDeBytes(bytes)} and a Read without limit returns at most ${formatoDeBytes(TOPE_DE_BYTES)}. Read it in parts with offset and limit, or use Grep to find the part you need.`,
+        `This file is ${formatoDeBytes(bytes)} and a Read without limit returns at most ${formatoDeBytes(TOPE_DE_BYTES)}. Read it in parts with offset and limit, or search the site for the part you need.`,
       );
     }
   }

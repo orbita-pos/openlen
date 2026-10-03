@@ -158,7 +158,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
           dondeFueElEdit,
           "Warning",
           "contenido-vaciado",
-          `Este Edit dejó ${p.elementosDespues} de ${p.elementosAntes} elementos y ${p.textoDespues} de ${p.textoAntes} caracteres de texto de lo que reemplazaba. Si no querías borrarlo, repón lo que falta; si sí, díselo al usuario.`,
+          `Esta edición dejó ${p.elementosDespues} de ${p.elementosAntes} elementos y ${p.textoDespues} de ${p.textoAntes} caracteres de texto de lo que reemplazaba. Si no querías borrarlo, repón lo que falta; si sí, díselo al usuario.`,
         ),
       );
     }
