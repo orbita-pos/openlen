@@ -110,7 +110,9 @@ export default async function SubprocessorsPage({
             <li>
               <strong>OpenAI</strong> (api.openai.com) — edición de imágenes con
               IA. Datos: la imagen que el usuario edita y su instrucción de
-              texto. Región: Estados Unidos.
+              texto. Y la voz de la app (llamar a Len o mandarle una nota de
+              voz): el audio de la llamada o de la nota y lo que Len responde.
+              Región: Estados Unidos.
             </li>
             <li>
               <strong>Exa</strong> (api.exa.ai) — búsqueda en internet, cuando
@@ -251,8 +253,10 @@ export default async function SubprocessorsPage({
             </li>
             <li>
               <strong>OpenAI</strong> (api.openai.com) — AI image editing. Data:
-              the image the user is editing and their text instruction. Region:
-              United States.
+              the image the user is editing and their text instruction. And the
+              app&apos;s voice (calling Len or sending a voice note): the audio of
+              the call or the note, and what Len says back. Region: United
+              States.
             </li>
             <li>
               <strong>Exa</strong> (api.exa.ai) — web search, when Len looks up

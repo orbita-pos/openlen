@@ -47,7 +47,9 @@ describe("las tres superficies leen la memoria de la persona", () => {
     it(`${nombre} — el extractor está leyendo el fichero de verdad`, () => {
       // Sin este candado, un renombrado dejaría `src` vacío y las dos
       // aserciones de abajo pasarían sin comprobar nada.
-      expect(src).toContain("export async function POST");
+      // `export const POST = paraLaApp(…)` desde la app móvil: la ruta de Len se
+      // envuelve para aceptar también la llave de la app. Las dos formas valen.
+      expect(src).toMatch(/export (async function|const) POST\b/);
     });
 
     it(`${nombre} — la lee, y por la vía ACOTADA`, () => {

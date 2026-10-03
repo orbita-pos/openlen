@@ -362,7 +362,7 @@ export default async function PrivacyPage({
               que se requiera tu consentimiento adicional): Cloudflare (CDN),
               Hetzner (alojamiento del servidor de aplicación y de la base de
               datos), Fireworks AI (generación con IA), OpenAI (edición de
-              imágenes con IA), Exa (búsqueda en internet cuando Len busca algo),
+              imágenes con IA y la voz de la app), Exa (búsqueda en internet cuando Len busca algo),
               Resend (correo transaccional) e{" "}
               <strong>InariWatch</strong> (<code>@inariwatch/capture</code>,
               monitoreo de errores). InariWatch es un producto hermano del mismo
@@ -397,7 +397,7 @@ export default async function PrivacyPage({
             Algunos de nuestros proveedores tratan datos fuera de tu país. El
             servidor de aplicación está en <strong>Alemania</strong> (Hetzner). La
             generación de páginas con IA usa Fireworks AI, la edición de imágenes
-            con IA usa OpenAI, la búsqueda en internet usa Exa, los correos usan
+            con IA y la voz de la app usan OpenAI, la búsqueda en internet usa Exa, los correos usan
             Resend y el cobro de suscripciones
             usa Polar, todos en{" "}
             <strong>Estados Unidos</strong>. Para los destinatarios en Estados
@@ -736,7 +736,7 @@ export default async function PrivacyPage({
               <strong>Processors</strong> (process data on OpenLen&apos;s behalf, no
               additional consent required): Cloudflare (CDN), Hetzner
               (application-server and database hosting), Fireworks AI (AI
-              generation), OpenAI (AI image editing), Exa (web search when Len
+              generation), OpenAI (AI image editing and the app&apos;s voice), Exa (web search when Len
               looks something up), Resend (transactional email), and{" "}
               <strong>InariWatch</strong> (
               <code>@inariwatch/capture</code>, error monitoring). InariWatch is a
@@ -768,7 +768,7 @@ export default async function PrivacyPage({
           <p>
             Some of our providers process data outside your country. The
             application server is in <strong>Germany</strong> (Hetzner). AI page
-            generation uses Fireworks AI, AI image editing uses OpenAI, web search
+            generation uses Fireworks AI, AI image editing and the app&apos;s voice use OpenAI, web search
             uses Exa, email uses Resend, and subscription billing uses Polar, all in
             the{" "}
             <strong>United States</strong>. For
