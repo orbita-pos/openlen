@@ -80,6 +80,50 @@ describe("TerminalDeLen", () => {
     expect(cargas()).toBe(2);
   }, 30_000);
 
+  // python3 desde el 2026-10-03, como la terminal de DeepSeek (un Linux con
+  // Python): CPython en WASM, librería estándar, sin pip y sin red.
+  describe("python3", () => {
+    it("edita la página y lo cambiado vuelve en `ficheros`, como un sed -i", async () => {
+      const { t } = terminal();
+      const r = await t.ejecutar(
+        `python3 - <<'PY'\nimport re\np = "/index.html"\ns = open(p).read()\nopen(p, "w").write(re.sub(r"Pelícanos (\\d+)", r"Pelícanos 14", s))\nPY`,
+      );
+      expect(r.exitCode, r.stderr).toBe(0);
+      expect(r.ficheros?.["/index.html"]).toBe("<h1>Marejada</h1>\n<p>Calle Pelícanos 14</p>\n");
+      expect((await t.ejecutar("grep -c 'Pelícanos 14' /index.html")).stdout).toBe("1\n");
+    }, 30_000);
+
+    it("trae la librería estándar, pero ni pip ni red", async () => {
+      const { t } = terminal();
+      const stdlib = await t.ejecutar("python3 -c 'import re, json, html.parser, csv, difflib; print(\"ok\")'");
+      expect(stdlib.stdout).toBe("ok\n");
+      const pip = await t.ejecutar("python3 -m pip --version");
+      expect(pip.exitCode).not.toBe(0);
+      expect(pip.stderr).toContain("No module named pip");
+      const red = await t.ejecutar(
+        "python3 -c 'import urllib.request; urllib.request.urlopen(\"https://example.com\", timeout=3)'",
+      );
+      expect(red.exitCode).not.toBe(0);
+    }, 30_000);
+
+    it("un bucle infinito en Python se corta, y la terminal sigue viva", async () => {
+      const { t } = terminal({ limiteMs: 3_000 });
+      const t0 = Date.now();
+      const r = await t.ejecutar("python3 -c 'while True: pass'");
+      expect(r.exitCode).not.toBe(0);
+      expect(Date.now() - t0).toBeLessThan(15_000);
+      expect((await t.ejecutar("echo sigue")).stdout).toBe("sigue\n");
+    }, 30_000);
+
+    it("su memoria tiene techo: pedir 700 MB da MemoryError y la terminal sigue viva", async () => {
+      const { t } = terminal();
+      const r = await t.ejecutar("python3 -c 'x = bytearray(700 * 1024 * 1024)'");
+      expect(r.exitCode).not.toBe(0);
+      expect(r.stderr).toContain("MemoryError");
+      expect((await t.ejecutar("python3 -c 'print(1 + 2)'")).stdout).toBe("3\n");
+    }, 30_000);
+  });
+
   it("`poner` deja la terminal como quedó de verdad tras las guardas", async () => {
     const { t } = terminal();
     await t.ejecutar("echo roto > /AGENTS.md; echo x > /notas.txt");
@@ -196,6 +240,34 @@ describe("TerminalDeLen", () => {
       expect(despues.stdout).toBe(FORMULARIOS + "formularios.jsonl\n");
       expect(Object.hasOwn((await t.ejecutar("true")).ficheros ?? {}, "/robado.jsonl")).toBe(false);
     }, 60_000);
+
+    it("python3 tampoco los escribe: ni cambiarlos, ni borrarlos, ni crear uno dentro", async () => {
+      const { t } = conPerezosos();
+      const intentos = [
+        "python3 -c 'open(\"/.openlen/bandeja/formularios.jsonl\", \"w\").write(\"x\")'",
+        "python3 -c 'with open(\"/.openlen/bandeja/formularios.jsonl\", \"a\") as f: f.write(\"x\")'",
+        "python3 -c 'import os; os.remove(\"/.openlen/bandeja/formularios.jsonl\")'",
+        "python3 -c 'with open(\"/.openlen/bandeja/nuevo.txt\", \"w\") as f: f.write(\"x\")'",
+      ];
+      for (const c of intentos) {
+        const r = await t.ejecutar(c);
+        expect(r.exitCode, c).not.toBe(0);
+      }
+      // Sin cerrar el fichero, el error salta al salir y CPython lo ignora: el
+      // código es 0, pero lo que importa es que el fichero no cambia.
+      await t.ejecutar("python3 -c 'open(\"/.openlen/bandeja/formularios.jsonl\", \"a\").write(\"x\")'");
+      const despues = await t.ejecutar("cat /.openlen/bandeja/formularios.jsonl; ls /.openlen/bandeja");
+      expect(despues.stdout).toBe(FORMULARIOS + "formularios.jsonl\n");
+    }, 60_000);
+
+    it("python3 sobre uno de sólo lectura dice «Read-only file system», no «I/O error»", async () => {
+      const { t } = conPerezosos();
+      const r = await t.ejecutar(
+        "python3 -c 'with open(\"/.openlen/bandeja/formularios.jsonl\", \"a\") as f: f.write(\"x\")'",
+      );
+      expect(r.stderr).toContain("OSError: [Errno 30] Read-only file system: '/.openlen/bandeja/formularios.jsonl'");
+      expect(r.stderr).not.toContain("I/O error");
+    }, 30_000);
 
     it("sed -i y tee sobre uno de sólo lectura dicen «Read-only file system», no «No such file»", async () => {
       const { t } = conPerezosos();
