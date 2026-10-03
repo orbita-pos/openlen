@@ -2,6 +2,7 @@
 //
 //   npm run bench:len -- --juego=dev --runs=3 --budget-usd=5 --yes
 //   npm run bench:len -- --juego=pendientes --solo=taqueria-menu-whatsapp --runs=1 --yes --conservar
+//   npm run bench:len -- --juego=dev --solo=encargo-grande --mode=dynamis --runs=3 --budget-usd=… --yes
 //
 // ⚠️ GASTA DINERO REAL. Mismas guardas que evals:agent: imprime el estimado,
 // no arranca sin --yes, y hay TOPE DURO. El gasto REAL acumulado detiene la
@@ -48,6 +49,13 @@ async function main(): Promise<number> {
   const base = arg("--base") ?? BASE_LEN_BENCH;
   const etiqueta = arg("--etiqueta") ?? juego;
   const conservar = arg("--conservar") !== undefined;
+  // Len Dynamis (lib/agent/dynamis.ts): cada turno lo manda en el cuerpo, como
+  // el panel. Sólo existe con la terminal encendida en el servidor del banco.
+  const modeArg = arg("--mode");
+  if (modeArg !== undefined && modeArg !== "dynamis" && modeArg !== "len") {
+    throw new Error(`--mode=${modeArg}: sólo «len» o «dynamis»`);
+  }
+  const mode = modeArg === "dynamis" ? ("dynamis" as const) : undefined;
 
   let encargos = await cargarEncargos(juego);
   if (solo) encargos = encargos.filter((e) => solo.includes(e.id));
@@ -60,7 +68,7 @@ async function main(): Promise<number> {
   // En céntimos y hacia arriba: ver `estimadoExcedeTope`. Se imprime la MISMA
   // cifra que se compara, así que declarar lo que se lee siempre pasa.
   const estimadoImpreso = (centimosDelEstimado(estimado) / 100).toFixed(2);
-  console.log(`Len-Bench · juego=${juego} · ${encargos.length} encargo(s) × ${runs} corrida(s)`);
+  console.log(`Len-Bench · juego=${juego} · ${encargos.length} encargo(s) × ${runs} corrida(s)${mode ? " · Len Dynamis" : ""}`);
   console.log(`Estimado PESIMISTA: ~$${estimadoImpreso} (hasta ${turnos} turnos × $${USD_POR_TURNO_ESTIMADO} × margen ${MARGEN_NO_GRABADO})`);
   console.log(`Tope de gasto: $${tope.toFixed(2)}`);
   if (estimadoExcedeTope(estimado, tope)) throw new Error(`RECHAZADO: el estimado ($${estimadoImpreso}) excede el tope. Decláralo: --budget-usd=${estimadoImpreso}`);
@@ -70,6 +78,13 @@ async function main(): Promise<number> {
   }
 
   const { owner, cookie } = await arrancarCorredor(base);
+  // 🔴 Sin la terminal en el servidor, la ruta convierte Dynamis en Len SIN
+  // DECIRLO, y el brazo mediría a Len con otro nombre. Se pregunta antes de gastar.
+  if (mode) {
+    const r = await fetch(`${base}/api/agent/esfuerzo`, { headers: { cookie } });
+    const d = (r.ok ? await r.json().catch(() => null) : null) as { dynamis?: boolean } | null;
+    if (d?.dynamis !== true) throw new Error("el servidor no ofrece Len Dynamis: arráncalo con OPENLEN_TERMINAL=1");
+  }
 
   const navegador = await lanzarNavegador();
   const dirGrabaciones = path.resolve(DIR_GRABACIONES);
@@ -86,6 +101,7 @@ async function main(): Promise<number> {
     conservar,
     timeoutTurnoMs: TIMEOUT_TURNO_MS,
     ...(capturasEn ? { capturasEn } : {}),
+    ...(mode ? { mode } : {}),
   };
   let gastado = 0;
   // Como el corredor de Claude Code: el tope se mira ANTES de cada corrida, las

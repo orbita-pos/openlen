@@ -48,6 +48,7 @@ import { enviarTurno, herramientasDeLen, tarjetaDePublicar, textoDeLen, tocarPub
 import { servirPublicada } from "./servidor-publicada";
 import type { Desenlace, Encargo, Intercambio, ResultadoDeCorrida, ResultadoDeGrader } from "./tipos";
 import { ficheroDeLaWeb, textoDeLaWeb, webASerializable } from "./web-sustituta";
+import type { AgentMode } from "@/lib/agent/dynamis";
 
 /** La zona del dueño si el caso no dice otra: la que manda el panel de un
  *  usuario en México (plans/len-resultados/diseno.md §7). */
@@ -64,6 +65,9 @@ export interface OpcionesDelConductor {
   /** Carpeta donde se guarda la página final de cada corrida (`capturas.ts`). Sin ella, no se captura. */
   readonly capturasEn?: string;
   readonly timeoutTurnoMs: number;
+  /** El modo de Len en cada turno, como lo manda el panel (`lib/agent/dynamis.ts`).
+   *  Ausente = Len. Con la terminal apagada en el servidor, la ruta lo ignora. */
+  readonly mode?: AgentMode;
 }
 
 /**
@@ -277,7 +281,18 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
           cookie: o.cookie,
           // `esfuerzo: "auto"`: lo que manda el panel de un usuario nuevo.
           // `zonaHoraria`: la del navegador, como la manda el panel.
-          cuerpo: { projectId, prompt: mensaje, turnId: crypto.randomUUID(), history, historyTotal, dichoAntes, esfuerzo: "auto", zonaHoraria: zona },
+          // `mode`: sólo Dynamis viaja, como en el panel.
+          cuerpo: {
+            projectId,
+            prompt: mensaje,
+            turnId: crypto.randomUUID(),
+            history,
+            historyTotal,
+            dichoAntes,
+            esfuerzo: "auto",
+            zonaHoraria: zona,
+            ...(o.mode === "dynamis" ? { mode: "dynamis" as const } : {}),
+          },
           timeoutMs: o.timeoutTurnoMs,
         });
         turnosDeLen++;

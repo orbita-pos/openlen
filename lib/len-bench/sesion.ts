@@ -80,6 +80,8 @@ export interface CuerpoDelTurno {
    *  diseno.md §7). Sin ella, la ruta usaría la guardada de la identidad de
    *  eval, que otra corrida pudo cambiar: el mismo problema que `esfuerzo`. */
   readonly zonaHoraria?: string;
+  /** Len Dynamis (`lib/agent/dynamis.ts`): como el panel, sólo se manda ése. */
+  readonly mode?: "dynamis";
 }
 
 export async function enviarTurno(o: {
