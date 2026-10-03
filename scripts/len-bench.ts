@@ -99,7 +99,10 @@ async function main(): Promise<number> {
     navegador,
     dirGrabaciones,
     conservar,
-    timeoutTurnoMs: TIMEOUT_TURNO_MS,
+    // Len Dynamis piensa ×11 por llamada (sonda del 03/10: 14 min un solo turno
+    // de `encargo-grande`). El reloj del banco es un tope de SEGURIDAD que un turno
+    // sano no toca, y producción no corta a los 20 min: con Dynamis, el doble.
+    timeoutTurnoMs: mode ? 2 * TIMEOUT_TURNO_MS : TIMEOUT_TURNO_MS,
     ...(capturasEn ? { capturasEn } : {}),
     ...(mode ? { mode } : {}),
   };
