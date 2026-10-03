@@ -113,7 +113,7 @@ export const en: Diccionario = {
       notaCommit: "b5d12836",
     },
     tarjeta: {
-      antetitulo: "Len 2.0 · September 2026",
+      antetitulo: "Len · October 2026",
       titulo: "Nineteen tools, one developer",
       texto:
         "It works on your site the way a programmer works on code: every page is a file it reads, searches and changes precisely. And before handing it over, it uses the page the way a visitor would: it clicks, types, reloads and looks at what happened.",

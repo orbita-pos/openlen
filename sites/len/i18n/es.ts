@@ -111,7 +111,7 @@ export const es = {
       notaCommit: "b5d12836",
     },
     tarjeta: {
-      antetitulo: "Len 2.0 · septiembre 2026",
+      antetitulo: "Len · octubre 2026",
       titulo: "Diecinueve herramientas, un solo desarrollador",
       texto:
         "Trabaja tu sitio como un programador trabaja su código: cada página es un fichero que lee, busca y cambia con precisión. Y antes de entregar, usa la página como la usaría un visitante: pulsa, escribe, recarga y mira qué pasó.",
