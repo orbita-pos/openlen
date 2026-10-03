@@ -714,7 +714,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "preguntar",
-    "description": "Cierra tu turno con una pregunta al usuario y espera su respuesta. Úsala cuando te falte un dato que SÓLO él puede dar —la dirección que quiere para su página, un teléfono, un precio, un horario, el nombre de su negocio, cuál de dos caminos prefiere— en vez de elegir tú por él o de inventártelo. En cuanto la llamas, el turno TERMINA: no hagas nada más después, porque no habrá después; su respuesta abre el turno siguiente. texto: la pregunta tal cual la va a leer, en SU idioma, corta y concreta. Es lo único que verá, así que no la repitas luego en tu respuesta. Si puedes averiguarlo mirando (Read, Grep, Glob) o decidirlo tú sin riesgo, hazlo y NO preguntes: preguntar por algo que estaba a la vista gasta un turno del usuario.",
+    "description": "Hazle al usuario una pregunta corta cuando te falte una confirmación, una elección o un dato para seguir. En cuanto la llamas, el turno TERMINA: no hagas nada más después, porque no habrá después; su respuesta abre el turno siguiente. texto: la pregunta tal cual la va a leer. Es lo único que verá, así que no la repitas luego en tu respuesta.",
     "parameters": {
       "type": "OBJECT",
       "properties": {

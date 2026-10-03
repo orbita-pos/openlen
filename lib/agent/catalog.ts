@@ -268,10 +268,19 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     DECLARACION_WEB_SEARCH,
     DECLARACION_WEB_FETCH,
     DECLARACION_TODO_WRITE,
+    // Como `ask_user_question` de DeepSeek (packages/interaction/tool-ask-user
+    // @639ed01): UNA frase, sin lista de datos. La lista que había («un
+    // teléfono, un precio, un horario» entre lo que «SÓLO él puede dar»)
+    // chocaba con `web_search`, que dice que los horarios y precios publicados
+    // se buscan: en la medición de la F2, 2 de 3 preguntaron el horario de un
+    // museo ajeno sin buscarlo (plans/len-2/corridas/2026-10-02-f2-web). Lo que
+    // es SUYO (su teléfono, sus horarios) sigue en la regla del prompt. Lo que
+    // queda además de la frase es de OpenLen: aquí preguntar CIERRA el turno
+    // (DeepSeek espera la respuesta dentro de él) y el texto es lo que ve.
     {
       name: "preguntar",
       description:
-        "Cierra tu turno con una pregunta al usuario y espera su respuesta. Úsala cuando te falte un dato que SÓLO él puede dar —la dirección que quiere para su página, un teléfono, un precio, un horario, el nombre de su negocio, cuál de dos caminos prefiere— en vez de elegir tú por él o de inventártelo. En cuanto la llamas, el turno TERMINA: no hagas nada más después, porque no habrá después; su respuesta abre el turno siguiente. texto: la pregunta tal cual la va a leer, en SU idioma, corta y concreta. Es lo único que verá, así que no la repitas luego en tu respuesta. Si puedes averiguarlo mirando (Read, Grep, Glob) o decidirlo tú sin riesgo, hazlo y NO preguntes: preguntar por algo que estaba a la vista gasta un turno del usuario.",
+        "Hazle al usuario una pregunta corta cuando te falte una confirmación, una elección o un dato para seguir. En cuanto la llamas, el turno TERMINA: no hagas nada más después, porque no habrá después; su respuesta abre el turno siguiente. texto: la pregunta tal cual la va a leer. Es lo único que verá, así que no la repitas luego en tu respuesta.",
       parameters: {
         type: "OBJECT",
         properties: {
