@@ -2,14 +2,14 @@
 
 // ¿TE SIRVIÓ? — los votos de cada turno en el chat nuevo (plans/new-chat/). Se
 // leen una vez al montar y se pintan OPTIMISTAS: votar es una opinión, no un
-// cambio de la página, y si el guardado falla el voto vuelve atrás y lo dice.
+// cambio de la página. Si el guardado falla, el voto vuelve atrás y `rate` /
+// `clear` devuelven `false`: quien llama lo dice (`turn-close.tsx`).
 
 import { useCallback, useEffect, useState } from "react";
 import type { FeedbackRating, FeedbackReason, TurnFeedback } from "@/lib/chat/feedback-reasons";
 
 export function useTurnFeedback(projectId: string) {
   const [votes, setVotes] = useState<Readonly<Record<string, TurnFeedback>>>({});
-  const [failed, setFailed] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -34,7 +34,6 @@ export function useTurnFeedback(projectId: string) {
         else delete copy[turnId];
         return copy;
       });
-      setFailed(null);
       try {
         const r = await fetch(`/api/projects/${projectId}/chat/feedback`, {
           method: next ? "POST" : "DELETE",
@@ -54,7 +53,6 @@ export function useTurnFeedback(projectId: string) {
           else delete copy[turnId];
           return copy;
         });
-        setFailed(turnId);
         return false;
       }
     },
@@ -63,8 +61,6 @@ export function useTurnFeedback(projectId: string) {
 
   return {
     votes,
-    /** El turno cuyo último voto no se pudo guardar. */
-    failed,
     rate: useCallback(
       (turnId: string, rating: FeedbackRating, reasons: readonly FeedbackReason[] = [], note: string | null = null) =>
         save(turnId, { rating, reasons, note }),
