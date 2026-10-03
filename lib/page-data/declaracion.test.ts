@@ -51,6 +51,52 @@ describe("leerDeclaracion", () => {
   });
 });
 
+// Las cuentas de la página (plans/page-accounts/design.md): el modo `privado` y
+// lo que cada almacén le da a cada papel.
+describe("leerDeclaracion — privado y papeles", () => {
+  it("lee un almacén privado con papeles, en la forma corta y en la larga", () => {
+    const d = leerDeclaracion(
+      bloque(
+        '{"ventas":{"visitante":"privado","papeles":{"cajero":{"leer":"propios","crear":"propios"},"gerente":["leer","borrar"]},"campos":{"total":"numero"}}}',
+      ),
+    );
+    expect(d.ventas).toEqual({
+      modo: "privado",
+      caducaDias: null,
+      campos: { total: "numero" },
+      papeles: {
+        cajero: { leer: "propios", crear: "propios" },
+        gerente: { leer: "todos", borrar: "todos" },
+      },
+    });
+  });
+
+  it("acepta papeles con acentos y ñ", () => {
+    const d = leerDeclaracion(bloque('{"x":{"visitante":"lectura","papeles":{"dueña-de-turno":["leer"]}}}'));
+    expect(d.x.papeles).toEqual({ "dueña-de-turno": { leer: "todos" } });
+  });
+
+  it("sin `papeles` el almacén queda como antes, sin el campo", () => {
+    const d = leerDeclaracion(bloque('{"x":{"visitante":"lectura","campos":{}}}'));
+    expect(d.x).not.toHaveProperty("papeles");
+  });
+
+  // 🔴 La regla del fichero: una errata del modelo NO abre una puerta. Una
+  // acción, un alcance o un papel que no reconocemos descartan el almacén
+  // entero — no se queda con «lo que sí se entendió».
+  it.each([
+    ['{"cajero":["leer","todo"]}', "una acción inventada"],
+    ['{"cajero":{"leer":"algunos"}}', "un alcance inventado"],
+    ['{"Cajero":["leer"]}', "un papel con mayúscula"],
+    ['{"caj ero":["leer"]}', "un papel con espacio"],
+    ['["cajero"]', "papeles como lista"],
+    ['{"cajero":"leer"}', "un papel con una cadena"],
+  ])("descarta el almacén con %s (%s)", (papeles) => {
+    const d = leerDeclaracion(bloque(`{"x":{"visitante":"privado","papeles":${papeles}}}`));
+    expect(d).toEqual({});
+  });
+});
+
 describe("validaDocumento", () => {
   const almacen = {
     modo: "propio" as const,

@@ -26,7 +26,7 @@ import http from "node:http";
 import path from "node:path";
 
 export const PREFIJOS_A_NEXT: readonly string[] = [
-  "/c/", "/api/f/", "/api/lienzo/", "/api/d/", "/api/m/", "/api/cm/", "/api/bk/", "/api/b/", "/api/chat/", "/uploads/",
+  "/c/", "/api/f/", "/api/lienzo/", "/api/d/", "/api/a/", "/api/m/", "/api/cm/", "/api/bk/", "/api/b/", "/api/chat/", "/uploads/",
 ];
 
 const MIME: Record<string, string> = {

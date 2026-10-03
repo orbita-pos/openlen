@@ -823,7 +823,8 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
     page.on("response", (r) => {
       try {
         const u = new URL(r.url());
-        if (u.host === origen.origin && u.pathname.startsWith("/api/") && !u.pathname.startsWith("/api/d/")) {
+        // `/api/d` y `/api/a` los contestan sus sustitutos: no son «otras».
+        if (u.host === origen.origin && u.pathname.startsWith("/api/") && !u.pathname.startsWith("/api/d/") && !u.pathname.startsWith("/api/a/")) {
           ev.otrasApi.push(`${r.request().method()} ${u.pathname}`);
         }
       } catch {

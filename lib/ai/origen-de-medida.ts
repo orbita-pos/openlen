@@ -37,7 +37,8 @@
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import { randomUUID } from "node:crypto";
 
-import { crearSustituto, type Sustituto } from "@/lib/page-data/sustituto";
+import { crearSustituto, VISITANTE_DE_LA_MEDIDA, type Sustituto } from "@/lib/page-data/sustituto";
+import { createAccountsSubstitute, type AccountsSubstitute } from "@/lib/page-accounts/substitute";
 
 export interface DocumentoServido {
   /** El URL que hay que abrir en el navegador. */
@@ -45,6 +46,9 @@ export interface DocumentoServido {
   /** El `/api/d` de ESTE documento: lo que la página guardó y cada llamada que
    *  hizo, con la respuesta que le habría dado el servidor real. */
   readonly datos: Sustituto;
+  /** El `/api/a` de ESTE documento: las cuentas de la página durante la visita
+   *  (lib/page-accounts/substitute.ts). Decide quién es el actor de `datos`. */
+  readonly cuentas: AccountsSubstitute;
   /** Deja de servirlo. Llamar SIEMPRE al terminar el render, o el documento
    *  se queda en memoria hasta que muera el proceso. */
   soltar(): void;
@@ -78,7 +82,7 @@ const documentos = new Map<string, string>();
 // recibe nunca: volveríamos a medir otra cosa. Así que se guarda aparte y se
 // barre por antigüedad. Diez minutos sobran para el render más lento (el plazo
 // de un turno entero es menor) y dejan la memoria acotada.
-const sustitutos = new Map<string, { datos: Sustituto; nacido: number }>();
+const sustitutos = new Map<string, { datos: Sustituto; cuentas: AccountsSubstitute; nacido: number }>();
 const VIDA_DEL_SUSTITUTO_MS = 10 * 60 * 1000;
 
 function barrerSustitutos(ahora: number): void {
@@ -119,6 +123,27 @@ function crear(): Promise<OrigenDeMedida> {
     // EL ALMACÉN DE LA PÁGINA. Es la única ruta que se contesta aparte del
     // documento: la página publicada la tiene detrás (Caddy la pasa a Next), y
     // medirla sin ella es lo que dejó pasar el carrito que no guardaba nada.
+    // LAS CUENTAS DE LA PÁGINA (/api/a/*), por lo mismo que el almacén: la
+    // publicada las tiene detrás, y una pantalla de entrar medida contra un 404
+    // es una pantalla que Len «arreglaría» rompiéndola.
+    if ((req.url ?? "").startsWith("/api/a/")) {
+      const id = documentoQueLlama(req);
+      const s = id ? sustitutos.get(id) : undefined;
+      if (!s) {
+        res.writeHead(404).end();
+        return;
+      }
+      void leerCuerpo(req).then((cuerpo) => {
+        const r = s.cuentas.respond({ method: req.method ?? "GET", url: req.url ?? "", body: cuerpo });
+        if (r.location) {
+          res.writeHead(r.status, { location: r.location, "cache-control": "no-store" }).end();
+          return;
+        }
+        res.writeHead(r.status, { "content-type": "application/json", "cache-control": "no-store" });
+        res.end(JSON.stringify(r.body));
+      });
+      return;
+    }
     if ((req.url ?? "").startsWith("/api/d/")) {
       const id = documentoQueLlama(req);
       const s = id ? sustitutos.get(id) : undefined;
@@ -180,14 +205,18 @@ function crear(): Promise<OrigenDeMedida> {
           // AUSENTE se queda ausente: «no sé el subdominio» no es «no tiene».
           // Convertirlo en `null` acusaba rutas que pueden ser correctas — lo
           // cazó la contra-prueba de `datos-en-la-medida.browser.test.ts`.
+          const url = `http://${origin}/${id}/`;
+          const cuentas = createAccountsSubstitute(html, { visitorId: VISITANTE_DE_LA_MEDIDA, documentUrl: url });
           const datos = crearSustituto(html, {
             ...(opciones.sub === undefined ? {} : { sub: opciones.sub }),
             ...(opciones.bytesYaUsados === undefined ? {} : { bytesYaUsados: opciones.bytesYaUsados }),
+            actor: () => cuentas.actor(),
           });
-          sustitutos.set(id, { datos, nacido: ahora });
+          sustitutos.set(id, { datos, cuentas, nacido: ahora });
           return {
-            url: `http://${origin}/${id}/`,
+            url,
             datos,
+            cuentas,
             soltar: () => {
               documentos.delete(id);
             },

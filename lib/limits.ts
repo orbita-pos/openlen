@@ -109,6 +109,12 @@ export const IP_LIMITS: Record<string, LimitWindow[]> = {
     { windowMs: HOUR, max: 10, label: "hourly" },
     { windowMs: DAY, max: 40, label: "daily" },
   ],
+  // Entrar en una página con cuentas (app/api/a/[sub]/login), por IP. Lo de
+  // la cuenta —10 fallos y se bloquea un rato— va aparte, con su propia clave.
+  page_login: [
+    { windowMs: 15 * 60 * 1000, max: 20, label: "15-minute" },
+    { windowMs: HOUR, max: 60, label: "hourly" },
+  ],
 };
 
 export interface LimitDecision {

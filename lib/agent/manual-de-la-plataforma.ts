@@ -27,10 +27,12 @@ import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contrac
 import { bloqueDeLibrerias } from "@/lib/librerias";
 import { paraSoloLaTerminal, terminalOnly } from "@/lib/agent/terminal/declaracion";
 import type { AgentMode } from "@/lib/agent/dynamis";
+import { ACCOUNTS_DOC } from "@/lib/agent/accounts-doc";
 import {
   CARPETA_DOCS,
   CIERRE_DEL_ADJUNTO,
   PRINCIPIO_DEL_ADJUNTO,
+  RUTA_ACCOUNTS,
   RUTA_API_D,
   RUTA_GUIA,
   RUTA_LIBRERIAS,
@@ -113,7 +115,9 @@ ${bloqueDeLibrerias({ dondeVaElScript: "libre" })}`;
 //   · /.openlen/docs/guia-de-diseno.md — color, letra, modo oscuro y acabado;
 //   · /.openlen/docs/api-d.md — cómo guarda y lee el JavaScript en un almacén;
 //   · /.openlen/docs/librerias.md — las librerías que sobreviven al publicar (lo que se
-//     rompe en silencio lo dice además `librerias-que-no-cargan`).
+//     rompe en silencio lo dice además `librerias-que-no-cargan`);
+//   · /.openlen/docs/accounts.md — la gente que entra y sale de la página
+//     (03/10/2026). Éste NO sale del manual: nació aparte, en lib/agent/accounts-doc.ts.
 // El texto se MUDA, no se reescribe: se corta por sus marcas y LANZA si una no
 // aparece, como `swapJsClauses`. Regla por regla, en
 // plans/len-agente-2026/notas/f4-tabla-de-reglas.md (M1–M21, I1–I3).
@@ -135,7 +139,8 @@ const EN_LUGAR_DE_API_D = `SAVING TOO is possible, in a store: what the JavaScri
 const INDICE = `MORE, IN ${CARPETA_DOCS} (read them when you need them):
 - ${RUTA_GUIA}: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch or a redesign. What you add to a page that already exists is written the way that page is.
 - ${RUTA_API_D}: how the page's JavaScript saves to and reads from a store (/api/d); read it before writing that JavaScript.
-- ${RUTA_LIBRERIAS}: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.`;
+- ${RUTA_LIBRERIAS}: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.
+- ${RUTA_ACCOUNTS}: people who sign in to the page —a till with its cashiers, members, staff— and stores only they can reach; read it before building anything someone signs in to.`;
 
 const encontrar = (texto: string, marca: string, desde = 0): number => {
   const i = texto.indexOf(marca, desde);
@@ -153,7 +158,8 @@ interface ManualPartido {
   readonly docs: Readonly<Record<string, string>>;
 }
 
-/** Corta el manual entero en /AGENTS.md y los tres ficheros de /.openlen/docs. */
+/** Corta el manual entero en /AGENTS.md y tres ficheros de /.openlen/docs, y
+ *  les suma el cuarto, el de las cuentas, que no sale del manual. */
 export function partirElManual(entero: string = manualSinPartir()): ManualPartido {
   // 1 · El contrato de /api/d sale de la línea del JavaScript, hasta su final.
   const iApi = encontrar(entero, MARCA_API_D);
@@ -188,6 +194,8 @@ export function partirElManual(entero: string = manualSinPartir()): ManualPartid
       [RUTA_GUIA]: `${cabecera}\n${gusto}`,
       [RUTA_API_D]: `# /api/d: the page's JavaScript saves to and reads from a store\n\n${apiD}`,
       [RUTA_LIBRERIAS]: librerias,
+      // No se corta del manual: nació aparte, en su fichero (lib/agent/accounts-doc.ts).
+      [RUTA_ACCOUNTS]: ACCOUNTS_DOC,
     },
   };
 }

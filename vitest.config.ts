@@ -90,6 +90,7 @@ export default defineConfig({
       // `include` es una LISTA BLANCA: un .test.ts fuera de ella NO corre, y
       // pasa desapercibido porque `npm test` sale verde igual.
       "lib/page-data/**/*.test.ts",
+      "lib/page-accounts/**/*.test.ts",
       "lib/conductas-heredadas/**/*.test.ts",
       // Lo que las TRES superficies mandan de verdad: nada de gusto nuestro,
       // ningún módulo ni conducta retirados, y el JavaScript del modelo sí
@@ -177,6 +178,8 @@ export default defineConfig({
       "lib/agent/paginas-del-turno.browser.test.ts",
       // /api/d contestada en la medida: sus rechazos vuelven al modelo.
       "lib/ai/datos-en-la-medida.browser.test.ts",
+      // Las cuentas de la página en la medida (/api/a). LISTA BLANCA.
+      "lib/ai/accounts-in-measurement.browser.test.ts",
       "lib/ai/imagenes-perezosas.browser.test.ts",
       "lib/ai/sse.test.ts",
       // Que el latido este ENCHUFADO, no solo que exista: Crear latia desde
@@ -410,6 +413,8 @@ export default defineConfig({
       "lib/agent/reloj-de-silencio.test.ts",
       "lib/agent/context.test.ts",
       "lib/agent/manual-de-la-plataforma.test.ts",
+      // /.openlen/docs/accounts.md, atado al código que describe. LISTA BLANCA.
+      "lib/agent/accounts-doc.test.ts",
       "lib/agent/subagente.test.ts",
       "lib/agent/facts-kept.test.ts",
       "lib/agent/contenido-perdido.test.ts",

@@ -31,7 +31,9 @@ const locales = routing.locales as readonly string[];
 // the middleware's edge bundle and break `next build`.
 const { auth } = NextAuth(authConfig);
 
-const PROTECTED = ["/new", "/projects", "/inbox", "/llamada", "/movil"];
+// `/page-owner`: el dueño entra en su página con su cuenta de OpenLen
+// (app/[locale]/(auth)/page-owner/[sub], plans/page-accounts/design.md).
+const PROTECTED = ["/new", "/projects", "/inbox", "/llamada", "/movil", "/page-owner"];
 
 function localeFromPath(pathname: string): string {
   const seg = pathname.split("/")[1];

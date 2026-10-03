@@ -111,6 +111,11 @@ const targets = [
   // Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código: `ver_formularios`
   // y el globito la leen, y sin ella cada consulta falla.
   "formularios-visto-migrate",
+  // Las cuentas de las páginas (plans/page-accounts/design.md): la columna del
+  // papel en siteMembers y la sesión del dueño en memberSessions y en
+  // memberLoginTokens. Aditiva e idempotente. 🔴 OBLIGATORIA antes que el
+  // código: Drizzle selecciona las columnas declaradas en schema.ts.
+  "page-accounts-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

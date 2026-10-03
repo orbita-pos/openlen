@@ -25,6 +25,12 @@ export const MAX_BYTES_DOCUMENTO = 16 * 1024;
  *  también la ruta pública y el sustituto de la medición. */
 export const MAX_FILAS_VISITANTE = 200;
 
+/** Filas que recibe quien ENTRÓ (una cuenta o el dueño, plans/page-accounts/).
+ *  El tope del visitante existe porque un almacén público se lo descargan
+ *  todos en cada carga; quien entró lee lo de su caja —las ventas del día que
+ *  suma el dueño—, y con 200 el total saldría corto sin que nadie lo notara. */
+export const MAX_ROWS_SIGNED_IN = 2000;
+
 export function bytesDe(doc: Record<string, unknown>): number {
   return Buffer.byteLength(JSON.stringify(doc), "utf8");
 }

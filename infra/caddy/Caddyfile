@@ -173,7 +173,7 @@ openlen.com, www.openlen.com {
 
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
-		not path /c/* /api/f/* /api/d/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/*
+		not path /c/* /api/f/* /api/d/* /api/a/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/*
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
@@ -229,6 +229,23 @@ openlen.com, www.openlen.com {
 	#
 	# La IP real hace falta para el tope por minuto de la ruta.
 	handle /api/d/* {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {vars.cf_client_ip}
+		}
+	}
+
+	# Cuentas de la página — entrar, salir, quién soy, las cuentas del dueño
+	# (/api/a/<sub>/*, plans/page-accounts/design.md). En el MISMO host que la
+	# página a propósito: la cookie de sesión es `__Host-`, sólo la pone y sólo
+	# la lee ese host. Sin este handle, try_files contestaría la HOME a un
+	# `POST login` y la página creería haber entrado.
+	#
+	# Excluido de @doc arriba, y es lo más serio de esta línea: con la caché
+	# pública, Cloudflare guardaría el `me` de una cajera y se lo daría al
+	# siguiente que pregunte.
+	#
+	# La IP real hace falta para el tope de intentos de entrar.
+	handle /api/a/* {
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
 		}

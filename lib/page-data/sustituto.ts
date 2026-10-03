@@ -26,8 +26,9 @@
 import { randomUUID } from "node:crypto";
 
 import { leerDeclaracion, validaDocumento, type Declaracion } from "./declaracion";
-import { bytesDe, cabe, MAX_FILAS_VISITANTE } from "./cuota";
+import { bytesDe, cabe, MAX_FILAS_VISITANTE, MAX_ROWS_SIGNED_IN } from "./cuota";
 import { permite, type Actor, type Alcance } from "./permisos";
+import { rowOwnerKey } from "@/lib/page-accounts/actor";
 
 /** Una llamada que la página hizo, tal y como la contestó el sustituto. */
 export interface LlamadaADatos {
@@ -54,7 +55,8 @@ export interface RespuestaDelSustituto {
 interface Fila {
   readonly id: string;
   readonly store: string;
-  readonly visitorId: string;
+  /** `rowOwnerKey` de quien la escribió: el visitante, `cuenta:<id>` o null (el dueño). */
+  readonly visitorId: string | null;
   doc: Record<string, unknown>;
   readonly createdAt: string;
   updatedAt: string;
@@ -88,7 +90,9 @@ export function explicarRechazo(l: LlamadaADatos): string {
           ? `the store «${almacen}» isn't in the page's \`data-ol-stores\` block`
           : campo
             ? `the field «${campo}» doesn't carry the type the store declares`
-            : l.error === "documento_invalido"
+            : l.error === "no_existe"
+              ? "there is no document with that id in the store that this visitor can change"
+              : l.error === "documento_invalido"
               ? "the body has to be a JSON object with the declared fields"
               : l.error === "no_permitido"
                 ? "the store's mode doesn't let the visitor do that"
@@ -98,8 +102,9 @@ export function explicarRechazo(l: LlamadaADatos): string {
   return `${que}${porque ? `: ${porque}` : ""}. What the visitor saves this way is lost.`;
 }
 
-/** En una medición hay un navegador, así que hay un visitante. */
-const VISITANTE_DE_LA_MEDIDA = "visitante-de-la-medida";
+/** En una medición hay un navegador, así que hay un visitante. Lo comparte el
+ *  sustituto de /api/a (lib/page-accounts/substitute.ts): es el mismo. */
+export const VISITANTE_DE_LA_MEDIDA = "visitante-de-la-medida";
 
 export function crearSustituto(
   html: string,
@@ -117,11 +122,17 @@ export function crearSustituto(
      *  que medía siempre el caso más fácil. Con esto se puede medir el caso que
      *  llega con el éxito: el almacén lleno, el 507, y qué hace la página. */
     readonly bytesYaUsados?: number;
+    /** Quién usa la página AHORA, si tiene cuentas: lo dice el sustituto de
+     *  /api/a según lo que la visita haya hecho (entrar, salir…). Sin esto, el
+     *  visitante anónimo de siempre. */
+    readonly actor?: () => Actor;
   } = {},
 ): Sustituto {
   const declaracion: Declaracion = leerDeclaracion(html);
   const sub = opciones.sub === undefined ? undefined : (opciones.sub?.toLowerCase() ?? null);
-  const actor: Actor = { tipo: "visitante", id: VISITANTE_DE_LA_MEDIDA };
+  const visitante: Actor = { tipo: "visitante", id: VISITANTE_DE_LA_MEDIDA };
+  /** Se pregunta en CADA llamada: entre una y otra la visita puede haber entrado o salido. */
+  const actorAhora = (): Actor => opciones.actor?.() ?? visitante;
   const filas: Fila[] = [];
   const registro: LlamadaADatos[] = [];
 
@@ -136,10 +147,11 @@ export function crearSustituto(
     return { status, cuerpo };
   }
 
-  function listar(store: string, alcance: Alcance, limite?: number): Fila[] {
+  function listar(store: string, alcance: Alcance, clave: string | null, limite?: number): Fila[] {
     if (alcance === "ninguno") return [];
+    // Como `store.ts`: «lo suyo» de quien no tiene clave (el dueño) no casa nada.
     const suyas = filas.filter(
-      (f) => f.store === store && (alcance === "todos" || f.visitorId === VISITANTE_DE_LA_MEDIDA),
+      (f) => f.store === store && (alcance === "todos" || (clave !== null && f.visitorId === clave)),
     );
     // Mismo orden que `store.ts`: con tope, las más nuevas primero.
     return limite ? [...suyas].reverse().slice(0, limite) : suyas;
@@ -174,15 +186,52 @@ export function crearSustituto(
       const almacen = declaracion[store];
       if (!almacen) return contestar(metodo, ruta, 404, { error: "almacen_no_declarado" });
 
-      if (metodo === "GET") {
-        const alcance = permite(almacen.modo, actor, "leer");
+      // Quién llama AHORA, y de quién son sus filas (como `rowOwnerKey` en la ruta).
+      const actor = actorAhora();
+      const clave = rowOwnerKey(actor);
+
+      // PATCH con `?id=`: modifica ESE documento, mezclando los campos (la ruta
+      // pública, desde el 2026-10-03). Sin `id`, PATCH es POST, más abajo.
+      const idDeLaQuery = new URLSearchParams(query).get("id");
+      if (metodo === "PATCH" && idDeLaQuery) {
+        const alcance = permite(almacen.modo, actor, "modificar", almacen.papeles);
         if (alcance === "ninguno") return contestar(metodo, ruta, 403, { error: "no_permitido" });
-        const documentos = listar(store, alcance, MAX_FILAS_VISITANTE).map(vista);
+        let json: unknown;
+        try {
+          json = JSON.parse(cuerpo);
+        } catch {
+          return contestar(metodo, ruta, 422, { error: "documento_invalido" });
+        }
+        const validado = validaDocumento(almacen, json);
+        if (!validado.ok) return contestar(metodo, ruta, 422, { error: validado.razon });
+        const antes = listar(store, alcance, clave).find((f) => f.id === idDeLaQuery);
+        if (!antes) return contestar(metodo, ruta, 404, { error: "no_existe" });
+        const doc = { ...antes.doc, ...validado.doc };
+        const veredicto = cabe({
+          plan: "free",
+          usados: (opciones.bytesYaUsados ?? 0) + filas.reduce((n, f) => n + bytesDe(f.doc), 0),
+          entrantes: bytesDe(doc),
+          salientes: bytesDe(antes.doc),
+        });
+        if (!veredicto.ok) {
+          const status = veredicto.razon === "documento_grande" ? 413 : 507;
+          return contestar(metodo, ruta, status, { error: veredicto.razon });
+        }
+        antes.doc = doc;
+        antes.updatedAt = new Date().toISOString();
+        return contestar(metodo, ruta, 200, { ok: true, documento: vista(antes) });
+      }
+
+      if (metodo === "GET") {
+        const alcance = permite(almacen.modo, actor, "leer", almacen.papeles);
+        if (alcance === "ninguno") return contestar(metodo, ruta, 403, { error: "no_permitido" });
+        const limite = actor.tipo === "visitante" ? MAX_FILAS_VISITANTE : MAX_ROWS_SIGNED_IN;
+        const documentos = listar(store, alcance, clave, limite).map(vista);
         return contestar(metodo, ruta, 200, { ok: true, documentos });
       }
 
       if (metodo === "POST" || metodo === "PATCH") {
-        if (permite(almacen.modo, actor, "crear") === "ninguno") {
+        if (permite(almacen.modo, actor, "crear", almacen.papeles) === "ninguno") {
           return contestar(metodo, ruta, 403, { error: "no_permitido" });
         }
         let json: unknown;
@@ -195,7 +244,7 @@ export function crearSustituto(
         if (!validado.ok) return contestar(metodo, ruta, 422, { error: validado.razon });
 
         // En `propio` hay UN documento por visitante: se reemplaza.
-        const previa = almacen.modo === "propio" ? listar(store, "propios")[0] : undefined;
+        const previa = almacen.modo === "propio" ? listar(store, "propios", clave)[0] : undefined;
         const veredicto = cabe({
           plan: "free",
           usados: (opciones.bytesYaUsados ?? 0) + filas.reduce((n, f) => n + bytesDe(f.doc), 0),
@@ -215,7 +264,7 @@ export function crearSustituto(
         const nueva: Fila = {
           id: randomUUID(),
           store,
-          visitorId: VISITANTE_DE_LA_MEDIDA,
+          visitorId: clave,
           doc: validado.doc,
           createdAt: ahora,
           updatedAt: ahora,
@@ -225,11 +274,11 @@ export function crearSustituto(
       }
 
       if (metodo === "DELETE") {
-        const alcance = permite(almacen.modo, actor, "borrar");
+        const alcance = permite(almacen.modo, actor, "borrar", almacen.papeles);
         if (alcance === "ninguno") return contestar(metodo, ruta, 403, { error: "no_permitido" });
         const id = new URLSearchParams(query).get("id");
         if (!id) return contestar(metodo, ruta, 422, { error: "falta_id" });
-        const i = filas.findIndex((f) => f.id === id && listar(store, alcance).includes(f));
+        const i = filas.findIndex((f) => f.id === id && listar(store, alcance, clave).includes(f));
         if (i >= 0) filas.splice(i, 1);
         return contestar(metodo, ruta, i >= 0 ? 200 : 404, { ok: i >= 0 });
       }
