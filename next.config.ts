@@ -38,10 +38,19 @@ const nextConfig = {
   // assets (preflight.css, stubs) into the standalone tree alongside the
   // JS — they're loaded at runtime via `fs.readFileSync` and the tracer
   // doesn't follow that.
+  //
+  // Len's terminal (2026-10-03) needs the same treatment: `lib/agent/terminal/
+  // terminal.ts` starts `trabajador.mjs` as a worker from a path computed at
+  // runtime, and only that worker imports `just-bash` — so the tracer never
+  // sees either. `just-bash` goes in whole: its CPython (`vendor/cpython-
+  // emscripten`, python.wasm + the stdlib zip) and its WASM worker chunks are
+  // loaded by path too, and its dependencies live nested under it.
   outputFileTracingIncludes: {
     "*": [
       "./node_modules/tailwindcss/lib/css/*.css",
       "./node_modules/tailwindcss/stubs/*",
+      "./lib/agent/terminal/trabajador.mjs",
+      "./node_modules/just-bash/**/*",
     ],
   },
   // External Node packages:
