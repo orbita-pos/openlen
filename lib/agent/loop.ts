@@ -108,6 +108,11 @@ export type AgentStreamEvent =
        *  «falló» y nada más, con el motivo ya escrito a dos capas de
        *  distancia. Ver `motivo-del-fallo.ts`. */
       motivo?: string;
+      /** LA PREGUNTA, literal, cuando la herramienta es `preguntar`. Es SÓLO
+       *  para la pantalla (la tarjeta destacada y «Esperando tu respuesta» del
+       *  chat nuevo, plans/new-chat/): el modelo no la lee de aquí — su texto ya
+       *  la lleva y el historial no copia este campo. */
+      pregunta?: string;
     }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
@@ -1942,6 +1947,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // Claude Code. `motivoDelFallo` ya devuelve `undefined` cuando la llamada
         // fue bien, así que el evento de un `done` sale igual que antes.
         ...(motivo ? { motivo } : {}),
+        // La pregunta con la que `preguntar` cierra el turno, para la tarjeta.
+        ...(outcome.pregunta ? { pregunta: outcome.pregunta } : {}),
       });
       if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
 

@@ -70,6 +70,13 @@ const ActionSchema = z.object({
     .optional(),
   paginasMiradas: z.number().int().min(0).max(1000).optional(),
   paginasTocadas: z.number().int().min(0).max(1000).optional(),
+  /** La pregunta de `preguntar`, para la tarjeta del chat nuevo
+   *  (plans/new-chat/). Aquí por lo mismo que `valores`: lo que este esquema no
+   *  nombra se pierde al guardar. Se TRUNCA al tope de la herramienta (600). */
+  pregunta: z
+    .string()
+    .transform((s) => s.slice(0, 600))
+    .optional(),
   /**
    * QUÉ cambió, resuelto por el servidor mientras los `data-op-id` valían.
    *

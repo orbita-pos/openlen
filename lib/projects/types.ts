@@ -346,6 +346,9 @@ export interface StoredChatTurn {
     /** Los valores que aplicó la llamada, para el historial. Ver
      *  `lib/agent/valores-de-tema.ts`. */
     valores?: string;
+    /** La pregunta, literal, de una tarjeta de `preguntar` (plans/new-chat/).
+     *  Sólo de pantalla: el historial del modelo no la copia. */
+    pregunta?: string;
     /** QUÉ cambió, resuelto en el servidor mientras los `data-op-id` valían.
      *  Va aquí y no en el turno porque `actions` es la ÚNICA parte del turno
      *  que se guarda como JSON — `appendChatMessage` escribe columnas
@@ -371,4 +374,9 @@ export interface StoredChatTurn {
    *  muere con el cliente; quien la lee puede volver a engancharse
    *  (`GET /api/agent/turno/<fila>`). Se lee con `status: "applied"`. */
   enCurso?: boolean;
+  /** Lo que COBRÓ el turno, en centicréditos, y lo que tardó. Los apunta el
+   *  servidor al cerrar la fila; el cierre del chat nuevo los enseña también al
+   *  recargar (plans/new-chat/). Ausentes en filas anteriores. */
+  centicredits?: number;
+  durationMs?: number;
 }

@@ -384,12 +384,58 @@ export const projectChatMessages = pgTable(
     // never persisted (transient — they changed nothing).
     status: text("status").notNull(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    // LA CHARLA A LA QUE PERTENECE (plans/new-chat/, «Empezar de cero»). NULL =
+    // la charla en curso del proyecto; un id = una charla archivada, que se
+    // puede volver a abrir. Todo lo que lee la conversación —el panel, el
+    // historial del modelo, la lente Terminal, el recorte— mira sólo NULL.
+    conversation: text("conversation"),
+    // Lo que COBRÓ el turno, en centicréditos, y lo que tardó. Los escribe
+    // SÓLO el servidor al cerrar la fila (lo sabe él); el cierre del turno los
+    // enseña y así no desaparecen al recargar. NULL = fila anterior a esto.
+    centicredits: integer("centicredits"),
+    durationMs: integer("durationMs"),
   },
   (table) => [
     index("projectChatMessages_projectId_createdAt_idx").on(
       table.projectId,
       table.createdAt,
     ),
+    index("projectChatMessages_projectId_conversation_idx").on(
+      table.projectId,
+      table.conversation,
+    ),
+  ],
+);
+
+// ¿TE SIRVIÓ? — 👍/👎 de un turno del chat, con sus motivos (plans/new-chat/,
+// decisión de Jesús del 03/10). Uno por turno y persona: votar otra vez lo
+// cambia. Sin clave foránea al turno a propósito: el turno puede no haber
+// llegado a la base todavía (lo guarda el navegador al cerrar) y su recorte lo
+// borraría; el voto no tiene por qué irse con él. Se borra con el proyecto.
+export const chatTurnFeedback = pgTable(
+  "chatTurnFeedback",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    turnId: text("turnId").notNull(),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** "up" | "down". */
+    rating: text("rating").notNull(),
+    /** Los motivos elegidos (códigos de `lib/chat/feedback.ts`). */
+    reasons: jsonb("reasons").$type<string[]>(),
+    note: text("note"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("chatTurnFeedback_turnId_userId_uq").on(table.turnId, table.userId),
+    index("chatTurnFeedback_projectId_idx").on(table.projectId),
   ],
 );
 

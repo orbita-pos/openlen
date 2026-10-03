@@ -579,6 +579,8 @@ export default defineConfig({
       "lib/projects/escribir-data.pg.test.ts",
       // Len 2.1: la fila del turno en curso, contra Postgres (sólo base local).
       "lib/projects/chat-en-curso.pg.test.ts",
+      // El chat nuevo: las charlas archivables y el 👍/👎 (plans/new-chat/).
+      "lib/projects/chat-conversations.pg.test.ts",
       "lib/projects/escritores-de-data.test.ts",
       "lib/notifications/**/*.test.ts",
     ],

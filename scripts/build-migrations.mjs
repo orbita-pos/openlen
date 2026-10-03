@@ -111,6 +111,11 @@ const targets = [
   // Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código: `ver_formularios`
   // y el globito la leen, y sin ella cada consulta falla.
   "formularios-visto-migrate",
+  // El chat nuevo (plans/new-chat/): `projectChatMessages.conversation`,
+  // centicredits y durationMs, y la tabla chatTurnFeedback. Aditiva e
+  // idempotente. 🔴 OBLIGATORIA antes que el código: `getChatMessages` y el
+  // historial filtran por la charla, y Drizzle selecciona las columnas nuevas.
+  "chat-conversations-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

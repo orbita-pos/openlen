@@ -810,6 +810,11 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         rotas: string[];
       };
       let suiteDelTurno: SuiteDelTurno | null = null;
+      // LO QUE COBRÓ EL TURNO (centicréditos) y CUÁNDO EMPEZÓ: el cierre del chat
+      // los enseña (plans/new-chat/, decisión de Jesús del 03/10), en el `done` y
+      // en la fila para que no desaparezcan al recargar. `null` = aún no se cobró.
+      let cobrado: number | null = null;
+      const empezo = Date.now();
       // LEN 2.1 · LA FILA DEL TURNO, ABIERTA MIENTRAS TRABAJA (diagnóstico
       // §4.4 punto 2). El turno ya no muere con el cliente, así que quien
       // vuelva a mirarlo —otra pestaña, el móvil, la misma tras perder la red—
@@ -862,6 +867,8 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
                 toolResults: diario.entradas(),
                 corte,
               }),
+              centicredits: cobrado,
+              durationMs: Date.now() - empezo,
               // H4 · lo que vio el modelo; de aquí sale el historial del turno siguiente.
               transcript: transcripcionDelTurno
                 ? transcripcionParaGuardar(transcripcionDelTurno, agentSession.leidos ?? new Map())
@@ -1459,6 +1466,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
               ` / vueltas=${result.turns} llamadas=${result.toolCalls}`,
           );
           await debitCredits(userId, credits);
+          cobrado = credits;
         } else if (result.topeAlcanzado === "budget_limit") {
           // 🔴 AL TECHO SE COBRA LO GASTADO, HASTA EL TECHO (Jesús, 2026-09-30).
           //
@@ -1467,12 +1475,13 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           // el cierre lo cuenta. Cobrar 0 convertiría el techo en un pase gratis
           // de hasta 30 créditos cada vez. Lo que pase del techo —la última
           // llamada y el cierre— lo paga la casa: el techo es la promesa.
-          const cobrado = Math.min(credits, techo);
+          const alTecho = Math.min(credits, techo);
           console.log(
-            `[agent] tope de gasto — ${cobrado} credits (gastado ${credits}, techo ${techo})` +
+            `[agent] tope de gasto — ${alTecho} credits (gastado ${credits}, techo ${techo})` +
               ` / vueltas=${result.turns} llamadas=${result.toolCalls} motivo=budget_limit`,
           );
-          await debitCredits(userId, cobrado);
+          await debitCredits(userId, alTecho);
+          cobrado = alTecho;
         } else if (!result.terminalError && result.sinCobro) {
           // 🔴 CERRADO CON ELEGANCIA, SIN COBRO (revisión pre-deploy del
           // 2026-09-22). El bucle redacta el cierre de dos turnos que antes
@@ -1526,6 +1535,8 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         // usuario veía un turno verde y limpio sobre una faena a medias.
         // LA FILA, CERRADA ANTES DE AVISAR: quien lea la conversación al recibir
         // el `done` —el panel, Len-Bench— tiene que encontrarla ya completa.
+        // Las ramas que no cobran dejan `cobrado` en null: el turno costó 0.
+        if (cobrado === null) cobrado = 0;
         await cerrarFila();
         // Lo que cambió, antes del `done`: el cliente lo engancha a este turno.
         // Sin llamadas a herramientas no pudo cambiar nada y no se mira.
@@ -1535,6 +1546,10 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           toolCalls: result.toolCalls,
           ...(mutoDurable ? { mutoDurable: true } : {}),
           ...(result.topeAlcanzado ? { topeAlcanzado: result.topeAlcanzado } : {}),
+          // LO QUE COBRÓ Y TARDÓ, en números (centicréditos y ms): la frase la
+          // compone el cliente en su idioma, como el tope (plans/new-chat/).
+          centicredits: cobrado,
+          durationMs: Date.now() - empezo,
           // 🔴 EL CORTE DE LA VENTANA, TAMBIÉN AL USUARIO.
           //
           // Al MODELO ya se le decía (`conversacionRecortada` → la nota de

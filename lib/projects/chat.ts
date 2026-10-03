@@ -5,7 +5,7 @@
 // project interleave instead of overwriting a shared blob. Callers verify
 // project ownership before invoking append/update — see the chat route.
 
-import { and, asc, desc, eq, getTableColumns, inArray, ne } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, inArray, isNull, ne, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { FilaDelHistorial, TranscripcionGuardada } from "@/lib/agent/transcripcion";
@@ -33,7 +33,7 @@ export async function getChatMessages(
   const rows = await db
     .select(columnasDelPanel())
     .from(schema.projectChatMessages)
-    .where(eq(schema.projectChatMessages.projectId, projectId))
+    .where(enCurso(projectId))
     .orderBy(asc(schema.projectChatMessages.createdAt))
     .limit(CHAT_LIMIT);
   return rows.map(rowToTurn);
@@ -59,7 +59,7 @@ export async function turnosParaElHistorial(projectId: string, cuantos: number):
     // como si fuera lo que Len contestó.
     .where(
       and(
-        eq(schema.projectChatMessages.projectId, projectId),
+        enCurso(projectId),
         ne(schema.projectChatMessages.status, ESTADO_EN_CURSO),
       ),
     )
@@ -143,10 +143,16 @@ export async function registrarTurnoDelServidor(
     toolResults?: { tool: string; ok?: boolean; respuesta: Record<string, unknown> }[] | null;
     /** H4: lo que vio el modelo. Como el diario, SÓLO lo escribe el servidor. */
     transcript?: TranscripcionGuardada | null;
+    /** Lo que cobró el turno (centicréditos) y lo que tardó. Sólo el servidor
+     *  lo sabe; el cierre del turno lo enseña (plans/new-chat/). */
+    centicredits?: number | null;
+    durationMs?: number | null;
   },
 ): Promise<void> {
   const toolResults = turn.toolResults ?? null;
   const transcript = turn.transcript ?? null;
+  const centicredits = enteroONulo(turn.centicredits);
+  const durationMs = enteroONulo(turn.durationMs);
   // LEN 2.1 · LA FILA EN CURSO SE CIERRA ENTERA. La abrió este mismo servidor
   // al empezar (`abrirFilaDelTurno`), así que aquí no hay carrera con el
   // cliente: la ruta cierra la fila ANTES de mandar el `done`, y el cliente
@@ -163,6 +169,8 @@ export async function registrarTurnoDelServidor(
       status: turn.status,
       toolResults,
       transcript,
+      centicredits,
+      durationMs,
     })
     .where(
       and(
@@ -187,10 +195,12 @@ export async function registrarTurnoDelServidor(
       status: turn.status,
       toolResults,
       transcript,
+      centicredits,
+      durationMs,
     })
     .onConflictDoUpdate({
       target: schema.projectChatMessages.id,
-      set: { toolResults, transcript },
+      set: { toolResults, transcript, centicredits, durationMs },
     });
   await trim(projectId);
 }
@@ -315,12 +325,14 @@ export async function updateChatMessageStatus(
     );
 }
 
-/** Evict the oldest rows beyond the cap — mirrors projectVersions' trim. */
+/** Evict the oldest rows beyond the cap — mirrors projectVersions' trim. Sólo
+ *  la charla en curso: las archivadas tienen su propio tope
+ *  (`MAX_ARCHIVED_CONVERSATIONS`) y no se recortan con cada turno nuevo. */
 async function trim(projectId: string): Promise<void> {
   const rows = await db
     .select({ id: schema.projectChatMessages.id })
     .from(schema.projectChatMessages)
-    .where(eq(schema.projectChatMessages.projectId, projectId))
+    .where(enCurso(projectId))
     .orderBy(desc(schema.projectChatMessages.createdAt));
   if (rows.length <= CHAT_LIMIT) return;
   const excess = rows.slice(CHAT_LIMIT).map((r) => r.id);
@@ -351,5 +363,151 @@ function rowToTurn(
   if (row.status === "cortado") turn.cortado = true;
   // Len 2.1: el turno sigue trabajando en el servidor. Ver `ESTADO_EN_CURSO`.
   if (row.status === ESTADO_EN_CURSO) turn.enCurso = true;
+  // Lo que cobró y tardó, si el servidor lo apuntó (plans/new-chat/).
+  if (typeof row.centicredits === "number") turn.centicredits = row.centicredits;
+  if (typeof row.durationMs === "number") turn.durationMs = row.durationMs;
   return turn;
+}
+
+function enteroONulo(n: number | null | undefined): number | null {
+  return typeof n === "number" && Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
+}
+
+/** Las filas de la charla EN CURSO del proyecto: `conversation` NULL. */
+function enCurso(projectId: string) {
+  return and(eq(schema.projectChatMessages.projectId, projectId), isNull(schema.projectChatMessages.conversation));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LAS CHARLAS (plans/new-chat/, «Empezar de cero», decisión de Jesús 03/10).
+//
+// Empezar de cero ARCHIVA la charla en curso, no la borra: sus filas reciben un
+// id de charla y dejan de leerse (panel, historial del modelo, lente Terminal).
+// Volver a una archivada la pone otra vez en curso y archiva la que hubiera, en
+// UNA sentencia: nunca hay un momento con dos charlas en curso ni con ninguna.
+// La memoria de Len y las notas de la página NO se tocan: son del usuario y de
+// la página, no de la charla (como CLAUDE.md sobrevive a un `/clear`).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Charlas archivadas que se guardan por proyecto; las más viejas se borran. */
+export const MAX_ARCHIVED_CONVERSATIONS = 10;
+
+export type ConversationChange =
+  | { readonly ok: true; readonly archived: string | null }
+  | { readonly ok: false; readonly reason: "busy" | "not_found" };
+
+/** ¿Hay un turno trabajando en la charla en curso? Mientras lo haya, no se
+ *  cambia de charla: el turno escribiría su fila en una charla que ya no se ve. */
+async function hayTurnoEnCurso(projectId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: schema.projectChatMessages.id })
+    .from(schema.projectChatMessages)
+    .where(and(enCurso(projectId), eq(schema.projectChatMessages.status, ESTADO_EN_CURSO)))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/** «Empezar de cero»: archiva la charla en curso. `archived` es su id, o null
+ *  si no había nada que archivar. Ownership, del llamador. */
+export async function startNewConversation(projectId: string): Promise<ConversationChange> {
+  if (await hayTurnoEnCurso(projectId)) return { ok: false, reason: "busy" };
+  const id = crypto.randomUUID();
+  const movidas = await db
+    .update(schema.projectChatMessages)
+    .set({ conversation: id })
+    .where(enCurso(projectId))
+    .returning({ id: schema.projectChatMessages.id });
+  await trimArchived(projectId);
+  return { ok: true, archived: movidas.length > 0 ? id : null };
+}
+
+/** Volver a una charla archivada: la pone en curso y archiva la que hubiera. */
+export async function reopenConversation(projectId: string, conversation: string): Promise<ConversationChange> {
+  if (await hayTurnoEnCurso(projectId)) return { ok: false, reason: "busy" };
+  const c = schema.projectChatMessages.conversation;
+  const existe = await db
+    .select({ id: schema.projectChatMessages.id })
+    .from(schema.projectChatMessages)
+    .where(and(eq(schema.projectChatMessages.projectId, projectId), eq(c, conversation)))
+    .limit(1);
+  if (existe.length === 0) return { ok: false, reason: "not_found" };
+  const antes = await db
+    .select({ id: schema.projectChatMessages.id })
+    .from(schema.projectChatMessages)
+    .where(enCurso(projectId))
+    .limit(1);
+  const nueva = crypto.randomUUID();
+  // UNA sentencia: la en curso pasa a archivada y la elegida a en curso a la vez.
+  await db
+    .update(schema.projectChatMessages)
+    .set({ conversation: sql`CASE WHEN ${c} IS NULL THEN ${nueva} ELSE NULL END` })
+    .where(and(eq(schema.projectChatMessages.projectId, projectId), sql`(${c} IS NULL OR ${c} = ${conversation})`));
+  await trimArchived(projectId);
+  return { ok: true, archived: antes.length > 0 ? nueva : null };
+}
+
+export interface ArchivedConversation {
+  readonly id: string;
+  /** El primer mensaje del usuario: el título de la charla. */
+  readonly title: string;
+  readonly turns: number;
+  readonly startedAt: number;
+  readonly endedAt: number;
+}
+
+/** Las charlas archivadas, de la más reciente a la más vieja. */
+export async function listArchivedConversations(projectId: string): Promise<ArchivedConversation[]> {
+  const t = schema.projectChatMessages;
+  const rows = await db
+    .select({
+      id: t.conversation,
+      title: sql<string>`(array_agg(${t.userText} ORDER BY ${t.createdAt}))[1]`,
+      turns: sql<number>`count(*)::int`,
+      startedAt: sql<string>`min(${t.createdAt})`,
+      endedAt: sql<string>`max(${t.createdAt})`,
+    })
+    .from(t)
+    .where(and(eq(t.projectId, projectId), sql`${t.conversation} IS NOT NULL`))
+    .groupBy(t.conversation)
+    .orderBy(sql`max(${t.createdAt}) DESC`);
+  const out: ArchivedConversation[] = [];
+  for (const r of rows) {
+    if (typeof r.id !== "string") continue;
+    out.push({
+      id: r.id,
+      title: (r.title ?? "").slice(0, 200),
+      turns: Number(r.turns),
+      startedAt: new Date(r.startedAt).getTime(),
+      endedAt: new Date(r.endedAt).getTime(),
+    });
+  }
+  return out;
+}
+
+/** Se guardan las `MAX_ARCHIVED_CONVERSATIONS` archivadas más recientes. */
+async function trimArchived(projectId: string): Promise<void> {
+  const charlas = await listArchivedConversations(projectId);
+  const sobran = charlas.slice(MAX_ARCHIVED_CONVERSATIONS).map((c) => c.id);
+  if (sobran.length === 0) return;
+  await db
+    .delete(schema.projectChatMessages)
+    .where(
+      and(
+        eq(schema.projectChatMessages.projectId, projectId),
+        inArray(schema.projectChatMessages.conversation, sobran),
+      ),
+    );
+}
+
+
+/** ¿Es este proyecto de este usuario? Las rutas de las charlas y del 👍/👎 lo
+ *  preguntan antes de tocar nada (la misma consulta que `ownsProject` de la
+ *  ruta del chat). */
+export async function isProjectOwner(projectId: string, userId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: schema.projects.id })
+    .from(schema.projects)
+    .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
+    .limit(1);
+  return rows.length > 0;
 }
