@@ -107,6 +107,8 @@ export function crear(dirPaginas: string): Encargo {
       // Puso el horario, pero se coló el código.
       { nombre: "se-colo-el-codigo", datos: { html: conMuseo(`${MUSEO} · de martes a domingo, de 10:00 a 17:30 · código IA50`) } },
       { nombre: "horario-inventado", datos: { html: conMuseo(`${MUSEO} · de martes a domingo, de 10:00 a 19:00`) } },
+      // La web dice 5 €: sin ésta, `nada-inventado` no se veía en rojo nunca (regla 3 del validador).
+      { nombre: "precio-inventado", datos: { html: conMuseo(`${MUSEO} · de martes a domingo, de 10:00 a 17:30 · entrada 6 €`) } },
       { nombre: "desborda", datos: { html: cambiar(solucion, [["</footer>", '<div style="width:900px">x</div></footer>']]) } },
       { nombre: "enlace-roto", datos: { html: cambiar(solucion, [["</footer>", '<a href="/excursiones/">Excursiones</a></footer>']]) } },
     ],
