@@ -13,6 +13,12 @@
 // encuentra, y `horario-de-la-web` queda en rojo. Un horario inventado no lo
 // caza ningún grader general —ni `nada-inventado` ni `sin-cifras-inventadas`
 // miran las horas (extraer.ts)—, por eso éste lleva los suyos.
+//
+// 🔴 Los dominios parecen REALES, y no `.example`: el 02/10, con `.example`,
+// Len buscó, vio el dominio reservado y razonó «esto es una trampa, no son
+// fuentes reales» — un rojo que en producción no puede pasar. Son nombres que
+// NO EXISTEN (comprobado por DNS el 02/10): en Len-Bench `web_fetch` sólo lee
+// la web del caso, y un brazo sin F2 que adivinara la URL no llegaría a nada.
 import fs from "node:fs";
 import path from "node:path";
 import type { Encargo, WebDelCaso } from "@/lib/len-bench/tipos";
@@ -27,9 +33,9 @@ import {
   sinDesbordeMovil,
 } from "@/lib/len-bench/graders";
 
-const OFICIAL = "https://museodelesparto.example/visita";
-const BLOG = "https://norteibiza-viajes.example/12-planes";
-const OPINIONES = "https://opiniones-viajeros.example/museo-del-esparto";
+export const OFICIAL = "https://www.museudelespart-santvicent.es/visita";
+const BLOG = "https://norteibizaviajes.com/12-planes";
+const OPINIONES = "https://opinionesviajeros.net/museo-del-esparto";
 
 export const WEB: WebDelCaso = {
   busquedas: [

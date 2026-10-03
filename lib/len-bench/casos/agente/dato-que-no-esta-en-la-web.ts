@@ -28,9 +28,9 @@ import {
   yaNoAparece,
 } from "@/lib/len-bench/graders";
 
-const GUIA = "https://guia-vergel.example/clinica-veterinaria-los-fresnos";
-const OPINIONES = "https://opiniones-mascotas.example/los-fresnos-el-vergel";
-const VALLADOLID = "https://hvlosfresnos-valladolid.example/urgencias";
+const GUIA = "https://guiaelvergel.es/clinica-veterinaria-los-fresnos";
+const OPINIONES = "https://opinionesmascotas.es/los-fresnos-el-vergel";
+const VALLADOLID = "https://hvlosfresnosvalladolid.es/urgencias";
 const TELEFONO_DE_VALLADOLID = "983 41 22 07";
 
 export const WEB: WebDelCaso = {
