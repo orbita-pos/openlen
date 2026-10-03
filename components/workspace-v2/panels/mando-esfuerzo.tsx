@@ -32,6 +32,7 @@ export function MandoEsfuerzo({
   onChange,
   abierto,
   onAbrir,
+  locked = false,
   t,
 }: {
   esfuerzo: EsfuerzoAgente;
@@ -59,6 +60,10 @@ export function MandoEsfuerzo({
   onChange: (e: EsfuerzoAgente) => void;
   abierto: boolean;
   onAbrir: (v: boolean) => void;
+  /** Len Dynamis elegido (`mode-picker.tsx`): ese modo piensa siempre al
+   *  máximo, así que el mando no elige nada. Se queda a la vista y DICE por qué
+   *  no se abre, en vez de desaparecer. */
+  locked?: boolean;
   /** El traductor del panel. Se pasa en vez de llamar a `useTranslations` aquí
    *  para que este componente no dependa del proveedor de next-intl y su prueba
    *  no tenga que montar uno. */
@@ -84,24 +89,31 @@ export function MandoEsfuerzo({
         type="button"
         ref={refDisparador}
         aria-label={t("composer.effort")}
-        title={t("composer.effortTitle")}
-        aria-expanded={abierto}
+        title={t(locked ? "composer.effortDynamis" : "composer.effortTitle")}
+        aria-expanded={abierto && !locked}
         aria-haspopup="menu"
+        // `aria-disabled` y no `disabled`: un botón deshabilitado no enseña su
+        // `title` en todos los navegadores, y el título es el porqué.
+        aria-disabled={locked || undefined}
         // NO SE DESHABILITA CON EL TURNO CORRIENDO: lo que se elija aquí vale
         // para el SIGUIENTE turno. El que ya salió lleva su nivel fijado desde
         // que se pulsó enviar — es el pin por turno de Claude Code, y cambiar
         // el mando a media respuesta no debe
         // reescribir con qué esfuerzo corrió lo que ya se mandó.
-        onClick={() => onAbrir(!abierto)}
+        onClick={() => {
+          if (!locked) onAbrir(!abierto);
+        }}
         className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition ${
-          abierto || esfuerzo !== "auto"
+          locked
+            ? "fg-faint opacity-40 cursor-default"
+            : abierto || esfuerzo !== "auto"
             ? "bg-[var(--accent-strong)] text-white shadow-coral"
             : "fg-faint hover:fg hover:bg-hover"
         }`}
       >
         <LevelBars size={13} />
       </button>
-      {abierto && (
+      {abierto && !locked && (
         <div
           role="menu"
           aria-label={t("composer.effort")}

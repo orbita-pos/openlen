@@ -93,7 +93,14 @@
     "xhigh": "非常に入念",
     "xhighDesc": "「入念」で解決しなかったとき",
     "max": "最大",
-    "maxDesc": "本当に行き詰まったときに。いちばん遅い"
+    "maxDesc": "本当に行き詰まったときに。いちばん遅い",
+    "mode": "どの Len",
+    "modeTitle": "次のメッセージをどの Len が担当するか選びます",
+    "modeLen": "Len",
+    "modeLenDesc": "ふだん使い：速くて、ほとんどのことに",
+    "modeDynamis": "Len Dynamis",
+    "modeDynamisDesc": "大きな依頼に：一歩ごとに限界まで考えます。時間がかかり、クレジットも多く使います",
+    "effortDynamis": "Len Dynamis は常に限界まで考えます"
   },
   "noChange": {
     "label": "ページに変更はありません"

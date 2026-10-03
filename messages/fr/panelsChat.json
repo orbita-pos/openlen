@@ -93,7 +93,14 @@
     "xhigh": "Très approfondi",
     "xhighDesc": "Quand « Approfondi » n’a pas suffi",
     "max": "Maximum",
-    "maxDesc": "Pour une vraie impasse. Le plus lent"
+    "maxDesc": "Pour une vraie impasse. Le plus lent",
+    "mode": "Quel Len",
+    "modeTitle": "Choisissez quel Len travaille sur votre prochain message",
+    "modeLen": "Len",
+    "modeLenDesc": "Celui de tous les jours : rapide, pour presque tout",
+    "modeDynamis": "Len Dynamis",
+    "modeDynamisDesc": "Pour les gros travaux : réfléchit au maximum avant chaque étape. Plus lent, et consomme plus de crédits",
+    "effortDynamis": "Len Dynamis réfléchit toujours au maximum"
   },
   "noChange": {
     "label": "Rien n'a changé sur la page"

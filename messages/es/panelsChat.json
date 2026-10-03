@@ -93,7 +93,14 @@
     "xhigh": "Muy a fondo",
     "xhighDesc": "Cuando «A fondo» no lo sacó",
     "max": "Máximo",
-    "maxDesc": "Para un atasco de verdad. Es el más lento"
+    "maxDesc": "Para un atasco de verdad. Es el más lento",
+    "mode": "Qué Len",
+    "modeTitle": "Elige qué Len trabaja en tu próximo mensaje",
+    "modeLen": "Len",
+    "modeLenDesc": "El de todos los días: rápido y para casi todo",
+    "modeDynamis": "Len Dynamis",
+    "modeDynamisDesc": "Para encargos grandes: piensa todo lo que puede antes de cada paso. Tarda más y gasta más créditos",
+    "effortDynamis": "Len Dynamis siempre piensa todo lo que puede"
   },
   "noChange": {
     "label": "No cambió nada de la página"

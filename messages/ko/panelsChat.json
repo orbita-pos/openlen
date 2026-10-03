@@ -93,7 +93,14 @@
     "xhigh": "매우 꼼꼼하게",
     "xhighDesc": "‘꼼꼼하게’로 해결되지 않았을 때",
     "max": "최대",
-    "maxDesc": "정말 막혔을 때. 가장 느립니다"
+    "maxDesc": "정말 막혔을 때. 가장 느립니다",
+    "mode": "어떤 Len",
+    "modeTitle": "다음 메시지를 어떤 Len이 맡을지 고르세요",
+    "modeLen": "Len",
+    "modeLenDesc": "매일 쓰는 Len: 빠르고, 거의 모든 일에",
+    "modeDynamis": "Len Dynamis",
+    "modeDynamisDesc": "큰 작업용: 단계마다 최대한 깊이 생각합니다. 더 느리고 크레딧을 더 씁니다",
+    "effortDynamis": "Len Dynamis는 항상 최대한 깊이 생각합니다"
   },
   "noChange": {
     "label": "페이지가 변경되지 않았습니다"

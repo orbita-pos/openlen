@@ -128,3 +128,31 @@ describe("el mando de esfuerzo tiene la forma de Claude Code", () => {
     expect(textos.at(-1)).toContain("composer.effortAutoDesc");
   });
 });
+
+// Len Dynamis piensa siempre al máximo: el mando no elige nada, pero se queda a
+// la vista y dice por qué (`mode-picker.tsx`).
+describe("el mando de esfuerzo con Len Dynamis", () => {
+  it("bloqueado: no abre el menú aunque se pulse, y su título dice por qué", () => {
+    const onAbrir = vi.fn();
+    const host = montar({ locked: true, abierto: true, onAbrir });
+    expect(opciones(host)).toHaveLength(0);
+    const boton = host.querySelector("button[aria-haspopup]") as HTMLButtonElement;
+    expect(boton.getAttribute("title")).toBe("composer.effortDynamis");
+    expect(boton.getAttribute("aria-disabled")).toBe("true");
+    act(() => {
+      boton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onAbrir).not.toHaveBeenCalled();
+  });
+
+  it("BRAZO DE CONTROL: sin bloquear, se abre como siempre", () => {
+    const onAbrir = vi.fn();
+    const host = montar({ abierto: false, onAbrir });
+    const boton = host.querySelector("button[aria-haspopup]") as HTMLButtonElement;
+    expect(boton.getAttribute("aria-disabled")).toBeNull();
+    act(() => {
+      boton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onAbrir).toHaveBeenCalledWith(true);
+  });
+});

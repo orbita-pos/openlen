@@ -49,6 +49,8 @@ import {
 } from "./undo-turn";
 import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "./turno-cerrado";
 import { MandoEsfuerzo } from "./mando-esfuerzo";
+import { ModePicker } from "./mode-picker";
+import type { AgentMode } from "@/lib/agent/dynamis";
 import {
   NIVEL_POR_DEFECTO,
   type EsfuerzoAgente,
@@ -491,6 +493,11 @@ function AIDesignChat({
     "medium",
     "high",
   ]);
+  // QUÉ LEN TRABAJA: Len o Len Dynamis (`lib/agent/dynamis.ts`). Viaja con el
+  // turno como el esfuerzo y NO se guarda (ver `mode-picker.tsx`). El selector
+  // sólo se pinta si el servidor lo ofrece, que es con la terminal encendida.
+  const [mode, setMode] = useState<AgentMode>("len");
+  const [dynamisOffered, setDynamisOffered] = useState(false);
   const [sending, setSending] = useState(false);
   // Agent mode — DEFAULT ON since graduation (alpha ruling 2026-07-08):
   // el Agente OpenLen es el chat. `ol:agent = "0"` is the per-browser
@@ -566,12 +573,14 @@ function AIDesignChat({
             esfuerzo?: EsfuerzoAgente;
             niveles?: readonly NivelEsfuerzo[];
             resuelveA?: NivelEsfuerzo;
+            dynamis?: boolean;
           } | null,
         ) => {
           if (!vivo || !d) return;
           if (d.esfuerzo) setEsfuerzo(d.esfuerzo);
           if (d.niveles?.length) setEsfuerzoNiveles(d.niveles);
           if (d.resuelveA) setEsfuerzoResuelveA(d.resuelveA);
+          setDynamisOffered(d.dynamis === true);
         },
       )
       .catch(() => {});
@@ -1306,6 +1315,9 @@ function AIDesignChat({
               // VEÍA al pulsar enviar, y cambiar el mando a media respuesta no
               // reescribe con qué esfuerzo corrió lo que ya salió.
               esfuerzo,
+              // EL MODO, con el mismo pestillo. Sólo se manda Dynamis: sin el
+              // campo, el turno es de Len y el cuerpo sale como siempre.
+              ...(mode === "dynamis" ? { mode } : {}),
               // LA HORA DEL USUARIO: «hoy» es su día, no el de UTC
               // (plans/len-resultados/diseno.md §7).
               zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -1823,6 +1835,11 @@ function AIDesignChat({
     [
       appendReasoning,
       attachedImage,
+      // El esfuerzo y el modo viajan en el cuerpo: sin ellos aquí, `send`
+      // mandaba los de cuando se creó (el `auto` del arranque, antes de que el
+      // GET trajera lo guardado).
+      esfuerzo,
+      mode,
       onClearScope,
       onLocalUpdate,
       persistTurn,
@@ -2075,6 +2092,10 @@ function AIDesignChat({
             body: JSON.stringify({ esfuerzo: e }),
           }).catch(() => {});
         }}
+        mode={mode}
+        // Sin la terminal en el servidor, Dynamis no existe y no se ofrece; y
+        // el chat clásico (`ai-design`, la vía de escape) no sabe de modos.
+        {...(dynamisOffered && agentModeUI ? { onModeChange: setMode } : {})}
         agentMode={agentModeUI}
       />
       <ReplaceAssetModal
@@ -2534,6 +2555,8 @@ export function Composer({
   esfuerzoNiveles = ["low", "medium", "high"],
   esfuerzoResuelveA = NIVEL_POR_DEFECTO,
   onEsfuerzoChange,
+  mode = "len",
+  onModeChange,
   agentMode = false,
   comentarios = SIN_COMENTARIOS,
   onQuitarComentario,
@@ -2568,6 +2591,11 @@ export function Composer({
   esfuerzoNiveles?: readonly NivelEsfuerzo[];
   esfuerzoResuelveA?: NivelEsfuerzo;
   onEsfuerzoChange?: (e: EsfuerzoAgente) => void;
+  /** QUÉ LEN TRABAJA: Len o Len Dynamis. Sin `onModeChange` el selector no se
+   *  pinta (el servidor no lo ofrece). En Dynamis el mando de esfuerzo se
+   *  bloquea: ese modo piensa siempre al máximo. */
+  mode?: AgentMode;
+  onModeChange?: (m: AgentMode) => void;
   /** Modo Agente. Aqui decia ademas que "esconde el ModelPicker": ese selector
    *  y todo su cableado salieron el 2026-08-28. Sigue existiendo porque cambia
    *  otras cosas de esta barra. */
@@ -2577,6 +2605,7 @@ export function Composer({
   const locale = useLocale();
   const [cancelando, setCancelando] = useState(false);
   const [esfuerzoAbierto, setEsfuerzoAbierto] = useState(false);
+  const [modeOpen, setModeOpen] = useState(false);
   // Con comentarios esperando se puede mandar sin escribir nada más.
   const hayQueMandar = value.trim().length > 0 || comentarios.length > 0;
   return (
@@ -2685,6 +2714,18 @@ export function Composer({
             >
               <ImageIcon size={13} />
             </button>
+            {onModeChange && (
+              <ModePicker
+                mode={mode}
+                onChange={onModeChange}
+                abierto={modeOpen}
+                onAbrir={(v) => {
+                  setModeOpen(v);
+                  if (v) setEsfuerzoAbierto(false);
+                }}
+                t={t}
+              />
+            )}
             {onEsfuerzoChange && (
               <MandoEsfuerzo
                 esfuerzo={esfuerzo}
@@ -2692,7 +2733,11 @@ export function Composer({
                 resuelveA={esfuerzoResuelveA}
                 onChange={onEsfuerzoChange}
                 abierto={esfuerzoAbierto}
-                onAbrir={setEsfuerzoAbierto}
+                onAbrir={(v) => {
+                  setEsfuerzoAbierto(v);
+                  if (v) setModeOpen(false);
+                }}
+                locked={onModeChange !== undefined && mode === "dynamis"}
                 t={t}
               />
             )}

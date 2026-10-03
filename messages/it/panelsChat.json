@@ -93,7 +93,14 @@
     "xhigh": "Molto approfondito",
     "xhighDesc": "Quando «Approfondito» non è bastato",
     "max": "Massimo",
-    "maxDesc": "Per un vero vicolo cieco. Il più lento"
+    "maxDesc": "Per un vero vicolo cieco. Il più lento",
+    "mode": "Quale Len",
+    "modeTitle": "Scegli quale Len lavora al tuo prossimo messaggio",
+    "modeLen": "Len",
+    "modeLenDesc": "Quello di tutti i giorni: veloce, per quasi tutto",
+    "modeDynamis": "Len Dynamis",
+    "modeDynamisDesc": "Per i lavori grandi: pensa il più possibile prima di ogni passo. Più lento e consuma più crediti",
+    "effortDynamis": "Len Dynamis pensa sempre il più possibile"
   },
   "noChange": {
     "label": "Non è cambiato nulla nella pagina"

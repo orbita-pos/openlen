@@ -93,7 +93,14 @@
     "xhigh": "Sehr gründlich",
     "xhighDesc": "Wenn „Gründlich“ es nicht geschafft hat",
     "max": "Maximum",
-    "maxDesc": "Für echte Sackgassen. Am langsamsten"
+    "maxDesc": "Für echte Sackgassen. Am langsamsten",
+    "mode": "Welcher Len",
+    "modeTitle": "Wähle, welcher Len an deiner nächsten Nachricht arbeitet",
+    "modeLen": "Len",
+    "modeLenDesc": "Der für jeden Tag: schnell, für fast alles",
+    "modeDynamis": "Len Dynamis",
+    "modeDynamisDesc": "Für große Aufträge: denkt vor jedem Schritt so gründlich wie möglich. Langsamer und verbraucht mehr Credits",
+    "effortDynamis": "Len Dynamis denkt immer so gründlich wie möglich"
   },
   "noChange": {
     "label": "Auf der Seite hat sich nichts geändert"

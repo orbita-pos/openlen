@@ -93,7 +93,14 @@
     "xhigh": "非常深入",
     "xhighDesc": "「深入」没解决时",
     "max": "最高",
-    "maxDesc": "真正卡住时用。最慢"
+    "maxDesc": "真正卡住时用。最慢",
+    "mode": "哪个 Len",
+    "modeTitle": "选择由哪个 Len 处理你的下一条消息",
+    "modeLen": "Len",
+    "modeLenDesc": "日常使用：快，几乎什么都能做",
+    "modeDynamis": "Len Dynamis",
+    "modeDynamisDesc": "适合大任务：每一步之前都尽全力思考。更慢，也更耗额度",
+    "effortDynamis": "Len Dynamis 始终尽全力思考"
   },
   "noChange": {
     "label": "页面没有任何变化"
