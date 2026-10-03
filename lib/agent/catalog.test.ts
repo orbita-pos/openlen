@@ -201,9 +201,10 @@ describe("buildFunctionDeclarations", () => {
     // Both optional — the tool asks the user for a subdomain when there's no
     // claim, rather than failing schema validation.
     expect(d.parameters.required).toBeUndefined();
-    // The valid idiomas codes are enumerated in the description, generated from
-    // the PUBLISH_LOCALES import (never hardcoded).
-    for (const l of PUBLISH_LOCALES) expect(String(d.description)).toContain(l.code);
+    // The valid idiomas codes are enumerated in the idiomas parameter (F4: the
+    // detail of each parameter lives in it), generated from the PUBLISH_LOCALES
+    // import (never hardcoded).
+    for (const l of PUBLISH_LOCALES) expect(String(d.parameters.properties.idiomas.description)).toContain(l.code);
     // The user-tap gate must be conveyed to the model.
     expect(String(d.description).toLowerCase()).toContain("usuario");
   });
@@ -433,13 +434,16 @@ describe("buildAgentSystemPrompt", () => {
   // prompt: el prompt lo repetía casi palabra por palabra, y en Claude Code lo
   // de cada herramienta va en su descripción.
   it("carries the F2 Task 7 publicar knowledge: always waits for the user's tap", () => {
-    const d = (buildFunctionDeclarations() as { name: string; description: string }[]).find((x) => x.name === "publicar")!.description;
+    const decl = buildFunctionDeclarations().find((x) => x.name === "publicar")!;
+    const d = String(decl.description);
     // The hard rule — the agent never publishes directly; the tap is the gate.
     expect(d).toContain("subdominio");
-    expect(d.toLowerCase()).toContain("tap");
+    expect(d).toContain("NUNCA publica por su cuenta");
+    expect(d).toContain("SÓLO cuando el usuario toca «Publicar»");
     // The agent can add/set languages but never clear them — that's the
     // publish modal's job (the card omits `languages` when the list is empty).
-    expect(d).toContain("QUITAR idiomas");
+    // F4: dicho en el parámetro, que es donde lo lee al rellenarlo.
+    expect(JSON.stringify(decl.parameters)).toContain("QUITAR idiomas");
     expect(buildAgentSystemPrompt()).not.toContain("PUBLICAR (publicar)");
   });
   // Medido, no supuesto: con la redacción anterior DeepSeek reclamaba el
@@ -453,7 +457,8 @@ describe("buildAgentSystemPrompt", () => {
   it("nunca le ofrece al modelo un subdominio de muestra que pueda reclamar", () => {
     const p = buildAgentSystemPrompt();
     const publicar = buildFunctionDeclarations().find((d) => d.name === "publicar");
-    const description = String((publicar as { description?: unknown }).description ?? "");
+    // F4: la descripción y sus parámetros, que es lo que el modelo lee de ella.
+    const description = JSON.stringify(publicar);
     for (const text of [p, description]) {
       expect(text).not.toMatch(/p\.\s?ej\.\s*[a-z0-9-]+\s*\)/i);
       expect(text).not.toContain("mi-negocio");

@@ -170,17 +170,18 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     },
     {
       name: "mirar_pagina",
+      // F4: la forma de DeepSeek, el detalle en los parámetros (MP1–MP10 de
+      // plans/len-agente-2026/notas/f4-tabla-de-reglas.md).
       description:
-        "Pregunta QUÉ HAY en una página renderizada en vez de suponerlo. Úsala para comprobar cómo se ve lo que cambiaste antes de darlo por hecho, y cuando una revisión te señale algo que no te cuadra con lo que ves en el fichero, ANTES de reeditar: una revisión puede equivocarse, y reeditar a ciegas sobre un dato falso deja la página peor. "
-        + 'tipo="medir" lo contesta el navegador y es GRATIS (no gasta créditos): qué color se pinta de verdad detrás de un texto, contrastes, si algo se sale en el móvil, si la página lanza errores. Si no puede determinarlo te lo dirá — eso también es una respuesta, y significa que NO hay hallazgo. '
-        + 'tipo="describir" lo contesta un modelo mirando una captura y CUESTA CRÉDITOS: qué se ve en una zona. Te devuelve una descripción, nunca un veredicto — quien mira sólo tiene píxeles, y desde píxeles no se distingue un marcador intencional de un fallo. Tú tienes el fichero, así que la conclusión es tuya. '
-        + 'pregunta es lenguaje natural. zona (opcional) acota dónde mirar ("el hero", "las tarjetas de propiedades"). No cambia nada de la página.',
+        "Mira una página renderizada en vez de suponer cómo se ve: para comprobar lo que cambiaste y, ANTES de reeditar, algo que te señalen y no cuadre con el fichero. "
+        + 'tipo="medir" lo contesta el navegador, GRATIS: el color que se pinta detrás de un texto, el contraste, lo que se sale en el móvil y los errores de JavaScript. '
+        + 'tipo="describir" lo contesta un modelo que mira una captura y CUESTA CRÉDITOS: describe sin veredicto —desde píxeles no se distingue un marcador puesto a propósito de un fallo— y la conclusión es tuya, que tienes el fichero.',
       parameters: {
         type: "OBJECT",
         properties: {
-          tipo: { type: "STRING" },
-          pregunta: { type: "STRING" },
-          zona: { type: "STRING" },
+          tipo: { type: "STRING", description: '"medir" o "describir".' },
+          pregunta: { type: "STRING", description: "Lo que quieres saber, en lenguaje natural." },
+          zona: { type: "STRING", description: 'Opcional: dónde mirar, p. ej. "el hero" o "las tarjetas de precios".' },
           file_path: FILE_PATH_OPCIONAL,
         },
         required: ["tipo", "pregunta"],
@@ -191,28 +192,31 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     // CARGADA desde el principio: en E, ToolSearch se usó 0 de 1.593 llamadas.
     {
       name: "usar_pagina",
+      // F4: la forma de DeepSeek; cada clave de un paso, en su parámetro
+      // (UP1–UP15 de plans/len-agente-2026/notas/f4-tabla-de-reglas.md).
       description:
-        "Usa la página como un visitante, en un navegador de verdad, para comprobar que lo que construiste FUNCIONA: leer el fichero comprueba el código, no que funcione. "
-        + "Cada llamada es una visita nueva a la página tal como está guardada ahora, sin nada de visitas anteriores; los pasos corren en orden y se para en el primero que no se puede hacer. "
-        + "Cada paso hace UNA cosa: pulsa (el texto que se ve en el botón o el enlace), escribe + en (lo que se teclea, y la etiqueta, el placeholder o el nombre del campo; en una barra, la mueve a ese valor), elige (una opción: de un desplegable, una casilla, un radio o un botón de opciones), recarga (true: vuelve a cargar la página, como quien vuelve más tarde) o lee (un texto de la zona que quieres leer: te devuelve lo que se ve en ese bloque). "
-        + "dentro_de (con pulsa o elige): un texto del bloque donde está el control, cuando hay varios iguales («Agregar» dentro del nombre de su producto). "
-        + "Te devuelve, paso a paso, lo que hizo y lo que cambió —lo que se ve, los campos, lo que guardó el navegador, a dónde mandaba un enlace, qué llevaba un formulario— y los errores de JavaScript: hechos, no un veredicto; la conclusión es tuya. "
-        + "Es gratis y no cambia el fichero. Nada sale de la visita: un formulario no llega al correo del usuario, lo que se guarda en un almacén va a una copia que se tira, y un enlace a otro sitio no se abre (te dice a dónde iba).",
+        "Usa la página como un visitante, en un navegador de verdad, para comprobar que lo que construiste FUNCIONA: te cuenta, paso a paso, lo que pasó, y la conclusión es tuya. "
+        + "Cada llamada es una visita nueva a la página tal como está guardada; los pasos corren en orden, cada uno hace UNA cosa, y se para en el primero que no se puede hacer. "
+        + "Es gratis y nada sale de la visita: un formulario no llega al correo del usuario, lo que se guarda va a una copia que se tira y un enlace a otro sitio no se abre (te dice a dónde iba).",
       parameters: {
         type: "OBJECT",
         properties: {
           pasos: {
             type: "ARRAY",
+            description: "Los pasos, en orden; cada uno lleva una de estas claves.",
             items: {
               type: "OBJECT",
               properties: {
-                pulsa: { type: "STRING" },
-                escribe: { type: "STRING" },
-                en: { type: "STRING" },
-                elige: { type: "STRING" },
-                dentro_de: { type: "STRING" },
-                recarga: { type: "BOOLEAN" },
-                lee: { type: "STRING" },
+                pulsa: { type: "STRING", description: "El texto que se ve en el botón o el enlace." },
+                escribe: { type: "STRING", description: "Lo que se teclea, con en; en una barra, la mueve a ese valor." },
+                en: { type: "STRING", description: "La etiqueta, el placeholder o el nombre del campo." },
+                elige: { type: "STRING", description: "Una opción de un desplegable, una casilla, un radio o un botón de opciones." },
+                dentro_de: {
+                  type: "STRING",
+                  description: "Con pulsa o elige: un texto del bloque donde está el control, cuando hay varios iguales («Agregar» dentro del nombre de su producto).",
+                },
+                recarga: { type: "BOOLEAN", description: "true: vuelve a cargar la página, como quien vuelve más tarde." },
+                lee: { type: "STRING", description: "Un texto de la zona que quieres leer: devuelve lo que se ve en ese bloque." },
               },
             },
           },
@@ -223,25 +227,34 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     },
     {
       name: "elegir_foto",
+      // F4: EF1–EF10 de plans/len-agente-2026/notas/f4-tabla-de-reglas.md. Lo
+      // de «sin resultados» y «pivotea» lo dice la nota de la respuesta.
       description:
-        `Busca fotos REALES del catálogo curado "Imágenes by OpenLen" (mismo picker del tab Contenido) — úsala antes de poner una foto nueva con Edit, y pon la url que devuelve como <img src>: es de images.openlen.com, el catálogo propio, y no cuenta como imagen externa. Nunca inventes una URL de imagen. Devuelve hasta 6 candidatas con url/alt/estilo; si no hay resultados, responde ok:true con fotos:[] y una nota — no es un error. El catálogo es acotado: prueba a lo sumo otro término o quita el filtro de estilo, pero si un par de intentos no dan con la vibra, NO existe en el catálogo — pivotea (el ambiente con el CSS de la página, el copy con Edit) o dilo con honestidad; no encadenes búsquedas sin fin. Una caja de color donde iría una foto suele ser un marcador a propósito, no un fallo. busqueda (opcional) es texto libre contra el tema/alt de la foto (español o inglés, sin distinguir acentos/mayúsculas). estilo (opcional) es un string libre — valores que existen en el catálogo: ${OPENLEN_IMAGE_STYLES.join(", ")}; un valor que no exista simplemente no encuentra nada, no falla.`,
+        "Busca fotos REALES en el catálogo propio de OpenLen y devuelve hasta 6, con su url: ponla tal cual como <img src>, que es de images.openlen.com y no cuenta como imagen externa. Nunca inventes una URL de imagen. El catálogo es acotado: si un par de búsquedas no dan con la foto, NO la tiene, y no encadenes más.",
       parameters: {
         type: "OBJECT",
         properties: {
-          busqueda: { type: "STRING" },
-          estilo: { type: "STRING" },
+          busqueda: { type: "STRING", description: "Opcional. Texto libre contra el tema y el alt de las fotos, en español o en inglés." },
+          estilo: {
+            type: "STRING",
+            description: `Opcional. Valores que existen: ${OPENLEN_IMAGE_STYLES.join(", ")}; otro valor no encuentra nada.`,
+          },
         },
       },
     },
     {
       name: "editar_imagen",
+      // F4: EI1–EI6 de plans/len-agente-2026/notas/f4-tabla-de-reglas.md.
       description:
-        "Edita con IA una imagen que YA está en el sitio: quitar un objeto, cambiar el fondo, extender una escena, limpiar un producto. imagen_url DEBE ser la URL exacta de una imagen presente en alguno de los ficheros del sitio (nunca una URL externa ni inventada — si no está, la herramienta la rechaza). instruccion describe el cambio en lenguaje natural. Cuesta créditos y solo se permite UNA edición de imagen por turno. Para AÑADIR una foto nueva (no editar una que ya existe) usa elegir_foto, no esta herramienta. Devuelve la nueva URL y deja el cambio hecho en cada fichero donde estaba la imagen, diciéndote cuáles: léelos con Read antes de volver a editarlos.",
+        "Edita con IA una imagen que YA está en el sitio: quitar un objeto, cambiar el fondo, extender la escena, limpiar un producto; para AÑADIR una foto nueva, elegir_foto. Cuesta créditos y se permite UNA por turno. Deja la imagen nueva en cada fichero donde estaba y te dice cuáles: léelos antes de volver a editarlos.",
       parameters: {
         type: "OBJECT",
         properties: {
-          imagen_url: { type: "STRING" },
-          instruccion: { type: "STRING" },
+          imagen_url: {
+            type: "STRING",
+            description: "La URL exacta de una imagen que está en un fichero del sitio; nunca una externa ni inventada (se rechaza).",
+          },
+          instruccion: { type: "STRING", description: "El cambio, en lenguaje natural." },
         },
         required: ["imagen_url", "instruccion"],
       },
@@ -252,13 +265,22 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     // quedó, y desde H3 (2026-09-25) es un fichero: /memoria/dueno.md.
     {
       name: "publicar",
+      // F4: PU1–PU8 de plans/len-agente-2026/notas/f4-tabla-de-reglas.md.
       description:
-        `Prepara la publicación de la página en <subdominio>.${PUBLISHED_BASE_HOST}. NUNCA publica por su cuenta: SIEMPRE espera el tap del usuario en la tarjeta de confirmación — tú solo dejas listo el subdominio y los idiomas, y le dices al usuario que toque «Publicar» para confirmar (no afirmes que ya está publicada). subdominio (opcional): SOLO puede salir de dos sitios — el que el proyecto ya tiene reclamado, o uno que el usuario haya escrito él mismo. NUNCA te lo inventes ni lo deduzcas del título del negocio: la dirección es la identidad pública del usuario y elegirla por él es reclamar un nombre que no pidió. Si el proyecto ya tiene uno y no pasas otro, se re-publica sobre el actual; si pasas uno nuevo, se reclama ese. Si el proyecto NO tiene subdominio y el usuario no te dio uno, llama SIN el argumento: la herramienta te dirá que le preguntes. idiomas (opcional): códigos de los idiomas a los que traducir la página al publicar (Speak Every Language); valores válidos: ${PUBLISH_LOCALE_CODES.join(", ")} (máx 9; los inválidos se ignoran). Si no los pasas, la página conserva los suyos; para QUITAR idiomas se usa el modal de Publicar, no esta herramienta.`,
+        `Prepara la publicación de la página en <subdominio>.${PUBLISHED_BASE_HOST}: deja listos el subdominio y los idiomas en una tarjeta, y NUNCA publica por su cuenta: se publica SÓLO cuando el usuario toca «Publicar». Díselo así y no afirmes que ya está publicada.`,
       parameters: {
         type: "OBJECT",
         properties: {
-          subdominio: { type: "STRING" },
-          idiomas: { type: "ARRAY", items: { type: "STRING" } },
+          subdominio: {
+            type: "STRING",
+            description:
+              "Opcional. SÓLO el que el proyecto ya tiene o uno que el usuario escribió él mismo; NUNCA te lo inventes ni lo saques del nombre del negocio. Sin él se re-publica en el que ya tiene; si no tiene ninguno, llama sin él y la herramienta te dirá que se lo preguntes.",
+          },
+          idiomas: {
+            type: "ARRAY",
+            items: { type: "STRING" },
+            description: `Opcional. Códigos de los idiomas a los que traducir la página al publicar: ${PUBLISH_LOCALE_CODES.join(", ")} (máx. 9). Sin ellos conserva los suyos; QUITAR idiomas se hace en el modal de Publicar.`,
+          },
         },
       },
     },
@@ -291,12 +313,18 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     },
     {
       name: "revertir_ultimo_cambio",
+      // F4: RV1–RV7 de plans/len-agente-2026/notas/f4-tabla-de-reglas.md. El
+      // choque y el «no hay nada que deshacer» los dice su error.
       description:
-        "Deshace TU último cambio guardado en una página. Es para cuando el usuario dice «deshaz eso», «vuelve a como estaba» o «no me gusta, quítalo»: NO intentes deshacer editando hacia atrás a mano —reescribir lo que había de memoria es adivinar, y lo que se pierde no vuelve—. file_path (opcional): el fichero de la página; sin él, el último que escribiste en este turno, o si no escribiste ninguno, la página que el usuario tiene abierta. Si el usuario editó la página a mano después de tu cambio, lo suyo se conserva y sólo se deshace lo tuyo; si su edición toca lo mismo que tú, no se toca nada y te lo dice: entonces pregúntale con preguntar qué prefiere. Después, léela con Read antes de volver a editarla. Si no hay ningún cambio anterior te lo dice, y entonces díselo al usuario en vez de inventarte que lo deshiciste.",
+        "Deshace TU último cambio guardado en una página y conserva lo que el usuario editó a mano después; si lo suyo toca lo mismo que lo tuyo, no deshace nada y te lo dice. «Deshaz eso» o «vuelve a como estaba» es esto, NUNCA editar hacia atrás de memoria. Después, lee la página antes de volver a editarla.",
       parameters: {
         type: "OBJECT",
         properties: {
-          file_path: FILE_PATH_OPCIONAL,
+          file_path: {
+            type: "STRING",
+            description:
+              "La página, p. ej. /index.html. Sin él, la última que escribiste en este turno o, si no escribiste ninguna, la que el usuario tiene abierta.",
+          },
         },
       },
     },
@@ -400,7 +428,7 @@ TONO:
 
 CÓMO TRABAJAR:
 - Lo pedido es el entregable: no lo estreches, no lo ensanches y no lo transformes en silencio. Cambia SÓLO lo que te piden, con el Edit más pequeño que lo hace; lo que queda claramente fuera —un botón, un texto, un dato, una sección que nadie mencionó— no se toca. Termina todo lo pedido, no solo lo fácil, y nada a medias en lo tuyo: lo que añades o cambias en este turno funciona entero. Si una parte está bloqueada, haz lo demás, deja fuera lo bloqueado en vez de ponerlo a medias —un botón que no lleva a ningún sitio es un botón roto— y di qué dejaste fuera y por qué. Lo que descubras por el camino y no te pidieron —un fallo que ya estaba, una función que vendría bien, algo que harías mejor— no lo haces. Solo tocas algo de fuera cuando sin eso lo pedido no funciona, y lo dices. <ejemplo>usuario: «pon el botón de arriba en verde» — agente: cambia el color de ese botón y nada más; los demás botones, los textos y la paleta de la página no se tocan.</ejemplo>
-- Lo que añades a una página que ya existe se escribe como ella —con sus colores, su letra y sus clases—, igual que el código nuevo se escribe como el que lo rodea. No la conviertas a la GUÍA DE DISEÑO de ${RUTA_MANUAL} ni la reescribas entera con Write para mejorarla: eso es un rediseño, y se hace sólo si el usuario lo pide. Y aun entonces, sus textos se quedan tal cual, palabra por palabra, salvo los que te pida cambiar.
+- Lo que añades a una página que ya existe se escribe como ella —con sus colores, su letra y sus clases—, igual que el código nuevo se escribe como el que lo rodea. No la conviertas a la GUÍA DE DISEÑO de ${RUTA_MANUAL} ni la reescribas entera con Write para mejorarla: eso es un rediseño, y se hace sólo si el usuario lo pide. Y aun entonces, sus textos se quedan tal cual, palabra por palabra, salvo los que te pida cambiar. Nada de emojis en los ficheros si el usuario no los pide.
 - Si cambias la página, pruébala antes de darlo por hecho. Lo que HACE —un botón, un formulario, un cálculo, algo que se guarda o que cambia al pulsar—, úsalo con usar_pagina: el camino que pidió el usuario y algún caso raro (un dato vacío o equivocado, recargar la página). Lo que SE VE —una sección, una página nueva—, míralo con mirar_pagina tipo="medir", que es gratis y dice si algo se sale en el móvil. Y fíjate en que lo demás de la página siga como estaba. Leer el fichero o buscar con Grep comprueba el código, no que funcione; lo que no pudiste probar no lo das por bueno.
 - No pides permiso para lo que ya te pidieron: una ambigüedad corriente la resuelves tú, como un colega cuidadoso, y preguntas sólo cuando las lecturas posibles llevan a trabajos muy distintos. Si dos instrucciones chocan, manda la más reciente y explícita; si no caben juntas, elige la lectura razonable y dilo al cerrar.
 - Si te surge una duda a mitad del trabajo, haz primero todo lo que no depende de la respuesta; para lo que sí depende, di tu suposición o haz tu pregunta en el momento justo. Las preguntas que bloquean —parar sin entregar nada hasta que conteste— son sólo para cuando seguir con cualquier suposición sería inseguro o dejaría el trabajo inservible si fallas.

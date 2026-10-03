@@ -15,44 +15,22 @@
  * Tipos en MAYÚSCULAS, como el resto del catálogo: el puente los baja.
  */
 
-const EL_SITIO =
-  "- This website's files are its pages: /index.html is the home page and /<slug>/index.html is each other page.";
+// F4 (plans/len-agente-2026): la FORMA de DeepSeek (`packages/fs/tool-fs`
+// @639ed01: «Read a UTF-8 text file and return line-numbered content.»): la
+// herramienta en una o dos frases y el detalle en sus parámetros. Lo que se
+// quitó lo dice otro sitio —el prompt, o el error en el momento en que importa
+// («Read it before changing it»)—: regla por regla en
+// plans/len-agente-2026/notas/f4-tabla-de-reglas.md (R, E, W, G, GL).
 
-const READ = `Returns one file of this website as numbered lines: each line starts with its number (counting from 1) and a tab, followed by the text of that line. Any file of the site can be read directly with it.
+const READ = `Reads a file of this website and returns it with numbered lines. A file longer than about 25,000 tokens comes back in part, with a note saying how to read the rest.`;
 
-${EL_SITIO}
-- Give file_path as an absolute path, such as /index.html. When the user names a path, take it as right and read it.
-- With no offset or limit you get the whole file, up to about 25,000 tokens; a longer one comes back in part, with a note saying how to read the rest. offset is the first line to return and limit how many lines.
-- If only one part of the file matters for what you are doing, ask for just that part with offset and limit: on a long page it saves a lot.
-- Asking for a file that does not exist just returns an error, so you can try a path you are unsure of.
-- Folders cannot be read; Glob tells you which files exist.
-- An empty file comes back as a warning instead of contents.
-- Do NOT Read a file again to check an Edit or a Write you just made: a change that did not apply returns an error, and the saved state of the file is tracked for you.`;
+const EDIT = `Changes a file of this website by replacing exact text. Read the file in this conversation first: an Edit to a file you have not read is refused.`;
 
-const EDIT = `Changes one exact piece of text in a file of this website: old_string is what is there now, new_string is what should be there instead.
+const WRITE = `Creates a file of this website or replaces it whole; writing /<slug>/index.html creates that page. Keep it for a page the request needs and for full rewrites, and change part of a page with Edit. A file that already exists has to be read in this conversation first.`;
 
-- You MUST Read the file at least once in this conversation before editing it. Editing a file you have not read is refused.
-- old_string must match the file character for character, spaces and tabs included. When you copy it from what Read showed you, leave out the number and the tab at the start of each line: they only mark the line and are not part of the file. NEVER put any of that number or tab in old_string or new_string.
-- old_string has to point at a single place. If the same text appears more than once the edit is refused: add a little of the surrounding text until it is unique, or set replace_all to true to change every copy (for example a phone number repeated in the header and the footer, or a name to rename all over the page).
-- ALWAYS change the pages that already exist with Edit. NEVER create a new file unless the request really needs a new page.
-- No emojis in the files unless the user asks for them.`;
+const GREP = `Searches the text of this website's files with a regular expression: JavaScript syntax, with ripgrep's option names. By default it lists the files that match; output_mode "content" returns the matching lines.`;
 
-const WRITE = `Saves a whole file of this website with the content you give it: a new page, or a page rewritten from top to bottom.
-
-- If the path already exists, that file is replaced. You MUST have read it in this conversation first; replacing a file you have not read is refused.
-- To change part of a page that exists, ALWAYS use Edit instead, which sends only what changes. Keep Write for new pages and for full rewrites.
-${EL_SITIO} Writing a new /<slug>/index.html creates that page.
-- No emojis in the files unless the user asks for them.`;
-
-const GREP = `Searches the text of this website's files with a regular expression. The expression is JavaScript's, with its full syntax; the options keep ripgrep's names.
-
-- ALWAYS use Grep when you need to find something across the site: a phone number, a price, a class name, every link to a page.
-- Example patterns: "wa\\.me/\\d+", "precio.*€".
-- output_mode decides what comes back: "files_with_matches" (the default) lists the files that contain a match, "content" the matching lines themselves, "count" how many matches each file has.
-- Limit which files are searched with glob (e.g. "*.html", "menu/*") or type (e.g. "html").
-- A match stays within one line unless multiline is true, which you need for something like \`<form[\\s\\S]*?</form>\`.`;
-
-const GLOB = `Lists the files of this website whose path matches a glob pattern, the most recently changed first: "**/*.html" gives every page, "*/index.html" every page except the home page. At most 100 paths come back; if there are more, the result says so. Use it to find out which pages and files exist.`;
+const GLOB = `Lists the files of this website whose path matches a glob pattern, most recently changed first, up to 100.`;
 
 export const DECLARACIONES_DE_FICHEROS: readonly Record<string, unknown>[] = [
   {
@@ -62,14 +40,8 @@ export const DECLARACIONES_DE_FICHEROS: readonly Record<string, unknown>[] = [
       type: "OBJECT",
       properties: {
         file_path: { type: "STRING", description: "Absolute path of the file, e.g. /index.html or /menu/index.html" },
-        offset: {
-          type: "NUMBER",
-          description: "Line to start from. Use it only when the file is too long to read in one go.",
-        },
-        limit: {
-          type: "NUMBER",
-          description: "How many lines to return. Use it only when the file is too long to read in one go.",
-        },
+        offset: { type: "NUMBER", description: "First line to return, counting from 1. To read only part of a long file." },
+        limit: { type: "NUMBER", description: "How many lines to return. To read only part of a long file." },
       },
       required: ["file_path"],
     },
@@ -81,10 +53,14 @@ export const DECLARACIONES_DE_FICHEROS: readonly Record<string, unknown>[] = [
       type: "OBJECT",
       properties: {
         file_path: { type: "STRING", description: "Absolute path of the file to change" },
-        old_string: { type: "STRING", description: "The exact text that is in the file now" },
+        old_string: {
+          type: "STRING",
+          description:
+            "The text that is in the file now, character for character, spaces included, and never with the line number and tab that Read puts before each line. It must appear only once in the file, unless replace_all is true.",
+        },
         new_string: {
           type: "STRING",
-          description: "The text that takes its place (it must differ from old_string)",
+          description: "The text that takes its place (it must differ from old_string; empty deletes old_string)",
         },
         replace_all: { type: "BOOLEAN", description: "Change every copy of old_string instead of exactly one (default false)" },
       },
@@ -177,11 +153,11 @@ export const DECLARACIONES_DE_FICHEROS: readonly Record<string, unknown>[] = [
     parameters: {
       type: "OBJECT",
       properties: {
-        pattern: { type: "STRING", description: "The glob pattern the file paths have to match" },
+        pattern: { type: "STRING", description: 'The glob pattern the paths have to match, e.g. "**/*.html" for every page' },
         path: {
           type: "STRING",
           description:
-            'Folder to search in. IMPORTANT: to search the whole site, leave the field out entirely; NEVER send "undefined" or "null" as a value. If you give it, it has to be a folder that exists.',
+            'Folder to search in. Leave it out to search the whole site, and never send "undefined" or "null"; if you give one, it has to exist.',
         },
       },
       required: ["pattern"],

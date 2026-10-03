@@ -53,16 +53,34 @@ describe("las cinco herramientas de ficheros, como Claude Code", () => {
 
   // Los textos son NUESTROS desde el 2026-09-27 (el repo es público): lo que se
   // exige es que digan las reglas de uso, no una redacción concreta.
+  // F4 (plans/len-agente-2026): la forma de DeepSeek, la herramienta en una o
+  // dos frases y el detalle en sus parámetros. Lo que se exige es que la regla
+  // esté en lo que el modelo lee de la herramienta, sea la descripción o un
+  // parámetro (tabla regla por regla: notas/f4-tabla-de-reglas.md).
   it("las descripciones dicen las reglas de uso de cada herramienta", () => {
-    const edit = porNombre("Edit").description;
-    expect(edit).toContain("You MUST Read the file");
-    expect(edit).toContain("leave out the number and the tab at the start of each line");
-    expect(edit).toContain("replace_all");
-    expect(porNombre("Read").description).toContain("each line starts with its number (counting from 1) and a tab");
-    expect(porNombre("Read").description).toContain("offset is the first line to return");
-    expect(porNombre("Write").description).toContain("use Edit");
-    expect(porNombre("Glob").description).toContain("the most recently changed first");
+    const lee = (n: string) => JSON.stringify(porNombre(n));
+    // E1: leer antes, con su peso, en la descripción misma.
+    expect(porNombre("Edit").description).toContain("Read the file in this conversation first");
+    expect(porNombre("Edit").description).toContain("is refused");
+    // E2–E4: carácter a carácter, NUNCA el número de línea, y una sola vez o replace_all.
+    expect(lee("Edit")).toContain("character for character");
+    expect(lee("Edit")).toContain("never with the line number and tab that Read puts before each line");
+    expect(lee("Edit")).toContain("unless replace_all is true");
+    expect(porNombre("Read").description).toContain("numbered lines");
+    expect(lee("Read")).toContain("First line to return, counting from 1");
+    // W2–W3: leer antes de reemplazar, y lo parcial con Edit.
+    expect(porNombre("Write").description).toContain("change part of a page with Edit");
+    expect(porNombre("Write").description).toContain("has to be read in this conversation first");
+    expect(porNombre("Glob").description).toContain("most recently changed first");
+    expect(lee("Glob")).toContain("never send");
     expect(porNombre("Grep").description).toContain("JavaScript");
+  });
+
+  it("F4 · cada descripción cabe en tres frases, como las de DeepSeek", () => {
+    for (const d of DECLARACIONES_DE_FICHEROS) {
+      const frases = String(d.description).split(/(?<=[.:;])\s+(?=[A-Z])/).length;
+      expect(frases, String(d.name)).toBeLessThanOrEqual(3);
+    }
   });
 
   it("no prometen lo que aquí no existe: imágenes, PDF, cuadernos, shell ni ripgrep", () => {

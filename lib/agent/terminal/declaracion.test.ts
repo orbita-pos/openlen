@@ -2,7 +2,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "@/lib/agent/catalog";
-import { NOMBRE_BASH, terminalEncendida } from "./declaracion";
+import { NOMBRE_BASH, PARA_LA_TERMINAL, terminalEncendida } from "./declaracion";
 
 const CON = { OPENLEN_TERMINAL: "1" };
 const SIN = {};
@@ -26,6 +26,14 @@ describe("la palanca de la terminal", () => {
     expect(textos(CON)).not.toMatch(/\bGrep\b|\bGlob\b/);
     expect(buildAgentSystemPrompt(CON)).toMatch(/\bbash\b/);
     expect(textos(SIN)).toMatch(/\bGrep\b/);
+  });
+
+  // F4: tres sustituciones se quedaron sin su frase cuando cambiaron los textos
+  // (una desde `31a94a0e`) y nada lo avisó. Una que no encuentra nada es una
+  // palanca a ninguna parte.
+  it("cada sustitución para la terminal encuentra su frase en lo que lee el modelo sin ella", () => {
+    const sinElla = [buildAgentSystemPrompt(SIN), ...buildFunctionDeclarations(SIN).map((d) => JSON.stringify(d))].join("\n");
+    expect(PARA_LA_TERMINAL.map(([de]) => de).filter((de) => !sinElla.includes(de))).toEqual([]);
   });
 
   it("sin ella, todo sale como antes: ni bash ni un prompt distinto", () => {
