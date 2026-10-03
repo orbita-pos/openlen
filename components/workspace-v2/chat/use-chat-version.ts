@@ -1,11 +1,11 @@
 "use client";
 
-// QUÉ CHAT SE MONTA: el de hoy o el nuevo (plans/new-chat/). El nuevo vive
-// detrás de este interruptor hasta que cubra el inventario entero
-// (`plans/new-chat/inventory.md`); entonces pasa a ser el de por defecto, el
-// viejo se queda una versión detrás del interruptor y después se borra.
+// QUÉ CHAT SE MONTA: el nuevo o el de antes (plans/new-chat/). Desde el 03/10 el
+// nuevo es el de POR DEFECTO (decisión de Jesús, tras verlo en el taller con un
+// turno de verdad). El viejo se queda una versión detrás de `?chat=old` por si
+// acaso, y después se borra junto con este interruptor.
 //
-// `?chat=new` lo enciende y `?chat=old` lo apaga, y se recuerda en este
+// `?chat=old` vuelve al de antes y `?chat=new` al nuevo; se recuerda en este
 // navegador (`ol:chat`) para no tener que repetirlo en cada URL. Mismo patrón
 // que `ol:agent` (el chat clásico como vía de escape).
 
@@ -13,8 +13,8 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 
 export type ChatVersion = "old" | "new";
 
-/** El chat de por defecto mientras el nuevo no cubra el inventario. */
-export const DEFAULT_CHAT_VERSION: ChatVersion = "old";
+/** El chat de por defecto: el nuevo desde el 03/10. */
+export const DEFAULT_CHAT_VERSION: ChatVersion = "new";
 
 const STORAGE_KEY = "ol:chat";
 

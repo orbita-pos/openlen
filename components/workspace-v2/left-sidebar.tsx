@@ -304,9 +304,9 @@ export function LeftSidebar({
   // After a click-to-place pick on mobile the panel overlays the canvas —
   // collapse it so the user can aim the placement click.
   const isMobileLayout = useIsMobile();
-  // EL CHAT NUEVO (plans/new-chat/), detrás de `?chat=new`: mismo sitio y
-  // mismas props que el de hoy. Lleva su propia cabecera y un panel más ancho
-  // que se estira desde su borde, como en el mock.
+  // EL CHAT NUEVO (plans/new-chat/), el de por defecto desde el 03/10; el de
+  // antes, con `?chat=old`. Mismo sitio y mismas props. Lleva su propia
+  // cabecera y un panel más ancho que se estira desde su borde, como en el mock.
   const chatVersion = useChatVersion();
   const newChat = chatVersion === "new" && mode === "chat" && entryMode !== "paste" && entryMode !== "ai";
   // EL CHAT FLOTANDO O MINIMIZADO: sigue montado aquí (no se mueve en el árbol,

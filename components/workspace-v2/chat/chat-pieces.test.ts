@@ -15,6 +15,8 @@ describe("qué chat se monta", () => {
     expect(readChatVersion("?chat=old", "new")).toBe("old");
     expect(readChatVersion("", "new")).toBe("new");
     expect(readChatVersion("?chat=raro", null)).toBe(DEFAULT_CHAT_VERSION);
+    // Desde el 03/10 el nuevo es el de por defecto; el viejo, sólo con ?chat=old.
+    expect(readChatVersion("", null)).toBe("new");
   });
 
   it("el ancho no se sale de sus topes", () => {
