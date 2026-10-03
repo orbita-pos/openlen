@@ -25,6 +25,7 @@ import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contract-min";
 import { bloqueDeLibrerias } from "@/lib/librerias";
+import { paraSoloLaTerminal, soloTerminal } from "@/lib/agent/terminal/declaracion";
 import {
   CARPETA_DOCS,
   CIERRE_DEL_ADJUNTO,
@@ -187,9 +188,11 @@ export function partirElManual(entero: string = manualSinPartir()): ManualPartid
   };
 }
 
-/** El contenido de /AGENTS.md: lo que Read devuelve y lo que se adjunta. */
-export function buildManualDeLaPlataforma(): string {
-  return partirElManual().agents;
+/** El contenido de /AGENTS.md: lo que Read devuelve y lo que se adjunta. En el
+ *  brazo «sólo terminal» (F4) no nombra Read, Edit ni Write, que no tiene. */
+export function buildManualDeLaPlataforma(env: Readonly<Record<string, string | undefined>> = process.env): string {
+  const { agents } = partirElManual();
+  return soloTerminal(env) ? paraSoloLaTerminal(agents) : agents;
 }
 
 /** Los ficheros de /.openlen/docs, por su ruta. */
