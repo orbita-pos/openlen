@@ -112,7 +112,7 @@ export const es = {
     },
     tarjeta: {
       antetitulo: "Len 2.0 · septiembre 2026",
-      titulo: "Quince herramientas, un solo desarrollador",
+      titulo: "Diecinueve herramientas, un solo desarrollador",
       texto:
         "Trabaja tu sitio como un programador trabaja su código: cada página es un fichero que lee, busca y cambia con precisión. Y antes de entregar, usa la página como la usaría un visitante: pulsa, escribe, recarga y mira qué pasó.",
       como: "Cómo trabaja →",
@@ -125,7 +125,7 @@ export const es = {
         leer: {
           titulo: "Leer y buscar",
           texto:
-            "Cada página es un fichero: lo lee, busca en todo el sitio el dato que va a cambiar y lee las páginas de internet que le das.",
+            "Cada página es un fichero: lo lee y busca en todo el sitio el dato que va a cambiar. Y lo que está publicado en otra parte —un horario, un precio— lo busca y lo lee en internet.",
         },
         editar: {
           titulo: "Escribir",
@@ -137,10 +137,14 @@ export const es = {
           texto:
             "Enciende el chat, que es un módulo real de OpenLen y no un formulario pintado. Lo que guarda tu página —un catálogo, unas reseñas, unos pedidos— vive en ficheros de datos que sobreviven a recargar.",
         },
+        resultados: {
+          titulo: "Tus resultados",
+          texto:
+            "Te dice cuántas visitas tuvo tu página y de dónde llegan, lee los formularios y los mensajes que te dejan y te deja preparada la respuesta: la mandas tú.",
+        },
         contigo: {
           titulo: "Contigo",
-          texto:
-            "Te pregunta el dato que le falta en vez de inventarlo, ordena el trabajo en una lista de tareas y publica.",
+          texto: "Te pregunta el dato que le falta en vez de inventarlo, y publica cuando tú lo confirmas.",
         },
       },
     },

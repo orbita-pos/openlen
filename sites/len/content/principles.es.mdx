@@ -17,9 +17,9 @@
 
 **Por qué.** Reducir el encargo por tu cuenta es una decisión del usuario, no del agente.
 
-**Cómo lo comprobamos.** Con una guarda que corre en cada turno: si Len declaró tareas y sólo hay evidencia de menos cambios reales —y evidencia es que los bytes de la página se movieran, no un «ok» a secas—, se le nombran las que faltan y no se le deja cerrar enumerándolas todas como hechas. <Fuente ruta="lib/agent/loop.ts" /> La sujetan pruebas que no gastan un modelo, y varios casos de la batería que releen el documento final en vez de creerse el relato del cierre. <Fuente ruta="lib/agent/evals/cases.ts" />
+**Cómo lo comprobamos.** Midiéndolo, no con una guarda: Len ya no lleva una lista de tareas que el servidor coteje con lo que de verdad cambió (se retiró para que lea menos; si la medición dice que hacía falta, vuelve). Lo vigila Len-Bench, que relee el sitio final en vez de creerse el relato del cierre y, en los encargos de «en todas partes», busca el cambio página por página. <Fuente ruta="lib/len-bench/graders.ts" />
 
-Y hay una medida: el caso que pide el mismo cambio en cuatro páginas se cerró con <Cifra valor="2 PASS" commit="a364731e">a coste normal, cuando antes no había pasado ni una vez</Cifra>. No está cerrado —una corrida falló con la forma vieja y las seis siguientes salieron nulas—, así que la estabilidad sigue sin medir. Por eso este principio está en medición y no en verde.
+Y hay una medida: el caso que pide el mismo cambio en cuatro páginas se cerró con <Cifra valor="2 PASS" commit="a364731e">a coste normal, cuando antes no había pasado ni una vez</Cifra>. No está cerrado —una corrida falló con la forma vieja y las seis siguientes salieron nulas—, así que la estabilidad sigue sin medir. Aquella medida fue con la lista de tareas; sin ella, se vuelve a medir. Por eso este principio está en medición y no en verde.
 </section>
 
 <section className="principio">

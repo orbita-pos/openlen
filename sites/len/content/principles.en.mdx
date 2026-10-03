@@ -17,9 +17,9 @@
 
 **Why.** Cutting the job down is the user’s decision, not the agent’s.
 
-**How we check it.** With a guard that runs on every turn: if Len declared tasks and there is evidence of fewer real changes —and evidence means the page’s bytes actually moved, not a bare “ok”— it is told which ones are missing, and it is not allowed to close by listing them all as done. <Fuente ruta="lib/agent/loop.ts" /> It is held in place by tests that spend no model at all, and by several battery cases that re-read the final document instead of believing the closing account. <Fuente ruta="lib/agent/evals/cases.ts" />
+**How we check it.** By measuring it, not with a guard: Len no longer keeps a task list for the server to check against what actually changed (it was removed so it reads less; if the measurement says it was needed, it comes back). Len-Bench watches it: it re-reads the final site instead of believing the closing account and, on “everywhere” requests, looks for the change page by page. <Fuente ruta="lib/len-bench/graders.ts" />
 
-And there is a measurement: the case that asks for the same change on four pages closed with <Cifra valor="2 PASS" commit="a364731e">at normal cost, where before it had never passed once</Cifra>. It isn’t closed —one run failed with the old shape and the six after it came back null— so stability is still unmeasured. That is why this principle is being measured rather than green.
+And there is a measurement: the case that asks for the same change on four pages closed with <Cifra valor="2 PASS" commit="a364731e">at normal cost, where before it had never passed once</Cifra>. It isn’t closed —one run failed with the old shape and the six after it came back null— so stability is still unmeasured. That measurement was taken with the task list; without it, it is measured again. That is why this principle is being measured rather than green.
 </section>
 
 <section className="principio">
