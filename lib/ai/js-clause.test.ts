@@ -182,11 +182,11 @@ describe("cómo se le enseña a guardar en un almacén", () => {
   // Sin esto la guarda podría pasar en vacío: medido el 2026-09-18, sólo el
   // prompt del Agente trae la cláusula (Crear y Chat usan el contrato mínimo).
   it("el Agente la lleva — si no, las de abajo no comprueban nada", () => {
-    expect(instruccionesDeLen()).toContain("GUARDAR TAMBIÉN");
+    expect(instruccionesDeLen()).toContain("SAVING TOO");
   });
   it.each(superficies)("%s: la ruta va sin subdominio", (_, prompt) => {
     if (!prompt.includes("GUARDAR TAMBIÉN")) return;
-    expect(prompt).toContain("/api/d/<almacén>");
+    expect(prompt).toContain("/api/d/<store>");
     expect(prompt).not.toContain("/api/d/<sub>/");
   });
   it.each(superficies)("%s: en `propio` el carrito va entero, un POST por cambio", (_, prompt) => {

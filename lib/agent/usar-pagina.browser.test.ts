@@ -39,11 +39,11 @@ describe("usar_pagina — la barra que no mueve el precio", () => {
     const pasos: PasoDeUso[] = [{ escribe: "3", en: "Metros" }, { lee: "Total" }];
     const rota = await visitar(calculadora(false), pasos);
     const bien = await visitar(calculadora(true), pasos);
-    expect(rota).toContain("moví la barra «Metros» a «3»");
-    expect(rota).toContain("no cambió nada");
-    expect(rota).toContain("se lee: «Total: $ 76.000");
+    expect(rota).toContain("I moved the slider «Metros» to «3»");
+    expect(rota).toMatch(/nothing (else )?changed/);
+    expect(rota).toContain("it reads: «Total: $ 76.000");
     expect(bien).toContain("«Total: $ 76.000» → «Total: $ 114.000»");
-    expect(bien).not.toContain("no cambió nada");
+    expect(bien).not.toMatch(/nothing (else )?changed/);
   }, 90_000);
 });
 
@@ -60,15 +60,15 @@ describe("usar_pagina — el clic que nadie escucha", () => {
   it("🔴 sin oyente lo dice; con oyente que pinta, dice el cambio y no la nota", async () => {
     const muerto = await visitar(boton("nada"), [{ pulsa: "Aplicar" }]);
     const vivo = await visitar(boton("pinta"), [{ pulsa: "Aplicar" }]);
-    expect(muerto).toContain("no tiene nada detrás");
+    expect(muerto).toContain("there is nothing behind it");
     expect(vivo).toContain("«Sin aplicar» → «Aplicado»");
-    expect(vivo).not.toContain("no tiene nada detrás");
+    expect(vivo).not.toContain("there is nothing behind it");
   }, 90_000);
 
   it("🔴 NO acusa en falso: si alguien escucha pero no pinta nada, dice que no cambió, sin la nota", async () => {
     const informe = await visitar(boton("calla"), [{ pulsa: "Aplicar" }]);
-    expect(informe).toContain("no cambió nada");
-    expect(informe).not.toContain("no tiene nada detrás");
+    expect(informe).toContain("nothing changed");
+    expect(informe).not.toContain("there is nothing behind it");
   }, 90_000);
 
   it("la delegación también cuenta: el oyente en document escucha al botón", async () => {
@@ -76,7 +76,7 @@ describe("usar_pagina — el clic que nadie escucha", () => {
       <p id="msg">0</p><button class="sumar">Sumar</button>
       <script>document.addEventListener("click", function (e) { if (e.target.closest(".sumar")) console.log("x"); });</script>`);
     const informe = await visitar(html, [{ pulsa: "Sumar" }]);
-    expect(informe).not.toContain("no tiene nada detrás");
+    expect(informe).not.toContain("there is nothing behind it");
   }, 90_000);
 });
 
@@ -94,11 +94,11 @@ describe("usar_pagina — lo que cambia solo", () => {
   it("🔴 el contador que se mueve solo sale marcado; lo que movió el clic, no", async () => {
     const muerto = await visitar(contador(false), [{ pulsa: "Abrir" }]);
     const vivo = await visitar(contador(true), [{ pulsa: "Abrir" }]);
-    expect(muerto).toContain("también cambia solo");
-    expect(muerto).toContain("no tiene nada detrás");
+    expect(muerto).toContain("also changes by itself");
+    expect(muerto).toContain("there is nothing behind it");
     expect(vivo).toContain("«Cerrado» → «Abierto»");
     const lineaDelClic = vivo.split("\n").find((l) => l.includes("«Cerrado» → «Abierto»")) ?? "";
-    expect(lineaDelClic).not.toContain("cambia solo");
+    expect(lineaDelClic).not.toContain("changes by itself");
   }, 90_000);
 });
 
@@ -111,10 +111,10 @@ describe("usar_pagina — nada sale de la visita", () => {
     const pasos: PasoDeUso[] = [{ escribe: "Ana", en: "Nombre" }, { pulsa: "Enviar" }];
     const normal = await visitar(form(false), pasos);
     const cancelado = await visitar(form(true), pasos);
-    expect(normal).toContain("envió el formulario con: nombre=«Ana»");
-    expect(normal).toContain("no se mandan");
-    expect(normal).not.toContain("CANCELÓ");
-    expect(cancelado).toContain("CANCELÓ el envío");
+    expect(normal).toContain("sent the form with: nombre=«Ana»");
+    expect(normal).toContain("forms aren't sent");
+    expect(normal).not.toContain("CANCELED");
+    expect(cancelado).toContain("CANCELED the form submission");
   }, 90_000);
 
   it("un enlace a WhatsApp no se abre y dice a dónde iba; la visita sigue", async () => {
@@ -123,7 +123,7 @@ describe("usar_pagina — nada sale de la visita", () => {
       <p id="p">Uno</p><button id="b">Siguiente</button>
       <script>document.getElementById("b").addEventListener("click", function () { document.getElementById("p").textContent = "Dos"; });</script>`);
     const informe = await visitar(html, [{ pulsa: "Pedir por WhatsApp" }, { pulsa: "Siguiente" }]);
-    expect(informe).toContain("mandaba a «https://wa.me/5215512345678?text=Hola quiero pedir» (no se abrió)");
+    expect(informe).toContain("it was sending to «https://wa.me/5215512345678?text=Hola quiero pedir» (not opened)");
     expect(informe).toContain("«Uno» → «Dos»");
   }, 90_000);
 
@@ -132,7 +132,7 @@ describe("usar_pagina — nada sale de la visita", () => {
       <button id="b">Pedir</button>
       <script>document.getElementById("b").addEventListener("click", function () { location.href = "https://wa.me/5215500000000?text=pedido"; });</script>`);
     const informe = await visitar(html, [{ pulsa: "Pedir" }]);
-    expect(informe).toContain("mandaba a «https://wa.me/5215500000000?text=pedido» (no se abrió)");
+    expect(informe).toContain("it was sending to «https://wa.me/5215500000000?text=pedido» (not opened)");
   }, 90_000);
 });
 
@@ -151,8 +151,8 @@ describe("usar_pagina — lo que se recuerda al volver", () => {
     const pasos: PasoDeUso[] = [{ pulsa: "Agregar" }, { recarga: true }];
     const guarda = await visitar(carrito(true), pasos);
     const olvida = await visitar(carrito(false), pasos);
-    expect(guarda).toContain("guardó en el navegador «n» = «1»");
-    expect(guarda).toContain("tras recargar, la página se ve igual");
+    expect(guarda).toContain("saved in the browser «n» = «1»");
+    expect(guarda).toContain("after reloading, the page looks the same");
     expect(olvida).toContain("«1 en el carrito» → «Carrito vacío»");
   }, 90_000);
 });
@@ -167,8 +167,8 @@ describe("usar_pagina — un control que no es único o no existe no se pulsa al
   it("🔴 dos «Agregar» se nombran y no se pulsa ninguno; con dentro_de, el suyo", async () => {
     const ambiguo = await visitar(tienda, [{ pulsa: "Agregar" }, { lee: "Pediste" }]);
     const elegido = await visitar(tienda, [{ pulsa: "Agregar", dentro_de: "Vela de cera" }]);
-    expect(ambiguo).toContain("hay 2 controles que dicen «Agregar»");
-    expect(ambiguo).toContain("El paso 2 no se hizo");
+    expect(ambiguo).toContain("there are 2 controls that say «Agregar»");
+    expect(ambiguo).toContain("Step 2 wasn't done");
     expect(elegido).toContain("«Nada» → «Pediste vela»");
   }, 90_000);
 
@@ -181,16 +181,16 @@ describe("usar_pagina — un control que no es único o no existe no se pulsa al
       <section id="visitanos"><p>Visítanos</p></section>`);
     const conOtros = await visitar(html, [{ pulsa: "WhatsApp" }]);
     const solo = await visitar(marco(`<a href="https://wa.me/5215511111111">WhatsApp</a>`), [{ pulsa: "WhatsApp" }]);
-    expect(conOtros).toContain("mandaba a «https://wa.me/5215511111111»");
-    expect(conOtros).toContain("otros controles también dicen «WhatsApp» y no los pulsé: «Agenda por WhatsApp →»");
-    expect(solo).not.toContain("otros controles");
+    expect(conOtros).toContain("it was sending to «https://wa.me/5215511111111»");
+    expect(conOtros).toContain("other controls also say «WhatsApp» and I didn't press them: «Agenda por WhatsApp →»");
+    expect(solo).not.toContain("other controls");
     const roto = await visitar(html, [{ pulsa: "Agenda por WhatsApp →" }]);
-    expect(roto).toContain("es un enlace a «#visitanos»");
+    expect(roto).toContain("it is a link to «#visitanos»");
   }, 90_000);
 
   it("uno que no existe se dice con lo que sí hay", async () => {
     const informe = await visitar(tienda, [{ pulsa: "Comprar ahora" }]);
-    expect(informe).toContain("no hay ningún control visible que diga «Comprar ahora»");
+    expect(informe).toContain("there is no visible control that says «Comprar ahora»");
     expect(informe).toContain("«Agregar»");
   }, 90_000);
 });
@@ -261,7 +261,7 @@ describe("usar_pagina — elegir", () => {
     const pasos: PasoDeUso[] = [{ elige: "Nogal" }, { elige: "Grande" }];
     const vivo = await visitar(pagina(true), pasos);
     const muerto = await visitar(pagina(false), pasos);
-    expect(vivo).toContain("elegí «Nogal» en el desplegable «Acabado");
+    expect(vivo).toContain("I chose «Nogal» in the dropdown «Acabado");
     expect(vivo).toContain("«$ 100» → «$ 150»");
     expect(vivo).toContain("«$ 150» → «$ 300»");
     expect(muerto).not.toContain("«$ 100» → «$ 150»");
@@ -282,6 +282,6 @@ describe("usar_pagina — un almacén de la página va al sustituto, no a la bas
     const informe = await visitar(html, [{ pulsa: "Guardar" }]);
     expect(informe).toContain("POST /api/d/notas");
     expect(informe).toContain("«Sin guardar» → «Guardado»");
-    expect(informe).toContain("se tira al terminar");
+    expect(informe).toContain("thrown away at the end");
   }, 90_000);
 });

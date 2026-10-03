@@ -372,7 +372,7 @@ describe("activar_modulo", () => {
     const { deps, store } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "comments" });
     assert.equal(out.response.ok, false);
-    assert.ok(String(out.response.error).includes("desconocido"));
+    assert.ok(String(out.response.error).includes("unknown"));
     // Y no toca nada: un rechazo que además escribiera sería peor que un throw.
     assert.equal(store.data.settings, undefined);
   });
@@ -391,8 +391,8 @@ describe("activar_modulo", () => {
       const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
       assert.equal(out.response.ok, true);
       assert.equal(out.response.ya_en_efecto_para_visitantes, false);
-      assert.match(String(out.response.aviso), /vuelva a publicar/);
-      assert.match(String(out.response.aviso), /no lo verán/);
+      assert.match(String(out.response.aviso), /publish(es)? again/);
+      assert.match(String(out.response.aviso), /won't see it/);
     });
 
     // APAGAR TIENE EFECTO YA; ENCENDER NECESITA PUBLICAR. No es una simetría
@@ -414,7 +414,7 @@ describe("activar_modulo", () => {
       assert.equal(out.response.ya_en_efecto_para_visitantes, true);
       assert.doesNotMatch(String(out.response.aviso), /lo seguirán viendo/);
       // Y el aviso le prohíbe a Len la frase vieja, que es la que se le pega.
-      assert.match(String(out.response.aviso), /se retira sola/);
+      assert.match(String(out.response.aviso), /removes itself/);
     });
 
     it("🔴 pero el aviso NO se calla la release vieja: ahí la burbuja se queda", async () => {
@@ -429,14 +429,14 @@ describe("activar_modulo", () => {
       // A la frase que lo DISTINGUE, no a «vuelva a publicar» a secas: eso
       // casaría también con el aviso viejo, el que pedía publicar para poder
       // apagar. Reparo de la revisión del 2026-09-17.
-      assert.match(String(out.response.aviso), /se publicó hace tiempo/);
+      assert.match(String(out.response.aviso), /published a long time ago/);
     });
 
     it("🔴 nunca publicada: aparecerá cuando la publique", async () => {
       const { deps } = makeDeps({ subdomain: null, publishedAt: null });
       const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
       assert.equal(out.response.ya_en_efecto_para_visitantes, false);
-      assert.match(String(out.response.aviso), /cuando la publique/);
+      assert.match(String(out.response.aviso), /when they publish it/);
     });
 
     it("nunca publicada y APAGANDO: nadie lo ve ni lo veía, no hay nada que avisar", async () => {
@@ -486,7 +486,7 @@ describe("el estado del proyecto (el que va en el contexto)", () => {
   it("🔴 `leer_estado` ya no existe: el despachador no la conoce", async () => {
     const { deps } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "leer_estado", { incluir_documento: true });
-    assert.equal(out.response.error, "herramienta desconocida");
+    assert.equal(out.response.error, "unknown tool");
   });
   // ⚰️ Aquí vivía su gemela: «el bloque negocio viaja en cada leer_estado
   // cuando hay perfil real». Se fue con el perfil el 2026-08-31: el ESTADO no
@@ -582,7 +582,7 @@ describe("mirar_pagina", () => {
       tipo: "describir", pregunta: "¿?",
     });
     assert.equal(tercera.response.ok, true);
-    assert.match(String(tercera.response.nota), /demasiadas miradas/i);
+    assert.match(String(tercera.response.nota), /too many looks/i);
   });
 
   // Y los dos topes son INDEPENDIENTES: gastar el de la cara no puede dejar al
@@ -618,7 +618,7 @@ describe("mirar_pagina", () => {
       tipo: "medir", pregunta: "¿?",
     });
     assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /no está disponible/i);
+    assert.match(String(out.response.error), /isn't available/i);
   });
 
   // 🔴 «No se pudo mirar» NO puede leerse como «está bien». Es exactamente el
@@ -631,7 +631,7 @@ describe("mirar_pagina", () => {
       tipo: "medir", pregunta: "¿?",
     });
     assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /no lo tomes como que está bien/i);
+    assert.match(String(out.response.error), /don't take it as meaning it's fine/i);
   });
 });
 
@@ -656,7 +656,7 @@ describe("usar_pagina", () => {
       pasos: [{ pulsa: "Agregar", lee: "Total" }],
     });
     assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /cada paso hace UNA cosa/);
+    assert.match(String(out.response.error), /each step does ONE thing/);
     assert.equal(visitas.length, 0);
   });
 
@@ -694,7 +694,7 @@ describe("usar_pagina", () => {
     const { deps } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "usar_pagina", { pasos: [{ pulsa: "Agregar" }] });
     assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /no pudiste probarlo/);
+    assert.match(String(out.response.error), /you couldn't test it/);
   });
 
   it("si la visita revienta, no la da por buena ni por mala", async () => {
@@ -702,7 +702,7 @@ describe("usar_pagina", () => {
     const roto = { ...deps, usarPagina: async () => { throw new Error("chromium no arrancó"); } };
     const out = await runAgentTool(makeSession(), roto, "usar_pagina", { pasos: [{ pulsa: "Agregar" }] });
     assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /No lo tomes como que funciona ni como que no/);
+    assert.match(String(out.response.error), /Don't take it as meaning it works or that it doesn't/);
   });
 });
 
@@ -797,7 +797,7 @@ describe("elegir_foto", () => {
     }
     assert.equal(last!.response.ok, true);
     assert.deepEqual(last!.response.fotos, []);
-    assert.match(String(last!.response.nota), /demasiadas|deja de buscar/i);
+    assert.match(String(last!.response.nota), /too many|stop searching/i);
   });
 
   it("a malformed manifest comes back as an empty list, not a throw", async () => {
@@ -887,7 +887,7 @@ describe("editar_imagen", () => {
       instruccion: "otra edición",
     });
     assert.equal(second.response.ok, false);
-    assert.ok(String(second.response.error).includes("turno"));
+    assert.ok(String(second.response.error).includes("turn"));
     // The cap fires before any fetch/edit/upload.
     assert.equal(store.fetches.length, fetchesAfterFirst);
     assert.equal(store.imageEdits.length, 1);
@@ -967,7 +967,7 @@ describe("publicar", () => {
     assert.equal(store.saved.length, 0);
     // The message must carry the actual rule, not just "invalid" — the model
     // needs it to explain the shape rule AND suggest a corrected name.
-    assert.ok(String(out.response.error).includes("minúsculas"));
+    assert.ok(String(out.response.error).includes("lowercase"));
   });
 
   it("a reserved subdominio (cuenta) → ok:false BEFORE any confirm card, nothing saved", async () => {
@@ -977,7 +977,7 @@ describe("publicar", () => {
     assert.equal(out.confirm, undefined);
     assert.equal(out.action, undefined);
     assert.equal(store.saved.length, 0);
-    assert.ok(String(out.response.error).toLowerCase().includes("reservad"));
+    assert.ok(String(out.response.error).toLowerCase().includes("reserved"));
   });
 
   it("no claim AND no subdominio → ok:false telling the model to ask the user, no confirm, nothing saved", async () => {
@@ -985,7 +985,7 @@ describe("publicar", () => {
     const out = await runAgentTool(makeSession(), deps, "publicar", {});
     assert.equal(out.response.ok, false);
     assert.equal(out.confirm, undefined);
-    assert.ok(String(out.response.error).toLowerCase().includes("subdomin"));
+    assert.ok(String(out.response.error).toLowerCase().includes("subdomain"), String(out.response.error));
     assert.equal(store.saved.length, 0);
   });
 
@@ -1021,7 +1021,7 @@ describe("publicar", () => {
     assert.equal(segunda.confirm, undefined, "construyó la tarjeta de confirmación igual");
     assert.equal(segunda.action, undefined);
     assert.equal(store.saved.length, 0);
-    assert.match(String(segunda.response.error), /invent/i);
+    assert.match(String(segunda.response.error), /made (that name )?up/i);
   });
 
   // 🔴 Y EL CASO QUE DE VERDAD PASA: SE LO INVENTA A LA PRIMERA.
@@ -1041,7 +1041,7 @@ describe("publicar", () => {
     assert.equal(out.response.ok, false, "se coló un subdominio inventado");
     assert.equal(out.confirm, undefined, "construyó la tarjeta igual");
     assert.equal(store.saved.length, 0);
-    assert.match(String(out.response.error), /no ha dicho|invent/i);
+    assert.match(String(out.response.error), /never said|made (that name )?up/i);
   });
 
   it("pero el que SÍ dijo pasa, aunque lo escribiera con espacios", async () => {
@@ -1212,7 +1212,7 @@ describe("guardarPreferencia — alcance de PERSONA (el DEFECTO)", () => {
     const out = await guardarPreferencia(makeSession(), deps, {
       preferencia: "Háblame siempre de tú",
     });
-    assert.match(String(out.response.nota), /TODAS/);
+    assert.match(String(out.response.nota), /ALL/);
   });
 
   it("un alcance desconocido cae al DEFECTO (persona), no al proyecto", async () => {
@@ -1234,7 +1234,7 @@ describe("guardarPreferencia — alcance de PERSONA (el DEFECTO)", () => {
       preferencia: "Otra preferencia mas",
     });
     assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /llena/);
+    assert.match(String(out.response.error), /full/);
     assert.equal(store.userBrief, null);
   });
 });
@@ -1244,7 +1244,7 @@ describe("runAgentTool", () => {
     const { deps } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "no_existe", {});
     assert.equal(out.response.ok, false);
-    assert.equal(out.response.error, "herramienta desconocida");
+    assert.equal(out.response.error, "unknown tool");
   });
 });
 
@@ -1451,7 +1451,7 @@ describe("publicar sin subdominio ya no da órdenes de comportamiento", () => {
     for (let i = 0; i < 5; i++) {
       const out = await runAgentTool(session, deps, "publicar", { subdominio: "tacos-el-guero" });
       assert.equal(out.response.ok, false, `la llamada ${i + 1} pasó`);
-      assert.match(String(out.response.error), /te lo has inventado/);
+      assert.match(String(out.response.error), /you made that name up/);
       assert.equal(out.confirm, undefined);
     }
   });
@@ -1546,7 +1546,7 @@ describe("revertir_ultimo_cambio", () => {
     const session = makeSession();
     const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
     assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /no hay/i);
+    assert.match(String(out.response.error), /there is no|nothing to/i);
   });
 
   it("🔴 deshacer en una subpágina no toca la Home", async () => {
@@ -1634,7 +1634,7 @@ describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después
     assert.equal(out.response.ok, true, String(out.response.error ?? ""));
     assert.ok(store.data.html.includes("Los mejores de Monterrey."), "se llevó la edición del dueño");
     assert.ok(!store.data.html.includes("Tacos de Len"), "no deshizo lo de Len");
-    assert.match(String(out.response.conservado), /lo que el usuario editó a mano/);
+    assert.match(String(out.response.conservado), /what the user edited by hand/);
   });
 
   it("🔴 C11b · con la versión del dueño encima: tampoco se deshace SU edición", async () => {
@@ -1708,7 +1708,7 @@ describe("H12-a · un conflicto al guardar que se repite no se arregla reintenta
     const { deps } = makeDeps();
     const out = await editarConLen(makeSession(), conDisputa(deps), "Los mejores del barrio.", "Vitalvet");
     assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /vuelve a intentarlo/);
+    assert.match(String(out.response.error), /try again/);
     // Con UN choque el turno sigue: el bucle no corta.
     assert.equal(out.guardarSinSalida, undefined);
   });
@@ -1721,22 +1721,22 @@ describe("H12-a · un conflicto al guardar que se repite no se arregla reintenta
     const segunda = await editarConLen(session, d, "Los mejores del barrio.", "Vitalvet Clínica");
     assert.equal(segunda.response.ok, false);
     const error = String(segunda.response.error);
-    assert.doesNotMatch(error, /vuelve a intentarlo/);
-    assert.match(error, /reintentar no lo arregla/);
-    assert.match(error, /2 intentos seguidos/);
-    assert.match(error, /ni releer la página, ni cambiar de herramienta/);
+    assert.doesNotMatch(error, /try again/);
+    assert.match(error, /retrying doesn't fix it/);
+    assert.match(error, /2 attempts in a row/);
+    assert.match(error, /not rereading the page, not switching tools/);
     // 🔴 Y LO QUE LEE EL MODELO dice lo mismo: el texto de Edit va tal cual por
     // `tool_result`, así que corregir sólo `error` le seguiría diciendo al
     // modelo «vuelve a intentarlo».
-    assert.match(String(segunda.response.tool_result), /reintentar no lo arregla/);
-    assert.doesNotMatch(String(segunda.response.tool_result), /vuelve a intentarlo/);
+    assert.match(String(segunda.response.tool_result), /retrying doesn't fix it/);
+    assert.doesNotMatch(String(segunda.response.tool_result), /try again/);
     // 🔴 LA MITAD QUE CORTA: el bucle cierra el turno por este campo.
     assert.equal(segunda.guardarSinSalida, true, "el segundo choque no le dice al bucle que cierre");
     // Y NO AFIRMA UNA CAUSA QUE NO CONOCE.
     assert.doesNotMatch(error, /otra escritura (est[aá]|que est[aá]) cambiando/);
-    assert.match(error, /no se pudo guardar/);
-    assert.match(error, /otra pestaña/);
-    assert.match(error, /fallo nuestro/);
+    assert.match(error, /it couldn't be saved/);
+    assert.match(error, /another tab/);
+    assert.match(error, /a fault of ours/);
   });
 
   it("BRAZO DE CONTROL: un guardado bueno entre medias pone la cuenta a cero", async () => {
@@ -1746,7 +1746,7 @@ describe("H12-a · un conflicto al guardar que se repite no se arregla reintenta
     const buena = await editarConLen(session, deps, "Los mejores del barrio.", "Vitalvet");
     assert.equal(buena.response.ok, true, String(buena.response.tool_result));
     const otra = await editarConLen(session, conDisputa(deps), "Vitalvet", "Vitalvet 24h");
-    assert.match(String(otra.response.error), /vuelve a intentarlo/);
+    assert.match(String(otra.response.error), /try again/);
   });
 });
 
@@ -1838,11 +1838,11 @@ describe("el aviso de pivotar cuenta vacías SEGUIDAS", () => {
     const session = makeSession();
 
     const primera = await runAgentTool(session, deps, "elegir_foto", NADA);
-    assert.ok(String(primera.response.nota).includes("UNA vez más"));
+    assert.ok(String(primera.response.nota).includes("ONE more time"));
 
     const segunda = await runAgentTool(session, deps, "elegir_foto", NADA);
-    assert.ok(String(segunda.response.nota).includes("acotado"));
-    assert.ok(String(segunda.response.nota).includes("degradado"));
+    assert.ok(String(segunda.response.nota).includes("limited"));
+    assert.ok(String(segunda.response.nota).includes("gradient"));
   });
 
   it("una que SÍ encuentra reinicia la cuenta", async () => {
@@ -1861,7 +1861,7 @@ describe("el aviso de pivotar cuenta vacías SEGUIDAS", () => {
 
     // Por tanto la siguiente vacía vuelve a ser la PRIMERA: consejo suave.
     const siguiente = await runAgentTool(session, deps, "elegir_foto", NADA);
-    assert.ok(String(siguiente.response.nota).includes("UNA vez más"));
+    assert.ok(String(siguiente.response.nota).includes("ONE more time"));
   });
 
   // EL CASO QUE BAJAR EL TECHO A 3 HABRÍA ROTO.

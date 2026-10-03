@@ -90,37 +90,37 @@ describe("ninguna superficie manda gusto nuestro", () => {
   it("Len: sus colores en variables de :root, con SUS nombres, y el oscuro con el interruptor que elija", () => {
     const p = instruccionesDeLen();
     // Lo que el Tema sí necesita: los colores en variables.
-    expect(p, "sin var() el color se repite a mano y el tema no se puede cambiar").toContain("usada con `var()`");
-    expect(p).toContain("con los nombres que tú elijas");
+    expect(p, "sin var() el color se repite a mano y el tema no se puede cambiar").toContain("used with `var()`");
+    expect(p).toContain("with names of your choosing");
     // …y cómo las encuentra, que es contrato de NUESTRA API, no gusto.
-    expect(p).toContain("las encuentran por cómo las usa la página");
+    expect(p).toContain("they find them by how the page uses them");
     // El interruptor oscuro, cualquiera sobre <html>; la media query sola no.
-    expect(p).toContain("bajo una clase o un atributo de `<html>`");
-    expect(p).toContain("`prefers-color-scheme` no lo puede encender");
+    expect(p).toContain("under a class or an attribute of `<html>`");
+    expect(p).toContain("`prefers-color-scheme` is one it can't turn on");
     // Lo que ya no recibe.
-    expect(p).not.toContain("vocabulario obligatorio");
-    expect(p).not.toContain("el prefijo `--ol-`");
+    expect(p).not.toContain("required vocabulary");
+    expect(p).not.toContain("the `--ol-` prefix");
     expect(p).not.toContain(':root[data-ol-mode="dark"]');
     expect(p).not.toContain("--ol-");
   });
 
   it("Len: los <iframe> sobreviven todos, y su script va donde él quiera", () => {
     const p = instruccionesDeLen();
-    expect(p).toContain("Los `<iframe>` que escribes sobreviven a todo");
+    expect(p).toContain("The `<iframe>`s you write survive everything");
     // Existían porque el editor borraba el iframe y el <script> anidado al
     // retocar a mano; ya no (`el-editor-no-borra-el-codigo.browser.test.ts`).
     expect(p).not.toContain("Spotify");
-    expect(p).not.toContain("al final del body");
+    expect(p).not.toContain("at the end of the body");
     // El orden que sí importa: la librería antes que su código.
-    expect(p).toContain("Van en el <head>, antes de tu propio <script>");
+    expect(p).toContain("They go in the <head>, before your own <script>");
   });
 
   it("CONTRA-PRUEBA: Crear y el Chat las siguen recibiendo hasta medir Crear", () => {
     for (const p of [generateSystemMessage({}), aiDesignSystemMessage()]) {
       expect(p).toContain("Spotify, Calendly");
-      expect(p).toContain("vocabulario obligatorio");
+      expect(p).toContain("required vocabulary");
     }
-    expect(generateSystemMessage({})).toContain("Tu propio <script> va al final del body");
+    expect(generateSystemMessage({})).toContain("Your own <script> goes at the end of the body");
   });
 
   // NINGÚN PROMPT OFRECE UN MECANISMO RETIRADO COMO SI SIGUIERA VIVO.
@@ -184,7 +184,7 @@ describe("ninguna superficie manda gusto nuestro", () => {
   // peor que el punto de partida.
   it.each(PROMPTS)("%s sí ofrece el JavaScript del modelo", (name, getPrompt) => {
     const p = getPrompt().replace(/\s+/g, " ");
-    expect(p).toMatch(/SURVIVES publication|sobrevive a la publicación|sobrevive al guardar/i);
+    expect(p).toMatch(/SURVIVES publication|sobrevive a la publicación|sobrevive al guardar|survives saving/i);
     // «Usa `addEventListener`, no `onclick`» existía porque el editor borraba
     // los `on*` al retocar a mano. Desde el 2026-09-29 no los borra
     // (lib/publish/el-on-del-modelo.test.ts), así que Len ya no la recibe: una
@@ -272,8 +272,8 @@ describe("el contrato mínimo alcanza a las tres superficies", () => {
 
   it.each(SUPERFICIES)("%s manda el contrato MÍNIMO por defecto", (_n, getPrompt) => {
     const p = getPrompt();
-    // La cabecera del mínimo, en español.
-    expect(p).toContain("LO QUE LA PUBLICACIÓN IMPONE");
+    // La cabecera del mínimo, en inglés desde la traducción (2026-10-02).
+    expect(p).toContain("WHAT PUBLISHING REQUIRES");
     // Y NO la del completo, que es lo que se estaba mandando.
     expect(p).not.toContain("OUTPUT FORMAT — strict rules");
   });
@@ -310,7 +310,7 @@ describe("el contrato mínimo alcanza a las tres superficies", () => {
     const p = generateSystemMessage({});
     expect(p).toContain('class="max-w-full h-auto"');
     // La meta sigue estando: el mecanismo la acompaña, no la sustituye.
-    expect(p).toContain("Legible y usable desde 360 px de ancho");
+    expect(p).toContain("Readable and usable from 360 px wide");
   });
 
   // EL MÍNIMO ADELGAZA DE VERDAD. Sin esta cuenta, la palanca podría estar
@@ -363,8 +363,8 @@ describe("el contrato mínimo alcanza a las tres superficies", () => {
  * mirase al Agente.
  */
 describe("el contrato dicho para cada superficie", () => {
-  const DOCUMENTO_ENTERO = "El primer carácter de tu respuesta es";
-  const EL_ENLACE_CREA = "y esa página se crea";
+  const DOCUMENTO_ENTERO = "The first character of your response is";
+  const EL_ENLACE_CREA = "and that page gets created";
 
   // 1. La respuesta del Agente son llamadas a herramientas más prosa para el
   //    usuario. El contrato le decía que empezara por `<` y acabara en
@@ -393,7 +393,7 @@ describe("el contrato dicho para cada superficie", () => {
 
   it("y a las otras se les dice lo que SÍ pasa: la portada con un 200", () => {
     for (const p of [aiDesignSystemMessage()]) {
-      expect(p).toContain("NO crea esa página");
+      expect(p).toContain("does NOT create that page");
     }
   });
 
@@ -439,9 +439,9 @@ describe("el contrato dicho para cada superficie", () => {
   // su prompt de sistema, en castellano.
   it("el Agente pide las llamadas independientes en paralelo, como Claude Code", () => {
     const p = instruccionesDeLen();
-    expect(p).toContain("Puedes llamar a varias herramientas en una sola respuesta");
-    expect(p).toContain("haz todas las llamadas independientes en paralelo");
-    expect(p).toContain("NO las llames en paralelo");
+    expect(p).toContain("A single response can carry several tool calls");
+    expect(p).toContain("send them together in that response");
+    expect(p).toContain("they DON'T go together");
   });
 
   // SE MOVIÓ, NO SE PERDIÓ (2026-09-29, paso 6 de 2.5). La frase medida salió
@@ -469,31 +469,31 @@ describe("el contrato dicho para cada superficie", () => {
   //    "obedecer" sería duplicar el script y la hoja que ya estaban.
   it("las superficies que EDITAN no reciben la orden de construir el <head>", () => {
     for (const p of [instruccionesDeLen(), aiDesignSystemMessage()]) {
-      expect(p).not.toContain("• Tailwind por CDN:");
-      expect(p).not.toContain("• Tu CSS propio va en un");
+      expect(p).not.toContain("• Tailwind via CDN:");
+      expect(p).not.toContain("• Your own CSS goes in a");
       // Y lo que SÍ reciben: dónde viven esas tres cosas, sin ordenar crearlas.
-      expect(p).toContain("El documento que edites ya las trae");
+      expect(p).toContain("The document you edit already has them");
     }
   });
 
   it("CONTRA-PRUEBA: crear SÍ las recibe — ahí construye el <head>", () => {
     for (const p of [generateSystemMessage({})]) {
-      expect(p).toContain("• Tailwind por CDN:");
-      expect(p).toContain("• Tu CSS propio va en un");
+      expect(p).toContain("• Tailwind via CDN:");
+      expect(p).toContain("• Your own CSS goes in a");
     }
   });
 
   it("el bloque oscuro se le ORDENA a quien crea y se le CONDICIONA a quien edita", () => {
     for (const p of [generateSystemMessage({})]) {
-      expect(p).toContain("Emite también `:root[data-ol-mode=");
+      expect(p).toContain("Also emit `:root[data-ol-mode=");
     }
     // El Agente, sólo en la página que crea (H8): en la que ya existe manda ella.
-    expect(instruccionesDeLen()).toContain("En una página que creas tú, escribe también su versión oscura");
-    expect(aiDesignSystemMessage()).toContain("Si la página aún no lo define, escríbelo tú");
+    expect(instruccionesDeLen()).toContain("On a page you create yourself, also write its dark version");
+    expect(aiDesignSystemMessage()).toContain("If the page doesn't define it yet, write it yourself");
     for (const p of [instruccionesDeLen(), aiDesignSystemMessage()]) {
       // …y entonces OFICIO no puede seguir ordenándolo doce líneas más abajo,
       // o el contrato se contradiría a sí mismo dentro del mismo prompt.
-      expect(p).not.toContain("Emite igualmente el bloque oscuro");
+      expect(p).not.toContain("Emit the dark block anyway");
     }
   });
 

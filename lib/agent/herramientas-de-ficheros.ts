@@ -197,7 +197,7 @@ function booleano(v: unknown): boolean | undefined {
 
 export async function toolRead(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: respuesta(fallo("proyecto no encontrado")) };
+  if (!row) return { response: respuesta(fallo("project not found")) };
   const v = await virtualesDe(session, deps, row.userBrief);
   const file_path = typeof args.file_path === "string" ? args.file_path : typeof args.path === "string" ? args.path : "";
   const r = ejecutarRead(
@@ -215,7 +215,7 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
 
 export async function toolGrep(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: respuesta(fallo("proyecto no encontrado")) };
+  if (!row) return { response: respuesta(fallo("project not found")) };
   const texto = (k: string) => (typeof args[k] === "string" ? (args[k] as string) : undefined);
   const entrada: EntradaGrep = {
     pattern: texto("pattern") ?? "",
@@ -243,7 +243,7 @@ export async function toolGrep(session: AgentSession, deps: AgentDeps, args: Rec
 
 export async function toolGlob(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: respuesta(fallo("proyecto no encontrado")) };
+  if (!row) return { response: respuesta(fallo("project not found")) };
   const r = ejecutarGlob(
     {
       pattern: typeof args.pattern === "string" ? args.pattern : "",
@@ -257,7 +257,7 @@ export async function toolGlob(session: AgentSession, deps: AgentDeps, args: Rec
 export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const entrada = coercerEntradaEdit(args);
   const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: respuesta(fallo("proyecto no encontrado")) };
+  if (!row) return { response: respuesta(fallo("project not found")) };
   const v = await virtualesDe(session, deps, row.userBrief);
   const plan = planearEdit(entrada, sitioDe(row.data, session, v), leidosDe(session));
   const detalle = `${rutaRelativa(plan.ok ? plan.ruta : entrada.file_path)}: «${recorte(entrada.old_string)}» → «${recorte(entrada.new_string)}»`;
@@ -270,7 +270,7 @@ export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Rec
 export async function toolWrite(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const { entrada, nota } = coercerEntradaWrite(args);
   const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: respuesta(fallo("proyecto no encontrado")) };
+  if (!row) return { response: respuesta(fallo("project not found")) };
   const v = await virtualesDe(session, deps, row.userBrief);
   const plan = planearWrite(entrada, sitioDe(row.data, session, v), leidosDe(session));
   const detalle = `${rutaRelativa(plan.ok ? plan.ruta : entrada.file_path)}${plan.ok && plan.crea ? " (página nueva)" : ""}`;
@@ -630,7 +630,7 @@ export async function guardarFichero(
   }
 
   if (detectSlotPath(contenido)) {
-    return { ok: false, error: "el HTML contiene un marcador reservado (data-slot-path)" };
+    return { ok: false, error: "the HTML contains a reserved marker (data-slot-path)" };
   }
   const antes = leerFichero(data, ruta);
   const preparado = await preparePage(contenido, {
@@ -644,10 +644,10 @@ export async function guardarFichero(
     return {
       ok: false,
       error: conductas
-        ? `Hay conductas mal cableadas que nacerían MUERTAS en la página: ${conductas}. NO se guardó nada.`
+        ? `There are badly wired behaviors that would be born DEAD on the page: ${conductas}. NOTHING was saved.`
         : preparado.code === "reserved_marker"
-          ? "el HTML contiene un marcador reservado (data-slot-path)"
-          : `el HTML no pasó la puerta de publicación (${preparado.code}${preparado.detail ? `: ${preparado.detail}` : ""})`,
+          ? "the HTML contains a reserved marker (data-slot-path)"
+          : `the HTML didn't pass the publishing gate (${preparado.code}${preparado.detail ? `: ${preparado.detail}` : ""})`,
     };
   }
 

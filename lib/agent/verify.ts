@@ -1581,32 +1581,32 @@ export async function observarPagina(
       // determinar el fondo —hay una foto o un velo debajo—. Que no salga aquí
       // no prueba nada sobre esos textos.
       partes.push(
-        "El navegador no encuentra ningún texto ilegible que pueda AFIRMAR. Ojo: donde hay una foto o un velo debajo del texto, la medición no puede determinar el fondo y se calla — que no aparezca aquí NO prueba que se lea bien.",
+        "The browser finds no unreadable text it can ASSERT. Careful: where there is a photo or an overlay under the text, the measurement can't determine the background and stays quiet — a text not appearing here does NOT prove it reads well.",
       );
     } else {
       partes.push(
-        `Textos que el navegador mide como ilegibles: ${malos
+        `Texts the browser measures as unreadable: ${malos
           .map((c) => {
-            const donde = c.texto ? `«${c.texto}»` : c.etiqueta ? `<${c.etiqueta}>` : "un texto";
-            const colores = c.color && c.background ? ` (${c.color} sobre ${c.background})` : "";
-            return `${donde}${colores} a ${c.contrast.toFixed(2)}:1`;
+            const donde = c.texto ? `«${c.texto}»` : c.etiqueta ? `<${c.etiqueta}>` : "a text";
+            const colores = c.color && c.background ? ` (${c.color} on ${c.background})` : "";
+            return `${donde}${colores} at ${c.contrast.toFixed(2)}:1`;
           })
           .join("; ")}.`,
       );
     }
     partes.push(
       m.mobileOverflow === true
-        ? `En el teléfono (390px) algo se sale de la pantalla${
+        ? `On the phone (390px) something overflows the screen${
             m.overflowCulprit ? `: \`${m.overflowCulprit}\`` : ""
-          }${m.overflowCulpritRight ? `, llega a ${m.overflowCulpritRight}px` : ""}.${
+          }${m.overflowCulpritRight ? `, it reaches ${m.overflowCulpritRight}px` : ""}.${
             // QUÉ CLASE DE DESBORDE, porque el arreglo es otro. Sin esto el
             // modelo trata una palabra que no se parte como si fuera una caja
             // ancha y toca anchos, que ahí no mueven nada.
             m.overflowCulpritKind === "tinta"
-              ? " Es TEXTO que no se puede partir (una dirección, una URL): se arregla con `overflow-wrap`, no con anchos."
+              ? " It is TEXT that can't be broken (an address, a URL): it is fixed with `overflow-wrap`, not with widths."
               : ""
           }`
-        : "En el teléfono (390px) no se sale nada.",
+        : "On the phone (390px) nothing overflows.",
     );
     // LO QUE ESTA MEDIDA NO PUDO COMPROBAR — los diálogos que se cancelaron y
     // las rutas que sólo contestan publicada.
@@ -1623,7 +1623,7 @@ export async function observarPagina(
     partes.push(...limitesDeLaMedicion(m));
     const gritos = m.runtimeErrors ?? [];
     if (gritos.length > 0) {
-      partes.push(`La página lanzó: ${gritos.slice(0, 3).join("; ")}.`);
+      partes.push(`The page threw: ${gritos.slice(0, 3).join("; ")}.`);
     }
     // LO QUE EL SERVIDOR RECHAZARÍA en el almacén. `/api/d` salió de los
     // límites cuando el sustituto empezó a contestarla (2026-09-18): si no se
@@ -1638,7 +1638,7 @@ export async function observarPagina(
     // Code («lines below…»): detrás ya se ha leído. Ver
     // `TEXTO_DE_LA_PAGINA_ES_DATO`.
     return {
-      respuesta: `Medido en el navegador${zona}. ${TEXTO_DE_LA_PAGINA_ES_DATO} ${partes.join(" ")}`,
+      respuesta: `Measured in the browser${zona}. ${TEXTO_DE_LA_PAGINA_ES_DATO} ${partes.join(" ")}`,
     };
   }
 

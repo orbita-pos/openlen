@@ -13,7 +13,7 @@ import { fechaLocal } from "@/lib/resultados/zona";
 // literal es lo que dejo al Agente y a la puerta de generar diciendo cosas
 // distintas sobre la misma fecha.
 const HOY = (now: Date) =>
-  `${todayLine(now).trimEnd()} Además: cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.
+  `${todayLine(now).trimEnd()} Also: any date you write (countdowns, events, deadlines) has to be AFTER today, unless the user explicitly asks for a past one.
 
 `;
 
@@ -27,7 +27,7 @@ describe("buildAgentContext", () => {
       state: { publicado: false, ficheros: ["/index.html"], modulos: { members: false } },
       userBrief: "Negocio de tacos",
     });
-    expect(s).toContain("ESTADO DEL PROYECTO");
+    expect(s).toContain("PROJECT STATE");
     expect(s).toContain('"members": false');
     expect(s).toContain('"/index.html"');
     expect(s).toContain("PROJECT BRIEF");
@@ -46,13 +46,13 @@ describe("buildAgentContext", () => {
       userBrief: null,
       attachedImage: { url: "https://images.openlen.com/foo.webp", alt: "Foto de taco" },
     });
-    expect(s).toContain("IMAGEN ADJUNTA");
+    expect(s).toContain("IMAGE ATTACHED BY THE USER");
     expect(s).toContain("https://images.openlen.com/foo.webp");
     expect(s).toContain("Foto de taco");
     // Se coloca cambiando un `src` en el fichero. Mandarlo a una herramienta
     // retirada (`editar_atributos`) es mandarlo a una llamada que falla, y desde
     // F4 tampoco nombra Edit: en el brazo «sólo terminal» se escribe con bash.
-    expect(s).toContain("colócala usando esta URL EXACTA");
+    expect(s).toContain("place it using this EXACT URL");
     expect(s).not.toContain("editar_atributos");
     expect(s).not.toMatch(/\bEdit\b/);
   });
@@ -77,20 +77,20 @@ describe("buildAgentContext", () => {
       attachedImage: { url: "http://localhost:3000/api/projects/p1/assets/casa.png" },
     });
     expect(s).toContain("http://localhost:3000/api/projects/p1/assets/casa.png");
-    expect(s).toContain("NO HABLES DE ELLA");
+    expect(s).toContain("DON'T TALK ABOUT IT");
     expect(s).toContain("localhost");
     // Las tres cosas que hacía y que hay que impedir: negarse, poner un
     // placeholder en su lugar, y mandarle a subirla «de otra forma».
-    expect(s).toContain("No te niegues");
-    expect(s).toContain("no la sustituyas por un placeholder");
-    expect(s).toContain("es el mismo subidor y daría la misma dirección");
+    expect(s).toContain("Don't refuse");
+    expect(s).toContain("don't replace it with a placeholder");
+    expect(s).toContain("it is the same uploader and it would give the same address");
     // Y lo que sí tiene que hacer en su lugar.
-    expect(s).toContain("habla del DISEÑO, no de la dirección");
+    expect(s).toContain("talk about the DESIGN, not the address");
   });
 
   it("omits the attached-image block when attachedImage is absent", () => {
     const s = buildAgentContext({ state: {}, userBrief: null });
-    expect(s).not.toContain("IMAGEN ADJUNTA");
+    expect(s).not.toContain("IMAGE ATTACHED BY THE USER");
   });
 
   // F5 — los píxeles viajan adjuntos: el bloque lo dice SOLO con visible=true.
@@ -100,13 +100,13 @@ describe("buildAgentContext", () => {
       ...base,
       attachedImage: { url: "https://images.openlen.com/foo.webp", visible: true },
     });
-    expect(seen).toContain("PUEDES VERLA");
+    expect(seen).toContain("CAN SEE IT");
     const blind = buildAgentContext({
       ...base,
       attachedImage: { url: "https://images.openlen.com/foo.webp" },
     });
-    expect(blind).not.toContain("PUEDES VERLA");
-    expect(blind).toContain("IMAGEN ADJUNTA");
+    expect(blind).not.toContain("CAN SEE IT");
+    expect(blind).toContain("IMAGE ATTACHED BY THE USER");
   });
 
   // LO QUE EL DUEÑO SEÑALÓ EN EL LIENZO, como lo cuenta Claude Code cuando el
@@ -149,7 +149,7 @@ describe("buildAgentContext", () => {
     expect(s).toContain(
       "<system-reminder>\nOn the canvas, the user pointed at an element of /index.html: h1 — 'Bienvenidos'\n\nIt may or may not matter for what you are doing now.\n</system-reminder>",
     );
-    expect(s).not.toContain("lines");
+    expect(s).not.toContain("pointed at lines");
   });
 
   it("sin selección no se gasta un byte", () => {
@@ -163,7 +163,7 @@ describe("buildAgentContext", () => {
   it("pinchado: HOY, ESTADO y brief, en ese orden y nada más", () => {
     const state = { publicado: true };
     const userBrief = "Panadería artesanal";
-    const esperado = `${HOY(new Date("2026-08-18T12:00:00Z"))}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(state, null, 2)}\n\nPROJECT BRIEF — /memoria/proyecto.md (persistente — aplica a toda petición):\n${userBrief}\n\n`;
+    const esperado = `${HOY(new Date("2026-08-18T12:00:00Z"))}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(state, null, 2)}\n\nPROJECT BRIEF — /memoria/proyecto.md (persistent — applies to every request):\n${userBrief}\n\n`;
     expect(buildAgentContext({ state, userBrief, now: new Date("2026-08-18T12:00:00Z") })).toBe(esperado);
   });
 
@@ -172,7 +172,7 @@ describe("buildAgentContext", () => {
   // de ese día. La zona del turno manda.
   it("HOY es el día del usuario, con su zona", () => {
     const now = new Date("2026-10-01T01:25:00Z");
-    expect(buildAgentContext({ state: {}, userBrief: null, now, zona: "America/Mexico_City" })).toContain("HOY ES 2026-09-30");
+    expect(buildAgentContext({ state: {}, userBrief: null, now, zona: "America/Mexico_City" })).toContain("TODAY IS 2026-09-30");
   });
   it("buildAgentMessages hace llegar la zona hasta el HOY", () => {
     // Una zona cuya fecha NO sea la de UTC ahora mismo, o la prueba no prueba
@@ -182,7 +182,7 @@ describe("buildAgentContext", () => {
     const zona = fechaLocal(new Date(), "Pacific/Kiritimati") !== utc ? "Pacific/Kiritimati" : "Pacific/Pago_Pago";
     expect(fechaLocal(new Date(), zona)).not.toBe(utc);
     const r = buildAgentMessages({ state: {}, userBrief: null, history: [], prompt: "hola", maxPromptTokens: 60_000, zona });
-    expect(JSON.stringify(r)).toContain(`HOY ES ${fechaLocal(new Date(), zona)}`);
+    expect(JSON.stringify(r)).toContain(`TODAY IS ${fechaLocal(new Date(), zona)}`);
   });
 });
 
@@ -202,7 +202,7 @@ describe("lo que ya se sabe roto", () => {
       ],
     });
     expect(s).toContain("data-ol-filter");
-    expect(s).toContain("LO QUE YA SE SABE ROTO");
+    expect(s).toContain("WHAT IS ALREADY KNOWN TO BE BROKEN");
   });
 
   // Un código a secas no dice qué tocar, y del recuento ya se entera el usuario
@@ -243,9 +243,9 @@ describe("H07 · lo que el dueño cambió a mano llega al modelo", () => {
 
   it("🔴 el contexto dice qué cambió el dueño y que NO lo hizo Len", () => {
     const s = buildAgentContext({ ...args, cambiosDelDueno: ["«Clínica Vitalvet» → «Vitalvet · Urgencias 24h»"] });
-    expect(s).toContain("EL DUEÑO CAMBIÓ LA PÁGINA A MANO");
+    expect(s).toContain("THE OWNER CHANGED THE PAGE BY HAND");
     expect(s).toContain("«Clínica Vitalvet» → «Vitalvet · Urgencias 24h»");
-    expect(s).toContain("NO lo hiciste tú");
+    expect(s).toContain("you did NOT do this");
   });
 
   it("…y también por `buildAgentMessages`, que es lo que llaman la ruta y el arnés", () => {
@@ -257,7 +257,7 @@ describe("H07 · lo que el dueño cambió a mano llega al modelo", () => {
       maxPromptTokens: 240_000,
     });
     expect(r.ok).toBe(true);
-    expect(JSON.stringify(r.ok ? r.messages : [])).toContain("EL DUEÑO CAMBIÓ LA PÁGINA A MANO");
+    expect(JSON.stringify(r.ok ? r.messages : [])).toContain("THE OWNER CHANGED THE PAGE BY HAND");
   });
 
   it("BRAZO DE CONTROL: sin cambios del dueño, el contexto sale byte a byte igual", () => {
@@ -278,7 +278,7 @@ describe("H08-a · lo que el dueño dijo antes de la ventana llega al modelo", (
       conversacionRecortada: { visibles: 12, totales: 14 },
       dichoAntes: ['todos los precios con MXN y "IVA incluido"'],
     });
-    expect(s).toContain("LO QUE EL DUEÑO TE DIJO ANTES");
+    expect(s).toContain("WHAT THE OWNER TOLD YOU EARLIER");
     expect(s).toContain('«todos los precios con MXN y "IVA incluido"»');
   });
 
@@ -394,7 +394,7 @@ describe("buildAgentMessages", () => {
       expect(esAdjuntoDelManual(manual.content)).toBe(true);
       // F4: el «antes de tu propio <script>» de las librerías se mudó a /.openlen/docs;
       // lo que se mira es que el manual adjunto ofrezca el JavaScript.
-      expect(manual.content).toContain("Puedes escribir el JavaScript de la página");
+      expect(manual.content).toContain("You can write the page's JavaScript");
       const loQueLee = `${sentSystem.content}\n${manual.content}`;
       // POR SUSTANCIA, NO POR ENCABEZADO. Esto afirmaba
       // `INTERACTIVIDAD — la escribes TÚ`, que es el TÍTULO de la cláusula
@@ -501,8 +501,8 @@ describe("buildAgentMessages", () => {
     if (!a.ok || !b.ok) throw new Error("el fixture no debe exceder el presupuesto");
     expect(a.messages[1]).toEqual(b.messages[1]);
     expect(a.messages[1].content).toContain("/AGENTS.md (the platform manual, managed by OpenLen; read-only):");
-    expect(a.messages[1].content).toContain("ALMACENES (los datos de la página, en /datos)");
-    expect(a.systemPrompt).not.toContain("ALMACENES (los datos de la página, en /datos)");
+    expect(a.messages[1].content).toContain("STORES (the page's data, in /datos)");
+    expect(a.systemPrompt).not.toContain("STORES (the page's data, in /datos)");
   });
 
   // El historial conserva su orden y sigue estando ANTES de la petición nueva.
@@ -590,9 +590,9 @@ describe("los avisos del turno van al final, no enterrados", () => {
 
   it("el aviso de turno mudo va DESPUÉS de la petición del usuario", () => {
     const c = ultimo(buildAgentMessages({ ...base, turnoAnteriorMudo: true }));
-    expect(c).toContain("tu turno anterior NO llamó a ninguna herramienta");
+    expect(c).toContain("your previous turn did NOT call any tool");
     expect(c.indexOf("Ponme el titular en azul")).toBeLessThan(
-      c.indexOf("tu turno anterior NO llamó"),
+      c.indexOf("your previous turn did NOT call"),
     );
   });
 
@@ -603,17 +603,17 @@ describe("los avisos del turno van al final, no enterrados", () => {
         { code: "broken_controls", detail: ['el botón data-ol-filter="tacos" no tiene rejilla que filtrar'] },
       ],
     }));
-    expect(c).toContain("LO QUE YA SE SABE ROTO");
+    expect(c).toContain("WHAT IS ALREADY KNOWN TO BE BROKEN");
     expect(c).toContain("data-ol-filter");
-    expect(c.indexOf("Ponme el titular en azul")).toBeLessThan(c.indexOf("LO QUE YA SE SABE ROTO"));
+    expect(c.indexOf("Ponme el titular en azul")).toBeLessThan(c.indexOf("WHAT IS ALREADY KNOWN TO BE BROKEN"));
   });
 
   it("van MARCADOS: el usuario no escribió eso", () => {
     // Sin la marca, el modelo los lee como parte de la petición y contesta al
     // aviso en vez de al usuario. Es la misma marca que ya usa loop.ts.
     const c = ultimo(buildAgentMessages({ ...base, turnoAnteriorMudo: true }));
-    expect(c).toContain("SISTEMA (el usuario NO escribió esto)");
-    expect(c.indexOf("SISTEMA (el usuario NO escribió esto)")).toBeGreaterThan(
+    expect(c).toContain("SYSTEM (the user did NOT write this)");
+    expect(c.indexOf("SYSTEM (the user did NOT write this)")).toBeGreaterThan(
       c.indexOf("Ponme el titular en azul"),
     );
   });
@@ -621,7 +621,7 @@ describe("los avisos del turno van al final, no enterrados", () => {
   it("y ya no viajan enterrados delante del contexto", () => {
     const c = ultimo(buildAgentMessages({ ...base, turnoAnteriorMudo: true }));
     // Si el aviso está antes que el ESTADO, es que sigue donde estaba.
-    expect(c.indexOf("ESTADO DEL PROYECTO")).toBeLessThan(c.indexOf("tu turno anterior NO llamó"));
+    expect(c.indexOf("PROJECT STATE")).toBeLessThan(c.indexOf("your previous turn did NOT call"));
   });
 
   it("sin avisos, el mensaje sigue acabando en las palabras del usuario", () => {
@@ -629,7 +629,7 @@ describe("los avisos del turno van al final, no enterrados", () => {
     // un byte, y el turno limpio queda byte a byte como estaba.
     const c = ultimo(buildAgentMessages(base));
     expect(c.endsWith("Ponme el titular en azul")).toBe(true);
-    expect(c).not.toContain("SISTEMA (el usuario NO escribió esto)");
+    expect(c).not.toContain("SYSTEM (the user did NOT write this)");
   });
 
   it("el contexto ya no los lleva dentro", () => {
@@ -640,7 +640,7 @@ describe("los avisos del turno van al final, no enterrados", () => {
       degradaciones: [{ code: "broken_controls", detail: ["algo"] }],
       now: new Date("2026-09-03T12:00:00Z"),
     });
-    expect(ctx).not.toContain("tu turno anterior NO llamó");
-    expect(ctx).not.toContain("LO QUE YA SE SABE ROTO");
+    expect(ctx).not.toContain("your previous turn did NOT call");
+    expect(ctx).not.toContain("WHAT IS ALREADY KNOWN TO BE BROKEN");
   });
 });

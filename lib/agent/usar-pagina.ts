@@ -152,16 +152,16 @@ export const PRELUDIO_DE_USO = `
       if (["hidden", "password", "submit", "button", "reset", "image", "file"].indexOf(t) >= 0) return;
       var et = etiquetaDe(e) || t || e.tagName.toLowerCase();
       if (t === "checkbox" || t === "radio") {
-        if (e.checked) lineas.push("[" + (t === "radio" ? "opción" : "casilla") + " «" + et + "»: marcada]");
+        if (e.checked) lineas.push("[" + (t === "radio" ? "option" : "checkbox") + " «" + et + "»: checked]");
         return;
       }
       if (!visible(e)) return;
       var v = e.tagName === "SELECT" ? (e.options[e.selectedIndex] ? e.options[e.selectedIndex].text : "") : e.value;
-      lineas.push("[campo «" + et + "»: «" + String(v).replace(/\\s+/g, " ").slice(0, 80) + "»]");
+      lineas.push("[field «" + et + "»: «" + String(v).replace(/\\s+/g, " ").slice(0, 80) + "»]");
     });
     var guardado = {};
     try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); guardado[k] = localStorage.getItem(k); } } catch (x) {}
-    try { for (var j = 0; j < sessionStorage.length; j++) { var s = sessionStorage.key(j); guardado["(sesión) " + s] = sessionStorage.getItem(s); } } catch (x) {}
+    try { for (var j = 0; j < sessionStorage.length; j++) { var s = sessionStorage.key(j); guardado["(session) " + s] = sessionStorage.getItem(s); } } catch (x) {}
     return { lineas: lineas, guardado: guardado, url: location.href };
   }
 
@@ -332,7 +332,7 @@ export const PRELUDIO_DE_USO = `
       var t = (e.type || "").toLowerCase();
       if (["hidden", "password", "submit", "button", "reset", "image", "file", "checkbox", "radio"].indexOf(t) >= 0 || !visible(e)) return;
       var v = e.tagName === "SELECT" ? (e.options[e.selectedIndex] ? e.options[e.selectedIndex].text : "") : e.value;
-      campos.push("[campo «" + (etiquetaDe(e) || t) + "»: «" + String(v).slice(0, 80) + "»]");
+      campos.push("[field «" + (etiquetaDe(e) || t) + "»: «" + String(v).slice(0, 80) + "»]");
     });
     return { encontrado: true, texto: texto.slice(0, 600), campos: campos, sitios: chicos.length };
   }
@@ -531,25 +531,25 @@ function contarCambios(
 ): CambioVisto[] {
   const out: CambioVisto[] = [];
   const solo = (l: string) => cambiantes.has(forma(l));
-  const marca = (l: string) => (solo(l) ? " (esto también cambia solo, sin tocar nada)" : "");
+  const marca = (l: string) => (solo(l) ? " (this also changes by itself, without touching anything)" : "");
   for (const c of diferencia(antes.lineas, despues.lineas)) {
     const quita = c.quita.filter((l) => !propio(l));
     const pone = c.pone.filter((l) => !propio(l));
     const pares = Math.min(quita.length, pone.length);
     for (let k = 0; k < pares; k++) out.push({ texto: `${q(quita[k]!)} → ${q(pone[k]!)}${marca(pone[k]!)}`, solo: solo(pone[k]!) });
-    for (const l of quita.slice(pares)) out.push({ texto: `ya no está ${q(l)}${marca(l)}`, solo: solo(l) });
-    for (const l of pone.slice(pares)) out.push({ texto: `apareció ${q(l)}${marca(l)}`, solo: solo(l) });
+    for (const l of quita.slice(pares)) out.push({ texto: `no longer there: ${q(l)}${marca(l)}`, solo: solo(l) });
+    for (const l of pone.slice(pares)) out.push({ texto: `appeared: ${q(l)}${marca(l)}`, solo: solo(l) });
   }
   const vistos: CambioVisto[] =
     out.length > MAX_CAMBIOS
-      ? [...out.slice(0, MAX_CAMBIOS), { texto: `(y ${out.length - MAX_CAMBIOS} cambio(s) más en lo que se ve)`, solo: out.slice(MAX_CAMBIOS).every((c) => c.solo) }]
+      ? [...out.slice(0, MAX_CAMBIOS), { texto: `(and ${out.length - MAX_CAMBIOS} more change(s) in what is shown)`, solo: out.slice(MAX_CAMBIOS).every((c) => c.solo) }]
       : out;
   const claves = new Set([...Object.keys(antes.guardado), ...Object.keys(despues.guardado)]);
   for (const k of claves) {
     const a = antes.guardado[k];
     const b = despues.guardado[k];
     if (a === b) continue;
-    vistos.push({ texto: b === undefined ? `borró del navegador ${q(k, 60)}` : `guardó en el navegador ${q(k, 60)} = ${q(b, 160)}`, solo: false });
+    vistos.push({ texto: b === undefined ? `deleted from the browser ${q(k, 60)}` : `saved in the browser ${q(k, 60)} = ${q(b, 160)}`, solo: false });
   }
   return vistos;
 }
@@ -563,9 +563,9 @@ function decodificada(u: string): string {
 }
 
 function describirPaso(p: PasoDeUso): string {
-  if ("pulsa" in p) return `pulsa ${q(p.pulsa)}${p.dentro_de ? ` dentro de ${q(p.dentro_de)}` : ""}`;
+  if ("pulsa" in p) return `pulsa ${q(p.pulsa)}${p.dentro_de ? ` dentro_de ${q(p.dentro_de)}` : ""}`;
   if ("escribe" in p) return `escribe ${q(p.escribe)} en ${q(p.en)}`;
-  if ("elige" in p) return `elige ${q(p.elige)}${p.dentro_de ? ` dentro de ${q(p.dentro_de)}` : ""}`;
+  if ("elige" in p) return `elige ${q(p.elige)}${p.dentro_de ? ` dentro_de ${q(p.dentro_de)}` : ""}`;
   if ("recarga" in p) return "recarga";
   return `lee ${q(p.lee)}`;
 }
@@ -594,8 +594,8 @@ interface Previo {
 }
 
 /** Las líneas de la foto que son el efecto DIRECTO de la acción. */
-const lineaDelCampo = (etiqueta: string) => (l: string) => l.startsWith(`[campo «${etiqueta}»:`);
-const lineaDeCasilla = (l: string) => l.startsWith("[opción «") || l.startsWith("[casilla «");
+const lineaDelCampo = (etiqueta: string) => (l: string) => l.startsWith(`[field «${etiqueta}»:`);
+const lineaDeCasilla = (l: string) => l.startsWith("[option «") || l.startsWith("[checkbox «");
 
 type Actuacion =
   | { readonly ok: false; readonly hecho: string }
@@ -651,7 +651,7 @@ async function actuar(
     await page.reload({ waitUntil: "load", timeout: 20_000 });
     return {
       ok: true,
-      hecho: "recargué la página (lo guardado en el navegador y en los almacenes de esta visita se conserva).",
+      hecho: "I reloaded the page (what was saved in the browser and in this visit's stores is kept).",
       antes,
       detalle: [],
       previo: null,
@@ -665,11 +665,11 @@ async function actuar(
         ok: false,
         hecho:
           r.n > 1
-            ? `no se pudo: hay ${r.n} campos que casan con ${q(paso.en)}: ${(r.etiquetas ?? []).map((e) => q(e, 50)).join(", ")}. Di cuál con un texto más exacto de su etiqueta.`
+            ? `couldn't: there are ${r.n} fields that match ${q(paso.en)}: ${(r.etiquetas ?? []).map((e) => q(e, 50)).join(", ")}. Say which one with a more exact text from its label.`
             : r.selects
-              ? `no se pudo: ${q(paso.en)} es un desplegable; se elige con \`elige\`, no se escribe.`
-              : `no se pudo: no hay ningún campo visible con la etiqueta, el placeholder o el nombre ${q(paso.en)}.${
-                  (r.hay ?? []).length ? ` Los campos que hay: ${r.hay!.map((e) => q(e, 50)).join(", ")}.` : " La página no tiene ningún campo visible."
+              ? `couldn't: ${q(paso.en)} is a dropdown; it is chosen with \`elige\`, not typed into.`
+              : `couldn't: there is no visible field with the label, placeholder or name ${q(paso.en)}.${
+                  (r.hay ?? []).length ? ` The fields there are: ${r.hay!.map((e) => q(e, 50)).join(", ")}.` : " The page has no visible field."
                 }`,
       };
     }
@@ -679,13 +679,13 @@ async function actuar(
     const etiqueta = q(r.etiqueta || paso.en);
     if (SIN_TECLEAR.has(r.tipo ?? "")) {
       await page.evaluate(US(`ponerValor(${JSON.stringify(paso.escribe)})`));
-      const hecho = r.tipo === "range" ? `moví la barra ${etiqueta} a ${q(paso.escribe)}.` : `puse ${q(paso.escribe)} en el campo ${etiqueta} (<input type=${r.tipo}>).`;
+      const hecho = r.tipo === "range" ? `I moved the slider ${etiqueta} to ${q(paso.escribe)}.` : `I set ${q(paso.escribe)} in the field ${etiqueta} (<input type=${r.tipo}>).`;
       return { ok: true, hecho, antes, detalle: [], previo, propio };
     }
     await page.evaluate(US("vaciarCampo()"));
     await page.keyboard.type(paso.escribe, { delay: 10 });
     await page.keyboard.press("Tab");
-    return { ok: true, hecho: `escribí ${q(paso.escribe)} en el campo ${etiqueta} y salí del campo.`, antes, detalle: [], previo, propio };
+    return { ok: true, hecho: `I typed ${q(paso.escribe)} into the field ${etiqueta} and left the field.`, antes, detalle: [], previo, propio };
   }
 
   const esElige = "elige" in paso;
@@ -699,27 +699,27 @@ async function actuar(
   if (r.n !== 1) {
     let hecho: string;
     if (r.n > 1) {
-      const cuales = r.que === "desplegable" ? "desplegables" : r.que === "casilla" ? "casillas" : "controles";
+      const cuales = r.que === "desplegable" ? "dropdowns" : r.que === "casilla" ? "checkboxes" : "controls";
       const pistas = (r.pistas ?? []).filter(Boolean);
-      hecho = `no se pudo: hay ${r.n} ${cuales} que dicen ${q(texto)}${dentro ? ` dentro de ${q(dentro)}` : ""}. Di cuál con \`dentro_de\` (un texto de su bloque)${pistas.length ? `: ${pistas.map((t) => q(t, 50)).join(", ")}` : ""}.`;
+      hecho = `couldn't: there are ${r.n} ${cuales} that say ${q(texto)}${dentro ? ` dentro_de ${q(dentro)}` : ""}. Say which one with \`dentro_de\` (a text from its block)${pistas.length ? `: ${pistas.map((t) => q(t, 50)).join(", ")}` : ""}.`;
     } else if (dentro) {
-      hecho = `no se pudo: no hay ${esElige ? "ninguna opción" : "ningún control"} ${q(texto)} dentro de un bloque que diga ${q(dentro)}.`;
+      hecho = `couldn't: there is no ${esElige ? "option" : "control"} ${q(texto)} inside a block that says ${q(dentro)}.`;
     } else {
-      hecho = `no se pudo: no hay ${esElige ? "ninguna opción (ni en un desplegable, ni una casilla, ni un botón)" : "ningún control visible"} que diga ${q(texto)}.`;
-      if (r.ocultos) hecho += ` Hay ${r.ocultos} que lo dice(n) pero no se ve(n): está(n) oculto(s).`;
-      if ((r.hay ?? []).length) hecho += ` Lo que se puede pulsar: ${r.hay!.map((t) => q(t, 40)).join(", ")}.`;
+      hecho = `couldn't: there is no ${esElige ? "option (not in a dropdown, nor a checkbox, nor a button)" : "visible control"} that says ${q(texto)}.`;
+      if (r.ocultos) hecho += ` ${r.ocultos} control(s) say it but can't be seen: hidden.`;
+      if ((r.hay ?? []).length) hecho += ` What can be pressed: ${r.hay!.map((t) => q(t, 40)).join(", ")}.`;
     }
     return { ok: false, hecho };
   }
   if (r.que === "desplegable" || r.que === "radio" || r.que === "casilla") {
     const previo = (await page.evaluate(US("escuchaElegido()"))) as Previo | null;
     if (r.que === "desplegable") {
-      const hecho = `elegí ${q(r.texto ?? texto)} en el desplegable ${q(r.etiqueta ?? "")}.`;
+      const hecho = `I chose ${q(r.texto ?? texto)} in the dropdown ${q(r.etiqueta ?? "")}.`;
       return { ok: true, hecho, antes: antes!, detalle: [], previo, propio: lineaDelCampo(r.etiqueta ?? "") };
     }
     const hecho = r.yaEstaba
-      ? `${q(r.texto ?? texto)} ya estaba marcada; no cambié nada.`
-      : `marqué ${r.que === "radio" ? "la opción" : "la casilla"} ${q(r.texto ?? texto)}.`;
+      ? `${q(r.texto ?? texto)} was already checked; I changed nothing.`
+      : `I checked ${r.que === "radio" ? "the option" : "the checkbox"} ${q(r.texto ?? texto)}.`;
     return { ok: true, hecho, antes: antes!, detalle: [], previo: r.yaEstaba ? null : previo, propio: lineaDeCasilla };
   }
 
@@ -739,13 +739,13 @@ async function actuar(
     porScript = true;
     await page.evaluate(US("pulsarPorScript()")).catch(() => undefined);
   }
-  const hecho = `pulsé ${r.que === "texto" ? "el texto" : `un <${r.tipo}>`} ${q(r.texto ?? texto)}.`;
-  if (tapa) detalle.push(`(nota: encima de ese control hay otro elemento, ${q(tapa, 60)}: el clic de un visitante cae en ése, y ahí cayó el mío.)`);
-  if (porScript) detalle.push("(nota: no se pudo pulsar con el ratón —sin tamaño o fuera de la pantalla—, así que lo pulsé por script.)");
+  const hecho = `I pressed ${r.que === "texto" ? "the text" : `a <${r.tipo}>`} ${q(r.texto ?? texto)}.`;
+  if (tapa) detalle.push(`(note: on top of that control there is another element, ${q(tapa, 60)}: a visitor's click lands on that one, and that is where mine landed.)`);
+  if (porScript) detalle.push("(note: it couldn't be pressed with the mouse —no size or off screen—, so I pressed it by script.)");
   const alFinal: string[] = [];
   if ((r.otros ?? []).length) {
     alFinal.push(
-      `(nota: otros controles también dicen ${q(texto)} y no los pulsé: ${r.otros!.map((t) => q(t, 50)).join(", ")}${r.masOtros ? ` y ${r.masOtros} más` : ""}. Para probar uno, nómbralo entero o usa dentro_de.)`,
+      `(note: other controls also say ${q(texto)} and I didn't press them: ${r.otros!.map((t) => q(t, 50)).join(", ")}${r.masOtros ? ` and ${r.masOtros} more` : ""}. To try one, name it in full or use dentro_de.)`,
     );
   }
   if (r.href) {
@@ -753,8 +753,8 @@ async function actuar(
     if (ancla) {
       detalle.push(
         ancla.existe
-          ? `es un enlace a ${q(`#${ancla.id}`)}: lleva a esa parte de esta misma página.`
-          : `(nota: es un enlace a ${q(`#${ancla.id}`)} y en la página no hay ningún elemento con id=${q(ancla.id)}.)`,
+          ? `it is a link to ${q(`#${ancla.id}`)}: it takes you to that part of this same page.`
+          : `(note: it is a link to ${q(`#${ancla.id}`)} and there is no element on the page with id=${q(ancla.id)}.)`,
       );
     }
   }
@@ -770,10 +770,10 @@ async function leerPaso(page: Page, texto: string): Promise<string> {
     if (r.encontrado) break;
     await dormir(500);
   }
-  if (!r.encontrado) return `no se ve ${q(texto)} en la página.`;
+  if (!r.encontrado) return `${q(texto)} isn't shown on the page.`;
   const campos = (r.campos ?? []).length ? ` ${r.campos!.join(" ")}` : "";
-  const sitios = (r.sitios ?? 1) > 1 ? ` (aparece en ${r.sitios} sitios; éste es el primero)` : "";
-  return `se lee: ${q(r.texto ?? "", 600)}${campos}${sitios}`;
+  const sitios = (r.sitios ?? 1) > 1 ? ` (it appears in ${r.sitios} places; this is the first)` : "";
+  return `it reads: ${q(r.texto ?? "", 600)}${campos}${sitios}`;
 }
 
 interface Eventos {
@@ -793,7 +793,7 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
   const plazoMs = internals.plazoMs ?? PLAZO_DE_LA_VISITA_MS;
   const plazo = Date.now() + plazoMs;
   const lineas: string[] = [
-    `Visita a ${p.ruta} como un visitante nuevo (sin nada guardado de antes), en un navegador de escritorio. ${TEXTO_DE_LA_PAGINA_ES_DATO}`,
+    `Visit to ${p.ruta} as a new visitor (with nothing saved from before), in a desktop browser. ${TEXTO_DE_LA_PAGINA_ES_DATO}`,
   ];
   const errores: string[] = [];
   const notas = new Set<string>();
@@ -808,8 +808,8 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
     });
     await page.evaluateOnNewDocument(PRELUDIO_DE_USO);
     page.on("dialog", (d) => {
-      const cual = d.type() === "confirm" ? "una pregunta (confirm)" : d.type() === "prompt" ? "un prompt" : "un aviso (alert)";
-      ev.dialogos.push(`salió ${cual} que decía ${q(d.message(), 120)}; la acepté.`);
+      const cual = d.type() === "confirm" ? "a question (confirm)" : d.type() === "prompt" ? "a prompt" : "an alert";
+      ev.dialogos.push(`${cual} came up saying ${q(d.message(), 120)}; I accepted it.`);
       void d.accept().catch(() => undefined);
     });
     page.on("pageerror", (e) => errores.push(String((e as Error)?.message ?? e).slice(0, 200)));
@@ -843,7 +843,7 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
         const encabezado = `${i + 1}. ${describirPaso(paso)}`;
         hechos = i + 1;
         if (Date.now() > plazo) {
-          lineas.push(`${encabezado} → no se hizo: la visita pasó de ${Math.round(plazoMs / 1000)} s y se cortó aquí.`);
+          lineas.push(`${encabezado} → not done: the visit went over ${Math.round(plazoMs / 1000)} s and was cut here.`);
           break;
         }
         if ("lee" in paso) {
@@ -877,53 +877,53 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
         for (const s of salidas) {
           detalle.push(
             /^[a-z][a-z0-9+.-]*:/i.test(s)
-              ? `mandaba a ${q(s, 300)} (no se abrió).`
-              : `mandaba a ${q(s, 200)}, otra página del sitio (en esta visita no se abre).`,
+              ? `it was sending to ${q(s, 300)} (not opened).`
+              : `it was sending to ${q(s, 200)}, another page of the site (not opened in this visit).`,
           );
         }
-        if (seFue) detalle.push("la página intentó irse, así que volví a cargarla para seguir: lo que no estaba guardado se perdió.");
+        if (seFue) detalle.push("the page tried to leave, so I loaded it again to carry on: what wasn't saved was lost.");
         for (const e of sale.envios) {
-          const campos = e.campos.length ? e.campos.map(([k, v]) => `${k}=${q(v, 60)}`).join(", ") : "ningún campo con name";
+          const campos = e.campos.length ? e.campos.map(([k, v]) => `${k}=${q(v, 60)}`).join(", ") : "no field with a name";
           if (e.cancelado) {
-            detalle.push(`el script de la página CANCELÓ el envío del formulario (preventDefault). Llevaba: ${campos}.`);
+            detalle.push(`the page's script CANCELED the form submission (preventDefault). It carried: ${campos}.`);
             notas.add(
-              "(nota: un formulario cuyo envío cancela el script no le llega al usuario en la página publicada: OpenLen le pone su destino al publicar, y el `preventDefault` lo anula.)",
+              "(note: a form whose submission the script cancels doesn't reach the user on the published page: OpenLen gives it its destination at publish time, and the `preventDefault` cancels that.)",
             );
           } else {
-            detalle.push(`envió el formulario${e.porScript ? " (por script)" : ""} con: ${campos}.`);
-            notas.add("(nota: en esta visita los formularios no se mandan; publicada, lo que envía un visitante llega al correo del usuario y a su Bandeja.)");
+            detalle.push(`sent the form${e.porScript ? " (by script)" : ""} with: ${campos}.`);
+            notas.add("(note: in this visit forms aren't sent; once published, what a visitor sends reaches the user's email and their Inbox.)");
           }
         }
         detalle.push(...ev.dialogos);
         ev.dialogos.length = 0;
         const llamadas = doc.datos.llamadas();
         for (const l of llamadas.slice(llamadasVistas)) {
-          detalle.push(l.status >= 400 ? explicarRechazo(l) : `llamó a \`${l.metodo} ${l.ruta}\` y el almacén contestó ${l.status}.`);
+          detalle.push(l.status >= 400 ? explicarRechazo(l) : `called \`${l.metodo} ${l.ruta}\` and the store answered ${l.status}.`);
           notas.add(
-            "(nota: lo que la página guarda en sus almacenes durante una visita va a una copia aparte que se tira al terminar, y en cada visita los almacenes empiezan VACÍOS: lo que ya tengan de verdad no se ve aquí.)",
+            "(note: what the page saves in its stores during a visit goes to a separate copy that is thrown away at the end, and on every visit the stores start EMPTY: what they really hold isn't seen here.)",
           );
         }
         llamadasVistas = llamadas.length;
-        for (const a of new Set(ev.otrasApi)) detalle.push(`llamó a \`${a}\`, que sólo contesta en la página publicada: aquí no se pudo comprobar.`);
+        for (const a of new Set(ev.otrasApi)) detalle.push(`called \`${a}\`, which only answers on the published page: it couldn't be checked here.`);
         ev.otrasApi.length = 0;
 
         // Lo que cambia solo no es efecto del paso: si es lo ÚNICO que cambió,
         // el paso no hizo nada, y se dice (el contador que tapaba el botón muerto).
         if (propios.length === 0 && salidas.length === 0 && sale.envios.length === 0 && !seFue) {
-          const salvo = cambios.length > 0 ? " (sólo cambió lo que cambia solo)" : "";
-          if ("recarga" in paso) detalle.push(`tras recargar, la página se ve igual que antes de recargar${salvo}.`);
+          const salvo = cambios.length > 0 ? " (only what changes by itself changed)" : "";
+          if ("recarga" in paso) detalle.push(`after reloading, the page looks the same as before reloading${salvo}.`);
           else {
             const campo = accion.previo?.campo === true;
             detalle.push(
               campo
-                ? `no cambió nada más: ni lo que se ve, ni los otros campos, ni lo guardado en el navegador${salvo}.`
-                : `no cambió nada: ni lo que se ve, ni los campos, ni lo guardado en el navegador${salvo}.`,
+                ? `nothing else changed: not what is shown, not the other fields, not what is saved in the browser${salvo}.`
+                : `nothing changed: not what is shown, not the fields, not what is saved in the browser${salvo}.`,
             );
             if (accion.previo && !accion.previo.escucha && !accion.previo.propia) {
               detalle.push(
                 campo
-                  ? "(nota: ni este campo, ni su formulario, ni la página escuchan lo que se teclea o se elige en él: no tiene nada detrás.)"
-                  : "(nota: ni este control, ni sus contenedores, ni la página escuchan el clic, el ratón o el toque, y el navegador no hace nada propio al pulsarlo: no tiene nada detrás.)",
+                  ? "(note: neither this field, nor its form, nor the page listens to what is typed or chosen in it: there is nothing behind it.)"
+                  : "(note: neither this control, nor its containers, nor the page listens to the click, the mouse or the touch, and the browser does nothing of its own when it is pressed: there is nothing behind it.)",
               );
             }
           }
@@ -934,7 +934,7 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
       }
       if (hechos < p.pasos.length) {
         const faltan = p.pasos.slice(hechos).map((_, k) => String(hechos + k + 1));
-        lineas.push(`${faltan.length === 1 ? "El paso" : "Los pasos"} ${faltan.join(", ")} no se ${faltan.length === 1 ? "hizo" : "hicieron"}.`);
+        lineas.push(`${faltan.length === 1 ? "Step" : "Steps"} ${faltan.join(", ")} ${faltan.length === 1 ? "wasn't" : "weren't"} done.`);
       }
     } finally {
       doc.soltar();
@@ -945,8 +945,8 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
   const unicos = [...new Set(errores)];
   lineas.push(
     unicos.length === 0
-      ? "Errores de JavaScript en la visita: ninguno."
-      : `Errores de JavaScript en la visita: ${unicos.slice(0, 5).map((e) => q(e, 200)).join("; ")}${unicos.length > 5 ? ` (y ${unicos.length - 5} más)` : ""}.`,
+      ? "JavaScript errors in the visit: none."
+      : `JavaScript errors in the visit: ${unicos.slice(0, 5).map((e) => q(e, 200)).join("; ")}${unicos.length > 5 ? ` (and ${unicos.length - 5} more)` : ""}.`,
   );
   lineas.push(...notas);
   return { informe: lineas.join("\n") };

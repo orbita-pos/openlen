@@ -28,9 +28,11 @@ import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO } from "@/lib/agent/ficheros/
 export function userMemoryBlock(memoria: string | null | undefined, ruta?: string): string {
   const v = memoria?.trim();
   if (!v) return "";
-  return `LO QUE SABES DE ESTA PERSONA ${ruta ? `— ${ruta} ` : ""}(de conversaciones anteriores, en CUALQUIERA de sus páginas — no es de este proyecto, es de ella):
+  // En inglés desde la traducción de lo que lee Len (2026-10-02), también para
+  // Crear y el Chat, que lo comparten: decisión de Jesús.
+  return `WHAT YOU KNOW ABOUT THIS PERSON ${ruta ? `— ${ruta} ` : ""}(from earlier conversations, on ANY of their pages — it isn't about this project, it's about them):
 ${v}
-Respétalo sin que te lo repita. Si algo de aquí choca con lo que te pide HOY, manda lo de hoy y no discutas: la memoria es un punto de partida, no una regla sobre él.
+Respect it without them having to repeat it. If something here clashes with what they ask TODAY, today wins and you don't argue: the memory is a starting point, not a rule over them.
 
 `;
 }
@@ -369,7 +371,7 @@ export type BuildAgentMessagesResult =
 /** Marca dónde acaba el contexto que pone el servidor y empiezan las palabras
  *  literales del usuario. Sin ella, la petición se lee como una línea más del
  *  volcado de ESTADO DEL PROYECTO que la precede. */
-export const PETICION_DEL_USUARIO = "LO QUE TE PIDE EL USUARIO AHORA:\n";
+export const PETICION_DEL_USUARIO = "WHAT THE USER ASKS YOU NOW:\n";
 
 /** Assemble the exact message array an agent turn ships upstream: system
  *  prompt, the prior history, then ONE user message carrying the context block

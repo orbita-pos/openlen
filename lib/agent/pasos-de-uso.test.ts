@@ -28,32 +28,32 @@ describe("validarPasos", () => {
 
   it("escribe puede teclear un texto vacío (vaciar un campo) pero necesita en", () => {
     expect(validarPasos([{ escribe: "", en: "Código" }]).ok).toBe(true);
-    expect(error([{ escribe: "hola" }])).toContain("necesita `en`");
+    expect(error([{ escribe: "hola" }])).toContain("needs `en`");
   });
 
   it("rechaza una lista vacía, o que no es lista, o demasiado larga", () => {
-    expect(error([])).toContain("al menos un paso");
-    expect(error("pulsa Agregar")).toContain("al menos un paso");
-    expect(error(Array.from({ length: MAX_PASOS + 1 }, () => ({ lee: "x" })))).toContain("Pártela en dos visitas");
+    expect(error([])).toContain("at least one step");
+    expect(error("pulsa Agregar")).toContain("at least one step");
+    expect(error(Array.from({ length: MAX_PASOS + 1 }, () => ({ lee: "x" })))).toContain("Split it into two visits");
   });
 
   it("un paso hace UNA cosa, y lo dice por su número", () => {
-    expect(error([{ lee: "Total" }, { pulsa: "A", lee: "B" }])).toContain("El paso 2 lleva `pulsa` y `lee`");
-    expect(error([{}])).toContain("no dice qué hacer");
+    expect(error([{ lee: "Total" }, { pulsa: "A", lee: "B" }])).toContain("Step 2 carries `pulsa` and `lee`");
+    expect(error([{}])).toContain("doesn't say what to do");
   });
 
   it("un parámetro inesperado se nombra (como Claude Code)", () => {
-    expect(error([{ pulsa: "A", selector: "#a" }])).toContain("parámetro inesperado `selector`");
+    expect(error([{ pulsa: "A", selector: "#a" }])).toContain("unexpected parameter `selector`");
   });
 
   it("en y dentro_de sólo donde tienen sentido; recarga es true", () => {
-    expect(error([{ pulsa: "A", en: "B" }])).toContain("`en` va sólo con `escribe`");
-    expect(error([{ lee: "A", dentro_de: "B" }])).toContain("`dentro_de` va sólo con `pulsa` o `elige`");
+    expect(error([{ pulsa: "A", en: "B" }])).toContain("`en` only goes with `escribe`");
+    expect(error([{ lee: "A", dentro_de: "B" }])).toContain("`dentro_de` only goes with `pulsa` or `elige`");
     expect(error([{ recarga: "sí" }])).toContain('{"recarga": true}');
   });
 
   it("un texto vacío o demasiado largo no vale", () => {
-    expect(error([{ pulsa: "   " }])).toContain("`pulsa` tiene que ser un texto");
-    expect(error([{ lee: "x".repeat(201) }])).toContain("`lee` tiene que ser un texto");
+    expect(error([{ pulsa: "   " }])).toContain("`pulsa` has to be a text");
+    expect(error([{ lee: "x".repeat(201) }])).toContain("`lee` has to be a text");
   });
 });

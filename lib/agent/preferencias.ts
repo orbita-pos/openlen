@@ -76,17 +76,17 @@ export async function guardarPreferencia(
           ok: false,
           error:
             res.reason === "llena"
-              ? `tu memoria de preferencias está llena (máx ${AGENT_MEMORY_MAX} caracteres) — dile al usuario que ya guardaste varias y pregúntale cuál quitar antes de añadir otra`
-              : "no se pudo guardar la preferencia",
+              ? `your preference memory is full (max ${AGENT_MEMORY_MAX} characters) — tell the user you already saved several and ask them which one to remove before adding another`
+              : "the preference couldn't be saved",
         },
       };
     }
     if (res.yaExistia) return { response: { ok: true, ya_existia: true, alcance } };
-    return { response: { ok: true, alcance, nota: "guardado para TODAS sus páginas, no sólo ésta" } };
+    return { response: { ok: true, alcance, nota: "saved for ALL their pages, not just this one" } };
   }
 
   const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+  if (!row) return { response: { ok: false, error: "project not found" } };
 
   const currentBrief = row.userBrief ?? "";
   const markerIdx = currentBrief.indexOf(PREFERENCIA_MARKER_LINE);
@@ -119,13 +119,13 @@ export async function guardarPreferencia(
       response: {
         ok: false,
         error:
-          `el brief del proyecto ya está lleno (máx ${USER_BRIEF_MAX} caracteres) — díselo al usuario y ofrécele guardarla con alcance="siempre", que usa otro espacio`,
+          `the project brief is already full (max ${USER_BRIEF_MAX} characters) — tell the user and offer to save it with alcance="siempre", which uses another space`,
       },
     };
   }
 
   const saved = await deps.setUserBrief(session.projectId, session.userId, nextBrief);
-  if (!saved) return { response: { ok: false, error: "no se pudo guardar la preferencia" } };
+  if (!saved) return { response: { ok: false, error: "the preference couldn't be saved" } };
 
   // Sin tarjeta propia: la pone el Edit de /memoria que llamó (H3).
   return { response: { ok: true } };

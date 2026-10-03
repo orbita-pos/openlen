@@ -419,7 +419,7 @@ export async function persistPage(
   } catch (err) {
     return {
       ok: false,
-      error: err instanceof Error ? err.message : "no se pudo guardar la página",
+      error: err instanceof Error ? err.message : "the page couldn't be saved",
     };
   }
 

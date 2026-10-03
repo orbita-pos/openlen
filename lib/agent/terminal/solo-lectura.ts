@@ -110,7 +110,7 @@ export async function soloLecturaDeLaTerminal(session: AgentSession, deps: Agent
       const r = deps.resultados;
       if (ruta === RUTA_VISITAS) {
         const out = await toolVerVisitas(session, deps, {});
-        if (out.response.ok === false) throw new Error(String(out.response.error ?? "no se pudieron leer las visitas"));
+        if (out.response.ok === false) throw new Error(String(out.response.error ?? "the visits couldn't be read"));
         const { ok: _ok, ...resto } = out.response;
         return JSON.stringify(resto, null, 2) + "\n";
       }

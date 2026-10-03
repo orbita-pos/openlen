@@ -58,8 +58,8 @@ export function describirCambiosDelDueno(delLen: string, actual: string): string
   if (resto > 0) {
     mostradas.push(
       deMarcado > 0 && lineas.length <= MAX_CAMBIOS
-        ? `y ${deMarcado} cambio(s) de marcado o estilo sin texto visible`
-        : `y ${resto} cambio(s) más`,
+        ? `and ${deMarcado} markup or style change(s) with no visible text`
+        : `and ${resto} more change(s)`,
     );
   }
   return mostradas;

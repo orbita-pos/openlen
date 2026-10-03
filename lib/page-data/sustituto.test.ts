@@ -187,7 +187,7 @@ describe("explicarRechazo — lo que se le dice al modelo", () => {
     const frase = explicarRechazo({ metodo: "POST", ruta: "/api/d/carrito/carrito", status: 403, error: "origen_invalido" });
     expect(frase).toContain("`POST /api/d/carrito/carrito`");
     expect(frase).toContain("403 origen_invalido");
-    expect(frase).toContain("`/api/d/<almacén>`, sin subdominio");
+    expect(frase).toContain("`/api/d/<store>`, without a subdomain");
   });
 
   it("el campo con el tipo equivocado lo nombra", () => {

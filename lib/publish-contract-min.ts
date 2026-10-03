@@ -104,55 +104,64 @@ import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 // Sin las palabras `landing`, `marketing`, `nav`, `hero`, `card`, `CTA` ni
 // `footer`, y sin un solo ejemplo de HTML.
 
-export const PUBLISH_CONTRACT_MIN = `LO QUE LA PUBLICACIÓN IMPONE
+// EN INGLÉS desde la traducción de lo que lee Len (rama len-agente-2026-en,
+// 2026-10-02): Jesús decidió que lo compartido con Crear se traduce para los
+// dos. Cada regla conserva su peso (NINGÚN → NO, SÓLO → ONLY, las mayúsculas
+// donde estaban); la tabla, en plans/len-agente-2026/notas/traduccion-tabla-de-reglas.md.
+// Los ejemplos de ids y rutas pasan a inglés (`#pricing`, `/services`): son
+// ejemplos, no datos. Y ninguna frase empieza por «Write»: en inglés es el
+// nombre de la herramienta, y «Write them directly» se leía como «usa Write»
+// (en el brazo «sólo terminal», una herramienta que no tiene). Por eso «Put
+// them in directly» y «Use a normal `<form>`».
+export const PUBLISH_CONTRACT_MIN = `WHAT PUBLISHING REQUIRES
 
-Nada de esto dice QUÉ construir: ni las secciones, ni su orden, ni lo que la página cuenta. Son las condiciones para que el documento sobreviva al publicarse, y al final el nivel de acabado que se espera.
+None of this says WHAT to build: not the sections, not their order, not what the page tells. These are the conditions for the document to survive being published, and at the end the level of finish that is expected.
 
-• UN documento \`<!doctype html>\` completo y autocontenido. Nada de JSX ni de marcado de ningún framework. El primer carácter de tu respuesta es \`<\` y el último es el cierre de \`</html>\`: sin preámbulo, sin notas, sin vallas de markdown.
-• Tailwind por CDN: \`<script src="https://cdn.tailwindcss.com"></script>\` en el \`<head>\`.
-• Google Fonts por \`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\` en el \`<head>\`. Cualquier familia del catálogo vale; carga todas las que uses.
-• Tu CSS propio va en un \`<style>\` dentro del \`<head>\`.
-• NINGÚN JavaScript sobrevive. Todo \`<script>\` —salvo el de Tailwind— y todo atributo \`on*\` se BORRAN antes de guardar el documento. Lo que deba moverse o responder se resuelve sin código: \`<details>\`/\`<summary>\`, un checkbox oculto con \`peer-checked:\`, \`:target\`, \`@keyframes\`, \`transition\`. Un control que sólo funcionaría con un script llega muerto.
-• Los \`<iframe>\` de Google Maps, YouTube y Vimeo sobreviven a todo, también a lo que el usuario edite a mano. Escríbelos directamente, no hay ninguna transformación al publicar:
-  – MAPA: \`<iframe src="https://maps.google.com/maps?q=<dirección>&output=embed" loading="lazy">\` — no necesita clave ni cuenta. Si el negocio tiene dirección física, ponlo donde des el contacto: un negocio local sin mapa está a medias.
-  – VÍDEO: \`<iframe src="https://www.youtube.com/embed/<ID>">\` o \`https://player.vimeo.com/video/<ID>\`, y SÓLO si el brief te da el enlace — un ID inventado es un reproductor roto.
-  Para cualquier otra cosa (Spotify, Calendly, reservas de terceros), enlaza con un \`<a href>\` honesto: un \`<iframe>\` de otro sitio sobrevive a tu guardado, pero el editor lo borra en cuanto el usuario deshace un cambio a mano, y desaparece sin aviso.
-• LOS FORMULARIOS FUNCIONAN, y son lo único de esta lista que AÑADE algo en vez de quitarlo: al publicar, OpenLen le hornea al \`<form>\` su \`action\`, y lo que el visitante envía llega al correo del usuario y a su bandeja. Escribe un \`<form>\` normal —\`<label>\` + \`<input name="…">\` + \`<button type="submit">\`— y NO le pongas \`action\`, ni \`method\`, ni JavaScript. Un \`onsubmit\` que llame a \`preventDefault()\` o devuelva \`false\` CANCELA el envío de verdad: el visitante ve tu mensaje de gracias, el usuario no recibe nada y ninguno de los dos se entera.
-• Ningún atributo \`data-slot-path=\` en ninguna parte.
-• Todo enlace interno tiene que LLEGAR: si escribes \`href="#precios"\`, la página necesita su \`id="precios"\`. Un ancla a una sección que no existe es un botón muerto, invisible en la captura. Típico: no hay cuentas detrás de estas páginas, así que un «Iniciar sesión» sólo sirve si apunta FUERA, a su URL real.
+• ONE complete, self-contained \`<!doctype html>\` document. No JSX and no markup from any framework. The first character of your response is \`<\` and the last one is the closing of \`</html>\`: no preamble, no notes, no markdown fences.
+• Tailwind via CDN: \`<script src="https://cdn.tailwindcss.com"></script>\` in the \`<head>\`.
+• Google Fonts via \`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\` in the \`<head>\`. Any family in the catalog works; load every one you use.
+• Your own CSS goes in a \`<style>\` inside the \`<head>\`.
+• NO JavaScript survives. Every \`<script>\` —except Tailwind's— and every \`on*\` attribute are DELETED before the document is saved. Whatever has to move or respond is solved without code: \`<details>\`/\`<summary>\`, a hidden checkbox with \`peer-checked:\`, \`:target\`, \`@keyframes\`, \`transition\`. A control that would only work with a script arrives dead.
+• \`<iframe>\`s from Google Maps, YouTube and Vimeo survive everything, including what the user edits by hand. Put them in directly, there is no transformation at publish time:
+  – MAP: \`<iframe src="https://maps.google.com/maps?q=<address>&output=embed" loading="lazy">\` — it needs no key and no account. If the business has a physical address, put it where you give the contact details: a local business without a map is half done.
+  – VIDEO: \`<iframe src="https://www.youtube.com/embed/<ID>">\` or \`https://player.vimeo.com/video/<ID>\`, and ONLY if the brief gives you the link — a made-up ID is a broken player.
+  For anything else (Spotify, Calendly, third-party bookings), link with an honest \`<a href>\`: an \`<iframe>\` from another site survives your save, but the editor deletes it as soon as the user undoes a change by hand, and it disappears without warning.
+• FORMS WORK, and they are the only thing on this list that ADDS something instead of taking it away: at publish time, OpenLen bakes the \`<form>\`'s \`action\` into it, and what the visitor sends reaches the user's email and their inbox. Use a normal \`<form>\` —\`<label>\` + \`<input name="…">\` + \`<button type="submit">\`— and DON'T give it an \`action\`, a \`method\` or JavaScript. An \`onsubmit\` that calls \`preventDefault()\` or returns \`false\` CANCELS the real submission: the visitor sees your thank-you message, the user receives nothing and neither of them finds out.
+• No \`data-slot-path=\` attribute anywhere.
+• Every internal link has to ARRIVE: if you write \`href="#pricing"\`, the page needs its \`id="pricing"\`. An anchor to a section that doesn't exist is a dead button, invisible in the screenshot. Typical: there are no accounts behind these pages, so a "Log in" only works if it points OUTSIDE, to its real URL.
 
-IMÁGENES
-• Ilustraciones, marcas e iconos: SVG en línea.
-• Todo SVG en línea y toda imagen llevan \`class="max-w-full h-auto"\`. Sin eso un ancho fijo NO encoge, y dentro de una tarjeta se sale del móvil aunque el resto de la página quepa.
-• Entrega la página TERMINADA: nada de huecos a la espera de una imagen que llegue después, porque no llega ninguna. Donde iría una fotografía, resuelve tú el área — una ilustración en SVG, una composición, lo que le siente. El usuario puede cambiar después cualquier área de imagen por una foto suya desde la biblioteca del editor.
-• Ninguna URL de imagen externa (unsplash, picsum, placehold.co…), ni siquiera una que venga en el encargo: un servidor que no controlamos es un 404 en la página publicada, y eso el visitante sí lo ve.
+IMAGES
+• Illustrations, logos and icons: inline SVG.
+• Every inline SVG and every image carry \`class="max-w-full h-auto"\`. Without it a fixed width does NOT shrink, and inside a card it overflows on mobile even when the rest of the page fits.
+• Deliver the page FINISHED: no gaps waiting for an image to arrive later, because none arrives. Where a photograph would go, solve the area yourself — an SVG illustration, a composition, whatever suits it. The user can later swap any image area for a photo of their own from the editor's library.
+• No external image URL (unsplash, picsum, placehold.co…), not even one that comes in the request: a server we don't control is a 404 on the published page, and that the visitor does see.
 
-ENLACES
-• Cualquier dirección que traiga el brief es un dato real: cópiala literal, carácter por carácter. Absoluta y con esquema — \`instagram.com/x\` se escribe \`https://instagram.com/x\`, un correo va con \`mailto:\`.
-• Un \`href\` sin esquema es una ruta relativa, y una ruta desconocida devuelve la portada con un 200 en vez de un error: el enlace se rompe sin que nadie lo note.
-• Si el brief no da destino, \`href="#"\`. No inventes cuentas, direcciones, correos ni teléfonos.
-• MÁS DE UNA PÁGINA: casi todo cabe en una con secciones (\`#seccion\`), y ésa es la respuesta por defecto. Cuando el brief pida páginas de verdad, el enlace del menú lleva una ruta relativa de UN tramo —\`href="/servicios"\`— y esa página se crea; el texto del enlace es su título. Minúsculas, sin acentos ni espacios, cuatro como mucho además de la portada.
+LINKS
+• Any address the brief brings is real data: copy it literally, character for character. Absolute and with a scheme — \`instagram.com/x\` is written \`https://instagram.com/x\`, an email goes with \`mailto:\`.
+• An \`href\` without a scheme is a relative path, and an unknown path returns the home page with a 200 instead of an error: the link breaks without anyone noticing.
+• If the brief gives no destination, \`href="#"\`. Don't make up accounts, addresses, emails or phone numbers.
+• MORE THAN ONE PAGE: almost everything fits in one with sections (\`#section\`), and that is the default answer. When the brief asks for real pages, the menu link carries a ONE-segment relative path —\`href="/services"\`— and that page gets created; the link text is its title. Lowercase, no accents or spaces, four at most besides the home page.
 
-COLOR, FORMA Y TIPOGRAFÍA — vocabulario obligatorio
-Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en \`:root\` y usada con \`var()\`. Nunca repitas un color literal por la página. Los nombres llevan el prefijo \`--ol-\`: son los que escriben los controles de Tema del editor, así que una página que los use responde al selector del usuario en vez de quedarse sorda.
-  Fondo  : --ol-bg · --ol-surface · --ol-surface-2
-  Texto  : --ol-fg · --ol-fg-muted · --ol-fg-faint
-  Línea  : --ol-border · --ol-border-strong
-  Acento : --ol-accent · --ol-accent-r (su tripleta R,G,B) · --ol-accent-ink (lo que va ENCIMA del acento)
-  Forma  : --ol-radius, declarado como \`calc(<tu base> * var(--ol-r-scale, 1))\` — el control de redondeo del editor mueve ese factor
-  Letra  : --ol-font-display · --ol-font-body · --ol-font-mono
-Nada de literales \`#rrggbb\` fuera de los bloques \`:root\`. Emite también \`:root[data-ol-mode="dark"] { … }\` redefiniendo esos tokens con valores oscuros pensados a mano, no una inversión mecánica: ese atributo sobre \`<html>\` es el que conmuta el editor.
+COLOR, SHAPE AND TYPE — required vocabulary
+Every color, radius and family comes from a CSS custom property, declared in \`:root\` and used with \`var()\`. Never repeat a literal color across the page. The names carry the \`--ol-\` prefix: they are the ones the editor's Theme controls write, so a page that uses them responds to the user's picker instead of staying deaf.
+  Background : --ol-bg · --ol-surface · --ol-surface-2
+  Text       : --ol-fg · --ol-fg-muted · --ol-fg-faint
+  Line       : --ol-border · --ol-border-strong
+  Accent     : --ol-accent · --ol-accent-r (its R,G,B triplet) · --ol-accent-ink (what goes ON TOP of the accent)
+  Shape      : --ol-radius, declared as \`calc(<your base> * var(--ol-r-scale, 1))\` — the editor's rounding control moves that factor
+  Type       : --ol-font-display · --ol-font-body · --ol-font-mono
+No \`#rrggbb\` literals outside the \`:root\` blocks. Also emit \`:root[data-ol-mode="dark"] { … }\` redefining those tokens with dark values thought out by hand, not a mechanical inversion: that attribute on \`<html>\` is the one the editor toggles.
 
-TAMAÑO
-• Legible y usable desde 360 px de ancho.
+SIZE
+• Readable and usable from 360 px wide.
 
-OFICIO
-Nada de esto dice qué secciones lleva la página ni en qué orden. Es el nivel de acabado que se espera de cualquier cosa que publiques.
-• Profundidad: las superficies elevadas se separan del fondo con sombra suave, nunca con un borde brillante. Los separadores son de un pelo, a la alfa baja de \`--ol-border\`.
-• UN solo acento, usado poco. Un acento que aparece en todas partes deja de ser un acento.
-• Tipografía con carácter: empareja una familia de titulares con otra de lectura, y que la de titulares lleve la personalidad de este encargo — un taller mecánico, una librería de viejo y un panel financiero no se letran igual. Sin fuentes por defecto.
-• Ritmo: espacio vertical generoso entre bloques, y texto de lectura que no pase de unos 65 caracteres por línea.
-• UNA modalidad por página — oscura, clara o crema — elegida por lo que el encargo sugiere. Emite igualmente el bloque oscuro para que el editor pueda conmutar, pero NO pongas un botón visible de cambio de tema: nadie que entre a la página de un negocio espera encontrarlo.`;
+CRAFT
+None of this says which sections the page has or in what order. It is the level of finish expected of anything you publish.
+• Depth: raised surfaces separate from the background with a soft shadow, never with a bright border. Dividers are hairline, at the low alpha of \`--ol-border\`.
+• ONE single accent, used sparingly. An accent that appears everywhere stops being an accent.
+• Type with character: pair a display family with a reading one, and let the display one carry the personality of this request — a car repair shop, a second-hand bookshop and a financial dashboard aren't lettered the same way. No default fonts.
+• Rhythm: generous vertical space between blocks, and reading text no wider than about 65 characters per line.
+• ONE mode per page — dark, light or cream — chosen by what the request suggests. Emit the dark block anyway so the editor can toggle, but DON'T put a visible theme-switch button: nobody who visits a business's page expects to find one.`;
 
 /**
  * LA PALANCA, en un solo sitio.
@@ -305,57 +314,57 @@ export interface FormaDeLaSuperficie {
 export type ReglaRetirada = "vocabulario-ol" | "iframes-que-borraba-el-editor";
 
 const LOS_IFRAMES_SOBREVIVEN =
-  "• Los `<iframe>` que escribes sobreviven a todo: al guardar, al publicar y a lo que el " +
-  "usuario edite a mano. Escríbelos directamente, no hay ninguna transformación al publicar:";
+  "• The `<iframe>`s you write survive everything: saving, publishing and whatever the " +
+  "user edits by hand. Put them in directly, there is no transformation at publish time:";
 
 /** El bloque COLOR sin el espacio de nombres `--ol-`. `creas` = la guía manda
  *  sólo en lo que la superficie crea (`laGuiaEsParaLoQueCrea`). */
 function colorConSusNombres(creas: boolean): string {
   const oscuro = creas
-    ? "En una página que creas tú, escribe también su versión oscura"
-    : "Si la página aún no la tiene, escribe tú su versión oscura";
+    ? "On a page you create yourself, also write its dark version"
+    : "If the page doesn't have one yet, write its dark version yourself";
   return (
-    "COLOR, FORMA Y TIPOGRAFÍA\n" +
-    "Todo color, radio y familia sale de una propiedad personalizada de CSS, declarada en `:root` y " +
-    "usada con `var()`, con los nombres que tú elijas. Nunca repitas un color literal por la página: " +
-    "nada de literales `#rrggbb` fuera de los bloques `:root`. Los controles de Tema del editor " +
-    "escriben en esas variables —las encuentran por cómo las usa la página: el fondo y el color del " +
-    "`body`, el fondo de los botones, los `border-radius`, la letra del `body` y de los titulares—, " +
-    "así que un color escrito a mano en una regla no lo pueden cambiar.\n" +
-    `${oscuro}: un bloque que redefine esas variables con valores oscuros pensados a mano —no una ` +
-    "inversión mecánica— bajo una clase o un atributo de `<html>` (`:root.dark`, " +
-    '`:root[data-theme="dark"]`…). Es lo que enciende el conmutador del editor; uno que sólo dependa ' +
-    "de `prefers-color-scheme` no lo puede encender."
+    "COLOR, SHAPE AND TYPE\n" +
+    "Every color, radius and family comes from a CSS custom property, declared in `:root` and " +
+    "used with `var()`, with names of your choosing. Never repeat a literal color across the page: " +
+    "no `#rrggbb` literals outside the `:root` blocks. The editor's Theme controls write into those " +
+    "variables —they find them by how the page uses them: the `body`'s background and color, the " +
+    "buttons' background, the `border-radius` values, the type of the `body` and of the headings—, " +
+    "so a color written by hand into a rule is one they can't change.\n" +
+    `${oscuro}: a block that redefines those variables with dark values thought out by hand —not a ` +
+    "mechanical inversion— under a class or an attribute of `<html>` (`:root.dark`, " +
+    '`:root[data-theme="dark"]`…). That is what the editor\'s switch turns on; one that depends only ' +
+    "on `prefers-color-scheme` is one it can't turn on."
   );
 }
 
 const RESPUESTA_NO_ES_EL_DOCUMENTO =
-  "• La página es UN documento `<!doctype html>` completo y autocontenido. Nada de JSX " +
-  "ni de marcado de ningún framework. El formato de TU respuesta no lo fija esta guía: " +
-  "lo fija tu propio bloque de instrucciones.";
+  "• The page is ONE complete, self-contained `<!doctype html>` document. No JSX and " +
+  "no markup from any framework. The format of YOUR response isn't set by this guide: " +
+  "your own instruction block sets it.";
 
 const EL_HEAD_YA_EXISTE =
-  "• En el `<head>` viven las tres cosas de las que depende el aspecto: Tailwind por CDN " +
-  "(`<script src=\"https://cdn.tailwindcss.com\"></script>`), las hojas de Google Fonts " +
-  "(`<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/…\">`) y el CSS propio de la " +
-  "página en un `<style>`. El documento que edites ya las trae: añade DENTRO lo que te falte " +
-  "—una familia nueva, reglas nuevas— en vez de duplicarlas.";
+  "• The three things the look depends on live in the `<head>`: Tailwind via CDN " +
+  "(`<script src=\"https://cdn.tailwindcss.com\"></script>`), the Google Fonts stylesheets " +
+  "(`<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/…\">`) and the page's own CSS " +
+  "in a `<style>`. The document you edit already has them: add what you are missing INSIDE them " +
+  "—a new family, new rules— instead of duplicating them.";
 
 const EL_BLOQUE_OSCURO_SI_FALTA =
-  'Si la página aún no lo define, escríbelo tú: `:root[data-ol-mode="dark"] { … }` con esos ' +
-  "tokens en valores oscuros pensados a mano, no una inversión mecánica — ese atributo sobre " +
-  "`<html>` es el que conmuta el editor.";
+  'If the page doesn\'t define it yet, write it yourself: `:root[data-ol-mode="dark"] { … }` with ' +
+  "those tokens in dark values thought out by hand, not a mechanical inversion — that attribute " +
+  "on `<html>` is the one the editor toggles.";
 
 const EL_BLOQUE_OSCURO_EN_LO_QUE_CREAS =
-  'En una página que creas tú, escríbelo también: `:root[data-ol-mode="dark"] { … }` con esos ' +
-  "tokens en valores oscuros pensados a mano, no una inversión mecánica — ese atributo sobre " +
-  "`<html>` es el que conmuta el editor.";
+  'On a page you create yourself, write it too: `:root[data-ol-mode="dark"] { … }` with those ' +
+  "tokens in dark values thought out by hand, not a mechanical inversion — that attribute on " +
+  "`<html>` is the one the editor toggles.";
 
 const EL_ENLACE_NO_CREA_LA_PAGINA =
-  "• MÁS DE UNA PÁGINA: casi todo cabe en una con secciones (`#seccion`), y ésa es la " +
-  "respuesta por defecto. Escribir un enlace a `/otra` NO crea esa página: si esa ruta " +
-  "no existe, el sitio sirve la portada con un 200 y el enlace se rompe EN SILENCIO. " +
-  "Enlaza sólo páginas que ya existan.";
+  "• MORE THAN ONE PAGE: almost everything fits in one with sections (`#section`), and that " +
+  "is the default answer. Writing a link to `/another` does NOT create that page: if that " +
+  "path doesn't exist, the site serves the home page with a 200 and the link breaks SILENTLY. " +
+  "Link only to pages that already exist.";
 
 /** De `desde` hasta `hasta` (exclusiva), sustituido. LANZA si falta cualquiera
  *  de las dos marcas: una redacción retocada no puede dejar el ajuste sin
@@ -405,7 +414,7 @@ export function contratoParaSuperficie(
       out,
       quien,
       "respuesta",
-      "• UN documento `<!doctype html>` completo y autocontenido.",
+      "• ONE complete, self-contained `<!doctype html>` document.",
       "\n",
       RESPUESTA_NO_ES_EL_DOCUMENTO,
     );
@@ -416,16 +425,16 @@ export function contratoParaSuperficie(
     // en la viñeta siguiente: la de después es la del JavaScript, que el
     // Agente RETIRA más abajo, y encadenar los dos ajustes haría que el orden
     // de este bloque decidiera si el otro lanza.
-    out = corta(out, quien, "head", "• Tailwind por CDN:", "\n", EL_HEAD_YA_EXISTE);
-    out = corta(out, quien, "fuentes", "• Google Fonts por", "\n", "");
-    out = corta(out, quien, "css-propio", "• Tu CSS propio va en un", "\n", "");
+    out = corta(out, quien, "head", "• Tailwind via CDN:", "\n", EL_HEAD_YA_EXISTE);
+    out = corta(out, quien, "fuentes", "• Google Fonts via", "\n", "");
+    out = corta(out, quien, "css-propio", "• Your own CSS goes in a", "\n", "");
     // El bloque oscuro deja de ser una orden y pasa a ser condicional, que es
     // lo único que un turno de edición puede ejecutar.
     out = corta(
       out,
       quien,
       "bloque-oscuro",
-      'Emite también `:root[data-ol-mode="dark"] { … }`',
+      'Also emit `:root[data-ol-mode="dark"] { … }`',
       "\n",
       forma.laGuiaEsParaLoQueCrea ? EL_BLOQUE_OSCURO_EN_LO_QUE_CREAS : EL_BLOQUE_OSCURO_SI_FALTA,
     );
@@ -435,16 +444,16 @@ export function contratoParaSuperficie(
       out,
       quien,
       "oficio-oscuro",
-      "Emite igualmente el bloque oscuro para que el editor pueda conmutar, pero NO",
-      " pongas un botón visible",
-      "NO",
+      "Emit the dark block anyway so the editor can toggle, but DON'T",
+      " put a visible",
+      "DON'T",
     );
   }
   // El bloque ENLACES se lleva dentro la viñeta de las páginas: si la
   // superficie lo retira entero, la frase falsa se va con él y no hay nada que
   // sustituir.
   if (!forma.elEnlaceCreaLaPagina && !quita.includes("enlaces")) {
-    out = corta(out, quien, "paginas", "• MÁS DE UNA PÁGINA:", "\n", EL_ENLACE_NO_CREA_LA_PAGINA);
+    out = corta(out, quien, "paginas", "• MORE THAN ONE PAGE:", "\n", EL_ENLACE_NO_CREA_LA_PAGINA);
   }
   if (quita.includes("javascript")) {
     // La viñeta ya pasó por `swapJsClauses`, así que la marca es su versión
@@ -453,15 +462,15 @@ export function contratoParaSuperficie(
     out = corta(out, quien, "javascript", "• JavaScript: tu código SOBREVIVE a la publicación", "\n", "");
   }
   if (quita.includes("data-slot-path")) {
-    out = corta(out, quien, "data-slot-path", "• Ningún atributo `data-slot-path=` en ninguna parte.", "\n", "");
+    out = corta(out, quien, "data-slot-path", "• No `data-slot-path=` attribute anywhere.", "\n", "");
   }
   if (quita.includes("enlaces")) {
     out = corta(
       out,
       quien,
       "enlaces",
-      "ENLACES\n• Cualquier dirección que traiga el brief",
-      "COLOR, FORMA Y TIPOGRAFÍA",
+      "LINKS\n• Any address the brief brings",
+      "COLOR, SHAPE AND TYPE",
       "",
     );
   }
@@ -473,11 +482,11 @@ export function contratoParaSuperficie(
       out,
       quien,
       "iframes",
-      "• Los `<iframe>` de Google Maps, YouTube y Vimeo sobreviven a todo",
+      "• `<iframe>`s from Google Maps, YouTube and Vimeo survive everything",
       "\n",
       LOS_IFRAMES_SOBREVIVEN,
     );
-    out = corta(out, quien, "spotify", "  Para cualquier otra cosa (Spotify, Calendly", "\n", "");
+    out = corta(out, quien, "spotify", "  For anything else (Spotify, Calendly", "\n", "");
   }
   if (retira.includes("vocabulario-ol")) {
     // Va DESPUÉS del ajuste del bloque oscuro de arriba, que lanza si no
@@ -487,17 +496,17 @@ export function contratoParaSuperficie(
       out,
       quien,
       "vocabulario-ol",
-      "COLOR, FORMA Y TIPOGRAFÍA — vocabulario obligatorio",
-      "\n\nTAMAÑO",
+      "COLOR, SHAPE AND TYPE — required vocabulary",
+      "\n\nSIZE",
       colorConSusNombres(!!forma.laGuiaEsParaLoQueCrea),
     );
     out = corta(
       out,
       quien,
       "separadores-ol",
-      "a la alfa baja de `--ol-border`",
+      "at the low alpha of `--ol-border`",
       ".",
-      "a la alfa baja de tu color de borde",
+      "at the low alpha of your border color",
     );
   }
   return out;

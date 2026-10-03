@@ -17,7 +17,7 @@ const nombres = () => TOOLS.map((t) => t.name);
 // guardar_dato y editar_dato lo tiene que decir ahora la sección del prompt.
 const ALMACENES = (() => {
   const p = instruccionesDeLen();
-  return p.slice(p.indexOf("ALMACENES (los datos de la página, en /datos)")).split("\n\n")[0];
+  return p.slice(p.indexOf("STORES (the page's data, in /datos)")).split("\n\n")[0];
 })();
 
 describe("el Agente sabe escribir en los almacenes", () => {
@@ -33,14 +33,14 @@ describe("el Agente sabe escribir en los almacenes", () => {
   // Sin esta frase escribiría /datos/<nuevo>.json, recibiría «not declared», y
   // no sabría qué hacer.
   it("el prompt dice cómo nace un almacén", () => {
-    expect(ALMACENES).toMatch(/DECLARA/);
+    expect(ALMACENES).toMatch(/DECLARED/);
     expect(ALMACENES).toContain("data-ol-stores");
   });
 
   // Y de dónde salen los ids: una fila que se cambia conserva el suyo, y sin él
   // el Agente añadiría una fila nueva cada vez que le piden cambiar un precio.
   it("el prompt dice dónde están las filas y qué hace el id", () => {
-    expect(ALMACENES).toContain("/datos/<almacén>.json");
-    expect(ALMACENES).toMatch(/sin id es nueva/);
+    expect(ALMACENES).toContain("/datos/<store>.json");
+    expect(ALMACENES).toMatch(/without an id is new/);
   });
 });

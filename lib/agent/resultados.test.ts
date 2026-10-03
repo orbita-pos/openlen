@@ -49,14 +49,14 @@ describe("ver_visitas", () => {
     (deps.loadProject as ReturnType<typeof vi.fn>).mockResolvedValue({ subdomain: null });
     const out = await toolVerVisitas(session, deps, {});
     expect(out.response.publicada).toBe(false);
-    expect(String(out.response.nota_publicada)).toContain("no está publicada");
+    expect(String(out.response.nota_publicada)).toContain("isn't published");
   });
   it("sin publicar pero CON visitas (se despublicó): los números son reales y no se tapan", async () => {
     const { session, deps } = montar({ visitas: vi.fn().mockResolvedValue(visitas) });
     (deps.loadProject as ReturnType<typeof vi.fn>).mockResolvedValue({ subdomain: null });
     const out = await toolVerVisitas(session, deps, {});
     expect(out.response).toMatchObject({ publicada: false, hoy: cuenta(3) });
-    expect(String(out.response.nota_publicada)).not.toContain("no tiene visitas");
+    expect(String(out.response.nota_publicada)).not.toContain("has no recorded visits");
   });
   // MEDIDO en el humo del 30/09, 3 de 3: con `publicada: false` y visitas, Len
   // se inventó que eran «de previsualizaciones». El contador sólo va en la
@@ -65,8 +65,8 @@ describe("ver_visitas", () => {
     const { session, deps } = montar({ visitas: vi.fn().mockResolvedValue(visitas) });
     (deps.loadProject as ReturnType<typeof vi.fn>).mockResolvedValue({ subdomain: null });
     const out = await toolVerVisitas(session, deps, {});
-    expect(String(out.response.nota_publicada)).toMatch(/sólo cuenta la página publicada/i);
-    expect(String(out.response.nota_publicada)).toMatch(/cuando estuvo publicada/i);
+    expect(String(out.response.nota_publicada)).toMatch(/only the published page counts/i);
+    expect(String(out.response.nota_publicada)).toMatch(/when it was published/i);
   });
   // «Error = dato» no se prueba aquí: `runAgentTool` ya convierte lo que una
   // herramienta lanza en `{ ok: false, error }`, como para todas las demás.

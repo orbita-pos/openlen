@@ -28,20 +28,20 @@ describe("el registro de cambios", () => {
       cambios: [cambio("Agente (1 ops): Añadir sección de horarios")],
     });
     expect(out).toContain("Añadir sección de horarios");
-    expect(out).toMatch(/registro real de versiones/);
+    expect(out).toMatch(/real version log/);
   });
 
   it("dice que NO es la conversación — es lo que se guardó", () => {
     // Es la diferencia entre «creo que hicimos» y «esto se hizo». Si el modelo
     // lo lee como charla, volverá a fiarse de su memoria y a inventar.
     const out = changelogBlock([cambio("Agente (1 ops): Centrar el pie")]);
-    expect(out).toMatch(/no es la conversación/);
-    expect(out).toMatch(/no llegó a guardarse/);
+    expect(out).toMatch(/not the conversation/);
+    expect(out).toMatch(/never got saved/);
   });
 
   it("nombra la página cuando el cambio no fue en el inicio", () => {
     const out = changelogBlock([cambio("Agente (1 ops): Cambiar el título", "menu")]);
-    expect(out).toContain('(página "menu")');
+    expect(out).toContain('(page "menu")');
   });
 
   it("se acota — no manda el historial entero en cada turno", () => {
@@ -64,9 +64,9 @@ describe("el aviso de que no ve toda la conversación", () => {
       ...base,
       conversacionRecortada: { visibles: 12, totales: 31 },
     });
-    expect(out).toContain("últimos 12");
+    expect(out).toContain("last 12");
     expect(out).toContain("31");
-    expect(out).toMatch(/no me acuerdo/);
+    expect(out).toMatch(/no longer remember/);
   });
 
   it("cuando lo ve todo NO dice nada", () => {
@@ -82,6 +82,6 @@ describe("el aviso de que no ve toda la conversación", () => {
       ...base,
       conversacionRecortada: { visibles: 12, totales: 31 },
     });
-    expect(out).toMatch(/registro de cambios/);
+    expect(out).toMatch(/change log/);
   });
 });

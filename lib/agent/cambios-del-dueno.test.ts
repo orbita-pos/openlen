@@ -14,7 +14,7 @@ describe("lo que el dueño cambió a mano desde el último turno de Len", () => 
   it("un cambio sólo de marcado se cuenta, no se copia", () => {
     const estilo = DEL_LEN.replace("<p>", '<p style="color:blue">');
     expect(describirCambiosDelDueno(DEL_LEN, estilo)).toEqual([
-      "y 1 cambio(s) de marcado o estilo sin texto visible",
+      "and 1 markup or style change(s) with no visible text",
     ]);
   });
 

@@ -55,7 +55,7 @@ describe("el interruptor del contrato mínimo", () => {
   // acordarse de encenderlo, y por eso pasó tres días decidido y sin usar.
   it("por defecto sale el MÍNIMO — la ausencia enciende", () => {
     expect(systemPromptFor({})).not.toBe(SYSTEM_PROMPT);
-    expect(systemPromptFor({})).toContain("LO QUE LA PUBLICACIÓN IMPONE");
+    expect(systemPromptFor({})).toContain("WHAT PUBLISHING REQUIRES");
   });
 
   it("sólo el literal 0 devuelve el contrato completo", () => {
@@ -63,7 +63,7 @@ describe("el interruptor del contrato mínimo", () => {
     // 2026-08-26 y le cambia su bloque. Lo que el interruptor decide sigue
     // siendo cuál de los dos contratos entra, y eso es lo que se mide.
     const completo = systemPromptFor({ OPENLEN_MIN_CONTRACT: "0" });
-    expect(completo).not.toContain("LO QUE LA PUBLICACIÓN IMPONE");
+    expect(completo).not.toContain("WHAT PUBLISHING REQUIRES");
     expect(completo).toContain("JAVASCRIPT");
     // Un "false" o un "no" NO apagan: la vuelta atrás es una sola forma, igual
     // que en `lib/publish/kill-switches.ts`.
@@ -75,7 +75,7 @@ describe("el interruptor del contrato mínimo", () => {
     const out = min();
     expect(out).not.toBe(SYSTEM_PROMPT);
     expect(out).not.toContain(PUBLISH_CONTRACT);
-    expect(out).toContain("LO QUE LA PUBLICACIÓN IMPONE");
+    expect(out).toContain("WHAT PUBLISHING REQUIRES");
     // ⚰️ EL COCIENTE, RETIRADO — Y LA TERCERA VEZ QUE ESTA LÍNEA MIENTE.
     //
     // Aquí vivía `out.length < completo.length * 0.8`, y antes de eso
@@ -162,7 +162,7 @@ describe("lo obligatorio sobrevive al recorte", () => {
     // español, que es la copia que sí llega en las cuatro superficies. Fijar la
     // redacción en vez de la obligación es cómo una prueba caduca en silencio
     // y luego bloquea el recorte correcto.
-    ["nada de huecos que rellene otro", /resuelve tú el área/],
+    ["nada de huecos que rellene otro", /solve the area yourself/],
     ["href absoluto con esquema", /mailto:/],
     // `--ol-accent-ink`, no `--accent-ink`: el vocabulario pasó al espacio que
     // los controles de Tema del editor LEEN. Ver `lib/publish-contract-min.ts`.
@@ -217,7 +217,7 @@ describe("lo que el recorte tiene que haber quitado", () => {
 describe("generateSystemMessage — una sola fuente para lo que se manda", () => {
   it("no es SYSTEM_PROMPT pelado: lleva el contrato mínimo, como producción", () => {
     expect(generateSystemMessage({})).not.toBe(SYSTEM_PROMPT);
-    expect(generateSystemMessage({})).toContain("LO QUE LA PUBLICACIÓN IMPONE");
+    expect(generateSystemMessage({})).toContain("WHAT PUBLISHING REQUIRES");
   });
 
   it("lleva el bloque del runtime", () => {
@@ -295,26 +295,27 @@ describe("el contrato deja que un sitio tenga varias páginas", () => {
 
   it("y en el que de verdad se envía, que es el MÍNIMO", () => {
     const enviado = systemPromptFor({ OPENLEN_MIN_CONTRACT: "1" });
-    expect(enviado).toContain("MÁS DE UNA PÁGINA");
-    expect(enviado).toContain('href="/servicios"');
+    // El mínimo, en inglés desde la traducción (2026-10-02); el completo sigue en español.
+    expect(enviado).toContain("MORE THAN ONE PAGE");
+    expect(enviado).toContain('href="/services"');
   });
 
   // Sin esto la regla se leería como «haz varias páginas», y cada landing
   // normal nacería troceada. Una página con secciones sigue siendo la
   // respuesta por defecto — el corte lo decide el contenido, no el entusiasmo.
   it("pero una sola página sigue siendo la respuesta por defecto", () => {
-    for (const contrato of [SYSTEM_PROMPT, systemPromptFor({ OPENLEN_MIN_CONTRACT: "1" })]) {
-      expect(contrato).toContain("por defecto");
-      expect(contrato).toContain("#seccion");
-    }
+    expect(SYSTEM_PROMPT).toContain("por defecto");
+    expect(SYSTEM_PROMPT).toContain("#seccion");
+    const minimo = systemPromptFor({ OPENLEN_MIN_CONTRACT: "1" });
+    expect(minimo).toContain("the default answer");
+    expect(minimo).toContain("#section");
   });
 
   // El techo se dice EN el contrato: es lo que evita que un modelo entusiasta
   // declare doce páginas. `paginasDeclaradas` lo vuelve a aplicar por su cuenta
   // — cinturón y tirantes, porque un prompt no es una garantía.
   it("y dice cuántas caben", () => {
-    for (const contrato of [SYSTEM_PROMPT, systemPromptFor({ OPENLEN_MIN_CONTRACT: "1" })]) {
-      expect(contrato.toLowerCase()).toContain("cuatro");
-    }
+    expect(SYSTEM_PROMPT.toLowerCase()).toContain("cuatro");
+    expect(systemPromptFor({ OPENLEN_MIN_CONTRACT: "1" }).toLowerCase()).toContain("four at most");
   });
 });

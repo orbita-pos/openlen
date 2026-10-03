@@ -76,26 +76,26 @@ export interface Sustituto {
  * que marcarla como dato (`TEXTO_DE_LA_PAGINA_ES_DATO`).
  */
 export function explicarRechazo(l: LlamadaADatos): string {
-  const que = `La página llamó a \`${l.metodo} ${l.ruta}\` y el servidor de la página publicada lo rechazaría (${l.status}${l.error ? ` ${l.error}` : ""})`;
+  const que = `The page called \`${l.metodo} ${l.ruta}\` and the published page's server would reject it (${l.status}${l.error ? ` ${l.error}` : ""})`;
   const almacen = l.ruta.split("/").filter(Boolean).pop() ?? "";
   const campo = l.error?.startsWith("campo_invalido:") ? l.error.slice("campo_invalido:".length) : null;
   const porque =
     l.error === "origen_invalido"
-      ? "el primer tramo de `/api/d/<sub>/<almacén>` tiene que ser el subdominio de ESTA página publicada, y la página no puede saberlo. Escribe `/api/d/<almacén>`, sin subdominio: el servidor sabe de qué página viene"
+      ? "the first segment of `/api/d/<sub>/<store>` has to be the subdomain of THIS published page, and the page can't know it. Write `/api/d/<store>`, without a subdomain: the server knows which page it comes from"
       : l.error === "ruta_inexistente"
-        ? "esa ruta no existe. Es `/api/d/<almacén>`: GET para leer, POST con el documento en JSON para guardar"
+        ? "that path doesn't exist. It is `/api/d/<store>`: GET to read, POST with the document as JSON to save"
         : l.error === "almacen_no_declarado"
-          ? `el almacén «${almacen}» no está en el bloque \`data-ol-stores\` de la página`
+          ? `the store «${almacen}» isn't in the page's \`data-ol-stores\` block`
           : campo
-            ? `el campo «${campo}» no trae el tipo que declara el almacén`
+            ? `the field «${campo}» doesn't carry the type the store declares`
             : l.error === "documento_invalido"
-              ? "el cuerpo tiene que ser un objeto JSON con los campos declarados"
+              ? "the body has to be a JSON object with the declared fields"
               : l.error === "no_permitido"
-                ? "el modo del almacén no deja al visitante hacer eso"
+                ? "the store's mode doesn't let the visitor do that"
                 : l.error === "documento_grande" || l.error === "cuota_llena"
-                  ? "no cabe: un documento no puede pasar de 16 KB"
+                  ? "it doesn't fit: a document can't go over 16 KB"
                   : "";
-  return `${que}${porque ? `: ${porque}` : ""}. Lo que el visitante guarde así se pierde.`;
+  return `${que}${porque ? `: ${porque}` : ""}. What the visitor saves this way is lost.`;
 }
 
 /** En una medición hay un navegador, así que hay un visitante. */

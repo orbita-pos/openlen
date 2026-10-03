@@ -199,9 +199,9 @@ export function notaDeLaFoto(foto: { url: string; alt?: string }, estado: "vista
     estado === "vista"
       ? ""
       : estado === NO_CABE
-        ? " (no está a la vista: no cabía con las demás; la dirección sirve igual)"
-        : " (no se pudo cargar para verla)";
-  return `[Foto adjunta: ${foto.url}${alt}${porque}]`;
+        ? " (not in view: it didn't fit with the others; the address works just the same)"
+        : " (it couldn't be loaded to see it)";
+  return `[Attached photo: ${foto.url}${alt}${porque}]`;
 }
 
 /** Tu mensaje de un turno pasado: el texto y, si mandaste foto, su nota y sus

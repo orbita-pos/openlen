@@ -55,7 +55,7 @@ LINKS (<a href>):
 - The URLs they give you are their real data: they go into the href VERBATIM, character for character, with their query string and their capital letters.
 - ABSOLUTE, ALWAYS: "instagram.com/juan" or "@juan" are completed to https://instagram.com/juan. An href without a scheme is a RELATIVE path of the site itself, and the failure is SILENT: the server serves the home page again with a 200 and the visitor lands on the same page. mailto: and tel: are fine too.
 - INTERNAL: the path "/<slug>" of its file /<slug>/index.html (e.g. /menu); never "menu.html" or plain "menu", which fall into the same silent fallback to the home page. The home page is "/".
-- ANCHORS ("#precios"): only if that id EXISTS on the target page; if not, create it in the same edit.
+- ANCHORS ("#pricing"): only if that id EXISTS on the target page; if not, create it in the same edit.
 
 STORES (the page's data, in /datos):
 A STORE keeps real data on the server —a dish on the menu, a product in the catalog, a review— and survives reloads and republishing. It is DECLARED in the page, with Edit: a \`<script type="application/json" data-ol-stores>\` block inside the <body>, outside any section that could be deleted, which says what fields it has and who may touch them. Its shape: {"menu":{"visitante":"lectura","campos":{"plato":"texto","precio":"numero"}}}. \`visitante\` is "lectura" (you maintain it, the visitor only reads it — the normal case for a menu or a catalog), "propio" (each visitor writes and reads THEIR OWN — a cart), "publico" (anyone writes and EVERYONE reads it — REVIEWS, comments, a wall: it is published at once and everybody sees it, as on Mercado Libre) or "añadir" (the visitor creates and does NOT read what others left — a sign-up form, where what each one leaves is private). The types are texto, numero, booleano, fecha and lista.
@@ -117,16 +117,16 @@ ${bloqueDeLibrerias({ dondeVaElScript: "libre" })}`;
 // aparece, como `swapJsClauses`. Regla por regla, en
 // plans/len-agente-2026/notas/f4-tabla-de-reglas.md (M1–M21, I1–I3).
 
-// Las marcas de lo que es sólo de Len van en inglés desde la traducción (rama
-// len-agente-2026-en); las del contrato y las librerías siguen en español
-// porque ese texto lo comparten Crear y el editor, que no se tradujeron.
+// Todas las marcas van en inglés desde la traducción de lo que lee Len (rama
+// len-agente-2026-en): también las del contrato y las librerías, que Jesús
+// decidió traducir para Crear y el editor a la vez (2026-10-02).
 const MARCA_GUIA = "DESIGN GUIDE (";
-const MARCA_GUSTO = "\nCOLOR, FORMA Y TIPOGRAFÍA";
-const MARCA_LIBRERIAS = "LIBRERÍAS DISPONIBLES";
+const MARCA_GUSTO = "\nCOLOR, SHAPE AND TYPE";
+const MARCA_LIBRERIAS = "AVAILABLE LIBRARIES";
 const MARCA_API_D = "SAVING TOO:";
-/** La entradilla de LO QUE LA PUBLICACIÓN IMPONE prometía el acabado «al
- *  final», y el acabado se va a la guía. */
-const PROMESA_DEL_ACABADO = ", y al final el nivel de acabado que se espera.";
+/** La entradilla de WHAT PUBLISHING REQUIRES prometía el acabado «al final»,
+ *  y el acabado se va a la guía. */
+const PROMESA_DEL_ACABADO = ", and at the end the level of finish that is expected.";
 
 /** Lo que queda en la línea del JavaScript donde estaba el contrato de /api/d. */
 const EN_LUGAR_DE_API_D = `SAVING TOO is possible, in a store: what the JavaScript asks of /api/d is in ${RUTA_API_D}.`;
@@ -176,7 +176,7 @@ export function partirElManual(entero: string = manualSinPartir()): ManualPartid
     impone = contrato.slice(0, iGusto).trimEnd();
     gusto = contrato.slice(iGusto + 1);
     encontrar(impone, PROMESA_DEL_ACABADO);
-    impone = impone.replace(PROMESA_DEL_ACABADO, `; el nivel de acabado está en ${RUTA_GUIA}.`);
+    impone = impone.replace(PROMESA_DEL_ACABADO, `; the level of finish is in ${RUTA_GUIA}.`);
   }
 
   const antes = sinApi.slice(0, iGuia).trimEnd();

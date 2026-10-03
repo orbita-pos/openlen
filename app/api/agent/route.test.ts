@@ -1399,7 +1399,7 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     mocks.conseguirFotos.mockResolvedValueOnce(new Map([["https://u/f.jpg", FOTO]]));
     await readEvents(await pedir());
     const tuMensaje = (historialQueRecibio() as { content: string; images?: unknown[] }[])[0]!;
-    expect(tuMensaje.content).toContain("[Foto adjunta: https://u/f.jpg]");
+    expect(tuMensaje.content).toContain("[Attached photo: https://u/f.jpg]");
     expect(tuMensaje.images).toEqual([FOTO]);
     // Del mismo servidor que la petición: así se reconocen las subidas propias.
     expect(mocks.conseguirFotos).toHaveBeenCalledWith(["https://u/f.jpg"], expect.objectContaining({ origen: "http://localhost/api/agent" }));
@@ -1435,7 +1435,7 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     const vieja = mensajes.find((m) => m.content.startsWith("la vieja"))!;
     const nueva = mensajes.find((m) => m.content.startsWith("la nueva"))!;
     expect(vieja.images).toBeUndefined();
-    expect(vieja.content).toContain("no cabía con las demás");
+    expect(vieja.content).toContain("it didn't fit with the others");
     expect(nueva.images).toHaveLength(1);
   });
 
@@ -1444,7 +1444,7 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     mocks.conseguirFotos.mockResolvedValueOnce(new Map([["https://u/f.jpg", null]]));
     await readEvents(await pedir());
     const tuMensaje = (historialQueRecibio() as { content: string; images?: unknown[] }[])[0]!;
-    expect(tuMensaje.content).toContain("(no se pudo cargar para verla)");
+    expect(tuMensaje.content).toContain("(it couldn't be loaded to see it)");
     expect(tuMensaje).not.toHaveProperty("images");
   });
 

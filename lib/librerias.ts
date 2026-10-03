@@ -108,7 +108,7 @@ export const LIBRERIAS: readonly Libreria[] = [
     id: "chart.js",
     nombre: "Chart.js",
     version: "4.5.0",
-    para: "gráficas (barras, líneas, tarta, radar) sobre un <canvas>",
+    para: "charts (bar, line, pie, radar) on a <canvas>",
     global: "Chart",
     scripts: [
       {
@@ -123,7 +123,7 @@ export const LIBRERIAS: readonly Libreria[] = [
     id: "swiper",
     nombre: "Swiper",
     version: "12.2.0",
-    para: "carruseles y pases de diapositivas con gesto táctil",
+    para: "carousels and slideshows with touch swipe",
     global: "Swiper",
     scripts: [
       {
@@ -139,7 +139,7 @@ export const LIBRERIAS: readonly Libreria[] = [
     id: "photoswipe",
     nombre: "PhotoSwipe",
     version: "5.4.4",
-    para: "galería a pantalla completa con zoom de pellizco y arrastre entre fotos",
+    para: "full-screen gallery with pinch zoom and swiping between photos",
     global: "PhotoSwipeLightbox",
     scripts: [
       {
@@ -155,7 +155,7 @@ export const LIBRERIAS: readonly Libreria[] = [
     cssSri:
       "sha384-IfxC36XL/toUyJ939C73PcgMuRzAZuIzZxE38drsmO5p6jD7ei+Zx/1oA/0l8ysE",
     nota:
-      "Los DOS scripts, en ese orden. En la versión UMD no hay import dinámico, así que el módulo se pasa a mano: `new PhotoSwipeLightbox({ gallery: '.galeria', children: 'a', pswpModule: PhotoSwipe }).init()`. Cada `<a>` lleva el href a la imagen grande y `data-pswp-width` / `data-pswp-height`.",
+      "BOTH scripts, in that order. The UMD build has no dynamic import, so the module is passed by hand: `new PhotoSwipeLightbox({ gallery: '.gallery', children: 'a', pswpModule: PhotoSwipe }).init()`. Each `<a>` carries the href to the large image and `data-pswp-width` / `data-pswp-height`.",
   },
 ];
 
@@ -195,10 +195,12 @@ export function bloqueDeLibrerias(
   // cargada cuando el código de la página corre. «Al final del body» lo
   // sostenía además el editor, que borraba un <script> anidado en cuanto el
   // usuario retocaba su sección; eso ya no pasa.
+  // En inglés desde la traducción de lo que lee Len (2026-10-02): Jesús decidió
+  // traducir lo compartido con Crear y el Chat a la vez.
   const orden =
     opciones.dondeVaElScript === "libre"
-      ? "- Van en el <head>, antes de tu propio <script>: así la librería ya está cargada cuando tu código corre."
-      : "- Van en el <head>. Tu propio <script> va al final del body, así que la librería ya está cargada cuando tu código corre.";
+      ? "- They go in the <head>, before your own <script>: that way the library is already loaded when your code runs."
+      : "- They go in the <head>. Your own <script> goes at the end of the body, so the library is already loaded when your code runs.";
   // Los dos atributos van JUNTOS o no va ninguno, y sólo si el origen manda
   // CORS — ver `ORIGEN_MANDA_CORS`. Un `integrity` sin
   // `Access-Control-Allow-Origin` no es «menos garantía»: es la librería
@@ -217,17 +219,17 @@ export function bloqueDeLibrerias(
       )
       .join("");
     const nota = l.nota ? `
-  Nota:    ${l.nota}` : "";
+  Note:    ${l.nota}` : "";
     return `• ${l.nombre} ${l.version} — ${l.para}. Global: \`${l.global}\`.${scripts}${css}${nota}`;
   }).join("\n");
 
-  return `LIBRERÍAS DISPONIBLES (opcionales — la mayoría de páginas no necesitan ninguna):
+  return `AVAILABLE LIBRARIES (optional — most pages need none):
 
 ${fichas}
 
-Reglas:
-- Copia la etiqueta EXACTA, tal y como está escrita aquí arriba. NO le añadas integrity ni crossorigin: este origen no manda cabeceras CORS, y cualquiera de los dos atributos hace que el navegador BLOQUEE la librería y tu código muera con "no está definido".
+Rules:
+- Copy the EXACT tag, just as it is written above. DON'T add integrity or crossorigin to it: this origin sends no CORS headers, and either of the two attributes makes the browser BLOCK the library and your code die with "is not defined".
 ${orden}
-- ${LIBRERIAS_HOST} es el ÚNICO origen de librerías que sobrevive al publicar. Un <script> a jsdelivr, unpkg, cdnjs o cualquier otro CDN se borra y la página queda con la función muerta.
-- No las metas "por si acaso": una gráfica con datos inventados es peor que no tener gráfica. Úsalas cuando la página de verdad las pida.`;
+- ${LIBRERIAS_HOST} is the ONLY library origin that survives publishing. A <script> to jsdelivr, unpkg, cdnjs or any other CDN is deleted and the page is left with the feature dead.
+- Don't put them in "just in case": a chart with made-up data is worse than no chart. Use them when the page really calls for them.`;
 }

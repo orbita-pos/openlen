@@ -373,8 +373,8 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
     const { deps } = makeDeps({ html: HOME });
     const out = await runAgentTool(makeSession(), deps, "Read", { file_path: "/AGENTS.md" });
     assert.equal(out.response.ok, true);
-    assert.ok(texto(out).startsWith("1\t# OpenLen: cómo funciona la plataforma"));
-    assert.match(texto(out), /ALMACENES \(los datos de la página, en \/datos\)/);
+    assert.ok(texto(out).startsWith("1\t# OpenLen: how the platform works"));
+    assert.match(texto(out), /STORES \(the page's data, in \/datos\)/);
   });
 
   it("🔴 un Grep por todo el sitio encuentra la página, no los ejemplos del manual", async () => {
@@ -410,8 +410,8 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
     const s = makeSession();
     const manual = texto(await runAgentTool(s, deps, "Read", { file_path: "/AGENTS.md" }));
     for (const [ruta, se] of [
-      ["/.openlen/docs/guia-de-diseno.md", /COLOR, FORMA Y TIPOGRAFÍA/],
-      ["/.openlen/docs/api-d.md", /fetch a \/api\/d\/<almacén>/],
+      ["/.openlen/docs/guia-de-diseno.md", /COLOR, SHAPE AND TYPE/],
+      ["/.openlen/docs/api-d.md", /fetch to \/api\/d\/<store>/],
       ["/.openlen/docs/librerias.md", /libs\.openlen\.com/],
     ] as const) {
       assert.ok(manual.includes(ruta), `el índice no nombra ${ruta}`);
@@ -533,14 +533,14 @@ describe("H2 retirada · ToolSearch ya no existe y nada está diferido", () => {
     const { deps } = makeDeps({ html: HOME });
     const r = await runAgentTool(makeSession(), deps, "ToolSearch", { query: "select:revertir_ultimo_cambio" });
     assert.equal(r.response.ok, false);
-    assert.equal(r.response.error, "herramienta desconocida");
+    assert.equal(r.response.error, "unknown tool");
     assert.doesNotMatch(JSON.stringify(r.response), /<functions>/);
   });
 
   it("revertir_ultimo_cambio corre sin cargar nada antes", async () => {
     const { deps } = makeDepsCompletos({ html: HOME });
     const r = await runAgentTool(makeSession(), deps, "revertir_ultimo_cambio", {});
-    assert.doesNotMatch(JSON.stringify(r.response), /InputValidationError|deferred tool|herramienta desconocida/);
+    assert.doesNotMatch(JSON.stringify(r.response), /InputValidationError|deferred tool|unknown tool/);
   });
 });
 
@@ -1177,7 +1177,7 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
         assert.equal(out.response.ok, true, texto(out));
         assert.equal(store.title, "Brote Verde");
         assert.equal(store.data.settings?.assistant?.enabled, true);
-        assert.match(texto(out), /ajustes\/proyecto\.json: saved\.\n {2}title: "Brote Verde"\.\n {2}assistant: on\. Guardado\. La página todavía no está publicada/);
+        assert.match(texto(out), /ajustes\/proyecto\.json: saved\.\n {2}title: "Brote Verde"\.\n {2}assistant: on\. Saved\. The page isn't published yet/);
         const despues = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "jq -c .modulos /ajustes/proyecto.json" }));
         assert.match(texto(despues), /^\{"chat":false,"assistant":true\}\n/);
       } finally {

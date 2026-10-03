@@ -96,7 +96,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
         literal ? posicionEnIndice(e.despues, literal.index) : null,
         "Error",
         "referencia-rota",
-        `El script busca #${id} y la página ya no tiene ningún elemento con ese id: la excepción corta el script entero y la página se queda sin su interactividad.`,
+        `The script looks for #${id} and the page no longer has any element with that id: the exception stops the whole script and the page is left without its interactivity.`,
       ),
     );
   }
@@ -109,7 +109,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
         posicionDelHref(e.despues, x.href),
         "Warning",
         "enlace-inventado",
-        `El enlace a ${x.red} «${x.handle}» no sale de la página ni de lo que dijo el usuario: si lo dedujiste del nombre del negocio, es una cuenta inventada que manda al visitante al perfil de otra persona. Déjalo en href="#" y pregúntale cuál es la suya.`,
+        `The link to ${x.red} «${x.handle}» doesn't come from the page or from what the user said: if you inferred it from the business name, it is a made-up account that sends the visitor to someone else's profile. Leave it as href="#" and ask them which one is theirs.`,
       ),
     );
   }
@@ -119,7 +119,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
         posicionDelHref(e.despues, x.href),
         "Warning",
         "prefijo-inventado",
-        `${x.href} lleva +${x.prefijo} delante de ${x.dictado}, y ese país no lo dio nadie: si lo adivinas, sus clientes llaman a otro país. En un tel: deja las cifras que te dieron; si es un wa.me, pregúntale de qué país es el número.`,
+        `${x.href} carries +${x.prefijo} in front of ${x.dictado}, and nobody gave that country: if you guess it, their customers call another country. In a tel: leave the digits they gave you; if it is a wa.me, ask them which country the number is from.`,
       ),
     );
   }
@@ -131,10 +131,10 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
         "Warning",
         x.tipo === "precio" ? "precio-inventado" : x.tipo === "cifra" ? "cifra-inventada" : "resena-inventada",
         x.tipo === "precio"
-          ? `El precio ${x.texto} no sale de lo que dijo el usuario ni de su sitio: puesto por ti, aparenta ser el suyo. Si no te lo dio, pregúntaselo; si lo calculaste, dilo al cerrar.`
+          ? `The price ${x.texto} doesn't come from what the user said or from their site: put there by you, it passes for theirs. If they didn't give it to you, ask them; if you calculated it, say so when you close.`
           : x.tipo === "cifra"
-            ? `«${x.texto}» afirma algo de su negocio que nadie dio: el visitante lo lee como cierto. Quítalo o pregúntale el dato real.`
-            : `La reseña «${x.texto}» no sale de lo que dio el usuario ni de su sitio: presentada como de un cliente, es inventada, y cambiar las palabras de una reseña real también lo es. Quítala, o pídele las suyas.`,
+            ? `«${x.texto}» claims something about their business that nobody gave: the visitor reads it as true. Remove it or ask them for the real figure.`
+            : `The review «${x.texto}» doesn't come from what the user gave or from their site: presented as a customer's, it is made up, and changing the words of a real review is too. Remove it, or ask them for theirs.`,
       ),
     );
   }
@@ -145,7 +145,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
           dondeFueElEdit,
           "Warning",
           "dato-perdido",
-          `Esta escritura quitó ${h.tipo === "imagen" ? "la imagen" : h.tipo === "enlace" ? "el enlace" : "el teléfono"} ${h.valor}, que la página tenía: es un dato real del usuario. Si no te lo pidieron, repónlo con el valor exacto; si sí, díselo al usuario.`,
+          `This write removed ${h.tipo === "imagen" ? "the image" : h.tipo === "enlace" ? "the link" : "the phone number"} ${h.valor}, which the page had: it is real data of the user's. If you weren't asked to, put it back with the exact value; if you were, tell the user.`,
         ),
       );
     }
@@ -158,7 +158,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
           dondeFueElEdit,
           "Warning",
           "contenido-vaciado",
-          `Esta edición dejó ${p.elementosDespues} de ${p.elementosAntes} elementos y ${p.textoDespues} de ${p.textoAntes} caracteres de texto de lo que reemplazaba. Si no querías borrarlo, repón lo que falta; si sí, díselo al usuario.`,
+          `This edit left ${p.elementosDespues} of ${p.elementosAntes} elements and ${p.textoDespues} of ${p.textoAntes} characters of text of what it replaced. If you didn't mean to delete it, put back what is missing; if you did, tell the user.`,
         ),
       );
     }
@@ -173,7 +173,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
           posicionDelHref(html, x.href),
           "Warning",
           "enlace-desfasado",
-          `El enlace dice «${x.texto}» y lleva a ${x.href}: la página enseña un dato y el botón marca otro. Cambiar el texto de un enlace no cambia su href.`,
+          `The link says «${x.texto}» and goes to ${x.href}: the page shows one value and the button dials another. Changing a link's text doesn't change its href.`,
         ),
       );
     }
@@ -185,7 +185,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
           meta ? posicionEnIndice(html, meta.index) : null,
           "Warning",
           "meta-desfasada",
-          `La <meta name="description"> sigue anunciando ${viejos.join(" y ")}, que ya no está en la página: es el texto que enseña Google. Actualízala.`,
+          `The <meta name="description"> still announces ${viejos.join(" and ")}, which is no longer on the page: it is the text Google shows. Update it.`,
         ),
       );
     }
@@ -195,7 +195,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
           x,
           "Error",
           "js-no-compila",
-          `El navegador no puede leer este <script> (${x.mensaje}): no corre NINGUNA línea de él, y la página se queda sin todo lo que hacía.`,
+          `The browser can't read this <script> (${x.mensaje}): NOT ONE line of it runs, and the page is left without everything it did.`,
         ),
       );
     }
@@ -206,10 +206,10 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
           "Warning",
           x.tipo === "ancla-muerta" ? "ancla-muerta" : "enlace-que-no-llega",
           x.tipo === "ancla-muerta"
-            ? `El enlace a ${x.href} no lleva a ningún sitio: la página no tiene ningún elemento con id="${x.href.slice(1)}". Al tocarlo no pasa nada. Pon ese id en la sección a la que apunta, o cambia el enlace.`
+            ? `The link to ${x.href} goes nowhere: the page has no element with id="${x.href.slice(1)}". Tapping it does nothing. Put that id on the section it points to, or change the link.`
             : x.tipo === "sin-esquema"
-              ? `El enlace «${x.href}» no lleva esquema, así que es una ruta de ESTE sitio: el servidor contesta con la portada y el visitante se queda donde estaba. ${x.sugerido ? `Escríbelo entero: ${x.sugerido}` : "Escribe la dirección completa, con https://."}`
-              : `El enlace «${x.href}» cae en la portada: las páginas del sitio se enlazan con su ruta, que es ${x.sugerido}. ${x.tipo === "relativa" ? "Una ruta sin «/» delante sólo funciona desde la portada." : "No existe ningún fichero .html con ese nombre."}`,
+              ? `The link «${x.href}» has no scheme, so it is a path of THIS site: the server answers with the home page and the visitor stays where they were. ${x.sugerido ? `Write it in full: ${x.sugerido}` : "Write the full address, with https://."}`
+              : `The link «${x.href}» lands on the home page: the site's pages are linked by their path, which is ${x.sugerido}. ${x.tipo === "relativa" ? "A path without a leading «/» only works from the home page." : "There is no .html file with that name."}`,
         ),
       );
     }
@@ -220,34 +220,34 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
               posicionDe(html, x.src),
               "Error",
               "script-que-se-borra",
-              `<script src="${x.src}"> se borra al publicar: sólo sobreviven las librerías de libs.openlen.com y Tailwind. En el lienzo funciona; en la página publicada, lo que dependa de él se queda muerto.${x.sustituta ? ` Usa la nuestra: ${etiquetasDe(x.sustituta)}` : " Escribe eso en tu propio <script> o quítalo."}`,
+              `<script src="${x.src}"> is deleted at publish time: only the libraries from libs.openlen.com and Tailwind survive. On the canvas it works; on the published page, whatever depends on it is left dead.${x.sustituta ? ` Use ours: ${etiquetasDe(x.sustituta)}` : " Write that in your own <script> or remove it."}`,
             )
           : x.tipo === "con-integrity"
             ? diag(
                 posicionDe(html, x.url),
                 "Error",
                 "libreria-bloqueada",
-                `${x.url} lleva integrity o crossorigin, y libs.openlen.com no manda CORS: el navegador BLOQUEA la librería y tu código falla con «no está definido». Quita los dos atributos.`,
+                `${x.url} carries integrity or crossorigin, and libs.openlen.com sends no CORS: the browser BLOCKS the library and your code fails with «is not defined». Remove both attributes.`,
               )
             : x.tipo === "fuera-del-catalogo"
               ? diag(
                   posicionDe(html, x.url),
                   "Warning",
                   "libreria-que-no-existe",
-                  `${x.url} no es ninguna ruta del catálogo, y lo más probable es que dé 404. Copia la etiqueta exacta: ${LIBRERIAS.map((l) => `${l.nombre} ${l.version}`).join(", ")}.`,
+                  `${x.url} isn't any path in the catalog, and it will most likely give a 404. Copy the exact tag: ${LIBRERIAS.map((l) => `${l.nombre} ${l.version}`).join(", ")}.`,
                 )
               : x.tipo === "sin-cargar"
                 ? diag(
                     posicionDe(html, x.global),
                     "Error",
                     "libreria-sin-cargar",
-                    `Tu script usa ${x.global} y la página no carga ${x.libreria.nombre}: en cuanto corra falla con «${x.global} is not defined» y se para entero. Añade en el <head>: ${etiquetasDe(x.libreria, x.faltan)}`,
+                    `Your script uses ${x.global} and the page doesn't load ${x.libreria.nombre}: as soon as it runs it fails with «${x.global} is not defined» and stops entirely. Add in the <head>: ${etiquetasDe(x.libreria, x.faltan)}`,
                   )
                 : diag(
                     posicionDe(html, "new Swiper"),
                     "Warning",
                     "libreria-sin-hoja",
-                    `Usas ${x.libreria.nombre} sin su hoja de estilos: el carrusel se apila en vertical y la página parece rota. Añade en el <head>: <link rel="stylesheet" href="${x.css}">`,
+                    `You use ${x.libreria.nombre} without its stylesheet: the carousel stacks vertically and the page looks broken. Add in the <head>: <link rel="stylesheet" href="${x.css}">`,
                   ),
       );
     }
@@ -257,7 +257,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
           posicionDe(html, r.selector),
           "Warning",
           "regla-muerta",
-          `La regla \`${r.selector}\` no puede aplicar nunca: pide ${r.ausentes.map((c) => `.${c}`).join(", ")} y ninguna etiqueta lo lleva (sí existe ${r.presentes.map((c) => `.${c}`).join(", ")}). El estilo está escrito y el elemento también, pero no se tocan.`,
+          `The rule \`${r.selector}\` can never apply: it asks for ${r.ausentes.map((c) => `.${c}`).join(", ")} and no tag carries it (${r.presentes.map((c) => `.${c}`).join(", ")} does exist). The style is written and so is the element, but they never meet.`,
         ),
       );
     }
@@ -276,7 +276,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
           // botón ponía `amt-on` (inerte) y además se pintaba con estilos en
           // línea, así que funcionaba. Lo que pasa en pantalla lo mira
           // `usar_pagina`, no esto.
-          `Tu script pone la clase «${x.clase}» y nada la usa: ninguna regla del CSS de la página la nombra, Tailwind no la conoce y el script no la lee. Ponerla no cambia nada en pantalla. Si es el estado de un control (abierto, activo, elegido…), le falta su CSS; si sobra, quítala.`,
+          `Your script sets the class «${x.clase}» and nothing uses it: no rule in the page's CSS names it, Tailwind doesn't know it and the script doesn't read it. Setting it changes nothing on screen. If it is the state of a control (open, active, selected…), it is missing its CSS; if it's not needed, remove it.`,
         ),
       );
     }

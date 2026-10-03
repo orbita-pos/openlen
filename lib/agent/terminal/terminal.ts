@@ -77,12 +77,12 @@ export class TerminalDeLen {
       if (!p) return;
       this.pendientes.delete(m.id);
       if (m.ok) p.resolve(m);
-      else p.reject(new Error(m.error ?? "la terminal falló"));
+      else p.reject(new Error(m.error ?? "the terminal failed"));
     });
     hilo.on("error", (e) => this.fallarTodo(e));
     hilo.on("exit", () => {
       if (this.hilo === hilo) this.hilo = null;
-      this.fallarTodo(new Error("la terminal se cerró"));
+      this.fallarTodo(new Error("the terminal closed"));
     });
     this.hilo = hilo;
     const [ficheros, perezosos] = await Promise.all([this.o.cargarFicheros(), this.o.perezosos?.rutas() ?? []]);
@@ -110,7 +110,7 @@ export class TerminalDeLen {
 
   private pedir(m: Record<string, unknown>, corteMs?: number): Promise<Respuesta> {
     const hilo = this.hilo;
-    if (!hilo) return Promise.reject(new Error("la terminal no está arrancada"));
+    if (!hilo) return Promise.reject(new Error("the terminal isn't started"));
     const id = ++this.siguiente;
     return new Promise<Respuesta>((resolve, reject) => {
       const reloj = corteMs === undefined ? null : setTimeout(() => {

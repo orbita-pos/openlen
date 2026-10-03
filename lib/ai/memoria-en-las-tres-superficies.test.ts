@@ -78,6 +78,6 @@ describe("el formateador compartido", () => {
     expect(b).toContain("nunca uses amarillo");
     // La regla de precedencia no es adorno: sin ella el modelo trata una
     // preferencia vieja como una orden y discute con lo que le piden ahora.
-    expect(b).toContain("manda lo de hoy");
+    expect(b).toContain("today wins");
   });
 });

@@ -1363,7 +1363,7 @@ test("una llamada a /api/f/ sale en límites, sin acusar a la página", async ()
   assert.deepEqual(v.issues, []);
   const texto = v.limites.join(" ");
   assert.ok(texto.includes("/api/f/mi-negocio"), texto);
-  assert.ok(texto.includes("publicada"), texto);
+  assert.ok(texto.includes("published page"), texto);
 });
 
 // ── doctrina 4: lo que escribió la página va marcado como DATO ──────────────

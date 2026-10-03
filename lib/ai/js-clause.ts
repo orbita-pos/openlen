@@ -137,7 +137,10 @@ const CABLEADO_EN =
 
 const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
   "contrato-min": {
-    desde: "• NINGÚN JavaScript sobrevive.",
+    // La marca está en inglés porque el contrato mínimo lo está (traducción de
+    // lo que lee Len, 2026-10-02). Lo que la sustituye (`libre`, abajo) sigue
+    // en español: sólo lo leen Crear y el Chat, y no es lo compartido.
+    desde: "• NO JavaScript survives.",
     hasta: "\n",
     libre:
       "• JavaScript: tu código SOBREVIVE a la publicación — escríbelo cuando la página gane algo de verdad con él: filtrar una lista, una galería con lightbox, pestañas, una cuenta atrás, buscar dentro de la propia página. Ponlo TODO en UN `<script>`, el último del `<body>`: no es un límite del sistema, es para que se pueda editar después de una pieza. " +

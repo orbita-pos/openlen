@@ -79,7 +79,7 @@ describe("y el perfil entero se fue detrás", () => {
   // con el perfil — vive en el prompt, y esto la fija.
   it("y el modelo sigue teniendo prohibido inventarse un @usuario", () => {
     // Desde el 2026-09-26 la dice una sola vez, en «SUS DATOS Y SUS ENLACES».
-    expect(leer("lib/agent/catalog.ts")).toMatch(/a qué cuenta apunta un enlace[^\n]*no se inventa/);
-    expect(leer("lib/agent/catalog.ts")).toMatch(/jamás tiktok\.com\/@sunegocio deducido del nombre/);
+    expect(leer("lib/agent/catalog.ts")).toMatch(/which account a link points to[^\n]*is never invented/);
+    expect(leer("lib/agent/catalog.ts")).toMatch(/never tiktok\.com\/@yourbusiness worked out from the name/);
   });
 });

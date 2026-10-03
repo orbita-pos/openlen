@@ -131,10 +131,10 @@ describe("buildFunctionDeclarations", () => {
     expect(p).toContain("Forms work");
     expect(p).toContain("offer the form; WhatsApp or the chat in addition, not instead");
     // La mecánica, en el contrato: el destino lo pone el publicador.
-    expect(p).toMatch(/hornea al `<form>` su `action`/);
-    expect(p).toMatch(/NO le pongas `action`/);
+    expect(p).toMatch(/bakes the `<form>`'s `action` into it/);
+    expect(p).toMatch(/DON'T give it an `action`/);
     // Y el modo de fallo, que es lo que de verdad rompía la página.
-    expect(p).toMatch(/CANCELA el envío de verdad/);
+    expect(p).toMatch(/CANCELS the real submission/);
   });
   // RETIRADAS el 2026-08-26 con motion, música y 3D: las tres herramientas de
   // settings salieron del catálogo. Eran presets nuestros que suplían el
@@ -399,10 +399,10 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("DESIGN GUIDE (for the pages you create yourself and for a redesign you are asked for;");
     // El bloque oscuro, sólo en lo que crea (desde el 2026-09-29, con el
     // interruptor que Len elija: ver `vocabulario-ol` en publish-contract-min).
-    expect(p).toContain("En una página que creas tú, escribe también su versión oscura");
+    expect(p).toContain("On a page you create yourself, also write its dark version");
     // La orden que empujaba a convertir la página entera ya no está.
-    expect(p).not.toContain("Si la página aún no lo define, escríbelo tú");
-    expect(p).not.toContain("Si la página aún no la tiene, escribe tú su versión oscura");
+    expect(p).not.toContain("If the page doesn't define it yet, write it yourself");
+    expect(p).not.toContain("If the page doesn't have one yet, write its dark version yourself");
   });
   // MOTION, MÚSICA Y 3D salieron de esta lista el 2026-08-26 con sus
   // herramientas. Lo que sigue vigilado es que el prompt conozca las que

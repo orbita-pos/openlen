@@ -288,7 +288,7 @@ async function readImageManifest(): Promise<unknown> {
  *  2026-09-22), y una copia de la frase dejaría de ser el mismo fallo en cuanto
  *  alguien tocara ésta. */
 export const CONFLICTO_AL_GUARDAR =
-  "la página cambió mientras se guardaba y no se pudo fusionar; vuelve a intentarlo";
+  "the page changed while it was being saved and couldn't be merged; try again";
 
 /**
  * 🔴 H12-a · EL MISMO CONFLICTO OTRA VEZ YA NO DICE «VUELVE A INTENTARLO».
@@ -319,7 +319,7 @@ export const CONFLICTO_AL_GUARDAR =
  * dice el hecho, las causas posibles y qué hacer; cuál fue, no se sabe.
  */
 export const conflictoRepetido = (veces: number) =>
-  `la página volvió a cambiar mientras se guardaba: ${veces} intentos seguidos en este turno chocaron, así que reintentar no lo arregla — ni releer la página, ni cambiar de herramienta, ni enviar otro cambio: el choque no depende de lo que envías. No intentes guardar otra vez en este turno: dile al usuario que no se pudo guardar y qué quedó sin hacer. La causa no la sabemos —la página abierta en otra pestaña o en el editor, otro guardado a la vez, o un fallo nuestro—: no afirmes cuál.`;
+  `the page changed again while it was being saved: ${veces} attempts in a row in this turn collided, so retrying doesn't fix it — not rereading the page, not switching tools, not sending another change: the collision doesn't depend on what you send. Don't attempt another save during this turn: let the user know it couldn't be saved and what was left undone. We don't know the cause —the page open in another tab or in the editor, another save at the same time, or a fault of ours—: don't claim which.`;
 
 export function realDeps(): AgentDeps {
   return {
@@ -404,7 +404,7 @@ export function realDeps(): AgentDeps {
     async saveProjectData(projectId, userId, aplicar) {
       const r = await actualizarData({ projectId, userId, aplicar });
       if (!r.ok) {
-        throw new Error(r.motivo === "conflicto" ? CONFLICTO_AL_GUARDAR : "proyecto no encontrado");
+        throw new Error(r.motivo === "conflicto" ? CONFLICTO_AL_GUARDAR : "project not found");
       }
     },
     async snapshotVersion(args) {
@@ -924,7 +924,7 @@ async function activateModulePatch(
 ): Promise<{ ok: true; outcome: SettingsPatchOutcome } | { ok: false; error: string }> {
   const validation = validateSettingsPatch(patchBody, session.projectId);
   if (!validation.ok) {
-    return { ok: false, error: validation.message ?? "patch inválido" };
+    return { ok: false, error: validation.message ?? "invalid patch" };
   }
 
   // I4 — `applySettingsPatch` es pura, así que se vuelve a correr sobre el
@@ -956,7 +956,7 @@ export async function toolActivarModulo(
 ): Promise<ToolOutcome> {
   const modulo = args.modulo;
   if (typeof modulo !== "string" || !(AGENT_MODULES as readonly string[]).includes(modulo)) {
-    return { response: { ok: false, error: "módulo desconocido" } };
+    return { response: { ok: false, error: "unknown module" } };
   }
   const encender = args.encender !== false;
 
@@ -964,7 +964,7 @@ export async function toolActivarModulo(
   // resolve its number-fallback chain from the existing row before the patch
   // is built — never a silent-dark { enabled: true } with no number to bake.
   const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+  if (!row) return { response: { ok: false, error: "project not found" } };
 
   let numero: string | undefined;
   const patchBody = buildModulePatch(modulo as AgentModule, encender, numero);
@@ -1000,11 +1000,11 @@ export async function toolActivarModulo(
     // La salvedad de la release vieja va como CONDICIÓN, no como hecho: una
     // página publicada antes de que el widget supiera preguntar sigue con su
     // burbuja, y desde aquí no se sabe de qué fecha es la que hay en el disco.
-    aviso = `Apagarlo tiene efecto YA: el ${nombre} deja de atender a los visitantes en el momento, y la burbuja se retira sola de la página publicada en cuanto alguien vuelve a cargarla. NO digas que hay que publicar para apagarlo. Si el usuario dice que la sigue viendo, es que su página se publicó hace tiempo: entonces sí, que vuelva a publicar.`;
+    aviso = `Turning it off takes effect NOW: the ${nombre} stops serving visitors at once, and the bubble removes itself from the published page as soon as someone reloads it. DON'T say it has to be published to turn it off. If the user says they still see it, their page was published a long time ago: then yes, they should publish again.`;
   } else if (!visible && publicada) {
-    aviso = `Guardado, pero la página publicada NO cambia sola: los visitantes no lo verán hasta que el usuario vuelva a publicar. Díselo así («el ${nombre} saldrá en tu página cuando vuelvas a publicar») y NO afirmes que ya aparece ni que ya contesta.`;
+    aviso = `Saved, but the published page does NOT change by itself: visitors won't see it until the user publishes again. Tell them so ("the ${nombre} will show up on your page when you publish again") and DON'T claim it already appears or already answers.`;
   } else if (!publicada && encender) {
-    aviso = `Guardado. La página todavía no está publicada, así que nadie lo ve aún: saldrá cuando la publique. Díselo así y NO afirmes que ya aparece ni que ya contesta a los visitantes.`;
+    aviso = `Saved. The page isn't published yet, so nobody sees it yet: it will show up when they publish it. Tell them so and DON'T claim it already appears or already answers visitors.`;
   }
 
   return {
@@ -1064,11 +1064,11 @@ const MAX_BUSQUEDAS_VACIAS_SEGUIDAS = 2;
 // curated catalog clearly doesn't carry a genre, stop retrying variants and
 // change approach. Named tools so the model has a concrete next move.
 const PHOTO_PIVOT_NOTE =
-  "El catálogo curado «Imágenes by OpenLen» es acotado y no tiene fotos de esto. NO sigas buscando variantes y NUNCA inventes una URL. "
-  + "Deja el hueco con un degradado de la paleta — es exactamente lo que hace la generación cuando no encuentra pareja, "
-  + "y una caja neutra es mejor que una foto que miente sobre el negocio del usuario. "
-  + "Después SIGUE con el resto de lo que te pidió: quedarte sin una foto no cancela lo demás ni te obliga a pedir permiso para continuar. "
-  + "En tu respuesta di qué foto no había y qué pusiste en su lugar.";
+  "The curated catalog \"Imágenes by OpenLen\" is limited and has no photos of this. DON'T keep searching for variants and NEVER make up a URL. "
+  + "Leave the gap with a gradient from the palette — that is exactly what generation does when it finds no match, "
+  + "and a neutral box is better than a photo that lies about the user's business. "
+  + "Then GO ON with the rest of what they asked: running out of a photo doesn't cancel the rest or make you ask permission to continue. "
+  + "In your answer say which photo there wasn't and what you put in its place.";
 
 // ─── mirar_pagina: el derecho a preguntar ────────────────────────────────────
 //
@@ -1091,13 +1091,13 @@ async function toolMirarPagina(
     return {
       response: {
         ok: false,
-        error: '"tipo" tiene que ser "medir" (lo contesta el navegador, gratis) o "describir" (lo mira un modelo, cuesta créditos).',
+        error: '"tipo" has to be "medir" (the browser answers it, free) or "describir" (a model looks at it, it costs credits).',
       },
     };
   }
   const pregunta = typeof args.pregunta === "string" ? args.pregunta.trim() : "";
   if (!pregunta) {
-    return { response: { ok: false, error: 'falta "pregunta": di qué quieres saber de la página.' } };
+    return { response: { ok: false, error: '"pregunta" is missing: say what you want to know about the page.' } };
   }
   const zona = typeof args.zona === "string" && args.zona.trim() ? args.zona.trim() : undefined;
 
@@ -1105,7 +1105,7 @@ async function toolMirarPagina(
     return {
       response: {
         ok: false,
-        error: "mirar_pagina no está disponible en este entorno. Sigue con lo que te pidió el usuario.",
+        error: "mirar_pagina isn't available in this environment. Go on with what the user asked you.",
       },
     };
   }
@@ -1119,7 +1119,7 @@ async function toolMirarPagina(
     return {
       response: {
         ok: true,
-        nota: `Ya hiciste demasiadas miradas de tipo "${tipo}" en este turno. Deja de mirar y decide con lo que ya sabes: tú tienes el documento, que es la mitad que a la captura le falta.`,
+        nota: `You already took too many looks of type "${tipo}" in this turn. Stop looking and decide with what you already know: you have the document, which is the half the screenshot is missing.`,
       },
     };
   }
@@ -1127,13 +1127,13 @@ async function toolMirarPagina(
   else session.miradasMedirEsteTurno = usadas + 1;
 
   const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+  if (!row) return { response: { ok: false, error: "project not found" } };
   // Len 2.0: el fichero que se le dice, o la página que el dueño tiene abierta.
   const pedida = paginaPedida(session, row.data, args.file_path, { preferirLoEscrito: false });
   if (!pedida.ok) return { response: { ok: false, error: pedida.error } };
   const html = activeHtml(row.data, pedida.page) ?? "";
   if (!html) {
-    return { response: { ok: false, error: "esta página todavía no tiene documento que mirar" } };
+    return { response: { ok: false, error: "this page doesn't have a document to look at yet" } };
   }
 
   const visto = await deps
@@ -1154,7 +1154,7 @@ async function toolMirarPagina(
     return {
       response: {
         ok: false,
-        error: "no se pudo mirar la página esta vez. No lo tomes como que está bien ni como que está mal.",
+        error: "the page couldn't be looked at this time. Don't take it as meaning it's fine or that it's wrong.",
       },
     };
   }
@@ -1181,19 +1181,19 @@ async function toolUsarPagina(
     return {
       response: {
         ok: false,
-        error: "usar_pagina no está disponible en este entorno. Sigue con lo que te pidió el usuario, y al cerrar di que no pudiste probarlo.",
+        error: "usar_pagina isn't available in this environment. Go on with what the user asked you, and when you close say you couldn't test it.",
       },
     };
   }
   const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+  if (!row) return { response: { ok: false, error: "project not found" } };
   // Sin `file_path`: la última página que escribió en este turno —la que acaba
   // de cambiar y quiere probar— y si no escribió ninguna, la que el dueño tiene
   // abierta.
   const pedida = paginaPedida(session, row.data, args.file_path, { preferirLoEscrito: true });
   if (!pedida.ok) return { response: { ok: false, error: pedida.error } };
   const html = activeHtml(row.data, pedida.page) ?? "";
-  if (!html) return { response: { ok: false, error: "esta página todavía no tiene documento que usar" } };
+  if (!html) return { response: { ok: false, error: "this page doesn't have a document to use yet" } };
 
   const visto = await deps
     .usarPagina({ html, pasos: v.pasos, ruta: pedida.ruta, vista: vistaParaMedir(session.projectId, row, pedida.page) })
@@ -1204,7 +1204,7 @@ async function toolUsarPagina(
     return {
       response: {
         ok: false,
-        error: "no se pudo abrir la página en el navegador esta vez. No lo tomes como que funciona ni como que no; si cierras sin probarlo, dilo.",
+        error: "the page couldn't be opened in the browser this time. Don't take it as meaning it works or that it doesn't; if you close without testing it, say so.",
       },
     };
   }
@@ -1226,7 +1226,7 @@ async function toolElegirFoto(
       response: {
         ok: true,
         fotos: [],
-        nota: `Ya hiciste demasiadas búsquedas de fotos en este turno. Deja de buscar: usa las que ya encontraste o pivotea. ${PHOTO_PIVOT_NOTE}`,
+        nota: `You already did too many photo searches in this turn. Stop searching: use the ones you already found or pivot. ${PHOTO_PIVOT_NOTE}`,
       },
     };
   }
@@ -1249,7 +1249,7 @@ async function toolElegirFoto(
         fotos: [],
         nota: pivot
           ? PHOTO_PIVOT_NOTE
-          : "sin resultados para esa búsqueda — prueba UNA vez más con otro término o quita el filtro de estilo. Si tampoco hay, no insistas: el catálogo es curado y acotado.",
+          : "no results for that search — try ONE more time with another term or remove the style filter. If there's nothing then either, don't insist: the catalog is curated and limited.",
       },
     };
   }
@@ -1310,14 +1310,14 @@ async function toolEditarImagen(
 ): Promise<ToolOutcome> {
   const imagenUrl = typeof args.imagen_url === "string" ? args.imagen_url : "";
   const instruccion = typeof args.instruccion === "string" ? args.instruccion.trim() : "";
-  if (!imagenUrl) return { response: { ok: false, error: "imagen_url es requerida" } };
-  if (!instruccion) return { response: { ok: false, error: "instruccion es requerida" } };
+  if (!imagenUrl) return { response: { ok: false, error: "imagen_url is required" } };
+  if (!instruccion) return { response: { ok: false, error: "instruccion is required" } };
 
   // Per-turn cap FIRST — a paid Gemini image op is expensive, so a second call
   // is refused before any fetch/edit/upload. Only successful edits count (a
   // failed one below leaves the counter untouched so the model can retry).
   if (session.imageEditsThisTurn >= 1) {
-    return { response: { ok: false, error: "límite de una edición de imagen por turno" } };
+    return { response: { ok: false, error: "limit of one image edit per turn" } };
   }
 
   // Anti prompt-injection SSRF: only edit an image ALREADY on the site. The URL
@@ -1327,7 +1327,7 @@ async function toolEditarImagen(
   //
   // Len 2.0: en TODOS los ficheros, no en «la página activa», que ya no existe.
   const inicial = await deps.loadProject(session.projectId, session.userId);
-  if (!inicial) return { response: { ok: false, error: "proyecto no encontrado" } };
+  if (!inicial) return { response: { ok: false, error: "project not found" } };
   const conLaImagen = ficherosDelSitio(inicial.data).filter((ruta) =>
     urlIsPageImage(leerFichero(inicial.data, ruta) ?? "", imagenUrl),
   );
@@ -1335,14 +1335,14 @@ async function toolEditarImagen(
     return {
       response: {
         ok: false,
-        error: "imagen_url debe ser la URL exacta de una imagen que YA está en el sitio (no una URL externa ni inventada)",
+        error: "imagen_url must be the exact URL of an image that is ALREADY on the site (not an external or made-up URL)",
       },
     };
   }
 
   const fetched = await deps.fetchImage(imagenUrl);
   if (!fetched.ok) {
-    return { response: { ok: false, error: `no se pudo descargar la imagen: ${fetched.error}` } };
+    return { response: { ok: false, error: `the image couldn't be downloaded: ${fetched.error}` } };
   }
 
   const edited = await deps.editImage(session.userId, {
@@ -1351,7 +1351,7 @@ async function toolEditarImagen(
     prompt: instruccion,
   });
   if ("error" in edited) {
-    return { response: { ok: false, error: `la edición de imagen falló: ${edited.error}` } };
+    return { response: { ok: false, error: `the image edit failed: ${edited.error}` } };
   }
 
   // Gemini returned an image and the credit was already charged inside the
@@ -1373,7 +1373,7 @@ async function toolEditarImagen(
   const cambiados: { ruta: string; html: string; page: string | null; versionPrevia: string | null }[] = [];
   for (const ruta of conLaImagen) {
     const row = await deps.loadProject(session.projectId, session.userId);
-    if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+    if (!row) return { response: { ok: false, error: "project not found" } };
     const antes = leerFichero(row.data, ruta);
     if (antes === null) continue;
     const guardado = await guardarFichero(session, deps, row.data, ruta, antes.split(imagenUrl).join(nuevaUrl), {
@@ -1413,7 +1413,7 @@ async function toolPublicar(
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
   const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: { ok: false, error: "proyecto no encontrado" } };
+  if (!row) return { response: { ok: false, error: "project not found" } };
 
   const current = row.subdomain; // string | null — the project's active claim
   const raw = typeof args.subdominio === "string" ? args.subdominio.trim().toLowerCase() : "";
@@ -1476,7 +1476,7 @@ async function toolPublicar(
       return {
         response: {
           ok: false,
-          error: `el usuario no ha dicho "${raw}" en ningún momento — ese nombre te lo has inventado tú, y la dirección de su página no la eliges tú. Este proyecto todavía no tiene subdominio: pregúntale con \`preguntar\` qué dirección quiere.`,
+          error: `the user has never said "${raw}" — you made that name up, and you don't choose the address of their page. This project doesn't have a subdomain yet: ask them with \`preguntar\` what address they want.`,
         },
       };
     }
@@ -1492,8 +1492,8 @@ async function toolPublicar(
           ok: false,
           error:
             check.reason === "reserved"
-              ? `el subdominio "${raw}" está reservado — pide al usuario otro nombre`
-              : `el subdominio "${raw}" no es válido: la regla es solo minúsculas, números y guiones, 1-63 caracteres, sin espacios ni acentos. Explícasela al usuario y sugiérele una versión corregida (p. ej. quitando espacios/acentos y usando guiones).`,
+              ? `the subdomain "${raw}" is reserved — ask the user for another name`
+              : `the subdomain "${raw}" isn't valid: the rule is only lowercase letters, numbers and hyphens, 1-63 characters, no spaces or accents. Explain it to the user and suggest a corrected version (e.g. removing spaces/accents and using hyphens).`,
         },
       };
     }
@@ -1518,7 +1518,7 @@ async function toolPublicar(
           // se le señala la herramienta que HACE eso, y llamarla cierra el turno
           // de verdad: la parada la ejecuta el servidor, no la buena voluntad
           // del modelo.
-          "este proyecto no tiene subdominio todavía, y el subdominio no lo eliges tú. Pregúntale al usuario qué dirección quiere con `preguntar` — esa herramienta cierra el turno y su respuesta abre el siguiente; entonces sí, llama a publicar con lo que él escriba.",
+          "this project doesn't have a subdomain yet, and you don't choose the subdomain. Ask the user what address they want with `preguntar` — that tool closes the turn and their answer opens the next one; then, yes, call publicar with what they write.",
       },
     };
   }
@@ -1581,7 +1581,7 @@ async function toolPreguntar(
   const texto = typeof args.texto === "string" ? args.texto.trim() : "";
   if (!texto) {
     return {
-      response: { ok: false, error: '"texto" es la pregunta que va a leer el usuario, y vino vacía.' },
+      response: { ok: false, error: '"texto" is the question the user will read, and it came empty.' },
     };
   }
   return {
@@ -1624,7 +1624,7 @@ async function toolRevertirUltimoCambio(
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
   const inicial = await deps.loadProject(session.projectId, session.userId);
-  if (!inicial) return { response: { ok: false, error: "proyecto no encontrado" } };
+  if (!inicial) return { response: { ok: false, error: "project not found" } };
   const pedida = paginaPedida(session, inicial.data, args.file_path, { preferirLoEscrito: true });
   if (!pedida.ok) return { response: { ok: false, error: pedida.error } };
   const { page, ruta } = pedida;
@@ -1648,8 +1648,8 @@ async function toolRevertirUltimoCambio(
             ok: false,
             error:
               r.motivo === "se_solapan"
-                ? `Después de tu último cambio («${delLenV.label}») la página se editó a mano, y esa edición toca lo mismo que tú: deshacer se llevaría también lo del usuario. NO lo deshagas por tu cuenta: pregúntale con preguntar si quiere deshacer también su edición o dejarlo como está.`
-                : `tu último cambio («${delLenV.label}») no movió nada de la página: no hay nada tuyo que deshacer.`,
+                ? `After your last change («${delLenV.label}») the page was edited by hand, and that edit touches the same thing as yours: undoing would also take away the user's. DON'T undo it on your own: ask them with preguntar whether they want to undo their edit too or leave it as it is.`
+                : `your last change («${delLenV.label}») didn't move anything on the page: there is nothing of yours to undo.`,
           },
         };
       }
@@ -1663,7 +1663,7 @@ async function toolRevertirUltimoCambio(
           ok: true,
           fichero: rutaRelativa(ruta),
           revertido_a: antesV.label,
-          conservado: "lo que el usuario editó a mano después de tu cambio sigue en la página",
+          conservado: "what the user edited by hand after your change is still on the page",
         },
         updatedHtml: guardado.html,
         page,
@@ -1683,8 +1683,8 @@ async function toolRevertirUltimoCambio(
         ok: false,
         error:
           versiones.length === 0
-            ? `${rutaRelativa(ruta)} no tiene ningún punto de guardado todavía, así que no hay nada a lo que volver.`
-            : `${rutaRelativa(ruta)} sólo tiene un punto de guardado —el estado actual—, así que no hay ningún cambio anterior que deshacer. Dile al usuario que no hay nada que revertir.`,
+            ? `${rutaRelativa(ruta)} doesn't have any save point yet, so there is nothing to go back to.`
+            : `${rutaRelativa(ruta)} has only one save point —the current state—, so there is no earlier change to undo. Tell the user there is nothing to revert.`,
       },
     };
   }
@@ -1700,7 +1700,7 @@ async function toolRevertirUltimoCambio(
     ...(delLenV && antesV ? [{ source: "chat" as const, label: `Agente: deshacer «${delLenV.label}»` }] : []),
   );
   if (!restaurado) {
-    return { response: { ok: false, error: "no se pudo restaurar ese punto de guardado" } };
+    return { response: { ok: false, error: "that save point couldn't be restored" } };
   }
 
   return {
@@ -1824,7 +1824,7 @@ async function ejecutarHerramienta(
       case "preparar_respuesta":
         return await toolPrepararRespuesta(session, deps, args);
       default:
-        return { response: { ok: false, error: "herramienta desconocida" } };
+        return { response: { ok: false, error: "unknown tool" } };
     }
   }
 }

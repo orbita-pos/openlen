@@ -247,25 +247,25 @@ describe("la foto sigue en la conversación (como Claude Code)", () => {
 
   it("tu mensaje de ese turno lleva la nota con la dirección y los píxeles", () => {
     const h = historialDesdeLaBase([conFoto("https://u/f.jpg")], undefined, new Map([["https://u/f.jpg", FOTO]]));
-    expect(h[0]).toEqual({ role: "user", content: "¿dónde la pondrías?\n\n[Foto adjunta: https://u/f.jpg]", images: [FOTO] });
+    expect(h[0]).toEqual({ role: "user", content: "¿dónde la pondrías?\n\n[Attached photo: https://u/f.jpg]", images: [FOTO] });
     expect(h[1]).toEqual({ role: "assistant", content: "1. En la portada" });
   });
 
   it("con texto alt, la nota lo lleva", () => {
     const h = historialDesdeLaBase([conFoto("https://u/f.jpg", "mi tienda")], undefined, new Map([["https://u/f.jpg", FOTO]]));
-    expect(h[0]!.content).toBe("¿dónde la pondrías?\n\n[Foto adjunta: https://u/f.jpg — «mi tienda»]");
+    expect(h[0]!.content).toBe("¿dónde la pondrías?\n\n[Attached photo: https://u/f.jpg — «mi tienda»]");
   });
 
   it("si no se pudo descargar, la nota lo dice y la dirección se queda", () => {
     const h = historialDesdeLaBase([conFoto("https://u/f.jpg")], undefined, new Map([["https://u/f.jpg", null]]));
-    expect(h[0]).toEqual({ role: "user", content: "¿dónde la pondrías?\n\n[Foto adjunta: https://u/f.jpg (no se pudo cargar para verla)]" });
+    expect(h[0]).toEqual({ role: "user", content: "¿dónde la pondrías?\n\n[Attached photo: https://u/f.jpg (it couldn't be loaded to see it)]" });
   });
 
   it("si no cabía con las demás (presupuesto de imagen, como DeepSeek), va sin píxeles y la nota lo dice; la dirección se queda", () => {
     const h = historialDesdeLaBase([conFoto("https://u/f.jpg")], undefined, new Map([["https://u/f.jpg", NO_CABE]]));
     expect(h[0]).toEqual({
       role: "user",
-      content: "¿dónde la pondrías?\n\n[Foto adjunta: https://u/f.jpg (no está a la vista: no cabía con las demás; la dirección sirve igual)]",
+      content: "¿dónde la pondrías?\n\n[Attached photo: https://u/f.jpg (not in view: it didn't fit with the others; the address works just the same)]",
     });
   });
 

@@ -23,21 +23,21 @@ describe("la memoria de la persona en el contexto", () => {
   it("con memoria la pone delante del estado del proyecto", () => {
     const out = buildAgentContext({ ...base, userMemory: "• nunca uses amarillo" });
     expect(out).toContain("nunca uses amarillo");
-    expect(out.indexOf("nunca uses amarillo")).toBeLessThan(out.indexOf("ESTADO DEL PROYECTO"));
+    expect(out.indexOf("nunca uses amarillo")).toBeLessThan(out.indexOf("PROJECT STATE"));
   });
 
   it("dice que es de la PERSONA, no del proyecto", () => {
     // Si el modelo cree que es del proyecto, la aplicará sólo aquí — que es
     // exactamente el bug que esto cierra.
     const out = buildAgentContext({ ...base, userMemory: "• háblame de tú" });
-    expect(out).toMatch(/CUALQUIERA de sus páginas/);
+    expect(out).toMatch(/ANY of their pages/);
   });
 
   // La memoria es un punto de partida, no una regla sobre el usuario: si hoy
   // pide lo contrario, manda hoy. Sin esta línea el modelo discute con él.
   it("le dice que lo de HOY gana sobre la memoria", () => {
     const out = buildAgentContext({ ...base, userMemory: "• nunca uses amarillo" });
-    expect(out).toMatch(/manda lo de hoy/);
+    expect(out).toMatch(/today wins/);
   });
 
   it("la memoria va ANTES que el brief del proyecto", () => {

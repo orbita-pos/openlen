@@ -470,7 +470,7 @@ const FAIL_REPEAT_LIMIT = 2;
 // `turnoAnteriorMudo` en context.ts —que es el que ya se sabe que funciona—
 // pero entregado DENTRO del turno en vez de en el siguiente.
 const INSISTE_SIN_HERRAMIENTAS =
-  "SYSTEM (the user did NOT write this): you ended the turn WITHOUT calling any tool, so the page has NOT changed. If your reply announced a change —\"I'm adding\", \"I'll do\", \"done\"— that change does NOT exist: apply it NOW with the right tool, and don't say again that you did it until you have called it. If instead your reply was an explanation, a question or an honest refusal, it was fine and has ALREADY reached the user: don't repeat it or summarize it. Answer only \"OK\" —…— and nothing else.";
+  "SYSTEM (the user did NOT write this): you ended the turn WITHOUT calling any tool, so the page has NOT changed. If your reply announced a change —\"I'm adding\", \"I'll do\", \"done\"— that change does NOT exist: apply it NOW with the right tool, and don't say again that you did it until you have called it. If instead your reply was an explanation, a question or an honest refusal, it was fine and has ALREADY reached the user: don't repeat it or summarize it. Answer only \"OK\" —the user never sees it— and nothing else.";
 
 /** La misma insistencia cuando SÍ hubo llamadas pero ninguna hizo nada: sólo
  *  lecturas, ediciones que dejaron la página byte a byte igual, o llamadas que
@@ -483,7 +483,7 @@ function esTestigo(texto: string): boolean {
 }
 
 const INSISTE_SIN_EFECTO =
-  "SYSTEM (the user did NOT write this): you ended the turn WITHOUT any call changing anything —only reads, edits that left the page exactly the same, or calls that failed—, so the page has NOT changed. If your reply announced a change —\"I'm adding\", \"I changed\", \"done\"— that change does NOT exist: apply it NOW with the right tool, and don't say again that you did it until a call has done it. If instead your reply was an explanation, a question or an honest refusal, it was fine and has ALREADY reached the user: don't repeat it or summarize it. Answer only \"OK\" —…— and nothing else.";
+  "SYSTEM (the user did NOT write this): you ended the turn WITHOUT any call changing anything —only reads, edits that left the page exactly the same, or calls that failed—, so the page has NOT changed. If your reply announced a change —\"I'm adding\", \"I changed\", \"done\"— that change does NOT exist: apply it NOW with the right tool, and don't say again that you did it until a call has done it. If instead your reply was an explanation, a question or an honest refusal, it was fine and has ALREADY reached the user: don't repeat it or summarize it. Answer only \"OK\" —the user never sees it— and nothing else.";
 
 /**
  * SE CORTÓ A MEDIA FRASE. Se le devuelve SU propio texto y se le pide que siga.
