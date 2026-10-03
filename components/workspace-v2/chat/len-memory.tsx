@@ -39,6 +39,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { LenMark } from "../icons";
+import { LenFace } from "./len-face";
 
 /** Las preferencias que Len recuerda de esta persona, y quitar una. */
 export function useAgentMemory() {
@@ -265,9 +266,7 @@ export function MemoryDrawer({
   return (
     <div className="bg-elev px-4 pb-3.5 pt-3">
       <div className="flex items-center gap-2 text-[13px] font-semibold">
-        <span className="text-[var(--accent-strong)]">
-          <LenMark size={15} />
-        </span>
+        <LenFace size={18} className="shrink-0" />
         {t("memoria.title")}
       </div>
       {lines.length > 0 ? (

@@ -12,7 +12,6 @@ import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { Crosshair, CornerDownRight } from "lucide-react";
 
-import { LenMark } from "../icons";
 import { TextoDeLen } from "../texto-de-len";
 import { AgentConfirmCard } from "../agent-confirm-card";
 import { AgentReplyCard, type EtiquetasDeRespuesta } from "../agent-reply-card";
@@ -24,6 +23,7 @@ import { ChangesCard } from "./changes-card";
 import { questionOf } from "./live-status";
 import { QuestionCard, withoutTrailingQuestion } from "./question-card";
 import { StepsCard, visibleSteps } from "./steps-card";
+import { LenFace } from "./len-face";
 import { TurnClose } from "./turn-close";
 import type { DesignTurn } from "./use-agent-chat";
 
@@ -143,9 +143,7 @@ export function LenTurn({
   return (
     <div className="nc-turn nc-up flex flex-col gap-2.5" data-last={isLast}>
       <div className="flex items-center gap-1.5 text-[12.5px]">
-        <span className="text-[var(--accent-strong)]">
-          <LenMark size={15} />
-        </span>
+        <LenFace size={18} className="shrink-0" />
         <b className="font-semibold">Len</b>
         <span className="text-[11.5px] fg-faint">{when}</span>
         {!samePage && (
