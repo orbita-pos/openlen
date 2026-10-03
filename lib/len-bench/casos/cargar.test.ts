@@ -27,6 +27,15 @@ describe("cargarEncargos", () => {
     const dev = new Set((await cargarEncargos("dev")).map((e) => e.id));
     expect(agente.map((e) => e.id).filter((id) => dev.has(id))).toEqual([]);
   }, 30_000);
+  // El juego difícil (Len Dynamis contra 2.5, como DeepSeek): carga, regla 4 en
+  // cada caso, y ningún id repetido con dev ni con agente.
+  it("el juego hard: carga, regla 4 en cada caso, ids propios", async () => {
+    const hard = await cargarEncargos("hard");
+    expect(hard.length).toBeGreaterThan(0);
+    expect(hard.filter((e) => faltaLoQueSigue(e)).map((e) => e.id)).toEqual([]);
+    const otros = new Set([...(await cargarEncargos("dev")), ...(await cargarEncargos("agente"))].map((e) => e.id));
+    expect(hard.map((e) => e.id).filter((id) => otros.has(id))).toEqual([]);
+  }, 30_000);
   it("un juego privado que no está dice QUÉ fichero buscó", async () => {
     const raiz = fs.mkdtempSync(path.join(os.tmpdir(), "lb-juegos-"));
     // Un texto en `toThrow` es una subcadena literal: la ruta va tal cual.

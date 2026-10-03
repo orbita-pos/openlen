@@ -8,7 +8,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Encargo } from "../tipos";
 
-export type Juego = "dev" | "pendientes" | "sellado" | "resultados" | "agente";
+export type Juego = "dev" | "pendientes" | "sellado" | "resultados" | "agente" | "hard";
 
 export async function cargarEncargos(juego: Juego, raiz = process.cwd()): Promise<Encargo[]> {
   if (juego === "dev") return (await import("./dev")).ENCARGOS;
@@ -17,6 +17,8 @@ export async function cargarEncargos(juego: Juego, raiz = process.cwd()): Promis
   if (juego === "resultados") return (await import("./resultados")).ENCARGOS;
   // La terminal y la búsqueda (plans/len-agente-2026/): aparte por lo mismo.
   if (juego === "agente") return (await import("./agente")).ENCARGOS;
+  // Len Dynamis contra Len 2.5, como DeepSeek (plans/len-2/corridas/2026-10-03-dynamis).
+  if (juego === "hard") return (await import("./hard")).ENCARGOS;
   const ruta = path.resolve(raiz, "plans", "len-2", juego, "index.ts");
   try {
     return ((await import(pathToFileURL(ruta).href)) as { ENCARGOS: Encargo[] }).ENCARGOS;

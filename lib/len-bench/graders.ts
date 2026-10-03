@@ -419,6 +419,17 @@ export type PasoDeFlujo =
   /** El texto de la página casa, también lo de un cajón cerrado (espera
    *  hasta 5 s: el JS pinta después). Los espacios van colapsados a uno. */
   | { readonly ve: RegExp }
+  /** Lo que la persona YA NO VE: el texto VISIBLE (`innerText`, sin lo que está
+   *  oculto) no casa —un filtro que quitó un producto, un aviso que se fue—.
+   *  Espera hasta 5 s, como `ve`. Al revés que `ve`, lo de un cajón cerrado no
+   *  cuenta: no se ve. */
+  | { readonly noVe: RegExp }
+  /** Rellena el formulario VISIBLE como una persona —sólo los campos de texto,
+   *  teléfono y correo que siguen vacíos: lo elegido en los pasos anteriores
+   *  (un select, un radio, una casilla) se queda como está— y lo manda. Pasa si
+   *  llega un envío nuevo con la marca y alguno de sus campos casa con
+   *  `envia`: el presupuesto calculado viaja con la solicitud, no sólo el nombre. */
+  | { readonly envia: RegExp }
   /** Lo último pulsado MANDÓ a una dirección que casa (decodificada): un
    *  `wa.me/…?text=` con el pedido, un `mailto:`… */
   | { readonly abre: RegExp }
@@ -441,6 +452,8 @@ function describirPaso(p: PasoDeFlujo): string {
   if ("pulsa" in p) return `pulsar ${p.pulsa}${p.n ? ` (el ${p.n + 1}º)` : ""}${p.siHay ? " si lo hay" : ""}`;
   if ("recarga" in p) return "recargar";
   if ("ve" in p) return `ver ${p.ve}`;
+  if ("noVe" in p) return `ya no ver ${p.noVe}`;
+  if ("envia" in p) return `mandar el formulario y que llegue con ${p.envia}`;
   if ("escribe" in p) return `escribir «${p.escribe}» en ${p.en}`;
   if ("elige" in p) return `elegir ${p.elige}`;
   if ("pide" in p) return `pedir ${p.pide} de ${p.de}`;
@@ -589,6 +602,18 @@ async function textoPintado(page: Page, listo: (texto: string) => boolean): Prom
         return (copia.textContent ?? "").replace(/\s+/g, " ");
       })
       .catch(() => "");
+    if (listo(texto)) break;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return texto;
+}
+
+/** El texto que se VE (`innerText`: fuera lo oculto), esperando hasta 5 s a
+ *  que cumpla `listo`, como `textoPintado`. Para `noVe`. */
+async function textoVisibleDeLaPagina(page: Page, listo: (texto: string) => boolean): Promise<string> {
+  let texto = "";
+  for (let t = 0; t < 10; t++) {
+    texto = await page.evaluate(() => (document.body.innerText ?? "").replace(/\s+/g, " ")).catch(() => "");
     if (listo(texto)) break;
     await new Promise((r) => setTimeout(r, 500));
   }
@@ -770,6 +795,70 @@ export function flujo(nombre: string, ruta: string, pasos: readonly PasoDeFlujo[
             const ve = p.ve;
             const texto = await textoPintado(page, (t) => ve.test(t));
             if (!ve.test(texto)) return falla(i, "no está en la página");
+          } else if ("noVe" in p) {
+            const noVe = p.noVe;
+            const visible = await textoVisibleDeLaPagina(page, (t) => !noVe.test(t));
+            if (noVe.test(visible)) return falla(i, `se sigue viendo: «${visible.match(noVe)?.[0] ?? ""}»`);
+          } else if ("envia" in p) {
+            const antes = (await ctx.leerEnvios()).length;
+            const sel = await page.evaluate(
+              (marca: string, correo: string) => {
+                // ⚠️ Sin funciones con nombre aquí dentro: tsx (keepNames) las
+                // envuelve en `__name`, que en la página no existe. Se marca lo
+                // visible con un atributo y se filtra por él.
+                for (const el of Array.from(document.querySelectorAll("form, form input, form textarea, form button, form [type=submit]"))) {
+                  const caja = el.getBoundingClientRect();
+                  const cs = getComputedStyle(el);
+                  if (caja.width > 1 && caja.height > 1 && cs.display !== "none" && cs.visibility !== "hidden" && Number(cs.opacity) !== 0) {
+                    el.setAttribute("data-ol-visible", "");
+                  }
+                }
+                const form = document.querySelector("form[data-ol-visible]");
+                if (!form) return null;
+                let fechas = 0;
+                for (const el of Array.from(form.querySelectorAll<HTMLInputElement>("input[data-ol-visible], textarea[data-ol-visible]"))) {
+                  if (!["text", "tel", "email", "textarea", "", "number", "date", "time"].includes(el.type) && el.tagName !== "TEXTAREA") continue;
+                  if (el.name.startsWith("_openlen_") || el.getAttribute("aria-hidden") === "true" || el.value) continue;
+                  // Como `formulario-llega`: cada fecha, dos días después de la anterior.
+                  el.value =
+                    el.type === "tel"
+                      ? "5512345678"
+                      : el.type === "email"
+                        ? correo
+                        : el.type === "number"
+                          ? "2"
+                          : el.type === "date"
+                            ? `2026-12-${String(1 + 2 * fechas++).padStart(2, "0")}`
+                            : el.type === "time"
+                              ? "14:00"
+                              : marca;
+                  el.dispatchEvent(new Event("input", { bubbles: true }));
+                  el.dispatchEvent(new Event("change", { bubbles: true }));
+                }
+                const boton = form.querySelector<HTMLElement>('[type="submit"][data-ol-visible], button[data-ol-visible]:not([type="button"])');
+                if (!boton) return "";
+                boton.setAttribute("data-ol-envia", "");
+                return "[data-ol-envia]";
+              },
+              MARCA,
+              CORREO_DE_PRUEBA,
+            );
+            if (sel === null) return falla(i, "no hay ningún formulario visible");
+            if (sel === "") return falla(i, "el formulario no tiene un botón de enviar visible");
+            const [respuesta] = await Promise.all([
+              page.waitForResponse((r) => new URL(r.url()).pathname.startsWith("/api/f/"), { timeout: 10_000 }).catch(() => null),
+              page.click(sel),
+            ]);
+            if (respuesta?.status() === 429) throw new Error("/api/f/ contestó 429 (el limitador de envíos): el formulario no se pudo medir");
+            let nuevo: Record<string, string> | undefined;
+            for (let k = 0; k < 10 && !nuevo; k++) {
+              nuevo = (await ctx.leerEnvios()).slice(antes).find((e) => Object.values(e).some((v) => v === MARCA || v === CORREO_DE_PRUEBA));
+              if (!nuevo) await new Promise((r) => setTimeout(r, 500));
+            }
+            if (!nuevo) return falla(i, "se pulsó enviar y en 5 s no llegó ningún envío a la base");
+            if (!Object.values(nuevo).some((v) => p.envia.test(String(v)))) {
+              return falla(i, `llegó, pero sin ${p.envia}: ${JSON.stringify(nuevo).slice(0, 300)}`);
+            }
           } else {
             const vistas = [...new Set(salidas.map(decodificada))];
             if (!vistas.some((u) => p.abre.test(u))) {
