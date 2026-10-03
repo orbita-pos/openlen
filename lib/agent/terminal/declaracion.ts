@@ -46,13 +46,15 @@ export const PARA_LA_TERMINAL: readonly (readonly [string, string])[] = [
   // ⚰️ «(Read, Grep, Glob)» se fue con la lista de `preguntar` (31a94a0e), y las
   // dos en inglés con las descripciones de F4. Una sustitución que no encuentra
   // su frase es una palanca a ninguna parte: lo vigila declaracion.test.ts.
+  // En inglés desde la traducción de lo que lee Len (rama len-agente-2026-en):
+  // son las mismas frases, dichas como las dice ahora el prompt.
   [
-    "Grep para buscar en todo el sitio y Glob para listar ficheros.",
-    "y bash, una terminal sobre los mismos ficheros, para buscar en todo el sitio (grep -rn), listarlos (find) o cambiar muchos a la vez (sed -i).",
+    "Grep to search the whole site and Glob to list files.",
+    "and bash, a terminal over the same files, to search the whole site (grep -rn), list them (find) or change many at once (sed -i).",
   ],
-  ["buscar con Grep", "buscar con grep"],
-  ["con Grep", "con grep en bash"],
-  ["(Grep lo encuentra)", "(grep lo encuentra)"],
+  ["searching with Grep", "searching with grep"],
+  ["with Grep", "with grep in bash"],
+  ["(Grep finds it)", "(grep finds it)"],
 ];
 
 export function paraLaTerminal(texto: string): string {
@@ -87,28 +89,28 @@ export const SUSTITUIDAS_EN_SOLO_TERMINAL: readonly string[] = ["Read", "Edit", 
 export const PARA_SOLO_LA_TERMINAL: readonly (readonly [string, string])[] = [
   // El prompt de sistema.
   [
-    "Read para leer, Edit para cambiar un trozo exacto, Write para crear una página nueva o reescribir una entera, y bash, una terminal sobre los mismos ficheros, para buscar en todo el sitio (grep -rn), listarlos (find) o cambiar muchos a la vez (sed -i).",
-    "bash, una terminal sobre esos ficheros, para leerlos (cat, sed -n), buscar en todo el sitio (grep -rn), listarlos (find) y cambiarlos (sed -i, o un heredoc para escribir uno entero).",
+    "Read to read, Edit to change an exact piece, Write to create a new page or rewrite a whole one, and bash, a terminal over the same files, to search the whole site (grep -rn), list them (find) or change many at once (sed -i).",
+    "bash, a terminal over those files, to read them (cat, sed -n), search the whole site (grep -rn), list them (find) and change them (sed -i, or a heredoc to write a whole one).",
   ],
-  ["con el Edit más pequeño que lo hace", "con el cambio más pequeño que lo hace"],
-  ["ni la reescribas entera con Write para mejorarla", "ni la reescribas entera para mejorarla"],
-  ["se cambian igual, con Edit.", "se cambian igual, con bash."],
-  ["Para quitar algo, un Edit que borra ESE trozo", "Para quitar algo, un cambio que borra ESE trozo"],
+  ["with the smallest Edit that does it", "with the smallest change that does it"],
+  ["or rewrite it whole with Write to improve it", "or rewrite it whole to improve it"],
+  ["are changed the same way, with Edit.", "are changed the same way, with bash."],
+  ["To remove something, one Edit that deletes THAT piece", "To remove something, one change that deletes THAT piece"],
   [
-    "agente: Read de /index.html, un Edit que borra la sección de la galería y otro que borra su enlace en el menú;",
-    "agente: lee /index.html y borra con bash la sección de la galería y su enlace en el menú;",
+    "agent: Read of /index.html, one Edit that deletes the gallery section and another that deletes its link in the menu;",
+    "agent: reads /index.html and deletes with bash the gallery section and its link in the menu;",
   ],
-  ["Tras cada Edit o Write el cambio YA está guardado", "Tras cada comando que cambia un fichero, el cambio YA está guardado"],
-  ["Una página nueva es un Write a /<slug>/index.html", "Una página nueva es un fichero nuevo, /<slug>/index.html"],
-  ["(Edit, con replace_all si se repite igual)", "(con sed -i, que los cambia todos de una vez)"],
-  ["lo arregla con Edit en cada fichero donde sale", "lo arregla con bash en cada fichero donde sale"],
-  ["AÑADE una línea con Edit:", "AÑADE una línea con bash (echo … >>):"],
+  ["After each Edit or Write the change is ALREADY saved", "After each command that changes a file, the change is ALREADY saved"],
+  ["A new page is a Write to /<slug>/index.html", "A new page is a new file, /<slug>/index.html"],
+  ["(Edit, with replace_all if it repeats identically)", "(with sed -i, which changes them all at once)"],
+  ["fixes it with Edit in every file where it appears", "fixes it with bash in every file where it appears"],
+  ["ADD a line with Edit:", "ADD a line with bash (echo … >>):"],
   // La descripción de `bash`.
   ["is saved like a Write, through the same checks and", "is saved through the same checks as any edit of the site, and"],
   // /AGENTS.md.
-  ["Se DECLARA en la página, con Edit:", "Se DECLARA en la página:"],
-  ["Léelo con Read y cámbialo con Edit o Write como cualquier fichero:", "Léelo y cámbialo como cualquier fichero:"],
-  ["declara el bloque con Edit y escribe su fichero", "declara el bloque y escribe su fichero"],
+  ["It is DECLARED in the page, with Edit:", "It is DECLARED in the page:"],
+  ["Read it with Read and change it with Edit or Write like any file:", "You read it and change it like any file:"],
+  ["declare the block with Edit and write its file", "declare the block and write its file"],
 ];
 
 export function paraSoloLaTerminal(texto: string): string {

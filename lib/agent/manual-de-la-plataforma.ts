@@ -43,25 +43,25 @@ import {
  * Exportado para la prueba que exige que no se pierda ninguna línea.
  */
 export function manualSinPartir(): string {
-  const manual = `# OpenLen: cómo funciona la plataforma
+  const manual = `# OpenLen: how the platform works
 
-LO QUE HAY Y LO QUE NO:
-- Lo guardado con localStorage SOBREVIVE a cerrar la pestaña y el navegador; lo que no hace es viajar a otro dispositivo, a otro visitante ni al usuario. Lo guardado en un ALMACÉN vive en el servidor: en modo propio cada visitante ve lo suyo, y el usuario lo ve todo en el editor, en la vista «Datos» (no en la Bandeja, que es la de los formularios). Decirle «se guarda en el navegador» de algo que guardaste en un almacén es mentirle.
-- Los formularios funcionan: lo que envía el visitante llega al correo del usuario y a su Bandeja (cómo se escribe uno, en la guía de abajo). Cuando haga falta que le escriban, ofrece el formulario; el WhatsApp o el chat, además, no en su lugar.
+WHAT EXISTS AND WHAT DOESN'T:
+- What is saved with localStorage SURVIVES closing the tab and the browser; what it doesn't do is travel to another device, another visitor or the user. What is saved in a STORE lives on the server: in "propio" mode each visitor sees their own, and the user sees all of it in the editor, in the "Data" view (not in the Inbox, which is for forms). Telling them "it's saved in the browser" about something you saved in a store is lying to them.
+- Forms work: what the visitor sends reaches the user's email and their Inbox (how to write one, in the guide below). When people need to be able to write to them, offer the form; WhatsApp or the chat in addition, not instead.
 - OpenLen NO ejecuta JavaScript de la página: ESTA LÍNEA NO LA LEE EL MODELO — es la MARCA de la cláusula \`agente\` y \`swapJsClauses\` la sustituye entera, del guion al salto de línea, por la versión permisiva (lib/ai/js-clause.ts). El texto tiene que quedarse porque el intercambio LANZA si no encuentra su marca. Lo sujeta lib/agent/catalog.test.ts, que exige que esta frase NO salga en el prompt montado.
-- LO QUE DE VERDAD NO SE PUEDE, y es poco: cobrar con tarjeta DENTRO de la página (no hay pasarela: se cobra con el enlace de pago del usuario, como arriba, o por WhatsApp o transferencia), que el usuario se entere de lo que el visitante hizo en su navegador (para eso está el formulario) y mandar correos por tu cuenta.
+- WHAT REALLY CAN'T BE DONE, and it is little: charging a card INSIDE the page (there is no payment gateway: payment goes through the user's payment link, as above, or by WhatsApp or bank transfer), the user finding out what the visitor did in their browser (that is what the form is for) and sending emails on your own.
 
-ENLACES (<a href>):
-- Las URLs que te da son datos reales suyos: van al href VERBATIM, carácter por carácter, con su query string y sus mayúsculas.
-- ABSOLUTAS, SIEMPRE: «instagram.com/juan» o «@juan» se completan a https://instagram.com/juan. Un href sin esquema es una ruta RELATIVA del propio sitio, y el fallo es SILENCIOSO: el servidor vuelve a servir la home con 200 y el visitante aterriza en la misma página. mailto: y tel: también valen.
-- INTERNAS: la ruta "/<slug>" de su fichero /<slug>/index.html (p. ej. /menu); jamás "menu.html" ni "menu" a secas, que caen en el mismo fallback silencioso a la home. La portada es "/".
-- ANCLAS ("#precios"): sólo si ese id EXISTE en la página de destino; si no, créalo en la misma edición.
+LINKS (<a href>):
+- The URLs they give you are their real data: they go into the href VERBATIM, character for character, with their query string and their capital letters.
+- ABSOLUTE, ALWAYS: "instagram.com/juan" or "@juan" are completed to https://instagram.com/juan. An href without a scheme is a RELATIVE path of the site itself, and the failure is SILENT: the server serves the home page again with a 200 and the visitor lands on the same page. mailto: and tel: are fine too.
+- INTERNAL: the path "/<slug>" of its file /<slug>/index.html (e.g. /menu); never "menu.html" or plain "menu", which fall into the same silent fallback to the home page. The home page is "/".
+- ANCHORS ("#precios"): only if that id EXISTS on the target page; if not, create it in the same edit.
 
-ALMACENES (los datos de la página, en /datos):
-Un ALMACÉN guarda datos de verdad en el servidor —un plato del menú, un producto del catálogo, una reseña— y sobrevive a recargas y a republicaciones. Se DECLARA en la página, con Edit: un bloque \`<script type="application/json" data-ol-stores>\` dentro del <body>, fuera de cualquier sección que se pueda borrar, que dice qué campos tiene y quién puede tocarlos. Su forma: {"menu":{"visitante":"lectura","campos":{"plato":"texto","precio":"numero"}}}. \`visitante\` es "lectura" (lo mantienes tú, el visitante sólo lo lee — el caso normal de un menú o un catálogo), "propio" (cada visitante escribe y lee LO SUYO — un carrito), "publico" (cualquiera escribe y TODOS lo leen — RESEÑAS, comentarios, un muro: se publica al momento y lo ve todo el mundo, como en Mercado Libre) o "añadir" (el visitante crea y NO lee lo de otros — un formulario de inscripción, donde lo que cada uno deja es privado). Los tipos son texto, numero, booleano, fecha y lista.
-Declarado, cada almacén es un FICHERO: /datos/<almacén>.json, la lista de sus filas con su id. Léelo con Read y cámbialo con Edit o Write como cualquier fichero: una fila sin id es nueva, la que cambias se actualiza y la que quitas se borra. Todo se comprueba antes de guardar nada —un campo que el almacén no declara, o un valor del tipo equivocado, te vuelve como error—. Si el almacén no existe todavía, declara el bloque con Edit y escribe su fichero en el MISMO turno. Para que el contenido de un almacén "lectura" se vea en la página publicada, deja un contenedor con data-ol-datos="<nombre>" donde quieras que salga.
+STORES (the page's data, in /datos):
+A STORE keeps real data on the server —a dish on the menu, a product in the catalog, a review— and survives reloads and republishing. It is DECLARED in the page, with Edit: a \`<script type="application/json" data-ol-stores>\` block inside the <body>, outside any section that could be deleted, which says what fields it has and who may touch them. Its shape: {"menu":{"visitante":"lectura","campos":{"plato":"texto","precio":"numero"}}}. \`visitante\` is "lectura" (you maintain it, the visitor only reads it — the normal case for a menu or a catalog), "propio" (each visitor writes and reads THEIR OWN — a cart), "publico" (anyone writes and EVERYONE reads it — REVIEWS, comments, a wall: it is published at once and everybody sees it, as on Mercado Libre) or "añadir" (the visitor creates and does NOT read what others left — a sign-up form, where what each one leaves is private). The types are texto, numero, booleano, fecha and lista.
+Once declared, each store is a FILE: /datos/<store>.json, the list of its rows with their id. Read it with Read and change it with Edit or Write like any file: a row without an id is new, the one you change gets updated and the one you remove gets deleted. Everything is checked before anything is saved —a field the store doesn't declare, or a value of the wrong type, comes back to you as an error—. If the store doesn't exist yet, declare the block with Edit and write its file in the SAME turn. For the content of a "lectura" store to show on the published page, leave a container with data-ol-datos="<name>" where you want it to appear.
 
-GUÍA DE DISEÑO (para las páginas que creas tú y para el rediseño que te pidan; lo que añades a una página que ya existe se escribe como ella):
+DESIGN GUIDE (for the pages you create yourself and for a redesign you are asked for; what you add to a page that already exists is written the way that page is):
 ${PUBLISH_CONTRACT}
 
 ${bloqueDeLibrerias({ dondeVaElScript: "libre" })}`;
@@ -117,21 +117,24 @@ ${bloqueDeLibrerias({ dondeVaElScript: "libre" })}`;
 // aparece, como `swapJsClauses`. Regla por regla, en
 // plans/len-agente-2026/notas/f4-tabla-de-reglas.md (M1–M21, I1–I3).
 
-const MARCA_GUIA = "GUÍA DE DISEÑO (";
+// Las marcas de lo que es sólo de Len van en inglés desde la traducción (rama
+// len-agente-2026-en); las del contrato y las librerías siguen en español
+// porque ese texto lo comparten Crear y el editor, que no se tradujeron.
+const MARCA_GUIA = "DESIGN GUIDE (";
 const MARCA_GUSTO = "\nCOLOR, FORMA Y TIPOGRAFÍA";
 const MARCA_LIBRERIAS = "LIBRERÍAS DISPONIBLES";
-const MARCA_API_D = "GUARDAR TAMBIÉN:";
+const MARCA_API_D = "SAVING TOO:";
 /** La entradilla de LO QUE LA PUBLICACIÓN IMPONE prometía el acabado «al
  *  final», y el acabado se va a la guía. */
 const PROMESA_DEL_ACABADO = ", y al final el nivel de acabado que se espera.";
 
 /** Lo que queda en la línea del JavaScript donde estaba el contrato de /api/d. */
-const EN_LUGAR_DE_API_D = `GUARDAR TAMBIÉN se puede, en un almacén: lo que el JavaScript le pide a /api/d está en ${RUTA_API_D}.`;
+const EN_LUGAR_DE_API_D = `SAVING TOO is possible, in a store: what the JavaScript asks of /api/d is in ${RUTA_API_D}.`;
 
-const INDICE = `MÁS, EN ${CARPETA_DOCS} (se leen cuando hacen falta):
-- ${RUTA_GUIA}: la guía de diseño —color, letra, modo oscuro y acabado—. Léela ANTES de escribir una página desde cero o un rediseño; lo que añades a una página que ya existe se escribe como ella.
-- ${RUTA_API_D}: cómo guarda y lee en un almacén el JavaScript de la página (/api/d). Léelo antes de escribir ese JavaScript.
-- ${RUTA_LIBRERIAS}: las librerías de gráficas, carruseles y galerías que sobreviven al publicar, con su etiqueta exacta. Léelo antes de añadir una.`;
+const INDICE = `MORE, IN ${CARPETA_DOCS} (read them when you need them):
+- ${RUTA_GUIA}: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch or a redesign. What you add to a page that already exists is written the way that page is.
+- ${RUTA_API_D}: how the page's JavaScript saves to and reads from a store (/api/d); read it before writing that JavaScript.
+- ${RUTA_LIBRERIAS}: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.`;
 
 const encontrar = (texto: string, marca: string, desde = 0): number => {
   const i = texto.indexOf(marca, desde);
@@ -182,7 +185,7 @@ export function partirElManual(entero: string = manualSinPartir()): ManualPartid
     agents,
     docs: {
       [RUTA_GUIA]: `${cabecera}\n${gusto}`,
-      [RUTA_API_D]: `# /api/d: el JavaScript de la página guarda y lee en un almacén\n\n${apiD}`,
+      [RUTA_API_D]: `# /api/d: the page's JavaScript saves to and reads from a store\n\n${apiD}`,
       [RUTA_LIBRERIAS]: librerias,
     },
   };

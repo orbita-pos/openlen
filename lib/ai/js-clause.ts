@@ -78,8 +78,10 @@ const SIN_OCULTAR_EN =
 // eso la regla se queda (memoria `openlen-se-adapta-a-len`). Claude Code la
 // tiene igual, en su skill `artifact-design`: «la página completa en reposo; nada se queda en `opacity: 0` esperando a un observador».
 // Crear y el Chat conservan la versión de arriba hasta medir Crear.
+// En inglés desde la traducción de lo que lee Len (rama len-agente-2026-en):
+// sólo la usa la cláusula `agente`, que sólo lee Len.
 const SIN_OCULTAR_LEN =
-  "Nunca escondas contenido con CSS para revelarlo desde el script: si el script falla, la página llega en blanco.";
+  "Never hide content with CSS so the script can reveal it: if the script fails, the page arrives blank.";
 
 // MEDIDO en la corrida del 21/08: de 6 páginas con JavaScript, la del carrito
 // cableó sus botones con `onclick="addToCart(1)"` y NINGÚN `addEventListener`.
@@ -224,7 +226,7 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       // ⚰️ Decía «Ponlo TODO en UN `<script>`… para poder cambiarlo después de
       // una pieza con target="runtime"». Len 2.0 (2026-09-24) edita el script
       // como cualquier otro trozo del fichero, con Edit: esa razón ya no existe.
-      "- Puedes escribir el JavaScript de la página, y sobrevive al guardar. " +
+      "- You can write the page's JavaScript, and it survives saving. " +
       // ⚰️ Aquí iba «Ponlo en un `<script>` al final del body», retirado para
       // Len el 2026-09-29 con el OK de Jesús. Existía por el mismo defecto que
       // `CABLEADO_ES`: un `<script>` dentro de una sección se iba con el saneo
@@ -262,21 +264,21 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       // YouTube y de Vimeo, «sólo si el brief te da el enlace», y qué hacer con
       // Spotify o Calendly—, y el Agente conserva ese bloque. Aquí sólo estaba
       // la mitad corta, dicha por segunda vez.
-      "COBRAR SÍ SE PUEDE, y sin servidor: si el usuario te da su enlace de pago de Stripe, cablea el botón con `<a href=\"https://buy.stripe.com/…\">`. NUNCA te inventes esa dirección — si no la tiene, explícale que la crea en su panel de Stripe y déjale el botón apuntando a donde te diga. " +
+      "CHARGING IS POSSIBLE, with no server: if the user gives you their Stripe payment link, wire the button with `<a href=\"https://buy.stripe.com/…\">`. NEVER make up that address — if they don't have it, explain that they create it in their Stripe dashboard and leave the button pointing wherever they tell you. " +
       // 🔴 `/api/d/<almacén>`, SIN subdominio (2026-09-18). Decía
       // `/api/d/<sub>/<almacén>`, y un borrador no sabe con qué subdominio se
       // publicará: en producción Len puso «carrito» en ese hueco y el carrito
       // no guardó nada. La ruta sin subdominio lo saca del host
       // (`app/api/d/[sub]/route.ts`). Y lo de `propio` es el otro medio fallo
       // de ese día: un POST por producto, que se reemplazaban entre sí.
-      "GUARDAR TAMBIÉN: declara un almacén en la página (el bloque data-ol-stores) y tu JavaScript escribe y lee con fetch a /api/d/<almacén> —relativa y SIN subdominio: el servidor sabe de qué página viene— — un carrito que sobrevive a recargas, un menú que mantiene el usuario, reseñas que dejan los visitantes. GET devuelve {documentos:[{id,doc}]}; POST con el documento en JSON lo guarda. En un almacén \"propio\" cada visitante tiene UN solo documento y cada POST lo REEMPLAZA: el carrito va ENTERO en un campo de tipo lista, con un POST por cambio —nunca uno por producto, que se pisan y sólo queda el último—, y se lee con GET al cargar la página. " +
+      "SAVING TOO: declare a store in the page (the data-ol-stores block) and your JavaScript writes and reads with fetch to /api/d/<store> —relative and WITHOUT a subdomain: the server knows which page it comes from— — a cart that survives reloads, a menu the user maintains, reviews that visitors leave. GET returns {documentos:[{id,doc}]}; a POST with the document as JSON saves it. In a \"propio\" store each visitor has ONE single document and every POST REPLACES it: the cart goes WHOLE in a field of type lista, with one POST per change —never one per product, since they overwrite each other and only the last one stays—, and it is read with GET when the page loads. " +
       // 🔴 EL «NO» DEL SERVIDOR (2026-09-19). Todo lo de arriba enseña a
       // guardar; nada decía qué hacer cuando la respuesta no es buena, y el
       // JavaScript del modelo pinta primero y no mira. El resultado lo ve el
       // VISITANTE, no el dueño: añade, ve su carrito crecer, recarga, y no hay
       // nada. Lo caza `comprobarAvisoAlVisitante` corriendo la misma página con
       // el almacén lleno y comparando lo que se ve.
-      "MIRA LA RESPUESTA DEL SERVIDOR: el POST puede decir que NO —507 si el usuario ha llenado su cuota, 413 si el documento pasa de 16 KB, y la red puede fallar—. Si no vuelve `ok`, díselo al visitante EN LA PÁGINA y no le dejes el cambio pintado como guardado (deshazlo, o píntalo sólo cuando el servidor conteste bien). Pintar primero y no mirar la respuesta es la forma de que alguien pierda su carrito sin enterarse.",
+      "CHECK THE SERVER'S RESPONSE: the POST can say NO —507 if the user has filled their quota, 413 if the document is over 16 KB, and the network can fail—. If it doesn't come back `ok`, tell the visitor ON THE PAGE and don't leave the change painted as saved (undo it, or paint it only once the server answers well). Painting first and not looking at the response is how someone loses their cart without noticing.",
   },
 
 

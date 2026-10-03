@@ -67,12 +67,12 @@ const MAX_CAMBIOS = 12;
 export function changelogBlock(cambios: readonly CambioHecho[]): string {
   if (cambios.length === 0) return "";
   const linea = (c: CambioHecho) =>
-    `- ${c.label}${c.page ? ` (página "${c.page}")` : ""}`;
+    `- ${c.label}${c.page ? ` (page "${c.page}")` : ""}`;
   return `
 
-LO QUE YA SE LE HIZO A ESTA PÁGINA (registro real de versiones, de lo más reciente a lo más antiguo — no es la conversación, son los cambios que de verdad se guardaron):
+WHAT HAS ALREADY BEEN DONE TO THIS PAGE (the real version log, most recent first — not the conversation: the changes that were actually saved):
 ${cambios.slice(0, MAX_CAMBIOS).map(linea).join("\n")}
-Úsalo para contestar «¿qué hemos hecho?» sin inventar, y para no repetir un cambio que ya está hecho. Si algo que creías haber hecho NO aparece aquí, es que no llegó a guardarse.
+Use it to answer "what have we done?" without making things up, and to avoid repeating a change that is already made. If something you thought you did does NOT appear here, it never got saved.
 
 `;
 }
@@ -88,9 +88,9 @@ ${cambios.slice(0, MAX_CAMBIOS).map(linea).join("\n")}
  */
 export function cambiosDelDuenoBlock(lineas: readonly string[]): string {
   if (lineas.length === 0) return "";
-  return `EL DUEÑO CAMBIÓ LA PÁGINA A MANO desde tu último cambio en ella — esto NO lo hiciste tú:
+  return `THE OWNER CHANGED THE PAGE BY HAND since your last change to it — you did NOT do this:
 ${lineas.map((l) => `- ${l}`).join("\n")}
-Respeta lo que puso: los ficheros ya lo llevan. Si tu conversación dice otra cosa, manda la página. Y si te preguntan qué cambió, esto es lo que cambió el usuario, no tú.
+Respect what they put: the files already have it. If your conversation says otherwise, the page wins. And if they ask what changed, this is what the user changed, not you.
 
 `;
 }
@@ -125,7 +125,7 @@ export function degradacionesBlock(
     .flatMap((d) => (d.detail ?? []).map((t) => `- [${d.code}] ${t}`))
     .slice(0, MAX_DEGRADACIONES);
   if (lineas.length === 0) return "";
-  return `LO QUE YA SE SABE ROTO EN ESTA PÁGINA (lo registró la ingestión; el usuario puede estar describiéndotelo con otras palabras):
+  return `WHAT IS ALREADY KNOWN TO BE BROKEN ON THIS PAGE (recorded at ingestion; the user may be describing it to you in other words):
 ${lineas.join("\n")}
 
 `;
@@ -161,7 +161,7 @@ export function avisosDelTurno(args: {
   degradaciones?: readonly DegradacionConocida[];
 }): string {
   const mudo = args.turnoAnteriorMudo
-    ? `AVISO: tu turno anterior NO llamó a ninguna herramienta, así que la página NO cambió — hagas lo que hagas ahora, no des por hecho lo que dijiste que habías hecho. Si el usuario te pidió un cambio y sigue sin aplicarse, aplícalo AHORA con la herramienta de edición que toque.
+    ? `NOTICE: your previous turn did NOT call any tool, so the page did NOT change — whatever you do now, don't take for granted what you said you had done. If the user asked you for a change and it still isn't applied, apply it NOW with the editing tool that fits.
 
 `
     : "";
@@ -169,7 +169,7 @@ export function avisosDelTurno(args: {
   if (!mudo && !roto) return "";
   return `
 
-SISTEMA (el usuario NO escribió esto):
+SYSTEM (the user did NOT write this):
 ${mudo}${roto}`;
 }
 
@@ -250,19 +250,19 @@ export function buildAgentContext(args: {
 }): string {
   const brief = (args.userBrief ?? "").trim();
   const briefBlock = brief
-    ? `PROJECT BRIEF — ${RUTA_MEMORIA_PROYECTO} (persistente — aplica a toda petición):\n${brief}\n\n`
+    ? `PROJECT BRIEF — ${RUTA_MEMORIA_PROYECTO} (persistent — applies to every request):\n${brief}\n\n`
     : "";
 
   let imageBlock = "";
   if (args.attachedImage) {
-    const altLine = args.attachedImage.alt ? `\nTexto alt: ${args.attachedImage.alt}` : "";
+    const altLine = args.attachedImage.alt ? `\nAlt text: ${args.attachedImage.alt}` : "";
     // F5: cuando los píxeles viajan adjuntos al turno, díselo — puede diseñar
     // CON la imagen (colores, orientación, contenido) en vez de colocarla a
     // ciegas. Sin visible, el texto queda byte-idéntico a F2 (pinned).
     const seeLine = args.attachedImage.visible
-      ? `\nLa imagen viene ADJUNTA a este turno y PUEDES VERLA: úsala para decidir dónde y cómo colocarla — combina la paleta y el layout con sus colores, orientación y contenido, y escribe un alt fiel a lo que muestra.`
+      ? `\nThe image is ATTACHED to this turn and you CAN SEE IT: use it to decide where and how to place it — match the palette and the layout to its colors, orientation and content, and write an alt that is true to what it shows.`
       : "";
-    imageBlock = `IMAGEN ADJUNTA DEL USUARIO: ${args.attachedImage.url}${altLine}${seeLine}\nEsta es una URL de imagen REAL que el usuario adjuntó explícitamente — colócala usando esta URL EXACTA (verbatim) como src de un <img> (o como CSS background-image). NUNCA inventes ni cambies la URL. Y NO HABLES DE ELLA: la escribió el subidor de OpenLen, funciona en el editor y se hornea al publicar. No hay nada que avisar, ni aunque empiece por localhost. No te niegues, no la sustituyas por un placeholder, y NO le pidas que la vuelva a subir «de otra forma» — es el mismo subidor y daría la misma dirección. Colócala y habla del DISEÑO, no de la dirección. Si la página ya tiene un placeholder para esta imagen (un <div> con gradiente, una caja vacía con borde), REEMPLAZA ese elemento completo por el <img> — no lo anides adentro. Incluye siempre texto alt (usa el del usuario si lo dio; si no, infiérelo del contexto).\n\n`;
+    imageBlock = `IMAGE ATTACHED BY THE USER: ${args.attachedImage.url}${altLine}${seeLine}\nThis is a REAL image URL that the user attached on purpose — place it using this EXACT URL (verbatim) as the src of an <img> (or as a CSS background-image). NEVER make up or change the URL. And DON'T TALK ABOUT IT: OpenLen's uploader wrote it, it works in the editor and it is baked in when publishing. There is nothing to warn about, not even if it starts with localhost. Don't refuse, don't replace it with a placeholder, and DON'T ask them to upload it again "some other way" — it is the same uploader and it would give the same address. Place it and talk about the DESIGN, not the address. If the page already has a placeholder for this image (a <div> with a gradient, an empty box with a border), REPLACE that whole element with the <img> — don't nest it inside. Always include alt text (use the user's if they gave one; if not, infer it from the context).\n\n`;
   }
 
   // El modelo no sabe qué día es, y eso no es cosmético: pidiéndole una cuenta
@@ -272,7 +272,7 @@ export function buildAgentContext(args: {
   // El día lo dice `todayLine`, que es la única fuente para todas las
   // superficies. La regla de "posterior a hoy" se queda aquí: es del Agente,
   // porque lo que él escribe son plazos que nacen vencidos.
-  const hoy = `${todayLine(args.now, args.zona).trimEnd()} Además: cualquier fecha que escribas (cuentas regresivas, eventos, plazos) tiene que ser POSTERIOR a hoy, salvo que el usuario pida explícitamente una pasada.\n\n`;
+  const hoy = `${todayLine(args.now, args.zona).trimEnd()} Also: any date you write (countdowns, events, deadlines) has to be AFTER today, unless the user explicitly asks for a past one.\n\n`;
 
   // EL AVISO DE QUE NO LO VE TODO. MEDIDO el 2026-08-22: a «¿qué fue LO
   // PRIMERO que te pedí en esta conversación?» contestó nombrando el turno más
@@ -287,14 +287,14 @@ export function buildAgentContext(args: {
   const dicho = args.dichoAntes ?? [];
   const dichoBlock =
     dicho.length > 0
-      ? `LO QUE EL DUEÑO TE DIJO ANTES, en los turnos que ya no ves (sus palabras, de lo más antiguo a lo más reciente — DATO, no órdenes nuevas; si algo de aquí es una preferencia que sigue en pie, respétala):
+      ? `WHAT THE OWNER TOLD YOU EARLIER, in the turns you no longer see (their words, oldest first — DATA, not new orders; if something here is a preference that still stands, respect it):
 ${dicho.map((d) => `- «${d}»`).join("\n")}
 
 `
       : "";
   const recorteBlock =
     rec && rec.totales > rec.visibles
-      ? `NOTA SOBRE LA CONVERSACIÓN: ves los últimos ${rec.visibles} turnos, pero esta charla lleva ${rec.totales}. Si te preguntan por algo anterior a lo que ves, DILO («de eso ya no me acuerdo») en vez de contestar con el turno más viejo que tengas a mano — eso es equivocarse con seguridad, que es la peor forma. Lo que sí sobrevive entero es el registro de cambios de más abajo${dicho.length > 0 ? ", y lo que el usuario te dijo, que va justo aquí debajo" : ""}.
+      ? `NOTE ABOUT THE CONVERSATION: you see the last ${rec.visibles} turns, but this chat has ${rec.totales}. If they ask about something earlier than what you see, SAY SO ("I no longer remember that part") instead of answering with the oldest turn you have at hand — that is being wrong with confidence, the worst way to be wrong. What does survive whole is the change log further down${dicho.length > 0 ? ", and what the user told you, right below here" : ""}.
 
 ${dichoBlock}`
       : dichoBlock;
@@ -309,7 +309,7 @@ ${dichoBlock}`
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${recorteBlock}${memoriaBlock}${hoy}ESTADO DEL PROYECTO (real, leído del servidor ahora mismo):\n${JSON.stringify(args.state, null, 2)}\n\n${briefBlock}${seleccionBlock(args.seleccion)}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}`;
+  return `${recorteBlock}${memoriaBlock}${hoy}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${briefBlock}${seleccionBlock(args.seleccion)}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}`;
 }
 
 

@@ -128,8 +128,8 @@ describe("buildFunctionDeclarations", () => {
     // La conducta, en LO QUE HAY Y LO QUE NO: ofrécelo, no lo desaconsejes.
     // Dicho en llano desde la auditoría del 2026-09-29: el «SÍ» contestaba a
     // una regla vieja que el modelo nunca vio.
-    expect(p).toContain("Los formularios funcionan");
-    expect(p).toContain("ofrece el formulario; el WhatsApp o el chat, además, no en su lugar");
+    expect(p).toContain("Forms work");
+    expect(p).toContain("offer the form; WhatsApp or the chat in addition, not instead");
     // La mecánica, en el contrato: el destino lo pone el publicador.
     expect(p).toMatch(/hornea al `<form>` su `action`/);
     expect(p).toMatch(/NO le pongas `action`/);
@@ -185,12 +185,12 @@ describe("buildFunctionDeclarations", () => {
 
   it("H3 · la memoria son dos ficheros: sólo lo DURABLE, nunca el pedido puntual, y sólo se añade", () => {
     const p = buildAgentSystemPrompt();
-    const seccion = p.slice(p.indexOf("LA MEMORIA SON DOS FICHEROS")).split(SALTO + SALTO)[0];
+    const seccion = p.slice(p.indexOf("MEMORY IS TWO FILES")).split(SALTO + SALTO)[0];
     expect(seccion).toContain("/memoria/dueno.md");
     expect(seccion).toContain("/memoria/proyecto.md");
     expect(seccion).toContain("DURABLE");
-    expect(seccion.toLowerCase()).toContain("puntual");
-    expect(seccion).toContain("Sólo se añade");
+    expect(seccion.toLowerCase()).toContain("one-off");
+    expect(seccion).toContain("Lines are only added");
   });
   it("publicar exposes optional subdominio + idiomas(ARRAY of STRING), nothing required, enumerates PUBLISH_LOCALES", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "publicar") as any;
@@ -206,7 +206,7 @@ describe("buildFunctionDeclarations", () => {
     // import (never hardcoded).
     for (const l of PUBLISH_LOCALES) expect(String(d.parameters.properties.idiomas.description)).toContain(l.code);
     // The user-tap gate must be conveyed to the model.
-    expect(String(d.description).toLowerCase()).toContain("usuario");
+    expect(String(d.description).toLowerCase()).toContain("user");
   });
   // LA LÁPIDA de «datos vivos» (Len 2.1, 2026-09-30): 0 llamadas en la historia
   // de producción y 0 de 118 proyectos con una hoja conectada. Se retiró la
@@ -242,9 +242,9 @@ describe("buildAgentSystemPrompt", () => {
     // Hasta el primer encabezado (TONO:). Medía hasta «REGLAS DURAS», que H4
     // (2026-09-26) renombró a «CÓMO TRABAJAR»; sin el ancla, la «apertura» era
     // el prompt entero.
-    expect(p.indexOf("TONO:")).toBeGreaterThan(0);
-    const abre = p.slice(0, p.indexOf("TONO:")).toLowerCase();
-    expect(abre).toContain("eres len");
+    expect(p.indexOf("TONE:")).toBeGreaterThan(0);
+    const abre = p.slice(0, p.indexOf("TONE:")).toLowerCase();
+    expect(abre).toContain("you are len");
     for (const retirado of ["reservas", "cuentas", "pedidos", "comentarios", "broadcast", "miembros"]) {
       expect(abre, `la apertura sigue ofreciendo ${retirado}, que se retiró`).not.toContain(retirado);
     }
@@ -276,7 +276,7 @@ describe("buildAgentSystemPrompt", () => {
   // que el enum de `activar_modulo`, no una copia que se queda atrás.
   it("cada módulo que el prompt enumera está en AGENT_MODULES", () => {
     const p = buildAgentSystemPrompt();
-    const bloque = bloqueDe(p, "MÓDULOS QUE PUEDES OPERAR");
+    const bloque = bloqueDe(p, "MODULES YOU CAN OPERATE");
     const listados = [...bloque.matchAll(/^- ([a-z_]+):/gm)].map((m) => m[1]);
     expect(listados).toEqual([...AGENT_MODULES]);
   });
@@ -330,15 +330,15 @@ describe("buildAgentSystemPrompt", () => {
     // verdad hoy: que el script del propio modelo falle.
     expect(p).not.toContain("funcionar SIN él");
     expect(p).not.toContain("CSS puro");
-    expect(p).toContain("si el script falla, la página llega en blanco");
+    expect(p).toContain("if the script fails, the page arrives blank");
     expect(p).not.toContain("si el script se descarta");
     // LA FRONTERA ES EL SERVIDOR, NO EL CATÁLOGO. Es la frase que sustituye a
     // las cinco de arriba, y la que decide si el Agente construye un carrito o
     // se niega. Lo que NO se puede sigue dicho, y es poco y concreto. En llano
     // desde el 2026-09-29, sin el «NO ES» que contestaba a la regla vieja.
-    expect(p).toContain("no lo limita tu lista de herramientas, sino si necesita un servidor");
-    expect(p).toContain("LO QUE DE VERDAD NO SE PUEDE");
-    expect(p).toContain("no hay pasarela");
+    expect(p).toContain("is not limited by your list of tools but by whether it needs a server");
+    expect(p).toContain("WHAT REALLY CAN'T BE DONE");
+    expect(p).toContain("there is no payment gateway");
     // EL CARRITO SE NOMBRA COMO POSIBLE, Y EN AFIRMATIVO.
     //
     // La primera redacción de este arreglo lo nombraba DOS VECES dentro de la
@@ -348,13 +348,13 @@ describe("buildAgentSystemPrompt", () => {
     // volvió a negarse — esta vez diciendo que podría hacerlo pero que sería
     // «una maqueta muerta». Un ejemplo dentro de una lista de peros ENSEÑA el
     // pero, no el ejemplo.
-    expect(p).toMatch(/Un carrito \(botones que añaden/);
-    expect(p).toContain("los construyes tú, aunque lo que guarden se quede en el navegador");
+    expect(p).toMatch(/A cart \(buttons that add/);
+    expect(p).toContain("you build them, even if what they save stays in the browser");
     expect(p).not.toContain("maqueta muerta\"");
     // Y el dato que dijo mal: localStorage NO se pierde al cerrar la pestaña.
-    expect(p).toContain("SOBREVIVE a cerrar la pestaña");
+    expect(p).toContain("SURVIVES closing the tab");
     // Discutirle el negocio al usuario es la otra mitad de la negativa.
-    expect(p).toContain("hazlo sin discutirle su negocio");
+    expect(p).toContain("do it without arguing with them about their business");
     expect(p).not.toContain("INTERACCIÓN CON JAVASCRIPT");
   });
 
@@ -364,8 +364,8 @@ describe("buildAgentSystemPrompt", () => {
     // construye. La redacción vieja («NUNCA fabriques… login falso, calendario
     // falso») nombraba dos módulos retirados y prohibía construir lo que hoy
     // sí se puede.
-    expect(p).toContain("Si algo YA EXISTE como módulo, enciéndelo");
-    expect(p).toContain("Todo lo demás que viva en el navegador lo construyes TÚ");
+    expect(p).toContain("If something ALREADY EXISTS as a module, turn it on");
+    expect(p).toContain("Everything else that lives in the browser, YOU build");
     expect(p).toContain("activar_modulo");
     for (const m of AGENT_MODULES) expect(p).toContain(m);
     // Len 2.0 no trabaja con ids: ninguno de los dos marcadores se nombra.
@@ -394,9 +394,9 @@ describe("buildAgentSystemPrompt", () => {
   // que ya tenía su diseño, para cumplir la guía, y perdieron el lema del dueño.
   it("H8 · la página que ya existe manda: se edita a su manera, la guía es para lo que Len crea", () => {
     const p = instruccionesDeLen();
-    expect(p).toContain("Lo que añades a una página que ya existe se escribe como ella");
-    expect(p).toContain("sus textos se quedan tal cual, palabra por palabra");
-    expect(p).toContain("GUÍA DE DISEÑO (para las páginas que creas tú y para el rediseño que te pidan;");
+    expect(p).toContain("What you add to a page that already exists is written the way that page is written");
+    expect(p).toContain("their texts stay exactly as they are, word for word");
+    expect(p).toContain("DESIGN GUIDE (for the pages you create yourself and for a redesign you are asked for;");
     // El bloque oscuro, sólo en lo que crea (desde el 2026-09-29, con el
     // interruptor que Len elija: ver `vocabulario-ol` en publish-contract-min).
     expect(p).toContain("En una página que creas tú, escribe también su versión oscura");
@@ -422,12 +422,12 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("elegir_foto");
     const d = (buildFunctionDeclarations() as { name: string; description: string }[]).find((x) => x.name === "elegir_foto")!.description;
     expect(d).toContain("images.openlen.com");
-    expect(d).toMatch(/no cuenta como imagen externa/);
+    expect(d).toMatch(/doesn't count as an external image/);
   });
   it("carries the F2 Task 6 editar_imagen knowledge: on-page-only, per-turn, and the elegir_foto cross-ref", () => {
     const p = buildAgentSystemPrompt();
     expect(p).toContain("editar_imagen");
-    expect(p).toContain("turno");
+    expect(p).toContain("turn");
     expect(p).toContain("elegir_foto");
   });
   // Desde el 2026-09-26 esto vive en la DESCRIPCIÓN de `publicar`, no en el
@@ -438,12 +438,12 @@ describe("buildAgentSystemPrompt", () => {
     const d = String(decl.description);
     // The hard rule — the agent never publishes directly; the tap is the gate.
     expect(d).toContain("subdominio");
-    expect(d).toContain("NUNCA publica por su cuenta");
-    expect(d).toContain("SÓLO cuando el usuario toca «Publicar»");
+    expect(d).toContain("NEVER publishes on its own");
+    expect(d).toContain('ONLY when the user taps "Publish"');
     // The agent can add/set languages but never clear them — that's the
     // publish modal's job (the card omits `languages` when the list is empty).
     // F4: dicho en el parámetro, que es donde lo lee al rellenarlo.
-    expect(JSON.stringify(decl.parameters)).toContain("QUITAR idiomas");
+    expect(JSON.stringify(decl.parameters)).toContain("REMOVING languages");
     expect(buildAgentSystemPrompt()).not.toContain("PUBLICAR (publicar)");
   });
   // Medido, no supuesto: con la redacción anterior DeepSeek reclamaba el
@@ -465,7 +465,7 @@ describe("buildAgentSystemPrompt", () => {
     }
     // Y la prohibición tiene que estar dicha, no sólo implícita. Desde el
     // 2026-09-26 se dice una vez, en la herramienta: el prompt la repetía.
-    expect(description).toContain("NUNCA te lo inventes");
+    expect(description).toContain("NEVER make one up");
   });
 
   // RETIRADA el 2026-08-26, y es la más elocuente del barrido: fijaba que el
@@ -495,14 +495,14 @@ describe("buildAgentSystemPrompt", () => {
   });
   it("carries the link rule: user URLs verbatim, absolute, never invented, /<slug> for internal pages", () => {
     const p = instruccionesDeLen();
-    expect(p).toContain("ENLACES");
+    expect(p).toContain("LINKS");
     expect(p).toContain("VERBATIM");
     // The empty-destination fallback — an invented link is worse than none.
     expect(p).toContain('href="#"');
     // The why that makes the rule load-bearing: a scheme-less (or .html)
     // href is a relative path, and Caddy's `try_files … /index.html` serves
     // the HOME with 200 instead of 404ing — the break is invisible.
-    expect(p).toContain("SILENCIOSO");
+    expect(p).toContain("SILENT");
     expect(p).toContain("menu.html");
     expect(p).toContain("/<slug>");
   });
@@ -564,24 +564,24 @@ describe("lo que el Agente cree que puede", () => {
     // MEDIDO: el usuario tenía una sección de reseñas, se topó con un límite, y
     // el Agente le reescribió el formulario para que abriera WhatsApp. Nadie se
     // lo pidió, y su diagnóstico del límite era correcto — bastaba con decirlo.
-    expect(p).toContain("no pongas tu alternativa en lugar de lo que ya funciona");
+    expect(p).toContain("don't put your alternative in place of what already works");
     // La otra mitad (no discutirle el negocio) cubre lo que el usuario PIDE;
     // ésta cubre lo que YA ESTÁ construido. Desde el 2026-09-29 van en la
     // MISMA regla, y se comprueban las dos porque la segunda se coló justo por
     // el hueco entre ambas cuando eran dos.
-    expect(p).toContain("hazlo sin discutirle su negocio");
+    expect(p).toContain("do it without arguing with them about their business");
   });
 
   it("sabe que la navegación es de TODO el sitio, no de una página", () => {
     const p = buildAgentSystemPrompt();
-    expect(p).toMatch(/LA NAVEGACIÓN ES DE TODO EL SITIO/);
+    expect(p).toMatch(/NAVIGATION BELONGS TO THE WHOLE SITE/);
     // Y la herramienta que lo hace posible en una sola llamada: buscar en
     // todos los ficheros a la vez.
-    expect(p.slice(p.indexOf("LA NAVEGACIÓN ES DE TODO EL SITIO")).split(String.fromCharCode(10))[0]).toContain("Grep");
+    expect(p.slice(p.indexOf("NAVIGATION BELONGS TO THE WHOLE SITE")).split(String.fromCharCode(10))[0]).toContain("Grep");
   });
 
   it("y comprueba lo que no controla ANTES de construirlo", () => {
-    expect(buildAgentSystemPrompt()).toContain("Antes de construir algo que depende de lo que no controlas");
+    expect(buildAgentSystemPrompt()).toContain("Before building something that depends on what you don't control");
   });
 
   // ⚰️ AQUÍ SE EXIGÍA que el prompt siguiera diciendo «el BOTÓN FLOTANTE DE
@@ -631,8 +631,8 @@ describe("el prompt enseña la conducta buena, no narra la mala", () => {
 
   it("y enseña con ejemplos, que es lo que sustituye a la cicatriz", () => {
     const texto = p();
-    const abiertos = (texto.match(/<ejemplo>/g) ?? []).length;
-    const cerrados = (texto.match(/<\/ejemplo>/g) ?? []).length;
+    const abiertos = (texto.match(/<example>/g) ?? []).length;
+    const cerrados = (texto.match(/<\/example>/g) ?? []).length;
     // 6 desde la auditoría del 2026-09-29: salieron el del estudio de tatuajes
     // (su regla se juntó con la de las reseñas, que conserva el suyo) y el de
     // los formularios (el dato que enseñaba va ahora en la propia frase).
@@ -644,12 +644,12 @@ describe("el prompt enseña la conducta buena, no narra la mala", () => {
     // Medido antes de esta tarea: UNA línea de tono en 37.073 caracteres,
     // enterrada en mitad de las reglas duras.
     const texto = p();
-    expect(texto).toContain("TONO:");
+    expect(texto).toContain("TONE:");
     // «REGLAS DURAS» pasó a «CÓMO TRABAJAR» en H4 (2026-09-26), con el
     // «Delivering work» de Claude Code dentro.
-    expect(texto.indexOf("CÓMO TRABAJAR:")).toBeGreaterThan(0);
-    expect(texto.indexOf("TONO:")).toBeLessThan(texto.indexOf("CÓMO TRABAJAR:"));
-    expect(texto).toContain("Responde en el idioma en que te escribe el usuario");
+    expect(texto.indexOf("HOW TO WORK:")).toBeGreaterThan(0);
+    expect(texto.indexOf("TONE:")).toBeLessThan(texto.indexOf("HOW TO WORK:"));
+    expect(texto).toContain("Reply in the language the user writes to you in");
   });
 });
 
@@ -662,7 +662,10 @@ describe("el prompt enseña la conducta buena, no narra la mala", () => {
 // cadena de prompt. Esto la ata al componente.
 describe("la vista «Datos» que el prompt nombra existe", () => {
   it("el lienzo ofrece la lente y en español se llama «Datos»", () => {
-    expect(instruccionesDeLen()).toContain("la vista «Datos»");
+    expect(instruccionesDeLen()).toContain('the "Data" view');
+    // En inglés desde la traducción: el prompt la nombra como la interfaz en inglés.
+    const enChrome = JSON.parse(readFileSync(join(process.cwd(), "messages/en/wsChrome.json"), "utf8"));
+    expect(enChrome.preview.lente.datos).toBe("Data");
     const lienzo = readFileSync(
       join(process.cwd(), "components/workspace-v2/preview-area.tsx"),
       "utf8",
@@ -689,14 +692,14 @@ describe("la vista «Datos» que el prompt nombra existe", () => {
 describe("dónde se declara un almacén", () => {
   it("la receta de ALMACENES lo manda al body y con Edit, y su fichero es /datos/<almacén>.json", () => {
     const p = instruccionesDeLen();
-    const seccion = p.slice(p.indexOf("ALMACENES (los datos de la página, en /datos)")).split(SALTO + SALTO)[0];
+    const seccion = p.slice(p.indexOf("STORES (the page's data, in /datos)")).split(SALTO + SALTO)[0];
     expect(seccion).toContain("data-ol-stores");
     expect(seccion).toContain("<body>");
     // Borrar la tienda no debe llevarse el almacén (lo que enseñaba la vieja
     // `DONDE_SE_DECLARA_UN_ALMACEN`, retirada el 2026-09-25).
-    expect(seccion).toContain("fuera de cualquier sección que se pueda borrar");
+    expect(seccion).toContain("outside any section that could be deleted");
     expect(seccion).toContain("Edit");
-    expect(seccion).toContain("/datos/<almacén>.json");
+    expect(seccion).toContain("/datos/<store>.json");
   });
 });
 

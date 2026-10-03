@@ -18,6 +18,19 @@ import { fechaLocal } from "@/lib/resultados/zona";
  * Len la tiene: la manda el panel con cada turno.
  */
 export function todayLine(now: Date = new Date(), zona?: string): string {
-  const dia = zona ? fechaLocal(now, zona) : now.toISOString().slice(0, 10);
-  return `HOY ES ${dia}. Cualquier cifra o fecha que escribas —años de experiencia, "desde 1998", el año del copyright, cuentas regresivas, temporadas— se calcula contra hoy, no contra ninguna otra época.\n\n`;
+  return `HOY ES ${diaDe(now, zona)}. Cualquier cifra o fecha que escribas —años de experiencia, "desde 1998", el año del copyright, cuentas regresivas, temporadas— se calcula contra hoy, no contra ninguna otra época.\n\n`;
+}
+
+/**
+ * La MISMA línea en inglés, para lo que lee Len desde la traducción (rama
+ * len-agente-2026-en). Crear y el editor siguen con la de arriba hasta medir
+ * Crear. El día sale del mismo cálculo: lo que se duplica es la frase, no la
+ * verdad.
+ */
+export function todayLineEn(now: Date = new Date(), zona?: string): string {
+  return `TODAY IS ${diaDe(now, zona)}. Any figure or date you write —years of experience, "since 1998", the copyright year, countdowns, seasons— is worked out from today, not from any other time.\n\n`;
+}
+
+function diaDe(now: Date, zona?: string): string {
+  return zona ? fechaLocal(now, zona) : now.toISOString().slice(0, 10);
 }
