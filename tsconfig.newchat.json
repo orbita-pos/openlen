@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "noUnusedLocals": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "global.d.ts",
+    "components/llamada/cara.d.ts",
+    "lib/document/tailwind-interno.d.ts",
+    "components/workspace-v2/chat/**/*.ts",
+    "components/workspace-v2/chat/**/*.tsx",
+    "components/workspace-v2/panels/chat-panel.tsx",
+    "components/workspace-v2/left-sidebar.tsx",
+    "components/marketing/hero-product.tsx",
+    "app/[locale]/dev/chat/*.ts",
+    "app/[locale]/dev/chat/*.tsx",
+    "app/[locale]/dev/terminal/vista.tsx"
+  ]
+}
