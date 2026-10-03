@@ -401,6 +401,46 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
     assert.equal(store.saved, 0, "no se guardó nada");
   });
 
+  // F4 (plans/len-agente-2026): lo que sólo hace falta a veces —la guía de
+  // diseño, el contrato de /api/d, las librerías— vive en /.openlen/docs. Lo pide la
+  // ficha: que Read llegue SIN la palanca de la terminal.
+  it("🔴 F4 · Read abre los ficheros de /.openlen/docs sin la terminal, y el índice de /AGENTS.md los nombra", async () => {
+    assert.notEqual(process.env.OPENLEN_TERMINAL, "1");
+    const { deps } = makeDeps({ html: HOME });
+    const s = makeSession();
+    const manual = texto(await runAgentTool(s, deps, "Read", { file_path: "/AGENTS.md" }));
+    for (const [ruta, se] of [
+      ["/.openlen/docs/guia-de-diseno.md", /COLOR, FORMA Y TIPOGRAFÍA/],
+      ["/.openlen/docs/api-d.md", /fetch a \/api\/d\/<almacén>/],
+      ["/.openlen/docs/librerias.md", /libs\.openlen\.com/],
+    ] as const) {
+      assert.ok(manual.includes(ruta), `el índice no nombra ${ruta}`);
+      const out = await runAgentTool(s, deps, "Read", { file_path: ruta });
+      assert.equal(out.response.ok, true, ruta);
+      assert.match(texto(out), se, ruta);
+    }
+    const nada = await runAgentTool(s, deps, "Read", { file_path: "/.openlen/docs/no-existe.md" });
+    assert.equal(nada.response.ok, false);
+  });
+
+  it("🔴 F4 · Grep y Glob no ven /.openlen/docs, y Edit y Write lo rechazan como al manual", async () => {
+    const { deps, store } = makeDeps({ html: HOME });
+    const s = makeSession();
+    // La guía nombra `:root`; la página no tiene por qué.
+    const grep = await runAgentTool(s, deps, "Grep", { pattern: "libs\\.openlen\\.com|:root", output_mode: "files_with_matches" });
+    assert.doesNotMatch(texto(grep), /docs/);
+    const glob = await runAgentTool(s, deps, "Glob", { pattern: "**/*" });
+    assert.doesNotMatch(texto(glob), /docs/);
+    await runAgentTool(s, deps, "Read", { file_path: "/.openlen/docs/guia-de-diseno.md" });
+    const edit = await runAgentTool(s, deps, "Edit", { file_path: "/.openlen/docs/guia-de-diseno.md", old_string: "TAMAÑO", new_string: "TALLA" });
+    const write = await runAgentTool(s, deps, "Write", { file_path: "/.openlen/docs/nuevo.md", content: "nada" });
+    for (const out of [edit, write]) {
+      assert.equal(out.response.ok, false);
+      assert.match(JSON.stringify(out.response), /read-only/);
+    }
+    assert.equal(store.saved, 0, "no se guardó nada");
+  });
+
   // H3: `leer_estado` se retiró; el estado va en el contexto al empezar, como el
   // `git status` de Claude Code, y es esto lo que lo arma.
   it("el estado del contexto lista los ficheros y la página abierta, sin documento", () => {
@@ -850,6 +890,23 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
       assert.deepEqual(out.terminal, { command: "echo hola > /AGENTS.md", salida: texto(out), exitCode: 1 });
       const cat = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "head -c 60 /AGENTS.md" }));
       assert.doesNotMatch(texto(cat), /^hola/);
+    } finally {
+      await cerrarTerminalDeLaSesion(session);
+    }
+  });
+
+  it("F4 · /.openlen/docs está en la terminal: se lista y se lee con cat, y escribir ahí falla", async () => {
+    const { deps } = makeDeps({ html: HOME });
+    const session = makeSession();
+    try {
+      const ls = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "ls /.openlen/docs" }));
+      assert.match(texto(ls), /api-d\.md\nguia-de-diseno\.md\nlibrerias\.md/);
+      const cat = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "grep -c var /.openlen/docs/guia-de-diseno.md" }));
+      assert.match(texto(cat), /^[1-9]/);
+      const escribe = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "echo x >> /.openlen/docs/api-d.md" }));
+      assert.equal(escribe.response.ok, false);
+      // Como lo demás de /.openlen: el hilo contesta EROFS y no se guarda nada.
+      assert.match(texto(escribe), /EROFS: read-only file system, '\/\.openlen\/docs\/api-d\.md'/);
     } finally {
       await cerrarTerminalDeLaSesion(session);
     }

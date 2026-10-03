@@ -45,11 +45,11 @@ import {
 import type { AlmacenDeclarado } from "@/lib/page-data/declaracion";
 import { AVISO_VISITANTES, llevaTextoDeVisitantes } from "@/lib/page-data/vista-del-agente";
 import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO, alcanceDeRuta, lineasNuevas } from "@/lib/agent/ficheros/memoria";
-import { MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
+import { esDeLaPlataforma, MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
 import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/terminal/ajustes";
 import { activoDelSitio, codigoNuevo } from "@/lib/agent/terminal/javascript-del-usuario";
-import { buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
+import { buildManualDeLaPlataforma, textoDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { PREFERENCIA_MAX, PREFERENCIA_MIN, guardarPreferencia } from "@/lib/agent/preferencias";
 
 /** Los nombres, como en Claude Code: es lo que el modelo ya sabe usar. */
@@ -140,9 +140,10 @@ function textoDelSitio(data: ProjectData, v: Virtuales): string {
 function sitioDe(data: ProjectData, session: AgentSession, v: Virtuales = SIN_VIRTUALES): SitioBuscable {
   return {
     contenido: (ruta) => {
-      // El manual de la plataforma: Read lo abre por su ruta, pero no está en
-      // `ficheros`, así que Grep y Glob no lo ven (`lib/agent/ficheros/manual.ts`).
-      if (ruta === RUTA_MANUAL) return buildManualDeLaPlataforma();
+      // El manual de la plataforma —/AGENTS.md y, desde F4, /.openlen/docs—: Read lo abre
+      // por su ruta, con terminal o sin ella, pero no está en `ficheros`, así que
+      // Grep y Glob no lo ven (`lib/agent/ficheros/manual.ts`).
+      if (esDeLaPlataforma(ruta)) return textoDeLaPlataforma(ruta);
       const datos = v.almacenes.get(ruta);
       if (datos) return datos.texto;
       const memoria = v.memoria.get(ruta);
@@ -434,6 +435,8 @@ export async function cargarFicherosDeLaTerminal(session: AgentSession, deps: Ag
   for (const [ruta, a] of v.almacenes) ficheros[ruta] = a.texto;
   for (const [ruta, texto] of v.memoria) ficheros[ruta] = texto;
   ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma();
+  // F4 · /.openlen/docs NO va aquí: es de la carpeta oculta de sólo lectura, y
+  // la sirve `soloLecturaDeLaTerminal` como lo demás de /.openlen.
   // F5 · los ajustes del proyecto, escribibles por sus caminos (`ajustes.ts`).
   ficheros[RUTA_AJUSTES] = textoDeAjustes(row);
   return ficheros;
@@ -494,7 +497,7 @@ export async function guardarLoDeLaTerminal(
       deshacer(c.ruta, "the terminal cannot delete files of the site (a page is removed by the user, in the editor).");
       continue;
     }
-    if (c.ruta === RUTA_MANUAL) {
+    if (esDeLaPlataforma(c.ruta)) {
       deshacer(c.ruta, MANUAL_SOLO_LECTURA);
       continue;
     }

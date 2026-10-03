@@ -1,4 +1,4 @@
-// lib/agent/manual-de-la-plataforma.ts — el texto de /AGENTS.md, y cómo se adjunta.
+// lib/agent/manual-de-la-plataforma.ts — el texto de /AGENTS.md y de /.openlen/docs, y cómo se adjunta.
 //
 // PASO 7 DE LEN 2.5 (2026-09-29, OK de Jesús). El prompt de Len mezclaba dos
 // cosas: CÓMO TRABAJAR (conducta: alcance, probar, preguntar, no inventar) y
@@ -25,10 +25,23 @@ import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contract-min";
 import { bloqueDeLibrerias } from "@/lib/librerias";
-import { PRINCIPIO_DEL_ADJUNTO } from "@/lib/agent/ficheros/manual";
+import {
+  CARPETA_DOCS,
+  CIERRE_DEL_ADJUNTO,
+  PRINCIPIO_DEL_ADJUNTO,
+  RUTA_API_D,
+  RUTA_GUIA,
+  RUTA_LIBRERIAS,
+  RUTA_MANUAL,
+} from "@/lib/agent/ficheros/manual";
 
-/** El contenido de /AGENTS.md: lo que Read devuelve y lo que se adjunta. */
-export function buildManualDeLaPlataforma(): string {
+/**
+ * El manual ENTERO, como era hasta F4: lo que se adjuntaba en cada vuelta. Sigue
+ * siendo la fuente —las tres transformaciones se aplican aquí, sobre el texto
+ * con sus marcas— y `partir` lo reparte después entre /AGENTS.md y /.openlen/docs.
+ * Exportado para la prueba que exige que no se pierda ninguna línea.
+ */
+export function manualSinPartir(): string {
   const manual = `# OpenLen: cómo funciona la plataforma
 
 LO QUE HAY Y LO QUE NO:
@@ -89,13 +102,114 @@ ${bloqueDeLibrerias({ dondeVaElScript: "libre" })}`;
   });
 }
 
+// ─── F4 (plans/len-agente-2026): el manual EN FICHEROS ──────────────────────
+//
+// Lo que la publicación IMPONE —formularios, iframes, enlaces, imágenes— vale
+// para cualquier edición y se queda a la vista en /AGENTS.md. Lo que sólo manda
+// en lo que Len crea o en un JavaScript concreto se lee cuando hace falta, en
+// /.openlen/docs (oculta: ver `CARPETA_DOCS`):
+//   · /.openlen/docs/guia-de-diseno.md — color, letra, modo oscuro y acabado;
+//   · /.openlen/docs/api-d.md — cómo guarda y lee el JavaScript en un almacén;
+//   · /.openlen/docs/librerias.md — las librerías que sobreviven al publicar (lo que se
+//     rompe en silencio lo dice además `librerias-que-no-cargan`).
+// El texto se MUDA, no se reescribe: se corta por sus marcas y LANZA si una no
+// aparece, como `swapJsClauses`. Regla por regla, en
+// plans/len-agente-2026/notas/f4-tabla-de-reglas.md (M1–M21, I1–I3).
+
+const MARCA_GUIA = "GUÍA DE DISEÑO (";
+const MARCA_GUSTO = "\nCOLOR, FORMA Y TIPOGRAFÍA";
+const MARCA_LIBRERIAS = "LIBRERÍAS DISPONIBLES";
+const MARCA_API_D = "GUARDAR TAMBIÉN:";
+/** La entradilla de LO QUE LA PUBLICACIÓN IMPONE prometía el acabado «al
+ *  final», y el acabado se va a la guía. */
+const PROMESA_DEL_ACABADO = ", y al final el nivel de acabado que se espera.";
+
+/** Lo que queda en la línea del JavaScript donde estaba el contrato de /api/d. */
+const EN_LUGAR_DE_API_D = `GUARDAR TAMBIÉN se puede, en un almacén: lo que el JavaScript le pide a /api/d está en ${RUTA_API_D}.`;
+
+const INDICE = `MÁS, EN ${CARPETA_DOCS} (se leen cuando hacen falta):
+- ${RUTA_GUIA}: la guía de diseño —color, letra, modo oscuro y acabado—. Léela ANTES de escribir una página desde cero o un rediseño; lo que añades a una página que ya existe se escribe como ella.
+- ${RUTA_API_D}: cómo guarda y lee en un almacén el JavaScript de la página (/api/d). Léelo antes de escribir ese JavaScript.
+- ${RUTA_LIBRERIAS}: las librerías de gráficas, carruseles y galerías que sobreviven al publicar, con su etiqueta exacta. Léelo antes de añadir una.`;
+
+const encontrar = (texto: string, marca: string, desde = 0): number => {
+  const i = texto.indexOf(marca, desde);
+  if (i === -1) {
+    throw new Error(
+      `manual-de-la-plataforma: la marca «${marca.trim()}» no apareció — el manual cambió de redacción. ` +
+        "Actualiza el reparto de F4; NO lo ignores: sin esto una parte del manual dejaría de llegarle a Len.",
+    );
+  }
+  return i;
+};
+
+interface ManualPartido {
+  readonly agents: string;
+  readonly docs: Readonly<Record<string, string>>;
+}
+
+/** Corta el manual entero en /AGENTS.md y los tres ficheros de /.openlen/docs. */
+export function partirElManual(entero: string = manualSinPartir()): ManualPartido {
+  // 1 · El contrato de /api/d sale de la línea del JavaScript, hasta su final.
+  const iApi = encontrar(entero, MARCA_API_D);
+  const finApi = entero.indexOf("\n", iApi) === -1 ? entero.length : entero.indexOf("\n", iApi);
+  const apiD = entero.slice(iApi, finApi);
+  const sinApi = entero.slice(0, iApi) + EN_LUGAR_DE_API_D + entero.slice(finApi);
+
+  // 2 · La guía: su cabecera, lo que IMPONE (se queda) y el gusto (se va).
+  const iGuia = encontrar(sinApi, MARCA_GUIA);
+  const finCabecera = encontrar(sinApi, "\n", iGuia);
+  const cabecera = sinApi.slice(iGuia, finCabecera);
+  const iLibrerias = encontrar(sinApi, MARCA_LIBRERIAS, finCabecera);
+  const contrato = sinApi.slice(finCabecera + 1, iLibrerias).trimEnd();
+  const librerias = sinApi.slice(iLibrerias).trim();
+  // Con el contrato COMPLETO (`OPENLEN_MIN_CONTRACT=0`, la salida de
+  // emergencia) no hay sección de gusto que separar: la guía entera va a /.openlen/docs.
+  const iGusto = contrato.indexOf(MARCA_GUSTO);
+  let impone = "";
+  let gusto = contrato;
+  if (iGusto !== -1) {
+    impone = contrato.slice(0, iGusto).trimEnd();
+    gusto = contrato.slice(iGusto + 1);
+    encontrar(impone, PROMESA_DEL_ACABADO);
+    impone = impone.replace(PROMESA_DEL_ACABADO, `; el nivel de acabado está en ${RUTA_GUIA}.`);
+  }
+
+  const antes = sinApi.slice(0, iGuia).trimEnd();
+  const agents = [antes, ...(impone ? [impone] : []), INDICE].join("\n\n");
+  return {
+    agents,
+    docs: {
+      [RUTA_GUIA]: `${cabecera}\n${gusto}`,
+      [RUTA_API_D]: `# /api/d: el JavaScript de la página guarda y lee en un almacén\n\n${apiD}`,
+      [RUTA_LIBRERIAS]: librerias,
+    },
+  };
+}
+
+/** El contenido de /AGENTS.md: lo que Read devuelve y lo que se adjunta. */
+export function buildManualDeLaPlataforma(): string {
+  return partirElManual().agents;
+}
+
+/** Los ficheros de /.openlen/docs, por su ruta. */
+export function documentosDeLaPlataforma(): Readonly<Record<string, string>> {
+  return partirElManual().docs;
+}
+
+/** El texto de un fichero del manual por su ruta, o `null` si no es ninguno. */
+export function textoDeLaPlataforma(ruta: string): string | null {
+  if (ruta === RUTA_MANUAL) return buildManualDeLaPlataforma();
+  const docs = documentosDeLaPlataforma();
+  return Object.hasOwn(docs, ruta) ? docs[ruta]! : null;
+}
+
 /** El mensaje que el arnés pone justo después del prompt de sistema. */
 export function adjuntoDelManual(manual: string = buildManualDeLaPlataforma()): string {
   return `${PRINCIPIO_DEL_ADJUNTO}
 
 ${manual.trim()}
 
-      IMPORTANT: this context may or may not be relevant to your tasks. You should not respond to this context unless it is highly relevant to your task.
-</system-reminder>
+${CIERRE_DEL_ADJUNTO}
 `;
 }

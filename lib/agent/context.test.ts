@@ -391,7 +391,9 @@ describe("buildAgentMessages", () => {
       const manual = result.messages[1];
       expect(manual.role).toBe("user");
       expect(esAdjuntoDelManual(manual.content)).toBe(true);
-      expect(manual.content).toContain("<script>");
+      // F4: el «antes de tu propio <script>» de las librerías se mudó a /.openlen/docs;
+      // lo que se mira es que el manual adjunto ofrezca el JavaScript.
+      expect(manual.content).toContain("Puedes escribir el JavaScript de la página");
       const loQueLee = `${sentSystem.content}\n${manual.content}`;
       // POR SUSTANCIA, NO POR ENCABEZADO. Esto afirmaba
       // `INTERACTIVIDAD — la escribes TÚ`, que es el TÍTULO de la cláusula
@@ -497,7 +499,7 @@ describe("buildAgentMessages", () => {
     ]);
     if (!a.ok || !b.ok) throw new Error("el fixture no debe exceder el presupuesto");
     expect(a.messages[1]).toEqual(b.messages[1]);
-    expect(a.messages[1].content).toContain("Contents of /AGENTS.md");
+    expect(a.messages[1].content).toContain("/AGENTS.md (the platform manual, managed by OpenLen; read-only):");
     expect(a.messages[1].content).toContain("ALMACENES (los datos de la página, en /datos)");
     expect(a.systemPrompt).not.toContain("ALMACENES (los datos de la página, en /datos)");
   });

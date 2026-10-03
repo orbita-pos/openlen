@@ -12,6 +12,8 @@
  *   /.openlen/versiones/indice.jsonl      las versiones guardadas de cada página, de la más nueva a la más vieja
  *   /.openlen/versiones/<id>/…            cada una, en la MISMA ruta que su página
  *                                         (`diff /.openlen/versiones/<id>/index.html /index.html`)
+ *   /.openlen/docs/*.md                   F4: la guía de diseño, el contrato de /api/d y las
+ *                                         librerías, que el índice de /AGENTS.md nombra
  *
  * Cuando el sitio cambia en el turno, se vuelven a listar y a calcular
  * (`refrescarPerezosos`): una versión guardada sale en el comando siguiente.
@@ -35,6 +37,8 @@ import { toolVerVisitas } from "@/lib/agent/resultados";
 import { todasLasFotosCuradas } from "@/lib/agent/photo-search";
 import { ficherosDelSitio, paginaDeRuta, rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { fechaLocal, restarDias, ZONA_SIN_DATO } from "@/lib/resultados/zona";
+import { RUTAS_DE_DOCS } from "@/lib/agent/ficheros/manual";
+import { textoDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 
 /** La carpeta oculta de lo que no es el sitio (la regla, en `ficheros.ts`). */
 export const CARPETA_DE_SOLO_LECTURA = "/.openlen";
@@ -90,6 +94,8 @@ export async function soloLecturaDeLaTerminal(session: AgentSession, deps: Agent
     ...(deps.resultados ? [RUTA_VISITAS, RUTA_FORMULARIOS, RUTA_MENSAJES] : []),
     RUTA_FOTOS,
     ...(indice.length > 0 ? [RUTA_INDICE_DE_VERSIONES, ...versiones.keys()] : []),
+    // F4 · el manual que se lee a demanda: texto fijo, en la misma carpeta oculta.
+    ...RUTAS_DE_DOCS,
   ];
 
   const zona = session.zonaHoraria ?? ZONA_SIN_DATO;
@@ -144,6 +150,8 @@ export async function soloLecturaDeLaTerminal(session: AgentSession, deps: Agent
         if (html === null) throw new Error("that version no longer exists");
         return sinOpIds(html);
       }
+      const doc = textoDeLaPlataforma(ruta);
+      if (doc !== null) return doc;
       throw new Error(`${ruta}: no such read-only file`);
     },
   };

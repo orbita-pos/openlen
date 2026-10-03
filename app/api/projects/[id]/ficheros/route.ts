@@ -5,8 +5,8 @@
 // sale de `cargarFicherosDeLaTerminal` (páginas, `/datos`, `/memoria`,
 // `/ajustes`) y de `soloLecturaDeLaTerminal` (`/.openlen`: resultados, bandeja,
 // catálogo y versiones), así que el dueño y Len ven lo mismo, sin una
-// segunda lista que se desfase. Fuera `/AGENTS.md`: es el manual de la
-// plataforma, no un fichero del proyecto del dueño.
+// segunda lista que se desfase. Fuera `/AGENTS.md` y `/.openlen/docs`: son el
+// manual de la plataforma, no ficheros del proyecto del dueño.
 //
 //   GET                  → { ficheros: [{ ruta, contenido }], perezosos: [ruta] }
 //   GET ?ruta=/.openlen/… → { ruta, contenido }   (los de sólo lectura se calculan al pedirlos)
@@ -21,7 +21,7 @@ import { db, schema } from "@/lib/db";
 import { realDeps, type AgentSession } from "@/lib/agent/tools";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { soloLecturaDeLaTerminal } from "@/lib/agent/terminal/solo-lectura";
-import { RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
+import { esDeLaPlataforma } from "@/lib/agent/ficheros/manual";
 import { guardarAMano } from "@/lib/agent/terminal/editar-a-mano";
 
 export const runtime = "nodejs";
@@ -61,7 +61,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const ruta = new URL(req.url).searchParams.get("ruta");
   if (ruta !== null) {
     const soloLectura = await soloLecturaDeLaTerminal(sesion, deps);
-    if (!soloLectura.rutas.includes(ruta)) return json({ error: "not_found" }, 404);
+    if (!soloLectura.rutas.includes(ruta) || esDeLaPlataforma(ruta)) return json({ error: "not_found" }, 404);
     try {
       return json({ ruta, contenido: await soloLectura.leer(ruta) });
     } catch (e) {
@@ -71,9 +71,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   const [todos, soloLectura] = await Promise.all([cargarFicherosDeLaTerminal(sesion, deps), soloLecturaDeLaTerminal(sesion, deps)]);
   const ficheros = Object.entries(todos)
-    .filter(([r]) => r !== RUTA_MANUAL)
+    .filter(([r]) => !esDeLaPlataforma(r))
     .map(([r, contenido]) => ({ ruta: r, contenido }));
-  return json({ ficheros, perezosos: soloLectura.rutas });
+  return json({ ficheros, perezosos: soloLectura.rutas.filter((r) => !esDeLaPlataforma(r)) });
 }
 
 /** Un fichero más grande que esto no se edita a mano en el navegador. */

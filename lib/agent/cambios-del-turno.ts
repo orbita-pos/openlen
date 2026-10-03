@@ -20,7 +20,7 @@
  * Puro: dos fotos dentro, la lista fuera. Lo prueba vitest.
  */
 import { esDelProyecto } from "@/lib/agent/terminal/ficheros";
-import { RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
+import { esDeLaPlataforma } from "@/lib/agent/ficheros/manual";
 
 /** Por encima de esto, un lado no viaja: «demasiado grande para compararlo»
  *  (el `oversized` de DeepSeek). Una página normal pesa decenas de KB. */
@@ -48,7 +48,7 @@ export function cambiosEntreFotos(
   despues: Readonly<Record<string, string>>,
 ): FicheroCambiado[] {
   const rutas = [...new Set([...Object.keys(antes), ...Object.keys(despues)])]
-    .filter((r) => r !== RUTA_MANUAL && esDelProyecto(r))
+    .filter((r) => !esDeLaPlataforma(r) && esDelProyecto(r))
     .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   const out: FicheroCambiado[] = [];
   for (const ruta of rutas) {

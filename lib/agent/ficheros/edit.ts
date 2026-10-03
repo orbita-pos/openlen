@@ -13,7 +13,7 @@
 import { paginaDeRuta, resolverRuta } from "./sitio";
 import { noExiste, normalizarFinales, type Leidos, type SitioLegible } from "./read";
 import { fallo, type Resultado } from "./resultado";
-import { MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "./manual";
+import { esDeLaPlataforma, MANUAL_SOLO_LECTURA } from "./manual";
 
 export interface EntradaEdit {
   readonly file_path: string;
@@ -64,7 +64,7 @@ export function planearEdit(entrada: EntradaEdit, sitio: SitioLegible, leidos: L
   const ruta = resolverRuta(entrada.file_path);
   const no = (mensaje: string): PlanDeEdit => ({ ok: false, resultado: fallo(mensaje) });
 
-  if (ruta === RUTA_MANUAL) return no(MANUAL_SOLO_LECTURA);
+  if (esDeLaPlataforma(ruta)) return no(MANUAL_SOLO_LECTURA);
   if (viejo === nuevo) return no("old_string and new_string are identical: there is nothing to change.");
 
   const crudo = sitio.contenido(ruta);

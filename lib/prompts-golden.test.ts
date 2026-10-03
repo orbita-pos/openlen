@@ -33,7 +33,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "./agent/catalog";
-import { buildManualDeLaPlataforma } from "./agent/manual-de-la-plataforma";
+import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "./agent/manual-de-la-plataforma";
 import { PUBLISHED_BASE_HOST } from "./publish/base-host";
 import { generateSystemMessage } from "../app/api/generate/system-prompt";
 import { aiDesignSystemMessage } from "../app/api/templates/ai-design/system-prompt";
@@ -54,6 +54,10 @@ const SUPERFICIES: ReadonlyArray<readonly [string, () => string]> = [
   // El manual de la plataforma (/AGENTS.md) que el arnés le adjunta a Len detrás
   // del prompt (paso 7 de 2.5): es la otra mitad de lo que lee.
   ["manual de la plataforma (/AGENTS.md)", () => buildManualDeLaPlataforma()],
+  // F4 (plans/len-agente-2026): lo que se lee a demanda, en /.openlen/docs.
+  ...Object.keys(documentosDeLaPlataforma()).map(
+    (ruta) => [`manual de la plataforma (${ruta})`, () => documentosDeLaPlataforma()[ruta]!] as const,
+  ),
 ];
 
 describe("golden de los prompts de producción", () => {
