@@ -30,6 +30,13 @@
 // /AGENTS.md que lee la terminal— y al cable. Sin él, todo sale byte a byte
 // como en Len 2.5.
 //
+// EL PRECIO (Jesús, 03/10/2026): «paga lo que usa». Las mismas tarifas y los
+// mismos techos por turno que Len (`lib/credits.ts`: los créditos ya se cobran
+// por tokens a la tarifa del papel `agent`), sin recargo ni regla aparte: lo que
+// piensa de más se paga solo. Medido en la sonda: un encargo grande, ~10
+// créditos contra ~6 (plans/len-2/corridas/2026-10-03-dynamis). El selector lo
+// dice («gasta más créditos»). Por eso aquí no hay ninguna constante de precio.
+//
 // ⚰️ SUSTITUYE A `OPENLEN_SOLO_TERMINAL`, la palanca del brazo «sólo terminal»
 // de F4, que valía para el servidor entero. Dos mecanismos para quitar las
 // mismas herramientas son una palanca que no vuelve a ningún sitio; DeepSeek
