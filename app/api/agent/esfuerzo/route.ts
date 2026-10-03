@@ -5,6 +5,7 @@ import { db, schema } from "@/lib/db";
 import { ESFUERZOS, caparEsfuerzo, capacidadDeEsfuerzo } from "@/lib/agent/esfuerzo";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
+import { dynamisAvailable } from "@/lib/agent/dynamis";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EL ESFUERZO DE LEN — la preferencia GUARDADA de la persona.
@@ -59,6 +60,10 @@ export async function GET() {
     esfuerzo: caparEsfuerzo(guardado ?? "auto", capacidad),
     niveles: capacidad.niveles,
     resuelveA: capacidad.defecto,
+    // ¿Se ofrece Len Dynamis? Sólo con la terminal encendida
+    // (`lib/agent/dynamis.ts`). Lo lee el selector del chat, que sin esto no se
+    // pinta: un modo que el servidor convertiría en Len no se enseña.
+    dynamis: dynamisAvailable(),
     // ⚰️ Aquí devolví `medido: capacidad.medido` y NO LO LEÍA NADIE. Es
     // exactamente el patrón que este mismo fichero acababa de cerrar con
     // `niveles` —un dato sin lector, [[la-palanca-que-no-vuelve-a-ningun-sitio]]

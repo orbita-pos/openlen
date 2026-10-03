@@ -66,6 +66,9 @@ export interface MetaGrabacion {
   readonly modelId?: string;
   /** El `requestId` del turno, para cruzarlo con la línea de log. */
   readonly requestId?: string;
+  /** `"dynamis"` si el turno corrió en Len Dynamis (`lib/agent/dynamis.ts`);
+   *  ausente, Len. Para que el banco sepa qué brazo leyó. */
+  readonly mode?: "dynamis";
   /** Escrita a mano al guardar un caso interesante. */
   readonly nota?: string;
 }

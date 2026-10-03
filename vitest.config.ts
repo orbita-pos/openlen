@@ -365,6 +365,9 @@ export default defineConfig({
       // `include` es LISTA BLANCA: sin esta línea existiría y no correría nunca.
       "components/workspace-v2/selector-de-modelo.test.tsx",
       "lib/agent/brain.test.ts",
+      // Len Dynamis (lib/agent/dynamis.ts): del cuerpo del turno a lo que lee el
+      // modelo. `include` es LISTA BLANCA: sin esta línea no correría nunca.
+      "lib/agent/dynamis.test.ts",
       // El arnes multiturno dice cablear el bucle «como en produccion»; esto
       // lo comprueba contra app/api/agent/route.ts. `include` es LISTA
       // BLANCA: sin esta linea la guarda existiria y no correria.

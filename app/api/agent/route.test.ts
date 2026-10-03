@@ -364,6 +364,49 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
     );
   });
 
+  // LEN DYNAMIS (`lib/agent/dynamis.ts`): el modo viaja en el cuerpo, como el
+  // esfuerzo, y llega a las herramientas que se declaran, al cerebro y a la
+  // sesión. Con la terminal apagada no existe: el turno es de Len.
+  describe("el modo del turno", () => {
+    const turno = async (cuerpo: Record<string, unknown>) =>
+      readEvents(
+        await POST(
+          new Request("http://localhost/api/agent", {
+            method: "POST",
+            body: JSON.stringify({ projectId: "p1", prompt: "cambia el título", ...cuerpo }),
+          }),
+        ),
+      );
+    const modoDelCerebro = () =>
+      (mocks.createAgentBrain.mock.calls.at(-1) as unknown as [{ mode?: string }])[0].mode;
+    const modoDeLasDeclaraciones = () =>
+      (mocks.buildFunctionDeclarations.mock.calls.at(-1) as unknown as unknown[])[2];
+    afterEach(() => vi.unstubAllEnvs());
+
+    it("con la terminal, \"dynamis\" llega a las declaraciones y al cerebro", async () => {
+      vi.stubEnv("OPENLEN_TERMINAL", "1");
+      await turno({ mode: "dynamis" });
+      expect(modoDeLasDeclaraciones()).toBe("dynamis");
+      expect(modoDelCerebro()).toBe("dynamis");
+    });
+
+    it("sin la terminal, \"dynamis\" se queda en Len", async () => {
+      vi.stubEnv("OPENLEN_TERMINAL", "");
+      await turno({ mode: "dynamis" });
+      expect(modoDeLasDeclaraciones()).toBe("len");
+      expect(modoDelCerebro()).toBe("len");
+    });
+
+    it("BRAZO DE CONTROL: sin el campo (o con basura), Len", async () => {
+      vi.stubEnv("OPENLEN_TERMINAL", "1");
+      for (const cuerpo of [{}, { mode: "DYNAMIS" }, { mode: 7 }]) {
+        await turno(cuerpo);
+        expect(modoDeLasDeclaraciones()).toBe("len");
+        expect(modoDelCerebro()).toBe("len");
+      }
+    });
+  });
+
   // LA HORA DEL USUARIO (plans/len-resultados/diseno.md §7): la del navegador
   // manda, se guarda para las rutinas y llega a la sesión de las herramientas.
   describe("la zona horaria del turno", () => {

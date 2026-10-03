@@ -25,7 +25,8 @@ import { PUBLISH_CONTRACT } from "@/lib/design-guidance";
 import { swapJsClauses } from "@/lib/ai/js-clause";
 import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contract-min";
 import { bloqueDeLibrerias } from "@/lib/librerias";
-import { paraSoloLaTerminal, soloTerminal } from "@/lib/agent/terminal/declaracion";
+import { paraSoloLaTerminal, terminalOnly } from "@/lib/agent/terminal/declaracion";
+import type { AgentMode } from "@/lib/agent/dynamis";
 import {
   CARPETA_DOCS,
   CIERRE_DEL_ADJUNTO,
@@ -191,11 +192,14 @@ export function partirElManual(entero: string = manualSinPartir()): ManualPartid
   };
 }
 
-/** El contenido de /AGENTS.md: lo que Read devuelve y lo que se adjunta. En el
- *  brazo «sólo terminal» (F4) no nombra Read, Edit ni Write, que no tiene. */
-export function buildManualDeLaPlataforma(env: Readonly<Record<string, string | undefined>> = process.env): string {
+/** El contenido de /AGENTS.md: lo que Read devuelve y lo que se adjunta. En Len
+ *  Dynamis no nombra Read, Edit ni Write, que no tiene. */
+export function buildManualDeLaPlataforma(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+  mode: AgentMode = "len",
+): string {
   const { agents } = partirElManual();
-  return soloTerminal(env) ? paraSoloLaTerminal(agents) : agents;
+  return terminalOnly(mode, env) ? paraSoloLaTerminal(agents) : agents;
 }
 
 /** Los ficheros de /.openlen/docs, por su ruta. */
@@ -204,8 +208,8 @@ export function documentosDeLaPlataforma(): Readonly<Record<string, string>> {
 }
 
 /** El texto de un fichero del manual por su ruta, o `null` si no es ninguno. */
-export function textoDeLaPlataforma(ruta: string): string | null {
-  if (ruta === RUTA_MANUAL) return buildManualDeLaPlataforma();
+export function textoDeLaPlataforma(ruta: string, mode: AgentMode = "len"): string | null {
+  if (ruta === RUTA_MANUAL) return buildManualDeLaPlataforma(process.env, mode);
   const docs = documentosDeLaPlataforma();
   return Object.hasOwn(docs, ruta) ? docs[ruta]! : null;
 }

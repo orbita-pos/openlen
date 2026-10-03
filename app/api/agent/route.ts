@@ -41,6 +41,7 @@ import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversac
 import { turnosParaElHistorial } from "@/lib/projects/chat";
 import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
+import { modeOfTurn } from "@/lib/agent/dynamis";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
 import { ZONA_SIN_DATO, zonaValida } from "@/lib/resultados/zona";
 import { guardarZona, leerZona } from "@/lib/resultados/zona-guardada";
@@ -220,6 +221,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
     /** EL ESFUERZO DE ESTE TURNO, fijado por el cliente al ENVIAR. Ver
      *  `esfuerzoDelTurno` más abajo: se manda por turno, no se lee en vivo. */
     esfuerzo?: unknown;
+    /** EL MODO DE ESTE TURNO: `"dynamis"` o nada (Len). Viaja como el esfuerzo;
+     *  se sanea con `modeOfTurn` (`lib/agent/dynamis.ts`). */
+    mode?: unknown;
     /** La zona IANA del navegador (plans/len-resultados/diseno.md §7). Se
      *  sanea con `zonaValida`: entra de fuera. */
     zonaHoraria?: unknown;
@@ -246,6 +250,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // las capas hasta la preferencia guardada, que es la degradación correcta.
   const esfuerzoCrudo = typeof body?.esfuerzo === "string" ? body.esfuerzo.trim().toLowerCase() : "";
   const esfuerzoDelTurno = ESFUERZOS.find((e) => e === esfuerzoCrudo) ?? null;
+  // LEN DYNAMIS, con el mismo pestillo: el modo que el usuario veía al pulsar
+  // enviar. Con la terminal apagada no existe, y el turno es de Len.
+  const mode = modeOfTurn(body?.mode);
   // LA HORA DEL USUARIO (plans/len-resultados/diseno.md §7). Se sanea: entra de
   // fuera. Basura -> null -> la zona guardada.
   const zonaDelCuerpo = zonaValida(body?.zonaHoraria);
@@ -377,7 +384,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // Ver D5 de la spec 2026-09-15.
   const vistaDelTurno = vistaParaMedir(projectId, project, pageSlug);
   // Todas cargadas: las diferidas y ToolSearch (H2) se retiraron en Len 2.1.
-  const tools = buildFunctionDeclarations(process.env);
+  const tools = buildFunctionDeclarations(process.env, {}, mode);
   // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador
   // sólo se acepta un NOMBRE de herramienta que exista, sin argumentos, y un
   // resumen acotado. Vive fuera para que el arnés de evals reproduzca una
@@ -577,6 +584,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // guardada tampoco tumba el turno: si la base falla, UTC, y la herramienta lo dice.
   const zonaDelTurno = zonaDelCuerpo ?? (await leerZona(userId).catch(() => null)) ?? ZONA_SIN_DATO;
   const argsDelTurno = {
+    mode,
     zona: zonaDelTurno,
     state,
     userBrief: project.userBrief,
@@ -691,6 +699,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   const agentSession: AgentSession = {
     projectId,
     userId,
+    mode,
     // H3 — la memoria que va en el contexto cuenta como LEÍDA, como el CLAUDE.md
     // que Claude Code siembra al empezar: se le añade una línea sin un Read.
     leidos: new Map([
@@ -746,6 +755,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
     // `null` en las dos significa que nunca eligió, que resuelve a "auto".
     esfuerzoDelTurno,
     esfuerzoDelUsuario,
+    mode,
   });
 
   const sse = new ReadableStream<Uint8Array>({
@@ -1605,7 +1615,11 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         if (grabadora && !grabadora.vacia) {
           try {
             const grabado = {
-              ...grabadora.resultado({ modelId: brain.modelId, requestId: projectId }),
+              ...grabadora.resultado({
+                modelId: brain.modelId,
+                requestId: projectId,
+                ...(mode === "dynamis" ? { mode } : {}),
+              }),
             };
             const { writeFile, mkdir } = await import("node:fs/promises");
             const { join } = await import("node:path");

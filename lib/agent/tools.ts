@@ -74,6 +74,7 @@ import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { NOMBRE_BASH } from "@/lib/agent/terminal/declaracion";
 import { toolBash } from "@/lib/agent/terminal/herramienta";
 import type { TerminalDeLen } from "@/lib/agent/terminal/terminal";
+import type { AgentMode } from "@/lib/agent/dynamis";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import {
   toolPrepararRespuesta,
@@ -546,6 +547,9 @@ export interface AgentSession {
   /** Con `autor: "usuario"`, DESDE DÓNDE: su terminal (ausente) o el editor de
    *  la lente «Código» (la #18). Sólo cambia cómo se llama su versión. */
   desde?: "editor";
+  /** El modo del turno (`lib/agent/dynamis.ts`). Ausente = Len. Lo lee el
+   *  /AGENTS.md que ve la terminal: en Dynamis no nombra Read, Edit ni Write. */
+  mode?: AgentMode;
   // ⚰️ Aquí vivían `taggedHtml` (el documento activo con ids, contra el que se
   // aplicaban las ops) y `baseHtml` (contra qué comparar si otro escribió). Len
   // 2.0 edita ficheros (plans/len-2/ficheros-plan.md): cada herramienta lee la

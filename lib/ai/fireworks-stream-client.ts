@@ -93,6 +93,11 @@ export interface FireworksStreamRequest {
    *  postura o sin ella. Lo único nuevo es que una operación distinta que SÍ
    *  traiga postura deja de ser ignorada. */
   readonly esfuerzo?: EsfuerzoAgente | null;
+  /** LEN DYNAMIS (`lib/agent/dynamis.ts`): el esfuerzo como PALABRA de
+   *  Fireworks, tal cual, en vez del presupuesto que saca `esfuerzo`. Gana sobre
+   *  `esfuerzo` cuando viene. Si el proveedor rechaza el campo, la petición se
+   *  repite sin él como siempre (`esfuerzo-no-admitido.ts`). */
+  readonly reasoningEffortWord?: "max";
   /** Declaraciones en formato OpenAI. Sin herramientas el turno es sólo texto. */
   readonly tools?: readonly Record<string, unknown>[];
   /** Píxeles para el ÚLTIMO mensaje de usuario. Sólo los papeles con visión. */
@@ -285,6 +290,9 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             // que este ensanche no quiere. Aditivo, no reescrito.
             ...(!conEsfuerzo
               ? {}
+              : // Len Dynamis: la palabra, tal cual (ver `reasoningEffortWord`).
+                request.reasoningEffortWord
+              ? { reasoning_effort: request.reasoningEffortWord }
               : request.esfuerzo !== undefined || request.operation === "agent_turn"
               ? (() => {
                   // CON POSTURA va lo que diga `presupuestoDeEsfuerzo`: un

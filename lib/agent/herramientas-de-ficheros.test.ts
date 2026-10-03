@@ -739,6 +739,26 @@ describe("H3 · la memoria como ficheros: sólo se AÑADE", () => {
   });
 });
 
+// LEN DYNAMIS (`lib/agent/dynamis.ts`): el /AGENTS.md que lee la terminal es el
+// de su modo. Con `cat /AGENTS.md` en un turno Dynamis, mandarle a usar Edit
+// sería mandarle a una herramienta que no tiene.
+describe("Len Dynamis · el /AGENTS.md de la terminal", () => {
+  it("en Dynamis no nombra Read, Edit ni Write; en Len sí (brazo de control)", async () => {
+    const { deps } = makeDepsCompletos({ html: HOME });
+    const antes = process.env.OPENLEN_TERMINAL;
+    process.env.OPENLEN_TERMINAL = "1";
+    try {
+      const dynamis = (await cargarFicherosDeLaTerminal({ ...makeSession(), mode: "dynamis" }, deps))["/AGENTS.md"]!;
+      const len = (await cargarFicherosDeLaTerminal(makeSession(), deps))["/AGENTS.md"]!;
+      assert.doesNotMatch(dynamis, /\b(Read|Edit|Write)\b(?!-)/);
+      assert.match(len, /\bEdit\b/);
+    } finally {
+      if (antes === undefined) delete process.env.OPENLEN_TERMINAL;
+      else process.env.OPENLEN_TERMINAL = antes;
+    }
+  });
+});
+
 describe("guardarLoDeLaTerminal — lo que escribe la terminal, por el camino de Write (F1 de plans/len-agente-2026)", () => {
   const CONTACTO = MENU.replace("<h1>Menú</h1>", "<h1>Contacto</h1>");
   const sitio = (): ProjectData => ({ html: HOME, pages: { menu: { html: MENU }, contacto: { html: CONTACTO } } });

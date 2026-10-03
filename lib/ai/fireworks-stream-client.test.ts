@@ -233,6 +233,19 @@ describe("transporte de texto en streaming", () => {
     expect(enviado.reasoning_effort).toBe(REQUEST.maxOutputTokens - 1);
   });
 
+  // LEN DYNAMIS (`lib/agent/dynamis.ts`): la PALABRA, tal cual, que es lo que
+  // la plantilla de V4.1 convierte en «Reasoning Effort: 100». La prueba de
+  // arriba es su brazo de control: el `max` del mando sigue siendo un número.
+  it("Len Dynamis manda la palabra \"max\", no un número, y gana sobre la postura", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
+    await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "auto", reasoningEffortWord: "max" }));
+    const enviado = JSON.parse(
+      (fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body,
+    );
+    expect(enviado.reasoning_effort).toBe("max");
+    expect(enviado).not.toHaveProperty("top_p");
+  });
+
   // EL BRAZO DE CONTROL de las dos pruebas de arriba: sin él, un futuro
   // refactor que vuelva incondicional el reemplazo por operación (R5) pasaría
   // en verde. `REQUEST.operation` es "page_edit" SIN postura, así que debe
@@ -408,6 +421,16 @@ describe("cuando el proveedor rechaza el esfuerzo", () => {
     expect(cuerpoDe(fetchImpl, 1)).not.toHaveProperty("reasoning_effort");
     // Y el turno SOBREVIVE, que es el punto entero.
     expect(eventos.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "end_turn" } });
+  });
+
+  it("también con la palabra de Len Dynamis: se repite sin ella", async () => {
+    olvidarModelosSinEsfuerzo();
+    const { client: c, fetchImpl } = clienteQueRechazaUnaVez();
+    const eventos = await drain(c.stream({ ...REQUEST, operation: "agent_turn", reasoningEffortWord: "max" }));
+    expect(cuerpoDe(fetchImpl, 0).reasoning_effort).toBe("max");
+    expect(cuerpoDe(fetchImpl, 1)).not.toHaveProperty("reasoning_effort");
+    expect(eventos.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "end_turn" } });
+    olvidarModelosSinEsfuerzo();
   });
 
   it("marca el modelo: el turno siguiente ya no paga el 400", async () => {

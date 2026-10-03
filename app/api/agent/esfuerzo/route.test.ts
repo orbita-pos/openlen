@@ -89,4 +89,14 @@ describe("GET /api/agent/esfuerzo", () => {
     mocks.guardado.mockResolvedValue("low");
     expect(await (await GET()).json()).toMatchObject({ esfuerzo: "low" });
   });
+
+  // El selector «Len / Len Dynamis» sólo se pinta si esto dice que sí: con la
+  // terminal apagada la ruta convertiría Dynamis en Len, y ofrecerlo mentiría.
+  it("ofrece Len Dynamis sólo con la terminal encendida", async () => {
+    vi.stubEnv("OPENLEN_TERMINAL", "1");
+    expect(await (await GET()).json()).toMatchObject({ dynamis: true });
+    vi.stubEnv("OPENLEN_TERMINAL", "");
+    expect(await (await GET()).json()).toMatchObject({ dynamis: false });
+    vi.unstubAllEnvs();
+  });
 });

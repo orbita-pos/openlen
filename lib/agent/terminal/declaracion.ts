@@ -13,6 +13,7 @@
  * quedan. Puro: lo importan el catálogo y sus pruebas.
  */
 import { MAX_SALIDA } from "./ficheros";
+import type { AgentMode } from "@/lib/agent/dynamis";
 
 export const NOMBRE_BASH = "bash";
 
@@ -62,28 +63,32 @@ export function paraLaTerminal(texto: string): string {
 }
 
 /**
- * EL BRAZO «SÓLO TERMINAL» (F4 de plans/len-agente-2026, punto 4): sin Read,
- * Edit ni Write, como el modo mínimo de DeepSeek (una terminal y nada más para
- * los ficheros; quitaron su editor el 03/09 porque «the shell already provides
- * file inspection and mutation»). SÓLO para medirlo: no se adopta sin ganar.
+ * SÓLO TERMINAL (F4 de plans/len-agente-2026, punto 4): sin Read, Edit ni
+ * Write, como el modo mínimo de DeepSeek (una terminal y nada más para los
+ * ficheros; quitaron su editor el 03/09 porque «the shell already provides file
+ * inspection and mutation»). Es la mitad de Len Dynamis que toca las
+ * herramientas (`lib/agent/dynamis.ts`); la otra mitad va en el cable.
  *
- * Su palanca, `OPENLEN_SOLO_TERMINAL=1`, sólo vale CON la terminal encendida:
- * sola no haría nada, porque quitar las herramientas de ficheros sin `bash`
- * dejaría a Len sin manos. Las demás herramientas (mirar, usar, publicar…) se
- * quedan.
+ * ⚰️ Era el brazo de F4, detrás de `OPENLEN_SOLO_TERMINAL=1`, para el servidor
+ * entero. Ahora lo decide el MODO DEL TURNO, y esa variable no hace nada: lo
+ * vigila declaracion.test.ts.
+ *
+ * Sólo CON la terminal encendida: quitar las herramientas de ficheros sin
+ * `bash` dejaría a Len sin manos. Las demás herramientas (mirar, usar,
+ * publicar…) se quedan.
  */
-export function soloTerminal(env: Readonly<Record<string, string | undefined>> = process.env): boolean {
-  return terminalEncendida(env) && env.OPENLEN_SOLO_TERMINAL === "1";
+export function terminalOnly(mode: AgentMode, env: Readonly<Record<string, string | undefined>> = process.env): boolean {
+  return mode === "dynamis" && terminalEncendida(env);
 }
 
-/** Lo que el brazo «sólo terminal» quita, además de Grep y Glob. */
+/** Lo que quita Dynamis, además de Grep y Glob. */
 export const SUSTITUIDAS_EN_SOLO_TERMINAL: readonly string[] = ["Read", "Edit", "Write"];
 
 /**
  * Las frases del prompt, de `bash` y de /AGENTS.md que nombran Read, Edit o
  * Write, dichas con la terminal. Se aplican DESPUÉS de `paraLaTerminal` (la
- * primera parte de su frase ya habla de `bash`). Sin la palanca no se aplican y
- * nada cambia. Cada una tiene que encontrar su frase: lo vigila
+ * primera parte de su frase ya habla de `bash`). Fuera de Dynamis no se aplican
+ * y nada cambia. Cada una tiene que encontrar su frase: lo vigila
  * declaracion.test.ts, como con las de arriba.
  */
 export const PARA_SOLO_LA_TERMINAL: readonly (readonly [string, string])[] = [
@@ -117,12 +122,16 @@ export function paraSoloLaTerminal(texto: string): string {
   return PARA_SOLO_LA_TERMINAL.reduce((t, [de, a]) => t.split(de).join(a), texto);
 }
 
-/** Lo que leen el prompt y las descripciones según las dos palancas: nada,
- *  la terminal, o la terminal sola. */
-export function segunLasPalancas(texto: string, env: Readonly<Record<string, string | undefined>> = process.env): string {
+/** Lo que leen el prompt y las descripciones según la palanca y el modo del
+ *  turno: nada, la terminal, o la terminal sola (Dynamis). */
+export function segunLasPalancas(
+  texto: string,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+  mode: AgentMode = "len",
+): string {
   if (!terminalEncendida(env)) return texto;
   const conTerminal = paraLaTerminal(texto);
-  return soloTerminal(env) ? paraSoloLaTerminal(conTerminal) : conTerminal;
+  return terminalOnly(mode, env) ? paraSoloLaTerminal(conTerminal) : conTerminal;
 }
 
 export const DECLARACION_BASH: Record<string, unknown> = {

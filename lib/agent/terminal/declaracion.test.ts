@@ -3,7 +3,8 @@
 import { describe, expect, it } from "vitest";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
-import { NOMBRE_BASH, PARA_LA_TERMINAL, PARA_SOLO_LA_TERMINAL, soloTerminal, terminalEncendida } from "./declaracion";
+import type { AgentMode } from "@/lib/agent/dynamis";
+import { NOMBRE_BASH, PARA_LA_TERMINAL, PARA_SOLO_LA_TERMINAL, terminalEncendida, terminalOnly } from "./declaracion";
 
 const CON = { OPENLEN_TERMINAL: "1" };
 const SIN = {};
@@ -44,28 +45,50 @@ describe("la palanca de la terminal", () => {
   });
 });
 
-// F4 (plans/len-agente-2026), punto 4: el brazo «sólo terminal», como el modo
-// mínimo de DeepSeek. Sólo para medirlo.
-describe("la palanca del brazo «sólo terminal»", () => {
-  const SOLO = { OPENLEN_TERMINAL: "1", OPENLEN_SOLO_TERMINAL: "1" };
-  const todo = (env: Record<string, string>) => [textos(env), buildManualDeLaPlataforma(env)].join("\n");
+// F4 (plans/len-agente-2026), punto 4: sólo la terminal para los ficheros,
+// como el modo mínimo de DeepSeek. Desde el 03/10 es la mitad de Len Dynamis
+// que toca las herramientas, y lo decide el MODO DEL TURNO (`lib/agent/dynamis.ts`),
+// no una variable del servidor.
+describe("Len Dynamis: sólo la terminal para los ficheros", () => {
+  const nombresEn = (env: Record<string, string>, mode: AgentMode) =>
+    buildFunctionDeclarations(env, {}, mode).map((d) => String(d.name));
+  const todo = (env: Record<string, string>, mode: AgentMode = "len") =>
+    [
+      buildAgentSystemPrompt(env, mode),
+      ...buildFunctionDeclarations(env, {}, mode).map((d) => String(d.description ?? "")),
+      buildManualDeLaPlataforma(env, mode),
+    ].join("\n");
 
-  it("sólo vale con la terminal encendida, y sólo con el literal \"1\"", () => {
-    expect(soloTerminal(SOLO)).toBe(true);
-    expect(soloTerminal({ OPENLEN_SOLO_TERMINAL: "1" })).toBe(false);
-    for (const v of [undefined, "0", "true", ""]) expect(soloTerminal({ OPENLEN_TERMINAL: "1", OPENLEN_SOLO_TERMINAL: v })).toBe(false);
+  it("sólo con el modo Dynamis y la terminal encendida", () => {
+    expect(terminalOnly("dynamis", CON)).toBe(true);
+    expect(terminalOnly("dynamis", SIN)).toBe(false);
+    expect(terminalOnly("len", CON)).toBe(false);
   });
 
-  it("con ella: bash y nada más para los ficheros; lo demás se queda", () => {
-    const n = nombres(SOLO);
+  it("en Dynamis: bash y nada más para los ficheros; lo demás se queda", () => {
+    const n = nombresEn(CON, "dynamis");
     expect(n).toContain(NOMBRE_BASH);
     for (const fuera of ["Read", "Edit", "Write", "Grep", "Glob"]) expect(n).not.toContain(fuera);
-    for (const queda of ["mirar_pagina", "usar_pagina", "publicar", "preguntar", "revertir_ultimo_cambio", "web_search"]) expect(n).toContain(queda);
+    for (const queda of ["mirar_pagina", "usar_pagina", "publicar", "preguntar", "revertir_ultimo_cambio", "web_search", "web_fetch"]) expect(n).toContain(queda);
   });
 
-  it("🔴 con ella, ni el prompt, ni las descripciones, ni /AGENTS.md nombran una herramienta que no tiene", () => {
+  it("🔴 en Dynamis, ni el prompt, ni las descripciones, ni /AGENTS.md nombran una herramienta que no tiene", () => {
     // «Read-only» no es la herramienta.
-    expect(todo(SOLO)).not.toMatch(/\b(Read|Edit|Write|Grep|Glob)\b(?!-)/);
+    expect(todo(CON, "dynamis")).not.toMatch(/\b(Read|Edit|Write|Grep|Glob)\b(?!-)/);
+  });
+
+  // 🔴 LA LÁPIDA de la palanca vieja: el valor que antes quitaba Read, Edit y
+  // Write ahora no cambia nada. Una variable que sigue en un .env viejo no
+  // puede volver a convertir un servidor entero en Dynamis.
+  it("OPENLEN_SOLO_TERMINAL=1 ya no hace nada", () => {
+    const VIEJA = { OPENLEN_TERMINAL: "1", OPENLEN_SOLO_TERMINAL: "1" };
+    expect(todo(VIEJA)).toBe(todo(CON));
+    expect(nombresEn(VIEJA, "len")).toEqual(expect.arrayContaining(["Read", "Edit", "Write"]));
+  });
+
+  it("con la terminal apagada, Dynamis no quita nada: Len sin manos no existe", () => {
+    expect(todo(SIN, "dynamis")).toBe(todo(SIN));
+    expect(nombresEn(SIN, "dynamis")).toEqual(expect.arrayContaining(["Read", "Edit", "Write", "Grep", "Glob"]));
   });
 
   it("cada sustitución encuentra su frase en lo que lee el modelo con la terminal", () => {
@@ -77,10 +100,8 @@ describe("la palanca del brazo «sólo terminal»", () => {
     expect(PARA_SOLO_LA_TERMINAL.map(([de]) => de).filter((de) => !conTerminal.includes(de))).toEqual([]);
   });
 
-  it("sin ella (sólo la terminal), todo sale como en el brazo de la terminal", () => {
-    expect(todo({ OPENLEN_TERMINAL: "1", OPENLEN_SOLO_TERMINAL: "0" })).toBe(todo(CON));
+  it("en Len (el modo por defecto), todo sale como con la terminal", () => {
+    expect(todo(CON, "len")).toBe(todo(CON));
     expect(nombres(CON)).toEqual(expect.arrayContaining(["Read", "Edit", "Write"]));
-    // Y la palanca sola, sin la terminal, no cambia nada.
-    expect(todo({ OPENLEN_SOLO_TERMINAL: "1" })).toBe(todo(SIN));
   });
 });

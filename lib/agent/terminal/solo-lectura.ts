@@ -150,7 +150,7 @@ export async function soloLecturaDeLaTerminal(session: AgentSession, deps: Agent
         if (html === null) throw new Error("that version no longer exists");
         return sinOpIds(html);
       }
-      const doc = textoDeLaPlataforma(ruta);
+      const doc = textoDeLaPlataforma(ruta, session.mode);
       if (doc !== null) return doc;
       throw new Error(`${ruta}: no such read-only file`);
     },

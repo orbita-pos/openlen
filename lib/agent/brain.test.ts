@@ -138,6 +138,58 @@ describe("la POSTURA del turno viaja en la petición", () => {
   });
 });
 
+// LEN DYNAMIS (`lib/agent/dynamis.ts`): la receta del modo Minimal de DeepSeek
+// llega al cable entera, en el turno y en el cierre; sin el modo, nada cambia.
+describe("Len Dynamis en el cable", () => {
+  const pedido = (i = 0) => fireworksStream.mock.calls[i][0];
+
+  it("temperatura 1,0, la palabra \"max\" y 65.536 de salida", async () => {
+    const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {}, mode: "dynamis" });
+    await drain(brain.openStream([USER]));
+    expect(pedido().temperature).toBe(1);
+    expect(pedido().reasoningEffortWord).toBe("max");
+    expect(pedido().maxOutputTokens).toBe(65_536);
+  });
+
+  it("el cierre también: con el razonamiento al máximo, 2.048 se irían en pensar", async () => {
+    const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {}, mode: "dynamis" });
+    await drain(brain.closeOut([USER]));
+    expect(pedido().temperature).toBe(1);
+    expect(pedido().reasoningEffortWord).toBe("max");
+    expect(pedido().maxOutputTokens).toBe(65_536);
+    expect(pedido().tools).toBeUndefined();
+  });
+
+  it("la preferencia guardada no lo baja: el modo es la postura del turno", async () => {
+    const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {}, mode: "dynamis", esfuerzoDelUsuario: "low" });
+    await drain(brain.openStream([USER]));
+    expect(pedido().reasoningEffortWord).toBe("max");
+  });
+
+  it("el operador sigue por encima: con OPENLEN_AGENT_EFFORT clavado no va la palabra", async () => {
+    const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: { OPENLEN_AGENT_EFFORT: "low" }, mode: "dynamis" });
+    await drain(brain.openStream([USER]));
+    expect(pedido().reasoningEffortWord).toBeUndefined();
+    expect(pedido().esfuerzo).toBe("low");
+    // El resto de la receta se queda.
+    expect(pedido().temperature).toBe(1);
+  });
+
+  it("BRAZO DE CONTROL: sin el modo (o con \"len\"), 0,2, sin palabra y los techos de siempre", async () => {
+    for (const mode of [undefined, "len"] as const) {
+      fireworksStream.mockClear();
+      const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {}, ...(mode ? { mode } : {}) });
+      await drain(brain.openStream([USER]));
+      await drain(brain.closeOut([USER]));
+      expect(pedido(0).temperature).toBe(0.2);
+      expect(pedido(0).maxOutputTokens).toBe(32_768);
+      expect(pedido(1).maxOutputTokens).toBe(2_048);
+      expect("reasoningEffortWord" in pedido(0)).toBe(false);
+      expect("reasoningEffortWord" in pedido(1)).toBe(false);
+    }
+  });
+});
+
 // EL MODELO QUE CORRE Y LA TARIFA QUE SE COBRA, ATADOS.
 //
 // Es el fallo que mordió dos veces el 2026-08-28, las dos por lo mismo: se

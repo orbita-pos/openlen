@@ -47,6 +47,8 @@ function normaliza(prompt: string): string {
   return prompt.replaceAll(PUBLISHED_BASE_HOST, "<PUBLISH_HOST>");
 }
 
+const CON_TERMINAL = { OPENLEN_TERMINAL: "1" };
+
 const SUPERFICIES: ReadonlyArray<readonly [string, () => string]> = [
   ["crear", () => generateSystemMessage({})],
   ["editar (ai-design)", () => aiDesignSystemMessage()],
@@ -58,6 +60,11 @@ const SUPERFICIES: ReadonlyArray<readonly [string, () => string]> = [
   ...Object.keys(documentosDeLaPlataforma()).map(
     (ruta) => [`manual de la plataforma (${ruta})`, () => documentosDeLaPlataforma()[ruta]!] as const,
   ),
+  // LEN DYNAMIS (`lib/agent/dynamis.ts`): el otro modo de Len, que sólo existe
+  // con la terminal. Va APARTE de los de arriba: sin el modo, nada de lo de
+  // Len se mueve. Los /.openlen/docs son los mismos en los dos modos.
+  ["agente (Len Dynamis)", () => buildAgentSystemPrompt(CON_TERMINAL, "dynamis")],
+  ["manual de la plataforma (/AGENTS.md, Len Dynamis)", () => buildManualDeLaPlataforma(CON_TERMINAL, "dynamis")],
 ];
 
 describe("golden de los prompts de producción", () => {
@@ -102,6 +109,12 @@ describe("golden de los prompts de producción", () => {
   // lee. `env: {}` fija el modo por defecto igual que el resto del fichero.
   it("las declaraciones de herramientas, enteras", () => {
     const decls = JSON.stringify(buildFunctionDeclarations({}), null, 2);
+    expect(normaliza(decls)).toMatchSnapshot();
+  });
+
+  // Las de Len Dynamis: `bash` y lo que no es de ficheros, sin Read/Edit/Write.
+  it("las declaraciones de herramientas de Len Dynamis, enteras", () => {
+    const decls = JSON.stringify(buildFunctionDeclarations(CON_TERMINAL, {}, "dynamis"), null, 2);
     expect(normaliza(decls)).toMatchSnapshot();
   });
 

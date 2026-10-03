@@ -3,8 +3,14 @@ import { createFireworksStreamClient, type FireworksStreamEvent } from "@/lib/ai
 import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-bridge";
 import { MODEL_POLICY, esfuerzoDisponible, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import type { CreditRate } from "@/lib/credits";
-import { esfuerzoEfectivo } from "./esfuerzo-efectivo";
+import { esfuerzoEfectivo, operatorEffort } from "./esfuerzo-efectivo";
 import { caparEsfuerzo, capacidadDeEsfuerzo, type EsfuerzoAgente } from "./esfuerzo";
+import {
+  DYNAMIS_MAX_OUTPUT_TOKENS,
+  DYNAMIS_REASONING_EFFORT,
+  DYNAMIS_TEMPERATURE,
+  type AgentMode,
+} from "./dynamis";
 
 /**
  * Quién razona por el Agente.
@@ -35,6 +41,9 @@ export interface AgentBrainOptions {
   readonly esfuerzoDelTurno?: EsfuerzoAgente | null;
   /** Su preferencia guardada (`users.agentEffort`). */
   readonly esfuerzoDelUsuario?: EsfuerzoAgente | null;
+  /** El modo del turno (`lib/agent/dynamis.ts`). En Dynamis: temperatura 1,0,
+   *  la palabra `"max"` y 65.536 de salida en todas sus llamadas. Ausente = Len. */
+  readonly mode?: AgentMode;
   /** Se llama con cada trozo de razonamiento, que NO llega al loop. Es señal de
    *  vida para el reloj de silencio de la ruta: sin ella, pensar más de 3 min
    *  seguidos parecía un cuelgue y se cancelaba el turno (E del 26/09, con H5). */
@@ -115,6 +124,8 @@ const CLOSEOUT_MAX_OUTPUT_TOKENS = 2_048;
 //
 // OpenCode cura la temperatura modelo a modelo (1,0 glm-4.6 · 0,6 kimi-k2) y a
 // DeepSeek no le manda NINGUNA (`transform.ts:527-544`, `request.ts:124`).
+//
+// Len Dynamis corre a 1,0, la de la ficha de V4.1 (`lib/agent/dynamis.ts`).
 const TEMPERATURE = 0.2;
 
 /** Qué operación corre una vuelta: la del agente, salvo que la conversación
@@ -192,6 +203,22 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
     console.warn(`[agent/brain] ${disponibilidad.motivo} — este turno va sin pensamiento.`);
   }
 
+  // LEN DYNAMIS (`lib/agent/dynamis.ts`): la receta del modo Minimal de
+  // DeepSeek en el cable. Temperatura 1,0, un solo techo de salida para todas
+  // las llamadas del turno —el cierre también: con el razonamiento al máximo,
+  // sus 2.048 se irían en pensar— y la PALABRA `"max"`, que no pasa por el dial
+  // de números ni por su recorte a `high`. Dos capas siguen por encima, como
+  // con el mando: el operador (`OPENLEN_AGENT_EFFORT`) y la puerta de un papel
+  // que no piensa (`esfuerzo === null`). Sin el modo, todo como antes.
+  const isDynamis = options.mode === "dynamis";
+  const temperature = isDynamis ? DYNAMIS_TEMPERATURE : TEMPERATURE;
+  const loopCeiling = isDynamis ? DYNAMIS_MAX_OUTPUT_TOKENS : LOOP_MAX_OUTPUT_TOKENS;
+  const closeOutCeiling = isDynamis ? DYNAMIS_MAX_OUTPUT_TOKENS : CLOSEOUT_MAX_OUTPUT_TOKENS;
+  const effortWord =
+    isDynamis && esfuerzo !== null && operatorEffort(env.OPENLEN_AGENT_EFFORT) === null
+      ? DYNAMIS_REASONING_EFFORT
+      : undefined;
+
   const viaFireworks = (messages: Message[], withTools: boolean, maxOutputTokens: number) =>
     ((): ReturnType<typeof asAgentStream> => {
       // LAS FOTOS VAN DENTRO DE SU MENSAJE (`Message.images`) y viajan en todas
@@ -205,13 +232,15 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
           messages: messagesForFireworks(messages),
           ...(withTools ? { tools: wireTools } : {}),
           maxOutputTokens,
-          temperature: TEMPERATURE,
+          temperature,
           requestId: options.requestId,
           operation,
           // La POSTURA sólo tiene sentido para `agent_turn`: si una vuelta con
           // fotos va al papel con visión (agente que no ve), ese papel mantiene
           // el valor de la tabla, no el elegido por el usuario para el Agente.
-          ...(operation === "agent_turn" ? { esfuerzo } : {}),
+          ...(operation === "agent_turn"
+            ? { esfuerzo, ...(effortWord ? { reasoningEffortWord: effortWord } : {}) }
+            : {}),
         },
         streamOpts,
       ),
@@ -234,7 +263,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
     // prompt (por el canal de `request.images`, que la pega al último mensaje
     // de usuario y no puede ir junto a resultados de herramientas). Con A va
     // dentro de tu mensaje y ese problema no existe.
-    openStream: (messages) => viaFireworks(messages, true, LOOP_MAX_OUTPUT_TOKENS),
-    closeOut: (messages) => viaFireworks(messages, false, CLOSEOUT_MAX_OUTPUT_TOKENS),
+    openStream: (messages) => viaFireworks(messages, true, loopCeiling),
+    closeOut: (messages) => viaFireworks(messages, false, closeOutCeiling),
   };
 }

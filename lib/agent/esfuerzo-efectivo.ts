@@ -18,9 +18,17 @@ export function esfuerzoEfectivo(o: {
   delTurno?: EsfuerzoAgente | null;
   delUsuario?: EsfuerzoAgente | null;
 }): EsfuerzoAgente {
-  const deEntorno = ESFUERZOS.find((e) => e === o.env?.trim().toLowerCase());
+  const deEntorno = operatorEffort(o.env);
   if (deEntorno) return deEntorno;
   if (o.delTurno) return o.delTurno;
   if (o.delUsuario) return o.delUsuario;
   return "auto";
+}
+
+/** La capa de arriba sola: lo que clavó el operador en `OPENLEN_AGENT_EFFORT`,
+ *  o `null` si no clavó nada válido. Aparte porque Len Dynamis la necesita sola:
+ *  su razonamiento máximo es la postura del TURNO, y el operador sigue mandando
+ *  por encima (`brain.ts`). */
+export function operatorEffort(env?: string): EsfuerzoAgente | null {
+  return ESFUERZOS.find((e) => e === env?.trim().toLowerCase()) ?? null;
 }

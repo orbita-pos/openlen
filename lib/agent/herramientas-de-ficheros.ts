@@ -143,7 +143,7 @@ function sitioDe(data: ProjectData, session: AgentSession, v: Virtuales = SIN_VI
       // El manual de la plataforma —/AGENTS.md y, desde F4, /.openlen/docs—: Read lo abre
       // por su ruta, con terminal o sin ella, pero no está en `ficheros`, así que
       // Grep y Glob no lo ven (`lib/agent/ficheros/manual.ts`).
-      if (esDeLaPlataforma(ruta)) return textoDeLaPlataforma(ruta);
+      if (esDeLaPlataforma(ruta)) return textoDeLaPlataforma(ruta, session.mode);
       const datos = v.almacenes.get(ruta);
       if (datos) return datos.texto;
       const memoria = v.memoria.get(ruta);
@@ -434,7 +434,8 @@ export async function cargarFicherosDeLaTerminal(session: AgentSession, deps: Ag
   for (const ruta of ficherosDelSitio(row.data)) ficheros[ruta] = sinOpIds(leerFichero(row.data, ruta) ?? "");
   for (const [ruta, a] of v.almacenes) ficheros[ruta] = a.texto;
   for (const [ruta, texto] of v.memoria) ficheros[ruta] = texto;
-  ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma();
+  // En Len Dynamis, el que no nombra Read, Edit ni Write (`lib/agent/dynamis.ts`).
+  ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma(process.env, session.mode);
   // F4 · /.openlen/docs NO va aquí: es de la carpeta oculta de sólo lectura, y
   // la sirve `soloLecturaDeLaTerminal` como lo demás de /.openlen.
   // F5 · los ajustes del proyecto, escribibles por sus caminos (`ajustes.ts`).
