@@ -8,12 +8,11 @@
  * ve Len en su siguiente turno: el sitio es uno.
  *
  * Es la misma maquinaria que la de Len (`toolBash`: just-bash en su hilo, sin
- * procesos ni red, y lo escrito por el camino de `Write`), con tres diferencias:
+ * procesos ni red, lo escrito por el camino de `Write`, y puesta al día antes de
+ * cada comando con lo guardado: aquí, lo que Len o el editor cambiaron mientras
+ * tanto), con dos diferencias:
  *   · PERSISTE entre comandos, como una terminal de verdad: una por usuario y
  *     proyecto, cerrada a los 10 minutos sin uso.
- *   · Se PONE AL DÍA antes de cada comando con lo guardado: si no, un `sed -i`
- *     sobre su copia vieja desharía en silencio lo que Len o el editor
- *     cambiaron mientras tanto.
  *   · Va con `autor: "usuario"`: no puede meter código que el sitio no tenía
  *     (`javascript-del-usuario.ts`) y su versión dice que fue la terminal.
  * Un comando cada vez por terminal: dos a la vez se pisarían la copia.
@@ -22,7 +21,6 @@ import "server-only";
 
 import { realDeps, type AgentDeps, type AgentSession } from "@/lib/agent/tools";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
-import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { cerrarTerminalDeLaSesion, toolBash } from "./herramienta";
 import type { CambiosDelComando } from "./cambios-del-comando";
 
@@ -92,7 +90,6 @@ async function correr(a: Abierta, deps: AgentDeps, command: string): Promise<Com
   if (a.reloj) clearTimeout(a.reloj);
   a.usada = Date.now();
   try {
-    await ponerAlDia(a.sesion, deps);
     const out = await toolBash(a.sesion, deps, { command });
     const cambio =
       out.updatedHtml !== undefined ||
@@ -114,23 +111,6 @@ async function correr(a: Abierta, deps: AgentDeps, command: string): Promise<Com
     a.reloj = setTimeout(() => void cerrar(a), TERMINAL_INACTIVA_MS);
     a.reloj.unref?.();
   }
-}
-
-/**
- * La copia de la terminal, igual a lo guardado AHORA. La primera vez no hace
- * falta: la terminal carga los ficheros al arrancar.
- */
-async function ponerAlDia(sesion: AgentSession, deps: AgentDeps): Promise<void> {
-  const foto = sesion.fotoDeLaTerminal;
-  if (!sesion.terminal || !foto) return;
-  const ahora = await cargarFicherosDeLaTerminal(sesion, deps);
-  const cambios: Record<string, string | null> = {};
-  for (const [ruta, contenido] of Object.entries(ahora)) if (foto[ruta] !== contenido) cambios[ruta] = contenido;
-  for (const ruta of Object.keys(foto)) if (!(ruta in ahora)) cambios[ruta] = null;
-  if (Object.keys(cambios).length === 0) return;
-  await sesion.terminal.poner(cambios);
-  sesion.fotoDeLaTerminal = { ...foto, ...ahora };
-  for (const [ruta, contenido] of Object.entries(cambios)) if (contenido === null) delete sesion.fotoDeLaTerminal[ruta];
 }
 
 async function cerrar(a: Abierta): Promise<void> {

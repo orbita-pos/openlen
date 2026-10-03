@@ -816,6 +816,29 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
     }
   });
 
+  // Medido en el humo de la tanda dev 31 (02/10, `quitar-producto-en-todas-partes`): tras 12 Edit, el
+  // `grep` de la terminal seguía viendo la página de antes («el shell me sirve una copia vieja»). Y
+  // como lo de la terminal se guarda ENTERO, un `sed -i` sobre esa copia borraba los Edit.
+  it("lo que escribe Edit en el mismo turno lo ve el siguiente comando, y un sed -i después no lo deshace", async () => {
+    const { deps, store } = makeDeps({ html: HOME });
+    const session = makeSession();
+    try {
+      const antes = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "grep -c '\\$300' /index.html" }));
+      assert.match(texto(antes), /^0\n/);
+      await runAgentTool(session, deps, "Read", { file_path: "/index.html" });
+      const edit = await runAgentTool(session, deps, "Edit", { file_path: "/index.html", old_string: "$250", new_string: "$300" });
+      assert.equal(edit.response.ok, true, texto(edit));
+      const ve = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "grep -c '\\$300' /index.html" }));
+      assert.match(texto(ve), /^1\n/);
+      const sed = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "sed -i 's#Zapatillas#Tenis#' /index.html" }));
+      assert.equal(sed.response.ok, true, texto(sed));
+      assert.match(store.data.html ?? "", /Gorra — \$300/);
+      assert.match(store.data.html ?? "", /Tenis — \$1200/);
+    } finally {
+      await cerrarTerminalDeLaSesion(session);
+    }
+  });
+
   it("escribir en /AGENTS.md falla (código distinto de 0) y el manual sigue igual en la terminal", async () => {
     const { deps } = makeDeps({ html: HOME });
     const session = makeSession();

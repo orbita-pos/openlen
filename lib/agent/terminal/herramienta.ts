@@ -4,7 +4,8 @@
  * salida como la da la terminal de DeepSeek.
  *
  * Una terminal por turno (`session.terminal`), arrancada con los ficheros del
- * proyecto en la primera llamada y cerrada al acabar el turno
+ * proyecto en la primera llamada, puesta al día antes de cada comando con lo
+ * que guardaron las demás herramientas, y cerrada al acabar el turno
  * (`cerrarTerminalDeLaSesion`, en el `finally` de app/api/agent/route.ts).
  */
 import "server-only";
@@ -49,6 +50,10 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
       leer: async (ruta) => (await (soloLectura ??= soloLecturaDeLaTerminal(session, deps))).leer(ruta),
     },
   }));
+  // Lo que otra herramienta guardó desde el último comando (Edit, Write, revertir…) entra antes de
+  // correr éste. Sin esto la terminal enseñaba la página de antes, y como lo suyo se guarda ENTERO,
+  // un `sed -i` deshacía los Edit (medido en el humo de la tanda dev 31, 02/10).
+  await ponerAlDia(session, deps);
   const r = await terminal.ejecutar(command);
 
   let guardado: GuardadoDeLaTerminal | null = null;
@@ -132,6 +137,23 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     ...(diagnosticos.length > 0 ? { diagnosticos } : {}),
     ...(escrituras.some((o) => o.mutoDurable) ? { mutoDurable: true } : {}),
   };
+}
+
+/**
+ * La copia de la terminal, igual a lo guardado AHORA. La primera vez no hace
+ * falta: la terminal carga los ficheros al arrancar.
+ */
+async function ponerAlDia(sesion: AgentSession, deps: AgentDeps): Promise<void> {
+  const foto = sesion.fotoDeLaTerminal;
+  if (!sesion.terminal || !foto) return;
+  const ahora = await cargarFicherosDeLaTerminal(sesion, deps);
+  const cambios: Record<string, string | null> = {};
+  for (const [ruta, contenido] of Object.entries(ahora)) if (foto[ruta] !== contenido) cambios[ruta] = contenido;
+  for (const ruta of Object.keys(foto)) if (!(ruta in ahora)) cambios[ruta] = null;
+  if (Object.keys(cambios).length === 0) return;
+  await sesion.terminal.poner(cambios);
+  sesion.fotoDeLaTerminal = { ...foto, ...ahora };
+  for (const [ruta, contenido] of Object.entries(cambios)) if (contenido === null) delete sesion.fotoDeLaTerminal[ruta];
 }
 
 /** Al acabar el turno: la terminal se cierra (su hilo muere) y la sesión la olvida. */
