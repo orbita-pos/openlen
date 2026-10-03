@@ -75,4 +75,34 @@ describe("juntar la conversación del servidor con la de la vista", () => {
     );
     expect(r.map((t) => t.id)).toEqual(["a", "x", "y"]);
   });
+  it("🔴 un error que nunca llega al servidor se queda en su sitio, no salta debajo del turno siguiente", () => {
+    // «Sin créditos» no deja fila y el cliente no guarda los errores; el turno
+    // siguiente sí se guarda. Antes, al converger, el error pasaba al final.
+    const r = fusionarConversacion(
+      [
+        { id: "a", status: "applied", texto: "uno" },
+        { id: "err", status: "error", texto: "sin créditos" },
+        { id: "b", status: "applied", texto: "dos" },
+      ],
+      [
+        { id: "a", status: "applied", texto: "uno" },
+        { id: "b", status: "applied", texto: "dos" },
+      ],
+      { ...opciones(), keepsPlace: (t: Local) => t.status === "error" },
+    );
+    expect(r.map((t) => t.id)).toEqual(["a", "err", "b"]);
+  });
+
+  it("también el primero de la charla, y un error al final sigue al final", () => {
+    const r = fusionarConversacion(
+      [
+        { id: "err1", status: "error", texto: "falló" },
+        { id: "a", status: "applied", texto: "uno" },
+        { id: "err2", status: "error", texto: "falló otra vez" },
+      ],
+      [{ id: "a", status: "applied", texto: "uno" }],
+      { ...opciones(), keepsPlace: (t: Local) => t.status === "error" },
+    );
+    expect(r.map((t) => t.id)).toEqual(["err1", "a", "err2"]);
+  });
 });

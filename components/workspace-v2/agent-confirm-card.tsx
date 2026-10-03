@@ -138,7 +138,9 @@ export function AgentConfirmCard({
       <div className="rounded-lg border border-emerald-300 dark:border-emerald-500/40 bg-emerald-50/70 dark:bg-emerald-500/10 px-3 py-2.5 text-[11.5px]">
         <div className="flex items-center gap-2 font-medium text-emerald-700 dark:text-emerald-300">
           <Check size={14} className="shrink-0" />
-          <span>{t("agent.confirm.published", { url: hostOf(state.url) })}</span>
+          {/* La frase empieza por «✓» porque también es el texto del turno
+              «Publicada…» de la charla; aquí ya lo dice el icono. */}
+          <span>{t("agent.confirm.published", { url: hostOf(state.url) }).replace(/^✓\s*/, "")}</span>
         </div>
         {state.langsFallidos.length > 0 && (
           <div className="mt-1.5 flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-300">

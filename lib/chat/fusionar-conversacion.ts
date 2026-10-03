@@ -16,6 +16,11 @@ export interface OpcionesDeFusion<L, S> {
   /** Un turno local con el estado que dice el servidor (otra pestaña pudo
    *  deshacerlo). */
   readonly conEstado: (local: L, s: S) => L;
+  /** ¿Es un turno local que el servidor NUNCA va a tener? Un rechazo temprano
+   *  —sin créditos, un 4xx— no deja fila en el servidor y el cliente no guarda
+   *  los errores. Si ya tiene detrás un turno que el servidor sí tiene, se
+   *  queda en su sitio en vez de irse al final (ver abajo). */
+  readonly keepsPlace?: (local: L) => boolean;
 }
 
 /**
@@ -26,7 +31,12 @@ export interface OpcionesDeFusion<L, S> {
  *    local que guardar, ni preimagen ni Deshacer;
  *  · los demás conservan lo local (la preimagen del Deshacer) con el estado
  *    del servidor;
- *  · lo local que el servidor aún no tiene va detrás, en su orden.
+ *  · lo local que el servidor aún no tiene va detrás, en su orden;
+ *  · salvo lo que nunca va a tener (`keepsPlace`) y ya quedó ENTRE turnos que
+ *    sí tiene: eso se queda detrás del turno que tenía delante. Si no, un
+ *    «sin créditos» saltaba debajo del turno siguiente en cuanto éste se
+ *    guardaba, y la barra viva del chat nuevo lo leía como el último turno
+ *    (plans/new-chat/, 03/10).
  */
 export function fusionarConversacion<
   L extends { readonly id: string; readonly enServidor?: boolean },
@@ -40,8 +50,27 @@ export function fusionarConversacion<
     if (s.enCurso || local?.enServidor) return o.restaurar(s);
     return local ? o.conEstado(local, s) : o.restaurar(s);
   });
-  for (const t of prev) {
-    if (!serverIds.has(t.id)) merged.push(t);
+  let lastKnown = -1;
+  prev.forEach((t, i) => {
+    if (serverIds.has(t.id)) lastKnown = i;
+  });
+  const anchored = new Map<string | null, L[]>();
+  const tail: L[] = [];
+  let anchor: string | null = null;
+  prev.forEach((t, i) => {
+    if (serverIds.has(t.id)) {
+      anchor = t.id;
+      return;
+    }
+    if (i < lastKnown && o.keepsPlace?.(t)) {
+      anchored.set(anchor, [...(anchored.get(anchor) ?? []), t]);
+      return;
+    }
+    tail.push(t);
+  });
+  const out: L[] = [...(anchored.get(null) ?? [])];
+  for (const m of merged) {
+    out.push(m, ...(anchored.get(m.id) ?? []));
   }
-  return merged;
+  return [...out, ...tail];
 }

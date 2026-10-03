@@ -37,6 +37,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { fusionarConversacion } from "@/lib/chat/fusionar-conversacion";
+import { withServerStatus } from "./server-status";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
 import { leerCambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
@@ -459,7 +460,12 @@ export function useAgentChat({
       fusionarConversacion(prev, server, {
         enVuelo: enVueloRef.current,
         restaurar: restoreTurn,
-        conEstado: (local, s) => ({ ...local, status: s.status }),
+        // El de otra pestaña (deshecho), sí; pero no le quita su error a un
+        // turno que aquí falló (ver `server-status.ts`).
+        conEstado: withServerStatus,
+        // Los errores no se guardan (ni aquí ni, si fueron un rechazo
+        // temprano, en el servidor): que no salten al final al converger.
+        keepsPlace: (t) => t.status === "error",
       }),
     );
   }, [initialChatSig]);
