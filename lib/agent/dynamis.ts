@@ -1,5 +1,13 @@
 // lib/agent/dynamis.ts — LEN DYNAMIS: el modo a fondo, elegido turno a turno.
 //
+// 🔴 EL NOMBRE PÚBLICO ES «LEN ODYSSEY» (Jesús, 03/10/2026). «Dynamis» se queda
+// como nombre INTERNO —el valor `dynamis` del cuerpo, el tipo, las pruebas y
+// estos comentarios—, y lo que ve el usuario sale de i18n (`composer.modeDynamis`).
+// Por qué se cambió: en EE. UU. OmNova, LLC tiene pendiente DYNAMIS (50017818,
+// clases 9 y 42) para agentes de IA, lo mismo que Len (búsqueda en
+// plans/len-2/corridas/2026-10-03-dynamis/README.md). Como Anthropic con «Claude
+// Opus», el nombre va siempre detrás de la marca de casa: «Len Odyssey».
+//
 // Decisión de Jesús (03/10/2026): Len 2.5 es el Len de todos los días, y Len
 // Dynamis (δύναμις, «poder, potencia») un MODO aparte que convive con él, como
 // el modo Minimal de DeepSeek convive con su Standard. Es la receta con la que

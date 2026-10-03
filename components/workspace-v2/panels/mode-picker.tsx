@@ -1,8 +1,8 @@
 "use client";
 
-// components/workspace-v2/panels/mode-picker.tsx — QUÉ LEN TRABAJA: Len o Len Dynamis.
+// components/workspace-v2/panels/mode-picker.tsx — QUÉ LEN TRABAJA: Len o Len Odyssey.
 //
-// Len Dynamis es un MODO aparte (`lib/agent/dynamis.ts`), como el Minimal de
+// Len Odyssey (por dentro, `dynamis`: ver la cabecera de lib/agent/dynamis.ts) es un MODO aparte (`lib/agent/dynamis.ts`), como el Minimal de
 // DeepSeek junto a su Standard: para encargos grandes, más lento y más caro. Se
 // elige aquí, junto al mando de esfuerzo, y viaja con el turno igual que él: lo
 // que se elija vale para el SIGUIENTE mensaje, nunca para el que ya corre.

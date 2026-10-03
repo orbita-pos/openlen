@@ -98,9 +98,9 @@
     "modeTitle": "다음 메시지를 어떤 Len이 맡을지 고르세요",
     "modeLen": "Len",
     "modeLenDesc": "매일 쓰는 Len: 빠르고, 거의 모든 일에",
-    "modeDynamis": "Len Dynamis",
+    "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "큰 작업용: 단계마다 최대한 깊이 생각합니다. 더 느리고 크레딧을 더 씁니다",
-    "effortDynamis": "Len Dynamis는 항상 최대한 깊이 생각합니다"
+    "effortDynamis": "Len Odyssey는 항상 최대한 깊이 생각합니다"
   },
   "noChange": {
     "label": "페이지가 변경되지 않았습니다"

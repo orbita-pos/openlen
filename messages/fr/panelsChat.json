@@ -98,9 +98,9 @@
     "modeTitle": "Choisissez quel Len travaille sur votre prochain message",
     "modeLen": "Len",
     "modeLenDesc": "Celui de tous les jours : rapide, pour presque tout",
-    "modeDynamis": "Len Dynamis",
+    "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "Pour les gros travaux : réfléchit au maximum avant chaque étape. Plus lent, et consomme plus de crédits",
-    "effortDynamis": "Len Dynamis réfléchit toujours au maximum"
+    "effortDynamis": "Len Odyssey réfléchit toujours au maximum"
   },
   "noChange": {
     "label": "Rien n'a changé sur la page"
