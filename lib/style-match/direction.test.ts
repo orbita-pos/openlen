@@ -78,8 +78,8 @@ describe("el bloque que entra en el brief", () => {
 
   it("dice EXPLÍCITAMENTE que no copie", () => {
     const b = directionToBriefBlock(base);
-    expect(b).toMatch(/nunca copies/i);
-    expect(b).toMatch(/PROPIA/i);
+    expect(b).toMatch(/never copy/i);
+    expect(b).toMatch(/THEIR OWN/);
   });
 
   // Sin esto, un modelo que lee "inspírate en stripe.com" escribe copy de
@@ -108,6 +108,6 @@ describe("el bloque que entra en el brief", () => {
   it("sin carácter (visión caída) sigue siendo un bloque útil", () => {
     const b = directionToBriefBlock(base);
     expect(b).toContain("#635bff");
-    expect(b).toContain("Tipografía");
+    expect(b).toContain("Typeface");
   });
 });

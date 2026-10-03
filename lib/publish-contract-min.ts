@@ -459,7 +459,7 @@ export function contratoParaSuperficie(
     // La viñeta ya pasó por `swapJsClauses`, así que la marca es su versión
     // permisiva. Por eso este ajuste va DESPUÉS del intercambio y nunca antes:
     // quitarla primero dejaría al intercambio sin su marca y lanzaría.
-    out = corta(out, quien, "javascript", "• JavaScript: tu código SOBREVIVE a la publicación", "\n", "");
+    out = corta(out, quien, "javascript", "• JavaScript: your code SURVIVES publishing", "\n", "");
   }
   if (quita.includes("data-slot-path")) {
     out = corta(out, quien, "data-slot-path", "• No `data-slot-path=` attribute anywhere.", "\n", "");

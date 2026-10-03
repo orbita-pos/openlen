@@ -407,7 +407,7 @@ describe("buildAgentMessages", () => {
       expect(loQueLee).not.toContain("addEventListener");
       // «LAS DOS MITADES» se movió al diagnóstico `clase-sin-estilo` el
       // 2026-09-29 (ver prompts-superficies.test.ts): ya no va en el prompt.
-      expect(loQueLee).not.toContain("LAS DOS MITADES");
+      expect(loQueLee).not.toContain("BOTH HALVES");
       expect(loQueLee).not.toContain("data-ol-sticky");
 
       // Len 2.0: el JavaScript ya no tiene herramienta propia (`editar_runtime`

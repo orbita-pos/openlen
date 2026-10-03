@@ -306,23 +306,23 @@ describe("varias imágenes en un turno", () => {
     const { client: c, fetchImpl } = client(chunk({ content: "ok" }, "stop"));
     await drain(c.stream({ ...REQUEST, images: [IMG("a"), IMG("b"), IMG("c")] }));
 
-    // texto del usuario, «Imagen 1:», img, «Imagen 2:», img, «Imagen 3:», img
+    // texto del usuario, «Image 1:», img, «Image 2:», img, «Image 3:», img
     expect(bloques(fetchImpl).map((b) => b.type)).toEqual([
       "text", "text", "image_url", "text", "image_url", "text", "image_url",
     ]);
     expect(bloques(fetchImpl).filter((b) => b.type === "text").map((b) => b.text)).toEqual([
-      "haz el hero azul", "Imagen 1:", "Imagen 2:", "Imagen 3:",
+      "haz el hero azul", "Image 1:", "Image 2:", "Image 3:",
     ]);
   });
 
   it("cada etiqueta va DELANTE de su imagen, no detrás", async () => {
     // El orden es lo único que convierte la etiqueta en un nombre. Detrás, el
-    // modelo lee «imagen, Imagen 1:» y la etiqueta nombra a la SIGUIENTE.
+    // modelo lee «imagen, Image 1:» y la etiqueta nombra a la SIGUIENTE.
     const { client: c, fetchImpl } = client(chunk({ content: "ok" }, "stop"));
     await drain(c.stream({ ...REQUEST, images: [IMG("primera"), IMG("segunda")] }));
 
     const lista = bloques(fetchImpl) as { type: string; text?: string; image_url?: { url: string } }[];
-    const i = lista.findIndex((b) => b.text === "Imagen 2:");
+    const i = lista.findIndex((b) => b.text === "Image 2:");
     expect(lista[i + 1].image_url?.url).toContain("segunda");
   });
 

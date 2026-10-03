@@ -323,7 +323,7 @@ describe("buildAgentSystemPrompt", () => {
     // POR SUSTANCIA, NO POR ENCABEZADO — ver el mismo cambio en context.test.ts.
     // «LAS DOS MITADES» ya no va en el prompt desde el 2026-09-29: la hace
     // cumplir el diagnóstico `clase-sin-estilo` (prompts-superficies.test.ts).
-    expect(p).not.toContain("LAS DOS MITADES");
+    expect(p).not.toContain("BOTH HALVES");
     // Sin «La página tiene que funcionar SIN él» ni «prefiere el CSS puro»
     // desde el 2026-09-29: nacieron cuando la plataforma tiraba el script, y
     // ya no lo tira. «No escondas contenido» se queda, con el porqué que es
@@ -355,7 +355,7 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("SURVIVES closing the tab");
     // Discutirle el negocio al usuario es la otra mitad de la negativa.
     expect(p).toContain("do it without arguing with them about their business");
-    expect(p).not.toContain("INTERACCIÓN CON JAVASCRIPT");
+    expect(p).not.toContain("INTERACTION WITH JAVASCRIPT");
   });
 
   it("carries the hard rules and module knowledge", () => {

@@ -181,7 +181,10 @@ function withImages(message: Record<string, unknown>, images: readonly InlineIma
       ...(images.length === 1
         ? [bloque(images[0])]
         : images.flatMap((image, i) => [
-            { type: "text", text: `Imagen ${i + 1}:` },
+            // En inglés desde el 2026-10-03, con el resto de lo que lee el
+            // modelo. El bloque de Crear que las nombra vive en
+            // `app/api/generate/route.ts`.
+            { type: "text", text: `Image ${i + 1}:` },
             bloque(image),
           ])),
     ],

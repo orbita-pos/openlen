@@ -713,7 +713,7 @@ describe("referencia visual en el brief", () => {
 
   it("le dice EXPLÍCITAMENTE que no copie", async () => {
     const prompt = await callConDireccion(direction);
-    expect(prompt).toMatch(/nunca copies/i);
+    expect(prompt).toMatch(/never copy/i);
   });
 
   // Un modelo que lee "inspírate en stripe.com" escribe copy de Stripe.
@@ -735,7 +735,7 @@ describe("referencia visual en el brief", () => {
 
   it("sin referencia, el prompt sale como siempre", async () => {
     const prompt = await callConDireccion(undefined);
-    expect(prompt).not.toContain("direccion-visual");
+    expect(prompt).not.toContain("visual-direction");
   });
 
   // Esto acaba dentro del prompt: un objeto con un `character` enorme o una
@@ -749,13 +749,16 @@ describe("referencia visual en el brief", () => {
       character: "z".repeat(9000),
       fontFamily: "f".repeat(900),
     });
-    const bloque = /<direccion-visual>[\s\S]*?<\/direccion-visual>/.exec(prompt)?.[0] ?? "";
+    const bloque = /<visual-direction>[\s\S]*?<\/visual-direction>/.exec(prompt)?.[0] ?? "";
+    // Que el bloque EXISTA: con la etiqueta renombrada (2026-10-03, al inglés)
+    // la expresión dejaba de casar y el techo pasaba midiendo una cadena vacía.
+    expect(bloque).toContain("#111111");
     expect(bloque.length).toBeLessThanOrEqual(900);
   });
 
   it("una paleta con hex inválidos no produce bloque", async () => {
     const prompt = await callConDireccion({ palette: [{ role: "x", hex: "rojo" }] });
-    expect(prompt).not.toContain("direccion-visual");
+    expect(prompt).not.toContain("visual-direction");
   });
 });
 

@@ -4,7 +4,7 @@ import { LANGUAGE_RULE } from "./authoring-rules";
 
 describe("la regla de idioma", () => {
   it("ata el idioma al brief, sin fijar ninguno", () => {
-    expect(LANGUAGE_RULE).toMatch(/mismo idioma que el BRIEF/i);
+    expect(LANGUAGE_RULE).toMatch(/same language as the BRIEF/i);
     // Fijar "español" rompería el brief en árabe, que en la misma medición
     // salió correcto con lang="ar" dir="rtl".
     expect(LANGUAGE_RULE).not.toMatch(/\ben espa[ñn]ol\b/i);
@@ -31,8 +31,15 @@ describe("la regla de idioma", () => {
   // fallo volvería en silencio: `<html lang>` seguiría bien formado y ninguna
   // otra guarda mira el idioma de la copy.
   it("🔴 nombra el RUBRO — la regla general sola ya se midió insuficiente", () => {
-    expect(LANGUAGE_RULE).toMatch(/rubro/i);
+    expect(LANGUAGE_RULE).toMatch(/INDUSTRY/);
     // El nombre del producto es la mitad que más se escapaba: «Resolvio».
-    expect(LANGUAGE_RULE).toMatch(/nombre/i);
+    expect(LANGUAGE_RULE).toMatch(/\bNAME\b/);
+  });
+
+  // La tercera colisión, la que trajo la traducción (2026-10-03, SIN MEDIR):
+  // las instrucciones están en inglés y el brief puede no estarlo. Se nombra
+  // por el mismo molde que el rubro; si se cae, nada más la dice.
+  it("🔴 nombra el idioma de las propias instrucciones", () => {
+    expect(LANGUAGE_RULE).toMatch(/language these instructions are written in/);
   });
 });

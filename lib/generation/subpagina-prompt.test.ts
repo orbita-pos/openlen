@@ -13,12 +13,12 @@ const hecho = () =>
 
 describe("el mensaje con el que se escribe una subpágina", () => {
   it("lleva la portada entera como referencia de diseño", () => {
-    expect(hecho()).toContain("<sitio-existente>");
+    expect(hecho()).toContain("<existing-site>");
     expect(hecho()).toContain("PORTADA DEL SITIO");
   });
 
   it("dice qué página y en qué ruta", () => {
-    expect(hecho()).toContain("«Servicios»");
+    expect(hecho()).toContain("\"Servicios\" page");
     expect(hecho()).toContain("/servicios");
   });
 
@@ -30,10 +30,10 @@ describe("el mensaje con el que se escribe una subpágina", () => {
   // alguna se cae, el sitio se despareja y NADIE lo mide: la subpágina saldría
   // "limpia" con otra tipografía y otro menú.
   it.each([
-    ["el mismo head", /Mismo <head>/],
-    ["la misma cabecera y el mismo pie", /misma cabecera y el mismo pie/],
-    ["contenido nuevo, no el de la portada", /No repitas las secciones de la/],
-    ["y sin inventarse más páginas", /No añadas páginas nuevas/],
+    ["el mismo head", /Same <head>/],
+    ["la misma cabecera y el mismo pie", /same header and the same footer/],
+    ["contenido nuevo, no el de la portada", /Don.t repeat the home/],
+    ["y sin inventarse más páginas", /Don.t add new pages/],
   ])("conserva %s", (_, re) => {
     expect(hecho()).toMatch(re);
   });
@@ -51,12 +51,12 @@ describe("no puede haber una segunda copia", () => {
   it("🔴 la ruta llama a la función, no repite el literal", () => {
     const ruta = readFileSync("app/api/generate/route.ts", "utf8");
     expect(ruta).toContain("subpaginaPrompt(");
-    expect(ruta, "el prompt volvió a la ruta: hay dos copias").not.toContain("<sitio-existente>");
+    expect(ruta, "el prompt volvió a la ruta: hay dos copias").not.toContain("<existing-site>");
   });
 
   it("🔴 el arnés de evals llama a la MISMA función", () => {
     const arnes = readFileSync("scripts/evals-pages.ts", "utf8");
     expect(arnes).toContain("subpaginaPrompt(");
-    expect(arnes, "el arnés se hizo su propia copia").not.toContain("<sitio-existente>");
+    expect(arnes, "el arnés se hizo su propia copia").not.toContain("<existing-site>");
   });
 });

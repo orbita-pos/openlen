@@ -65,8 +65,10 @@ interface Clausula {
 // en blanco porque olvidó ponerle la clase a algún elemento. Si el script se
 // descarta —y hay diez motivos por los que puede descartarse— una página que
 // esconde su contenido en CSS llega vacía.
-const SIN_OCULTAR_ES =
-  "Nunca escondas contenido con CSS para revelarlo desde el script: si el script se descarta, la página llega en blanco.";
+//
+// Había dos versiones, `_ES` para el contrato mínimo y `_EN` para el completo,
+// que decían lo mismo. Desde que Crear y el Chat leen en inglés (2026-10-03,
+// SIN MEDIR) queda una, la inglesa, para los dos.
 const SIN_OCULTAR_EN =
   "Never hide content in CSS and reveal it from the script: if the script is dropped, the page ships blank.";
 
@@ -114,13 +116,17 @@ const SIN_OCULTAR_LEN =
 // frase (cláusula `agente`). Crear y el Chat SÍ, todavía, y con un porqué que
 // ya no es cierto: quitarla ahí espera a medir las páginas de Crear, que es la
 // regla para tocar Crear.
-const CABLEADO_ES =
-  "Cablea los manejadores con `addEventListener` DENTRO del script, no con atributos `onclick=` (ni ningún `on*`): tu guardado los conserva, pero el editor los borra cuando el usuario retoca ese elemento a mano o deshace un cambio, y el botón se queda mudo sin que nadie lo note.";
+//
+// Una sola versión, en inglés, desde el 2026-10-03 (SIN MEDIR): la española del
+// contrato mínimo y ésta decían lo mismo. Dice «user», como la española, y no
+// «owner», como decía ésta.
+const CABLEADO_EN =
+  "Wire handlers with `addEventListener` INSIDE the script, not with `onclick=` (or any `on*`) attributes: your save keeps them, but the editor strips them when the user touches that element by hand or undoes a change, and the button goes dead without anyone noticing.";
 
 // EL SEGUNDO PUNTO CIEGO MEDIDO del JavaScript del modelo, y el que no lanza:
 // una clase que el script pone y que nadie define en el CSS deja el control
 // MUDO — se ejecuta, no falla, no sale en consola, y no se nota. (El primero,
-// el `on*` que borra el editor del dueño, lo cubre `CABLEADO_ES`.)
+// el `on*` que borra el editor del dueño, lo cubre `CABLEADO_EN`.)
 //
 // Vivía suelta en `contrato-min`. Se extrae aquí porque desde el 2026-09-04 el
 // Agente RETIRA esa viñeta del contrato —sus REGLAS DURAS ya decían todo lo
@@ -129,33 +135,33 @@ const CABLEADO_ES =
 //
 // Desde el 2026-09-29 Len ya no la recibe: se la dice el diagnóstico
 // `clase-sin-estilo` después de escribir (ver la cláusula `agente`). Crear y el
-// Chat sí, hasta medir Crear.
-const DOS_MITADES_ES =
-  "Escribe SIEMPRE LAS DOS MITADES: el comportamiento y el CSS del estado que ese comportamiento activa — una clase que el script pone y que nadie define en el CSS deja el control mudo, se ejecuta y no se nota.";
-const CABLEADO_EN =
-  "Wire handlers with `addEventListener` INSIDE the script, not with `onclick=` (or any `on*`) attributes: your save keeps them, but the editor strips them when the owner touches that element by hand or undoes a change, and the button goes dead without anyone noticing.";
+// Chat sí, hasta medir Crear. En inglés desde el 2026-10-03, SIN MEDIR.
+const DOS_MITADES_EN =
+  "ALWAYS write BOTH HALVES: the behavior and the CSS for the state that behavior turns on — a class the script sets and nobody defines in the CSS leaves the control silent; it runs and nobody notices.";
 
 const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
   "contrato-min": {
     // La marca está en inglés porque el contrato mínimo lo está (traducción de
-    // lo que lee Len, 2026-10-02). Lo que la sustituye (`libre`, abajo) sigue
-    // en español: sólo lo leen Crear y el Chat, y no es lo compartido.
+    // lo que lee Len, 2026-10-02). Lo que la sustituye (`libre`, abajo) se
+    // tradujo el 2026-10-03, SIN MEDIR, con el resto de lo que leen Crear y el
+    // Chat. ⚠️ Su primera frase es la marca con la que el Agente la recorta
+    // (`corta(…, "javascript", …)` en `lib/publish-contract-min.ts`): cambiarla
+    // aquí obliga a cambiarla allí, o el recorte lanza.
     desde: "• NO JavaScript survives.",
     hasta: "\n",
     libre:
-      "• JavaScript: tu código SOBREVIVE a la publicación — escríbelo cuando la página gane algo de verdad con él: filtrar una lista, una galería con lightbox, pestañas, una cuenta atrás, buscar dentro de la propia página. Ponlo TODO en UN `<script>`, el último del `<body>`: no es un límite del sistema, es para que se pueda editar después de una pieza. " +
-      "" +
-      `${CABLEADO_ES} ` +
+      "• JavaScript: your code SURVIVES publishing — write it when the page really gains something from it: filtering a list, a gallery with a lightbox, tabs, a countdown, searching inside the page itself. Put it ALL in ONE `<script>`, the last one in the `<body>`: that is not a limit of the system, it is so it can be edited later in one piece. " +
+      `${CABLEADO_EN} ` +
       // 🔴 LAS DOS MITADES, también aquí (2026-09-01). Esta frase vivía SÓLO en
       // la cláusula `conductas`, que sustituye un bloque que el contrato mínimo
       // ya no tiene — así que la ruta del mínimo se quedaba sin ella. Y no es
       // retórica: es el segundo de los dos puntos ciegos medidos del JavaScript
       // del modelo. Una clase que el script pone y que nadie define en el CSS
       // deja el control MUDO — se ejecuta, no lanza, no sale en consola, y no
-      // se nota. El primero (el `on*` que borra el editor) ya lo cubre `CABLEADO_ES`.
-      `${DOS_MITADES_ES} ` +
-      `La página tiene que estar completa y legible SIN ese script: mejora, nunca construye el contenido. ${SIN_OCULTAR_ES} ` +
-      "Cuando el CSS puro ya resuelve —`<details>`/`<summary>`, un checkbox con `peer-checked:`, `:target`, `@keyframes`— prefiérelo; para lo demás, escribe el script.",
+      // se nota. El primero (el `on*` que borra el editor) ya lo cubre `CABLEADO_EN`.
+      `${DOS_MITADES_EN} ` +
+      `The page has to be complete and readable WITHOUT that script: it improves the page, it never builds the content. ${SIN_OCULTAR_EN} ` +
+      "When plain CSS already solves it —`<details>`/`<summary>`, a checkbox with `peer-checked:`, `:target`, `@keyframes`— prefer that; for everything else, write the script.",
   },
 
   "contrato-completo": {
@@ -198,21 +204,22 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
   conductas: {
     desde: "• CAROUSEL — a horizontal rail WITH working arrows",
     hasta: "• NO `data-slot-path=` attribute anywhere",
+    // En inglés desde el 2026-10-03, SIN MEDIR, como la viñeta del mínimo.
     libre:
-      "• INTERACTIVIDAD — la escribes TÚ, con CSS y con tu `<script>`. No hay\n" +
-      "  marcadores declarativos que aprender ni contratos de OpenLen que seguir.\n" +
-      "  Si la página gana algo con un contador en vivo, un filtro, un lightbox,\n" +
-      "  copiar al portapapeles, pestañas, un tema claro/oscuro o una barra que se\n" +
-      "  vuelve sólida al bajar, constrúyelo como lo construirías en cualquier otro\n" +
-      "  sitio web.\n" +
-      "  Prefiere CSS cuando ya basta — `position: sticky`, `<details>`,\n" +
-      "  `scroll-snap`, `@keyframes`, `peer-checked:` — y deja el JavaScript para el\n" +
-      "  estado que el CSS no puede llevar solo. Un carrusel es un contenedor\n" +
-      "  `overflow-x:auto snap-x` con dos botones que llaman a `scrollBy`; no\n" +
-      "  necesita ningún contrato especial.\n" +
-      "  Escribe SIEMPRE LAS DOS MITADES: el comportamiento y el CSS del estado que\n" +
-      "  ese comportamiento activa. Una clase que el script pone y que nadie define\n" +
-      "  en el CSS deja el control mudo — se ejecuta y no se nota.\n",
+      "• INTERACTIVITY — YOU write it, with CSS and with your `<script>`. There\n" +
+      "  are no declarative markers to learn and no OpenLen contracts to follow.\n" +
+      "  If the page gains something from a live counter, a filter, a lightbox,\n" +
+      "  copying to the clipboard, tabs, a light/dark theme or a bar that turns\n" +
+      "  solid as you scroll down, build it the way you would build it on any\n" +
+      "  other website.\n" +
+      "  Prefer CSS when it is already enough — `position: sticky`, `<details>`,\n" +
+      "  `scroll-snap`, `@keyframes`, `peer-checked:` — and keep JavaScript for the\n" +
+      "  state CSS can't carry by itself. A carousel is an\n" +
+      "  `overflow-x:auto snap-x` container with two buttons that call `scrollBy`;\n" +
+      "  it needs no special contract.\n" +
+      "  ALWAYS write BOTH HALVES: the behavior and the CSS for the state that\n" +
+      "  behavior turns on. A class the script sets and nobody defines in the\n" +
+      "  CSS leaves the control silent — it runs and nobody notices.\n",
   },
 
   "no-negociable": {
@@ -232,17 +239,17 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       "- You can write the page's JavaScript, and it survives saving. " +
       // ⚰️ Aquí iba «Ponlo en un `<script>` al final del body», retirado para
       // Len el 2026-09-29 con el OK de Jesús. Existía por el mismo defecto que
-      // `CABLEADO_ES`: un `<script>` dentro de una sección se iba con el saneo
+      // `CABLEADO_EN`: un `<script>` dentro de una sección se iba con el saneo
       // en cuanto el usuario retocaba esa sección a mano. El editor ya manda
       // sólo lo que cambió (`el-editor-no-borra-el-codigo.browser.test.ts`),
       // así que dónde va el script lo decide Len, como cualquier desarrollador.
-      // ⚰️ Aquí iba `CABLEADO_ES` («usa `addEventListener`, no `onclick`»),
+      // ⚰️ Aquí iba `CABLEADO_EN` («usa `addEventListener`, no `onclick`»),
       // retirado para Len el 2026-09-29: existía porque el editor borraba los
       // `on*` al retocar a mano o deshacer, y el editor ya no lo hace (ver
       // `lib/page-engine/cambiar-texto.ts`). Una regla que protege a la
       // plataforma de un defecto suyo no va en el prompt: se arregla la
       // plataforma (memoria `openlen-se-adapta-a-len`).
-      // ⚰️ Aquí iba `DOS_MITADES_ES` («escribe SIEMPRE LAS DOS MITADES»),
+      // ⚰️ Aquí iba `DOS_MITADES_EN` («escribe SIEMPRE LAS DOS MITADES»),
       // retirado para Len el 2026-09-29 (paso 6 de 2.5): lo hace cumplir el
       // diagnóstico `clase-sin-estilo` (`clasesQueElScriptPoneSinEstilo` en
       // `lib/document/css-wiring.ts`), que le llega tras cada escritura, igual

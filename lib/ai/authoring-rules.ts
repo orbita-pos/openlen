@@ -32,15 +32,25 @@
  * verse en inglés», y por eso la regla ahora la nombra en vez de describir sólo
  * el caso general — mismo molde que usa Claude Code, donde ninguna prohibición
  * se queda sin su condición escrita al lado.
+ *
+ * 🔴 EN INGLÉS desde el 2026-10-03, SIN MEDIR (Jesús: «traducir para los dos»):
+ * Crear y el Chat leen ya el contrato en inglés, así que aparece una tercera
+ * colisión que el 07/09 no existía — el idioma de las instrucciones. Por el
+ * mismo molde que el rubro, se nombra en la última frase en vez de esperar a
+ * que tire. Lo medido el 07/09 (el prompt en castellano no arrastraba un brief
+ * en árabe) es la razón para esperar que el inglés tampoco arrastre; no es una
+ * medición de esto.
  */
 export const LANGUAGE_RULE =
-  "IDIOMA: escribe TODA la copy de la página —titulares, párrafos, botones, " +
-  "etiquetas de formulario, pie, y el NOMBRE que le pongas al producto— en el " +
-  "mismo idioma que el BRIEF de abajo. " +
-  "Pon ese idioma en `<html lang>`, y `dir=\"rtl\"` si la escritura va de " +
-  "derecha a izquierda. Si el brief mezcla idiomas, manda aquel en el que esté " +
-  "escrito lo que el negocio ofrece. " +
-  "El RUBRO no decide: un software, una API, un panel para equipos o una marca " +
-  "de lujo se escriben en el idioma del brief aunque el género suela verse en " +
-  "otro — si el brief está en castellano, no hay ni un titular ni un botón en " +
-  "otra lengua.\n\n";
+  "LANGUAGE: write ALL of the page's copy —headlines, paragraphs, buttons, " +
+  "form labels, footer, and the NAME you give the product— in the same " +
+  "language as the BRIEF below, which is the language of the user's request. " +
+  "Put that language in `<html lang>`, and `dir=\"rtl\"` if the script is " +
+  "written right to left. If the brief mixes languages, the one that wins is " +
+  "the language in which what the business offers is written. " +
+  "The INDUSTRY doesn't decide: a piece of software, an API, a dashboard for " +
+  "teams or a luxury brand is written in the brief's language even when that " +
+  "genre is usually seen in another one — if the brief is in Spanish, there " +
+  "isn't a single headline or button in another language. " +
+  "Nor does the language these instructions are written in decide it: it is " +
+  "the same for every page, whatever language the page ends up in.\n\n";

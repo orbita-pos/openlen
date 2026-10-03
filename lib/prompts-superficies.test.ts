@@ -184,7 +184,7 @@ describe("ninguna superficie manda gusto nuestro", () => {
   // peor que el punto de partida.
   it.each(PROMPTS)("%s sí ofrece el JavaScript del modelo", (name, getPrompt) => {
     const p = getPrompt().replace(/\s+/g, " ");
-    expect(p).toMatch(/SURVIVES publication|sobrevive a la publicación|sobrevive al guardar|survives saving/i);
+    expect(p).toMatch(/SURVIVES publication|SURVIVES publishing|survives saving/i);
     // «Usa `addEventListener`, no `onclick`» existía porque el editor borraba
     // los `on*` al retocar a mano. Desde el 2026-09-29 no los borra
     // (lib/publish/el-on-del-modelo.test.ts), así que Len ya no la recibe: una
@@ -450,7 +450,7 @@ describe("el contrato dicho para cada superficie", () => {
   // quita el diagnóstico, esta prueba tiene que caer: la regla no puede
   // quedarse en ninguno de los dos sitios.
   it("«las dos mitades»: fuera del prompt del Agente, y la caza el diagnóstico", () => {
-    expect(instruccionesDeLen()).not.toContain("LAS DOS MITADES");
+    expect(instruccionesDeLen()).not.toContain("BOTH HALVES");
     const html = '<!doctype html><html><head><style>.menu{display:none}</style></head><body><nav class="menu"></nav><script>m.classList.toggle("open")</script></body></html>';
     const ds = diagnosticosDeLaEscritura({ ruta: "/index.html", antes: null, despues: html, fuentes: [] });
     expect(ds.map((d) => d.codigo)).toContain("clase-sin-estilo");

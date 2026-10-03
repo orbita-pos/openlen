@@ -333,14 +333,18 @@ ${brief}`;
   // Y DICE QUE NO SE PUEDEN COLOCAR. Viajan como entrada de visión, no tienen
   // URL: un modelo que intente ponerlas en la página sólo puede inventarse un
   // `src`, y un `src` inventado es una imagen rota en una página recién nacida.
+  //
+  // En inglés desde el 2026-10-03, SIN MEDIR, como el resto de lo que lee Crear.
+  // Las etiquetas que nombra («Image 1…») las pone `withImages` en
+  // `lib/ai/fireworks-stream-client.ts`: si cambian allí, cambian aquí.
   if (referencias.length > 1) {
-    briefBlock = `REFERENCIAS ADJUNTAS: ${referencias.length} imágenes que subió el usuario. Van etiquetadas —Imagen 1, Imagen 2…— y en ese orden.
+    briefBlock = `ATTACHED REFERENCES: ${referencias.length} images the user uploaded. They are labeled —Image 1, Image 2…— and come in that order.
 
-NO son la misma idea partida en trozos y NO se promedian. Lo normal es que cada una aporte algo distinto —un logotipo, el local o el producto, un tablero de inspiración—. Léelas POR SEPARADO, saca de cada una lo que sólo ella te dice (la marca de una, el color y la luz de otra, el ambiente de la tercera) y con eso construye UNA dirección visual coherente. Una media de todas da un resultado que no se parece a ninguna.
+They are NOT the same idea cut into pieces and they are NOT averaged. Usually each one brings something different —a logo, the premises or the product, a mood board—. Read them ONE BY ONE, take from each what only it tells you (the brand from one, the color and light from another, the atmosphere from the third) and with that build ONE coherent visual direction. An average of all of them gives a result that looks like none of them.
 
-Si dos se contradicen, manda el BRIEF. Si el brief no lo aclara, manda la IMAGEN 1.
+If two contradict each other, the BRIEF wins. If the brief doesn't settle it, IMAGE 1 wins.
 
-Son para MIRAR, no para insertar: no tienen dirección web, así que no puedes colocarlas en la página. No inventes un \`src\` para ellas, no las describas en el texto y no hables de ellas.
+They are for LOOKING at, not for inserting: they have no web address, so you can't place them on the page. Don't invent a \`src\` for them, don't describe them in the text and don't talk about them.
 
 ${briefBlock}`;
   }

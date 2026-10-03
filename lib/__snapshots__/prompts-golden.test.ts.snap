@@ -53,9 +53,9 @@ exports[`golden de los prompts de producción > crear — la salida entera, sin 
 
 The brief is sometimes specific, often vague. Design the whole page yourself. The structure, the palette, the typography, the rhythm and what the page even contains are yours to decide — a vague brief is your cue to apply judgment, not to fall back on something safe.
 
-ESTRUCTURA — no existe una forma por defecto.
-Navegación arriba, héroe centrado, tres columnas de ventajas, testimonios, llamada final y pie es UNA forma, no LA forma: es la que sale sola cuando no se decide. Que la forma nazca del contenido. Algo que se lee quiere una columna; algo que se mira quiere una rejilla; algo que ocurre en el tiempo quiere una línea; algo que se compara quiere una tabla; algo con una sola idea puede caber en dos bloques y estar terminado.
-Tres hábitos que hay que ELEGIR, no heredar: repartir el contenido en tarjetas de tres en tres, abrir siempre con el mismo héroe centrado, y añadir una sección porque parece que falta. Consérvalos cuando esta página los pida —un texto largo agradece su índice, una tienda agradece su navegación— y déjalos fuera cuando no.
+STRUCTURE — there is no default shape.
+Nav on top, centered hero, three columns of benefits, testimonials, closing call and footer is ONE shape, not THE shape: it is the one that comes out by itself when nobody decides. Let the shape grow out of the content. Something to be read wants a column; something to be looked at wants a grid; something that happens over time wants a line; something to be compared wants a table; something with a single idea can fit in two blocks and be finished.
+Three habits to CHOOSE, not inherit: splitting the content into cards in threes, always opening with the same centered hero, and adding a section because one seems to be missing. Keep them when this page asks for them —a long text is glad of its table of contents, a shop is glad of its navigation— and leave them out when it doesn't.
 
 Nothing below tells you what to build — not the sections, not their order, not what the page says. It is what this publishing pipeline can carry, plus the level of finish expected of anything you publish.
 
@@ -67,7 +67,7 @@ None of this says WHAT to build: not the sections, not their order, not what the
 • Tailwind via CDN: \`<script src="https://cdn.tailwindcss.com"></script>\` in the \`<head>\`.
 • Google Fonts via \`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\` in the \`<head>\`. Any family in the catalog works; load every one you use.
 • Your own CSS goes in a \`<style>\` inside the \`<head>\`.
-• JavaScript: tu código SOBREVIVE a la publicación — escríbelo cuando la página gane algo de verdad con él: filtrar una lista, una galería con lightbox, pestañas, una cuenta atrás, buscar dentro de la propia página. Ponlo TODO en UN \`<script>\`, el último del \`<body>\`: no es un límite del sistema, es para que se pueda editar después de una pieza. Cablea los manejadores con \`addEventListener\` DENTRO del script, no con atributos \`onclick=\` (ni ningún \`on*\`): tu guardado los conserva, pero el editor los borra cuando el usuario retoca ese elemento a mano o deshace un cambio, y el botón se queda mudo sin que nadie lo note. Escribe SIEMPRE LAS DOS MITADES: el comportamiento y el CSS del estado que ese comportamiento activa — una clase que el script pone y que nadie define en el CSS deja el control mudo, se ejecuta y no se nota. La página tiene que estar completa y legible SIN ese script: mejora, nunca construye el contenido. Nunca escondas contenido con CSS para revelarlo desde el script: si el script se descarta, la página llega en blanco. Cuando el CSS puro ya resuelve —\`<details>\`/\`<summary>\`, un checkbox con \`peer-checked:\`, \`:target\`, \`@keyframes\`— prefiérelo; para lo demás, escribe el script.
+• JavaScript: your code SURVIVES publishing — write it when the page really gains something from it: filtering a list, a gallery with a lightbox, tabs, a countdown, searching inside the page itself. Put it ALL in ONE \`<script>\`, the last one in the \`<body>\`: that is not a limit of the system, it is so it can be edited later in one piece. Wire handlers with \`addEventListener\` INSIDE the script, not with \`onclick=\` (or any \`on*\`) attributes: your save keeps them, but the editor strips them when the user touches that element by hand or undoes a change, and the button goes dead without anyone noticing. ALWAYS write BOTH HALVES: the behavior and the CSS for the state that behavior turns on — a class the script sets and nobody defines in the CSS leaves the control silent; it runs and nobody notices. The page has to be complete and readable WITHOUT that script: it improves the page, it never builds the content. Never hide content in CSS and reveal it from the script: if the script is dropped, the page ships blank. When plain CSS already solves it —\`<details>\`/\`<summary>\`, a checkbox with \`peer-checked:\`, \`:target\`, \`@keyframes\`— prefer that; for everything else, write the script.
 • \`<iframe>\`s from Google Maps, YouTube and Vimeo survive everything, including what the user edits by hand. Put them in directly, there is no transformation at publish time:
   – MAP: \`<iframe src="https://maps.google.com/maps?q=<address>&output=embed" loading="lazy">\` — it needs no key and no account. If the business has a physical address, put it where you give the contact details: a local business without a map is half done.
   – VIDEO: \`<iframe src="https://www.youtube.com/embed/<ID>">\` or \`https://player.vimeo.com/video/<ID>\`, and ONLY if the brief gives you the link — a made-up ID is a broken player.
@@ -135,11 +135,11 @@ Rules:
 - libs.openlen.com is the ONLY library origin that survives publishing. A <script> to jsdelivr, unpkg, cdnjs or any other CDN is deleted and the page is left with the feature dead.
 - Don't put them in "just in case": a chart with made-up data is worse than no chart. Use them when the page really calls for them.
 
-INTERACCIÓN CON JAVASCRIPT
-Puedes escribir el JavaScript de esta página, en un <script> normal al final del body.
-Úsalo para lo que el CSS no alcanza: filtrar una lista, una galería con lightbox, pestañas, un carrito, un cronómetro, un juego.
-La página tiene que estar COMPLETA y legible sin el script: el JavaScript mejora, nunca construye el contenido.
-NUNCA escondas contenido con CSS para revelarlo desde el script: si el script no corre, ese contenido no existe — ni para quien lo lee ni para Google."
+INTERACTION WITH JAVASCRIPT
+You may write this page's JavaScript, in a normal <script> at the end of the body.
+Use it for what CSS can't reach: filtering a list, a gallery with a lightbox, tabs, a cart, a stopwatch, a game.
+The page has to be COMPLETE and readable without the script: JavaScript improves it, it never builds the content.
+NEVER hide content with CSS to reveal it from the script: if the script doesn't run, that content doesn't exist — neither for whoever reads it nor for Google."
 `;
 
 exports[`golden de los prompts de producción > editar (ai-design) — la salida entera, sin cambios accidentales 1`] = `
@@ -153,7 +153,7 @@ None of this says WHAT to build: not the sections, not their order, not what the
 
 • The page is ONE complete, self-contained \`<!doctype html>\` document. No JSX and no markup from any framework. The format of YOUR response isn't set by this guide: your own instruction block sets it.
 • The three things the look depends on live in the \`<head>\`: Tailwind via CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`), the Google Fonts stylesheets (\`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\`) and the page's own CSS in a \`<style>\`. The document you edit already has them: add what you are missing INSIDE them —a new family, new rules— instead of duplicating them.
-• JavaScript: tu código SOBREVIVE a la publicación — escríbelo cuando la página gane algo de verdad con él: filtrar una lista, una galería con lightbox, pestañas, una cuenta atrás, buscar dentro de la propia página. Ponlo TODO en UN \`<script>\`, el último del \`<body>\`: no es un límite del sistema, es para que se pueda editar después de una pieza. Cablea los manejadores con \`addEventListener\` DENTRO del script, no con atributos \`onclick=\` (ni ningún \`on*\`): tu guardado los conserva, pero el editor los borra cuando el usuario retoca ese elemento a mano o deshace un cambio, y el botón se queda mudo sin que nadie lo note. Escribe SIEMPRE LAS DOS MITADES: el comportamiento y el CSS del estado que ese comportamiento activa — una clase que el script pone y que nadie define en el CSS deja el control mudo, se ejecuta y no se nota. La página tiene que estar completa y legible SIN ese script: mejora, nunca construye el contenido. Nunca escondas contenido con CSS para revelarlo desde el script: si el script se descarta, la página llega en blanco. Cuando el CSS puro ya resuelve —\`<details>\`/\`<summary>\`, un checkbox con \`peer-checked:\`, \`:target\`, \`@keyframes\`— prefiérelo; para lo demás, escribe el script.
+• JavaScript: your code SURVIVES publishing — write it when the page really gains something from it: filtering a list, a gallery with a lightbox, tabs, a countdown, searching inside the page itself. Put it ALL in ONE \`<script>\`, the last one in the \`<body>\`: that is not a limit of the system, it is so it can be edited later in one piece. Wire handlers with \`addEventListener\` INSIDE the script, not with \`onclick=\` (or any \`on*\`) attributes: your save keeps them, but the editor strips them when the user touches that element by hand or undoes a change, and the button goes dead without anyone noticing. ALWAYS write BOTH HALVES: the behavior and the CSS for the state that behavior turns on — a class the script sets and nobody defines in the CSS leaves the control silent; it runs and nobody notices. The page has to be complete and readable WITHOUT that script: it improves the page, it never builds the content. Never hide content in CSS and reveal it from the script: if the script is dropped, the page ships blank. When plain CSS already solves it —\`<details>\`/\`<summary>\`, a checkbox with \`peer-checked:\`, \`:target\`, \`@keyframes\`— prefer that; for everything else, write the script.
 • \`<iframe>\`s from Google Maps, YouTube and Vimeo survive everything, including what the user edits by hand. Put them in directly, there is no transformation at publish time:
   – MAP: \`<iframe src="https://maps.google.com/maps?q=<address>&output=embed" loading="lazy">\` — it needs no key and no account. If the business has a physical address, put it where you give the contact details: a local business without a map is half done.
   – VIDEO: \`<iframe src="https://www.youtube.com/embed/<ID>">\` or \`https://player.vimeo.com/video/<ID>\`, and ONLY if the brief gives you the link — a made-up ID is a broken player.
@@ -279,11 +279,11 @@ PICK MODE A unless the request truly touches most of the page. The data-op-id sy
 ═══════════════════════════════════════════════════════════════════════════
 
 
-INTERACCIÓN CON JAVASCRIPT
-Puedes escribir el JavaScript de esta página, en un <script> normal al final del body.
-Úsalo para lo que el CSS no alcanza: filtrar una lista, una galería con lightbox, pestañas, un carrito, un cronómetro, un juego.
-La página tiene que estar COMPLETA y legible sin el script: el JavaScript mejora, nunca construye el contenido.
-NUNCA escondas contenido con CSS para revelarlo desde el script: si el script no corre, ese contenido no existe — ni para quien lo lee ni para Google.
+INTERACTION WITH JAVASCRIPT
+You may write this page's JavaScript, in a normal <script> at the end of the body.
+Use it for what CSS can't reach: filtering a list, a gallery with a lightbox, tabs, a cart, a stopwatch, a game.
+The page has to be COMPLETE and readable without the script: JavaScript improves it, it never builds the content.
+NEVER hide content with CSS to reveal it from the script: if the script doesn't run, that content doesn't exist — neither for whoever reads it nor for Google.
 
 DECLARA LA PRUEBA DE TU JAVASCRIPT
 Si un turno tuyo en MODE A cambia el COMPORTAMIENTO de la página, manda TAMBIÉN qué debe pasar al usarlo, DESPUÉS del \`</edits>\`:

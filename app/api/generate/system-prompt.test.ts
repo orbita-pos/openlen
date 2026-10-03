@@ -22,8 +22,8 @@ import { SYSTEM_PROMPT, generateSystemMessage, systemPromptFor } from "./system-
  */
 describe("la directiva de estructura sigue en el prompt", () => {
   it("nombra los tres hábitos que se midieron", () => {
-    expect(SYSTEM_PROMPT).toContain("ESTRUCTURA");
-    for (const habito of ["tarjetas de tres en tres", "héroe centrado", "porque parece que falta"]) {
+    expect(SYSTEM_PROMPT).toContain("STRUCTURE");
+    for (const habito of ["cards in threes", "centered hero", "because one seems to be missing"]) {
       expect(SYSTEM_PROMPT, `la directiva ya no nombra: ${habito}`).toContain(habito);
     }
   });
@@ -32,8 +32,8 @@ describe("la directiva de estructura sigue en el prompt", () => {
   // ensayo largo, que es justo donde un índice sirve. La directiva pide
   // decidir, no obedecer — y eso también hay que sostenerlo.
   it("pide elegirlos, no prohibirlos", () => {
-    expect(SYSTEM_PROMPT).toContain("ELEGIR, no heredar");
-    expect(SYSTEM_PROMPT).toContain("Consérvalos cuando esta página los pida");
+    expect(SYSTEM_PROMPT).toContain("CHOOSE, not inherit");
+    expect(SYSTEM_PROMPT).toContain("Keep them when this page asks for them");
   });
 
   it("no toca lo que el prompt ya prometía: la estructura es del modelo", () => {
@@ -127,8 +127,8 @@ describe("el interruptor del contrato mínimo", () => {
   // La directiva de arriba vive FUERA del contrato, así que el recorte no
   // puede llevársela por delante.
   it("la directiva de estructura sobrevive al recorte", () => {
-    expect(min()).toContain("ESTRUCTURA");
-    expect(min()).toContain("ELEGIR, no heredar");
+    expect(min()).toContain("STRUCTURE");
+    expect(min()).toContain("CHOOSE, not inherit");
   });
 });
 
@@ -253,7 +253,7 @@ describe("generateSystemMessage — una sola fuente para lo que se manda", () =>
   it("y lo que añade es el bloque del JavaScript, no otra cosa", () => {
     const env = {};
     const extra = generateSystemMessage(env).replace(systemPromptFor(env), "");
-    expect(extra).toContain("INTERACCIÓN CON JAVASCRIPT");
+    expect(extra).toContain("INTERACTION WITH JAVASCRIPT");
   });
 
   // Lo que produjo el hallazgo fue la COPIA A MANO, así que se vigila la copia

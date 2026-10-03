@@ -186,13 +186,15 @@ export function modelRuntimePromptBlock(): string {
   // columna; desde el 2026-08-26 no se extrae nada, así que pedirle una marca
   // al modelo sería pedirle que firme algo que nadie lee. Escribe `<script>`,
   // como en cualquier página.
+  // En inglés desde el 2026-10-03, SIN MEDIR: el resto del prompt de Crear y
+  // del Chat ya lo estaba. Mismo orden y mismo tono que lo medido arriba.
   return `
 
-INTERACCIÓN CON JAVASCRIPT
-Puedes escribir el JavaScript de esta página, en un <script> normal al final del body.
-Úsalo para lo que el CSS no alcanza: filtrar una lista, una galería con lightbox, pestañas, un carrito, un cronómetro, un juego.
-La página tiene que estar COMPLETA y legible sin el script: el JavaScript mejora, nunca construye el contenido.
-NUNCA escondas contenido con CSS para revelarlo desde el script: si el script no corre, ese contenido no existe — ni para quien lo lee ni para Google.`;
+INTERACTION WITH JAVASCRIPT
+You may write this page's JavaScript, in a normal <script> at the end of the body.
+Use it for what CSS can't reach: filtering a list, a gallery with a lightbox, tabs, a cart, a stopwatch, a game.
+The page has to be COMPLETE and readable without the script: JavaScript improves it, it never builds the content.
+NEVER hide content with CSS to reveal it from the script: if the script doesn't run, that content doesn't exist — neither for whoever reads it nor for Google.`;
 }
 /** Cómo se le pide al modelo que envuelva un cambio de comportamiento.
  *  Se conserva porque los builders de prompt siguen tipando con él. */

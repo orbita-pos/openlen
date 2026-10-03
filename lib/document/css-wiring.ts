@@ -151,7 +151,7 @@ export function reglasQueNuncaAplican(
 //
 // El script corre, no lanza, no sale nada en consola, y en pantalla no cambia
 // nada: el control está mudo. Es el segundo punto ciego medido del JavaScript
-// del modelo (ver `DOS_MITADES_ES` en `lib/ai/js-clause.ts`), que hasta hoy
+// del modelo (ver `DOS_MITADES_EN` en `lib/ai/js-clause.ts`), que hasta hoy
 // sólo se le pedía en el prompt.
 //
 // LA PRECISIÓN, con la misma vara que su hermano. No se avisa de «clase sin

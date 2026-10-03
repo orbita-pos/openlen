@@ -33,15 +33,17 @@ export type { StyleDirection } from "./direction-types";
 
 /** La mitad MEDIDA. Sin modelo, sin red, sin coste. */
 export function directionFromTokens(tokens: ExtractedTokens): StyleDirection {
+  // Los papeles van en inglés desde el 2026-10-03: sólo los lee el modelo, dentro
+  // del bloque de abajo (el compositor de /new pinta el `hex`, no el papel).
   const palette: { role: string; hex: string }[] = [];
-  if (tokens.color.primary) palette.push({ role: "principal", hex: tokens.color.primary.hex });
+  if (tokens.color.primary) palette.push({ role: "primary", hex: tokens.color.primary.hex });
   for (const a of tokens.color.accents.slice(0, 2)) {
-    palette.push({ role: "acento", hex: a.hex });
+    palette.push({ role: "accent", hex: a.hex });
   }
   // Los neutros llevan el peso visual de una página entera —fondos, textos,
   // bordes— así que dos dicen más del carácter que cinco acentos.
   for (const n of tokens.color.neutrals.slice(0, 2)) {
-    palette.push({ role: `neutro ${n.step}`, hex: n.entry.hex });
+    palette.push({ role: `neutral ${n.step}`, hex: n.entry.hex });
   }
 
   return {
@@ -60,17 +62,20 @@ export function directionFromTokens(tokens: ExtractedTokens): StyleDirection {
  * modelo hay que decirle qué hacer, no contarle qué vio alguien. Y se le dice
  * explícitamente que el contenido es del usuario — sin eso, un modelo que lee
  * "inspírate en stripe.com" tiende a escribir copy de Stripe.
+ *
+ * En inglés desde el 2026-10-03, SIN MEDIR, como el resto de lo que lee Crear.
+ * El `character` lo escribe Qwen en `/api/style-reference` y llega como venga.
  */
 export function directionToBriefBlock(d: StyleDirection): string {
   const colores = d.palette.map((p) => `${p.hex} (${p.role})`).join(", ");
   const partes = [
-    "<direccion-visual>",
-    `El usuario tomó como referencia el ESTILO de una página que le gusta. Escribe una página PROPIA con su contenido y este carácter — nunca copies texto, estructura ni marcado de la referencia.`,
-    `Paleta medida del render: ${colores}.`,
-    `Fondo ${d.polarity === "dark" ? "oscuro" : "claro"}. Tipografía tipo ${d.fontFamily}. Esquinas ${radiusEs(d.radius)}.`,
+    "<visual-direction>",
+    `The user took the STYLE of a page they like as a reference. Write a page of THEIR OWN, with their content and this character — never copy text, structure or markup from the reference.`,
+    `Palette measured from the render: ${colores}.`,
+    `${d.polarity === "dark" ? "Dark" : "Light"} background. Typeface in the style of ${d.fontFamily}. ${radiusEn(d.radius)}.`,
   ];
-  if (d.character) partes.push(`Carácter: ${d.character}`);
-  partes.push("</direccion-visual>");
+  if (d.character) partes.push(`Character: ${d.character}`);
+  partes.push("</visual-direction>");
   const bloque = partes.join("\n");
   // Se recorta por el final: la paleta y la polaridad van primero a propósito,
   // porque son lo medido. Lo que se pierde al truncar es el carácter, que es lo
@@ -79,15 +84,15 @@ export function directionToBriefBlock(d: StyleDirection): string {
   // El cierre se CUENTA, no se estima: un `- 20` a ojo dejaba el bloque en 901
   // caracteres con un techo de 900, y un presupuesto que se pasa por uno es un
   // presupuesto que no se está respetando.
-  const cierre = "…\n</direccion-visual>";
+  const cierre = "…\n</visual-direction>";
   return bloque.slice(0, DIRECTION_BUDGET_CHARS - cierre.length) + cierre;
 }
 
-function radiusEs(r: StyleDirection["radius"]): string {
+function radiusEn(r: StyleDirection["radius"]): string {
   switch (r) {
-    case "sharp": return "rectas";
-    case "soft": return "apenas redondeadas";
-    case "rounded": return "redondeadas";
-    case "pill": return "muy redondeadas, tipo píldora";
+    case "sharp": return "Square corners";
+    case "soft": return "Barely rounded corners";
+    case "rounded": return "Rounded corners";
+    case "pill": return "Very rounded, pill-shaped corners";
   }
 }

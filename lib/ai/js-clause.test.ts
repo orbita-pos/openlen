@@ -38,15 +38,15 @@ describe("con JS libre, las conductas desaparecen del prompt", () => {
 
   it("y en su lugar se le dice que la escriba él, con las dos mitades", () => {
     const vivo = systemPromptFor(COMPLETO);
-    expect(vivo).toContain("INTERACTIVIDAD — la escribes TÚ");
+    expect(vivo).toContain("INTERACTIVITY — YOU write it");
     // La lección del nav mudo, generalizada: comportamiento Y su CSS.
-    expect(vivo).toContain("LAS DOS MITADES");
+    expect(vivo).toContain("BOTH HALVES");
   });
 
   it("el Chat recibe exactamente el mismo trato", () => {
     const vivo = swapJsClauses(CHAT_SYSTEM_PROMPT, ["contrato-completo", "conductas", "no-negociable"]);
     expect(vivo).not.toContain("data-ol-sticky");
-    expect(vivo).toContain("INTERACTIVIDAD — la escribes TÚ");
+    expect(vivo).toContain("INTERACTIVITY — YOU write it");
   });
 
   // El contrato mínimo ya había sustituido `PUBLISH_CONTRACT` entero, y con él
@@ -108,12 +108,12 @@ describe("con el JavaScript abierto, el prompt NO se contradice", () => {
   it("el bloque ya no cierra invitando a omitirlo", () => {
     const bloque = modelRuntimePromptBlock();
     expect(bloque).not.toContain("no incluyas el bloque");
-    expect(bloque).toContain("Puedes escribir el JavaScript de esta página");
+    expect(bloque).toContain("You may write this page's JavaScript");
   });
 
   it("avisa de no esconder contenido tras el script (la trampa del .reveal)", () => {
-    expect(systemPromptFor(MINIMO)).toMatch(/escondas contenido con CSS/);
-    expect(modelRuntimePromptBlock()).toMatch(/escondas contenido con CSS/);
+    expect(systemPromptFor(MINIMO)).toMatch(/hide content (in|with) CSS/i);
+    expect(modelRuntimePromptBlock()).toMatch(/hide content (in|with) CSS/i);
   });
 });
 

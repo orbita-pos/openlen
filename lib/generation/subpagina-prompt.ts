@@ -19,21 +19,22 @@ export interface SubpaginaPrompt {
   readonly briefBlock: string;
 }
 
+// En inglés desde el 2026-10-03, SIN MEDIR, como el resto de lo que lee Crear.
 export function subpaginaPrompt(o: SubpaginaPrompt): string {
-  return `<sitio-existente>
-Esta es la PORTADA del sitio, ya escrita y aprobada. Es tu referencia de diseño:
+  return `<existing-site>
+This is the site's HOME PAGE, already written and approved. It is your design reference:
 
 ${o.portada}
-</sitio-existente>
+</existing-site>
 
-Escribe ahora la página «${o.nombre}» de ESTE MISMO sitio, en \`/${o.slug}\`.
+Now write the "${o.nombre}" page of THIS SAME site, at \`/${o.slug}\`.
 
-- Mismo <head>: las mismas tipografías, los mismos tokens de :root, el mismo modo.
-- La misma cabecera y el mismo pie, con los mismos enlaces. El visitante tiene
-  que poder volver a la portada y saltar a las demás páginas.
-- El CONTENIDO es nuevo y es sólo de esta página. No repitas las secciones de la
-  portada: esta página existe porque ese contenido no cabía ahí.
-- No añadas páginas nuevas: los enlaces del menú son los que ya hay.
+- Same <head>: the same typefaces, the same :root tokens, the same mode.
+- The same header and the same footer, with the same links. The visitor has
+  to be able to go back to the home page and jump to the other pages.
+- The CONTENT is new and belongs to this page only. Don't repeat the home
+  page's sections: this page exists because that content didn't fit there.
+- Don't add new pages: the menu links are the ones already there.
 
 ${o.briefBlock}`;
 }
