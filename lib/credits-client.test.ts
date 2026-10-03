@@ -149,7 +149,8 @@ describe("el muro de créditos habla el idioma del lector", () => {
 describe("el refresco del saldo sigue cableado tras un turno bueno", () => {
   it("mantiene cableado el refresco tras las dos rutas exitosas de Chat", () => {
     const source = readFileSync(
-      resolve(process.cwd(), "components/workspace-v2/panels/chat-panel.tsx"),
+      // La lógica del chat, compartida por los dos chats (plans/new-chat/).
+      resolve(process.cwd(), "components/workspace-v2/chat/use-agent-chat.ts"),
       "utf8",
     );
     const calls = source.match(/notifyCreditBalanceChanged\(\);/g) ?? [];

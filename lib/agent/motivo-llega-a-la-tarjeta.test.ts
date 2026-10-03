@@ -32,7 +32,8 @@ describe("el motivo del fallo cruza los cinco eslabones", () => {
   });
 
   it("2 · el panel lo LEE del evento y lo cuelga de la tarjeta", () => {
-    const panel = lee("components", "workspace-v2", "panels", "chat-panel.tsx");
+    // La lectura del stream vive en la lógica que comparten los dos chats.
+    const panel = lee("components", "workspace-v2", "chat", "use-agent-chat.ts");
     expect(panel).toMatch(/motivo\?: unknown/);
     expect(panel).toMatch(/\{ motivo: motivo\.slice/);
   });
