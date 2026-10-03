@@ -71,7 +71,8 @@
       }
     },
     "tabLocked": "{label} — locked",
-    "collapsePanel": "Collapse panel"
+    "collapsePanel": "Collapse panel",
+    "resizeChat": "Drag to change the width · double-click: normal size"
   },
   "preview": {
     "zoomFit": "Fit",

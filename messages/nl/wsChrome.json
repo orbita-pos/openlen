@@ -71,7 +71,8 @@
       }
     },
     "tabLocked": "{label} — vergrendeld",
-    "collapsePanel": "Paneel inklappen"
+    "collapsePanel": "Paneel inklappen",
+    "resizeChat": "Sleep om de breedte te wijzigen · dubbelklik: normale grootte"
   },
   "toast": {
     "deleted": {

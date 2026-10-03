@@ -71,7 +71,8 @@
       }
     },
     "tabLocked": "{label} — 잠김",
-    "collapsePanel": "패널 접기"
+    "collapsePanel": "패널 접기",
+    "resizeChat": "드래그해서 너비 변경 · 더블클릭: 기본 크기"
   },
   "preview": {
     "zoomFit": "맞춤",

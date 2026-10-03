@@ -41,14 +41,15 @@ export interface ModalShellProps {
    * escritura sin saberlo.
    */
   dismissable?: boolean;
-  /** El ancho del panel. `lg` es un formulario; `xl`, una rejilla de imágenes. */
-  size?: "lg" | "xl";
+  /** El ancho del panel. `lg` es un formulario; `xl`, una rejilla de imágenes;
+   *  `page`, una página entera (comparar antes y después, plans/new-chat/). */
+  size?: "lg" | "xl" | "page";
   /** Texto del `aria-label` del aspa — cada superficie tiene el suyo traducido. */
   closeLabel: string;
   children: ReactNode;
 }
 
-const ANCHOS = { lg: "max-w-lg", xl: "max-w-2xl" } as const;
+const ANCHOS = { lg: "max-w-lg", xl: "max-w-2xl", page: "max-w-5xl" } as const;
 
 export function ModalShell({
   open,

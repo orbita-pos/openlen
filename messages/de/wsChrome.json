@@ -71,7 +71,8 @@
       }
     },
     "tabLocked": "{label} — gesperrt",
-    "collapsePanel": "Panel einklappen"
+    "collapsePanel": "Panel einklappen",
+    "resizeChat": "Ziehen, um die Breite zu ändern · Doppelklick: normale Größe"
   },
   "preview": {
     "zoomFit": "Anpassen",

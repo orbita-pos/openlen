@@ -216,8 +216,9 @@ export function HeroProduct() {
                 </div>
               </div>
             </div>
-            {/* Composer — chat-panel.tsx:2046. Adjuntar imagen · seleccionar
-                sección · Autorrelleno, y enviar. Sin selector de modelo. */}
+            {/* Composer — el de `panels/chat-panel.tsx`. Adjuntar imagen ·
+                seleccionar sección, y enviar. Sin selector de modelo y sin
+                Autorrelleno (el botón se borró del chat el 03/10). */}
             <div className="p-3 pt-0">
               <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elev)]">
                 <div className="px-3 pt-2.5 pb-1 text-[12.5px] text-[var(--fg-faint)]">

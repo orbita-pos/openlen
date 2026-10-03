@@ -71,7 +71,8 @@
       }
     },
     "tabLocked": "{label} — bloqueado",
-    "collapsePanel": "Recolher painel"
+    "collapsePanel": "Recolher painel",
+    "resizeChat": "Arraste para mudar a largura · clique duplo: tamanho normal"
   },
   "toast": {
     "deleted": {

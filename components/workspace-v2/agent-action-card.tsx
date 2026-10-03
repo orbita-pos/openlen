@@ -71,6 +71,10 @@ export interface AgentAction {
   /** Los valores que aplicó la llamada. NO se pinta: lo lee el historial que
    *  se le reenvía al modelo (`lib/chat/historial-del-agente.ts`). */
   valores?: string;
+  /** La pregunta de `preguntar`, literal. Al revés que `valores`: SÓLO se
+   *  pinta (la tarjeta destacada del chat nuevo, plans/new-chat/) y el
+   *  historial del modelo no la copia. */
+  pregunta?: string;
   /** Cuántas ediciones aplicó esta llamada. */
   edits?: number;
   /**

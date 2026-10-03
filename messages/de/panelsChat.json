@@ -72,9 +72,6 @@
     "selectSectionTitle": "Deine nächste Nachricht auf einen Bereich eingrenzen",
     "cancelSelection": "Auswahlmodus abbrechen (ESC)",
     "cancelSelectionTitle": "Klicke einen Bereich in der Vorschau an oder drücke ESC zum Abbrechen",
-    "autofill": "Mit meinen Daten ausfüllen",
-    "autofillLabel": "Automatisch ausfüllen",
-    "autofillTitle": "Die Vorlage mit deinen Geschäftsdaten ausfüllen — lade einen Screenshot hoch oder gib deine Daten ein",
     "send": "Senden",
     "stop": "Stopp",
     "steer": "Lenken",
@@ -138,5 +135,120 @@
     "titulo": "Kommentare zum Code",
     "deAntes": "vor dem Durchlauf",
     "quitar": "Kommentar entfernen"
+  },
+  "newChat": {
+    "header": {
+      "title": "Chat",
+      "withLen": "mit Len",
+      "conversations": "Unterhaltungen",
+      "newChat": "Neu anfangen",
+      "newChatHint": "Speichert diese Unterhaltung und beginnt eine neue. Len erinnert sich nicht daran; dein Gedächtnis und die Notizen der Seite bleiben.",
+      "busy": "Warte, bis Len fertig ist, um die Unterhaltung zu wechseln.",
+      "failed": "Die Unterhaltung konnte nicht gewechselt werden. Versuch es noch einmal.",
+      "archived": "Frühere Unterhaltungen",
+      "archivedEmpty": "Noch keine gespeicherten Unterhaltungen.",
+      "reopen": "Zu dieser Unterhaltung zurückkehren",
+      "messages": "{count, plural, one {# Nachricht} other {# Nachrichten}}"
+    },
+    "memory": {
+      "empty": "Len erinnert sich noch an nichts über dich. Wenn du etwas sagst, das für alle deine Seiten gilt, siehst du es hier."
+    },
+    "empty": {
+      "title": "Was machen wir heute mit deiner Seite?",
+      "subtitle": "Sag es mit deinen Worten. Len erledigt es, zeigt dir, was sich geändert hat, und du kannst es rückgängig machen.",
+      "suggestions": {
+        "photos": "Echte Fotos auf die Startseite",
+        "form": "Füge ein Kontaktformular hinzu",
+        "mobile": "Prüf die Ansicht auf dem Handy",
+        "publish": "Veröffentliche meine Seite"
+      }
+    },
+    "steps": {
+      "running": "Len arbeitet",
+      "done": "{count, plural, one {Len hat # Schritt gemacht} other {Len hat # Schritte gemacht}}"
+    },
+    "activity": {
+      "reading": "Liest deine Seite",
+      "editing": "Ändert die Seite",
+      "terminal": "Nutzt das Terminal",
+      "photos": "Sucht Fotos",
+      "image": "Bearbeitet ein Bild",
+      "web": "Sucht im Internet",
+      "checking": "Prüft das Ergebnis",
+      "publishing": "Bereitet die Veröffentlichung vor",
+      "remembering": "Notiert, was du gesagt hast",
+      "results": "Schaut sich deine Ergebnisse an",
+      "reply": "Bereitet eine Antwort vor",
+      "module": "Schaltet ein Modul ein",
+      "undoing": "Macht die letzte Änderung rückgängig",
+      "asking": "Bereitet eine Frage vor",
+      "working": "Arbeitet"
+    },
+    "live": {
+      "thinking": "Denkt nach",
+      "writing": "Schreibt",
+      "working": "arbeitet · {seconds} s",
+      "onServer": "arbeitet weiter, auch wenn du diesen Tab schließt",
+      "waitingAnswer": "Wartet auf deine Antwort",
+      "waitingApproval": "Wartet auf deine Zustimmung",
+      "yourTurn": "Du bist dran · pausiert",
+      "done": "Fertig",
+      "doneHint": "bitte um etwas anderes",
+      "stopped": "Gestoppt",
+      "stoppedHint": "was schon erledigt ist, bleibt",
+      "failed": "Konnte nicht fertig werden"
+    },
+    "question": {
+      "label": "Len fragt dich",
+      "hint": "Antworte unten, mit deinen Worten.",
+      "answered": "Deine Antwort: {answer}"
+    },
+    "changes": {
+      "showAll": "Alle {count} Änderungen ansehen",
+      "showLess": "Weniger anzeigen",
+      "compare": "Vorher und nachher vergleichen"
+    },
+    "compare": {
+      "title": "Vorher und nachher",
+      "subtitle": "Zieh den Balken, um die Seite vor dem Durchgang mit der jetzigen zu vergleichen.",
+      "close": "Schließen",
+      "before": "Vorher",
+      "after": "Nachher",
+      "drag": "Zum Vergleichen ziehen"
+    },
+    "close": {
+      "applied": "Übernommen",
+      "appliedEdits": "Übernommen · {count, plural, one {# Änderung} other {# Änderungen}}",
+      "credits": "{credits} Credits"
+    },
+    "feedback": {
+      "up": "Hat geholfen",
+      "down": "Hat nicht geholfen",
+      "thanks": "Danke für dein Feedback.",
+      "title": "Was ist schiefgelaufen?",
+      "reasons": {
+        "made_up": "Hat Daten erfunden",
+        "not_what_i_asked": "Hat nicht gemacht, was ich wollte",
+        "touched_other": "Hat etwas anderes geändert",
+        "looks_bad": "Sieht schlecht aus",
+        "too_slow": "Hat zu lange gedauert"
+      },
+      "notePlaceholder": "Erzähl uns mehr (optional)",
+      "privacy": "Das OpenLen-Team liest das, um Len zu verbessern.",
+      "send": "Senden",
+      "cancel": "Abbrechen"
+    },
+    "composer": {
+      "plus": "Bild und mehr",
+      "on": "Aktiv",
+      "disclaimer": "Len kann sich irren. Prüf deine Seite, bevor du sie veröffentlichst."
+    },
+    "layout": {
+      "float": "Chat lösen",
+      "dock": "Wieder andocken",
+      "minimize": "Zu Len minimieren",
+      "open": "Chat öffnen",
+      "resize": "Ziehen, um die Größe zu ändern"
+    }
   }
 }

@@ -33,6 +33,7 @@ export function MandoEsfuerzo({
   abierto,
   onAbrir,
   locked = false,
+  variant = "icon",
   t,
 }: {
   esfuerzo: EsfuerzoAgente;
@@ -64,6 +65,11 @@ export function MandoEsfuerzo({
    *  máximo, así que el mando no elige nada. Se queda a la vista y DICE por qué
    *  no se abre, en vez de desaparecer. */
   locked?: boolean;
+  /** «icon»: el botón de barras del chat de hoy. «pill»: la pastilla con el
+   *  nivel escrito del chat nuevo («● Automático ⌄», plans/new-chat/), con el
+   *  menú abierto hacia la izquierda porque va al final de la fila. El menú y
+   *  su teclado son los mismos. */
+  variant?: "icon" | "pill";
   /** El traductor del panel. Se pasa en vez de llamar a `useTranslations` aquí
    *  para que este componente no dependa del proveedor de next-intl y su prueba
    *  no tenga que montar uno. */
@@ -103,21 +109,34 @@ export function MandoEsfuerzo({
         onClick={() => {
           if (!locked) onAbrir(!abierto);
         }}
-        className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition ${
-          locked
-            ? "fg-faint opacity-40 cursor-default"
-            : abierto || esfuerzo !== "auto"
-            ? "bg-[var(--accent-strong)] text-white shadow-coral"
-            : "fg-faint hover:fg hover:bg-hover"
-        }`}
+        className={
+          variant === "pill"
+            ? `inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full border bd bg-side px-2.5 text-[11.5px] transition ${
+                locked ? "fg-faint opacity-60 cursor-default" : "fg-muted hover:fg hover:border-[color:var(--border-strong)]"
+              }`
+            : `inline-flex h-7 w-7 items-center justify-center rounded-md transition ${
+                locked
+                  ? "fg-faint opacity-40 cursor-default"
+                  : abierto || esfuerzo !== "auto"
+                  ? "bg-[var(--accent-strong)] text-white shadow-coral"
+                  : "fg-faint hover:fg hover:bg-hover"
+              }`
+        }
       >
-        <LevelBars size={13} />
+        {variant === "pill" ? (
+          <>
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+            {locked ? t("composer.max") : esfuerzo === "auto" ? t("composer.effortAuto") : t(`composer.${esfuerzo}`)}
+          </>
+        ) : (
+          <LevelBars size={13} />
+        )}
       </button>
       {abierto && !locked && (
         <div
           role="menu"
           aria-label={t("composer.effort")}
-          className="absolute bottom-full left-0 z-20 mb-1.5 w-60 overflow-hidden rounded-md bg-card ring-1 ring-[color:var(--border)] shadow-lg fade-in"
+          className={`absolute bottom-full ${variant === "pill" ? "right-0" : "left-0"} z-20 mb-1.5 w-60 overflow-hidden rounded-md bg-card ring-1 ring-[color:var(--border)] shadow-lg fade-in`}
         >
           {niveles.map((n) => (
             <button

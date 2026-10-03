@@ -11,11 +11,10 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
 import {
   useCallback,
-  useEffect,
   useMemo,
-  useRef,
   useState,
   useSyncExternalStore,
   type RefObject,
@@ -30,7 +29,6 @@ import {
   LenMark,
   TriangleAlert,
   Wand,
-  WandSparkles,
   X,
 } from "../icons";
 import { ReplaceAssetModal } from "../replace-asset-modal";
@@ -58,7 +56,9 @@ import { ProcesoPlegable } from "../proceso-plegable";
 import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
 import { abrirEnElCodigo, abrirFicheroDelTurno, rutasDelTurno } from "@/lib/workspace-v2/abrir-fichero";
 import { FicherosDelTurnoEnVivo } from "../ficheros-del-turno";
-import { seccionesCambiadas, tipoDeOp, agruparCambios, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
+import { agruparCambios, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
+import { editsOfTurn, turnChanges } from "../chat/turn-changes";
+import { MemoriaDeLen } from "../chat/len-memory";
 import {
   useAgentChat,
   type AttachedImage,
@@ -109,9 +109,6 @@ interface ChatPanelProps {
   onToggleSectionSelect?: (active: boolean) => void;
   scopedSelection?: ScopedSelection | null;
   onClearScope?: () => void;
-  /** Open the Autofill modal. Renders a labeled "Autofill" pill in the
-   *  composer when provided. Pass undefined to hide (e.g., non-flat projects). */
-  onAutofill?: () => void;
   /** External push of composer draft text — used by the post-swap chip
    *  to suggest a context-aware prompt. Set non-null to apply; chat-
    *  panel calls `onPendingDraftConsumed` once it has copied the value
@@ -143,7 +140,6 @@ export function ChatPanel({
   onToggleSectionSelect,
   scopedSelection = null,
   onClearScope,
-  onAutofill,
   pendingDraft = null,
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
@@ -167,7 +163,6 @@ export function ChatPanel({
         onToggleSectionSelect={onToggleSectionSelect}
         scopedSelection={scopedSelection}
         onClearScope={onClearScope}
-        onAutofill={onAutofill}
         pendingDraft={pendingDraft}
         pendingDraftAutoSend={pendingDraftAutoSend}
         onPendingDraftConsumed={onPendingDraftConsumed}
@@ -250,7 +245,6 @@ function AIDesignChat({
   onToggleSectionSelect,
   scopedSelection = null,
   onClearScope,
-  onAutofill,
   pendingDraft = null,
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
@@ -277,7 +271,6 @@ function AIDesignChat({
   onToggleSectionSelect?: (active: boolean) => void;
   scopedSelection?: ScopedSelection | null;
   onClearScope?: () => void;
-  onAutofill?: () => void;
   pendingDraft?: string | null;
   /** ¿Se manda solo, sin que el usuario tenga que pulsar Enviar?
    *
@@ -375,7 +368,6 @@ function AIDesignChat({
         onToggleSectionSelect={onToggleSectionSelect}
         scopedSelection={scopedSelection}
         onClearScope={onClearScope}
-        onAutofill={onAutofill}
         attachedImage={attachedImage}
         onAttachImage={() => setImageModalOpen(true)}
         onClearAttachedImage={() => setAttachedImage(null)}
@@ -471,6 +463,12 @@ function TurnView({
   hideAIBubble: boolean;
 }) {
   const t = useTranslations("panelsChat");
+  const { data: sesion } = useSession();
+  const inicialDelUsuario = (
+    sesion?.user?.name?.trim() || sesion?.user?.email?.split("@")[0] || "?"
+  )
+    .charAt(0)
+    .toUpperCase();
   const tAgent = useTranslations("wsPage.agent");
   // Los textos de la tarjeta del borrador van por props (ver `AgentReplyCard`).
   const etiquetasDeRespuesta = useMemo<EtiquetasDeRespuesta>(
@@ -555,7 +553,8 @@ function TurnView({
       )}
       <div className="flex gap-2 flex-row-reverse">
         <span className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold bg-gradient-to-br from-[#FF7E55] to-[#C72E10] text-white">
-          J
+          {/* Era una «J» fija para todo el mundo (plans/new-chat/, inventario N3). */}
+          {inicialDelUsuario}
         </span>
         <div className="min-w-0 max-w-[80%] text-right">
           <div className="inline-block max-w-full rounded-2xl px-3 py-2 text-left bg-accent-soft text-accent border border-[color:var(--accent)]/30">
@@ -713,9 +712,9 @@ function TurnFooter({
         <div className="inline-flex items-center gap-2 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small">
           <Wand size={10} className="text-[var(--accent)]" />
           <span>
-            {edicionesDelTurno(turn)
+            {editsOfTurn(turn)
               ? t("applied.labelConEdits", {
-                  edits: edicionesDelTurno(turn),
+                  edits: editsOfTurn(turn),
                   time: relativeTime(turn.appliedAt ?? Date.now(), t),
                 })
               : t("applied.label", {
@@ -838,7 +837,6 @@ export function Composer({
   onToggleSectionSelect,
   scopedSelection = null,
   onClearScope,
-  onAutofill,
   attachedImage = null,
   onAttachImage,
   onClearAttachedImage,
@@ -867,7 +865,6 @@ export function Composer({
   onToggleSectionSelect?: (active: boolean) => void;
   scopedSelection?: ScopedSelection | null;
   onClearScope?: () => void;
-  onAutofill?: () => void;
   attachedImage?: AttachedImage | null;
   onAttachImage?: () => void;
   onClearAttachedImage?: () => void;
@@ -1071,25 +1068,10 @@ export function Composer({
                 `model-picker.tsx`. Un cableado inerte no es neutral —se lee como
                 una funcion que existe— y el siguiente que lo encuentre no va a
                 tener este comentario delante. */}
-            {onAutofill && (
-              <>
-                <span
-                  aria-hidden
-                  className="h-4 w-px shrink-0 bg-[color:var(--border)] mx-1"
-                />
-                <button
-                  type="button"
-                  aria-label={t("composer.autofill")}
-                  title={t("composer.autofillTitle")}
-                  onClick={onAutofill}
-                  disabled={sending}
-                  className="shrink-0 inline-flex items-center gap-1 h-7 px-2 rounded-md text-[11.5px] font-medium fg-faint hover:fg hover:bg-hover hover:ring-1 hover:ring-[color:var(--border)] transition disabled:opacity-40"
-                >
-                  <WandSparkles size={13} />
-                  <span>{t("composer.autofillLabel")}</span>
-                </button>
-              </>
-            )}
+            {/* ⚰️ AQUÍ VIVÍA «Rellenar» (autofill). Nadie le pasaba `onAutofill`
+                —`left-sidebar.tsx` nunca lo hizo—, así que era un botón que no
+                se podía pulsar. Jesús, 03/10 (plans/new-chat/): fuera de los dos
+                chats. El diálogo de autorrelleno sigue existiendo aparte. */}
           </div>
           <button
             type="button"
@@ -1181,243 +1163,6 @@ function relativeTime(ms: number, t: Translator): string {
   return t("relativeTime.days", { count: d });
 }
 
-// LA MEMORIA DE LEN — las DOS mitades, en un solo sitio y siempre alcanzable.
-//
-// Len recuerda en dos sitios y hasta hoy no se veía NINGUNO:
-//
-//   · `users.agentMemory` — de la PERSONA, cruza todos sus proyectos. Es lo que
-//     `recordar_preferencia` escribe por DEFECTO (alcance="siempre").
-//     `forgetAboutUser` existía desde el principio diciendo «el borrado es del
-//     dueño» y no tenía UN SOLO LLAMADOR en el repo.
-//   · `projects.userBrief` — de ESTA página. Se le inyecta al Agente como
-//     «PROJECT BRIEF (persistente — aplica a toda petición)». Sólo lo escribía
-//     el modelo, sólo lo leía el modelo, y mandaba sobre cada petición del
-//     usuario sin que él supiera que existe.
-//
-// POR QUÉ JUNTAS. Separarlas es exactamente lo que nos trajo aquí: había DOS
-// paneles de brief (`panels/brief-panel.tsx` y `panels/ai-brief-panel.tsx`) y
-// los dos acabaron con CERO importadores, invisibles, mientras el prompt seguía
-// mandando al usuario a «la pestaña Brief». Una sola cosa, un solo sitio.
-//
-// POR QUÉ AQUÍ Y NO EN EL RAIL. El rail está podado a propósito —su historia
-// entera es QUITAR iconos porque «un icono cobra un sitio permanente»— y no es
-// mío re-decidirlo. El Chat es donde Len dice «guardé tu preferencia», así que
-// es donde tiene sentido poder retirarla.
-//
-// POR QUÉ NO EN EL ESTADO VACÍO, que es donde estuvo primero: ahí sólo se ve
-// con la conversación en blanco, y el momento en que el usuario NECESITA podar
-// es cuando la herramienta le dice que el brief está lleno — a mitad de
-// conversación, con el estado vacío ya fuera de pantalla.
-//
-// CERRADO por defecto y una línea de alto: alcanzable siempre, sin cobrar sitio.
-function MemoriaDeLen({ projectId }: { projectId: string | null }) {
-  const t = useTranslations("panelsChat");
-  const [abierto, setAbierto] = useState(false);
-  const [lineas, setLineas] = useState<string[] | null>(null);
-  const [quitando, setQuitando] = useState<string | null>(null);
-
-  useEffect(() => {
-    let vivo = true;
-    // Fail-soft: si la memoria no se puede leer, el Chat sigue entero. Es una
-    // vista, no una puerta.
-    fetch("/api/agent/memoria")
-      .then((r) => (r.ok ? r.json() : { lineas: [] }))
-      .then((d) => {
-        if (vivo) setLineas(Array.isArray(d?.lineas) ? d.lineas : []);
-      })
-      .catch(() => {
-        if (vivo) setLineas([]);
-      });
-    return () => {
-      vivo = false;
-    };
-  }, []);
-
-  const quitar = useCallback(async (preferencia: string) => {
-    setQuitando(preferencia);
-    try {
-      const res = await fetch("/api/agent/memoria", {
-        method: "DELETE",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ preferencia }),
-      });
-      // Se pinta lo que VUELVE del servidor, no lo que creíamos tener: con dos
-      // pestañas abiertas, el estado que manda es el suyo.
-      if (res.ok) {
-        const d = await res.json();
-        if (Array.isArray(d?.lineas)) setLineas(d.lineas);
-      }
-    } catch {
-      // Silencio deliberado: la línea sigue ahí y el usuario puede reintentar.
-    } finally {
-      setQuitando(null);
-    }
-  }, []);
-
-  const cuantas = lineas?.length ?? 0;
-
-  return (
-    <div className="shrink-0 border-b bd">
-      <button
-        type="button"
-        onClick={() => setAbierto((v) => !v)}
-        aria-expanded={abierto}
-        className="w-full flex items-center gap-1.5 px-3 py-1.5 text-[10.5px] fg-faint hover:fg-muted ui-small"
-      >
-        <LenMark size={10} className="text-accent" />
-        <span>{t("memoria.title")}</span>
-        {cuantas > 0 && <span className="tabular">({cuantas})</span>}
-        <span className="ml-auto" aria-hidden>
-          {abierto ? "−" : "+"}
-        </span>
-      </button>
-
-      {abierto && (
-        <div className="px-3 pb-2.5 space-y-2.5">
-          {cuantas > 0 && (
-            <div>
-              <div className="text-[10.5px] fg-faint mb-1 leading-relaxed">
-                {t("memoria.description")}
-              </div>
-              <ul className="flex flex-col gap-1">
-                {lineas?.map((linea) => (
-                  <li key={linea} className="flex items-start gap-2">
-                    <span className="flex-1 text-[11.5px] leading-relaxed fg">{linea}</span>
-                    <button
-                      type="button"
-                      onClick={() => void quitar(linea)}
-                      disabled={quitando === linea}
-                      className="shrink-0 text-[10.5px] fg-faint hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 ui-small"
-                    >
-                      {t("memoria.remove")}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <BriefDeLaPagina projectId={projectId} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Tope del servidor (`PatchSchema` en app/api/projects/[id]/route.ts). Se
- *  repite aquí para poder AVISAR antes de que el guardado falle — no para
- *  decidir: quien rechaza sigue siendo el servidor. */
-const BRIEF_MAX = 4000;
-
-/**
- * Las notas de ESTA página: `projects.userBrief`.
- *
- * Se LEE por su propia ruta en vez de enhebrarse como prop desde la página
- * porque el Agente puede escribirlo a mitad de sesión —`recordar_preferencia`
- * con alcance="esta_pagina"—, que es justo cuando el usuario querrá mirarlo;
- * una prop quedaría rancia. Se ESCRIBE por el `PATCH` que ya existía: dos
- * escritores del mismo campo es como se separan.
- */
-function BriefDeLaPagina({ projectId }: { projectId: string | null }) {
-  const t = useTranslations("panelsChat");
-  const [texto, setTexto] = useState<string | null>(null);
-  const [estado, setEstado] = useState<"idle" | "guardando" | "guardado" | "error">("idle");
-  const timerRef = useRef<number | null>(null);
-  const cargadoRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!projectId) return;
-    let vivo = true;
-    fetch(`/api/projects/${projectId}/brief`)
-      .then((r) => (r.ok ? r.json() : { brief: "" }))
-      .then((d) => {
-        if (!vivo) return;
-        const v = typeof d?.brief === "string" ? d.brief : "";
-        cargadoRef.current = v;
-        setTexto(v);
-      })
-      .catch(() => {
-        if (vivo) setTexto("");
-      });
-    return () => {
-      vivo = false;
-    };
-  }, [projectId]);
-
-  const guardar = useCallback(
-    (valor: string) => {
-      if (!projectId) return;
-      if (timerRef.current) window.clearTimeout(timerRef.current);
-      timerRef.current = window.setTimeout(() => {
-        // No se guarda lo que no cambió: evita un PATCH por cada vez que el
-        // usuario abre el desplegable y lo vuelve a cerrar.
-        if (valor === cargadoRef.current) return;
-        setEstado("guardando");
-        fetch(`/api/projects/${projectId}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ userBrief: valor }),
-        })
-          .then((r) => {
-            if (!r.ok) throw new Error(String(r.status));
-            cargadoRef.current = valor;
-            setEstado("guardado");
-          })
-          .catch(() => setEstado("error"));
-      }, 700);
-    },
-    [projectId],
-  );
-
-  useEffect(
-    () => () => {
-      if (timerRef.current) window.clearTimeout(timerRef.current);
-    },
-    [],
-  );
-
-  if (!projectId || texto === null) return null;
-  const quedan = BRIEF_MAX - texto.length;
-
-  return (
-    <div>
-      <div className="text-[10.5px] fg-faint mb-1 leading-relaxed">{t("memoria.briefHint")}</div>
-      <textarea
-        value={texto}
-        onChange={(e) => {
-          const v = e.target.value.slice(0, BRIEF_MAX);
-          setTexto(v);
-          guardar(v);
-        }}
-        rows={4}
-        spellCheck={false}
-        placeholder={t("memoria.briefPlaceholder")}
-        className="w-full resize-y rounded-md ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] fg placeholder:fg-faint text-[11.5px] leading-relaxed px-2 py-1.5 focus:outline-none focus:ring-[color:var(--border-strong)] nice-scroll"
-      />
-      <div className="flex items-center justify-between text-[10px] fg-faint ui-small mt-0.5">
-        <span>
-          {estado === "guardando" && t("memoria.saving")}
-          {estado === "guardado" && t("memoria.saved")}
-          {estado === "error" && t("memoria.saveFailed")}
-        </span>
-        {/* El contador sólo aparece cerca del tope: el usuario tiene que VER
-            venir el «brief lleno» que hoy le llega como un error del modelo. */}
-        {quedan < 400 && (
-          <span className="tabular">
-            {texto.length} / {BRIEF_MAX}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/** Las ediciones que aplicó el turno, sumadas de sus acciones. Vive aquí y no
- *  en un campo del turno por lo mismo que las ops: sólo `actions` se guarda como
- *  JSON, así que un campo de turno no sobrevive a recargar. */
-function edicionesDelTurno(turn: DesignTurn): number {
-  return turn.actions?.reduce((n, a) => n + (a.edits ?? 0), 0) ?? 0;
-}
-
 // QUÉ CAMBIÓ ESTE TURNO, sección a sección — y un «ver» que lo enseña.
 //
 // El par ya estaba en el cliente: `preEditHtml` (snapshot al enviar) y
@@ -1439,28 +1184,13 @@ function CambiosDelTurno({ turn, mismaPagina }: { turn: DesignTurn; mismaPagina:
   //
   // El diff se queda como respaldo, y hace falta: los turnos anteriores a esto
   // no traen ops, y la vía de opt-out (`ai-design`) no las emite.
-  const cambios = useMemo(() => {
-    // Una sola fuente: las acciones del turno. Antes esto vivía además en un
-    // campo del turno, y ese campo NO se guardaba —`appendChatMessage` escribe
-    // columnas explícitas—, así que se pintaba en vivo y desaparecía al
-    // recargar. Derivarlo de `actions`, que sí es JSON, lo arregla y quita la
-    // segunda cuenta de la misma cosa.
-    const ops = turn.actions?.flatMap((a) => a.ops ?? []) ?? [];
-    if (ops.length) {
-      return ops.map((o) => ({
-        // El mapeo vive en `diff-de-turno.ts`, junto a su tipo y con prueba:
-        // aquí sólo se traducían `delete` y `replace`, y `attrs`/`text` —las
-        // dos del caso más común— se pintaban «añadido».
-        tipo: tipoDeOp(o.tipo),
-        // Fuera del documento no hay nombre de sección que dar: el nombre es el
-        // sitio («los estilos», «la cabecera»), y lo escribe el idioma.
-        etiqueta: o.donde === "documento" ? o.etiqueta : t(`diff.${o.donde}`),
-        indice: o.indice,
-      }));
-    }
-    if (!turn.preEditHtml || !turn.postEditHtml) return [];
-    return seccionesCambiadas(turn.preEditHtml, turn.postEditHtml);
-  }, [turn.actions, turn.preEditHtml, turn.postEditHtml, t]);
+  // La cuenta es la de `../chat/turn-changes.ts`, la misma del chat nuevo: las
+  // ops mandan sobre el diff (el porqué está allí).
+  const cambios = useMemo(
+    () => turnChanges(turn, (donde) => t(`diff.${donde}`)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [turn.actions, turn.preEditHtml, turn.postEditHtml, t],
+  );
 
   if (cambios.length === 0) return null;
   // Se agrupa ANTES de topar: si no, el tope de 6 se gastaba en repeticiones

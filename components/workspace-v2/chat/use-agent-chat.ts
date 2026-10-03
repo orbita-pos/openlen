@@ -165,6 +165,11 @@ export interface DesignTurn {
    *  su stream: vino así al cargar (otra pestaña, el móvil) o esta pestaña lo
    *  perdió por el camino. El panel relee su fila hasta que cierra. */
   enServidor?: boolean;
+  /** Lo que COBRÓ el turno (centicréditos) y lo que tardó, según el servidor
+   *  (el `done` y, al recargar, la fila). El cierre del chat nuevo los enseña
+   *  (plans/new-chat/). Ausentes en turnos viejos y en los de `ai-design`. */
+  centicredits?: number;
+  durationMs?: number;
 }
 
 const FLUSH_INTERVAL_MS = 800;
@@ -1078,6 +1083,9 @@ export function useAgentChat({
         /** Cuántos turnos vio Len de cuántos tiene la charla. Presente sólo
          *  cuando de verdad se quedó algo fuera de la ventana. */
         let ventana: { visibles: number; totales: number } | null = null;
+        // Lo que cobró y tardó, en números: la frase la compone quien pinta.
+        let centicredits: number | undefined;
+        let durationMs: number | undefined;
         let errorMessage: string | null = null;
         // F4 Task 7 — set when the route's kill-switch fires (`code:
         // "agent_off"`): NOT an error to show the user, a signal to
@@ -1134,10 +1142,20 @@ export function useAgentChat({
               .json()
               .catch(() => ({ error: `HTTP ${res.status}` }));
             scanController.cancel();
+            // EL CÓDIGO GANA A LA PROSA, igual que en `runAiDesignTurn`: un 413
+            // de la ruta del Agente (`pageTooLarge`) se pintaba «Page too large
+            // for an agent turn» en los diez idiomas (plans/new-chat/,
+            // inventario N2). Lista explícita por lo mismo que allí.
+            const CODIGO_A_CLAVE: Record<string, string> = {
+              pageTooLarge: "errors.pageTooLarge",
+              noTaggableElements: "errors.noTaggableElements",
+            };
+            const clave = typeof errPayload?.code === "string" ? CODIGO_A_CLAVE[errPayload.code] : undefined;
             updateTurn(turnId, {
               status: "error",
-              errorText:
-                typeof errPayload?.error === "string"
+              errorText: clave
+                ? t(clave)
+                : typeof errPayload?.error === "string"
                   ? errPayload.error
                   : t("errors.requestFailed", { status: res.status }),
             });
@@ -1245,6 +1263,8 @@ export function useAgentChat({
                 // desaparecería al recargar, en silencio.
                 const motivo = (payload as { motivo?: unknown } | null)?.motivo;
                 const valores = (payload as { valores?: unknown } | null)?.valores;
+                // La pregunta de `preguntar`, sólo de pantalla (plans/new-chat/).
+                const pregunta = (payload as { pregunta?: unknown } | null)?.pregunta;
                 if (tool) {
                   const action: AgentAction = {
                     tool,
@@ -1265,6 +1285,9 @@ export function useAgentChat({
                       : {}),
                     ...(typeof motivo === "string" && motivo.trim()
                       ? { motivo: motivo.slice(0, 200) }
+                      : {}),
+                    ...(typeof pregunta === "string" && pregunta.trim()
+                      ? { pregunta: pregunta.slice(0, 600) }
                       : {}),
                     ...(typeof valores === "string" && valores.trim()
                       ? { valores: valores.slice(0, 200) }
@@ -1410,6 +1433,10 @@ export function useAgentChat({
                 ) {
                   ventana = v as { visibles: number; totales: number };
                 }
+                const cc = (payload as { centicredits?: unknown } | null)?.centicredits;
+                if (typeof cc === "number" && Number.isFinite(cc) && cc >= 0) centicredits = cc;
+                const ms = (payload as { durationMs?: unknown } | null)?.durationMs;
+                if (typeof ms === "number" && Number.isFinite(ms) && ms >= 0) durationMs = ms;
                 break agentOuter;
               } else if (evName === "error") {
                 const code = (payload as { code?: unknown } | null)?.code;
@@ -1505,6 +1532,8 @@ export function useAgentChat({
           updateTurn(turnId, {
             status: "applied",
             appliedAt: Date.now(),
+            ...(centicredits !== undefined ? { centicredits } : {}),
+            ...(durationMs !== undefined ? { durationMs } : {}),
             // ¿CAMBIÓ ALGO DE VERDAD? Dos correcciones, una sola condición.
             //
             // (a) Un `editar_pagina` que devuelve `sin_cambio` SEGUÍA emitiendo
@@ -1852,6 +1881,20 @@ export function useAgentChat({
 
   const removeComentario = useCallback((id: number) => comentariosDelChat.quitar(projectId, id), [projectId]);
 
+  /**
+   * LA CHARLA CAMBIÓ EN EL SERVIDOR («Empezar de cero» o volver a una
+   * archivada, plans/new-chat/). Se vacía la vista ANTES de refrescar: la
+   * convergencia conserva lo local que el servidor no tiene
+   * (`fusionarConversacion`), así que sin esto los turnos de la charla vieja
+   * seguirían pegados detrás de la nueva. Luego el padre refresca y la charla
+   * que toque llega por `initialChat`. Con un turno en marcha no se llama: el
+   * servidor lo rechaza (409).
+   */
+  const conversationChanged = useCallback(() => {
+    setTurns([]);
+    onChatChangeRef.current?.();
+  }, []);
+
   return {
     turns,
     draft,
@@ -1888,8 +1931,11 @@ export function useAgentChat({
     handleCancel,
     handleUndo,
     handlePublished,
+    conversationChanged,
   };
 }
+
+export type AgentChat = ReturnType<typeof useAgentChat>;
 
 export function restoreTurn(s: StoredChatTurn): DesignTurn {
   return {
@@ -1921,6 +1967,9 @@ export function restoreTurn(s: StoredChatTurn): DesignTurn {
     // Guardado como cortado por el servidor: el aviso se compone al pintar,
     // en el idioma de quien lo mira (`AvisoDeTurno`).
     ...(s.cortado ? { cortado: true } : {}),
+    // Lo que cobró y tardó, si el servidor lo apuntó (plans/new-chat/).
+    ...(typeof s.centicredits === "number" ? { centicredits: s.centicredits } : {}),
+    ...(typeof s.durationMs === "number" ? { durationMs: s.durationMs } : {}),
   };
 }
 

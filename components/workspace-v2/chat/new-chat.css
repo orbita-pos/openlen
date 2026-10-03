@@ -1,0 +1,153 @@
+/* El chat nuevo (plans/new-chat/): las piezas que Tailwind no dice bien —
+   animaciones, el pliegue que se abre con altura, el brillo de la pregunta.
+   Todo cuelga de `.nc` y usa los tokens del taller (`app/[locale]/new/tokens.css`),
+   así que el modo oscuro sale solo. La dirección visual es la del mock
+   `brand/len-chat/index.html`. */
+
+.nc {
+  --nc-ok: #1fa967;
+  --nc-warn: #b7791f;
+  --nc-bad: #d92d20;
+}
+.dark .nc {
+  --nc-warn: #e0a43a;
+  --nc-bad: #ff6b5e;
+}
+
+@keyframes nc-up {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes nc-card-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes nc-spin { to { transform: rotate(360deg); } }
+@keyframes nc-pop { 0% { transform: scale(0.6); } 100% { transform: scale(1); } }
+@keyframes nc-blink { 50% { opacity: 0; } }
+@keyframes nc-shimmer { from { background-position: 100% 0; } to { background-position: -160% 0; } }
+@keyframes nc-ask-glow { 50% { box-shadow: 0 0 0 5px color-mix(in oklab, var(--accent) 12%, transparent); } }
+@keyframes nc-ic-pulse { 50% { box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 16%, transparent); } }
+
+.nc .nc-up { animation: nc-up 0.35s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.nc .nc-card-in { animation: nc-card-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.15) both; }
+.nc .nc-spin {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.8px solid var(--accent);
+  border-top-color: transparent;
+  animation: nc-spin 0.75s linear infinite;
+  flex: none;
+}
+.nc .nc-pop { animation: nc-pop 0.35s cubic-bezier(0.3, 1.7, 0.5, 1); }
+.nc .nc-caret {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  background: var(--accent);
+  border-radius: 2px;
+  margin-left: 2px;
+  vertical-align: -2px;
+  animation: nc-blink 0.8s steps(1) infinite;
+}
+
+/* El verbo que se está haciendo brilla (como el «shimmer» del mock). */
+.nc .nc-shimmer {
+  background: linear-gradient(90deg, currentColor 0%, currentColor 38%, var(--accent) 50%, currentColor 62%, currentColor 100%);
+  background-size: 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: nc-shimmer 1.7s linear infinite;
+}
+
+/* Lo plegable se abre con altura: grid de 0fr a 1fr. */
+.nc .nc-fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.45s cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+.nc .nc-fold[data-open="true"] { grid-template-rows: 1fr; }
+.nc .nc-fold > div { overflow: hidden; min-height: 0; }
+
+/* La pregunta llama la atención hasta que se contesta. */
+.nc .nc-ask {
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent);
+  border-radius: 14px;
+  animation: nc-card-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.15) both, nc-ask-glow 2.2s 1s ease-in-out infinite;
+}
+
+.nc .nc-step-ic {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  flex: none;
+}
+.nc .nc-step-ic[data-running="true"] { animation: nc-ic-pulse 1.4s ease-in-out infinite; }
+.nc .nc-step-ic[data-tone="warn"] { background: color-mix(in oklab, var(--nc-warn) 16%, transparent); color: var(--nc-warn); }
+.nc .nc-step-ic[data-tone="bad"] { background: color-mix(in oklab, var(--nc-bad) 14%, transparent); color: var(--nc-bad); }
+
+.nc .nc-ok { color: var(--nc-ok); }
+.nc .nc-warn { color: var(--nc-warn); }
+.nc .nc-bad { color: var(--nc-bad); }
+.nc .nc-notice-warn {
+  color: color-mix(in oklab, var(--nc-warn) 80%, var(--fg));
+  background: color-mix(in oklab, var(--nc-warn) 9%, transparent);
+  border: 1px solid color-mix(in oklab, var(--nc-warn) 35%, transparent);
+}
+.nc .nc-notice-bad {
+  color: var(--nc-bad);
+  background: color-mix(in oklab, var(--nc-bad) 7%, transparent);
+  border: 1px solid color-mix(in oklab, var(--nc-bad) 35%, transparent);
+}
+.nc .nc-notice-ok {
+  color: color-mix(in oklab, var(--nc-ok) 75%, var(--fg));
+  background: color-mix(in oklab, var(--nc-ok) 9%, transparent);
+  border: 1px solid color-mix(in oklab, var(--nc-ok) 32%, transparent);
+}
+
+/* El compositor se enciende al escribir. */
+.nc .nc-composer:focus-within {
+  border-color: var(--accent-ring);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 13%, transparent);
+}
+
+/* El 👍/👎 es discreto: aparece al pasar por el turno y siempre en el último. */
+.nc .nc-fb { opacity: 0; transition: opacity 0.2s; }
+.nc .nc-turn:hover .nc-fb,
+.nc .nc-turn[data-last="true"] .nc-fb,
+.nc .nc-fb[data-voted="true"],
+.nc .nc-fb:focus-within { opacity: 1; }
+
+/* El borde del panel se estira: invisible hasta que pasas por encima. */
+.nc-split::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.nc-split:hover::before,
+.nc-split:focus-visible::before,
+.nc-split[data-dragging="true"]::before { opacity: 0.85; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nc .nc-up,
+  .nc .nc-card-in,
+  .nc .nc-ask,
+  .nc .nc-pop,
+  .nc .nc-shimmer,
+  .nc .nc-step-ic[data-running="true"] { animation: none; }
+  .nc .nc-shimmer { -webkit-text-fill-color: currentColor; background: none; }
+  .nc .nc-fold { transition: none; }
+}

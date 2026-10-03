@@ -71,7 +71,8 @@
       }
     },
     "tabLocked": "{label} — verrouillé",
-    "collapsePanel": "Replier le panneau"
+    "collapsePanel": "Replier le panneau",
+    "resizeChat": "Faites glisser pour changer la largeur · double-clic : taille normale"
   },
   "preview": {
     "zoomFit": "Ajuster",

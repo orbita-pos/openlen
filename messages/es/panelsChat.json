@@ -72,9 +72,6 @@
     "selectSectionTitle": "Acota tu próximo mensaje a una sola sección",
     "cancelSelection": "Cancelar el modo de selección (ESC)",
     "cancelSelectionTitle": "Haz clic en cualquier sección de la vista previa, o pulsa ESC para cancelar",
-    "autofill": "Rellenar con mi información",
-    "autofillLabel": "Rellenar",
-    "autofillTitle": "Rellena la plantilla con la información de tu negocio: sube una captura o escribe tus datos",
     "send": "Enviar",
     "stop": "Detener",
     "steer": "Dirigir",
@@ -138,5 +135,120 @@
     "titulo": "Comentarios en el código",
     "deAntes": "antes del turno",
     "quitar": "Quitar el comentario"
+  },
+  "newChat": {
+    "header": {
+      "title": "Chat",
+      "withLen": "con Len",
+      "conversations": "Charlas",
+      "newChat": "Empezar de cero",
+      "newChatHint": "Guarda esta charla y empieza otra. Len no la recordará; tu memoria y las notas de la página se quedan.",
+      "busy": "Espera a que Len termine para cambiar de charla.",
+      "failed": "No se pudo cambiar de charla. Inténtalo otra vez.",
+      "archived": "Charlas anteriores",
+      "archivedEmpty": "Todavía no hay charlas guardadas.",
+      "reopen": "Volver a esta charla",
+      "messages": "{count, plural, one {# mensaje} other {# mensajes}}"
+    },
+    "memory": {
+      "empty": "Len todavía no recuerda nada tuyo. Cuando le digas algo que valga para todas tus páginas, lo verás aquí."
+    },
+    "empty": {
+      "title": "¿Qué le hacemos hoy a tu página?",
+      "subtitle": "Pídelo con tus palabras. Len lo hace, te enseña qué cambió y lo puedes deshacer.",
+      "suggestions": {
+        "photos": "Pon fotos de verdad en la portada",
+        "form": "Añade un formulario de contacto",
+        "mobile": "Revisa cómo se ve en el móvil",
+        "publish": "Publica mi página"
+      }
+    },
+    "steps": {
+      "running": "Len está trabajando",
+      "done": "{count, plural, one {Len hizo # paso} other {Len hizo # pasos}}"
+    },
+    "activity": {
+      "reading": "Leyendo tu página",
+      "editing": "Cambiando la página",
+      "terminal": "Usando la terminal",
+      "photos": "Buscando fotos",
+      "image": "Editando una imagen",
+      "web": "Buscando en internet",
+      "checking": "Revisando el resultado",
+      "publishing": "Preparando la publicación",
+      "remembering": "Apuntando lo que me dijiste",
+      "results": "Mirando tus resultados",
+      "reply": "Preparando una respuesta",
+      "module": "Encendiendo un módulo",
+      "undoing": "Deshaciendo el último cambio",
+      "asking": "Preparando una pregunta",
+      "working": "Trabajando"
+    },
+    "live": {
+      "thinking": "Pensando",
+      "writing": "Escribiendo",
+      "working": "trabajando · {seconds} s",
+      "onServer": "sigue trabajando aunque cierres esta pestaña",
+      "waitingAnswer": "Esperando tu respuesta",
+      "waitingApproval": "Esperando tu aprobación",
+      "yourTurn": "Te toca · en pausa",
+      "done": "Listo",
+      "doneHint": "pídele otra cosa",
+      "stopped": "Detenido",
+      "stoppedHint": "lo que ya hizo se queda",
+      "failed": "No pudo terminar"
+    },
+    "question": {
+      "label": "Len te pregunta",
+      "hint": "Contéstale abajo, con tus palabras.",
+      "answered": "Respondiste: {answer}"
+    },
+    "changes": {
+      "showAll": "Ver los {count} cambios",
+      "showLess": "Ver menos",
+      "compare": "Comparar antes y después"
+    },
+    "compare": {
+      "title": "Antes y después",
+      "subtitle": "Arrastra la barra para comparar la página de antes del turno con la de ahora.",
+      "close": "Cerrar",
+      "before": "Antes",
+      "after": "Después",
+      "drag": "Arrastra para comparar"
+    },
+    "close": {
+      "applied": "Aplicado",
+      "appliedEdits": "Aplicado · {count, plural, one {# edición} other {# ediciones}}",
+      "credits": "{credits} créditos"
+    },
+    "feedback": {
+      "up": "Me sirvió",
+      "down": "No me sirvió",
+      "thanks": "Gracias por decírnoslo.",
+      "title": "¿Qué falló?",
+      "reasons": {
+        "made_up": "Inventó datos",
+        "not_what_i_asked": "No hizo lo que pedí",
+        "touched_other": "Tocó algo que no pedí",
+        "looks_bad": "Se ve mal",
+        "too_slow": "Tardó mucho"
+      },
+      "notePlaceholder": "Cuéntanos más (opcional)",
+      "privacy": "Lo lee el equipo de OpenLen para mejorar a Len.",
+      "send": "Enviar",
+      "cancel": "Cancelar"
+    },
+    "composer": {
+      "plus": "Imagen y más",
+      "on": "Activo",
+      "disclaimer": "Len puede equivocarse. Revisa tu página antes de publicarla."
+    },
+    "layout": {
+      "float": "Sacar el chat",
+      "dock": "Volver a anclar",
+      "minimize": "Minimizar a Len",
+      "open": "Abrir el chat",
+      "resize": "Arrastra para cambiar el tamaño"
+    }
   }
 }

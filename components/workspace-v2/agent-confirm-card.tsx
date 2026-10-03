@@ -32,6 +32,7 @@ export function AgentConfirmCard({
   projectId,
   confirm,
   onPublished,
+  onCancelled,
 }: {
   projectId: string;
   // SÓLO la tarjeta de publicar. La de objetivo es otro componente y quien
@@ -40,6 +41,9 @@ export function AgentConfirmCard({
   // el lint, no el compilador.
   confirm: Extract<AgentConfirm, { action: "publicar" }>;
   onPublished: (url: string) => void;
+  /** «Cancelar»: la tarjeta se apaga. El chat nuevo lo usa para dejar de decir
+   *  «Esperando tu aprobación» (plans/new-chat/). */
+  onCancelled?: () => void;
 }) {
   const t = useTranslations("wsPage");
   const [state, setState] = useState<CardState>({ kind: "idle" });
@@ -131,7 +135,8 @@ export function AgentConfirmCard({
   const handleCancel = useCallback(() => {
     if (busy || inert) return;
     setState({ kind: "cancelled" });
-  }, [busy, inert]);
+    onCancelled?.();
+  }, [busy, inert, onCancelled]);
 
   if (state.kind === "published") {
     return (
