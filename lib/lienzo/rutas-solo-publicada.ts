@@ -11,4 +11,9 @@ export const RUTAS_SOLO_PUBLICADA: readonly string[] = [
   "/api/bk/",
   "/api/b/",
   "/c/",
+  // El backend de las páginas (lib/backend): supabase-js llama a la URL
+  // ABSOLUTA del proyecto, que contesta también desde el lienzo; un `/rest/v1`
+  // o `/auth/v1` RELATIVO sólo contesta en la publicada.
+  "/rest/v1/",
+  "/auth/v1/",
 ];
