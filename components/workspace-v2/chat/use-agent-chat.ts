@@ -175,6 +175,10 @@ export interface DesignTurn {
 
 const FLUSH_INTERVAL_MS = 800;
 const FLUSH_CHAR_BUDGET = 2000;
+/** Lo que se espera a que el servidor cierre un turno parado con ■ (N40). El
+ *  bucle se entera en su siguiente llamada al modelo; una comprobación con el
+ *  navegador en medio puede tardar unos segundos. */
+const STOP_FALLBACK_MS = 20_000;
 
 // F4 Task 7 — kill-switch fallback: flips true the first time /api/agent
 // reports `code: "agent_off"` (server env OPENLEN_AGENT=0). Module state
@@ -352,6 +356,38 @@ export function useAgentChat({
   // El turno que ESTA pestaña lee por su stream: la convergencia no puede
   // pisarlo con la fila del servidor, que va unos segundos por detrás.
   const enVueloRef = useRef<string | null>(null);
+  // 🔴 N40 (plans/new-chat/): EL ■ DE UN TURNO DEL AGENTE NO CORTA LA LECTURA.
+  // Cortarla pintaba «Cancelado.» en rojo, con Reintentar, sobre lo que el
+  // servidor hacía de verdad. Visto en el taller el 03/10, las dos mitades: un
+  // ■ antes del evento `turno` no llegaba a pedir nada y el servidor —que desde
+  // Len 2.1 no para cuando el cliente se va— hizo el turno entero y lo cobró
+  // (1,13 créditos); un ■ tras el primer cambio lo dejaba guardado («cortado»)
+  // y el lienzo y el chat decían que no. Ahora se pide parar y se espera al
+  // cierre del servidor (`error` cancelled + `done`), que es quien sabe si
+  // cambió algo: rojo si no, el ámbar de C7 si sí.
+  const agentStreamOpenRef = useRef(false);
+  const stopFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // La red de seguridad saltó: el turno se sigue desde su fila, no se da por
+  // cancelado sin saberlo.
+  const stopFellBackRef = useRef(false);
+  const requestStop = useCallback((turnoId: string) => {
+    void fetch("/api/agent/cancelar", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ turnoId }),
+      keepalive: true,
+    }).catch(() => {});
+    // Si el servidor no cierra el turno a tiempo (una herramienta larga entre
+    // dos llamadas al modelo, la red), se deja de esperar y se sigue la fila.
+    if (agentStreamOpenRef.current && !stopFallbackRef.current) {
+      stopFallbackRef.current = setTimeout(() => {
+        stopFallbackRef.current = null;
+        if (!agentStreamOpenRef.current) return;
+        stopFellBackRef.current = true;
+        abortRef.current?.abort();
+      }, STOP_FALLBACK_MS);
+    }
+  }, []);
 
   // Bumps every 15s so "Applied · 12s ago" stays accurate without
   // per-message timers.
@@ -562,7 +598,11 @@ export function useAgentChat({
   useEffect(() => {
     if (reenganche) return;
     const pendiente = turns.find((x) => x.enServidor && x.status === "streaming");
-    if (pendiente) setReenganche(pendiente.id);
+    if (pendiente) {
+      // Un turno que esta pestaña no empezó: nadie le ha pulsado ■ todavía.
+      stopRequestedRef.current = false;
+      setReenganche(pendiente.id);
+    }
   }, [turns, reenganche]);
 
   // LEN 2.1 · RELEER LA FILA cada ~3 s hasta que el turno cierra (decisión de
@@ -572,7 +612,10 @@ export function useAgentChat({
     if (!reenganche) return;
     const fila = reenganche;
     let vivo = true;
-    stopRequestedRef.current = false;
+    // (Aquí se ponía `stopRequestedRef` a cero. Ya no: si el ■ de un turno
+    // propio no recibió respuesta a tiempo (N40), se sigue desde su fila y su
+    // 404 tiene que seguir siendo «Cancelado.». Se pone a cero al empezar cada
+    // turno, y al recoger uno que esta pestaña no empezó.)
     const terminar = () => {
       turnoIdRef.current = null;
       setReenganche(null);
@@ -1063,6 +1106,9 @@ export function useAgentChat({
         // El id del turno ANTERIOR no puede quedarse aquí: el ■ de este turno,
         // pulsado antes de que llegue su evento `turno`, pararía otro.
         turnoIdRef.current = null;
+        stopRequestedRef.current = false;
+        stopFellBackRef.current = false;
+        agentStreamOpenRef.current = true;
         enVueloRef.current = turnId;
         /** Llegó el `done`: el turno terminó y lo dijo. Sin él y sin `error`,
          *  el stream se cortó por el camino y el turno sigue en el servidor. */
@@ -1214,7 +1260,12 @@ export function useAgentChat({
 
               if (evName === "turno") {
                 const id = strField(payload, "turnoId");
-                if (id) turnoIdRef.current = id;
+                if (id) {
+                  turnoIdRef.current = id;
+                  // ■ pulsado antes de saber a qué turno iba (N40): ahora sí
+                  // se le puede pedir al servidor.
+                  if (stopRequestedRef.current) requestStop(id);
+                }
               } else if (evName === "direccion") {
                 // LO QUE ESCRIBISTE A MEDIA FAENA, de vuelta por el stream. Se
                 // pega al texto del turno para que quede EN LA CONVERSACION: si
@@ -1479,6 +1530,9 @@ export function useAgentChat({
                   (isAgentErrorCode(code)
                     ? tAgent(`errors.${code}`)
                     : strField(payload, "message") || t("errors.generic"));
+                // El ■ de quien mira: se dice con la misma palabra que el ■
+                // de un turno reenganchado (N38).
+                if (code === "cancelled" && stopRequestedRef.current) errorMessage = t("errors.cancelled");
               }
             }
           }
@@ -1487,6 +1541,8 @@ export function useAgentChat({
             // F4 Task 7 — the SAME turn, the SAME abort controller, routed
             // through classic ai-design instead. No error surfaces; the
             // outer try/finally below still owns abortRef/sending cleanup.
+            // ai-design sí para cortando la conexión: su ■ vuelve a abortar.
+            agentStreamOpenRef.current = false;
             await runAiDesignTurn({
               turnId,
               prompt,
@@ -1643,7 +1699,11 @@ export function useAgentChat({
           notifyCreditBalanceChanged();
         } catch (err) {
           scanController.cancel();
-          if (abort.signal.aborted) {
+          if (abort.signal.aborted && stopFellBackRef.current) {
+            // El ■ se pidió y el servidor no cerró a tiempo (N40): lo que
+            // diga su fila —borrada, cortada o aplicada— es la respuesta.
+            seguirEnElServidor(turnId);
+          } else if (abort.signal.aborted) {
             updateTurn(turnId, {
               status: "error",
               errorText: t("errors.cancelled"),
@@ -1655,7 +1715,14 @@ export function useAgentChat({
             seguirEnElServidor(turnId);
           }
         } finally {
-          if (abortRef.current === abort) abortRef.current = null;
+          if (abortRef.current === abort) {
+            abortRef.current = null;
+            agentStreamOpenRef.current = false;
+            if (stopFallbackRef.current) {
+              clearTimeout(stopFallbackRef.current);
+              stopFallbackRef.current = null;
+            }
+          }
           if (enVueloRef.current === turnId) enVueloRef.current = null;
           setSending(false);
         }
@@ -1694,6 +1761,7 @@ export function useAgentChat({
       persistTurn,
       projectId,
       reenganche,
+      requestStop,
       runAiDesignTurn,
       scopedSelection,
       seguirEnElServidor,
@@ -1750,18 +1818,19 @@ export function useAgentChat({
     // Un turno reenganchado no tiene conexión que abortar: lo que diga su fila
     // después (un 404 si no llegó a cambiar nada) es la respuesta al ■.
     stopRequestedRef.current = true;
-    if (turnoId) {
-      void fetch("/api/agent/cancelar", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ turnoId }),
-        keepalive: true,
-      }).catch(() => {});
-    }
-    // Aborting triggers the catch branch in `send`, which marks the turn
-    // as error with text "Cancelled." and reverts any partial iframe drip.
+    // Sin `turnoId` todavía, la petición sale en cuanto llegue (ver el evento
+    // `turno` en `send`).
+    if (turnoId) requestStop(turnoId);
+    // 🔴 N40: un turno del Agente leído por su stream NO se aborta. El
+    // servidor lo cierra (`error` cancelled + `done`) y ese cierre decide
+    // rojo o ámbar por el camino de siempre. Abortar aquí era decidirlo a
+    // ciegas: «Cancelado.» sobre un turno que seguía, o que ya había cambiado
+    // la página.
+    if (agentStreamOpenRef.current) return;
+    // ai-design: abortar lleva al `catch` de su turno, que lo marca
+    // «Cancelado.» y deshace lo que goteaba en el lienzo.
     abortRef.current?.abort();
-  }, []);
+  }, [requestStop]);
 
   const handleUndo = useCallback(
     async (turn: DesignTurn) => {

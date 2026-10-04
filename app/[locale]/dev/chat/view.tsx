@@ -55,6 +55,10 @@ function agentStream(body: { projectId: string; prompt: string; turnId: string }
   let text = "";
   const corrections: string[] = [];
   let stopped = false;
+  // ■ por `/api/agent/cancelar`: el servidor de verdad no corta, cierra el
+  // turno con `error` cancelled + `done` (N40). Abortar el fetch sí corta.
+  let cancelRequested = false;
+  let wroteHtml = false;
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (event: string, data: unknown) => controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
@@ -64,7 +68,7 @@ function agentStream(body: { projectId: string; prompt: string; turnId: string }
           send("direccion", { texto });
         },
         abort: () => {
-          stopped = true;
+          cancelRequested = true;
         },
       });
       signal?.addEventListener("abort", () => {
@@ -73,6 +77,13 @@ function agentStream(body: { projectId: string; prompt: string; turnId: string }
       let closed = false;
       for (const s of steps) {
         await new Promise((r) => setTimeout(r, s.ms));
+        if (cancelRequested && !stopped) {
+          send("error", { message: "El agente fue cancelado.", code: "cancelled" });
+          send("done", { mutoDurable: wroteHtml, centicredits: 0 });
+          controller.close();
+          closed = true;
+          break;
+        }
         if (stopped) {
           try {
             controller.error(new DOMException("Aborted", "AbortError"));
@@ -84,7 +95,10 @@ function agentStream(body: { projectId: string; prompt: string; turnId: string }
         }
         send(s.event, s.data);
         if (s.event === "text") text += (s.data as { text: string }).text;
-        if (s.event === "html") p.html = (s.data as { html: string }).html;
+        if (s.event === "html") {
+          p.html = (s.data as { html: string }).html;
+          wroteHtml = true;
+        }
         if (s.event === "action") {
           const a = s.data as NonNullable<StoredChatTurn["actions"]>[number];
           if (a.status !== "running") actions.push(a);
