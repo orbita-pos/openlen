@@ -1737,6 +1737,88 @@ describe("POST /api/agent — el techo de dinero del turno", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 🔴 EL ■ COBRA LO QUE SE USÓ, HASTA EL TECHO (Jesús, 03/10: «como DeepSeek lo
+// hace»). En el arnés de DeepSeek el usuario paga cada token que el modelo llegó
+// a gastar, también en un turno cancelado: su contador cierra cada intento
+// termine como termine. Hasta hoy el ■ cobraba 0 (regla del 07/07, de cuando el ■
+// deshacía lo hecho). Los finales que son NUESTROS —el proveedor caído, el perro
+// del silencio, los topes de pasos— siguen en 0.
+describe("POST /api/agent — el ■ cobra lo que se usó, hasta el techo", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<html><body><h1>hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "pro", balance: 5_000, allotment: 15_000, refillsAt: null });
+    mocks.techoDelTurno.mockReturnValue(3_000);
+    mocks.creditsForUsage.mockReturnValue(146);
+  });
+
+  const pedir = async () =>
+    readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "rehaz el menú" }),
+        }),
+      ),
+    );
+  const cancelado = { finalText: "", turns: 2, toolCalls: 1, terminalError: true, topeAlcanzado: null, errorCode: "cancelled", mutoDurable: false };
+  const conUso = (tokens: number) => ({ inputTokens: tokens, outputTokens: tokens ? 5 : 0, cachedTokens: 0, thinkingTokens: 0 });
+  /** El bucle termina cancelado; con `porElDueno`, porque llegó el ■ (lo que
+   *  hace `POST /api/agent/cancelar` con el `abortar` del turno). */
+  const turnoCancelado = (porElDueno: boolean, tokens: number, extra: Record<string, unknown> = {}) => async (args: AgentLoopArgs) => {
+    if (porElDueno) {
+      const opciones = (mocks.abrirTurno.mock.calls.at(-1) as unknown as [string, string, number, { abortar: () => void }])[3];
+      opciones.abortar();
+    }
+    args.emit({ type: "text", text: "Empiezo…" });
+    return { ...cancelado, usage: conUso(tokens), ...extra };
+  };
+  const cierre = (eventos: Awaited<ReturnType<typeof pedir>>) => eventos.find((e) => e.event === "done")!.data;
+
+  it("🔴 el ■ cobra lo que el modelo llegó a gastar, y el cierre lo dice", async () => {
+    mocks.runAgentLoop.mockImplementation(turnoCancelado(true, 10));
+    const eventos = await pedir();
+    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 146);
+    expect(cierre(eventos).centicredits).toBe(146);
+  });
+
+  it("y nunca más que el techo del turno", async () => {
+    mocks.creditsForUsage.mockReturnValue(3_140);
+    mocks.runAgentLoop.mockImplementation(turnoCancelado(true, 10));
+    await pedir();
+    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 3_000);
+  });
+
+  it("un ■ antes de que el modelo gastara nada no cobra nada", async () => {
+    mocks.runAgentLoop.mockImplementation(turnoCancelado(true, 0));
+    const eventos = await pedir();
+    expect(mocks.debitCredits).not.toHaveBeenCalled();
+    expect(cierre(eventos).centicredits).toBe(0);
+  });
+
+  it("BRAZO DE CONTROL: una cancelación que NO es el ■ (el perro del silencio) sigue sin cobrarse", async () => {
+    mocks.runAgentLoop.mockImplementation(turnoCancelado(false, 10));
+    await pedir();
+    expect(mocks.debitCredits).not.toHaveBeenCalled();
+  });
+
+  it("BRAZO DE CONTROL: el proveedor caído sigue sin cobrarse aunque llegue el ■ a la vez", async () => {
+    mocks.runAgentLoop.mockImplementation(turnoCancelado(true, 10, { errorCode: "upstream" }));
+    await pedir();
+    expect(mocks.debitCredits).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // N42 (taller, 03/10) · EL CIERRE DICE LO QUE SE COBRÓ, TAMBIÉN LO DE LAS
 // HERRAMIENTAS. Un turno con `web_search` dijo «1,46 créditos» y costó 5,96: cada
 // consulta se cobra aparte (`lib/agent/web/buscar.ts`), igual que editar una

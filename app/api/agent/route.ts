@@ -1426,7 +1426,8 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         // F2-T9 billing ruling (Jesús 2026-07-07): a turn that ended on a
         // terminal error (stopReason error/cancelled/max_tokens, or the
         // maxTurns/maxToolCalls caps) debits 0 credits — the user got no
-        // usable output. A clean end_turn finish charges normally, even
+        // usable output. ⚠️ Dos excepciones, las dos «hasta el techo»: el tope
+        // de gasto (30/09) y el ■ del dueño (03/10, «como DeepSeek»). A clean end_turn finish charges normally, even
         // when a tool inside it returned {ok:false} as data or the turn
         // ended waiting on a confirm card.
         // El importe se calcula SIEMPRE, se cobre o no. Hasta el 25/08 vivía
@@ -1495,6 +1496,28 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           );
           await debitCredits(userId, alTecho);
           cobrado = alTecho;
+        } else if (canceladoAProposito && result.errorCode === "cancelled") {
+          // 🔴 EL ■ COBRA LO QUE SE USÓ, HASTA EL TECHO (Jesús, 03/10: «como
+          // DeepSeek lo hace»).
+          //
+          // En el arnés de DeepSeek el usuario paga cada token que el modelo
+          // llegó a gastar, también en un turno cancelado: su contador cierra
+          // cada intento termine como termine. Aquí el ■ cobraba 0 por la regla
+          // del 07/07, que es de cuando el ■ deshacía lo hecho; desde 2.1 lo hecho
+          // se queda, y cobrar 0 era un pase gratis igual que el del techo (30/09).
+          //
+          // Sólo el ■ de verdad: `canceladoAProposito` lo pone el `abortar` de
+          // `POST /api/agent/cancelar`. El perro del silencio también aborta, y
+          // eso es nuestro: sigue por la rama de abajo, en 0. Sin tokens gastados
+          // —el ■ llegó antes de la primera respuesta— no hay nada que cobrar: el
+          // suelo de 1 de `credits` es para un turno que sí trabajó.
+          const usado = inputTokens + outputTokens > 0 ? Math.min(credits, techo) : 0;
+          console.log(
+            `[agent] ■ del dueño — ${usado} credits (gastado ${credits}, techo ${techo})` +
+              ` / vueltas=${result.turns} llamadas=${result.toolCalls} motivo=cancelled`,
+          );
+          if (usado > 0) await debitCredits(userId, usado);
+          cobrado = usado;
         } else if (!result.terminalError && result.sinCobro) {
           // 🔴 CERRADO CON ELEGANCIA, SIN COBRO (revisión pre-deploy del
           // 2026-09-22). El bucle redacta el cierre de dos turnos que antes
