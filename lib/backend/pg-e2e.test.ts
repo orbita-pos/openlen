@@ -14,13 +14,13 @@
 import { randomBytes } from "node:crypto";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { defaultAuthConfig, type AuthMail } from "./auth/config";
 import { ONLY_USER, signInForVisit, supabaseStorageKey } from "./auth/visit-session";
 import { hashSecretKey, newDatabasePassword, newJwtSecret, newProjectRef, newPublishableKey, newSecretKey } from "./keys";
 import { projectDatabase, withAdmin, withDeveloper } from "./pg";
-import { devRoleOf, provisionDatabase } from "./provision";
+import { devRoleOf, dropProjectDatabase, provisionDatabase } from "./provision";
 import { handleBackendRequest, type BackendProject } from "./router";
 
 const E2E_URL = process.env.PAGES_E2E_DATABASE_URL;
@@ -66,10 +66,7 @@ describe.skipIf(!E2E_URL)("el backend de las páginas contra un Postgres de verd
 
   afterAll(async () => {
     if (!E2E_URL) return;
-    await withAdmin("postgres", async (r) => {
-      await r.exec(`drop database if exists ${dev} with (force)`);
-      await r.exec(`drop role if exists ${dev}`);
-    });
+    await dropProjectDatabase(ref);
   }, 60_000);
 
   const client = (key: string, stored = new Map<string, string>()): SupabaseClient =>
@@ -143,5 +140,42 @@ describe.skipIf(!E2E_URL)("el backend de las páginas contra un Postgres de verd
     await r.end();
     const after = await withAdmin(dev, (q) => q.query(`select count(*)::int as n from auth.sessions where user_agent like 'OpenLen%'`));
     expect(after.rows[0]?.n).toBe(0);
+  }, 60_000);
+  // 🔴 BORRAR UN PROYECTO SE LLEVA SU BASE. Hasta el 04/10, `deleteProject`
+  // borraba la fila de `projectBackends` (en cascada) y dejaba en el clúster la
+  // base y el rol `ol_<ref>`, con las cuentas de los visitantes dentro —correo,
+  // contraseña con hash, la IP de cada sesión— y ya sin dueño que pudiera
+  // verlas ni borrarlas.
+  //
+  // Y sin cerrar antes los pools de ESTE proceso: el `with (force)` del borrado
+  // les mata las conexiones ociosas y cada una sale como «conexión rota» en el
+  // registro (se veía en el afterAll de este mismo fichero).
+  it("🔴 borrar la base de un proyecto se lleva la base y su rol, sin dejar conexiones rotas", async () => {
+    const otro = newProjectRef();
+    const otroDev = devRoleOf(otro);
+    await provisionDatabase({ ref: otro, dbPassword: newDatabasePassword() });
+    await projectDatabase(otroDev).transaction((q) => q("select 1"));
+    await withAdmin(otroDev, (r) => r.query("select 1"));
+
+    const errores: unknown[][] = [];
+    const spy = vi.spyOn(console, "error").mockImplementation((...a: unknown[]) => void errores.push(a));
+    try {
+      await dropProjectDatabase(otro);
+      await new Promise((r) => setTimeout(r, 300));
+    } finally {
+      spy.mockRestore();
+    }
+
+    const quedan = await withAdmin("postgres", (r) =>
+      r.query(
+        `select (select count(*) from pg_database where datname = $1)::int as bases,
+                (select count(*) from pg_roles where rolname = $1)::int as roles`,
+        [otroDev],
+      ),
+    );
+    expect(quedan.rows[0]).toEqual({ bases: 0, roles: 0 });
+    expect(errores).toEqual([]);
+    // Otra vez: ya no hay nada que borrar, y no falla.
+    await dropProjectDatabase(otro);
   }, 60_000);
 });

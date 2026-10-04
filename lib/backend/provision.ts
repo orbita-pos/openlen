@@ -11,7 +11,7 @@
 import "server-only";
 
 import { CLUSTER_ROLES_SQL, initProjectDatabase } from "./schema";
-import { withAdmin } from "./pg";
+import { closePools, withAdmin } from "./pg";
 import { literal } from "./rest/sql";
 
 const REF_RE = /^[a-z]{20}$/;
@@ -60,6 +60,27 @@ export async function provisionDatabase(opts: { ref: string; dbPassword: string 
     } catch (err) {
       await r.exec("ROLLBACK").catch(() => {});
       throw err;
+    }
+  });
+}
+
+/** Lo contrario de `provisionDatabase`: la base del proyecto y su rol de
+ *  desarrollador fuera del clúster, con todo lo que la página guardaba —las
+ *  cuentas de sus visitantes incluidas—. Idempotente.
+ *
+ *  `with (force)` echa las conexiones de otros procesos; las de éste se
+ *  cierran antes, en orden. El mismo cerrojo que el alta: un borrado y un alta
+ *  del mismo `ref` no se cruzan. */
+export async function dropProjectDatabase(ref: string): Promise<void> {
+  const dev = devRoleOf(ref);
+  await closePools(dev);
+  await withAdmin("postgres", async (r) => {
+    await r.query(`select pg_advisory_lock(hashtext($1))`, [`pages-backend:${ref}`]);
+    try {
+      await r.exec(`drop database if exists ${dev} with (force);`);
+      await r.exec(`drop role if exists ${dev};`);
+    } finally {
+      await r.query(`select pg_advisory_unlock(hashtext($1))`, [`pages-backend:${ref}`]);
     }
   });
 }

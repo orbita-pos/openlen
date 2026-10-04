@@ -578,6 +578,8 @@ export default defineConfig({
       "lib/projects/assets-config.test.ts",
       "lib/projects/drift-pill.test.ts",
       "lib/projects/dismiss-degradations.test.ts",
+      // Borrar un proyecto se lleva la base de su página (04/10).
+      "lib/projects/delete-project.test.ts",
       // I4 — el primitivo de escritura con compare-and-swap y su guardia.
       "lib/projects/escribir-data.test.ts",
       // 🔴 CONTRA POSTGRES DE VERDAD. La de arriba dobla la base y por eso no

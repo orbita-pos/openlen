@@ -55,6 +55,18 @@ function pool(key: string, url: string, max: number): Pool {
   return p;
 }
 
+/** Cierra los pools de ESTE proceso hacia una base. Antes de borrarla: el
+ *  `with (force)` del borrado les mataría las conexiones ociosas y cada una
+ *  saldría como «conexión rota» en el registro. */
+export async function closePools(dbName: string): Promise<void> {
+  for (const key of [`admin:${dbName}`, `auth:${dbName}`]) {
+    const p = pools.get(key);
+    if (!p) continue;
+    pools.delete(key);
+    await p.end();
+  }
+}
+
 function txQuery(client: PoolClient): TxQuery {
   return async (sql, params) => {
     const r = await client.query(sql, params as unknown[] | undefined);

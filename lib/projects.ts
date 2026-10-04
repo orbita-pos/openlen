@@ -19,6 +19,7 @@ import {
   ReleaseNotFoundError,
 } from "@/lib/publish/filesystem";
 import { purgeSubdomain } from "@/lib/publish/cache-purge";
+import { dropPageDatabase, pageDatabaseRef } from "@/lib/backend/teardown";
 import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
 import { actualizarData } from "@/lib/projects/escribir-data";
@@ -455,6 +456,10 @@ export async function deleteProject(
     )
     .limit(1);
   const sub = existing[0]?.subdomain;
+  // La base de la página, si tiene: el `ref` ANTES de borrar (la fila se va en
+  // cascada). Sin esto la base y su rol se quedaban en el clúster con las
+  // cuentas de los visitantes dentro y sin dueño. Ver lib/backend/teardown.ts.
+  const ref = existing[0] ? await pageDatabaseRef(projectId) : null;
 
   const result = await db
     .delete(schema.projects)
@@ -472,6 +477,7 @@ export async function deleteProject(
       // operator can rm it. Surface the delete success either way.
     });
   }
+  if (ref && result.length > 0) await dropPageDatabase(ref);
   return result.length > 0;
 }
 
