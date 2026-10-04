@@ -13,16 +13,16 @@
     "menu": "メニュー"
   },
   "hero": {
-    "title": "あなたが所有するランディングページ。<br></br><muted>AIで構築。</muted> <gradient>オープンソース。</gradient>",
+    "title": "あなた専属のWeb開発者。<br></br><gradient>Len。</gradient>",
     "pagesThisWeek": "今週生成されたページ数は <strong>{count, number}</strong>",
     "githubAria": "GitHub の OpenLen",
     "starOnGithub": "GitHub でスターを付ける",
     "pagesLive": "独自サブドメイン・ドメインで公開中のページ <strong>{count}</strong> 件"
   },
   "heroPrompt": {
-    "placeholder": "私の SaaS のためのランディングページで…",
+    "placeholder": "Lenに必要なことを伝えてください…",
     "generate": "生成",
-    "tryLabel": "試す",
+    "tryLabel": "例えば",
     "dictate": "音声入力",
     "stopDictating": "音声入力を停止",
     "micDenied": "ブラウザがマイクをブロックしました。アドレスバーで許可すると音声入力できます。",
@@ -44,7 +44,32 @@
       "visualCriticDesc": "より丁寧に書き、添付した画像も読みます",
       "sinVision": "画像を読めません。画像が添付されています",
       "masCaro": "コスト約{n}倍"
-    }
+    },
+    "asks": {
+      "bakery": {
+        "label": "私のパン屋",
+        "prompt": "私のパン屋「La Espiga」のページ。菓子パン、オーダーケーキ、営業時間、アクセス、WhatsAppで注文できるボタン付き。"
+      },
+      "barber": {
+        "label": "理容室の予約",
+        "prompt": "理容師が3人いる理容室のページ。カットメニューと料金、店内の写真、予約フォーム付き。"
+      },
+      "photographer": {
+        "label": "写真のポートフォリオ",
+        "prompt": "ウェディングフォトグラファーとしての私のポートフォリオ。結婚式ごとのギャラリー、各プランの内容、日程を問い合わせるフォーム付き。"
+      },
+      "course": {
+        "label": "私のオンライン講座",
+        "prompt": "お菓子作りのオンライン講座のランディングページ。週ごとのカリキュラム、価格49ドル、受講生の声、申し込みボタン付き。"
+      }
+    },
+    "ghost": [
+      "WhatsAppで注文できる、パン屋のページ",
+      "理容室のオンライン予約",
+      "ウェディング写真のポートフォリオ",
+      "お菓子作り講座を売るランディングページ",
+      "全料理の写真付き、レストランのメニュー"
+    ]
   },
   "signInDialog": {
     "close": "閉じる",
@@ -54,9 +79,9 @@
     "logIn": "ログイン"
   },
   "demoStrip": {
-    "eyebrow": "手作りのテンプレート {count} 点 — すべて公開準備完了",
-    "title": "本物のテンプレート。<br></br><muted> 選んで、入力して、公開。</muted>",
-    "description": "各テンプレートは自己完結型の HTML — Tailwind と Google Fonts をインライン化し、React ランタイムは不要。複製してコピーと画像を編集し、サブドメインに公開します。",
+    "lenSays": "どこから始めればいいか迷ったら、ひとつ選んでください。あなたのビジネスに合わせます。",
+    "title": "手作りのデザイン。<br></br><muted> Lenがあなたのものにします。</muted>",
+    "description": "あなたの文章、写真、色、フォーム。美しいものから始めて、あなただけのものに仕上げます。",
     "browseAll": "{count} 点すべてのテンプレートを見る"
   },
   "features": {
@@ -82,9 +107,9 @@
     }
   },
   "analyticsLeads": {
-    "badge": "アナリティクスとリード",
-    "title": "トラフィックを把握。<muted>すべてのリードを獲得。</muted>",
-    "subtitle": "プライバシー第一のアナリティクスとリードフォームを、公開するすべてのページに標準搭載 — Google Analyticsなし、Cookieなし、同意バナーなし。そしてデータはあなたのものです。",
+    "lenSays": "誰かからメッセージが届いたら、お知らせします。",
+    "title": "誰が訪れたか分かる。<muted>誰がメッセージをくれたかも。</muted>",
+    "subtitle": "公開したページには、それぞれアナリティクスとフォームが付いてきます。訪問者数、流入元、受信箱のメッセージまで。Google Analyticsも、Cookieも、同意バナーもありません。",
     "dashboard": {
       "title": "概要",
       "range": "過去30日間",
@@ -168,9 +193,9 @@
     "featureColumn": "機能"
   },
   "trust": {
-    "badge": "検証できる",
-    "title": "<muted>検証できる</muted>信頼",
-    "subtitle": "約束ではなく、すべての主張に確認ボタンがあります。",
+    "lenSays": "私の言葉をうのみにせず、確かめてください。",
+    "title": "私たちの主張には、<muted>すべて確かめるボタンがあります。</muted>",
+    "subtitle": "稼働率、速度、そしてコード。誰でも見られるように公開しています。",
     "uptime": {
       "title": "ライブ稼働率",
       "live": "<b>{pct}</b> の稼働率 — {window}、外部から5分ごとに計測",
@@ -204,52 +229,54 @@
     "allCount": "{count} 点すべてのクリエイターテンプレート"
   },
   "pricing": {
-    "badge": "料金",
-    "title": "無料で始められます。<muted>セルフホストはずっと無料。</muted>",
-    "subtitle": "月20 AIクレジットで無料スタート。Pro にアップグレードして150クレジット — または制限のないセルフホストでスタック全体を自分のものに。",
+    "lenSays": "制作会社の1時間分より安いです。",
+    "title": "無料で始めよう。<muted>本格的に使うなら月${price}。</muted>",
+    "subtitle": "制作会社に頼めば、見積もりは高額で、何週間も待たされます。Lenなら毎月20クレジットで無料から始められ、カード不要、いつでも解約できます。",
     "comingSoon": "近日公開",
     "mostPopular": "一番人気",
-    "githubAria": "GitHub の OpenLen",
-    "footnote": "すべてのプランに AGPL ライセンスのオープンソースジェネレーターが含まれます。ホスティングプランは機能ではなく利便性を追加します。",
+    "footnote": "価格は米ドル（USD）表示です。有料プランで増えるのはクレジットと手軽さ。OpenLenはすべてAGPLv3のオープンソースです。",
     "free": {
       "name": "Free",
       "suffix": "ずっと",
-      "blurb": "すべて使えます。クレジットカード不要、期限もありません。",
-      "cta": "無料で試す",
+      "blurb": "実際のページでLenを試すために。",
+      "cta": "無料で始める",
       "features": {
-        "0": "月20 AIクレジット",
-        "1": "link-in-bio 30 点を含むテンプレート {count} 点",
-        "2": "'<you>'.openlen.com に公開",
-        "3": "プライバシー重視のアナリティクス + リンクごとのクリック計測",
-        "4": "メール通知付きのリードフォーム"
+        "0": "毎月20クレジット",
+        "1": "手作りのデザイン{count}種",
+        "2": "your-name.openlen.app で公開",
+        "3": "Cookieなしのアナリティクスとリンクごとのクリック数",
+        "4": "メール通知付きフォーム"
       }
     },
     "pro": {
       "name": "Pro",
       "suffix": "/月",
       "save": "{percent}%オフ",
-      "blurb": "月に150 AIクレジット — 完全なサイト約25個、または単体ページ75枚。",
-      "cta": "Pro にアップグレード",
+      "blurb": "ビジネスに。毎週Lenがそばにいます。",
+      "cta": "Proにする",
       "features": {
         "0": "Free のすべて",
-        "1": "月に150 AIクレジット（完全なサイト約25個）",
-        "2": "カスタムドメイン（links.your-brand.com）",
-        "3": "90日を超えるアナリティクス保持",
+        "1": "毎月{credits}クレジット",
+        "2": "独自ドメイン（yourbusiness.com）",
+        "3": "90日を超えるアナリティクス",
         "4": "優先メールサポート"
       }
     },
-    "selfHost": {
-      "name": "セルフホスト",
-      "suffix": "ずっと",
-      "blurb": "自分のサーバーでスタック全体を動かす。",
-      "cta": "リポジトリを複製",
+    "max": {
+      "name": "Max",
+      "suffix": "/月",
+      "blurb": "毎日Lenに頼みごとをする人に。",
+      "cta": "Maxにする",
       "features": {
-        "0": "AGPLv3 — 改変も再配布もあなたの自由",
-        "1": "自分の Fireworks と OpenAI のキーを使用",
-        "2": "Hetzner の 1 台ですべてを実行",
-        "3": "Caddy でワイルドカードサブドメイン",
-        "4": "請求なし、レート制限なし、監視なし"
+        "0": "Pro のすべて",
+        "1": "毎月{credits}クレジット — Proの{times, number}倍",
+        "2": "最安のクレジット：{proCents, number}¢ではなく{cents, number}¢"
       }
+    },
+    "selfHost": {
+      "title": "自分で運用したいなら？",
+      "body": "OpenLenはオープンソース（AGPLv3）です。クローンして自分のキーを設定し、自分のサーバーで動かせます。制限なし、私たちへの支払いも不要です。",
+      "cta": "リポジトリを複製"
     },
     "custom": {
       "title": "ページ以上のものが必要ですか？",
@@ -257,10 +284,10 @@
     }
   },
   "finalCta": {
-    "badge": "スタックを所有しよう",
-    "title": "ロックインへの支払いをやめよう。<br></br><muted>ランディングページを所有しはじめよう。</muted>",
-    "subtitle": "プロンプトひとつで、<strong>あなたのもので、どこでもデプロイでき、読めるコードでできた</strong>ランディングページが手に入ります。",
-    "generateBtn": "ページを生成 — 無料",
+    "lenSays": "始めましょうか？必要なことを教えてください。",
+    "title": "思い描いたWebサイトを、<br></br><muted>誰も待たずに。</muted>",
+    "subtitle": "必要なことをLenに伝えるだけ。ページは<strong>あなたのもの。HTMLも、ドメインも、読めるオープンソースのコードも。</strong>",
+    "generateBtn": "Lenで始める — 無料",
     "githubAria": "GitHub の OpenLen",
     "cloneBtn": "GitHub で複製",
     "perks": {
@@ -335,5 +362,9 @@
     "errorStatus": "エラー {status}: {detail}",
     "unexpectedResponse": "サーバーから予期しない応答がありました",
     "networkError": "ネットワークエラー"
+  },
+  "lenCompanion": {
+    "ask": "何かお手伝いしましょうか？",
+    "aria": "Lenに頼む"
   }
 }

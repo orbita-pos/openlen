@@ -13,16 +13,16 @@
     "menu": "메뉴"
   },
   "hero": {
-    "title": "당신이 소유하는 랜딩 페이지.<br></br><muted>AI가 제작.</muted> <gradient>오픈 소스.</gradient>",
+    "title": "당신만의 웹 개발자.<br></br><gradient>Len.</gradient>",
     "pagesThisWeek": "이번 주 생성된 페이지 <strong>{count, number}</strong>개",
     "githubAria": "GitHub의 OpenLen",
     "starOnGithub": "GitHub에서 Star 누르기",
     "pagesLive": "자체 서브도메인·도메인으로 공개된 페이지 <strong>{count}</strong>개"
   },
   "heroPrompt": {
-    "placeholder": "내 SaaS를 위한 랜딩 페이지인데…",
+    "placeholder": "Len에게 필요한 것을 말해 주세요…",
     "generate": "생성",
-    "tryLabel": "예시",
+    "tryLabel": "예를 들어",
     "dictate": "받아쓰기",
     "stopDictating": "받아쓰기 중지",
     "micDenied": "브라우저가 마이크를 차단했습니다. 주소 표시줄에서 허용하면 받아쓰기를 사용할 수 있습니다.",
@@ -44,7 +44,32 @@
       "visualCriticDesc": "더 자세히 쓰고 첨부한 이미지도 읽습니다",
       "sinVision": "이미지를 읽지 못하는데 이미지를 첨부했습니다",
       "masCaro": "비용 약 {n}배"
-    }
+    },
+    "asks": {
+      "bakery": {
+        "label": "나의 빵집",
+        "prompt": "내 빵집 ‘La Espiga’ 페이지: 단과자빵, 주문 제작 케이크, 영업시간, 오시는 길, WhatsApp으로 주문하는 버튼."
+      },
+      "barber": {
+        "label": "바버숍 예약",
+        "prompt": "바버 세 명이 있는 내 바버숍 페이지: 커트 메뉴와 가격, 매장 사진, 시간을 예약하는 폼."
+      },
+      "photographer": {
+        "label": "사진 포트폴리오",
+        "prompt": "웨딩 사진작가인 내 포트폴리오: 결혼식별 갤러리, 패키지마다 포함된 내용, 날짜를 문의하는 폼."
+      },
+      "course": {
+        "label": "나의 온라인 강의",
+        "prompt": "내 온라인 베이킹 강의 랜딩 페이지: 주차별 커리큘럼, 가격 $49, 수강생 후기, 수강 신청 버튼."
+      }
+    },
+    "ghost": [
+      "WhatsApp 주문이 되는 빵집 페이지",
+      "바버숍 온라인 예약",
+      "웨딩 사진 포트폴리오",
+      "베이킹 강의를 파는 랜딩 페이지",
+      "모든 요리 사진이 있는 레스토랑 메뉴"
+    ]
   },
   "signInDialog": {
     "close": "닫기",
@@ -54,9 +79,9 @@
     "logIn": "로그인"
   },
   "demoStrip": {
-    "eyebrow": "직접 제작한 템플릿 {count}개 — 모두 바로 게시 가능",
-    "title": "진짜 템플릿.<br></br><muted> 고르고, 채우고, 게시하세요.</muted>",
-    "description": "각 템플릿은 독립적인 HTML입니다 — Tailwind와 Google Fonts가 인라인으로 포함되고, React 런타임은 없습니다. 복제하고, 문구와 이미지를 편집한 뒤, 내 서브도메인에 배포하세요.",
+    "lenSays": "어디서 시작할지 모르겠다면 하나 고르세요. 당신의 비즈니스에 맞게 바꿔 드릴게요.",
+    "title": "손으로 만든 디자인.<br></br><muted> Len이 당신의 것으로 만듭니다.</muted>",
+    "description": "당신의 글, 사진, 색상, 폼까지. 아름다운 것에서 시작해 당신만의 것으로 완성합니다.",
     "browseAll": "템플릿 {count}개 모두 둘러보기"
   },
   "features": {
@@ -82,9 +107,9 @@
     }
   },
   "analyticsLeads": {
-    "badge": "분석 및 리드",
-    "title": "트래픽을 파악하세요. <muted>모든 리드를 확보하세요.</muted>",
-    "subtitle": "프라이버시를 최우선으로 하는 분석과 리드 양식이 게시하는 모든 페이지에 기본 내장 — Google Analytics도, 쿠키도, 동의 배너도 없습니다. 그리고 데이터는 모두 여러분의 것입니다.",
+    "lenSays": "누군가 메시지를 보내면 알려 드릴게요.",
+    "title": "누가 다녀갔는지. <muted>누가 메시지를 보냈는지도.</muted>",
+    "subtitle": "게시하는 모든 페이지에 분석과 폼이 함께 제공됩니다. 방문자 수, 유입 경로, 받은편지함의 메시지까지. Google Analytics도, 쿠키도, 동의 배너도 없습니다.",
     "dashboard": {
       "title": "개요",
       "range": "최근 30일",
@@ -168,9 +193,9 @@
     "featureColumn": "기능"
   },
   "trust": {
-    "badge": "직접 확인",
-    "title": "<muted>직접 확인할 수 있는</muted> 신뢰",
-    "subtitle": "약속이 아니라, 모든 주장에 확인 버튼이 있습니다.",
+    "lenSays": "제 말만 믿지 마세요. 직접 확인해 보세요.",
+    "title": "우리가 말하는 모든 것에는 <muted>확인할 수 있는 버튼이 있습니다.</muted>",
+    "subtitle": "가동률, 속도, 그리고 코드까지 누구나 볼 수 있게 공개합니다.",
     "uptime": {
       "title": "실시간 가동률",
       "live": "<b>{pct}</b> 가동률 — {window}, 외부에서 5분마다 측정",
@@ -204,52 +229,54 @@
     "allCount": "크리에이터 템플릿 {count}개 전체"
   },
   "pricing": {
-    "badge": "요금제",
-    "title": "무료로 시작. <muted>직접 호스팅은 영원히 무료.</muted>",
-    "subtitle": "매달 20 AI 크레딧으로 무료로 시작하세요. Pro로 업그레이드하면 150 크레딧 — 또는 전체 스택을 직접 호스팅해 제한 없이 사용하세요.",
+    "lenSays": "에이전시 한 시간보다 저렴해요.",
+    "title": "무료로 시작하세요. <muted>제대로 쓸 때는 월 ${price}.</muted>",
+    "subtitle": "에이전시는 큰 비용과 몇 주의 대기를 요구합니다. Len은 매월 20크레딧으로 무료로 시작하고, 카드 없이, 언제든 해지할 수 있습니다.",
     "comingSoon": "출시 예정",
     "mostPopular": "가장 인기",
-    "githubAria": "GitHub의 OpenLen",
-    "footnote": "모든 플랜에는 AGPL 라이선스의 오픈 소스 생성기가 포함됩니다. 호스팅 플랜은 기능이 아니라 편의를 더해줍니다.",
+    "footnote": "가격은 미국 달러(USD) 기준입니다. 유료 플랜은 크레딧과 편의성을 더할 뿐, OpenLen 전체가 AGPLv3 오픈 소스입니다.",
     "free": {
       "name": "무료",
       "suffix": "영원히",
-      "blurb": "모든 기능이 작동합니다. 신용카드도, 기간 제한도 없습니다.",
-      "cta": "무료로 시작하기",
+      "blurb": "실제 페이지로 Len을 써 보세요.",
+      "cta": "무료로 시작",
       "features": {
-        "0": "월 20 AI 크레딧",
-        "1": "링크인바이오 30개를 포함한 템플릿 {count}개",
-        "2": "'<you>'.openlen.com에 게시",
-        "3": "프라이버시 우선 분석 + 링크별 클릭 추적",
-        "4": "이메일 알림이 포함된 리드 폼"
+        "0": "월 20크레딧",
+        "1": "손으로 만든 디자인 {count}개",
+        "2": "your-name.openlen.app에 게시",
+        "3": "쿠키 없는 분석과 링크별 클릭",
+        "4": "이메일 알림이 있는 폼"
       }
     },
     "pro": {
       "name": "Pro",
       "suffix": "/월",
       "save": "{percent}% 할인",
-      "blurb": "월 150 AI 크레딧 — 완성된 사이트 약 25개 또는 단일 페이지 75개.",
+      "blurb": "비즈니스를 위해: 매주 곁에 있는 Len.",
       "cta": "Pro로 업그레이드",
       "features": {
         "0": "무료 플랜의 모든 기능",
-        "1": "월 150 AI 크레딧 (완성된 사이트 약 25개)",
-        "2": "커스텀 도메인 (links.your-brand.com)",
-        "3": "90일을 넘는 분석 데이터 보관",
+        "1": "월 {credits}크레딧",
+        "2": "나만의 도메인 (yourbusiness.com)",
+        "3": "90일 이상의 분석 데이터",
         "4": "우선 이메일 지원"
       }
     },
-    "selfHost": {
-      "name": "직접 호스팅",
-      "suffix": "영원히",
-      "blurb": "전체 스택을 당신의 서버에서 직접 운영하세요.",
-      "cta": "저장소 복제하기",
+    "max": {
+      "name": "Max",
+      "suffix": "/월",
+      "blurb": "매일 Len에게 일을 맡기는 분께.",
+      "cta": "Max로 업그레이드",
       "features": {
-        "0": "AGPLv3 — 자유롭게 수정하고 재배포할 수 있습니다",
-        "1": "자체 Fireworks 및 OpenAI 키 사용",
-        "2": "단일 Hetzner 서버로 모든 것을 실행",
-        "3": "Caddy를 통한 와일드카드 서브도메인",
-        "4": "청구서도, 사용 제한도, 감시도 없음"
+        "0": "Pro 플랜의 모든 기능",
+        "1": "월 {credits}크레딧 — Pro의 {times, number}배",
+        "2": "가장 저렴한 크레딧: {proCents, number}¢ 대신 {cents, number}¢"
       }
+    },
+    "selfHost": {
+      "title": "직접 운영하고 싶으신가요?",
+      "body": "OpenLen은 오픈 소스(AGPLv3)입니다. 클론하고, 자신의 키를 넣고, 내 서버에서 실행하세요. 제한도 없고 저희에게 낼 비용도 없습니다.",
+      "cta": "저장소 복제하기"
     },
     "custom": {
       "title": "페이지 그 이상이 필요하신가요?",
@@ -257,10 +284,10 @@
     }
   },
   "finalCta": {
-    "badge": "당신의 스택을 소유하세요",
-    "title": "종속에 비용 그만 내세요.<br></br><muted>당신의 랜딩 페이지를 소유하기 시작하세요.</muted>",
-    "subtitle": "프롬프트 하나면 <strong>온전히 당신의 것이고, 어디든 배포 가능하며, 직접 읽을 수 있는 코드로 된</strong> 랜딩 페이지가 완성됩니다.",
-    "generateBtn": "내 페이지 생성 — 무료",
+    "lenSays": "시작해 볼까요? 필요한 걸 말해 주세요.",
+    "title": "원하던 웹사이트를,<br></br><muted>누구도 기다리지 않고.</muted>",
+    "subtitle": "Len에게 필요한 것을 말하세요. 페이지는 <strong>당신의 것입니다: 당신의 HTML, 당신의 도메인, 그리고 읽을 수 있는 오픈 소스.</strong>",
+    "generateBtn": "Len으로 시작하기 — 무료",
     "githubAria": "GitHub의 OpenLen",
     "cloneBtn": "GitHub에서 복제하기",
     "perks": {
@@ -335,5 +362,9 @@
     "errorStatus": "오류 {status}: {detail}",
     "unexpectedResponse": "서버에서 예상치 못한 응답이 왔습니다",
     "networkError": "네트워크 오류"
+  },
+  "lenCompanion": {
+    "ask": "필요한 거 있으세요?",
+    "aria": "Len에게 요청하기"
   }
 }
