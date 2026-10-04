@@ -42,6 +42,12 @@ describe("la barra viva", () => {
   it("escribiendo sin herramienta: trabajando, sin actividad", () => {
     const s = liveStatus(turn({ status: "streaming", assistantReasoning: "Voy…" }), { busy: true });
     expect(s).toMatchObject({ kind: "working", activity: null });
+    expect(s).not.toHaveProperty("streamedChars");
+  });
+
+  it("el camino de reserva que gotea la página dice cuánto lleva (C3)", () => {
+    const s = liveStatus(turn({ status: "streaming", assistantReasoning: "Reescribo…", streamedChars: 12_300 }), { busy: true });
+    expect(s).toMatchObject({ kind: "working", activity: null, streamedChars: 12_300 });
   });
 
   it("un turno que sigue en el servidor lo dice", () => {

@@ -13,14 +13,14 @@
 // Lo nuevo es la línea: el tiempo y lo que costó (los manda el servidor), y el
 // 👍/👎.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Clock, RotateCcw, Sparkles, TriangleAlert, X } from "lucide-react";
 
 import { CENTICREDITOS_POR_CREDITO } from "@/lib/credits-client";
 import { duracionLegible } from "@/lib/workspace-v2/proceso-del-turno";
 import type { FeedbackReason, TurnFeedback } from "@/lib/chat/feedback-reasons";
-import { planDeUndo } from "../panels/undo-turn";
+import { planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
 import { isPublishNote } from "./publish-note";
 import { editsOfTurn } from "./turn-changes";
 import { FeedbackButtons, FeedbackForm } from "./turn-feedback";
@@ -169,18 +169,7 @@ export function TurnClose({
           <span className="min-w-0 flex-1 break-words">{notice}</span>
         </div>
       )}
-      {turn.undoFallo && (
-        <div className="nc-notice-bad flex items-start gap-2 rounded-[9px] px-2.5 py-1.5 text-[12px] leading-snug">
-          <X size={14} className="mt-px shrink-0" />
-          <span className="min-w-0 flex-1 break-words">
-            {turn.undoFallo.motivo === "red"
-              ? t("undo.failedNetwork")
-              : turn.undoFallo.motivo === "respuesta"
-                ? t("undo.failedResponse")
-                : t("undo.failedHttp", { status: turn.undoFallo.status })}
-          </span>
-        </div>
-      )}
+      {turn.undoFallo && <UndoFailedNotice failure={turn.undoFallo} />}
       {form && (
         <FeedbackForm
           initial={vote}
@@ -193,6 +182,32 @@ export function TurnClose({
           onCancel={() => setForm(false)}
         />
       )}
+    </div>
+  );
+}
+
+/** El Deshacer que el servidor rechazó: el cambio SIGUE aplicado. Sale debajo
+ *  del cierre —en el último turno, casi siempre por debajo del borde de la
+ *  lista—, así que se trae a la vista, como el formulario del 👎: si no, el
+ *  botón parecía no hacer nada. Y se anuncia: es la respuesta a lo que se acaba
+ *  de pulsar. Cada fallo es un objeto nuevo, así que un segundo intento fallido
+ *  vuelve a traerlo. */
+function UndoFailedNotice({ failure }: { failure: FalloDeUndo }) {
+  const t = useTranslations("panelsChat");
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    box.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [failure]);
+  return (
+    <div ref={box} role="alert" className="nc-notice-bad flex items-start gap-2 rounded-[9px] px-2.5 py-1.5 text-[12px] leading-snug">
+      <X size={14} className="mt-px shrink-0" />
+      <span className="min-w-0 flex-1 break-words">
+        {failure.motivo === "red"
+          ? t("undo.failedNetwork")
+          : failure.motivo === "respuesta"
+            ? t("undo.failedResponse")
+            : t("undo.failedHttp", { status: failure.status })}
+      </span>
     </div>
   );
 }

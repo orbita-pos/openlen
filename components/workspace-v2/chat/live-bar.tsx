@@ -8,7 +8,7 @@
 // Lo que dice sale de `liveStatus` (puro, con prueba).
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Square } from "lucide-react";
 
 import { CaraDeLen } from "@/components/llamada/cara-de-len";
@@ -16,6 +16,13 @@ import type { LiveStatus } from "./live-status";
 
 export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => void }) {
   const t = useTranslations("panelsChat");
+  const locale = useLocale();
+  // «1,7k caracteres» en español, «1.7k chars» en inglés: el número en el
+  // idioma de quien lee (el chat de hoy lo escribía siempre con punto).
+  const charsLabel = (n: number) =>
+    n < 1000
+      ? t("chars.count", { count: n })
+      : t("chars.thousands", { count: new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(n / 1000) });
   const running = status.kind === "thinking" || status.kind === "working";
   const startedAt = running ? status.startedAt : null;
   const [now, setNow] = useState(() => Date.now());
@@ -53,7 +60,15 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
       ticking = meta !== null;
       break;
     case "working":
-      verb = status.activity ? t(`newChat.activity.${status.activity}`) : t("newChat.live.writing");
+      // El camino de reserva (`ai-design`) gotea la página entera: se dice
+      // cuánto lleva, como el chat de hoy (C3). Al lector de pantalla no: el
+      // número cambia con cada trozo; para él sigue siendo «Escribiendo».
+      verb =
+        status.activity
+          ? t(`newChat.activity.${status.activity}`)
+          : status.streamedChars
+            ? t("streaming.writingPage", { chars: charsLabel(status.streamedChars) })
+            : t("newChat.live.writing");
       meta = status.onServer
         ? t("newChat.live.onServer")
         : seconds !== null
@@ -81,7 +96,8 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
   }
 
   const between = status.kind === "working" && !status.activity && spoken !== "";
-  const announced = between ? spoken : [verb, ticking ? null : meta, why].filter(Boolean).join(". ");
+  const spokenVerb = status.kind === "working" && !status.activity ? t("newChat.live.writing") : verb;
+  const announced = between ? spoken : [spokenVerb, ticking ? null : meta, why].filter(Boolean).join(". ");
   if (announced !== spoken) setSpoken(announced);
 
   return (

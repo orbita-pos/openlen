@@ -117,6 +117,10 @@ export type LiveStatus =
       readonly startedAt: number | null;
       /** Sigue en el servidor y esta vista no tiene su stream (Len 2.1). */
       readonly onServer: boolean;
+      /** Lo que lleva escrito de la página el camino de reserva (`ai-design`
+       *  gotea el documento): «Escribiendo la página · 12,3k caracteres» (C3).
+       *  Sólo está si hay algo. */
+      readonly streamedChars?: number;
     }
   /** El turno acabó preguntando: te toca. `question` es la pregunta. */
   | { readonly kind: "waiting"; readonly face: FaceState; readonly reason: "question"; readonly question: string }
@@ -158,7 +162,15 @@ export function liveStatus(
     if (latest.assistantReasoning.length === 0 && (latest.actions?.length ?? 0) === 0 && !latest.enServidor) {
       return { kind: "thinking", face: "pensando", startedAt };
     }
-    return { kind: "working", face: "escribiendo", activity: null, startedAt, onServer: latest.enServidor === true };
+    const chars = latest.streamedChars ?? 0;
+    return {
+      kind: "working",
+      face: "escribiendo",
+      activity: null,
+      startedAt,
+      onServer: latest.enServidor === true,
+      ...(chars > 0 ? { streamedChars: chars } : {}),
+    };
   }
   if (latest.status === "error") {
     if (o.cancelledText && latest.errorText === o.cancelledText) return { kind: "stopped", face: "reposo" };
