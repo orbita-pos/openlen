@@ -349,7 +349,8 @@
     "messages": "받은편지함",
     "marketing": "마케팅",
     "business": "내 비즈니스",
-    "versions": "버전"
+    "versions": "버전",
+    "database": "데이터베이스"
   },
   "startTabs": {
     "crear": "만들기",
@@ -360,5 +361,70 @@
     "page": "페이지",
     "site": "사이트",
     "leads": "리드"
+  },
+  "database": {
+    "title": "데이터베이스",
+    "refresh": "새로고침",
+    "loading": "불러오는 중…",
+    "loadError": "데이터베이스를 불러오지 못했습니다.",
+    "retry": "다시 시도",
+    "projectUrl": "프로젝트 URL: 클릭하여 복사",
+    "copied": "복사됨",
+    "tabs": {
+      "tables": "테이블",
+      "users": "사용자"
+    },
+    "unavailable": {
+      "title": "여기서는 데이터베이스를 사용할 수 없습니다",
+      "body": "이 서버에는 페이지 백엔드가 설정되어 있지 않습니다."
+    },
+    "noData": {
+      "title": "이 페이지는 아직 데이터를 저장하지 않습니다",
+      "body": "리뷰, 장바구니, 사용자 계정처럼 저장이 필요한 것을 Len에게 요청하면 데이터베이스가 여기에 나타납니다."
+    },
+    "tables": {
+      "list": "테이블",
+      "empty": "데이터베이스에 아직 테이블이 없습니다.",
+      "rls": "{count, plural, =0 {RLS 켜짐, 정책 없음: 페이지에서 읽을 수 없음} other {RLS 켜짐 · 정책 #개}}",
+      "noRls": "RLS 없음: 누구나 읽고 바꿀 수 있음",
+      "noKey": "기본 키 없음: 읽기 전용",
+      "addRow": "행 추가",
+      "save": "저장",
+      "cancel": "취소",
+      "delete": "행 삭제",
+      "confirmDelete": "삭제할까요?",
+      "noRows": "행이 없습니다.",
+      "defaultHint": "기본값",
+      "editHint": "셀을 클릭해 변경하세요. 비우면 (허용되는 경우) NULL입니다.",
+      "range": "{total}개 중 {from}–{to}",
+      "prev": "이전",
+      "next": "다음"
+    },
+    "users": {
+      "total": "{count, plural, other {사용자 #명}}",
+      "invitePlaceholder": "초대할 이메일",
+      "invite": "초대",
+      "inviteSent": "{email}에게 초대를 보냈습니다",
+      "empty": "아직 사용자가 없습니다. 페이지에서 가입하거나 여기서 초대할 수 있습니다.",
+      "email": "이메일",
+      "statusHeader": "상태",
+      "created": "가입일",
+      "lastSignIn": "마지막 로그인",
+      "never": "없음",
+      "status": {
+        "confirmed": "확인됨",
+        "invited": "초대됨",
+        "unconfirmed": "미확인",
+        "banned": "차단됨"
+      },
+      "signOut": "모든 세션 종료",
+      "signedOut": "{email}의 세션을 종료했습니다",
+      "delete": "사용자 삭제",
+      "deleted": "{email} 삭제됨",
+      "confirm": "확실한가요?",
+      "page": "{pages}쪽 중 {page}쪽",
+      "prev": "이전",
+      "next": "다음"
+    }
   }
 }

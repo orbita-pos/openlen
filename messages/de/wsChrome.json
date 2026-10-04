@@ -349,7 +349,8 @@
     "messages": "Posteingang",
     "marketing": "Marketing",
     "business": "Mein Unternehmen",
-    "versions": "Versionen"
+    "versions": "Versionen",
+    "database": "Datenbank"
   },
   "startTabs": {
     "crear": "Erstellen",
@@ -360,5 +361,70 @@
     "page": "Seite",
     "site": "Website",
     "leads": "Leads"
+  },
+  "database": {
+    "title": "Datenbank",
+    "refresh": "Neu laden",
+    "loading": "Wird geladen…",
+    "loadError": "Die Datenbank konnte nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "projectUrl": "Projekt-URL: zum Kopieren klicken",
+    "copied": "Kopiert",
+    "tabs": {
+      "tables": "Tabellen",
+      "users": "Nutzer"
+    },
+    "unavailable": {
+      "title": "Die Datenbank ist hier nicht verfügbar",
+      "body": "Auf diesem Server ist das Backend der Seiten nicht eingerichtet."
+    },
+    "noData": {
+      "title": "Diese Seite speichert noch keine Daten",
+      "body": "Wenn du Len um etwas bittest, das gespeichert werden muss —Bewertungen, einen Warenkorb, Nutzerkonten—, erscheint ihre Datenbank hier."
+    },
+    "tables": {
+      "list": "Tabellen",
+      "empty": "Die Datenbank hat noch keine Tabellen.",
+      "rls": "{count, plural, =0 {RLS aktiv ohne Richtlinien: die Seite kann sie nicht lesen} one {RLS aktiv · # Richtlinie} other {RLS aktiv · # Richtlinien}}",
+      "noRls": "Ohne RLS: jeder kann sie lesen und ändern",
+      "noKey": "Ohne Primärschlüssel: nur lesen",
+      "addRow": "Zeile hinzufügen",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "delete": "Zeile löschen",
+      "confirmDelete": "Löschen?",
+      "noRows": "Keine Zeilen.",
+      "defaultHint": "Standard",
+      "editHint": "Klicke auf eine Zelle, um sie zu ändern. Leer = NULL, wenn die Spalte es erlaubt.",
+      "range": "{from}–{to} von {total}",
+      "prev": "Zurück",
+      "next": "Weiter"
+    },
+    "users": {
+      "total": "{count, plural, one {# Nutzer} other {# Nutzer}}",
+      "invitePlaceholder": "E-Mail zum Einladen",
+      "invite": "Einladen",
+      "inviteSent": "Einladung an {email} gesendet",
+      "empty": "Noch keine Nutzer: Sie registrieren sich über deine Seite, oder du lädst sie hier ein.",
+      "email": "E-Mail",
+      "statusHeader": "Status",
+      "created": "Erstellt",
+      "lastSignIn": "Letzte Anmeldung",
+      "never": "Nie",
+      "status": {
+        "confirmed": "Bestätigt",
+        "invited": "Eingeladen",
+        "unconfirmed": "Unbestätigt",
+        "banned": "Gesperrt"
+      },
+      "signOut": "Überall abmelden",
+      "signedOut": "{email} wurde abgemeldet",
+      "delete": "Nutzer löschen",
+      "deleted": "{email} gelöscht",
+      "confirm": "Sicher?",
+      "page": "Seite {page} von {pages}",
+      "prev": "Zurück",
+      "next": "Weiter"
+    }
   }
 }

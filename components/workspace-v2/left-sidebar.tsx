@@ -43,9 +43,9 @@ import { formatBadge } from "@/components/inbox/badge-format";
 export type { SectionView, SidebarMode } from "./rail-model";
 import {
   RAIL_CREAR,
-  RAIL_OPERAR,
   railActiveKey,
   railItemKey,
+  visibleOperar,
   type RailItemDef,
   type SectionView,
   type SidebarMode,
@@ -62,6 +62,8 @@ function UnifiedRail({
   lockedTabs,
   lockReason,
   badges,
+  hasDatabase,
+  centerView,
 }: {
   activeKey: string;
   onPanel: (id: SidebarMode) => void;
@@ -69,6 +71,8 @@ function UnifiedRail({
   lockedTabs?: SidebarMode[];
   lockReason?: string;
   badges: { leads: number; chat: number };
+  hasDatabase: boolean;
+  centerView: SectionView;
 }) {
   const t = useTranslations("wsChrome");
   const tInbox = useTranslations("inbox");
@@ -127,7 +131,7 @@ function UnifiedRail({
     <>
       {RAIL_CREAR.map(render)}
       <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
-      {RAIL_OPERAR.map(render)}
+      {visibleOperar({ hasDatabase, centerView }).map(render)}
     </>
   );
 }
@@ -243,6 +247,8 @@ interface LeftSidebarProps {
    *  The global-section rail icons set this; the parent renders the section. */
   activeSection?: SectionView;
   onSelectSection?: (v: SectionView) => void;
+  /** La página tiene base de datos: el rail enseña su icono (`visibleOperar`). */
+  hasDatabase?: boolean;
   /** Multi-page site tree (Site tab) — owned by the parent. */
   sitePages?: SitePageSummary[];
   activeSitePage?: string | null;
@@ -275,6 +281,7 @@ export function LeftSidebar({
   entryMode = "editing",
   activeSection = "page",
   onSelectSection,
+  hasDatabase = false,
   flatProjectHtml,
   flatProjectId,
   flatProjectPage = null,
@@ -376,6 +383,8 @@ export function LeftSidebar({
             leads: inboxCounts?.leads ?? 0,
             chat: inboxCounts?.chat ?? 0,
           }}
+          hasDatabase={hasDatabase}
+          centerView={activeSection}
         />
         {/* ⚰️ Aquí vivía el botón de desplegar. Lo hace ahora el propio icono
             del panel — ver `abrirOPlegar`.
@@ -411,6 +420,8 @@ export function LeftSidebar({
             leads: inboxCounts?.leads ?? 0,
             chat: inboxCounts?.chat ?? 0,
           }}
+          hasDatabase={hasDatabase}
+          centerView={activeSection}
         />
         {/* ⚰️ Y aquí el de plegar. Mismo motivo: un segundo clic en el icono
             del panel abierto lo cierra. La «✕» de la cabecera SÍ se queda — en

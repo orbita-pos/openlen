@@ -349,7 +349,8 @@
     "messages": "Boîte de réception",
     "marketing": "Marketing",
     "business": "Mon entreprise",
-    "versions": "Versions"
+    "versions": "Versions",
+    "database": "Base de données"
   },
   "startTabs": {
     "crear": "Créer",
@@ -360,5 +361,70 @@
     "page": "Page",
     "site": "Site",
     "leads": "Leads"
+  },
+  "database": {
+    "title": "Base de données",
+    "refresh": "Recharger",
+    "loading": "Chargement…",
+    "loadError": "Impossible de charger la base de données.",
+    "retry": "Réessayer",
+    "projectUrl": "URL du projet : cliquez pour copier",
+    "copied": "Copiée",
+    "tabs": {
+      "tables": "Tables",
+      "users": "Utilisateurs"
+    },
+    "unavailable": {
+      "title": "La base de données n'est pas disponible ici",
+      "body": "Ce serveur n'a pas le backend des pages configuré."
+    },
+    "noData": {
+      "title": "Cette page n'enregistre pas encore de données",
+      "body": "Quand vous demanderez à Len quelque chose qui doit être enregistré —des avis, un panier, des comptes utilisateur—, sa base de données apparaîtra ici."
+    },
+    "tables": {
+      "list": "Tables",
+      "empty": "La base n'a pas encore de tables.",
+      "rls": "{count, plural, =0 {RLS actif sans politique : la page ne peut pas la lire} one {RLS actif · # politique} other {RLS actif · # politiques}}",
+      "noRls": "Sans RLS : tout le monde peut la lire et la modifier",
+      "noKey": "Sans clé primaire : lecture seule",
+      "addRow": "Ajouter une ligne",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "delete": "Supprimer la ligne",
+      "confirmDelete": "Supprimer ?",
+      "noRows": "Aucune ligne.",
+      "defaultHint": "par défaut",
+      "editHint": "Cliquez sur une cellule pour la modifier. Vide = NULL si la colonne l'accepte.",
+      "range": "{from}–{to} sur {total}",
+      "prev": "Précédent",
+      "next": "Suivant"
+    },
+    "users": {
+      "total": "{count, plural, one {# utilisateur} other {# utilisateurs}}",
+      "invitePlaceholder": "e-mail à inviter",
+      "invite": "Inviter",
+      "inviteSent": "Invitation envoyée à {email}",
+      "empty": "Aucun utilisateur pour l'instant : ils s'inscrivent depuis votre page, ou vous les invitez ici.",
+      "email": "E-mail",
+      "statusHeader": "Statut",
+      "created": "Inscription",
+      "lastSignIn": "Dernière connexion",
+      "never": "Jamais",
+      "status": {
+        "confirmed": "Confirmé",
+        "invited": "Invité",
+        "unconfirmed": "Non confirmé",
+        "banned": "Banni"
+      },
+      "signOut": "Fermer ses sessions",
+      "signedOut": "Sessions de {email} fermées",
+      "delete": "Supprimer l'utilisateur",
+      "deleted": "{email} supprimé",
+      "confirm": "Sûr ?",
+      "page": "Page {page} sur {pages}",
+      "prev": "Précédent",
+      "next": "Suivant"
+    }
   }
 }

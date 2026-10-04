@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import {
-  BarChart3, ChatIcon, HistoryIcon, Inbox,
+  BarChart3, ChatIcon, DatabaseIcon, HistoryIcon, Inbox,
   ListTree, Megaphone,
 } from "./icons";
 
@@ -13,7 +13,9 @@ export type SectionView =
   // ⚰️ `business` —la sección «Mi negocio»— salió de aquí el 2026-08-31 con el
   // perfil entero. Era la única vista del rail que pedía RELLENAR una ficha en
   // vez de mirar la página.
-  | "marketing" | "explore" | "resultados";
+  | "marketing" | "explore" | "resultados"
+  // La base de datos de la página (fase 6 de plans/pages-backend/design.md).
+  | "database";
 
 export type SidebarMode =
   | "site" | "chat" | "templates" | "pages"
@@ -81,9 +83,20 @@ export const RAIL_OPERAR: ReadonlyArray<RailItemDef> = [
   // bandeja. El globo se va con lo que llega, y lo que llega vive aquí.
   { kind: "view", view: "resultados", icon: BarChart3 },
   { kind: "view", view: "messages", icon: Inbox, badge: ["chat", "leads"] },
+  // Sólo cuando la página tiene base: ver `visibleOperar`.
+  { kind: "view", view: "database", icon: DatabaseIcon },
   { kind: "view", view: "marketing", icon: Megaphone },
   { kind: "panel", id: "versions", icon: HistoryIcon },
 ];
+
+/** OPERAR tal como se pinta. La base de datos sólo sale si la página la tiene
+ *  —el rail es una invitación, y un vacío no invita a nada—, o si ya se está
+ *  en esa vista (el icono activo no puede esfumarse bajo el dedo). */
+export function visibleOperar(opts: { hasDatabase: boolean; centerView: SectionView }): RailItemDef[] {
+  return RAIL_OPERAR.filter(
+    (i) => !(i.kind === "view" && i.view === "database") || opts.hasDatabase || opts.centerView === "database",
+  );
+}
 
 export function railItemKey(item: RailItemDef): string {
   return item.kind === "panel" ? item.id : item.view;

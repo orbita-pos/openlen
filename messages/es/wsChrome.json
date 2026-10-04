@@ -349,7 +349,8 @@
     "messages": "Bandeja",
     "marketing": "Marketing",
     "business": "Mi negocio",
-    "versions": "Versiones"
+    "versions": "Versiones",
+    "database": "Base de datos"
   },
   "startTabs": {
     "crear": "Crear",
@@ -360,5 +361,70 @@
     "page": "Página",
     "site": "Sitio",
     "leads": "Leads"
+  },
+  "database": {
+    "title": "Base de datos",
+    "refresh": "Recargar",
+    "loading": "Cargando…",
+    "loadError": "No se pudo cargar la base de datos.",
+    "retry": "Reintentar",
+    "projectUrl": "URL del proyecto: clic para copiarla",
+    "copied": "Copiada",
+    "tabs": {
+      "tables": "Tablas",
+      "users": "Usuarios"
+    },
+    "unavailable": {
+      "title": "La base de datos no está disponible aquí",
+      "body": "Este servidor no tiene configurado el backend de las páginas."
+    },
+    "noData": {
+      "title": "Esta página todavía no guarda datos",
+      "body": "Cuando le pidas a Len algo que tenga que guardarse —reseñas, un carrito, cuentas de usuario—, su base de datos aparece aquí."
+    },
+    "tables": {
+      "list": "Tablas",
+      "empty": "La base todavía no tiene tablas.",
+      "rls": "{count, plural, =0 {RLS activo sin políticas: la página no puede leerla} one {RLS activo · # política} other {RLS activo · # políticas}}",
+      "noRls": "Sin RLS: cualquiera puede leerla y cambiarla",
+      "noKey": "Sin clave primaria: sólo lectura",
+      "addRow": "Agregar fila",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "delete": "Borrar fila",
+      "confirmDelete": "¿Borrar?",
+      "noRows": "No hay filas.",
+      "defaultHint": "por defecto",
+      "editHint": "Clic en una celda para cambiarla. Vacía = NULL si la columna lo admite.",
+      "range": "{from}–{to} de {total}",
+      "prev": "Anterior",
+      "next": "Siguiente"
+    },
+    "users": {
+      "total": "{count, plural, one {# usuario} other {# usuarios}}",
+      "invitePlaceholder": "correo para invitar",
+      "invite": "Invitar",
+      "inviteSent": "Invitación enviada a {email}",
+      "empty": "Todavía no hay usuarios: se registran desde tu página, o los invitas aquí.",
+      "email": "Correo",
+      "statusHeader": "Estado",
+      "created": "Alta",
+      "lastSignIn": "Último acceso",
+      "never": "Nunca",
+      "status": {
+        "confirmed": "Confirmado",
+        "invited": "Invitado",
+        "unconfirmed": "Sin confirmar",
+        "banned": "Vetado"
+      },
+      "signOut": "Cerrar sus sesiones",
+      "signedOut": "Sesiones de {email} cerradas",
+      "delete": "Borrar usuario",
+      "deleted": "{email} borrado",
+      "confirm": "¿Seguro?",
+      "page": "Página {page} de {pages}",
+      "prev": "Anterior",
+      "next": "Siguiente"
+    }
   }
 }

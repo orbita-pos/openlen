@@ -40,6 +40,7 @@ import { ExploreView } from "@/components/community/explore-view";
 import { ProjectsSection } from "../projects/projects-section";
 import { AnalyticsSection } from "../analytics/analytics-section";
 import { MarketingView } from "@/components/workspace-v2/marketing-view";
+import { DatabaseView } from "@/components/workspace-v2/database-view";
 import { ResultadosView } from "@/components/workspace-v2/resultados-view";
 import {
   LeftSidebar,
@@ -404,7 +405,8 @@ function NewV2Inner() {
     viewParam === "marketing" ||
     viewParam === "templates" ||
     viewParam === "messages" ||
-    viewParam === "explore"
+    viewParam === "explore" ||
+    viewParam === "database"
       ? viewParam
       : "page";
   // "analytics" is the pre-rail-unification URL alias for "resultados" —
@@ -454,6 +456,25 @@ function NewV2Inner() {
    */
   const [lente, setLente] = useState<Lente>("pagina");
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
+  // ¿Tiene base de datos la página? Decide si el rail enseña su icono
+  // (`visibleOperar`). Sólo «ready» cuenta: el registro se crea solo en cuanto
+  // Len mira el estado, y una base sin crear todavía no guarda nada.
+  const [hasDatabase, setHasDatabase] = useState(false);
+  const loadedProjectId = loadedProject?.id ?? null;
+  useEffect(() => {
+    setHasDatabase(false);
+    if (!loadedProjectId) return;
+    let live = true;
+    fetch(`/api/projects/${loadedProjectId}/backend`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b: { status?: string } | null) => {
+        if (live) setHasDatabase(b?.status === "ready");
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [loadedProjectId]);
   // Por qué no se abrió el proyecto de la URL (N31). Sin esto, un 404 se quedaba
   // en «Cargando proyecto…» para siempre.
   const [projectLoadFailure, setProjectLoadFailure] = useState<ProjectLoadFailure | null>(null);
@@ -3319,6 +3340,7 @@ function NewV2Inner() {
           onToggleCollapse={() => setLeftCollapsed((c) => !c)}
           activeSection={normalizedCenterView}
           onSelectSection={setCenterView}
+          hasDatabase={hasDatabase}
           mode={mode}
           setMode={handleTabSelect}
           sections={sections}
@@ -3432,6 +3454,8 @@ function NewV2Inner() {
             }}
             siteSlot={<AnalyticsSection />}
           />
+        ) : normalizedCenterView === "database" ? (
+          <DatabaseView projectId={loadedProject?.id ?? null} />
         ) : normalizedCenterView === "marketing" ? (
           <MarketingView
             projectId={loadedProject?.id ?? null}

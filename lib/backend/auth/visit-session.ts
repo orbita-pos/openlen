@@ -11,8 +11,9 @@
 // usuario: así no pisa un enlace de recuperación que tenga pendiente. Se cierra
 // al acabar la visita (`end`).
 
+import { serviceAuthContext } from "../dashboard";
 import type { BackendProject } from "../router";
-import { issueSession, type AuthContext } from "./handler";
+import { issueSession } from "./handler";
 import { deleteSessions, findRefreshToken, findUserByEmail, listEmailUsers } from "./store";
 
 /** Lo que Len pasa cuando no sabe el correo: entra como el único usuario. */
@@ -50,14 +51,7 @@ type Opened =
   | { readonly ok: true; readonly email: string; readonly session: Record<string, unknown> };
 
 export async function signInForVisit(project: BackendProject, who: string): Promise<VisitSignIn> {
-  const ctx: AuthContext = {
-    db: project.db,
-    config: project.auth.config,
-    sendMail: project.auth.sendMail,
-    jwtSecret: project.jwtSecret,
-    keyRole: "service_role",
-    apikey: null,
-  };
+  const ctx = serviceAuthContext(project);
   const req = new Request(`${project.auth.config.externalUrl}/token`, { headers: { "user-agent": VISIT_USER_AGENT } });
   const wanted = who.trim();
   const opened = await project.db.transaction(async (q): Promise<Opened> => {

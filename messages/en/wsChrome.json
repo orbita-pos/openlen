@@ -349,7 +349,8 @@
     "messages": "Inbox",
     "marketing": "Marketing",
     "business": "My business",
-    "versions": "Versions"
+    "versions": "Versions",
+    "database": "Database"
   },
   "startTabs": {
     "crear": "Create",
@@ -360,5 +361,70 @@
     "page": "Page",
     "site": "Site",
     "leads": "Leads"
+  },
+  "database": {
+    "title": "Database",
+    "refresh": "Reload",
+    "loading": "Loading…",
+    "loadError": "Couldn't load the database.",
+    "retry": "Try again",
+    "projectUrl": "Project URL: click to copy",
+    "copied": "Copied",
+    "tabs": {
+      "tables": "Tables",
+      "users": "Users"
+    },
+    "unavailable": {
+      "title": "The database isn't available here",
+      "body": "This server doesn't have the pages backend configured."
+    },
+    "noData": {
+      "title": "This page doesn't store data yet",
+      "body": "When you ask Len for something that has to be saved —reviews, a cart, user accounts—, its database shows up here."
+    },
+    "tables": {
+      "list": "Tables",
+      "empty": "The database has no tables yet.",
+      "rls": "{count, plural, =0 {RLS on with no policies: the page can't read it} one {RLS on · # policy} other {RLS on · # policies}}",
+      "noRls": "No RLS: anyone can read and change it",
+      "noKey": "No primary key: read only",
+      "addRow": "Add row",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete row",
+      "confirmDelete": "Delete?",
+      "noRows": "No rows.",
+      "defaultHint": "default",
+      "editHint": "Click a cell to change it. Empty = NULL if the column allows it.",
+      "range": "{from}–{to} of {total}",
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "users": {
+      "total": "{count, plural, one {# user} other {# users}}",
+      "invitePlaceholder": "email to invite",
+      "invite": "Invite",
+      "inviteSent": "Invitation sent to {email}",
+      "empty": "No users yet: they sign up from your page, or you invite them here.",
+      "email": "Email",
+      "statusHeader": "Status",
+      "created": "Created",
+      "lastSignIn": "Last sign-in",
+      "never": "Never",
+      "status": {
+        "confirmed": "Confirmed",
+        "invited": "Invited",
+        "unconfirmed": "Unconfirmed",
+        "banned": "Banned"
+      },
+      "signOut": "Sign out everywhere",
+      "signedOut": "Signed {email} out",
+      "delete": "Delete user",
+      "deleted": "{email} deleted",
+      "confirm": "Sure?",
+      "page": "Page {page} of {pages}",
+      "prev": "Previous",
+      "next": "Next"
+    }
   }
 }

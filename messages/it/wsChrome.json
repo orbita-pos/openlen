@@ -349,7 +349,8 @@
     "messages": "Posta in arrivo",
     "marketing": "Marketing",
     "business": "La mia attività",
-    "versions": "Versioni"
+    "versions": "Versioni",
+    "database": "Database"
   },
   "startTabs": {
     "crear": "Crea",
@@ -360,5 +361,70 @@
     "page": "Pagina",
     "site": "Sito",
     "leads": "Lead"
+  },
+  "database": {
+    "title": "Database",
+    "refresh": "Ricarica",
+    "loading": "Caricamento…",
+    "loadError": "Impossibile caricare il database.",
+    "retry": "Riprova",
+    "projectUrl": "URL del progetto: clicca per copiarlo",
+    "copied": "Copiato",
+    "tabs": {
+      "tables": "Tabelle",
+      "users": "Utenti"
+    },
+    "unavailable": {
+      "title": "Il database non è disponibile qui",
+      "body": "Questo server non ha configurato il backend delle pagine."
+    },
+    "noData": {
+      "title": "Questa pagina non salva ancora dati",
+      "body": "Quando chiederai a Len qualcosa che deve essere salvato —recensioni, un carrello, account utente—, il suo database comparirà qui."
+    },
+    "tables": {
+      "list": "Tabelle",
+      "empty": "Il database non ha ancora tabelle.",
+      "rls": "{count, plural, =0 {RLS attivo senza policy: la pagina non può leggerla} one {RLS attivo · # policy} other {RLS attivo · # policy}}",
+      "noRls": "Senza RLS: chiunque può leggerla e modificarla",
+      "noKey": "Senza chiave primaria: sola lettura",
+      "addRow": "Aggiungi riga",
+      "save": "Salva",
+      "cancel": "Annulla",
+      "delete": "Elimina riga",
+      "confirmDelete": "Eliminare?",
+      "noRows": "Nessuna riga.",
+      "defaultHint": "predefinito",
+      "editHint": "Clicca una cella per modificarla. Vuota = NULL se la colonna lo consente.",
+      "range": "{from}–{to} di {total}",
+      "prev": "Precedente",
+      "next": "Successiva"
+    },
+    "users": {
+      "total": "{count, plural, one {# utente} other {# utenti}}",
+      "invitePlaceholder": "email da invitare",
+      "invite": "Invita",
+      "inviteSent": "Invito inviato a {email}",
+      "empty": "Ancora nessun utente: si registrano dalla tua pagina, oppure li inviti qui.",
+      "email": "Email",
+      "statusHeader": "Stato",
+      "created": "Iscrizione",
+      "lastSignIn": "Ultimo accesso",
+      "never": "Mai",
+      "status": {
+        "confirmed": "Confermato",
+        "invited": "Invitato",
+        "unconfirmed": "Non confermato",
+        "banned": "Bloccato"
+      },
+      "signOut": "Chiudi le sessioni",
+      "signedOut": "Sessioni di {email} chiuse",
+      "delete": "Elimina utente",
+      "deleted": "{email} eliminato",
+      "confirm": "Sicuro?",
+      "page": "Pagina {page} di {pages}",
+      "prev": "Precedente",
+      "next": "Successiva"
+    }
   }
 }

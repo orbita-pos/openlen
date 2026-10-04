@@ -349,7 +349,8 @@
     "messages": "Inbox",
     "marketing": "Marketing",
     "business": "Mijn bedrijf",
-    "versions": "Versies"
+    "versions": "Versies",
+    "database": "Database"
   },
   "startTabs": {
     "crear": "Maken",
@@ -360,5 +361,70 @@
     "page": "Pagina",
     "site": "Site",
     "leads": "Leads"
+  },
+  "database": {
+    "title": "Database",
+    "refresh": "Opnieuw laden",
+    "loading": "Laden…",
+    "loadError": "De database kon niet worden geladen.",
+    "retry": "Opnieuw proberen",
+    "projectUrl": "Project-URL: klik om te kopiëren",
+    "copied": "Gekopieerd",
+    "tabs": {
+      "tables": "Tabellen",
+      "users": "Gebruikers"
+    },
+    "unavailable": {
+      "title": "De database is hier niet beschikbaar",
+      "body": "Op deze server is de backend van de pagina's niet ingesteld."
+    },
+    "noData": {
+      "title": "Deze pagina slaat nog geen gegevens op",
+      "body": "Als je Len vraagt om iets dat bewaard moet worden —recensies, een winkelwagen, gebruikersaccounts—, verschijnt de database hier."
+    },
+    "tables": {
+      "list": "Tabellen",
+      "empty": "De database heeft nog geen tabellen.",
+      "rls": "{count, plural, =0 {RLS aan zonder beleid: de pagina kan haar niet lezen} one {RLS aan · # beleid} other {RLS aan · # beleidsregels}}",
+      "noRls": "Geen RLS: iedereen kan haar lezen en wijzigen",
+      "noKey": "Geen primaire sleutel: alleen lezen",
+      "addRow": "Rij toevoegen",
+      "save": "Opslaan",
+      "cancel": "Annuleren",
+      "delete": "Rij verwijderen",
+      "confirmDelete": "Verwijderen?",
+      "noRows": "Geen rijen.",
+      "defaultHint": "standaard",
+      "editHint": "Klik op een cel om die te wijzigen. Leeg = NULL als de kolom dat toestaat.",
+      "range": "{from}–{to} van {total}",
+      "prev": "Vorige",
+      "next": "Volgende"
+    },
+    "users": {
+      "total": "{count, plural, one {# gebruiker} other {# gebruikers}}",
+      "invitePlaceholder": "e-mail om uit te nodigen",
+      "invite": "Uitnodigen",
+      "inviteSent": "Uitnodiging verstuurd naar {email}",
+      "empty": "Nog geen gebruikers: ze registreren zich via je pagina, of je nodigt ze hier uit.",
+      "email": "E-mail",
+      "statusHeader": "Status",
+      "created": "Aangemeld",
+      "lastSignIn": "Laatst ingelogd",
+      "never": "Nooit",
+      "status": {
+        "confirmed": "Bevestigd",
+        "invited": "Uitgenodigd",
+        "unconfirmed": "Onbevestigd",
+        "banned": "Geblokkeerd"
+      },
+      "signOut": "Overal uitloggen",
+      "signedOut": "{email} is uitgelogd",
+      "delete": "Gebruiker verwijderen",
+      "deleted": "{email} verwijderd",
+      "confirm": "Zeker?",
+      "page": "Pagina {page} van {pages}",
+      "prev": "Vorige",
+      "next": "Volgende"
+    }
   }
 }

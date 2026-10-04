@@ -349,7 +349,8 @@
     "messages": "收件箱",
     "marketing": "营销",
     "business": "我的业务",
-    "versions": "版本"
+    "versions": "版本",
+    "database": "数据库"
   },
   "startTabs": {
     "crear": "创建",
@@ -360,5 +361,70 @@
     "page": "页面",
     "site": "站点",
     "leads": "线索"
+  },
+  "database": {
+    "title": "数据库",
+    "refresh": "重新加载",
+    "loading": "加载中…",
+    "loadError": "无法加载数据库。",
+    "retry": "重试",
+    "projectUrl": "项目 URL：点击复制",
+    "copied": "已复制",
+    "tabs": {
+      "tables": "表",
+      "users": "用户"
+    },
+    "unavailable": {
+      "title": "此处无法使用数据库",
+      "body": "此服务器未配置页面后端。"
+    },
+    "noData": {
+      "title": "此页面尚未保存任何数据",
+      "body": "当你请 Len 做需要保存的东西（评价、购物车、用户账户）时，它的数据库会显示在这里。"
+    },
+    "tables": {
+      "list": "表",
+      "empty": "数据库中还没有表。",
+      "rls": "{count, plural, =0 {已启用 RLS 但无策略：页面无法读取} other {已启用 RLS · # 条策略}}",
+      "noRls": "未启用 RLS：任何人都能读取和修改",
+      "noKey": "无主键：只读",
+      "addRow": "添加行",
+      "save": "保存",
+      "cancel": "取消",
+      "delete": "删除行",
+      "confirmDelete": "删除？",
+      "noRows": "没有行。",
+      "defaultHint": "默认",
+      "editHint": "点击单元格即可修改。留空即为 NULL（如果该列允许）。",
+      "range": "第 {from}–{to} 条，共 {total} 条",
+      "prev": "上一页",
+      "next": "下一页"
+    },
+    "users": {
+      "total": "{count, plural, other {# 位用户}}",
+      "invitePlaceholder": "要邀请的邮箱",
+      "invite": "邀请",
+      "inviteSent": "已向 {email} 发送邀请",
+      "empty": "还没有用户：他们会从你的页面注册，或在这里邀请。",
+      "email": "邮箱",
+      "statusHeader": "状态",
+      "created": "注册时间",
+      "lastSignIn": "最近登录",
+      "never": "从未",
+      "status": {
+        "confirmed": "已确认",
+        "invited": "已邀请",
+        "unconfirmed": "未确认",
+        "banned": "已封禁"
+      },
+      "signOut": "退出所有会话",
+      "signedOut": "已退出 {email} 的会话",
+      "delete": "删除用户",
+      "deleted": "已删除 {email}",
+      "confirm": "确定吗？",
+      "page": "第 {page} 页，共 {pages} 页",
+      "prev": "上一页",
+      "next": "下一页"
+    }
   }
 }

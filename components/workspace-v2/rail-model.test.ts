@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RAIL_CREAR, RAIL_OPERAR, railActiveKey } from "./rail-model";
+import { RAIL_CREAR, RAIL_OPERAR, railActiveKey, visibleOperar } from "./rail-model";
 
 // LÁPIDA del 2026-08-29. El hub de Módulos sale del rail.
 //
@@ -124,5 +124,29 @@ describe("railActiveKey y el panel plegado", () => {
       expect(de("messages")).toBeDefined();
       expect(de("resultados")).toBeDefined();
     });
+  });
+});
+
+// LA BASE DE DATOS SÓLO SE ENSEÑA SI LA HAY (fase 6 de plans/pages-backend).
+// El rail es una invitación: un icono «Base de datos» en una página que no
+// guarda nada invitaría a ir a mirar un vacío. Aparece cuando la página tiene
+// base, y se queda mientras se está en esa vista (si no, el icono activo se
+// esfumaría bajo el dedo).
+describe("el icono de la base de datos", () => {
+  const vistas = (items: ReturnType<typeof visibleOperar>) =>
+    items.filter((i) => i.kind === "view").map((i) => (i as { view: string }).view);
+
+  it("🔴 sin base no sale; con base, sí", () => {
+    expect(vistas(visibleOperar({ hasDatabase: false, centerView: "page" }))).not.toContain("database");
+    expect(vistas(visibleOperar({ hasDatabase: true, centerView: "page" }))).toContain("database");
+  });
+
+  it("estando en la vista se queda aunque no haya base", () => {
+    expect(vistas(visibleOperar({ hasDatabase: false, centerView: "database" }))).toContain("database");
+  });
+
+  it("lo demás del rail no cambia", () => {
+    const sin = vistas(visibleOperar({ hasDatabase: false, centerView: "page" }));
+    expect(sin).toEqual(vistas([...RAIL_OPERAR]).filter((v) => v !== "database"));
   });
 });

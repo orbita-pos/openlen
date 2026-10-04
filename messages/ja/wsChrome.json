@@ -349,7 +349,8 @@
     "messages": "受信箱",
     "marketing": "マーケティング",
     "business": "マイビジネス",
-    "versions": "バージョン"
+    "versions": "バージョン",
+    "database": "データベース"
   },
   "startTabs": {
     "crear": "作成",
@@ -360,5 +361,70 @@
     "page": "ページ",
     "site": "サイト",
     "leads": "リード"
+  },
+  "database": {
+    "title": "データベース",
+    "refresh": "再読み込み",
+    "loading": "読み込み中…",
+    "loadError": "データベースを読み込めませんでした。",
+    "retry": "再試行",
+    "projectUrl": "プロジェクトURL：クリックでコピー",
+    "copied": "コピーしました",
+    "tabs": {
+      "tables": "テーブル",
+      "users": "ユーザー"
+    },
+    "unavailable": {
+      "title": "ここではデータベースを利用できません",
+      "body": "このサーバーにはページのバックエンドが設定されていません。"
+    },
+    "noData": {
+      "title": "このページはまだデータを保存していません",
+      "body": "保存が必要なもの（レビュー、カート、ユーザーアカウントなど）をLenに頼むと、そのデータベースがここに表示されます。"
+    },
+    "tables": {
+      "list": "テーブル",
+      "empty": "データベースにはまだテーブルがありません。",
+      "rls": "{count, plural, =0 {RLS有効・ポリシーなし：ページから読めません} other {RLS有効・ポリシー#件}}",
+      "noRls": "RLSなし：誰でも読み書きできます",
+      "noKey": "主キーなし：読み取り専用",
+      "addRow": "行を追加",
+      "save": "保存",
+      "cancel": "キャンセル",
+      "delete": "行を削除",
+      "confirmDelete": "削除しますか？",
+      "noRows": "行がありません。",
+      "defaultHint": "既定値",
+      "editHint": "セルをクリックして変更。空欄は（許可されていれば）NULLになります。",
+      "range": "{total}件中 {from}–{to}",
+      "prev": "前へ",
+      "next": "次へ"
+    },
+    "users": {
+      "total": "{count, plural, other {#人のユーザー}}",
+      "invitePlaceholder": "招待するメールアドレス",
+      "invite": "招待",
+      "inviteSent": "{email} に招待を送りました",
+      "empty": "まだユーザーはいません。ページから登録するか、ここで招待できます。",
+      "email": "メール",
+      "statusHeader": "状態",
+      "created": "登録日",
+      "lastSignIn": "最終ログイン",
+      "never": "なし",
+      "status": {
+        "confirmed": "確認済み",
+        "invited": "招待中",
+        "unconfirmed": "未確認",
+        "banned": "利用停止"
+      },
+      "signOut": "すべてのセッションを終了",
+      "signedOut": "{email} のセッションを終了しました",
+      "delete": "ユーザーを削除",
+      "deleted": "{email} を削除しました",
+      "confirm": "よろしいですか？",
+      "page": "{pages}ページ中 {page}ページ",
+      "prev": "前へ",
+      "next": "次へ"
+    }
   }
 }
