@@ -760,29 +760,31 @@ describe("elegir_foto", () => {
     assert.deepEqual(first.response.fotos, []);
     assert.deepEqual(second.response.fotos, []);
     assert.equal(session.photoSearchesThisTurn, 2);
-    // First: exploratory (no fallback tools named). Second: pivot.
-    assert.ok(!/\bEdit\b/.test(String(first.response.nota)));
+    // First: exploratory. Second: pivot, with a concrete way out.
     const nota = String(second.response.nota);
-    const nombrada = /\bEdit\b/.exec(nota)?.[0];
-    assert.ok(nombrada, `la nota de pivote no nombra ninguna salida concreta: ${nota}`);
+    assert.notEqual(nota, String(first.response.nota), "la segunda búsqueda vacía no cambia de nota: no hay giro");
+    assert.ok(/gradient/i.test(nota), `la nota de pivote no nombra ninguna salida concreta: ${nota}`);
 
-    // 🔴 Y QUE LA HERRAMIENTA NOMBRADA EXISTA DE VERDAD.
+    // 🔴 Y QUE NO MANDE A UNA HERRAMIENTA QUE PUEDE NO ESTAR.
     //
-    // Esta prueba se rompio en silencio el 2026-09-04: la nota decia
-    // `editar_pagina`, la herramienta se partio en cuatro y dejo de existir, y
-    // la lista de aqui arriba siguio nombrandola. Vive en test:node, que NO
-    // entra en `npm test` —vitest usa lista blanca—, asi que las tres puertas
-    // del repo salieron verdes con el fallo dentro.
+    // Hasta el 2026-10-02 esto exigía lo contrario: que la nota nombrara `Edit`
+    // y que existiera (se rompió en silencio el 2026-09-04 con `editar_pagina`).
+    // da7c56cd quitó el nombre a propósito —con la terminal, y en «sólo
+    // terminal», no hay Edit—, y esta prueba se quedó atrás un día entero sin
+    // que nadie lo viera: vive en test:node, que NO entra en `npm test`.
     //
-    // Comparar contra el CATALOGO en vez de contra una lista escrita a mano es
-    // lo que hace que el siguiente renombrado se note aqui y no en produccion:
-    // una nota que manda al modelo a una herramienta inexistente es
-    // exactamente el bug del terror-hero otra vez, con otro disfraz.
-    const declaradas = new Set(buildFunctionDeclarations(process.env).map((d) => d.name));
-    assert.ok(
-      declaradas.has(nombrada),
-      `la nota manda a "${nombrada}", que ya no es una herramienta declarada`,
-    );
+    // Se compara contra el CATALOGO de los dos modos, no contra una lista a
+    // mano, por lo mismo que antes: el siguiente renombrado se nota aquí.
+    const declaradas = new Set([
+      ...buildFunctionDeclarations(process.env).map((d) => d.name),
+      ...buildFunctionDeclarations({ ...process.env, OPENLEN_TERMINAL: "1" }).map((d) => d.name),
+    ]);
+    for (const herramienta of declaradas) {
+      assert.ok(
+        !new RegExp(`\\b${herramienta}\\b`).test(nota),
+        `la nota de pivote nombra la herramienta "${herramienta}", que puede no estar en este turno: ${nota}`,
+      );
+    }
   });
 
   it("hard-stops photo searches past the per-turn ceiling", async () => {
