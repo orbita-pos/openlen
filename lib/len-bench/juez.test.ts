@@ -133,7 +133,8 @@ describe("trazaDeLasFilas — la traza sale de las filas que escribió el servid
     const traza = trazaDeLasFilas([
       { userText: "¿cómo van las visitas?", assistantReasoning: "Hoy llevas 3.", transcript: { mensajes: TRAZA.slice(1), leidos: [] } },
     ]);
-    expect(traza).toEqual(TRAZA);
+    // El pedido del dueño lleva la marca de que abrió el turno (N39, `opensTurn`).
+    expect(traza).toEqual([{ ...TRAZA[0]!, opensTurn: true }, ...TRAZA.slice(1)]);
   });
 
   it("🔴 nada se vacía: el historial del turno siguiente vacía lo viejo por presupuesto, la traza del juez no", () => {
@@ -157,7 +158,7 @@ describe("trazaDeLasFilas — la traza sale de las filas que escribió el servid
 
   it("una fila sin transcripción (un servidor anterior a H4) da sólo el texto de Len, como el historial", () => {
     expect(trazaDeLasFilas([{ userText: "hola", assistantReasoning: "Hola, ¿qué hacemos?", transcript: null }])).toEqual([
-      { role: "user", content: "hola" },
+      { role: "user", content: "hola", opensTurn: true },
       { role: "assistant", content: "Hola, ¿qué hacemos?" },
     ]);
   });
