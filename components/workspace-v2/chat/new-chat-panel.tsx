@@ -8,7 +8,7 @@
 
 import "./new-chat.css";
 
-import { useCallback, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 
@@ -130,6 +130,17 @@ function AgentChatView({
   const feedback = useTurnFeedback(projectId);
   const conversations = useConversations(projectId, chat.conversationChanged);
   const [memoryOpen, setMemoryOpen] = useState(false);
+  // La memoria se relee al abrir el cajón y al cerrarse cada turno (N30): Len
+  // pudo guardar una preferencia en él, y el «(N)» de la cabecera se ve sin abrir.
+  const { reload: reloadMemory } = memory;
+  useEffect(() => {
+    if (memoryOpen) void reloadMemory();
+  }, [memoryOpen, reloadMemory]);
+  const wasBusy = useRef(chat.busy);
+  useEffect(() => {
+    if (wasBusy.current && !chat.busy) void reloadMemory();
+    wasBusy.current = chat.busy;
+  }, [chat.busy, reloadMemory]);
   const [settledConfirms, setSettledConfirms] = useState<ReadonlySet<string>>(() => new Set());
   const { data: session } = useSession();
   const initial = useMemo(() => {

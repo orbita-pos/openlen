@@ -41,30 +41,50 @@ import { useTranslations } from "next-intl";
 import { LenMark } from "../icons";
 import { LenFace } from "./len-face";
 
-/** Las preferencias que Len recuerda de esta persona, y quitar una. */
+/** Las preferencias que Len recuerda de esta persona, y quitar una.
+ *
+ *  `reload` existe porque se leía UNA vez, al montar el chat (N30): si Len
+ *  guardaba una preferencia en un turno («la guardé»), el cajón seguía diciendo
+ *  que no recuerda nada hasta recargar. Quien la usa la pide al abrir el cajón y
+ *  al cerrarse cada turno. */
 export function useAgentMemory() {
   const [lineas, setLineas] = useState<string[] | null>(null);
   const [quitando, setQuitando] = useState<string | null>(null);
+  const vivoRef = useRef(true);
+  // Cada lectura y cada borrado se numeran: sólo pinta la última. Sin esto, la
+  // respuesta de una lectura vieja que llega tarde devolvía una línea ya quitada.
+  const turnoRef = useRef(0);
 
   useEffect(() => {
-    let vivo = true;
-    // Fail-soft: si la memoria no se puede leer, el Chat sigue entero. Es una
-    // vista, no una puerta.
-    fetch("/api/agent/memoria")
-      .then((r) => (r.ok ? r.json() : { lineas: [] }))
-      .then((d) => {
-        if (vivo) setLineas(Array.isArray(d?.lineas) ? d.lineas : []);
-      })
-      .catch(() => {
-        if (vivo) setLineas([]);
-      });
+    vivoRef.current = true;
     return () => {
-      vivo = false;
+      vivoRef.current = false;
     };
   }, []);
 
+  const reload = useCallback(async () => {
+    const mio = ++turnoRef.current;
+    const vale = () => vivoRef.current && mio === turnoRef.current;
+    // Fail-soft: si la memoria no se puede leer, el Chat sigue entero. Es una
+    // vista, no una puerta. Y un fallo no vacía lo que ya se veía: sólo la
+    // primera lectura, que no tenía nada, cae a la lista vacía.
+    try {
+      const r = await fetch("/api/agent/memoria");
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      if (vale()) setLineas(Array.isArray(d?.lineas) ? d.lineas : []);
+    } catch {
+      if (vale()) setLineas((prev) => prev ?? []);
+    }
+  }, []);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
   const quitar = useCallback(async (preferencia: string) => {
     setQuitando(preferencia);
+    const mio = ++turnoRef.current;
     try {
       const res = await fetch("/api/agent/memoria", {
         method: "DELETE",
@@ -75,7 +95,7 @@ export function useAgentMemory() {
       // pestañas abiertas, el estado que manda es el suyo.
       if (res.ok) {
         const d = await res.json();
-        if (Array.isArray(d?.lineas)) setLineas(d.lineas);
+        if (Array.isArray(d?.lineas) && vivoRef.current && mio === turnoRef.current) setLineas(d.lineas);
       }
     } catch {
       // Silencio deliberado: la línea sigue ahí y el usuario puede reintentar.
@@ -84,20 +104,24 @@ export function useAgentMemory() {
     }
   }, []);
 
-  return { lines: lineas, remove: quitar, removing: quitando };
+  return { lines: lineas, remove: quitar, removing: quitando, reload };
 }
 
 export function MemoriaDeLen({ projectId }: { projectId: string | null }) {
   const t = useTranslations("panelsChat");
   const [abierto, setAbierto] = useState(false);
-  const { lines: lineas, remove: quitar, removing: quitando } = useAgentMemory();
+  const { lines: lineas, remove: quitar, removing: quitando, reload } = useAgentMemory();
   const cuantas = lineas?.length ?? 0;
 
   return (
     <div className="shrink-0 border-b bd">
       <button
         type="button"
-        onClick={() => setAbierto((v) => !v)}
+        onClick={() => {
+          // Al abrir se relee (N30): Len pudo guardar algo en el último turno.
+          if (!abierto) void reload();
+          setAbierto((v) => !v);
+        }}
         aria-expanded={abierto}
         className="w-full flex items-center gap-1.5 px-3 py-1.5 text-[10.5px] fg-faint hover:fg-muted ui-small"
       >
