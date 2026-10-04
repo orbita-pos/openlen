@@ -88,6 +88,9 @@ const mocks = vi.hoisted(() => ({
   // La foto de los ficheros del turno (la lente «Cambios»). Por defecto, un
   // proyecto vacío: ningún cambio y ningún evento.
   cargarFicherosDeLaTerminal: vi.fn(async (): Promise<Record<string, string>> => ({})),
+  // N42: el cobro que la ruta le pasa a `realDeps` — el que usan las
+  // herramientas que cobran aparte del modelo (búsquedas, editar una imagen).
+  cobroDeLasHerramientas: undefined as undefined | ((userId: string, centicreditos: number) => Promise<unknown>),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -157,11 +160,14 @@ vi.mock("@/lib/agent/loop", async (real) => ({
 }));
 vi.mock("@/lib/agent/retry", () => ({ streamWithRetry: vi.fn() }));
 vi.mock("@/lib/agent/tools", () => ({
-  realDeps: () => ({
-    loadProject: mocks.loadProject,
-    cambiosSinPublicar: mocks.cambiosSinPublicar,
-    loadBusinessProfile: mocks.loadBusinessProfile,
-  }),
+  realDeps: (cobro?: (userId: string, centicreditos: number) => Promise<unknown>) => {
+    mocks.cobroDeLasHerramientas = cobro;
+    return {
+      loadProject: mocks.loadProject,
+      cambiosSinPublicar: mocks.cambiosSinPublicar,
+      loadBusinessProfile: mocks.loadBusinessProfile,
+    };
+  },
   runAgentTool: mocks.runAgentTool,
   summarizeProjectState: () => ({}),
 }));
@@ -1727,6 +1733,96 @@ describe("POST /api/agent — el techo de dinero del turno", () => {
     mocks.creditsForUsage.mockReturnValue(3_140);
     await pedir();
     expect(mocks.debitCredits).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// N42 (taller, 03/10) · EL CIERRE DICE LO QUE SE COBRÓ, TAMBIÉN LO DE LAS
+// HERRAMIENTAS. Un turno con `web_search` dijo «1,46 créditos» y costó 5,96: cada
+// consulta se cobra aparte (`lib/agent/web/buscar.ts`), igual que editar una
+// imagen, y el total del `done` sólo contaba el modelo.
+describe("POST /api/agent — lo que cobran las herramientas entra en el cierre", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<html><body><h1>hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "pro", balance: 5_000, allotment: 15_000, refillsAt: null });
+    mocks.creditsForUsage.mockReturnValue(146);
+  });
+
+  const pedir = async () =>
+    readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "busca el horario del museo" }),
+        }),
+      ),
+    );
+  /** Un turno en el que una herramienta cobra `aparte` centicréditos —dos
+   *  consultas de `web_search` son 300— por el cobro que la ruta le dio. */
+  const turnoQueCobra = (aparte: number, fin: Record<string, unknown> = {}) => async (args: AgentLoopArgs) => {
+    if (aparte > 0) await mocks.cobroDeLasHerramientas!("u1", aparte);
+    // Con texto, para que el turno merezca fila.
+    args.emit({ type: "text", text: "Listo." });
+    return {
+      finalText: "Listo.", turns: 2, toolCalls: 1,
+      usage: { inputTokens: 10, outputTokens: 5, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
+      ...fin,
+    };
+  };
+  const centicreditosDelCierre = (eventos: Awaited<ReturnType<typeof pedir>>) =>
+    eventos.find((e) => e.event === "done")!.data.centicredits;
+  const centicreditosDeLaFila = () =>
+    (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { centicredits?: number }])[1]
+      .centicredits;
+
+  it("🔴 el `done` y la fila suman el modelo y lo que cobraron las herramientas", async () => {
+    mocks.runAgentLoop.mockImplementation(turnoQueCobra(300));
+    const eventos = await pedir();
+
+    // Lo de la herramienta se cobra de verdad, por la misma puerta que el modelo.
+    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 300);
+    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 146);
+    expect(centicreditosDelCierre(eventos)).toBe(446);
+    expect(centicreditosDeLaFila()).toBe(446);
+  });
+
+  it("un turno que acaba en error no cobra el modelo, pero lo ya buscado sí se dice", async () => {
+    mocks.runAgentLoop.mockImplementation(
+      turnoQueCobra(300, { terminalError: true, errorCode: "cancelled", mutoDurable: false }),
+    );
+    const eventos = await pedir();
+
+    expect(mocks.debitCredits).toHaveBeenCalledTimes(1);
+    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 300);
+    expect(centicreditosDelCierre(eventos)).toBe(300);
+  });
+
+  it("si el bucle revienta después de cobrar una búsqueda, la fila lo dice", async () => {
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await mocks.cobroDeLasHerramientas!("u1", 150);
+      args.emit({ type: "text", text: "Busco…" });
+      throw new Error("el proveedor se cayó");
+    });
+    await pedir();
+
+    expect(centicreditosDeLaFila()).toBe(150);
+  });
+
+  it("BRAZO DE CONTROL: sin herramientas que cobren, el cierre es sólo el modelo", async () => {
+    mocks.runAgentLoop.mockImplementation(turnoQueCobra(0));
+    const eventos = await pedir();
+    expect(centicreditosDelCierre(eventos)).toBe(146);
   });
 });
 

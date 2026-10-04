@@ -1415,6 +1415,17 @@ describe("web_search y web_fetch (F2)", () => {
     assert.equal(out.response.ok, false);
     assert.match(texto(out), /not a public website/);
   });
+
+  // N42: la ruta cuenta lo cobrado aparte con el cobro que le da a `realDeps`.
+  // Si la web cobrara por su cuenta, el cierre del turno no lo vería.
+  it("🔴 lo que cobra la búsqueda va por el cobro que se le da a realDeps", async () => {
+    const cobros: [string, number][] = [];
+    const deps = realDeps(async (userId, centicreditos) => {
+      cobros.push([userId, centicreditos]);
+    });
+    await deps.web!.cobrar("u1", 2);
+    assert.deepEqual(cobros, [["u1", 300]]);
+  });
 });
 
 // ⚰️ TodoWrite (H2) se retiró en F4 (plans/len-agente-2026). La lápida: el

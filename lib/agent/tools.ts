@@ -322,11 +322,19 @@ export const CONFLICTO_AL_GUARDAR =
 export const conflictoRepetido = (veces: number) =>
   `the page changed again while it was being saved: ${veces} attempts in a row in this turn collided, so retrying doesn't fix it — not rereading the page, not switching tools, not sending another change: the collision doesn't depend on what you send. Don't attempt another save during this turn: let the user know it couldn't be saved and what was left undone. We don't know the cause —the page open in another tab or in the editor, another save at the same time, or a fault of ours—: don't claim which.`;
 
-export function realDeps(): AgentDeps {
+/**
+ * `debit` es el cobro de lo que las herramientas cobran APARTE del modelo
+ * —buscar en la web, editar una imagen—. La ruta del Agente pasa uno que además
+ * lo cuenta, para que el cierre del turno diga lo que de verdad se cobró (N42:
+ * un turno con búsquedas decía «1,46 créditos» y costó 5,96).
+ */
+export function realDeps(
+  debit: (userId: string, centicreditos: number) => Promise<unknown> = debitCredits,
+): AgentDeps {
   return {
     // F2 · la web: la de prueba en Len-Bench, Exa y `fetchRaw` fuera de él.
     // Lo buscado de verdad se cobra aparte del turno, como editar una imagen.
-    web: webDelServidor((userId, centicreditos) => debitCredits(userId, centicreditos)),
+    web: webDelServidor(debit),
     // H3 — import perezoso por lo mismo que en los tools de almacén:
     // `lib/page-data/agente.ts` es server-only.
     async almacenesDelProyecto(projectId) {
@@ -496,7 +504,9 @@ export function realDeps(): AgentDeps {
     async editImage(userId, input) {
       return editImage(input, {
         callProvider: realImageEditTransport(),
-        debit: (cost) => debitCredits(userId, cost),
+        debit: async (cost) => {
+          await debit(userId, cost);
+        },
       });
     },
     async setUserBrief(projectId, userId, value) {

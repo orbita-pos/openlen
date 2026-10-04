@@ -360,8 +360,16 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
     await pool?.close().catch(() => {});
   };
 
+  // N42 · LO QUE LAS HERRAMIENTAS COBRAN APARTE DEL MODELO (centicréditos):
+  // buscar en la web, editar una imagen. Se cobra al momento, como siempre; aquí
+  // además se cuenta, porque el cierre del turno tiene que decir lo que de
+  // verdad se cobró — un turno con búsquedas decía «1,46 créditos» y costó 5,96.
+  let chargedByTools = 0;
   const deps = {
-    ...realDeps(),
+    ...realDeps(async (uid, centicreditos) => {
+      await debitCredits(uid, centicreditos);
+      chargedByTools += centicreditos;
+    }),
     // `mirar_pagina` mide por el mismo navegador que los ojos: es la herramienta
     // que más veces lo abre en un turno.
     observarPagina: (input: Parameters<typeof observarPagina>[0]) =>
@@ -870,7 +878,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
               // `undefined` y no `null`: el tipo de la fila (`StoredChatTurn`) no
               // admite `null` y cruzado con el de la función gana él. Se guarda
               // igual: `enteroONulo` los deja los dos en NULL.
-              centicredits: cobrado ?? undefined,
+              // Si el turno no llegó a su cierre (el bucle reventó), lo que ya
+              // cobraron las herramientas sigue cobrado y se dice (N42).
+              centicredits: cobrado ?? (chargedByTools > 0 ? chargedByTools : undefined),
               durationMs: Date.now() - empezo,
               // H4 · lo que vio el modelo; de aquí sale el historial del turno siguiente.
               transcript: transcripcionDelTurno
@@ -1538,8 +1548,10 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         // usuario veía un turno verde y limpio sobre una faena a medias.
         // LA FILA, CERRADA ANTES DE AVISAR: quien lea la conversación al recibir
         // el `done` —el panel, Len-Bench— tiene que encontrarla ya completa.
-        // Las ramas que no cobran dejan `cobrado` en null: el turno costó 0.
-        if (cobrado === null) cobrado = 0;
+        // Las ramas que no cobran dejan `cobrado` en null: el modelo costó 0. Lo
+        // que cobraron las herramientas se suma siempre: ya está cobrado, acabe
+        // como acabe el turno (N42).
+        cobrado = (cobrado ?? 0) + chargedByTools;
         await cerrarFila();
         // Lo que cambió, antes del `done`: el cliente lo engancha a este turno.
         // Sin llamadas a herramientas no pudo cambiar nada y no se mira.
