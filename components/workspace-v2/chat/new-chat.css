@@ -5,11 +5,17 @@
    `brand/len-chat/index.html`. */
 
 .nc {
+  /* El acento como TEXTO. `--accent-strong` es el relleno con letra blanca
+     encima (4,7:1) y no voltea en oscuro: como texto sobre casi negro daba
+     4,19:1. En oscuro el texto va con `--accent`, ~6:1. Los rellenos siguen
+     con `--accent-strong`. */
+  --nc-accent-text: var(--accent-strong);
   --nc-ok: #1fa967;
   --nc-warn: #b7791f;
   --nc-bad: #d92d20;
 }
 .dark .nc {
+  --nc-accent-text: var(--accent);
   --nc-warn: #e0a43a;
   --nc-bad: #ff6b5e;
 }
@@ -86,7 +92,7 @@
   display: grid;
   place-items: center;
   background: var(--accent-soft);
-  color: var(--accent-strong);
+  color: var(--nc-accent-text);
   flex: none;
 }
 .nc .nc-step-ic[data-running="true"] { animation: nc-ic-pulse 1.4s ease-in-out infinite; }

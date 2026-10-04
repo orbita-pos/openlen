@@ -51,7 +51,7 @@ export function UserMessage({ turn, initial }: { turn: DesignTurn; initial: stri
           )}
           {turn.scope && (
             <div className="mb-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] fg-muted">
-              <Crosshair size={12} className="shrink-0 text-[var(--accent-strong)]" />
+              <Crosshair size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
               <span className="min-w-0 truncate font-mono">{turn.scope.hint}</span>
             </div>
           )}
@@ -69,7 +69,7 @@ export function UserMessage({ turn, initial }: { turn: DesignTurn; initial: stri
           key={i}
           className="nc-up mr-8 flex max-w-[88%] items-start gap-1.5 rounded-[16px_16px_4px_16px] border border-dashed bd-strong bg-elev px-2.5 py-1.5 text-[12.5px] fg"
         >
-          <CornerDownRight size={13} className="mt-0.5 shrink-0 text-[var(--accent-strong)]" />
+          <CornerDownRight size={13} className="mt-0.5 shrink-0 text-[var(--nc-accent-text)]" />
           <span className="min-w-0 whitespace-pre-wrap break-words">{c}</span>
         </div>
       ))}

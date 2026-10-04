@@ -51,8 +51,8 @@ export function MasMenos({ anadidas, quitadas }: { anadidas: number | null; quit
   if (anadidas === null || quitadas === null) return null;
   return (
     <span className="shrink-0 tabular-nums">
-      <span className="text-emerald-600 dark:text-emerald-400">+{anadidas}</span>{" "}
-      <span className="text-red-600 dark:text-red-400">−{quitadas}</span>
+      <span className="text-emerald-700 dark:text-emerald-400">+{anadidas}</span>{" "}
+      <span className="text-red-700 dark:text-red-400">−{quitadas}</span>
     </span>
   );
 }
@@ -96,8 +96,8 @@ export function FicherosDelTurno({
               className="flex w-full items-center gap-1.5 px-2 py-0.5 text-left fg-faint hover:fg hover:bg-hover"
             >
               <span className="min-w-0 truncate font-mono text-[10.5px]">{c.ruta.replace(/^\//, "")}</span>
-              {c.nuevo && <span className="shrink-0 text-emerald-600 dark:text-emerald-400">{t("preview.cambios.nuevo")}</span>}
-              {c.borrado && <span className="shrink-0 text-red-600 dark:text-red-400">{t("preview.cambios.borrado")}</span>}
+              {c.nuevo && <span className="shrink-0 text-emerald-700 dark:text-emerald-400">{t("preview.cambios.nuevo")}</span>}
+              {c.borrado && <span className="shrink-0 text-red-700 dark:text-red-400">{t("preview.cambios.borrado")}</span>}
               {c.grande && <span className="shrink-0">{t("preview.cambios.grandeCorto")}</span>}
               <span className="ml-auto pl-2">
                 <MasMenos anadidas={c.anadidas} quitadas={c.quitadas} />

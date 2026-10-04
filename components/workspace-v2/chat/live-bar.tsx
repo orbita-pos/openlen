@@ -25,16 +25,32 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
     return () => window.clearInterval(id);
   }, [running]);
 
-  if (status.kind === "idle") return null;
+  // LO QUE SE ANUNCIA va en su propia región, siempre montada (una región que
+  // nace ya con texto no la lee ningún lector de pantalla) y sin el contador:
+  // con la barra entera como región viva, «12 s», «13 s»… se leía cada segundo
+  // mientras durara el turno, y el ■ quedaba dentro de un estado. Sólo lo que
+  // cambia de verdad: qué hace, el turno es tuyo, terminó, falló.
+  //
+  // Entre paso y paso la barra dice «Escribiendo»; anunciado, eso volvía entre
+  // cada herramienta («Buscando fotos», «Escribiendo», «Cambiando la página»,
+  // «Escribiendo»…). Se queda dicho lo último que hizo de verdad.
+  const [spoken, setSpoken] = useState("");
+  if (status.kind === "idle") {
+    if (spoken !== "") setSpoken("");
+    return <span className="sr-only" role="status" aria-live="polite" />;
+  }
   const seconds = startedAt !== null ? Math.max(0, Math.floor((now - startedAt) / 1000)) : null;
 
   let verb: string;
   let meta: string | null = null;
   let why: string | null = null;
+  // El contador: se ve, pero no se anuncia.
+  let ticking = false;
   switch (status.kind) {
     case "thinking":
       verb = t("newChat.live.thinking");
       meta = seconds !== null ? t("newChat.live.working", { seconds }) : null;
+      ticking = meta !== null;
       break;
     case "working":
       verb = status.activity ? t(`newChat.activity.${status.activity}`) : t("newChat.live.writing");
@@ -43,6 +59,7 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
         : seconds !== null
           ? t("newChat.live.working", { seconds })
           : null;
+      ticking = !status.onServer && meta !== null;
       break;
     case "waiting":
       verb = status.reason === "question" ? t("newChat.live.waitingAnswer") : t("newChat.live.waitingApproval");
@@ -63,29 +80,40 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
       break;
   }
 
+  const between = status.kind === "working" && !status.activity && spoken !== "";
+  const announced = between ? spoken : [verb, ticking ? null : meta, why].filter(Boolean).join(". ");
+  if (announced !== spoken) setSpoken(announced);
+
   return (
-    <div
-      className="nc-up flex min-h-[58px] items-center gap-3.5 py-2 pl-1.5 pr-2"
-      role="status"
-      aria-live="polite"
-    >
-      <CaraDeLen estado={status.face} props="compact" className="h-[38px] w-[38px] shrink-0" />
-      <div className="flex min-w-0 flex-1 flex-col leading-[1.32]">
-        <span className={`text-[13.5px] font-semibold ${running ? "nc-shimmer" : ""}`}>{verb}</span>
-        {meta && <span className="text-[11.5px] tabular-nums fg-muted">{meta}</span>}
-        {why && <span className="mt-0.5 line-clamp-2 text-[11.5px] italic fg-faint">{why}</span>}
+    <>
+      <span className="sr-only" role="status" aria-live="polite">
+        {announced}
+      </span>
+      <div className="nc-up flex min-h-[58px] items-center gap-3.5 py-2 pl-1.5 pr-2">
+        <CaraDeLen estado={status.face} props="compact" className="h-[38px] w-[38px] shrink-0" />
+        <div className="flex min-w-0 flex-1 flex-col leading-[1.32]">
+          {/* Lo que ya dice la región de arriba, oculto para no leerlo dos
+              veces; el contador no está allí, así que se deja leer. */}
+          <span aria-hidden className={`text-[13.5px] font-semibold ${running ? "nc-shimmer" : ""}`}>{verb}</span>
+          {meta && (
+            <span aria-hidden={!ticking} className="text-[11.5px] tabular-nums fg-muted">
+              {meta}
+            </span>
+          )}
+          {why && <span aria-hidden className="mt-0.5 line-clamp-2 text-[11.5px] italic fg-faint">{why}</span>}
+        </div>
+        {running && (
+          <button
+            type="button"
+            onClick={onStop}
+            aria-label={t("composer.stop")}
+            title={t("composer.stop")}
+            className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full border bd-strong bg-elev fg-muted hover:border-[color:var(--accent-ring)] hover:text-[var(--nc-accent-text)]"
+          >
+            <Square size={11} className="fill-current" />
+          </button>
+        )}
       </div>
-      {running && (
-        <button
-          type="button"
-          onClick={onStop}
-          aria-label={t("composer.stop")}
-          title={t("composer.stop")}
-          className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full border bd-strong bg-elev fg-muted hover:border-[color:var(--accent-ring)] hover:text-[var(--accent-strong)]"
-        >
-          <Square size={11} className="fill-current" />
-        </button>
-      )}
-    </div>
+    </>
   );
 }

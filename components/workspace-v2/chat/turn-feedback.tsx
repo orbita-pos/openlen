@@ -6,7 +6,7 @@
 // `/api/projects/[id]/chat/feedback` y lo lee el equipo para mejorar a Len.
 // Votar otra vez lo cambia; volver a pulsar el mismo lo quita.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 
@@ -32,7 +32,7 @@ export function FeedbackButtons({
         aria-pressed={vote?.rating === "up"}
         aria-label={t("newChat.feedback.up")}
         title={t("newChat.feedback.up")}
-        className={`${base} ${vote?.rating === "up" ? "!text-[var(--accent-strong)]" : ""}`}
+        className={`${base} ${vote?.rating === "up" ? "!text-[var(--nc-accent-text)]" : ""}`}
       >
         <ThumbsUp size={14} className={vote?.rating === "up" ? "nc-pop fill-[color-mix(in_oklab,var(--accent)_24%,transparent)]" : ""} />
       </button>
@@ -42,7 +42,7 @@ export function FeedbackButtons({
         aria-pressed={vote?.rating === "down"}
         aria-label={t("newChat.feedback.down")}
         title={t("newChat.feedback.down")}
-        className={`${base} ${vote?.rating === "down" ? "!text-[var(--accent-strong)]" : ""}`}
+        className={`${base} ${vote?.rating === "down" ? "!text-[var(--nc-accent-text)]" : ""}`}
       >
         <ThumbsDown size={14} className={vote?.rating === "down" ? "nc-pop fill-[color-mix(in_oklab,var(--accent)_24%,transparent)]" : ""} />
       </button>
@@ -68,12 +68,20 @@ export function FeedbackForm({
   // Se abre debajo del cierre del turno, casi siempre por debajo del borde de
   // la lista: sin esto el 👎 parecía no hacer nada.
   const box = useRef<HTMLDivElement>(null);
+  // El formulario se nombra con su título: los motivos se oyen como «¿Qué
+  // falló?», no como botones sueltos.
+  const titleId = useId();
   useEffect(() => {
     box.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, []);
   return (
-    <div ref={box} className="nc-card-in rounded-[14px] border bd bg-elev px-3.5 py-3">
-      <b className="mb-2 block text-[13px] font-semibold">{t("newChat.feedback.title")}</b>
+    <div
+      ref={box}
+      role="group"
+      aria-labelledby={titleId}
+      className="nc-card-in rounded-[14px] border bd bg-elev px-3.5 py-3"
+    >
+      <b id={titleId} className="mb-2 block text-[13px] font-semibold">{t("newChat.feedback.title")}</b>
       <div className="flex flex-wrap gap-1.5">
         {FEEDBACK_REASONS.map((r) => (
           <button

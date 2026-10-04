@@ -10,7 +10,7 @@
 // sección en el lienzo y sólo sale cuando hay a dónde ir: una sección quitada ya
 // no está, y un turno de otra página movería el lienzo a otro documento.
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowLeftRight, Minus, Pencil, Plus } from "lucide-react";
 
@@ -37,6 +37,8 @@ export function ChangesCard({
   const t = useTranslations("panelsChat");
   const [all, setAll] = useState(false);
   const [comparing, setComparing] = useState(false);
+  // «Ver» a secas no dice QUÉ resalta: cada botón se describe con su fila.
+  const rowId = useId();
   const changes = useMemo(
     () => agruparCambios(turnChanges(turn, (place) => t(`diff.${place}`))).slice(0, MAX_SECCIONES * 2),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -63,20 +65,21 @@ export function ChangesCard({
                 ? "nc-ok bg-[color-mix(in_oklab,var(--nc-ok)_12%,transparent)]"
                 : c.tipo === "quitada"
                   ? "nc-bad bg-[color-mix(in_oklab,var(--nc-bad)_10%,transparent)]"
-                  : "bg-accent-soft text-[var(--accent-strong)]"
+                  : "bg-accent-soft text-[var(--nc-accent-text)]"
             }`}
           >
             {c.tipo === "anadida" ? <Plus size={13} /> : c.tipo === "quitada" ? <Minus size={13} /> : <Pencil size={12} />}
           </span>
-          <span className="min-w-0 flex-1 truncate text-[12.5px] fg">
+          <span id={`${rowId}-${i}`} className="min-w-0 flex-1 truncate text-[12.5px] fg">
             {c.etiqueta ? t(`diff.${c.tipo}`, { que: c.etiqueta }) : t(`diff.${c.tipo}SinNombre`)}
           </span>
           {c.veces > 1 && <span className="shrink-0 tabular-nums text-[11.5px] fg-faint">×{c.veces}</span>}
           {c.indice >= 0 && samePage && turn.status !== "reverted" && (
             <button
               type="button"
+              aria-describedby={`${rowId}-${i}`}
               onClick={() => resaltarController.resaltar(c.indice)}
-              className="shrink-0 rounded-md px-1.5 py-1 text-[12.5px] font-semibold text-[var(--accent-strong)] hover:bg-accent-soft"
+              className="shrink-0 rounded-md px-1.5 py-1 text-[12.5px] font-semibold text-[var(--nc-accent-text)] hover:bg-accent-soft"
             >
               {t("diff.ver")}
             </button>

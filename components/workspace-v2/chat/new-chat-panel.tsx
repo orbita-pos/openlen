@@ -281,6 +281,14 @@ function AgentChatView({
   return <ChatFrame layout={layout} status={status}>{body}</ChatFrame>;
 }
 
+/** Estirar la caja flotante con las flechas: [ancho, alto] por pulsación. */
+const RESIZE_KEYS: Partial<Record<string, readonly [number, number]>> = {
+  ArrowLeft: [-24, 0],
+  ArrowRight: [24, 0],
+  ArrowUp: [0, -24],
+  ArrowDown: [0, 24],
+};
+
 /**
  * EL CHAT ANCLADO, FLOTANTE O MINIMIZADO (plans/new-chat/, del mock). La caja
  * es el MISMO chat en los tres: el árbol tiene siempre la misma forma (el asa y
@@ -359,6 +367,17 @@ function ChatFrame({
             role="separator"
             aria-label={t("newChat.layout.resize")}
             title={t("newChat.layout.resize")}
+            // Con el teclado también, como el borde del chat anclado
+            // (`left-sidebar.tsx`): flechas, de 24 en 24; `fitFloatBox` lo
+            // mantiene dentro de la ventana.
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (!box) return;
+              const step = RESIZE_KEYS[e.key];
+              if (!step) return;
+              e.preventDefault();
+              setBox({ ...box, w: box.w + step[0], h: box.h + step[1] });
+            }}
             onPointerDown={start("resize")}
             className="absolute bottom-0 right-0 z-10 h-4 w-4 cursor-nwse-resize touch-none bg-[linear-gradient(135deg,transparent_50%,var(--border-strong)_50%)] opacity-70"
           />

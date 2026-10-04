@@ -142,7 +142,7 @@ export function TurnClose({
                   type="button"
                   onClick={() => onUndo(turn)}
                   disabled={turn.undoEnCurso === true}
-                  className="font-semibold text-[var(--accent-strong)] hover:underline disabled:opacity-50 disabled:no-underline"
+                  className="font-semibold text-[var(--nc-accent-text)] hover:underline disabled:opacity-50 disabled:no-underline"
                 >
                   {turn.undoEnCurso ? t("applied.undoing") : t("applied.undo")}
                 </button>

@@ -24,7 +24,7 @@ export function QuestionCard({ question, answer }: { question: string; answer: s
   }
   return (
     <div className="nc-ask px-3.5 py-3">
-      <div className="mb-1 flex items-center gap-1.5 text-[11.5px] font-medium text-[var(--accent-strong)]">
+      <div className="mb-1 flex items-center gap-1.5 text-[11.5px] font-medium text-[var(--nc-accent-text)]">
         <HelpCircle size={13} />
         {t("newChat.question.label")}
       </div>

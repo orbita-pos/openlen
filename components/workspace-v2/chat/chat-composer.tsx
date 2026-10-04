@@ -85,7 +85,7 @@ export function ChatComposer({
           <div className="mb-1 flex flex-wrap gap-1.5">
             {comments.map((c) => (
               <Chip key={c.id} title={c.texto} onRemove={() => onRemoveComment(c.id)} removeLabel={t("comentarios.quitar")}>
-                <MessageSquare size={12} className="shrink-0 text-[var(--accent-strong)]" />
+                <MessageSquare size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
                 <b className="shrink-0 font-mono text-[11px] font-semibold">
                   {c.ruta.replace(/^\/+/, "")}:{c.linea}
                 </b>
@@ -94,7 +94,7 @@ export function ChatComposer({
             ))}
             {scopedSelection && (
               <Chip onRemove={onClearScope} removeLabel={t("composer.clearScope")}>
-                <Crosshair size={12} className="shrink-0 text-[var(--accent-strong)]" />
+                <Crosshair size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
                 <b className="shrink-0 font-semibold">{t("composer.scoped")}</b>
                 <span className="min-w-0 truncate font-mono text-[11px]">{scopedSelection.hint}</span>
               </Chip>
@@ -142,7 +142,7 @@ export function ChatComposer({
               onClick={() => setPlusOpen((x) => !x)}
               disabled={busy}
               className={`grid h-[30px] w-[30px] place-items-center rounded-[9px] transition disabled:opacity-40 ${
-                attachedImage || scopedSelection ? "text-[var(--accent-strong)]" : "fg-muted"
+                attachedImage || scopedSelection ? "text-[var(--nc-accent-text)]" : "fg-muted"
               } hover:bg-side hover:fg`}
             >
               <Plus size={16} className={`transition-transform duration-200 ${plusOpen ? "rotate-45" : ""}`} />
@@ -189,7 +189,7 @@ export function ChatComposer({
               onClick={() => onToggleSectionSelect(!sectionSelectMode)}
               disabled={busy}
               className={`grid h-[30px] w-[30px] place-items-center rounded-[9px] transition hover:bg-side disabled:opacity-40 ${
-                sectionSelectMode ? "bg-side text-[var(--accent-strong)]" : "fg-muted hover:fg"
+                sectionSelectMode ? "bg-side text-[var(--nc-accent-text)]" : "fg-muted hover:fg"
               }`}
             >
               <Crosshair size={16} />
@@ -311,14 +311,14 @@ function PlusOption({
       onClick={onClick}
       className="nc-up flex w-full items-center gap-2.5 rounded-[10px] p-2 text-left hover:bg-side"
     >
-      <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] bg-accent-soft text-[var(--accent-strong)]">
+      <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] bg-accent-soft text-[var(--nc-accent-text)]">
         {icon}
       </span>
       <span className="min-w-0 flex-1">
         <b className="block text-[13px] font-semibold">{title}</b>
         <small className="block text-[11.5px] leading-snug fg-muted">{hint}</small>
       </span>
-      {on && <span className="shrink-0 text-[11px] font-semibold text-[var(--accent-strong)]">{onLabel}</span>}
+      {on && <span className="shrink-0 text-[11px] font-semibold text-[var(--nc-accent-text)]">{onLabel}</span>}
     </button>
   );
 }

@@ -35,7 +35,7 @@
 // el chat de hoy la pinta como cabecera plegable (`MemoriaDeLen`) y el nuevo
 // como un cajón bajo la cabecera (`MemoryDrawer`).
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { LenMark } from "../icons";
@@ -156,6 +156,9 @@ const BRIEF_MAX = 4000;
  */
 export function BriefDeLaPagina({ projectId }: { projectId: string | null }) {
   const t = useTranslations("panelsChat");
+  // La línea de encima ES la etiqueta de la caja; sin esto, su nombre para un
+  // lector de pantalla era el ejemplo largo del placeholder.
+  const hintId = useId();
   const [texto, setTexto] = useState<string | null>(null);
   const [estado, setEstado] = useState<"idle" | "guardando" | "guardado" | "error">("idle");
   const timerRef = useRef<number | null>(null);
@@ -217,8 +220,11 @@ export function BriefDeLaPagina({ projectId }: { projectId: string | null }) {
 
   return (
     <div>
-      <div className="text-[10.5px] fg-faint mb-1 leading-relaxed">{t("memoria.briefHint")}</div>
+      <div id={hintId} className="text-[10.5px] fg-faint mb-1 leading-relaxed">
+        {t("memoria.briefHint")}
+      </div>
       <textarea
+        aria-labelledby={hintId}
         value={texto}
         onChange={(e) => {
           const v = e.target.value.slice(0, BRIEF_MAX);
@@ -263,6 +269,8 @@ export function MemoryDrawer({
 }) {
   const t = useTranslations("panelsChat");
   const lines = memory.lines ?? [];
+  // «Quitar» a secas no dice QUÉ quita: cada botón se describe con su línea.
+  const lineId = useId();
   return (
     <div className="bg-elev px-4 pb-3.5 pt-3">
       <div className="flex items-center gap-2 text-[13px] font-semibold">
@@ -273,14 +281,17 @@ export function MemoryDrawer({
         <>
           <p className="mb-2 mt-0.5 text-[11.5px] fg-muted">{t("memoria.description")}</p>
           <ul className="mb-2.5 grid list-none gap-[5px] p-0">
-            {lines.map((line) => (
+            {lines.map((line, i) => (
               <li
                 key={line}
                 className="nc-up flex items-center gap-2 rounded-[9px] border bd bg-side py-1.5 pl-2.5 pr-2 text-[12.5px]"
               >
-                <span className="flex-1">{line}</span>
+                <span id={`${lineId}-${i}`} className="flex-1">
+                  {line}
+                </span>
                 <button
                   type="button"
+                  aria-describedby={`${lineId}-${i}`}
                   onClick={() => void memory.remove(line)}
                   disabled={memory.removing === line}
                   className="shrink-0 text-[11.5px] fg-muted hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50"

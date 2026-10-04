@@ -61,10 +61,12 @@ export function ChatHeader({
       <button
         type="button"
         onClick={onToggleMemory}
-        aria-pressed={memoryOpen}
-        aria-label={t("memoria.title")}
+        // Abre y cierra un panel: `aria-expanded`, como la cabecera del chat de
+        // hoy. Y el número va en el nombre, que si no el globito no se oye.
+        aria-expanded={memoryOpen}
+        aria-label={memoryCount > 0 ? `${t("memoria.title")} (${memoryCount})` : t("memoria.title")}
         title={t("memoria.title")}
-        className="relative grid h-7 w-7 place-items-center rounded-lg fg-muted hover:bg-elev hover:fg aria-pressed:bg-elev aria-pressed:fg"
+        className="relative grid h-7 w-7 place-items-center rounded-lg fg-muted hover:bg-elev hover:fg aria-expanded:bg-[var(--bg-elev)] aria-expanded:text-[var(--fg)]"
       >
         <Brain size={15} />
         {memoryCount > 0 && (
@@ -87,7 +89,7 @@ export function ChatHeader({
             setNotice(null);
             if (next) void conversations.load();
           }}
-          className="grid h-7 w-7 place-items-center rounded-lg fg-muted hover:bg-elev hover:fg aria-expanded:bg-elev aria-expanded:fg"
+          className="grid h-7 w-7 place-items-center rounded-lg fg-muted hover:bg-elev hover:fg aria-expanded:bg-[var(--bg-elev)] aria-expanded:text-[var(--fg)]"
         >
           <History size={15} />
         </button>
@@ -104,7 +106,7 @@ export function ChatHeader({
               onClick={() => void run(conversations.startNew)}
               className="flex w-full items-center gap-2.5 rounded-[10px] p-2 text-left hover:bg-side disabled:opacity-50"
             >
-              <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] bg-accent-soft text-[var(--accent-strong)]">
+              <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] bg-accent-soft text-[var(--nc-accent-text)]">
                 <MessageSquarePlus size={15} />
               </span>
               <span className="min-w-0 flex-1">
