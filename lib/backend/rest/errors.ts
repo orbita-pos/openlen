@@ -6,7 +6,8 @@
 export interface PostgrestErrorBody {
   readonly code: string;
   readonly message: string;
-  readonly details: string | null;
+  /** Texto, o la lista de relaciones de un PGRST201. */
+  readonly details: string | readonly Record<string, unknown>[] | null;
   readonly hint: string | null;
 }
 

@@ -8,7 +8,8 @@
 
 import { RollbackWith, transactionOrRollback, type ProjectDatabase, type TxQuery } from "../db";
 import { fromPgError, PostgrestError } from "./errors";
-import { parseQueryString, type ParsedQuery, type SelectItem } from "./parse";
+import { parseQueryString, type ParsedQuery } from "./parse";
+import { buildReadPlan, countSql, readSql, rootConditions, rootRange, type PlanSource } from "./read-plan";
 import { parsePreferences, preferenceApplied, shouldCount, type Preferences } from "./preferences";
 import {
   closestName,
@@ -20,18 +21,7 @@ import {
   type FunctionInfo,
   type TableInfo,
 } from "./schema-cache";
-import {
-  filterSql,
-  ident,
-  jsonBodySql,
-  limitOffsetSql,
-  logicTreeSql,
-  orderSql,
-  Params,
-  qualified,
-  selectItemSql,
-  type Qualifier,
-} from "./sql";
+import { ident, jsonBodySql, Params, qualified } from "./sql";
 
 export type ApiRole = "anon" | "authenticated" | "service_role";
 
@@ -188,50 +178,6 @@ function singularity(n: number): PostgrestError {
   });
 }
 
-function onlyFields(select: readonly SelectItem[]): Extract<SelectItem, { kind: "field" }>[] {
-  for (const s of select) {
-    if (s.kind !== "field") {
-      throw new PostgrestError(400, { code: "PGRST127", message: "Feature not implemented", details: "embedded resources", hint: null });
-    }
-  }
-  return select as Extract<SelectItem, { kind: "field" }>[];
-}
-
-/** Los filtros y árboles de la raíz. Uno con camino pide un recurso embebido
- *  que (aún) no está en el select. */
-function rootWhere(qs: ParsedQuery, qi: Qualifier, p: Params, columns: readonly ColumnInfo[]): string[] {
-  const conds: string[] = [];
-  for (const f of qs.filters) {
-    if (f.path.length > 0) throw notEmbedded(f.path[0]!);
-    conds.push(filterSql(qi, f.filter, p, columns));
-  }
-  for (const l of qs.logic) {
-    if (l.path.length > 0) throw notEmbedded(l.path[0]!);
-    conds.push(logicTreeSql(qi, l.tree, p, columns));
-  }
-  return conds;
-}
-
-function notEmbedded(resource: string): PostgrestError {
-  return new PostgrestError(400, {
-    code: "PGRST108",
-    message: `'${resource}' is not an embedded resource in this request`,
-    details: null,
-    hint: `Verify that '${resource}' is included in the 'select' query parameter.`,
-  });
-}
-
-function rootOrder(qs: ParsedQuery, qi: Qualifier): string {
-  const root = qs.order.filter((o) => o.path.length === 0).flatMap((o) => o.terms);
-  for (const o of qs.order) if (o.path.length > 0) throw notEmbedded(o.path[0]!);
-  return orderSql(qi, root);
-}
-
-function selectList(qi: Qualifier, select: readonly SelectItem[]): string {
-  const fields = onlyFields(select);
-  return fields.length === 0 ? `${qi.sql}.*` : fields.map((f) => selectItemSql(qi, f)).join(", ");
-}
-
 async function tableOr404(q: TxQuery, schema: string, name: string): Promise<TableInfo> {
   const t = await findTable(q, schema, name);
   if (t) return t;
@@ -246,16 +192,18 @@ async function tableOr404(q: TxQuery, schema: string, name: string): Promise<Tab
 
 // ─── Lecturas ───────────────────────────────────────────────────────────────
 
+function tableSource(table: TableInfo, fromSql?: string): PlanSource {
+  return { name: table.name, fromSql: fromSql ?? qualified(table.schema, table.name).sql, alias: table.name, columns: table.columns };
+}
+
 async function read(q: TxQuery, table: TableInfo, qs: ParsedQuery, prefs: Preferences, media: Media) {
-  const qi = qualified(table.schema, table.name);
   const p = new Params();
-  const where = rootWhere(qs, qi, p, table.columns);
-  const whereSql = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
-  const range = qs.ranges[""];
-  const source = `SELECT ${selectList(qi, qs.select)} FROM ${qi.sql} ${whereSql} ${rootOrder(qs, qi)} ${limitOffsetSql(range, p)}`;
+  const plan = await buildReadPlan(q, table.schema, tableSource(table), qs);
+  const range = rootRange(plan);
+  const source = readSql(plan, plan.root, p);
   const counting = shouldCount(prefs);
   const ranged = range !== undefined && (range.limit !== null || range.offset > 0);
-  const countCte = counting && ranged ? `, pgrst_source_count AS (SELECT 1 FROM ${qi.sql} ${whereSql})` : "";
+  const countCte = counting && ranged ? `, pgrst_source_count AS (${countSql(plan, plan.root, p)})` : "";
   const total = counting ? (ranged ? "(SELECT pg_catalog.count(*) FROM pgrst_source_count)" : "pg_catalog.count(_postgrest_t)") : "null::bigint";
   const sql =
     `WITH pgrst_source AS ( ${source} ) ${countCte} SELECT ${total} AS total_result_set, ` +
@@ -310,10 +258,12 @@ function payloadColumns(value: unknown, isObject: boolean, qs: ParsedQuery, tabl
   });
 }
 
-function returnedRows(qs: ParsedQuery, table: TableInfo, p: Params, representation: boolean): string {
+/** Las filas que devuelve una escritura: el plan sobre `pgrst_source`, con sus
+ *  embebidos; los filtros de la raíz ya fueron los de la escritura. */
+async function returnedRows(q: TxQuery, table: TableInfo, qs: ParsedQuery, p: Params, representation: boolean): Promise<string> {
   if (!representation) return "SELECT * FROM pgrst_source";
-  const alias: Qualifier = { sql: ident(table.name) };
-  return `SELECT ${selectList(alias, qs.select)} FROM pgrst_source AS ${ident(table.name)} ${rootOrder(qs, alias)} ${limitOffsetSql(qs.ranges[""], p)}`;
+  const plan = await buildReadPlan(q, table.schema, tableSource(table, "pgrst_source"), qs);
+  return readSql(plan, plan.root, p, { skipConditions: true });
 }
 
 async function insert(q: TxQuery, table: TableInfo, qs: ParsedQuery, prefs: Preferences, media: Media, bodyText: string) {
@@ -344,7 +294,7 @@ async function insert(q: TxQuery, table: TableInfo, qs: ParsedQuery, prefs: Pref
     `WITH pgrst_source AS (${mutation}) SELECT '' AS total_result_set, pg_catalog.count(_postgrest_t) AS page_total, ` +
     `${representation ? `(${bodyFor(media)})::text` : "''"} AS body, ${RESPONSE_GUCS}, ` +
     `${merge ? "nullif(current_setting('pgrst.inserted', true),'')::int" : "''"} AS response_inserted ` +
-    `FROM (${returnedRows(qs, table, p, representation)}) _postgrest_t`;
+    `FROM (${await returnedRows(q, table, qs, p, representation)}) _postgrest_t`;
   return run(q, sql, p);
 }
 
@@ -361,7 +311,7 @@ async function update(q: TxQuery, table: TableInfo, qs: ParsedQuery, prefs: Pref
   const { value, isObject } = parseBody(bodyText || "{}");
   const cols = payloadColumns(value, isObject, qs, table);
   const p = new Params();
-  const where = rootWhere(qs, qi, p, table.columns);
+  const where = rootConditions(await buildReadPlan(q, table.schema, tableSource(table), qs), p);
   const representation = prefs.representation === "representation";
   let mutation: string;
   if (cols.length === 0) {
@@ -376,21 +326,21 @@ async function update(q: TxQuery, table: TableInfo, qs: ParsedQuery, prefs: Pref
   const sql =
     `WITH pgrst_source AS (${mutation}) SELECT '' AS total_result_set, pg_catalog.count(_postgrest_t) AS page_total, ` +
     `${representation ? `(${bodyFor(media)})::text` : "''"} AS body, ${RESPONSE_GUCS}, '' AS response_inserted ` +
-    `FROM (${returnedRows(qs, table, p, representation)}) _postgrest_t`;
+    `FROM (${await returnedRows(q, table, qs, p, representation)}) _postgrest_t`;
   return run(q, sql, p);
 }
 
 async function remove(q: TxQuery, table: TableInfo, qs: ParsedQuery, prefs: Preferences, media: Media) {
   const qi = qualified(table.schema, table.name);
   const p = new Params();
-  const where = rootWhere(qs, qi, p, table.columns);
+  const where = rootConditions(await buildReadPlan(q, table.schema, tableSource(table), qs), p);
   requireWhere("DELETE", where);
   const representation = prefs.representation === "representation";
   const mutation = `DELETE FROM ${qi.sql} WHERE ${where.join(" AND ")} RETURNING ${representation ? `${qi.sql}.*` : "1"}`;
   const sql =
     `WITH pgrst_source AS (${mutation}) SELECT '' AS total_result_set, pg_catalog.count(_postgrest_t) AS page_total, ` +
     `${representation ? `(${bodyFor(media)})::text` : "''"} AS body, ${RESPONSE_GUCS}, '' AS response_inserted ` +
-    `FROM (${returnedRows(qs, table, p, representation)}) _postgrest_t`;
+    `FROM (${await returnedRows(q, table, qs, p, representation)}) _postgrest_t`;
   return run(q, sql, p);
 }
 
@@ -461,15 +411,12 @@ async function callRpc(
     }
   }
   const call = `SELECT ${fn.returnsScalar ? "pgrst_call.pgrst_scalar" : "*"} ${fromCall}`;
-  const alias: Qualifier = { sql: ident(fn.name) };
-  let readSql: string;
+  let rowsSql: string;
   if (fn.returnsScalar) {
-    readSql = `SELECT * FROM pgrst_source`;
+    rowsSql = `SELECT * FROM pgrst_source`;
   } else {
-    const where = rootWhere(qs, alias, p, []);
-    readSql =
-      `SELECT ${selectList(alias, qs.select)} FROM pgrst_source AS ${ident(fn.name)} ` +
-      `${where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""} ${rootOrder(qs, alias)} ${limitOffsetSql(qs.ranges[""], p)}`;
+    const plan = await buildReadPlan(q, schema, { name: fn.name, fromSql: "pgrst_source", alias: fn.name, columns: [] }, qs);
+    rowsSql = readSql(plan, plan.root, p);
   }
   const scalarKind = fn.returnsScalar ? (fn.returnsSet ? "scalarSet" : "scalar") : "row";
   const singleRow = !fn.returnsSet && !fn.returnsScalar;
@@ -478,7 +425,7 @@ async function callRpc(
   const sql =
     `WITH pgrst_source AS (${call}) SELECT ${counting ? "pg_catalog.count(_postgrest_t)" : "null::bigint"} AS total_result_set, ` +
     `${fn.returnsSet ? "pg_catalog.count(_postgrest_t)" : "1"} AS page_total, (${body})::text AS body, ${RESPONSE_GUCS}, '' AS response_inserted ` +
-    `FROM (${readSql}) _postgrest_t`;
+    `FROM (${rowsSql}) _postgrest_t`;
   return run(q, sql, p);
 }
 
