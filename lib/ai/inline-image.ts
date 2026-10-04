@@ -13,6 +13,7 @@ import type { InlineImage } from "@/lib/ai-gateway";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
 import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
+import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 import { esCargaFallida } from "@/lib/generation/rotura-ajena";
 
@@ -294,6 +295,8 @@ export async function renderHtmlToInlineImage(
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
+        // Toda su red por el proxy que filtra (lib/security/egress-proxy.ts).
+        ...(await isolatedNetworkArgs()),
       ],
       env: {
         ...process.env,

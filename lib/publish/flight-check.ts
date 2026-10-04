@@ -34,6 +34,7 @@ import { captureException } from "@inariwatch/capture";
 import { db, schema } from "@/lib/db";
 import { getPublishRoot } from "@/lib/publish/filesystem";
 import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
+import { allowEgressOrigin, isolatedNetworkArgs } from "@/lib/security/egress-proxy";
 
 const HARD_DEADLINE_MS = 120_000;
 const MAX_CONCURRENT = Math.max(
@@ -238,11 +239,15 @@ async function runLighthouse(url: string, allowOrigin: string): Promise<LhrLike 
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-crash-reporter",
+      // Toda su red por el proxy que filtra (lib/security/egress-proxy.ts).
+      ...(await isolatedNetworkArgs()),
     ],
   });
   const watchdog = setTimeout(() => {
     void browser.close().catch(() => {});
   }, HARD_DEADLINE_MS);
+  // Nuestro servidor efímero es el único loopback que ese proxy deja ver.
+  const soltarOrigen = allowEgressOrigin(allowOrigin);
   try {
     const page = await browser.newPage();
     // The page under audit is user-controlled HTML — block subresource
@@ -264,6 +269,7 @@ async function runLighthouse(url: string, allowOrigin: string): Promise<LhrLike 
     );
     return (result?.lhr as unknown as LhrLike) ?? null;
   } finally {
+    soltarOrigen();
     clearTimeout(watchdog);
     await browser.close().catch(() => {});
   }

@@ -35,6 +35,8 @@
 // desde un efímero en 127.0.0.1 y abrir ese URL con el guardia apuntando a él.
 
 import { createServer, type IncomingMessage, type Server } from "node:http";
+
+import { allowEgressOrigin } from "@/lib/security/egress-proxy";
 import { randomUUID } from "node:crypto";
 
 export interface DocumentoServido {
@@ -98,6 +100,9 @@ function crear(): Promise<OrigenDeMedida> {
       // trabajo pendiente.
       server.unref();
       const origin = `127.0.0.1:${address.port}`;
+      // El proxy de salida del Chromium (lib/security/egress-proxy.ts) corta el
+      // loopback entero: éste es el único hueco, y vive lo que vive el proceso.
+      allowEgressOrigin(origin);
       resolve({
         origin,
         publicar(html: string): DocumentoServido {

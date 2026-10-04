@@ -8,6 +8,7 @@ import {
   type ScrapeResult,
   type ScrapeTarget,
 } from "../types";
+import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
 import { findChromeExecutable } from "./find-browser";
 import { validateUrl } from "./validate-url";
 
@@ -41,6 +42,9 @@ export async function fetchPuppeteer(
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-blink-features=AutomationControlled",
+        // Corre el JavaScript de una URL AJENA: toda su red por el proxy que
+        // filtra (lib/security/egress-proxy.ts), que no deja ver lo interno.
+        ...(await isolatedNetworkArgs()),
       ],
     });
     page = await browser.newPage();

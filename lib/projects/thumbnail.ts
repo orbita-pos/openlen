@@ -28,6 +28,7 @@ import { db, schema } from "@/lib/db";
 import { processImage } from "@/lib/images";
 import { getStorage } from "@/lib/storage";
 import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
+import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
 
 // 16:10 — matches the card's `aspect-[16/10]` frame and the template
 // thumbnail viewport, so previews are framed identically across the app.
@@ -157,6 +158,8 @@ async function doRender(projectId: string, html: string, vuelo: Vuelo): Promise<
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-crash-reporter",
+      // Toda su red por el proxy que filtra (lib/security/egress-proxy.ts).
+      ...(await isolatedNetworkArgs()),
     ],
   });
   // Watchdog: if anything past the bounded load phase hangs (screenshot /

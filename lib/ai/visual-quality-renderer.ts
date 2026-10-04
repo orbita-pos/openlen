@@ -1,5 +1,6 @@
 import type { InlineImage } from "@/lib/ai-gateway";
 import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
+import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
 import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
@@ -556,7 +557,8 @@ export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
     ...SIN_VENTANAS_NUEVAS,
     headless: true,
     executablePath,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    // Toda su red por el proxy que filtra (lib/security/egress-proxy.ts).
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", ...(await isolatedNetworkArgs())],
     env: { ...process.env, HOME: "/tmp" },
   });
 }

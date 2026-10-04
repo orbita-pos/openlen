@@ -473,6 +473,10 @@ export default defineConfig({
       "lib/publish/embed-sandbox.test.ts",
       // La guarda SSRF tampoco deja salir las ventanas que abre la página.
       "lib/security/render-ssrf-guard.browser.test.ts",
+      // Y el proxy de salida, por debajo de todas las pestañas: WebSocket,
+      // rebinding y ventanas con clic real. `include` es LISTA BLANCA.
+      "lib/security/egress-proxy.test.ts",
+      "lib/security/egress-proxy.browser.test.ts",
       "lib/publish/model-runtime-e2e.test.ts",
       "lib/publish/request-origin.test.ts",
       "lib/publish/cloudflare-email.test.ts",

@@ -8,6 +8,7 @@
 import { createHash } from "node:crypto";
 import { captureException } from "@inariwatch/capture";
 import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
+import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
 import { POST_FORMAT_SIZES, type PostFormat } from "./post-templates/families";
 
 const HARD_DEADLINE_MS = 12_000;
@@ -73,6 +74,8 @@ async function renderPostPngUnbounded(
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-crash-reporter",
+        // Toda su red por el proxy que filtra (lib/security/egress-proxy.ts).
+        ...(await isolatedNetworkArgs()),
       ],
     });
     const watchdog = setTimeout(() => {
