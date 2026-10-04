@@ -197,6 +197,15 @@ export function bloqueDeLibrerias(
   // usuario retocaba su sección; eso ya no pasa.
   // En inglés desde la traducción de lo que lee Len (2026-10-02): Jesús decidió
   // traducir lo compartido con Crear y el Chat a la vez.
+  //
+  // ⚰️ Las reglas acababan con «libs.openlen.com is the ONLY library origin
+  // that survives publishing. A <script> to jsdelivr, unpkg, cdnjs or any other
+  // CDN is deleted». FALSO para las tres superficies desde el 2026-08-26: lo que
+  // escribe el modelo sólo pasa por `gateReservedMarker` (lib/page-engine/
+  // prepare.ts y publishToDir), no por el saneador del HTML ajeno. Medido el
+  // 2026-10-04: supabase-js de jsDelivr llega a la publicada. Se retiró ese día,
+  // con el aviso que lo repetía (`script-que-se-borra`), a petición de Jesús. Por
+  // qué hospedamos las nuestras sigue arriba; eso no hace que las demás se borren.
   const orden =
     opciones.dondeVaElScript === "libre"
       ? "- They go in the <head>, before your own <script>: that way the library is already loaded when your code runs."
@@ -230,6 +239,5 @@ ${fichas}
 Rules:
 - Copy the EXACT tag, just as it is written above. DON'T add integrity or crossorigin to it: this origin sends no CORS headers, and either of the two attributes makes the browser BLOCK the library and your code die with "is not defined".
 ${orden}
-- ${LIBRERIAS_HOST} is the ONLY library origin that survives publishing. A <script> to jsdelivr, unpkg, cdnjs or any other CDN is deleted and the page is left with the feature dead.
 - Don't put them in "just in case": a chart with made-up data is worse than no chart. Use them when the page really calls for them.`;
 }

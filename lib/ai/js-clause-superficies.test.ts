@@ -102,10 +102,12 @@ describe("las cinco superficies ofrecen las librerias", () => {
       });
     }
 
-    it(`${nombre} — dice que los demas CDN no sobreviven`, () => {
-      // Sin esta frase el modelo escribe jsdelivr, que es lo que ha visto un
-      // millon de veces, y el saneador se lo borra.
-      expect(prompt).toContain("jsdelivr");
+    // ⚰️ Exigía «los demás CDN no sobreviven»: el modelo escribía jsdelivr y «el
+    // saneador se lo borra». Era falso —lo que escribe el modelo sólo pasa por
+    // `gateReservedMarker`; medido el 2026-10-04, supabase-js de jsDelivr llega a
+    // la publicada— y se retiró. Ahora se exige que NO lo diga.
+    it(`${nombre} — no dice que los demás CDN se borran`, () => {
+      expect(prompt).not.toMatch(/ONLY library origin|any other CDN is deleted/);
     });
   }
 });

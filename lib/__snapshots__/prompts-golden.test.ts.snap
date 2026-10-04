@@ -180,7 +180,6 @@ AVAILABLE LIBRARIES (optional — most pages need none):
 Rules:
 - Copy the EXACT tag, just as it is written above. DON'T add integrity or crossorigin to it: this origin sends no CORS headers, and either of the two attributes makes the browser BLOCK the library and your code die with "is not defined".
 - They go in the <head>. Your own <script> goes at the end of the body, so the library is already loaded when your code runs.
-- libs.openlen.com is the ONLY library origin that survives publishing. A <script> to jsdelivr, unpkg, cdnjs or any other CDN is deleted and the page is left with the feature dead.
 - Don't put them in "just in case": a chart with made-up data is worse than no chart. Use them when the page really calls for them.
 
 INTERACTION WITH JAVASCRIPT
@@ -359,7 +358,6 @@ AVAILABLE LIBRARIES (optional — most pages need none):
 Rules:
 - Copy the EXACT tag, just as it is written above. DON'T add integrity or crossorigin to it: this origin sends no CORS headers, and either of the two attributes makes the browser BLOCK the library and your code die with "is not defined".
 - They go in the <head>. Your own <script> goes at the end of the body, so the library is already loaded when your code runs.
-- libs.openlen.com is the ONLY library origin that survives publishing. A <script> to jsdelivr, unpkg, cdnjs or any other CDN is deleted and the page is left with the feature dead.
 - Don't put them in "just in case": a chart with made-up data is worse than no chart. Use them when the page really calls for them."
 `;
 
@@ -1173,7 +1171,6 @@ exports[`golden de los prompts de producción > manual de la plataforma (/.openl
 Rules:
 - Copy the EXACT tag, just as it is written above. DON'T add integrity or crossorigin to it: this origin sends no CORS headers, and either of the two attributes makes the browser BLOCK the library and your code die with "is not defined".
 - They go in the <head>, before your own <script>: that way the library is already loaded when your code runs.
-- libs.openlen.com is the ONLY library origin that survives publishing. A <script> to jsdelivr, unpkg, cdnjs or any other CDN is deleted and the page is left with the feature dead.
 - Don't put them in "just in case": a chart with made-up data is worse than no chart. Use them when the page really calls for them."
 `;
 

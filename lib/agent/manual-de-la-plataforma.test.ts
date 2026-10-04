@@ -50,7 +50,7 @@ describe("el manual de la plataforma", () => {
       ["SAVING TOO: declare a store", RUTA_API_D],
       ["CHECK THE SERVER'S RESPONSE", RUTA_API_D],
       ["AVAILABLE LIBRARIES", RUTA_LIBRERIAS],
-      ["libs.openlen.com is the ONLY library origin", RUTA_LIBRERIAS],
+      ["Copy the EXACT tag, just as it is written above", RUTA_LIBRERIAS],
     ];
     for (const [texto, ruta] of donde) {
       expect(docs[ruta], `${texto} → ${ruta}`).toContain(texto);
