@@ -6,10 +6,10 @@
  * lo que cambió y Deshacer restaura la copia del servidor, así que no hay nada
  * que empalmar. Lo usaba también `from-template`, que saneaba la plantilla
  * curada y le devolvía aquí sus scripts, hasta el 2026-10-04 (la entrada como
- * Vercel: el clon ya no sanea). Desde ese día `conservarScripts` no lo llama
- * ningún camino de producción; sólo las pruebas que reconstruyen el Deshacer
- * viejo (`undo-turn.test.ts`). Las otras funciones de este fichero sí siguen
- * vivas. Lo de abajo cuenta por qué nació.
+ * Vercel: el clon ya no sanea). Sin ningún camino de producción que lo llamara,
+ * `conservarScripts` se retiró el 2026-10-04; lo de abajo cuenta por qué nació,
+ * y es la regla que sigue: el código no lo pone quien edita. Las otras
+ * funciones de este fichero sí siguen vivas.
  *
  * EL PROBLEMA. El editor guardaba serializando el DOM VIVO
  * (`captureClean` en use-inline-edit.ts manda `document.documentElement
@@ -55,30 +55,6 @@ const SCRIPT_RE = /<script\b[^>]*>[\s\S]*?<\/script>/gi;
 /** Los bloques `<script>…</script>` completos, en orden de aparición. */
 function scriptsDe(html: string): string[] {
   return html.match(SCRIPT_RE) ?? [];
-}
-
-/**
- * `editado` con los `<script>` de `guardado` restaurados antes de `</body>`.
- *
- * Sólo se restauran los que NO estén ya presentes byte a byte: el CDN de
- * Tailwind sobrevive al saneador (está en su lista blanca), así que sin esta
- * comprobación acabaría dos veces en el documento.
- *
- * Sin `</body>` se pegan al final. Un documento así ya pasó por el
- * normalizador, de modo que es un caso que no debería existir; perder los
- * scripts en silencio sería peor que ponerlos donde el navegador los lee igual.
- */
-export function conservarScripts(guardado: string, editado: string): string {
-  const previos = scriptsDe(guardado);
-  if (previos.length === 0) return editado;
-
-  const yaEstan = new Set(scriptsDe(editado));
-  const faltan = previos.filter((s) => !yaEstan.has(s));
-  if (faltan.length === 0) return editado;
-
-  const bloque = faltan.join("");
-  const i = editado.toLowerCase().lastIndexOf("</body>");
-  return i === -1 ? editado + bloque : editado.slice(0, i) + bloque + editado.slice(i);
 }
 
 /**

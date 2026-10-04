@@ -13,7 +13,6 @@ import { generateSystemMessage } from "./system-prompt";
 import { randomUUID } from "node:crypto";
 import { appendChatMessage } from "@/lib/projects/chat";
 import { detectSlotPath } from "@/lib/html-engine";
-import { collectDegradations } from "@/lib/ingestion/degradations";
 import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/direction";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { generateHtmlStream, laEscribeElRazonador } from "@/lib/ai-stream/generate";
@@ -907,24 +906,11 @@ ${briefBlock}`;
         // ninguna parte.
 
         // ── Guardar el documento elegido ────────────────────────────────────
-        const gated = {
-          removed: prepared.report.removed,
-        };
-
-        // What the page lost on the way in. On the ROW, not in the SSE payload:
-        // the client redirects to the workspace on `project_saved`, so a field
-        // added there dies on arrival.
-        //
-        // In practice this is `broken_controls`. Everything else the gate
-        // counts was already stripped upstream (the stream sanitizes each
-        // write), so the sanitize counters here read zero — which is the
-        // honest answer: the model wrote this page, not the user, and telling
-        // someone their page "had JavaScript removed" about markup they never
-        // typed is the noise this record exists to avoid.
-        const degradations = collectDegradations({
-          surface: "generate",
-          removed: gated.removed,
-        });
+        // ⚰️ Aquí se apuntaba en la fila lo que la página perdió al entrar
+        // (`collectDegradations`). Por este motor la puerta es
+        // `gateReservedMarker`, que no quita nada y devuelve `removed` a cero,
+        // así que el registro salía siempre vacío: sin entrada viva, se retiró el
+        // 2026-10-04. Las filas viejas que lo llevan las sigue leyendo el editor.
 
         // ⚰️ Aquí se leía `prepared.report.modules` — el puente IA→módulos, que
         // encendía el módulo cuyo marcador traía la página recién generada. Se
@@ -1067,7 +1053,6 @@ ${briefBlock}`;
             brief,
             title,
             settings: undefined,
-            degradations: degradations.length > 0 ? degradations : undefined,
             pages: paginas,
           });
         } catch (err) {

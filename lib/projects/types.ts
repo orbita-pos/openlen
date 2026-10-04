@@ -245,9 +245,9 @@ export type DegradationCode =
   | "dynamic_content"
   | "broken_controls"
   /** El clon de una plantilla perdió los `on*`. Es su PROPIA degradación y no
-   *  `scripts`: en `from-template` los bloques `<script>` SÍ vuelven
-   *  (`conservarScripts`), así que la función está viva y lo único muerto es el
-   *  cableado del botón. Decirle al usuario «se quitó tu JavaScript» sería
+   *  `scripts`: en `from-template` los bloques `<script>` SÍ volvían
+   *  (`conservarScripts`, retirado el 2026-10-04), así que la función estaba viva
+   *  y lo único muerto era el cableado del botón. Decirle al usuario «se quitó tu JavaScript» sería
    *  falso y le mandaría a rehacer lo que ya tiene. Ya no nace desde el
    *  2026-10-04 (el clon no sanea); se queda por las filas que lo llevan. */
   | "handlers_lost"

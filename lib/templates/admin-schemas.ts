@@ -166,9 +166,10 @@ export type UpdateTemplateInput = z.infer<typeof UpdateSchema>;
 //
 // LOS `<script>` SE ACEPTAN, y el motivo cambió el 2026-08-31. Antes era «los
 // borra el sanitizador al clonar, así que da igual»; esa doctrina murió el
-// 2026-08-26 y hoy `from-template` los RESTAURA tras el saneado
-// (`conservarScripts`). Se siguen aceptando, pero ahora es una decisión con
-// consecuencias: lo que se registre aquí se ejecuta en la página de un visitante.
+// 2026-08-26; `from-template` los restauró tras el saneado (`conservarScripts`)
+// hasta el 2026-10-04, y desde la entrada como Vercel el clon ni siquiera sanea:
+// llegan tal cual. Se siguen aceptando, y es una decisión con consecuencias: lo
+// que se registre aquí se ejecuta en la página de un visitante.
 //
 // LOS `on*` SE RECHAZAN, y el 13% es lo que lo permitió. Ese número ERA el
 // argumento para no rechazarlos —«bloquearía el 13% del corpus sin arreglar ni
@@ -201,13 +202,19 @@ export type UpdateTemplateInput = z.infer<typeof UpdateSchema>;
 // Lo medido que conviene NO volver a suponer: en las 178 plantillas había
 // **CERO `onclick`**, y ningún handler llamaba a una función —todos eran
 // one-liners que sólo tocaban `this`—. El `onclick="abrir()"` que ilustra este
-// fichero y `lib/ingestion/degradations.ts` es un ejemplo hipotético, no un
-// caso del corpus.
+// fichero (y el retirado `lib/ingestion/degradations.ts`) es un ejemplo
+// hipotético, no un caso del corpus.
 //
 // Los tres de abajo no tienen un solo precedente legítimo, y como el clon
 // también los borraría, una plantilla que los traiga está rota de nacimiento:
 // mejor enterarse al registrarla que descubrir el vídeo ausente en cada clon.
 // Es el mismo criterio que ahora cubre los `on*`.
+//
+// ⚠️ DESDE EL 2026-10-04 «el clon los borraría» YA NO ES CIERTO: la entrada como
+// Vercel quitó el saneado del clon, así que un `on*`, un iframe o un meta
+// refresh registrados aquí llegarían VIVOS a la página clonada. El rechazo se
+// queda —no bloquea nada que exista: el corpus está en cero—, pero el motivo que
+// lo sostenía cambió.
 //
 // El oráculo NO se rompe con eso: los tres que se rechazan (URLs peligrosas,
 // embebidos fuera de lista, meta refresh) los sigue quitando el mismo
@@ -246,7 +253,7 @@ function htmlIssue(html: string): string | null {
   // entran: son la norma del corpus (89% / 13%)».
   //
   // El 89% de los `<script>` sigue siendo cierto y sigue aceptándose: el clon
-  // los RESTAURA (`conservarScripts`), así que llegan vivos.
+  // no los toca (desde el 2026-10-04 no sanea), así que llegan vivos.
   //
   // El 13% de los `on*` era el único argumento para no rechazarlos —«bloquearía
   // el 13% del corpus sin arreglar ni una plantilla ya registrada»— y ese

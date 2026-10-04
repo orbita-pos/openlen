@@ -7,8 +7,6 @@
 // PÁGINA. El bloque del final lo sujeta con el saneador y el empalme REALES —
 // ver su propia cabecera.
 import { describe, expect, it, vi } from "vitest";
-import { sanitizeForPublish } from "@/lib/html-engine";
-import { conservarScripts } from "@/lib/page-engine/conservar-scripts";
 import {
   ejecutarUndo,
   planDeUndo,
@@ -311,13 +309,15 @@ describe("ejecutarUndo", () => {
 //   · el turno QUITÓ JavaScript → vuelve el marcado y el JS de antes NO VUELVE.
 //     Eso destruye trabajo del usuario, y es el caso que se veía.
 //
-// EL SERVIDOR ES DE VERDAD. Estas dos pruebas montan las DOS rutas con el
-// saneador nativo y el empalme REALES, no con dobles: la trampa que mordió
-// cinco veces en la sesión anterior fue creerse suites verdes sobre fixtures
-// que no se parecían a producción. Por eso el documento lleva el `<script>` del
-// CDN de Tailwind, que el contrato obliga en toda página — sin él,
-// `conservarScripts` se comporta distinto (ese bloque sobrevive al saneador y
-// es el que le enseña a no duplicar).
+// EL SERVIDOR CONTESTA LO QUE CONTESTA HOY. Hasta el 2026-10-04 el doble de
+// `PATCH /html` reconstruía el camino viejo con el saneador y el empalme
+// (`conservarScripts`) reales. Ese camino ya no existe: desde el 2026-09-29 la
+// ruta sólo acepta EDICIONES y a un cuerpo con el documento entero le contesta
+// 400 («edits array is required»), y `conservarScripts` se retiró sin ningún
+// camino de producción que lo llamara. Así que el doble contesta ese 400: si
+// Deshacer volviera a mandar el documento, fallaría aquí. El documento sigue
+// llevando el `<script>` del CDN de Tailwind, que el contrato obliga en toda
+// página: lo que se mide es el código del modelo, no ése.
 //
 // Lo que se mide es lo que queda GUARDADO, no lo que se pinta: el lienzo
 // enseñaba la preimagen correcta en los dos casos, y por eso el fallo era
@@ -356,12 +356,11 @@ function servidor(inicial: string, versiones: Record<string, string>) {
       return restaurado(html, null);
     }
     if (url.endsWith("/html")) {
-      // PATCH /html — el camino viejo, con sus dos pasos REALES.
-      const cuerpo = JSON.parse(String(init?.body ?? "{}")) as { html?: string };
-      const saneado = sanitizeForPublish(cuerpo.html ?? "");
-      if (saneado.html === null) return error(400);
-      estado.guardado = conservarScripts(estado.guardado, saneado.html);
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      // PATCH /html — lo que hace hoy la ruta con un cuerpo sin `edits`
+      // (app/api/projects/[id]/html/route.ts): 400, y no toca la base.
+      const cuerpo = JSON.parse(String(init?.body ?? "{}")) as { edits?: unknown };
+      if (!Array.isArray(cuerpo.edits)) return error(400);
+      return error(500); // con ediciones: este doble no las aplica, y Deshacer no las manda
     }
     return error(404);
   });
@@ -416,17 +415,17 @@ describe("deshacer y el JavaScript del modelo", () => {
     ).toBe(false);
   });
 
-  // CONTRA-PRUEBA del montaje: si el mismo servidor recibe el camino VIEJO, el
-  // JavaScript se pierde. Sin esto, las dos de arriba podrían estar verdes
-  // porque el doble del servidor es blando, no porque el arreglo funcione.
-  it("CONTRA-PRUEBA: el camino viejo (PATCH /html) SÍ pierde el JavaScript", async () => {
+  // CONTRA-PRUEBA del montaje: el camino VIEJO —el documento entero por
+  // `PATCH /html`— lo rechaza el servidor y no deja nada guardado. Sin esto, las
+  // dos de arriba podrían estar verdes porque el doble es blando, no porque
+  // Deshacer vaya por la copia del servidor.
+  it("CONTRA-PRUEBA: el camino viejo (PATCH /html con el documento) lo rechaza el servidor", async () => {
     const s = servidor(SIN_JS, { "v-antes": CON_JS });
-    await s.fetchImpl("/api/projects/p1/html", {
+    const res = await s.fetchImpl("/api/projects/p1/html", {
       method: "PATCH",
       body: JSON.stringify({ html: CON_JS }),
     });
-    expect(tieneJsDelModelo(s.estado.guardado)).toBe(false);
-    // El CDN de Tailwind sobrevive: lo que se pierde es el código del modelo.
-    expect(s.estado.guardado).toContain("cdn.tailwindcss.com");
+    expect(res.status).toBe(400);
+    expect(s.estado.guardado).toBe(SIN_JS);
   });
 });

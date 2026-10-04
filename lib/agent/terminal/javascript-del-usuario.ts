@@ -12,8 +12,9 @@
  * tiene en alguna de sus páginas. Copiarlo o moverlo (`cp /index.html
  * /promo/index.html`, que lleva el `<script>` del CDN de Tailwind) y quitarlo,
  * sí: es la página del usuario y no entra código nuevo. Inventarlo o cambiarlo,
- * no: eso es cosa de Len. Es `conservarScripts` dicho de otra forma: el código
- * sale de lo guardado, no de la petición.
+ * no: eso es cosa de Len. Es la regla de `conservarScripts` (retirado el
+ * 2026-10-04: ya no lo llamaba nadie) dicha de otra forma: el código sale de lo
+ * guardado, no de la petición.
  *
  * Aquí nos separamos de DeepSeek, y a propósito: allí la terminal del usuario
  * tiene todos sus permisos porque corre en SU ordenador
