@@ -26,7 +26,7 @@ describe("el manual de la plataforma", () => {
 
   it("/AGENTS.md lleva lo que vale para cualquier edición, y el prompt no", () => {
     for (const seccion of [
-      "STORES (the page's data, in /datos)",
+      "THE BACKEND (Supabase)",
       "LINKS (<a href>)",
       "WHAT REALLY CAN'T BE DONE",
       "WHAT PUBLISHING REQUIRES",
@@ -38,13 +38,15 @@ describe("el manual de la plataforma", () => {
     }
   });
 
-  it("F4 · la guía, el contrato de /api/d y las librerías se mudan a /.openlen/docs, cada uno a su fichero", () => {
+  it("F4 · la guía, lo de data-ol-stores y las librerías viven en /.openlen/docs, cada uno en su fichero", () => {
     expect(Object.keys(docs)).toEqual([...RUTAS_DE_DOCS]);
     const donde: [string, string][] = [
       ["DESIGN GUIDE (for the pages you create yourself", RUTA_GUIA],
       ["COLOR, SHAPE AND TYPE", RUTA_GUIA],
       ["On a page you create yourself, also write its dark version", RUTA_GUIA],
       ["CRAFT", RUTA_GUIA],
+      // Lo de antes de Supabase (2026-10-04): no sale del manual, se mudó entero.
+      ["A STORE keeps real data on the server", RUTA_API_D],
       ["SAVING TOO: declare a store", RUTA_API_D],
       ["CHECK THE SERVER'S RESPONSE", RUTA_API_D],
       ["AVAILABLE LIBRARIES", RUTA_LIBRERIAS],
@@ -61,8 +63,9 @@ describe("el manual de la plataforma", () => {
     // Lo que mata F4: que Len deje de leer la guía al escribir una página nueva.
     expect(manual).toContain(`${RUTA_GUIA}: the design guide`);
     expect(manual).toMatch(/read it BEFORE writing a page from scratch or a redesign/);
-    // Y en la línea del JavaScript, donde estaba el contrato, el puntero.
-    expect(manual).toContain(`SAVING TOO is possible, in a store: what the JavaScript asks of /api/d is in ${RUTA_API_D}.`);
+    // Lo de data-ol-stores, SÓLO para las páginas que ya lo declaran; lo nuevo, al backend.
+    expect(manual).toContain(`${RUTA_API_D}: ONLY for a page that already declares a data-ol-stores block`);
+    expect(manual).toContain(`keeps working with it; how, in ${RUTA_API_D}. New data goes in the backend.`);
   });
 
   it("🔴 F4 · no se pierde ninguna línea: cada una del manual entero está en /AGENTS.md o en /.openlen/docs", () => {
@@ -70,14 +73,9 @@ describe("el manual de la plataforma", () => {
     const perdidas = manualSinPartir()
       .split("\n")
       .filter((l) => l.trim() !== "" && !juntos.includes(l))
-      // Las dos que se cortan a propósito, comprobadas abajo.
-      .filter((l) => !l.includes("SAVING TOO:") && !l.includes("and at the end the level of finish that is expected"));
+      // La que se corta a propósito, comprobada abajo.
+      .filter((l) => !l.includes("and at the end the level of finish that is expected"));
     expect(perdidas).toEqual([]);
-    // La línea del JavaScript: su primera mitad se queda, el contrato se muda.
-    const js = manualSinPartir().split("\n").find((l) => l.includes("SAVING TOO:"))!;
-    const [antes, despues] = [js.slice(0, js.indexOf("SAVING TOO:")), js.slice(js.indexOf("SAVING TOO:"))];
-    expect(manual).toContain(antes);
-    expect(docs[RUTA_API_D]).toContain(despues);
     // La entradilla de lo que IMPONE ya no promete el acabado «al final».
     expect(manual).toContain(`These are the conditions for the document to survive being published; the level of finish is in ${RUTA_GUIA}.`);
   });
@@ -120,7 +118,7 @@ describe("el corte, por sus marcas", () => {
 
   it("🔴 LANZA si una marca no aparece, en vez de dejar una parte sin llegar", () => {
     const entero = manualSinPartir();
-    for (const marca of ["SAVING TOO:", "DESIGN GUIDE (", "AVAILABLE LIBRARIES"]) {
+    for (const marca of ["DESIGN GUIDE (", "AVAILABLE LIBRARIES"]) {
       expect(() => partirElManual(entero.replace(marca, "OTRA COSA")), marca).toThrow(/no apareció/);
     }
   });

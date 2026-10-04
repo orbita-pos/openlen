@@ -525,6 +525,12 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
       // release que puede ser la de anteayer, y el Agente contesta «ya
       // contesta la IA» sin llamar a una sola herramienta.
       cambiosSinPublicar: await deps.cambiosSinPublicar(projectId, userId),
+      // El backend del proyecto (plans/pages-backend/design.md). Si la base no
+      // contesta, el turno sigue sin el campo: `supabase status` lo dirá.
+      supabase: await (deps.supabaseProject?.(projectId) ?? Promise.resolve(null)).catch((err: unknown) => {
+        console.warn("[agent] no se pudo leer el backend del proyecto", err);
+        return null;
+      }),
     },
     // La pagina ACTIVA: los rasgos del documento (tokens, modo, fuentes)
     // describen el que se va a editar, no siempre la Home.

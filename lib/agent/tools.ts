@@ -103,6 +103,10 @@ export interface AgentDeps {
   ficherosDeSupabase?(projectId: string): Promise<Record<string, string>>;
   /** Guardar uno de esos ficheros. */
   guardarFicheroDeSupabase?(projectId: string, ruta: string, contenido: string): Promise<void>;
+  /** La URL y la clave publicable del backend del proyecto, para el ESTADO;
+   *  lo da de alta si aún no tiene (sin crear la base). `null` si este
+   *  servidor no tiene el clúster de las páginas. */
+  supabaseProject?(projectId: string): Promise<{ url: string; publishableKey: string } | null>;
   /** `supabase …` en la terminal de Len: la CLI de Supabase contra el backend
    *  del proyecto (`lib/backend/cli.ts`). `ficheros`: los de `/supabase/` tal
    *  como están en la terminal; `escribir`: los que crea (`migration new`). */
@@ -361,6 +365,13 @@ export function realDeps(
     async supabaseCli(projectId, args, ficheros) {
       const { runSupabaseCli } = await import("@/lib/backend/cli");
       return runSupabaseCli(projectId, args, ficheros);
+    },
+    async supabaseProject(projectId) {
+      const { backendConfigured } = await import("@/lib/backend/pg");
+      if (!backendConfigured()) return null;
+      const { ensureBackend, projectUrl } = await import("@/lib/backend/registry");
+      const rec = await ensureBackend(projectId);
+      return { url: projectUrl(rec.ref), publishableKey: rec.publishableKey };
     },
     // H3 — import perezoso por lo mismo que en los tools de almacén:
     // `lib/page-data/agente.ts` es server-only.
@@ -890,6 +901,9 @@ export function summarizeProjectState(
      *  `leer_estado`— porque esto es una función pura y la respuesta vive en
      *  la fila. Ausente ⇒ el campo no se pinta. */
     cambiosSinPublicar?: boolean;
+    /** El backend del proyecto (plans/pages-backend/design.md): lo que la
+     *  página pone en `createClient`. `null`/ausente ⇒ no hay en este servidor. */
+    supabase?: { url: string; publishableKey: string } | null;
   },
   /** La página que el dueño tiene abierta en el editor; `null` es la Home. */
   page: string | null = null,
@@ -935,6 +949,9 @@ export function summarizeProjectState(
     // el IDE» de Claude Code: puede que la petición sea sobre ésa, o no.
     abierta_en_el_editor: rutaDePagina(page),
     modulos,
+    // Lo que la página pone en `createClient(url, key)` (THE BACKEND, en el
+    // manual). Con los nombres que tienen en Supabase.
+    ...(row.supabase ? { supabase: { project_url: row.supabase.url, publishable_key: row.supabase.publishableKey } } : {}),
   };
 }
 

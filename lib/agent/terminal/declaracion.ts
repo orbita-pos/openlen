@@ -116,10 +116,10 @@ export const PARA_SOLO_LA_TERMINAL: readonly (readonly [string, string])[] = [
   ["ADD a line with Edit:", "ADD a line with bash (echo … >>):"],
   // La descripción de `bash`.
   ["is saved like a Write, through the same checks and", "is saved through the same checks as any edit of the site, and"],
-  // /AGENTS.md.
-  ["It is DECLARED in the page, with Edit:", "It is DECLARED in the page:"],
-  ["Read it with Read and change it with Edit or Write like any file:", "You read it and change it like any file:"],
-  ["declare the block with Edit and write its file", "declare the block and write its file"],
+  // /AGENTS.md. ⚰️ Los tres de la receta de STORES (`data-ol-stores`) se fueron
+  // el 2026-10-04 con ella, al backend de Supabase (lib/agent/stores-doc.ts,
+  // /.openlen/docs/api-d.md, que no pasa por aquí).
+  ["you write the SQL in it with Write or Edit,", "you write the SQL in it,"],
 ];
 
 export function paraSoloLaTerminal(texto: string): string {

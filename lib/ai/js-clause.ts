@@ -275,20 +275,18 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       // Spotify o Calendly—, y el Agente conserva ese bloque. Aquí sólo estaba
       // la mitad corta, dicha por segunda vez.
       "CHARGING IS POSSIBLE, with no server: if the user gives you their Stripe payment link, wire the button with `<a href=\"https://buy.stripe.com/…\">`. NEVER make up that address — if they don't have it, explain that they create it in their Stripe dashboard and leave the button pointing wherever they tell you. " +
-      // 🔴 `/api/d/<almacén>`, SIN subdominio (2026-09-18). Decía
-      // `/api/d/<sub>/<almacén>`, y un borrador no sabe con qué subdominio se
-      // publicará: en producción Len puso «carrito» en ese hueco y el carrito
-      // no guardó nada. La ruta sin subdominio lo saca del host
-      // (`app/api/d/[sub]/route.ts`). Y lo de `propio` es el otro medio fallo
-      // de ese día: un POST por producto, que se reemplazaban entre sí.
-      "SAVING TOO: declare a store in the page (the data-ol-stores block) and your JavaScript writes and reads with fetch to /api/d/<store> —relative and WITHOUT a subdomain: the server knows which page it comes from— — a cart that survives reloads, a menu the user maintains, reviews that visitors leave. GET returns {documentos:[{id,doc}]}; a POST with the document as JSON saves it. In a \"propio\" store each visitor has ONE single document and every POST REPLACES it: the cart goes WHOLE in a field of type lista, with one POST per change —never one per product, since they overwrite each other and only the last one stays—, and it is read with GET when the page loads. " +
-      // 🔴 EL «NO» DEL SERVIDOR (2026-09-19). Todo lo de arriba enseña a
-      // guardar; nada decía qué hacer cuando la respuesta no es buena, y el
+      // ⚰️ Aquí iba «SAVING TOO: declare a store… /api/d», el contrato de
+      // `data-ol-stores`, retirado para Len el 2026-10-04 con el backend de
+      // Supabase (plans/pages-backend/design.md): lo nuevo se guarda con
+      // supabase-js (THE BACKEND, en el manual). Para las páginas que ya
+      // declaran almacenes, el texto se mudó entero a lib/agent/stores-doc.ts.
+      // 🔴 EL «NO» DEL SERVIDOR (2026-09-19; dicho para supabase-js el
+      // 2026-10-04). Nada decía qué hacer cuando la respuesta no es buena, y el
       // JavaScript del modelo pinta primero y no mira. El resultado lo ve el
       // VISITANTE, no el dueño: añade, ve su carrito crecer, recarga, y no hay
-      // nada. Lo caza `comprobarAvisoAlVisitante` corriendo la misma página con
-      // el almacén lleno y comparando lo que se ve.
-      "CHECK THE SERVER'S RESPONSE: the POST can say NO —507 if the user has filled their quota, 413 if the document is over 16 KB, and the network can fail—. If it doesn't come back `ok`, tell the visitor ON THE PAGE and don't leave the change painted as saved (undo it, or paint it only once the server answers well). Painting first and not looking at the response is how someone loses their cart without noticing.",
+      // nada. Con /api/d lo cazaba `comprobarAvisoAlVisitante`, con el almacén
+      // lleno; con supabase-js el `error` es el sitio donde mirar.
+      "CHECK THE RESPONSE: every supabase-js call returns { data, error }, and the network can fail. If error isn't null, tell the visitor ON THE PAGE and don't leave the change painted as saved (undo it, or paint it only once the answer is good). Painting first and not looking at the response is how someone loses their cart without noticing.",
   },
 
 

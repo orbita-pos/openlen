@@ -27,12 +27,11 @@ import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contrac
 import { bloqueDeLibrerias } from "@/lib/librerias";
 import { paraSoloLaTerminal, terminalOnly } from "@/lib/agent/terminal/declaracion";
 import type { AgentMode } from "@/lib/agent/dynamis";
-import { ACCOUNTS_DOC } from "@/lib/agent/accounts-doc";
+import { STORES_DOC } from "@/lib/agent/stores-doc";
 import {
   CARPETA_DOCS,
   CIERRE_DEL_ADJUNTO,
   PRINCIPIO_DEL_ADJUNTO,
-  RUTA_ACCOUNTS,
   RUTA_API_D,
   RUTA_GUIA,
   RUTA_LIBRERIAS,
@@ -49,7 +48,7 @@ export function manualSinPartir(): string {
   const manual = `# OpenLen: how the platform works
 
 WHAT EXISTS AND WHAT DOESN'T:
-- What is saved with localStorage SURVIVES closing the tab and the browser; what it doesn't do is travel to another device, another visitor or the user. What is saved in a STORE lives on the server: in "propio" mode each visitor sees their own, and the user sees all of it in the editor, in the "Data" view (not in the Inbox, which is for forms). Telling them "it's saved in the browser" about something you saved in a store is lying to them.
+- What is saved with localStorage SURVIVES closing the tab and the browser; what it doesn't do is travel to another device, another visitor or the user. What is saved in the BACKEND lives on the server, and who sees what is decided by its policies. Telling them "it's saved in the browser" about something you saved in the backend is lying to them.
 - Forms work: what the visitor sends reaches the user's email and their Inbox (how to write one, in the guide below). When people need to be able to write to them, offer the form; WhatsApp or the chat in addition, not instead.
 - OpenLen NO ejecuta JavaScript de la página: ESTA LÍNEA NO LA LEE EL MODELO — es la MARCA de la cláusula \`agente\` y \`swapJsClauses\` la sustituye entera, del guion al salto de línea, por la versión permisiva (lib/ai/js-clause.ts). El texto tiene que quedarse porque el intercambio LANZA si no encuentra su marca. Lo sujeta lib/agent/catalog.test.ts, que exige que esta frase NO salga en el prompt montado.
 - WHAT REALLY CAN'T BE DONE, and it is little: charging a card INSIDE the page (there is no payment gateway: payment goes through the user's payment link, as above, or by WhatsApp or bank transfer), the user finding out what the visitor did in their browser (that is what the form is for) and sending emails on your own.
@@ -60,9 +59,12 @@ LINKS (<a href>):
 - INTERNAL: the path "/<slug>" of its file /<slug>/index.html (e.g. /menu); never "menu.html" or plain "menu", which fall into the same silent fallback to the home page. The home page is "/".
 - ANCHORS ("#pricing"): only if that id EXISTS on the target page; if not, create it in the same edit.
 
-STORES (the page's data, in /datos):
-A STORE keeps real data on the server —a dish on the menu, a product in the catalog, a review— and survives reloads and republishing. It is DECLARED in the page, with Edit: a \`<script type="application/json" data-ol-stores>\` block inside the <body>, outside any section that could be deleted, which says what fields it has and who may touch them. Its shape: {"menu":{"visitante":"lectura","campos":{"plato":"texto","precio":"numero"}}}. \`visitante\` is "lectura" (you maintain it, the visitor only reads it — the normal case for a menu or a catalog), "propio" (each visitor writes and reads THEIR OWN — a cart), "publico" (anyone writes and EVERYONE reads it — REVIEWS, comments, a wall: it is published at once and everybody sees it, as on Mercado Libre) or "añadir" (the visitor creates and does NOT read what others left — a sign-up form, where what each one leaves is private). The types are texto, numero, booleano, fecha and lista.
-Once declared, each store is a FILE: /datos/<store>.json, the list of its rows with their id. Read it with Read and change it with Edit or Write like any file: a row without an id is new, the one you change gets updated and the one you remove gets deleted. Everything is checked before anything is saved —a field the store doesn't declare, or a value of the wrong type, comes back to you as an error—. If the store doesn't exist yet, declare the block with Edit and write its file in the SAME turn. For the content of a "lectura" store to show on the published page, leave a container with data-ol-datos="<name>" where you want it to appear.
+THE BACKEND (Supabase):
+This project has its own Supabase backend —a Postgres database behind the REST API, and Auth with email and password— at the URL and with the publishable key that PROJECT STATE gives you under \`supabase\` (\`supabase status\` in the terminal prints them too). Realtime, Storage and Edge Functions don't exist here yet: if something needs them, say so. Anything that has to live on a server —a cart that is still there tomorrow, reviews everyone sees, a menu the user maintains, people who sign in— goes here.
+- In the page, supabase-js as usual: \`<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>\` and \`supabase.createClient(url, publishableKey)\`. The publishable key is meant to be in the page; a secret key, never.
+- The tables, their policies, functions and triggers are migrations: \`supabase migration new <name>\` creates /supabase/migrations/<timestamp>_<name>.sql, you write the SQL in it with Write or Edit, and \`supabase db push\` applies it. Enable row level security on every table you create and write its policies: with RLS on and no policy the page reads nothing and writes nothing, and without RLS anyone can read and change everything. Users are auth.users: \`references auth.users(id)\`, and \`auth.uid()\` in the policies.
+- To change what was already pushed, write a NEW migration. There is no \`supabase db reset\` here: this is the live database, with the visitors' data in it.
+- A page that already declares a data-ol-stores block (the older way to keep data) keeps working with it; how, in ${RUTA_API_D}. New data goes in the backend.
 
 DESIGN GUIDE (for the pages you create yourself and for a redesign you are asked for; what you add to a page that already exists is written the way that page is):
 ${PUBLISH_CONTRACT}
@@ -113,11 +115,14 @@ ${bloqueDeLibrerias({ dondeVaElScript: "libre" })}`;
 // en lo que Len crea o en un JavaScript concreto se lee cuando hace falta, en
 // /.openlen/docs (oculta: ver `CARPETA_DOCS`):
 //   · /.openlen/docs/guia-de-diseno.md — color, letra, modo oscuro y acabado;
-//   · /.openlen/docs/api-d.md — cómo guarda y lee el JavaScript en un almacén;
 //   · /.openlen/docs/librerias.md — las librerías que sobreviven al publicar (lo que se
 //     rompe en silencio lo dice además `librerias-que-no-cargan`);
-//   · /.openlen/docs/accounts.md — la gente que entra y sale de la página
-//     (03/10/2026). Éste NO sale del manual: nació aparte, en lib/agent/accounts-doc.ts.
+//   · /.openlen/docs/api-d.md — `data-ol-stores` y /api/d, SÓLO para las páginas
+//     que ya declaran almacenes. Desde el 2026-10-04 lo nuevo va al backend de
+//     Supabase (THE BACKEND, arriba; plans/pages-backend/design.md), y este
+//     texto NO sale del manual: se mudó entero a lib/agent/stores-doc.ts.
+// ⚰️ /.openlen/docs/accounts.md (data-ol-accounts, 03/10) se retiró el mismo día
+// sin llegar a desplegarse: la gente que entra en la página es Supabase Auth.
 // El texto se MUDA, no se reescribe: se corta por sus marcas y LANZA si una no
 // aparece, como `swapJsClauses`. Regla por regla, en
 // plans/len-agente-2026/notas/f4-tabla-de-reglas.md (M1–M21, I1–I3).
@@ -128,19 +133,14 @@ ${bloqueDeLibrerias({ dondeVaElScript: "libre" })}`;
 const MARCA_GUIA = "DESIGN GUIDE (";
 const MARCA_GUSTO = "\nCOLOR, SHAPE AND TYPE";
 const MARCA_LIBRERIAS = "AVAILABLE LIBRARIES";
-const MARCA_API_D = "SAVING TOO:";
 /** La entradilla de WHAT PUBLISHING REQUIRES prometía el acabado «al final»,
  *  y el acabado se va a la guía. */
 const PROMESA_DEL_ACABADO = ", and at the end the level of finish that is expected.";
 
-/** Lo que queda en la línea del JavaScript donde estaba el contrato de /api/d. */
-const EN_LUGAR_DE_API_D = `SAVING TOO is possible, in a store: what the JavaScript asks of /api/d is in ${RUTA_API_D}.`;
-
 const INDICE = `MORE, IN ${CARPETA_DOCS} (read them when you need them):
 - ${RUTA_GUIA}: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch or a redesign. What you add to a page that already exists is written the way that page is.
-- ${RUTA_API_D}: how the page's JavaScript saves to and reads from a store (/api/d); read it before writing that JavaScript.
-- ${RUTA_LIBRERIAS}: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.
-- ${RUTA_ACCOUNTS}: people who sign in to the page —a till with its cashiers, members, staff— and stores only they can reach; read it before building anything someone signs in to.`;
+- ${RUTA_API_D}: ONLY for a page that already declares a data-ol-stores block: how its stores and its JavaScript (/api/d) work.
+- ${RUTA_LIBRERIAS}: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.`;
 
 const encontrar = (texto: string, marca: string, desde = 0): number => {
   const i = texto.indexOf(marca, desde);
@@ -158,22 +158,16 @@ interface ManualPartido {
   readonly docs: Readonly<Record<string, string>>;
 }
 
-/** Corta el manual entero en /AGENTS.md y tres ficheros de /.openlen/docs, y
- *  les suma el cuarto, el de las cuentas, que no sale del manual. */
+/** Corta el manual entero en /AGENTS.md y dos ficheros de /.openlen/docs, y
+ *  les suma el tercero, el de los almacenes de antes, que no sale del manual. */
 export function partirElManual(entero: string = manualSinPartir()): ManualPartido {
-  // 1 · El contrato de /api/d sale de la línea del JavaScript, hasta su final.
-  const iApi = encontrar(entero, MARCA_API_D);
-  const finApi = entero.indexOf("\n", iApi) === -1 ? entero.length : entero.indexOf("\n", iApi);
-  const apiD = entero.slice(iApi, finApi);
-  const sinApi = entero.slice(0, iApi) + EN_LUGAR_DE_API_D + entero.slice(finApi);
-
-  // 2 · La guía: su cabecera, lo que IMPONE (se queda) y el gusto (se va).
-  const iGuia = encontrar(sinApi, MARCA_GUIA);
-  const finCabecera = encontrar(sinApi, "\n", iGuia);
-  const cabecera = sinApi.slice(iGuia, finCabecera);
-  const iLibrerias = encontrar(sinApi, MARCA_LIBRERIAS, finCabecera);
-  const contrato = sinApi.slice(finCabecera + 1, iLibrerias).trimEnd();
-  const librerias = sinApi.slice(iLibrerias).trim();
+  // La guía: su cabecera, lo que IMPONE (se queda) y el gusto (se va).
+  const iGuia = encontrar(entero, MARCA_GUIA);
+  const finCabecera = encontrar(entero, "\n", iGuia);
+  const cabecera = entero.slice(iGuia, finCabecera);
+  const iLibrerias = encontrar(entero, MARCA_LIBRERIAS, finCabecera);
+  const contrato = entero.slice(finCabecera + 1, iLibrerias).trimEnd();
+  const librerias = entero.slice(iLibrerias).trim();
   // Con el contrato COMPLETO (`OPENLEN_MIN_CONTRACT=0`, la salida de
   // emergencia) no hay sección de gusto que separar: la guía entera va a /.openlen/docs.
   const iGusto = contrato.indexOf(MARCA_GUSTO);
@@ -186,16 +180,15 @@ export function partirElManual(entero: string = manualSinPartir()): ManualPartid
     impone = impone.replace(PROMESA_DEL_ACABADO, `; the level of finish is in ${RUTA_GUIA}.`);
   }
 
-  const antes = sinApi.slice(0, iGuia).trimEnd();
+  const antes = entero.slice(0, iGuia).trimEnd();
   const agents = [antes, ...(impone ? [impone] : []), INDICE].join("\n\n");
   return {
     agents,
     docs: {
       [RUTA_GUIA]: `${cabecera}\n${gusto}`,
-      [RUTA_API_D]: `# /api/d: the page's JavaScript saves to and reads from a store\n\n${apiD}`,
+      // No se corta del manual: lo de antes de Supabase, en su fichero (lib/agent/stores-doc.ts).
+      [RUTA_API_D]: STORES_DOC,
       [RUTA_LIBRERIAS]: librerias,
-      // No se corta del manual: nació aparte, en su fichero (lib/agent/accounts-doc.ts).
-      [RUTA_ACCOUNTS]: ACCOUNTS_DOC,
     },
   };
 }

@@ -41,9 +41,10 @@ export const CARPETA_DOCS = "/.openlen/docs";
 export const RUTA_GUIA = `${CARPETA_DOCS}/guia-de-diseno.md`;
 export const RUTA_API_D = `${CARPETA_DOCS}/api-d.md`;
 export const RUTA_LIBRERIAS = `${CARPETA_DOCS}/librerias.md`;
-/** Las cuentas de la página (plans/page-accounts/design.md, 03/10/2026). */
-export const RUTA_ACCOUNTS = `${CARPETA_DOCS}/accounts.md`;
-export const RUTAS_DE_DOCS: readonly string[] = [RUTA_GUIA, RUTA_API_D, RUTA_LIBRERIAS, RUTA_ACCOUNTS];
+// ⚰️ Aquí iba RUTA_ACCOUNTS (`accounts.md`, data-ol-accounts, 03/10/2026),
+// retirada el 2026-10-04 sin llegar a desplegarse: la gente que entra en la
+// página es Supabase Auth (plans/pages-backend/design.md).
+export const RUTAS_DE_DOCS: readonly string[] = [RUTA_GUIA, RUTA_API_D, RUTA_LIBRERIAS];
 
 /** ¿Es del manual de la plataforma (de sólo lectura, no se publica)? Toda la
  *  carpeta, no sólo sus tres ficheros: un `nuevo.md` ahí tampoco se escribe. */

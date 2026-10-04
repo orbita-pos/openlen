@@ -8,6 +8,8 @@ import {
   buildFunctionDeclarations,
   instruccionesDeLen,
 } from "./catalog";
+import { documentosDeLaPlataforma } from "./manual-de-la-plataforma";
+import { RUTA_API_D } from "./ficheros/manual";
 import { clauseMarker } from "@/lib/ai/js-clause";
 import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
@@ -697,11 +699,13 @@ describe("la vista «Datos» que el prompt nombra existe", () => {
 });
 
 // Len 2.0: el almacén se declara con Edit, dentro del <body>. La receta vieja
-// (editar_html sobre un data-op-id) ya no existe en su camino.
+// (editar_html sobre un data-op-id) ya no existe en su camino. Desde el
+// 2026-10-04 la receta vive en /.openlen/docs/api-d.md, sólo para las páginas
+// que ya declaran almacenes: lo nuevo va al backend de Supabase.
 describe("dónde se declara un almacén", () => {
   it("la receta de ALMACENES lo manda al body y con Edit, y su fichero es /datos/<almacén>.json", () => {
-    const p = instruccionesDeLen();
-    const seccion = p.slice(p.indexOf("STORES (the page's data, in /datos)")).split(SALTO + SALTO)[0];
+    const seccion = documentosDeLaPlataforma()[RUTA_API_D]!;
+    expect(instruccionesDeLen()).not.toContain("STORES (the page's data, in /datos)");
     expect(seccion).toContain("data-ol-stores");
     expect(seccion).toContain("<body>");
     // Borrar la tienda no debe llevarse el almacén (lo que enseñaba la vieja

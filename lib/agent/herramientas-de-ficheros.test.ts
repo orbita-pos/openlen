@@ -389,13 +389,13 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
     const out = await runAgentTool(makeSession(), deps, "Read", { file_path: "/AGENTS.md" });
     assert.equal(out.response.ok, true);
     assert.ok(texto(out).startsWith("1\t# OpenLen: how the platform works"));
-    assert.match(texto(out), /STORES \(the page's data, in \/datos\)/);
+    assert.match(texto(out), /THE BACKEND \(Supabase\)/);
   });
 
   it("🔴 un Grep por todo el sitio encuentra la página, no los ejemplos del manual", async () => {
     const { deps } = makeDeps({ html: HOME });
-    // El manual nombra `data-ol-stores` en su receta de ALMACENES; la página no
-    // declara ninguno. Si el Grep lo encontrara, Len creería que sí.
+    // El manual nombra `data-ol-stores` (para las páginas que ya lo declaran); la
+    // página no declara ninguno. Si el Grep lo encontrara, Len creería que sí.
     const out = await runAgentTool(makeSession(), deps, "Grep", { pattern: "data-ol-stores", output_mode: "files_with_matches" });
     assert.doesNotMatch(texto(out), /AGENTS\.md/);
     const glob = await runAgentTool(makeSession(), deps, "Glob", { pattern: "**/*" });

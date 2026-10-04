@@ -302,6 +302,22 @@ describe("summarizeProjectState", () => {
     assert.equal(s.paginas, undefined, "la lista vieja con «principal» ya no va");
   });
 
+  // plans/pages-backend/design.md: la URL y la clave publicable del backend del
+  // proyecto, que van en la página con `createClient`. Como en Lovable, en el
+  // contexto: Len no tiene que ir a buscarlas para escribir la página.
+  it("🔴 con backend, el estado trae su URL y su clave publicable; sin él, no hay campo", () => {
+    const con = summarizeProjectState({
+      data: { html: HTML },
+      title: "Tacos",
+      subdomain: null,
+      publishedAt: null,
+      supabase: { url: "https://abcdefghijklmnopqrst.openlen.app", publishableKey: "sb_publishable_x" },
+    });
+    assert.deepEqual(con.supabase, { project_url: "https://abcdefghijklmnopqrst.openlen.app", publishable_key: "sb_publishable_x" });
+    const sin = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null, supabase: null });
+    assert.equal("supabase" in sin, false);
+  });
+
   it("y dice qué página tiene abierta el dueño, como el fichero abierto en el IDE", () => {
     const s = summarizeProjectState(
       { data: { html: HTML, pages: { nosotros: { html: HTML } } }, title: "Tacos", subdomain: null, publishedAt: null },

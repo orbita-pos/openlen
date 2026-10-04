@@ -501,8 +501,8 @@ describe("buildAgentMessages", () => {
     if (!a.ok || !b.ok) throw new Error("el fixture no debe exceder el presupuesto");
     expect(a.messages[1]).toEqual(b.messages[1]);
     expect(a.messages[1].content).toContain("/AGENTS.md (the platform manual, managed by OpenLen; read-only):");
-    expect(a.messages[1].content).toContain("STORES (the page's data, in /datos)");
-    expect(a.systemPrompt).not.toContain("STORES (the page's data, in /datos)");
+    expect(a.messages[1].content).toContain("THE BACKEND (Supabase)");
+    expect(a.systemPrompt).not.toContain("THE BACKEND (Supabase)");
   });
 
   // El historial conserva su orden y sigue estando ANTES de la petición nueva.
