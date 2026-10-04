@@ -17,7 +17,7 @@
 // lib/ai/inline-image.ts (vision-critic reference shots of generated HTML).
 
 import dns from "node:dns/promises";
-import type { Page } from "puppeteer";
+import type { Page, Target } from "puppeteer";
 import { ipInPrivateRange } from "@/lib/style-match/scrape/validate-url";
 
 // Schemes that never hit the network in a way that can reach internal hosts.
@@ -52,6 +52,86 @@ async function hostIsBlocked(hostname: string): Promise<boolean> {
     return true;
   }
 }
+
+/**
+ * LAS VENTANAS NUEVAS NO SALEN (2026-10-04).
+ *
+ * La interceptación de abajo es de ESTA página. Una ventana que la página abre
+ * —`window.open`, un enlace o un formulario con `target="_blank"`— es OTRO
+ * target, sin interceptación y con la red del servidor entera: SSRF al
+ * loopback, a la LAN o a los metadatos de la nube. Medido con un servidor en
+ * 127.0.0.1: las dos puertas llegaban (`render-ssrf-guard.browser.test.ts`).
+ * El transformador de ingestión lo cerraba en su propio navegador; al
+ * retirarlo, el JavaScript pegado pasó a correr aquí (miniatura, medición,
+ * comprobaciones al publicar), y lo encontró el revisor de publicación.
+ *
+ * Tres capas, porque ninguna basta sola (medido):
+ *   1. `BLOQUEO_DE_VENTANAS`, en el documento actual Y en los nuevos: anula
+ *      `window.open` y el `click`/`submit`/`dispatchEvent` programáticos de un
+ *      enlace o formulario con destino fuera. Va a los PROTOTIPOS porque
+ *      `setContent` de Puppeteer hace `document.open()`, que borra los oyentes
+ *      del documento pero no toca el reino; y al documento ACTUAL porque la
+ *      guarda se instala con `about:blank` ya cargado, donde
+ *      `evaluateOnNewDocument` no llega.
+ *   2. `SIN_VENTANAS_NUEVAS` en el `launch`: Puppeteer pasa
+ *      `--disable-popup-blocking` por defecto, y sin el bloqueador de Chromium
+ *      cualquier script abre ventanas sin que nadie pulse nada.
+ *   3. De respaldo, la pestaña que se cuela se cierra. Llega TARDE para su
+ *      primera petición (medido), así que no es la defensa: sólo acota.
+ *
+ * Lo que NO cubre: un clic DE VERDAD (con gesto de usuario) en un enlace
+ * `target="_blank"` dentro de una visita (`usar_pagina` intercepta los suyos
+ * con su preludio), y `--block-new-web-contents`, que en el headless nuevo no
+ * hace nada (medido).
+ */
+export const BLOQUEO_DE_VENTANAS = `(function () {
+  if (window.__olSinVentanas) return;
+  window.__olSinVentanas = true;
+  // Sólo si sigue siendo el NATIVO: quien mide puede haber puesto antes el suyo,
+  // que apunta a dónde manda la página (los graders de Len-Bench, el preludio de
+  // usar_pagina) y tampoco abre nada. Una página no se adelanta a esto: corre
+  // antes que sus scripts.
+  try {
+    if (/\\[native code\\]/.test(Function.prototype.toString.call(window.open))) {
+      window.open = function () { return null; };
+    }
+  } catch (e) {}
+  function fuera(t) { t = String(t || "").toLowerCase(); return t !== "" && t !== "_self" && t !== "_parent" && t !== "_top"; }
+  function base() { var b = document.querySelector("base[target]"); return b ? b.getAttribute("target") : ""; }
+  function abre(el, extra) {
+    if (!el || !el.getAttribute) return false;
+    var enlace = el.matches && el.matches("a[href], area[href]");
+    if (!enlace && el.tagName !== "FORM") return false;
+    return fuera(extra || el.getAttribute("target") || base());
+  }
+  function envia(b) {
+    return !!(b && b.form && (b.type === "submit" || b.type === "image") && abre(b.form, b.getAttribute("formtarget")));
+  }
+  var click = HTMLElement.prototype.click;
+  HTMLElement.prototype.click = function () {
+    if (abre(this.closest ? this.closest("a[href], area[href]") : null) || envia(this)) return;
+    return click.apply(this, arguments);
+  };
+  var submit = HTMLFormElement.prototype.submit;
+  HTMLFormElement.prototype.submit = function () { if (abre(this)) return; return submit.apply(this, arguments); };
+  var requestSubmit = HTMLFormElement.prototype.requestSubmit;
+  if (requestSubmit) HTMLFormElement.prototype.requestSubmit = function (b) {
+    if (abre(this, b && b.getAttribute ? b.getAttribute("formtarget") : "")) return;
+    return requestSubmit.apply(this, arguments);
+  };
+  var despachar = EventTarget.prototype.dispatchEvent;
+  EventTarget.prototype.dispatchEvent = function (ev) {
+    if (ev && ev.type === "click" && this.closest && (abre(this.closest("a[href], area[href]")) || envia(this))) return false;
+    return despachar.apply(this, arguments);
+  };
+})();`;
+
+/** Para el `launch` de todo navegador que pinte HTML ajeno con esta guarda:
+ *  vuelve a encender el bloqueador de ventanas de Chromium, que Puppeteer
+ *  apaga por defecto (capa 2 de arriba). */
+export const SIN_VENTANAS_NUEVAS: { ignoreDefaultArgs: string[] } = {
+  ignoreDefaultArgs: ["--disable-popup-blocking"],
+};
 
 /** Install request interception on `page` that blocks subresource fetches to
  *  internal/loopback/link-local hosts. Call BEFORE setContent. Safe for public
@@ -116,6 +196,21 @@ export async function installSubresourceSsrfGuard(
       /* quien escucha no puede tumbar el guardia */
     }
   };
+  // Las ventanas nuevas (ver BLOQUEO_DE_VENTANAS): capas 1 y 3.
+  await page.evaluateOnNewDocument(BLOQUEO_DE_VENTANAS);
+  await page.evaluate(BLOQUEO_DE_VENTANAS).catch(() => undefined);
+  const propia = page.target();
+  const navegador = page.browser();
+  const cerrarSiEsSuya = (t: Target) => {
+    if (t.opener() !== propia) return;
+    void t
+      .page()
+      .then((p) => p?.close())
+      .catch(() => undefined);
+  };
+  navegador.on("targetcreated", cerrarSiEsSuya);
+  page.once("close", () => navegador.off("targetcreated", cerrarSiEsSuya));
+
   await page.setRequestInterception(true);
   page.on("request", (req) => {
     // The handler MUST resolve every request exactly once (continue/abort) or

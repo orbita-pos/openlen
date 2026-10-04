@@ -7,7 +7,7 @@
 
 import { createHash } from "node:crypto";
 import { captureException } from "@inariwatch/capture";
-import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
+import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
 import { POST_FORMAT_SIZES, type PostFormat } from "./post-templates/families";
 
 const HARD_DEADLINE_MS = 12_000;
@@ -63,6 +63,8 @@ async function renderPostPngUnbounded(
         ? { ...process.env, HOME: "/tmp" }
         : process.env;
     const browser = await puppeteer.launch({
+      // Vuelve a encender el bloqueador de ventanas (ver render-ssrf-guard.ts).
+      ...SIN_VENTANAS_NUEVAS,
       headless: true,
       executablePath,
       env: launchEnv,

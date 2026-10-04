@@ -33,7 +33,7 @@ import { and, eq } from "drizzle-orm";
 import { captureException } from "@inariwatch/capture";
 import { db, schema } from "@/lib/db";
 import { getPublishRoot } from "@/lib/publish/filesystem";
-import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
+import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
 
 const HARD_DEADLINE_MS = 120_000;
 const MAX_CONCURRENT = Math.max(
@@ -228,6 +228,8 @@ async function runLighthouse(url: string, allowOrigin: string): Promise<LhrLike 
     process.platform === "linux" ? { ...process.env, HOME: "/tmp" } : process.env;
 
   const browser = await puppeteer.launch({
+    // Vuelve a encender el bloqueador de ventanas (ver render-ssrf-guard.ts).
+    ...SIN_VENTANAS_NUEVAS,
     headless: true,
     executablePath,
     env: launchEnv,

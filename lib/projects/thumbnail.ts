@@ -27,7 +27,7 @@ import { soltarVuelo, tomarVuelo, type Vuelo } from "./miniatura-en-vuelo";
 import { db, schema } from "@/lib/db";
 import { processImage } from "@/lib/images";
 import { getStorage } from "@/lib/storage";
-import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
+import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
 
 // 16:10 — matches the card's `aspect-[16/10]` frame and the template
 // thumbnail viewport, so previews are framed identically across the app.
@@ -143,6 +143,8 @@ async function doRender(projectId: string, html: string, vuelo: Vuelo): Promise<
     process.platform === "linux" ? { ...process.env, HOME: "/tmp" } : process.env;
 
   const browser = await puppeteer.launch({
+    // Vuelve a encender el bloqueador de ventanas (ver render-ssrf-guard.ts).
+    ...SIN_VENTANAS_NUEVAS,
     headless: true,
     executablePath,
     env: launchEnv,

@@ -12,7 +12,7 @@
 import type { InlineImage } from "@/lib/ai-gateway";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
-import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
+import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 import { esCargaFallida } from "@/lib/generation/rotura-ajena";
 
@@ -285,6 +285,8 @@ export async function renderHtmlToInlineImage(
     // /tmp is always writable; the env override only affects the spawned
     // Chrome process, not the Node parent.
     const browser = await puppeteer.launch({
+      // Vuelve a encender el bloqueador de ventanas (ver render-ssrf-guard.ts).
+      ...SIN_VENTANAS_NUEVAS,
       headless: true,
       executablePath,
       args: [

@@ -15,7 +15,7 @@
 // Aparte de `harness.ts` a propósito: aquel importa la base de datos al cargar,
 // y esto tiene que poder probarse en un navegador sin tocarla.
 import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
-import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
+import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
 import { leerVacuas, programaSinAccionesJs, type FalloSpec } from "@/lib/agent/prueba-js";
 
 /**
@@ -29,6 +29,8 @@ import { leerVacuas, programaSinAccionesJs, type FalloSpec } from "@/lib/agent/p
 export async function brazoSinAcciones(html: string, codigo: string): Promise<readonly FalloSpec[]> {
   const puppeteer = (await import("puppeteer")).default;
   const browser = await puppeteer.launch({
+    // Vuelve a encender el bloqueador de ventanas (ver render-ssrf-guard.ts).
+    ...SIN_VENTANAS_NUEVAS,
     headless: true,
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],

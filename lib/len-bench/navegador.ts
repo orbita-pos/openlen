@@ -16,6 +16,7 @@
 // app y las páginas publicadas siguen sin resolver.
 
 import puppeteer, { type Browser, type Page } from "puppeteer";
+import { SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
 import { OPENLEN_PAGE_HOSTS, OPENLEN_STATIC_HOSTS } from "@/lib/publish/base-host";
 
 /** `--host-resolver-rules` de Chromium: cada dominio de OpenLen y todos sus
@@ -47,6 +48,8 @@ export async function cerrarPestana(page: Page, tope = 5_000): Promise<void> {
 
 export async function lanzarNavegador(): Promise<Browser> {
   return puppeteer.launch({
+    // Vuelve a encender el bloqueador de ventanas (ver render-ssrf-guard.ts).
+    ...SIN_VENTANAS_NUEVAS,
     headless: true,
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined,
     args: [
