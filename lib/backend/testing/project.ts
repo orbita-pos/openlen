@@ -26,6 +26,8 @@ export async function newTestProject(migration: string): Promise<TestProject> {
   const dev = `ol_${TEST_REF}`;
   await runner.exec(CLUSTER_ROLES_SQL);
   await runner.exec(`create role ${dev} nologin noinherit`);
+  // Lo que le da `provisionDatabase` en su base: crear esquemas, como `postgres` en Supabase.
+  await runner.exec(`do $$ begin execute format('grant create on database %I to ${dev}', current_database()); end $$;`);
   await initProjectDatabase(runner, { devRole: dev });
   if (migration) {
     const r = await asRole(pg, dev, null, (q) => q(migration));

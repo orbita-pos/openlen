@@ -39,7 +39,12 @@ export async function provisionDatabase(opts: { ref: string; dbPassword: string 
       }
       const db = await r.query(`select 1 from pg_database where datname = $1`, [dbName]);
       if (db.rows.length === 0) await r.exec(`create database ${dbName};`);
-      await r.exec(`revoke connect on database ${dbName} from public; grant connect on database ${dbName} to ${dev}, authenticator;`);
+      // CREATE para el de desarrollador, como `postgres` en Supabase: una
+      // migración puede crear su esquema (el `private` que la documentación de
+      // Supabase pide para las funciones security definer). Sólo en SU base.
+      await r.exec(
+        `revoke connect on database ${dbName} from public; grant connect on database ${dbName} to ${dev}, authenticator; grant create on database ${dbName} to ${dev};`,
+      );
     } finally {
       await r.query(`select pg_advisory_unlock(hashtext($1))`, [`pages-backend:${opts.ref}`]);
     }
