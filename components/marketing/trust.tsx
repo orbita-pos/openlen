@@ -1,6 +1,6 @@
-import { ArrowUpRight, FolderDown, Gauge, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, FolderDown, Gauge } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { Badge } from "@/components/ui/badge";
+import { LenSays } from "./len-says";
 import { GithubIcon } from "@/components/ui/brand-icons";
 import { getUptimeBadge, type UptimeBadge } from "@/lib/marketing/uptime";
 
@@ -67,16 +67,14 @@ export async function Trust() {
   const badge = await getUptimeBadge();
 
   return (
-    <section id="confianza" className="relative scroll-mt-20">
+    <section id="confianza" data-len-section="confianza" className="relative scroll-mt-20">
       <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
         <div className="max-w-2xl">
-          <Badge tone="coral">
-            <ShieldCheck size={11} /> {t("trust.badge")}
-          </Badge>
-          <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.08]">
+          <LenSays>{t("trust.lenSays")}</LenSays>
+          <h2 className="mt-6 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.08]">
             {t.rich("trust.title", {
               muted: (chunks) => (
-                <span className="serif-accent bg-gradient-to-br from-coral-500 via-coral-600 to-rose-500 bg-clip-text text-transparent pr-[0.04em]">
+                <span className="font-medium text-zinc-500 dark:text-zinc-400">
                   {chunks}
                 </span>
               ),

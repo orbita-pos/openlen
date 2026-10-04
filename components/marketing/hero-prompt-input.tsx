@@ -17,8 +17,9 @@ import {
 import "@/components/workspace-v2/chat/new-chat.css";
 import { useMandoDesplegable } from "@/components/workspace-v2/use-mando-desplegable";
 import { cn } from "@/lib/cn";
-import { QUICK_PROMPTS } from "@/lib/quick-prompts";
 import { useDictado } from "./use-dictado";
+import { useHeroLenReport } from "./hero-len";
+import { useGhostTyping } from "./use-ghost-typing";
 import { reducirImagen } from "./reducir-imagen";
 import {
   dejarReferenciasEnTransito,
@@ -31,6 +32,12 @@ import {
 } from "@/components/generation-brief-limit";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// LO QUE LE PEDIRÍAS A UN DESARROLLADOR (04/10). La portada enseñaba las ideas
+// del taller (`QUICK_PROMPTS`: «SaaS launch», «Coffee subscription»…), en inglés
+// en todos los idiomas y con cara de demo de SaaS. Aquí van encargos de negocio
+// de verdad, traducidos, en la voz de quien se lo pide a Len.
+const HERO_ASKS = ["bakery", "barber", "photographer", "course"] as const;
+
 // Hero prompt input — the homepage entry into AI generation. Mirrors the
 // /new AI brief panel: same quick-prompts, same composer affordances.
 //
@@ -94,6 +101,25 @@ export function HeroPromptInput() {
       });
     },
   });
+
+  // LA CARA DE LEN DEL HÉROE mira esta caja: escucha mientras escribes o
+  // dictas y piensa al enviar (hero-len.tsx). Fuera del héroe, no-op.
+  const reportLen = useHeroLenReport();
+  const [focused, setFocused] = useState(false);
+  // Teclea sola mientras está vacía y nadie la toca (use-ghost-typing.ts).
+  const ghost = useGhostTyping(
+    t.raw("heroPrompt.ghost") as string[],
+    !focused && value === "" && referencias.length === 0 && !dictado.escuchando,
+  );
+  useEffect(() => {
+    reportLen({
+      focused,
+      hasText: value.trim().length > 0,
+      listening: dictado.escuchando,
+      sent: submitting || loginOpen,
+      ghost: ghost.typing,
+    });
+  }, [reportLen, focused, value, dictado.escuchando, submitting, loginOpen, ghost.typing]);
 
   // Auto-grow up to ~10 lines.
   useEffect(() => {
@@ -216,11 +242,24 @@ export function HeroPromptInput() {
             </div>
           )}
 
+          <div className="relative">
+          {ghost.text && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 mt-0.5 text-[15px] leading-normal text-zinc-500 dark:text-zinc-400"
+            >
+              {ghost.text}
+              <span className="ml-px inline-block h-[1.05em] w-[2px] translate-y-[0.15em] animate-pulse rounded-full bg-coral-500" />
+            </div>
+          )}
           <textarea
+            id="hero-prompt"
             ref={taRef}
             value={value}
             onChange={briefLimit.onChange}
             onPaste={briefLimit.onPaste}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             onKeyDown={(e) => {
               // COMO EN EL CHAT: Enter manda y Mayús+Enter salta de línea. El
               // ⌘/Ctrl+Enter de antes sigue valiendo. Mientras un IME compone
@@ -231,12 +270,13 @@ export function HeroPromptInput() {
               }
             }}
             rows={1}
-            placeholder={t("heroPrompt.placeholder")}
+            placeholder={ghost.text ? "" : t("heroPrompt.placeholder")}
             maxLength={briefLimit.maxLength}
             aria-describedby={briefLimit.warningVisible ? briefLimit.feedbackId : undefined}
             className="mt-0.5 block w-full resize-none bg-transparent text-[15px] leading-normal text-zinc-900 outline-none placeholder:text-zinc-500 dark:text-zinc-100 dark:placeholder:text-zinc-500"
             style={{ minHeight: 52 }}
           />
+          </div>
 
           {/* LO QUE EL MOTOR VA OYENDO, antes de darlo por bueno. Sin esto,
               dictar se siente roto: entre que hablas y que el motor cierra la
@@ -394,18 +434,18 @@ export function HeroPromptInput() {
         <span className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400 font-semibold mr-1">
           {t("heroPrompt.tryLabel")}
         </span>
-        {QUICK_PROMPTS.map((p) => (
+        {HERO_ASKS.map((key) => (
           <button
-            key={p.label}
+            key={key}
             type="button"
             onClick={() => {
-              briefLimit.replaceValue(p.prompt);
+              briefLimit.replaceValue(t(`heroPrompt.asks.${key}.prompt`));
               taRef.current?.focus();
             }}
             className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] text-zinc-700 dark:text-zinc-300 ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white/70 dark:bg-zinc-950/70 backdrop-blur hover:bg-white dark:hover:bg-zinc-900 hover:ring-zinc-300 dark:hover:ring-zinc-700 transition"
           >
             <Sparkles size={10} className="text-coral-500" />
-            {p.label}
+            {t(`heroPrompt.asks.${key}.label`)}
           </button>
         ))}
       </div>

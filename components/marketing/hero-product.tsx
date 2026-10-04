@@ -11,9 +11,7 @@ import {
   HistoryIcon,
   ICONO_BARRA,
   ICONO_RAIL,
-  ImageIcon,
   Inbox,
-  LenMark,
   Megaphone,
   Monitor,
   Pencil,
@@ -22,7 +20,8 @@ import {
   Smartphone,
   Tablet,
 } from "@/components/workspace-v2/icons";
-import { Coins, Database } from "lucide-react";
+import { Brain, ChevronRight, Coins, Database, History, PanelLeft, Plus } from "lucide-react";
+import { LenFace } from "@/components/workspace-v2/chat/len-face";
 
 // Hero product visual — una réplica ESTÁTICA y fiel del taller real de OpenLen
 // (`/new`): barra superior · rail de iconos · panel de Chat (Len) · lienzo.
@@ -68,8 +67,8 @@ import { Coins, Database } from "lucide-react";
 //     enseñando en su home un control que se quitó por mentir.
 //  7. PUBLICAR NO LLEVA ESTRELLITA. Se le quitó en el taller —publicar no lo
 //     hace ninguna IA— y era el único botón de la barra que ya destaca solo.
-//  8. LEN NO ES UNA ESTRELLITA. Su marca es `LenMark`: un aro grueso y una
-//     pupila.
+//  8. LEN NO ES UNA ESTRELLITA. Era `LenMark` (un aro y una pupila) y desde
+//     el chat nuevo es su cara, `LenFace`: el aro con dos ojos.
 //
 // Al tocar el taller, esta maqueta es lo segundo que hay que mirar. No tiene
 // compilador que avise: se queda quieta y sigue vendiendo lo de antes.
@@ -177,78 +176,121 @@ export function HeroProduct() {
             </span>
           </div>
 
-          {/* panel de Chat (Len) — w-[272px], left-sidebar.tsx:385 */}
-          <div className="hidden lg:flex h-full w-[272px] shrink-0 flex-col border-r border-[var(--border)] bg-[var(--bg-sidebar)]">
-            <div className="flex items-center justify-between px-3 py-1.5 border-b border-[var(--border)]">
-              <span className="text-[10px] uppercase tracking-[0.16em] text-[var(--fg-faint)] font-semibold">
-                Chat
+          {/* EL CHAT NUEVO (04/10) — components/workspace-v2/chat/. La maqueta
+              enseñaba el chat de antes: burbujas, la tarjeta «Editar página» y
+              LenMark. Ahora, como en la pantalla real: «Chat con Len» y sus
+              botones, la cara de Len en la cabecera del turno, los pasos
+              PLEGADOS en una tarjeta (steps-card.tsx), lo que cambió en
+              palabras con su «Ver» (changes-card.tsx), la barra viva con la
+              cara (live-bar.tsx) y el compositor con el mando de esfuerzo. */}
+          <div className="hidden lg:flex h-full w-[300px] shrink-0 flex-col border-r border-[var(--border)] bg-[var(--bg-sidebar)]">
+            <div className="flex h-11 items-center justify-between px-3 border-b border-[var(--border)]">
+              <span className="text-[13px] font-semibold">
+                Chat <span className="font-normal text-[var(--fg-muted)]">con Len</span>
+              </span>
+              <span className="flex items-center gap-0.5 text-[var(--fg-muted)]">
+                <span className="grid h-7 w-7 place-items-center rounded-md">
+                  <Brain size={14} />
+                </span>
+                <span className="grid h-7 w-7 place-items-center rounded-md">
+                  <History size={14} />
+                </span>
+                <span className="grid h-7 w-7 place-items-center rounded-md">
+                  <PanelLeft size={14} />
+                </span>
               </span>
             </div>
-            <div className="flex-1 min-h-0 px-3 py-3 space-y-2 overflow-hidden">
-              <div className="flex gap-2 flex-row-reverse">
-                <span className="shrink-0 grid h-6 w-6 place-items-center rounded-full text-[10px] font-semibold bg-gradient-to-br from-[#FF7E55] to-[#C72E10] text-white">
-                  J
-                </span>
-                <div className="min-w-0 max-w-[80%] text-right">
-                  <div className="inline-block rounded-2xl px-3 py-2 text-left bg-[var(--accent-soft)] border border-[color:#FF5A36]/30 text-[12.5px] leading-relaxed text-[#B23A1A] dark:text-[#FFB39E]">
-                    Hazlo minimal y editorial, con una galería de proyectos
-                  </div>
+
+            <div className="flex-1 min-h-0 px-3 py-3 space-y-3 overflow-hidden">
+              <div className="flex justify-end">
+                <div className="max-w-[85%] rounded-2xl border border-[var(--border)] bg-[var(--bg-elev)] px-3 py-2 text-[12.5px] leading-relaxed">
+                  Hazlo minimal y editorial, con una galería de proyectos
                 </div>
               </div>
-              <div className="flex gap-2">
-                <span className="shrink-0 inline-flex h-6 w-6 items-center justify-center text-[var(--accent-strong)] dark:text-[#FF8463]">
-                  <LenMark size={22} />
-                </span>
-                <div className="min-w-0 max-w-[85%] space-y-1.5">
-                  {/* LAS ACCIONES DEL AGENTE, encima de lo que dice. Len trabaja
-                      con herramientas y se ven — agent-action-card.tsx:102. */}
-                  <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 text-[11px]">
-                    <Check size={13} className="shrink-0 text-[var(--accent)]" />
-                    <span className="font-medium shrink-0">Editar página</span>
-                    <span className="text-[var(--fg-faint)] truncate min-w-0">
-                      3 secciones
-                    </span>
-                  </div>
-                  <div className="inline-block rounded-2xl px-3 py-2 text-left bg-[var(--bg-elev)] border border-[var(--border)] text-[12.5px] leading-relaxed text-[var(--fg)]">
-                    Listo — titulares editoriales, galería blanca con mucho aire
-                    y 9 fotos en el hero.
-                  </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-[11.5px]">
+                  <LenFace size={16} />
+                  <span className="font-semibold">Len</span>
+                  <span className="text-[var(--fg-faint)]">justo ahora</span>
+                </div>
+                <div className="flex items-center gap-2 rounded-[12px] border border-[var(--border)] bg-[var(--bg-elev)] px-3 py-2 text-[11.5px]">
+                  <Check size={13} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span className="font-semibold">Len hizo 4 pasos</span>
+                  <span className="text-[var(--fg-muted)] tabular-nums">· 31s</span>
+                  <ChevronRight size={13} className="ml-auto text-[var(--fg-faint)]" />
+                </div>
+                <p className="text-[12.5px] leading-relaxed">
+                  Listo. Titulares editoriales, una galería blanca con mucho aire
+                  y nueve de tus fotos en la portada.
+                </p>
+                <div className="overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--bg-elev)] text-[11.5px]">
+                  {[
+                    { Icon: Pencil, label: "Cambió la portada", add: false },
+                    { Icon: Plus, label: "Añadió «Proyectos»", add: true },
+                    { Icon: Pencil, label: "Cambió los estilos", add: false },
+                  ].map(({ Icon, label, add }, i) => (
+                    <div
+                      key={label}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 ${i ? "border-t border-[var(--border)]" : ""}`}
+                    >
+                      <span
+                        className={`grid h-5 w-5 shrink-0 place-items-center rounded-md ${
+                          add
+                            ? "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400"
+                            : "bg-[var(--accent-soft)] text-[var(--accent-strong)] dark:text-[#FF8463]"
+                        }`}
+                      >
+                        <Icon size={11} />
+                      </span>
+                      <span className="min-w-0 truncate">{label}</span>
+                      <span className="ml-auto font-semibold text-[var(--accent-strong)] dark:text-[#FF8463]">
+                        Ver
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-            {/* Composer — el de `panels/chat-panel.tsx`. Adjuntar imagen ·
-                seleccionar sección, y enviar. Sin selector de modelo y sin
-                Autorrelleno (el botón se borró del chat el 03/10). */}
-            <div className="p-3 pt-0">
-              <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elev)]">
-                <div className="px-3 pt-2.5 pb-1 text-[12.5px] text-[var(--fg-faint)]">
-                  Pídele algo a Len…
+
+            {/* La barra viva — la cara dice qué hace Len; aquí ya terminó. */}
+            <div className="flex items-center gap-2.5 px-3 pb-2">
+              <span className="relative">
+                <LenFace size={30} />
+                <span className="absolute -right-0.5 -top-0.5 grid h-3 w-3 place-items-center rounded-full bg-emerald-500 ring-2 ring-[var(--bg-sidebar)]">
+                  <Check size={8} className="text-white" />
+                </span>
+              </span>
+              <span className="leading-tight">
+                <span className="block text-[12px] font-semibold">Listo</span>
+                <span className="block text-[11px] text-[var(--fg-muted)]">pídele otra cosa</span>
+              </span>
+            </div>
+
+            <div className="px-3 pb-2">
+              <div className="rounded-[14px] border border-[var(--border)] bg-[var(--bg-elev)]">
+                <div className="px-3 pt-2.5 pb-1 text-[12px] text-[var(--fg-faint)]">
+                  Describe cómo debería verse o leerse tu página…
                 </div>
-                <div className="flex items-center justify-between px-1.5 pb-1.5 pt-0.5">
-                  <div className="flex items-center gap-0.5 min-w-0">
-                    <span className="grid h-7 w-7 place-items-center rounded-md text-[var(--fg-faint)]">
-                      <ImageIcon size={13} />
-                    </span>
-                    <span className="grid h-7 w-7 place-items-center rounded-md text-[var(--fg-faint)]">
-                      <Crosshair size={13} />
-                    </span>
-                    {/* ⚰️ AQUÍ PUSE UNA PASTILLA «AUTORRELLENO» Y LA QUITÉ EL
-                        MISMO DÍA. Jesús entró en `/new` y no estaba, y tenía
-                        razón: el botón existe en `chat-panel.tsx:2126` pero
-                        detrás de `onAutofill &&`, y `left-sidebar.tsx` —el
-                        ÚNICO que monta `ChatPanel`— no menciona esa prop ni una
-                        vez. `AutofillModal` tampoco lo monta nadie. O sea que
-                        no es que no salga en su pantalla: no sale en ninguna.
-                        Leer el JSX de un componente no dice si se PINTA; hay
-                        que seguir la prop hasta quien la pasa. Es el mismo
-                        error que esta maqueta venía cometiendo desde julio,
-                        cometido otra vez el día de arreglarla. */}
-                  </div>
+                <div className="flex items-center gap-1 px-1.5 pb-1.5 pt-1">
+                  <span className="grid h-7 w-7 place-items-center rounded-md text-[var(--fg-faint)]">
+                    <Plus size={14} />
+                  </span>
+                  <span className="grid h-7 w-7 place-items-center rounded-md text-[var(--fg-faint)]">
+                    <Crosshair size={13} />
+                  </span>
+                  <span className="ml-auto inline-flex h-6 items-center gap-1 rounded-full border border-[var(--border)] px-2 text-[10.5px] text-[var(--fg-muted)]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#FF5A36]" />
+                    Automático
+                  </span>
                   <span className="grid h-7 w-7 place-items-center rounded-md bg-[var(--hover)] text-[var(--fg-faint)]">
                     <SendUp size={13} />
                   </span>
                 </div>
               </div>
+              <p className="mt-1.5 text-center text-[10px] text-[var(--fg-faint)]">
+                Len puede equivocarse. Revisa tu página antes de publicarla.
+              </p>
             </div>
           </div>
 

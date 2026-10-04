@@ -1,14 +1,15 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Check, Sparkles, Unlock } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GithubIcon } from "@/components/ui/brand-icons";
+import { LenSays } from "./len-says";
+import { LenWave } from "./len-wave";
 
 export async function FinalCta() {
   const t = await getTranslations("marketing");
   return (
-    <section className="relative overflow-hidden">
+    <section data-len-hide className="relative overflow-hidden">
       <div className="mx-auto max-w-6xl px-6 py-24">
         {/* Dusk card — the page opens at dawn (hero aurora) and closes here at
             nightfall: warm violet twilight, faint stars, coral horizon. */}
@@ -23,14 +24,12 @@ export async function FinalCta() {
             aria-hidden
           />
 
+          {/* Len despide la portada: su cara viva, que saluda al llegar aquí. */}
+          <LenWave className="absolute right-12 top-1/2 hidden size-48 -translate-y-1/2 lg:block xl:right-20 xl:size-56" />
+
           <div className="relative max-w-3xl">
-            <Badge
-              tone="coral"
-              className="!bg-coral-500/15 !text-coral-300 !ring-coral-500/30"
-            >
-              <Unlock size={11} /> {t("finalCta.badge")}
-            </Badge>
-            <h2 className="mt-5 text-4xl sm:text-6xl font-semibold tracking-tightest text-white leading-[1.06]">
+            <LenSays dark>{t("finalCta.lenSays")}</LenSays>
+            <h2 className="mt-6 text-4xl sm:text-6xl font-semibold tracking-tightest text-white leading-[1.06]">
               {t.rich("finalCta.title", {
                 br: () => <br />,
                 muted: (chunks) => (

@@ -8,22 +8,34 @@
 //
 // Las tres páginas de prosa no tienen arreglo —el importe va dentro de una
 // frase legal— pero todo lo que PINTA el precio lee de aquí.
-export const PRO_PRICE = 3.99;
+//
+// 04/10: los planes de pago pasan a DOS, Pro $10 y Max $20 (Jesús: «vender a
+// mayoreo», como los planes de Claude y OpenAI). ⚠️ Esto es lo que PINTA la
+// portada; el cobro todavía no lo sabe: `CREDITS_BY_PLAN` (lib/credits.ts)
+// sigue en pro=150 y sin `max`, el producto de Polar es el Pro de antes, y los
+// Términos, el reembolso y la documentación llevan el importe viejo en prosa.
+// Antes de publicar esto, las cuatro cosas tienen que decir lo mismo.
+export const PRO_PRICE = 10;
+export const PRO_CREDITS = 200;
+
+export const MAX_PRICE = 20;
+export const MAX_CREDITS = 500;
 
 /** El precio anterior, para tacharlo.
  *
- *  ES REAL: $7 fue el precio publicado hasta el 2026-08-29, en la landing y en
- *  los Términos. Eso es lo que permite anunciarlo como rebaja — la directiva
- *  Omnibus de la UE exige que un precio tachado sea uno realmente aplicado, y
- *  Polar vende dentro de la UE como merchant of record.
- *
- *  ⚠️ CADUCA. Un descuento que no termina nunca deja de ser un descuento.
- *  Cuando $3.99 sea simplemente el precio, esto se pone a `null` y la tarjeta
- *  vuelve a tener un solo número. */
-export const PRO_WAS: number | null = 7;
+ *  `null`: con Pro a $10 no hay rebaja que anunciar. Un tachado tiene que ser
+ *  un precio realmente aplicado (directiva Omnibus de la UE; Polar vende dentro
+ *  de la UE como merchant of record), y $10 es más, no menos, que los $7 y los
+ *  $3.99 de antes. */
+export const PRO_WAS: number | null = null;
 
-/** Calculado, nunca escrito a mano: un 43% literal se queda viejo en cuanto se
- *  toca un precio, y un descuento que no cuadra con sus propias cifras es el
- *  peor tipo de error en una página de precios. */
+/** Calculado, nunca escrito a mano: un porcentaje literal se queda viejo en
+ *  cuanto se toca un precio, y un descuento que no cuadra con sus propias cifras
+ *  es el peor tipo de error en una página de precios. */
 export const PRO_SAVE_PERCENT =
   PRO_WAS === null ? 0 : Math.round(((PRO_WAS - PRO_PRICE) / PRO_WAS) * 100);
+
+/** Centavos por crédito de cada plan, para decir cuál sale más barato sin
+ *  escribir el número a mano. */
+export const centsPerCredit = (price: number, credits: number) =>
+  Math.round((price / credits) * 1000) / 10;
