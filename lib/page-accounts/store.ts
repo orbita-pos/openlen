@@ -8,7 +8,7 @@
 // `tienda.openlen.app` no existe en `otra.openlen.app`.
 
 import "server-only";
-import { and, asc, eq, gt, isNotNull, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { hashToken, newSessionToken } from "./session";
@@ -163,6 +163,138 @@ export async function deleteAccountSessions(projectId: string, memberId: string)
   await db
     .delete(schema.memberSessions)
     .where(and(eq(schema.memberSessions.projectId, projectId), eq(schema.memberSessions.memberId, memberId)));
+}
+
+// ─── F2: registrarse, confirmar, recuperar (como Supabase) ───────────────────
+// Las fichas de un uso de una CUENTA viven en la misma tabla que el código del
+// dueño (`memberLoginTokens`), con `purpose` y SIN `ownerUserId`: cada camino
+// sólo canjea las suyas. El `slug` guarda a dónde volver en la página: la
+// redirección se arma con ESE valor, nunca con lo que traiga el enlace.
+
+export type EmailTokenPurpose = "confirm" | "recovery" | "invite" | "set_password";
+
+/** Una cuenta que se registró sola: sin papel y sin poder entrar hasta abrir el
+ *  enlace del correo. `"exists"` si ese correo ya tiene cuenta aquí. */
+export async function createUnconfirmedAccount(args: {
+  projectId: string;
+  email: string;
+  name: string | null;
+  passwordHash: string;
+}): Promise<PageAccount | "exists"> {
+  const rows = await db
+    .insert(schema.siteMembers)
+    .values({
+      projectId: args.projectId,
+      email: args.email,
+      name: args.name,
+      role: null,
+      passwordHash: args.passwordHash,
+      status: "unconfirmed",
+    })
+    .onConflictDoNothing({ target: [schema.siteMembers.projectId, schema.siteMembers.email] })
+    .returning(accountColumns());
+  return rows[0] ?? "exists";
+}
+
+/** La que invita el dueño: con su papel, SIN contraseña —la pone ella al abrir
+ *  el enlace—, y sin poder entrar hasta entonces. `"exists"` si ese correo ya
+ *  tiene cuenta aquí. */
+export async function createInvitedAccount(args: {
+  projectId: string;
+  email: string;
+  name: string | null;
+  role: string | null;
+}): Promise<PageAccount | "exists"> {
+  const rows = await db
+    .insert(schema.siteMembers)
+    .values({
+      projectId: args.projectId,
+      email: args.email,
+      name: args.name,
+      role: args.role,
+      passwordHash: null,
+      status: "invited",
+    })
+    .onConflictDoNothing({ target: [schema.siteMembers.projectId, schema.siteMembers.email] })
+    .returning(accountColumns());
+  return rows[0] ?? "exists";
+}
+
+/** Devuelve la ficha CRUDA, que sólo viaja en el enlace del correo. */
+export async function createEmailToken(args: {
+  projectId: string;
+  email: string;
+  purpose: EmailTokenPurpose;
+  backPath: string;
+  ttlMs: number;
+}): Promise<string> {
+  const { raw, hash } = newSessionToken();
+  await db.insert(schema.memberLoginTokens).values({
+    tokenHash: hash,
+    projectId: args.projectId,
+    email: args.email,
+    slug: args.backPath,
+    purpose: args.purpose,
+    expires: new Date(Date.now() + args.ttlMs),
+  });
+  return raw;
+}
+
+/** Gasta la ficha en la misma sentencia (dos canjes a la vez no ganan los dos)
+ *  si es de este proyecto, de uno de esos `purposes`, no se usó y no caducó. */
+export async function redeemEmailToken(
+  projectId: string,
+  raw: string,
+  purposes: readonly EmailTokenPurpose[],
+): Promise<{ email: string; purpose: EmailTokenPurpose; backPath: string } | null> {
+  const rows = await db
+    .update(schema.memberLoginTokens)
+    .set({ used: true })
+    .where(
+      and(
+        eq(schema.memberLoginTokens.tokenHash, hashToken(raw)),
+        eq(schema.memberLoginTokens.projectId, projectId),
+        eq(schema.memberLoginTokens.used, false),
+        isNull(schema.memberLoginTokens.ownerUserId),
+        inArray(schema.memberLoginTokens.purpose, [...purposes]),
+        gt(schema.memberLoginTokens.expires, sql`now()`),
+      ),
+    )
+    .returning({ email: schema.memberLoginTokens.email, purpose: schema.memberLoginTokens.purpose, slug: schema.memberLoginTokens.slug });
+  const row = rows[0];
+  return row ? { email: row.email, purpose: row.purpose as EmailTokenPurpose, backPath: row.slug ?? "/" } : null;
+}
+
+/** Abrió el enlace de confirmar: la cuenta pasa a activa. Una que ya lo estaba
+ *  se devuelve tal cual; otra cosa (invitada, borrada), `null`. */
+export async function confirmAccount(projectId: string, email: string): Promise<PageAccount | null> {
+  const [row] = await db
+    .update(schema.siteMembers)
+    .set({ status: "active", emailVerifiedAt: new Date() })
+    .where(
+      and(
+        eq(schema.siteMembers.projectId, projectId),
+        eq(schema.siteMembers.email, email),
+        inArray(schema.siteMembers.status, ["unconfirmed", "active"]),
+      ),
+    )
+    .returning(accountColumns());
+  return row ?? null;
+}
+
+/** La contraseña nueva de quien abrió el enlace de recuperar o de invitación:
+ *  abrirlo PRUEBA el correo, así que la cuenta queda activa y verificada. */
+export async function setAccountPassword(
+  projectId: string,
+  email: string,
+  passwordHash: string,
+): Promise<PageAccount | null> {
+  const [row] = await db
+    .update(schema.siteMembers)
+    .set({ passwordHash, status: "active", emailVerifiedAt: sql`COALESCE(${schema.siteMembers.emailVerifiedAt}, now())` })
+    .where(and(eq(schema.siteMembers.projectId, projectId), eq(schema.siteMembers.email, email)))
+    .returning(accountColumns());
+  return row ?? null;
 }
 
 // ─── El código de un uso del dueño ───────────────────────────────────────────

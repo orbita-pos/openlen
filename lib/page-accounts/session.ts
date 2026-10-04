@@ -19,6 +19,17 @@ export const SESSION_COOKIE = "__Host-ol_s";
 export const MEMBER_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export const OWNER_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** Las fichas de un uso de los correos (F2), con los plazos de Supabase: el
+ *  enlace de confirmar, 24 h; el de recuperar, 1 h; la invitación, 7 días; y el
+ *  permiso de poner contraseña que da `/api/a/verify` al abrir uno de los dos
+ *  últimos, 30 min (lo que tarda en escribirla). */
+export const EMAIL_TOKEN_TTL_MS = {
+  confirm: 24 * 60 * 60 * 1000,
+  recovery: 60 * 60 * 1000,
+  invite: 7 * 24 * 60 * 60 * 1000,
+  set_password: 30 * 60 * 1000,
+} as const;
+
 export function newSessionToken(): { raw: string; hash: string } {
   const raw = crypto.randomBytes(32).toString("base64url");
   return { raw, hash: hashToken(raw) };

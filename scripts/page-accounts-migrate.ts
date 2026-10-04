@@ -12,6 +12,8 @@
 //     `memberId` deja de ser obligatorio.
 //   · `memberLoginTokens.ownerUserId`  — el código de un uso con el que el
 //     dueño vuelve de openlen.com a su página ya dentro.
+//   · `memberLoginTokens.purpose`      — (F2) para qué es la ficha: confirmar
+//     el correo, recuperar, invitar o el permiso de poner contraseña.
 //
 // Los CREATE van primero, copiados de `scripts/members-migrate.ts` (borrado en
 // 07f43193): una base que nunca tuvo Miembros también tiene que poder correr
@@ -58,6 +60,9 @@ async function main() {
     ALTER TABLE "memberLoginTokens"
       ADD COLUMN IF NOT EXISTS "ownerUserId" text REFERENCES "users"("id") ON DELETE CASCADE;
   `);
+  // F2: para qué es cada ficha de un uso (confirmar, recuperar, invitar, el
+  // permiso de poner contraseña). Null en las del dueño y en las de Miembros.
+  await db.execute(sql`ALTER TABLE "memberLoginTokens" ADD COLUMN IF NOT EXISTS "purpose" text;`);
 
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS "memberSessions" (

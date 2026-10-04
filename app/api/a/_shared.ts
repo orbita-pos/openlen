@@ -70,6 +70,25 @@ export async function siteWithAccounts(
   return site as AccountsSite & { accounts: AccountsDeclaration };
 }
 
+/** El host de la página, el que da por bueno `pageSubOf`. */
+export function pageHostOf(req: Request): string {
+  return (req.headers.get("host") ?? "").toLowerCase();
+}
+
+/** El enlace del correo, en el host de la página. Absoluto: un correo no tiene
+ *  una página desde la que resolver una ruta. */
+export function verifyLink(req: Request, rawToken: string): string {
+  return `https://${pageHostOf(req)}/api/a/verify?token=${rawToken}`;
+}
+
+/** Correos por cuenta: uno por minuto y cinco por hora, el `max_frequency` de
+ *  Supabase. Se gasta ANTES de mirar si la cuenta existe, así que un 429 no
+ *  dice nada de ella. */
+export const EMAIL_SEND_LIMIT = [
+  { windowMs: 60 * 1000, max: 1, label: "minute" },
+  { windowMs: 60 * 60 * 1000, max: 5, label: "hourly" },
+];
+
 /** Lo que la página puede saber de una cuenta. Nunca el hash. */
 export function publicAccount(account: PageAccount, actor?: SignedInActor) {
   return {

@@ -30,6 +30,14 @@ export function roleFromInput(raw: unknown, accounts: AccountsDeclaration): stri
   return typeof raw === "string" && accounts.papeles.includes(raw) ? raw : false;
 }
 
+/** El idioma en el que pide la página sus correos («es», «pt-BR»…). Lo que no
+ *  lo parece se queda en `null` y el correo sale en inglés. */
+export function cleanLang(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const lang = raw.trim();
+  return /^[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{1,8}){0,3}$/.test(lang) ? lang : null;
+}
+
 /** A dónde volver después de entrar: una ruta de ESTA página. Nada que empiece
  *  por `//` o `/\` (el navegador lo lee como otro host), nada con esquema. */
 export function safeBackPath(raw: unknown): string {

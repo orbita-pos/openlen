@@ -876,7 +876,9 @@ export const siteMembers = pgTable(
     email: text("email").notNull(), // stored lowercase, normalized at the edges
     name: text("name"),
     // 'invited' rows (owner pre-approved an email) flip to 'active' on first login.
-    status: text("status").$type<"active" | "invited">().notNull().default("active"),
+    // `unconfirmed` (cuentas de una página, F2): se registró sola y aún no
+    // abrió el enlace del correo; no puede entrar hasta abrirlo.
+    status: text("status").$type<"active" | "invited" | "unconfirmed">().notNull().default("active"),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     lastLoginAt: timestamp("lastLoginAt", { mode: "date" }),
     // bcrypt hash (cost-12) cuando el miembro se registró con contraseña.
@@ -912,6 +914,11 @@ export const memberLoginTokens = pgTable("memberLoginTokens", {
   // su página ya dentro (lib/page-accounts/store.ts). Los códigos de un miembro
   // lo llevan en null, y cada camino sólo canjea los suyos.
   ownerUserId: text("ownerUserId").references(() => users.id, { onDelete: "cascade" }),
+  // Para qué es la ficha de una CUENTA de la página (F2, lib/page-accounts/store.ts):
+  // `confirm` (registrarse), `recovery` (recuperar), `invite` (la invita el
+  // dueño) o `set_password` (el permiso de un uso para poner contraseña nueva).
+  // Null = el código del dueño o una ficha del Miembros retirado.
+  purpose: text("purpose"),
 });
 
 // Member sessions — server-side, opaque, revocable. The cookie carries a raw

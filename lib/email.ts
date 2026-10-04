@@ -89,6 +89,12 @@ async function enviar(
   return true;
 }
 
+/** Hay cliente de Resend: el correo sale de verdad. Para quien tiene que decir
+ *  «sin correo no se puede» en vez de fingir (las cuentas de una página). */
+export function emailIsLive(): boolean {
+  return client !== null;
+}
+
 export interface PasswordResetEmail {
   to: string;
   name: string | null;
@@ -597,6 +603,34 @@ function buildChatNotificationHtml(input: {
   </table>
 </body>
 </html>`;
+}
+
+// ─── Cuentas de una página — confirmar, recuperar, invitar ───────────────────
+
+/** Los textos (en el idioma de la página) los arma lib/page-accounts/mail.ts;
+ *  esto sólo manda. En desarrollo apunta el texto en la consola: lleva el
+ *  enlace, y con él se sigue el camino sin clave de Resend. */
+export async function sendPageAccountEmail(input: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}): Promise<void> {
+  const live = liveClientOrWarn("page account email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`\n  📧 [DEV] Page account email to ${input.to}\n     ${input.subject}\n\n${input.text}\n`);
+    }
+    return;
+  }
+  await enviar(live, "page account email", {
+    from,
+    to: input.to,
+    subject: input.subject,
+    html: input.html,
+    text: input.text,
+  });
 }
 
 // ─── Bookings — confirmation / reminder / cancellation, optional .ics ────────
