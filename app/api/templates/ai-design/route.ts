@@ -1486,8 +1486,13 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // cargo perdido sólo queda en este diario. Cerrarlo de verdad pide un
         // cargo idempotente que se pueda reintentar, y eso es trabajo de
         // esquema. Lo que esto arregla es la MENTIRA, no la contabilidad.
+        // Lo que cobró DE VERDAD, para el cierre del turno (N35, plans/new-chat/):
+        // el del Agente decía «0,63 créditos» y éste no. `null` si el cargo
+        // falló: no se enseña un número que no se cobró.
+        let cobrado: number | null = null;
         try {
           await debitCredits(userId, credits);
+          cobrado = credits;
         } catch (debitErr) {
           // eslint-disable-next-line no-console
           console.error(
@@ -1541,6 +1546,10 @@ ${avisos}` : reasoning,
           // que se sanea y perdía el JavaScript del modelo. Ver
           // components/workspace-v2/panels/undo-turn.ts.
           versionPrevia: saved.versionPrevia,
+          // En números (centicréditos y ms), como el `done` del Agente: la frase
+          // la compone el cliente en su idioma.
+          ...(cobrado !== null ? { centicredits: cobrado } : {}),
+          durationMs: Date.now() - startedAt,
         });
         closeStream();
       } catch (err) {

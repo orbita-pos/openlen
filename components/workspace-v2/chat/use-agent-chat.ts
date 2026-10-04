@@ -750,6 +750,10 @@ export function useAgentChat({
         let sseBuf = "";
         let finalHtml: string | null = null;
         let errorMessage: string | null = null;
+        // Lo que cobró y tardó, del `done` (N35): el cierre los enseña igual que
+        // en un turno del Agente.
+        let centicredits: number | undefined;
+        let durationMs: number | undefined;
 
         outer: while (true) {
           const { done, value } = await reader.read();
@@ -828,8 +832,16 @@ export function useAgentChat({
                 html?: string;
                 reasoning?: string;
                 versionPrevia?: unknown;
+                centicredits?: unknown;
+                durationMs?: unknown;
               };
               if (typeof data.html === "string") finalHtml = data.html;
+              if (typeof data.centicredits === "number" && Number.isFinite(data.centicredits) && data.centicredits >= 0) {
+                centicredits = data.centicredits;
+              }
+              if (typeof data.durationMs === "number" && Number.isFinite(data.durationMs) && data.durationMs >= 0) {
+                durationMs = data.durationMs;
+              }
               // LA DIRECCIÓN DEL DESHACER. Aquí sólo hay UNA escritura por
               // turno, así que no hay «primero» que elegir como en el Agente.
               if (typeof data.versionPrevia === "string" && data.versionPrevia) {
@@ -878,6 +890,8 @@ export function useAgentChat({
             postEditHtml: finalHtml,
             appliedAt: Date.now(),
             versionPrevia,
+            ...(centicredits !== undefined ? { centicredits } : {}),
+            ...(durationMs !== undefined ? { durationMs } : {}),
           });
           // Append the settled turn to the server transcript — append-only, so
           // it's safe even with the same project open in another tab.

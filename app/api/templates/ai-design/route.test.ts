@@ -459,6 +459,30 @@ describe("POST /api/templates/ai-design", () => {
     expect(String(done?.data.html)).toContain("Con botón nuevo");
   });
 
+  // N35 (plans/new-chat/): el cierre del turno decía «Aplicado · 14 s» sin los
+  // créditos, que el del Agente sí dice. Van en el `done`, en números.
+  it("el done dice lo que cobró y lo que tardó, como el del Agente", async () => {
+    mocks.creditsForUsage.mockReturnValue(44);
+    mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Llámanos</h1>")));
+
+    const done = (await readEvents(await call())).find((event) => event.event === "done");
+
+    expect(done?.data.centicredits).toBe(44);
+    expect(typeof done?.data.durationMs).toBe("number");
+    expect(done?.data.durationMs as number).toBeGreaterThanOrEqual(0);
+  });
+
+  it("si el cargo falla, el done no enseña un número que no se cobró", async () => {
+    mocks.creditsForUsage.mockReturnValue(44);
+    mocks.debitCredits.mockRejectedValueOnce(new Error("la base rechazó el UPDATE"));
+    mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Llámanos</h1>")));
+
+    const done = (await readEvents(await call())).find((event) => event.event === "done");
+
+    expect(String(done?.data.html)).toContain("Llámanos");
+    expect(done?.data).not.toHaveProperty("centicredits");
+  });
+
   // 🔴 EL CHAT CLÁSICO NO VE LA IMAGEN QUE LE ADJUNTAS.
   //
   // La UI enseña la miniatura y el modelo recibe la URL como TEXTO — sus
