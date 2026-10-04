@@ -7,6 +7,7 @@ import { getTemplate, listTemplates } from "@/lib/templates/store";
 import { TemplateCard } from "@/components/marketing/template-card";
 import { UseTemplateButton } from "@/components/marketing/use-template-button";
 import { MarketingChrome } from "@/components/marketing/marketing-chrome";
+import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 
 interface PageProps {
   params: Promise<{ slug: string; locale: string }>;
@@ -42,7 +43,7 @@ export async function generateMetadata({
   const familyLabel = tf(`${t.family}.label`);
   return {
     title: `${t.name} — Template ${familyLabel.toLowerCase()}`,
-    description: `${t.pitch} — ${t.description}. Template gratuita lista para publicar en tu subdominio openlen.com.`,
+    description: `${t.pitch} — ${t.description}. Template gratuita lista para publicar en tu subdominio ${PUBLISHED_BASE_HOST}.`,
     openGraph: {
       title: `${t.name} — Template para ${familyLabel}`,
       description: t.pitch,
@@ -186,7 +187,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
                   <span className="w-2.5 h-2.5 rounded-full bg-[#28C840]" aria-hidden />
                   <span className="mx-auto inline-flex items-center rounded-full bg-white dark:bg-zinc-950 ring-1 ring-zinc-200/70 dark:ring-white/10 px-3 py-0.5 text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
                     {template.id}
-                    <span style={{ color: template.accent }}>.openlen.com</span>
+                    <span style={{ color: template.accent }}>.{PUBLISHED_BASE_HOST}</span>
                   </span>
                 </div>
                 {template.screenshotUrl ? (

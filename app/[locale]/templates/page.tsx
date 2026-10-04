@@ -4,6 +4,7 @@ import { listTemplates } from "@/lib/templates/store";
 import { MarketingChrome } from "@/components/marketing/marketing-chrome";
 import { TemplatesGallery } from "@/components/marketing/templates-gallery";
 import type { TemplateCardData } from "@/components/marketing/template-card";
+import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 
 // Gallery content changes whenever the admin adds/edits/archives a template.
 // Static prerender would cache the count at build time, so we render on
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Templates",
   description:
-    "Hand-built landing page templates for SaaS, devtools, ecommerce, restaurants, editorial brands, creators, and more. Static HTML, optimized, ready to publish to your openlen.com subdomain.",
+    `Hand-built landing page templates for SaaS, devtools, ecommerce, restaurants, editorial brands, creators, and more. Static HTML, optimized, ready to publish to your ${PUBLISHED_BASE_HOST} subdomain.`,
   openGraph: {
     title: "Templates | OpenLen",
     description:

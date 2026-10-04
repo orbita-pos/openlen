@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { LenSays } from "./len-says";
 import { GithubIcon } from "@/components/ui/brand-icons";
 import { getUptimeBadge, type UptimeBadge } from "@/lib/marketing/uptime";
+import { publishedUrl } from "@/lib/publish/base-host";
 
 /* Sección de confianza — un instrumento, no un folleto. El uptime vivo es el
    héroe (número gigante con el sensor dentro del aro de la lente, eco del
@@ -11,8 +12,9 @@ import { getUptimeBadge, type UptimeBadge } from "@/lib/marketing/uptime";
    cae, el instrumento degrada al copy 24/7. Cero JS de cliente. */
 
 const STATUS_URL = "https://status.openlen.com";
-const PSI_URL =
-  "https://pagespeed.web.dev/analysis?url=https%3A%2F%2Fheadwaters-demo.openlen.com%2F";
+// La demo vive donde viven todas las páginas: en `.com` sólo hay un 308, y
+// PageSpeed mediría la redirección junto con la página.
+const PSI_URL = `https://pagespeed.web.dev/analysis?url=${encodeURIComponent(publishedUrl("headwaters-demo", "/"))}`;
 const REPO_URL = "https://github.com/orbita-pos/openlen";
 
 const PANEL =
