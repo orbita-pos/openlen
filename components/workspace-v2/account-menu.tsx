@@ -55,6 +55,26 @@ export function AccountMenu({
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  // EL PLAN, para ofrecer «Gestionar suscripción» a quien paga. Ese enlace
+  // vivía en `components/app/app-header.tsx` y `dashboard-shell.tsx`, que nadie
+  // monta desde el rail unificado (`66cd8fa8`): un Pro no tenía desde la app
+  // cómo cancelar, y la política de reembolso dice que sí.
+  const [plan, setPlan] = useState<string | null>(null);
+  const userId = session?.user?.id;
+
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    void fetch("/api/usage")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { plan?: string } | null) => {
+        if (!cancelled && d?.plan) setPlan(d.plan);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const userName = session?.user?.name ?? "";
   const userEmail = session?.user?.email ?? "";
@@ -189,6 +209,17 @@ export function AccountMenu({
                 className="w-16 h-1 shrink-0 cursor-pointer accent-[color:var(--accent)]"
               />
             </div>
+          )}
+
+          {/* `/api/` va en un <a> crudo: el Link de next-intl le pondría el
+              idioma delante (/es/api/… → 404). El portal es de Polar. */}
+          {plan && plan !== "free" && (
+            <a
+              href={`/api/billing/portal?locale=${locale}`}
+              className="flex items-center gap-2.5 w-full text-left px-2.5 py-1.5 rounded-md text-[13px] fg hover:bg-hover transition"
+            >
+              {t("account.manageSubscription")}
+            </a>
           )}
 
           <button
