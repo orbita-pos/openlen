@@ -81,6 +81,13 @@ export async function initProjectDatabase(db: SqlRunner, opts: { devRole: string
     grant usage on schema extensions to ${dev}, anon, authenticated, service_role;
   `);
 
+  // Supabase corre en UTC: las fechas salen `…+00:00`. Para las conexiones
+  // nuevas (ALTER DATABASE) y para ésta.
+  await db.exec(`
+    do $$ begin execute format('alter database %I set timezone to %L', current_database(), 'UTC'); end $$;
+    set timezone to 'UTC';
+  `);
+
   // 00000000000003-post-setup.sql: ALTER ROLE postgres SET search_path …
   await db.exec(`alter role ${dev} set search_path to "$user", public, extensions;`);
 

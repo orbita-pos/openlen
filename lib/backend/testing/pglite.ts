@@ -9,7 +9,20 @@ import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 import { uuid_ossp } from "@electric-sql/pglite/contrib/uuid_ossp";
 
-import type { SqlRunner } from "../db";
+import type { ProjectDatabase, SqlRunner } from "../db";
+
+/** La base de un proyecto en PGlite, con la interfaz de producción. */
+export function pgliteProjectDatabase(pg: PGlite): ProjectDatabase {
+  return {
+    transaction: (fn) =>
+      pg.transaction(async (tx) =>
+        fn(async (sql, params) => {
+          const r = await tx.query(sql, params as unknown[] | undefined);
+          return { rows: r.rows as Record<string, unknown>[], rowCount: r.affectedRows ?? r.rows.length };
+        }),
+      ),
+  };
+}
 
 export function newTestDatabase(): { pg: PGlite; runner: SqlRunner } {
   const pg = new PGlite({ extensions: { pgcrypto, uuid_ossp } });
