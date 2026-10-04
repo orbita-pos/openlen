@@ -84,28 +84,6 @@
     "description": "당신의 글, 사진, 색상, 폼까지. 아름다운 것에서 시작해 당신만의 것으로 완성합니다.",
     "browseAll": "템플릿 {count}개 모두 둘러보기"
   },
-  "features": {
-    "badge": "OpenLen을 선택하는 이유",
-    "title": "소프트웨어를 빌리기보다 <muted>소유하고 싶은</muted> 사람들을 위해 만들었습니다.",
-    "items": {
-      "templates": {
-        "title": "프로덕션 템플릿 {count}개",
-        "body": "손수 만든 마케팅 랜딩 + 크리에이터용 링크인바이오 {creators}종(스트리머, 뮤지션, 포토그래퍼, 인디 메이커). 하나를 골라 iframe에서 편집하고 내 서브도메인에 게시하세요."
-      },
-      "analytics": {
-        "title": "프라이버시 우선 분석 기본 제공",
-        "body": "링크별 클릭 추적, 페이지 방문, 상위 유입 경로, 국가별 분포 — 쿠키도, IP 저장도, 동의 배너도 없습니다. 설계 자체가 GDPR에 부합합니다. Plausible과 같은 방식이지만, 온전히 당신의 것입니다."
-      },
-      "ownHtml": {
-        "title": "당신의 HTML, 당신의 서브도메인",
-        "body": "순수 HTML + Tailwind 결과물. '<you>'.openlen.com에 즉시 게시하거나, 파일을 가져가 어디서든 호스팅하세요 — Vercel, Cloudflare, GitHub Pages, 직접 운영하는 서버까지. 런타임 종속이 없습니다."
-      },
-      "openSource": {
-        "title": "오픈 소스 (AGPLv3)",
-        "body": "포크하세요. 감사하세요. 전체 스택을 단일 Hetzner 서버에서 직접 호스팅하세요. 생성기, 에디터, 게시 파이프라인, 분석까지 모두 저장소에 들어 있습니다."
-      }
-    }
-  },
   "analyticsLeads": {
     "lenSays": "누군가 메시지를 보내면 알려 드릴게요.",
     "title": "누가 다녀갔는지. <muted>누가 메시지를 보냈는지도.</muted>",
@@ -169,28 +147,6 @@
         }
       }
     }
-  },
-  "comparison": {
-    "badge": "비교",
-    "title": "계산은 우리가 해뒀으니, 당신은 안 해도 됩니다.",
-    "subtitle": "꾸밈없는 솔직한 비교표. 2026년 5월 업데이트.",
-    "cols": {
-      "price": "가격",
-      "yourCode": "내 코드 소유",
-      "openSource": "오픈 소스",
-      "selfHost": "직접 호스팅",
-      "analytics": "분석"
-    },
-    "values": {
-      "ourPrice": "무료 · ${price}/월",
-      "builtIn": "기본 제공",
-      "export": "내보내기",
-      "basic": "기본",
-      "paidTier": "유료 플랜"
-    },
-    "thatsUs": "바로 우리입니다",
-    "footnote": "가격은 2026년 5월 기준 공개 플랜을 반영합니다. Linktree를 포함한 이유는 30개의 링크인바이오 크리에이터 템플릿이 동일한 대상을 겨냥하기 때문입니다 — 차이점은 HTML과 서브도메인을 당신이 소유한다는 것입니다.",
-    "featureColumn": "기능"
   },
   "trust": {
     "lenSays": "제 말만 믿지 마세요. 직접 확인해 보세요.",

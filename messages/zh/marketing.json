@@ -84,28 +84,6 @@
     "description": "你的文字、你的照片、你的配色和你的表单。从一个漂亮的起点出发，最后变成属于你的作品。",
     "browseAll": "浏览全部 {count} 套模板"
   },
-  "features": {
-    "badge": "为什么选 OpenLen",
-    "title": "为那些<muted>宁愿拥有软件</muted>、也不愿租用软件的人打造。",
-    "items": {
-      "templates": {
-        "title": "{count} 套可投产模板",
-        "body": "手工打造的营销落地页 + {creators} 个面向创作者的 link-in-bio 主页（主播、音乐人、摄影师、独立开发者）。挑一个，在 iframe 里改好，发布到你的子域名。"
-      },
-      "analytics": {
-        "title": "内置隐私优先的数据分析",
-        "body": "逐链接点击追踪、页面访问量、热门来源、国家分布 — 不用 cookie，不存储 IP，无需同意横幅。设计上即符合 GDPR。与 Plausible 同样的理念，但完全归你所有。"
-      },
-      "ownHtml": {
-        "title": "你的 HTML，你的子域名",
-        "body": "输出纯 HTML + Tailwind。可立即发布到 '<you>'.openlen.com，也可拿走文件托管到任何地方 — Vercel、Cloudflare、GitHub Pages、你自己的服务器。无运行时锁定。"
-      },
-      "openSource": {
-        "title": "开源（AGPLv3）",
-        "body": "随你 fork、审计，把整套技术栈自托管在一台 Hetzner 主机上。生成器、编辑器、发布流水线和数据分析全都在仓库里。"
-      }
-    }
-  },
   "analyticsLeads": {
     "lenSays": "有人给你留言时，我会告诉你。",
     "title": "看看谁来过。<muted>还有谁给你留了言。</muted>",
@@ -169,28 +147,6 @@
         }
       }
     }
-  },
-  "comparison": {
-    "badge": "对比",
-    "title": "我们替你算好了账。",
-    "subtitle": "一份诚实、不加修饰的横向对比。更新于 2026 年 5 月。",
-    "cols": {
-      "price": "价格",
-      "yourCode": "你的代码",
-      "openSource": "开源",
-      "selfHost": "自托管",
-      "analytics": "数据分析"
-    },
-    "values": {
-      "ourPrice": "免费 · ${price}/月",
-      "builtIn": "内置",
-      "export": "导出",
-      "basic": "基础版",
-      "paidTier": "付费档位"
-    },
-    "thatsUs": "就是我们",
-    "footnote": "定价以 2026 年 5 月各家公开方案为准。之所以纳入 Linktree，是因为我们的 30 个 link-in-bio 创作者模板面向同一群用户 — 区别在于 HTML 和子域名都归你所有。",
-    "featureColumn": "功能"
   },
   "trust": {
     "lenSays": "别只听我说，自己验证一下。",

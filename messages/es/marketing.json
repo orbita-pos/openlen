@@ -84,28 +84,6 @@
     "description": "Tus textos, tus fotos, tus colores y tus formularios. Empiezas con algo bonito y terminas con algo tuyo.",
     "browseAll": "Explorar las {count} plantillas"
   },
-  "features": {
-    "badge": "Por qué OpenLen",
-    "title": "Hecho para quienes prefieren <muted>tener su software</muted> en lugar de alquilarlo.",
-    "items": {
-      "templates": {
-        "title": "{count} plantillas listas para producción",
-        "body": "Landings de marketing hechas a mano + {creators} hubs link-in-bio para creadores (streamer, músico, fotógrafo, indie maker). Elige una, personalízala en el iframe y publícala en tu subdominio."
-      },
-      "analytics": {
-        "title": "Analíticas con privacidad integradas",
-        "body": "Seguimiento de clics por enlace, visitas a la página, principales referentes y desglose por país — sin cookies, sin almacenar IPs, sin banner de consentimiento. Cumple el RGPD por diseño. El mismo modelo que Plausible, pero tuyo."
-      },
-      "ownHtml": {
-        "title": "Tu HTML, tu subdominio",
-        "body": "Salida en HTML + Tailwind puro. Publica en '<tu>'.openlen.com al instante, o toma el archivo y hospédalo donde quieras — Vercel, Cloudflare, GitHub Pages o tu propio servidor. Sin ataduras de runtime."
-      },
-      "openSource": {
-        "title": "Código abierto (AGPLv3)",
-        "body": "Bifúrcalo. Audítalo. Hospeda todo el stack en un único servidor Hetzner. El generador, el editor, el pipeline de publicación y las analíticas viven todos en el repo."
-      }
-    }
-  },
   "analyticsLeads": {
     "lenSays": "Cuando alguien te escriba, te aviso.",
     "title": "Sabes quién vino. <muted>Y quién te escribió.</muted>",
@@ -169,28 +147,6 @@
         }
       }
     }
-  },
-  "comparison": {
-    "badge": "Compara",
-    "title": "Hicimos las cuentas para que tú no tengas que hacerlas.",
-    "subtitle": "Una comparativa honesta y sin adornos. Actualizada en mayo de 2026.",
-    "cols": {
-      "price": "Precio",
-      "yourCode": "Tu código",
-      "openSource": "Código abierto",
-      "selfHost": "Self-host",
-      "analytics": "Analíticas"
-    },
-    "values": {
-      "ourPrice": "Gratis · ${price}/mes",
-      "builtIn": "Integradas",
-      "export": "Exportar",
-      "basic": "Básicas",
-      "paidTier": "Plan de pago"
-    },
-    "thatsUs": "esos somos nosotros",
-    "footnote": "Los precios reflejan los planes públicos a mayo de 2026. Incluimos a Linktree porque nuestras 30 plantillas link-in-bio para creadores apuntan al mismo público — la diferencia es que tú eres dueño del HTML y del subdominio.",
-    "featureColumn": "Característica"
   },
   "trust": {
     "lenSays": "No me creas a mí: compruébalo.",

@@ -84,28 +84,6 @@
     "description": "Your copy, your photos, your colors and your forms. You start with something beautiful and end with something yours.",
     "browseAll": "Browse all {count} templates"
   },
-  "features": {
-    "badge": "Why OpenLen",
-    "title": "Built for people who'd rather <muted>own software</muted> than rent it.",
-    "items": {
-      "templates": {
-        "title": "{count} production templates",
-        "body": "Hand-built marketing landings + {creators} link-in-bio hubs for creators (streamer, musician, photographer, indie maker). Pick one, customize it in the iframe, and publish it to your subdomain."
-      },
-      "analytics": {
-        "title": "Privacy-first analytics built in",
-        "body": "Per-link click tracking, page visits, top referrers, country split — no cookies, no IP storage, no consent banner. GDPR-clear by design. Same model as Plausible, but yours."
-      },
-      "ownHtml": {
-        "title": "Your HTML, your subdomain",
-        "body": "Pure HTML + Tailwind output. Publish to '<you>'.openlen.com instantly, or take the file and host anywhere — Vercel, Cloudflare, GitHub Pages, your own server. No runtime lock-in."
-      },
-      "openSource": {
-        "title": "Open source (AGPLv3)",
-        "body": "Fork it. Audit it. Self-host the whole stack on a single Hetzner box. Generator, editor, publish pipeline, and analytics all live in the repo."
-      }
-    }
-  },
   "analyticsLeads": {
     "lenSays": "When someone writes to you, I'll let you know.",
     "title": "See who came by. <muted>And who wrote to you.</muted>",
@@ -169,28 +147,6 @@
         }
       }
     }
-  },
-  "comparison": {
-    "badge": "Compare",
-    "title": "We did the math, so you don't have to.",
-    "subtitle": "An honest, unflattering side-by-side. Updated May 2026.",
-    "cols": {
-      "price": "Price",
-      "yourCode": "Your code",
-      "openSource": "Open source",
-      "selfHost": "Self-host",
-      "analytics": "Analytics"
-    },
-    "values": {
-      "ourPrice": "Free · ${price}/mo",
-      "builtIn": "Built-in",
-      "export": "Export",
-      "basic": "Basic",
-      "paidTier": "Paid tier"
-    },
-    "thatsUs": "that's us",
-    "footnote": "Pricing reflects public plans as of May 2026. Linktree included because our 30 link-in-bio creator templates target the same audience — difference is you own the HTML and the subdomain.",
-    "featureColumn": "Feature"
   },
   "trust": {
     "lenSays": "Don't take my word for it: check.",

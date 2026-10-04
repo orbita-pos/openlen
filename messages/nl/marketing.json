@@ -84,28 +84,6 @@
     "description": "Jouw teksten, jouw foto’s, jouw kleuren en jouw formulieren. Je begint met iets moois en eindigt met iets van jezelf.",
     "browseAll": "Bekijk alle {count} templates"
   },
-  "features": {
-    "badge": "Waarom OpenLen",
-    "title": "Gemaakt voor mensen die hun software liever <muted>bezitten</muted> dan huren.",
-    "items": {
-      "templates": {
-        "title": "{count} kant-en-klare templates",
-        "body": "Handgemaakte marketinglandings + {creators} link-in-bio hubs voor creators (streamer, muzikant, fotograaf, indie maker). Kies er één, pas hem aan in de iframe en publiceer op je subdomein."
-      },
-      "analytics": {
-        "title": "Privacy-first analytics ingebouwd",
-        "body": "Kliks per link, paginabezoeken, topverwijzers, verdeling per land — geen cookies, geen IP-opslag, geen toestemmingsbanner. AVG-proof by design. Hetzelfde model als Plausible, maar dan van jou."
-      },
-      "ownHtml": {
-        "title": "Jouw HTML, jouw subdomein",
-        "body": "Pure HTML + Tailwind als output. Publiceer direct naar '<you>'.openlen.com, of neem het bestand mee en host het overal — Vercel, Cloudflare, GitHub Pages, je eigen server. Geen runtime-lock-in."
-      },
-      "openSource": {
-        "title": "Open source (AGPLv3)",
-        "body": "Fork het. Controleer het. Self-host de hele stack op één Hetzner-box. Generator, editor, publicatiepijplijn en analytics staan allemaal in de repo."
-      }
-    }
-  },
   "analyticsLeads": {
     "lenSays": "Als iemand je schrijft, laat ik het je weten.",
     "title": "Zie wie er langskwam. <muted>En wie je heeft geschreven.</muted>",
@@ -169,28 +147,6 @@
         }
       }
     }
-  },
-  "comparison": {
-    "badge": "Vergelijk",
-    "title": "Wij hebben het uitgerekend, zodat jij dat niet hoeft.",
-    "subtitle": "Een eerlijke, niet-vleiende vergelijking naast elkaar. Bijgewerkt in mei 2026.",
-    "cols": {
-      "price": "Prijs",
-      "yourCode": "Jouw code",
-      "openSource": "Open source",
-      "selfHost": "Self-host",
-      "analytics": "Analytics"
-    },
-    "values": {
-      "ourPrice": "Gratis · ${price}/mnd",
-      "builtIn": "Ingebouwd",
-      "export": "Exporteren",
-      "basic": "Basis",
-      "paidTier": "Betaald abonnement"
-    },
-    "thatsUs": "dat zijn wij",
-    "footnote": "Prijzen weerspiegelen de openbare abonnementen van mei 2026. Linktree is opgenomen omdat onze 30 link-in-bio creatortemplates op hetzelfde publiek mikken — het verschil is dat jij de HTML en het subdomein bezit.",
-    "featureColumn": "Functie"
   },
   "trust": {
     "lenSays": "Geloof me niet zomaar: controleer het.",
