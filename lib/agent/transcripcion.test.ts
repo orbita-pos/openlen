@@ -41,7 +41,8 @@ describe("historialDesdeLaBase", () => {
         { role: "assistant", content: "Listo: el título dice El Farol." },
       ]),
     ]);
-    expect(h[0]).toEqual({ role: "user", content: "cambia el título" });
+    // `opensTurn` (N39): la petición del dueño que abrió el turno. No va al modelo.
+    expect(h[0]).toEqual({ role: "user", content: "cambia el título", opensTurn: true });
     expect(h[3]!.functionCalls![0]!.args).toEqual({ file_path: "/index.html", old_string: "Taquería", new_string: "El Farol" });
     expect(h.at(-1)).toEqual({ role: "assistant", content: "Listo: el título dice El Farol." });
   });
@@ -49,7 +50,7 @@ describe("historialDesdeLaBase", () => {
   it("una fila sin transcripción (anterior a H4, o del Chat) cae a su texto", () => {
     const h = historialDesdeLaBase([fila("hola", null, "Hola, ¿qué cambiamos?")]);
     expect(h).toEqual([
-      { role: "user", content: "hola" },
+      { role: "user", content: "hola", opensTurn: true },
       { role: "assistant", content: "Hola, ¿qué cambiamos?" },
     ]);
   });
@@ -222,6 +223,48 @@ describe("turnoAnteriorMudoDe — con el historial del navegador y con el de la 
     expect(turnoAnteriorMudoDe(historialDesdeLaBase([fila("hola", [{ role: "assistant", content: "¡Hola!" }])]))).toBe(true);
   });
 
+  // 🔴 N39 (03/10). Lo que el SERVIDOR mete en el turno con papel de usuario —la
+  // insistencia «SYSTEM (the user did NOT write this)…», lo medido al cerrar, la
+  // corrección que el dueño escribió a media faena— no es una petición que abra
+  // turno. Se contaba como tal: «Len ve N de M» salía con N > M (Pizarrón: 18
+  // visibles de 14) y nunca avisaba, y el aviso de «turno mudo» saltaba tras un
+  // turno que sí editó. Como en el arnés de DeepSeek, quién abrió el turno es un
+  // hecho de la estructura (la fila), no del texto.
+  const insistencia = {
+    role: "user" as const,
+    content: "SYSTEM (the user did NOT write this): you ended the turn WITHOUT calling any tool…",
+  };
+  const correccion = {
+    role: "user" as const,
+    content: "[The user wrote to you while you were working. Read it and adjust before your next step.]\nmejor en azul",
+  };
+
+  it("🔴 N39: la ventana cuenta los turnos del dueño, no lo que el servidor metió en ellos", () => {
+    const h = historialDesdeLaBase([
+      fila("hazme la carta", [{ role: "assistant", content: "Ya la hago." }, insistencia, { role: "assistant", content: "OK" }]),
+      fila("cambia el título", [...leer("/index.html", PAGINA), correccion, { role: "assistant", content: "Listo, en azul." }]),
+    ]);
+    expect(ventanaVisibleDe(h)).toBe(2);
+  });
+
+  it("🔴 N39: un turno que editó y recibió una corrección después NO es mudo", () => {
+    const h = historialDesdeLaBase([
+      fila("cambia el título", [
+        { role: "assistant", content: "", functionCalls: [{ name: "Edit", args: { file_path: "/index.html", old_string: "Taquería", new_string: "El Farol" } }] },
+        { role: "user", content: "", functionResponses: [{ name: "Edit", response: { ok: true, tool_result: "Edited /index.html." } }] },
+        correccion,
+        { role: "assistant", content: "Listo, en azul." },
+      ]),
+    ]);
+    expect(turnoAnteriorMudoDe(h)).toBe(false);
+  });
+
+  it("BRAZO DE CONTROL N39: un turno de la base que sólo habló sigue siendo mudo aunque el servidor insistiera", () => {
+    const h = historialDesdeLaBase([fila("hola", [{ role: "assistant", content: "¡Hola!" }, insistencia, { role: "assistant", content: "OK" }])]);
+    expect(turnoAnteriorMudoDe(h)).toBe(true);
+    expect(ventanaVisibleDe(h)).toBe(1);
+  });
+
   it("CONTRA-PRUEBA: el formato del navegador se lee como antes", () => {
     const conLlamada = [
       { role: "user" as const, content: "cambia" },
@@ -247,7 +290,7 @@ describe("la foto sigue en la conversación (como Claude Code)", () => {
 
   it("tu mensaje de ese turno lleva la nota con la dirección y los píxeles", () => {
     const h = historialDesdeLaBase([conFoto("https://u/f.jpg")], undefined, new Map([["https://u/f.jpg", FOTO]]));
-    expect(h[0]).toEqual({ role: "user", content: "¿dónde la pondrías?\n\n[Attached photo: https://u/f.jpg]", images: [FOTO] });
+    expect(h[0]).toEqual({ role: "user", opensTurn: true, content: "¿dónde la pondrías?\n\n[Attached photo: https://u/f.jpg]", images: [FOTO] });
     expect(h[1]).toEqual({ role: "assistant", content: "1. En la portada" });
   });
 
@@ -258,20 +301,21 @@ describe("la foto sigue en la conversación (como Claude Code)", () => {
 
   it("si no se pudo descargar, la nota lo dice y la dirección se queda", () => {
     const h = historialDesdeLaBase([conFoto("https://u/f.jpg")], undefined, new Map([["https://u/f.jpg", null]]));
-    expect(h[0]).toEqual({ role: "user", content: "¿dónde la pondrías?\n\n[Attached photo: https://u/f.jpg (it couldn't be loaded to see it)]" });
+    expect(h[0]).toEqual({ role: "user", opensTurn: true, content: "¿dónde la pondrías?\n\n[Attached photo: https://u/f.jpg (it couldn't be loaded to see it)]" });
   });
 
   it("si no cabía con las demás (presupuesto de imagen, como DeepSeek), va sin píxeles y la nota lo dice; la dirección se queda", () => {
     const h = historialDesdeLaBase([conFoto("https://u/f.jpg")], undefined, new Map([["https://u/f.jpg", NO_CABE]]));
     expect(h[0]).toEqual({
       role: "user",
+      opensTurn: true,
       content: "¿dónde la pondrías?\n\n[Attached photo: https://u/f.jpg (not in view: it didn't fit with the others; the address works just the same)]",
     });
   });
 
   it("un turno sin foto queda exactamente igual que antes", () => {
     expect(historialDesdeLaBase([fila("hola", null, "¡Hola!")], undefined, new Map())).toEqual([
-      { role: "user", content: "hola" },
+      { role: "user", content: "hola", opensTurn: true },
       { role: "assistant", content: "¡Hola!" },
     ]);
   });

@@ -44,8 +44,14 @@ export const PRESUPUESTO_DE_RESULTADOS = 80_000;
 export const TOPE_TRANSCRIPCION = 400_000;
 
 /** Un mensaje del historial: el `Message` del bucle sin el papel de sistema.
- *  Lo cumplen también los del navegador (`MensajeSaneado`). */
-export type MensajeDelHistorial = Omit<Message, "role"> & { role: "user" | "assistant" };
+ *  Lo cumplen también los del navegador (`MensajeSaneado`).
+ *
+ *  `opensTurn` (N39): éste es el mensaje del DUEÑO que abrió un turno. Lo marca
+ *  la fila, que es el turno —como el `turn/start` del arnés de DeepSeek—, porque
+ *  con papel de usuario viajan también cosas que no abren turno: la insistencia
+ *  del servidor, lo medido al cerrar, la corrección a media faena. No llega al
+ *  modelo: el puente arma cada mensaje campo a campo. */
+export type MensajeDelHistorial = Omit<Message, "role"> & { role: "user" | "assistant"; opensTurn?: true };
 
 /** Todo lo que el historial pone delante del modelo, como texto: el contenido,
  *  lo pensado (H15), los argumentos de cada llamada y cada respuesta tal y como
@@ -207,11 +213,12 @@ export function notaDeLaFoto(foto: { url: string; alt?: string }, estado: "vista
 /** Tu mensaje de un turno pasado: el texto y, si mandaste foto, su nota y sus
  *  píxeles. Sin foto, el mensaje de siempre, byte a byte. */
 function mensajeDelDueno(f: FilaDelHistorial, fotos: FotosDeLaConversacion): MensajeDelHistorial {
-  if (!f.attachedImage) return { role: "user", content: f.userText };
+  if (!f.attachedImage) return { role: "user", content: f.userText, opensTurn: true };
   const foto = fotos.get(f.attachedImage.url) ?? null;
   const estado = foto === NO_CABE ? NO_CABE : foto ? "vista" : "no-cargo";
   return {
     role: "user",
+    opensTurn: true,
     content: `${f.userText}\n\n${notaDeLaFoto(f.attachedImage, estado)}`,
     ...(foto && foto !== NO_CABE ? { images: [foto] } : {}),
   };

@@ -129,6 +129,36 @@ export function turnosTotalesDe(historyTotal: unknown): number {
     : 0;
 }
 
+/** Lo que necesitan los dos contadores de abajo de cada mensaje. */
+type MensajeContado = {
+  role: "user" | "assistant";
+  content: string;
+  functionCalls?: readonly unknown[];
+  functionResponses?: readonly unknown[];
+  opensTurn?: boolean;
+};
+
+/**
+ * ¿QUÉ MENSAJES SON PETICIONES DEL DUEÑO QUE ABREN TURNO?
+ *
+ * 🔴 N39 (03/10). Con papel de usuario viajan también cosas que el dueño no
+ * pidió como turno: la insistencia del servidor («SYSTEM (the user did NOT write
+ * this)…»), lo medido al cerrar, la corrección que escribió a media faena. Se
+ * contaban como peticiones: «Len ve N de M» salía con N > M (Pizarrón: 18
+ * visibles de 14) y el aviso de turno mudo saltaba tras un turno que editó.
+ *
+ * El historial de la base marca el mensaje que abrió cada turno (`opensTurn`,
+ * desde la fila: la fila ES el turno, como el `turn/start` de DeepSeek). Si hay
+ * marcas, mandan ellas. Si no las hay —el historial del navegador, que sólo trae
+ * lo que el dueño escribió y lo que contestó Len—, la regla de antes: un mensaje
+ * de usuario con texto y SIN respuestas de herramienta (que viajan con lo medido
+ * al lado y su texto no es del dueño).
+ */
+function peticionDelDueno(history: readonly MensajeContado[]): (h: MensajeContado) => boolean {
+  if (history.some((h) => h.opensTurn === true)) return (h) => h.opensTurn === true;
+  return (h) => h.role === "user" && h.content.length > 0 && !(h.functionResponses?.length ?? 0);
+}
+
 /**
  * CUÁNTOS TURNOS DE LA CHARLA VIAJAN DE VERDAD.
  *
@@ -140,10 +170,8 @@ export function turnosTotalesDe(historyTotal: unknown): number {
  * historial de la base (H4) no llegan vacíos —traen lo medido tras editar al
  * lado—, así que se reconocen por sus respuestas, no por su texto.
  */
-export function ventanaVisibleDe(
-  history: readonly { role: "user" | "assistant"; content: string; functionResponses?: readonly unknown[] }[],
-): number {
-  return history.filter((h) => h.role === "user" && h.content.length > 0 && !(h.functionResponses?.length ?? 0)).length;
+export function ventanaVisibleDe(history: readonly MensajeContado[]): number {
+  return history.filter(peticionDelDueno(history)).length;
 }
 
 /** ¿El turno anterior fue MUDO? Mudo = el asistente respondió a la última
@@ -160,18 +188,12 @@ export function ventanaVisibleDe(
  *  herramienta: las respuestas viajan con lo medido tras editar al lado, y su
  *  texto no es del dueño (E del 26/09: 122 de 282 peticiones recibieron el
  *  aviso de mudo tras un turno que sí editó). */
-export function turnoAnteriorMudoDe(
-  history: readonly {
-    role: "user" | "assistant";
-    content: string;
-    functionCalls?: readonly unknown[];
-    functionResponses?: readonly unknown[];
-  }[],
-): boolean {
+export function turnoAnteriorMudoDe(history: readonly MensajeContado[]): boolean {
+  const esPeticion = peticionDelDueno(history);
   let desde = -1;
   for (let i = history.length - 1; i >= 0; i--) {
     const h = history[i]!;
-    if (h.role === "user" && h.content.length > 0 && !(h.functionResponses?.length ?? 0)) {
+    if (esPeticion(h)) {
       desde = i;
       break;
     }
