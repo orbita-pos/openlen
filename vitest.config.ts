@@ -91,6 +91,9 @@ export default defineConfig({
       // pasa desapercibido porque `npm test` sale verde igual.
       "lib/page-data/**/*.test.ts",
       "lib/page-accounts/**/*.test.ts",
+      // El backend de las páginas: la API de Supabase sobre nuestro Postgres
+      // (plans/pages-backend/design.md). Lista blanca: sin esta línea no corre.
+      "lib/backend/**/*.test.ts",
       "lib/conductas-heredadas/**/*.test.ts",
       // Lo que las TRES superficies mandan de verdad: nada de gusto nuestro,
       // ningún módulo ni conducta retirados, y el JavaScript del modelo sí
