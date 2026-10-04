@@ -383,8 +383,9 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
       (mocks.buildFunctionDeclarations.mock.calls.at(-1) as unknown as unknown[])[2];
     afterEach(() => vi.unstubAllEnvs());
 
-    it("con la terminal, \"dynamis\" llega a las declaraciones y al cerebro", async () => {
+    it("con la terminal y OPENLEN_DYNAMIS=1, \"dynamis\" llega a las declaraciones y al cerebro", async () => {
       vi.stubEnv("OPENLEN_TERMINAL", "1");
+      vi.stubEnv("OPENLEN_DYNAMIS", "1");
       await turno({ mode: "dynamis" });
       expect(modoDeLasDeclaraciones()).toBe("dynamis");
       expect(modoDelCerebro()).toBe("dynamis");
@@ -392,6 +393,17 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
 
     it("sin la terminal, \"dynamis\" se queda en Len", async () => {
       vi.stubEnv("OPENLEN_TERMINAL", "");
+      vi.stubEnv("OPENLEN_DYNAMIS", "1");
+      await turno({ mode: "dynamis" });
+      expect(modoDeLasDeclaraciones()).toBe("len");
+      expect(modoDelCerebro()).toBe("len");
+    });
+
+    // 🔴 APARCADO (03/10/2026): Len 2.5 sale con la terminal encendida, y eso
+    // solo no puede convertir un turno en Odyssey.
+    it("aparcado: con la terminal pero sin OPENLEN_DYNAMIS=1, \"dynamis\" se queda en Len", async () => {
+      vi.stubEnv("OPENLEN_TERMINAL", "1");
+      vi.stubEnv("OPENLEN_DYNAMIS", "");
       await turno({ mode: "dynamis" });
       expect(modoDeLasDeclaraciones()).toBe("len");
       expect(modoDelCerebro()).toBe("len");
@@ -399,6 +411,7 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
 
     it("BRAZO DE CONTROL: sin el campo (o con basura), Len", async () => {
       vi.stubEnv("OPENLEN_TERMINAL", "1");
+      vi.stubEnv("OPENLEN_DYNAMIS", "1");
       for (const cuerpo of [{}, { mode: "DYNAMIS" }, { mode: 7 }]) {
         await turno(cuerpo);
         expect(modoDeLasDeclaraciones()).toBe("len");

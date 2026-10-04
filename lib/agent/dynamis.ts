@@ -1,5 +1,22 @@
 // lib/agent/dynamis.ts — LEN DYNAMIS: el modo a fondo, elegido turno a turno.
 //
+// 🅿️ APARCADO (Jesús, 03/10/2026): «no fue un fracaso porque aprendimos de Len
+// Odyssey, sólo que aún no está listo para salir… dejarlo ahí tranquilo, con sus
+// datos, para enfocarnos en sacar Len 2.5». Los datos, en
+// plans/len-2/corridas/2026-10-03-dynamis/README.md: en el encargo grande empata
+// con 2.5 (1,00) a ×1,6 de coste; en el juego `hard` (× 1) pierde, 1/3 contra
+// 3/3, a ×1,9 de coste y ×1,7 de tiempo — piensa ×11 por llamada y verifica
+// MENOS (71 pasos contra 94), y sus dos fallos fueron de comportamiento. Lo que
+// falta por medir, si vuelve: los 5 encargos donde 2.5 falla a veces (8/15).
+//
+// Por eso NO sale con la terminal: Len 2.5 la enciende en producción
+// (`OPENLEN_TERMINAL=1`) y, sin más, el selector aparecería en el chat de todos.
+// Hace falta ADEMÁS `OPENLEN_DYNAMIS=1` (`dynamisAvailable`). No es una palanca
+// sin destino: detrás está el modo entero, probado y medido. Si un día se
+// retira, la palanca se va con él en el mismo barrido (memoria
+// `la-palanca-que-no-vuelve-a-ningun-sitio`). Para medirlo en el banco, el
+// servidor de Len-Bench se arranca con las dos.
+//
 // 🔴 EL NOMBRE PÚBLICO ES «LEN ODYSSEY» (Jesús, 03/10/2026). «Dynamis» se queda
 // como nombre INTERNO —el valor `dynamis` del cuerpo, el tipo, las pruebas y
 // estos comentarios—, y lo que ve el usuario sale de i18n (`composer.modeDynamis`).
@@ -56,10 +73,11 @@ import { terminalEncendida } from "./terminal/declaracion";
 export const AGENT_MODES = ["len", "dynamis"] as const;
 export type AgentMode = (typeof AGENT_MODES)[number];
 
-/** ¿Se puede ofrecer Dynamis? Sólo con la terminal encendida: quitarle a Len
- *  Read, Edit y Write sin darle `bash` lo dejaría sin manos. */
+/** ¿Se puede ofrecer Dynamis? Sólo si se pide a propósito —está APARCADO, ver
+ *  la cabecera— y con la terminal encendida: quitarle a Len Read, Edit y Write
+ *  sin darle `bash` lo dejaría sin manos. */
 export function dynamisAvailable(env: Readonly<Record<string, string | undefined>> = process.env): boolean {
-  return terminalEncendida(env);
+  return env.OPENLEN_DYNAMIS?.trim() === "1" && terminalEncendida(env);
 }
 
 /** El modo de ESTE turno, saneado: entra de fuera. Cualquier otra cosa —o
