@@ -23,6 +23,7 @@ const common = {
 const targets = [
   { entry: "scripts/analytics/rollup-daily.ts", out: ".next/standalone/cron/analytics-rollup.mjs" },
   { entry: "scripts/notifications-drain.ts", out: ".next/standalone/cron/notifications-drain.mjs" },
+  { entry: "scripts/renewal-reminders.ts", out: ".next/standalone/cron/renewal-reminders.mjs" },
   // NB: lo que llama a publishProject NO se bundlea aquí — arrastra los crates
   // nativos (.node), cuyo `require` relativo esbuild no puede empaquetar en un
   // .mjs standalone. Esas tareas corren EN PROCESO con la app, detrás de una

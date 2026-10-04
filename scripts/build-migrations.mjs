@@ -127,6 +127,10 @@ const targets = [
   // projectBackends. Tabla NUEVA con IF NOT EXISTS. 🔴 OBLIGATORIA antes que el
   // código: las rutas /rest/v1 y /auth/v1 la leen en cada petición.
   "pages-backend-migrate",
+  // Los recordatorios de renovación (lib/billing/renewal-reminder.ts): la
+  // tabla renewalReminders. Tabla NUEVA con IF NOT EXISTS; sólo la lee la tarea
+  // diaria, así que no impone orden.
+  "renewal-reminders-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

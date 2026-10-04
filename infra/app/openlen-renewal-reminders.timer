@@ -1,0 +1,15 @@
+[Unit]
+Description=OpenLen — recordatorio de renovación, una vez al día
+Requires=openlen-renewal-reminders.service
+
+[Timer]
+# 15:00 UTC = 9:00 en Ciudad de México: el correo llega de día. Una vez al día
+# basta: avisa cuando faltan 6 días hábiles, uno de margen sobre los 5 que
+# promete la política. Persistent=true recupera la corrida perdida si la caja
+# estaba apagada.
+OnCalendar=*-*-* 15:00:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

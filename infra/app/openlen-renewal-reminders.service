@@ -1,0 +1,26 @@
+[Unit]
+Description=OpenLen — recordatorio de renovación (aviso 5+ días hábiles antes)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=openlen-deploy
+Group=www-data
+
+# El MISMO fichero de secretos que openlen-app.service (/etc/openlen/openlen.env):
+# DATABASE_URL, POLAR_ACCESS_TOKEN (con permiso subscriptions:read),
+# RESEND_API_KEY, NEXTAUTH_URL.
+WorkingDirectory=/opt/openlen-app
+EnvironmentFile=/etc/openlen/openlen.env
+
+ExecStart=/usr/bin/node /opt/openlen-app/cron/renewal-reminders.mjs
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openlen-renewal-reminders
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only

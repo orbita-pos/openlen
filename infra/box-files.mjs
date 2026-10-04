@@ -55,4 +55,6 @@ export const BOX_FILES = [
   // se borran del repo y, en el deploy, de la caja (DEPLOY_RUNBOOK §1).
   { repo: "infra/app/openlen-notifications-drain.service", box: "/etc/systemd/system/openlen-notifications-drain.service" },
   { repo: "infra/app/openlen-notifications-drain.timer", box: "/etc/systemd/system/openlen-notifications-drain.timer" },
+  { repo: "infra/app/openlen-renewal-reminders.service", box: "/etc/systemd/system/openlen-renewal-reminders.service" },
+  { repo: "infra/app/openlen-renewal-reminders.timer", box: "/etc/systemd/system/openlen-renewal-reminders.timer" },
 ];

@@ -836,6 +836,22 @@ export const processedWebhooks = pgTable("processedWebhooks", {
   receivedAt: timestamp("receivedAt", { mode: "date" }).notNull().defaultNow(),
 });
 
+// Los recordatorios de renovación ya mandados: uno por persona y por fecha de
+// renovación (lib/billing/renewal-reminder.ts). Tabla aparte y no una columna
+// de `users`: Drizzle selecciona las columnas declaradas, y una columna nueva
+// en `users` entraría en cada consulta de usuarios (el fallo de `agentEffort`).
+export const renewalReminders = pgTable(
+  "renewalReminders",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    periodEnd: timestamp("periodEnd", { mode: "date" }).notNull(),
+    sentAt: timestamp("sentAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.periodEnd] })],
+);
+
 // Password reset tokens — separate table so a leaked token only impacts
 // password reset and not session/email-verification flows.
 export const passwordResetTokens = pgTable("passwordResetTokens", {

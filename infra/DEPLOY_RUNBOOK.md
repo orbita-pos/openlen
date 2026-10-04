@@ -35,7 +35,8 @@ Edit, then `systemctl restart openlen-app`. Full reference: `infra/app/env.examp
 **Phase 2 (enable later):**
 - `GOOGLE_CLIENT_ID/SECRET`, `GITHUB_ID/SECRET` — OAuth login
 - `POLAR_SERVER=sandbox` + `POLAR_ACCESS_TOKEN` + `POLAR_PRODUCT_PRO_ID` +
-  `POLAR_WEBHOOK_SECRET` — billing. Keep `sandbox` until Phase 2 passes; flip to
+  `POLAR_PRODUCT_MAX_ID` + `POLAR_WEBHOOK_SECRET` — billing (ver «Pro $10 y Max
+  $20» abajo). Keep `sandbox` until Phase 2 passes; flip to
   `production` only to take real money. Webhook URL in Polar:
   `${NEXTAUTH_URL}/api/billing/webhook` (format: Raw).
 - `GITHUB_DEPLOY_*`, `VERCEL_*` — Deploy-dropdown export targets
@@ -191,3 +192,36 @@ service / browser — those are the manual checklist below.
   surfaces in the Replace modal as the raw string `ai_unavailable`, so it reads
   as a random editor bug rather than missing config.
 - **Polar stays in sandbox** until you set `POLAR_SERVER=production`.
+
+## Pro $10 y Max $20, y el recordatorio de renovación (salida de octubre 2026)
+
+El cobro lee los créditos de `lib/marketing/plan-price.ts` (Pro 200, Max 500) y el
+plan sale del PRODUCTO de Polar: Max si es `POLAR_PRODUCT_MAX_ID`, cualquier otro es
+Pro. Quien ya pagaba Pro a $3.99 conserva ese precio (Polar se lo guarda) y recibe
+lo mismo que un Pro nuevo.
+
+**En Polar, ANTES del deploy:**
+
+1. El producto Pro: precio nuevo $10/mes. Polar sólo lo aplica a las suscripciones
+   nuevas; las de $3.99 siguen igual.
+2. Un producto nuevo, Max, $20/mes, misma moneda. Su id va a
+   `/etc/openlen/openlen.env` como `POLAR_PRODUCT_MAX_ID`.
+3. Portal del cliente: activar **Enable subscription plan changes**. Es por donde
+   un Pro pasa a Max (la app manda al portal a quien ya paga).
+4. El token (`POLAR_ACCESS_TOKEN`) necesita además el permiso
+   `subscriptions:read`: el recordatorio lee cada suscripción.
+
+**En la caja, DESPUÉS del deploy** (el deploy no instala unidades de systemd; la
+migración `renewal-reminders-migrate` sí la corre él):
+
+```bash
+scp infra/app/openlen-renewal-reminders.{service,timer} openlen:/tmp/
+ssh openlen "sudo mv /tmp/openlen-renewal-reminders.* /etc/systemd/system/ && sudo systemctl daemon-reload"
+ssh openlen "sudo systemctl start openlen-renewal-reminders.service; journalctl -u openlen-renewal-reminders -n 20 --no-pager"
+ssh openlen "sudo systemctl enable --now openlen-renewal-reminders.timer"
+```
+
+La primera corrida a mano tiene que decir `[renewal-reminders] N suscripciones, …`.
+Avisa cuando faltan 6 días hábiles o menos, una vez por renovación
+(`renewalReminders`), y se salta a quien canceló y a los planes de 6 meses o más
+(ésos los avisa Polar).

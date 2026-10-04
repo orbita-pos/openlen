@@ -123,6 +123,29 @@ export async function sendPasswordResetEmail(
   });
 }
 
+/** El recordatorio de renovación (lib/billing/renewal-reminder.ts arma el
+ *  correo). Devuelve si salió: si no, la tarea no lo apunta y lo reintenta al
+ *  día siguiente. En desarrollo sólo se imprime. */
+export async function sendRenewalReminderEmail(mail: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}): Promise<boolean> {
+  const live = liveClientOrWarn("renewal reminder email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`
+  📧 [DEV] Renewal reminder to ${mail.to}
+${mail.text}
+`);
+    }
+    return false;
+  }
+  return enviar(live, "renewal reminder email", { from, ...mail });
+}
+
 export interface AbuseReportEmail {
   siteUrl: string;
   category: string;

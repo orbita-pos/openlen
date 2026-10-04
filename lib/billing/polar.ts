@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { CREDITS_BY_PLAN } from "@/lib/credits";
 import { PLAN_RANK, planFromDb } from "@/lib/plan";
+import type { PolarSubscription } from "./renewal-reminder";
 import { publicOrigin } from "@/lib/integrations/oauth";
 import { verifyWebhookSignature } from "./webhook-signature";
 
@@ -75,6 +76,23 @@ async function polarPost(path: string, body: unknown): Promise<unknown> {
     throw new BillingError(`polar ${path} ${res.status}: ${detail.slice(0, 300)}`);
   }
   return res.json();
+}
+
+/** Una suscripción tal como la tiene Polar (`GET /v1/subscriptions/{id}`):
+ *  su próxima renovación, si va a cancelarse y el importe que paga esa
+ *  persona. Lo usa el recordatorio de renovación. El token necesita el permiso
+ *  `subscriptions:read`. */
+export async function getSubscription(id: string): Promise<PolarSubscription> {
+  const token = env("POLAR_ACCESS_TOKEN");
+  if (!token) throw new BillingError("not_configured");
+  const res = await fetch(`${apiBase()}/v1/subscriptions/${encodeURIComponent(id)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new BillingError(`polar subscription ${res.status}: ${detail.slice(0, 300)}`);
+  }
+  return (await res.json()) as PolarSubscription;
 }
 
 /** Create a hosted checkout for a paid plan (Pro by default) and return its
