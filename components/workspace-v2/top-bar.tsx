@@ -542,7 +542,7 @@ export function TopBar({
           disabled={projectLoading}
           aria-haspopup="menu"
           aria-expanded={proyectosOpen}
-          className="inline-flex items-center gap-1.5 max-w-[260px] lg:max-w-[420px] min-w-0 px-2 h-7 rounded-md hover:bg-hover transition group disabled:cursor-default disabled:hover:bg-transparent"
+          className="inline-flex items-center gap-1.5 max-w-[260px] lg:max-w-[420px] min-w-0 px-2 h-7 rounded-md enabled:hover:bg-hover transition group disabled:cursor-default"
         >
           {editingName ? (
             <input

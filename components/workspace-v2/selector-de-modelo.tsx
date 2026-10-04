@@ -226,7 +226,7 @@ function SelectorConFilas({
                 aria-checked={elegido}
                 disabled={motivo !== null}
                 onClick={() => elegir(papel)}
-                className={`flex w-full flex-col items-start gap-0.5 border-t border-[color:var(--border)] px-2.5 py-1.5 text-left transition hover:bg-hover disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent ${
+                className={`flex w-full flex-col items-start gap-0.5 border-t border-[color:var(--border)] px-2.5 py-1.5 text-left transition enabled:hover:bg-hover disabled:cursor-not-allowed disabled:opacity-45 ${
                   elegido ? "bg-accent-soft" : ""
                 }`}
               >
