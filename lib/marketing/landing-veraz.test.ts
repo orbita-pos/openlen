@@ -123,19 +123,23 @@ describe("los módulos que anuncia la landing existen", () => {
   });
 });
 
-describe("las cifras del plan Pro no se contradicen con el cobro", () => {
-  // «≈10 generaciones» era el número viejo, de antes de corregir la tarifa de
-  // deepseek-flash. Con 2 créditos por portada y 1 por subpágina, 150 créditos
-  // son ~25 sitios de cinco páginas. Vendíamos 2,5x menos de lo que damos.
-  it.each(LOCALES)("%s — el plan Pro dice 25, no 10", (locale) => {
-    const pro = (marketing(locale) as unknown as {
-      pricing: { pro: { blurb: string; features: Record<string, string> } };
-    }).pricing.pro;
-    // LAS DOS PIEZAS, POR SEPARADO. La primera versión concatenaba blurb +
-    // features y pedía que el resultado contuviera "25" — así que bastaba con
-    // que UNA lo dijera. Su propio brazo de control lo enseñó: cambiando sólo
-    // el blurb al «10» viejo, la guarda seguía en verde.
-    expect(pro.blurb, `${locale}: el blurb no dice cuántos sitios`).toContain("25");
-    expect(pro.features["1"], `${locale}: la viñeta no dice cuántos sitios`).toContain("25");
+describe("las cifras de los planes no se contradicen con el cobro", () => {
+  // HASTA EL 04/10 aquí se pedía que el plan Pro dijera «25» (los sitios que
+  // daban 150 créditos). La portada nueva vende Pro 200 y Max 500, y su texto ya
+  // no cuenta sitios: lo que tiene que cuadrar ahora es el NÚMERO DE CRÉDITOS.
+  // La portada lo pinta desde lib/marketing/plan-price.ts y el cobro lo saca de
+  // ahí mismo (CREDITS_BY_PLAN, comprobado en lib/credits.test.ts). Lo que
+  // queda por vigilar es que ninguna traducción escriba la cifra A MANO: una
+  // cifra escrita en la cadena no se entera cuando cambia el precio.
+  it.each(LOCALES)("%s — los créditos de Pro y de Max salen del precio, no del texto", (locale) => {
+    const pricing = (marketing(locale) as unknown as {
+      pricing: Record<string, { blurb?: string; features?: Record<string, string> }>;
+    }).pricing;
+    expect(pricing.pro.features?.["1"], `${locale}: Pro`).toContain("{credits");
+    expect(pricing.max.features?.["1"], `${locale}: Max`).toContain("{credits");
+    const todo = JSON.stringify(pricing);
+    for (const viejo of ["150", "3.99", "3,99"]) {
+      expect(todo, `${locale}: los precios dicen «${viejo}»`).not.toContain(viejo);
+    }
   });
 });
