@@ -260,8 +260,9 @@ async function accessToken(ctx: AuthContext, q: TxQuery, user: AuthUserRow, sess
   return { token, expiresAt: Math.floor(Date.now() / 1000) + ctx.config.jwtExp };
 }
 
-/** `issueRefreshToken` → `AccessTokenResponse`. */
-async function issueSession(ctx: AuthContext, q: TxQuery, req: Request, userId: string, method: string) {
+/** `issueRefreshToken` → `AccessTokenResponse`. Exportada para la visita de
+ *  Len (`visit-session.ts`), que abre la sesión sin pasar por una ruta. */
+export async function issueSession(ctx: AuthContext, q: TxQuery, req: Request, userId: string, method: string) {
   const { sessionId, refreshToken } = await createSession(q, userId, method, requestMeta(req));
   const user = (await findUserById(q, userId))!;
   const { token, expiresAt } = await accessToken(ctx, q, user, sessionId);

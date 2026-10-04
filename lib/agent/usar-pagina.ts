@@ -576,7 +576,25 @@ export interface VisitaParams {
   readonly ruta: string;
   /** El contexto con el que se hornea: la página que el dueño ve en el lienzo. */
   readonly vista?: ContextoDeVista | null;
+  /** Entrar como un usuario de la página (lib/backend/auth/visit-session.ts):
+   *  la sesión de supabase-js, guardada en su clave antes de que corra la página. */
+  readonly signedInAs?: SignedInAs | null;
 }
+
+export interface SignedInAs {
+  readonly email: string;
+  readonly storageKey: string;
+  readonly session: Record<string, unknown>;
+}
+
+/** Guarda la sesión en el `localStorage` del documento de arriba, como si el
+ *  usuario hubiera entrado antes. Sólo en la PRIMERA carga: se retira tras ella,
+ *  para que una página que cierra la sesión no la recupere al recargar. */
+const storeSessionScript = (s: SignedInAs) => `
+(function () {
+  if (window.top !== window) return;
+  try { localStorage.setItem(${JSON.stringify(s.storageKey)}, ${JSON.stringify(JSON.stringify(s.session))}); } catch (x) {}
+})();`;
 
 export interface VisitaInternals {
   readonly lanzar?: () => Promise<Browser>;
@@ -789,9 +807,10 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
   const browser = await (internals.lanzar ?? lanzarChromium)();
   const plazoMs = internals.plazoMs ?? PLAZO_DE_LA_VISITA_MS;
   const plazo = Date.now() + plazoMs;
-  const lineas: string[] = [
-    `Visit to ${p.ruta} as a new visitor (with nothing saved from before), in a desktop browser. ${TEXTO_DE_LA_PAGINA_ES_DATO}`,
-  ];
+  const visitor = p.signedInAs
+    ? `signed in as ${p.signedInAs.email} (a real session of the page's backend, closed when the visit ends; nothing else saved from before)`
+    : "as a new visitor (with nothing saved from before)";
+  const lineas: string[] = [`Visit to ${p.ruta} ${visitor}, in a desktop browser. ${TEXTO_DE_LA_PAGINA_ES_DATO}`];
   const errores: string[] = [];
   const notas = new Set<string>();
   try {
@@ -804,6 +823,7 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
       alSalir: (u) => ev.fueraPorRed.push(u),
     });
     await page.evaluateOnNewDocument(PRELUDIO_DE_USO);
+    const sessionScript = p.signedInAs ? await page.evaluateOnNewDocument(storeSessionScript(p.signedInAs)) : null;
     page.on("dialog", (d) => {
       const cual = d.type() === "confirm" ? "a question (confirm)" : d.type() === "prompt" ? "a prompt" : "an alert";
       ev.dialogos.push(`${cual} came up saying ${q(d.message(), 120)}; I accepted it.`);
@@ -832,6 +852,7 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
     const sinHash = (u: string) => u.split("#")[0];
     try {
       await page.goto(doc.url, { waitUntil: "load", timeout: 20_000 });
+      if (sessionScript) await page.removeScriptToEvaluateOnNewDocument(sessionScript.identifier);
       const cambiantes = new Set<string>();
       let hechos = 0;
 

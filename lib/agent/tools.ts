@@ -31,6 +31,8 @@ import { debitCredits } from "@/lib/credits";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
 import { vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
+import type { SignedInAs } from "@/lib/agent/usar-pagina";
+import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import { getUserMemory, rememberAboutUser } from "@/lib/agent/user-memory";
 import { webDelServidor, type WebDeps } from "@/lib/agent/web/buscar";
@@ -197,7 +199,12 @@ export interface AgentDeps {
     pasos: readonly PasoDeUso[];
     ruta: string;
     vista?: ContextoDeVista | null;
+    signedInAs?: SignedInAs | null;
   }): Promise<{ informe: string }>;
+  /** `usar_pagina` con `sign_in_as`: abre una sesión de verdad del backend de
+   *  la página como uno de sus usuarios (lib/backend/auth/visit-session.ts), y
+   *  la clave donde supabase-js la busca. `null` si no hay backend al que entrar. */
+  signInForVisit?(projectId: string, who: string): Promise<{ storageKey: string; result: VisitSignIn } | null>;
   /** Download an on-page image as base64 — SSRF-guarded (validateUrl, same as
    *  the proxy-image route) + capped + MIME-allowlisted. editar_imagen only
    *  ever passes a URL it already found verbatim in the current document. */
@@ -356,6 +363,19 @@ export function realDeps(
       const { ensureBackend, projectUrl } = await import("@/lib/backend/registry");
       const rec = await ensureBackend(projectId);
       return { url: projectUrl(rec.ref), publishableKey: rec.publishableKey };
+    },
+    async signInForVisit(projectId, who) {
+      const { backendConfigured } = await import("@/lib/backend/pg");
+      if (!backendConfigured()) return null;
+      const { backendProjectFor, getBackendByProject, projectUrl } = await import("@/lib/backend/registry");
+      const rec = await getBackendByProject(projectId);
+      if (!rec) return null;
+      const { signInForVisit, supabaseStorageKey } = await import("@/lib/backend/auth/visit-session");
+      const storageKey = supabaseStorageKey(projectUrl(rec.ref));
+      // Sin la base creada todavía no hay nadie: se crea con la primera
+      // petición o la primera migración, no por entrar.
+      if (!rec.provisionedAt) return { storageKey, result: { ok: false, reason: "no_users" } };
+      return { storageKey, result: await signInForVisit(backendProjectFor({ record: rec, pageSub: null }), who) };
     },
     async leerMemoriaDelDueno(userId) {
       return getUserMemory(userId);
@@ -1216,9 +1236,36 @@ async function toolUsarPagina(
   const html = activeHtml(row.data, pedida.page) ?? "";
   if (!html) return { response: { ok: false, error: "this page doesn't have a document to use yet" } };
 
+  // Entrar como un usuario de la página, como Lovable: con uno solo, ése; con
+  // varios sin decir cuál, no se visita y se pregunta en el chat.
+  const who = typeof args.sign_in_as === "string" ? args.sign_in_as.trim() : "";
+  let signedInAs: SignedInAs | null = null;
+  let end: (() => Promise<void>) | null = null;
+  if (who) {
+    const signIn = deps.signInForVisit
+      ? await deps.signInForVisit(session.projectId, who).catch(() => undefined)
+      : null;
+    if (signIn === undefined) {
+      return {
+        response: {
+          ok: false,
+          error: "couldn't sign in to the page's backend this time. Don't take it as meaning it works or that it doesn't; if you close without testing it, say so.",
+        },
+      };
+    }
+    if (!signIn) {
+      return { response: { ok: false, error: "this page has no backend to sign in to: visit it without sign_in_as." } };
+    }
+    const r = signIn.result;
+    if (!r.ok) return { response: { ok: false, error: whySignInFailed(r, who) } };
+    signedInAs = { email: r.email, storageKey: signIn.storageKey, session: r.session };
+    end = r.end;
+  }
+
   const visto = await deps
-    .usarPagina({ html, pasos: v.pasos, ruta: pedida.ruta, vista: vistaParaMedir(session.projectId, row, pedida.page) })
-    .catch(() => null);
+    .usarPagina({ html, pasos: v.pasos, ruta: pedida.ruta, vista: vistaParaMedir(session.projectId, row, pedida.page), signedInAs })
+    .catch(() => null)
+    .finally(() => end?.().catch(() => undefined));
   if (!visto) {
     // No poder abrirla no es que funcione ni que no: se dice así, para que no
     // cierre dándola por buena.
@@ -1230,6 +1277,19 @@ async function toolUsarPagina(
     };
   }
   return { response: { ok: true, visita: visto.informe } };
+}
+
+/** Por qué `sign_in_as` no abrió sesión, dicho para que Len sepa qué hacer. */
+function whySignInFailed(r: Exclude<VisitSignIn, { ok: true }>, who: string): string {
+  if (r.reason === "no_users") return "the page has no users yet: there's no one to sign in as.";
+  if (r.reason === "banned") return `«${who}» is banned in the page's backend: a visit can't sign in as them.`;
+  const listed = `${r.emails.join(", ")}${r.total > r.emails.length ? ` (and ${r.total - r.emails.length} more)` : ""}`;
+  if (r.reason === "pick_one") {
+    return `the page has ${r.total} users and nobody said which one to sign in as: ask the user in chat which one to use, then call usar_pagina again with sign_in_as set to that email. Users: ${listed}.`;
+  }
+  return r.total === 0
+    ? `no user of the page has the email «${who}»; the page has no users yet.`
+    : `no user of the page has the email «${who}». Users: ${listed}.`;
 }
 
 async function toolElegirFoto(

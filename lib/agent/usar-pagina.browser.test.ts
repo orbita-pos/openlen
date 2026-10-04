@@ -271,3 +271,46 @@ describe("usar_pagina — elegir", () => {
 // ⚰️ «usar_pagina — un almacén de la página va al sustituto, no a la base»: lo
 // que la visita guardaba en `/api/d` iba a un sustituto que se tiraba al final.
 // Se retiró con `data-ol-stores` el 2026-10-04.
+
+// Entrar como un usuario de la página, como Lovable: la sesión de supabase-js
+// va en SU clave del `localStorage` antes de que corra la página. La sesión es
+// de mentira aquí (no hay backend): lo que se prueba es la visita, no GoTrue
+// (eso está en lib/backend/auth/visit-session.test.ts).
+describe("usar_pagina — entrar como un usuario de la página", () => {
+  const STORAGE_KEY = "sb-abcdefghijklmnopqrst-auth-token";
+  const signedInAs = {
+    email: "ana@tiendaluna.mx",
+    storageKey: STORAGE_KEY,
+    session: { access_token: "x.y.z", token_type: "bearer", expires_in: 3600, expires_at: 9999999999, refresh_token: "r", user: { id: "u1", email: "ana@tiendaluna.mx" } },
+  };
+  const pageHtml = marco(`
+    <div><p id="quien"></p><button id="salir">Salir</button></div>
+    <script>
+      function pintar() {
+        var s = localStorage.getItem("${STORAGE_KEY}");
+        document.getElementById("quien").textContent = s ? "Hola, " + JSON.parse(s).user.email : "Sin sesión";
+      }
+      pintar();
+      document.getElementById("salir").addEventListener("click", function () { localStorage.removeItem("${STORAGE_KEY}"); pintar(); });
+    </script>`);
+
+  it("🔴 la sesión ya está guardada cuando corre la página, y el informe lo dice; sin ella, nadie", async () => {
+    const pasos: PasoDeUso[] = [{ lee: "Salir" }];
+    const signedIn = (await usarPagina({ html: pageHtml, pasos, ruta: "/index.html", signedInAs })).informe;
+    const anonymous = await visitar(pageHtml, pasos);
+    expect(signedIn).toContain("Hola, ana@tiendaluna.mx");
+    expect(signedIn).toContain("signed in as ana@tiendaluna.mx");
+    expect(anonymous).toContain("Sin sesión");
+    expect(anonymous).not.toContain("signed in as");
+  }, 90_000);
+
+  it("🔴 si la página cierra la sesión, recargar no la vuelve a abrir", async () => {
+    const pasos: PasoDeUso[] = [{ pulsa: "Salir" }, { recarga: true }, { lee: "Salir" }];
+    const report = (await usarPagina({ html: pageHtml, pasos, ruta: "/index.html", signedInAs })).informe;
+    // Había sesión antes de pulsar «Salir»: si no, el resto no prueba nada.
+    expect(report).toContain("«Hola, ana@tiendaluna.mx» → «Sin sesión»");
+    const lastStep = report.split("\n").find((l) => l.startsWith("3."));
+    expect(lastStep).toContain("Sin sesión");
+    expect(lastStep).not.toContain("Hola, ana");
+  }, 90_000);
+});

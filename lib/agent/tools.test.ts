@@ -13,6 +13,7 @@ import { loQueCambioElDueno } from "./cambios-del-dueno";
 import { buildFunctionDeclarations } from "./catalog";
 import { guardarPreferencia } from "./preferencias";
 import type { ProjectData } from "@/lib/projects/types";
+import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
 
 /** Estrecha un ToolOutcome a la tarjeta de PUBLICAR.
  *
@@ -719,6 +720,114 @@ describe("usar_pagina", () => {
     const out = await runAgentTool(makeSession(), roto, "usar_pagina", { pasos: [{ pulsa: "Agregar" }] });
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /Don't take it as meaning it works or that it doesn't/);
+  });
+
+  // Entrar como un usuario de la página, como Lovable (lib/backend/auth/
+  // visit-session.ts): un solo usuario → ése; varios sin decir cuál → no
+  // visita y pregunta en el chat; nunca crea una cuenta.
+  describe("sign_in_as", () => {
+    const STORAGE_KEY = "sb-abcdefghijklmnopqrst-auth-token";
+    const SESSION = { access_token: "x.y.z", refresh_token: "r" };
+    const withBackend = (
+      deps: AgentDeps,
+      visits: Record<string, unknown>[],
+      result: VisitSignIn,
+      requested: string[] = [],
+    ): AgentDeps => ({
+      ...conNavegador(deps, visits),
+      signInForVisit: async (_projectId, who) => {
+        requested.push(who);
+        return { storageKey: STORAGE_KEY, result };
+      },
+    });
+
+    it("🔴 entra, le pasa la sesión a la visita y la cierra al acabar", async () => {
+      const { deps } = makeDeps();
+      const visits: Record<string, unknown>[] = [];
+      let ended = false;
+      const requested: string[] = [];
+      const withSignIn = withBackend(deps, visits, { ok: true, email: "ana@tiendaluna.mx", session: SESSION, end: async () => { ended = true; } }, requested);
+      const out = await runAgentTool(makeSession(), withSignIn, "usar_pagina", { pasos: [{ pulsa: "Agregar" }], sign_in_as: "only_user" });
+      assert.equal(out.response.ok, true);
+      assert.deepEqual(requested, ["only_user"]);
+      assert.deepEqual(visits[0]!.signedInAs, { email: "ana@tiendaluna.mx", storageKey: STORAGE_KEY, session: SESSION });
+      assert.equal(ended, true);
+    });
+
+    it("🔴 con varios usuarios y sin decir cuál, NO visita: los nombra para preguntar en el chat", async () => {
+      const { deps } = makeDeps();
+      const visits: Record<string, unknown>[] = [];
+      const withSignIn = withBackend(deps, visits, { ok: false, reason: "pick_one", emails: ["ana@tiendaluna.mx", "beto@tiendaluna.mx"], total: 2 });
+      const out = await runAgentTool(makeSession(), withSignIn, "usar_pagina", { pasos: [{ pulsa: "Agregar" }], sign_in_as: "only_user" });
+      assert.equal(out.response.ok, false);
+      assert.match(String(out.response.error), /ask the user in chat which one/);
+      assert.match(String(out.response.error), /ana@tiendaluna\.mx, beto@tiendaluna\.mx/);
+      assert.equal(visits.length, 0);
+    });
+
+    it("un correo que no es de nadie no visita, y dice quién hay", async () => {
+      const { deps } = makeDeps();
+      const visits: Record<string, unknown>[] = [];
+      const withSignIn = withBackend(deps, visits, { ok: false, reason: "not_found", emails: ["ana@tiendaluna.mx"], total: 1 });
+      const out = await runAgentTool(makeSession(), withSignIn, "usar_pagina", { pasos: [{ pulsa: "Agregar" }], sign_in_as: "nadie@tiendaluna.mx" });
+      assert.equal(out.response.ok, false);
+      assert.match(String(out.response.error), /no user of the page has the email «nadie@tiendaluna\.mx»/);
+      assert.match(String(out.response.error), /ana@tiendaluna\.mx/);
+      assert.equal(visits.length, 0);
+    });
+
+    it("sin usuarios lo dice y no visita", async () => {
+      const { deps } = makeDeps();
+      const visits: Record<string, unknown>[] = [];
+      const withSignIn = withBackend(deps, visits, { ok: false, reason: "no_users" });
+      const out = await runAgentTool(makeSession(), withSignIn, "usar_pagina", { pasos: [{ pulsa: "Agregar" }], sign_in_as: "only_user" });
+      assert.equal(out.response.ok, false);
+      assert.match(String(out.response.error), /has no users yet/);
+      assert.equal(visits.length, 0);
+    });
+
+    it("sin backend lo dice y no visita", async () => {
+      const { deps } = makeDeps();
+      const visits: Record<string, unknown>[] = [];
+      const noBackend = { ...conNavegador(deps, visits), signInForVisit: async () => null };
+      const out = await runAgentTool(makeSession(), noBackend, "usar_pagina", { pasos: [{ pulsa: "Agregar" }], sign_in_as: "only_user" });
+      assert.equal(out.response.ok, false);
+      assert.match(String(out.response.error), /no backend to sign in to/);
+      assert.equal(visits.length, 0);
+    });
+
+    it("si abrir la sesión revienta, no visita ni lo confunde con no tener backend", async () => {
+      const { deps } = makeDeps();
+      const visits: Record<string, unknown>[] = [];
+      const broken = { ...conNavegador(deps, visits), signInForVisit: async () => { throw new Error("la base no contesta"); } };
+      const out = await runAgentTool(makeSession(), broken, "usar_pagina", { pasos: [{ pulsa: "Agregar" }], sign_in_as: "only_user" });
+      assert.equal(out.response.ok, false);
+      assert.match(String(out.response.error), /couldn't sign in/);
+      assert.doesNotMatch(String(out.response.error), /no backend/);
+      assert.equal(visits.length, 0);
+    });
+
+    it("🔴 si la visita revienta, la sesión se cierra igual", async () => {
+      const { deps } = makeDeps();
+      let ended = false;
+      const withSignIn: AgentDeps = {
+        ...deps,
+        usarPagina: async () => { throw new Error("chromium no arrancó"); },
+        signInForVisit: async () => ({ storageKey: STORAGE_KEY, result: { ok: true, email: "ana@tiendaluna.mx", session: SESSION, end: async () => { ended = true; } } }),
+      };
+      await runAgentTool(makeSession(), withSignIn, "usar_pagina", { pasos: [{ pulsa: "Agregar" }], sign_in_as: "only_user" });
+      assert.equal(ended, true);
+    });
+
+    it("sin sign_in_as no abre ninguna sesión", async () => {
+      const { deps } = makeDeps();
+      const visits: Record<string, unknown>[] = [];
+      const requested: string[] = [];
+      const withSignIn = withBackend(deps, visits, { ok: false, reason: "no_users" }, requested);
+      await runAgentTool(makeSession(), withSignIn, "usar_pagina", { pasos: [{ pulsa: "Agregar" }] });
+      assert.deepEqual(requested, []);
+      assert.equal(visits[0]!.signedInAs ?? null, null);
+    });
   });
 });
 

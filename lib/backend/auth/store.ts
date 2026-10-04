@@ -322,6 +322,16 @@ export async function listUsers(q: TxQuery, aud: string, page: number, perPage: 
   return { users: r.rows as unknown as AuthUserRow[], total };
 }
 
+/** Los usuarios como los que puede entrar la visita de Len: con correo, sin
+ *  borrar, no anónimos y sin veto vigente. Los primeros `limit` correos y cuántos son. */
+export async function listEmailUsers(q: TxQuery, aud: string, limit: number): Promise<{ emails: string[]; total: number }> {
+  const where = `aud = $1 and email is not null and deleted_at is null and not is_anonymous
+    and (banned_until is null or banned_until <= now())`;
+  const total = Number((await q(`select count(*)::int8 as n from auth.users where ${where}`, [aud])).rows[0]?.n ?? 0);
+  const r = await q(`select email from auth.users where ${where} order by created_at limit $2`, [aud, limit]);
+  return { emails: r.rows.map((x) => String(x.email)), total };
+}
+
 export async function deleteUser(q: TxQuery, userId: string): Promise<boolean> {
   const r = await q(`delete from auth.users where id = $1 returning id`, [userId]);
   return r.rows.length > 0;
