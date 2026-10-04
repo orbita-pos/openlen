@@ -224,7 +224,16 @@ export function sanitizeForPublish(html: string): SanitizeResult {
   // del extend ya rechaza data-slot-path en claves y valores; este guard final
   // es el cinturón: si por lo que sea el marcador aparece en la salida, se
   // rechaza el documento entero (jamás llega a disco NI a la DB).
-  if (out !== null && out.includes("data-slot-path=")) {
+  //
+  // 🔴 Y EN TODAS SUS VARIANTES (2026-10-04). Aquí sólo se miraba el literal, y
+  // el validador del extend también: `&#100;ata-slot-path=` en un valor volvía
+  // en el carrier y llegaba a la base por autofill o re-estilar (lo midió el
+  // revisor de publicación). Con carrier reinyectado, la salida pasa además la
+  // puerta de Rust; sin él, la salida ES la de Rust y ya pasó.
+  const conMarcador = (h: string) =>
+    h.includes("data-slot-path=") ||
+    (extend !== null && (rustSanitizeForPublish(h) as RustSanitizeResult).html == null);
+  if (out !== null && conMarcador(out)) {
     return { html: null, errors: [...r.errors, "slot-path marker in output"], removed };
   }
   return { html: out, errors: r.errors, removed };

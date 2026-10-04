@@ -85,6 +85,22 @@ describe("bakeTailwind honra el carrier (publish con paleta real)", () => {
     assert.ok(!baked.html.includes("cdn.tailwindcss.com"));
   });
 
+  // Y SI LA CONFIG NO SE PUEDE LEER (lógica en el mismo script, valores que se
+  // calculan al cargar), NO SE HORNEA: se queda el CDN y el script, como con
+  // `?plugins=`. Hornear la quitaba entera —paleta Y lógica— (lo vio el revisor
+  // de publicación en la segunda pasada, medido el 2026-10-04).
+  for (const [caso, script] of [
+    ["config y lógica en el mismo script", `tailwind.config={theme:{extend:{colors:{ink:"#0a0a0a"}}}}; window.__logica = 1;`],
+    ["config calculada", `var c = "#0a0a0a"; tailwind.config={theme:{extend:{colors:{ink:c}}}}; window.__logica = 1;`],
+  ] as const) {
+    it(`🔴 ${caso}: no hornea, deja el CDN y el script`, async () => {
+      const html = `<!doctype html><html><head><script src="https://cdn.tailwindcss.com"></script><script>${script}</script></head><body><p class="bg-ink">x</p></body></html>`;
+      const baked = await bakeTailwind(html);
+      assert.equal(baked.baked, false);
+      assert.equal(baked.html, html);
+    });
+  }
+
   it("sin carrier el bake sigue idéntico a hoy (core-only)", async () => {
     const plain = `<!doctype html><html><head><script src="https://cdn.tailwindcss.com"></script></head><body><p class="text-red-500">x</p></body></html>`;
     const baked = await bakeTailwind(plain);
@@ -105,6 +121,23 @@ describe("seguridad end-to-end (security review)", () => {
       assert.ok(!out.html.includes("data-slot-path="), "el marcador jamás en el output");
     }
     assert.equal(readTwCarrier(out.html ?? "")?.colors?.note, undefined);
+  });
+
+  // 🔴 Y CODIFICADO. El validador del extend y el guard final miraban el literal,
+  // así que `&#100;ata-slot-path=` en un valor volvía en el carrier y llegaba a
+  // la base por autofill o re-estilar (revisor de publicación, 2026-10-04). La
+  // puerta de Rust, que sí ve las variantes, no lo había mirado: se extrae antes.
+  it("una variante CODIFICADA del marcador en un color → RECHAZA", () => {
+    const evil = `<!doctype html><html><head><script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { theme: { extend: { colors: { ink: "&#100;ata-slot-path=x" } } } }</script>
+</head><body><p class="text-ink">x</p></body></html>`;
+    assert.equal(sanitizeForPublish(evil).html, null);
+  });
+
+  it("CONTRA-PRUEBA: una paleta limpia sigue pasando, con su carrier", () => {
+    const out = sanitizeForPublish(LUME_LIKE);
+    assert.ok(out.html);
+    assert.equal((readTwCarrier(out.html!)?.colors as Record<string, string>).ink, "#0A0A0A");
   });
 
   it("ReDoS: from-html-style payload gigante sanitiza en tiempo lineal", () => {

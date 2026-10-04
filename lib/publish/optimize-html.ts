@@ -198,7 +198,18 @@ export async function bakeTailwind(html: string): Promise<OptimizeResult> {
   // extractor y validador, y se retira con el CDN — sin el CDN no hay
   // `tailwind` global y ese script lanzaría ReferenceError en la publicada.
   // El carrier, si lo hay, sigue mandando (es la paleta ya validada).
-  const conConfig = extractTwConfig(html);
+  const carrier = readTwCarrier(html);
+  const sinCarrier = stripTwCarrier(html);
+  const conConfig = extractTwConfig(sinCarrier);
+  // Y SI HAY CONFIG PERO NO SE PUEDE LEER —lógica en el mismo script, valores
+  // que se calculan al cargar—, NO SE HORNEA: se queda el CDN y el script, como
+  // con `?plugins=`. Hornear la quitaba entera, paleta y lógica (medido por el
+  // revisor de publicación). La página se publica como se ve en el lienzo.
+  if (carrier === null && conConfig.extend === null && conConfig.html !== sinCarrier) {
+    // eslint-disable-next-line no-console
+    console.warn("[optimize-html] tailwind.config que no se puede leer: se publica con el CDN, sin hornear");
+    return { html, baked: false, cssBytes: 0 };
+  }
 
   let css: string;
   try {
@@ -209,7 +220,7 @@ export async function bakeTailwind(html: string): Promise<OptimizeResult> {
     // data-ol-*>), para que los sliders Tier-3 vivan en la publicada.
     css = await generateTailwindCss(
       html,
-      mergeThemeExtends(readTwCarrier(html) ?? conConfig.extend ?? {}, html),
+      mergeThemeExtends(carrier ?? conConfig.extend ?? {}, html),
     );
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -233,14 +244,11 @@ export async function bakeTailwind(html: string): Promise<OptimizeResult> {
   // en el CSS) — fuera del HTML final, igual que el CDN. Los <style data-ol-*>
   // se quedan: definen los tokens que el CSS horneado referencia.
   // `conConfig.html` ya viene sin los `<script>` de config ni el carrier.
-  const withoutCdn = stripTwCarrier(conConfig.html.replace(CDN_TAG_RE, "")).replace(
-    THEME_SCRIPT_RE,
-    "",
-  );
+  const withoutCdn = conConfig.html.replace(CDN_TAG_RE, "").replace(THEME_SCRIPT_RE, "");
   const headClose = /<\/head\s*>/i;
   const out = headClose.test(withoutCdn)
     ? withoutCdn.replace(headClose, (close) => `${styleTag}${close}`)
-    : stripTwCarrier(conConfig.html)
+    : conConfig.html
         .replace(THEME_SCRIPT_RE, "")
         .replace(CDN_TAG_RE, () => styleTag); // no </head>: fall back in-place
   return { html: out, baked: true, cssBytes: css.length };
