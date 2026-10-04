@@ -8,6 +8,7 @@ import { withoutTrailingQuestion } from "./question-card";
 import { editsOfTurn, turnChanges } from "./turn-changes";
 import { visibleSteps } from "./steps-card";
 import { withServerStatus } from "./server-status";
+import { isPublishNote, publishNoteId } from "./publish-note";
 
 describe("qué chat se monta", () => {
   it("la URL manda, luego lo recordado, luego el de por defecto", () => {
@@ -98,5 +99,14 @@ describe("el estado que dice el servidor al converger", () => {
   it("🔴 no le quita su error a un turno que aquí falló, aunque el servidor lo registrara «applied»", () => {
     const local = { id: "b", status: "error", errorText: "upstream" };
     expect(withServerStatus(local, { status: "applied" })).toBe(local);
+  });
+});
+
+describe("la nota «✓ Publicada…»", () => {
+  it("se reconoce por su id, también tras recargar, y un turno de Len no", () => {
+    const id = publishNoteId();
+    expect(id.length).toBeLessThanOrEqual(100); // el tope de la ruta que la guarda
+    expect(isPublishNote({ id })).toBe(true);
+    expect(isPublishNote({ id: crypto.randomUUID() })).toBe(false);
   });
 });

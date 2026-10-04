@@ -59,6 +59,7 @@ import { FicherosDelTurnoEnVivo } from "../ficheros-del-turno";
 import { agruparCambios, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
 import { editsOfTurn, turnChanges } from "../chat/turn-changes";
 import { MemoriaDeLen } from "../chat/len-memory";
+import { isPublishNote } from "../chat/publish-note";
 import {
   useAgentChat,
   type AttachedImage,
@@ -693,6 +694,9 @@ function TurnFooter({
     // pregunta: ahí también es verdad y no estorba. Juzgar la prosa para
     // adivinar si «prometió» algo sería adivinar; esto es un hecho.
     if (turn.noDocChange) {
+      // Salvo en la nota «✓ Publicada…», que no es un turno de Len (ver
+      // `chat/publish-note.ts`).
+      if (isPublishNote(turn)) return null;
       return (
         <div className={marginClass}>
           <div className="inline-flex items-center gap-1.5 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small">

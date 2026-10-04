@@ -38,6 +38,7 @@ import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { fusionarConversacion } from "@/lib/chat/fusionar-conversacion";
 import { withServerStatus } from "./server-status";
+import { publishNoteId } from "./publish-note";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
 import { leerCambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
@@ -1787,10 +1788,7 @@ export function useAgentChat({
   // ephemeral, rebuilt from the SSE `confirm` event and gone on reload).
   const handlePublished = useCallback(
     (url: string) => {
-      const noteId =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `pub-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const noteId = publishNoteId();
       const userText = tAgent("confirm.publish");
       const assistantReasoning = tAgent("confirm.published", { url });
       setTurns((prev) => [

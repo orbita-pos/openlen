@@ -21,6 +21,7 @@ import { CENTICREDITOS_POR_CREDITO } from "@/lib/credits-client";
 import { duracionLegible } from "@/lib/workspace-v2/proceso-del-turno";
 import type { FeedbackReason, TurnFeedback } from "@/lib/chat/feedback-reasons";
 import { planDeUndo } from "../panels/undo-turn";
+import { isPublishNote } from "./publish-note";
 import { editsOfTurn } from "./turn-changes";
 import { FeedbackButtons, FeedbackForm } from "./turn-feedback";
 import type { DesignTurn } from "./use-agent-chat";
@@ -117,11 +118,14 @@ export function TurnClose({
   const notice = turn.cortado
     ? t("cutShort", { reason: turn.avisoTurno || tAgent("errors.cancelled") })
     : turn.avisoTurno || null;
+  // La nota «✓ Publicada…» no es un turno de Len: sin la etiqueta de «No cambió
+  // nada» (ver `publish-note.ts`).
+  const showLabel = !(turn.status === "applied" && turn.noDocChange && isPublishNote(turn));
 
   return (
     <div className="space-y-1.5">
       <div className="nc-up flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-        <span className="inline-flex items-center gap-1.5 rounded-lg border bd bg-elev px-2 py-[3px] text-[11.5px] fg-muted">
+        {showLabel && <span className="inline-flex items-center gap-1.5 rounded-lg border bd bg-elev px-2 py-[3px] text-[11.5px] fg-muted">
           {turn.status === "reverted" ? (
             <>
               <RotateCcw size={12} className="text-[var(--accent)]" />
@@ -145,7 +149,7 @@ export function TurnClose({
               )}
             </>
           )}
-        </span>
+        </span>}
         {stats.length > 0 && (
           <span className="inline-flex items-center gap-1.5 text-[11.5px] tabular-nums fg-faint">
             <Clock size={12} />
