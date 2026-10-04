@@ -165,11 +165,27 @@ function resolveFile(
   };
 }
 
+/** El Host de la petición, sin puerto y en minúsculas. */
+function hostDeLaPeticion(req: Request): string {
+  return (req.headers.get("host") ?? "").trim().toLowerCase().replace(/:\d+$/, "");
+}
+
 async function serve(
+  req: Request,
   params: { host: string; path?: string[] },
   includeBody: boolean,
 ): Promise<Response> {
   const host = params.host.toLowerCase();
+  // 🔴 SÓLO EN SU PROPIO HOST (2026-10-04). Caddy reescribe la RUTA de
+  // `landing.miempresa.com/about` a `/served/landing.miempresa.com/about` y
+  // deja el Host como estaba. Pero esta ruta existe también en openlen.com (el
+  // bloque apex lo manda todo a Next y el middleware no la toca), así que
+  // `https://openlen.com/served/<dominio>/` servía la página publicada en el
+  // origen de la APP: su JavaScript corría como openlen.com, con la sesión de
+  // quien abriera el enlace. Lo encontró el revisor de publicación al abrir la
+  // entrada a lo pegado; existía desde que hay dominios propios (bastaba con
+  // pedirle el script a Len). Si el Host no es el dominio, no existe.
+  if (hostDeLaPeticion(req) !== host) return notFound(includeBody);
   const found = await lookupDomain(host);
   if (!found || !found.verified || !found.subdomain) {
     return notFound(includeBody);
@@ -232,15 +248,15 @@ function notFound(includeBody: boolean): Response {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ host: string; path?: string[] }> },
 ): Promise<Response> {
-  return serve(await params, true);
+  return serve(req, await params, true);
 }
 
 export async function HEAD(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ host: string; path?: string[] }> },
 ): Promise<Response> {
-  return serve(await params, false);
+  return serve(req, await params, false);
 }

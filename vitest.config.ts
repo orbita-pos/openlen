@@ -522,6 +522,9 @@ export default defineConfig({
       "app/api/projects/[id]/raw/route.test.ts",
       // Same, for the Chat surface. Mocks only the model, DB, auth and
       // credits — the sanitize/normalize/behaviour passes are the real ones.
+      // Un dominio propio sólo se sirve en su propio host, nunca en openlen.com.
+      // (por carpeta: los corchetes de `[[...path]]` el glob los lee como clase)
+      "app/served/**/*.test.ts",
       "app/api/templates/ai-design/route.test.ts",
       "app/api/agent/route.test.ts",
       // Contestar deja la conversación leída: el «Enviar» del borrador de Len.
