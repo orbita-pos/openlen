@@ -5,6 +5,8 @@
 # everything else a dead box would lose —
 #   uploads/   /var/openlen/uploads (skipped if prod stores uploads in R2)
 #   db/        encrypted pg_dump of Neon, newest 7 kept
+#   pages/     encrypted tar of every page database (`ol_<ref>`) + its roles,
+#              newest 7 kept (the pages backend cluster, PAGES_DATABASE_URL)
 #   etc/       encrypted tar of /etc/openlen (minus backup.pass), newest 7 kept
 #   manifest/  which openlen units/timers are enabled + tool versions
 #
@@ -20,6 +22,7 @@
 #                               their password manager. Without it the db/ and
 #                               etc/ objects are unreadable.
 #   pg_dump — version >= the Neon server major version.
+#   psql + pg_dumpall — for the pages cluster (same postgresql-client package).
 
 set -uo pipefail
 # No -e: sections run isolated so one transient failure (a flaky rclone call,
@@ -99,6 +102,56 @@ if [[ -n "$DB_URL" ]]; then
     prune db || warn "db: prune falló"
   else
     warn "db: pg_dump falló"
+  fi
+fi
+
+# ── 2b. Las bases de las páginas (lib/backend, plans/pages-backend) ─────────
+# Una base de Postgres por proyecto (`ol_<ref>`) en el clúster de las páginas:
+# los datos y los usuarios de cada página publicada. Se vuelca cada una con el
+# administrador del clúster (PAGES_DATABASE_URL: CREATEDB CREATEROLE BYPASSRLS y
+# `createrole_self_grant = 'set, inherit'`, así que lee todo, RLS incluido), más
+# los roles SIN contraseña: la de cada rol de desarrollador vive cifrada en
+# `projectBackends` (base de la app, sección 2) y la de `authenticator` en
+# openlen.env. Probado el 2026-10-04 con ese mismo rol contra un Postgres 17.
+pages_url_for() { # pages_url_for DB — la URL del administrador con otra base
+  local u="$PAGES_URL" q=""
+  if [[ "$u" == *\?* ]]; then q="?${u#*\?}"; u="${u%%\?*}"; fi
+  echo "${u%/*}/$1$q"
+}
+PAGES_URL=""
+if [[ -f "$ENV_FILE" ]]; then
+  PAGES_URL="$(grep -E '^PAGES_DATABASE_URL=' "$ENV_FILE" | head -n1 | cut -d= -f2- | tr -d '"' || true)"
+fi
+if [[ -z "$PAGES_URL" ]]; then
+  echo "== pages: skip (no PAGES_DATABASE_URL in $ENV_FILE)"
+else
+  echo "== pages: las bases del clúster de las páginas"
+  mkdir -p "$WORK/pages"
+  pages_ok=1
+  pg_dumpall -d "$PAGES_URL" --roles-only --no-role-passwords > "$WORK/pages/roles.sql" \
+    || { warn "pages: roles falló"; pages_ok=0; }
+  if dbs="$(psql "$PAGES_URL" -XAtc "select datname from pg_database where datname like 'ol\_%' order by 1")"; then
+    n=0
+    while read -r db; do
+      [[ -z "$db" ]] && continue
+      if pg_dump "$(pages_url_for "$db")" --format=custom --file="$WORK/pages/$db.dump"; then
+        n=$((n + 1))
+      else
+        warn "pages: pg_dump de $db falló"; pages_ok=0
+      fi
+    done <<< "$dbs"
+    echo "  $n bases volcadas"
+  else
+    warn "pages: listar las bases falló"; pages_ok=0
+  fi
+  # Lo que haya se sube aunque falte algo (mejor una copia parcial que
+  # ninguna); sólo se poda con una copia completa.
+  if tar -C "$WORK" -cf "$WORK/pages.tar" pages \
+      && encrypt "$WORK/pages.tar" "$WORK/pages-$STAMP.tar.enc" \
+      && rc copyto "$WORK/pages-$STAMP.tar.enc" "$REMOTE/pages/pages-$STAMP.tar.enc"; then
+    (( pages_ok )) && { prune pages || warn "pages: prune falló"; }
+  else
+    warn "pages: tar/encrypt/subida falló"
   fi
 fi
 

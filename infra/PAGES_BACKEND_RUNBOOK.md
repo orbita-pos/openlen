@@ -1,0 +1,89 @@
+# El backend de las páginas — runbook del primer deploy
+
+La rama `pages-backend` (diseño y estado en `plans/pages-backend/design.md`, fuera del repo): cada página puede tener
+su backend de Supabase —`/rest/v1` (PostgREST) y `/auth/v1` (GoTrue)— sobre una base de Postgres propia, en un clúster
+aparte del de la app. Esto es lo que hay que hacer en la caja, en orden. **Nada de esto está aplicado todavía.**
+
+## 0. Antes: lo que el deploy ya hace solo
+
+- **La migración** `pages-backend-migrate` (tablas `projectBackends` y `projectFiles`) va en el paquete de migraciones
+  (`scripts/build-migrations.mjs`) y corre en el paso 6 de `deploy.ps1`, antes del código. Aditiva e idempotente.
+- **Caddy**: el `Caddyfile` del repo ya lleva `handle /rest/v1/*` y `handle /auth/v1/*` en el comodín de `*.openlen.app`,
+  y el paso 8 del deploy lo sube y lo recarga. El host del proyecto (`<ref>.openlen.app`) entra por el mismo comodín.
+- **El proxy de salida de Chromium** (`lib/security/egress-proxy.ts`) vive dentro del proceso de Next: no pide nada en la
+  caja.
+
+## 1. El clúster de las páginas (una vez, como root, ANTES del deploy)
+
+```bash
+scp infra/db/setup-pages-cluster.sh openlen:/tmp/
+ssh openlen "sudo bash /tmp/setup-pages-cluster.sh"
+```
+
+Crea el clúster `17/pages` en `127.0.0.1:5433`, el administrador `openlen_pages_admin` (CREATEDB + CREATEROLE +
+BYPASSRLS + `createrole_self_grant = 'set, inherit'`, **no** superusuario) y añade a `/etc/openlen/openlen.env`:
+
+- `PAGES_DATABASE_URL` — la URL de ese administrador.
+- `PAGES_AUTHENTICATOR_PASSWORD` — la del rol `authenticator`, con el que se atienden las peticiones.
+
+Es idempotente y no pisa variables que ya estén. Sin estas dos variables la app no finge un backend:
+`/rest/v1` y `/auth/v1` contestan 503 y el panel dice «no está disponible en este servidor».
+
+⚠️ Los roles de Supabase (`anon`, `authenticated`, `service_role`, `authenticator`, `supabase_auth_admin`) los crea la
+app la primera vez que un proyecto pide su base, y **tiene que crearlos ese administrador**: si los creara otro, no
+podría concederlos (medido: «permission denied to grant role "anon"»). No crearlos a mano.
+
+## 2. El deploy
+
+```bash
+npm run deploy:prod
+```
+
+## 3. En la MISMA ventana: las 5 plantillas
+
+```bash
+npm run templates:republish
+```
+
+Desplegar sin subirlas deja clonar las 5 viejas (altanube, avenir, brote, gremio, yunque) con conductas `data-ol-*`
+cuyo código ya no existe: el menú fijo y los botones de copiar, muertos.
+
+## 4. La copia nocturna de las bases de las páginas
+
+`backup-system-to-r2.sh` gana la sección `pages/`: cada base `ol_<ref>` con `pg_dump` y los roles sin contraseña,
+cifrado y a R2 como la base de la app. Instalarla (a mano, como el resto de la configuración del box):
+
+```bash
+scp infra/scripts/backup-system-to-r2.sh openlen:/tmp/
+ssh openlen "sudo install -m 755 /tmp/backup-system-to-r2.sh /opt/openlen-backup/backup-system-to-r2.sh"
+ssh openlen "command -v psql pg_dumpall"   # vienen con postgresql-client
+```
+
+Al restaurar: `roles.sql` primero, luego `pg_restore` de cada base. Las contraseñas no viajan: la de `authenticator`
+la repone `provisionDatabase` desde `openlen.env`, y la de cada rol de desarrollador está cifrada en
+`projectBackends.dbPasswordEncrypted` (base de la app).
+
+## 5. Comprobar
+
+```bash
+# La puerta de GoTrue de un proyecto que ya tenga backend (el ref sale del panel o de projectBackends):
+curl -s https://<ref>.openlen.app/auth/v1/health
+# → {"version":"openlen","name":"GoTrue",...}
+```
+
+- En el editor, una página con backend enseña el icono «Base de datos» en el rail (sólo si su base existe).
+- Len: pedirle algo que guarde datos («que las reseñas se queden») y ver que escribe la migración y la aplica con
+  `supabase db push`.
+
+## Lo que se sabe de antemano
+
+- `taller` y `marea` (de Jesús) llamaban a `/api/d/*`, retirado con `data-ol-stores`: Caddy les contestará con la
+  página estática. 0 filas en `pageData`.
+- La visita de Len (`usar_pagina`) usa la base REAL, como la vista previa de Lovable; puede entrar como un usuario que
+  ya existe (`sign_in_as`). Si Len rellena un registro, sale un correo de confirmación de verdad.
+- `lienzo-<id>.openlen.app` comparte sitio con las publicadas hasta que `openlen.app` esté en la Public Suffix List.
+
+## Marcha atrás
+
+El clúster puede quedarse: sin las variables, la app no lo toca. Volver al release anterior con el procedimiento de
+siempre (`DEPLOY_RUNBOOK.md`). Las bases `ol_*` que se hubieran creado siguen ahí, con sus datos.
