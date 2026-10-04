@@ -67,8 +67,24 @@ describe("Write", () => {
     const r = planearWrite({ file_path: "/styles.css", content: "x" }, sitio({ "/index.html": "x" }), new Map());
     expect(r).toMatchObject({
       ok: false,
-      resultado: { error: "Cannot create /styles.css: this site only has pages, at /index.html and /<slug>/index.html, and the data files of its declared stores, at /datos/<store>.json." },
+      resultado: { error: "Cannot create /styles.css: this site only has pages, at /index.html and /<slug>/index.html, and the data files of its declared stores, at /datos/<store>.json, and its Supabase files, under /supabase/." },
     });
+  });
+
+  // El backend del proyecto (plans/pages-backend/design.md): sus migraciones son
+  // ficheros como en cualquier proyecto con la CLI de Supabase.
+  it("🔴 una migración de Supabase sí se crea", () => {
+    const r = planearWrite(
+      { file_path: "/supabase/migrations/20261004120000_init.sql", content: "create table t (id int);" },
+      sitio({ "/index.html": "x" }),
+      new Map(),
+    );
+    expect(r).toMatchObject({ ok: true, ruta: "/supabase/migrations/20261004120000_init.sql", crea: true });
+  });
+
+  it("BRAZO DE CONTROL: fuera de /supabase/, un .sql no se crea", () => {
+    const r = planearWrite({ file_path: "/migrations/x.sql", content: "x" }, sitio({ "/index.html": "x" }), new Map());
+    expect(r.ok).toBe(false);
   });
 
   it("aquí sólo hay páginas: un fichero con otra forma no se puede crear, y se sugiere el que sí", () => {
@@ -77,7 +93,7 @@ describe("Write", () => {
       ok: false,
       resultado: {
         error:
-          "Cannot create /menu.html: this site only has pages, at /index.html and /<slug>/index.html, and the data files of its declared stores, at /datos/<store>.json. Did you mean /menu/index.html?",
+          "Cannot create /menu.html: this site only has pages, at /index.html and /<slug>/index.html, and the data files of its declared stores, at /datos/<store>.json, and its Supabase files, under /supabase/. Did you mean /menu/index.html?",
       },
     });
   });

@@ -57,6 +57,13 @@ export class TerminalDeLen {
         readonly rutas: () => Promise<readonly string[]>;
         readonly leer: (ruta: string) => Promise<string>;
       };
+      /** `supabase …` (plans/pages-backend/design.md): la CLI del backend del
+       *  proyecto, que corre aquí porque necesita la base. Sin él, la terminal
+       *  no tiene el comando. */
+      readonly supabase?: (
+        args: readonly string[],
+        ficheros: Readonly<Record<string, string>>,
+      ) => Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string> }>;
       readonly limiteMs?: number;
       readonly margenMs?: number;
     },
@@ -73,6 +80,10 @@ export class TerminalDeLen {
         void this.servirPerezoso(hilo, m.perezoso, String(m.ruta ?? ""));
         return;
       }
+      if (typeof m.supabase === "number") {
+        void this.servirSupabase(hilo, m.supabase, m.args as string[], m.ficheros as Record<string, string>);
+        return;
+      }
       const p = this.pendientes.get(m.id);
       if (!p) return;
       this.pendientes.delete(m.id);
@@ -86,7 +97,20 @@ export class TerminalDeLen {
     });
     this.hilo = hilo;
     const [ficheros, perezosos] = await Promise.all([this.o.cargarFicheros(), this.o.perezosos?.rutas() ?? []]);
-    await this.pedir({ tipo: "iniciar", ficheros, perezosos, limiteMs: this.limite });
+    await this.pedir({ tipo: "iniciar", ficheros, perezosos, supabase: Boolean(this.o.supabase), limiteMs: this.limite });
+  }
+
+  /** `supabase …`: se corre aquí y se le devuelve la salida al hilo. Si el hilo
+   *  ya se cortó (el comando pasó del tope), la respuesta no va a ningún sitio. */
+  private async servirSupabase(hilo: Worker, pid: number, args: string[], ficheros: Record<string, string>): Promise<void> {
+    let respuesta: Record<string, unknown>;
+    try {
+      if (!this.o.supabase) throw new Error("this project has no backend here");
+      respuesta = { tipo: "supabase", pid, resultado: await this.o.supabase(args, ficheros) };
+    } catch (e) {
+      respuesta = { tipo: "supabase", pid, error: e instanceof Error ? e.message : String(e) };
+    }
+    if (this.hilo === hilo) hilo.postMessage(respuesta);
   }
 
   /** Un fichero de sólo lectura que el hilo necesita: se calcula aquí y se le devuelve. */

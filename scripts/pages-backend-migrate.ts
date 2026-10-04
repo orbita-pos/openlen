@@ -1,5 +1,6 @@
 // El backend de las páginas (plans/pages-backend/design.md): la tabla de los
-// proyectos que usan la API de Supabase sobre su propia base. Tabla NUEVA con
+// proyectos que usan la API de Supabase sobre su propia base, y los ficheros
+// del proyecto que no son páginas (sus migraciones). Tablas NUEVAS con
 // IF NOT EXISTS: idempotente. Mantener en sintonía con lib/db/schema.ts
 // (`projectBackends`).
 //
@@ -27,7 +28,16 @@ async function main() {
       "createdAt" timestamp NOT NULL DEFAULT now()
     );
   `);
-  console.log("[pages-backend:migrate] projectBackends listo");
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "projectFiles" (
+      "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+      "path" text NOT NULL,
+      "content" text NOT NULL,
+      "updatedAt" timestamp NOT NULL DEFAULT now(),
+      PRIMARY KEY ("projectId", "path")
+    );
+  `);
+  console.log("[pages-backend:migrate] projectBackends y projectFiles listos");
   process.exit(0);
 }
 

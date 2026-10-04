@@ -49,6 +49,11 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
       rutas: async () => (await (soloLectura = soloLecturaDeLaTerminal(session, deps))).rutas,
       leer: async (ruta) => (await (soloLectura ??= soloLecturaDeLaTerminal(session, deps))).leer(ruta),
     },
+    // `supabase …`: lo que crea (una migración nueva) vuelve como cualquier otro
+    // fichero cambiado y se guarda abajo, por el camino de Write.
+    ...(deps.supabaseCli
+      ? { supabase: (args: readonly string[], ficheros: Readonly<Record<string, string>>) => deps.supabaseCli!(session.projectId, args, ficheros) }
+      : {}),
   }));
   // Lo que otra herramienta guardó desde el último comando (Edit, Write, revertir…) entra antes de
   // correr éste. Sin esto la terminal enseñaba la página de antes, y como lo suyo se guarda ENTERO,

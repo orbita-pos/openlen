@@ -45,6 +45,7 @@ import {
 import type { AlmacenDeclarado } from "@/lib/page-data/declaracion";
 import { AVISO_VISITANTES, llevaTextoDeVisitantes } from "@/lib/page-data/vista-del-agente";
 import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO, alcanceDeRuta, lineasNuevas } from "@/lib/agent/ficheros/memoria";
+import { esFicheroDeSupabase, motivoParaNoGuardar } from "@/lib/agent/ficheros/supabase";
 import { esDeLaPlataforma, MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
 import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/terminal/ajustes";
@@ -106,11 +107,14 @@ async function almacenesDe(session: AgentSession, deps: AgentDeps): Promise<Alma
   return out;
 }
 
-/** Los ficheros que no son páginas (H3): los almacenes y la memoria. */
+/** Los ficheros que no son páginas (H3): los almacenes y la memoria; y los de
+ *  `/supabase/`, las migraciones del backend del proyecto. */
 interface Virtuales {
   readonly almacenes: Almacenes;
   /** `/memoria/dueno.md` y `/memoria/proyecto.md`, con su texto. */
   readonly memoria: ReadonlyMap<string, string>;
+  /** `/supabase/...` → contenido (plans/pages-backend/design.md). */
+  readonly supabase: ReadonlyMap<string, string>;
 }
 
 async function virtualesDe(session: AgentSession, deps: AgentDeps, userBrief: string | null): Promise<Virtuales> {
@@ -121,16 +125,24 @@ async function virtualesDe(session: AgentSession, deps: AgentDeps, userBrief: st
     // eslint-disable-next-line no-console
     console.warn("[agente] no se pudo leer la memoria del dueño", err);
   }
+  let supabase: Record<string, string> = {};
+  try {
+    supabase = (await deps.ficherosDeSupabase?.(session.projectId)) ?? {};
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[agente] no se pudieron leer los ficheros de /supabase", err);
+  }
   return {
     almacenes: await almacenesDe(session, deps),
     memoria: new Map([
       [RUTA_MEMORIA_DUENO, dueno],
       [RUTA_MEMORIA_PROYECTO, userBrief ?? ""],
     ]),
+    supabase: new Map(Object.entries(supabase).filter(([ruta]) => esFicheroDeSupabase(ruta))),
   };
 }
 
-const SIN_VIRTUALES: Virtuales = { almacenes: new Map(), memoria: new Map() };
+const SIN_VIRTUALES: Virtuales = { almacenes: new Map(), memoria: new Map(), supabase: new Map() };
 
 /** Todas las páginas, los almacenes y la memoria del sitio, en un solo texto. */
 function textoDelSitio(data: ProjectData, v: Virtuales): string {
@@ -149,10 +161,12 @@ function sitioDe(data: ProjectData, session: AgentSession, v: Virtuales = SIN_VI
       if (datos) return datos.texto;
       const memoria = v.memoria.get(ruta);
       if (memoria !== undefined) return memoria;
+      const supabase = v.supabase.get(ruta);
+      if (supabase !== undefined) return supabase;
       const html = leerFichero(data, ruta);
       return html === null ? null : sinOpIds(html);
     },
-    ficheros: [...ficherosDelSitio(data), ...v.almacenes.keys(), ...v.memoria.keys()],
+    ficheros: [...ficherosDelSitio(data), ...v.almacenes.keys(), ...v.memoria.keys(), ...v.supabase.keys()],
     recientes: session.escritos ?? [],
   };
 }
@@ -304,6 +318,9 @@ async function aplicarPlan(
   if (alcanceDeRuta(plan.ruta) !== null) {
     return await guardarMemoria(session, deps, v.memoria, plan, herramienta, detalle);
   }
+  if (esFicheroDeSupabase(plan.ruta)) {
+    return await guardarSupabase(session, deps, v.supabase, plan, herramienta, detalle);
+  }
   const etiqueta = `${herramienta} ${detalle}`;
   // El sitio de ANTES de la primera escritura del turno: lo que ya decía en
   // cualquier página es de su usuario, y los avisos de procedencia lo cuentan.
@@ -345,6 +362,33 @@ async function aplicarPlan(
       }),
     ),
     ...(guardado.versionPrevia ? { versionPrevia: guardado.versionPrevia } : {}),
+  };
+}
+
+/**
+ * GUARDAR UN FICHERO DE /supabase/ (plans/pages-backend/design.md): las
+ * migraciones del backend. Se guardan tal cual —no son páginas, no hay puerta
+ * de página— en `projectFiles`; se aplican a la base con `supabase db push`.
+ */
+async function guardarSupabase(
+  session: AgentSession,
+  deps: AgentDeps,
+  supabase: ReadonlyMap<string, string>,
+  plan: Extract<PlanDeEdit, { ok: true }>,
+  herramienta: "Edit" | "Write" | "bash",
+  detalle: string,
+): Promise<ToolOutcome> {
+  if (!deps.guardarFicheroDeSupabase) return { response: respuesta(fallo(`${plan.ruta}: this project cannot save Supabase files here.`)) };
+  const motivo = motivoParaNoGuardar(plan.ruta, plan.contenido, supabase.size, plan.crea);
+  if (motivo) return { response: respuesta(fallo(`Cannot save ${motivo}`)) };
+  const previo = supabase.get(plan.ruta);
+  await deps.guardarFicheroDeSupabase(session.projectId, plan.ruta, plan.contenido);
+  leidosDe(session).set(plan.ruta, { instantanea: normalizarFinales(plan.contenido), offset: undefined, limit: undefined });
+  session.escritos = [plan.ruta, ...(session.escritos ?? []).filter((x) => x !== plan.ruta)];
+  const cambio = previo === plan.contenido ? "sin_cambio" : "cambio";
+  return {
+    response: respuesta({ ok: true, texto: plan.respuesta({ guardadoIgual: true }) }, { cambio }),
+    action: { tool: herramienta, ok: true, summary: detalle, cambio },
   };
 }
 
@@ -441,6 +485,7 @@ export async function cargarFicherosDeLaTerminal(session: AgentSession, deps: Ag
   for (const ruta of ficherosDelSitio(row.data)) ficheros[ruta] = sinOpIds(leerFichero(row.data, ruta) ?? "");
   for (const [ruta, a] of v.almacenes) ficheros[ruta] = a.texto;
   for (const [ruta, texto] of v.memoria) ficheros[ruta] = texto;
+  for (const [ruta, texto] of v.supabase) ficheros[ruta] = texto;
   // En Len Dynamis, el que no nombra Read, Edit ni Write (`lib/agent/dynamis.ts`).
   ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma(process.env, session.mode);
   // F4 · /.openlen/docs NO va aquí: es de la carpeta oculta de sólo lectura, y

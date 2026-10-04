@@ -121,6 +121,6 @@ ${gotrueMigrationSql(m.sql, dev)}
       name text
     );
     grant usage on schema supabase_migrations to ${dev};
-    grant select on supabase_migrations.schema_migrations to ${dev};
+    grant select, insert on supabase_migrations.schema_migrations to ${dev};
   `);
 }

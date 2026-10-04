@@ -10,6 +10,7 @@
  * en Claude Code no hay «copiar el esqueleto de la home», se lee `index.html` y
  * se escribe (decisión B7). Como `planearEdit`, esto no guarda nada.
  */
+import { esFicheroDeSupabase } from "./supabase";
 import { almacenDeRuta, noDeclarado } from "./datos";
 import { paginaDeRuta, resolverRuta } from "./sitio";
 import { normalizarFinales, type Leidos, type SitioLegible } from "./read";
@@ -70,12 +71,12 @@ export function planearWrite(entrada: EntradaWrite, sitio: SitioLegible, leidos:
     // hay dónde guardar otra cosa: se dice, y se sugiere la ruta que sí es.
     const almacen = almacenDeRuta(ruta);
     if (almacen !== null) return { ok: false, resultado: fallo(noDeclarado(almacen)) };
-    if (!paginaDeRuta(ruta)) {
+    if (!paginaDeRuta(ruta) && !esFicheroDeSupabase(ruta)) {
       const parecida = paginaQueQuisoCrear(ruta);
       return {
         ok: false,
         resultado: fallo(
-          `Cannot create ${ruta}: this site only has pages, at /index.html and /<slug>/index.html, and the data files of its declared stores, at /datos/<store>.json.${parecida ? ` Did you mean ${parecida}?` : ""}`,
+          `Cannot create ${ruta}: this site only has pages, at /index.html and /<slug>/index.html, and the data files of its declared stores, at /datos/<store>.json, and its Supabase files, under /supabase/.${parecida ? ` Did you mean ${parecida}?` : ""}`,
         ),
       };
     }

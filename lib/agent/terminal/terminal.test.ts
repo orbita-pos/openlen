@@ -287,4 +287,62 @@ describe("TerminalDeLen", () => {
       expect(hilo).toContain(`const SOLO_LECTURA = ${DE_SOLO_LECTURA.toString()};`);
     });
   });
+
+  // plans/pages-backend/design.md: `supabase …` lo corre el hilo de la app (con
+  // la base); el hilo de la terminal le pasa los argumentos y los ficheros de
+  // `/supabase/` como están en la terminal, y escribe los que la CLI crea.
+  describe("supabase, la CLI del backend del proyecto", () => {
+    function conSupabase(responder?: (args: readonly string[], ficheros: Readonly<Record<string, string>>) => Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string> }>) {
+      const llamadas: { args: readonly string[]; ficheros: Readonly<Record<string, string>> }[] = [];
+      const { t } = terminal({
+        supabase: async (args, ficheros) => {
+          llamadas.push({ args, ficheros });
+          return responder ? responder(args, ficheros) : { stdout: "ok\n", stderr: "", exitCode: 0 };
+        },
+      });
+      return { t, llamadas };
+    }
+
+    it("🔴 migration new: el fichero que crea la CLI aparece en la terminal y vuelve en `ficheros`", async () => {
+      const { t, llamadas } = conSupabase(async () => ({
+        stdout: "Created new migration at supabase/migrations/20261004120000_notes.sql\n",
+        stderr: "",
+        exitCode: 0,
+        escribir: { "/supabase/migrations/20261004120000_notes.sql": "" },
+      }));
+      const r = await t.ejecutar("supabase migration new notes");
+      expect(r.exitCode, r.stderr).toBe(0);
+      expect(r.stdout).toBe("Created new migration at supabase/migrations/20261004120000_notes.sql\n");
+      expect(llamadas[0]!.args).toEqual(["migration", "new", "notes"]);
+      expect(r.ficheros?.["/supabase/migrations/20261004120000_notes.sql"]).toBe("");
+      expect((await t.ejecutar("ls /supabase/migrations")).stdout).toBe("20261004120000_notes.sql\n");
+    }, 20_000);
+
+    it("🔴 db push recibe lo escrito en el MISMO comando, sólo lo de /supabase/, y su código de salida manda", async () => {
+      const { t, llamadas } = conSupabase(async () => ({ stdout: "Connecting to remote database...\n", stderr: "ERROR: boom\n", exitCode: 1 }));
+      const r = await t.ejecutar(
+        "mkdir -p /supabase/migrations && echo 'create table a (id int);' > /supabase/migrations/20261004120000_a.sql && supabase db push --dry-run; echo rc=$?",
+      );
+      expect(llamadas[0]!.args).toEqual(["db", "push", "--dry-run"]);
+      expect(llamadas[0]!.ficheros).toEqual({ "/supabase/migrations/20261004120000_a.sql": "create table a (id int);\n" });
+      expect(r.stdout).toBe("Connecting to remote database...\nrc=1\n");
+      expect(r.stderr).toBe("ERROR: boom\n");
+    }, 20_000);
+
+    it("si el hilo de la app falla, el comando falla y lo dice; la terminal sigue", async () => {
+      const { t } = conSupabase(async () => {
+        throw new Error("la base no contesta");
+      });
+      const r = await t.ejecutar("supabase status");
+      expect(r.exitCode).toBe(1);
+      expect(r.stderr).toBe("supabase: la base no contesta\n");
+      expect((await t.ejecutar("echo sigue")).stdout).toBe("sigue\n");
+    }, 20_000);
+
+    it("BRAZO DE CONTROL: sin backend no hay comando (no se finge)", async () => {
+      const { t } = terminal();
+      const r = await t.ejecutar("supabase status");
+      expect(r.exitCode).toBe(127);
+    }, 20_000);
+  });
 });

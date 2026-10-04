@@ -923,6 +923,23 @@ export const projectBackends = pgTable("projectBackends", {
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
 
+// Los ficheros del proyecto que no son páginas: las migraciones de su backend
+// (`/supabase/migrations/*.sql`, plans/pages-backend/design.md), que Len
+// escribe con Write o con `supabase migration new` y aplica con
+// `supabase db push`. Sólo bajo `/supabase/` (lib/agent/ficheros/supabase.ts).
+export const projectFiles = pgTable(
+  "projectFiles",
+  {
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    path: text("path").notNull(),
+    content: text("content").notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.path] })],
+);
+
 export const memberLoginTokens = pgTable("memberLoginTokens", {
   tokenHash: text("tokenHash").primaryKey(),
   projectId: text("projectId")

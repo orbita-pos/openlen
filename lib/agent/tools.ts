@@ -98,6 +98,19 @@ export type FetchedImage =
   | { ok: false; error: string };
 
 export interface AgentDeps {
+  /** El backend del proyecto (plans/pages-backend/design.md): sus ficheros de
+   *  `/supabase/` (las migraciones), por ruta. Opcional: sin él no hay. */
+  ficherosDeSupabase?(projectId: string): Promise<Record<string, string>>;
+  /** Guardar uno de esos ficheros. */
+  guardarFicheroDeSupabase?(projectId: string, ruta: string, contenido: string): Promise<void>;
+  /** `supabase …` en la terminal de Len: la CLI de Supabase contra el backend
+   *  del proyecto (`lib/backend/cli.ts`). `ficheros`: los de `/supabase/` tal
+   *  como están en la terminal; `escribir`: los que crea (`migration new`). */
+  supabaseCli?(
+    projectId: string,
+    args: readonly string[],
+    ficheros: Readonly<Record<string, string>>,
+  ): Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string> }>;
   /** H3 — los almacenes que declara el BORRADOR, con sus filas y quién las
    *  escribió. Opcional: sin él no hay ficheros en /datos. */
   almacenesDelProyecto?(projectId: string): Promise<
@@ -336,6 +349,19 @@ export function realDeps(
     // F2 · la web: la de prueba en Len-Bench, Exa y `fetchRaw` fuera de él.
     // Lo buscado de verdad se cobra aparte del turno, como editar una imagen.
     web: webDelServidor(debit),
+    // El backend del proyecto (lib/backend): import perezoso, es server-only.
+    async ficherosDeSupabase(projectId) {
+      const { listProjectFiles } = await import("@/lib/backend/files");
+      return listProjectFiles(projectId, "/supabase/");
+    },
+    async guardarFicheroDeSupabase(projectId, ruta, contenido) {
+      const { saveProjectFile } = await import("@/lib/backend/files");
+      await saveProjectFile(projectId, ruta, contenido);
+    },
+    async supabaseCli(projectId, args, ficheros) {
+      const { runSupabaseCli } = await import("@/lib/backend/cli");
+      return runSupabaseCli(projectId, args, ficheros);
+    },
     // H3 — import perezoso por lo mismo que en los tools de almacén:
     // `lib/page-data/agente.ts` es server-only.
     async almacenesDelProyecto(projectId) {

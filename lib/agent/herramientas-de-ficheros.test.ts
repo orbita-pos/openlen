@@ -17,6 +17,7 @@ import { cerrarTerminalDeLaSesion } from "./terminal/herramienta";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "./terminal/cambios-del-comando";
 import { cerrarLasTerminalesDelUsuario, ejecutarEnLaTerminalDelUsuario } from "./terminal/terminal-del-usuario";
 import { guardarAMano } from "./terminal/editar-a-mano";
+import { runCli } from "@/lib/backend/cli-core";
 
 const HOME = `<!doctype html>
 <html lang="es">
@@ -1403,5 +1404,128 @@ describe("editar a mano en la lente «Código» (la #18 de plans/len-agente-2026
   it("un fichero que no existe no se crea desde aquí", async () => {
     const { deps } = makeDepsCompletos({ html: HOME });
     assert.deepEqual(await guardarAMano("p-editor", "u1", "/nuevo/index.html", "<p>x</p>", "", deps), { ok: false, motivo: "no_existe" });
+  });
+});
+
+// EL BACKEND DEL PROYECTO (plans/pages-backend/design.md): sus migraciones son
+// ficheros de /supabase/, como en cualquier proyecto con la CLI de Supabase.
+// No son páginas: no pasan por la puerta de la página ni tocan el sitio.
+describe("el backend: los ficheros de /supabase/", () => {
+  const MIG = "/supabase/migrations/20261004120000_init.sql";
+  const conTerminal = async <T>(f: () => Promise<T>): Promise<T> => {
+    const antes = process.env.OPENLEN_TERMINAL;
+    process.env.OPENLEN_TERMINAL = "1";
+    try {
+      return await f();
+    } finally {
+      if (antes === undefined) delete process.env.OPENLEN_TERMINAL;
+      else process.env.OPENLEN_TERMINAL = antes;
+    }
+  };
+
+  function conSupabase(data: ProjectData) {
+    const base = makeDeps(data);
+    const archivos: Record<string, string> = {};
+    const deps = {
+      ...base.deps,
+      async ficherosDeSupabase() {
+        return { ...archivos };
+      },
+      async guardarFicheroDeSupabase(_p: string, ruta: string, contenido: string) {
+        archivos[ruta] = contenido;
+      },
+    } as unknown as AgentDeps;
+    return { deps, archivos, store: base.store };
+  }
+
+  it("🔴 Write crea la migración (sin tocar el sitio) y Read la abre", async () => {
+    const { deps, archivos, store } = conSupabase({ html: HOME });
+    const s = makeSession();
+    const w = await runAgentTool(s, deps, "Write", { file_path: MIG, content: "create table notas (id int);\n" });
+    assert.equal(w.response.ok, true, texto(w));
+    assert.deepEqual(archivos, { [MIG]: "create table notas (id int);\n" });
+    assert.equal(store.saved, 0);
+    const r = await runAgentTool(s, deps, "Read", { file_path: MIG });
+    assert.match(texto(r), /create table notas/);
+  });
+
+  it("Edit después de Read la cambia", async () => {
+    const { deps, archivos } = conSupabase({ html: HOME });
+    archivos[MIG] = "create table notas (id int);\n";
+    const s = makeSession();
+    await runAgentTool(s, deps, "Read", { file_path: MIG });
+    const e = await runAgentTool(s, deps, "Edit", { file_path: MIG, old_string: "(id int)", new_string: "(id int primary key)" });
+    assert.equal(e.response.ok, true, texto(e));
+    assert.equal(archivos[MIG], "create table notas (id int primary key);\n");
+  });
+
+  it("Glob y Grep la ven", async () => {
+    const { deps, archivos } = conSupabase({ html: HOME });
+    archivos[MIG] = "create table notas (id int);\n";
+    assert.equal(texto(await runAgentTool(makeSession(), deps, "Glob", { pattern: "supabase/**/*.sql" })), "supabase/migrations/20261004120000_init.sql");
+    assert.match(texto(await runAgentTool(makeSession(), deps, "Grep", { pattern: "create table", output_mode: "files_with_matches" })), /supabase\/migrations/);
+  });
+
+  it("🔴 la terminal la ve, y lo que escribe ahí se guarda por el mismo camino", async () => {
+    const { deps, archivos } = conSupabase({ html: HOME });
+    archivos[MIG] = "create table notas (id int);\n";
+    const s = makeSession();
+    const ficheros = await cargarFicherosDeLaTerminal(s, deps);
+    assert.equal(ficheros[MIG], "create table notas (id int);\n");
+    const nueva = "/supabase/migrations/20261004130000_mas.sql";
+    const g = await guardarLoDeLaTerminal(s, deps, [{ tipo: "escrito", ruta: nueva, contenido: "alter table notas add column t text;\n", crea: true }], ficheros);
+    assert.equal(g.rechazado, false, g.notas.join("\n"));
+    assert.equal(archivos[nueva], "alter table notas add column t text;\n");
+  });
+
+  it("BRAZO DE CONTROL: un fichero de más de 256 KB no se guarda", async () => {
+    const { deps, archivos } = conSupabase({ html: HOME });
+    const w = await runAgentTool(makeSession(), deps, "Write", { file_path: MIG, content: "x".repeat(256 * 1024 + 1) });
+    assert.equal(w.response.ok, false);
+    assert.deepEqual(archivos, {});
+  });
+
+  // La CLI de verdad (`runCli`) detrás de `bash`, con una base de mentira: lo
+  // que se prueba aquí es el camino de la terminal; la CLI contra Postgres la
+  // prueba lib/backend/cli-core.test.ts.
+  it("🔴 bash: `supabase migration new` guarda la migración, y `supabase db push` aplica lo escrito en la terminal", async () => {
+    const { deps: base, archivos, store } = conSupabase({ html: HOME });
+    const aplicadas: { version: string; name: string; statements: string[] }[] = [];
+    const deps = {
+      ...base,
+      supabaseCli: (_p: string, args: readonly string[], ficheros: Readonly<Record<string, string>>) =>
+        runCli(
+          args,
+          ficheros,
+          {
+            status: async () => ({ apiUrl: "https://abcdefghijklmnopqrst.openlen.app", publishableKey: "sb_publishable_x" }),
+            remoteMigrations: async () => aplicadas.map((m) => ({ version: m.version, name: m.name })),
+            applyMigration: async (m) => {
+              aplicadas.push(m);
+              return { ok: true };
+            },
+          },
+          new Date(Date.UTC(2026, 9, 4, 12, 0, 0)),
+        ),
+    } as AgentDeps;
+    const session = makeSession();
+    const NUEVA = "/supabase/migrations/20261004120000_notes.sql";
+    try {
+      const nueva = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "supabase migration new notes" }));
+      assert.equal(nueva.response.ok, true, texto(nueva));
+      assert.match(texto(nueva), /Created new migration at supabase\/migrations\/20261004120000_notes\.sql/);
+      assert.equal(archivos[NUEVA], "");
+
+      const push = await conTerminal(() =>
+        runAgentTool(session, deps, "bash", { command: `printf 'create table notes (id int);\\n' > ${NUEVA} && supabase db push` }),
+      );
+      assert.equal(push.response.ok, true, texto(push));
+      assert.match(texto(push), /Applying migration 20261004120000_notes\.sql\.\.\.\nFinished supabase db push\./);
+      assert.deepEqual(aplicadas, [{ version: "20261004120000", name: "notes", statements: ["create table notes (id int)"] }]);
+      assert.equal(archivos[NUEVA], "create table notes (id int);\n");
+      assert.equal(store.saved, 0);
+    } finally {
+      await cerrarTerminalDeLaSesion(session);
+    }
   });
 });
