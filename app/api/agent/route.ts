@@ -867,7 +867,10 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
                 toolResults: diario.entradas(),
                 corte,
               }),
-              centicredits: cobrado,
+              // `undefined` y no `null`: el tipo de la fila (`StoredChatTurn`) no
+              // admite `null` y cruzado con el de la función gana él. Se guarda
+              // igual: `enteroONulo` los deja los dos en NULL.
+              centicredits: cobrado ?? undefined,
               durationMs: Date.now() - empezo,
               // H4 · lo que vio el modelo; de aquí sale el historial del turno siguiente.
               transcript: transcripcionDelTurno
