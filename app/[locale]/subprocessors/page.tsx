@@ -33,7 +33,7 @@ export default async function SubprocessorsPage({
   return (
     <LegalPage
       title={es ? "Subprocesadores" : "Subprocessors"}
-      updated={es ? "Última actualización: 2 de octubre de 2026" : "Last updated: October 2, 2026"}
+      updated={es ? "Última actualización: 4 de octubre de 2026" : "Last updated: October 4, 2026"}
     >
       {es ? (
         <>
@@ -75,10 +75,12 @@ export default async function SubprocessorsPage({
             </li>
             <li>
               <strong>Hetzner</strong> — servidor de la aplicación donde se
-              ejecuta OpenLen y donde vive su base de datos Postgres. Datos:
-              cuenta, contenido de proyectos, registros de envíos de formularios,
-              analítica, y todos los datos en tránsito y en procesamiento del
-              servicio. Región: Alemania.
+              ejecuta OpenLen y donde viven sus bases de datos Postgres, la suya y
+              las de las páginas que tienen una. Datos: cuenta, contenido de
+              proyectos, envíos de formularios, mensajes del chat de las páginas,
+              datos y cuentas de las bases de datos de las páginas, analítica, y
+              todos los datos en tránsito y en procesamiento del servicio. Región:
+              Estados Unidos (Ashburn, Virginia).
             </li>
           </ul>
 
@@ -104,8 +106,9 @@ export default async function SubprocessorsPage({
               del brief del usuario, el HTML de la página, capturas e imágenes
               de referencia y, cuando el usuario le pide a Len revisarlos, los
               mensajes del chat y los envíos de formularios de su página (sin la
-              IP ni el navegador del visitante). Fireworks no guarda lo que
-              recibe con modelos abiertos. Región: Estados Unidos.
+              IP ni el navegador del visitante). También las preguntas que los
+              visitantes le hacen al asistente de una página. Fireworks no guarda
+              lo que recibe con modelos abiertos. Región: Estados Unidos.
             </li>
             <li>
               <strong>OpenAI</strong> (api.openai.com) — edición de imágenes con
@@ -127,9 +130,10 @@ export default async function SubprocessorsPage({
           <ul>
             <li>
               <strong>Resend</strong> — envío de correo transaccional y de avisos
-              de leads. Datos: direcciones de correo de destinatarios y el
-              contenido de los avisos (por ejemplo, envíos de formularios).
-              Región: Estados Unidos.
+              de leads, y de los correos de confirmación y recuperación de las
+              cuentas de las páginas. Datos: direcciones de correo de
+              destinatarios y el contenido de los avisos (por ejemplo, envíos de
+              formularios). Región: Estados Unidos.
             </li>
           </ul>
 
@@ -221,9 +225,11 @@ export default async function SubprocessorsPage({
             </li>
             <li>
               <strong>Hetzner</strong> — the application server that runs OpenLen
-              and hosts its Postgres database. Data: account data, project
-              content, form-submission records, analytics, and all service data in
-              transit and in processing. Region: Germany.
+              and hosts its Postgres databases: OpenLen&apos;s own and those of
+              the pages that have one. Data: account data, project content, form
+              submissions, page chat messages, page database data and accounts,
+              analytics, and all service data in transit and in processing.
+              Region: United States (Ashburn, Virginia).
             </li>
           </ul>
 
@@ -248,8 +254,9 @@ export default async function SubprocessorsPage({
               brief text, page HTML, reference screenshots and images and, when
               the user asks Len to review them, the chat messages and form
               submissions of their page (without the visitor&apos;s IP or
-              browser). Fireworks does not store what it receives for open
-              models. Region: United States.
+              browser). Also the questions visitors ask a page&apos;s assistant.
+              Fireworks does not store what it receives for open models. Region:
+              United States.
             </li>
             <li>
               <strong>OpenAI</strong> (api.openai.com) — AI image editing. Data:
@@ -270,9 +277,10 @@ export default async function SubprocessorsPage({
           <h2>Email</h2>
           <ul>
             <li>
-              <strong>Resend</strong> — transactional and lead-notification email.
-              Data: recipient email addresses and notification content (for
-              example, form submissions). Region: United States.
+              <strong>Resend</strong> — transactional and lead-notification email,
+              and the confirmation and recovery emails of page accounts. Data:
+              recipient email addresses and notification content (for example,
+              form submissions). Region: United States.
             </li>
           </ul>
 

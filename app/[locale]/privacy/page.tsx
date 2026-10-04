@@ -33,7 +33,7 @@ export default async function PrivacyPage({
   return (
     <LegalPage
       title={es ? "Aviso de privacidad" : "Privacy Policy"}
-      updated={es ? "Última actualización: 2 de octubre de 2026" : "Last updated: October 2, 2026"}
+      updated={es ? "Última actualización: 4 de octubre de 2026" : "Last updated: October 4, 2026"}
     >
       {es ? (
         <>
@@ -109,18 +109,29 @@ export default async function PrivacyPage({
               dirección IP y el User-Agent del visitante, conservados brevemente
               para protección frente a spam y abuso, además del referente y el
               país, dispositivo y navegador derivados). Ver el apartado «Datos de
-              formularios».
+              visitantes».
             </li>
             <li>
-              <strong>Módulos interactivos en páginas publicadas</strong> — si un
-              usuario activa los módulos de Miembros, Comentarios o Reservas,
-              guardamos los datos que el visitante proporciona a ese módulo (por
-              ejemplo, su correo para el acceso por enlace mágico; su nombre,
-              comentario o, en una reserva, su nombre, correo, nota y la fecha y
-              hora elegidas), junto con la dirección IP conservada brevemente para
-              limitar el abuso. Se aplica la misma relación responsable/encargado
-              del apartado «Datos de formularios»: el usuario que publica la página
-              es el responsable de esos datos.
+              <strong>Chat de las páginas publicadas</strong> — si el dueño de una
+              página activa el chat, guardamos lo que el visitante da para abrir
+              una conversación (un nombre de usuario y, si quiere, un nombre
+              visible, un correo y una contraseña protegida mediante hash) y los
+              mensajes que intercambia con el dueño o su equipo, que llegan a la
+              Bandeja del dueño. Si la página tiene además el asistente, las
+              preguntas del visitante se envían a nuestro proveedor de IA para
+              contestarlas con el contenido de la página, y no las guardamos. Ver
+              el apartado «Datos de visitantes».
+            </li>
+            <li>
+              <strong>Bases de datos y cuentas de las páginas publicadas</strong> —
+              si el dueño de una página le activa una base de datos, guardamos en
+              nuestros servidores lo que su página guarde en ella, en las tablas y
+              con las reglas de acceso que el dueño define. Si la página tiene
+              cuentas de usuario, guardamos el correo de cada visitante que se
+              registra, su contraseña protegida mediante hash (bcrypt), los datos
+              que la página añada a su perfil y, por cada sesión, el navegador
+              (User-Agent) y la dirección IP. Ver el apartado «Datos de
+              visitantes».
             </li>
             <li>
               <strong>Analítica de páginas publicadas</strong> — analítica
@@ -135,6 +146,13 @@ export default async function PrivacyPage({
               motivo. Nunca guardamos lo que escribes. Si tu navegador envía «No
               rastrear» o Global Privacy Control, no registramos nada. Estos
               registros se borran a los 90 días.
+            </li>
+            <li>
+              <strong>Notificaciones</strong> — si activas las notificaciones en
+              tu navegador, guardamos la suscripción push que él crea (una
+              dirección de su servicio de notificaciones y sus claves) y el
+              navegador desde el que la activaste, para avisarte de mensajes y
+              formularios nuevos. Se borra al desactivarlas o al borrar tu cuenta.
             </li>
           </ul>
           <p>
@@ -161,7 +179,9 @@ export default async function PrivacyPage({
             <li>Medir y aplicar tu saldo de créditos de IA y tu plan.</li>
             <li>
               Enviar correos transaccionales (verificación, restablecimiento de
-              contraseña, avisos de clientes potenciales de tus formularios).
+              contraseña, avisos de clientes potenciales de tus formularios) y,
+              por cuenta del dueño de una página, los de confirmación y
+              recuperación de las cuentas de su página.
             </li>
             <li>
               Procesar el pago de tu suscripción a través de Polar y conservar el
@@ -184,7 +204,9 @@ export default async function PrivacyPage({
             que los utiliza únicamente para producir el resultado solicitado conforme
             a sus términos de API. Si editas una imagen con IA, esa imagen y tu
             instrucción se envían a <strong>OpenAI</strong> con la misma finalidad.
-            No tomamos ninguna decisión automatizada con efectos jurídicos sobre ti.
+            Si hablas con Len por voz desde la app, el audio también va a OpenAI,
+            para la llamada o para transcribir la nota; no guardamos el audio. No
+            tomamos ninguna decisión automatizada con efectos jurídicos sobre ti.
           </p>
           <p>
             <strong>Len y tus resultados.</strong> Si le pides a Len que revise tus
@@ -213,36 +235,24 @@ export default async function PrivacyPage({
             conteos agregados.
           </p>
 
-          <h2>Datos de formularios en páginas publicadas (responsable y encargado)</h2>
+          <h2>Datos de visitantes en páginas publicadas (responsable y encargado)</h2>
           <p>
-            Cuando un visitante envía un formulario en la página publicada de un
-            usuario, el <strong>dueño de la página es el responsable</strong> de
-            esos datos personales y <strong>OpenLen actúa como encargado</strong>,
-            tratándolos por cuenta del dueño. Esta relación se rige por un acuerdo
-            de tratamiento de datos (encargado conforme a la LFPDPPP / art. 28 del
+            Cuando un visitante envía un formulario, escribe en el chat o crea una
+            cuenta en la página publicada de un usuario, o cuando esa página
+            guarda datos en su base de datos, el{" "}
+            <strong>dueño de la página es el responsable</strong> de esos datos
+            personales y <strong>OpenLen actúa como encargado</strong>,
+            tratándolos por cuenta del dueño. Eso incluye los correos de
+            confirmación y de recuperación de las cuentas de la página, que
+            enviamos en su nombre. Esta relación se rige por un acuerdo de
+            tratamiento de datos (encargado conforme a la LFPDPPP / art. 28 del
             RGPD) disponible a solicitud en{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>. Los dueños de
             páginas deben contar con su propia base legal y su propio aviso de
-            privacidad, y atender los derechos de sus visitantes. Si eres visitante
-            y deseas ejercer derechos sobre datos que enviaste en un formulario,
-            contacta al dueño de esa página.
-          </p>
-
-          <h2>Membresías y correos a miembros (Broadcast)</h2>
-          <p>
-            Si el dueño de una página activa <strong>Miembros</strong>, los
-            visitantes pueden registrarse con su correo (acceso sin contraseña
-            por enlace mágico). Si además activa <strong>Broadcast</strong>, el
-            dueño puede enviar correos a sus miembros; OpenLen los entrega{" "}
-            <strong>por cuenta del dueño</strong> (encargado) usando nuestra
-            infraestructura de envío, y aparece como remitente del dominio
-            compartido. Cada correo incluye, por ley, la identidad del
-            remitente, una dirección postal y un{" "}
-            <strong>enlace de baja</strong> de un clic; las bajas se respetan de
-            inmediato y no vuelven a recibir campañas. OpenLen{" "}
-            <strong>no</strong> usa los correos de los miembros para sus propios
-            fines de marketing ni los comparte con terceros distintos de
-            nuestro proveedor de envío.
+            privacidad, y atender los derechos de sus visitantes. OpenLen{" "}
+            <strong>no</strong> usa los datos de los visitantes para sus propios
+            fines. Si eres visitante y deseas ejercer derechos sobre datos que
+            diste en una página, contacta al dueño de esa página.
           </p>
 
           <h2>Cookies</h2>
@@ -250,9 +260,14 @@ export default async function PrivacyPage({
             Solo usamos cookies estrictamente necesarias: la cookie de sesión de
             Auth.js (httpOnly) en las rutas con sesión iniciada, y una cookie CSRF
             de corta duración <strong>ol_oauth_state</strong> (httpOnly, ~10
-            minutos) durante la conexión con Vercel o GitHub. No usamos cookie de
-            idioma ni cookies de analítica, marketing o de terceros, por lo que no
-            mostramos banner de consentimiento. Ten en cuenta que las páginas
+            minutos) durante la conexión con Vercel o GitHub. A los visitantes de
+            las páginas sólo les ponemos una cookie cuando ellos la piden:{" "}
+            <strong>ol_chat</strong> (httpOnly, 30 días) al abrir una conversación
+            en el chat de una página, y <strong>ol_pv_…</strong> (httpOnly, 12
+            horas) al desbloquear con contraseña un enlace de vista previa. No
+            usamos cookie de idioma ni cookies de analítica, marketing o de
+            terceros, por lo que no mostramos banner de consentimiento. Ten en
+            cuenta que las páginas
             creadas por usuarios pueden incrustar código de terceros que sí
             establezca cookies; eso es responsabilidad del dueño de la página. Más
             detalles en nuestra{" "}
@@ -338,8 +353,10 @@ export default async function PrivacyPage({
               propias políticas y obligaciones legales.
             </li>
             <li>
-              <strong>Envíos de formularios</strong> — se conservan según las
+              <strong>Envíos de formularios, mensajes del chat y datos de las
+              bases de datos de las páginas</strong> — se conservan según las
               instrucciones del dueño de la página (responsable de esos datos).
+              La sesión de chat de un visitante caduca a los 30 días.
             </li>
           </ul>
 
@@ -360,7 +377,7 @@ export default async function PrivacyPage({
             <li>
               <strong>Encargados</strong> (tratan datos por cuenta de OpenLen, sin
               que se requiera tu consentimiento adicional): Cloudflare (CDN),
-              Hetzner (alojamiento del servidor de aplicación y de la base de
+              Hetzner (alojamiento del servidor de aplicación y de las bases de
               datos), Fireworks AI (generación con IA), OpenAI (edición de
               imágenes con IA y la voz de la app), Exa (búsqueda en internet cuando Len busca algo),
               Resend (correo transaccional) e{" "}
@@ -394,13 +411,13 @@ export default async function PrivacyPage({
 
           <h2>Transferencias internacionales</h2>
           <p>
-            Algunos de nuestros proveedores tratan datos fuera de tu país. El
-            servidor de aplicación está en <strong>Alemania</strong> (Hetzner). La
+            Algunos de nuestros proveedores tratan datos fuera de tu país. Nuestro
+            servidor (Hetzner), donde viven la aplicación y sus bases de datos,
+            está en <strong>Ashburn, Virginia, Estados Unidos</strong>. La
             generación de páginas con IA usa Fireworks AI, la edición de imágenes
-            con IA y la voz de la app usan OpenAI, la búsqueda en internet usa Exa, los correos usan
-            Resend y el cobro de suscripciones
-            usa Polar, todos en{" "}
-            <strong>Estados Unidos</strong>. Para los destinatarios en Estados
+            con IA y la voz de la app usan OpenAI, la búsqueda en internet usa Exa,
+            los correos usan Resend y el cobro de suscripciones usa Polar, todos
+            también en <strong>Estados Unidos</strong>. Para los destinatarios en Estados
             Unidos, estas transferencias se amparan en las{" "}
             <strong>Cláusulas Contractuales Tipo</strong> de la Comisión Europea
             y/o en el <strong>Marco de Privacidad de Datos UE-EE. UU.</strong>{" "}
@@ -495,18 +512,27 @@ export default async function PrivacyPage({
               values plus metadata (the visitor&apos;s IP address and User-Agent,
               retained briefly for spam and abuse protection, plus the referrer and
               derived country, device, and browser). See the
-              &quot;Published-page form data&quot; section.
+              &quot;Visitor data&quot; section.
             </li>
             <li>
-              <strong>Published-page interactive modules</strong> — if a user
-              turns on the Members, Comments, or Bookings module, we store the data
-              a visitor gives that module (for example, their email for magic-link
-              sign-in; their name and comment; or, for a booking, their name,
-              email, note, and chosen date and time), along with the IP address
-              retained briefly to limit abuse. The same controller/processor
-              relationship as the &quot;Published-page form data&quot; section
-              applies: the user who publishes the page is the controller of that
-              data.
+              <strong>Published-page chat</strong> — if a page owner turns on
+              chat, we store what a visitor gives to open a conversation (a
+              username and, optionally, a display name, an email, and a hashed
+              password) and the messages they exchange with the owner or their
+              team, which land in the owner&apos;s Inbox. If the page also has the
+              assistant, the visitor&apos;s questions are sent to our AI provider
+              to answer them from the page&apos;s content, and we don&apos;t store
+              them. See the &quot;Visitor data&quot; section.
+            </li>
+            <li>
+              <strong>Published-page databases and accounts</strong> — if a page
+              owner gives their page a database, we store on our servers whatever
+              the page saves in it, in the tables and under the access rules the
+              owner defines. If the page has user accounts, we store each
+              signed-up visitor&apos;s email, their hashed password (bcrypt), the
+              data the page adds to their profile and, for each session, the
+              browser (User-Agent) and IP address. See the &quot;Visitor
+              data&quot; section.
             </li>
             <li>
               <strong>Published-page analytics</strong> — privacy-first,{" "}
@@ -521,6 +547,13 @@ export default async function PrivacyPage({
               store what you type. If your browser sends &quot;Do Not Track&quot; or
               Global Privacy Control, we record nothing. These records are deleted
               after 90 days.
+            </li>
+            <li>
+              <strong>Notifications</strong> — if you turn on notifications in
+              your browser, we store the push subscription it creates (an address
+              on its notification service and its keys) and the browser you turned
+              them on from, to alert you to new messages and form submissions. It
+              is deleted when you turn them off or delete your account.
             </li>
           </ul>
           <p>
@@ -547,7 +580,8 @@ export default async function PrivacyPage({
             <li>Measure and apply your AI credit balance and plan.</li>
             <li>
               Send transactional emails (verification, password reset, lead
-              notifications from your forms).
+              notifications from your forms) and, on a page owner&apos;s behalf,
+              the confirmation and recovery emails of their page&apos;s accounts.
             </li>
             <li>
               Process your subscription payment through Polar and keep your
@@ -568,8 +602,10 @@ export default async function PrivacyPage({
             brief text and the page HTML to <strong>Fireworks AI</strong>, which
             uses them solely to produce the requested output under its API terms.
             If you edit an image with AI, that image and your instruction are sent
-            to <strong>OpenAI</strong> for the same purpose. We make no automated
-            decision producing legal effects concerning you.
+            to <strong>OpenAI</strong> for the same purpose. If you talk to Len by
+            voice from the app, the audio also goes to OpenAI, for the call or to
+            transcribe the note; we don&apos;t store the audio. We make no
+            automated decision producing legal effects concerning you.
           </p>
           <p>
             <strong>Len and your results.</strong> If you ask Len to review your
@@ -597,36 +633,23 @@ export default async function PrivacyPage({
             aggregate counts.
           </p>
 
-          <h2>Published-page form data (controller and processor)</h2>
+          <h2>Visitor data on published pages (controller and processor)</h2>
           <p>
-            When a visitor submits a form on a user&apos;s published page, the{" "}
-            <strong>page owner is the data controller</strong> for that personal
-            data and <strong>OpenLen acts as a processor</strong>, handling it on
-            the owner&apos;s behalf. This relationship is governed by a
-            data-processing agreement (processor / encargado under Art. 28 GDPR /
-            LFPDPPP) available on request at{" "}
+            When a visitor submits a form, writes in the chat, or creates an
+            account on a user&apos;s published page, or when that page saves data
+            in its database, the <strong>page owner is the data controller</strong>{" "}
+            for that personal data and <strong>OpenLen acts as a processor</strong>,
+            handling it on the owner&apos;s behalf. That includes the confirmation
+            and recovery emails of the page&apos;s accounts, which we send in the
+            owner&apos;s name. This relationship is governed by a data-processing
+            agreement (processor / encargado under Art. 28 GDPR / LFPDPPP)
+            available on request at{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>. Page owners
             must have their own lawful basis and their own privacy notice, and must
-            honor their visitors&apos; rights. If you&apos;re a visitor and want to
-            exercise rights over data you submitted through a form, contact that
+            honor their visitors&apos; rights. OpenLen does <strong>not</strong>{" "}
+            use visitors&apos; data for its own purposes. If you&apos;re a visitor
+            and want to exercise rights over data you gave a page, contact that
             page&apos;s owner.
-          </p>
-
-          <h2>Memberships and member emails (Broadcast)</h2>
-          <p>
-            If a page owner enables <strong>Members</strong>, visitors can sign
-            up with their email (passwordless magic-link login). If they also
-            enable <strong>Broadcast</strong>, the owner can email their
-            members; OpenLen delivers those emails{" "}
-            <strong>on the owner&apos;s behalf</strong> (as a processor) using
-            our sending infrastructure, appearing as the sender on the shared
-            domain. Every email carries, as required by law, the sender&apos;s
-            identity, a postal address, and a one-click{" "}
-            <strong>unsubscribe</strong> link; unsubscribes take effect
-            immediately and those recipients receive no further campaigns.
-            OpenLen does <strong>not</strong> use members&apos; emails for its
-            own marketing or share them with anyone other than our sending
-            provider.
           </p>
 
           <h2>Cookies</h2>
@@ -634,9 +657,14 @@ export default async function PrivacyPage({
             We use only strictly-necessary cookies: the Auth.js session cookie
             (httpOnly) on signed-in routes, and a short-lived{" "}
             <strong>ol_oauth_state</strong> CSRF cookie (httpOnly, ~10 minutes)
-            during the Vercel or GitHub connect flow. We use no locale cookie and
-            no analytics, marketing, or third-party cookies, so we show no consent
-            banner. Note that pages built by users may embed third-party code that
+            during the Vercel or GitHub connect flow. On published pages we only
+            set a cookie on visitors when they ask for it:{" "}
+            <strong>ol_chat</strong> (httpOnly, 30 days) when they open a
+            conversation in a page&apos;s chat, and <strong>ol_pv_…</strong>{" "}
+            (httpOnly, 12 hours) when they unlock a password-protected preview
+            link. We use no locale cookie and no analytics, marketing, or
+            third-party cookies, so we show no consent banner. Note that pages
+            built by users may embed third-party code that
             does set cookies; that is the page owner&apos;s responsibility. More
             detail in our <Link href="/cookie-policy">cookie policy</Link>.
           </p>
@@ -713,8 +741,10 @@ export default async function PrivacyPage({
               legal obligations.
             </li>
             <li>
-              <strong>Form submissions</strong> — kept per the page owner&apos;s
-              instruction (the owner is the controller for that data).
+              <strong>Form submissions, chat messages, and page database
+              data</strong> — kept per the page owner&apos;s instruction (the
+              owner is the controller for that data). A visitor&apos;s chat
+              session expires after 30 days.
             </li>
           </ul>
 
@@ -735,7 +765,7 @@ export default async function PrivacyPage({
             <li>
               <strong>Processors</strong> (process data on OpenLen&apos;s behalf, no
               additional consent required): Cloudflare (CDN), Hetzner
-              (application-server and database hosting), Fireworks AI (AI
+              (hosting of the application server and databases), Fireworks AI (AI
               generation), OpenAI (AI image editing and the app&apos;s voice), Exa (web search when Len
               looks something up), Resend (transactional email), and{" "}
               <strong>InariWatch</strong> (
@@ -766,12 +796,12 @@ export default async function PrivacyPage({
 
           <h2>International transfers</h2>
           <p>
-            Some of our providers process data outside your country. The
-            application server is in <strong>Germany</strong> (Hetzner). AI page
-            generation uses Fireworks AI, AI image editing and the app&apos;s voice use OpenAI, web search
-            uses Exa, email uses Resend, and subscription billing uses Polar, all in
-            the{" "}
-            <strong>United States</strong>. For
+            Some of our providers process data outside your country. Our server
+            (Hetzner), where the application and its databases live, is in{" "}
+            <strong>Ashburn, Virginia, United States</strong>. AI page generation
+            uses Fireworks AI, AI image editing and the app&apos;s voice use
+            OpenAI, web search uses Exa, email uses Resend, and subscription
+            billing uses Polar, all also in the <strong>United States</strong>. For
             recipients in the United States, these transfers are covered by the
             European Commission&apos;s <strong>Standard Contractual Clauses</strong>{" "}
             and/or the <strong>EU-US Data Privacy Framework</strong>; you can

@@ -33,7 +33,7 @@ export default async function Page({
   return (
     <LegalPage
       title={es ? "Política de cookies" : "Cookie Policy"}
-      updated={es ? "Última actualización: 30 de mayo de 2026" : "Last updated: May 30, 2026"}
+      updated={es ? "Última actualización: 4 de octubre de 2026" : "Last updated: October 4, 2026"}
     >
       {es ? (
         <>
@@ -56,8 +56,9 @@ export default async function Page({
 
           <h2>Cookies que usamos</h2>
           <p>
-            Solo usamos cookies estrictamente necesarias, y únicamente en las
-            áreas con sesión iniciada de la aplicación:
+            Solo usamos cookies estrictamente necesarias: las de las áreas con
+            sesión iniciada de la aplicación, y dos que sólo se crean cuando el
+            visitante de una página las pide:
           </p>
           <ul>
             <li>
@@ -83,6 +84,19 @@ export default async function Page({
               conectas tu cuenta de Vercel o GitHub para exportar una página.
               Protege ese intercambio OAuth frente a ataques CSRF y se elimina en
               cuanto el flujo termina.
+            </li>
+            <li>
+              <strong>ol_chat</strong> — se crea cuando un visitante abre una
+              conversación en el chat de una página publicada cuyo dueño lo
+              activó. Es <strong>httpOnly</strong>, dura <strong>30 días</strong>{" "}
+              y sirve para que el visitante siga en su conversación al volver.
+            </li>
+            <li>
+              <strong>ol_pv_…</strong> — se crea cuando alguien desbloquea con la
+              contraseña un enlace de vista previa protegido. Es{" "}
+              <strong>httpOnly</strong>, vale sólo para ese enlace y dura{" "}
+              <strong>12 horas</strong>, para no pedir la contraseña en cada
+              visita.
             </li>
           </ul>
 
@@ -146,7 +160,10 @@ export default async function Page({
             incluir código de terceros (por ejemplo, vídeos incrustados, widgets
             o píxeles) que establezca sus propias cookies. Esas cookies escapan a
             nuestro control y son responsabilidad del propietario de la página,
-            que debe cumplir con la normativa aplicable. Consulta nuestra{" "}
+            que debe cumplir con la normativa aplicable. Si una página tiene
+            cuentas de usuario, su código (la biblioteca supabase-js) guarda la
+            sesión del visitante en su navegador, en localStorage: es parte de la
+            página y de su dueño. Consulta nuestra{" "}
             <Link href="/acceptable-use">Política de uso aceptable</Link>.
           </p>
 
@@ -176,8 +193,9 @@ export default async function Page({
 
           <h2>Cookies we use</h2>
           <p>
-            We use only strictly-necessary cookies, and only on the signed-in
-            areas of the app:
+            We use only strictly-necessary cookies: those of the signed-in areas
+            of the app, and two that are only created when a page visitor asks
+            for them:
           </p>
           <ul>
             <li>
@@ -200,6 +218,18 @@ export default async function Page({
               ~10 minutes) set only while you connect your Vercel or GitHub
               account to export a page. It protects that OAuth exchange against
               CSRF attacks and is cleared as soon as the flow completes.
+            </li>
+            <li>
+              <strong>ol_chat</strong> — created when a visitor opens a
+              conversation in the chat of a published page whose owner turned it
+              on. It is <strong>httpOnly</strong>, lasts <strong>30 days</strong>,
+              and keeps the visitor in their conversation when they come back.
+            </li>
+            <li>
+              <strong>ol_pv_…</strong> — created when someone unlocks a
+              password-protected preview link. It is <strong>httpOnly</strong>,
+              valid only for that link, and lasts <strong>12 hours</strong>, so the
+              password isn&apos;t asked on every visit.
             </li>
           </ul>
 
@@ -258,7 +288,9 @@ export default async function Page({
             third-party code (for example, embedded videos, widgets, or pixels)
             that sets its own cookies. Those cookies are outside our control and
             are the page owner&apos;s responsibility to disclose and comply with.
-            See our <Link href="/acceptable-use">Acceptable Use Policy</Link>.
+            If a page has user accounts, its code (the supabase-js library) keeps
+            the visitor&apos;s session in their browser, in localStorage: that is
+            part of the page and of its owner. See our <Link href="/acceptable-use">Acceptable Use Policy</Link>.
           </p>
 
           <h2>Contact</h2>

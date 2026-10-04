@@ -33,7 +33,7 @@ export default async function RefundPage({
   return (
     <LegalPage
       title={es ? "Reembolsos y cancelación" : "Refund & Cancellation"}
-      updated={es ? "Última actualización: 30 de mayo de 2026" : "Last updated: May 30, 2026"}
+      updated={es ? "Última actualización: 4 de octubre de 2026" : "Last updated: October 4, 2026"}
     >
       {es ? (
         <>
@@ -104,9 +104,10 @@ export default async function RefundPage({
 
           <h2>Cómo cancelar</h2>
           <p>
-            Cancelar es sencillo: puedes hacerlo en línea en unos pocos clics
-            desde la configuración de tu cuenta o a través de Polar, en cualquier
-            momento. <strong>No hay penalización, cargo por cancelación ni proceso
+            Cancelar es sencillo: puedes hacerlo en línea en unos pocos clics,
+            en cualquier momento, desde el menú de tu cuenta en OpenLen
+            («Gestionar suscripción») o desde el enlace que trae cada correo de
+            Polar. <strong>No hay penalización, cargo por cancelación ni proceso
             de retención.</strong> Al cancelar:
           </p>
           <ul>
@@ -245,8 +246,9 @@ export default async function RefundPage({
 
           <h2>How to cancel</h2>
           <p>
-            Cancelling is simple: you can do it online in a few clicks from your
-            account settings or through Polar, at any time.{" "}
+            Cancelling is simple: you can do it online in a few clicks, at any
+            time, from your account menu in OpenLen (&quot;Manage
+            subscription&quot;) or from the link in any email from Polar.{" "}
             <strong>There is no penalty, cancellation fee, or retention
             process.</strong> When you cancel:
           </p>

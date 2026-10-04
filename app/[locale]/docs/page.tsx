@@ -36,16 +36,16 @@ export default async function DocsPage({
       title={es ? "Documentación" : "Documentation"}
       updated={
         es
-          ? "Última actualización: 10 de julio de 2026"
-          : "Last updated: July 10, 2026"
+          ? "Última actualización: 4 de octubre de 2026"
+          : "Last updated: October 4, 2026"
       }
     >
       {es ? (
         <>
           <p>
-            OpenLen es un creador de landing pages con IA. Describes tu página,
-            la editas hasta dejarla a tu gusto y la publicas en internet — sin
-            escribir código. Esta guía te lleva paso a paso, pensada para
+            OpenLen es un creador de páginas web con Len, su agente de IA. Le
+            describes tu página, la ajustan juntos hasta dejarla a tu gusto y la
+            publicas en internet — sin escribir código. Esta guía te lleva paso a paso, pensada para
             creadores sin perfil técnico.
           </p>
 
@@ -53,10 +53,9 @@ export default async function DocsPage({
           <p>Hay tres formas de empezar. Elige la que más te convenga:</p>
           <ul>
             <li>
-              <strong>Descríbela a la IA</strong> — escribe en lenguaje natural
-              qué página quieres (por ejemplo, &quot;una landing para mi
-              cafetería con menú y horarios&quot;) y la IA genera un documento
-              HTML completo listo para editar.
+              <strong>Descríbela</strong> — escribe con tus palabras qué página
+              quieres (por ejemplo, &quot;una landing para mi cafetería con menú
+              y horarios&quot;) y Len la crea completa, lista para editar.
             </li>
             <li>
               <strong>Elige una plantilla</strong> — abre la galería de
@@ -75,7 +74,7 @@ export default async function DocsPage({
 
           <h2>2. Edita tu página</h2>
           <p>
-            Dentro del espacio de trabajo tienes tres maneras de modificar la
+            Dentro del espacio de trabajo tienes varias maneras de modificar la
             página, que puedes combinar:
           </p>
           <ul>
@@ -85,10 +84,12 @@ export default async function DocsPage({
               y reemplaza imágenes sin salir de la vista previa.
             </li>
             <li>
-              <strong>Chat con IA</strong> — pídele a la IA que rediseñe o
-              ajuste la página con instrucciones en lenguaje natural (por
-              ejemplo, &quot;hazla más minimalista&quot; o &quot;cambia el tono a
-              algo más formal&quot;). La IA reescribe la parte que indiques.
+              <strong>Habla con Len</strong> — en el chat le pides cambios con
+              tus palabras (por ejemplo, &quot;hazla más minimalista&quot; o
+              &quot;cambia el tono a algo más formal&quot;). Len edita la página,
+              la mira para comprobar cómo quedó y te cuenta lo que hizo. Si se lo
+              pides, también busca en internet datos de tu negocio o revisa tus
+              visitas, formularios y mensajes.
             </li>
             <li>
               <strong>Inspector</strong> — abre el panel de propiedades para
@@ -127,28 +128,32 @@ export default async function DocsPage({
             conexión; puedes desconectarla cuando quieras y el token se elimina.
           </p>
 
-          <h2>6. Activa módulos: reservas, pedidos y más</h2>
+          <h2>6. Habla con tus visitantes y guarda datos</h2>
           <p>
-            Tu página puede hacer más que informar. Desde el espacio de trabajo
-            activa módulos y cada uno se convierte en una sección o página a
-            juego con tu marca:
+            Tu página puede hacer más que informar. Lo que te escriben tus
+            visitantes llega a la <strong>Bandeja</strong>:
           </p>
           <ul>
             <li>
-              <strong>Reservas</strong> — agenda de citas en tu página, con
-              recordatorios por correo.
+              <strong>Formularios</strong> — los envíos se guardan y te avisamos
+              por correo al instante.
             </li>
             <li>
-              <strong>Pedidos por WhatsApp</strong> — catálogo con carrito; el
-              pedido te llega directo a WhatsApp, sin pasarela de pago.
+              <strong>Chat</strong> — conversación privada con quien visita tu
+              página. Puedes invitar a tu equipo a contestar.
             </li>
             <li>
-              <strong>Miembros y cuentas</strong> — área privada para tu
-              comunidad, con inicio de sesión para tus visitantes.
+              <strong>Asistente</strong> — responde las preguntas de tus
+              visitantes con lo que dice tu página.
             </li>
             <li>
-              <strong>Comentarios y chat</strong> — comentarios en tu página y
-              mensajería privada con tus visitantes.
+              <strong>Base de datos y cuentas</strong> — pídele a Len que tu
+              página guarde cosas (reservas, pedidos, reseñas) o que tenga cuentas
+              de usuario: Len le crea una base de datos, la conecta y define quién
+              puede leer o cambiar cada dato. La revisas en{" "}
+              <strong>Base de datos</strong>. Esos datos son de tus visitantes y
+              tú respondes por ellos; ver los{" "}
+              <Link href="/terms">términos del servicio</Link>.
             </li>
           </ul>
 
@@ -205,7 +210,7 @@ export default async function DocsPage({
           <h2>Preguntas frecuentes</h2>
           <p>
             <strong>¿Necesito saber programar?</strong> No. Puedes crear, editar
-            y publicar todo sin escribir código; la IA hace el trabajo pesado.
+            y publicar todo sin escribir código; Len hace el trabajo pesado.
           </p>
           <p>
             <strong>¿Puedo confiar en lo que genera la IA?</strong> Revisa
@@ -232,8 +237,9 @@ export default async function DocsPage({
       ) : (
         <>
           <p>
-            OpenLen is an AI landing-page builder. You describe a page, edit it
-            until it feels right, and publish it to the web — no coding required.
+            OpenLen is a web-page builder with Len, its AI agent. You describe
+            your page, you shape it together until it feels right, and you
+            publish it to the web — no coding required.
             This guide walks you through it step by step, written for
             non-technical creators.
           </p>
@@ -242,10 +248,9 @@ export default async function DocsPage({
           <p>There are three ways to start. Pick whichever suits you:</p>
           <ul>
             <li>
-              <strong>Describe it to the AI</strong> — write in plain language
-              what you want (for example, &quot;a landing page for my coffee shop
-              with a menu and hours&quot;) and the AI generates a complete HTML
-              document ready to edit.
+              <strong>Describe it</strong> — write in your own words what you
+              want (for example, &quot;a landing page for my coffee shop with a
+              menu and hours&quot;) and Len builds the whole page, ready to edit.
             </li>
             <li>
               <strong>Pick a template</strong> — open the template gallery,
@@ -263,8 +268,8 @@ export default async function DocsPage({
 
           <h2>2. Edit your page</h2>
           <p>
-            Inside the workspace you have three ways to change the page, and you
-            can mix them freely:
+            Inside the workspace you have several ways to change the page, and
+            you can mix them freely:
           </p>
           <ul>
             <li>
@@ -273,10 +278,12 @@ export default async function DocsPage({
               leaving the preview.
             </li>
             <li>
-              <strong>AI Chat</strong> — ask the AI to redesign or adjust the
-              page with plain-language instructions (for example, &quot;make it
-              more minimal&quot; or &quot;change the tone to something more
-              formal&quot;). The AI rewrites the part you point it at.
+              <strong>Talk to Len</strong> — in the chat you ask for changes in
+              your own words (for example, &quot;make it more minimal&quot; or
+              &quot;change the tone to something more formal&quot;). Len edits
+              the page, looks at it to check how it turned out, and tells you what
+              it did. If you ask, it also searches the web for your business&apos;s
+              details or reviews your visits, form submissions, and messages.
             </li>
             <li>
               <strong>Inspector</strong> — open the properties panel to fine-tune
@@ -313,27 +320,31 @@ export default async function DocsPage({
             disconnect it any time and the token is deleted.
           </p>
 
-          <h2>6. Turn on modules: bookings, orders, and more</h2>
+          <h2>6. Talk to your visitors and store data</h2>
           <p>
-            Your page can do more than inform. From the workspace, switch on
-            modules and each becomes a section or page matched to your brand:
+            Your page can do more than inform. What your visitors send you lands
+            in your <strong>Inbox</strong>:
           </p>
           <ul>
             <li>
-              <strong>Bookings</strong> — appointment scheduling on your page,
-              with email reminders.
+              <strong>Forms</strong> — submissions are stored and emailed to you
+              instantly.
             </li>
             <li>
-              <strong>WhatsApp orders</strong> — a catalog with a cart; orders
-              land directly in your WhatsApp, no payment gateway needed.
+              <strong>Chat</strong> — private conversations with the people who
+              visit your page. You can invite your team to answer.
             </li>
             <li>
-              <strong>Members and accounts</strong> — a private area for your
-              community, with visitor sign-in.
+              <strong>Assistant</strong> — answers your visitors&apos; questions
+              with what your page says.
             </li>
             <li>
-              <strong>Comments and chat</strong> — comments on your page and
-              private messaging with your visitors.
+              <strong>Database and accounts</strong> — ask Len for your page to
+              store things (bookings, orders, reviews) or to have user accounts:
+              Len creates a database for it, wires it up, and sets who can read or
+              change each piece of data. You can review it under{" "}
+              <strong>Database</strong>. That data belongs to your visitors and you
+              answer for it; see the <Link href="/terms">terms of service</Link>.
             </li>
           </ul>
 
@@ -390,7 +401,7 @@ export default async function DocsPage({
           <h2>Frequently asked questions</h2>
           <p>
             <strong>Do I need to know how to code?</strong> No. You can create,
-            edit, and publish everything without writing code; the AI does the
+            edit, and publish everything without writing code; Len does the
             heavy lifting.
           </p>
           <p>

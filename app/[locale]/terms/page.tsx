@@ -34,7 +34,7 @@ export default async function TermsPage({
   return (
     <LegalPage
       title={es ? "Términos del servicio" : "Terms of Service"}
-      updated={es ? "Última actualización: 30 de mayo de 2026" : "Last updated: May 30, 2026"}
+      updated={es ? "Última actualización: 4 de octubre de 2026" : "Last updated: October 4, 2026"}
     >
       {es ? (
         <>
@@ -133,8 +133,9 @@ export default async function TermsPage({
             otras cosas, queda prohibido publicar contenido ilegal, phishing,
             fraude, malware, material de abuso infantil, discurso de odio, acoso,
             difamación, infracción de derechos de terceros o spam. Si recopilas
-            datos de tus visitantes mediante formularios, debes tener tu propia
-            base de licitud y aviso de privacidad.
+            datos de tus visitantes —con formularios, el chat, cuentas de usuario
+            o la base de datos de tu página—, debes tener tu propia base de
+            licitud y aviso de privacidad.
           </p>
           <p>
             Con independencia del requisito de edad para tu propia cuenta, declaras
@@ -173,6 +174,16 @@ export default async function TermsPage({
             propios. Nos reservamos el derecho de retirar contenido o suspender
             páginas que infrinjan estos Términos o nuestra Política de uso
             aceptable, sin aviso previo en casos graves.
+          </p>
+          <p>
+            <strong>Bases de datos de las páginas.</strong> Puedes darle a una
+            página una base de datos y cuentas de usuario para sus visitantes.
+            Tú decides qué guarda y quién puede leerlo o cambiarlo (sus tablas y
+            sus reglas de acceso), y eres el responsable de esos datos; nosotros
+            los alojamos y tratamos por tu cuenta, como se explica en nuestra{" "}
+            <Link href="/privacy">Política de privacidad</Link>. Una regla de
+            acceso mal puesta puede dejar datos a la vista de cualquiera: revísalas
+            antes de publicar.
           </p>
 
           <h2>Derechos de autor / DMCA</h2>
@@ -443,8 +454,8 @@ export default async function TermsPage({
             things, you may not publish illegal content, phishing, fraud, malware,
             child sexual abuse material, hate speech, harassment, defamation,
             infringement of others&apos; rights, or spam. If you collect visitor
-            data through forms, you must have your own lawful basis and privacy
-            notice.
+            data (through forms, the chat, user accounts, or your page&apos;s
+            database), you must have your own lawful basis and privacy notice.
           </p>
           <p>
             Separately from the age requirement for your own account, you represent
@@ -482,6 +493,15 @@ export default async function TermsPage({
             custom domains. We reserve the right to take down content or suspend
             pages that violate these Terms or our Acceptable Use Policy, without
             prior notice in egregious cases.
+          </p>
+          <p>
+            <strong>Page databases.</strong> You can give a page a database and
+            user accounts for its visitors. You decide what it stores and who can
+            read or change it (its tables and access rules), and you are the
+            controller of that data; we host and process it on your behalf, as
+            explained in our <Link href="/privacy">Privacy Policy</Link>. A badly
+            set access rule can leave data open to anyone: review them before you
+            publish.
           </p>
 
           <h2>Copyright / DMCA</h2>

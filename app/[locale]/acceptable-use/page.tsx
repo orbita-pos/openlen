@@ -34,7 +34,7 @@ export default async function AcceptableUsePage({
   return (
     <LegalPage
       title={es ? "Política de uso aceptable" : "Acceptable Use Policy"}
-      updated={es ? "Última actualización: 12 de junio de 2026" : "Last updated: June 12, 2026"}
+      updated={es ? "Última actualización: 4 de octubre de 2026" : "Last updated: October 4, 2026"}
     >
       {es ? (
         <>
@@ -144,7 +144,8 @@ export default async function AcceptableUsePage({
           <h2>Páginas que recopilan datos de visitantes</h2>
           <p>
             Si tu página publicada recopila datos de visitantes (por ejemplo,
-            mediante formularios), tú actúas como responsable del tratamiento de
+            mediante formularios, el chat, cuentas de usuario o su base de
+            datos), tú actúas como responsable del tratamiento de
             esos datos y OpenLen actúa como encargado, conforme a la Ley Federal
             de Protección de Datos Personales en Posesión de los Particulares
             (LFPDPPP). Debes contar con una base legal para recopilarlos,
@@ -312,7 +313,7 @@ export default async function AcceptableUsePage({
           <h2>Pages that collect visitor data</h2>
           <p>
             If your published page collects visitor data (for example, through
-            forms), you act as the data controller for that data and OpenLen
+            forms, the chat, user accounts, or its database), you act as the data controller for that data and OpenLen
             acts as a processor, under Mexico&apos;s Federal Law on the
             Protection of Personal Data Held by Private Parties (LFPDPPP). You
             must have a lawful basis to collect it, publish your own privacy
