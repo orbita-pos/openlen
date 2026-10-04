@@ -116,6 +116,14 @@ const targets = [
   // idempotente. 🔴 OBLIGATORIA antes que el código: `getChatMessages` y el
   // historial filtran por la charla, y Drizzle selecciona las columnas nuevas.
   "chat-conversations-migrate",
+  // Las dos tablas de la app del teléfono (`movilCodigos`, `movilLlaves`, de
+  // la rama len-movil). Tablas NUEVAS con IF NOT EXISTS: si ya están en
+  // producción no hace nada. La web no las toca (sólo `lib/movil/quien.ts`,
+  // cuando un teléfono manda su llave), así que no impone orden.
+  //
+  // 🔴 Cambiarles una COLUMNA después pide su propio ALTER: el IF NOT EXISTS
+  // no toca una tabla que ya existe, y el cambio no llegaría nunca a prod.
+  "movil-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE
