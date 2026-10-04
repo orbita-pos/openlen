@@ -1,4 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
+// ⚠️ DESDE N41 (03/10) AQUÍ SÓLO QUEDA EL ÁMBAR (`avisoParaElDueno`). La tarjeta
+// ROJA ya no pinta lo que leyó el modelo: dice el `ownerReason` que declara la
+// herramienta (lib/agent/owner-reason.ts). Lo de abajo es la historia de la
+// regla que N41 retiró — ver la lápida de `motivoDelFallo`.
+//
 // EL MOTIVO DE UN FALLO, sacado de la respuesta que la herramienta le dio al
 // modelo — para que la tarjeta roja diga LO MISMO que el modelo leyó.
 //
@@ -33,44 +38,14 @@
  *  ENTERO —hasta 400— sigue en el diario del turno, que es el registro. */
 export const TOPE_MOTIVO = 200;
 
-/** Las claves con las que las herramientas de verdad devuelven el porqué, en
- *  orden de preferencia.
- *
- *  🔴 `detalle` VA PRIMERO, y es lo contrario de lo que parece. En Claude Code
- *  el texto del error es UNO y es PROSA: la interfaz pinta el mismo string que
- *  leyó el modelo. Aquí la respuesta viene partida —`error` a veces es un
- *  CÓDIGO (`op_contra_la_raiz`, `seccion_no_abierta`, `sin_tokens`) y la frase
- *  que un humano lee está en `detalle`—, así que preferir `error` le ponía a la
- *  tarjeta un slug teniendo la frase al lado. MEDIDO el 2026-09-18 en el diario
- *  de producción: el turno «ponme un carrito con base de datos» habría estrenado
- *  la tarjeta diciendo «falló · op_contra_la_raiz».
- *
- *  `error` sigue detrás porque en casi todas las herramientas YA es la frase, y
- *  entonces se enseña igual que antes. Y `como_hacerlo` NO está en esta lista a
- *  propósito: es la corrección que va al modelo —como la que Claude Code pega a
- *  una entrada inválida—, no una línea de tarjeta. El objeto entero sigue en el diario. */
-const CLAVES = ["detalle", "error", "motivo", "reason"] as const;
-
-/**
- * El motivo de una respuesta FALLIDA, o `undefined` si no la hay.
- *
- * Sólo mira respuestas con `ok: false` exacto: una respuesta sin `ok` no ha
- * declarado fallo, y una que fue bien no tiene nada que explicar — colgarle un
- * motivo a una tarjeta verde sería peor que no tener motivos.
- */
-export function motivoDelFallo(
-  respuesta: Record<string, unknown> | undefined,
-): string | undefined {
-  if (!respuesta || respuesta.ok !== false) return undefined;
-  for (const clave of CLAVES) {
-    const valor = respuesta[clave];
-    if (typeof valor !== "string") continue;
-    const limpio = valor.trim();
-    if (!limpio) continue;
-    return recorta(limpio);
-  }
-  return undefined;
-}
+// ⚰️ AQUÍ VIVÍA `motivoDelFallo` (2026-09-18 → 03/10): sacaba de una respuesta
+// FALLIDA —`detalle`, `error`, `motivo` o `reason`— el texto que leyó el modelo,
+// y la tarjeta roja lo pintaba. Lo retiró N41: con Len en inglés el dueño leía
+// «falló · the user has never said… you made that name up». La regla de «un
+// solo canal» de arriba sólo vale cuando quien mira lee lo mismo que el modelo;
+// en OpenLen no. La roja dice ahora el `ownerReason` que declara la
+// herramienta (lib/agent/owner-reason.ts), y lo que leyó el modelo se queda en
+// el diario del turno.
 
 /** Se corta CON MARCA. Una frase que acaba a medias sin avisar se lee como el
  *  motivo entero, y manda a buscar por donde no es. El texto ENTERO sigue en

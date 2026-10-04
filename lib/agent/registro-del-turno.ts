@@ -93,6 +93,8 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
           // línea el turno que peor acabó sería justo el que perdiera el porqué
           // al recargar.
           ...(ev.motivo ? { motivo: ev.motivo } : {}),
+          // N41: el motivo del DUEÑO de una roja, por la misma razón.
+          ...(ev.ownerReason ? { ownerReason: ev.ownerReason } : {}),
           // Y LOS VALORES, que sólo lee el historial: sin ellos el turno
           // siguiente pierde el color exacto que se aplicó (H08-b).
           ...(ev.valores ? { valores: ev.valores } : {}),

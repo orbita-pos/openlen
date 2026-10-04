@@ -13,6 +13,7 @@ vi.mock("next-intl", () => ({
 import type { AgentAction } from "./agent-action-card";
 import { KNOWN_TOOLS } from "./agent-action-card";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { OWNER_REASON_CODES, type OwnerReasonCode } from "@/lib/agent/owner-reason";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -229,6 +230,37 @@ describe("«no me cabe la conversación entera» tiene texto en los diez", () =>
   });
 });
 
+// 🔴 N41 · CADA MOTIVO DEL DUEÑO TIENE SU FRASE EN LOS DIEZ, con sus datos
+// dentro. El servidor manda el código; si un idioma no tiene la clave, el dueño
+// leería la clave cruda. Y la frase que lleva un dato (la dirección, el tope)
+// tiene que nombrarlo: sin él vuelve a ser «algo falló».
+describe("N41 · los motivos del dueño tienen texto en los diez", () => {
+  const CON_DATO: Partial<Record<OwnerReasonCode, string>> = {
+    address_invalid: "{address}",
+    address_reserved: "{address}",
+    search_limit: "{limit}",
+    web_pages_limit: "{limit}",
+    site_page_limit: "{limit}",
+  };
+  it.each(LOCALES)("%s", (loc) => {
+    const motivos = (
+      JSON.parse(readFileSync(join(process.cwd(), "messages", loc, "wsPage.json"), "utf-8")).agent as {
+        ownerReason?: Record<string, string>;
+      }
+    ).ownerReason;
+    for (const code of OWNER_REASON_CODES) {
+      expect(motivos?.[code], `${code} sin traducir en ${loc}`).toBeTruthy();
+      const dato = CON_DATO[code];
+      if (dato) expect(motivos![code], `${code} sin ${dato} en ${loc}`).toContain(dato);
+      // En ICU un apóstrofo pegado a `{` lo vuelve texto literal: «'{address}'»
+      // pintaría las llaves en vez de la dirección (pasó escribiendo el coreano).
+      expect(motivos![code], `${code} con '{ en ${loc}`).not.toMatch(/'[{}]|[{}]'/);
+    }
+    // Y ninguna de más: una clave que ningún código pide es texto muerto.
+    expect(Object.keys(motivos ?? {}).sort()).toEqual([...OWNER_REASON_CODES].sort());
+  });
+});
+
 // ─── Y QUE LA FRASE LLEGUE AL DOM, no sólo a una función ────────────────────
 //
 // 🔴 Una cobertura que se calcula y no se pinta es el velo que nunca se pintó:
@@ -310,27 +342,47 @@ describe("la cobertura llega al DOM", () => {
   // prosa en español («módulo desconocido»), y esta tarjeta se pinta en 10
   // idiomas. Sustituir la etiqueta le quitaría a un usuario japonés la única
   // palabra que hoy entiende; sumarlo no le quita nada y le da el detalle.
-  it("un fallo con motivo lo PINTA, y conserva la etiqueta localizada", () => {
+  //
+  // 🔴 N41 (taller, 03/10): EN ROJO, EL MOTIVO DEL DUEÑO, NO EL DEL MODELO. Con
+  // Len en inglés, la regla de arriba le pintaba al dueño «falló · the user has
+  // never said "reformas-bernal" — you made that name up…». La roja dice ahora
+  // el `ownerReason` que declaró la herramienta, en el idioma de quien mira, y
+  // si no hay, «falló» y nada más. El `motivo` de una roja (lo traen las filas
+  // guardadas antes) no se pinta nunca.
+  it("🔴 un fallo pinta su motivo del DUEÑO, y nunca el texto que leyó el modelo", () => {
+    const el = pintar({
+      tool: "publicar",
+      status: "error",
+      summary: "reformas-bernal",
+      motivo: 'the user has never said "reformas-bernal" — you made that name up',
+      ownerReason: { code: "address_needed" },
+    });
+    expect(el.textContent).toContain("agent.ownerReason.address_needed");
+    expect(el.textContent).toContain("agent.failed");
+    expect(el.textContent).not.toContain("you made that name up");
+  });
+
+  it("una roja de antes, con sólo `motivo`, dice que falló y nada más", () => {
     const el = pintar({
       tool: "cambiar_tema",
       status: "error",
       summary: "azul marino",
       motivo: "el acento no está cableado",
     });
-    expect(el.textContent).toContain("el acento no está cableado");
     expect(el.textContent).toContain("agent.failed");
+    expect(el.textContent).not.toContain("el acento no está cableado");
   });
 
   // El motivo se trunca por CSS, así que el texto entero vive en el `title` —
   // y ahí gana a la cobertura, que sólo describe un vistazo que salió bien.
   it("el motivo entero va en el title, por encima de la cobertura", () => {
     const el = pintar({
-      tool: "verificar_diseno",
+      tool: "web_search",
       status: "error",
-      summary: "ok",
-      motivo: "el navegador no arrancó",
+      summary: "museo",
+      ownerReason: { code: "search_failed" },
     });
-    expect(el.getAttribute("title")).toBe("el navegador no arrancó");
+    expect(el.getAttribute("title")).toBe("agent.ownerReason.search_failed");
   });
 
   // NUNCA VACÍO, que es la otra mitad de la regla de Claude Code: cuando un

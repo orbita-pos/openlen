@@ -51,6 +51,7 @@ import {
 } from "@/lib/workspace-v2/comentarios-de-lineas";
 import { cambiosEnVivo, esFicheroCambiado } from "@/lib/workspace-v2/cambios-en-vivo";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
+import { ownerReasonFrom } from "@/lib/agent/owner-reason";
 import { httpErrorText } from "./http-error";
 
 /** El evento `html` del bucle, tal cual sale por el cable. Se usa como TIPO al
@@ -1305,6 +1306,9 @@ export function useAgentChat({
                 // campo largo haría 400 a `persistTurn` y el turno entero
                 // desaparecería al recargar, en silencio.
                 const motivo = (payload as { motivo?: unknown } | null)?.motivo;
+                // N41 · el motivo del DUEÑO de una roja: un código que la
+                // tarjeta traduce. Pasa por la puerta que valida el código.
+                const ownerReason = ownerReasonFrom((payload as { ownerReason?: unknown } | null)?.ownerReason);
                 const valores = (payload as { valores?: unknown } | null)?.valores;
                 // La pregunta de `preguntar`, sólo de pantalla (plans/new-chat/).
                 const pregunta = (payload as { pregunta?: unknown } | null)?.pregunta;
@@ -1329,6 +1333,7 @@ export function useAgentChat({
                     ...(typeof motivo === "string" && motivo.trim()
                       ? { motivo: motivo.slice(0, 200) }
                       : {}),
+                    ...(ownerReason ? { ownerReason } : {}),
                     ...(typeof pregunta === "string" && pregunta.trim()
                       ? { pregunta: pregunta.slice(0, 600) }
                       : {}),

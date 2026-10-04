@@ -172,6 +172,7 @@ export type VisualEngineProjectMetadata =
 
 import type { Declaracion } from "@/lib/page-data/declaracion";
 import type { PruebaGuardada } from "@/lib/agent/pruebas-de-la-pagina";
+import type { OwnerReason } from "@/lib/agent/owner-reason";
 
 export interface ProjectData {
   /** Publish-ready static HTML — the source of truth for the project. */
@@ -332,13 +333,16 @@ export interface StoredChatTurn {
      *  recargar la conversación desaparecería», y al sacarlo de ahí había que
      *  traerlo hasta aquí o se repetía la avería con otro disfraz. */
     observacion?: string;
-    /** POR QUÉ falló, literal — el mismo string que leyó el modelo y que el
-     *  diario del turno guarda. Va aquí porque `actions` se persiste como JSON
-     *  contra ESTA forma: un campo que no está declarado lo pierde el primero
-     *  que construya la tarjeta a mano, y entonces se ve en vivo y desaparece
-     *  al recargar. Ya pasó con `ops` y con `observacion`. Sólo con
-     *  `status: "error"`; llega truncado a 200 desde `motivo-del-fallo.ts`. */
+    /** El porqué de una tarjeta ÁMBAR, escrito para el dueño (lo que midieron
+     *  los ojos). Va aquí porque `actions` se persiste como JSON contra ESTA
+     *  forma: un campo que no está declarado lo pierde el primero que construya
+     *  la tarjeta a mano, y entonces se ve en vivo y desaparece al recargar. Ya
+     *  pasó con `ops` y con `observacion`. ⚠️ Las filas ROJAS de antes del
+     *  03/10 lo traen con el texto que leyó el modelo, y no se pinta (N41). */
     motivo?: string;
+    /** N41 · por qué falló una tarjeta roja, para el dueño: un código que el
+     *  chat traduce. Ver `lib/agent/owner-reason.ts`. */
+    ownerReason?: OwnerReason;
     /** Cuántas páginas miraron los ojos y cuántas tocó el turno («1 de 2
      *  páginas»). Los dos juntos o ninguno — ver `AgentAction`. */
     paginasMiradas?: number;

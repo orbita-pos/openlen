@@ -76,6 +76,7 @@ import { toolBash } from "@/lib/agent/terminal/herramienta";
 import type { TerminalDeLen } from "@/lib/agent/terminal/terminal";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
+import type { OwnerReason } from "@/lib/agent/owner-reason";
 import {
   toolPrepararRespuesta,
   toolVerFormularios,
@@ -674,6 +675,11 @@ export interface ToolOutcome {
   /** H12-a · guardar ya chocó dos veces seguidas en este turno: el bucle no
    *  ejecuta más escrituras y cierra. Lo pone `contarConflictos`. */
   guardarSinSalida?: true;
+  /** N41 · POR QUÉ FALLÓ, PARA EL DUEÑO: un código que el chat traduce. Sólo
+   *  cuando el fallo es algo que el dueño entiende o puede resolver; sin él, la
+   *  tarjeta dice «No pudo». Lo que lee el modelo (`response`) no va a la
+   *  tarjeta. Ver `lib/agent/owner-reason.ts`. */
+  ownerReason?: OwnerReason;
   /** Tarjeta para el stream (ausente en leer_estado). */
   action?: {
     tool: string;
@@ -1331,7 +1337,7 @@ async function toolEditarImagen(
   // is refused before any fetch/edit/upload. Only successful edits count (a
   // failed one below leaves the counter untouched so the model can retry).
   if (session.imageEditsThisTurn >= 1) {
-    return { response: { ok: false, error: "limit of one image edit per turn" } };
+    return { response: { ok: false, error: "limit of one image edit per turn" }, ownerReason: { code: "image_edit_limit" } };
   }
 
   // Anti prompt-injection SSRF: only edit an image ALREADY on the site. The URL
@@ -1356,7 +1362,10 @@ async function toolEditarImagen(
 
   const fetched = await deps.fetchImage(imagenUrl);
   if (!fetched.ok) {
-    return { response: { ok: false, error: `the image couldn't be downloaded: ${fetched.error}` } };
+    return {
+      response: { ok: false, error: `the image couldn't be downloaded: ${fetched.error}` },
+      ownerReason: { code: "image_unreachable" },
+    };
   }
 
   const edited = await deps.editImage(session.userId, {
@@ -1365,7 +1374,7 @@ async function toolEditarImagen(
     prompt: instruccion,
   });
   if ("error" in edited) {
-    return { response: { ok: false, error: `the image edit failed: ${edited.error}` } };
+    return { response: { ok: false, error: `the image edit failed: ${edited.error}` }, ownerReason: { code: "image_edit_failed" } };
   }
 
   // Gemini returned an image and the credit was already charged inside the
@@ -1492,6 +1501,8 @@ async function toolPublicar(
           ok: false,
           error: `the user has never said "${raw}" — you made that name up, and you don't choose the address of their page. This project doesn't have a subdomain yet: ask them with \`preguntar\` what address they want.`,
         },
+        // N41: al dueño, que la dirección la elige él — no «you made that name up».
+        ownerReason: { code: "address_needed" },
       };
     }
   }
@@ -1509,6 +1520,7 @@ async function toolPublicar(
               ? `the subdomain "${raw}" is reserved — ask the user for another name`
               : `the subdomain "${raw}" isn't valid: the rule is only lowercase letters, numbers and hyphens, 1-63 characters, no spaces or accents. Explain it to the user and suggest a corrected version (e.g. removing spaces/accents and using hyphens).`,
         },
+        ownerReason: { code: check.reason === "reserved" ? "address_reserved" : "address_invalid", address: raw },
       };
     }
     subdominio = check.value;
@@ -1534,6 +1546,7 @@ async function toolPublicar(
           // del modelo.
           "this project doesn't have a subdomain yet, and you don't choose the subdomain. Ask the user what address they want with `preguntar` — that tool closes the turn and their answer opens the next one; then, yes, call publicar with what they write.",
       },
+      ownerReason: { code: "address_needed" },
     };
   }
 
@@ -1769,10 +1782,13 @@ function contarConflictos(session: AgentSession, out: ToolOutcome, escrituras: n
   if (error.includes(CONFLICTO_AL_GUARDAR)) {
     const veces = (session.conflictosAlGuardar ?? 0) + 1;
     session.conflictosAlGuardar = veces;
-    if (veces < 2) return out;
+    // N41: al dueño, que la página cambió mientras se guardaba — sin la causa,
+    // que tampoco se sabe (ver `conflictoRepetido`).
+    const conMotivo: ToolOutcome = { ...out, ownerReason: { code: "page_changed" } };
+    if (veces < 2) return conMotivo;
     const repetido = conflictoRepetido(veces);
     return {
-      ...out,
+      ...conMotivo,
       response: {
         ...out.response,
         error: repetido,

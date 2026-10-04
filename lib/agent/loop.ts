@@ -13,7 +13,8 @@ import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
-import { avisoParaElDueno, motivoDelFallo } from "@/lib/agent/motivo-del-fallo";
+import { avisoParaElDueno } from "@/lib/agent/motivo-del-fallo";
+import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { avisoDeRegresion, type Regresion } from "@/lib/agent/pruebas-de-la-pagina";
 // Import de VALOR a propósito, y no viola la regla de arriba: `aviso-medido` no
 // importa nada — ni la pasarela, ni las herramientas, ni Chromium. Es texto y
@@ -103,11 +104,15 @@ export type AgentStreamEvent =
        *  `components/workspace-v2/agent-action-card.tsx`. */
       paginasMiradas?: number;
       paginasTocadas?: number;
-      /** POR QUÉ falló, literal, el mismo string que leyó el modelo. Sólo viaja
-       *  con `status: "error"`. Hasta el 2026-09-18 la tarjeta roja decía
-       *  «falló» y nada más, con el motivo ya escrito a dos capas de
-       *  distancia. Ver `motivo-del-fallo.ts`. */
+      /** El porqué de una tarjeta ÁMBAR (`warning`): lo que midieron los ojos o
+       *  el aviso de la herramienta. ⚠️ Ya NO viaja con `status: "error"`: desde
+       *  N41 (03/10) lo que leyó el modelo no va a la tarjeta roja — ver
+       *  `ownerReason`. */
       motivo?: string;
+      /** N41 · POR QUÉ FALLÓ, PARA EL DUEÑO: un código que el chat traduce a su
+       *  idioma. Sólo con `status: "error"`, y sólo si la herramienta lo
+       *  declaró; sin él la tarjeta dice «No pudo». Ver `owner-reason.ts`. */
+      ownerReason?: OwnerReason;
       /** LA PREGUNTA, literal, cuando la herramienta es `preguntar`. Es SÓLO
        *  para la pantalla (la tarjeta destacada y «Esperando tu respuesta» del
        *  chat nuevo, plans/new-chat/): el modelo no la lee de aquí — su texto ya
@@ -1948,10 +1953,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       const cambioDeclarado = outcome.response.cambio;
       const nula = cambioDeclarado === "sin_cambio";
       if (ok && !nula && !READ_ONLY_TOOLS.has(call.name)) actuo = true;
-      // El rojo y el ámbar salen del MISMO sitio y se excluyen: `motivoDelFallo`
-      // sólo habla con `ok:false` y `avisoParaElDueno` sólo sin él.
+      // El ámbar y su aviso: `avisoParaElDueno` sólo habla sin `ok:false`.
+      // 🔴 N41: la ROJA ya no lleva lo que leyó el modelo (`motivoDelFallo`
+      // pintaba «falló · the user has never said… you made that name up»): lleva
+      // el `ownerReason` que la herramienta declaró, o nada.
       const descartada = avisoParaElDueno(outcome.response);
-      const motivo = motivoDelFallo(outcome.response) ?? descartada;
       if (!ok) failedSignatures.set(sig, (failedSignatures.get(sig) ?? 0) + 1);
       args.emit({
         type: "action",
@@ -1964,11 +1970,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         ...(outcome.action?.edits !== undefined ? { edits: outcome.action.edits } : {}),
         ...(outcome.action?.ops?.length ? { ops: outcome.action.ops } : {}),
         ...(outcome.action?.valores ? { valores: outcome.action.valores } : {}),
-        // EL MOTIVO, a la tarjeta. Mismo string que acaba de irse al modelo en
-        // `outcome.response` y que el diario guarda: uno solo, como en
-        // Claude Code. `motivoDelFallo` ya devuelve `undefined` cuando la llamada
-        // fue bien, así que el evento de un `done` sale igual que antes.
-        ...(motivo ? { motivo } : {}),
+        // EL PORQUÉ, a la tarjeta: el aviso del ámbar, o el motivo del dueño de
+        // una roja. El texto entero que leyó el modelo se queda en el diario.
+        ...(descartada ? { motivo: descartada } : {}),
+        ...(!ok && outcome.ownerReason ? { ownerReason: outcome.ownerReason } : {}),
         // La pregunta con la que `preguntar` cierra el turno, para la tarjeta.
         ...(outcome.pregunta ? { pregunta: outcome.pregunta } : {}),
       });

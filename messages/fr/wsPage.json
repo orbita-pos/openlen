@@ -104,7 +104,23 @@
       "todo": "Tout voir",
       "menos": "Voir moins"
     },
-    "abrirFichero": "Ouvrir le fichier"
+    "abrirFichero": "Ouvrir le fichier",
+    "ownerReason": {
+      "address_needed": "vous devez choisir l'adresse de votre page",
+      "address_invalid": "l'adresse « {address} » n'est pas valide : uniquement des minuscules, des chiffres et des tirets",
+      "address_reserved": "l'adresse « {address} » est réservée",
+      "page_changed": "la page a changé pendant l'enregistrement",
+      "web_unavailable": "la recherche sur internet n'est pas disponible pour le moment",
+      "search_failed": "la recherche sur internet n'a pas répondu",
+      "search_limit": "limite de {limit} recherches par tour",
+      "web_page_unreadable": "cette page web n'a pas pu être lue",
+      "web_pages_limit": "limite de {limit} pages lues par tour",
+      "image_unreachable": "l'image n'a pas pu être téléchargée",
+      "image_edit_failed": "le service n'a pas pu modifier l'image",
+      "image_edit_limit": "une seule image peut être modifiée par tour",
+      "site_page_limit": "votre site a déjà le maximum de {limit} pages",
+      "memory_full": "la mémoire de Len est pleine"
+    }
   },
   "defaultProjectName": "Page de tarifs",
   "chatDraft": {

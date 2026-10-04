@@ -35,7 +35,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { KNOWN_TOOLS, coberturaTitle, summaryLabel, type AgentAction } from "../agent-action-card";
+import { KNOWN_TOOLS, coberturaTitle, reasonLine, summaryLabel, type AgentAction } from "../agent-action-card";
 import { SalidaEnLaTarjeta } from "../salida-en-la-tarjeta";
 import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 import { duracionLegible, procesoDelTurno } from "@/lib/workspace-v2/proceso-del-turno";
@@ -179,8 +179,8 @@ function StepRow({
   const label = KNOWN_TOOLS.has(action.tool) ? t(`agent.tool.${action.tool}`) : action.tool;
   const detail = summaryLabel(action, t);
   const coverage = coberturaTitle(action, t);
-  const reason =
-    action.status === "error" || action.status === "warning" ? action.motivo?.trim() || undefined : undefined;
+  // Qué porqué y en qué color: `reasonLine` (N41) — en rojo, nunca lo que leyó el modelo.
+  const reason = reasonLine(action, t);
   const Icon = ICON_OF[activityOf(action.tool)];
   const tone = action.status === "error" ? "bad" : action.status === "warning" ? "warn" : undefined;
   const isTerminal = action.tool === "bash" && terminal !== undefined && action.status !== "running";

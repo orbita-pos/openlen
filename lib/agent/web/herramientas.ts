@@ -20,7 +20,8 @@
  */
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
-import { ErrorDeLaWeb, type FuenteWeb } from "./buscar";
+import { ErrorDeLaWeb, WebUnavailableError, type FuenteWeb } from "./buscar";
+import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { htmlAMarkdown } from "./markdown";
 
 export const NOMBRE_WEB_SEARCH = "web_search";
@@ -82,9 +83,11 @@ export const DECLARACION_WEB_FETCH = {
   },
 } as const;
 
-const fallo = (mensaje: string): ToolOutcome => {
+/** `ownerReason` (N41): lo que el dueño lee en la tarjeta, cuando el fallo es
+ *  suyo de entender; sin él, «No pudo». `mensaje` es lo que lee el modelo. */
+const fallo = (mensaje: string, ownerReason?: OwnerReason): ToolOutcome => {
   const texto = `Error: ${mensaje}`;
-  return { response: { ok: false, error: mensaje, [CLAVE_TOOL_RESULT]: texto } };
+  return { response: { ok: false, error: mensaje, [CLAVE_TOOL_RESULT]: texto }, ...(ownerReason ? { ownerReason } : {}) };
 };
 
 /** Las consultas válidas, sin repetidas, o el porqué no. */
@@ -126,18 +129,21 @@ export function textoDeLaBusqueda(fuentes: readonly FuenteWeb[], hayMas: boolean
 }
 
 export async function toolWebSearch(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
-  if (!deps.web) return fallo("web search is not available on this server");
+  if (!deps.web) return fallo("web search is not available on this server", { code: "web_unavailable" });
   const v = consultasDe(args.queries);
   if (!v.ok) return fallo(v.error);
   const hechas = session.consultasWebEsteTurno ?? 0;
   if (hechas + v.consultas.length > CONSULTAS_POR_TURNO) {
-    return fallo(`that would be more than ${CONSULTAS_POR_TURNO} searches in this turn, the limit (${hechas} done). Work with what you have, or tell the user what is missing.`);
+    return fallo(
+      `that would be more than ${CONSULTAS_POR_TURNO} searches in this turn, the limit (${hechas} done). Work with what you have, or tell the user what is missing.`,
+      { code: "search_limit", limit: CONSULTAS_POR_TURNO },
+    );
   }
   session.consultasWebEsteTurno = hechas + v.consultas.length;
 
   const control = new AbortController();
   const plazo = setTimeout(() => control.abort(), PLAZO_MS);
-  const lo = { primerError: null as string | null, cobrables: 0 };
+  const lo = { primerError: null as string | null, cobrables: 0, noDisponible: false };
   const resultados = await Promise.allSettled(
     v.consultas.map(async (q) => {
       try {
@@ -146,6 +152,7 @@ export async function toolWebSearch(session: AgentSession, deps: AgentDeps, args
         return fuentes;
       } catch (e) {
         lo.primerError ??= e instanceof ErrorDeLaWeb ? e.message : `the search failed: ${e instanceof Error ? e.message : String(e)}`;
+        if (e instanceof WebUnavailableError) lo.noDisponible = true;
         control.abort();
         throw e;
       }
@@ -154,7 +161,7 @@ export async function toolWebSearch(session: AgentSession, deps: AgentDeps, args
   // Lo que sí se buscó le costó al servidor: se cobra aunque otra consulta fallara.
   await deps.web.cobrar(session.userId, lo.cobrables).catch(() => undefined);
   if (lo.primerError !== null || resultados.some((r) => r.status === "rejected")) {
-    return fallo(lo.primerError ?? "the search failed");
+    return fallo(lo.primerError ?? "the search failed", { code: lo.noDisponible ? "web_unavailable" : "search_failed" });
   }
   const { fuentes, hayMas } = mezclarFuentes(resultados.map((r) => (r as PromiseFulfilledResult<readonly FuenteWeb[]>).value));
   return {
@@ -164,17 +171,20 @@ export async function toolWebSearch(session: AgentSession, deps: AgentDeps, args
 }
 
 export async function toolWebFetch(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
-  if (!deps.web) return fallo("reading web pages is not available on this server");
+  if (!deps.web) return fallo("reading web pages is not available on this server", { code: "web_unavailable" });
   const url = typeof args.url === "string" ? args.url.trim() : "";
   if (!url) return fallo("url must be a non-empty string");
   const hechas = session.paginasWebEsteTurno ?? 0;
   if (hechas >= PAGINAS_POR_TURNO) {
-    return fallo(`you have already read ${PAGINAS_POR_TURNO} pages in this turn, the limit. Work with what you have, or tell the user what is missing.`);
+    return fallo(`you have already read ${PAGINAS_POR_TURNO} pages in this turn, the limit. Work with what you have, or tell the user what is missing.`, {
+      code: "web_pages_limit",
+      limit: PAGINAS_POR_TURNO,
+    });
   }
   session.paginasWebEsteTurno = hechas + 1;
 
   const p = await deps.web.leer(session.projectId, url);
-  if (!p.ok) return fallo(p.error);
+  if (!p.ok) return fallo(p.error, { code: "web_page_unreadable" });
   const { titulo, markdown } = htmlAMarkdown(p.html, p.url);
   const cabeza = [`Fetched ${p.url}`, ...(titulo ? [`Title: ${titulo}`] : [])].join("\n");
   const sinCuerpo = `${cabeza}\n\n${AVISO}\n\n`;

@@ -104,7 +104,23 @@
       "todo": "Alles tonen",
       "menos": "Minder tonen"
     },
-    "abrirFichero": "Bestand openen"
+    "abrirFichero": "Bestand openen",
+    "ownerReason": {
+      "address_needed": "je moet zelf het adres van je pagina kiezen",
+      "address_invalid": "het adres ‘{address}’ is ongeldig: alleen kleine letters, cijfers en koppeltekens",
+      "address_reserved": "het adres ‘{address}’ is gereserveerd",
+      "page_changed": "de pagina veranderde tijdens het opslaan",
+      "web_unavailable": "zoeken op internet is nu niet beschikbaar",
+      "search_failed": "de zoekopdracht op internet gaf geen antwoord",
+      "search_limit": "limiet van {limit} zoekopdrachten per beurt",
+      "web_page_unreadable": "die webpagina kon niet worden gelezen",
+      "web_pages_limit": "limiet van {limit} gelezen pagina's per beurt",
+      "image_unreachable": "de afbeelding kon niet worden gedownload",
+      "image_edit_failed": "de dienst kon de afbeelding niet bewerken",
+      "image_edit_limit": "er kan maar één afbeelding per beurt worden bewerkt",
+      "site_page_limit": "je site heeft al het maximum van {limit} pagina's",
+      "memory_full": "het geheugen van Len is vol"
+    }
   },
   "defaultProjectName": "Prijzenpagina",
   "chatDraft": {

@@ -128,13 +128,34 @@ describe("runAgentLoop", () => {
     expect(r.terminalError).toBe(false);
   });
 
-  // EL MOTIVO LLEGA A LA TARJETA, y no sólo al modelo (2026-09-18).
+  // 🔴 N41 (taller, 03/10): LO QUE LEE EL MODELO NO VA A LA TARJETA.
   //
-  // El `{ok:false, error}` de arriba ya volvía al modelo como dato. Lo que no
-  // salía del servidor era el PORQUÉ para quien mira: la tarjeta se pintaba
-  // «falló» y punto, con el motivo escrito a dos capas de distancia. Es la
-  // forma de Claude Code: un solo texto, el mismo para los dos.
-  it("un fallo emite su motivo en el evento de la tarjeta", async () => {
+  // Desde el 2026-09-18 la tarjeta roja pintaba el `error` que la herramienta
+  // le devolvía al modelo («un solo texto, como Claude Code»). Con Len en inglés
+  // el dueño leía «falló · the user has never said "reformas-bernal" — you made
+  // that name up…». Ahora la tarjeta lleva el motivo DEL DUEÑO, en código, y
+  // sólo si la herramienta lo declaró; el chat compone la frase en su idioma.
+  it("🔴 un fallo lleva el motivo del dueño que declaró la herramienta, no el texto del modelo", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "publicar", args: {} }, done],
+        [{ type: "text_delta", text: "¿qué dirección quieres?" }, done],
+      ),
+      runTool: async () => ({
+        response: { ok: false, error: 'the user has never said "reformas-bernal" — you made that name up' },
+        ownerReason: { code: "address_needed" },
+      }),
+      emit: (e) => events.push(e),
+    });
+    const fallo = events.find((e) => e.type === "action" && e.status === "error");
+    expect(fallo).toBeDefined();
+    expect((fallo as { ownerReason?: unknown }).ownerReason).toEqual({ code: "address_needed" });
+    expect("motivo" in fallo!).toBe(false);
+  });
+
+  it("un fallo sin motivo del dueño no lleva ninguno: la tarjeta dirá «No pudo»", async () => {
     const events: AgentStreamEvent[] = [];
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],
@@ -147,7 +168,8 @@ describe("runAgentLoop", () => {
     });
     const fallo = events.find((e) => e.type === "action" && e.status === "error");
     expect(fallo).toBeDefined();
-    expect((fallo as { motivo?: string }).motivo).toBe("target missing");
+    expect("motivo" in fallo!).toBe(false);
+    expect("ownerReason" in fallo!).toBe(false);
   });
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -265,11 +287,15 @@ describe("runAgentLoop", () => {
         [{ type: "function_call", name: "editar_pagina", args: {} }, done],
         [{ type: "text_delta", text: "hecho" }, done],
       ),
-      runTool: async () => ({ response: { ok: true, error: "no es un fallo" } }),
+      // Ni el motivo del dueño: sólo viaja con un fallo.
+      runTool: async () => ({ response: { ok: true, error: "no es un fallo" }, ownerReason: { code: "page_changed" } }),
       emit: (e) => events.push(e),
     });
     for (const e of events) {
-      if (e.type === "action") expect("motivo" in e).toBe(false);
+      if (e.type === "action") {
+        expect("motivo" in e).toBe(false);
+        expect("ownerReason" in e).toBe(false);
+      }
     }
   });
 

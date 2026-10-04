@@ -338,6 +338,20 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
     const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "/Nos Otros/index.html", content: MENU });
     assert.equal(out.response.ok, false);
     assert.equal(store.saved, 0);
+    // Un nombre mal escrito es cosa de Len: el dueño lee «No pudo».
+    assert.equal(out.ownerReason, undefined);
+  });
+
+  // N41: el tope de páginas SÍ es algo que el dueño entiende y puede resolver
+  // (quitar una), así que su tarjeta lo dice en su idioma.
+  it("Write de una página de más se niega, y al dueño le dice el tope", async () => {
+    const pages = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`p${i}`, { html: MENU }]));
+    const { deps, store } = makeDeps({ html: HOME, pages });
+    const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "/nosotros/index.html", content: MENU });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /maximum of 20 pages/);
+    assert.equal(store.saved, 0);
+    assert.deepEqual(out.ownerReason, { code: "site_page_limit", limit: 20 });
   });
 
   it("un documento con el marcador reservado no se guarda (la puerta de siempre)", async () => {
@@ -686,6 +700,22 @@ describe("H3 · la memoria como ficheros: sólo se AÑADE", () => {
     assert.equal(out.response.ok, true, texto(out));
     assert.deepEqual(estado.recordadas, ["Nunca uses amarillo"]);
     assert.equal(out.mutoDurable, true);
+  });
+
+  // N41: con la memoria llena, el dueño lo lee en su idioma (no «your preference
+  // memory is full…»): es suyo decidir qué se borra.
+  it("con la memoria llena, la línea no se guarda y al dueño se le dice que está llena", async () => {
+    const { deps } = depsConMemoria("— Lo que sé de ti —\n• Háblale de tú", null);
+    deps.rememberAboutUser = async () => ({ ok: false as const, reason: "llena" as const });
+    const session = makeSession();
+    await runAgentTool(session, deps, "Read", { file_path: "/memoria/dueno.md" });
+    const out = await runAgentTool(session, deps, "Edit", {
+      file_path: "/memoria/dueno.md",
+      old_string: "• Háblale de tú",
+      new_string: "• Háblale de tú\n• Nunca uses amarillo",
+    });
+    assert.equal(out.response.ok, false);
+    assert.deepEqual(out.ownerReason, { code: "memory_full" });
   });
 
   it("🔴 la memoria que va en el contexto cuenta como LEÍDA (el `seedMemoryFile` de Claude Code): se añade sin Read", async () => {

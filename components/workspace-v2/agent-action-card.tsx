@@ -6,6 +6,7 @@ import { AlertTriangle, Check, ChevronDown, ChevronRight, ExternalLink, Loader }
 import { SalidaEnLaTarjeta, type DondeEstaLaSalida } from "./salida-en-la-tarjeta";
 
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
+import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 
 export interface AgentAction {
@@ -66,8 +67,16 @@ export interface AgentAction {
    * español y esta tarjeta se pinta en 10 idiomas. Quitar la etiqueta
    * localizada le dejaría a un usuario japonés una frase que no puede leer y
    * ni siquiera la palabra «falló».
+   *
+   * ⚠️ N41 (03/10): desde que Len lee en inglés, el `motivo` de una ROJA era
+   * «the user has never said… you made that name up». Ya no se pinta en rojo
+   * (las filas de antes lo traen): la roja dice su `ownerReason`. Se queda para
+   * el ÁMBAR, que sí se escribe para el dueño. Ver `reasonLine`.
    */
   motivo?: string;
+  /** N41 · por qué falló, PARA EL DUEÑO: un código que se traduce aquí. Sólo
+   *  en rojo, y sólo si la herramienta lo declaró. */
+  ownerReason?: OwnerReason;
   /** Los valores que aplicó la llamada. NO se pinta: lo lee el historial que
    *  se le reenvía al modelo (`lib/chat/historial-del-agente.ts`). */
   valores?: string;
@@ -230,6 +239,25 @@ export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTransl
 }
 
 /**
+ * EL PORQUÉ DE UNA TARJETA, en el idioma de quien mira — o `undefined`.
+ *
+ * 🔴 N41 (taller, 03/10). En ROJO, sólo el `ownerReason` que la herramienta
+ * declaró, traducido: lo que leyó el modelo («you made that name up…») no se
+ * pinta nunca, tampoco el `motivo` que traen las filas de antes. Sin
+ * `ownerReason`, la línea dice «falló» y nada más. En ÁMBAR, el `motivo`, que
+ * ahí sí está escrito para el dueño (lo que midieron los ojos). En verde, nada.
+ *
+ * Una sola regla para las dos tarjetas (ésta y `chat/steps-card.tsx`).
+ */
+export function reasonLine(action: AgentAction, t: ReturnType<typeof useTranslations<"wsPage">>): string | undefined {
+  if (action.status === "error") {
+    const r = action.ownerReason;
+    return r ? t(`agent.ownerReason.${r.code}`, { address: r.address ?? "", limit: r.limit ?? 0 }) : undefined;
+  }
+  return action.status === "warning" ? action.motivo?.trim() || undefined : undefined;
+}
+
+/**
  * QUÉ CUBRE LA COMPROBACIÓN Y QUÉ NO — la frase que le faltaba al cierre.
  *
  * 🔴 Es lo que hace Claude Code en su informe de `preview`:
@@ -315,10 +343,8 @@ export function AgentActionCard({
   // descartada: la edición SÍ se guardó, pero nadie comprobó que hiciera lo que
   // promete, y hasta el 2026-09-18 eso no salía del servidor. Verde nunca: un
   // motivo colgado de una fila que fue bien es ruido en el 95% de los casos.
-  const motivo =
-    action.status === "error" || action.status === "warning"
-      ? action.motivo?.trim()
-      : undefined;
+  // Qué porqué y en qué color: `reasonLine` (N41).
+  const motivo = reasonLine(action, t);
   const titulo = motivo || cobertura;
   const fila = (
     <>

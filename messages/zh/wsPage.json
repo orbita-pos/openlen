@@ -104,7 +104,23 @@
       "todo": "显示全部",
       "menos": "收起"
     },
-    "abrirFichero": "打开文件"
+    "abrirFichero": "打开文件",
+    "ownerReason": {
+      "address_needed": "需要由你来选择页面的地址",
+      "address_invalid": "地址“{address}”无效：只能使用小写字母、数字和连字符",
+      "address_reserved": "地址“{address}”已被保留",
+      "page_changed": "保存时页面发生了变化",
+      "web_unavailable": "联网搜索目前不可用",
+      "search_failed": "联网搜索没有响应",
+      "search_limit": "已达到每轮 {limit} 次搜索的上限",
+      "web_page_unreadable": "无法读取该网页",
+      "web_pages_limit": "已达到每轮阅读 {limit} 个页面的上限",
+      "image_unreachable": "无法下载该图片",
+      "image_edit_failed": "服务未能编辑该图片",
+      "image_edit_limit": "每轮只能编辑一张图片",
+      "site_page_limit": "你的网站已达到 {limit} 个页面的上限",
+      "memory_full": "Len 的记忆已满"
+    }
   },
   "defaultProjectName": "价格页面",
   "chatDraft": {

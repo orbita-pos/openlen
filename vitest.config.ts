@@ -318,6 +318,8 @@ export default defineConfig({
       "lib/agent/fotos-de-la-conversacion.test.ts",
       // `include` es LISTA BLANCA: sin esta línea la prueba existe y NO corre.
       "lib/agent/motivo-del-fallo.test.ts",
+      // N41: el motivo de un paso fallido, dicho para el dueño (código, no prosa).
+      "lib/agent/owner-reason.test.ts",
       // La suite de la página: nace en verde y muere con su selector. LISTA
       // BLANCA — sin esta línea el fichero existe y no corre nadie.
       "lib/agent/pruebas-de-la-pagina.test.ts",

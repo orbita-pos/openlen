@@ -122,6 +122,22 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
     expect(guardadas[0]!.summary).toBe("paso 1");
   });
 
+  // N41: la roja guarda el motivo del DUEÑO (código + datos), o al recargar
+  // volvería a decir «falló» a secas.
+  it("🔴 el motivo del dueño de una roja LLEGA a guardarse", async () => {
+    const res = await guardar(
+      turno([{ tool: "publicar", status: "error", summary: "x", ownerReason: { code: "address_invalid", address: "mi negocio" } }]),
+    );
+    expect(res.status).toBe(200);
+    expect(guardada().ownerReason).toEqual({ code: "address_invalid", address: "mi negocio" });
+  });
+
+  it("un motivo del dueño con un código desconocido se QUITA, sin tirar el turno", async () => {
+    const res = await guardar(turno([{ tool: "publicar", status: "error", summary: "x", ownerReason: { code: "inventado" } }]));
+    expect(res.status).toBe(200);
+    expect(guardada().ownerReason).toBeUndefined();
+  });
+
   it("BRAZO DE CONTROL: una tarjeta sin los campos nuevos se guarda como antes, sin claves añadidas", async () => {
     const res = await guardar(turno([{ tool: "editar_pagina", status: "done", summary: "titular", edits: 1 }]));
     expect(res.status).toBe(200);
