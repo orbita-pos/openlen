@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { libreriasQueNoCargan, scriptSobreviveAlPublicar } from "./librerias-que-no-cargan";
+import { libreriasQueNoCargan } from "./librerias-que-no-cargan";
 
-// En pareja, como sus hermanos: lo que se rompe al publicar AVISA (🔴) y la
-// etiqueta exacta del catálogo CALLA.
+// En pareja, como sus hermanos: lo que no carga AVISA (🔴) y lo que carga CALLA.
 
 const CHART = "https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js";
 const SWIPER_JS = "https://libs.openlen.com/swiper/12.2.0/swiper-bundle.min.js";
@@ -14,24 +13,15 @@ const doc = (head: string, js = "") =>
   `<!doctype html><html><head>${head}</head><body><canvas id="g"></canvas>${js ? `<script>${js}</script>` : ""}</body></html>`;
 const tipos = (html: string) => libreriasQueNoCargan(html).map((x) => x.tipo);
 
-describe("scriptSobreviveAlPublicar — el espejo de scripts.rs", () => {
-  it("Tailwind y nuestras librerías sobreviven; lo demás, no", () => {
-    expect(scriptSobreviveAlPublicar("https://cdn.tailwindcss.com")).toBe(true);
-    expect(scriptSobreviveAlPublicar("https://cdn.tailwindcss.com?plugins=forms")).toBe(true);
-    expect(scriptSobreviveAlPublicar(CHART)).toBe(true);
-    expect(scriptSobreviveAlPublicar("https://cdn.jsdelivr.net/npm/chart.js")).toBe(false);
-    expect(scriptSobreviveAlPublicar("http://cdn.tailwindcss.com")).toBe(false);
-    expect(scriptSobreviveAlPublicar("https://cdn.tailwindcss.com.evil.example/x.js")).toBe(false);
-    expect(scriptSobreviveAlPublicar("/app.js")).toBe(false);
-  });
-});
-
 describe("libreriasQueNoCargan", () => {
-  it("🔴 un Chart.js de jsDelivr se borra al publicar, y se le ofrece el nuestro", () => {
-    const r = libreriasQueNoCargan(doc('<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>', "new Chart(g, {})"));
-    expect(r).toHaveLength(1);
-    expect(r[0]).toMatchObject({ tipo: "script-ajeno", src: "https://cdn.jsdelivr.net/npm/chart.js" });
-    expect(r[0]!.tipo === "script-ajeno" && r[0]!.sustituta?.id).toBe("chart.js");
+  // Lo que escribe el modelo llega tal cual a la publicada (medido el
+  // 2026-10-04 con supabase-js de jsDelivr): un CDN que no es el nuestro CARGA.
+  it("🔴 un script de jsDelivr o unpkg calla, y su `new Chart` no cuenta como «sin cargar»", () => {
+    expect(tipos(doc('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>'))).toEqual([]);
+    expect(tipos(doc('<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>', "new Chart(g, {})"))).toEqual([]);
+    expect(tipos(doc('<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>', "new Swiper('.s', {})"))).toEqual([]);
+    // BRAZO DE CONTROL: sin cargarla de ningún sitio, sí avisa.
+    expect(tipos(doc("", "new Chart(g, {})"))).toEqual(["sin-cargar"]);
   });
   it("la etiqueta exacta del catálogo calla", () => {
     expect(tipos(doc(`<script src="${CHART}"></script>`, "new Chart(g, {})"))).toEqual([]);

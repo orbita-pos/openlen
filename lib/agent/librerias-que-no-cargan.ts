@@ -1,29 +1,28 @@
 // lib/agent/librerias-que-no-cargan.ts — la librería que en el lienzo va y publicada no.
 //
-// 🔴 EL FALLO QUE CIERRA ES MUDO. Len pone `<script src="https://cdn.jsdelivr.net/…/chart.js">`
-// y la gráfica sale en el lienzo. Al publicar, el saneador borra todo `<script src>`
-// que no sea de Tailwind o de `libs.openlen.com` (`crates/html-engine/src/sanitize/scripts.rs`),
-// y la página publicada se queda con `Chart is not defined` y sin gráfica. Nadie lo
-// ve: ni Len, ni el usuario en su editor. Con `integrity` o `crossorigin` en una de
-// las nuestras pasa lo mismo, y ahí ni siquiera en el lienzo: el origen no manda
-// CORS y el navegador la BLOQUEA (medido el 2026-09-04, `ORIGEN_MANDA_CORS`).
+// Lo que vigila es el ORIGEN de las librerías, `libs.openlen.com`: con
+// `integrity` o `crossorigin` en una de las nuestras el navegador la BLOQUEA (el
+// origen no manda CORS, medido el 2026-09-04, `ORIGEN_MANDA_CORS`), una ruta que
+// no está en el catálogo da 404, el script que usa `Chart` sin cargarla muere
+// con «is not defined», y Swiper sin su hoja se apila. Como `enlaces-inventados`
+// y `datos-inventados`, es un DETECTOR: la comprobación sin modelo que Claude
+// Code recibe del linter, en el mismo `<new-diagnostics>`. Habla del FICHERO, y
+// `diagnosticos-de-la-escritura` resta lo que ya venía.
 //
-// Hasta hoy lo decía sólo el prompt (`bloqueDeLibrerias`). Como `enlaces-inventados`
-// y `datos-inventados`, ahora también un DETECTOR: la comprobación sin modelo que
-// Claude Code recibe del linter, en el mismo `<new-diagnostics>`. Habla del
-// FICHERO, y `diagnosticos-de-la-escritura` resta lo que ya venía.
-//
-// 🔴 ESTA ES UNA LISTA MÁS de las que deciden «¿carga esta librería?» (memoria
-// `librerias-tres-listas`: eran cuatro y cada desacuerdo tenía su síntoma mudo).
-// Por eso `scriptSobreviveAlPublicar` está clavada contra el saneador REAL en
-// `lib/ai/librerias-acuerdo.test.ts` (`test:node`): si Rust cambia, esto falla.
+// ⚰️ «script-ajeno» (29/09) decía que un `<script src>` de jsDelivr o unpkg se
+// BORRA al publicar, y mandaba quitarlo. Era FALSO: lo comparaba con
+// `sanitizeForPublish`, el saneador del HTML AJENO (lo pegado, un remix), y lo
+// que escribe el modelo no pasa por él desde el 2026-08-26 —sólo por
+// `gateReservedMarker`, en el motor y en `publishToDir`—. Medido el 2026-10-04:
+// supabase-js de jsDelivr llega a la publicada. En 3.165 escrituras grabadas no
+// había avisado nunca; con el backend de Supabase habría mandado quitar justo
+// supabase-js. Se retiró, con `scriptSobreviveAlPublicar`, que sólo existía
+// para él.
 
 import { LIBRERIAS, ORIGEN_MANDA_CORS, esUrlDeLibreria, type Libreria } from "@/lib/librerias";
 import { todoElJsDelDocumento } from "@/lib/page-engine/conservar-scripts";
 
 export type ProblemaDeLibreria =
-  /** Un `<script src>` que el saneador borra al publicar. */
-  | { readonly tipo: "script-ajeno"; readonly src: string; readonly sustituta: Libreria | null }
   /** Una de las nuestras con `integrity` o `crossorigin`: el navegador la bloquea. */
   | { readonly tipo: "con-integrity"; readonly url: string }
   /** Una ruta de `libs.openlen.com` que no está en el catálogo: casi seguro, 404. */
@@ -33,23 +32,6 @@ export type ProblemaDeLibreria =
   /** Swiper sin su hoja: el carrusel se apila en vertical. */
   | { readonly tipo: "sin-hoja"; readonly libreria: Libreria; readonly css: string };
 
-/**
- * ¿Sobrevive este `src` al saneador? El espejo, en TypeScript, de
- * `script_permitido` en `scripts.rs`: el CDN de Tailwind (cualquier ruta o
- * `?plugins=`) y `libs.openlen.com` con ruta, siempre por `https:`. Clavado
- * contra el binding real en `librerias-acuerdo.test.ts`.
- */
-export function scriptSobreviveAlPublicar(src: string): boolean {
-  const limpio = src.trim();
-  if (esUrlDeLibreria(limpio)) return true;
-  let u: URL;
-  try {
-    u = new URL(limpio);
-  } catch {
-    return false;
-  }
-  return u.protocol === "https:" && u.hostname.toLowerCase() === "cdn.tailwindcss.com" && !u.username && !u.password;
-}
 
 interface Etiqueta {
   readonly nombre: "script" | "link";
@@ -97,16 +79,19 @@ export function libreriasQueNoCargan(html: string): ProblemaDeLibreria[] {
   const out: ProblemaDeLibreria[] = [];
   const etiquetas = etiquetasConUrl(html);
   const cargadas = new Set(etiquetas.map((e) => e.url));
-  const ajenas: Libreria[] = [];
+  const deOtroCdn: Libreria[] = [];
 
   for (const e of etiquetas) {
-    if (e.nombre === "script" && !scriptSobreviveAlPublicar(e.url)) {
-      const sustituta = libreriaQueIntenta(e.url);
-      if (sustituta) ajenas.push(sustituta);
-      out.push({ tipo: "script-ajeno", src: e.url, sustituta });
+    if (!esUrlDeLibreria(e.url)) {
+      // Una de las conocidas cargada de otro CDN (jsDelivr, unpkg…) CARGA: lo
+      // que escribe el modelo llega tal cual a la publicada. Se apunta para que
+      // su `new Chart` no cuente como «sin cargar».
+      if (e.nombre === "script") {
+        const otra = libreriaQueIntenta(e.url);
+        if (otra) deOtroCdn.push(otra);
+      }
       continue;
     }
-    if (!esUrlDeLibreria(e.url)) continue;
     if (!URLS_DEL_CATALOGO.has(e.url)) out.push({ tipo: "fuera-del-catalogo", url: e.url });
     if (!ORIGEN_MANDA_CORS && /\s(?:integrity|crossorigin)(?:\s*=|[\s>/])/i.test(e.cruda)) {
       out.push({ tipo: "con-integrity", url: e.url });
@@ -118,8 +103,8 @@ export function libreriasQueNoCargan(html: string): ProblemaDeLibreria[] {
   for (const uso of USOS) {
     if (!uso.patron.test(js)) continue;
     const libreria = LIBRERIAS.find((l) => l.id === uso.id);
-    // Si intentaba cargarla de otro sitio, eso ya lo dice «script-ajeno».
-    if (!libreria || ajenas.includes(libreria)) continue;
+    // Cargada de otro CDN: no falta.
+    if (!libreria || deOtroCdn.includes(libreria)) continue;
     const necesarias = libreria.scripts.slice(0, uso.script + 1).map((s) => s.url);
     const faltan = necesarias.filter((u) => !cargadas.has(u));
     if (faltan.length > 0 && !avisadas.has(libreria.id)) {

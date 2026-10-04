@@ -215,40 +215,33 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
     }
     for (const x of libreriasQueNoCargan(html)) {
       fuera.push(
-        x.tipo === "script-ajeno"
+        x.tipo === "con-integrity"
           ? diag(
-              posicionDe(html, x.src),
+              posicionDe(html, x.url),
               "Error",
-              "script-que-se-borra",
-              `<script src="${x.src}"> is deleted at publish time: only the libraries from libs.openlen.com and Tailwind survive. On the canvas it works; on the published page, whatever depends on it is left dead.${x.sustituta ? ` Use ours: ${etiquetasDe(x.sustituta)}` : " Write that in your own <script> or remove it."}`,
+              "libreria-bloqueada",
+              `${x.url} carries integrity or crossorigin, and libs.openlen.com sends no CORS: the browser BLOCKS the library and your code fails with «is not defined». Remove both attributes.`,
             )
-          : x.tipo === "con-integrity"
+          : x.tipo === "fuera-del-catalogo"
             ? diag(
                 posicionDe(html, x.url),
-                "Error",
-                "libreria-bloqueada",
-                `${x.url} carries integrity or crossorigin, and libs.openlen.com sends no CORS: the browser BLOCKS the library and your code fails with «is not defined». Remove both attributes.`,
+                "Warning",
+                "libreria-que-no-existe",
+                `${x.url} isn't any path in the catalog, and it will most likely give a 404. Copy the exact tag: ${LIBRERIAS.map((l) => `${l.nombre} ${l.version}`).join(", ")}.`,
               )
-            : x.tipo === "fuera-del-catalogo"
+            : x.tipo === "sin-cargar"
               ? diag(
-                  posicionDe(html, x.url),
-                  "Warning",
-                  "libreria-que-no-existe",
-                  `${x.url} isn't any path in the catalog, and it will most likely give a 404. Copy the exact tag: ${LIBRERIAS.map((l) => `${l.nombre} ${l.version}`).join(", ")}.`,
+                  posicionDe(html, x.global),
+                  "Error",
+                  "libreria-sin-cargar",
+                  `Your script uses ${x.global} and the page doesn't load ${x.libreria.nombre}: as soon as it runs it fails with «${x.global} is not defined» and stops entirely. Add in the <head>: ${etiquetasDe(x.libreria, x.faltan)}`,
                 )
-              : x.tipo === "sin-cargar"
-                ? diag(
-                    posicionDe(html, x.global),
-                    "Error",
-                    "libreria-sin-cargar",
-                    `Your script uses ${x.global} and the page doesn't load ${x.libreria.nombre}: as soon as it runs it fails with «${x.global} is not defined» and stops entirely. Add in the <head>: ${etiquetasDe(x.libreria, x.faltan)}`,
-                  )
-                : diag(
-                    posicionDe(html, "new Swiper"),
-                    "Warning",
-                    "libreria-sin-hoja",
-                    `You use ${x.libreria.nombre} without its stylesheet: the carousel stacks vertically and the page looks broken. Add in the <head>: <link rel="stylesheet" href="${x.css}">`,
-                  ),
+              : diag(
+                  posicionDe(html, "new Swiper"),
+                  "Warning",
+                  "libreria-sin-hoja",
+                  `You use ${x.libreria.nombre} without its stylesheet: the carousel stacks vertically and the page looks broken. Add in the <head>: <link rel="stylesheet" href="${x.css}">`,
+                ),
       );
     }
     for (const r of reglasQueNuncaAplican(html, todoElJsDelDocumento(html))) {

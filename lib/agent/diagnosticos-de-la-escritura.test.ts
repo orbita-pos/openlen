@@ -107,13 +107,16 @@ describe("diagnosticosDeLaEscritura: lo que antes era un aviso_critico, anclado 
     expect(dados.filter((d) => /-inventad[oa]$/.test(d.codigo ?? ""))).toEqual([]);
   });
 
-  it("un <script src> que se borra al publicar, y sólo si lo puso ESTA escritura", () => {
-    const conCdn = pagina('<canvas id="g"></canvas>', '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>');
-    const ds = escritura({ despues: conCdn, fuentes: ["ponme una gráfica"] });
-    expect(ds.map((d) => d.codigo)).toContain("script-que-se-borra");
-    expect(ds.find((d) => d.codigo === "script-que-se-borra")!.mensaje).toContain("https://libs.openlen.com/chart.js/4.5.0/chart.umd.min.js");
-    // Línea base: si ya venía en la página, no lo puso esta escritura.
-    expect(escritura({ antes: conCdn, despues: conCdn.replace("<canvas", "<p>hola</p><canvas") }).map((d) => d.codigo)).not.toContain("script-que-se-borra");
+  // ⚰️ Aquí se exigía «script-que-se-borra» ante un `<script src>` de jsDelivr.
+  // Era falso (lo que escribe el modelo llega tal cual a la publicada, medido el
+  // 2026-10-04) y se retiró: ahora se exige silencio.
+  it("un <script src> de jsDelivr no avisa: llega a la publicada", () => {
+    const conCdn = pagina(
+      '<canvas id="g"></canvas><script>supabase.createClient("https://abcdefghijklmnopqrst.openlen.app", "sb_publishable_x"); new Chart(g, {});</script>',
+      '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://cdn.jsdelivr.net/npm/chart.js"></script>',
+    );
+    const ds = escritura({ despues: conCdn, fuentes: ["ponme una gráfica y guarda los pedidos"] });
+    expect(ds.filter((d) => /^(script|libreria)-/.test(d.codigo ?? ""))).toEqual([]);
   });
 
   it("un enlace que cae en la portada, y sólo si lo puso ESTA escritura", () => {
