@@ -162,7 +162,18 @@
   },
   "editing": {
     "noHtml": "Ce projet n'a pas encore de contenu HTML.",
-    "loading": "Chargement du projet…"
+    "loading": "Chargement du projet…",
+    "unavailable": {
+      "notFoundTitle": "Nous n'avons pas trouvé cette page",
+      "notFoundBody": "Elle a peut-être été supprimée, ou elle appartient à un autre compte.",
+      "signedOutTitle": "Votre session est terminée",
+      "signedOutBody": "Reconnectez-vous pour ouvrir cette page.",
+      "failedTitle": "Impossible d'ouvrir cette page",
+      "failedBody": "C'est peut-être votre connexion. Réessayez.",
+      "myPages": "Voir mes pages",
+      "signIn": "Se connecter",
+      "retry": "Réessayer"
+    }
   },
   "a11y": {
     "workspaceHeading": "Espace de travail OpenLen"

@@ -162,7 +162,18 @@
   },
   "editing": {
     "noHtml": "此项目尚无 HTML 内容。",
-    "loading": "正在加载项目……"
+    "loading": "正在加载项目……",
+    "unavailable": {
+      "notFoundTitle": "找不到这个页面",
+      "notFoundBody": "它可能已被删除，或属于另一个账号。",
+      "signedOutTitle": "你已退出登录",
+      "signedOutBody": "请重新登录以打开此页面。",
+      "failedTitle": "无法打开这个页面",
+      "failedBody": "可能是网络连接问题，请重试。",
+      "myPages": "查看我的页面",
+      "signIn": "登录",
+      "retry": "重试"
+    }
   },
   "a11y": {
     "workspaceHeading": "OpenLen 工作区"

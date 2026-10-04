@@ -8,7 +8,8 @@
     "switch": "Andere pagina",
     "seeAll": "Al mijn pagina's",
     "rename": "Naam wijzigen",
-    "onlyOne": "Dit is je enige pagina"
+    "onlyOne": "Dit is je enige pagina",
+    "unavailable": "Pagina niet beschikbaar"
   },
   "save": {
     "saving": "Opslaan…",

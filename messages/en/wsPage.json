@@ -162,7 +162,18 @@
   },
   "editing": {
     "noHtml": "This project has no HTML content yet.",
-    "loading": "Loading project…"
+    "loading": "Loading project…",
+    "unavailable": {
+      "notFoundTitle": "We couldn't find this page",
+      "notFoundBody": "It may have been deleted, or it belongs to another account.",
+      "signedOutTitle": "You've been signed out",
+      "signedOutBody": "Sign in again to open this page.",
+      "failedTitle": "This page couldn't be opened",
+      "failedBody": "It may be your connection. Try again.",
+      "myPages": "See my pages",
+      "signIn": "Sign in",
+      "retry": "Try again"
+    }
   },
   "a11y": {
     "workspaceHeading": "OpenLen workspace"

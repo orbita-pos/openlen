@@ -162,7 +162,18 @@
   },
   "editing": {
     "noHtml": "このプロジェクトにはまだHTMLコンテンツがありません。",
-    "loading": "プロジェクトを読み込んでいます…"
+    "loading": "プロジェクトを読み込んでいます…",
+    "unavailable": {
+      "notFoundTitle": "このページが見つかりません",
+      "notFoundBody": "削除されたか、別のアカウントのページの可能性があります。",
+      "signedOutTitle": "ログインが切れました",
+      "signedOutBody": "このページを開くには、もう一度ログインしてください。",
+      "failedTitle": "このページを開けませんでした",
+      "failedBody": "接続の問題かもしれません。もう一度お試しください。",
+      "myPages": "自分のページを見る",
+      "signIn": "ログイン",
+      "retry": "再試行"
+    }
   },
   "a11y": {
     "workspaceHeading": "OpenLen ワークスペース"

@@ -8,7 +8,8 @@
     "switch": "Seite wechseln",
     "seeAll": "Alle meine Seiten",
     "rename": "Umbenennen",
-    "onlyOne": "Das ist deine einzige Seite"
+    "onlyOne": "Das ist deine einzige Seite",
+    "unavailable": "Seite nicht verfügbar"
   },
   "save": {
     "saving": "Wird gespeichert…",

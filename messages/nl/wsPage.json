@@ -162,7 +162,18 @@
   },
   "editing": {
     "noHtml": "Dit project heeft nog geen HTML-inhoud.",
-    "loading": "Project laden…"
+    "loading": "Project laden…",
+    "unavailable": {
+      "notFoundTitle": "We kunnen deze pagina niet vinden",
+      "notFoundBody": "Misschien is hij verwijderd, of hij hoort bij een ander account.",
+      "signedOutTitle": "Je sessie is beëindigd",
+      "signedOutBody": "Log opnieuw in om deze pagina te openen.",
+      "failedTitle": "Deze pagina kon niet worden geopend",
+      "failedBody": "Misschien ligt het aan je verbinding. Probeer het opnieuw.",
+      "myPages": "Mijn pagina's bekijken",
+      "signIn": "Inloggen",
+      "retry": "Opnieuw proberen"
+    }
   },
   "a11y": {
     "workspaceHeading": "OpenLen-werkruimte"
