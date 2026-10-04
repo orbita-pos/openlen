@@ -1768,8 +1768,46 @@ describe("corregirle el rumbo a media faena", () => {
       emit: () => {},
       leerDireccion: () => { lecturas += 1; return null; },
     });
-    // Dos vueltas del bucle ⇒ dos lecturas, aunque la primera hiciera 2 tools.
-    expect(lecturas).toBe(2);
+    // Dos vueltas del bucle ⇒ dos lecturas, aunque la primera hiciera 2 tools;
+    // y una más al cerrar (2026-10-03: la que llega durante el cierre no se pierde).
+    expect(lecturas).toBe(3);
+  });
+
+  it("🔴 la que llega MIENTRAS ESCRIBE EL CIERRE no se pierde: el turno sigue y la lee", async () => {
+    // Visto en el taller el 2026-10-03: el POST a /api/agent/dirigir llegó
+    // durante la última llamada —la que ya no pide herramientas—, se aceptó con
+    // 200, y el turno cerró sin leerla. Vuelta 1: edita. Vuelta 2: escribe el
+    // cierre, y la corrección «llega» durante esa llamada, así que sólo la puede
+    // ver la lectura del cierre (la tercera).
+    const events: AgentStreamEvent[] = [];
+    const vistos: Message[][] = [];
+    let lecturas = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hazme un hero" }],
+      tools: [],
+      openStream: (msgs) => {
+        vistos.push(msgs.map((m) => ({ ...m })));
+        const n = vistos.length;
+        return (async function* () {
+          if (n === 1) yield { type: "function_call", name: "editar_pagina", args: {} } as StreamEvent;
+          else yield { type: "text_delta", text: n === 2 ? "Listo, quedó azul." : "Hecho en verde." } as StreamEvent;
+          yield usage(5);
+          yield doneEv;
+        })();
+      },
+      runTool: async () => ({ response: { ok: true }, updatedHtml: "<p>x</p>" }),
+      emit: (e) => events.push(e),
+      leerDireccion: () => (++lecturas === 3 ? "mejor verde" : null),
+    });
+
+    expect(events.some((e) => e.type === "direccion" && e.texto === "mejor verde")).toBe(true);
+    expect(vistos).toHaveLength(3);
+    // La tercera llamada ve lo que acababa de decir Y la corrección, en orden.
+    const ultimos = vistos[2].slice(-2);
+    expect(ultimos[0]).toMatchObject({ role: "assistant", content: "Listo, quedó azul." });
+    expect(ultimos[1]?.role).toBe("user");
+    expect(String(ultimos[1]?.content)).toContain("mejor verde");
+    expect(r.finalText).toBe("Hecho en verde.");
   });
 
   it("una correccion que llega EN EL TOPE todavia se lee y da margen", async () => {

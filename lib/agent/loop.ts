@@ -760,6 +760,17 @@ const EN_PARALELO = new Set([
  *  el tiempo dos veces. */
 const VUELTAS_POR_DIRECCION = 2;
 
+/** La corrección, tal como la lee el modelo: el texto del usuario VERBATIM, y
+ *  alrededor sólo lo que el modelo no puede saber por su cuenta —que llegó
+ *  mientras trabajaba, no al principio—. Una sola redacción para los dos sitios
+ *  donde se recoge: entre vueltas y al cerrar. */
+function steerMessage(texto: string): Message {
+  return {
+    role: "user",
+    content: `[The user wrote to you while you were working. Read it and adjust before your next step.]\n${texto}`,
+  };
+}
+
 /**
  * 🔴 H12 · LAS VUELTAS DE LLAMADAS RECHAZADAS NO SON TRABAJO.
  *
@@ -1268,13 +1279,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // acaba el presupuesto, leerla y salir sería lo peor de los dos mundos.
     const direccion = args.leerDireccion?.() ?? null;
     if (direccion) {
-      messages.push({
-        role: "user",
-        // El texto del usuario VERBATIM. El marco de alrededor es del servidor
-        // y dice sólo lo que el modelo no puede saber por su cuenta: que esto
-        // llegó mientras trabajaba, no al principio.
-        content: `[The user wrote to you while you were working. Read it and adjust before your next step.]\n${direccion}`,
-      });
+      messages.push(steerMessage(direccion));
       args.emit({ type: "direccion", texto: direccion });
       maxTurns += VUELTAS_POR_DIRECCION;
     }
@@ -1433,6 +1438,23 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
 
     if (calls.length === 0) {
+      // 🔴 UNA CORRECCIÓN QUE LLEGÓ MIENTRAS ESCRIBÍA EL CIERRE. Se leían sólo
+      // al empezar cada vuelta, así que la que llegaba durante la última
+      // llamada —la que ya no pide herramientas— se aceptaba con 200, el turno
+      // cerraba sin mirar y `cerrarTurno` la borraba: ni se aplicaba ni salía
+      // el «↳». Visto en el taller el 2026-10-03 con dos vueltas (sesión del
+      // chat nuevo). Como en Claude Code, lo que el usuario escribe mientras el
+      // agente trabaja no se pierde: aquí el turno no cierra, Len la lee con lo
+      // que acaba de decir delante y sigue, con el mismo margen que entre vueltas.
+      const tardia = args.leerDireccion?.() ?? null;
+      if (tardia) {
+        if (turnText.trim()) messages.push(delAsistente(turnText));
+        messages.push(steerMessage(tardia));
+        args.emit({ type: "direccion", texto: tardia });
+        maxTurns += VUELTAS_POR_DIRECCION;
+        continue;
+      }
+
       // 🔴 CERRÓ CALLADO TRAS UN AVISO. La insistencia le dice que, si lo suyo
       // era una explicación, ya le llegó al dueño y no la repita (revisión
       // pre-deploy del 2026-09-22: antes se le pedía «repítela tal cual» y el
