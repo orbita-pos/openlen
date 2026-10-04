@@ -346,6 +346,9 @@ export function useAgentChat({
   // turno propio: ■ lo para y lo escrito lo corrige, con el `turnoId` que
   // devuelve su fila.
   const [reenganche, setReenganche] = useState<string | null>(null);
+  // Se pulsó ■ sobre el turno reenganchado (N38): su fila borrada es «Cancelado.»,
+  // no un error de red.
+  const stopRequestedRef = useRef(false);
   // El turno que ESTA pestaña lee por su stream: la convergencia no puede
   // pisarlo con la fila del servidor, que va unos segundos por detrás.
   const enVueloRef = useRef<string | null>(null);
@@ -569,6 +572,7 @@ export function useAgentChat({
     if (!reenganche) return;
     const fila = reenganche;
     let vivo = true;
+    stopRequestedRef.current = false;
     const terminar = () => {
       turnoIdRef.current = null;
       setReenganche(null);
@@ -585,11 +589,13 @@ export function useAgentChat({
       if (!vivo) return;
       if (r.status === 404) {
         // El servidor nunca llegó a abrir la fila (o el turno no produjo
-        // nada): ahora sí es el error de red de siempre.
+        // nada): ahora sí es el error de red de siempre. SALVO si se pidió
+        // parar (N38, plans/new-chat/): un ■ sobre un turno que aún no cambió
+        // nada borra su fila, y esto decía «Error de red» a quien lo acababa de
+        // parar. Visto en el taller el 03/10.
+        const errorText = stopRequestedRef.current ? t("errors.cancelled") : t("errors.network");
         setTurns((prev) =>
-          prev.map((x) =>
-            x.id === fila ? { ...x, status: "error", enServidor: false, errorText: t("errors.network") } : x,
-          ),
+          prev.map((x) => (x.id === fila ? { ...x, status: "error", enServidor: false, errorText } : x)),
         );
         terminar();
         return;
@@ -1741,6 +1747,9 @@ export function useAgentChat({
     // turno seguiría gastando detrás. `keepalive` para que la petición salga
     // aunque la pestaña se cierre justo después.
     const turnoId = turnoIdRef.current;
+    // Un turno reenganchado no tiene conexión que abortar: lo que diga su fila
+    // después (un 404 si no llegó a cambiar nada) es la respuesta al ■.
+    stopRequestedRef.current = true;
     if (turnoId) {
       void fetch("/api/agent/cancelar", {
         method: "POST",
