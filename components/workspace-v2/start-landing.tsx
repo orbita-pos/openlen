@@ -23,8 +23,11 @@ import {
   type TemplateFamily,
   type TemplateSpec,
 } from "./templates-data";
-import { Loader, Search, SendUp } from "./icons";
-import { Mic, Plus, Square, X } from "lucide-react";
+import { Loader, Search } from "./icons";
+import { ArrowUp, ImageIcon, Mic, Plus, Square } from "lucide-react";
+import "./chat/new-chat.css";
+import { ComposerChip, ComposerPlusOption } from "./composer-pieces";
+import { useMandoDesplegable } from "./use-mando-desplegable";
 import { ReferenceField } from "./reference-field";
 import { useDictado } from "@/components/marketing/use-dictado";
 import { reducirImagen } from "@/components/marketing/reducir-imagen";
@@ -286,7 +289,7 @@ function FamilyChip({
 
 // The centered AI composer. Mirrors the sidebar AiBriefPanel composer (auto-grow
 // textarea + Enter-to-send + the shared EffortSelect) at a larger, hero size.
-function HeroComposer({
+export function HeroComposer({
   state,
   onGenerate,
   generating,
@@ -337,6 +340,10 @@ function HeroComposer({
   // siempre. Elegir modelo nunca debe poder romper la pantalla de entrada.
   const [escritor, setEscritor] = useState<EscritorFijado>(null);
   const [modeloAbierto, setModeloAbierto] = useState(false);
+  // El menú del `+`, con el mismo gancho que el chat: Esc, clic fuera, flechas.
+  const [plusOpen, setPlusOpen] = useState(false);
+  const plus = useMandoDesplegable({ abierto: plusOpen, cerrar: () => setPlusOpen(false) });
+  const tc = useTranslations("panelsChat");
   useEffect(() => {
     let vivo = true;
     fetch("/api/crear/escritor")
@@ -425,192 +432,193 @@ function HeroComposer({
   };
 
   return (
-    <div className="rounded-2xl border bd bg-elev shadow-card focus-within:border-[color:var(--accent)] focus-within:ring-1 focus-within:ring-[color:var(--accent-ring)]/30 transition">
-      {/* La miniatura va ARRIBA y DENTRO, igual que en el heroe: la caja crece
-          con ella en vez de taparle algo al usuario. */}
-      {state.fotos.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-4 pt-3.5">
+    // LA PIEL DEL CHAT NUEVO (Jesús, 03/10: «que sean como el chat nuevo»): la
+    // misma caja, las fichas encima del texto, el `+` con su menú, las opciones
+    // como pastillas al final y el botón cuadrado. Bajo `.nc` por los tokens y
+    // las animaciones de chat/new-chat.css. Lo que HACE no cambia: fotos,
+    // dictado, límite del brief, escritor, referencia y eventos de uso.
+    <div className="nc">
+      <div className="nc-composer relative rounded-[16px] border bd-strong bg-elev px-3 pb-[7px] pt-2 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition">
+        {/* Lo que va con el encargo, como fichas ARRIBA y dentro: las fotos y
+            la referencia de una web. `empty:hidden` porque la referencia no
+            pinta nada sin una dirección escrita, que es lo normal. */}
+        <div className="mb-1 flex flex-wrap gap-1.5 empty:hidden">
           {state.fotos.map((foto, i) => (
-            <div key={`${foto.nombre}-${i}`} className="relative inline-flex">
+            <ComposerChip
+              key={`${foto.nombre}-${i}`}
+              title={foto.nombre}
+              {...(generating ? {} : { onRemove: () => state.setFotos(state.fotos.filter((_, j) => j !== i)) })}
+              removeLabel={tm("heroPrompt.removeImage")}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={foto.dataUrl}
-                alt={foto.nombre || tm("heroPrompt.attachedAlt")}
-                className="h-14 w-14 rounded-lg object-cover ring-1 ring-[color:var(--border)]"
-              />
-              <button
-                type="button"
-                onClick={() => state.setFotos(state.fotos.filter((_, j) => j !== i))}
-                aria-label={tm("heroPrompt.removeImage")}
-                className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[color:var(--fg)] text-[color:var(--bg)] ring-2 ring-[color:var(--bg-elev)] transition hover:opacity-80"
-              >
-                <X size={11} strokeWidth={2.6} />
-              </button>
-            </div>
+              <img src={foto.dataUrl} alt="" className="h-[18px] w-[18px] shrink-0 rounded object-cover" />
+              <span className="min-w-0 max-w-[180px] truncate">{foto.nombre || tm("heroPrompt.attachedAlt")}</span>
+            </ComposerChip>
           ))}
+          <ReferenceField
+            brief={state.prompt}
+            reference={state.reference}
+            onChange={state.setReference}
+            disabled={generating}
+            variant="chip"
+          />
         </div>
-      )}
 
-      <textarea
-        ref={taRef}
-        value={state.prompt}
-        onChange={(e) => {
-          marcarEscrito();
-          briefLimit.onChange(e);
-        }}
-        onPaste={(e) => {
-          marcarEscrito();
-          briefLimit.onPaste(e);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            if (canGenerate) enviar();
-          }
-        }}
-        rows={2}
-        disabled={generating}
-        placeholder={t("aiBrief.placeholder")}
-        maxLength={briefLimit.maxLength}
-        aria-describedby={
-          briefLimit.warningVisible ? briefLimit.feedbackId : undefined
-        }
-        className="block w-full bg-transparent text-[13.5px] leading-relaxed px-4 pt-3.5 pb-1 fg placeholder:fg-faint focus:outline-none resize-none nice-scroll disabled:opacity-60"
-        style={{ minHeight: 56 }}
-      />
-      {/* Lo que el motor va oyendo. Fuera del textarea a proposito: es texto
-          que todavia puede CORREGIRSE, y verlo reescribirse dentro de lo ya
-          escrito da la sensacion de que te lo borra. */}
-      {dictado.escuchando && (
-        <p className="px-4 pb-1 text-[12px] italic fg-faint" aria-live="polite">
-          {dictado.parcial || tm("heroPrompt.listening")}
-        </p>
-      )}
-      {dictado.mudo && (
-        <p className="px-4 pb-1 text-[11.5px] text-amber-600 dark:text-amber-400" role="status">
-          {tm("heroPrompt.micSilent")}
-        </p>
-      )}
-      {dictado.denegado && (
-        <p className="px-4 pb-1 text-[11.5px] text-amber-600 dark:text-amber-400" role="status">
-          {tm("heroPrompt.micDenied")}
-        </p>
-      )}
-
-      <GenerationBriefLimitFeedback
-        valueLength={state.prompt.length}
-        state={briefLimit}
-        warningText={t("aiBrief.trimmed", { max: briefLimit.maxLength })}
-        className="px-4 pb-1 text-[11px]"
-        warningClassName="text-amber-600 dark:text-amber-400"
-        counterClassName="fg-faint"
-      />
-      {/* justify-END, no justify-between: la referencia no pinta nada hasta
-          que hay una dirección, y `between` con un solo hijo lo alinea al
-          INICIO — el botón de generar se iba a la izquierda en cuanto el brief
-          no traía URL, que es casi siempre. La referencia se empuja ella sola
-          con `me-auto`. */}
-      {/* El `+` y la referencia van en un GRUPO con `me-auto`, no cada uno con
-          el suyo: `ReferenceField` ya trae `me-auto` dentro, y dos margenes
-          automaticos se reparten el hueco —la referencia se iria al centro—.
-          Ponerselo solo a ella tampoco vale: devuelve `null` sin URL, que es el
-          caso normal, y entonces el `+` se iria a la derecha. El microfono va
-          pegado a generar, como en el heroe. */}
-      <div className="flex items-center justify-end gap-2 px-2.5 pb-2.5 pt-1">
-        <div className="me-auto flex min-w-0 items-center gap-2">
-        <input
-          ref={fileRef}
-          type="file"
-          multiple
-          accept="image/png,image/jpeg,image/webp,image/avif"
-          className="sr-only"
-          tabIndex={-1}
-          onChange={(e) => void elegirFotos(e.target.files)}
-        />
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={generating || leyendoFoto || state.fotos.length >= MAX_REFERENCIAS}
-          aria-label={tm("heroPrompt.attachImages")}
-          title={
-            state.fotos.length >= MAX_REFERENCIAS
-              ? tm("heroPrompt.maxImages", { max: MAX_REFERENCIAS })
-              : tm("heroPrompt.attachImages")
-          }
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md fg-faint hover:fg hover:bg-hover transition disabled:opacity-40"
-        >
-          {leyendoFoto ? <Loader size={14} className="animate-spin" /> : <Plus size={16} />}
-        </button>
-        {/* QUÉ MOTOR ESCRIBE — y ahora, cuál. El nombre sigue estando en la
-            entrada como texto tenue, que es la forma de la bienvenida de Claude
-            Code (el modelo y, si lo hay, su nivel), y ADEMÁS es el mando: allí
-            la propia entrada de `/model` se describe como `el modelo de IA de
-            Claude Code (ahora, Opus 5)`, o sea que el nombre es el botón.
-            Sin nivel, porque pensar en Crear no compra nada (medido). Ver
-            `selector-de-modelo.tsx`. */}
-        <SelectorDeModelo
-          escritor={escritor}
-          hasImages={state.fotos.length > 0}
-          onChange={elegirEscritor}
-          abierto={modeloAbierto}
-          onAbrir={(v) => {
-            setModeloAbierto(v);
-            if (v) registrarUso("crear_modelo_abrio", {});
+        <textarea
+          ref={taRef}
+          value={state.prompt}
+          onChange={(e) => {
+            marcarEscrito();
+            briefLimit.onChange(e);
           }}
-          t={(clave, valores) => tm(`heroPrompt.${clave}`, valores)}
-        />
-        <ReferenceField
-          brief={state.prompt}
-          reference={state.reference}
-          onChange={state.setReference}
+          onPaste={(e) => {
+            marcarEscrito();
+            briefLimit.onPaste(e);
+          }}
+          onKeyDown={(e) => {
+            // Mientras un IME compone (japonés, coreano, chino), Enter confirma
+            // la palabra: no puede mandar el encargo a medias.
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              if (canGenerate) enviar();
+            }
+          }}
+          rows={1}
           disabled={generating}
+          placeholder={t("aiBrief.placeholder")}
+          maxLength={briefLimit.maxLength}
+          aria-describedby={briefLimit.warningVisible ? briefLimit.feedbackId : undefined}
+          className="mt-0.5 block w-full resize-none bg-transparent text-[14px] leading-normal fg outline-none placeholder:fg-faint nice-scroll disabled:opacity-60"
+          style={{ minHeight: 44 }}
         />
-        </div>
-        {dictado.soportado && (
+        {/* Lo que el motor va oyendo. Fuera del textarea a proposito: es texto
+            que todavia puede CORREGIRSE, y verlo reescribirse dentro de lo ya
+            escrito da la sensacion de que te lo borra. */}
+        {dictado.escuchando && (
+          <p className="pb-1 text-[12px] italic fg-faint" aria-live="polite">
+            {dictado.parcial || tm("heroPrompt.listening")}
+          </p>
+        )}
+        {dictado.mudo && (
+          <p className="pb-1 text-[11.5px] text-amber-600 dark:text-amber-400" role="status">
+            {tm("heroPrompt.micSilent")}
+          </p>
+        )}
+        {dictado.denegado && (
+          <p className="pb-1 text-[11.5px] text-amber-600 dark:text-amber-400" role="status">
+            {tm("heroPrompt.micDenied")}
+          </p>
+        )}
+        <GenerationBriefLimitFeedback
+          valueLength={state.prompt.length}
+          state={briefLimit}
+          warningText={t("aiBrief.trimmed", { max: briefLimit.maxLength })}
+          className="pb-1 text-[11px]"
+          warningClassName="text-amber-600 dark:text-amber-400"
+          counterClassName="fg-faint"
+        />
+
+        <div className="mt-0.5 flex items-center gap-[3px]">
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept="image/png,image/jpeg,image/webp,image/avif"
+            className="sr-only"
+            tabIndex={-1}
+            onChange={(e) => void elegirFotos(e.target.files)}
+          />
+          {/* EL `+` ABRE SU MENÚ, como en el chat: hoy una opción, adjuntar
+              imágenes, con lo que hace dicho debajo. */}
+          <div className="relative" ref={plus.refContenedor} onKeyDown={plus.alPulsarTecla}>
+            <button
+              type="button"
+              ref={plus.refDisparador}
+              aria-label={tc("newChat.composer.plus")}
+              title={tc("newChat.composer.plus")}
+              aria-haspopup="menu"
+              aria-expanded={plusOpen}
+              onClick={() => setPlusOpen((x) => !x)}
+              disabled={generating}
+              className={`grid h-[30px] w-[30px] place-items-center rounded-[9px] transition disabled:opacity-40 ${
+                state.fotos.length > 0 ? "text-[var(--nc-accent-text)]" : "fg-muted"
+              } hover:bg-side hover:fg`}
+            >
+              {leyendoFoto ? (
+                <Loader size={14} className="animate-spin" />
+              ) : (
+                <Plus size={16} className={`transition-transform duration-200 ${plusOpen ? "rotate-45" : ""}`} />
+              )}
+            </button>
+            {plusOpen && (
+              <div
+                role="menu"
+                aria-label={tc("newChat.composer.plus")}
+                className="nc-card-in absolute bottom-[calc(100%+8px)] left-0 z-20 w-[290px] rounded-[14px] border bd-strong bg-elev p-1.5 shadow-[0_18px_40px_-12px_rgb(20_10_5/0.35)]"
+              >
+                <ComposerPlusOption
+                  icon={<ImageIcon size={15} />}
+                  title={tm("heroPrompt.attachImages")}
+                  hint={
+                    state.fotos.length >= MAX_REFERENCIAS
+                      ? tm("heroPrompt.maxImages", { max: MAX_REFERENCIAS })
+                      : tm("heroPrompt.attachImagesHint", { max: MAX_REFERENCIAS })
+                  }
+                  on={state.fotos.length > 0}
+                  onLabel={String(state.fotos.length)}
+                  disabled={leyendoFoto || state.fotos.length >= MAX_REFERENCIAS}
+                  onClick={() => {
+                    setPlusOpen(false);
+                    fileRef.current?.click();
+                  }}
+                />
+              </div>
+            )}
+          </div>
+          {dictado.soportado && (
+            <button
+              type="button"
+              onClick={dictado.alternar}
+              aria-pressed={dictado.escuchando}
+              aria-label={dictado.escuchando ? tm("heroPrompt.stopDictating") : tm("heroPrompt.dictate")}
+              title={dictado.escuchando ? tm("heroPrompt.stopDictating") : tm("heroPrompt.dictate")}
+              disabled={generating}
+              className={`grid h-[30px] w-[30px] place-items-center rounded-[9px] transition hover:bg-side disabled:opacity-40 ${
+                dictado.escuchando ? "bg-side text-[var(--nc-accent-text)]" : "fg-muted hover:fg"
+              }`}
+            >
+              {dictado.escuchando ? <Square size={11} className="fill-current" /> : <Mic size={15} />}
+            </button>
+          )}
+          {/* QUÉ MOTOR ESCRIBE, como pastilla al final de la fila: el sitio del
+              mando de esfuerzo en el chat. Ver `selector-de-modelo.tsx`. */}
+          <div className="ml-auto flex min-w-0 items-center gap-1.5">
+            <SelectorDeModelo
+              escritor={escritor}
+              hasImages={state.fotos.length > 0}
+              onChange={elegirEscritor}
+              abierto={modeloAbierto}
+              onAbrir={(v) => {
+                setModeloAbierto(v);
+                if (v) registrarUso("crear_modelo_abrio", {});
+              }}
+              variant="pill"
+              t={(clave, valores) => tm(`heroPrompt.${clave}`, valores)}
+            />
+          </div>
           <button
             type="button"
-            onClick={dictado.alternar}
-            aria-pressed={dictado.escuchando}
-            aria-label={dictado.escuchando ? tm("heroPrompt.stopDictating") : tm("heroPrompt.dictate")}
-            title={dictado.escuchando ? tm("heroPrompt.stopDictating") : tm("heroPrompt.dictate")}
-            disabled={generating}
-            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition disabled:opacity-40 ${
-              dictado.escuchando
-                ? "bg-[var(--accent-strong)] text-white shadow-coral"
-                : "fg-faint hover:fg hover:bg-hover"
+            onClick={enviar}
+            disabled={!canGenerate}
+            aria-label={t("aiBrief.generate")}
+            title={t("aiBrief.generate")}
+            className={`ml-1 flex h-8 min-w-8 shrink-0 items-center justify-center rounded-[10px] text-white transition hover:-translate-y-px disabled:translate-y-0 disabled:cursor-default ${
+              generating || canGenerate ? "bg-[var(--accent-strong)]" : "bg-[var(--border-strong)]"
             }`}
           >
-            {dictado.escuchando ? <Square size={10} className="fill-current" /> : <Mic size={15} />}
+            {generating ? <Loader size={14} className="animate-spin" /> : <ArrowUp size={16} />}
           </button>
-        )}
-        {/* El dial está aparcado mientras la puerta es /api/generate: ahí no
-            compra nada todavía, y un selector que no compra nada es la mentira
-            que se arregló en page-effort.ts. Su hueco lo ocupa ahora la
-            referencia visual, que sí compra algo: la dirección de una web que
-            al usuario le gusta. Se ve y se quita antes de generar.
-            Desde el 2026-08-27 la dirección se ESCRIBE dentro del brief y esto
-            no ocupa nada hasta que hay una — ni un botón. */}
-        <button
-          type="button"
-          onClick={enviar}
-          disabled={!canGenerate}
-          aria-label={t("aiBrief.generate")}
-          className={`inline-flex shrink-0 items-center justify-center gap-1.5 h-9 rounded-lg text-[12.5px] font-medium transition ${
-            canGenerate
-              ? "px-4 bg-[var(--accent-strong)] text-white shadow-coral hover:brightness-105"
-              : "w-9 bg-hover fg-faint cursor-not-allowed"
-          }`}
-        >
-          {generating ? (
-            <Loader size={14} className="animate-spin" />
-          ) : canGenerate ? (
-            <>
-              <SendUp size={13} /> <span>{t("aiBrief.generate")}</span>
-            </>
-          ) : (
-            <SendUp size={14} />
-          )}
-        </button>
+        </div>
       </div>
     </div>
   );

@@ -195,3 +195,37 @@ describe("la dirección sale de lo que el usuario escribió", () => {
     vi.useRealTimers();
   });
 });
+
+// LA FICHA (03/10/2026): en Crear la referencia va encima del texto, como lo
+// que viaja con un mensaje en el chat nuevo. Se ve y se quita igual.
+describe("variant chip", () => {
+  it("puesta: la ficha con los colores, el host y la equis que la quita", () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const onChange = vi.fn();
+    let root!: Root;
+    act(() => {
+      root = createRoot(container);
+      root.render(<ReferenceField brief="" reference={DIRECCION} onChange={onChange} variant="chip" />);
+    });
+    roots.push(root);
+    const ficha = container.querySelector("span.nc-pop") as HTMLElement;
+    expect(ficha).not.toBeNull();
+    expect(ficha.textContent).toContain(DIRECCION.hostname);
+    act(() => (ficha.querySelector("button") as HTMLButtonElement).click());
+    expect(onChange).toHaveBeenCalledWith(null);
+  });
+
+  it("deshabilitada (generando) se ve pero no se puede quitar", () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    let root!: Root;
+    act(() => {
+      root = createRoot(container);
+      root.render(<ReferenceField brief="" reference={DIRECCION} onChange={() => {}} variant="chip" disabled />);
+    });
+    roots.push(root);
+    expect(container.querySelector("span.nc-pop")).not.toBeNull();
+    expect(container.querySelector("button")).toBeNull();
+  });
+});

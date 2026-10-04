@@ -29,6 +29,7 @@
     "listening": "正在聆听…",
     "attachImage": "添加图片",
     "attachImages": "添加图片",
+    "attachImagesHint": "最多 {max} 张：你的标志、你的店面，或你喜欢的网站。",
     "maxImages": "最多 {max} 张",
     "removeImage": "移除图片",
     "attachedAlt": "已添加的参考图",

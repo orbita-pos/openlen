@@ -34,6 +34,7 @@ import {
   type ReferenceErrorCode,
 } from "./reference-input";
 import { urlEnElBrief } from "./url-en-el-brief";
+import { ComposerChip } from "./composer-pieces";
 
 /** Un respiro antes de mirar la página. El usuario está ESCRIBIENDO: sin esto,
  *  cada tecla después de pegar la dirección dispararía una petición. */
@@ -44,12 +45,17 @@ export function ReferenceField({
   reference,
   onChange,
   disabled = false,
+  variant = "row",
 }: {
   /** Lo que el usuario lleva escrito. De aquí sale la dirección. */
   brief: string;
   reference: StyleDirection | null;
   onChange: (d: StyleDirection | null) => void;
   disabled?: boolean;
+  /** `row`: en el pie del compositor, como siempre (el panel lateral). `chip`:
+   *  como ficha encima del texto, igual que lo que viaja con un mensaje en el
+   *  chat nuevo (`ComposerChip`); el que la monta la pone bajo `.nc`. */
+  variant?: "row" | "chip";
 }) {
   const t = useTranslations("panelsA");
   const [cargando, setCargando] = useState(false);
@@ -100,6 +106,22 @@ export function ReferenceField({
   }
 
   // Puesta: la pastilla con los colores MEDIDOS y la equis para quitarla.
+  if (reference && variant === "chip") {
+    return (
+      <ComposerChip
+        title={reference.hostname}
+        {...(disabled ? {} : { onRemove: () => onChange(null) })}
+        removeLabel={t("aiBrief.reference.remove")}
+      >
+        <span className="flex shrink-0 gap-[3px]" aria-hidden="true">
+          {swatches(reference).map((hex, i) => (
+            <span key={`${hex}-${i}`} className="h-3 w-3 rounded-[3px] ring-1 ring-black/10" style={{ background: hex }} />
+          ))}
+        </span>
+        <span className="min-w-0 truncate">{reference.hostname}</span>
+      </ComposerChip>
+    );
+  }
   if (reference) {
     return (
       <div className="me-auto flex items-center gap-1.5 rounded-lg bg-hover pl-2 pr-1 py-1 max-w-[62%]">
@@ -129,6 +151,14 @@ export function ReferenceField({
   // TRAYÉNDOLA. Sale sola de lo que el usuario escribió, así que hay que decir
   // qué está pasando: un hueco que tarda dos segundos sin explicarse se lee como
   // que la aplicación se colgó.
+  if (cargando && encontrada && variant === "chip") {
+    return (
+      <ComposerChip removeLabel="">
+        <Loader size={12} className="shrink-0 animate-spin" />
+        <span className="min-w-0 truncate fg-muted">{t("aiBrief.reference.lookingAt", { host: hostDe(encontrada.url) })}</span>
+      </ComposerChip>
+    );
+  }
   if (cargando && encontrada) {
     return (
       <span className="me-auto inline-flex items-center gap-1.5 h-8 px-2 text-[11.5px] fg-faint">
@@ -143,6 +173,14 @@ export function ReferenceField({
   // NO SE PUDO. Se dice y no se reintenta: la dirección sigue escrita en el
   // brief, así que un reintento automático sería un bucle a cada tecla. Y no
   // impide generar — el brief del usuario vale por sí solo.
+  if (error && variant === "chip") {
+    return (
+      <span role="status" className="inline-flex max-w-full items-center gap-1.5 rounded-lg border bd py-[3px] px-[7px] text-[11px] fg-faint">
+        <Link size={12} className="shrink-0" />
+        <span className="min-w-0 truncate">{t(`aiBrief.reference.error.${error}`)}</span>
+      </span>
+    );
+  }
   if (error) {
     return (
       <span

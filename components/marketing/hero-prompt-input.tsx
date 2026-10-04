@@ -6,6 +6,7 @@ import { useRouter, Link } from "@/i18n/navigation";
 import { useSession } from "next-auth/react";
 import {
   ArrowUp,
+  ImageIcon,
   Loader2,
   Mic,
   Plus,
@@ -13,6 +14,8 @@ import {
   Square,
   X,
 } from "lucide-react";
+import "@/components/workspace-v2/chat/new-chat.css";
+import { useMandoDesplegable } from "@/components/workspace-v2/use-mando-desplegable";
 import { cn } from "@/lib/cn";
 import { QUICK_PROMPTS } from "@/lib/quick-prompts";
 import { useDictado } from "./use-dictado";
@@ -67,6 +70,10 @@ export function HeroPromptInput() {
   const [leyendoFoto, setLeyendoFoto] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  // El menú del `+`, con el gancho del chat: Esc, clic fuera y flechas.
+  const [plusOpen, setPlusOpen] = useState(false);
+  const plus = useMandoDesplegable({ abierto: plusOpen, cerrar: () => setPlusOpen(false) });
+  const tc = useTranslations("panelsChat");
   const briefLimit = useGenerationBriefLimit({
     value,
     onValueChange: setValue,
@@ -175,159 +182,170 @@ export function HeroPromptInput() {
         aria-hidden
       />
 
-      <div className="group rounded-2xl bg-white dark:bg-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.18)] dark:shadow-[0_30px_80px_-30px_rgba(0,0,0,0.7)] focus-within:ring-2 focus-within:ring-coral-500 transition">
-        {/* LA MINIATURA VA ARRIBA, DENTRO DE LA TARJETA (Jesus, 2026-08-28:
-            "que se pongan arriba del input asi bonito"). Dentro y no encima
-            porque la caja crece con ella: una foto flotando sobre el
-            compositor taparia el titular en cuanto el brief pase de dos
-            lineas. */}
-        {referencias.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-4 pt-3.5">
-            {referencias.map((referencia, i) => (
-              <div key={`${referencia.nombre}-${i}`} className="relative inline-flex">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={referencia.dataUrl}
-                  alt={referencia.nombre || t("heroPrompt.attachedAlt")}
-                  className="h-16 w-16 rounded-xl object-cover ring-1 ring-zinc-200 dark:ring-zinc-800"
-                />
-                <button
-                  type="button"
-                  onClick={() => quitarFoto(i)}
-                  aria-label={t("heroPrompt.removeImage")}
-                  className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white ring-2 ring-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:ring-zinc-950 dark:hover:bg-white"
+      {/* LA PIEL DEL CHAT NUEVO (Jesús, 03/10: «que sean como el chat nuevo»):
+          la caja de radio 16 con su borde, las fichas encima del texto, el `+`
+          con su menú, y el botón cuadrado al final. En los colores de la
+          portada —aquí no viven los tokens del taller—; `.nc` sólo trae las
+          animaciones de chat/new-chat.css. Lo que HACE no cambia. */}
+      <div className="nc">
+        <div className="relative rounded-[16px] border border-zinc-300 bg-white px-3 pb-[7px] pt-2 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition focus-within:border-coral-400 focus-within:shadow-[0_0_0_4px_rgb(255_90_54/0.13)] dark:border-zinc-700 dark:bg-zinc-950 dark:focus-within:border-coral-500">
+          {/* LAS FOTOS VAN ARRIBA, DENTRO DE LA TARJETA (Jesus, 2026-08-28:
+              "que se pongan arriba del input asi bonito"), ahora como las
+              fichas del chat: dentro, y la caja crece con ellas. */}
+          {referencias.length > 0 && (
+            <div className="mb-1 flex flex-wrap gap-1.5">
+              {referencias.map((referencia, i) => (
+                <span
+                  key={`${referencia.nombre}-${i}`}
+                  title={referencia.nombre}
+                  className="nc-pop inline-flex max-w-full items-center gap-1.5 rounded-lg border border-coral-500/30 bg-coral-500/[0.07] py-[3px] pl-[7px] pr-1 text-[11.5px] text-zinc-800 dark:text-zinc-100"
                 >
-                  <X size={11} strokeWidth={2.6} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={referencia.dataUrl} alt="" className="h-[18px] w-[18px] shrink-0 rounded object-cover" />
+                  <span className="min-w-0 max-w-[180px] truncate">{referencia.nombre || t("heroPrompt.attachedAlt")}</span>
+                  <button
+                    type="button"
+                    onClick={() => quitarFoto(i)}
+                    aria-label={t("heroPrompt.removeImage")}
+                    className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[5px] text-zinc-500 hover:bg-coral-500/15 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
 
-        <div className="px-4 pt-3.5">
           <textarea
             ref={taRef}
             value={value}
             onChange={briefLimit.onChange}
             onPaste={briefLimit.onPaste}
             onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              // COMO EN EL CHAT: Enter manda y Mayús+Enter salta de línea. El
+              // ⌘/Ctrl+Enter de antes sigue valiendo. Mientras un IME compone
+              // (japonés, coreano, chino), Enter confirma la palabra y no manda.
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 submit();
               }
             }}
-            rows={2}
+            rows={1}
             placeholder={t("heroPrompt.placeholder")}
             maxLength={briefLimit.maxLength}
-            aria-describedby={
-              briefLimit.warningVisible ? briefLimit.feedbackId : undefined
-            }
-            className="block w-full resize-none bg-transparent text-[15px] leading-relaxed text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-500 focus:outline-none"
-            style={{ minHeight: 56 }}
+            aria-describedby={briefLimit.warningVisible ? briefLimit.feedbackId : undefined}
+            className="mt-0.5 block w-full resize-none bg-transparent text-[15px] leading-normal text-zinc-900 outline-none placeholder:text-zinc-500 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+            style={{ minHeight: 52 }}
           />
-        </div>
 
-        {/* LO QUE EL MOTOR VA OYENDO, antes de darlo por bueno.
+          {/* LO QUE EL MOTOR VA OYENDO, antes de darlo por bueno. Sin esto,
+              dictar se siente roto: entre que hablas y que el motor cierra la
+              frase la caja no cambia. No entra en el textarea a proposito: es
+              texto que el motor todavia puede CORREGIR. */}
+          {dictado.escuchando && (
+            <p className="pb-1 text-[12.5px] italic text-zinc-500 dark:text-zinc-400" aria-live="polite">
+              {dictado.parcial || t("heroPrompt.listening")}
+            </p>
+          )}
+          {/* EL MOTOR ABRIO Y NO OYO NADA, y EL PERMISO DENEGADO: los dos se
+              dicen, porque un fallo real no puede verse igual que escuchar. */}
+          {dictado.mudo && (
+            <p className="pb-1 text-[12px] text-amber-600 dark:text-amber-400" role="status">
+              {t("heroPrompt.micSilent")}
+            </p>
+          )}
+          {dictado.denegado && (
+            <p className="pb-1 text-[12px] text-amber-600 dark:text-amber-400" role="status">
+              {t("heroPrompt.micDenied")}
+            </p>
+          )}
 
-            Sin esto, dictar se siente roto: entre que hablas y que el motor
-            cierra la frase pasan uno o dos segundos en los que la caja no
-            cambia y parece que el boton no hizo nada. El parcial es la prueba
-            de que te esta oyendo.
-
-            No entra en el textarea a proposito: es texto que el motor todavia
-            puede CORREGIR —cambia de palabra a media frase— y verlo reescribirse
-            dentro de lo que ya escribiste da la sensacion de que te lo borra. */}
-        {dictado.escuchando && (
-          <p className="px-4 pb-1 text-[12.5px] italic text-zinc-500 dark:text-zinc-400" aria-live="polite">
-            {dictado.parcial || t("heroPrompt.listening")}
-          </p>
-        )}
-
-        {/* EL PERMISO DENEGADO SI SE DICE. Es la unica diferencia real con
-            "no soportado": ahi no se pinta nada porque no hay nada que hacer,
-            y aqui el usuario PUEDE arreglarlo — pero solo si sabe donde. */}
-        {/* EL MOTOR ABRIO Y NO OYO NADA. Sin este aviso, un fallo real se ve
-            igual que estar escuchando — y el usuario habla contra una caja que
-            nunca le va a contestar. */}
-        {dictado.mudo && (
-          <p className="px-4 pb-1 text-[12px] text-amber-600 dark:text-amber-400" role="status">
-            {t("heroPrompt.micSilent")}
-          </p>
-        )}
-
-        {dictado.denegado && (
-          <p className="px-4 pb-1 text-[12px] text-amber-600 dark:text-amber-400" role="status">
-            {t("heroPrompt.micDenied")}
-          </p>
-        )}
-
-        <GenerationBriefLimitFeedback
-          valueLength={value.length}
-          state={briefLimit}
-          warningText={tp("aiBrief.trimmed", { max: briefLimit.maxLength })}
-          className="px-4 pb-1 text-[11px]"
-          warningClassName="text-amber-600 dark:text-amber-400"
-          counterClassName="text-zinc-500 dark:text-zinc-400"
-        />
-
-        {/* EL PIE, con la silueta de la referencia de Jesús (2026-08-28): un
-            renglón bajo el texto con la meta a la izquierda, muda, y UN botón
-            redondo sólido a la derecha. Nada en medio.
-
-            SE FUE «Listo» con su punto verde latiendo. Era el hueco que dejó
-            «Gemini 3.1 Pro» esta mañana, y heredó su problema: un indicador de
-            estado EN VIVO —punto que parpadea— para algo que no se mide. No
-            hay comprobación detrás; dice «listo» siempre, incluso si la
-            generación está caída. Un semáforo que sólo sabe ponerse en verde
-            no es información, es decoración que parece información. */}
-        <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-1">
-          {/* EL `+`. Abre el selector de ficheros del sistema; el `<input>`
-              real va oculto porque su aspecto nativo no se puede estilar y
-              rompe la silueta del compositor.
-
-              `accept="image/*"` FILTRA, no valida. Quien quiera puede elegir
-              "todos los archivos" y mandar un PDF; por eso el reductor comprueba
-              el tipo y el servidor lo vuelve a comprobar en
-              `leerReferenciaAdjunta`. Esto es comodidad, no una puerta. */}
-          <input
-            ref={fileRef}
-            type="file"
-            multiple
-            accept="image/png,image/jpeg,image/webp,image/avif"
-            className="sr-only"
-            tabIndex={-1}
-            onChange={(e) => void elegirFotos(e.target.files)}
+          <GenerationBriefLimitFeedback
+            valueLength={value.length}
+            state={briefLimit}
+            warningText={tp("aiBrief.trimmed", { max: briefLimit.maxLength })}
+            className="pb-1 text-[11px]"
+            warningClassName="text-amber-600 dark:text-amber-400"
+            counterClassName="text-zinc-500 dark:text-zinc-400"
           />
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={leyendoFoto || referencias.length >= MAX_REFERENCIAS}
-            aria-label={t("heroPrompt.attachImages")}
-            title={
-              referencias.length >= MAX_REFERENCIAS
-                ? t("heroPrompt.maxImages", { max: MAX_REFERENCIAS })
-                : t("heroPrompt.attachImages")
-            }
-            className="mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
-          >
-            {leyendoFoto ? <Loader2 size={17} className="animate-spin" /> : <Plus size={18} />}
-          </button>
 
-          {/* AQUI ESTABA LA PISTA `⌘ ↵ Generar` (fuera el 2026-08-28, Jesus).
-              El atajo SIGUE funcionando —lo escucha el `onKeyDown` del
-              textarea—; lo que se va es anunciarlo. En la referencia el pie
-              lleva controles, no leyendas, y una pista de teclado en la portada
-              le habla al 5% que iba a usarla de todas formas. */}
-          {/* EL GRUPO DERECHO. `ml-auto` vive aqui y no en cada boton: con la
-              pista de teclado fuera, el pie tiene UN elemento a la izquierda
-              (el `+`) y este grupo a la derecha. Si el margen lo llevara el
-              microfono, en Firefox —donde no se pinta— el boton de enviar se
-              iria al centro. */}
-          <span className="ml-auto flex items-center">
-            {/* EL MICROFONO. Solo se pinta si la API EXISTE — no hay lista de
-                navegadores, se comprueba el objeto. En Firefox, que no la trae,
-                este boton sencillamente no esta: un control gris que no responde
-                es lo que quitamos del heroe esta misma manana. */}
+          <div className="mt-0.5 flex items-center gap-[3px]">
+            {/* El `<input>` real va oculto: su aspecto nativo no se puede
+                estilar. `accept` FILTRA, no valida — el reductor y el servidor
+                vuelven a comprobar el tipo. */}
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              accept="image/png,image/jpeg,image/webp,image/avif"
+              className="sr-only"
+              tabIndex={-1}
+              onChange={(e) => void elegirFotos(e.target.files)}
+            />
+            {/* EL `+` ABRE SU MENÚ, como en el chat. */}
+            <div className="relative" ref={plus.refContenedor} onKeyDown={plus.alPulsarTecla}>
+              <button
+                type="button"
+                ref={plus.refDisparador}
+                aria-label={tc("newChat.composer.plus")}
+                title={tc("newChat.composer.plus")}
+                aria-haspopup="menu"
+                aria-expanded={plusOpen}
+                onClick={() => setPlusOpen((x) => !x)}
+                className={cn(
+                  "grid h-[30px] w-[30px] place-items-center rounded-[9px] transition hover:bg-zinc-100 dark:hover:bg-zinc-900",
+                  referencias.length > 0
+                    ? "text-coral-600 dark:text-coral-400"
+                    : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100",
+                )}
+              >
+                {leyendoFoto ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <Plus size={16} className={cn("transition-transform duration-200", plusOpen && "rotate-45")} />
+                )}
+              </button>
+              {plusOpen && (
+                <div
+                  role="menu"
+                  aria-label={tc("newChat.composer.plus")}
+                  className="nc-card-in absolute bottom-[calc(100%+8px)] left-0 z-20 w-[290px] rounded-[14px] border border-zinc-300 bg-white p-1.5 shadow-[0_18px_40px_-12px_rgb(20_10_5/0.35)] dark:border-zinc-700 dark:bg-zinc-950"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={leyendoFoto || referencias.length >= MAX_REFERENCIAS}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      fileRef.current?.click();
+                    }}
+                    className="nc-up flex w-full items-center gap-2.5 rounded-[10px] p-2 text-left hover:bg-zinc-100 disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent dark:hover:bg-zinc-900"
+                  >
+                    <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] bg-coral-500/10 text-coral-600 dark:text-coral-400">
+                      <ImageIcon size={15} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <b className="block text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
+                        {t("heroPrompt.attachImages")}
+                      </b>
+                      <small className="block text-[11.5px] leading-snug text-zinc-500 dark:text-zinc-400">
+                        {referencias.length >= MAX_REFERENCIAS
+                          ? t("heroPrompt.maxImages", { max: MAX_REFERENCIAS })
+                          : t("heroPrompt.attachImagesHint", { max: MAX_REFERENCIAS })}
+                      </small>
+                    </span>
+                    {referencias.length > 0 && (
+                      <span className="shrink-0 text-[11px] font-semibold text-coral-600 dark:text-coral-400">
+                        {referencias.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+            {/* EL MICROFONO, sólo si la API EXISTE — se comprueba el objeto, no
+                una lista de navegadores. En Firefox no se pinta: un control gris
+                que no responde es peor que ninguno. */}
             {dictado.soportado && (
               <button
                 type="button"
@@ -336,48 +354,39 @@ export function HeroPromptInput() {
                 aria-label={dictado.escuchando ? t("heroPrompt.stopDictating") : t("heroPrompt.dictate")}
                 title={dictado.escuchando ? t("heroPrompt.stopDictating") : t("heroPrompt.dictate")}
                 className={cn(
-                  "mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition",
+                  "grid h-[30px] w-[30px] place-items-center rounded-[9px] transition hover:bg-zinc-100 dark:hover:bg-zinc-900",
                   dictado.escuchando
-                    ? "bg-coral-500/10 text-coral-600 dark:text-coral-400 ring-1 ring-coral-500/40"
-                    : "text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-900",
+                    ? "bg-zinc-100 text-coral-600 dark:bg-zinc-900 dark:text-coral-400"
+                    : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100",
                 )}
               >
                 {dictado.escuchando ? (
                   <span className="relative inline-flex h-4 w-4 items-center justify-center">
-                    {/* El halo late para que se vea que el micro esta ABIERTO.
-                        Se apaga con `prefers-reduced-motion`. */}
+                    {/* El halo late para que se vea que el micro esta ABIERTO. */}
                     <span className="absolute inset-0 rounded-full bg-coral-500/30 motion-safe:animate-ping" />
                     <Square size={9} className="relative fill-current" />
                   </span>
                 ) : (
-                  <Mic size={17} />
+                  <Mic size={15} />
                 )}
               </button>
             )}
-          {/* REDONDO Y SIEMPRE DEL MISMO TAMAÑO. Antes cambiaba de forma según
-              hubiera texto —píldora ancha con la palabra «Generar», o cuadrado
-              estrecho— así que el pie se reacomodaba al teclear la primera
-              letra. La referencia tiene un círculo fijo que sólo cambia de
-              color: el control no se mueve, se enciende. */}
-          <button
-            type="button"
-            onClick={submit}
-            disabled={!canSend || submitting || status === "loading"}
-            className={cn(
-              "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition",
-              canSend
-                ? "bg-coral-500 text-white hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow disabled:opacity-80"
-                : "bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600 cursor-not-allowed",
-            )}
-            aria-label={t("heroPrompt.generate")}
-          >
-            {submitting ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <ArrowUp size={17} strokeWidth={2.4} />
-            )}
-          </button>
-          </span>
+            {/* EL BOTÓN DEL CHAT: cuadrado redondeado, siempre del mismo tamaño;
+                sólo cambia de color al haber algo que mandar. */}
+            <button
+              type="button"
+              onClick={submit}
+              disabled={!canSend || submitting || status === "loading"}
+              aria-label={t("heroPrompt.generate")}
+              title={t("heroPrompt.generate")}
+              className={cn(
+                "ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-white transition hover:-translate-y-px disabled:translate-y-0 disabled:cursor-default",
+                canSend ? "bg-coral-500 hover:bg-coral-600" : "bg-zinc-300 dark:bg-zinc-700",
+              )}
+            >
+              {submitting ? <Loader2 size={15} className="animate-spin" /> : <ArrowUp size={16} />}
+            </button>
+          </div>
         </div>
       </div>
 

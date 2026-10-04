@@ -108,15 +108,24 @@ function sufijoDeCoste(
  */
 const HAY_ELECCION = new Set(ESCRITORES_ELEGIBLES.map(modelIdForRole)).size > 1;
 
+/** La pastilla, la misma del mando de esfuerzo del chat nuevo (`variant="pill"`). */
+const PILL =
+  "inline-flex h-7 min-w-0 max-w-full items-center gap-1.5 truncate whitespace-nowrap rounded-full border bd bg-side px-2.5 text-[11.5px] transition";
+
 export function SelectorDeModelo(props: Parameters<typeof SelectorConFilas>[0]) {
   if (HAY_ELECCION) return <SelectorConFilas {...props} />;
   // Sin elección, el NOMBRE se queda —es la bienvenida de Claude Code: qué
   // modelo escribe—; lo que se va es el menú. Mismo texto tenue que el botón.
-  return (
-    <span className="min-w-0 truncate px-1 py-0.5 text-[11px] fg-faint">
-      {displayNameForRole(escritorDeCrear(props.hasImages, props.escritor))}
-    </span>
-  );
+  const nombre = displayNameForRole(escritorDeCrear(props.hasImages, props.escritor));
+  if (props.variant === "pill") {
+    return (
+      <span className={`${PILL} fg-faint`}>
+        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+        {nombre}
+      </span>
+    );
+  }
+  return <span className="min-w-0 truncate px-1 py-0.5 text-[11px] fg-faint">{nombre}</span>;
 }
 
 function SelectorConFilas({
@@ -126,6 +135,7 @@ function SelectorConFilas({
   abierto,
   onAbrir,
   disabled = false,
+  variant = "text",
   t,
 }: {
   /** Lo que la persona tiene FIJADO, o `null` = «Automático». */
@@ -136,6 +146,10 @@ function SelectorConFilas({
   abierto: boolean;
   onAbrir: (v: boolean) => void;
   disabled?: boolean;
+  /** `text`: el nombre tenue de siempre. `pill`: la pastilla del compositor
+   *  del chat nuevo, como el mando de esfuerzo (`MandoEsfuerzo`), con el menú
+   *  abierto hacia la izquierda porque va al final de la fila. */
+  variant?: "text" | "pill";
   /** El traductor del compositor (`marketing` → `heroPrompt.modelo.*`). Se pasa
    *  en vez de llamar a `useTranslations` aquí para que este componente no
    *  dependa del proveedor de next-intl y su prueba no tenga que montar uno.
@@ -179,17 +193,22 @@ function SelectorConFilas({
         aria-haspopup="menu"
         onClick={() => onAbrir(!abierto)}
         disabled={disabled}
-        className={`min-w-0 truncate rounded-md px-1 py-0.5 text-[11px] transition disabled:opacity-40 ${
-          abierto || escritor !== null ? "fg" : "fg-faint hover:fg hover:bg-hover"
-        }`}
+        className={
+          variant === "pill"
+            ? `${PILL} disabled:opacity-40 ${abierto || escritor !== null ? "fg" : "fg-muted hover:fg hover:border-[color:var(--border-strong)]"}`
+            : `min-w-0 truncate rounded-md px-1 py-0.5 text-[11px] transition disabled:opacity-40 ${
+                abierto || escritor !== null ? "fg" : "fg-faint hover:fg hover:bg-hover"
+              }`
+        }
       >
+        {variant === "pill" && <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]" />}
         {displayNameForRole(efectivo)}
       </button>
       {abierto && (
         <div
           role="menu"
           aria-label={t("modelo.titulo")}
-          className="absolute bottom-full left-0 z-20 mb-1.5 w-72 overflow-hidden rounded-md bg-card ring-1 ring-[color:var(--border)] shadow-lg fade-in"
+          className={`absolute bottom-full ${variant === "pill" ? "right-0" : "left-0"} z-20 mb-1.5 w-72 overflow-hidden rounded-md bg-card ring-1 ring-[color:var(--border)] shadow-lg fade-in`}
         >
           <div className="border-b border-[color:var(--border)] px-2.5 py-1.5">
             <p className="text-[11px] font-medium">{t("modelo.titulo")}</p>
