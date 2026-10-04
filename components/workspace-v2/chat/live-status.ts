@@ -159,10 +159,13 @@ export function liveStatus(
       const activity = activityOf(running.tool);
       return { kind: "working", face: FACE_OF[activity], activity, startedAt, onServer: latest.enServidor === true };
     }
-    if (latest.assistantReasoning.length === 0 && (latest.actions?.length ?? 0) === 0 && !latest.enServidor) {
+    const chars = latest.streamedChars ?? 0;
+    // Si ya escribió la página, no está pensando (N34): el `done` de ai-design
+    // cambia el texto por su `reasoning` final, que puede venir vacío, y la barra
+    // volvía a «Pensando» mientras se disolvía el barrido.
+    if (latest.assistantReasoning.length === 0 && (latest.actions?.length ?? 0) === 0 && !latest.enServidor && chars === 0) {
       return { kind: "thinking", face: "pensando", startedAt };
     }
-    const chars = latest.streamedChars ?? 0;
     return {
       kind: "working",
       face: "escribiendo",

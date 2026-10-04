@@ -24,6 +24,13 @@ describe("la barra viva", () => {
     expect(s).toEqual({ kind: "thinking", face: "pensando", startedAt: 1000 });
   });
 
+  it("ai-design ya escribió la página y su `done` vació el texto: sigue escribiendo, no vuelve a «pensando» (N34)", () => {
+    // Visto en el taller: «Escribiendo la página · 186 caracteres» → «Pensando · 12 s» durante el segundo que se
+    // disuelve el barrido, porque el `done` cambia el texto de Len por su `reasoning` final, que venía vacío.
+    const s = liveStatus(turn({ status: "streaming", startedAt: 1, streamedChars: 186 }), { busy: true });
+    expect(s).toMatchObject({ kind: "working", face: "escribiendo", streamedChars: 186 });
+  });
+
   it("con una herramienta en marcha dice QUÉ hace, de la última que corre", () => {
     const s = liveStatus(
       turn({
