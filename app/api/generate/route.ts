@@ -928,9 +928,9 @@ ${briefBlock}`;
 
         // ⚰️ Aquí se leía `prepared.report.modules` — el puente IA→módulos, que
         // encendía el módulo cuyo marcador traía la página recién generada. Se
-        // retiró el 2026-08-29 (ver lib/page-data/sin-puente-ia-modulos.test.ts,
-        // que guarda el porqué Y lo mantiene honesto porque corre): su módulo
-        // puenteado ya no tiene horneado, así que la lista salía siempre vacía.
+        // retiró el 2026-08-29: su módulo puenteado ya no tiene horneado, así que
+        // la lista salía siempre vacía. (Su prueba, sin-puente-ia-modulos, vivía en
+        // lib/page-data y se fue con los almacenes el 2026-10-04.)
 
         // LAS PÁGINAS QUE LA PORTADA DICE QUE HAY.
         //

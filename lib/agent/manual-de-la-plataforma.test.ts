@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildAgentSystemPrompt } from "./catalog";
-import { CARPETA_DOCS, esAdjuntoDelManual, RUTA_API_D, RUTA_GUIA, RUTA_LIBRERIAS, RUTA_MANUAL, RUTAS_DE_DOCS } from "./ficheros/manual";
+import { CARPETA_DOCS, esAdjuntoDelManual, RUTA_GUIA, RUTA_LIBRERIAS, RUTA_MANUAL, RUTAS_DE_DOCS } from "./ficheros/manual";
 import {
   adjuntoDelManual,
   buildManualDeLaPlataforma,
@@ -38,17 +38,13 @@ describe("el manual de la plataforma", () => {
     }
   });
 
-  it("F4 · la guía, lo de data-ol-stores y las librerías viven en /.openlen/docs, cada uno en su fichero", () => {
+  it("F4 · la guía y las librerías viven en /.openlen/docs, cada una en su fichero", () => {
     expect(Object.keys(docs)).toEqual([...RUTAS_DE_DOCS]);
     const donde: [string, string][] = [
       ["DESIGN GUIDE (for the pages you create yourself", RUTA_GUIA],
       ["COLOR, SHAPE AND TYPE", RUTA_GUIA],
       ["On a page you create yourself, also write its dark version", RUTA_GUIA],
       ["CRAFT", RUTA_GUIA],
-      // Lo de antes de Supabase (2026-10-04): no sale del manual, se mudó entero.
-      ["A STORE keeps real data on the server", RUTA_API_D],
-      ["SAVING TOO: declare a store", RUTA_API_D],
-      ["CHECK THE SERVER'S RESPONSE", RUTA_API_D],
       ["AVAILABLE LIBRARIES", RUTA_LIBRERIAS],
       ["Copy the EXACT tag, just as it is written above", RUTA_LIBRERIAS],
     ];
@@ -63,9 +59,8 @@ describe("el manual de la plataforma", () => {
     // Lo que mata F4: que Len deje de leer la guía al escribir una página nueva.
     expect(manual).toContain(`${RUTA_GUIA}: the design guide`);
     expect(manual).toMatch(/read it BEFORE writing a page from scratch or a redesign/);
-    // Lo de data-ol-stores, SÓLO para las páginas que ya lo declaran; lo nuevo, al backend.
-    expect(manual).toContain(`${RUTA_API_D}: ONLY for a page that already declares a data-ol-stores block`);
-    expect(manual).toContain(`keeps working with it; how, in ${RUTA_API_D}. New data goes in the backend.`);
+    // Los datos de una página, en su backend: ni rastro de data-ol-stores (2026-10-04).
+    expect(manual).not.toContain("data-ol-stores");
   });
 
   it("🔴 F4 · no se pierde ninguna línea: cada una del manual entero está en /AGENTS.md o en /.openlen/docs", () => {

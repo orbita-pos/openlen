@@ -5,7 +5,6 @@ import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 import { PRELUDIO_CENSO_CLIC } from "@/lib/agent/prueba-js";
 import { RUTAS_SOLO_PUBLICADA } from "@/lib/lienzo/rutas-solo-publicada";
-import type { LlamadaADatos } from "@/lib/page-data/sustituto";
 import { decodificarPng, type PngCrudo } from "@/lib/ai/png-crudo";
 import { juzgarContraste, type CandidatoDeContraste, type UnreadableTextFinding } from "@/lib/ai/contraste";
 import { barrerUnaVezPorProceso } from "@/lib/ai/perfiles-huerfanos";
@@ -141,12 +140,6 @@ export interface VisualQualityViewports {
    *  No es un defecto de la página: es que no hay a quién llamar. Cada una como
    *  `"<ruta> → <status>"`. Ausente cuando no llamó a ninguna. */
   llamadasSoloPublicada?: readonly string[];
-  /** LO QUE LA PÁGINA GUARDÓ Y LEYÓ en su almacén (`/api/d`), contestado por el
-   *  sustituto de la medición con las reglas del servidor real
-   *  (`lib/page-data/sustituto.ts`). Desde el 2026-09-18 `/api/d` ya no es una
-   *  ruta «sólo publicada»: aquí SÍ hay quien conteste, y lo que rechazaría el
-   *  servidor es un hecho de la página. Ausente cuando no llamó. */
-  llamadasADatos?: readonly LlamadaADatos[];
   /** Lo CRUDO que devolvió el guion declarado por el modelo, tal cual sale del
    *  navegador. Se deja sin tipar aquí a propósito: este módulo no sabe de
    *  specs, sólo ejecuta el programa que le dan y devuelve lo que salga. Quien
@@ -171,12 +164,6 @@ export interface VisualQualityRenderOptions {
    * decía nunca. Ver `captureWithPage`.
    */
   readonly behaviorProgram?: string;
-  /**
-   * El subdominio con el que se publica el proyecto, para que el sustituto de
-   * `/api/d` juzgue `/api/d/<sub>/<almacén>`: `null` = aún no tiene. AUSENTE =
-   * quien mide no lo sabe, y entonces ese tramo no se juzga.
-   */
-  readonly sub?: string | null;
 }
 
 interface PageLike {
@@ -1069,13 +1056,8 @@ async function captureWithPage(
     opts.behaviorProgram && page.evaluateOnNewDocument
       ? await page.evaluateOnNewDocument(PRELUDIO_CENSO_CLIC).catch(() => null)
       : null;
-  let datos: Awaited<ReturnType<typeof cargarEnOrigenReal>>;
   try {
-    datos = await cargarEnOrigenReal(
-      page,
-      injectDeterministicRenderReset(html),
-      opts.sub === undefined ? {} : { sub: opts.sub },
-    );
+    await cargarEnOrigenReal(page, injectDeterministicRenderReset(html));
   } finally {
     if (censo) await page.removeScriptToEvaluateOnNewDocument?.(censo.identifier).catch(() => {});
   }
@@ -1469,15 +1451,7 @@ async function captureWithPage(
     // Lo que la página preguntó y nosotros cancelamos. Ausente cuando no
     // preguntó nada, como los gritos y las bloqueadas.
     ...(dialogos.length > 0 ? { dialogosNativos: [...dialogos] } : {}),
-    // `/api/d` sale de aquí cuando el sustituto la contestó: ya no es algo que
-    // la medición no pueda comprobar, y decirle a Len «no es un fallo de la
-    // página» sobre una llamada que el servidor rechazaría es lo que dejó pasar
-    // el carrito del 2026-09-18.
-    ...(() => {
-      const quedan = datos ? soloPublicada.filter((l) => !l.startsWith("/api/d/")) : soloPublicada;
-      return quedan.length > 0 ? { llamadasSoloPublicada: [...quedan] } : {};
-    })(),
-    ...(datos && datos.llamadas().length > 0 ? { llamadasADatos: datos.llamadas() } : {}),
+    ...(soloPublicada.length > 0 ? { llamadasSoloPublicada: [...soloPublicada] } : {}),
     ...(behaviorResult !== undefined ? { behaviorResult } : {}),
   };
 }

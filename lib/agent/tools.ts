@@ -14,8 +14,6 @@
 // dispatch in try/catch so a bug in one tool can never crash the agent
 // loop mid-conversation.
 
-import type { AlmacenDeclarado } from "@/lib/page-data/declaracion";
-import type { FilaDeAlmacen, PlanDeAlmacen } from "@/lib/agent/ficheros/datos";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
@@ -115,26 +113,12 @@ export interface AgentDeps {
     args: readonly string[],
     ficheros: Readonly<Record<string, string>>,
   ): Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string> }>;
-  /** H3 — los almacenes que declara el BORRADOR, con sus filas y quién las
-   *  escribió. Opcional: sin él no hay ficheros en /datos. */
-  almacenesDelProyecto?(projectId: string): Promise<
-    { nombre: string; declarado: AlmacenDeclarado; filas: FilaDeAlmacen[] }[]
-  >;
+  // ⚰️ `almacenesDelProyecto`, `aplicarAlmacen` y `avisoDeCuota`: los almacenes
+  // `data-ol-stores` como ficheros de /datos, retirados el 2026-10-04 (los datos
+  // de una página van a su backend de Supabase).
   /** H3 — lo que Len sabe del DUEÑO (`users.agentMemory`), para leerlo como
    *  `/memoria/dueno.md`. Opcional: sin él, el fichero sale vacío. */
   leerMemoriaDelDueno?(userId: string): Promise<string | null>;
-  /** H3 — un fichero de /datos editado, aplicado ENTERO con las reglas de
-   *  siempre (`aplicarPlanDeAlmacen`): permisos, validación y cuota antes de
-   *  tocar nada. */
-  aplicarAlmacen?(args: {
-    projectId: string;
-    userId: string;
-    almacen: string;
-    plan: PlanDeAlmacen;
-  }): Promise<{ ok: true; mensaje: string } | { ok: false; error: string }>;
-  /** H3 — el aviso de cuota que daba `leer_estado`, o `null` con sitio de
-   *  sobra. Se pide sólo al leer un fichero de /datos. */
-  avisoDeCuota?(projectId: string, userId: string): Promise<string | null>;
   /** Len sabe de tus resultados (plans/len-resultados/): visitas, formularios y
    *  mensajes, contados por el servidor. Opcional: sin él las herramientas lo dicen. */
   resultados?: ResultadosDeps;
@@ -373,33 +357,8 @@ export function realDeps(
       const rec = await ensureBackend(projectId);
       return { url: projectUrl(rec.ref), publishableKey: rec.publishableKey };
     },
-    // H3 — import perezoso por lo mismo que en los tools de almacén:
-    // `lib/page-data/agente.ts` es server-only.
-    async almacenesDelProyecto(projectId) {
-      const { declaracionDelBorrador } = await import("@/lib/page-data/publicada");
-      const { leerDatos } = await import("@/lib/page-data/agente");
-      const declaracion = await declaracionDelBorrador(projectId);
-      const out: { nombre: string; declarado: AlmacenDeclarado; filas: FilaDeAlmacen[] }[] = [];
-      for (const [nombre, declarado] of Object.entries(declaracion)) {
-        out.push({ nombre, declarado, filas: await leerDatos({ projectId, almacen: nombre }) });
-      }
-      return out;
-    },
     async leerMemoriaDelDueno(userId) {
       return getUserMemory(userId);
-    },
-    async aplicarAlmacen(args) {
-      const { aplicarPlanDeAlmacen } = await import("@/lib/page-data/agente");
-      return aplicarPlanDeAlmacen(args);
-    },
-    // LA CUOTA, CUANDO APRIETA. El panel de Datos ya la enseña, pero eso sólo
-    // ayuda a quien lo abre — y el 507 les ocurre a los visitantes mientras el
-    // dueño no mira. Len habla con él, así que Len tiene que saberlo.
-    async avisoDeCuota(projectId, userId) {
-      const { cuotaDelProyecto } = await import("@/lib/page-data/agente");
-      const { avisoDeCuotaParaElModelo } = await import("@/lib/page-data/cuota");
-      const cuota = await cuotaDelProyecto({ projectId, userId });
-      return cuota ? avisoDeCuotaParaElModelo(cuota) : null;
     },
     // Len sabe de tus resultados. Import perezoso: las consultas tiran de la
     // base y del chat, server-only.
@@ -690,8 +649,8 @@ export interface AgentSession {
    *  del mismo turno lo quitara: los avisos de procedencia lo cuentan como
    *  fuente (E del 26/09, oficina-y-whatsapp). */
   alEmpezar?: Map<string, string>;
-  /** Todo el sitio como estaba al empezar el turno —cada página, sus almacenes
-   *  y su memoria—, en un solo texto. Es fuente para los avisos de procedencia:
+  /** Todo el sitio como estaba al empezar el turno —cada página y su
+   *  memoria—, en un solo texto. Es fuente para los avisos de procedencia:
    *  un precio o un enlace que ya estaba en OTRA página no lo inventó Len al
    *  copiarlo (H13). Se toma en la primera escritura del turno. */
   sitioAlEmpezar?: string;
@@ -956,9 +915,8 @@ export function summarizeProjectState(
 }
 
 // ⚰️ AQUÍ VIVÍA `toolLeerEstado` (H3, 2026-09-25). El estado del proyecto ya va en
-// el contexto al empezar —como el `git status` de Claude Code— y los almacenes
-// son ficheros de /datos (`lib/agent/ficheros/datos.ts`), con su aviso de
-// visitantes.
+// el contexto al empezar —como el `git status` de Claude Code—. (Los almacenes,
+// que también contaba, se fueron el 2026-10-04 con `data-ol-stores`.)
 
 function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: string): SettingsPatchBody {
   switch (modulo) {
@@ -1624,8 +1582,8 @@ async function toolPublicar(
 // `lib/agent/preferencias.ts`.
 
 // ⚰️ `guardar_dato`, `editar_dato` y `quitar_dato` se retiraron en H3
-// (2026-09-25): cada almacén es el fichero /datos/<almacen>.json y se edita
-// con Edit/Write (`guardarDatos` en `lib/agent/herramientas-de-ficheros.ts`).
+// (2026-09-25), y los almacenes enteros (`data-ol-stores`, sus ficheros de
+// /datos) el 2026-10-04: los datos de una página son su backend de Supabase.
 
 // ⚰️ `conectar_datos_vivos` se retiró en Len 2.1 (2026-09-30) con la función
 // entera de «datos vivos»: 0 llamadas en la historia de producción y 0 de 118

@@ -170,8 +170,8 @@ export interface Encargo {
   readonly zona?: string;
   /** Lo que diría y haría Len en la solución (ver `TurnoDeValidacion`). */
   readonly solucionTurno?: TurnoDeValidacion;
-  /** Lo que la SOLUCIÓN deja en la base y no cabe en su HTML —las filas de un
-   *  almacén—, plantado tras sembrar, como el `despues` de una rota. */
+  /** Lo que la SOLUCIÓN deja en la base y no cabe en su HTML —sus filas—,
+   *  plantado tras sembrar, como el `despues` de una rota. */
   readonly solucionDespues?: (s: Siembra) => Promise<void>;
   /** Lo que hay en internet para este caso. Sin ella, buscar no encuentra nada. */
   readonly web?: WebDelCaso;

@@ -3,7 +3,7 @@
 // PASO 7 DE LEN 2.5 (2026-09-29, OK de Jesús). El prompt de Len mezclaba dos
 // cosas: CÓMO TRABAJAR (conducta: alcance, probar, preguntar, no inventar) y
 // CÓMO FUNCIONA OPENLEN (los contratos que el modelo no puede adivinar: dónde se
-// guarda cada cosa, el `/api/d`, los formularios, los enlaces, los almacenes,
+// guarda cada cosa, los formularios, los enlaces, el backend,
 // la guía de diseño, las librerías). Claude Code las separa igual: su prompt de
 // sistema es conducta, y lo del proyecto y de la organización llega en sus
 // ficheros de instrucciones (`CLAUDE.md`, `AGENTS.md`, el gestionado), que el
@@ -27,12 +27,10 @@ import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contrac
 import { bloqueDeLibrerias } from "@/lib/librerias";
 import { paraSoloLaTerminal, terminalOnly } from "@/lib/agent/terminal/declaracion";
 import type { AgentMode } from "@/lib/agent/dynamis";
-import { STORES_DOC } from "@/lib/agent/stores-doc";
 import {
   CARPETA_DOCS,
   CIERRE_DEL_ADJUNTO,
   PRINCIPIO_DEL_ADJUNTO,
-  RUTA_API_D,
   RUTA_GUIA,
   RUTA_LIBRERIAS,
   RUTA_MANUAL,
@@ -64,7 +62,6 @@ This project has its own Supabase backend —a Postgres database behind the REST
 - In the page, supabase-js as usual: \`<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>\` and \`supabase.createClient(url, publishableKey)\`. The publishable key is meant to be in the page; a secret key, never.
 - The tables, their policies, functions and triggers are migrations: \`supabase migration new <name>\` creates /supabase/migrations/<timestamp>_<name>.sql, you write the SQL in it with Write or Edit, and \`supabase db push\` applies it. Enable row level security on every table you create and write its policies: with RLS on and no policy the page reads nothing and writes nothing, and without RLS anyone can read and change everything. Users are auth.users: \`references auth.users(id)\`, and \`auth.uid()\` in the policies.
 - To change what was already pushed, write a NEW migration. There is no \`supabase db reset\` here: this is the live database, with the visitors' data in it.
-- A page that already declares a data-ol-stores block (the older way to keep data) keeps working with it; how, in ${RUTA_API_D}. New data goes in the backend.
 
 DESIGN GUIDE (for the pages you create yourself and for a redesign you are asked for; what you add to a page that already exists is written the way that page is):
 ${PUBLISH_CONTRACT}
@@ -117,12 +114,10 @@ ${bloqueDeLibrerias({ dondeVaElScript: "libre" })}`;
 //   · /.openlen/docs/guia-de-diseno.md — color, letra, modo oscuro y acabado;
 //   · /.openlen/docs/librerias.md — las librerías que sobreviven al publicar (lo que se
 //     rompe en silencio lo dice además `librerias-que-no-cargan`);
-//   · /.openlen/docs/api-d.md — `data-ol-stores` y /api/d, SÓLO para las páginas
-//     que ya declaran almacenes. Desde el 2026-10-04 lo nuevo va al backend de
-//     Supabase (THE BACKEND, arriba; plans/pages-backend/design.md), y este
-//     texto NO sale del manual: se mudó entero a lib/agent/stores-doc.ts.
-// ⚰️ /.openlen/docs/accounts.md (data-ol-accounts, 03/10) se retiró el mismo día
-// sin llegar a desplegarse: la gente que entra en la página es Supabase Auth.
+// ⚰️ /.openlen/docs/api-d.md (`data-ol-stores` y /api/d) y accounts.md
+// (data-ol-accounts) se retiraron el 2026-10-04 con lo que describían: los datos
+// de una página van a su backend de Supabase (THE BACKEND, arriba;
+// plans/pages-backend/design.md).
 // El texto se MUDA, no se reescribe: se corta por sus marcas y LANZA si una no
 // aparece, como `swapJsClauses`. Regla por regla, en
 // plans/len-agente-2026/notas/f4-tabla-de-reglas.md (M1–M21, I1–I3).
@@ -139,7 +134,6 @@ const PROMESA_DEL_ACABADO = ", and at the end the level of finish that is expect
 
 const INDICE = `MORE, IN ${CARPETA_DOCS} (read them when you need them):
 - ${RUTA_GUIA}: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch or a redesign. What you add to a page that already exists is written the way that page is.
-- ${RUTA_API_D}: ONLY for a page that already declares a data-ol-stores block: how its stores and its JavaScript (/api/d) work.
 - ${RUTA_LIBRERIAS}: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.`;
 
 const encontrar = (texto: string, marca: string, desde = 0): number => {
@@ -158,8 +152,7 @@ interface ManualPartido {
   readonly docs: Readonly<Record<string, string>>;
 }
 
-/** Corta el manual entero en /AGENTS.md y dos ficheros de /.openlen/docs, y
- *  les suma el tercero, el de los almacenes de antes, que no sale del manual. */
+/** Corta el manual entero en /AGENTS.md y dos ficheros de /.openlen/docs. */
 export function partirElManual(entero: string = manualSinPartir()): ManualPartido {
   // La guía: su cabecera, lo que IMPONE (se queda) y el gusto (se va).
   const iGuia = encontrar(entero, MARCA_GUIA);
@@ -186,8 +179,6 @@ export function partirElManual(entero: string = manualSinPartir()): ManualPartid
     agents,
     docs: {
       [RUTA_GUIA]: `${cabecera}\n${gusto}`,
-      // No se corta del manual: lo de antes de Supabase, en su fichero (lib/agent/stores-doc.ts).
-      [RUTA_API_D]: STORES_DOC,
       [RUTA_LIBRERIAS]: librerias,
     },
   };

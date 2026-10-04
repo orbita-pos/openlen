@@ -53,10 +53,9 @@ export type DocumentOpRejection =
   | "vacio"
   | "demasiado_grande"
   | "no_permitido"
-  | "marcador_de_editor"
-  /** El bloque `data-ol-stores` de un almacén. Es `no_permitido` también, pero
-   *  con su propio nombre porque TIENE sitio —el body— y el rechazo lo dice. */
-  | "almacen_en_cabeza";
+  | "marcador_de_editor";
+// ⚰️ «almacen_en_cabeza»: el bloque `data-ol-stores` tenía su propio motivo de
+// rechazo; los almacenes se retiraron el 2026-10-04.
 
 export type StylesOpResult =
   | { readonly kind: "ninguna" }
@@ -251,8 +250,6 @@ function leerHead(op: Op): HeadOpResult {
   const html = payloadDe(op);
   if (html.length === 0) return { kind: "error", reason: "vacio" };
   if (html.includes("data-slot-path=")) return { kind: "error", reason: "marcador_de_editor" };
-  // Antes que el resto: tiene sitio, y el rechazo tiene que poder decirlo.
-  if (/\bdata-ol-stores\b/i.test(html)) return { kind: "error", reason: "almacen_en_cabeza" };
 
   const nodos = separarPorEtiqueta(html);
   if (nodos.length === 0 || nodos.length > 4) return { kind: "error", reason: "no_permitido" };
@@ -486,8 +483,6 @@ export function documentOpAviso(
           ? "el código de idioma no es válido (se espera algo como `en` o `pt-BR`)"
           : "el CSS traía etiquetas dentro",
     marcador_de_editor: "traía un marcador reservado del editor",
-    almacen_en_cabeza:
-      "intentó declarar un almacén en la cabecera, y va en el cuerpo de la página",
   };
   const que =
     target === "head"

@@ -398,18 +398,5 @@
     "fix": "Corriger ceci",
     "runtime_stale_title": "Ta page ne fonctionne plus",
     "runtime_stale": "Le code de ta page cherche des éléments qui n'existent pas, donc elle a cessé de fonctionner entièrement — pas seulement cette partie. Demande au chat de le corriger."
-  },
-  "datos": {
-    "title": "Données",
-    "close": "Fermer",
-    "vacio": "Cette page ne stocke encore rien. Demandez-le à Len — « que le panier se souvienne », « mets mon menu ici » — et ça apparaîtra.",
-    "modoLectura": "c'est vous qui le gérez",
-    "modoVisitante": "écrit par les visiteurs",
-    "error": "Impossible de lire les données.",
-    "filas": "{count} lignes",
-    "vacia": "NULL",
-    "cuota": "{porcentaje}% de vos données",
-    "cuotaCerca": "il reste peu de place : supprimez les lignes inutiles",
-    "cuotaLlena": "plus de place : vos visiteurs ne peuvent plus rien enregistrer"
   }
 }

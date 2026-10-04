@@ -545,8 +545,8 @@ describe("POST /api/generate", () => {
   // puente parecía útil.
   //
   // El puente se retiró porque su único módulo ya no tiene horneado. El porqué
-  // vive en lib/page-data/sin-puente-ia-modulos.test.ts, que además lo mantiene
-  // honesto porque corre — el fichero-lápida que esta línea citaba
+  // vivía en lib/page-data/sin-puente-ia-modulos.test.ts, que se fue con los
+  // almacenes el 2026-10-04 — el fichero-lápida que esta línea citaba
   // (lib/projects/module-intent.ts) se borró el 2026-09-05: eran 28 líneas de
   // comentario y un `export {}`, contando lo mismo por segunda vez.
   //

@@ -11,7 +11,6 @@
  * se escribe (decisión B7). Como `planearEdit`, esto no guarda nada.
  */
 import { esFicheroDeSupabase } from "./supabase";
-import { almacenDeRuta, noDeclarado } from "./datos";
 import { paginaDeRuta, resolverRuta } from "./sitio";
 import { normalizarFinales, type Leidos, type SitioLegible } from "./read";
 import { CAMBIADO_DESDE_LA_LECTURA, NO_LEIDO, NOTA_ESTADO_AL_DIA, type PlanDeEdit } from "./edit";
@@ -69,14 +68,12 @@ export function planearWrite(entrada: EntradaWrite, sitio: SitioLegible, leidos:
   if (crudo === null) {
     // Claude Code crearía cualquier fichero. Aquí los ficheros son páginas y no
     // hay dónde guardar otra cosa: se dice, y se sugiere la ruta que sí es.
-    const almacen = almacenDeRuta(ruta);
-    if (almacen !== null) return { ok: false, resultado: fallo(noDeclarado(almacen)) };
     if (!paginaDeRuta(ruta) && !esFicheroDeSupabase(ruta)) {
       const parecida = paginaQueQuisoCrear(ruta);
       return {
         ok: false,
         resultado: fallo(
-          `Cannot create ${ruta}: this site only has pages, at /index.html and /<slug>/index.html, and the data files of its declared stores, at /datos/<store>.json, and its Supabase files, under /supabase/.${parecida ? ` Did you mean ${parecida}?` : ""}`,
+          `Cannot create ${ruta}: this site only has pages, at /index.html and /<slug>/index.html, and its Supabase files, under /supabase/.${parecida ? ` Did you mean ${parecida}?` : ""}`,
         ),
       };
     }

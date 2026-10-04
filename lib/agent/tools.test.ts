@@ -486,7 +486,7 @@ describe("activar_modulo", () => {
 
 // H3 (2026-09-25): `leer_estado` se retiró. El estado del proyecto va en el
 // contexto al empezar —como el `git status` de Claude Code— y lo arma
-// `summarizeProjectState`; los almacenes son ficheros de /datos.
+// `summarizeProjectState`. (Los almacenes de /datos se retiraron el 2026-10-04.)
 describe("el estado del proyecto (el que va en el contexto)", () => {
   it("returns fresh module state after a mutation", async () => {
     const { deps } = makeDeps();

@@ -173,10 +173,10 @@ describe("publishedBaseHosts", () => {
   });
 });
 
-// `/api/d/<almacén>` no lleva el subdominio en la URL: lo saca de aquí. Es la
-// forma que el modelo escribe sin que se la pidan (medido el 2026-09-18: 2 de 2
-// carritos la usaron, y el servidor la contestaba 404), y la única que puede
-// escribir bien un borrador que todavía no tiene subdominio.
+// Nació para `/api/d/<almacén>`, que no llevaba el subdominio en la URL (medido
+// el 2026-09-18: 2 de 2 carritos la escribieron así, y el servidor la contestaba
+// 404). Los almacenes se retiraron el 2026-10-04; hoy lo usa el backend de las
+// páginas (`lib/backend/registry.ts`).
 describe("subDeLaPagina — de qué página publicada viene la petición", () => {
   const sub = (headers: Record<string, string>, dominios: Record<string, string> = {}) =>
     subDeLaPagina({

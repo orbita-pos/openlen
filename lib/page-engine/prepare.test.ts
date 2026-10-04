@@ -32,7 +32,8 @@ describe("el motor de la página", () => {
     expect(out.report.stages.map((s) => s.stage)).toEqual([
       // "modules" salio de esta lista el 2026-08-29 con el puente IA->modulos.
       // La etapa devolvia siempre lista vacia: su unico modulo puenteado ya no
-      // tiene horneado. Ver lib/page-data/sin-puente-ia-modulos.test.ts.
+      // tiene horneado. (Lo contaba lib/page-data/sin-puente-ia-modulos.test.ts,
+      // retirado con los almacenes el 2026-10-04.)
       // «imagery» y «legibility» se retiraron el 2026-09-04: eran las dos
       // últimas etapas que tocaban lo que escribió el modelo.
       // «invariants» se retiró el 2026-10-04 con `data-ol-calc`, lo último que hacía.

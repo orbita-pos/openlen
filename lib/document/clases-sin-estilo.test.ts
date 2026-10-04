@@ -129,7 +129,7 @@ describe("no acusa lo que sí se usa", () => {
   });
 
   it("los bloques que no son JavaScript no cuentan", () => {
-    const html = pagina(`<style></style>`, `<script type="application/json" data-ol-stores>{"x":"p.classList.add('open')"}</script>`);
+    const html = pagina(`<style></style>`, `<script type="application/json" id="datos">{"x":"p.classList.add('open')"}</script>`);
     expect(clases(html)).toEqual([]);
   });
 });

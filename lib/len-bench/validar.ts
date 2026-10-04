@@ -30,8 +30,8 @@ export function revisarCaso(
     // En los casos de resultados (plans/len-resultados/) la rota se distingue
     // por lo que Len diría (`turno`) o por lo que se planta después
     // (`despues`), no por la página: sólo es idéntica si nada de eso cambia.
-    // Y la solución también puede plantar (`solucionDespues`, las filas de un
-    // almacén): una rota con su mismo HTML y sin esas filas no es la misma.
+    // Y la solución también puede plantar (`solucionDespues`, filas en la
+    // base): una rota con su mismo HTML y sin esas filas no es la misma.
     const mismoTurno = JSON.stringify(rota.turno ?? null) === JSON.stringify(e.solucionTurno ?? null);
     const mismoDespues = (rota.despues ?? null) === (e.solucionDespues ?? null);
     if (JSON.stringify(rota.datos) === JSON.stringify(e.solucion) && mismoTurno && mismoDespues) {

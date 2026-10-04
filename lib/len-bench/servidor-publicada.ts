@@ -2,7 +2,7 @@
 //
 // Copia del bloque `*.openlen.app` de infra/caddy/Caddyfile, en lo que un
 // visitante puede tocar:
-//   · los prefijos con `handle` propio van a Next (formularios, datos, chat,
+//   · los prefijos con `handle` propio van a Next (formularios, chat,
 //     analítica…), CON el Host de la publicada, como hace reverse_proxy;
 //   · `/assets/*` sale de `<sub>/assets`;
 //   · todo lo demás es `try_files {path} {path}/index.html /index.html` sobre
@@ -26,7 +26,7 @@ import http from "node:http";
 import path from "node:path";
 
 export const PREFIJOS_A_NEXT: readonly string[] = [
-  "/c/", "/api/f/", "/api/lienzo/", "/api/d/", "/api/m/", "/api/cm/", "/api/bk/", "/api/b/", "/api/chat/", "/uploads/",
+  "/c/", "/api/f/", "/api/lienzo/", "/api/m/", "/api/cm/", "/api/bk/", "/api/b/", "/api/chat/", "/uploads/",
   // El backend de las páginas (lib/backend): la API de Supabase.
   "/rest/v1/", "/auth/v1/",
 ];
@@ -74,7 +74,7 @@ export async function servirPublicada(o: {
         const destino = new URL(req.url ?? "/", o.next);
         // El `Origin` de la propia publicada es el de su host, como en
         // producción. Sin esto Chromium mandaba 127.0.0.1, `requestingHost` lo
-        // lee antes que el Host, y los almacenes (`/api/d/`) contestaban 404.
+        // lee antes que el Host, y lo que miraba el origen contestaba 404.
         const origen =
           req.headers.origin === `http://${req.headers.host}` ? { origin: `https://${o.hostPublicado}` } : {};
         const prox = http.request(

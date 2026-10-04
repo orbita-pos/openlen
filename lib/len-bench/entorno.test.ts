@@ -43,14 +43,9 @@ describe("entornoDeLenBench", () => {
     expect(env.CLOUDFLARE_API_TOKEN).toBe("");
     expect(env.RESEND_API_KEY).toBe("");
   });
-  // 🔴 E del 26/09: sin el secreto, todas las /api/d/ contestaban 500
-  // `no_configurado` y ninguna página que guardara en un almacén podía pasar.
-  it("🔴 pone un secreto para los almacenes si falta, y respeta el que haya", () => {
-    const env = entornoDeLenBench({}, RAIZ);
-    expect(env.OPENLEN_INTERNAL_SECRET?.length).toBeGreaterThanOrEqual(32);
-    expect(entornoDeLenBench({ OPENLEN_INTERNAL_SECRET: "  " }, RAIZ).OPENLEN_INTERNAL_SECRET?.trim()).not.toBe("");
-    expect(entornoDeLenBench({ OPENLEN_INTERNAL_SECRET: "el-suyo" }, RAIZ).OPENLEN_INTERNAL_SECRET).toBe("el-suyo");
-  });
+  // ⚰️ «pone un secreto para los almacenes si falta» (E del 26/09): sin él, las
+  // /api/d/ contestaban 500 `no_configurado`. Los almacenes se retiraron el
+  // 2026-10-04 y Len-Bench ya no inventa OPENLEN_INTERNAL_SECRET.
   it("apunta la publicación y las grabaciones a plans/len-2", () => {
     const env = entornoDeLenBench({}, RAIZ);
     expect(env.PUBLISH_ROOT).toBe(path.join(RAIZ, "plans", "len-2", "publicadas"));

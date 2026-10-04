@@ -2,7 +2,7 @@
 // el PUT guarda lo editado a mano (la #18, abajo).
 //
 // Es el MISMO árbol que ve Len en su terminal (F1 y F5 de plans/len-agente-2026):
-// sale de `cargarFicherosDeLaTerminal` (páginas, `/datos`, `/memoria`,
+// sale de `cargarFicherosDeLaTerminal` (páginas, `/supabase`, `/memoria`,
 // `/ajustes`) y de `soloLecturaDeLaTerminal` (`/.openlen`: resultados, bandeja,
 // catálogo y versiones), así que el dueño y Len ven lo mismo, sin una
 // segunda lista que se desfase. Fuera `/AGENTS.md` y `/.openlen/docs`: son el

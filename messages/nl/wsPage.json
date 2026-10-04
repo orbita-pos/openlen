@@ -398,18 +398,5 @@
     "fix": "Dit repareren",
     "runtime_stale_title": "Je pagina werkt niet meer",
     "runtime_stale": "De code van je pagina zoekt naar dingen die er niet zijn, dus hij werkt helemaal niet meer — niet alleen dat deel. Vraag de chat om het te repareren."
-  },
-  "datos": {
-    "title": "Gegevens",
-    "close": "Sluiten",
-    "vacio": "Deze pagina bewaart nog niets. Vraag het Len — «laat het winkelmandje onthouden», «zet mijn menu hier» — en het verschijnt hier.",
-    "modoLectura": "jij houdt dit bij",
-    "modoVisitante": "bezoekers schrijven dit",
-    "error": "Kon de gegevens niet lezen.",
-    "filas": "{count} rijen",
-    "vacia": "NULL",
-    "cuota": "{porcentaje}% van je gegevens",
-    "cuotaCerca": "weinig ruimte over: verwijder rijen die je niet gebruikt",
-    "cuotaLlena": "geen ruimte: je bezoekers kunnen niets meer opslaan"
   }
 }

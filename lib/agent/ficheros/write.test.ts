@@ -67,7 +67,7 @@ describe("Write", () => {
     const r = planearWrite({ file_path: "/styles.css", content: "x" }, sitio({ "/index.html": "x" }), new Map());
     expect(r).toMatchObject({
       ok: false,
-      resultado: { error: "Cannot create /styles.css: this site only has pages, at /index.html and /<slug>/index.html, and the data files of its declared stores, at /datos/<store>.json, and its Supabase files, under /supabase/." },
+      resultado: { error: "Cannot create /styles.css: this site only has pages, at /index.html and /<slug>/index.html, and its Supabase files, under /supabase/." },
     });
   });
 
@@ -93,7 +93,7 @@ describe("Write", () => {
       ok: false,
       resultado: {
         error:
-          "Cannot create /menu.html: this site only has pages, at /index.html and /<slug>/index.html, and the data files of its declared stores, at /datos/<store>.json, and its Supabase files, under /supabase/. Did you mean /menu/index.html?",
+          "Cannot create /menu.html: this site only has pages, at /index.html and /<slug>/index.html, and its Supabase files, under /supabase/. Did you mean /menu/index.html?",
       },
     });
   });

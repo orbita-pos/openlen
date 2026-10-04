@@ -4,8 +4,9 @@
 // Para medir si Len BUSCA bien (plans/len-agente-2026, F0 y F2), la búsqueda
 // tiene que dar lo mismo en cada corrida. Contra Brave de verdad los resultados
 // cambian cada día, y se mediría la web y no a Len (HOJA-DE-RUTA.md, F0,
-// alternativas descartadas). Es la misma idea que el sustituto de `/api/d`
-// (lib/page-data/sustituto.ts): en memoria, con las reglas del servicio real.
+// alternativas descartadas). Es la misma idea que tenía el sustituto de `/api/d`
+// (retirado el 2026-10-04 con los almacenes): en memoria, con las reglas del
+// servicio real.
 //
 // La consulta es texto libre del modelo, así que «fijo por consulta» quiere
 // decir que cada caso declara REGLAS (`WebDelCaso.busquedas`): la primera

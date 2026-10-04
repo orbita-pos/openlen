@@ -72,11 +72,12 @@ describe("servirPublicada", () => {
   // 🔴 Control del 26/09 (carrito #1, punto-de-venta #3): la página de Len
   // guardaba en un almacén, Chromium mandaba `Origin: http://127.0.0.1:<p>`,
   // `subDeLaPagina` daba null y `/api/d/` contestaba 404. En producción el
-  // Origin es el host de la publicada.
+  // Origin es el host de la publicada. `/api/d/` se retiró el 2026-10-04; el
+  // Origin lo siguen leyendo `/api/f/` y el backend (`lib/backend/registry.ts`).
   it("🔴 el Origin de la propia publicada llega a Next como el de su host, y la ruta sabe de qué página viene", async () => {
     const s = await servirPublicada({ raiz, sub: "demo", next: nextUrl, hostPublicado: "demo.openlen.app" });
     try {
-      await fetch(`${s.url}/api/d/demo/carrito`, { method: "POST", headers: { origin: s.url }, body: "{}" });
+      await fetch(`${s.url}/api/f/demo`, { method: "POST", headers: { origin: s.url }, body: "x=1" });
       expect(origenesVistos.at(-1)).toBe("https://demo.openlen.app");
       const headers = new Headers({ origin: String(origenesVistos.at(-1)), host: "demo.openlen.app" });
       expect(await subDeLaPagina({ headers, baseHost: "openlen.app", resolveCustomDomain: async () => null })).toBe("demo");
@@ -89,7 +90,7 @@ describe("servirPublicada", () => {
   it("un Origin de otra página pasa tal cual", async () => {
     const s = await servirPublicada({ raiz, sub: "demo", next: nextUrl, hostPublicado: "demo.openlen.app" });
     try {
-      await fetch(`${s.url}/api/d/demo/carrito`, { method: "POST", headers: { origin: "https://otra.openlen.app" }, body: "{}" });
+      await fetch(`${s.url}/api/f/demo`, { method: "POST", headers: { origin: "https://otra.openlen.app" }, body: "x=1" });
       expect(origenesVistos.at(-1)).toBe("https://otra.openlen.app");
     } finally {
       await s.cerrar();

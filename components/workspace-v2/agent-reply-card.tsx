@@ -10,7 +10,7 @@ import { enlaceDeCorreo, enlaceDeWhatsApp } from "@/lib/resultados/enlaces-de-re
 // un toque. «Enviar» contesta como el negocio por la bandeja; correo y
 // WhatsApp abren SU aplicación con el texto puesto. Como la de publicar, no se
 // guarda: al recargar, el borrador sigue en el texto de Len. Los textos llegan
-// por props, como en `DatosView`: así se prueba sin montar next-intl. La caja y
+// por props: así se prueba sin montar next-intl. La caja y
 // los botones son los de `AgentConfirmCard`, para que las dos se vean iguales.
 
 export interface EtiquetasDeRespuesta {

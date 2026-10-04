@@ -1398,9 +1398,9 @@ export const bookingEvents = pgTable(
 // ⚰️ AQUÍ VIVÍAN `collections` y `collectionItems`.
 //
 // El módulo murió el 2026-08-29: lo que hacía —un catálogo que el dueño
-// mantiene y que se hornea como HTML estático al publicar— lo hace mejor un
-// almacén declarado en la propia página (`pageData` + `data-ol-stores`), sin
-// nada que activar y sin una tabla por rasgo.
+// mantiene y que se hornea como HTML estático al publicar— lo pasó a hacer un
+// almacén declarado en la propia página (`pageData` + `data-ol-stores`, a su vez
+// retirados el 2026-10-04: hoy es el backend de Supabase de la página).
 //
 // 🔴 LAS TABLAS DE POSTGRES NO SE BORRAN CON ESTO. Quitarlas del esquema hace
 // que el código deje de saber que existen; borrar los datos de alguien es otra
@@ -1699,48 +1699,13 @@ export const visualEnginePilotRuns = pgTable(
   ],
 );
 
-// Datos libres — los documentos que una página publicada guarda.
+// ⚰️ AQUÍ VIVÍA `pageData`: los documentos de los almacenes `data-ol-stores`
+// (Datos libres, 2026-08-29). Se retiraron el 2026-10-04 con los almacenes: los
+// datos de una página van a su backend de Supabase (lib/backend).
 //
-// UNA TABLA PARA TODO, a propósito: sin DDL por proyecto, sin migraciones por
-// almacén. La forma la declara el modelo dentro de la página (ver
-// lib/page-data/declaracion.ts) y sirve para validar y para pintar columnas;
-// NO se materializa aquí. Ese es el trato que da lo que gusta de una base de
-// datos de verdad —columnas y tipos para el dueño— sin la máquina de
-// mantenerlas.
-//
-// `bytes` está desnormalizado a propósito: la cuota se comprueba en CADA
-// escritura, y sumar `length(doc::text)` sobre todas las filas del proyecto en
-// cada POST es exactamente el tipo de consulta que se ve bien con 10 filas y
-// tumba la caja con 100.000.
-export const pageData = pgTable(
-  "pageData",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    projectId: text("projectId")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    store: text("store").notNull(),
-    /** NULL = documento del dueño. Con valor = del visitante que lo escribió. */
-    visitorId: text("visitorId"),
-    doc: jsonb("doc").notNull(),
-    bytes: integer("bytes").notNull(),
-    createdAt: timestamp("createdAt", { mode: "date", precision: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { mode: "date", precision: 3 }).notNull().defaultNow(),
-    /** NULL = no caduca (sólo almacenes de `lectura`). */
-    expiresAt: timestamp("expiresAt", { mode: "date" }),
-  },
-  (table) => [
-    index("pageData_project_store_idx").on(table.projectId, table.store),
-    index("pageData_project_store_visitor_idx").on(
-      table.projectId,
-      table.store,
-      table.visitorId,
-    ),
-    index("pageData_expires_idx").on(table.expiresAt),
-  ],
-);
+// 🔴 LA TABLA DE POSTGRES NO SE BORRA CON ESTO, como con las colecciones de
+// arriba. En producción tenía 0 filas (medido el 2026-10-04); tirarla es una
+// migración aparte, con su OK.
 
 // Los EVENTOS DE USO de la app (lib/uso/): en qué paso de Crear se queda cada
 // usuario. No es la analítica de las páginas publicadas (`pageEvents`), que

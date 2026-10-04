@@ -48,7 +48,7 @@ describe("diagnosticosDeLaEscritura: lo que antes era un aviso_critico, anclado 
     const despues = pagina(
       [
         "<script>document.querySelectorAll('.x').forEach(function (b) { b.addEventListener('click', () => {}); });</script>",
-        '<script type="application/json" data-ol-stores>{"menu":{"visitante":"lectura"}}</script>',
+        '<script type="application/json" id="menu">{"menu":{"visitante":"lectura"}}</script>',
         '<script type="module">import x from "./x.js"; export default x;</script>',
         '<script src="https://cdn.tailwindcss.com"></script>',
       ].join("\n"),

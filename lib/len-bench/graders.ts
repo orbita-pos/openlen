@@ -94,8 +94,8 @@ export function datosDeLaFicha(campos: readonly string[], peso = 3): Grader {
           return !aparece(v, texto);
         });
       let faltan = faltanEn(html);
-      // Lo que pinta el JS al cargar —las filas de un almacén, un menú montado en
-      // el navegador— también lo ve el visitante: si falta en el HTML servido, se
+      // Lo que pinta el JS al cargar —las filas que trae de la base, un menú montado
+      // en el navegador— también lo ve el visitante: si falta en el HTML servido, se
       // busca en lo que pinta Chromium (revisión de E, 26/09: las reseñas que el
       // dueño dio vivían en un almacén y salían como que faltaban). Sin navegador
       // (las pruebas sin Chromium) se queda en lo servido.
@@ -1283,10 +1283,10 @@ export function enElFichero(nombre: string, ruta: string, patron: RegExp, peso =
 /**
  * Lo que tiene que verse DENTRO de una tabla de la página ya pintada: la
  * `<table>` (o `role="table"`) cuyo texto casa con `cabecera`, y en ella cada
- * patrón. Dentro de la tabla y no en la página, a propósito: las filas de un
- * almacén horneadas en un `<tbody>` son `<div>`, que el navegador saca FUERA
- * de la tabla al leer el HTML, y el visitante ve los productos sueltos encima
- * de una tabla vacía (`lib/publish/bake-lectura.ts`).
+ * patrón. Dentro de la tabla y no en la página, a propósito: unas filas que son
+ * `<div>` dentro de un `<tbody>` el navegador las saca FUERA de la tabla al leer
+ * el HTML, y el visitante ve los productos sueltos encima de una tabla vacía
+ * (le pasaba al horneado de los almacenes, retirados el 2026-10-04).
  */
 export function enLaTabla(nombre: string, ruta: string, cabecera: RegExp, filas: readonly RegExp[], peso = 3): Grader {
   return {
@@ -1318,11 +1318,11 @@ export function enLaTabla(nombre: string, ruta: string, cabecera: RegExp, filas:
 }
 
 /**
- * Lo que tiene que salir de un ALMACÉN no está escrito en el HTML del proyecto
- * —ni a la vista, ni en un atributo, ni en un arreglo de JavaScript—: el
- * borrador que guarda la base, antes de que publicar hornee las filas. Junto a
+ * Lo que tiene que salir de la BASE no está escrito en el HTML del proyecto
+ * —ni a la vista, ni en un atributo, ni en un arreglo de JavaScript—. Junto a
  * `en-la-tabla` (se ve) dice de dónde sale lo que se ve: si no está en el
- * fichero y el visitante lo lee, vino del almacén.
+ * fichero y el visitante lo lee, vino de la base. (Nació para los almacenes,
+ * retirados el 2026-10-04; hoy ningún caso lo usa.)
  */
 export function noEscritoEnElProyecto(nombre: string, valores: readonly string[], peso = 3): Grader {
   return {

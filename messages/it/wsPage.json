@@ -398,18 +398,5 @@
     "fix": "Sistema questo",
     "runtime_stale_title": "La tua pagina ha smesso di funzionare",
     "runtime_stale": "Il codice della tua pagina cerca cose che non ci sono, quindi ha smesso di funzionare del tutto — non solo quella parte. Chiedi alla chat di sistemarlo."
-  },
-  "datos": {
-    "title": "Dati",
-    "close": "Chiudi",
-    "vacio": "Questa pagina non salva ancora nulla. Chiedilo a Len — «che il carrello ricordi», «metti qui il mio menù» — e comparirà.",
-    "modoLectura": "lo gestisci tu",
-    "modoVisitante": "lo scrivono i visitatori",
-    "error": "Non è stato possibile leggere i dati.",
-    "filas": "{count} righe",
-    "vacia": "NULL",
-    "cuota": "{porcentaje}% dei tuoi dati",
-    "cuotaCerca": "resta poco spazio: elimina le righe che non usi",
-    "cuotaLlena": "spazio esaurito: i tuoi visitatori non possono più salvare nulla"
   }
 }

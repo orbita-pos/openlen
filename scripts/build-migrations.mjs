@@ -57,7 +57,6 @@ const targets = [
   "template-visual-metadata-migrate",
   "visual-engine-pilot-migrate",
   "user-memory-migrate",
-  "page-data-migrate",
   // 🔴 SE ARMA EN EL SEGUNDO DESPLIEGUE, NO EN EL PRIMERO. Tira la tabla
   // `businessProfiles` y la columna `projects.profileId`.
   //

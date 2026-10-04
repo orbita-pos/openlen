@@ -334,14 +334,8 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
       return null;
     });
     const pool = await poolDelTurno;
-    // EL SUBDOMINIO DEL PROYECTO, para el sustituto de `/api/d`: con él juzga
-    // `/api/d/<sub>/<almacén>` como lo haría la página publicada. Se lee al
-    // medir, no al construir esto: el proyecto se carga unas líneas más abajo.
-    // Mientras no se haya cargado, AUSENTE — no se juzga ese tramo.
-    const opciones = subDelProyecto === undefined ? {} : { sub: subDelProyecto };
-    return pool ? pool.render(html, opciones) : renderVisualQualityViewports(html, {}, opciones);
+    return pool ? pool.render(html) : renderVisualQualityViewports(html);
   };
-  let subDelProyecto: string | null | undefined;
   const medidaDelTurno = medirUnaVezPorDocumento(medirDocumento);
   const medirDelTurno = medidaDelTurno.medir;
   const cerrarNavegadorDelTurno = async () => {
@@ -376,14 +370,11 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
       observarPagina(input, { medir: medirDelTurno }),
     // `usar_pagina` (H9) abre SU navegador por visita y no el del turno: cada
     // visita tiene que empezar limpia (sin lo guardado por la anterior) y lleva
-    // su propio preludio. El subdominio, para que el sustituto de `/api/d` juzgue
-    // las rutas como la publicada.
-    usarPagina: (input: Omit<Parameters<typeof usarPagina>[0], "sub">) =>
-      usarPagina(subDelProyecto === undefined ? input : { ...input, sub: subDelProyecto }),
+    // su propio preludio.
+    usarPagina,
   };
   const project = await deps.loadProject(projectId, userId);
   if (!project) return errorJson(404, "project not found");
-  subDelProyecto = project.subdomain ?? null;
   const pageSlug =
     pageSlugRaw && project.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
   if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
@@ -542,10 +533,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // colección llegaba VACÍA en el documento —los items se horneaban al
   // publicar— y sin esto el Agente fabricaba tarjetas inventadas.
   //
-  // Ya no hace falta: cada almacén es el fichero /datos/<almacén>.json (H3) y
-  // Read le da las filas, las de `lectura` y las de `propio`/`añadir`. El
-  // problema que esto resolvía —el modelo sin ver lo que la página guarda— lo
-  // resuelve el fichero, no un bloque cosido al prompt.
+  // Dejó de hacer falta cuando cada almacén fue el fichero /datos/<almacén>.json
+  // (H3), y los almacenes se retiraron a su vez el 2026-10-04: los datos de una
+  // página viven hoy en su backend de Supabase.
 
   // 🔴 LAS TRES LECTURAS DE PERFIL SALEN JUNTAS, no en fila.
   //
@@ -719,7 +709,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
     leidos: new Map([
       // H4 · y lo que el turno anterior dejó leído, si no cambió y sigue a la
       // vista (lo leído, como lo apunta Claude Code). Las páginas, con el mismo
-      // texto que les daría Read; /memoria va aparte, y /datos se relee.
+      // texto que les daría Read; /memoria va aparte.
       ...(historialDeLaBase
         ? leidosSembrados(
             filasDelHistorial.at(-1)?.transcript?.leidos ?? [],

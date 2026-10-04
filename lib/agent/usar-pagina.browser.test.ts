@@ -268,20 +268,6 @@ describe("usar_pagina — elegir", () => {
   }, 90_000);
 });
 
-describe("usar_pagina — un almacén de la página va al sustituto, no a la base", () => {
-  it("dice la llamada y que la copia se tira", async () => {
-    const html = marco(`
-      <script type="application/json" data-ol-stores>{"notas":{"visitante":"propio","campos":{"texto":"texto"}}}</script>
-      <p id="r">Sin guardar</p><button id="g">Guardar</button>
-      <script>
-        document.getElementById("g").addEventListener("click", function () {
-          fetch("/api/d/notas", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ texto: "hola" }) })
-            .then(function (r) { document.getElementById("r").textContent = r.ok ? "Guardado" : "Error " + r.status; });
-        });
-      </script>`);
-    const informe = await visitar(html, [{ pulsa: "Guardar" }]);
-    expect(informe).toContain("POST /api/d/notas");
-    expect(informe).toContain("«Sin guardar» → «Guardado»");
-    expect(informe).toContain("thrown away at the end");
-  }, 90_000);
-});
+// ⚰️ «usar_pagina — un almacén de la página va al sustituto, no a la base»: lo
+// que la visita guardaba en `/api/d` iba a un sustituto que se tiraba al final.
+// Se retiró con `data-ol-stores` el 2026-10-04.

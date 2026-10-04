@@ -48,8 +48,8 @@ export function bakeModulesForPreviewHtml(html: string, ctx: PreviewBakeCtx): st
 
   // ⚰️ El horneado del catálogo se fue el 2026-08-29, AQUÍ Y EN EL PUBLICADOR
   // a la vez — es lo que exige `bake-surfaces.ts`: un horneado que existe en una
-  // superficie y no en la otra es un borrador que miente. Un catálogo es ahora
-  // un almacén de `lectura`.
+  // superficie y no en la otra es un borrador que miente. (Un catálogo pasó a
+  // ser un almacén de `lectura`, retirado a su vez el 2026-10-04.)
   // AI→human handoff — same single-source-of-truth rule as publishToDir.
   const assistantOn =
     process.env.OPENLEN_ASSISTANT !== "0" && s.assistant?.enabled === true;

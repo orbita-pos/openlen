@@ -14,7 +14,7 @@
  * allí.
  *
  * Los ficheros son los del explorador y la terminal (`cargarFicherosDeLaTerminal`):
- * páginas, `/datos`, `/memoria` y `/ajustes`. Fuera el manual, que no es del
+ * páginas, `/supabase`, `/memoria` y `/ajustes`. Fuera el manual, que no es del
  * proyecto, y lo de sólo lectura, que nadie escribe.
  *
  * Puro: dos fotos dentro, la lista fuera. Lo prueba vitest.

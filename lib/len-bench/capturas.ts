@@ -47,7 +47,7 @@ export async function capturarPublicada(o: {
   readonly navegador: Browser;
   /** Donde se sirve la publicada. */
   readonly url: string;
-  /** El Next al que la página llama (almacenes, formularios): como en `abrir` de los graders. */
+  /** El Next al que la página llama (formularios, backend): como en `abrir` de los graders. */
   readonly next: string;
   readonly sub: string;
   readonly rutas: readonly string[];

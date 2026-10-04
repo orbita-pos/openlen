@@ -27,8 +27,8 @@
 //     no se hace y se dice con los candidatos, como el `Edit` que no casa.
 //
 // 🔴 NADA SALE (la regla del camino destructivo de `verify`): un formulario no
-// llega al correo del dueño, lo que se guarda en un almacén va al sustituto de
-// esta visita, y un enlace a otro sitio no se abre — se dice a dónde iba.
+// llega al correo del dueño y un enlace a otro sitio no se abre — se dice a
+// dónde iba.
 
 import type { Browser, ElementHandle, Page } from "puppeteer";
 
@@ -36,7 +36,6 @@ import { TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
 import { origenDeMedida } from "@/lib/ai/origen-de-medida";
 import { lanzarChromium } from "@/lib/ai/visual-quality-renderer";
 import { documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
-import { explicarRechazo } from "@/lib/page-data/sustituto";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import type { PasoDeUso } from "@/lib/agent/pasos-de-uso";
 
@@ -577,8 +576,6 @@ export interface VisitaParams {
   readonly ruta: string;
   /** El contexto con el que se hornea: la página que el dueño ve en el lienzo. */
   readonly vista?: ContextoDeVista | null;
-  /** El subdominio, para que el sustituto de `/api/d` juzgue las rutas como la publicada. */
-  readonly sub?: string | null;
 }
 
 export interface VisitaInternals {
@@ -823,7 +820,7 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
     page.on("response", (r) => {
       try {
         const u = new URL(r.url());
-        if (u.host === origen.origin && u.pathname.startsWith("/api/") && !u.pathname.startsWith("/api/d/")) {
+        if (u.host === origen.origin && u.pathname.startsWith("/api/")) {
           ev.otrasApi.push(`${r.request().method()} ${u.pathname}`);
         }
       } catch {
@@ -831,12 +828,11 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
       }
     });
 
-    const doc = origen.publicar(html, p.sub === undefined ? {} : { sub: p.sub });
+    const doc = origen.publicar(html);
     const sinHash = (u: string) => u.split("#")[0];
     try {
       await page.goto(doc.url, { waitUntil: "load", timeout: 20_000 });
       const cambiantes = new Set<string>();
-      let llamadasVistas = doc.datos.llamadas().length;
       let hechos = 0;
 
       for (const [i, paso] of p.pasos.entries()) {
@@ -896,14 +892,6 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
         }
         detalle.push(...ev.dialogos);
         ev.dialogos.length = 0;
-        const llamadas = doc.datos.llamadas();
-        for (const l of llamadas.slice(llamadasVistas)) {
-          detalle.push(l.status >= 400 ? explicarRechazo(l) : `called \`${l.metodo} ${l.ruta}\` and the store answered ${l.status}.`);
-          notas.add(
-            "(note: what the page saves in its stores during a visit goes to a separate copy that is thrown away at the end, and on every visit the stores start EMPTY: what they really hold isn't seen here.)",
-          );
-        }
-        llamadasVistas = llamadas.length;
         for (const a of new Set(ev.otrasApi)) detalle.push(`called \`${a}\`, which only answers on the published page: it couldn't be checked here.`);
         ev.otrasApi.length = 0;
 

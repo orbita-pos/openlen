@@ -10,7 +10,6 @@
 // código, no de una lista escrita a mano: una lista copiada se queda vieja el
 // día que alguien añade una variable (memoria `la-guarda-que-compara-dos-copias`).
 
-import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { sql } from "drizzle-orm";
@@ -71,11 +70,8 @@ export function entornoDeLenBench(base: Readonly<Entorno>, raizRepo: string): En
   // PRODUCCIÓN. En producción la página también envía a otro origen (el
   // ápice), así que apuntarlo al Next de Len-Bench es la misma forma.
   env.NEXT_PUBLIC_SITE_URL = BASE_LEN_BENCH;
-  // Los almacenes (/api/d/) firman la cookie del visitante con este secreto y
-  // sin él contestan 500 `no_configurado`. Producción lo tiene; el .env.local
-  // de desarrollo no (E del 26/09: todas las /api/d/ daban 500). Uno de usar y
-  // tirar basta: sólo firma cookies de Len-Bench.
-  if (!env.OPENLEN_INTERNAL_SECRET?.trim()) env.OPENLEN_INTERNAL_SECRET = randomBytes(32).toString("hex");
+  // ⚰️ Aquí se ponía OPENLEN_INTERNAL_SECRET, con el que los almacenes (/api/d/)
+  // firmaban la cookie del visitante. Se retiraron el 2026-10-04.
   return env;
 }
 

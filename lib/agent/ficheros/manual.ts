@@ -9,15 +9,15 @@
  * proyecto.
  *
  * F4: /AGENTS.md se queda con lo que vale para cualquier edición y un índice;
- * lo que sólo hace falta a veces —la guía de diseño, el contrato de /api/d y
- * las librerías— vive en /.openlen/docs y se lee cuando hace falta, como las
+ * lo que sólo hace falta a veces —la guía de diseño y las librerías— vive en
+ * /.openlen/docs y se lee cuando hace falta, como las
  * habilidades de DeepSeek y de Claude Code (un catálogo corto, el texto a
  * demanda). No es una herramienta `Skill`: Flash no carga lo diferido
  * (ToolSearch, 2 llamadas en 958 turnos), y leer un fichero sí lo hace bien.
  *
  * Tres propiedades, las mismas para los cuatro ficheros:
  *   · Read los abre por su ruta, con terminal o sin ella;
- *   · Grep y Glob NO los ven: así un Grep de `data-ol-stores` o de un teléfono
+ *   · Grep y Glob NO los ven: así un Grep de `createClient` o de un teléfono
  *     encuentra la página, no los ejemplos del manual;
  *   · Edit, Write y la terminal los rechazan, y el rechazo dice dónde sí se
  *     escribe.
@@ -39,12 +39,11 @@ export const RUTA_MANUAL = "/AGENTS.md";
  */
 export const CARPETA_DOCS = "/.openlen/docs";
 export const RUTA_GUIA = `${CARPETA_DOCS}/guia-de-diseno.md`;
-export const RUTA_API_D = `${CARPETA_DOCS}/api-d.md`;
 export const RUTA_LIBRERIAS = `${CARPETA_DOCS}/librerias.md`;
-// ⚰️ Aquí iba RUTA_ACCOUNTS (`accounts.md`, data-ol-accounts, 03/10/2026),
-// retirada el 2026-10-04 sin llegar a desplegarse: la gente que entra en la
-// página es Supabase Auth (plans/pages-backend/design.md).
-export const RUTAS_DE_DOCS: readonly string[] = [RUTA_GUIA, RUTA_API_D, RUTA_LIBRERIAS];
+// ⚰️ Aquí iban RUTA_API_D (`api-d.md`, data-ol-stores) y RUTA_ACCOUNTS
+// (`accounts.md`, data-ol-accounts), retiradas el 2026-10-04: los datos y la
+// gente que entra en una página son su backend de Supabase.
+export const RUTAS_DE_DOCS: readonly string[] = [RUTA_GUIA, RUTA_LIBRERIAS];
 
 /** ¿Es del manual de la plataforma (de sólo lectura, no se publica)? Toda la
  *  carpeta, no sólo sus tres ficheros: un `nuevo.md` ahí tampoco se escribe. */

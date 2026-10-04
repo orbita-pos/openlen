@@ -63,8 +63,8 @@ export interface ChatSettings {
 // resto del módulo: no queda tabla, ni store, ni horneado, ni panel.
 //
 // Lo que valía la pena de aquello —que un catálogo fuera contenido indexable
-// y no un `fetch`— lo hace `horneaLectura` sobre un almacén declarado en la
-// propia página, sin módulo que encender.
+// y no un `fetch`— lo hizo después `horneaLectura` sobre un almacén declarado
+// en la propia página, retirado a su vez el 2026-10-04.
 
 /** Project-level settings that aren't part of the HTML document. */
 export interface ProjectSettings {
@@ -170,7 +170,6 @@ export type VisualEngineProjectMetadata =
       repair?: VisualRepairProjectMetadata;
     } & VisualEngineAssetMetadata);
 
-import type { Declaracion } from "@/lib/page-data/declaracion";
 import type { PruebaGuardada } from "@/lib/agent/pruebas-de-la-pagina";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 
@@ -197,17 +196,9 @@ export interface ProjectData {
   /** Set once the user closes the notice. A warning that reappears forever is
    *  noise, and noise is how we arrive back at silence through another door. */
   degradationsDismissed?: boolean;
-  /** Los almacenes que la página DECLARA, extraídos del HTML al publicar.
-   *
-   *  La fuente de verdad es el documento publicado, no esto: aquí vive una
-   *  copia para no tener que parsear el HTML en cada escritura. No hay forma
-   *  de editarlo salvo republicando — si el modelo borra el bloque, la
-   *  siguiente publicación deja el almacén sin permisos y sus documentos
-   *  dejan de aceptar escrituras (se conservan; el dueño puede exportarlos).
-   *
-   *  Ausente = la página no declara ninguno, que es el caso de todas las que
-   *  existían antes del 2026-08-29. Ver lib/page-data/declaracion.ts. */
-  almacenes?: Declaracion;
+  // ⚰️ `almacenes`: los que la página declaraba con `data-ol-stores`, copiados
+  // al publicar. Retirados el 2026-10-04 (proyectos viejos pueden llevar el campo;
+  // ya no lo lee nadie).
   /** LAS PROMESAS QUE ESTA PÁGINA YA CUMPLIÓ UNA VEZ, para que un turno
    *  posterior no pueda romperlas en silencio.
    *

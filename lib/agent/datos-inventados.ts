@@ -16,7 +16,7 @@
 //
 // La prueba es de PROCEDENCIA, no de verdad: el dato tiene que salir de algún
 // sitio —lo que dijo el usuario, su brief, cualquier fichero de su sitio tal
-// como estaba al empezar el turno (también sus almacenes y su memoria)—. Las
+// como estaba al empezar el turno (también su memoria)—. Las
 // fuentes se leen ENTERAS, con su JavaScript y sus atributos: un precio que
 // estaba en el carrito del script y Len pasa al texto no lo inventó él. Lo que
 // se vigila es sólo lo VISIBLE que esta escritura añade. Ante la duda, callar:

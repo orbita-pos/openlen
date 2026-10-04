@@ -25,7 +25,7 @@ const HTML = [
   '<div class="grid">x</div>',
   '<p class="mt-3 text( --ol-fg-muted )">y</p>',
   "<script>",
-  "fetch('/api/d/carrito/carrito', { method: 'POST' });",
+  "fetch('/api/f/carrito', { method: 'POST' });",
   "</script>",
   "</body>",
   "</html>",
@@ -481,42 +481,5 @@ describe("doctrina 4 — lo que escribió la página va marcado como DATO", () =
   });
 });
 
-// LO QUE EL SERVIDOR RECHAZARÍA EN EL ALMACÉN (2026-09-18). El carrito de ese
-// día se veía y se usaba perfecto y no guardaba nada; esto es lo que el modelo
-// no llegó a ver.
-describe("los rechazos del almacén son defectos", () => {
-  const rechazada = { metodo: "POST", ruta: "/api/d/carrito/carrito", status: 403, error: "origen_invalido" };
-
-  it("un rechazo es un Error `almacen`, con el motivo y la forma buena, donde la página llama", () => {
-    const d = medidos({ llamadasADatos: [rechazada] });
-    expect(d).toHaveLength(1);
-    expect(d[0]).toMatchObject({ gravedad: "Error", codigo: "almacen", linea: 7, columna: 8 });
-    expect(d[0]!.mensaje).toContain("`/api/d/<store>`, without a subdomain");
-  });
-
-  it("una llamada contestada bien no es nada", () => {
-    expect(medidos({ llamadasADatos: [{ metodo: "POST", ruta: "/api/d/carrito", status: 200 }] })).toEqual([]);
-  });
-
-  it("la misma llamada rechazada dos veces se dice una", () => {
-    expect(medidos({ llamadasADatos: [rechazada, rechazada] })).toHaveLength(1);
-  });
-
-  it("es un Error, como el JavaScript: en el sobre va delante del desborde", () => {
-    const sobre = redactarDiagnosticos(
-      medidos({ llamadasADatos: [rechazada], mobileOverflow: true, overflowCulprit: "div.ancho", overflowCulpritOpId: "L4C1" }),
-    )!;
-    expect(sobre.indexOf("[almacen]")).toBeLessThan(sobre.indexOf("[desborde]"));
-  });
-
-  it("con un rechazo, la medición no puede decir «limpio»", () => {
-    const limpia = {
-      mobileOverflow: false,
-      unreadableText: [],
-      runtimeErrors: [],
-      clasesMuertas: [],
-    };
-    expect(medicionLimpia(limpia)).not.toBeNull();
-    expect(medicionLimpia({ ...limpia, llamadasADatos: [rechazada] })).toBeNull();
-  });
-});
+// ⚰️ «los rechazos del almacén son defectos»: el sustituto de `/api/d` en la
+// medición se retiró el 2026-10-04 con los almacenes `data-ol-stores`.

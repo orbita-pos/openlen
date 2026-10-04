@@ -2068,7 +2068,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       const respuesta = outcome.response;
       // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
       // viene de `declararCambio` (hash antes ≠ hash después); lo durable cubre
-      // las que no tocan el documento — módulos, páginas, almacenes.
+      // las que no tocan el documento — módulos, páginas.
       //
       // 🔴 H01 (2026-09-22): LO QUE LA HERRAMIENTA DECLARA MANDA. La condición
       // era `cambio === "cambio" || mutoDurable || updatedHtml`, y las puertas

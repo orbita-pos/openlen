@@ -12,7 +12,7 @@ import { SANDBOX_REMOTO } from "./sandbox-del-lienzo";
 import { injectSoloPublicada } from "./solo-publicada";
 
 const PAGINA = injectSoloPublicada(`<!doctype html><html><head><title>p</title></head><body>
-<button id="datos" onclick="fetch('/api/d/mitienda/carrito').catch(function(){})">datos</button>
+<button id="datos" onclick="fetch('/rest/v1/pedidos').catch(function(){})">datos</button>
 <button id="otra" onclick="fetch('/otra.json').catch(function(){})">otra</button>
 <form id="nativo"><input name="x" value="1"><button id="enviar" type="submit">enviar</button></form>
 <form id="conjs"><button id="enviarjs" type="submit">enviar js</button></form>
@@ -81,12 +81,12 @@ async function conLienzo(fn: (h: { pulsar: (sel: string) => Promise<void>; msgs:
 const deTipo = (msgs: unknown[], type: string) => msgs.filter((m) => (m as { type?: string })?.type === type);
 
 describe("lo que sólo funciona publicado se dice", () => {
-  it("🔴 una llamada a /api/d avisa con su ruta; otra ruta no", async () => {
+  it("🔴 una llamada a /rest/v1 relativa avisa con su ruta; otra ruta no", async () => {
     await conLienzo(async (h) => {
       await h.pulsar("#datos");
       await h.pulsar("#otra");
       const avisos = deTipo(await h.msgs(), "openlen:solo-publicada");
-      expect(avisos).toEqual([{ type: "openlen:solo-publicada", tipo: "llamada", ruta: "/api/d/mitienda/carrito" }]);
+      expect(avisos).toEqual([{ type: "openlen:solo-publicada", tipo: "llamada", ruta: "/rest/v1/pedidos" }]);
     });
   }, 60_000);
 

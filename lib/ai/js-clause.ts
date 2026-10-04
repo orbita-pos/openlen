@@ -278,8 +278,8 @@ const CLAUSULAS: Readonly<Record<ClauseId, Clausula>> = {
       // ⚰️ Aquí iba «SAVING TOO: declare a store… /api/d», el contrato de
       // `data-ol-stores`, retirado para Len el 2026-10-04 con el backend de
       // Supabase (plans/pages-backend/design.md): lo nuevo se guarda con
-      // supabase-js (THE BACKEND, en el manual). Para las páginas que ya
-      // declaran almacenes, el texto se mudó entero a lib/agent/stores-doc.ts.
+      // supabase-js (THE BACKEND, en el manual). Los almacenes se retiraron
+      // del todo ese mismo día.
       // 🔴 EL «NO» DEL SERVIDOR (2026-09-19; dicho para supabase-js el
       // 2026-10-04). Nada decía qué hacer cuando la respuesta no es buena, y el
       // JavaScript del modelo pinta primero y no mira. El resultado lo ve el

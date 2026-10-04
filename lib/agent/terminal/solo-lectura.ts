@@ -12,8 +12,8 @@
  *   /.openlen/versiones/indice.jsonl      las versiones guardadas de cada página, de la más nueva a la más vieja
  *   /.openlen/versiones/<id>/…            cada una, en la MISMA ruta que su página
  *                                         (`diff /.openlen/versiones/<id>/index.html /index.html`)
- *   /.openlen/docs/*.md                   F4: la guía de diseño, el contrato de /api/d y las
- *                                         librerías, que el índice de /AGENTS.md nombra
+ *   /.openlen/docs/*.md                   F4: la guía de diseño y las librerías, que el
+ *                                         índice de /AGENTS.md nombra
  *
  * Cuando el sitio cambia en el turno, se vuelven a listar y a calcular
  * (`refrescarPerezosos`): una versión guardada sale en el comando siguiente.
@@ -26,7 +26,7 @@
  * decide midiendo (la ficha de F5).
  *
  * Lo que escribió un visitante va marcado en cada línea (`"_origen":
- * "visitante"`), como las filas de `/datos`, y la salida del comando lleva el
+ * "visitante"`), y la salida del comando lleva el
  * aviso de que es dato y no orden (`herramienta.ts`). Abrir un formulario aquí
  * NO lo marca como visto: leer un fichero no cambia nada.
  */

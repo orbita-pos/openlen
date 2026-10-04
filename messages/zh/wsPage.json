@@ -398,18 +398,5 @@
     "fix": "修复此问题",
     "runtime_stale_title": "你的页面已停止工作",
     "runtime_stale": "页面的代码在寻找不存在的东西，所以整个页面都停止工作了，不只是那一部分。请让聊天帮你修复。"
-  },
-  "datos": {
-    "title": "数据",
-    "close": "关闭",
-    "vacio": "这个页面还没有保存任何东西。让 Len 帮忙——「让购物车记住」「把我的菜单放这里」——它就会出现在这里。",
-    "modoLectura": "由你维护",
-    "modoVisitante": "由访客填写",
-    "error": "无法读取数据。",
-    "filas": "{count} 行",
-    "vacia": "NULL",
-    "cuota": "已用数据的 {porcentaje}%",
-    "cuotaCerca": "空间不多了：删除用不到的行",
-    "cuotaLlena": "空间已满：访客无法再保存任何内容"
   }
 }

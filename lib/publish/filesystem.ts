@@ -514,8 +514,8 @@ async function bakeDocument(
   // HTML estático en la página publicada.
   //
   // Lo que hacía —que un catálogo fuera contenido indexable y no un `fetch`— lo
-  // hace ahora `horneaLectura` (lib/publish/bake-lectura.ts) sobre un almacén
-  // declarado en la propia página. Mismo mecanismo, sin módulo que encender, y
+  // hizo después `horneaLectura` (lib/publish/bake-lectura.ts) sobre un almacén
+  // declarado en la propia página, retirado a su vez el 2026-10-04. Mismo mecanismo, sin módulo que encender, y
   // se construyó ANTES de tocar esto: demoler primero habría dejado a las
   // páginas con catálogo sin nada en medio.
   //

@@ -398,18 +398,5 @@
     "fix": "Das reparieren",
     "runtime_stale_title": "Deine Seite funktioniert nicht mehr",
     "runtime_stale": "Der Code deiner Seite sucht nach Dingen, die es nicht gibt, deshalb funktioniert sie komplett nicht mehr — nicht nur dieser Teil. Bitte den Chat, es zu reparieren."
-  },
-  "datos": {
-    "title": "Daten",
-    "close": "Schließen",
-    "vacio": "Diese Seite speichert noch nichts. Sag es Len — «der Warenkorb soll sich merken», «mein Menü hierhin» — und es taucht hier auf.",
-    "modoLectura": "pflegst du",
-    "modoVisitante": "schreiben die Besucher",
-    "error": "Die Daten konnten nicht gelesen werden.",
-    "filas": "{count} Zeilen",
-    "vacia": "NULL",
-    "cuota": "{porcentaje}% deiner Daten",
-    "cuotaCerca": "wenig Platz übrig: lösche nicht benötigte Zeilen",
-    "cuotaLlena": "kein Platz mehr: deine Besucher können nichts mehr speichern"
   }
 }

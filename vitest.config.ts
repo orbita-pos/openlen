@@ -89,7 +89,6 @@ export default defineConfig({
       "lib/agent/cambios-del-turno.test.ts",
       // `include` es una LISTA BLANCA: un .test.ts fuera de ella NO corre, y
       // pasa desapercibido porque `npm test` sale verde igual.
-      "lib/page-data/**/*.test.ts",
       // El backend de las páginas: la API de Supabase sobre nuestro Postgres
       // (plans/pages-backend/design.md). Lista blanca: sin esta línea no corre.
       "lib/backend/**/*.test.ts",
@@ -169,15 +168,11 @@ export default defineConfig({
       "lib/ai/fireworks-stream-client.test.ts",
       "lib/ai/esfuerzo-no-admitido.test.ts",
       "lib/ai/origen-de-medida.browser.test.ts",
-      // El carrito probado USÁNDOLO contra el sustituto de /api/d, con el
-      // carrito de producción del 2026-09-18 como brazo de control.
       // La suite de la página corriendo en Chromium de verdad: es la única que
       // puede decir si el programa con las promesas guardadas se ejecuta y si
       // lo que devuelve el navegador se reparte bien. LISTA BLANCA.
       "lib/agent/suite-de-la-pagina.browser.test.ts",
       "lib/agent/paginas-del-turno.browser.test.ts",
-      // /api/d contestada en la medida: sus rechazos vuelven al modelo.
-      "lib/ai/datos-en-la-medida.browser.test.ts",
       "lib/ai/imagenes-perezosas.browser.test.ts",
       "lib/ai/sse.test.ts",
       // Que el latido este ENCHUFADO, no solo que exista: Crear latia desde
@@ -460,7 +455,6 @@ export default defineConfig({
       "lib/publish/assistant-widget.test.ts",
       // `lib/publish/**` entra fichero a fichero, no por directorio: es la
       // convención de arriba y hay pruebas ahí que necesitan el binding nativo.
-      "lib/publish/bake-lectura.test.ts",
       "lib/publish/form-identity.test.ts",
       // La guarda de las veinte frases que ve el visitante al enviar un
       // formulario: viven duplicadas dentro del guion de Rust y sin esta línea

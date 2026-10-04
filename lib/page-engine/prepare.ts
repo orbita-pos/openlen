@@ -198,8 +198,8 @@ export async function preparePage(
   // Encendía el módulo cuyo marcador traía la página. Su único módulo
   // puenteado ya no tiene horneado, así que la etapa devolvía siempre lista
   // vacía — y `report.modules` alimentaba dos ramas, en generate y en
-  // ai-design, que por eso nunca se tomaban. El porqué, con sus pruebas, en
-  // lib/page-data/sin-puente-ia-modulos.test.ts.
+  // ai-design, que por eso nunca se tomaban. (Su prueba vivía en lib/page-data
+  // y se fue con los almacenes el 2026-10-04.)
 
   // ── 7. identidad de los formularios ────────────────────────────────────
   // Al final, sobre el documento que de verdad se guarda: si el saneo o los

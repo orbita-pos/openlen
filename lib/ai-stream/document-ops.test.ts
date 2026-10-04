@@ -386,19 +386,11 @@ describe("paridad del contrato de objetivos reservados", () => {
 // `editar_runtime`, que ya no existen. Se retiró el 2026-09-25. Queda lo que
 // sigue vivo en el Chat: qué acepta la puerta y lo que lee el USUARIO.
 describe("el rechazo de la cabecera", () => {
-  const ALMACEN =
-    '<script type="application/json" data-ol-stores>' +
-    '{"carrito":{"visitante":"propio","campos":{"producto":"texto"}}}</script>';
   const enCabeza = (fragmento: string) =>
     splitDocumentOps([op({ target: HEAD_OP_TARGET, type: "insert_after", newHtml: fragmento })]).head;
 
-  it("un almacén en la cabecera tiene su propio motivo", () => {
-    expect(enCabeza(ALMACEN)).toEqual({ kind: "error", reason: "almacen_en_cabeza" });
-  });
-
-  it("el usuario también lo lee dicho así", () => {
-    expect(documentOpAviso("head", "almacen_en_cabeza")).toContain("cuerpo de la página");
-  });
+  // ⚰️ «un almacén en la cabecera tiene su propio motivo»: los almacenes
+  // `data-ol-stores` se retiraron el 2026-10-04.
 
   // LA LISTA SALE DE LA PUERTA: cada cosa que la cabecera acepta DE VERDAD
   // tiene que salir en lo que se le dice al usuario cuando rechaza.

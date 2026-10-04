@@ -75,12 +75,12 @@ const HISTORIAL = {
     },
     {
       id: "t2",
-      pedido: "¿Quién reservó clase para el sábado?",
+      pedido: "¿Cuánto cuesta la clase de avanzados?",
       creado: "2026-10-02T10:40:00.000Z",
       comandos: [
         {
-          command: "jq -r '.[] | select(.dia==\"sábado\") | .nombre' /datos/reservas.json",
-          salida: "Ana Ruiz\nMarco Díaz\n[Command finished with exit code 0]",
+          command: "grep -n Avanzados /clases/index.html",
+          salida: "18:      <li>Avanzados · 2 h · $800</li>\n[Command finished with exit code 0]",
           exitCode: 0,
         },
         // Una salida LARGA (la #14): plegada, las 8 primeras y las 8 últimas.
@@ -107,13 +107,13 @@ const TARJETAS: AgentAction[] = HISTORIAL.turnos[0]!.comandos.map((c): AgentActi
 ]);
 
 // Y un turno que sólo LEYÓ («t2»): sus rutas van a «Código».
-const TARJETAS_T2: AgentAction[] = [{ tool: "Read", status: "done", summary: "datos/reservas.json" }];
+const TARJETAS_T2: AgentAction[] = [{ tool: "Read", status: "done", summary: "clases/index.html" }];
 
 // Lo que Len escribió. `index.html` es la ruta de la portada (casa exacta), no
 // un nombre suelto; `notas.txt` no lo leyó ni lo cambió nadie: se queda en texto.
 const TEXTO_T1 =
   "Listo: cambié la dirección en `contacto/index.html`, en `menu/index.html` y en `index.html`, y creé `clases/index.html`. También lo apunté en `memoria/proyecto.md`; `notas.txt` no hacía falta.";
-const TEXTO_T2 = "El sábado reservaron **Ana Ruiz** y **Marco Díaz** (lo saqué de `datos/reservas.json`).";
+const TEXTO_T2 = "La clase de avanzados cuesta **$800** (está en `clases/index.html`).";
 
 const rutasDe = (turnId: string, tarjetas: readonly AgentAction[]) =>
   rutasDelTurno(tarjetas, cambiosEnVivo.turnos(PROYECTO).find((x) => x.turnId === turnId)?.ficheros.map((f) => f.ruta) ?? []);
@@ -126,7 +126,7 @@ const FICHEROS = () => ({
     { ruta: "/index.html", contenido: INDEX_DESPUES },
     { ruta: "/contacto/index.html", contenido: CONTACTO("Calle Gaviotas 7") },
     { ruta: "/clases/index.html", contenido: CLASES },
-    { ruta: "/datos/reservas.json", contenido: RESERVAS_DESPUES },
+    { ruta: "/ajustes/proyecto.json", contenido: AJUSTES(true) },
   ],
   // Se calcula al abrirlo: hasta entonces, la búsqueda sólo lo encuentra por nombre.
   perezosos: ["/.openlen/resultados/visitas.json"],
@@ -145,7 +145,7 @@ function preparar() {
       const { command } = JSON.parse(String(init.body)) as { command: string };
       const sed = command.includes("sed -i");
       const salida = command.trim().startsWith("ls")
-        ? "AGENTS.md\nclases\ncontacto\ndatos\nindex.html\nresultados\n[Command finished with exit code 0]"
+        ? "AGENTS.md\najustes\nclases\ncontacto\nindex.html\nresultados\n[Command finished with exit code 0]"
         : sed
           ? `${Object.keys(SITIO_GRANDE)
               .sort()
@@ -190,11 +190,11 @@ function preparar() {
   });
   cambiosEnVivo.guardar(PROYECTO, {
     turnId: "t1",
-    pedido: "Cambia la dirección vieja por Calle Gaviotas 7 en todo el sitio y añade la página de clases",
+    pedido: "Cambia la dirección vieja por Calle Gaviotas 7 en todo el sitio, añade la página de clases y enciende el chat",
     ficheros: [
       { ruta: "/clases/index.html", tipo: "texto", antes: null, despues: CLASES },
       { ruta: "/contacto/index.html", tipo: "texto", antes: CONTACTO("Calle Marea 12"), despues: CONTACTO("Calle Gaviotas 7") },
-      { ruta: "/datos/reservas.json", tipo: "texto", antes: RESERVAS_ANTES, despues: RESERVAS_DESPUES },
+      { ruta: "/ajustes/proyecto.json", tipo: "texto", antes: AJUSTES(false), despues: AJUSTES(true) },
       { ruta: "/index.html", tipo: "texto", antes: INDEX_ANTES, despues: INDEX_DESPUES },
       { ruta: "/memoria/proyecto.md", tipo: "texto", antes: "- Escuela de surf en Sayulita.\n", despues: "- Escuela de surf en Sayulita.\n- Se mudó a Calle Gaviotas 7 (oct. 2026).\n" },
       { ruta: "/menu/index.html", tipo: "grande", nuevo: false, borrado: false },
@@ -242,9 +242,9 @@ const INDEX_DESPUES = [...CABEZA, pie("Calle Gaviotas 7", "Todos los días, de 7
 const CONTACTO = (direccion: string) =>
   [...CABEZA, '  <main class="px-6 py-16">', '    <h1 class="text-4xl">Contacto</h1>', `    <address>${direccion}, Sayulita, Nay.</address>`, "  </main>", "</body>", "</html>", ""].join("\n");
 const CLASES = [...CABEZA, '  <main class="px-6 py-16">', '    <h1 class="text-4xl">Clases</h1>', "    <ul>", "      <li>Principiantes · 2 h · $650</li>", "      <li>Avanzados · 2 h · $800</li>", "    </ul>", "  </main>", "</body>", "</html>", ""].join("\n");
-const RESERVAS_ANTES = JSON.stringify([{ id: "r1", nombre: "Ana Ruiz", dia: "sábado" }], null, 2) + "\n";
-const RESERVAS_DESPUES =
-  JSON.stringify([{ id: "r1", nombre: "Ana Ruiz", dia: "sábado" }, { id: "r2", nombre: "Marco Díaz", dia: "sábado" }], null, 2) + "\n";
+// Con la forma de `textoDeAjustes` (lib/agent/terminal/ajustes.ts).
+const AJUSTES = (chat: boolean) =>
+  JSON.stringify({ titulo: "Casa Oleaje · Escuela de surf", idiomas: [], modulos: { chat, assistant: false } }, null, 2) + "\n";
 
 const DOC = `<!doctype html><html><head><style>body{font-family:system-ui;margin:0;padding:48px;background:#f6efe6;color:#1d2a33}h1{font-size:44px}</style></head><body><h1>Casa Oleaje</h1><p>Clases de surf en Sayulita · Calle Gaviotas 7</p></body></html>`;
 

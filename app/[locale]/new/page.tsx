@@ -446,7 +446,7 @@ function NewV2Inner() {
     [searchParams, router],
   );
   /**
-   * QUÉ LENTE SE MIRA — la página, su código o sus datos.
+   * QUÉ LENTE SE MIRA — la página, su código, su terminal o sus cambios.
    *
    * Vive AQUÍ y no dentro de `PreviewArea` porque el taller monta TRES lienzos
    * —dos vistas previas de plantilla y el de edición— y la lente es una sola
@@ -465,7 +465,7 @@ function NewV2Inner() {
   const activeSitePageRef = useRef<string | null>(null);
   activeSitePageRef.current = activeSitePage;
   // Un aviso de «sólo publicada» por cosa y documento: una página que llama a
-  // /api/d en cada pintado no puede llenar la pantalla de toasts.
+  // /api/f en cada pintado no puede llenar la pantalla de toasts.
   //
   // ⚠️ Vive AQUÍ y no junto a `useToast()`, que es donde lo pedía el plan:
   // depende de `loadedProject` y `activeSitePage`, y las dos se declaran más

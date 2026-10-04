@@ -8,8 +8,10 @@ import {
   buildFunctionDeclarations,
   instruccionesDeLen,
 } from "./catalog";
-import { documentosDeLaPlataforma } from "./manual-de-la-plataforma";
-import { RUTA_API_D } from "./ficheros/manual";
+import {
+  buildManualDeLaPlataforma,
+  documentosDeLaPlataforma,
+} from "./manual-de-la-plataforma";
 import { clauseMarker } from "@/lib/ai/js-clause";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 
@@ -518,8 +520,8 @@ describe("buildAgentSystemPrompt", () => {
   // ── LÁPIDAS del 2026-08-29 ────────────────────────────────────────────────
   //
   // `collections` murió con el hub de Módulos: lo que hacía lo hace mejor un
-  // almacén declarado en la página (hoy, /datos/<almacén>.json), sin nada que
-  // activar. Estas aserciones no son ceremonia — un prompt que sigue ofreciendo
+  // almacén declarado en la página (retirado a su vez el 2026-10-04: hoy, el
+  // backend de Supabase), sin nada que activar. Estas aserciones no son ceremonia — un prompt que sigue ofreciendo
   // lo retirado hace que el modelo lo intente, falle, y el usuario pague el
   // turno. Ya pasó con Pedidos y con Reservas.
   it("🔴 `activar_modulo` acepta el asistente, no sólo el chat", () => {
@@ -667,32 +669,27 @@ describe("el prompt enseña la conducta buena, no narra la mala", () => {
   });
 });
 
-// 🔴 EL PROMPT NOMBRA UNA PARTE DE LA INTERFAZ: la vista «Datos» del editor,
-// donde el dueño ve lo que guardan sus almacenes. Hacía falta —sin el sitio,
-// Len se lo inventaba: MEDIDO el 2026-09-17, 5 de 5 cierres dijeron «tú los
-// ves todos desde la Bandeja», que es la de los formularios—. Pero una regla
-// que cita la UI caduca EN SILENCIO cuando esa parte se retira: un grep al
-// borrar el componente encuentra sus imports, no su nombre dentro de una
-// cadena de prompt. Esto la ata al componente.
-describe("la vista «Datos» que el prompt nombra existe", () => {
-  it("el lienzo ofrece la lente y en español se llama «Datos»", () => {
-    expect(instruccionesDeLen()).toContain('the "Data" view');
-    // En inglés desde la traducción: el prompt la nombra como la interfaz en inglés.
-    const enChrome = JSON.parse(readFileSync(join(process.cwd(), "messages/en/wsChrome.json"), "utf8"));
-    expect(enChrome.preview.lente.datos).toBe("Data");
+// ⚰️ «la vista «Datos» que el prompt nombra existe» (2026-09-17): el prompt
+// mandaba al dueño a la lente «Datos» para ver sus almacenes —sin el sitio, Len
+// se lo inventaba—, y esto ataba esa frase al componente. La lente se retiró con
+// `data-ol-stores` el 2026-10-04, así que ahora se vigila al revés: una regla
+// que cita la UI caduca EN SILENCIO cuando esa parte se retira.
+describe("la vista «Datos» se retiró y el prompt no la nombra", () => {
+  it("ni el prompt la nombra ni el lienzo la ofrece", () => {
+    expect(instruccionesDeLen()).not.toContain('the "Data" view');
+    expect(buildManualDeLaPlataforma()).not.toContain('the "Data" view');
     const lienzo = readFileSync(
       join(process.cwd(), "components/workspace-v2/preview-area.tsx"),
       "utf8",
     );
-    expect(lienzo).toContain('value: "datos" as const');
-    expect(lienzo).toContain("<DatosView");
+    expect(lienzo).not.toContain('value: "datos"');
+    expect(lienzo).not.toContain("DatosView");
     const chrome = JSON.parse(
       readFileSync(join(process.cwd(), "messages/es/wsChrome.json"), "utf8"),
     );
     expect(chrome.preview.lente).toEqual({
       pagina: "Vista previa",
       codigo: "Código",
-      datos: "Datos",
       // F6a: la terminal de Len, sólo con la palanca o comandos guardados.
       terminal: "Terminal",
       // Lo que cambió en cada turno de la sesión, fichero a fichero.
@@ -701,21 +698,25 @@ describe("la vista «Datos» que el prompt nombra existe", () => {
   });
 });
 
-// Len 2.0: el almacén se declara con Edit, dentro del <body>. La receta vieja
-// (editar_html sobre un data-op-id) ya no existe en su camino. Desde el
-// 2026-10-04 la receta vive en /.openlen/docs/api-d.md, sólo para las páginas
-// que ya declaran almacenes: lo nuevo va al backend de Supabase.
-describe("dónde se declara un almacén", () => {
-  it("la receta de ALMACENES lo manda al body y con Edit, y su fichero es /datos/<almacén>.json", () => {
-    const seccion = documentosDeLaPlataforma()[RUTA_API_D]!;
-    expect(instruccionesDeLen()).not.toContain("STORES (the page's data, in /datos)");
-    expect(seccion).toContain("data-ol-stores");
-    expect(seccion).toContain("<body>");
-    // Borrar la tienda no debe llevarse el almacén (lo que enseñaba la vieja
-    // `DONDE_SE_DECLARA_UN_ALMACEN`, retirada el 2026-09-25).
-    expect(seccion).toContain("outside any section that could be deleted");
-    expect(seccion).toContain("Edit");
-    expect(seccion).toContain("/datos/<store>.json");
+// ⚰️ «dónde se declara un almacén»: la receta de `data-ol-stores` se retiró del
+// todo el 2026-10-04. Lo que sí se vigila: que nada de lo que lee Len la enseñe.
+describe("los almacenes data-ol-stores no vuelven", () => {
+  it("ni el prompt ni el manual enseñan data-ol-stores ni /datos", () => {
+    const textos: Record<string, string> = {
+      prompt: instruccionesDeLen(),
+      "/AGENTS.md": buildManualDeLaPlataforma(),
+      ...documentosDeLaPlataforma(),
+    };
+    for (const [donde, texto] of Object.entries(textos)) {
+      expect(texto, donde).not.toContain("data-ol-stores");
+      expect(texto, donde).not.toMatch(/\/datos\b/);
+      expect(texto, donde).not.toMatch(/\bstores?\b/);
+    }
+    // La terminal también lista sus ficheros, en la descripción de `bash`.
+    const bash = buildFunctionDeclarations().find((x) => x.name === "bash");
+    expect(bash, "sin `bash` la guarda de abajo no comprueba nada").toBeDefined();
+    expect(bash!.description).not.toMatch(/\/datos\b/);
+    expect(bash!.description).toContain("/supabase/migrations/");
   });
 });
 

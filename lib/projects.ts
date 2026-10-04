@@ -31,7 +31,6 @@ import {
   splitPagesForPublish,
 } from "@/lib/projects/site-pages";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
-import { leerDeclaracion } from "@/lib/page-data/declaracion";
 import { ensureSocialOgImage } from "@/lib/branding/social-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
@@ -779,36 +778,9 @@ export async function publishProject(
   // 4. DB upsert — claim the subdomain. We do this BEFORE the filesystem
   // write so a UNIQUE collision short-circuits without leaving an orphan
   // directory. On FS failure below we roll back.
-  // LOS ALMACENES QUE ESTA PÁGINA DECLARA. Se extraen AQUÍ porque la fuente de
-  // verdad es el documento publicado: si el HTML ya no lleva el bloque, la
-  // declaración queda vacía y sus documentos dejan de aceptar escrituras (se
-  // conservan; el dueño puede exportarlos). Ver lib/page-data/publicada.ts.
-  const almacenes = leerDeclaracion(html);
-
-  // Y los de `lectura` se HORNEAN en el documento: su contenido tiene que estar
-  // EN el HTML publicado, no llegar por fetch. Un menú que sólo se lee por JS no
-  // lo indexa Google y parpadea vacío mientras carga.
-  //
-  // `propio` y `añadir` NO: son por visitante, y hornearlos sería servirle a
-  // todo el mundo los datos de uno.
-  //
-  // Fail-soft: un fallo aquí no puede tumbar una publicación. La página sale
-  // con el contenedor vacío, que es exactamente lo que había antes.
-  try {
-    const deLectura = Object.keys(almacenes).filter((n) => almacenes[n].modo === "lectura");
-    if (deLectura.length > 0) {
-      const { leerDatos } = await import("@/lib/page-data/agente");
-      const { horneaLectura } = await import("@/lib/publish/bake-lectura");
-      const datos: Record<string, { id: string; doc: Record<string, unknown> }[]> = {};
-      for (const nombre of deLectura) {
-        datos[nombre] = await leerDatos({ projectId: params.projectId, almacen: nombre });
-      }
-      html = horneaLectura(html, datos);
-    }
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn("[publish] horneado de almacenes falló; publicando sin él", err);
-  }
+  // ⚰️ Aquí se extraían los almacenes que la página declaraba (`data-ol-stores`)
+  // y se horneaban los de «lectura» en el HTML. Se retiraron el 2026-10-04: los
+  // datos de una página van a su backend de Supabase.
 
   const previousSubdomain = project.subdomain;
   const previousPublished = await db
@@ -837,17 +809,11 @@ export async function publishProject(
         status: "published",
         deployUrl: `${v.value}.${publishBaseHost()}`,
         updatedAt: now,
-        // `data` se escribe en CADA publicación, no sólo al tocar idiomas: los
-        // almacenes declarados tienen que llegar a la base aunque el usuario no
-        // cambie nada más. Los idiomas siguen siendo condicionales dentro.
-        ...(project.data
-          ? {
-              data: {
-                ...project.data,
-                almacenes,
-                ...(persistLanguages ? { settings: ajustesPublicados } : {}),
-              },
-            }
+        // `data` sólo cuando cambian los idiomas. (Desde el 2026-08-29 se
+        // escribía en cada publicación para guardar los almacenes declarados;
+        // se retiraron el 2026-10-04.)
+        ...(project.data && persistLanguages
+          ? { data: { ...project.data, settings: ajustesPublicados } }
           : {}),
       })
       .where(eq(schema.projects.id, params.projectId));
@@ -889,9 +855,9 @@ export async function publishProject(
   // y ya devuelve `gatedPages` vacío sin el módulo.
   const { publicPages } = splitPagesForPublish(project.data);
 
-  // ⚰️ Aquí se leían los items del catálogo para hornearlos. Se va con el
-  // horneado el 2026-08-29: un catálogo es ahora un almacén de `lectura`, y sus
-  // filas las mete `horneaLectura` unas líneas más arriba.
+  // ⚰️ Aquí se leían los items del catálogo para hornearlos. Se fue con el
+  // horneado el 2026-08-29 (un catálogo pasó a ser un almacén de `lectura`, y
+  // los almacenes se retiraron a su vez el 2026-10-04).
   // ⚰️ Aquí se leía `settings.liveData`, la hoja de datos vivos, para
   // hornearla. Se retiró con la función en Len 2.1 (2026-09-30).
 
@@ -950,7 +916,7 @@ export async function publishProject(
     // ends up with phantom subdomains (DB claims live, disk has nothing).
     //
     // 🔴 `data` NO SE RESTAURA, Y ES DELIBERADO. El UPDATE de ida sí lo
-    // escribe (los almacenes horneados, los idiomas, los ajustes), y esa
+    // escribe (los idiomas, los ajustes), y esa
     // escritura SOBREVIVE a la vuelta atrás. `prev` ni lo selecciona.
     //
     // Lo que eso deja es CORRECTO, no un fallo: el disco sigue sirviendo la

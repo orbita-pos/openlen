@@ -21,8 +21,7 @@ import {
 } from "./icons";
 import { CodeView } from "./code-view";
 import { rutaDePagina } from "@/lib/agent/ficheros/sitio";
-import { Database, FileDiff, Maximize, Terminal as TerminalIcon } from "lucide-react";
-import { DatosView } from "./datos-view";
+import { FileDiff, Maximize, Terminal as TerminalIcon } from "lucide-react";
 import { TerminalView } from "./terminal-view";
 import { CambiosView } from "./cambios-view";
 import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
@@ -179,7 +178,7 @@ interface PreviewAreaProps {
    *  every srcDoc; stripEditorInstrumentation removes it on every save. Keep
    *  the object identity stable across keystrokes — a new identity re-derives
    *  the srcDoc (that reload is the DESIRED feedback on a module toggle). */
-  /** El proyecto abierto, para la pestaña de Datos. Ausente en la vista previa
+  /** El proyecto abierto, para la terminal y los cambios. Ausente en la vista previa
    *  de una plantilla, que no tiene proyecto del que leer nada. */
   projectId?: string | null;
   /** La página del sitio que enseña el lienzo (null = Home). Viaja al POST de
@@ -205,7 +204,8 @@ function injectCanvasScrollbar(html: string): string {
 /** Las formas de mirar el mismo proyecto. «terminal» (F6a): los comandos de
  *  Len, sólo cuando la terminal está encendida o el proyecto ya tiene alguno.
  *  «cambios»: lo que cambió cada turno de esta sesión, fichero a fichero. */
-export type Lente = "pagina" | "codigo" | "datos" | "terminal" | "cambios";
+// ⚰️ «datos»: la lente de los almacenes `data-ol-stores`, retirada el 2026-10-04.
+export type Lente = "pagina" | "codigo" | "terminal" | "cambios";
 
 const SIN_TURNOS: readonly CambiosDeUnTurno[] = [];
 
@@ -243,7 +243,6 @@ export function PreviewArea({
   pagina = null,
 }: PreviewAreaProps) {
   const t = useTranslations("wsChrome");
-  const tPage = useTranslations("wsPage");
   const [device, setDevice] = useState<Device>("desktop");
   const [zoom, setZoom] = useState<Zoom>("fit");
   // On phone-sized screens the canvas pane is itself phone-sized — fitting
@@ -256,7 +255,7 @@ export function PreviewArea({
   }, []);
   const [refreshTick, setRefreshTick] = useState(0);
   /**
-   * QUÉ LENTE SE MIRA. La página, su código o sus datos — tres formas de ver el
+   * QUÉ LENTE SE MIRA. La página, su código, su terminal o sus cambios — formas de ver el
    * MISMO documento, así que son EXCLUYENTES y viven en un solo control.
    *
    * Antes eran dos booleanos sueltos (`codeOpen`, `datosOpen`) y se podían
@@ -275,16 +274,16 @@ export function PreviewArea({
   // El artefacto YA es el código. No se oculta a nadie: para el técnico, una
   // caja negra es una razón para no usarte. Sólo cuando hay documento propio —
   // en la vista previa de una plantilla el iframe apunta a una URL y aquí no
-  // hay nada que enseñar, ni proyecto del que leer datos.
+  // hay nada que enseñar, ni proyecto del que leer.
   const hayCodigo = !previewUrl && doc.length > 0;
-  const hayDatos = hayCodigo && !!projectId;
+  const hayProyecto = hayCodigo && !!projectId;
   // LA TERMINAL DE LEN (F6a). Sólo se ofrece si existe algo que enseñar: la
   // palanca encendida en el servidor o comandos ya guardados en este proyecto.
-  const terminal = useTerminalDeLen(hayDatos ? projectId : null);
+  const terminal = useTerminalDeLen(hayProyecto ? projectId : null);
   // LA TUYA (la #17): sólo con la terminal encendida en el servidor.
-  const terminalTuya = useTerminalDelUsuario(hayDatos && terminal.encendida ? projectId : null);
+  const terminalTuya = useTerminalDelUsuario(hayProyecto && terminal.encendida ? projectId : null);
   const hayTerminal =
-    hayDatos && (terminal.encendida || terminal.turnos.length > 0 || terminal.enVivo.length > 0);
+    hayProyecto && (terminal.encendida || terminal.turnos.length > 0 || terminal.enVivo.length > 0);
   // LO QUE CAMBIÓ EN CADA TURNO (la forma de DeepSeek): sólo se ofrece cuando
   // un turno de esta sesión cambió algún fichero. Lo trae el Chat.
   const turnosConCambios = useSyncExternalStore(
@@ -297,17 +296,16 @@ export function PreviewArea({
     () => (projectId ? cambiosEnVivo.peticion(projectId) : null),
     () => null,
   );
-  const hayCambios = hayDatos && turnosConCambios.length > 0;
+  const hayCambios = hayProyecto && turnosConCambios.length > 0;
   // Y SI LA LENTE ABIERTA DEJA DE EXISTIR, se vuelve a la página. Pasa de
   // verdad: con Código abierto se pincha una plantilla de la galería, llega un
   // `previewUrl` y el visor se quedaba enseñando el documento anterior — código
   // de una página que ya no está delante.
   useEffect(() => {
     if (lente === "codigo" && !hayCodigo) setLente("pagina");
-    if (lente === "datos" && !hayDatos) setLente("pagina");
     if (lente === "terminal" && !hayTerminal && !terminal.cargando) setLente("pagina");
     if (lente === "cambios" && !hayCambios) setLente("pagina");
-  }, [lente, hayCodigo, hayDatos, hayTerminal, terminal.cargando, hayCambios]);
+  }, [lente, hayCodigo, hayTerminal, terminal.cargando, hayCambios]);
   // Una fila de la tarjeta del turno pide la lente «Cambios»: se abre. La
   // propia lente sigue la petición hasta su fichero.
   // Sólo una petición NUEVA: al volver a montarse, la de antes ya se atendió.
@@ -808,9 +806,6 @@ export function PreviewArea({
               options={[
                 { value: "pagina", label: t("preview.lente.pagina"), icon: Eye },
                 { value: "codigo", label: t("preview.lente.codigo"), icon: Code2 },
-                ...(hayDatos
-                  ? [{ value: "datos" as const, label: t("preview.lente.datos"), icon: Database }]
-                  : []),
                 ...(hayTerminal
                   ? [{ value: "terminal" as const, label: t("preview.lente.terminal"), icon: TerminalIcon }]
                   : []),
@@ -873,7 +868,7 @@ export function PreviewArea({
       </div>
 
       {/* EL ENCUADRE, en su propia fila y centrado. Sólo con la página delante:
-          sobre el código o los datos, cambiar de móvil a tablet no encuadra
+          sobre el código o la terminal, cambiar de móvil a tablet no encuadra
           nada, y una fila entera de controles muertos es peor que su ausencia. */}
       {lente === "pagina" && (
         <div className="relative z-10 h-9 shrink-0 flex items-center justify-center gap-2 border-b bd bg-app/60">
@@ -937,7 +932,7 @@ export function PreviewArea({
         </div>
       )}
       {/* Habla de los límites de la VISTA PREVIA: sólo en su lente. Encima de
-          Código, Datos o Terminal parecía que eran ellas las limitadas. */}
+          Código o Terminal parecía que eran ellas las limitadas. */}
       {vistaLimitada && lente === "pagina" && (
         <div
           role="status"
@@ -1043,26 +1038,6 @@ export function PreviewArea({
         ref={containerRef}
         className="relative flex-1 min-h-0 overflow-auto nice-scroll p-3 sm:p-4"
       >
-        {lente === "datos" && projectId && (
-          <DatosView
-            projectId={projectId}
-            onClose={() => setLente("pagina")}
-            labels={{
-              title: tPage("datos.title"),
-              close: tPage("datos.close"),
-              vacio: tPage("datos.vacio"),
-              modoLectura: tPage("datos.modoLectura"),
-              modoVisitante: tPage("datos.modoVisitante"),
-              error: tPage("datos.error"),
-              filas: (n: number) => tPage("datos.filas", { count: n }),
-              vacia: tPage("datos.vacia"),
-              cuota: (porcentaje: number) => tPage("datos.cuota", { porcentaje }),
-              cuotaCerca: tPage("datos.cuotaCerca"),
-              cuotaLlena: tPage("datos.cuotaLlena"),
-            }}
-          />
-        )}
-
         {lente === "terminal" && hayTerminal && (
           <TerminalView
             terminal={terminal}
