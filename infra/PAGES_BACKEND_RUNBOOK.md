@@ -75,6 +75,23 @@ curl -s https://<ref>.openlen.app/auth/v1/health
 - Len: pedirle algo que guarde datos («que las reseñas se queden») y ver que escribe la migración y la aplica con
   `supabase db push`.
 
+## Al borrar a mano una cuenta o un proyecto
+
+Borrar un proyecto desde la app ya se lleva la base de su página y su rol `ol_<ref>` (`lib/backend/teardown.ts`). Lo
+que NO pasa por ahí deja la base en el clúster de las páginas, con las cuentas de los visitantes dentro y sin dueño:
+una cuenta o un proyecto borrados a mano en SQL (la cascada se lleva la fila de `projectBackends`, no la base del otro
+clúster), o un borrado que falló (en el registro: «no se pudo borrar la base de la página <ref>»). Después de borrar a
+mano, o si sale esa línea:
+
+```bash
+scp infra/db/pages-orphans.sh openlen:/tmp/
+ssh openlen "sudo bash /tmp/pages-orphans.sh"                 # sólo lista
+ssh openlen "sudo bash /tmp/pages-orphans.sh --drop <ref>"    # borra las que se nombren
+```
+
+Sin argumentos no toca nada. Con `--drop` sólo borra un `ref` que esté en la lista de huérfanas; uno con dueño se
+salta. Si no puede leer `projectBackends`, se para sin tocar nada.
+
 ## Lo que se sabe de antemano
 
 - `taller` y `marea` (de Jesús) llamaban a `/api/d/*`, retirado con `data-ol-stores`: Caddy les contestará con la
