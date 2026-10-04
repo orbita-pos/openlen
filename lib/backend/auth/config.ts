@@ -50,6 +50,9 @@ export interface AuthMail {
   readonly link: string;
   readonly otp: string;
   readonly redirectTo: string;
+  /** El idioma del navegador de quien lo pidió (`Accept-Language`): el correo
+   *  va en el suyo. */
+  readonly lang?: string;
 }
 
 export type SendAuthMail = (mail: AuthMail) => Promise<void>;

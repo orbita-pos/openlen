@@ -129,6 +129,10 @@ const targets = [
   // memberLoginTokens. Aditiva e idempotente. 🔴 OBLIGATORIA antes que el
   // código: Drizzle selecciona las columnas declaradas en schema.ts.
   "page-accounts-migrate",
+  // El backend de las páginas (plans/pages-backend/design.md): la tabla
+  // projectBackends. Tabla NUEVA con IF NOT EXISTS. 🔴 OBLIGATORIA antes que el
+  // código: las rutas /rest/v1 y /auth/v1 la leen en cada petición.
+  "pages-backend-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

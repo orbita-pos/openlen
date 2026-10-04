@@ -201,6 +201,7 @@ function encodeRedirect(u: string): string {
 async function sendEmailToken(
   ctx: AuthContext,
   q: TxQuery,
+  req: Request,
   user: AuthUserRow,
   kind: AuthMail["kind"],
   redirectTo: string,
@@ -212,7 +213,15 @@ async function sendEmailToken(
   const tokenHash = hash(email);
   await storeEmailToken(q, { id: user.id, email }, tokenType, tokenHash, { invited: kind === "invite" });
   try {
-    await ctx.sendMail({ to: email, kind, link: verifyLink(ctx.config, tokenHash, kind, redirectTo), otp, redirectTo });
+    const lang = (req.headers.get("accept-language") ?? "").split(",")[0]?.split(";")[0]?.trim();
+    await ctx.sendMail({
+      to: email,
+      kind,
+      link: verifyLink(ctx.config, tokenHash, kind, redirectTo),
+      otp,
+      redirectTo,
+      ...(lang ? { lang } : {}),
+    });
   } catch {
     const what = kind === "signup" ? "confirmation" : kind;
     throw new AuthError(500, "unexpected_failure", `Error sending ${what} email`);
@@ -222,7 +231,8 @@ async function sendEmailToken(
 // ─── Sesiones ───────────────────────────────────────────────────────────────
 
 function requestMeta(req: Request) {
-  const fwd = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  // Detrás de Cloudflare y Caddy: la IP real llega en CF-Connecting-IP.
+  const fwd = (req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for")?.split(",")[0])?.trim();
   const ip = fwd && /^[0-9a-fA-F:.]+$/.test(fwd) ? fwd : null;
   return { userAgent: req.headers.get("user-agent"), ip };
 }
@@ -379,7 +389,7 @@ async function signup(ctx: AuthContext, req: Request): Promise<Response> {
       await confirmUser(q, userId);
       return json(await issueSession(ctx, q, req, userId, "password"));
     }
-    await sendEmailToken(ctx, q, user, "signup", redirectTo);
+    await sendEmailToken(ctx, q, req, user, "signup", redirectTo);
     return json(await loadUserJson(q, userId));
   });
 }
@@ -498,7 +508,7 @@ async function recover(ctx: AuthContext, req: Request): Promise<Response> {
     await q(`select set_config('role', 'supabase_auth_admin', true)`);
     const user = await findUserByEmail(q, email, AUD);
     // Sin cuenta: lo mismo que con ella. No se dice qué correos existen.
-    if (user) await sendEmailToken(ctx, q, user, "recovery", redirectTo);
+    if (user) await sendEmailToken(ctx, q, req, user, "recovery", redirectTo);
     return json({});
   });
 }
@@ -511,7 +521,7 @@ async function resend(ctx: AuthContext, req: Request): Promise<Response> {
   return ctx.db.transaction(async (q) => {
     await q(`select set_config('role', 'supabase_auth_admin', true)`);
     const user = await findUserByEmail(q, email, AUD);
-    if (user && !user.email_confirmed_at) await sendEmailToken(ctx, q, user, "signup", redirectTo);
+    if (user && !user.email_confirmed_at) await sendEmailToken(ctx, q, req, user, "signup", redirectTo);
     return json({});
   });
 }
@@ -649,7 +659,7 @@ async function invite(ctx: AuthContext, req: Request): Promise<Response> {
       await insertIdentity(q, id, "email", { sub: id, email, email_verified: false, phone_verified: false });
       user = (await findUserById(q, id))!;
     }
-    await sendEmailToken(ctx, q, user, "invite", redirectTo);
+    await sendEmailToken(ctx, q, req, user, "invite", redirectTo);
     return json(await loadUserJson(q, user.id));
   });
 }

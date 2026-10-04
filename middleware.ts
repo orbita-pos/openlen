@@ -191,5 +191,8 @@ export const config = {
   // metadata files: robots.txt, sitemap.xml, icon.svg, og.png, favicon.ico, …).
   // `p/` (with the slash) excludes only /p/<id> — NOT /projects, /pricing, …
   // which start with a bare `p`.
-  matcher: ["/((?!api|_next|_vercel|served|c|p/|.*\\..*).*)"],
+  // `rest/v1/` y `auth/v1/` (con su barra) son el backend de las páginas, la
+  // API de Supabase (lib/backend): sin ellos aquí, una llamada de supabase-js
+  // volvería redirigida a /es/rest/v1/… .
+  matcher: ["/((?!api|_next|_vercel|served|c|p/|rest/v1/|auth/v1/|.*\\..*).*)"],
 };

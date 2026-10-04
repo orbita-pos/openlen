@@ -898,6 +898,31 @@ export const siteMembers = pgTable(
   ],
 );
 
+// El backend de un proyecto: la API de Supabase sobre su propia base de
+// Postgres (plans/pages-backend/design.md). Una fila por proyecto que lo usa;
+// la base se crea la primera vez que hace falta (`provisionedAt`).
+//
+// Los secretos van cifrados con `encryptToken` (lib/integrations/crypto.ts):
+// la clave secreta (para enseñársela al dueño), el secreto de los JWT y la
+// contraseña del rol de desarrollador. La publicable va en claro: va en la
+// página.
+export const projectBackends = pgTable("projectBackends", {
+  projectId: text("projectId")
+    .primaryKey()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  /** 20 letras minúsculas: `https://<ref>.<publish host>`. */
+  ref: text("ref").notNull().unique(),
+  publishableKey: text("publishableKey").notNull().unique(),
+  secretKeyHash: text("secretKeyHash").notNull(),
+  secretKeyEncrypted: text("secretKeyEncrypted").notNull(),
+  jwtSecretEncrypted: text("jwtSecretEncrypted").notNull(),
+  dbPasswordEncrypted: text("dbPasswordEncrypted").notNull(),
+  /** Lo que cambia de los valores por defecto de GoTrue (lib/backend/auth/config.ts). */
+  authConfig: jsonb("authConfig").$type<Record<string, unknown>>().notNull().default({}),
+  provisionedAt: timestamp("provisionedAt", { mode: "date" }),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+});
+
 export const memberLoginTokens = pgTable("memberLoginTokens", {
   tokenHash: text("tokenHash").primaryKey(),
   projectId: text("projectId")

@@ -679,6 +679,13 @@ export async function publishProject(
   // 1. regex → length → reserved
   const v = validateSubdomain(params.subdomain);
   if (!v.ok) throw new SubdomainInvalidError(v.reason);
+  // El `ref` del backend de un proyecto (lib/backend) vive en el mismo comodín
+  // que las páginas: `<ref>.<publish host>`. Uno de 20 letras puede serlo.
+  // (Import dinámico: el registro importa este fichero.)
+  if (/^[a-z]{20}$/.test(v.value)) {
+    const { isBackendRef } = await import("@/lib/backend/registry");
+    if (await isBackendRef(v.value)) throw new SubdomainTakenError();
+  }
 
   // 2. ownership — also pulls the current data.html so we can snapshot it.
   const projects = await db

@@ -173,7 +173,7 @@ openlen.com, www.openlen.com {
 
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
-		not path /c/* /api/f/* /api/d/* /api/a/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/*
+		not path /c/* /api/f/* /api/d/* /api/a/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/*
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
@@ -246,6 +246,27 @@ openlen.com, www.openlen.com {
 	#
 	# La IP real hace falta para el tope de intentos de entrar.
 	handle /api/a/* {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {vars.cf_client_ip}
+		}
+	}
+
+	# El backend de las páginas: la API de Supabase, /rest/v1 y /auth/v1
+	# (lib/backend, plans/pages-backend/design.md). Lo atiende Next, en
+	# `<ref>.openlen.app` —la URL del proyecto que Len pone en createClient— y
+	# en el host de la página. Sin estos handles, try_files contestaría la HOME
+	# estática con un 200 a un `select`, y supabase-js no sabría que no hubo
+	# respuesta.
+	#
+	# Excluidos de @doc arriba: cada respuesta es de quien la pide (su sesión
+	# viaja en la cabecera Authorization), nada de eso puede quedarse en el
+	# borde. La IP real, para los topes y las sesiones de auth.
+	handle /rest/v1/* {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {vars.cf_client_ip}
+		}
+	}
+	handle /auth/v1/* {
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
 		}
