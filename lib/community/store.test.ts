@@ -23,7 +23,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // leer filas, así que se apaga en la puerta.
 vi.mock("@/lib/html-engine", () => ({
   normalizeBornCanonical: (h: string) => h,
-  sanitizeForPublish: (h: string) => ({ html: h }),
+  detectSlotPath: () => false,
   gateReservedMarker: () => {},
 }));
 

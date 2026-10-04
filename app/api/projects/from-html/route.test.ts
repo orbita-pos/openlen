@@ -125,6 +125,28 @@ describe("POST /api/projects/from-html", () => {
     expect((await res.json()).error).toBe("invalid_html");
     expect(mocks.values).not.toHaveBeenCalled();
   });
+
+  // 🔴 Y ESCONDIDAS EN LOS DOS SCRIPTS QUE `sanitizeForPublish` SACA ANTES DE
+  // LLAMAR A RUST: el `tailwind.config` y el carrier `data-ol-tw`. Pasaban la
+  // puerta (medido el 2026-10-04 por el revisor de publicación) y, como la
+  // puerta devuelve el documento original, llegaban a la base.
+  it.each([
+    ["el tailwind.config", '<script>tailwind.config={theme:{extend:{colors:{ink:"#111"}}}} /* DATA-SLOT-PATH="x" */</script>'],
+    ["el carrier data-ol-tw", '<script type="application/json" data-ol-tw>{"colors":{"ink":"#111"}} Data-Slot-Path="a"</script>'],
+  ])("y escondidas en %s", async (_, script) => {
+    const res = await call(doc(`${script}<h1>Hola</h1>`));
+
+    expect(res.status).toBe(400);
+    expect(mocks.values).not.toHaveBeenCalled();
+  });
+
+  it("CONTRA-PRUEBA: un tailwind.config limpio entra, y con su script", async () => {
+    const config = '<script>tailwind.config={theme:{extend:{colors:{ink:"#111"}}}}</script>';
+    const res = await call(doc(`${config}<h1 class="text-ink">Hola</h1>`));
+
+    expect(res.status).toBe(200);
+    expect(storedData().html).toContain(config);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

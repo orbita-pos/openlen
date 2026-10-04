@@ -393,8 +393,17 @@ export function gateReservedMarker(html: string): SanitizeResult {
  *
  *  Returns true when the gate fires. Use this everywhere the publish /
  *  ingestion paths reject editor-mode HTML — consolidates the inline call
- *  sites under one Rust-backed implementation. */
+ *  sites under one Rust-backed implementation.
+ *
+ *  🔴 EL ESCANEO DE RUST VA SOBRE EL DOCUMENTO CRUDO (2026-10-04). Hasta ese
+ *  día sólo se miraba a través de `sanitizeForPublish`, que SACA el
+ *  `tailwind.config` y el carrier `data-ol-tw` ANTES de llamar a Rust: una
+ *  variante del marcador (`DATA-SLOT-PATH=`, `Data-Slot-Path=`) escondida en
+ *  esos dos scripts no la veía nadie, y como `gateReservedMarker` devuelve el
+ *  documento ORIGINAL, llegaba entera a la base. Medido con el revisor de
+ *  publicación al quitar el saneado de pegar y clonar. */
 export function detectSlotPath(html: string): boolean {
+  if ((rustSanitizeForPublish(html) as RustSanitizeResult).html == null) return true;
   const r = sanitizeForPublish(html);
   return r.html === null;
 }

@@ -2,7 +2,7 @@ import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getUserByHandle } from "./handle";
 import type { ProjectData } from "@/lib/projects/types";
-import { gateReservedMarker, sanitizeForPublish } from "@/lib/html-engine";
+import { detectSlotPath, gateReservedMarker } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { createVersion } from "@/lib/projects/versions";
@@ -206,7 +206,7 @@ export async function setVisibility(
   // blocked term on ANY page must keep the whole project out of the feed.
   const data = p.data as ProjectData;
   const htmls = [data?.html ?? "", ...Object.values(data?.pages ?? {}).map((pg) => pg.html)];
-  if (htmls.some((h) => sanitizeForPublish(h).html === null)) return { ok: false, reason: "invalid_html" };
+  if (htmls.some((h) => detectSlotPath(h))) return { ok: false, reason: "invalid_html" };
   if (containsBlockedTerm([p.title, ...htmls].join("\n"))) return { ok: false, reason: "blocked" };
 
   await db.update(schema.projects)

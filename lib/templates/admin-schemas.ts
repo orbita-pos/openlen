@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { sanitizeForPublish } from "@/lib/html-engine";
+import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { validatePageSlug } from "@/lib/projects/site-pages";
 import { TemplateVisualMetadataSchema } from "./visual-metadata";
 
@@ -226,7 +226,10 @@ export interface TemplateHtmlIssue {
 
 function htmlIssue(html: string): string | null {
   const r = sanitizeForPublish(html);
-  if (r.html === null) {
+  // `detectSlotPath` además del saneador: éste saca el `tailwind.config` y el
+  // carrier antes de mirar, y una variante del marcador escondida ahí pasaba
+  // (2026-10-04). Lo que se registra aquí llega TAL CUAL al clon.
+  if (r.html === null || detectSlotPath(html)) {
     return "contiene el marcador data-slot-path (fuga de modo-editor)";
   }
   const bad: string[] = [];
