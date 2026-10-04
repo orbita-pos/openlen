@@ -2,27 +2,28 @@ import { db, schema } from "@/lib/db";
 import type { ProjectData } from "@/lib/projects/types";
 import { publishProject } from "@/lib/projects";
 import { getTemplate, getTemplateHtml } from "@/lib/templates/store";
-import { sanitizeForPublish } from "@/lib/html-engine";
+import { gateReservedMarker } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
-import { transformTemplateCached } from "@/lib/transform/template-cache";
 import { setVisibility } from "./store";
 import { SHOWCASE, SEED_ENTRIES, type SeedEntry } from "./explore-seed.config";
 
-/** Sanitize → born-canonical normalize → complete <head>. Same chain as
- *  from-template, minus the business-profile seeding (the showcase account has
- *  none). Returns null if the HTML carries a data-slot-path editor marker. */
+/** Reserved-marker gate → born-canonical normalize → complete <head>. Same
+ *  chain as from-template: since 2026-10-04 (la entrada como Vercel) the
+ *  template keeps its JavaScript, so the showcase page works like the
+ *  template does. Returns null if the HTML carries a data-slot-path editor
+ *  marker. */
 export function buildShowcaseProjectData(
   title: string,
   homeHtml: string,
   pages: { slug: string; html: string }[],
 ): ProjectData | null {
-  const s = sanitizeForPublish(homeHtml);
+  const s = gateReservedMarker(homeHtml);
   if (s.html === null) return null;
   const html = ensurePageMeta(normalizeBornCanonical(s.html), { title });
   const cloned: Record<string, { html: string }> = {};
   for (const pg of pages) {
-    const ps = sanitizeForPublish(pg.html);
+    const ps = gateReservedMarker(pg.html);
     if (ps.html === null) continue;
     cloned[pg.slug] = {
       html: ensurePageMeta(normalizeBornCanonical(ps.html), { title }),
@@ -79,27 +80,12 @@ export async function seedExplore(
       continue;
     }
 
-    // Transform de ingestión (mismas claves de cache que from-template:
-    // `<id>` / `<id>--<slug>`) — sin él, los demos del Explore nacen con las
-    // secciones JS-generadas VACÍAS y sin conductas. Batch admin sin usuario
-    // esperando → presupuesto por-documento, no el deadline de 12s del clon.
-    // Fallback interno = html original (jamás peor).
-    const homeHtml = await transformTemplateCached(e.templateId, html, {
-      timeoutMs: 8000,
-      source: `explore-seed:${e.templateId}`,
-    });
-    const pages: { slug: string; html: string }[] = [];
-    for (const pg of tpl.pages ?? []) {
-      pages.push({
-        slug: pg.slug,
-        html: await transformTemplateCached(`${e.templateId}--${pg.slug}`, pg.html, {
-          timeoutMs: 8000,
-          source: `explore-seed:${e.templateId}--${pg.slug}`,
-        }),
-      });
-    }
+    // ⚰️ Aquí pasaba el transformador de ingestión (lib/transform), que
+    // horneaba las secciones que generaba el JavaScript porque el saneador lo
+    // borraba. Retirado el 2026-10-04: los scripts llegan vivos.
+    const pages = (tpl.pages ?? []).map((pg) => ({ slug: pg.slug, html: pg.html }));
 
-    const data = buildShowcaseProjectData(tpl.name, homeHtml, pages);
+    const data = buildShowcaseProjectData(tpl.name, html, pages);
     if (!data) {
       failed.push({ id: e.templateId, reason: "invalid_html" });
       continue;

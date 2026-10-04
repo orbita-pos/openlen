@@ -2,6 +2,9 @@
 // to be dropped silently: the clone shipped, the nav still linked to it, and
 // because a broken link serves the HOME page the site looked complete and
 // lied about itself. It now fails the whole clone loudly.
+//
+// LA ENTRADA COMO VERCEL (2026-10-04): la plantilla se clona como es, con su
+// JavaScript; sólo el marcador reservado se rechaza.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -11,7 +14,6 @@ const mocks = vi.hoisted(() => ({
   getTemplate: vi.fn(),
   getTemplateHtml: vi.fn(),
   createVersion: vi.fn(),
-  transformCached: vi.fn(),
   tope: vi.fn(async (): Promise<Response | null> => null),
 }));
 
@@ -22,7 +24,6 @@ vi.mock("@/lib/templates/store", () => ({
   getTemplateHtml: mocks.getTemplateHtml,
 }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
-vi.mock("@/lib/transform/template-cache", () => ({ transformTemplateCached: mocks.transformCached }));
 // El tope de ingestión: por defecto DEJA PASAR, para que las pruebas de siempre
 // midan lo que venían midiendo. Su propio caso lo pone en bloqueo.
 vi.mock("@/lib/ingestion/tope", () => ({ topeDeIngestion: mocks.tope }));
@@ -50,8 +51,6 @@ describe("POST /api/projects/from-template", () => {
     mocks.insert.mockReturnValue({ values: mocks.values });
     mocks.createVersion.mockResolvedValue("v1");
     mocks.getTemplateHtml.mockResolvedValue(HOME);
-    // The transform is a pass-through in these tests.
-    mocks.transformCached.mockImplementation(async (_id: string, html: string) => html);
     mocks.getTemplate.mockResolvedValue({
       id: "mirror",
       name: "Mirror",
@@ -75,17 +74,10 @@ describe("POST /api/projects/from-template", () => {
     expect(Object.keys(data.pages ?? {})).toEqual(["tienda"]);
   });
 
-  // 🔴 LA HOME RECUPERABA SUS `<script>` Y LAS SUBPÁGINAS NO. Desde que
-  // `conservarScripts` entró en esta ruta (2026-08-31) el empalme estaba SÓLO
-  // en la Home; el bucle de subpáginas guardaba `pgGated.html` tal cual, o sea
-  // el documento recién saneado, sin sus scripts. Una plantilla multi-página
-  // clonaba con la Home viva y todas las demás muertas.
-  //
-  // Y la pérdida era SILENCIOSA: `collectDegradations` fuerza `scripts` a cero
-  // para toda la superficie `from-template` —Home y subpáginas por igual— y
-  // justifica ese cero diciendo que «`conservarScripts` restaura los scripts».
-  // Para las subpáginas eso no era verdad, así que el cero tapaba una pérdida
-  // real en vez de describir una recuperación. Ver lib/ingestion/degradations.ts.
+  // 🔴 LA HOME RECUPERABA SUS `<script>` Y LAS SUBPÁGINAS NO (2026-08-31 a
+  // 2026-09-01): el empalme `conservarScripts` estaba sólo en la Home. Desde el
+  // 2026-10-04 no hay empalme —la puerta no quita los scripts—, y esto vigila
+  // que las dos sigan llegando enteras.
   it("🔴 una subpágina conserva sus <script>, igual que la Home", async () => {
     const SCRIPT = `<script>window.__tienda=1;</script>`;
     mocks.getTemplateHtml.mockResolvedValue(doc(`<h1>Home</h1>${SCRIPT}`));
@@ -108,6 +100,29 @@ describe("POST /api/projects/from-template", () => {
     expect(data.html).toContain("window.__tienda=1;");
     // La subpágina es la que no.
     expect(data.pages?.tienda.html).toContain("window.__tienda=1;");
+  });
+
+  // 🔴 LA ENTRADA COMO VERCEL. El saneador se llevaba los `on*` (y nadie los
+  // devolvía: `conservarScripts` trabajaba con bloques) y los `<script src>`
+  // que no fueran el CDN de Tailwind. Ahora llega todo, y la fila no apunta
+  // ninguna pérdida.
+  it("🔴 clona el JavaScript tal cual: el on*, el script de un CDN y el inline", async () => {
+    mocks.getTemplateHtml.mockResolvedValue(
+      doc(
+        '<h1>Home</h1><button onclick="abrir()">Abrir</button>' +
+          '<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>' +
+          "<script>if (1 < 2 && 3 > 2) { window.__ok = '<i>ok</i>'; }</script>",
+      ),
+    );
+
+    const res = await call();
+
+    expect(res.status).toBe(200);
+    const data = (mocks.values.mock.calls[0][0] as { data: { html: string; degradations?: unknown } }).data;
+    expect(data.html).toContain('onclick="abrir()"');
+    expect(data.html).toContain('src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"');
+    expect(data.html).toContain("<script>if (1 < 2 && 3 > 2) { window.__ok = '<i>ok</i>'; }</script>");
+    expect(data.degradations).toBeUndefined();
   });
 
   it("fails the whole clone when a subpage cannot be cleaned, instead of dropping it", async () => {
@@ -159,8 +174,9 @@ describe("POST /api/projects/from-template", () => {
 // EL TOPE DE INGESTIÓN.
 //
 // 🔴 Esta ruta no tenía puerta. No gasta una llamada de modelo, así que no la
-// frenan ni el crédito ni la cuota de generación — pero el transform arranca
-// Chromium por documento, y una plantilla de 6 páginas son SIETE arranques.
+// frenan ni el crédito ni la cuota de generación. Hasta el 2026-10-04 el
+// transformador arrancaba Chromium por documento; hoy cada clon escribe un
+// proyecto y sus versiones.
 describe("el tope de ingestión", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -170,7 +186,6 @@ describe("el tope de ingestión", () => {
     mocks.createVersion.mockResolvedValue("v1");
     mocks.getTemplateHtml.mockResolvedValue(HOME);
     mocks.tope.mockResolvedValue(null);
-    mocks.transformCached.mockImplementation(async (_id: string, html: string) => html);
     mocks.getTemplate.mockResolvedValue({
       id: "mirror",
       name: "Mirror",
@@ -187,16 +202,15 @@ describe("el tope de ingestión", () => {
     const res = await call();
 
     expect(res.status).toBe(429);
-    // Rechazar DESPUÉS de haber traído el cuerpo por la red y de haber abierto
-    // el navegador es pagar el trabajo que se está rechazando.
+    // Rechazar DESPUÉS de haber traído el cuerpo por la red es pagar el
+    // trabajo que se está rechazando.
     expect(mocks.getTemplateHtml).not.toHaveBeenCalled();
-    expect(mocks.transformCached).not.toHaveBeenCalled();
     expect(mocks.insert).not.toHaveBeenCalled();
   });
 
   it("y cuando deja pasar, el clon ocurre igual que siempre", async () => {
     const res = await call();
     expect(res.status).toBe(200);
-    expect(mocks.transformCached).toHaveBeenCalled();
+    expect(mocks.insert).toHaveBeenCalled();
   });
 });

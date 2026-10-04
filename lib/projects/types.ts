@@ -248,7 +248,8 @@ export type DegradationCode =
    *  `scripts`: en `from-template` los bloques `<script>` SÍ vuelven
    *  (`conservarScripts`), así que la función está viva y lo único muerto es el
    *  cableado del botón. Decirle al usuario «se quitó tu JavaScript» sería
-   *  falso y le mandaría a rehacer lo que ya tiene. */
+   *  falso y le mandaría a rehacer lo que ya tiene. Ya no nace desde el
+   *  2026-10-04 (el clon no sanea); se queda por las filas que lo llevan. */
   | "handlers_lost"
   /* ⚰️ AQUÍ ESTABA `interactivity_lost` — «el JavaScript que el modelo escribió
    *  no llegó al release». Sus dos causas eran de la CÁPSULA: que dejara de

@@ -141,8 +141,13 @@ export type UpdateTemplateInput = z.infer<typeof UpdateSchema>;
 
 // ── Validación de contenido al REGISTRAR una plantilla ──────────────────────
 //
+// ⚠️ DESDE EL 2026-10-04 EL CLON NO SANEA (la entrada como Vercel): pasa sólo
+// `gateReservedMarker`, así que lo que se registra aquí llega TAL CUAL a la
+// página del usuario y a la de sus visitantes. Lo de abajo que dice «el clon
+// los borraría» describe el antes; el rechazo se queda como norma del corpus.
+//
 // Aquí se VALIDA Y RECHAZA; deliberadamente NO se sanitiza. Las plantillas se
-// guardan CRUDAS en R2 a propósito y se sanitizan al CLONAR: esa copia cruda es
+// guardan CRUDAS en R2 a propósito y se sanitizaban al CLONAR: esa copia cruda es
 // la que permitió que el fix del carrier (977e325) reparara los clones futuros
 // sin tocar nada. Sanitizar al registrar destruiría la única copia cruda de
 // esas paletas — la misma pérdida irreversible que acabamos de arreglar. Y
@@ -252,8 +257,11 @@ function htmlIssue(html: string): string | null {
         `cablea con addEventListener dentro del <script>, que sí sobrevive`,
     );
   }
+  // El motivo ya no es «el clon los borraría» (desde el 2026-10-04 no borra
+  // nada): ninguna plantilla del corpus los necesita, y un `on*` se cablea con
+  // `addEventListener` en su `<script>`.
   return bad.length > 0
-    ? `${bad.join("; ")} — el clon los borraría, así que la plantilla nacería rota`
+    ? `${bad.join("; ")} — fuera de la norma del corpus de plantillas`
     : null;
 }
 

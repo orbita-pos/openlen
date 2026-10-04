@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { transformEnabled, thumbnailsEnabled } from "./kill-switches";
+import { thumbnailsEnabled } from "./kill-switches";
 
 // ⚰️ El describe de OPENLEN_BEHAVIORS/CAROUSEL se fue el 2026-08-31 con sus dos
 // predicados: gobernaban horneados que salieron de publicar el 2026-08-26, y su
@@ -7,15 +7,8 @@ import { transformEnabled, thumbnailsEnabled } from "./kill-switches";
 // obedeciera la misma palanca. Sin la mitad de publicar, la palanca creaba la
 // divergencia que se escribió para impedir.
 
-// Transform de ingestión (spec 2026-07-14): mismo contrato que los dos de
-// arriba — "0" apaga, todo lo demás enciende.
-describe("kill-switches — OPENLEN_TRANSFORM", () => {
-  it('"0" apaga; ausente o cualquier otro valor enciende', () => {
-    expect(transformEnabled({})).toBe(true);
-    expect(transformEnabled({ OPENLEN_TRANSFORM: "0" })).toBe(false);
-    expect(transformEnabled({ OPENLEN_TRANSFORM: "1" })).toBe(true);
-  });
-});
+// ⚰️ Aquí se probaba `OPENLEN_TRANSFORM`, retirada el 2026-10-04 con el
+// transformador de ingestión.
 
 // ⚰️ Aquí se probaba `OPENLEN_LIVE_DATA`, la palanca de datos vivos, retirada
 // con la función en Len 2.1 (2026-09-30).

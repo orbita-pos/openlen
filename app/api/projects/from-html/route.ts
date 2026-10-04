@@ -2,10 +2,8 @@ import { auth } from "@/auth";
 import { topeDeIngestion } from "@/lib/ingestion/tope";
 import { db, schema } from "@/lib/db";
 import { createVersion } from "@/lib/projects/versions";
-import { sanitizeForPublish } from "@/lib/html-engine";
+import { gateReservedMarker } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
-import { collectDegradations, hadScript } from "@/lib/ingestion/degradations";
-import { transformIngestedHtml } from "@/lib/transform";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 import { MAX_HTML_BYTES } from "@/lib/projects/limites-html";
@@ -19,11 +17,20 @@ import { MAX_HTML_BYTES } from "@/lib/projects/limites-html";
 // dropdown on /new then publishes that HTML verbatim through
 // `publishProject` → `publishToDir`.
 //
+// LA ENTRADA COMO VERCEL (2026-10-04, decidido por Jesús). Lo que se pega se
+// guarda como se pegó, con su JavaScript: aquí no pasa `sanitizeForPublish`,
+// sólo `gateReservedMarker`, la MISMA puerta que lo que escribe el modelo. Hasta
+// ese día el saneador borraba todos los `<script>` y el transformador de
+// ingestión (lib/transform, retirado) intentaba hornear lo que generaban;
+// ahora los scripts llegan vivos y lo generan ellos.
+//
+// La razón de seguridad del saneador la cubre el aislamiento: el lienzo corre
+// en un origen opaco o en otro sitio (`sandbox-del-lienzo.ts`), y la página
+// publicada vive en `<sub>.<publish host>`, otro origen que la app.
+//
 // Safety:
 // - 8 MB max HTML size.
-// - sanitizeForPublish() strips inline scripts / on*-handlers / dangerous-URL
-//   schemes / iframes / meta-refresh (Tailwind CDN is preserved) and rejects
-//   `data-slot-path=` editor markers. We store the CLEANED html; the same gate
+// - Rejects `data-slot-path=` editor markers, in every variant; the same gate
 //   runs again in publishToDir as defense in depth.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -41,12 +48,10 @@ export async function POST(req: Request): Promise<Response> {
 
   // ── EL TOPE DE INGESTIÓN ───────────────────────────────────────────────────
   //
-  // 🔴 Y AQUÍ ES MÁS GORDO QUE EN EL CLON. `from-template` al menos cachea el
-  // transform por (plantilla, hash), así que la segunda persona que clona la
-  // misma plantilla no arranca ningún navegador. Ésta NO cachea nada —lo dice su
-  // propio comentario, «contenido de un solo uso»— así que CADA petición paga su
-  // Chromium entero, con HTML arbitrario y sin nada que lo frene: ni crédito, ni
-  // cuota de generación, ni tope.
+  // Nació por el transformador, que arrancaba un Chromium por petición con HTML
+  // arbitrario. Se fue el 2026-10-04, pero la miniatura de abajo sigue
+  // arrancando uno por página pegada, y nada más lo frena: ni crédito, ni cuota
+  // de generación.
   const limite = await topeDeIngestion(session.user.id);
   if (limite) return limite;
 
@@ -62,17 +67,6 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: "too_large", message: "HTML must be under 8 MB" }, 413);
   }
 
-  // Transform de ingestión (lib/transform, spec 2026-07-14) — ANTES del
-  // sanitize porque lee los <script> que aquel borra: el HTML pegado tiene el
-  // MISMO bug que las plantillas (contenido JS-generado nace vacío, botones
-  // muertos). Chrome con red TOTALMENTE bloqueada + 5s de presupuesto; ante
-  // cualquier fallo devuelve el html original — la ruta queda exactamente
-  // como hoy, jamás peor. Sin cache: contenido de un solo uso.
-  const transformed = await transformIngestedHtml(html, {
-    timeoutMs: 5000,
-    source: "from-html",
-  });
-
   const title =
     (typeof body.title === "string" && body.title.trim()) ||
     extractTitle(html) ||
@@ -85,14 +79,13 @@ export async function POST(req: Request): Promise<Response> {
 
   // One gate. This surface FAILS OPEN: the project does
   // not exist yet, so refusing costs the user the whole page instead of an
-  // edit. It ships and we tell them what was lost. `seal: false` (publishToDir
-  // seals at publish time) and `render: false` (a paste cannot pay a browser
-  // launch).
+  // edit. `seal: false` (publishToDir seals at publish time) and
+  // `render: false` (a paste cannot pay a browser launch).
   //
   const gated = await passHtmlGate(
-    transformed.html,
+    html,
     {
-      sanitize: sanitizeForPublish,
+      sanitize: gateReservedMarker,
       // ⚰️ Aquí se sembraba el perfil de negocio (`seedBrandIntoHtml`).
       // Retirado el 2026-08-31: los datos del dueño viven en su página, no en
       // otra tabla que los repinta. Con el widget de contacto ya fuera, lo
@@ -107,31 +100,24 @@ export async function POST(req: Request): Promise<Response> {
     },
   );
   if (!gated.ok) {
-    // The reserved marker never fails open, anywhere — including when the
-    // seeding seam is what introduced it.
-    if (gated.code === "reserved_marker") {
-      return json(
-        {
-          error: "invalid_html",
-          message:
-            "HTML contains editor-mode markers (data-slot-path). Save the rendered output instead.",
-        },
-        400,
-      );
-    }
-    return json({ error: "sanitization_failed", message: "Could not clean this HTML." }, 400);
+    // The reserved marker never fails open, anywhere. `gateReservedMarker`
+    // refuses ONLY for it, so both codes mean the same thing here: the literal
+    // marker, or one of its encoded variants.
+    return json(
+      {
+        error: "invalid_html",
+        message:
+          "HTML contains editor-mode markers (data-slot-path). Save the rendered output instead.",
+      },
+      400,
+    );
   }
   const finalHtml = gated.html;
 
-  // What the page lost on the way in. Stored on the ROW, not returned — every
-  // creation client navigates away and destructures the response down to
-  // `projectId`, so a field added there would be dead on arrival.
-  const degradations = collectDegradations({
-    surface: "from-html",
-    removed: gated.removed,
-    transformFallback: transformed.report.fallback,
-    hadScripts: hadScript(html),
-  });
+  // ⚰️ Aquí se apuntaba en la fila lo que la página perdió al entrar
+  // (`collectDegradations`: scripts, embebidos, enlaces peligrosos y el
+  // contenido que el transformador no horneó). Desde el 2026-10-04 la puerta
+  // no quita nada, así que no hay pérdida que apuntar.
 
   const projectId = crypto.randomUUID();
   try {
@@ -143,7 +129,7 @@ export async function POST(req: Request): Promise<Response> {
       thumbnailUrl: null,
       tags: ["paste"],
       status: "draft",
-      data: { html: finalHtml, ...(degradations.length > 0 ? { degradations } : {}) },
+      data: { html: finalHtml },
     });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -165,6 +151,8 @@ export async function POST(req: Request): Promise<Response> {
 
   // Background card thumbnail so the pasted page shows a preview in /projects
   // instead of the placeholder icon. Fire-and-forget — never blocks the create.
+  // Its Chromium blocks private and internal addresses
+  // (`installSubresourceSsrfGuard`): the pasted JavaScript runs there too.
   void renderProjectThumbnail({ projectId, html: finalHtml });
 
   return json({ projectId, title }, 200);

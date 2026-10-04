@@ -488,7 +488,6 @@ export default defineConfig({
       "lib/publish/kill-switches.test.ts",
       "lib/publish/tw-config.test.ts",
       "lib/publish/design-stash-strip.test.ts",
-      "lib/transform/**/*.test.ts",
       "lib/publish/chat-widget.test.ts",
       "lib/chat/**/*.test.ts",
       "lib/community/**/*.test.ts",

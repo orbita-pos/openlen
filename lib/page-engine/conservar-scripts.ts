@@ -4,8 +4,12 @@
  * ⚰️ EL EDITOR YA NO LO USA (2026-09-29). Su último camino con el documento
  * entero —el Deshacer del taller por `PATCH /html`— se retiró: el editor manda
  * lo que cambió y Deshacer restaura la copia del servidor, así que no hay nada
- * que empalmar. Lo sigue usando `from-template`, que sanea la plantilla curada
- * y le devuelve aquí sus scripts. Lo de abajo cuenta por qué nació.
+ * que empalmar. Lo usaba también `from-template`, que saneaba la plantilla
+ * curada y le devolvía aquí sus scripts, hasta el 2026-10-04 (la entrada como
+ * Vercel: el clon ya no sanea). Desde ese día `conservarScripts` no lo llama
+ * ningún camino de producción; sólo las pruebas que reconstruyen el Deshacer
+ * viejo (`undo-turn.test.ts`). Las otras funciones de este fichero sí siguen
+ * vivas. Lo de abajo cuenta por qué nació.
  *
  * EL PROBLEMA. El editor guardaba serializando el DOM VIVO
  * (`captureClean` en use-inline-edit.ts manda `document.documentElement

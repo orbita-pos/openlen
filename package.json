@@ -37,8 +37,6 @@
     "marketing:render-smoke": "tsx --tsconfig tsconfig.eval.json scripts/marketing-render-smoke.ts",
     "assistant:evals": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/assistant-evals.ts",
     "generation:selector-eval": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/generation-selector-eval.ts",
-    "transform:security": "tsx --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/qa/transform-security-gate.mts",
-    "transform:gate": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/qa/transform-gate.mts",
     "evals:pages": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/evals-pages.ts",
     "bench:len": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/len-bench.ts",
     "bench:len:validar": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/len-bench-validar.ts",

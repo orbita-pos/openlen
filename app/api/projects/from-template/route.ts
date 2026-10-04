@@ -3,11 +3,8 @@ import { topeDeIngestion } from "@/lib/ingestion/tope";
 import { db, schema } from "@/lib/db";
 import { getTemplate, getTemplateHtml } from "@/lib/templates/store";
 import { createVersion } from "@/lib/projects/versions";
-import { sanitizeForPublish } from "@/lib/html-engine";
+import { gateReservedMarker } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
-import { collectDegradations, hadScript } from "@/lib/ingestion/degradations";
-import { transformTemplateCached } from "@/lib/transform/template-cache";
-import { conservarScripts } from "@/lib/page-engine/conservar-scripts";
 import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -16,11 +13,19 @@ import { pageMetaFor } from "@/lib/publish/page-meta-intent";
 //
 // Clones a curated template's HTML into a NEW project owned by the caller.
 // The template's HTML is stored verbatim in `project.data.html`, so the
-// publish path (publishProject → publishToDir → nginx wildcard) treats it
-// like any other project's output.
+// publish path (publishProject → publishToDir → Caddy) treats it like any
+// other project's output.
 //
 // The template itself NEVER claims a subdomain — only the project the user
-// publishes does (e.g. myco.openlen.com).
+// publishes does (e.g. myco.openlen.app).
+//
+// LA ENTRADA COMO VERCEL (2026-10-04, decidido por Jesús): la plantilla se
+// clona como es, con su JavaScript. Sólo pasa `gateReservedMarker`, como lo que
+// escribe el modelo. Hasta ese día pasaba `sanitizeForPublish`, que borraba los
+// `<script>`; `conservarScripts` los devolvía desde el documento curado y el
+// transformador de ingestión (lib/transform) horneaba lo que generaban — y
+// tenía que quitar el generador para que la sección no saliera dos veces. Las
+// tres piezas se fueron: los scripts llegan vivos y generan su contenido ellos.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const runtime = "nodejs";
@@ -35,11 +40,10 @@ export async function POST(req: Request): Promise<Response> {
 
   // ── EL TOPE DE INGESTIÓN ───────────────────────────────────────────────────
   //
-  // 🔴 ESTA RUTA NO TENÍA PUERTA. No gasta una llamada de modelo —así que no la
-  // frenan ni el crédito ni la cuota de generación— pero SÍ arranca Chromium: el
-  // transform de ingestión abre un navegador por documento, y un clon de una
-  // plantilla de 6 páginas son SIETE arranques. Sin límite, ese bucle salía
-  // gratis.
+  // Nació porque el transformador de ingestión arrancaba un Chromium por
+  // documento (un clon de 6 páginas eran SIETE arranques). El transformador se
+  // fue el 2026-10-04; el tope se queda porque cada clon sigue escribiendo un
+  // proyecto y sus versiones, y sin él ese bucle sale gratis.
   //
   // Va ANTES de leer la plantilla de almacenamiento: rechazar después de haber
   // ido a buscar el cuerpo por la red es pagar la mitad del trabajo que se está
@@ -70,36 +74,6 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: "template_body_unavailable" }, 500);
   }
 
-  // Transform de ingestión (lib/transform, spec 2026-07-14) — ANTES del
-  // sanitize de abajo, porque necesita leer los <script> que el sanitize
-  // borra: hornea el contenido que esos scripts generaban (45 plantillas del
-  // catálogo publican secciones VACÍAS sin esto — medido) y traduce patrones
-  // conocidos a conductas. Cacheado por sha256: corre una vez por versión de
-  // plantilla, no por clon. Fallback interno = html original (jamás peor).
-  // OPENLEN_TRANSFORM=0 lo apaga.
-  // Presupuesto TOTAL del request (hallazgo publish-safety #3): un template
-  // multi-página con cache frío lanzaba un Chrome POR PÁGINA en serie — un
-  // sitio de 5 páginas podía colgar el clon ~40s. Con el deadline compartido,
-  // el primer clon transforma lo que quepa en 12s y el resto queda statu quo
-  // SIN cachear — cada clon siguiente avanza más hasta converger (los éxitos
-  // sí se cachean).
-  const transformStarted = Date.now();
-  const TRANSFORM_TOTAL_BUDGET_MS = 12_000;
-  const remainingBudget = () =>
-    Math.max(0, TRANSFORM_TOTAL_BUDGET_MS - (Date.now() - transformStarted));
-
-  // Captured once: `remainingBudget()` moves, and the record has to say what
-  // actually happened, not what a second call would say.
-  const homeTransformSkipped = remainingBudget() <= 500;
-  const transformedHtml = homeTransformSkipped
-    ? html
-    : await transformTemplateCached(entry.id, html, {
-        timeoutMs: Math.min(8000, remainingBudget()),
-      });
-
-  // Defense in depth: sanitize the curated body (strips any stray
-  // scripts/handlers/iframes; clean templates pass through byte-identical) and
-  // reject the data-slot-path editor marker the publish flow also rejects.
   // ⚰️ Aquí se resolvía el PERFIL DE NEGOCIO al crear (`resolveProfileForCreation`)
   // para que la página naciera con los datos del dueño. Retirado el 2026-08-31.
   // Los datos viven en la página; el logo se pone desde el inspector, que es
@@ -111,9 +85,9 @@ export async function POST(req: Request): Promise<Response> {
   // (a clone cannot pay a browser launch).
   //
   const gated = await passHtmlGate(
-    transformedHtml,
+    html,
     {
-      sanitize: sanitizeForPublish,
+      sanitize: gateReservedMarker,
       // ⚰️ Aquí se sembraba el perfil de negocio (`seedBrandIntoHtml`).
       // Retirado el 2026-08-31: los datos del dueño viven en su página, no en
       // otra tabla que los repinta. Con el widget de contacto ya fuera, lo
@@ -131,71 +105,37 @@ export async function POST(req: Request): Promise<Response> {
   );
   if (!gated.ok) {
     // A curated template that cannot pass the gate is OUR broken file, not the
-    // user's input — 500 and name it, exactly as before.
+    // user's input — 500 and name it. `gateReservedMarker` refuses only for
+    // the reserved marker.
     return json(
       {
         error: "invalid_template",
-        message:
-          gated.code === "reserved_marker"
-            ? "Template HTML contains data-slot-path markers — fix the curated file."
-            : "Template HTML could not be cleaned — fix the curated file.",
+        message: "Template HTML contains data-slot-path markers — fix the curated file.",
       },
       500,
     );
   }
-  // LOS SCRIPTS DE LA PLANTILLA VUELVEN. Mismo empalme determinista que el
-  // editor (`conservarScripts`, ver su cabecera): el saneador de arriba se los
-  // lleva todos —y eso se queda, porque es quien también quita los `on*`, las
-  // URLs peligrosas y los embebidos fuera de lista— y aquí se restauran desde
-  // el documento CURADO, no desde la petición. Es incapaz de introducir código
-  // nuevo: los bytes salen de la plantilla que subimos nosotros por CLI.
-  //
-  // POR QUÉ, medido en el propio `admin-schemas.ts`: el 89% de las plantillas
-  // llevan un `<script>` inline. Hasta el 2026-08-31 el clon se los comía
-  // TODOS, así que la galería curada —el contenido más revisado del producto,
-  // con aprobación de Jesús antes de publicarse— era la única superficie que no
-  // podía llevar interactividad, mientras la salida cruda del modelo sí. La
-  // procedencia de una plantilla es MEJOR que la del modelo, no peor.
-  //
-  // El generador de contenido ya no está: `bakeGeneratedContent` lo retira
-  // cuando hornea su contenedor, justo para que esto no lo devuelva y la
-  // sección salga dos veces.
-  const finalHtml = conservarScripts(transformedHtml, gated.html);
+  const finalHtml = gated.html;
 
-  const degradations = collectDegradations({
-    surface: "from-template",
-    removed: gated.removed,
-    // The shared 12s deadline can run out before the home is transformed —
-    // its JS-built sections then clone empty. Degradation #4: real loss, and
-    // the user has no way to see why, so it goes on the record.
-    transformFallback: homeTransformSkipped ? "budget" : undefined,
-    hadScripts: hadScript(html),
-  });
+  // ⚰️ Aquí se apuntaba en la fila lo que el clon perdió (`collectDegradations`:
+  // el contenido que el transformador no llegó a hornear y los `on*` que el
+  // saneador borraba). Desde el 2026-10-04 la puerta no quita nada.
 
-  // Multi-page template: clone each extra page through the same born-canonical
-  // chain (sanitize → normalize → ensurePageMeta) into project.data.pages, so a
-  // cloned site is multi-page from birth (e.g. Home + Tienda + product fichas).
+  // Multi-page template: clone each extra page through the same gate into
+  // project.data.pages, so a cloned site is multi-page from birth (e.g. Home +
+  // Tienda + product fichas).
   const clonedPages: Record<string, { html: string }> = {};
   for (const pg of entry.pages ?? []) {
-    // Mismo transform que la Home, clave propia por página (el hash del
-    // contenido distingue versiones; el sufijo evita colisión de claves) y
-    // mismo deadline compartido del request.
-    const pgTransformSkipped = remainingBudget() <= 500;
-    const pgTransformed = pgTransformSkipped
-      ? pg.html
-      : await transformTemplateCached(`${entry.id}--${pg.slug}`, pg.html, {
-          timeoutMs: Math.min(8000, remainingBudget()),
-        });
     // Degradation #6. This used to `continue` — the subpage vanished, the
     // clone shipped, and the nav still promised a page that no longer
     // existed. Because a broken link serves the HOME page
     // ([[caddy-broken-links-serve-home]]) the user had no way to discover it:
-    // the site LOOKED complete and lied about itself. A page we cannot clean
-    // is our broken curated file, so it fails the whole clone loudly, the
-    // same way the home page already does above.
+    // the site LOOKED complete and lied about itself. A page that cannot pass
+    // the gate is our broken curated file, so it fails the whole clone loudly,
+    // the same way the home page already does above.
     const pgGated = await passHtmlGate(
-      pgTransformed,
-      { sanitize: sanitizeForPublish },
+      pg.html,
+      { sanitize: gateReservedMarker },
       {
         render: false,
         seal: false,
@@ -216,37 +156,16 @@ export async function POST(req: Request): Promise<Response> {
       return json(
         {
           error: "invalid_template",
-          message: `Template subpage "${pg.slug}" could not be cleaned — fix the curated file.`,
+          message: `Template subpage "${pg.slug}" contains data-slot-path markers — fix the curated file.`,
         },
         500,
       );
     }
-    // Y SUS `<script>` TAMBIÉN VUELVEN. Mismo empalme que la Home hace arriba,
-    // con los mismos dos argumentos: el documento que ENTRÓ en la puerta
-    // (`pgTransformed`, el análogo exacto de `transformedHtml`) y el que salió.
-    //
-    // Faltaba desde que `conservarScripts` entró en esta ruta el 2026-08-31: el
-    // empalme se puso en la Home y el bucle de subpáginas se quedó guardando
-    // `pgGated.html` a secas, o sea el documento recién saneado. Una plantilla
-    // multi-página clonaba con la Home viva y todas las demás muertas, que es
-    // justo la mitad de la promesa —"un sitio multi-página desde que nace"— que
-    // este bucle existe para cumplir.
-    //
-    // Y no se oía: `collectDegradations` fuerza `scripts` a cero para TODA la
-    // superficie `from-template`, Home y subpáginas por igual, y justifica ese
-    // cero diciendo que aquí los scripts se restauran. Para las subpáginas eso
-    // era falso, así que el cero no describía una recuperación: tapaba una
-    // pérdida. Con esta línea el cero pasa a ser cierto para las dos.
-    clonedPages[pg.slug] = { html: conservarScripts(pgTransformed, pgGated.html) };
-    degradations.push(
-      ...collectDegradations({
-        surface: "from-template",
-        removed: pgGated.removed,
-        // Degradation #5 — same deadline, per subpage.
-        transformFallback: pgTransformSkipped ? "budget" : undefined,
-        hadScripts: hadScript(pg.html),
-      }),
-    );
+    // Sus `<script>` llegan con ella: la puerta no los toca. (Hasta el
+    // 2026-10-04 los devolvía `conservarScripts` tras el saneado, y faltó en
+    // este bucle del 2026-08-31 al 2026-09-01: la Home clonaba viva y las
+    // subpáginas muertas.)
+    clonedPages[pg.slug] = { html: pgGated.html };
   }
 
   const projectId = crypto.randomUUID();
@@ -267,7 +186,6 @@ export async function POST(req: Request): Promise<Response> {
       data: {
         html: finalHtml,
         ...(Object.keys(clonedPages).length ? { pages: clonedPages } : {}),
-        ...(degradations.length > 0 ? { degradations } : {}),
       },
     });
   } catch (err) {

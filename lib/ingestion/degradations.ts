@@ -14,37 +14,22 @@ import type { Degradation } from "@/lib/projects/types";
  * sentence anyway.
  */
 /**
- * Whether the incoming document carried script for the transform to bake.
- * `<script>` specifically, not inline handlers: the transform exists to bake
- * content JS BUILDS on load, and an `onclick` builds nothing.
+ * ⚠️ DESDE EL 2026-10-04 (la entrada como Vercel) pegar y clonar ya no la
+ * llaman: pasan sólo `gateReservedMarker`, que no quita nada, así que no hay
+ * pérdida que apuntar. Con ellas se fueron `hadScript`, `transformFallback` y
+ * el código `dynamic_content` (lo que el transformador de ingestión no llegaba a
+ * hornear). El tipo conserva los códigos: hay filas viejas que los llevan.
  */
-export function hadScript(html: string): boolean {
-  return /<script[\s>]/i.test(html);
-}
-
 export function collectDegradations(input: {
   surface: Degradation["surface"];
   removed?: { scripts: number; eventHandlers: number; iframes: number; dangerousUrls: number };
-  /** `TransformReport.fallback` — present means the page was NOT transformed. */
-  transformFallback?: string;
-  /** Whether the incoming document actually carried script to bake. */
-  hadScripts?: boolean;
 }): Degradation[] {
-  const { surface, removed, transformFallback, hadScripts } = input;
+  const { surface, removed } = input;
   const out: Degradation[] = [];
 
-  // First, because it happens first and because it is the one the user is
-  // most likely to SEE: content the page builds with JS never got baked, and
-  // the JS that would have built it is about to be stripped.
-  //
-  // Gated on the page having had script at all. A fallback means "we did not
-  // transform", which is also what we get when the kill switch is off or when
-  // Chrome dies — a recurring failure on the dev box and a plausible one in
-  // prod. Reporting it unconditionally would warn on every paste during an
-  // outage, about dynamic content the page may never have had.
-  if (transformFallback && hadScripts) {
-    out.push({ surface, stage: "transform", code: "dynamic_content", count: 1 });
-  }
+  // ⚰️ Aquí nacía `dynamic_content`: el transformador de ingestión no había
+  // horneado lo que la página construía con JavaScript, y el saneador iba a
+  // borrar ese JavaScript. Retirados los dos el 2026-10-04.
 
   if (removed) {
     // Two counters, one lived experience — the interactive bits are gone.

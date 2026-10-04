@@ -29,12 +29,9 @@ type EnvLike = Record<string, string | undefined>;
 // publicada, y subida hacía que el taller horneara conductas y carrusel que
 // el visitante nunca recibía. Una palanca que no vuelve a ningún sitio.
 
-/** Transform de ingestión (spec 2026-07-14) — bake quirúrgico + translate en
- *  from-template/from-html. Corre en INGESTIÓN (antes de guardar), no toca
- *  preview ni publish, así que este es su único consumidor de palanca. */
-export function transformEnabled(env: EnvLike = process.env): boolean {
-  return env.OPENLEN_TRANSFORM !== "0";
-}
+// ⚰️ Aquí vivía `transformEnabled` (`OPENLEN_TRANSFORM=0`), la palanca del
+// transformador de ingestión (lib/transform). Se retiró con él el 2026-10-04:
+// pegar y clonar ya no borran los `<script>`, así que no hay nada que hornear.
 
 // ⚰️ Aquí vivía `liveDataEnabled` (`OPENLEN_LIVE_DATA=0`), la palanca de datos
 // vivos. Se retiró con la función en Len 2.1 (2026-09-30).

@@ -1,9 +1,11 @@
 // Task 4 step 2 — from-html is a FAIL-OPEN surface: the project does not
-// exist yet, so refusing costs the user the whole page instead of an edit. It
-// ships what it can and records what was lost on the row.
+// exist yet, so refusing costs the user the whole page instead of an edit.
 //
-// Only auth, db, the profile store, the transform and the thumbnail are
-// mocked; sanitize/normalize/meta/behaviours are the real passes.
+// LA ENTRADA COMO VERCEL (2026-10-04): lo pegado se guarda como se pegó, con su
+// JavaScript. Sólo el marcador reservado se rechaza.
+//
+// Only auth, db, the version store and the thumbnail are mocked; the gate,
+// normalize and meta are the real passes (with the native binding).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -11,7 +13,6 @@ const mocks = vi.hoisted(() => ({
   insert: vi.fn(),
   values: vi.fn(),
   createVersion: vi.fn(),
-  transform: vi.fn(),
   thumbnail: vi.fn(),
   tope: vi.fn(async (): Promise<Response | null> => null),
 }));
@@ -22,7 +23,6 @@ vi.mock("@/lib/db", () => ({
   schema: { projects: {} },
 }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
-vi.mock("@/lib/transform", () => ({ transformIngestedHtml: mocks.transform }));
 vi.mock("@/lib/projects/thumbnail", () => ({ renderProjectThumbnail: mocks.thumbnail }));
 // El tope de ingestión: por defecto DEJA PASAR, para que las pruebas de
 // siempre midan lo que venían midiendo. Su propio caso lo pone en bloqueo.
@@ -55,11 +55,6 @@ describe("POST /api/projects/from-html", () => {
     mocks.insert.mockReturnValue({ values: mocks.values });
     mocks.createVersion.mockResolvedValue("v1");
     mocks.thumbnail.mockReturnValue(undefined);
-    // Default: the transform succeeded and changed nothing.
-    mocks.transform.mockImplementation(async (html: string) => ({
-      html,
-      report: { bakedContainers: 0, bakedGeoms: 0, translated: [], tabsFound: 0, ms: 1 },
-    }));
   });
 
   it("records nothing when the page comes through whole", async () => {
@@ -74,20 +69,28 @@ describe("POST /api/projects/from-html", () => {
     expect(data.html).toContain("--ol-");
   });
 
-  it("keeps the page and records the JavaScript it had to strip", async () => {
+  // 🔴 LA ENTRADA COMO VERCEL. Hasta el 2026-10-04 esta prueba se llamaba
+  // «keeps the page and records the JavaScript it had to strip»: el saneador
+  // borraba el `<script>` y el `onclick`, y la fila apuntaba la pérdida. Ahora
+  // llegan los dos, y no hay nada que apuntar.
+  it("🔴 guarda el JavaScript tal cual: el <script>, el on* y el script de un CDN", async () => {
+    // Un script que una re-serialización descuidada rompería: `<`, `&&` y HTML
+    // dentro de una cadena.
+    const js = "if (a < b && c > d) { document.body.insertAdjacentHTML('beforeend', '<b>x</b>'); }";
     const res = await call(
-      doc('<h1>Hola</h1><script>init()</script><button onclick="go()">Ir</button>'),
+      doc(
+        `<h1>Hola</h1><script>${js}</script><button onclick="go()">Ir</button>` +
+          '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>',
+      ),
     );
 
-    // FAIL OPEN — the user gets their page.
     expect(res.status).toBe(200);
     expect(mocks.values).toHaveBeenCalledTimes(1);
     const data = storedData();
-    // One script + one inline handler fold into a single thing the user lost.
-    expect(data.degradations).toEqual([
-      { surface: "from-html", stage: "sanitize", code: "scripts", count: 2 },
-    ]);
-    expect(data.html).not.toContain("<script>init()");
+    expect(data.html).toContain(`<script>${js}</script>`);
+    expect(data.html).toContain('onclick="go()"');
+    expect(data.html).toContain('src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"');
+    expect(data.degradations).toBeUndefined();
   });
 
   // ⚰️ Antes: «records a mis-wired control» (`broken_controls`). Ahora no hay
@@ -100,40 +103,23 @@ describe("POST /api/projects/from-html", () => {
     expect(storedData().degradations ?? []).toEqual([]);
   });
 
-  it("records dynamic content that the transform could not bake", async () => {
-    mocks.transform.mockImplementation(async (html: string) => ({
-      html,
-      report: { bakedContainers: 0, bakedGeoms: 0, translated: [], tabsFound: 0, ms: 1, fallback: "timeout" },
-    }));
-
-    const res = await call(doc("<h1>Hola</h1><script>build()</script>"));
-
-    expect(res.status).toBe(200);
-    expect(storedData().degradations).toEqual([
-      { surface: "from-html", stage: "transform", code: "dynamic_content", count: 1 },
-      { surface: "from-html", stage: "sanitize", code: "scripts", count: 1 },
-    ]);
-  });
-
-  it("stays quiet when the transform falls back on a page with no script", async () => {
-    // The fallback also fires when Chrome dies — a recurring failure. Warning
-    // then would alarm every paste during an outage about dynamic content the
-    // page never had.
-    mocks.transform.mockImplementation(async (html: string) => ({
-      html,
-      report: { bakedContainers: 0, bakedGeoms: 0, translated: [], tabsFound: 0, ms: 1, fallback: "timeout" },
-    }));
-
-    const res = await call(doc("<h1>Hola</h1>"));
-
-    expect(res.status).toBe(200);
-    // Absent, not empty: a row with nothing to say reads the same as one
-    // created before this existed, and the surface has nothing to render.
-    expect(storedData().degradations).toBeUndefined();
-  });
+  // ⚰️ «records dynamic content that the transform could not bake» y «stays
+  // quiet when the transform falls back on a page with no script»: el
+  // transformador de ingestión se retiró el 2026-10-04.
 
   it("still refuses the reserved marker — that never fails open", async () => {
     const res = await call(doc('<section data-slot-path="a">x</section>'));
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("invalid_html");
+    expect(mocks.values).not.toHaveBeenCalled();
+  });
+
+  // La comprobación literal de la puerta (`includes("data-slot-path=")`) no ve
+  // esta variante; `gateReservedMarker` (Rust) sí. Sin el saneador delante, es
+  // lo único que la para.
+  it("y también sus variantes: mayúsculas y espacios alrededor del =", async () => {
+    const res = await call(doc('<section DATA-SLOT-PATH = "a">x</section>'));
 
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe("invalid_html");
@@ -145,9 +131,9 @@ describe("POST /api/projects/from-html", () => {
 // EL TOPE DE INGESTIÓN.
 //
 // 🔴 Esta ruta no tenía puerta. No gasta una llamada de modelo —así que no la
-// frenan ni el crédito ni la cuota de generación— pero SÍ arranca Chromium, y
-// además NO cachea nada (su propio comentario: «contenido de un solo uso»), así
-// que CADA petición paga su navegador entero con HTML arbitrario.
+// frenan ni el crédito ni la cuota de generación— y cada página pegada arranca
+// un Chromium para su miniatura (y, hasta el 2026-10-04, otro para el
+// transformador de ingestión).
 describe("el tope de ingestión", () => {
   // El mismo montaje que el bloque de arriba: este describe vive fuera de su
   // `beforeEach`, así que sin esto la ruta contestaría 401 y la prueba
@@ -160,10 +146,6 @@ describe("el tope de ingestión", () => {
     mocks.createVersion.mockResolvedValue("v1");
     mocks.thumbnail.mockReturnValue(undefined);
     mocks.tope.mockResolvedValue(null);
-    mocks.transform.mockImplementation(async (html) => ({
-      html,
-      report: { bakedContainers: 0, bakedGeoms: 0, translated: [], tabsFound: 0, ms: 1 },
-    }));
   });
 
   it("🔴 se consulta ANTES de tocar el HTML: un bloqueo no arranca Chromium", async () => {
@@ -174,16 +156,16 @@ describe("el tope de ingestión", () => {
     const res = await call(doc("<h1>x</h1>"));
 
     expect(res.status).toBe(429);
-    // Lo que importa no es el 429: es que el transform —el que abre el
-    // navegador— no llegó a correr. Un tope que rechaza DESPUÉS de pagar el
+    // Lo que importa no es el 429: es que la miniatura —la que abre el
+    // navegador— no llegó a pedirse. Un tope que rechaza DESPUÉS de pagar el
     // trabajo no es un tope, es un mensaje.
-    expect(mocks.transform).not.toHaveBeenCalled();
+    expect(mocks.thumbnail).not.toHaveBeenCalled();
     expect(mocks.insert).not.toHaveBeenCalled();
   });
 
   it("y cuando deja pasar, la ruta hace lo de siempre", async () => {
     const res = await call(doc("<h1>x</h1>"));
     expect(res.status).toBe(200);
-    expect(mocks.transform).toHaveBeenCalled();
+    expect(mocks.thumbnail).toHaveBeenCalled();
   });
 });

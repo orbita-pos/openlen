@@ -33,7 +33,7 @@ import type {
  *   4. puerta      el marcador reservado + metadatos
  *   6. módulos     el hueco que el documento pidió
  *
- * CONTRATO — igual que `lib/transform/index.ts`: las etapas 1-4 son fail-soft.
+ * CONTRATO: las etapas 1-4 son fail-soft.
  * Si Chrome se cuelga o una pasada revienta, el documento sigue su camino y el
  * informe dice por qué; el llamador no necesita `try/catch`. La ÚNICA que puede
  * refusar es la puerta (4), y sólo por el marcador reservado `data-slot-path`.
