@@ -91,20 +91,21 @@ export async function initProjectDatabase(db: SqlRunner, opts: { devRole: string
   // 00000000000003-post-setup.sql: ALTER ROLE postgres SET search_path …
   await db.exec(`alter role ${dev} set search_path to "$user", public, extensions;`);
 
-  // 00000000000001-auth-schema.sql (el esquema) + las migraciones de GoTrue.
-  await db.exec(`create schema if not exists auth;`);
+  // 00000000000001-auth-schema.sql (el esquema) + las migraciones de GoTrue,
+  // aplicadas CON el rol de GoTrue, como en Supabase: así `supabase_auth_admin`
+  // es el dueño de sus tablas, y el RLS que esas mismas migraciones activan en
+  // ellas (20240612123726) no le aplica a él.
+  await db.exec(`create schema if not exists auth authorization supabase_auth_admin;`);
   for (const m of GOTRUE_MIGRATIONS) {
-    await db.exec(gotrueMigrationSql(m.sql, dev));
+    await db.exec(`set role supabase_auth_admin;
+${gotrueMigrationSql(m.sql, dev)}
+;reset role;`);
   }
   for (const m of GOTRUE_MIGRATIONS) {
     await db.query(`insert into auth.schema_migrations (version) values ($1) on conflict do nothing`, [m.version]);
   }
   await db.exec(`
     grant usage on schema auth to ${dev}, anon, authenticated, service_role;
-    grant all privileges on schema auth to supabase_auth_admin;
-    grant all privileges on all tables in schema auth to supabase_auth_admin;
-    grant all privileges on all sequences in schema auth to supabase_auth_admin;
-    grant all privileges on all routines in schema auth to supabase_auth_admin;
     -- El patrón de perfiles de Supabase: \`references auth.users\` y el trigger
     -- \`on_auth_user_created\` los escribe el desarrollador.
     grant references, trigger on auth.users to ${dev};

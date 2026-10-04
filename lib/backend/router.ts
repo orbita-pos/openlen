@@ -11,6 +11,8 @@
 //   · CORS abierto, como Supabase: la autorización viaja en cabeceras, no en
 //     cookies, así que una página ajena no puede usar una sesión que no tiene.
 
+import type { AuthConfig, SendAuthMail } from "./auth/config";
+import { handleAuth, isOpenAuthPath } from "./auth/handler";
 import type { ProjectDatabase } from "./db";
 import { hashSecretKey, verifyJwt } from "./keys";
 import { errorResponse, handleRest, type ApiRole } from "./rest/handler";
@@ -22,6 +24,7 @@ export interface BackendProject {
   readonly secretKeyHash: string;
   readonly jwtSecret: string;
   readonly db: ProjectDatabase;
+  readonly auth: { readonly config: AuthConfig; readonly sendMail: SendAuthMail };
 }
 
 /** Las cabeceras que PostgREST deja ver a una página de otro origen; sin
@@ -118,6 +121,32 @@ export async function handleBackendRequest(req: Request, project: BackendProject
     const resolved = await resolveRole(req, project);
     if (!resolved.ok) return withCors(resolved.response, req);
     return withCors(await handleRest(req, rest[1] ?? "", { db: project.db, role: resolved.role, claims: resolved.claims }), req);
+  }
+  const auth = /^\/auth\/v1(\/.*)?$/.exec(path);
+  if (auth) {
+    const sub = auth[1] ?? "";
+    const url = new URL(req.url);
+    const apikey = req.headers.get("apikey") ?? url.searchParams.get("apikey");
+    let keyRole: "anon" | "service_role" | null = null;
+    if (!isOpenAuthPath(sub, req.method.toUpperCase())) {
+      if (!apikey) {
+        return withCors(gatewayError("No API key found in request", "No `apikey` request header or url param was found."), req);
+      }
+      if (apikey === project.publishableKey) keyRole = "anon";
+      else if (hashSecretKey(apikey) === project.secretKeyHash) keyRole = "service_role";
+      else return withCors(gatewayError("Invalid API key", "Double check your Supabase `anon` or `service_role` API key."), req);
+    }
+    return withCors(
+      await handleAuth(req, sub, {
+        db: project.db,
+        config: project.auth.config,
+        sendMail: project.auth.sendMail,
+        jwtSecret: project.jwtSecret,
+        keyRole,
+        apikey,
+      }),
+      req,
+    );
   }
   return withCors(
     new Response(JSON.stringify({ message: "no Route matched with those values" }), {

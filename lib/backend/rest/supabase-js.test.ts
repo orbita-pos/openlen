@@ -8,13 +8,10 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { handleBackendRequest, type BackendProject } from "../router";
-import { CLUSTER_ROLES_SQL, initProjectDatabase } from "../schema";
-import { newJwtSecret, newPublishableKey, newSecretKey, hashSecretKey } from "../keys";
-import { asRole, newTestDatabase, pgliteProjectDatabase } from "../testing/pglite";
+import { newJwtSecret, newPublishableKey } from "../keys";
+import { newTestProject, TEST_URL } from "../testing/project";
 
-const REF = "abcdefghijklmnopqrst";
-const DEV = `ol_${REF}`;
-const URL_ = `https://${REF}.openlen.app`;
+const URL_ = TEST_URL;
 
 // Lo que Len escribiría en supabase/migrations/…_init.sql.
 const MIGRACION = `
@@ -52,7 +49,6 @@ create function public.sin_nada() returns void language sql volatile as $$ selec
 let supabase: SupabaseClient;
 let project: BackendProject;
 let secretKey: string;
-const { pg, runner } = newTestDatabase();
 const conClave = (key: string, extra: Record<string, unknown> = {}) =>
   createClient(URL_, key, {
     global: { fetch: (input, init) => handleBackendRequest(new Request(input, init), project) },
@@ -61,23 +57,11 @@ const conClave = (key: string, extra: Record<string, unknown> = {}) =>
   });
 
 beforeAll(async () => {
-  await runner.exec(CLUSTER_ROLES_SQL);
-  await runner.exec(`create role ${DEV} nologin noinherit`);
-  await initProjectDatabase(runner, { devRole: DEV });
-  const r = await asRole(pg, DEV, null, (q) => q(MIGRACION));
-  if (r && typeof r === "object" && "error" in r) throw new Error(String(r.error));
-
-  const publishableKey = newPublishableKey();
-  secretKey = newSecretKey();
-  project = {
-    ref: REF,
-    publishableKey,
-    secretKeyHash: hashSecretKey(secretKey),
-    jwtSecret: newJwtSecret(),
-    db: pgliteProjectDatabase(pg),
-  };
-  supabase = conClave(publishableKey);
-  await runner.exec(`insert into public.secretos values (1, 'la receta')`);
+  const t = await newTestProject(MIGRACION);
+  project = t.project;
+  secretKey = t.secretKey;
+  supabase = conClave(project.publishableKey);
+  await t.pg.exec(`insert into public.secretos values (1, 'la receta')`);
 });
 
 describe("insert", () => {
