@@ -62,7 +62,7 @@
   .gal-grade--bright{filter:saturate(.82) contrast(.96) brightness(.93)}
   .proj-go{display:inline-flex;align-items:center;gap:.3rem;font-size:12.5px;font-weight:600;color:var(--accent);opacity:0;transform:translateY(2px);transition:opacity .25s,transform .25s}
   .proj:hover .proj-go{opacity:1;transform:none}
-  header[data-ol-stuck]{box-shadow:0 8px 24px -16px rgba(28,36,28,.5)}
+  header.is-stuck{box-shadow:0 8px 24px -16px rgba(28,36,28,.5)}
   .stat-cell{padding:26px 24px}
   /* 2x2 mobile hairlines */
   .stat-cell:nth-child(odd){border-right:1px solid var(--line)}
@@ -78,7 +78,7 @@
 <body class="grain">
 
   <!-- NAV -->
-  <header id="site-header" class="sticky top-0 z-40" data-ol-sticky style="background:rgba(251,247,239,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);transition:box-shadow .3s">
+  <header id="site-header" class="sticky top-0 z-40" style="background:rgba(251,247,239,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);transition:box-shadow .3s">
     <div class="wrap flex items-center justify-between" style="height:72px">
       <a href="#top" class="serif flex items-center gap-2" style="font-size:22px;letter-spacing:.16em;font-weight:600">
         <span style="width:10px;height:10px;border-radius:999px;background:var(--leaf);display:inline-block"></span>BROTE
@@ -317,6 +317,11 @@
       // Safety net: reveal everything after a beat in case the observer never
       // fires (no scroll, short viewport, gallery preview).
       setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+      // The header gains its shadow once the page scrolls (.is-stuck past 24px).
+      var header=document.getElementById('site-header'),frame=0;
+      function syncHeader(){frame=0;header.classList.toggle('is-stuck',window.scrollY>24)}
+      window.addEventListener('scroll',function(){if(!frame)frame=requestAnimationFrame(syncHeader)},{passive:true});
+      syncHeader();
     })();
   </script>
 </body>

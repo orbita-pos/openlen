@@ -127,7 +127,7 @@
           <div class="card" style="display:flex;align-items:center;gap:12px;padding:11px 12px 11px 18px;max-width:430px;border-color:var(--line-strong)">
             <span class="mono" style="color:var(--faint);font-size:14px">$</span>
             <code id="yunque-cmd-hero" class="mono" style="font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">curl -fsSL yunque.sh | sh</code>
-            <button class="copybtn" data-ol-copy="yunque-cmd-hero" data-ol-copied="Copiado ✓" aria-label="Copiar comando de instalación">Copiar</button>
+            <button class="copybtn" data-copy="yunque-cmd-hero" data-copied="Copiado ✓" aria-label="Copiar comando de instalación">Copiar</button>
           </div>
 
           <div class="flex flex-wrap gap-3" style="margin-top:26px">
@@ -424,7 +424,7 @@ mode    = <span style="color:var(--steel)">"read-write"</span>   <span style="co
         <div class="card mx-auto" style="display:flex;align-items:center;gap:12px;padding:11px 12px 11px 18px;max-width:430px;border-color:var(--line-strong)">
           <span class="mono" style="color:var(--faint);font-size:14px">$</span>
           <code id="yunque-cmd-cta" class="mono" style="font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">curl -fsSL yunque.sh | sh</code>
-          <button class="copybtn" data-ol-copy="yunque-cmd-cta" data-ol-copied="Copiado ✓" aria-label="Copiar comando de instalación">Copiar</button>
+          <button class="copybtn" data-copy="yunque-cmd-cta" data-copied="Copiado ✓" aria-label="Copiar comando de instalación">Copiar</button>
         </div>
 
         <div class="flex flex-wrap gap-3 justify-center" style="margin-top:26px">
@@ -483,11 +483,16 @@ mode    = <span style="color:var(--steel)">"read-write"</span>   <span style="co
       // Safety net: reveal everything after a beat in case the observer never
       // fires (no scroll, short viewport, static preview).
       setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
-      // Copy install command is CSS-free but JS-free too now (data-ol-copy on
-      // .copybtn) -- OpenLen bakes the real runtime at publish time. This
-      // whole script never runs on a published/cloned page anyway (OpenLen
-      // strips every <script>); what's left only executes in the un-cloned
-      // template preview, for the reveal-on-scroll effect above.
+      // Copy buttons: copy the text of the element named by `data-copy`, then
+      // show `data-copied` for two seconds.
+      document.addEventListener('click',function(e){
+        var b=e.target.closest&&e.target.closest('[data-copy]');if(!b)return;
+        var src=document.getElementById(b.getAttribute('data-copy'));if(!src)return;
+        var text=src.innerText||src.textContent;
+        function done(){var msg=b.getAttribute('data-copied');if(!msg||b.hasAttribute('data-copying'))return;var was=b.innerHTML;b.setAttribute('data-copying','');b.textContent=msg;setTimeout(function(){b.innerHTML=was;b.removeAttribute('data-copying')},2000)}
+        function fallback(){var t=document.createElement('textarea');t.style.cssText='position:fixed;opacity:0';t.value=text;document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch(_){}t.remove();done()}
+        if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done,fallback);else fallback();
+      });
     })();
   </script>
 </body>

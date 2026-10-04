@@ -126,7 +126,7 @@
       <div class="reveal" style="margin-top:34px;display:flex;flex-direction:column;align-items:center;gap:16px">
         <div class="install">
           <span class="cmd"><span style="color:var(--accent)">$</span> <span id="gremio-cmd-hero">npm create gremio@latest</span></span>
-          <button class="copy" aria-label="Copiar comando" data-ol-copy="gremio-cmd-hero" data-ol-copied="✓">
+          <button class="copy" aria-label="Copiar comando" data-copy="gremio-cmd-hero" data-copied="✓">
             <span class="mono" style="font-size:16px">⧉</span>
           </button>
         </div>
@@ -381,7 +381,7 @@
         <div style="display:flex;justify-content:center;margin-bottom:26px">
           <div class="install">
             <span class="cmd"><span style="color:var(--accent)">$</span> <span id="gremio-cmd-footer">npm create gremio@latest</span></span>
-            <button class="copy" aria-label="Copiar comando" data-ol-copy="gremio-cmd-footer" data-ol-copied="✓">
+            <button class="copy" aria-label="Copiar comando" data-copy="gremio-cmd-footer" data-copied="✓">
               <span class="mono" style="font-size:16px">⧉</span>
             </button>
           </div>
@@ -443,6 +443,16 @@
       // Safety net: reveal everything after a beat in case the observer never
       // fires (no scroll, short viewport, static preview).
       setTimeout(function(){els.forEach(function(el){el.classList.add('in')})},1600);
+      // Copy buttons: copy the text of the element named by `data-copy`, then
+      // show `data-copied` for two seconds.
+      document.addEventListener('click',function(e){
+        var b=e.target.closest&&e.target.closest('[data-copy]');if(!b)return;
+        var src=document.getElementById(b.getAttribute('data-copy'));if(!src)return;
+        var text=src.innerText||src.textContent;
+        function done(){var msg=b.getAttribute('data-copied');if(!msg||b.hasAttribute('data-copying'))return;var was=b.innerHTML;b.setAttribute('data-copying','');b.textContent=msg;setTimeout(function(){b.innerHTML=was;b.removeAttribute('data-copying')},2000)}
+        function fallback(){var t=document.createElement('textarea');t.style.cssText='position:fixed;opacity:0';t.value=text;document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch(_){}t.remove();done()}
+        if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done,fallback);else fallback();
+      });
     })();
   </script>
 </body>
