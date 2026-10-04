@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildAgentMessages } from "./context";
 import { dynamisAvailable, modeOfTurn } from "./dynamis";
 
-const CON = { OPENLEN_TERMINAL: "1" };
+const CON = { OPENLEN_TERMINAL: "1", OPENLEN_DYNAMIS: "1" };
 const SIN = {};
 
 describe("el modo del turno, saneado en la ruta", () => {
@@ -17,9 +17,19 @@ describe("el modo del turno, saneado en la ruta", () => {
 
   it("con la terminal apagada no existe: el turno es de Len y el panel no lo ofrece", () => {
     expect(modeOfTurn("dynamis", SIN)).toBe("len");
-    expect(modeOfTurn("dynamis", { OPENLEN_TERMINAL: "0" })).toBe("len");
+    expect(modeOfTurn("dynamis", { OPENLEN_TERMINAL: "0", OPENLEN_DYNAMIS: "1" })).toBe("len");
     expect(dynamisAvailable(SIN)).toBe(false);
     expect(dynamisAvailable(CON)).toBe(true);
+  });
+
+  // 🔴 APARCADO (03/10/2026). Len 2.5 sale con la terminal encendida, y ESO
+  // solo no puede traer el selector de Odyssey al chat de todos.
+  it("aparcado: con la terminal encendida pero sin OPENLEN_DYNAMIS=1, no existe", () => {
+    expect(dynamisAvailable({ OPENLEN_TERMINAL: "1" })).toBe(false);
+    expect(modeOfTurn("dynamis", { OPENLEN_TERMINAL: "1" })).toBe("len");
+    for (const raro of ["", "0", "true", "yes", " 2"]) {
+      expect(dynamisAvailable({ OPENLEN_TERMINAL: "1", OPENLEN_DYNAMIS: raro })).toBe(false);
+    }
   });
 });
 
@@ -53,7 +63,8 @@ describe("el mensaje que se manda, según el modo", () => {
   });
 
   it("sin la terminal, el modo no cambia ni un byte", () => {
-    vi.stubEnv("OPENLEN_TERMINAL", "");
+    // Encendida por defecto desde N45: apagarla es el literal "0".
+    vi.stubEnv("OPENLEN_TERMINAL", "0");
     expect(armar("dynamis")).toBe(armar());
   });
 });

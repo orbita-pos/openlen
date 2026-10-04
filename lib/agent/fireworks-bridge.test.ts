@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { Message } from "@/lib/ai-gateway";
 import { messagesForFireworks, toolsForFireworks } from "./fireworks-bridge";
 import { buildFunctionDeclarations } from "./catalog";
 
@@ -122,6 +123,17 @@ describe("puente del Agente al cable de Fireworks", () => {
       { role: "user", content: "", functionResponses: [{ name: "leer_estado", response: { ok: true } }] },
     ]);
     expect(wire).toEqual([{ role: "user", content: 'leer_estado: {"ok":true}' }]);
+  });
+
+  // N39: el historial marca la petición del dueño que abrió cada turno
+  // (`opensTurn`) para CONTAR turnos. Es nuestro, no del modelo: no viaja.
+  it("la marca de turno del historial no llega al cable", () => {
+    const out = messagesForFireworks([
+      { role: "user", content: "hola", opensTurn: true } as Message,
+      { role: "assistant", content: "¡Hola!" },
+    ]);
+    expect(out[0]).toEqual({ role: "user", content: "hola" });
+    expect(JSON.stringify(out)).not.toContain("opensTurn");
   });
 
   it("deja en paz una conversación sin herramientas", () => {

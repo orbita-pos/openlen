@@ -128,13 +128,34 @@ describe("runAgentLoop", () => {
     expect(r.terminalError).toBe(false);
   });
 
-  // EL MOTIVO LLEGA A LA TARJETA, y no sólo al modelo (2026-09-18).
+  // 🔴 N41 (taller, 03/10): LO QUE LEE EL MODELO NO VA A LA TARJETA.
   //
-  // El `{ok:false, error}` de arriba ya volvía al modelo como dato. Lo que no
-  // salía del servidor era el PORQUÉ para quien mira: la tarjeta se pintaba
-  // «falló» y punto, con el motivo escrito a dos capas de distancia. Es la
-  // forma de Claude Code: un solo texto, el mismo para los dos.
-  it("un fallo emite su motivo en el evento de la tarjeta", async () => {
+  // Desde el 2026-09-18 la tarjeta roja pintaba el `error` que la herramienta
+  // le devolvía al modelo («un solo texto, como Claude Code»). Con Len en inglés
+  // el dueño leía «falló · the user has never said "reformas-bernal" — you made
+  // that name up…». Ahora la tarjeta lleva el motivo DEL DUEÑO, en código, y
+  // sólo si la herramienta lo declaró; el chat compone la frase en su idioma.
+  it("🔴 un fallo lleva el motivo del dueño que declaró la herramienta, no el texto del modelo", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "publicar", args: {} }, done],
+        [{ type: "text_delta", text: "¿qué dirección quieres?" }, done],
+      ),
+      runTool: async () => ({
+        response: { ok: false, error: 'the user has never said "reformas-bernal" — you made that name up' },
+        ownerReason: { code: "address_needed" },
+      }),
+      emit: (e) => events.push(e),
+    });
+    const fallo = events.find((e) => e.type === "action" && e.status === "error");
+    expect(fallo).toBeDefined();
+    expect((fallo as { ownerReason?: unknown }).ownerReason).toEqual({ code: "address_needed" });
+    expect("motivo" in fallo!).toBe(false);
+  });
+
+  it("un fallo sin motivo del dueño no lleva ninguno: la tarjeta dirá «No pudo»", async () => {
     const events: AgentStreamEvent[] = [];
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],
@@ -147,7 +168,8 @@ describe("runAgentLoop", () => {
     });
     const fallo = events.find((e) => e.type === "action" && e.status === "error");
     expect(fallo).toBeDefined();
-    expect((fallo as { motivo?: string }).motivo).toBe("target missing");
+    expect("motivo" in fallo!).toBe(false);
+    expect("ownerReason" in fallo!).toBe(false);
   });
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -265,11 +287,15 @@ describe("runAgentLoop", () => {
         [{ type: "function_call", name: "editar_pagina", args: {} }, done],
         [{ type: "text_delta", text: "hecho" }, done],
       ),
-      runTool: async () => ({ response: { ok: true, error: "no es un fallo" } }),
+      // Ni el motivo del dueño: sólo viaja con un fallo.
+      runTool: async () => ({ response: { ok: true, error: "no es un fallo" }, ownerReason: { code: "page_changed" } }),
       emit: (e) => events.push(e),
     });
     for (const e of events) {
-      if (e.type === "action") expect("motivo" in e).toBe(false);
+      if (e.type === "action") {
+        expect("motivo" in e).toBe(false);
+        expect("ownerReason" in e).toBe(false);
+      }
     }
   });
 
@@ -1768,8 +1794,46 @@ describe("corregirle el rumbo a media faena", () => {
       emit: () => {},
       leerDireccion: () => { lecturas += 1; return null; },
     });
-    // Dos vueltas del bucle ⇒ dos lecturas, aunque la primera hiciera 2 tools.
-    expect(lecturas).toBe(2);
+    // Dos vueltas del bucle ⇒ dos lecturas, aunque la primera hiciera 2 tools;
+    // y una más al cerrar (2026-10-03: la que llega durante el cierre no se pierde).
+    expect(lecturas).toBe(3);
+  });
+
+  it("🔴 la que llega MIENTRAS ESCRIBE EL CIERRE no se pierde: el turno sigue y la lee", async () => {
+    // Visto en el taller el 2026-10-03: el POST a /api/agent/dirigir llegó
+    // durante la última llamada —la que ya no pide herramientas—, se aceptó con
+    // 200, y el turno cerró sin leerla. Vuelta 1: edita. Vuelta 2: escribe el
+    // cierre, y la corrección «llega» durante esa llamada, así que sólo la puede
+    // ver la lectura del cierre (la tercera).
+    const events: AgentStreamEvent[] = [];
+    const vistos: Message[][] = [];
+    let lecturas = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hazme un hero" }],
+      tools: [],
+      openStream: (msgs) => {
+        vistos.push(msgs.map((m) => ({ ...m })));
+        const n = vistos.length;
+        return (async function* () {
+          if (n === 1) yield { type: "function_call", name: "editar_pagina", args: {} } as StreamEvent;
+          else yield { type: "text_delta", text: n === 2 ? "Listo, quedó azul." : "Hecho en verde." } as StreamEvent;
+          yield usage(5);
+          yield doneEv;
+        })();
+      },
+      runTool: async () => ({ response: { ok: true }, updatedHtml: "<p>x</p>" }),
+      emit: (e) => events.push(e),
+      leerDireccion: () => (++lecturas === 3 ? "mejor verde" : null),
+    });
+
+    expect(events.some((e) => e.type === "direccion" && e.texto === "mejor verde")).toBe(true);
+    expect(vistos).toHaveLength(3);
+    // La tercera llamada ve lo que acababa de decir Y la corrección, en orden.
+    const ultimos = vistos[2].slice(-2);
+    expect(ultimos[0]).toMatchObject({ role: "assistant", content: "Listo, quedó azul." });
+    expect(ultimos[1]?.role).toBe("user");
+    expect(String(ultimos[1]?.content)).toContain("mejor verde");
+    expect(r.finalText).toBe("Hecho en verde.");
   });
 
   it("una correccion que llega EN EL TOPE todavia se lee y da margen", async () => {
@@ -3792,7 +3856,8 @@ describe("F1 · las lecturas del principio de la vuelta, en paralelo detrás de 
   });
 
   it("sin la palanca, todo en serie como hoy (brazo de control)", async () => {
-    const { maxEnVuelo, respuestas } = await correr(undefined);
+    // Encendida por defecto desde N45: apagarla es el literal "0".
+    const { maxEnVuelo, respuestas } = await correr("0");
     expect(maxEnVuelo).toBe(1);
     expect(respuestas).toEqual(["Read /a", "Read /b", "Edit /c", "Read /d"]);
   });

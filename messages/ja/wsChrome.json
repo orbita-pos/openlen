@@ -71,7 +71,8 @@
       }
     },
     "tabLocked": "{label} — ロック中",
-    "collapsePanel": "パネルを折りたたむ"
+    "collapsePanel": "パネルを折りたたむ",
+    "resizeChat": "ドラッグで幅を変更 · ダブルクリックで標準サイズ"
   },
   "preview": {
     "zoomFit": "全体表示",
@@ -124,6 +125,7 @@
       "splitRight": "画像を右に",
       "swap": "画像を入れ替え"
     },
+    "copyChip": "テキストも合わせて更新しますか？",
     "code": {
       "title": "ページのコード",
       "close": "閉じる",

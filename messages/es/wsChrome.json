@@ -71,7 +71,8 @@
       }
     },
     "tabLocked": "{label} — bloqueado",
-    "collapsePanel": "Contraer panel"
+    "collapsePanel": "Contraer panel",
+    "resizeChat": "Arrastra para cambiar el ancho · doble clic: tamaño normal"
   },
   "preview": {
     "zoomFit": "Ajustar",
@@ -124,6 +125,7 @@
       "splitRight": "Imagen a la derecha",
       "swap": "Intercambiar imágenes"
     },
+    "copyChip": "¿Ajustar el texto a juego?",
     "code": {
       "title": "El código de tu página",
       "close": "Cerrar",

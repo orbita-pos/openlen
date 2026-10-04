@@ -13,6 +13,30 @@ describe("seccionesCambiadas", () => {
     expect(seccionesCambiadas(doc(HERO, PRECIOS), doc(HERO, PRECIOS))).toEqual([]);
   });
 
+  it("un <br> del encabezado separa palabras en la etiqueta", () => {
+    const antes = "<body><header>x</header><section><h1>Bernal<br>Reformas<br>Integrales</h1><a>Ver servicios</a></section></body>";
+    const despues = "<body><header>x</header><section><h1>Bernal<br>Reformas<br>Integrales</h1><a>Pide presupuesto</a></section></body>";
+    expect(seccionesCambiadas(antes, despues)).toEqual([
+      { tipo: "cambiada", etiqueta: "Bernal Reformas Integrales", indice: 1 },
+    ]);
+  });
+
+  it("un trozo del encabezado que se pinta en su línea también separa palabras", () => {
+    // Visto en la base de desarrollo (N28): AETHERBORN<span class="block">…</span>
+    // sale en dos líneas y la etiqueta decía «AETHERBORNLeyendas del Aetherium».
+    const h1 = '<h1>AETHERBORN<span class="block">Leyendas</span><span class="hidden md:block">del</span><div>Aetherium</div></h1>';
+    const antes = `<body><section>${h1}<a>Jugar</a></section></body>`;
+    const despues = `<body><section>${h1}<a>Jugar gratis</a></section></body>`;
+    expect(seccionesCambiadas(antes, despues)[0].etiqueta).toBe("AETHERBORN Leyendas del Aetherium");
+  });
+
+  it("dos trozos EN LÍNEA sin espacio siguen pegados: así se pintan", () => {
+    const h1 = '<h1>Solstice<span class="text-[color:var(--ol-accent)]">.</span> Tour<em class="inline-block">s</em></h1>';
+    const antes = `<body><section>${h1}<a>a</a></section></body>`;
+    const despues = `<body><section>${h1}<a>b</a></section></body>`;
+    expect(seccionesCambiadas(antes, despues)[0].etiqueta).toBe("Solstice. Tours");
+  });
+
   it("una sección editada sale como cambiada, con su encabezado por etiqueta", () => {
     const despues = doc(HERO, PRECIOS.replace("Desde 40€", "Desde 45€"));
     expect(seccionesCambiadas(doc(HERO, PRECIOS), despues)).toEqual([

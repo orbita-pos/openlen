@@ -43,11 +43,19 @@ describe("la tarjeta de un fichero lo abre", () => {
     expect(abrir).toHaveBeenCalledWith("/menu/index.html");
   });
 
-  it("roja, el motivo sigue en el title; mientras corre, o sin quien abra, es una fila como siempre", () => {
+  it("roja, el motivo del dueño sigue en el title; mientras corre, o sin quien abra, es una fila como siempre", () => {
+    // N41: en rojo, el `ownerReason` traducido; lo que leyó el modelo (`motivo`) no.
     const rota = pintar(
+      <AgentActionCard
+        action={{ tool: "Write", status: "error", summary: "index.html", motivo: "Cannot create /x/index.html…", ownerReason: { code: "site_page_limit", limit: 20 } }}
+        onAbrirFichero={() => {}}
+      />,
+    );
+    expect(rota.querySelector("button")!.getAttribute("title")).toBe("agent.ownerReason.site_page_limit");
+    const deAntes = pintar(
       <AgentActionCard action={{ tool: "Write", status: "error", summary: "index.html", motivo: "data-slot-path" }} onAbrirFichero={() => {}} />,
     );
-    expect(rota.querySelector("button")!.getAttribute("title")).toBe("data-slot-path");
+    expect(deAntes.querySelector("button")!.getAttribute("title")).toBe("agent.abrirFichero");
     expect(pintar(<AgentActionCard action={{ tool: "Read", status: "running", summary: "index.html" }} onAbrirFichero={() => {}} />).querySelector("button")).toBeNull();
     expect(pintar(<AgentActionCard action={{ tool: "Read", status: "done", summary: "index.html" }} />).querySelector("button")).toBeNull();
     expect(pintar(<AgentActionCard action={{ tool: "Grep", status: "done", summary: "Marea" }} onAbrirFichero={() => {}} />).querySelector("button")).toBeNull();

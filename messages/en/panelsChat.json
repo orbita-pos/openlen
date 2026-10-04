@@ -46,7 +46,13 @@
     "cancelled": "Cancelled.",
     "network": "Network error — try again.",
     "pageTooLarge": "This page is too large for one assistant turn. Split it into several pages, or ask me for a narrower change.",
-    "noTaggableElements": "This page has no elements I can edit yet. Add some content and try again."
+    "noTaggableElements": "This page has no elements I can edit yet. Add some content and try again.",
+    "sessionExpired": "Your session ended. Sign in again and resend the message.",
+    "notFound": "We couldn’t find this page — it may have been deleted. Reload the workspace.",
+    "pageChanged": "The page changed in the meantime. Reload the workspace and try again.",
+    "serverError": "The server failed ({status}). Try again in a moment.",
+    "scopeTooLarge": "The section you picked is too large. Pick a smaller one or remove the scope.",
+    "promptLength": "A message must be between 1 and 10,000 characters. Shorten it and send it again."
   },
   "chars": {
     "count": "{count} chars",
@@ -72,9 +78,6 @@
     "selectSectionTitle": "Scope your next message to one section",
     "cancelSelection": "Cancel selection mode (ESC)",
     "cancelSelectionTitle": "Click any section in the preview, or ESC to cancel",
-    "autofill": "Autofill with my info",
-    "autofillLabel": "Autofill",
-    "autofillTitle": "Autofill the template with your business info — upload a screenshot or type your data",
     "send": "Send",
     "stop": "Stop",
     "steer": "Steer",
@@ -138,5 +141,120 @@
     "titulo": "Comments on the code",
     "deAntes": "before the turn",
     "quitar": "Remove comment"
+  },
+  "newChat": {
+    "header": {
+      "line": "<b>Chat</b> with Len",
+      "conversations": "Conversations",
+      "newChat": "Start over",
+      "newChatHint": "Saves this conversation and starts a new one. Len won't remember it; your memory and the page notes stay.",
+      "busy": "Wait for Len to finish before switching conversations.",
+      "failed": "Couldn't switch conversations. Try again.",
+      "archived": "Earlier conversations",
+      "archivedEmpty": "No saved conversations yet.",
+      "reopen": "Go back to this conversation",
+      "messages": "{count, plural, one {# message} other {# messages}}"
+    },
+    "memory": {
+      "empty": "Len doesn't remember anything about you yet. When you tell it something that applies to all your pages, you'll see it here."
+    },
+    "empty": {
+      "title": "What shall we do to your page today?",
+      "subtitle": "Ask in your own words. Len does it, shows you what changed, and you can undo it.",
+      "suggestions": {
+        "photos": "Put real photos on the homepage",
+        "form": "Add a contact form",
+        "mobile": "Check how it looks on mobile",
+        "publish": "Publish my page"
+      }
+    },
+    "steps": {
+      "running": "Len is working",
+      "done": "{count, plural, one {Len took # step} other {Len took # steps}}"
+    },
+    "activity": {
+      "reading": "Reading your page",
+      "editing": "Changing the page",
+      "terminal": "Using the terminal",
+      "photos": "Looking for photos",
+      "image": "Editing an image",
+      "web": "Searching the web",
+      "checking": "Checking the result",
+      "publishing": "Getting ready to publish",
+      "remembering": "Noting what you told me",
+      "results": "Looking at your results",
+      "reply": "Drafting a reply",
+      "module": "Turning on a module",
+      "undoing": "Undoing the last change",
+      "asking": "Preparing a question",
+      "working": "Working"
+    },
+    "live": {
+      "thinking": "Thinking",
+      "writing": "Writing",
+      "working": "working · {seconds} s",
+      "onServer": "keeps working even if you close this tab",
+      "waitingAnswer": "Waiting for your answer",
+      "waitingApproval": "Waiting for your approval",
+      "yourTurn": "Your turn · paused",
+      "done": "Done",
+      "doneHint": "ask for something else",
+      "stopped": "Stopped",
+      "stoppedHint": "what it already did stays",
+      "failed": "Couldn't finish"
+    },
+    "question": {
+      "label": "Len is asking",
+      "hint": "Answer below, in your own words.",
+      "answered": "You answered: {answer}"
+    },
+    "changes": {
+      "showAll": "See all {count} changes",
+      "showLess": "See less",
+      "compare": "Compare before and after"
+    },
+    "compare": {
+      "title": "Before and after",
+      "subtitle": "Drag the bar to compare the page from before the turn with the page now.",
+      "close": "Close",
+      "before": "Before",
+      "after": "After",
+      "drag": "Drag to compare"
+    },
+    "close": {
+      "applied": "Applied",
+      "appliedEdits": "Applied · {count, plural, one {# edit} other {# edits}}",
+      "credits": "{credits} credits"
+    },
+    "feedback": {
+      "up": "This helped",
+      "down": "This didn't help",
+      "thanks": "Thanks for telling us.",
+      "failed": "Couldn't save your vote. Try again.",
+      "title": "What went wrong?",
+      "reasons": {
+        "made_up": "Made things up",
+        "not_what_i_asked": "Didn't do what I asked",
+        "touched_other": "Changed something I didn't ask for",
+        "looks_bad": "Looks bad",
+        "too_slow": "Took too long"
+      },
+      "notePlaceholder": "Tell us more (optional)",
+      "privacy": "The OpenLen team reads this to improve Len.",
+      "send": "Send",
+      "cancel": "Cancel"
+    },
+    "composer": {
+      "plus": "Image and more",
+      "on": "On",
+      "disclaimer": "Len can make mistakes. Check your page before publishing it."
+    },
+    "layout": {
+      "float": "Pop out the chat",
+      "dock": "Dock it again",
+      "minimize": "Minimize to Len",
+      "open": "Open the chat",
+      "resize": "Drag to resize"
+    }
   }
 }

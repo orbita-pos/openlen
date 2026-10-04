@@ -9,6 +9,8 @@ import { esDuenoDelProyecto } from "@/lib/voz/dueno";
 import { abrirSesionDeVoz } from "@/lib/voz/sesion";
 import { topeDeLlamadas } from "@/lib/voz/tope";
 import { vozParaIdioma } from "@/lib/voz/voces";
+import { SESSION_OPEN_SECONDS, voiceCenticredits, watchVoiceCall } from "@/lib/voz/billing";
+import { debitCredits, getCreditState } from "@/lib/credits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +33,11 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   if (!projectId || !sdp || sdp.length > 20_000) return json({ error: "cuerpo_invalido" }, 400);
 
   if (!(await esDuenoDelProyecto(projectId, userId))) return json({ error: "proyecto_no_encontrado" }, 404);
+  // LA VOZ SE COBRA (Jesús, 03/10: 5 créditos por minuto). Para abrirla hace falta
+  // al menos lo que OpenAI cobra al abrir; a media llamada la cuelga el servidor
+  // si el saldo se acaba (`lib/voz/billing.ts`).
+  const { balance } = await getCreditState(userId);
+  if (balance < voiceCenticredits(SESSION_OPEN_SECONDS)) return json({ error: "sin_creditos" }, 402);
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return json({ error: "sin_clave" }, 503);
   if (!topeDeLlamadas.intentar()) return json({ error: "tope_del_dia" }, 429);
@@ -42,6 +49,19 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
     return json({ error: "openai", status: r.status }, 502);
   }
   console.log(`[voz] abierta ${r.sesionId ?? "?"} usuario=${userId} proyecto=${projectId} idioma=${idioma} voz=${config.voz}`);
+  // El servidor se engancha a ESA sesión y la cobra con los segundos que le dice
+  // OpenAI; no se espera: vive lo que dure la llamada, fuera de esta petición.
+  if (r.sesionId) {
+    watchVoiceCall({
+      sessionId: r.sesionId,
+      apiKey,
+      userId,
+      charge: debitCredits,
+      balance: async (u) => (await getCreditState(u)).balance,
+    });
+  } else {
+    console.error(`[voz] OpenAI no dio id de sesión: la llamada de usuario=${userId} no se puede cobrar`);
+  }
   return json({ sdp: r.sdp, sesionId: r.sesionId, saludo: config.saludo });
 });
 

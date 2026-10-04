@@ -46,7 +46,13 @@
     "cancelled": "Annulé.",
     "network": "Erreur réseau — réessayez.",
     "pageTooLarge": "Cette page est trop volumineuse pour un tour de l’assistant. Divisez-la en plusieurs pages ou demandez une modification plus ciblée.",
-    "noTaggableElements": "Cette page n’a pas encore d’éléments que je puisse modifier. Ajoutez du contenu et réessayez."
+    "noTaggableElements": "Cette page n’a pas encore d’éléments que je puisse modifier. Ajoutez du contenu et réessayez.",
+    "sessionExpired": "Votre session a expiré. Reconnectez-vous et renvoyez le message.",
+    "notFound": "Nous ne trouvons pas cette page — elle a peut-être été supprimée. Rechargez l’éditeur.",
+    "pageChanged": "La page a changé entre-temps. Rechargez l’éditeur et réessayez.",
+    "serverError": "Le serveur a échoué ({status}). Réessayez dans un instant.",
+    "scopeTooLarge": "La section choisie est trop grande. Choisissez-en une plus petite ou retirez la sélection.",
+    "promptLength": "Un message doit faire entre 1 et 10 000 caractères. Raccourcissez-le et renvoyez-le."
   },
   "chars": {
     "count": "{count} caractères",
@@ -72,9 +78,6 @@
     "selectSectionTitle": "Ciblez votre prochain message sur une seule section",
     "cancelSelection": "Quitter le mode sélection (ESC)",
     "cancelSelectionTitle": "Cliquez sur une section de l'aperçu, ou ESC pour annuler",
-    "autofill": "Remplir avec mes infos",
-    "autofillLabel": "Remplissage auto",
-    "autofillTitle": "Remplir le template avec les infos de votre activité — importez une capture d'écran ou saisissez vos données",
     "send": "Envoyer",
     "stop": "Arrêter",
     "steer": "Rediriger",
@@ -138,5 +141,120 @@
     "titulo": "Commentaires sur le code",
     "deAntes": "avant le tour",
     "quitar": "Retirer le commentaire"
+  },
+  "newChat": {
+    "header": {
+      "line": "<b>Chat</b> avec Len",
+      "conversations": "Conversations",
+      "newChat": "Repartir de zéro",
+      "newChatHint": "Garde cette conversation et en commence une autre. Len ne s'en souviendra pas ; votre mémoire et les notes de la page restent.",
+      "busy": "Attendez que Len ait fini pour changer de conversation.",
+      "failed": "Impossible de changer de conversation. Réessayez.",
+      "archived": "Conversations précédentes",
+      "archivedEmpty": "Aucune conversation enregistrée pour l'instant.",
+      "reopen": "Revenir à cette conversation",
+      "messages": "{count, plural, one {# message} other {# messages}}"
+    },
+    "memory": {
+      "empty": "Len ne se souvient encore de rien à votre sujet. Quand vous lui direz quelque chose qui vaut pour toutes vos pages, vous le verrez ici."
+    },
+    "empty": {
+      "title": "Qu'est-ce qu'on fait aujourd'hui sur votre page ?",
+      "subtitle": "Demandez-le avec vos mots. Len le fait, vous montre ce qui a changé, et vous pouvez annuler.",
+      "suggestions": {
+        "photos": "Mets de vraies photos sur l'accueil",
+        "form": "Ajoute un formulaire de contact",
+        "mobile": "Vérifie l'affichage sur mobile",
+        "publish": "Publie ma page"
+      }
+    },
+    "steps": {
+      "running": "Len travaille",
+      "done": "{count, plural, one {Len a fait # étape} other {Len a fait # étapes}}"
+    },
+    "activity": {
+      "reading": "Lecture de votre page",
+      "editing": "Modification de la page",
+      "terminal": "Utilisation du terminal",
+      "photos": "Recherche de photos",
+      "image": "Retouche d'une image",
+      "web": "Recherche sur internet",
+      "checking": "Vérification du résultat",
+      "publishing": "Préparation de la publication",
+      "remembering": "Je note ce que vous m'avez dit",
+      "results": "Consultation de vos résultats",
+      "reply": "Préparation d'une réponse",
+      "module": "Activation d'un module",
+      "undoing": "Annulation de la dernière modification",
+      "asking": "Préparation d'une question",
+      "working": "Au travail"
+    },
+    "live": {
+      "thinking": "Réflexion",
+      "writing": "Rédaction",
+      "working": "au travail · {seconds} s",
+      "onServer": "continue même si vous fermez cet onglet",
+      "waitingAnswer": "En attente de votre réponse",
+      "waitingApproval": "En attente de votre accord",
+      "yourTurn": "À vous · en pause",
+      "done": "Terminé",
+      "doneHint": "demandez autre chose",
+      "stopped": "Arrêté",
+      "stoppedHint": "ce qui est fait reste fait",
+      "failed": "N'a pas pu terminer"
+    },
+    "question": {
+      "label": "Len vous demande",
+      "hint": "Répondez ci-dessous, avec vos mots.",
+      "answered": "Vous avez répondu : {answer}"
+    },
+    "changes": {
+      "showAll": "Voir les {count} modifications",
+      "showLess": "Voir moins",
+      "compare": "Comparer avant et après"
+    },
+    "compare": {
+      "title": "Avant et après",
+      "subtitle": "Faites glisser la barre pour comparer la page d'avant le tour avec celle d'aujourd'hui.",
+      "close": "Fermer",
+      "before": "Avant",
+      "after": "Après",
+      "drag": "Faites glisser pour comparer"
+    },
+    "close": {
+      "applied": "Appliqué",
+      "appliedEdits": "Appliqué · {count, plural, one {# modification} other {# modifications}}",
+      "credits": "{credits} crédits"
+    },
+    "feedback": {
+      "up": "Ça m'a aidé",
+      "down": "Ça ne m'a pas aidé",
+      "thanks": "Merci de nous l'avoir dit.",
+      "failed": "Impossible d'enregistrer ton vote. Réessaie.",
+      "title": "Qu'est-ce qui n'a pas marché ?",
+      "reasons": {
+        "made_up": "A inventé des données",
+        "not_what_i_asked": "N'a pas fait ce que j'ai demandé",
+        "touched_other": "A touché à autre chose",
+        "looks_bad": "Le rendu est mauvais",
+        "too_slow": "A pris trop de temps"
+      },
+      "notePlaceholder": "Dites-nous en plus (facultatif)",
+      "privacy": "L'équipe OpenLen le lit pour améliorer Len.",
+      "send": "Envoyer",
+      "cancel": "Annuler"
+    },
+    "composer": {
+      "plus": "Image et plus",
+      "on": "Actif",
+      "disclaimer": "Len peut se tromper. Vérifiez votre page avant de la publier."
+    },
+    "layout": {
+      "float": "Détacher le chat",
+      "dock": "Rattacher",
+      "minimize": "Réduire en Len",
+      "open": "Ouvrir le chat",
+      "resize": "Faites glisser pour redimensionner"
+    }
   }
 }

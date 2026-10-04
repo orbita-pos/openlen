@@ -18,10 +18,15 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-const FUENTE = readFileSync(
+// El envío vive en la lógica compartida (`chat/use-agent-chat.ts`, la usan los
+// dos chats) y la burbuja que lo pinta, en cada chat: se leen juntos, la lógica
+// primero.
+const FUENTE = [
+  path.join(process.cwd(), "components", "workspace-v2", "chat", "use-agent-chat.ts"),
   path.join(process.cwd(), "components", "workspace-v2", "panels", "chat-panel.tsx"),
-  "utf8",
-);
+]
+  .map((f) => readFileSync(f, "utf8"))
+  .join("\n");
 
 /** El cuerpo del envío: de donde se vacía el borrador a donde arranca el
  *  streaming. Acotar la búsqueda es lo que hace que esto signifique algo — la

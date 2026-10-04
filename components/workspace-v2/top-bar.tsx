@@ -90,6 +90,11 @@ interface TopBarProps {
    *  name slot shows "Loading…" until the real title resolves, so the
    *  workspace stops flashing the mock "Pricing Page" placeholder. */
   projectLoading?: boolean;
+  /** El proyecto de la URL no se pudo abrir (N31). Ni «Cargando…», que sería
+   *  mentira, ni el nombre por defecto («Página de precios»), que sería otra:
+   *  «Página no disponible», sin logo y sin «Cambiar nombre». El menú se queda,
+   *  porque cambiar a otra página es justo la salida. */
+  projectUnavailable?: boolean;
   /** Lightweight save indicator next to the project name. Parent toggles
    *  this when section/design edits autosave. Null/idle = hidden. */
   savingStatus?: "idle" | "saving" | "saved" | null;
@@ -138,6 +143,7 @@ export function TopBar({
   onRename,
   projectLogoUrl,
   projectLoading = false,
+  projectUnavailable = false,
   savingStatus = null,
   onPublish,
   published,
@@ -542,7 +548,7 @@ export function TopBar({
           disabled={projectLoading}
           aria-haspopup="menu"
           aria-expanded={proyectosOpen}
-          className="inline-flex items-center gap-1.5 max-w-[260px] lg:max-w-[420px] min-w-0 px-2 h-7 rounded-md hover:bg-hover transition group disabled:cursor-default disabled:hover:bg-transparent"
+          className="inline-flex items-center gap-1.5 max-w-[260px] lg:max-w-[420px] min-w-0 px-2 h-7 rounded-md enabled:hover:bg-hover transition group disabled:cursor-default"
         >
           {editingName ? (
             <input
@@ -579,6 +585,10 @@ export function TopBar({
               {projectLoading ? (
                 <span className="text-[13px] font-medium fg-faint truncate animate-pulse">
                   {t("common.loading")}
+                </span>
+              ) : projectUnavailable ? (
+                <span className="text-[13px] font-medium fg-muted truncate">
+                  {t("projectName.unavailable")}
                 </span>
               ) : (
                 <>
@@ -661,18 +671,20 @@ export function TopBar({
               <Grid3 size={12} className="shrink-0 fg-muted" />
               {t("projectName.seeAll")}
             </Link>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setProyectosOpen(false);
-                setEditingName(true);
-              }}
-              className="flex items-center gap-2.5 w-full text-left px-2.5 py-1.5 rounded-md text-[12.5px] fg hover:bg-hover transition"
-            >
-              <Pencil size={12} className="shrink-0 fg-muted" />
-              {t("projectName.rename")}
-            </button>
+            {!projectUnavailable && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setProyectosOpen(false);
+                  setEditingName(true);
+                }}
+                className="flex items-center gap-2.5 w-full text-left px-2.5 py-1.5 rounded-md text-[12.5px] fg hover:bg-hover transition"
+              >
+                <Pencil size={12} className="shrink-0 fg-muted" />
+                {t("projectName.rename")}
+              </button>
+            )}
           </div>
         )}
         </div>

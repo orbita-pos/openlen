@@ -7,14 +7,23 @@ import type { AgentMode } from "@/lib/agent/dynamis";
 import { NOMBRE_BASH, PARA_LA_TERMINAL, PARA_SOLO_LA_TERMINAL, terminalEncendida, terminalOnly } from "./declaracion";
 
 const CON = { OPENLEN_TERMINAL: "1" };
-const SIN = {};
+const SIN = { OPENLEN_TERMINAL: "0" };
 const nombres = (env: Record<string, string>) => buildFunctionDeclarations(env).map((d) => String(d.name));
 const textos = (env: Record<string, string>) => [buildAgentSystemPrompt(env), ...buildFunctionDeclarations(env).map((d) => String(d.description ?? ""))].join("\n");
 
 describe("la palanca de la terminal", () => {
-  it("sólo el literal \"1\" la enciende", () => {
-    expect(terminalEncendida(CON)).toBe(true);
-    for (const v of [undefined, "0", "true", "si", ""]) expect(terminalEncendida({ OPENLEN_TERMINAL: v })).toBe(false);
+  // N45 (03/10, Jesús: «como DeepSeek lo hace»): en el arnés de DeepSeek la
+  // terminal siempre está. Sin ella Len no veía las versiones guardadas
+  // (`/.openlen/versiones` sólo vive en `bash`), y su encendido dependía de una
+  // línea en la caja.
+  it("encendida por defecto: sólo el literal \"0\" la apaga", () => {
+    for (const v of [undefined, "1", "", "true"]) expect(terminalEncendida({ OPENLEN_TERMINAL: v })).toBe(true);
+    expect(terminalEncendida(SIN)).toBe(false);
+  });
+
+  it("sin la variable, Len lee lo mismo que con ella", () => {
+    expect(buildAgentSystemPrompt({})).toBe(buildAgentSystemPrompt(CON));
+    expect(nombres({})).toEqual(nombres(CON));
   });
 
   it("con ella: entra bash y salen Grep y Glob; Read, Edit y Write se quedan", () => {
@@ -38,10 +47,9 @@ describe("la palanca de la terminal", () => {
     expect(PARA_LA_TERMINAL.map(([de]) => de).filter((de) => !sinElla.includes(de))).toEqual([]);
   });
 
-  it("sin ella, todo sale como antes: ni bash ni un prompt distinto", () => {
+  it("apagada, todo sale como antes de la terminal: ni bash, y Grep y Glob vuelven", () => {
     expect(nombres(SIN)).not.toContain(NOMBRE_BASH);
     expect(nombres(SIN)).toEqual(expect.arrayContaining(["Grep", "Glob"]));
-    expect(buildAgentSystemPrompt(SIN)).toBe(buildAgentSystemPrompt({ OPENLEN_TERMINAL: "0" }));
   });
 });
 

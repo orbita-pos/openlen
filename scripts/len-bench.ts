@@ -83,7 +83,7 @@ async function main(): Promise<number> {
   if (mode) {
     const r = await fetch(`${base}/api/agent/esfuerzo`, { headers: { cookie } });
     const d = (r.ok ? await r.json().catch(() => null) : null) as { dynamis?: boolean } | null;
-    if (d?.dynamis !== true) throw new Error("el servidor no ofrece Len Dynamis: arráncalo con OPENLEN_TERMINAL=1");
+    if (d?.dynamis !== true) throw new Error("el servidor no ofrece Len Dynamis (aparcado): arráncalo con OPENLEN_TERMINAL=1 y OPENLEN_DYNAMIS=1");
   }
 
   const navegador = await lanzarNavegador();

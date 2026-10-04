@@ -104,7 +104,23 @@
       "todo": "Alles anzeigen",
       "menos": "Weniger anzeigen"
     },
-    "abrirFichero": "Datei öffnen"
+    "abrirFichero": "Datei öffnen",
+    "ownerReason": {
+      "address_needed": "du musst die Adresse deiner Seite wählen",
+      "address_invalid": "die Adresse „{address}“ ist ungültig: nur Kleinbuchstaben, Zahlen und Bindestriche",
+      "address_reserved": "die Adresse „{address}“ ist reserviert",
+      "page_changed": "die Seite hat sich beim Speichern geändert",
+      "web_unavailable": "die Websuche ist gerade nicht verfügbar",
+      "search_failed": "die Websuche hat nicht geantwortet",
+      "search_limit": "Limit von {limit} Suchen pro Zug",
+      "web_page_unreadable": "diese Webseite konnte nicht gelesen werden",
+      "web_pages_limit": "Limit von {limit} gelesenen Seiten pro Zug",
+      "image_unreachable": "das Bild konnte nicht heruntergeladen werden",
+      "image_edit_failed": "der Dienst konnte das Bild nicht bearbeiten",
+      "image_edit_limit": "pro Zug kann nur ein Bild bearbeitet werden",
+      "site_page_limit": "deine Website hat bereits die maximale Anzahl von {limit} Seiten",
+      "memory_full": "Lens Gedächtnis ist voll"
+    }
   },
   "defaultProjectName": "Preisseite",
   "chatDraft": {
@@ -162,7 +178,18 @@
   },
   "editing": {
     "noHtml": "Dieses Projekt hat noch keinen HTML-Inhalt.",
-    "loading": "Projekt wird geladen …"
+    "loading": "Projekt wird geladen …",
+    "unavailable": {
+      "notFoundTitle": "Wir haben diese Seite nicht gefunden",
+      "notFoundBody": "Vielleicht wurde sie gelöscht, oder sie gehört zu einem anderen Konto.",
+      "signedOutTitle": "Deine Sitzung wurde beendet",
+      "signedOutBody": "Melde dich erneut an, um diese Seite zu öffnen.",
+      "failedTitle": "Diese Seite konnte nicht geöffnet werden",
+      "failedBody": "Vielleicht liegt es an der Verbindung. Versuch es noch einmal.",
+      "myPages": "Meine Seiten ansehen",
+      "signIn": "Anmelden",
+      "retry": "Erneut versuchen"
+    }
   },
   "a11y": {
     "workspaceHeading": "OpenLen-Arbeitsbereich"

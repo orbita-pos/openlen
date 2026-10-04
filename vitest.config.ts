@@ -321,6 +321,8 @@ export default defineConfig({
       "lib/agent/fotos-de-la-conversacion.test.ts",
       // `include` es LISTA BLANCA: sin esta línea la prueba existe y NO corre.
       "lib/agent/motivo-del-fallo.test.ts",
+      // N41: el motivo de un paso fallido, dicho para el dueño (código, no prosa).
+      "lib/agent/owner-reason.test.ts",
       // La suite de la página: nace en verde y muere con su selector. LISTA
       // BLANCA — sin esta línea el fichero existe y no corre nadie.
       "lib/agent/pruebas-de-la-pagina.test.ts",
@@ -584,6 +586,8 @@ export default defineConfig({
       "lib/projects/escribir-data.pg.test.ts",
       // Len 2.1: la fila del turno en curso, contra Postgres (sólo base local).
       "lib/projects/chat-en-curso.pg.test.ts",
+      // El chat nuevo: las charlas archivables y el 👍/👎 (plans/new-chat/).
+      "lib/projects/chat-conversations.pg.test.ts",
       "lib/projects/escritores-de-data.test.ts",
       "lib/notifications/**/*.test.ts",
     ],

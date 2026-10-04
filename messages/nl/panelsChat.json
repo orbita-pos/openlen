@@ -46,7 +46,13 @@
     "cancelled": "Geannuleerd.",
     "network": "Netwerkfout — probeer het opnieuw.",
     "pageTooLarge": "Deze pagina is te groot voor één beurt van de assistent. Splits hem op in meerdere pagina’s of vraag om een kleinere wijziging.",
-    "noTaggableElements": "Deze pagina heeft nog geen elementen die ik kan bewerken. Voeg wat inhoud toe en probeer het opnieuw."
+    "noTaggableElements": "Deze pagina heeft nog geen elementen die ik kan bewerken. Voeg wat inhoud toe en probeer het opnieuw.",
+    "sessionExpired": "Je sessie is verlopen. Log opnieuw in en stuur het bericht nog eens.",
+    "notFound": "We kunnen deze pagina niet vinden — misschien is hij verwijderd. Laad de editor opnieuw.",
+    "pageChanged": "De pagina is intussen veranderd. Laad de editor opnieuw en probeer het nog eens.",
+    "serverError": "De server gaf een fout ({status}). Probeer het zo meteen opnieuw.",
+    "scopeTooLarge": "De sectie die je koos is te groot. Kies een kleinere of haal de selectie weg.",
+    "promptLength": "Een bericht moet tussen 1 en 10.000 tekens lang zijn. Maak het korter en stuur het opnieuw."
   },
   "chars": {
     "count": "{count} tekens",
@@ -72,9 +78,6 @@
     "selectSectionTitle": "Beperk je volgende bericht tot één sectie",
     "cancelSelection": "Selectiemodus annuleren (ESC)",
     "cancelSelectionTitle": "Klik op een sectie in de preview, of druk op ESC om te annuleren",
-    "autofill": "Automatisch invullen met mijn gegevens",
-    "autofillLabel": "Automatisch invullen",
-    "autofillTitle": "Vul de template automatisch in met je bedrijfsgegevens — upload een screenshot of typ je gegevens",
     "send": "Versturen",
     "stop": "Stoppen",
     "steer": "Bijsturen",
@@ -138,5 +141,120 @@
     "titulo": "Opmerkingen bij de code",
     "deAntes": "vóór de beurt",
     "quitar": "Opmerking verwijderen"
+  },
+  "newChat": {
+    "header": {
+      "line": "<b>Chat</b> met Len",
+      "conversations": "Gesprekken",
+      "newChat": "Opnieuw beginnen",
+      "newChatHint": "Bewaart dit gesprek en begint een nieuw. Len onthoudt het niet; je geheugen en de notities van de pagina blijven.",
+      "busy": "Wacht tot Len klaar is om van gesprek te wisselen.",
+      "failed": "Kon niet van gesprek wisselen. Probeer het opnieuw.",
+      "archived": "Eerdere gesprekken",
+      "archivedEmpty": "Nog geen bewaarde gesprekken.",
+      "reopen": "Terug naar dit gesprek",
+      "messages": "{count, plural, one {# bericht} other {# berichten}}"
+    },
+    "memory": {
+      "empty": "Len onthoudt nog niets over jou. Als je iets zegt dat voor al je pagina's geldt, zie je het hier."
+    },
+    "empty": {
+      "title": "Wat doen we vandaag met je pagina?",
+      "subtitle": "Vraag het in je eigen woorden. Len doet het, laat zien wat er veranderd is, en je kunt het ongedaan maken.",
+      "suggestions": {
+        "photos": "Zet echte foto's op de homepage",
+        "form": "Voeg een contactformulier toe",
+        "mobile": "Bekijk hoe het er op mobiel uitziet",
+        "publish": "Publiceer mijn pagina"
+      }
+    },
+    "steps": {
+      "running": "Len is bezig",
+      "done": "{count, plural, one {Len deed # stap} other {Len deed # stappen}}"
+    },
+    "activity": {
+      "reading": "Leest je pagina",
+      "editing": "Past de pagina aan",
+      "terminal": "Gebruikt de terminal",
+      "photos": "Zoekt foto's",
+      "image": "Bewerkt een afbeelding",
+      "web": "Zoekt op internet",
+      "checking": "Controleert het resultaat",
+      "publishing": "Bereidt de publicatie voor",
+      "remembering": "Noteert wat je me vertelde",
+      "results": "Bekijkt je resultaten",
+      "reply": "Bereidt een antwoord voor",
+      "module": "Zet een module aan",
+      "undoing": "Maakt de laatste wijziging ongedaan",
+      "asking": "Bereidt een vraag voor",
+      "working": "Bezig"
+    },
+    "live": {
+      "thinking": "Denkt na",
+      "writing": "Schrijft",
+      "working": "bezig · {seconds} s",
+      "onServer": "werkt door, ook als je dit tabblad sluit",
+      "waitingAnswer": "Wacht op je antwoord",
+      "waitingApproval": "Wacht op je goedkeuring",
+      "yourTurn": "Jij bent aan de beurt · gepauzeerd",
+      "done": "Klaar",
+      "doneHint": "vraag iets anders",
+      "stopped": "Gestopt",
+      "stoppedHint": "wat al gedaan is, blijft",
+      "failed": "Kon het niet afmaken"
+    },
+    "question": {
+      "label": "Len vraagt je",
+      "hint": "Antwoord hieronder, in je eigen woorden.",
+      "answered": "Je antwoordde: {answer}"
+    },
+    "changes": {
+      "showAll": "Alle {count} wijzigingen bekijken",
+      "showLess": "Minder tonen",
+      "compare": "Voor en na vergelijken"
+    },
+    "compare": {
+      "title": "Voor en na",
+      "subtitle": "Sleep de balk om de pagina van vóór de beurt te vergelijken met die van nu.",
+      "close": "Sluiten",
+      "before": "Voor",
+      "after": "Na",
+      "drag": "Sleep om te vergelijken"
+    },
+    "close": {
+      "applied": "Toegepast",
+      "appliedEdits": "Toegepast · {count, plural, one {# bewerking} other {# bewerkingen}}",
+      "credits": "{credits} credits"
+    },
+    "feedback": {
+      "up": "Dit hielp",
+      "down": "Dit hielp niet",
+      "thanks": "Bedankt dat je het laat weten.",
+      "failed": "Je stem kon niet worden opgeslagen. Probeer het opnieuw.",
+      "title": "Wat ging er mis?",
+      "reasons": {
+        "made_up": "Verzon gegevens",
+        "not_what_i_asked": "Deed niet wat ik vroeg",
+        "touched_other": "Veranderde iets wat ik niet vroeg",
+        "looks_bad": "Ziet er slecht uit",
+        "too_slow": "Duurde te lang"
+      },
+      "notePlaceholder": "Vertel ons meer (optioneel)",
+      "privacy": "Het OpenLen-team leest dit om Len te verbeteren.",
+      "send": "Versturen",
+      "cancel": "Annuleren"
+    },
+    "composer": {
+      "plus": "Afbeelding en meer",
+      "on": "Aan",
+      "disclaimer": "Len kan zich vergissen. Controleer je pagina voordat je hem publiceert."
+    },
+    "layout": {
+      "float": "Chat losmaken",
+      "dock": "Weer vastzetten",
+      "minimize": "Minimaliseren naar Len",
+      "open": "Chat openen",
+      "resize": "Sleep om het formaat te wijzigen"
+    }
   }
 }

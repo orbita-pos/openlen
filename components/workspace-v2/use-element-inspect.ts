@@ -153,7 +153,22 @@ ${CORE_SRC}
     if (!el || !el.tagName) return false;
     if (SKIP[el.tagName]) return false;
     if (el.closest && el.closest('script, style, noscript, template')) return false;
+    if (inEditorChrome(el)) return false;
     return true;
+  }
+
+  // LA INTERFAZ DEL EDITOR NO ES DE LA PÁGINA. El chip «¿ajustar el texto?»
+  // que sale tras cambiar una imagen vive DENTRO del lienzo, y este inspector
+  // se quedaba su clic: lo seleccionaba como si fuera un elemento más («span —
+  // Update copy to match?») y el stopPropagation de abajo no dejaba llegar el
+  // clic al chip, así que no hacía nada (visto en el taller el 2026-10-03). El
+  // botón Reemplazar y la papelera sobrevivieron porque use-image-replace.ts
+  // los reenvía desde document (onDocChromeClick); el chip se quedó fuera.
+  function inEditorChrome(el) {
+    for (var n = el; n && n.nodeType === 1; n = n.parentElement) {
+      if (isEditorNode(n)) return true;
+    }
+    return false;
   }
 
   // A click usually lands on an inline span inside the link/image — the
@@ -1896,6 +1911,8 @@ ${CORE_SRC}
 
   document.addEventListener('click', function (e) {
     if (!inEditMode()) return;
+    // Antes del stopPropagation: el clic tiene que seguir hasta el control.
+    if (inEditorChrome(e.target)) return;
     e.preventDefault();
     e.stopPropagation();
     var t = resolveTarget(e.target);

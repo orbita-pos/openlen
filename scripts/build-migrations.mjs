@@ -111,6 +111,19 @@ const targets = [
   // Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código: `ver_formularios`
   // y el globito la leen, y sin ella cada consulta falla.
   "formularios-visto-migrate",
+  // El chat nuevo (plans/new-chat/): `projectChatMessages.conversation`,
+  // centicredits y durationMs, y la tabla chatTurnFeedback. Aditiva e
+  // idempotente. 🔴 OBLIGATORIA antes que el código: `getChatMessages` y el
+  // historial filtran por la charla, y Drizzle selecciona las columnas nuevas.
+  "chat-conversations-migrate",
+  // Las dos tablas de la app del teléfono (`movilCodigos`, `movilLlaves`, de
+  // la rama len-movil). Tablas NUEVAS con IF NOT EXISTS: si ya están en
+  // producción no hace nada. La web no las toca (sólo `lib/movil/quien.ts`,
+  // cuando un teléfono manda su llave), así que no impone orden.
+  //
+  // 🔴 Cambiarles una COLUMNA después pide su propio ALTER: el IF NOT EXISTS
+  // no toca una tabla que ya existe, y el cambio no llegaría nunca a prod.
+  "movil-migrate",
   // Las cuentas de las páginas (plans/page-accounts/design.md): la columna del
   // papel en siteMembers y la sesión del dueño en memberSessions y en
   // memberLoginTokens. Aditiva e idempotente. 🔴 OBLIGATORIA antes que el

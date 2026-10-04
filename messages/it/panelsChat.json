@@ -46,7 +46,13 @@
     "cancelled": "Annullato.",
     "network": "Errore di rete — riprova.",
     "pageTooLarge": "Questa pagina è troppo grande per un turno dell’assistente. Dividila in più pagine o chiedimi una modifica più mirata.",
-    "noTaggableElements": "Questa pagina non ha ancora elementi che io possa modificare. Aggiungi dei contenuti e riprova."
+    "noTaggableElements": "Questa pagina non ha ancora elementi che io possa modificare. Aggiungi dei contenuti e riprova.",
+    "sessionExpired": "La tua sessione è scaduta. Accedi di nuovo e rimanda il messaggio.",
+    "notFound": "Non troviamo questa pagina: forse è stata eliminata. Ricarica l’editor.",
+    "pageChanged": "La pagina è cambiata nel frattempo. Ricarica l’editor e riprova.",
+    "serverError": "Il server non ha risposto bene ({status}). Riprova tra un momento.",
+    "scopeTooLarge": "La sezione che hai scelto è troppo grande. Scegline una più piccola o togli la selezione.",
+    "promptLength": "Un messaggio deve avere tra 1 e 10.000 caratteri. Accorcialo e rimandalo."
   },
   "chars": {
     "count": "{count} caratteri",
@@ -72,9 +78,6 @@
     "selectSectionTitle": "Limita il tuo prossimo messaggio a una sola sezione",
     "cancelSelection": "Annulla la modalità selezione (ESC)",
     "cancelSelectionTitle": "Clicca una sezione qualsiasi nell'anteprima, oppure ESC per annullare",
-    "autofill": "Compila con i miei dati",
-    "autofillLabel": "Compila",
-    "autofillTitle": "Compila il template con i dati della tua attività — carica uno screenshot o digita i tuoi dati",
     "send": "Invia",
     "stop": "Ferma",
     "steer": "Correggi",
@@ -138,5 +141,120 @@
     "titulo": "Commenti sul codice",
     "deAntes": "prima del turno",
     "quitar": "Rimuovi il commento"
+  },
+  "newChat": {
+    "header": {
+      "line": "<b>Chat</b> con Len",
+      "conversations": "Conversazioni",
+      "newChat": "Ricomincia da capo",
+      "newChatHint": "Salva questa conversazione e ne inizia un'altra. Len non la ricorderà; la tua memoria e le note della pagina restano.",
+      "busy": "Aspetta che Len finisca per cambiare conversazione.",
+      "failed": "Impossibile cambiare conversazione. Riprova.",
+      "archived": "Conversazioni precedenti",
+      "archivedEmpty": "Ancora nessuna conversazione salvata.",
+      "reopen": "Torna a questa conversazione",
+      "messages": "{count, plural, one {# messaggio} other {# messaggi}}"
+    },
+    "memory": {
+      "empty": "Len non ricorda ancora niente di te. Quando gli dirai qualcosa che vale per tutte le tue pagine, lo vedrai qui."
+    },
+    "empty": {
+      "title": "Cosa facciamo oggi alla tua pagina?",
+      "subtitle": "Chiedilo con parole tue. Len lo fa, ti mostra cosa è cambiato e puoi annullarlo.",
+      "suggestions": {
+        "photos": "Metti foto vere in home",
+        "form": "Aggiungi un modulo di contatto",
+        "mobile": "Controlla come si vede sul telefono",
+        "publish": "Pubblica la mia pagina"
+      }
+    },
+    "steps": {
+      "running": "Len sta lavorando",
+      "done": "{count, plural, one {Len ha fatto # passo} other {Len ha fatto # passi}}"
+    },
+    "activity": {
+      "reading": "Legge la tua pagina",
+      "editing": "Modifica la pagina",
+      "terminal": "Usa il terminale",
+      "photos": "Cerca foto",
+      "image": "Modifica un'immagine",
+      "web": "Cerca su internet",
+      "checking": "Controlla il risultato",
+      "publishing": "Prepara la pubblicazione",
+      "remembering": "Annota quello che mi hai detto",
+      "results": "Guarda i tuoi risultati",
+      "reply": "Prepara una risposta",
+      "module": "Attiva un modulo",
+      "undoing": "Annulla l'ultima modifica",
+      "asking": "Prepara una domanda",
+      "working": "Al lavoro"
+    },
+    "live": {
+      "thinking": "Ci pensa",
+      "writing": "Scrive",
+      "working": "al lavoro · {seconds} s",
+      "onServer": "continua anche se chiudi questa scheda",
+      "waitingAnswer": "Aspetta la tua risposta",
+      "waitingApproval": "Aspetta la tua approvazione",
+      "yourTurn": "Tocca a te · in pausa",
+      "done": "Fatto",
+      "doneHint": "chiedigli altro",
+      "stopped": "Fermato",
+      "stoppedHint": "quello che ha già fatto resta",
+      "failed": "Non è riuscito a finire"
+    },
+    "question": {
+      "label": "Len ti chiede",
+      "hint": "Rispondi qui sotto, con parole tue.",
+      "answered": "Hai risposto: {answer}"
+    },
+    "changes": {
+      "showAll": "Vedi tutte le {count} modifiche",
+      "showLess": "Vedi meno",
+      "compare": "Confronta prima e dopo"
+    },
+    "compare": {
+      "title": "Prima e dopo",
+      "subtitle": "Trascina la barra per confrontare la pagina di prima del turno con quella di adesso.",
+      "close": "Chiudi",
+      "before": "Prima",
+      "after": "Dopo",
+      "drag": "Trascina per confrontare"
+    },
+    "close": {
+      "applied": "Applicato",
+      "appliedEdits": "Applicato · {count, plural, one {# modifica} other {# modifiche}}",
+      "credits": "{credits} crediti"
+    },
+    "feedback": {
+      "up": "Mi è stato utile",
+      "down": "Non mi è stato utile",
+      "thanks": "Grazie per avercelo detto.",
+      "failed": "Non è stato possibile salvare il tuo voto. Riprova.",
+      "title": "Cosa non ha funzionato?",
+      "reasons": {
+        "made_up": "Ha inventato dati",
+        "not_what_i_asked": "Non ha fatto quello che ho chiesto",
+        "touched_other": "Ha toccato altro",
+        "looks_bad": "Si vede male",
+        "too_slow": "Ci ha messo troppo"
+      },
+      "notePlaceholder": "Raccontaci di più (facoltativo)",
+      "privacy": "Il team di OpenLen lo legge per migliorare Len.",
+      "send": "Invia",
+      "cancel": "Annulla"
+    },
+    "composer": {
+      "plus": "Immagine e altro",
+      "on": "Attivo",
+      "disclaimer": "Len può sbagliare. Controlla la pagina prima di pubblicarla."
+    },
+    "layout": {
+      "float": "Stacca la chat",
+      "dock": "Riaggancia",
+      "minimize": "Riduci a Len",
+      "open": "Apri la chat",
+      "resize": "Trascina per ridimensionare"
+    }
   }
 }

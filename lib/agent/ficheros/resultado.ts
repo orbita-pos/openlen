@@ -8,7 +8,7 @@
  * salto de línea escapado — otra cosa de por medio.
  *
  * `texto` es ese `tool_result`. `error` es el mismo mensaje sin envolver, para
- * lo que ya lee el bucle y pinta la tarjeta (`motivoDelFallo`).
+ * lo que ya lee el bucle (`ok`) y el diario del turno.
  */
 export type Resultado =
   | { readonly ok: true; readonly texto: string; readonly error?: undefined }

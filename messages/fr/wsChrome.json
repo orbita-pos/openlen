@@ -71,7 +71,8 @@
       }
     },
     "tabLocked": "{label} — verrouillé",
-    "collapsePanel": "Replier le panneau"
+    "collapsePanel": "Replier le panneau",
+    "resizeChat": "Faites glisser pour changer la largeur · double-clic : taille normale"
   },
   "preview": {
     "zoomFit": "Ajuster",
@@ -124,6 +125,7 @@
       "splitRight": "Image à droite",
       "swap": "Échanger les images"
     },
+    "copyChip": "Adapter le texte en conséquence ?",
     "code": {
       "title": "Le code de votre page",
       "close": "Fermer",

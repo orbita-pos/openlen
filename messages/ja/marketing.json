@@ -29,6 +29,7 @@
     "listening": "聞き取り中…",
     "attachImage": "画像を添付",
     "attachImages": "画像を添付",
+    "attachImagesHint": "{max}枚まで：ロゴ、お店の写真、気に入ったサイトなど。",
     "maxImages": "最大{max}枚まで",
     "removeImage": "画像を削除",
     "attachedAlt": "添付した参考画像",

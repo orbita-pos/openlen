@@ -88,6 +88,9 @@ const mocks = vi.hoisted(() => ({
   // La foto de los ficheros del turno (la lente «Cambios»). Por defecto, un
   // proyecto vacío: ningún cambio y ningún evento.
   cargarFicherosDeLaTerminal: vi.fn(async (): Promise<Record<string, string>> => ({})),
+  // N42: el cobro que la ruta le pasa a `realDeps` — el que usan las
+  // herramientas que cobran aparte del modelo (búsquedas, editar una imagen).
+  cobroDeLasHerramientas: undefined as undefined | ((userId: string, centicreditos: number) => Promise<unknown>),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -157,11 +160,14 @@ vi.mock("@/lib/agent/loop", async (real) => ({
 }));
 vi.mock("@/lib/agent/retry", () => ({ streamWithRetry: vi.fn() }));
 vi.mock("@/lib/agent/tools", () => ({
-  realDeps: () => ({
-    loadProject: mocks.loadProject,
-    cambiosSinPublicar: mocks.cambiosSinPublicar,
-    loadBusinessProfile: mocks.loadBusinessProfile,
-  }),
+  realDeps: (cobro?: (userId: string, centicreditos: number) => Promise<unknown>) => {
+    mocks.cobroDeLasHerramientas = cobro;
+    return {
+      loadProject: mocks.loadProject,
+      cambiosSinPublicar: mocks.cambiosSinPublicar,
+      loadBusinessProfile: mocks.loadBusinessProfile,
+    };
+  },
   runAgentTool: mocks.runAgentTool,
   summarizeProjectState: () => ({}),
 }));
@@ -383,15 +389,28 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
       (mocks.buildFunctionDeclarations.mock.calls.at(-1) as unknown as unknown[])[2];
     afterEach(() => vi.unstubAllEnvs());
 
-    it("con la terminal, \"dynamis\" llega a las declaraciones y al cerebro", async () => {
+    it("con la terminal y OPENLEN_DYNAMIS=1, \"dynamis\" llega a las declaraciones y al cerebro", async () => {
       vi.stubEnv("OPENLEN_TERMINAL", "1");
+      vi.stubEnv("OPENLEN_DYNAMIS", "1");
       await turno({ mode: "dynamis" });
       expect(modoDeLasDeclaraciones()).toBe("dynamis");
       expect(modoDelCerebro()).toBe("dynamis");
     });
 
     it("sin la terminal, \"dynamis\" se queda en Len", async () => {
-      vi.stubEnv("OPENLEN_TERMINAL", "");
+      // Encendida por defecto desde N45: apagarla es el literal "0".
+      vi.stubEnv("OPENLEN_TERMINAL", "0");
+      vi.stubEnv("OPENLEN_DYNAMIS", "1");
+      await turno({ mode: "dynamis" });
+      expect(modoDeLasDeclaraciones()).toBe("len");
+      expect(modoDelCerebro()).toBe("len");
+    });
+
+    // 🔴 APARCADO (03/10/2026): Len 2.5 sale con la terminal encendida, y eso
+    // solo no puede convertir un turno en Odyssey.
+    it("aparcado: con la terminal pero sin OPENLEN_DYNAMIS=1, \"dynamis\" se queda en Len", async () => {
+      vi.stubEnv("OPENLEN_TERMINAL", "1");
+      vi.stubEnv("OPENLEN_DYNAMIS", "");
       await turno({ mode: "dynamis" });
       expect(modoDeLasDeclaraciones()).toBe("len");
       expect(modoDelCerebro()).toBe("len");
@@ -399,6 +418,7 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
 
     it("BRAZO DE CONTROL: sin el campo (o con basura), Len", async () => {
       vi.stubEnv("OPENLEN_TERMINAL", "1");
+      vi.stubEnv("OPENLEN_DYNAMIS", "1");
       for (const cuerpo of [{}, { mode: "DYNAMIS" }, { mode: 7 }]) {
         await turno(cuerpo);
         expect(modoDeLasDeclaraciones()).toBe("len");
@@ -1714,6 +1734,178 @@ describe("POST /api/agent — el techo de dinero del turno", () => {
     mocks.creditsForUsage.mockReturnValue(3_140);
     await pedir();
     expect(mocks.debitCredits).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔴 EL ■ COBRA LO QUE SE USÓ, HASTA EL TECHO (Jesús, 03/10: «como DeepSeek lo
+// hace»). En el arnés de DeepSeek el usuario paga cada token que el modelo llegó
+// a gastar, también en un turno cancelado: su contador cierra cada intento
+// termine como termine. Hasta hoy el ■ cobraba 0 (regla del 07/07, de cuando el ■
+// deshacía lo hecho). Los finales que son NUESTROS —el proveedor caído, el perro
+// del silencio, los topes de pasos— siguen en 0.
+describe("POST /api/agent — el ■ cobra lo que se usó, hasta el techo", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<html><body><h1>hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "pro", balance: 5_000, allotment: 15_000, refillsAt: null });
+    mocks.techoDelTurno.mockReturnValue(3_000);
+    mocks.creditsForUsage.mockReturnValue(146);
+  });
+
+  const pedir = async () =>
+    readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "rehaz el menú" }),
+        }),
+      ),
+    );
+  const cancelado = { finalText: "", turns: 2, toolCalls: 1, terminalError: true, topeAlcanzado: null, errorCode: "cancelled", mutoDurable: false };
+  const conUso = (tokens: number) => ({ inputTokens: tokens, outputTokens: tokens ? 5 : 0, cachedTokens: 0, thinkingTokens: 0 });
+  /** El bucle termina cancelado; con `porElDueno`, porque llegó el ■ (lo que
+   *  hace `POST /api/agent/cancelar` con el `abortar` del turno). */
+  const turnoCancelado = (porElDueno: boolean, tokens: number, extra: Record<string, unknown> = {}) => async (args: AgentLoopArgs) => {
+    if (porElDueno) {
+      const opciones = (mocks.abrirTurno.mock.calls.at(-1) as unknown as [string, string, number, { abortar: () => void }])[3];
+      opciones.abortar();
+    }
+    args.emit({ type: "text", text: "Empiezo…" });
+    return { ...cancelado, usage: conUso(tokens), ...extra };
+  };
+  const cierre = (eventos: Awaited<ReturnType<typeof pedir>>) => eventos.find((e) => e.event === "done")!.data;
+
+  it("🔴 el ■ cobra lo que el modelo llegó a gastar, y el cierre lo dice", async () => {
+    mocks.runAgentLoop.mockImplementation(turnoCancelado(true, 10));
+    const eventos = await pedir();
+    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 146);
+    expect(cierre(eventos).centicredits).toBe(146);
+  });
+
+  it("y nunca más que el techo del turno", async () => {
+    mocks.creditsForUsage.mockReturnValue(3_140);
+    mocks.runAgentLoop.mockImplementation(turnoCancelado(true, 10));
+    await pedir();
+    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 3_000);
+  });
+
+  it("un ■ antes de que el modelo gastara nada no cobra nada", async () => {
+    mocks.runAgentLoop.mockImplementation(turnoCancelado(true, 0));
+    const eventos = await pedir();
+    expect(mocks.debitCredits).not.toHaveBeenCalled();
+    expect(cierre(eventos).centicredits).toBe(0);
+  });
+
+  it("BRAZO DE CONTROL: una cancelación que NO es el ■ (el perro del silencio) sigue sin cobrarse", async () => {
+    mocks.runAgentLoop.mockImplementation(turnoCancelado(false, 10));
+    await pedir();
+    expect(mocks.debitCredits).not.toHaveBeenCalled();
+  });
+
+  it("BRAZO DE CONTROL: el proveedor caído sigue sin cobrarse aunque llegue el ■ a la vez", async () => {
+    mocks.runAgentLoop.mockImplementation(turnoCancelado(true, 10, { errorCode: "upstream" }));
+    await pedir();
+    expect(mocks.debitCredits).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// N42 (taller, 03/10) · EL CIERRE DICE LO QUE SE COBRÓ, TAMBIÉN LO DE LAS
+// HERRAMIENTAS. Un turno con `web_search` dijo «1,46 créditos» y costó 5,96: cada
+// consulta se cobra aparte (`lib/agent/web/buscar.ts`), igual que editar una
+// imagen, y el total del `done` sólo contaba el modelo.
+describe("POST /api/agent — lo que cobran las herramientas entra en el cierre", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<html><body><h1>hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "pro", balance: 5_000, allotment: 15_000, refillsAt: null });
+    mocks.creditsForUsage.mockReturnValue(146);
+  });
+
+  const pedir = async () =>
+    readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "busca el horario del museo" }),
+        }),
+      ),
+    );
+  /** Un turno en el que una herramienta cobra `aparte` centicréditos —dos
+   *  consultas de `web_search` son 300— por el cobro que la ruta le dio. */
+  const turnoQueCobra = (aparte: number, fin: Record<string, unknown> = {}) => async (args: AgentLoopArgs) => {
+    if (aparte > 0) await mocks.cobroDeLasHerramientas!("u1", aparte);
+    // Con texto, para que el turno merezca fila.
+    args.emit({ type: "text", text: "Listo." });
+    return {
+      finalText: "Listo.", turns: 2, toolCalls: 1,
+      usage: { inputTokens: 10, outputTokens: 5, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
+      ...fin,
+    };
+  };
+  const centicreditosDelCierre = (eventos: Awaited<ReturnType<typeof pedir>>) =>
+    eventos.find((e) => e.event === "done")!.data.centicredits;
+  const centicreditosDeLaFila = () =>
+    (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { centicredits?: number }])[1]
+      .centicredits;
+
+  it("🔴 el `done` y la fila suman el modelo y lo que cobraron las herramientas", async () => {
+    mocks.runAgentLoop.mockImplementation(turnoQueCobra(300));
+    const eventos = await pedir();
+
+    // Lo de la herramienta se cobra de verdad, por la misma puerta que el modelo.
+    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 300);
+    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 146);
+    expect(centicreditosDelCierre(eventos)).toBe(446);
+    expect(centicreditosDeLaFila()).toBe(446);
+  });
+
+  it("un turno que acaba en error no cobra el modelo, pero lo ya buscado sí se dice", async () => {
+    mocks.runAgentLoop.mockImplementation(
+      turnoQueCobra(300, { terminalError: true, errorCode: "cancelled", mutoDurable: false }),
+    );
+    const eventos = await pedir();
+
+    expect(mocks.debitCredits).toHaveBeenCalledTimes(1);
+    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 300);
+    expect(centicreditosDelCierre(eventos)).toBe(300);
+  });
+
+  it("si el bucle revienta después de cobrar una búsqueda, la fila lo dice", async () => {
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await mocks.cobroDeLasHerramientas!("u1", 150);
+      args.emit({ type: "text", text: "Busco…" });
+      throw new Error("el proveedor se cayó");
+    });
+    await pedir();
+
+    expect(centicreditosDeLaFila()).toBe(150);
+  });
+
+  it("BRAZO DE CONTROL: sin herramientas que cobren, el cierre es sólo el modelo", async () => {
+    mocks.runAgentLoop.mockImplementation(turnoQueCobra(0));
+    const eventos = await pedir();
+    expect(centicreditosDelCierre(eventos)).toBe(146);
   });
 });
 

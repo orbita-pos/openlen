@@ -71,7 +71,8 @@
       }
     },
     "tabLocked": "{label} — 已锁定",
-    "collapsePanel": "收起面板"
+    "collapsePanel": "收起面板",
+    "resizeChat": "拖动以调整宽度 · 双击：恢复默认大小"
   },
   "preview": {
     "zoomFit": "适应",
@@ -124,6 +125,7 @@
       "splitRight": "图片在右",
       "swap": "交换图片"
     },
+    "copyChip": "同步更新文案？",
     "code": {
       "title": "你的页面代码",
       "close": "关闭",

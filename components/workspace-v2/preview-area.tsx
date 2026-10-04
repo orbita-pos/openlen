@@ -390,6 +390,7 @@ export function PreviewArea({
     splitRight: t("preview.drop.splitRight"),
     swap: t("preview.drop.swap"),
   };
+  const replaceLabels = { copyChip: t("preview.copyChip") };
   const derive = (rawDoc: string): string => {
     // `untrustedDoc`: el chat está dripeando la salida CRUDA del modelo, que
     // aún no pasó por sanitizeForPublish (corre al final, sobre el `done`).
@@ -410,7 +411,7 @@ export function PreviewArea({
     // first → fires first on each event → sets the `over-image` body
     // attribute before Reorder's listener reads it. Avoids a one-frame
     // flicker where the drag handle briefly appears over an image.
-    html = injectImageReplace(html);
+    html = injectImageReplace(html, replaceLabels);
     html = injectSectionReorder(html);
     html = injectElementInspect(html);
     html = injectInlineEdit(html);

@@ -22,17 +22,59 @@ import { crearRegistroDelTurno } from "./registro-del-turno";
 
 const lee = (...partes: string[]) => readFileSync(join(process.cwd(), ...partes), "utf8");
 
-describe("el motivo del fallo cruza los cinco eslabones", () => {
-  it("1 · el bucle lo EMITE con la tarjeta", () => {
+// 🔴 N41 (03/10): el `motivo` de una tarjeta ROJA ya no es el texto que leyó el
+// modelo —en inglés y escrito para Len—, sino `ownerReason`: un código que el
+// chat traduce. El `motivo` sigue viajando para lo que SÍ se escribe para el
+// dueño (las tarjetas de los ojos), así que sus eslabones 2–5 se quedan.
+describe("el motivo del DUEÑO cruza los cinco eslabones (N41)", () => {
+  it("1 · el bucle lo EMITE con la tarjeta, declarado en el tipo del evento", () => {
     const loop = lee("lib", "agent", "loop.ts");
-    expect(loop).toContain("motivoDelFallo");
-    // En el tipo del evento, no sólo colado por el spread: un campo que viaja
-    // sin estar declarado lo borra el primero que toque el emisor.
-    expect(loop).toMatch(/motivo\?: string;/);
+    expect(loop).toMatch(/ownerReason\?: OwnerReason;/);
+    expect(loop).toMatch(/outcome\.ownerReason/);
+    // Y lo que leyó el modelo NO sale por la tarjeta.
+    expect(loop).not.toMatch(/motivoDelFallo\(/);
   });
 
+  it("2 · el chat lo LEE del evento por la puerta que valida el código", () => {
+    const panel = lee("components", "workspace-v2", "chat", "use-agent-chat.ts");
+    expect(panel).toMatch(/ownerReasonFrom\(/);
+  });
+
+  it("3 · el servidor lo copia a la tarjeta que PERSISTE él", () => {
+    const r = crearRegistroDelTurno();
+    r.observar({ type: "action", tool: "publicar", status: "error", summary: "x", ownerReason: { code: "address_needed" } });
+    r.observar({ type: "action", tool: "publicar", status: "error", summary: "y" });
+    expect(r.tarjetas[0]).toMatchObject({ ownerReason: { code: "address_needed" } });
+    // BRAZO DE CONTROL: la tarjeta sin motivo no se inventa uno.
+    expect(r.tarjetas[1]).not.toHaveProperty("ownerReason");
+  });
+
+  it("4 · el esquema del historial lo ACEPTA en vez de tirar el turno", () => {
+    const chat = lee("app", "api", "projects", "[id]", "chat", "route.ts");
+    expect(chat).toMatch(/ownerReason: z/);
+  });
+
+  it("5 · la forma guardada lo DECLARA, o se pierde al reconstruir el turno", () => {
+    const tipos = lee("lib", "projects", "types.ts");
+    const actions = tipos.slice(tipos.indexOf("actions?: Array<{"));
+    expect(actions.slice(0, 3000)).toMatch(/ownerReason\?: OwnerReason;/);
+  });
+
+  // La regla de qué se pinta vive en UNA función (`reasonLine`, probada en
+  // agent-action-card.test.ts); aquí sólo se sujeta que las dos tarjetas la usan.
+  it("y las dos tarjetas (chat nuevo y viejo) lo PINTAN por la misma regla", () => {
+    expect(lee("components", "workspace-v2", "chat", "steps-card.tsx")).toMatch(/reasonLine\(action, t\)/);
+    expect(lee("components", "workspace-v2", "agent-action-card.tsx")).toMatch(/reasonLine\(action, t\)/);
+  });
+});
+
+// El `motivo` que queda es el de las tarjetas ÁMBAR de los ojos (la regresión,
+// la lista medida), escrito para el dueño.
+describe("el motivo del ámbar cruza los mismos eslabones", () => {
+
   it("2 · el panel lo LEE del evento y lo cuelga de la tarjeta", () => {
-    const panel = lee("components", "workspace-v2", "panels", "chat-panel.tsx");
+    // La lectura del stream vive en la lógica que comparten los dos chats.
+    const panel = lee("components", "workspace-v2", "chat", "use-agent-chat.ts");
     expect(panel).toMatch(/motivo\?: unknown/);
     expect(panel).toMatch(/\{ motivo: motivo\.slice/);
   });
@@ -48,7 +90,7 @@ describe("el motivo del fallo cruza los cinco eslabones", () => {
     const ruta = lee("app", "api", "agent", "route.ts");
     expect(ruta).toMatch(/crearRegistroDelTurno\(\)/);
     const r = crearRegistroDelTurno();
-    r.observar({ type: "action", tool: "editar_html", status: "error", summary: "x", motivo: "sin id" });
+    r.observar({ type: "action", tool: "verificar_diseno", status: "warning", summary: "x", motivo: "sin id" });
     r.observar({ type: "action", tool: "editar_html", status: "done", summary: "y" });
     expect(r.tarjetas[0]).toMatchObject({ motivo: "sin id" });
     // BRAZO DE CONTROL: la tarjeta sin motivo no se inventa uno.
@@ -68,10 +110,10 @@ describe("el motivo del fallo cruza los cinco eslabones", () => {
     expect(actions.slice(0, 2000)).toMatch(/motivo\?: string;/);
   });
 
-  it("y la tarjeta lo PINTA en rojo y en ámbar, nunca en verde", () => {
-    const card = lee("components", "workspace-v2", "agent-action-card.tsx");
-    expect(card).toMatch(/action\.status === "error" \|\| action\.status === "warning"/);
-  });
+  // 🔴 SÓLO EN ÁMBAR (N41). Un `motivo` en una tarjeta ROJA es el texto que
+  // leyó el modelo —las filas guardadas antes del 03/10 lo traen—, y no se
+  // pinta: la roja dice su `ownerReason` o «No pudo». Lo prueba `reasonLine`
+  // en agent-action-card.test.ts.
 
   // ─────────────────────────────────────────────────────────────────────────
   // EL ÁMBAR CRUZA LOS MISMOS ESLABONES (2026-09-18).

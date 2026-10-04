@@ -71,7 +71,8 @@
       }
     },
     "tabLocked": "{label} — 잠김",
-    "collapsePanel": "패널 접기"
+    "collapsePanel": "패널 접기",
+    "resizeChat": "드래그해서 너비 변경 · 더블클릭: 기본 크기"
   },
   "preview": {
     "zoomFit": "맞춤",
@@ -124,6 +125,7 @@
       "splitRight": "이미지 오른쪽",
       "swap": "이미지 맞바꾸기"
     },
+    "copyChip": "텍스트도 맞춰 바꿀까요?",
     "code": {
       "title": "페이지 코드",
       "close": "닫기",

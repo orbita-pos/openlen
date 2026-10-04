@@ -104,7 +104,23 @@
       "todo": "Ver todo",
       "menos": "Ver menos"
     },
-    "abrirFichero": "Abrir el archivo"
+    "abrirFichero": "Abrir el archivo",
+    "ownerReason": {
+      "address_needed": "falta que elijas la dirección de tu página",
+      "address_invalid": "la dirección «{address}» no vale: sólo minúsculas, números y guiones",
+      "address_reserved": "la dirección «{address}» está reservada",
+      "page_changed": "la página cambió mientras se guardaba",
+      "web_unavailable": "buscar en internet no está disponible ahora",
+      "search_failed": "la búsqueda en internet no respondió",
+      "search_limit": "tope de {limit} búsquedas por turno",
+      "web_page_unreadable": "esa página de internet no se pudo leer",
+      "web_pages_limit": "tope de {limit} páginas leídas por turno",
+      "image_unreachable": "la imagen no se pudo descargar",
+      "image_edit_failed": "el servicio no pudo editar la imagen",
+      "image_edit_limit": "sólo se puede editar una imagen por turno",
+      "site_page_limit": "tu sitio ya tiene el máximo de {limit} páginas",
+      "memory_full": "la memoria de Len está llena"
+    }
   },
   "defaultProjectName": "Página de precios",
   "chatDraft": {
@@ -162,7 +178,18 @@
   },
   "editing": {
     "noHtml": "Este proyecto aún no tiene contenido HTML.",
-    "loading": "Cargando proyecto…"
+    "loading": "Cargando proyecto…",
+    "unavailable": {
+      "notFoundTitle": "No encontramos esta página",
+      "notFoundBody": "Puede que se haya borrado o que sea de otra cuenta.",
+      "signedOutTitle": "Se cerró tu sesión",
+      "signedOutBody": "Vuelve a entrar para abrir esta página.",
+      "failedTitle": "No se pudo abrir esta página",
+      "failedBody": "Puede ser la conexión. Inténtalo otra vez.",
+      "myPages": "Ver mis páginas",
+      "signIn": "Entrar",
+      "retry": "Reintentar"
+    }
   },
   "a11y": {
     "workspaceHeading": "Espacio de trabajo de OpenLen"

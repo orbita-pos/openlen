@@ -10,6 +10,7 @@
   "colgar": "挂断",
   "sinMicro": "我需要麦克风才能说话。",
   "sinVoz": "我现在没法说话，给我发消息吧。",
+  "sinCreditos": "你的积分已用完，无法和 Len 通话。",
   "irAlChat": "去聊天",
   "cortada": "通话中断了。Len 仍在处理，完成后会通知你。",
   "colgadaSilencio": "我们有一会儿没说话，我就挂断了。",

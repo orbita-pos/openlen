@@ -79,6 +79,8 @@ export async function guardarPreferencia(
               ? `your preference memory is full (max ${AGENT_MEMORY_MAX} characters) — tell the user you already saved several and ask them which one to remove before adding another`
               : "the preference couldn't be saved",
         },
+        // N41: al dueño, en su idioma, que la memoria está llena.
+        ...(res.reason === "llena" ? { ownerReason: { code: "memory_full" as const } } : {}),
       };
     }
     if (res.yaExistia) return { response: { ok: true, ya_existia: true, alcance } };
@@ -121,6 +123,7 @@ export async function guardarPreferencia(
         error:
           `the project brief is already full (max ${USER_BRIEF_MAX} characters) — tell the user and offer to save it with alcance="siempre", which uses another space`,
       },
+      ownerReason: { code: "memory_full" },
     };
   }
 

@@ -10,6 +10,7 @@
   "colgar": "Hang up",
   "sinMicro": "I need the microphone to talk.",
   "sinVoz": "I can't talk right now, write to me instead.",
+  "sinCreditos": "You’re out of credits to talk with Len.",
   "irAlChat": "Go to chat",
   "cortada": "The call dropped. Len kept working and will let you know.",
   "colgadaSilencio": "I hung up because we hadn't talked for a while.",

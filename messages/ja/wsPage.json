@@ -104,7 +104,23 @@
       "todo": "すべて表示",
       "menos": "折りたたむ"
     },
-    "abrirFichero": "ファイルを開く"
+    "abrirFichero": "ファイルを開く",
+    "ownerReason": {
+      "address_needed": "ページのアドレスを選んでください",
+      "address_invalid": "アドレス「{address}」は使えません：小文字・数字・ハイフンのみです",
+      "address_reserved": "アドレス「{address}」は予約されています",
+      "page_changed": "保存中にページが変更されました",
+      "web_unavailable": "現在、ウェブ検索は利用できません",
+      "search_failed": "ウェブ検索から応答がありませんでした",
+      "search_limit": "ターンごとの検索上限（{limit}回）に達しました",
+      "web_page_unreadable": "そのウェブページを読み込めませんでした",
+      "web_pages_limit": "ターンごとに読めるページの上限（{limit}件）に達しました",
+      "image_unreachable": "画像をダウンロードできませんでした",
+      "image_edit_failed": "サービスが画像を編集できませんでした",
+      "image_edit_limit": "画像の編集はターンごとに1枚までです",
+      "site_page_limit": "サイトはすでに上限の{limit}ページに達しています",
+      "memory_full": "Lenのメモリがいっぱいです"
+    }
   },
   "defaultProjectName": "料金ページ",
   "chatDraft": {
@@ -162,7 +178,18 @@
   },
   "editing": {
     "noHtml": "このプロジェクトにはまだHTMLコンテンツがありません。",
-    "loading": "プロジェクトを読み込んでいます…"
+    "loading": "プロジェクトを読み込んでいます…",
+    "unavailable": {
+      "notFoundTitle": "このページが見つかりません",
+      "notFoundBody": "削除されたか、別のアカウントのページの可能性があります。",
+      "signedOutTitle": "ログインが切れました",
+      "signedOutBody": "このページを開くには、もう一度ログインしてください。",
+      "failedTitle": "このページを開けませんでした",
+      "failedBody": "接続の問題かもしれません。もう一度お試しください。",
+      "myPages": "自分のページを見る",
+      "signIn": "ログイン",
+      "retry": "再試行"
+    }
   },
   "a11y": {
     "workspaceHeading": "OpenLen ワークスペース"

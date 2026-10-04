@@ -13,7 +13,8 @@ import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
-import { avisoParaElDueno, motivoDelFallo } from "@/lib/agent/motivo-del-fallo";
+import { avisoParaElDueno } from "@/lib/agent/motivo-del-fallo";
+import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { avisoDeRegresion, type Regresion } from "@/lib/agent/pruebas-de-la-pagina";
 // Import de VALOR a propósito, y no viola la regla de arriba: `aviso-medido` no
 // importa nada — ni la pasarela, ni las herramientas, ni Chromium. Es texto y
@@ -103,11 +104,20 @@ export type AgentStreamEvent =
        *  `components/workspace-v2/agent-action-card.tsx`. */
       paginasMiradas?: number;
       paginasTocadas?: number;
-      /** POR QUÉ falló, literal, el mismo string que leyó el modelo. Sólo viaja
-       *  con `status: "error"`. Hasta el 2026-09-18 la tarjeta roja decía
-       *  «falló» y nada más, con el motivo ya escrito a dos capas de
-       *  distancia. Ver `motivo-del-fallo.ts`. */
+      /** El porqué de una tarjeta ÁMBAR (`warning`): lo que midieron los ojos o
+       *  el aviso de la herramienta. ⚠️ Ya NO viaja con `status: "error"`: desde
+       *  N41 (03/10) lo que leyó el modelo no va a la tarjeta roja — ver
+       *  `ownerReason`. */
       motivo?: string;
+      /** N41 · POR QUÉ FALLÓ, PARA EL DUEÑO: un código que el chat traduce a su
+       *  idioma. Sólo con `status: "error"`, y sólo si la herramienta lo
+       *  declaró; sin él la tarjeta dice «No pudo». Ver `owner-reason.ts`. */
+      ownerReason?: OwnerReason;
+      /** LA PREGUNTA, literal, cuando la herramienta es `preguntar`. Es SÓLO
+       *  para la pantalla (la tarjeta destacada y «Esperando tu respuesta» del
+       *  chat nuevo, plans/new-chat/): el modelo no la lee de aquí — su texto ya
+       *  la lleva y el historial no copia este campo. */
+      pregunta?: string;
     }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
@@ -760,6 +770,17 @@ const EN_PARALELO = new Set([
  *  el tiempo dos veces. */
 const VUELTAS_POR_DIRECCION = 2;
 
+/** La corrección, tal como la lee el modelo: el texto del usuario VERBATIM, y
+ *  alrededor sólo lo que el modelo no puede saber por su cuenta —que llegó
+ *  mientras trabajaba, no al principio—. Una sola redacción para los dos sitios
+ *  donde se recoge: entre vueltas y al cerrar. */
+function steerMessage(texto: string): Message {
+  return {
+    role: "user",
+    content: `[The user wrote to you while you were working. Read it and adjust before your next step.]\n${texto}`,
+  };
+}
+
 /**
  * 🔴 H12 · LAS VUELTAS DE LLAMADAS RECHAZADAS NO SON TRABAJO.
  *
@@ -1268,13 +1289,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // acaba el presupuesto, leerla y salir sería lo peor de los dos mundos.
     const direccion = args.leerDireccion?.() ?? null;
     if (direccion) {
-      messages.push({
-        role: "user",
-        // El texto del usuario VERBATIM. El marco de alrededor es del servidor
-        // y dice sólo lo que el modelo no puede saber por su cuenta: que esto
-        // llegó mientras trabajaba, no al principio.
-        content: `[The user wrote to you while you were working. Read it and adjust before your next step.]\n${direccion}`,
-      });
+      messages.push(steerMessage(direccion));
       args.emit({ type: "direccion", texto: direccion });
       maxTurns += VUELTAS_POR_DIRECCION;
     }
@@ -1433,6 +1448,23 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
 
     if (calls.length === 0) {
+      // 🔴 UNA CORRECCIÓN QUE LLEGÓ MIENTRAS ESCRIBÍA EL CIERRE. Se leían sólo
+      // al empezar cada vuelta, así que la que llegaba durante la última
+      // llamada —la que ya no pide herramientas— se aceptaba con 200, el turno
+      // cerraba sin mirar y `cerrarTurno` la borraba: ni se aplicaba ni salía
+      // el «↳». Visto en el taller el 2026-10-03 con dos vueltas (sesión del
+      // chat nuevo). Como en Claude Code, lo que el usuario escribe mientras el
+      // agente trabaja no se pierde: aquí el turno no cierra, Len la lee con lo
+      // que acaba de decir delante y sigue, con el mismo margen que entre vueltas.
+      const tardia = args.leerDireccion?.() ?? null;
+      if (tardia) {
+        if (turnText.trim()) messages.push(delAsistente(turnText));
+        messages.push(steerMessage(tardia));
+        args.emit({ type: "direccion", texto: tardia });
+        maxTurns += VUELTAS_POR_DIRECCION;
+        continue;
+      }
+
       // 🔴 CERRÓ CALLADO TRAS UN AVISO. La insistencia le dice que, si lo suyo
       // era una explicación, ya le llegó al dueño y no la repita (revisión
       // pre-deploy del 2026-09-22: antes se le pedía «repítela tal cual» y el
@@ -1921,10 +1953,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       const cambioDeclarado = outcome.response.cambio;
       const nula = cambioDeclarado === "sin_cambio";
       if (ok && !nula && !READ_ONLY_TOOLS.has(call.name)) actuo = true;
-      // El rojo y el ámbar salen del MISMO sitio y se excluyen: `motivoDelFallo`
-      // sólo habla con `ok:false` y `avisoParaElDueno` sólo sin él.
+      // El ámbar y su aviso: `avisoParaElDueno` sólo habla sin `ok:false`.
+      // 🔴 N41: la ROJA ya no lleva lo que leyó el modelo (`motivoDelFallo`
+      // pintaba «falló · the user has never said… you made that name up»): lleva
+      // el `ownerReason` que la herramienta declaró, o nada.
       const descartada = avisoParaElDueno(outcome.response);
-      const motivo = motivoDelFallo(outcome.response) ?? descartada;
       if (!ok) failedSignatures.set(sig, (failedSignatures.get(sig) ?? 0) + 1);
       args.emit({
         type: "action",
@@ -1937,11 +1970,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         ...(outcome.action?.edits !== undefined ? { edits: outcome.action.edits } : {}),
         ...(outcome.action?.ops?.length ? { ops: outcome.action.ops } : {}),
         ...(outcome.action?.valores ? { valores: outcome.action.valores } : {}),
-        // EL MOTIVO, a la tarjeta. Mismo string que acaba de irse al modelo en
-        // `outcome.response` y que el diario guarda: uno solo, como en
-        // Claude Code. `motivoDelFallo` ya devuelve `undefined` cuando la llamada
-        // fue bien, así que el evento de un `done` sale igual que antes.
-        ...(motivo ? { motivo } : {}),
+        // EL PORQUÉ, a la tarjeta: el aviso del ámbar, o el motivo del dueño de
+        // una roja. El texto entero que leyó el modelo se queda en el diario.
+        ...(descartada ? { motivo: descartada } : {}),
+        ...(!ok && outcome.ownerReason ? { ownerReason: outcome.ownerReason } : {}),
+        // La pregunta con la que `preguntar` cierra el turno, para la tarjeta.
+        ...(outcome.pregunta ? { pregunta: outcome.pregunta } : {}),
       });
       if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
 

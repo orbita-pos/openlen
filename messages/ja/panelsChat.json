@@ -46,7 +46,13 @@
     "cancelled": "キャンセルしました。",
     "network": "ネットワークエラーです。もう一度お試しください。",
     "pageTooLarge": "このページはアシスタントの1ターンには大きすぎます。複数のページに分けるか、もう少し範囲を絞った変更をご依頼ください。",
-    "noTaggableElements": "このページにはまだ編集できる要素がありません。コンテンツを追加してからもう一度お試しください。"
+    "noTaggableElements": "このページにはまだ編集できる要素がありません。コンテンツを追加してからもう一度お試しください。",
+    "sessionExpired": "セッションが切れました。もう一度ログインして、メッセージを送り直してください。",
+    "notFound": "このページが見つかりません。削除された可能性があります。エディターを再読み込みしてください。",
+    "pageChanged": "その間にページが変更されました。エディターを再読み込みして、もう一度お試しください。",
+    "serverError": "サーバーでエラーが発生しました（{status}）。少し待ってから、もう一度お試しください。",
+    "scopeTooLarge": "選んだセクションが大きすぎます。もっと小さな部分を選ぶか、選択を外してください。",
+    "promptLength": "メッセージは1〜10,000文字にしてください。短くして、もう一度送ってください。"
   },
   "chars": {
     "count": "{count}文字",
@@ -72,9 +78,6 @@
     "selectSectionTitle": "次のメッセージを1つのセクションに限定します",
     "cancelSelection": "選択モードを終了（ESC）",
     "cancelSelectionTitle": "プレビューで任意のセクションをクリック、またはESCでキャンセル",
-    "autofill": "自分の情報で自動入力",
-    "autofillLabel": "自動入力",
-    "autofillTitle": "あなたのビジネス情報でテンプレートを自動入力 — スクリーンショットをアップロードするかデータを入力してください",
     "send": "送信",
     "stop": "停止",
     "steer": "軌道修正",
@@ -138,5 +141,120 @@
     "titulo": "コードへのコメント",
     "deAntes": "このターンの前",
     "quitar": "コメントを削除"
+  },
+  "newChat": {
+    "header": {
+      "line": "Len と<b>チャット</b>",
+      "conversations": "会話",
+      "newChat": "最初からやり直す",
+      "newChatHint": "この会話を保存して新しい会話を始めます。Len はこの会話を覚えていません。メモリーとページのメモはそのまま残ります。",
+      "busy": "会話を切り替えるには、Len の作業が終わるまでお待ちください。",
+      "failed": "会話を切り替えられませんでした。もう一度お試しください。",
+      "archived": "以前の会話",
+      "archivedEmpty": "保存された会話はまだありません。",
+      "reopen": "この会話に戻る",
+      "messages": "{count, plural, other {# 件のメッセージ}}"
+    },
+    "memory": {
+      "empty": "Len はまだあなたについて何も覚えていません。すべてのページに当てはまることを伝えると、ここに表示されます。"
+    },
+    "empty": {
+      "title": "今日はページに何をしましょう？",
+      "subtitle": "自分の言葉で頼んでください。Len が作業し、何が変わったかを見せます。元に戻すこともできます。",
+      "suggestions": {
+        "photos": "トップに本物の写真を入れて",
+        "form": "お問い合わせフォームを追加して",
+        "mobile": "スマホでの見え方を確認して",
+        "publish": "ページを公開して"
+      }
+    },
+    "steps": {
+      "running": "Len が作業中",
+      "done": "{count, plural, other {Len が # ステップ実行}}"
+    },
+    "activity": {
+      "reading": "ページを読んでいます",
+      "editing": "ページを変更しています",
+      "terminal": "ターミナルを使っています",
+      "photos": "写真を探しています",
+      "image": "画像を編集しています",
+      "web": "インターネットで検索しています",
+      "checking": "結果を確認しています",
+      "publishing": "公開の準備をしています",
+      "remembering": "伝えられたことをメモしています",
+      "results": "成果を確認しています",
+      "reply": "返信を準備しています",
+      "module": "モジュールをオンにしています",
+      "undoing": "直前の変更を元に戻しています",
+      "asking": "質問を準備しています",
+      "working": "作業中"
+    },
+    "live": {
+      "thinking": "考えています",
+      "writing": "書いています",
+      "working": "作業中 · {seconds} 秒",
+      "onServer": "このタブを閉じても作業を続けます",
+      "waitingAnswer": "あなたの返事を待っています",
+      "waitingApproval": "あなたの承認を待っています",
+      "yourTurn": "あなたの番です · 一時停止中",
+      "done": "完了",
+      "doneHint": "ほかのことも頼めます",
+      "stopped": "停止しました",
+      "stoppedHint": "すでに終えた作業は残ります",
+      "failed": "最後まで終えられませんでした"
+    },
+    "question": {
+      "label": "Len からの質問",
+      "hint": "下の欄に、自分の言葉で答えてください。",
+      "answered": "あなたの答え: {answer}"
+    },
+    "changes": {
+      "showAll": "{count} 件の変更をすべて見る",
+      "showLess": "閉じる",
+      "compare": "変更前と変更後を比べる"
+    },
+    "compare": {
+      "title": "変更前と変更後",
+      "subtitle": "バーをドラッグして、このターンの前のページと今のページを比べます。",
+      "close": "閉じる",
+      "before": "変更前",
+      "after": "変更後",
+      "drag": "ドラッグして比べる"
+    },
+    "close": {
+      "applied": "適用済み",
+      "appliedEdits": "適用済み · {count, plural, other {# 件の編集}}",
+      "credits": "{credits} クレジット"
+    },
+    "feedback": {
+      "up": "役に立った",
+      "down": "役に立たなかった",
+      "thanks": "教えていただきありがとうございます。",
+      "failed": "評価を保存できませんでした。もう一度お試しください。",
+      "title": "何がよくなかったですか？",
+      "reasons": {
+        "made_up": "情報をでっち上げた",
+        "not_what_i_asked": "頼んだことをしなかった",
+        "touched_other": "頼んでいない所を変えた",
+        "looks_bad": "見た目が悪い",
+        "too_slow": "時間がかかりすぎた"
+      },
+      "notePlaceholder": "詳しく教えてください（任意）",
+      "privacy": "OpenLen チームが Len の改善のために読みます。",
+      "send": "送信",
+      "cancel": "キャンセル"
+    },
+    "composer": {
+      "plus": "画像など",
+      "on": "オン",
+      "disclaimer": "Len は間違えることがあります。公開する前にページを確認してください。"
+    },
+    "layout": {
+      "float": "チャットを切り離す",
+      "dock": "元に戻す",
+      "minimize": "Len に最小化",
+      "open": "チャットを開く",
+      "resize": "ドラッグでサイズを変更"
+    }
   }
 }

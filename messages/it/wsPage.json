@@ -104,7 +104,23 @@
       "todo": "Mostra tutto",
       "menos": "Mostra meno"
     },
-    "abrirFichero": "Apri il file"
+    "abrirFichero": "Apri il file",
+    "ownerReason": {
+      "address_needed": "devi scegliere l'indirizzo della tua pagina",
+      "address_invalid": "l'indirizzo «{address}» non è valido: solo lettere minuscole, numeri e trattini",
+      "address_reserved": "l'indirizzo «{address}» è riservato",
+      "page_changed": "la pagina è cambiata durante il salvataggio",
+      "web_unavailable": "la ricerca su internet non è disponibile al momento",
+      "search_failed": "la ricerca su internet non ha risposto",
+      "search_limit": "limite di {limit} ricerche per turno",
+      "web_page_unreadable": "non è stato possibile leggere quella pagina web",
+      "web_pages_limit": "limite di {limit} pagine lette per turno",
+      "image_unreachable": "non è stato possibile scaricare l'immagine",
+      "image_edit_failed": "il servizio non è riuscito a modificare l'immagine",
+      "image_edit_limit": "si può modificare una sola immagine per turno",
+      "site_page_limit": "il tuo sito ha già il massimo di {limit} pagine",
+      "memory_full": "la memoria di Len è piena"
+    }
   },
   "defaultProjectName": "Pagina prezzi",
   "chatDraft": {
@@ -162,7 +178,18 @@
   },
   "editing": {
     "noHtml": "Questo progetto non ha ancora contenuti HTML.",
-    "loading": "Caricamento del progetto…"
+    "loading": "Caricamento del progetto…",
+    "unavailable": {
+      "notFoundTitle": "Non abbiamo trovato questa pagina",
+      "notFoundBody": "Forse è stata eliminata, oppure appartiene a un altro account.",
+      "signedOutTitle": "La tua sessione è terminata",
+      "signedOutBody": "Accedi di nuovo per aprire questa pagina.",
+      "failedTitle": "Impossibile aprire questa pagina",
+      "failedBody": "Potrebbe essere la connessione. Riprova.",
+      "myPages": "Vedi le mie pagine",
+      "signIn": "Accedi",
+      "retry": "Riprova"
+    }
   },
   "a11y": {
     "workspaceHeading": "Area di lavoro OpenLen"

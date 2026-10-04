@@ -51,6 +51,7 @@ import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/termin
 import { activoDelSitio, codigoNuevo } from "@/lib/agent/terminal/javascript-del-usuario";
 import { buildManualDeLaPlataforma, textoDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { PREFERENCIA_MAX, PREFERENCIA_MIN, guardarPreferencia } from "@/lib/agent/preferencias";
+import type { OwnerReason } from "@/lib/agent/owner-reason";
 
 /** Los nombres, como en Claude Code: es lo que el modelo ya sabe usar. */
 export const HERRAMIENTAS_DE_FICHEROS = ["Read", "Edit", "Write", "Grep", "Glob"] as const;
@@ -308,7 +309,9 @@ async function aplicarPlan(
   // cualquier página es de su usuario, y los avisos de procedencia lo cuentan.
   session.sitioAlEmpezar ??= textoDelSitio(data, v);
   const guardado = await guardarFichero(session, deps, data, plan.ruta, plan.contenido, { crea: plan.crea, etiqueta });
-  if (!guardado.ok) return { response: respuesta(fallo(guardado.error)) };
+  if (!guardado.ok) {
+    return { response: respuesta(fallo(guardado.error)), ...(guardado.ownerReason ? { ownerReason: guardado.ownerReason } : {}) };
+  }
 
   // Lo que Len recuerda como leído es lo que SE GUARDÓ, como Claude Code tras su
   // propia escritura: así su siguiente edición no se cree pisada por otro.
@@ -368,7 +371,11 @@ async function guardarMemoria(
   for (const preferencia of r.nuevas) {
     const g = await guardarPreferencia(session, deps, { preferencia, alcance });
     if (g.response.ok === false) {
-      return { response: respuesta(fallo(`${plan.ruta}: «${preferencia}» was not saved: ${String(g.response.error ?? "")}`)) };
+      return {
+        response: respuesta(fallo(`${plan.ruta}: «${preferencia}» was not saved: ${String(g.response.error ?? "")}`)),
+        // La memoria llena (N41) se le dice al dueño igual que por `guardar_preferencia`.
+        ...(g.ownerReason ? { ownerReason: g.ownerReason } : {}),
+      };
     }
   }
   // Lo que quedó de VERDAD (el servidor pone el marcador y la viñeta).
@@ -596,7 +603,8 @@ type Guardado =
       /** Los ids que el script busca y esta escritura dejó sin elemento. */
       referenciasRotas: readonly string[];
     }
-  | { ok: false; error: string };
+  /** `ownerReason` (N41): lo que lee el dueño, cuando el fallo es suyo de entender. */
+  | { ok: false; error: string; ownerReason?: OwnerReason };
 
 /**
  * Guarda un fichero por el camino de siempre. Es `persistHtmlChange` sin la
@@ -626,7 +634,11 @@ export async function guardarFichero(
       };
     }
     if (Object.keys(data.pages ?? {}).length >= MAX_SITE_PAGES) {
-      return { ok: false, error: `Cannot create ${ruta}: this site already has the maximum of ${MAX_SITE_PAGES} pages.` };
+      return {
+        ok: false,
+        error: `Cannot create ${ruta}: this site already has the maximum of ${MAX_SITE_PAGES} pages.`,
+        ownerReason: { code: "site_page_limit", limit: MAX_SITE_PAGES },
+      };
     }
   }
 

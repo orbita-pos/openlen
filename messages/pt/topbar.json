@@ -8,7 +8,8 @@
     "switch": "Trocar de página",
     "seeAll": "Todas as minhas páginas",
     "rename": "Renomear",
-    "onlyOne": "É a sua única página"
+    "onlyOne": "É a sua única página",
+    "unavailable": "Página indisponível"
   },
   "save": {
     "saving": "Salvando…",

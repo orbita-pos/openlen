@@ -46,7 +46,13 @@
     "cancelled": "Cancelado.",
     "network": "Erro de rede — tente de novo.",
     "pageTooLarge": "Esta página é grande demais para um turno do assistente. Divida-a em várias páginas ou peça uma alteração mais específica.",
-    "noTaggableElements": "Esta página ainda não tem elementos que eu possa editar. Adicione algum conteúdo e tente de novo."
+    "noTaggableElements": "Esta página ainda não tem elementos que eu possa editar. Adicione algum conteúdo e tente de novo.",
+    "sessionExpired": "Sua sessão foi encerrada. Entre de novo e reenvie a mensagem.",
+    "notFound": "Não encontramos esta página — talvez tenha sido apagada. Recarregue o editor.",
+    "pageChanged": "A página mudou nesse meio-tempo. Recarregue o editor e tente de novo.",
+    "serverError": "O servidor falhou ({status}). Tente de novo em um instante.",
+    "scopeTooLarge": "A seção que você escolheu é grande demais. Escolha uma menor ou remova a seleção.",
+    "promptLength": "A mensagem precisa ter entre 1 e 10.000 caracteres. Encurte-a e envie de novo."
   },
   "chars": {
     "count": "{count} caracteres",
@@ -72,9 +78,6 @@
     "selectSectionTitle": "Defina o escopo da sua próxima mensagem para uma seção",
     "cancelSelection": "Cancelar modo de seleção (ESC)",
     "cancelSelectionTitle": "Clique em qualquer seção na pré-visualização, ou ESC para cancelar",
-    "autofill": "Preencher com meus dados",
-    "autofillLabel": "Preencher",
-    "autofillTitle": "Preencha o template com os dados da sua empresa — envie uma captura de tela ou digite seus dados",
     "send": "Enviar",
     "stop": "Parar",
     "steer": "Direcionar",
@@ -138,5 +141,120 @@
     "titulo": "Comentários no código",
     "deAntes": "antes do turno",
     "quitar": "Remover o comentário"
+  },
+  "newChat": {
+    "header": {
+      "line": "<b>Chat</b> com o Len",
+      "conversations": "Conversas",
+      "newChat": "Começar do zero",
+      "newChatHint": "Guarda esta conversa e começa outra. O Len não vai lembrar dela; sua memória e as notas da página ficam.",
+      "busy": "Espere o Len terminar para trocar de conversa.",
+      "failed": "Não foi possível trocar de conversa. Tente de novo.",
+      "archived": "Conversas anteriores",
+      "archivedEmpty": "Ainda não há conversas guardadas.",
+      "reopen": "Voltar a esta conversa",
+      "messages": "{count, plural, one {# mensagem} other {# mensagens}}"
+    },
+    "memory": {
+      "empty": "O Len ainda não lembra nada sobre você. Quando você disser algo que vale para todas as suas páginas, vai aparecer aqui."
+    },
+    "empty": {
+      "title": "O que vamos fazer hoje na sua página?",
+      "subtitle": "Peça com suas palavras. O Len faz, mostra o que mudou e você pode desfazer.",
+      "suggestions": {
+        "photos": "Coloque fotos de verdade na capa",
+        "form": "Adicione um formulário de contato",
+        "mobile": "Veja como fica no celular",
+        "publish": "Publique minha página"
+      }
+    },
+    "steps": {
+      "running": "O Len está trabalhando",
+      "done": "{count, plural, one {O Len fez # passo} other {O Len fez # passos}}"
+    },
+    "activity": {
+      "reading": "Lendo sua página",
+      "editing": "Mudando a página",
+      "terminal": "Usando o terminal",
+      "photos": "Procurando fotos",
+      "image": "Editando uma imagem",
+      "web": "Pesquisando na internet",
+      "checking": "Revisando o resultado",
+      "publishing": "Preparando a publicação",
+      "remembering": "Anotando o que você me disse",
+      "results": "Olhando seus resultados",
+      "reply": "Preparando uma resposta",
+      "module": "Ligando um módulo",
+      "undoing": "Desfazendo a última mudança",
+      "asking": "Preparando uma pergunta",
+      "working": "Trabalhando"
+    },
+    "live": {
+      "thinking": "Pensando",
+      "writing": "Escrevendo",
+      "working": "trabalhando · {seconds} s",
+      "onServer": "continua trabalhando mesmo se você fechar esta aba",
+      "waitingAnswer": "Esperando sua resposta",
+      "waitingApproval": "Esperando sua aprovação",
+      "yourTurn": "Sua vez · em pausa",
+      "done": "Pronto",
+      "doneHint": "peça outra coisa",
+      "stopped": "Parado",
+      "stoppedHint": "o que já fez continua feito",
+      "failed": "Não conseguiu terminar"
+    },
+    "question": {
+      "label": "O Len pergunta",
+      "hint": "Responda abaixo, com suas palavras.",
+      "answered": "Você respondeu: {answer}"
+    },
+    "changes": {
+      "showAll": "Ver as {count} mudanças",
+      "showLess": "Ver menos",
+      "compare": "Comparar antes e depois"
+    },
+    "compare": {
+      "title": "Antes e depois",
+      "subtitle": "Arraste a barra para comparar a página de antes do turno com a de agora.",
+      "close": "Fechar",
+      "before": "Antes",
+      "after": "Depois",
+      "drag": "Arraste para comparar"
+    },
+    "close": {
+      "applied": "Aplicado",
+      "appliedEdits": "Aplicado · {count, plural, one {# edição} other {# edições}}",
+      "credits": "{credits} créditos"
+    },
+    "feedback": {
+      "up": "Ajudou",
+      "down": "Não ajudou",
+      "thanks": "Obrigado por nos contar.",
+      "failed": "Não foi possível salvar seu voto. Tente de novo.",
+      "title": "O que deu errado?",
+      "reasons": {
+        "made_up": "Inventou dados",
+        "not_what_i_asked": "Não fez o que pedi",
+        "touched_other": "Mexeu em algo que não pedi",
+        "looks_bad": "Ficou feio",
+        "too_slow": "Demorou muito"
+      },
+      "notePlaceholder": "Conte mais (opcional)",
+      "privacy": "A equipe do OpenLen lê isto para melhorar o Len.",
+      "send": "Enviar",
+      "cancel": "Cancelar"
+    },
+    "composer": {
+      "plus": "Imagem e mais",
+      "on": "Ativo",
+      "disclaimer": "O Len pode errar. Revise sua página antes de publicá-la."
+    },
+    "layout": {
+      "float": "Destacar o chat",
+      "dock": "Fixar de novo",
+      "minimize": "Minimizar para o Len",
+      "open": "Abrir o chat",
+      "resize": "Arraste para mudar o tamanho"
+    }
   }
 }

@@ -8,7 +8,8 @@
     "switch": "ページを切り替え",
     "seeAll": "すべてのページ",
     "rename": "名前を変更",
-    "onlyOne": "ページはこれだけです"
+    "onlyOne": "ページはこれだけです",
+    "unavailable": "ページを利用できません"
   },
   "save": {
     "saving": "保存中…",

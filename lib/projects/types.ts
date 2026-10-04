@@ -173,6 +173,7 @@ export type VisualEngineProjectMetadata =
 import type { Declaracion } from "@/lib/page-data/declaracion";
 import type { AccountsDeclaration } from "@/lib/page-accounts/declaration";
 import type { PruebaGuardada } from "@/lib/agent/pruebas-de-la-pagina";
+import type { OwnerReason } from "@/lib/agent/owner-reason";
 
 export interface ProjectData {
   /** Publish-ready static HTML — the source of truth for the project. */
@@ -339,13 +340,16 @@ export interface StoredChatTurn {
      *  recargar la conversación desaparecería», y al sacarlo de ahí había que
      *  traerlo hasta aquí o se repetía la avería con otro disfraz. */
     observacion?: string;
-    /** POR QUÉ falló, literal — el mismo string que leyó el modelo y que el
-     *  diario del turno guarda. Va aquí porque `actions` se persiste como JSON
-     *  contra ESTA forma: un campo que no está declarado lo pierde el primero
-     *  que construya la tarjeta a mano, y entonces se ve en vivo y desaparece
-     *  al recargar. Ya pasó con `ops` y con `observacion`. Sólo con
-     *  `status: "error"`; llega truncado a 200 desde `motivo-del-fallo.ts`. */
+    /** El porqué de una tarjeta ÁMBAR, escrito para el dueño (lo que midieron
+     *  los ojos). Va aquí porque `actions` se persiste como JSON contra ESTA
+     *  forma: un campo que no está declarado lo pierde el primero que construya
+     *  la tarjeta a mano, y entonces se ve en vivo y desaparece al recargar. Ya
+     *  pasó con `ops` y con `observacion`. ⚠️ Las filas ROJAS de antes del
+     *  03/10 lo traen con el texto que leyó el modelo, y no se pinta (N41). */
     motivo?: string;
+    /** N41 · por qué falló una tarjeta roja, para el dueño: un código que el
+     *  chat traduce. Ver `lib/agent/owner-reason.ts`. */
+    ownerReason?: OwnerReason;
     /** Cuántas páginas miraron los ojos y cuántas tocó el turno («1 de 2
      *  páginas»). Los dos juntos o ninguno — ver `AgentAction`. */
     paginasMiradas?: number;
@@ -353,6 +357,9 @@ export interface StoredChatTurn {
     /** Los valores que aplicó la llamada, para el historial. Ver
      *  `lib/agent/valores-de-tema.ts`. */
     valores?: string;
+    /** La pregunta, literal, de una tarjeta de `preguntar` (plans/new-chat/).
+     *  Sólo de pantalla: el historial del modelo no la copia. */
+    pregunta?: string;
     /** QUÉ cambió, resuelto en el servidor mientras los `data-op-id` valían.
      *  Va aquí y no en el turno porque `actions` es la ÚNICA parte del turno
      *  que se guarda como JSON — `appendChatMessage` escribe columnas
@@ -378,4 +385,9 @@ export interface StoredChatTurn {
    *  muere con el cliente; quien la lee puede volver a engancharse
    *  (`GET /api/agent/turno/<fila>`). Se lee con `status: "applied"`. */
   enCurso?: boolean;
+  /** Lo que COBRÓ el turno, en centicréditos, y lo que tardó. Los apunta el
+   *  servidor al cerrar la fila; el cierre del chat nuevo los enseña también al
+   *  recargar (plans/new-chat/). Ausentes en filas anteriores. */
+  centicredits?: number;
+  durationMs?: number;
 }

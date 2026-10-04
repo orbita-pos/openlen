@@ -44,8 +44,9 @@ afterEach(() => {
 
 // LA TARJETA DEL BORRADOR SALÍA EN BLANCO (llamadas del 01/10). Las tarjetas
 // del chat pintan con clases que sólo existen dentro de `.workspace-v2`
-// (`fg`, `bg-elev`, `bd`, `bg-[var(--accent-strong)]`…, en
-// app/[locale]/new/tokens.css). Fuera de ahí no pintan nada: la caja del texto
+// (`fg`, `bg-elev`, `bd`, `bg-[var(--accent-strong)]`…: las variables en
+// app/[locale]/new/tokens.css, las clases en app/globals.css, acotadas a
+// `.workspace-v2`). Fuera de ahí no pintan nada: la caja del texto
 // heredaba el blanco de la pantalla de la llamada y quedaba blanco sobre blanco.
 describe("las tarjetas del chat dentro de la llamada", () => {
   it("el borrador lleva el texto de Len y vive dentro de .workspace-v2", () => {

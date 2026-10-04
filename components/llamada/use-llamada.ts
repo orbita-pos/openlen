@@ -9,7 +9,7 @@ import { despacharEventoDeVoz } from "./eventos-de-voz";
 import { contextoDelEncargo, crearPuenteALen, type EncargoDeFuera, type EventoParaLaVoz, type TarjetaDeLlamada } from "./puente-a-len";
 import { crearTopes, MAX_LLAMADA_MS, SILENCIO_MS } from "./topes";
 
-export type AvisoDeLlamada = "sinMicro" | "sinVoz" | "cortada" | "colgadaSilencio" | "colgadaDuracion";
+export type AvisoDeLlamada = "sinMicro" | "sinVoz" | "sinCreditos" | "cortada" | "colgadaSilencio" | "colgadaDuracion";
 type Fase = "lista" | "conectando" | "en_llamada" | "terminada";
 
 /** Un hueco de más de 1,2 s entre fragmentos abre una frase nueva en el subtítulo. */
@@ -203,6 +203,13 @@ export function useLlamada(o: { projectId: string; idioma: string; cliente?: Cli
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ projectId: o.projectId, sdp: oferta.sdp, idioma: o.idioma }),
       });
+      // 402: sin saldo para abrirla (la voz se cobra, `lib/voz/billing.ts`).
+      if (res.status === 402) {
+        setAviso("sinCreditos");
+        cerrarTodo("no_abrio");
+        setFase("lista");
+        return;
+      }
       if (!res.ok) throw new Error(String(res.status));
       const j = (await res.json()) as { sdp: string; sesionId: string | null; saludo: string };
       saludo = j.saludo;

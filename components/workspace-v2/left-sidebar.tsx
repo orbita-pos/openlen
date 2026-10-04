@@ -23,6 +23,9 @@ import {
   type ScopedSelection,
 } from "./panels/chat-panel";
 import { useIsMobile } from "./use-is-mobile";
+import { NewChatPanel } from "./chat/new-chat-panel";
+import { CHAT_WIDTH_DEFAULT, setChatLayout, useChatLayout, useChatVersion, useChatWidth } from "./chat/use-chat-version";
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { PastePanel } from "./panels/paste-panel";
 import type { SitePageSummary } from "@/lib/projects/site-pages";
 import { TemplatesPanel } from "./panels/templates-panel";
@@ -301,6 +304,33 @@ export function LeftSidebar({
   // After a click-to-place pick on mobile the panel overlays the canvas —
   // collapse it so the user can aim the placement click.
   const isMobileLayout = useIsMobile();
+  // EL CHAT NUEVO (plans/new-chat/), el de por defecto desde el 03/10; el de
+  // antes, con `?chat=old`. Mismo sitio y mismas props. Lleva su propia
+  // cabecera y un panel más ancho que se estira desde su borde, como en el mock.
+  const chatVersion = useChatVersion();
+  const newChat = chatVersion === "new" && mode === "chat" && entryMode !== "paste" && entryMode !== "ai";
+  // EL CHAT FLOTANDO O MINIMIZADO: sigue montado aquí (no se mueve en el árbol,
+  // ver use-chat-version.ts) pero el panel no ocupa sitio, y el lienzo se queda
+  // con él. Por eso, mientras flota, la barra se pinta abierta aunque esté
+  // plegada: plegarla desmontaría el chat.
+  const chatLayout = useChatLayout();
+  const chatOut = newChat && chatLayout !== "docked" && !isMobileLayout;
+  const [chatWidth, setChatWidth] = useChatWidth();
+  const [dragging, setDragging] = useState(false);
+  const dragFrom = useRef<{ x: number; w: number } | null>(null);
+  const startDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+    dragFrom.current = { x: e.clientX, w: chatWidth };
+    setDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const moveDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragFrom.current) return;
+    setChatWidth(dragFrom.current.w + (e.clientX - dragFrom.current.x));
+  };
+  const endDrag = () => {
+    dragFrom.current = null;
+    setDragging(false);
+  };
 
   /**
    * UN SOLO GESTO PARA ABRIR Y PARA CERRAR (2026-08-31).
@@ -318,6 +348,12 @@ export function LeftSidebar({
    * está delante.
    */
   const abrirOPlegar = (id: SidebarMode) => {
+    // Con el chat flotando, su icono lo vuelve a anclar en vez de plegar.
+    if (id === "chat" && chatOut) {
+      setChatLayout("docked");
+      if (collapsed) onToggleCollapse();
+      return;
+    }
     if (id === mode && !collapsed && activeSection === "page") {
       onToggleCollapse();
       return;
@@ -327,7 +363,7 @@ export function LeftSidebar({
     if (collapsed) onToggleCollapse();
   };
 
-  if (collapsed) {
+  if (collapsed && !chatOut) {
     return (
       <aside className="h-full w-12 shrink-0 bg-side border-r bd flex flex-col items-center pt-2 gap-1">
         <UnifiedRail
@@ -388,7 +424,35 @@ export function LeftSidebar({
           onToggleSoundMute={onToggleSoundMute}
         />
       </div>
-      <div className="w-[272px] max-md:w-auto max-md:flex-1 shrink-0 flex flex-col min-w-0">
+      <div
+        className={`${newChat ? "relative" : "w-[272px]"} max-md:w-auto max-md:flex-1 shrink-0 flex flex-col min-w-0`}
+        style={chatOut ? { width: 0 } : newChat && !isMobileLayout ? { width: chatWidth } : undefined}
+      >
+      {newChat && !isMobileLayout && !chatOut && (
+        // El borde del chat se estira: invisible hasta que pasas por encima.
+        // Doble clic, al ancho de siempre.
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={t("sidebar.resizeChat")}
+          title={t("sidebar.resizeChat")}
+          tabIndex={0}
+          data-dragging={dragging}
+          onPointerDown={startDrag}
+          onPointerMove={moveDrag}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onDoubleClick={() => setChatWidth(CHAT_WIDTH_DEFAULT)}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+              e.preventDefault();
+              setChatWidth(chatWidth + (e.key === "ArrowRight" ? 24 : -24));
+            }
+          }}
+          className="nc-split absolute -right-[5px] top-0 bottom-0 z-30 w-[10px] cursor-col-resize touch-none outline-none"
+        />
+      )}
+      {!newChat && (
       <div className="flex items-center justify-between px-3 py-1.5 border-b bd shrink-0">
         <span className="text-[10px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
           {tabTitle(mode)}
@@ -402,7 +466,12 @@ export function LeftSidebar({
           <X size={ICONO_BARRA} />
         </button>
       </div>
-      <div key={`${entryMode}:${mode}`} className="flex-1 min-h-0 fade-slide">
+      )}
+      {/* Sin `fade-slide` mientras el chat flota: su animación deja un
+          `transform` (la matriz identidad, no `none`) y un `transform` en un
+          antepasado atrapa al `position: fixed` del chat flotante dentro de
+          este div de ancho 0, debajo del lienzo. Cambiar la clase no remonta. */}
+      <div key={`${entryMode}:${mode}:${newChat ? "new" : "old"}`} className={`flex-1 min-h-0 ${chatOut ? "" : "fade-slide"}`}>
         {entryMode === "paste" ? (
           <PastePanel />
         ) : entryMode === "ai" ? (
@@ -426,7 +495,27 @@ export function LeftSidebar({
                 (2026-08-27). El rail perdió su icono y este modo se quedó sin
                 nadie que lo encendiera — una rama que no se puede alcanzar es
                 una invitación a que alguien la vuelva a cablear por error. */}
-            {mode === "chat" && (
+            {mode === "chat" && newChat && (
+              <NewChatPanel
+                flatProjectId={flatProjectId}
+                flatProjectHtml={flatProjectHtml}
+                flatProjectPage={flatProjectPage}
+                onFlatHtmlUpdate={onFlatHtmlUpdate}
+                flatProjectChat={flatProjectChat}
+                onChatChange={onChatChange}
+                onRedesigningChange={onRedesigningChange}
+                projectLoading={projectLoading}
+                sectionSelectMode={sectionSelectMode}
+                onToggleSectionSelect={onToggleSectionSelect}
+                scopedSelection={scopedSelection}
+                onClearScope={onClearScope}
+                pendingDraft={pendingDraft}
+                pendingDraftAutoSend={pendingDraftAutoSend}
+                onPendingDraftConsumed={onPendingDraftConsumed}
+                onClose={onToggleCollapse}
+              />
+            )}
+            {mode === "chat" && !newChat && (
               <ChatPanel
                 flatProjectId={flatProjectId}
                 flatProjectHtml={flatProjectHtml}

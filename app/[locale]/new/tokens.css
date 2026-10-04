@@ -80,27 +80,9 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
-.workspace-v2 .bg-app       { background: var(--bg); }
-.workspace-v2 .bg-side      { background: var(--bg-sidebar); }
-.workspace-v2 .bg-preview-a { background: var(--bg-preview); }
-.workspace-v2 .bg-elev      { background: var(--bg-elev); }
-.workspace-v2 .bg-hover     { background: var(--hover); }
-.workspace-v2 .fg           { color: var(--fg); }
-.workspace-v2 .fg-muted     { color: var(--fg-muted); }
-.workspace-v2 .fg-faint     { color: var(--fg-faint); }
-.workspace-v2 .bd           { border-color: var(--border); }
-.workspace-v2 .bd-strong    { border-color: var(--border-strong); }
-.workspace-v2 .bg-accent-soft { background: var(--accent-soft); }
-.workspace-v2 .text-accent  { color: var(--accent); }
-.workspace-v2 .ring-accent  { box-shadow: 0 0 0 2px var(--accent); }
-.workspace-v2 .shadow-card  { box-shadow: var(--shadow-card); }
-.workspace-v2 .shadow-elev  { box-shadow: var(--shadow-elev); }
-.workspace-v2 .shadow-coral { box-shadow: var(--shadow-coral); }
-.workspace-v2 .font-display { font-family: 'Geist', 'Inter', sans-serif; letter-spacing: -0.025em; font-weight: 600; }
-.workspace-v2 .ui-small     { font-size: 11px; letter-spacing: 0.005em; font-weight: 500; }
-.workspace-v2 .tabular      { font-variant-numeric: tabular-nums; }
-.workspace-v2 .seg-active   { background: var(--bg-elev); color: var(--fg); box-shadow: var(--shadow-card); }
-.workspace-v2 .mini         { font-size: 4.5px; line-height: 1.25; }
+/* Las clases de token (bg-elev, fg, bd, seg-active…) viven en app/globals.css,
+   dentro de `@layer utilities`: aquí, fuera de Tailwind, `hover:bg-hover` y
+   compañía no generaban ninguna regla. Ver el comentario de allí. */
 
 .workspace-v2 .nice-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
 .workspace-v2 .nice-scroll::-webkit-scrollbar-thumb {

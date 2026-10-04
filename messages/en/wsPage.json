@@ -104,7 +104,23 @@
       "todo": "Show all",
       "menos": "Show less"
     },
-    "abrirFichero": "Open the file"
+    "abrirFichero": "Open the file",
+    "ownerReason": {
+      "address_needed": "you need to choose your page's address",
+      "address_invalid": "the address “{address}” isn't valid: only lowercase letters, numbers and hyphens",
+      "address_reserved": "the address “{address}” is reserved",
+      "page_changed": "the page changed while it was being saved",
+      "web_unavailable": "web search isn't available right now",
+      "search_failed": "the web search didn't respond",
+      "search_limit": "limit of {limit} searches per turn",
+      "web_page_unreadable": "that web page couldn't be read",
+      "web_pages_limit": "limit of {limit} pages read per turn",
+      "image_unreachable": "the image couldn't be downloaded",
+      "image_edit_failed": "the service couldn't edit the image",
+      "image_edit_limit": "only one image can be edited per turn",
+      "site_page_limit": "your site already has the maximum of {limit} pages",
+      "memory_full": "Len's memory is full"
+    }
   },
   "defaultProjectName": "Pricing Page",
   "chatDraft": {
@@ -162,7 +178,18 @@
   },
   "editing": {
     "noHtml": "This project has no HTML content yet.",
-    "loading": "Loading project…"
+    "loading": "Loading project…",
+    "unavailable": {
+      "notFoundTitle": "We couldn't find this page",
+      "notFoundBody": "It may have been deleted, or it belongs to another account.",
+      "signedOutTitle": "You've been signed out",
+      "signedOutBody": "Sign in again to open this page.",
+      "failedTitle": "This page couldn't be opened",
+      "failedBody": "It may be your connection. Try again.",
+      "myPages": "See my pages",
+      "signIn": "Sign in",
+      "retry": "Try again"
+    }
   },
   "a11y": {
     "workspaceHeading": "OpenLen workspace"

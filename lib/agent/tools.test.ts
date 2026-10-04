@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { stripOpIds } from "@/lib/html-ops";
 import { runAgentTool, summarizeProjectState, urlIsPageImage, type AgentDeps, type AgentSession } from "./tools";
 import { CONFLICTO_AL_GUARDAR, realDeps } from "./tools";
-import { ErrorDeLaWeb, type WebDeps } from "./web/buscar";
+import { ErrorDeLaWeb, WebUnavailableError, type WebDeps } from "./web/buscar";
 import { loQueCambioElDueno } from "./cambios-del-dueno";
 import { buildFunctionDeclarations } from "./catalog";
 import { guardarPreferencia } from "./preferencias";
@@ -760,29 +760,31 @@ describe("elegir_foto", () => {
     assert.deepEqual(first.response.fotos, []);
     assert.deepEqual(second.response.fotos, []);
     assert.equal(session.photoSearchesThisTurn, 2);
-    // First: exploratory (no fallback tools named). Second: pivot.
-    assert.ok(!/\bEdit\b/.test(String(first.response.nota)));
+    // First: exploratory. Second: pivot, with a concrete way out.
     const nota = String(second.response.nota);
-    const nombrada = /\bEdit\b/.exec(nota)?.[0];
-    assert.ok(nombrada, `la nota de pivote no nombra ninguna salida concreta: ${nota}`);
+    assert.notEqual(nota, String(first.response.nota), "la segunda búsqueda vacía no cambia de nota: no hay giro");
+    assert.ok(/gradient/i.test(nota), `la nota de pivote no nombra ninguna salida concreta: ${nota}`);
 
-    // 🔴 Y QUE LA HERRAMIENTA NOMBRADA EXISTA DE VERDAD.
+    // 🔴 Y QUE NO MANDE A UNA HERRAMIENTA QUE PUEDE NO ESTAR.
     //
-    // Esta prueba se rompio en silencio el 2026-09-04: la nota decia
-    // `editar_pagina`, la herramienta se partio en cuatro y dejo de existir, y
-    // la lista de aqui arriba siguio nombrandola. Vive en test:node, que NO
-    // entra en `npm test` —vitest usa lista blanca—, asi que las tres puertas
-    // del repo salieron verdes con el fallo dentro.
+    // Hasta el 2026-10-02 esto exigía lo contrario: que la nota nombrara `Edit`
+    // y que existiera (se rompió en silencio el 2026-09-04 con `editar_pagina`).
+    // da7c56cd quitó el nombre a propósito —con la terminal, y en «sólo
+    // terminal», no hay Edit—, y esta prueba se quedó atrás un día entero sin
+    // que nadie lo viera: vive en test:node, que NO entra en `npm test`.
     //
-    // Comparar contra el CATALOGO en vez de contra una lista escrita a mano es
-    // lo que hace que el siguiente renombrado se note aqui y no en produccion:
-    // una nota que manda al modelo a una herramienta inexistente es
-    // exactamente el bug del terror-hero otra vez, con otro disfraz.
-    const declaradas = new Set(buildFunctionDeclarations(process.env).map((d) => d.name));
-    assert.ok(
-      declaradas.has(nombrada),
-      `la nota manda a "${nombrada}", que ya no es una herramienta declarada`,
-    );
+    // Se compara contra el CATALOGO de los dos modos, no contra una lista a
+    // mano, por lo mismo que antes: el siguiente renombrado se nota aquí.
+    const declaradas = new Set([
+      ...buildFunctionDeclarations(process.env).map((d) => d.name),
+      ...buildFunctionDeclarations({ ...process.env, OPENLEN_TERMINAL: "1" }).map((d) => d.name),
+    ]);
+    for (const herramienta of declaradas) {
+      assert.ok(
+        !new RegExp(`\\b${herramienta}\\b`).test(nota),
+        `la nota de pivote nombra la herramienta "${herramienta}", que puede no estar en este turno: ${nota}`,
+      );
+    }
   });
 
   it("hard-stops photo searches past the per-turn ceiling", async () => {
@@ -841,6 +843,8 @@ describe("editar_imagen", () => {
     assert.equal(store.imageEdits.length, 0);
     assert.equal(store.uploads.length, 0);
     assert.equal(store.saved.length, 0);
+    // Una URL que no está en el sitio es un error de Len: el dueño lee «No pudo».
+    assert.equal(out.ownerReason, undefined);
   });
 
   it("happy path: fetch→edit→upload→swap, persists the new url, versions=2, re-tags, card present", async () => {
@@ -888,6 +892,7 @@ describe("editar_imagen", () => {
     });
     assert.equal(second.response.ok, false);
     assert.ok(String(second.response.error).includes("turn"));
+    assert.deepEqual(second.ownerReason, { code: "image_edit_limit" });
     // The cap fires before any fetch/edit/upload.
     assert.equal(store.fetches.length, fetchesAfterFirst);
     assert.equal(store.imageEdits.length, 1);
@@ -909,6 +914,7 @@ describe("editar_imagen", () => {
     assert.equal(store.saved.length, 0);
     // Turn allowance untouched — the model can retry with another image.
     assert.equal(session.imageEditsThisTurn, 0);
+    assert.deepEqual(out.ownerReason, { code: "image_edit_failed" });
   });
 
   it("a failed fetch returns ok:false without editing, uploading, or saving", async () => {
@@ -926,6 +932,7 @@ describe("editar_imagen", () => {
     assert.equal(store.uploads.length, 0);
     assert.equal(store.saved.length, 0);
     assert.equal(session.imageEditsThisTurn, 0);
+    assert.deepEqual(out.ownerReason, { code: "image_unreachable" });
   });
 });
 
@@ -968,6 +975,8 @@ describe("publicar", () => {
     // The message must carry the actual rule, not just "invalid" — the model
     // needs it to explain the shape rule AND suggest a corrected name.
     assert.ok(String(out.response.error).includes("lowercase"));
+    // N41: al dueño, el código con la dirección; la frase la pone el chat.
+    assert.deepEqual(out.ownerReason, { code: "address_invalid", address: "héllo world" });
   });
 
   it("a reserved subdominio (cuenta) → ok:false BEFORE any confirm card, nothing saved", async () => {
@@ -978,6 +987,7 @@ describe("publicar", () => {
     assert.equal(out.action, undefined);
     assert.equal(store.saved.length, 0);
     assert.ok(String(out.response.error).toLowerCase().includes("reserved"));
+    assert.deepEqual(out.ownerReason, { code: "address_reserved", address: "cuenta" });
   });
 
   it("no claim AND no subdominio → ok:false telling the model to ask the user, no confirm, nothing saved", async () => {
@@ -987,6 +997,7 @@ describe("publicar", () => {
     assert.equal(out.confirm, undefined);
     assert.ok(String(out.response.error).toLowerCase().includes("subdomain"), String(out.response.error));
     assert.equal(store.saved.length, 0);
+    assert.deepEqual(out.ownerReason, { code: "address_needed" });
   });
 
   // 🔴 Y SI VUELVE A LLAMAR EN EL MISMO TURNO, SE INVENTÓ EL NOMBRE.
@@ -1042,6 +1053,8 @@ describe("publicar", () => {
     assert.equal(out.confirm, undefined, "construyó la tarjeta igual");
     assert.equal(store.saved.length, 0);
     assert.match(String(out.response.error), /never said|made (that name )?up/i);
+    // 🔴 N41: el dueño NO lee «you made that name up»; lee que falta su dirección.
+    assert.deepEqual(out.ownerReason, { code: "address_needed" });
   });
 
   it("pero el que SÍ dijo pasa, aunque lo escribiera con espacios", async () => {
@@ -1180,6 +1193,7 @@ describe("guardarPreferencia — alcance de PROYECTO (alcance:\"esta_pagina\")",
     const out = await guardarPreferencia(makeSession(), deps, { alcance: "esta_pagina", preferencia: "Preferencia larga que no cabe" });
     assert.equal(out.response.ok, false);
     assert.equal(store.userBrief!.length, 3990);
+    assert.deepEqual(out.ownerReason, { code: "memory_full" });
   });
   it("rejects out-of-range preferencia", async () => {
     const { deps } = makeDeps();
@@ -1236,6 +1250,8 @@ describe("guardarPreferencia — alcance de PERSONA (el DEFECTO)", () => {
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /full/);
     assert.equal(store.userBrief, null);
+    // N41: al dueño, en su idioma, no «your preference memory is full…».
+    assert.deepEqual(out.ownerReason, { code: "memory_full" });
   });
 });
 
@@ -1360,6 +1376,20 @@ describe("web_search y web_fetch (F2)", () => {
     const out = await runAgentTool(makeSession(), conWeb(web), "web_search", { queries: ["buena", "mala"] });
     assert.equal(out.response.ok, false);
     assert.equal(texto(out), "Error: the search service answered HTTP 429");
+    assert.deepEqual(out.ownerReason, { code: "search_failed" });
+  });
+
+  // N41: «no hay buscador configurado» no es una búsqueda que falló: el dueño no
+  // puede reintentarlo, y la frase tiene que decirlo.
+  it("un buscador sin configurar se le dice al dueño como no disponible, no como fallo", async () => {
+    const { web } = webFalsa({
+      buscar: async () => {
+        throw new WebUnavailableError("web search is not available on this server (no search provider is configured)");
+      },
+    });
+    const out = await runAgentTool(makeSession(), conWeb(web), "web_search", { queries: ["museo"] });
+    assert.equal(out.response.ok, false);
+    assert.deepEqual(out.ownerReason, { code: "web_unavailable" });
   });
 
   it("los argumentos y el tope de 10 consultas por turno", async () => {
@@ -1368,11 +1398,15 @@ describe("web_search y web_fetch (F2)", () => {
     const session = makeSession();
     assert.equal(texto(await runAgentTool(session, deps, "web_search", { queries: [] })), "Error: queries must contain at least one query");
     assert.equal(texto(await runAgentTool(session, deps, "web_search", { queries: ["a", "b", "c", "d", "e"] })), "Error: queries must contain at most 4 queries");
-    assert.equal(texto(await runAgentTool(session, deps, "web_search", { queries: ["a", " "] })), "Error: each query must be a non-empty string");
+    const mal = await runAgentTool(session, deps, "web_search", { queries: ["a", " "] });
+    assert.equal(texto(mal), "Error: each query must be a non-empty string");
+    // Los argumentos mal son cosa de Len: el dueño lee «No pudo».
+    assert.equal(mal.ownerReason, undefined);
     for (const q of [["a", "b", "c", "d"], ["e", "f", "g", "h"]]) assert.equal((await runAgentTool(session, deps, "web_search", { queries: q })).response.ok, true);
     const tope = await runAgentTool(session, deps, "web_search", { queries: ["i", "j", "k"] });
     assert.equal(tope.response.ok, false);
     assert.match(texto(tope), /more than 10 searches in this turn/);
+    assert.deepEqual(tope.ownerReason, { code: "search_limit", limit: 10 });
   });
 
   it("sin buscador en el servidor, lo dice y no rompe", async () => {
@@ -1380,6 +1414,9 @@ describe("web_search y web_fetch (F2)", () => {
     const out = await runAgentTool(makeSession(), { ...deps, web: undefined } as AgentDeps, "web_search", { queries: ["museo"] });
     assert.equal(out.response.ok, false);
     assert.match(texto(out), /^Error: web search is not available/);
+    assert.deepEqual(out.ownerReason, { code: "web_unavailable" });
+    const leer = await runAgentTool(makeSession(), { ...deps, web: undefined } as AgentDeps, "web_fetch", { url: "https://museo.example/" });
+    assert.deepEqual(leer.ownerReason, { code: "web_unavailable" });
   });
 
   it("web_fetch: la página en markdown, sin lo activo y con el aviso; el error, con su motivo; tope de 5 páginas", async () => {
@@ -1396,9 +1433,11 @@ describe("web_search y web_fetch (F2)", () => {
       url: "http://localhost/secreto",
     });
     assert.equal(texto(mala), "Error: that address is not a public website and cannot be read");
+    assert.deepEqual(mala.ownerReason, { code: "web_page_unreadable" });
     for (let i = 0; i < 4; i++) await runAgentTool(session, deps, "web_fetch", { url: "https://museo.example/" });
     const sexta = await runAgentTool(session, deps, "web_fetch", { url: "https://museo.example/" });
     assert.match(texto(sexta), /already read 5 pages in this turn/);
+    assert.deepEqual(sexta.ownerReason, { code: "web_pages_limit", limit: 5 });
   });
 
   it("web_fetch: una página larga se corta a 50.000 caracteres y lo dice", async () => {
@@ -1412,6 +1451,17 @@ describe("web_search y web_fetch (F2)", () => {
     const out = await runAgentTool(makeSession(), realDeps(), "web_fetch", { url: "http://localhost/secreto" });
     assert.equal(out.response.ok, false);
     assert.match(texto(out), /not a public website/);
+  });
+
+  // N42: la ruta cuenta lo cobrado aparte con el cobro que le da a `realDeps`.
+  // Si la web cobrara por su cuenta, el cierre del turno no lo vería.
+  it("🔴 lo que cobra la búsqueda va por el cobro que se le da a realDeps", async () => {
+    const cobros: [string, number][] = [];
+    const deps = realDeps(async (userId, centicreditos) => {
+      cobros.push([userId, centicreditos]);
+    });
+    await deps.web!.cobrar("u1", 2);
+    assert.deepEqual(cobros, [["u1", 300]]);
   });
 });
 
@@ -1711,6 +1761,8 @@ describe("H12-a · un conflicto al guardar que se repite no se arregla reintenta
     assert.match(String(out.response.error), /try again/);
     // Con UN choque el turno sigue: el bucle no corta.
     assert.equal(out.guardarSinSalida, undefined);
+    // N41: el dueño lee que la página cambió mientras se guardaba.
+    assert.deepEqual(out.ownerReason, { code: "page_changed" });
   });
 
   it("🔴 C22 · el SEGUNDO seguido, aunque cambie la llamada, dice que reintentar no lo arregla", async () => {
@@ -1732,6 +1784,7 @@ describe("H12-a · un conflicto al guardar que se repite no se arregla reintenta
     assert.doesNotMatch(String(segunda.response.tool_result), /try again/);
     // 🔴 LA MITAD QUE CORTA: el bucle cierra el turno por este campo.
     assert.equal(segunda.guardarSinSalida, true, "el segundo choque no le dice al bucle que cierre");
+    assert.deepEqual(segunda.ownerReason, { code: "page_changed" });
     // Y NO AFIRMA UNA CAUSA QUE NO CONOCE.
     assert.doesNotMatch(error, /otra escritura (est[aá]|que est[aá]) cambiando/);
     assert.match(error, /it couldn't be saved/);

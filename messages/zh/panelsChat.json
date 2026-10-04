@@ -46,7 +46,13 @@
     "cancelled": "已取消。",
     "network": "网络错误——请重试。",
     "pageTooLarge": "此页面过大，助手无法在一次操作中处理。请将其拆分为多个页面，或提出范围更小的修改。",
-    "noTaggableElements": "此页面暂时没有我可以编辑的元素。请先添加一些内容再试。"
+    "noTaggableElements": "此页面暂时没有我可以编辑的元素。请先添加一些内容再试。",
+    "sessionExpired": "你的会话已结束。请重新登录后再发送这条消息。",
+    "notFound": "找不到此页面，可能已被删除。请重新加载编辑器。",
+    "pageChanged": "页面在此期间发生了变化。请重新加载编辑器后重试。",
+    "serverError": "服务器出错（{status}）。请稍后重试。",
+    "scopeTooLarge": "你选择的区块太大了。请选择更小的部分，或取消选择。",
+    "promptLength": "消息长度需在 1 到 10,000 个字符之间。请缩短后重新发送。"
   },
   "chars": {
     "count": "{count} 个字符",
@@ -72,9 +78,6 @@
     "selectSectionTitle": "将你的下一条消息限定到某个模块",
     "cancelSelection": "退出选择模式（ESC）",
     "cancelSelectionTitle": "点击预览中的任意模块，或按 ESC 取消",
-    "autofill": "用我的信息自动填充",
-    "autofillLabel": "自动填充",
-    "autofillTitle": "用你的业务信息自动填充模板——上传截图或输入你的数据",
     "send": "发送",
     "stop": "停止",
     "steer": "调整方向",
@@ -138,5 +141,120 @@
     "titulo": "对代码的评论",
     "deAntes": "本轮之前",
     "quitar": "删除评论"
+  },
+  "newChat": {
+    "header": {
+      "line": "与 Len <b>聊天</b>",
+      "conversations": "对话",
+      "newChat": "重新开始",
+      "newChatHint": "保存这段对话并开始新的对话。Len 不会记得它；你的记忆和页面备注会保留。",
+      "busy": "请等 Len 完成后再切换对话。",
+      "failed": "无法切换对话，请重试。",
+      "archived": "之前的对话",
+      "archivedEmpty": "还没有保存的对话。",
+      "reopen": "回到这段对话",
+      "messages": "{count, plural, other {# 条消息}}"
+    },
+    "memory": {
+      "empty": "Len 还没有记住关于你的任何事。当你告诉它适用于你所有页面的内容时，会显示在这里。"
+    },
+    "empty": {
+      "title": "今天想给你的页面做点什么？",
+      "subtitle": "用你自己的话说。Len 来完成，告诉你改了什么，你也可以撤销。",
+      "suggestions": {
+        "photos": "在首页放上真实照片",
+        "form": "添加一个联系表单",
+        "mobile": "看看在手机上的效果",
+        "publish": "发布我的页面"
+      }
+    },
+    "steps": {
+      "running": "Len 正在工作",
+      "done": "{count, plural, other {Len 完成了 # 个步骤}}"
+    },
+    "activity": {
+      "reading": "正在阅读你的页面",
+      "editing": "正在修改页面",
+      "terminal": "正在使用终端",
+      "photos": "正在找照片",
+      "image": "正在编辑图片",
+      "web": "正在网上搜索",
+      "checking": "正在检查结果",
+      "publishing": "正在准备发布",
+      "remembering": "正在记下你说的话",
+      "results": "正在查看你的数据",
+      "reply": "正在准备回复",
+      "module": "正在开启模块",
+      "undoing": "正在撤销上一次修改",
+      "asking": "正在准备一个问题",
+      "working": "工作中"
+    },
+    "live": {
+      "thinking": "思考中",
+      "writing": "撰写中",
+      "working": "工作中 · {seconds} 秒",
+      "onServer": "即使关闭此标签页也会继续工作",
+      "waitingAnswer": "等待你的回答",
+      "waitingApproval": "等待你的确认",
+      "yourTurn": "轮到你了 · 已暂停",
+      "done": "完成",
+      "doneHint": "可以再让它做别的",
+      "stopped": "已停止",
+      "stoppedHint": "已经完成的部分会保留",
+      "failed": "没能完成"
+    },
+    "question": {
+      "label": "Len 想问你",
+      "hint": "在下方用你自己的话回答。",
+      "answered": "你的回答：{answer}"
+    },
+    "changes": {
+      "showAll": "查看全部 {count} 处修改",
+      "showLess": "收起",
+      "compare": "对比修改前后"
+    },
+    "compare": {
+      "title": "修改前后",
+      "subtitle": "拖动滑杆，对比这一轮之前的页面和现在的页面。",
+      "close": "关闭",
+      "before": "修改前",
+      "after": "修改后",
+      "drag": "拖动以对比"
+    },
+    "close": {
+      "applied": "已应用",
+      "appliedEdits": "已应用 · {count, plural, other {# 处编辑}}",
+      "credits": "{credits} 积分"
+    },
+    "feedback": {
+      "up": "有帮助",
+      "down": "没有帮助",
+      "thanks": "谢谢你告诉我们。",
+      "failed": "无法保存你的评价，请再试一次。",
+      "title": "哪里出了问题？",
+      "reasons": {
+        "made_up": "编造了信息",
+        "not_what_i_asked": "没有按我说的做",
+        "touched_other": "改了我没要求的地方",
+        "looks_bad": "效果不好看",
+        "too_slow": "太慢了"
+      },
+      "notePlaceholder": "多说一点（可选）",
+      "privacy": "OpenLen 团队会阅读这些内容来改进 Len。",
+      "send": "发送",
+      "cancel": "取消"
+    },
+    "composer": {
+      "plus": "图片等",
+      "on": "已开启",
+      "disclaimer": "Len 可能会出错。发布前请检查你的页面。"
+    },
+    "layout": {
+      "float": "弹出聊天",
+      "dock": "重新固定",
+      "minimize": "最小化为 Len",
+      "open": "打开聊天",
+      "resize": "拖动以调整大小"
+    }
   }
 }

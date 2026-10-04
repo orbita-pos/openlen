@@ -128,9 +128,36 @@ function recorta(texto: string, max = 42): string {
   return limpio.length > max ? `${limpio.slice(0, max - 1)}…` : limpio;
 }
 
+/** Etiquetas que se pintan en su propia línea aunque nadie les ponga clase. */
+const BLOCK_TAGS = new Set(["DIV", "P", "UL", "OL", "LI", "SECTION", "HEADER", "FOOTER", "BLOCKQUOTE"]);
+/** `block`, `flex`, `grid`, `table`, también con prefijo (`md:block`); NO
+ *  `inline-block`, que se pinta en la misma línea. */
+const BLOCK_CLASS = /(?:^|[\s:])(?:block|flex|grid|table)(?=\s|$)/;
+
+/** El texto como se LEE: un `<br>` separa palabras. `textContent` se los come
+ *  y «Bernal<br>Reformas<br>Integrales» salía «BernalReformasIntegrales» en la
+ *  tarjeta de cambios (plans/new-chat/, visto en el taller el 03/10). Un trozo
+ *  que se pinta en su línea (`<span class="block">`) también separa: salía
+ *  «AETHERBORNLeyendas…» (N28). Lo que va EN LÍNEA sin espacio sigue pegado,
+ *  porque así se pinta («Solstice<span>.</span>»). */
+function visibleText(el: Element): string {
+  let out = "";
+  el.childNodes.forEach((n) => {
+    if (n.nodeType === 3) out += n.textContent ?? "";
+    else if (n.nodeType === 1) {
+      const child = n as Element;
+      if (child.tagName === "BR") out += " ";
+      else if (BLOCK_TAGS.has(child.tagName) || BLOCK_CLASS.test(child.getAttribute("class") ?? "")) {
+        out += ` ${visibleText(child)} `;
+      } else out += visibleText(child);
+    }
+  });
+  return out;
+}
+
 function etiquetaDe(el: Element): string {
   const encabezado = el.querySelector("h1, h2, h3, h4, h5, h6");
-  const texto = encabezado?.textContent ?? "";
+  const texto = encabezado ? visibleText(encabezado) : "";
   if (texto.trim()) return recorta(texto);
   const id = el.getAttribute("id");
   if (id?.trim()) return recorta(`#${id}`);

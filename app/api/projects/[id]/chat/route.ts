@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ownerReasonFrom } from "@/lib/agent/owner-reason";
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
@@ -33,14 +34,18 @@ const ActionSchema = z.object({
   // 400 the whole turn (which vanishes silently on reload). `tool` stays a
   // hard structural reject; the actions count truncates too (see TurnSchema).
   summary: z.string().transform((s) => s.slice(0, 200)),
-  /** POR QUÉ falló, literal — el mismo string que leyó el modelo. Se TRUNCA, no
-   *  se rechaza, por el mismo motivo que el `summary`: un motivo largo haría
-   *  400 a todo el turno y el turno desaparecería al recargar, en silencio.
-   *  Ver `lib/agent/motivo-del-fallo.ts`. */
+  /** El porqué de una tarjeta ámbar (lo que midieron los ojos); las rojas de
+   *  antes del 03/10 traen aquí lo que leyó el modelo (N41). Se TRUNCA, no se
+   *  rechaza, por el mismo motivo que el `summary`: un motivo largo haría 400 a
+   *  todo el turno y el turno desaparecería al recargar, en silencio. */
   motivo: z
     .string()
     .transform((s) => s.slice(0, 200))
     .optional(),
+  /** N41 · el motivo del DUEÑO de una tarjeta roja (código + datos). Lo que no
+   *  tenga la forma se QUITA, no se rechaza: un código desconocido haría 400 a
+   *  todo el turno, que desaparecería al recargar. Ver `lib/agent/owner-reason.ts`. */
+  ownerReason: z.unknown().transform(ownerReasonFrom).optional(),
   /** Cuántas ediciones aplicó esta llamada. */
   edits: z.number().int().min(0).max(10_000).optional(),
   /** Los valores que aplicó la llamada, para el historial (H08-b). Se TRUNCA,
@@ -70,6 +75,13 @@ const ActionSchema = z.object({
     .optional(),
   paginasMiradas: z.number().int().min(0).max(1000).optional(),
   paginasTocadas: z.number().int().min(0).max(1000).optional(),
+  /** La pregunta de `preguntar`, para la tarjeta del chat nuevo
+   *  (plans/new-chat/). Aquí por lo mismo que `valores`: lo que este esquema no
+   *  nombra se pierde al guardar. Se TRUNCA al tope de la herramienta (600). */
+  pregunta: z
+    .string()
+    .transform((s) => s.slice(0, 600))
+    .optional(),
   /**
    * QUÉ cambió, resuelto por el servidor mientras los `data-op-id` valían.
    *

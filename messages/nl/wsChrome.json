@@ -71,7 +71,8 @@
       }
     },
     "tabLocked": "{label} — vergrendeld",
-    "collapsePanel": "Paneel inklappen"
+    "collapsePanel": "Paneel inklappen",
+    "resizeChat": "Sleep om de breedte te wijzigen · dubbelklik: normale grootte"
   },
   "toast": {
     "deleted": {
@@ -132,6 +133,7 @@
       "splitRight": "Afbeelding rechts",
       "swap": "Afbeeldingen wisselen"
     },
+    "copyChip": "Tekst erop afstemmen?",
     "code": {
       "title": "De code van je pagina",
       "close": "Sluiten",

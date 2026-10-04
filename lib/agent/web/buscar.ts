@@ -31,6 +31,10 @@ export interface FuenteWeb {
 /** Un fallo con su mensaje para el modelo, en inglés como el resto de lo que lee. */
 export class ErrorDeLaWeb extends Error {}
 
+/** N41 · el servidor no tiene buscador (falta la clave): no es una búsqueda que
+ *  falló, y al dueño se le dice distinto — reintentar no lo arregla. */
+export class WebUnavailableError extends ErrorDeLaWeb {}
+
 export type PaginaWeb = { readonly ok: true; readonly url: string; readonly html: string } | { readonly ok: false; readonly error: string };
 
 export interface WebDeps {
@@ -168,7 +172,7 @@ export function webDelServidor(debit: (userId: string, centicreditos: number) =>
   return {
     async buscar(_projectId, consulta, max, signal) {
       const clave = process.env.EXA_API_KEY?.trim();
-      if (!clave) throw new ErrorDeLaWeb("web search is not available on this server (no search provider is configured)");
+      if (!clave) throw new WebUnavailableError("web search is not available on this server (no search provider is configured)");
       return buscarEnExa(clave, consulta, max, signal);
     },
     leer: (_projectId, url) => leerPaginaDeVerdad(url),

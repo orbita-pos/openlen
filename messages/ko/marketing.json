@@ -29,6 +29,7 @@
     "listening": "듣는 중…",
     "attachImage": "이미지 첨부",
     "attachImages": "이미지 첨부",
+    "attachImagesHint": "최대 {max}장: 로고, 매장 사진, 마음에 드는 사이트.",
     "maxImages": "최대 {max}장",
     "removeImage": "이미지 제거",
     "attachedAlt": "첨부한 참고 이미지",

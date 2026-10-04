@@ -12,7 +12,7 @@
 //
 // Y POST, la terminal DEL USUARIO (abajo).
 
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
@@ -55,7 +55,7 @@ export async function GET(
   const filas = await db
     .select({ id: t.id, userText: t.userText, createdAt: t.createdAt, transcript: t.transcript })
     .from(t)
-    .where(and(eq(t.projectId, id), sql`${t.transcript}::text like '%"bash"%'`))
+    .where(and(eq(t.projectId, id), isNull(t.conversation), sql`${t.transcript}::text like '%"bash"%'`))
     .orderBy(desc(t.createdAt))
     .limit(TURNOS);
 

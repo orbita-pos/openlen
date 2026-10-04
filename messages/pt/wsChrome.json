@@ -71,7 +71,8 @@
       }
     },
     "tabLocked": "{label} — bloqueado",
-    "collapsePanel": "Recolher painel"
+    "collapsePanel": "Recolher painel",
+    "resizeChat": "Arraste para mudar a largura · clique duplo: tamanho normal"
   },
   "toast": {
     "deleted": {
@@ -132,6 +133,7 @@
       "splitRight": "Imagem à direita",
       "swap": "Trocar imagens"
     },
+    "copyChip": "Ajustar o texto para combinar?",
     "code": {
       "title": "O código da sua página",
       "close": "Fechar",

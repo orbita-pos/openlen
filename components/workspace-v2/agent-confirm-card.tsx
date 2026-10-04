@@ -32,6 +32,7 @@ export function AgentConfirmCard({
   projectId,
   confirm,
   onPublished,
+  onCancelled,
 }: {
   projectId: string;
   // SÓLO la tarjeta de publicar. La de objetivo es otro componente y quien
@@ -40,6 +41,9 @@ export function AgentConfirmCard({
   // el lint, no el compilador.
   confirm: Extract<AgentConfirm, { action: "publicar" }>;
   onPublished: (url: string) => void;
+  /** «Cancelar»: la tarjeta se apaga. El chat nuevo lo usa para dejar de decir
+   *  «Esperando tu aprobación» (plans/new-chat/). */
+  onCancelled?: () => void;
 }) {
   const t = useTranslations("wsPage");
   const [state, setState] = useState<CardState>({ kind: "idle" });
@@ -131,14 +135,17 @@ export function AgentConfirmCard({
   const handleCancel = useCallback(() => {
     if (busy || inert) return;
     setState({ kind: "cancelled" });
-  }, [busy, inert]);
+    onCancelled?.();
+  }, [busy, inert, onCancelled]);
 
   if (state.kind === "published") {
     return (
       <div className="rounded-lg border border-emerald-300 dark:border-emerald-500/40 bg-emerald-50/70 dark:bg-emerald-500/10 px-3 py-2.5 text-[11.5px]">
         <div className="flex items-center gap-2 font-medium text-emerald-700 dark:text-emerald-300">
           <Check size={14} className="shrink-0" />
-          <span>{t("agent.confirm.published", { url: hostOf(state.url) })}</span>
+          {/* La frase empieza por «✓» porque también es el texto del turno
+              «Publicada…» de la charla; aquí ya lo dice el icono. */}
+          <span>{t("agent.confirm.published", { url: hostOf(state.url) }).replace(/^✓\s*/, "")}</span>
         </div>
         {state.langsFallidos.length > 0 && (
           <div className="mt-1.5 flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-300">

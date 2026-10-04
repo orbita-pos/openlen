@@ -73,6 +73,7 @@
     "publish-hash:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/publish-hash-migrate.ts",
     "diario:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/diario-turno-migrate.ts",
     "transcripcion:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/transcripcion-migrate.ts",
+    "chat-conversations:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/chat-conversations-migrate.ts",
     "migrations:bundle": "node scripts/build-migrations.mjs",
     "notifications:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/notifications-migrate.ts",
     "notifications:drain": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/notifications-drain.ts",

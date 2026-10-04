@@ -108,6 +108,11 @@ import { useEditorSound } from "@/lib/use-editor-sound";
 import { useIsMobile } from "@/components/workspace-v2/use-is-mobile";
 import { formConfigKey, listSitePages } from "@/lib/projects/site-pages";
 import { esperarAQueSeCalme } from "@/lib/workspace-v2/esperar-a-que-se-calme";
+import {
+  projectLoadFailureFromStatus,
+  type ProjectLoadFailure,
+} from "@/lib/workspace-v2/project-load-failure";
+import { ProjectUnavailable } from "@/components/workspace-v2/project-unavailable";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
 import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import type { SitePage } from "@/lib/projects/types";
@@ -449,6 +454,9 @@ function NewV2Inner() {
    */
   const [lente, setLente] = useState<Lente>("pagina");
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
+  // Por qué no se abrió el proyecto de la URL (N31). Sin esto, un 404 se quedaba
+  // en «Cargando proyecto…» para siempre.
+  const [projectLoadFailure, setProjectLoadFailure] = useState<ProjectLoadFailure | null>(null);
   // The active site page (null = home) and the document the canvas edits.
   // Everything that used to read loadedProject.html for DISPLAY reads
   // activeDoc; saves route into the matching slot via activeSitePageRef.
@@ -1137,7 +1145,7 @@ function NewV2Inner() {
   // preview iframe stays in charge of visual content for this session —
   // wiring V3 primitives into the preview is deferred to a follow-up.
   const refetchProject = useCallback(
-    async (id: string, opts?: { deliberado?: boolean }): Promise<boolean> => {
+    async (id: string, opts?: { deliberado?: boolean; initial?: boolean }): Promise<boolean> => {
       // A refetch must never clobber local edits the server hasn't seen yet.
       // Con el «Aplicar» explícito esto pesa MÁS, no menos: el montón de
       // pendientes puede quedarse ahí todo el rato que el usuario quiera, y un
@@ -1165,7 +1173,20 @@ function NewV2Inner() {
           return false;
       } else if (editingLocally()) return false;
       const res = await fetch(`/api/projects/${id}`);
-      if (!res.ok) return false;
+      // LA PRIMERA CARGA dice por qué falló (N31); la convergencia (foco, otra
+      // pestaña) sigue rindiéndose en silencio, porque ya hay un proyecto a la
+      // vista y un fallo suyo no es motivo para quitárselo a nadie. Se vacía
+      // `loadedProject`: al pasar de A a un B que no se abre, seguir pintando A
+      // con la URL de B sería otra mentira.
+      const failInitial = (failure: ProjectLoadFailure) => {
+        if (!opts?.initial || projectParamRef.current !== id) return;
+        setLoadedProject(null);
+        setProjectLoadFailure(failure);
+      };
+      if (!res.ok) {
+        failInitial(projectLoadFailureFromStatus(res.status));
+        return false;
+      }
       // Re-check AFTER the await: a slow response (dev compiles, cold DB) can
       // arrive seconds later carrying a long-stale document — applying it
       // then would time-travel the canvas past edits made mid-flight.
@@ -1198,7 +1219,10 @@ function NewV2Inner() {
           }
         | null;
       const p = data?.project;
-      if (!p) return false;
+      if (!p) {
+        failInitial("failed");
+        return false;
+      }
       // Superseded: the URL moved on (e.g. redirected out to a global surface)
       // while this request was in flight — applying it now would resurrect a
       // project the user already left.
@@ -1232,9 +1256,25 @@ function NewV2Inner() {
         degradationsDismissed: p.data?.degradationsDismissed,
       });
       setProjectName(p.title);
+      setProjectLoadFailure(null);
       return true;
     },
     [],
+  );
+
+  // Abrir el proyecto de la URL. Lo usan la primera carga y el «Reintentar».
+  // Una excepción del `fetch` es la red: se dice como fallo pasajero, nunca
+  // como «no existe».
+  const openProjectFromUrl = useCallback(
+    (id: string) => {
+      setProjectLoadFailure(null);
+      return refetchProject(id, { initial: true }).catch(() => {
+        if (projectParamRef.current !== id) return;
+        setLoadedProject(null);
+        setProjectLoadFailure("failed");
+      });
+    },
+    [refetchProject],
   );
 
   useEffect(() => {
@@ -1242,17 +1282,14 @@ function NewV2Inner() {
     projectUpdatedAtRef.current = 0;
     if (!projectParam) {
       setLoadedProject(null);
+      setProjectLoadFailure(null);
       return;
     }
-    let cancelled = false;
-    void refetchProject(projectParam).catch(() => {
-      if (cancelled) return;
-      /* network blip — leave demo state */
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [projectParam, refetchProject]);
+    void openProjectFromUrl(projectParam);
+  }, [projectParam, openProjectFromUrl]);
+  // Ni cargando ni abierto: el proyecto de la URL no se pudo abrir.
+  const projectUnavailable = Boolean(projectParam && !loadedProject && projectLoadFailure);
+  const projectLoadingFromUrl = Boolean(projectParam && !loadedProject && !projectLoadFailure);
 
   // ── Cross-tab / cross-device convergence ────────────────────────────────
   // Same browser: a BroadcastChannel — a save in one tab nudges the others to
@@ -3214,7 +3251,8 @@ function NewV2Inner() {
         projectName={projectName}
         onRename={persistRename}
         projectLogoUrl={loadedProject?.logoUrl ?? null}
-        projectLoading={!!projectParam && !loadedProject}
+        projectLoading={projectLoadingFromUrl}
+        projectUnavailable={projectUnavailable}
         savingStatus={savingStatus}
         onPublish={onPublish}
         published={published}
@@ -3339,7 +3377,7 @@ function NewV2Inner() {
             }
           }}
           onRedesigningChange={setChatRedesigning}
-          projectLoading={!!projectParam && !loadedProject}
+          projectLoading={projectLoadingFromUrl}
           savingStatus={savingStatus}
           currentProjectId={loadedProject?.id ?? null}
           onRestoreApplied={applyRestoredVersion}
@@ -3937,6 +3975,12 @@ function NewV2Inner() {
                 </div>
               )}
             </>
+          ) : projectUnavailable && projectParam && projectLoadFailure ? (
+            <ProjectUnavailable
+              failure={projectLoadFailure}
+              projectId={projectParam}
+              onRetry={() => void openProjectFromUrl(projectParam)}
+            />
           ) : (
             <div className="flex-1 flex items-center justify-center bg-preview-a">
               <div className="text-[12px] fg-faint">

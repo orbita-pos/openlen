@@ -265,7 +265,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   if (!projectId) return errorJson(400, "projectId is required");
   // El tope es el del mensaje ENTERO: lo que escribes sigue en 2.000 en la caja,
   // y los comentarios de líneas van dentro (la #8, `comentarios-de-lineas.ts`).
-  if (prompt.length === 0 || prompt.length > MAX_PROMPT) return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`);
+  if (prompt.length === 0 || prompt.length > MAX_PROMPT) return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`, "promptLength");
   // F4 Task 1 — multi-page base: page slug, validated CLONED from
   // app/api/templates/ai-design/route.ts (read that file first if editing
   // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in
@@ -360,8 +360,16 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
     await pool?.close().catch(() => {});
   };
 
+  // N42 · LO QUE LAS HERRAMIENTAS COBRAN APARTE DEL MODELO (centicréditos):
+  // buscar en la web, editar una imagen. Se cobra al momento, como siempre; aquí
+  // además se cuenta, porque el cierre del turno tiene que decir lo que de
+  // verdad se cobró — un turno con búsquedas decía «1,46 créditos» y costó 5,96.
+  let chargedByTools = 0;
   const deps = {
-    ...realDeps(),
+    ...realDeps(async (uid, centicreditos) => {
+      await debitCredits(uid, centicreditos);
+      chargedByTools += centicreditos;
+    }),
     // `mirar_pagina` mide por el mismo navegador que los ojos: es la herramienta
     // que más veces lo abre en un turno.
     observarPagina: (input: Parameters<typeof observarPagina>[0]) =>
@@ -411,7 +419,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   if (body?.scope && typeof body.scope === "object") {
     const raw = body.scope.outerHtml;
     if (typeof raw === "string" && raw.length > SCOPE_OUTER_MAX) {
-      return errorJson(400, "scope.outerHtml too large");
+      return errorJson(400, "scope.outerHtml too large", "scopeTooLarge");
     }
     if (typeof body.scope.hint === "string" && body.scope.hint.trim().length > 0) {
       scopeHint = body.scope.hint.trim().slice(0, 200);
@@ -810,6 +818,11 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         rotas: string[];
       };
       let suiteDelTurno: SuiteDelTurno | null = null;
+      // LO QUE COBRÓ EL TURNO (centicréditos) y CUÁNDO EMPEZÓ: el cierre del chat
+      // los enseña (plans/new-chat/, decisión de Jesús del 03/10), en el `done` y
+      // en la fila para que no desaparezcan al recargar. `null` = aún no se cobró.
+      let cobrado: number | null = null;
+      const empezo = Date.now();
       // LEN 2.1 · LA FILA DEL TURNO, ABIERTA MIENTRAS TRABAJA (diagnóstico
       // §4.4 punto 2). El turno ya no muere con el cliente, así que quien
       // vuelva a mirarlo —otra pestaña, el móvil, la misma tras perder la red—
@@ -862,6 +875,13 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
                 toolResults: diario.entradas(),
                 corte,
               }),
+              // `undefined` y no `null`: el tipo de la fila (`StoredChatTurn`) no
+              // admite `null` y cruzado con el de la función gana él. Se guarda
+              // igual: `enteroONulo` los deja los dos en NULL.
+              // Si el turno no llegó a su cierre (el bucle reventó), lo que ya
+              // cobraron las herramientas sigue cobrado y se dice (N42).
+              centicredits: cobrado ?? (chargedByTools > 0 ? chargedByTools : undefined),
+              durationMs: Date.now() - empezo,
               // H4 · lo que vio el modelo; de aquí sale el historial del turno siguiente.
               transcript: transcripcionDelTurno
                 ? transcripcionParaGuardar(transcripcionDelTurno, agentSession.leidos ?? new Map())
@@ -1406,7 +1426,8 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         // F2-T9 billing ruling (Jesús 2026-07-07): a turn that ended on a
         // terminal error (stopReason error/cancelled/max_tokens, or the
         // maxTurns/maxToolCalls caps) debits 0 credits — the user got no
-        // usable output. A clean end_turn finish charges normally, even
+        // usable output. ⚠️ Dos excepciones, las dos «hasta el techo»: el tope
+        // de gasto (30/09) y el ■ del dueño (03/10, «como DeepSeek»). A clean end_turn finish charges normally, even
         // when a tool inside it returned {ok:false} as data or the turn
         // ended waiting on a confirm card.
         // El importe se calcula SIEMPRE, se cobre o no. Hasta el 25/08 vivía
@@ -1459,6 +1480,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
               ` / vueltas=${result.turns} llamadas=${result.toolCalls}`,
           );
           await debitCredits(userId, credits);
+          cobrado = credits;
         } else if (result.topeAlcanzado === "budget_limit") {
           // 🔴 AL TECHO SE COBRA LO GASTADO, HASTA EL TECHO (Jesús, 2026-09-30).
           //
@@ -1467,12 +1489,35 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           // el cierre lo cuenta. Cobrar 0 convertiría el techo en un pase gratis
           // de hasta 30 créditos cada vez. Lo que pase del techo —la última
           // llamada y el cierre— lo paga la casa: el techo es la promesa.
-          const cobrado = Math.min(credits, techo);
+          const alTecho = Math.min(credits, techo);
           console.log(
-            `[agent] tope de gasto — ${cobrado} credits (gastado ${credits}, techo ${techo})` +
+            `[agent] tope de gasto — ${alTecho} credits (gastado ${credits}, techo ${techo})` +
               ` / vueltas=${result.turns} llamadas=${result.toolCalls} motivo=budget_limit`,
           );
-          await debitCredits(userId, cobrado);
+          await debitCredits(userId, alTecho);
+          cobrado = alTecho;
+        } else if (canceladoAProposito && result.errorCode === "cancelled") {
+          // 🔴 EL ■ COBRA LO QUE SE USÓ, HASTA EL TECHO (Jesús, 03/10: «como
+          // DeepSeek lo hace»).
+          //
+          // En el arnés de DeepSeek el usuario paga cada token que el modelo
+          // llegó a gastar, también en un turno cancelado: su contador cierra
+          // cada intento termine como termine. Aquí el ■ cobraba 0 por la regla
+          // del 07/07, que es de cuando el ■ deshacía lo hecho; desde 2.1 lo hecho
+          // se queda, y cobrar 0 era un pase gratis igual que el del techo (30/09).
+          //
+          // Sólo el ■ de verdad: `canceladoAProposito` lo pone el `abortar` de
+          // `POST /api/agent/cancelar`. El perro del silencio también aborta, y
+          // eso es nuestro: sigue por la rama de abajo, en 0. Sin tokens gastados
+          // —el ■ llegó antes de la primera respuesta— no hay nada que cobrar: el
+          // suelo de 1 de `credits` es para un turno que sí trabajó.
+          const usado = inputTokens + outputTokens > 0 ? Math.min(credits, techo) : 0;
+          console.log(
+            `[agent] ■ del dueño — ${usado} credits (gastado ${credits}, techo ${techo})` +
+              ` / vueltas=${result.turns} llamadas=${result.toolCalls} motivo=cancelled`,
+          );
+          if (usado > 0) await debitCredits(userId, usado);
+          cobrado = usado;
         } else if (!result.terminalError && result.sinCobro) {
           // 🔴 CERRADO CON ELEGANCIA, SIN COBRO (revisión pre-deploy del
           // 2026-09-22). El bucle redacta el cierre de dos turnos que antes
@@ -1526,6 +1571,10 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         // usuario veía un turno verde y limpio sobre una faena a medias.
         // LA FILA, CERRADA ANTES DE AVISAR: quien lea la conversación al recibir
         // el `done` —el panel, Len-Bench— tiene que encontrarla ya completa.
+        // Las ramas que no cobran dejan `cobrado` en null: el modelo costó 0. Lo
+        // que cobraron las herramientas se suma siempre: ya está cobrado, acabe
+        // como acabe el turno (N42).
+        cobrado = (cobrado ?? 0) + chargedByTools;
         await cerrarFila();
         // Lo que cambió, antes del `done`: el cliente lo engancha a este turno.
         // Sin llamadas a herramientas no pudo cambiar nada y no se mira.
@@ -1535,6 +1584,10 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           toolCalls: result.toolCalls,
           ...(mutoDurable ? { mutoDurable: true } : {}),
           ...(result.topeAlcanzado ? { topeAlcanzado: result.topeAlcanzado } : {}),
+          // LO QUE COBRÓ Y TARDÓ, en números (centicréditos y ms): la frase la
+          // compone el cliente en su idioma, como el tope (plans/new-chat/).
+          centicredits: cobrado,
+          durationMs: Date.now() - empezo,
           // 🔴 EL CORTE DE LA VENTANA, TAMBIÉN AL USUARIO.
           //
           // Al MODELO ya se le decía (`conversacionRecortada` → la nota de
@@ -1672,9 +1725,12 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
  * un usuario japonés en inglés. La regla ya estaba escrita en este repo —código
  * y campos, que el cliente componga— y aquí no se aplicaba.
  *
- * No se convierten los diez: `unauthorized`, `projectId is required` o
- * `project not found` no los alcanza la interfaz, y traducir un fallo que sólo
- * ve un `curl` es trabajo sin lector. Se convierten los que un usuario SÍ toca.
+ * No se convierten los diez: `projectId is required` sólo lo ve un `curl`, y
+ * traducir un fallo sin lector es trabajo perdido. Se convierten los que un
+ * usuario SÍ toca. ⚠️ `unauthorized` y los 404 SÍ los alcanza la interfaz (una
+ * sesión que caduca, un proyecto o una página borrados en otra pestaña; visto en
+ * el taller el 03/10, N44 de plans/new-chat/): el chat los compone por el ESTADO
+ * HTTP, sin código (`components/workspace-v2/chat/http-error.ts`).
  */
 function errorJson(status: number, message: string, code?: string): Response {
   return jsonResponse(code ? { error: message, code } : { error: message }, status);

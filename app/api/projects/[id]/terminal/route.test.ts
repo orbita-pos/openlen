@@ -46,7 +46,8 @@ describe("POST /api/projects/[id]/terminal — la terminal del usuario (la #17)"
 
   it("409 con la terminal apagada en el servidor", async () => {
     comoUsuario("u1");
-    delete process.env.OPENLEN_TERMINAL;
+    // Encendida por defecto desde N45: apagarla es el literal "0".
+    process.env.OPENLEN_TERMINAL = "0";
     const res = await pedir({ command: "ls /" });
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: "apagada" });

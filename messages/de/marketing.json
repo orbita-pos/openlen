@@ -29,6 +29,7 @@
     "listening": "Ich höre zu…",
     "attachImage": "Bild anhängen",
     "attachImages": "Bilder anhängen",
+    "attachImagesHint": "Bis zu {max}: dein Logo, dein Laden oder eine Website, die dir gefällt.",
     "maxImages": "Maximal {max} Bilder",
     "removeImage": "Bild entfernen",
     "attachedAlt": "Angehängte Referenz",

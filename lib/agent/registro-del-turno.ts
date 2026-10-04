@@ -93,9 +93,14 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
           // línea el turno que peor acabó sería justo el que perdiera el porqué
           // al recargar.
           ...(ev.motivo ? { motivo: ev.motivo } : {}),
+          // N41: el motivo del DUEÑO de una roja, por la misma razón.
+          ...(ev.ownerReason ? { ownerReason: ev.ownerReason } : {}),
           // Y LOS VALORES, que sólo lee el historial: sin ellos el turno
           // siguiente pierde el color exacto que se aplicó (H08-b).
           ...(ev.valores ? { valores: ev.valores } : {}),
+          // Y LA PREGUNTA de `preguntar`: la tarjeta destacada del chat nuevo
+          // tiene que seguir ahí al recargar (plans/new-chat/).
+          ...(ev.pregunta ? { pregunta: ev.pregunta } : {}),
           // Y EL RECUENTO DE COBERTURA, por la misma razón que los dos de
           // arriba: esta lista es BLANCA, así que un campo que no se nombre aquí
           // se ve en vivo y desaparece al recargar.

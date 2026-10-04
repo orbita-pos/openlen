@@ -5,12 +5,20 @@ const mocks = vi.hoisted(() => ({
   dueno: vi.fn(),
   abrir: vi.fn(),
   intentar: vi.fn(),
+  saldo: vi.fn(),
+  debitar: vi.fn(),
+  vigilar: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/voz/dueno", () => ({ esDuenoDelProyecto: mocks.dueno }));
 vi.mock("@/lib/voz/sesion", () => ({ abrirSesionDeVoz: mocks.abrir }));
 vi.mock("@/lib/voz/tope", () => ({ topeDeLlamadas: { intentar: mocks.intentar } }));
+vi.mock("@/lib/credits", () => ({ getCreditState: mocks.saldo, debitCredits: mocks.debitar }));
+vi.mock("@/lib/voz/billing", async (real) => ({
+  ...(await real<typeof import("@/lib/voz/billing")>()),
+  watchVoiceCall: mocks.vigilar,
+}));
 
 import { POST } from "./route";
 
@@ -25,12 +33,31 @@ beforeEach(() => {
   mocks.dueno.mockResolvedValue(true);
   mocks.intentar.mockReturnValue(true);
   mocks.abrir.mockResolvedValue({ ok: true, sdp: "v=0 respuesta", sesionId: "live_1" });
+  mocks.saldo.mockResolvedValue({ balance: 5_000 });
+  mocks.vigilar.mockReturnValue({ ended: new Promise(() => undefined) });
 });
 afterEach(() => {
   delete process.env.OPENLEN_VOZ;
 });
 
 describe("POST /api/voz/sesion", () => {
+  // 🔴 LA VOZ SE COBRA (Jesús, 03/10: 5 créditos por minuto, con los segundos
+  // que OpenAI le dice al SERVIDOR). Ver `lib/voz/billing.ts`.
+  it("🔴 abierta la llamada, el servidor se engancha a ESA sesión para cobrarla", async () => {
+    expect((await POST(pide(bueno))).status).toBe(200);
+    expect(mocks.vigilar).toHaveBeenCalledTimes(1);
+    expect(mocks.vigilar.mock.calls[0]![0]).toMatchObject({ sessionId: "live_1", apiKey: "sk-test", userId: "u1" });
+  });
+
+  it("sin saldo para abrirla: 402, sin gastar tope ni llamar a OpenAI", async () => {
+    mocks.saldo.mockResolvedValue({ balance: 0 });
+    const r = await POST(pide(bueno));
+    expect(r.status).toBe(402);
+    expect((await r.json()).error).toBe("sin_creditos");
+    expect(mocks.intentar).not.toHaveBeenCalled();
+    expect(mocks.abrir).not.toHaveBeenCalled();
+  });
+
   it("con todo en orden devuelve la respuesta SDP, el id y el saludo del idioma", async () => {
     const r = await POST(pide(bueno));
     expect(r.status).toBe(200);

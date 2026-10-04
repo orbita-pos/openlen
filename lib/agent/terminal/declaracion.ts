@@ -7,8 +7,8 @@
  * distinto aquí: no hay red ni procesos, los ficheros son los del sitio y lo
  * que se escribe se guarda como una versión.
  *
- * Detrás de `OPENLEN_TERMINAL=1`, la palanca de los dos brazos de la medición
- * de F1: con ella encendida, `bash` entra y salen Grep y Glob (Claude Code en
+ * Encendida salvo `OPENLEN_TERMINAL=0` (desde N45; nació como la palanca de los
+ * dos brazos de la medición de F1): con ella, `bash` entra y salen Grep y Glob (Claude Code en
  * Linux tampoco los tiene: busca con la terminal). Read, Edit y Write se
  * quedan. Puro: lo importan el catálogo y sus pruebas.
  */
@@ -17,9 +17,13 @@ import type { AgentMode } from "@/lib/agent/dynamis";
 
 export const NOMBRE_BASH = "bash";
 
-/** ¿Está encendida la terminal? Sólo el literal "1": cualquier otra cosa, apagada. */
+/** ¿Está encendida la terminal? ENCENDIDA POR DEFECTO: sólo el literal "0" la
+ *  apaga (N45, 03/10, Jesús: «como DeepSeek lo hace»: en su arnés la terminal
+ *  siempre está). Hasta hoy era al revés —sólo "1" la encendía— y sin ella Len
+ *  no veía las versiones guardadas (`/.openlen/versiones` sólo vive en `bash`);
+ *  en producción dependía de una línea en la caja. */
 export function terminalEncendida(env: Readonly<Record<string, string | undefined>> = process.env): boolean {
-  return env.OPENLEN_TERMINAL === "1";
+  return env.OPENLEN_TERMINAL !== "0";
 }
 
 /** Las herramientas que la terminal sustituye. */
