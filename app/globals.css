@@ -349,6 +349,49 @@
   }
 }
 
+/* LAS CLASES DE TOKEN DEL TALLER (bg-elev, fg, bd…), DENTRO DE TAILWIND.
+   Las variables viven en app/[locale]/new/tokens.css, sobre `.workspace-v2`;
+   las clases, aquí.
+
+   Vivían en tokens.css, fuera de Tailwind, y por eso Tailwind no les sabía
+   hacer variantes: `hover:bg-hover`, `hover:fg`, `placeholder:fg-faint`… no
+   generaban NI UNA regla (comprobado en las hojas de estilo del navegador el
+   2026-10-03): 322 usos en el taller cuyos hover no se pintaban. Y como
+   tokens.css se carga DESPUÉS de las utilidades con la misma especificidad, la
+   clase de token pisaba también las variantes normales del mismo elemento
+   (`fg-faint hover:text-red-500` nunca se ponía rojo).
+
+   Dentro de `@layer utilities` Tailwind (3.4) les hace variantes conservando
+   el selector, comprobado compilándolo: `.workspace-v2 .hover\:bg-hover:hover`,
+   `.workspace-v2 .placeholder\:fg-faint::placeholder`, `.workspace-v2 .group:hover
+   .group-hover\:fg`. Siguen ACOTADAS a `.workspace-v2` —fuera del taller no
+   pintan nada, como antes— y con dos clases de especificidad, así que siguen
+   ganando a una utilidad suelta; y como las variantes salen después de las
+   clases base, `fg-faint hover:text-red-500` ya se pone rojo. */
+@layer utilities {
+  .workspace-v2 .bg-app       { background: var(--bg); }
+  .workspace-v2 .bg-side      { background: var(--bg-sidebar); }
+  .workspace-v2 .bg-preview-a { background: var(--bg-preview); }
+  .workspace-v2 .bg-elev      { background: var(--bg-elev); }
+  .workspace-v2 .bg-hover     { background: var(--hover); }
+  .workspace-v2 .fg           { color: var(--fg); }
+  .workspace-v2 .fg-muted     { color: var(--fg-muted); }
+  .workspace-v2 .fg-faint     { color: var(--fg-faint); }
+  .workspace-v2 .bd           { border-color: var(--border); }
+  .workspace-v2 .bd-strong    { border-color: var(--border-strong); }
+  .workspace-v2 .bg-accent-soft { background: var(--accent-soft); }
+  .workspace-v2 .text-accent  { color: var(--accent); }
+  .workspace-v2 .ring-accent  { box-shadow: 0 0 0 2px var(--accent); }
+  .workspace-v2 .shadow-card  { box-shadow: var(--shadow-card); }
+  .workspace-v2 .shadow-elev  { box-shadow: var(--shadow-elev); }
+  .workspace-v2 .shadow-coral { box-shadow: var(--shadow-coral); }
+  .workspace-v2 .font-display { font-family: 'Geist', 'Inter', sans-serif; letter-spacing: -0.025em; font-weight: 600; }
+  .workspace-v2 .ui-small     { font-size: 11px; letter-spacing: 0.005em; font-weight: 500; }
+  .workspace-v2 .tabular      { font-variant-numeric: tabular-nums; }
+  .workspace-v2 .seg-active   { background: var(--bg-elev); color: var(--fg); box-shadow: var(--shadow-card); }
+  .workspace-v2 .mini         { font-size: 4.5px; line-height: 1.25; }
+}
+
 /* `:has()` makes this fire on the very first paint as soon as the
    workspace mounts (no useEffect lag). Without it, /new's layout
    classNames are set client-side after hydration and the StatusBar

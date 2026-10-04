@@ -66,7 +66,7 @@ export function ChatHeader({
         aria-expanded={memoryOpen}
         aria-label={memoryCount > 0 ? `${t("memoria.title")} (${memoryCount})` : t("memoria.title")}
         title={t("memoria.title")}
-        className="relative grid h-7 w-7 place-items-center rounded-lg fg-muted hover:bg-elev hover:fg aria-expanded:bg-[var(--bg-elev)] aria-expanded:text-[var(--fg)]"
+        className="relative grid h-7 w-7 place-items-center rounded-lg fg-muted hover:bg-elev hover:fg aria-expanded:bg-elev aria-expanded:fg"
       >
         <Brain size={15} />
         {memoryCount > 0 && (
@@ -89,7 +89,7 @@ export function ChatHeader({
             setNotice(null);
             if (next) void conversations.load();
           }}
-          className="grid h-7 w-7 place-items-center rounded-lg fg-muted hover:bg-elev hover:fg aria-expanded:bg-[var(--bg-elev)] aria-expanded:text-[var(--fg)]"
+          className="grid h-7 w-7 place-items-center rounded-lg fg-muted hover:bg-elev hover:fg aria-expanded:bg-elev aria-expanded:fg"
         >
           <History size={15} />
         </button>
