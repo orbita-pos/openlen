@@ -46,7 +46,13 @@
     "cancelled": "已取消。",
     "network": "网络错误——请重试。",
     "pageTooLarge": "此页面过大，助手无法在一次操作中处理。请将其拆分为多个页面，或提出范围更小的修改。",
-    "noTaggableElements": "此页面暂时没有我可以编辑的元素。请先添加一些内容再试。"
+    "noTaggableElements": "此页面暂时没有我可以编辑的元素。请先添加一些内容再试。",
+    "sessionExpired": "你的会话已结束。请重新登录后再发送这条消息。",
+    "notFound": "找不到此页面，可能已被删除。请重新加载编辑器。",
+    "pageChanged": "页面在此期间发生了变化。请重新加载编辑器后重试。",
+    "serverError": "服务器出错（{status}）。请稍后重试。",
+    "scopeTooLarge": "你选择的区块太大了。请选择更小的部分，或取消选择。",
+    "promptLength": "消息长度需在 1 到 10,000 个字符之间。请缩短后重新发送。"
   },
   "chars": {
     "count": "{count} 个字符",

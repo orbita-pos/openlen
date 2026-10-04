@@ -46,7 +46,13 @@
     "cancelled": "Cancelado.",
     "network": "Error de red: inténtalo de nuevo.",
     "pageTooLarge": "Esta página es demasiado grande para un turno del asistente. Divídela en varias páginas o pídeme un cambio más acotado.",
-    "noTaggableElements": "Esta página no tiene elementos que yo pueda editar todavía. Añade algo de contenido y vuelve a intentarlo."
+    "noTaggableElements": "Esta página no tiene elementos que yo pueda editar todavía. Añade algo de contenido y vuelve a intentarlo.",
+    "sessionExpired": "Se cerró tu sesión. Vuelve a entrar y repite el mensaje.",
+    "notFound": "No encontramos esta página: puede que se haya borrado. Recarga el taller.",
+    "pageChanged": "La página cambió mientras tanto. Recarga el taller e inténtalo otra vez.",
+    "serverError": "El servidor falló ({status}). Inténtalo otra vez en un momento.",
+    "scopeTooLarge": "La sección que elegiste es demasiado grande. Elige una más pequeña o quita el acotado.",
+    "promptLength": "El mensaje tiene que tener entre 1 y 10.000 caracteres. Acórtalo y vuelve a mandarlo."
   },
   "chars": {
     "count": "{count} caracteres",

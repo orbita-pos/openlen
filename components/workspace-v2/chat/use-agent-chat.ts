@@ -51,6 +51,7 @@ import {
 } from "@/lib/workspace-v2/comentarios-de-lineas";
 import { cambiosEnVivo, esFicheroCambiado } from "@/lib/workspace-v2/cambios-en-vivo";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
+import { httpErrorText } from "./http-error";
 
 /** El evento `html` del bucle, tal cual sale por el cable. Se usa como TIPO al
  *  leer el payload para que un renombrado allí rompa aquí la compilación en vez
@@ -768,29 +769,11 @@ export function useAgentChat({
             .json()
             .catch(() => ({ error: `HTTP ${res.status}` }));
           scanController.cancel();
-          // EL CÓDIGO GANA A LA PROSA. El servidor manda `code` para los fallos
-          // que un usuario puede provocar de verdad, y aquí se compone en SU
-          // idioma. Sin esto, `errPayload.error` se pintaba TAL CUAL — así que
-          // una página grande le decía «Page too large for an agent turn» a un
-          // usuario japonés, en los 10 locales.
-          //
-          // Lista explícita y no `t("errors." + code)`: una clave dinámica
-          // convierte un código nuevo sin traducir en un fallo de next-intl en
-          // tiempo de ejecución, y además no se puede grepear.
-          const CODIGO_A_CLAVE: Record<string, string> = {
-            pageTooLarge: "errors.pageTooLarge",
-            noTaggableElements: "errors.noTaggableElements",
-          };
-          const clave =
-            typeof errPayload?.code === "string" ? CODIGO_A_CLAVE[errPayload.code] : undefined;
-          updateTurn(turnId, {
-            status: "error",
-            errorText: clave
-              ? t(clave)
-              : typeof errPayload?.error === "string"
-                ? errPayload.error
-                : t("errors.requestFailed", { status: res.status }),
-          });
+          // EL CÓDIGO GANA A LA PROSA, y el `error` crudo no se pinta nunca: ver
+          // ./http-error (N44). Una página grande le decía «Page too large for
+          // an agent turn» a un usuario japonés, en los 10 locales.
+          const texto = httpErrorText(res.status, errPayload?.code);
+          updateTurn(turnId, { status: "error", errorText: t(texto.key, texto.values) });
           return;
         }
 
@@ -1209,23 +1192,11 @@ export function useAgentChat({
               .json()
               .catch(() => ({ error: `HTTP ${res.status}` }));
             scanController.cancel();
-            // EL CÓDIGO GANA A LA PROSA, igual que en `runAiDesignTurn`: un 413
-            // de la ruta del Agente (`pageTooLarge`) se pintaba «Page too large
-            // for an agent turn» en los diez idiomas (plans/new-chat/,
-            // inventario N2). Lista explícita por lo mismo que allí.
-            const CODIGO_A_CLAVE: Record<string, string> = {
-              pageTooLarge: "errors.pageTooLarge",
-              noTaggableElements: "errors.noTaggableElements",
-            };
-            const clave = typeof errPayload?.code === "string" ? CODIGO_A_CLAVE[errPayload.code] : undefined;
-            updateTurn(turnId, {
-              status: "error",
-              errorText: clave
-                ? t(clave)
-                : typeof errPayload?.error === "string"
-                  ? errPayload.error
-                  : t("errors.requestFailed", { status: res.status }),
-            });
+            // EL CÓDIGO GANA A LA PROSA, igual que en `runAiDesignTurn` (N2 y
+            // N44, plans/new-chat/): «unauthorized», «page not found»… salían
+            // tal cual en los diez idiomas. Ver ./http-error.
+            const texto = httpErrorText(res.status, errPayload?.code);
+            updateTurn(turnId, { status: "error", errorText: t(texto.key, texto.values) });
             return;
           }
 

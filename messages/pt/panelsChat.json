@@ -46,7 +46,13 @@
     "cancelled": "Cancelado.",
     "network": "Erro de rede — tente de novo.",
     "pageTooLarge": "Esta página é grande demais para um turno do assistente. Divida-a em várias páginas ou peça uma alteração mais específica.",
-    "noTaggableElements": "Esta página ainda não tem elementos que eu possa editar. Adicione algum conteúdo e tente de novo."
+    "noTaggableElements": "Esta página ainda não tem elementos que eu possa editar. Adicione algum conteúdo e tente de novo.",
+    "sessionExpired": "Sua sessão foi encerrada. Entre de novo e reenvie a mensagem.",
+    "notFound": "Não encontramos esta página — talvez tenha sido apagada. Recarregue o editor.",
+    "pageChanged": "A página mudou nesse meio-tempo. Recarregue o editor e tente de novo.",
+    "serverError": "O servidor falhou ({status}). Tente de novo em um instante.",
+    "scopeTooLarge": "A seção que você escolheu é grande demais. Escolha uma menor ou remova a seleção.",
+    "promptLength": "A mensagem precisa ter entre 1 e 10.000 caracteres. Encurte-a e envie de novo."
   },
   "chars": {
     "count": "{count} caracteres",

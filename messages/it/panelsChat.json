@@ -46,7 +46,13 @@
     "cancelled": "Annullato.",
     "network": "Errore di rete — riprova.",
     "pageTooLarge": "Questa pagina è troppo grande per un turno dell’assistente. Dividila in più pagine o chiedimi una modifica più mirata.",
-    "noTaggableElements": "Questa pagina non ha ancora elementi che io possa modificare. Aggiungi dei contenuti e riprova."
+    "noTaggableElements": "Questa pagina non ha ancora elementi che io possa modificare. Aggiungi dei contenuti e riprova.",
+    "sessionExpired": "La tua sessione è scaduta. Accedi di nuovo e rimanda il messaggio.",
+    "notFound": "Non troviamo questa pagina: forse è stata eliminata. Ricarica l’editor.",
+    "pageChanged": "La pagina è cambiata nel frattempo. Ricarica l’editor e riprova.",
+    "serverError": "Il server non ha risposto bene ({status}). Riprova tra un momento.",
+    "scopeTooLarge": "La sezione che hai scelto è troppo grande. Scegline una più piccola o togli la selezione.",
+    "promptLength": "Un messaggio deve avere tra 1 e 10.000 caratteri. Accorcialo e rimandalo."
   },
   "chars": {
     "count": "{count} caratteri",

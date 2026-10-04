@@ -46,7 +46,13 @@
     "cancelled": "Cancelled.",
     "network": "Network error — try again.",
     "pageTooLarge": "This page is too large for one assistant turn. Split it into several pages, or ask me for a narrower change.",
-    "noTaggableElements": "This page has no elements I can edit yet. Add some content and try again."
+    "noTaggableElements": "This page has no elements I can edit yet. Add some content and try again.",
+    "sessionExpired": "Your session ended. Sign in again and resend the message.",
+    "notFound": "We couldn’t find this page — it may have been deleted. Reload the workspace.",
+    "pageChanged": "The page changed in the meantime. Reload the workspace and try again.",
+    "serverError": "The server failed ({status}). Try again in a moment.",
+    "scopeTooLarge": "The section you picked is too large. Pick a smaller one or remove the scope.",
+    "promptLength": "A message must be between 1 and 10,000 characters. Shorten it and send it again."
   },
   "chars": {
     "count": "{count} chars",

@@ -46,7 +46,13 @@
     "cancelled": "Geannuleerd.",
     "network": "Netwerkfout — probeer het opnieuw.",
     "pageTooLarge": "Deze pagina is te groot voor één beurt van de assistent. Splits hem op in meerdere pagina’s of vraag om een kleinere wijziging.",
-    "noTaggableElements": "Deze pagina heeft nog geen elementen die ik kan bewerken. Voeg wat inhoud toe en probeer het opnieuw."
+    "noTaggableElements": "Deze pagina heeft nog geen elementen die ik kan bewerken. Voeg wat inhoud toe en probeer het opnieuw.",
+    "sessionExpired": "Je sessie is verlopen. Log opnieuw in en stuur het bericht nog eens.",
+    "notFound": "We kunnen deze pagina niet vinden — misschien is hij verwijderd. Laad de editor opnieuw.",
+    "pageChanged": "De pagina is intussen veranderd. Laad de editor opnieuw en probeer het nog eens.",
+    "serverError": "De server gaf een fout ({status}). Probeer het zo meteen opnieuw.",
+    "scopeTooLarge": "De sectie die je koos is te groot. Kies een kleinere of haal de selectie weg.",
+    "promptLength": "Een bericht moet tussen 1 en 10.000 tekens lang zijn. Maak het korter en stuur het opnieuw."
   },
   "chars": {
     "count": "{count} tekens",

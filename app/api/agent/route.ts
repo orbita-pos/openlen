@@ -265,7 +265,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   if (!projectId) return errorJson(400, "projectId is required");
   // El tope es el del mensaje ENTERO: lo que escribes sigue en 2.000 en la caja,
   // y los comentarios de líneas van dentro (la #8, `comentarios-de-lineas.ts`).
-  if (prompt.length === 0 || prompt.length > MAX_PROMPT) return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`);
+  if (prompt.length === 0 || prompt.length > MAX_PROMPT) return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`, "promptLength");
   // F4 Task 1 — multi-page base: page slug, validated CLONED from
   // app/api/templates/ai-design/route.ts (read that file first if editing
   // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in
@@ -411,7 +411,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   if (body?.scope && typeof body.scope === "object") {
     const raw = body.scope.outerHtml;
     if (typeof raw === "string" && raw.length > SCOPE_OUTER_MAX) {
-      return errorJson(400, "scope.outerHtml too large");
+      return errorJson(400, "scope.outerHtml too large", "scopeTooLarge");
     }
     if (typeof body.scope.hint === "string" && body.scope.hint.trim().length > 0) {
       scopeHint = body.scope.hint.trim().slice(0, 200);
@@ -1690,9 +1690,12 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
  * un usuario japonés en inglés. La regla ya estaba escrita en este repo —código
  * y campos, que el cliente componga— y aquí no se aplicaba.
  *
- * No se convierten los diez: `unauthorized`, `projectId is required` o
- * `project not found` no los alcanza la interfaz, y traducir un fallo que sólo
- * ve un `curl` es trabajo sin lector. Se convierten los que un usuario SÍ toca.
+ * No se convierten los diez: `projectId is required` sólo lo ve un `curl`, y
+ * traducir un fallo sin lector es trabajo perdido. Se convierten los que un
+ * usuario SÍ toca. ⚠️ `unauthorized` y los 404 SÍ los alcanza la interfaz (una
+ * sesión que caduca, un proyecto o una página borrados en otra pestaña; visto en
+ * el taller el 03/10, N44 de plans/new-chat/): el chat los compone por el ESTADO
+ * HTTP, sin código (`components/workspace-v2/chat/http-error.ts`).
  */
 function errorJson(status: number, message: string, code?: string): Response {
   return jsonResponse(code ? { error: message, code } : { error: message }, status);

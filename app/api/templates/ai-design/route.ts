@@ -258,7 +258,7 @@ export async function POST(req: Request): Promise<Response> {
   const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
   // El del mensaje ENTERO, como /api/agent: con los comentarios de líneas dentro (la #8).
   if (prompt.length === 0 || prompt.length > MAX_PROMPT) {
-    return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`);
+    return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`, "promptLength");
   }
 
   const currentHtml = typeof body.currentHtml === "string" ? body.currentHtml : "";
@@ -307,7 +307,7 @@ export async function POST(req: Request): Promise<Response> {
   if (body.scope && typeof body.scope === "object") {
     const raw = body.scope.outerHtml;
     if (typeof raw === "string" && raw.length > SCOPE_OUTER_MAX) {
-      return errorJson(400, "scope.outerHtml too large");
+      return errorJson(400, "scope.outerHtml too large", "scopeTooLarge");
     }
     if (typeof body.scope.hint === "string" && body.scope.hint.trim().length > 0) {
       scopeHint = body.scope.hint.trim().slice(0, 200);
@@ -502,7 +502,7 @@ export async function POST(req: Request): Promise<Response> {
   // y un 400 permanente. Un documento limpio pasa byte-idéntico.
   const { taggedHtml, taggedCount } = tagWithOpIds(stripOpIds(currentHtml));
   if (taggedCount === 0) {
-    return errorJson(400, "currentHtml has no taggable elements");
+    return errorJson(400, "currentHtml has no taggable elements", "noTaggableElements");
   }
 
   // ¿ESTE TURNO NECESITA OJOS? Decisión de Jesús (2026-08-25): los píxeles del
@@ -631,6 +631,7 @@ export async function POST(req: Request): Promise<Response> {
       `Page is too large for one turn (≈${Math.round(
         estimatedTokens / 1000,
       )}K tokens, cap ${MAX_PROMPT_TOKENS / 1000}K). ${suggestion}.`,
+      "pageTooLarge",
     );
   }
   // eslint-disable-next-line no-console
@@ -1588,7 +1589,13 @@ ${avisos}` : reasoning,
 }
 
 /** El cuerpo vive en lib/ai/sse; el nombre local se queda porque lo usan
- *  decenas de sitios y renombrarlos no aclara nada. */
-function errorJson(status: number, message: string): Response {
-  return jsonResponse({ error: message }, status);
+ *  decenas de sitios y renombrarlos no aclara nada.
+ *
+ *  `code`, como en /api/agent, para lo que un USUARIO puede provocar: el chat
+ *  compone el texto en su idioma. Hasta el 2026-10-03 esta ruta no mandaba
+ *  ninguno, así que el `pageTooLarge` y el `noTaggableElements` que el chat ya
+ *  sabía traducir no llegaban nunca, y se pintaba el `message` en inglés (N44
+ *  de plans/new-chat/). */
+function errorJson(status: number, message: string, code?: string): Response {
+  return jsonResponse(code ? { error: message, code } : { error: message }, status);
 }
