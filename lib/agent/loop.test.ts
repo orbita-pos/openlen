@@ -3856,7 +3856,8 @@ describe("F1 · las lecturas del principio de la vuelta, en paralelo detrás de 
   });
 
   it("sin la palanca, todo en serie como hoy (brazo de control)", async () => {
-    const { maxEnVuelo, respuestas } = await correr(undefined);
+    // Encendida por defecto desde N45: apagarla es el literal "0".
+    const { maxEnVuelo, respuestas } = await correr("0");
     expect(maxEnVuelo).toBe(1);
     expect(respuestas).toEqual(["Read /a", "Read /b", "Edit /c", "Read /d"]);
   });

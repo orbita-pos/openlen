@@ -47,15 +47,15 @@ const RETIRADAS = [
 ] as const;
 
 describe("buildFunctionDeclarations", () => {
-  it("declara exactamente las de Len 2.0: las cinco de ficheros primero", () => {
+  it("declara exactamente las de Len por defecto: los ficheros primero y la terminal al final", () => {
     const names = buildFunctionDeclarations().map((d) => d.name);
     expect(names).toEqual([
-      // El sitio como ficheros, con el contrato de Claude Code.
+      // El sitio como ficheros, con el contrato de Claude Code. Grep y Glob
+      // salen: con la terminal —encendida por defecto desde N45, 03/10— se
+      // busca con `grep` en `bash`, como Claude Code en Linux.
       "Read",
       "Edit",
       "Write",
-      "Grep",
-      "Glob",
       "activar_modulo",
       "mirar_pagina",
       // H9: usarla, no sólo mirarla. Cargada desde el principio.
@@ -75,6 +75,8 @@ describe("buildFunctionDeclarations", () => {
       "ver_mensajes",
       // Y el borrador: no manda nada, deja una tarjeta con su botón.
       "preparar_respuesta",
+      // La terminal (F1), encendida por defecto (N45).
+      "bash",
     ]);
   });
 
@@ -387,7 +389,8 @@ describe("buildAgentSystemPrompt", () => {
     const p = buildAgentSystemPrompt();
     expect(p).toContain("/index.html");
     expect(p).toContain("/<slug>/index.html");
-    for (const h of ["Read", "Edit", "Write", "Grep"]) expect(p).toContain(h);
+    // Buscar, con la terminal (encendida por defecto desde N45).
+    for (const h of ["Read", "Edit", "Write", "bash"]) expect(p).toContain(h);
   });
 
   // H8 (2026-09-26): en E las tres taquerías reescribieron con Write una página
@@ -576,8 +579,8 @@ describe("lo que el Agente cree que puede", () => {
     const p = buildAgentSystemPrompt();
     expect(p).toMatch(/NAVIGATION BELONGS TO THE WHOLE SITE/);
     // Y la herramienta que lo hace posible en una sola llamada: buscar en
-    // todos los ficheros a la vez.
-    expect(p.slice(p.indexOf("NAVIGATION BELONGS TO THE WHOLE SITE")).split(String.fromCharCode(10))[0]).toContain("Grep");
+    // todos los ficheros a la vez (`grep` en `bash`, con la terminal).
+    expect(p.slice(p.indexOf("NAVIGATION BELONGS TO THE WHOLE SITE")).split(String.fromCharCode(10))[0]).toContain("grep in bash");
   });
 
   it("y comprueba lo que no controla ANTES de construirlo", () => {

@@ -96,7 +96,8 @@ describe("GET /api/agent/esfuerzo", () => {
     vi.stubEnv("OPENLEN_TERMINAL", "1");
     vi.stubEnv("OPENLEN_DYNAMIS", "1");
     expect(await (await GET()).json()).toMatchObject({ dynamis: true });
-    vi.stubEnv("OPENLEN_TERMINAL", "");
+    // Encendida por defecto desde N45: apagarla es el literal "0".
+    vi.stubEnv("OPENLEN_TERMINAL", "0");
     expect(await (await GET()).json()).toMatchObject({ dynamis: false });
     vi.unstubAllEnvs();
   });

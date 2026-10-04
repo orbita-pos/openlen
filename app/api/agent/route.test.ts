@@ -398,7 +398,8 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
     });
 
     it("sin la terminal, \"dynamis\" se queda en Len", async () => {
-      vi.stubEnv("OPENLEN_TERMINAL", "");
+      // Encendida por defecto desde N45: apagarla es el literal "0".
+      vi.stubEnv("OPENLEN_TERMINAL", "0");
       vi.stubEnv("OPENLEN_DYNAMIS", "1");
       await turno({ mode: "dynamis" });
       expect(modoDeLasDeclaraciones()).toBe("len");

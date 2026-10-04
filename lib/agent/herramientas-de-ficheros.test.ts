@@ -418,8 +418,14 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
   // F4 (plans/len-agente-2026): lo que sólo hace falta a veces —la guía de
   // diseño, el contrato de /api/d, las librerías— vive en /.openlen/docs. Lo pide la
   // ficha: que Read llegue SIN la palanca de la terminal.
-  it("🔴 F4 · Read abre los ficheros de /.openlen/docs sin la terminal, y el índice de /AGENTS.md los nombra", async () => {
-    assert.notEqual(process.env.OPENLEN_TERMINAL, "1");
+  it("🔴 F4 · Read abre los ficheros de /.openlen/docs sin la terminal, y el índice de /AGENTS.md los nombra", async (t) => {
+    // Encendida por defecto desde N45: «sin la terminal» es el literal "0".
+    const antes = process.env.OPENLEN_TERMINAL;
+    process.env.OPENLEN_TERMINAL = "0";
+    t.after(() => {
+      if (antes === undefined) delete process.env.OPENLEN_TERMINAL;
+      else process.env.OPENLEN_TERMINAL = antes;
+    });
     const { deps } = makeDeps({ html: HOME });
     const s = makeSession();
     const manual = texto(await runAgentTool(s, deps, "Read", { file_path: "/AGENTS.md" }));
@@ -1261,9 +1267,17 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
   });
 
   it("sin la palanca, no hay bash (brazo de control de la medición)", async () => {
-    const { deps } = makeDeps({ html: HOME });
-    const out = await runAgentTool(makeSession(), deps, "bash", { command: "ls /" });
-    assert.equal(out.response.ok, false);
+    // Encendida por defecto desde N45: apagarla es el literal "0".
+    const antes = process.env.OPENLEN_TERMINAL;
+    process.env.OPENLEN_TERMINAL = "0";
+    try {
+      const { deps } = makeDeps({ html: HOME });
+      const out = await runAgentTool(makeSession(), deps, "bash", { command: "ls /" });
+      assert.equal(out.response.ok, false);
+    } finally {
+      if (antes === undefined) delete process.env.OPENLEN_TERMINAL;
+      else process.env.OPENLEN_TERMINAL = antes;
+    }
   });
 });
 

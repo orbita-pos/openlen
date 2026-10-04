@@ -63,7 +63,8 @@ describe("el mensaje que se manda, según el modo", () => {
   });
 
   it("sin la terminal, el modo no cambia ni un byte", () => {
-    vi.stubEnv("OPENLEN_TERMINAL", "");
+    // Encendida por defecto desde N45: apagarla es el literal "0".
+    vi.stubEnv("OPENLEN_TERMINAL", "0");
     expect(armar("dynamis")).toBe(armar());
   });
 });
