@@ -111,13 +111,6 @@ const targets = [
   // Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código: `ver_formularios`
   // y el globito la leen, y sin ella cada consulta falla.
   "formularios-visto-migrate",
-  // Las tablas de la app del teléfono (movilCodigos, movilLlaves; rama
-  // len-movil, 0bb84c7d). Llegaba SIN CLASIFICAR y la guarda de abajo paraba el
-  // deploy de Len 2.5. Va aquí y no en YA_EN_PRODUCCION porque nadie ha
-  // comprobado que existan allá, y es CREATE ... IF NOT EXISTS: correcta lo
-  // estén o no. Las lee lib/movil/llaves.ts, que viaja en el paquete aunque la
-  // app no esté publicada.
-  "movil-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE
