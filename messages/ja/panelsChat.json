@@ -95,9 +95,9 @@
     "modeTitle": "次のメッセージをどの Len が担当するか選びます",
     "modeLen": "Len",
     "modeLenDesc": "ふだん使い：速くて、ほとんどのことに",
-    "modeDynamis": "Len Dynamis",
+    "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "大きな依頼に：一歩ごとに限界まで考えます。時間がかかり、クレジットも多く使います",
-    "effortDynamis": "Len Dynamis は常に限界まで考えます"
+    "effortDynamis": "Len Odyssey は常に限界まで考えます"
   },
   "noChange": {
     "label": "ページに変更はありません"

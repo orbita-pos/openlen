@@ -94,8 +94,18 @@ describe("GET /api/agent/esfuerzo", () => {
   // terminal apagada la ruta convertiría Dynamis en Len, y ofrecerlo mentiría.
   it("ofrece Len Dynamis sólo con la terminal encendida", async () => {
     vi.stubEnv("OPENLEN_TERMINAL", "1");
+    vi.stubEnv("OPENLEN_DYNAMIS", "1");
     expect(await (await GET()).json()).toMatchObject({ dynamis: true });
     vi.stubEnv("OPENLEN_TERMINAL", "");
+    expect(await (await GET()).json()).toMatchObject({ dynamis: false });
+    vi.unstubAllEnvs();
+  });
+
+  // 🔴 APARCADO (03/10/2026): la terminal de Len 2.5 en producción no puede
+  // pintar el selector de Odyssey en el chat de todos.
+  it("aparcado: con la terminal encendida pero sin OPENLEN_DYNAMIS=1, no lo ofrece", async () => {
+    vi.stubEnv("OPENLEN_TERMINAL", "1");
+    vi.stubEnv("OPENLEN_DYNAMIS", "");
     expect(await (await GET()).json()).toMatchObject({ dynamis: false });
     vi.unstubAllEnvs();
   });
