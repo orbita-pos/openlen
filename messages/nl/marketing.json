@@ -29,6 +29,7 @@
     "listening": "Luisteren…",
     "attachImage": "Een afbeelding toevoegen",
     "attachImages": "Afbeeldingen toevoegen",
+    "attachImagesHint": "Tot {max}: je logo, je zaak of een site die je mooi vindt.",
     "maxImages": "Maximaal {max} afbeeldingen",
     "removeImage": "Afbeelding verwijderen",
     "attachedAlt": "Toegevoegde referentie",

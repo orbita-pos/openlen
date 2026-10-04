@@ -29,6 +29,7 @@
     "listening": "Escuchando…",
     "attachImage": "Adjuntar una imagen",
     "attachImages": "Adjuntar imágenes",
+    "attachImagesHint": "Hasta {max}: tu logo, tu local o una web que te guste.",
     "maxImages": "Máximo {max} imágenes",
     "removeImage": "Quitar la imagen",
     "attachedAlt": "Referencia adjunta",

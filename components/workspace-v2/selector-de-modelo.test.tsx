@@ -272,3 +272,25 @@ describe("las flechas", () => {
     expect(document.activeElement).toBe(navegables[1]);
   });
 });
+
+// LA PASTILLA (03/10/2026): Crear se ve como el compositor del chat nuevo, y el
+// escritor va donde allí va el mando de esfuerzo, al final de la fila.
+describe("variant pill", () => {
+  it("pinta el nombre con su punto, y el menú se abre hacia la izquierda", () => {
+    const host = montar({ variant: "pill" });
+    const boton = host.querySelector('button[aria-haspopup="menu"]') as HTMLButtonElement;
+    expect(boton.className).toContain("rounded-full");
+    expect(boton.querySelector("span.rounded-full")).not.toBeNull();
+    const menu = host.querySelector('[role="menu"]') as HTMLElement;
+    expect(menu.className).toContain("right-0");
+    expect(menu.className).not.toContain("left-0");
+  });
+
+  // Sin `variant` todo queda como antes: el panel lateral no cambia.
+  it("BRAZO DE CONTROL: sin variante, el nombre tenue y el menú a la derecha del botón", () => {
+    const host = montar();
+    const boton = host.querySelector('button[aria-haspopup="menu"]') as HTMLButtonElement;
+    expect(boton.className).not.toContain("rounded-full");
+    expect((host.querySelector('[role="menu"]') as HTMLElement).className).toContain("left-0");
+  });
+});

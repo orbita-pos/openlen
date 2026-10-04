@@ -29,6 +29,7 @@
     "listening": "Écoute…",
     "attachImage": "Joindre une image",
     "attachImages": "Joindre des images",
+    "attachImagesHint": "Jusqu’à {max} : votre logo, votre boutique ou un site que vous aimez.",
     "maxImages": "{max} images maximum",
     "removeImage": "Retirer l'image",
     "attachedAlt": "Référence jointe",
