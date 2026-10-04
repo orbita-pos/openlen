@@ -89,12 +89,6 @@ async function enviar(
   return true;
 }
 
-/** Hay cliente de Resend: el correo sale de verdad. Para quien tiene que decir
- *  «sin correo no se puede» en vez de fingir (las cuentas de una página). */
-export function emailIsLive(): boolean {
-  return client !== null;
-}
-
 export interface PasswordResetEmail {
   to: string;
   name: string | null;
@@ -605,26 +599,27 @@ function buildChatNotificationHtml(input: {
 </html>`;
 }
 
-// ─── Cuentas de una página — confirmar, recuperar, invitar ───────────────────
+// ─── /auth/v1 de una página — confirmar, recuperar, invitar ─────────────────
 
-/** Los textos (en el idioma de la página) los arma lib/page-accounts/mail.ts;
- *  esto sólo manda. En desarrollo apunta el texto en la consola: lleva el
+/** Los correos del backend de una página (lib/backend/auth/mail.ts); los
+ *  textos, en el idioma de la página, los arma lib/backend/auth/mail-texts.ts
+ *  y esto sólo manda. En desarrollo apunta el texto en la consola: lleva el
  *  enlace, y con él se sigue el camino sin clave de Resend. */
-export async function sendPageAccountEmail(input: {
+export async function sendPageAuthEmail(input: {
   to: string;
   subject: string;
   html: string;
   text: string;
 }): Promise<void> {
-  const live = liveClientOrWarn("page account email");
+  const live = liveClientOrWarn("page auth email");
   if (!live) {
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
-      console.log(`\n  📧 [DEV] Page account email to ${input.to}\n     ${input.subject}\n\n${input.text}\n`);
+      console.log(`\n  📧 [DEV] Page auth email to ${input.to}\n     ${input.subject}\n\n${input.text}\n`);
     }
     return;
   }
-  await enviar(live, "page account email", {
+  await enviar(live, "page auth email", {
     from,
     to: input.to,
     subject: input.subject,

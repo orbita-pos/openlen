@@ -1,34 +1,22 @@
-// Los correos de las cuentas de una página (F2, plans/page-accounts/design.md),
-// «como Supabase»: el enlace de confirmar al registrarse, el de recuperar la
-// contraseña y la invitación del dueño. Cada uno lleva UN enlace de un uso a
-// `/api/a/verify` en la propia página.
+// Los textos de los correos de /auth/v1 (confirmar el registro, recuperar la
+// contraseña, invitar), en los 10 idiomas, en el de la página y si no, en
+// inglés. Puros: el envío es lib/backend/auth/mail.ts.
 //
-// Van en el idioma que diga la página (`lang` en el cuerpo de la petición) y,
-// si no dice ninguno o es uno que no tenemos, en inglés. Los textos son puros
-// (`accountEmailContent`); el envío es el de todos los correos (lib/email.ts).
+// Se escribieron para las cuentas de la página (data-ol-accounts, 03/10), que
+// se retiraron sin llegar a desplegarse; los textos se MUDARON tal cual, sin el
+// «papel» del invitado, que en Supabase Auth no existe.
 
-import { emailIsLive, sendPageAccountEmail } from "@/lib/email";
-
-export type AccountEmailKind = "confirm" | "recovery" | "invite";
-
-/** Sin correo de verdad no hay registro ni recuperar: la ruta lo dice (503) en
- *  vez de crear una cuenta que nadie podrá confirmar. En desarrollo siempre
- *  hay: `sendPageAccountEmail` apunta el enlace en la consola. */
-export function accountEmailAvailable(): boolean {
-  return process.env.NODE_ENV !== "production" || emailIsLive();
-}
+export type AuthEmailKind = "confirm" | "recovery" | "invite";
 
 interface Copy {
   readonly subject: string;
   readonly lead: string;
-  /** Sólo la invitación: la frase cuando el dueño le dio un papel. */
-  readonly leadWithRole?: string;
   readonly button: string;
   readonly ignore: string;
 }
 
-// `{host}` y `{role}` se sustituyen; nada más.
-const COPY: Record<string, Record<AccountEmailKind, Copy>> = {
+// `{host}` se sustituye; nada más.
+const COPY: Record<string, Record<AuthEmailKind, Copy>> = {
   en: {
     confirm: {
       subject: "Confirm your account on {host}",
@@ -45,7 +33,6 @@ const COPY: Record<string, Record<AccountEmailKind, Copy>> = {
     invite: {
       subject: "You're invited to {host}",
       lead: "You've been invited to join {host}. Open this link to choose your password.",
-      leadWithRole: "You've been invited to join {host} as {role}. Open this link to choose your password.",
       button: "Accept and choose a password",
       ignore: "If you weren't expecting this invitation, you can ignore this email.",
     },
@@ -66,7 +53,6 @@ const COPY: Record<string, Record<AccountEmailKind, Copy>> = {
     invite: {
       subject: "Te invitaron a {host}",
       lead: "Te invitaron a entrar en {host}. Abre este enlace para elegir tu contraseña.",
-      leadWithRole: "Te invitaron a entrar en {host} como {role}. Abre este enlace para elegir tu contraseña.",
       button: "Aceptar y elegir contraseña",
       ignore: "Si no esperabas esta invitación, puedes ignorar este correo.",
     },
@@ -87,7 +73,6 @@ const COPY: Record<string, Record<AccountEmailKind, Copy>> = {
     invite: {
       subject: "Convite para {host}",
       lead: "Você recebeu um convite para entrar em {host}. Abra este link para escolher sua senha.",
-      leadWithRole: "Você recebeu um convite para entrar em {host} como {role}. Abra este link para escolher sua senha.",
       button: "Aceitar e escolher senha",
       ignore: "Se você não esperava este convite, pode ignorar este e-mail.",
     },
@@ -108,8 +93,6 @@ const COPY: Record<string, Record<AccountEmailKind, Copy>> = {
     invite: {
       subject: "Invitation à rejoindre {host}",
       lead: "Vous avez reçu une invitation à rejoindre {host}. Ouvrez ce lien pour choisir votre mot de passe.",
-      leadWithRole:
-        "Vous avez reçu une invitation à rejoindre {host} en tant que {role}. Ouvrez ce lien pour choisir votre mot de passe.",
       button: "Accepter et choisir un mot de passe",
       ignore: "Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet e-mail.",
     },
@@ -130,7 +113,6 @@ const COPY: Record<string, Record<AccountEmailKind, Copy>> = {
     invite: {
       subject: "Einladung zu {host}",
       lead: "Du wurdest zu {host} eingeladen. Öffne diesen Link, um dein Passwort zu wählen.",
-      leadWithRole: "Du wurdest zu {host} eingeladen, als {role}. Öffne diesen Link, um dein Passwort zu wählen.",
       button: "Annehmen und Passwort wählen",
       ignore: "Wenn du diese Einladung nicht erwartet hast, kannst du diese E-Mail ignorieren.",
     },
@@ -151,7 +133,6 @@ const COPY: Record<string, Record<AccountEmailKind, Copy>> = {
     invite: {
       subject: "Invito a {host}",
       lead: "Hai ricevuto un invito a entrare in {host}. Apri questo link per scegliere la tua password.",
-      leadWithRole: "Hai ricevuto un invito a entrare in {host} come {role}. Apri questo link per scegliere la tua password.",
       button: "Accetta e scegli la password",
       ignore: "Se non aspettavi questo invito, puoi ignorare questa email.",
     },
@@ -172,7 +153,6 @@ const COPY: Record<string, Record<AccountEmailKind, Copy>> = {
     invite: {
       subject: "{host} への招待",
       lead: "{host} に招待されました。このリンクを開いてパスワードを設定してください。",
-      leadWithRole: "{host} に「{role}」として招待されました。このリンクを開いてパスワードを設定してください。",
       button: "招待を受けてパスワードを設定する",
       ignore: "心当たりがない場合は、このメールを無視してください。",
     },
@@ -193,7 +173,6 @@ const COPY: Record<string, Record<AccountEmailKind, Copy>> = {
     invite: {
       subject: "{host} 초대",
       lead: "{host}에 초대되었습니다. 이 링크를 열어 비밀번호를 설정하세요.",
-      leadWithRole: "{host}에 초대되었습니다(역할: {role}). 이 링크를 열어 비밀번호를 설정하세요.",
       button: "초대 수락하고 비밀번호 설정하기",
       ignore: "예상하지 못한 초대라면 이 이메일을 무시하셔도 됩니다.",
     },
@@ -214,7 +193,6 @@ const COPY: Record<string, Record<AccountEmailKind, Copy>> = {
     invite: {
       subject: "{host} 的邀请",
       lead: "你受邀加入 {host}。打开此链接设置你的密码。",
-      leadWithRole: "你受邀以「{role}」身份加入 {host}。打开此链接设置你的密码。",
       button: "接受邀请并设置密码",
       ignore: "如果你没有预料到这份邀请，可以忽略这封邮件。",
     },
@@ -235,7 +213,6 @@ const COPY: Record<string, Record<AccountEmailKind, Copy>> = {
     invite: {
       subject: "Uitnodiging voor {host}",
       lead: "Je bent uitgenodigd voor {host}. Open deze link om je wachtwoord te kiezen.",
-      leadWithRole: "Je bent uitgenodigd voor {host} als {role}. Open deze link om je wachtwoord te kiezen.",
       button: "Accepteren en wachtwoord kiezen",
       ignore: "Had je deze uitnodiging niet verwacht? Dan kun je deze e-mail negeren.",
     },
@@ -252,35 +229,30 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-export interface AccountEmailInput {
-  readonly kind: AccountEmailKind;
+export interface AuthEmailInput {
+  readonly kind: AuthEmailKind;
   readonly link: string;
   /** El host de la página (`tienda.openlen.app` o su dominio propio). */
   readonly host: string;
   readonly lang?: string | null;
-  /** Sólo la invitación: el papel que le dio el dueño. */
-  readonly role?: string | null;
 }
 
-export function accountEmailContent(input: AccountEmailInput): { subject: string; html: string; text: string } {
+export function authEmailContent(input: AuthEmailInput): { subject: string; html: string; text: string } {
   const lang = languageOf(input.lang);
   const copy = COPY[lang]![input.kind];
-  const role = input.role?.trim() || null;
-  const leadTemplate = role && copy.leadWithRole ? copy.leadWithRole : copy.lead;
-  // Con función, no con cadena: un `$&` en el papel no es un patrón de replace.
-  const fill = (s: string, esc: (v: string) => string) =>
-    s.replace(/\{host\}/g, () => esc(input.host)).replace(/\{role\}/g, () => esc(role ?? ""));
+  // Con función, no con cadena: un `$&` en el host no es un patrón de replace.
+  const fill = (s: string, esc: (v: string) => string) => s.replace(/\{host\}/g, () => esc(input.host));
   const plain = (v: string) => v;
 
   const subject = fill(copy.subject, plain);
-  const text = [fill(leadTemplate, plain), "", input.link, "", fill(copy.ignore, plain)].join("\n");
+  const text = [fill(copy.lead, plain), "", input.link, "", fill(copy.ignore, plain)].join("\n");
   const html = `<!doctype html>
 <html lang="${lang}">
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; background:#fafafa; margin:0; padding:32px; color:#0a0a0a;">
   <table align="center" style="max-width:480px; width:100%; background:#fff; border-radius:16px; padding:32px; border:1px solid #e5e5e5;">
     <tr><td>
       <p style="font-size:13px; font-weight:600; color:#525252; margin:0 0 20px;">${escapeHtml(input.host)}</p>
-      <p style="font-size:15px; line-height:1.5; margin:0 0 24px;">${fill(leadTemplate, escapeHtml)}</p>
+      <p style="font-size:15px; line-height:1.5; margin:0 0 24px;">${fill(copy.lead, escapeHtml)}</p>
       <p style="margin:0 0 24px;">
         <a href="${escapeHtml(input.link)}" style="display:inline-block; background:#0a0a0a; color:#fff; padding:11px 18px; border-radius:8px; text-decoration:none; font-weight:500; font-size:14px;">${escapeHtml(copy.button)}</a>
       </p>
@@ -291,9 +263,4 @@ export function accountEmailContent(input: AccountEmailInput): { subject: string
 </body>
 </html>`;
   return { subject, html, text };
-}
-
-export async function sendAccountEmail(input: AccountEmailInput & { to: string }): Promise<void> {
-  const { subject, html, text } = accountEmailContent(input);
-  await sendPageAccountEmail({ to: input.to, subject, html, text });
 }

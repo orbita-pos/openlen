@@ -171,7 +171,6 @@ export type VisualEngineProjectMetadata =
     } & VisualEngineAssetMetadata);
 
 import type { Declaracion } from "@/lib/page-data/declaracion";
-import type { AccountsDeclaration } from "@/lib/page-accounts/declaration";
 import type { PruebaGuardada } from "@/lib/agent/pruebas-de-la-pagina";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 
@@ -209,12 +208,6 @@ export interface ProjectData {
    *  Ausente = la página no declara ninguno, que es el caso de todas las que
    *  existían antes del 2026-08-29. Ver lib/page-data/declaracion.ts. */
   almacenes?: Declaracion;
-  /** Las CUENTAS que la página declara (`data-ol-accounts`), extraídas del
-   *  HTML al publicar, con la misma regla que `almacenes`: si el bloque
-   *  desaparece de lo publicado, las sesiones dejan de valer en la página (las
-   *  cuentas se conservan). `null`/ausente = la página no tiene cuentas. Ver
-   *  lib/page-accounts/declaration.ts. */
-  accounts?: AccountsDeclaration | null;
   /** LAS PROMESAS QUE ESTA PÁGINA YA CUMPLIÓ UNA VEZ, para que un turno
    *  posterior no pueda romperlas en silencio.
    *

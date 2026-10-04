@@ -1474,8 +1474,7 @@ async function captureWithPage(
     // página» sobre una llamada que el servidor rechazaría es lo que dejó pasar
     // el carrito del 2026-09-18.
     ...(() => {
-      // `/api/a` (las cuentas) también tiene sustituto desde el 2026-10-03.
-      const quedan = datos ? soloPublicada.filter((l) => !l.startsWith("/api/d/") && !l.startsWith("/api/a/")) : soloPublicada;
+      const quedan = datos ? soloPublicada.filter((l) => !l.startsWith("/api/d/")) : soloPublicada;
       return quedan.length > 0 ? { llamadasSoloPublicada: [...quedan] } : {};
     })(),
     ...(datos && datos.llamadas().length > 0 ? { llamadasADatos: datos.llamadas() } : {}),

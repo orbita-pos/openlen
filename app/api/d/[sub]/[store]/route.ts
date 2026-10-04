@@ -22,19 +22,15 @@ import type { AlmacenDeclarado } from "@/lib/page-data/declaracion";
 import { validaDocumento } from "@/lib/page-data/declaracion";
 import { declaracionPublicada } from "@/lib/page-data/publicada";
 import { permite, type Actor } from "@/lib/page-data/permisos";
-import { bytesDe, cabe, MAX_ROWS_SIGNED_IN } from "@/lib/page-data/cuota";
+import { bytesDe, cabe } from "@/lib/page-data/cuota";
 import { MAX_FILAS_VISITANTE } from "@/lib/page-data/store";
-import { borrar, bytesUsados, escribir, findOne, listar, updateOne } from "@/lib/page-data/store";
+import { borrar, bytesUsados, escribir, listar } from "@/lib/page-data/store";
 import {
   cabeceraDeVisitante,
   COOKIE_VISITANTE,
   nuevoVisitante,
   verificaVisitante,
 } from "@/lib/page-data/visitante";
-import { rowOwnerKey } from "@/lib/page-accounts/actor";
-import { isSameOriginRead, isSameOriginRequest } from "@/lib/page-accounts/same-origin";
-import { readSessionCookie } from "@/lib/page-accounts/session";
-import { publishedAccounts, resolveSignedIn } from "@/lib/page-accounts/signed-in";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,10 +66,7 @@ interface Contexto {
   projectId: string;
   almacen: AlmacenDeclarado;
   actor: Actor;
-  /** De quién son las filas que escribe este actor, y qué es «propios» al
-   *  leer (`rowOwnerKey`): la cookie del visitante, `cuenta:<id>` o null (el
-   *  dueño). */
-  visitorId: string | null;
+  visitorId: string;
   cookieNueva?: string;
   plan: "free" | "pro";
 }
@@ -127,41 +120,11 @@ async function preparar(
     cookieNueva = cabeceraDeVisitante(emitida);
   }
 
-  // QUIEN ENTRÓ (plans/page-accounts/design.md): una cuenta de la página o su
-  // dueño. Sólo se mira si trae la cookie de sesión, así que una página sin
-  // cuentas no paga ni una consulta más.
-  //
-  // 🔴 Y sólo si la petición es de la PROPIA página, con la regla estricta
-  // (lib/page-accounts/same-origin.ts) y no con la de arriba, que deja pasar lo
-  // que no identifica: con `openlen.app` fuera de la Public Suffix List, una
-  // página hermana manda la cookie de la caja en su POST. Si no es de aquí, la
-  // sesión se ignora y quien escribe es un visitante, como hasta hoy.
-  let actor: Actor = { tipo: "visitante", id: visitorId };
-  if (readSessionCookie(req.headers)) {
-    const deEstaPagina =
-      req.method === "GET" || req.method === "HEAD"
-        ? isSameOriginRead(req.headers)
-        : await isSameOriginRequest({
-            headers: req.headers,
-            targetSub: sub,
-            baseHost: publishedBaseHosts(),
-            resolveCustomDomain: resolveCustomDomainSub,
-          });
-    if (deEstaPagina) {
-      const signedIn = await resolveSignedIn(req.headers, {
-        projectId: dueño.projectId,
-        ownerUserId: dueño.userId,
-        accounts: await publishedAccounts(dueño.projectId),
-      });
-      if (signedIn) actor = signedIn.actor;
-    }
-  }
-
   return {
     projectId: dueño.projectId,
     almacen,
-    actor,
-    visitorId: rowOwnerKey(actor),
+    actor: { tipo: "visitante", id: visitorId },
+    visitorId,
     cookieNueva,
     plan: usuario?.plan === "pro" ? "pro" : "free",
   };
@@ -175,7 +138,7 @@ export async function GET(
   const ctx = await preparar(req, sub, store);
   if (ctx instanceof Response) return ctx;
 
-  const alcance = permite(ctx.almacen.modo, ctx.actor, "leer", ctx.almacen.papeles);
+  const alcance = permite(ctx.almacen.modo, ctx.actor, "leer");
   if (alcance === "ninguno") return json({ error: "no_permitido" }, 403);
 
   const documentos = await listar({
@@ -186,9 +149,8 @@ export async function GET(
     // ESTA es la lectura del VISITANTE, y por eso lleva tope: un almacén
     // `publico` con miles de reseñas se las mandaría todas, a cada uno, en cada
     // carga de página. El dueño lee sin tope desde su panel, que es otro
-    // camino. Ver MAX_FILAS_VISITANTE. Quien entró a la página tiene el suyo,
-    // más alto (MAX_ROWS_SIGNED_IN).
-    limite: ctx.actor.tipo === "visitante" ? MAX_FILAS_VISITANTE : MAX_ROWS_SIGNED_IN,
+    // camino. Ver MAX_FILAS_VISITANTE.
+    limite: MAX_FILAS_VISITANTE,
   });
   return json({ ok: true, documentos }, 200, ctx.cookieNueva);
 }
@@ -207,7 +169,7 @@ export async function POST(
   const ctx = await preparar(req, sub, store);
   if (ctx instanceof Response) return ctx;
 
-  if (permite(ctx.almacen.modo, ctx.actor, "crear", ctx.almacen.papeles) === "ninguno") {
+  if (permite(ctx.almacen.modo, ctx.actor, "crear") === "ninguno") {
     return json({ error: "no_permitido" }, 403);
   }
 
@@ -266,57 +228,10 @@ export async function PATCH(
   req: Request,
   ctxRuta: { params: Promise<{ sub: string; store: string }> },
 ): Promise<Response> {
-  // SIN `?id=`, modificar es reemplazar: en `propio` sólo hay un documento por
-  // visitante, así que POST ya hace exactamente esto. Tener dos caminos para
-  // una operación es tener dos sitios donde equivocarse con los permisos.
-  const id = new URL(req.url).searchParams.get("id");
-  if (!id) return POST(req, ctxRuta);
-
-  // CON `?id=`, modifica ESE documento —el precio de un producto, las
-  // existencias tras una venta— con el permiso `modificar`, que hasta el
-  // 2026-10-03 no usaba ninguna ruta: sin él, una caja no podía descontar
-  // nada (plans/page-accounts/design.md). Los campos que manda se MEZCLAN con
-  // los que ya tenía: `{"existencias": 4}` no borra el nombre.
-  const { sub, store } = await ctxRuta.params;
-  const permitido = await checkAndConsume(ipLimitKey(getClientIp(req), "page-data"), [
-    { windowMs: MINUTO, max: MAX_POR_MINUTO, label: "minuto" },
-  ]);
-  if (!permitido.ok) return json({ error: "demasiadas_peticiones" }, 429);
-
-  const ctx = await preparar(req, sub, store);
-  if (ctx instanceof Response) return ctx;
-
-  const alcance = permite(ctx.almacen.modo, ctx.actor, "modificar", ctx.almacen.papeles);
-  if (alcance === "ninguno") return json({ error: "no_permitido" }, 403);
-
-  let crudo: unknown;
-  try {
-    crudo = await req.json();
-  } catch {
-    return json({ error: "documento_invalido" }, 422);
-  }
-  const validado = validaDocumento(ctx.almacen, crudo);
-  if (!validado.ok) return json({ error: validado.razon }, 422);
-
-  const donde = { projectId: ctx.projectId, store, id, alcance, visitorId: ctx.visitorId };
-  const antes = await findOne(donde);
-  if (!antes) return json({ error: "no_existe" }, 404);
-  const doc = { ...antes.doc, ...validado.doc };
-
-  const veredicto = cabe({
-    plan: ctx.plan,
-    usados: await bytesUsados(ctx.projectId),
-    entrantes: bytesDe(doc),
-    salientes: bytesDe(antes.doc),
-  });
-  if (!veredicto.ok) {
-    const status = veredicto.razon === "documento_grande" ? 413 : /* cuota_llena */ 507;
-    return json({ error: veredicto.razon }, status);
-  }
-
-  const documento = await updateOne({ ...donde, doc });
-  if (!documento) return json({ error: "no_existe" }, 404);
-  return json({ ok: true, documento }, 200, ctx.cookieNueva);
+  // Modificar es reemplazar: en `propio` sólo hay un documento por visitante,
+  // así que POST ya hace exactamente esto. Tener dos caminos para una operación
+  // es tener dos sitios donde equivocarse con los permisos.
+  return POST(req, ctxRuta);
 }
 
 export async function DELETE(
@@ -327,7 +242,7 @@ export async function DELETE(
   const ctx = await preparar(req, sub, store);
   if (ctx instanceof Response) return ctx;
 
-  const alcance = permite(ctx.almacen.modo, ctx.actor, "borrar", ctx.almacen.papeles);
+  const alcance = permite(ctx.almacen.modo, ctx.actor, "borrar");
   if (alcance === "ninguno") return json({ error: "no_permitido" }, 403);
 
   const id = new URL(req.url).searchParams.get("id");

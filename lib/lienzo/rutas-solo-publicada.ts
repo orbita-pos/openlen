@@ -4,7 +4,6 @@
  *  demás 403 o 404. Las lee el aviso del lienzo y la guarda del Caddyfile. */
 export const RUTAS_SOLO_PUBLICADA: readonly string[] = [
   "/api/d/",
-  "/api/a/",
   "/api/f/",
   "/api/chat/",
   "/api/m/",

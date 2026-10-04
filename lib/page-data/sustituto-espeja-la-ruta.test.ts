@@ -136,50 +136,22 @@ vi.mock("@/lib/page-data/store", async () => {
       estado.filas.splice(i, 1);
       return true;
     },
-    findOne: async (a: { store: string; id: string; alcance: string; visitorId: string | null }) => {
-      if (a.alcance === "ninguno") return null;
-      const f = suyas(a.store, a.alcance, a.visitorId).find((x) => x.id === a.id);
-      return f ? { id: f.id, doc: f.doc, createdAt: f.createdAt, updatedAt: f.updatedAt } : null;
-    },
-    updateOne: async (a: {
-      store: string;
-      id: string;
-      alcance: string;
-      visitorId: string | null;
-      doc: Record<string, unknown>;
-    }) => {
-      const f = suyas(a.store, a.alcance, a.visitorId).find((x) => x.id === a.id);
-      if (!f) return null;
-      f.doc = a.doc;
-      f.updatedAt = new Date().toISOString();
-      return { id: f.id, doc: f.doc, createdAt: f.createdAt, updatedAt: f.updatedAt };
-    },
   };
 });
 
 // El import de la ruta va DESPUÉS de los mocks a propósito: `vi.mock` se iza,
 // pero el orden deja escrito qué depende de qué.
-import { DELETE, GET, PATCH, POST } from "@/app/api/d/[sub]/[store]/route";
+import { DELETE, GET, POST } from "@/app/api/d/[sub]/[store]/route";
 
 // ─── La tabla ───────────────────────────────────────────────────────────────
 
 interface Peticion {
-  readonly metodo: "GET" | "POST" | "PATCH" | "DELETE";
+  readonly metodo: "GET" | "POST" | "DELETE";
   /** El tramo del subdominio que ESCRIBE la página. Ausente = el suyo. */
   readonly sub?: string;
   readonly almacen: string;
   readonly cuerpo?: string;
-  /** `{ultimo}` se cambia por el id del último documento que devolvió ESE
-   *  lado: la ruta y el sustituto ponen ids distintos a la misma fila. */
   readonly query?: string;
-}
-
-/** El id del último documento que devolvió un lado. */
-type Memoria = { ultimo?: string };
-const conId = (query: string | undefined, m: Memoria) => (query ?? "").replace("{ultimo}", m.ultimo ?? "");
-function recordar(cuerpo: unknown, m: Memoria) {
-  const id = (cuerpo as { documento?: { id?: unknown } } | null)?.documento?.id;
-  if (typeof id === "string") m.ultimo = id;
 }
 
 interface Respuesta {
@@ -286,42 +258,6 @@ const CASOS: readonly Caso[] = [
     peticion: { metodo: "GET", almacen: "menu" },
     esperado: { status: 200 },
   },
-  // PATCH con `?id=` (2026-10-03): modifica ESE documento con el permiso
-  // `modificar`, que antes no usaba nadie.
-  {
-    nombre: "modificar el documento propio por su id",
-    html: CARRITO,
-    preludio: [{ metodo: "POST", almacen: "carrito", cuerpo: doc({ lista: ["a"], total: 1 }) }],
-    peticion: { metodo: "PATCH", almacen: "carrito", query: "?id={ultimo}", cuerpo: doc({ total: 2 }) },
-    esperado: { status: 200 },
-  },
-  {
-    nombre: "modificar un id que no existe",
-    html: CARRITO,
-    preludio: [{ metodo: "POST", almacen: "carrito", cuerpo: doc({ total: 1 }) }],
-    peticion: { metodo: "PATCH", almacen: "carrito", query: "?id=no-esta", cuerpo: doc({ total: 2 }) },
-    esperado: { status: 404, error: "no_existe" },
-  },
-  {
-    nombre: "modificar una reseña: `publico` deja escribir, no editar",
-    html: RESENAS,
-    preludio: [{ metodo: "POST", almacen: "resenas", cuerpo: doc({ texto: "bien" }) }],
-    peticion: { metodo: "PATCH", almacen: "resenas", query: "?id={ultimo}", cuerpo: doc({ texto: "mal" }) },
-    esperado: { status: 403, error: "no_permitido" },
-  },
-  {
-    nombre: "modificar con un campo del tipo equivocado",
-    html: CARRITO,
-    preludio: [{ metodo: "POST", almacen: "carrito", cuerpo: doc({ total: 1 }) }],
-    peticion: { metodo: "PATCH", almacen: "carrito", query: "?id={ultimo}", cuerpo: doc({ total: "dos" }) },
-    esperado: { status: 422, error: "campo_invalido:total" },
-  },
-  {
-    nombre: "PATCH sin id sigue siendo guardar",
-    html: CARRITO,
-    peticion: { metodo: "PATCH", almacen: "carrito", cuerpo: doc({ total: 3 }) },
-    esperado: { status: 200 },
-  },
 ];
 
 // La cuota llena va aparte porque necesita LLENARLA: el preludio se calcula del
@@ -349,17 +285,16 @@ async function porLaRuta(caso: Caso): Promise<Respuesta> {
   // La cookie del visitante vuelve a la siguiente llamada: sin ella la segunda
   // sería OTRO visitante, y en `propio` no reemplazaría nada.
   const galleta: { valor?: string } = {};
-  const memoria: Memoria = {};
-  for (const p of caso.preludio ?? []) await unaLlamada(p, galleta, memoria);
-  return unaLlamada(caso.peticion, galleta, memoria);
+  for (const p of caso.preludio ?? []) await unaLlamada(p, galleta);
+  return unaLlamada(caso.peticion, galleta);
 }
 
-async function unaLlamada(p: Peticion, galleta: { valor?: string }, memoria: Memoria): Promise<Respuesta> {
+async function unaLlamada(p: Peticion, galleta: { valor?: string }): Promise<Respuesta> {
   const sub = p.sub ?? PAGINA;
   const cabeceras: Record<string, string> = { host: `${PAGINA}.openlen.app` };
   if (galleta.valor) cabeceras.cookie = galleta.valor;
   const req = new Request(
-    `https://${PAGINA}.openlen.app/api/d/${sub}/${p.almacen}${conId(p.query, memoria)}`,
+    `https://${PAGINA}.openlen.app/api/d/${sub}/${p.almacen}${p.query ?? ""}`,
     {
       method: p.metodo,
       headers: cabeceras,
@@ -372,30 +307,24 @@ async function unaLlamada(p: Peticion, galleta: { valor?: string }, memoria: Mem
       ? await GET(req, ctx)
       : p.metodo === "DELETE"
         ? await DELETE(req, ctx)
-        : p.metodo === "PATCH"
-          ? await PATCH(req, ctx)
-          : await POST(req, ctx);
+        : await POST(req, ctx);
   const puesta = r.headers.get("set-cookie");
   if (puesta) galleta.valor = puesta.split(";")[0];
-  const cuerpo = await r.json().catch(() => ({}));
-  recordar(cuerpo, memoria);
-  return leerRespuesta(r.status, cuerpo);
+  return leerRespuesta(r.status, await r.json().catch(() => ({})));
 }
 
 function porElSustituto(caso: Caso, envolver: (s: Sustituto) => Sustituto = (s) => s): Respuesta {
   const sustituto = envolver(crearSustituto(caso.html, { sub: PAGINA }));
-  const memoria: Memoria = {};
-  for (const p of caso.preludio ?? []) responder(sustituto, p, memoria);
-  return responder(sustituto, caso.peticion, memoria);
+  for (const p of caso.preludio ?? []) responder(sustituto, p);
+  return responder(sustituto, caso.peticion);
 }
 
-function responder(sustituto: Sustituto, p: Peticion, memoria: Memoria): Respuesta {
+function responder(sustituto: Sustituto, p: Peticion): Respuesta {
   const r = sustituto.responder({
     metodo: p.metodo,
-    url: `/api/d/${p.sub ?? PAGINA}/${p.almacen}${conId(p.query, memoria)}`,
+    url: `/api/d/${p.sub ?? PAGINA}/${p.almacen}${p.query ?? ""}`,
     cuerpo: p.cuerpo ?? "",
   });
-  recordar(r.cuerpo, memoria);
   return leerRespuesta(r.status, r.cuerpo);
 }
 

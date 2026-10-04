@@ -32,7 +32,6 @@ import {
 } from "@/lib/projects/site-pages";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { leerDeclaracion } from "@/lib/page-data/declaracion";
-import { readAccountsDeclaration } from "@/lib/page-accounts/declaration";
 import { ensureSocialOgImage } from "@/lib/branding/social-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
@@ -785,9 +784,6 @@ export async function publishProject(
   // declaración queda vacía y sus documentos dejan de aceptar escrituras (se
   // conservan; el dueño puede exportarlos). Ver lib/page-data/publicada.ts.
   const almacenes = leerDeclaracion(html);
-  // Y las CUENTAS, por lo mismo: sin el bloque en lo publicado, las sesiones
-  // dejan de valer en la página. Ver lib/page-accounts/declaration.ts.
-  const accounts = readAccountsDeclaration(html);
 
   // Y los de `lectura` se HORNEAN en el documento: su contenido tiene que estar
   // EN el HTML publicado, no llegar por fetch. Un menú que sólo se lee por JS no
@@ -849,7 +845,6 @@ export async function publishProject(
               data: {
                 ...project.data,
                 almacenes,
-                accounts,
                 ...(persistLanguages ? { settings: ajustesPublicados } : {}),
               },
             }

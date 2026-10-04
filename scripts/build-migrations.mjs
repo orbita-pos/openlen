@@ -124,11 +124,6 @@ const targets = [
   // 🔴 Cambiarles una COLUMNA después pide su propio ALTER: el IF NOT EXISTS
   // no toca una tabla que ya existe, y el cambio no llegaría nunca a prod.
   "movil-migrate",
-  // Las cuentas de las páginas (plans/page-accounts/design.md): la columna del
-  // papel en siteMembers y la sesión del dueño en memberSessions y en
-  // memberLoginTokens. Aditiva e idempotente. 🔴 OBLIGATORIA antes que el
-  // código: Drizzle selecciona las columnas declaradas en schema.ts.
-  "page-accounts-migrate",
   // El backend de las páginas (plans/pages-backend/design.md): la tabla
   // projectBackends. Tabla NUEVA con IF NOT EXISTS. 🔴 OBLIGATORIA antes que el
   // código: las rutas /rest/v1 y /auth/v1 la leen en cada petición.
