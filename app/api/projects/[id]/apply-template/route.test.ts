@@ -44,10 +44,6 @@ const STORED_HTML =
   '<!doctype html><html lang="es"><head><title>Antes</title></head><body><h1>Antes</h1></body></html>';
 const CLEAN_RESTYLE =
   '<!doctype html><html lang="es"><head><title>Después</title></head><body><h1>Después</h1></body></html>';
-// A lightbox marker whose required <img> is missing — validateBehaviors flags
-// it, and the runtime would bake a control that opens nothing.
-const BROKEN_BEHAVIOR_RESTYLE =
-  '<!doctype html><html lang="es"><head><title>Después</title></head><body><a data-ol-lightbox href="https://images.openlen.com/x.jpg">sin img</a></body></html>';
 
 function call(body: unknown): Promise<Response> {
   return POST(
@@ -97,23 +93,11 @@ describe("POST /api/projects/[id]/apply-template", () => {
     expect(mocks.debitCredits).toHaveBeenCalledTimes(1);
   });
 
-  it("refuses a restyle whose behaviours would be born dead, and stores nothing", async () => {
-    mocks.fillTemplateFromPage.mockResolvedValue({
-      ok: true,
-      html: BROKEN_BEHAVIOR_RESTYLE,
-      appliedOps: 4,
-    });
-
-    const res = await call({ templateId: "mirror" });
-
-    expect(res.status).toBe(422);
-    expect(await res.json()).toMatchObject({ error: "behaviors_invalid", detail: "lightbox" });
-    // The page the user already had must be exactly as it was: no write, no
-    // version snapshot, and — because Gemini already ran — no charge either.
-    expect(mocks.update).not.toHaveBeenCalled();
-    expect(mocks.createVersion).not.toHaveBeenCalled();
-    expect(mocks.debitCredits).not.toHaveBeenCalled();
-  });
+  // ⚰️ «refuses a restyle whose behaviours would be born dead»: con
+  // behaviors:"block" la puerta rechazaba (422 behaviors_invalid) un
+  // data-ol-lightbox sin su <img>. Las conductas y esa puerta se retiraron el
+  // 2026-10-04 (fb099c02). Lo que vigilaba de un rechazo —ni versión ni cobro—
+  // se mudó a la prueba de abajo, que rechaza por otro motivo.
 
   it("keeps the reserved-marker refusal distinct from a sanitization failure", async () => {
     mocks.fillTemplateFromPage.mockResolvedValue({
@@ -128,6 +112,10 @@ describe("POST /api/projects/[id]/apply-template", () => {
     // Collapsing this into a generic failure is the one thing the plan's
     // ledger names as its structural lesson.
     expect(await res.json()).toMatchObject({ error: "reserved_marker" });
+    // The page the user already had must be exactly as it was: no write, no
+    // version snapshot, and — because the model already ran — no charge either.
     expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.createVersion).not.toHaveBeenCalled();
+    expect(mocks.debitCredits).not.toHaveBeenCalled();
   });
 });

@@ -439,30 +439,12 @@ describe("POST /api/generate", () => {
     expect(mocks.registrarEnServidor).not.toHaveBeenCalled();
   });
 
-  it("keeps the page and records a control born dead, instead of only logging it", async () => {
-    // The route's old answer to this was `console.warn` — the log nobody
-    // reads. behaviors:"warn" still ships the page (there is no previous good
-    // state to fall back to) but the loss goes on the row, and the workspace
-    // tells the user to ask the assistant to fix it.
-    modelReturns(doc("", '<h1>Café Luna</h1><button data-ol-copy="cupon">Copiar</button>'));
-
-    const { events } = await call();
-
-    expect(events.at(-1)?.event).toBe("project_saved");
-    expect(mocks.createProject).toHaveBeenCalledTimes(1);
-    expect(savedInput().degradations).toEqual([
-      {
-        surface: "generate",
-        stage: "behaviors",
-        code: "broken_controls",
-        count: 1,
-        // El detalle viaja con el conteo hasta la fila del proyecto: es lo que
-        // el botón "Arreglar esto" le pasa al asistente. Sin él, el aviso
-        // vuelve a ser "algunos controles" y el creador no sabe qué pedir.
-        detail: [expect.any(String)],
-      },
-    ]);
-  });
+  // ⚰️ «keeps the page and records a control born dead»: con behaviors:"warn"
+  // la puerta apuntaba en la fila un `broken_controls` por un data-ol-copy sin
+  // destino. Las conductas data-ol-* y esa puerta se retiraron el 2026-10-04
+  // (fb099c02): `broken_controls` ya no nace. Que una página entera no apunte
+  // nada lo sigue vigilando «records nothing when the generated page comes
+  // through whole», arriba.
 
   // ⚰️ «rechaza una reparación destructiva y conserva el HTML/runtime del
   // usuario, sin reescribir» — RETIRADA el 2026-09-04 con `repairGeneratedPage`.
