@@ -20,6 +20,7 @@ import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios
 import { abrirEnElCodigo, abrirFicheroDelTurno, rutasDelTurno } from "@/lib/workspace-v2/abrir-fichero";
 import type { FeedbackReason, TurnFeedback } from "@/lib/chat/feedback-reasons";
 import { ChangesCard } from "./changes-card";
+import { wroteOnlyItsOwnPage } from "./turn-changes";
 import { questionOf } from "./live-status";
 import { QuestionCard, withoutTrailingQuestion } from "./question-card";
 import { StepsCard, visibleSteps } from "./steps-card";
@@ -160,7 +161,12 @@ export function LenTurn({
         </p>
       )}
       {question !== null && <QuestionCard question={question} answer={next ? next.userText : null} />}
-      {showChanges && !turn.noDocChange && <ChangesCard turn={turn} projectId={projectId} samePage={samePage} />}
+      {/* «Ver» y «Comparar» necesitan que el turno escribiera la página que se
+          mira, no sólo que empezara en ella (N33). La pastilla de arriba sí va
+          por dónde empezó. */}
+      {showChanges && !turn.noDocChange && (
+        <ChangesCard turn={turn} projectId={projectId} samePage={samePage && wroteOnlyItsOwnPage(turn)} />
+      )}
       {turn.confirm && (
         <AgentConfirmCard
           projectId={projectId}

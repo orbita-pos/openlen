@@ -15,14 +15,29 @@
 // preimagen, y decir «no cambió nada» sobre eso sería afirmar algo que nadie
 // miró — la misma regla que el botón de Deshacer.
 
+import { mismaPagina } from "@/lib/chat/historial-del-agente";
 import { seccionesCambiadas, tipoDeOp, type SeccionCambiada } from "@/lib/workspace-v2/diff-de-turno";
 import type { DesignTurn } from "./use-agent-chat";
+
+/**
+ * ¿El turno escribió SÓLO la página en la que empezó? La preimagen es de ésa, y
+ * `postEditHtml` es el último `html` del turno, que trae SU página. Si escribió
+ * otra, el par antes/después es de dos documentos distintos: visto en el taller
+ * el 03/10 (plans/new-chat/, N33), «cambia el título de Servicios» mirando Inicio
+ * comparaba Inicio con Servicios y la tarjeta decía «12 cambios» con su «Ver» y
+ * su «Comparar». La misma regla que Deshacer (`planDeUndo`, «otra-pagina»).
+ * Sin `page` (turno anterior al multipágina) no hay con qué contradecir.
+ */
+export function wroteOnlyItsOwnPage(turn: Pick<DesignTurn, "page" | "paginasTocadas">): boolean {
+  if (turn.page === undefined) return true;
+  return (turn.paginasTocadas ?? []).every((p) => mismaPagina(p, turn.page));
+}
 
 /** Dónde cae un cambio que no es de una sección: los estilos, la cabecera… */
 export type ChangePlace = "estilos" | "cabecera" | "comportamiento";
 
 export function turnChanges(
-  turn: Pick<DesignTurn, "actions" | "preEditHtml" | "postEditHtml">,
+  turn: Pick<DesignTurn, "actions" | "preEditHtml" | "postEditHtml" | "page" | "paginasTocadas">,
   /** El nombre del sitio («los estilos», «la cabecera»), en el idioma de quien mira. */
   placeLabel: (place: ChangePlace) => string,
 ): SeccionCambiada[] {
@@ -36,7 +51,7 @@ export function turnChanges(
       indice: o.indice,
     }));
   }
-  if (!turn.preEditHtml || !turn.postEditHtml) return [];
+  if (!turn.preEditHtml || !turn.postEditHtml || !wroteOnlyItsOwnPage(turn)) return [];
   return seccionesCambiadas(turn.preEditHtml, turn.postEditHtml);
 }
 

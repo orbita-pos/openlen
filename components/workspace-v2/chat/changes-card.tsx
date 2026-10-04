@@ -42,7 +42,7 @@ export function ChangesCard({
   const changes = useMemo(
     () => agruparCambios(turnChanges(turn, (place) => t(`diff.${place}`))).slice(0, MAX_SECCIONES * 2),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [turn.actions, turn.preEditHtml, turn.postEditHtml, t],
+    [turn.actions, turn.preEditHtml, turn.postEditHtml, turn.page, turn.paginasTocadas, t],
   );
   const canCompare = samePage && Boolean(turn.preEditHtml) && Boolean(turn.postEditHtml);
   if (changes.length === 0 && !canCompare) {
