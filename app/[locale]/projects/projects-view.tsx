@@ -42,6 +42,7 @@ import {
   Zap,
 } from "lucide-react";
 import { formatCredits } from "@/lib/credits-client";
+import type { Plan } from "@/lib/plan";
 import { cn } from "@/lib/cn";
 import { useToast } from "@/components/workspace-v2/toast";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
@@ -60,7 +61,7 @@ type FilterId = "all" | "draft" | "published" | "archived";
 type SortId = "edited" | "created" | "name";
 
 interface UsageInfo {
-  plan: "free" | "pro";
+  plan: Plan;
   credits: { balance: number; allotment: number };
 }
 
@@ -864,7 +865,7 @@ function UsageStrip({
           </span>
           <div className="min-w-0 flex-1">
             <div className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-semibold">
-              {usage.plan === "free" ? t("usage.freePlan") : t("usage.proPlan")}
+              {usage.plan === "max" ? t("usage.maxPlan") : usage.plan === "pro" ? t("usage.proPlan") : t("usage.freePlan")}
             </div>
             <div className="text-[13.5px] font-medium leading-tight tabular-nums">
               {t("usage.creditsLeft", { count: formatCredits(balance) })}

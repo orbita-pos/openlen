@@ -89,8 +89,6 @@ export async function Pricing() {
       price: MAX_PRICE,
       suffix: t("pricing.max.suffix"),
       blurb: t("pricing.max.blurb"),
-      // ⚠️ `plan=max` no lo lee nadie todavía: /api/billing/checkout vende el
-      // único producto que conoce. Ver lib/marketing/plan-price.ts.
       cta: { label: t("pricing.max.cta"), variant: "outline", icon: ArrowRight, href: `/api/billing/checkout?plan=max&locale=${locale}` },
       features: [
         t("pricing.max.features.0"),

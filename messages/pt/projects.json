@@ -37,6 +37,7 @@
     "creditsUsed": "{used} / {allotment} créditos usados",
     "freePlan": "Plano gratuito",
     "proPlan": "Plano Pro",
+    "maxPlan": "Plano Max",
     "creditsLeft": "{count, plural, one {# crédito restante} other {# créditos restantes}}",
     "dismiss": "Dispensar"
   },

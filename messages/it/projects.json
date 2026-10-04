@@ -37,6 +37,7 @@
     "creditsUsed": "{used} / {allotment} crediti usati",
     "freePlan": "Piano Free",
     "proPlan": "Piano Pro",
+    "maxPlan": "Piano Max",
     "creditsLeft": "{count, plural, one {# credito rimasto} other {# crediti rimasti}}",
     "dismiss": "Ignora"
   },

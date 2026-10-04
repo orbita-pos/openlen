@@ -37,6 +37,7 @@
     "creditsUsed": "{used} / {allotment} Credits verbraucht",
     "freePlan": "Free-Tarif",
     "proPlan": "Pro-Tarif",
+    "maxPlan": "Max-Tarif",
     "creditsLeft": "{count, plural, one {# Credit übrig} other {# Credits übrig}}",
     "dismiss": "Ausblenden"
   },

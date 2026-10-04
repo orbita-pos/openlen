@@ -1,16 +1,22 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
-import { billingConfigured, createCheckout } from "@/lib/billing/polar";
+import { billingConfigured, createCheckout, createCustomerPortalUrl } from "@/lib/billing/polar";
+import { getUserPlan } from "@/lib/limits";
 import { publicOrigin } from "@/lib/integrations/oauth";
 import { routing } from "@/i18n/routing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/billing/checkout?locale=<en|es>
+// GET /api/billing/checkout?plan=<pro|max>&locale=<en|es>
 // Full-page navigation (not fetch) from the in-app "Upgrade" affordance. Auths
-// the user, opens a hosted Polar checkout for the Pro product, and 302s there.
-// Failures bounce back into /projects with a ?billing_error= the UI can show.
+// the user, opens a hosted Polar checkout for the plan (Pro unless plan=max),
+// and 302s there. Failures bounce back into /projects with a ?billing_error=
+// the UI can show.
+//
+// Quien YA paga no abre otro checkout: va al portal de Polar, que es donde se
+// cambia de plan (04/10, decisión de Jesús). Polar tampoco deja tener dos
+// suscripciones a la vez.
 export async function GET(req: NextRequest): Promise<Response> {
   const localeParam = req.nextUrl.searchParams.get("locale") ?? "en";
   const locale = (routing.locales as readonly string[]).includes(localeParam)
@@ -18,11 +24,22 @@ export async function GET(req: NextRequest): Promise<Response> {
     : routing.defaultLocale;
   const projects = new URL(`/${locale}/projects`, publicOrigin());
 
+  const plan = req.nextUrl.searchParams.get("plan") === "max" ? "max" : "pro";
+
   const session = await auth();
   if (!session?.user?.id) {
     const login = new URL(`/${locale}/login`, publicOrigin());
-    login.searchParams.set("next", `/api/billing/checkout?locale=${locale}`);
+    login.searchParams.set("next", `/api/billing/checkout?plan=${plan}&locale=${locale}`);
     return NextResponse.redirect(login);
+  }
+
+  if ((await getUserPlan(session.user.id)) !== "free") {
+    try {
+      return NextResponse.redirect(await createCustomerPortalUrl(session.user.id));
+    } catch {
+      projects.searchParams.set("billing_error", "portal_failed");
+      return NextResponse.redirect(projects);
+    }
   }
 
   if (!billingConfigured()) {
@@ -35,6 +52,7 @@ export async function GET(req: NextRequest): Promise<Response> {
       userId: session.user.id,
       email: session.user.email,
       locale,
+      plan,
     });
     return NextResponse.redirect(url);
   } catch {

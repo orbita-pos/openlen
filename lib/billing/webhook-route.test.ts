@@ -115,7 +115,43 @@ describe("POST /api/billing/webhook", () => {
       status: "active",
       customerId: "cus_1",
       subscriptionId: "sub_1",
+      plan: "pro",
     });
+  });
+
+  // MAX (04/10): el plan sale del PRODUCTO de la suscripción. El cambio de
+  // Pro a Max se hace en el portal de Polar y llega como subscription.updated
+  // con el producto nuevo.
+  it("🔴 una suscripción al producto de Max llega como plan max", async () => {
+    const prev = process.env.POLAR_PRODUCT_MAX_ID;
+    process.env.POLAR_PRODUCT_MAX_ID = "prod_max";
+    try {
+      const body = JSON.stringify({
+        type: "subscription.updated",
+        data: { id: "sub_1", status: "active", product_id: "prod_max", customer: { external_id: "user_123" } },
+      });
+      expect((await POST(signed(body, { id: "evt_max" }))).status).toBe(200);
+      expect(applySubscriptionStateMock).toHaveBeenCalledWith(expect.objectContaining({ userId: "user_123", plan: "max" }));
+    } finally {
+      if (prev === undefined) delete process.env.POLAR_PRODUCT_MAX_ID;
+      else process.env.POLAR_PRODUCT_MAX_ID = prev;
+    }
+  });
+
+  it("el producto también se lee de data.product.id", async () => {
+    const prev = process.env.POLAR_PRODUCT_MAX_ID;
+    process.env.POLAR_PRODUCT_MAX_ID = "prod_max";
+    try {
+      const body = JSON.stringify({
+        type: "subscription.active",
+        data: { id: "sub_1", status: "active", product: { id: "prod_max" }, customer: { external_id: "user_123" } },
+      });
+      await POST(signed(body, { id: "evt_max2" }));
+      expect(applySubscriptionStateMock).toHaveBeenCalledWith(expect.objectContaining({ plan: "max" }));
+    } finally {
+      if (prev === undefined) delete process.env.POLAR_PRODUCT_MAX_ID;
+      else process.env.POLAR_PRODUCT_MAX_ID = prev;
+    }
   });
 
   it("rejects a tampered signature with 403 and never touches the plan", async () => {

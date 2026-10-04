@@ -1,7 +1,8 @@
 import { and, eq, isNull, sql as sqlOp } from "drizzle-orm";
 import { TARIFAS_POR_MILLON, tarifaDe, type CreditRate } from "@/lib/ai/tarifas";
 import { db, schema } from "@/lib/db";
-import type { Plan } from "@/lib/limits";
+import { planFromDb, type Plan } from "@/lib/plan";
+import { MAX_CREDITS, PRO_CREDITS } from "@/lib/marketing/plan-price";
 // La unidad y su formateo viven en el módulo CLIENT-SAFE: los pintan
 // componentes de cliente (la píldora de créditos), y este fichero importa la
 // base de datos. Mismo criterio que `lib/templates/families.ts`.
@@ -43,10 +44,13 @@ export { CENTICREDITOS_POR_CREDITO, USD_PER_CREDIT, formatCredits, usdDeCenticre
 // ─────────────────────────────────────────────────────────────────────────────
 
 
-/** Monthly credit allotment per plan. */
+/** Monthly credit allotment per plan. Los de pago salen de la MISMA cifra que
+ *  pinta la portada (lib/marketing/plan-price.ts): hasta el 04/10 eran dos
+ *  números, la portada decía 200 y el cobro daba 150. */
 export const CREDITS_BY_PLAN: Record<Plan, number> = {
   free: 20 * CENTICREDITOS_POR_CREDITO,
-  pro: 150 * CENTICREDITOS_POR_CREDITO,
+  pro: PRO_CREDITS * CENTICREDITOS_POR_CREDITO,
+  max: MAX_CREDITS * CENTICREDITOS_POR_CREDITO,
 };
 
 /**
@@ -63,6 +67,9 @@ export const CREDITS_BY_PLAN: Record<Plan, number> = {
 export const TECHO_POR_TURNO: Record<Plan, number> = {
   free: 10 * CENTICREDITOS_POR_CREDITO,
   pro: 30 * CENTICREDITOS_POR_CREDITO,
+  // Max = Pro (lib/plan.ts): el techo corta el turno que se desboca, no es
+  // lo que se vende.
+  max: 30 * CENTICREDITOS_POR_CREDITO,
 };
 
 /** Lo que puede gastar ESTE turno: el techo de su plan o el saldo con el que
@@ -313,7 +320,7 @@ export async function getCreditState(userId: string): Promise<CreditState> {
     .where(eq(schema.users.id, userId))
     .limit(1);
   const row = rows[0];
-  const plan: Plan = row?.plan === "pro" ? "pro" : "free";
+  const plan: Plan = planFromDb(row?.plan);
   const allotment = CREDITS_BY_PLAN[plan];
   if (!row) return { plan, balance: 0, allotment, refillsAt: null };
 
@@ -348,7 +355,7 @@ export async function getCreditState(userId: string): Promise<CreditState> {
       // never manufacture the allotment from our stale snapshot.
       return getCreditState(userId);
     }
-    const refilledPlan: Plan = refilled.plan === "pro" ? "pro" : "free";
+    const refilledPlan: Plan = planFromDb(refilled.plan);
     return {
       plan: refilledPlan,
       balance: refilled.credits,

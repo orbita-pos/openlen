@@ -28,6 +28,7 @@ const WINDOW_MS = 30 * DAY;
 export const ASSISTANT_MONTHLY_CAP: Record<Plan, number> = {
   free: 30,
   pro: 1000,
+  max: 1000,
 };
 
 function quotaKey(projectId: string): string {

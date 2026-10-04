@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { CREDITS_BY_PLAN } from "@/lib/credits";
+import { PLAN_RANK, planFromDb } from "@/lib/plan";
 import { publicOrigin } from "@/lib/integrations/oauth";
 import { verifyWebhookSignature } from "./webhook-signature";
 
@@ -46,6 +47,18 @@ export function billingConfigured(): boolean {
   return !!(env("POLAR_ACCESS_TOKEN") && env("POLAR_PRODUCT_PRO_ID"));
 }
 
+/** Los dos planes de pago que vende Polar (04/10: Pro $10 y Max $20). */
+export type PaidPlan = "pro" | "max";
+
+/** El plan de una suscripción, por su producto. Max sólo si es el producto de
+ *  Max (POLAR_PRODUCT_MAX_ID); cualquier otro es Pro. Así el Pro de antes, a
+ *  $3.99 —Polar le guarda el precio y Jesús decidió que reciba lo mismo que un
+ *  Pro nuevo—, sigue siendo Pro sin que el código tenga que distinguirlo. */
+export function planForProduct(productId: string | null | undefined): PaidPlan {
+  const max = env("POLAR_PRODUCT_MAX_ID");
+  return max && productId === max ? "max" : "pro";
+}
+
 async function polarPost(path: string, body: unknown): Promise<unknown> {
   const token = env("POLAR_ACCESS_TOKEN");
   if (!token) throw new BillingError("not_configured");
@@ -64,13 +77,15 @@ async function polarPost(path: string, body: unknown): Promise<unknown> {
   return res.json();
 }
 
-/** Create a hosted Pro checkout and return its URL to redirect the user to. */
+/** Create a hosted checkout for a paid plan (Pro by default) and return its
+ *  URL. Max sin su producto configurado falla: nunca vende Pro en su lugar. */
 export async function createCheckout(opts: {
   userId: string;
   email?: string | null;
   locale?: string;
+  plan?: PaidPlan;
 }): Promise<string> {
-  const productId = env("POLAR_PRODUCT_PRO_ID");
+  const productId = env(opts.plan === "max" ? "POLAR_PRODUCT_MAX_ID" : "POLAR_PRODUCT_PRO_ID");
   if (!productId) throw new BillingError("not_configured");
   const locale = opts.locale === "es" ? "es" : "en";
   const successUrl = `${publicOrigin()}/${locale}/projects?upgraded=1`;
@@ -125,6 +140,9 @@ export async function applySubscriptionState(params: {
   status: string;
   customerId?: string | null;
   subscriptionId?: string | null;
+  /** El plan del producto de la suscripción (`planForProduct`). Pro si no
+   *  se sabe: un reembolso, por ejemplo, sólo trae el estado. */
+  plan?: PaidPlan;
 }): Promise<void> {
   const rows = await db
     .select({ plan: schema.users.plan })
@@ -134,22 +152,24 @@ export async function applySubscriptionState(params: {
   if (!rows[0]) return; // unknown user — nothing to do
 
   if (ACCESS_STATUSES.has(params.status)) {
-    const wasPro = rows[0].plan === "pro";
+    const plan = params.plan ?? "pro";
+    // Créditos SÓLO al subir de plan (gratis → pro, gratis → max, pro → max).
+    // Quedarse (los webhooks repetidos, past_due) o bajar (max → pro) no
+    // recarga: si no, cada aviso de Polar sería una recarga gratis.
+    const upgrade = PLAN_RANK[plan] > PLAN_RANK[planFromDb(rows[0].plan)];
     await db
       .update(schema.users)
       .set({
-        plan: "pro",
+        plan,
         // Don't overwrite an existing id with null — only set when we have one.
         ...(params.customerId
           ? { polarCustomerId: params.customerId }
           : {}),
         polarSubscriptionId: params.subscriptionId ?? undefined,
         subscriptionStatus: params.status,
-        // Grant the Pro allotment only on the free → pro transition (never on
-        // past_due — that must not top up credits).
-        ...(wasPro
-          ? {}
-          : { credits: CREDITS_BY_PLAN.pro, creditsRefreshedAt: new Date() }),
+        ...(upgrade
+          ? { credits: CREDITS_BY_PLAN[plan], creditsRefreshedAt: new Date() }
+          : {}),
       })
       .where(eq(schema.users.id, params.userId));
     return;

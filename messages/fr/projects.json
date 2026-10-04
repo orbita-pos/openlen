@@ -37,6 +37,7 @@
     "creditsUsed": "{used} / {allotment} crédits utilisés",
     "freePlan": "Forfait gratuit",
     "proPlan": "Forfait Pro",
+    "maxPlan": "Forfait Max",
     "creditsLeft": "{count, plural, one {# crédit restant} other {# crédits restants}}",
     "dismiss": "Ignorer"
   },

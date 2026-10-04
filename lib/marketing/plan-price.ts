@@ -10,11 +10,11 @@
 // frase legal— pero todo lo que PINTA el precio lee de aquí.
 //
 // 04/10: los planes de pago pasan a DOS, Pro $10 y Max $20 (Jesús: «vender a
-// mayoreo», como los planes de Claude y OpenAI). ⚠️ Esto es lo que PINTA la
-// portada; el cobro todavía no lo sabe: `CREDITS_BY_PLAN` (lib/credits.ts)
-// sigue en pro=150 y sin `max`, el producto de Polar es el Pro de antes, y los
-// Términos, el reembolso y la documentación llevan el importe viejo en prosa.
-// Antes de publicar esto, las cuatro cosas tienen que decir lo mismo.
+// mayoreo», como los planes de Claude y OpenAI). Los créditos de aquí son los
+// que da el cobro: `CREDITS_BY_PLAN` (lib/credits.ts) los lee de este fichero.
+// El PRECIO lo cobra Polar (un producto por plan: POLAR_PRODUCT_PRO_ID y
+// POLAR_PRODUCT_MAX_ID) y va en prosa en los Términos, el reembolso y la
+// documentación: cambiar un precio es cambiar Polar y esas tres páginas.
 export const PRO_PRICE = 10;
 export const PRO_CREDITS = 200;
 

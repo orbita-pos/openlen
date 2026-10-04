@@ -118,6 +118,7 @@ export default defineConfig({
       "lib/etiquetas-de-esfuerzo.test.ts",
       "lib/email.test.ts",
       "lib/credits.test.ts",
+      "lib/plan.test.ts",
       "lib/credits-client.test.ts",
       "components/app/credit-pill.test.tsx",
       // El reductor SSE de la superficie Crear: distingue el muro de créditos
@@ -290,6 +291,7 @@ export default defineConfig({
       "lib/agent/pasos-de-uso.test.ts",
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
+      "app/api/billing/**/*.test.ts",
       "lib/auth/**/*.test.ts",
       // NB: lib/agent mixes runners — tools.test.ts exercises the native
       // html-engine binding and runs under node:test (`tsx --test`), so list

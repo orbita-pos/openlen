@@ -37,6 +37,7 @@
     "creditsUsed": "크레딧 {used} / {allotment}개 사용",
     "freePlan": "무료 플랜",
     "proPlan": "Pro 플랜",
+    "maxPlan": "Max 플랜",
     "creditsLeft": "{count, plural, one {크레딧 #개 남음} other {크레딧 #개 남음}}",
     "dismiss": "닫기"
   },

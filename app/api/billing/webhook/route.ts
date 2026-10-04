@@ -1,5 +1,6 @@
 import {
   applySubscriptionState,
+  planForProduct,
   userIdFromPayload,
   verifyWebhookSignature,
 } from "@/lib/billing/polar";
@@ -78,15 +79,26 @@ export async function POST(req: Request): Promise<Response> {
       customer?: { external_id?: unknown } | null;
       customer_external_id?: unknown;
       metadata?: { userId?: unknown } | null;
+      product_id?: unknown;
+      product?: { id?: unknown } | null;
     };
     const userId = userIdFromPayload(data);
     const status = typeof data.status === "string" ? data.status : "";
     if (userId && status) {
+      // El plan sale del PRODUCTO: el cambio de Pro a Max en el portal de
+      // Polar llega como subscription.updated con el producto nuevo.
+      const productId =
+        typeof data.product_id === "string"
+          ? data.product_id
+          : typeof data.product?.id === "string"
+            ? data.product.id
+            : null;
       await applySubscriptionState({
         userId,
         status,
         customerId: polarCustomerId(data),
         subscriptionId: typeof data.id === "string" ? data.id : null,
+        plan: planForProduct(productId),
       });
     }
   } else if (type === "order.refunded" || type === "order.disputed") {

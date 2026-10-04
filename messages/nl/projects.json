@@ -55,6 +55,7 @@
     "creditsUsed": "{used} / {allotment} credits gebruikt",
     "freePlan": "Gratis abonnement",
     "proPlan": "Pro-abonnement",
+    "maxPlan": "Max-abonnement",
     "creditsLeft": "{count, plural, one {# credit over} other {# credits over}}",
     "dismiss": "Sluiten"
   },

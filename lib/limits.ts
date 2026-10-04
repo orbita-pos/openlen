@@ -22,10 +22,11 @@ import {
 // is preserved verbatim — same SQL pattern, just executed from Rust.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type Plan = "free" | "pro";
+import { planFromDb, type Plan } from "@/lib/plan";
+export type { Plan };
 
-// Tunable agent-seat caps per plan.
-export const AGENT_LIMITS: Record<Plan, number> = { free: 0, pro: 3 };
+// Tunable agent-seat caps per plan. Max = Pro (lib/plan.ts).
+export const AGENT_LIMITS: Record<Plan, number> = { free: 0, pro: 3, max: 3 };
 
 export interface LimitWindow {
   /** Sliding window in milliseconds (e.g. 60 * 60 * 1000 for 1 hour). */
@@ -69,6 +70,11 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     ingest: [{ windowMs: HOUR, max: 15, label: "hourly" }],
   },
   pro: {
+    generate: [{ windowMs: HOUR, max: 30, label: "hourly" }],
+    regen: [{ windowMs: HOUR, max: 60, label: "hourly" }],
+    ingest: [{ windowMs: HOUR, max: 60, label: "hourly" }],
+  },
+  max: {
     generate: [{ windowMs: HOUR, max: 30, label: "hourly" }],
     regen: [{ windowMs: HOUR, max: 60, label: "hourly" }],
     ingest: [{ windowMs: HOUR, max: 60, label: "hourly" }],
@@ -168,8 +174,7 @@ export async function getUserPlan(userId: string): Promise<Plan> {
     .from(schema.users)
     .where(eq(schema.users.id, userId))
     .limit(1);
-  const raw = rows[0]?.plan ?? "free";
-  return raw === "pro" ? "pro" : "free";
+  return planFromDb(rows[0]?.plan);
 }
 
 export function userLimitKey(

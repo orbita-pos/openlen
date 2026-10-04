@@ -485,3 +485,28 @@ describe("refundCredits", () => {
     expect(mocks.update).not.toHaveBeenCalled();
   });
 });
+
+// LOS CRÉDITOS DE CADA PLAN SON LOS QUE VENDE LA PORTADA (04/10). La portada
+// lee lib/marketing/plan-price.ts; el cobro, CREDITS_BY_PLAN. Hasta hoy eran
+// dos cifras (200 en la portada, 150 en el cobro) y nada las ataba.
+describe("los créditos de los planes de pago, contra la portada", () => {
+  it("🔴 Pro da los créditos que dice la portada", async () => {
+    const { PRO_CREDITS } = await import("@/lib/marketing/plan-price");
+    expect(CREDITS_BY_PLAN.pro).toBe(PRO_CREDITS * CENTICREDITOS_POR_CREDITO);
+  });
+
+  it("🔴 Max también", async () => {
+    const { MAX_CREDITS } = await import("@/lib/marketing/plan-price");
+    expect((CREDITS_BY_PLAN as Record<string, number>).max).toBe(MAX_CREDITS * CENTICREDITOS_POR_CREDITO);
+  });
+
+  it("🔴 un Max que recarga recibe los créditos de Max, no los de Gratis", async () => {
+    const now = new Date("2026-10-10T12:00:00.000Z");
+    vi.setSystemTime(now);
+    mocks.selectLimit.mockResolvedValue([{ plan: "max", credits: 0, refreshedAt: null }]);
+    mocks.updateReturning.mockResolvedValue([{ plan: "max", credits: 1, refreshedAt: now }]);
+    const st = await getCreditState("u1");
+    expect(st.plan).toBe("max");
+    expect(st.allotment).toBe((CREDITS_BY_PLAN as Record<string, number>).max);
+  });
+});
