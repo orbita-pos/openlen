@@ -9,7 +9,6 @@ import { getCreditState, debitCredits, AUTOFILL_CREDIT_COST } from "@/lib/credit
 import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
-import { describeBehaviorIssues } from "@/lib/conductas-heredadas/validate";
 import {
   extractFromImage,
   extractFromText,
@@ -236,33 +235,22 @@ export async function POST(req: Request) {
         // contract and with a half-empty <head> that every other ingestion
         // path fills in.
         //
-        // Policy. `behaviors: "block"` — autofill EDITS a project that already
-        // exists (the route 400s above if its HTML is missing or malformed),
-        // so refusing costs the user the fill, not the page; that is the same
-        // fail-closed trade as apply-template, its sibling surface. `seal:
-        // false` — nothing is served from here, publishToDir seals at publish
-        // time. `render: false` — this is an interactive SSE stream and cannot
+        // Policy. `seal: false` — nothing is served from here, publishToDir
+        // seals at publish time. `render: false` — this is an interactive SSE stream and cannot
         // pay a browser launch; publish verifies geometry instead.
         const gated = await passHtmlGate(
           fill.filledHtml,
           { sanitize: sanitizeForPublish },
-          { render: false, seal: false, behaviors: "block" },
+          { render: false, seal: false },
         );
         if (!gated.ok) {
           // The modal renders `message` verbatim and never reads `kind`, so
           // the reason has to survive as Spanish prose for the person who
           // clicked Apply; `kind` stays for the logs.
-          const behaviorList = describeBehaviorIssues([...(gated.issues ?? [])]);
           emit("error", {
-            kind:
+            kind: gated.code === "reserved_marker" ? "editor-marker-leak" : "sanitize",
+            message:
               gated.code === "reserved_marker"
-                ? "editor-marker-leak"
-                : gated.code === "behaviors_invalid"
-                  ? "behaviors-invalid"
-                  : "sanitize",
-            message: behaviorList
-              ? `Los datos entraron bien, pero quedaron controles mal cableados que no funcionarían en tu página: ${behaviorList}. No guardé nada — probá de nuevo.`
-              : gated.code === "reserved_marker"
                 ? "Model emitted editor-mode markers — try again."
                 : "El HTML no pasó la revisión de publicación — probá de nuevo.",
           });

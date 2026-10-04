@@ -90,7 +90,6 @@ export async function POST(
   const gated = await passHtmlGate(res.html, { sanitize: sanitizeForPublish }, {
     render: false,
     seal: false,
-    behaviors: "block",
   });
   if (!gated.ok) {
     // No charge: `debitCredits` is below, and the refusal returns before it.

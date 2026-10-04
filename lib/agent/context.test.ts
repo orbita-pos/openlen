@@ -5,9 +5,12 @@ import { TOKENS_POR_FOTO, avisosDelTurno, buildAgentContext, buildAgentMessages,
 import { buildFunctionDeclarations } from "./catalog";
 import { esAdjuntoDelManual } from "./ficheros/manual";
 import type { MensajeDelHistorial } from "./transcripcion";
-import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
 import { todayLine } from "@/lib/ai/today-line";
 import { fechaLocal } from "@/lib/resultados/zona";
+
+// Las nueve conductas `data-ol-*`, retiradas el 2026-10-04. Ningún prompt puede
+// volver a enseñarlas.
+const MARCADORES_DE_CONDUCTAS = ["data-ol-countdown", "data-ol-filter", "data-ol-lightbox", "data-ol-copy", "data-ol-autoplay", "data-ol-theme", "data-ol-sticky", "data-ol-tab", "data-ol-calc"];
 
 // El bloque HOY se compone desde `todayLine`, la fuente unica. Fijarlo como
 // literal es lo que dejo al Agente y a la puerta de generar diciendo cosas
@@ -418,8 +421,8 @@ describe("buildAgentMessages", () => {
         .join("\n");
       const inputEfectivo = `${loQueLee}\n${descripciones}`;
       expect(inputEfectivo).not.toContain("CONDUCTA (data-ol-calc y las demás)");
-      for (const name of BEHAVIOR_ORDER) {
-        expect(inputEfectivo, `quedó el marcador declarativo de ${name}`).not.toContain(BEHAVIORS[name].marker);
+      for (const marcador of MARCADORES_DE_CONDUCTAS) {
+        expect(inputEfectivo, `quedó el marcador declarativo ${marcador}`).not.toContain(marcador);
       }
       expect(inputEfectivo).not.toContain("código COMPLETO");
       expect(inputEfectivo).not.toContain("prueba_js");

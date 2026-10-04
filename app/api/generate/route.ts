@@ -15,7 +15,6 @@ import { appendChatMessage } from "@/lib/projects/chat";
 import { detectSlotPath } from "@/lib/html-engine";
 import { collectDegradations } from "@/lib/ingestion/degradations";
 import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/direction";
-import { disableCalcRegions } from "@/lib/expr/repair";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { generateHtmlStream, laEscribeElRazonador } from "@/lib/ai-stream/generate";
 import { getEscritorGuardado } from "@/lib/ai/escritor-guardado";
@@ -728,7 +727,6 @@ ${briefBlock}`;
         // el render pulsa los controles— y la medición sigue entera.
         const engine = (candidate: string) =>
           preparePage(candidate, {
-            mode: "create",
             brief,
             title,
             // Sin `vista`: aquí todavía no hay proyecto (la fila se inserta con
@@ -778,11 +776,6 @@ ${briefBlock}`;
         // crítico, y su único escritor la reparación automática, retirada el
         // 2026-09-04. Sin ninguno de los dos no queda presupuesto que contar.
         let breakage = [...prepared.report.breakage];
-        // Una fórmula que el reparador NO pudo arreglar sin adivinar entra en
-        // el mismo reintento que la rotura medida. No es un reintento nuevo:
-        // es que el diagnóstico —que ya era quirúrgico— por fin llega a quien
-        // puede actuar sobre él.
-        let calcRotas = [...(prepared.report.calcIssues ?? [])];
         // CSS que no puede aplicar nunca. Entra por el MISMO reintento, sin
         // presupuesto nuevo — es el defecto que ninguna otra etapa ve: el render
         // mide lo que se pinta y la puerta valida lo que está cableado, pero un
@@ -880,25 +873,8 @@ ${briefBlock}`;
           console.warn(`[generate] entregada con rotura — ${breakage.join(" · ")}`);
         }
 
-        // DEGRADAR SIN MENTIR. Si tras reparar y reintentar una fórmula sigue
-        // muerta, se le quitan los marcadores a la región: la página queda
-        // estática pero íntegra —el valor de nacimiento ya está escrito dentro
-        // del elemento— y el visitante no ve un control que invite a teclear y
-        // no responda.
-        //
-        // Es lo que hace un error boundary con un widget roto: esconderlo, no
-        // mostrarlo muerto. La otra mitad —decírselo al creador— la lleva
-        // `collectDegradations` con el código `broken_controls`, más abajo.
-        if (calcRotas.length > 0) {
-          const off = disableCalcRegions(html);
-          if (off.repaired > 0) {
-            html = off.html;
-            // eslint-disable-next-line no-console
-            console.warn(
-              `[generate] cálculo apagado tras ${calcRotas.length} fórmula(s) irreparable(s) — la página se entrega sin él`,
-            );
-          }
-        }
+        // ⚰️ Aquí se apagaban las regiones de `data-ol-calc` con fórmulas rotas
+        // (`disableCalcRegions`). Se fue el 2026-10-04 con las conductas.
 
         // ⚰️ EL CRÍTICO CON VISIÓN, RETIRADO (Jesús, 2026-09-05).
         //
@@ -933,7 +909,6 @@ ${briefBlock}`;
         // ── Guardar el documento elegido ────────────────────────────────────
         const gated = {
           removed: prepared.report.removed,
-          issues: (prepared.report.behaviorIssues ?? []) as readonly never[],
         };
 
         // What the page lost on the way in. On the ROW, not in the SSE payload:
@@ -949,7 +924,6 @@ ${briefBlock}`;
         const degradations = collectDegradations({
           surface: "generate",
           removed: gated.removed,
-          behaviorIssues: gated.issues,
         });
 
         // ⚰️ Aquí se leía `prepared.report.modules` — el puente IA→módulos, que
@@ -1035,7 +1009,6 @@ ${briefBlock}`;
           // esto la subpágina sería la única superficie del producto que se
           // guarda sin pasar por el motor.
           const listo = await preparePage(escrita.html, {
-            mode: "create",
             brief,
             title: nombre,
             // Sin `vista`: aquí todavía no hay proyecto (la fila se inserta con
@@ -1138,22 +1111,6 @@ ${briefBlock}`;
         } catch (err) {
           // eslint-disable-next-line no-console
           console.warn("[generate] no se pudo sembrar el primer turno del chat", err);
-        }
-
-        // Telemetry only — the same `[name] ` + one-line-JSON convention
-        // publishToDir uses. This used to be the ONLY answer this route had to
-        // a control born dead: validate after the row was written and write a
-        // line nobody reads. The user's answer is the `broken_controls` record
-        // above, which the workspace shows as "algunos controles quedaron mal
-        // conectados — pedile al asistente que los arregle". The log stays
-        // because it is how we count how often the model does this; it is no
-        // longer how the person who owns the page finds out.
-        if (gated.issues && gated.issues.length > 0) {
-          // eslint-disable-next-line no-console
-          console.warn(
-            "[generate] behavior issues " +
-              JSON.stringify({ projectId, issues: gated.issues }),
-          );
         }
 
         await createVersion({

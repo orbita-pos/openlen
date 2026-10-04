@@ -1,4 +1,3 @@
-import type { BehaviorIssue } from "@/lib/conductas-heredadas/types";
 import type { Degradation } from "@/lib/projects/types";
 
 /**
@@ -26,13 +25,12 @@ export function hadScript(html: string): boolean {
 export function collectDegradations(input: {
   surface: Degradation["surface"];
   removed?: { scripts: number; eventHandlers: number; iframes: number; dangerousUrls: number };
-  behaviorIssues?: readonly BehaviorIssue[];
   /** `TransformReport.fallback` — present means the page was NOT transformed. */
   transformFallback?: string;
   /** Whether the incoming document actually carried script to bake. */
   hadScripts?: boolean;
 }): Degradation[] {
-  const { surface, removed, behaviorIssues, transformFallback, hadScripts } = input;
+  const { surface, removed, transformFallback, hadScripts } = input;
   const out: Degradation[] = [];
 
   // First, because it happens first and because it is the one the user is
@@ -116,19 +114,9 @@ export function collectDegradations(input: {
     }
   }
 
-  if (behaviorIssues && behaviorIssues.length > 0) {
-    out.push({
-      surface,
-      stage: "behaviors",
-      code: "broken_controls",
-      count: behaviorIssues.length,
-      // El detalle que ya existía y se tiraba. Acotado: tres frases y 200
-      // caracteres cada una. Es lo que hace falta para saber qué pedirle al
-      // asistente — más sería un registro, y un registro que nadie lee es
-      // justo lo que este aviso existe para no ser.
-      detail: behaviorIssues.slice(0, 3).map((i) => i.message.slice(0, 200)),
-    });
-  }
+  // ⚰️ Aquí nacía `broken_controls` (una conducta `data-ol-*` mal cableada).
+  // Las conductas se retiraron el 2026-10-04; el código sigue en el tipo y en
+  // el editor porque proyectos viejos pueden tenerlo guardado.
 
   return out;
 }

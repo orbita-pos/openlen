@@ -7,11 +7,9 @@
 // during its own server build. Plain `tsx --test` (test:node's runner) never
 // sets that condition, so a bare `require("server-only")` falls through to
 // index.js, which throws unconditionally: "This module cannot be imported
-// from a Client Component module." lib/conductas-heredadas/validate.ts is a real
-// server-only module (node-html-parser needs an actual DOM tree) that
-// lib/agent/tools.ts now imports (Task 16) — the import is correct and
-// stays; the test runner just needs to tolerate it, same as it already
-// tolerates every other server-only module reachable from tools.ts.
+// from a Client Component module." Many modules reachable from
+// lib/agent/tools.ts are real server-only modules; the imports are correct
+// and stay, the test runner just needs to tolerate them.
 //
 // vitest.config.ts solved the identical problem with `resolve.alias`: one
 // bare specifier repointed at the same empty.js Next would pick, NOT

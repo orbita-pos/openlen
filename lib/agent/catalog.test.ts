@@ -11,8 +11,11 @@ import {
 import { documentosDeLaPlataforma } from "./manual-de-la-plataforma";
 import { RUTA_API_D } from "./ficheros/manual";
 import { clauseMarker } from "@/lib/ai/js-clause";
-import { BEHAVIOR_ORDER, BEHAVIORS } from "@/lib/conductas-heredadas/registry";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
+
+// Las nueve conductas `data-ol-*`, retiradas el 2026-10-04. Ningún prompt puede
+// volver a enseñarlas.
+const MARCADORES_DE_CONDUCTAS = ["data-ol-countdown", "data-ol-filter", "data-ol-lightbox", "data-ol-copy", "data-ol-autoplay", "data-ol-theme", "data-ol-sticky", "data-ol-tab", "data-ol-calc"];
 
 const SALTO = String.fromCharCode(10);
 
@@ -314,8 +317,8 @@ describe("buildAgentSystemPrompt", () => {
     ]) {
       expect(p, `quedó la prohibición obsoleta: ${mentira}`).not.toContain(mentira);
     }
-    for (const name of BEHAVIOR_ORDER) {
-      expect(p, `quedó el marcador declarativo de ${name}`).not.toContain(BEHAVIORS[name].marker);
+    for (const marcador of MARCADORES_DE_CONDUCTAS) {
+      expect(p, `quedó el marcador declarativo ${marcador}`).not.toContain(marcador);
     }
     expect(p).not.toContain("data-ol-sticky");
     expect(p).toContain("<script>");

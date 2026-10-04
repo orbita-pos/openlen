@@ -20,10 +20,9 @@ export const MARKER = "---HTML---";
 /**
  * ⚠️ ESTA CONSTANTE NO ES LO QUE LA RUTA MANDA — usa `aiDesignSystemMessage()`.
  *
- * Lleva `PUBLISH_CONTRACT` en CRUDO: la sección CONDUCTAS entera, sus 9
- * marcadores y la prohibición del JavaScript. Nada de eso llega al modelo;
- * `swapJsClauses` lo sustituye en el ensamblado (26.618 → 16.342 caracteres,
- * medido el 2026-08-28).
+ * Lleva `PUBLISH_CONTRACT` en CRUDO, con las marcas que `swapJsClauses`
+ * sustituye en el ensamblado (la prohibición del JavaScript; la sección
+ * CONDUCTAS se redujo a su marca el 2026-10-04, al retirarlas).
  *
  * Se exporta sólo para las pruebas que afirman SOBRE EL LITERAL. Cualquier
  * prueba que quiera medir lo que recibe el modelo llama a la función.

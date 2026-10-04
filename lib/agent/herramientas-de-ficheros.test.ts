@@ -166,7 +166,7 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
 
   it("🔴 Read → Edit quita la gorra y las zapatillas siguen ahí, guardado por el camino de siempre", async () => {
     // La home como está en producción: ya pasó por la puerta alguna vez.
-    const guardada = await preparePage(HOME, { mode: "edit", renderChecks: false, priorHtml: HOME });
+    const guardada = await preparePage(HOME, { renderChecks: false });
     assert.ok(guardada.ok);
     const { deps, store } = makeDeps({ html: guardada.html });
     const session = makeSession();

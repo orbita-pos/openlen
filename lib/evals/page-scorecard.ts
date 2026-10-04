@@ -79,12 +79,8 @@ export interface PageMeasurement {
   readonly deadAnchorWorst?: string;
   readonly lang?: string;
   readonly dir?: string;
-  /** Fórmulas de una región `data-ol-calc` que compilaron. Se SIGUE midiendo
-   *  —`compileCalcRegions` no se ha ido y una página vieja puede traerlas— pero
-   *  ya no decide nada: ver la lápida del veredicto `calc`, más abajo. */
-  readonly calcFormulas?: number;
-  /** Fórmulas que NACIERON MUERTAS: no parsean, o leen un nombre inexistente. */
-  readonly calcIssues?: number;
+  // ⚰️ `calcFormulas` y `calcIssues` medían `data-ol-calc`, retirado el
+  // 2026-10-04 con las conductas.
   // ⚰️ `pruebaPasos` y `pruebaFallos`, retirados con la prueba (2026-09-05).
   // El bloque que la pedía salió del prompt de crear, así que ninguna página
   // declara ya nada y estos dos campos no los escribía nadie.

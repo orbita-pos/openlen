@@ -815,25 +815,19 @@ ${inner}` };
     expect(String(done?.data.reasoning)).toMatch(/falló al cerrar el turno/i);
   });
 
-  it("refuses a redesign whose control would be born dead, and stores nothing", async () => {
-    // data-ol-copy pointing at an id that does not exist: OpenLen would bake a
-    // button that copies nothing.
+  // ⚰️ Antes: «refuses a redesign whose control would be born dead». Ahora
+  // la página se guarda tal cual: las conductas `data-ol-*` se retiraron el 2026-10-04: un `data-ol-copy` es
+  // un atributo como otro cualquiera, y la puerta ya no rechaza por él.
+  it("guarda un rediseño con un `data-ol-copy` suelto: ya no hay conductas que validar", async () => {
     mocks.fireworksStream.mockReturnValue(
       modelSays(rewrite('<h1>Hola</h1><button data-ol-copy="cupon-fantasma">Copiar</button>')),
     );
 
     const events = await readEvents(await call());
 
-    const error = events.find((e) => e.event === "error");
-    expect(error).toBeDefined();
-    // The reason has to reach the person reading the chat as prose, not as a
-    // machine slug.
-    expect(String(error?.data.message)).toMatch(/cupon-fantasma/);
-    expect(String(error?.data.message)).toMatch(/no guardé nada/i);
-    // The page the user already had is untouched, and no version is written.
-    expect(mocks.update).not.toHaveBeenCalled();
-    expect(mocks.createVersion).not.toHaveBeenCalled();
-    expect(events.some((e) => e.event === "done")).toBe(false);
+    expect(events.some((e) => e.event === "error")).toBe(false);
+    expect(events.some((e) => e.event === "done")).toBe(true);
+    expect(mocks.update).toHaveBeenCalled();
   });
 
   it("edita con DeepSeek sin que nadie tenga que encenderlo", async () => {

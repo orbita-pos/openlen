@@ -4,9 +4,7 @@ import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { documentoMedible } from "@/lib/lienzo/documento";
 import { todoElJsDelDocumento } from "./conservar-scripts";
 import { stampFormIds } from "@/lib/publish/form-identity";
-import { validateBehaviors } from "@/lib/conductas-heredadas/validate";
 import { leerFallos, programaJs, type FalloSpec } from "@/lib/agent/prueba-js";
-import { compileCalcRegions, type CalcIssue } from "@/lib/expr/document";
 import { reglasQueNuncaAplican, type ReglaMuerta } from "@/lib/document/css-wiring";
 import { clasesQueNuncaAplican, type ClaseMuerta } from "@/lib/document/clases-muertas";
 import { objectiveBreakage, roturaDeRed } from "@/lib/generation/objective-breakage";
@@ -32,14 +30,13 @@ import type {
  *   1. imágenes    fotos reales en los huecos que el modelo dejó marcados
  *   2. legibilidad texto que la página pinta y nadie puede leer
  *   3. medición    desborde y geometría, leídos DEL RENDER
- *   4. invariantes exactamente un <h1>; el literal que ya vale un token, atado
- *   5. puerta      saneo + normalización + metadatos + conductas
+ *   4. puerta      el marcador reservado + metadatos
  *   6. módulos     el hueco que el documento pidió
  *
  * CONTRATO — igual que `lib/transform/index.ts`: las etapas 1-4 son fail-soft.
  * Si Chrome se cuelga o una pasada revienta, el documento sigue su camino y el
  * informe dice por qué; el llamador no necesita `try/catch`. La ÚNICA que puede
- * refusar es la puerta (5), y sólo con `mode: "edit"`.
+ * refusar es la puerta (4), y sólo por el marcador reservado `data-slot-path`.
  *
  * NO opina de gusto. Ni color, ni tipografía, ni ritmo, ni densidad. Sólo
  * rechaza lo roto: eso es lo que deja que una página de terror y una de niños
@@ -156,81 +153,19 @@ export async function preparePage(
     stages.push({ stage: "measure", status: "unavailable", detail: reason(err) });
   }
 
-  // ── `beforeMeta`: lo único que queda corriendo aquí ────────────────────
-  // Corre después de sanear y normalizar, y antes de `ensurePageMeta`.
-  //
-  // ⚰️ El orden lo justificaba `bindColorsToTokens` —«cosecha el tema que el
-  // normalizador escribe en `<html style>`, medido: 8 de 40 documentos salían
-  // distintos»— y el sembrado de marca. Las dos cosas se fueron: la siembra el
-  // 2026-08-31, las cuatro reparaciones el 2026-09-04, y sus módulos el
-  // 2026-09-05. Lo que queda es `compileCalcRegions`, y a ése el orden le da
-  // igual: no cosecha nada del normalizador, ejecuta lo que el modelo marcó.
-  let invariants: StageOutcome = { stage: "invariants", status: "skipped" };
-  let calcIssues: CalcIssue[] = [];
-  let calcRepairs: string[] = [];
-  const beforeMeta = (h: string): string => {
-    try {
-      // ⚰️ Aquí corría `seedBrandIntoHtml` en CADA guardado — el sembrado del
-      // perfil de negocio. Retirado el 2026-08-31.
-      //
-      // ⚰️ Y CON ÉL, LAS CUATRO REPARACIONES (Jesús, 2026-09-04). Se llamaban
-      // «invariantes», que es como se llama a una corrección cuando se da por
-      // supuesto que el que escribió el documento se equivocó:
-      //
-      //   `ensureSingleH1`      — le añadía un <h1>. La única que metía
-      //                           CONTENIDO VISIBLE que el modelo no escribió.
-      //   `ensureScrollPadding` — le metía scroll-padding para las anclas.
-      //   `bindColorsToTokens`  — le reescribía sus hex a `var(--su-token)`.
-      //                           Ni siquiera cambiaba el color pintado: le
-      //                           refactorizaba el CSS a cambio de nada visible.
-      //   `repairCalcRegions`   — le movía las regiones de cálculo mal puestas.
-      //
-      // La decisión es la misma que retiró las fotos, los colores ilegibles, la
-      // cadena born-canonical y las dos reescrituras: lo que escribe el modelo
-      // ES la página. Un defecto suyo se MIDE y se dice —la etapa de medición
-      // sigue entera— pero no se le corrige por detrás.
-      //
-      // LO QUE SE QUEDA, y por qué no es lo mismo:
-      //
-      //   `compileCalcRegions` — no le corrige nada: EJECUTA lo que él marcó.
-      //     Quitarlo dejaría muertas las regiones que el propio modelo pidió.
-      //     Sigue compilando ANTES de `validateBehaviors`, así que la puerta
-      //     ve el documento compilado y una fórmula rota se trata como
-      //     cualquier control muerto.
-      //
-      //     Sigue siendo seguro por construcción, no por suerte: lo único que
-      //     inyecta es un programa derivado de un AST cerrado, serializado con
-      //     los ángulos escapados, y un valor inicial escapado como texto. Ni
-      //     un `<script>`, ni un `on*`, ni una URL.
-      //
-      // Las fórmulas que el modelo dejó rotas ya no se arreglan: salen en
-      // `calcIssues` y de ahí al informe y al diario, como el desborde.
-      const calc = compileCalcRegions(h);
-      calcIssues = [...calc.issues];
-      calcRepairs = [];
-      invariants = {
-        stage: "invariants",
-        status: calc.compiled > 0 ? "changed" : "skipped",
-        detail:
-          `calc=${calc.compiled}/${calc.regions}` +
-          (calc.issues.length > 0 ? ` rotas=${calc.issues.length}` : ""),
-      };
-      return calc.html;
-    } catch (err) {
-      // Un invariante es una mejora, nunca un peaje: si revienta, pasa el
-      // documento tal cual y la puerta sigue su curso.
-      invariants = { stage: "invariants", status: "unavailable", detail: reason(err) };
-      return h;
-    }
-  };
-
+  // ⚰️ AQUÍ CORRÍA `beforeMeta` (la etapa «invariantes»): lo último que hacía
+  // era `compileCalcRegions`, la calculadora de `data-ol-calc`. Se fue el
+  // 2026-10-04 con las conductas —su motor no se inyectaba desde agosto, así
+  // que compilaba fórmulas que nada ejecutaba— y la etapa se quedó vacía. Antes
+  // se habían ido sus otras cuatro reparaciones (2026-09-04): lo que escribe el
+  // modelo ES la página.
   const gated = await gate(
     current,
     // `gateReservedMarker`, no `sanitizeForPublish`: por este motor pasan las TRES
     // superficies del modelo —Crear, el Chat y Len— y ninguna otra. Lo que
     // escribe el modelo no se le recorta; sólo se le aplica la puerta de
     // `data-slot-path`, que no admite excepción por procedencia.
-    { sanitize: gateReservedMarker, beforeMeta },
+    { sanitize: gateReservedMarker },
     {
       render: false,
       seal: false,
@@ -238,17 +173,11 @@ export async function preparePage(
       // igual que con `gateReservedMarker` arriba: lo que escribe el modelo no
       // se le normaliza. Ver `HtmlGatePolicy.normalize`.
       normalize: false,
-      // La asimetría deliberada. Ver el comentario de `PageMode`. Y con
-      // `priorHtml` la puerta avisa en vez de bloquear: la comparación de abajo
-      // decide, para no cobrarle al usuario un defecto que ya estaba.
-      behaviors: opts.mode === "create" || opts.priorHtml !== undefined ? "warn" : "block",
       // ⚰️ Con perfil, aquí se pasaban sus metadatos (logo → og:image). Se fue
       // con él el 2026-08-31; el título y la descripción los sigue poniendo
       // `ensurePageMeta` a partir del propio documento.
     },
   );
-  stages.push(invariants);
-
   if (!gated.ok) {
     stages.push({ stage: "gate", status: "unavailable", detail: gated.code });
     return {
@@ -259,33 +188,9 @@ export async function preparePage(
         stages,
         breakage,
         ...(gated.removed ? { removed: { ...gated.removed, metaRefresh: 0 } } : {}),
-        ...(gated.issues ? { behaviorIssues: [...gated.issues] } : {}),
-        ...(calcIssues.length ? { calcIssues } : {}),
-        ...(calcRepairs.length ? { calcRepairs } : {}),
       },
     };
   }
-  // Sólo lo que ESTA edición rompió. Una conducta que ya venía rota se queda
-  // anotada en el informe, no cuesta la edición.
-  const issues = [...(gated.issues ?? [])];
-  if (opts.mode === "edit" && opts.priorHtml !== undefined && issues.length > 0) {
-    const before = new Set(safeBehaviors(opts.priorHtml).map((i) => JSON.stringify(i)));
-    const nuevos = issues.filter((i) => !before.has(JSON.stringify(i)));
-    if (nuevos.length > 0) {
-      stages.push({ stage: "gate", status: "unavailable", detail: "behaviors_invalid" });
-      return {
-        ok: false,
-        code: "behaviors_invalid",
-        report: {
-          stages,
-          breakage,
-          ...(gated.removed ? { removed: { ...gated.removed, metaRefresh: 0 } } : {}),
-          behaviorIssues: nuevos,
-        },
-      };
-    }
-  }
-
   current = gated.html;
   stages.push({ stage: "gate", status: "changed" });
 
@@ -357,9 +262,6 @@ export async function preparePage(
     stages,
     breakage,
     ...(gated.removed ? { removed: { ...gated.removed, metaRefresh: 0 } } : {}),
-    ...(gated.issues ? { behaviorIssues: [...gated.issues] } : {}),
-    ...(calcIssues.length ? { calcIssues } : {}),
-    ...(calcRepairs.length ? { calcRepairs } : {}),
     ...(deadRules.length ? { deadRules } : {}),
     ...(clasesMuertas.length ? { clasesMuertas } : {}),
     ...(specFailures.length ? { specFailures } : {}),
@@ -385,14 +287,6 @@ function withDeadline<T>(work: Promise<T>, onTimeout: T): Promise<T> {
   ]);
 }
 
-/** Nunca tira: un validador caído no puede costar una edición. */
-function safeBehaviors(html: string): ReturnType<typeof validateBehaviors> {
-  try {
-    return validateBehaviors(html);
-  } catch {
-    return [];
-  }
-}
 
 function reason(err: unknown): string {
   return (err instanceof Error ? err.message : String(err)).slice(0, 120);

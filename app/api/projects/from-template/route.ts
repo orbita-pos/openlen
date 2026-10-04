@@ -105,15 +105,11 @@ export async function POST(req: Request): Promise<Response> {
   // Los datos viven en la página; el logo se pone desde el inspector, que es
   // donde el dueño lo ve.
 
-  // One gate. `behaviors: "warn"` — this surface FAILS OPEN: the project does
+  // One gate. This surface FAILS OPEN: the project does
   // not exist yet, so refusing costs the user the whole page rather than an
   // edit. `seal: false` (publishToDir seals at publish time), `render: false`
   // (a clone cannot pay a browser launch).
   //
-  // ⚰️ Decía «Seeding rides in `beforeMeta`». Ya no cabalga nada: esta llamada
-  // NO pasa un `beforeMeta` —la siembra del perfil de negocio se retiró el
-  // 2026-08-31, ver la lápida de arriba— y el único `beforeMeta` vivo del repo
-  // es el de `lib/page-engine/prepare.ts`. Corregido el 2026-09-05.
   const gated = await passHtmlGate(
     transformedHtml,
     {
@@ -127,7 +123,6 @@ export async function POST(req: Request): Promise<Response> {
     {
       render: false,
       seal: false,
-      behaviors: "warn",
       // CLONED: the curated body's <title>/og copy is OUR marketing, not this
       // user's. Preserving it published another product's name into their tab,
       // their Google result and their WhatsApp card.
@@ -170,7 +165,6 @@ export async function POST(req: Request): Promise<Response> {
   const degradations = collectDegradations({
     surface: "from-template",
     removed: gated.removed,
-    behaviorIssues: gated.issues,
     // The shared 12s deadline can run out before the home is transformed —
     // its JS-built sections then clone empty. Degradation #4: real loss, and
     // the user has no way to see why, so it goes on the record.
@@ -205,7 +199,6 @@ export async function POST(req: Request): Promise<Response> {
       {
         render: false,
         seal: false,
-        behaviors: "warn",
         // AUTHORED, deliberately — not because a human wrote a subpage's head,
         // but because the takeover is all-or-nothing (`takeover =
         // replaceStaleMeta && title`) and the only title in hand is the
@@ -249,7 +242,6 @@ export async function POST(req: Request): Promise<Response> {
       ...collectDegradations({
         surface: "from-template",
         removed: pgGated.removed,
-        behaviorIssues: pgGated.issues,
         // Degradation #5 — same deadline, per subpage.
         transformFallback: pgTransformSkipped ? "budget" : undefined,
         hadScripts: hadScript(pg.html),

@@ -23,16 +23,12 @@
 // would over-weight them as instructions; in `user` (tagged `<reference>`)
 // it weighs them as material to draw from.
 //
-// The CONDUCTAS section (right after • CAROUSEL below) is NOT hand-written:
-// it's buildBehaviorsDoc() interpolated at module load, generated straight
-// from lib/conductas-heredadas/registry.ts. This is the fix for the bug that started
-// this whole effort — this file once promised a <script> the sanitizer had
-// been deleting for months, because the promise and the engine lived in two
-// places that silently drifted apart. Now they're the same object: a recipe
-// this file doesn't know about cannot exist, and a recipe registered in the
-// engine cannot go undocumented here.
-
-import { buildBehaviorsDoc, BEHAVIOR_NAMES, BEHAVIOR_COUNT } from "./conductas-heredadas/doc";
+// ⚰️ Aquí se generaba la sección CONDUCTAS a partir de su registro
+// (`buildBehaviorsDoc()`), y el carrusel tenía su contrato. Se retiraron el
+// 2026-10-04: sus motores no se inyectaban desde agosto. El tramo que ocupaban
+// lo SUSTITUYEN siempre las cláusulas `contrato-completo` y `conductas` de
+// lib/ai/js-clause.ts (las tres superficies las aplican); aquí quedan sólo sus
+// marcas, que es lo que esas cláusulas necesitan para cortar.
 
 export const DESIGN_GUIDANCE = `
 ═══════════════════════════════════════════════════════════════════════════
@@ -48,49 +44,10 @@ OUTPUT FORMAT — strict rules (instant failure if violated)
   character calls for and load every family you use.
 • All custom CSS inline in \`<style>\` inside <head> — keyframes, gradients,
   custom utility classes (pulse-dot, marquee, hairline borders, etc).
-• NO JAVASCRIPT — it does not survive. Every \`<script>\` (inline or remote,
-  the Tailwind CDN tag being the one exception) and every \`on*\` attribute is
-  STRIPPED before the page is ever saved. So no React, no Babel, no
-  \`window.X\` globals — and no "procedural script" to draw an SVG path or wire
-  up a control either: the script is deleted and what's left is an empty
-  \`<path>\` and a dead button. Anything that must MOVE or RESPOND is exactly
-  one of three things:
-    1. CSS-only, when plain CSS already does the job:
-         – accordion / FAQ      → \`<details><summary>\`
-         – mobile nav, toggles  → hidden checkbox + \`peer-checked:\` (or \`:target\`)
-         – tabs                 → radio inputs + \`peer-checked:\`
-         – entrances, hovers, marquees → \`@keyframes\` / \`transition\`
-       (the CAROUSEL contract below is the same "you write no runtime" idea,
-       for a horizontal rail with working arrows — it's its own contract,
-       not CSS and not a CONDUCTA.)
-    2. A CONDUCTA, for the ${BEHAVIOR_COUNT} things CSS genuinely cannot do
-       alone — ${BEHAVIOR_NAMES}. Emit ONLY the declarative \`data-ol-*\`
-       marker; OpenLen bakes the real runtime for you at publish time. Full
-       contract — when to use each, when NOT to, exact markup — in the
-       CONDUCTAS section below.
-    3. NEVER your own JavaScript. Not one line, not "just this once" — it
-       is deleted with zero exceptions, every single time, no matter how
-       small.
-  A \`<button>\` that is not a form submit and carries none of the above can
-  do NOTHING. Use an \`<a>\` with a real destination, a CSS-only pattern, or
-  a CONDUCTA marker. Never ship a control that only a script could have
-  made work.
-• NO \`<iframe>\` — stripped as well. No embedded map, no Spotify, no Calendly.
-  Video is the exception and needs no iframe: a plain \`<a href>\` pointing at a
-  YouTube or Vimeo URL is turned into an in-page player automatically at
-  publish time. For anything else, do not fake an embed.
-• CAROUSEL — a horizontal rail WITH working arrows is a real OpenLen power:
-  emit the contract and the runtime is baked in for you at publish time. Per row:
-    \`<div data-ol-row class="relative">\`          ← wrapper; must NOT scroll
-      \`<button data-ol-scroll="prev">…</button>\`  ← arrows OUTSIDE the scroller,
-      \`<button data-ol-scroll="next">…</button>\`     so they pin to the edge
-      \`<div data-ol-scroller class="overflow-x-auto flex gap-4 snap-x">\` …cards… \`</div>\`
-    \`</div>\`
-  Swipe and trackpad scroll the rail with no script at all; the arrows get wired
-  at publish (smooth, ~80% of the visible width). Do NOT write your own slider
-  script — it will be deleted — and do NOT wire the arrows with \`:target\`
-  anchors: those scroll the whole document vertically instead of the rail.
-${buildBehaviorsDoc()}
+• NO JAVASCRIPT — it does not survive. [Never shown: the contrato-completo
+  clause of lib/ai/js-clause.ts replaces this bullet, up to the next one.]
+• CAROUSEL — a horizontal rail WITH working arrows [never shown: the
+  conductas clause of lib/ai/js-clause.ts replaces this bullet.]
 • NO \`data-slot-path=\` attribute anywhere (reserved for editor pipeline).
 • NO login / signup / sign-out / "my account" / dashboard UI of any kind,
   and NO "Sign in" / "Log in" link in the nav. These are PUBLIC informational

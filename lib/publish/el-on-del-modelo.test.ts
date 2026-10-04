@@ -92,7 +92,7 @@ describe("lo que escribe el MODELO conserva su onclick", () => {
     }
     const s = await done;
     assert.ok(s.finalHtml?.includes(ONCLICK), "el stream se lo quitó");
-    const listo = await preparePage(s.finalHtml!, { mode: "create", renderChecks: false });
+    const listo = await preparePage(s.finalHtml!, { renderChecks: false });
     assert.ok(listo.ok);
     assert.ok(listo.html.includes(ONCLICK), "la puerta de crear se lo quitó");
   });
@@ -103,13 +103,13 @@ describe("lo que escribe el MODELO conserva su onclick", () => {
     assert.ok(target, "no encontré el id del botón");
     const r = applyOps(etiquetado, [{ type: "replace", target, newHtml: BOTON_CON_ONCLICK }]);
     assert.ok(r.html?.includes(ONCLICK), "applyOps se lo quitó");
-    const listo = await preparePage(r.html!, { mode: "edit", renderChecks: false, priorHtml: PREVIA });
+    const listo = await preparePage(r.html!, { renderChecks: false });
     assert.ok(listo.ok);
     assert.ok(listo.html.includes(ONCLICK), "la puerta de editar se lo quitó");
   });
 
   it("Chat, reescribiendo la página entera (y Len con Write): la puerta de editar", async () => {
-    const listo = await preparePage(CON_ONCLICK, { mode: "edit", renderChecks: false, priorHtml: PREVIA });
+    const listo = await preparePage(CON_ONCLICK, { renderChecks: false });
     assert.ok(listo.ok);
     assert.ok(listo.html.includes(ONCLICK));
   });

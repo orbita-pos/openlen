@@ -5,7 +5,7 @@
 // editor surface (props/reorder/replace/insert) never ships them to the
 // published page. jsdom provides DOMParser.
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { stripEditorInstrumentation } from "./strip-editor-instrumentation";
 
 // ⚰️ SE FUERON el 2026-08-31 CUATRO BLOQUES (~430 líneas): el del carrusel de
@@ -16,14 +16,10 @@ import { stripEditorInstrumentation } from "./strip-editor-instrumentation";
 // borró con ellos, porque horneaba conductas y carrusel que la página
 // publicada ya no tiene desde el 2026-08-26.
 //
-// No se pierde cobertura de nada vivo: sin inyector no hay mutación de runtime
-// que deshacer al guardar. Lo que SÍ sigue probado aquí abajo es la limpieza
-// de marcadores `data-ol-*` que pueden venir de páginas viejas.
-import { bakeBehaviors, buildBehaviorsScript, BEHAVIORS_MARKER } from "@/lib/conductas-heredadas/build";
-import { BEHAVIORS, BEHAVIOR_ORDER } from "@/lib/conductas-heredadas/registry";
-import { mount, trackDocumentListeners } from "@/lib/conductas-heredadas/recipes/test-helpers";
-import type { Behavior, BehaviorName } from "@/lib/conductas-heredadas/types";
-import { CAROUSEL_JS, MARKER as CAROUSEL_MARKER } from "@/lib/publish/carousel";
+// ⚰️ Y EL 2026-10-04, LO QUE QUEDABA DE ELLOS: los scripts horneados de las
+// conductas, el `data-ol-stuck` del sticky y los restos de la animación. El
+// limpiador ya no los quita porque nada los produce (ver la lápida en
+// strip-editor-instrumentation.ts), y las conductas se borraron ese día.
 
 const DOC = (body: string) =>
   `<!doctype html><html><head></head><body>${body}</body></html>`;
@@ -81,45 +77,6 @@ describe("stripEditorInstrumentation — Editor V5 markers", () => {
   it("fast-paths clean HTML untouched", () => {
     const clean = DOC(`<h1>Clean</h1>`);
     expect(stripEditorInstrumentation(clean)).toBe(clean);
-  });
-
-  it("removes motion/music preview scripts, styles and the preview player", () => {
-    const out = stripEditorInstrumentation(
-      `<!doctype html><html data-ol-motion="editorial" class="ol-motion-js"><head>` +
-        `<style id="ol-motion-preview-style" data-openlen-motion-preview>.x{}</style>` +
-        `<style id="ol-music-preview-style" data-openlen-music-preview>.olmp{}</style>` +
-        `</head><body><h1>Hi</h1>` +
-        `<script data-openlen-motion-preview>void 0</script>` +
-        `<script data-openlen-music-preview>void 0</script>` +
-        `<div data-openlen-music-preview data-openlen-edit-noedit>` +
-        `<div class="olmp" data-ol-music><audio src="/a.mp3"></audio></div></div>` +
-        `</body></html>`,
-    );
-    expect(out).not.toContain("data-openlen-motion-preview");
-    expect(out).not.toContain("data-openlen-music-preview");
-    expect(out).not.toContain("ol-motion-preview-style");
-    expect(out).not.toContain("ol-music-preview-style");
-    expect(out).not.toContain("data-ol-music");
-    expect(out).not.toContain("<audio");
-    expect(out).not.toContain("data-ol-motion");
-    expect(out).not.toContain("ol-motion-js");
-    expect(out).toContain("<h1>Hi</h1>");
-  });
-
-  it("restores motion-runtime mutations: reveal classes + frozen counters", () => {
-    const out = stripEditorInstrumentation(
-      DOC(
-        `<section class="hero ol-in"><h1>Hero</h1>` +
-          `<span data-openlen-editable data-ol-counted data-ol-orig="1,200+">37+</span></section>` +
-          `<p class="ol-in">lead</p>`,
-      ),
-    );
-    expect(out).not.toContain("ol-in");
-    expect(out).not.toContain("data-ol-counted");
-    expect(out).not.toContain("data-ol-orig");
-    expect(out).not.toContain("37+");
-    expect(out).toContain("1,200+"); // counter text restored to the original
-    expect(out).toContain('class="hero"'); // sibling classes survive
   });
 
   it("PRESERVES the persisted temática world (style + font link + html attr)", () => {
@@ -198,78 +155,6 @@ describe("stripEditorInstrumentation — Editor V5 markers", () => {
   });
 });
 
-describe("stripEditorInstrumentation — behaviors runtime scripts", () => {
-  // Same fake-registry pattern as lib/conductas-heredadas/build.test.ts and
-  // use-behaviors-preview.test.ts — this file tests the STRIPPING mechanism
-  // against a controlled registry, independent of what the real registry
-  // (lib/conductas-heredadas/registry.ts, all 7 recipes since Task 13) happens to contain.
-  const fake = (name: string, marker: string, js: string, headJs?: string): Behavior =>
-    ({
-      name: name as BehaviorName, marker, js, headJs, budgetBytes: 700, docBudgetChars: 1200,
-      schema: { root: { kind: "flag" } },
-      degradation: "content-intact", a11y: [], status: "stable",
-      doc: { label: "", when: "", whenNot: "", example: "" },
-    }) as Behavior;
-
-  const REG = {
-    countdown: fake("countdown", "data-ol-countdown", "/*CD*/"),
-  } as Partial<Record<BehaviorName, Behavior>>;
-  const ORDER: BehaviorName[] = ["countdown"];
-
-  it("removes the body behaviors script and keeps real content intact", () => {
-    const out = stripEditorInstrumentation(
-      DOC(`<h1>Hello</h1><script ${BEHAVIORS_MARKER}>void 0</script>`),
-    );
-    expect(out).not.toContain(BEHAVIORS_MARKER);
-    expect(out).toContain("<h1>Hello</h1>");
-  });
-
-  it("removes the head behaviors script", () => {
-    const out = stripEditorInstrumentation(
-      `<!doctype html><html><head><script ${BEHAVIORS_MARKER}-head>void 0</script></head>` +
-        `<body><h1>Hello</h1></body></html>`,
-    );
-    expect(out).not.toContain(`${BEHAVIORS_MARKER}-head`);
-    expect(out).toContain("<h1>Hello</h1>");
-  });
-
-  it("removes both the head and body scripts when present together", () => {
-    const out = stripEditorInstrumentation(
-      `<!doctype html><html><head><script ${BEHAVIORS_MARKER}-head>void 0</script></head>` +
-        `<body><h1>Hello</h1><script ${BEHAVIORS_MARKER}>void 0</script></body></html>`,
-    );
-    expect(out).not.toContain(BEHAVIORS_MARKER);
-    expect(out).toContain("<h1>Hello</h1>");
-  });
-
-  it("lets bakeBehaviors re-inject after the strip — closes the idempotency-guard divergence bug", () => {
-    const withBehavior = DOC(`<div data-ol-countdown="2026-08-15T20:00Z"></div>`);
-    const baked = bakeBehaviors(withBehavior, REG, ORDER);
-    expect(baked).toContain(BEHAVIORS_MARKER); // sanity: the bake actually fired
-
-    const stripped = stripEditorInstrumentation(baked);
-    expect(stripped).not.toContain(BEHAVIORS_MARKER);
-
-    // Before the fix, bakeBehaviors' own guard —
-    // `if (html.includes(BEHAVIORS_MARKER)) return html;` — would see the
-    // leftover marker on a re-save and no-op forever. This proves it doesn't.
-    const rebaked = bakeBehaviors(stripped, REG, ORDER);
-    expect(rebaked).not.toBe(stripped);
-    expect(rebaked).toContain(BEHAVIORS_MARKER);
-  });
-
-  it("a document without behaviors scripts passes through the parse path undamaged", () => {
-    const out = stripEditorInstrumentation(
-      DOC(`<h1 data-openlen-editable>Hello</h1><p>World</p>`),
-    );
-    expect(out).not.toContain(BEHAVIORS_MARKER);
-    expect(out).not.toContain("data-openlen-editable");
-    expect(out).toContain("Hello");
-    expect(out).toContain("World");
-  });
-});
-
-
 
 // CRITICAL (revisión final de rama) — data-ol-hidden NO es un marker
 // runtime-owned de NINGUNA receta: es el atributo de use-element-inspect.ts's
@@ -278,7 +163,7 @@ describe("stripEditorInstrumentation — behaviors runtime scripts", () => {
 // propio ensureHiddenStyle() ahí, que inyecta la regla CSS persistente
 // `body:not([data-openlen-edit-mode]) [data-ol-hidden]{display:none!important}`.
 // filter.ts solía reclamar ESE MISMO nombre para su propio estado de runtime
-// (ahora `data-ol-filtered`, ver lib/conductas-heredadas/recipes/filter.ts) y la lista
+// (luego `data-ol-filtered`; las conductas se retiraron el 2026-10-04) y la lista
 // runtime-owned de arriba lo borraba incondicionalmente en cada guardado —
 // des-ocultando en silencio cualquier elemento que un creador hubiera
 // ocultado a propósito, con o sin la receta filter en la página. Este test
@@ -313,27 +198,6 @@ describe("stripEditorInstrumentation — data-ol-hidden pertenece al inspector, 
   });
 });
 
-
-
-describe("stripEditorInstrumentation — sticky's data-ol-stuck (runtime-owned, siempre se limpia)", () => {
-  trackDocumentListeners();
-
-  beforeEach(() => {
-    document.body.innerHTML = "";
-    Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
-  });
-
-  it("un nav con data-ol-stuck (puesto por scroll en el preview) no sobrevive al guardado", () => {
-    Object.defineProperty(window, "scrollY", { value: 100, configurable: true });
-    mount(`<nav data-ol-sticky class="fixed top-0 w-full"><a href="/">Mi negocio</a></nav>`);
-    const nav = document.querySelector("[data-ol-sticky]")!;
-    expect(nav.hasAttribute("data-ol-stuck"), "sanity: sticky se aplica de inmediato al montar").toBe(true);
-
-    const dirty = "<!doctype html>\n" + document.documentElement.outerHTML;
-    const saved = stripEditorInstrumentation(dirty);
-    expect(saved).not.toContain("data-ol-stuck");
-  });
-});
 
 describe("stripEditorInstrumentation — data-ol-was (stash de originales del inspector)", () => {
   it("preserva data-ol-was — la memoria de originales del inspector es estado del documento, no instrumentación", () => {

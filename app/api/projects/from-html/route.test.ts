@@ -90,24 +90,14 @@ describe("POST /api/projects/from-html", () => {
     expect(data.html).not.toContain("<script>init()");
   });
 
-  it("keeps the page and records a mis-wired control instead of refusing", async () => {
-    // behaviors:"warn" is what makes this a fail-open surface. Blocking here
-    // would cost the user the whole paste.
+  // ⚰️ Antes: «records a mis-wired control» (`broken_controls`). Ahora no hay
+  // nada que anotar: las conductas `data-ol-*` se retiraron el 2026-10-04: un `data-ol-copy` es
+  // un atributo como otro cualquiera, y la puerta ya no rechaza por él.
+  it("un `data-ol-lightbox` suelto ya no deja ningún aviso: se guarda tal cual", async () => {
     const res = await call(doc('<a data-ol-lightbox href="https://x.test/a.jpg">sin img</a>'));
 
     expect(res.status).toBe(200);
-    expect(storedData().degradations).toEqual([
-      {
-        surface: "from-html",
-        stage: "behaviors",
-        code: "broken_controls",
-        count: 1,
-        // El detalle viaja con el conteo hasta la fila del proyecto: es lo que
-        // el botón "Arreglar esto" le pasa al asistente. Sin él, el aviso
-        // vuelve a ser "algunos controles" y el creador no sabe qué pedir.
-        detail: [expect.any(String)],
-      },
-    ]);
+    expect(storedData().degradations ?? []).toEqual([]);
   });
 
   it("records dynamic content that the transform could not bake", async () => {

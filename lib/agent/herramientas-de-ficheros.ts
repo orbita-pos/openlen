@@ -16,7 +16,6 @@ import { detectSlotPath } from "@/lib/html-engine";
 import { diagnosticosDeLaEscritura } from "@/lib/agent/diagnosticos-de-la-escritura";
 import { persistPage } from "@/lib/page-engine/persist";
 import { preparePage } from "@/lib/page-engine/prepare";
-import { describeBehaviorIssues } from "@/lib/conductas-heredadas/validate";
 import { MAX_SITE_PAGES, validatePageSlug } from "@/lib/projects/site-pages";
 import type { ProjectData } from "@/lib/projects/types";
 import { ejecutarRead, noExiste, normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
@@ -692,18 +691,14 @@ export async function guardarFichero(
   }
   const antes = leerFichero(data, ruta);
   const preparado = await preparePage(contenido, {
-    mode: opts.crea ? "create" : "edit",
     renderChecks: false,
     ...(session.brief ? { brief: session.brief } : {}),
-    ...(antes !== null ? { priorHtml: antes } : {}),
   });
   if (!preparado.ok) {
-    const conductas = describeBehaviorIssues([...((preparado.report.behaviorIssues ?? []) as never[])]);
     return {
       ok: false,
-      error: conductas
-        ? `There are badly wired behaviors that would be born DEAD on the page: ${conductas}. NOTHING was saved.`
-        : preparado.code === "reserved_marker"
+      error:
+        preparado.code === "reserved_marker"
           ? "the HTML contains a reserved marker (data-slot-path)"
           : `the HTML didn't pass the publishing gate (${preparado.code}${preparado.detail ? `: ${preparado.detail}` : ""})`,
     };

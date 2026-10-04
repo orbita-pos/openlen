@@ -1,16 +1,10 @@
 import type { FalloSpec, PruebaDeclarada } from "@/lib/agent/prueba-js";
 import type { ContextoDeVista } from "@/lib/lienzo/documento";
 
-/**
- * Crear vs editar. La diferencia NO es cosmética y se conserva a propósito:
- *
- * - `create` — no hay página que perder. Una conducta mal cableada se anota
- *   como degradación y el documento se entrega igual (`behaviors: "warn"`).
- * - `edit` — la página del usuario ya existe. Romperla es peor que perder la
- *   edición, así que la puerta falla CERRADA (`behaviors: "block"`) y no se
- *   guarda nada.
- */
-export type PageMode = "create" | "edit";
+// ⚰️ Aquí vivía `PageMode` («create»/«edit»): decidía si la puerta AVISABA o
+// BLOQUEABA por una conducta `data-ol-*` mal cableada. Se fue el 2026-10-04 con
+// las conductas, y con él `priorHtml`, que sólo servía para no cobrarle al
+// usuario una conducta rota heredada.
 
 /** Cada etapa dice qué hizo, o por qué no pudo. Ninguna puede tirar la página. */
 export interface StageOutcome {
@@ -18,7 +12,7 @@ export interface StageOutcome {
     | "imagery"
     | "legibility"
     | "measure"
-    | "invariants"
+    // "invariants" se retiró el 2026-10-04 con `data-ol-calc`, lo último que hacía.
     | "gate"
     // "modules" se retiró el 2026-08-29 con el puente IA→módulos.
     | "form_identity";
@@ -33,8 +27,8 @@ export interface PrepareReport {
   /** Roturas MEDIDAS en el render. Vacío no prueba que no haya: si el render
    *  falló, la etapa `measure` lo dice como `unavailable`. */
   readonly breakage: readonly string[];
-  /** Lo que el saneador quitó y las conductas que la puerta objetó — el
-   *  material del que la ruta arma su aviso al usuario o al modelo. */
+  /** Lo que el saneador quitó: el material del que la ruta arma su aviso al
+   *  usuario o al modelo. */
   readonly removed?: {
     scripts: number;
     eventHandlers: number;
@@ -42,25 +36,14 @@ export interface PrepareReport {
     iframes: number;
     metaRefresh: number;
   };
-  readonly behaviorIssues?: readonly unknown[];
-  /** Las fórmulas que siguen ROTAS después de reparar lo inequívoco.
-   *
-   *  Antes se perdían: `compileCalcRegions` corre dentro de `beforeMeta` y sólo
-   *  su CONTEO llegaba al `detail` de la etapa. Se salvaban por accidente
-   *  porque `validateBehaviors` las re-detecta vía `exprAttrs` — salvo la de
-   *  "fuera de toda región", que sólo existe en el compilador y se iba en
-   *  silencio. Un diagnóstico que nadie recibe no cierra ningún bucle. */
-  readonly calcIssues?: readonly { attr: string; formula: string; message: string }[];
-  /** Qué arregló el reparador determinista, en códigos de máquina. */
-  readonly calcRepairs?: readonly string[];
   /**
    * Selectores que NO pueden aplicar nunca sobre este documento — el CSS está
    * escrito, el elemento existe, y no se tocan.
    *
    * Aparte de `breakage` a propósito: aquello son roturas MEDIDAS en el render
    * y esto es determinista, así que llega también cuando no hubo navegador (el
-   * turno del Agente). Mismo trato que `calcIssues`: el motor diagnostica, el
-   * llamador decide si eso vale una llamada más al modelo.
+   * turno del Agente). El motor diagnostica; el llamador decide si eso vale una
+   * llamada más al modelo.
    */
   readonly deadRules?: readonly {
     selector: string;
@@ -109,7 +92,6 @@ export type PrepareResult =
     };
 
 export interface PreparePageOptions {
-  readonly mode: PageMode;
   /** Guía la búsqueda de fotos. Sin él la etapa de imágenes se salta. */
   readonly brief?: string;
   readonly title?: string;
@@ -141,19 +123,6 @@ export interface PreparePageOptions {
    * que no necesitan navegador: los invariantes y la puerta corren siempre.
    */
   readonly renderChecks?: boolean;
-  /**
-   * El documento ANTES de esta edición. Sólo en `mode: "edit"`.
-   *
-   * Sin esto, una conducta rota que YA venía en la página condena todas las
-   * ediciones futuras: crear falla abierto y entrega la página con el defecto
-   * anotado, editar falla cerrado y la rechaza. Medido en la primera página que
-   * generó el motor — el modelo escribió botones de filtro sin la rejilla que
-   * filtran — y con esa página el Chat y el Agente rechazaban CUALQUIER cambio,
-   * hablándole al usuario de un control que no tocó.
-   *
-   * Con él, la puerta sólo rechaza lo que ESTA edición rompió.
-   */
-  readonly priorHtml?: string;
   // `runtime` MURIÓ AQUÍ el 2026-08-26. Era el canal por el que viajaba el
   // código del modelo cuando vivía FUERA del documento (la cápsula): había que
   // injertarlo para poder medirlo y pasárselo aparte a los detectores. Ahora

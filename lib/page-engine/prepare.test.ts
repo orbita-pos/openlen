@@ -11,19 +11,13 @@ const PAGE_CON_JS = PAGE.replace(
   `<script>console.log('hola')</script></body>`,
 );
 
-/**
- * La puerta real hace I/O nativo, pero el doble tiene que respetar su contrato:
- * llama a `beforeMeta`, que es donde corren los invariantes. Un doble que lo
- * ignore prueba una tubería que no existe.
- */
-const gateOk = vi.fn(
-  async (html: string, deps: { beforeMeta?: (h: string) => string }, _policy: unknown) => ({
-    ok: true as const,
-    html: deps.beforeMeta ? deps.beforeMeta(html) : html,
-    removed: { scripts: 0, eventHandlers: 0, iframes: 0, dangerousUrls: 0 },
-    warnings: [] as string[],
-  }),
-);
+/** La puerta real hace I/O nativo; el doble devuelve el documento tal cual,
+ *  que es lo que hace la de verdad con lo que escribe el modelo. */
+const gateOk = vi.fn(async (html: string, _deps: unknown, _policy: unknown) => ({
+  ok: true as const,
+  html,
+  removed: { scripts: 0, eventHandlers: 0, iframes: 0, dangerousUrls: 0 },
+}));
 
 const deps = (over: Parameters<typeof preparePage>[2] = {}) => ({
   render: (async () => ({ mobileOverflow: false, invalidGeometry: false })) as never,
@@ -33,7 +27,7 @@ const deps = (over: Parameters<typeof preparePage>[2] = {}) => ({
 
 describe("el motor de la página", () => {
   it("entrega el documento y nombra cada etapa", async () => {
-    const out = await preparePage(PAGE, { mode: "create" }, deps());
+    const out = await preparePage(PAGE, {}, deps());
     expect(out.ok).toBe(true);
     expect(out.report.stages.map((s) => s.stage)).toEqual([
       // "modules" salio de esta lista el 2026-08-29 con el puente IA->modulos.
@@ -41,7 +35,8 @@ describe("el motor de la página", () => {
       // tiene horneado. Ver lib/page-data/sin-puente-ia-modulos.test.ts.
       // «imagery» y «legibility» se retiraron el 2026-09-04: eran las dos
       // últimas etapas que tocaban lo que escribió el modelo.
-      "measure", "invariants", "gate",
+      // «invariants» se retiró el 2026-10-04 con `data-ol-calc`, lo último que hacía.
+      "measure", "gate",
       // La identidad de los formularios va la ULTIMA: sobre el documento que
       // de verdad se guarda, para que el saneo no anada un <form> despues del
       // estampado. Ver lib/publish/form-identity.ts.
@@ -62,7 +57,7 @@ describe("el motor de la página", () => {
       "<!doctype html><html><head><style>nav{position:fixed}h2{color:#c0392b}</style></head>" +
       "<body><nav><a href=\"#s\">s</a></nav><h2>Aurora</h2><section id=\"s\">x</section></body></html>";
 
-    const out = await preparePage(SIN_H1, { mode: "create" }, deps());
+    const out = await preparePage(SIN_H1, {}, deps());
 
     expect(out.ok).toBe(true);
     if (!out.ok) return;
@@ -74,19 +69,12 @@ describe("el motor de la página", () => {
     expect(out.html, "le atamos el color a un token").toContain("#c0392b");
   });
 
-  // El motivo por el que existe: crear no tiene página que perder, editar sí.
-  it.each([
-    ["create", "warn"],
-    ["edit", "block"],
-  ] as const)("en %s la puerta corre con behaviors=%s", async (mode, behaviors) => {
-    gateOk.mockClear();
-    await preparePage(PAGE, { mode }, deps());
-    expect(gateOk.mock.calls[0]?.[2]).toMatchObject({ behaviors });
-  });
+  // ⚰️ «en create/edit la puerta corre con behaviors=warn/block»: la puerta de
+  // las conductas `data-ol-*`, retiradas el 2026-10-04.
 
   describe("NEVER-THROW — ninguna etapa cosmética puede costar la página", () => {
     it("un Chrome caído no impide entregar", async () => {
-      const out = await preparePage(PAGE, { mode: "create" }, deps({
+      const out = await preparePage(PAGE, {}, deps({
         render: (async () => { throw new Error("chrome muerto"); }) as never,
       }));
       expect(out.ok).toBe(true);
@@ -97,7 +85,7 @@ describe("el motor de la página", () => {
   });
 
   it("la rotura medida se informa, no se actúa — regenerar es del llamador", async () => {
-    const out = await preparePage(PAGE, { mode: "create" }, deps({
+    const out = await preparePage(PAGE, {}, deps({
       render: (async () => ({ mobileOverflow: true, invalidGeometry: false })) as never,
     }));
     expect(out.ok).toBe(true);
@@ -105,7 +93,7 @@ describe("el motor de la página", () => {
   });
 
   it("sólo la puerta puede refusar, y devuelve el motivo", async () => {
-    const out = await preparePage(PAGE, { mode: "edit" }, deps({
+    const out = await preparePage(PAGE, {}, deps({
       gate: (async () => ({ ok: false as const, code: "reserved_marker" })) as never,
     }));
     expect(out.ok).toBe(false);
@@ -121,99 +109,13 @@ describe("el motor de la página", () => {
   // de arriba, que las nombra todas.
 });
 
-describe("una edición no paga por lo que ya estaba roto", () => {
-  // El caso real: la primera página que generó el motor traía botones de filtro
-  // sin su rejilla. Crear la entrega (falla abierto); editar la rechazaba
-  // (falla cerrado), así que esa página no se podía cambiar NUNCA.
-  const conDefecto = `<!doctype html><html><head></head><body><div data-ol-filter-group="panes"><button data-ol-filter="a">A</button></div></body></html>`;
+// ⚰️ «una edición no paga por lo que ya estaba roto» (`priorHtml`), «los
+// cálculos se compilan al ingerir» y «los cálculos rotos se reparan o se
+// reportan»: probaban las conductas `data-ol-*` y la calculadora de
+// `data-ol-calc`, retiradas el 2026-10-04 (sus motores no se inyectaban desde
+// agosto).
 
-  it("sin priorHtml, el defecto heredado bloquea — la trampa que había", async () => {
-    const out = await preparePage(conDefecto, { mode: "edit", renderChecks: false });
-    expect(out.ok).toBe(false);
-  });
-
-  it("con priorHtml, el defecto heredado NO bloquea", async () => {
-    const editada = conDefecto.replace("<button", "<p>texto nuevo</p><button");
-    const out = await preparePage(editada, {
-      mode: "edit",
-      renderChecks: false,
-      priorHtml: conDefecto,
-    });
-    expect(out.ok).toBe(true);
-  });
-
-  it("pero un defecto que ESTA edición introduce sí bloquea", async () => {
-    const sano = `<!doctype html><html><head></head><body><p>hola</p></body></html>`;
-    const out = await preparePage(conDefecto, {
-      mode: "edit",
-      renderChecks: false,
-      priorHtml: sano,
-    });
-    expect(out.ok).toBe(false);
-    expect(!out.ok && out.report.behaviorIssues?.length).toBe(1);
-  });
-});
-
-// L2 — la compilación de los cálculos vive DENTRO de `beforeMeta`, junto a los
-// invariantes, y no en el llamador: así el documento que la puerta valida es el
-// ya compilado, y las tres superficies (crear, Chat, Agente) lo heredan sin que
-// ninguna lo cablee por su cuenta.
-describe("los cálculos se compilan al ingerir", () => {
-  const CALC = `<!doctype html><html><body><div data-ol-calc>` +
-    `<input data-ol-val="recibo" type="number" value="1800">` +
-    `<p data-ol-out="REDONDEA(recibo * 0.72, 0)">0</p>` +
-    `</div></body></html>`;
-
-  it("el gemelo compilado y el valor de nacimiento salen del motor", async () => {
-    const out = await preparePage(CALC, { mode: "create" }, deps());
-    expect(out.ok).toBe(true);
-    expect(out.ok && out.html).toContain("data-ol-out-c=");
-    // Nace con el número visible: sin esto, una página sin JS mostraría un hueco.
-    expect(out.ok && out.html).toContain(">1296<");
-  });
-
-  it("el informe dice cuántas regiones compiló", async () => {
-    const out = await preparePage(CALC, { mode: "create" }, deps());
-    const inv = out.report.stages.find((s) => s.stage === "invariants");
-    expect(inv?.detail).toContain("calc=1/1");
-  });
-
-  it("una página sin cálculos no paga nada", async () => {
-    const out = await preparePage(PAGE, { mode: "create" }, deps());
-    const inv = out.report.stages.find((s) => s.stage === "invariants");
-    expect(inv?.detail).toContain("calc=0/0");
-    expect(out.ok && out.html).not.toContain("-c=");
-  });
-});
-
-// Cerrar el bucle: lo que el motor detecta, el motor lo arregla — y lo que no
-// puede arreglar, lo dice en vez de perderlo.
-describe("los cálculos rotos se reparan o se reportan", () => {
-  // ⚰️ «una región puesta sobre el botón se envuelve» y «un campo que nadie lee
-  // pierde el marcador» — RETIRADAS el 2026-09-04 con `repairCalcRegions`.
-  // Una fórmula que el modelo dejó mal puesta ya no se le mueve: sale en
-  // `calcIssues`, y de ahí al informe y al diario, igual que el desborde.
-  // `compileCalcRegions` se queda porque no corrige nada — ejecuta lo que él
-  // marcó — y eso lo cubren las pruebas de «los cálculos se compilan al
-  // ingerir», que siguen verdes.
-
-
-  // Lo que NO se puede arreglar sin adivinar tiene que LLEGAR. Antes se perdía:
-  // el informe sólo llevaba el conteo en el `detail` de la etapa.
-  it("una fórmula que necesita criterio viaja en el informe", async () => {
-    const html =
-      `<!doctype html><html><body><div data-ol-calc>` +
-      `<input data-ol-val="x" value="1"><p data-ol-out="x * ">0</p></div></body></html>`;
-    const out = await preparePage(html, { mode: "create" }, deps());
-    expect(out.report.calcIssues?.length).toBeGreaterThan(0);
-    expect(out.report.calcIssues?.[0]?.attr).toBe("data-ol-out");
-  });
-
-  it("una página sin cálculos no reporta ni repara nada", async () => {
-    const out = await preparePage(PAGE, { mode: "create" }, deps());
-    expect(out.report.calcIssues).toBeUndefined();
-    expect(out.report.calcRepairs).toBeUndefined();
-  });
+describe("el JavaScript en la medición", () => {
 
   // ── el JavaScript en la MEDICIÓN ──────────────────────────────────────────
   // Se mide LO QUE SE PUBLICA. Aquí había un injerto —el código llegaba por un
@@ -226,7 +128,7 @@ describe("los cálculos rotos se reparan o se reportan", () => {
     const vistos: string[] = [];
     await preparePage(
       PAGE_CON_JS,
-      { mode: "create" },
+      {},
       deps({ render: (async (h: string) => { vistos.push(h); return {}; }) as never }),
     );
     expect(vistos.some((h) => h.includes("console.log('hola')"))).toBe(true);
@@ -238,7 +140,7 @@ describe("los cálculos rotos se reparan o se reportan", () => {
     const vistos: string[] = [];
     await preparePage(
       PAGE_CON_JS,
-      { mode: "create" },
+      {},
       deps({ render: (async (h: string) => { vistos.push(h); return {}; }) as never }),
     );
     for (const h of vistos) {
@@ -251,7 +153,7 @@ describe("los cálculos rotos se reparan o se reportan", () => {
   // en la salida lo habría persistido en `data.html`. Ahora el script ES parte
   // del documento del usuario, así que perderlo aquí es perder su carrito.
   it("y el script SIGUE en el documento entregado", async () => {
-    const out = await preparePage(PAGE_CON_JS, { mode: "create" }, deps());
+    const out = await preparePage(PAGE_CON_JS, {}, deps());
     expect(out.ok && out.html).toContain("console.log('hola')");
   });
 
@@ -278,7 +180,7 @@ describe("los cálculos rotos se reparan o se reportan", () => {
     "</body></html>";
 
   it("una clase que el script añade en caliente NO es una regla muerta", async () => {
-    const out = await preparePage(CON_TOAST, { mode: "create" }, deps());
+    const out = await preparePage(CON_TOAST, {}, deps());
     expect(
       out.report.deadRules ?? [],
       "el detector no vio el JavaScript de la página y denunció una regla viva",
@@ -293,7 +195,7 @@ describe("los cálculos rotos se reparan o se reportan", () => {
       "<script>document.querySelector('.toast').classList.add('show')</script>",
       "",
     );
-    const out = await preparePage(sinJs, { mode: "create" }, deps());
+    const out = await preparePage(sinJs, {}, deps());
     expect(
       (out.report.deadRules ?? []).map((r) => r.selector).join(" "),
       "el detector de reglas muertas dejó de detectar",
@@ -303,7 +205,7 @@ describe("los cálculos rotos se reparan o se reportan", () => {
     const vistos: string[] = [];
     await preparePage(
       PAGE,
-      { mode: "create" },
+      {},
       deps({ render: (async (h: string) => { vistos.push(h); return {}; }) as never }),
     );
     expect(vistos.every((h) => !h.includes("<script"))).toBe(true);
@@ -312,7 +214,7 @@ describe("los cálculos rotos se reparan o se reportan", () => {
   it("lo que la página grita al cargar entra como rotura", async () => {
     const out = await preparePage(
       PAGE_CON_JS,
-      { mode: "create" },
+      {},
       deps({
         render: (async () => ({
           runtimeErrors: ["ReferenceError: noExiste is not defined"],
@@ -336,7 +238,7 @@ describe("la prueba declarada, dentro de la medición", () => {
     let recibido: { behaviorProgram?: string } | undefined;
     const out = await preparePage(
       PAGE,
-      { mode: "create", prueba: PRUEBA },
+      { prueba: PRUEBA },
       deps({
         render: (async (_h: string, _i: unknown, o: { behaviorProgram?: string }) => {
           recibido = o;
@@ -353,7 +255,7 @@ describe("la prueba declarada, dentro de la medición", () => {
   it("una prueba que PASA no deja nada en el informe", async () => {
     const out = await preparePage(
       PAGE,
-      { mode: "create", prueba: PRUEBA },
+      { prueba: PRUEBA },
       deps({ render: (async () => ({ behaviorResult: [] })) as never }),
     );
     expect(out.report.specFailures).toBeUndefined();
@@ -363,7 +265,7 @@ describe("la prueba declarada, dentro de la medición", () => {
     let recibido: { behaviorProgram?: string } | undefined = { behaviorProgram: "sucio" };
     const out = await preparePage(
       PAGE,
-      { mode: "create" },
+      {},
       deps({
         render: (async (_h: string, _i: unknown, o: { behaviorProgram?: string }) => {
           recibido = o;
@@ -380,7 +282,7 @@ describe("la prueba declarada, dentro de la medición", () => {
     // no se pudo correr: se calla, no reprueba.
     const out = await preparePage(
       PAGE,
-      { mode: "create", prueba: PRUEBA },
+      { prueba: PRUEBA },
       deps({ render: (async () => ({ behaviorResult: "vaya" })) as never }),
     );
     expect(out.report.specFailures).toBeUndefined();
@@ -392,7 +294,7 @@ describe("la prueba declarada, dentro de la medición", () => {
   it("🔴 un fallo DEL INSTRUMENTO llega al informe con su marca, para que se diga", async () => {
     const out = await preparePage(
       PAGE,
-      { mode: "create", prueba: PRUEBA },
+      { prueba: PRUEBA },
       deps({
         render: (async () => ({
           behaviorResult: [[0, "#empezar no tiene manejador de clic", "prueba", 0]],
@@ -409,7 +311,7 @@ describe("la prueba declarada, dentro de la medición", () => {
   it("los fallos de la prueba se nombran en la etapa `measure`", async () => {
     const out = await preparePage(
       PAGE,
-      { mode: "create", prueba: PRUEBA },
+      { prueba: PRUEBA },
       deps({ render: (async () => ({ behaviorResult: [[0, "#reloj no cambió"]] })) as never }),
     );
     const medir = out.report.stages.find((s) => s.stage === "measure");
@@ -459,7 +361,7 @@ describe("el modelo decide sus colores", () => {
       };
     }) as never;
 
-    await preparePage(PAGE, { mode: "create" }, deps({ gate: espia }));
+    await preparePage(PAGE, {}, deps({ gate: espia }));
 
     expect(politica, "el motor no llamó a la puerta").not.toBeNull();
     expect(
@@ -483,7 +385,7 @@ describe("la etapa de medición mira el documento de vista", () => {
     let medido = "";
     const out = await preparePage(
       PAGE,
-      { mode: "create", vista: VISTA },
+      { vista: VISTA },
       deps({
         render: (async (html: string) => {
           medido = html;
@@ -504,7 +406,7 @@ describe("la etapa de medición mira el documento de vista", () => {
     let medido = "";
     await preparePage(
       PAGE,
-      { mode: "create" },
+      {},
       deps({
         render: (async (html: string) => {
           medido = html;

@@ -95,7 +95,7 @@ describe("lo que escribe el MODELO conserva su iframe de fuera de la lista", () 
     }
     const s = await done;
     assert.ok(tiene(s.finalHtml ?? "", SPOTIFY), "el stream se lo quitó");
-    const listo = await preparePage(s.finalHtml!, { mode: "create", renderChecks: false });
+    const listo = await preparePage(s.finalHtml!, { renderChecks: false });
     assert.ok(listo.ok);
     assert.ok(tiene(listo.html, SPOTIFY), "la puerta de crear se lo quitó");
   });
@@ -106,13 +106,13 @@ describe("lo que escribe el MODELO conserva su iframe de fuera de la lista", () 
     assert.ok(target, "no encontré el id de la sección");
     const r = applyOps(etiquetado, [{ type: "replace", target, newHtml: SECCION_CON_SPOTIFY }]);
     assert.ok(tiene(r.html ?? "", SPOTIFY), "applyOps se lo quitó");
-    const listo = await preparePage(r.html!, { mode: "edit", renderChecks: false, priorHtml: PREVIA });
+    const listo = await preparePage(r.html!, { renderChecks: false });
     assert.ok(listo.ok);
     assert.ok(tiene(listo.html, SPOTIFY), "la puerta de editar se lo quitó");
   });
 
   it("Chat, reescribiendo la página entera (y Len con Write): la puerta de editar", async () => {
-    const listo = await preparePage(CON_SPOTIFY, { mode: "edit", renderChecks: false, priorHtml: PREVIA });
+    const listo = await preparePage(CON_SPOTIFY, { renderChecks: false });
     assert.ok(listo.ok);
     assert.ok(tiene(listo.html, SPOTIFY));
   });

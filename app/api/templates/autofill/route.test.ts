@@ -140,7 +140,10 @@ describe("POST /api/templates/autofill", () => {
     expect(done?.data.newHtml).toBe(stored);
   });
 
-  it("refuses a fill whose control would be born dead, and stores nothing", async () => {
+  // ⚰️ Antes: «refuses a fill whose control would be born dead». Ahora se
+  // guarda: las conductas `data-ol-*` se retiraron el 2026-10-04: un `data-ol-copy` es
+  // un atributo como otro cualquiera, y la puerta ya no rechaza por él.
+  it("guarda un relleno con un `data-ol-copy` suelto: ya no hay conductas que validar", async () => {
     mocks.fillTemplate.mockResolvedValue({
       ok: true,
       filledHtml: filled('<h1>Tacos</h1><button data-ol-copy="cupon-fantasma">Copiar</button>'),
@@ -150,18 +153,9 @@ describe("POST /api/templates/autofill", () => {
 
     const events = await readEvents(await call());
 
-    const error = events.find((e) => e.event === "error");
-    expect(error).toBeDefined();
-    // The modal renders `message` verbatim and never reads `kind`, so the
-    // reason has to be human Spanish prose, not a slug.
-    expect(String(error?.data.message)).toMatch(/cupon-fantasma/);
-    expect(String(error?.data.message)).toMatch(/no guardé nada/i);
-    // Nothing written, nothing snapshotted, and no charge — the refusal
-    // returns before debitCredits even though Gemini already ran.
-    expect(mocks.update).not.toHaveBeenCalled();
-    expect(mocks.createVersion).not.toHaveBeenCalled();
-    expect(mocks.debitCredits).not.toHaveBeenCalled();
-    expect(events.some((e) => e.event === "done")).toBe(false);
+    expect(events.some((e) => e.event === "error")).toBe(false);
+    expect(events.some((e) => e.event === "done")).toBe(true);
+    expect(mocks.update).toHaveBeenCalled();
   });
 
   // Degradation #8 — the pre-apply "Before Autofill" snapshot is the user's

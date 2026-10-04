@@ -83,17 +83,12 @@ export async function POST(req: Request): Promise<Response> {
   // Los datos viven en la página; el logo se pone desde el inspector, que es
   // donde el dueño lo ve.
 
-  // One gate. `behaviors: "warn"` — this surface FAILS OPEN: the project does
+  // One gate. This surface FAILS OPEN: the project does
   // not exist yet, so refusing costs the user the whole page instead of an
   // edit. It ships and we tell them what was lost. `seal: false` (publishToDir
   // seals at publish time) and `render: false` (a paste cannot pay a browser
   // launch).
   //
-  // ⚰️ Decía «Seeding rides in `beforeMeta`, which is the slot Task 2 built for
-  // exactly this». Ya no cabalga nada: esta llamada NO pasa un `beforeMeta` —la
-  // siembra del perfil de negocio se retiró el 2026-08-31, ver la lápida de
-  // arriba— y el único `beforeMeta` vivo del repo es el de
-  // `lib/page-engine/prepare.ts`. Corregido el 2026-09-05.
   const gated = await passHtmlGate(
     transformed.html,
     {
@@ -107,7 +102,6 @@ export async function POST(req: Request): Promise<Response> {
     {
       render: false,
       seal: false,
-      behaviors: "warn",
       // AUTHORED: a human may have written this <head>. Never take it over.
       meta: pageMetaFor({ provenance: "authored", title }),
     },
@@ -135,7 +129,6 @@ export async function POST(req: Request): Promise<Response> {
   const degradations = collectDegradations({
     surface: "from-html",
     removed: gated.removed,
-    behaviorIssues: gated.issues,
     transformFallback: transformed.report.fallback,
     hadScripts: hadScript(html),
   });

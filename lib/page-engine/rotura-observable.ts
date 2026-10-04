@@ -30,9 +30,6 @@ import type { PrepareReport } from "./contract";
 export function roturaObservable(report: PrepareReport): string[] {
   return [
     ...report.breakage,
-    ...(report.calcIssues ?? []).map(
-      (i) => `la fórmula ${i.attr}="${i.formula}" ${i.message}`,
-    ),
     ...(report.deadRules ?? []).map(
       (r) =>
         `el selector \`${r.selector}\` no aplica NUNCA: falta class="${r.ausentes[0]}" en el documento`,

@@ -59,7 +59,6 @@ import { necesitaOjos } from "@/lib/ai/needs-image-eyes";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 import { persistPage } from "@/lib/page-engine/persist";
-import { describeBehaviorIssues } from "@/lib/conductas-heredadas/validate";
 import { LANGUAGE_RULE } from "@/lib/ai/authoring-rules";
 import { todayLine } from "@/lib/ai/today-line";
 import { CHAT_HISTORY_TURNS } from "@/lib/chat/history-window";
@@ -1258,12 +1257,6 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // publish time. `render: false` — a chat turn cannot pay a
         // twenty-second browser launch; publish verifies instead.
         //
-        // behaviors: "block" is the user-visible trade. DESIGN_GUIDANCE
-        // animates the model to emit data-ol-* markers, and until now a
-        // mis-wired one landed anyway with a note appended to `reasoning` for
-        // the model to fix on the NEXT turn — which meant the visitor could
-        // meet the dead control first. ai-design edits a page that already
-        // exists, so refusing costs the user the edit, not the page.
         // EL SCRIPT DEL MODELO llega por su objetivo reservado en modo OPS
         // (`splitRuntimeOps`) — hasta el 2026-08-22 aquí se devolvía `null` sin
         // más, y por eso el camino barato no podía tocar el comportamiento de
@@ -1299,17 +1292,12 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // quirúrgicas sobre un párrafo, no — y el usuario está mirando.
 
         const prepared = await preparePage(trimmedHtml, {
-          mode: "edit",
           // …salvo cuando el turno tocó el COMPORTAMIENTO. Ahí sí se paga el
           // navegador: es el único caso donde el camino barato podía cambiar
           // el JavaScript de la página entera sin que nada lo mirara — ni
           // siquiera recogía lo que gritaba, porque no había navegador que
           // escuchase. Cambiar un párrafo sigue costando 17 ms.
           renderChecks: outputMode !== "ops" || runtimeDesdeOps !== null,
-          // Sin esto, una conducta rota que ya venía en la página condena TODAS
-          // las ediciones futuras y el usuario oye hablar de un control que no
-          // tocó. La puerta sólo rechaza lo que este turno rompió.
-          priorHtml: currentHtml,
           // El brief y el perfil, que faltaban. Sin `brief` la etapa de
           // IMÁGENES se salta entera (`prepare.ts` la marca "no_brief"), y el
           // contrato ORDENA al modelo marcar cada hueco con `data-ol-photo`:
@@ -1339,18 +1327,12 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           ...(pruebaDeclarada ? { prueba: pruebaDeclarada } : {}),
         });
         const gated = prepared.ok
-          ? { ok: true as const, html: prepared.html, issues: prepared.report.behaviorIssues, code: "", detail: "" }
-          : { ok: false as const, html: "", issues: prepared.report.behaviorIssues, code: prepared.code, detail: prepared.detail ?? "" };
+          ? { ok: true as const, html: prepared.html, code: "", detail: "" }
+          : { ok: false as const, html: "", code: prepared.code, detail: prepared.detail ?? "" };
         if (!gated.ok) {
-          // The reason has to survive as prose: describeBehaviorIssues writes
-          // for the person reading the chat, `gated.detail` is the machine
-          // slug. Collapsing them into one string is the mistake this whole
-          // migration exists to stop repeating.
-          const behaviorList = describeBehaviorIssues([...((gated.issues ?? []) as never[])]);
           emit("error", {
-            message: behaviorList
-              ? `Conductas mal cableadas — no guardé nada para no dejarte un control muerto en la página: ${behaviorList}. Pídemelo otra vez y lo cableo bien.`
-              : gated.code === "reserved_marker"
+            message:
+              gated.code === "reserved_marker"
                 ? "Model emitted editor-mode markers — try again."
                 : `El HTML no pasó la puerta de publicación (${gated.code}${gated.detail ? `: ${gated.detail}` : ""}) — try again.`,
           });

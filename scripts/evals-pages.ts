@@ -47,7 +47,6 @@ import { creditRate, type CreditRate } from "@/lib/credits";
 import { creditRateForRole, displayNameForRole } from "@/lib/generation/model-policy";
 import { ESFUERZOS, presupuestoDeEsfuerzo, type EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 import { ESCRITORES_ELEGIBLES, type TurnWriter } from "@/lib/ai/provider-switch";
-import { compileCalcRegions } from "@/lib/expr/document";
 import { detectSlotPath } from "@/lib/html-engine";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
@@ -353,7 +352,6 @@ async function main(): Promise<void> {
     // Misma firma que la de la ruta (`app/api/generate/route.ts`).
     const engine = (h: string) =>
       preparePage(h, {
-        mode: "create",
         brief: c.brief,
         title: c.id,
       });
@@ -399,7 +397,6 @@ async function main(): Promise<void> {
       trimmed: number,
       desde: number,
     ): Promise<PageMeasurement> => {
-    const calc = compileCalcRegions(html);
     const rendered = await renderVisualQualityViewports(html).catch(() => null);
     const htmlTag = /<html\b([^>]*)>/i.exec(html)?.[1] ?? "";
     return {
@@ -425,8 +422,6 @@ async function main(): Promise<void> {
       lang: /lang="([^"]*)"/i.exec(htmlTag)?.[1] ?? "",
       dir: /dir="([^"]*)"/i.exec(htmlTag)?.[1] ?? "",
       bytes: html.length,
-      calcFormulas: calc.compiled,
-      calcIssues: calc.issues.length,
       // ⚰️ Aquí se contaban los pasos de la prueba declarada y sus fallos. Se
       // fue con la prueba: sin bloque en el prompt no hay promesa que contar.
       ms: Date.now() - desde,
@@ -467,7 +462,7 @@ async function main(): Promise<void> {
         });
         continue;
       }
-      const listo = await preparePage(escrita.html, { mode: "create", brief: c.brief, title: nombre });
+      const listo = await preparePage(escrita.html, { brief: c.brief, title: nombre });
       if (!listo.ok) {
         subpages.push({
           slug,

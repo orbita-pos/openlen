@@ -57,7 +57,7 @@ const SUB = "pagina-viva-gate";
 
 // LA PÁGINA. Es lo que el modelo escribe hoy: contenido completo y legible,
 // y UN solo <script> al final del body que lo mejora. Nada de marcadores
-// declarativos — ese catálogo se retiró (ver lib/conductas-heredadas).
+// declarativos — ese catálogo se retiró del todo el 2026-10-04.
 //
 // El script hace las dos cosas que el producto promete y que antes exigían
 // una receta nuestra: filtrar una lista y contar hacia arriba al entrar en

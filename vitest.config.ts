@@ -24,7 +24,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./", import.meta.url)),
-      // lib/conductas-heredadas/validate.ts (and any future server-only module) imports
+      // A server-only module imports
       // "server-only" as a marker. Next resolves it to empty.js in production
       // via the `react-server` exports condition; vitest doesn't set that
       // condition, so it falls through to index.js, which throws "This module
@@ -93,7 +93,6 @@ export default defineConfig({
       // El backend de las páginas: la API de Supabase sobre nuestro Postgres
       // (plans/pages-backend/design.md). Lista blanca: sin esta línea no corre.
       "lib/backend/**/*.test.ts",
-      "lib/conductas-heredadas/**/*.test.ts",
       // Lo que las TRES superficies mandan de verdad: nada de gusto nuestro,
       // ningún módulo ni conducta retirados, y el JavaScript del modelo sí
       // ofrecido. Importa app/api/**/system-prompt.ts (módulos planos, sin
@@ -135,7 +134,6 @@ export default defineConfig({
       "lib/contract/**/*.test.ts",
       "lib/document/**/*.test.ts",
       "lib/evals/**/*.test.ts",
-      "lib/expr/**/*.test.ts",
       "lib/page-engine/**/*.test.ts",
       "lib/generation/**/*.test.ts",
       "lib/html-gate/**/*.test.ts",
