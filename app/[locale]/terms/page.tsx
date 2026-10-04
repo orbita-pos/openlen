@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
+import { MAX_CREDITS, MAX_PRICE, PRO_CREDITS, PRO_PRICE } from "@/lib/marketing/plan-price";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { Link } from "@/i18n/navigation";
 
@@ -254,8 +255,11 @@ export default async function TermsPage({
 
           <h2>Facturación</h2>
           <p>
-            El plan Pro cuesta US$3.99 al mes e incluye 150 créditos de IA al mes; el
-            plan gratuito incluye 20 créditos al mes. Los créditos se reinician
+            El plan Pro cuesta US${PRO_PRICE} al mes e incluye {PRO_CREDITS} créditos
+            de IA al mes; el plan Max cuesta US${MAX_PRICE} al mes e incluye{" "}
+            {MAX_CREDITS}; el plan gratuito incluye 20 créditos al mes. Si
+            contrataste Pro cuando costaba US$3.99, conservas ese precio mientras
+            sigas suscrito, con los créditos de Pro. Los créditos se reinician
             cada mes y no se acumulan. Los pagos son procesados por{" "}
             <strong>Polar</strong> (Polar Software Inc., Estados Unidos), que actúa
             como <strong>comerciante registrado (Merchant of Record)</strong>:
@@ -569,8 +573,11 @@ export default async function TermsPage({
 
           <h2>Billing</h2>
           <p>
-            The Pro plan costs US$3.99 per month and includes 150 AI credits per
-            month; the free tier includes 20 credits per month. Credits reset each
+            The Pro plan costs US${PRO_PRICE} per month and includes {PRO_CREDITS}{" "}
+            AI credits per month; the Max plan costs US${MAX_PRICE} per month and
+            includes {MAX_CREDITS}; the free tier includes 20 credits per month. If
+            you subscribed to Pro when it cost US$3.99, you keep that price while
+            you stay subscribed, with Pro&apos;s credits. Credits reset each
             month and do not roll over. Payments are processed by{" "}
             <strong>Polar</strong> (Polar Software Inc., United States), which acts
             as the <strong>Merchant of Record</strong>: Polar is the legal seller,

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
+import { MAX_CREDITS, MAX_PRICE, PRO_CREDITS, PRO_PRICE } from "@/lib/marketing/plan-price";
 import { Link } from "@/i18n/navigation";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
@@ -65,9 +66,18 @@ export default async function RefundPage({
               <strong>Plan gratuito:</strong> 20 créditos al mes, sin costo.
             </li>
             <li>
-              <strong>Plan Pro:</strong> US$3.99 al mes por 150 créditos al mes.
+              <strong>Plan Pro:</strong> US${PRO_PRICE} al mes por {PRO_CREDITS}{" "}
+              créditos al mes.
+            </li>
+            <li>
+              <strong>Plan Max:</strong> US${MAX_PRICE} al mes por {MAX_CREDITS}{" "}
+              créditos al mes.
             </li>
           </ul>
+          <p>
+            Si contrataste Pro cuando costaba US$3.99 al mes, conservas ese precio
+            mientras sigas suscrito, con los mismos créditos que un Pro de hoy.
+          </p>
           <p>
             Los créditos se reinician cada mes y <strong>no se acumulan</strong>:
             los créditos no utilizados se pierden al inicio de cada nuevo periodo
@@ -92,9 +102,11 @@ export default async function RefundPage({
 
           <h2>Renovación automática</h2>
           <p>
-            El plan Pro se renueva <strong>automáticamente cada mes</strong> al
-            precio de US$3.99 hasta que lo canceles. El cargo se realiza en la fecha
-            de renovación, con una frecuencia mensual y por el importe de US$3.99. De
+            Los planes de pago se renuevan <strong>automáticamente cada
+            mes</strong> al precio de tu plan hasta que los canceles. El cargo se
+            realiza en la fecha de renovación, con una frecuencia mensual y por el
+            importe de tu plan: US${PRO_PRICE} el Pro, US${MAX_PRICE} el Max, o el
+            precio con el que te suscribiste si era otro. De
             conformidad con la Ley Federal de Protección al Consumidor (LFPC, en
             vigor desde diciembre de 2025), te enviaremos un{" "}
             <strong>recordatorio al menos 5 días hábiles antes de cada
@@ -107,13 +119,14 @@ export default async function RefundPage({
             Cancelar es sencillo: puedes hacerlo en línea en unos pocos clics,
             en cualquier momento, desde el menú de tu cuenta en OpenLen
             («Gestionar suscripción») o desde el enlace que trae cada correo de
-            Polar. <strong>No hay penalización, cargo por cancelación ni proceso
-            de retención.</strong> Al cancelar:
+            Polar. Desde ese mismo sitio puedes cambiar entre Pro y Max; el
+            ajuste del cobro lo hace Polar. <strong>No hay penalización, cargo por
+            cancelación ni proceso de retención.</strong> Al cancelar:
           </p>
           <ul>
             <li>
               La cancelación surte efecto al final del periodo ya pagado;
-              conservas el acceso a las funciones Pro hasta entonces.
+              conservas el acceso a tu plan hasta entonces.
             </li>
             <li>
               Al terminar ese periodo, tu cuenta vuelve automáticamente al plan
@@ -210,9 +223,19 @@ export default async function RefundPage({
               <strong>Free plan:</strong> 20 credits per month, at no cost.
             </li>
             <li>
-              <strong>Pro plan:</strong> US$3.99 per month for 150 credits per month.
+              <strong>Pro plan:</strong> US${PRO_PRICE} per month for {PRO_CREDITS}{" "}
+              credits per month.
+            </li>
+            <li>
+              <strong>Max plan:</strong> US${MAX_PRICE} per month for {MAX_CREDITS}{" "}
+              credits per month.
             </li>
           </ul>
+          <p>
+            If you subscribed to Pro when it cost US$3.99 per month, you keep that
+            price for as long as you stay subscribed, with the same credits as
+            today&apos;s Pro.
+          </p>
           <p>
             Credits reset monthly and <strong>do not roll over</strong>: any
             unused credits are forfeited at the start of each new period and do
@@ -236,9 +259,11 @@ export default async function RefundPage({
 
           <h2>Auto-renewal</h2>
           <p>
-            The Pro plan <strong>renews automatically each month</strong> at US$3.99
-            until you cancel. The charge is made on the renewal date, on a monthly
-            frequency, for the amount of US$3.99. In line with Mexico&apos;s Federal
+            Paid plans <strong>renew automatically each month</strong> at your
+            plan&apos;s price until you cancel. The charge is made on the renewal
+            date, on a monthly frequency, for your plan&apos;s amount: US${PRO_PRICE}{" "}
+            for Pro, US${MAX_PRICE} for Max, or the price you subscribed at if it
+            was different. In line with Mexico&apos;s Federal
             Consumer Protection Law (LFPC, in force since December 2025), we send a{" "}
             <strong>reminder at least 5 business days before each renewal</strong>,
             so you can cancel beforehand at no cost before the charge is made.
@@ -248,14 +273,16 @@ export default async function RefundPage({
           <p>
             Cancelling is simple: you can do it online in a few clicks, at any
             time, from your account menu in OpenLen (&quot;Manage
-            subscription&quot;) or from the link in any email from Polar.{" "}
+            subscription&quot;) or from the link in any email from Polar. From
+            the same place you can switch between Pro and Max; Polar handles the
+            billing adjustment.{" "}
             <strong>There is no penalty, cancellation fee, or retention
             process.</strong> When you cancel:
           </p>
           <ul>
             <li>
               Cancellation takes effect at the end of the period you have already
-              paid for; you keep access to Pro features until then.
+              paid for; you keep access to your plan until then.
             </li>
             <li>
               At the end of that period, your account automatically reverts to the

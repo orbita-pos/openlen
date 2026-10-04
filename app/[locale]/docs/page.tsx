@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
+import { MAX_CREDITS, MAX_PRICE, PRO_CREDITS, PRO_PRICE } from "@/lib/marketing/plan-price";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { Link } from "@/i18n/navigation";
 
@@ -183,7 +184,7 @@ export default async function DocsPage({
             </li>
           </ul>
 
-          <h2>8. Créditos de IA y el plan Pro</h2>
+          <h2>8. Créditos de IA y los planes de pago</h2>
           <p>
             Las funciones de IA (generar y rediseñar páginas) se miden en
             créditos:
@@ -193,12 +194,18 @@ export default async function DocsPage({
               <strong>Plan gratis</strong> — 20 créditos al mes.
             </li>
             <li>
-              <strong>Plan Pro</strong> — US$3.99 al mes con 150 créditos al mes.
+              <strong>Plan Pro</strong> — US${PRO_PRICE} al mes con {PRO_CREDITS}{" "}
+              créditos al mes.
+            </li>
+            <li>
+              <strong>Plan Max</strong> — US${MAX_PRICE} al mes con {MAX_CREDITS}{" "}
+              créditos al mes.
             </li>
           </ul>
           <p>
-            Los créditos se reinician cada mes y no se acumulan. Si cancelas el
-            plan Pro, conservas el acceso hasta el final del periodo pagado y
+            Los créditos se reinician cada mes y no se acumulan. Puedes cambiar
+            entre Pro y Max, o cancelar, desde «Gestionar suscripción» en el menú
+            de tu cuenta. Si cancelas, conservas el acceso hasta el final del periodo pagado y
             luego vuelves al plan gratis; los créditos no usados se pierden al
             bajar de plan o cancelar. Los pagos los gestiona Polar como
             comerciante registrado (Merchant of Record): Polar emite la factura y
@@ -374,7 +381,7 @@ export default async function DocsPage({
             </li>
           </ul>
 
-          <h2>8. AI credits and the Pro plan</h2>
+          <h2>8. AI credits and the paid plans</h2>
           <p>
             AI features (generating and redesigning pages) are metered in
             credits:
@@ -384,13 +391,18 @@ export default async function DocsPage({
               <strong>Free plan</strong> — 20 credits per month.
             </li>
             <li>
-              <strong>Pro plan</strong> — US$3.99 per month with 150 credits per
-              month.
+              <strong>Pro plan</strong> — US${PRO_PRICE} per month with{" "}
+              {PRO_CREDITS} credits per month.
+            </li>
+            <li>
+              <strong>Max plan</strong> — US${MAX_PRICE} per month with{" "}
+              {MAX_CREDITS} credits per month.
             </li>
           </ul>
           <p>
-            Credits reset every month and do not roll over. If you cancel Pro,
-            you keep access until the end of the paid period and then revert to
+            Credits reset every month and do not roll over. You can switch
+            between Pro and Max, or cancel, from &quot;Manage subscription&quot; in
+            your account menu. If you cancel, you keep access until the end of the paid period and then revert to
             the free plan; unused credits are forfeited on downgrade or cancel.
             Payments are handled by Polar as the Merchant of Record: Polar issues
             the invoice and refunds are requested through Polar per its buyer
