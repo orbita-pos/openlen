@@ -15,6 +15,7 @@ import { ChatPanel } from "@/components/workspace-v2/panels/chat-panel";
 import { NewChatPanel } from "@/components/workspace-v2/chat/new-chat-panel";
 import type { ScopedSelection } from "@/components/workspace-v2/chat/use-agent-chat";
 import type { StoredChatTurn } from "@/lib/projects/types";
+import { comentariosDelChat } from "@/lib/workspace-v2/comentarios-de-lineas";
 import { demoPage, pickScenario, SCENARIOS, SCENARIO_LABEL, scriptFor, type ScenarioId } from "./scripts";
 
 type Side = "new" | "old";
@@ -338,6 +339,31 @@ export function ChatSandbox({ dark, only }: { dark: boolean; only: Side | null }
             onClick={() => setDraft({ new: { text: "Arregla el texto que no se lee en la portada", auto: true }, old: { text: "Arregla el texto que no se lee en la portada", auto: true } })}
           >
             «Arréglalo» (se manda solo)
+          </button>
+          {/* Lo que empujan las lentes Código y Cambios al comentar una línea
+              (E7): la misma cola, así que el chat lo ve igual que en el taller. */}
+          <button
+            type="button"
+            className="rounded-full border bd px-2 py-0.5"
+            onClick={() => {
+              for (const side of ["new", "old"] as const) {
+                comentariosDelChat.anadir(PROJECT[side], {
+                  ruta: "/index.html",
+                  linea: 14,
+                  codigo: "<h1>Pan hecho a mano, cada mañana</h1>",
+                  texto: "Que el título quepa en dos líneas en el móvil",
+                });
+                comentariosDelChat.anadir(PROJECT[side], {
+                  ruta: "/index.html",
+                  linea: 22,
+                  deAntes: true,
+                  codigo: '<p class="horario">Lunes a sábado 7:00–20:00</p>',
+                  texto: "Esto lo quitaste: vuelve a ponerlo en el pie",
+                });
+              }
+            }}
+          >
+            Comentar dos líneas
           </button>
         </div>
         <div className="flex min-h-0 flex-1">
