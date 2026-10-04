@@ -465,7 +465,7 @@ function NewV2Inner() {
     setHasDatabase(false);
     if (!loadedProjectId) return;
     let live = true;
-    fetch(`/api/projects/${loadedProjectId}/backend`, { cache: "no-store" })
+    fetch(`/api/projects/${loadedProjectId}/backend?status`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((b: { status?: string } | null) => {
         if (live) setHasDatabase(b?.status === "ready");
