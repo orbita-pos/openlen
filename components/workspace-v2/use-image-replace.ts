@@ -197,9 +197,17 @@ const CORE_SRC = [
   decl("ajustarAlMarco", ajustarAlMarco),
   decl("trasCargar", trasCargar),
 ].join("\n");
-const REPLACE_SCRIPT = `
+// Los textos que el guion pinta DENTRO del lienzo llegan traducidos desde el
+// padre, como las etiquetas de soltar de use-drop-place.ts. El chip decía
+// «Update copy to match?» en los 10 idiomas.
+export type ReplaceLabels = { copyChip: string };
+const FALLBACK_LABELS: ReplaceLabels = { copyChip: "Update copy to match?" };
+
+function buildReplaceScript(labelsJson: string): string {
+  return `
 ${CORE_SRC}
 (function () {
+  var LABELS = ${labelsJson};
   ${decl("resizeWidthPct", resizeWidthPct)}
   var hoverButton = null;
   var removeButton = null;
@@ -658,13 +666,14 @@ ${CORE_SRC}
     var chip = document.createElement('div');
     chip.setAttribute('data-openlen-replace', 'copy-chip');
     chip.className = 'openlen-replace-copy-chip';
-    var label = kind === 'icon' ? 'Update copy to match?' : 'Update copy to match?';
     chip.innerHTML =
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
-      '<span>' + label + '</span>' +
+      '<span data-copy-label="1"></span>' +
       '<span class="openlen-replace-copy-close" data-close="1" aria-hidden="true">' +
       '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
       '</span>';
+    // Como texto, no como HTML: viene de las traducciones.
+    chip.querySelector('[data-copy-label]').textContent = LABELS.copyChip;
     chip.addEventListener('click', function (ev) {
       var t = ev.target;
       var isClose = false;
@@ -895,17 +904,23 @@ ${CORE_SRC}
   }
 })();
 `;
+}
 
-const INJECTION = `<style data-openlen-replace>${REPLACE_STYLE}</style><script data-openlen-replace>${REPLACE_SCRIPT}</script>`;
+function buildInjection(labels: ReplaceLabels): string {
+  // <-escape so a translated label can never close the script tag.
+  const json = JSON.stringify(labels).replace(/</g, "\\u003c");
+  return `<style data-openlen-replace>${REPLACE_STYLE}</style><script data-openlen-replace>${buildReplaceScript(json)}</script>`;
+}
 
 /** Returns the HTML with replace instrumentation appended just before
  *  `</body>`. The injected style/script carry `data-openlen-replace`
  *  markers so the script can strip them before posting clean HTML. */
-export function injectImageReplace(html: string): string {
+export function injectImageReplace(html: string, labels?: ReplaceLabels): string {
   if (!html) return html;
+  const inj = buildInjection(labels || FALLBACK_LABELS);
   const idx = html.lastIndexOf("</body>");
-  if (idx === -1) return html + INJECTION;
-  return html.slice(0, idx) + INJECTION + html.slice(idx);
+  if (idx === -1) return html + inj;
+  return html.slice(0, idx) + inj + html.slice(idx);
 }
 
 /** Source identifier used in postMessage payloads + version timeline.

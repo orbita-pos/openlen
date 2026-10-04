@@ -125,6 +125,7 @@
       "splitRight": "Image on the right",
       "swap": "Swap images"
     },
+    "copyChip": "Update copy to match?",
     "code": {
       "title": "Your page's code",
       "close": "Close",
