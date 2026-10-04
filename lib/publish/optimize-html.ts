@@ -48,7 +48,7 @@ import postcss from "postcss";
 import tailwindcss from "tailwindcss";
 
 import { optimizeForPublish as rustOptimizeForPublish } from "@/lib/html-engine";
-import { CDN_TAG_RE, readTwCarrier, stripTwCarrier } from "./tw-config";
+import { CDN_TAG_RE, extractTwConfig, readTwCarrier, stripTwCarrier } from "./tw-config";
 
 const TAILWIND_INPUT = "@tailwind base;\n@tailwind components;\n@tailwind utilities;\n";
 
@@ -191,6 +191,15 @@ export async function bakeTailwind(html: string): Promise<OptimizeResult> {
     return { html, baked: false, cssBytes: 0 };
   }
 
+  // 🔴 EL `tailwind.config` DE LA PROPIA PÁGINA (2026-10-04). Desde la entrada
+  // como Vercel, pegar, clonar y sembrar no pasan `sanitizeForPublish`, que era
+  // quien lo convertía en carrier: la página llega con su
+  // `<script>tailwind.config=…</script>` tal cual. Se lee aquí con el MISMO
+  // extractor y validador, y se retira con el CDN — sin el CDN no hay
+  // `tailwind` global y ese script lanzaría ReferenceError en la publicada.
+  // El carrier, si lo hay, sigue mandando (es la paleta ya validada).
+  const conConfig = extractTwConfig(html);
+
   let css: string;
   try {
     // El carrier data-ol-tw (lib/publish/tw-config.ts) trae el theme.extend
@@ -200,7 +209,7 @@ export async function bakeTailwind(html: string): Promise<OptimizeResult> {
     // data-ol-*>), para que los sliders Tier-3 vivan en la publicada.
     css = await generateTailwindCss(
       html,
-      mergeThemeExtends(readTwCarrier(html) ?? {}, html),
+      mergeThemeExtends(readTwCarrier(html) ?? conConfig.extend ?? {}, html),
     );
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -223,14 +232,15 @@ export async function bakeTailwind(html: string): Promise<OptimizeResult> {
   // El carrier y los scripts de tema ya cumplieron (su extend está compilado
   // en el CSS) — fuera del HTML final, igual que el CDN. Los <style data-ol-*>
   // se quedan: definen los tokens que el CSS horneado referencia.
-  const withoutCdn = stripTwCarrier(html.replace(CDN_TAG_RE, "")).replace(
+  // `conConfig.html` ya viene sin los `<script>` de config ni el carrier.
+  const withoutCdn = stripTwCarrier(conConfig.html.replace(CDN_TAG_RE, "")).replace(
     THEME_SCRIPT_RE,
     "",
   );
   const headClose = /<\/head\s*>/i;
   const out = headClose.test(withoutCdn)
     ? withoutCdn.replace(headClose, (close) => `${styleTag}${close}`)
-    : stripTwCarrier(html)
+    : stripTwCarrier(conConfig.html)
         .replace(THEME_SCRIPT_RE, "")
         .replace(CDN_TAG_RE, () => styleTag); // no </head>: fall back in-place
   return { html: out, baked: true, cssBytes: css.length };

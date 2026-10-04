@@ -70,6 +70,21 @@ describe("bakeTailwind honra el carrier (publish con paleta real)", () => {
     assert.ok(!baked.html.includes("cdn.tailwindcss.com"));
   });
 
+  // 🔴 LA ENTRADA COMO VERCEL (2026-10-04): pegar, clonar y sembrar ya no pasan
+  // `sanitizeForPublish`, así que el carrier no nace y la página llega a
+  // publicar con su `<script>tailwind.config=…</script>` tal cual. El horneado
+  // sólo leía el carrier: la paleta se perdía (lo vio el revisor de
+  // publicación en lume, marea y hornada) y el script de config se quedaba
+  // vivo sin el CDN, lanzando ReferenceError.
+  it("🔴 sin carrier, lee el tailwind.config de la página, y lo quita con el CDN", async () => {
+    const baked = await bakeTailwind(LUME_LIKE);
+    assert.equal(baked.baked, true);
+    assert.match(baked.html, /\.bg-ink\s*\{[^}]*rgb\(10 10 10/);
+    assert.match(baked.html, /\.text-lime\s*\{[^}]*rgb\(168 228 11/);
+    assert.ok(!baked.html.includes("tailwind.config"), "el script de config no sobrevive sin el CDN");
+    assert.ok(!baked.html.includes("cdn.tailwindcss.com"));
+  });
+
   it("sin carrier el bake sigue idéntico a hoy (core-only)", async () => {
     const plain = `<!doctype html><html><head><script src="https://cdn.tailwindcss.com"></script></head><body><p class="text-red-500">x</p></body></html>`;
     const baked = await bakeTailwind(plain);
