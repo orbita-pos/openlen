@@ -13,16 +13,16 @@
     "menu": "Menü"
   },
   "hero": {
-    "title": "Landingpages, die dir gehören.<br></br><muted>KI-gebaut.</muted> <gradient>Open Source.</gradient>",
+    "title": "Dein eigener Webentwickler.<br></br><gradient>Len.</gradient>",
     "pagesThisWeek": "<strong>{count, number}</strong> Seiten diese Woche erstellt",
     "githubAria": "OpenLen auf GitHub",
     "starOnGithub": "Auf GitHub mit Stern markieren",
     "pagesLive": "<strong>{count}</strong> Seiten live auf eigener Subdomain oder Domain"
   },
   "heroPrompt": {
-    "placeholder": "Eine Landingpage für mein SaaS, die …",
+    "placeholder": "Sag Len, was du brauchst …",
     "generate": "Erstellen",
-    "tryLabel": "Testen",
+    "tryLabel": "Zum Beispiel",
     "dictate": "Diktieren",
     "stopDictating": "Diktat beenden",
     "micDenied": "Dein Browser hat das Mikrofon blockiert. Erlaube es in der Adressleiste, um zu diktieren.",
@@ -44,7 +44,32 @@
       "visualCriticDesc": "Schreibt ausführlicher und liest deine Bilder",
       "sinVision": "Liest keine Bilder, und du hast eines angehängt",
       "masCaro": "~{n}× die Kosten"
-    }
+    },
+    "asks": {
+      "bakery": {
+        "label": "Meine Bäckerei",
+        "prompt": "Eine Seite für meine Bäckerei „La Espiga“: süßes Gebäck, Torten auf Bestellung, Öffnungszeiten, Anfahrt und ein Button zum Bestellen per WhatsApp."
+      },
+      "barber": {
+        "label": "Barbershop-Termine",
+        "prompt": "Eine Seite für meinen Barbershop mit drei Barbieren: Schnitte und Preise, Fotos vom Laden und ein Formular, um einen Termin zu buchen."
+      },
+      "photographer": {
+        "label": "Foto-Portfolio",
+        "prompt": "Mein Portfolio als Hochzeitsfotografin: eine Galerie pro Hochzeit, was jedes Paket enthält, und ein Formular, um einen Termin anzufragen."
+      },
+      "course": {
+        "label": "Mein Online-Kurs",
+        "prompt": "Eine Landingpage für meinen Online-Backkurs: Lehrplan Woche für Woche, Preis 49 $, Stimmen von Teilnehmerinnen und ein Button zur Anmeldung."
+      }
+    },
+    "ghost": [
+      "Eine Seite für meine Bäckerei, mit Bestellungen per WhatsApp",
+      "Online-Termine für meinen Barbershop",
+      "Mein Portfolio als Hochzeitsfotografin",
+      "Eine Landingpage, die meinen Backkurs verkauft",
+      "Die Speisekarte meines Restaurants, mit einem Foto von jedem Gericht"
+    ]
   },
   "signInDialog": {
     "close": "Schließen",
@@ -54,9 +79,9 @@
     "logIn": "Anmelden"
   },
   "demoStrip": {
-    "eyebrow": "{count} HANDGEBAUTE VORLAGEN — ALLE BEREIT ZUR VERÖFFENTLICHUNG",
-    "title": "Echte Vorlagen.<br></br><muted> Wählen, ausfüllen, veröffentlichen.</muted>",
-    "description": "Jede Vorlage ist eigenständiges HTML — Tailwind + Google Fonts inline, keine React-Runtime. Klonen, Texte + Bilder bearbeiten, auf deiner Subdomain veröffentlichen.",
+    "lenSays": "Du weißt nicht, wo du anfangen sollst? Such dir eins aus, und ich passe es an dein Business an.",
+    "title": "Handgemachte Designs.<br></br><muted> Len macht sie zu deinen.</muted>",
+    "description": "Deine Texte, deine Fotos, deine Farben und deine Formulare. Du startest mit etwas Schönem und endest mit etwas Eigenem.",
     "browseAll": "Alle {count} Vorlagen durchsuchen"
   },
   "features": {
@@ -82,9 +107,9 @@
     }
   },
   "analyticsLeads": {
-    "badge": "Analytics & Leads",
-    "title": "Kenne deinen Traffic. <muted>Erfasse jeden Lead.</muted>",
-    "subtitle": "Datenschutzfreundliche Analytics und Lead-Formulare, integriert in jede Seite, die du veröffentlichst — kein Google Analytics, keine Cookies, kein Consent-Banner. Und die Daten gehören dir.",
+    "lenSays": "Wenn dir jemand schreibt, sage ich dir Bescheid.",
+    "title": "Sieh, wer vorbeikam. <muted>Und wer dir geschrieben hat.</muted>",
+    "subtitle": "Jede Seite, die du veröffentlichst, bringt eigene Analytics und Formulare mit: wie viele Leute vorbeischauen, woher sie kommen und die Nachrichten in deinem Posteingang. Kein Google Analytics, keine Cookies, kein Consent-Banner.",
     "dashboard": {
       "title": "Übersicht",
       "range": "Letzte 30 Tage",
@@ -168,9 +193,9 @@
     "featureColumn": "Funktion"
   },
   "trust": {
-    "badge": "Prüf es",
-    "title": "Vertrauen, das du <muted>überprüfen</muted> kannst",
-    "subtitle": "Keine Versprechen — jede Aussage hat einen Button zum Nachprüfen.",
+    "lenSays": "Glaub mir nicht einfach: Prüf es nach.",
+    "title": "Alles, was wir behaupten, <muted>hat einen Button zum Nachprüfen.</muted>",
+    "subtitle": "Uptime, Geschwindigkeit und der Code – für alle offen sichtbar.",
     "uptime": {
       "title": "Live-Uptime",
       "live": "<b>{pct}</b> Uptime — {window}, alle 5 Minuten von außen gemessen",
@@ -204,52 +229,54 @@
     "allCount": "Alle {count} Creator-Vorlagen"
   },
   "pricing": {
-    "badge": "Preise",
-    "title": "Kostenlos starten. <muted>Für immer selbst hosten.</muted>",
-    "subtitle": "Starte kostenlos mit 20 KI-Credits pro Monat. Upgrade auf Pro für 150 — oder hoste den gesamten Stack ganz ohne Limits selbst.",
+    "lenSays": "Ich koste weniger als eine Agenturstunde.",
+    "title": "Starte kostenlos. <muted>Wenn du es richtig nutzt, {price} $ im Monat.</muted>",
+    "subtitle": "Eine Agentur nennt dir Tausende und Wochen Wartezeit. Len startet kostenlos mit 20 Credits im Monat, ohne Karte, und du kündigst, wann du willst.",
     "comingSoon": "Demnächst",
     "mostPopular": "Am beliebtesten",
-    "githubAria": "OpenLen auf GitHub",
-    "footnote": "Alle Tarife enthalten den Open-Source-Generator unter AGPL. Gehostete Tarife bieten Komfort, keine zusätzlichen Funktionen.",
+    "footnote": "Preise in US-Dollar (USD). Bezahlte Pläne bringen mehr Credits und Komfort: Ganz OpenLen ist Open Source unter AGPLv3.",
     "free": {
       "name": "Kostenlos",
       "suffix": "für immer",
-      "blurb": "Alles funktioniert. Ohne Kreditkarte, ohne Zeitlimit.",
-      "cta": "Kostenlos testen",
+      "blurb": "Um Len an einer echten Seite auszuprobieren.",
+      "cta": "Kostenlos starten",
       "features": {
-        "0": "20 KI-Credits / Monat",
-        "1": "{count} Vorlagen, inklusive 30 Link-in-Bio",
-        "2": "Auf '<you>'.openlen.com veröffentlichen",
-        "3": "Datenschutzfreundliche Analytics + Klick-Tracking pro Link",
-        "4": "Lead-Formulare mit E-Mail-Benachrichtigungen"
+        "0": "20 Credits im Monat",
+        "1": "{count} handgemachte Designs",
+        "2": "Veröffentliche unter dein-name.openlen.app",
+        "3": "Cookielose Analytics und Klicks pro Link",
+        "4": "Formulare mit E-Mail-Benachrichtigung"
       }
     },
     "pro": {
       "name": "Pro",
       "suffix": "/Monat",
       "save": "{percent} % sparen",
-      "blurb": "150 KI-Credits pro Monat — etwa 25 komplette Websites oder 75 einzelne Seiten.",
-      "cta": "Auf Pro upgraden",
+      "blurb": "Für dein Business: Len jede Woche zur Hand.",
+      "cta": "Zu Pro wechseln",
       "features": {
         "0": "Alles aus Kostenlos",
-        "1": "150 KI-Credits pro Monat (≈25 komplette Websites)",
-        "2": "Eigene Domains (links.deine-marke.com)",
-        "3": "Analytics-Aufbewahrung über 90 Tage hinaus",
+        "1": "{credits} Credits im Monat",
+        "2": "Deine eigene Domain (deinbusiness.com)",
+        "3": "Analytics über 90 Tage hinaus",
         "4": "Bevorzugter E-Mail-Support"
       }
     },
-    "selfHost": {
-      "name": "Selbst hosten",
-      "suffix": "für immer",
-      "blurb": "Betreibe den gesamten Stack auf deiner eigenen Box.",
-      "cta": "Repo klonen",
+    "max": {
+      "name": "Max",
+      "suffix": "/Monat",
+      "blurb": "Für alle, die Len jeden Tag um etwas bitten.",
+      "cta": "Zu Max wechseln",
       "features": {
-        "0": "AGPLv3 — deins zum Anpassen + Weitergeben",
-        "1": "Nutze deine eigenen Fireworks- und OpenAI-Keys",
-        "2": "Eine einzige Hetzner-Box betreibt alles",
-        "3": "Wildcard-Subdomain über Caddy",
-        "4": "Keine Rechnung, kein Rate-Limit, keine Kontrolle von außen"
+        "0": "Alles aus Pro",
+        "1": "{credits} Credits im Monat – {times, number}× Pro",
+        "2": "Der günstigste Credit: {cents, number} ¢ statt {proCents, number} ¢"
       }
+    },
+    "selfHost": {
+      "title": "Lieber selbst betreiben?",
+      "body": "OpenLen ist Open Source (AGPLv3). Klon es, trag deine eigenen Keys ein und betreib es auf deinem Server: ohne Limits und ohne uns etwas zu zahlen.",
+      "cta": "Repo klonen"
     },
     "custom": {
       "title": "Mehr als eine Seite gebraucht?",
@@ -257,10 +284,10 @@
     }
   },
   "finalCta": {
-    "badge": "Besitze deinen Stack",
-    "title": "Hör auf, für Lock-in zu zahlen.<br></br><muted>Fang an, deine Landingpages zu besitzen.</muted>",
-    "subtitle": "Nur einen Prompt entfernt von einer Landingpage, die <strong>dir gehört, überall einsetzbar ist und aus Code besteht, den du lesen kannst.</strong>",
-    "generateBtn": "Meine Seite erstellen — kostenlos",
+    "lenSays": "Sollen wir anfangen? Sag mir, was du brauchst.",
+    "title": "Die Website, die du wolltest,<br></br><muted>ohne auf jemanden zu warten.</muted>",
+    "subtitle": "Sag Len, was du brauchst. Die Seite gehört <strong>dir: dein HTML, deine Domain und Open Source, das du lesen kannst.</strong>",
+    "generateBtn": "Mit Len starten – kostenlos",
     "githubAria": "OpenLen auf GitHub",
     "cloneBtn": "Auf GitHub klonen",
     "perks": {
@@ -335,5 +362,9 @@
     "errorStatus": "Fehler {status}: {detail}",
     "unexpectedResponse": "Unerwartete Antwort vom Server",
     "networkError": "Netzwerkfehler"
+  },
+  "lenCompanion": {
+    "ask": "Brauchst du etwas?",
+    "aria": "Len um etwas bitten"
   }
 }

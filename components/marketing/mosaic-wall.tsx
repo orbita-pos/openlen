@@ -3,6 +3,7 @@ import { Link } from "@/i18n/navigation";
 import { ArrowRight } from "lucide-react";
 import { listTemplates, type TemplateRecord } from "@/lib/templates/store";
 import { WallTile } from "./wall-tile";
+import { LenSays } from "./len-says";
 
 // Edge-to-edge template wall: real template previews, full-bleed under the
 // hero. Reuses the `demoStrip.*` i18n keys (eyebrow / title / browseAll) →
@@ -54,23 +55,18 @@ export async function MosaicWall() {
   return (
     <section
       id="templates"
+      data-len-section="plantillas"
       className="relative border-y border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-[#070707]"
     >
       <div className="mx-auto max-w-6xl px-6 pt-16 sm:pt-20 pb-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 text-xs font-medium text-coral-700 dark:text-coral-400 mb-2">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-coral-500 opacity-75 animate-ping" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-coral-500" />
-              </span>
-              {t("demoStrip.eyebrow", { count })}
-            </div>
+            <LenSays className="mb-5">{t("demoStrip.lenSays", { count })}</LenSays>
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight">
               {t.rich("demoStrip.title", {
                 br: () => <br className="sm:hidden" />,
                 muted: (chunks) => (
-                  <span className="serif-accent bg-gradient-to-br from-coral-500 via-coral-600 to-rose-500 bg-clip-text text-transparent pr-[0.04em]">
+                  <span className="font-medium text-zinc-500 dark:text-zinc-400">
                     {chunks}
                   </span>
                 ),

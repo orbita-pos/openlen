@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import { Hero } from "@/components/marketing/hero";
 import { MosaicWall } from "@/components/marketing/mosaic-wall";
-import { Features } from "@/components/marketing/features";
 import { AnalyticsLeads } from "@/components/marketing/analytics-leads";
-import { Comparison } from "@/components/marketing/comparison";
 import { Trust } from "@/components/marketing/trust";
 import { Pricing } from "@/components/marketing/pricing";
 import { FinalCta } from "@/components/marketing/final-cta";
 import { MarketingChrome } from "@/components/marketing/marketing-chrome";
+import { LenCompanion } from "@/components/marketing/len-companion";
 import { countTemplates } from "@/lib/templates/store";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
@@ -31,11 +30,11 @@ export async function generateMetadata({
   // branded query "openlen" (the layout's title.template doesn't apply
   // to its own segment, so it must be inline here).
   const title = es
-    ? "OpenLen — Landing pages que son tuyas. Hechas con IA. Código abierto."
-    : "OpenLen — Landing pages you own. AI-built. Open source.";
+    ? "OpenLen — Len, tu propio desarrollador web. Código abierto."
+    : "OpenLen — Len, your own web developer. Open source.";
   const description = es
-    ? `Una mirada abierta a tus landing pages. Creador de código abierto con generación por IA, ${count} plantillas (incluidas 30 link-in-bio para creadores), analítica respetuosa con la privacidad y tu HTML — AGPLv3.`
-    : `An open lens on your landing pages. Open-source builder with AI generation, ${count} templates including 30 link-in-bio creator hubs, privacy-first analytics, your HTML — AGPLv3.`;
+    ? `Len es tu propio desarrollador web: le cuentas qué necesitas y construye tu página —textos, fotos y formularios— y la publica en tu dominio. ${count} diseños hechos a mano, analítica sin cookies y tu HTML — AGPLv3.`
+    : `Len is your own web developer: tell it what you need and it builds your page — copy, photos and forms — and publishes it on your domain. ${count} hand-made designs, cookieless analytics and your HTML — AGPLv3.`;
   return {
     title,
     description,
@@ -84,14 +83,19 @@ export default function HomePage() {
         aria-hidden
       />
       <MarketingChrome>
+        {/* 04/10: de ocho secciones a seis. Se fueron Funciones (vendía
+            plantillas y HTML, lo de antes de Len; la analítica ya la cuenta
+            AnalyticsLeads y lo de «tuya» Trust) y la Comparativa (precios de
+            Carrd y Linktree «a mayo de 2026»: con Len ya no compite ahí). El
+            ancla `#features` de la nav y el pie vive ahora en la maqueta del
+            taller, en el héroe. */}
         <Hero />
         <MosaicWall />
-        <Features />
         <AnalyticsLeads />
-        <Comparison />
         <Trust />
         <Pricing />
         <FinalCta />
+        <LenCompanion />
       </MarketingChrome>
     </div>
   );

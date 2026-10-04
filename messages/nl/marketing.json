@@ -13,16 +13,16 @@
     "menu": "Menu"
   },
   "hero": {
-    "title": "Landingspagina's die echt van jou zijn.<br></br><muted>AI-gebouwd.</muted> <gradient>Open source.</gradient>",
+    "title": "Je eigen webontwikkelaar.<br></br><gradient>Len.</gradient>",
     "pagesThisWeek": "<strong>{count, number}</strong> pagina's deze week gegenereerd",
     "githubAria": "OpenLen op GitHub",
     "starOnGithub": "Geef een ster op GitHub",
     "pagesLive": "<strong>{count}</strong> pagina’s live op een eigen subdomein of domein"
   },
   "heroPrompt": {
-    "placeholder": "Een landingspagina voor mijn SaaS die…",
+    "placeholder": "Vertel Len wat je nodig hebt…",
     "generate": "Genereren",
-    "tryLabel": "Probeer",
+    "tryLabel": "Bijvoorbeeld",
     "dictate": "Dicteren",
     "stopDictating": "Stoppen met dicteren",
     "micDenied": "Je browser blokkeerde de microfoon. Sta hem toe in de adresbalk om te dicteren.",
@@ -44,7 +44,32 @@
       "visualCriticDesc": "Schrijft uitgebreider en leest je afbeeldingen",
       "sinVision": "Leest geen afbeeldingen, en je hebt er een bijgevoegd",
       "masCaro": "~{n}× de kosten"
-    }
+    },
+    "asks": {
+      "bakery": {
+        "label": "Mijn bakkerij",
+        "prompt": "Een pagina voor mijn bakkerij ‘La Espiga’: zoet brood, taarten op bestelling, openingstijden, routebeschrijving en een knop om via WhatsApp te bestellen."
+      },
+      "barber": {
+        "label": "Afspraken barbershop",
+        "prompt": "Een pagina voor mijn barbershop met drie barbiers: knipbeurten en prijzen, foto’s van de zaak en een formulier om een tijdslot te boeken."
+      },
+      "photographer": {
+        "label": "Fotoportfolio",
+        "prompt": "Mijn portfolio als trouwfotograaf: een galerij per bruiloft, wat elk pakket inhoudt en een formulier om een datum aan te vragen."
+      },
+      "course": {
+        "label": "Mijn online cursus",
+        "prompt": "Een landingspagina voor mijn online bakcursus: lesprogramma per week, prijs $49, ervaringen van cursisten en een inschrijfknop."
+      }
+    },
+    "ghost": [
+      "Een pagina voor mijn bakkerij, met bestellen via WhatsApp",
+      "Online afspraken voor mijn barbershop",
+      "Mijn portfolio als trouwfotograaf",
+      "Een landingspagina die mijn bakcursus verkoopt",
+      "De menukaart van mijn restaurant, met een foto van elk gerecht"
+    ]
   },
   "signInDialog": {
     "close": "Sluiten",
@@ -54,9 +79,9 @@
     "logIn": "Inloggen"
   },
   "demoStrip": {
-    "eyebrow": "{count} HANDGEMAAKTE TEMPLATES — ALLEMAAL KLAAR OM TE PUBLICEREN",
-    "title": "Echte templates.<br></br><muted> Kies, vul in, publiceer.</muted>",
-    "description": "Elke template is zelfstandige HTML — Tailwind + Google Fonts inline, geen React-runtime. Klonen, tekst + afbeeldingen aanpassen, naar je subdomein publiceren.",
+    "lenSays": "Weet je niet waar je moet beginnen? Kies er een en ik pas hem aan je bedrijf aan.",
+    "title": "Handgemaakte ontwerpen.<br></br><muted> Len maakt ze van jou.</muted>",
+    "description": "Jouw teksten, jouw foto’s, jouw kleuren en jouw formulieren. Je begint met iets moois en eindigt met iets van jezelf.",
     "browseAll": "Bekijk alle {count} templates"
   },
   "features": {
@@ -82,9 +107,9 @@
     }
   },
   "analyticsLeads": {
-    "badge": "Analytics en leads",
-    "title": "Ken je verkeer. <muted>Verzamel elke lead.</muted>",
-    "subtitle": "Privacyvriendelijke analytics en leadformulieren, ingebouwd in elke pagina die je publiceert — geen Google Analytics, geen cookies, geen toestemmingsbanner. En de data is van jou.",
+    "lenSays": "Als iemand je schrijft, laat ik het je weten.",
+    "title": "Zie wie er langskwam. <muted>En wie je heeft geschreven.</muted>",
+    "subtitle": "Elke pagina die je publiceert heeft eigen statistieken en formulieren: hoeveel mensen er komen, waar ze vandaan komen en de berichten in je inbox. Geen Google Analytics, geen cookies, geen cookiebanner.",
     "dashboard": {
       "title": "Overzicht",
       "range": "Laatste 30 dagen",
@@ -168,9 +193,9 @@
     "featureColumn": "Functie"
   },
   "trust": {
-    "badge": "Controleer het",
-    "title": "Vertrouwen dat je kunt <muted>controleren</muted>",
-    "subtitle": "Geen beloftes — elke bewering heeft een knop om het te checken.",
+    "lenSays": "Geloof me niet zomaar: controleer het.",
+    "title": "Alles wat we beweren <muted>heeft een knop om het te controleren.</muted>",
+    "subtitle": "Uptime, snelheid en de code, voor iedereen zichtbaar.",
     "uptime": {
       "title": "Live uptime",
       "live": "<b>{pct}</b> uptime — {window}, elke 5 minuten van buitenaf gemeten",
@@ -204,52 +229,54 @@
     "allCount": "Alle {count} creatortemplates"
   },
   "pricing": {
-    "badge": "Prijzen",
-    "title": "Gratis om te beginnen. <muted>Voor altijd self-hosten.</muted>",
-    "subtitle": "Begin gratis met 20 AI-credits per maand. Upgrade naar Pro voor 150 — of self-host de hele stack zonder enige limiet.",
+    "lenSays": "Ik kost minder dan een uur bij een bureau.",
+    "title": "Begin gratis. <muted>Gebruik je het echt, dan is het ${price} per maand.</muted>",
+    "subtitle": "Een bureau rekent duizenden en laat je weken wachten. Len begint gratis met 20 credits per maand, zonder kaart, en je zegt op wanneer je wilt.",
     "comingSoon": "Binnenkort beschikbaar",
     "mostPopular": "Meest gekozen",
-    "githubAria": "OpenLen op GitHub",
-    "footnote": "Alle abonnementen bevatten de open-source generator onder AGPL. Gehoste abonnementen voegen gemak toe, geen functies.",
+    "footnote": "Prijzen in Amerikaanse dollars (USD). Betaalde abonnementen voegen credits en gemak toe: heel OpenLen is open source onder AGPLv3.",
     "free": {
       "name": "Gratis",
       "suffix": "voor altijd",
-      "blurb": "Alles werkt. Geen creditcard, geen tijdslimiet.",
-      "cta": "Probeer gratis",
+      "blurb": "Om Len uit te proberen op een echte pagina.",
+      "cta": "Gratis beginnen",
       "features": {
-        "0": "20 AI-credits / maand",
-        "1": "{count} templates inclusief 30 link-in-bio",
-        "2": "Publiceren naar '<you>'.openlen.com",
-        "3": "Privacy-first analytics + kliks per link",
-        "4": "Leadformulieren met e-mailmeldingen"
+        "0": "20 credits per maand",
+        "1": "{count} handgemaakte ontwerpen",
+        "2": "Publiceer op jouw-naam.openlen.app",
+        "3": "Statistieken zonder cookies en klikken per link",
+        "4": "Formulieren met e-mailmeldingen"
       }
     },
     "pro": {
       "name": "Pro",
       "suffix": "/maand",
       "save": "Bespaar {percent}%",
-      "blurb": "150 AI-credits per maand — ongeveer 25 complete sites of 75 losse pagina's.",
-      "cta": "Upgrade naar Pro",
+      "blurb": "Voor je bedrijf: Len elke week bij de hand.",
+      "cta": "Ga voor Pro",
       "features": {
         "0": "Alles uit Gratis",
-        "1": "150 AI-credits per maand (≈25 complete sites)",
-        "2": "Eigen domeinen (links.jouw-merk.com)",
-        "3": "Analytics-bewaring langer dan 90 dagen",
+        "1": "{credits} credits per maand",
+        "2": "Je eigen domein (jouwbedrijf.com)",
+        "3": "Statistieken langer dan 90 dagen",
         "4": "Prioriteit-e-mailondersteuning"
       }
     },
-    "selfHost": {
-      "name": "Self-host",
-      "suffix": "voor altijd",
-      "blurb": "Draai de hele stack op je eigen box.",
-      "cta": "Kloon de repo",
+    "max": {
+      "name": "Max",
+      "suffix": "/maand",
+      "blurb": "Voor wie Len elke dag iets vraagt.",
+      "cta": "Ga voor Max",
       "features": {
-        "0": "AGPLv3 — van jou om aan te passen + te verspreiden",
-        "1": "Gebruik je eigen Fireworks- en OpenAI-sleutels",
-        "2": "Eén Hetzner-box draait alles",
-        "3": "Wildcard-subdomein via Caddy",
-        "4": "Geen rekening, geen ratelimiet, geen toezicht"
+        "0": "Alles uit Pro",
+        "1": "{credits} credits per maand — {times, number}× Pro",
+        "2": "De goedkoopste credit: {cents, number}¢ in plaats van {proCents, number}¢"
       }
+    },
+    "selfHost": {
+      "title": "Liever zelf draaien?",
+      "body": "OpenLen is open source (AGPLv3). Kloon het, voeg je eigen sleutels toe en draai het op je eigen server: zonder limieten en zonder ons iets te betalen.",
+      "cta": "Kloon de repo"
     },
     "custom": {
       "title": "Meer nodig dan een pagina?",
@@ -257,10 +284,10 @@
     }
   },
   "finalCta": {
-    "badge": "Bezit je stack",
-    "title": "Stop met betalen voor lock-in.<br></br><muted>Begin met het bezitten van je landingspagina's.</muted>",
-    "subtitle": "Eén prompt verwijderd van een landingspagina die <strong>van jou is, overal te deployen, in code die je kunt lezen.</strong>",
-    "generateBtn": "Genereer mijn pagina — gratis",
+    "lenSays": "Zullen we beginnen? Vertel me wat je nodig hebt.",
+    "title": "De website die je wilde,<br></br><muted>zonder op iemand te wachten.</muted>",
+    "subtitle": "Vertel Len wat je nodig hebt. De pagina is <strong>van jou: jouw HTML, jouw domein en open source die je kunt lezen.</strong>",
+    "generateBtn": "Begin met Len — gratis",
     "githubAria": "OpenLen op GitHub",
     "cloneBtn": "Klonen op GitHub",
     "perks": {
@@ -335,5 +362,9 @@
     "errorStatus": "Fout {status}: {detail}",
     "unexpectedResponse": "Onverwacht antwoord van de server",
     "networkError": "Netwerkfout"
+  },
+  "lenCompanion": {
+    "ask": "Iets nodig?",
+    "aria": "Vraag Len iets"
   }
 }

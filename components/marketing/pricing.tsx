@@ -5,7 +5,6 @@ import {
   Check,
   Mail,
   Sparkles,
-  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +12,16 @@ import { GithubIcon } from "@/components/ui/brand-icons";
 import { Button, type ButtonVariant } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { countTemplates } from "@/lib/templates/store";
-import { PRO_PRICE, PRO_SAVE_PERCENT, PRO_WAS } from "@/lib/marketing/plan-price";
+import {
+  MAX_CREDITS,
+  MAX_PRICE,
+  PRO_CREDITS,
+  PRO_PRICE,
+  PRO_SAVE_PERCENT,
+  PRO_WAS,
+  centsPerCredit,
+} from "@/lib/marketing/plan-price";
+import { LenSays } from "./len-says";
 
 type CtaIconComponent =
   | LucideIcon
@@ -40,13 +48,17 @@ export async function Pricing() {
   const locale = await getLocale();
   const templateCount = await countTemplates().catch(() => 0);
 
+  // TRES PLANES Y EL SELF-HOST APARTE (04/10). Gratis, Pro $10 y Max $20 son
+  // la misma cosa —Len trabajando para ti— con más o menos créditos; el
+  // self-host es otra decisión (correrlo tú) y baja a una tira bajo las
+  // tarjetas, al lado del trabajo a medida.
   const tiers: Tier[] = [
     {
       name: t("pricing.free.name"),
       price: 0,
       suffix: t("pricing.free.suffix"),
       blurb: t("pricing.free.blurb"),
-      cta: { label: t("pricing.free.cta"), variant: "primary", icon: Sparkles, href: "/register" },
+      cta: { label: t("pricing.free.cta"), variant: "outline", icon: Sparkles, href: "/register" },
       features: [
         t("pricing.free.features.0"),
         t("pricing.free.features.1", { count: templateCount }),
@@ -63,43 +75,44 @@ export async function Pricing() {
       discount: PRO_WAS === null ? undefined : t("pricing.pro.save", { percent: PRO_SAVE_PERCENT }),
       suffix: t("pricing.pro.suffix"),
       blurb: t("pricing.pro.blurb"),
-      cta: { label: t("pricing.pro.cta"), variant: "outline", icon: ArrowRight, href: `/api/billing/checkout?locale=${locale}` },
+      cta: { label: t("pricing.pro.cta"), variant: "primary", icon: ArrowRight, href: `/api/billing/checkout?locale=${locale}` },
       features: [
         t("pricing.pro.features.0"),
-        t("pricing.pro.features.1"),
+        t("pricing.pro.features.1", { credits: PRO_CREDITS }),
         t("pricing.pro.features.2"),
         t("pricing.pro.features.3"),
         t("pricing.pro.features.4"),
       ],
     },
     {
-      name: t("pricing.selfHost.name"),
-      oss: true,
-      price: 0,
-      suffix: t("pricing.selfHost.suffix"),
-      blurb: t("pricing.selfHost.blurb"),
-      cta: { label: t("pricing.selfHost.cta"), variant: "outline", icon: GithubIcon, href: "https://github.com/orbita-pos/openlen" },
+      name: t("pricing.max.name"),
+      price: MAX_PRICE,
+      suffix: t("pricing.max.suffix"),
+      blurb: t("pricing.max.blurb"),
+      // ⚠️ `plan=max` no lo lee nadie todavía: /api/billing/checkout vende el
+      // único producto que conoce. Ver lib/marketing/plan-price.ts.
+      cta: { label: t("pricing.max.cta"), variant: "outline", icon: ArrowRight, href: `/api/billing/checkout?plan=max&locale=${locale}` },
       features: [
-        t("pricing.selfHost.features.0"),
-        t("pricing.selfHost.features.1"),
-        t("pricing.selfHost.features.2"),
-        t("pricing.selfHost.features.3"),
-        t("pricing.selfHost.features.4"),
+        t("pricing.max.features.0"),
+        t("pricing.max.features.1", { credits: MAX_CREDITS, times: MAX_CREDITS / PRO_CREDITS }),
+        t("pricing.max.features.2", {
+          cents: centsPerCredit(MAX_PRICE, MAX_CREDITS),
+          proCents: centsPerCredit(PRO_PRICE, PRO_CREDITS),
+        }),
       ],
     },
   ];
 
   return (
-    <section id="pricing" className="relative scroll-mt-20">
+    <section id="pricing" data-len-section="precios" className="relative scroll-mt-20">
       <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
         <div className="text-center max-w-2xl mx-auto">
-          <Badge tone="zinc">
-            <Wallet size={11} /> {t("pricing.badge")}
-          </Badge>
-          <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.08]">
+          <LenSays className="justify-center">{t("pricing.lenSays")}</LenSays>
+          <h2 className="mt-6 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.08]">
             {t.rich("pricing.title", {
+              price: PRO_PRICE,
               muted: (chunks) => (
-                <span className="serif-accent bg-gradient-to-br from-coral-500 via-coral-600 to-rose-500 bg-clip-text text-transparent pr-[0.04em]">
+                <span className="font-medium text-zinc-500 dark:text-zinc-400">
                   {chunks}
                 </span>
               ),
@@ -230,26 +243,44 @@ export async function Pricing() {
           })}
         </div>
 
-        {/* Custom work — beyond a landing page (POS, bookings, full apps).
-            A quiet banner, not a tier: this has no fixed price. */}
-        <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 rounded-3xl bg-white/70 dark:bg-white/[0.04] ring-1 ring-zinc-200/70 dark:ring-white/10 backdrop-blur-sm px-7 sm:px-8 py-6">
-          <div>
-            <h3 className="text-[17px] font-semibold tracking-tight">
-              <span className="serif-accent bg-gradient-to-br from-coral-500 via-coral-600 to-rose-500 bg-clip-text text-transparent pr-[0.04em]">
-                {t("pricing.custom.title")}
-              </span>
-            </h3>
-            <p className="mt-1 max-w-xl text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              {t("pricing.custom.body")}
-            </p>
+        {/* Debajo de los planes, dos tiras: correrlo tú (self-host, gratis y
+            para siempre) y el trabajo a medida, que no tiene precio fijo. */}
+        <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="flex flex-col justify-between gap-5 rounded-3xl bg-white/70 dark:bg-white/[0.04] ring-1 ring-zinc-200/70 dark:ring-white/10 backdrop-blur-sm px-7 py-6">
+            <div>
+              <h3 className="flex items-center gap-2 text-[17px] font-semibold tracking-tight">
+                {t("pricing.selfHost.title")}
+                <span className="text-[11px] font-normal uppercase tracking-wider text-zinc-500 dark:text-zinc-400">OSS</span>
+              </h3>
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                {t("pricing.selfHost.body")}
+              </p>
+            </div>
+            <a
+              href="https://github.com/orbita-pos/openlen"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex w-fit items-center gap-2 rounded-full ring-1 ring-zinc-300 dark:ring-zinc-700 px-4 py-2 text-[13.5px] font-medium transition-transform hover:-translate-y-0.5"
+            >
+              <GithubIcon size={14} />
+              {t("pricing.selfHost.cta")}
+            </a>
           </div>
-          <a
-            href="mailto:info@jesusbr.com"
-            className="shrink-0 inline-flex items-center gap-2 rounded-full bg-zinc-900 dark:bg-white px-5 py-2.5 text-[13.5px] font-medium text-white dark:text-zinc-900 shadow-sm transition-transform hover:-translate-y-0.5"
-          >
-            <Mail size={14} />
-            info@jesusbr.com
-          </a>
+          <div className="flex flex-col justify-between gap-5 rounded-3xl bg-white/70 dark:bg-white/[0.04] ring-1 ring-zinc-200/70 dark:ring-white/10 backdrop-blur-sm px-7 py-6">
+            <div>
+              <h3 className="text-[17px] font-semibold tracking-tight">{t("pricing.custom.title")}</h3>
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                {t("pricing.custom.body")}
+              </p>
+            </div>
+            <a
+              href="mailto:info@jesusbr.com"
+              className="inline-flex w-fit items-center gap-2 rounded-full bg-zinc-900 dark:bg-white px-4 py-2 text-[13.5px] font-medium text-white dark:text-zinc-900 shadow-sm transition-transform hover:-translate-y-0.5"
+            >
+              <Mail size={14} />
+              info@jesusbr.com
+            </a>
+          </div>
         </div>
 
         <div className="mt-10 text-center text-xs text-zinc-500 dark:text-zinc-400">

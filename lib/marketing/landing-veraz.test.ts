@@ -40,19 +40,13 @@ describe("la landing no nombra proveedores de modelo", () => {
       resolve(process.cwd(), `messages/${locale}/marketing.json`),
       "utf8",
     );
+    // SIN EXCEPCIÓN desde el 04/10. El plan self-host la tenía porque nombraba
+    // las claves que hacían falta («Bring your own Fireworks and OpenAI keys»):
+    // ahí el proveedor era la instrucción. El rediseño de la portada lo bajó a
+    // una tira que dice «tus propias claves» sin nombrar a nadie, así que ya
+    // no queda ninguna cadena que tenga derecho a decirlo.
     for (const p of PROVEEDORES) {
-      // EXCEPCIÓN: el plan self-host SÍ debe nombrar las claves que hacen falta
-      // — ahí el nombre del proveedor es la instrucción, no el escaparate.
-      const sinSelfHost = JSON.parse(crudo) as {
-        pricing: { selfHost: { features: Record<string, string> } };
-      };
-      const selfHost = Object.values(sinSelfHost.pricing.selfHost.features).join(" ");
-      const resto = crudo.replace(
-        JSON.stringify(sinSelfHost.pricing.selfHost.features).slice(1, -1),
-        "",
-      );
-      if (selfHost.includes(p)) continue;
-      expect(resto, `${locale}: la landing nombra «${p}»`).not.toContain(p);
+      expect(crudo, `${locale}: la landing nombra «${p}»`).not.toContain(p);
     }
   });
 });

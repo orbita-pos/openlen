@@ -13,16 +13,16 @@
     "menu": "菜单"
   },
   "hero": {
-    "title": "完全属于你的着陆页。<br></br><muted>AI 生成。</muted> <gradient>开源。</gradient>",
+    "title": "你的专属网页开发者。<br></br><gradient>Len。</gradient>",
     "pagesThisWeek": "本周已生成 <strong>{count, number}</strong> 个页面",
     "githubAria": "OpenLen on GitHub",
     "starOnGithub": "在 GitHub 上 Star",
     "pagesLive": "<strong>{count}</strong> 个页面已在自己的子域名或域名上线"
   },
   "heroPrompt": {
-    "placeholder": "为我的 SaaS 做一个着陆页，主打……",
+    "placeholder": "告诉 Len 你需要什么……",
     "generate": "生成",
-    "tryLabel": "试试",
+    "tryLabel": "例如",
     "dictate": "语音输入",
     "stopDictating": "停止语音输入",
     "micDenied": "浏览器已阻止麦克风。请在地址栏中允许后即可语音输入。",
@@ -44,7 +44,32 @@
       "visualCriticDesc": "写得更细，并会读取你的图片",
       "sinVision": "不能读取图片，而你附上了一张",
       "masCaro": "费用约 {n} 倍"
-    }
+    },
+    "asks": {
+      "bakery": {
+        "label": "我的面包店",
+        "prompt": "为我的面包店「La Espiga」做一个页面：甜面包、定制蛋糕、营业时间、交通路线，以及一个通过 WhatsApp 下单的按钮。"
+      },
+      "barber": {
+        "label": "理发店预约",
+        "prompt": "为我的理发店做一个页面，店里有三位理发师：剪发项目和价格、店面照片，以及一个预约时段的表单。"
+      },
+      "photographer": {
+        "label": "摄影作品集",
+        "prompt": "我的婚礼摄影作品集：每场婚礼一个相册、每个套餐包含的内容，以及一个预约档期的表单。"
+      },
+      "course": {
+        "label": "我的在线课程",
+        "prompt": "为我的在线烘焙课程做一个着陆页：按周排列的课程大纲、49 美元的价格、学员评价和一个报名按钮。"
+      }
+    },
+    "ghost": [
+      "一个能用 WhatsApp 下单的面包店页面",
+      "理发店的在线预约",
+      "我的婚礼摄影作品集",
+      "一个卖烘焙课程的着陆页",
+      "我的餐厅菜单，每道菜都配照片"
+    ]
   },
   "signInDialog": {
     "close": "关闭",
@@ -54,9 +79,9 @@
     "logIn": "登录"
   },
   "demoStrip": {
-    "eyebrow": "{count} 套纯手工模板 — 全部可直接发布",
-    "title": "真实可用的模板。<br></br><muted> 挑选、填充、发布。</muted>",
-    "description": "每套模板都是自包含的 HTML — Tailwind 与 Google Fonts 内联，无需 React 运行时。克隆后编辑文案和图片，发布到你的子域名。",
+    "lenSays": "不知道从哪里开始？选一个，我帮你改成适合你生意的样子。",
+    "title": "手工打造的设计。<br></br><muted> Len 让它成为你的。</muted>",
+    "description": "你的文字、你的照片、你的配色和你的表单。从一个漂亮的起点出发，最后变成属于你的作品。",
     "browseAll": "浏览全部 {count} 套模板"
   },
   "features": {
@@ -82,9 +107,9 @@
     }
   },
   "analyticsLeads": {
-    "badge": "数据分析与潜在客户",
-    "title": "读懂你的流量。<muted>留住每一位潜客。</muted>",
-    "subtitle": "隐私优先的访问分析与潜客表单，内置于你发布的每一个页面——无需 Google Analytics，无 Cookie，无同意提示横幅。数据完全归你所有。",
+    "lenSays": "有人给你留言时，我会告诉你。",
+    "title": "看看谁来过。<muted>还有谁给你留了言。</muted>",
+    "subtitle": "你发布的每个页面都自带数据分析和表单：有多少人访问、从哪里来，以及收件箱里的留言。无需 Google Analytics，没有 Cookie，也没有同意弹窗。",
     "dashboard": {
       "title": "概览",
       "range": "最近 30 天",
@@ -168,9 +193,9 @@
     "featureColumn": "功能"
   },
   "trust": {
-    "badge": "亲自验证",
-    "title": "可以<muted>亲自验证</muted>的信任",
-    "subtitle": "不许诺——每个说法都有一个可供验证的按钮。",
+    "lenSays": "别只听我说，自己验证一下。",
+    "title": "我们说的每一句话，<muted>都配有一个验证按钮。</muted>",
+    "subtitle": "在线率、速度和代码，任何人都看得到。",
     "uptime": {
       "title": "实时在线率",
       "live": "<b>{pct}</b> 在线率 — {window}，每 5 分钟从外部测量",
@@ -204,52 +229,54 @@
     "allCount": "全部 {count} 套创作者模板"
   },
   "pricing": {
-    "badge": "定价",
-    "title": "免费开始。<muted>自托管永久免费。</muted>",
-    "subtitle": "免费起步，每月 20 个 AI 额度。升级 Pro 可享 150 个 — 或自托管整套技术栈，完全不设限制。",
+    "lenSays": "我比外包公司一小时的费用还便宜。",
+    "title": "免费开始。<muted>真正用起来时，每月 ${price}。</muted>",
+    "subtitle": "找外包公司，报价动辄上千，还要等好几周。Len 免费起步，每月 20 个额度，无需绑卡，随时取消。",
     "comingSoon": "即将推出",
     "mostPopular": "最受欢迎",
-    "githubAria": "OpenLen on GitHub",
-    "footnote": "所有方案都包含基于 AGPL 的开源生成器。托管方案增加的是便利，而非功能。",
+    "footnote": "价格以美元（USD）计。付费方案增加的是额度和便利：OpenLen 全部基于 AGPLv3 开源。",
     "free": {
       "name": "免费版",
       "suffix": "永久",
-      "blurb": "一切功能可用。无需信用卡，也没有时间限制。",
-      "cta": "免费试用",
+      "blurb": "用一个真实的页面试试 Len。",
+      "cta": "免费开始",
       "features": {
-        "0": "每月 20 个 AI 额度",
-        "1": "{count} 套模板，含 30 个 link-in-bio",
-        "2": "发布到 '<you>'.openlen.com",
-        "3": "隐私优先的数据分析 + 逐链接点击追踪",
-        "4": "带邮件通知的潜客表单"
+        "0": "每月 20 个额度",
+        "1": "{count} 套手工设计",
+        "2": "发布到 your-name.openlen.app",
+        "3": "无 Cookie 数据分析与按链接统计点击",
+        "4": "带邮件提醒的表单"
       }
     },
     "pro": {
       "name": "Pro",
       "suffix": "/月",
       "save": "省 {percent}%",
-      "blurb": "每月 150 个 AI 额度——约 25 个完整站点，或 75 个单页。",
+      "blurb": "为你的生意：每周都有 Len 随时待命。",
       "cta": "升级到 Pro",
       "features": {
         "0": "包含免费版全部功能",
-        "1": "每月 150 个 AI 额度（约 25 个完整站点）",
-        "2": "自定义域名（links.your-brand.com）",
-        "3": "分析数据保留超过 90 天",
+        "1": "每月 {credits} 个额度",
+        "2": "自定义域名（yourbusiness.com）",
+        "3": "超过 90 天的数据分析",
         "4": "优先邮件支持"
       }
     },
-    "selfHost": {
-      "name": "自托管",
-      "suffix": "永久",
-      "blurb": "把整套技术栈跑在你自己的主机上。",
-      "cta": "克隆仓库",
+    "max": {
+      "name": "Max",
+      "suffix": "/月",
+      "blurb": "适合每天都找 Len 帮忙的人。",
+      "cta": "升级到 Max",
       "features": {
-        "0": "AGPLv3 — 可自由修改与再分发",
-        "1": "使用你自己的 Fireworks 和 OpenAI 密钥",
-        "2": "单台 Hetzner 主机即可跑通一切",
-        "3": "通过 Caddy 实现泛子域名",
-        "4": "无账单、无限速、无监管"
+        "0": "包含 Pro 全部功能",
+        "1": "每月 {credits} 个额度 — Pro 的 {times, number} 倍",
+        "2": "最便宜的额度：每个 {cents, number}¢，而不是 {proCents, number}¢"
       }
+    },
+    "selfHost": {
+      "title": "更想自己部署？",
+      "body": "OpenLen 是开源的（AGPLv3）。克隆下来，填上你自己的密钥，在你的服务器上运行：没有限制，也不用付我们一分钱。",
+      "cta": "克隆仓库"
     },
     "custom": {
       "title": "需要的不止一个页面？",
@@ -257,10 +284,10 @@
     }
   },
   "finalCta": {
-    "badge": "掌控你的技术栈",
-    "title": "别再为锁定买单。<br></br><muted>从此真正拥有你的着陆页。</muted>",
-    "subtitle": "一句提示词，即可获得一个<strong>完全属于你、可部署到任何地方、代码清晰可读</strong>的着陆页。",
-    "generateBtn": "免费生成我的页面",
+    "lenSays": "开始吧？告诉我你需要什么。",
+    "title": "你想要的网站，<br></br><muted>不用等任何人。</muted>",
+    "subtitle": "告诉 Len 你需要什么。页面<strong>属于你：你的 HTML、你的域名，以及可以阅读的开源代码。</strong>",
+    "generateBtn": "和 Len 一起开始 — 免费",
     "githubAria": "OpenLen on GitHub",
     "cloneBtn": "在 GitHub 上克隆",
     "perks": {
@@ -335,5 +362,9 @@
     "errorStatus": "错误 {status}：{detail}",
     "unexpectedResponse": "服务器返回了意外的响应",
     "networkError": "网络错误"
+  },
+  "lenCompanion": {
+    "ask": "需要帮忙吗？",
+    "aria": "请 Len 帮忙"
   }
 }

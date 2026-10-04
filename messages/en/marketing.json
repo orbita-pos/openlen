@@ -13,16 +13,16 @@
     "menu": "Menu"
   },
   "hero": {
-    "title": "Landing pages you own.<br></br><muted>AI-built.</muted> <gradient>Open source.</gradient>",
+    "title": "Your own web developer.<br></br><gradient>Len.</gradient>",
     "pagesThisWeek": "<strong>{count, number}</strong> pages generated this week",
     "githubAria": "OpenLen on GitHub",
     "starOnGithub": "Star on GitHub",
     "pagesLive": "<strong>{count}</strong> pages live on their own subdomain or domain"
   },
   "heroPrompt": {
-    "placeholder": "A landing page for my SaaS that…",
+    "placeholder": "Tell Len what you need…",
     "generate": "Generate",
-    "tryLabel": "Try",
+    "tryLabel": "For example",
     "dictate": "Dictate",
     "stopDictating": "Stop dictating",
     "micDenied": "Your browser blocked the microphone. Allow it in the address bar to dictate.",
@@ -44,7 +44,32 @@
       "visualCriticDesc": "Writes in more detail and reads your images",
       "sinVision": "Doesn't read images, and you've attached one",
       "masCaro": "~{n}× the cost"
-    }
+    },
+    "asks": {
+      "bakery": {
+        "label": "My bakery",
+        "prompt": "A page for my bakery «La Espiga»: sweet bread, custom cakes, opening hours, directions and a button to order on WhatsApp."
+      },
+      "barber": {
+        "label": "Barbershop bookings",
+        "prompt": "A page for my barbershop with three barbers: cuts and prices, photos of the shop and a form to book a slot."
+      },
+      "photographer": {
+        "label": "Photo portfolio",
+        "prompt": "My wedding photographer portfolio: a gallery per wedding, what each package includes and a form to request a date."
+      },
+      "course": {
+        "label": "My online course",
+        "prompt": "A landing page for my online baking course: week-by-week syllabus, $49 price, student testimonials and a sign-up button."
+      }
+    },
+    "ghost": [
+      "A page for my bakery, with WhatsApp orders",
+      "Online booking for my barbershop",
+      "My wedding photography portfolio",
+      "A landing page that sells my baking course",
+      "My restaurant menu, with a photo of every dish"
+    ]
   },
   "signInDialog": {
     "close": "Close",
@@ -54,9 +79,9 @@
     "logIn": "Log in"
   },
   "demoStrip": {
-    "eyebrow": "{count} HAND-BUILT TEMPLATES — ALL READY TO PUBLISH",
-    "title": "Real templates.<br></br><muted> Pick, fill, publish.</muted>",
-    "description": "Each template is self-contained HTML — Tailwind + Google Fonts inline, no React runtime. Clone, edit copy + images, deploy to your subdomain.",
+    "lenSays": "Not sure where to start? Pick one and I'll fit it to your business.",
+    "title": "Hand-made designs.<br></br><muted> Len makes them yours.</muted>",
+    "description": "Your copy, your photos, your colors and your forms. You start with something beautiful and end with something yours.",
     "browseAll": "Browse all {count} templates"
   },
   "features": {
@@ -82,9 +107,9 @@
     }
   },
   "analyticsLeads": {
-    "badge": "Analytics & leads",
-    "title": "Know your traffic. <muted>Capture every lead.</muted>",
-    "subtitle": "Privacy-first analytics and lead forms, built into every page you publish — no Google Analytics, no cookies, no consent banner. And the data is yours.",
+    "lenSays": "When someone writes to you, I'll let you know.",
+    "title": "See who came by. <muted>And who wrote to you.</muted>",
+    "subtitle": "Every page you publish comes with its own analytics and forms: how many people visit, where they come from and the messages in your inbox. No Google Analytics, no cookies, no consent banner.",
     "dashboard": {
       "title": "Overview",
       "range": "Last 30 days",
@@ -168,9 +193,9 @@
     "featureColumn": "Feature"
   },
   "trust": {
-    "badge": "Verify it",
-    "title": "Trust you can <muted>verify</muted>",
-    "subtitle": "No promises — every claim has a button to check it.",
+    "lenSays": "Don't take my word for it: check.",
+    "title": "Everything we claim <muted>comes with a button to check it.</muted>",
+    "subtitle": "Uptime, speed and the code, in plain sight for anyone.",
     "uptime": {
       "title": "Live uptime",
       "live": "<b>{pct}</b> uptime — {window}, measured from the outside every 5 minutes",
@@ -204,52 +229,54 @@
     "allCount": "All {count} creator templates"
   },
   "pricing": {
-    "badge": "Pricing",
-    "title": "Free to start. <muted>Self-host forever.</muted>",
-    "subtitle": "Start free with 20 AI credits a month. Upgrade to Pro for 150 — or self-host the whole stack with no limits at all.",
+    "lenSays": "I cost less than an hour of agency time.",
+    "title": "Start free. <muted>When you use it for real, ${price} a month.</muted>",
+    "subtitle": "An agency quotes you thousands and weeks of waiting. Len starts free with 20 credits a month, no card, and you cancel whenever you want.",
     "comingSoon": "Coming soon",
     "mostPopular": "Most popular",
-    "githubAria": "OpenLen on GitHub",
-    "footnote": "All plans include the open-source generator under AGPL. Hosted plans add convenience, not features.",
+    "footnote": "Prices in US dollars (USD). Paid plans add credits and convenience: all of OpenLen is open source under AGPLv3.",
     "free": {
       "name": "Free",
       "suffix": "forever",
-      "blurb": "Everything works. No credit card, no time limit.",
-      "cta": "Try it free",
+      "blurb": "To try Len on a real page.",
+      "cta": "Start free",
       "features": {
-        "0": "20 AI credits / month",
-        "1": "{count} templates including 30 link-in-bio",
-        "2": "Publish to '<you>'.openlen.com",
-        "3": "Privacy-first analytics + per-link click tracking",
-        "4": "Lead forms with email notifications"
+        "0": "20 credits a month",
+        "1": "{count} hand-made designs",
+        "2": "Publish at your-name.openlen.app",
+        "3": "Cookieless analytics and per-link clicks",
+        "4": "Forms with email alerts"
       }
     },
     "pro": {
       "name": "Pro",
       "suffix": "/month",
       "save": "Save {percent}%",
-      "blurb": "150 AI credits a month — around 25 full sites or 75 single pages.",
-      "cta": "Upgrade to Pro",
+      "blurb": "For your business: Len on hand every week.",
+      "cta": "Go Pro",
       "features": {
         "0": "Everything in Free",
-        "1": "150 AI credits a month (≈25 full sites)",
-        "2": "Custom domains (links.your-brand.com)",
-        "3": "Analytics retention beyond 90 days",
+        "1": "{credits} credits a month",
+        "2": "Your own domain (yourbusiness.com)",
+        "3": "Analytics beyond 90 days",
         "4": "Priority email support"
       }
     },
-    "selfHost": {
-      "name": "Self-host",
-      "suffix": "forever",
-      "blurb": "Run the whole stack on your own box.",
-      "cta": "Clone the repo",
+    "max": {
+      "name": "Max",
+      "suffix": "/mo",
+      "blurb": "For people who ask Len for things every day.",
+      "cta": "Go Max",
       "features": {
-        "0": "AGPLv3 — yours to modify + redistribute",
-        "1": "Bring your own Fireworks and OpenAI keys",
-        "2": "Single Hetzner box runs everything",
-        "3": "Wildcard subdomain via Caddy",
-        "4": "No bill, no rate limit, no oversight"
+        "0": "Everything in Pro",
+        "1": "{credits} credits a month — {times, number}× Pro",
+        "2": "The cheapest credit: {cents, number}¢ instead of {proCents, number}¢"
       }
+    },
+    "selfHost": {
+      "title": "Rather run it yourself?",
+      "body": "OpenLen is open source (AGPLv3). Clone it, add your own keys and run it on your server: no limits and nothing to pay us.",
+      "cta": "Clone the repo"
     },
     "custom": {
       "title": "Need more than a page?",
@@ -257,10 +284,10 @@
     }
   },
   "finalCta": {
-    "badge": "Own your stack",
-    "title": "Stop paying for lock-in.<br></br><muted>Start owning your landing pages.</muted>",
-    "subtitle": "One prompt away from a landing page that's <strong>yours, deployable anywhere, in code you can read.</strong>",
-    "generateBtn": "Generate my page — free",
+    "lenSays": "Shall we start? Tell me what you need.",
+    "title": "The website you wanted,<br></br><muted>without waiting on anyone.</muted>",
+    "subtitle": "Tell Len what you need. The page is <strong>yours: your HTML, your domain, and open source you can read.</strong>",
+    "generateBtn": "Start with Len — free",
     "githubAria": "OpenLen on GitHub",
     "cloneBtn": "Clone on GitHub",
     "perks": {
@@ -335,5 +362,9 @@
     "errorStatus": "Error {status}: {detail}",
     "unexpectedResponse": "Unexpected response from the server",
     "networkError": "Network error"
+  },
+  "lenCompanion": {
+    "ask": "Need something?",
+    "aria": "Ask Len for something"
   }
 }

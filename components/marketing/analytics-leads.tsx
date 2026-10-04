@@ -1,7 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { listPostTemplates } from "@/lib/marketing/post-templates/store";
 import {
-  BarChart3,
   Eye,
   Inbox,
   Languages,
@@ -9,7 +8,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { LenSays } from "./len-says";
 
 // Marketing showcase for the two things every published OpenLen page gets for
 // free: privacy-first analytics + lead forms. The dashboard + inbox are
@@ -123,16 +122,14 @@ export async function AnalyticsLeads() {
     .catch(() => 0);
 
   return (
-    <section className="relative">
+    <section data-len-section="resultados" className="relative">
       <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
         <div className="max-w-2xl">
-          <Badge tone="coral">
-            <BarChart3 size={11} /> {t("analyticsLeads.badge")}
-          </Badge>
-          <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.08]">
+          <LenSays>{t("analyticsLeads.lenSays")}</LenSays>
+          <h2 className="mt-6 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.08]">
             {t.rich("analyticsLeads.title", {
               muted: (chunks) => (
-                <span className="serif-accent bg-gradient-to-br from-coral-500 via-coral-600 to-rose-500 bg-clip-text text-transparent pr-[0.04em]">
+                <span className="font-medium text-zinc-500 dark:text-zinc-400">
                   {chunks}
                 </span>
               ),

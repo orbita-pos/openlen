@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { countLiveProjects } from "@/lib/projects";
 import { HeroProduct } from "./hero-product";
 import { HeroPromptInput } from "./hero-prompt-input";
+import { HeroLenFace, HeroLenProvider } from "./hero-len";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HÉROE — rediseñado el 2026-08-28 sobre la referencia de Jesús (Lovable).
@@ -69,61 +70,65 @@ export async function Hero() {
         </div>
       </div>
 
-      {/* DOS ANCHOS. El titular quiere aire —la copia trae su propio <br> y
-          pide DOS líneas— y el prompt quiere una columna estrecha, como en la
-          referencia. Metidos en el mismo max-w-3xl, el titular se partía en
-          cuatro renglones apelmazados. */}
-      <div className="relative mx-auto max-w-5xl px-6 pt-24 pb-12 sm:pt-32 sm:pb-16">
-        <div className="flex flex-col items-center text-center">
-          <h1 className="max-w-[56rem] text-balance text-[38px] sm:text-[56px] md:text-[64px] font-semibold tracking-tightest leading-[1.06]">
-            {t.rich("hero.title", {
-              br: () => <br />,
-              muted: (chunks) => (
-                <span className="text-zinc-500 dark:text-zinc-400 font-medium">{chunks}</span>
-              ),
-              gradient: (chunks) => (
-                <span className="serif-accent bg-gradient-to-br from-coral-600 via-coral-700 to-rose-600 bg-clip-text text-transparent pr-[0.06em]">
-                  {chunks}
-                </span>
-              ),
-            })}
-          </h1>
+      {/* LEN ES EL HÉROE (04/10, Jesús: «poner a Len en /»), y la caja le
+          habla: el proveedor envuelve a la cara y a la caja para que Len sepa
+          si escribes, dictas o envías. */}
+      <HeroLenProvider>
+        <div className="relative mx-auto max-w-5xl px-6 pt-14 pb-12 sm:pt-20 sm:pb-16">
+          <div className="flex flex-col items-center text-center">
+            {/* `data-len-hide`: mientras se ve esta cara, la que acompaña al
+                bajar (len-companion.tsx) espera escondida. */}
+            <div data-len-hide>
+              <HeroLenFace className="mb-5 size-24 sm:mb-6 sm:size-28" />
+            </div>
+            <h1 className="max-w-[56rem] text-balance text-[38px] sm:text-[56px] md:text-[64px] font-semibold tracking-tightest leading-[1.06]">
+              {t.rich("hero.title", {
+                br: () => <br />,
+                muted: (chunks) => (
+                  <span className="text-zinc-500 dark:text-zinc-400 font-medium">{chunks}</span>
+                ),
+                gradient: (chunks) => (
+                  <span className="serif-accent bg-gradient-to-br from-coral-600 via-coral-700 to-rose-600 bg-clip-text text-transparent pr-[0.06em]">
+                    {chunks}
+                  </span>
+                ),
+              })}
+            </h1>
+          </div>
 
+          {/* La caja de prompt: el centro del héroe, no un extra al final. */}
+          <div className="mx-auto mt-12 max-w-2xl sm:mt-14">
+            <HeroPromptInput />
+          </div>
+
+          {/* zinc-700, no zinc-500: MEDIDO sobre el píxel pintado daba 2.67:1
+              — esta línea cayó en la zona más saturada de la malla al bajarla
+              del héroe. Se oscurece el texto, que es UNA línea, en vez de
+              apagar la malla, que es el héroe entero.
+
+              Y zinc-300 en OSCURO, no zinc-400: ahí medía 4.55:1 contra un
+              mínimo de 4.5 — pasa, pero sin margen, y las manchas DERIVAN, así
+              que el fondo bajo esta línea cambia con el tiempo. Un contraste al
+              filo sobre un fondo que se mueve es un fallo con retardo. */}
+          {pagesLive > 0 && (
+            <p className="mx-auto mt-8 max-w-2xl text-center text-[13px] text-zinc-700 dark:text-zinc-300">
+              {t.rich("hero.pagesLive", {
+                count: pagesLive,
+                strong: (chunks) => (
+                  <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-200">
+                    {chunks}
+                  </span>
+                ),
+              })}
+            </p>
+          )}
         </div>
-
-        {/* La caja de prompt: el centro del héroe, no un extra al final.
-            Vuelve a la columna estrecha — es la proporción de la referencia. */}
-        <div className="mx-auto mt-12 max-w-2xl sm:mt-14">
-          <HeroPromptInput />
-        </div>
-
-        {/* zinc-700, no zinc-500: MEDIDO sobre el píxel pintado daba 2.67:1
-            — esta línea cayó en la zona más saturada de la malla al bajarla
-            del héroe. Se oscurece el texto, que es UNA línea, en vez de
-            apagar la malla, que es el héroe entero.
-
-            Y zinc-300 en OSCURO, no zinc-400: ahí medía 4.55:1 contra un
-            mínimo de 4.5 — pasa, pero sin margen, y las manchas DERIVAN, así
-            que el fondo bajo esta línea cambia con el tiempo. Un contraste al
-            filo sobre un fondo que se mueve es un fallo con retardo. */}
-        {pagesLive > 0 && (
-          <p className="mx-auto mt-8 max-w-2xl text-center text-[13px] text-zinc-700 dark:text-zinc-300">
-            {t.rich("hero.pagesLive", {
-              count: pagesLive,
-              strong: (chunks) => (
-                <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-200">
-                  {chunks}
-                </span>
-              ),
-            })}
-          </p>
-        )}
-      </div>
+      </HeroLenProvider>
 
       {/* Segundo compás: la maqueta del producto, ya fuera del primer
           pantallazo. Sangra por abajo (estilo Framer/Linear) para que se lea
           como «sigue leyendo», no como el final de la sección. */}
-      <div className="relative mx-auto max-w-[88rem] px-6 mt-28 pb-20 sm:mt-36 sm:pb-24">
+      <div id="features" data-len-section="taller" className="relative mx-auto max-w-[88rem] scroll-mt-20 px-6 mt-20 pb-20 sm:mt-28 sm:pb-24">
         <div className="relative">
           <HeroProduct />
         </div>
