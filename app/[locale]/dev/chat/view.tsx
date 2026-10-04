@@ -127,6 +127,45 @@ function agentStream(body: { projectId: string; prompt: string; turnId: string }
   return new Response(stream, { headers: { "content-type": "text/event-stream" } });
 }
 
+/** El camino de reserva, `/api/templates/ai-design` (C3, C18, C19): un poco de
+ *  razonamiento y el documento ENTERO goteando en trozos (`html_chunk`), como la
+ *  reescritura de verdad, y un `done` con el html final y su versión. */
+function aiDesignStream(body: { projectId: string; prompt: string }, signal?: AbortSignal | null): Response {
+  const enc = new TextEncoder();
+  const p = project(body.projectId);
+  const doc = demoPage({ photos: true, form: true });
+  const reasoning = "Reescribo la página entera con fotos de verdad y el formulario de encargos.";
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (event: string, data: unknown) => controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      try {
+        for (const word of reasoning.split(" ")) {
+          if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+          send("reasoning_chunk", { text: `${word} ` });
+          await pause(60);
+        }
+        for (let i = 0; i < doc.length; i += 120) {
+          if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+          send("html_chunk", { text: doc.slice(i, i + 120) });
+          await pause(90);
+        }
+        p.html = doc;
+        send("done", { html: doc, reasoning, versionPrevia: "v-ai-design" });
+        controller.close();
+      } catch (err) {
+        controller.error(err);
+      }
+      listeners.forEach((l) => l());
+    },
+  });
+  return new Response(stream, { headers: { "content-type": "text/event-stream" } });
+}
+
+/** C15: cómo falla el Deshacer cuando se pide (ninguno, o uno de los tres textos). */
+type UndoFailure = "none" | "http" | "network" | "empty";
+let undoFailure: UndoFailure = "none";
+
 let installed = false;
 function install() {
   if (installed || typeof window === "undefined") return;
@@ -139,7 +178,16 @@ function install() {
     const path = url.replace(/^https?:\/\/[^/]+/, "").split("?")[0] ?? "";
 
     if (path === "/api/agent" && method === "POST") {
-      return agentStream(body() as { projectId: string; prompt: string; turnId: string }, init?.signal);
+      const b = body() as { projectId: string; prompt: string; turnId: string };
+      // D13: la ruta rechaza la página ANTES de abrir el stream, con la forma
+      // de `errorJson` (app/api/agent/route.ts).
+      if ((scenarioOverride ?? pickScenario(b.prompt)) === "tooLarge") {
+        return json({ error: "Page too large for an agent turn", code: "pageTooLarge" }, 413);
+      }
+      return agentStream(b, init?.signal);
+    }
+    if (path === "/api/templates/ai-design" && method === "POST") {
+      return aiDesignStream(body() as { projectId: string; prompt: string }, init?.signal);
     }
     if (path === "/api/agent/esfuerzo") {
       return method === "GET"
@@ -246,6 +294,9 @@ function install() {
       }
       const restore = rest.match(/^\/versions\/[^/]+\/restore$/);
       if (restore && method === "POST") {
+        if (undoFailure === "http") return json({ error: "restore failed" }, 500);
+        if (undoFailure === "network") throw new TypeError("Failed to fetch");
+        if (undoFailure === "empty") return json({ ok: true });
         p.html = START_HTML;
         return json({ html: START_HTML, page: null });
       }
@@ -270,6 +321,28 @@ export function ChatSandbox({ dark, only }: { dark: boolean; only: Side | null }
   const [draft, setDraft] = useState<Record<Side, { text: string; auto: boolean } | null>>({ new: null, old: null });
   const [chat, setChat] = useState<Record<Side, StoredChatTurn[]>>({ new: [], old: [] });
   const [html, setHtml] = useState<Record<Side, string>>({ new: START_HTML, old: START_HTML });
+  // Lo que el sandbox finge del resto del taller (C15, A3, I2, C19).
+  const [undoMode, setUndoMode] = useState<UndoFailure>("none");
+  const [noProject, setNoProject] = useState(false);
+  const [veil, setVeil] = useState<Record<Side, boolean>>({ new: false, old: false });
+  const [noScanFx, setNoScanFx] = useState(false);
+  const [classic, setClassic] = useState(false);
+  useEffect(() => {
+    try {
+      setNoScanFx(localStorage.getItem("ol:scanfx") === "0");
+      setClassic(localStorage.getItem("ol:agent") === "0");
+    } catch {
+      // sin almacenamiento: se queda en lo de siempre
+    }
+  }, []);
+  const toggleStorage = (key: string, on: boolean) => {
+    try {
+      if (on) localStorage.setItem(key, "0");
+      else localStorage.removeItem(key);
+    } catch {
+      // sin almacenamiento
+    }
+  };
 
   const refresh = useCallback(() => {
     setChat({ new: [...project(PROJECT.new).chat], old: [...project(PROJECT.old).chat] });
@@ -365,6 +438,49 @@ export function ChatSandbox({ dark, only }: { dark: boolean; only: Side | null }
           >
             Comentar dos líneas
           </button>
+          <span className="mx-1 h-4 w-px bg-[color:var(--border)]" />
+          <button
+            type="button"
+            className={`rounded-full border px-2 py-0.5 ${undoMode !== "none" ? "border-[color:var(--accent)] bg-accent-soft" : "bd"}`}
+            onClick={() => {
+              const order: UndoFailure[] = ["none", "http", "network", "empty"];
+              const next = order[(order.indexOf(undoMode) + 1) % order.length]!;
+              undoFailure = next;
+              setUndoMode(next);
+            }}
+          >
+            Deshacer falla: {{ none: "no", http: "HTTP 500", network: "sin red", empty: "sin página" }[undoMode]}
+          </button>
+          <button
+            type="button"
+            className={`rounded-full border px-2 py-0.5 ${noProject ? "border-[color:var(--accent)] bg-accent-soft" : "bd"}`}
+            onClick={() => setNoProject((x) => !x)}
+          >
+            Sin proyecto
+          </button>
+          {/* I2: con el rayo X apagado (`ol:scanfx`, o movimiento reducido) el
+              chat pide el velo del lienzo; aquí se pinta encima del iframe. */}
+          <button
+            type="button"
+            className={`rounded-full border px-2 py-0.5 ${noScanFx ? "border-[color:var(--accent)] bg-accent-soft" : "bd"}`}
+            onClick={() => {
+              toggleStorage("ol:scanfx", !noScanFx);
+              setNoScanFx((x) => !x);
+            }}
+          >
+            Sin rayo X (velo)
+          </button>
+          {/* C19: el opt-out por navegador; el chat lo lee al montarse. */}
+          <button
+            type="button"
+            className={`rounded-full border px-2 py-0.5 ${classic ? "border-[color:var(--accent)] bg-accent-soft" : "bd"}`}
+            onClick={() => {
+              toggleStorage("ol:agent", !classic);
+              window.location.reload();
+            }}
+          >
+            Chat clásico (ol:agent=0)
+          </button>
         </div>
         <div className="flex min-h-0 flex-1">
           {sides.map((side) => (
@@ -376,7 +492,7 @@ export function ChatSandbox({ dark, only }: { dark: boolean; only: Side | null }
                 <div className="min-h-0 flex-1">
                   {side === "new" ? (
                     <NewChatPanel
-                      flatProjectId={PROJECT.new}
+                      flatProjectId={noProject ? undefined : PROJECT.new}
                       flatProjectHtml={html.new}
                       onFlatHtmlUpdate={(h) => setHtml((x) => ({ ...x, new: h }))}
                       flatProjectChat={chat.new}
@@ -388,10 +504,11 @@ export function ChatSandbox({ dark, only }: { dark: boolean; only: Side | null }
                       pendingDraft={draft.new?.text ?? null}
                       pendingDraftAutoSend={draft.new?.auto ?? false}
                       onPendingDraftConsumed={() => setDraft((x) => ({ ...x, new: null }))}
+                      onRedesigningChange={(a) => setVeil((x) => ({ ...x, new: a }))}
                     />
                   ) : (
                     <ChatPanel
-                      flatProjectId={PROJECT.old}
+                      flatProjectId={noProject ? undefined : PROJECT.old}
                       flatProjectHtml={html.old}
                       onFlatHtmlUpdate={(h) => setHtml((x) => ({ ...x, old: h }))}
                       flatProjectChat={chat.old}
@@ -403,12 +520,18 @@ export function ChatSandbox({ dark, only }: { dark: boolean; only: Side | null }
                       pendingDraft={draft.old?.text ?? null}
                       pendingDraftAutoSend={draft.old?.auto ?? false}
                       onPendingDraftConsumed={() => setDraft((x) => ({ ...x, old: null }))}
+                      onRedesigningChange={(a) => setVeil((x) => ({ ...x, old: a }))}
                     />
                   )}
                 </div>
               </div>
-              <div className="min-w-0 flex-1 bg-[color:var(--bg-preview)] p-3">
+              <div className="relative min-w-0 flex-1 bg-[color:var(--bg-preview)] p-3">
                 <iframe title={`page-${side}`} srcDoc={html[side]} sandbox="" className="h-full w-full rounded-xl border bd bg-white" />
+                {veil[side] && (
+                  <div data-veil className="absolute inset-3 grid place-items-center rounded-xl bg-[color:var(--bg-preview)] text-[13px] fg-muted">
+                    Velo de construcción (el lienzo del taller pone aquí su cargador)
+                  </div>
+                )}
               </div>
             </div>
           ))}

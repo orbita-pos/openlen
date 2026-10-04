@@ -15,7 +15,12 @@ export type ScenarioId =
   | "error"
   | "cut"
   | "drop"
-  | "slow";
+  | "slow"
+  | "window"
+  | "otherPage"
+  | "tooLarge"
+  | "agentOff"
+  | "versions";
 
 export const SCENARIOS: readonly ScenarioId[] = [
   "edit",
@@ -28,6 +33,11 @@ export const SCENARIOS: readonly ScenarioId[] = [
   "cut",
   "drop",
   "slow",
+  "window",
+  "otherPage",
+  "tooLarge",
+  "agentOff",
+  "versions",
 ];
 
 export const SCENARIO_LABEL: Readonly<Record<ScenarioId, string>> = {
@@ -41,6 +51,11 @@ export const SCENARIO_LABEL: Readonly<Record<ScenarioId, string>> = {
   cut: "Cortado (techo)",
   drop: "Se cae la red (reenganche)",
   slow: "Piensa mucho (para ■)",
+  window: "Charla recortada",
+  otherPage: "Cambia otra página",
+  tooLarge: "Página enorme (413)",
+  agentOff: "Len apagado → ai-design",
+  versions: "Lee las versiones",
 };
 
 /** Un paso del guion: un evento, tras `ms` de espera. */
@@ -59,6 +74,7 @@ export function pickScenario(prompt: string): ScenarioId {
   if (p.includes("corta") || p.includes("techo")) return "cut";
   if (p.includes("red ") || p.includes("cae")) return "drop";
   if (p.includes("piensa") || p.includes("lento")) return "slow";
+  if (p.includes("versi")) return "versions";
   if (p.includes("publica")) return "publish";
   if (p.includes("respond") || p.includes("mensaje")) return "reply";
   if (p.includes("terminal") || p.includes("busca") || p.includes("internet") || p.includes("móvil")) return "terminal";
@@ -255,6 +271,50 @@ export function scriptFor(id: ScenarioId, turnoId: string): ScriptStep[] {
         ...head,
         wait(9000, "text", { text: "Lo pensé bien: la portada ya está bien como está." }),
         wait(100, "done", DONE({ centicredits: 92, durationMs: 9_200 })),
+      ];
+    case "window":
+      // C9: la charla no cabe y el `done` lo dice con los dos números.
+      return [
+        ...head,
+        wait(900, "text", { text: "Te lo resumo con lo que veo de la charla: la portada ya tiene fotos y el formulario de encargos está arriba." }),
+        wait(100, "done", DONE({ centicredits: 22, durationMs: 4_100, ventana: { visibles: 12, totales: 20 } })),
+      ];
+    case "otherPage":
+      // C17: el turno empieza en el Inicio y escribe también en /contacto, así
+      // que no puede ofrecer Deshacer desde aquí.
+      return [
+        ...head,
+        wait(700, "action", { tool: "Edit", status: "running", summary: "index.html" }),
+        wait(900, "html", { html: demoPage({ photos: true, form: false }), page: null, versionPrevia: "v-antes" }),
+        wait(100, "action", { tool: "Edit", status: "done", summary: "index.html", cambio: "cambio", edits: 1, ops: [{ tipo: "replace", donde: "documento", etiqueta: "la portada", indice: 1 }] }),
+        wait(300, "action", { tool: "Edit", status: "running", summary: "contacto/index.html" }),
+        wait(900, "html", { html: demoPage({ photos: true, form: true }), page: "contacto", versionPrevia: "v-contacto" }),
+        wait(100, "action", { tool: "Edit", status: "done", summary: "contacto/index.html", cambio: "cambio", edits: 1, ops: [{ tipo: "insert_after", donde: "documento", etiqueta: "el formulario", indice: 2 }] }),
+        wait(300, "text", { text: "Cambié la portada y añadí el formulario en la página de contacto." }),
+        wait(100, "done", DONE({ mutoDurable: true, centicredits: 96, durationMs: 12_300 })),
+      ];
+    case "tooLarge":
+      // D13: la ruta contesta 413 ANTES del stream (lo hace el servidor falso).
+      return [];
+    case "agentOff":
+      // C18: con OPENLEN_AGENT=0 la ruta contesta un stream con UN solo
+      // `error` (sin `turno` ni `done`) y el chat repite el turno por ai-design.
+      return [wait(300, "error", { message: "El Agente está desactivado temporalmente.", code: "agent_off" })];
+    case "versions":
+      // L4: las versiones y `/.openlen` son de sólo lectura y se ven como pasos.
+      return [
+        ...head,
+        wait(600, "action", { tool: "Read", status: "running", summary: "/.openlen/versiones/indice.jsonl" }),
+        wait(700, "action", { tool: "Read", status: "done", summary: "/.openlen/versiones/indice.jsonl" }),
+        wait(200, "action", { tool: "bash", status: "running", summary: "diff /.openlen/versiones/v-41/index.html /index.html" }),
+        wait(800, "terminal", {
+          command: "diff /.openlen/versiones/v-41/index.html /index.html",
+          salida: "14c14\n< <h1>Pan de pueblo</h1>\n---\n> <h1>Pan hecho a mano, cada mañana</h1>\n[Command finished with exit code 1]",
+          exitCode: 1,
+        }),
+        wait(50, "action", { tool: "bash", status: "done", summary: "diff /.openlen/versiones/v-41/index.html /index.html" }),
+        wait(300, "text", { text: "Hace dos versiones el título decía «Pan de pueblo»; lo cambiaste el martes. No toqué nada." }),
+        wait(100, "done", DONE({ centicredits: 38, durationMs: 5_600 })),
       ];
   }
 }
