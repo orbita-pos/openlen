@@ -518,6 +518,8 @@ export default defineConfig({
       "app/api/projects/[id]/terminal/route.test.ts",
       // Editar a mano en la lente «Código» (la #18).
       "app/api/projects/[id]/ficheros/route.test.ts",
+      // «Abrir en pestaña» se va al lienzo en .app; lo que queda aquí, opaco.
+      "app/api/projects/[id]/raw/route.test.ts",
       // Same, for the Chat surface. Mocks only the model, DB, auth and
       // credits — the sanitize/normalize/behaviour passes are the real ones.
       "app/api/templates/ai-design/route.test.ts",

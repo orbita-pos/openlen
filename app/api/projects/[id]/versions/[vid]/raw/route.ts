@@ -33,8 +33,8 @@ export async function GET(
       "content-type": "text/html; charset=utf-8",
       "cache-control": "private, max-age=300",
       "x-frame-options": "SAMEORIGIN",
-      // Miniatura de una versión: incrustada va con origen opaco.
-      // Ver lib/publish/embed-sandbox.ts.
+      // Origen opaco siempre, incrustada o abierta a mano: el JavaScript de
+      // una versión nunca corre como openlen.com. Ver lib/publish/embed-sandbox.ts.
       ...embedSandboxHeaders(req),
     },
   });

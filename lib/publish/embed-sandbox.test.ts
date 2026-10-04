@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { EMBED_SANDBOX_CSP, embedSandboxHeaders } from "./embed-sandbox";
+import { EMBED_SANDBOX_CSP, TAB_SANDBOX_CSP, embedSandboxHeaders } from "./embed-sandbox";
 
 function req(dest?: string): Request {
   return new Request("https://openlen.com/api/projects/p1/raw", {
@@ -29,17 +29,25 @@ describe("CSP de aislamiento para HTML de proyecto incrustado", () => {
     }
   });
 
-  test("navegación de primer nivel → SIN sandbox (abrir en pestaña sigue clicable)", () => {
-    expect(embedSandboxHeaders(req("document"))).toEqual({});
+  // 🔴 INVERTIDA el 2026-10-04. Se llamaba «navegación de primer nivel → SIN
+  // sandbox (abrir en pestaña sigue clicable)»: la pestaña corría el JavaScript
+  // del proyecto como openlen.com, con la sesión del dueño. Hoy «abrir en
+  // pestaña» redirige al lienzo en `.app`; lo que llega aquí en primer nivel es
+  // la reserva, y la reserva tampoco es el origen de la app.
+  test("navegación de primer nivel → sandbox navegable, SIN allow-same-origin", () => {
+    expect(embedSandboxHeaders(req("document"))["content-security-policy"]).toBe(TAB_SANDBOX_CSP);
+    expect(TAB_SANDBOX_CSP).toContain("sandbox");
+    expect(TAB_SANDBOX_CSP).toContain("allow-scripts");
+    expect(TAB_SANDBOX_CSP).toContain("allow-popups");
+    expect(TAB_SANDBOX_CSP).toContain("allow-forms");
+    expect(TAB_SANDBOX_CSP).not.toContain("allow-same-origin");
   });
 
-  // Deliberado: el header lo pone el navegador y una página no puede falsearlo
-  // (es un nombre prohibido). Si falta, el cliente es viejo o no-navegador y se
-  // sirve como hasta hoy — el aislamiento no empeora respecto del estado previo,
-  // y en los iframes propios ya no va allow-same-origin.
-  test("sin el header → sin sandbox, no rompe clientes que no lo mandan", () => {
-    expect(embedSandboxHeaders(req())).toEqual({});
-    expect(embedSandboxHeaders(req(""))).toEqual({});
+  // También INVERTIDA: sin el header se servía sin sandbox «como hasta hoy».
+  // Sin saber dónde va a pintarse, no se le da el origen de la app.
+  test("sin el header → sandbox igual (no se sabe dónde va)", () => {
+    expect(embedSandboxHeaders(req())["content-security-policy"]).toBe(TAB_SANDBOX_CSP);
+    expect(embedSandboxHeaders(req(""))["content-security-policy"]).toBe(TAB_SANDBOX_CSP);
   });
 
   test("tolera mayúsculas y espacios", () => {

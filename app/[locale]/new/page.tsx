@@ -3684,9 +3684,11 @@ function NewV2Inner() {
                 // para verlo bien».
                 //
                 // `raw?bake=1` es el documento ACTUAL con el mismo horneado que
-                // la vista previa, y va protegido por sesión. Para ver lo
-                // publicado está el botón de la barra de publicación, que es
-                // donde esa intención vive.
+                // la vista previa, y va protegido por sesión. Desde el
+                // 2026-10-04 redirige al lienzo en `.app` (ver su ruta): la
+                // página corre allí con su origen, no con el de openlen.com.
+                // Para ver lo publicado está el botón de la barra de
+                // publicación, que es donde esa intención vive.
                 openInNewTabUrl={`/api/projects/${loadedProject.id}/raw?bake=1${
                   activeSitePage ? `&page=${activeSitePage}` : ""
                 }`}
