@@ -1539,7 +1539,8 @@ describe("session_search, session_event_search y session_event_read", () => {
     const session = makeSession();
     const out = await runAgentTool(session, conChat(deps, pedidos), "session_search", { query: "horario" });
     assert.equal(out.response.ok, true);
-    assert.match(String(out.response.tool_result ?? out.response.resultado), /Session c-vieja — Pon el horario de la tienda/);
+    // El título, el de respaldo de DeepSeek: 5 palabras (lote 7-8, 2).
+    assert.match(String(out.response.tool_result ?? out.response.resultado), /Session c-vieja — Pon el horario de la\n/);
     assert.deepEqual(pedidos, [session.projectId]);
   });
 

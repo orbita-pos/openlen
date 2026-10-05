@@ -2387,13 +2387,22 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // modelo, por lo mismo de arriba. La llamada y su error —el de DeepSeek—
     // quedan en la conversación, como con el ■ a mitad de tanda: el turno
     // siguiente los lee antes del mensaje del dueño.
-    if (ownerTookOver) {
+    //
+    // 🔴 SALVO QUE EL DUEÑO YA HAYA ESCRITO (lote 7-8, 2). Lo que manda desde el
+    // compositor mientras la pregunta espera es una corrección, y sólo se leía al
+    // empezar la vuelta siguiente — que con estos dos cierres no llegaba: se
+    // perdía. DeepSeek no acaba un turno mientras haya algo en `next-step`
+    // (`agent-loop/src/agent.ts`: `if (turnEnds && this.inbox.nextStep.length
+    // === 0) break`): con una pendiente, la tanda se apunta como siempre y Len
+    // la lee detrás, como la corrección tardía del cierre normal.
+    const pendiente = ownerTookOver || pregunta ? (args.leerDireccion?.() ?? null) : null;
+    if (ownerTookOver && !pendiente) {
       messages.push(delAsistente(turnText, calls));
       messages.push({ role: "user", content: "", functionResponses });
       return buildResult(false);
     }
 
-    if (pregunta) {
+    if (pregunta && !pendiente) {
       // El texto lo escribió el modelo, en el idioma del usuario — el servidor
       // decide CUÁNDO se para, no QUÉ se dice. Se emite salvo que ya lo haya
       // dicho en su prosa, para no leerlo dos veces.
@@ -2428,6 +2437,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       content: [medido, ...avisos].filter((x) => x.length > 0).join("\n\n"),
       functionResponses,
     });
+    // Lote 7-8 (2): lo que el dueño escribió mientras la pregunta esperaba, detrás
+    // de la tanda; como la corrección tardía, con su margen de vueltas.
+    if (pendiente) {
+      messages.push(steerMessage(pendiente));
+      args.emit({ type: "direccion", texto: pendiente });
+      maxTurns += VUELTAS_POR_DIRECCION;
+    }
     // H12 · quien insiste en lo que se le rechaza no avanza: se le cierra.
     if (vueltasSoloRechazadas >= VUELTAS_SOLO_RECHAZADAS) return await cerrarSinSalida("rechazos");
     // H12-a · y si guardar ya no puede salir bien, tampoco.

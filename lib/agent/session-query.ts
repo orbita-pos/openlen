@@ -14,6 +14,8 @@
  * Puro: las filas llegan de `lib/projects/chat.ts` por `AgentDeps`.
  */
 
+import { goalRoundOf } from "@/lib/agent/goal";
+
 export interface ChatRowForSearch {
   id: string;
   conversation: string | null;
@@ -29,7 +31,14 @@ export const CURRENT_SESSION = "current";
 export const DEFAULT_MAX_SEARCH_RESULTS = 100;
 /** El turno que está corriendo (`ESTADO_EN_CURSO` de lib/projects/chat.ts). */
 const RUNNING = "en_curso";
-const TITLE_MAX = 80;
+/** Lote 7-8 (2): los límites del título de respaldo del bundle base de DeepSeek
+ *  (`bundle/base/cordis.patch.yml`, `session-title`: `fallbackMaxWords: 5`,
+ *  `fallbackMaxBytes: 40`). El que escribe un modelo encima
+ *  (`session-title-first-prompt-llm`) cuesta una llamada por charla: no se usa. */
+const TITLE_MAX_WORDS = 5;
+const TITLE_MAX_BYTES = 40;
+/** Los controles que `normalize.ts` de DeepSeek quita de un título. */
+const TITLE_CONTROLS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F​‎‏‪-‮⁠-⁤⁦-⁯﻿]/gu;
 const SNIPPET_MAX = 160;
 
 export interface SessionEvent {
@@ -60,7 +69,10 @@ export function sessionsFromRows(rows: readonly ChatRowForSearch[]): Session[] {
   }
   return [...porCharla].map(([id, filas]) => ({
     id,
-    title: oneLine(filas[0]!.userText).slice(0, TITLE_MAX),
+    // Lote 7-8 (2), como el `session-title` de DeepSeek: del primer mensaje
+    // HUMANO (una ronda del encargo es `source.kind: 'goal'` allí y no cuenta);
+    // sin ninguno, vacío, y se enseña `untitled`.
+    title: filas.map((f) => (goalRoundOf(f.userText) ? "" : fallbackTitle(f.userText))).find(Boolean) ?? "",
     createdAt: filas[0]!.createdAt.getTime(),
     events: filas.flatMap((f, i) => {
       const time = f.createdAt.getTime();
@@ -228,7 +240,27 @@ function formatNeighbor(event: SessionEvent): string {
 }
 
 function titleText(session: Session): string {
-  return session.title || "(untitled)";
+  // El literal de DeepSeek (`tool-session-query/src/workspace-access.ts`).
+  return session.title || "untitled";
+}
+
+/**
+ * LOTE 7-8 (2) · el título de respaldo de DeepSeek (`session-title/src/
+ * normalize.ts`, `fallbackSessionTitle`): sin controles, en una línea, las
+ * primeras palabras y como mucho tantos bytes UTF-8, sin partir un carácter.
+ */
+export function fallbackTitle(text: string): string {
+  const palabras = oneLine(text.replace(TITLE_CONTROLS, "")).split(" ").filter(Boolean).slice(0, TITLE_MAX_WORDS);
+  const encoder = new TextEncoder();
+  let titulo = "";
+  let bytes = 0;
+  for (const caracter of palabras.join(" ")) {
+    const tamano = encoder.encode(caracter).length;
+    if (bytes + tamano > TITLE_MAX_BYTES) break;
+    titulo += caracter;
+    bytes += tamano;
+  }
+  return titulo.trimEnd();
 }
 
 function formatTime(value: number): string {
