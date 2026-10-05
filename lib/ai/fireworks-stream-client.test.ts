@@ -494,6 +494,12 @@ describe("el código del fallo, para que el bucle sepa reintentar", () => {
     expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", code: "transport" } });
   });
 
+  it("un 400 de contexto demasiado largo sale con code «context_window_exceeded»", async () => {
+    const { client: c } = client(JSON.stringify({ error: { message: "This model's maximum context length is 1048576 tokens" } }), { status: 400 });
+    const events = await drain(c.stream(REQUEST));
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", code: "context_window_exceeded" } });
+  });
+
   it("BRAZO DE CONTROL: un 400 sale SIN code", async () => {
     const { client: c } = client("bad request", { status: 400 });
     const events = await drain(c.stream(REQUEST));
