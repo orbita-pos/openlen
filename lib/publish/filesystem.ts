@@ -19,10 +19,10 @@ import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
-import { widgetApiBase } from "@/lib/publish/base-host";
+import { widgetApiBase } from "@/lib/publish/base-host";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeMediaPreconnect } from "@/lib/publish/video-embed";
-import { optOutOfEmailObfuscation } from "@/lib/publish/cloudflare-email";
+import { optOutOfEmailObfuscation } from "@/lib/publish/cloudflare-email";
 import {
   annotateLanguageCluster,
   buildRobots,
@@ -424,7 +424,7 @@ interface BakeDocumentCtx {
   /** Site assistant widget config. Absent/disabled = no widget injected. */
   assistant?: AssistantBake;
   /** Collections module. When enabled, the owner's item list is baked as STATIC
-   *  HTML (grid/list of cards) at the placeholder, or appended. */
+   *  HTML (grid/list of cards) at the placeholder, or appended. */
   /** WhatsApp button. When enabled with a usable number, a floating FAB is baked
    *  (suppressed if the profile contact widget is already present). */
   /** Pedidos por WhatsApp — cart over the collections buttons. */
@@ -877,7 +877,7 @@ export async function publishToDir(
     formConfigs: params.formConfigs,
     analyticsEnabled: params.analyticsEnabled ?? true,
     logoUrl: params.logoUrl,
-    assistant: params.assistant,
+    assistant: params.assistant,
     orders: params.orders,
     chat: params.chat,
   };
