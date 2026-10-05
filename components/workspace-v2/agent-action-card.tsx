@@ -6,6 +6,7 @@ import { AlertTriangle, Check, ChevronDown, ChevronRight, ExternalLink, Loader }
 import { SalidaEnLaTarjeta, type DondeEstaLaSalida } from "./salida-en-la-tarjeta";
 
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
+import { isQuestionTool, type UserQuestion } from "@/lib/agent/ask-user-question";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 
@@ -84,6 +85,12 @@ export interface AgentAction {
    *  pinta (la tarjeta destacada del chat nuevo, plans/new-chat/) y el
    *  historial del modelo no la copia. */
   pregunta?: string;
+  /** Pieza 3 de Len 2.5: las preguntas con sus opciones, para la tarjeta que
+   *  se contesta con un toque. */
+  preguntas?: UserQuestion[];
+  /** Lo que contestó el dueño DENTRO del turno, en una línea. Con ella, la
+   *  pregunta ya no es «te toca»: Len la tuvo y siguió. */
+  respuesta?: string;
   /** Cuántas ediciones aplicó esta llamada. */
   edits?: number;
   /**
@@ -159,7 +166,9 @@ export const KNOWN_TOOLS = new Set([
   "web_search",
   "web_fetch",
   "declarar_tareas",
+  // Se queda por lo guardado: pasó a llamarse ask_user_question (pieza 3).
   "preguntar",
+  "ask_user_question",
   // H2 (2026-09-25): cargar una herramienta diferida. Retirada en Len 2.1;
   // se queda por el historial.
   "ToolSearch",
@@ -196,6 +205,8 @@ export const KNOWN_TOOLS = new Set([
 //
 // Exported for unit testing (agent-action-card.test.ts).
 export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTranslations<"wsPage">>): string {
+  // Pieza 3: la pregunta que el dueño contestó dentro del turno dice qué contestó.
+  if (isQuestionTool(action.tool) && action.respuesta) return action.respuesta;
   if (action.tool === "trabajar_en_pagina" && action.summary === "") {
     return t("agent.action.home");
   }

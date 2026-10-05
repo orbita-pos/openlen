@@ -1,7 +1,7 @@
 // ask_user_question (pieza 3 de Len 2.5): el esquema de DeepSeek, validado antes
 // de enseñar nada al dueño.
 import { describe, expect, it } from "vitest";
-import { isQuestionTool, questionText, validateQuestions } from "./ask-user-question";
+import { isQuestionTool, questionsFrom, questionText, validateQuestions } from "./ask-user-question";
 
 describe("validateQuestions", () => {
   it("acepta la forma de DeepSeek y la normaliza", () => {
@@ -68,5 +68,14 @@ describe("questionText e isQuestionTool", () => {
     expect(isQuestionTool("ask_user_question")).toBe(true);
     expect(isQuestionTool("preguntar")).toBe(true);
     expect(isQuestionTool("Read")).toBe(false);
+  });
+});
+
+describe("questionsFrom (lo que llega al chat)", () => {
+  it("lee la forma normalizada que manda el servidor (multiSelect), y descarta lo que no vale", () => {
+    const qs = [{ id: "dias", question: "¿Qué días?", options: [{ label: "Lunes" }], multiSelect: true }];
+    expect(questionsFrom(qs)).toEqual(qs);
+    expect(questionsFrom("¿?")).toBeNull();
+    expect(questionsFrom([{ question: "sin id" }])).toBeNull();
   });
 });

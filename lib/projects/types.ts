@@ -345,6 +345,11 @@ export interface StoredChatTurn {
     /** La pregunta, literal, de una tarjeta de `preguntar` (plans/new-chat/).
      *  Sólo de pantalla: el historial del modelo no la copia. */
     pregunta?: string;
+    /** Pieza 3 de Len 2.5: las preguntas de `ask_user_question` con sus
+     *  opciones (forma de `lib/agent/ask-user-question.ts`). Sólo de pantalla. */
+    preguntas?: Array<{ id: string; question: string; header?: string; options?: Array<{ label: string; description?: string }>; multiSelect?: boolean }>;
+    /** Lo que contestó el dueño dentro del turno, en una línea. */
+    respuesta?: string;
     /** QUÉ cambió, resuelto en el servidor mientras los `data-op-id` valían.
      *  Va aquí y no en el turno porque `actions` es la ÚNICA parte del turno
      *  que se guarda como JSON — `appendChatMessage` escribe columnas

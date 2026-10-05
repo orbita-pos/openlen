@@ -211,7 +211,12 @@
     "question": {
       "label": "Len fragt dich",
       "hint": "Antworte unten, mit deinen Worten.",
-      "answered": "Deine Antwort: {answer}"
+      "answered": "Deine Antwort: {answer}",
+      "send": "Antworten",
+      "other": "Etwas anderes",
+      "otherPlaceholder": "Schreib deine Antwort",
+      "pickMany": "Du kannst mehrere wählen",
+      "recommended": "Empfohlen"
     },
     "changes": {
       "showAll": "Alle {count} Änderungen ansehen",

@@ -211,7 +211,12 @@
     "question": {
       "label": "Len의 질문",
       "hint": "아래에 편하게 답해 주세요.",
-      "answered": "답변: {answer}"
+      "answered": "답변: {answer}",
+      "send": "답하기",
+      "other": "다른 답",
+      "otherPlaceholder": "답을 입력하세요",
+      "pickMany": "여러 개를 고를 수 있어요",
+      "recommended": "추천"
     },
     "changes": {
       "showAll": "변경 {count}개 모두 보기",

@@ -87,6 +87,16 @@ export function validateQuestions(raw: unknown): { ok: true; questions: UserQues
   return { ok: true, questions };
 }
 
+/** Las preguntas tal como llegan al chat (la forma ya normalizada del servidor,
+ *  con `multiSelect`), validadas con las mismas reglas; `null` si no valen. */
+export function questionsFrom(raw: unknown): UserQuestion[] | null {
+  if (!Array.isArray(raw)) return null;
+  const v = validateQuestions(
+    raw.map((q) => (isObject(q) && q.multiSelect !== undefined ? { ...q, multi_select: q.multiSelect } : q)),
+  );
+  return v.ok ? v.questions : null;
+}
+
 /** La(s) pregunta(s) como texto plano: para la tarjeta de antes, la voz y el
  *  cierre del turno cuando nadie contesta. */
 export function questionText(questions: readonly UserQuestion[]): string {

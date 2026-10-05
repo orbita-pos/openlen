@@ -211,7 +211,12 @@
     "question": {
       "label": "Len 想问你",
       "hint": "在下方用你自己的话回答。",
-      "answered": "你的回答：{answer}"
+      "answered": "你的回答：{answer}",
+      "send": "回答",
+      "other": "其他回答",
+      "otherPlaceholder": "输入你的回答",
+      "pickMany": "可以选多个",
+      "recommended": "推荐"
     },
     "changes": {
       "showAll": "查看全部 {count} 处修改",

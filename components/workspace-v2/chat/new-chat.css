@@ -85,6 +85,67 @@
   animation: nc-card-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.15) both, nc-ask-glow 2.2s 1s ease-in-out infinite;
 }
 
+/* Las opciones de la pregunta (pieza 3 de Len 2.5): filas tranquilas dentro de
+   la tarjeta que brilla. La marca dice si es una respuesta (círculo) o varias
+   (cuadro); elegida, la fila toma el acento. */
+.nc .nc-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  text-align: left;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.nc .nc-opt:hover:not(:disabled) { border-color: var(--accent-ring); }
+.nc .nc-opt:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 1px; }
+.nc .nc-opt[aria-checked="true"] {
+  border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+  background: color-mix(in oklab, var(--accent) 9%, var(--bg-elev));
+}
+.nc .nc-opt:disabled { cursor: default; opacity: 0.7; }
+.nc .nc-opt-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in oklab, var(--fg) 35%, transparent);
+  color: #fff;
+}
+.nc .nc-opt-mark[data-multi="true"] { border-radius: 4px; }
+.nc .nc-opt[aria-checked="true"] .nc-opt-mark {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  box-shadow: inset 0 0 0 2.5px var(--bg-elev);
+}
+.nc .nc-opt[aria-checked="true"] .nc-opt-mark[data-multi="true"] { box-shadow: none; }
+.nc .nc-opt-rec {
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--nc-accent-text);
+  background: var(--accent-soft);
+}
+.nc .nc-opt-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 34px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--fg);
+  font-size: 13px;
+}
+.nc .nc-opt-input:focus { outline: none; border-color: var(--accent-ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 13%, transparent); }
+
 .nc .nc-step-ic {
   width: 24px;
   height: 24px;

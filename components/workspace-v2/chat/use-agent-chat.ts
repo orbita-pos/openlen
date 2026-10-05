@@ -28,6 +28,7 @@ import {
 import { noCreditsText, notifyCreditBalanceChanged } from "@/lib/credits-client";
 import type { AgentAction } from "../agent-action-card";
 import { upsertActionInto } from "./action-cards";
+import { isQuestionTool, questionsFrom, type UserQuestion } from "@/lib/agent/ask-user-question";
 import type { AgentConfirm } from "../agent-confirm-card";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { ejecutarUndo, ficherosDelEvento, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
@@ -103,6 +104,10 @@ export interface DesignTurn {
    *  (`compaction_start`). Se borra cuando acaba (`compaction`), con el primer
    *  texto o tarjeta, o si el turno pasa a seguirse desde el servidor. */
   compacting?: boolean;
+  /** Pieza 3 de Len 2.5: la pregunta de `ask_user_question` que espera respuesta
+   *  DENTRO del turno (evento `question`). Se borra cuando llega su tarjeta
+   *  (contestada o no). */
+  pendingQuestions?: UserQuestion[];
   errorText?: string;
   /** HTML before this turn ran. YA NO es lo que se manda al deshacer —el
    *  servidor lee la versión de su propia base— sino lo que alimenta el diff
@@ -1281,6 +1286,12 @@ export function useAgentChat({
                   ),
                 );
                 reintentando = true;
+              } else if (evName === "question") {
+                // PIEZA 3: Len pregunta y ESPERA (`ask_user_question`, 120 s). La
+                // tarjeta se contesta con un toque y la respuesta vuelve al
+                // turno vivo (`POST /api/agent/responder`).
+                const preguntas = questionsFrom((payload as { questions?: unknown } | null)?.questions);
+                if (preguntas) updateTurn(turnId, { pendingQuestions: preguntas });
               } else if (evName === "compaction_start") {
                 // LA COMPACTACIÓN (`lib/agent/compaction/`, como DeepSeek): Len
                 // resume lo más viejo para seguir; la barra lo dice mientras dura.
@@ -1381,8 +1392,14 @@ export function useAgentChat({
                 // tarjeta traduce. Pasa por la puerta que valida el código.
                 const ownerReason = ownerReasonFrom((payload as { ownerReason?: unknown } | null)?.ownerReason);
                 const valores = (payload as { valores?: unknown } | null)?.valores;
-                // La pregunta de `preguntar`, sólo de pantalla (plans/new-chat/).
+                // La pregunta de `ask_user_question` (antes `preguntar`), sólo de
+                // pantalla (plans/new-chat/); con sus opciones y, si se contestó
+                // dentro del turno, la respuesta (pieza 3).
                 const pregunta = (payload as { pregunta?: unknown } | null)?.pregunta;
+                const preguntas = questionsFrom((payload as { preguntas?: unknown } | null)?.preguntas);
+                const respuesta = (payload as { respuesta?: unknown } | null)?.respuesta;
+                // Su tarjeta llegó: ya no espera.
+                if (isQuestionTool(tool) && status !== "running") updateTurn(turnId, { pendingQuestions: undefined });
                 if (tool) {
                   const action: AgentAction = {
                     tool,
@@ -1407,6 +1424,10 @@ export function useAgentChat({
                     ...(ownerReason ? { ownerReason } : {}),
                     ...(typeof pregunta === "string" && pregunta.trim()
                       ? { pregunta: pregunta.slice(0, 600) }
+                      : {}),
+                    ...(preguntas ? { preguntas } : {}),
+                    ...(typeof respuesta === "string" && respuesta.trim()
+                      ? { respuesta: respuesta.slice(0, 200) }
                       : {}),
                     ...(typeof valores === "string" && valores.trim()
                       ? { valores: valores.slice(0, 200) }

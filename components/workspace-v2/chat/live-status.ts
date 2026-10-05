@@ -8,6 +8,7 @@
 // Es la forma de la barra de estado de Claude Code: dice qué hace, no cómo.
 
 import type { DesignTurn } from "./use-agent-chat";
+import { isQuestionTool, type UserQuestion } from "@/lib/agent/ask-user-question";
 
 /** Qué clase de trabajo hace la herramienta, en palabras de quien no programa. */
 export type Activity =
@@ -80,6 +81,8 @@ const ACTIVITY_OF: Readonly<Record<string, Activity>> = {
   conectar_datos_vivos: "module",
   revertir_ultimo_cambio: "undoing",
   preguntar: "asking",
+  // Pieza 3 de Len 2.5: el nombre de hoy (`preguntar` se queda por lo guardado).
+  ask_user_question: "asking",
 };
 
 export function activityOf(tool: string): Activity {
@@ -156,12 +159,26 @@ export function retryPhase(
   return now < status.until ? { waiting: true, seconds: Math.max(1, Math.ceil((status.until - now) / 1000)) } : { waiting: false };
 }
 
-/** La pregunta con la que acabó el turno, si acabó preguntando. */
-export function questionOf(turn: Pick<DesignTurn, "actions" | "status">): string | null {
+/** La tarjeta con la que acabó el turno si acabó PREGUNTANDO: la última, de
+ *  la herramienta de preguntar (con su nombre de hoy o el de antes), que no
+ *  falló y que nadie contestó dentro del turno (pieza 3: con `respuesta`, Len
+ *  ya la tuvo y siguió). */
+function lastQuestion(turn: Pick<DesignTurn, "actions" | "status">) {
   if (turn.status !== "applied") return null;
   const last = turn.actions?.[turn.actions.length - 1];
-  if (!last || last.tool !== "preguntar" || last.status === "error") return null;
-  return last.pregunta?.trim() || "";
+  if (!last || !isQuestionTool(last.tool) || last.status === "error" || last.respuesta) return null;
+  return last;
+}
+
+/** La pregunta con la que acabó el turno, si acabó preguntando. */
+export function questionOf(turn: Pick<DesignTurn, "actions" | "status">): string | null {
+  const last = lastQuestion(turn);
+  return last ? last.pregunta?.trim() || "" : null;
+}
+
+/** Y sus opciones, para que la tarjeta se conteste con un toque (pieza 3). */
+export function questionsOf(turn: Pick<DesignTurn, "actions" | "status">): UserQuestion[] | null {
+  return lastQuestion(turn)?.preguntas ?? null;
 }
 
 export function liveStatus(

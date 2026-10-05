@@ -211,7 +211,12 @@
     "question": {
       "label": "Len vraagt je",
       "hint": "Antwoord hieronder, in je eigen woorden.",
-      "answered": "Je antwoordde: {answer}"
+      "answered": "Je antwoordde: {answer}",
+      "send": "Antwoorden",
+      "other": "Iets anders",
+      "otherPlaceholder": "Schrijf je antwoord",
+      "pickMany": "Je kunt er meer kiezen",
+      "recommended": "Aanbevolen"
     },
     "changes": {
       "showAll": "Alle {count} wijzigingen bekijken",
