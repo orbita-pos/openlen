@@ -30,6 +30,8 @@ const MAX_CUSTOM_METADATA_SIZE = 1024 * 1024;
 /** Lo que ocupan las partes de un multipart además del fichero: los campos
  *  (`cacheControl`, `metadata` hasta 1 MB) y los separadores. */
 const MULTIPART_SLACK = MAX_CUSTOM_METADATA_SIZE + 64 * 1024;
+/** Lo que cabe en el valor de una cabecera: ASCII visible y espacio. */
+const HEADER_SAFE = /^[\x20-\x7e]{1,255}$/;
 
 interface FileUpload {
   readonly body: ReadableStream<Uint8Array>;
@@ -105,8 +107,13 @@ async function fileUploadFromRequest(
       return typeof v === "string" ? v : undefined;
     };
     const mimeType = field("contentType") || file.type || "application/octet-stream";
+    // Los campos del multipart los escribe el cliente y van a las cabeceras de
+    // la bajada: un carácter que no cabe en una cabecera dejaría el fichero
+    // dando 500 (Supabase lo para al servir, con su InvalidHeaderChar).
+    if (!HEADER_SAFE.test(mimeType)) throw ERRORS.InvalidMimeType(mimeType);
     checkMime(mimeType);
     const cacheTime = field("cacheControl");
+    if (cacheTime && !/^\d{1,10}$/.test(cacheTime)) throw ERRORS.InvalidParameter("cacheControl");
     const customMd = field("metadata") ?? field("userMetadata");
     let userMetadata: Record<string, unknown> | undefined;
     if (customMd !== undefined) {

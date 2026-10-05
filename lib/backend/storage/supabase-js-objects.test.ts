@@ -164,6 +164,35 @@ describe("supabase.storage — límites (Review Focus 2)", () => {
   });
 });
 
+describe("lo que escribe el cliente en el multipart no rompe la bajada", () => {
+  const subirForm = async (campos: Record<string, string>) => {
+    const jwt = await signJwt(t.project.jwtSecret, { sub: U1, role: "authenticated", aud: "authenticated" }, 3600);
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(campos)) fd.append(k, v);
+    fd.append("", new Blob(["x"], { type: "text/plain" }));
+    return handleBackendRequest(
+      new Request(`${TEST_URL}/storage/v1/object/privado/u1/${Object.keys(campos)[0]}.txt`, {
+        method: "POST",
+        headers: { apikey: t.project.publishableKey, authorization: `Bearer ${jwt}` },
+        body: fd,
+      }),
+      project,
+    );
+  };
+
+  it("un contentType con un salto de línea: 415, no un fichero que luego da 500", async () => {
+    const r = await subirForm({ contentType: "text/plain\r\nX-Evil: 1" });
+    expect(r.status).toBe(400);
+    expect(await r.json()).toMatchObject({ statusCode: "415", code: "InvalidMimeType" });
+  });
+
+  it("un cacheControl que no son segundos: 400", async () => {
+    const r = await subirForm({ cacheControl: "3600\r\nSet-Cookie: a=b" });
+    expect(r.status).toBe(400);
+    expect(await r.json()).toMatchObject({ statusCode: "400", code: "InvalidParameter" });
+  });
+});
+
 describe("supabase.storage — bajar", () => {
   it("download de lo suyo en un bucket privado: los mismos bytes", async () => {
     const u1 = await comoUsuario(U1);
