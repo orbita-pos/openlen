@@ -150,7 +150,7 @@ export async function uploadFromRequest(
   ctx: StorageContext,
   bucketId: string,
   objectName: string,
-  o: { isUpsert: boolean; owner?: string | undefined },
+  o: { isUpsert: boolean; owner?: string | undefined; /** La subida con URL firmada: RLS ya se miró al firmar (su `asSuperUser`). */ skipPermission?: boolean },
 ): Promise<UploadResult> {
   mustBeValidKey(objectName);
   const bucket = await asStorageAdmin(ctx, (q) => findBucket(q, bucketId));
@@ -166,7 +166,9 @@ export async function uploadFromRequest(
 
   // canUpload: RLS decide antes de tocar el almacén.
   const probe = { bucket_id: bucketId, name: objectName, version: "1", owner, metadata: { mimetype: file.mimeType, contentLength: file.declaredLength }, user_metadata: file.userMetadata };
-  await testPermission(ctx, (q) => (o.isUpsert ? upsertObject(q, probe).then(() => undefined) : insertObject(q, probe)));
+  if (!o.skipPermission) {
+    await testPermission(ctx, (q) => (o.isUpsert ? upsertObject(q, probe).then(() => undefined) : insertObject(q, probe)));
+  }
 
   const version = randomUUID();
   const key = blobKey(ctx.project.ref, bucketId, objectName, version);

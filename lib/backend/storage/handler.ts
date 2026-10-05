@@ -19,6 +19,7 @@ import type { BlobStore } from "./blob-store";
 import { BUCKET_ROUTES } from "./buckets";
 import { ERRORS, StorageError, storageErrorResponse } from "./errors";
 import { OBJECT_ROUTES } from "./objects";
+import { SIGNED_ROUTES } from "./signed";
 import { storageLimits, type StorageLimits } from "./limits";
 
 export interface StorageContext {
@@ -46,7 +47,7 @@ export interface StorageRoute {
 }
 
 /** Las rutas de su servidor que cubrimos (buckets.ts, objects.ts, signed.ts). */
-const routes: readonly StorageRoute[] = [...BUCKET_ROUTES, ...OBJECT_ROUTES];
+const routes: readonly StorageRoute[] = [...BUCKET_ROUTES, ...SIGNED_ROUTES, ...OBJECT_ROUTES];
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
