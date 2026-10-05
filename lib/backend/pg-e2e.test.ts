@@ -179,9 +179,10 @@ describe.skipIf(!E2E_URL)("el backend de las páginas contra un Postgres de verd
     await dropProjectDatabase(otro);
   }, 60_000);
 
-  /* ── carril D: storage (lib/backend/storage) ── Lo que PGlite no ve: el
-   * admin del clúster NO es superusuario, y el desarrollador entra con SU rol
-   * (session_user), así que `set role` se comprueba de verdad. */
+  /* ── carril D: storage (lib/backend/storage) ── Los roles sin superusuario
+   * ya los prueba PGlite (storage/production-roles.pglite.test.ts, con `set
+   * session authorization`); aquí, además, lo que PGlite no da: el driver
+   * `pg`, el desarrollador conectándose con SU LOGIN y CONNECT por base. */
   it("🔴 Storage: el esquema se monta con este admin, el desarrollador crea su bucket y su política, y no puede hacerse supabase_storage_admin", async () => {
     const { ensureStorageProvisioned, forgetStorageProvisioned } = await import("./storage/provision");
     forgetStorageProvisioned();
