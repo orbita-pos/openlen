@@ -829,6 +829,11 @@ async function correrTurno(
   const planPlegado = planModeFromRows(filasDelHistorial);
   const planDelTurno = resolveTurnPlanMode({ folded: planPlegado, selected: planElegido });
   let planActivo = planDelTurno.active;
+  /** ALINEAR CON DEEPSEEK · ¿cambió este turno el estado de la charla (modo plan o
+   *  encargo)? Allí es un evento duradero en el momento, haya o no más en el
+   *  turno; aquí decide que la fila se guarde aunque no haya texto ni tarjetas, y
+   *  que cuente como duradero para marcarla cortada (`corteDelTurno`, H05). */
+  const estadoCambiado = () => planActivo !== planPlegado || goalActual !== goalPlegado;
   if (planDelTurno.notice) messages.splice(messages.length - 1, 0, { role: "user", content: planDelTurno.notice });
 
   // LA DIRECCION A LA QUE SE LE PUEDE CORREGIR EL RUMBO. El SSE es de una sola
@@ -1009,7 +1014,9 @@ async function correrTurno(
         if (filaCerrada) return;
         filaCerrada = true;
         await avance.parar();
-        if (registro.hayAlgo(mutoDurable)) {
+        // Alinear con DeepSeek: también si el turno EMPEZÓ (la fila se abrió, pasada
+        // la puerta de créditos) y cambió el estado, aunque no haya hecho nada más.
+        if (registro.hayAlgo(mutoDurable) || (filaAbierta && estadoCambiado())) {
           try {
             await registrarTurnoDelServidor(projectId, {
               ...registro.fila({
@@ -1634,7 +1641,7 @@ async function correrTurno(
         });
         mutoDurable = mutoDurable || result.mutoDurable;
         transcripcionDelTurno = result.transcripcion ?? null;
-        corte = corteDelTurno({ ...result, mutoDurable });
+        corte = corteDelTurno({ ...result, mutoDurable: mutoDurable || estadoCambiado() });
 
         // LA SUITE DE LA PÁGINA, guardada. Dos cosas a la vez y en este orden:
         // se retiran las promesas que el navegador declaró sin sentido —su
@@ -1965,7 +1972,7 @@ async function correrTurno(
           disarmGoal(projectId);
         }
         const code: AgentErrorCode = "upstream";
-        corte = corteDelTurno({ terminalError: true, topeAlcanzado: null, errorCode: code, mutoDurable });
+        corte = corteDelTurno({ terminalError: true, topeAlcanzado: null, errorCode: code, mutoDurable: mutoDurable || estadoCambiado() });
         // La fila, cerrada antes de avisar, como en el final bueno.
         await cerrarFila();
         emit("error", { message: err instanceof Error ? err.message : "Unknown error", code });
