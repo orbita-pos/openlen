@@ -21,7 +21,8 @@ import { abrirEnElCodigo, abrirFicheroDelTurno, rutasDelTurno } from "@/lib/work
 import type { FeedbackReason, TurnFeedback } from "@/lib/chat/feedback-reasons";
 import { ChangesCard } from "./changes-card";
 import { wroteOnlyItsOwnPage } from "./turn-changes";
-import { questionOf } from "./live-status";
+import { questionOf, questionsOf } from "./live-status";
+import { questionText, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { QuestionCard, withoutTrailingQuestion } from "./question-card";
 import { StepsCard, visibleSteps } from "./steps-card";
 import { LenFace } from "./len-face";
@@ -91,6 +92,7 @@ export function LenTurn({
   onRetry,
   onPublished,
   onConfirmSettled,
+  onAnswerQuestion,
   onRate,
   onClearRate,
 }: {
@@ -107,6 +109,8 @@ export function LenTurn({
   onRetry: (turn: DesignTurn) => void;
   onPublished: (url: string) => void;
   onConfirmSettled: (turnId: string) => void;
+  /** Pieza 3: la respuesta a una pregunta de Len, desde su tarjeta. */
+  onAnswerQuestion: (turnId: string, questions: readonly UserQuestion[], answers: QuestionAnswer[]) => void;
   /** Devuelve si el servidor guardó el voto: «Gracias» sólo entonces. */
   onRate: (rating: "up" | "down", reasons?: readonly FeedbackReason[], note?: string | null) => Promise<boolean>;
   onClearRate: () => Promise<boolean>;
@@ -132,6 +136,11 @@ export function LenTurn({
     [projectId, turn.id],
   );
   const question = questionOf(turn);
+  // PIEZA 3: la pregunta que el turno ESPERA ahora mismo (se contesta y Len
+  // sigue), o la que dejó al cerrar (se contesta y abre el turno siguiente;
+  // sólo en el último turno, y sólo si nadie la contestó ya).
+  const liveQuestions = turn.status === "streaming" && turn.pendingQuestions?.length ? turn.pendingQuestions : null;
+  const endedQuestions: readonly UserQuestion[] | null = question === null ? null : (questionsOf(turn) ?? (question ? [{ id: "q1", question }] : null));
   const text = withoutTrailingQuestion(turn.assistantReasoning, question);
   const streaming = turn.status === "streaming";
   const samePage = mismaPagina(turn.page, currentPage);
@@ -160,7 +169,22 @@ export function LenTurn({
           {streaming && <span className="nc-caret" />}
         </p>
       )}
-      {question !== null && <QuestionCard question={question} answer={next ? next.userText : null} />}
+      {liveQuestions && (
+        <QuestionCard
+          question={questionText(liveQuestions)}
+          questions={liveQuestions}
+          answer={turn.answeredLive ?? null}
+          onAnswer={(answers) => onAnswerQuestion(turn.id, liveQuestions, answers)}
+        />
+      )}
+      {question !== null && (
+        <QuestionCard
+          question={question}
+          questions={endedQuestions}
+          answer={next ? next.userText : null}
+          onAnswer={!next && isLast && endedQuestions ? (answers) => onAnswerQuestion(turn.id, endedQuestions, answers) : undefined}
+        />
+      )}
       {/* «Ver» y «Comparar» necesitan que el turno escribiera la página que se
           mira, no sólo que empezara en ella (N33). La pastilla de arriba sí va
           por dónde empezó. */}
