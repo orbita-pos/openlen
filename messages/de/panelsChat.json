@@ -204,7 +204,9 @@
       "failed": "Konnte nicht fertig werden",
       "retrying": "Neuer Versuch",
       "retryingHint": "keine Antwort · in {seconds} s · Versuch {attempt} von {max}",
-      "retryingAttempt": "Versuch {attempt} von {max}"
+      "retryingAttempt": "Versuch {attempt} von {max}",
+      "compacting": "Fasst zusammen",
+      "compactingHint": "um weiterzumachen, ohne den Faden zu verlieren"
     },
     "question": {
       "label": "Len fragt dich",

@@ -204,7 +204,9 @@
       "failed": "Non è riuscito a finire",
       "retrying": "Nuovo tentativo",
       "retryingHint": "nessuna risposta · tra {seconds} s · tentativo {attempt} di {max}",
-      "retryingAttempt": "tentativo {attempt} di {max}"
+      "retryingAttempt": "tentativo {attempt} di {max}",
+      "compacting": "Riordina quello che ha fatto",
+      "compactingHint": "per continuare senza perdere il filo"
     },
     "question": {
       "label": "Len ti chiede",

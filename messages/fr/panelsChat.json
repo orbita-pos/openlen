@@ -204,7 +204,9 @@
       "failed": "N'a pas pu terminer",
       "retrying": "Nouvel essai",
       "retryingHint": "pas de réponse · dans {seconds} s · essai {attempt} sur {max}",
-      "retryingAttempt": "essai {attempt} sur {max}"
+      "retryingAttempt": "essai {attempt} sur {max}",
+      "compacting": "Fait le point",
+      "compactingHint": "pour continuer sans perdre le fil"
     },
     "question": {
       "label": "Len vous demande",

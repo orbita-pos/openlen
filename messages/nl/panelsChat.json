@@ -204,7 +204,9 @@
       "failed": "Kon het niet afmaken",
       "retrying": "Opnieuw proberen",
       "retryingHint": "geen antwoord · over {seconds} s · poging {attempt} van {max}",
-      "retryingAttempt": "poging {attempt} van {max}"
+      "retryingAttempt": "poging {attempt} van {max}",
+      "compacting": "Zet op een rij wat er is",
+      "compactingHint": "om verder te gaan zonder de draad kwijt te raken"
     },
     "question": {
       "label": "Len vraagt je",

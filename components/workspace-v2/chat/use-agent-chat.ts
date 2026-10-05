@@ -98,6 +98,10 @@ export interface DesignTurn {
    *  acaba la espera en el reloj del navegador. Se borra en cuanto llega texto
    *  o una tarjeta, o el turno pasa a seguirse desde el servidor. */
   retrying?: { attempt: number; maxAttempts: number; until: number };
+  /** Len está resumiendo lo más viejo de la conversación para seguir
+   *  (`compaction_start`). Se borra cuando acaba (`compaction`), con el primer
+   *  texto o tarjeta, o si el turno pasa a seguirse desde el servidor. */
+  compacting?: boolean;
   errorText?: string;
   /** HTML before this turn ran. YA NO es lo que se manda al deshacer —el
    *  servidor lee la versión de su propia base— sino lo que alimenta el diff
@@ -601,7 +605,7 @@ export function useAgentChat({
     setTurns((prev) =>
       // Sin `retrying`: si el stream se cayó entre un reintento y su texto, la
       // barra tiene que decir que sigue en el servidor, no «Reintentando».
-      prev.map((t) => (t.id === id ? { ...t, status: "streaming", enServidor: true, retrying: undefined } : t)),
+      prev.map((t) => (t.id === id ? { ...t, status: "streaming", enServidor: true, retrying: undefined, compacting: undefined } : t)),
     );
     setReenganche(id);
   }, []);
@@ -1112,6 +1116,8 @@ export function useAgentChat({
         let accumulatedReasoning = "";
         /** Hay un `retry` en curso: el siguiente texto o tarjeta lo borra de la barra. */
         let reintentando = false;
+        /** Len está ordenando lo que lleva (`compaction_start`): igual. */
+        let compactando = false;
         // LO QUE ESCRIBISTE A MEDIA FAENA, para que sobreviva a un F5.
         //
         // El `↳` se pintaba sólo en el estado de React y `persistTurn` guardaba
@@ -1294,10 +1300,40 @@ export function useAgentChat({
                   ),
                 );
                 reintentando = true;
+              } else if (evName === "compaction_start") {
+                // LA COMPACTACIÓN (`lib/agent/compaction/`, como DeepSeek): Len
+                // resume lo más viejo para seguir; la barra lo dice mientras dura.
+                compactando = true;
+                updateTurn(turnId, { compacting: true });
+              } else if (evName === "compaction") {
+                // Acabó. Si fue para recuperarse de un desborde a media vuelta,
+                // lo que el intento llegó a escribir no existió, como en `retry`.
+                const p = payload as { discardChars?: unknown };
+                const discard = typeof p.discardChars === "number" && p.discardChars > 0 ? p.discardChars : 0;
+                if (discard > 0) {
+                  accumulatedReasoning = accumulatedReasoning.slice(0, Math.max(0, accumulatedReasoning.length - discard));
+                }
+                compactando = false;
+                setTurns((prev) =>
+                  prev.map((t) =>
+                    t.id === turnId
+                      ? {
+                          ...t,
+                          assistantReasoning:
+                            discard > 0 ? t.assistantReasoning.slice(0, Math.max(0, t.assistantReasoning.length - discard)) : t.assistantReasoning,
+                          compacting: undefined,
+                        }
+                      : t,
+                  ),
+                );
               } else if (evName === "text") {
                 if (reintentando) {
                   reintentando = false;
                   updateTurn(turnId, { retrying: undefined });
+                }
+                if (compactando) {
+                  compactando = false;
+                  updateTurn(turnId, { compacting: undefined });
                 }
                 const text = strField(payload, "text");
                 if (text) {
@@ -1308,6 +1344,10 @@ export function useAgentChat({
                 if (reintentando) {
                   reintentando = false;
                   updateTurn(turnId, { retrying: undefined });
+                }
+                if (compactando) {
+                  compactando = false;
+                  updateTurn(turnId, { compacting: undefined });
                 }
                 const p = payload as {
                   tool?: unknown;

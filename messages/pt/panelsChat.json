@@ -204,7 +204,9 @@
       "failed": "Não conseguiu terminar",
       "retrying": "Tentando de novo",
       "retryingHint": "sem resposta · em {seconds} s · tentativa {attempt} de {max}",
-      "retryingAttempt": "tentativa {attempt} de {max}"
+      "retryingAttempt": "tentativa {attempt} de {max}",
+      "compacting": "Organizando o que já fez",
+      "compactingHint": "para continuar sem perder o fio"
     },
     "question": {
       "label": "O Len pergunta",

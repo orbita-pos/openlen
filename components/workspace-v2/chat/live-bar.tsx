@@ -109,6 +109,10 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
       }
       break;
     }
+    case "compacting":
+      verb = t("newChat.live.compacting");
+      meta = t("newChat.live.compactingHint");
+      break;
   }
 
   const between = status.kind === "working" && !status.activity && spoken !== "";
