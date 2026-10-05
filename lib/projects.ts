@@ -22,6 +22,8 @@ import { purgeSubdomain } from "@/lib/publish/cache-purge";
 import { dropPageDatabase, pageDatabaseRef } from "@/lib/backend/teardown";
 import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
+import { listProjectFiles } from "@/lib/backend/files";
+import { folderFingerprint } from "@/lib/projects/files-hash";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import { getChatMessages } from "@/lib/projects/chat";
 import { titleFromHtml } from "@/lib/projects/titulo-del-html";
@@ -134,10 +136,18 @@ export function computeUnpublishedChanges(row: {
   publishedHtml: string | null;
   publishedHomeHash: string | null;
   publishedPagesHash: string | null;
+  /** LA CARPETA (pieza 9 de Len 2.5): la huella de sus ficheros publicables
+   *  ahora y en la última publicación (`folderFingerprint`). Ausentes = nulas. */
+  filesHash?: string | null;
+  publishedFilesHash?: string | null;
   data: ProjectData | null;
   currentHtml: string;
 }): boolean {
   if (row.subdomain === null) return false;
+  // LA CARPETA: un `js/app.js` cambiado es un cambio sin publicar aunque
+  // ninguna página se mueva. Sin carpeta, las dos son nulas y nada cambia.
+  // Va antes que la fecha: con huellas distintas hay deriva demostrada.
+  if ((row.filesHash ?? null) !== (row.publishedFilesHash ?? null) && row.publishedAt !== null) return true;
   // 🔴 SIN HUELLA, LO QUE MANDA ES LA FECHA. `publishedHtml` nulo significa una
   // de dos cosas, y no dan la misma respuesta:
   //
@@ -177,6 +187,8 @@ export async function leerCambiosSinPublicar(projectId: string, userId: string):
       publishedHtml: schema.projects.publishedHtml,
       publishedHomeHash: schema.projects.publishedHomeHash,
       publishedPagesHash: schema.projects.publishedPagesHash,
+      filesHash: schema.projects.filesHash,
+      publishedFilesHash: schema.projects.publishedFilesHash,
       data: schema.projects.data,
     })
     .from(schema.projects)
@@ -321,6 +333,8 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       publishedHtml: schema.projects.publishedHtml,
       publishedHomeHash: schema.projects.publishedHomeHash,
       publishedPagesHash: schema.projects.publishedPagesHash,
+      filesHash: schema.projects.filesHash,
+      publishedFilesHash: schema.projects.publishedFilesHash,
       data: schema.projects.data,
       createdAt: schema.projects.createdAt,
       updatedAt: schema.projects.updatedAt,
@@ -788,6 +802,11 @@ export async function publishProject(
   // y se horneaban los de «lectura» en el HTML. Se retiraron el 2026-10-04: los
   // datos de una página van a su backend de Supabase.
 
+  // LA CARPETA (pieza 9 de Len 2.5): se publica lo que hay AHORA, y su huella
+  // queda como la publicada para que «cambios sin publicar» se apague. Leída
+  // una vez: lo que se escribe al disco y lo que se apunta son lo mismo.
+  const projectFiles = await listProjectFiles(params.projectId);
+
   const previousSubdomain = project.subdomain;
   const previousPublished = await db
     .select({
@@ -795,6 +814,7 @@ export async function publishProject(
       publishedHtml: schema.projects.publishedHtml,
       publishedHomeHash: schema.projects.publishedHomeHash,
       publishedPagesHash: schema.projects.publishedPagesHash,
+      publishedFilesHash: schema.projects.publishedFilesHash,
       publishedReleaseSha: schema.projects.publishedReleaseSha,
       status: schema.projects.status,
     })
@@ -812,6 +832,7 @@ export async function publishProject(
         publishedHtml: html,
         publishedHomeHash: hashHomeDoc(project.data?.html ?? "", ajustesPublicados),
         publishedPagesHash: hashSitePages(project.data),
+        publishedFilesHash: folderFingerprint(projectFiles),
         status: "published",
         deployUrl: `${v.value}.${publishBaseHost()}`,
         updatedAt: now,
@@ -900,6 +921,7 @@ export async function publishProject(
           }
         : undefined,
       pages: publicPages,
+      files: Object.entries(projectFiles).map(([path, content]) => ({ path, content })),
       sourceLang,
       // `targets` ya viene filtrado (códigos válidos, sin el idioma de origen),
       // así que es exactamente «lo que debería salir». Comparar contra ESTO es
@@ -952,6 +974,7 @@ export async function publishProject(
           // sirviendo la anterior. El fallo seguro es sobre-reportar.
           publishedHomeHash: prev?.publishedHomeHash ?? null,
           publishedPagesHash: prev?.publishedPagesHash ?? null,
+          publishedFilesHash: prev?.publishedFilesHash ?? null,
           publishedReleaseSha: prev?.publishedReleaseSha ?? null,
           status: prev?.status ?? "draft",
           deployUrl: previousSubdomain
@@ -1131,6 +1154,7 @@ export async function unpublishProject(params: UnpublishParams): Promise<void> {
       publishedAt: null,
       publishedHtml: null,
       publishedPagesHash: null,
+      publishedFilesHash: null,
       publishedReleaseSha: null,
       // Flip published → draft. Archived stays archived (deliberate
       // un-publish of an archived project is rare but should preserve
@@ -1228,6 +1252,9 @@ export async function rollbackProject(
       // publish records fresh ones.
       publishedHomeHash: null,
       publishedPagesHash: null,
+      // La carpeta de una release vieja no se conoce: nula, y si hoy hay
+      // carpeta la píldora se enciende (sobre-reportar es el fallo seguro).
+      publishedFilesHash: null,
       publishedReleaseSha: params.sha,
       updatedAt: now,
     })
