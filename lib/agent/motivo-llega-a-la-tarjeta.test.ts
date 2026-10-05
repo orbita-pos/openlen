@@ -126,7 +126,9 @@ describe("el motivo del ámbar cruza los mismos eslabones", () => {
   it("el bucle traduce el aviso a ÁMBAR, no a verde ni a rojo", () => {
     const loop = lee("lib", "agent", "loop.ts");
     expect(loop).toContain("avisoParaElDueno");
-    expect(loop).toMatch(/status: ok \? \(descartada \? "warning" : "done"\) : "error"/);
+    // Lote 7-8: una pregunta DESCARTADA para hablar tampoco es roja (DeepSeek
+    // pinta su `ASK_CANCELLED` como `ok`), aunque el modelo lea un error.
+    expect(loop).toMatch(/status: ok \|\| outcome\.dismissed \? \(descartada \? "warning" : "done"\) : "error"/);
   });
 
   // ─────────────────────────────────────────────────────────────────────────

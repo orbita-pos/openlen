@@ -2381,11 +2381,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // edición y una pregunta en la misma vuelta, la edición se aplica y se
     // emite igual. Cortar en seco perdería trabajo que el usuario ya tiene
     // delante en el lienzo.
-    // LOTE 7-8 · EL DUEÑO DESCARTÓ LA PREGUNTA PARA HABLAR: el turno cierra aquí,
-    // como Claude Code cuando el usuario rechaza, sin otra llamada al modelo (lo
-    // de arriba: pedirle que se pare no basta). La llamada y su error —el de
-    // DeepSeek— quedan en la conversación, como con el ■ a mitad de tanda: el
-    // turno siguiente los lee antes del mensaje del dueño.
+    //
+    // LOTE 7-8 · Y SI EL DUEÑO DESCARTÓ LA PREGUNTA PARA HABLAR, también cierra
+    // aquí, como Claude Code cuando el usuario rechaza: sin otra llamada al
+    // modelo, por lo mismo de arriba. La llamada y su error —el de DeepSeek—
+    // quedan en la conversación, como con el ■ a mitad de tanda: el turno
+    // siguiente los lee antes del mensaje del dueño.
     if (ownerTookOver) {
       messages.push(delAsistente(turnText, calls));
       messages.push({ role: "user", content: "", functionResponses });

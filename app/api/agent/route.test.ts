@@ -2597,6 +2597,19 @@ describe("POST /api/agent — el encargo", () => {
     expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
   });
 
+  it("LOTE 7-8 · una ronda cuya revisión del plan se DESCARTÓ no encadena: el dueño tiene la palabra", async () => {
+    mocks.getCreditState.mockResolvedValue(saldo(50));
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      // La tarjeta del descarte: `done`, con sus preguntas, sin `pregunta` ni `respuesta`.
+      args.emit({ type: "action", tool: "exit_plan_mode", status: "done", summary: "", preguntas: [{ id: "plan-review", question: "Approve this plan and leave plan mode?" }] } as never);
+      return cierre;
+    });
+    const eventos = await turno({ goal: "create" });
+    expect(done(eventos).round).toBeUndefined();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
   it("al tope de rondas, atascado con `round-limit` y su mensaje literal", async () => {
     mocks.getCreditState.mockResolvedValue(saldo(50));
     historialInicial = [filaCon(encargo({ phase: "paused", roundsStarted: 2, maxGoalRounds: 3, revision: 4 }))];
