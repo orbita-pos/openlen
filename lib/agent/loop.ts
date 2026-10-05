@@ -1429,19 +1429,21 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       const delayMs = retryDelayMs(intento);
       args.emit({ type: "retry", attempt: intento, maxAttempts: MAX_PROVIDER_RETRIES, delayMs, discardChars: emitidoEnElIntento });
       await (args.sleep ?? sleepAbortable)(delayMs, args.signal);
-      if (args.signal?.aborted) {
-        args.emit({ type: "error", message: "El agente fue cancelado.", code: "cancelled" });
-        errorCode = "cancelled";
-        sawError = true;
-        break;
-      }
-      // El intento fallido no existió: se vacía lo que dejó.
+      // El intento fallido no existió: se vacía lo que dejó ANTES de mirar el ■.
+      // Si no, en una vuelta retenida lo retenido del intento descartado salía
+      // al dueño detrás del «cancelado» (lo cazó la revisión de la pieza).
       turnText = "";
       turnReasoning = "";
       calls.length = 0;
       truncado = false;
       retenido = "";
       algunaVueltaYaDijoAlgo = yaHablabaAntesDelIntento;
+      if (args.signal?.aborted) {
+        args.emit({ type: "error", message: "El agente fue cancelado.", code: "cancelled" });
+        errorCode = "cancelled";
+        sawError = true;
+        break;
+      }
     }
 
     // Lo retenido, ahora que se sabe qué trae la vuelta: el testigo solo, sin

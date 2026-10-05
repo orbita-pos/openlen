@@ -3929,6 +3929,27 @@ describe("reintentos ante fallos del proveedor (como el arnés de DeepSeek)", ()
     expect(r.finalText).not.toContain("no debe llegar");
   });
 
+  it("🔴 el ■ durante la espera, en una vuelta RETENIDA (tras la insistencia), no enseña el texto descartado", async () => {
+    const ctrl = new AbortController();
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el título" }], tools: [], maxTurns: 6,
+      openStream: scripted(
+        // Vuelta 1: sólo prosa → insistencia; la vuelta 2 se RETIENE.
+        [{ type: "text_delta", text: "¡Claro! Lo cambio." }, done],
+        [{ type: "text_delta", text: "Ya está respondido: el tit" }, fallo("server")],
+        [{ type: "text_delta", text: "no debe llegar" }, done],
+      ),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+      signal: ctrl.signal,
+      sleep: async () => { ctrl.abort(); },
+    });
+    const textos = events.filter((e) => e.type === "text").map((e) => (e as { text: string }).text).join("");
+    expect(textos).not.toContain("Ya está respondido");
+    expect(events.some((e) => e.type === "error" && e.code === "cancelled")).toBe(true);
+  });
+
   it("el ■ durante la espera corta sin lanzar otro intento", async () => {
     const ctrl = new AbortController();
     const events: AgentStreamEvent[] = [];
