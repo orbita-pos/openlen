@@ -296,6 +296,9 @@ export type DegradationCode =
 export interface StoredChatTurn {
   id: string;
   userText: string;
+  /** Pieza 7: el turno cerró en modo plan (la foto de su transcripción). El
+   *  chat enciende su ficha «Plan» si el último turno lo trae. */
+  planMode?: true;
   /** Image the user attached to this turn — shown in the restored bubble. */
   attachedImage?: { url: string; alt?: string };
   assistantReasoning: string;
@@ -347,7 +350,15 @@ export interface StoredChatTurn {
     pregunta?: string;
     /** Pieza 3 de Len 2.5: las preguntas de `ask_user_question` con sus
      *  opciones (forma de `lib/agent/ask-user-question.ts`). Sólo de pantalla. */
-    preguntas?: Array<{ id: string; question: string; header?: string; options?: Array<{ label: string; description?: string }>; multiSelect?: boolean }>;
+    preguntas?: Array<{
+      id: string;
+      question: string;
+      header?: string;
+      options?: Array<{ label: string; description?: string }>;
+      multiSelect?: boolean;
+      /** Pieza 7: la revisión del plan o el consentimiento (`QuestionIntent`). */
+      intent?: { kind: "plan-review"; plan: string } | { kind: "plan-consent" };
+    }>;
     /** Lo que contestó el dueño dentro del turno, en una línea. */
     respuesta?: string;
     /** QUÉ cambió, resuelto en el servidor mientras los `data-op-id` valían.

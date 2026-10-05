@@ -32,7 +32,8 @@ export async function getChatMessages(
   projectId: string,
 ): Promise<StoredChatTurn[]> {
   const rows = await db
-    .select(columnasDelPanel())
+    // Pieza 7: de la transcripción, sólo si el turno cerró en modo plan.
+    .select({ ...columnasDelPanel(), planMode: sql<string | null>`${schema.projectChatMessages.transcript}->>'planMode'` })
     .from(schema.projectChatMessages)
     .where(enCurso(projectId))
     .orderBy(asc(schema.projectChatMessages.createdAt))
@@ -390,8 +391,11 @@ async function trim(projectId: string): Promise<void> {
     .where(inArray(schema.projectChatMessages.id, excess));
 }
 
-function rowToTurn(
-  row: Omit<typeof schema.projectChatMessages.$inferSelect, "transcript">,
+/** La fila de la base como turno del panel. Exportada para su prueba
+ *  (`chat-row.test.ts`). `planMode` es `transcript->>'planMode'` cuando la
+ *  consulta lo pide (pieza 7): texto, porque así sale de un jsonb. */
+export function rowToTurn(
+  row: Omit<typeof schema.projectChatMessages.$inferSelect, "transcript"> & { planMode?: string | null },
 ): StoredChatTurn {
   const turn: StoredChatTurn = {
     id: row.id,
@@ -415,6 +419,8 @@ function rowToTurn(
   // Lo que cobró y tardó, si el servidor lo apuntó (plans/new-chat/).
   if (typeof row.centicredits === "number") turn.centicredits = row.centicredits;
   if (typeof row.durationMs === "number") turn.durationMs = row.durationMs;
+  // Pieza 7: el turno cerró en modo plan; el chat enciende su ficha al recargar.
+  if (row.planMode === "true") turn.planMode = true;
   return turn;
 }
 
