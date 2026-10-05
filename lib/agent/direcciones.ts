@@ -269,7 +269,31 @@ export function cerrarTurno(turnoId: string): void {
   abiertos.delete(turnoId);
 }
 
+// PIEZA 8 DE LEN 2.5 · LA RONDA QUE SIGUE A UNA FILA. Al cerrar una ronda del
+// encargo, la ruta abre la siguiente; quien sigue la conversación releyendo la
+// fila (el chat, `GET /api/agent/turno/[fila]`) necesita saber a cuál pasar. Es
+// del proceso, como lo demás de aquí: tras un reinicio no hay cadena que seguir.
+const CLAVE_RONDAS = Symbol.for("openlen.agente.rondas");
+type GlobalRondas = typeof globalThis & { [CLAVE_RONDAS]?: Map<string, string> };
+const siguientes: Map<string, string> =
+  (globalThis as GlobalRondas)[CLAVE_RONDAS] ?? ((globalThis as GlobalRondas)[CLAVE_RONDAS] = new Map());
+
+export function rondaSiguiente(filaId: string, siguiente: string): void {
+  siguientes.set(filaId, siguiente);
+  while (siguientes.size > MAX_ABIERTOS) {
+    const primero = siguientes.keys().next();
+    if (primero.done) break;
+    siguientes.delete(primero.value);
+  }
+}
+
+/** La fila de la ronda que siguió a ésta, si la hubo. */
+export function siguienteDeLaFila(filaId: string): string | null {
+  return siguientes.get(filaId) ?? null;
+}
+
 /** Sólo para las pruebas: deja el almacén como recién arrancado. */
 export function _vaciarTodo(): void {
   abiertos.clear();
+  siguientes.clear();
 }

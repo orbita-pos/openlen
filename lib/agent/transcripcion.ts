@@ -31,6 +31,7 @@ import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "@/lib/agent/terminal/cambios-del-comando";
 import { currentToolCall, currentToolName } from "@/lib/agent/ask-user-question";
+import type { GoalSnapshot } from "@/lib/agent/goal";
 
 /** La misma marca que usa Claude Code. */
 export const RESULTADO_VACIADO = "[Earlier tool result removed to save space]";
@@ -89,6 +90,9 @@ export interface TranscripcionGuardada {
   /** PIEZA 7 · el turno cerró en modo plan: la foto de la que se pliega el
    *  estado al empezar el siguiente (`planModeFromRows`). Ausente = no. */
   readonly planMode?: true;
+  /** PIEZA 8 · el encargo como quedó al cerrar el turno (`goalFromRows` lo
+   *  pliega). Ausente = no había; `null` = se quitó. */
+  readonly goal?: GoalSnapshot | null;
 }
 
 /** Una fila de `projectChatMessages`, con lo que hace falta para el historial. */
