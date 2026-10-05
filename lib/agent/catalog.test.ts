@@ -28,6 +28,9 @@ const SALTO = String.fromCharCode(10);
  *  descripción o en el prompt es una herramienta que el modelo intentará
  *  llamar y no existe. */
 const RETIRADAS = [
+  // Pieza 3 de Len 2.5 (05/10): pasa a llamarse ask_user_question, como DeepSeek.
+  // El nombre viejo sólo se entiende en lo guardado (alias), nunca en el prompt.
+  "preguntar",
   // H3 (2026-09-25): los almacenes y la memoria son ficheros.
   "leer_estado",
   "guardar_dato",
@@ -73,7 +76,8 @@ describe("buildFunctionDeclarations", () => {
       "web_search",
       "web_fetch",
       // ⚰️ TodoWrite, retirada en F4 (plans/len-agente-2026).
-      "preguntar",
+      // Pieza 3 de Len 2.5: el nombre y el esquema de DeepSeek.
+      "ask_user_question",
       "revertir_ultimo_cambio",
       // Len sabe de tus resultados (plans/len-resultados/): una por fuente,
       // siempre cargadas, como los conectores de Grok, dots y Claude.
@@ -95,6 +99,16 @@ describe("buildFunctionDeclarations", () => {
     expect("HERRAMIENTAS_DIFERIDAS" in catalogo).toBe(false);
     expect(buildFunctionDeclarations().some((d) => d.name === "ToolSearch")).toBe(false);
     expect(buildAgentSystemPrompt()).not.toContain("ToolSearch");
+  });
+
+  it("pieza 3: la pregunta se llama ask_user_question, con el esquema de DeepSeek", () => {
+    const decl = buildFunctionDeclarations().find((d) => d.name === "ask_user_question") as any;
+    expect(decl).toBeDefined();
+    const pregunta = decl.parameters.properties.questions.items;
+    expect(Object.keys(pregunta.properties)).toEqual(["id", "question", "header", "options", "multi_select"]);
+    expect(pregunta.required).toEqual(["id", "question"]);
+    expect(Object.keys(pregunta.properties.options.items.properties)).toEqual(["label", "description"]);
+    expect(decl.parameters.required).toEqual(["questions"]);
   });
 
   it("🔴 ninguna descripción nombra una herramienta retirada, ni data-op-id, ni prueba_js", () => {

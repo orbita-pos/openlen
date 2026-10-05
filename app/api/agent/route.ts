@@ -52,7 +52,8 @@ import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
 import { runAgentLoop, type AgentErrorCode, type AgentLoopResult, type VerifyOutcome } from "@/lib/agent/loop";
 import { randomUUID } from "node:crypto";
 
-import { abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
+import { abrirTurno, cerrarTurno, esperarRespuesta, leerDireccion } from "@/lib/agent/direcciones";
+import { ASK_USER_TIMEOUT_MS, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { crearDiarioDelTurno } from "@/lib/agent/diario-del-turno";
 import { corteDelTurno, crearRegistroDelTurno } from "@/lib/agent/registro-del-turno";
 import { actualizarSuite, marcarRegresiones, migrarSuite, vivas } from "@/lib/agent/pruebas-de-la-pagina";
@@ -246,6 +247,10 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
     /** La zona IANA del navegador (plans/len-resultados/diseno.md §7). Se
      *  sanea con `zonaValida`: entra de fuera. */
     zonaHoraria?: unknown;
+    /** Pieza 3 de Len 2.5: el cliente SABE contestar las preguntas de
+     *  `ask_user_question` dentro del turno (el chat). La voz y Len-Bench no lo
+     *  mandan: para ellos la pregunta sigue cerrando el turno. */
+    answersQuestions?: unknown;
   } | null;
 
   const projectId = typeof body?.projectId === "string" ? body.projectId.trim() : "";
@@ -272,6 +277,8 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // LEN DYNAMIS, con el mismo pestillo: el modo que el usuario veía al pulsar
   // enviar. Con la terminal apagada no existe, y el turno es de Len.
   const mode = modeOfTurn(body?.mode);
+  // Pieza 3: sólo el literal `true` cuenta (entra de fuera).
+  const answersQuestions = body?.answersQuestions === true;
   // LA HORA DEL USUARIO (plans/len-resultados/diseno.md §7). Se sanea: entra de
   // fuera. Basura -> null -> la zona guardada.
   const zonaDelCuerpo = zonaValida(body?.zonaHoraria);
@@ -998,6 +1005,21 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         } catch (err) {
           console.warn("[agent] no se pudo abrir la fila del turno", err);
         }
+        // PIEZA 3 DE LEN 2.5 · QUIEN CONTESTA LAS PREGUNTAS DENTRO DEL TURNO.
+        // Sólo si el cliente lo pidió (el chat): la pregunta sale al chat con
+        // sus opciones (`question`) y `ask_user_question` espera la respuesta
+        // en el almacén del turno (`POST /api/agent/responder`). El evento
+        // re-arma el reloj de silencio, y la espera (120 s) queda por debajo de
+        // él (180 s). El ■ la suelta.
+        const depsDelTurno = answersQuestions
+          ? {
+              ...deps,
+              askUser: async (questions: UserQuestion[]) => {
+                emit("question", { questions });
+                return esperarRespuesta(turnoId, { timeoutMs: ASK_USER_TIMEOUT_MS, signal: upstreamAbort.signal });
+              },
+            }
+          : deps;
         const result = await runAgentLoop({
           messages,
           tools,
@@ -1096,7 +1118,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           runTool: async (name, args) => {
             // Nada se escribe antes de la foto del principio.
             await fotoAntes;
-            const outcome = await runAgentTool(agentSession, deps, name, args);
+            const outcome = await runAgentTool(agentSession, depsDelTurno, name, args);
             diario.anotar(name, outcome.response, args);
             // LA CARPETA (pieza 9 de Len 2.5, carril B): los ficheros que cambió
             // esta herramienta, cada uno con la versión de su «antes», para

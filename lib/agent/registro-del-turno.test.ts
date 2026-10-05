@@ -38,6 +38,13 @@ describe("la fila del turno que escribe el servidor", () => {
     expect(r.texto).toBe("Miro la página.\n\nYa está.");
   });
 
+  it("🔴 pieza 3: la tarjeta de la pregunta guarda sus opciones y lo que contestó el dueño (la lista es BLANCA)", () => {
+    const r = crearRegistroDelTurno();
+    const preguntas = [{ id: "plazo", question: "¿Cuánto tarda?", options: [{ label: "48 horas" }] }];
+    r.observar({ type: "action", tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Cuánto tarda?", preguntas, respuesta: "48 horas" });
+    expect(r.tarjetas[0]).toMatchObject({ pregunta: "¿Cuánto tarda?", preguntas, respuesta: "48 horas" });
+  });
+
   it("una compactación a media vuelta retira lo que el intento llegó a escribir; sin descarte, no toca nada", () => {
     const r = crearRegistroDelTurno();
     r.observar({ type: "text", text: "Miro." });

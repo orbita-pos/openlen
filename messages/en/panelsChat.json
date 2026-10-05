@@ -211,7 +211,12 @@
     "question": {
       "label": "Len is asking",
       "hint": "Answer below, in your own words.",
-      "answered": "You answered: {answer}"
+      "answered": "You answered: {answer}",
+      "send": "Answer",
+      "other": "Something else",
+      "otherPlaceholder": "Write your answer",
+      "pickMany": "You can pick more than one",
+      "recommended": "Recommended"
     },
     "changes": {
       "showAll": "See all {count} changes",

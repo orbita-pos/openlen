@@ -67,6 +67,16 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
     });
   });
 
+  it("🔴 pieza 3: las preguntas con sus opciones y la respuesta del dueño LLEGAN a guardarse, recortadas", async () => {
+    const preguntas = [{ id: "plazo", question: "¿Cuánto tarda?", options: [{ label: "48 horas (Recommended)", description: "Lo de tu ficha." }], multiSelect: false }];
+    const res = await guardar(
+      turno([{ tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Cuánto tarda?", preguntas, respuesta: "x".repeat(500) }]),
+    );
+    expect(res.status).toBe(200);
+    expect(guardada()).toMatchObject({ preguntas });
+    expect(guardada().respuesta).toHaveLength(200);
+  });
+
   it("una observación larga se RECORTA y el turno se guarda igual", async () => {
     const res = await guardar(
       turno([{ tool: "verificar_diseno", status: "done", summary: "ok", observacion: "x".repeat(5000) }]),

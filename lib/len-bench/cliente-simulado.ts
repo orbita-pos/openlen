@@ -20,6 +20,7 @@
 // sobre la web publicada.
 
 import type { EventoSse } from "./sse";
+import { isQuestionTool } from "@/lib/agent/ask-user-question";
 import {
   correosDe,
   esElTelefonoDado,
@@ -61,7 +62,8 @@ export function respuestaFija(ficha: Ficha): string {
 export function preguntoLen(eventos: readonly EventoSse[]): boolean {
   return eventos.some((e) => {
     const d = e.datos as { tool?: unknown; status?: unknown } | null;
-    return e.nombre === "action" && d?.tool === "preguntar" && d.status === "done";
+    // Con el nombre de hoy (`ask_user_question`, pieza 3) o el de antes.
+    return e.nombre === "action" && typeof d?.tool === "string" && isQuestionTool(d.tool) && d.status === "done";
   });
 }
 

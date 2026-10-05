@@ -211,7 +211,12 @@
     "question": {
       "label": "Len からの質問",
       "hint": "下の欄に、自分の言葉で答えてください。",
-      "answered": "あなたの答え: {answer}"
+      "answered": "あなたの答え: {answer}",
+      "send": "回答する",
+      "other": "その他",
+      "otherPlaceholder": "回答を入力",
+      "pickMany": "複数選べます",
+      "recommended": "おすすめ"
     },
     "changes": {
       "showAll": "{count} 件の変更をすべて見る",

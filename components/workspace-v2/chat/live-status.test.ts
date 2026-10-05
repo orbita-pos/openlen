@@ -2,7 +2,7 @@
 // inventario sección C). Puro: sale del último turno y de si hay uno en marcha.
 import { describe, expect, it } from "vitest";
 
-import { activityOf, isRunning, liveStatus, questionOf, retryPhase } from "./live-status";
+import { activityOf, isRunning, liveStatus, questionOf, questionsOf, retryPhase } from "./live-status";
 import type { DesignTurn } from "./use-agent-chat";
 
 const turn = (patch: Partial<DesignTurn> = {}): DesignTurn => ({
@@ -109,6 +109,20 @@ describe("la barra viva", () => {
       reason: "question",
       question: "¿Cuántas horas antes?",
     });
+  });
+
+  it("pieza 3: con el nombre nuevo es lo mismo, y trae sus opciones para la tarjeta", () => {
+    const preguntas = [{ id: "plazo", question: "¿Cuántas horas antes?", options: [{ label: "24" }, { label: "48" }] }];
+    const t = turn({ actions: [{ tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Cuántas horas antes?", preguntas }] });
+    expect(questionOf(t)).toBe("¿Cuántas horas antes?");
+    expect(questionsOf(t)).toEqual(preguntas);
+    expect(activityOf("ask_user_question")).toBe("asking");
+  });
+
+  it("🔴 pieza 3: una pregunta contestada DENTRO del turno ya no es esperar", () => {
+    const t = turn({ actions: [{ tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Cuántas horas antes?", respuesta: "48" }] });
+    expect(questionOf(t)).toBeNull();
+    expect(liveStatus(t, { busy: false })).toEqual({ kind: "done", face: "terminado" });
   });
 
   it("una pregunta de una fila vieja, sin su texto, sigue siendo esperar", () => {

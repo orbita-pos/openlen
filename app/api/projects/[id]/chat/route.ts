@@ -82,6 +82,34 @@ const ActionSchema = z.object({
     .string()
     .transform((s) => s.slice(0, 600))
     .optional(),
+  /** Pieza 3 de Len 2.5: las preguntas de `ask_user_question` con sus opciones,
+   *  y lo que contestó el dueño dentro del turno. Con los topes de
+   *  `lib/agent/ask-user-question.ts`, recortando y no rechazando: un campo largo
+   *  haría 400 al guardado ENTERO y el turno se perdería al recargar. */
+  preguntas: z
+    .array(
+      z.object({
+        id: z.string().transform((s) => s.slice(0, 80)),
+        question: z.string().transform((s) => s.slice(0, 600)),
+        header: z.string().transform((s) => s.slice(0, 40)).optional(),
+        options: z
+          .array(
+            z.object({
+              label: z.string().transform((s) => s.slice(0, 120)),
+              description: z.string().transform((s) => s.slice(0, 300)).optional(),
+            }),
+          )
+          .transform((a) => a.slice(0, 10))
+          .optional(),
+        multiSelect: z.boolean().optional(),
+      }),
+    )
+    .transform((a) => a.slice(0, 20))
+    .optional(),
+  respuesta: z
+    .string()
+    .transform((s) => s.slice(0, 200))
+    .optional(),
   /**
    * QUÉ cambió, resuelto por el servidor mientras los `data-op-id` valían.
    *

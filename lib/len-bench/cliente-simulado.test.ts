@@ -112,6 +112,8 @@ describe("preguntoLen — la señal sale de la herramienta, no del texto", () =>
     expect(preguntoLen([{ nombre: "action", datos: { type: "action", tool: "preguntar", status: "done", summary: "" } }])).toBe(true);
   });
   it("un «¿te parece?» en el texto no lo es, ni otra herramienta", () => {
+    // Pieza 3: con el nombre de hoy (y el viejo, en grabaciones de antes).
+    expect(preguntoLen([{ nombre: "action", datos: { type: "action", tool: "ask_user_question", status: "done", summary: "" } }])).toBe(true);
     expect(preguntoLen([{ nombre: "text", datos: { type: "text", text: "¿Te parece?" } }])).toBe(false);
     expect(preguntoLen([{ nombre: "action", datos: { type: "action", tool: "Edit", status: "done", summary: "" } }])).toBe(false);
     expect(preguntoLen([{ nombre: "action", datos: { type: "action", tool: "preguntar", status: "running", summary: "" } }])).toBe(false);

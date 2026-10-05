@@ -105,6 +105,10 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
           // Y LA PREGUNTA de `preguntar`: la tarjeta destacada del chat nuevo
           // tiene que seguir ahí al recargar (plans/new-chat/).
           ...(ev.pregunta ? { pregunta: ev.pregunta } : {}),
+          // Y sus opciones y lo que contestó el dueño dentro del turno (pieza 3
+          // de Len 2.5): sin nombrarlos aquí, se ven en vivo y se pierden al recargar.
+          ...(ev.preguntas?.length ? { preguntas: ev.preguntas } : {}),
+          ...(ev.respuesta ? { respuesta: ev.respuesta } : {}),
           // Y EL RECUENTO DE COBERTURA, por la misma razón que los dos de
           // arriba: esta lista es BLANCA, así que un campo que no se nombre aquí
           // se ve en vivo y desaparece al recargar.

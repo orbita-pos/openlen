@@ -401,6 +401,9 @@ export default defineConfig({
       "lib/agent/tool-concurrency.test.ts",
       "lib/agent/tool-scheduler.test.ts",
       "lib/agent/concurrency-limit.test.ts",
+      // Pieza 3 de Len 2.5: ask_user_question, como DeepSeek. LISTA BLANCA.
+      "lib/agent/ask-user-question.test.ts",
+      "lib/agent/historial-saneado.test.ts",
       // Deshacer lo de Len sobre lo que hay AHORA, sin llevarse lo que el dueño
       // editó a mano (H06, auditoría 2026-09-22). Núcleo puro — pero `include`
       // es LISTA BLANCA y sin esta línea la prueba existiría y no correría.
@@ -557,6 +560,8 @@ export default defineConfig({
       // credits — the sanitize/normalize/behaviour passes are the real ones.
       "app/api/templates/ai-design/route.test.ts",
       "app/api/agent/route.test.ts",
+      // Pieza 3 de Len 2.5: la respuesta del dueño a ask_user_question.
+      "app/api/agent/responder/route.test.ts",
       // Contestar deja la conversación leída: el «Enviar» del borrador de Len.
       "app/api/inbox/[conversationId]/reply/route.test.ts",
       // Len 2.1: volver a mirar un turno que sigue trabajando sin cliente.

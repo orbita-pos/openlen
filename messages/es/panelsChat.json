@@ -211,7 +211,12 @@
     "question": {
       "label": "Len te pregunta",
       "hint": "Contéstale abajo, con tus palabras.",
-      "answered": "Respondiste: {answer}"
+      "answered": "Respondiste: {answer}",
+      "send": "Responder",
+      "other": "Otra respuesta",
+      "otherPlaceholder": "Escribe tu respuesta",
+      "pickMany": "Puedes elegir varias",
+      "recommended": "Recomendada"
     },
     "changes": {
       "showAll": "Ver los {count} cambios",

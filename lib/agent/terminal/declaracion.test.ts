@@ -77,7 +77,7 @@ describe("Len Dynamis: sólo la terminal para los ficheros", () => {
     const n = nombresEn(CON, "dynamis");
     expect(n).toContain(NOMBRE_BASH);
     for (const fuera of ["Read", "Edit", "Write", "Grep", "Glob"]) expect(n).not.toContain(fuera);
-    for (const queda of ["mirar_pagina", "usar_pagina", "publicar", "preguntar", "revertir_ultimo_cambio", "web_search", "web_fetch"]) expect(n).toContain(queda);
+    for (const queda of ["mirar_pagina", "usar_pagina", "publicar", "ask_user_question", "revertir_ultimo_cambio", "web_search", "web_fetch"]) expect(n).toContain(queda);
   });
 
   it("🔴 en Dynamis, ni el prompt, ni las descripciones, ni /AGENTS.md nombran una herramienta que no tiene", () => {

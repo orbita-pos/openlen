@@ -47,6 +47,17 @@ describe("historialDesdeLaBase", () => {
     expect(h.at(-1)).toEqual({ role: "assistant", content: "Listo: el título dice El Farol." });
   });
 
+  it("pieza 3: una conversación vieja con `preguntar` vuelve con el nombre y la forma de ask_user_question", () => {
+    const h = historialDesdeLaBase([
+      fila("publícala", [
+        { role: "assistant", content: "", functionCalls: [{ name: "preguntar", args: { texto: "¿Qué dirección quieres?" } }] },
+        { role: "user", content: "", functionResponses: [{ name: "preguntar", response: { ok: true, preguntado: true } }] },
+      ]),
+    ]);
+    expect(h[1]!.functionCalls).toEqual([{ name: "ask_user_question", args: { questions: [{ id: "q1", question: "¿Qué dirección quieres?" }] } }]);
+    expect(h[2]!.functionResponses![0]!.name).toBe("ask_user_question");
+  });
+
   it("una fila sin transcripción (anterior a H4, o del Chat) cae a su texto", () => {
     const h = historialDesdeLaBase([fila("hola", null, "Hola, ¿qué cambiamos?")]);
     expect(h).toEqual([

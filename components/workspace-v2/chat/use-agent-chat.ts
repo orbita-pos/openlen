@@ -28,6 +28,8 @@ import {
 import { noCreditsText, notifyCreditBalanceChanged } from "@/lib/credits-client";
 import type { AgentAction } from "../agent-action-card";
 import { upsertActionInto } from "./action-cards";
+import { answerSummary, isQuestionTool, questionsFrom, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { composeAnswerMessage, fallbackDelivery, outcomeOfResponder } from "./question-answer";
 import type { AgentConfirm } from "../agent-confirm-card";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { ejecutarUndo, ficherosDelEvento, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
@@ -103,6 +105,13 @@ export interface DesignTurn {
    *  (`compaction_start`). Se borra cuando acaba (`compaction`), con el primer
    *  texto o tarjeta, o si el turno pasa a seguirse desde el servidor. */
   compacting?: boolean;
+  /** Pieza 3 de Len 2.5: la pregunta de `ask_user_question` que espera respuesta
+   *  DENTRO del turno (evento `question`). Se borra cuando llega su tarjeta
+   *  (contestada o no). */
+  pendingQuestions?: UserQuestion[];
+  /** Lo que el dueño contestó a esa pregunta viva, mientras llega su tarjeta:
+   *  la tarjeta se encoge en cuanto contesta, sin esperar al servidor. */
+  answeredLive?: string;
   errorText?: string;
   /** HTML before this turn ran. YA NO es lo que se manda al deshacer —el
    *  servidor lee la versión de su propia base— sino lo que alimenta el diff
@@ -1184,6 +1193,9 @@ export function useAgentChat({
               // LA HORA DEL USUARIO: «hoy» es su día, no el de UTC
               // (plans/len-resultados/diseno.md §7).
               zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              // PIEZA 3: este chat SABE contestar las preguntas de Len dentro del
+              // turno (la tarjeta con opciones y `POST /api/agent/responder`).
+              answersQuestions: true,
               // Same value + same conditional shape ai-design sends below —
               // absent/empty means home, cloned for parity.
               ...(turnPage ? { page: turnPage } : {}),
@@ -1281,6 +1293,12 @@ export function useAgentChat({
                   ),
                 );
                 reintentando = true;
+              } else if (evName === "question") {
+                // PIEZA 3: Len pregunta y ESPERA (`ask_user_question`, 120 s). La
+                // tarjeta se contesta con un toque y la respuesta vuelve al
+                // turno vivo (`POST /api/agent/responder`).
+                const preguntas = questionsFrom((payload as { questions?: unknown } | null)?.questions);
+                if (preguntas) updateTurn(turnId, { pendingQuestions: preguntas });
               } else if (evName === "compaction_start") {
                 // LA COMPACTACIÓN (`lib/agent/compaction/`, como DeepSeek): Len
                 // resume lo más viejo para seguir; la barra lo dice mientras dura.
@@ -1381,8 +1399,14 @@ export function useAgentChat({
                 // tarjeta traduce. Pasa por la puerta que valida el código.
                 const ownerReason = ownerReasonFrom((payload as { ownerReason?: unknown } | null)?.ownerReason);
                 const valores = (payload as { valores?: unknown } | null)?.valores;
-                // La pregunta de `preguntar`, sólo de pantalla (plans/new-chat/).
+                // La pregunta de `ask_user_question` (antes `preguntar`), sólo de
+                // pantalla (plans/new-chat/); con sus opciones y, si se contestó
+                // dentro del turno, la respuesta (pieza 3).
                 const pregunta = (payload as { pregunta?: unknown } | null)?.pregunta;
+                const preguntas = questionsFrom((payload as { preguntas?: unknown } | null)?.preguntas);
+                const respuesta = (payload as { respuesta?: unknown } | null)?.respuesta;
+                // Su tarjeta llegó: ya no espera.
+                if (isQuestionTool(tool) && status !== "running") updateTurn(turnId, { pendingQuestions: undefined, answeredLive: undefined });
                 if (tool) {
                   const action: AgentAction = {
                     tool,
@@ -1407,6 +1431,10 @@ export function useAgentChat({
                     ...(ownerReason ? { ownerReason } : {}),
                     ...(typeof pregunta === "string" && pregunta.trim()
                       ? { pregunta: pregunta.slice(0, 600) }
+                      : {}),
+                    ...(preguntas ? { preguntas } : {}),
+                    ...(typeof respuesta === "string" && respuesta.trim()
+                      ? { respuesta: respuesta.slice(0, 200) }
                       : {}),
                     ...(typeof valores === "string" && valores.trim()
                       ? { valores: valores.slice(0, 200) }
@@ -2011,6 +2039,54 @@ export function useAgentChat({
     void send(draft, undefined, { comentarios });
   }, [comentarios, draft, reenganche, send, sending]);
 
+  /**
+   * PIEZA 3 · CONTESTAR A LEN DESDE LA TARJETA. Si el turno sigue esperando la
+   * respuesta (`ask_user_question`), vuelve a ESE turno y Len sigue. Si ya nadie
+   * espera (venció, cerró, o es una fila vieja), sale como un mensaje normal y
+   * abre el siguiente: la respuesta nunca se pierde.
+   */
+  /** La respuesta que salió como mensaje con un turno aún en vuelo: espera aquí. */
+  const respuestaEnColaRef = useRef<string | null>(null);
+  const answerQuestion = useCallback(
+    async (turnId: string, questions: readonly UserQuestion[], answers: QuestionAnswer[]) => {
+      const turn = turnsRef.current.find((x) => x.id === turnId);
+      const turnoId = turnoIdRef.current;
+      if (turn?.status === "streaming" && turn.pendingQuestions?.length && turnoId) {
+        try {
+          const r = await fetch("/api/agent/responder", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ turnoId, answers }),
+          });
+          const code = r.ok ? undefined : ((await r.json().catch(() => ({}))) as { error?: string }).error;
+          if (outcomeOfResponder(r.status, code) !== "fallback") {
+            updateTurn(turnId, { answeredLive: answerSummary(answers) });
+            return;
+          }
+        } catch {
+          // Sin red: cae al mensaje normal, abajo.
+        }
+      }
+      const mensaje = composeAnswerMessage(questions, answers);
+      if (!mensaje.trim()) return;
+      // 🔴 Con el turno aún en vuelo (el que preguntó, cerrándose justo al vencer
+      // la espera), `send()` la tiraría en silencio: queda en cola y sale en
+      // cuanto el turno acaba (el efecto de abajo).
+      if (fallbackDelivery(sending || reenganche !== null) === "after-turn") {
+        respuestaEnColaRef.current = mensaje;
+        return;
+      }
+      void send(mensaje);
+    },
+    [reenganche, send, sending, updateTurn],
+  );
+  useEffect(() => {
+    if (sending || reenganche !== null || !respuestaEnColaRef.current) return;
+    const mensaje = respuestaEnColaRef.current;
+    respuestaEnColaRef.current = null;
+    void send(mensaje);
+  }, [reenganche, send, sending]);
+
   const changeEsfuerzo = useCallback((e: EsfuerzoAgente) => {
     // OPTIMISTA A PROPÓSITO, y aquí sí es correcto: la preferencia sólo
     // afecta a turnos FUTUROS, así que un guardado que falle no deja nada
@@ -2077,6 +2153,7 @@ export function useAgentChat({
     handleCancel,
     handleUndo,
     handlePublished,
+    answerQuestion,
     conversationChanged,
   };
 }
