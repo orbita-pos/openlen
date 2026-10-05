@@ -288,6 +288,25 @@
       "skipHint": "Lenは今すぐ依頼の作業を続けます。",
       "showPlan": "計画をすべて見る",
       "hidePlan": "計画を隠す"
+    },
+    "goal": {
+      "option": "ゴール",
+      "optionHint": "終わるまで、Len がラウンドを重ねて自分で進めます。",
+      "optionTaken": "すでにゴールがあります。外すか、終わるまでお待ちください。",
+      "chip": "ゴール",
+      "chipOff": "ゴールにしない",
+      "placeholder": "ゴール全体を説明してください。Len が最後まで進めます…",
+      "label": "ゴール",
+      "round": "ラウンド {round}/{max}",
+      "running": "進行中",
+      "paused": "一時停止中",
+      "blocked": "行き詰まり",
+      "roundLimit": "上限の {max} ラウンドに達しました。",
+      "noCredits": "停止しました：残高がありません。",
+      "resume": "再開",
+      "clear": "外す",
+      "clearFailed": "ゴールを外せませんでした。",
+      "roundLine": "ゴール · ラウンド {round}/{max}"
     }
   }
 }

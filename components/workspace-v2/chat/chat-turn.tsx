@@ -10,7 +10,7 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { Crosshair, CornerDownRight } from "lucide-react";
+import { Crosshair, CornerDownRight, Flag } from "lucide-react";
 
 import { TextoDeLen } from "../texto-de-len";
 import { AgentConfirmCard } from "../agent-confirm-card";
@@ -28,6 +28,7 @@ import { StepsCard, visibleSteps } from "./steps-card";
 import { LenFace } from "./len-face";
 import { TurnClose } from "./turn-close";
 import type { DesignTurn } from "./use-agent-chat";
+import { roundOfTurn } from "./goal-state";
 
 const NO_TURNS: readonly CambiosDeUnTurno[] = [];
 
@@ -39,7 +40,33 @@ export function splitCorrections(userText: string): { text: string; corrections:
 
 export function UserMessage({ turn, initial }: { turn: DesignTurn; initial: string }) {
   const t = useTranslations("panelsChat");
-  const { text, corrections } = splitCorrections(turn.userText);
+  const { text: escrito, corrections } = splitCorrections(turn.userText);
+  // PIEZA 8 · LAS RONDAS DEL ENCARGO: su mensaje (el de DeepSeek) queda en la
+  // charla porque lo lee el modelo, pero el dueño no lo escribió. La ronda 1 es
+  // su mensaje —su objetivo—; las siguientes, una línea.
+  const ronda = roundOfTurn(escrito);
+  const text = ronda ? ronda.objective : escrito;
+  if (ronda && ronda.round > 1) {
+    return (
+      <div className="flex flex-col items-end gap-1.5">
+        <div className="nc-up flex w-full items-center gap-2 text-[11.5px] fg-faint">
+          <span className="h-px flex-1 bg-[var(--border)]" />
+          <Flag size={11} className="shrink-0 text-[var(--nc-accent-text)]" />
+          <span className="shrink-0 tabular-nums">{t("newChat.goal.roundLine", { round: ronda.round, max: ronda.maxGoalRounds })}</span>
+          <span className="h-px flex-1 bg-[var(--border)]" />
+        </div>
+        {corrections.map((c, i) => (
+          <div
+            key={i}
+            className="nc-up mr-8 flex max-w-[88%] items-start gap-1.5 rounded-[16px_16px_4px_16px] border border-dashed bd-strong bg-elev px-2.5 py-1.5 text-[12.5px] fg"
+          >
+            <CornerDownRight size={13} className="mt-0.5 shrink-0 text-[var(--nc-accent-text)]" />
+            <span className="min-w-0 whitespace-pre-wrap break-words">{c}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col items-end gap-1.5">
       <div className="nc-up flex items-end justify-end gap-2">
@@ -55,6 +82,12 @@ export function UserMessage({ turn, initial }: { turn: DesignTurn; initial: stri
             <div className="mb-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] fg-muted">
               <Crosshair size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
               <span className="min-w-0 truncate font-mono">{turn.scope.hint}</span>
+            </div>
+          )}
+          {ronda && (
+            <div className="mb-1 flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--nc-accent-text)]">
+              <Flag size={12} className="shrink-0" />
+              {t("newChat.goal.label")}
             </div>
           )}
           {text}

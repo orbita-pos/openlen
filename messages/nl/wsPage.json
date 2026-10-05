@@ -52,7 +52,10 @@
       "ver_mensajes": "Berichten bekijken",
       "preparar_respuesta": "Antwoord voorbereiden",
       "web_search": "Zoekt op het web",
-      "web_fetch": "Leest een webpagina"
+      "web_fetch": "Leest een webpagina",
+      "get_goal": "Doel bekijken",
+      "create_goal": "Doel aanmaken",
+      "update_goal": "Doel bijwerken"
     },
     "action": {
       "home": "Home",

@@ -288,6 +288,25 @@
       "skipHint": "Len poursuit votre demande maintenant.",
       "showPlan": "Voir tout le plan",
       "hidePlan": "Masquer le plan"
+    },
+    "goal": {
+      "option": "Objectif",
+      "optionHint": "Len continue seul, tour après tour, jusqu'à ce que ce soit fini.",
+      "optionTaken": "Il y a déjà un objectif : retirez-le ou attendez qu'il se termine.",
+      "chip": "Objectif",
+      "chipOff": "Ne pas en faire un objectif",
+      "placeholder": "Décrivez l'objectif en entier ; Len continuera jusqu'au bout…",
+      "label": "Objectif",
+      "round": "Tour {round} sur {max}",
+      "running": "En cours",
+      "paused": "En pause",
+      "blocked": "Bloqué",
+      "roundLimit": "Limite de {max} tours atteinte.",
+      "noCredits": "Arrêté : plus de crédits.",
+      "resume": "Reprendre",
+      "clear": "Retirer",
+      "clearFailed": "Impossible de retirer l'objectif.",
+      "roundLine": "Objectif · tour {round} sur {max}"
     }
   }
 }

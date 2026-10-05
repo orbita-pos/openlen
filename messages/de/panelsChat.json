@@ -288,6 +288,25 @@
       "skipHint": "Len macht jetzt mit deiner Anfrage weiter.",
       "showPlan": "Ganzen Plan ansehen",
       "hidePlan": "Plan ausblenden"
+    },
+    "goal": {
+      "option": "Ziel",
+      "optionHint": "Len macht allein weiter, Runde um Runde, bis es fertig ist.",
+      "optionTaken": "Es gibt schon ein Ziel: entferne es oder warte, bis es fertig ist.",
+      "chip": "Ziel",
+      "chipOff": "Kein Ziel daraus machen",
+      "placeholder": "Beschreibe das ganze Ziel; Len macht weiter, bis es fertig ist…",
+      "label": "Ziel",
+      "round": "Runde {round} von {max}",
+      "running": "Läuft",
+      "paused": "Pausiert",
+      "blocked": "Festgefahren",
+      "roundLimit": "Grenze von {max} Runden erreicht.",
+      "noCredits": "Gestoppt: kein Guthaben mehr.",
+      "resume": "Fortsetzen",
+      "clear": "Entfernen",
+      "clearFailed": "Das Ziel konnte nicht entfernt werden.",
+      "roundLine": "Ziel · Runde {round} von {max}"
     }
   }
 }

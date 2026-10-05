@@ -288,6 +288,25 @@
       "skipHint": "O Len segue com o seu pedido agora.",
       "showPlan": "Ver o plano inteiro",
       "hidePlan": "Ocultar o plano"
+    },
+    "goal": {
+      "option": "Objetivo",
+      "optionHint": "Len segue sozinho, rodada após rodada, até terminar.",
+      "optionTaken": "Já existe um objetivo: remova-o ou espere ele terminar.",
+      "chip": "Objetivo",
+      "chipOff": "Não fazer disso um objetivo",
+      "placeholder": "Descreva o objetivo inteiro; Len vai seguir até terminar…",
+      "label": "Objetivo",
+      "round": "Rodada {round} de {max}",
+      "running": "Em andamento",
+      "paused": "Pausado",
+      "blocked": "Travado",
+      "roundLimit": "Chegou ao limite de {max} rodadas.",
+      "noCredits": "Parou: sem saldo.",
+      "resume": "Retomar",
+      "clear": "Remover",
+      "clearFailed": "Não foi possível remover o objetivo.",
+      "roundLine": "Objetivo · rodada {round} de {max}"
     }
   }
 }

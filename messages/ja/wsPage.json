@@ -52,7 +52,10 @@
       "ver_mensajes": "メッセージを確認中",
       "preparar_respuesta": "返信を準備中",
       "web_search": "ウェブを検索中",
-      "web_fetch": "ウェブページを読んでいます"
+      "web_fetch": "ウェブページを読んでいます",
+      "get_goal": "ゴールを確認",
+      "create_goal": "ゴールを作成",
+      "update_goal": "ゴールを更新"
     },
     "action": {
       "home": "ホーム",

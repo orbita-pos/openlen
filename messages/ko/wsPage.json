@@ -52,7 +52,10 @@
       "ver_mensajes": "메시지 확인 중",
       "preparar_respuesta": "답장 준비 중",
       "web_search": "웹 검색 중",
-      "web_fetch": "웹페이지 읽는 중"
+      "web_fetch": "웹페이지 읽는 중",
+      "get_goal": "목표 확인",
+      "create_goal": "목표 만들기",
+      "update_goal": "목표 업데이트"
     },
     "action": {
       "home": "홈",
