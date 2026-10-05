@@ -203,7 +203,8 @@
       "stoppedHint": "wat al gedaan is, blijft",
       "failed": "Kon het niet afmaken",
       "retrying": "Opnieuw proberen",
-      "retryingHint": "geen antwoord · poging {attempt} van {max}"
+      "retryingHint": "geen antwoord · over {seconds} s · poging {attempt} van {max}",
+      "retryingAttempt": "poging {attempt} van {max}"
     },
     "question": {
       "label": "Len vraagt je",

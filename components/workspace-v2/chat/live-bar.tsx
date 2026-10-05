@@ -12,7 +12,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Square } from "lucide-react";
 
 import { CaraDeLen } from "@/components/llamada/cara-de-len";
-import type { LiveStatus } from "./live-status";
+import { isRunning, retryPhase, type LiveStatus } from "./live-status";
 
 export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => void }) {
   const t = useTranslations("panelsChat");
@@ -23,8 +23,9 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
     n < 1000
       ? t("chars.count", { count: n })
       : t("chars.thousands", { count: new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(n / 1000) });
-  const running = status.kind === "thinking" || status.kind === "working";
-  const startedAt = running ? status.startedAt : null;
+  // `isRunning`: también un reintento (el ■ no puede irse justo mientras espera).
+  const running = isRunning(status);
+  const startedAt = status.kind === "thinking" || status.kind === "working" ? status.startedAt : null;
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!running) return;
@@ -93,10 +94,21 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
       verb = t("newChat.live.failed");
       why = status.message;
       break;
-    case "retrying":
-      verb = t("newChat.live.retrying");
-      meta = t("newChat.live.retryingHint", { attempt: status.attempt, max: status.maxAttempts });
+    case "retrying": {
+      // Esperando: «Reintentando · en 3 s · intento 2 de 5» (como Claude Code).
+      // Vencida la espera, el intento nuevo ya está pensando aunque no haya
+      // llegado texto: «Pensando · intento 2 de 5».
+      const phase = retryPhase(status, now);
+      if (phase.waiting) {
+        verb = t("newChat.live.retrying");
+        meta = t("newChat.live.retryingHint", { seconds: phase.seconds, attempt: status.attempt, max: status.maxAttempts });
+        ticking = true;
+      } else {
+        verb = t("newChat.live.thinking");
+        meta = t("newChat.live.retryingAttempt", { attempt: status.attempt, max: status.maxAttempts });
+      }
       break;
+    }
   }
 
   const between = status.kind === "working" && !status.activity && spoken !== "";

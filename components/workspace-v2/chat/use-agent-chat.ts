@@ -93,9 +93,10 @@ export interface DesignTurn {
   scope?: ScopedSelection;
   assistantReasoning: string;
   status: TurnStatus;
-  /** Un reintento del proveedor en curso (`retry` del bucle). Se borra en cuanto
-   *  llega texto o una tarjeta: ya no se está esperando. */
-  retrying?: { attempt: number; maxAttempts: number };
+  /** Un reintento del proveedor en curso (`retry` del bucle). `until` = cuándo
+   *  acaba la espera en el reloj del navegador. Se borra en cuanto llega texto
+   *  o una tarjeta, o el turno pasa a seguirse desde el servidor. */
+  retrying?: { attempt: number; maxAttempts: number; until: number };
   errorText?: string;
   /** HTML before this turn ran. YA NO es lo que se manda al deshacer —el
    *  servidor lee la versión de su propia base— sino lo que alimenta el diff
@@ -592,7 +593,9 @@ export function useAgentChat({
    *  stream: se pinta en marcha y se relee su fila (efecto de abajo). */
   const seguirEnElServidor = useCallback((id: string) => {
     setTurns((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: "streaming", enServidor: true } : t)),
+      // Sin `retrying`: si el stream se cayó entre un reintento y su texto, la
+      // barra tiene que decir que sigue en el servidor, no «Reintentando».
+      prev.map((t) => (t.id === id ? { ...t, status: "streaming", enServidor: true, retrying: undefined } : t)),
     );
     setReenganche(id);
   }, []);
@@ -1260,10 +1263,11 @@ export function useAgentChat({
               } else if (evName === "retry") {
                 // EL INTENTO FALLIDO NO EXISTIÓ (`lib/agent/loop.ts`, reintentos):
                 // se retira lo que llegó a escribir y la barra dice que reintenta.
-                const p = payload as { attempt?: unknown; maxAttempts?: unknown; discardChars?: unknown };
+                const p = payload as { attempt?: unknown; maxAttempts?: unknown; delayMs?: unknown; discardChars?: unknown };
                 const discard = typeof p.discardChars === "number" && p.discardChars > 0 ? p.discardChars : 0;
                 const attempt = typeof p.attempt === "number" ? p.attempt : 1;
                 const maxAttempts = typeof p.maxAttempts === "number" ? p.maxAttempts : 5;
+                const until = Date.now() + (typeof p.delayMs === "number" && p.delayMs > 0 ? p.delayMs : 0);
                 if (discard > 0) {
                   accumulatedReasoning = accumulatedReasoning.slice(0, Math.max(0, accumulatedReasoning.length - discard));
                 }
@@ -1274,7 +1278,7 @@ export function useAgentChat({
                           ...t,
                           assistantReasoning:
                             discard > 0 ? t.assistantReasoning.slice(0, Math.max(0, t.assistantReasoning.length - discard)) : t.assistantReasoning,
-                          retrying: { attempt, maxAttempts },
+                          retrying: { attempt, maxAttempts, until },
                         }
                       : t,
                   ),

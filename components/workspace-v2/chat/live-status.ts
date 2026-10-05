@@ -133,7 +133,24 @@ export type LiveStatus =
   /** No pudo terminar. */
   | { readonly kind: "failed"; readonly face: FaceState; readonly message: string | null }
   // El proveedor no contestó y el bucle repite el paso (`retry`, como DeepSeek).
-  | { readonly kind: "retrying"; readonly face: FaceState; readonly attempt: number; readonly maxAttempts: number };
+  // `until`: cuándo acaba la espera (reloj del navegador); ver `retryPhase`.
+  | { readonly kind: "retrying"; readonly face: FaceState; readonly attempt: number; readonly maxAttempts: number; readonly until: number };
+
+/** ¿Len está trabajando? Es lo que enseña el ■ y el reloj de la barra. Un
+ *  reintento es trabajo: el ■ no puede desaparecer justo mientras espera. */
+export function isRunning(status: LiveStatus): boolean {
+  return status.kind === "thinking" || status.kind === "working" || status.kind === "retrying";
+}
+
+/** La fase de un reintento: esperando («Reintentando · en X s», como Claude
+ *  Code) o ya con el intento nuevo en marcha («Pensando»), que es lo que pasa
+ *  en cuanto vence la espera aunque todavía no haya llegado texto. */
+export function retryPhase(
+  status: Extract<LiveStatus, { kind: "retrying" }>,
+  now: number,
+): { readonly waiting: true; readonly seconds: number } | { readonly waiting: false } {
+  return now < status.until ? { waiting: true, seconds: Math.max(1, Math.ceil((status.until - now) / 1000)) } : { waiting: false };
+}
 
 /** La pregunta con la que acabó el turno, si acabó preguntando. */
 export function questionOf(turn: Pick<DesignTurn, "actions" | "status">): string | null {
@@ -156,7 +173,13 @@ export function liveStatus(
   if (!latest) return { kind: "idle", face: "reposo" };
   if (latest.status === "streaming" || o.busy) {
     if (latest.retrying) {
-      return { kind: "retrying", face: "pensando", attempt: latest.retrying.attempt, maxAttempts: latest.retrying.maxAttempts };
+      return {
+        kind: "retrying",
+        face: "pensando",
+        attempt: latest.retrying.attempt,
+        maxAttempts: latest.retrying.maxAttempts,
+        until: latest.retrying.until,
+      };
     }
     const startedAt = latest.startedAt ?? null;
     const running = [...(latest.actions ?? [])].reverse().find((a) => a.status === "running");

@@ -203,7 +203,8 @@
       "stoppedHint": "quello che ha già fatto resta",
       "failed": "Non è riuscito a finire",
       "retrying": "Nuovo tentativo",
-      "retryingHint": "nessuna risposta · tentativo {attempt} di {max}"
+      "retryingHint": "nessuna risposta · tra {seconds} s · tentativo {attempt} di {max}",
+      "retryingAttempt": "tentativo {attempt} di {max}"
     },
     "question": {
       "label": "Len ti chiede",

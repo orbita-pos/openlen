@@ -203,7 +203,8 @@
       "stoppedHint": "이미 한 작업은 그대로 남습니다",
       "failed": "끝내지 못했습니다",
       "retrying": "다시 시도 중",
-      "retryingHint": "응답 없음 · {max}회 중 {attempt}회째"
+      "retryingHint": "응답 없음 · {seconds}초 후 · {max}회 중 {attempt}회째",
+      "retryingAttempt": "{max}회 중 {attempt}회째"
     },
     "question": {
       "label": "Len의 질문",

@@ -203,7 +203,8 @@
       "stoppedHint": "was schon erledigt ist, bleibt",
       "failed": "Konnte nicht fertig werden",
       "retrying": "Neuer Versuch",
-      "retryingHint": "keine Antwort · Versuch {attempt} von {max}"
+      "retryingHint": "keine Antwort · in {seconds} s · Versuch {attempt} von {max}",
+      "retryingAttempt": "Versuch {attempt} von {max}"
     },
     "question": {
       "label": "Len fragt dich",

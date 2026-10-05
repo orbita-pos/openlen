@@ -203,7 +203,8 @@
       "stoppedHint": "ce qui est fait reste fait",
       "failed": "N'a pas pu terminer",
       "retrying": "Nouvel essai",
-      "retryingHint": "pas de réponse · essai {attempt} sur {max}"
+      "retryingHint": "pas de réponse · dans {seconds} s · essai {attempt} sur {max}",
+      "retryingAttempt": "essai {attempt} sur {max}"
     },
     "question": {
       "label": "Len vous demande",
