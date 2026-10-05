@@ -18,6 +18,7 @@ import type { BackendProject } from "../router";
 import type { BlobStore } from "./blob-store";
 import { BUCKET_ROUTES } from "./buckets";
 import { ERRORS, StorageError, storageErrorResponse } from "./errors";
+import { OBJECT_ROUTES } from "./objects";
 import { storageLimits, type StorageLimits } from "./limits";
 
 export interface StorageContext {
@@ -27,6 +28,9 @@ export interface StorageContext {
   readonly claims: Record<string, unknown>;
   /** El JWT tal cual (va en `request.jwt`, como en Supabase). */
   readonly jwt: string;
+  /** Su `request.isAuthenticated`: la petición trae una clave o un JWT que vale.
+   *  Sin eso, una ruta abierta sólo enseña lo de los buckets públicos. */
+  readonly authenticated: boolean;
   readonly limits: StorageLimits;
   readonly method: string;
   /** La ruta dentro de /storage/v1, sin la consulta. */
@@ -42,7 +46,7 @@ export interface StorageRoute {
 }
 
 /** Las rutas de su servidor que cubrimos (buckets.ts, objects.ts, signed.ts). */
-const routes: readonly StorageRoute[] = [...BUCKET_ROUTES];
+const routes: readonly StorageRoute[] = [...BUCKET_ROUTES, ...OBJECT_ROUTES];
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
@@ -62,7 +66,7 @@ export function isProjectHost(req: Request, ref: string): boolean {
   return host.split(".")[0] === ref && host.includes(".");
 }
 
-type Resolved = { ok: true; role: ApiRole; claims: Record<string, unknown>; jwt: string } | { ok: false; response: Response };
+type Resolved = { ok: true; role: ApiRole; claims: Record<string, unknown>; jwt: string; authenticated: boolean } | { ok: false; response: Response };
 
 async function resolveStorageRole(req: Request, project: BackendProject, open: boolean): Promise<Resolved> {
   const url = new URL(req.url);
@@ -77,17 +81,17 @@ async function resolveStorageRole(req: Request, project: BackendProject, open: b
   }
 
   const bearer = /^Bearer\s+(.+)$/i.exec(req.headers.get("authorization") ?? "")?.[1]?.trim() ?? "";
-  if (!bearer || bearer === apikey) return { ok: true, role: base, claims: { role: base }, jwt: "" };
+  if (!bearer || bearer === apikey) return { ok: true, role: base, claims: { role: base }, jwt: "", authenticated: Boolean(apikey) };
   try {
     const { payload } = await jwtVerify(bearer, new TextEncoder().encode(project.jwtSecret), { algorithms: ["HS256"] });
     const role = payload.role;
     if (typeof role !== "string" || !(API_ROLES as readonly string[]).includes(role)) {
       throw ERRORS.AccessDenied(`role "${String(role)}" does not exist`);
     }
-    return { ok: true, role: role as ApiRole, claims: payload as Record<string, unknown>, jwt: bearer };
+    return { ok: true, role: role as ApiRole, claims: payload as Record<string, unknown>, jwt: bearer, authenticated: true };
   } catch (err) {
     // `allowInvalidJwt`: la ruta sigue como anon.
-    if (open) return { ok: true, role: "anon", claims: { role: "anon" }, jwt: "" };
+    if (open) return { ok: true, role: "anon", claims: { role: "anon" }, jwt: "", authenticated: false };
     if (err instanceof StorageError) return { ok: false, response: storageErrorResponse(err) };
     const message = err instanceof joseErrors.JOSEError || err instanceof Error ? err.message : String(err);
     return { ok: false, response: storageErrorResponse(ERRORS.AccessDenied(message)) };
@@ -139,6 +143,7 @@ export async function handleStorage(req: Request, sub: string, project: BackendP
     role: resolved.role,
     claims: resolved.claims,
     jwt: resolved.jwt,
+    authenticated: resolved.authenticated,
     limits: project.storage?.limits ?? storageLimits(),
     method,
     path,

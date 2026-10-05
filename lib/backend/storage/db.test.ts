@@ -26,6 +26,7 @@ const ctx = (role: StorageContext["role"], claims: Record<string, unknown> = { r
   role,
   claims,
   jwt: "",
+  authenticated: true,
   limits: storageLimits({}),
   method: "POST",
   path: "/object/avatars/x",
