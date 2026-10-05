@@ -400,6 +400,7 @@ export default defineConfig({
       // Pieza 4 de Len 2.5: herramientas en paralelo, como DeepSeek. LISTA BLANCA.
       "lib/agent/tool-concurrency.test.ts",
       "lib/agent/tool-scheduler.test.ts",
+      "lib/agent/concurrency-limit.test.ts",
       // Deshacer lo de Len sobre lo que hay AHORA, sin llevarse lo que el dueño
       // editó a mano (H06, auditoría 2026-09-22). Núcleo puro — pero `include`
       // es LISTA BLANCA y sin esta línea la prueba existiría y no correría.
