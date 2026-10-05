@@ -10,6 +10,7 @@
 // Len, que ya habla el idioma del usuario.
 
 import type { LenTurnoEvent } from "@/lib/notifications/types";
+import { isQuestionTool } from "@/lib/agent/ask-user-question";
 
 /** Lo que cabe en una notificación sin que el sistema lo corte a su manera. */
 export const MAX_AVISO = 140;
@@ -29,15 +30,16 @@ export function avisoDelTurno(o: {
   readonly projectId: string;
   readonly userId: string;
   readonly texto: string;
-  readonly tarjetas: readonly { readonly tool: string }[];
+  readonly tarjetas: readonly { readonly tool: string; readonly respuesta?: string }[];
 }): LenTurnoEvent {
   return {
     type: "len_turno",
     projectId: o.projectId,
     recipientUserId: o.userId,
     preview: ultimoParrafo(o.texto),
-    // `preguntar` cierra el turno esperando al usuario: sin su respuesta, Len
-    // no sigue. Es el aviso que más importa no perderse.
-    pregunta: o.tarjetas.some((t) => t.tool === "preguntar"),
+    // La pregunta sin contestar cierra el turno esperando al usuario: sin su
+    // respuesta, Len no sigue. Es el aviso que más importa no perderse. Una
+    // contestada DENTRO del turno (pieza 3: `respuesta`) ya no lo es.
+    pregunta: o.tarjetas.some((t) => isQuestionTool(t.tool) && !t.respuesta),
   };
 }

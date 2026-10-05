@@ -39,6 +39,12 @@ describe("el aviso de que Len terminó sin nadie mirando", () => {
     });
   });
 
+  it("pieza 3: con el nombre nuevo, igual; y una contestada DENTRO del turno ya no es «te toca»", () => {
+    const base = { projectId: "p1", userId: "u1", texto: "¿Cuál es tu WhatsApp?" };
+    expect(avisoDelTurno({ ...base, tarjetas: [{ tool: "ask_user_question" }] }).pregunta).toBe(true);
+    expect(avisoDelTurno({ ...base, tarjetas: [{ tool: "ask_user_question", respuesta: "55 1234" }, { tool: "Edit" }] }).pregunta).toBe(false);
+  });
+
   it("BRAZO DE CONTROL: un turno que terminó el trabajo no es una pregunta", () => {
     const e = avisoDelTurno({ projectId: "p1", userId: "u1", texto: "Listo.", tarjetas: [{ tool: "Edit" }] });
     expect(e.pregunta).toBe(false);
