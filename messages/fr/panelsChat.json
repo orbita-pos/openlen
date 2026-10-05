@@ -201,7 +201,9 @@
       "doneHint": "demandez autre chose",
       "stopped": "Arrêté",
       "stoppedHint": "ce qui est fait reste fait",
-      "failed": "N'a pas pu terminer"
+      "failed": "N'a pas pu terminer",
+      "retrying": "Nouvel essai",
+      "retryingHint": "pas de réponse · essai {attempt} sur {max}"
     },
     "question": {
       "label": "Len vous demande",

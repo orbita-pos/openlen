@@ -93,6 +93,10 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
       verb = t("newChat.live.failed");
       why = status.message;
       break;
+    case "retrying":
+      verb = t("newChat.live.retrying");
+      meta = t("newChat.live.retryingHint", { attempt: status.attempt, max: status.maxAttempts });
+      break;
   }
 
   const between = status.kind === "working" && !status.activity && spoken !== "";

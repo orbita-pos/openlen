@@ -201,7 +201,9 @@
       "doneHint": "可以再让它做别的",
       "stopped": "已停止",
       "stoppedHint": "已经完成的部分会保留",
-      "failed": "没能完成"
+      "failed": "没能完成",
+      "retrying": "正在重试",
+      "retryingHint": "没有响应 · 第 {attempt} 次，共 {max} 次"
     },
     "question": {
       "label": "Len 想问你",

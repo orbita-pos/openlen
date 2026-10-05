@@ -201,7 +201,9 @@
       "doneHint": "peça outra coisa",
       "stopped": "Parado",
       "stoppedHint": "o que já fez continua feito",
-      "failed": "Não conseguiu terminar"
+      "failed": "Não conseguiu terminar",
+      "retrying": "Tentando de novo",
+      "retryingHint": "sem resposta · tentativa {attempt} de {max}"
     },
     "question": {
       "label": "O Len pergunta",

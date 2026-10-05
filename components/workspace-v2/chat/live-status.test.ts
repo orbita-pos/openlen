@@ -15,6 +15,16 @@ const turn = (patch: Partial<DesignTurn> = {}): DesignTurn => ({
 });
 
 describe("la barra viva", () => {
+  it("en un reintento del proveedor dice que reintenta y en qué intento va", () => {
+    const s = liveStatus(turn({ status: "streaming", startedAt: 1, retrying: { attempt: 2, maxAttempts: 5 } }), { busy: true });
+    expect(s).toEqual({ kind: "retrying", face: "pensando", attempt: 2, maxAttempts: 5 });
+  });
+
+  it("BRAZO DE CONTROL: sin reintento, la misma vuelta sigue en «pensando»", () => {
+    const s = liveStatus(turn({ status: "streaming", startedAt: 1 }), { busy: true });
+    expect(s.kind).toBe("thinking");
+  });
+
   it("sin conversación no dice nada", () => {
     expect(liveStatus(undefined, { busy: false }).kind).toBe("idle");
   });

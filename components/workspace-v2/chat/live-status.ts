@@ -131,7 +131,9 @@ export type LiveStatus =
   /** Lo paraste tú (o se cortó): lo que hizo, hecho está. */
   | { readonly kind: "stopped"; readonly face: FaceState }
   /** No pudo terminar. */
-  | { readonly kind: "failed"; readonly face: FaceState; readonly message: string | null };
+  | { readonly kind: "failed"; readonly face: FaceState; readonly message: string | null }
+  // El proveedor no contestó y el bucle repite el paso (`retry`, como DeepSeek).
+  | { readonly kind: "retrying"; readonly face: FaceState; readonly attempt: number; readonly maxAttempts: number };
 
 /** La pregunta con la que acabó el turno, si acabó preguntando. */
 export function questionOf(turn: Pick<DesignTurn, "actions" | "status">): string | null {
@@ -153,6 +155,9 @@ export function liveStatus(
 ): LiveStatus {
   if (!latest) return { kind: "idle", face: "reposo" };
   if (latest.status === "streaming" || o.busy) {
+    if (latest.retrying) {
+      return { kind: "retrying", face: "pensando", attempt: latest.retrying.attempt, maxAttempts: latest.retrying.maxAttempts };
+    }
     const startedAt = latest.startedAt ?? null;
     const running = [...(latest.actions ?? [])].reverse().find((a) => a.status === "running");
     if (running) {

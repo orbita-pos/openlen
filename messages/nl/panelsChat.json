@@ -201,7 +201,9 @@
       "doneHint": "vraag iets anders",
       "stopped": "Gestopt",
       "stoppedHint": "wat al gedaan is, blijft",
-      "failed": "Kon het niet afmaken"
+      "failed": "Kon het niet afmaken",
+      "retrying": "Opnieuw proberen",
+      "retryingHint": "geen antwoord · poging {attempt} van {max}"
     },
     "question": {
       "label": "Len vraagt je",

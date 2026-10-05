@@ -201,7 +201,9 @@
       "doneHint": "pídele otra cosa",
       "stopped": "Detenido",
       "stoppedHint": "lo que ya hizo se queda",
-      "failed": "No pudo terminar"
+      "failed": "No pudo terminar",
+      "retrying": "Reintentando",
+      "retryingHint": "no hubo respuesta · intento {attempt} de {max}"
     },
     "question": {
       "label": "Len te pregunta",
