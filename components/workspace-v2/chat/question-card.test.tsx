@@ -163,7 +163,7 @@ describe("QuestionCardView — el modo plan", () => {
 
   it("la revisión enseña el plan, y «Aprobar» manda Approve", () => {
     const onAnswer = vi.fn();
-    const host = montar({ questions: [revision], onAnswer });
+    const host = montar({ questions: [revision], onAnswer, onDismiss: () => undefined });
     expect(host.textContent).toContain("newChat.plan.reviewLabel");
     expect(host.textContent).toContain("Reseñas con estrellas");
     expect(host.textContent).toContain("• Dejo una reseña y la veo");
@@ -172,13 +172,16 @@ describe("QuestionCardView — el modo plan", () => {
     expect(onAnswer).toHaveBeenCalledWith([{ id: "plan-review", selected: ["Approve"] }]);
   });
 
-  it("«Pedir cambios» abre el campo y manda Keep planning con lo escrito", () => {
+  it("LOTE 7-8 · «Pedir cambios» no abre caja: descarta (onDismiss) y no contesta nada", () => {
     const onAnswer = vi.fn();
-    const host = montar({ questions: [revision], onAnswer });
+    const onDismiss = vi.fn();
+    const host = montar({ questions: [revision], onAnswer, onDismiss });
     pulsarBoton(host, "newChat.plan.keep");
-    escribir(host.querySelector("textarea")!, "más corto");
-    pulsarBoton(host, "newChat.plan.sendFeedback");
-    expect(onAnswer).toHaveBeenCalledWith([{ id: "plan-review", selected: ["Keep planning"], custom: "más corto" }]);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onAnswer).not.toHaveBeenCalled();
+    expect(host.querySelector("textarea")).toBeNull();
+    // La tarjeta sigue enseñando el plan: el dueño lo lee mientras escribe abajo.
+    expect(host.textContent).toContain("Reseñas con estrellas");
   });
 
   it("contestada, dice lo que elegiste traducido y deja ver el plan", () => {

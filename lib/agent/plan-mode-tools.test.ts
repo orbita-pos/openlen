@@ -3,7 +3,7 @@
 // revisa y, aprobado, el modo se apaga). Con un dueño falso que contesta lo que
 // se le diga y el estado en memoria.
 import { describe, expect, it } from "vitest";
-import type { QuestionAnswer, UserQuestion } from "./ask-user-question";
+import { QUESTION_DISMISSED, type AskUserResult, type UserQuestion } from "./ask-user-question";
 import {
   APPROVE_LABEL,
   ENTER_PLAN_MODE,
@@ -18,7 +18,7 @@ import type { AgentDeps, AgentSession } from "./tools";
 const session = { projectId: "p1", userId: "u1" } as AgentSession;
 const PLAN = "# Reseñas con estrellas\n\nUna sección con las reseñas.\n\n## Cómo lo comprobaré\nAbro la página y dejo una.";
 
-function dueno(contesta: ((qs: UserQuestion[]) => QuestionAnswer[] | null) | null, activo = false) {
+function dueno(contesta: ((qs: UserQuestion[]) => AskUserResult) | null, activo = false) {
   const estado = { active: activo, cambios: [] as boolean[] };
   const preguntadas: UserQuestion[][] = [];
   const deps = {
@@ -66,6 +66,15 @@ describe("enter_plan_mode", () => {
     expect(d.estado.cambios).toEqual([]);
   });
 
+  it("LOTE 7-8 · descartado (sólo por la API): como sin respuesta, la pregunta cierra el turno y el modo no cambia", async () => {
+    const d = dueno(() => QUESTION_DISMISSED);
+    const out = await toolEnterPlanMode(session, d.deps, {});
+    expect(out.response).toEqual({ ok: true, preguntado: true });
+    expect(out.pregunta).toBeTruthy();
+    expect(out.dismissed).toBeUndefined();
+    expect(d.estado.cambios).toEqual([]);
+  });
+
   it("sin quien conteste (voz, Len-Bench), no entra", async () => {
     const d = dueno(null);
     const out = await toolEnterPlanMode(session, d.deps, {});
@@ -100,6 +109,20 @@ describe("exit_plan_mode", () => {
     const d = dueno((qs) => [{ id: qs[0]!.id, selected: [KEEP_PLANNING_LABEL], custom: "sin fotos de stock" }], true);
     const out = await toolExitPlanMode(session, d.deps, { plan: PLAN });
     expect(out.response).toEqual({ ok: false, error: "The user chose to keep planning; their feedback: sin fotos de stock" });
+    expect(d.estado.cambios).toEqual([]);
+  });
+
+  it("LOTE 7-8 · descartada para hablar: el error literal de DeepSeek, el modo sigue y el turno lo cierra el servidor", async () => {
+    const d = dueno(() => QUESTION_DISMISSED, true);
+    const out = await toolExitPlanMode(session, d.deps, { plan: PLAN });
+    expect(out.response).toEqual({
+      ok: false,
+      error: "The user dismissed the plan review to speak instead; stay in plan mode, stop here, and wait for their message.",
+    });
+    expect(out.dismissed).toBe(true);
+    expect(out.preguntas?.[0]?.intent).toEqual({ kind: "plan-review", plan: PLAN });
+    expect(out.respuesta).toBeUndefined();
+    expect(out.pregunta).toBeUndefined();
     expect(d.estado.cambios).toEqual([]);
   });
 

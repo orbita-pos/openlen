@@ -126,6 +126,7 @@ export function LenTurn({
   onPublished,
   onConfirmSettled,
   onAnswerQuestion,
+  onDismissQuestion,
   onRate,
   onClearRate,
 }: {
@@ -144,6 +145,8 @@ export function LenTurn({
   onConfirmSettled: (turnId: string) => void;
   /** Pieza 3: la respuesta a una pregunta de Len, desde su tarjeta. */
   onAnswerQuestion: (turnId: string, questions: readonly UserQuestion[], answers: QuestionAnswer[]) => void;
+  /** Lote 7-8: «Pedir cambios» en la revisión del plan (descartar y escribir). */
+  onDismissQuestion: (turnId: string) => void;
   /** Devuelve si el servidor guardó el voto: «Gracias» sólo entonces. */
   onRate: (rating: "up" | "down", reasons?: readonly FeedbackReason[], note?: string | null) => Promise<boolean>;
   onClearRate: () => Promise<boolean>;
@@ -208,6 +211,7 @@ export function LenTurn({
           questions={liveQuestions}
           answer={turn.answeredLive ?? null}
           onAnswer={(answers) => onAnswerQuestion(turn.id, liveQuestions, answers)}
+          onDismiss={() => onDismissQuestion(turn.id)}
         />
       )}
       {question !== null && (
@@ -216,6 +220,7 @@ export function LenTurn({
           questions={endedQuestions}
           answer={next ? next.userText : null}
           onAnswer={!next && isLast && endedQuestions ? (answers) => onAnswerQuestion(turn.id, endedQuestions, answers) : undefined}
+          onDismiss={!next && isLast && endedQuestions ? () => onDismissQuestion(turn.id) : undefined}
         />
       )}
       {/* «Ver» y «Comparar» necesitan que el turno escribiera la página que se

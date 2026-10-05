@@ -96,6 +96,11 @@ export function resolveTurnPlanMode(o: { folded: boolean; selected: boolean | nu
 /** Las etiquetas de la revisión de DeepSeek (`APPROVE_LABEL`, `KEEP_PLANNING_LABEL`). */
 export const APPROVE_LABEL = "Approve";
 export const KEEP_PLANNING_LABEL = "Keep planning";
+/** LOTE 7-8 · el error de DeepSeek cuando el dueño descarta la revisión para
+ *  hablar (`plan-mode/src/index.ts`, la rama de `ASK_CANCELLED`): no nombra
+ *  `ask_user_question`, que el modelo nunca llamó. */
+export const PLAN_REVIEW_DISMISSED_ERROR =
+  "The user dismissed the plan review to speak instead; stay in plan mode, stop here, and wait for their message.";
 /** Las del consentimiento para entrar (nuestras: DeepSeek no tiene esta puerta). */
 export const PLAN_FIRST_LABEL = "Plan first";
 export const SKIP_PLANNING_LABEL = "Skip planning";

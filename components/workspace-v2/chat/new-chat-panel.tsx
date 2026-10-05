@@ -245,6 +245,7 @@ function AgentChatView({
                 onPublished={chat.handlePublished}
                 onConfirmSettled={settle}
                 onAnswerQuestion={chat.answerQuestion}
+                onDismissQuestion={(id) => void chat.dismissQuestion(id)}
                 onRate={(rating, reasons, note) => feedback.rate(turn.id, rating, reasons ?? [], note ?? null)}
                 onClearRate={() => feedback.clear(turn.id)}
               />

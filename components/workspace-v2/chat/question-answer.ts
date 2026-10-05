@@ -38,3 +38,13 @@ export function outcomeOfResponder(status: number, code: string | undefined): Re
   if (status === 409 && code === "ya_respondida") return "ignore";
   return "fallback";
 }
+
+/** LOTE 7-8 · el turno que ESPERA ahora la respuesta de esta tarjeta —su id
+ *  para `POST /api/agent/responder`—, o `null` si ya nadie espera (cerró,
+ *  venció, o es una fila vieja). Lo usan contestar y «Pedir cambios». */
+export function liveQuestionTurno(
+  turn: { readonly status: string; readonly pendingQuestions?: readonly unknown[] } | undefined,
+  turnoId: string | null,
+): string | null {
+  return turn?.status === "streaming" && turn.pendingQuestions?.length && turnoId ? turnoId : null;
+}

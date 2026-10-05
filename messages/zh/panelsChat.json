@@ -278,8 +278,6 @@
       "approveHint": "Len 现在开始执行计划。",
       "keep": "要求修改",
       "keepHint": "Len 会按你的意见继续完善计划。",
-      "feedbackPlaceholder": "计划中有哪些要改？",
-      "sendFeedback": "发送修改意见",
       "consentLabel": "计划模式",
       "consentQuestion": "Len 想在改动任何内容之前先做计划。先做计划吗？",
       "planFirst": "先做计划",

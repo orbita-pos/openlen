@@ -278,8 +278,6 @@
       "approveHint": "Len exécute le plan maintenant.",
       "keep": "Demander des changements",
       "keepHint": "Len continue de planifier avec vos remarques.",
-      "feedbackPlaceholder": "Que faudrait-il changer dans le plan ?",
-      "sendFeedback": "Envoyer les changements",
       "consentLabel": "Mode plan",
       "consentQuestion": "Len veut planifier avant de modifier quoi que ce soit. Planifier d'abord ?",
       "planFirst": "Planifier d'abord",

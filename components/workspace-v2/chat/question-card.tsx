@@ -15,7 +15,7 @@ import { useTranslations } from "next-intl";
 import { Check, HelpCircle, ListChecks } from "lucide-react";
 
 import { RECOMMENDED_SUFFIX, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
-import { APPROVE_LABEL, KEEP_PLANNING_LABEL, planTitle } from "@/lib/agent/plan-mode";
+import { APPROVE_LABEL, planTitle } from "@/lib/agent/plan-mode";
 import { PLAN_LABEL_KEYS } from "./plan-mode-state";
 
 type Translate = (key: string, values?: Record<string, string>) => string;
@@ -29,6 +29,9 @@ export interface QuestionCardProps {
   answer: string | null;
   /** Quien recibe la respuesta. Sin él, no hay botones: se contesta abajo. */
   onAnswer?: (answers: QuestionAnswer[]) => void;
+  /** LOTE 7-8 · «Pedir cambios» de la revisión del plan: el dueño toma la
+   *  palabra (descarta la espera y escribe en el compositor). */
+  onDismiss?: () => void;
 }
 
 export function QuestionCard(props: QuestionCardProps) {
@@ -48,7 +51,7 @@ function shownAnswer(answer: string, conIntencion: boolean, t: Translate): strin
     .join(" · ");
 }
 
-export function QuestionCardView({ question, questions, answer, onAnswer, t }: QuestionCardProps & { t: Translate }) {
+export function QuestionCardView({ question, questions, answer, onAnswer, onDismiss, t }: QuestionCardProps & { t: Translate }) {
   const [elegidas, setElegidas] = useState<Record<string, string[]>>({});
   const [libres, setLibres] = useState<Record<string, string>>({});
   const [otraAbierta, setOtraAbierta] = useState<Record<string, boolean>>({});
@@ -96,6 +99,7 @@ export function QuestionCardView({ question, questions, answer, onAnswer, t }: Q
           setEnviada(true);
           onAnswer(answers);
         }}
+        onDismiss={onDismiss}
         t={t}
       />
     );
@@ -236,25 +240,25 @@ export function QuestionCardView({ question, questions, answer, onAnswer, t }: Q
 
 /**
  * PIEZA 7 · LA REVISIÓN DEL PLAN (`exit_plan_mode`), con los dos botones de la
- * de DeepSeek: «Aprobar» y «Pedir cambios». Pedir cambios abre un campo y manda
- * «Keep planning» con lo escrito, que le llega literal a Len (la forma de su
- * canal temporizado: una etiqueta y `custom`).
+ * de DeepSeek (`PlanReviewPanel`): «Aprobar» manda «Approve» y «Pedir cambios»
+ * es su «discuss» (lote 7-8): no hay caja en la tarjeta, se DESCARTA la
+ * revisión (`onDismiss`) y el dueño escribe en el compositor de siempre.
  */
 function PlanReview({
   id,
   plan,
   contestable,
   onSend,
+  onDismiss,
   t,
 }: {
   id: string;
   plan: string;
   contestable: boolean;
   onSend: (answers: QuestionAnswer[]) => void;
+  onDismiss?: () => void;
   t: Translate;
 }) {
-  const [cambios, setCambios] = useState(false);
-  const [texto, setTexto] = useState("");
   return (
     <div className="nc-ask px-3.5 py-3">
       <div className="mb-1.5 flex items-center gap-1.5 text-[11.5px] font-medium text-[var(--nc-accent-text)]">
@@ -262,17 +266,19 @@ function PlanReview({
         {t("newChat.plan.reviewLabel")}
       </div>
       <PlanBody plan={plan} />
-      {contestable && !cambios ? (
+      {contestable ? (
         <div className="mt-2.5 flex flex-wrap items-center justify-end gap-2">
           <span className="w-full text-[12px] fg-muted">{t("newChat.plan.reviewQuestion")}</span>
-          <button
-            type="button"
-            onClick={() => setCambios(true)}
-            title={t("newChat.plan.keepHint")}
-            className="rounded-full border bd-strong px-3.5 py-1.5 text-[12.5px] font-semibold fg hover:bg-side focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-          >
-            {t("newChat.plan.keep")}
-          </button>
+          {onDismiss ? (
+            <button
+              type="button"
+              onClick={onDismiss}
+              title={t("newChat.plan.keepHint")}
+              className="rounded-full border bd-strong px-3.5 py-1.5 text-[12.5px] font-semibold fg hover:bg-side focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              {t("newChat.plan.keep")}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => onSend([{ id, selected: [APPROVE_LABEL] }])}
@@ -281,31 +287,6 @@ function PlanReview({
           >
             {t("newChat.plan.approve")}
           </button>
-        </div>
-      ) : null}
-      {contestable && cambios ? (
-        <div className="mt-2.5 flex flex-col gap-2">
-          <textarea
-            rows={2}
-            autoFocus
-            value={texto}
-            onChange={(e) => setTexto(e.currentTarget.value)}
-            placeholder={t("newChat.plan.feedbackPlaceholder")}
-            aria-label={t("newChat.plan.keep")}
-            className="nc-opt-input"
-          />
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                const custom = texto.trim();
-                onSend([{ id, selected: [KEEP_PLANNING_LABEL], ...(custom ? { custom } : {}) }]);
-              }}
-              className="rounded-full bg-[var(--accent-strong)] px-3.5 py-1.5 text-[12.5px] font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-            >
-              {t("newChat.plan.sendFeedback")}
-            </button>
-          </div>
         </div>
       ) : null}
     </div>

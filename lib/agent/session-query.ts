@@ -66,6 +66,10 @@ export function sessionsFromRows(rows: readonly ChatRowForSearch[]): Session[] {
       const time = f.createdAt.getTime();
       const acciones = (f.actions ?? []).map((a) => `${a.tool}: ${a.summary}`.trim());
       return [
+        // Lote 7-8: las rondas del encargo guardan aquí su mensaje de ronda
+        // (`<goal_round>…`, en inglés) y se busca ENTERO, como en DeepSeek: allí
+        // la ronda es un `user/message` de texto y su búsqueda indexa todo
+        // `user/message` sin mirar de dónde viene (session-query/src/extraction.ts).
         { seq: 2 * i + 1, type: "user" as const, time, text: f.userText, rowId: f.id },
         { seq: 2 * i + 2, type: "assistant" as const, time, text: [f.assistantReasoning, ...acciones].filter(Boolean).join("\n"), rowId: f.id },
       ];

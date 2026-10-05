@@ -1181,6 +1181,37 @@ describe("runAgentLoop — ask_user_question (antes preguntar)", () => {
     expect(tarjeta.respuesta).toBe("48 horas");
   });
 
+  it("LOTE 7-8 · DESCARTADA para hablar: el turno cierra sin otra llamada, la tarjeta es `done` y el modelo leerá el error", async () => {
+    const events: AgentStreamEvent[] = [];
+    const seen: string[] = [];
+    const preguntas = [{ id: "plan-review", question: "Approve this plan and leave plan mode?" }];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "planea las reseñas" }], tools: [],
+      openStream: scripted(
+        [{ type: "text_delta", text: "Aquí va el plan." }, { type: "function_call", name: "exit_plan_mode", args: { plan: "# Reseñas" } }, done],
+        // No debe abrirse: el dueño tomó la palabra.
+        [{ type: "text_delta", text: "Sigo." }, done],
+      ),
+      runTool: async (name) => {
+        seen.push(name);
+        return { response: { ok: false, error: "dismissed to speak" }, preguntas, dismissed: true };
+      },
+      emit: (e) => events.push(e),
+    });
+    expect(seen).toEqual(["exit_plan_mode"]);
+    expect(r.terminalError).toBe(false);
+    const tarjeta = events.find((e) => e.type === "action" && (e as { status: string }).status !== "running") as Record<string, unknown>;
+    expect(tarjeta.status).toBe("done");
+    expect(tarjeta.preguntas).toEqual(preguntas);
+    expect(tarjeta.pregunta).toBeUndefined();
+    // La transcripción termina con la llamada y su error: es lo que lee el turno siguiente.
+    const ultimo = r.transcripcion!.at(-1)!;
+    expect(ultimo.functionResponses?.[0]?.response).toEqual({ ok: false, error: "dismissed to speak" });
+    expect(r.transcripcion!.at(-2)!.functionCalls?.[0]?.name).toBe("exit_plan_mode");
+    // Y nadie lee la pregunta como texto de Len.
+    expect(events.filter((e) => e.type === "text").map((e) => (e as { text: string }).text).join("")).toBe("Aquí va el plan.");
+  });
+
   it("preguntar (ask_user_question) no gasta presupuesto de acciones", async () => {
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [], maxToolCalls: 1,

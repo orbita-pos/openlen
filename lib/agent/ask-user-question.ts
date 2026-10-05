@@ -47,6 +47,17 @@ export interface QuestionAnswer {
  *  una aprobación: el turno cierra con la pregunta. */
 export const ASK_USER_TIMEOUT_MS = 120_000;
 
+/** LOTE 7-8 · el dueño DESCARTÓ la pregunta para hablar él: el `dismiss` del
+ *  panel de DeepSeek, que rechaza la espera con `ASK_CANCELLED`. No es una
+ *  respuesta ni un «no contestó»: el turno lo cierra el servidor (como Claude
+ *  Code al rechazar) y lo que escriba el dueño es el turno siguiente. */
+export const QUESTION_DISMISSED = "dismissed" as const;
+/** Lo que devuelve la espera: las respuestas, el descarte o `null` (venció, ■). */
+export type AskUserResult = QuestionAnswer[] | typeof QUESTION_DISMISSED | null;
+/** El mensaje de DeepSeek para `ASK_CANCELLED` (`ui-user-questions/src/client/
+ *  contract/slots.ts`, `rejectionMessages`). */
+export const ASK_CANCELLED_ERROR = "the user cancelled ask_user_question";
+
 /** Una pregunta, no un ensayo: lo que no quepa aquí es el modelo pensando en
  *  voz alta, y eso va en su texto. 600 era el tope de `preguntar`. */
 const QUESTION_MAX = 600;

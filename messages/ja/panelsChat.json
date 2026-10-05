@@ -278,8 +278,6 @@
       "approveHint": "Lenが今すぐ計画を実行します。",
       "keep": "変更を依頼",
       "keepHint": "Lenはあなたの指摘をもとに計画を続けます。",
-      "feedbackPlaceholder": "計画のどこを変えますか？",
-      "sendFeedback": "変更を送信",
       "consentLabel": "計画モード",
       "consentQuestion": "Lenは何かを変更する前に計画したいと考えています。先に計画しますか？",
       "planFirst": "先に計画する",

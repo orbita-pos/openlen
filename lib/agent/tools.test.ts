@@ -1497,6 +1497,15 @@ describe("ask_user_question (antes preguntar)", () => {
     assert.equal(out.pregunta, "¿Cuánto tarda la entrega?");
   });
 
+  it("LOTE 7-8 · descartada: el error de DeepSeek (`ASK_CANCELLED`) y el turno lo cierra el servidor", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), { ...deps, askUser: async () => "dismissed" as const }, "ask_user_question", { questions: preguntas });
+    assert.deepEqual(out.response, { ok: false, error: "the user cancelled ask_user_question" });
+    assert.equal(out.dismissed, true);
+    assert.equal(out.pregunta, undefined);
+    assert.equal(out.respuesta, undefined);
+  });
+
   it("una pregunta mal formada no llega a quien contesta", async () => {
     const { deps } = makeDeps();
     let llamado = false;
