@@ -6,6 +6,7 @@ import {
   RESULTADO_VACIADO,
   historialDesdeLaBase,
   leidosSembrados,
+  stateOnlyTranscript,
   textoDelHistorial,
   transcripcionParaGuardar,
   type FilaDelHistorial,
@@ -337,5 +338,33 @@ describe("la foto sigue en la conversación (como Claude Code)", () => {
       new Map(),
     );
     expect(JSON.stringify(t)).not.toContain("AAAA");
+  });
+});
+
+// LOTE 7-8 · un turno que cae sin transcripción pero cambió el modo plan o el
+// encargo deja la foto (en DeepSeek, un evento duradero de la sesión).
+describe("stateOnlyTranscript (lote 7-8)", () => {
+  const G = { id: "g1", revision: 1, objective: "Tienda", phase: "active" as const, maxGoalRounds: 256, roundsStarted: 1 };
+
+  it("sin cambios, nada: la fila sigue con transcript NULL", () => {
+    expect(stateOnlyTranscript({ folded: { planMode: true, goal: G }, now: { planMode: true, goal: G } })).toBeNull();
+    expect(stateOnlyTranscript({ folded: { planMode: false, goal: null }, now: { planMode: false, goal: null } })).toBeNull();
+  });
+
+  it("con el modo plan o el encargo cambiados, la foto con mensajes y lecturas vacíos", () => {
+    expect(stateOnlyTranscript({ folded: { planMode: false, goal: null }, now: { planMode: true, goal: null } })).toEqual({ mensajes: [], leidos: [], planMode: true });
+    expect(stateOnlyTranscript({ folded: { planMode: false, goal: null }, now: { planMode: false, goal: G } })).toEqual({ mensajes: [], leidos: [], goal: G });
+    // Apagarlo también es un cambio: la foto sin `planMode` lo apaga en el pliegue.
+    expect(stateOnlyTranscript({ folded: { planMode: true, goal: null }, now: { planMode: false, goal: null } })).toEqual({ mensajes: [], leidos: [] });
+  });
+
+  it("🔴 una fila así no rompe el historial: cae a lo que escribió Len, y no siembra lecturas", () => {
+    const transcript = { mensajes: [], leidos: [], planMode: true as const };
+    const filas: FilaDelHistorial[] = [{ userText: "añade reseñas", assistantReasoning: "Voy a planearlo.", transcript }];
+    const h = historialDesdeLaBase(filas);
+    expect(h.map((m) => m.role)).toEqual(["user", "assistant"]);
+    expect(h[0]!.content).toContain("añade reseñas");
+    expect(h[1]!.content).toBe("Voy a planearlo.");
+    expect(leidosSembrados(transcript.leidos, h, () => "x").size).toBe(0);
   });
 });

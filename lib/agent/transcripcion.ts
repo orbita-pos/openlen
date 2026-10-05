@@ -104,6 +104,29 @@ export interface FilaDelHistorial {
   readonly attachedImage?: { readonly url: string; readonly alt?: string } | null;
 }
 
+/**
+ * LOTE 7-8 · LA FOTO DE UN TURNO QUE CAYÓ SIN TRANSCRIPCIÓN. El pliegue
+ * (`planModeFromRows`, `goalFromRows`) toma la última fila CON transcripción, y
+ * un turno que revienta no la tiene: un `enter_plan_mode` aceptado o un
+ * `create_goal` justo antes de caer se perdían al recargar. En DeepSeek ese
+ * cambio es un evento duradero de la sesión en el momento (`goal/change`, el
+ * modo plan); aquí, si el estado cambió en el turno, la fila lleva una
+ * transcripción VACÍA con la foto —el historial cae a `assistantReasoning` y no
+ * siembra lecturas—; si no cambió, `null`, como siempre.
+ */
+export function stateOnlyTranscript(o: {
+  readonly folded: { readonly planMode: boolean; readonly goal: GoalSnapshot | null };
+  readonly now: { readonly planMode: boolean; readonly goal: GoalSnapshot | null };
+}): TranscripcionGuardada | null {
+  if (o.now.planMode === o.folded.planMode && o.now.goal === o.folded.goal) return null;
+  return {
+    mensajes: [],
+    leidos: [],
+    ...(o.now.planMode ? { planMode: true as const } : {}),
+    ...(o.now.goal ? { goal: o.now.goal } : {}),
+  };
+}
+
 const huella = (texto: string) => createHash("sha1").update(normalizarFinales(texto)).digest("hex");
 
 /** El tamaño de una respuesta tal y como viaja al modelo (ver `fireworks-bridge`). */

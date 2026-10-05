@@ -33,6 +33,7 @@ import {
   NO_CABE,
   historialDesdeLaBase,
   leidosSembrados,
+  stateOnlyTranscript,
   transcripcionParaGuardar,
   type FilaDelHistorial,
   type MensajeDelHistorial,
@@ -500,7 +501,10 @@ async function correrTurno(
   // (`opts.round`). En las tres, el mensaje del turno es el de ronda de DeepSeek,
   // y queda en la conversación como allí. Armar espera a que el turno empiece de
   // verdad (pasada la puerta de créditos): una salida temprana no deja nada armado.
-  let goalActual: GoalSnapshot | null = goalFromRows(filasDelHistorial);
+  // Lo plegado se guarda aparte: un turno que cae sin transcripción deja su foto
+  // sólo si la cambió (`stateOnlyTranscript`, lote 7-8).
+  const goalPlegado: GoalSnapshot | null = goalFromRows(filasDelHistorial);
+  let goalActual: GoalSnapshot | null = goalPlegado;
   let goalArmado = goalActivation(projectId, goalActual?.id) === "armed";
   let rondaDelTurno: RondaDelEncargo | null = null;
   let ronda: GoalSnapshot | null = null;
@@ -822,7 +826,8 @@ async function correrTurno(
   // (allí es un mensaje de usuario inyectado entre turnos). Sólo lo cambian
   // `enter_plan_mode` y `exit_plan_mode` (`deps.planMode`, más abajo); la
   // sección entra o sale del prompt en CADA petición (`withPlanSection`).
-  const planDelTurno = resolveTurnPlanMode({ folded: planModeFromRows(filasDelHistorial), selected: planElegido });
+  const planPlegado = planModeFromRows(filasDelHistorial);
+  const planDelTurno = resolveTurnPlanMode({ folded: planPlegado, selected: planElegido });
   let planActivo = planDelTurno.active;
   if (planDelTurno.notice) messages.splice(messages.length - 1, 0, { role: "user", content: planDelTurno.notice });
 
@@ -1031,7 +1036,14 @@ async function correrTurno(
                     // Pieza 8: y el encargo como queda, que es de donde lo pliega el siguiente.
                     ...(goalActual ? { goal: goalActual } : {}),
                   }
-                : null,
+                : // LOTE 7-8: sin transcripción (el bucle reventó), la foto del
+                  // estado si el turno lo cambió —lo plegado es de ANTES de la
+                  // puerta del dueño—; si no, NULL como siempre. `goalActual`
+                  // sólo se reasigna en una transición (ronda o `commit`).
+                  stateOnlyTranscript({
+                    folded: { planMode: planPlegado, goal: goalPlegado },
+                    now: { planMode: planActivo, goal: goalActual },
+                  }),
             });
           } catch (err) {
             console.warn("[agent] no se pudo registrar el turno", err);

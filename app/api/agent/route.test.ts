@@ -9,7 +9,7 @@ import type { AgentLoopArgs } from "@/lib/agent/loop";
 import type { Message } from "@/lib/ai-gateway";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { PLAN_OFF_NOTICE, PLAN_ON_NOTICE, PLAN_POLICY } from "@/lib/agent/plan-mode";
-import { goalRoundPrompt, type GoalSnapshot } from "@/lib/agent/goal";
+import { createGoal, goalRoundPrompt, type GoalSnapshot } from "@/lib/agent/goal";
 import { _resetGoalActivation, armGoal, goalActivation } from "@/lib/agent/goal-activation";
 import type { VisualVerdict } from "@/lib/agent/verify";
 import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
@@ -752,6 +752,30 @@ describe("POST /api/agent — el modo plan", () => {
     await turno();
     expect(sinSeccion(enviados[0]!)).toBe(true);
     expect(filaGuardada()?.planMode).toBeUndefined();
+  });
+
+  it("LOTE 7-8 · 🔴 entra en modo plan y revienta: la fila guarda la foto (sin mensajes)", async () => {
+    mocks.runAgentTool.mockImplementation(async (_s: unknown, deps: Record<string, unknown>) => {
+      (deps.planMode as { set(v: boolean): void }).set(true);
+      return { response: { ok: true, planMode: true } };
+    });
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("enter_plan_mode", {});
+      args.emit({ type: "action", tool: "enter_plan_mode", status: "done", summary: "" });
+      throw new Error("se cayó el proveedor");
+    });
+    await turno();
+    expect(filaGuardada()).toEqual({ mensajes: [], leidos: [], planMode: true });
+  });
+
+  it("LOTE 7-8 · BRAZO DE CONTROL: un turno caído que no cambió nada sigue guardando transcript null", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.emit({ type: "text", text: "Miro la página…" });
+      throw new Error("se cayó el proveedor");
+    });
+    await turno();
+    expect(filaGuardada()).toBeNull();
   });
 });
 
@@ -2585,6 +2609,23 @@ describe("POST /api/agent — el encargo", () => {
     });
     await new Promise((r) => setTimeout(r, 20));
     expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("LOTE 7-8 · 🔴 crea un encargo y revienta: la fila guarda el encargo (sin mensajes)", async () => {
+    mocks.getCreditState.mockResolvedValueOnce(saldo(50));
+    mocks.runAgentTool.mockImplementation(async (_s: unknown, deps: Record<string, unknown>) => {
+      (deps.goal as { commit(g: GoalSnapshot, a: "armed" | "disarmed"): void }).commit(createGoal(null, { objective: OBJETIVO }, "goal-9"), "armed");
+      return { response: { ok: true } };
+    });
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("create_goal", { objective: OBJETIVO });
+      args.emit({ type: "action", tool: "create_goal", status: "done", summary: "" });
+      throw new Error("se cayó el proveedor");
+    });
+    await turno();
+    const t = filas()[0]!.transcript as { mensajes: unknown[]; leidos: unknown[]; goal?: GoalSnapshot } | null;
+    expect(t?.mensajes).toEqual([]);
+    expect(t?.goal).toMatchObject({ id: "goal-9", objective: OBJETIVO, phase: "active" });
   });
 
   it("reanudar uno completo: 409 sin abrir turno", async () => {
