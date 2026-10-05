@@ -27,7 +27,8 @@ export async function GET(
   const project = await getProject(id, session.user.id);
   if (!project) return json({ error: "not_found" }, 404);
   const a = project.data?.settings?.assistant ?? {};
-  const usage = await getAssistantUsage(id, session.user.id);
+  // De la CUENTA, no de esta página: todas sus páginas comparten el cupo.
+  const usage = await getAssistantUsage(session.user.id);
   return json(
     {
       enabled: a.enabled ?? false,

@@ -175,7 +175,7 @@ export async function POST(
   // lead capture instead of erroring — the owner still gets the contact, and
   // la petición no llega al modelo (techo de coste). Corre por Fireworks desde
   // el 2026-08-21, no por Gemini.
-  const quota = await consumeAssistantMessage(owner.projectId, owner.userId);
+  const quota = await consumeAssistantMessage(owner.userId);
   if (!quota.ok) {
     return reply(200, {
       respuesta:
