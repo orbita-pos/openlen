@@ -81,6 +81,8 @@ import { createConcurrencyLimit } from "@/lib/agent/concurrency-limit";
 import { ASK_USER_QUESTION, answerSummary, questionText, validateQuestions, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { toolEnterPlanMode, toolExitPlanMode } from "@/lib/agent/plan-mode-tools";
+import type { GoalActivation, GoalSnapshot } from "@/lib/agent/goal";
+import { CREATE_GOAL, GET_GOAL, UPDATE_GOAL, toolCreateGoal, toolGetGoal, toolUpdateGoal } from "@/lib/agent/goal-tools";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import {
   SESSION_EVENT_READ,
@@ -129,6 +131,19 @@ export interface AgentDeps {
    *  ruta; sólo `enter_plan_mode` y `exit_plan_mode` lo cambian. Sin él, el
    *  modo plan no existe y las dos lo dicen. */
   planMode?: { active(): boolean; set(active: boolean): void };
+  /** Pieza 8: el encargo del turno (`lib/agent/goal.ts`). Lo guarda la ruta: la
+   *  foto que se escribe al cerrar y la activación del proceso. Sin él, las
+   *  tres herramientas dicen que no hay turno abierto. */
+  goal?: {
+    get(): GoalSnapshot | null;
+    activation(): GoalActivation;
+    /** La foto nueva y si queda armado, como cada mutación de DeepSeek. */
+    commit(next: GoalSnapshot | null, activation: GoalActivation): void;
+    /** De quién es el turno: el dueño (o el dueño corrigió el rumbo en él) o la
+     *  ronda de un encargo. Que es ronda lo dice SÓLO el servidor. */
+    authority(): { kind: "direct-human" } | { kind: "goal-round"; goalId: string; revision: number; round: number } | null;
+    newId(): string;
+  };
   /** Pieza 5: las filas del chat del proyecto, para buscar en sus charlas
    *  (`session_search`). Sin él, las herramientas lo dicen. */
   chatRows?(projectId: string): Promise<ChatRowForSearch[]>;
@@ -763,6 +778,10 @@ export interface AgentSession {
 export interface ToolOutcome {
   /** functionResponse.response que vuelve al modelo. Siempre presente. */
   response: Record<string, unknown>;
+  /** Pieza 8 · el `deferContext` de DeepSeek: un texto que el modelo lee en su
+   *  paso siguiente, detrás de los resultados de la tanda (el cierre de un
+   *  encargo). Lo añade el bucle al mensaje que lleva las respuestas. */
+  notice?: string;
   /** H12-a · guardar ya chocó dos veces seguidas en este turno: el bucle no
    *  ejecuta más escrituras y cierra. Lo pone `contarConflictos`. */
   guardarSinSalida?: true;
@@ -2005,6 +2024,13 @@ async function ejecutarHerramienta(
         return await toolEnterPlanMode(session, deps, args);
       case EXIT_PLAN_MODE:
         return await toolExitPlanMode(session, deps, args);
+      // Pieza 8: el encargo, como DeepSeek.
+      case GET_GOAL:
+        return await toolGetGoal(session, deps, args);
+      case CREATE_GOAL:
+        return await toolCreateGoal(session, deps, args);
+      case UPDATE_GOAL:
+        return await toolUpdateGoal(session, deps, args);
       // Pieza 5: buscar en las charlas pasadas, como DeepSeek.
       case SESSION_SEARCH:
         return await toolSessionSearch(session, deps, args);

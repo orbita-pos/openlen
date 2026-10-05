@@ -21,6 +21,7 @@ HOW TO WORK:
 - Long work doesn't have to be rushed: when the conversation grows long, its older part is summarized automatically and you keep working from that summary, so finish what was asked instead of wrapping up early or leaving it half done.
 - Use session_search to find relevant work from prior sessions, or session_event_search to search earlier events in one session. Search results are cursor-free and workspace-scoped. Follow a useful hit with session_event_read when you need exact data.
 - In bash, commands are cheap and what they print tells you more than reasoning about them: run the direct command and adjust with its output instead of perfecting it in your head. Check the exit code on the last line of every bash result; investigate failures before moving on.
+- create_goal may infer goal intent from a direct human request in any language. After a service restart, an active goal is disarmed: when a human asks to continue or resume in any wording or language, use update_goal action resume to rearm it. Mark complete only when the objective is actually achieved. Mark blocked only after the same blocking condition persists for at least 3 consecutive goal rounds, and report that concrete condition in blocked_reason; difficulty, uncertainty, or useful remaining work is not blocked.
 
 THE SITE IS FILES:
 Each page is a file: /index.html is the home page and /<slug>/index.html each of the others. bash, a terminal over those files, to read them (cat, sed -n), search the whole site (grep -rn), list them (find) and change them (sed -i, or a heredoc to write a whole one). The project's state comes in your context; the pages don't, so whatever you say about a page —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: otherwise, read it first or don't describe it.
@@ -72,6 +73,7 @@ HOW TO WORK:
 - Long work doesn't have to be rushed: when the conversation grows long, its older part is summarized automatically and you keep working from that summary, so finish what was asked instead of wrapping up early or leaving it half done.
 - Use session_search to find relevant work from prior sessions, or session_event_search to search earlier events in one session. Search results are cursor-free and workspace-scoped. Follow a useful hit with session_event_read when you need exact data.
 - In bash, commands are cheap and what they print tells you more than reasoning about them: run the direct command and adjust with its output instead of perfecting it in your head. Check the exit code on the last line of every bash result; investigate failures before moving on.
+- create_goal may infer goal intent from a direct human request in any language. After a service restart, an active goal is disarmed: when a human asks to continue or resume in any wording or language, use update_goal action resume to rearm it. Mark complete only when the objective is actually achieved. Mark blocked only after the same blocking condition persists for at least 3 consecutive goal rounds, and report that concrete condition in blocked_reason; difficulty, uncertainty, or useful remaining work is not blocked.
 
 THE SITE IS FILES:
 Each page is a file: /index.html is the home page and /<slug>/index.html each of the others. Read to read, Edit to change an exact piece, Write to create a new page or rewrite a whole one, and bash, a terminal over the same files, to search the whole site (grep -rn), list them (find) or change many at once (sed -i). The project's state comes in your context; the pages don't, so whatever you say about a page —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: otherwise, read it first or don't describe it.
@@ -655,6 +657,79 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
       },
       "required": [
         "plan"
+      ]
+    }
+  },
+  {
+    "name": "get_goal",
+    "description": "Read the current session goal, including the id and revision that update_goal requires.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {}
+    }
+  },
+  {
+    "name": "create_goal",
+    "description": "Create a persisted goal that keeps this session working across automatic continuation rounds. Use it when the direct human request is a long-running objective, even if the user did not say \\"goal\\"; not for single-turn work.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "objective": {
+          "type": "STRING",
+          "description": "The concrete completion objective inferred from the direct human request."
+        },
+        "max_goal_rounds": {
+          "type": "NUMBER",
+          "description": "Optional positive safe-integer limit on automatic continuation rounds."
+        }
+      },
+      "required": [
+        "objective"
+      ]
+    }
+  },
+  {
+    "name": "update_goal",
+    "description": "Update the current goal.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "goal_id": {
+          "type": "STRING",
+          "description": "Exact id returned by get_goal."
+        },
+        "revision": {
+          "type": "NUMBER",
+          "description": "Exact positive revision returned by get_goal."
+        },
+        "action": {
+          "type": "STRING",
+          "enum": [
+            "edit",
+            "pause",
+            "resume",
+            "complete",
+            "blocked"
+          ],
+          "description": "edit, pause, and resume require a direct top-level human request. complete and blocked are also allowed during an automatic continuation of this goal; blocked is rejected before the configured minimum round count."
+        },
+        "objective": {
+          "type": "STRING",
+          "description": "Replacement objective; valid only with action edit."
+        },
+        "max_goal_rounds": {
+          "type": "NUMBER",
+          "description": "Replacement cap; valid only with action edit."
+        },
+        "blocked_reason": {
+          "type": "STRING",
+          "description": "Required only with action blocked: the concrete condition that persisted across rounds and blocks progress."
+        }
+      },
+      "required": [
+        "goal_id",
+        "revision",
+        "action"
       ]
     }
   },
@@ -1280,6 +1355,79 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
       },
       "required": [
         "plan"
+      ]
+    }
+  },
+  {
+    "name": "get_goal",
+    "description": "Read the current session goal, including the id and revision that update_goal requires.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {}
+    }
+  },
+  {
+    "name": "create_goal",
+    "description": "Create a persisted goal that keeps this session working across automatic continuation rounds. Use it when the direct human request is a long-running objective, even if the user did not say \\"goal\\"; not for single-turn work.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "objective": {
+          "type": "STRING",
+          "description": "The concrete completion objective inferred from the direct human request."
+        },
+        "max_goal_rounds": {
+          "type": "NUMBER",
+          "description": "Optional positive safe-integer limit on automatic continuation rounds."
+        }
+      },
+      "required": [
+        "objective"
+      ]
+    }
+  },
+  {
+    "name": "update_goal",
+    "description": "Update the current goal.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "goal_id": {
+          "type": "STRING",
+          "description": "Exact id returned by get_goal."
+        },
+        "revision": {
+          "type": "NUMBER",
+          "description": "Exact positive revision returned by get_goal."
+        },
+        "action": {
+          "type": "STRING",
+          "enum": [
+            "edit",
+            "pause",
+            "resume",
+            "complete",
+            "blocked"
+          ],
+          "description": "edit, pause, and resume require a direct top-level human request. complete and blocked are also allowed during an automatic continuation of this goal; blocked is rejected before the configured minimum round count."
+        },
+        "objective": {
+          "type": "STRING",
+          "description": "Replacement objective; valid only with action edit."
+        },
+        "max_goal_rounds": {
+          "type": "NUMBER",
+          "description": "Replacement cap; valid only with action edit."
+        },
+        "blocked_reason": {
+          "type": "STRING",
+          "description": "Required only with action blocked: the concrete condition that persisted across rounds and blocks progress."
+        }
+      },
+      "required": [
+        "goal_id",
+        "revision",
+        "action"
       ]
     }
   },

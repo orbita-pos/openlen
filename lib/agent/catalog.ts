@@ -41,6 +41,7 @@ import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "@/lib/agent
 import { ASK_USER_QUESTION } from "@/lib/agent/ask-user-question";
 import { SESSION_QUERY_DECLARATIONS, SESSION_QUERY_PROMPT } from "@/lib/agent/session-query-tools";
 import { PLAN_MODE_DECLARATIONS } from "@/lib/agent/plan-mode-tools";
+import { GOAL_DECLARATIONS, GOAL_PROMPT } from "@/lib/agent/goal-tools";
 
 export const AGENT_MODULES = [
   // SÓLO CHAT desde el 2026-08-29. `collections` murió con el hub de Módulos:
@@ -373,6 +374,10 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     // `lib/agent/plan-mode-tools.ts`. Siempre declaradas, como la de DeepSeek:
     // el catálogo no cambia entre modos (la caché).
     ...PLAN_MODE_DECLARATIONS,
+    // PIEZA 8 DE LEN 2.5: el encargo — `get_goal`, `create_goal` y
+    // `update_goal` de DeepSeek (`lib/agent/goal-tools.ts`). Siempre
+    // declaradas: el catálogo no cambia entre turnos (la caché).
+    ...GOAL_DECLARATIONS,
     {
       name: "revertir_ultimo_cambio",
       // F4: RV1–RV7 de plans/len-agente-2026/notas/f4-tabla-de-reglas.md. El
@@ -518,6 +523,7 @@ HOW TO WORK:
 - The <new-diagnostics> and a tool's "aviso" field are checked facts about what YOUR last edit left on the page: fix them in this turn or tell the user; never finish while keeping quiet about them.
 - Long work doesn't have to be rushed: when the conversation grows long, its older part is summarized automatically and you keep working from that summary, so finish what was asked instead of wrapping up early or leaving it half done.
 - ${SESSION_QUERY_PROMPT}${lineaDeBash}
+- ${GOAL_PROMPT}
 
 THE SITE IS FILES:
 Each page is a file: /index.html is the home page and /<slug>/index.html each of the others. Read to read, Edit to change an exact piece, Write to create a new page or rewrite a whole one, Grep to search the whole site and Glob to list files. The project's state comes in your context; the pages don't, so whatever you say about a page —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: otherwise, read it first or don't describe it.
