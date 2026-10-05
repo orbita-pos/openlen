@@ -16,6 +16,7 @@ import { hashSecretKey } from "../keys";
 import type { ApiRole } from "../rest/handler";
 import type { BackendProject } from "../router";
 import type { BlobStore } from "./blob-store";
+import { BUCKET_ROUTES } from "./buckets";
 import { ERRORS, StorageError, storageErrorResponse } from "./errors";
 import { storageLimits, type StorageLimits } from "./limits";
 
@@ -41,7 +42,7 @@ export interface StorageRoute {
 }
 
 /** Las rutas de su servidor que cubrimos (buckets.ts, objects.ts, signed.ts). */
-const routes: readonly StorageRoute[] = [];
+const routes: readonly StorageRoute[] = [...BUCKET_ROUTES];
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 

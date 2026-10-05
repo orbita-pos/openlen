@@ -193,3 +193,131 @@ export async function projectUsageBytes(q: TxQuery): Promise<number> {
   const r = await q(`select coalesce(sum((metadata->>'size')::bigint), 0)::text as n from storage.objects`);
   return Number(r.rows[0]?.n ?? 0);
 }
+
+// ── Buckets ──────────────────────────────────────────────────────────────
+
+export interface Bucket {
+  readonly id: string;
+  readonly name: string;
+  readonly owner: string | null;
+  readonly owner_id?: string | null;
+  readonly public: boolean;
+  readonly file_size_limit: number | null;
+  readonly allowed_mime_types: string[] | null;
+  readonly created_at: string;
+  readonly updated_at: string;
+  readonly type?: string;
+}
+
+/** Las columnas que devuelve su `getBucket`; `listBuckets` suma `type`. */
+const BUCKET_COLUMNS = "id, name, owner, public, created_at, updated_at, file_size_limit, allowed_mime_types";
+
+/** `file_size_limit` es bigint: `pg` lo da como texto, Supabase como número. */
+function bucketOf(row: Record<string, unknown>): Bucket {
+  const limit = row.file_size_limit;
+  return { ...(row as unknown as Bucket), file_size_limit: limit === null || limit === undefined ? null : Number(limit) };
+}
+
+export async function findBucket(
+  q: TxQuery,
+  id: string,
+  o: { forUpdate?: boolean; dontErrorOnEmpty?: boolean; isPublic?: boolean } = {},
+): Promise<Bucket> {
+  const params: unknown[] = [id];
+  let where = "id = $1";
+  if (o.isPublic !== undefined) {
+    params.push(o.isPublic);
+    where += ` and public = $2`;
+  }
+  const r = await q(`select ${BUCKET_COLUMNS} from storage.buckets where ${where} limit 1${o.forUpdate ? " for update" : ""}`, params);
+  const row = r.rows[0];
+  if (!row) {
+    if (o.dontErrorOnEmpty) return undefined as unknown as Bucket;
+    throw ERRORS.NoSuchBucket();
+  }
+  return bucketOf(row);
+}
+
+export interface ListBucketOptions {
+  readonly limit?: number;
+  readonly offset?: number;
+  readonly sortColumn?: "id" | "name" | "created_at" | "updated_at";
+  readonly sortOrder?: "asc" | "desc";
+  readonly search?: string;
+}
+
+/** pg.ts `escapeLike`. */
+export function escapeLike(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/([%_])/g, "\\$1");
+}
+
+export async function listBuckets(q: TxQuery, o: ListBucketOptions = {}): Promise<Bucket[]> {
+  const values: unknown[] = [];
+  const conditions: string[] = [];
+  if (o.search) {
+    values.push(`%${escapeLike(o.search)}%`);
+    conditions.push(`name ilike $${values.length}`);
+  }
+  const orderBy = o.sortColumn ? ` order by "${o.sortColumn}" ${o.sortOrder === "desc" ? "desc" : "asc"}` : "";
+  let pagination = "";
+  if (o.limit !== undefined) {
+    values.push(o.limit);
+    pagination += ` limit $${values.length}`;
+  }
+  if (o.offset !== undefined) {
+    values.push(o.offset);
+    pagination += ` offset $${values.length}`;
+  }
+  const r = await q(
+    `select ${BUCKET_COLUMNS}, type from storage.buckets${conditions.length ? ` where ${conditions.join(" and ")}` : ""}${orderBy}${pagination}`,
+    values,
+  );
+  return r.rows.map(bucketOf);
+}
+
+export interface NewBucket {
+  readonly id: string;
+  readonly name: string;
+  readonly owner: string | undefined;
+  readonly public: boolean;
+  readonly file_size_limit: number | null | undefined;
+  readonly allowed_mime_types: string[] | null | undefined;
+}
+
+export async function insertBucket(q: TxQuery, b: NewBucket): Promise<void> {
+  const { owner, owner_id } = ownerColumns(b.owner);
+  try {
+    await q(
+      `insert into storage.buckets (id, name, owner, owner_id, public, file_size_limit, allowed_mime_types, type)
+       values ($1, $2, $3, $4, $5, $6, $7::text[], 'STANDARD')`,
+      [b.id, b.name, owner, owner_id, b.public, b.file_size_limit ?? null, b.allowed_mime_types ? textArray(b.allowed_mime_types) : null],
+    );
+  } catch (err) {
+    const se = toStorageError(err);
+    if (se instanceof StorageError && se.code === "ResourceAlreadyExists") throw ERRORS.BucketAlreadyExists();
+    throw se;
+  }
+}
+
+export async function updateBucket(
+  q: TxQuery,
+  id: string,
+  fields: { public?: boolean; file_size_limit?: number | null; allowed_mime_types?: string[] | null },
+): Promise<void> {
+  const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
+  if (entries.length === 0) return;
+  const values = entries.map(([k, v]) => (k === "allowed_mime_types" && Array.isArray(v) ? textArray(v) : v));
+  const set = entries.map(([k], i) => `"${k}" = $${i + 1}${k === "allowed_mime_types" ? "::text[]" : ""}`).join(", ");
+  const r = await q(`update storage.buckets set ${set} where id = $${entries.length + 1} returning id`, [...values, id]);
+  if (r.rows.length === 0) throw ERRORS.NoSuchBucket();
+}
+
+export async function deleteBucket(q: TxQuery, id: string): Promise<number> {
+  const r = await q(`delete from storage.buckets where id = $1`, [id]);
+  return r.rowCount;
+}
+
+export async function countObjectsInBucket(q: TxQuery, bucketId: string, limit: number): Promise<number> {
+  const r = await q(`select 1 from storage.objects where bucket_id = $1 limit $2`, [bucketId, limit]);
+  return r.rows.length;
+}
