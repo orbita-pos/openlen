@@ -91,6 +91,9 @@ export interface AgentAction {
   /** Lo que contestó el dueño DENTRO del turno, en una línea. Con ella, la
    *  pregunta ya no es «te toca»: Len la tuvo y siguió. */
   respuesta?: string;
+  /** El dueño DESCARTÓ la pregunta («Pedir cambios»): se pinta «cancelada»,
+   *  asentada, como el `ASK_CANCELLED` de DeepSeek. Tampoco es «te toca». */
+  dismissed?: true;
   /** Cuántas ediciones aplicó esta llamada. */
   edits?: number;
   /**

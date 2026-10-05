@@ -1491,6 +1491,8 @@ export function useAgentChat({
                 const pregunta = (payload as { pregunta?: unknown } | null)?.pregunta;
                 const preguntas = questionsFrom((payload as { preguntas?: unknown } | null)?.preguntas);
                 const respuesta = (payload as { respuesta?: unknown } | null)?.respuesta;
+                // Alinear con DeepSeek: la pregunta descartada, «cancelada».
+                const descartada = (payload as { dismissed?: unknown } | null)?.dismissed === true;
                 // Su tarjeta llegó: ya no espera.
                 if (asksTheOwner(tool) && status !== "running") updateTurn(turnId, { pendingQuestions: undefined, answeredLive: undefined });
                 if (tool) {
@@ -1522,6 +1524,7 @@ export function useAgentChat({
                     ...(typeof respuesta === "string" && respuesta.trim()
                       ? { respuesta: respuesta.slice(0, 200) }
                       : {}),
+                    ...(descartada ? { dismissed: true as const } : {}),
                     ...(typeof valores === "string" && valores.trim()
                       ? { valores: valores.slice(0, 200) }
                       : {}),

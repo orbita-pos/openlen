@@ -213,6 +213,7 @@
       "label": "Len ti chiede",
       "hint": "Rispondi qui sotto, con parole tue.",
       "answered": "Hai risposto: {answer}",
+      "cancelled": "Annullata senza inviare una risposta",
       "send": "Rispondi",
       "other": "Un'altra risposta",
       "otherPlaceholder": "Scrivi la tua risposta",

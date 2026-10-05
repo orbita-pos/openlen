@@ -22,7 +22,7 @@ import type { FeedbackReason, TurnFeedback } from "@/lib/chat/feedback-reasons";
 import { ChangesCard } from "./changes-card";
 import { wroteOnlyItsOwnPage } from "./turn-changes";
 import { questionOf, questionsOf } from "./live-status";
-import { questionText, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { asksTheOwner, questionText, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { QuestionCard, withoutTrailingQuestion } from "./question-card";
 import { StepsCard, visibleSteps } from "./steps-card";
 import { LenFace } from "./len-face";
@@ -172,6 +172,9 @@ export function LenTurn({
     [projectId, turn.id],
   );
   const question = questionOf(turn);
+  // Alinear con DeepSeek: las preguntas que el dueño DESCARTÓ, asentadas y
+  // «canceladas», con el plan a la vista (allí la fila queda en el hilo).
+  const cancelledQuestions = (turn.actions ?? []).filter((a) => asksTheOwner(a.tool) && a.dismissed && a.preguntas?.length);
   // PIEZA 3: la pregunta que el turno ESPERA ahora mismo (se contesta y Len
   // sigue), o la que dejó al cerrar (se contesta y abre el turno siguiente;
   // sólo en el último turno, y sólo si nadie la contestó ya).
@@ -214,6 +217,9 @@ export function LenTurn({
           onDismiss={() => onDismissQuestion(turn.id)}
         />
       )}
+      {cancelledQuestions.map((a, i) => (
+        <QuestionCard key={`cancelada-${i}`} question={questionText(a.preguntas!)} questions={a.preguntas} answer={null} cancelled />
+      ))}
       {question !== null && (
         <QuestionCard
           question={question}

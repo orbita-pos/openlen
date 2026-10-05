@@ -213,6 +213,7 @@
       "label": "O Len pergunta",
       "hint": "Responda abaixo, com suas palavras.",
       "answered": "Você respondeu: {answer}",
+      "cancelled": "Cancelada sem enviar resposta",
       "send": "Responder",
       "other": "Outra resposta",
       "otherPlaceholder": "Escreva sua resposta",

@@ -213,6 +213,7 @@
       "label": "Len からの質問",
       "hint": "下の欄に、自分の言葉で答えてください。",
       "answered": "あなたの答え: {answer}",
+      "cancelled": "回答を送信せずにキャンセルしました",
       "send": "回答する",
       "other": "その他",
       "otherPlaceholder": "回答を入力",

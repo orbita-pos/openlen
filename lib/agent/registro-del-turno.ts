@@ -109,6 +109,8 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
           // de Len 2.5): sin nombrarlos aquí, se ven en vivo y se pierden al recargar.
           ...(ev.preguntas?.length ? { preguntas: ev.preguntas } : {}),
           ...(ev.respuesta ? { respuesta: ev.respuesta } : {}),
+          // Y la marca de «cancelada» (alinear con DeepSeek), por lo mismo.
+          ...(ev.dismissed ? { dismissed: true as const } : {}),
           // Y EL RECUENTO DE COBERTURA, por la misma razón que los dos de
           // arriba: esta lista es BLANCA, así que un campo que no se nombre aquí
           // se ve en vivo y desaparece al recargar.

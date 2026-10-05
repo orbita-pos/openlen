@@ -213,6 +213,7 @@
       "label": "Len fragt dich",
       "hint": "Antworte unten, mit deinen Worten.",
       "answered": "Deine Antwort: {answer}",
+      "cancelled": "Abgebrochen, ohne eine Antwort zu senden",
       "send": "Antworten",
       "other": "Etwas anderes",
       "otherPlaceholder": "Schreib deine Antwort",

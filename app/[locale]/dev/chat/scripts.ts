@@ -188,7 +188,7 @@ const AFTER_FILE = demoPage({ photos: true, form: true });
  *  preguntas, sin `pregunta` (`exit_plan_mode` con `dismissed`), y el `done`. */
 export function dismissedReviewSteps(): ScriptStep[] {
   return [
-    wait(150, "action", { tool: "exit_plan_mode", status: "done", summary: "", preguntas: [planReviewQuestion(PLAN_DE_EJEMPLO)] }),
+    wait(150, "action", { tool: "exit_plan_mode", status: "done", summary: "", preguntas: [planReviewQuestion(PLAN_DE_EJEMPLO)], dismissed: true }),
     wait(100, "done", DONE({ centicredits: 18, durationMs: 9_000 })),
   ];
 }

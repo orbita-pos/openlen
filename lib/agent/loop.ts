@@ -146,6 +146,9 @@ export type AgentStreamEvent =
       preguntas?: UserQuestion[];
       /** Pieza 3: lo que contestó el dueño dentro del turno, en una línea. */
       respuesta?: string;
+      /** Alinear con DeepSeek: el dueño DESCARTÓ la pregunta (su `ASK_CANCELLED`).
+       *  La tarjeta se pinta «cancelada», asentada: ya no pide nada. */
+      dismissed?: true;
     }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
@@ -2210,6 +2213,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           ...(outcome.pregunta ? { pregunta: outcome.pregunta } : {}),
           ...(outcome.preguntas?.length ? { preguntas: outcome.preguntas } : {}),
           ...(outcome.respuesta ? { respuesta: outcome.respuesta } : {}),
+          ...(outcome.dismissed ? { dismissed: true as const } : {}),
         });
         if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
 

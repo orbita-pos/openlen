@@ -1204,6 +1204,8 @@ describe("runAgentLoop — ask_user_question (antes preguntar)", () => {
     expect(tarjeta.status).toBe("done");
     expect(tarjeta.preguntas).toEqual(preguntas);
     expect(tarjeta.pregunta).toBeUndefined();
+    // ALINEAR: y la marca de «cancelada», como el `ASK_CANCELLED` de DeepSeek.
+    expect(tarjeta.dismissed).toBe(true);
     // La transcripción termina con la llamada y su error: es lo que lee el turno siguiente.
     const ultimo = r.transcripcion!.at(-1)!;
     expect(ultimo.functionResponses?.[0]?.response).toEqual({ ok: false, error: "dismissed to speak" });

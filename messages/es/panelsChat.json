@@ -213,6 +213,7 @@
       "label": "Len te pregunta",
       "hint": "Contéstale abajo, con tus palabras.",
       "answered": "Respondiste: {answer}",
+      "cancelled": "Cancelada sin enviar respuesta",
       "send": "Responder",
       "other": "Otra respuesta",
       "otherPlaceholder": "Escribe tu respuesta",

@@ -12,7 +12,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, HelpCircle, ListChecks } from "lucide-react";
+import { Check, HelpCircle, ListChecks, X } from "lucide-react";
 
 import { RECOMMENDED_SUFFIX, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { APPROVE_LABEL, planTitle } from "@/lib/agent/plan-mode";
@@ -32,6 +32,10 @@ export interface QuestionCardProps {
   /** LOTE 7-8 · «Pedir cambios» de la revisión del plan: el dueño toma la
    *  palabra (descarta la espera y escribe en el compositor). */
   onDismiss?: () => void;
+  /** Alinear con DeepSeek: el dueño la DESCARTÓ. Se pinta asentada, «Cancelada
+   *  sin enviar respuesta» (su `ASK_CANCELLED`), con el plan a la vista y sin
+   *  nada que pulsar. */
+  cancelled?: boolean;
 }
 
 export function QuestionCard(props: QuestionCardProps) {
@@ -51,7 +55,7 @@ function shownAnswer(answer: string, conIntencion: boolean, t: Translate): strin
     .join(" · ");
 }
 
-export function QuestionCardView({ question, questions, answer, onAnswer, onDismiss, t }: QuestionCardProps & { t: Translate }) {
+export function QuestionCardView({ question, questions, answer, onAnswer, onDismiss, cancelled, t }: QuestionCardProps & { t: Translate }) {
   const [elegidas, setElegidas] = useState<Record<string, string[]>>({});
   const [libres, setLibres] = useState<Record<string, string>>({});
   const [otraAbierta, setOtraAbierta] = useState<Record<string, boolean>>({});
@@ -59,16 +63,18 @@ export function QuestionCardView({ question, questions, answer, onAnswer, onDism
   const [planAbierto, setPlanAbierto] = useState(false);
   const intent = questions?.[0]?.intent;
 
-  if (answer !== null) {
+  if (answer !== null || cancelled) {
     return (
       <div className="flex min-w-0 flex-col gap-1.5">
         <div
           className="nc-up flex min-w-0 items-center gap-2 rounded-[10px] border bd bg-elev px-2.5 py-1.5 text-[12px] fg-muted"
           title={question}
         >
-          <Check size={13} className="nc-ok shrink-0" />
+          {cancelled ? <X size={13} className="shrink-0 fg-faint" /> : <Check size={13} className="nc-ok shrink-0" />}
           <span className="min-w-0 truncate">
-            {t("newChat.question.answered", { answer: firstLine(shownAnswer(answer, Boolean(intent), t)) })}
+            {cancelled
+              ? t("newChat.question.cancelled")
+              : t("newChat.question.answered", { answer: firstLine(shownAnswer(answer ?? "", Boolean(intent), t)) })}
           </span>
           {/* El plan aprobado (o revisado) se sigue pudiendo leer, como las
               tarjetas de plan de DeepSeek al cerrar el turno. */}

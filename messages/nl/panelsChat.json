@@ -213,6 +213,7 @@
       "label": "Len vraagt je",
       "hint": "Antwoord hieronder, in je eigen woorden.",
       "answered": "Je antwoordde: {answer}",
+      "cancelled": "Geannuleerd zonder een antwoord te versturen",
       "send": "Antwoorden",
       "other": "Iets anders",
       "otherPlaceholder": "Schrijf je antwoord",

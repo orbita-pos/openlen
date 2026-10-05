@@ -213,6 +213,7 @@
       "label": "Len의 질문",
       "hint": "아래에 편하게 답해 주세요.",
       "answered": "답변: {answer}",
+      "cancelled": "답변을 보내지 않고 취소했습니다",
       "send": "답하기",
       "other": "다른 답",
       "otherPlaceholder": "답을 입력하세요",
