@@ -39,10 +39,21 @@ podría concederlos (medido: «permission denied to grant role "anon"»). No cre
 npm run deploy:prod
 ```
 
-## 3. En la MISMA ventana: las 5 plantillas
+## 3. En la MISMA ventana: las 5 plantillas, desde la caja
+
+🔴 **No con `npm run templates:republish` desde el portátil**: su `DATABASE_URL` es la base local de desarrollo, así
+que escribiría allí, imprimiría `ok` y producción no cambiaría (`fbc52872`). Se republican EN la caja, con la ruta
+interna y las fuentes que el deploy deja en `/opt/openlen-app/templates-starter/` (DEPLOY_RUNBOOK §0,
+`OPENLEN_INTERNAL_SECRET`). Dentro de `ssh openlen`, primero en seco y después con los mismos ids:
 
 ```bash
-npm run templates:republish
+S=$(sudo grep -oP '^OPENLEN_INTERNAL_SECRET=\K.*' /etc/openlen/openlen.env)
+curl -s -X POST -H "x-internal-secret: $S" -H "content-type: application/json" \
+  -d '{"ids":["altanube","avenir","brote","gremio","yunque"]}' \
+  http://127.0.0.1:3000/api/internal/republish-templates
+curl -s -X POST -H "x-internal-secret: $S" -H "content-type: application/json" \
+  -d '{"aplicar":true,"ids":["altanube","avenir","brote","gremio","yunque"]}' \
+  http://127.0.0.1:3000/api/internal/republish-templates
 ```
 
 Desplegar sin subirlas deja clonar las 5 viejas (altanube, avenir, brote, gremio, yunque) con conductas `data-ol-*`
