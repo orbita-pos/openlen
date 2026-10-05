@@ -12,13 +12,13 @@ export function codeForHttpStatus(status: number): ProviderErrorCode | undefined
 }
 
 /** Un error que el proveedor manda DENTRO del stream (`data: {"error": …}`),
- *  ya empezada la respuesta: con su estado, el de ese estado; sin él, límite si
- *  lo dice y, si no, «server» — el proveedor falló a medias, no es defecto
- *  nuestro (un 400 nuestro llega antes, como estado HTTP). */
-export function codeForInBandError(error: Readonly<Record<string, unknown>>): ProviderErrorCode {
+ *  ya empezada la respuesta: con su estado, el de ese estado — y un 4xx que no
+ *  es 429 es defecto nuestro y NO se reintenta, como el mismo estado por HTTP —;
+ *  sin estado, límite si lo dice y, si no, «server»: el proveedor falló a
+ *  medias. */
+export function codeForInBandError(error: Readonly<Record<string, unknown>>): ProviderErrorCode | undefined {
   const status = typeof error.code === "number" ? error.code : typeof error.status === "number" ? error.status : undefined;
-  const byStatus = status !== undefined ? codeForHttpStatus(status) : undefined;
-  if (byStatus) return byStatus;
+  if (status !== undefined) return codeForHttpStatus(status);
   const text = `${typeof error.type === "string" ? error.type : ""} ${typeof error.message === "string" ? error.message : ""}`;
   return /rate.?limit|too many requests|\b429\b/i.test(text) ? "rate_limit" : "server";
 }

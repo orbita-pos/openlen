@@ -430,7 +430,8 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             const inBandError = record(root.error);
             if (inBandError) {
               const message = typeof inBandError.message === "string" ? inBandError.message : JSON.stringify(inBandError);
-              yield { type: "done", stopReason: { kind: "error", error: `in_stream_error: ${message.slice(0, 300)}`, code: codeForInBandError(inBandError) } };
+              const code = codeForInBandError(inBandError);
+              yield { type: "done", stopReason: { kind: "error", error: `in_stream_error: ${message.slice(0, 300)}`, ...(code ? { code } : {}) } };
               return;
             }
             if (record(root.usage)) usageEnvelope = root;

@@ -24,6 +24,11 @@ describe("el código de un error que llega DENTRO del stream", () => {
     expect(codeForInBandError({ status: 503, message: "x" })).toBe("server");
   });
 
+  it("BRAZO DE CONTROL: con un estado 4xx que no es 429 NO hay código — un 400 nuestro no se reintenta", () => {
+    expect(codeForInBandError({ code: 400, message: "invalid request" })).toBeUndefined();
+    expect(codeForInBandError({ status: 422, message: "bad schema" })).toBeUndefined();
+  });
+
   it("sin estado, si habla de límite es «rate_limit»; si no, «server» (falló el proveedor a medias)", () => {
     expect(codeForInBandError({ message: "Rate limit exceeded" })).toBe("rate_limit");
     expect(codeForInBandError({ type: "internal_server_error", message: "server overloaded" })).toBe("server");
