@@ -1,0 +1,195 @@
+// Las consultas de Storage, portadas de supabase/storage @ eccef5e7
+// (Apache-2.0): src/storage/database/pg.ts (las consultas) y
+// src/internal/database/postgres/scope.ts (el rol y los claims de cada una).
+//
+// Todo corre en una transacción COMO el rol de la petición, para que RLS
+// decida; lo que no es del usuario (la fila final de una subida, mirar si un
+// bucket es público) como `supabase_storage_admin`, su `asSuperUser()`.
+
+import { RollbackWith, transactionOrRollback, type TxQuery } from "../db";
+import { ERRORS, fromDbError, StorageError } from "./errors";
+import type { StorageContext } from "./handler";
+
+/** Los `statement_timeout` de los roles, del arranque de Supabase (como
+ *  lib/backend/rest/handler.ts). */
+const ROLE_TIMEOUT: Record<string, string | null> = { anon: "3s", authenticated: "8s", service_role: null, supabase_storage_admin: null };
+
+function toStorageError(err: unknown): unknown {
+  if (err instanceof StorageError || err instanceof RollbackWith) return err;
+  const code = (err as { code?: unknown } | null)?.code;
+  if (typeof code === "string" && /^[0-9A-Z]{5}$/.test(code)) return fromDbError(err);
+  return err;
+}
+
+async function scoped<T>(ctx: StorageContext, role: string, fn: (q: TxQuery) => Promise<T>): Promise<T> {
+  try {
+    return await transactionOrRollback(ctx.project.db, async (q) => {
+      // buildScopeStatement de Supabase, con `true` (local a la transacción).
+      await q(
+        `select set_config('role', $1, true),
+                set_config('request.jwt.claim.role', $2, true),
+                set_config('request.jwt', $3, true),
+                set_config('request.jwt.claim.sub', $4, true),
+                set_config('request.jwt.claims', $5, true),
+                set_config('request.method', $6, true),
+                set_config('request.path', $7, true),
+                set_config('storage.operation', $8, true),
+                set_config('storage.allow_delete_query', 'true', true)`,
+        [
+          role,
+          String(ctx.claims.role ?? ctx.role),
+          ctx.jwt,
+          typeof ctx.claims.sub === "string" ? ctx.claims.sub : "",
+          JSON.stringify(ctx.claims),
+          ctx.method,
+          ctx.path,
+          "",
+        ],
+      );
+      const timeout = ROLE_TIMEOUT[role];
+      if (timeout) await q(`select set_config('statement_timeout', $1, true)`, [timeout]);
+      return fn(q);
+    });
+  } catch (err) {
+    throw toStorageError(err);
+  }
+}
+
+/** Como el rol de la petición: RLS manda. */
+export function asRole<T>(ctx: StorageContext, fn: (q: TxQuery) => Promise<T>): Promise<T> {
+  return scoped(ctx, ctx.role, fn);
+}
+
+/** Como `supabase_storage_admin`, el dueño de las tablas (su `asSuperUser`). */
+export function asStorageAdmin<T>(ctx: StorageContext, fn: (q: TxQuery) => Promise<T>): Promise<T> {
+  return scoped(ctx, "supabase_storage_admin", fn);
+}
+
+/** Corre `fn` como el rol y lo deshace siempre: ¿le dejaría RLS? (su
+ *  `testPermission`). Devuelve lo que devolvió `fn`. */
+export async function testPermission<T>(ctx: StorageContext, fn: (q: TxQuery) => Promise<T>): Promise<T> {
+  return asRole(ctx, async (q) => {
+    throw new RollbackWith(await fn(q));
+  });
+}
+
+// ── Objetos ──────────────────────────────────────────────────────────────
+
+/** Los campos de su `ObjectMetadata` que guarda `storage.objects.metadata`. */
+export interface ObjectMetadata {
+  readonly eTag: string;
+  readonly size: number;
+  readonly mimetype: string;
+  readonly cacheControl: string;
+  readonly lastModified: string;
+  readonly contentLength: number;
+  readonly httpStatusCode: number;
+}
+
+export interface ObjectRow {
+  readonly id: string;
+  readonly bucket_id: string;
+  readonly name: string;
+  readonly owner: string | null;
+  readonly owner_id: string | null;
+  readonly version: string | null;
+  readonly metadata: ObjectMetadata | null;
+  readonly user_metadata: Record<string, unknown> | null;
+  readonly created_at: string;
+  readonly updated_at: string;
+  readonly last_accessed_at: string;
+}
+
+export interface NewObject {
+  readonly bucket_id: string;
+  readonly name: string;
+  readonly owner: string | undefined | null;
+  readonly version: string;
+  readonly metadata: Partial<ObjectMetadata> | Record<string, unknown> | null;
+  readonly user_metadata: Record<string, unknown> | null | undefined;
+}
+
+const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-5][0-9a-fA-F]{3}-[089abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
+
+/** `owner` es uuid (sólo si lo es); `owner_id`, el texto tal cual (su `normalizeRecordColumns`). */
+function ownerColumns(owner: string | undefined | null): { owner: string | null; owner_id: string | null } {
+  if (!owner) return { owner: null, owner_id: null };
+  return { owner: UUID_RE.test(owner) ? owner : null, owner_id: owner };
+}
+
+const json = (v: unknown) => (v === undefined || v === null ? null : JSON.stringify(v));
+
+export async function insertObject(q: TxQuery, o: NewObject): Promise<void> {
+  const { owner, owner_id } = ownerColumns(o.owner);
+  try {
+    await q(
+      `insert into storage.objects (bucket_id, name, owner, owner_id, version, metadata, user_metadata)
+       values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb)`,
+      [o.bucket_id, o.name, owner, owner_id, o.version, json(o.metadata), json(o.user_metadata)],
+    );
+  } catch (err) {
+    const se = toStorageError(err);
+    if (se instanceof StorageError && se.code === "ResourceAlreadyExists") throw ERRORS.KeyAlreadyExists();
+    throw se;
+  }
+}
+
+/** Su `upsertObject`, con el índice de la versión actual (`objects-current-version-index`). */
+export async function upsertObject(q: TxQuery, o: NewObject): Promise<ObjectRow> {
+  const { owner, owner_id } = ownerColumns(o.owner);
+  const r = await q(
+    `insert into storage.objects (bucket_id, name, owner, owner_id, version, metadata, user_metadata)
+     values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb)
+     on conflict (bucket_id, name collate "C") where archived_at is null
+     do update set metadata = excluded.metadata, user_metadata = excluded.user_metadata, version = excluded.version,
+                   owner = excluded.owner, owner_id = excluded.owner_id
+     returning *`,
+    [o.bucket_id, o.name, owner, owner_id, o.version, json(o.metadata), json(o.user_metadata)],
+  );
+  return r.rows[0] as unknown as ObjectRow;
+}
+
+export async function findObject(
+  q: TxQuery,
+  bucketId: string,
+  name: string,
+  o: { forUpdate?: boolean; dontErrorOnEmpty?: boolean } = {},
+): Promise<ObjectRow> {
+  const r = await q(
+    `select * from storage.objects where name collate "C" = $1 and bucket_id = $2 and archived_at is null limit 1${o.forUpdate ? " for update" : ""}`,
+    [name, bucketId],
+  );
+  const row = r.rows[0] as unknown as ObjectRow | undefined;
+  if (!row && !o.dontErrorOnEmpty) throw ERRORS.NoSuchKey();
+  return row as ObjectRow;
+}
+
+/** Un array de texto como literal de Postgres: PGlite no convierte arrays de
+ *  JS en parámetros (pg sí), así que va siempre como `'{…}'::text[]`. */
+export function textArray(values: readonly string[]): string {
+  return `{${values.map((v) => `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`).join(",")}}`;
+}
+
+export async function findObjects(q: TxQuery, bucketId: string, names: readonly string[]): Promise<ObjectRow[]> {
+  if (names.length === 0) return [];
+  const r = await q(`select * from storage.objects where bucket_id = $1 and name collate "C" = any($2::text[]) and archived_at is null`, [
+    bucketId,
+    textArray(names),
+  ]);
+  return r.rows as unknown as ObjectRow[];
+}
+
+export async function deleteObjects(q: TxQuery, bucketId: string, names: readonly string[]): Promise<ObjectRow[]> {
+  if (names.length === 0) return [];
+  const r = await q(
+    `delete from storage.objects where bucket_id = $1 and name collate "C" = any($2::text[]) and archived_at is null returning *`,
+    [bucketId, textArray(names)],
+  );
+  return r.rows as unknown as ObjectRow[];
+}
+
+/** Lo que ocupan todos los ficheros del proyecto (para el tope de 1 GB). */
+export async function projectUsageBytes(q: TxQuery): Promise<number> {
+  const r = await q(`select coalesce(sum((metadata->>'size')::bigint), 0)::text as n from storage.objects`);
+  return Number(r.rows[0]?.n ?? 0);
+}
