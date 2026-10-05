@@ -415,6 +415,8 @@ export default defineConfig({
       "lib/agent/goal-activation.test.ts",
       "lib/agent/goal-tools.test.ts",
       "lib/projects/chat-row.test.ts",
+      // Lote 7-8: el SQL de jsonb del estado de la charla contra PGlite.
+      "lib/projects/chat-estado.pglite.test.ts",
       // Deshacer lo de Len sobre lo que hay AHORA, sin llevarse lo que el dueño
       // editó a mano (H06, auditoría 2026-09-22). Núcleo puro — pero `include`
       // es LISTA BLANCA y sin esta línea la prueba existiría y no correría.
