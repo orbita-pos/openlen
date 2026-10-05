@@ -11,6 +11,7 @@ import {
   sessionsFromRows,
   type ChatRowForSearch,
 } from "./session-query";
+import { goalRoundPrompt } from "./goal";
 
 const fila = (o: Partial<ChatRowForSearch> & { id: string; at: string }): ChatRowForSearch => ({
   conversation: null,
@@ -114,5 +115,27 @@ describe("eventSearch y leer un evento", () => {
     expect(out).toContain("Before:\n- seq 2 | assistant |");
     expect(out).toContain("After:\n- seq 4 | assistant |");
     expect(findEvent(s, undefined, 99)).toBeNull();
+  });
+});
+
+// LOTE 7-8 · las rondas del encargo guardan su mensaje de ronda en `userText`.
+// DeepSeek lo crea como un `user/message` de texto (goal-round-driver/src/index.ts)
+// y su búsqueda indexa el texto de todo `user/message` sin mirar de dónde viene
+// (session-query/src/extraction.ts): se busca ENTERO, objetivo y texto fijo.
+describe("las rondas del encargo (lote 7-8), como DeepSeek", () => {
+  const ronda = fila({
+    id: "r2",
+    at: "2026-10-05T12:00:00Z",
+    userText: goalRoundPrompt({ objective: "Montar la tienda de pasteles", maxGoalRounds: 256 }, 2),
+    assistantReasoning: "Seguí con el carrito.",
+  });
+  const s = sessionsFromRows([ronda]);
+
+  it("se encuentra por su objetivo", () => {
+    expect(sessionSearch(s, { query: "tienda de pasteles" })).toContain("Session search results (1):");
+  });
+
+  it("y también por su texto fijo: se indexa entero, como allí", () => {
+    expect(sessionSearch(s, { query: "Treat the current project" })).toContain("Best match: seq 1 | user");
   });
 });
