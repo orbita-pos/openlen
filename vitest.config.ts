@@ -386,6 +386,7 @@ export default defineConfig({
       // es LISTA BLANCA: sin esta linea no corre nunca.
       "lib/generation/model-policy-sin-huerfanas.test.ts",
       "lib/agent/loop.test.ts",
+      "lib/agent/retry-policy.test.ts",
       // Deshacer lo de Len sobre lo que hay AHORA, sin llevarse lo que el dueño
       // editó a mano (H06, auditoría 2026-09-22). Núcleo puro — pero `include`
       // es LISTA BLANCA y sin esta línea la prueba existiría y no correría.
