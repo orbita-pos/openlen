@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildAgentSystemPrompt } from "./catalog";
 import { CARPETA_DOCS, esAdjuntoDelManual, RUTA_GUIA, RUTA_LIBRERIAS, RUTA_MANUAL, RUTAS_DE_DOCS } from "./ficheros/manual";
@@ -128,6 +129,22 @@ describe("el corte, por sus marcas", () => {
   });
 });
 
+/** Las marcas del envoltorio de Claude Code que el manual NO puede llevar, por
+ *  largo y sha256 (ver «F4» abajo). */
+const MARCAS_AJENAS: ReadonlyArray<{ largo: number; sha256: string }> = [
+  { largo: 46, sha256: "8098ae9f7722d8f72d954573b22cc1b74d47f675357a63ff821d53dd004c3447" },
+  { largo: 10, sha256: "58520faa949f6bb5345f789bddbca30712cd194138d21609c964c04c8bc6a111" },
+  { largo: 29, sha256: "c3a58c0684973750c4f080e5a398e23014e8d14b1d0113e8044b7a8c8c82e703" },
+  { largo: 40, sha256: "16a2d90a4336d4916044e725a8198a62b5cf5b5c7153e0246a7fc12baea567bb" },
+];
+
+function contieneHuella(texto: string, marca: { largo: number; sha256: string }): boolean {
+  for (let i = 0; i + marca.largo <= texto.length; i++) {
+    if (createHash("sha256").update(texto.slice(i, i + marca.largo)).digest("hex") === marca.sha256) return true;
+  }
+  return false;
+}
+
 describe("cómo se adjunta", () => {
   it("con un envoltorio propio y la ruta del fichero", () => {
     const a = adjuntoDelManual();
@@ -140,10 +157,14 @@ describe("cómo se adjunta", () => {
     expect(esAdjuntoDelManual(a)).toBe(true);
   });
 
+  // 🔴 LAS CUATRO MARCAS DEL ENVOLTORIO DE CLAUDE CODE, POR HUELLA. El repo es
+  // público: la prueba no puede llevar sus frases escritas. Guarda el largo y
+  // el sha256 de cada una y busca cualquier tramo del adjunto con esa huella:
+  // caza exactamente lo mismo que el `not.toContain` de antes.
   it("🔴 F4 · ya no es el envoltorio de Claude Code palabra por palabra (el repo es público)", () => {
     const a = adjuntoDelManual();
-    for (const ajeno of ["…", "# manual", "…", "may or may not be relevant to your tasks"]) {
-      expect(a).not.toContain(ajeno);
+    for (const marca of MARCAS_AJENAS) {
+      expect(contieneHuella(a, marca), `una marca de ${marca.largo} caracteres`).toBe(false);
     }
   });
 
