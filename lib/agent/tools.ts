@@ -79,6 +79,7 @@ import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { createConcurrencyLimit } from "@/lib/agent/concurrency-limit";
 import { ASK_USER_QUESTION, answerSummary, questionText, validateQuestions, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
+import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import {
   toolPrepararRespuesta,
   toolVerFormularios,
@@ -114,6 +115,11 @@ export interface AgentDeps {
    *  respuestas o `null` si no llegaron a tiempo (o el ■). Sin él, la pregunta
    *  cierra el turno, como siempre: así siguen la voz y Len-Bench. */
   askUser?(questions: UserQuestion[]): Promise<QuestionAnswer[] | null>;
+  /** Pieza 5: las filas del chat del proyecto, para buscar en sus charlas
+   *  (`session_search`). Sin él, las herramientas lo dicen. */
+  chatRows?(projectId: string): Promise<ChatRowForSearch[]>;
+  /** Pieza 5: la transcripción de una fila, para `session_event_read`. */
+  chatTranscript?(projectId: string, rowId: string): Promise<unknown>;
   /** LA CARPETA (pieza 9 de Len 2.5): los ficheros del proyecto que no son
    *  páginas —`/supabase/`, `/tests/`, `js/`, `css/`, `data/`…—, por ruta.
    *  Opcional: sin él no hay carpeta. */
@@ -379,6 +385,16 @@ export function realDeps(
     // LA CARPETA (lib/backend/files.ts): import perezoso, es server-only. Cada
     // cambio archiva su «antes» para deshacer; si archivar falla, el cambio
     // se guarda igual y el turno no ofrecerá deshacerlo (`versionPrevia` nulo).
+    // Pieza 5: el chat del proyecto, para buscar en sus charlas. Perezoso, como
+    // la carpeta: `lib/projects/chat` arrastra la base.
+    async chatRows(projectId) {
+      const { filasParaBuscar } = await import("@/lib/projects/chat");
+      return filasParaBuscar(projectId);
+    },
+    async chatTranscript(projectId, rowId) {
+      const { transcripcionDeLaFila } = await import("@/lib/projects/chat");
+      return transcripcionDeLaFila(projectId, rowId);
+    },
     async projectFiles(projectId) {
       const { listProjectFiles } = await import("@/lib/backend/files");
       return listProjectFiles(projectId);

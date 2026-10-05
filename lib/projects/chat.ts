@@ -9,6 +9,7 @@ import { and, asc, desc, eq, getTableColumns, inArray, isNull, ne, sql } from "d
 import { db, schema } from "@/lib/db";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { FilaDelHistorial, TranscripcionGuardada } from "@/lib/agent/transcripcion";
+import type { ChatRowForSearch } from "@/lib/agent/session-query";
 
 /** Las columnas de la fila SIN la transcripción (H4): el panel del chat no la
  *  usa, y son los resultados enteros de cada turno. Se calculan al usarse, no
@@ -71,6 +72,42 @@ export async function turnosParaElHistorial(projectId: string, cuantos: number):
     transcript: r.transcript ?? null,
     attachedImage: r.attachedImage ?? null,
   }));
+}
+
+/**
+ * PIEZA 5 DE LEN 2.5 · las filas del proyecto para buscar en sus charlas
+ * (`session_search`, `lib/agent/session-query.ts`): la en curso y las
+ * archivadas, de la más vieja a la más reciente, SIN la transcripción — pesa, y
+ * sólo hace falta al leer un evento (`transcripcionDeLaFila`). El turno que
+ * corre viene con su estado y lo descarta el módulo. Ownership, del llamador.
+ */
+export async function filasParaBuscar(projectId: string): Promise<ChatRowForSearch[]> {
+  const t = schema.projectChatMessages;
+  const rows = await db
+    .select({
+      id: t.id,
+      conversation: t.conversation,
+      userText: t.userText,
+      assistantReasoning: t.assistantReasoning,
+      actions: t.actions,
+      createdAt: t.createdAt,
+      status: t.status,
+    })
+    .from(t)
+    .where(eq(t.projectId, projectId))
+    .orderBy(asc(t.createdAt));
+  return rows.map((r) => ({ ...r, actions: r.actions ?? null }));
+}
+
+/** La transcripción de UNA fila del proyecto, para `session_event_read`. */
+export async function transcripcionDeLaFila(projectId: string, id: string): Promise<TranscripcionGuardada | null> {
+  const t = schema.projectChatMessages;
+  const rows = await db
+    .select({ transcript: t.transcript })
+    .from(t)
+    .where(and(eq(t.projectId, projectId), eq(t.id, id)))
+    .limit(1);
+  return rows[0]?.transcript ?? null;
 }
 
 /** Append one settled turn. The turn id is the PK, so a retried append is an
