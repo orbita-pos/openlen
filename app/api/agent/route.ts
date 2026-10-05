@@ -43,6 +43,8 @@ import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
 import { DYNAMIS_MAX_OUTPUT_TOKENS, modeOfTurn } from "@/lib/agent/dynamis";
 import { resolveCompaction } from "@/lib/agent/compaction/policy";
+import { SPILL_MAX_INLINE_TOKENS } from "@/lib/agent/compaction/spill";
+import { NOMBRE_BASH, terminalEncendida } from "@/lib/agent/terminal/declaracion";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
 import { ZONA_SIN_DATO, zonaValida } from "@/lib/resultados/zona";
 import { guardarZona, leerZona } from "@/lib/resultados/zona-guardada";
@@ -159,12 +161,15 @@ const MODEL_WINDOW_TOKENS = 1_048_576;
 // umbral vale para los dos.
 const MAX_LOOP_OUTPUT_TOKENS = DYNAMIS_MAX_OUTPUT_TOKENS;
 const MAX_PROMPT_TOKENS = MODEL_WINDOW_TOKENS - MAX_LOOP_OUTPUT_TOKENS;
-// LA VENTANA EFECTIVA, donde empieza a compactar (pieza 2 de Len 2.5): la decide
-// el COSTE, no el modelo (§2 de plans/len-agente-2026/INVESTIGACION-2-5-AL-LIMITE.md),
-// y la elige Jesús. Hasta que la elija, la de antes.
-const AGENT_EFFECTIVE_WINDOW_TOKENS = 240_000;
+// DÓNDE EMPIEZA A COMPACTAR (pieza 2 de Len 2.5): sobre la ventana REAL del
+// modelo, como DeepSeek, que deriva su umbral del `contextWindow` del modelo
+// (1.000.000 en su catálogo para este mismo DeepSeek-V41-Flash,
+// packages/llm/llm-deepseek/src/defaults.ts @ 5badb15). Jesús, 05/10: las dudas
+// se deciden como DeepSeek o Claude Code. ⚰️ Era una «ventana efectiva» de
+// 240.000 elegida por coste, pendiente de él. El coste de un turno largo lo
+// sigue acotando el techo de dinero del turno (`techoDelTurno`).
 const COMPACTION_POLICY = resolveCompaction({
-  windowTokens: AGENT_EFFECTIVE_WINDOW_TOKENS,
+  windowTokens: MODEL_WINDOW_TOKENS,
   maxOutputTokens: MAX_LOOP_OUTPUT_TOKENS,
 });
 
@@ -1036,6 +1041,23 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
             // Len lee con `cat` (`spill-policy` de DeepSeek). Sólo en una terminal
             // viva: arrancarla para esto sería cargar el sitio entero por un aviso.
             saveRecovery: async (path, text) => {
+              const terminal = agentSession.terminal;
+              if (!terminal?.arrancada) return false;
+              await terminal.poner({ [path]: text });
+              return true;
+            },
+          },
+          // LA RETENCIÓN DE RESULTADOS GRANDES, como la `spill-policy` de DeepSeek
+          // (`lib/agent/compaction/spill.ts`): lo que pase de 12.500 tokens llega
+          // recortado y el texto entero queda en /tmp de la terminal. Aquí SÍ se
+          // arranca si no lo estaba —un resultado así es justo cuando hace falta
+          // poder leer el resto—, y por el camino de `bash` (un comando que no
+          // hace nada), que es quien sabe montarla. Sin terminal, entero.
+          spill: {
+            maxInlineTokens: SPILL_MAX_INLINE_TOKENS,
+            save: async (path, text) => {
+              if (!terminalEncendida()) return false;
+              if (!agentSession.terminal?.arrancada) await runAgentTool(agentSession, deps, NOMBRE_BASH, { command: "true" });
               const terminal = agentSession.terminal;
               if (!terminal?.arrancada) return false;
               await terminal.poner({ [path]: text });

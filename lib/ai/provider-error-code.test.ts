@@ -48,6 +48,17 @@ describe("el desborde de contexto (el clasificador de DeepSeek, tal cual)", () =
     expect(codeForProviderError(413, "request is too large for the model's context window")).toBe("context_window_exceeded");
   });
 
+  // TASK 10 DE LA PIEZA 2, A $0: el texto REAL que devuelve Fireworks al
+  // desbordar un modelo de ~1M (copiado de la prueba de charmbracelet/fantasy#385,
+  // que lo recogió de un error de verdad; fíjate en el máximo, 1048573 y no
+  // 1048576). Sustituye a la petición pagada de >1M tokens que pedía el plan.
+  it("🔴 el desborde REAL de Fireworks, suelto y dentro de su sobre de error, es «context_window_exceeded»", () => {
+    const real = "The prompt is too long: 1261484, model maximum context length: 1048573";
+    expect(codeForProviderError(400, real)).toBe("context_window_exceeded");
+    expect(codeForProviderError(400, JSON.stringify({ error: { object: "error", type: "invalid_request_error", message: real } }))).toBe("context_window_exceeded");
+    expect(codeForInBandError({ code: 400, message: real })).toBe("context_window_exceeded");
+  });
+
   it("no se reintenta como un fallo cualquiera (lo arregla la compactación)", () => {
     expect(isRetryable("context_window_exceeded")).toBe(false);
   });

@@ -197,6 +197,7 @@
       "waitingAnswer": "等待你的回答",
       "waitingApproval": "等待你的确认",
       "yourTurn": "轮到你了 · 已暂停",
+      "yourTurnLive": "轮到你了 · 你一回答，Len 就继续",
       "done": "完成",
       "doneHint": "可以再让它做别的",
       "stopped": "已停止",

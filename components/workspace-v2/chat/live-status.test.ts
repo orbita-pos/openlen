@@ -121,6 +121,16 @@ describe("la barra viva", () => {
     expect(["session_search", "session_event_search", "session_event_read"].map(activityOf)).toEqual(["reading", "reading", "reading"]);
   });
 
+  it("🔴 pieza 3: mientras la pregunta espera DENTRO del turno, la barra dice que te toca y el ■ sigue", () => {
+    const preguntas = [{ id: "plazo", question: "¿Cuántas horas antes?" }];
+    const t = turn({ status: "streaming", startedAt: 1, pendingQuestions: preguntas, actions: [{ tool: "ask_user_question", status: "running", summary: "" }] });
+    const s = liveStatus(t, { busy: true });
+    expect(s).toEqual({ kind: "waiting", face: "preguntando", reason: "question", question: "¿Cuántas horas antes?", live: true });
+    expect(isRunning(s)).toBe(true);
+    // Ya contestó: Len sigue trabajando con la respuesta.
+    expect(liveStatus({ ...t, answeredLive: "24" }, { busy: true }).kind).toBe("working");
+  });
+
   it("🔴 pieza 3: una pregunta contestada DENTRO del turno ya no es esperar", () => {
     const t = turn({ actions: [{ tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Cuántas horas antes?", respuesta: "48" }] });
     expect(questionOf(t)).toBeNull();

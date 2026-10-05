@@ -81,6 +81,16 @@ export async function turnosParaElHistorial(projectId: string, cuantos: number):
  * sólo hace falta al leer un evento (`transcripcionDeLaFila`). El turno que
  * corre viene con su estado y lo descarta el módulo. Ownership, del llamador.
  */
+/** Techo de filas de una búsqueda: la charla en curso (`CHAT_LIMIT`) y las
+ *  archivadas que se guardan (`MAX_ARCHIVED_CONVERSATIONS`), de `CHAT_LIMIT` cada
+ *  una como mucho. 🔴 Sin `statement_timeout` en la base, y es a propósito: la app
+ *  no hace ninguna `db.transaction()` para que los dos conductores (Neon y pg)
+ *  sigan intercambiables, y un SET de sesión se quedaría en la conexión del pool.
+ *  Lo que la deja sin riesgo es su forma: igualdad por `projectId` (con índice),
+ *  sin regex (la lección de la consulta que corrió 17 h) y con este LIMIT. Se
+ *  calcula al llamar: `MAX_ARCHIVED_CONVERSATIONS` se declara más abajo. */
+const maxFilasParaBuscar = () => CHAT_LIMIT * (MAX_ARCHIVED_CONVERSATIONS + 1);
+
 export async function filasParaBuscar(projectId: string): Promise<ChatRowForSearch[]> {
   const t = schema.projectChatMessages;
   const rows = await db
@@ -95,7 +105,9 @@ export async function filasParaBuscar(projectId: string): Promise<ChatRowForSear
     })
     .from(t)
     .where(eq(t.projectId, projectId))
-    .orderBy(asc(t.createdAt));
+    .orderBy(desc(t.createdAt))
+    .limit(maxFilasParaBuscar());
+  // Las más recientes si hubiera de más; el módulo las ordena por fecha.
   return rows.map((r) => ({ ...r, actions: r.actions ?? null }));
 }
 

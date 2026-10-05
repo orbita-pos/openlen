@@ -4283,3 +4283,42 @@ describe("sobreQue: el resumen de la tarjeta de cada llamada", () => {
     expect(sobreQue({ query: "x".repeat(100) })).toHaveLength(60);
   });
 });
+
+describe("la retención de resultados grandes (spill-policy de DeepSeek)", () => {
+  async function correr(tool: string, conSpill: boolean) {
+    const ficheros: Record<string, string> = {};
+    let vista: Record<string, unknown> | undefined;
+    const guion = scripted(
+      [{ type: "function_call", name: tool, args: { query: "x" } }, usage(1), done],
+      [{ type: "text_delta", text: "listo" }, usage(1), done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "busca" }],
+      tools: [],
+      ...(conSpill ? { spill: { maxInlineTokens: 200, save: async (p: string, t: string) => ((ficheros[p] = t), true) } } : {}),
+      openStream: (m) => {
+        const ultima = m[m.length - 1];
+        if (ultima?.functionResponses) vista = ultima.functionResponses[0]!.response;
+        return guion(m);
+      },
+      runTool: async () => ({ response: { ok: true, tool_result: "Z".repeat(5000) } }),
+      emit: () => undefined,
+    });
+    return { ficheros, vista: vista! };
+  }
+
+  it("🔴 un resultado de más de maxInlineTokens llega recortado con su aviso, y el entero queda en /tmp/spill", async () => {
+    const { ficheros, vista } = await correr("session_event_read", true);
+    const ruta = Object.keys(ficheros)[0]!;
+    expect(ruta).toMatch(/^\/tmp\/spill\/\d+-0-session_event_read\.txt$/);
+    expect(ficheros[ruta]).toBe("Z".repeat(5000));
+    expect(String(vista.tool_result)).toContain(`Full formatted result stored at: ${ruta}`);
+    expect(String(vista.tool_result).length).toBeLessThan(5000);
+    expect(vista.ok).toBe(true);
+  });
+
+  it("Read no se recorta (como el `read` de DeepSeek), ni nada sin dónde guardar", async () => {
+    expect(String((await correr("Read", true)).vista.tool_result)).toHaveLength(5000);
+    expect(String((await correr("session_event_read", false)).vista.tool_result)).toHaveLength(5000);
+  });
+});

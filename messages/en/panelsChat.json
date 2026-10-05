@@ -197,6 +197,7 @@
       "waitingAnswer": "Waiting for your answer",
       "waitingApproval": "Waiting for your approval",
       "yourTurn": "Your turn · paused",
+      "yourTurnLive": "Your turn · Len goes on as soon as you answer",
       "done": "Done",
       "doneHint": "ask for something else",
       "stopped": "Stopped",

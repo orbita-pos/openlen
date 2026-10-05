@@ -5,9 +5,31 @@
 // (`turno`, `cambios`, el `done` con `centicredits`…), así que el chat los lee
 // por el mismo camino que los de verdad. Sólo existe en desarrollo.
 
+/** Las preguntas de los guiones de ask_user_question: una de una sola respuesta,
+ *  con la recomendada, y otra de varias. */
+const PREGUNTAS_DE_EJEMPLO = [
+  {
+    id: "anticipacion",
+    header: "Encargos",
+    question: "¿Con cuánta anticipación aceptas encargos de pasteles?",
+    options: [
+      { label: "48 horas (Recommended)", description: "Lo que dice tu ficha; da tiempo a hornear y decorar." },
+      { label: "Una semana", description: "Para pasteles grandes o con decoración especial." },
+    ],
+  },
+  {
+    id: "dias",
+    question: "¿Qué días entregas?",
+    multiSelect: true,
+    options: [{ label: "Lunes a viernes" }, { label: "Sábado" }, { label: "Domingo" }],
+  },
+];
+
 export type ScenarioId =
   | "edit"
   | "question"
+  | "askLive"
+  | "askEnded"
   | "terminal"
   | "publish"
   | "reply"
@@ -25,6 +47,8 @@ export type ScenarioId =
 export const SCENARIOS: readonly ScenarioId[] = [
   "edit",
   "question",
+  "askLive",
+  "askEnded",
   "terminal",
   "publish",
   "reply",
@@ -42,7 +66,9 @@ export const SCENARIOS: readonly ScenarioId[] = [
 
 export const SCENARIO_LABEL: Readonly<Record<ScenarioId, string>> = {
   edit: "Editar (fotos + formulario)",
-  question: "Pregunta",
+  question: "Pregunta (preguntar, fila vieja)",
+  askLive: "Pregunta con opciones (espera dentro del turno)",
+  askEnded: "Pregunta con opciones (cerró el turno)",
   terminal: "Terminal + web",
   publish: "Publicar",
   reply: "Borrador de respuesta",
@@ -166,6 +192,41 @@ export function scriptFor(id: ScenarioId, turnoId: string): ScriptStep[] {
         }),
         wait(100, "text", { text: "¿Con cuánta anticipación aceptas encargos de pasteles?" }),
         wait(100, "done", DONE({ centicredits: 41, durationMs: 6_200 })),
+      ];
+    // Pieza 3 de Len 2.5: ask_user_question con opciones. «askLive» espera la
+    // respuesta DENTRO del turno (evento `question`); «askEnded» cerró el turno
+    // con la pregunta, que se contesta con un toque y abre el siguiente.
+    case "askLive":
+      return [
+        ...head,
+        wait(800, "text", { text: "Para el formulario de encargos necesito dos datos.\n\n" }),
+        wait(200, "action", { tool: "ask_user_question", status: "running", summary: "" }),
+        wait(300, "question", { questions: PREGUNTAS_DE_EJEMPLO }),
+        // Lo que tarda el dueño en contestar (la espera de verdad son 120 s).
+        // Sin respuesta a tiempo, la tarjeta de cierre trae las opciones (como
+        // `toolAskUserQuestion` cuando `askUser` devuelve null).
+        wait(60_000, "action", {
+          tool: "ask_user_question",
+          status: "done",
+          summary: "",
+          pregunta: "¿Con cuánta anticipación aceptas encargos de pasteles?\n¿Qué días entregas?",
+          preguntas: PREGUNTAS_DE_EJEMPLO,
+        }),
+        wait(100, "done", DONE({ centicredits: 12, durationMs: 61_000 })),
+      ];
+    case "askEnded":
+      return [
+        ...head,
+        wait(800, "text", { text: "Para el formulario de encargos necesito dos datos.\n\n" }),
+        wait(200, "action", { tool: "ask_user_question", status: "running", summary: "" }),
+        wait(300, "action", {
+          tool: "ask_user_question",
+          status: "done",
+          summary: "",
+          pregunta: "¿Con cuánta anticipación aceptas encargos de pasteles?\n¿Qué días entregas?",
+          preguntas: PREGUNTAS_DE_EJEMPLO,
+        }),
+        wait(100, "done", DONE({ centicredits: 12, durationMs: 4_000 })),
       ];
     case "terminal":
       return [

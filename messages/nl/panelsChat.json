@@ -197,6 +197,7 @@
       "waitingAnswer": "Wacht op je antwoord",
       "waitingApproval": "Wacht op je goedkeuring",
       "yourTurn": "Jij bent aan de beurt · gepauzeerd",
+      "yourTurnLive": "Jij bent aan de beurt · Len gaat verder zodra je antwoordt",
       "done": "Klaar",
       "doneHint": "vraag iets anders",
       "stopped": "Gestopt",
