@@ -71,16 +71,32 @@ export interface TurnoParaUndo {
   /** Páginas que el turno escribió de verdad (una por evento `html`).
    *  Ausente en los turnos de ai-design, que son de una sola página. */
   paginasTocadas?: ReadonlyArray<string | null>;
+  /** LA CARPETA (pieza 9 de Len 2.5): los ficheros que el turno cambió, en
+   *  orden, cada uno con la versión que archivó su «antes» (evento
+   *  `ficheros` del Agente). Una ruta puede venir varias veces: la PRIMERA es
+   *  su estado de antes del turno. `versionPrevia: null` = archivar falló. */
+  ficherosTocados?: ReadonlyArray<{ readonly ruta: string; readonly versionPrevia: string | null }>;
 }
 
 export type MotivoSinUndo =
   | "no-aplicado"
   | "sin-preimagen"
   | "sin-version"
-  | "otra-pagina";
+  | "otra-pagina"
+  /** Algún fichero que tocó el turno no tiene versión de antes: deshacer
+   *  dejaría ese fichero cambiado y diría «Revertido». */
+  | "fichero-sin-version";
 
 export type PlanDeUndo =
-  | { kind: "restaurar"; page: string | null; versionId: string }
+  | {
+      kind: "restaurar";
+      page: string | null;
+      /** La versión de la página. `null` = el turno sólo tocó ficheros. */
+      versionId: string | null;
+      /** Los ficheros a devolver a su estado de antes del turno (pieza 9).
+       *  Ausente si el turno no tocó ninguno. */
+      files?: ReadonlyArray<{ ruta: string; versionId: string }>;
+    }
   | { kind: "imposible"; motivo: MotivoSinUndo };
 
 /**
@@ -93,6 +109,25 @@ export function planDeUndo(
 ): PlanDeUndo {
   if (turn.status !== "applied") {
     return { kind: "imposible", motivo: "no-aplicado" };
+  }
+  // LA CARPETA (pieza 9 de Len 2.5): todos los ficheros del turno vuelven, o
+  // no se ofrece. Un fichero sin versión de antes quedaría cambiado bajo un
+  // «Revertido» — la mentira de la regla 2, con otro disfraz.
+  const ficheros = turn.ficherosTocados ?? [];
+  if (ficheros.some((f) => !f.versionPrevia)) {
+    return { kind: "imposible", motivo: "fichero-sin-version" };
+  }
+  const vistas = new Set<string>();
+  const files: Array<{ ruta: string; versionId: string }> = [];
+  for (const f of ficheros) {
+    if (vistas.has(f.ruta)) continue;
+    vistas.add(f.ruta);
+    files.push({ ruta: f.ruta, versionId: f.versionPrevia as string });
+  }
+  // Un turno que SÓLO tocó ficheros (ninguna página escrita) se deshace sin
+  // página: no hay preimagen que restaurar ni que exigir.
+  if (files.length > 0 && turn.paginasTocadas !== undefined && turn.paginasTocadas.length === 0) {
+    return { kind: "restaurar", page: null, versionId: null, files };
   }
   if (turn.preEditHtml.length === 0) {
     return { kind: "imposible", motivo: "sin-preimagen" };
@@ -112,7 +147,30 @@ export function planDeUndo(
   if (tocadas.some((p) => !mismaPagina(p, anclaje))) {
     return { kind: "imposible", motivo: "otra-pagina" };
   }
-  return { kind: "restaurar", page: anclaje, versionId: turn.versionPrevia };
+  return {
+    kind: "restaurar",
+    page: anclaje,
+    versionId: turn.versionPrevia,
+    ...(files.length > 0 ? { files } : {}),
+  };
+}
+
+/**
+ * Lo que trae el evento `ficheros` del Agente (pieza 9 de Len 2.5): los
+ * ficheros que cambió una herramienta, cada uno con la versión de su «antes».
+ * Llega por el SSE, así que se lee entrada a entrada y lo que no tiene forma se
+ * cae — nunca un `as` sobre lo que mande el servidor.
+ */
+export function ficherosDelEvento(
+  payload: unknown,
+): Array<{ ruta: string; versionPrevia: string | null }> {
+  const lista = (payload as { ficherosTocados?: unknown } | null)?.ficherosTocados;
+  if (!Array.isArray(lista)) return [];
+  return lista.flatMap((f) => {
+    const { ruta, versionPrevia } = (f ?? {}) as { ruta?: unknown; versionPrevia?: unknown };
+    if (typeof ruta !== "string" || !(typeof versionPrevia === "string" || versionPrevia === null)) return [];
+    return [{ ruta, versionPrevia }];
+  });
 }
 
 export type FalloDeUndo =
@@ -131,6 +189,9 @@ export interface DepsDeUndo {
   marcarRevertido(): void;
   /** El servidor no lo aceptó: el turno SIGUE aplicado y hay que decirlo. */
   marcarFallo(fallo: FalloDeUndo): void;
+  /** LA CARPETA (pieza 9): los ficheros ya volvieron. No cambian el documento,
+   *  así que quien enseña la página tiene que enterarse por aquí. */
+  ficherosRestaurados?(): void;
 }
 
 /**
@@ -153,6 +214,33 @@ export async function ejecutarUndo(
   deps: DepsDeUndo,
 ): Promise<boolean> {
   if (plan.kind !== "restaurar") return false;
+
+  // LOS FICHEROS PRIMERO (pieza 9 de Len 2.5), uno a uno, y el primero que
+  // falla para todo: ni página, ni pintar, ni «Revertido». Como la página,
+  // sin cuerpo: la versión la lee el servidor de su base
+  // (`restoreFileVersion`), y restaurar archiva lo de ahora, así que el propio
+  // Deshacer se deshace.
+  for (const f of plan.files ?? []) {
+    let r: Response;
+    try {
+      r = await deps.fetchImpl(`/api/projects/${deps.projectId}/ficheros/versions/${f.versionId}/restore`, {
+        method: "POST",
+      });
+    } catch {
+      deps.marcarFallo({ motivo: "red" });
+      return false;
+    }
+    if (!r.ok) {
+      deps.marcarFallo({ motivo: "http", status: r.status });
+      return false;
+    }
+  }
+  if ((plan.files ?? []).length > 0) deps.ficherosRestaurados?.();
+  // Sólo ficheros: no hay documento que pintar.
+  if (plan.versionId === null) {
+    deps.marcarRevertido();
+    return true;
+  }
 
   let res: Response;
   try {

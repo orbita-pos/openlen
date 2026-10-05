@@ -10,6 +10,8 @@
 //
 // Puro: ni red, ni base, ni bindings nativos.
 
+import { currentToolName } from "@/lib/agent/ask-user-question";
+
 /** Un mensaje del historial tal y como lo acepta el servidor. */
 export interface MensajeSaneado {
   role: "user" | "assistant";
@@ -32,6 +34,17 @@ export interface MensajeSaneado {
  */
 export function sanearHistorial(raw: unknown, nombresValidos: ReadonlySet<string>): MensajeSaneado[] {
   if (!Array.isArray(raw)) return [];
+  // Pieza 3 de Len 2.5: un nombre viejo que sigue valiendo (`preguntar`) se
+  // lee con el de hoy ANTES de mirar el catálogo; si no, la conversación vieja
+  // perdería esas llamadas.
+  const conNombreDeHoy = (v: unknown) =>
+    Array.isArray(v)
+      ? v.map((c) =>
+          c && typeof (c as { name?: unknown }).name === "string"
+            ? { ...(c as object), name: currentToolName((c as { name: string }).name) }
+            : c,
+        )
+      : v;
   const limpiaLlamadas = (v: unknown) =>
     Array.isArray(v)
       ? v
@@ -79,8 +92,8 @@ export function sanearHistorial(raw: unknown, nombresValidos: ReadonlySet<string
         typeof (h as { content?: unknown }).content === "string",
     )
     .map((h) => {
-      const llamadas = limpiaLlamadas((h as { functionCalls?: unknown }).functionCalls);
-      const respuestas = limpiaRespuestas((h as { functionResponses?: unknown }).functionResponses);
+      const llamadas = limpiaLlamadas(conNombreDeHoy((h as { functionCalls?: unknown }).functionCalls));
+      const respuestas = limpiaRespuestas(conNombreDeHoy((h as { functionResponses?: unknown }).functionResponses));
       return {
         role: h.role,
         content: h.content.slice(0, 4000),

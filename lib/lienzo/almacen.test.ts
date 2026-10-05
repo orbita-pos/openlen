@@ -5,8 +5,10 @@ import {
   TOPE_POR_USUARIO,
   guardarDocumento,
   leerDocumento,
+  proyectoDeEtiqueta,
   vaciarAlmacenParaPruebas,
 } from "./almacen";
+import { etiquetaDeLienzo } from "./host";
 
 const base = { html: "<p>hola</p>", projectId: "p1", userId: "u1", pagina: null };
 
@@ -86,5 +88,35 @@ describe("el techo global de bytes", () => {
     // Chromium. Si alguien lo sube cerca del presupuesto, esto avisa.
     expect(TOPE_GLOBAL_BYTES).toBeLessThanOrEqual(512 * 1024 * 1024);
     expect(TOPE_GLOBAL_BYTES).toBeGreaterThanOrEqual(64 * 1024 * 1024);
+  });
+});
+
+// DE QUÉ PROYECTO ES UN HOST LIENZO (pieza 9 de Len 2.5). Los ficheros de la
+// carpeta se sirven en el host del lienzo; sólo responden mientras el dueño
+// tiene un documento VIVO de ese proyecto.
+describe("el proyecto de una etiqueta", () => {
+  const env = { AUTH_SECRET: "s3cr3t" };
+  const P1 = "4f9c10cb-8781-48f1-b291-c5d146579f09";
+  const P2 = "0e0c4d1a-1b2c-4d3e-8f90-a1b2c3d4e5f6";
+
+  it("🔴 con un documento vivo, la etiqueta dice su proyecto y su dueño", () => {
+    guardarDocumento({ ...base, projectId: P1 }, 1_000);
+    expect(proyectoDeEtiqueta(etiquetaDeLienzo(P1, env)!, 1_000, env)).toEqual({ projectId: P1, userId: "u1" });
+  });
+
+  it("🔴 sin documento vivo de ESE proyecto, nada — aunque haya de otro", () => {
+    guardarDocumento({ ...base, projectId: P2 }, 1_000);
+    expect(proyectoDeEtiqueta(etiquetaDeLienzo(P1, env)!, 1_000, env)).toBeNull();
+  });
+
+  it("caducado, nada; y no lo renueva", () => {
+    const id = guardarDocumento({ ...base, projectId: P1 }, 0);
+    expect(proyectoDeEtiqueta(etiquetaDeLienzo(P1, env)!, CADUCIDAD_MS + 1, env)).toBeNull();
+    expect(leerDocumento(id, CADUCIDAD_MS + 1)).toBeNull();
+  });
+
+  it("una etiqueta inventada, nada", () => {
+    guardarDocumento({ ...base, projectId: P1 }, 1_000);
+    expect(proyectoDeEtiqueta(`lienzo-${"0".repeat(32)}`, 1_000, env)).toBeNull();
   });
 });

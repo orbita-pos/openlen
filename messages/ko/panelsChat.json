@@ -197,16 +197,28 @@
       "waitingAnswer": "답변을 기다리는 중",
       "waitingApproval": "승인을 기다리는 중",
       "yourTurn": "당신 차례 · 일시 정지",
+      "yourTurnLive": "당신 차례예요 · 답하면 Len이 바로 이어서 해요",
       "done": "완료",
       "doneHint": "다른 것도 요청해 보세요",
       "stopped": "중지됨",
       "stoppedHint": "이미 한 작업은 그대로 남습니다",
-      "failed": "끝내지 못했습니다"
+      "failed": "끝내지 못했습니다",
+      "retrying": "다시 시도 중",
+      "retryingHint": "응답 없음 · {seconds}초 후 · {max}회 중 {attempt}회째",
+      "retryingAttempt": "{max}회 중 {attempt}회째",
+      "compacting": "지금까지를 정리하는 중",
+      "compactingHint": "흐름을 잃지 않고 계속하려고"
     },
     "question": {
       "label": "Len의 질문",
       "hint": "아래에 편하게 답해 주세요.",
-      "answered": "답변: {answer}"
+      "answered": "답변: {answer}",
+      "cancelled": "답변을 보내지 않고 취소했습니다",
+      "send": "답하기",
+      "other": "다른 답",
+      "otherPlaceholder": "답을 입력하세요",
+      "pickMany": "여러 개를 고를 수 있어요",
+      "recommended": "추천"
     },
     "changes": {
       "showAll": "변경 {count}개 모두 보기",
@@ -255,6 +267,45 @@
       "minimize": "Len으로 최소화",
       "open": "채팅 열기",
       "resize": "드래그해서 크기 변경"
+    },
+    "plan": {
+      "option": "먼저 계획하기",
+      "optionHint": "Len이 먼저 살펴보고 계획을 제안합니다. 승인하기 전에는 아무것도 바뀌지 않아요.",
+      "chip": "계획",
+      "chipOff": "계획 모드 끝내기",
+      "reviewLabel": "검토할 계획",
+      "reviewQuestion": "이 계획을 승인할까요?",
+      "approve": "승인",
+      "approveHint": "Len이 지금 계획을 실행합니다.",
+      "keep": "변경 요청",
+      "keepHint": "Len이 말씀하신 내용으로 계속 계획합니다.",
+      "consentLabel": "계획 모드",
+      "consentQuestion": "Len이 무언가를 바꾸기 전에 계획하려고 해요. 먼저 계획할까요?",
+      "planFirst": "먼저 계획하기",
+      "planFirstHint": "계획을 승인하기 전에는 아무것도 바뀌지 않아요.",
+      "skip": "계획 없이",
+      "skipHint": "Len이 지금 요청을 계속 진행합니다.",
+      "showPlan": "계획 전체 보기",
+      "hidePlan": "계획 숨기기"
+    },
+    "goal": {
+      "option": "목표",
+      "optionHint": "끝날 때까지 Len이 라운드를 거듭하며 스스로 진행합니다.",
+      "optionTaken": "이미 목표가 있습니다. 지우거나 끝날 때까지 기다려 주세요.",
+      "chip": "목표",
+      "chipOff": "목표로 하지 않기",
+      "placeholder": "목표 전체를 설명해 주세요. Len이 끝까지 진행합니다…",
+      "label": "목표",
+      "round": "라운드 {round}/{max}",
+      "running": "진행 중",
+      "paused": "일시 중지됨",
+      "blocked": "막힘",
+      "roundLimit": "최대 {max} 라운드에 도달했습니다.",
+      "noCredits": "중지됨: 잔액이 없습니다.",
+      "resume": "다시 시작",
+      "clear": "지우기",
+      "clearFailed": "목표를 지우지 못했습니다.",
+      "roundLine": "목표 · 라운드 {round}/{max}"
     }
   }
 }

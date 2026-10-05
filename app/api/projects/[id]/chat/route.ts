@@ -82,6 +82,46 @@ const ActionSchema = z.object({
     .string()
     .transform((s) => s.slice(0, 600))
     .optional(),
+  /** Pieza 3 de Len 2.5: las preguntas de `ask_user_question` con sus opciones,
+   *  y lo que contestó el dueño dentro del turno. Con los topes de
+   *  `lib/agent/ask-user-question.ts`, recortando y no rechazando: un campo largo
+   *  haría 400 al guardado ENTERO y el turno se perdería al recargar. */
+  preguntas: z
+    .array(
+      z.object({
+        id: z.string().transform((s) => s.slice(0, 80)),
+        question: z.string().transform((s) => s.slice(0, 600)),
+        header: z.string().transform((s) => s.slice(0, 40)).optional(),
+        options: z
+          .array(
+            z.object({
+              label: z.string().transform((s) => s.slice(0, 120)),
+              description: z.string().transform((s) => s.slice(0, 300)).optional(),
+            }),
+          )
+          .transform((a) => a.slice(0, 10))
+          .optional(),
+        multiSelect: z.boolean().optional(),
+        // Pieza 7: la revisión del plan o el consentimiento (`QuestionIntent`),
+        // para que la tarjeta se pinte igual al recargar. Una que no vale se cae
+        // sola, sin tirar el guardado.
+        intent: z
+          .union([
+            z.object({ kind: z.literal("plan-review"), plan: z.string().min(1) }),
+            z.object({ kind: z.literal("plan-consent") }),
+          ])
+          .optional()
+          .catch(undefined),
+      }),
+    )
+    .transform((a) => a.slice(0, 20))
+    .optional(),
+  respuesta: z
+    .string()
+    .transform((s) => s.slice(0, 200))
+    .optional(),
+  // Alinear con DeepSeek: la pregunta descartada se queda «cancelada» al recargar.
+  dismissed: z.literal(true).optional().catch(undefined),
   /**
    * QUÉ cambió, resuelto por el servidor mientras los `data-op-id` valían.
    *

@@ -197,16 +197,28 @@
       "waitingAnswer": "あなたの返事を待っています",
       "waitingApproval": "あなたの承認を待っています",
       "yourTurn": "あなたの番です · 一時停止中",
+      "yourTurnLive": "あなたの番です · 答えるとすぐにLenが続けます",
       "done": "完了",
       "doneHint": "ほかのことも頼めます",
       "stopped": "停止しました",
       "stoppedHint": "すでに終えた作業は残ります",
-      "failed": "最後まで終えられませんでした"
+      "failed": "最後まで終えられませんでした",
+      "retrying": "再試行中",
+      "retryingHint": "応答なし · {seconds} 秒後 · {max} 回中 {attempt} 回目",
+      "retryingAttempt": "{max} 回中 {attempt} 回目",
+      "compacting": "ここまでを整理中",
+      "compactingHint": "流れを失わずに続けるため"
     },
     "question": {
       "label": "Len からの質問",
       "hint": "下の欄に、自分の言葉で答えてください。",
-      "answered": "あなたの答え: {answer}"
+      "answered": "あなたの答え: {answer}",
+      "cancelled": "回答を送信せずにキャンセルしました",
+      "send": "回答する",
+      "other": "その他",
+      "otherPlaceholder": "回答を入力",
+      "pickMany": "複数選べます",
+      "recommended": "おすすめ"
     },
     "changes": {
       "showAll": "{count} 件の変更をすべて見る",
@@ -255,6 +267,45 @@
       "minimize": "Len に最小化",
       "open": "チャットを開く",
       "resize": "ドラッグでサイズを変更"
+    },
+    "plan": {
+      "option": "先に計画する",
+      "optionHint": "Lenがまず確認して計画を提案します。承認するまで何も変わりません。",
+      "chip": "計画",
+      "chipOff": "計画モードを終了",
+      "reviewLabel": "確認待ちの計画",
+      "reviewQuestion": "この計画を承認しますか？",
+      "approve": "承認する",
+      "approveHint": "Lenが今すぐ計画を実行します。",
+      "keep": "変更を依頼",
+      "keepHint": "Lenはあなたの指摘をもとに計画を続けます。",
+      "consentLabel": "計画モード",
+      "consentQuestion": "Lenは何かを変更する前に計画したいと考えています。先に計画しますか？",
+      "planFirst": "先に計画する",
+      "planFirstHint": "計画を承認するまで何も変わりません。",
+      "skip": "計画しない",
+      "skipHint": "Lenは今すぐ依頼の作業を続けます。",
+      "showPlan": "計画をすべて見る",
+      "hidePlan": "計画を隠す"
+    },
+    "goal": {
+      "option": "ゴール",
+      "optionHint": "終わるまで、Len がラウンドを重ねて自分で進めます。",
+      "optionTaken": "すでにゴールがあります。外すか、終わるまでお待ちください。",
+      "chip": "ゴール",
+      "chipOff": "ゴールにしない",
+      "placeholder": "ゴール全体を説明してください。Len が最後まで進めます…",
+      "label": "ゴール",
+      "round": "ラウンド {round}/{max}",
+      "running": "進行中",
+      "paused": "一時停止中",
+      "blocked": "行き詰まり",
+      "roundLimit": "上限の {max} ラウンドに達しました。",
+      "noCredits": "停止しました：残高がありません。",
+      "resume": "再開",
+      "clear": "外す",
+      "clearFailed": "ゴールを外せませんでした。",
+      "roundLine": "ゴール · ラウンド {round}/{max}"
     }
   }
 }

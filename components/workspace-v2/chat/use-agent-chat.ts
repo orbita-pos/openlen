@@ -27,9 +27,15 @@ import {
 
 import { noCreditsText, notifyCreditBalanceChanged } from "@/lib/credits-client";
 import type { AgentAction } from "../agent-action-card";
+import { upsertActionInto } from "./action-cards";
+import { answerSummary, asksTheOwner, questionsFrom, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { composeAnswerMessage, fallbackDelivery, liveQuestionTurno, outcomeOfResponder } from "./question-answer";
+import { lastPlanMode, planAnswersForMessage, planModeAfterAnswer, togglePlanSelection } from "./plan-mode-state";
+import { canCreateGoal, goalOrder, goalViewOf, lastGoal, roundAfterDone, roundOfTurn, roundTextFor, type GoalView } from "./goal-state";
 import type { AgentConfirm } from "../agent-confirm-card";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
-import { ejecutarUndo, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
+import { ejecutarUndo, ficherosDelEvento, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
+import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "../panels/turno-cerrado";
 import { NIVEL_POR_DEFECTO, type EsfuerzoAgente, type NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import type { AgentMode } from "@/lib/agent/dynamis";
@@ -93,6 +99,21 @@ export interface DesignTurn {
   scope?: ScopedSelection;
   assistantReasoning: string;
   status: TurnStatus;
+  /** Un reintento del proveedor en curso (`retry` del bucle). `until` = cuándo
+   *  acaba la espera en el reloj del navegador. Se borra en cuanto llega texto
+   *  o una tarjeta, o el turno pasa a seguirse desde el servidor. */
+  retrying?: { attempt: number; maxAttempts: number; until: number };
+  /** Len está resumiendo lo más viejo de la conversación para seguir
+   *  (`compaction_start`). Se borra cuando acaba (`compaction`), con el primer
+   *  texto o tarjeta, o si el turno pasa a seguirse desde el servidor. */
+  compacting?: boolean;
+  /** Pieza 3 de Len 2.5: la pregunta de `ask_user_question` que espera respuesta
+   *  DENTRO del turno (evento `question`). Se borra cuando llega su tarjeta
+   *  (contestada o no). */
+  pendingQuestions?: UserQuestion[];
+  /** Lo que el dueño contestó a esa pregunta viva, mientras llega su tarjeta:
+   *  la tarjeta se encoge en cuanto contesta, sin esperar al servidor. */
+  answeredLive?: string;
   errorText?: string;
   /** HTML before this turn ran. YA NO es lo que se manda al deshacer —el
    *  servidor lee la versión de su propia base— sino lo que alimenta el diff
@@ -121,6 +142,11 @@ export interface DesignTurn {
    *  ./undo-turn. Local: los turnos restaurados no traen preimagen y ya
    *  esconden el botón por otro motivo. */
   paginasTocadas?: (string | null)[];
+  /** LA CARPETA (pieza 9 de Len 2.5): los ficheros que el turno cambió, cada
+   *  uno con la versión de su «antes» (evento `ficheros`). Deshacer los
+   *  devuelve con la página o no se ofrece — ver ./undo-turn. Local, como
+   *  `paginasTocadas`. */
+  ficherosTocados?: ReadonlyArray<{ readonly ruta: string; readonly versionPrevia: string | null }>;
   /** El turno se cortó DESPUÉS de haber cambiado la página. Se pinta como
    *  aviso sobre un turno aplicado, no como error: el cambio ya vive en la
    *  base y decir «falló» manda al usuario a repetirlo. */
@@ -190,26 +216,6 @@ const STOP_FALLBACK_MS = 20_000;
 // means here. Once true, `send()` skips the agent branch outright and goes
 // straight to classic ai-design for every later turn in this session.
 let agentKilledThisSession = false;
-
-// Agent-mode: upsert one card into an ordered list of tool cards — replace a
-// trailing `running` card for the same tool instead of stacking a duplicate,
-// otherwise append. Pure so it's shared between the live React-state upsert
-// (`upsertAction`) and `send()`'s local accumulator, which needs the same
-// final list (independent of React's render/flush timing) to hand to
-// `persistTurn` once the turn settles.
-function upsertActionInto(
-  actions: AgentAction[] | undefined,
-  action: AgentAction,
-): AgentAction[] {
-  const next = actions ? [...actions] : [];
-  const last = next[next.length - 1];
-  if (last && last.tool === action.tool && last.status === "running") {
-    next[next.length - 1] = action;
-  } else {
-    next.push(action);
-  }
-  return next;
-}
 
 export interface AgentChatOptions {
   projectId: string;
@@ -303,6 +309,32 @@ export function useAgentChat({
   // turno como el esfuerzo y NO se guarda (ver `mode-picker.tsx`). El selector
   // sólo se pinta si el servidor lo ofrece, que es con la terminal encendida.
   const [mode, setMode] = useState<AgentMode>("len");
+  // PIEZA 7 · EL MODO PLAN. `planKnown` es lo que dice el servidor (el último
+  // turno cerrado y los eventos `plan` del turno en vuelo); `planWanted`, lo que
+  // el dueño eligió y aún no ha viajado. Al servidor sólo viaja la elección
+  // (`plan-mode-state.ts` dice por qué). Los refs, para que `send` y
+  // `answerQuestion` lean el valor de AHORA.
+  const [planKnown, setPlanKnown] = useState<boolean>(() => lastPlanMode(initialChat ?? []));
+  const [planWanted, setPlanWanted] = useState<boolean | null>(null);
+  const planKnownRef = useRef(planKnown);
+  planKnownRef.current = planKnown;
+  const planWantedRef = useRef(planWanted);
+  planWantedRef.current = planWanted;
+  /** La elección que viajó con el turno en vuelo: se da por aplicada cuando el
+   *  servidor dice con qué modo empezó. */
+  const planSentRef = useRef<boolean | null>(null);
+  // PIEZA 8 · EL ENCARGO. `goalKnown` es lo que dice el servidor (el último
+  // turno cerrado, y los eventos `goal`/`done` del turno en vuelo); `goalChip`,
+  // la ficha «Encargo» del compositor (lo que se mande será el objetivo). Al
+  // servidor viaja la orden (`goal: "create" | "resume"`), nunca el estado.
+  const [goalKnown, setGoalKnown] = useState<GoalView | null>(() => lastGoal(initialChat ?? []));
+  const goalKnownRef = useRef(goalKnown);
+  goalKnownRef.current = goalKnown;
+  const [goalChip, setGoalChip] = useState(false);
+  const goalChipRef = useRef(goalChip);
+  goalChipRef.current = goalChip;
+  /** La cadena de rondas paró porque no quedaba saldo (`done.round.stopped`). */
+  const [goalStoppedForCredits, setGoalStoppedForCredits] = useState(false);
   const [dynamisOffered, setDynamisOffered] = useState(false);
   const [sending, setSending] = useState(false);
   // Agent mode — DEFAULT ON since graduation (alpha ruling 2026-07-08):
@@ -487,7 +519,7 @@ export function useAgentChat({
   const initialChatSig = (initialChat ?? [])
     // `enCurso` y `cortado` viajan con `status: "applied"`: sin ellos en la
     // firma, un turno que termina en el servidor no volvería a converger.
-    .map((s) => `${s.id}:${s.status}:${s.enCurso ? "c" : ""}${s.cortado ? "x" : ""}`)
+    .map((s) => `${s.id}:${s.status}:${s.enCurso ? "c" : ""}${s.cortado ? "x" : ""}${s.planMode ? "p" : ""}`)
     .join("|");
   const chatSeededRef = useRef(false);
   useEffect(() => {
@@ -497,6 +529,12 @@ export function useAgentChat({
       return;
     }
     const server = initialChatRef.current ?? [];
+    // PIEZA 7: lo que dice el servidor del modo plan, salvo con un turno propio
+    // en vuelo (su fila aún no está, y sus eventos son más nuevos). Cubre el
+    // turno reenganchado, que no trae eventos.
+    if (!enVueloRef.current) setPlanKnown(lastPlanMode(server));
+    // PIEZA 8: y el encargo, por lo mismo.
+    if (!enVueloRef.current) setGoalKnown(lastGoal(server));
     // Server turns first (chronological, the authority). Keep the local
     // DesignTurn where we have it — it carries preEditHtml for in-session
     // Undo — but take status from the server (another tab may have undone
@@ -573,8 +611,8 @@ export function useAgentChat({
   }, []);
 
   // Agent-mode: upsert a tool card. Each tool call emits `running` then
-  // `done`/`error` — replace the trailing `running` card for that tool
-  // instead of stacking a duplicate; otherwise append a new card.
+  // `done`/`error`; with tools in parallel (pieza 4) several can be running at
+  // once — see `upsertActionInto` for which card an outcome replaces.
   const upsertAction = useCallback((id: string, action: AgentAction) => {
     setTurns((prev) =>
       prev.map((t) =>
@@ -589,7 +627,9 @@ export function useAgentChat({
    *  stream: se pinta en marcha y se relee su fila (efecto de abajo). */
   const seguirEnElServidor = useCallback((id: string) => {
     setTurns((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: "streaming", enServidor: true } : t)),
+      // Sin `retrying`: si el stream se cayó entre un reintento y su texto, la
+      // barra tiene que decir que sigue en el servidor, no «Reintentando».
+      prev.map((t) => (t.id === id ? { ...t, status: "streaming", enServidor: true, retrying: undefined, compacting: undefined } : t)),
     );
     setReenganche(id);
   }, []);
@@ -646,7 +686,7 @@ export function useAgentChat({
         return;
       }
       if (!r.ok) return;
-      const cuerpo = (await r.json().catch(() => null)) as { turno?: StoredChatTurn; turnoId?: string } | null;
+      const cuerpo = (await r.json().catch(() => null)) as { turno?: StoredChatTurn; turnoId?: string; siguiente?: unknown } | null;
       if (!vivo || !cuerpo?.turno) return;
       const turno = cuerpo.turno;
       if (turno.enCurso) {
@@ -665,7 +705,17 @@ export function useAgentChat({
         );
         return;
       }
-      setTurns((prev) => prev.map((x) => (x.id === fila ? restoreTurn(turno) : x)));
+      // PIEZA 8: el encargo como quedó y, si esta ronda dio paso a otra, la
+      // siguiente se pinta en marcha (el efecto de arriba la recoge y la sigue).
+      const goalTras = turno.goal ? goalViewOf(turno.goal, turno.goal.activation) : null;
+      if (goalTras) setGoalKnown(goalTras);
+      const siguiente = typeof cuerpo.siguiente === "string" ? cuerpo.siguiente : null;
+      setTurns((prev) => {
+        const restaurados = prev.map((x) => (x.id === fila ? restoreTurn(turno) : x));
+        return siguiente && !restaurados.some((x) => x.id === siguiente)
+          ? [...restaurados, rondaEnCamino(siguiente, goalTras)]
+          : restaurados;
+      });
       terminar();
     };
     void leer();
@@ -976,19 +1026,32 @@ export function useAgentChat({
       imageOverride?: AttachedImage | null,
       /** Desde el compositor: los comentarios de líneas que esperan van DENTRO
        *  del mensaje (la #8). Reintentar no los pasa: su texto ya los lleva. */
-      opciones?: { readonly comentarios: readonly ComentarioDeLinea[] },
+      opciones?: {
+        readonly comentarios?: readonly ComentarioDeLinea[];
+        /** Pieza 8: «Reanudar» el encargo — un turno sin mensaje: la ronda siguiente. */
+        readonly goal?: "resume";
+      },
     ) => {
       const escrito = rawPrompt.trim();
       // Lo que escribes tiene su tope; con los comentarios, el del mensaje entero.
-      if (escrito.length > (opciones ? MAX_TEXTO_ESCRITO : MAX_PROMPT)) return;
+      if (escrito.length > (opciones?.comentarios ? MAX_TEXTO_ESCRITO : MAX_PROMPT)) return;
       const comentarios = opciones?.comentarios ?? [];
       const prompt = textoConComentarios(escrito, comentarios, {
         titulo: t("comentarios.titulo"),
         deAntes: t("comentarios.deAntes"),
       });
+      // PIEZA 8 · la orden del dueño al encargo que viaja con ESTE turno: crear
+      // (la ficha puesta: lo escrito es el objetivo) o reanudar. Con ella, el
+      // turno es una ronda y su texto es el mensaje de esa ronda.
+      const ordenDelEncargo = opciones?.goal ?? goalOrder(goalChipRef.current, goalKnownRef.current);
+      const textoDelTurno = roundTextFor(ordenDelEncargo, prompt, goalKnownRef.current);
       // Con un turno aún trabajando en el servidor, otro turno sobre la misma
       // página serían dos agentes editándola a la vez: se corrige o se para.
-      if (!prompt || sending || reenganche) return;
+      if ((!prompt && ordenDelEncargo !== "resume") || sending || reenganche) return;
+      if (ordenDelEncargo) {
+        setGoalChip(false);
+        setGoalStoppedForCredits(false);
+      }
       if (comentarios.length > 0) comentariosDelChat.vaciar(projectId);
 
       // imageOverride lets Retry re-send the failed turn's original image;
@@ -1008,7 +1071,7 @@ export function useAgentChat({
 
       const newTurn: DesignTurn = {
         id: turnId,
-        userText: prompt,
+        userText: textoDelTurno,
         attachedImage: img ?? undefined,
         // El alcance viaja EN el turno, no sólo en la petición: es la misma
         // prueba que la imagen. Se lee AQUÍ, antes de que el envío lo suelte
@@ -1098,6 +1161,10 @@ export function useAgentChat({
          *  el stream se cortó por el camino y el turno sigue en el servidor. */
         let llegoElDone = false;
         let accumulatedReasoning = "";
+        /** Hay un `retry` en curso: el siguiente texto o tarjeta lo borra de la barra. */
+        let reintentando = false;
+        /** Len está ordenando lo que lleva (`compaction_start`): igual. */
+        let compactando = false;
         // LO QUE ESCRIBISTE A MEDIA FAENA, para que sobreviva a un F5.
         //
         // El `↳` se pintaba sólo en el estado de React y `persistTurn` guardaba
@@ -1114,6 +1181,10 @@ export function useAgentChat({
         // permite saber, al cerrar el turno, si la única preimagen que tenemos
         // (la de `turnPage`) cubre de verdad lo que cambió.
         const paginasTocadas: (string | null)[] = [];
+        // LA CARPETA (pieza 9 de Len 2.5, carril B): los ficheros que el turno
+        // cambió, en orden (evento `ficheros`). Para Deshacer: van con la
+        // página o el botón no se ofrece.
+        const ficherosTocados: Array<{ ruta: string; versionPrevia: string | null }> = [];
         // LA DIRECCIÓN DEL DESHACER, y se queda el PRIMERO. `persistPage`
         // archiva un «antes» por cada escritura, así que un turno con dos
         // `editar_pagina` deja dos versiones — y sólo la primera es el
@@ -1137,6 +1208,9 @@ export function useAgentChat({
         // Lo que cobró y tardó, en números: la frase la compone quien pinta.
         let centicredits: number | undefined;
         let durationMs: number | undefined;
+        /** Pieza 8: el encargo tras el turno y la ronda que el servidor encadenó. */
+        let goalTrasElTurno: GoalView | null = null;
+        let rondaTrasElTurno: ReturnType<typeof roundAfterDone> = null;
         let errorMessage: string | null = null;
         // F4 Task 7 — set when the route's kill-switch fires (`code:
         // "agent_off"`): NOT an error to show the user, a signal to
@@ -1149,6 +1223,8 @@ export function useAgentChat({
         let finalActions: AgentAction[] = [];
         try {
           scanController.start();
+          // Pieza 7: la elección del modo plan que viaja con ESTE turno.
+          planSentRef.current = planWantedRef.current;
           const res = await fetch("/api/agent", {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -1179,6 +1255,15 @@ export function useAgentChat({
               // LA HORA DEL USUARIO: «hoy» es su día, no el de UTC
               // (plans/len-resultados/diseno.md §7).
               zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              // PIEZA 3: este chat SABE contestar las preguntas de Len dentro del
+              // turno (la tarjeta con opciones y `POST /api/agent/responder`).
+              answersQuestions: true,
+              // PIEZA 7: la elección del dueño, si tocó la ficha (como el `/plan`
+              // de DeepSeek: un evento). Sin elección no viaja nada y el servidor
+              // sigue con lo que ya estaba.
+              ...(planSentRef.current !== null ? { plan: planSentRef.current } : {}),
+              // PIEZA 8: la orden del dueño al encargo (el `/goal` de DeepSeek).
+              ...(ordenDelEncargo ? { goal: ordenDelEncargo } : {}),
               // Same value + same conditional shape ai-design sends below —
               // absent/empty means home, cloned for parity.
               ...(turnPage ? { page: turnPage } : {}),
@@ -1252,13 +1337,103 @@ export function useAgentChat({
                     ),
                   );
                 }
+              } else if (evName === "retry") {
+                // EL INTENTO FALLIDO NO EXISTIÓ (`lib/agent/loop.ts`, reintentos):
+                // se retira lo que llegó a escribir y la barra dice que reintenta.
+                const p = payload as { attempt?: unknown; maxAttempts?: unknown; delayMs?: unknown; discardChars?: unknown };
+                const discard = typeof p.discardChars === "number" && p.discardChars > 0 ? p.discardChars : 0;
+                const attempt = typeof p.attempt === "number" ? p.attempt : 1;
+                const maxAttempts = typeof p.maxAttempts === "number" ? p.maxAttempts : 5;
+                const until = Date.now() + (typeof p.delayMs === "number" && p.delayMs > 0 ? p.delayMs : 0);
+                if (discard > 0) {
+                  accumulatedReasoning = accumulatedReasoning.slice(0, Math.max(0, accumulatedReasoning.length - discard));
+                }
+                setTurns((prev) =>
+                  prev.map((t) =>
+                    t.id === turnId
+                      ? {
+                          ...t,
+                          assistantReasoning:
+                            discard > 0 ? t.assistantReasoning.slice(0, Math.max(0, t.assistantReasoning.length - discard)) : t.assistantReasoning,
+                          retrying: { attempt, maxAttempts, until },
+                        }
+                      : t,
+                  ),
+                );
+                reintentando = true;
+              } else if (evName === "plan") {
+                // PIEZA 7: el modo con el que empezó el turno, y cada cambio
+                // (aceptar entrar, aprobar el plan). La elección que viajó ya
+                // está aplicada.
+                const active = (payload as { active?: unknown } | null)?.active;
+                if (typeof active === "boolean") {
+                  setPlanKnown(active);
+                  const enviada = planSentRef.current;
+                  if (enviada !== null) {
+                    planSentRef.current = null;
+                    setPlanWanted((w) => (w === enviada ? null : w));
+                  }
+                }
+              } else if (evName === "goal") {
+                // PIEZA 8: el encargo con el que empezó el turno, y cada cambio
+                // (crearlo, completarlo, atascarlo, pausarlo).
+                const p = payload as { goal?: unknown; activation?: unknown } | null;
+                setGoalKnown(p?.goal === null ? null : goalViewOf(p?.goal, p?.activation));
+              } else if (evName === "question") {
+                // PIEZA 3: Len pregunta y ESPERA (`ask_user_question`, 120 s). La
+                // tarjeta se contesta con un toque y la respuesta vuelve al
+                // turno vivo (`POST /api/agent/responder`).
+                const preguntas = questionsFrom((payload as { questions?: unknown } | null)?.questions);
+                if (preguntas) updateTurn(turnId, { pendingQuestions: preguntas });
+              } else if (evName === "compaction_start") {
+                // LA COMPACTACIÓN (`lib/agent/compaction/`, como DeepSeek): Len
+                // resume lo más viejo para seguir; la barra lo dice mientras dura.
+                compactando = true;
+                updateTurn(turnId, { compacting: true });
+              } else if (evName === "compaction") {
+                // Acabó. Si fue para recuperarse de un desborde a media vuelta,
+                // lo que el intento llegó a escribir no existió, como en `retry`.
+                const p = payload as { discardChars?: unknown };
+                const discard = typeof p.discardChars === "number" && p.discardChars > 0 ? p.discardChars : 0;
+                if (discard > 0) {
+                  accumulatedReasoning = accumulatedReasoning.slice(0, Math.max(0, accumulatedReasoning.length - discard));
+                }
+                compactando = false;
+                setTurns((prev) =>
+                  prev.map((t) =>
+                    t.id === turnId
+                      ? {
+                          ...t,
+                          assistantReasoning:
+                            discard > 0 ? t.assistantReasoning.slice(0, Math.max(0, t.assistantReasoning.length - discard)) : t.assistantReasoning,
+                          compacting: undefined,
+                        }
+                      : t,
+                  ),
+                );
               } else if (evName === "text") {
+                if (reintentando) {
+                  reintentando = false;
+                  updateTurn(turnId, { retrying: undefined });
+                }
+                if (compactando) {
+                  compactando = false;
+                  updateTurn(turnId, { compacting: undefined });
+                }
                 const text = strField(payload, "text");
                 if (text) {
                   appendReasoning(turnId, text);
                   accumulatedReasoning += text;
                 }
               } else if (evName === "action") {
+                if (reintentando) {
+                  reintentando = false;
+                  updateTurn(turnId, { retrying: undefined });
+                }
+                if (compactando) {
+                  compactando = false;
+                  updateTurn(turnId, { compacting: undefined });
+                }
                 const p = payload as {
                   tool?: unknown;
                   status?: unknown;
@@ -1310,8 +1485,16 @@ export function useAgentChat({
                 // tarjeta traduce. Pasa por la puerta que valida el código.
                 const ownerReason = ownerReasonFrom((payload as { ownerReason?: unknown } | null)?.ownerReason);
                 const valores = (payload as { valores?: unknown } | null)?.valores;
-                // La pregunta de `preguntar`, sólo de pantalla (plans/new-chat/).
+                // La pregunta de `ask_user_question` (antes `preguntar`), sólo de
+                // pantalla (plans/new-chat/); con sus opciones y, si se contestó
+                // dentro del turno, la respuesta (pieza 3).
                 const pregunta = (payload as { pregunta?: unknown } | null)?.pregunta;
+                const preguntas = questionsFrom((payload as { preguntas?: unknown } | null)?.preguntas);
+                const respuesta = (payload as { respuesta?: unknown } | null)?.respuesta;
+                // Alinear con DeepSeek: la pregunta descartada, «cancelada».
+                const descartada = (payload as { dismissed?: unknown } | null)?.dismissed === true;
+                // Su tarjeta llegó: ya no espera.
+                if (asksTheOwner(tool) && status !== "running") updateTurn(turnId, { pendingQuestions: undefined, answeredLive: undefined });
                 if (tool) {
                   const action: AgentAction = {
                     tool,
@@ -1337,6 +1520,11 @@ export function useAgentChat({
                     ...(typeof pregunta === "string" && pregunta.trim()
                       ? { pregunta: pregunta.slice(0, 600) }
                       : {}),
+                    ...(preguntas ? { preguntas } : {}),
+                    ...(typeof respuesta === "string" && respuesta.trim()
+                      ? { respuesta: respuesta.slice(0, 200) }
+                      : {}),
+                    ...(descartada ? { dismissed: true as const } : {}),
                     ...(typeof valores === "string" && valores.trim()
                       ? { valores: valores.slice(0, 200) }
                       : {}),
@@ -1370,6 +1558,11 @@ export function useAgentChat({
                 const ficheros = (payload as { ficheros?: unknown } | null)?.ficheros;
                 const validos = Array.isArray(ficheros) ? ficheros.filter(esFicheroCambiado) : [];
                 if (validos.length > 0) cambiosEnVivo.guardar(projectId, { turnId, pedido: prompt, ficheros: validos });
+              } else if (evName === "ficheros") {
+                // LA CARPETA (pieza 9 de Len 2.5): lo que cambió de la carpeta
+                // una herramienta, con la versión de su «antes».
+                ficherosTocados.push(...ficherosDelEvento(payload));
+                notifyFolderChanged(projectId);
               } else if (evName === "html") {
                 const html = strField(payload, "html");
                 if (html) {
@@ -1485,6 +1678,15 @@ export function useAgentChat({
                 if (typeof cc === "number" && Number.isFinite(cc) && cc >= 0) centicredits = cc;
                 const ms = (payload as { durationMs?: unknown } | null)?.durationMs;
                 if (typeof ms === "number" && Number.isFinite(ms) && ms >= 0) durationMs = ms;
+                // PIEZA 8: el encargo como queda y lo que sigue (la ronda que el
+                // servidor ya abrió, o que paró por el saldo).
+                const d = payload as { goal?: unknown; goalActivation?: unknown } | null;
+                if (d?.goal !== undefined) {
+                  goalTrasElTurno = goalViewOf(d.goal, d.goalActivation);
+                  setGoalKnown(goalTrasElTurno);
+                }
+                rondaTrasElTurno = roundAfterDone(payload);
+                if (rondaTrasElTurno && "stopped" in rondaTrasElTurno) setGoalStoppedForCredits(true);
                 break agentOuter;
               } else if (evName === "error") {
                 const code = (payload as { code?: unknown } | null)?.code;
@@ -1542,6 +1744,15 @@ export function useAgentChat({
             scanController.cancel();
             seguirEnElServidor(turnId);
             return;
+          }
+
+          // PIEZA 8 · LA RONDA SIGUIENTE ya corre en el servidor (la abrió antes
+          // del `done`): se pinta en marcha detrás de ésta y el efecto de Len
+          // 2.1 la sigue desde su fila, como un turno que llega en curso.
+          if (rondaTrasElTurno && "next" in rondaTrasElTurno) {
+            const next = rondaTrasElTurno.next;
+            const goalDeLaRonda = goalTrasElTurno;
+            setTurns((prev) => (prev.some((x) => x.id === next) ? prev : [...prev, rondaEnCamino(next, goalDeLaRonda)]));
           }
 
           // UN TURNO QUE YA MUTÓ NO PUEDE TERMINAR EN ROJO.
@@ -1616,6 +1827,7 @@ export function useAgentChat({
             // la página en la que empezó (de donde viene la preimagen); estas
             // son las que tocó. Cuando no coinciden, Deshacer no puede cumplir.
             paginasTocadas: [...paginasTocadas],
+            ...(ficherosTocados.length > 0 ? { ficherosTocados: [...ficherosTocados] } : {}),
             versionPrevia,
             // Aplicado CON aviso: el cambio está y el usuario tiene que ver el
             // aviso. La marca de corte, en cambio, sólo si de verdad se cortó
@@ -1629,7 +1841,8 @@ export function useAgentChat({
             id: turnId,
             // El mismo texto que se está viendo en pantalla — mismo `↳`, mismo
             // orden. Sin correcciones es `prompt` y nada más, byte a byte.
-            userText: [prompt, ...correcciones.map((c) => `↳ ${c}`)].join("\n"),
+            // Pieza 8: en una ronda, su mensaje (el que guarda el servidor).
+            userText: [textoDelTurno, ...correcciones.map((c) => `↳ ${c}`)].join("\n"),
             attachedImage: img ?? undefined,
             // El aviso viaja a la transcripción: al recargar, el turno tiene
             // que seguir contando que se cortó. Sin esto el usuario ve un turno
@@ -1776,12 +1989,41 @@ export function useAgentChat({
   const handleRetry = useCallback(
     (turn: DesignTurn) => {
       setTurns((prev) => prev.filter((t) => t.id !== turn.id));
+      // PIEZA 8: reintentar una ronda del encargo es reanudarlo (la ronda
+      // siguiente), no mandarle a Len su mensaje de ronda como si fuera tuyo.
+      if (roundOfTurn(turn.userText)) {
+        void send("", undefined, { goal: "resume" });
+        return;
+      }
       // Re-send with the turn's ORIGINAL image (the live composer was cleared
       // after the first send), so a vision/image edit retries as the same request.
       void send(turn.userText, turn.attachedImage ?? null);
     },
     [send],
   );
+
+  // PIEZA 8 · LOS CONTROLES DEL ENCARGO. La ficha «Encargo» (la puerta del
+  // dueño: lo que mande será el objetivo), «Reanudar» (un turno: la ronda
+  // siguiente) y «Quitar» (`/goal clear`, una ruta aparte: no es un turno).
+  const toggleGoalChip = useCallback(() => setGoalChip((x) => !x), []);
+  const resumeGoal = useCallback(() => {
+    void send("", undefined, { goal: "resume" });
+  }, [send]);
+  const clearGoal = useCallback(async () => {
+    try {
+      const r = await fetch("/api/agent/encargo", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ projectId, action: "clear" }),
+      });
+      if (r.ok) {
+        setGoalKnown(null);
+        setGoalStoppedForCredits(false);
+      }
+    } catch {
+      // Sin red: la tarjeta sigue ahí, que es el aviso.
+    }
+  }, [projectId]);
 
   const handleCancel = useCallback(() => {
     // 🔴 PARAR ES UNA PETICIÓN, NO CERRAR LA CONEXIÓN (Len 2.1). El servidor
@@ -1830,6 +2072,9 @@ export function useAgentChat({
         // lo rechazan con «Illegal invocation».
         fetchImpl: (...args) => fetch(...args),
         pintar: (html, page) => onLocalUpdate(html, page),
+        // Los ficheros devueltos no cambian el documento: el lienzo se recarga
+        // con el aviso (lib/lienzo/carpeta-cambiada.ts).
+        ficherosRestaurados: () => notifyFolderChanged(projectId),
         marcarRevertido: () =>
           updateTurn(turn.id, { status: "reverted", undoEnCurso: false }),
         marcarFallo: (fallo) =>
@@ -1931,6 +2176,87 @@ export function useAgentChat({
     void send(draft, undefined, { comentarios });
   }, [comentarios, draft, reenganche, send, sending]);
 
+  /**
+   * PIEZA 3 · CONTESTAR A LEN DESDE LA TARJETA. Si el turno sigue esperando la
+   * respuesta (`ask_user_question`), vuelve a ESE turno y Len sigue. Si ya nadie
+   * espera (venció, cerró, o es una fila vieja), sale como un mensaje normal y
+   * abre el siguiente: la respuesta nunca se pierde.
+   */
+  /** La respuesta que salió como mensaje con un turno aún en vuelo: espera aquí. */
+  const respuestaEnColaRef = useRef<string | null>(null);
+  const answerQuestion = useCallback(
+    async (turnId: string, questions: readonly UserQuestion[], answers: QuestionAnswer[]) => {
+      const turnoId = liveQuestionTurno(
+        turnsRef.current.find((x) => x.id === turnId),
+        turnoIdRef.current,
+      );
+      if (turnoId) {
+        try {
+          const r = await fetch("/api/agent/responder", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ turnoId, answers }),
+          });
+          const code = r.ok ? undefined : ((await r.json().catch(() => ({}))) as { error?: string }).error;
+          if (outcomeOfResponder(r.status, code) !== "fallback") {
+            updateTurn(turnId, { answeredLive: answerSummary(answers) });
+            return;
+          }
+        } catch {
+          // Sin red: cae al mensaje normal, abajo.
+        }
+      }
+      // Pieza 7: con las etiquetas del modo plan en el idioma del dueño.
+      const mensaje = composeAnswerMessage(questions, planAnswersForMessage(questions, answers, (k) => t(k as never)));
+      if (!mensaje.trim()) return;
+      // PIEZA 7: contestar después la tarjeta del modo plan es la puerta del
+      // dueño: aceptar entrar lo enciende, aprobar el plan lo apaga.
+      const tras = planModeAfterAnswer(questions, answers);
+      if (tras !== null) {
+        const eleccion = tras === planKnownRef.current ? null : tras;
+        planWantedRef.current = eleccion;
+        setPlanWanted(eleccion);
+      }
+      // 🔴 Con el turno aún en vuelo (el que preguntó, cerrándose justo al vencer
+      // la espera), `send()` la tiraría en silencio: queda en cola y sale en
+      // cuanto el turno acaba (el efecto de abajo).
+      if (fallbackDelivery(sending || reenganche !== null) === "after-turn") {
+        respuestaEnColaRef.current = mensaje;
+        return;
+      }
+      void send(mensaje);
+    },
+    [reenganche, send, sending, t, updateTurn],
+  );
+  useEffect(() => {
+    if (sending || reenganche !== null || !respuestaEnColaRef.current) return;
+    const mensaje = respuestaEnColaRef.current;
+    respuestaEnColaRef.current = null;
+    void send(mensaje);
+  }, [reenganche, send, sending]);
+
+  /**
+   * LOTE 7-8 · «PEDIR CAMBIOS» EN LA REVISIÓN DEL PLAN, como el «discuss» de
+   * DeepSeek (`PlanReviewPanel`: `pending.dismiss()`): no hay caja en la
+   * tarjeta. El foco va al compositor y, si el turno espera la revisión, se
+   * descarta: el servidor cierra el turno en modo plan y lo que escriba el
+   * dueño es el turno siguiente. Si la revisión ya cerró el turno (no contestó
+   * en 120 s), sólo el foco.
+   */
+  const dismissQuestion = useCallback(async (turnId: string) => {
+    taRef.current?.focus();
+    const turnoId = liveQuestionTurno(
+      turnsRef.current.find((x) => x.id === turnId),
+      turnoIdRef.current,
+    );
+    if (!turnoId) return;
+    await fetch("/api/agent/responder", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ turnoId, dismiss: true }),
+    }).catch(() => undefined);
+  }, []);
+
   const changeEsfuerzo = useCallback((e: EsfuerzoAgente) => {
     // OPTIMISTA A PROPÓSITO, y aquí sí es correcto: la preferencia sólo
     // afecta a turnos FUTUROS, así que un guardado que falle no deja nada
@@ -1943,6 +2269,12 @@ export function useAgentChat({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ esfuerzo: e }),
     }).catch(() => {});
+  }, []);
+
+  // PIEZA 7 · la ficha «Plan» y la opción del «+»: eligen lo contrario de lo que
+  // se ve; volver a lo que ya era deshace la elección.
+  const togglePlan = useCallback(() => {
+    setPlanWanted((w) => togglePlanSelection({ wanted: w, known: planKnownRef.current }));
   }, []);
 
   const removeComentario = useCallback((id: number) => comentariosDelChat.quitar(projectId, id), [projectId]);
@@ -1958,6 +2290,13 @@ export function useAgentChat({
    */
   const conversationChanged = useCallback(() => {
     setTurns([]);
+    // Una charla nueva empieza sin modo plan (el servidor pliega de sus filas).
+    setPlanKnown(false);
+    setPlanWanted(null);
+    // Y sin encargo: el de antes se queda en la charla archivada.
+    setGoalKnown(null);
+    setGoalChip(false);
+    setGoalStoppedForCredits(false);
     onChatChangeRef.current?.();
   }, []);
 
@@ -1997,7 +2336,24 @@ export function useAgentChat({
     handleCancel,
     handleUndo,
     handlePublished,
+    answerQuestion,
+    dismissQuestion,
     conversationChanged,
+    /** Pieza 7: el modo plan que se ve (lo elegido, o lo que dice el servidor). */
+    planMode: planWanted ?? planKnown,
+    togglePlan,
+    /** El chat clásico (`ai-design`, la vía de escape) no tiene modo plan. */
+    planOffered: agentModeUI,
+    /** Pieza 8: el encargo que se ve, la ficha «Encargo» y sus controles. El
+     *  chat clásico (`ai-design`) no lo tiene. */
+    goal: goalKnown,
+    goalChip,
+    goalAvailable: canCreateGoal(goalKnown),
+    goalStoppedForCredits,
+    toggleGoalChip,
+    resumeGoal,
+    clearGoal,
+    goalOffered: agentModeUI,
   };
 }
 
@@ -2037,6 +2393,20 @@ export function restoreTurn(s: StoredChatTurn): DesignTurn {
     ...(typeof s.centicredits === "number" ? { centicredits: s.centicredits } : {}),
     ...(typeof s.durationMs === "number" ? { durationMs: s.durationMs } : {}),
   };
+}
+
+/** PIEZA 8 · la ronda siguiente de un encargo, que el servidor ya abrió: se
+ *  pinta en marcha y se sigue desde su fila, como un turno de Len 2.1. Su texto
+ *  es el mensaje de esa ronda, el mismo que guardará el servidor. */
+function rondaEnCamino(id: string, goal: GoalView | null): DesignTurn {
+  return restoreTurn({
+    id,
+    userText: goal ? roundTextFor("resume", "", goal) : "",
+    assistantReasoning: "",
+    status: "applied",
+    appliedAt: Date.now(),
+    enCurso: true,
+  });
 }
 
 // Pull a string field off an unknown SSE payload, "" when absent/non-string.

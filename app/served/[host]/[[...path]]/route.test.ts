@@ -62,3 +62,47 @@ describe("/served/<host>/", () => {
     expect((await HEAD(pide(DOMINIO), params())).status).toBe(200);
   });
 });
+
+// LA CARPETA EN UN DOMINIO PROPIO (pieza 9 de Len 2.5, nota 7 de C). Caddy
+// manda todo el dominio propio por aquí, así que la carpeta la sirve esta ruta:
+// con su tipo y revalidándose siempre, como `public/` en Vercel. Hasta ahora
+// todo lo que no era HTML salía inmutable 30 días — también un `sw.js`, que
+// dejaría a los visitantes en la versión vieja.
+describe("/served/<host>/ — los ficheros de la carpeta", () => {
+  const fichero = (ruta: string, contenido: string) => {
+    const abs = path.join(raiz, "demo", "current", ...ruta.split("/").filter(Boolean));
+    mkdirSync(path.dirname(abs), { recursive: true });
+    writeFileSync(abs, contenido);
+  };
+  const pideRuta = (ruta: string) =>
+    GET(new Request(`https://${DOMINIO}${ruta}`, { headers: { host: DOMINIO } }), {
+      params: Promise.resolve({ host: DOMINIO, path: ruta.split("/").filter(Boolean) }),
+    });
+
+  it("🔴 un fichero de la carpeta se revalida siempre y lleva su tipo", async () => {
+    const casos: Array<[string, string]> = [
+      ["/js/app.js", "text/javascript; charset=utf-8"],
+      ["/js/m.mjs", "text/javascript; charset=utf-8"],
+      ["/sw.js", "text/javascript; charset=utf-8"],
+      ["/manifest.webmanifest", "application/manifest+json; charset=utf-8"],
+      ["/data/menu.json", "application/json; charset=utf-8"],
+      ["/docs/leeme.md", "text/markdown; charset=utf-8"],
+      ["/css/site.css", "text/css; charset=utf-8"],
+    ];
+    for (const [ruta, tipo] of casos) {
+      fichero(ruta, "x");
+      const res = await pideRuta(ruta);
+      expect(res.status, ruta).toBe(200);
+      expect(res.headers.get("content-type"), ruta).toBe(tipo);
+      expect(res.headers.get("cache-control"), ruta).toBe("public, max-age=0, must-revalidate");
+    }
+  });
+
+  it("BRAZO DE CONTROL: lo de /assets/ (nombre con hash) y los binarios siguen inmutables", async () => {
+    mkdirSync(path.join(raiz, "demo", "assets"), { recursive: true });
+    writeFileSync(path.join(raiz, "demo", "assets", "abc123.js"), "x");
+    fichero("/foto.png", "x");
+    expect((await pideRuta("/assets/abc123.js")).headers.get("cache-control")).toBe("public, max-age=2592000, immutable");
+    expect((await pideRuta("/foto.png")).headers.get("cache-control")).toBe("public, max-age=2592000, immutable");
+  });
+});

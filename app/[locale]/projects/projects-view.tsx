@@ -314,7 +314,9 @@ export function ProjectsView({
     const res = await fetch("/api/export/zip", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(proj.project.data),
+      // `projectId`: con él entra la carpeta del proyecto (pieza 9 de Len 2.5)
+      // — el servidor comprueba que es tuyo.
+      body: JSON.stringify({ ...proj.project.data, projectId: id }),
     });
     if (!res.ok) {
       toast.error(t("toast.zipError"));

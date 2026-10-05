@@ -16,7 +16,8 @@ import { NewChatPanel } from "@/components/workspace-v2/chat/new-chat-panel";
 import type { ScopedSelection } from "@/components/workspace-v2/chat/use-agent-chat";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { comentariosDelChat } from "@/lib/workspace-v2/comentarios-de-lineas";
-import { demoPage, pickScenario, SCENARIOS, SCENARIO_LABEL, scriptFor, type ScenarioId } from "./scripts";
+import { demoPage, dismissedReviewSteps, ENCARGO_DE_EJEMPLO, nextRoundOf, pickScenario, SCENARIOS, SCENARIO_LABEL, scriptFor, type ScenarioId } from "./scripts";
+import { goalRoundPrompt } from "@/lib/agent/goal";
 
 type Side = "new" | "old";
 const PROJECT: Readonly<Record<Side, string>> = { new: "demo-chat-new", old: "demo-chat-old" };
@@ -33,8 +34,8 @@ interface FakeProject {
 const db: Record<string, FakeProject> = {};
 const memory = { lines: ["Tono cercano, sin tecnicismos", "Fotos cálidas y reales, nada de stock frío"] };
 let scenarioOverride: ScenarioId | null = null;
-const live = new Map<string, { steer: (texto: string) => void; abort: () => void }>();
-const onServer = new Map<string, { polls: number; turn: StoredChatTurn }>();
+const live = new Map<string, { steer: (texto: string) => void; abort: () => void; dismiss: () => boolean }>();
+const onServer = new Map<string, { polls: number; turn: StoredChatTurn; final?: Partial<StoredChatTurn> }>();
 const listeners = new Set<() => void>();
 
 function project(id: string): FakeProject {
@@ -45,10 +46,12 @@ function project(id: string): FakeProject {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
-function agentStream(body: { projectId: string; prompt: string; turnId: string }, signal?: AbortSignal | null): Response {
-  const scenario = scenarioOverride ?? pickScenario(body.prompt);
+function agentStream(body: { projectId: string; prompt: string; turnId: string; goal?: string }, signal?: AbortSignal | null): Response {
+  // Pieza 8: con la puerta del dueño al encargo (crear o reanudar), su guion.
+  const scenario = body.goal === "create" || body.goal === "resume" ? "goalRounds" : (scenarioOverride ?? pickScenario(body.prompt));
   const turnoId = `turno-${body.turnId.slice(0, 8)}`;
-  const steps = scriptFor(scenario, turnoId);
+  // Lote 7-8: una cola, para que descartar la revisión cambie lo que queda.
+  const steps = [...scriptFor(scenario, turnoId)];
   const enc = new TextEncoder();
   const p = project(body.projectId);
   const actions: NonNullable<StoredChatTurn["actions"]> = [];
@@ -58,6 +61,15 @@ function agentStream(body: { projectId: string; prompt: string; turnId: string }
   // ■ por `/api/agent/cancelar`: el servidor de verdad no corta, cierra el
   // turno con `error` cancelled + `done` (N40). Abortar el fetch sí corta.
   let cancelRequested = false;
+  // Lote 7-8 · «Pedir cambios» descarta la revisión que espera: como el servidor
+  // de verdad, el turno cierra con la tarjeta `done` (sin pregunta) y el `done`.
+  let waiting: ReturnType<typeof setTimeout> | null = null;
+  let wake: (() => void) | null = null;
+  let dismissRequested = false;
+  /** Hay una pregunta esperando (entre su `question` y su tarjeta). */
+  let asking = false;
+  /** El modo plan como lo dejan los eventos `plan` del guion (la foto de la fila). */
+  let planActive = false;
   let wroteHtml = false;
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -70,13 +82,31 @@ function agentStream(body: { projectId: string; prompt: string; turnId: string }
         abort: () => {
           cancelRequested = true;
         },
+        dismiss: () => {
+          if (!asking) return false;
+          asking = false;
+          dismissRequested = true;
+          if (waiting) clearTimeout(waiting);
+          wake?.();
+          return true;
+        },
       });
       signal?.addEventListener("abort", () => {
         stopped = true;
       });
       let closed = false;
-      for (const s of steps) {
-        await new Promise((r) => setTimeout(r, s.ms));
+      while (steps.length > 0) {
+        const s = steps.shift()!;
+        await new Promise<void>((r) => {
+          wake = r;
+          waiting = setTimeout(r, s.ms);
+        });
+        wake = null;
+        if (dismissRequested) {
+          dismissRequested = false;
+          steps.splice(0, steps.length, ...dismissedReviewSteps());
+          continue;
+        }
         if (cancelRequested && !stopped) {
           send("error", { message: "El agente fue cancelado.", code: "cancelled" });
           send("done", { mutoDurable: wroteHtml, centicredits: 0 });
@@ -94,6 +124,9 @@ function agentStream(body: { projectId: string; prompt: string; turnId: string }
           break;
         }
         send(s.event, s.data);
+        if (s.event === "question") asking = true;
+        if (s.event === "plan") planActive = (s.data as { active: boolean }).active;
+        if (s.event === "action" && (s.data as { status: string }).status !== "running") asking = false;
         if (s.event === "text") text += (s.data as { text: string }).text;
         if (s.event === "html") {
           p.html = (s.data as { html: string }).html;
@@ -104,8 +137,18 @@ function agentStream(body: { projectId: string; prompt: string; turnId: string }
           if (a.status !== "running") actions.push(a);
         }
         if (s.event === "done") {
-          const d = s.data as { centicredits?: number; durationMs?: number };
+          const d = s.data as {
+            centicredits?: number;
+            durationMs?: number;
+            goal?: Omit<NonNullable<StoredChatTurn["goal"]>, "activation">;
+            goalActivation?: "armed" | "disarmed";
+          };
           p.chat.push({
+            // Pieza 8: la foto del encargo en la fila, como la pone `getChatMessages`.
+            ...(d.goal ? { goal: { ...d.goal, activation: d.goalActivation ?? "disarmed" } } : {}),
+            // Lote 7-8: y la del modo plan, por lo mismo (si no, al cerrar el
+            // turno la ficha «Plan» se apagaba aquí y no en producción).
+            ...(planActive ? { planMode: true as const } : {}),
             id: body.turnId,
             userText: [body.prompt, ...corrections.map((c) => `↳ ${c}`)].join("\n"),
             assistantReasoning: text,
@@ -118,6 +161,36 @@ function agentStream(body: { projectId: string; prompt: string; turnId: string }
         }
       }
       live.delete(turnoId);
+      if (!closed && scenario === "goalRounds") {
+        // Pieza 8: «el servidor» abre la ronda 2; el chat la sigue sondeando
+        // su fila y, a la tercera vuelta, la ronda cierra el encargo.
+        const next = nextRoundOf(turnoId);
+        const turn: StoredChatTurn = {
+          id: next,
+          userText: goalRoundPrompt(ENCARGO_DE_EJEMPLO, 2),
+          assistantReasoning: "Sigo con el carrito y el pago…",
+          status: "applied",
+          appliedAt: Date.now(),
+          enCurso: true,
+          actions: [{ tool: "Read", status: "running", summary: "index.html" }],
+        };
+        onServer.set(next, {
+          polls: 0,
+          turn,
+          final: {
+            assistantReasoning:
+              "Listo: la tienda tiene catálogo, carrito y pago con tarjeta. Lo comprobé: añadí dos pasteles al carrito, pagué con la tarjeta de prueba y el pedido llegó a tu Bandeja. Revisa los precios de los pasteles grandes.",
+            actions: [
+              { tool: "Edit", status: "done", summary: "index.html" },
+              { tool: "update_goal", status: "done", summary: "" },
+            ],
+            goal: { ...ENCARGO_DE_EJEMPLO, revision: 2, phase: "complete", roundsStarted: 2, activation: "disarmed" },
+            centicredits: 140,
+            durationMs: 31_000,
+          },
+        });
+        p.chat.push(turn);
+      }
       if (!closed) {
         if (scenario === "drop") {
           // El turno sigue «en el servidor»: el chat lo relee de su fila.
@@ -192,7 +265,7 @@ function install() {
     const path = url.replace(/^https?:\/\/[^/]+/, "").split("?")[0] ?? "";
 
     if (path === "/api/agent" && method === "POST") {
-      const b = body() as { projectId: string; prompt: string; turnId: string };
+      const b = body() as { projectId: string; prompt: string; turnId: string; goal?: string };
       // D13: la ruta rechaza la página ANTES de abrir el stream, con la forma
       // de `errorJson` (app/api/agent/route.ts).
       if ((scenarioOverride ?? pickScenario(b.prompt)) === "tooLarge") {
@@ -215,11 +288,24 @@ function install() {
       }
       return json({ lineas: memory.lines });
     }
+    if (path === "/api/agent/responder" && method === "POST") {
+      // Lote 7-8: sólo el descarte; contestar sigue yendo al servidor de verdad
+      // (sin sesión: 401, y la respuesta sale como mensaje en cola).
+      const b = body() as { turnoId?: string; dismiss?: boolean };
+      if (b.dismiss === true) {
+        const s = live.get(b.turnoId ?? "");
+        return s?.dismiss() ? json({ ok: true }) : json({ error: "sin_pregunta" }, 409);
+      }
+    }
     if (path === "/api/agent/dirigir") {
       const { turnoId, texto } = body() as { turnoId: string; texto: string };
       const s = live.get(turnoId);
       if (!s) return json({ error: "not_found" }, 404);
       s.steer(texto);
+      return json({ ok: true });
+    }
+    if (path === "/api/agent/encargo" && method === "POST") {
+      // Pieza 8: quitar el encargo.
       return json({ ok: true });
     }
     if (path === "/api/agent/cancelar") {
@@ -235,11 +321,16 @@ function install() {
       o.polls += 1;
       if (o.polls >= 3) {
         o.turn.enCurso = false;
-        o.turn.assistantReasoning += "Ya está: tu página no tenía nada roto.";
-        o.turn.actions = [{ tool: "Read", status: "done", summary: "index.html" }];
-        o.turn.noDocChange = true;
-        o.turn.centicredits = 52;
-        o.turn.durationMs = 14_000;
+        if (o.final) {
+          // Pieza 8: la ronda del encargo cierra con lo suyo.
+          Object.assign(o.turn, o.final);
+        } else {
+          o.turn.assistantReasoning += "Ya está: tu página no tenía nada roto.";
+          o.turn.actions = [{ tool: "Read", status: "done", summary: "index.html" }];
+          o.turn.noDocChange = true;
+          o.turn.centicredits = 52;
+          o.turn.durationMs = 14_000;
+        }
         onServer.delete(id);
       }
       return json({ turno: o.turn, turnoId: `turno-${id.slice(0, 8)}` });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
-import { runAgentLoop, type AgentStreamEvent } from "./loop";
+import { runAgentLoop, sobreQue, type AgentStreamEvent } from "./loop";
 import { etiquetarConPosiciones } from "./ficheros/posiciones";
 
 // Repite el ÚLTIMO guion cuando se acaba: así una prueba con \`maxTurns\` llega
@@ -1072,7 +1072,7 @@ describe("runAgentLoop — TodoWrite, retirada (F4)", () => {
   });
 });
 
-// ── preguntar: la parada la ejecuta el SERVIDOR ─────────────────────────────
+// ── ask_user_question (antes preguntar): la parada la ejecuta el SERVIDOR ─────────────────────────────
 //
 // 🔴 «Esto lo decide el usuario» viajaba como `ok:false` con una ORDEN dentro
 // —«NO vuelvas a llamar a publicar en este turno; termina preguntándole»— más un
@@ -1080,25 +1080,26 @@ describe("runAgentLoop — TodoWrite, retirada (F4)", () => {
 // con un ejemplo en el texto reclamaba «mi-negocio» 3 de 3 veces, y sin ejemplo
 // se inventaba el nombre del contexto. Pedirle a un modelo que se pare y luego
 // vigilar si se paró son las dos mitades del mismo parche.
-describe("runAgentLoop — preguntar", () => {
+describe("runAgentLoop — ask_user_question (antes preguntar)", () => {
+  const preguntaDe = (a: Record<string, unknown>) => String((a.questions as { question: string }[])[0].question);
   it("una pregunta CIERRA el turno, aunque el modelo tuviera más que decir", async () => {
     const seen: string[] = [];
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "publícala" }], tools: [],
       openStream: scripted(
-        [{ type: "function_call", name: "preguntar", args: { texto: "¿Qué dirección quieres?" } }, done],
+        [{ type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿Qué dirección quieres?" }] } }, done],
         // Este segundo stream NO debe llegar a abrirse: el turno terminó.
         [{ type: "function_call", name: "publicar", args: { subdominio: "mi-negocio" } }, done],
       ),
       runTool: async (name, args) => {
         seen.push(name);
-        return name === "preguntar"
-          ? { response: { ok: true }, pregunta: String(args.texto) }
+        return name === "ask_user_question"
+          ? { response: { ok: true }, pregunta: preguntaDe(args) }
           : { response: { ok: true } };
       },
       emit: () => {},
     });
-    expect(seen).toEqual(["preguntar"]);
+    expect(seen).toEqual(["ask_user_question"]);
     expect(r.finalText).toBe("¿Qué dirección quieres?");
     expect(r.terminalError).toBe(false);
   });
@@ -1108,10 +1109,10 @@ describe("runAgentLoop — preguntar", () => {
     await runAgentLoop({
       messages: [{ role: "user", content: "publícala" }], tools: [],
       openStream: scripted([
-        { type: "function_call", name: "preguntar", args: { texto: "¿Qué dirección quieres?" } },
+        { type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿Qué dirección quieres?" }] } },
         done,
       ]),
-      runTool: async (_n, args) => ({ response: { ok: true }, pregunta: String(args.texto) }),
+      runTool: async (_n, args) => ({ response: { ok: true }, pregunta: preguntaDe(args) }),
       emit: (e) => events.push(e),
     });
     const textos = events.filter((e) => e.type === "text").map((e) => (e as { text: string }).text);
@@ -1124,10 +1125,10 @@ describe("runAgentLoop — preguntar", () => {
       messages: [{ role: "user", content: "publícala" }], tools: [],
       openStream: scripted([
         { type: "text_delta", text: "Claro. ¿Qué dirección quieres?" },
-        { type: "function_call", name: "preguntar", args: { texto: "¿Qué dirección quieres?" } },
+        { type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿Qué dirección quieres?" }] } },
         done,
       ]),
-      runTool: async (_n, args) => ({ response: { ok: true }, pregunta: String(args.texto) }),
+      runTool: async (_n, args) => ({ response: { ok: true }, pregunta: preguntaDe(args) }),
       emit: (e) => events.push(e),
     });
     const textos = events.filter((e) => e.type === "text").map((e) => (e as { text: string }).text);
@@ -1142,38 +1143,178 @@ describe("runAgentLoop — preguntar", () => {
       messages: [{ role: "user", content: "cambia el hero y publícala" }], tools: [],
       openStream: scripted([
         { type: "function_call", name: "editar_pagina", args: {} },
-        { type: "function_call", name: "preguntar", args: { texto: "¿Y la dirección?" } },
+        { type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿Y la dirección?" }] } },
         done,
       ]),
       runTool: async (name, args) => {
         seen.push(name);
-        return name === "preguntar"
-          ? { response: { ok: true }, pregunta: String(args.texto) }
+        return name === "ask_user_question"
+          ? { response: { ok: true }, pregunta: preguntaDe(args) }
           : { response: { ok: true }, updatedHtml: "<!doctype html><html><body>v2</body></html>" };
       },
       emit: (e) => events.push(e),
     });
-    expect(seen).toEqual(["editar_pagina", "preguntar"]);
+    expect(seen).toEqual(["editar_pagina", "ask_user_question"]);
     // El lienzo recibió el cambio: cortar en seco al ver la pregunta habría
     // perdido trabajo que el usuario ya tiene delante.
     expect(events.some((e) => e.type === "html")).toBe(true);
   });
 
-  it("preguntar no gasta presupuesto de acciones", async () => {
+  it("pieza 3: contestada DENTRO del turno, el turno sigue y la tarjeta lleva la pregunta y la respuesta", async () => {
+    const events: AgentStreamEvent[] = [];
+    const vistos: Message[][] = [];
+    const preguntas = [{ id: "plazo", question: "¿Cuánto tarda?" }];
+    const guion = scripted(
+      [{ type: "function_call", name: "ask_user_question", args: { questions: preguntas } }, done],
+      [{ type: "text_delta", text: "Puesto: 48 horas." }, done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "pon el plazo" }], tools: [],
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => ({ response: { ok: true, answers: [{ id: "plazo", selected: ["48 horas"] }] }, preguntas, respuesta: "48 horas" }),
+      emit: (e) => events.push(e),
+    });
+    expect(r.finalText).toBe("Puesto: 48 horas.");
+    expect(vistos[1]!.at(-1)!.functionResponses![0]!.response).toEqual({ ok: true, answers: [{ id: "plazo", selected: ["48 horas"] }] });
+    const tarjeta = events.find((e) => e.type === "action" && (e as { status: string }).status === "done") as Record<string, unknown>;
+    expect(tarjeta.preguntas).toEqual(preguntas);
+    expect(tarjeta.respuesta).toBe("48 horas");
+  });
+
+  it("LOTE 7-8 · DESCARTADA para hablar: el turno cierra sin otra llamada, la tarjeta es `done` y el modelo leerá el error", async () => {
+    const events: AgentStreamEvent[] = [];
+    const seen: string[] = [];
+    const preguntas = [{ id: "plan-review", question: "Approve this plan and leave plan mode?" }];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "planea las reseñas" }], tools: [],
+      openStream: scripted(
+        [{ type: "text_delta", text: "Aquí va el plan." }, { type: "function_call", name: "exit_plan_mode", args: { plan: "# Reseñas" } }, done],
+        // No debe abrirse: el dueño tomó la palabra.
+        [{ type: "text_delta", text: "Sigo." }, done],
+      ),
+      runTool: async (name) => {
+        seen.push(name);
+        return { response: { ok: false, error: "dismissed to speak" }, preguntas, dismissed: true };
+      },
+      emit: (e) => events.push(e),
+    });
+    expect(seen).toEqual(["exit_plan_mode"]);
+    expect(r.terminalError).toBe(false);
+    const tarjeta = events.find((e) => e.type === "action" && (e as { status: string }).status !== "running") as Record<string, unknown>;
+    expect(tarjeta.status).toBe("done");
+    expect(tarjeta.preguntas).toEqual(preguntas);
+    expect(tarjeta.pregunta).toBeUndefined();
+    // ALINEAR: y la marca de «cancelada», como el `ASK_CANCELLED` de DeepSeek.
+    expect(tarjeta.dismissed).toBe(true);
+    // La transcripción termina con la llamada y su error: es lo que lee el turno siguiente.
+    const ultimo = r.transcripcion!.at(-1)!;
+    expect(ultimo.functionResponses?.[0]?.response).toEqual({ ok: false, error: "dismissed to speak" });
+    expect(r.transcripcion!.at(-2)!.functionCalls?.[0]?.name).toBe("exit_plan_mode");
+    // Y nadie lee la pregunta como texto de Len.
+    expect(events.filter((e) => e.type === "text").map((e) => (e as { text: string }).text).join("")).toBe("Aquí va el plan.");
+  });
+
+  it("LOTE 7-8 (2) · lo que el dueño escribió mientras la pregunta esperaba: el turno NO cierra, Len lo lee y sigue", async () => {
+    const events: AgentStreamEvent[] = [];
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [{ type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿Cuánto tarda?" }] } }, done],
+      [{ type: "text_delta", text: "Puesto: 48 horas." }, done],
+    );
+    const direcciones: (string | null)[] = [null, "mejor 48 horas"];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "pon el plazo" }], tools: [],
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async (_n, args) => ({ response: { ok: true, preguntado: true }, pregunta: preguntaDe(args) }),
+      leerDireccion: () => direcciones.shift() ?? null,
+      emit: (e) => events.push(e),
+    });
+    expect(r.finalText).toBe("Puesto: 48 horas.");
+    expect(String(vistos[1]!.at(-1)!.content)).toContain("mejor 48 horas");
+    expect(vistos[1]!.at(-2)!.functionResponses?.[0]?.name).toBe("ask_user_question");
+    expect(events.some((e) => e.type === "direccion")).toBe(true);
+  });
+
+  it("ALINEAR · el resultado dice si el turno ACABÓ esperando al dueño (pregunta vencida o descartada), y no si siguió", async () => {
+    const pregunta = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted([{ type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿?" }] } }, done]),
+      runTool: async (_n, args) => ({ response: { ok: true, preguntado: true }, pregunta: preguntaDe(args) }),
+      emit: () => {},
+    });
+    expect(pregunta.endedOnQuestion).toBe(true);
+    const descartada = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted([{ type: "function_call", name: "exit_plan_mode", args: { plan: "# P" } }, done]),
+      runTool: async () => ({ response: { ok: false, error: "dismissed" }, dismissed: true }),
+      emit: () => {},
+    });
+    expect(descartada.endedOnQuestion).toBe(true);
+    const direcciones: (string | null)[] = [null, "sigue"];
+    const siguio = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿?" }] } }, done],
+        [{ type: "text_delta", text: "Vale." }, done],
+      ),
+      runTool: async (_n, args) => ({ response: { ok: true, preguntado: true }, pregunta: preguntaDe(args) }),
+      leerDireccion: () => direcciones.shift() ?? null,
+      emit: () => {},
+    });
+    expect(siguio.endedOnQuestion).toBeUndefined();
+  });
+
+  it("LOTE 7-8 (2) · BRAZO DE CONTROL: sin nada escrito, la pregunta sigue cerrando el turno", async () => {
+    let llamadas = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "pon el plazo" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿Cuánto tarda?" }] } }, done],
+        [{ type: "text_delta", text: "No debería llegar." }, done],
+      ),
+      runTool: async (_n, args) => ({ response: { ok: true, preguntado: true }, pregunta: preguntaDe(args) }),
+      leerDireccion: () => { llamadas += 1; return null; },
+      emit: () => {},
+    });
+    expect(r.finalText).toBe("¿Cuánto tarda?");
+    // Una al empezar la vuelta y otra al cerrar por la pregunta.
+    expect(llamadas).toBe(2);
+  });
+
+  it("LOTE 7-8 (2) · y lo mismo tras DESCARTAR la revisión: lo escrito es el mensaje que Len espera", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [{ type: "function_call", name: "exit_plan_mode", args: { plan: "# Reseñas" } }, done],
+      [{ type: "text_delta", text: "Lo rehago sin estrellas." }, done],
+    );
+    const direcciones: (string | null)[] = [null, "sin estrellas"];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "planea las reseñas" }], tools: [],
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => ({ response: { ok: false, error: "dismissed to speak" }, preguntas: [{ id: "plan-review", question: "?" }], dismissed: true }),
+      leerDireccion: () => direcciones.shift() ?? null,
+      emit: () => {},
+    });
+    expect(r.finalText).toBe("Lo rehago sin estrellas.");
+    expect(String(vistos[1]!.at(-1)!.content)).toContain("sin estrellas");
+    expect(vistos[1]!.at(-2)!.functionResponses?.[0]?.response).toEqual({ ok: false, error: "dismissed to speak" });
+  });
+
+  it("preguntar (ask_user_question) no gasta presupuesto de acciones", async () => {
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [], maxToolCalls: 1,
       openStream: scripted([
         { type: "function_call", name: "editar_pagina", args: {} },
-        { type: "function_call", name: "preguntar", args: { texto: "¿sí o no?" } },
+        { type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿sí o no?" }] } },
         done,
       ]),
       runTool: async (name, args) =>
-        name === "preguntar"
-          ? { response: { ok: true }, pregunta: String(args.texto) }
+        name === "ask_user_question"
+          ? { response: { ok: true }, pregunta: preguntaDe(args) }
           : { response: { ok: true } },
       emit: () => {},
     });
-    // Con `preguntar` contando, la segunda llamada habría reventado el tope de 1
+    // Con la pregunta contando, la segunda llamada habría reventado el tope de 1
     // y el turno cerraría con un error rojo en vez de con la pregunta.
     expect(r.finalText).toBe("¿sí o no?");
     expect(r.terminalError).toBe(false);
@@ -3776,8 +3917,53 @@ describe("H15 · el razonamiento vuelve al modelo dentro del turno", () => {
   });
 });
 
-describe("F1 · las lecturas del principio de la vuelta, en paralelo detrás de la palanca de la terminal", () => {
-  const vuelta = [
+describe("pieza 4 · las llamadas de una vuelta, planificadas como DeepSeek", () => {
+  const lento = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  async function correr(
+    vuelta: StreamEvent[],
+    o: {
+      maxParallelToolCalls?: number;
+      duracion?: (name: string, a: Record<string, unknown>) => number;
+      maxToolCalls?: number;
+      alEmpezar?: (name: string, a: Record<string, unknown>) => void;
+      signal?: AbortSignal;
+    } = {},
+  ) {
+    const log: string[] = [];
+    const events: AgentStreamEvent[] = [];
+    let enVuelo = 0;
+    let maxEnVuelo = 0;
+    let respuestas: string[] = [];
+    const guion = scripted(vuelta, [{ type: "text_delta", text: "fin" }, usage(1), done]);
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      ...(o.maxParallelToolCalls ? { maxParallelToolCalls: o.maxParallelToolCalls } : {}),
+      ...(o.maxToolCalls ? { maxToolCalls: o.maxToolCalls } : {}),
+      ...(o.signal ? { signal: o.signal } : {}),
+      openStream: (messages) => {
+        const ultima = messages[messages.length - 1];
+        if (ultima?.functionResponses) respuestas = ultima.functionResponses.map((f) => String(f.response.tool_result ?? f.response.error));
+        return guion(messages);
+      },
+      runTool: async (name, a) => {
+        enVuelo++;
+        maxEnVuelo = Math.max(maxEnVuelo, enVuelo);
+        const id = `${name} ${String(a.file_path ?? a.query ?? "")}`;
+        log.push(`empieza ${id}`);
+        o.alEmpezar?.(name, a);
+        await lento(o.duracion?.(name, a) ?? 20);
+        enVuelo--;
+        log.push(`acaba ${id}`);
+        return { response: { ok: true, tool_result: id } };
+      },
+      emit: (e) => events.push(e),
+    });
+    return { r, log, maxEnVuelo, respuestas, events };
+  }
+
+  const lecturasYEdit = [
     { type: "function_call", name: "Read", args: { file_path: "/a" } },
     { type: "function_call", name: "Read", args: { file_path: "/b" } },
     { type: "function_call", name: "Edit", args: { file_path: "/c" } },
@@ -3786,44 +3972,8 @@ describe("F1 · las lecturas del principio de la vuelta, en paralelo detrás de 
     done,
   ] as StreamEvent[];
 
-  async function correr(palanca: string | undefined) {
-    const antes = process.env.OPENLEN_TERMINAL;
-    if (palanca === undefined) delete process.env.OPENLEN_TERMINAL;
-    else process.env.OPENLEN_TERMINAL = palanca;
-    const log: string[] = [];
-    let enVuelo = 0;
-    let maxEnVuelo = 0;
-    let respuestas: string[] = [];
-    const guion = scripted(vuelta, [{ type: "text_delta", text: "fin" }, usage(1), done]);
-    try {
-      await runAgentLoop({
-        messages: [{ role: "user", content: "x" }],
-        tools: [],
-        openStream: (messages) => {
-          const ultima = messages[messages.length - 1];
-          if (ultima?.functionResponses) respuestas = ultima.functionResponses.map((f) => String(f.response.tool_result));
-          return guion(messages);
-        },
-        runTool: async (name, a) => {
-          enVuelo++;
-          maxEnVuelo = Math.max(maxEnVuelo, enVuelo);
-          log.push(`empieza ${name} ${String(a.file_path)}`);
-          await new Promise((r) => setTimeout(r, 20));
-          enVuelo--;
-          log.push(`acaba ${name} ${String(a.file_path)}`);
-          return { response: { ok: true, tool_result: `${name} ${String(a.file_path)}` } };
-        },
-        emit: () => undefined,
-      });
-    } finally {
-      if (antes === undefined) delete process.env.OPENLEN_TERMINAL;
-      else process.env.OPENLEN_TERMINAL = antes;
-    }
-    return { log, maxEnVuelo, respuestas };
-  }
-
-  it("con la palanca: las dos lecturas del principio a la vez; el Edit y la lectura de detrás, en serie después; las respuestas, en el orden del modelo", async () => {
-    const { log, maxEnVuelo, respuestas } = await correr("1");
+  it("las dos lecturas del principio a la vez; el Edit, barrera; la lectura de detrás, después; respuestas en el orden del modelo", async () => {
+    const { log, maxEnVuelo, respuestas } = await correr(lecturasYEdit);
     expect(maxEnVuelo).toBe(2);
     expect(log.slice(0, 2)).toEqual(["empieza Read /a", "empieza Read /b"]);
     expect(log.indexOf("empieza Edit /c")).toBeGreaterThan(log.indexOf("acaba Read /b"));
@@ -3831,10 +3981,534 @@ describe("F1 · las lecturas del principio de la vuelta, en paralelo detrás de 
     expect(respuestas).toEqual(["Read /a", "Read /b", "Edit /c", "Read /d"]);
   });
 
-  it("sin la palanca, todo en serie como hoy (brazo de control)", async () => {
-    // Encendida por defecto desde N45: apagarla es el literal "0".
-    const { maxEnVuelo, respuestas } = await correr("0");
+  it("también las de DETRÁS de una barrera van juntas (F1 sólo juntaba las del principio)", async () => {
+    const { log } = await correr([
+      { type: "function_call", name: "Edit", args: { file_path: "/c" } },
+      { type: "function_call", name: "Read", args: { file_path: "/a" } },
+      { type: "function_call", name: "Grep", args: { file_path: "/b" } },
+      usage(10),
+      done,
+    ] as StreamEvent[]);
+    expect(log.indexOf("empieza Grep /b")).toBeLessThan(log.indexOf("acaba Read /a"));
+  });
+
+  it("con tope 1, todo en serie (brazo de control)", async () => {
+    const { maxEnVuelo, respuestas } = await correr(lecturasYEdit, { maxParallelToolCalls: 1 });
     expect(maxEnVuelo).toBe(1);
     expect(respuestas).toEqual(["Read /a", "Read /b", "Edit /c", "Read /d"]);
+  });
+
+  it("la tarjeta de cada una sale AL EMPEZAR, y su 'done' en el orden del modelo aunque acabe antes", async () => {
+    const { events } = await correr(
+      [
+        { type: "function_call", name: "Read", args: { file_path: "/lenta" } },
+        { type: "function_call", name: "Read", args: { file_path: "/rapida" } },
+        usage(10),
+        done,
+      ] as StreamEvent[],
+      { duracion: (_n, a) => (a.file_path === "/lenta" ? 40 : 1) },
+    );
+    const tarjetas = events
+      .filter((e) => e.type === "action")
+      .map((e) => `${(e as { status: string }).status} ${(e as { summary: string }).summary}`);
+    expect(tarjetas).toEqual(["running lenta", "running rapida", "done lenta", "done rapida"]);
+  });
+
+  it("🔴 usar_pagina con un clic no se solapa con nada", async () => {
+    const { log } = await correr([
+      { type: "function_call", name: "Read", args: { file_path: "/a" } },
+      { type: "function_call", name: "usar_pagina", args: { pasos: [{ pulsa: "Enviar" }] } },
+      { type: "function_call", name: "Read", args: { file_path: "/b" } },
+      usage(10),
+      done,
+    ] as StreamEvent[]);
+    expect(log.indexOf("empieza usar_pagina ")).toBeGreaterThan(log.indexOf("acaba Read /a"));
+    expect(log.indexOf("empieza Read /b")).toBeGreaterThan(log.indexOf("acaba usar_pagina "));
+  });
+
+  it("🔴 el ■ a mitad de grupo: las empezadas se quedan, las demás 'abortadas' sin tarjeta, ninguna empieza después, cierra cancelado", async () => {
+    const ac = new AbortController();
+    const { r, log, respuestas, events } = await correr(
+      [
+        { type: "function_call", name: "Read", args: { file_path: "/a" } },
+        { type: "function_call", name: "Read", args: { file_path: "/b" } },
+        { type: "function_call", name: "Read", args: { file_path: "/c" } },
+        { type: "function_call", name: "Edit", args: { file_path: "/x" } },
+        usage(10),
+        done,
+      ] as StreamEvent[],
+      {
+        maxParallelToolCalls: 2,
+        signal: ac.signal,
+        alEmpezar: (_n, a) => {
+          if (a.file_path === "/b") ac.abort();
+        },
+      },
+    );
+    expect(log.filter((l) => l.startsWith("empieza"))).toEqual(["empieza Read /a", "empieza Read /b"]);
+    expect(r.errorCode).toBe("cancelled");
+    expect(events.filter((e) => e.type === "action" && (e as { status: string }).status === "running")).toHaveLength(2);
+    // La transcripción del turno queda equilibrada: las cuatro llamadas con su respuesta.
+    const ultimo = r.transcripcion?.[r.transcripcion.length - 1];
+    expect(ultimo?.functionResponses?.map((f) => String(f.response.tool_result ?? f.response.error))).toEqual([
+      "Read /a",
+      "Read /b",
+      "tool call aborted before dispatch",
+      "tool call aborted before dispatch",
+    ]);
+    expect(respuestas).toEqual([]);
+  });
+
+  it("🔴 el tope de acciones a mitad de grupo: no empieza la que topa, la empezada se confirma y el cierre la ve", async () => {
+    const { log, r } = await correr(
+      [
+        { type: "function_call", name: "web_search", args: { query: "uno" } },
+        { type: "function_call", name: "web_search", args: { query: "dos" } },
+        usage(10),
+        done,
+      ] as StreamEvent[],
+      { maxToolCalls: 1 },
+    );
+    expect(log.filter((l) => l.startsWith("empieza"))).toEqual(["empieza web_search uno"]);
+    expect(r.topeAlcanzado).toBe("tool_limit");
+  });
+
+  it("una errata y una inexistente en mitad del grupo responden en su sitio", async () => {
+    const { respuestas } = await correr([
+      { type: "function_call", name: "Read", args: { file_path: "/a" } },
+      { type: "function_call", name: "NoExiste", args: {} },
+      { type: "function_call", name: "Read", args: { file_path: "/b" } },
+      usage(10),
+      done,
+    ] as StreamEvent[]);
+    expect(respuestas[0]).toBe("Read /a");
+    expect(respuestas[2]).toBe("Read /b");
+    expect(respuestas).toHaveLength(3);
+  });
+});
+
+describe("reintentos ante fallos del proveedor (como el arnés de DeepSeek)", () => {
+  const fallo = (code?: "server" | "transport" | "rate_limit"): StreamEvent => ({
+    type: "done",
+    stopReason: { kind: "error", error: "http_503", ...(code ? { code } : {}) },
+  });
+
+  it("un 503 se reintenta y el turno termina bien, sin error a la vista", async () => {
+    const events: AgentStreamEvent[] = [];
+    const esperas: number[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: scripted([fallo("server")], [{ type: "text_delta", text: "¡Hola!" }, usage(5), done]),
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+      sleep: async (ms) => { esperas.push(ms); },
+    });
+    expect(r.finalText).toBe("¡Hola!");
+    expect(r.terminalError).toBe(false);
+    expect(events.filter((e) => e.type === "retry")).toHaveLength(1);
+    expect(events.some((e) => e.type === "error")).toBe(false);
+    expect(esperas).toHaveLength(1);
+    expect(esperas[0]).toBeGreaterThanOrEqual(450);
+    expect(esperas[0]).toBeLessThanOrEqual(550);
+  });
+
+  it("lo que el intento fallido llegó a escribir se retira y NO entra en la conversación", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [{ type: "text_delta", text: "Voy a mir" }, fallo("transport")],
+      [{ type: "text_delta", text: "Listo." }, usage(5), done],
+    );
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+      sleep: async () => {},
+    });
+    const retry = events.find((e) => e.type === "retry") as Extract<AgentStreamEvent, { type: "retry" }>;
+    expect(retry.discardChars).toBe("Voy a mir".length);
+    expect(r.finalText).toBe("Listo.");
+    expect(JSON.stringify(vistos[1])).not.toContain("Voy a mir");
+  });
+
+  it("si ya había hablado en una vuelta anterior, el separador del intento fallido también se retira", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "busca" }], tools: [],
+      openStream: scripted(
+        [{ type: "text_delta", text: "Miro." }, { type: "function_call", name: "Read", args: { file_path: "/index.html" } }, usage(5), done],
+        [{ type: "text_delta", text: "Ya v" }, fallo("server")],
+        [{ type: "text_delta", text: "Ya está." }, usage(5), done],
+      ),
+      runTool: async () => ({ response: { ok: true, tool_result: "1\t<h1>" }, action: { tool: "Read", ok: true, summary: "/index.html" } }),
+      emit: (e) => events.push(e),
+      sleep: async () => {},
+    });
+    const retry = events.find((e) => e.type === "retry") as Extract<AgentStreamEvent, { type: "retry" }>;
+    expect(retry.discardChars).toBe("\n\n".length + "Ya v".length);
+  });
+
+  it("tras 5 reintentos fallidos, el turno termina con el error de siempre", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: scripted([fallo("server")]),
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+      sleep: async () => {},
+    });
+    expect(events.filter((e) => e.type === "retry")).toHaveLength(5);
+    expect(events.filter((e) => e.type === "error" && e.code === "upstream")).toHaveLength(1);
+    expect(r.terminalError).toBe(true);
+  });
+
+  it("BRAZO DE CONTROL: un fallo sin código (un 400) no se reintenta", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: scripted([fallo()], [{ type: "text_delta", text: "no debe llegar" }, done]),
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+      sleep: async () => { throw new Error("no debe esperar"); },
+    });
+    expect(events.some((e) => e.type === "retry")).toBe(false);
+    expect(r.terminalError).toBe(true);
+    expect(r.finalText).not.toContain("no debe llegar");
+  });
+
+  it("🔴 el ■ durante la espera, en una vuelta RETENIDA (tras la insistencia), no enseña el texto descartado", async () => {
+    const ctrl = new AbortController();
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el título" }], tools: [], maxTurns: 6,
+      openStream: scripted(
+        // Vuelta 1: sólo prosa → insistencia; la vuelta 2 se RETIENE.
+        [{ type: "text_delta", text: "¡Claro! Lo cambio." }, done],
+        [{ type: "text_delta", text: "Ya está respondido: el tit" }, fallo("server")],
+        [{ type: "text_delta", text: "no debe llegar" }, done],
+      ),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+      signal: ctrl.signal,
+      sleep: async () => { ctrl.abort(); },
+    });
+    const textos = events.filter((e) => e.type === "text").map((e) => (e as { text: string }).text).join("");
+    expect(textos).not.toContain("Ya está respondido");
+    expect(events.some((e) => e.type === "error" && e.code === "cancelled")).toBe(true);
+  });
+
+  it("el ■ durante la espera corta sin lanzar otro intento", async () => {
+    const ctrl = new AbortController();
+    const events: AgentStreamEvent[] = [];
+    let llamadas = 0;
+    const guion = scripted([fallo("server")], [{ type: "text_delta", text: "no debe llegar" }, done]);
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: (m) => { llamadas += 1; return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+      signal: ctrl.signal,
+      sleep: async () => { ctrl.abort(); },
+    });
+    expect(llamadas).toBe(1);
+    expect(events.some((e) => e.type === "error" && e.code === "cancelled")).toBe(true);
+    expect(r.terminalError).toBe(true);
+  });
+});
+
+describe("compactación dentro del turno (como el arnés de DeepSeek)", () => {
+  // Sólo herramientas de lectura: un cierre sin acción no recibe la insistencia
+  // (ver `puedeActuar`), así que cada guion es UNA llamada. Y 1 token de entrada
+  // por llamada: la presión que se mide después es la de la conversación, no la
+  // cifra fija de `usage`.
+  const leer = [{ name: "Read" }];
+  const uso = (o: number): StreamEvent => ({ type: "usage", inputTokens: 1, outputTokens: o, cachedTokens: 0, thinkingTokens: 0 });
+  const historial = (n: number): Message[] => [
+    { role: "system", content: "s" }, { role: "user", content: "manual" },
+    ...Array.from({ length: n }, (_, i): Message => ({ role: i % 2 ? "assistant" : "user", content: "x".repeat(70) })),
+    { role: "user", content: "ahora haz esto" },
+  ];
+  const compaction = { policy: { thresholdTokens: 100, retainTokens: 20 }, firstIndex: 2 };
+  const esResumen = (m: Message[]) => m.at(-1)?.content.includes("You are now acting as a compaction engine") === true;
+
+  it("BRAZO DE CONTROL: sin `compaction`, el bucle no resume nada", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted([{ type: "text_delta", text: "ok" }, uso(1), done]);
+    await runAgentLoop({
+      messages: historial(10), tools: leer,
+      openStream: (m) => { vistos.push(m); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); }, emit: () => {},
+    });
+    // (Puede haber más llamadas —el aviso de cierre—, pero ninguna es un resumen.)
+    expect(vistos.some(esResumen)).toBe(false);
+  });
+
+  it("por encima del umbral, la primera llamada es el resumen y la segunda va compactada", async () => {
+    const vistos: Message[][] = [];
+    const events: AgentStreamEvent[] = [];
+    const guion = scripted(
+      [{ type: "text_delta", text: "## Primary Request and Intent\n- haz esto" }, uso(10), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(5), done],
+    );
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compaction,
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(vistos[0]!.at(-1)!.content).toContain("You are now acting as a compaction engine");
+    expect(JSON.stringify(vistos[1])).toContain("<compacted-summary>");
+    expect(vistos[1]!.at(-1)!.content).toBe("ahora haz esto");
+    // El aviso de que empieza va ANTES de la llamada del resumen; el de que acabó, después.
+    const tipos = events.map((e) => e.type);
+    expect(tipos.indexOf("compaction_start")).toBeLessThan(tipos.indexOf("compaction"));
+    expect(events).toContainEqual({ type: "compaction_start" });
+    expect(events).toContainEqual({ type: "compaction", pruned: 0, summarized: true, discardChars: 0 });
+    expect(r.finalText).toBe("Hecho.");
+    expect(r.usage.outputTokens).toBe(15); // el resumen se cobra
+    expect(events.some((e) => e.type === "text" && e.text.includes("Primary Request"))).toBe(false); // el resumen NO se le enseña al dueño
+  });
+
+  it("un resumen que intenta llamar una herramienta se descarta, se cobra lo que usó y el turno sigue sin resumen", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, uso(1), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(5), done],
+    );
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compaction,
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); }, emit: () => {},
+    });
+    expect(JSON.stringify(vistos[1])).not.toContain("<compacted-summary>");
+    expect(r.finalText).toBe("Hecho.");
+    expect(r.usage.outputTokens).toBe(6);
+  });
+
+  it("con el ■ ya dado, no arranca una llamada de resumen", async () => {
+    const vistos: Message[][] = [];
+    const events: AgentStreamEvent[] = [];
+    const ctrl = new AbortController();
+    ctrl.abort();
+    const guion = scripted([{ type: "done", stopReason: { kind: "cancelled" } }]);
+    await runAgentLoop({
+      messages: historial(10), tools: leer, compaction, signal: ctrl.signal,
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(vistos.some(esResumen)).toBe(false);
+    expect(events.some((e) => e.type === "compaction_start")).toBe(false);
+  });
+
+  it("un desborde del proveedor compacta sin mirar el umbral y repite el paso una vez", async () => {
+    const vistos: Message[][] = [];
+    const events: AgentStreamEvent[] = [];
+    const desborde: StreamEvent = { type: "done", stopReason: { kind: "error", error: "http_400", code: "context_window_exceeded" } };
+    const guion = scripted(
+      [desborde],
+      [{ type: "text_delta", text: "## Primary Request and Intent\n- r" }, uso(3), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(5), done],
+    );
+    // historial(10): con 4 mensajes el resumen (preámbulo + etiquetas, ~110 tokens) no encogería y se rechazaría.
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compaction: { policy: { thresholdTokens: 1_000_000, retainTokens: 20 }, firstIndex: 2 },
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(vistos).toHaveLength(3);
+    expect(JSON.stringify(vistos[2])).toContain("<compacted-summary>");
+    expect(r.finalText).toBe("Hecho.");
+    expect(events.some((e) => e.type === "error")).toBe(false);
+  });
+
+  it("el segundo desborde del mismo turno ya no se reintenta: error claro", async () => {
+    const desborde: StreamEvent = { type: "done", stopReason: { kind: "error", error: "http_400", code: "context_window_exceeded" } };
+    const events: AgentStreamEvent[] = [];
+    // historial(10), para que el PRIMER desborde sí se recupere y lo que se prueba sea el segundo.
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compaction: { policy: { thresholdTokens: 1_000_000, retainTokens: 20 }, firstIndex: 2 },
+      openStream: scripted([desborde], [{ type: "text_delta", text: "r" }, uso(1), done], [desborde]),
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(r.terminalError).toBe(true);
+    expect(events.filter((e) => e.type === "error")).toHaveLength(1);
+  });
+
+  it("BRAZO DE CONTROL: sin `compaction`, un desborde es un error como siempre (no se resume)", async () => {
+    const desborde: StreamEvent = { type: "done", stopReason: { kind: "error", error: "http_400", code: "context_window_exceeded" } };
+    const vistos: Message[][] = [];
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer,
+      openStream: (m) => { vistos.push(m); return scripted([desborde])(m); },
+      runTool: async () => { throw new Error("must not run"); }, emit: () => {},
+    });
+    expect(vistos).toHaveLength(1);
+    expect(r.terminalError).toBe(true);
+  });
+
+  it("🔴 la transcripción del turno sobrevive a la compactación: lleva sus llamadas y respuestas, no el resumen", async () => {
+    const guion = scripted(
+      [{ type: "text_delta", text: "## Primary Request and Intent\n- haz esto" }, uso(1), done],
+      [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, uso(1), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(1), done],
+    );
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compaction,
+      openStream: guion,
+      runTool: async () => ({ response: { ok: true, tool_result: "<html></html>" } }),
+      emit: () => {},
+    });
+    const t = r.transcripcion ?? [];
+    expect(t.some((m) => m.functionCalls?.[0]?.name === "Read")).toBe(true);
+    expect(t.some((m) => m.functionResponses?.[0]?.name === "Read")).toBe(true);
+    expect(t.at(-1)).toMatchObject({ role: "assistant", content: "Hecho." });
+    expect(JSON.stringify(t)).not.toContain("<compacted-summary>");
+  });
+
+  it("lo que el modelo aún no vio no se poda, aunque detrás llegue una corrección del dueño", async () => {
+    const vistos: Message[][] = [];
+    const largo = "r".repeat(20_000);
+    let direcciones = 0;
+    const guion = scripted(
+      [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, uso(1), done],
+      // El resumen de la vuelta 2 se descarta (llama una herramienta): así la
+      // llamada siguiente lleva la conversación tal cual, podada o no.
+      [{ type: "function_call", name: "Read", args: {} }, uso(1), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(1), done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "system", content: "s" }, { role: "user", content: "manual" }, { role: "user", content: "lee la página" }],
+      tools: leer,
+      compaction: { policy: { thresholdTokens: 1_000, retainTokens: 10 }, firstIndex: 2 },
+      leerDireccion: () => (direcciones++ === 1 ? "mejor en azul" : null),
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => ({ response: { ok: true, tool_result: largo } }),
+      emit: () => {},
+    });
+    // La llamada de la vuelta 2 (no el resumen): la que lleva la corrección al final.
+    const vuelta2 = vistos.find((m) => !esResumen(m) && m.at(-1)!.content.includes("mejor en azul"));
+    expect(vuelta2).toBeDefined();
+    expect(JSON.stringify(vuelta2)).toContain(largo);
+  });
+});
+
+describe("sobreQue: el resumen de la tarjeta de cada llamada", () => {
+  it("pieza 5: la tarjeta de buscar en charlas pasadas enseña lo que se busca", () => {
+    expect(sobreQue({ query: "horario de la tienda" })).toBe("horario de la tienda");
+    expect(sobreQue({ query: "x".repeat(100) })).toHaveLength(60);
+  });
+});
+
+describe("la retención de resultados grandes (spill-policy de DeepSeek)", () => {
+  async function correr(tool: string, conSpill: boolean) {
+    const ficheros: Record<string, string> = {};
+    let vista: Record<string, unknown> | undefined;
+    const guion = scripted(
+      [{ type: "function_call", name: tool, args: { query: "x" } }, usage(1), done],
+      [{ type: "text_delta", text: "listo" }, usage(1), done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "busca" }],
+      tools: [],
+      ...(conSpill ? { spill: { maxInlineTokens: 200, save: async (p: string, t: string) => ((ficheros[p] = t), true) } } : {}),
+      openStream: (m) => {
+        const ultima = m[m.length - 1];
+        if (ultima?.functionResponses) vista = ultima.functionResponses[0]!.response;
+        return guion(m);
+      },
+      runTool: async () => ({ response: { ok: true, tool_result: "Z".repeat(5000) } }),
+      emit: () => undefined,
+    });
+    return { ficheros, vista: vista! };
+  }
+
+  it("🔴 un resultado de más de maxInlineTokens llega recortado con su aviso, y el entero queda en /tmp/spill", async () => {
+    const { ficheros, vista } = await correr("session_event_read", true);
+    const ruta = Object.keys(ficheros)[0]!;
+    expect(ruta).toMatch(/^\/tmp\/spill\/\d+-0-session_event_read\.txt$/);
+    expect(ficheros[ruta]).toBe("Z".repeat(5000));
+    expect(String(vista.tool_result)).toContain(`Full formatted result stored at: ${ruta}`);
+    expect(String(vista.tool_result).length).toBeLessThan(5000);
+    expect(vista.ok).toBe(true);
+  });
+
+  it("Read no se recorta (como el `read` de DeepSeek), ni nada sin dónde guardar", async () => {
+    expect(String((await correr("Read", true)).vista.tool_result)).toHaveLength(5000);
+    expect(String((await correr("session_event_read", false)).vista.tool_result)).toHaveLength(5000);
+  });
+});
+
+// ─── PIEZA 7 · EL MODO PLAN ─────────────────────────────────────────────────
+// En modo plan no cambiar nada es lo que se pide: el empujón de «anunciaste un
+// cambio y no lo hiciste» no puede mandarle a editar a media exploración.
+describe("el modo plan no recibe la insistencia", () => {
+  const insistencia = (m: Message[]) =>
+    m.some((x) => x.role === "user" && typeof x.content === "string" && x.content.includes("you ended the turn WITHOUT"));
+  const leerYContar = async (planModeActive: (() => boolean) | undefined) => {
+    const vistos: Message[][] = [];
+    const stream = scripted(
+      [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, done],
+      [{ type: "text_delta", text: "Ya miré la página; ahora te propongo el plan." }, done],
+      [{ type: "text_delta", text: "OK" }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "añade reseñas" }], tools: [],
+      openStream: (m) => { vistos.push([...m]); return stream(m); },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+      ...(planModeActive ? { planModeActive } : {}),
+    });
+    return vistos;
+  };
+
+  it("🔴 en modo plan, leer y contar cierra sin empujón", async () => {
+    expect((await leerYContar(() => true)).some(insistencia)).toBe(false);
+  });
+
+  it("BRAZO DE CONTROL: fuera del modo plan, el mismo turno lo recibe", async () => {
+    expect((await leerYContar(() => false)).some(insistencia)).toBe(true);
+    expect((await leerYContar(undefined)).some(insistencia)).toBe(true);
+  });
+});
+
+// ─── PIEZA 8 · EL ENCARGO ───────────────────────────────────────────────────
+// El `deferContext` de DeepSeek: lo que una herramienta deja para el paso
+// siguiente (el cierre de un encargo) viaja en el mensaje de las respuestas.
+describe("el encargo en el bucle", () => {
+  it("el aviso de una herramienta llega al modelo con las respuestas de la tanda", async () => {
+    const vistos: Message[][] = [];
+    const stream = scripted(
+      [{ type: "function_call", name: "update_goal", args: { goal_id: "goal-1", revision: 1, action: "complete" } }, done],
+      [{ type: "text_delta", text: "Hecho." }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "<goal_round>…</goal_round>" }], tools: [],
+      openStream: (m) => { vistos.push([...m]); return stream(m); },
+      runTool: async () => ({ response: { ok: true }, notice: "<goal_complete>\nescribe el cierre\n</goal_complete>" }),
+      emit: () => {},
+    });
+    const conRespuestas = vistos[1]!.at(-1)!;
+    expect(conRespuestas.functionResponses?.[0]?.name).toBe("update_goal");
+    expect(conRespuestas.content).toContain("<goal_complete>\nescribe el cierre\n</goal_complete>");
+  });
+
+  it("get_goal, create_goal y update_goal no gastan presupuesto de acciones", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [], maxToolCalls: 1,
+      openStream: scripted([
+        { type: "function_call", name: "editar_pagina", args: {} },
+        { type: "function_call", name: "get_goal", args: {} },
+        { type: "function_call", name: "create_goal", args: { objective: "la tienda" } },
+        { type: "function_call", name: "update_goal", args: { goal_id: "g", revision: 1, action: "complete" } },
+        done,
+      ], [{ type: "text_delta", text: "Listo." }, done]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(r.terminalError).toBe(false);
   });
 });

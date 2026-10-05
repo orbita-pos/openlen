@@ -32,8 +32,10 @@ describe("Caddy pasa el backend de las páginas a Next", () => {
 
 describe("el middleware de idiomas no toca el backend", () => {
   const src = readFileSync(join(process.cwd(), "middleware.ts"), "utf8");
-  // En el fuente el patrón va con las barras dobladas de un literal de JS.
-  const pattern = /matcher:\s*\["([^"]+)"\]/.exec(src)![1]!.replace(/\\\\/g, "\\");
+  // En el fuente el patrón va con las barras dobladas de un literal de JS. Es
+  // la PRIMERA entrada del `matcher`: la segunda (pieza 9, carril B) es la del
+  // host del lienzo, que sólo corre en `lienzo-*` (lib/lienzo/middleware-lienzo.test.ts).
+  const pattern = /matcher:\s*\[\s*"([^"]+)"/.exec(src)![1]!.replace(/\\\\/g, "\\");
   const matches = (path: string) => new RegExp(`^${pattern}$`).test(path);
 
   it("BRAZO DE CONTROL: el matcher sí casa una página de la app", () => {
@@ -73,4 +75,14 @@ describe("Caddy pasa /storage/v1 a Next y no le pone caché", () => {
     const assets = paginas.slice(i, paginas.indexOf("\n\theader @assets", i));
     expect(assets).toContain("not path /storage/v1/*");
   });
+
+  // Los de la carpeta (pieza 9, carril B): `header` + `reverse_proxy` DUPLICA
+  // la cabecera, y un `sw.svg` privado saldría con dos Cache-Control.
+  for (const nombre of ["carpeta", "webmanifest", "markdown"]) {
+    it(`@${nombre} tampoco le estampa sus cabeceras a un objeto de Storage`, () => {
+      const i = paginas.indexOf(`\t@${nombre} {`);
+      expect(i).toBeGreaterThan(0);
+      expect(paginas.slice(i, paginas.indexOf("\n\t}", i))).toContain("not path /storage/v1/*");
+    });
+  }
 });

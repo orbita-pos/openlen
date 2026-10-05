@@ -35,6 +35,24 @@ import {
   RUTA_LIBRERIAS,
   RUTA_MANUAL,
 } from "@/lib/agent/ficheros/manual";
+import {
+  MAX_FOLDER_BYTES,
+  MAX_FOLDER_FILE_BYTES,
+  MAX_FOLDER_FILES,
+  MAX_TEST_FILE_BYTES,
+  RESERVED_ROOTS,
+  WEB_EXTENSIONS,
+} from "@/lib/agent/ficheros/folder";
+
+// LA CARPETA (pieza 9 de Len 2.5; el texto lo escribió el carril B,
+// B-PARA-A-manual-carpeta.md). Las cifras, las extensiones y las raíces salen
+// de folder.ts, que es quien las hace cumplir: copiadas, se quedarían viejas en
+// cuanto cambie una. Las raíces que se nombran son las del sitio publicado
+// (las que Caddy contesta con otra cosa); las de Len y su terminal, desde
+// `memoria`, no le dicen nada al modelo sobre dónde poner un fichero.
+const RAICES_DEL_SITIO = RESERVED_ROOTS.slice(0, RESERVED_ROOTS.indexOf("memoria"))
+  .map((r) => `/${r}`)
+  .join(", ");
 
 /**
  * El manual ENTERO, como era hasta F4: lo que se adjuntaba en cada vuelta. Sigue
@@ -56,6 +74,13 @@ LINKS (<a href>):
 - ABSOLUTE, ALWAYS: "instagram.com/juan" or "@juan" are completed to https://instagram.com/juan. An href without a scheme is a RELATIVE path of the site itself, and the failure is SILENT: the server serves the home page again with a 200 and the visitor lands on the same page. mailto: and tel: are fine too.
 - INTERNAL: the path "/<slug>" of its file /<slug>/index.html (e.g. /menu); never "menu.html" or plain "menu", which fall into the same silent fallback to the home page. The home page is "/".
 - ANCHORS ("#pricing"): only if that id EXISTS on the target page; if not, create it in the same edit.
+
+THE PROJECT'S FOLDER:
+Besides its pages, the project is a folder like any Vercel + Supabase project: /js, /css, /data/*.json, /sw.js, /manifest.json and any other text file (${WEB_EXTENSIONS.join(" ")}), anywhere except the reserved roots (${RAICES_DEL_SITIO}). They are read and changed like the pages, every change can be undone with the turn, and publishing ships them as they are, next to the pages. Reference them by path: \`<script src="/js/app.js" type="module">\`, \`fetch("/data/menu.json")\`.
+- /tests holds Playwright tests (never published); /supabase holds the backend's migrations.
+- mirar_pagina, usar_pagina and the checks after each turn load these files the way the published site does. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
+- An installable app is a /manifest.json plus a service worker at /sw.js; if the site stops using one, the platform publishes a /sw.js that removes itself, so no visitor stays on an old version.
+- Up to ${MAX_FOLDER_FILES} files and ${MAX_FOLDER_BYTES / 1024 / 1024} MB; ${MAX_FOLDER_FILE_BYTES / 1024 / 1024} MB per file (${MAX_TEST_FILE_BYTES / 1024} KB per test file).
 
 THE BACKEND (Supabase):
 This project has its own Supabase backend —a Postgres database behind the REST API, Auth with email and password, and Storage for files— at the URL and with the publishable key that PROJECT STATE gives you under \`supabase\` (\`supabase status\` in the terminal prints them too). Storage works too, for files (photos, videos, PDFs). Realtime and Edge Functions don't exist here yet: if something needs them, say so. Anything that has to live on a server —a cart that is still there tomorrow, reviews everyone sees, a menu the user maintains, people who sign in— goes here.

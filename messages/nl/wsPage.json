@@ -35,6 +35,12 @@
       "declarar_tareas": "Werk plannen",
       "leer_de_internet": "De gelinkte pagina lezen",
       "preguntar": "Vraag aan jou",
+      "ask_user_question": "Vraag aan jou",
+      "enter_plan_mode": "Vraagt om eerst te plannen",
+      "exit_plan_mode": "Presenteert het plan",
+      "session_search": "Zoekt in eerdere gesprekken",
+      "session_event_search": "Zoekt in een eerder gesprek",
+      "session_event_read": "Leest een eerder gesprek",
       "revertir_ultimo_cambio": "Laatste wijziging ongedaan maken",
       "verificar_diseno": "Resultaat controleren",
       "redisenar_pagina": "Pagina wordt herontworpen",
@@ -46,7 +52,10 @@
       "ver_mensajes": "Berichten bekijken",
       "preparar_respuesta": "Antwoord voorbereiden",
       "web_search": "Zoekt op het web",
-      "web_fetch": "Leest een webpagina"
+      "web_fetch": "Leest een webpagina",
+      "get_goal": "Doel bekijken",
+      "create_goal": "Doel aanmaken",
+      "update_goal": "Doel bijwerken"
     },
     "action": {
       "home": "Home",

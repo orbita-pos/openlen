@@ -53,6 +53,13 @@ describe("la pregunta", () => {
     ).toEqual(["Read"]);
     expect(visibleSteps([{ tool: "preguntar", status: "error", summary: "" }])).toHaveLength(1);
   });
+
+  it("pieza 3: con el nombre nuevo, igual; y una ya contestada dentro del turno se queda como paso", () => {
+    expect(visibleSteps([{ tool: "Read", status: "done", summary: "a" }, { tool: "ask_user_question", status: "done", summary: "" }]).map((a) => a.tool)).toEqual(["Read"]);
+    expect(visibleSteps([{ tool: "ask_user_question", status: "done", summary: "", respuesta: "48" }])).toHaveLength(1);
+    // ALINEAR: una cancelada va en su tarjeta, esté donde esté, no como paso.
+    expect(visibleSteps([{ tool: "exit_plan_mode", status: "done", summary: "", dismissed: true }, { tool: "Read", status: "done", summary: "a" }]).map((a) => a.tool)).toEqual(["Read"]);
+  });
 });
 
 describe("qué cambió el turno", () => {

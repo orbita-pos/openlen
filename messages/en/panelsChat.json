@@ -197,16 +197,28 @@
       "waitingAnswer": "Waiting for your answer",
       "waitingApproval": "Waiting for your approval",
       "yourTurn": "Your turn · paused",
+      "yourTurnLive": "Your turn · Len goes on as soon as you answer",
       "done": "Done",
       "doneHint": "ask for something else",
       "stopped": "Stopped",
       "stoppedHint": "what it already did stays",
-      "failed": "Couldn't finish"
+      "failed": "Couldn't finish",
+      "retrying": "Retrying",
+      "retryingHint": "no response · in {seconds} s · attempt {attempt} of {max}",
+      "retryingAttempt": "attempt {attempt} of {max}",
+      "compacting": "Tidying up what it has",
+      "compactingHint": "to keep going without losing the thread"
     },
     "question": {
       "label": "Len is asking",
       "hint": "Answer below, in your own words.",
-      "answered": "You answered: {answer}"
+      "answered": "You answered: {answer}",
+      "cancelled": "Cancelled before answers were submitted",
+      "send": "Answer",
+      "other": "Something else",
+      "otherPlaceholder": "Write your answer",
+      "pickMany": "You can pick more than one",
+      "recommended": "Recommended"
     },
     "changes": {
       "showAll": "See all {count} changes",
@@ -255,6 +267,45 @@
       "minimize": "Minimize to Len",
       "open": "Open the chat",
       "resize": "Drag to resize"
+    },
+    "plan": {
+      "option": "Plan first",
+      "optionHint": "Len looks around first and proposes a plan; nothing changes until you approve it.",
+      "chip": "Plan",
+      "chipOff": "Leave plan mode",
+      "reviewLabel": "Plan to review",
+      "reviewQuestion": "Approve this plan?",
+      "approve": "Approve",
+      "approveHint": "Len carries out the plan now.",
+      "keep": "Request changes",
+      "keepHint": "Len keeps planning with what you tell it.",
+      "consentLabel": "Plan mode",
+      "consentQuestion": "Len wants to plan before changing anything. Plan first?",
+      "planFirst": "Plan first",
+      "planFirstHint": "Nothing changes until you approve the plan.",
+      "skip": "Skip planning",
+      "skipHint": "Len carries on with your request now.",
+      "showPlan": "See the whole plan",
+      "hidePlan": "Hide the plan"
+    },
+    "goal": {
+      "option": "Goal",
+      "optionHint": "Len keeps going on its own, round after round, until it's done.",
+      "optionTaken": "There's already a goal: remove it or wait for it to finish.",
+      "chip": "Goal",
+      "chipOff": "Don't make it a goal",
+      "placeholder": "Describe the whole goal; Len will keep going until it's done…",
+      "label": "Goal",
+      "round": "Round {round} of {max}",
+      "running": "Running",
+      "paused": "Paused",
+      "blocked": "Stuck",
+      "roundLimit": "Reached the limit of {max} rounds.",
+      "noCredits": "Stopped: out of credits.",
+      "resume": "Resume",
+      "clear": "Remove",
+      "clearFailed": "Couldn't remove the goal.",
+      "roundLine": "Goal · round {round} of {max}"
     }
   }
 }

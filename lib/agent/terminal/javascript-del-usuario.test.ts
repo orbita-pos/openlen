@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { activoDelSitio, codigoNuevo, loActivo } from "./javascript-del-usuario";
+import { activoDelSitio, codigoNuevo, loActivo, newCodeInFolderFile } from "./javascript-del-usuario";
 
 const PAGINA = `<!doctype html><html><head><script src="https://cdn.tailwindcss.com"></script></head>
 <body><h1>Casa Oleaje</h1><button onclick="abrir()">Reserva</button>
@@ -40,5 +40,33 @@ describe("codigoNuevo — la terminal del usuario no mete código que el sitio n
 
   it("lo activo se compara sin disfraces y en orden estable", () => {
     expect(loActivo('<a href="JAV&#65;SCRIPT:x">')).toEqual(loActivo('<a href="javascript:x">'));
+  });
+});
+
+// LA CARPETA (pieza 9 de Len 2.5): la misma regla para los ficheros. Un .js es
+// código entero; un .svg puede llevarlo dentro. Datos, CSS y texto, libres.
+describe("newCodeInFolderFile — el dueño no mete código a mano en la carpeta", () => {
+  const antes = { "/js/app.js": "console.log(1)", "/data/menu.json": "[]", "/index.html": PAGINA };
+
+  it("🔴 cambiar o crear un .js/.mjs, no", () => {
+    expect(newCodeInFolderFile("/js/app.js", "console.log(2)", antes)).toMatch(/Len's job/);
+    expect(newCodeInFolderFile("/js/nuevo.mjs", "export {}", antes)).toMatch(/Len's job/);
+  });
+
+  it("copiarlo o moverlo (el mismo contenido que uno guardado), sí", () => {
+    expect(newCodeInFolderFile("/js/copia.js", "console.log(1)", antes)).toBeNull();
+  });
+
+  it("🔴 un .svg con script o con on…, no; uno inerte, sí", () => {
+    expect(newCodeInFolderFile("/img/a.svg", '<svg onload="x()"></svg>', antes)).toMatch(/Len's job/);
+    expect(newCodeInFolderFile("/img/a.svg", "<svg><script>x()</script></svg>", antes)).toMatch(/Len's job/);
+    expect(newCodeInFolderFile("/img/a.svg", '<svg><circle r="4"/></svg>', antes)).toBeNull();
+  });
+
+  it("los datos, el CSS, el texto y las pruebas, libres", () => {
+    expect(newCodeInFolderFile("/data/menu.json", "[1]", antes)).toBeNull();
+    expect(newCodeInFolderFile("/css/a.css", "body{color:red}", antes)).toBeNull();
+    expect(newCodeInFolderFile("/README.md", "# hola", antes)).toBeNull();
+    expect(newCodeInFolderFile("/tests/a.spec.ts", "test('x', async () => {})", antes)).toBeNull();
   });
 });

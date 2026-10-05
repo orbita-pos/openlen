@@ -197,16 +197,28 @@
       "waitingAnswer": "Esperando tu respuesta",
       "waitingApproval": "Esperando tu aprobación",
       "yourTurn": "Te toca · en pausa",
+      "yourTurnLive": "Te toca · Len sigue en cuanto contestes",
       "done": "Listo",
       "doneHint": "pídele otra cosa",
       "stopped": "Detenido",
       "stoppedHint": "lo que ya hizo se queda",
-      "failed": "No pudo terminar"
+      "failed": "No pudo terminar",
+      "retrying": "Reintentando",
+      "retryingHint": "no hubo respuesta · en {seconds} s · intento {attempt} de {max}",
+      "retryingAttempt": "intento {attempt} de {max}",
+      "compacting": "Ordenando lo que lleva",
+      "compactingHint": "para seguir sin perder el hilo"
     },
     "question": {
       "label": "Len te pregunta",
       "hint": "Contéstale abajo, con tus palabras.",
-      "answered": "Respondiste: {answer}"
+      "answered": "Respondiste: {answer}",
+      "cancelled": "Cancelada sin enviar respuesta",
+      "send": "Responder",
+      "other": "Otra respuesta",
+      "otherPlaceholder": "Escribe tu respuesta",
+      "pickMany": "Puedes elegir varias",
+      "recommended": "Recomendada"
     },
     "changes": {
       "showAll": "Ver los {count} cambios",
@@ -255,6 +267,45 @@
       "minimize": "Minimizar a Len",
       "open": "Abrir el chat",
       "resize": "Arrastra para cambiar el tamaño"
+    },
+    "plan": {
+      "option": "Planear primero",
+      "optionHint": "Len mira primero y te propone un plan; nada cambia hasta que lo apruebes.",
+      "chip": "Plan",
+      "chipOff": "Salir del modo plan",
+      "reviewLabel": "Plan para revisar",
+      "reviewQuestion": "¿Apruebas este plan?",
+      "approve": "Aprobar",
+      "approveHint": "Len lleva a cabo el plan ahora.",
+      "keep": "Pedir cambios",
+      "keepHint": "Len sigue planeando con lo que le digas.",
+      "consentLabel": "Modo plan",
+      "consentQuestion": "Len quiere planear antes de cambiar nada. ¿Planear primero?",
+      "planFirst": "Planear primero",
+      "planFirstHint": "Nada cambia hasta que apruebes el plan.",
+      "skip": "Sin plan",
+      "skipHint": "Len sigue con lo que pediste ahora.",
+      "showPlan": "Ver el plan entero",
+      "hidePlan": "Ocultar el plan"
+    },
+    "goal": {
+      "option": "Encargo",
+      "optionHint": "Len sigue solo, ronda tras ronda, hasta terminarlo.",
+      "optionTaken": "Ya hay un encargo: quítalo o espera a que acabe.",
+      "chip": "Encargo",
+      "chipOff": "No hacerlo encargo",
+      "placeholder": "Describe el encargo entero; Len seguirá hasta terminarlo…",
+      "label": "Encargo",
+      "round": "Ronda {round} de {max}",
+      "running": "En marcha",
+      "paused": "En pausa",
+      "blocked": "Atascado",
+      "roundLimit": "Llegó al tope de {max} rondas.",
+      "noCredits": "Se paró: no queda saldo.",
+      "resume": "Reanudar",
+      "clear": "Quitar",
+      "clearFailed": "No se pudo quitar el encargo.",
+      "roundLine": "Encargo · ronda {round} de {max}"
     }
   }
 }

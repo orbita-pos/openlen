@@ -165,10 +165,15 @@ export default defineConfig({
       "lib/ai/perfiles-huerfanos.test.ts",
       "lib/ai/image-edit-core.test.ts",
       "lib/ai/fireworks-client.test.ts",
+      // La carpeta (pieza 9 de Len 2.5): los ojos de Len cargan sus ficheros.
+      "lib/ai/origen-de-medida-carpeta.test.ts",
       "lib/ai/fireworks-tool-client.test.ts",
       "lib/ai/fireworks-stream-client.test.ts",
+      "lib/ai/provider-error-code.test.ts",
       "lib/ai/esfuerzo-no-admitido.test.ts",
       "lib/ai/origen-de-medida.browser.test.ts",
+      // La carpeta (pieza 9 de Len 2.5), en un Chromium de verdad.
+      "lib/ai/ojos-cargan-la-carpeta.browser.test.ts",
       // La suite de la página corriendo en Chromium de verdad: es la única que
       // puede decir si el programa con las promesas guardadas se ejecuta y si
       // lo que devuelve el navegador se reparte bien. LISTA BLANCA.
@@ -197,6 +202,8 @@ export default defineConfig({
       "lib/ai/runtime-capability.test.ts",
       "lib/projects/page-runtimes.test.ts",
       "lib/projects/miniatura-en-vuelo.test.ts",
+      // La carpeta (pieza 9 de Len 2.5): su huella publicable.
+      "lib/projects/files-hash.test.ts",
       "lib/publish/model-runtime-locales.test.ts",
       // Un idioma pedido que no sale tiene que OÍRSE: el fallo era mudo y por
       // eso la traducción vivió cinco meses sin producir una sola página.
@@ -356,6 +363,8 @@ export default defineConfig({
       "app/api/lienzo/route.test.ts",
       "app/api/assistant/[sub]/route.test.ts",
       "app/api/lienzo/[docId]/route.test.ts",
+      // El lienzo sirve el sitio entero (pieza 9 de Len 2.5).
+      "app/api/lienzo/site/**/*.test.ts",
       "lib/lecturas-de-users-proyectan.test.ts",
       "lib/ninguna-prueba-a-oscuras.test.ts",
       "components/workspace-v2/panels/mando-esfuerzo.test.tsx",
@@ -385,6 +394,29 @@ export default defineConfig({
       // es LISTA BLANCA: sin esta linea no corre nunca.
       "lib/generation/model-policy-sin-huerfanas.test.ts",
       "lib/agent/loop.test.ts",
+      // La compactación dentro del turno (pieza 2 de Len 2.5): todo el módulo.
+      "lib/agent/compaction/**/*.test.ts",
+      "lib/agent/retry-policy.test.ts",
+      // Pieza 4 de Len 2.5: herramientas en paralelo, como DeepSeek. LISTA BLANCA.
+      "lib/agent/tool-concurrency.test.ts",
+      "lib/agent/tool-scheduler.test.ts",
+      "lib/agent/concurrency-limit.test.ts",
+      // Pieza 3 de Len 2.5: ask_user_question, como DeepSeek. LISTA BLANCA.
+      "lib/agent/ask-user-question.test.ts",
+      "lib/agent/historial-saneado.test.ts",
+      // Pieza 5 de Len 2.5: buscar en las charlas, como session-query de DeepSeek.
+      "lib/agent/session-query.test.ts",
+      "lib/agent/session-query-tools.test.ts",
+      // Pieza 7 de Len 2.5: el modo plan, como DeepSeek. LISTA BLANCA.
+      "lib/agent/plan-mode.test.ts",
+      "lib/agent/plan-mode-tools.test.ts",
+      // Pieza 8 de Len 2.5: el encargo (el goal de DeepSeek).
+      "lib/agent/goal.test.ts",
+      "lib/agent/goal-activation.test.ts",
+      "lib/agent/goal-tools.test.ts",
+      "lib/projects/chat-row.test.ts",
+      // Lote 7-8: el SQL de jsonb del estado de la charla contra PGlite.
+      "lib/projects/chat-estado.pglite.test.ts",
       // Deshacer lo de Len sobre lo que hay AHORA, sin llevarse lo que el dueño
       // editó a mano (H06, auditoría 2026-09-22). Núcleo puro — pero `include`
       // es LISTA BLANCA y sin esta línea la prueba existiría y no correría.
@@ -458,6 +490,8 @@ export default defineConfig({
       // `lib/publish/**` entra fichero a fichero, no por directorio: es la
       // convención de arriba y hay pruebas ahí que necesitan el binding nativo.
       "lib/publish/form-identity.test.ts",
+      // La carpeta (pieza 9 de Len 2.5): el service worker que se da de baja.
+      "lib/publish/service-worker.test.ts",
       // La guarda de las veinte frases que ve el visitante al enviar un
       // formulario: viven duplicadas dentro del guion de Rust y sin esta línea
       // la copia se pudriría en silencio (medido en producción el 19/09).
@@ -526,6 +560,10 @@ export default defineConfig({
       "app/api/projects/[id]/terminal/route.test.ts",
       // Editar a mano en la lente «Código» (la #18).
       "app/api/projects/[id]/ficheros/route.test.ts",
+      // Deshacer un fichero de la carpeta (pieza 9 de Len 2.5).
+      "app/api/projects/*/ficheros/versions/**/*.test.ts",
+      // Exportar lleva la carpeta (pieza 9 de Len 2.5).
+      "app/api/export/zip/route.test.ts",
       // «Abrir en pestaña» se va al lienzo en .app; lo que queda aquí, opaco.
       "app/api/projects/[id]/raw/route.test.ts",
       // Un dominio propio sólo se sirve en su propio host, nunca en openlen.com.
@@ -535,10 +573,14 @@ export default defineConfig({
       // credits — the sanitize/normalize/behaviour passes are the real ones.
       "app/api/templates/ai-design/route.test.ts",
       "app/api/agent/route.test.ts",
+      // Pieza 3 de Len 2.5: la respuesta del dueño a ask_user_question.
+      "app/api/agent/responder/route.test.ts",
       // Contestar deja la conversación leída: el «Enviar» del borrador de Len.
       "app/api/inbox/[conversationId]/reply/route.test.ts",
       // Len 2.1: volver a mirar un turno que sigue trabajando sin cliente.
       "app/api/agent/turno/[fila]/route.test.ts",
+      // Pieza 8: quitar el encargo.
+      "app/api/agent/encargo/route.test.ts",
       "app/api/usage/route.test.ts",
       // Task 5 — the fill surface that had no gate at all. Mocks fillTemplate
       // so the test drives the route's gate, not the filler's own sanitizer.

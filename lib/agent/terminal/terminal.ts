@@ -42,6 +42,12 @@ type Respuesta = { id: number; ok: boolean; error?: string } & Record<string, un
 
 export class TerminalDeLen {
   private hilo: Worker | null = null;
+
+  /** ¿Ya arrancó? `poner` sin arrancar no hace nada: quien quiera dejar un
+   *  fichero (la compactación, su fichero de recuperación) tiene que saberlo. */
+  get arrancada(): boolean {
+    return Boolean(this.hilo);
+  }
   private siguiente = 0;
   private cargados: string[] = [];
   private fallidos: { ruta: string; error: string }[] = [];

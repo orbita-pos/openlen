@@ -30,9 +30,20 @@ import {
 import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/lib/agent/diagnosticos";
 import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
 import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
-import { terminalEncendida } from "@/lib/agent/terminal/declaracion";
+import { DEFAULT_MAX_PARALLEL_TOOL_CALLS, isConcurrencySafe } from "@/lib/agent/tool-concurrency";
+import { ASK_USER_QUESTION, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
+import { scheduleToolCalls, type Prepared } from "@/lib/agent/tool-scheduler";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
+import type { ProviderErrorCode } from "@/lib/ai/provider-error-code";
+import { MAX_PROVIDER_RETRIES, isRetryable, retryDelayMs, sleepAbortable } from "./retry-policy";
+import { compactIfNeeded } from "./compaction/compact";
+import { retainOversized } from "./compaction/spill";
+import { contenidoDeRespuesta } from "./fireworks-bridge";
+import { CLAVE_TOOL_RESULT } from "./ficheros/resultado";
+import { estimateTokens } from "./compaction/estimate";
+import type { CompactionPolicy } from "./compaction/policy";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -62,6 +73,19 @@ export type AgentErrorCode =
 
 export type AgentStreamEvent =
   | { type: "text"; text: string }
+  // UN REINTENTO DEL PROVEEDOR (como DeepSeek: el paso se repite entero). Lo
+  // que el intento fallido llegó a escribir NO entra en la conversación, y el
+  // chat y el registro lo retiran con `discardChars`. Claude Code enseña lo
+  // mismo: «reintentando en X s · intento N».
+  | { type: "retry"; attempt: number; maxAttempts: number; delayMs: number; discardChars: number }
+  // LA COMPACTACIÓN (como DeepSeek): se poda y/o se resume lo más viejo para
+  // seguir. `compaction_start` sale justo ANTES de la llamada del resumen —es
+  // la espera que el dueño ve: «ordenando lo que lleva»— y `compaction` cuando
+  // la conversación ya cambió. El resumen NO se le enseña al dueño; si fue para
+  // recuperarse de un desborde a media vuelta, `discardChars` retira lo que el
+  // intento llegó a escribir, como `retry`.
+  | { type: "compaction_start" }
+  | { type: "compaction"; pruned: number; summarized: boolean; discardChars: number }
   // LO QUE EL USUARIO ESCRIBIÓ A MEDIA FAENA. Se emite en cuanto el bucle lo
   // recoge, para que el panel pueda pintarlo en su sitio de la conversación:
   // sin esto, la corrección desaparecería y el usuario vería al Agente cambiar
@@ -113,11 +137,18 @@ export type AgentStreamEvent =
        *  idioma. Sólo con `status: "error"`, y sólo si la herramienta lo
        *  declaró; sin él la tarjeta dice «No pudo». Ver `owner-reason.ts`. */
       ownerReason?: OwnerReason;
-      /** LA PREGUNTA, literal, cuando la herramienta es `preguntar`. Es SÓLO
+      /** LA PREGUNTA, literal, cuando la herramienta es `ask_user_question`. Es SÓLO
        *  para la pantalla (la tarjeta destacada y «Esperando tu respuesta» del
        *  chat nuevo, plans/new-chat/): el modelo no la lee de aquí — su texto ya
        *  la lleva y el historial no copia este campo. */
       pregunta?: string;
+      /** Pieza 3: las preguntas con sus opciones, para la tarjeta que contesta. */
+      preguntas?: UserQuestion[];
+      /** Pieza 3: lo que contestó el dueño dentro del turno, en una línea. */
+      respuesta?: string;
+      /** Alinear con DeepSeek: el dueño DESCARTÓ la pregunta (su `ASK_CANCELLED`).
+       *  La tarjeta se pinta «cancelada», asentada: ya no pide nada. */
+      dismissed?: true;
     }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
@@ -252,6 +283,33 @@ export interface AgentLoopArgs {
   /** Abre un stream de modelo para un set de mensajes. El route inyecta el
    *  GeminiProvider real; los tests inyectan streams guionados. */
   openStream(messages: Message[]): AsyncIterable<StreamEvent>;
+  /** El ■ del turno: corta la espera entre reintentos (el stream ya lo corta
+   *  su propio `fetch`). Lo pasa la ruta (`upstreamAbort.signal`). */
+  signal?: AbortSignal;
+  /** Pieza 4 (como DeepSeek): cuántas llamadas seguras de una vuelta corren a
+   *  la vez. Por defecto `DEFAULT_MAX_PARALLEL_TOOL_CALLS` (10); 1 = en serie. */
+  maxParallelToolCalls?: number;
+  /** La retención de resultados grandes, como la `spill-policy` de DeepSeek
+   *  (`compaction/spill.ts`): un resultado de más de `maxInlineTokens` llega
+   *  recortado y su texto entero queda donde `save` lo deje. Sin esto, enteros. */
+  spill?: { maxInlineTokens: number; save(path: string, text: string): Promise<boolean> };
+  /** Pieza 7: ¿está el turno en modo plan AHORA? (cambia a media vuelta al
+   *  aprobar el plan). En modo plan no cambiar nada es lo que se pide, así que
+   *  el empujón de «anunciaste un cambio y no lo hiciste» no salta. */
+  planModeActive?: () => boolean;
+  /** Para las pruebas: la espera entre reintentos. Por defecto, `sleepAbortable`. */
+  sleep?(ms: number, signal?: AbortSignal): Promise<void>;
+  /** La compactación dentro del turno (`lib/agent/compaction/`). Sin ella, el
+   *  bucle no resume nada (las pruebas de siempre y quien no la pida). La pasa
+   *  la ruta. */
+  compaction?: {
+    policy: CompactionPolicy;
+    /** Primer mensaje que se puede resumir: después del sistema y del manual. */
+    firstIndex: number;
+    /** Deja el resultado entero de lo que se poda en un fichero que Len puede
+     *  leer (`spill-policy` de DeepSeek); `false` si no pudo. */
+    saveRecovery?(path: string, text: string): Promise<boolean>;
+  };
   /** F5 — los ojos del agente. Cuando está presente y el turno MUTÓ el
    *  documento, se llama UNA vez justo antes de cerrar (con el último HTML
    *  emitido); si devuelve !ok, la crítica se inyecta como mensaje de sistema
@@ -352,6 +410,11 @@ export interface AgentLoopResult {
    *  sale de ahí, como la transcripción de Claude Code. El bucle trabaja sobre
    *  una COPIA de `messages`, así que tiene que devolverlo. */
   transcripcion?: Message[];
+  /** El turno ACABÓ esperando al dueño: una pregunta sin contestar (vencida o
+   *  sin quien conteste) o descartada para hablar. Lo lee el conductor del
+   *  encargo: aquí una pregunta cierra el turno, así que esa ronda no encadena.
+   *  Ausente si el turno siguió (lo escrito por el dueño, lote 7-8). */
+  endedOnQuestion?: true;
   /** `thinkingTokens` es un SUBCONJUNTO de `outputTokens`, no un extra: lo
    *  afirma el validador del proveedor, que descarta la respuesta si
    *  `thinkingTokens > outputTokens` (`lib/ai/fireworks-client.ts`). Se
@@ -618,6 +681,8 @@ export function sobreQue(argsDeLaLlamada: Record<string, unknown>): string {
     texto("pattern") ??
     rel(texto("path")) ??
     consultas?.slice(0, 60) ??
+    // Pieza 5: lo que se busca en las charlas pasadas (`session_search`).
+    texto("query")?.slice(0, 60) ??
     texto("url")?.slice(0, 60) ??
     (comando ? resumenDelComando(comando) : "")
   );
@@ -740,27 +805,21 @@ const READ_ONLY_TOOLS = new Set([
   // ⚰️ `trabajar_en_pagina` estaba aquí porque mudarse de página no cambiaba
   // nada y se cobraba como si sí (medido 7 de 7 el 2026-09-08). Len 2.0 no se
   // muda: cada Edit dice su fichero.
-  "preguntar",
+  ASK_USER_QUESTION,
+  // Pieza 7: entrar en modo plan y presentar el plan no cambian la página.
+  ENTER_PLAN_MODE,
+  EXIT_PLAN_MODE,
+  // Pieza 8: leer, crear y actualizar el encargo no cambian la página.
+  "get_goal",
+  "create_goal",
+  "update_goal",
+  // Pieza 5: buscar y leer en las charlas pasadas no cambia nada.
+  "session_search",
+  "session_event_search",
+  "session_event_read",
   // ⚰️ Aquí iba `ToolSearch` (H2), retirada con las diferidas en Len 2.1, y
   // `TodoWrite`, retirada en F4 (plans/len-agente-2026).
 ]);
-/** Las lecturas que pueden correr a la vez (F1): no cambian ni la página ni
- *  nada del proyecto. `preguntar` no: cierra el turno. */
-// F2: `web_search` y `web_fetch` tampoco tocan el proyecto. Como `ver_visitas`,
-// NO van en READ_ONLY_TOOLS: buscar y contestar con lo encontrado es el trabajo.
-const EN_PARALELO = new Set([
-  "Read",
-  "Grep",
-  "Glob",
-  "mirar_pagina",
-  "usar_pagina",
-  "ver_visitas",
-  "ver_formularios",
-  "ver_mensajes",
-  "web_search",
-  "web_fetch",
-]);
-
 /** Cuántas vueltas gana el turno cuando el usuario corrige el rumbo.
  *
  *  POR QUÉ SE LE DA MÁS: corregir a media faena es la señal más barata y más
@@ -830,6 +889,11 @@ const CONFLICTO_SIN_SALIDA =
 const GUARDAR_YA_CHOCO =
   "not run: saving already clashed twice in a row in this turn, and this one would have clashed too.";
 
+/** Lo que recibe una llamada que no llegó a empezar porque el dueño pulsó ■:
+ *  el texto de DeepSeek (`appendSkippedToolCall`, tool-calls.ts @ 5badb15,
+ *  MIT). Así la transcripción queda con cada llamada y su respuesta. */
+export const TOOL_ABORTED_BEFORE_DISPATCH = "tool call aborted before dispatch";
+
 interface PendingCall {
   name: string;
   args: Record<string, unknown>;
@@ -843,8 +907,17 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   /** Lo que el turno añadió a la conversación, más su texto final si no quedó
    *  como mensaje (la vuelta que cierra no empuja el suyo). Ver
    *  `AgentLoopResult.transcripcion`. */
+  //
+  // 🔴 LA COMPACTACIÓN (pieza 2 de Len 2.5) cambia `messages` EN SITIO —resume lo
+  // más viejo, poda lo grande—, así que lo del turno ya no empieza siempre en
+  // `args.messages.length`. Antes de cada cambio, lo del turno se ARCHIVA tal
+  // cual estaba (`ownArchived`) y lo nuevo empieza después (`ownStart`): la
+  // transcripción es el registro entero, como el almacén de sesión de DeepSeek;
+  // lo compactado es sólo lo que se le manda al modelo.
+  const ownArchived: Message[] = [];
+  let ownStart = args.messages.length;
   const transcripcionDelTurno = (texto: string): Message[] => {
-    const propios = messages.slice(args.messages.length);
+    const propios = [...ownArchived, ...messages.slice(ownStart)];
     const ultimo = propios.at(-1);
     const yaEsta = ultimo?.role === "assistant" && !ultimo.functionCalls?.length && ultimo.content.trim() === texto.trim();
     if (texto.trim() && !yaEsta) propios.push({ role: "assistant", content: texto });
@@ -855,6 +928,64 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   let outputTokens = 0;
   let cachedTokens = 0;
   let thinkingTokens = 0;
+  /** COMPACTACIÓN · los tokens de entrada REALES de la última llamada (DeepSeek
+   *  mide así) y cuántos mensajes había entonces: la presión es eso + lo
+   *  añadido después, estimado. */
+  let lastInputTokens: number | null = null;
+  let messagesAtLastCall = 0;
+  /** Un solo reintento tras desborde por turno (`maxOverflowRetries` 1 de DeepSeek). */
+  let overflowRecovered = false;
+
+  /** El resumen lo escribe el MISMO modelo con la MISMA petición más la
+   *  instrucción al final (`buildSummaryRequest`): el prefijo sale de la caché.
+   *  Se cobra como cualquier llamada. Un resumen que llama herramientas, que se
+   *  corta o que falla no vale: `null`, y el turno sigue sin resumen. */
+  const summarizeWithModel = async (request: Message[]): Promise<string | null> => {
+    if (args.signal?.aborted) return null;
+    args.emit({ type: "compaction_start" });
+    let text = "";
+    let valid = true;
+    for await (const ev of args.openStream(request)) {
+      if (ev.type === "text_delta") text += ev.text;
+      // Se sigue leyendo hasta el final aunque ya no valga: el `usage` llega
+      // detrás y esa llamada también se paga.
+      else if (ev.type === "function_call") valid = false;
+      else if (ev.type === "usage") {
+        inputTokens += ev.inputTokens;
+        outputTokens += ev.outputTokens;
+        cachedTokens += ev.cachedTokens;
+        thinkingTokens += ev.thinkingTokens;
+      } else if (ev.type === "done" && ev.stopReason.kind !== "end_turn") valid = false;
+    }
+    return valid && text.trim() !== "" ? text : null;
+  };
+
+  /** Compacta `messages` EN SITIO (como hacen los `push`). `true` si cambió. */
+  const compactNow = async (trigger: "pressure" | "overflow", discardChars: number): Promise<boolean> => {
+    if (!args.compaction) return false;
+    const pressureTokens =
+      lastInputTokens === null ? estimateTokens(messages) : lastInputTokens + estimateTokens(messages.slice(messagesAtLastCall));
+    const outcome = await compactIfNeeded({
+      messages,
+      firstIndex: args.compaction.firstIndex,
+      pressureTokens,
+      policy: args.compaction.policy,
+      trigger,
+      // Lo que el modelo aún no ha visto no se poda: lo llegado después de la
+      // última llamada (sus respuestas, una corrección del dueño) o, antes de
+      // la primera, la petición. Tras un desborde eso es todo: se puede podar.
+      protectFrom: messagesAtLastCall > 0 ? messagesAtLastCall : args.messages.length - 1,
+      summarize: summarizeWithModel,
+      saveRecovery: args.compaction.saveRecovery,
+    });
+    if (!outcome.changed) return false;
+    ownArchived.push(...messages.slice(ownStart));
+    messages.splice(0, messages.length, ...outcome.messages);
+    ownStart = messages.length;
+    lastInputTokens = null;
+    args.emit({ type: "compaction", pruned: outcome.pruned, summarized: outcome.summarized, discardChars });
+    return true;
+  };
   let turns = 0;
   // Only turns that MUTATE count toward maxTurns. A turn whose calls were all
   // read-only (elegir_foto photo hunts, leer_estado re-reads) is exempt —
@@ -889,7 +1020,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // request (lo que el usuario está viendo en el canvas) y si el ciclo de
   // verificación ya corrió (corre a lo sumo UNA vez por request — un segundo
   // ciclo podría oscilar entre dos arreglos y quemar presupuesto sin fin).
-  let lastMutation: { html: string; page: string | null; taggedHtml?: string } | null = null;
+  // Con `as` y no con anotación: desde la pieza 4 se asigna dentro del `commit`
+  // del planificador, un cierre que el análisis de flujo de TypeScript no sigue,
+  // y con `: T | null = null` lo daría por `null` para siempre.
+  let lastMutation = null as { html: string; page: string | null; taggedHtml?: string } | null;
   // TODAS las páginas que este turno mutó, no sólo la última.
   //
   // 🔴 Medido el 2026-09-20 en producción (`proj=2d6cad43`): Len creó una
@@ -1070,6 +1204,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    *  y `turnText` se reinicia en cada vuelta: sin esto, una continuación
    *  devolvería sólo la segunda mitad de su propia frase. */
   let textoArrastrado = "";
+  /** El turno acabó esperando al dueño (ver `AgentLoopResult.endedOnQuestion`). */
+  let endedOnQuestion = false;
   let continuaciones = 0;
 
   const buildResult = (
@@ -1090,6 +1226,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     mutoDurable,
     aplicado: [...aplicado],
     rechazos: [...rechazos],
+    ...(endedOnQuestion ? { endedOnQuestion: true as const } : {}),
   });
 
   /**
@@ -1304,6 +1441,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
     turns += 1;
 
+    // ─── COMPACTACIÓN, antes de llamar al modelo (como DeepSeek) ─────────
+    //
+    // Con presión, se poda lo grande y, si no basta, se resume lo más viejo
+    // (`lib/agent/compaction/`). Aquí y no a media herramienta, por lo mismo
+    // que la dirección y el techo de arriba.
+    await compactNow("pressure", 0);
+
     let turnText = "";
     /** H15 · lo que el modelo PENSÓ en esta vuelta. Viaja en cada mensaje del
      *  asistente que la vuelta empuja (`delAsistente`), como lo hace el arnés de
@@ -1341,54 +1485,123 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     const retener = dichoAntesDelAviso !== null && dichoAntesDelAviso.vuelta === turns - 1;
     let retenido = "";
 
-    for await (const ev of args.openStream(messages)) {
-      if (ev.type === "text_delta" && retener) {
-        turnText += ev.text;
-        retenido += ev.text;
-      } else if (ev.type === "text_delta") {
-        // EL SEPARADOR ENTRE VUELTAS, y sólo aquí: `turnText.length === 0`
-        // identifica el PRIMER trozo de ESTA vuelta —se reinicia arriba— y la
-        // bandera dice si alguna anterior habló. Una sola vuelta no gana nada.
-        //
-        // 🔴 VA AL CLIENTE, NO A `turnText`. Éste es el `content` del mensaje
-        // que se le manda al MODELO: meterle un salto de línea a la cabeza sería
-        // ensuciar la conversación para arreglar la pantalla.
-        if (algunaVueltaYaDijoAlgo && turnText.length === 0) {
-          args.emit({ type: "text", text: "\n\n" });
+    // ─── REINTENTOS DEL PROVEEDOR (como el arnés de DeepSeek) ────────────
+    //
+    // Un 429, un 5xx o una red caída repiten el PASO entero
+    // (`lib/agent/retry-policy.ts`): lo que el intento fallido llegó a escribir
+    // no entra en `messages` y se le retira al dueño con `discardChars`. Un
+    // fallo sin código (un 400) es nuestro y sale como siempre. El ■ durante la
+    // espera corta sin otro intento. `turns` no se vuelve a sumar.
+    const yaHablabaAntesDelIntento: boolean = algunaVueltaYaDijoAlgo;
+    for (let intento = 1; ; intento++) {
+      let emitidoEnElIntento = 0;
+      let falloReintentable: ProviderErrorCode | undefined;
+      /** El proveedor dijo que no cabe (`context_window_exceeded`). */
+      let desbordado = false;
+
+      messagesAtLastCall = messages.length;
+      for await (const ev of args.openStream(messages)) {
+        if (ev.type === "text_delta" && retener) {
+          turnText += ev.text;
+          retenido += ev.text;
+        } else if (ev.type === "text_delta") {
+          // EL SEPARADOR ENTRE VUELTAS, y sólo aquí: `turnText.length === 0`
+          // identifica el PRIMER trozo de ESTA vuelta —se reinicia arriba— y la
+          // bandera dice si alguna anterior habló. Una sola vuelta no gana nada.
+          //
+          // 🔴 VA AL CLIENTE, NO A `turnText`. Éste es el `content` del mensaje
+          // que se le manda al MODELO: meterle un salto de línea a la cabeza sería
+          // ensuciar la conversación para arreglar la pantalla.
+          if (algunaVueltaYaDijoAlgo && turnText.length === 0) {
+            args.emit({ type: "text", text: "\n\n" });
+            emitidoEnElIntento += 2;
+          }
+          turnText += ev.text;
+          algunaVueltaYaDijoAlgo = true;
+          args.emit({ type: "text", text: ev.text });
+          emitidoEnElIntento += ev.text.length;
+        } else if (ev.type === "reasoning") {
+          turnReasoning += ev.text;
+        } else if (ev.type === "function_call") {
+          calls.push({
+            name: ev.name,
+            args: ev.args,
+          });
+        } else if (ev.type === "usage") {
+          // El uso de un intento fallido, si llegó, también se cobra: cada
+          // reintento es otra petición facturada (DeepSeek lo dice igual).
+          inputTokens += ev.inputTokens;
+          outputTokens += ev.outputTokens;
+          cachedTokens += ev.cachedTokens;
+          thinkingTokens += ev.thinkingTokens;
+          lastInputTokens = ev.inputTokens;
+        } else if (ev.type === "done") {
+          // A stream that ends on anything but a clean end_turn must NOT read
+          // as success: error (SAFETY/RECITATION/5xx), cancelled (abort), and
+          // max_tokens (truncated response) all surface as an error event and
+          // stop the loop — a truncated turn's partial text is not a real answer.
+          if (ev.stopReason.kind === "error") {
+            if (ev.stopReason.code === "context_window_exceeded" && args.compaction && !overflowRecovered && !args.signal?.aborted) {
+              desbordado = true;
+            } else if (isRetryable(ev.stopReason.code) && intento <= MAX_PROVIDER_RETRIES && !args.signal?.aborted) {
+              falloReintentable = ev.stopReason.code;
+            } else {
+              args.emit({ type: "error", message: ev.stopReason.error, code: "upstream" });
+              errorCode = "upstream";
+              sawError = true;
+            }
+          } else if (ev.stopReason.kind === "cancelled") {
+            args.emit({ type: "error", message: "El agente fue cancelado.", code: "cancelled" });
+            errorCode = "cancelled";
+            sawError = true;
+          } else if (ev.stopReason.kind === "max_tokens") {
+            // NO se decide aquí: se anota. Si la vuelta se puede continuar, esto
+            // no es un error y emitirlo ya habría pintado el turno de rojo.
+            truncado = true;
+          }
         }
-        turnText += ev.text;
-        algunaVueltaYaDijoAlgo = true;
-        args.emit({ type: "text", text: ev.text });
-      } else if (ev.type === "reasoning") {
-        turnReasoning += ev.text;
-      } else if (ev.type === "function_call") {
-        calls.push({
-          name: ev.name,
-          args: ev.args,
-        });
-      } else if (ev.type === "usage") {
-        inputTokens += ev.inputTokens;
-        outputTokens += ev.outputTokens;
-        cachedTokens += ev.cachedTokens;
-        thinkingTokens += ev.thinkingTokens;
-      } else if (ev.type === "done") {
-        // A stream that ends on anything but a clean end_turn must NOT read
-        // as success: error (SAFETY/RECITATION/5xx), cancelled (abort), and
-        // max_tokens (truncated response) all surface as an error event and
-        // stop the loop — a truncated turn's partial text is not a real answer.
-        if (ev.stopReason.kind === "error") {
-          args.emit({ type: "error", message: ev.stopReason.error, code: "upstream" });
-          errorCode = "upstream";
-          sawError = true;
-        } else if (ev.stopReason.kind === "cancelled") {
-          args.emit({ type: "error", message: "El agente fue cancelado.", code: "cancelled" });
-          errorCode = "cancelled";
-          sawError = true;
-        } else if (ev.stopReason.kind === "max_tokens") {
-          // NO se decide aquí: se anota. Si la vuelta se puede continuar, esto
-          // no es un error y emitirlo ya habría pintado el turno de rojo.
-          truncado = true;
+      }
+
+      // ─── NO CABE: se compacta sin mirar el umbral y se repite UNA vez ────
+      //
+      // Como DeepSeek (`maxOverflowRetries` 1, cola 0): lo del intento no
+      // existió, como en un reintento. Si la compactación no cambia nada, o es
+      // el segundo desborde del turno, el turno termina con su error.
+      if (desbordado) {
+        overflowRecovered = true;
+        if (await compactNow("overflow", emitidoEnElIntento)) {
+          turnText = "";
+          turnReasoning = "";
+          calls.length = 0;
+          truncado = false;
+          retenido = "";
+          algunaVueltaYaDijoAlgo = yaHablabaAntesDelIntento;
+          continue;
         }
+        args.emit({ type: "error", message: "La conversación ya no cabe en lo que el modelo puede leer.", code: "upstream" });
+        errorCode = "upstream";
+        sawError = true;
+        break;
+      }
+      if (!falloReintentable) break;
+
+      const delayMs = retryDelayMs(intento);
+      args.emit({ type: "retry", attempt: intento, maxAttempts: MAX_PROVIDER_RETRIES, delayMs, discardChars: emitidoEnElIntento });
+      await (args.sleep ?? sleepAbortable)(delayMs, args.signal);
+      // El intento fallido no existió: se vacía lo que dejó ANTES de mirar el ■.
+      // Si no, en una vuelta retenida lo retenido del intento descartado salía
+      // al dueño detrás del «cancelado» (lo cazó la revisión de la pieza).
+      turnText = "";
+      turnReasoning = "";
+      calls.length = 0;
+      truncado = false;
+      retenido = "";
+      algunaVueltaYaDijoAlgo = yaHablabaAntesDelIntento;
+      if (args.signal?.aborted) {
+        args.emit({ type: "error", message: "El agente fue cancelado.", code: "cancelled" });
+        errorCode = "cancelled";
+        sawError = true;
+        break;
       }
     }
 
@@ -1521,7 +1734,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       //
       // ⚰️ Iba DESPUÉS DEL RECLAMO DE TAREAS y no se sumaba a él; el reclamo se
       // fue con TodoWrite (F4 de plans/len-agente-2026).
-      if (puedeActuar && !actuo && !yaSeInsistio && turnText.trim().length > 0) {
+      // Pieza 7: en modo plan, no. Mandarle «aplícalo AHORA» a media
+      // exploración sería empujarle a editar lo que aún no se ha aprobado.
+      if (puedeActuar && !actuo && !yaSeInsistio && !args.planModeActive?.() && turnText.trim().length > 0) {
         yaSeInsistio = true;
         dichoAntesDelAviso = { vuelta: turns, texto: turnText };
         messages.push(delAsistente(turnText));
@@ -1832,6 +2047,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     /** La pregunta con la que este turno se cierra, si alguna herramienta la
      *  produjo. Ver el bloque que la consume al salir del bucle de llamadas. */
     let pregunta = "";
+    /** Lote 7-8 · el dueño descartó una pregunta para hablar: el turno cierra
+     *  tras la tanda (ver el bloque que lo consume, antes del de `pregunta`). */
+    let ownerTookOver = false;
+    /** Pieza 8 · lo que las herramientas de la tanda dejan para el paso
+     *  siguiente (`ToolOutcome.notice`, el `deferContext` de DeepSeek). */
+    const avisos: string[] = [];
     // Los nombres que el modelo puede llamar en ESTE turno. Salen de las
     // declaraciones que se le mandaron, no de una lista escrita a mano: una
     // lista a mano no avisa de lo que falta, y aquí faltarían justo las
@@ -1860,243 +2081,298 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       messages.push({ role: "user", content: "", functionResponses });
     };
 
-    // F1 (plans/len-agente-2026), detrás de la palanca de la terminal: las
-    // LECTURAS del principio de la vuelta se lanzan a la vez, como en el arnés
-    // de DeepSeek, y sus resultados se procesan abajo en el orden del modelo.
-    // Sólo las de ANTES de la primera llamada que no es lectura: un Read detrás
-    // de un Edit tiene que ver lo editado. Y no la que el freno de «ya falló
-    // dos veces» no dejaría correr.
-    const adelantadas = new Map<(typeof calls)[number], Promise<ToolOutcome>>();
-    if (terminalEncendida()) {
-      for (const original of calls) {
-        const r = declaradas.length ? repararNombre(original.name, declaradas) : { arreglado: original.name };
-        if (!("arreglado" in r) || !EN_PARALELO.has(r.arreglado)) break;
-        const llamada = r.arreglado === original.name ? original : { ...original, name: r.arreglado };
-        if ((failedSignatures.get(`${llamada.name}\u0000${stableStringify(llamada.args)}`) ?? 0) >= FAIL_REPEAT_LIMIT) break;
-        const p = args.runTool(llamada.name, llamada.args);
-        // Si el bucle sale antes de esperarla, su fallo no tumba el proceso.
-        p.catch(() => undefined);
-        adelantadas.set(original, p);
-      }
-    }
+    // 🔴 PIEZA 4 · LAS LLAMADAS DE LA VUELTA, PLANIFICADAS COMO DEEPSEEK
+    // (`lib/agent/tool-scheduler.ts`): las seguras seguidas (`tool-concurrency.ts`)
+    // a la vez, con tope; cada exclusiva es una barrera; las guardas, la tarjeta
+    // al empezar y todo lo de después van en el orden del modelo. Con el ■ no
+    // empieza ninguna más. Sustituye a F1, que sólo juntaba las lecturas del
+    // principio, sin tope, y seguía ejecutando la tanda entera tras el ■.
+    type Rechazo = { kind: "rechazo"; name: string; motivo: string; args: Record<string, unknown>; response: Record<string, unknown> };
+    type Ejecutada = { kind: "ejecutada"; call: PendingCall; readOnly: boolean; summary: string; sig: string; outcome: ToolOutcome };
+    const reparar = (original: PendingCall) =>
+      declaradas.length ? repararNombre(original.name, declaradas) : { arreglado: original.name };
+    const nombreDe = (original: PendingCall): string => {
+      const r = reparar(original);
+      return "arreglado" in r ? r.arreglado : original.name;
+    };
+    // Las guardas CONTESTAN sin ejecutar; sus efectos (la cuenta, el diario) se
+    // apuntan al confirmar, para que salgan en el orden del modelo.
+    const rechazar = (
+      name: string,
+      original: PendingCall,
+      motivo: string,
+      response: Record<string, unknown>,
+    ): Prepared<Rechazo | Ejecutada> => ({ kind: "result", value: { kind: "rechazo", name, motivo, args: original.args, response } });
 
-    for (const original of calls) {
-      // LA ERRATA SE ARREGLA ANTES DE COBRAR. El presupuesto se descuenta más
-      // abajo, así que reparar aquí es lo que hace que un fallo de tecleo no
-      // cueste una plaza.
-      const reparo = declaradas.length ? repararNombre(original.name, declaradas) : { arreglado: original.name };
-      if (!("arreglado" in reparo)) {
-        // No hay herramienta que ejecutar, así que NO se emite tarjeta: pintar
-        // una en rojo con un nombre inexistente le cuenta al usuario una avería
-        // que no es suya. Se le devuelve al modelo una corrección legible y el
-        // turno sigue, sin tocar presupuesto ni firmas fallidas.
-        const error_de_uso =
-          `There is no tool called "${original.name}".` +
-          (reparo.sugerido ? ` The closest one is "${reparo.sugerido}".` : "") +
-          " Call one of the tools you have declared, with its exact name.";
-        rechazos.push({ tool: original.name, motivo: error_de_uso });
-        rechazadasEnLaVuelta += 1;
-        args.onRechazo?.(original.name, original.args, error_de_uso);
-        functionResponses.push({ name: original.name, response: { ok: false, error_de_uso } });
-        continue;
-      }
-      const call = reparo.arreglado === original.name
-        ? original
-        : { ...original, name: reparo.arreglado };
-
-      // H12-a · una escritura detrás del segundo choque no se ejecuta: sólo
-      // podía chocar otra vez. Las lecturas siguen. Ver `CONFLICTO_SIN_SALIDA`.
-      if (guardarSinSalida && !READ_ONLY_TOOLS.has(call.name)) {
-        rechazos.push({ tool: call.name, motivo: GUARDAR_YA_CHOCO });
-        rechazadasEnLaVuelta += 1;
-        args.onRechazo?.(call.name, call.args, GUARDAR_YA_CHOCO);
-        functionResponses.push({ name: call.name, response: { ok: false, error: GUARDAR_YA_CHOCO } });
-        continue;
-      }
-
-      // No-progress guard: this exact call already failed FAIL_REPEAT_LIMIT
-      // times — don't run it again. Feed the model a nudge (as a functionResponse
-      // so the FC protocol stays balanced) to change approach. A refused call
-      // doesn't run, so it doesn't touch the caps; termination is still
-      // guaranteed because a mutating turn advances maxTurns → finishOnCap.
-      const sig = `${call.name}\u0000${stableStringify(call.args)}`;
-      if ((failedSignatures.get(sig) ?? 0) >= FAIL_REPEAT_LIMIT) {
-        const error =
-          "You already tried this same action with the same parameters and it failed several times. DON'T repeat it: change approach (another tool or different parameters), or tell the user what you could do and what you couldn't.";
-        rechazos.push({ tool: call.name, motivo: error });
-        rechazadasEnLaVuelta += 1;
-        args.onRechazo?.(call.name, call.args, error);
-        functionResponses.push({ name: call.name, response: { ok: false, error } });
-        continue;
-      }
-
-      const readOnly = READ_ONLY_TOOLS.has(call.name);
-      if (!readOnly) {
-        if (budgetedToolCalls >= maxToolCalls) {
-          empujarLoEjecutado();
-          return await finishOnCap("tool_limit");
+    const ronda = await scheduleToolCalls<PendingCall, Rechazo | Ejecutada>({
+      calls,
+      maxParallel: args.maxParallelToolCalls ?? DEFAULT_MAX_PARALLEL_TOOL_CALLS,
+      signal: args.signal,
+      isParallel: (original) => {
+        const r = reparar(original);
+        return "arreglado" in r && isConcurrencySafe(r.arreglado, original.args);
+      },
+      prepare: (original) => {
+        // LA ERRATA SE ARREGLA ANTES DE COBRAR. El presupuesto se descuenta más
+        // abajo, así que reparar aquí es lo que hace que un fallo de tecleo no
+        // cueste una plaza.
+        const reparo = reparar(original);
+        if (!("arreglado" in reparo)) {
+          // No hay herramienta que ejecutar, así que NO se emite tarjeta: pintar
+          // una en rojo con un nombre inexistente le cuenta al usuario una avería
+          // que no es suya. Se le devuelve al modelo una corrección legible y el
+          // turno sigue, sin tocar presupuesto ni firmas fallidas.
+          const error_de_uso =
+            `There is no tool called "${original.name}".` +
+            (reparo.sugerido ? ` The closest one is "${reparo.sugerido}".` : "") +
+            " Call one of the tools you have declared, with its exact name.";
+          return rechazar(original.name, original, error_de_uso, { ok: false, error_de_uso });
         }
-        budgetedToolCalls += 1;
-      }
-      toolCalls += 1;
+        const call = reparo.arreglado === original.name
+          ? original
+          : { ...original, name: reparo.arreglado };
 
-      const summary = sobreQue(call.args);
-      args.emit({ type: "action", tool: call.name, status: "running", summary });
+        // H12-a · una escritura detrás del segundo choque no se ejecuta: sólo
+        // podía chocar otra vez. Las lecturas siguen. Ver `CONFLICTO_SIN_SALIDA`.
+        if (guardarSinSalida && !READ_ONLY_TOOLS.has(call.name)) {
+          return rechazar(call.name, original, GUARDAR_YA_CHOCO, { ok: false, error: GUARDAR_YA_CHOCO });
+        }
 
-      const outcome = await (adelantadas.get(original) ?? args.runTool(call.name, call.args));
-      if (!readOnly) ejecutadasDeTrabajo += 1;
-      if (outcome.guardarSinSalida) guardarSinSalida = true;
-      const ok = outcome.response.ok !== false;
-      // 🔴 H01 · LO QUE LA HERRAMIENTA DICE DE SU PROPIO EFECTO. Las puertas de
-      // edición lo declaran (`declararCambio`: `cambio` / `sin_cambio` /
-      // `no_se`); el resto no lo dice y se juzga por si escribió.
-      const cambioDeclarado = outcome.response.cambio;
-      const nula = cambioDeclarado === "sin_cambio";
-      if (ok && !nula && !READ_ONLY_TOOLS.has(call.name)) actuo = true;
-      // El ámbar y su aviso: `avisoParaElDueno` sólo habla sin `ok:false`.
-      // 🔴 N41: la ROJA ya no lleva lo que leyó el modelo (`motivoDelFallo`
-      // pintaba «falló · the user has never said… you made that name up»): lleva
-      // el `ownerReason` que la herramienta declaró, o nada.
-      const descartada = avisoParaElDueno(outcome.response);
-      if (!ok) failedSignatures.set(sig, (failedSignatures.get(sig) ?? 0) + 1);
-      args.emit({
-        type: "action",
-        tool: call.name,
-        status: ok ? (descartada ? "warning" : "done") : "error",
-        summary: outcome.action?.summary ?? summary,
-        // Se reenvían sólo si la herramienta los puso, para que el evento de
-        // las que no los conocen salga byte-idéntico al de antes.
-        ...(outcome.action?.cambio ? { cambio: outcome.action.cambio } : {}),
-        ...(outcome.action?.edits !== undefined ? { edits: outcome.action.edits } : {}),
-        ...(outcome.action?.ops?.length ? { ops: outcome.action.ops } : {}),
-        ...(outcome.action?.valores ? { valores: outcome.action.valores } : {}),
-        // EL PORQUÉ, a la tarjeta: el aviso del ámbar, o el motivo del dueño de
-        // una roja. El texto entero que leyó el modelo se queda en el diario.
-        ...(descartada ? { motivo: descartada } : {}),
-        ...(!ok && outcome.ownerReason ? { ownerReason: outcome.ownerReason } : {}),
-        // La pregunta con la que `preguntar` cierra el turno, para la tarjeta.
-        ...(outcome.pregunta ? { pregunta: outcome.pregunta } : {}),
-      });
-      if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
+        // No-progress guard: this exact call already failed FAIL_REPEAT_LIMIT
+        // times — don't run it again. Feed the model a nudge (as a functionResponse
+        // so the FC protocol stays balanced) to change approach. A refused call
+        // doesn't run, so it doesn't touch the caps; termination is still
+        // guaranteed because a mutating turn advances maxTurns → finishOnCap.
+        const sig = `${call.name}\u0000${stableStringify(call.args)}`;
+        if ((failedSignatures.get(sig) ?? 0) >= FAIL_REPEAT_LIMIT) {
+          const error =
+            "You already tried this same action with the same parameters and it failed several times. DON'T repeat it: change approach (another tool or different parameters), or tell the user what you could do and what you couldn't.";
+          return rechazar(call.name, original, error, { ok: false, error });
+        }
 
-      if (outcome.updatedHtml) {
+        const readOnly = READ_ONLY_TOOLS.has(call.name);
+        if (!readOnly) {
+          // El tope: ni ésta ni las de detrás empiezan; las ya empezadas se
+          // confirman y el turno cierra contándolas (abajo, `ronda.stopped`).
+          if (budgetedToolCalls >= maxToolCalls) return { kind: "stop" };
+          budgetedToolCalls += 1;
+        }
+        toolCalls += 1;
+
+        // La tarjeta sale AL EMPEZAR (como DeepSeek y Claude Code): con varias a
+        // la vez, el dueño ve todas las que están en marcha.
+        const summary = sobreQue(call.args);
+        args.emit({ type: "action", tool: call.name, status: "running", summary });
+        return {
+          kind: "dispatch",
+          run: async () => ({ kind: "ejecutada", call, readOnly, summary, sig, outcome: await args.runTool(call.name, call.args) }),
+        };
+      },
+      commit: async (_original, indice, paso) => {
+        if (paso.kind === "rechazo") {
+          rechazos.push({ tool: paso.name, motivo: paso.motivo });
+          rechazadasEnLaVuelta += 1;
+          args.onRechazo?.(paso.name, paso.args, paso.motivo);
+          functionResponses.push({ name: paso.name, response: paso.response });
+          return;
+        }
+        const { call, readOnly, summary, sig, outcome } = paso;
+        if (!readOnly) ejecutadasDeTrabajo += 1;
+        if (outcome.guardarSinSalida) guardarSinSalida = true;
+        const ok = outcome.response.ok !== false;
+        // 🔴 H01 · LO QUE LA HERRAMIENTA DICE DE SU PROPIO EFECTO. Las puertas de
+        // edición lo declaran (`declararCambio`: `cambio` / `sin_cambio` /
+        // `no_se`); el resto no lo dice y se juzga por si escribió.
+        const cambioDeclarado = outcome.response.cambio;
+        const nula = cambioDeclarado === "sin_cambio";
+        if (ok && !nula && !READ_ONLY_TOOLS.has(call.name)) actuo = true;
+        // El ámbar y su aviso: `avisoParaElDueno` sólo habla sin `ok:false`.
+        // 🔴 N41: la ROJA ya no lleva lo que leyó el modelo (`motivoDelFallo`
+        // pintaba «falló · the user has never said… you made that name up»): lleva
+        // el `ownerReason` que la herramienta declaró, o nada.
+        const descartada = avisoParaElDueno(outcome.response);
+        if (!ok) failedSignatures.set(sig, (failedSignatures.get(sig) ?? 0) + 1);
         args.emit({
-          type: "html",
-          html: outcome.updatedHtml,
-          page: outcome.page ?? null,
-          // Sólo si la herramienta lo puso, para que el evento de las que no
-          // archivan nada salga byte-idéntico al de antes.
-          ...(outcome.versionPrevia ? { versionPrevia: outcome.versionPrevia } : {}),
+          type: "action",
+          tool: call.name,
+          // Lote 7-8: una pregunta DESCARTADA para hablar no es un fallo (DeepSeek
+          // pinta su `ASK_CANCELLED` como `ok`), aunque el modelo lea un error.
+          status: ok || outcome.dismissed ? (descartada ? "warning" : "done") : "error",
+          summary: outcome.action?.summary ?? summary,
+          // Se reenvían sólo si la herramienta los puso, para que el evento de
+          // las que no los conocen salga byte-idéntico al de antes.
+          ...(outcome.action?.cambio ? { cambio: outcome.action.cambio } : {}),
+          ...(outcome.action?.edits !== undefined ? { edits: outcome.action.edits } : {}),
+          ...(outcome.action?.ops?.length ? { ops: outcome.action.ops } : {}),
+          ...(outcome.action?.valores ? { valores: outcome.action.valores } : {}),
+          // EL PORQUÉ, a la tarjeta: el aviso del ámbar, o el motivo del dueño de
+          // una roja. El texto entero que leyó el modelo se queda en el diario.
+          ...(descartada ? { motivo: descartada } : {}),
+          ...(!ok && outcome.ownerReason ? { ownerReason: outcome.ownerReason } : {}),
+          // La pregunta de `ask_user_question` (y sus opciones), para la tarjeta.
+          ...(outcome.pregunta ? { pregunta: outcome.pregunta } : {}),
+          ...(outcome.preguntas?.length ? { preguntas: outcome.preguntas } : {}),
+          ...(outcome.respuesta ? { respuesta: outcome.respuesta } : {}),
+          ...(outcome.dismissed ? { dismissed: true as const } : {}),
         });
-        // 🔴 EL GEMELO VIAJA CON LA MUTACIÓN. Leerlo de la sesión al verificar
-        // sería leer la página equivocada: `trabajar_en_pagina` mueve la sesión
-        // a otra página a mitad de turno y `lastMutation` sigue siendo ésta.
-        //
-        // Y UNA EDICIÓN NULA NO ES UNA MUTACIÓN (H01): la página es byte a byte
-        // la de antes, así que no hay nada nuevo que medir ni que mirar. La
-        // puerta devuelve el documento igual (`updatedHtml` va siempre que
-        // guardó), y sin esta guarda un turno cuya única edición fue nula
-        // pagaba unos ojos sobre una página que nadie tocó.
-        if (!nula) {
-          // EL GEMELO CON POSICIONES, hecho aquí y en un solo sitio: lo miden la
-          // medición de la tanda y los ojos del cierre, y cada nodo trae su
-          // línea del fichero (Len 2.0, T9).
-          const tal = sinOpIds(outcome.updatedHtml);
-          lastMutation = {
+        if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
+
+        if (outcome.updatedHtml) {
+          args.emit({
+            type: "html",
             html: outcome.updatedHtml,
             page: outcome.page ?? null,
-            taggedHtml: etiquetarConPosiciones(tal),
-          };
-          porMedir.set(lastMutation.page, { html: tal, gemelo: lastMutation.taggedHtml! });
-          // El mapa se llena aquí, junto a `lastMutation` y por la misma razón:
-          // es el único sitio donde se sabe QUÉ página acaba de cambiar. Se
-          // sobrescribe la entrada, así que de cada página queda su ÚLTIMA
-          // versión — que es la que hay que mirar.
-          ultimaPorPagina.set(outcome.page ?? null, lastMutation);
+            // Sólo si la herramienta lo puso, para que el evento de las que no
+            // archivan nada salga byte-idéntico al de antes.
+            ...(outcome.versionPrevia ? { versionPrevia: outcome.versionPrevia } : {}),
+          });
+          // 🔴 EL GEMELO VIAJA CON LA MUTACIÓN. Leerlo de la sesión al verificar
+          // sería leer la página equivocada: `trabajar_en_pagina` mueve la sesión
+          // a otra página a mitad de turno y `lastMutation` sigue siendo ésta.
+          //
+          // Y UNA EDICIÓN NULA NO ES UNA MUTACIÓN (H01): la página es byte a byte
+          // la de antes, así que no hay nada nuevo que medir ni que mirar. La
+          // puerta devuelve el documento igual (`updatedHtml` va siempre que
+          // guardó), y sin esta guarda un turno cuya única edición fue nula
+          // pagaba unos ojos sobre una página que nadie tocó.
+          if (!nula) {
+            // EL GEMELO CON POSICIONES, hecho aquí y en un solo sitio: lo miden la
+            // medición de la tanda y los ojos del cierre, y cada nodo trae su
+            // línea del fichero (Len 2.0, T9).
+            const tal = sinOpIds(outcome.updatedHtml);
+            lastMutation = {
+              html: outcome.updatedHtml,
+              page: outcome.page ?? null,
+              taggedHtml: etiquetarConPosiciones(tal),
+            };
+            porMedir.set(lastMutation.page, { html: tal, gemelo: lastMutation.taggedHtml! });
+            // El mapa se llena aquí, junto a `lastMutation` y por la misma razón:
+            // es el único sitio donde se sabe QUÉ página acaba de cambiar. Se
+            // sobrescribe la entrada, así que de cada página queda su ÚLTIMA
+            // versión — que es la que hay que mirar.
+            ultimaPorPagina.set(outcome.page ?? null, lastMutation);
+          }
         }
-      }
-      // LA LÍNEA BASE DE CADA PÁGINA: cómo estaba antes de la PRIMERA escritura
-      // del turno sobre ella. Las siguientes no la mueven.
-      if (outcome.htmlPrevio !== undefined && !previoPorPagina.has(outcome.page ?? null)) {
-        previoPorPagina.set(outcome.page ?? null, outcome.htmlPrevio);
-      }
-      // F1 (plans/len-agente-2026): un comando de la terminal puede escribir
-      // VARIAS páginas. Cada una, igual que la primera: al lienzo, a medir, y
-      // con su línea base.
-      for (const otra of outcome.masPaginas ?? []) {
-        args.emit({ type: "html", html: otra.html, page: otra.page, ...(otra.versionPrevia ? { versionPrevia: otra.versionPrevia } : {}) });
-        if (!nula) {
-          const tal = sinOpIds(otra.html);
-          lastMutation = { html: otra.html, page: otra.page, taggedHtml: etiquetarConPosiciones(tal) };
-          porMedir.set(otra.page, { html: tal, gemelo: lastMutation.taggedHtml! });
-          ultimaPorPagina.set(otra.page, lastMutation);
+        // LA LÍNEA BASE DE CADA PÁGINA: cómo estaba antes de la PRIMERA escritura
+        // del turno sobre ella. Las siguientes no la mueven.
+        if (outcome.htmlPrevio !== undefined && !previoPorPagina.has(outcome.page ?? null)) {
+          previoPorPagina.set(outcome.page ?? null, outcome.htmlPrevio);
         }
-        if (otra.htmlPrevio !== undefined && !previoPorPagina.has(otra.page)) previoPorPagina.set(otra.page, otra.htmlPrevio);
-      }
-      // Lo que la escritura dejó mal, para el `<new-diagnostics>` de la tanda.
-      if (outcome.diagnosticos?.length) diagnosticosDeLaTanda.push(...outcome.diagnosticos);
-      // Lo durable incluye los cambios de AJUSTES, que no emiten html: módulos,
-      // hoy, los módulos (`activar_modulo`). `runAgentTool` los cuenta.
-      if (!mutoDurable && (outcome.mutoDurable || outcome.updatedHtml)) {
-        mutoDurable = true;
-        args.onMutacion?.();
-      }
+        // F1 (plans/len-agente-2026): un comando de la terminal puede escribir
+        // VARIAS páginas. Cada una, igual que la primera: al lienzo, a medir, y
+        // con su línea base.
+        for (const otra of outcome.masPaginas ?? []) {
+          args.emit({ type: "html", html: otra.html, page: otra.page, ...(otra.versionPrevia ? { versionPrevia: otra.versionPrevia } : {}) });
+          if (!nula) {
+            const tal = sinOpIds(otra.html);
+            lastMutation = { html: otra.html, page: otra.page, taggedHtml: etiquetarConPosiciones(tal) };
+            porMedir.set(otra.page, { html: tal, gemelo: lastMutation.taggedHtml! });
+            ultimaPorPagina.set(otra.page, lastMutation);
+          }
+          if (otra.htmlPrevio !== undefined && !previoPorPagina.has(otra.page)) previoPorPagina.set(otra.page, otra.htmlPrevio);
+        }
+        // Lo que la escritura dejó mal, para el `<new-diagnostics>` de la tanda.
+        if (outcome.diagnosticos?.length) diagnosticosDeLaTanda.push(...outcome.diagnosticos);
+        // Lo durable incluye los cambios de AJUSTES, que no emiten html: módulos,
+        // hoy, los módulos (`activar_modulo`). `runAgentTool` los cuenta.
+        if (!mutoDurable && (outcome.mutoDurable || outcome.updatedHtml)) {
+          mutoDurable = true;
+          args.onMutacion?.();
+        }
 
-      // A confirm outcome (publicar) NEVER carries out its action. Surface the
-      // confirm card to the user and hand the model a fixed "waiting" state so
-      // it closes the turn asking for the tap — never a payload it could read
-      // as "already published".
-      if (outcome.confirm) {
-        args.emit({ type: "confirm", ...outcome.confirm });
-        // El estado FIJO de espera, distinto por acción. Nunca un payload que
-        // el modelo pueda leer como «ya está hecho».
+        // A confirm outcome (publicar) NEVER carries out its action. Surface the
+        // confirm card to the user and hand the model a fixed "waiting" state so
+        // it closes the turn asking for the tap — never a payload it could read
+        // as "already published".
+        if (outcome.confirm) {
+          args.emit({ type: "confirm", ...outcome.confirm });
+          // El estado FIJO de espera, distinto por acción. Nunca un payload que
+          // el modelo pueda leer como «ya está hecho».
+          functionResponses.push({
+            name: call.name,
+            response:
+              outcome.confirm.action === "publicar"
+                ? { ok: true, estado: "esperando_confirmacion_del_usuario", subdominio: outcome.confirm.subdominio }
+                : {
+                    ok: true,
+                    estado: "borrador_en_una_tarjeta_nada_enviado",
+                    nota: "The draft is in a card with its button. NOTHING has been sent: tell the user to review it and send it themselves. Never say it was already sent.",
+                  },
+          });
+          return;
+        }
+
+        if (outcome.pregunta) pregunta = outcome.pregunta;
+        if (outcome.dismissed) ownerTookOver = true;
+        if (outcome.notice) avisos.push(outcome.notice);
+        const respuesta = outcome.response;
+        // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
+        // viene de `declararCambio` (hash antes ≠ hash después); lo durable cubre
+        // las que no tocan el documento — módulos, páginas.
+        //
+        // 🔴 H01 (2026-09-22): LO QUE LA HERRAMIENTA DECLARA MANDA. La condición
+        // era `cambio === "cambio" || mutoDurable || updatedHtml`, y las puertas
+        // de edición devuelven `updatedHtml` SIEMPRE que guardan — también cuando
+        // acaban de declarar `sin_cambio`. Así una edición nula pasaba por hecha:
+        // la tarea sin hacer no se reclamaba, y al topar el cierre recibía «SÍ se
+        // aplicó» sobre algo que no pasó (G1 y G3 de la auditoría). Es la forma
+        // de Claude Code: la acción informa de su propio efecto, y una edición
+        // que no cambia nada no cuenta como hecha.
+        //
+        // `no_se` SÍ cuenta, y es una decisión: sólo sale cuando no había
+        // documento anterior que comparar, o sea cuando la escritura CREÓ lo que
+        // hay. Descontarla haría reclamar una página que sí existe.
+        const esEvidencia =
+          cambioDeclarado === undefined
+            ? Boolean(outcome.mutoDurable || outcome.updatedHtml)
+            : cambioDeclarado !== "sin_cambio";
+        if (esEvidencia) {
+          // El MISMO sitio que cuenta la evidencia guarda su nombre: si se
+          // contaran en dos lados, uno se quedaría atrás — que es la clase de
+          // fallo que este repositorio ya tiene documentada tres veces.
+          aplicado.push(outcome.action?.summary ?? (summary || call.name));
+          // I6 — y el estado en que la deja. Aquí mismo, por el mismo motivo.
+          const rotas = (outcome.response as { referencias_rotas?: unknown }).referencias_rotas;
+          rotoPorLaUltima = Array.isArray(rotas) ? rotas.map(String) : [];
+        }
+
+        // LA RETENCIÓN DE DEEPSEEK, en el post-execute como allí: lo que no cabe
+        // en `maxInlineTokens` se queda con su principio y su final, y el entero
+        // en /tmp/spill. `Read` no (tampoco el `read` de DeepSeek): ya trae sus
+        // propios topes y una ruta que releer.
+        const retenido = args.spill && call.name !== "Read"
+          ? await retainOversized(contenidoDeRespuesta(respuesta), {
+              maxTokens: args.spill.maxInlineTokens,
+              path: `/tmp/spill/${turns}-${indice}-${call.name}.txt`,
+              save: args.spill.save,
+            })
+          : null;
         functionResponses.push({
           name: call.name,
-          response:
-            outcome.confirm.action === "publicar"
-              ? { ok: true, estado: "esperando_confirmacion_del_usuario", subdominio: outcome.confirm.subdominio }
-              : {
-                  ok: true,
-                  estado: "borrador_en_una_tarjeta_nada_enviado",
-                  nota: "The draft is in a card with its button. NOTHING has been sent: tell the user to review it and send it themselves. Never say it was already sent.",
-                },
+          response: retenido === null
+            ? respuesta
+            : typeof respuesta[CLAVE_TOOL_RESULT] === "string"
+              ? { ...respuesta, [CLAVE_TOOL_RESULT]: retenido }
+              : { ok: respuesta.ok !== false, [CLAVE_TOOL_RESULT]: retenido },
         });
-        continue;
-      }
-
-      if (outcome.pregunta) pregunta = outcome.pregunta;
-      const respuesta = outcome.response;
-      // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
-      // viene de `declararCambio` (hash antes ≠ hash después); lo durable cubre
-      // las que no tocan el documento — módulos, páginas.
-      //
-      // 🔴 H01 (2026-09-22): LO QUE LA HERRAMIENTA DECLARA MANDA. La condición
-      // era `cambio === "cambio" || mutoDurable || updatedHtml`, y las puertas
-      // de edición devuelven `updatedHtml` SIEMPRE que guardan — también cuando
-      // acaban de declarar `sin_cambio`. Así una edición nula pasaba por hecha:
-      // la tarea sin hacer no se reclamaba, y al topar el cierre recibía «SÍ se
-      // aplicó» sobre algo que no pasó (G1 y G3 de la auditoría). Es la forma
-      // de Claude Code: la acción informa de su propio efecto, y una edición
-      // que no cambia nada no cuenta como hecha.
-      //
-      // `no_se` SÍ cuenta, y es una decisión: sólo sale cuando no había
-      // documento anterior que comparar, o sea cuando la escritura CREÓ lo que
-      // hay. Descontarla haría reclamar una página que sí existe.
-      const esEvidencia =
-        cambioDeclarado === undefined
-          ? Boolean(outcome.mutoDurable || outcome.updatedHtml)
-          : cambioDeclarado !== "sin_cambio";
-      if (esEvidencia) {
-        // El MISMO sitio que cuenta la evidencia guarda su nombre: si se
-        // contaran en dos lados, uno se quedaría atrás — que es la clase de
-        // fallo que este repositorio ya tiene documentada tres veces.
-        aplicado.push(outcome.action?.summary ?? (summary || call.name));
-        // I6 — y el estado en que la deja. Aquí mismo, por el mismo motivo.
-        const rotas = (outcome.response as { referencias_rotas?: unknown }).referencias_rotas;
-        rotoPorLaUltima = Array.isArray(rotas) ? rotas.map(String) : [];
-      }
-
-      functionResponses.push({ name: call.name, response: respuesta });
+      },
+      skip: (original) => {
+        functionResponses.push({ name: nombreDe(original), response: { ok: false, error: TOOL_ABORTED_BEFORE_DISPATCH } });
+      },
+    });
+    if (ronda.stopped) {
+      empujarLoEjecutado();
+      return await finishOnCap("tool_limit");
+    }
+    if (ronda.aborted) {
+      // EL ■ A MITAD DE LA TANDA: lo empezado se quedó (tarjetas, html,
+      // respuestas); lo demás tiene su respuesta de abortada. Se apunta todo en
+      // la conversación —la transcripción equilibrada es el historial del turno
+      // siguiente— y se cierra como cualquier ■, sin medir: el dueño pidió parar.
+      messages.push(delAsistente(turnText, calls));
+      messages.push({ role: "user", content: "", functionResponses });
+      args.emit({ type: "error", message: "El agente fue cancelado.", code: "cancelled" });
+      return buildResult(true, null, "cancelled");
     }
 
     // La cuenta de la vuelta, ahora que se sabe qué se ejecutó de verdad.
@@ -2117,7 +2393,29 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // edición y una pregunta en la misma vuelta, la edición se aplica y se
     // emite igual. Cortar en seco perdería trabajo que el usuario ya tiene
     // delante en el lienzo.
-    if (pregunta) {
+    //
+    // LOTE 7-8 · Y SI EL DUEÑO DESCARTÓ LA PREGUNTA PARA HABLAR, también cierra
+    // aquí, como Claude Code cuando el usuario rechaza: sin otra llamada al
+    // modelo, por lo mismo de arriba. La llamada y su error —el de DeepSeek—
+    // quedan en la conversación, como con el ■ a mitad de tanda: el turno
+    // siguiente los lee antes del mensaje del dueño.
+    //
+    // 🔴 SALVO QUE EL DUEÑO YA HAYA ESCRITO (lote 7-8, 2). Lo que manda desde el
+    // compositor mientras la pregunta espera es una corrección, y sólo se leía al
+    // empezar la vuelta siguiente — que con estos dos cierres no llegaba: se
+    // perdía. DeepSeek no acaba un turno mientras haya algo en `next-step`
+    // (`agent-loop/src/agent.ts`: `if (turnEnds && this.inbox.nextStep.length
+    // === 0) break`): con una pendiente, la tanda se apunta como siempre y Len
+    // la lee detrás, como la corrección tardía del cierre normal.
+    const pendiente = ownerTookOver || pregunta ? (args.leerDireccion?.() ?? null) : null;
+    if (ownerTookOver && !pendiente) {
+      messages.push(delAsistente(turnText, calls));
+      messages.push({ role: "user", content: "", functionResponses });
+      endedOnQuestion = true;
+      return buildResult(false);
+    }
+
+    if (pregunta && !pendiente) {
       // El texto lo escribió el modelo, en el idioma del usuario — el servidor
       // decide CUÁNDO se para, no QUÉ se dice. Se emite salvo que ya lo haya
       // dicho en su prosa, para no leerlo dos veces.
@@ -2129,6 +2427,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // falta una respuesta que sólo una persona puede dar. Claude Code separa
       // esos dos finales por lo mismo — `blocked` (el usuario puede
       // desbloquear) no es `done` (salió bien) ni `failed`.
+      endedOnQuestion = true;
       return buildResult(false);
     }
 
@@ -2144,11 +2443,21 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     //
     // Y va DESPUÉS del `assistant`, así que el modelo lo lee en su siguiente
     // paso —el que iba a dar de todas formas—: cero llamadas nuevas.
+    // Pieza 8: y detrás, lo que las herramientas dejaron para este paso (el
+    // cierre de un encargo), como el `deferContext` de DeepSeek.
+    const medido = await medirYRedactar();
     messages.push({
       role: "user",
-      content: await medirYRedactar(),
+      content: [medido, ...avisos].filter((x) => x.length > 0).join("\n\n"),
       functionResponses,
     });
+    // Lote 7-8 (2): lo que el dueño escribió mientras la pregunta esperaba, detrás
+    // de la tanda; como la corrección tardía, con su margen de vueltas.
+    if (pendiente) {
+      messages.push(steerMessage(pendiente));
+      args.emit({ type: "direccion", texto: pendiente });
+      maxTurns += VUELTAS_POR_DIRECCION;
+    }
     // H12 · quien insiste en lo que se le rechaza no avanza: se le cierra.
     if (vueltasSoloRechazadas >= VUELTAS_SOLO_RECHAZADAS) return await cerrarSinSalida("rechazos");
     // H12-a · y si guardar ya no puede salir bien, tampoco.

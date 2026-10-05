@@ -150,6 +150,10 @@ export function crearPuenteALen(deps: DepsDelPuente) {
           turnoId = d.turnoId;
           empezo = true;
         } else if (e.nombre === "text" && typeof d.text === "string") texto += d.text;
+        // El intento fallido no existió (`lib/agent/loop.ts`, reintentos): la voz no lo dice.
+        else if (e.nombre === "retry" && typeof d.discardChars === "number") texto = texto.slice(0, Math.max(0, texto.length - d.discardChars));
+        // Ni lo de un intento que desbordó y se repitió tras compactar.
+        else if (e.nombre === "compaction" && typeof d.discardChars === "number") texto = texto.slice(0, Math.max(0, texto.length - d.discardChars));
         else if (e.nombre === "action" && typeof d.tool === "string") {
           usadas.add(d.tool);
           const f = fraseDeAvance(d.tool);

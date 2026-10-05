@@ -197,16 +197,28 @@
       "waitingAnswer": "Aspetta la tua risposta",
       "waitingApproval": "Aspetta la tua approvazione",
       "yourTurn": "Tocca a te · in pausa",
+      "yourTurnLive": "Tocca a te · Len continua appena rispondi",
       "done": "Fatto",
       "doneHint": "chiedigli altro",
       "stopped": "Fermato",
       "stoppedHint": "quello che ha già fatto resta",
-      "failed": "Non è riuscito a finire"
+      "failed": "Non è riuscito a finire",
+      "retrying": "Nuovo tentativo",
+      "retryingHint": "nessuna risposta · tra {seconds} s · tentativo {attempt} di {max}",
+      "retryingAttempt": "tentativo {attempt} di {max}",
+      "compacting": "Riordina quello che ha fatto",
+      "compactingHint": "per continuare senza perdere il filo"
     },
     "question": {
       "label": "Len ti chiede",
       "hint": "Rispondi qui sotto, con parole tue.",
-      "answered": "Hai risposto: {answer}"
+      "answered": "Hai risposto: {answer}",
+      "cancelled": "Annullata senza inviare una risposta",
+      "send": "Rispondi",
+      "other": "Un'altra risposta",
+      "otherPlaceholder": "Scrivi la tua risposta",
+      "pickMany": "Puoi sceglierne più di una",
+      "recommended": "Consigliata"
     },
     "changes": {
       "showAll": "Vedi tutte le {count} modifiche",
@@ -255,6 +267,45 @@
       "minimize": "Riduci a Len",
       "open": "Apri la chat",
       "resize": "Trascina per ridimensionare"
+    },
+    "plan": {
+      "option": "Pianifica prima",
+      "optionHint": "Len guarda prima e ti propone un piano; non cambia nulla finché non lo approvi.",
+      "chip": "Piano",
+      "chipOff": "Esci dalla modalità piano",
+      "reviewLabel": "Piano da rivedere",
+      "reviewQuestion": "Approvi questo piano?",
+      "approve": "Approva",
+      "approveHint": "Len esegue il piano adesso.",
+      "keep": "Chiedi modifiche",
+      "keepHint": "Len continua a pianificare con quello che gli dici.",
+      "consentLabel": "Modalità piano",
+      "consentQuestion": "Len vuole pianificare prima di cambiare qualsiasi cosa. Pianificare prima?",
+      "planFirst": "Pianifica prima",
+      "planFirstHint": "Non cambia nulla finché non approvi il piano.",
+      "skip": "Senza piano",
+      "skipHint": "Len prosegue con la tua richiesta adesso.",
+      "showPlan": "Vedi tutto il piano",
+      "hidePlan": "Nascondi il piano"
+    },
+    "goal": {
+      "option": "Obiettivo",
+      "optionHint": "Len va avanti da solo, giro dopo giro, finché non è finito.",
+      "optionTaken": "C'è già un obiettivo: toglilo o aspetta che finisca.",
+      "chip": "Obiettivo",
+      "chipOff": "Non farne un obiettivo",
+      "placeholder": "Descrivi l'obiettivo intero; Len andrà avanti fino alla fine…",
+      "label": "Obiettivo",
+      "round": "Giro {round} di {max}",
+      "running": "In corso",
+      "paused": "In pausa",
+      "blocked": "Bloccato",
+      "roundLimit": "Raggiunto il limite di {max} giri.",
+      "noCredits": "Fermato: credito esaurito.",
+      "resume": "Riprendi",
+      "clear": "Togli",
+      "clearFailed": "Non è stato possibile togliere l'obiettivo.",
+      "roundLine": "Obiettivo · giro {round} di {max}"
     }
   }
 }

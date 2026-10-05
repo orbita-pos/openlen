@@ -10,7 +10,7 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { Crosshair, CornerDownRight } from "lucide-react";
+import { Crosshair, CornerDownRight, Flag } from "lucide-react";
 
 import { TextoDeLen } from "../texto-de-len";
 import { AgentConfirmCard } from "../agent-confirm-card";
@@ -21,12 +21,14 @@ import { abrirEnElCodigo, abrirFicheroDelTurno, rutasDelTurno } from "@/lib/work
 import type { FeedbackReason, TurnFeedback } from "@/lib/chat/feedback-reasons";
 import { ChangesCard } from "./changes-card";
 import { wroteOnlyItsOwnPage } from "./turn-changes";
-import { questionOf } from "./live-status";
+import { questionOf, questionsOf } from "./live-status";
+import { asksTheOwner, questionText, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { QuestionCard, withoutTrailingQuestion } from "./question-card";
 import { StepsCard, visibleSteps } from "./steps-card";
 import { LenFace } from "./len-face";
 import { TurnClose } from "./turn-close";
 import type { DesignTurn } from "./use-agent-chat";
+import { roundOfTurn } from "./goal-state";
 
 const NO_TURNS: readonly CambiosDeUnTurno[] = [];
 
@@ -38,7 +40,33 @@ export function splitCorrections(userText: string): { text: string; corrections:
 
 export function UserMessage({ turn, initial }: { turn: DesignTurn; initial: string }) {
   const t = useTranslations("panelsChat");
-  const { text, corrections } = splitCorrections(turn.userText);
+  const { text: escrito, corrections } = splitCorrections(turn.userText);
+  // PIEZA 8 · LAS RONDAS DEL ENCARGO: su mensaje (el de DeepSeek) queda en la
+  // charla porque lo lee el modelo, pero el dueño no lo escribió. La ronda 1 es
+  // su mensaje —su objetivo—; las siguientes, una línea.
+  const ronda = roundOfTurn(escrito);
+  const text = ronda ? ronda.objective : escrito;
+  if (ronda && ronda.round > 1) {
+    return (
+      <div className="flex flex-col items-end gap-1.5">
+        <div className="nc-up flex w-full items-center gap-2 text-[11.5px] fg-faint">
+          <span className="h-px flex-1 bg-[var(--border)]" />
+          <Flag size={11} className="shrink-0 text-[var(--nc-accent-text)]" />
+          <span className="shrink-0 tabular-nums">{t("newChat.goal.roundLine", { round: ronda.round, max: ronda.maxGoalRounds })}</span>
+          <span className="h-px flex-1 bg-[var(--border)]" />
+        </div>
+        {corrections.map((c, i) => (
+          <div
+            key={i}
+            className="nc-up mr-8 flex max-w-[88%] items-start gap-1.5 rounded-[16px_16px_4px_16px] border border-dashed bd-strong bg-elev px-2.5 py-1.5 text-[12.5px] fg"
+          >
+            <CornerDownRight size={13} className="mt-0.5 shrink-0 text-[var(--nc-accent-text)]" />
+            <span className="min-w-0 whitespace-pre-wrap break-words">{c}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col items-end gap-1.5">
       <div className="nc-up flex items-end justify-end gap-2">
@@ -54,6 +82,12 @@ export function UserMessage({ turn, initial }: { turn: DesignTurn; initial: stri
             <div className="mb-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] fg-muted">
               <Crosshair size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
               <span className="min-w-0 truncate font-mono">{turn.scope.hint}</span>
+            </div>
+          )}
+          {ronda && (
+            <div className="mb-1 flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--nc-accent-text)]">
+              <Flag size={12} className="shrink-0" />
+              {t("newChat.goal.label")}
             </div>
           )}
           {text}
@@ -91,6 +125,8 @@ export function LenTurn({
   onRetry,
   onPublished,
   onConfirmSettled,
+  onAnswerQuestion,
+  onDismissQuestion,
   onRate,
   onClearRate,
 }: {
@@ -107,6 +143,10 @@ export function LenTurn({
   onRetry: (turn: DesignTurn) => void;
   onPublished: (url: string) => void;
   onConfirmSettled: (turnId: string) => void;
+  /** Pieza 3: la respuesta a una pregunta de Len, desde su tarjeta. */
+  onAnswerQuestion: (turnId: string, questions: readonly UserQuestion[], answers: QuestionAnswer[]) => void;
+  /** Lote 7-8: «Pedir cambios» en la revisión del plan (descartar y escribir). */
+  onDismissQuestion: (turnId: string) => void;
   /** Devuelve si el servidor guardó el voto: «Gracias» sólo entonces. */
   onRate: (rating: "up" | "down", reasons?: readonly FeedbackReason[], note?: string | null) => Promise<boolean>;
   onClearRate: () => Promise<boolean>;
@@ -132,6 +172,14 @@ export function LenTurn({
     [projectId, turn.id],
   );
   const question = questionOf(turn);
+  // Alinear con DeepSeek: las preguntas que el dueño DESCARTÓ, asentadas y
+  // «canceladas», con el plan a la vista (allí la fila queda en el hilo).
+  const cancelledQuestions = (turn.actions ?? []).filter((a) => asksTheOwner(a.tool) && a.dismissed && a.preguntas?.length);
+  // PIEZA 3: la pregunta que el turno ESPERA ahora mismo (se contesta y Len
+  // sigue), o la que dejó al cerrar (se contesta y abre el turno siguiente;
+  // sólo en el último turno, y sólo si nadie la contestó ya).
+  const liveQuestions = turn.status === "streaming" && turn.pendingQuestions?.length ? turn.pendingQuestions : null;
+  const endedQuestions: readonly UserQuestion[] | null = question === null ? null : (questionsOf(turn) ?? (question ? [{ id: "q1", question }] : null));
   const text = withoutTrailingQuestion(turn.assistantReasoning, question);
   const streaming = turn.status === "streaming";
   const samePage = mismaPagina(turn.page, currentPage);
@@ -160,7 +208,27 @@ export function LenTurn({
           {streaming && <span className="nc-caret" />}
         </p>
       )}
-      {question !== null && <QuestionCard question={question} answer={next ? next.userText : null} />}
+      {liveQuestions && (
+        <QuestionCard
+          question={questionText(liveQuestions)}
+          questions={liveQuestions}
+          answer={turn.answeredLive ?? null}
+          onAnswer={(answers) => onAnswerQuestion(turn.id, liveQuestions, answers)}
+          onDismiss={() => onDismissQuestion(turn.id)}
+        />
+      )}
+      {cancelledQuestions.map((a, i) => (
+        <QuestionCard key={`cancelada-${i}`} question={questionText(a.preguntas!)} questions={a.preguntas} answer={null} cancelled />
+      ))}
+      {question !== null && (
+        <QuestionCard
+          question={question}
+          questions={endedQuestions}
+          answer={next ? next.userText : null}
+          onAnswer={!next && isLast && endedQuestions ? (answers) => onAnswerQuestion(turn.id, endedQuestions, answers) : undefined}
+          onDismiss={!next && isLast && endedQuestions ? () => onDismissQuestion(turn.id) : undefined}
+        />
+      )}
       {/* «Ver» y «Comparar» necesitan que el turno escribiera la página que se
           mira, no sólo que empezara en ella (N33). La pastilla de arriba sí va
           por dónde empezó. */}

@@ -30,6 +30,8 @@ import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "@/lib/agent/terminal/cambios-del-comando";
+import { currentToolCall, currentToolName } from "@/lib/agent/ask-user-question";
+import type { GoalSnapshot } from "@/lib/agent/goal";
 
 /** La misma marca que usa Claude Code. */
 export const RESULTADO_VACIADO = "[Earlier tool result removed to save space]";
@@ -85,6 +87,12 @@ export interface LecturaGuardada {
 export interface TranscripcionGuardada {
   readonly mensajes: Message[];
   readonly leidos: LecturaGuardada[];
+  /** PIEZA 7 · el turno cerró en modo plan: la foto de la que se pliega el
+   *  estado al empezar el siguiente (`planModeFromRows`). Ausente = no. */
+  readonly planMode?: true;
+  /** PIEZA 8 · el encargo como quedó al cerrar el turno (`goalFromRows` lo
+   *  pliega). Ausente = no había; `null` = se quitó. */
+  readonly goal?: GoalSnapshot | null;
 }
 
 /** Una fila de `projectChatMessages`, con lo que hace falta para el historial. */
@@ -94,6 +102,29 @@ export interface FilaDelHistorial {
   readonly transcript: TranscripcionGuardada | null;
   /** La foto que el dueño adjuntó a ese turno (columna `attachedImage`). */
   readonly attachedImage?: { readonly url: string; readonly alt?: string } | null;
+}
+
+/**
+ * LOTE 7-8 · LA FOTO DE UN TURNO QUE CAYÓ SIN TRANSCRIPCIÓN. El pliegue
+ * (`planModeFromRows`, `goalFromRows`) toma la última fila CON transcripción, y
+ * un turno que revienta no la tiene: un `enter_plan_mode` aceptado o un
+ * `create_goal` justo antes de caer se perdían al recargar. En DeepSeek ese
+ * cambio es un evento duradero de la sesión en el momento (`goal/change`, el
+ * modo plan); aquí, si el estado cambió en el turno, la fila lleva una
+ * transcripción VACÍA con la foto —el historial cae a `assistantReasoning` y no
+ * siembra lecturas—; si no cambió, `null`, como siempre.
+ */
+export function stateOnlyTranscript(o: {
+  readonly folded: { readonly planMode: boolean; readonly goal: GoalSnapshot | null };
+  readonly now: { readonly planMode: boolean; readonly goal: GoalSnapshot | null };
+}): TranscripcionGuardada | null {
+  if (o.now.planMode === o.folded.planMode && o.now.goal === o.folded.goal) return null;
+  return {
+    mensajes: [],
+    leidos: [],
+    ...(o.now.planMode ? { planMode: true as const } : {}),
+    ...(o.now.goal ? { goal: o.now.goal } : {}),
+  };
 }
 
 const huella = (texto: string) => createHash("sha1").update(normalizarFinales(texto)).digest("hex");
@@ -116,9 +147,11 @@ function limpio<M extends Message | MensajeDelHistorial>(m: M): M {
     role: m.role,
     content: typeof m.content === "string" ? m.content : "",
     ...(m.role === "assistant" && typeof m.reasoning === "string" && m.reasoning ? { reasoning: m.reasoning } : {}),
-    ...(m.functionCalls?.length ? { functionCalls: m.functionCalls.map((c) => ({ name: c.name, args: c.args ?? {} })) } : {}),
+    // Con el nombre de HOY (pieza 3: `preguntar` → `ask_user_question`): el
+    // modelo no puede leer una llamada a una herramienta que ya no tiene.
+    ...(m.functionCalls?.length ? { functionCalls: m.functionCalls.map(currentToolCall) } : {}),
     ...(m.functionResponses?.length
-      ? { functionResponses: m.functionResponses.map((r) => ({ name: r.name, response: r.response ?? {} })) }
+      ? { functionResponses: m.functionResponses.map((r) => ({ name: currentToolName(r.name), response: r.response ?? {} })) }
       : {}),
   } as M;
 }

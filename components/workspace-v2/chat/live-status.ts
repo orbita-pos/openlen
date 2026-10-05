@@ -8,6 +8,7 @@
 // Es la forma de la barra de estado de Claude Code: dice qué hace, no cómo.
 
 import type { DesignTurn } from "./use-agent-chat";
+import { asksTheOwner, questionText, type UserQuestion } from "@/lib/agent/ask-user-question";
 
 /** Qué clase de trabajo hace la herramienta, en palabras de quien no programa. */
 export type Activity =
@@ -80,6 +81,15 @@ const ACTIVITY_OF: Readonly<Record<string, Activity>> = {
   conectar_datos_vivos: "module",
   revertir_ultimo_cambio: "undoing",
   preguntar: "asking",
+  // Pieza 3 de Len 2.5: el nombre de hoy (`preguntar` se queda por lo guardado).
+  ask_user_question: "asking",
+  // Pieza 7: pedir planear y presentar el plan también le preguntan al dueño.
+  enter_plan_mode: "asking",
+  exit_plan_mode: "asking",
+  // Pieza 5: buscar y leer en las charlas pasadas es leer.
+  session_search: "reading",
+  session_event_search: "reading",
+  session_event_read: "reading",
 };
 
 export function activityOf(tool: string): Activity {
@@ -123,7 +133,18 @@ export type LiveStatus =
       readonly streamedChars?: number;
     }
   /** El turno acabó preguntando: te toca. `question` es la pregunta. */
-  | { readonly kind: "waiting"; readonly face: FaceState; readonly reason: "question"; readonly question: string }
+  | {
+      readonly kind: "waiting";
+      readonly face: FaceState;
+      readonly reason: "question";
+      readonly question: string;
+      /** Pieza 3: la pregunta espera DENTRO del turno (`ask_user_question`):
+       *  Len sigue en cuanto contestes, y el ■ sigue valiendo. */
+      readonly live?: true;
+      /** Pieza 7: es la revisión del plan o el consentimiento para entrar. Su
+       *  `question` es el inglés del servidor; la barra dice la suya traducida. */
+      readonly intent?: "plan-review" | "plan-consent";
+    }
   /** El turno dejó una tarjeta de publicar sin tocar: te toca aprobarla. */
   | { readonly kind: "waiting"; readonly face: FaceState; readonly reason: "publish"; readonly question: null }
   /** Acabó bien. */
@@ -131,14 +152,59 @@ export type LiveStatus =
   /** Lo paraste tú (o se cortó): lo que hizo, hecho está. */
   | { readonly kind: "stopped"; readonly face: FaceState }
   /** No pudo terminar. */
-  | { readonly kind: "failed"; readonly face: FaceState; readonly message: string | null };
+  | { readonly kind: "failed"; readonly face: FaceState; readonly message: string | null }
+  // El proveedor no contestó y el bucle repite el paso (`retry`, como DeepSeek).
+  // `until`: cuándo acaba la espera (reloj del navegador); ver `retryPhase`.
+  | { readonly kind: "retrying"; readonly face: FaceState; readonly attempt: number; readonly maxAttempts: number; readonly until: number }
+  // Len resume lo más viejo de la conversación para seguir (`compaction_start`,
+  // como DeepSeek): «Ordenando lo que lleva».
+  | { readonly kind: "compacting"; readonly face: FaceState };
+
+/** ¿Len está trabajando? Es lo que enseña el ■ y el reloj de la barra. Un
+ *  reintento es trabajo: el ■ no puede desaparecer justo mientras espera. Ni
+ *  mientras ordena lo que lleva: es una llamada al modelo, y se cobra. */
+export function isRunning(status: LiveStatus): boolean {
+  return (
+    status.kind === "thinking" ||
+    status.kind === "working" ||
+    status.kind === "retrying" ||
+    status.kind === "compacting" ||
+    // Pieza 3: esperando tu respuesta DENTRO del turno, el turno sigue abierto.
+    (status.kind === "waiting" && status.reason === "question" && status.live === true)
+  );
+}
+
+/** La fase de un reintento: esperando («Reintentando · en X s», como Claude
+ *  Code) o ya con el intento nuevo en marcha («Pensando»), que es lo que pasa
+ *  en cuanto vence la espera aunque todavía no haya llegado texto. */
+export function retryPhase(
+  status: Extract<LiveStatus, { kind: "retrying" }>,
+  now: number,
+): { readonly waiting: true; readonly seconds: number } | { readonly waiting: false } {
+  return now < status.until ? { waiting: true, seconds: Math.max(1, Math.ceil((status.until - now) / 1000)) } : { waiting: false };
+}
+
+/** La tarjeta con la que acabó el turno si acabó PREGUNTANDO: la última, de
+ *  la herramienta de preguntar (con su nombre de hoy o el de antes), que no
+ *  falló y que nadie contestó dentro del turno (pieza 3: con `respuesta`, Len
+ *  ya la tuvo y siguió). */
+function lastQuestion(turn: Pick<DesignTurn, "actions" | "status">) {
+  if (turn.status !== "applied") return null;
+  const last = turn.actions?.[turn.actions.length - 1];
+  // Alinear con DeepSeek: una CANCELADA (`dismissed`) ya no espera a nadie.
+  if (!last || !asksTheOwner(last.tool) || last.status === "error" || last.respuesta || last.dismissed) return null;
+  return last;
+}
 
 /** La pregunta con la que acabó el turno, si acabó preguntando. */
 export function questionOf(turn: Pick<DesignTurn, "actions" | "status">): string | null {
-  if (turn.status !== "applied") return null;
-  const last = turn.actions?.[turn.actions.length - 1];
-  if (!last || last.tool !== "preguntar" || last.status === "error") return null;
-  return last.pregunta?.trim() || "";
+  const last = lastQuestion(turn);
+  return last ? last.pregunta?.trim() || "" : null;
+}
+
+/** Y sus opciones, para que la tarjeta se conteste con un toque (pieza 3). */
+export function questionsOf(turn: Pick<DesignTurn, "actions" | "status">): UserQuestion[] | null {
+  return lastQuestion(turn)?.preguntas ?? null;
 }
 
 export function liveStatus(
@@ -153,6 +219,28 @@ export function liveStatus(
 ): LiveStatus {
   if (!latest) return { kind: "idle", face: "reposo" };
   if (latest.status === "streaming" || o.busy) {
+    if (latest.retrying) {
+      return {
+        kind: "retrying",
+        face: "pensando",
+        attempt: latest.retrying.attempt,
+        maxAttempts: latest.retrying.maxAttempts,
+        until: latest.retrying.until,
+      };
+    }
+    if (latest.compacting) return { kind: "compacting", face: "revisando" };
+    // PIEZA 3: la pregunta espera DENTRO del turno: te toca, aunque el turno siga.
+    if (latest.pendingQuestions?.length && !latest.answeredLive) {
+      const intent = latest.pendingQuestions[0]?.intent?.kind;
+      return {
+        kind: "waiting",
+        face: "preguntando",
+        reason: "question",
+        question: questionText(latest.pendingQuestions),
+        live: true,
+        ...(intent ? { intent } : {}),
+      };
+    }
     const startedAt = latest.startedAt ?? null;
     const running = [...(latest.actions ?? [])].reverse().find((a) => a.status === "running");
     if (running) {
@@ -181,7 +269,10 @@ export function liveStatus(
   }
   if (latest.status === "applied") {
     const question = questionOf(latest);
-    if (question !== null) return { kind: "waiting", face: "preguntando", reason: "question", question };
+    if (question !== null) {
+      const intent = questionsOf(latest)?.[0]?.intent?.kind;
+      return { kind: "waiting", face: "preguntando", reason: "question", question, ...(intent ? { intent } : {}) };
+    }
     if (latest.confirm && !o.settledConfirms?.has(latest.id)) {
       return { kind: "waiting", face: "preguntando", reason: "publish", question: null };
     }

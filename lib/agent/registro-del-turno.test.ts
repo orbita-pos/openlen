@@ -26,4 +26,39 @@ describe("la fila del turno que escribe el servidor", () => {
     const fila = crearRegistroDelTurno().fila({ id: "t", userText: "x", page: null, toolResults: null });
     expect(fila.status).toBe("applied");
   });
+
+  it("un reintento retira de la fila lo que el intento fallido llegó a escribir", () => {
+    const r = crearRegistroDelTurno();
+    r.observar({ type: "text", text: "Miro la página." });
+    r.observar({ type: "text", text: "\n\n" });
+    r.observar({ type: "text", text: "Ya v" });
+    r.observar({ type: "retry", attempt: 1, maxAttempts: 5, delayMs: 500, discardChars: 6 });
+    r.observar({ type: "text", text: "\n\n" });
+    r.observar({ type: "text", text: "Ya está." });
+    expect(r.texto).toBe("Miro la página.\n\nYa está.");
+  });
+
+  it("🔴 pieza 3: la tarjeta de la pregunta guarda sus opciones y lo que contestó el dueño (la lista es BLANCA)", () => {
+    const r = crearRegistroDelTurno();
+    const preguntas = [{ id: "plazo", question: "¿Cuánto tarda?", options: [{ label: "48 horas" }] }];
+    r.observar({ type: "action", tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Cuánto tarda?", preguntas, respuesta: "48 horas" });
+    expect(r.tarjetas[0]).toMatchObject({ pregunta: "¿Cuánto tarda?", preguntas, respuesta: "48 horas" });
+  });
+
+  it("ALINEAR · la pregunta descartada guarda su marca de «cancelada»", () => {
+    const r = crearRegistroDelTurno();
+    r.observar({ type: "action", tool: "exit_plan_mode", status: "done", summary: "", preguntas: [{ id: "plan-review", question: "?" }], dismissed: true });
+    expect(r.tarjetas[0]).toMatchObject({ dismissed: true });
+  });
+
+  it("una compactación a media vuelta retira lo que el intento llegó a escribir; sin descarte, no toca nada", () => {
+    const r = crearRegistroDelTurno();
+    r.observar({ type: "text", text: "Miro." });
+    r.observar({ type: "compaction_start" });
+    r.observar({ type: "compaction", pruned: 0, summarized: true, discardChars: 0 });
+    r.observar({ type: "text", text: " Ya v" });
+    r.observar({ type: "compaction", pruned: 1, summarized: true, discardChars: 5 });
+    r.observar({ type: "text", text: " Ya está." });
+    expect(r.texto).toBe("Miro. Ya está.");
+  });
 });

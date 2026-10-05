@@ -722,6 +722,30 @@ describe("usar_pagina", () => {
     assert.match(String(out.response.error), /Don't take it as meaning it works or that it doesn't/);
   });
 
+  // Pieza 4 de Len 2.5: con herramientas en paralelo, dos visitas sin clics
+  // pueden pedirse a la vez; cada una arranca su Chromium (§11: tope 2).
+  it("pieza 4: como mucho DOS visitas a la vez por turno, aunque el bucle pida tres", async () => {
+    const { deps } = makeDeps();
+    let enVuelo = 0;
+    let max = 0;
+    const conVisitaLenta = {
+      ...deps,
+      usarPagina: async () => {
+        enVuelo++;
+        max = Math.max(max, enVuelo);
+        await new Promise((r) => setTimeout(r, 20));
+        enVuelo--;
+        return { informe: "1. lee «Inicio» → «Inicio»." };
+      },
+    };
+    const session = makeSession();
+    const outs = await Promise.all(
+      [1, 2, 3].map(() => runAgentTool(session, conVisitaLenta, "usar_pagina", { pasos: [{ lee: "Inicio" }] })),
+    );
+    assert.equal(max, 2);
+    assert.deepEqual(outs.map((o) => o.response.ok), [true, true, true]);
+  });
+
   // Entrar como un usuario de la página, como Lovable (lib/backend/auth/
   // visit-session.ts): un solo usuario → ése; varios sin decir cuál → no
   // visita y pregunta en el chat; nunca crea una cuenta.
@@ -1420,15 +1444,16 @@ describe("runAgentTool", () => {
 // «Esto lo decide el usuario» viajaba como `ok:false` con una ORDEN dentro («NO
 // vuelvas a llamar a publicar en este turno; termina preguntándole») más un flag
 // de sesión para cazarle si la desobedecía. Está MEDIDO que la desobedecía.
-describe("preguntar", () => {
-  it("devuelve la pregunta para que el bucle cierre el turno", async () => {
+describe("ask_user_question (antes preguntar)", () => {
+  it("devuelve la pregunta para que el bucle cierre el turno, con sus opciones para la tarjeta", async () => {
     const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "preguntar", {
-      texto: "¿Qué dirección quieres para tu página?",
+    const out = await runAgentTool(makeSession(), deps, "ask_user_question", {
+      questions: [{ id: "dir", question: "¿Qué dirección quieres para tu página?", options: [{ label: "tacos-len (Recommended)" }, { label: "len-tacos" }] }],
     });
 
     assert.equal(out.response.ok, true);
     assert.equal(out.pregunta, "¿Qué dirección quieres para tu página?");
+    assert.deepEqual(out.preguntas, [{ id: "dir", question: "¿Qué dirección quieres para tu página?", options: [{ label: "tacos-len (Recommended)" }, { label: "len-tacos" }] }]);
     // Preguntar no toca la página ni la base.
     assert.equal(store.saved.length, 0);
     assert.equal(out.updatedHtml, undefined);
@@ -1436,18 +1461,110 @@ describe("preguntar", () => {
 
   it("una pregunta vacía se rechaza — el usuario no puede leer nada", async () => {
     const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "preguntar", { texto: "   " });
+    const out = await runAgentTool(makeSession(), deps, "ask_user_question", { questions: [{ id: "a", question: "   " }] });
     assert.equal(out.response.ok, false);
     assert.equal(out.pregunta, undefined);
   });
 
   it("recorta una pregunta kilométrica: eso ya no es una pregunta", async () => {
     const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "preguntar", {
-      texto: "¿".repeat(2_000),
+    const out = await runAgentTool(makeSession(), deps, "ask_user_question", {
+      questions: [{ id: "a", question: "¿".repeat(2_000) }],
     });
     assert.equal(out.response.ok, true);
     assert.ok((out.pregunta ?? "").length <= 600);
+  });
+
+  // Pieza 3: con quien sepa contestar (`deps.askUser`, lo pone la ruta cuando
+  // el chat lo pide), la herramienta ESPERA y la respuesta es su resultado.
+  const preguntas = [{ id: "plazo", question: "¿Cuánto tarda la entrega?", options: [{ label: "48 horas (Recommended)" }, { label: "Una semana" }] }];
+
+  it("con quien conteste, la respuesta es el resultado y el turno SIGUE (sin `pregunta`)", async () => {
+    const { deps } = makeDeps();
+    const vistas: unknown[] = [];
+    const conDueno = { ...deps, askUser: async (qs: unknown) => { vistas.push(qs); return [{ id: "plazo", selected: ["48 horas (Recommended)"] }]; } };
+    const out = await runAgentTool(makeSession(), conDueno, "ask_user_question", { questions: preguntas });
+    assert.deepEqual(out.response, { ok: true, answers: [{ id: "plazo", selected: ["48 horas (Recommended)"] }] });
+    assert.equal(out.pregunta, undefined);
+    assert.equal(out.respuesta, "48 horas");
+    assert.deepEqual(vistas, [preguntas]);
+  });
+
+  it("si nadie contesta a tiempo (null), cierra el turno con la pregunta, como siempre", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), { ...deps, askUser: async () => null }, "ask_user_question", { questions: preguntas });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.pregunta, "¿Cuánto tarda la entrega?");
+  });
+
+  it("LOTE 7-8 · descartada: el error de DeepSeek (`ASK_CANCELLED`) y el turno lo cierra el servidor", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), { ...deps, askUser: async () => "dismissed" as const }, "ask_user_question", { questions: preguntas });
+    assert.deepEqual(out.response, { ok: false, error: "the user cancelled ask_user_question" });
+    assert.equal(out.dismissed, true);
+    assert.equal(out.pregunta, undefined);
+    assert.equal(out.respuesta, undefined);
+  });
+
+  it("una pregunta mal formada no llega a quien contesta", async () => {
+    const { deps } = makeDeps();
+    let llamado = false;
+    const out = await runAgentTool(makeSession(), { ...deps, askUser: async () => { llamado = true; return null; } }, "ask_user_question", { questions: [{ question: "sin id" }] });
+    assert.equal(out.response.ok, false);
+    assert.equal(llamado, false);
+  });
+
+  it("el nombre viejo ya no es una herramienta (sólo se entiende en lo guardado)", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "preguntar", { texto: "¿?" });
+    assert.equal(out.response.ok, false);
+  });
+});
+
+// Pieza 5 de Len 2.5: buscar en las charlas del proyecto, como session-query de
+// DeepSeek. La base es un doble (`chatRows`, `chatTranscript`).
+describe("session_search, session_event_search y session_event_read", () => {
+  const filas = [
+    { id: "a1", conversation: "c-vieja", userText: "Pon el horario de la tienda", assistantReasoning: "Listo: lunes a viernes de 9 a 18.", actions: null, createdAt: new Date("2026-09-01T10:00:00Z"), status: "applied" },
+  ];
+  const conChat = (deps: AgentDeps, pedidos: string[]) => ({
+    ...deps,
+    chatRows: async (projectId: string) => { pedidos.push(projectId); return filas; },
+    chatTranscript: async () => ({ mensajes: [{ role: "assistant", content: "", functionCalls: [{ name: "Edit", args: { file_path: "/index.html" } }] }], leidos: [] }),
+  });
+
+  it("busca en las charlas DEL PROYECTO del turno, y nada más", async () => {
+    const { deps } = makeDeps();
+    const pedidos: string[] = [];
+    const session = makeSession();
+    const out = await runAgentTool(session, conChat(deps, pedidos), "session_search", { query: "horario" });
+    assert.equal(out.response.ok, true);
+    // El título, el de respaldo de DeepSeek: 5 palabras (lote 7-8, 2).
+    assert.match(String(out.response.tool_result ?? out.response.resultado), /Session c-vieja — Pon el horario de la\n/);
+    assert.deepEqual(pedidos, [session.projectId]);
+  });
+
+  it("lee un evento entero, y el del asistente trae la transcripción del turno", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), conChat(deps, []), "session_event_read", { session_id: "c-vieja", seq: 2 });
+    assert.equal(out.response.ok, true);
+    const texto = String(out.response.tool_result ?? out.response.resultado);
+    assert.match(texto, /Target event seq 2:/);
+    assert.match(texto, /"functionCalls"/);
+  });
+
+  it("un argumento que no vale o un evento que no existe se le dicen al modelo", async () => {
+    const { deps } = makeDeps();
+    const vacia = await runAgentTool(makeSession(), conChat(deps, []), "session_search", { query: "  " });
+    assert.equal(vacia.response.ok, false);
+    const nada = await runAgentTool(makeSession(), conChat(deps, []), "session_event_read", { session_id: "c-vieja", seq: 99 });
+    assert.equal(nada.response.ok, false);
+  });
+
+  it("sin acceso al chat (otro entorno), lo dice", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "session_event_search", { query: "x" });
+    assert.equal(out.response.ok, false);
   });
 });
 
@@ -1605,13 +1722,13 @@ describe("TodoWrite, retirada (F4)", () => {
 });
 
 describe("publicar sin subdominio ya no da órdenes de comportamiento", () => {
-  it("señala `preguntar` en vez de pedirle al modelo que se pare solo", async () => {
+  it("señala `ask_user_question` en vez de pedirle al modelo que se pare solo", async () => {
     const { deps } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "publicar", {});
 
     assert.equal(out.response.ok, false);
     const error = String(out.response.error);
-    assert.match(error, /preguntar/);
+    assert.match(error, /ask_user_question/);
     // Y NO la orden vieja, que es la que el modelo se saltaba.
     assert.doesNotMatch(error, /NO vuelvas a llamar/i);
     // Sin tarjeta: el usuario no puede confirmar una dirección que nadie eligió.
@@ -1825,7 +1942,7 @@ describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después
     const antes = store.data.html;
     const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
     assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /preguntar/);
+    assert.match(String(out.response.error), /ask_user_question/);
     assert.equal(store.data.html, antes, "tocó la página cuando debía preguntar");
   });
 
@@ -2073,3 +2190,77 @@ describe("el aviso de pivotar cuenta vacías SEGUIDAS", () => {
 //   (b) guarda su copia, con el script VIEJO, y deshace el comportamiento que
 //       el propio turno acababa de escribir.
 const CON_SCRIPT_VIEJO = `<!doctype html><html><head><title>Decks</title><meta name="description" content="Decks"></head><body><h1>Mis decks</h1><p>Arrastra tus cartas.</p><script>window.estado = 'viejo';</script></body></html>`;
+
+// ── LA CARPETA en los ojos (pieza 9 de Len 2.5) ─────────────────────────────
+//
+// `mirar_pagina` y `usar_pagina` abren la página en el Chromium del servidor:
+// si sus ficheros (`/js/app.js`, `/data/menu.json`) no viajan con la vista, Len
+// ve rota una página que publicada funciona. Sólo viaja lo que se publica.
+describe("la carpeta viaja con la vista de mirar_pagina y usar_pagina", () => {
+  const CARPETA = {
+    "/js/app.js": "document.title = 'cargó'",
+    "/data/menu.json": "[]",
+    "/tests/menu.spec.ts": "no se publica",
+    "/supabase/migrations/0001_init.sql": "create table t ();",
+  };
+  const PUBLICABLE = { "/js/app.js": "document.title = 'cargó'", "/data/menu.json": "[]" };
+
+  it("🔴 mirar_pagina: la vista lleva los ficheros publicables", async () => {
+    const { deps } = makeDeps();
+    const vistas: Record<string, unknown>[] = [];
+    await runAgentTool(makeSession(), {
+      ...deps,
+      projectFiles: async () => CARPETA,
+      observarPagina: async (input: Record<string, unknown>) => {
+        vistas.push(input.vista as Record<string, unknown>);
+        return { respuesta: "x" };
+      },
+    }, "mirar_pagina", { tipo: "medir", pregunta: "¿se lee?" });
+    assert.deepEqual(vistas[0]!.files, PUBLICABLE);
+  });
+
+  it("🔴 usar_pagina: la vista lleva los ficheros publicables", async () => {
+    const { deps } = makeDeps();
+    const visitas: Record<string, unknown>[] = [];
+    await runAgentTool(makeSession(), {
+      ...deps,
+      projectFiles: async () => CARPETA,
+      usarPagina: async (input: Record<string, unknown>) => {
+        visitas.push(input);
+        return { informe: "1. pulsa «Agregar» → pulsé." };
+      },
+    }, "usar_pagina", { pasos: [{ pulsa: "Agregar" }] });
+    assert.deepEqual((visitas[0]!.vista as Record<string, unknown>).files, PUBLICABLE);
+  });
+
+  it("BRAZO DE CONTROL: sin ficheros publicables, la vista es la de siempre", async () => {
+    const { deps } = makeDeps();
+    const vistas: Record<string, unknown>[] = [];
+    const conOjos = {
+      ...deps,
+      observarPagina: async (input: Record<string, unknown>) => {
+        vistas.push(input.vista as Record<string, unknown>);
+        return { respuesta: "x" };
+      },
+    };
+    await runAgentTool(makeSession(), { ...conOjos, projectFiles: async () => ({ "/tests/a.spec.ts": "t" }) }, "mirar_pagina", { tipo: "medir", pregunta: "¿?" });
+    await runAgentTool(makeSession(), conOjos, "mirar_pagina", { tipo: "medir", pregunta: "¿?" });
+    assert.equal("files" in vistas[0]!, false);
+    assert.equal("files" in vistas[1]!, false);
+  });
+
+  it("si la carpeta no se puede leer, se mira igual sin ella (fallo blando)", async () => {
+    const { deps } = makeDeps();
+    const vistas: Record<string, unknown>[] = [];
+    const out = await runAgentTool(makeSession(), {
+      ...deps,
+      projectFiles: async () => { throw new Error("la base no contesta"); },
+      observarPagina: async (input: Record<string, unknown>) => {
+        vistas.push(input.vista as Record<string, unknown>);
+        return { respuesta: "x" };
+      },
+    }, "mirar_pagina", { tipo: "medir", pregunta: "¿?" });
+    assert.equal(out.response.ok, true);
+    assert.equal("files" in vistas[0]!, false);
+  });
+});

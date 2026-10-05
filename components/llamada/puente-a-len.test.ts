@@ -43,6 +43,37 @@ describe("crearPuenteALen", () => {
     expect(tarjetas).toEqual([{ tipo: "visitas" }]);
   });
 
+  it("un `retry` retira de lo que dirá la voz el texto del intento descartado", async () => {
+    const { voz, puente } = preparar([
+      turno,
+      { nombre: "text", datos: { text: "Voy a mir" } },
+      { nombre: "retry", datos: { attempt: 1, maxAttempts: 5, delayMs: 500, discardChars: 9 } },
+      { nombre: "text", datos: { text: "Llevas 312 visitas." } },
+      done,
+    ]);
+    puente.oir("¿Cómo va mi página?");
+    await puente.delegar("d1");
+    const final = voz.at(-1)!;
+    expect(final.content).toContain("Llevas 312 visitas.");
+    expect(final.content).not.toContain("Voy a mir");
+  });
+
+  it("una compactación tras un desborde retira de lo que dirá la voz el texto del intento descartado", async () => {
+    const { voz, puente } = preparar([
+      turno,
+      { nombre: "text", datos: { text: "Voy a mir" } },
+      { nombre: "compaction_start", datos: {} },
+      { nombre: "compaction", datos: { pruned: 0, summarized: true, discardChars: 9 } },
+      { nombre: "text", datos: { text: "Llevas 312 visitas." } },
+      done,
+    ]);
+    puente.oir("¿Cómo va mi página?");
+    await puente.delegar("d1");
+    const final = voz.at(-1)!;
+    expect(final.content).toContain("Llevas 312 visitas.");
+    expect(final.content).not.toContain("Voy a mir");
+  });
+
   it("el borrador y publicar llegan como tarjetas; mensajes, con el texto de Len", async () => {
     const respuesta = { action: "responder", para: "chat", id: "c1", con: "Juan", texto: "¡Hola!", botones: ["enviar"], correo: null, whatsapp: null };
     const { tarjetas, puente } = preparar([

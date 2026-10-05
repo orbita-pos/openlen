@@ -11,16 +11,35 @@ import {
 const ID = "4f9c10cb-8781-48f1-b291-c5d146579f09";
 const HEX = "4f9c10cb878148f1b291c5d146579f09";
 
+// 🔴 LA ETIQUETA NO SE ADIVINA POR EL ID (pieza 9 de Len 2.5). Con el sitio
+// entero en el host, el HOST es la llave de los ficheros sin publicar, y el id
+// del proyecto lo enseña la analítica de cualquier página publicada.
 describe("la etiqueta del lienzo", () => {
-  it("es el prefijo más el UUID sin guiones, y cabe en una etiqueta DNS", () => {
-    const e = etiquetaDeLienzo(ID);
-    expect(e).toBe(`${LIENZO_PREFIJO}${HEX}`);
+  const env = { AUTH_SECRET: "s3cr3t" };
+
+  it("es lienzo- + 32 hex, estable, cabe en una etiqueta DNS y NO es el UUID", () => {
+    const e = etiquetaDeLienzo(ID, env);
+    expect(e).toMatch(/^lienzo-[0-9a-f]{32}$/);
     expect(e!.length).toBeLessThanOrEqual(63);
+    expect(e).toBe(etiquetaDeLienzo(ID, env));
+    expect(e).toBe(etiquetaDeLienzo(ID.toUpperCase(), env));
+    expect(e).not.toBe(`${LIENZO_PREFIJO}${HEX}`);
+    expect(etiquetaDeLienzo(ID, { AUTH_SECRET: "otro" })).not.toBe(e);
+  });
+
+  it("sin secreto no hay etiqueta (el lienzo cae a la reserva)", () => {
+    expect(etiquetaDeLienzo(ID, {})).toBeNull();
+    expect(etiquetaDeLienzo(ID, { AUTH_SECRET: "  " })).toBeNull();
   });
 
   it("no se fabrica de algo que no es un UUID", () => {
-    expect(etiquetaDeLienzo("../../etc")).toBeNull();
-    expect(etiquetaDeLienzo("")).toBeNull();
+    expect(etiquetaDeLienzo("../../etc", env)).toBeNull();
+    expect(etiquetaDeLienzo("", env)).toBeNull();
+  });
+
+  it("la que lee un host es la que se fabrica", () => {
+    const e = etiquetaDeLienzo(ID, env)!;
+    expect(etiquetaDelHost(`${e}.openlen.app`)).toBe(e);
   });
 });
 
@@ -42,30 +61,48 @@ describe("leer la etiqueta de un host", () => {
 });
 
 describe("la URL del documento", () => {
-  const prod = { NODE_ENV: "production", LIENZO_BASE_HOST: "openlen.app" };
+  const prod = { NODE_ENV: "production", LIENZO_BASE_HOST: "openlen.app", AUTH_SECRET: "s3cr3t" };
+  const E = etiquetaDeLienzo(ID, prod);
 
-  it("en producción va por https bajo LIENZO_BASE_HOST", () => {
-    expect(urlDelDocumento({ projectId: ID, docId: "abc", hostDeLaPeticion: "openlen.com" }, prod)).toBe(
-      `https://lienzo-${HEX}.openlen.app/api/lienzo/abc`,
+  it("🔴 refleja la ruta de la publicada y lleva el documento en __lienzo", () => {
+    expect(urlDelDocumento({ projectId: ID, docId: "D1", pagina: null, hostDeLaPeticion: "openlen.com" }, prod)).toBe(
+      `https://${E}.openlen.app/?__lienzo=D1`,
+    );
+    // `index.html` y no `/menu/`: Next redirige toda ruta con barra final ANTES
+    // del middleware (`/menu/` → `/menu`), y desde `/menu` lo relativo se
+    // resolvería desde la raíz. `/menu/index.html` también la sirve la
+    // publicada, y lo relativo se resuelve desde `/menu/`, como allí.
+    expect(urlDelDocumento({ projectId: ID, docId: "D1", pagina: "menu", hostDeLaPeticion: null }, prod)).toBe(
+      `https://${E}.openlen.app/menu/index.html?__lienzo=D1`,
+    );
+  });
+
+  it("el id del documento va escapado", () => {
+    expect(urlDelDocumento({ projectId: ID, docId: "a b&c", pagina: null, hostDeLaPeticion: null }, prod)).toBe(
+      `https://${E}.openlen.app/?__lienzo=a%20b%26c`,
     );
   });
 
   it("sin LIENZO_BASE_HOST cae a PUBLISH_BASE_HOST, nunca a un literal", () => {
-    const env = { NODE_ENV: "production", PUBLISH_BASE_HOST: "openlen.app" };
-    expect(urlDelDocumento({ projectId: ID, docId: "abc", hostDeLaPeticion: null }, env)).toBe(
-      `https://lienzo-${HEX}.openlen.app/api/lienzo/abc`,
+    const env = { NODE_ENV: "production", PUBLISH_BASE_HOST: "openlen.app", AUTH_SECRET: "s3cr3t" };
+    expect(urlDelDocumento({ projectId: ID, docId: "abc", pagina: null, hostDeLaPeticion: null }, env)).toBe(
+      `https://${E}.openlen.app/?__lienzo=abc`,
     );
-    expect(urlDelDocumento({ projectId: ID, docId: "abc", hostDeLaPeticion: null }, { NODE_ENV: "production" })).toBeNull();
+    const sinBase = { NODE_ENV: "production", AUTH_SECRET: "s3cr3t" };
+    expect(urlDelDocumento({ projectId: ID, docId: "abc", pagina: null, hostDeLaPeticion: null }, sinBase)).toBeNull();
   });
 
   it("en desarrollo va por http a *.localhost con el puerto de la petición", () => {
-    expect(
-      urlDelDocumento({ projectId: ID, docId: "abc", hostDeLaPeticion: "localhost:3007" }, { NODE_ENV: "development" }),
-    ).toBe(`http://lienzo-${HEX}.localhost:3007/api/lienzo/abc`);
+    const dev = { NODE_ENV: "development", AUTH_SECRET: "s3cr3t" };
+    expect(urlDelDocumento({ projectId: ID, docId: "abc", pagina: null, hostDeLaPeticion: "localhost:3007" }, dev)).toBe(
+      `http://${E}.localhost:3007/?__lienzo=abc`,
+    );
   });
 
-  it("un projectId que no es UUID no produce URL", () => {
-    expect(urlDelDocumento({ projectId: "x", docId: "abc", hostDeLaPeticion: null }, prod)).toBeNull();
+  it("un projectId que no es UUID, o sin secreto, no produce URL", () => {
+    expect(urlDelDocumento({ projectId: "x", docId: "abc", pagina: null, hostDeLaPeticion: null }, prod)).toBeNull();
+    const sinSecreto = { NODE_ENV: "production", LIENZO_BASE_HOST: "openlen.app" };
+    expect(urlDelDocumento({ projectId: ID, docId: "abc", pagina: null, hostDeLaPeticion: null }, sinSecreto)).toBeNull();
   });
 });
 

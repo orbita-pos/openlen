@@ -6,6 +6,7 @@ import { AlertTriangle, Check, ChevronDown, ChevronRight, ExternalLink, Loader }
 import { SalidaEnLaTarjeta, type DondeEstaLaSalida } from "./salida-en-la-tarjeta";
 
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
+import { asksTheOwner, type UserQuestion } from "@/lib/agent/ask-user-question";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 
@@ -84,6 +85,15 @@ export interface AgentAction {
    *  pinta (la tarjeta destacada del chat nuevo, plans/new-chat/) y el
    *  historial del modelo no la copia. */
   pregunta?: string;
+  /** Pieza 3 de Len 2.5: las preguntas con sus opciones, para la tarjeta que
+   *  se contesta con un toque. */
+  preguntas?: UserQuestion[];
+  /** Lo que contestó el dueño DENTRO del turno, en una línea. Con ella, la
+   *  pregunta ya no es «te toca»: Len la tuvo y siguió. */
+  respuesta?: string;
+  /** El dueño DESCARTÓ la pregunta («Pedir cambios»): se pinta «cancelada»,
+   *  asentada, como el `ASK_CANCELLED` de DeepSeek. Tampoco es «te toca». */
+  dismissed?: true;
   /** Cuántas ediciones aplicó esta llamada. */
   edits?: number;
   /**
@@ -159,7 +169,20 @@ export const KNOWN_TOOLS = new Set([
   "web_search",
   "web_fetch",
   "declarar_tareas",
+  // Se queda por lo guardado: pasó a llamarse ask_user_question (pieza 3).
   "preguntar",
+  "ask_user_question",
+  // Pieza 7 de Len 2.5: el modo plan (pedir planear, presentar el plan).
+  "enter_plan_mode",
+  "exit_plan_mode",
+  // Pieza 8 de Len 2.5: el encargo (mirarlo, crearlo, actualizarlo).
+  "get_goal",
+  "create_goal",
+  "update_goal",
+  // Pieza 5 de Len 2.5: buscar y leer en las charlas pasadas.
+  "session_search",
+  "session_event_search",
+  "session_event_read",
   // H2 (2026-09-25): cargar una herramienta diferida. Retirada en Len 2.1;
   // se queda por el historial.
   "ToolSearch",
@@ -196,6 +219,8 @@ export const KNOWN_TOOLS = new Set([
 //
 // Exported for unit testing (agent-action-card.test.ts).
 export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTranslations<"wsPage">>): string {
+  // Pieza 3: la pregunta que el dueño contestó dentro del turno dice qué contestó.
+  if (asksTheOwner(action.tool) && action.respuesta) return action.respuesta;
   if (action.tool === "trabajar_en_pagina" && action.summary === "") {
     return t("agent.action.home");
   }

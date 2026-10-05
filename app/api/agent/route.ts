@@ -18,7 +18,7 @@ import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { persistPage } from "@/lib/page-engine/persist";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
-import { documentoMedible, vistaParaMedir } from "@/lib/lienzo/documento";
+import { carpetaDeLaVista, documentoMedible, vistaConCarpeta, vistaParaMedir } from "@/lib/lienzo/documento";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { formaDelTurno, lineaDeForma } from "@/lib/agent/forma-del-turno";
 import {
@@ -33,6 +33,7 @@ import {
   NO_CABE,
   historialDesdeLaBase,
   leidosSembrados,
+  stateOnlyTranscript,
   transcripcionParaGuardar,
   type FilaDelHistorial,
   type MensajeDelHistorial,
@@ -41,7 +42,10 @@ import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversac
 import { turnosParaElHistorial } from "@/lib/projects/chat";
 import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
-import { modeOfTurn } from "@/lib/agent/dynamis";
+import { DYNAMIS_MAX_OUTPUT_TOKENS, modeOfTurn } from "@/lib/agent/dynamis";
+import { resolveCompaction } from "@/lib/agent/compaction/policy";
+import { SPILL_MAX_INLINE_TOKENS } from "@/lib/agent/compaction/spill";
+import { NOMBRE_BASH, terminalEncendida } from "@/lib/agent/terminal/declaracion";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
 import { ZONA_SIN_DATO, zonaValida } from "@/lib/resultados/zona";
 import { guardarZona, leerZona } from "@/lib/resultados/zona-guardada";
@@ -51,7 +55,21 @@ import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
 import { runAgentLoop, type AgentErrorCode, type AgentLoopResult, type VerifyOutcome } from "@/lib/agent/loop";
 import { randomUUID } from "node:crypto";
 
-import { abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
+import { abrirTurno, cerrarTurno, esperarRespuesta, leerDireccion, rondaSiguiente } from "@/lib/agent/direcciones";
+import { ASK_USER_TIMEOUT_MS, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { planModeFromRows, resolveTurnPlanMode, withPlanSection } from "@/lib/agent/plan-mode";
+import {
+  GoalError,
+  blockGoal,
+  createGoal,
+  goalFromRows,
+  goalRoundPrompt,
+  pauseGoal,
+  resumeGoal,
+  startRound,
+  type GoalSnapshot,
+} from "@/lib/agent/goal";
+import { armGoal, disarmGoal, goalActivation } from "@/lib/agent/goal-activation";
 import { crearDiarioDelTurno } from "@/lib/agent/diario-del-turno";
 import { corteDelTurno, crearRegistroDelTurno } from "@/lib/agent/registro-del-turno";
 import { actualizarSuite, marcarRegresiones, migrarSuite, vivas } from "@/lib/agent/pruebas-de-la-pagina";
@@ -66,7 +84,7 @@ import { crearAvance } from "@/lib/agent/avance-del-turno";
 import { avisoDelTurno } from "@/lib/agent/aviso-del-turno";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { conSenales, relojDeSilencio } from "@/lib/agent/reloj-de-silencio";
-import { realDeps, runAgentTool, summarizeProjectState, type AgentSession } from "@/lib/agent/tools";
+import { realDeps, runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession } from "@/lib/agent/tools";
 import { cerrarTerminalDeLaSesion } from "@/lib/agent/terminal/herramienta";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
@@ -75,6 +93,7 @@ import { usarPagina } from "@/lib/agent/usar-pagina";
 import {
   createVisualQualityRendererPool,
   renderVisualQualityViewports,
+  type VisualQualityRenderOptions,
   type VisualQualityRendererPool,
   type VisualQualityViewports,
 } from "@/lib/ai/visual-quality-renderer";
@@ -146,7 +165,27 @@ const SILENCIO_MS = 180_000;
 // porqué viven en `sseChannel` (lib/ai/sse.ts), que es donde tiene que estar
 // para que la cuarta superficie no tenga que acordarse.
 const LATIDO_MS = 15_000;
-const MAX_PROMPT_TOKENS = 240_000;
+// LA VENTANA REAL DEL MODELO en Fireworks (deepseek-v4p1-flash: 1.048.576
+// tokens, fireworks.ai/models/deepseek-ai/deepseek-v4p1-flash, leído el
+// 04/10/2026). Sólo un turno que no cabe AHÍ se rechaza al empezar. El techo de
+// 240.000 que había venía del 07/07, de cuando Len era Gemini Flash
+// (`7b38e227`, «Same ceiling as ai-design»).
+const MODEL_WINDOW_TOKENS = 1_048_576;
+// La salida más grande de los dos modos (Dynamis pide 65.536; Len, 32.768): el
+// umbral vale para los dos.
+const MAX_LOOP_OUTPUT_TOKENS = DYNAMIS_MAX_OUTPUT_TOKENS;
+const MAX_PROMPT_TOKENS = MODEL_WINDOW_TOKENS - MAX_LOOP_OUTPUT_TOKENS;
+// DÓNDE EMPIEZA A COMPACTAR (pieza 2 de Len 2.5): sobre la ventana REAL del
+// modelo, como DeepSeek, que deriva su umbral del `contextWindow` del modelo
+// (1.000.000 en su catálogo para este mismo DeepSeek-V41-Flash,
+// packages/llm/llm-deepseek/src/defaults.ts @ 5badb15). Jesús, 05/10: las dudas
+// se deciden como DeepSeek o Claude Code. ⚰️ Era una «ventana efectiva» de
+// 240.000 elegida por coste, pendiente de él. El coste de un turno largo lo
+// sigue acotando el techo de dinero del turno (`techoDelTurno`).
+const COMPACTION_POLICY = resolveCompaction({
+  windowTokens: MODEL_WINDOW_TOKENS,
+  maxOutputTokens: MAX_LOOP_OUTPUT_TOKENS,
+});
 
 // F2 Task 8 — attached image + scope, validated with the SAME limits/posture
 // as app/api/templates/ai-design/route.ts (read that file first if editing
@@ -198,39 +237,74 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   const userId = await usuarioDeLaPeticion(req);
   if (!userId) return errorJson(401, "unauthorized");
 
-  const body = (await req.json().catch(() => null)) as {
-    projectId?: string;
-    prompt?: string;
-    page?: string;
-    /** Id de la fila de la transcripción, elegido por el cliente. Ver abajo. */
-    turnId?: string;
-    history?: {
-      role: "user" | "assistant";
-      content: string;
-      functionCalls?: unknown;
-      functionResponses?: unknown;
-    }[];
-    /** Cuántos turnos tiene la conversación entera (el cliente sólo manda los
-     *  últimos). Sólo sirve para avisarle al modelo de que no lo ve todo. */
-    historyTotal?: number;
-    /** Lo que el dueño dijo en los turnos que ya no caben (H08-a). Se sanea
-     *  con `sanearDichoAntes`: aquí es `unknown` a efectos prácticos. */
-    dichoAntes?: unknown;
-    scope?: ScopeBody;
-    attachedImage?: AttachedImageBody;
-    /** EL ESFUERZO DE ESTE TURNO, fijado por el cliente al ENVIAR. Ver
-     *  `esfuerzoDelTurno` más abajo: se manda por turno, no se lee en vivo. */
-    esfuerzo?: unknown;
-    /** EL MODO DE ESTE TURNO: `"dynamis"` o nada (Len). Viaja como el esfuerzo;
-     *  se sanea con `modeOfTurn` (`lib/agent/dynamis.ts`). */
-    mode?: unknown;
-    /** La zona IANA del navegador (plans/len-resultados/diseno.md §7). Se
-     *  sanea con `zonaValida`: entra de fuera. */
-    zonaHoraria?: unknown;
-  } | null;
+  const body = (await req.json().catch(() => null)) as CuerpoDelTurno | null;
+  return correrTurno(userId, body, { url: req.url, signal: req.signal });
+});
 
+/** Lo que manda el cliente en el cuerpo de un turno. Todo entra de fuera y se sanea abajo. */
+type CuerpoDelTurno = {
+  projectId?: string;
+  prompt?: string;
+  page?: string;
+  /** Id de la fila de la transcripción, elegido por el cliente. Ver abajo. */
+  turnId?: string;
+  history?: {
+    role: "user" | "assistant";
+    content: string;
+    functionCalls?: unknown;
+    functionResponses?: unknown;
+  }[];
+  /** Cuántos turnos tiene la conversación entera (el cliente sólo manda los
+   *  últimos). Sólo sirve para avisarle al modelo de que no lo ve todo. */
+  historyTotal?: number;
+  /** Lo que el dueño dijo en los turnos que ya no caben (H08-a). Se sanea
+   *  con `sanearDichoAntes`: aquí es `unknown` a efectos prácticos. */
+  dichoAntes?: unknown;
+  scope?: ScopeBody;
+  attachedImage?: AttachedImageBody;
+  /** EL ESFUERZO DE ESTE TURNO, fijado por el cliente al ENVIAR. Ver
+   *  `esfuerzoDelTurno` más abajo: se manda por turno, no se lee en vivo. */
+  esfuerzo?: unknown;
+  /** EL MODO DE ESTE TURNO: `"dynamis"` o nada (Len). Viaja como el esfuerzo;
+   *  se sanea con `modeOfTurn` (`lib/agent/dynamis.ts`). */
+  mode?: unknown;
+  /** La zona IANA del navegador (plans/len-resultados/diseno.md §7). Se
+   *  sanea con `zonaValida`: entra de fuera. */
+  zonaHoraria?: unknown;
+  /** Pieza 3 de Len 2.5: el cliente SABE contestar las preguntas de
+   *  `ask_user_question` dentro del turno (el chat). La voz y Len-Bench no lo
+   *  mandan: para ellos la pregunta sigue cerrando el turno. */
+  answersQuestions?: unknown;
+  /** Pieza 7: el modo plan que el dueño veía al mandar (la ficha «Plan» del
+   *  compositor). Sólo `true`/`false` cuentan; sin él, lo plegado. */
+  plan?: unknown;
+  /** Pieza 8: la puerta del dueño al encargo — `"create"` (la opción «Encargo»:
+   *  el mensaje es el objetivo) o `"resume"` («Reanudar»). Otra cosa no cuenta. */
+  goal?: unknown;
+};
+
+/** La ronda de un encargo que abre el conductor (pieza 8). Nunca sale del cuerpo. */
+type RondaDelEncargo = { goalId: string; revision: number; round: number };
+
+/**
+ * EL TURNO, sin la puerta HTTP (pieza 8 de Len 2.5). Lo llama `POST` con el
+ * usuario de la petición y lo llama el conductor del encargo para abrir la
+ * ronda siguiente en el servidor, sin nadie delante: `opts.round` es lo único
+ * que hace de un turno una ronda, y no sale del cuerpo. `req` es lo que el
+ * turno usaba de la petición (su URL, para las fotos, y su señal).
+ */
+async function correrTurno(
+  userId: string,
+  body: CuerpoDelTurno | null,
+  req: { url: string; signal: AbortSignal },
+  opts: { round?: RondaDelEncargo } = {},
+): Promise<Response> {
   const projectId = typeof body?.projectId === "string" ? body.projectId.trim() : "";
-  const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
+  // `let`: en una ronda del encargo (pieza 8) el mensaje del turno es el de
+  // ronda de DeepSeek, que se compone abajo, con el encargo plegado.
+  let prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
+  // Pieza 8: la puerta del dueño al encargo. Sólo los dos literales cuentan.
+  const pedidoDelEncargo = body?.goal === "create" || body?.goal === "resume" ? body.goal : null;
   // EL ID DE LA FILA DE LA TRANSCRIPCIÓN, elegido por el cliente para que su
   // fila optimista y la que escribe el servidor sean la MISMA. Distinto del
   // `turnoId` de las correcciones, que lo sigue minteando el servidor porque es
@@ -253,6 +327,12 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // LEN DYNAMIS, con el mismo pestillo: el modo que el usuario veía al pulsar
   // enviar. Con la terminal apagada no existe, y el turno es de Len.
   const mode = modeOfTurn(body?.mode);
+  // Pieza 3: sólo el literal `true` cuenta (entra de fuera).
+  const answersQuestions = body?.answersQuestions === true;
+  // Pieza 7: la elección del dueño, con el mismo pestillo (lo que veía al
+  // mandar). Basura o ausente (voz, Len-Bench, un cliente viejo) = `null`: no
+  // es «apagado», es «lo que ya estaba».
+  const planElegido = typeof body?.plan === "boolean" ? body.plan : null;
   // LA HORA DEL USUARIO (plans/len-resultados/diseno.md §7). Se sanea: entra de
   // fuera. Basura -> null -> la zona guardada.
   const zonaDelCuerpo = zonaValida(body?.zonaHoraria);
@@ -265,7 +345,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   if (!projectId) return errorJson(400, "projectId is required");
   // El tope es el del mensaje ENTERO: lo que escribes sigue en 2.000 en la caja,
   // y los comentarios de líneas van dentro (la #8, `comentarios-de-lineas.ts`).
-  if (prompt.length === 0 || prompt.length > MAX_PROMPT) return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`, "promptLength");
+  // Reanudar un encargo y una ronda no traen mensaje: lo pone el de ronda.
+  const sinMensajeDelDueno = pedidoDelEncargo === "resume" || opts.round !== undefined;
+  if ((prompt.length === 0 && !sinMensajeDelDueno) || prompt.length > MAX_PROMPT) return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`, "promptLength");
   // F4 Task 1 — multi-page base: page slug, validated CLONED from
   // app/api/templates/ai-design/route.ts (read that file first if editing
   // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in
@@ -323,7 +405,15 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // La mecánica y sus guardas viven en `lib/ai/medir-una-vez.ts`: la clave es
   // el documento ENTERO, no un hash, así que es imposible que devuelva la
   // medida de otra página — que era justo el miedo que dejó esto sin hacer.
-  const medirDocumento = async (html: string): Promise<VisualQualityViewports | null> => {
+  //
+  // LA CARPETA (pieza 9 de Len 2.5, carril B): `opts.carpeta` son los ficheros
+  // que la página pide (`/js/app.js`), y entran en la clave del memo. Sin
+  // carpeta, el navegador recibe el documento solo, como siempre.
+  const medirDocumento = async (
+    html: string,
+    _internals?: Record<string, never>,
+    opts?: VisualQualityRenderOptions,
+  ): Promise<VisualQualityViewports | null> => {
     poolDelTurno ??= createVisualQualityRendererPool(1).catch((e: unknown) => {
       // FAIL-SOFT. Si el navegador no arranca, los ojos NO se quedan ciegos: se
       // mide como se medía antes, uno por llamada. Que falle por su motivo, no
@@ -334,6 +424,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
       return null;
     });
     const pool = await poolDelTurno;
+    if (opts?.carpeta) return pool ? pool.render(html, opts) : renderVisualQualityViewports(html, {}, opts);
     return pool ? pool.render(html) : renderVisualQualityViewports(html);
   };
   const medidaDelTurno = medirUnaVezPorDocumento(medirDocumento);
@@ -401,6 +492,49 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // El historial se ARMA más abajo, después de conseguir las fotos de la
   // conversación (A): sin ellas, la foto de un turno anterior no tendría dónde ir.
   const dichoAntes = sanearDichoAntes(body?.dichoAntes);
+
+  // PIEZA 8 · EL ENCARGO DEL TURNO, como el goal de DeepSeek: plegado de la
+  // última fila con transcripción (`goalFromRows`) y armado o no según el
+  // PROCESO (`goal-activation.ts`: tras un reinicio, nada lo está). Tres formas
+  // de que este turno sea una RONDA: la puerta del dueño (crear: este turno es la
+  // 1, como `/goal` + la primera ronda; reanudar: la siguiente) o el conductor
+  // (`opts.round`). En las tres, el mensaje del turno es el de ronda de DeepSeek,
+  // y queda en la conversación como allí. Armar espera a que el turno empiece de
+  // verdad (pasada la puerta de créditos): una salida temprana no deja nada armado.
+  // Lo plegado se guarda aparte: un turno que cae sin transcripción deja su foto
+  // sólo si la cambió (`stateOnlyTranscript`, lote 7-8).
+  const goalPlegado: GoalSnapshot | null = goalFromRows(filasDelHistorial);
+  let goalActual: GoalSnapshot | null = goalPlegado;
+  let goalArmado = goalActivation(projectId, goalActual?.id) === "armed";
+  let rondaDelTurno: RondaDelEncargo | null = null;
+  let ronda: GoalSnapshot | null = null;
+  if (opts.round) {
+    // La reserva del conductor sólo vale para la revisión EXACTA, activa y
+    // armada (el `validReservation` de DeepSeek): si algo la movió entre medias,
+    // no corre.
+    const g = goalActual;
+    if (!g || !goalArmado || g.phase !== "active" || g.id !== opts.round.goalId || g.revision !== opts.round.revision || g.roundsStarted + 1 !== opts.round.round) {
+      return errorJson(409, "stale goal round", "goal_round_stale");
+    }
+    ronda = startRound(g);
+  } else if (pedidoDelEncargo === "create" && (goalActual === null || goalActual.phase === "complete")) {
+    // Con un encargo vivo, la puerta se ignora y el turno es uno normal (dos
+    // pestañas): el modelo lo ve con `get_goal`.
+    ronda = startRound(createGoal(goalActual, { objective: prompt }, `goal-${randomUUID()}`));
+  } else if (pedidoDelEncargo === "resume") {
+    try {
+      if (!goalActual) throw new GoalError("no current goal", "GOAL_NOT_FOUND");
+      ronda = startRound(resumeGoal(goalActual, goalActual, goalArmado ? "armed" : "disarmed"));
+    } catch (err) {
+      return errorJson(409, err instanceof Error ? err.message : "goal not resumable", "goal_not_resumable");
+    }
+  }
+  if (ronda) {
+    goalActual = ronda;
+    goalArmado = true;
+    rondaDelTurno = { goalId: ronda.id, revision: ronda.revision, round: ronda.roundsStarted };
+    prompt = goalRoundPrompt(ronda, ronda.roundsStarted);
+  }
 
   // Validate the scope payload (optional) — same shape/limits as ai-design.
   // The hint is a textual fallback; the path, when it resolves, becomes the
@@ -686,6 +820,22 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // la primera vuelta y en la segunda Len ya no la tenía delante.
   if (attachedInline) messages[messages.length - 1] = { ...messages[messages.length - 1]!, images: [attachedInline] };
 
+  // PIEZA 7 · EL MODO PLAN DEL TURNO, como el de DeepSeek: plegado de la última
+  // fila con transcripción y, si el dueño eligió otra cosa al mandar, gana él y
+  // el modelo lo lee con la narración de DeepSeek, justo antes de su petición
+  // (allí es un mensaje de usuario inyectado entre turnos). Sólo lo cambian
+  // `enter_plan_mode` y `exit_plan_mode` (`deps.planMode`, más abajo); la
+  // sección entra o sale del prompt en CADA petición (`withPlanSection`).
+  const planPlegado = planModeFromRows(filasDelHistorial);
+  const planDelTurno = resolveTurnPlanMode({ folded: planPlegado, selected: planElegido });
+  let planActivo = planDelTurno.active;
+  /** ALINEAR CON DEEPSEEK · ¿cambió este turno el estado de la charla (modo plan o
+   *  encargo)? Allí es un evento duradero en el momento, haya o no más en el
+   *  turno; aquí decide que la fila se guarde aunque no haya texto ni tarjetas, y
+   *  que cuente como duradero para marcarla cortada (`corteDelTurno`, H05). */
+  const estadoCambiado = () => planActivo !== planPlegado || goalActual !== goalPlegado;
+  if (planDelTurno.notice) messages.splice(messages.length - 1, 0, { role: "user", content: planDelTurno.notice });
+
   // LA DIRECCION A LA QUE SE LE PUEDE CORREGIR EL RUMBO. El SSE es de una sola
   // via, asi que la correccion del usuario entra por otra peticion
   // (POST /api/agent/dirigir) y necesita saber a que turno va.
@@ -818,6 +968,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
       // los enseña (plans/new-chat/, decisión de Jesús del 03/10), en el `done` y
       // en la fila para que no desaparezcan al recargar. `null` = aún no se cobró.
       let cobrado: number | null = null;
+      /** Pieza 8 · la ronda del encargo que este turno dejó en marcha: el aviso
+       *  del final (push) no sale, sale al final de la cadena. */
+      let siguienteFila: string | null = null;
       const empezo = Date.now();
       // LEN 2.1 · LA FILA DEL TURNO, ABIERTA MIENTRAS TRABAJA (diagnóstico
       // §4.4 punto 2). El turno ya no muere con el cliente, así que quien
@@ -861,7 +1014,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         if (filaCerrada) return;
         filaCerrada = true;
         await avance.parar();
-        if (registro.hayAlgo(mutoDurable)) {
+        // Alinear con DeepSeek: también si el turno EMPEZÓ (la fila se abrió, pasada
+        // la puerta de créditos) y cambió el estado, aunque no haya hecho nada más.
+        if (registro.hayAlgo(mutoDurable) || (filaAbierta && estadoCambiado())) {
           try {
             await registrarTurnoDelServidor(projectId, {
               ...registro.fila({
@@ -879,9 +1034,23 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
               centicredits: cobrado ?? (chargedByTools > 0 ? chargedByTools : undefined),
               durationMs: Date.now() - empezo,
               // H4 · lo que vio el modelo; de aquí sale el historial del turno siguiente.
+              // Pieza 7: y si cerró en modo plan, que es de donde se pliega el
+              // estado del turno siguiente.
               transcript: transcripcionDelTurno
-                ? transcripcionParaGuardar(transcripcionDelTurno, agentSession.leidos ?? new Map())
-                : null,
+                ? {
+                    ...transcripcionParaGuardar(transcripcionDelTurno, agentSession.leidos ?? new Map()),
+                    ...(planActivo ? { planMode: true as const } : {}),
+                    // Pieza 8: y el encargo como queda, que es de donde lo pliega el siguiente.
+                    ...(goalActual ? { goal: goalActual } : {}),
+                  }
+                : // LOTE 7-8: sin transcripción (el bucle reventó), la foto del
+                  // estado si el turno lo cambió —lo plegado es de ANTES de la
+                  // puerta del dueño—; si no, NULL como siempre. `goalActual`
+                  // sólo se reasigna en una transición (ronda o `commit`).
+                  stateOnlyTranscript({
+                    folded: { planMode: planPlegado, goal: goalPlegado },
+                    now: { planMode: planActivo, goal: goalActual },
+                  }),
             });
           } catch (err) {
             console.warn("[agent] no se pudo registrar el turno", err);
@@ -918,6 +1087,8 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           upstreamAbort.abort();
         },
         filaId,
+        // Pieza 8: quitar el encargo espera a que no corra ningún turno aquí.
+        projectId,
       });
       emit("turno", { turnoId });
 
@@ -970,9 +1141,99 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         } catch (err) {
           console.warn("[agent] no se pudo abrir la fila del turno", err);
         }
+        // PIEZA 3 DE LEN 2.5 · QUIEN CONTESTA LAS PREGUNTAS DENTRO DEL TURNO.
+        // Sólo si el cliente lo pidió (el chat): la pregunta sale al chat con
+        // sus opciones (`question`) y `ask_user_question` espera la respuesta
+        // en el almacén del turno (`POST /api/agent/responder`). El evento
+        // re-arma el reloj de silencio, y la espera (120 s) queda por debajo de
+        // él (180 s). El ■ la suelta.
+        // PIEZA 7 · el modo plan, para las dos herramientas que lo cambian. Cada
+        // cambio se le dice al chat (`plan`), que mueve su ficha.
+        const planMode = {
+          active: () => planActivo,
+          set: (activo: boolean) => {
+            if (activo === planActivo) return;
+            planActivo = activo;
+            emit("plan", { active: activo });
+          },
+        };
+        // El modo con el que empieza el turno (y `plan` otra vez a cada cambio):
+        // la ficha del chat sigue al servidor, no a su copia. Aquí y no junto a
+        // `turno`: un turno que la puerta de créditos para no llega a empezar.
+        emit("plan", { active: planActivo });
+        // PIEZA 8 · EL ENCARGO, ahora que el turno empieza de verdad: se arma lo
+        // que la puerta del dueño o el conductor dejaron listo, y se le dice al
+        // chat con qué encargo empieza (sólo si hay uno: sin él, nada cambia).
+        if (goalActual && goalArmado) armGoal(projectId, goalActual.id);
+        if (goalActual) emit("goal", { goal: goalActual, activation: goalArmado ? "armed" : "disarmed" });
+        const goal: NonNullable<AgentDeps["goal"]> = {
+          get: () => goalActual,
+          activation: () => (goalArmado ? "armed" : "disarmed"),
+          commit: (next, activation) => {
+            goalActual = next;
+            goalArmado = next !== null && activation === "armed";
+            if (goalArmado && next) armGoal(projectId, next.id);
+            else disarmGoal(projectId);
+            emit("goal", { goal: next, activation: goalArmado ? "armed" : "disarmed" });
+          },
+          // De quién es el turno, como `authority.ts` de DeepSeek: una corrección
+          // del dueño a media ronda es entrada humana directa (un `steer`).
+          authority: () =>
+            rondaDelTurno && correcciones.length === 0 ? { kind: "goal-round", ...rondaDelTurno } : { kind: "direct-human" },
+          newId: () => `goal-${randomUUID()}`,
+        };
+        const depsDelTurno = answersQuestions
+          ? {
+              ...deps,
+              planMode,
+              goal,
+              askUser: async (questions: UserQuestion[]) => {
+                emit("question", { questions });
+                return esperarRespuesta(turnoId, { timeoutMs: ASK_USER_TIMEOUT_MS, signal: upstreamAbort.signal });
+              },
+            }
+          : { ...deps, planMode, goal };
         const result = await runAgentLoop({
           messages,
           tools,
+          // Pieza 7: en modo plan el bucle no empuja a editar.
+          planModeActive: () => planActivo,
+          // El ■ también corta la espera entre reintentos del proveedor
+          // (`lib/agent/retry-policy.ts`).
+          signal: upstreamAbort.signal,
+          // LA COMPACTACIÓN DENTRO DEL TURNO, como DeepSeek (`lib/agent/compaction/`).
+          compaction: {
+            policy: COMPACTION_POLICY,
+            // `buildAgentMessages` arma [sistema, manual (/AGENTS.md), …historial,
+            // petición]: lo resumible empieza en el historial.
+            firstIndex: 2,
+            // El resultado entero de lo que se poda, en un fichero de /tmp que
+            // Len lee con `cat` (`spill-policy` de DeepSeek). Sólo en una terminal
+            // viva: arrancarla para esto sería cargar el sitio entero por un aviso.
+            saveRecovery: async (path, text) => {
+              const terminal = agentSession.terminal;
+              if (!terminal?.arrancada) return false;
+              await terminal.poner({ [path]: text });
+              return true;
+            },
+          },
+          // LA RETENCIÓN DE RESULTADOS GRANDES, como la `spill-policy` de DeepSeek
+          // (`lib/agent/compaction/spill.ts`): lo que pase de 12.500 tokens llega
+          // recortado y el texto entero queda en /tmp de la terminal. Aquí SÍ se
+          // arranca si no lo estaba —un resultado así es justo cuando hace falta
+          // poder leer el resto—, y por el camino de `bash` (un comando que no
+          // hace nada), que es quien sabe montarla. Sin terminal, entero.
+          spill: {
+            maxInlineTokens: SPILL_MAX_INLINE_TOKENS,
+            save: async (path, text) => {
+              if (!terminalEncendida()) return false;
+              if (!agentSession.terminal?.arrancada) await runAgentTool(agentSession, deps, NOMBRE_BASH, { command: "true" });
+              const terminal = agentSession.terminal;
+              if (!terminal?.arrancada) return false;
+              await terminal.poner({ [path]: text });
+              return true;
+            },
+          },
           // Con la MISMA cuenta que el cobro de abajo. Sin gasto todavía no se
           // pregunta: `creditsForUsage` tiene un suelo de 1 y un saldo mínimo
           // cerraría el turno antes de empezar.
@@ -1015,14 +1276,17 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
             }
             return direccion;
           },
-          // streamWithRetry rides out transient Gemini 503 spikes: it re-opens
-          // the stream on a retryable error thrown BEFORE any event (safe — the
-          // model produced nothing yet), and honors upstreamAbort so a retry
-          // never outlives the silence clock. A mid-stream failure still
-          // propagates (no double-applied tool calls). Cada evento del modelo
+          // `streamWithRetry` es de la época de Gemini: reabre el stream sólo si
+          // `brain.openStream` LANZA antes del primer evento. El cliente de
+          // Fireworks no lanza —un 429, un 5xx, una red caída o un corte a
+          // medias llegan como un `done` de error con su código—, así que los
+          // reintentos de verdad, también a mitad de stream, los hace el BUCLE
+          // (`lib/agent/retry-policy.ts`, como DeepSeek). Cada evento del modelo
           // rearma el reloj de silencio.
           openStream: (msgs) => {
-            const s = conSenales(streamWithRetry(() => brain.openStream(msgs), { signal: upstreamAbort.signal }), reloj.vivo);
+            // Pieza 7: la sección del modo plan, con el estado de AHORA.
+            const conModo = withPlanSection(msgs, planActivo);
+            const s = conSenales(streamWithRetry(() => brain.openStream(conModo), { signal: upstreamAbort.signal }), reloj.vivo);
             // `envuelve` deja pasar cada evento tal cual y se queda una copia:
             // no cambia el orden, ni el contenido, ni el momento en que llega.
             return grabadora ? grabadora.envuelve(s) : s;
@@ -1031,7 +1295,8 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           // compose a closing summary when a step-budget cap is hit, so the turn
           // ends with "here's what I did / what's pending" instead of a red error.
           closeOut: (msgs) => {
-            const s = conSenales(streamWithRetry(() => brain.closeOut(msgs), { signal: upstreamAbort.signal }), reloj.vivo);
+            const conModo = withPlanSection(msgs, planActivo);
+            const s = conSenales(streamWithRetry(() => brain.closeOut(conModo), { signal: upstreamAbort.signal }), reloj.vivo);
             return grabadora ? grabadora.envuelveCierre(s) : s;
           },
           // EL DIARIO SE ESCRIBE AQUÍ, y no dentro de `runAgentTool`, porque
@@ -1048,8 +1313,12 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           runTool: async (name, args) => {
             // Nada se escribe antes de la foto del principio.
             await fotoAntes;
-            const outcome = await runAgentTool(agentSession, deps, name, args);
+            const outcome = await runAgentTool(agentSession, depsDelTurno, name, args);
             diario.anotar(name, outcome.response, args);
+            // LA CARPETA (pieza 9 de Len 2.5, carril B): los ficheros que cambió
+            // esta herramienta, cada uno con la versión de su «antes», para
+            // que «Deshacer» los devuelva con la página o no se ofrezca.
+            if (outcome.ficherosTocados?.length) emit("ficheros", { ficherosTocados: outcome.ficherosTocados });
             return outcome;
           },
           // 🔴 EL MOMENTO `tsc`: lo medido vuelve AL MODELO, no sólo al usuario.
@@ -1077,8 +1346,15 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
                   // Las fotos del dueño, incrustadas: medir sin ellas da
                   // lecturas de contraste sobre fondos que en la página real no
                   // están vacíos. Es lo mismo que hacen los ojos aquí abajo.
-                  const paraMedir = documentoMedible(await inlineOwnAssets(gemelo), vistaDelTurno);
-                  return componerMedicion(await medirDelTurno(paraMedir), gemelo);
+                  // LA CARPETA (pieza 9, carril B): se relee aquí, no al
+                  // empezar: el turno pudo escribir `js/app.js` hace un paso.
+                  const vista = await vistaConCarpeta(vistaDelTurno, deps, projectId);
+                  const paraMedir = documentoMedible(await inlineOwnAssets(gemelo), vista);
+                  const carpeta = carpetaDeLaVista(vista);
+                  return componerMedicion(
+                    await (carpeta ? medirDelTurno(paraMedir, {}, { carpeta }) : medirDelTurno(paraMedir)),
+                    gemelo,
+                  );
                 },
           // ⚰️ Aquí iba `lineaBase`, el documento del arranque etiquetado con los
           // ids del motor. Len 2.0 (T9): la base la trae cada escritura
@@ -1133,7 +1409,8 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
                       // De la fila que se acaba de releer: si el turno cambió
                       // los ajustes (activar el chat, por ejemplo), los ojos
                       // miran la página CON su burbuja, que es la que se guardó.
-                      vista: vistaParaMedir(projectId, row, page ?? null),
+                      // Y LA CARPETA (pieza 9, carril B), releída como la fila.
+                      vista: await vistaConCarpeta(vistaParaMedir(projectId, row, page ?? null), deps, projectId),
                     };
                   })();
                   if (fresco.kind === "desconocido") {
@@ -1345,7 +1622,11 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           // ni el momento en que llega al cliente.
           emit: (ev) => {
             registro.observar(ev);
-            if (ev.type === "text" || ev.type === "action") avance.tocar();
+            // Un reintento cambia la fila: `registro.texto` acaba de soltar lo
+            // descartado, y `avance` la escribe ya, como tras un `text`. (El
+            // reloj de silencio no va por aquí: lo rearma el `emit` de arriba
+            // con cualquier evento.)
+            if (ev.type === "text" || ev.type === "action" || ev.type === "retry") avance.tocar();
             emit(ev.type, ev);
           },
           onMutacion: () => {
@@ -1360,7 +1641,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         });
         mutoDurable = mutoDurable || result.mutoDurable;
         transcripcionDelTurno = result.transcripcion ?? null;
-        corte = corteDelTurno({ ...result, mutoDurable });
+        corte = corteDelTurno({ ...result, mutoDurable: mutoDurable || estadoCambiado() });
 
         // LA SUITE DE LA PÁGINA, guardada. Dos cosas a la vez y en este orden:
         // se retiran las promesas que el navegador declaró sin sentido —su
@@ -1571,13 +1852,93 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         // que cobraron las herramientas se suma siempre: ya está cobrado, acabe
         // como acabe el turno (N42).
         cobrado = (cobrado ?? 0) + chargedByTools;
+        // 🔴 PIEZA 8 · EL CONDUCTOR DE RONDAS (`goal-round-driver` de DeepSeek),
+        // ANTES de cerrar la fila: lo que decida es parte de la foto que se
+        // guarda. Las paradas son las suyas: el ■ en una ronda la deja en pausa
+        // (sólo el dueño la reanuda) y en otro turno desarma; un turno que
+        // revienta desarma; una pregunta sin contestar espera al dueño (su
+        // respuesta es un turno, y al cerrarlo se sigue); al tope de rondas,
+        // atascado. El techo de un turno NO para (cada ronda trae el suyo, y
+        // Jesús lo dijo: sin tope propio de créditos); lo que para es el saldo.
+        let siguiente: GoalSnapshot | null = null;
+        let rondaParada: "credits" | null = null;
+        if (goalActual) {
+          const cancelado = canceladoAProposito && result.errorCode === "cancelled";
+          const revento = result.terminalError && !cancelado && result.topeAlcanzado === null;
+          // El conductor de DeepSeek no mira preguntas: reserva la ronda siguiente
+          // al quedar libre. Aquí una pregunta CIERRA el turno (pieza 3), y sólo
+          // entonces se espera al dueño; si el turno siguió (lo escrito por el
+          // dueño, lote 7-8), encadena como allí. Lo dice el bucle, no las tarjetas.
+          const preguntaSinContestar = result.endedOnQuestion === true;
+          if (cancelado) {
+            if (rondaDelTurno && goalActual.phase === "active") goal.commit(pauseGoal(goalActual, goalActual), "disarmed");
+            else if (goalArmado) goal.commit(goalActual, "disarmed");
+          } else if (revento) {
+            if (goalArmado) goal.commit(goalActual, "disarmed");
+          } else if (!preguntaSinContestar && goalActual.phase === "active" && goalArmado) {
+            if (goalActual.roundsStarted >= goalActual.maxGoalRounds) {
+              goal.commit(
+                blockGoal(goalActual, goalActual, {
+                  code: "round-limit",
+                  message: `Goal reached its configured limit of ${goalActual.maxGoalRounds} rounds.`,
+                }),
+                "disarmed",
+              );
+            } else {
+              const saldo = await getCreditState(userId).catch(() => null);
+              if (!saldo || saldo.balance < 1) {
+                goal.commit(goalActual, "disarmed");
+                rondaParada = "credits";
+              } else {
+                siguiente = goalActual;
+              }
+            }
+          }
+        }
         await cerrarFila();
+        // LA RONDA SIGUIENTE, con la fila de ésta ya escrita (su historial la
+        // ve entera) y ANTES del `done`, que la anuncia: el chat la sigue como
+        // sigue un turno que llega en curso del servidor (Len 2.1). Nadie lee su
+        // stream —su cuerpo se cancela—, así que corre como un turno sin cliente.
+        if (siguiente) {
+          const fila = randomUUID();
+          try {
+            const res = await correrTurno(
+              userId,
+              {
+                projectId,
+                prompt: "",
+                turnId: fila,
+                ...(pageSlug ? { page: pageSlug } : {}),
+                ...(esfuerzoDelTurno ? { esfuerzo: esfuerzoDelTurno } : {}),
+                ...(body?.mode !== undefined ? { mode: body.mode } : {}),
+                ...(body?.zonaHoraria !== undefined ? { zonaHoraria: body.zonaHoraria } : {}),
+              },
+              { url: req.url, signal: new AbortController().signal },
+              { round: { goalId: siguiente.id, revision: siguiente.revision, round: siguiente.roundsStarted + 1 } },
+            );
+            if (res.ok && res.headers.get("content-type")?.startsWith("text/event-stream")) {
+              void res.body?.cancel().catch(() => undefined);
+              rondaSiguiente(filaId, fila);
+              siguienteFila = fila;
+            } else {
+              console.warn(`[agent] la ronda siguiente no arrancó (${res.status})`);
+              disarmGoal(projectId);
+            }
+          } catch (err) {
+            console.warn("[agent] la ronda siguiente no arrancó", err);
+            disarmGoal(projectId);
+          }
+        }
         // Lo que cambió, antes del `done`: el cliente lo engancha a este turno.
         // Sin llamadas a herramientas no pudo cambiar nada y no se mira.
         if (result.toolCalls > 0) await emitirCambios();
         emit("done", {
           turns: result.turns,
           toolCalls: result.toolCalls,
+          // Pieza 8: el encargo como queda, y la ronda que sigue (o por qué no).
+          ...(goalActual ? { goal: goalActual, goalActivation: goalArmado ? "armed" : "disarmed" } : {}),
+          ...(siguienteFila ? { round: { next: siguienteFila } } : rondaParada ? { round: { stopped: rondaParada } } : {}),
           ...(mutoDurable ? { mutoDurable: true } : {}),
           ...(result.topeAlcanzado ? { topeAlcanzado: result.topeAlcanzado } : {}),
           // LO QUE COBRÓ Y TARDÓ, en números (centicréditos y ms): la frase la
@@ -1605,8 +1966,13 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         close();
       } catch (err) {
         console.error("[agent] stream failed", err);
+        // Pieza 8: el bucle reventó: el encargo se desarma y no se encadena (DeepSeek, `agent/error`).
+        if (goalArmado) {
+          goalArmado = false;
+          disarmGoal(projectId);
+        }
         const code: AgentErrorCode = "upstream";
-        corte = corteDelTurno({ terminalError: true, topeAlcanzado: null, errorCode: code, mutoDurable });
+        corte = corteDelTurno({ terminalError: true, topeAlcanzado: null, errorCode: code, mutoDurable: mutoDurable || estadoCambiado() });
         // La fila, cerrada antes de avisar, como en el final bueno.
         await cerrarFila();
         emit("error", { message: err instanceof Error ? err.message : "Unknown error", code });
@@ -1641,7 +2007,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         // correo lo salta), con la clave de la fila para no repetir. El módulo
         // se carga sólo aquí: la inmensa mayoría de turnos no lo necesita.
         // FAIL-SOFT: un aviso que no sale no le cuesta el turno a nadie.
-        if (clienteSeFue && !canceladoAProposito && registro.hayAlgo(mutoDurable)) {
+        if (clienteSeFue && !canceladoAProposito && registro.hayAlgo(mutoDurable) && siguienteFila === null) {
           try {
             const { scheduleNotification } = await import("@/lib/notifications/dispatch");
             await scheduleNotification(
@@ -1708,7 +2074,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
       "x-accel-buffering": "no",
     },
   });
-});
+}
 
 /** El cuerpo vive en lib/ai/sse; el nombre local se queda porque lo usan
  *  decenas de sitios y renombrarlos no aclara nada. */

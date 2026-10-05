@@ -18,6 +18,7 @@ import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
 import { sealRelease } from "@/lib/html-engine";
 import type { ProjectData } from "@/lib/projects/types";
 import { bakeModulesForPreviewHtml } from "@/lib/publish/preview-bake";
+import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 
 export interface ContextoDeVista {
   projectId: string;
@@ -26,6 +27,20 @@ export interface ContextoDeVista {
   pagina: string | null;
   settings: ProjectData["settings"] | undefined;
   logoUrl: string | null;
+  /** LA CARPETA (pieza 9 de Len 2.5): los ficheros del proyecto, `/js/app.js`
+   *  → contenido. No entran en el documento: viajan con él hasta el navegador
+   *  que lo mide, que los contesta cuando la página los pide. */
+  files?: Readonly<Record<string, string>>;
+}
+
+/** Lo que el navegador que mide necesita de la carpeta, o `undefined` si la
+ *  vista no trae ficheros: así quien mide una página sin carpeta llama igual
+ *  que siempre. */
+export function carpetaDeLaVista(
+  vista: Pick<ContextoDeVista, "files" | "pagina"> | null | undefined,
+): { files: Readonly<Record<string, string>>; pagina: string | null } | undefined {
+  if (!vista?.files || Object.keys(vista.files).length === 0) return undefined;
+  return { files: vista.files, pagina: vista.pagina };
 }
 
 export function documentoDeVista(html: string, ctx: ContextoDeVista): string {
@@ -87,6 +102,33 @@ export function vistaParaMedir(
     settings: fila.data?.settings,
     logoUrl: null,
   };
+}
+
+/**
+ * LA VISTA CON SU CARPETA (pieza 9 de Len 2.5). Los ficheros que se publican
+ * viajan con la vista hasta el navegador que mide, que los contesta cuando la
+ * página los pide (`<script src="/js/app.js">`). Sin ficheros publicables —o
+ * si la carpeta no se puede leer— la vista es la de siempre: medir sin carpeta
+ * ya es útil, y no poder leerla no puede dejar ciego a Len.
+ *
+ * `deps` es estructural (el `projectFiles` de `AgentDeps`): lo llaman la
+ * herramienta (`mirar_pagina`, `usar_pagina`) y la ruta del agente (los ojos y
+ * la medida que vuelve al modelo).
+ */
+export async function vistaConCarpeta(
+  vista: ContextoDeVista,
+  deps: { projectFiles?(projectId: string): Promise<Readonly<Record<string, string>>> },
+  projectId: string,
+): Promise<ContextoDeVista> {
+  let todos: Readonly<Record<string, string>> | null | undefined;
+  try {
+    todos = await deps.projectFiles?.(projectId);
+  } catch {
+    todos = null;
+  }
+  if (!todos) return vista;
+  const files = Object.fromEntries(Object.entries(todos).filter(([ruta]) => isPublishableFolderPath(ruta)));
+  return Object.keys(files).length > 0 ? { ...vista, files } : vista;
 }
 
 /**

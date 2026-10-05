@@ -11,7 +11,7 @@
 
 import type { InlineImage } from "@/lib/ai-gateway";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
-import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
+import { cargarEnOrigenReal, origenDeMedida, type OpcionesDelDocumento } from "@/lib/ai/origen-de-medida";
 import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
 import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
@@ -269,6 +269,10 @@ export async function renderHtmlToInlineImage(
      *  y no llegaría a instalarse, que es lo que ya se midió en su día. */
     behaviorPrelude?: string;
     onBehaviorResult?: (bruto: unknown) => void;
+    /** LA CARPETA (pieza 9 de Len 2.5): los ficheros del proyecto que la
+     *  página pide (`<script src="/js/app.js">`), contestados desde memoria
+     *  por el guardia. Sin ellos la página se ve como se veía. */
+    carpeta?: OpcionesDelDocumento;
   } = {},
 ): Promise<InlineImage | null> {
   // Spec: inline base64 when small. 1 MB JPEG of a full page is plenty of
@@ -361,7 +365,7 @@ export async function renderHtmlToInlineImage(
       // ANTES DE CARGAR, o no sirve: lo que el preludio observa son los
       // `addEventListener` de la página, y ésos corren al cargar.
       if (opts.behaviorPrelude) await page.evaluateOnNewDocument(opts.behaviorPrelude);
-      await cargarEnOrigenReal(page, html);
+      await cargarEnOrigenReal(page, html, opts.carpeta);
       // 🔴 LAS IMÁGENES PEREZOSAS NO EXISTEN PARA UNA FOTO DE PÁGINA ENTERA.
       //
       // La captura es `fullPage`, pero la ventana mide 1280x720 y nada hace

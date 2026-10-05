@@ -66,6 +66,28 @@ describe("textoDeLen", () => {
       ]),
     ).toBe("Hola");
   });
+
+  it("un `retry` retira lo que el intento fallido llegó a escribir (no se puntúa lo descartado)", () => {
+    expect(
+      textoDeLen([
+        { nombre: "text", datos: { type: "text", text: "Miro. " } },
+        { nombre: "text", datos: { type: "text", text: "Ya v" } },
+        { nombre: "retry", datos: { type: "retry", attempt: 1, maxAttempts: 5, delayMs: 500, discardChars: 4 } },
+        { nombre: "text", datos: { type: "text", text: "Ya está." } },
+      ]),
+    ).toBe("Miro. Ya está.");
+  });
+
+  it("una `compaction` con descarte también retira lo del intento (desborde a media vuelta)", () => {
+    expect(
+      textoDeLen([
+        { nombre: "text", datos: { type: "text", text: "Miro. " } },
+        { nombre: "text", datos: { type: "text", text: "Ya v" } },
+        { nombre: "compaction", datos: { type: "compaction", pruned: 0, summarized: true, discardChars: 4 } },
+        { nombre: "text", datos: { type: "text", text: "Ya está." } },
+      ]),
+    ).toBe("Miro. Ya está.");
+  });
 });
 
 describe("herramientasDeLen", () => {

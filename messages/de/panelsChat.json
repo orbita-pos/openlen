@@ -197,16 +197,28 @@
       "waitingAnswer": "Wartet auf deine Antwort",
       "waitingApproval": "Wartet auf deine Zustimmung",
       "yourTurn": "Du bist dran · pausiert",
+      "yourTurnLive": "Du bist dran · Len macht weiter, sobald du antwortest",
       "done": "Fertig",
       "doneHint": "bitte um etwas anderes",
       "stopped": "Gestoppt",
       "stoppedHint": "was schon erledigt ist, bleibt",
-      "failed": "Konnte nicht fertig werden"
+      "failed": "Konnte nicht fertig werden",
+      "retrying": "Neuer Versuch",
+      "retryingHint": "keine Antwort · in {seconds} s · Versuch {attempt} von {max}",
+      "retryingAttempt": "Versuch {attempt} von {max}",
+      "compacting": "Fasst zusammen",
+      "compactingHint": "um weiterzumachen, ohne den Faden zu verlieren"
     },
     "question": {
       "label": "Len fragt dich",
       "hint": "Antworte unten, mit deinen Worten.",
-      "answered": "Deine Antwort: {answer}"
+      "answered": "Deine Antwort: {answer}",
+      "cancelled": "Abgebrochen, ohne eine Antwort zu senden",
+      "send": "Antworten",
+      "other": "Etwas anderes",
+      "otherPlaceholder": "Schreib deine Antwort",
+      "pickMany": "Du kannst mehrere wählen",
+      "recommended": "Empfohlen"
     },
     "changes": {
       "showAll": "Alle {count} Änderungen ansehen",
@@ -255,6 +267,45 @@
       "minimize": "Zu Len minimieren",
       "open": "Chat öffnen",
       "resize": "Ziehen, um die Größe zu ändern"
+    },
+    "plan": {
+      "option": "Zuerst planen",
+      "optionHint": "Len sieht sich zuerst um und schlägt einen Plan vor; nichts ändert sich, bis du ihn freigibst.",
+      "chip": "Plan",
+      "chipOff": "Planmodus verlassen",
+      "reviewLabel": "Plan zur Prüfung",
+      "reviewQuestion": "Diesen Plan freigeben?",
+      "approve": "Freigeben",
+      "approveHint": "Len setzt den Plan jetzt um.",
+      "keep": "Änderungen anfragen",
+      "keepHint": "Len plant mit deinen Hinweisen weiter.",
+      "consentLabel": "Planmodus",
+      "consentQuestion": "Len möchte planen, bevor etwas geändert wird. Zuerst planen?",
+      "planFirst": "Zuerst planen",
+      "planFirstHint": "Nichts ändert sich, bis du den Plan freigibst.",
+      "skip": "Ohne Plan",
+      "skipHint": "Len macht jetzt mit deiner Anfrage weiter.",
+      "showPlan": "Ganzen Plan ansehen",
+      "hidePlan": "Plan ausblenden"
+    },
+    "goal": {
+      "option": "Ziel",
+      "optionHint": "Len macht allein weiter, Runde um Runde, bis es fertig ist.",
+      "optionTaken": "Es gibt schon ein Ziel: entferne es oder warte, bis es fertig ist.",
+      "chip": "Ziel",
+      "chipOff": "Kein Ziel daraus machen",
+      "placeholder": "Beschreibe das ganze Ziel; Len macht weiter, bis es fertig ist…",
+      "label": "Ziel",
+      "round": "Runde {round} von {max}",
+      "running": "Läuft",
+      "paused": "Pausiert",
+      "blocked": "Festgefahren",
+      "roundLimit": "Grenze von {max} Runden erreicht.",
+      "noCredits": "Gestoppt: kein Guthaben mehr.",
+      "resume": "Fortsetzen",
+      "clear": "Entfernen",
+      "clearFailed": "Das Ziel konnte nicht entfernt werden.",
+      "roundLine": "Ziel · Runde {round} von {max}"
     }
   }
 }

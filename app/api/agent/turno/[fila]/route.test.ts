@@ -3,12 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   turnoDeLaFila: vi.fn(),
+  siguienteDeLaFila: vi.fn((): string | null => null),
   leerTurnoDelUsuario: vi.fn(),
   marcarCortadaSiSigueEnCurso: vi.fn(async () => {}),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
-vi.mock("@/lib/agent/direcciones", () => ({ turnoDeLaFila: mocks.turnoDeLaFila }));
+vi.mock("@/lib/agent/direcciones", () => ({ turnoDeLaFila: mocks.turnoDeLaFila, siguienteDeLaFila: mocks.siguienteDeLaFila }));
 vi.mock("@/lib/projects/chat", () => ({
   leerTurnoDelUsuario: mocks.leerTurnoDelUsuario,
   marcarCortadaSiSigueEnCurso: mocks.marcarCortadaSiSigueEnCurso,
@@ -70,6 +71,27 @@ describe("GET /api/agent/turno/[fila] — volver a mirar un turno que sigue", ()
   it("🔴 la fila de otro, o una que no existe, es un 404 sin distinguir", async () => {
     mocks.leerTurnoDelUsuario.mockResolvedValue(null);
     expect((await pedir()).status).toBe(404);
+  });
+
+  // PIEZA 8: la ronda siguiente de un encargo arranca antes de abrir su fila
+  // (la abre pasada la puerta de créditos), y el chat la empieza a sondear en
+  // cuanto el `done` la anuncia. Ese hueco no es «Error de red».
+  it("🔴 pieza 8: una fila que aún no existe pero cuyo turno está vivo es un turno en marcha, vacío", async () => {
+    mocks.leerTurnoDelUsuario.mockResolvedValue(null);
+    mocks.turnoDeLaFila.mockReturnValue("t-9");
+    const { status, cuerpo } = await pedir("fila-2");
+    expect(status).toBe(200);
+    expect(cuerpo.turnoId).toBe("t-9");
+    expect(cuerpo.turno).toMatchObject({ id: "fila-2", userText: "", assistantReasoning: "", status: "applied", enCurso: true });
+    expect(mocks.turnoDeLaFila).toHaveBeenCalledWith("fila-2", "u1");
+  });
+
+  it("pieza 8: una fila cerrada que dio paso a otra ronda la dice", async () => {
+    const { enCurso: _x, ...cerrado } = enCurso;
+    mocks.leerTurnoDelUsuario.mockResolvedValue(cerrado);
+    mocks.siguienteDeLaFila.mockReturnValue("fila-2");
+    const { cuerpo } = await pedir();
+    expect(cuerpo).toEqual({ turno: cerrado, siguiente: "fila-2" });
   });
 
   it("sin sesión, 401", async () => {

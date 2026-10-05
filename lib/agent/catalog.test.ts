@@ -13,6 +13,7 @@ import {
   documentosDeLaPlataforma,
 } from "./manual-de-la-plataforma";
 import { clauseMarker } from "@/lib/ai/js-clause";
+import { GOAL_GUIDANCE } from "@/lib/agent/goal";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 
 // Las nueve conductas `data-ol-*`, retiradas el 2026-10-04. Ningún prompt puede
@@ -28,6 +29,9 @@ const SALTO = String.fromCharCode(10);
  *  descripción o en el prompt es una herramienta que el modelo intentará
  *  llamar y no existe. */
 const RETIRADAS = [
+  // Pieza 3 de Len 2.5 (05/10): pasa a llamarse ask_user_question, como DeepSeek.
+  // El nombre viejo sólo se entiende en lo guardado (alias), nunca en el prompt.
+  "preguntar",
   // H3 (2026-09-25): los almacenes y la memoria son ficheros.
   "leer_estado",
   "guardar_dato",
@@ -73,8 +77,20 @@ describe("buildFunctionDeclarations", () => {
       "web_search",
       "web_fetch",
       // ⚰️ TodoWrite, retirada en F4 (plans/len-agente-2026).
-      "preguntar",
+      // Pieza 3 de Len 2.5: el nombre y el esquema de DeepSeek.
+      "ask_user_question",
+      // Pieza 7: el modo plan — la entrada de Claude Code, la salida de DeepSeek.
+      "enter_plan_mode",
+      "exit_plan_mode",
+      // Pieza 8: el encargo, las tres de DeepSeek.
+      "get_goal",
+      "create_goal",
+      "update_goal",
       "revertir_ultimo_cambio",
+      // Pieza 5 de Len 2.5: buscar en las charlas pasadas, como DeepSeek.
+      "session_search",
+      "session_event_search",
+      "session_event_read",
       // Len sabe de tus resultados (plans/len-resultados/): una por fuente,
       // siempre cargadas, como los conectores de Grok, dots y Claude.
       "ver_visitas",
@@ -95,6 +111,23 @@ describe("buildFunctionDeclarations", () => {
     expect("HERRAMIENTAS_DIFERIDAS" in catalogo).toBe(false);
     expect(buildFunctionDeclarations().some((d) => d.name === "ToolSearch")).toBe(false);
     expect(buildAgentSystemPrompt()).not.toContain("ToolSearch");
+  });
+
+  it("pieza 5: las tres de session-query de DeepSeek, con los parámetros que significan algo aquí", () => {
+    const props = (n: string) => Object.keys((buildFunctionDeclarations().find((d) => d.name === n) as any).parameters.properties);
+    expect(props("session_search")).toEqual(["query", "session_ids", "created_at_from", "created_at_to", "event_seq_from", "event_seq_to", "event_time_from", "event_time_to", "event_types"]);
+    expect(props("session_event_search")).toEqual(["session_id", "query", "seq_from", "seq_to", "time_from", "time_to", "event_types"]);
+    expect(props("session_event_read")).toEqual(["session_id", "seq", "before", "after"]);
+  });
+
+  it("pieza 3: la pregunta se llama ask_user_question, con el esquema de DeepSeek", () => {
+    const decl = buildFunctionDeclarations().find((d) => d.name === "ask_user_question") as any;
+    expect(decl).toBeDefined();
+    const pregunta = decl.parameters.properties.questions.items;
+    expect(Object.keys(pregunta.properties)).toEqual(["id", "question", "header", "options", "multi_select"]);
+    expect(pregunta.required).toEqual(["id", "question"]);
+    expect(Object.keys(pregunta.properties.options.items.properties)).toEqual(["label", "description"]);
+    expect(decl.parameters.required).toEqual(["questions"]);
   });
 
   it("🔴 ninguna descripción nombra una herramienta retirada, ni data-op-id, ni prueba_js", () => {
@@ -192,6 +225,20 @@ describe("buildFunctionDeclarations", () => {
     expect(buildAgentSystemPrompt()).toContain("/memoria/dueno.md");
   });
 
+  it("pieza 5: la línea de session-query de DeepSeek, sin las herramientas de trace que Len no tiene", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("Use session_search to find relevant work from prior sessions, or session_event_search to search earlier events in one session.");
+    expect(p).toContain("Follow a useful hit with session_event_read when you need exact data.");
+    expect(p).not.toContain("session_trace");
+  });
+
+  it("pieza 6: con la terminal, correr lo directo y mirar el código de salida (Claude Code + DeepSeek); sin ella, nada de bash", () => {
+    const con = buildAgentSystemPrompt();
+    expect(con).toContain("run the direct command and adjust with its output instead of perfecting it in your head");
+    expect(con).toContain("investigate failures before moving on");
+    expect(buildAgentSystemPrompt({ OPENLEN_TERMINAL: "0" })).not.toContain("investigate failures before moving on");
+  });
+
   it("H3 · la memoria son dos ficheros: sólo lo DURABLE, nunca el pedido puntual, y sólo se añade", () => {
     const p = buildAgentSystemPrompt();
     const seccion = p.slice(p.indexOf("MEMORY IS TWO FILES")).split(SALTO + SALTO)[0];
@@ -232,6 +279,16 @@ describe("buildAgentSystemPrompt", () => {
   // página guarda la suya, así que con el interruptor encendido el prompt es el
   // MISMO en todas: el Agente no tiene por qué saber en qué documento está para
   // saber si puede escribir JavaScript.
+  // PIEZA 2 DE LEN 2.5: el contexto se compacta solo (lib/agent/compaction/), así
+  // que el prompt ya puede decirlo — antes de existir habría sido mentira (§1.4,
+  // p. 11, de INVESTIGACION-2-5-AL-LIMITE.md). Claude Code dice lo mismo en su
+  // gestión del contexto; aquí con palabras nuestras, porque su texto no se copia.
+  it("le dice que lo viejo se resume solo y que termine lo pedido en vez de cerrar antes de tiempo", () => {
+    const p = instruccionesDeLen();
+    expect(p).toContain("its older part is summarized automatically");
+    expect(p).toContain("instead of wrapping up early or leaving it half done");
+  });
+
   it("el prompt le ofrece escribir JavaScript, esté en la página que esté", () => {
     const p = instruccionesDeLen();
     expect(p).toContain("<script>");
@@ -592,6 +649,10 @@ describe("lo que el Agente cree que puede", () => {
 
   it("y comprueba lo que no controla ANTES de construirlo", () => {
     expect(buildAgentSystemPrompt()).toContain("Before building something that depends on what you don't control");
+  });
+
+  it("pieza 8: lleva la política del encargo de DeepSeek, siempre", () => {
+    expect(buildAgentSystemPrompt()).toContain(GOAL_GUIDANCE);
   });
 
   // ⚰️ AQUÍ SE EXIGÍA que el prompt siguiera diciendo «el BOTÓN FLOTANTE DE

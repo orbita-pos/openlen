@@ -6,8 +6,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // conocía. Es `import type`, así que se borra al compilar y no despierta al
 // módulo mockeado.
 import type { AgentLoopArgs } from "@/lib/agent/loop";
+import type { Message } from "@/lib/ai-gateway";
+import { streamWithRetry } from "@/lib/agent/retry";
+import { PLAN_OFF_NOTICE, PLAN_ON_NOTICE, PLAN_POLICY } from "@/lib/agent/plan-mode";
+import { createGoal, goalRoundPrompt, type GoalSnapshot } from "@/lib/agent/goal";
+import { _resetGoalActivation, armGoal, goalActivation } from "@/lib/agent/goal-activation";
 import type { VisualVerdict } from "@/lib/agent/verify";
-import { documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
+import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 
 /**
  * EL VEREDICTO DE LOS OJOS, TIPADO — para que un campo nuevo rompa el
@@ -61,6 +66,8 @@ const mocks = vi.hoisted(() => ({
   verifyEditedPage: vi.fn(),
   leerDireccion: vi.fn(() => null as string | null),
   abrirTurno: vi.fn(),
+  esperarRespuesta: vi.fn(async (_turnoId: string, _o: { timeoutMs: number; signal?: AbortSignal }) => null as unknown),
+  rondaSiguiente: vi.fn(),
   // Len 2.1: el aviso de turno terminado sin nadie mirando.
   scheduleNotification: vi.fn(async () => {}),
   createPool: vi.fn(),
@@ -88,12 +95,22 @@ const mocks = vi.hoisted(() => ({
   // La foto de los ficheros del turno (la lente «Cambios»). Por defecto, un
   // proyecto vacío: ningún cambio y ningún evento.
   cargarFicherosDeLaTerminal: vi.fn(async (): Promise<Record<string, string>> => ({})),
+  // LA CARPETA (pieza 9 de Len 2.5): los ficheros del proyecto que los ojos
+  // cargan. Por defecto `undefined` (sin carpeta), como un proyecto de hoy.
+  projectFiles: vi.fn(),
   // N42: el cobro que la ruta le pasa a `realDeps` — el que usan las
   // herramientas que cobran aparte del modelo (búsquedas, editar una imagen).
   cobroDeLasHerramientas: undefined as undefined | ((userId: string, centicreditos: number) => Promise<unknown>),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
+// El correo del dueño sale de la base (`ownerEmail`). Sin este doble, cada turno
+// de estas pruebas esperaba ~2,7 s a una base que aquí no existe — y las rondas
+// del encargo (pieza 8), que son varios turnos seguidos, no cabían en el plazo.
+vi.mock("@/lib/movil/llaves", async (real) => ({
+  ...(await real<typeof import("@/lib/movil/llaves")>()),
+  correoDelUsuario: async () => null,
+}));
 vi.mock("@/lib/agent/herramientas-de-ficheros", async (real) => ({
   ...(await real<typeof import("@/lib/agent/herramientas-de-ficheros")>()),
   cargarFicherosDeLaTerminal: mocks.cargarFicherosDeLaTerminal,
@@ -166,6 +183,7 @@ vi.mock("@/lib/agent/tools", () => ({
       loadProject: mocks.loadProject,
       cambiosSinPublicar: mocks.cambiosSinPublicar,
       loadBusinessProfile: mocks.loadBusinessProfile,
+      projectFiles: mocks.projectFiles,
     };
   },
   runAgentTool: mocks.runAgentTool,
@@ -182,6 +200,9 @@ vi.mock("@/lib/agent/direcciones", () => ({
   abrirTurno: mocks.abrirTurno,
   cerrarTurno: vi.fn(),
   leerDireccion: mocks.leerDireccion,
+  esperarRespuesta: mocks.esperarRespuesta,
+  // Pieza 8: la ronda siguiente de una fila (el sondeo del chat la lee).
+  rondaSiguiente: mocks.rondaSiguiente,
   MAX_DIRECCION: 2000,
 }));
 // El renderizador de Chromium. Se dobla para poder CONTAR arranques: el punto
@@ -542,6 +563,249 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
       expect(eventos.map((e) => e.event)).not.toContain("cambios");
       expect(orden).toEqual(["herramienta", "herramienta"]);
     });
+  });
+});
+
+// PIEZA 3 DE LEN 2.5: ask_user_question espera la respuesta DENTRO del turno,
+// pero sólo si el cliente sabe contestar (`answersQuestions`): la voz y Len-Bench
+// no lo mandan y siguen como siempre (la pregunta cierra el turno).
+describe("POST /api/agent — la pregunta que espera", () => {
+  const preguntas = [{ id: "plazo", question: "¿Cuánto tarda?" }];
+  let depsVistas: Record<string, unknown> | null = null;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+    depsVistas = null;
+    mocks.runAgentTool.mockImplementation(async (_s: unknown, deps: Record<string, unknown>) => {
+      depsVistas = deps;
+      const askUser = deps.askUser as ((q: unknown) => Promise<unknown>) | undefined;
+      const answers = askUser ? await askUser(preguntas) : null;
+      return { response: { ok: true, ...(answers ? { answers } : {}) } };
+    });
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("ask_user_question", { questions: preguntas });
+      return { turns: 1, toolCalls: 1, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    mocks.esperarRespuesta.mockResolvedValue([{ id: "plazo", selected: ["48 horas"] }]);
+  });
+  afterEach(() => {
+    mocks.runAgentTool.mockReset();
+    mocks.runAgentLoop.mockReset();
+    mocks.esperarRespuesta.mockReset();
+  });
+  const turno = async (extra: Record<string, unknown>) =>
+    readEvents(await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "pon el plazo", ...extra }) })));
+
+  it("con answersQuestions: emite la pregunta y espera su respuesta en el almacén del turno", async () => {
+    const eventos = await turno({ answersQuestions: true });
+    expect(eventos.find((e) => e.event === "question")?.data).toEqual({ questions: preguntas });
+    expect(mocks.esperarRespuesta).toHaveBeenCalledTimes(1);
+    expect(mocks.esperarRespuesta.mock.calls[0]![1]).toMatchObject({ timeoutMs: 120_000 });
+  });
+
+  it("sin él (la voz, Len-Bench), no hay quien conteste: ni evento ni espera (brazo de control)", async () => {
+    const eventos = await turno({});
+    // La herramienta SÍ corrió (si no, la prueba no mediría nada) y sin quien conteste.
+    expect(depsVistas).not.toBeNull();
+    expect(depsVistas!.askUser).toBeUndefined();
+    expect(eventos.some((e) => e.event === "question")).toBe(false);
+    expect(mocks.esperarRespuesta).not.toHaveBeenCalled();
+  });
+});
+
+// PIEZA 7 · EL MODO PLAN EN LA RUTA. El estado se pliega de la última fila con
+// transcripción; la elección del dueño viaja en el cuerpo (`plan`) y, si
+// difiere, el modelo lo lee con la narración de DeepSeek; la sección entra y
+// sale del prompt de sistema en CADA petición (al aprobar a media vuelta, la
+// siguiente ya sale sin ella), y la fila guarda si el turno cerró en modo plan.
+describe("POST /api/agent — el modo plan", () => {
+  const SYS = "You are Len.";
+  let enviados: Message[][] = [];
+  const conSeccion = (m: Message[]) => typeof m[0]?.content === "string" && m[0].content === `${SYS}\n\n${PLAN_POLICY}`;
+  const sinSeccion = (m: Message[]) => m[0]?.content === SYS;
+  const filaEnPlan = { userText: "antes", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant", content: "plan" }], leidos: [], planMode: true } };
+  const filaSinPlan = { userText: "antes", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant", content: "hecho" }], leidos: [] } };
+  const cierre = { finalText: "ok", turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false, mutoDurable: true, transcripcion: [{ role: "assistant", content: "ok" }] };
+  const filaGuardada = () =>
+    (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { planMode?: true } | null }])[1].transcript;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+    mocks.creditsForUsage.mockReturnValue(1);
+    mocks.buildAgentMessages.mockReturnValue({
+      ok: true as const,
+      messages: [
+        { role: "system", content: SYS },
+        { role: "user", content: "manual" },
+        { role: "user", content: "añade reseñas" },
+      ],
+      systemPrompt: SYS,
+      contextBlock: "",
+    } as never);
+    enviados = [];
+    mocks.createAgentBrain.mockReturnValue({
+      modelId: "test",
+      creditRate: () => "deepseek-flash",
+      openStream: (m: Message[]) => {
+        enviados.push(m);
+        return (async function* () {})();
+      },
+    } as never);
+    vi.mocked(streamWithRetry).mockImplementation(((f: () => unknown) => f()) as never);
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.openStream(args.messages);
+      return cierre;
+    });
+  });
+  afterEach(() => {
+    mocks.runAgentLoop.mockReset();
+    mocks.runAgentTool.mockReset();
+    mocks.buildAgentMessages.mockReset();
+    mocks.buildAgentMessages.mockReturnValue({ ok: true as const, messages: [{ role: "user", content: "cambia el título" }] });
+    mocks.createAgentBrain.mockReset();
+    mocks.createAgentBrain.mockReturnValue({ modelId: "test", creditRate: () => "deepseek-flash" });
+    mocks.turnosParaElHistorial.mockReset();
+    mocks.turnosParaElHistorial.mockResolvedValue([]);
+    vi.mocked(streamWithRetry).mockReset();
+  });
+  const turno = async (extra: Record<string, unknown> = {}) =>
+    readEvents(await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "añade reseñas", ...extra }) })));
+
+  it("sin elección en el cuerpo, sigue lo plegado: la sección va y no hay narración", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
+    await turno();
+    expect(conSeccion(enviados[0]!)).toBe(true);
+    expect(enviados[0]!.some((m) => m.content === PLAN_ON_NOTICE || m.content === PLAN_OFF_NOTICE)).toBe(false);
+    expect(filaGuardada()?.planMode).toBe(true);
+  });
+
+  it("el dueño lo enciende: sección y la narración justo antes de su petición", async () => {
+    await turno({ plan: true });
+    const m = enviados[0]!;
+    expect(conSeccion(m)).toBe(true);
+    expect(m.at(-2)).toEqual({ role: "user", content: PLAN_ON_NOTICE });
+    expect(m.at(-1)?.content).toBe("añade reseñas");
+  });
+
+  it("el dueño lo apaga: sin sección, con su narración, y la fila sin la foto", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
+    await turno({ plan: false });
+    expect(sinSeccion(enviados[0]!)).toBe(true);
+    expect(enviados[0]!.at(-2)).toEqual({ role: "user", content: PLAN_OFF_NOTICE });
+    expect(filaGuardada()?.planMode).toBeUndefined();
+  });
+
+  it("🔴 aprobado a media vuelta: la petición SIGUIENTE sale sin la sección, se avisa al chat y se guarda apagado", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
+    const visto: boolean[] = [];
+    mocks.runAgentTool.mockImplementation(async (_s: unknown, deps: Record<string, unknown>) => {
+      (deps.planMode as { set(v: boolean): void }).set(false);
+      return { response: { ok: true, approved: true } };
+    });
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.openStream(args.messages);
+      visto.push(args.planModeActive!());
+      await args.runTool("exit_plan_mode", { plan: "# Reseñas" });
+      visto.push(args.planModeActive!());
+      args.openStream(args.messages);
+      return cierre;
+    });
+    const eventos = await turno();
+    expect(conSeccion(enviados[0]!)).toBe(true);
+    expect(sinSeccion(enviados[1]!)).toBe(true);
+    expect(visto).toEqual([true, false]);
+    // El estado al empezar y el cambio.
+    expect(eventos.filter((e) => e.event === "plan").map((e) => e.data)).toEqual([{ active: true }, { active: false }]);
+    expect(filaGuardada()?.planMode).toBeUndefined();
+  });
+
+  it("una elección que no es un booleano no cuenta (y un cliente viejo no apaga nada)", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
+    await turno({ plan: "yes" });
+    expect(conSeccion(enviados[0]!)).toBe(true);
+    expect(enviados[0]!.at(-2)?.content).toBe("manual");
+  });
+
+  it("BRAZO DE CONTROL: sin modo plan ni elección, el prompt es el de siempre", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([filaSinPlan]);
+    await turno();
+    expect(sinSeccion(enviados[0]!)).toBe(true);
+    expect(filaGuardada()?.planMode).toBeUndefined();
+  });
+
+  it("LOTE 7-8 · 🔴 entra en modo plan y revienta: la fila guarda la foto (sin mensajes)", async () => {
+    mocks.runAgentTool.mockImplementation(async (_s: unknown, deps: Record<string, unknown>) => {
+      (deps.planMode as { set(v: boolean): void }).set(true);
+      return { response: { ok: true, planMode: true } };
+    });
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("enter_plan_mode", {});
+      args.emit({ type: "action", tool: "enter_plan_mode", status: "done", summary: "" });
+      throw new Error("se cayó el proveedor");
+    });
+    await turno();
+    expect(filaGuardada()).toEqual({ mensajes: [], leidos: [], planMode: true });
+  });
+
+  it("ALINEAR · el dueño enciende el modo y el turno revienta SIN HACER NADA: la fila se guarda con el estado, cortada", async () => {
+    mocks.runAgentLoop.mockImplementation(async () => {
+      throw new Error("se cayó el proveedor");
+    });
+    await turno({ plan: true });
+    expect(mocks.registrarTurnoDelServidor).toHaveBeenCalledTimes(1);
+    const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { status: string; transcript: unknown }])[1];
+    expect(fila.transcript).toEqual({ mensajes: [], leidos: [], planMode: true });
+    // Una fila vacía «aplicada» parecería un turno limpio (H05): va cortada.
+    expect(fila.status).toBe("cortado");
+    expect(mocks.quitarFilaDelTurno).not.toHaveBeenCalled();
+  });
+
+  it("ALINEAR · un turno que la puerta de créditos paró no deja fila aunque el dueño encendiera el modo (no llegó a empezar)", async () => {
+    mocks.getCreditState.mockResolvedValueOnce({ plan: "free", balance: 0, allotment: 20, refillsAt: null });
+    await turno({ plan: true });
+    expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+    expect(mocks.registrarTurnoDelServidor).not.toHaveBeenCalled();
+  });
+
+  it("ALINEAR · BRAZO DE CONTROL: revienta sin hacer nada y sin cambiar el estado → no hay fila", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
+    mocks.runAgentLoop.mockImplementation(async () => {
+      throw new Error("se cayó el proveedor");
+    });
+    await turno();
+    expect(mocks.registrarTurnoDelServidor).not.toHaveBeenCalled();
+    expect(mocks.quitarFilaDelTurno).toHaveBeenCalledTimes(1);
+  });
+
+  it("LOTE 7-8 · BRAZO DE CONTROL: un turno caído que no cambió nada sigue guardando transcript null", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.emit({ type: "text", text: "Miro la página…" });
+      throw new Error("se cayó el proveedor");
+    });
+    await turno();
+    expect(filaGuardada()).toBeNull();
   });
 });
 
@@ -2012,5 +2276,461 @@ describe("POST /api/agent — la fila del turno se abre al empezar y se cierra a
     const eventos = await readEvents(await pedir());
     expect(eventos.some((e) => e.event === "error")).toBe(true);
     expect(mocks.registrarTurnoDelServidor).toHaveBeenCalledTimes(1);
+  });
+});
+
+// LOS OJOS CARGAN LA CARPETA (pieza 9 de Len 2.5). `verify.ts` ya pasa la
+// carpeta al medidor; pero en producción los dos —los ojos al cerrar y la
+// medida que vuelve al modelo— miden por el navegador del turno, y ahí se
+// tiraba: Len veía rota una página con `<script src="/js/app.js">` que
+// publicada funciona.
+describe("POST /api/agent — los ojos cargan la carpeta", () => {
+  const CARPETA = { "/js/app.js": "document.title = 'x'", "/tests/a.spec.ts": "no se publica" };
+  const PUBLICABLE = { "/js/app.js": "document.title = 'x'" };
+
+  /** Un turno que mide para el modelo y cierra con los ojos, sobre una página. */
+  async function turnoQueMide() {
+    mocks.verifyEditedPage.mockImplementation(
+      async (
+        params: { html: string; vista?: ContextoDeVista | null },
+        internals?: { medir?: (h: string, i?: unknown, o?: unknown) => Promise<unknown> },
+      ) => {
+        // Lo que hace `runVerify` de verdad (ver verify.test.ts): hornea y,
+        // si la vista trae carpeta, se la pasa al medidor.
+        const doc = documentoMedible(params.html, params.vista ?? null);
+        const carpeta = carpetaDeLaVista(params.vista);
+        await (carpeta ? internals?.medir?.(doc, {}, { carpeta }) : internals?.medir?.(doc));
+        return veredicto();
+      },
+    );
+    mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
+      const medir = args.medirParaElModelo as (h: string) => Promise<unknown>;
+      const verifyTurn = args.verifyTurn as (i: { html: string; page: string | null }) => Promise<unknown>;
+      await medir("<h1>Para el modelo</h1>");
+      await verifyTurn({ html: "<h1>Para los ojos</h1>", page: null });
+      return { turns: 1, toolCalls: 1, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "ponle un menú" }),
+        }),
+      ),
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: `<!doctype html><html><body><h1>Hola</h1><script src="/js/app.js"></script></body></html>` },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+    mocks.createPool.mockResolvedValue({ render: mocks.poolRender, close: mocks.poolClose });
+  });
+  afterEach(() => {
+    // Que la carpeta de estas pruebas no se cuele en las de otros bloques.
+    mocks.projectFiles.mockReset();
+  });
+
+  it("🔴 los ojos reciben la vista con la carpeta publicable, y el navegador del turno la carga", async () => {
+    mocks.projectFiles.mockResolvedValue(CARPETA);
+    await turnoQueMide();
+    const { vista } = mocks.verifyEditedPage.mock.calls[0]![0] as { vista: ContextoDeVista };
+    expect(vista.files).toEqual(PUBLICABLE);
+    const conCarpeta = mocks.poolRender.mock.calls.filter((c: unknown[]) => c.length > 1);
+    expect(conCarpeta.map((c: unknown[]) => c[1])).toEqual([
+      { carpeta: { files: PUBLICABLE, pagina: null } },
+      { carpeta: { files: PUBLICABLE, pagina: null } },
+    ]);
+  });
+
+  it("🔴 cada medida relee la carpeta en el momento: el turno pudo escribir `js/app.js` entre las dos", async () => {
+    // La medida para el modelo ve la carpeta vacía; entre ella y los ojos, el
+    // turno escribe `js/app.js`.
+    mocks.projectFiles.mockResolvedValueOnce({}).mockResolvedValue(CARPETA);
+    await turnoQueMide();
+    const [paraElModelo, paraLosOjos] = mocks.poolRender.mock.calls as unknown[][];
+    expect(paraElModelo).toHaveLength(1);
+    expect(paraLosOjos![1]).toEqual({ carpeta: { files: PUBLICABLE, pagina: null } });
+  });
+
+  it("BRAZO DE CONTROL: sin ficheros, el navegador recibe el documento solo, como hoy", async () => {
+    mocks.projectFiles.mockResolvedValue({ "/supabase/migrations/0001_init.sql": "create table t ();" });
+    await turnoQueMide();
+    const { vista } = mocks.verifyEditedPage.mock.calls[0]![0] as { vista: ContextoDeVista };
+    expect("files" in vista).toBe(false);
+    expect(mocks.poolRender).toHaveBeenCalledTimes(2);
+    for (const llamada of mocks.poolRender.mock.calls as unknown[][]) expect(llamada).toHaveLength(1);
+  });
+});
+
+// EL DESHACER CON FICHEROS (pieza 9 de Len 2.5): lo que el turno cambió de la
+// carpeta viaja al cliente en un evento `ficheros`, emitido donde ya está el
+// resultado de cada herramienta (el envoltorio de `runTool`). Sin él, un
+// «Deshacer» devolvería la página y dejaría `js/app.js` cambiado.
+describe("POST /api/agent — los ficheros que tocó el turno viajan al cliente", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+  });
+
+  async function turnoConHerramientas(salidas: Array<Record<string, unknown>>) {
+    for (const s of salidas) mocks.runAgentTool.mockResolvedValueOnce(s);
+    mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
+      const runTool = args.runTool as (n: string, a: unknown) => Promise<unknown>;
+      for (let i = 0; i < salidas.length; i++) await runTool("Write", { file_path: "/js/app.js", content: "x" });
+      return { turns: 1, toolCalls: salidas.length, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    return readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "cambia el script" }),
+        }),
+      ),
+    );
+  }
+
+  it("🔴 cada herramienta que cambió ficheros emite `ficheros` con su lista", async () => {
+    const eventos = await turnoConHerramientas([
+      { response: { ok: true }, ficherosTocados: [{ ruta: "/js/app.js", versionPrevia: "f1" }] },
+      { response: { ok: true }, ficherosTocados: [{ ruta: "/css/a.css", versionPrevia: "f2" }] },
+    ]);
+    const ficheros = eventos.filter((e) => e.event === "ficheros").map((e) => e.data.ficherosTocados);
+    expect(ficheros).toEqual([[{ ruta: "/js/app.js", versionPrevia: "f1" }], [{ ruta: "/css/a.css", versionPrevia: "f2" }]]);
+  });
+
+  it("BRAZO DE CONTROL: una herramienta que no tocó ficheros no emite nada", async () => {
+    const eventos = await turnoConHerramientas([{ response: { ok: true } }]);
+    expect(eventos.some((e) => e.event === "ficheros")).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LA COMPACTACIÓN (pieza 2 de Len 2.5, plans/len-agente-2026/plan-2-5): la ruta
+// le pasa al bucle la política de DeepSeek sobre la ventana EFECTIVA, y el techo
+// que rechaza un turno pasa a ser la ventana REAL del modelo.
+describe("POST /api/agent — la compactación dentro del turno", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<html><body><h1>El Farol</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ balance: 100 });
+  });
+
+  it("el bucle recibe la política de DeepSeek sobre la ventana REAL del modelo, el historial como primer resumible, y el techo es la ventana real", async () => {
+    let compaction: AgentLoopArgs["compaction"];
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      compaction = args.compaction;
+      return { finalText: "listo", turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    await readEvents(
+      await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "hazme el sitio" }) })),
+    );
+    // Como DeepSeek (W = la ventana del modelo): floor(min(1.048.576 × 0,8,
+    // 1.048.576 − 65.536 − 65.536)) y 16 % de (1.048.576 − 65.536).
+    expect(compaction?.policy).toEqual({ thresholdTokens: 838_860, retainTokens: 157_286 });
+    // [sistema, manual (/AGENTS.md), …historial, petición]: se resume desde el historial.
+    expect(compaction?.firstIndex).toBe(2);
+    // Sin terminal arrancada no hay dónde dejar el resultado entero: lo dice, y
+    // el aviso de la poda no nombra ningún fichero.
+    expect(await compaction?.saveRecovery?.("/tmp/pruned/1-3-0.txt", "texto")).toBe(false);
+    const { maxPromptTokens } = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ maxPromptTokens: number }])[0];
+    expect(maxPromptTokens).toBe(1_048_576 - 65_536);
+  });
+
+  it("la retención de DeepSeek: 12.500 tokens, y para guardar arranca la terminal por el camino de bash si no lo estaba", async () => {
+    let spill: AgentLoopArgs["spill"];
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      spill = args.spill;
+      // Sin terminal de verdad (la herramienta es un doble), no hay dónde guardar.
+      const guardo = await args.spill?.save("/tmp/spill/1-0-session_event_read.txt", "texto");
+      return { finalText: String(guardo), turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    mocks.runAgentTool.mockReset().mockResolvedValue({ response: { ok: true } });
+    await readEvents(
+      await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "busca" }) })),
+    );
+    expect(spill?.maxInlineTokens).toBe(12_500);
+    expect(mocks.runAgentTool).toHaveBeenCalledWith(expect.anything(), expect.anything(), "bash", { command: "true" });
+  });
+});
+
+// PIEZA 8 · EL ENCARGO EN LA RUTA (el goal de DeepSeek). Una ronda es un turno:
+// al cerrar uno con el encargo activo y armado, la ruta abre el siguiente ella
+// misma con el mensaje de ronda, y el `done` dice cuál es. El historial de estas
+// pruebas sale de las filas que la propia ruta guarda, así que cada ronda pliega
+// la foto que dejó la anterior.
+describe("POST /api/agent — el encargo", () => {
+  const SYS = "You are Len.";
+  const OBJETIVO = "la tienda entera";
+  const saldo = (balance: number) => ({ plan: "free", balance, allotment: 20, refillsAt: null });
+  const cierre = { finalText: "ok", turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false, mutoDurable: true, transcripcion: [{ role: "assistant", content: "ok" }] };
+  type FilaGuardada = { userText: string; transcript: { goal?: GoalSnapshot | null } | null };
+  const filas = () => mocks.registrarTurnoDelServidor.mock.calls.map((c) => (c as unknown as [string, FilaGuardada])[1]);
+  const encargo = (o: Partial<GoalSnapshot> = {}): GoalSnapshot => ({
+    id: "goal-1", revision: 1, objective: OBJETIVO, phase: "active", maxGoalRounds: 256, roundsStarted: 1, ...o,
+  });
+  const filaCon = (goal: GoalSnapshot) => ({ userText: "antes", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant", content: "hecho" }], leidos: [], goal } });
+  let historialInicial: unknown[] = [];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    _resetGoalActivation();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    // Sin saldo por defecto: cada prueba da el que necesita, así ninguna cadena
+    // sigue sola más allá de la prueba.
+    mocks.getCreditState.mockResolvedValue(saldo(0));
+    mocks.creditsForUsage.mockReturnValue(1);
+    mocks.buildAgentMessages.mockImplementation(((a: { prompt: string }) => ({
+      ok: true as const,
+      messages: [{ role: "system", content: SYS }, { role: "user", content: a.prompt }],
+      systemPrompt: SYS,
+      contextBlock: "",
+    })) as never);
+    mocks.createAgentBrain.mockReturnValue({ modelId: "test", creditRate: () => "deepseek-flash", openStream: () => (async function* () {})() } as never);
+    vi.mocked(streamWithRetry).mockImplementation(((f: () => unknown) => f()) as never);
+    historialInicial = [];
+    mocks.turnosParaElHistorial.mockImplementation(async () => [
+      ...historialInicial,
+      ...filas().map((f) => ({ userText: f.userText, assistantReasoning: "", transcript: f.transcript })),
+    ]);
+    mocks.runAgentLoop.mockImplementation(async () => cierre);
+  });
+  afterEach(() => {
+    mocks.runAgentLoop.mockReset();
+    mocks.runAgentTool.mockReset();
+    mocks.buildAgentMessages.mockReset();
+    mocks.buildAgentMessages.mockReturnValue({ ok: true as const, messages: [{ role: "user", content: "cambia el título" }] });
+    mocks.createAgentBrain.mockReset();
+    mocks.createAgentBrain.mockReturnValue({ modelId: "test", creditRate: () => "deepseek-flash" });
+    mocks.turnosParaElHistorial.mockReset();
+    mocks.turnosParaElHistorial.mockResolvedValue([]);
+    mocks.getCreditState.mockReset();
+    vi.mocked(streamWithRetry).mockReset();
+    _resetGoalActivation();
+  });
+  const turno = async (extra: Record<string, unknown> = {}) =>
+    readEvents(await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: OBJETIVO, ...extra }) })));
+  const promptDe = (i: number) => (mocks.buildAgentMessages.mock.calls[i] as unknown as [{ prompt: string }])[0].prompt;
+  const done = (ev: Awaited<ReturnType<typeof turno>>) => ev.find((e) => e.event === "done")!.data;
+
+  it("la puerta del dueño: este turno es la ronda 1, se guarda y se encadena la 2", async () => {
+    // La puerta de la 1, la cuenta al cerrar la 1, la puerta de la 2; al cerrar
+    // la 2, sin saldo: la cadena para ahí.
+    mocks.getCreditState.mockResolvedValueOnce(saldo(50)).mockResolvedValueOnce(saldo(50)).mockResolvedValueOnce(saldo(50));
+    const eventos = await turno({ goal: "create" });
+    expect(promptDe(0)).toBe(goalRoundPrompt({ objective: OBJETIVO, maxGoalRounds: 256 }, 1));
+    const primera = filas()[0]!;
+    expect(primera.userText).toBe(promptDe(0));
+    expect(primera.transcript?.goal).toMatchObject({ objective: OBJETIVO, phase: "active", roundsStarted: 1, revision: 1 });
+    expect((done(eventos).round as { next?: string } | undefined)?.next).toMatch(/^[0-9a-f-]{36}$/);
+    expect(eventos.some((e) => e.event === "goal")).toBe(true);
+    await vi.waitFor(() => expect(filas()).toHaveLength(2));
+    expect(promptDe(1)).toBe(goalRoundPrompt({ objective: OBJETIVO, maxGoalRounds: 256 }, 2));
+    expect(filas()[1]!.transcript?.goal).toMatchObject({ roundsStarted: 2, phase: "active" });
+    // 🔴 La fila de la 1 se escribió ANTES de que empezara la 2.
+    expect(mocks.registrarTurnoDelServidor.mock.invocationCallOrder[0]!).toBeLessThan(mocks.runAgentLoop.mock.invocationCallOrder[1]!);
+    // Y al cerrar la 2 sin saldo, desarmado.
+    const id = (filas()[1]!.transcript!.goal as GoalSnapshot).id;
+    await vi.waitFor(() => expect(goalActivation("p1", id)).toBe("disarmed"));
+  });
+
+  it("sin saldo al encadenar, no se abre otra ronda y el `done` lo dice", async () => {
+    mocks.getCreditState.mockResolvedValueOnce(saldo(50));
+    const eventos = await turno({ goal: "create" });
+    expect(done(eventos).round).toEqual({ stopped: "credits" });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("🔴 el push no sale en la ronda que encadena; sí al final de la cadena", async () => {
+    // 1 (del dueño), 2 (encadena la 3) y 3 (para sin saldo).
+    for (let i = 0; i < 5; i++) mocks.getCreditState.mockResolvedValueOnce(saldo(50));
+    await turno({ goal: "create" });
+    await vi.waitFor(() => expect(filas()).toHaveLength(3));
+    await vi.waitFor(() => expect(mocks.scheduleNotification).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.scheduleNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it("■ en una ronda: en pausa, y no se encadena", async () => {
+    mocks.getCreditState.mockResolvedValueOnce(saldo(50)).mockResolvedValue(saldo(50));
+    mocks.runAgentLoop.mockImplementation(async () => {
+      const extra = (mocks.abrirTurno.mock.calls.at(-1) as unknown as [string, string, number, { abortar: () => void }])[3];
+      extra.abortar();
+      return { ...cierre, terminalError: true, errorCode: "cancelled" };
+    });
+    await turno({ goal: "create" });
+    expect(filas()[0]!.transcript?.goal).toMatchObject({ phase: "paused", revision: 2 });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("un turno que revienta desarma y no encadena", async () => {
+    mocks.getCreditState.mockResolvedValue(saldo(50));
+    mocks.runAgentLoop.mockImplementation(async () => ({ ...cierre, terminalError: true, errorCode: "upstream", topeAlcanzado: null }));
+    const eventos = await turno({ goal: "create" });
+    expect(done(eventos)?.round).toBeUndefined();
+    const id = (filas()[0]!.transcript!.goal as GoalSnapshot).id;
+    expect(goalActivation("p1", id)).toBe("disarmed");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("una ronda que cierra con una pregunta sin contestar no encadena (sigue armado)", async () => {
+    mocks.getCreditState.mockResolvedValue(saldo(50));
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.emit({ type: "action", tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Qué colores?" } as never);
+      return { ...cierre, endedOnQuestion: true };
+    });
+    const eventos = await turno({ goal: "create" });
+    expect(done(eventos).round).toBeUndefined();
+    const id = (filas()[0]!.transcript!.goal as GoalSnapshot).id;
+    expect(goalActivation("p1", id)).toBe("armed");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("LOTE 7-8 · una ronda cuya revisión del plan se DESCARTÓ no encadena: el dueño tiene la palabra", async () => {
+    mocks.getCreditState.mockResolvedValue(saldo(50));
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      // La tarjeta del descarte: `done`, con sus preguntas, sin `pregunta` ni `respuesta`.
+      args.emit({ type: "action", tool: "exit_plan_mode", status: "done", summary: "", preguntas: [{ id: "plan-review", question: "Approve this plan and leave plan mode?" }] } as never);
+      return { ...cierre, endedOnQuestion: true };
+    });
+    const eventos = await turno({ goal: "create" });
+    expect(done(eventos).round).toBeUndefined();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("ALINEAR · una ronda con una pregunta sin `respuesta` que SIGUIÓ (el dueño escribió) encadena, como DeepSeek", async () => {
+    mocks.getCreditState.mockResolvedValue(saldo(50));
+    let vueltas = 0;
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      vueltas += 1;
+      if (vueltas === 1) args.emit({ type: "action", tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Qué colores?" } as never);
+      // Sin `endedOnQuestion`: el turno no acabó en la pregunta.
+      return cierre;
+    });
+    const eventos = await turno({ goal: "create" });
+    expect((done(eventos).round as { next?: string } | undefined)?.next).toMatch(/^[0-9a-f-]{36}$/);
+    await vi.waitFor(() => expect(mocks.runAgentLoop).toHaveBeenCalledTimes(2));
+  });
+
+  it("al tope de rondas, atascado con `round-limit` y su mensaje literal", async () => {
+    mocks.getCreditState.mockResolvedValue(saldo(50));
+    historialInicial = [filaCon(encargo({ phase: "paused", roundsStarted: 2, maxGoalRounds: 3, revision: 4 }))];
+    await turno({ goal: "resume", prompt: "" });
+    expect(promptDe(0)).toBe(goalRoundPrompt({ objective: OBJETIVO, maxGoalRounds: 3 }, 3));
+    expect(filas()[0]!.transcript?.goal).toMatchObject({
+      phase: "blocked",
+      roundsStarted: 3,
+      blockedReason: { code: "round-limit", message: "Goal reached its configured limit of 3 rounds." },
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("LOTE 7-8 · 🔴 crea un encargo y revienta: la fila guarda el encargo (sin mensajes)", async () => {
+    mocks.getCreditState.mockResolvedValueOnce(saldo(50));
+    mocks.runAgentTool.mockImplementation(async (_s: unknown, deps: Record<string, unknown>) => {
+      (deps.goal as { commit(g: GoalSnapshot, a: "armed" | "disarmed"): void }).commit(createGoal(null, { objective: OBJETIVO }, "goal-9"), "armed");
+      return { response: { ok: true } };
+    });
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("create_goal", { objective: OBJETIVO });
+      args.emit({ type: "action", tool: "create_goal", status: "done", summary: "" });
+      throw new Error("se cayó el proveedor");
+    });
+    await turno();
+    const t = filas()[0]!.transcript as { mensajes: unknown[]; leidos: unknown[]; goal?: GoalSnapshot } | null;
+    expect(t?.mensajes).toEqual([]);
+    expect(t?.goal).toMatchObject({ id: "goal-9", objective: OBJETIVO, phase: "active" });
+  });
+
+  it("reanudar uno completo: 409 sin abrir turno", async () => {
+    historialInicial = [filaCon(encargo({ phase: "complete" }))];
+    const res = await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "", goal: "resume" }) }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: "goal_not_resumable" });
+    expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+  });
+
+  it("la autoridad: ronda, y del dueño en cuanto corrige el rumbo; un turno suyo siempre del dueño", async () => {
+    mocks.getCreditState.mockResolvedValueOnce(saldo(50));
+    const vistas: unknown[] = [];
+    mocks.runAgentTool.mockImplementation(async (_s: unknown, deps: { goal: { authority(): unknown } }) => {
+      vistas.push(deps.goal.authority());
+      return { response: { ok: true } };
+    });
+    mocks.leerDireccion.mockReturnValueOnce(null).mockReturnValueOnce("para el encargo");
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.leerDireccion?.();
+      await args.runTool("get_goal", {});
+      args.leerDireccion?.();
+      await args.runTool("get_goal", {});
+      return cierre;
+    });
+    await turno({ goal: "create", round: { goalId: "x", revision: 1, round: 9 } });
+    const id = (filas()[0]!.transcript!.goal as GoalSnapshot).id;
+    expect(vistas).toEqual([{ kind: "goal-round", goalId: id, revision: 1, round: 1 }, { kind: "direct-human" }]);
+  });
+
+  it("BRAZO DE CONTROL: un encargo activo pero DESARMADO (tras reiniciar) no encadena al cerrar un turno del dueño", async () => {
+    mocks.getCreditState.mockResolvedValue(saldo(50));
+    historialInicial = [filaCon(encargo())];
+    const eventos = await turno({ prompt: "cambia el título" });
+    expect(promptDe(0)).toBe("cambia el título");
+    expect(done(eventos).round).toBeUndefined();
+    expect(filas()[0]!.transcript?.goal).toMatchObject({ id: "goal-1", roundsStarted: 1 });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("un turno del dueño con el encargo armado (lo creó el modelo) encadena la ronda 1", async () => {
+    mocks.getCreditState.mockResolvedValueOnce(saldo(50)).mockResolvedValueOnce(saldo(50)).mockResolvedValueOnce(saldo(50));
+    historialInicial = [filaCon(encargo({ roundsStarted: 0 }))];
+    armGoal("p1", "goal-1");
+    const eventos = await turno({ prompt: "sigue" });
+    expect((done(eventos).round as { next?: string }).next).toBeTruthy();
+    await vi.waitFor(() => expect(filas()).toHaveLength(2));
+    expect(promptDe(1)).toBe(goalRoundPrompt({ objective: OBJETIVO, maxGoalRounds: 256 }, 1));
   });
 });

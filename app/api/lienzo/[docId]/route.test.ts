@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { guardarDocumento, vaciarAlmacenParaPruebas } from "@/lib/lienzo/almacen";
 import { GET } from "./route";
+import { etiquetaDeLienzo } from "@/lib/lienzo/host";
 
 const ID = "4f9c10cb-8781-48f1-b291-c5d146579f09";
-const HOST = "lienzo-4f9c10cb878148f1b291c5d146579f09.openlen.app";
+// La etiqueta es un HMAC del id con AUTH_SECRET (pieza 9 de Len 2.5).
+const SECRETO = "s3cr3t";
+const ETIQ = etiquetaDeLienzo(ID, { AUTH_SECRET: SECRETO })!;
+const HOST = `${ETIQ}.openlen.app`;
 const OTRO = "lienzo-00000000000000000000000000000000.openlen.app";
 
 const pide = (docId: string, host: string) =>
@@ -14,6 +18,7 @@ const pide = (docId: string, host: string) =>
 let docId = "";
 beforeEach(() => {
   vi.unstubAllEnvs();
+  vi.stubEnv("AUTH_SECRET", SECRETO);
   vaciarAlmacenParaPruebas();
   docId = guardarDocumento({ html: "<!doctype html><p>vista</p>", projectId: ID, userId: "u1", pagina: null });
 });
@@ -50,6 +55,10 @@ describe("GET /api/lienzo/[docId]", () => {
     expect((await pide(docId, OTRO)).status).toBe(404);
   });
 
+  it("🔴 404 en el host de la etiqueta VIEJA (el UUID sin guiones): ya no es la llave", async () => {
+    expect((await pide(docId, "lienzo-4f9c10cb878148f1b291c5d146579f09.openlen.app")).status).toBe(404);
+  });
+
   it("404 con un id desconocido — la misma respuesta que los demás", async () => {
     const res = await pide("no-existe", HOST);
     expect(res.status).toBe(404);
@@ -58,7 +67,7 @@ describe("GET /api/lienzo/[docId]", () => {
 
   it("en desarrollo, frame-ancestors deja entrar a localhost", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    const res = await pide(docId, "lienzo-4f9c10cb878148f1b291c5d146579f09.localhost:3007");
+    const res = await pide(docId, `${ETIQ}.localhost:3007`);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-security-policy")).toContain("http://localhost:*");
   });

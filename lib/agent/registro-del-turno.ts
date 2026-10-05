@@ -79,6 +79,10 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
   return {
     observar(ev) {
       if (ev.type === "text") texto += ev.text;
+      // El intento fallido no existió (`lib/agent/loop.ts`, reintentos).
+      else if (ev.type === "retry") texto = texto.slice(0, Math.max(0, texto.length - ev.discardChars));
+      // Ni lo de un intento que desbordó y se repitió tras compactar.
+      else if (ev.type === "compaction" && ev.discardChars > 0) texto = texto.slice(0, Math.max(0, texto.length - ev.discardChars));
       else if (ev.type === "action" && ev.status !== "running") {
         tarjetas.push({
           tool: ev.tool,
@@ -101,6 +105,12 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
           // Y LA PREGUNTA de `preguntar`: la tarjeta destacada del chat nuevo
           // tiene que seguir ahí al recargar (plans/new-chat/).
           ...(ev.pregunta ? { pregunta: ev.pregunta } : {}),
+          // Y sus opciones y lo que contestó el dueño dentro del turno (pieza 3
+          // de Len 2.5): sin nombrarlos aquí, se ven en vivo y se pierden al recargar.
+          ...(ev.preguntas?.length ? { preguntas: ev.preguntas } : {}),
+          ...(ev.respuesta ? { respuesta: ev.respuesta } : {}),
+          // Y la marca de «cancelada» (alinear con DeepSeek), por lo mismo.
+          ...(ev.dismissed ? { dismissed: true as const } : {}),
           // Y EL RECUENTO DE COBERTURA, por la misma razón que los dos de
           // arriba: esta lista es BLANCA, así que un campo que no se nombre aquí
           // se ve en vivo y desaparece al recargar.

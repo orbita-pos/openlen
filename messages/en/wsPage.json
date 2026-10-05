@@ -35,6 +35,12 @@
       "declarar_tareas": "Planning the work",
       "leer_de_internet": "Reading the page you linked",
       "preguntar": "Asking you",
+      "ask_user_question": "Asking you",
+      "enter_plan_mode": "Asking to plan first",
+      "exit_plan_mode": "Presenting the plan",
+      "session_search": "Searching past conversations",
+      "session_event_search": "Searching a past conversation",
+      "session_event_read": "Reading a past conversation",
       "revertir_ultimo_cambio": "Undoing the last change",
       "verificar_diseno": "Reviewing the result",
       "redisenar_pagina": "Redesigning the page",
@@ -46,7 +52,10 @@
       "ver_mensajes": "Checking your messages",
       "preparar_respuesta": "Drafting your reply",
       "web_search": "Searching the web",
-      "web_fetch": "Reading a web page"
+      "web_fetch": "Reading a web page",
+      "get_goal": "Checking the goal",
+      "create_goal": "Creating the goal",
+      "update_goal": "Updating the goal"
     },
     "action": {
       "home": "Home",

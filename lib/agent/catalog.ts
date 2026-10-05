@@ -38,6 +38,10 @@ import {
 import type { AgentMode } from "@/lib/agent/dynamis";
 import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
+import { ASK_USER_QUESTION } from "@/lib/agent/ask-user-question";
+import { SESSION_QUERY_DECLARATIONS, SESSION_QUERY_PROMPT } from "@/lib/agent/session-query-tools";
+import { PLAN_MODE_DECLARATIONS } from "@/lib/agent/plan-mode-tools";
+import { GOAL_DECLARATIONS, GOAL_PROMPT } from "@/lib/agent/goal-tools";
 
 export const AGENT_MODULES = [
   // SÓLO CHAT desde el 2026-08-29. `collections` murió con el hub de Módulos:
@@ -310,27 +314,70 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     DECLARACION_WEB_FETCH,
     // ⚰️ Aquí iba TodoWrite, la lista de tareas. Retirada en F4
     // (plans/len-agente-2026), como Claude Code con los modelos nuevos.
-    // Como `ask_user_question` de DeepSeek (packages/interaction/tool-ask-user
-    // @639ed01): UNA frase, sin lista de datos. La lista que había («un
-    // teléfono, un precio, un horario» entre lo que «SÓLO él puede dar»)
-    // chocaba con `web_search`, que dice que los horarios y precios publicados
-    // se buscan: en la medición de la F2, 2 de 3 preguntaron el horario de un
-    // museo ajeno sin buscarlo (plans/len-2/corridas/2026-10-02-f2-web). Lo que
-    // es SUYO (su teléfono, sus horarios) sigue en la regla del prompt. Lo que
-    // queda además de la frase es de OpenLen: aquí preguntar CIERRA el turno
-    // (DeepSeek espera la respuesta dentro de él) y el texto es lo que ve.
+    // 🔴 PIEZA 3 DE LEN 2.5: `ask_user_question` de DeepSeek TAL CUAL, nombre
+    // incluido (`deepseek-harness` @ 5badb15, MIT,
+    // LICENSES/deepseek-harness.MIT.txt: packages/interaction/tool-ask-user/
+    // src/index.ts). Las descripciones son las suyas, copiadas. Lo único
+    // nuestro es la última frase: aquí la espera tiene límite (120 s, el de su
+    // modo `timed`) porque Len corre en un servidor, y la tarjeta ya enseña las
+    // preguntas. Se llamaba `preguntar`, con UN `texto` y cerrando el turno; el
+    // nombre viejo sólo se entiende en lo guardado (`ask-user-question.ts`).
+    // ⚰️ La lista de datos que había («un teléfono, un precio, un horario») se
+    // fue antes, con F2: chocaba con `web_search` (plans/len-2/corridas/
+    // 2026-10-02-f2-web). Lo que es SUYO sigue en la regla del prompt.
     {
-      name: "preguntar",
+      name: ASK_USER_QUESTION,
       description:
-        "Ask the user a short question when you are missing a confirmation, a choice or a piece of information to go on. As soon as you call it, the turn ENDS: don't do anything after it, because there is no after; their answer opens the next turn. texto: the question exactly as they will read it. It is the only thing they will see, so don't repeat it afterwards in your reply.",
+        "Ask the user a concise question when you need confirmation, a choice, or missing information before proceeding. "
+        + "The questions are shown to the user in a card, so don't repeat them in your reply; if they don't answer in a while, the turn ends with your questions shown and their answer opens the next turn.",
       parameters: {
         type: "OBJECT",
         properties: {
-          texto: { type: "STRING" },
+          questions: {
+            type: "ARRAY",
+            description: "Questions to ask the user before continuing.",
+            items: {
+              type: "OBJECT",
+              properties: {
+                id: { type: "STRING", description: "Stable id for this question; echoed in the answer." },
+                question: { type: "STRING", description: "The specific question to ask the user." },
+                header: {
+                  type: "STRING",
+                  description: 'Optional short heading for the question, such as "Confirm" or "Choose Mode".',
+                },
+                options: {
+                  type: "ARRAY",
+                  description: 'Optional choices to show the user. If you recommend one, put it first and append "(Recommended)" to that label.',
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      label: { type: "STRING", description: "Short user-facing option label." },
+                      description: { type: "STRING", description: "One sentence explaining the tradeoff or impact." },
+                    },
+                    required: ["label"],
+                  },
+                },
+                multi_select: {
+                  type: "BOOLEAN",
+                  description: "Whether the user may select more than one option. Defaults to false.",
+                },
+              },
+              required: ["id", "question"],
+            },
+          },
         },
-        required: ["texto"],
+        required: ["questions"],
       },
     },
+    // PIEZA 7 DE LEN 2.5: el modo plan — la entrada de Claude Code (el dueño
+    // acepta) y la salida de DeepSeek (el plan se revisa) en
+    // `lib/agent/plan-mode-tools.ts`. Siempre declaradas, como la de DeepSeek:
+    // el catálogo no cambia entre modos (la caché).
+    ...PLAN_MODE_DECLARATIONS,
+    // PIEZA 8 DE LEN 2.5: el encargo — `get_goal`, `create_goal` y
+    // `update_goal` de DeepSeek (`lib/agent/goal-tools.ts`). Siempre
+    // declaradas: el catálogo no cambia entre turnos (la caché).
+    ...GOAL_DECLARATIONS,
     {
       name: "revertir_ultimo_cambio",
       // F4: RV1–RV7 de plans/len-agente-2026/notas/f4-tabla-de-reglas.md. El
@@ -348,6 +395,9 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
         },
       },
     },
+    // PIEZA 5 DE LEN 2.5: buscar en las charlas pasadas del proyecto, con las
+    // tres de session-query de DeepSeek (`lib/agent/session-query-tools.ts`).
+    ...SESSION_QUERY_DECLARATIONS,
     // LEN SABE DE TUS RESULTADOS (plans/len-resultados/diseno.md): como los
     // conectores de Grok, dots y Claude, una herramienta por fuente. Sólo leen.
     // Se describen por PARA QUÉ sirven, no por qué palabras las disparan: así
@@ -444,6 +494,16 @@ export function buildAgentSystemPrompt(
   mode: AgentMode = "len",
 ): string {
   const moduleLines = AGENT_MODULES.map((m) => `- ${m}: ${MODULE_KNOWLEDGE[m]}`).join("\n");
+  // PIEZA 6 DE LEN 2.5 · LÍNEAS PEQUEÑAS, sólo con la terminal (sin ella no hay
+  // `bash` que nombrar). La primera mitad es la conducta de la descripción de
+  // `bash` de Claude Code, con palabras nuestras (los comandos son baratos y su
+  // salida enseña más que pensarlos: lo que le faltaba a Dynamis, que pensaba
+  // ×3–4 en vez de correr); la segunda es la sección `tool:bash` de DeepSeek
+  // (packages/shell/tool-bash/src/index.ts @ 5badb15, MIT) con nuestro marcador
+  // de salida, que va en la última línea.
+  const lineaDeBash = terminalEncendida(env)
+    ? "\n- In bash, commands are cheap and what they print tells you more than reasoning about them: run the direct command and adjust with its output instead of perfecting it in your head. Check the exit code on the last line of every bash result; investigate failures before moving on."
+    : "";
   const prompt = `You are Len, OpenLen's agent. OpenLen builds and publishes websites: each project is a site made of HTML files that is published exactly as it is, and you edit it on behalf of whoever is talking to you.
 
 TONE:
@@ -461,6 +521,9 @@ HOW TO WORK:
 - Before building something that depends on what you don't control —a table and its policies, a module, a fact about the business—, look at it; building blind on top of that is building something that may not work. <example>user: "add a reviews section" — agent: searches /supabase/migrations for a reviews table with Grep and reads the migrations that create or change it before writing, and builds knowing what the page will be able to read and write.</example>
 - A single response can carry several tool calls. When the ones you are about to make don't depend on each other, send them together in that response — it saves time, so do it whenever you can. When a call needs another one's result to know what to put in it, they DON'T go together: make them one after the other.
 - The <new-diagnostics> and a tool's "aviso" field are checked facts about what YOUR last edit left on the page: fix them in this turn or tell the user; never finish while keeping quiet about them.
+- Long work doesn't have to be rushed: when the conversation grows long, its older part is summarized automatically and you keep working from that summary, so finish what was asked instead of wrapping up early or leaving it half done.
+- ${SESSION_QUERY_PROMPT}${lineaDeBash}
+- ${GOAL_PROMPT}
 
 THE SITE IS FILES:
 Each page is a file: /index.html is the home page and /<slug>/index.html each of the others. Read to read, Edit to change an exact piece, Write to create a new page or rewrite a whole one, Grep to search the whole site and Glob to list files. The project's state comes in your context; the pages don't, so whatever you say about a page —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: otherwise, read it first or don't describe it.
@@ -481,7 +544,7 @@ MODULES YOU CAN OPERATE (activar_modulo):
 ${moduleLines}
 
 THEIR DATA AND THEIR LINKS:
-The user's phone, WhatsApp, social profiles and address live ON THEIR PAGE: if they give you one, you write it on the page and that's it. What you can't decide for them —their page's address, their phone, their email, which account a link points to, their menu, their prices, their opening hours, their available spots, their business figures and what their customers say (reviews, testimonials, ratings)— is never invented or guessed, because it looks true: if it isn't in the files (Grep finds it), do everything else and ask them with preguntar. <example>user: "add a TikTok button for me" — agent: adds the button with href="#" and asks "what's your TikTok?", never tiktok.com/@yourbusiness worked out from the name.</example>
+The user's phone, WhatsApp, social profiles and address live ON THEIR PAGE: if they give you one, you write it on the page and that's it. What you can't decide for them —their page's address, their phone, their email, which account a link points to, their menu, their prices, their opening hours, their available spots, their business figures and what their customers say (reviews, testimonials, ratings)— is never invented or guessed, because it looks true: if it isn't in the files (Grep finds it), do everything else and ask them with ask_user_question. <example>user: "add a TikTok button for me" — agent: adds the button with href="#" and asks "what's your TikTok?", never tiktok.com/@yourbusiness worked out from the name.</example>
 
 MEMORY IS TWO FILES (/memoria/dueno.md and /memoria/proyecto.md):
 What you know about the user and about this project lives in two files, and you already have them in your context. To save a DURABLE preference, ADD a line with Edit: to /memoria/dueno.md if it applies to ALL their pages —that is what people mean by "don't forget this", and it is the default place—; to /memoria/proyecto.md if it clearly belongs to this project and not to the person (e.g. "on this page the tone is formal"). Use them ONLY when the user states a lasting preference about how to treat them or about the page ("always talk to me informally", "never use yellow", "be more formal") — NEVER for this turn's one-off request. Lines are only added: removing or changing what is saved is done by the user from the editor; if they ask you to, tell them so. After saving it, confirm in your reply what you saved.

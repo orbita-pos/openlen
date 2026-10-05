@@ -5,9 +5,56 @@
 // (`turno`, `cambios`, el `done` con `centicredits`…), así que el chat los lee
 // por el mismo camino que los de verdad. Sólo existe en desarrollo.
 
+import { planConsentQuestion, planReviewQuestion } from "@/lib/agent/plan-mode";
+import type { GoalSnapshot } from "@/lib/agent/goal";
+
+/** Las preguntas de los guiones de ask_user_question: una de una sola respuesta,
+ *  con la recomendada, y otra de varias. */
+const PREGUNTAS_DE_EJEMPLO = [
+  {
+    id: "anticipacion",
+    header: "Encargos",
+    question: "¿Con cuánta anticipación aceptas encargos de pasteles?",
+    options: [
+      { label: "48 horas (Recommended)", description: "Lo que dice tu ficha; da tiempo a hornear y decorar." },
+      { label: "Una semana", description: "Para pasteles grandes o con decoración especial." },
+    ],
+  },
+  {
+    id: "dias",
+    question: "¿Qué días entregas?",
+    multiSelect: true,
+    options: [{ label: "Lunes a viernes" }, { label: "Sábado" }, { label: "Domingo" }],
+  },
+];
+
+/** El plan de los guiones del modo plan (pieza 7): como lo escribiría Len, en
+ *  palabras del dueño y terminando con cómo lo comprobará. */
+const PLAN_DE_EJEMPLO = [
+  "# Reseñas con estrellas en la portada",
+  "",
+  "Una sección nueva debajo de los pasteles donde tus clientes dejan su opinión, con estrellas del 1 al 5.",
+  "",
+  "## Qué voy a hacer",
+  "- Añadir la sección «Lo que dicen» con el estilo de tu página.",
+  "- Guardar cada reseña en una tabla nueva, que sólo tú puedes borrar.",
+  "- Enseñar las 6 más recientes y la media de estrellas.",
+  "",
+  "## Cómo lo comprobaré",
+  "- Dejo una reseña de prueba y miro que aparece arriba de la lista.",
+  "- Pruebo a mandar una sin estrellas: tiene que pedirlas.",
+  "- Miro la página en el móvil para ver que no se desborda.",
+].join("\n");
+
 export type ScenarioId =
   | "edit"
   | "question"
+  | "askLive"
+  | "askEnded"
+  | "planReview"
+  | "planConsent"
+  | "goalRounds"
+  | "goalPaused"
   | "terminal"
   | "publish"
   | "reply"
@@ -25,6 +72,12 @@ export type ScenarioId =
 export const SCENARIOS: readonly ScenarioId[] = [
   "edit",
   "question",
+  "askLive",
+  "askEnded",
+  "planReview",
+  "planConsent",
+  "goalRounds",
+  "goalPaused",
   "terminal",
   "publish",
   "reply",
@@ -42,7 +95,13 @@ export const SCENARIOS: readonly ScenarioId[] = [
 
 export const SCENARIO_LABEL: Readonly<Record<ScenarioId, string>> = {
   edit: "Editar (fotos + formulario)",
-  question: "Pregunta",
+  question: "Pregunta (preguntar, fila vieja)",
+  askLive: "Pregunta con opciones (espera dentro del turno)",
+  askEnded: "Pregunta con opciones (cerró el turno)",
+  planReview: "Modo plan: revisar el plan (espera dentro del turno)",
+  planConsent: "Modo plan: Len pide planear primero",
+  goalRounds: "Encargo: dos rondas y el cierre",
+  goalPaused: "Encargo en pausa",
   terminal: "Terminal + web",
   publish: "Publicar",
   reply: "Borrador de respuesta",
@@ -106,10 +165,33 @@ ${o.form ? `<section id="encargos"><h2>Encarga tu pastel</h2><form><input placeh
 </body></html>`;
 }
 
+/** El encargo de los guiones de la pieza 8, con la forma de `GoalSnapshot`. */
+export const ENCARGO_DE_EJEMPLO: GoalSnapshot = {
+  id: "goal-demo",
+  revision: 1,
+  objective: "Haz la tienda entera: catálogo de pasteles, carrito y pago con tarjeta.",
+  phase: "active",
+  maxGoalRounds: 256,
+  roundsStarted: 1,
+};
+
+/** La ronda que sigue a la 1 en el guion: la sigue el chat sondeando su fila. */
+export const nextRoundOf = (turnoId: string) => `${turnoId}-r2`;
+
 const DONE = (extra: Record<string, unknown> = {}) => ({ turns: 4, toolCalls: 6, centicredits: 118, durationMs: 26_400, ...extra });
 
 const BEFORE_FILE = demoPage({ photos: false, form: false });
 const AFTER_FILE = demoPage({ photos: true, form: true });
+
+/** Lote 7-8 · lo que queda del turno cuando el dueño descarta la revisión del
+ *  plan («Pedir cambios»): el servidor lo cierra con la tarjeta `done` y sus
+ *  preguntas, sin `pregunta` (`exit_plan_mode` con `dismissed`), y el `done`. */
+export function dismissedReviewSteps(): ScriptStep[] {
+  return [
+    wait(150, "action", { tool: "exit_plan_mode", status: "done", summary: "", preguntas: [planReviewQuestion(PLAN_DE_EJEMPLO)], dismissed: true }),
+    wait(100, "done", DONE({ centicredits: 18, durationMs: 9_000 })),
+  ];
+}
 
 export function scriptFor(id: ScenarioId, turnoId: string): ScriptStep[] {
   const head = [wait(150, "turno", { turnoId })];
@@ -166,6 +248,103 @@ export function scriptFor(id: ScenarioId, turnoId: string): ScriptStep[] {
         }),
         wait(100, "text", { text: "¿Con cuánta anticipación aceptas encargos de pasteles?" }),
         wait(100, "done", DONE({ centicredits: 41, durationMs: 6_200 })),
+      ];
+    // Pieza 3 de Len 2.5: ask_user_question con opciones. «askLive» espera la
+    // respuesta DENTRO del turno (evento `question`); «askEnded» cerró el turno
+    // con la pregunta, que se contesta con un toque y abre el siguiente.
+    case "askLive":
+      return [
+        ...head,
+        wait(800, "text", { text: "Para el formulario de encargos necesito dos datos.\n\n" }),
+        wait(200, "action", { tool: "ask_user_question", status: "running", summary: "" }),
+        wait(300, "question", { questions: PREGUNTAS_DE_EJEMPLO }),
+        // Lo que tarda el dueño en contestar (la espera de verdad son 120 s).
+        // Sin respuesta a tiempo, la tarjeta de cierre trae las opciones (como
+        // `toolAskUserQuestion` cuando `askUser` devuelve null).
+        wait(60_000, "action", {
+          tool: "ask_user_question",
+          status: "done",
+          summary: "",
+          pregunta: "¿Con cuánta anticipación aceptas encargos de pasteles?\n¿Qué días entregas?",
+          preguntas: PREGUNTAS_DE_EJEMPLO,
+        }),
+        wait(100, "done", DONE({ centicredits: 12, durationMs: 61_000 })),
+      ];
+    // Pieza 7 de Len 2.5: el modo plan. «planReview» presenta el plan y espera
+    // la revisión dentro del turno; «planConsent» es Len pidiendo entrar.
+    case "planReview":
+      return [
+        ...head,
+        wait(200, "plan", { active: true }),
+        wait(800, "action", { tool: "Read", status: "running", summary: "/index.html" }),
+        wait(600, "action", { tool: "Read", status: "done", summary: "/index.html" }),
+        wait(300, "action", { tool: "exit_plan_mode", status: "running", summary: "" }),
+        wait(300, "question", { questions: [planReviewQuestion(PLAN_DE_EJEMPLO)] }),
+        wait(60_000, "action", {
+          tool: "exit_plan_mode",
+          status: "done",
+          summary: "",
+          pregunta: "Approve this plan and leave plan mode?",
+          preguntas: [planReviewQuestion(PLAN_DE_EJEMPLO)],
+        }),
+        wait(100, "done", DONE({ centicredits: 18, durationMs: 62_000 })),
+      ];
+    // Pieza 8 de Len 2.5: el encargo. «goalRounds» es la ronda 1 en vivo; la 2
+    // la abre «el servidor» y el chat la sigue desde su fila (`view.tsx`), y
+    // cierra con el encargo completo. «goalPaused», uno que quedó en pausa.
+    case "goalRounds":
+      return [
+        ...head,
+        wait(150, "goal", { goal: ENCARGO_DE_EJEMPLO, activation: "armed" }),
+        wait(700, "text", { text: "Empiezo por el catálogo: los pasteles con su foto y su precio.\n\n" }),
+        wait(300, "action", { tool: "Read", status: "running", summary: "index.html" }),
+        wait(600, "action", { tool: "Read", status: "done", summary: "index.html" }),
+        wait(300, "action", { tool: "Edit", status: "running", summary: "index.html" }),
+        wait(900, "action", { tool: "Edit", status: "done", summary: "index.html" }),
+        wait(300, "text", { text: "El catálogo ya está. Sigo con el carrito en la ronda siguiente." }),
+        wait(100, "done", DONE({ goal: ENCARGO_DE_EJEMPLO, goalActivation: "armed", round: { next: nextRoundOf(turnoId) } })),
+      ];
+    case "goalPaused": {
+      const enPausa: GoalSnapshot = { ...ENCARGO_DE_EJEMPLO, revision: 2, phase: "paused", roundsStarted: 2 };
+      return [
+        ...head,
+        wait(150, "goal", { goal: { ...ENCARGO_DE_EJEMPLO, roundsStarted: 2 }, activation: "armed" }),
+        wait(600, "action", { tool: "update_goal", status: "running", summary: "" }),
+        wait(400, "goal", { goal: enPausa, activation: "disarmed" }),
+        wait(100, "action", { tool: "update_goal", status: "done", summary: "" }),
+        wait(300, "text", { text: "Paré el encargo como pediste. Cuando quieras, lo reanudas desde la tarjeta." }),
+        wait(100, "done", DONE({ goal: enPausa, goalActivation: "disarmed" })),
+      ];
+    }
+    case "planConsent":
+      return [
+        ...head,
+        wait(200, "plan", { active: false }),
+        wait(800, "text", { text: "Esto toca varias partes de la página; mejor lo planeamos antes.\n\n" }),
+        wait(200, "action", { tool: "enter_plan_mode", status: "running", summary: "" }),
+        wait(300, "question", { questions: [planConsentQuestion()] }),
+        wait(60_000, "action", {
+          tool: "enter_plan_mode",
+          status: "done",
+          summary: "",
+          pregunta: planConsentQuestion().question,
+          preguntas: [planConsentQuestion()],
+        }),
+        wait(100, "done", DONE({ centicredits: 6, durationMs: 61_000 })),
+      ];
+    case "askEnded":
+      return [
+        ...head,
+        wait(800, "text", { text: "Para el formulario de encargos necesito dos datos.\n\n" }),
+        wait(200, "action", { tool: "ask_user_question", status: "running", summary: "" }),
+        wait(300, "action", {
+          tool: "ask_user_question",
+          status: "done",
+          summary: "",
+          pregunta: "¿Con cuánta anticipación aceptas encargos de pasteles?\n¿Qué días entregas?",
+          preguntas: PREGUNTAS_DE_EJEMPLO,
+        }),
+        wait(100, "done", DONE({ centicredits: 12, durationMs: 4_000 })),
       ];
     case "terminal":
       return [

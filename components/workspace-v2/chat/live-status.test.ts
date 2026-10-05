@@ -2,7 +2,7 @@
 // inventario sección C). Puro: sale del último turno y de si hay uno en marcha.
 import { describe, expect, it } from "vitest";
 
-import { activityOf, liveStatus, questionOf } from "./live-status";
+import { activityOf, isRunning, liveStatus, questionOf, questionsOf, retryPhase } from "./live-status";
 import type { DesignTurn } from "./use-agent-chat";
 
 const turn = (patch: Partial<DesignTurn> = {}): DesignTurn => ({
@@ -15,6 +15,42 @@ const turn = (patch: Partial<DesignTurn> = {}): DesignTurn => ({
 });
 
 describe("la barra viva", () => {
+  it("en un reintento del proveedor dice que reintenta, en qué intento va y hasta cuándo espera", () => {
+    const s = liveStatus(turn({ status: "streaming", startedAt: 1, retrying: { attempt: 2, maxAttempts: 5, until: 9_000 } }), { busy: true });
+    expect(s).toEqual({ kind: "retrying", face: "pensando", attempt: 2, maxAttempts: 5, until: 9_000 });
+  });
+
+  it("mientras espera dice «en X s» (redondeado hacia arriba); al acabar la espera, el intento nuevo ya está pensando", () => {
+    const s = { kind: "retrying", face: "pensando", attempt: 2, maxAttempts: 5, until: 9_000 } as const;
+    expect(retryPhase(s, 6_500)).toEqual({ waiting: true, seconds: 3 });
+    expect(retryPhase(s, 8_999)).toEqual({ waiting: true, seconds: 1 });
+    expect(retryPhase(s, 9_000)).toEqual({ waiting: false });
+  });
+
+  it("mientras compacta, dice que ordena lo que lleva", () => {
+    const s = liveStatus(turn({ status: "streaming", startedAt: 1, compacting: true }), { busy: true });
+    expect(s).toEqual({ kind: "compacting", face: "revisando" });
+  });
+
+  it("el ■ sigue mientras ordena lo que lleva (es trabajo, y se cobra)", () => {
+    expect(isRunning({ kind: "compacting", face: "revisando" })).toBe(true);
+  });
+
+  it("BRAZO DE CONTROL: con el turno ya cerrado, la marca de compactar no pinta nada", () => {
+    expect(liveStatus(turn({ status: "applied", compacting: true }), { busy: false }).kind).not.toBe("compacting");
+  });
+
+  it("el ■ sigue mientras reintenta (está trabajando); no con el turno terminado", () => {
+    expect(isRunning({ kind: "retrying", face: "pensando", attempt: 1, maxAttempts: 5, until: 1 })).toBe(true);
+    expect(isRunning({ kind: "thinking", face: "pensando", startedAt: 1 })).toBe(true);
+    expect(isRunning({ kind: "done", face: "terminado" })).toBe(false);
+  });
+
+  it("BRAZO DE CONTROL: sin reintento, la misma vuelta sigue en «pensando»", () => {
+    const s = liveStatus(turn({ status: "streaming", startedAt: 1 }), { busy: true });
+    expect(s.kind).toBe("thinking");
+  });
+
   it("sin conversación no dice nada", () => {
     expect(liveStatus(undefined, { busy: false }).kind).toBe("idle");
   });
@@ -73,6 +109,54 @@ describe("la barra viva", () => {
       reason: "question",
       question: "¿Cuántas horas antes?",
     });
+  });
+
+  it("ALINEAR · una pregunta CANCELADA no es «te toca»: ni pregunta, ni barra de espera", () => {
+    const preguntas = [{ id: "plan-review", question: "Approve this plan and leave plan mode?" }];
+    const t = turn({ actions: [{ tool: "exit_plan_mode", status: "done", summary: "", preguntas, dismissed: true }] });
+    expect(questionOf(t)).toBeNull();
+    expect(liveStatus(t, { busy: false }).kind).not.toBe("waiting");
+  });
+
+  it("pieza 3: con el nombre nuevo es lo mismo, y trae sus opciones para la tarjeta", () => {
+    const preguntas = [{ id: "plazo", question: "¿Cuántas horas antes?", options: [{ label: "24" }, { label: "48" }] }];
+    const t = turn({ actions: [{ tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Cuántas horas antes?", preguntas }] });
+    expect(questionOf(t)).toBe("¿Cuántas horas antes?");
+    expect(questionsOf(t)).toEqual(preguntas);
+    expect(activityOf("ask_user_question")).toBe("asking");
+    // Pieza 7: las del modo plan, igual.
+    expect(["enter_plan_mode", "exit_plan_mode"].map(activityOf)).toEqual(["asking", "asking"]);
+    // Pieza 5: buscar y leer en las charlas pasadas es leer.
+    expect(["session_search", "session_event_search", "session_event_read"].map(activityOf)).toEqual(["reading", "reading", "reading"]);
+  });
+
+  it("🔴 pieza 3: mientras la pregunta espera DENTRO del turno, la barra dice que te toca y el ■ sigue", () => {
+    const preguntas = [{ id: "plazo", question: "¿Cuántas horas antes?" }];
+    const t = turn({ status: "streaming", startedAt: 1, pendingQuestions: preguntas, actions: [{ tool: "ask_user_question", status: "running", summary: "" }] });
+    const s = liveStatus(t, { busy: true });
+    expect(s).toEqual({ kind: "waiting", face: "preguntando", reason: "question", question: "¿Cuántas horas antes?", live: true });
+    expect(isRunning(s)).toBe(true);
+    // Ya contestó: Len sigue trabajando con la respuesta.
+    expect(liveStatus({ ...t, answeredLive: "24" }, { busy: true }).kind).toBe("working");
+  });
+
+  it("🔴 pieza 3: una pregunta contestada DENTRO del turno ya no es esperar", () => {
+    const t = turn({ actions: [{ tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Cuántas horas antes?", respuesta: "48" }] });
+    expect(questionOf(t)).toBeNull();
+    expect(liveStatus(t, { busy: false })).toEqual({ kind: "done", face: "terminado" });
+  });
+
+  it("🔴 pieza 7: una revisión del plan sin contestar al cerrar el turno es esperar, con su tarjeta", () => {
+    const preguntas = [{ id: "plan-review", question: "Approve this plan and leave plan mode?", intent: { kind: "plan-review" as const, plan: "# Plan" } }];
+    const t = turn({ actions: [{ tool: "exit_plan_mode", status: "done", summary: "", pregunta: "Approve this plan and leave plan mode?", preguntas }] });
+    expect(questionsOf(t)).toEqual(preguntas);
+    // Con su intención: la barra la dice en el idioma del dueño, no en el inglés del servidor.
+    expect(liveStatus(t, { busy: false })).toMatchObject({ kind: "waiting", reason: "question", intent: "plan-review" });
+    // Y la que espera dentro del turno, igual.
+    const viva = turn({ status: "streaming", startedAt: 1, pendingQuestions: preguntas, actions: [{ tool: "exit_plan_mode", status: "running", summary: "" }] });
+    expect(liveStatus(viva, { busy: true })).toMatchObject({ kind: "waiting", live: true, intent: "plan-review" });
+    // Contestada, no.
+    expect(questionOf(turn({ actions: [{ tool: "enter_plan_mode", status: "done", summary: "", respuesta: "Plan first" }] }))).toBeNull();
   });
 
   it("una pregunta de una fila vieja, sin su texto, sigue siendo esperar", () => {

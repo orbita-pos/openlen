@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   _vaciarTodo,
@@ -6,10 +6,17 @@ import {
   cancelar,
   cerrarTurno,
   dirigir,
+  dismissQuestion,
+  esperarRespuesta,
   leerDireccion,
+  responder,
   turnoDeLaFila,
+  turnoVivoDelProyecto,
+  rondaSiguiente,
+  siguienteDeLaFila,
   MAX_DIRECCION,
 } from "./direcciones";
+import { QUESTION_DISMISSED, type QuestionAnswer } from "./ask-user-question";
 
 beforeEach(() => _vaciarTodo());
 
@@ -142,5 +149,128 @@ describe("¿sigue vivo el turno de esta fila?", () => {
 
   it("una fila que nadie escribe (el servidor se reinició) no tiene turno", () => {
     expect(turnoDeLaFila("huerfana", "u1")).toBeNull();
+  });
+});
+
+// Pieza 3 de Len 2.5: ask_user_question espera la respuesta DENTRO del turno.
+// Entra por otra petición (POST /api/agent/responder) y se encuentra con la
+// herramienta que espera por este mismo almacén, como una corrección.
+describe("la respuesta a una pregunta de Len, dentro del turno", () => {
+  afterEach(() => vi.useRealTimers());
+  const respuesta = [{ id: "plazo", selected: ["48 horas"] }];
+
+  it("llega a quien espera", async () => {
+    abrirTurno("t1", "u1");
+    const espera = esperarRespuesta("t1", { timeoutMs: 60_000 });
+    expect(responder("t1", "u1", respuesta)).toBe("ok");
+    expect(await espera).toEqual(respuesta);
+  });
+
+  it("🔴 el turno de otro no se contesta, y no se distingue de uno que no existe", async () => {
+    abrirTurno("t1", "u1");
+    void esperarRespuesta("t1", { timeoutMs: 60_000 });
+    expect(responder("t1", "otro", respuesta)).toBe("ajeno");
+    expect(responder("nadie", "u1", respuesta)).toBe("no_existe");
+  });
+
+  it("sin nadie esperando: sin_pregunta (el cliente lo manda como mensaje normal)", () => {
+    abrirTurno("t1", "u1");
+    expect(responder("t1", "u1", respuesta)).toBe("sin_pregunta");
+  });
+
+  it("🔴 la segunda respuesta a la misma pregunta es ya_respondida: se resuelve UNA vez", async () => {
+    abrirTurno("t1", "u1");
+    const espera = esperarRespuesta("t1", { timeoutMs: 60_000 });
+    expect(responder("t1", "u1", respuesta)).toBe("ok");
+    expect(responder("t1", "u1", [{ id: "plazo", selected: ["Una semana"] }])).toBe("ya_respondida");
+    expect(await espera).toEqual(respuesta);
+  });
+
+  it("LOTE 7-8 · descartar: quien espera recibe el descarte, no una respuesta", async () => {
+    abrirTurno("t1", "u1");
+    const espera = esperarRespuesta("t1", { timeoutMs: 60_000 });
+    expect(dismissQuestion("t1", "u1")).toBe("ok");
+    expect(await espera).toBe(QUESTION_DISMISSED);
+  });
+
+  it("🔴 descartar: el turno de otro es ajeno; sin nadie esperando, sin_pregunta", () => {
+    abrirTurno("t1", "u1");
+    void esperarRespuesta("t1", { timeoutMs: 60_000 });
+    expect(dismissQuestion("t1", "otro")).toBe("ajeno");
+    expect(dismissQuestion("nadie", "u1")).toBe("no_existe");
+    expect(dismissQuestion("t1", "u1")).toBe("ok");
+    expect(dismissQuestion("t1", "u1")).toBe("sin_pregunta");
+  });
+
+  it("🔴 tras descartar, una respuesta no es ya_respondida: cae a mensaje (no se pierde un «Aprobar» tardío)", () => {
+    abrirTurno("t1", "u1");
+    void esperarRespuesta("t1", { timeoutMs: 60_000 });
+    dismissQuestion("t1", "u1");
+    expect(responder("t1", "u1", respuesta)).toBe("sin_pregunta");
+  });
+
+  it("una forma que no vale es invalida y no resuelve", () => {
+    abrirTurno("t1", "u1");
+    void esperarRespuesta("t1", { timeoutMs: 60_000 });
+    expect(responder("t1", "u1", "48 horas")).toBe("invalida");
+    expect(responder("t1", "u1", [{ id: "plazo", selected: "48 horas" }])).toBe("invalida");
+    expect(responder("t1", "u1", [{ selected: [] }])).toBe("invalida");
+    expect(responder("t1", "u1", respuesta)).toBe("ok");
+  });
+
+  it("🔴 lo escrito en «otra» es dato acotado: 5.000 caracteres llegan como 2.000", async () => {
+    abrirTurno("t1", "u1");
+    const espera = esperarRespuesta("t1", { timeoutMs: 60_000 });
+    responder("t1", "u1", [{ id: "plazo", selected: [], custom: "x".repeat(5000) }]);
+    expect(((await espera) as QuestionAnswer[])[0]?.custom?.length).toBe(2000);
+  });
+
+  it("vence con null a los timeoutMs, y después ya no hay pregunta que contestar", async () => {
+    vi.useFakeTimers();
+    abrirTurno("t1", "u1");
+    const espera = esperarRespuesta("t1", { timeoutMs: 120_000 });
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(await espera).toBeNull();
+    expect(responder("t1", "u1", respuesta)).toBe("sin_pregunta");
+  });
+
+  it("el ■ la suelta al momento con null", async () => {
+    abrirTurno("t1", "u1");
+    const ac = new AbortController();
+    const espera = esperarRespuesta("t1", { timeoutMs: 60_000, signal: ac.signal });
+    ac.abort();
+    expect(await espera).toBeNull();
+  });
+
+  it("cerrar el turno la suelta con null", async () => {
+    abrirTurno("t1", "u1");
+    const espera = esperarRespuesta("t1", { timeoutMs: 60_000 });
+    cerrarTurno("t1");
+    expect(await espera).toBeNull();
+  });
+
+  it("sin turno abierto no hay a quién esperar: null", async () => {
+    expect(await esperarRespuesta("nadie", { timeoutMs: 60_000 })).toBeNull();
+  });
+});
+
+// PIEZA 8 · el encargo: quitarlo no puede pisar una ronda viva, y el chat que
+// sondea una fila tiene que saber a qué ronda pasar.
+describe("el encargo en el almacén", () => {
+  it("un turno vivo del proyecto se ve, del dueño y de ese proyecto", () => {
+    abrirTurno("t1", "u1", Date.now(), { projectId: "p1" });
+    expect(turnoVivoDelProyecto("p1", "u1")).toBe(true);
+    expect(turnoVivoDelProyecto("p2", "u1")).toBe(false);
+    expect(turnoVivoDelProyecto("p1", "u2")).toBe(false);
+    cerrarTurno("t1");
+    expect(turnoVivoDelProyecto("p1", "u1")).toBe(false);
+  });
+
+  it("la ronda que siguió a una fila", () => {
+    expect(siguienteDeLaFila("f1")).toBeNull();
+    rondaSiguiente("f1", "f2");
+    expect(siguienteDeLaFila("f1")).toBe("f2");
+    _vaciarTodo();
+    expect(siguienteDeLaFila("f1")).toBeNull();
   });
 });

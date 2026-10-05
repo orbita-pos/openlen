@@ -31,12 +31,21 @@ vi.mock("@/lib/publish/preview-bake", async (importOriginal) => ({
 }));
 
 import { GET } from "./route";
-import { GET as GET_LIENZO } from "@/app/api/lienzo/[docId]/route";
+import { GET as GET_SITIO } from "@/app/api/lienzo/site/[[...path]]/route";
 import { vaciarAlmacenParaPruebas } from "@/lib/lienzo/almacen";
+import { etiquetaDeLienzo } from "@/lib/lienzo/host";
 import { TAB_SANDBOX_CSP, EMBED_SANDBOX_CSP } from "@/lib/publish/embed-sandbox";
 
 const ID = "4f9c10cb-8781-48f1-b291-c5d146579f09";
-const ETIQUETA = "lienzo-4f9c10cb878148f1b291c5d146579f09";
+// La etiqueta es un HMAC del id con AUTH_SECRET (pieza 9 de Len 2.5).
+const SECRETO = "s3cr3t";
+const ETIQUETA = etiquetaDeLienzo(ID, { AUTH_SECRET: SECRETO })!;
+
+/** Lo que contesta el lienzo en la URL a la que redirige (su host y su ruta). */
+const abrir = (destino: URL) =>
+  GET_SITIO(new Request(destino, { headers: { host: destino.host } }), {
+    params: Promise.resolve({ path: destino.pathname.split("/").filter(Boolean) }),
+  });
 const SCRIPT = "<script>localStorage.setItem('carrito','1')</script>";
 const HOME = `<!doctype html><html lang="es"><head><title>Tienda</title></head><body><h1>Tienda</h1>${SCRIPT}</body></html>`;
 const MENU = `<!doctype html><html lang="es"><head><title>Menú</title></head><body><h1>Menú</h1>${SCRIPT}</body></html>`;
@@ -55,6 +64,7 @@ beforeEach(() => {
   vi.stubEnv("PUBLISH_BASE_HOST", "openlen.app");
   vi.stubEnv("LIENZO_BASE_HOST", "");
   vi.stubEnv("OPENLEN_LIENZO_ORIGEN", "");
+  vi.stubEnv("AUTH_SECRET", SECRETO);
   mocks.auth.mockResolvedValue({ user: { id: "u1" } });
   mocks.limit.mockResolvedValue([
     { data: { html: HOME, pages: { menu: { html: MENU } }, settings: {} }, title: "Tienda", subdomain: null, logoUrl: null },
@@ -69,14 +79,12 @@ describe("«abrir en pestaña» — /raw?bake=1 en primer nivel", () => {
     expect(res.status).toBe(303);
     const destino = new URL(res.headers.get("location")!);
     expect(destino.origin).toBe(`https://${ETIQUETA}.openlen.app`);
-    expect(destino.pathname).toMatch(/^\/api\/lienzo\/[\w-]+$/);
+    // La ruta de la publicada, con el documento en `__lienzo` (pieza 9).
+    expect(destino.pathname).toBe("/");
+    expect(destino.searchParams.get("__lienzo")).toMatch(/^[\w-]+$/);
 
     // Lo que contesta el lienzo en ESE host: el documento, con su script.
-    const docId = destino.pathname.split("/").pop()!;
-    const lienzo = await GET_LIENZO(
-      new Request(destino, { headers: { host: destino.host } }),
-      { params: Promise.resolve({ docId }) },
-    );
+    const lienzo = await abrir(destino);
     expect(lienzo.status).toBe(200);
     const html = await lienzo.text();
     expect(html).toContain("<h1>Tienda</h1>");
@@ -88,10 +96,8 @@ describe("«abrir en pestaña» — /raw?bake=1 en primer nivel", () => {
   it("?page= lleva esa página al lienzo, no la portada", async () => {
     const res = await GET(pide("?bake=1&page=menu", "document"), params);
     const destino = new URL(res.headers.get("location")!);
-    const docId = destino.pathname.split("/").pop()!;
-    const html = await (
-      await GET_LIENZO(new Request(destino, { headers: { host: destino.host } }), { params: Promise.resolve({ docId }) })
-    ).text();
+    expect(destino.pathname).toBe("/menu/index.html");
+    const html = await (await abrir(destino)).text();
     expect(html).toContain("<h1>Menú</h1>");
     expect(html).not.toContain("<h1>Tienda</h1>");
   });

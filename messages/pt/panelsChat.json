@@ -197,16 +197,28 @@
       "waitingAnswer": "Esperando sua resposta",
       "waitingApproval": "Esperando sua aprovação",
       "yourTurn": "Sua vez · em pausa",
+      "yourTurnLive": "Sua vez · o Len continua assim que você responder",
       "done": "Pronto",
       "doneHint": "peça outra coisa",
       "stopped": "Parado",
       "stoppedHint": "o que já fez continua feito",
-      "failed": "Não conseguiu terminar"
+      "failed": "Não conseguiu terminar",
+      "retrying": "Tentando de novo",
+      "retryingHint": "sem resposta · em {seconds} s · tentativa {attempt} de {max}",
+      "retryingAttempt": "tentativa {attempt} de {max}",
+      "compacting": "Organizando o que já fez",
+      "compactingHint": "para continuar sem perder o fio"
     },
     "question": {
       "label": "O Len pergunta",
       "hint": "Responda abaixo, com suas palavras.",
-      "answered": "Você respondeu: {answer}"
+      "answered": "Você respondeu: {answer}",
+      "cancelled": "Cancelada sem enviar resposta",
+      "send": "Responder",
+      "other": "Outra resposta",
+      "otherPlaceholder": "Escreva sua resposta",
+      "pickMany": "Você pode escolher mais de uma",
+      "recommended": "Recomendada"
     },
     "changes": {
       "showAll": "Ver as {count} mudanças",
@@ -255,6 +267,45 @@
       "minimize": "Minimizar para o Len",
       "open": "Abrir o chat",
       "resize": "Arraste para mudar o tamanho"
+    },
+    "plan": {
+      "option": "Planejar primeiro",
+      "optionHint": "O Len olha primeiro e propõe um plano; nada muda até você aprovar.",
+      "chip": "Plano",
+      "chipOff": "Sair do modo plano",
+      "reviewLabel": "Plano para revisar",
+      "reviewQuestion": "Aprovar este plano?",
+      "approve": "Aprovar",
+      "approveHint": "O Len executa o plano agora.",
+      "keep": "Pedir mudanças",
+      "keepHint": "O Len continua planejando com o que você disser.",
+      "consentLabel": "Modo plano",
+      "consentQuestion": "O Len quer planejar antes de mudar qualquer coisa. Planejar primeiro?",
+      "planFirst": "Planejar primeiro",
+      "planFirstHint": "Nada muda até você aprovar o plano.",
+      "skip": "Sem plano",
+      "skipHint": "O Len segue com o seu pedido agora.",
+      "showPlan": "Ver o plano inteiro",
+      "hidePlan": "Ocultar o plano"
+    },
+    "goal": {
+      "option": "Objetivo",
+      "optionHint": "Len segue sozinho, rodada após rodada, até terminar.",
+      "optionTaken": "Já existe um objetivo: remova-o ou espere ele terminar.",
+      "chip": "Objetivo",
+      "chipOff": "Não fazer disso um objetivo",
+      "placeholder": "Descreva o objetivo inteiro; Len vai seguir até terminar…",
+      "label": "Objetivo",
+      "round": "Rodada {round} de {max}",
+      "running": "Em andamento",
+      "paused": "Pausado",
+      "blocked": "Travado",
+      "roundLimit": "Chegou ao limite de {max} rodadas.",
+      "noCredits": "Parou: sem saldo.",
+      "resume": "Retomar",
+      "clear": "Remover",
+      "clearFailed": "Não foi possível remover o objetivo.",
+      "roundLine": "Objetivo · rodada {round} de {max}"
     }
   }
 }

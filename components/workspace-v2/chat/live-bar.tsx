@@ -12,7 +12,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Square } from "lucide-react";
 
 import { CaraDeLen } from "@/components/llamada/cara-de-len";
-import type { LiveStatus } from "./live-status";
+import { isRunning, retryPhase, type LiveStatus } from "./live-status";
 
 export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => void }) {
   const t = useTranslations("panelsChat");
@@ -23,8 +23,9 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
     n < 1000
       ? t("chars.count", { count: n })
       : t("chars.thousands", { count: new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(n / 1000) });
-  const running = status.kind === "thinking" || status.kind === "working";
-  const startedAt = running ? status.startedAt : null;
+  // `isRunning`: también un reintento (el ■ no puede irse justo mientras espera).
+  const running = isRunning(status);
+  const startedAt = status.kind === "thinking" || status.kind === "working" ? status.startedAt : null;
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!running) return;
@@ -78,8 +79,15 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
       break;
     case "waiting":
       verb = status.reason === "question" ? t("newChat.live.waitingAnswer") : t("newChat.live.waitingApproval");
-      meta = t("newChat.live.yourTurn");
-      why = status.question || null;
+      // Pieza 3: dentro del turno no está «en pausa»: Len sigue al contestar.
+      meta = status.reason === "question" && status.live ? t("newChat.live.yourTurnLive") : t("newChat.live.yourTurn");
+      // Pieza 7: la del modo plan, en el idioma del dueño.
+      why =
+        status.reason === "question" && status.intent === "plan-review"
+          ? t("newChat.plan.reviewQuestion")
+          : status.reason === "question" && status.intent === "plan-consent"
+            ? t("newChat.plan.consentQuestion")
+            : status.question || null;
       break;
     case "done":
       verb = t("newChat.live.done");
@@ -92,6 +100,25 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
     case "failed":
       verb = t("newChat.live.failed");
       why = status.message;
+      break;
+    case "retrying": {
+      // Esperando: «Reintentando · en 3 s · intento 2 de 5» (como Claude Code).
+      // Vencida la espera, el intento nuevo ya está pensando aunque no haya
+      // llegado texto: «Pensando · intento 2 de 5».
+      const phase = retryPhase(status, now);
+      if (phase.waiting) {
+        verb = t("newChat.live.retrying");
+        meta = t("newChat.live.retryingHint", { seconds: phase.seconds, attempt: status.attempt, max: status.maxAttempts });
+        ticking = true;
+      } else {
+        verb = t("newChat.live.thinking");
+        meta = t("newChat.live.retryingAttempt", { attempt: status.attempt, max: status.maxAttempts });
+      }
+      break;
+    }
+    case "compacting":
+      verb = t("newChat.live.compacting");
+      meta = t("newChat.live.compactingHint");
       break;
   }
 

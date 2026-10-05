@@ -67,6 +67,37 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
     });
   });
 
+  it("🔴 pieza 3: las preguntas con sus opciones y la respuesta del dueño LLEGAN a guardarse, recortadas", async () => {
+    const preguntas = [{ id: "plazo", question: "¿Cuánto tarda?", options: [{ label: "48 horas (Recommended)", description: "Lo de tu ficha." }], multiSelect: false }];
+    const res = await guardar(
+      turno([{ tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Cuánto tarda?", preguntas, respuesta: "x".repeat(500) }]),
+    );
+    expect(res.status).toBe(200);
+    expect(guardada()).toMatchObject({ preguntas });
+    expect(guardada().respuesta).toHaveLength(200);
+  });
+
+  it("ALINEAR · la marca de «cancelada» llega a guardarse", async () => {
+    const res = await guardar(turno([{ tool: "exit_plan_mode", status: "done", summary: "", preguntas: [{ id: "plan-review", question: "?" }], dismissed: true }]));
+    expect(res.status).toBe(200);
+    expect(guardada()).toMatchObject({ dismissed: true });
+  });
+
+  it("🔴 pieza 7: la intención de la pregunta (la revisión del plan) llega a guardarse; una que no vale se cae", async () => {
+    const revision = { id: "plan-review", question: "Approve this plan and leave plan mode?", intent: { kind: "plan-review", plan: "# Reseñas" } };
+    const res = await guardar(
+      turno([
+        { tool: "exit_plan_mode", status: "done", summary: "", preguntas: [revision], respuesta: "Approve" },
+        { tool: "enter_plan_mode", status: "done", summary: "", preguntas: [{ id: "plan-mode", question: "¿Planear?", intent: { kind: "otra" } }] },
+      ]),
+    );
+    expect(res.status).toBe(200);
+    const acciones = vi.mocked(appendChatMessage).mock.calls[0]![1].actions!;
+    expect(acciones[0]!.preguntas![0]).toMatchObject({ intent: { kind: "plan-review", plan: "# Reseñas" } });
+    // `undefined`: el JSON de la fila no la lleva.
+    expect(acciones[1]!.preguntas![0]!.intent).toBeUndefined();
+  });
+
   it("una observación larga se RECORTA y el turno se guarda igual", async () => {
     const res = await guardar(
       turno([{ tool: "verificar_diseno", status: "done", summary: "ok", observacion: "x".repeat(5000) }]),

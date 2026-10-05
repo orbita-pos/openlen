@@ -35,6 +35,12 @@
       "declarar_tareas": "Ordenando el trabajo",
       "leer_de_internet": "Leyendo la página que me pasaste",
       "preguntar": "Preguntando",
+      "ask_user_question": "Preguntando",
+      "enter_plan_mode": "Pidiendo planear primero",
+      "exit_plan_mode": "Presentando el plan",
+      "session_search": "Buscando en charlas anteriores",
+      "session_event_search": "Buscando en una charla anterior",
+      "session_event_read": "Leyendo una charla anterior",
       "revertir_ultimo_cambio": "Deshaciendo el último cambio",
       "verificar_diseno": "Revisando el resultado",
       "redisenar_pagina": "Rediseñando la página",
@@ -46,7 +52,10 @@
       "ver_mensajes": "Mirando tus mensajes",
       "preparar_respuesta": "Preparando tu respuesta",
       "web_search": "Buscando en internet",
-      "web_fetch": "Leyendo una página web"
+      "web_fetch": "Leyendo una página web",
+      "get_goal": "Mirando el encargo",
+      "create_goal": "Creando el encargo",
+      "update_goal": "Actualizando el encargo"
     },
     "action": {
       "home": "Inicio",

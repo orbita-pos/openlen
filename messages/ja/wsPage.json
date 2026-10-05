@@ -35,6 +35,12 @@
       "declarar_tareas": "作業を整理中",
       "leer_de_internet": "指定されたページを読み込み中",
       "preguntar": "確認しています",
+      "ask_user_question": "確認しています",
+      "enter_plan_mode": "先に計画するか確認中",
+      "exit_plan_mode": "計画を提示中",
+      "session_search": "過去の会話を検索中",
+      "session_event_search": "以前の会話の中を検索中",
+      "session_event_read": "以前の会話を読んでいます",
       "revertir_ultimo_cambio": "直前の変更を取り消し中",
       "verificar_diseno": "結果を確認中",
       "redisenar_pagina": "ページを再デザイン中",
@@ -46,7 +52,10 @@
       "ver_mensajes": "メッセージを確認中",
       "preparar_respuesta": "返信を準備中",
       "web_search": "ウェブを検索中",
-      "web_fetch": "ウェブページを読んでいます"
+      "web_fetch": "ウェブページを読んでいます",
+      "get_goal": "ゴールを確認",
+      "create_goal": "ゴールを作成",
+      "update_goal": "ゴールを更新"
     },
     "action": {
       "home": "ホーム",

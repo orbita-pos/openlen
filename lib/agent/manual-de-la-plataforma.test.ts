@@ -11,6 +11,14 @@ import {
   textoDeLaPlataforma,
 } from "./manual-de-la-plataforma";
 import { TOPE_DE_LINEA } from "./ficheros/read";
+import {
+  MAX_FOLDER_BYTES,
+  MAX_FOLDER_FILE_BYTES,
+  MAX_FOLDER_FILES,
+  MAX_TEST_FILE_BYTES,
+  RESERVED_ROOTS,
+  WEB_EXTENSIONS,
+} from "./ficheros/folder";
 import { clauseMarker } from "@/lib/ai/js-clause";
 import { PETICION_DEL_USUARIO } from "./context";
 
@@ -114,6 +122,23 @@ describe("el manual de la plataforma", () => {
     for (const ruta of RUTAS_DE_DOCS) expect(textoDeLaPlataforma(ruta)).toBe(docs[ruta]);
     expect(textoDeLaPlataforma(`${CARPETA_DOCS}/otro.md`)).toBeNull();
     expect(textoDeLaPlataforma("/index.html")).toBeNull();
+  });
+
+  it("LA CARPETA (pieza 9 de 2.5): /AGENTS.md la explica con las cifras y las rutas de folder.ts, no con unas copiadas", () => {
+    expect(manual).toContain("THE PROJECT'S FOLDER");
+    expect(prompt).not.toContain("THE PROJECT'S FOLDER");
+    for (const ext of WEB_EXTENSIONS) expect(manual, ext).toContain(ext);
+    // Las raíces que el sitio publicado contesta con otra cosa; las de Len y su
+    // terminal (`memoria`, `tmp`…) no son cosa del manual.
+    const delSitio = ["api", "c", "assets", "uploads", "rest", "auth", "storage", "functions", "realtime"];
+    expect(RESERVED_ROOTS).toEqual(expect.arrayContaining(delSitio));
+    expect(manual).toContain(`except the reserved roots (${delSitio.map((r) => `/${r}`).join(", ")})`);
+    expect(manual).not.toContain("/memoria,");
+    expect(manual).toContain(
+      `Up to ${MAX_FOLDER_FILES} files and ${MAX_FOLDER_BYTES / 1024 / 1024} MB; ${MAX_FOLDER_FILE_BYTES / 1024 / 1024} MB per file (${MAX_TEST_FILE_BYTES / 1024} KB per test file).`,
+    );
+    // Lo que sus ojos no pueden comprobar lo dice, en vez de darlo por bueno.
+    expect(manual).toContain("offline mode cannot be checked there");
   });
 });
 

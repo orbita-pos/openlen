@@ -6,6 +6,7 @@ import { detectSlotPath, gateReservedMarker } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { createVersion } from "@/lib/projects/versions";
+import { copyFolderForRemix } from "@/lib/backend/files";
 import { containsBlockedTerm } from "./blocklist";
 // 🔴 EL HOST SE DERIVA, NO SE LEE DE LA COLUMNA. Misma derivación que
 // `lib/projects.ts` — es literalmente la misma función desde el 2026-09-17.
@@ -258,6 +259,13 @@ export async function remixProject(
     status: "draft",
     remixedFromId: src.id,
     data: { html: finalHtml, ...(Object.keys(clonedPages).length ? { pages: clonedPages } : {}) },
+  });
+
+  // LA CARPETA (pieza 9 de Len 2.5): el `js/app.js` que la página carga viaja
+  // con ella, como su JavaScript en línea. Sólo lo publicable. Si falla, el
+  // remix ya existe: se dice en el log y la copia sigue sin carpeta.
+  await copyFolderForRemix(src.id, newId).catch((err: unknown) => {
+    console.warn(`[remix] no se copió la carpeta de ${src.id}`, err);
   });
 
   await db.update(schema.projects)

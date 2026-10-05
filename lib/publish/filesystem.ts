@@ -40,6 +40,8 @@ import { absolutizeSocialMeta } from "@/lib/branding/social-image";
 import { buildLlmsTxt, pageTitle } from "@/lib/publish/llms-txt";
 import { detectSiteAccent } from "@/lib/publish/site-accent";
 import { validatePageSlug } from "@/lib/projects/site-pages";
+import { isPublishableFolderPath, publishableFolderFiles } from "@/lib/agent/ficheros/folder";
+import { SELF_UNREGISTERING_SW, serviceWorkerPaths } from "@/lib/publish/service-worker";
 import type {
   FormConfig,
 } from "@/lib/projects/types";
@@ -166,6 +168,10 @@ export interface PublishParams {
     slug: string;
     html: string;
   }>;
+  /** LA CARPETA (pieza 9 de Len 2.5): los ficheros del proyecto que no son
+   *  páginas, con la ruta de `projectFiles` (`/js/app.js`). Se publican tal
+   *  cual los web (`lib/agent/ficheros/folder.ts`); el resto se ignora. */
+  files?: ReadonlyArray<{ path: string; content: string }>;
   /** Site assistant (settings.assistant). When enabled, the visitor-facing
    *  chat widget IIFE is injected before </body> on the root doc AND every
    *  page/locale variant. The owner's business brain never ships — the widget
@@ -1018,10 +1024,27 @@ export async function publishToDir(
     },
   ];
 
+  // LA CARPETA (pieza 9 de Len 2.5): los ficheros web del proyecto, tal cual,
+  // junto a las páginas. Se filtran OTRA VEZ aquí aunque el llamador ya lo
+  // haga (como `data-slot-path`): ni una prueba, ni una migración, ni una ruta
+  // reservada o rara llegan al disco. Si el dueño trae su robots.txt o su
+  // llms.txt, gana el suyo, como en Vercel con `public/`.
+  const folder = publishableFolderFiles(Object.fromEntries((params.files ?? []).map((f) => [f.path, f.content])));
+  const own = new Set(folder.map((f) => f.path));
+  const tree = [...releaseFiles.filter((f) => !own.has(f.path)), ...folder];
+  // EL SERVICE WORKER NO ATRAPA A NADIE (lib/publish/service-worker.ts): donde
+  // el sitio tuvo o puede tener uno y esta release no lo trae, va el que se da
+  // de baja. Las rutas se recuerdan fuera de la release, para las siguientes.
+  const swPaths = [...new Set([...serviceWorkerPaths(tree), ...(await rememberedServiceWorkers(subDir))])].sort();
+  for (const p of swPaths) {
+    if (!tree.some((f) => f.path === p)) tree.push({ path: p, content: SELF_UNREGISTERING_SW });
+  }
+  await rememberServiceWorkers(subDir, swPaths);
+
   // Protected docs shape the sha (an edit to a gated page must mint a new
   // release) without ever entering the release dir — the __protected__/
   // prefix only exists inside this hash input.
-  const sha = computeShaFiles(releaseFiles);
+  const sha = computeShaFiles(tree);
 
   const releaseDir = safeJoin(releasesDir, sha);
   let written = false;
@@ -1041,8 +1064,8 @@ export async function publishToDir(
     const tmpDir = safeJoin(releasesDir, `.tmp-${sha}-${randomUUID()}`);
     await mkdir(tmpDir, { recursive: true });
     try {
-      for (const f of releaseFiles) {
-        const dst = path.join(tmpDir, f.path);
+      for (const f of tree) {
+        const dst = safeJoin(tmpDir, f.path);
         await mkdir(path.dirname(dst), { recursive: true });
         await writeFile(dst, f.content, "utf8");
       }
@@ -1172,6 +1195,19 @@ export async function rollbackToSha(
     throw new ReleaseNotFoundError(v.value, sha);
   }
 
+  // EL SERVICE WORKER NO ATRAPA A NADIE, tampoco al volver atrás (pieza 9): una
+  // release de antes —o una sin el suyo— no trae el que se da de baja donde el
+  // sitio tuvo uno, así que se pone ahí. Sólo donde FALTA (`wx`): nunca pisa un
+  // fichero de la release. El nombre de la release deja de ser la huella exacta
+  // de su contenido, y es a propósito: es un fichero que nunca estuvo.
+  for (const p of new Set(["sw.js", ...(await rememberedServiceWorkers(subDir))])) {
+    const dst = safeJoin(releaseDir, p);
+    await mkdir(path.dirname(dst), { recursive: true });
+    await writeFile(dst, SELF_UNREGISTERING_SW, { encoding: "utf8", flag: "wx" }).catch((err: NodeJS.ErrnoException) => {
+      if (err.code !== "EEXIST") throw err;
+    });
+  }
+
   const currentPath = safeJoin(subDir, "current");
   const currentNew = safeJoin(subDir, `.current-${randomUUID()}.new`);
   await symlink(path.join("releases", sha), currentNew).catch(async (err) => {
@@ -1182,6 +1218,24 @@ export async function rollbackToSha(
     throw err;
   });
   await rename(currentNew, currentPath);
+}
+
+/** Dónde se recuerdan las rutas de service worker de un subdominio: junto a
+ *  `releases/`, fuera de la release (Caddy sólo sirve `current/` y `assets/`). */
+const SERVICE_WORKERS_FILE = "service-workers.json";
+
+async function rememberedServiceWorkers(subDir: string): Promise<string[]> {
+  try {
+    const raw: unknown = JSON.parse(await readFile(safeJoin(subDir, SERVICE_WORKERS_FILE), "utf8"));
+    // Lo leído se vuelve a validar: una ruta rara nunca llega a escribirse.
+    return Array.isArray(raw) ? raw.filter((p): p is string => typeof p === "string" && isPublishableFolderPath(`/${p}`)) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function rememberServiceWorkers(subDir: string, paths: readonly string[]): Promise<void> {
+  await writeFile(safeJoin(subDir, SERVICE_WORKERS_FILE), JSON.stringify(paths), "utf8");
 }
 
 /**

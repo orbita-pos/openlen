@@ -158,3 +158,23 @@ describe("computeUnpublishedChanges", () => {
     });
   });
 });
+
+// LA CARPETA (pieza 9 de Len 2.5): un `js/app.js` cambiado es un cambio sin
+// publicar aunque ninguna página se mueva.
+describe("computeUnpublishedChanges y la carpeta", () => {
+  it("🔴 una carpeta distinta de la publicada la enciende", () => {
+    expect(computeUnpublishedChanges(row({ filesHash: "a1", publishedFilesHash: null }))).toBe(true);
+    expect(computeUnpublishedChanges(row({ filesHash: "a2", publishedFilesHash: "a1" }))).toBe(true);
+    expect(computeUnpublishedChanges(row({ filesHash: null, publishedFilesHash: "a1" }))).toBe(true);
+  });
+
+  it("la misma carpeta, o ninguna, no cambia nada", () => {
+    expect(computeUnpublishedChanges(row({ filesHash: "a1", publishedFilesHash: "a1" }))).toBe(false);
+    expect(computeUnpublishedChanges(row({ filesHash: null, publishedFilesHash: null }))).toBe(false);
+    expect(computeUnpublishedChanges(row())).toBe(false);
+  });
+
+  it("sin subdominio, tampoco con carpeta", () => {
+    expect(computeUnpublishedChanges(row({ subdomain: null, filesHash: "a1" }))).toBe(false);
+  });
+});

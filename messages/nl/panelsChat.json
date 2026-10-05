@@ -197,16 +197,28 @@
       "waitingAnswer": "Wacht op je antwoord",
       "waitingApproval": "Wacht op je goedkeuring",
       "yourTurn": "Jij bent aan de beurt · gepauzeerd",
+      "yourTurnLive": "Jij bent aan de beurt · Len gaat verder zodra je antwoordt",
       "done": "Klaar",
       "doneHint": "vraag iets anders",
       "stopped": "Gestopt",
       "stoppedHint": "wat al gedaan is, blijft",
-      "failed": "Kon het niet afmaken"
+      "failed": "Kon het niet afmaken",
+      "retrying": "Opnieuw proberen",
+      "retryingHint": "geen antwoord · over {seconds} s · poging {attempt} van {max}",
+      "retryingAttempt": "poging {attempt} van {max}",
+      "compacting": "Zet op een rij wat er is",
+      "compactingHint": "om verder te gaan zonder de draad kwijt te raken"
     },
     "question": {
       "label": "Len vraagt je",
       "hint": "Antwoord hieronder, in je eigen woorden.",
-      "answered": "Je antwoordde: {answer}"
+      "answered": "Je antwoordde: {answer}",
+      "cancelled": "Geannuleerd zonder een antwoord te versturen",
+      "send": "Antwoorden",
+      "other": "Iets anders",
+      "otherPlaceholder": "Schrijf je antwoord",
+      "pickMany": "Je kunt er meer kiezen",
+      "recommended": "Aanbevolen"
     },
     "changes": {
       "showAll": "Alle {count} wijzigingen bekijken",
@@ -255,6 +267,45 @@
       "minimize": "Minimaliseren naar Len",
       "open": "Chat openen",
       "resize": "Sleep om het formaat te wijzigen"
+    },
+    "plan": {
+      "option": "Eerst plannen",
+      "optionHint": "Len kijkt eerst rond en stelt een plan voor; er verandert niets tot je het goedkeurt.",
+      "chip": "Plan",
+      "chipOff": "Planmodus verlaten",
+      "reviewLabel": "Plan om te beoordelen",
+      "reviewQuestion": "Dit plan goedkeuren?",
+      "approve": "Goedkeuren",
+      "approveHint": "Len voert het plan nu uit.",
+      "keep": "Wijzigingen vragen",
+      "keepHint": "Len plant verder met wat je zegt.",
+      "consentLabel": "Planmodus",
+      "consentQuestion": "Len wil plannen voordat er iets verandert. Eerst plannen?",
+      "planFirst": "Eerst plannen",
+      "planFirstHint": "Er verandert niets tot je het plan goedkeurt.",
+      "skip": "Zonder plan",
+      "skipHint": "Len gaat nu verder met je verzoek.",
+      "showPlan": "Hele plan bekijken",
+      "hidePlan": "Plan verbergen"
+    },
+    "goal": {
+      "option": "Doel",
+      "optionHint": "Len gaat zelf door, ronde na ronde, tot het af is.",
+      "optionTaken": "Er is al een doel: haal het weg of wacht tot het klaar is.",
+      "chip": "Doel",
+      "chipOff": "Geen doel van maken",
+      "placeholder": "Beschrijf het hele doel; Len gaat door tot het af is…",
+      "label": "Doel",
+      "round": "Ronde {round} van {max}",
+      "running": "Bezig",
+      "paused": "Gepauzeerd",
+      "blocked": "Vastgelopen",
+      "roundLimit": "Limiet van {max} rondes bereikt.",
+      "noCredits": "Gestopt: geen tegoed meer.",
+      "resume": "Hervatten",
+      "clear": "Weghalen",
+      "clearFailed": "Het doel kon niet worden weggehaald.",
+      "roundLine": "Doel · ronde {round} van {max}"
     }
   }
 }

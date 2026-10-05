@@ -29,7 +29,7 @@ import { stripOpIds } from "@/lib/html-ops";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import { debitCredits } from "@/lib/credits";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
-import { vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
+import { vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 import type { SignedInAs } from "@/lib/agent/usar-pagina";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
@@ -77,6 +77,30 @@ import type { TerminalDeLen } from "@/lib/agent/terminal/terminal";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
+import { createConcurrencyLimit } from "@/lib/agent/concurrency-limit";
+import {
+  ASK_CANCELLED_ERROR,
+  ASK_USER_QUESTION,
+  QUESTION_DISMISSED,
+  answerSummary,
+  questionText,
+  validateQuestions,
+  type AskUserResult,
+  type UserQuestion,
+} from "@/lib/agent/ask-user-question";
+import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
+import { toolEnterPlanMode, toolExitPlanMode } from "@/lib/agent/plan-mode-tools";
+import type { GoalActivation, GoalSnapshot } from "@/lib/agent/goal";
+import { CREATE_GOAL, GET_GOAL, UPDATE_GOAL, toolCreateGoal, toolGetGoal, toolUpdateGoal } from "@/lib/agent/goal-tools";
+import type { ChatRowForSearch } from "@/lib/agent/session-query";
+import {
+  SESSION_EVENT_READ,
+  SESSION_EVENT_SEARCH,
+  SESSION_SEARCH,
+  toolSessionEventRead,
+  toolSessionEventSearch,
+  toolSessionSearch,
+} from "@/lib/agent/session-query-tools";
 import {
   toolPrepararRespuesta,
   toolVerFormularios,
@@ -97,12 +121,52 @@ export type FetchedImage =
   | { ok: true; base64: string; mimeType: string }
   | { ok: false; error: string };
 
+/** Con qué se archiva el «antes» de un fichero de la carpeta, para deshacer. */
+export interface FileVersionNote {
+  /** Cómo estaba; `null` si no existía. */
+  readonly before: string | null;
+  readonly label: string;
+  /** `chat` si lo hizo Len; `manual` si fue el dueño (su terminal o el editor). */
+  readonly source: "chat" | "manual";
+}
+
 export interface AgentDeps {
-  /** El backend del proyecto (plans/pages-backend/design.md): sus ficheros de
-   *  `/supabase/` (las migraciones), por ruta. Opcional: sin él no hay. */
-  ficherosDeSupabase?(projectId: string): Promise<Record<string, string>>;
-  /** Guardar uno de esos ficheros. */
-  guardarFicheroDeSupabase?(projectId: string, ruta: string, contenido: string): Promise<void>;
+  /** Pieza 3 de Len 2.5: quien CONTESTA las preguntas de `ask_user_question`
+   *  dentro del turno (lo pone la ruta cuando el chat lo pide). Devuelve las
+   *  respuestas, el descarte del dueño (`QUESTION_DISMISSED`, lote 7-8) o
+   *  `null` si no llegaron a tiempo (o el ■). Sin él, la pregunta cierra el
+   *  turno, como siempre: así siguen la voz y Len-Bench. */
+  askUser?(questions: UserQuestion[]): Promise<AskUserResult>;
+  /** Pieza 7: el modo plan del turno (`lib/agent/plan-mode.ts`). Lo guarda la
+   *  ruta; sólo `enter_plan_mode` y `exit_plan_mode` lo cambian. Sin él, el
+   *  modo plan no existe y las dos lo dicen. */
+  planMode?: { active(): boolean; set(active: boolean): void };
+  /** Pieza 8: el encargo del turno (`lib/agent/goal.ts`). Lo guarda la ruta: la
+   *  foto que se escribe al cerrar y la activación del proceso. Sin él, las
+   *  tres herramientas dicen que no hay turno abierto. */
+  goal?: {
+    get(): GoalSnapshot | null;
+    activation(): GoalActivation;
+    /** La foto nueva y si queda armado, como cada mutación de DeepSeek. */
+    commit(next: GoalSnapshot | null, activation: GoalActivation): void;
+    /** De quién es el turno: el dueño (o el dueño corrigió el rumbo en él) o la
+     *  ronda de un encargo. Que es ronda lo dice SÓLO el servidor. */
+    authority(): { kind: "direct-human" } | { kind: "goal-round"; goalId: string; revision: number; round: number } | null;
+    newId(): string;
+  };
+  /** Pieza 5: las filas del chat del proyecto, para buscar en sus charlas
+   *  (`session_search`). Sin él, las herramientas lo dicen. */
+  chatRows?(projectId: string): Promise<ChatRowForSearch[]>;
+  /** Pieza 5: la transcripción de una fila, para `session_event_read`. */
+  chatTranscript?(projectId: string, rowId: string): Promise<unknown>;
+  /** LA CARPETA (pieza 9 de Len 2.5): los ficheros del proyecto que no son
+   *  páginas —`/supabase/`, `/tests/`, `js/`, `css/`, `data/`…—, por ruta.
+   *  Opcional: sin él no hay carpeta. */
+  projectFiles?(projectId: string): Promise<Record<string, string>>;
+  /** Guardar uno, archivando antes su «antes» (`projectFileVersions`). */
+  saveProjectFile?(projectId: string, path: string, content: string, version: FileVersionNote): Promise<{ versionPrevia: string | null }>;
+  /** Borrar uno, archivando lo que tenía. */
+  deleteProjectFile?(projectId: string, path: string, version: FileVersionNote): Promise<{ versionPrevia: string | null }>;
   /** La URL y la clave publicable del backend del proyecto, para el ESTADO;
    *  lo da de alta si aún no tiene (sin crear la base). `null` si este
    *  servidor no tiene el clúster de las páginas. */
@@ -337,6 +401,19 @@ export const conflictoRepetido = (veces: number) =>
  * lo cuenta, para que el cierre del turno diga lo que de verdad se cobró (N42:
  * un turno con búsquedas decía «1,46 créditos» y costó 5,96).
  */
+/** El «antes» de un fichero de la carpeta, archivado. `null` si no se pudo:
+ *  el cambio sigue, pero sin versión no hay deshacer y el turno no lo ofrece. */
+async function archivarAntes(projectId: string, path: string, version: FileVersionNote): Promise<string | null> {
+  try {
+    const { archiveFileVersion } = await import("@/lib/projects/file-versions");
+    return await archiveFileVersion({ projectId, path, content: version.before, label: version.label, source: version.source });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(`[agente] no se pudo archivar el «antes» de ${path}`, err);
+    return null;
+  }
+}
+
 export function realDeps(
   debit: (userId: string, centicreditos: number) => Promise<unknown> = debitCredits,
 ): AgentDeps {
@@ -344,14 +421,34 @@ export function realDeps(
     // F2 · la web: la de prueba en Len-Bench, Exa y `fetchRaw` fuera de él.
     // Lo buscado de verdad se cobra aparte del turno, como editar una imagen.
     web: webDelServidor(debit),
-    // El backend del proyecto (lib/backend): import perezoso, es server-only.
-    async ficherosDeSupabase(projectId) {
-      const { listProjectFiles } = await import("@/lib/backend/files");
-      return listProjectFiles(projectId, "/supabase/");
+    // LA CARPETA (lib/backend/files.ts): import perezoso, es server-only. Cada
+    // cambio archiva su «antes» para deshacer; si archivar falla, el cambio
+    // se guarda igual y el turno no ofrecerá deshacerlo (`versionPrevia` nulo).
+    // Pieza 5: el chat del proyecto, para buscar en sus charlas. Perezoso, como
+    // la carpeta: `lib/projects/chat` arrastra la base.
+    async chatRows(projectId) {
+      const { filasParaBuscar } = await import("@/lib/projects/chat");
+      return filasParaBuscar(projectId);
     },
-    async guardarFicheroDeSupabase(projectId, ruta, contenido) {
+    async chatTranscript(projectId, rowId) {
+      const { transcripcionDeLaFila } = await import("@/lib/projects/chat");
+      return transcripcionDeLaFila(projectId, rowId);
+    },
+    async projectFiles(projectId) {
+      const { listProjectFiles } = await import("@/lib/backend/files");
+      return listProjectFiles(projectId);
+    },
+    async saveProjectFile(projectId, path, content, version) {
       const { saveProjectFile } = await import("@/lib/backend/files");
-      await saveProjectFile(projectId, ruta, contenido);
+      const versionPrevia = await archivarAntes(projectId, path, version);
+      await saveProjectFile(projectId, path, content);
+      return { versionPrevia };
+    },
+    async deleteProjectFile(projectId, path, version) {
+      const { deleteProjectFile } = await import("@/lib/backend/files");
+      const versionPrevia = await archivarAntes(projectId, path, version);
+      await deleteProjectFile(projectId, path);
+      return { versionPrevia };
     },
     async supabaseCli(projectId, args, ficheros) {
       const { runSupabaseCli } = await import("@/lib/backend/cli");
@@ -664,6 +761,9 @@ export interface AgentSession {
   /** LEN 2.0 · las rutas escritas este turno, la más reciente primero: el
    *  «orden por fecha» de Grep y Glob (decisión B6). */
   escritos?: string[];
+  /** Pieza 4 de Len 2.5: el tope de visitas de `usar_pagina` a la vez de ESTE
+   *  turno (`MAX_CONCURRENT_VISITS`). Se crea con la primera visita. */
+  visitLimit?: <T>(fn: () => Promise<T>) => Promise<T>;
   /** Cómo estaba cada fichero antes de su PRIMERA escritura de este turno. Lo
    *  que la página ya decía sigue siendo de la página aunque un Edit anterior
    *  del mismo turno lo quitara: los avisos de procedencia lo cuentan como
@@ -688,6 +788,15 @@ export interface AgentSession {
 export interface ToolOutcome {
   /** functionResponse.response que vuelve al modelo. Siempre presente. */
   response: Record<string, unknown>;
+  /** Pieza 8 · el `deferContext` de DeepSeek: un texto que el modelo lee en su
+   *  paso siguiente, detrás de los resultados de la tanda (el cierre de un
+   *  encargo). Lo añade el bucle al mensaje que lleva las respuestas. */
+  notice?: string;
+  /** LOTE 7-8 · el dueño DESCARTÓ la pregunta para hablar (el `ASK_CANCELLED`
+   *  de DeepSeek). El modelo lee el error de `response`; la tarjeta NO es un
+   *  fallo (DeepSeek la pinta `ok`) y el bucle cierra el turno tras la tanda,
+   *  como Claude Code cuando el usuario rechaza: el dueño tiene la palabra. */
+  dismissed?: true;
   /** H12-a · guardar ya chocó dos veces seguidas en este turno: el bucle no
    *  ejecuta más escrituras y cierra. Lo pone `contarConflictos`. */
   guardarSinSalida?: true;
@@ -738,6 +847,11 @@ export interface ToolOutcome {
      *  para que el modelo no los pierda (H08-b, `lib/agent/valores-de-tema.ts`). */
     valores?: string;
   };
+  /** LA CARPETA (pieza 9): los ficheros que tocó la llamada, cada uno con la
+   *  versión de su «antes». Es lo que necesita «Deshacer» para devolver el
+   *  turno ENTERO (components/workspace-v2/panels/undo-turn.ts); `versionPrevia`
+   *  nulo = no se pudo archivar, y entonces el turno no se ofrece deshacer. */
+  ficherosTocados?: ReadonlyArray<{ readonly ruta: string; readonly versionPrevia: string | null }>;
   /** HTML nuevo (sin op-ids) para refrescar el iframe. */
   updatedHtml?: string;
   // ⚰️ Aquí viajaba `taggedHtml`, el gemelo con los `data-op-id` del motor, para
@@ -836,6 +950,12 @@ export interface ToolOutcome {
    * QUÉ se dice.
    */
   pregunta?: string;
+  /** Pieza 3 de Len 2.5: las preguntas de `ask_user_question`, con sus
+   *  opciones, para la tarjeta del chat. Van con `pregunta` (su texto plano). */
+  preguntas?: UserQuestion[];
+  /** Pieza 3: lo que contestó el dueño dentro del turno, en una línea, para
+   *  que la tarjeta se encoja a «Respondiste: …». */
+  respuesta?: string;
   /**
    * ¿ESTA EDICIÓN CAMBIÓ EL COMPORTAMIENTO de la página? Es la MISMA decisión
    * con la que se le pide `prueba` al modelo (`cambioConducta`, sin contar el
@@ -1122,6 +1242,12 @@ const PHOTO_PIVOT_NOTE =
 const MAX_MIRADAS_DESCRIBIR = 2;
 const MAX_MIRADAS_MEDIR = 4;
 
+/** Pieza 4: visitas de `usar_pagina` a la vez en un turno. Cada una arranca su
+ *  Chromium; con herramientas en paralelo, dos llamadas seguras pueden pedir
+ *  visita a la vez (§11 de la investigación: tope 2 por la carga del navegador
+ *  del servidor). */
+export const MAX_CONCURRENT_VISITS = 2;
+
 async function toolMirarPagina(
   session: AgentSession,
   deps: AgentDeps,
@@ -1186,7 +1312,7 @@ async function toolMirarPagina(
       // LA VISTA, para que lo que se mide sea el documento que el usuario tiene
       // delante y no el pelado. La fila ya está leída aquí arriba, así que no
       // cuesta una consulta. Ver `MiradaParams.vista`.
-      vista: vistaParaMedir(session.projectId, row, pedida.page),
+      vista: await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId),
     })
     .catch(() => null);
   if (!visto) {
@@ -1262,8 +1388,12 @@ async function toolUsarPagina(
     end = r.end;
   }
 
-  const visto = await deps
-    .usarPagina({ html, pasos: v.pasos, ruta: pedida.ruta, vista: vistaParaMedir(session.projectId, row, pedida.page), signedInAs })
+  const usarPagina = deps.usarPagina;
+  const vista = await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId);
+  // Pieza 4: con herramientas en paralelo, como mucho `MAX_CONCURRENT_VISITS`
+  // Chromium a la vez en el turno; la que sobra espera su plaza.
+  const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
+  const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta: pedida.ruta, vista, signedInAs }))
     .catch(() => null)
     .finally(() => end?.().catch(() => undefined));
   if (!visto) {
@@ -1560,7 +1690,7 @@ async function toolPublicar(
       return {
         response: {
           ok: false,
-          error: `the user has never said "${raw}" — you made that name up, and you don't choose the address of their page. This project doesn't have a subdomain yet: ask them with \`preguntar\` what address they want.`,
+          error: `the user has never said "${raw}" — you made that name up, and you don't choose the address of their page. This project doesn't have a subdomain yet: ask them with \`ask_user_question\` what address they want.`,
         },
         // N41: al dueño, que la dirección la elige él — no «you made that name up».
         ownerReason: { code: "address_needed" },
@@ -1605,7 +1735,7 @@ async function toolPublicar(
           // se le señala la herramienta que HACE eso, y llamarla cierra el turno
           // de verdad: la parada la ejecuta el servidor, no la buena voluntad
           // del modelo.
-          "this project doesn't have a subdomain yet, and you don't choose the subdomain. Ask the user what address they want with `preguntar` — that tool closes the turn and their answer opens the next one; then, yes, call publicar with what they write.",
+          "this project doesn't have a subdomain yet, and you don't choose the subdomain. Ask the user what address they want with `ask_user_question`; then, yes, call publicar with what they answer.",
       },
       ownerReason: { code: "address_needed" },
     };
@@ -1661,28 +1791,34 @@ async function toolPublicar(
  * El texto lo escribe él, en el idioma del usuario. La parada la ejecuta el
  * bucle. Ver `ToolOutcome.pregunta`.
  */
-async function toolPreguntar(
+async function toolAskUserQuestion(
   _session: AgentSession,
-  _deps: AgentDeps,
+  deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
-  const texto = typeof args.texto === "string" ? args.texto.trim() : "";
-  if (!texto) {
-    return {
-      response: { ok: false, error: '"texto" is the question the user will read, and it came empty.' },
-    };
+  // Pieza 3 de Len 2.5: la forma de DeepSeek, validada ANTES de enseñar nada
+  // (`lib/agent/ask-user-question.ts`). Mal formada, el modelo lee qué cambiar
+  // y el dueño no ve tarjeta.
+  const v = validateQuestions(args.questions);
+  if (!v.ok) return { response: { ok: false, error: v.error } };
+  // ESPERA DENTRO DEL TURNO, como DeepSeek (`ctx.userQuestions.ask`): la
+  // respuesta del dueño es el resultado de la herramienta y Len sigue. Sólo si
+  // hay quien conteste (`deps.askUser`); `null` (no llegó a tiempo, ■) NO es
+  // una aprobación: cae a lo de siempre, la pregunta cierra el turno.
+  if (deps.askUser) {
+    const answers = await deps.askUser(v.questions);
+    // Lote 7-8: descartada para hablar, el error de DeepSeek; el bucle cierra.
+    if (answers === QUESTION_DISMISSED) return { response: { ok: false, error: ASK_CANCELLED_ERROR }, preguntas: v.questions, dismissed: true };
+    if (answers) return { response: { ok: true, answers }, preguntas: v.questions, respuesta: answerSummary(answers) };
   }
   return {
     // `ok: true` de verdad: preguntar es una acción que sale bien. El turno
     // termina porque el dueño tiene la palabra, no porque algo haya fallado.
     response: { ok: true, preguntado: true },
-    pregunta: texto.slice(0, PREGUNTA_MAX),
+    pregunta: questionText(v.questions),
+    preguntas: v.questions,
   };
 }
-
-/** Una pregunta, no un ensayo. Lo que no quepa aquí no es una pregunta: es el
- *  modelo pensando en voz alta, y eso va en su texto normal. */
-const PREGUNTA_MAX = 600;
 
 // ⚰️ Aquí vivía `leer_de_internet` (hasta 3 URLs, 4.000 caracteres de texto,
 // 2 llamadas por turno). Lo sustituyen `web_search` y `web_fetch` (F2 de
@@ -1736,7 +1872,7 @@ async function toolRevertirUltimoCambio(
             ok: false,
             error:
               r.motivo === "se_solapan"
-                ? `After your last change («${delLenV.label}») the page was edited by hand, and that edit touches the same thing as yours: undoing would also take away the user's. DON'T undo it on your own: ask them with preguntar whether they want to undo their edit too or leave it as it is.`
+                ? `After your last change («${delLenV.label}») the page was edited by hand, and that edit touches the same thing as yours: undoing would also take away the user's. DON'T undo it on your own: ask them with ask_user_question whether they want to undo their edit too or leave it as it is.`
                 : `your last change («${delLenV.label}») didn't move anything on the page: there is nothing of yours to undo.`,
           },
         };
@@ -1898,8 +2034,27 @@ async function ejecutarHerramienta(
         return await toolEditarImagen(session, deps, args);
       case "publicar":
         return await toolPublicar(session, deps, args);
-      case "preguntar":
-        return await toolPreguntar(session, deps, args);
+      case ASK_USER_QUESTION:
+        return await toolAskUserQuestion(session, deps, args);
+      // Pieza 7: el modo plan, como DeepSeek (la salida) y Claude Code (la entrada).
+      case ENTER_PLAN_MODE:
+        return await toolEnterPlanMode(session, deps, args);
+      case EXIT_PLAN_MODE:
+        return await toolExitPlanMode(session, deps, args);
+      // Pieza 8: el encargo, como DeepSeek.
+      case GET_GOAL:
+        return await toolGetGoal(session, deps, args);
+      case CREATE_GOAL:
+        return await toolCreateGoal(session, deps, args);
+      case UPDATE_GOAL:
+        return await toolUpdateGoal(session, deps, args);
+      // Pieza 5: buscar en las charlas pasadas, como DeepSeek.
+      case SESSION_SEARCH:
+        return await toolSessionSearch(session, deps, args);
+      case SESSION_EVENT_SEARCH:
+        return await toolSessionEventSearch(session, deps, args);
+      case SESSION_EVENT_READ:
+        return await toolSessionEventRead(session, deps, args);
       case NOMBRE_WEB_SEARCH:
         return await toolWebSearch(session, deps, args);
       case NOMBRE_WEB_FETCH:

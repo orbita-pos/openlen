@@ -20,6 +20,7 @@ import { ChatComposer } from "./chat-composer";
 import { ChatHeader } from "./chat-header";
 import { LenTurn, UserMessage } from "./chat-turn";
 import { LiveBar } from "./live-bar";
+import { GoalCardView } from "./goal-card";
 import { liveStatus } from "./live-status";
 import { MemoryDrawer, useAgentMemory } from "./len-memory";
 import { useAgentChat, type ScopedSelection } from "./use-agent-chat";
@@ -243,6 +244,8 @@ function AgentChatView({
                 onRetry={chat.handleRetry}
                 onPublished={chat.handlePublished}
                 onConfirmSettled={settle}
+                onAnswerQuestion={chat.answerQuestion}
+                onDismissQuestion={(id) => void chat.dismissQuestion(id)}
                 onRate={(rating, reasons, note) => feedback.rate(turn.id, rating, reasons ?? [], note ?? null)}
                 onClearRate={() => feedback.clear(turn.id)}
               />
@@ -252,6 +255,16 @@ function AgentChatView({
       </div>
       <div className="relative z-[2] shrink-0 px-3 pb-3 pt-1">
         <LiveBar status={status} onStop={chat.handleCancel} />
+        {/* Pieza 8: el encargo, si hay uno vivo (en marcha, en pausa o atascado). */}
+        {chat.goalOffered && (
+          <GoalCardView
+            goal={chat.goal}
+            busy={chat.busy}
+            stoppedForCredits={chat.goalStoppedForCredits}
+            onResume={chat.resumeGoal}
+            onClear={() => void chat.clearGoal()}
+          />
+        )}
         <ChatComposer
           value={chat.draft}
           onChange={chat.setDraft}
@@ -274,6 +287,11 @@ function AgentChatView({
           onEffortChange={chat.changeEsfuerzo}
           mode={chat.mode}
           {...(chat.modeOffered ? { onModeChange: chat.setMode } : {})}
+          planMode={chat.planMode}
+          {...(chat.planOffered ? { onTogglePlan: chat.togglePlan } : {})}
+          goalChip={chat.goalChip}
+          goalAvailable={chat.goalAvailable}
+          {...(chat.goalOffered ? { onToggleGoal: chat.toggleGoalChip } : {})}
         />
       </div>
       <ReplaceAssetModal
