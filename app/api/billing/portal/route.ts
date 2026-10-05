@@ -28,7 +28,8 @@ export async function GET(req: NextRequest): Promise<Response> {
   try {
     const url = await createCustomerPortalUrl(session.user.id);
     return NextResponse.redirect(url);
-  } catch {
+  } catch (err) {
+    console.error("[billing] el portal de Polar falló:", err instanceof Error ? err.message : err);
     projects.searchParams.set("billing_error", "portal_failed");
     return NextResponse.redirect(projects);
   }

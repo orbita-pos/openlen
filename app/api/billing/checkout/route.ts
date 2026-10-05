@@ -36,7 +36,8 @@ export async function GET(req: NextRequest): Promise<Response> {
   if ((await getUserPlan(session.user.id)) !== "free") {
     try {
       return NextResponse.redirect(await createCustomerPortalUrl(session.user.id));
-    } catch {
+    } catch (err) {
+      console.error("[billing] el portal de Polar falló:", err instanceof Error ? err.message : err);
       projects.searchParams.set("billing_error", "portal_failed");
       return NextResponse.redirect(projects);
     }
@@ -55,7 +56,10 @@ export async function GET(req: NextRequest): Promise<Response> {
       plan,
     });
     return NextResponse.redirect(url);
-  } catch {
+  } catch (err) {
+    // El motivo, al registro: sin él, un rechazo de Polar (un producto de otro
+    // entorno, un token sin permiso) sólo se veía como «checkout_failed».
+    console.error("[billing] el checkout de Polar falló:", err instanceof Error ? err.message : err);
     projects.searchParams.set("billing_error", "checkout_failed");
     return NextResponse.redirect(projects);
   }
