@@ -46,7 +46,7 @@ export function lenguajeDe(ruta: string): Lenguaje | null {
   if (ext === "html" || ext === "htm") return "html";
   if (ext === "css") return "css";
   if (ext === "js" || ext === "mjs") return "js";
-  if (ext === "json" || ext === "jsonl") return "json";
+  if (ext === "json" || ext === "jsonl" || ext === "webmanifest") return "json";
   if (ext === "md" || ext === "markdown") return "markdown";
   return null;
 }
