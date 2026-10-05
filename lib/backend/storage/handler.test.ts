@@ -3,7 +3,7 @@
 // La puerta de /storage/v1: la clave (la pasarela de Supabase), el host (sólo
 // el del `ref`: un fichero subido nunca vive en el origen de la página), y lo
 // que contesta su servidor a una ruta que no existe.
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { handleBackendRequest, type BackendProject } from "../router";
 import { TEST_REF, TEST_SITE, TEST_URL, type TestProject } from "../testing/project";
@@ -73,6 +73,30 @@ describe("/storage/v1 — la puerta", () => {
       project,
     );
     expect(r.headers.get("access-control-allow-origin")).toBe("https://tienda.openlen.app");
+  });
+
+  it("sin almacén propio, el del entorno: sin credenciales de R2, 503", async () => {
+    vi.stubEnv("R2_ACCOUNT_ID", "");
+    try {
+      const r = await pedir(`${TEST_URL}/storage/v1/bucket`, { apikey: t.secretKey }, t.project);
+      expect(r.status).toBe(503);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("transformar imágenes no está: el 404 de ruta de Supabase con la función apagada", async () => {
+    const r = await pedir(`${TEST_URL}/storage/v1/render/image/public/web/x.png?width=100`, { apikey: t.secretKey });
+    expect(r.status).toBe(404);
+    expect(await r.json()).toMatchObject({ statusCode: "404", error: "Not Found", message: "Route GET:/render/image/public/web/x.png?width=100 not found" });
+  });
+
+  it("subidas reanudables (TUS) tampoco: 404 de ruta", async () => {
+    const r = await handleBackendRequest(
+      new Request(`${TEST_URL}/storage/v1/upload/resumable`, { method: "POST", headers: { apikey: t.secretKey } }),
+      project,
+    );
+    expect(r.status).toBe(404);
   });
 
   it("el ref de prueba es el del host", () => {

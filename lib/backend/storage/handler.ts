@@ -19,6 +19,7 @@ import type { BlobStore } from "./blob-store";
 import { BUCKET_ROUTES } from "./buckets";
 import { ERRORS, StorageError, storageErrorResponse } from "./errors";
 import { OBJECT_ROUTES } from "./objects";
+import { pageBlobStore } from "./r2-blob-store";
 import { SIGNED_ROUTES } from "./signed";
 import { storageLimits, type StorageLimits } from "./limits";
 
@@ -125,7 +126,7 @@ function findRoute(method: string, path: string): { r: StorageRoute; m: RegExpEx
 /** El almacén de un proyecto: el suyo si lo trae (pruebas), si no, el del
  *  entorno. null = sin R2 en este servidor. */
 function storeFor(project: BackendProject): BlobStore | null {
-  return project.storage ? project.storage.store : null;
+  return project.storage ? project.storage.store : pageBlobStore();
 }
 
 /** Una petición a /storage/v1`sub`. */
