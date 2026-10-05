@@ -49,6 +49,7 @@ import {
 } from "@/components/workspace-v2/left-sidebar";
 import { AlertTriangle, Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
 import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
+import { PastePanel } from "@/components/workspace-v2/panels/paste-panel";
 import { StartLanding } from "@/components/workspace-v2/start-landing";
 import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
@@ -3654,7 +3655,17 @@ function NewV2Inner() {
           )
         )}
         {entryMode === "paste" && (
-          <PreviewPlaceholder mode={entryMode} />
+          // SIN PROYECTO NO HAY BARRA LATERAL (las dos pantallas del taller,
+          // `enElEditor`), y el panel de pegar vivía sólo ahí: esta pantalla
+          // decía «Pega tu HTML en la barra lateral» sin barra y sin cuadro. Va
+          // aquí, en el centro, con el ancho de un formulario.
+          <section className="relative flex flex-col flex-1 min-w-0 bg-preview-a">
+            <div className="flex-1 min-h-0 flex justify-center px-4 py-6">
+              <div className="w-full max-w-2xl min-h-0 flex flex-col rounded-xl ring-1 ring-[color:var(--border)] bg-elev">
+                <PastePanel />
+              </div>
+            </div>
+          </section>
         )}
         {entryMode === "editing" && !previewingTemplate &&
           (loadedProject && activeDoc ? (
