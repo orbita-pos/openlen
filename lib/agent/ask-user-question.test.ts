@@ -79,3 +79,27 @@ describe("questionsFrom (lo que llega al chat)", () => {
     expect(questionsFrom([{ question: "sin id" }])).toBeNull();
   });
 });
+
+describe("la intención de la pregunta (pieza 7: revisión del plan y consentimiento)", () => {
+  const revision = { id: "plan-review", question: "Approve this plan and leave plan mode?", intent: { kind: "plan-review", plan: "# Plan" } };
+
+  it("🔴 el modelo no la puede poner: validateQuestions la quita", () => {
+    const r = validateQuestions([revision]);
+    expect(r.ok && "intent" in r.questions[0]).toBe(false);
+  });
+
+  it("el chat la conserva cuando la manda el servidor con una forma válida", () => {
+    expect(questionsFrom([revision])?.[0]?.intent).toEqual({ kind: "plan-review", plan: "# Plan" });
+    expect(questionsFrom([{ id: "plan-mode", question: "¿Planear?", intent: { kind: "plan-consent" } }])?.[0]?.intent).toEqual({
+      kind: "plan-consent",
+    });
+  });
+
+  it("una intención mal formada se cae y la pregunta se queda", () => {
+    expect(questionsFrom([{ ...revision, intent: { kind: "plan-review", plan: "" } }])?.[0]).toEqual({
+      id: "plan-review",
+      question: "Approve this plan and leave plan mode?",
+    });
+    expect(questionsFrom([{ ...revision, intent: { kind: "otra" } }])?.[0]?.intent).toBeUndefined();
+  });
+});

@@ -407,6 +407,8 @@ export default defineConfig({
       // Pieza 5 de Len 2.5: buscar en las charlas, como session-query de DeepSeek.
       "lib/agent/session-query.test.ts",
       "lib/agent/session-query-tools.test.ts",
+      // Pieza 7 de Len 2.5: el modo plan, como DeepSeek. LISTA BLANCA.
+      "lib/agent/plan-mode.test.ts",
       // Deshacer lo de Len sobre lo que hay AHORA, sin llevarse lo que el dueño
       // editó a mano (H06, auditoría 2026-09-22). Núcleo puro — pero `include`
       // es LISTA BLANCA y sin esta línea la prueba existiría y no correría.
