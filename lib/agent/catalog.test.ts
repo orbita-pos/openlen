@@ -224,6 +224,13 @@ describe("buildFunctionDeclarations", () => {
     expect(p).not.toContain("session_trace");
   });
 
+  it("pieza 6: con la terminal, correr lo directo y mirar el código de salida (Claude Code + DeepSeek); sin ella, nada de bash", () => {
+    const con = buildAgentSystemPrompt();
+    expect(con).toContain("run the direct command and adjust with its output instead of perfecting it in your head");
+    expect(con).toContain("investigate failures before moving on");
+    expect(buildAgentSystemPrompt({ OPENLEN_TERMINAL: "0" })).not.toContain("investigate failures before moving on");
+  });
+
   it("H3 · la memoria son dos ficheros: sólo lo DURABLE, nunca el pedido puntual, y sólo se añade", () => {
     const p = buildAgentSystemPrompt();
     const seccion = p.slice(p.indexOf("MEMORY IS TWO FILES")).split(SALTO + SALTO)[0];

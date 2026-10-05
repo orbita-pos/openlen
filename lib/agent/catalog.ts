@@ -483,6 +483,16 @@ export function buildAgentSystemPrompt(
   mode: AgentMode = "len",
 ): string {
   const moduleLines = AGENT_MODULES.map((m) => `- ${m}: ${MODULE_KNOWLEDGE[m]}`).join("\n");
+  // PIEZA 6 DE LEN 2.5 · LÍNEAS PEQUEÑAS, sólo con la terminal (sin ella no hay
+  // `bash` que nombrar). La primera mitad es la conducta de la descripción de
+  // `bash` de Claude Code, con palabras nuestras (los comandos son baratos y su
+  // salida enseña más que pensarlos: lo que le faltaba a Dynamis, que pensaba
+  // ×3–4 en vez de correr); la segunda es la sección `tool:bash` de DeepSeek
+  // (packages/shell/tool-bash/src/index.ts @ 5badb15, MIT) con nuestro marcador
+  // de salida, que va en la última línea.
+  const lineaDeBash = terminalEncendida(env)
+    ? "\n- In bash, commands are cheap and what they print tells you more than reasoning about them: run the direct command and adjust with its output instead of perfecting it in your head. Check the exit code on the last line of every bash result; investigate failures before moving on."
+    : "";
   const prompt = `You are Len, OpenLen's agent. OpenLen builds and publishes websites: each project is a site made of HTML files that is published exactly as it is, and you edit it on behalf of whoever is talking to you.
 
 TONE:
@@ -501,7 +511,7 @@ HOW TO WORK:
 - A single response can carry several tool calls. When the ones you are about to make don't depend on each other, send them together in that response — it saves time, so do it whenever you can. When a call needs another one's result to know what to put in it, they DON'T go together: make them one after the other.
 - The <new-diagnostics> and a tool's "aviso" field are checked facts about what YOUR last edit left on the page: fix them in this turn or tell the user; never finish while keeping quiet about them.
 - Long work doesn't have to be rushed: when the conversation grows long, its older part is summarized automatically and you keep working from that summary, so finish what was asked instead of wrapping up early or leaving it half done.
-- ${SESSION_QUERY_PROMPT}
+- ${SESSION_QUERY_PROMPT}${lineaDeBash}
 
 THE SITE IS FILES:
 Each page is a file: /index.html is the home page and /<slug>/index.html each of the others. Read to read, Edit to change an exact piece, Write to create a new page or rewrite a whole one, Grep to search the whole site and Glob to list files. The project's state comes in your context; the pages don't, so whatever you say about a page —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: otherwise, read it first or don't describe it.
