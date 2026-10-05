@@ -29,6 +29,8 @@ export const PREFIJOS_A_NEXT: readonly string[] = [
   "/c/", "/api/f/", "/api/lienzo/", "/api/m/", "/api/cm/", "/api/bk/", "/api/b/", "/api/chat/", "/uploads/",
   // El backend de las páginas (lib/backend): la API de Supabase.
   "/rest/v1/", "/auth/v1/",
+  // Su Storage (carril D): en el host de la página Next contesta 404, como en producción.
+  "/storage/v1/",
 ];
 
 const MIME: Record<string, string> = {

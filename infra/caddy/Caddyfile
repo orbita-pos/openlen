@@ -178,9 +178,13 @@ openlen.com, www.openlen.com {
 	# 🔴 Ninguna de estas cabeceras se estampa en un host lienzo-*: allí
 	# responde Next con las suyas, y `header` + `reverse_proxy` las DUPLICA.
 	# Cada `not` va en su línea: dos en un mismo `not { }` serían otra cosa.
+	#
+	# carril D: por lo mismo, tampoco en /storage/v1/*: un .png de Storage puede
+	# ser PRIVADO, y Next pone el Cache-Control y el Content-Type de cada objeto.
 	@assets {
 		path *.jpg *.jpeg *.png *.gif *.webp *.ico *.woff *.woff2 *.avif /assets/* /uploads/*
 		not header_regexp Host ^lienzo-
+		not path /storage/v1/*
 	}
 	header @assets Cache-Control "public, immutable, max-age=2592000"
 
@@ -191,23 +195,26 @@ openlen.com, www.openlen.com {
 		path *.js *.mjs *.css *.json *.webmanifest *.txt *.svg *.md
 		not path /assets/* /uploads/*
 		not header_regexp Host ^lienzo-
+		not path /storage/v1/*
 	}
 	header @carpeta Cache-Control "public, max-age=0, must-revalidate"
 	# Los dos tipos que la tabla de Go no trae (.mjs sí está).
 	@webmanifest {
 		path *.webmanifest
 		not header_regexp Host ^lienzo-
+		not path /storage/v1/*
 	}
 	header @webmanifest Content-Type "application/manifest+json"
 	@markdown {
 		path *.md
 		not header_regexp Host ^lienzo-
+		not path /storage/v1/*
 	}
 	header @markdown Content-Type "text/markdown; charset=utf-8"
 
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif *.mjs *.json *.webmanifest *.txt *.md
-		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/*
+		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/* /storage/v1/*
 		not header_regexp Host ^lienzo-
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
@@ -292,6 +299,18 @@ openlen.com, www.openlen.com {
 		}
 	}
 	handle /auth/v1/* {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {vars.cf_client_ip}
+		}
+	}
+
+	# carril D: el Storage de las páginas (/storage/v1, lib/backend/storage). Lo
+	# atiende Next y SÓLO en <ref>.openlen.app: en el host de una página Next
+	# contesta 404, porque un SVG o un HTML que sube un visitante no puede tener
+	# el origen de la página. Excluido de @assets y de @doc: Next pone el
+	# Cache-Control de cada objeto (los privados, `private`). Cloudflare corta
+	# los cuerpos en 100 MB; el tope por fichero es 50 MB.
+	handle /storage/v1/* {
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
 		}

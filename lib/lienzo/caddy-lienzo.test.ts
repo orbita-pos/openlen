@@ -44,6 +44,10 @@ describe("Caddy y el lienzo", () => {
     expect(pasan.length).toBeGreaterThan(5);
     for (const ruta of pasan) {
       if (ruta === "/api/lienzo/*") continue;
+      // carril D: /storage/v1 sólo contesta en `<ref>.openlen.app`, la URL del
+      // proyecto (lib/backend/storage); en el host de la página da 404 también
+      // PUBLICADA, así que avisar «sólo funciona publicada» sería mentir.
+      if (ruta === "/storage/v1/*") continue;
       expect(RUTAS_SOLO_PUBLICADA, `${ruta} pasa a Next y el aviso del lienzo no lo conoce`).toContain(ruta.replace(/\*$/, ""));
     }
   });
@@ -104,7 +108,8 @@ describe("Caddy, la carpeta y el host lienzo-*", () => {
   it("🔴 cada extensión de la carpeta se revalida siempre (como public/ en Vercel), y no lleva la caché del HTML", () => {
     const c = matcher("carpeta");
     const rutas = rutasDe(c, "path ");
-    expect(rutasDe(c, "not path ")).toEqual(["/assets/*", "/uploads/*"]);
+    // /storage/v1/* (carril D): Next pone la caché de cada objeto, los privados `private`.
+    expect(rutasDe(c, "not path ")).toEqual(["/assets/*", "/uploads/*", "/storage/v1/*"]);
     expect(PAGINAS).toContain('header @carpeta Cache-Control "public, max-age=0, must-revalidate"');
     const doc = matcher("doc");
     // Nota 8: la línea de extensiones, NO la de `/api/f/*` (la vigila caddy-contract).

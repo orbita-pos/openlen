@@ -178,4 +178,52 @@ describe.skipIf(!E2E_URL)("el backend de las páginas contra un Postgres de verd
     // Otra vez: ya no hay nada que borrar, y no falla.
     await dropProjectDatabase(otro);
   }, 60_000);
+
+  /* ── carril D: storage (lib/backend/storage) ── Los roles sin superusuario
+   * ya los prueba PGlite (storage/production-roles.pglite.test.ts, con `set
+   * session authorization`); aquí, además, lo que PGlite no da: el driver
+   * `pg`, el desarrollador conectándose con SU LOGIN y CONNECT por base. */
+  it("🔴 Storage: el esquema se monta con este admin, el desarrollador crea su bucket y su política, y no puede hacerse supabase_storage_admin", async () => {
+    const { ensureStorageProvisioned, forgetStorageProvisioned } = await import("./storage/provision");
+    forgetStorageProvisioned();
+    await ensureStorageProvisioned(ref);
+    forgetStorageProvisioned();
+    await ensureStorageProvisioned(ref); // otra vez, en otro «proceso»: no rompe
+    const n = await withAdmin(dev, (r) => r.query(`select count(*)::int as n from storage.migrations`));
+    expect(n.rows[0]?.n).toBe(73);
+
+    await withDeveloper(dev, dev, dbPassword, (r) =>
+      r.exec(`
+        insert into storage.buckets (id, name, public) values ('avatars', 'avatars', false);
+        create policy "subir a lo tuyo" on storage.objects for insert to authenticated
+          with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid()::text));
+        create policy "ver lo tuyo" on storage.objects for select to authenticated
+          using (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid()::text));
+      `),
+    );
+    const sinPermiso = await withDeveloper(dev, dev, dbPassword, (r) => r.exec(`set role supabase_storage_admin`)).catch((e: unknown) => e);
+    expect(String(sinPermiso)).toMatch(/permission denied to set role/);
+    const sinRoles = await withDeveloper(dev, dev, dbPassword, (r) => r.exec(`create role intruso`)).catch((e: unknown) => e);
+    expect(String(sinRoles)).toMatch(/permission denied to create role/);
+  }, 120_000);
+
+  it("🔴 Storage con supabase-js por el pool de authenticator: cada uno sube y baja lo suyo", async () => {
+    const { MemoryBlobStore } = await import("./storage/blob-store");
+    const store = new MemoryBlobStore();
+    const conStorage: BackendProject = { ...project, storage: { store } };
+    const ana = createClient(projectUrl, project.publishableKey, {
+      global: { fetch: (input, init) => handleBackendRequest(new Request(input, init), conStorage) },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: s } = await ana.auth.signInWithPassword({ email: "ana@tiendaluna.mx", password: "una-clave-larga-1" });
+    const uid = s.user!.id;
+    const up = await ana.storage.from("avatars").upload(`${uid}/foto.png`, new Blob([new Uint8Array([1, 2, 3])], { type: "image/png" }));
+    expect(up.error).toBeNull();
+    const otra = await ana.storage.from("avatars").upload(`otro/foto.png`, new Blob([new Uint8Array([1])], { type: "image/png" }));
+    expect(otra.error).toMatchObject({ statusCode: "403" });
+    const down = await ana.storage.from("avatars").download(`${uid}/foto.png`);
+    expect([...new Uint8Array(await down.data!.arrayBuffer())]).toEqual([1, 2, 3]);
+    expect(store.keys()).toHaveLength(1);
+  }, 60_000);
+  /* ── fin carril D ── */
 });

@@ -12,6 +12,8 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { backendConfigured } from "./pg";
 import { dropProjectDatabase } from "./provision";
+/* ── carril D ── */
+import { purgeProjectStorage } from "./storage/purge";
 
 /** El `ref` de la base del proyecto, o null si no tiene. */
 export async function pageDatabaseRef(projectId: string): Promise<string | null> {
@@ -31,4 +33,8 @@ export async function dropPageDatabase(ref: string): Promise<void> {
   await dropProjectDatabase(ref).catch((err: unknown) => {
     console.error("[backend] no se pudo borrar la base de la página", ref, err);
   });
+  /* ── carril D: storage ── Sus ficheros también, aunque la base no se haya
+   * podido borrar: el proyecto ya no existe. Nunca lanza, y sin R2 no toca la red. */
+  await purgeProjectStorage(ref);
+  /* ── fin carril D ── */
 }

@@ -17,6 +17,11 @@ import type { ProjectDatabase } from "./db";
 import { hashSecretKey, verifyJwt } from "./keys";
 import { errorResponse, handleRest, type ApiRole } from "./rest/handler";
 import { PostgrestError } from "./rest/errors";
+/* ── carril D: storage ── */
+import type { BlobStore } from "./storage/blob-store";
+import { handleStorage } from "./storage/handler";
+import type { StorageLimits } from "./storage/limits";
+/* ── fin carril D ── */
 
 export interface BackendProject {
   readonly ref: string;
@@ -25,6 +30,12 @@ export interface BackendProject {
   readonly jwtSecret: string;
   readonly db: ProjectDatabase;
   readonly auth: { readonly config: AuthConfig; readonly sendMail: SendAuthMail };
+  /* ── carril D: storage ── Sin esto, el almacén del entorno (R2) y los
+   * límites por defecto (las pruebas traen los suyos). */
+  readonly storage?: {
+    readonly store: BlobStore | null;
+    readonly limits?: StorageLimits;
+  };
 }
 
 /** Las cabeceras que PostgREST deja ver a una página de otro origen; sin
@@ -148,6 +159,11 @@ export async function handleBackendRequest(req: Request, project: BackendProject
       req,
     );
   }
+  /* ── carril D: storage ── (lib/backend/storage/handler.ts: sólo en el host
+   * del `ref`, nunca en el de la página). */
+  const storage = /^\/storage\/v1(\/.*)?$/.exec(path);
+  if (storage) return withCors(await handleStorage(req, storage[1] ?? "", project), req);
+  /* ── fin carril D ── */
   return withCors(
     new Response(JSON.stringify({ message: "no Route matched with those values" }), {
       status: 404,

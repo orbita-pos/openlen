@@ -47,6 +47,16 @@ describe("el manual de la plataforma", () => {
     }
   });
 
+  // Carril D de Len 2.5 (lib/backend/storage): Storage existe, y se usa con la
+  // API real de supabase-js; lo que no hay, se dice.
+  it("THE BACKEND enseña Storage (supabase.storage, buckets en una migración, políticas en storage.objects, límites)", () => {
+    const backend = manual.slice(manual.indexOf("THE BACKEND (Supabase)"), manual.indexOf("DESIGN GUIDE"));
+    expect(backend).not.toMatch(/Storage and Edge Functions don't exist/);
+    for (const frase of ["supabase.storage.from(bucket).upload(path, file)", "getPublicUrl(path)", "createSignedUrl(path, seconds)", "insert into storage.buckets", "storage.objects", "50 MB per file and 1 GB per project", "Realtime and Edge Functions don't exist here yet"]) {
+      expect(backend, frase).toContain(frase);
+    }
+  });
+
   it("F4 · la guía y las librerías viven en /.openlen/docs, cada una en su fichero", () => {
     expect(Object.keys(docs)).toEqual([...RUTAS_DE_DOCS]);
     const donde: [string, string][] = [

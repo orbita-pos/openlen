@@ -372,7 +372,8 @@
     "copied": "コピーしました",
     "tabs": {
       "tables": "テーブル",
-      "users": "ユーザー"
+      "users": "ユーザー",
+      "storage": "Storage"
     },
     "unavailable": {
       "title": "ここではデータベースを利用できません",
@@ -425,6 +426,22 @@
       "page": "{pages}ページ中 {page}ページ",
       "prev": "前へ",
       "next": "次へ"
+    },
+    "storage": {
+      "list": "Buckets",
+      "public": "公開",
+      "private": "非公開",
+      "files": "{count, plural, other {# 件のファイル}}",
+      "noBuckets": "まだバケットはありません。Len がマイグレーションで作るか、ページが supabase.storage.createBucket で作ります。",
+      "empty": "このバケットは空です。",
+      "name": "名前",
+      "type": "種類",
+      "size": "サイズ",
+      "updated": "更新日時",
+      "open": "開く",
+      "delete": "ファイルを削除",
+      "confirm": "よろしいですか？",
+      "deleted": "{name} を削除しました"
     }
   }
 }

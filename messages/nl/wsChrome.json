@@ -372,7 +372,8 @@
     "copied": "Gekopieerd",
     "tabs": {
       "tables": "Tabellen",
-      "users": "Gebruikers"
+      "users": "Gebruikers",
+      "storage": "Storage"
     },
     "unavailable": {
       "title": "De database is hier niet beschikbaar",
@@ -425,6 +426,22 @@
       "page": "Pagina {page} van {pages}",
       "prev": "Vorige",
       "next": "Volgende"
+    },
+    "storage": {
+      "list": "Buckets",
+      "public": "Openbaar",
+      "private": "Privé",
+      "files": "{count, plural, one {# bestand} other {# bestanden}}",
+      "noBuckets": "Nog geen buckets: Len maakt ze aan in een migratie, of je pagina met supabase.storage.createBucket.",
+      "empty": "Deze bucket is leeg.",
+      "name": "Naam",
+      "type": "Type",
+      "size": "Grootte",
+      "updated": "Gewijzigd",
+      "open": "Openen",
+      "delete": "Bestand verwijderen",
+      "confirm": "Zeker?",
+      "deleted": "{name} verwijderd"
     }
   }
 }

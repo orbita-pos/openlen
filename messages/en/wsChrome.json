@@ -372,7 +372,8 @@
     "copied": "Copied",
     "tabs": {
       "tables": "Tables",
-      "users": "Users"
+      "users": "Users",
+      "storage": "Storage"
     },
     "unavailable": {
       "title": "The database isn't available here",
@@ -425,6 +426,22 @@
       "page": "Page {page} of {pages}",
       "prev": "Previous",
       "next": "Next"
+    },
+    "storage": {
+      "list": "Buckets",
+      "public": "Public",
+      "private": "Private",
+      "files": "{count, plural, one {# file} other {# files}}",
+      "noBuckets": "No buckets yet: Len creates them in a migration, or your page with supabase.storage.createBucket.",
+      "empty": "This bucket is empty.",
+      "name": "Name",
+      "type": "Type",
+      "size": "Size",
+      "updated": "Updated",
+      "open": "Open",
+      "delete": "Delete file",
+      "confirm": "Sure?",
+      "deleted": "{name} deleted"
     }
   }
 }
