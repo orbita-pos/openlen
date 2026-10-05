@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { codeForHttpStatus } from "./provider-error-code";
+import { codeForHttpStatus, codeForInBandError } from "./provider-error-code";
 
 describe("el código de un fallo del proveedor (los de DeepSeek)", () => {
   it("429 es límite de peticiones", () => {
@@ -15,5 +15,17 @@ describe("el código de un fallo del proveedor (los de DeepSeek)", () => {
     expect(codeForHttpStatus(400)).toBeUndefined();
     expect(codeForHttpStatus(401)).toBeUndefined();
     expect(codeForHttpStatus(404)).toBeUndefined();
+  });
+});
+
+describe("el código de un error que llega DENTRO del stream", () => {
+  it("con un estado numérico, el de ese estado", () => {
+    expect(codeForInBandError({ code: 429, message: "slow down" })).toBe("rate_limit");
+    expect(codeForInBandError({ status: 503, message: "x" })).toBe("server");
+  });
+
+  it("sin estado, si habla de límite es «rate_limit»; si no, «server» (falló el proveedor a medias)", () => {
+    expect(codeForInBandError({ message: "Rate limit exceeded" })).toBe("rate_limit");
+    expect(codeForInBandError({ type: "internal_server_error", message: "server overloaded" })).toBe("server");
   });
 });

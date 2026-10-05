@@ -513,3 +513,33 @@ describe("el código del fallo, para que el bucle sepa reintentar", () => {
     expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "cancelled" } });
   });
 });
+
+describe("cortes a mitad del stream (revisión de la pieza 1)", () => {
+  it("si la conexión se cierra a media respuesta (sin finish_reason), sale con code «transport» y lo escrito llega", async () => {
+    const { client: c } = client(chunk({ content: "Voy a cambi" }));
+    const events = await drain(c.stream(REQUEST));
+    expect(events.some((e) => e.type === "text_delta")).toBe(true);
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", code: "transport" } });
+  });
+
+  it("si no llega NADA (un 200 vacío), sale con code «empty_response»", async () => {
+    const { client: c } = client("");
+    const events = await drain(c.stream(REQUEST));
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", code: "empty_response" } });
+  });
+
+  it("un error del proveedor DENTRO del stream sale con su mensaje y su código, sin seguir leyendo", async () => {
+    const { client: c } = client(
+      chunk({ content: "Hola" }) + `data: ${JSON.stringify({ error: { message: "server overloaded", type: "internal_server_error" } })}\n\n` + chunk({ content: "no debe llegar" }, "stop"),
+    );
+    const events = await drain(c.stream(REQUEST));
+    expect(events.filter((e) => e.type === "text_delta").map((e) => (e as { text: string }).text)).toEqual(["Hola"]);
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", code: "server", error: expect.stringContaining("server overloaded") } });
+  });
+
+  it("BRAZO DE CONTROL: un final limpio sigue siendo end_turn", async () => {
+    const { client: c } = client(chunk({ content: "Listo." }, "stop") + "data: [DONE]\n\n");
+    const events = await drain(c.stream(REQUEST));
+    expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "end_turn" } });
+  });
+});
