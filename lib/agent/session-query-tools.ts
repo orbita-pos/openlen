@@ -29,6 +29,12 @@ export const SESSION_SEARCH = "session_search";
 export const SESSION_EVENT_SEARCH = "session_event_search";
 export const SESSION_EVENT_READ = "session_event_read";
 
+/** El plazo cooperativo de las dos búsquedas: `DEFAULT_SEARCH_TIMEOUT_MS` de
+ *  DeepSeek (tool-session-query/src/index.ts). Un plazo en JS no para una
+ *  consulta en Postgres; la de `filasParaBuscar` va por índice y con LIMIT, así
+ *  que no tiene cómo quedarse corriendo (ver su comentario). */
+export const DEFAULT_SEARCH_TIMEOUT_MS = 30_000;
+
 /** Cuántos vecinos resume `session_event_read` como mucho. DeepSeek no pone
  *  tope; aquí cada evento puede traer un turno entero. */
 const MAX_NEIGHBORS = 20;
@@ -117,22 +123,34 @@ async function conLasCharlas(
   session: AgentSession,
   deps: AgentDeps,
   hacer: (sesiones: ReturnType<typeof sessionsFromRows>) => Promise<string> | string,
+  plazoMs?: number,
 ): Promise<ToolOutcome> {
-  if (!deps.chatRows) return fallo(SIN_CHAT);
+  const chatRows = deps.chatRows;
+  if (!chatRows) return fallo(SIN_CHAT);
+  const trabajo = async () => bien(await hacer(sessionsFromRows(await chatRows(session.projectId))));
+  let reloj: ReturnType<typeof setTimeout> | undefined;
   try {
-    return bien(await hacer(sessionsFromRows(await deps.chatRows(session.projectId))));
+    if (plazoMs === undefined) return await trabajo();
+    return await Promise.race([
+      trabajo(),
+      new Promise<ToolOutcome>((resolve) => {
+        reloj = setTimeout(() => resolve(fallo(`session search timed out after ${plazoMs} ms; narrow the query or add filters.`)), plazoMs);
+      }),
+    ]);
   } catch (e) {
     if (e instanceof SessionQueryInputError) return fallo(e.message);
     throw e;
+  } finally {
+    if (reloj) clearTimeout(reloj);
   }
 }
 
 export function toolSessionSearch(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
-  return conLasCharlas(session, deps, (s) => sessionSearch(s, args as unknown as SessionSearchArgs));
+  return conLasCharlas(session, deps, (s) => sessionSearch(s, args as unknown as SessionSearchArgs), DEFAULT_SEARCH_TIMEOUT_MS);
 }
 
 export function toolSessionEventSearch(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
-  return conLasCharlas(session, deps, (s) => eventSearch(s, args as unknown as EventSearchArgs));
+  return conLasCharlas(session, deps, (s) => eventSearch(s, args as unknown as EventSearchArgs), DEFAULT_SEARCH_TIMEOUT_MS);
 }
 
 export function toolSessionEventRead(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
