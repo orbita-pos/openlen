@@ -1018,11 +1018,12 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
             }
             return direccion;
           },
-          // streamWithRetry rides out transient Gemini 503 spikes: it re-opens
-          // the stream on a retryable error thrown BEFORE any event (safe — the
-          // model produced nothing yet), and honors upstreamAbort so a retry
-          // never outlives the silence clock. A mid-stream failure still
-          // propagates (no double-applied tool calls). Cada evento del modelo
+          // `streamWithRetry` es de la época de Gemini: reabre el stream sólo si
+          // `brain.openStream` LANZA antes del primer evento. El cliente de
+          // Fireworks no lanza —un 429, un 5xx, una red caída o un corte a
+          // medias llegan como un `done` de error con su código—, así que los
+          // reintentos de verdad, también a mitad de stream, los hace el BUCLE
+          // (`lib/agent/retry-policy.ts`, como DeepSeek). Cada evento del modelo
           // rearma el reloj de silencio.
           openStream: (msgs) => {
             const s = conSenales(streamWithRetry(() => brain.openStream(msgs), { signal: upstreamAbort.signal }), reloj.vivo);
@@ -1348,8 +1349,10 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           // ni el momento en que llega al cliente.
           emit: (ev) => {
             registro.observar(ev);
-            // Un reintento ES avance: sin él, una espera de 10 s se acercaría
-            // al reloj de silencio.
+            // Un reintento cambia la fila: `registro.texto` acaba de soltar lo
+            // descartado, y `avance` la escribe ya, como tras un `text`. (El
+            // reloj de silencio no va por aquí: lo rearma el `emit` de arriba
+            // con cualquier evento.)
             if (ev.type === "text" || ev.type === "action" || ev.type === "retry") avance.tocar();
             emit(ev.type, ev);
           },
