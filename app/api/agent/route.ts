@@ -1060,6 +1060,10 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
             await fotoAntes;
             const outcome = await runAgentTool(agentSession, deps, name, args);
             diario.anotar(name, outcome.response, args);
+            // LA CARPETA (pieza 9 de Len 2.5, carril B): los ficheros que cambió
+            // esta herramienta, cada uno con la versión de su «antes», para
+            // que «Deshacer» los devuelva con la página o no se ofrezca.
+            if (outcome.ficherosTocados?.length) emit("ficheros", { ficherosTocados: outcome.ficherosTocados });
             return outcome;
           },
           // 🔴 EL MOMENTO `tsc`: lo medido vuelve AL MODELO, no sólo al usuario.

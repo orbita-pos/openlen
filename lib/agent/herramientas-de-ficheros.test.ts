@@ -1448,6 +1448,13 @@ describe("la carpeta del proyecto (pieza 9)", () => {
       [["/js/app.js", null, "chat"]],
     );
     assert.deepEqual(w.ficherosTocados, [{ ruta: "/js/app.js", versionPrevia: "fv1" }]);
+    // 🔴 Cambiar un fichero ES cambiar el sitio: sin esto el turno se cerraba
+    // como «No cambió nada de la página» y sin Deshacer.
+    assert.equal(w.mutoDurable, true);
+    // BRAZO DE CONTROL: escribir lo mismo no cambia nada.
+    const igual = await runAgentTool(s, deps, "Write", { file_path: "/js/app.js", content: "console.log('hola');\n" });
+    assert.equal(igual.mutoDurable, undefined);
+    assert.equal(igual.ficherosTocados, undefined);
     assert.match(texto(await runAgentTool(s, deps, "Read", { file_path: "/js/app.js" })), /console\.log\('hola'\)/);
   });
 
@@ -1491,6 +1498,8 @@ describe("la carpeta del proyecto (pieza 9)", () => {
       assert.equal(archivos["/css/site.css"], undefined);
       assert.equal(versiones.at(-1)?.before, "body{color:blue}\n");
       assert.deepEqual(rm.ficherosTocados, [{ ruta: "/css/site.css", versionPrevia: `fv${versiones.length}` }]);
+      assert.equal(sed.mutoDurable, true);
+      assert.equal(rm.mutoDurable, true);
       const rmPagina = await conTerminal(() => runAgentTool(s, deps, "bash", { command: "rm /index.html" }));
       assert.equal(rmPagina.response.ok, false);
     } finally {

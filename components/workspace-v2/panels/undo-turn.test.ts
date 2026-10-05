@@ -9,6 +9,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   ejecutarUndo,
+  ficherosDelEvento,
   planDeUndo,
   type DepsDeUndo,
   type FalloDeUndo,
@@ -427,5 +428,147 @@ describe("deshacer y el JavaScript del modelo", () => {
     });
     expect(res.status).toBe(400);
     expect(s.estado.guardado).toBe(SIN_JS);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LA CARPETA (pieza 9 de Len 2.5): un turno que cambió la página Y `js/app.js`
+// se deshace ENTERO o no se ofrece. Nunca «Revertido» con un fichero cambiado.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("deshacer un turno que tocó ficheros", () => {
+  it("🔴 página y fichero: restaura los dos, cada fichero a su estado de ANTES del turno", () => {
+    const p = planDeUndo(
+      {
+        status: "applied", preEditHtml: "<h1>", versionPrevia: "v1", page: null, paginasTocadas: [null],
+        ficherosTocados: [{ ruta: "/js/app.js", versionPrevia: "f1" }, { ruta: "/js/app.js", versionPrevia: "f2" }],
+      },
+      null,
+    );
+    expect(p).toEqual({ kind: "restaurar", page: null, versionId: "v1", files: [{ ruta: "/js/app.js", versionId: "f1" }] });
+  });
+
+  it("🔴 un fichero sin versión: no se ofrece", () => {
+    const p = planDeUndo(
+      {
+        status: "applied", preEditHtml: "<h1>", versionPrevia: "v1", page: null, paginasTocadas: [null],
+        ficherosTocados: [{ ruta: "/js/app.js", versionPrevia: null }],
+      },
+      null,
+    );
+    expect(p).toEqual({ kind: "imposible", motivo: "fichero-sin-version" });
+  });
+
+  it("sólo ficheros: se deshacen sin página", () => {
+    const p = planDeUndo(
+      {
+        status: "applied", preEditHtml: "", versionPrevia: null, page: null, paginasTocadas: [],
+        ficherosTocados: [{ ruta: "/data/menu.json", versionPrevia: "f9" }],
+      },
+      null,
+    );
+    expect(p).toEqual({ kind: "restaurar", page: null, versionId: null, files: [{ ruta: "/data/menu.json", versionId: "f9" }] });
+  });
+
+  it("BRAZO DE CONTROL: sin ficheros el plan es el de siempre (sin `files`)", () => {
+    const p = planDeUndo({ status: "applied", preEditHtml: "<h1>", versionPrevia: "v1", page: null, paginasTocadas: [null] }, null);
+    expect(p).toEqual({ kind: "restaurar", page: null, versionId: "v1" });
+  });
+
+  const ficheroRestaurado = (path: string) =>
+    new Response(JSON.stringify({ path, content: "antes", versionPrevia: "fx" }), { status: 200 });
+
+  it("🔴 restaura cada fichero ANTES que la página, y sólo después pinta y dice «Revertido»", async () => {
+    const e = espias();
+    const fetchImpl = vi.fn(async (url: string) =>
+      url.includes("/ficheros/") ? ficheroRestaurado("/js/app.js") : restaurado("<html>antes</html>"),
+    );
+    const ok = await ejecutarUndo(
+      { kind: "restaurar", page: null, versionId: "v1", files: [{ ruta: "/js/app.js", versionId: "f1" }, { ruta: "/css/a.css", versionId: "f2" }] },
+      { ...e.deps, fetchImpl: fetchImpl as unknown as typeof fetch },
+    );
+    expect(ok).toBe(true);
+    expect(fetchImpl.mock.calls.map((c) => c[0])).toEqual([
+      "/api/projects/p1/ficheros/versions/f1/restore",
+      "/api/projects/p1/ficheros/versions/f2/restore",
+      "/api/projects/p1/versions/v1/restore",
+    ]);
+    expect(e.pintado).toEqual([{ html: "<html>antes</html>", page: null }]);
+    expect(e.revertido).toBe(1);
+  });
+
+  it("🔴 si un fichero falla: ni la página, ni pintar, ni «Revertido» — y se dice", async () => {
+    const e = espias();
+    const fetchImpl = vi.fn(async (url: string) => (url.includes("/ficheros/") ? error(500) : restaurado("<html>antes</html>")));
+    const ok = await ejecutarUndo(
+      { kind: "restaurar", page: null, versionId: "v1", files: [{ ruta: "/js/app.js", versionId: "f1" }] },
+      { ...e.deps, fetchImpl: fetchImpl as unknown as typeof fetch },
+    );
+    expect(ok).toBe(false);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(e.pintado).toEqual([]);
+    expect(e.revertido).toBe(0);
+    expect(e.fallos).toEqual([{ motivo: "http", status: 500 }]);
+  });
+
+  it("si la red falla al restaurar un fichero, tampoco", async () => {
+    const e = espias();
+    const fetchImpl = vi.fn(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    const ok = await ejecutarUndo(
+      { kind: "restaurar", page: null, versionId: null, files: [{ ruta: "/js/app.js", versionId: "f1" }] },
+      { ...e.deps, fetchImpl: fetchImpl as unknown as typeof fetch },
+    );
+    expect(ok).toBe(false);
+    expect(e.fallos).toEqual([{ motivo: "red" }]);
+  });
+
+  it("sólo ficheros: los restaura y dice «Revertido», sin pintar nada", async () => {
+    const e = espias();
+    const fetchImpl = vi.fn(async () => ficheroRestaurado("/data/menu.json"));
+    const ok = await ejecutarUndo(
+      { kind: "restaurar", page: null, versionId: null, files: [{ ruta: "/data/menu.json", versionId: "f9" }] },
+      { ...e.deps, fetchImpl: fetchImpl as unknown as typeof fetch },
+    );
+    expect(ok).toBe(true);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(e.pintado).toEqual([]);
+    expect(e.revertido).toBe(1);
+  });
+});
+
+// EL EVENTO `ficheros` (pieza 9 de Len 2.5) llega por el SSE: entrada que se
+// valida, no que se cree. Y su camino hasta el Deshacer cruza cuatro ficheros;
+// el eslabón que falte no rompe nada, el botón simplemente deshace a medias.
+describe("los ficheros del turno llegan al Deshacer", () => {
+  it("el evento se lee entrada a entrada, y lo que no tiene forma se cae", () => {
+    expect(
+      ficherosDelEvento({
+        ficherosTocados: [
+          { ruta: "/js/app.js", versionPrevia: "f1" },
+          { ruta: "/css/a.css", versionPrevia: null },
+          { ruta: 3, versionPrevia: "x" },
+          { ruta: "/x.js" },
+          "basura",
+        ],
+      }),
+    ).toEqual([
+      { ruta: "/js/app.js", versionPrevia: "f1" },
+      { ruta: "/css/a.css", versionPrevia: null },
+    ]);
+    expect(ficherosDelEvento(null)).toEqual([]);
+    expect(ficherosDelEvento({ ficherosTocados: "no" })).toEqual([]);
+  });
+
+  it("🔴 los eslabones: la ruta lo emite, el chat lo acumula y lo pasa al turno", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const lee = (...p: string[]) => readFileSync(join(process.cwd(), ...p), "utf8");
+    const ruta = lee("app", "api", "agent", "route.ts");
+    expect(ruta).toMatch(/emit\("ficheros", \{ ficherosTocados: outcome\.ficherosTocados \}\)/);
+    const chat = lee("components", "workspace-v2", "chat", "use-agent-chat.ts");
+    expect(chat).toMatch(/evName === "ficheros"[\s\S]{0,400}ficherosTocados\.push\(\.\.\.ficherosDelEvento\(payload\)\)/);
+    expect(chat).toMatch(/ficherosTocados\.length > 0 \? \{ ficherosTocados: \[\.\.\.ficherosTocados\] \}/);
+    expect(chat).toMatch(/ficherosTocados\?: ReadonlyArray<\{ readonly ruta: string; readonly versionPrevia: string \| null \}>/);
   });
 });

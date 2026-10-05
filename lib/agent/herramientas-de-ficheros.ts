@@ -351,7 +351,10 @@ async function guardarEnLaCarpeta(
   return {
     response: respuesta({ ok: true, texto: plan.respuesta({ guardadoIgual: true }) }, { cambio }),
     action: { tool: herramienta, ok: true, summary: detalle, cambio },
-    ...(cambio === "cambio" ? { ficherosTocados: [{ ruta: plan.ruta, versionPrevia }] } : {}),
+    // Cambiar un fichero de la carpeta ES cambiar el sitio, aunque no llegue
+    // documento nuevo: sin `mutoDurable` el turno se cerraba como «No cambió
+    // nada de la página» y sin Deshacer.
+    ...(cambio === "cambio" ? { ficherosTocados: [{ ruta: plan.ruta, versionPrevia }], mutoDurable: true } : {}),
   };
 }
 
@@ -487,6 +490,7 @@ export async function guardarLoDeLaTerminal(
           response: { ok: true, cambio: "cambio" },
           action: { tool: "bash", ok: true, summary: `rm ${detalle}`, cambio: "cambio" },
           ficherosTocados: [{ ruta: c.ruta, versionPrevia }],
+          mutoDurable: true,
         });
         continue;
       }

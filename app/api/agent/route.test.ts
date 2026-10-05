@@ -2111,3 +2111,55 @@ describe("POST /api/agent — los ojos cargan la carpeta", () => {
     for (const llamada of mocks.poolRender.mock.calls as unknown[][]) expect(llamada).toHaveLength(1);
   });
 });
+
+// EL DESHACER CON FICHEROS (pieza 9 de Len 2.5): lo que el turno cambió de la
+// carpeta viaja al cliente en un evento `ficheros`, emitido donde ya está el
+// resultado de cada herramienta (el envoltorio de `runTool`). Sin él, un
+// «Deshacer» devolvería la página y dejaría `js/app.js` cambiado.
+describe("POST /api/agent — los ficheros que tocó el turno viajan al cliente", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+  });
+
+  async function turnoConHerramientas(salidas: Array<Record<string, unknown>>) {
+    for (const s of salidas) mocks.runAgentTool.mockResolvedValueOnce(s);
+    mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
+      const runTool = args.runTool as (n: string, a: unknown) => Promise<unknown>;
+      for (let i = 0; i < salidas.length; i++) await runTool("Write", { file_path: "/js/app.js", content: "x" });
+      return { turns: 1, toolCalls: salidas.length, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    return readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "cambia el script" }),
+        }),
+      ),
+    );
+  }
+
+  it("🔴 cada herramienta que cambió ficheros emite `ficheros` con su lista", async () => {
+    const eventos = await turnoConHerramientas([
+      { response: { ok: true }, ficherosTocados: [{ ruta: "/js/app.js", versionPrevia: "f1" }] },
+      { response: { ok: true }, ficherosTocados: [{ ruta: "/css/a.css", versionPrevia: "f2" }] },
+    ]);
+    const ficheros = eventos.filter((e) => e.event === "ficheros").map((e) => e.data.ficherosTocados);
+    expect(ficheros).toEqual([[{ ruta: "/js/app.js", versionPrevia: "f1" }], [{ ruta: "/css/a.css", versionPrevia: "f2" }]]);
+  });
+
+  it("BRAZO DE CONTROL: una herramienta que no tocó ficheros no emite nada", async () => {
+    const eventos = await turnoConHerramientas([{ response: { ok: true } }]);
+    expect(eventos.some((e) => e.event === "ficheros")).toBe(false);
+  });
+});
