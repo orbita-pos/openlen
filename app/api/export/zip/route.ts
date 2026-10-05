@@ -1,5 +1,8 @@
 import JSZip from "jszip";
+import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
+import { isFolderPath } from "@/lib/agent/ficheros/folder";
+import { db, schema } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +15,10 @@ export const dynamic = "force-dynamic";
 //   - index.html           (home — a complete self-contained document)
 //   - <slug>/index.html    (one per site page — static hosts serve /<slug>)
 //   - README.md            (how to open / host)
+//   - LA CARPETA (pieza 9 de Len 2.5): with `projectId` of a project the
+//     caller OWNS, every file of its folder at its own path — `js/`, `css/`,
+//     `data/`, `tests/`, `supabase/` — so the export works as is on Vercel +
+//     Supabase. A project of someone else adds nothing.
 //
 // An OpenLen page is already a single self-contained HTML document (Tailwind
 // via CDN, fonts via <link>, inline <style>, inline SVG), so the export is
@@ -21,6 +28,8 @@ export const dynamic = "force-dynamic";
 
 interface ExportBody {
   html?: string;
+  /** LA CARPETA (pieza 9 de Len 2.5): el proyecto cuyos ficheros entran. */
+  projectId?: string;
   pages?: Record<string, { html?: string; membersOnly?: boolean }>;
 }
 
@@ -50,6 +59,22 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: "Body must include a full HTML document" }, 400);
   }
 
+  // LA CARPETA: sólo de un proyecto del que pide, y sólo lo que la carpeta
+  // reconoce (web, `tests/`, `supabase/`) — nada de la plataforma.
+  const projectId = (body as ExportBody).projectId;
+  let carpeta: Array<[string, string]> = [];
+  if (typeof projectId === "string" && projectId.length > 0) {
+    const [propio] = await db
+      .select({ id: schema.projects.id })
+      .from(schema.projects)
+      .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, session.user.id)))
+      .limit(1);
+    if (propio) {
+      const { listProjectFiles } = await import("@/lib/backend/files");
+      carpeta = Object.entries(await listProjectFiles(projectId)).filter(([ruta]) => isFolderPath(ruta));
+    }
+  }
+
   try {
     const zip = new JSZip();
     zip.file("index.html", html);
@@ -71,7 +96,13 @@ export async function POST(req: Request): Promise<Response> {
         zip.file(`${slug}/index.html`, pageHtml);
       }
     }
-    zip.file("README.md", buildReadme(html, excludedGated));
+    for (const [ruta, contenido] of carpeta) zip.file(ruta.slice(1), contenido);
+    // El README del dueño, si lo tiene, es suyo: el nuestro va aparte.
+    const conCarpeta = { supabase: carpeta.some(([r]) => r.startsWith("/supabase/")), tests: carpeta.some(([r]) => r.startsWith("/tests/")) };
+    zip.file(
+      carpeta.some(([r]) => r === "/README.md") ? "OPENLEN.md" : "README.md",
+      buildReadme(html, excludedGated, conCarpeta),
+    );
     const bytes = await zip.generateAsync({
       type: "uint8array",
       compression: "DEFLATE",
@@ -96,8 +127,19 @@ export async function POST(req: Request): Promise<Response> {
   }
 }
 
-function buildReadme(html: string, excludedGated = 0): string {
+function buildReadme(
+  html: string,
+  excludedGated = 0,
+  carpeta: { supabase: boolean; tests: boolean } = { supabase: false, tests: false },
+): string {
   const title = extractTitle(html) ?? "Landing page";
+  const extras = [carpeta.supabase ? "`supabase/` (your backend's migrations)" : null, carpeta.tests ? "`tests/` (Playwright tests)" : null].filter(Boolean);
+  const folderNote =
+    extras.length > 0
+      ? `
+> ${extras.join(" and ")} come with your project: they are not part of the published site.
+`
+      : "";
   const gatedNote =
     excludedGated > 0
       ? `\n> Note: ${excludedGated} members-only page${excludedGated === 1 ? "" : "s"} ${excludedGated === 1 ? "was" : "were"} left out of this export — a static folder can't enforce the members gate, so they stay on your OpenLen site only.\n`
@@ -105,7 +147,7 @@ function buildReadme(html: string, excludedGated = 0): string {
   return `# ${title}
 
 Exported from OpenLen.
-${gatedNote}
+${gatedNote}${folderNote}
 ## How to use
 
 **Open locally:** double-click \`index.html\`. It opens in your browser. No server required.

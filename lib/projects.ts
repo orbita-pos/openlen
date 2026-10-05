@@ -22,7 +22,7 @@ import { purgeSubdomain } from "@/lib/publish/cache-purge";
 import { dropPageDatabase, pageDatabaseRef } from "@/lib/backend/teardown";
 import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
-import { listProjectFiles } from "@/lib/backend/files";
+import { copyFolderForDuplicate, listProjectFiles } from "@/lib/backend/files";
 import { folderFingerprint } from "@/lib/projects/files-hash";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import { getChatMessages } from "@/lib/projects/chat";
@@ -631,6 +631,11 @@ export async function duplicateProject(
     publishedAt: null,
     publishedHtml: null,
     data: existing.data,
+  });
+  // LA CARPETA (pieza 9 de Len 2.5): duplicar copia tu carpeta entera. Si
+  // falla, la copia ya existe: se dice en el log y sigue sin carpeta.
+  await copyFolderForDuplicate(projectId, id).catch((err: unknown) => {
+    console.warn(`[duplicate] no se copió la carpeta de ${projectId}`, err);
   });
   return id;
 }

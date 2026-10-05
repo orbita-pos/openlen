@@ -22,7 +22,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { copyProjectFiles, deleteProjectFile, listProjectFiles, saveProjectFile } = await import("./files");
+const { copyFolderForDuplicate, copyFolderForRemix, copyProjectFiles, deleteProjectFile, listProjectFiles, saveProjectFile } = await import("./files");
 const { archiveFileVersion, restoreFileVersion } = await import("@/lib/projects/file-versions");
 
 let pg: PGlite;
@@ -85,6 +85,40 @@ describe("los ficheros del proyecto", () => {
     expect(await copyProjectFiles("p1", "p2", (p) => p.startsWith("/js/"))).toBe(1);
     expect(await listProjectFiles("p2")).toEqual({ "/js/app.js": "1" });
     expect(await huella("p2")).toBe(await huella("p1"));
+  });
+
+  // REMEZCLAR Y DUPLICAR (Task 9): remezclar se lleva SÓLO lo que la publicada
+  // ya enseña —las pruebas y las migraciones del autor no son públicas—;
+  // duplicar, tu propia carpeta entera.
+  it("🔴 remezclar copia sólo lo publicable; duplicar, todo", async () => {
+    await saveProjectFile("p1", "/js/app.js", "1");
+    await saveProjectFile("p1", "/tests/a.spec.ts", "t");
+    await saveProjectFile("p1", "/supabase/migrations/20261004120000_init.sql", "create table t ();");
+    expect(await copyFolderForRemix("p1", "p3")).toBe(1);
+    expect(await listProjectFiles("p3")).toEqual({ "/js/app.js": "1" });
+    expect(await copyFolderForDuplicate("p1", "p2")).toBe(3);
+    expect(Object.keys(await listProjectFiles("p2")).sort()).toEqual([
+      "/js/app.js",
+      "/supabase/migrations/20261004120000_init.sql",
+      "/tests/a.spec.ts",
+    ]);
+  });
+
+  it("borrar el proyecto se lleva su carpeta y sus versiones (ON DELETE CASCADE)", async () => {
+    await saveProjectFile("p1", "/js/app.js", "1");
+    await archiveFileVersion({ projectId: "p1", path: "/js/app.js", content: null, label: "x", source: "chat" });
+    await pg.exec(`delete from "projects" where "id" = 'p1'`);
+    expect((await pg.query(`select 1 from "projectFiles" where "projectId" = 'p1'`)).rows).toHaveLength(0);
+    expect((await pg.query(`select 1 from "projectFileVersions" where "projectId" = 'p1'`)).rows).toHaveLength(0);
+  });
+
+  it("🔴 los eslabones: remezclar y duplicar llaman a su copia", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const store = readFileSync(join(process.cwd(), "lib", "community", "store.ts"), "utf8");
+    const projects = readFileSync(join(process.cwd(), "lib", "projects.ts"), "utf8");
+    expect(store).toMatch(/copyFolderForRemix\(src\.id, newId\)/);
+    expect(projects).toMatch(/copyFolderForDuplicate\(projectId, id\)/);
   });
 });
 

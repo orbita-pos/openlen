@@ -538,6 +538,8 @@ export default defineConfig({
       "app/api/projects/[id]/ficheros/route.test.ts",
       // Deshacer un fichero de la carpeta (pieza 9 de Len 2.5).
       "app/api/projects/*/ficheros/versions/**/*.test.ts",
+      // Exportar lleva la carpeta (pieza 9 de Len 2.5).
+      "app/api/export/zip/route.test.ts",
       // «Abrir en pestaña» se va al lienzo en .app; lo que queda aquí, opaco.
       "app/api/projects/[id]/raw/route.test.ts",
       // Un dominio propio sólo se sirve en su propio host, nunca en openlen.com.
