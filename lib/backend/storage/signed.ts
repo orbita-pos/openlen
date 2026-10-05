@@ -13,7 +13,7 @@ import { signJwt } from "../keys";
 import { asRole, asStorageAdmin, findObject, findObjects, insertObject, testPermission, upsertObject } from "./db";
 import { ERRORS } from "./errors";
 import { json, readJsonBody, type StorageContext, type StorageRoute } from "./handler";
-import { MAX_OBJECTS_PER_REQUEST, mustBeValidKey } from "./limits";
+import { MAX_OBJECTS_PER_REQUEST, mustBeValidKey, decodePathParam } from "./limits";
 import { serveObject } from "./objects";
 import { uploadFromRequest } from "./upload";
 
@@ -24,7 +24,7 @@ const MAX_ABSOLUTE_JWT_EXPIRATION_SECONDS = Math.floor(Number.MAX_SAFE_INTEGER /
 /** Su `uploadSignedUrlExpirationTime` por defecto: dos horas. */
 const UPLOAD_SIGNED_URL_EXPIRATION = 7200;
 
-const decode = (s: string) => decodeURIComponent(s);
+const decode = decodePathParam;
 
 function ownerOf(ctx: StorageContext): string | undefined {
   return typeof ctx.claims.sub === "string" ? ctx.claims.sub : undefined;
@@ -77,7 +77,7 @@ const signUrl: StorageRoute = {
     const expiresIn = assertValidExpiresIn(b.expiresIn);
     await asRole(ctx, (q) => findObject(q, bucketId, objectName));
     // `urlParts.splice(3)` de su `signObjectUrl`, sobre la ruta pedida.
-    const urlToSign = decodeURI(ctx.path.split("/").splice(3).join("/"));
+    const urlToSign = `${bucketId}/${objectName}`;
     const token = await signJwt(ctx.project.jwtSecret, { url: urlToSign, scope: SIGNED_URL_SCOPE_DOWNLOAD }, expiresIn);
     return json({ signedURL: `/object/sign/${urlToSign}?token=${token}` });
   },

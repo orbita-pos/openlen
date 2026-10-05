@@ -24,11 +24,11 @@ import {
 } from "./db";
 import { ERRORS } from "./errors";
 import { json, readJsonBody, type StorageContext, type StorageRoute } from "./handler";
-import { MAX_OBJECTS_PER_REQUEST, mustBeValidKey } from "./limits";
+import { MAX_OBJECTS_PER_REQUEST, mustBeValidKey, decodePathParam } from "./limits";
 import { objectHeaders, parseRangeHeader } from "./serve-headers";
 import { uploadFromRequest } from "./upload";
 
-const decode = (s: string) => decodeURIComponent(s);
+const decode = decodePathParam;
 
 /** Su `MAX_OBJECTS_PER_DELETE_BATCH`. */
 const MAX_OBJECTS_PER_DELETE_BATCH = Math.floor(1000 / 2);

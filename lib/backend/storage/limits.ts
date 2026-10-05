@@ -26,6 +26,16 @@ export function mustBeValidBucketName(name?: string): asserts name is string {
   if (!name || !isValidBucketName(name)) throw ERRORS.InvalidBucketName();
 }
 
+/** Un trozo de la ruta, decodificado; un `%` mal formado es una clave que no
+ *  vale (400), no un error del servidor. */
+export function decodePathParam(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    throw ERRORS.InvalidKey(raw);
+  }
+}
+
 export function isEmptyFolder(object: string): boolean {
   return object.endsWith(".emptyFolderPlaceholder");
 }

@@ -19,6 +19,7 @@ import type { BlobStore } from "./blob-store";
 import { BUCKET_ROUTES } from "./buckets";
 import { ERRORS, StorageError, storageErrorResponse } from "./errors";
 import { OBJECT_ROUTES } from "./objects";
+import { ensureStorageProvisioned } from "./provision";
 import { pageBlobStore } from "./r2-blob-store";
 import { SIGNED_ROUTES } from "./signed";
 import { storageLimits, type StorageLimits } from "./limits";
@@ -134,6 +135,17 @@ export async function handleStorage(req: Request, sub: string, project: BackendP
   if (!isProjectHost(req, project.ref)) return json({ message: "no Route matched with those values" }, 404);
   const store = storeFor(project);
   if (!store) return json({ message: "Storage is not available on this server" }, 503);
+  // En producción (sin almacén propio), el esquema `storage` tiene que estar:
+  // ensureProvisioned lo intenta pero no lanza, para no tumbar /rest/v1 ni
+  // /auth/v1. Aquí sí hace falta. Una vez por proceso (un Set).
+  if (!project.storage) {
+    try {
+      await ensureStorageProvisioned(project.ref);
+    } catch (err) {
+      console.error("[storage] no se pudo montar el esquema storage", project.ref, err);
+      return json({ message: "The project storage is not ready yet. Try again in a moment." }, 503);
+    }
+  }
 
   const method = req.method.toUpperCase();
   const path = sub || "/";

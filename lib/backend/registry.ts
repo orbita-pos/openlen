@@ -89,8 +89,12 @@ export async function ensureProvisioned(rec: BackendRecord): Promise<void> {
   }
   /* ── carril D: storage ── El esquema `storage` también en las bases creadas
    * antes de que hubiera Storage (ésas no vuelven a provisionDatabase). Una vez
-   * por proceso: lib/backend/storage/provision.ts. */
-  await ensureStorageProvisioned(rec.ref);
+   * por proceso: lib/backend/storage/provision.ts. Si falla NO tumba /rest/v1
+   * ni /auth/v1, que ya funcionaban: queda en el registro y lo vuelve a
+   * intentar la siguiente petición; la ruta de Storage lo exige ella misma. */
+  await ensureStorageProvisioned(rec.ref).catch((err: unknown) => {
+    console.error("[storage] no se pudo montar el esquema storage", rec.ref, err);
+  });
   /* ── fin carril D ── */
 }
 

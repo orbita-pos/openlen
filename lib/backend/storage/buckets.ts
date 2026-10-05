@@ -17,7 +17,7 @@ import {
 } from "./db";
 import { ERRORS } from "./errors";
 import { json, readJsonBody, type StorageContext, type StorageRoute } from "./handler";
-import { mustBeValidBucketName, normalizeAllowedMimeTypes, parseFileSizeToBytes } from "./limits";
+import { mustBeValidBucketName, normalizeAllowedMimeTypes, parseFileSizeToBytes, decodePathParam } from "./limits";
 
 function ownerOf(ctx: StorageContext): string | undefined {
   return typeof ctx.claims.sub === "string" ? ctx.claims.sub : undefined;
@@ -40,7 +40,7 @@ function mimeTypes(v: unknown): string[] | null | undefined {
   return list.length ? normalizeAllowedMimeTypes(list) : list;
 }
 
-const decode = (s: string) => decodeURIComponent(s);
+const decode = decodePathParam;
 
 const createBucket: StorageRoute = {
   method: "POST",

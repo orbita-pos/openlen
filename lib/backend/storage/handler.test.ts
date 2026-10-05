@@ -88,6 +88,14 @@ describe("/storage/v1 — la puerta", () => {
     }
   });
 
+  it("una ruta con un % mal formado: 400 Invalid key, no un 500", async () => {
+    for (const ruta of ["/object/authenticated/fotos/a%E0%A4%A.png", "/bucket/a%ZZ", "/object/sign/fotos/x%"]) {
+      const r = await pedir(`${TEST_URL}/storage/v1${ruta}`, { apikey: t.secretKey });
+      expect(r.status, ruta).toBe(400);
+      expect(await r.json(), ruta).toMatchObject({ statusCode: "400", code: "InvalidKey" });
+    }
+  });
+
   it("transformar imágenes no está: el 404 de ruta de Supabase con la función apagada", async () => {
     const r = await pedir(`${TEST_URL}/storage/v1/render/image/public/web/x.png?width=100`, { apikey: t.secretKey });
     expect(r.status).toBe(404);
