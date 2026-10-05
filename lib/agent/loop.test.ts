@@ -1212,6 +1212,63 @@ describe("runAgentLoop — ask_user_question (antes preguntar)", () => {
     expect(events.filter((e) => e.type === "text").map((e) => (e as { text: string }).text).join("")).toBe("Aquí va el plan.");
   });
 
+  it("LOTE 7-8 (2) · lo que el dueño escribió mientras la pregunta esperaba: el turno NO cierra, Len lo lee y sigue", async () => {
+    const events: AgentStreamEvent[] = [];
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [{ type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿Cuánto tarda?" }] } }, done],
+      [{ type: "text_delta", text: "Puesto: 48 horas." }, done],
+    );
+    const direcciones: (string | null)[] = [null, "mejor 48 horas"];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "pon el plazo" }], tools: [],
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async (_n, args) => ({ response: { ok: true, preguntado: true }, pregunta: preguntaDe(args) }),
+      leerDireccion: () => direcciones.shift() ?? null,
+      emit: (e) => events.push(e),
+    });
+    expect(r.finalText).toBe("Puesto: 48 horas.");
+    expect(String(vistos[1]!.at(-1)!.content)).toContain("mejor 48 horas");
+    expect(vistos[1]!.at(-2)!.functionResponses?.[0]?.name).toBe("ask_user_question");
+    expect(events.some((e) => e.type === "direccion")).toBe(true);
+  });
+
+  it("LOTE 7-8 (2) · BRAZO DE CONTROL: sin nada escrito, la pregunta sigue cerrando el turno", async () => {
+    let llamadas = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "pon el plazo" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿Cuánto tarda?" }] } }, done],
+        [{ type: "text_delta", text: "No debería llegar." }, done],
+      ),
+      runTool: async (_n, args) => ({ response: { ok: true, preguntado: true }, pregunta: preguntaDe(args) }),
+      leerDireccion: () => { llamadas += 1; return null; },
+      emit: () => {},
+    });
+    expect(r.finalText).toBe("¿Cuánto tarda?");
+    // Una al empezar la vuelta y otra al cerrar por la pregunta.
+    expect(llamadas).toBe(2);
+  });
+
+  it("LOTE 7-8 (2) · y lo mismo tras DESCARTAR la revisión: lo escrito es el mensaje que Len espera", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [{ type: "function_call", name: "exit_plan_mode", args: { plan: "# Reseñas" } }, done],
+      [{ type: "text_delta", text: "Lo rehago sin estrellas." }, done],
+    );
+    const direcciones: (string | null)[] = [null, "sin estrellas"];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "planea las reseñas" }], tools: [],
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => ({ response: { ok: false, error: "dismissed to speak" }, preguntas: [{ id: "plan-review", question: "?" }], dismissed: true }),
+      leerDireccion: () => direcciones.shift() ?? null,
+      emit: () => {},
+    });
+    expect(r.finalText).toBe("Lo rehago sin estrellas.");
+    expect(String(vistos[1]!.at(-1)!.content)).toContain("sin estrellas");
+    expect(vistos[1]!.at(-2)!.functionResponses?.[0]?.response).toEqual({ ok: false, error: "dismissed to speak" });
+  });
+
   it("preguntar (ask_user_question) no gasta presupuesto de acciones", async () => {
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [], maxToolCalls: 1,
