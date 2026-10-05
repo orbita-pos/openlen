@@ -74,12 +74,42 @@ Al restaurar: `roles.sql` primero, luego `pg_restore` de cada base. Las contrase
 la repone `provisionDatabase` desde `openlen.env`, y la de cada rol de desarrollador está cifrada en
 `projectBackends.dbPasswordEncrypted` (base de la app).
 
+## 4b. Storage de las páginas (carril D de Len 2.5: `/storage/v1`, `lib/backend/storage`)
+
+Los ficheros que suben los visitantes van a **R2** (Jesús, 04/10), a un bucket propio y **privado**: nada se sirve
+desde R2, todo sale por `/storage/v1` en `<ref>.openlen.app`, que pone las cabeceras.
+
+1. En Cloudflare → R2: crear el bucket `openlen-page-storage`, **sin** dominio público ni acceso público. Las
+   credenciales que ya usa la app (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY`, `R2_SECRET_KEY`) tienen que poder leer y escribir
+   en él (si el token está limitado a otros buckets, añadirle éste).
+2. Si el bucket se llama de otra forma: `PAGES_STORAGE_R2_BUCKET=<nombre>` en `/etc/openlen/openlen.env`.
+3. Opcional: `PAGES_STORAGE_FILE_SIZE_LIMIT` (bytes por fichero; por defecto 52428800 = 50 MB, el del plan gratis de
+   Supabase; Cloudflare corta los cuerpos en 100 MB) y `PAGES_STORAGE_PROJECT_LIMIT` (bytes por proyecto; por
+   defecto 1 GB).
+4. `sudo systemctl restart openlen-app`.
+
+Sin credenciales de R2, `/storage/v1` contesta 503 «Storage is not available on this server»: no se finge.
+
+El esquema `storage` (las 73 migraciones de `supabase/storage`) y el rol `supabase_storage_admin` los monta la app sola
+la primera vez que un proyecto usa su backend (una petición o un `supabase db push`), también en las bases que ya
+existían. No crearlos a mano.
+
+Borrar un proyecto desde la app se lleva sus ficheros (`<ref>/` en el bucket). Los de un proyecto borrado a mano se ven
+en el bucket bajo su `ref`.
+
 ## 5. Comprobar
 
 ```bash
 # La puerta de GoTrue de un proyecto que ya tenga backend (el ref sale del panel o de projectBackends):
 curl -s https://<ref>.openlen.app/auth/v1/health
 # → {"version":"openlen","name":"GoTrue",...}
+
+# Storage (carril D): la lista de buckets con la clave secreta del proyecto (sale del panel).
+curl -s https://<ref>.openlen.app/storage/v1/bucket -H "apikey: <sb_secret_…>" -H "authorization: Bearer <sb_secret_…>"
+# → [] (o sus buckets). Un 503 «Storage is not available» = faltan las credenciales de R2.
+# Y en el host de la PÁGINA tiene que dar 404 (un fichero subido nunca vive en el origen de la página):
+curl -s -o /dev/null -w "%{http_code}\n" https://<sub>.openlen.app/storage/v1/bucket -H "apikey: <sb_secret_…>"
+# → 404
 ```
 
 - En el editor, una página con backend enseña el icono «Base de datos» en el rail (sólo si su base existe).

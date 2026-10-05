@@ -5,7 +5,10 @@
 # Un clúster APARTE del de la app, en la misma caja: una base por proyecto
 # (`ol_<ref>`), con los roles de Supabase (anon, authenticated, service_role,
 # authenticator, supabase_auth_admin) que crea la app la primera vez que un
-# proyecto pide su base (lib/backend/provision.ts). Aparte para que el
+# proyecto pide su base (lib/backend/provision.ts). Carril D: también
+# `supabase_storage_admin`, el dueño del esquema `storage`, que crea la app
+# como este mismo administrador (lib/backend/storage/provision.ts), sin
+# CREATEROLE ni LOGIN. Aparte para que el
 # administrador de las páginas no tenga NADA que ver con la base de la app.
 #
 # El administrador NO es superusuario: CREATEDB + CREATEROLE + BYPASSRLS y
