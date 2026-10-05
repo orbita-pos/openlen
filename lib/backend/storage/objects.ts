@@ -10,7 +10,7 @@ import { blobKey } from "./blob-store";
 import { asRole, asStorageAdmin, findBucket, findObject, type ObjectRow } from "./db";
 import { ERRORS } from "./errors";
 import { json, type StorageContext, type StorageRoute } from "./handler";
-import { objectHeaders } from "./serve-headers";
+import { objectHeaders, parseRangeHeader } from "./serve-headers";
 import { uploadFromRequest } from "./upload";
 
 const decode = (s: string) => decodeURIComponent(s);
@@ -53,7 +53,17 @@ export async function serveObject(
     if (typeof meta.size === "number") headers.set("Content-Length", String(meta.size));
     return new Response(null, { status: 200, headers });
   }
-  const blob = await ctx.store.get(blobKey(ctx.project.ref, bucketId, obj.name, obj.version));
+  const key = blobKey(ctx.project.ref, bucketId, obj.name, obj.version);
+  const rangeHeader = req.headers.get("range");
+  if (rangeHeader && typeof meta.size === "number") {
+    const range = parseRangeHeader(rangeHeader, meta.size);
+    const blob = await ctx.store.get(key, { start: range.fromByte, end: range.toByte });
+    if (!blob) throw ERRORS.NoSuchKey();
+    headers.set("Content-Length", String(range.size));
+    headers.set("Content-Range", `bytes ${range.fromByte}-${range.toByte}/${meta.size}`);
+    return new Response(blob.body, { status: 206, headers });
+  }
+  const blob = await ctx.store.get(key);
   if (!blob) throw ERRORS.NoSuchKey();
   headers.set("Content-Length", String(blob.size));
   return new Response(blob.body, { status: 200, headers });
@@ -139,8 +149,35 @@ const info = (prefix: string, open: boolean): StorageRoute => ({
   },
 });
 
+/** getPublicObject.ts: sólo un bucket público, todo como superusuario, sin
+ *  pedir nada (lo que `getPublicUrl` arma en el navegador). */
+const getPublic = (method: "GET" | "HEAD"): StorageRoute => ({
+  method,
+  pattern: OBJ("public/"),
+  open: true,
+  async handle(req, ctx, m) {
+    const bucketId = decode(m[1]!);
+    await asStorageAdmin(ctx, (q) => findBucket(q, bucketId, { isPublic: true }));
+    const obj = await asStorageAdmin(ctx, (q) => findObject(q, bucketId, decode(m[2]!)));
+    return serveObject(req, ctx, bucketId, obj, { visibility: "public", head: method === "HEAD" });
+  },
+});
+
+const infoPublic: StorageRoute = {
+  method: "GET",
+  pattern: OBJ("info/public/"),
+  open: true,
+  async handle(_req, ctx, m) {
+    const { obj } = await visibleObject(ctx, decode(m[1]!), decode(m[2]!), { publicRoute: true });
+    return infoResponse(obj);
+  },
+};
+
 /** En orden: las rutas con prefijo fijo antes que `/object/:bucket/*`. */
 export const OBJECT_ROUTES: readonly StorageRoute[] = [
+  infoPublic,
+  getPublic("GET"),
+  getPublic("HEAD"),
   info("authenticated/", false),
   info("", true),
   get("authenticated/", false),
