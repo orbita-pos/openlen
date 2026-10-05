@@ -2263,4 +2263,20 @@ describe("POST /api/agent — la compactación dentro del turno", () => {
     const { maxPromptTokens } = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ maxPromptTokens: number }])[0];
     expect(maxPromptTokens).toBe(1_048_576 - 65_536);
   });
+
+  it("la retención de DeepSeek: 12.500 tokens, y para guardar arranca la terminal por el camino de bash si no lo estaba", async () => {
+    let spill: AgentLoopArgs["spill"];
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      spill = args.spill;
+      // Sin terminal de verdad (la herramienta es un doble), no hay dónde guardar.
+      const guardo = await args.spill?.save("/tmp/spill/1-0-session_event_read.txt", "texto");
+      return { finalText: String(guardo), turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    mocks.runAgentTool.mockReset().mockResolvedValue({ response: { ok: true } });
+    await readEvents(
+      await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "busca" }) })),
+    );
+    expect(spill?.maxInlineTokens).toBe(12_500);
+    expect(mocks.runAgentTool).toHaveBeenCalledWith(expect.anything(), expect.anything(), "bash", { command: "true" });
+  });
 });

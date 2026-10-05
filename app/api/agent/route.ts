@@ -43,6 +43,8 @@ import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
 import { DYNAMIS_MAX_OUTPUT_TOKENS, modeOfTurn } from "@/lib/agent/dynamis";
 import { resolveCompaction } from "@/lib/agent/compaction/policy";
+import { SPILL_MAX_INLINE_TOKENS } from "@/lib/agent/compaction/spill";
+import { NOMBRE_BASH, terminalEncendida } from "@/lib/agent/terminal/declaracion";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
 import { ZONA_SIN_DATO, zonaValida } from "@/lib/resultados/zona";
 import { guardarZona, leerZona } from "@/lib/resultados/zona-guardada";
@@ -1039,6 +1041,23 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
             // Len lee con `cat` (`spill-policy` de DeepSeek). Sólo en una terminal
             // viva: arrancarla para esto sería cargar el sitio entero por un aviso.
             saveRecovery: async (path, text) => {
+              const terminal = agentSession.terminal;
+              if (!terminal?.arrancada) return false;
+              await terminal.poner({ [path]: text });
+              return true;
+            },
+          },
+          // LA RETENCIÓN DE RESULTADOS GRANDES, como la `spill-policy` de DeepSeek
+          // (`lib/agent/compaction/spill.ts`): lo que pase de 12.500 tokens llega
+          // recortado y el texto entero queda en /tmp de la terminal. Aquí SÍ se
+          // arranca si no lo estaba —un resultado así es justo cuando hace falta
+          // poder leer el resto—, y por el camino de `bash` (un comando que no
+          // hace nada), que es quien sabe montarla. Sin terminal, entero.
+          spill: {
+            maxInlineTokens: SPILL_MAX_INLINE_TOKENS,
+            save: async (path, text) => {
+              if (!terminalEncendida()) return false;
+              if (!agentSession.terminal?.arrancada) await runAgentTool(agentSession, deps, NOMBRE_BASH, { command: "true" });
               const terminal = agentSession.terminal;
               if (!terminal?.arrancada) return false;
               await terminal.poner({ [path]: text });

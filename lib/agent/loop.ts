@@ -38,6 +38,9 @@ import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando
 import type { ProviderErrorCode } from "@/lib/ai/provider-error-code";
 import { MAX_PROVIDER_RETRIES, isRetryable, retryDelayMs, sleepAbortable } from "./retry-policy";
 import { compactIfNeeded } from "./compaction/compact";
+import { retainOversized } from "./compaction/spill";
+import { contenidoDeRespuesta } from "./fireworks-bridge";
+import { CLAVE_TOOL_RESULT } from "./ficheros/resultado";
 import { estimateTokens } from "./compaction/estimate";
 import type { CompactionPolicy } from "./compaction/policy";
 
@@ -282,6 +285,10 @@ export interface AgentLoopArgs {
   /** Pieza 4 (como DeepSeek): cuántas llamadas seguras de una vuelta corren a
    *  la vez. Por defecto `DEFAULT_MAX_PARALLEL_TOOL_CALLS` (10); 1 = en serie. */
   maxParallelToolCalls?: number;
+  /** La retención de resultados grandes, como la `spill-policy` de DeepSeek
+   *  (`compaction/spill.ts`): un resultado de más de `maxInlineTokens` llega
+   *  recortado y su texto entero queda donde `save` lo deje. Sin esto, enteros. */
+  spill?: { maxInlineTokens: number; save(path: string, text: string): Promise<boolean> };
   /** Para las pruebas: la espera entre reintentos. Por defecto, `sleepAbortable`. */
   sleep?(ms: number, signal?: AbortSignal): Promise<void>;
   /** La compactación dentro del turno (`lib/agent/compaction/`). Sin ella, el
@@ -2130,7 +2137,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           run: async () => ({ kind: "ejecutada", call, readOnly, summary, sig, outcome: await args.runTool(call.name, call.args) }),
         };
       },
-      commit: (_original, _indice, paso) => {
+      commit: async (_original, indice, paso) => {
         if (paso.kind === "rechazo") {
           rechazos.push({ tool: paso.name, motivo: paso.motivo });
           rechazadasEnLaVuelta += 1;
@@ -2293,7 +2300,25 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           rotoPorLaUltima = Array.isArray(rotas) ? rotas.map(String) : [];
         }
 
-        functionResponses.push({ name: call.name, response: respuesta });
+        // LA RETENCIÓN DE DEEPSEEK, en el post-execute como allí: lo que no cabe
+        // en `maxInlineTokens` se queda con su principio y su final, y el entero
+        // en /tmp/spill. `Read` no (tampoco el `read` de DeepSeek): ya trae sus
+        // propios topes y una ruta que releer.
+        const retenido = args.spill && call.name !== "Read"
+          ? await retainOversized(contenidoDeRespuesta(respuesta), {
+              maxTokens: args.spill.maxInlineTokens,
+              path: `/tmp/spill/${turns}-${indice}-${call.name}.txt`,
+              save: args.spill.save,
+            })
+          : null;
+        functionResponses.push({
+          name: call.name,
+          response: retenido === null
+            ? respuesta
+            : typeof respuesta[CLAVE_TOOL_RESULT] === "string"
+              ? { ...respuesta, [CLAVE_TOOL_RESULT]: retenido }
+              : { ok: respuesta.ok !== false, [CLAVE_TOOL_RESULT]: retenido },
+        });
       },
       skip: (original) => {
         functionResponses.push({ name: nombreDe(original), response: { ok: false, error: TOOL_ABORTED_BEFORE_DISPATCH } });
