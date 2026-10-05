@@ -1730,3 +1730,59 @@ test("una guardada que no se pudo convertir sale como NO COMPROBADA, con su id",
   assert.match(v.regresionesSinComprobar ?? "", /formato viejo/);
 });
 
+
+// LA CARPETA (pieza 9 de Len 2.5): los ficheros del proyecto viajan con la
+// vista hasta los dos navegadores —la foto y la medida—, para que una página
+// con `<script src="/js/app.js">` se vea como publicada y no rota.
+const CARPETA = { "/js/app.js": "document.title = 'cargó'" };
+
+test("🔴 los ojos cargan la carpeta: la foto y la medida reciben los ficheros y la página", async () => {
+  let enLaFoto: unknown = null;
+  let enLaMedida: unknown = null;
+  await verifyEditedPage(
+    { ...PARAMS, vista: { ...VISTA, pagina: "menu", files: CARPETA } },
+    {
+      provider: providerReturning('{"broken":false,"issues":[]}'),
+      render: (async (_html: string, opts?: { carpeta?: unknown }) => {
+        enLaFoto = opts?.carpeta ?? null;
+        return IMAGE;
+      }) as never,
+      medir: (async (_html: string, _internals?: unknown, opts?: { carpeta?: unknown }) => {
+        enLaMedida = opts?.carpeta ?? null;
+        return null;
+      }) as never,
+    },
+  );
+  assert.deepEqual(enLaFoto, { files: CARPETA, pagina: "menu" });
+  assert.deepEqual(enLaMedida, { files: CARPETA, pagina: "menu" });
+});
+
+test("🔴 `mirar_pagina` también: la medida recibe la carpeta", async () => {
+  let enLaMedida: unknown = null;
+  await observarPagina(
+    { html: PARAMS.html, tipo: "medir", pregunta: "¿se lee?", vista: { ...VISTA, files: CARPETA } },
+    {
+      medir: (async (_html: string, _internals?: unknown, opts?: { carpeta?: unknown }) => {
+        enLaMedida = opts?.carpeta ?? null;
+        return { unreadableText: [], mobileOverflow: false };
+      }) as never,
+    },
+  );
+  assert.deepEqual(enLaMedida, { files: CARPETA, pagina: null });
+});
+
+test("BRAZO DE CONTROL: sin carpeta en la vista, nada viaja", async () => {
+  let enLaFoto: unknown = "sin llamar";
+  await verifyEditedPage(
+    { ...PARAMS, vista: VISTA },
+    {
+      provider: providerReturning('{"broken":false,"issues":[]}'),
+      render: (async (_html: string, opts?: { carpeta?: unknown }) => {
+        enLaFoto = opts?.carpeta;
+        return IMAGE;
+      }) as never,
+      medir: async () => null,
+    },
+  );
+  assert.equal(enLaFoto, undefined);
+});

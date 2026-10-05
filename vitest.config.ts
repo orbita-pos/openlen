@@ -165,10 +165,14 @@ export default defineConfig({
       "lib/ai/perfiles-huerfanos.test.ts",
       "lib/ai/image-edit-core.test.ts",
       "lib/ai/fireworks-client.test.ts",
+      // La carpeta (pieza 9 de Len 2.5): los ojos de Len cargan sus ficheros.
+      "lib/ai/origen-de-medida-carpeta.test.ts",
       "lib/ai/fireworks-tool-client.test.ts",
       "lib/ai/fireworks-stream-client.test.ts",
       "lib/ai/esfuerzo-no-admitido.test.ts",
       "lib/ai/origen-de-medida.browser.test.ts",
+      // La carpeta (pieza 9 de Len 2.5), en un Chromium de verdad.
+      "lib/ai/ojos-cargan-la-carpeta.browser.test.ts",
       // La suite de la página corriendo en Chromium de verdad: es la única que
       // puede decir si el programa con las promesas guardadas se ejecuta y si
       // lo que devuelve el navegador se reparte bien. LISTA BLANCA.

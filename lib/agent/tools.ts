@@ -29,7 +29,7 @@ import { stripOpIds } from "@/lib/html-ops";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import { debitCredits } from "@/lib/credits";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
-import { vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
+import { vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 import type { SignedInAs } from "@/lib/agent/usar-pagina";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
@@ -1226,7 +1226,7 @@ async function toolMirarPagina(
       // LA VISTA, para que lo que se mide sea el documento que el usuario tiene
       // delante y no el pelado. La fila ya está leída aquí arriba, así que no
       // cuesta una consulta. Ver `MiradaParams.vista`.
-      vista: vistaParaMedir(session.projectId, row, pedida.page),
+      vista: await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId),
     })
     .catch(() => null);
   if (!visto) {
@@ -1303,7 +1303,13 @@ async function toolUsarPagina(
   }
 
   const visto = await deps
-    .usarPagina({ html, pasos: v.pasos, ruta: pedida.ruta, vista: vistaParaMedir(session.projectId, row, pedida.page), signedInAs })
+    .usarPagina({
+      html,
+      pasos: v.pasos,
+      ruta: pedida.ruta,
+      vista: await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId),
+      signedInAs,
+    })
     .catch(() => null)
     .finally(() => end?.().catch(() => undefined));
   if (!visto) {

@@ -35,7 +35,7 @@ import type { Browser, ElementHandle, Page } from "puppeteer";
 import { TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
 import { origenDeMedida } from "@/lib/ai/origen-de-medida";
 import { lanzarChromium } from "@/lib/ai/visual-quality-renderer";
-import { documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
+import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import type { PasoDeUso } from "@/lib/agent/pasos-de-uso";
 
@@ -848,7 +848,9 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
       }
     });
 
-    const doc = origen.publicar(html);
+    // LA CARPETA (pieza 9 de Len 2.5): los ficheros de la vista se contestan
+    // desde memoria (el guardia), y el documento vive en la ruta de su página.
+    const doc = origen.publicar(html, carpetaDeLaVista(p.vista));
     const sinHash = (u: string) => u.split("#")[0];
     try {
       await page.goto(doc.url, { waitUntil: "load", timeout: 20_000 });
