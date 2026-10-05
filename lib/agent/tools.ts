@@ -78,6 +78,7 @@ import type { AgentMode } from "@/lib/agent/dynamis";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { createConcurrencyLimit } from "@/lib/agent/concurrency-limit";
+import { ASK_USER_QUESTION, questionText, validateQuestions, type UserQuestion } from "@/lib/agent/ask-user-question";
 import {
   toolPrepararRespuesta,
   toolVerFormularios,
@@ -880,6 +881,9 @@ export interface ToolOutcome {
    * QUÉ se dice.
    */
   pregunta?: string;
+  /** Pieza 3 de Len 2.5: las preguntas de `ask_user_question`, con sus
+   *  opciones, para la tarjeta del chat. Van con `pregunta` (su texto plano). */
+  preguntas?: UserQuestion[];
   /**
    * ¿ESTA EDICIÓN CAMBIÓ EL COMPORTAMIENTO de la página? Es la MISMA decisión
    * con la que se le pide `prueba` al modelo (`cambioConducta`, sin contar el
@@ -1614,7 +1618,7 @@ async function toolPublicar(
       return {
         response: {
           ok: false,
-          error: `the user has never said "${raw}" — you made that name up, and you don't choose the address of their page. This project doesn't have a subdomain yet: ask them with \`preguntar\` what address they want.`,
+          error: `the user has never said "${raw}" — you made that name up, and you don't choose the address of their page. This project doesn't have a subdomain yet: ask them with \`ask_user_question\` what address they want.`,
         },
         // N41: al dueño, que la dirección la elige él — no «you made that name up».
         ownerReason: { code: "address_needed" },
@@ -1659,7 +1663,7 @@ async function toolPublicar(
           // se le señala la herramienta que HACE eso, y llamarla cierra el turno
           // de verdad: la parada la ejecuta el servidor, no la buena voluntad
           // del modelo.
-          "this project doesn't have a subdomain yet, and you don't choose the subdomain. Ask the user what address they want with `preguntar` — that tool closes the turn and their answer opens the next one; then, yes, call publicar with what they write.",
+          "this project doesn't have a subdomain yet, and you don't choose the subdomain. Ask the user what address they want with `ask_user_question`; then, yes, call publicar with what they answer.",
       },
       ownerReason: { code: "address_needed" },
     };
@@ -1715,28 +1719,24 @@ async function toolPublicar(
  * El texto lo escribe él, en el idioma del usuario. La parada la ejecuta el
  * bucle. Ver `ToolOutcome.pregunta`.
  */
-async function toolPreguntar(
+async function toolAskUserQuestion(
   _session: AgentSession,
   _deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
-  const texto = typeof args.texto === "string" ? args.texto.trim() : "";
-  if (!texto) {
-    return {
-      response: { ok: false, error: '"texto" is the question the user will read, and it came empty.' },
-    };
-  }
+  // Pieza 3 de Len 2.5: la forma de DeepSeek, validada ANTES de enseñar nada
+  // (`lib/agent/ask-user-question.ts`). Mal formada, el modelo lee qué cambiar
+  // y el dueño no ve tarjeta.
+  const v = validateQuestions(args.questions);
+  if (!v.ok) return { response: { ok: false, error: v.error } };
   return {
     // `ok: true` de verdad: preguntar es una acción que sale bien. El turno
     // termina porque el dueño tiene la palabra, no porque algo haya fallado.
     response: { ok: true, preguntado: true },
-    pregunta: texto.slice(0, PREGUNTA_MAX),
+    pregunta: questionText(v.questions),
+    preguntas: v.questions,
   };
 }
-
-/** Una pregunta, no un ensayo. Lo que no quepa aquí no es una pregunta: es el
- *  modelo pensando en voz alta, y eso va en su texto normal. */
-const PREGUNTA_MAX = 600;
 
 // ⚰️ Aquí vivía `leer_de_internet` (hasta 3 URLs, 4.000 caracteres de texto,
 // 2 llamadas por turno). Lo sustituyen `web_search` y `web_fetch` (F2 de
@@ -1790,7 +1790,7 @@ async function toolRevertirUltimoCambio(
             ok: false,
             error:
               r.motivo === "se_solapan"
-                ? `After your last change («${delLenV.label}») the page was edited by hand, and that edit touches the same thing as yours: undoing would also take away the user's. DON'T undo it on your own: ask them with preguntar whether they want to undo their edit too or leave it as it is.`
+                ? `After your last change («${delLenV.label}») the page was edited by hand, and that edit touches the same thing as yours: undoing would also take away the user's. DON'T undo it on your own: ask them with ask_user_question whether they want to undo their edit too or leave it as it is.`
                 : `your last change («${delLenV.label}») didn't move anything on the page: there is nothing of yours to undo.`,
           },
         };
@@ -1952,8 +1952,8 @@ async function ejecutarHerramienta(
         return await toolEditarImagen(session, deps, args);
       case "publicar":
         return await toolPublicar(session, deps, args);
-      case "preguntar":
-        return await toolPreguntar(session, deps, args);
+      case ASK_USER_QUESTION:
+        return await toolAskUserQuestion(session, deps, args);
       case NOMBRE_WEB_SEARCH:
         return await toolWebSearch(session, deps, args);
       case NOMBRE_WEB_FETCH:

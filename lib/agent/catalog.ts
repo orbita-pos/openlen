@@ -38,6 +38,7 @@ import {
 import type { AgentMode } from "@/lib/agent/dynamis";
 import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
+import { ASK_USER_QUESTION } from "@/lib/agent/ask-user-question";
 
 export const AGENT_MODULES = [
   // SÓLO CHAT desde el 2026-08-29. `collections` murió con el hub de Módulos:
@@ -310,25 +311,59 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     DECLARACION_WEB_FETCH,
     // ⚰️ Aquí iba TodoWrite, la lista de tareas. Retirada en F4
     // (plans/len-agente-2026), como Claude Code con los modelos nuevos.
-    // Como `ask_user_question` de DeepSeek (packages/interaction/tool-ask-user
-    // @639ed01): UNA frase, sin lista de datos. La lista que había («un
-    // teléfono, un precio, un horario» entre lo que «SÓLO él puede dar»)
-    // chocaba con `web_search`, que dice que los horarios y precios publicados
-    // se buscan: en la medición de la F2, 2 de 3 preguntaron el horario de un
-    // museo ajeno sin buscarlo (plans/len-2/corridas/2026-10-02-f2-web). Lo que
-    // es SUYO (su teléfono, sus horarios) sigue en la regla del prompt. Lo que
-    // queda además de la frase es de OpenLen: aquí preguntar CIERRA el turno
-    // (DeepSeek espera la respuesta dentro de él) y el texto es lo que ve.
+    // 🔴 PIEZA 3 DE LEN 2.5: `ask_user_question` de DeepSeek TAL CUAL, nombre
+    // incluido (`deepseek-harness` @ 5badb15, MIT,
+    // LICENSES/deepseek-harness.MIT.txt: packages/interaction/tool-ask-user/
+    // src/index.ts). Las descripciones son las suyas, copiadas. Lo único
+    // nuestro es la última frase: aquí la espera tiene límite (120 s, el de su
+    // modo `timed`) porque Len corre en un servidor, y la tarjeta ya enseña las
+    // preguntas. Se llamaba `preguntar`, con UN `texto` y cerrando el turno; el
+    // nombre viejo sólo se entiende en lo guardado (`ask-user-question.ts`).
+    // ⚰️ La lista de datos que había («un teléfono, un precio, un horario») se
+    // fue antes, con F2: chocaba con `web_search` (plans/len-2/corridas/
+    // 2026-10-02-f2-web). Lo que es SUYO sigue en la regla del prompt.
     {
-      name: "preguntar",
+      name: ASK_USER_QUESTION,
       description:
-        "Ask the user a short question when you are missing a confirmation, a choice or a piece of information to go on. As soon as you call it, the turn ENDS: don't do anything after it, because there is no after; their answer opens the next turn. texto: the question exactly as they will read it. It is the only thing they will see, so don't repeat it afterwards in your reply.",
+        "Ask the user a concise question when you need confirmation, a choice, or missing information before proceeding. "
+        + "The questions are shown to the user in a card, so don't repeat them in your reply; if they don't answer in a while, the turn ends with your questions shown and their answer opens the next turn.",
       parameters: {
         type: "OBJECT",
         properties: {
-          texto: { type: "STRING" },
+          questions: {
+            type: "ARRAY",
+            description: "Questions to ask the user before continuing.",
+            items: {
+              type: "OBJECT",
+              properties: {
+                id: { type: "STRING", description: "Stable id for this question; echoed in the answer." },
+                question: { type: "STRING", description: "The specific question to ask the user." },
+                header: {
+                  type: "STRING",
+                  description: 'Optional short heading for the question, such as "Confirm" or "Choose Mode".',
+                },
+                options: {
+                  type: "ARRAY",
+                  description: 'Optional choices to show the user. If you recommend one, put it first and append "(Recommended)" to that label.',
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      label: { type: "STRING", description: "Short user-facing option label." },
+                      description: { type: "STRING", description: "One sentence explaining the tradeoff or impact." },
+                    },
+                    required: ["label"],
+                  },
+                },
+                multi_select: {
+                  type: "BOOLEAN",
+                  description: "Whether the user may select more than one option. Defaults to false.",
+                },
+              },
+              required: ["id", "question"],
+            },
+          },
         },
-        required: ["texto"],
+        required: ["questions"],
       },
     },
     {
@@ -482,7 +517,7 @@ MODULES YOU CAN OPERATE (activar_modulo):
 ${moduleLines}
 
 THEIR DATA AND THEIR LINKS:
-The user's phone, WhatsApp, social profiles and address live ON THEIR PAGE: if they give you one, you write it on the page and that's it. What you can't decide for them —their page's address, their phone, their email, which account a link points to, their menu, their prices, their opening hours, their available spots, their business figures and what their customers say (reviews, testimonials, ratings)— is never invented or guessed, because it looks true: if it isn't in the files (Grep finds it), do everything else and ask them with preguntar. <example>user: "add a TikTok button for me" — agent: adds the button with href="#" and asks "what's your TikTok?", never tiktok.com/@yourbusiness worked out from the name.</example>
+The user's phone, WhatsApp, social profiles and address live ON THEIR PAGE: if they give you one, you write it on the page and that's it. What you can't decide for them —their page's address, their phone, their email, which account a link points to, their menu, their prices, their opening hours, their available spots, their business figures and what their customers say (reviews, testimonials, ratings)— is never invented or guessed, because it looks true: if it isn't in the files (Grep finds it), do everything else and ask them with ask_user_question. <example>user: "add a TikTok button for me" — agent: adds the button with href="#" and asks "what's your TikTok?", never tiktok.com/@yourbusiness worked out from the name.</example>
 
 MEMORY IS TWO FILES (/memoria/dueno.md and /memoria/proyecto.md):
 What you know about the user and about this project lives in two files, and you already have them in your context. To save a DURABLE preference, ADD a line with Edit: to /memoria/dueno.md if it applies to ALL their pages —that is what people mean by "don't forget this", and it is the default place—; to /memoria/proyecto.md if it clearly belongs to this project and not to the person (e.g. "on this page the tone is formal"). Use them ONLY when the user states a lasting preference about how to treat them or about the page ("always talk to me informally", "never use yellow", "be more formal") — NEVER for this turn's one-off request. Lines are only added: removing or changing what is saved is done by the user from the editor; if they ask you to, tell them so. After saving it, confirm in your reply what you saved.

@@ -1,0 +1,72 @@
+// ask_user_question (pieza 3 de Len 2.5): el esquema de DeepSeek, validado antes
+// de enseñar nada al dueño.
+import { describe, expect, it } from "vitest";
+import { isQuestionTool, questionText, validateQuestions } from "./ask-user-question";
+
+describe("validateQuestions", () => {
+  it("acepta la forma de DeepSeek y la normaliza", () => {
+    const r = validateQuestions([
+      {
+        id: "plazo",
+        question: "¿Cuánto tarda la entrega?",
+        header: "Entrega",
+        options: [{ label: "48 horas (Recommended)", description: "Lo que dice tu ficha." }, { label: "Una semana" }],
+        multi_select: false,
+      },
+    ]);
+    expect(r).toEqual({
+      ok: true,
+      questions: [
+        {
+          id: "plazo",
+          question: "¿Cuánto tarda la entrega?",
+          header: "Entrega",
+          options: [{ label: "48 horas (Recommended)", description: "Lo que dice tu ficha." }, { label: "Una semana" }],
+          multiSelect: false,
+        },
+      ],
+    });
+  });
+
+  it("sin opciones ni cabecera también vale: una pregunta abierta", () => {
+    expect(validateQuestions([{ id: "tel", question: "¿Cuál es tu teléfono?" }])).toEqual({
+      ok: true,
+      questions: [{ id: "tel", question: "¿Cuál es tu teléfono?" }],
+    });
+  });
+
+  it("🔴 rechaza lo mal formado con un error que dice qué cambiar", () => {
+    expect(validateQuestions(undefined)).toMatchObject({ ok: false });
+    expect(validateQuestions([])).toMatchObject({ ok: false });
+    expect(validateQuestions([{ question: "¿?" }])).toMatchObject({ ok: false, error: expect.stringMatching(/id/) });
+    expect(validateQuestions([{ id: "a", question: " " }])).toMatchObject({ ok: false, error: expect.stringMatching(/question/) });
+    expect(validateQuestions([{ id: "a", question: "x" }, { id: "a", question: "y" }])).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/unique/),
+    });
+    expect(validateQuestions([{ id: "a", question: "x", options: [{ description: "sin etiqueta" }] }])).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/label/),
+    });
+    expect(validateQuestions([{ id: "a", question: "x", options: "sí, no" }])).toMatchObject({ ok: false, error: expect.stringMatching(/options/) });
+  });
+
+  it("acota lo largo (una pregunta, no un ensayo)", () => {
+    const r = validateQuestions([{ id: "a", question: "x".repeat(5000), options: Array.from({ length: 30 }, (_, i) => ({ label: `o${i}` })) }]);
+    expect(r.ok && r.questions[0].question.length).toBe(600);
+    expect(r.ok && r.questions[0].options?.length).toBe(10);
+  });
+});
+
+describe("questionText e isQuestionTool", () => {
+  it("una pregunta es su texto; varias, una por línea", () => {
+    expect(questionText([{ id: "a", question: "¿Uno?" }])).toBe("¿Uno?");
+    expect(questionText([{ id: "a", question: "¿Uno?" }, { id: "b", question: "¿Dos?" }])).toBe("¿Uno?\n¿Dos?");
+  });
+
+  it("el nombre nuevo y el viejo son la misma herramienta", () => {
+    expect(isQuestionTool("ask_user_question")).toBe(true);
+    expect(isQuestionTool("preguntar")).toBe(true);
+    expect(isQuestionTool("Read")).toBe(false);
+  });
+});

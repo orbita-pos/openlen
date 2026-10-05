@@ -31,6 +31,7 @@ import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/li
 import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
 import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { DEFAULT_MAX_PARALLEL_TOOL_CALLS, isConcurrencySafe } from "@/lib/agent/tool-concurrency";
+import { ASK_USER_QUESTION, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { scheduleToolCalls, type Prepared } from "@/lib/agent/tool-scheduler";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
@@ -132,11 +133,13 @@ export type AgentStreamEvent =
        *  idioma. Sólo con `status: "error"`, y sólo si la herramienta lo
        *  declaró; sin él la tarjeta dice «No pudo». Ver `owner-reason.ts`. */
       ownerReason?: OwnerReason;
-      /** LA PREGUNTA, literal, cuando la herramienta es `preguntar`. Es SÓLO
+      /** LA PREGUNTA, literal, cuando la herramienta es `ask_user_question`. Es SÓLO
        *  para la pantalla (la tarjeta destacada y «Esperando tu respuesta» del
        *  chat nuevo, plans/new-chat/): el modelo no la lee de aquí — su texto ya
        *  la lleva y el historial no copia este campo. */
       pregunta?: string;
+      /** Pieza 3: las preguntas con sus opciones, para la tarjeta que contesta. */
+      preguntas?: UserQuestion[];
     }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
@@ -778,7 +781,7 @@ const READ_ONLY_TOOLS = new Set([
   // ⚰️ `trabajar_en_pagina` estaba aquí porque mudarse de página no cambiaba
   // nada y se cobraba como si sí (medido 7 de 7 el 2026-09-08). Len 2.0 no se
   // muda: cada Edit dice su fichero.
-  "preguntar",
+  ASK_USER_QUESTION,
   // ⚰️ Aquí iba `ToolSearch` (H2), retirada con las diferidas en Len 2.1, y
   // `TodoWrite`, retirada en F4 (plans/len-agente-2026).
 ]);
@@ -2158,8 +2161,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // una roja. El texto entero que leyó el modelo se queda en el diario.
           ...(descartada ? { motivo: descartada } : {}),
           ...(!ok && outcome.ownerReason ? { ownerReason: outcome.ownerReason } : {}),
-          // La pregunta con la que `preguntar` cierra el turno, para la tarjeta.
+          // La pregunta de `ask_user_question` (y sus opciones), para la tarjeta.
           ...(outcome.pregunta ? { pregunta: outcome.pregunta } : {}),
+          ...(outcome.preguntas?.length ? { preguntas: outcome.preguntas } : {}),
         });
         if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
 

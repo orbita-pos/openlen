@@ -1072,7 +1072,7 @@ describe("runAgentLoop — TodoWrite, retirada (F4)", () => {
   });
 });
 
-// ── preguntar: la parada la ejecuta el SERVIDOR ─────────────────────────────
+// ── ask_user_question (antes preguntar): la parada la ejecuta el SERVIDOR ─────────────────────────────
 //
 // 🔴 «Esto lo decide el usuario» viajaba como `ok:false` con una ORDEN dentro
 // —«NO vuelvas a llamar a publicar en este turno; termina preguntándole»— más un
@@ -1080,25 +1080,26 @@ describe("runAgentLoop — TodoWrite, retirada (F4)", () => {
 // con un ejemplo en el texto reclamaba «mi-negocio» 3 de 3 veces, y sin ejemplo
 // se inventaba el nombre del contexto. Pedirle a un modelo que se pare y luego
 // vigilar si se paró son las dos mitades del mismo parche.
-describe("runAgentLoop — preguntar", () => {
+describe("runAgentLoop — ask_user_question (antes preguntar)", () => {
+  const preguntaDe = (a: Record<string, unknown>) => String((a.questions as { question: string }[])[0].question);
   it("una pregunta CIERRA el turno, aunque el modelo tuviera más que decir", async () => {
     const seen: string[] = [];
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "publícala" }], tools: [],
       openStream: scripted(
-        [{ type: "function_call", name: "preguntar", args: { texto: "¿Qué dirección quieres?" } }, done],
+        [{ type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿Qué dirección quieres?" }] } }, done],
         // Este segundo stream NO debe llegar a abrirse: el turno terminó.
         [{ type: "function_call", name: "publicar", args: { subdominio: "mi-negocio" } }, done],
       ),
       runTool: async (name, args) => {
         seen.push(name);
-        return name === "preguntar"
-          ? { response: { ok: true }, pregunta: String(args.texto) }
+        return name === "ask_user_question"
+          ? { response: { ok: true }, pregunta: preguntaDe(args) }
           : { response: { ok: true } };
       },
       emit: () => {},
     });
-    expect(seen).toEqual(["preguntar"]);
+    expect(seen).toEqual(["ask_user_question"]);
     expect(r.finalText).toBe("¿Qué dirección quieres?");
     expect(r.terminalError).toBe(false);
   });
@@ -1108,10 +1109,10 @@ describe("runAgentLoop — preguntar", () => {
     await runAgentLoop({
       messages: [{ role: "user", content: "publícala" }], tools: [],
       openStream: scripted([
-        { type: "function_call", name: "preguntar", args: { texto: "¿Qué dirección quieres?" } },
+        { type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿Qué dirección quieres?" }] } },
         done,
       ]),
-      runTool: async (_n, args) => ({ response: { ok: true }, pregunta: String(args.texto) }),
+      runTool: async (_n, args) => ({ response: { ok: true }, pregunta: preguntaDe(args) }),
       emit: (e) => events.push(e),
     });
     const textos = events.filter((e) => e.type === "text").map((e) => (e as { text: string }).text);
@@ -1124,10 +1125,10 @@ describe("runAgentLoop — preguntar", () => {
       messages: [{ role: "user", content: "publícala" }], tools: [],
       openStream: scripted([
         { type: "text_delta", text: "Claro. ¿Qué dirección quieres?" },
-        { type: "function_call", name: "preguntar", args: { texto: "¿Qué dirección quieres?" } },
+        { type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿Qué dirección quieres?" }] } },
         done,
       ]),
-      runTool: async (_n, args) => ({ response: { ok: true }, pregunta: String(args.texto) }),
+      runTool: async (_n, args) => ({ response: { ok: true }, pregunta: preguntaDe(args) }),
       emit: (e) => events.push(e),
     });
     const textos = events.filter((e) => e.type === "text").map((e) => (e as { text: string }).text);
@@ -1142,38 +1143,38 @@ describe("runAgentLoop — preguntar", () => {
       messages: [{ role: "user", content: "cambia el hero y publícala" }], tools: [],
       openStream: scripted([
         { type: "function_call", name: "editar_pagina", args: {} },
-        { type: "function_call", name: "preguntar", args: { texto: "¿Y la dirección?" } },
+        { type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿Y la dirección?" }] } },
         done,
       ]),
       runTool: async (name, args) => {
         seen.push(name);
-        return name === "preguntar"
-          ? { response: { ok: true }, pregunta: String(args.texto) }
+        return name === "ask_user_question"
+          ? { response: { ok: true }, pregunta: preguntaDe(args) }
           : { response: { ok: true }, updatedHtml: "<!doctype html><html><body>v2</body></html>" };
       },
       emit: (e) => events.push(e),
     });
-    expect(seen).toEqual(["editar_pagina", "preguntar"]);
+    expect(seen).toEqual(["editar_pagina", "ask_user_question"]);
     // El lienzo recibió el cambio: cortar en seco al ver la pregunta habría
     // perdido trabajo que el usuario ya tiene delante.
     expect(events.some((e) => e.type === "html")).toBe(true);
   });
 
-  it("preguntar no gasta presupuesto de acciones", async () => {
+  it("preguntar (ask_user_question) no gasta presupuesto de acciones", async () => {
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [], maxToolCalls: 1,
       openStream: scripted([
         { type: "function_call", name: "editar_pagina", args: {} },
-        { type: "function_call", name: "preguntar", args: { texto: "¿sí o no?" } },
+        { type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿sí o no?" }] } },
         done,
       ]),
       runTool: async (name, args) =>
-        name === "preguntar"
-          ? { response: { ok: true }, pregunta: String(args.texto) }
+        name === "ask_user_question"
+          ? { response: { ok: true }, pregunta: preguntaDe(args) }
           : { response: { ok: true } },
       emit: () => {},
     });
-    // Con `preguntar` contando, la segunda llamada habría reventado el tope de 1
+    // Con la pregunta contando, la segunda llamada habría reventado el tope de 1
     // y el turno cerraría con un error rojo en vez de con la pregunta.
     expect(r.finalText).toBe("¿sí o no?");
     expect(r.terminalError).toBe(false);

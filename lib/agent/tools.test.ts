@@ -1444,15 +1444,16 @@ describe("runAgentTool", () => {
 // «Esto lo decide el usuario» viajaba como `ok:false` con una ORDEN dentro («NO
 // vuelvas a llamar a publicar en este turno; termina preguntándole») más un flag
 // de sesión para cazarle si la desobedecía. Está MEDIDO que la desobedecía.
-describe("preguntar", () => {
-  it("devuelve la pregunta para que el bucle cierre el turno", async () => {
+describe("ask_user_question (antes preguntar)", () => {
+  it("devuelve la pregunta para que el bucle cierre el turno, con sus opciones para la tarjeta", async () => {
     const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "preguntar", {
-      texto: "¿Qué dirección quieres para tu página?",
+    const out = await runAgentTool(makeSession(), deps, "ask_user_question", {
+      questions: [{ id: "dir", question: "¿Qué dirección quieres para tu página?", options: [{ label: "tacos-len (Recommended)" }, { label: "len-tacos" }] }],
     });
 
     assert.equal(out.response.ok, true);
     assert.equal(out.pregunta, "¿Qué dirección quieres para tu página?");
+    assert.deepEqual(out.preguntas, [{ id: "dir", question: "¿Qué dirección quieres para tu página?", options: [{ label: "tacos-len (Recommended)" }, { label: "len-tacos" }] }]);
     // Preguntar no toca la página ni la base.
     assert.equal(store.saved.length, 0);
     assert.equal(out.updatedHtml, undefined);
@@ -1460,18 +1461,24 @@ describe("preguntar", () => {
 
   it("una pregunta vacía se rechaza — el usuario no puede leer nada", async () => {
     const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "preguntar", { texto: "   " });
+    const out = await runAgentTool(makeSession(), deps, "ask_user_question", { questions: [{ id: "a", question: "   " }] });
     assert.equal(out.response.ok, false);
     assert.equal(out.pregunta, undefined);
   });
 
   it("recorta una pregunta kilométrica: eso ya no es una pregunta", async () => {
     const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "preguntar", {
-      texto: "¿".repeat(2_000),
+    const out = await runAgentTool(makeSession(), deps, "ask_user_question", {
+      questions: [{ id: "a", question: "¿".repeat(2_000) }],
     });
     assert.equal(out.response.ok, true);
     assert.ok((out.pregunta ?? "").length <= 600);
+  });
+
+  it("el nombre viejo ya no es una herramienta (sólo se entiende en lo guardado)", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "preguntar", { texto: "¿?" });
+    assert.equal(out.response.ok, false);
   });
 });
 
@@ -1629,13 +1636,13 @@ describe("TodoWrite, retirada (F4)", () => {
 });
 
 describe("publicar sin subdominio ya no da órdenes de comportamiento", () => {
-  it("señala `preguntar` en vez de pedirle al modelo que se pare solo", async () => {
+  it("señala `ask_user_question` en vez de pedirle al modelo que se pare solo", async () => {
     const { deps } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "publicar", {});
 
     assert.equal(out.response.ok, false);
     const error = String(out.response.error);
-    assert.match(error, /preguntar/);
+    assert.match(error, /ask_user_question/);
     // Y NO la orden vieja, que es la que el modelo se saltaba.
     assert.doesNotMatch(error, /NO vuelvas a llamar/i);
     // Sin tarjeta: el usuario no puede confirmar una dirección que nadie eligió.
@@ -1849,7 +1856,7 @@ describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después
     const antes = store.data.html;
     const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
     assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /preguntar/);
+    assert.match(String(out.response.error), /ask_user_question/);
     assert.equal(store.data.html, antes, "tocó la página cuando debía preguntar");
   });
 
