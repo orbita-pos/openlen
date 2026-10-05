@@ -3838,3 +3838,112 @@ describe("F1 · las lecturas del principio de la vuelta, en paralelo detrás de 
     expect(respuestas).toEqual(["Read /a", "Read /b", "Edit /c", "Read /d"]);
   });
 });
+
+describe("reintentos ante fallos del proveedor (como el arnés de DeepSeek)", () => {
+  const fallo = (code?: "server" | "transport" | "rate_limit"): StreamEvent => ({
+    type: "done",
+    stopReason: { kind: "error", error: "http_503", ...(code ? { code } : {}) },
+  });
+
+  it("un 503 se reintenta y el turno termina bien, sin error a la vista", async () => {
+    const events: AgentStreamEvent[] = [];
+    const esperas: number[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: scripted([fallo("server")], [{ type: "text_delta", text: "¡Hola!" }, usage(5), done]),
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+      sleep: async (ms) => { esperas.push(ms); },
+    });
+    expect(r.finalText).toBe("¡Hola!");
+    expect(r.terminalError).toBe(false);
+    expect(events.filter((e) => e.type === "retry")).toHaveLength(1);
+    expect(events.some((e) => e.type === "error")).toBe(false);
+    expect(esperas).toHaveLength(1);
+    expect(esperas[0]).toBeGreaterThanOrEqual(450);
+    expect(esperas[0]).toBeLessThanOrEqual(550);
+  });
+
+  it("lo que el intento fallido llegó a escribir se retira y NO entra en la conversación", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [{ type: "text_delta", text: "Voy a mir" }, fallo("transport")],
+      [{ type: "text_delta", text: "Listo." }, usage(5), done],
+    );
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+      sleep: async () => {},
+    });
+    const retry = events.find((e) => e.type === "retry") as Extract<AgentStreamEvent, { type: "retry" }>;
+    expect(retry.discardChars).toBe("Voy a mir".length);
+    expect(r.finalText).toBe("Listo.");
+    expect(JSON.stringify(vistos[1])).not.toContain("Voy a mir");
+  });
+
+  it("si ya había hablado en una vuelta anterior, el separador del intento fallido también se retira", async () => {
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "busca" }], tools: [],
+      openStream: scripted(
+        [{ type: "text_delta", text: "Miro." }, { type: "function_call", name: "Read", args: { file_path: "/index.html" } }, usage(5), done],
+        [{ type: "text_delta", text: "Ya v" }, fallo("server")],
+        [{ type: "text_delta", text: "Ya está." }, usage(5), done],
+      ),
+      runTool: async () => ({ response: { ok: true, tool_result: "1\t<h1>" }, action: { tool: "Read", ok: true, summary: "/index.html" } }),
+      emit: (e) => events.push(e),
+      sleep: async () => {},
+    });
+    const retry = events.find((e) => e.type === "retry") as Extract<AgentStreamEvent, { type: "retry" }>;
+    expect(retry.discardChars).toBe("\n\n".length + "Ya v".length);
+  });
+
+  it("tras 5 reintentos fallidos, el turno termina con el error de siempre", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: scripted([fallo("server")]),
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+      sleep: async () => {},
+    });
+    expect(events.filter((e) => e.type === "retry")).toHaveLength(5);
+    expect(events.filter((e) => e.type === "error" && e.code === "upstream")).toHaveLength(1);
+    expect(r.terminalError).toBe(true);
+  });
+
+  it("BRAZO DE CONTROL: un fallo sin código (un 400) no se reintenta", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: scripted([fallo()], [{ type: "text_delta", text: "no debe llegar" }, done]),
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+      sleep: async () => { throw new Error("no debe esperar"); },
+    });
+    expect(events.some((e) => e.type === "retry")).toBe(false);
+    expect(r.terminalError).toBe(true);
+    expect(r.finalText).not.toContain("no debe llegar");
+  });
+
+  it("el ■ durante la espera corta sin lanzar otro intento", async () => {
+    const ctrl = new AbortController();
+    const events: AgentStreamEvent[] = [];
+    let llamadas = 0;
+    const guion = scripted([fallo("server")], [{ type: "text_delta", text: "no debe llegar" }, done]);
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: (m) => { llamadas += 1; return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+      signal: ctrl.signal,
+      sleep: async () => { ctrl.abort(); },
+    });
+    expect(llamadas).toBe(1);
+    expect(events.some((e) => e.type === "error" && e.code === "cancelled")).toBe(true);
+    expect(r.terminalError).toBe(true);
+  });
+});
