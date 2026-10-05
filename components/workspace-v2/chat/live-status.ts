@@ -8,7 +8,7 @@
 // Es la forma de la barra de estado de Claude Code: dice qué hace, no cómo.
 
 import type { DesignTurn } from "./use-agent-chat";
-import { isQuestionTool, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { isQuestionTool, questionText, type UserQuestion } from "@/lib/agent/ask-user-question";
 
 /** Qué clase de trabajo hace la herramienta, en palabras de quien no programa. */
 export type Activity =
@@ -130,7 +130,15 @@ export type LiveStatus =
       readonly streamedChars?: number;
     }
   /** El turno acabó preguntando: te toca. `question` es la pregunta. */
-  | { readonly kind: "waiting"; readonly face: FaceState; readonly reason: "question"; readonly question: string }
+  | {
+      readonly kind: "waiting";
+      readonly face: FaceState;
+      readonly reason: "question";
+      readonly question: string;
+      /** Pieza 3: la pregunta espera DENTRO del turno (`ask_user_question`):
+       *  Len sigue en cuanto contestes, y el ■ sigue valiendo. */
+      readonly live?: true;
+    }
   /** El turno dejó una tarjeta de publicar sin tocar: te toca aprobarla. */
   | { readonly kind: "waiting"; readonly face: FaceState; readonly reason: "publish"; readonly question: null }
   /** Acabó bien. */
@@ -150,7 +158,14 @@ export type LiveStatus =
  *  reintento es trabajo: el ■ no puede desaparecer justo mientras espera. Ni
  *  mientras ordena lo que lleva: es una llamada al modelo, y se cobra. */
 export function isRunning(status: LiveStatus): boolean {
-  return status.kind === "thinking" || status.kind === "working" || status.kind === "retrying" || status.kind === "compacting";
+  return (
+    status.kind === "thinking" ||
+    status.kind === "working" ||
+    status.kind === "retrying" ||
+    status.kind === "compacting" ||
+    // Pieza 3: esperando tu respuesta DENTRO del turno, el turno sigue abierto.
+    (status.kind === "waiting" && status.reason === "question" && status.live === true)
+  );
 }
 
 /** La fase de un reintento: esperando («Reintentando · en X s», como Claude
@@ -207,6 +222,10 @@ export function liveStatus(
       };
     }
     if (latest.compacting) return { kind: "compacting", face: "revisando" };
+    // PIEZA 3: la pregunta espera DENTRO del turno: te toca, aunque el turno siga.
+    if (latest.pendingQuestions?.length && !latest.answeredLive) {
+      return { kind: "waiting", face: "preguntando", reason: "question", question: questionText(latest.pendingQuestions), live: true };
+    }
     const startedAt = latest.startedAt ?? null;
     const running = [...(latest.actions ?? [])].reverse().find((a) => a.status === "running");
     if (running) {

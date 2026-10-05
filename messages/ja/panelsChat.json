@@ -197,6 +197,7 @@
       "waitingAnswer": "あなたの返事を待っています",
       "waitingApproval": "あなたの承認を待っています",
       "yourTurn": "あなたの番です · 一時停止中",
+      "yourTurnLive": "あなたの番です · 答えるとすぐにLenが続けます",
       "done": "完了",
       "doneHint": "ほかのことも頼めます",
       "stopped": "停止しました",

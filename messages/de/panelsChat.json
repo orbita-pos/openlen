@@ -197,6 +197,7 @@
       "waitingAnswer": "Wartet auf deine Antwort",
       "waitingApproval": "Wartet auf deine Zustimmung",
       "yourTurn": "Du bist dran · pausiert",
+      "yourTurnLive": "Du bist dran · Len macht weiter, sobald du antwortest",
       "done": "Fertig",
       "doneHint": "bitte um etwas anderes",
       "stopped": "Gestoppt",

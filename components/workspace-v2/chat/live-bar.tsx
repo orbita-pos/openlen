@@ -79,7 +79,8 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
       break;
     case "waiting":
       verb = status.reason === "question" ? t("newChat.live.waitingAnswer") : t("newChat.live.waitingApproval");
-      meta = t("newChat.live.yourTurn");
+      // Pieza 3: dentro del turno no está «en pausa»: Len sigue al contestar.
+      meta = status.reason === "question" && status.live ? t("newChat.live.yourTurnLive") : t("newChat.live.yourTurn");
       why = status.question || null;
       break;
     case "done":
