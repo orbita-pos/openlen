@@ -560,6 +560,8 @@ export default defineConfig({
       // credits — the sanitize/normalize/behaviour passes are the real ones.
       "app/api/templates/ai-design/route.test.ts",
       "app/api/agent/route.test.ts",
+      // Pieza 3 de Len 2.5: la respuesta del dueño a ask_user_question.
+      "app/api/agent/responder/route.test.ts",
       // Contestar deja la conversación leída: el «Enviar» del borrador de Len.
       "app/api/inbox/[conversationId]/reply/route.test.ts",
       // Len 2.1: volver a mirar un turno que sigue trabajando sin cliente.

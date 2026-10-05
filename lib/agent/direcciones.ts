@@ -18,6 +18,8 @@
 // la corrección llega a un proceso y el turno vive en el otro. Ése es el
 // disparador para moverlo a la base, y no antes ([[no-redis-or-queue-until-trigger]]).
 
+import type { QuestionAnswer } from "@/lib/agent/ask-user-question";
+
 /** Cuánto texto se acepta. Una corrección es una frase, no un documento. */
 export const MAX_DIRECCION = 2000;
 
@@ -44,6 +46,10 @@ interface TurnoAbierto {
   /** La fila de la conversación que escribe este turno (el id que eligió el
    *  cliente). Con ella se sabe si una fila `en_curso` sigue viva. */
   readonly filaId?: string;
+  /** Pieza 3 de Len 2.5: la pregunta de `ask_user_question` que ESPERA
+   *  respuesta ahora mismo (como mucho una: la herramienta es exclusiva), y si
+   *  la última ya se contestó — para que un doble clic no la resuelva dos veces. */
+  readonly pregunta: { resolver?: (r: QuestionAnswer[] | null) => void; respondida: boolean };
 }
 
 // 🔴 EN `globalThis`, NO en un `const` del módulo. MEDIDO el 2026-09-03 con el
@@ -88,6 +94,7 @@ export function abrirTurno(
     userId,
     abiertoEn: ahora,
     pendientes: [],
+    pregunta: { respondida: false },
     ...(extra.abortar ? { abortar: extra.abortar } : {}),
     ...(extra.filaId ? { filaId: extra.filaId } : {}),
   });
@@ -133,6 +140,88 @@ export function leerDireccion(turnoId: string): string | null {
   return juntas;
 }
 
+/** Lo que acepta una respuesta: lo que el dueño escribe en «otra» es DATO para
+ *  el modelo, nunca una orden, y se acota como una corrección. */
+export const MAX_RESPUESTA_LIBRE = MAX_DIRECCION;
+const MAX_RESPUESTAS = 20;
+const MAX_ELEGIDAS = 10;
+const MAX_ETIQUETA = 120;
+
+/**
+ * PIEZA 3 DE LEN 2.5 · ESPERAR LA RESPUESTA DENTRO DEL TURNO, como
+ * `ask_user_question` de DeepSeek (`ctx.userQuestions.ask`): la herramienta se
+ * queda esperando aquí y la respuesta entra por otra petición
+ * (`POST /api/agent/responder` → `responder`), igual que una corrección.
+ *
+ * Resuelve con las respuestas, o con `null` si vence `timeoutMs` (el límite de
+ * espera: Len corre en un servidor, no en una terminal abierta), con el ■ o si
+ * el turno se cierra. `null` NUNCA es una aprobación: la herramienta cierra el
+ * turno con la pregunta y la respuesta abre el siguiente.
+ */
+export function esperarRespuesta(
+  turnoId: string,
+  o: { readonly timeoutMs: number; readonly signal?: AbortSignal },
+): Promise<QuestionAnswer[] | null> {
+  const turno = abiertos.get(turnoId);
+  if (!turno || o.signal?.aborted) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    let reloj: ReturnType<typeof setTimeout> | undefined;
+    const alAbortar = () => terminar(null);
+    function terminar(r: QuestionAnswer[] | null): void {
+      if (turno!.pregunta.resolver !== terminar) return;
+      turno!.pregunta.resolver = undefined;
+      if (reloj) clearTimeout(reloj);
+      o.signal?.removeEventListener("abort", alAbortar);
+      resolve(r);
+    }
+    turno.pregunta.respondida = false;
+    turno.pregunta.resolver = terminar;
+    reloj = setTimeout(() => terminar(null), o.timeoutMs);
+    (reloj as { unref?: () => void }).unref?.();
+    o.signal?.addEventListener("abort", alAbortar, { once: true });
+  });
+}
+
+export type ResultadoResponder = "ok" | "no_existe" | "ajeno" | "sin_pregunta" | "ya_respondida" | "invalida";
+
+/** La forma de DeepSeek (`{ id, selected, custom? }`), validada y acotada. */
+function respuestasValidas(raw: unknown): QuestionAnswer[] | null {
+  if (!Array.isArray(raw) || raw.length === 0 || raw.length > MAX_RESPUESTAS) return null;
+  const out: QuestionAnswer[] = [];
+  for (const a of raw) {
+    if (!a || typeof a !== "object") return null;
+    const { id, selected, custom } = a as { id?: unknown; selected?: unknown; custom?: unknown };
+    if (typeof id !== "string" || !id.trim()) return null;
+    if (!Array.isArray(selected) || !selected.every((x) => typeof x === "string")) return null;
+    if (custom !== undefined && typeof custom !== "string") return null;
+    const libre = typeof custom === "string" ? custom.trim().slice(0, MAX_RESPUESTA_LIBRE) : "";
+    out.push({
+      id: id.trim(),
+      selected: (selected as string[]).slice(0, MAX_ELEGIDAS).map((x) => x.trim().slice(0, MAX_ETIQUETA)).filter(Boolean),
+      ...(libre ? { custom: libre } : {}),
+    });
+  }
+  return out;
+}
+
+/**
+ * La respuesta del dueño a la pregunta que espera. Mismo control de dueño que
+ * `dirigir` y por lo mismo. Se resuelve UNA vez: la segunda respuesta (doble
+ * clic, dos pestañas) es `ya_respondida` y no toca nada.
+ */
+export function responder(turnoId: string, userId: string, raw: unknown): ResultadoResponder {
+  const turno = abiertos.get(turnoId);
+  if (!turno) return "no_existe";
+  if (turno.userId !== userId) return "ajeno";
+  const resolver = turno.pregunta.resolver;
+  if (!resolver) return turno.pregunta.respondida ? "ya_respondida" : "sin_pregunta";
+  const respuestas = respuestasValidas(raw);
+  if (!respuestas) return "invalida";
+  turno.pregunta.respondida = true;
+  resolver(respuestas);
+  return "ok";
+}
+
 export type ResultadoCancelar = "ok" | "no_existe" | "ajeno";
 
 /**
@@ -174,6 +263,9 @@ export function turnoDeLaFila(filaId: string, userId: string): string | null {
 
 /** El turno terminó. Se llama SIEMPRE, también cuando revienta. */
 export function cerrarTurno(turnoId: string): void {
+  // Una pregunta que seguía esperando se suelta: su herramienta cierra el turno
+  // como cuando nadie contesta.
+  abiertos.get(turnoId)?.pregunta.resolver?.(null);
   abiertos.delete(turnoId);
 }
 
