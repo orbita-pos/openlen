@@ -1,5 +1,5 @@
 import { isReserved } from "./reserved";
-import { LIENZO_PREFIJO } from "@/lib/lienzo/host";
+import { LIENZO_PREFIJO } from "@/lib/lienzo/prefijo";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pure subdomain validator.

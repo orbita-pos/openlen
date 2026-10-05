@@ -108,6 +108,8 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   const ok = !guardado?.rechazado && !esFalloDeLaTerminal(command, r.exitCode);
   const cambio = escrituras.length === 0 ? undefined : escrituras.some((o) => o.response.cambio === "cambio") ? "cambio" : "sin_cambio";
   const diagnosticos = escrituras.flatMap((o) => o.diagnosticos ?? []);
+  // LA CARPETA (pieza 9): los ficheros que tocó el comando, para «Deshacer».
+  const ficherosTocados = escrituras.flatMap((o) => o.ficherosTocados ?? []);
   const [primera, ...resto] = paginas;
   return {
     response: {
@@ -142,6 +144,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
         }
       : {}),
     ...(diagnosticos.length > 0 ? { diagnosticos } : {}),
+    ...(ficherosTocados.length > 0 ? { ficherosTocados } : {}),
     ...(escrituras.some((o) => o.mutoDurable) ? { mutoDurable: true } : {}),
   };
 }

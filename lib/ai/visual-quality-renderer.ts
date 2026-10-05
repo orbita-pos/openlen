@@ -1,7 +1,7 @@
 import type { InlineImage } from "@/lib/ai-gateway";
 import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
 import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
-import { cargarEnOrigenReal, origenDeMedida } from "@/lib/ai/origen-de-medida";
+import { cargarEnOrigenReal, origenDeMedida, type OpcionesDelDocumento } from "@/lib/ai/origen-de-medida";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 import { PRELUDIO_CENSO_CLIC } from "@/lib/agent/prueba-js";
@@ -165,6 +165,9 @@ export interface VisualQualityRenderOptions {
    * decía nunca. Ver `captureWithPage`.
    */
   readonly behaviorProgram?: string;
+  /** LA CARPETA (pieza 9 de Len 2.5): los ficheros del proyecto que la página
+   *  pide, contestados desde memoria por el guardia (`localResponseFor`). */
+  readonly carpeta?: OpcionesDelDocumento;
 }
 
 interface PageLike {
@@ -1061,7 +1064,7 @@ async function captureWithPage(
       ? await page.evaluateOnNewDocument(PRELUDIO_CENSO_CLIC).catch(() => null)
       : null;
   try {
-    await cargarEnOrigenReal(page, injectDeterministicRenderReset(html));
+    await cargarEnOrigenReal(page, injectDeterministicRenderReset(html), opts.carpeta);
   } finally {
     if (censo) await page.removeScriptToEvaluateOnNewDocument?.(censo.identifier).catch(() => {});
   }

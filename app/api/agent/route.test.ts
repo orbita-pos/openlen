@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // módulo mockeado.
 import type { AgentLoopArgs } from "@/lib/agent/loop";
 import type { VisualVerdict } from "@/lib/agent/verify";
-import { documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
+import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 
 /**
  * EL VEREDICTO DE LOS OJOS, TIPADO — para que un campo nuevo rompa el
@@ -88,6 +88,9 @@ const mocks = vi.hoisted(() => ({
   // La foto de los ficheros del turno (la lente «Cambios»). Por defecto, un
   // proyecto vacío: ningún cambio y ningún evento.
   cargarFicherosDeLaTerminal: vi.fn(async (): Promise<Record<string, string>> => ({})),
+  // LA CARPETA (pieza 9 de Len 2.5): los ficheros del proyecto que los ojos
+  // cargan. Por defecto `undefined` (sin carpeta), como un proyecto de hoy.
+  projectFiles: vi.fn(),
   // N42: el cobro que la ruta le pasa a `realDeps` — el que usan las
   // herramientas que cobran aparte del modelo (búsquedas, editar una imagen).
   cobroDeLasHerramientas: undefined as undefined | ((userId: string, centicreditos: number) => Promise<unknown>),
@@ -166,6 +169,7 @@ vi.mock("@/lib/agent/tools", () => ({
       loadProject: mocks.loadProject,
       cambiosSinPublicar: mocks.cambiosSinPublicar,
       loadBusinessProfile: mocks.loadBusinessProfile,
+      projectFiles: mocks.projectFiles,
     };
   },
   runAgentTool: mocks.runAgentTool,
@@ -2012,5 +2016,150 @@ describe("POST /api/agent — la fila del turno se abre al empezar y se cierra a
     const eventos = await readEvents(await pedir());
     expect(eventos.some((e) => e.event === "error")).toBe(true);
     expect(mocks.registrarTurnoDelServidor).toHaveBeenCalledTimes(1);
+  });
+});
+
+// LOS OJOS CARGAN LA CARPETA (pieza 9 de Len 2.5). `verify.ts` ya pasa la
+// carpeta al medidor; pero en producción los dos —los ojos al cerrar y la
+// medida que vuelve al modelo— miden por el navegador del turno, y ahí se
+// tiraba: Len veía rota una página con `<script src="/js/app.js">` que
+// publicada funciona.
+describe("POST /api/agent — los ojos cargan la carpeta", () => {
+  const CARPETA = { "/js/app.js": "document.title = 'x'", "/tests/a.spec.ts": "no se publica" };
+  const PUBLICABLE = { "/js/app.js": "document.title = 'x'" };
+
+  /** Un turno que mide para el modelo y cierra con los ojos, sobre una página. */
+  async function turnoQueMide() {
+    mocks.verifyEditedPage.mockImplementation(
+      async (
+        params: { html: string; vista?: ContextoDeVista | null },
+        internals?: { medir?: (h: string, i?: unknown, o?: unknown) => Promise<unknown> },
+      ) => {
+        // Lo que hace `runVerify` de verdad (ver verify.test.ts): hornea y,
+        // si la vista trae carpeta, se la pasa al medidor.
+        const doc = documentoMedible(params.html, params.vista ?? null);
+        const carpeta = carpetaDeLaVista(params.vista);
+        await (carpeta ? internals?.medir?.(doc, {}, { carpeta }) : internals?.medir?.(doc));
+        return veredicto();
+      },
+    );
+    mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
+      const medir = args.medirParaElModelo as (h: string) => Promise<unknown>;
+      const verifyTurn = args.verifyTurn as (i: { html: string; page: string | null }) => Promise<unknown>;
+      await medir("<h1>Para el modelo</h1>");
+      await verifyTurn({ html: "<h1>Para los ojos</h1>", page: null });
+      return { turns: 1, toolCalls: 1, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "ponle un menú" }),
+        }),
+      ),
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: `<!doctype html><html><body><h1>Hola</h1><script src="/js/app.js"></script></body></html>` },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+    mocks.createPool.mockResolvedValue({ render: mocks.poolRender, close: mocks.poolClose });
+  });
+  afterEach(() => {
+    // Que la carpeta de estas pruebas no se cuele en las de otros bloques.
+    mocks.projectFiles.mockReset();
+  });
+
+  it("🔴 los ojos reciben la vista con la carpeta publicable, y el navegador del turno la carga", async () => {
+    mocks.projectFiles.mockResolvedValue(CARPETA);
+    await turnoQueMide();
+    const { vista } = mocks.verifyEditedPage.mock.calls[0]![0] as { vista: ContextoDeVista };
+    expect(vista.files).toEqual(PUBLICABLE);
+    const conCarpeta = mocks.poolRender.mock.calls.filter((c: unknown[]) => c.length > 1);
+    expect(conCarpeta.map((c: unknown[]) => c[1])).toEqual([
+      { carpeta: { files: PUBLICABLE, pagina: null } },
+      { carpeta: { files: PUBLICABLE, pagina: null } },
+    ]);
+  });
+
+  it("🔴 cada medida relee la carpeta en el momento: el turno pudo escribir `js/app.js` entre las dos", async () => {
+    // La medida para el modelo ve la carpeta vacía; entre ella y los ojos, el
+    // turno escribe `js/app.js`.
+    mocks.projectFiles.mockResolvedValueOnce({}).mockResolvedValue(CARPETA);
+    await turnoQueMide();
+    const [paraElModelo, paraLosOjos] = mocks.poolRender.mock.calls as unknown[][];
+    expect(paraElModelo).toHaveLength(1);
+    expect(paraLosOjos![1]).toEqual({ carpeta: { files: PUBLICABLE, pagina: null } });
+  });
+
+  it("BRAZO DE CONTROL: sin ficheros, el navegador recibe el documento solo, como hoy", async () => {
+    mocks.projectFiles.mockResolvedValue({ "/supabase/migrations/0001_init.sql": "create table t ();" });
+    await turnoQueMide();
+    const { vista } = mocks.verifyEditedPage.mock.calls[0]![0] as { vista: ContextoDeVista };
+    expect("files" in vista).toBe(false);
+    expect(mocks.poolRender).toHaveBeenCalledTimes(2);
+    for (const llamada of mocks.poolRender.mock.calls as unknown[][]) expect(llamada).toHaveLength(1);
+  });
+});
+
+// EL DESHACER CON FICHEROS (pieza 9 de Len 2.5): lo que el turno cambió de la
+// carpeta viaja al cliente en un evento `ficheros`, emitido donde ya está el
+// resultado de cada herramienta (el envoltorio de `runTool`). Sin él, un
+// «Deshacer» devolvería la página y dejaría `js/app.js` cambiado.
+describe("POST /api/agent — los ficheros que tocó el turno viajan al cliente", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+  });
+
+  async function turnoConHerramientas(salidas: Array<Record<string, unknown>>) {
+    for (const s of salidas) mocks.runAgentTool.mockResolvedValueOnce(s);
+    mocks.runAgentLoop.mockImplementation(async (args: Record<string, unknown>) => {
+      const runTool = args.runTool as (n: string, a: unknown) => Promise<unknown>;
+      for (let i = 0; i < salidas.length; i++) await runTool("Write", { file_path: "/js/app.js", content: "x" });
+      return { turns: 1, toolCalls: salidas.length, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    return readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "cambia el script" }),
+        }),
+      ),
+    );
+  }
+
+  it("🔴 cada herramienta que cambió ficheros emite `ficheros` con su lista", async () => {
+    const eventos = await turnoConHerramientas([
+      { response: { ok: true }, ficherosTocados: [{ ruta: "/js/app.js", versionPrevia: "f1" }] },
+      { response: { ok: true }, ficherosTocados: [{ ruta: "/css/a.css", versionPrevia: "f2" }] },
+    ]);
+    const ficheros = eventos.filter((e) => e.event === "ficheros").map((e) => e.data.ficherosTocados);
+    expect(ficheros).toEqual([[{ ruta: "/js/app.js", versionPrevia: "f1" }], [{ ruta: "/css/a.css", versionPrevia: "f2" }]]);
+  });
+
+  it("BRAZO DE CONTROL: una herramienta que no tocó ficheros no emite nada", async () => {
+    const eventos = await turnoConHerramientas([{ response: { ok: true } }]);
+    expect(eventos.some((e) => e.event === "ficheros")).toBe(false);
   });
 });

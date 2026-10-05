@@ -15,6 +15,7 @@
 // rutas, y el empaquetador puede darles instancias de módulo distintas.
 
 import { randomBytes } from "node:crypto";
+import { etiquetaDeLienzo } from "./host";
 
 export const CADUCIDAD_MS = 30 * 60 * 1000;
 export const TOPE_POR_USUARIO = 20;
@@ -138,6 +139,27 @@ export function leerDocumento(docId: string, ahora = Date.now()): DocumentoGuard
   // subóptimo), pero el `max` lo cierra sin costar nada.
   d.ultimoUso = Math.max(d.ultimoUso, ahora);
   return d;
+}
+
+/**
+ * DE QUÉ PROYECTO ES UN HOST LIENZO (pieza 9 de Len 2.5), entre los documentos
+ * VIVOS. Es la llave de los ficheros de la carpeta en el host del lienzo: sólo
+ * se sirven mientras el dueño tiene un documento abierto de ese proyecto (30
+ * min sin uso), y la etiqueta es un HMAC que no se adivina por el id.
+ *
+ * No renueva la caducidad: pedir un fichero no es abrir el lienzo, y un host
+ * que alguien guardó no puede mantener vivos los borradores sin el dueño.
+ */
+export function proyectoDeEtiqueta(
+  etiqueta: string,
+  ahora = Date.now(),
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): { projectId: string; userId: string } | null {
+  podar(ahora);
+  for (const d of mapa().values()) {
+    if (etiquetaDeLienzo(d.projectId, env) === etiqueta) return { projectId: d.projectId, userId: d.userId };
+  }
+  return null;
 }
 
 /** SÓLO PRUEBAS. */

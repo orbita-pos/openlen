@@ -38,6 +38,7 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 
 import { allowEgressOrigin } from "@/lib/security/egress-proxy";
 import { randomUUID } from "node:crypto";
+import { contentTypeFor, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 
 export interface DocumentoServido {
   /** El URL que hay que abrir en el navegador. */
@@ -50,14 +51,71 @@ export interface DocumentoServido {
 // ⚰️ `OpcionesDePublicacion` (el subdominio y los bytes ya usados) sólo servían
 // para que el sustituto de `/api/d` juzgara sus rutas; se retiró el 2026-10-04 con los almacenes `data-ol-stores`.
 
+/** LA CARPETA (pieza 9 de Len 2.5): lo que acompaña a un documento. */
+export interface OpcionesDelDocumento {
+  /** Los ficheros del proyecto (`/js/app.js` → contenido). Sólo se contestan
+   *  los que se publican (`isPublishableFolderPath`), y desde memoria: ver
+   *  `localResponseFor`. */
+  readonly files?: Readonly<Record<string, string>>;
+  /** La página que es (`null` o ausente = la home). El documento se sirve en
+   *  `/<id>/<pagina>/` para que lo relativo se resuelva desde su carpeta, como
+   *  en la publicada (`/<pagina>/`). */
+  readonly pagina?: string | null;
+}
+
 export interface OrigenDeMedida {
   /** `host:puerto`, tal y como lo quiere `allowOrigins` del guardia SSRF. */
   readonly origin: string;
-  publicar(html: string): DocumentoServido;
+  publicar(html: string, opciones?: OpcionesDelDocumento): DocumentoServido;
 }
 
 /** Los documentos vivos ahora mismo, por identificador de ruta. */
 const documentos = new Map<string, string>();
+/** Los ficheros de la carpeta de cada documento vivo. */
+const ficherosPorDocumento = new Map<string, ReadonlyMap<string, string>>();
+/** El `host:puerto` del servidor, una vez arrancado. */
+let origenVivo: string | null = null;
+
+/**
+ * LOS OJOS DE LEN CARGAN LA CARPETA (pieza 9 de Len 2.5). Lo que el guardia
+ * SSRF contesta en memoria (`req.respond`) cuando el documento pide un fichero
+ * de su carpeta: `/js/app.js` desde la raíz, o `js/app.js` relativo. Sin esto
+ * una página con `<script src="/js/app.js">` se mediría rota aquí y funcionaría
+ * publicada. Por qué en memoria y no en el servidor: varios documentos
+ * comparten este origen a la vez, y una ruta desde la raíz no dice de cuál es;
+ * el guardia sí lo sabe, por la página que la pide (`documentUrl`).
+ *
+ * `null` = no es de aquí: la petición sigue su camino (y da 404, como hoy).
+ */
+export function localResponseFor(
+  requestUrl: string,
+  documentUrl: string | null,
+): { status: 200; contentType: string; body: string } | null {
+  if (!origenVivo || !documentUrl) return null;
+  let pedida: URL;
+  let doc: URL;
+  try {
+    pedida = new URL(requestUrl);
+    doc = new URL(documentUrl);
+  } catch {
+    return null;
+  }
+  if (pedida.host !== origenVivo || doc.host !== origenVivo) return null;
+  const id = doc.pathname.split("/")[1] ?? "";
+  const files = ficherosPorDocumento.get(id);
+  if (!files) return null;
+  let ruta: string;
+  try {
+    ruta = decodeURIComponent(pedida.pathname);
+  } catch {
+    return null;
+  }
+  // Lo relativo al documento llega con su id delante: se quita, y queda la
+  // ruta que tendría en la publicada.
+  if (ruta.startsWith(`/${id}/`)) ruta = ruta.slice(id.length + 1);
+  const body = files.get(ruta);
+  return body === undefined ? null : { status: 200, contentType: contentTypeFor(ruta), body };
+}
 
 function crear(): Promise<OrigenDeMedida> {
   const server: Server = createServer((req, res) => {
@@ -74,8 +132,10 @@ function crear(): Promise<OrigenDeMedida> {
       res.writeHead(204).end();
       return;
     }
-    const id = ruta.replace(/^\/+|\/+$/g, "");
-    const html = documentos.get(id);
+    // El documento vive en `/<id>/` o, si es la página de un slug,
+    // `/<id>/<slug>/`: el primer tramo es el id, y la ruta termina en barra.
+    const id = ruta.split("/")[1] ?? "";
+    const html = ruta.endsWith("/") ? documentos.get(id) : undefined;
     if (html === undefined) {
       res.writeHead(404).end();
       return;
@@ -103,15 +163,24 @@ function crear(): Promise<OrigenDeMedida> {
       // El proxy de salida del Chromium (lib/security/egress-proxy.ts) corta el
       // loopback entero: éste es el único hueco, y vive lo que vive el proceso.
       allowEgressOrigin(origin);
+      origenVivo = origin;
       resolve({
         origin,
-        publicar(html: string): DocumentoServido {
+        publicar(html: string, opciones: OpcionesDelDocumento = {}): DocumentoServido {
           const id = randomUUID();
           documentos.set(id, html);
+          if (opciones.files) {
+            ficherosPorDocumento.set(
+              id,
+              new Map(Object.entries(opciones.files).filter(([ruta]) => isPublishableFolderPath(ruta))),
+            );
+          }
+          const pagina = opciones.pagina ? `${encodeURIComponent(opciones.pagina)}/` : "";
           return {
-            url: `http://${origin}/${id}/`,
+            url: `http://${origin}/${id}/${pagina}`,
             soltar: () => {
               documentos.delete(id);
+              ficherosPorDocumento.delete(id);
             },
           };
         },
@@ -179,15 +248,27 @@ export interface PaginaCargable {
  * puede levantar, esto LANZA: el llamador lo anota como «no se pudo medir», que
  * es honesto, en vez de medir en condiciones que no son las de nadie.
  */
-export async function cargarEnOrigenReal(page: PaginaCargable, html: string): Promise<void> {
+export async function cargarEnOrigenReal(
+  page: PaginaCargable,
+  html: string,
+  opciones: OpcionesDelDocumento = {},
+): Promise<void> {
   if (!page.goto) {
     await page.setContent(html, { waitUntil: "load", timeout: 20_000 });
     return;
   }
-  const doc = (await origenDeMedida()).publicar(html);
+  const doc = (await origenDeMedida()).publicar(html, opciones);
   try {
     await page.goto(doc.url, { waitUntil: "load", timeout: 20_000 });
   } finally {
-    doc.soltar();
+    // Con carpeta, el documento se queda lo que dura una medida: la página
+    // sigue pidiendo sus ficheros DESPUÉS de cargar (un `fetch` en un clic, un
+    // import perezoso). Sin carpeta, se suelta ya, como siempre.
+    if (opciones.files && Object.keys(opciones.files).length > 0) setTimeout(doc.soltar, VIDA_CON_CARPETA_MS).unref();
+    else doc.soltar();
   }
 }
+
+/** Lo que vive un documento con carpeta tras cargar: más que cualquier medida
+ *  (los pasos de `usar_pagina` y los ojos acaban antes), y acotado. */
+const VIDA_CON_CARPETA_MS = 3 * 60_000;

@@ -165,11 +165,15 @@ export default defineConfig({
       "lib/ai/perfiles-huerfanos.test.ts",
       "lib/ai/image-edit-core.test.ts",
       "lib/ai/fireworks-client.test.ts",
+      // La carpeta (pieza 9 de Len 2.5): los ojos de Len cargan sus ficheros.
+      "lib/ai/origen-de-medida-carpeta.test.ts",
       "lib/ai/fireworks-tool-client.test.ts",
       "lib/ai/fireworks-stream-client.test.ts",
       "lib/ai/provider-error-code.test.ts",
       "lib/ai/esfuerzo-no-admitido.test.ts",
       "lib/ai/origen-de-medida.browser.test.ts",
+      // La carpeta (pieza 9 de Len 2.5), en un Chromium de verdad.
+      "lib/ai/ojos-cargan-la-carpeta.browser.test.ts",
       // La suite de la página corriendo en Chromium de verdad: es la única que
       // puede decir si el programa con las promesas guardadas se ejecuta y si
       // lo que devuelve el navegador se reparte bien. LISTA BLANCA.
@@ -198,6 +202,8 @@ export default defineConfig({
       "lib/ai/runtime-capability.test.ts",
       "lib/projects/page-runtimes.test.ts",
       "lib/projects/miniatura-en-vuelo.test.ts",
+      // La carpeta (pieza 9 de Len 2.5): su huella publicable.
+      "lib/projects/files-hash.test.ts",
       "lib/publish/model-runtime-locales.test.ts",
       // Un idioma pedido que no sale tiene que OÍRSE: el fallo era mudo y por
       // eso la traducción vivió cinco meses sin producir una sola página.
@@ -357,6 +363,8 @@ export default defineConfig({
       "app/api/lienzo/route.test.ts",
       "app/api/assistant/[sub]/route.test.ts",
       "app/api/lienzo/[docId]/route.test.ts",
+      // El lienzo sirve el sitio entero (pieza 9 de Len 2.5).
+      "app/api/lienzo/site/**/*.test.ts",
       "lib/lecturas-de-users-proyectan.test.ts",
       "lib/ninguna-prueba-a-oscuras.test.ts",
       "components/workspace-v2/panels/mando-esfuerzo.test.tsx",
@@ -460,6 +468,8 @@ export default defineConfig({
       // `lib/publish/**` entra fichero a fichero, no por directorio: es la
       // convención de arriba y hay pruebas ahí que necesitan el binding nativo.
       "lib/publish/form-identity.test.ts",
+      // La carpeta (pieza 9 de Len 2.5): el service worker que se da de baja.
+      "lib/publish/service-worker.test.ts",
       // La guarda de las veinte frases que ve el visitante al enviar un
       // formulario: viven duplicadas dentro del guion de Rust y sin esta línea
       // la copia se pudriría en silencio (medido en producción el 19/09).
@@ -528,6 +538,10 @@ export default defineConfig({
       "app/api/projects/[id]/terminal/route.test.ts",
       // Editar a mano en la lente «Código» (la #18).
       "app/api/projects/[id]/ficheros/route.test.ts",
+      // Deshacer un fichero de la carpeta (pieza 9 de Len 2.5).
+      "app/api/projects/*/ficheros/versions/**/*.test.ts",
+      // Exportar lleva la carpeta (pieza 9 de Len 2.5).
+      "app/api/export/zip/route.test.ts",
       // «Abrir en pestaña» se va al lienzo en .app; lo que queda aquí, opaco.
       "app/api/projects/[id]/raw/route.test.ts",
       // Un dominio propio sólo se sirve en su propio host, nunca en openlen.com.

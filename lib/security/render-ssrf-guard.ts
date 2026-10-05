@@ -19,6 +19,17 @@
 import dns from "node:dns/promises";
 import type { Page, Target } from "puppeteer";
 import { ipInPrivateRange } from "@/lib/style-match/scrape/validate-url";
+import { localResponseFor } from "@/lib/ai/origen-de-medida";
+
+/**
+ * SIN SERVICE WORKERS en el Chromium del servidor (pieza 9 de Len 2.5): como un
+ * navegador que no los tiene. El código que comprueba `'serviceWorker' in
+ * navigator` —el de casi todo el mundo— no lo intenta y no hay error que
+ * confunda a los ojos; el modo sin internet no se puede comprobar aquí, y el
+ * manual de Len lo dice. Un service worker que sí arrancara aquí guardaría su
+ * caché en un navegador que se reutiliza entre medidas.
+ */
+export const SIN_SERVICE_WORKERS = "try{delete Navigator.prototype.serviceWorker}catch(e){}";
 
 // Schemes that never hit the network in a way that can reach internal hosts.
 const ALLOWED_NON_HTTP_SCHEMES = new Set(["data:", "blob:", "about:"]);
@@ -198,6 +209,7 @@ export async function installSubresourceSsrfGuard(
   };
   // Las ventanas nuevas (ver BLOQUEO_DE_VENTANAS): capas 1 y 3.
   await page.evaluateOnNewDocument(BLOQUEO_DE_VENTANAS);
+  await page.evaluateOnNewDocument(SIN_SERVICE_WORKERS);
   await page.evaluate(BLOQUEO_DE_VENTANAS).catch(() => undefined);
   const propia = page.target();
   const navegador = page.browser();
@@ -240,6 +252,14 @@ export async function installSubresourceSsrfGuard(
         }
         const { hostname, host } = new URL(url);
         if (allowedOrigins.has(host.toLowerCase())) {
+          // LA CARPETA (pieza 9 de Len 2.5): un fichero de la carpeta del
+          // documento que se mide se contesta desde memoria, sin red; lo
+          // demás del origen permitido sigue como siempre.
+          const local = localResponseFor(url, req.frame()?.url() ?? page.url());
+          if (local) {
+            await req.respond({ status: local.status, contentType: local.contentType, body: local.body });
+            return;
+          }
           await req.continue();
           return;
         }
