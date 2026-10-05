@@ -34,11 +34,11 @@ import {
 } from "@/lib/agent/ficheros/sitio";
 import { CLAVE_TOOL_RESULT, fallo, type Resultado } from "@/lib/agent/ficheros/resultado";
 import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO, alcanceDeRuta, lineasNuevas } from "@/lib/agent/ficheros/memoria";
-import { esFicheroDeSupabase, motivoParaNoGuardar } from "@/lib/agent/ficheros/supabase";
+import { classifyFolderPath, folderSaveProblem, isFolderPath } from "@/lib/agent/ficheros/folder";
 import { esDeLaPlataforma, MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
 import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/terminal/ajustes";
-import { activoDelSitio, codigoNuevo } from "@/lib/agent/terminal/javascript-del-usuario";
+import { activoDelSitio, codigoNuevo, newCodeInFolderFile } from "@/lib/agent/terminal/javascript-del-usuario";
 import { buildManualDeLaPlataforma, textoDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { PREFERENCIA_MAX, PREFERENCIA_MIN, guardarPreferencia } from "@/lib/agent/preferencias";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
@@ -69,13 +69,13 @@ function leidosDe(session: AgentSession): Leidos {
 // Se retiraron el 2026-10-04: los datos de una página van a su backend de
 // Supabase, y sus tablas se escriben como migraciones de /supabase/.
 
-/** Los ficheros que no son páginas: la memoria y los de `/supabase/`, las
- *  migraciones del backend del proyecto. */
+/** Los ficheros que no son páginas: la memoria y la CARPETA del proyecto
+ *  (pieza 9 de Len 2.5: `/supabase/`, `/tests/`, `js/`, `css/`, `data/`…). */
 interface Virtuales {
   /** `/memoria/dueno.md` y `/memoria/proyecto.md`, con su texto. */
   readonly memoria: ReadonlyMap<string, string>;
-  /** `/supabase/...` → contenido (plans/pages-backend/design.md). */
-  readonly supabase: ReadonlyMap<string, string>;
+  /** Ruta → contenido, sólo las que `lib/agent/ficheros/folder.ts` acepta. */
+  readonly folder: ReadonlyMap<string, string>;
 }
 
 async function virtualesDe(session: AgentSession, deps: AgentDeps, userBrief: string | null): Promise<Virtuales> {
@@ -86,23 +86,23 @@ async function virtualesDe(session: AgentSession, deps: AgentDeps, userBrief: st
     // eslint-disable-next-line no-console
     console.warn("[agente] no se pudo leer la memoria del dueño", err);
   }
-  let supabase: Record<string, string> = {};
+  let folder: Record<string, string> = {};
   try {
-    supabase = (await deps.ficherosDeSupabase?.(session.projectId)) ?? {};
+    folder = (await deps.projectFiles?.(session.projectId)) ?? {};
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.warn("[agente] no se pudieron leer los ficheros de /supabase", err);
+    console.warn("[agente] no se pudieron leer los ficheros de la carpeta", err);
   }
   return {
     memoria: new Map([
       [RUTA_MEMORIA_DUENO, dueno],
       [RUTA_MEMORIA_PROYECTO, userBrief ?? ""],
     ]),
-    supabase: new Map(Object.entries(supabase).filter(([ruta]) => esFicheroDeSupabase(ruta))),
+    folder: new Map(Object.entries(folder).filter(([ruta]) => isFolderPath(ruta))),
   };
 }
 
-const SIN_VIRTUALES: Virtuales = { memoria: new Map(), supabase: new Map() };
+const SIN_VIRTUALES: Virtuales = { memoria: new Map(), folder: new Map() };
 
 /** Todas las páginas y la memoria del sitio, en un solo texto. */
 function textoDelSitio(data: ProjectData, v: Virtuales): string {
@@ -119,12 +119,12 @@ function sitioDe(data: ProjectData, session: AgentSession, v: Virtuales = SIN_VI
       if (esDeLaPlataforma(ruta)) return textoDeLaPlataforma(ruta, session.mode);
       const memoria = v.memoria.get(ruta);
       if (memoria !== undefined) return memoria;
-      const supabase = v.supabase.get(ruta);
-      if (supabase !== undefined) return supabase;
+      const fichero = v.folder.get(ruta);
+      if (fichero !== undefined) return fichero;
       const html = leerFichero(data, ruta);
       return html === null ? null : sinOpIds(html);
     },
-    ficheros: [...ficherosDelSitio(data), ...v.memoria.keys(), ...v.supabase.keys()],
+    ficheros: [...ficherosDelSitio(data), ...v.memoria.keys(), ...v.folder.keys()],
     recientes: session.escritos ?? [],
   };
 }
@@ -255,8 +255,8 @@ async function aplicarPlan(
   if (alcanceDeRuta(plan.ruta) !== null) {
     return await guardarMemoria(session, deps, v.memoria, plan, herramienta, detalle);
   }
-  if (esFicheroDeSupabase(plan.ruta)) {
-    return await guardarSupabase(session, deps, v.supabase, plan, herramienta, detalle);
+  if (isFolderPath(plan.ruta)) {
+    return await guardarEnLaCarpeta(session, deps, data, v.folder, plan, herramienta, detalle);
   }
   const etiqueta = `${herramienta} ${detalle}`;
   // El sitio de ANTES de la primera escritura del turno: lo que ya decía en
@@ -302,30 +302,56 @@ async function aplicarPlan(
   };
 }
 
+/** La etiqueta de una versión: la de Len lleva la herramienta; la del dueño,
+ *  desde dónde (su terminal o el editor de la lente «Código»), como las páginas
+ *  (`guardarFichero`). */
+function etiquetaDeVersion(session: AgentSession, herramienta: string, detalle: string): { label: string; source: "chat" | "manual" } {
+  if (session.autor !== "usuario") return { label: `${herramienta} ${detalle}`, source: "chat" };
+  return { label: `${session.desde === "editor" ? "Code editor" : "Terminal"}: ${detalle}`, source: "manual" };
+}
+
+/** Lo guardado del sitio entero —páginas y carpeta—, para la regla del dueño. */
+function sitioGuardado(data: ProjectData, folder: ReadonlyMap<string, string>): Record<string, string> {
+  const todo: Record<string, string> = Object.fromEntries(folder);
+  for (const ruta of ficherosDelSitio(data)) todo[ruta] = leerFichero(data, ruta) ?? "";
+  return todo;
+}
+
 /**
- * GUARDAR UN FICHERO DE /supabase/ (plans/pages-backend/design.md): las
- * migraciones del backend. Se guardan tal cual —no son páginas, no hay puerta
- * de página— en `projectFiles`; se aplican a la base con `supabase db push`.
+ * GUARDAR UN FICHERO DE LA CARPETA (pieza 9 de Len 2.5): `js/`, `css/`,
+ * `data/`, `sw.js`, `/tests/`, `/supabase/`… No son páginas: no pasan por
+ * la puerta de la página; se guardan tal cual en `projectFiles` con sus topes
+ * (`folderSaveProblem`), y el «antes» queda archivado para deshacer. El dueño
+ * (su terminal, el editor) no mete código a mano (`newCodeInFolderFile`).
  */
-async function guardarSupabase(
+async function guardarEnLaCarpeta(
   session: AgentSession,
   deps: AgentDeps,
-  supabase: ReadonlyMap<string, string>,
+  data: ProjectData,
+  folder: ReadonlyMap<string, string>,
   plan: Extract<PlanDeEdit, { ok: true }>,
   herramienta: "Edit" | "Write" | "bash",
   detalle: string,
 ): Promise<ToolOutcome> {
-  if (!deps.guardarFicheroDeSupabase) return { response: respuesta(fallo(`${plan.ruta}: this project cannot save Supabase files here.`)) };
-  const motivo = motivoParaNoGuardar(plan.ruta, plan.contenido, supabase.size, plan.crea);
-  if (motivo) return { response: respuesta(fallo(`Cannot save ${motivo}`)) };
-  const previo = supabase.get(plan.ruta);
-  await deps.guardarFicheroDeSupabase(session.projectId, plan.ruta, plan.contenido);
+  if (!deps.saveProjectFile) return { response: respuesta(fallo(`${plan.ruta}: this project cannot save files here.`)) };
+  const motivo = folderSaveProblem(plan.ruta, plan.contenido, folder);
+  if (motivo) return { response: respuesta(fallo(motivo.startsWith("Cannot") ? motivo : `Cannot save ${plan.ruta}: ${motivo}`)) };
+  if (session.autor === "usuario") {
+    const codigo = newCodeInFolderFile(plan.ruta, plan.contenido, sitioGuardado(data, folder));
+    if (codigo) return { response: respuesta(fallo(codigo)) };
+  }
+  const previo = folder.get(plan.ruta) ?? null;
+  const { versionPrevia } = await deps.saveProjectFile(session.projectId, plan.ruta, plan.contenido, {
+    before: previo,
+    ...etiquetaDeVersion(session, herramienta, detalle),
+  });
   leidosDe(session).set(plan.ruta, { instantanea: normalizarFinales(plan.contenido), offset: undefined, limit: undefined });
   session.escritos = [plan.ruta, ...(session.escritos ?? []).filter((x) => x !== plan.ruta)];
   const cambio = previo === plan.contenido ? "sin_cambio" : "cambio";
   return {
     response: respuesta({ ok: true, texto: plan.respuesta({ guardadoIgual: true }) }, { cambio }),
     action: { tool: herramienta, ok: true, summary: detalle, cambio },
+    ...(cambio === "cambio" ? { ficherosTocados: [{ ruta: plan.ruta, versionPrevia }] } : {}),
   };
 }
 
@@ -374,7 +400,7 @@ async function guardarMemoria(
 
 /**
  * LOS FICHEROS QUE VE LA TERMINAL (F1): los mismos que Read —las páginas sin
- * op-ids, la memoria, los ficheros de /supabase/ y el manual—, con su
+ * op-ids, la memoria, la carpeta del proyecto (pieza 9) y el manual—, con su
  * contenido de AHORA.
  */
 export async function cargarFicherosDeLaTerminal(session: AgentSession, deps: AgentDeps): Promise<Record<string, string>> {
@@ -384,7 +410,7 @@ export async function cargarFicherosDeLaTerminal(session: AgentSession, deps: Ag
   const ficheros: Record<string, string> = {};
   for (const ruta of ficherosDelSitio(row.data)) ficheros[ruta] = sinOpIds(leerFichero(row.data, ruta) ?? "");
   for (const [ruta, texto] of v.memoria) ficheros[ruta] = texto;
-  for (const [ruta, texto] of v.supabase) ficheros[ruta] = texto;
+  for (const [ruta, texto] of v.folder) ficheros[ruta] = texto;
   // En Len Dynamis, el que no nombra Read, Edit ni Write (`lib/agent/dynamis.ts`).
   ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma(process.env, session.mode);
   // F4 · /.openlen/docs NO va aquí: es de la carpeta oculta de sólo lectura, y
@@ -416,7 +442,7 @@ export interface GuardadoDeLaTerminal {
  * LO QUE ESCRIBIÓ LA TERMINAL (F1 de plans/len-agente-2026), por el camino de
  * Write: cada fichero cambiado se guarda ENTERO con `aplicarPlan` —la puerta
  * de la página, `data-slot-path` rechazado, una versión por fichero, los
- * diagnósticos—, y los de `/memoria` y `/supabase` con sus reglas. Sin el «léelo
+ * diagnósticos—, y los de `/memoria` y la carpeta con sus reglas. Sin el «léelo
  * antes» de Write: en una terminal el fichero se lee y se escribe en el mismo
  * comando (`sed -i`), como en la de DeepSeek. Lo que no se guarda —el manual,
  * borrar un fichero del sitio, lo que su puerta rechaza— vuelve a la terminal
@@ -446,6 +472,24 @@ export async function guardarLoDeLaTerminal(
   };
   for (const c of cambios) {
     if (c.tipo === "borrado") {
+      // LA CARPETA (pieza 9): un fichero de la carpeta se borra, como `rm` en
+      // cualquier proyecto, con su contenido archivado para deshacer. Una
+      // página, no: la quita el dueño en el editor.
+      if (isFolderPath(c.ruta) && deps.deleteProjectFile && Object.hasOwn(antes, c.ruta)) {
+        const detalle = rutaRelativa(c.ruta);
+        const { versionPrevia } = await deps.deleteProjectFile(session.projectId, c.ruta, {
+          before: antes[c.ruta]!,
+          ...etiquetaDeVersion(session, "bash", `rm ${detalle}`),
+        });
+        enLaTerminal[c.ruta] = null;
+        notas.push(`${detalle}: removed.`);
+        escrituras.push({
+          response: { ok: true, cambio: "cambio" },
+          action: { tool: "bash", ok: true, summary: `rm ${detalle}`, cambio: "cambio" },
+          ficherosTocados: [{ ruta: c.ruta, versionPrevia }],
+        });
+        continue;
+      }
       deshacer(c.ruta, "the terminal cannot delete files of the site (a page is removed by the user, in the editor).");
       continue;
     }
@@ -497,7 +541,7 @@ export async function guardarLoDeLaTerminal(
       enLaTerminal[c.ruta] = sinOpIds(o.updatedHtml);
     } else {
       const ahora = await virtualesDe(session, deps, (await deps.loadProject(session.projectId, session.userId))?.userBrief ?? null);
-      enLaTerminal[c.ruta] = ahora.memoria.get(c.ruta) ?? ahora.supabase.get(c.ruta) ?? c.contenido;
+      enLaTerminal[c.ruta] = ahora.memoria.get(c.ruta) ?? ahora.folder.get(c.ruta) ?? c.contenido;
     }
     notas.push(`${rutaRelativa(c.ruta)}: saved${c.crea && paginaDeRuta(c.ruta) ? " (new page)" : ""}.`);
   }
@@ -565,7 +609,11 @@ export async function guardarFichero(
   opts: { crea: boolean; etiqueta: string },
 ): Promise<Guardado> {
   const donde = paginaDeRuta(ruta);
-  if (!donde) return { ok: false, error: `Cannot write ${ruta}: this site only has pages, at /index.html and /<slug>/index.html.` };
+  if (!donde) {
+    // Ni página ni fichero de la carpeta: se dice qué vale (folder.ts).
+    const c = classifyFolderPath(ruta);
+    return { ok: false, error: c.ok ? `Cannot write ${ruta} here.` : c.reason };
+  }
   const page = donde.page;
 
   if (opts.crea && page !== null) {

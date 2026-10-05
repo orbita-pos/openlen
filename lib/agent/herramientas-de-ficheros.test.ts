@@ -751,19 +751,19 @@ describe("guardarLoDeLaTerminal — lo que escribe la terminal, por el camino de
     assert.match(r.notas[2]!, /^menu\/index\.html: not saved — the terminal cannot delete/);
   });
 
-  it("un fichero nuevo fuera de las páginas no se guarda y desaparece; una página nueva, sí", async () => {
+  it("un fichero nuevo que no es página ni cabe en la carpeta no se guarda y desaparece; una página nueva, sí", async () => {
     const { deps, store } = makeDeps(sitio());
     const r = await guardarLoDeLaTerminal(
       makeSession(),
       deps,
       [
-        { tipo: "escrito", ruta: "/notas.txt", contenido: "x", crea: true },
+        { tipo: "escrito", ruta: "/foto.png", contenido: "x", crea: true },
         { tipo: "escrito", ruta: "/clases/index.html", contenido: MENU.replace("<h1>Menú</h1>", "<h1>Clases</h1>"), crea: true },
       ],
       antes,
     );
-    assert.equal(r.enLaTerminal["/notas.txt"], null);
-    assert.match(r.notas[0]!, /^notas\.txt: not saved — .*only has pages.*It was removed\.$/);
+    assert.equal(r.enLaTerminal["/foto.png"], null);
+    assert.match(r.notas[0]!, /^foto\.png: not saved — .*text files only.*It was removed\.$/);
     assert.equal(r.notas[1], "clases/index.html: saved (new page).");
     assert.match(store.data.pages?.clases?.html ?? "", /<h1>Clases<\/h1>/);
   });
@@ -771,16 +771,6 @@ describe("guardarLoDeLaTerminal — lo que escribe la terminal, por el camino de
 
 describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas mínimas de F1)", () => {
   const CONTACTO = MENU.replace("<h1>Menú</h1>", "<h1>Contacto</h1>");
-  const conTerminal = async <T>(f: () => Promise<T>): Promise<T> => {
-    const antes = process.env.OPENLEN_TERMINAL;
-    process.env.OPENLEN_TERMINAL = "1";
-    try {
-      return await f();
-    } finally {
-      if (antes === undefined) delete process.env.OPENLEN_TERMINAL;
-      else process.env.OPENLEN_TERMINAL = antes;
-    }
-  };
 
   it("un `sed -i` sobre 3 páginas da 3 versiones, y las 3 páginas llegan al bucle", async () => {
     const { deps, store } = makeDeps({ html: HOME, pages: { menu: { html: MENU }, contacto: { html: CONTACTO } } });
@@ -1293,6 +1283,46 @@ describe("editar a mano en la lente «Código» (la #18 de plans/len-agente-2026
   });
 });
 
+/** El doble de la carpeta del proyecto (pieza 9): los ficheros en memoria y
+ *  cada «antes» archivado, con la misma forma que `realDeps`. */
+function conCarpeta(data: ProjectData) {
+  const base = makeDeps(data);
+  const archivos: Record<string, string> = {};
+  const versiones: { path: string; before: string | null; label: string; source: string }[] = [];
+  const archivar = (path: string, v: { before: string | null; label: string; source: string }) => {
+    versiones.push({ path, ...v });
+    return { versionPrevia: `fv${versiones.length}` };
+  };
+  const deps = {
+    ...base.deps,
+    async projectFiles() {
+      return { ...archivos };
+    },
+    async saveProjectFile(_p: string, ruta: string, contenido: string, v: { before: string | null; label: string; source: string }) {
+      const r = archivar(ruta, v);
+      archivos[ruta] = contenido;
+      return r;
+    },
+    async deleteProjectFile(_p: string, ruta: string, v: { before: string | null; label: string; source: string }) {
+      const r = archivar(ruta, v);
+      delete archivos[ruta];
+      return r;
+    },
+  } as unknown as AgentDeps;
+  return { deps, archivos, versiones, store: base.store };
+}
+
+const conTerminal = async <T>(f: () => Promise<T>): Promise<T> => {
+  const antes = process.env.OPENLEN_TERMINAL;
+  process.env.OPENLEN_TERMINAL = "1";
+  try {
+    return await f();
+  } finally {
+    if (antes === undefined) delete process.env.OPENLEN_TERMINAL;
+    else process.env.OPENLEN_TERMINAL = antes;
+  }
+};
+
 // EL BACKEND DEL PROYECTO (plans/pages-backend/design.md): sus migraciones son
 // ficheros de /supabase/, como en cualquier proyecto con la CLI de Supabase.
 // No son páginas: no pasan por la puerta de la página ni tocan el sitio.
@@ -1309,23 +1339,9 @@ describe("el backend: los ficheros de /supabase/", () => {
     }
   };
 
-  function conSupabase(data: ProjectData) {
-    const base = makeDeps(data);
-    const archivos: Record<string, string> = {};
-    const deps = {
-      ...base.deps,
-      async ficherosDeSupabase() {
-        return { ...archivos };
-      },
-      async guardarFicheroDeSupabase(_p: string, ruta: string, contenido: string) {
-        archivos[ruta] = contenido;
-      },
-    } as unknown as AgentDeps;
-    return { deps, archivos, store: base.store };
-  }
 
   it("🔴 Write crea la migración (sin tocar el sitio) y Read la abre", async () => {
-    const { deps, archivos, store } = conSupabase({ html: HOME });
+    const { deps, archivos, store } = conCarpeta({ html: HOME });
     const s = makeSession();
     const w = await runAgentTool(s, deps, "Write", { file_path: MIG, content: "create table notas (id int);\n" });
     assert.equal(w.response.ok, true, texto(w));
@@ -1336,7 +1352,7 @@ describe("el backend: los ficheros de /supabase/", () => {
   });
 
   it("Edit después de Read la cambia", async () => {
-    const { deps, archivos } = conSupabase({ html: HOME });
+    const { deps, archivos } = conCarpeta({ html: HOME });
     archivos[MIG] = "create table notas (id int);\n";
     const s = makeSession();
     await runAgentTool(s, deps, "Read", { file_path: MIG });
@@ -1346,14 +1362,14 @@ describe("el backend: los ficheros de /supabase/", () => {
   });
 
   it("Glob y Grep la ven", async () => {
-    const { deps, archivos } = conSupabase({ html: HOME });
+    const { deps, archivos } = conCarpeta({ html: HOME });
     archivos[MIG] = "create table notas (id int);\n";
     assert.equal(texto(await runAgentTool(makeSession(), deps, "Glob", { pattern: "supabase/**/*.sql" })), "supabase/migrations/20261004120000_init.sql");
     assert.match(texto(await runAgentTool(makeSession(), deps, "Grep", { pattern: "create table", output_mode: "files_with_matches" })), /supabase\/migrations/);
   });
 
   it("🔴 la terminal la ve, y lo que escribe ahí se guarda por el mismo camino", async () => {
-    const { deps, archivos } = conSupabase({ html: HOME });
+    const { deps, archivos } = conCarpeta({ html: HOME });
     archivos[MIG] = "create table notas (id int);\n";
     const s = makeSession();
     const ficheros = await cargarFicherosDeLaTerminal(s, deps);
@@ -1365,7 +1381,7 @@ describe("el backend: los ficheros de /supabase/", () => {
   });
 
   it("BRAZO DE CONTROL: un fichero de más de 256 KB no se guarda", async () => {
-    const { deps, archivos } = conSupabase({ html: HOME });
+    const { deps, archivos } = conCarpeta({ html: HOME });
     const w = await runAgentTool(makeSession(), deps, "Write", { file_path: MIG, content: "x".repeat(256 * 1024 + 1) });
     assert.equal(w.response.ok, false);
     assert.deepEqual(archivos, {});
@@ -1375,7 +1391,7 @@ describe("el backend: los ficheros de /supabase/", () => {
   // que se prueba aquí es el camino de la terminal; la CLI contra Postgres la
   // prueba lib/backend/cli-core.test.ts.
   it("🔴 bash: `supabase migration new` guarda la migración, y `supabase db push` aplica lo escrito en la terminal", async () => {
-    const { deps: base, archivos, store } = conSupabase({ html: HOME });
+    const { deps: base, archivos, store } = conCarpeta({ html: HOME });
     const aplicadas: { version: string; name: string; statements: string[] }[] = [];
     const deps = {
       ...base,
@@ -1413,5 +1429,93 @@ describe("el backend: los ficheros de /supabase/", () => {
     } finally {
       await cerrarTerminalDeLaSesion(session);
     }
+  });
+});
+
+// LA CARPETA DEL PROYECTO (pieza 9 de Len 2.5): los ficheros que no son páginas
+// —`js/`, `css/`, `data/*.json`, `sw.js`…— por las mismas herramientas y las
+// mismas guardas que una página, y cada cambio con su «antes» para deshacer.
+describe("la carpeta del proyecto (pieza 9)", () => {
+  it("🔴 Write crea /js/app.js sin tocar el sitio, archiva su «antes» (no existía) y Read lo abre", async () => {
+    const { deps, archivos, versiones, store } = conCarpeta({ html: HOME });
+    const s = makeSession();
+    const w = await runAgentTool(s, deps, "Write", { file_path: "/js/app.js", content: "console.log('hola');\n" });
+    assert.equal(w.response.ok, true, texto(w));
+    assert.equal(archivos["/js/app.js"], "console.log('hola');\n");
+    assert.equal(store.saved, 0);
+    assert.deepEqual(
+      versiones.map((v) => [v.path, v.before, v.source]),
+      [["/js/app.js", null, "chat"]],
+    );
+    assert.deepEqual(w.ficherosTocados, [{ ruta: "/js/app.js", versionPrevia: "fv1" }]);
+    assert.match(texto(await runAgentTool(s, deps, "Read", { file_path: "/js/app.js" })), /console\.log\('hola'\)/);
+  });
+
+  it("Edit tras Read lo cambia; Glob y Grep lo ven", async () => {
+    const { deps, archivos } = conCarpeta({ html: HOME });
+    archivos["/data/menu.json"] = '[{"plato":"sopa"}]';
+    const s = makeSession();
+    await runAgentTool(s, deps, "Read", { file_path: "/data/menu.json" });
+    const e = await runAgentTool(s, deps, "Edit", { file_path: "/data/menu.json", old_string: "sopa", new_string: "caldo" });
+    assert.equal(e.response.ok, true, texto(e));
+    assert.equal(archivos["/data/menu.json"], '[{"plato":"caldo"}]');
+    assert.equal(texto(await runAgentTool(s, deps, "Glob", { pattern: "data/*.json" })), "data/menu.json");
+    assert.match(
+      texto(await runAgentTool(s, deps, "Grep", { pattern: "caldo", output_mode: "files_with_matches" })),
+      /data\/menu\.json/,
+    );
+  });
+
+  it("🔴 una ruta reservada o una extensión de fuera se rechaza diciendo qué vale", async () => {
+    const { deps, archivos } = conCarpeta({ html: HOME });
+    const a = await runAgentTool(makeSession(), deps, "Write", { file_path: "/assets/x.js", content: "1" });
+    assert.equal(a.response.ok, false);
+    assert.match(texto(a), /reserved/);
+    const b = await runAgentTool(makeSession(), deps, "Write", { file_path: "/logo.png", content: "1" });
+    assert.equal(b.response.ok, false);
+    assert.match(texto(b), /\.js \.mjs \.css/);
+    assert.deepEqual(archivos, {});
+  });
+
+  it("🔴 la terminal la ve; sed -i la cambia y rm la borra (archivando); rm de una página, no", async () => {
+    const { deps, archivos, versiones } = conCarpeta({ html: HOME });
+    archivos["/css/site.css"] = "body{color:red}\n";
+    const s = makeSession();
+    assert.equal((await cargarFicherosDeLaTerminal(s, deps))["/css/site.css"], "body{color:red}\n");
+    try {
+      const sed = await conTerminal(() => runAgentTool(s, deps, "bash", { command: "sed -i 's/red/blue/' /css/site.css" }));
+      assert.equal(sed.response.ok, true, texto(sed));
+      assert.equal(archivos["/css/site.css"], "body{color:blue}\n");
+      const rm = await conTerminal(() => runAgentTool(s, deps, "bash", { command: "rm /css/site.css" }));
+      assert.equal(rm.response.ok, true, texto(rm));
+      assert.equal(archivos["/css/site.css"], undefined);
+      assert.equal(versiones.at(-1)?.before, "body{color:blue}\n");
+      assert.deepEqual(rm.ficherosTocados, [{ ruta: "/css/site.css", versionPrevia: `fv${versiones.length}` }]);
+      const rmPagina = await conTerminal(() => runAgentTool(s, deps, "bash", { command: "rm /index.html" }));
+      assert.equal(rmPagina.response.ok, false);
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
+
+  it("🔴 el editor del dueño cambia /data/menu.json pero no /js/app.js, y su versión dice que fue él", async () => {
+    const { deps, archivos, versiones } = conCarpeta({ html: HOME });
+    archivos["/data/menu.json"] = "[]";
+    archivos["/js/app.js"] = "console.log(1)";
+    const ok = await guardarAMano("p1", "u1", "/data/menu.json", "[1]", "[]", deps);
+    assert.equal(ok.ok, true);
+    assert.equal(archivos["/data/menu.json"], "[1]");
+    assert.equal(versiones.at(-1)?.source, "manual");
+    assert.match(versiones.at(-1)?.label ?? "", /^Code editor: /);
+    const no = await guardarAMano("p1", "u1", "/js/app.js", "console.log(2)", "console.log(1)", deps);
+    assert.equal(no.ok, false);
+    assert.equal(archivos["/js/app.js"], "console.log(1)");
+  });
+
+  it("BRAZO DE CONTROL: un fichero de más de 1 MiB no se guarda", async () => {
+    const { deps, archivos } = conCarpeta({ html: HOME });
+    const w = await runAgentTool(makeSession(), deps, "Write", { file_path: "/data/x.json", content: "x".repeat(1024 * 1024 + 1) });
+    assert.equal(w.response.ok, false);
+    assert.deepEqual(archivos, {});
   });
 });

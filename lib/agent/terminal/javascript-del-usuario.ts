@@ -81,3 +81,31 @@ export function codigoNuevo(despues: string, delSitio: ReadonlySet<string>): str
   // Sin «tu terminal»: lo dicen también el editor de la lente «Código» (la #18).
   return "the page's JavaScript (scripts, on… attributes, javascript: links, iframes) cannot be added or changed by hand — that is Len's job: ask in the chat.";
 }
+
+/**
+ * LA CARPETA (pieza 9 de Len 2.5): la misma regla para los ficheros. Un
+ * `.js`/`.mjs` es código entero: lo que el dueño escribe a mano sólo puede ser
+ * una COPIA de uno guardado (`cp`, `mv`). Un `.svg` puede llevar `<script>` y
+ * `on…`: lo activo tiene que estar ya en el sitio (sus páginas y sus SVG). Lo
+ * demás —datos, CSS, texto, y las pruebas, que no corren en el navegador del
+ * visitante— no ejecuta código: libre. Borrar no pasa por aquí: quitar código
+ * no lo añade.
+ */
+export function newCodeInFolderFile(path: string, content: string, savedBefore: Readonly<Record<string, string>>): string | null {
+  const ext = path.slice(path.lastIndexOf(".")).toLowerCase();
+  if (ext === ".js" || ext === ".mjs") {
+    const copia = Object.entries(savedBefore).some(([p, t]) => /\.m?js$/i.test(p) && t === content);
+    return copia ? null : "JavaScript files cannot be added or changed by hand — that is Len's job: ask in the chat.";
+  }
+  if (ext === ".svg") {
+    const delSitio = activoDelSitio(
+      Object.entries(savedBefore)
+        .filter(([p]) => /\.(?:html|svg)$/i.test(p))
+        .map(([, t]) => t),
+    );
+    return codigoNuevo(content, delSitio) === null
+      ? null
+      : "an SVG's scripts and on… attributes cannot be added or changed by hand — that is Len's job: ask in the chat.";
+  }
+  return null;
+}

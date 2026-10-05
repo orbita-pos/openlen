@@ -63,12 +63,23 @@ describe("Write", () => {
     expect(r.ok).toBe(true);
   });
 
-  it("un fichero que no es HTML no se puede crear, y no se inventa una sugerencia", () => {
-    const r = planearWrite({ file_path: "/styles.css", content: "x" }, sitio({ "/index.html": "x" }), new Map());
-    expect(r).toMatchObject({
-      ok: false,
-      resultado: { error: "Cannot create /styles.css: this site only has pages, at /index.html and /<slug>/index.html, and its Supabase files, under /supabase/." },
-    });
+  // LA CARPETA (pieza 9 de Len 2.5): además de las páginas, el proyecto lleva
+  // ficheros de texto como cualquier proyecto de Vercel. Lo que no cabe en ella
+  // se dice con su motivo.
+  it("🔴 un fichero de la carpeta (/styles.css, /js/app.js) sí se crea", () => {
+    for (const file_path of ["/styles.css", "/js/app.js", "/data/menu.json"]) {
+      const r = planearWrite({ file_path, content: "x" }, sitio({ "/index.html": "x" }), new Map());
+      expect(r, file_path).toMatchObject({ ok: true, ruta: file_path, crea: true });
+    }
+  });
+
+  it("un fichero que no cabe en la carpeta no se crea, dice qué vale y no se inventa una sugerencia", () => {
+    const r = planearWrite({ file_path: "/logo.png", content: "x" }, sitio({ "/index.html": "x" }), new Map());
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.resultado.texto.startsWith("<tool_use_error>Cannot create /logo.png: ")).toBe(true);
+    expect(r.resultado.texto).toContain("text files only (.js .mjs .css .json .webmanifest .txt .svg .md)");
+    expect(r.resultado.texto).not.toContain("Did you mean");
   });
 
   // El backend del proyecto (plans/pages-backend/design.md): sus migraciones son
@@ -87,15 +98,13 @@ describe("Write", () => {
     expect(r.ok).toBe(false);
   });
 
-  it("aquí sólo hay páginas: un fichero con otra forma no se puede crear, y se sugiere el que sí", () => {
+  it("una página con forma de fichero suelto no se crea, y se sugiere la que sí", () => {
     const r = planearWrite({ file_path: "/menu.html", content: "x" }, sitio({ "/index.html": "x" }), new Map());
-    expect(r).toMatchObject({
-      ok: false,
-      resultado: {
-        error:
-          "Cannot create /menu.html: this site only has pages, at /index.html and /<slug>/index.html, and its Supabase files, under /supabase/. Did you mean /menu/index.html?",
-      },
-    });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.resultado.texto.startsWith("<tool_use_error>Cannot create /menu.html: ")).toBe(true);
+    expect(r.resultado.texto).toContain("pages are /index.html and /<slug>/index.html");
+    expect(r.resultado.texto).toContain("Did you mean /menu/index.html?");
   });
 });
 

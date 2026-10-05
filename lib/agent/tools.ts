@@ -97,12 +97,24 @@ export type FetchedImage =
   | { ok: true; base64: string; mimeType: string }
   | { ok: false; error: string };
 
+/** Con qué se archiva el «antes» de un fichero de la carpeta, para deshacer. */
+export interface FileVersionNote {
+  /** Cómo estaba; `null` si no existía. */
+  readonly before: string | null;
+  readonly label: string;
+  /** `chat` si lo hizo Len; `manual` si fue el dueño (su terminal o el editor). */
+  readonly source: "chat" | "manual";
+}
+
 export interface AgentDeps {
-  /** El backend del proyecto (plans/pages-backend/design.md): sus ficheros de
-   *  `/supabase/` (las migraciones), por ruta. Opcional: sin él no hay. */
-  ficherosDeSupabase?(projectId: string): Promise<Record<string, string>>;
-  /** Guardar uno de esos ficheros. */
-  guardarFicheroDeSupabase?(projectId: string, ruta: string, contenido: string): Promise<void>;
+  /** LA CARPETA (pieza 9 de Len 2.5): los ficheros del proyecto que no son
+   *  páginas —`/supabase/`, `/tests/`, `js/`, `css/`, `data/`…—, por ruta.
+   *  Opcional: sin él no hay carpeta. */
+  projectFiles?(projectId: string): Promise<Record<string, string>>;
+  /** Guardar uno, archivando antes su «antes» (`projectFileVersions`). */
+  saveProjectFile?(projectId: string, path: string, content: string, version: FileVersionNote): Promise<{ versionPrevia: string | null }>;
+  /** Borrar uno, archivando lo que tenía. */
+  deleteProjectFile?(projectId: string, path: string, version: FileVersionNote): Promise<{ versionPrevia: string | null }>;
   /** La URL y la clave publicable del backend del proyecto, para el ESTADO;
    *  lo da de alta si aún no tiene (sin crear la base). `null` si este
    *  servidor no tiene el clúster de las páginas. */
@@ -337,6 +349,19 @@ export const conflictoRepetido = (veces: number) =>
  * lo cuenta, para que el cierre del turno diga lo que de verdad se cobró (N42:
  * un turno con búsquedas decía «1,46 créditos» y costó 5,96).
  */
+/** El «antes» de un fichero de la carpeta, archivado. `null` si no se pudo:
+ *  el cambio sigue, pero sin versión no hay deshacer y el turno no lo ofrece. */
+async function archivarAntes(projectId: string, path: string, version: FileVersionNote): Promise<string | null> {
+  try {
+    const { archiveFileVersion } = await import("@/lib/projects/file-versions");
+    return await archiveFileVersion({ projectId, path, content: version.before, label: version.label, source: version.source });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(`[agente] no se pudo archivar el «antes» de ${path}`, err);
+    return null;
+  }
+}
+
 export function realDeps(
   debit: (userId: string, centicreditos: number) => Promise<unknown> = debitCredits,
 ): AgentDeps {
@@ -344,14 +369,24 @@ export function realDeps(
     // F2 · la web: la de prueba en Len-Bench, Exa y `fetchRaw` fuera de él.
     // Lo buscado de verdad se cobra aparte del turno, como editar una imagen.
     web: webDelServidor(debit),
-    // El backend del proyecto (lib/backend): import perezoso, es server-only.
-    async ficherosDeSupabase(projectId) {
+    // LA CARPETA (lib/backend/files.ts): import perezoso, es server-only. Cada
+    // cambio archiva su «antes» para deshacer; si archivar falla, el cambio
+    // se guarda igual y el turno no ofrecerá deshacerlo (`versionPrevia` nulo).
+    async projectFiles(projectId) {
       const { listProjectFiles } = await import("@/lib/backend/files");
-      return listProjectFiles(projectId, "/supabase/");
+      return listProjectFiles(projectId);
     },
-    async guardarFicheroDeSupabase(projectId, ruta, contenido) {
+    async saveProjectFile(projectId, path, content, version) {
       const { saveProjectFile } = await import("@/lib/backend/files");
-      await saveProjectFile(projectId, ruta, contenido);
+      const versionPrevia = await archivarAntes(projectId, path, version);
+      await saveProjectFile(projectId, path, content);
+      return { versionPrevia };
+    },
+    async deleteProjectFile(projectId, path, version) {
+      const { deleteProjectFile } = await import("@/lib/backend/files");
+      const versionPrevia = await archivarAntes(projectId, path, version);
+      await deleteProjectFile(projectId, path);
+      return { versionPrevia };
     },
     async supabaseCli(projectId, args, ficheros) {
       const { runSupabaseCli } = await import("@/lib/backend/cli");
@@ -738,6 +773,11 @@ export interface ToolOutcome {
      *  para que el modelo no los pierda (H08-b, `lib/agent/valores-de-tema.ts`). */
     valores?: string;
   };
+  /** LA CARPETA (pieza 9): los ficheros que tocó la llamada, cada uno con la
+   *  versión de su «antes». Es lo que necesita «Deshacer» para devolver el
+   *  turno ENTERO (components/workspace-v2/panels/undo-turn.ts); `versionPrevia`
+   *  nulo = no se pudo archivar, y entonces el turno no se ofrece deshacer. */
+  ficherosTocados?: ReadonlyArray<{ readonly ruta: string; readonly versionPrevia: string | null }>;
   /** HTML nuevo (sin op-ids) para refrescar el iframe. */
   updatedHtml?: string;
   // ⚰️ Aquí viajaba `taggedHtml`, el gemelo con los `data-op-id` del motor, para
