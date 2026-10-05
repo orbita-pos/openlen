@@ -232,6 +232,16 @@ describe("buildAgentSystemPrompt", () => {
   // página guarda la suya, así que con el interruptor encendido el prompt es el
   // MISMO en todas: el Agente no tiene por qué saber en qué documento está para
   // saber si puede escribir JavaScript.
+  // PIEZA 2 DE LEN 2.5: el contexto se compacta solo (lib/agent/compaction/), así
+  // que el prompt ya puede decirlo — antes de existir habría sido mentira (§1.4,
+  // p. 11, de INVESTIGACION-2-5-AL-LIMITE.md). Claude Code dice lo mismo en su
+  // gestión del contexto; aquí con palabras nuestras, porque su texto no se copia.
+  it("le dice que lo viejo se resume solo y que termine lo pedido en vez de cerrar antes de tiempo", () => {
+    const p = instruccionesDeLen();
+    expect(p).toContain("its older part is summarized automatically");
+    expect(p).toContain("instead of wrapping up early or leaving it half done");
+  });
+
   it("el prompt le ofrece escribir JavaScript, esté en la página que esté", () => {
     const p = instruccionesDeLen();
     expect(p).toContain("<script>");
