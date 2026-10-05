@@ -77,8 +77,9 @@ const SIN_OCULTAR_EN =
 // nada: la cápsula murió el 26/08 y el editor dejó de borrar código el 29/09
 // (`deb2acc8`). Lo que sigue pasando es que el script del propio modelo FALLE,
 // y entonces lo escondido no se ve nunca. Es un fallo suyo, no nuestro, y por
-// eso la regla se queda (memoria `openlen-se-adapta-a-len`). Claude Code la
-// tiene igual, en su skill `artifact-design`: «la página completa en reposo; nada se queda en `opacity: 0` esperando a un observador».
+// eso la regla se queda (memoria `openlen-se-adapta-a-len`). Claude Code sigue
+// la misma regla al diseñar: la página tiene que estar completa en reposo, sin
+// nada en `opacity: 0` esperando a que un observador lo enseñe.
 // Crear y el Chat conservan la versión de arriba hasta medir Crear.
 // En inglés desde la traducción de lo que lee Len (rama len-agente-2026-en):
 // sólo la usa la cláusula `agente`, que sólo lee Len.

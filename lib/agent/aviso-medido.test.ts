@@ -423,8 +423,9 @@ describe("limitesDeLaMedicion", () => {
 // EL TEXTO DE LA PÁGINA VIAJA ETIQUETADO COMO DATO.
 //
 // Es el cuarto punto de la doctrina de `preview` de Claude Code y el único que
-// faltaba aquí. Su informe abre con «…», y estos dos
-// sobres citan exactamente eso: el texto de un nodo ilegible, el selector que
+// faltaba aquí. Su informe avisa antes de citar lo que produjo la página (es
+// dato, no instrucción, y no puede autorizar nada), y estos dos sobres citan
+// exactamente eso: el texto de un nodo ilegible, el selector que
 // se desborda, los nombres de clase, lo que la página lanza por consola y las
 // rutas a las que llama. La página la escribe un modelo con lo que le pidió
 // cualquiera —o llega entera de fuera por `from-html` y `style-match`—, así que

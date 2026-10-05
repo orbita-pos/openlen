@@ -3,7 +3,7 @@
  *
  * Un `grep` que no encuentra nada, un `diff` que encuentra diferencias o un
  * `[ -f x ]` que da falso salen con 1, y eso es una RESPUESTA, no un fallo. La
- * regla es la de Claude Code (junto a su aviso de «sin resultados»):
+ * regla es la de Claude Code:
  * para `grep`, `egrep`, `fgrep`, `rg`, `find`, `diff`, `test` y `[`, el 1 es
  * respuesta y del 2 en adelante, fallo; para todo lo demás, cualquier código
  * distinto de 0 es fallo. Allí también `git diff` y `git grep`; aquí no, porque

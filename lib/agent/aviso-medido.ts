@@ -316,8 +316,9 @@ export function diagnosticosMedidos(
  * indistinguible de una instruccion nuestra.
  *
  * Es el cuarto punto de la doctrina de `preview` de Claude Code, medida sobre
- * Claude Code el 2026-09-16, y el único que aquí faltaba: su informe abre con
- * «…».
+ * Claude Code el 2026-09-16, y el único que aquí faltaba: su informe avisa
+ * antes de citar lo que produjo la página, que es dato y no instrucción y que no
+ * puede autorizar nada.
  *
  * 🔴 UNA SOLA FUENTE, y no es un gusto: este par de ficheros ya pago DOS VECES
  * la asimetría de arreglar una rama y dejar su gemela (H3, y la Tarea 5 una

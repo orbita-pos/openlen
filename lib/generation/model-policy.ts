@@ -429,8 +429,8 @@ export function reasoningEffortAllowed(role: ModelRole, effort: FireworksReasoni
  * 🔴 EL INTERRUPTOR NO ES UN NIVEL. Un selector `none | medium | high` mezcla
  * una capacidad con una magnitud y tiene una posición que invalida al propio
  * mando. Claude Code lo resuelve en dos capas: `alwaysThinkingEnabled` apaga el
- * pensamiento, y entonces el selector NO está disponible — con este mensaje:
- * «…».
+ * pensamiento, y entonces el selector NO está disponible, y lo dice: ese nivel
+ * no existe con el pensamiento apagado en ese modelo.
  *
  * Se DICE en vez de esconderse, que es la otra mitad de su diseño.
  */

@@ -3,7 +3,7 @@ import { ESFUERZOS, type EsfuerzoAgente } from "./esfuerzo";
 /**
  * Las cuatro capas, en el orden de Claude Code.
  *
- * `CLAUDE_CODE_EFFORT_LEVEL` «manda sobre el esfuerzo de esta sesión» y está POR
+ * La variable de entorno de Claude Code manda en toda la sesión y está POR
  * ENCIMA de `/effort`, que a su vez está por encima del ajuste guardado. Aquí
  * el equivalente del primero es `OPENLEN_AGENT_EFFORT`: la palanca del
  * operador para clavar el esfuerzo en un incidente sin tocar la base ni

@@ -5,15 +5,14 @@
 // LA FORMA ES LA DEL SELECTOR DE MODELO DE Claude Code. Cada decisión de aquí
 // se puede cotejar allí:
 //
-//  - EL NOMBRE DEL MODELO ES EL MANDO. La entrada de `/model` en su menú se
-//    describe a sí misma como `el modelo de IA de Claude Code (ahora, Opus 5)`. Aquí la etiqueta tenue que ya decía el nombre es el botón; no se
-//    añade un icono nuevo al compositor.
-//  - LA PRIMERA FILA ES SIEMPRE EL DEFECTO. Como la suya: «Default
-//    (recommended)», con la descripción «Use the default model (currently X)».
-//    El «(ahora: …)» sale de la MISMA función que decide quién escribe, así que
+//  - EL NOMBRE DEL MODELO ES EL MANDO. La entrada de `/model` en su menú dice
+//    qué modelo está puesto ahora. Aquí la etiqueta tenue que ya decía el nombre
+//    es el botón; no se añade un icono nuevo al compositor.
+//  - LA PRIMERA FILA ES SIEMPRE EL DEFECTO, recomendada y diciendo cuál es
+//    ahora, como la suya. El «(ahora: …)» sale de la MISMA función que decide quién escribe, así que
 //    con una imagen adjunta cambia solo.
-//  - LA DESCRIPCIÓN ES LA OCASIÓN, nunca los tokens ni el precio. Como las
-//    suyas: «Best for everyday, complex tasks», «Fastest for quick answers».
+//  - LA DESCRIPCIÓN ES LA OCASIÓN (para qué tarea sirve), nunca los tokens ni
+//    el precio, como las suyas.
 //  - LAS FILAS DESHABILITADAS LLEVAN EL MOTIVO DENTRO, en el sitio de la
 //    descripción, y se hunden al fondo de la lista. Aquí sólo hay un motivo: el razonador no tiene ojos.
 //

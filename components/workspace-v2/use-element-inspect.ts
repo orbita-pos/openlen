@@ -349,10 +349,9 @@ ${CORE_SRC}
   // en ella era hablarle a nadie. El lienzo lo pintaba gracias a un CSS
   // forzado que no se guardaba, y la pagina guardada seguia igual.
   //
-  // Lo resuelven dos skills de Claude Code: artifact-design,
-  // «respeta lo que ya existe: el sistema propio del proyecto», y
-  // design-sync, «…», con su corolario:
-  // nombrar lo que no existe «sale sin estilo y sin avisar».
+  // Es el criterio de Claude Code al diseñar: respetar el sistema que el
+  // proyecto ya tiene y no traer un modismo que ese sistema no tiene, porque
+  // lo que nombra algo que no existe sale sin estilo y nadie se entera.
   //
   // Asi que antes de escribir se mira COMO esta cableada la pagina, no como se
   // llaman sus variables: que variable pinta el fondo del body, cual su texto,

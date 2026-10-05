@@ -62,8 +62,7 @@ export const users = pgTable("users", {
    *  NULL = no eligió = la fila «Automático», que es lo que decide la imagen.
    *  Igual que `agentEffort`: un ajuste de la PERSONA, no del proyecto — en
    *  Claude Code la elección del selector se guarda en los ajustes del usuario
-   *  («…»), no en el proyecto
-   *  abierto. Guarda el PAPEL, nunca un id de modelo: así el modelo y su
+   *  y vale para las sesiones nuevas, no en el proyecto abierto. Guarda el PAPEL, nunca un id de modelo: así el modelo y su
    *  tarifa siguen viajando juntos en `MODEL_POLICY`. */
   crearWriter: text("crearWriter"),
   image: text("image"),

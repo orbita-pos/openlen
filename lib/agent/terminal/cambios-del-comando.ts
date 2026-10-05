@@ -25,7 +25,7 @@ import { cambiosDeLaTerminal } from "./ficheros";
 /** La clave en la respuesta guardada del `bash`. */
 export const CLAVE_CAMBIOS_DEL_COMANDO = "cambios_del_comando";
 
-/** Los topes, como los de Claude Code. */
+/** Los topes de Claude Code. */
 export const MAX_FICHEROS = 5;
 export const LINEAS_POR_FICHERO = 40;
 export const DIFF_DEMASIADO_GRANDE = 400;

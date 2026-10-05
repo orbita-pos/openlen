@@ -261,7 +261,9 @@ export function reasonLine(action: AgentAction, t: ReturnType<typeof useTranslat
  * QUÉ CUBRE LA COMPROBACIÓN Y QUÉ NO — la frase que le faltaba al cierre.
  *
  * 🔴 Es lo que hace Claude Code en su informe de `preview`:
- * nunca dice «está bien» a secas, dice «…». Aquí la tarjeta decía «sin problemas» y punto, que
+ * nunca dice «está bien» a secas: dice que las comprobaciones mecánicas no
+ * encontraron nada, qué cubren (desbordes, recortes…) y que si la página se ve
+ * bien no lo dicen ellas, sino las capturas. Aquí la tarjeta decía «sin problemas» y punto, que
  * un creador lee como «la página está bien».
  *
  * Va en el `title` y no en la línea: el `summary` lleva `truncate`, y se midió
