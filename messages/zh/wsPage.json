@@ -36,6 +36,8 @@
       "leer_de_internet": "正在读取你给的网页",
       "preguntar": "正在向你确认",
       "ask_user_question": "正在向你确认",
+      "enter_plan_mode": "请求先做计划",
+      "exit_plan_mode": "正在提交计划",
       "session_search": "正在搜索以前的对话",
       "session_event_search": "正在一段以前的对话中搜索",
       "session_event_read": "正在阅读以前的对话",

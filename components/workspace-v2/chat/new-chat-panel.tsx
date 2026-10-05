@@ -275,6 +275,8 @@ function AgentChatView({
           onEffortChange={chat.changeEsfuerzo}
           mode={chat.mode}
           {...(chat.modeOffered ? { onModeChange: chat.setMode } : {})}
+          planMode={chat.planMode}
+          {...(chat.planOffered ? { onTogglePlan: chat.togglePlan } : {})}
         />
       </div>
       <ReplaceAssetModal

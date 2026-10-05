@@ -143,6 +143,18 @@ export function isQuestionTool(name: string): boolean {
   return name === ASK_USER_QUESTION || name === LEGACY_QUESTION_TOOL;
 }
 
+/** PIEZA 7 · las herramientas que le preguntan al dueño y esperan: la pregunta
+ *  y las dos del modo plan (el consentimiento para entrar, la revisión del
+ *  plan). Su tarjeta es una pregunta en el chat, en la barra, en el aviso del
+ *  cierre y en Len-Bench. Con los nombres en texto: `plan-mode.ts` ya importa
+ *  de aquí. */
+const ASKS_THE_OWNER: ReadonlySet<string> = new Set([ASK_USER_QUESTION, LEGACY_QUESTION_TOOL, "enter_plan_mode", "exit_plan_mode"]);
+
+/** ¿Le pregunta al dueño y espera su respuesta? */
+export function asksTheOwner(name: string): boolean {
+  return ASKS_THE_OWNER.has(name);
+}
+
 /** Los nombres viejos que siguen valiendo en lo GUARDADO, con el de hoy. */
 const LEGACY_TOOL_NAMES: Readonly<Record<string, string>> = { [LEGACY_QUESTION_TOOL]: ASK_USER_QUESTION };
 

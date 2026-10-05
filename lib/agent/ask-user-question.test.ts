@@ -1,7 +1,7 @@
 // ask_user_question (pieza 3 de Len 2.5): el esquema de DeepSeek, validado antes
 // de enseñar nada al dueño.
 import { describe, expect, it } from "vitest";
-import { isQuestionTool, questionsFrom, questionText, validateQuestions } from "./ask-user-question";
+import { isQuestionTool, questionsFrom, questionText, validateQuestions, asksTheOwner } from "./ask-user-question";
 
 describe("validateQuestions", () => {
   it("acepta la forma de DeepSeek y la normaliza", () => {
@@ -101,5 +101,12 @@ describe("la intención de la pregunta (pieza 7: revisión del plan y consentimi
       question: "Approve this plan and leave plan mode?",
     });
     expect(questionsFrom([{ ...revision, intent: { kind: "otra" } }])?.[0]?.intent).toBeUndefined();
+  });
+});
+
+describe("asksTheOwner (pieza 7)", () => {
+  it("la pregunta y las dos del modo plan le preguntan al dueño; las demás no", () => {
+    expect(["ask_user_question", "preguntar", "enter_plan_mode", "exit_plan_mode"].map(asksTheOwner)).toEqual([true, true, true, true]);
+    expect(asksTheOwner("Read")).toBe(false);
   });
 });

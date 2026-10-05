@@ -266,6 +266,28 @@
       "minimize": "Réduire en Len",
       "open": "Ouvrir le chat",
       "resize": "Faites glisser pour redimensionner"
+    },
+    "plan": {
+      "option": "Planifier d'abord",
+      "optionHint": "Len regarde d'abord et propose un plan ; rien ne change avant votre accord.",
+      "chip": "Plan",
+      "chipOff": "Quitter le mode plan",
+      "reviewLabel": "Plan à valider",
+      "reviewQuestion": "Approuver ce plan ?",
+      "approve": "Approuver",
+      "approveHint": "Len exécute le plan maintenant.",
+      "keep": "Demander des changements",
+      "keepHint": "Len continue de planifier avec vos remarques.",
+      "feedbackPlaceholder": "Que faudrait-il changer dans le plan ?",
+      "sendFeedback": "Envoyer les changements",
+      "consentLabel": "Mode plan",
+      "consentQuestion": "Len veut planifier avant de modifier quoi que ce soit. Planifier d'abord ?",
+      "planFirst": "Planifier d'abord",
+      "planFirstHint": "Rien ne change avant que vous approuviez le plan.",
+      "skip": "Sans plan",
+      "skipHint": "Len poursuit votre demande maintenant.",
+      "showPlan": "Voir tout le plan",
+      "hidePlan": "Masquer le plan"
     }
   }
 }

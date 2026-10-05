@@ -8,7 +8,7 @@
 // Es la forma de la barra de estado de Claude Code: dice qué hace, no cómo.
 
 import type { DesignTurn } from "./use-agent-chat";
-import { isQuestionTool, questionText, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { asksTheOwner, questionText, type UserQuestion } from "@/lib/agent/ask-user-question";
 
 /** Qué clase de trabajo hace la herramienta, en palabras de quien no programa. */
 export type Activity =
@@ -83,6 +83,9 @@ const ACTIVITY_OF: Readonly<Record<string, Activity>> = {
   preguntar: "asking",
   // Pieza 3 de Len 2.5: el nombre de hoy (`preguntar` se queda por lo guardado).
   ask_user_question: "asking",
+  // Pieza 7: pedir planear y presentar el plan también le preguntan al dueño.
+  enter_plan_mode: "asking",
+  exit_plan_mode: "asking",
   // Pieza 5: buscar y leer en las charlas pasadas es leer.
   session_search: "reading",
   session_event_search: "reading",
@@ -138,6 +141,9 @@ export type LiveStatus =
       /** Pieza 3: la pregunta espera DENTRO del turno (`ask_user_question`):
        *  Len sigue en cuanto contestes, y el ■ sigue valiendo. */
       readonly live?: true;
+      /** Pieza 7: es la revisión del plan o el consentimiento para entrar. Su
+       *  `question` es el inglés del servidor; la barra dice la suya traducida. */
+      readonly intent?: "plan-review" | "plan-consent";
     }
   /** El turno dejó una tarjeta de publicar sin tocar: te toca aprobarla. */
   | { readonly kind: "waiting"; readonly face: FaceState; readonly reason: "publish"; readonly question: null }
@@ -185,7 +191,7 @@ export function retryPhase(
 function lastQuestion(turn: Pick<DesignTurn, "actions" | "status">) {
   if (turn.status !== "applied") return null;
   const last = turn.actions?.[turn.actions.length - 1];
-  if (!last || !isQuestionTool(last.tool) || last.status === "error" || last.respuesta) return null;
+  if (!last || !asksTheOwner(last.tool) || last.status === "error" || last.respuesta) return null;
   return last;
 }
 
@@ -224,7 +230,15 @@ export function liveStatus(
     if (latest.compacting) return { kind: "compacting", face: "revisando" };
     // PIEZA 3: la pregunta espera DENTRO del turno: te toca, aunque el turno siga.
     if (latest.pendingQuestions?.length && !latest.answeredLive) {
-      return { kind: "waiting", face: "preguntando", reason: "question", question: questionText(latest.pendingQuestions), live: true };
+      const intent = latest.pendingQuestions[0]?.intent?.kind;
+      return {
+        kind: "waiting",
+        face: "preguntando",
+        reason: "question",
+        question: questionText(latest.pendingQuestions),
+        live: true,
+        ...(intent ? { intent } : {}),
+      };
     }
     const startedAt = latest.startedAt ?? null;
     const running = [...(latest.actions ?? [])].reverse().find((a) => a.status === "running");
@@ -254,7 +268,10 @@ export function liveStatus(
   }
   if (latest.status === "applied") {
     const question = questionOf(latest);
-    if (question !== null) return { kind: "waiting", face: "preguntando", reason: "question", question };
+    if (question !== null) {
+      const intent = questionsOf(latest)?.[0]?.intent?.kind;
+      return { kind: "waiting", face: "preguntando", reason: "question", question, ...(intent ? { intent } : {}) };
+    }
     if (latest.confirm && !o.settledConfirms?.has(latest.id)) {
       return { kind: "waiting", face: "preguntando", reason: "publish", question: null };
     }

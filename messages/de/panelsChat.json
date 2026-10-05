@@ -266,6 +266,28 @@
       "minimize": "Zu Len minimieren",
       "open": "Chat öffnen",
       "resize": "Ziehen, um die Größe zu ändern"
+    },
+    "plan": {
+      "option": "Zuerst planen",
+      "optionHint": "Len sieht sich zuerst um und schlägt einen Plan vor; nichts ändert sich, bis du ihn freigibst.",
+      "chip": "Plan",
+      "chipOff": "Planmodus verlassen",
+      "reviewLabel": "Plan zur Prüfung",
+      "reviewQuestion": "Diesen Plan freigeben?",
+      "approve": "Freigeben",
+      "approveHint": "Len setzt den Plan jetzt um.",
+      "keep": "Änderungen anfragen",
+      "keepHint": "Len plant mit deinen Hinweisen weiter.",
+      "feedbackPlaceholder": "Was soll sich am Plan ändern?",
+      "sendFeedback": "Änderungen senden",
+      "consentLabel": "Planmodus",
+      "consentQuestion": "Len möchte planen, bevor etwas geändert wird. Zuerst planen?",
+      "planFirst": "Zuerst planen",
+      "planFirstHint": "Nichts ändert sich, bis du den Plan freigibst.",
+      "skip": "Ohne Plan",
+      "skipHint": "Len macht jetzt mit deiner Anfrage weiter.",
+      "showPlan": "Ganzen Plan ansehen",
+      "hidePlan": "Plan ausblenden"
     }
   }
 }

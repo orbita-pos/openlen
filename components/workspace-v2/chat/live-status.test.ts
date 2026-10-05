@@ -117,6 +117,8 @@ describe("la barra viva", () => {
     expect(questionOf(t)).toBe("¿Cuántas horas antes?");
     expect(questionsOf(t)).toEqual(preguntas);
     expect(activityOf("ask_user_question")).toBe("asking");
+    // Pieza 7: las del modo plan, igual.
+    expect(["enter_plan_mode", "exit_plan_mode"].map(activityOf)).toEqual(["asking", "asking"]);
     // Pieza 5: buscar y leer en las charlas pasadas es leer.
     expect(["session_search", "session_event_search", "session_event_read"].map(activityOf)).toEqual(["reading", "reading", "reading"]);
   });
@@ -135,6 +137,19 @@ describe("la barra viva", () => {
     const t = turn({ actions: [{ tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Cuántas horas antes?", respuesta: "48" }] });
     expect(questionOf(t)).toBeNull();
     expect(liveStatus(t, { busy: false })).toEqual({ kind: "done", face: "terminado" });
+  });
+
+  it("🔴 pieza 7: una revisión del plan sin contestar al cerrar el turno es esperar, con su tarjeta", () => {
+    const preguntas = [{ id: "plan-review", question: "Approve this plan and leave plan mode?", intent: { kind: "plan-review" as const, plan: "# Plan" } }];
+    const t = turn({ actions: [{ tool: "exit_plan_mode", status: "done", summary: "", pregunta: "Approve this plan and leave plan mode?", preguntas }] });
+    expect(questionsOf(t)).toEqual(preguntas);
+    // Con su intención: la barra la dice en el idioma del dueño, no en el inglés del servidor.
+    expect(liveStatus(t, { busy: false })).toMatchObject({ kind: "waiting", reason: "question", intent: "plan-review" });
+    // Y la que espera dentro del turno, igual.
+    const viva = turn({ status: "streaming", startedAt: 1, pendingQuestions: preguntas, actions: [{ tool: "exit_plan_mode", status: "running", summary: "" }] });
+    expect(liveStatus(viva, { busy: true })).toMatchObject({ kind: "waiting", live: true, intent: "plan-review" });
+    // Contestada, no.
+    expect(questionOf(turn({ actions: [{ tool: "enter_plan_mode", status: "done", summary: "", respuesta: "Plan first" }] }))).toBeNull();
   });
 
   it("una pregunta de una fila vieja, sin su texto, sigue siendo esperar", () => {

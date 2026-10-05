@@ -12,7 +12,7 @@
 
 import { useState, type ReactNode, type RefObject } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowUp, Crosshair, ImageIcon, MessageSquare, Plus, Square, X } from "lucide-react";
+import { ArrowUp, Crosshair, ImageIcon, ListChecks, MessageSquare, Plus, Square, X } from "lucide-react";
 
 import { MandoEsfuerzo } from "../panels/mando-esfuerzo";
 import { ModePicker } from "../panels/mode-picker";
@@ -44,6 +44,8 @@ export function ChatComposer({
   onEffortChange,
   mode,
   onModeChange,
+  planMode = false,
+  onTogglePlan,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -67,6 +69,10 @@ export function ChatComposer({
   mode: AgentMode;
   /** Sin él no se ofrece Len Dynamis (el servidor no lo ofrece). */
   onModeChange?: (m: AgentMode) => void;
+  /** Pieza 7: el modo plan que se ve y quien lo cambia. Sin `onTogglePlan` no
+   *  se ofrece (el chat clásico no lo tiene). */
+  planMode?: boolean;
+  onTogglePlan?: () => void;
 }) {
   const t = useTranslations("panelsChat");
   const [plusOpen, setPlusOpen] = useState(false);
@@ -81,8 +87,17 @@ export function ChatComposer({
   return (
     <div>
       <div className="nc-composer relative rounded-[16px] border bd-strong bg-elev px-3 pb-[7px] pt-2 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition">
-        {(comments.length > 0 || scopedSelection || attachedImage) && (
+        {(comments.length > 0 || scopedSelection || attachedImage || (planMode && onTogglePlan)) && (
           <div className="mb-1 flex flex-wrap gap-1.5">
+            {/* PIEZA 7 · LA FICHA «PLAN», la de DeepSeek: está mientras dura el
+                modo plan y su ✕ lo apaga. Mientras Len trabaja no se toca (se
+                elige al mandar, como el modo y el esfuerzo). */}
+            {planMode && onTogglePlan && (
+              <Chip title={t("newChat.plan.optionHint")} onRemove={busy ? undefined : onTogglePlan} removeLabel={t("newChat.plan.chipOff")}>
+                <ListChecks size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+                <b className="shrink-0 font-semibold">{t("newChat.plan.chip")}</b>
+              </Chip>
+            )}
             {comments.map((c) => (
               <Chip key={c.id} title={c.texto} onRemove={() => onRemoveComment(c.id)} removeLabel={t("comentarios.quitar")}>
                 <MessageSquare size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
@@ -164,6 +179,19 @@ export function ChatComposer({
                     onAttachImage();
                   }}
                 />
+                {onTogglePlan && (
+                  <PlusOption
+                    icon={<ListChecks size={15} />}
+                    title={t("newChat.plan.option")}
+                    hint={t("newChat.plan.optionHint")}
+                    on={planMode}
+                    onLabel={t("newChat.composer.on")}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      onTogglePlan();
+                    }}
+                  />
+                )}
                 {onToggleSectionSelect && (
                   <PlusOption
                     icon={<Crosshair size={15} />}

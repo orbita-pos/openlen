@@ -40,7 +40,7 @@ import { SalidaEnLaTarjeta } from "../salida-en-la-tarjeta";
 import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 import { duracionLegible, procesoDelTurno } from "@/lib/workspace-v2/proceso-del-turno";
 import { activityOf, type Activity } from "./live-status";
-import { isQuestionTool } from "@/lib/agent/ask-user-question";
+import { asksTheOwner } from "@/lib/agent/ask-user-question";
 import type { DesignTurn } from "./use-agent-chat";
 
 const ICON_OF: Readonly<Record<Activity, LucideIcon>> = {
@@ -66,7 +66,7 @@ const ICON_OF: Readonly<Record<Activity, LucideIcon>> = {
 export function visibleSteps(actions: readonly AgentAction[] | undefined): AgentAction[] {
   const list = actions ?? [];
   // Pieza 3: una contestada dentro del turno (`respuesta`) sí es un paso.
-  return list.filter((a, i) => !(isQuestionTool(a.tool) && a.status !== "error" && !a.respuesta && i === list.length - 1));
+  return list.filter((a, i) => !(asksTheOwner(a.tool) && a.status !== "error" && !a.respuesta && i === list.length - 1));
 }
 
 /** Cuántas tarjetas de la terminal van antes de la `i`-ésima: su posición entre ellas. */
