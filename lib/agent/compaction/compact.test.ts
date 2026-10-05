@@ -75,6 +75,20 @@ describe("compactIfNeeded", () => {
     expect(out.messages[2]!.functionResponses![0]!.response.tool_result as string).not.toContain("/tmp/pruned");
   });
 
+  it("🔴 si guardar el fichero LANZA (la terminal se reinició), se poda igual, sin ruta, y no se lleva el turno por delante", async () => {
+    const ms: Message[] = [
+      { role: "system", content: "s" }, { role: "user", content: "manual" },
+      { role: "user", content: "", functionResponses: [{ name: "Read", response: { ok: true, tool_result: "a".repeat(20_000) } }] },
+      { role: "user", content: "sigue" },
+    ];
+    const out = await compactIfNeeded({
+      messages: ms, firstIndex: 2, pressureTokens: 6_000, policy: { thresholdTokens: 5_000, retainTokens: 10 }, trigger: "pressure",
+      summarize: vi.fn(), saveRecovery: async () => { throw new Error("worker terminated"); },
+    });
+    expect(out.pruned).toBe(1);
+    expect(out.messages[2]!.functionResponses![0]!.response.tool_result as string).not.toContain("/tmp/pruned");
+  });
+
   it("protectFrom: lo que el modelo aún no vio no se poda, aunque no sea el último mensaje", async () => {
     // Las respuestas de la vuelta y, detrás, la corrección del dueño: las dos sin ver.
     const ms: Message[] = [

@@ -46,7 +46,10 @@ export async function compactIfNeeded(o: CompactInput): Promise<CompactOutcome> 
     const stamp = Date.now();
     for (const { key, text } of oversizedResults(o.messages, protectFrom)) {
       const path = `/tmp/pruned/${stamp}-${key.replace(":", "-")}.txt`;
-      if (await o.saveRecovery(path, text)) paths.set(key, path);
+      // Un fichero que no se pudo dejar —la terminal se reinició a medias— no
+      // se nombra y ya está: el aviso de la poda sale sin ruta, y el turno sigue.
+      const saved = await o.saveRecovery(path, text).catch(() => false);
+      if (saved) paths.set(key, path);
     }
   }
   const pruned = pruneToolResults(o.messages, protectFrom, paths);
