@@ -32,8 +32,10 @@ describe("Caddy pasa el backend de las páginas a Next", () => {
 
 describe("el middleware de idiomas no toca el backend", () => {
   const src = readFileSync(join(process.cwd(), "middleware.ts"), "utf8");
-  // En el fuente el patrón va con las barras dobladas de un literal de JS.
-  const pattern = /matcher:\s*\["([^"]+)"\]/.exec(src)![1]!.replace(/\\\\/g, "\\");
+  // En el fuente el patrón va con las barras dobladas de un literal de JS. Es
+  // la PRIMERA entrada del `matcher`: la segunda (pieza 9, carril B) es la del
+  // host del lienzo, que sólo corre en `lienzo-*` (lib/lienzo/middleware-lienzo.test.ts).
+  const pattern = /matcher:\s*\[\s*"([^"]+)"/.exec(src)![1]!.replace(/\\\\/g, "\\");
   const matches = (path: string) => new RegExp(`^${pattern}$`).test(path);
 
   it("BRAZO DE CONTROL: el matcher sí casa una página de la app", () => {

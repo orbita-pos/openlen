@@ -17,8 +17,12 @@ vi.mock("@/lib/lienzo/documento", () => ({ documentoDeVista: mocks.documento }))
 vi.mock("@/lib/lienzo/almacen", () => ({ guardarDocumento: mocks.guardar }));
 
 import { POST } from "./route";
+import { etiquetaDeLienzo } from "@/lib/lienzo/host";
 
 const ID = "4f9c10cb-8781-48f1-b291-c5d146579f09";
+// La etiqueta es un HMAC del id con AUTH_SECRET (pieza 9 de Len 2.5).
+const SECRETO = "s3cr3t";
+const ETIQ = etiquetaDeLienzo(ID, { AUTH_SECRET: SECRETO })!;
 const pide = (body: unknown, host = "localhost:3007") =>
   new Request("http://localhost:3007/api/lienzo", {
     method: "POST",
@@ -29,6 +33,7 @@ const pide = (body: unknown, host = "localhost:3007") =>
 beforeEach(() => {
   vi.clearAllMocks();
   vi.unstubAllEnvs();
+  vi.stubEnv("AUTH_SECRET", SECRETO);
   mocks.auth.mockResolvedValue({ user: { id: "u1" } });
   mocks.limit.mockResolvedValue([
     { data: { html: "<p>g</p>", pages: { menu: { html: "<p>m</p>" } }, settings: {} }, title: "T", subdomain: null, logoUrl: null },
@@ -40,7 +45,7 @@ describe("POST /api/lienzo", () => {
     const res = await POST(pide({ projectId: ID, html: "<p>x</p>" }));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
-      url: "http://lienzo-4f9c10cb878148f1b291c5d146579f09.localhost:3007/api/lienzo/DOC1",
+      url: `http://${ETIQ}.localhost:3007/?__lienzo=DOC1`,
     });
     expect(mocks.guardar).toHaveBeenCalledWith(
       expect.objectContaining({ html: "<p>x</p><!--vista-->", projectId: ID, userId: "u1", pagina: null }),
@@ -58,6 +63,19 @@ describe("POST /api/lienzo", () => {
   it("404 si el proyecto no es tuyo", async () => {
     mocks.limit.mockResolvedValue([]);
     expect((await POST(pide({ projectId: ID, html: "x" }))).status).toBe(404);
+    expect(mocks.guardar).not.toHaveBeenCalled();
+  });
+
+  it("🔴 la página va en su ruta, como en la publicada (pieza 9)", async () => {
+    const res = await POST(pide({ projectId: ID, pagina: "menu", html: "<p>m</p>" }));
+    expect(await res.json()).toEqual({ url: `http://${ETIQ}.localhost:3007/menu/index.html?__lienzo=DOC1` });
+    expect(mocks.guardar).toHaveBeenCalledWith(expect.objectContaining({ pagina: "menu" }));
+  });
+
+  it("503 sin_host si no hay secreto con el que firmar la etiqueta", async () => {
+    vi.stubEnv("AUTH_SECRET", "");
+    const res = await POST(pide({ projectId: ID, html: "x" }));
+    expect(res.status).toBe(503);
     expect(mocks.guardar).not.toHaveBeenCalled();
   });
 

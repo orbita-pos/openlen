@@ -1,5 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { contentTypeFor as folderContentType, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import { lookupDomain } from "@/lib/custom-domains";
 import { NOT_FOUND_HTML } from "@/lib/publish/not-found-page";
 
@@ -64,6 +65,11 @@ const CONTENT_TYPES: Record<string, string> = {
 const HTML_CACHE =
   "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400";
 const ASSET_CACHE = "public, max-age=2592000, immutable";
+/** LA CARPETA (pieza 9 de Len 2.5): ficheros de nombre fijo, como `public/` en
+ *  Vercel — se revalidan siempre, o un `js/app.js` nuevo no llegaría y un
+ *  `sw.js` viejo dejaría a los visitantes en la versión de antes. Es lo mismo
+ *  que pone Caddy en `*.openlen.app` (`@carpeta`). */
+const FOLDER_CACHE = "public, max-age=0, must-revalidate";
 
 const SECURITY_HEADERS: Record<string, string> = {
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
@@ -158,6 +164,11 @@ function resolveFile(
 
   // Specific file under the current release.
   const absolutePath = path.join(subDir, ...releaseSegments, ...pathParts);
+  // Un fichero de la carpeta: su tipo y sin caché inmutable.
+  const ruta = `/${pathParts.join("/")}`;
+  if (isPublishableFolderPath(ruta)) {
+    return { absolutePath, contentType: folderContentType(ruta), cacheControl: FOLDER_CACHE };
+  }
   return {
     absolutePath,
     contentType: contentTypeFor(absolutePath),

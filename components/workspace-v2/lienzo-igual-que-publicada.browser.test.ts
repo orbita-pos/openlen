@@ -58,7 +58,15 @@
 import { readFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
+// La etiqueta del lienzo es un HMAC del id con AUTH_SECRET (pieza 9 de Len
+// 2.5): sin secreto no hay host. Antes de los imports, porque `HEX_HOST` se
+// calcula al cargar y la ruta lo vuelve a calcular con el mismo entorno.
+vi.hoisted(() => {
+  process.env.AUTH_SECRET ||= "prueba-del-lienzo";
+});
+
 import { GET } from "@/app/api/lienzo/[docId]/route";
 import { guardarDocumento, vaciarAlmacenParaPruebas } from "@/lib/lienzo/almacen";
 import { etiquetaDeLienzo } from "@/lib/lienzo/host";

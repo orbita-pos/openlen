@@ -362,6 +362,8 @@ export default defineConfig({
       "app/api/lienzo/route.test.ts",
       "app/api/assistant/[sub]/route.test.ts",
       "app/api/lienzo/[docId]/route.test.ts",
+      // El lienzo sirve el sitio entero (pieza 9 de Len 2.5).
+      "app/api/lienzo/site/**/*.test.ts",
       "lib/lecturas-de-users-proyectan.test.ts",
       "lib/ninguna-prueba-a-oscuras.test.ts",
       "components/workspace-v2/panels/mando-esfuerzo.test.tsx",
