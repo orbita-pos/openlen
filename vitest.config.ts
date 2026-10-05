@@ -577,6 +577,8 @@ export default defineConfig({
       "app/api/inbox/[conversationId]/reply/route.test.ts",
       // Len 2.1: volver a mirar un turno que sigue trabajando sin cliente.
       "app/api/agent/turno/[fila]/route.test.ts",
+      // Pieza 8: quitar el encargo.
+      "app/api/agent/encargo/route.test.ts",
       "app/api/usage/route.test.ts",
       // Task 5 — the fill surface that had no gate at all. Mocks fillTemplate
       // so the test drives the route's gate, not the filler's own sanitizer.

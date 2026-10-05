@@ -23,7 +23,7 @@
 
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
-import { turnoDeLaFila } from "@/lib/agent/direcciones";
+import { siguienteDeLaFila, turnoDeLaFila } from "@/lib/agent/direcciones";
 import { leerTurnoDelUsuario, marcarCortadaSiSigueEnCurso } from "@/lib/projects/chat";
 
 export const runtime = "nodejs";
@@ -47,9 +47,25 @@ export const GET = paraLaApp(async (
   if (!fila) return json({ error: "falta_fila" }, 400);
 
   const turno = await leerTurnoDelUsuario(fila, userId);
-  if (!turno) return json({ error: "turno_no_encontrado" }, 404);
+  if (!turno) {
+    // PIEZA 8 · la ronda siguiente de un encargo ya corre pero aún no abrió su
+    // fila (la abre pasada la puerta de créditos): es un turno en marcha, vacío.
+    // Sólo con el turno VIVO de este usuario; si no, el 404 de siempre.
+    const vivo = turnoDeLaFila(fila, userId);
+    if (vivo) {
+      return json({
+        turno: { id: fila, userText: "", assistantReasoning: "", status: "applied", appliedAt: Date.now(), enCurso: true },
+        turnoId: vivo,
+      });
+    }
+    return json({ error: "turno_no_encontrado" }, 404);
+  }
 
-  if (!turno.enCurso) return json({ turno });
+  if (!turno.enCurso) {
+    // Pieza 8: si esta fila dio paso a otra ronda del encargo, el chat pasa a ella.
+    const siguiente = siguienteDeLaFila(fila);
+    return json(siguiente ? { turno, siguiente } : { turno });
+  }
 
   const turnoId = turnoDeLaFila(fila, userId);
   if (turnoId) return json({ turno, turnoId });

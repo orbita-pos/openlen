@@ -14,6 +14,7 @@ import {
   goalRoundPrompt,
   goalValue,
   goalWrapup,
+  parseGoalSnapshot,
   pauseGoal,
   resumeGoal,
   startRound,
@@ -119,6 +120,17 @@ describe("las transiciones", () => {
 
   it("empezar una ronda cuenta, no es una mutación", () => {
     expect(startRound(nuevo())).toEqual(nuevo({ roundsStarted: 1 }));
+  });
+});
+
+describe("la foto que vuelve de la base o del cable", () => {
+  it("una válida pasa tal cual; lo demás es null", () => {
+    const b = nuevo({ phase: "blocked", blockedReason: { code: "round-limit", message: "x" } });
+    expect(parseGoalSnapshot(b)).toEqual(b);
+    expect(parseGoalSnapshot(nuevo())).toEqual(nuevo());
+    for (const roto of [null, "goal", { ...nuevo(), phase: "rara" }, { ...nuevo(), revision: "2" }, { ...nuevo(), id: 3 }]) {
+      expect(parseGoalSnapshot(roto)).toBeNull();
+    }
   });
 });
 

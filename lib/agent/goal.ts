@@ -185,6 +185,39 @@ export function startRound(goal: GoalSnapshot): GoalSnapshot {
   return { ...goal, roundsStarted: goal.roundsStarted + 1 };
 }
 
+const PHASES: readonly GoalPhase[] = ["active", "paused", "blocked", "complete"];
+
+/** La foto que vuelve de la base (un jsonb) o del cable (el chat): la válida tal
+ *  cual, y cualquier otra cosa, `null`. Un encargo roto no es un encargo. */
+export function parseGoalSnapshot(raw: unknown): GoalSnapshot | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const g = raw as Record<string, unknown>;
+  if (
+    typeof g.id !== "string" ||
+    typeof g.revision !== "number" ||
+    typeof g.objective !== "string" ||
+    !PHASES.includes(g.phase as GoalPhase) ||
+    typeof g.maxGoalRounds !== "number" ||
+    typeof g.roundsStarted !== "number"
+  ) {
+    return null;
+  }
+  const motivo = g.blockedReason as Record<string, unknown> | undefined;
+  const blockedReason =
+    motivo && typeof motivo.code === "string" && typeof motivo.message === "string"
+      ? { code: motivo.code, message: motivo.message }
+      : undefined;
+  return {
+    id: g.id,
+    revision: g.revision,
+    objective: g.objective,
+    phase: g.phase as GoalPhase,
+    maxGoalRounds: g.maxGoalRounds,
+    roundsStarted: g.roundsStarted,
+    ...(blockedReason ? { blockedReason } : {}),
+  };
+}
+
 /**
  * EL ENCARGO AL EMPEZAR EL TURNO, plegado de la conversación como el modo plan:
  * la foto de la última fila CON transcripción. Una fila caída (sin

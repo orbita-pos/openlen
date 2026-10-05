@@ -10,6 +10,8 @@ import { db, schema } from "@/lib/db";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { FilaDelHistorial, TranscripcionGuardada } from "@/lib/agent/transcripcion";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
+import { parseGoalSnapshot, type GoalSnapshot } from "@/lib/agent/goal";
+import { goalActivation } from "@/lib/agent/goal-activation";
 
 /** Las columnas de la fila SIN la transcripción (H4): el panel del chat no la
  *  usa, y son los resultados enteros de cada turno. Se calculan al usarse, no
@@ -31,50 +33,93 @@ export const ESTADO_EN_CURSO = "en_curso";
 export async function getChatMessages(
   projectId: string,
 ): Promise<StoredChatTurn[]> {
-  const [rows, planMode] = await Promise.all([
+  const [rows, estado] = await Promise.all([
     db
       .select(columnasDelPanel())
       .from(schema.projectChatMessages)
       .where(enCurso(projectId))
       .orderBy(asc(schema.projectChatMessages.createdAt))
       .limit(CHAT_LIMIT),
-    planModeOfConversation(projectId),
+    conversationStateOf(projectId),
   ]);
   const turns = rows.map(rowToTurn);
-  // Pieza 7: la foto va en el último turno cerrado, que es donde la busca el
-  // chat (`lastPlanMode`).
-  if (planMode) {
+  // Piezas 7 y 8: la foto va en el último turno cerrado, que es donde la busca
+  // el chat (`lastPlanMode`, el encargo).
+  if (estado.planMode || estado.goal) {
     for (let i = turns.length - 1; i >= 0; i--) {
       if (turns[i]!.enCurso) continue;
-      turns[i] = { ...turns[i]!, planMode: true };
+      turns[i] = {
+        ...turns[i]!,
+        ...(estado.planMode ? { planMode: true as const } : {}),
+        ...(estado.goal ? { goal: conActivacion(projectId, estado.goal) } : {}),
+      };
       break;
     }
   }
   return turns;
 }
 
+/** El encargo con la activación de ESTE proceso (tras un reinicio, desarmado). */
+function conActivacion(projectId: string, goal: GoalSnapshot): StoredChatTurn["goal"] {
+  return { ...goal, activation: goalActivation(projectId, goal.id) };
+}
+
 /**
- * PIEZA 7 · ¿sigue la charla en modo plan? Lo que pliega el servidor al empezar
- * el turno (`planModeFromRows`): la última fila cerrada CON transcripción. De UNA
- * fila, y es a propósito: leer `transcript->>'planMode'` obliga a Postgres a
- * descomprimir la transcripción entera (hasta `TOPE_TRANSCRIPCION`), y en las
- * 50 filas del panel eran megas en cada carga de proyecto. Si falla, la charla
- * se carga igual, sin modo plan: el turno siguiente lo dice (`plan`).
+ * PIEZAS 7 Y 8 · EL ESTADO DE LA CHARLA: si sigue en modo plan y su encargo. Lo
+ * que pliega el servidor al empezar el turno (`planModeFromRows`,
+ * `goalFromRows`): la última fila cerrada CON transcripción. De UNA fila, y es
+ * a propósito: leer `transcript->>'planMode'` obliga a Postgres a descomprimir
+ * la transcripción entera (hasta `TOPE_TRANSCRIPCION`), y en las 50 filas del
+ * panel eran megas en cada carga de proyecto. Si falla, la charla se carga
+ * igual, sin los dos: el turno siguiente los dice (`plan`, `goal`).
  */
-async function planModeOfConversation(projectId: string): Promise<boolean> {
+async function conversationStateOf(projectId: string): Promise<{ planMode: boolean; goal: GoalSnapshot | null }> {
   const t = schema.projectChatMessages;
   try {
     const rows = await db
-      .select({ planMode: sql<string | null>`${t.transcript}->>'planMode'` })
+      .select({
+        planMode: sql<string | null>`${t.transcript}->>'planMode'`,
+        goal: sql<unknown>`${t.transcript}->'goal'`,
+      })
       .from(t)
       .where(and(enCurso(projectId), ne(t.status, ESTADO_EN_CURSO), sql`jsonb_typeof(${t.transcript}) = 'object'`))
       .orderBy(desc(t.createdAt))
       .limit(1);
-    return rows[0]?.planMode === "true";
+    return { planMode: rows[0]?.planMode === "true", goal: parseGoalSnapshot(rows[0]?.goal) };
   } catch (err) {
-    console.warn("[chat] no se pudo leer el modo plan de la charla", err);
-    return false;
+    console.warn("[chat] no se pudo leer el estado de la charla", err);
+    return { planMode: false, goal: null };
   }
+}
+
+/**
+ * PIEZA 8 · QUITAR EL ENCARGO de la charla en curso (`POST /api/agent/encargo`).
+ * Lo duradero es la foto de la última fila cerrada con transcripción (la que
+ * pliega el servidor), así que se escribe `goal: null` en ESA fila: el pliegue
+ * deja de verlo. Comprueba el dueño del proyecto; quien llama comprueba que no
+ * corre ningún turno (que al cerrar escribiría su foto).
+ */
+export async function quitarEncargo(projectId: string, userId: string): Promise<"ok" | "no_encontrado"> {
+  const t = schema.projectChatMessages;
+  const propio = await db
+    .select({ id: schema.projects.id })
+    .from(schema.projects)
+    .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)))
+    .limit(1);
+  if (!propio[0]) return "no_encontrado";
+  const ultima = await db
+    .select({ id: t.id })
+    .from(t)
+    .where(and(enCurso(projectId), ne(t.status, ESTADO_EN_CURSO), sql`jsonb_typeof(${t.transcript}) = 'object'`))
+    .orderBy(desc(t.createdAt))
+    .limit(1);
+  if (ultima[0]) {
+    await db
+      .update(t)
+      .set({ transcript: sql`jsonb_set(${t.transcript}, '{goal}', 'null'::jsonb)` })
+      .where(eq(t.id, ultima[0].id));
+  }
+  return "ok";
 }
 
 /**
@@ -374,13 +419,19 @@ export async function leerTurnoDelUsuario(
   userId: string,
 ): Promise<StoredChatTurn | null> {
   const rows = await db
-    .select(columnasDelPanel())
+    // Pieza 8: y SU encargo (una fila: una sola transcripción que descomprimir),
+    // para que el chat que sigue las rondas sondeando vea cómo va.
+    .select({ ...columnasDelPanel(), goal: sql<unknown>`${schema.projectChatMessages.transcript}->'goal'` })
     .from(schema.projectChatMessages)
     .innerJoin(schema.projects, eq(schema.projects.id, schema.projectChatMessages.projectId))
     .where(and(eq(schema.projectChatMessages.id, id), eq(schema.projects.userId, userId)))
     .limit(1);
   const row = rows[0];
-  return row ? rowToTurn(row) : null;
+  if (!row) return null;
+  const { goal: crudo, ...fila } = row;
+  const turn = rowToTurn(fila);
+  const goal = parseGoalSnapshot(crudo);
+  return goal ? { ...turn, goal: conActivacion(fila.projectId, goal) } : turn;
 }
 
 /** Una fila que se quedó en curso sin nadie que la corra (el servidor se

@@ -1068,6 +1068,8 @@ async function correrTurno(
           upstreamAbort.abort();
         },
         filaId,
+        // Pieza 8: quitar el encargo espera a que no corra ningún turno aquí.
+        projectId,
       });
       emit("turno", { turnoId });
 
