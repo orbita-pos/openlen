@@ -54,6 +54,19 @@ export function json(body: unknown, status = 200, headers: Record<string, string
   return new Response(JSON.stringify(body), { status, headers: { ...JSON_HEADERS, ...headers } });
 }
 
+/** El cuerpo JSON de una petición (vacío = `{}`). */
+export async function readJsonBody(req: Request): Promise<Record<string, unknown>> {
+  const text = await req.text();
+  if (!text) return {};
+  try {
+    const v = JSON.parse(text) as unknown;
+    if (v && typeof v === "object" && !Array.isArray(v)) return v as Record<string, unknown>;
+  } catch {
+    // abajo
+  }
+  throw ERRORS.InvalidRequest("Body is not valid JSON");
+}
+
 function gatewayError(message: string, hint: string): Response {
   return json({ message, hint }, 401);
 }

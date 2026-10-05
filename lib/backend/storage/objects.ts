@@ -6,14 +6,32 @@
 // clave ni JWT (una ruta abierta), sólo lo de un bucket público; en un bucket
 // público el objeto se busca sin RLS, y en uno privado CON RLS.
 
+import { randomUUID } from "node:crypto";
+
 import { blobKey } from "./blob-store";
-import { asRole, asStorageAdmin, findBucket, findObject, type ObjectRow } from "./db";
+import {
+  asRole,
+  asStorageAdmin,
+  deleteObjects,
+  findBucket,
+  findObject,
+  insertObject,
+  searchObjects,
+  testPermission,
+  updateObject,
+  upsertObject,
+  type ObjectRow,
+} from "./db";
 import { ERRORS } from "./errors";
-import { json, type StorageContext, type StorageRoute } from "./handler";
+import { json, readJsonBody, type StorageContext, type StorageRoute } from "./handler";
+import { MAX_OBJECTS_PER_REQUEST, mustBeValidKey } from "./limits";
 import { objectHeaders, parseRangeHeader } from "./serve-headers";
 import { uploadFromRequest } from "./upload";
 
 const decode = (s: string) => decodeURIComponent(s);
+
+/** Su `MAX_OBJECTS_PER_DELETE_BATCH`. */
+const MAX_OBJECTS_PER_DELETE_BATCH = Math.floor(1000 / 2);
 
 function ownerOf(ctx: StorageContext): string | undefined {
   return typeof ctx.claims.sub === "string" ? ctx.claims.sub : undefined;
@@ -108,7 +126,7 @@ const createObject: StorageRoute = {
   },
 };
 
-const updateObject: StorageRoute = {
+const updateObjectRoute: StorageRoute = {
   method: "PUT",
   pattern: OBJ(""),
   async handle(req, ctx, m) {
@@ -173,8 +191,154 @@ const infoPublic: StorageRoute = {
   },
 };
 
+const str = (v: unknown, field: string): string => {
+  if (typeof v !== "string" || !v) throw ERRORS.InvalidRequest(`body must have required property '${field}'`);
+  return v;
+};
+
+/** listObjects.ts: `storage.search` como el rol. */
+const listObjects: StorageRoute = {
+  method: "POST",
+  pattern: /^\/object\/list\/([^/]+)\/?$/,
+  async handle(req, ctx, m) {
+    const b = await readJsonBody(req);
+    const sortBy = (b.sortBy ?? {}) as { column?: string; order?: string };
+    // object.ts `searchObjects`: el prefijo es siempre una carpeta.
+    let prefix = typeof b.prefix === "string" ? b.prefix : "";
+    if (prefix.length > 0 && !prefix.endsWith("/")) prefix = `${prefix}/`;
+    const rows = await asRole(ctx, (q) =>
+      searchObjects(q, decode(m[1]!), prefix, {
+        limit: typeof b.limit === "number" ? b.limit : undefined,
+        offset: typeof b.offset === "number" ? b.offset : undefined,
+        search: typeof b.search === "string" ? b.search : undefined,
+        sortBy,
+      }),
+    );
+    return json(rows);
+  },
+};
+
+/** deleteObjects.ts + object.ts `deleteObjects`: como el rol (lo que RLS no
+ *  deja no se borra), por lotes, y los blobs de lo borrado. */
+const deleteObjectsRoute: StorageRoute = {
+  method: "DELETE",
+  pattern: /^\/object\/([^/]+)\/?$/,
+  async handle(req, ctx, m) {
+    const bucketId = decode(m[1]!);
+    const b = await readJsonBody(req);
+    const prefixes = b.prefixes;
+    if (!Array.isArray(prefixes) || prefixes.some((p) => typeof p !== "string")) throw ERRORS.InvalidRequest("body must have required property 'prefixes'");
+    if (prefixes.length > MAX_OBJECTS_PER_REQUEST) {
+      throw ERRORS.InvalidRequest(`Bulk object requests are limited to ${MAX_OBJECTS_PER_REQUEST} objects per request.`);
+    }
+    const results: ObjectRow[] = [];
+    for (let i = 0; i < prefixes.length; i += MAX_OBJECTS_PER_DELETE_BATCH) {
+      const batch = prefixes.slice(i, i + MAX_OBJECTS_PER_DELETE_BATCH) as string[];
+      const gone = await asRole(ctx, (q) => deleteObjects(q, bucketId, batch));
+      await ctx.store.delete(gone.filter((o) => o.version).map((o) => blobKey(ctx.project.ref, bucketId, o.name, o.version!)));
+      results.push(...gone);
+    }
+    return json(results);
+  },
+};
+
+/** moveObject.ts + object.ts `moveObject`. */
+const moveObject: StorageRoute = {
+  method: "POST",
+  pattern: /^\/object\/move\/?$/,
+  async handle(req, ctx) {
+    const b = await readJsonBody(req);
+    const bucketId = str(b.bucketId, "bucketId");
+    const sourceKey = str(b.sourceKey, "sourceKey");
+    const destinationKey = str(b.destinationKey, "destinationKey");
+    const destinationBucket = typeof b.destinationBucket === "string" && b.destinationBucket ? b.destinationBucket : bucketId;
+    mustBeValidKey(destinationKey);
+    const owner = ownerOf(ctx);
+    const newVersion = randomUUID();
+    // RLS: ¿puede este rol ver el origen y dejarlo con su nombre nuevo?
+    await testPermission(ctx, async (q) => {
+      await findObject(q, bucketId, sourceKey);
+      await updateObject(q, bucketId, sourceKey, { name: destinationKey, bucket_id: destinationBucket, version: newVersion, owner });
+    });
+    const source = await asStorageAdmin(ctx, (q) => findObject(q, bucketId, sourceKey));
+    const from = blobKey(ctx.project.ref, bucketId, sourceKey, source.version ?? "");
+    const to = blobKey(ctx.project.ref, destinationBucket, destinationKey, newVersion);
+    if (bucketId === destinationBucket && sourceKey === destinationKey) {
+      return json({ message: "Successfully moved", Id: source.id, Key: source.name });
+    }
+    await ctx.store.copy(from, to);
+    try {
+      const moved = await asStorageAdmin(ctx, async (q) => {
+        await q(`select pg_advisory_xact_lock(hashtext($1))`, [`storage:${destinationBucket}/${destinationKey}`]);
+        const current = await findObject(q, bucketId, sourceKey, { forUpdate: true });
+        const row = await updateObject(q, bucketId, sourceKey, {
+          name: destinationKey,
+          bucket_id: destinationBucket,
+          version: newVersion,
+          owner,
+          metadata: current.metadata,
+          user_metadata: current.user_metadata,
+        });
+        return { row, oldVersion: current.version };
+      });
+      if (moved.oldVersion) await ctx.store.delete([blobKey(ctx.project.ref, bucketId, sourceKey, moved.oldVersion)]).catch(() => {});
+      return json({ message: "Successfully moved", Id: moved.row.id, Key: moved.row.name });
+    } catch (err) {
+      await ctx.store.delete([to]).catch(() => {});
+      throw err;
+    }
+  },
+};
+
+/** copyObject.ts + object.ts `copyObject` (con `copyMetadata`, su valor por defecto). */
+const copyObject: StorageRoute = {
+  method: "POST",
+  pattern: /^\/object\/copy\/?$/,
+  async handle(req, ctx) {
+    const b = await readJsonBody(req);
+    const bucketId = str(b.bucketId, "bucketId");
+    const sourceKey = str(b.sourceKey, "sourceKey");
+    const destinationKey = str(b.destinationKey, "destinationKey");
+    const destinationBucket = typeof b.destinationBucket === "string" && b.destinationBucket ? b.destinationBucket : bucketId;
+    const upsert = req.headers.get("x-upsert") === "true";
+    mustBeValidKey(destinationKey);
+    const owner = ownerOf(ctx);
+    const origin = await asRole(ctx, (q) => findObject(q, bucketId, sourceKey));
+    const probe = { bucket_id: destinationBucket, name: destinationKey, version: "1", owner, metadata: origin.metadata, user_metadata: origin.user_metadata };
+    await testPermission(ctx, (q) => (upsert ? upsertObject(q, probe).then(() => undefined) : insertObject(q, probe)));
+    const newVersion = randomUUID();
+    const to = blobKey(ctx.project.ref, destinationBucket, destinationKey, newVersion);
+    await ctx.store.copy(blobKey(ctx.project.ref, bucketId, sourceKey, origin.version ?? ""), to);
+    try {
+      const { row, previous } = await asStorageAdmin(ctx, async (q) => {
+        await q(`select pg_advisory_xact_lock(hashtext($1))`, [`storage:${destinationBucket}/${destinationKey}`]);
+        const existing = await findObject(q, destinationBucket, destinationKey, { forUpdate: true, dontErrorOnEmpty: true });
+        if (existing && !upsert) throw ERRORS.KeyAlreadyExists();
+        const row = await upsertObject(q, {
+          bucket_id: destinationBucket,
+          name: destinationKey,
+          owner,
+          version: newVersion,
+          metadata: { ...(origin.metadata ?? {}), lastModified: new Date().toISOString() },
+          user_metadata: origin.user_metadata,
+        });
+        return { row, previous: existing?.version ?? null };
+      });
+      if (previous) await ctx.store.delete([blobKey(ctx.project.ref, destinationBucket, destinationKey, previous)]).catch(() => {});
+      return json({ Id: row.id, Key: `${destinationBucket}/${destinationKey}`, ...row });
+    } catch (err) {
+      await ctx.store.delete([to]).catch(() => {});
+      throw err;
+    }
+  },
+};
+
 /** En orden: las rutas con prefijo fijo antes que `/object/:bucket/*`. */
 export const OBJECT_ROUTES: readonly StorageRoute[] = [
+  listObjects,
+  moveObject,
+  copyObject,
+  deleteObjectsRoute,
   infoPublic,
   getPublic("GET"),
   getPublic("HEAD"),
@@ -183,7 +347,7 @@ export const OBJECT_ROUTES: readonly StorageRoute[] = [
   get("authenticated/", false),
   head("authenticated/", false),
   createObject,
-  updateObject,
+  updateObjectRoute,
   get("", true),
   head("", true),
 ];

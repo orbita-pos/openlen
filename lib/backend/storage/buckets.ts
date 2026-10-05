@@ -16,20 +16,8 @@ import {
   type ListBucketOptions,
 } from "./db";
 import { ERRORS } from "./errors";
-import { json, type StorageContext, type StorageRoute } from "./handler";
+import { json, readJsonBody, type StorageContext, type StorageRoute } from "./handler";
 import { mustBeValidBucketName, normalizeAllowedMimeTypes, parseFileSizeToBytes } from "./limits";
-
-async function body(req: Request): Promise<Record<string, unknown>> {
-  const text = await req.text();
-  if (!text) return {};
-  try {
-    const v = JSON.parse(text) as unknown;
-    if (v && typeof v === "object" && !Array.isArray(v)) return v as Record<string, unknown>;
-  } catch {
-    // abajo
-  }
-  throw ERRORS.InvalidRequest("Body is not valid JSON");
-}
 
 function ownerOf(ctx: StorageContext): string | undefined {
   return typeof ctx.claims.sub === "string" ? ctx.claims.sub : undefined;
@@ -58,7 +46,7 @@ const createBucket: StorageRoute = {
   method: "POST",
   pattern: /^\/bucket\/?$/,
   async handle(req, ctx) {
-    const b = await body(req);
+    const b = await readJsonBody(req);
     const name = b.name;
     if (typeof name !== "string") throw ERRORS.InvalidRequest("body must have required property 'name'");
     const id = typeof b.id === "string" && b.id ? b.id : name;
@@ -122,7 +110,7 @@ const updateBucketRoute: StorageRoute = {
   async handle(req, ctx, m) {
     const id = decode(m[1]!);
     mustBeValidBucketName(id);
-    const b = await body(req);
+    const b = await readJsonBody(req);
     const fields = {
       public: typeof b.public === "boolean" ? b.public : undefined,
       file_size_limit: parseMaxSizeLimit(ctx, b.file_size_limit),

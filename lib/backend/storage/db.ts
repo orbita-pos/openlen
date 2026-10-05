@@ -188,6 +188,63 @@ export async function deleteObjects(q: TxQuery, bucketId: string, names: readonl
   return r.rows as unknown as ObjectRow[];
 }
 
+export interface SearchOptions {
+  readonly limit?: number;
+  readonly offset?: number;
+  readonly search?: string;
+  readonly sortBy?: { readonly column?: string; readonly order?: string };
+}
+
+const SEARCH_OBJECTS_MAX_LIMIT = 1500;
+const SEARCH_SORT_COLUMNS = ["name", "updated_at", "created_at", "last_accessed_at"];
+
+/** Su `searchObjects` (sin `exactMatch`): la función `storage.search` que crean
+ *  sus migraciones, como el rol (RLS decide qué se ve). */
+export async function searchObjects(q: TxQuery, bucketId: string, prefix: string, o: SearchOptions): Promise<Record<string, unknown>[]> {
+  const sortColumn = o.sortBy?.column ?? "name";
+  if (!SEARCH_SORT_COLUMNS.includes(sortColumn)) throw ERRORS.InvalidParameter("sortBy.column");
+  const order = (o.sortBy?.order ?? "asc").toLowerCase();
+  if (order !== "asc" && order !== "desc") throw ERRORS.InvalidParameter("sortBy.order");
+  const shouldEscape = sortColumn !== "name";
+  const safePrefix = shouldEscape ? escapeLike(prefix) : prefix;
+  const safeSearch = shouldEscape ? escapeLike(o.search || "") : o.search || "";
+  const limit = Math.min(o.limit || 100, SEARCH_OBJECTS_MAX_LIMIT);
+  const r = await q(
+    `select name, id, updated_at, created_at, last_accessed_at, metadata, version, archived_at, is_delete_marker, is_versioned
+       from storage.search($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    [safePrefix, bucketId, limit, (safePrefix + safeSearch).split("/").length, o.offset || 0, safeSearch, sortColumn, order, "exclude", "exclude"],
+  );
+  return r.rows;
+}
+
+/** Su `updateObject`: mueve la fila (nombre, bucket, versión, dueño). */
+export async function updateObject(
+  q: TxQuery,
+  bucketId: string,
+  name: string,
+  data: { name: string; bucket_id: string; version: string; owner: string | undefined; metadata?: unknown; user_metadata?: unknown },
+): Promise<ObjectRow> {
+  const { owner, owner_id } = ownerColumns(data.owner);
+  const sets = [`name = $1`, `bucket_id = $2`, `version = $3`, `owner = $4`, `owner_id = $5`];
+  const values: unknown[] = [data.name, data.bucket_id, data.version, owner, owner_id];
+  if (data.metadata !== undefined) {
+    values.push(json(data.metadata));
+    sets.push(`metadata = $${values.length}::jsonb`);
+  }
+  if (data.user_metadata !== undefined) {
+    values.push(json(data.user_metadata));
+    sets.push(`user_metadata = $${values.length}::jsonb`);
+  }
+  values.push(bucketId, name);
+  const r = await q(
+    `update storage.objects set ${sets.join(", ")} where bucket_id = $${values.length - 1} and name collate "C" = $${values.length} and archived_at is null returning *`,
+    values,
+  );
+  const row = r.rows[0] as unknown as ObjectRow | undefined;
+  if (!row) throw ERRORS.NoSuchKey();
+  return row;
+}
+
 /** Lo que ocupan todos los ficheros del proyecto (para el tope de 1 GB). */
 export async function projectUsageBytes(q: TxQuery): Promise<number> {
   const r = await q(`select coalesce(sum((metadata->>'size')::bigint), 0)::text as n from storage.objects`);
