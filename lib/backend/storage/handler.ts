@@ -125,7 +125,7 @@ function findRoute(method: string, path: string): { r: StorageRoute; m: RegExpEx
 
 /** El almacén de un proyecto: el suyo si lo trae (pruebas), si no, el del
  *  entorno. null = sin R2 en este servidor. */
-function storeFor(project: BackendProject): BlobStore | null {
+export function storeFor(project: BackendProject): BlobStore | null {
   return project.storage ? project.storage.store : pageBlobStore();
 }
 

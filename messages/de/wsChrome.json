@@ -372,7 +372,8 @@
     "copied": "Kopiert",
     "tabs": {
       "tables": "Tabellen",
-      "users": "Nutzer"
+      "users": "Nutzer",
+      "storage": "Storage"
     },
     "unavailable": {
       "title": "Die Datenbank ist hier nicht verfügbar",
@@ -425,6 +426,22 @@
       "page": "Seite {page} von {pages}",
       "prev": "Zurück",
       "next": "Weiter"
+    },
+    "storage": {
+      "list": "Buckets",
+      "public": "Öffentlich",
+      "private": "Privat",
+      "files": "{count, plural, one {# Datei} other {# Dateien}}",
+      "noBuckets": "Noch keine Buckets: Len legt sie in einer Migration an, oder deine Seite mit supabase.storage.createBucket.",
+      "empty": "Dieser Bucket ist leer.",
+      "name": "Name",
+      "type": "Typ",
+      "size": "Größe",
+      "updated": "Geändert",
+      "open": "Öffnen",
+      "delete": "Datei löschen",
+      "confirm": "Sicher?",
+      "deleted": "{name} gelöscht"
     }
   }
 }

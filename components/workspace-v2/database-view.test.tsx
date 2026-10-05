@@ -176,4 +176,59 @@ describe("la base de datos de la página", () => {
     expect(calls.find((c) => c.method === "POST")).toMatchObject({ url: "/api/projects/p1/backend/users", body: { email: "caro@tiendaluna.mx" } });
     expect(text()).toContain("Invitación enviada a caro@tiendaluna.mx");
   });
+
+  /* ── carril D: Storage (lib/backend/storage/dashboard.ts) ── */
+  const BUCKETS = {
+    buckets: [
+      { id: "fotos", public: true, files: 2, bytes: 1_572_864, fileSizeLimit: null, allowedMimeTypes: null },
+      { id: "facturas", public: false, files: 0, bytes: 0, fileSizeLimit: null, allowedMimeTypes: null },
+    ],
+  };
+  const FILES = {
+    files: [{ name: "u1/perfil.png", size: 1_048_576, mimetype: "image/png", updatedAt: "2026-10-04T12:00:00.000Z", url: "https://abcdefghijklmnopqrst.openlen.app/storage/v1/object/sign/fotos/u1/perfil.png?token=t" }],
+  };
+  const storageRoutes = (c: Call) =>
+    c.url.endsWith("/backend")
+      ? READY
+      : c.url.includes("/tables/")
+        ? ROWS
+        : c.method === "DELETE"
+          ? { ok: true }
+          : c.url.includes("?bucket=")
+            ? FILES
+            : BUCKETS;
+
+  it("Storage: los buckets (público o privado, cuántos ficheros, cuánto) y los ficheros del primero, con su enlace", async () => {
+    stubFetch(storageRoutes);
+    await render();
+    await click(button("Storage"));
+    expect(text()).toContain("fotos");
+    expect(text()).toContain("Público");
+    expect(text()).toContain("facturas");
+    expect(text()).toContain("Privado");
+    expect(calls.map((c) => c.url)).toContain("/api/projects/p1/backend/storage?bucket=fotos");
+    expect(text()).toContain("u1/perfil.png");
+    expect(text()).toContain("1 MB");
+    const link = host.querySelector('a[href*="/object/sign/fotos/u1/perfil.png"]') as HTMLAnchorElement;
+    expect(link.target).toBe("_blank");
+    expect(link.rel).toContain("noopener");
+  });
+
+  it("🔴 Storage: borrar un fichero pide dos clics y manda bucket y nombre", async () => {
+    stubFetch(storageRoutes);
+    await render();
+    await click(button("Storage"));
+    const trash = () => host.querySelector('button[title="Borrar fichero"]')!;
+    await click(trash());
+    expect(calls.some((c) => c.method === "DELETE")).toBe(false);
+    await click(trash());
+    expect(calls.find((c) => c.method === "DELETE")).toMatchObject({ url: "/api/projects/p1/backend/storage", body: { bucket: "fotos", name: "u1/perfil.png" } });
+  });
+
+  it("Storage sin buckets: lo dice", async () => {
+    stubFetch((c) => (c.url.endsWith("/backend") ? READY : c.url.includes("/tables/") ? ROWS : { buckets: [] }));
+    await render();
+    await click(button("Storage"));
+    expect(text()).toContain("Todavía no hay buckets");
+  });
 });

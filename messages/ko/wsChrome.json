@@ -372,7 +372,8 @@
     "copied": "복사됨",
     "tabs": {
       "tables": "테이블",
-      "users": "사용자"
+      "users": "사용자",
+      "storage": "Storage"
     },
     "unavailable": {
       "title": "여기서는 데이터베이스를 사용할 수 없습니다",
@@ -425,6 +426,22 @@
       "page": "{pages}쪽 중 {page}쪽",
       "prev": "이전",
       "next": "다음"
+    },
+    "storage": {
+      "list": "Buckets",
+      "public": "공개",
+      "private": "비공개",
+      "files": "{count, plural, other {파일 #개}}",
+      "noBuckets": "아직 버킷이 없습니다. Len이 마이그레이션으로 만들거나, 페이지가 supabase.storage.createBucket으로 만듭니다.",
+      "empty": "이 버킷은 비어 있습니다.",
+      "name": "이름",
+      "type": "유형",
+      "size": "크기",
+      "updated": "수정됨",
+      "open": "열기",
+      "delete": "파일 삭제",
+      "confirm": "확실한가요?",
+      "deleted": "{name} 삭제됨"
     }
   }
 }

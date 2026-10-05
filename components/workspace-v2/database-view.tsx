@@ -16,6 +16,8 @@ import {
   ChevronRight,
   Copy,
   Database,
+  ExternalLink,
+  HardDrive,
   LogOut,
   Plus,
   RefreshCw,
@@ -27,6 +29,7 @@ import {
 } from "lucide-react";
 
 import type { ColumnInfo, PanelUser, Row, TableInfo } from "@/lib/backend/dashboard";
+import type { PanelBucket, PanelFile } from "@/lib/backend/storage/dashboard";
 
 type Overview =
   | { readonly status: "loading" }
@@ -52,7 +55,7 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function DatabaseView({ projectId }: { projectId: string | null }) {
   const t = useTranslations("wsChrome.database");
-  const [tab, setTab] = useState<"tables" | "users">("tables");
+  const [tab, setTab] = useState<"tables" | "users" | "storage">("tables");
   const [overview, setOverview] = useState<Overview>({ status: "loading" });
 
   const load = useCallback(async () => {
@@ -95,6 +98,7 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
           <div role="tablist" aria-label={t("title")} className="flex gap-1 px-3 sm:px-5">
             <TabButton active={tab === "tables"} onClick={() => setTab("tables")} icon={<Table2 size={14} />} label={t("tabs.tables")} />
             <TabButton active={tab === "users"} onClick={() => setTab("users")} icon={<Users size={14} />} label={t("tabs.users")} />
+            <TabButton active={tab === "storage"} onClick={() => setTab("storage")} icon={<HardDrive size={14} />} label={t("tabs.storage")} />
           </div>
         ) : (
           <div className="h-3" />
@@ -130,8 +134,10 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
         {overview.status === "ready" && projectId && (
           tab === "tables" ? (
             <TablesTab projectId={projectId} tables={overview.tables} />
-          ) : (
+          ) : tab === "users" ? (
             <UsersTab projectId={projectId} />
+          ) : (
+            <StorageTab projectId={projectId} />
           )
         )}
       </div>
@@ -655,6 +661,165 @@ function UsersTab({ projectId }: { projectId: string }) {
           </button>
         </footer>
       )}
+    </div>
+  );
+}
+
+// ─── Storage (carril D: lib/backend/storage/dashboard.ts) ───────────────────
+
+/** 1048576 → «1 MB»: en base 1024, como el navegador de ficheros de Supabase. */
+function useBytes() {
+  const locale = useLocale();
+  const nf = useMemo(() => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }), [locale]);
+  return (n: number | null) => {
+    if (n === null) return "—";
+    const units = ["B", "KB", "MB", "GB"];
+    let v = n;
+    let i = 0;
+    while (v >= 1024 && i < units.length - 1) {
+      v /= 1024;
+      i++;
+    }
+    return `${nf.format(v)} ${units[i]}`;
+  };
+}
+
+function StorageTab({ projectId }: { projectId: string }) {
+  const t = useTranslations("wsChrome.database.storage");
+  const tDb = useTranslations("wsChrome.database");
+  const locale = useLocale();
+  const bytes = useBytes();
+  const when = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }), [locale]);
+  const base = `/api/projects/${projectId}/backend/storage`;
+  const [buckets, setBuckets] = useState<readonly PanelBucket[] | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [files, setFiles] = useState<readonly PanelFile[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const loadBuckets = useCallback(async () => {
+    setError(null);
+    try {
+      const r = await call<{ buckets: PanelBucket[] }>(base);
+      setBuckets(r.buckets);
+      setSelected((s) => (s && r.buckets.some((b) => b.id === s) ? s : (r.buckets[0]?.id ?? null)));
+    } catch (e) {
+      setError(errorText(e));
+    }
+  }, [base]);
+
+  const loadFiles = useCallback(async () => {
+    if (!selected) return;
+    setFiles(null);
+    try {
+      setFiles((await call<{ files: PanelFile[] }>(`${base}?bucket=${encodeURIComponent(selected)}`)).files);
+    } catch (e) {
+      setError(errorText(e));
+    }
+  }, [base, selected]);
+
+  useEffect(() => {
+    void loadBuckets();
+  }, [loadBuckets]);
+  useEffect(() => {
+    void loadFiles();
+  }, [loadFiles]);
+
+  const remove = async (name: string) => {
+    if (!selected) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await call(base, { method: "DELETE", body: JSON.stringify({ bucket: selected, name }) });
+      setNotice(t("deleted", { name }));
+      await Promise.all([loadBuckets(), loadFiles()]);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!buckets && !error) return <Centered>{tDb("loading")}</Centered>;
+  if (buckets && buckets.length === 0) return <Centered><p className="max-w-sm text-[13px] text-zinc-500">{t("noBuckets")}</p></Centered>;
+
+  return (
+    <div className="flex-1 min-w-0 flex">
+      <nav aria-label={t("list")} className="w-52 shrink-0 overflow-y-auto nice-scroll border-r border-zinc-200 p-2 dark:border-zinc-800">
+        {buckets?.map((b) => (
+          <button
+            key={b.id}
+            type="button"
+            onClick={() => setSelected(b.id)}
+            aria-current={b.id === selected ? "true" : undefined}
+            className={`flex w-full flex-col rounded-md px-2 py-1.5 text-left text-[13px] transition ${
+              b.id === selected ? "bg-zinc-100 font-medium dark:bg-zinc-900" : "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-900/60"
+            }`}
+          >
+            <span className="flex items-center gap-1.5">
+              <HardDrive size={13} className="shrink-0 text-zinc-400" />
+              <span className="truncate">{b.id}</span>
+              <span className={`ml-auto shrink-0 text-[10.5px] ${b.public ? "text-amber-600" : "text-zinc-400"}`}>{b.public ? t("public") : t("private")}</span>
+            </span>
+            <span className="pl-5 text-[11px] font-normal text-zinc-500">
+              {t("files", { count: b.files })} · {bytes(b.bytes)}
+            </span>
+          </button>
+        ))}
+      </nav>
+      <div className="flex-1 min-w-0 flex flex-col">
+        {error && <p role="alert" className="border-b border-red-200 bg-red-50 px-4 py-2 text-[12px] text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
+        {notice && <p role="status" className="border-b border-emerald-200 bg-emerald-50 px-4 py-2 text-[12px] text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">{notice}</p>}
+        <div className="flex-1 min-h-0 overflow-auto nice-scroll">
+          {!files ? (
+            <p className="p-8 text-center text-[13px] text-zinc-500">{tDb("loading")}</p>
+          ) : files.length === 0 ? (
+            <p className="p-8 text-center text-[13px] text-zinc-500">{t("empty")}</p>
+          ) : (
+            <table className="min-w-full border-separate border-spacing-0 text-[12.5px]">
+              <thead className="sticky top-0 bg-app">
+                <tr>
+                  {[t("name"), t("type"), t("size"), t("updated")].map((h) => (
+                    <th key={h} scope="col" className="border-b border-zinc-200 px-4 py-1.5 text-left font-medium dark:border-zinc-800">
+                      {h}
+                    </th>
+                  ))}
+                  <th aria-hidden className="border-b border-zinc-200 dark:border-zinc-800" />
+                </tr>
+              </thead>
+              <tbody>
+                {files.map((f) => (
+                  <tr key={f.name} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40">
+                    <td className="border-b border-zinc-200 px-4 py-2 font-mono dark:border-zinc-800">{f.name}</td>
+                    <td className="border-b border-zinc-200 px-4 py-2 text-zinc-500 dark:border-zinc-800">{f.mimetype ?? "—"}</td>
+                    <td className="border-b border-zinc-200 px-4 py-2 tabular-nums text-zinc-500 dark:border-zinc-800">{bytes(f.size)}</td>
+                    <td className="border-b border-zinc-200 px-4 py-2 tabular-nums text-zinc-500 dark:border-zinc-800">
+                      {f.updatedAt ? when.format(new Date(f.updatedAt)) : "—"}
+                    </td>
+                    <td className="border-b border-zinc-200 px-2 py-1 text-right dark:border-zinc-800">
+                      <div className="inline-flex gap-1">
+                        <a
+                          href={f.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={t("open")}
+                          aria-label={t("open")}
+                          className="inline-flex h-7 items-center rounded-md px-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-900"
+                        >
+                          <ExternalLink size={13} />
+                        </a>
+                        <ConfirmButton label={t("delete")} confirmLabel={t("confirm")} icon={<Trash2 size={13} />} disabled={busy} onConfirm={() => void remove(f.name)} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
