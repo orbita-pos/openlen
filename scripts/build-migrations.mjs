@@ -131,6 +131,11 @@ const targets = [
   // tabla renewalReminders. Tabla NUEVA con IF NOT EXISTS; sólo la lee la tarea
   // diaria, así que no impone orden.
   "renewal-reminders-migrate",
+  // La carpeta del proyecto (pieza 9 de Len 2.5): `projects.filesHash`,
+  // `projects.publishedFilesHash` y la tabla projectFileVersions. Aditiva e
+  // idempotente. 🔴 OBLIGATORIA antes que el código: `getProject` SELECCIONA
+  // las dos columnas para «cambios sin publicar».
+  "folder-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

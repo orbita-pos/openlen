@@ -197,6 +197,8 @@ export default defineConfig({
       "lib/ai/runtime-capability.test.ts",
       "lib/projects/page-runtimes.test.ts",
       "lib/projects/miniatura-en-vuelo.test.ts",
+      // La carpeta (pieza 9 de Len 2.5): su huella publicable.
+      "lib/projects/files-hash.test.ts",
       "lib/publish/model-runtime-locales.test.ts",
       // Un idioma pedido que no sale tiene que OÍRSE: el fallo era mudo y por
       // eso la traducción vivió cinco meses sin producir una sola página.
