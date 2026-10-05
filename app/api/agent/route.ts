@@ -159,12 +159,15 @@ const MODEL_WINDOW_TOKENS = 1_048_576;
 // umbral vale para los dos.
 const MAX_LOOP_OUTPUT_TOKENS = DYNAMIS_MAX_OUTPUT_TOKENS;
 const MAX_PROMPT_TOKENS = MODEL_WINDOW_TOKENS - MAX_LOOP_OUTPUT_TOKENS;
-// LA VENTANA EFECTIVA, donde empieza a compactar (pieza 2 de Len 2.5): la decide
-// el COSTE, no el modelo (§2 de plans/len-agente-2026/INVESTIGACION-2-5-AL-LIMITE.md),
-// y la elige Jesús. Hasta que la elija, la de antes.
-const AGENT_EFFECTIVE_WINDOW_TOKENS = 240_000;
+// DÓNDE EMPIEZA A COMPACTAR (pieza 2 de Len 2.5): sobre la ventana REAL del
+// modelo, como DeepSeek, que deriva su umbral del `contextWindow` del modelo
+// (1.000.000 en su catálogo para este mismo DeepSeek-V41-Flash,
+// packages/llm/llm-deepseek/src/defaults.ts @ 5badb15). Jesús, 05/10: las dudas
+// se deciden como DeepSeek o Claude Code. ⚰️ Era una «ventana efectiva» de
+// 240.000 elegida por coste, pendiente de él. El coste de un turno largo lo
+// sigue acotando el techo de dinero del turno (`techoDelTurno`).
 const COMPACTION_POLICY = resolveCompaction({
-  windowTokens: AGENT_EFFECTIVE_WINDOW_TOKENS,
+  windowTokens: MODEL_WINDOW_TOKENS,
   maxOutputTokens: MAX_LOOP_OUTPUT_TOKENS,
 });
 

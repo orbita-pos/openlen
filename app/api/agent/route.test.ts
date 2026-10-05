@@ -2243,7 +2243,7 @@ describe("POST /api/agent — la compactación dentro del turno", () => {
     mocks.getCreditState.mockResolvedValue({ balance: 100 });
   });
 
-  it("el bucle recibe la política de DeepSeek (240k efectivos), el historial como primer resumible, y el techo es la ventana real", async () => {
+  it("el bucle recibe la política de DeepSeek sobre la ventana REAL del modelo, el historial como primer resumible, y el techo es la ventana real", async () => {
     let compaction: AgentLoopArgs["compaction"];
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
       compaction = args.compaction;
@@ -2252,8 +2252,9 @@ describe("POST /api/agent — la compactación dentro del turno", () => {
     await readEvents(
       await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "hazme el sitio" }) })),
     );
-    // floor(min(240.000 × 0,8, 240.000 − 65.536 − 65.536)) y 16 % de (240.000 − 65.536).
-    expect(compaction?.policy).toEqual({ thresholdTokens: 108_928, retainTokens: 27_914 });
+    // Como DeepSeek (W = la ventana del modelo): floor(min(1.048.576 × 0,8,
+    // 1.048.576 − 65.536 − 65.536)) y 16 % de (1.048.576 − 65.536).
+    expect(compaction?.policy).toEqual({ thresholdTokens: 838_860, retainTokens: 157_286 });
     // [sistema, manual (/AGENTS.md), …historial, petición]: se resume desde el historial.
     expect(compaction?.firstIndex).toBe(2);
     // Sin terminal arrancada no hay dónde dejar el resultado entero: lo dice, y
