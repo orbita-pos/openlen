@@ -134,12 +134,16 @@ export type LiveStatus =
   | { readonly kind: "failed"; readonly face: FaceState; readonly message: string | null }
   // El proveedor no contestó y el bucle repite el paso (`retry`, como DeepSeek).
   // `until`: cuándo acaba la espera (reloj del navegador); ver `retryPhase`.
-  | { readonly kind: "retrying"; readonly face: FaceState; readonly attempt: number; readonly maxAttempts: number; readonly until: number };
+  | { readonly kind: "retrying"; readonly face: FaceState; readonly attempt: number; readonly maxAttempts: number; readonly until: number }
+  // Len resume lo más viejo de la conversación para seguir (`compaction_start`,
+  // como DeepSeek): «Ordenando lo que lleva».
+  | { readonly kind: "compacting"; readonly face: FaceState };
 
 /** ¿Len está trabajando? Es lo que enseña el ■ y el reloj de la barra. Un
- *  reintento es trabajo: el ■ no puede desaparecer justo mientras espera. */
+ *  reintento es trabajo: el ■ no puede desaparecer justo mientras espera. Ni
+ *  mientras ordena lo que lleva: es una llamada al modelo, y se cobra. */
 export function isRunning(status: LiveStatus): boolean {
-  return status.kind === "thinking" || status.kind === "working" || status.kind === "retrying";
+  return status.kind === "thinking" || status.kind === "working" || status.kind === "retrying" || status.kind === "compacting";
 }
 
 /** La fase de un reintento: esperando («Reintentando · en X s», como Claude
@@ -181,6 +185,7 @@ export function liveStatus(
         until: latest.retrying.until,
       };
     }
+    if (latest.compacting) return { kind: "compacting", face: "revisando" };
     const startedAt = latest.startedAt ?? null;
     const running = [...(latest.actions ?? [])].reverse().find((a) => a.status === "running");
     if (running) {

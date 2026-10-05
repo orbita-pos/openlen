@@ -190,12 +190,13 @@ export async function tocarPublicar(o: {
 
 /** Lo que Len le escribió al dueño en el turno: la suma de sus eventos `text`
  *  (la ruta reenvía cada evento del bucle como `event: <type>`), menos lo que un
- *  `retry` retiró (el intento fallido no existió, `lib/agent/loop.ts`). */
+ *  `retry` retiró (el intento fallido no existió, `lib/agent/loop.ts`) o una
+ *  `compaction` tras un desborde (lo mismo). */
 export function textoDeLen(eventos: readonly EventoSse[]): string {
   let texto = "";
   for (const e of eventos) {
     if (e.nombre === "text") texto += String((e.datos as { text?: unknown } | null)?.text ?? "");
-    else if (e.nombre === "retry") {
+    else if (e.nombre === "retry" || e.nombre === "compaction") {
       const descartar = (e.datos as { discardChars?: unknown } | null)?.discardChars;
       if (typeof descartar === "number") texto = texto.slice(0, Math.max(0, texto.length - descartar));
     }

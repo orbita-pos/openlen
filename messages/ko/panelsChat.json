@@ -204,7 +204,9 @@
       "failed": "끝내지 못했습니다",
       "retrying": "다시 시도 중",
       "retryingHint": "응답 없음 · {seconds}초 후 · {max}회 중 {attempt}회째",
-      "retryingAttempt": "{max}회 중 {attempt}회째"
+      "retryingAttempt": "{max}회 중 {attempt}회째",
+      "compacting": "지금까지를 정리하는 중",
+      "compactingHint": "흐름을 잃지 않고 계속하려고"
     },
     "question": {
       "label": "Len의 질문",

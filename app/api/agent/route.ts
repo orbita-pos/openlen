@@ -41,7 +41,8 @@ import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversac
 import { turnosParaElHistorial } from "@/lib/projects/chat";
 import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
-import { modeOfTurn } from "@/lib/agent/dynamis";
+import { DYNAMIS_MAX_OUTPUT_TOKENS, modeOfTurn } from "@/lib/agent/dynamis";
+import { resolveCompaction } from "@/lib/agent/compaction/policy";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
 import { ZONA_SIN_DATO, zonaValida } from "@/lib/resultados/zona";
 import { guardarZona, leerZona } from "@/lib/resultados/zona-guardada";
@@ -147,7 +148,24 @@ const SILENCIO_MS = 180_000;
 // porqué viven en `sseChannel` (lib/ai/sse.ts), que es donde tiene que estar
 // para que la cuarta superficie no tenga que acordarse.
 const LATIDO_MS = 15_000;
-const MAX_PROMPT_TOKENS = 240_000;
+// LA VENTANA REAL DEL MODELO en Fireworks (deepseek-v4p1-flash: 1.048.576
+// tokens, fireworks.ai/models/deepseek-ai/deepseek-v4p1-flash, leído el
+// 04/10/2026). Sólo un turno que no cabe AHÍ se rechaza al empezar. El techo de
+// 240.000 que había venía del 07/07, de cuando Len era Gemini Flash
+// (`7b38e227`, «Same ceiling as ai-design»).
+const MODEL_WINDOW_TOKENS = 1_048_576;
+// La salida más grande de los dos modos (Dynamis pide 65.536; Len, 32.768): el
+// umbral vale para los dos.
+const MAX_LOOP_OUTPUT_TOKENS = DYNAMIS_MAX_OUTPUT_TOKENS;
+const MAX_PROMPT_TOKENS = MODEL_WINDOW_TOKENS - MAX_LOOP_OUTPUT_TOKENS;
+// LA VENTANA EFECTIVA, donde empieza a compactar (pieza 2 de Len 2.5): la decide
+// el COSTE, no el modelo (§2 de plans/len-agente-2026/INVESTIGACION-2-5-AL-LIMITE.md),
+// y la elige Jesús. Hasta que la elija, la de antes.
+const AGENT_EFFECTIVE_WINDOW_TOKENS = 240_000;
+const COMPACTION_POLICY = resolveCompaction({
+  windowTokens: AGENT_EFFECTIVE_WINDOW_TOKENS,
+  maxOutputTokens: MAX_LOOP_OUTPUT_TOKENS,
+});
 
 // F2 Task 8 — attached image + scope, validated with the SAME limits/posture
 // as app/api/templates/ai-design/route.ts (read that file first if editing
@@ -986,6 +1004,22 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           // El ■ también corta la espera entre reintentos del proveedor
           // (`lib/agent/retry-policy.ts`).
           signal: upstreamAbort.signal,
+          // LA COMPACTACIÓN DENTRO DEL TURNO, como DeepSeek (`lib/agent/compaction/`).
+          compaction: {
+            policy: COMPACTION_POLICY,
+            // `buildAgentMessages` arma [sistema, manual (/AGENTS.md), …historial,
+            // petición]: lo resumible empieza en el historial.
+            firstIndex: 2,
+            // El resultado entero de lo que se poda, en un fichero de /tmp que
+            // Len lee con `cat` (`spill-policy` de DeepSeek). Sólo en una terminal
+            // viva: arrancarla para esto sería cargar el sitio entero por un aviso.
+            saveRecovery: async (path, text) => {
+              const terminal = agentSession.terminal;
+              if (!terminal?.arrancada) return false;
+              await terminal.poner({ [path]: text });
+              return true;
+            },
+          },
           // Con la MISMA cuenta que el cobro de abajo. Sin gasto todavía no se
           // pregunta: `creditsForUsage` tiene un suelo de 1 y un saldo mínimo
           // cerraría el turno antes de empezar.

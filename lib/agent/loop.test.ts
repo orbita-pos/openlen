@@ -3968,3 +3968,182 @@ describe("reintentos ante fallos del proveedor (como el arnés de DeepSeek)", ()
     expect(r.terminalError).toBe(true);
   });
 });
+
+describe("compactación dentro del turno (como el arnés de DeepSeek)", () => {
+  // Sólo herramientas de lectura: un cierre sin acción no recibe la insistencia
+  // (ver `puedeActuar`), así que cada guion es UNA llamada. Y 1 token de entrada
+  // por llamada: la presión que se mide después es la de la conversación, no la
+  // cifra fija de `usage`.
+  const leer = [{ name: "Read" }];
+  const uso = (o: number): StreamEvent => ({ type: "usage", inputTokens: 1, outputTokens: o, cachedTokens: 0, thinkingTokens: 0 });
+  const historial = (n: number): Message[] => [
+    { role: "system", content: "s" }, { role: "user", content: "manual" },
+    ...Array.from({ length: n }, (_, i): Message => ({ role: i % 2 ? "assistant" : "user", content: "x".repeat(70) })),
+    { role: "user", content: "ahora haz esto" },
+  ];
+  const compaction = { policy: { thresholdTokens: 100, retainTokens: 20 }, firstIndex: 2 };
+  const esResumen = (m: Message[]) => m.at(-1)?.content.includes("You are now acting as a compaction engine") === true;
+
+  it("BRAZO DE CONTROL: sin `compaction`, el bucle no resume nada", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted([{ type: "text_delta", text: "ok" }, uso(1), done]);
+    await runAgentLoop({
+      messages: historial(10), tools: leer,
+      openStream: (m) => { vistos.push(m); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); }, emit: () => {},
+    });
+    // (Puede haber más llamadas —el aviso de cierre—, pero ninguna es un resumen.)
+    expect(vistos.some(esResumen)).toBe(false);
+  });
+
+  it("por encima del umbral, la primera llamada es el resumen y la segunda va compactada", async () => {
+    const vistos: Message[][] = [];
+    const events: AgentStreamEvent[] = [];
+    const guion = scripted(
+      [{ type: "text_delta", text: "## Primary Request and Intent\n- haz esto" }, uso(10), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(5), done],
+    );
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compaction,
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(vistos[0]!.at(-1)!.content).toContain("You are now acting as a compaction engine");
+    expect(JSON.stringify(vistos[1])).toContain("<compacted-summary>");
+    expect(vistos[1]!.at(-1)!.content).toBe("ahora haz esto");
+    // El aviso de que empieza va ANTES de la llamada del resumen; el de que acabó, después.
+    const tipos = events.map((e) => e.type);
+    expect(tipos.indexOf("compaction_start")).toBeLessThan(tipos.indexOf("compaction"));
+    expect(events).toContainEqual({ type: "compaction_start" });
+    expect(events).toContainEqual({ type: "compaction", pruned: 0, summarized: true, discardChars: 0 });
+    expect(r.finalText).toBe("Hecho.");
+    expect(r.usage.outputTokens).toBe(15); // el resumen se cobra
+    expect(events.some((e) => e.type === "text" && e.text.includes("Primary Request"))).toBe(false); // el resumen NO se le enseña al dueño
+  });
+
+  it("un resumen que intenta llamar una herramienta se descarta, se cobra lo que usó y el turno sigue sin resumen", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, uso(1), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(5), done],
+    );
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compaction,
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); }, emit: () => {},
+    });
+    expect(JSON.stringify(vistos[1])).not.toContain("<compacted-summary>");
+    expect(r.finalText).toBe("Hecho.");
+    expect(r.usage.outputTokens).toBe(6);
+  });
+
+  it("con el ■ ya dado, no arranca una llamada de resumen", async () => {
+    const vistos: Message[][] = [];
+    const events: AgentStreamEvent[] = [];
+    const ctrl = new AbortController();
+    ctrl.abort();
+    const guion = scripted([{ type: "done", stopReason: { kind: "cancelled" } }]);
+    await runAgentLoop({
+      messages: historial(10), tools: leer, compaction, signal: ctrl.signal,
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(vistos.some(esResumen)).toBe(false);
+    expect(events.some((e) => e.type === "compaction_start")).toBe(false);
+  });
+
+  it("un desborde del proveedor compacta sin mirar el umbral y repite el paso una vez", async () => {
+    const vistos: Message[][] = [];
+    const events: AgentStreamEvent[] = [];
+    const desborde: StreamEvent = { type: "done", stopReason: { kind: "error", error: "http_400", code: "context_window_exceeded" } };
+    const guion = scripted(
+      [desborde],
+      [{ type: "text_delta", text: "## Primary Request and Intent\n- r" }, uso(3), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(5), done],
+    );
+    // historial(10): con 4 mensajes el resumen (preámbulo + etiquetas, ~110 tokens) no encogería y se rechazaría.
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compaction: { policy: { thresholdTokens: 1_000_000, retainTokens: 20 }, firstIndex: 2 },
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(vistos).toHaveLength(3);
+    expect(JSON.stringify(vistos[2])).toContain("<compacted-summary>");
+    expect(r.finalText).toBe("Hecho.");
+    expect(events.some((e) => e.type === "error")).toBe(false);
+  });
+
+  it("el segundo desborde del mismo turno ya no se reintenta: error claro", async () => {
+    const desborde: StreamEvent = { type: "done", stopReason: { kind: "error", error: "http_400", code: "context_window_exceeded" } };
+    const events: AgentStreamEvent[] = [];
+    // historial(10), para que el PRIMER desborde sí se recupere y lo que se prueba sea el segundo.
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compaction: { policy: { thresholdTokens: 1_000_000, retainTokens: 20 }, firstIndex: 2 },
+      openStream: scripted([desborde], [{ type: "text_delta", text: "r" }, uso(1), done], [desborde]),
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(r.terminalError).toBe(true);
+    expect(events.filter((e) => e.type === "error")).toHaveLength(1);
+  });
+
+  it("BRAZO DE CONTROL: sin `compaction`, un desborde es un error como siempre (no se resume)", async () => {
+    const desborde: StreamEvent = { type: "done", stopReason: { kind: "error", error: "http_400", code: "context_window_exceeded" } };
+    const vistos: Message[][] = [];
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer,
+      openStream: (m) => { vistos.push(m); return scripted([desborde])(m); },
+      runTool: async () => { throw new Error("must not run"); }, emit: () => {},
+    });
+    expect(vistos).toHaveLength(1);
+    expect(r.terminalError).toBe(true);
+  });
+
+  it("🔴 la transcripción del turno sobrevive a la compactación: lleva sus llamadas y respuestas, no el resumen", async () => {
+    const guion = scripted(
+      [{ type: "text_delta", text: "## Primary Request and Intent\n- haz esto" }, uso(1), done],
+      [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, uso(1), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(1), done],
+    );
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compaction,
+      openStream: guion,
+      runTool: async () => ({ response: { ok: true, tool_result: "<html></html>" } }),
+      emit: () => {},
+    });
+    const t = r.transcripcion ?? [];
+    expect(t.some((m) => m.functionCalls?.[0]?.name === "Read")).toBe(true);
+    expect(t.some((m) => m.functionResponses?.[0]?.name === "Read")).toBe(true);
+    expect(t.at(-1)).toMatchObject({ role: "assistant", content: "Hecho." });
+    expect(JSON.stringify(t)).not.toContain("<compacted-summary>");
+  });
+
+  it("lo que el modelo aún no vio no se poda, aunque detrás llegue una corrección del dueño", async () => {
+    const vistos: Message[][] = [];
+    const largo = "r".repeat(20_000);
+    let direcciones = 0;
+    const guion = scripted(
+      [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, uso(1), done],
+      // El resumen de la vuelta 2 se descarta (llama una herramienta): así la
+      // llamada siguiente lleva la conversación tal cual, podada o no.
+      [{ type: "function_call", name: "Read", args: {} }, uso(1), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(1), done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "system", content: "s" }, { role: "user", content: "manual" }, { role: "user", content: "lee la página" }],
+      tools: leer,
+      compaction: { policy: { thresholdTokens: 1_000, retainTokens: 10 }, firstIndex: 2 },
+      leerDireccion: () => (direcciones++ === 1 ? "mejor en azul" : null),
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => ({ response: { ok: true, tool_result: largo } }),
+      emit: () => {},
+    });
+    // La llamada de la vuelta 2 (no el resumen): la que lleva la corrección al final.
+    const vuelta2 = vistos.find((m) => !esResumen(m) && m.at(-1)!.content.includes("mejor en azul"));
+    expect(vuelta2).toBeDefined();
+    expect(JSON.stringify(vuelta2)).toContain(largo);
+  });
+});

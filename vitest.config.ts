@@ -394,6 +394,8 @@ export default defineConfig({
       // es LISTA BLANCA: sin esta linea no corre nunca.
       "lib/generation/model-policy-sin-huerfanas.test.ts",
       "lib/agent/loop.test.ts",
+      // La compactación dentro del turno (pieza 2 de Len 2.5): todo el módulo.
+      "lib/agent/compaction/**/*.test.ts",
       "lib/agent/retry-policy.test.ts",
       // Deshacer lo de Len sobre lo que hay AHORA, sin llevarse lo que el dueño
       // editó a mano (H06, auditoría 2026-09-22). Núcleo puro — pero `include`

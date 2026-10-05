@@ -77,6 +77,17 @@ describe("textoDeLen", () => {
       ]),
     ).toBe("Miro. Ya está.");
   });
+
+  it("una `compaction` con descarte también retira lo del intento (desborde a media vuelta)", () => {
+    expect(
+      textoDeLen([
+        { nombre: "text", datos: { type: "text", text: "Miro. " } },
+        { nombre: "text", datos: { type: "text", text: "Ya v" } },
+        { nombre: "compaction", datos: { type: "compaction", pruned: 0, summarized: true, discardChars: 4 } },
+        { nombre: "text", datos: { type: "text", text: "Ya está." } },
+      ]),
+    ).toBe("Miro. Ya está.");
+  });
 });
 
 describe("herramientasDeLen", () => {

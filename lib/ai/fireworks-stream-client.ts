@@ -20,7 +20,7 @@ import {
 } from "../generation/model-policy";
 import { providerUsage } from "./fireworks-client";
 import { admiteEsfuerzo, marcarSinEsfuerzo, rechazoDeEsfuerzo } from "./esfuerzo-no-admitido";
-import { codeForHttpStatus, codeForInBandError, type ProviderErrorCode } from "./provider-error-code";
+import { codeForInBandError, codeForProviderError, type ProviderErrorCode } from "./provider-error-code";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { presupuestoDeEsfuerzo, type EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 
@@ -377,14 +377,15 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             return;
           }
           if (!response.ok || !response.body) {
-            let reintento = `http_${response.status}`;
-            try { reintento = `${reintento}: ${(await response.text()).slice(0, 300)}`; } catch { /* sin cuerpo */ }
-            const code = codeForHttpStatus(response.status);
+            let cuerpo = "";
+            try { cuerpo = await response.text(); } catch { /* sin cuerpo */ }
+            const reintento = `http_${response.status}${cuerpo ? `: ${cuerpo.slice(0, 300)}` : ""}`;
+            const code = codeForProviderError(response.status, cuerpo);
             yield { type: "done", stopReason: { kind: "error", error: reintento, ...(code ? { code } : {}) } };
             return;
           }
         } else {
-          const code = codeForHttpStatus(response.status);
+          const code = codeForProviderError(response.status, crudo);
           yield {
             type: "done",
             stopReason: { kind: "error", error: `http_${response.status}${crudo ? `: ${crudo.slice(0, 300)}` : ""}`, ...(code ? { code } : {}) },

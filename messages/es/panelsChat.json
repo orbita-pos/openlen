@@ -204,7 +204,9 @@
       "failed": "No pudo terminar",
       "retrying": "Reintentando",
       "retryingHint": "no hubo respuesta · en {seconds} s · intento {attempt} de {max}",
-      "retryingAttempt": "intento {attempt} de {max}"
+      "retryingAttempt": "intento {attempt} de {max}",
+      "compacting": "Ordenando lo que lleva",
+      "compactingHint": "para seguir sin perder el hilo"
     },
     "question": {
       "label": "Len te pregunta",

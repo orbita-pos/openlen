@@ -27,6 +27,19 @@ describe("la barra viva", () => {
     expect(retryPhase(s, 9_000)).toEqual({ waiting: false });
   });
 
+  it("mientras compacta, dice que ordena lo que lleva", () => {
+    const s = liveStatus(turn({ status: "streaming", startedAt: 1, compacting: true }), { busy: true });
+    expect(s).toEqual({ kind: "compacting", face: "revisando" });
+  });
+
+  it("el ■ sigue mientras ordena lo que lleva (es trabajo, y se cobra)", () => {
+    expect(isRunning({ kind: "compacting", face: "revisando" })).toBe(true);
+  });
+
+  it("BRAZO DE CONTROL: con el turno ya cerrado, la marca de compactar no pinta nada", () => {
+    expect(liveStatus(turn({ status: "applied", compacting: true }), { busy: false }).kind).not.toBe("compacting");
+  });
+
   it("el ■ sigue mientras reintenta (está trabajando); no con el turno terminado", () => {
     expect(isRunning({ kind: "retrying", face: "pensando", attempt: 1, maxAttempts: 5, until: 1 })).toBe(true);
     expect(isRunning({ kind: "thinking", face: "pensando", startedAt: 1 })).toBe(true);

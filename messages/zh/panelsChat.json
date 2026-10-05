@@ -204,7 +204,9 @@
       "failed": "没能完成",
       "retrying": "正在重试",
       "retryingHint": "没有响应 · {seconds} 秒后 · 第 {attempt} 次，共 {max} 次",
-      "retryingAttempt": "第 {attempt} 次，共 {max} 次"
+      "retryingAttempt": "第 {attempt} 次，共 {max} 次",
+      "compacting": "正在整理已有内容",
+      "compactingHint": "以便继续而不丢失思路"
     },
     "question": {
       "label": "Len 想问你",

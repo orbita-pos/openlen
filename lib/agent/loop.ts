@@ -35,6 +35,9 @@ import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import type { ProviderErrorCode } from "@/lib/ai/provider-error-code";
 import { MAX_PROVIDER_RETRIES, isRetryable, retryDelayMs, sleepAbortable } from "./retry-policy";
+import { compactIfNeeded } from "./compaction/compact";
+import { estimateTokens } from "./compaction/estimate";
+import type { CompactionPolicy } from "./compaction/policy";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -69,6 +72,14 @@ export type AgentStreamEvent =
   // chat y el registro lo retiran con `discardChars`. Claude Code enseña lo
   // mismo: «reintentando en X s · intento N».
   | { type: "retry"; attempt: number; maxAttempts: number; delayMs: number; discardChars: number }
+  // LA COMPACTACIÓN (como DeepSeek): se poda y/o se resume lo más viejo para
+  // seguir. `compaction_start` sale justo ANTES de la llamada del resumen —es
+  // la espera que el dueño ve: «ordenando lo que lleva»— y `compaction` cuando
+  // la conversación ya cambió. El resumen NO se le enseña al dueño; si fue para
+  // recuperarse de un desborde a media vuelta, `discardChars` retira lo que el
+  // intento llegó a escribir, como `retry`.
+  | { type: "compaction_start" }
+  | { type: "compaction"; pruned: number; summarized: boolean; discardChars: number }
   // LO QUE EL USUARIO ESCRIBIÓ A MEDIA FAENA. Se emite en cuanto el bucle lo
   // recoge, para que el panel pueda pintarlo en su sitio de la conversación:
   // sin esto, la corrección desaparecería y el usuario vería al Agente cambiar
@@ -264,6 +275,17 @@ export interface AgentLoopArgs {
   signal?: AbortSignal;
   /** Para las pruebas: la espera entre reintentos. Por defecto, `sleepAbortable`. */
   sleep?(ms: number, signal?: AbortSignal): Promise<void>;
+  /** La compactación dentro del turno (`lib/agent/compaction/`). Sin ella, el
+   *  bucle no resume nada (las pruebas de siempre y quien no la pida). La pasa
+   *  la ruta. */
+  compaction?: {
+    policy: CompactionPolicy;
+    /** Primer mensaje que se puede resumir: después del sistema y del manual. */
+    firstIndex: number;
+    /** Deja el resultado entero de lo que se poda en un fichero que Len puede
+     *  leer (`spill-policy` de DeepSeek); `false` si no pudo. */
+    saveRecovery?(path: string, text: string): Promise<boolean>;
+  };
   /** F5 — los ojos del agente. Cuando está presente y el turno MUTÓ el
    *  documento, se llama UNA vez justo antes de cerrar (con el último HTML
    *  emitido); si devuelve !ok, la crítica se inyecta como mensaje de sistema
@@ -855,8 +877,17 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   /** Lo que el turno añadió a la conversación, más su texto final si no quedó
    *  como mensaje (la vuelta que cierra no empuja el suyo). Ver
    *  `AgentLoopResult.transcripcion`. */
+  //
+  // 🔴 LA COMPACTACIÓN (pieza 2 de Len 2.5) cambia `messages` EN SITIO —resume lo
+  // más viejo, poda lo grande—, así que lo del turno ya no empieza siempre en
+  // `args.messages.length`. Antes de cada cambio, lo del turno se ARCHIVA tal
+  // cual estaba (`ownArchived`) y lo nuevo empieza después (`ownStart`): la
+  // transcripción es el registro entero, como el almacén de sesión de DeepSeek;
+  // lo compactado es sólo lo que se le manda al modelo.
+  const ownArchived: Message[] = [];
+  let ownStart = args.messages.length;
   const transcripcionDelTurno = (texto: string): Message[] => {
-    const propios = messages.slice(args.messages.length);
+    const propios = [...ownArchived, ...messages.slice(ownStart)];
     const ultimo = propios.at(-1);
     const yaEsta = ultimo?.role === "assistant" && !ultimo.functionCalls?.length && ultimo.content.trim() === texto.trim();
     if (texto.trim() && !yaEsta) propios.push({ role: "assistant", content: texto });
@@ -867,6 +898,64 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   let outputTokens = 0;
   let cachedTokens = 0;
   let thinkingTokens = 0;
+  /** COMPACTACIÓN · los tokens de entrada REALES de la última llamada (DeepSeek
+   *  mide así) y cuántos mensajes había entonces: la presión es eso + lo
+   *  añadido después, estimado. */
+  let lastInputTokens: number | null = null;
+  let messagesAtLastCall = 0;
+  /** Un solo reintento tras desborde por turno (`maxOverflowRetries` 1 de DeepSeek). */
+  let overflowRecovered = false;
+
+  /** El resumen lo escribe el MISMO modelo con la MISMA petición más la
+   *  instrucción al final (`buildSummaryRequest`): el prefijo sale de la caché.
+   *  Se cobra como cualquier llamada. Un resumen que llama herramientas, que se
+   *  corta o que falla no vale: `null`, y el turno sigue sin resumen. */
+  const summarizeWithModel = async (request: Message[]): Promise<string | null> => {
+    if (args.signal?.aborted) return null;
+    args.emit({ type: "compaction_start" });
+    let text = "";
+    let valid = true;
+    for await (const ev of args.openStream(request)) {
+      if (ev.type === "text_delta") text += ev.text;
+      // Se sigue leyendo hasta el final aunque ya no valga: el `usage` llega
+      // detrás y esa llamada también se paga.
+      else if (ev.type === "function_call") valid = false;
+      else if (ev.type === "usage") {
+        inputTokens += ev.inputTokens;
+        outputTokens += ev.outputTokens;
+        cachedTokens += ev.cachedTokens;
+        thinkingTokens += ev.thinkingTokens;
+      } else if (ev.type === "done" && ev.stopReason.kind !== "end_turn") valid = false;
+    }
+    return valid && text.trim() !== "" ? text : null;
+  };
+
+  /** Compacta `messages` EN SITIO (como hacen los `push`). `true` si cambió. */
+  const compactNow = async (trigger: "pressure" | "overflow", discardChars: number): Promise<boolean> => {
+    if (!args.compaction) return false;
+    const pressureTokens =
+      lastInputTokens === null ? estimateTokens(messages) : lastInputTokens + estimateTokens(messages.slice(messagesAtLastCall));
+    const outcome = await compactIfNeeded({
+      messages,
+      firstIndex: args.compaction.firstIndex,
+      pressureTokens,
+      policy: args.compaction.policy,
+      trigger,
+      // Lo que el modelo aún no ha visto no se poda: lo llegado después de la
+      // última llamada (sus respuestas, una corrección del dueño) o, antes de
+      // la primera, la petición. Tras un desborde eso es todo: se puede podar.
+      protectFrom: messagesAtLastCall > 0 ? messagesAtLastCall : args.messages.length - 1,
+      summarize: summarizeWithModel,
+      saveRecovery: args.compaction.saveRecovery,
+    });
+    if (!outcome.changed) return false;
+    ownArchived.push(...messages.slice(ownStart));
+    messages.splice(0, messages.length, ...outcome.messages);
+    ownStart = messages.length;
+    lastInputTokens = null;
+    args.emit({ type: "compaction", pruned: outcome.pruned, summarized: outcome.summarized, discardChars });
+    return true;
+  };
   let turns = 0;
   // Only turns that MUTATE count toward maxTurns. A turn whose calls were all
   // read-only (elegir_foto photo hunts, leer_estado re-reads) is exempt —
@@ -1316,6 +1405,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
     turns += 1;
 
+    // ─── COMPACTACIÓN, antes de llamar al modelo (como DeepSeek) ─────────
+    //
+    // Con presión, se poda lo grande y, si no basta, se resume lo más viejo
+    // (`lib/agent/compaction/`). Aquí y no a media herramienta, por lo mismo
+    // que la dirección y el techo de arriba.
+    await compactNow("pressure", 0);
+
     let turnText = "";
     /** H15 · lo que el modelo PENSÓ en esta vuelta. Viaja en cada mensaje del
      *  asistente que la vuelta empuja (`delAsistente`), como lo hace el arnés de
@@ -1364,7 +1460,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     for (let intento = 1; ; intento++) {
       let emitidoEnElIntento = 0;
       let falloReintentable: ProviderErrorCode | undefined;
+      /** El proveedor dijo que no cabe (`context_window_exceeded`). */
+      let desbordado = false;
 
+      messagesAtLastCall = messages.length;
       for await (const ev of args.openStream(messages)) {
         if (ev.type === "text_delta" && retener) {
           turnText += ev.text;
@@ -1399,13 +1498,16 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           outputTokens += ev.outputTokens;
           cachedTokens += ev.cachedTokens;
           thinkingTokens += ev.thinkingTokens;
+          lastInputTokens = ev.inputTokens;
         } else if (ev.type === "done") {
           // A stream that ends on anything but a clean end_turn must NOT read
           // as success: error (SAFETY/RECITATION/5xx), cancelled (abort), and
           // max_tokens (truncated response) all surface as an error event and
           // stop the loop — a truncated turn's partial text is not a real answer.
           if (ev.stopReason.kind === "error") {
-            if (isRetryable(ev.stopReason.code) && intento <= MAX_PROVIDER_RETRIES && !args.signal?.aborted) {
+            if (ev.stopReason.code === "context_window_exceeded" && args.compaction && !overflowRecovered && !args.signal?.aborted) {
+              desbordado = true;
+            } else if (isRetryable(ev.stopReason.code) && intento <= MAX_PROVIDER_RETRIES && !args.signal?.aborted) {
               falloReintentable = ev.stopReason.code;
             } else {
               args.emit({ type: "error", message: ev.stopReason.error, code: "upstream" });
@@ -1424,6 +1526,27 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         }
       }
 
+      // ─── NO CABE: se compacta sin mirar el umbral y se repite UNA vez ────
+      //
+      // Como DeepSeek (`maxOverflowRetries` 1, cola 0): lo del intento no
+      // existió, como en un reintento. Si la compactación no cambia nada, o es
+      // el segundo desborde del turno, el turno termina con su error.
+      if (desbordado) {
+        overflowRecovered = true;
+        if (await compactNow("overflow", emitidoEnElIntento)) {
+          turnText = "";
+          turnReasoning = "";
+          calls.length = 0;
+          truncado = false;
+          retenido = "";
+          algunaVueltaYaDijoAlgo = yaHablabaAntesDelIntento;
+          continue;
+        }
+        args.emit({ type: "error", message: "La conversación ya no cabe en lo que el modelo puede leer.", code: "upstream" });
+        errorCode = "upstream";
+        sawError = true;
+        break;
+      }
       if (!falloReintentable) break;
 
       const delayMs = retryDelayMs(intento);

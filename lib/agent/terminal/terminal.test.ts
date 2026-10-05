@@ -31,6 +31,13 @@ afterEach(async () => {
 });
 
 describe("TerminalDeLen", () => {
+  it("`arrancada` es falso antes del primer comando y verdadero después (la compactación sólo deja su fichero en una terminal viva)", async () => {
+    const { t } = terminal();
+    expect(t.arrancada).toBe(false);
+    await t.ejecutar("echo hola");
+    expect(t.arrancada).toBe(true);
+  });
+
   it("grep y sed -i sobre los ficheros del proyecto: lo cambiado vuelve en `ficheros`", async () => {
     const { t } = terminal();
     const g = await t.ejecutar("grep -rn Marejada /");

@@ -20,8 +20,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * devuelven TEXTO, como el `tool_result` de Claude Code, y va tal cual: por
  * `JSON.stringify` el `cat -n` de Read llegaría con cada salto de línea
  * escapado. Las demás siguen yendo como objeto serializado.
+ *
+ * Exportado para la poda de la compactación (lib/agent/compaction/prune.ts):
+ * se poda el texto que el modelo VE, y la regla de cuál es vive sólo aquí.
  */
-function contenidoDeRespuesta(response: Record<string, unknown>): string {
+export function contenidoDeRespuesta(response: Record<string, unknown>): string {
   const texto = response[CLAVE_TOOL_RESULT];
   return typeof texto === "string" ? texto : JSON.stringify(response);
 }

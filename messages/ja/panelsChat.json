@@ -204,7 +204,9 @@
       "failed": "最後まで終えられませんでした",
       "retrying": "再試行中",
       "retryingHint": "応答なし · {seconds} 秒後 · {max} 回中 {attempt} 回目",
-      "retryingAttempt": "{max} 回中 {attempt} 回目"
+      "retryingAttempt": "{max} 回中 {attempt} 回目",
+      "compacting": "ここまでを整理中",
+      "compactingHint": "流れを失わずに続けるため"
     },
     "question": {
       "label": "Len からの質問",

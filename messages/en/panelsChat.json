@@ -204,7 +204,9 @@
       "failed": "Couldn't finish",
       "retrying": "Retrying",
       "retryingHint": "no response · in {seconds} s · attempt {attempt} of {max}",
-      "retryingAttempt": "attempt {attempt} of {max}"
+      "retryingAttempt": "attempt {attempt} of {max}",
+      "compacting": "Tidying up what it has",
+      "compactingHint": "to keep going without losing the thread"
     },
     "question": {
       "label": "Len is asking",
