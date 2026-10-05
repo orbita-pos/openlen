@@ -22,6 +22,12 @@ describe("isConcurrencySafe", () => {
     }
   });
 
+  it("pieza 5: leer un evento de una charla es seguro; las dos búsquedas, exclusivas (como DeepSeek)", () => {
+    expect(isConcurrencySafe("session_event_read", { seq: 1 })).toBe(true);
+    expect(isConcurrencySafe("session_search", { query: "x" })).toBe(false);
+    expect(isConcurrencySafe("session_event_search", { query: "x" })).toBe(false);
+  });
+
   it("un nombre desconocido es exclusivo, también los de Object.prototype (falla cerrado)", () => {
     expect(isConcurrencySafe("no_existe", {})).toBe(false);
     expect(isConcurrencySafe("toString", {})).toBe(false);

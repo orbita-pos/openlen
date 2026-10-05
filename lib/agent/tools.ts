@@ -81,6 +81,14 @@ import { createConcurrencyLimit } from "@/lib/agent/concurrency-limit";
 import { ASK_USER_QUESTION, answerSummary, questionText, validateQuestions, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import {
+  SESSION_EVENT_READ,
+  SESSION_EVENT_SEARCH,
+  SESSION_SEARCH,
+  toolSessionEventRead,
+  toolSessionEventSearch,
+  toolSessionSearch,
+} from "@/lib/agent/session-query-tools";
+import {
   toolPrepararRespuesta,
   toolVerFormularios,
   toolVerMensajes,
@@ -1986,6 +1994,13 @@ async function ejecutarHerramienta(
         return await toolPublicar(session, deps, args);
       case ASK_USER_QUESTION:
         return await toolAskUserQuestion(session, deps, args);
+      // Pieza 5: buscar en las charlas pasadas, como DeepSeek.
+      case SESSION_SEARCH:
+        return await toolSessionSearch(session, deps, args);
+      case SESSION_EVENT_SEARCH:
+        return await toolSessionEventSearch(session, deps, args);
+      case SESSION_EVENT_READ:
+        return await toolSessionEventRead(session, deps, args);
       case NOMBRE_WEB_SEARCH:
         return await toolWebSearch(session, deps, args);
       case NOMBRE_WEB_FETCH:

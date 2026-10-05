@@ -79,6 +79,10 @@ describe("buildFunctionDeclarations", () => {
       // Pieza 3 de Len 2.5: el nombre y el esquema de DeepSeek.
       "ask_user_question",
       "revertir_ultimo_cambio",
+      // Pieza 5 de Len 2.5: buscar en las charlas pasadas, como DeepSeek.
+      "session_search",
+      "session_event_search",
+      "session_event_read",
       // Len sabe de tus resultados (plans/len-resultados/): una por fuente,
       // siempre cargadas, como los conectores de Grok, dots y Claude.
       "ver_visitas",
@@ -99,6 +103,13 @@ describe("buildFunctionDeclarations", () => {
     expect("HERRAMIENTAS_DIFERIDAS" in catalogo).toBe(false);
     expect(buildFunctionDeclarations().some((d) => d.name === "ToolSearch")).toBe(false);
     expect(buildAgentSystemPrompt()).not.toContain("ToolSearch");
+  });
+
+  it("pieza 5: las tres de session-query de DeepSeek, con los parámetros que significan algo aquí", () => {
+    const props = (n: string) => Object.keys((buildFunctionDeclarations().find((d) => d.name === n) as any).parameters.properties);
+    expect(props("session_search")).toEqual(["query", "session_ids", "created_at_from", "created_at_to", "event_seq_from", "event_seq_to", "event_time_from", "event_time_to", "event_types"]);
+    expect(props("session_event_search")).toEqual(["session_id", "query", "seq_from", "seq_to", "time_from", "time_to", "event_types"]);
+    expect(props("session_event_read")).toEqual(["session_id", "seq", "before", "after"]);
   });
 
   it("pieza 3: la pregunta se llama ask_user_question, con el esquema de DeepSeek", () => {
@@ -204,6 +215,13 @@ describe("buildFunctionDeclarations", () => {
     // users.agentMemory no está escrita en ninguna página—; desde H3 es el
     // fichero /memoria/dueno.md.
     expect(buildAgentSystemPrompt()).toContain("/memoria/dueno.md");
+  });
+
+  it("pieza 5: la línea de session-query de DeepSeek, sin las herramientas de trace que Len no tiene", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p).toContain("Use session_search to find relevant work from prior sessions, or session_event_search to search earlier events in one session.");
+    expect(p).toContain("Follow a useful hit with session_event_read when you need exact data.");
+    expect(p).not.toContain("session_trace");
   });
 
   it("H3 · la memoria son dos ficheros: sólo lo DURABLE, nunca el pedido puntual, y sólo se añade", () => {
