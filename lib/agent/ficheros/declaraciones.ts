@@ -114,7 +114,7 @@ export const DECLARACIONES_DE_FICHEROS: readonly Record<string, unknown>[] = [
         "-C": { type: "NUMBER", description: "Same as context." },
         context: {
           type: "NUMBER",
-          description: 'Lines of context …. Only with output_mode "content".',
+          description: 'Lines of context on both sides of each match. Only with output_mode "content".',
         },
         "-n": {
           type: "BOOLEAN",
