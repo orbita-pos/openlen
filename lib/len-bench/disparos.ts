@@ -11,9 +11,9 @@
 //   - Un fichero roto no tumba la carpeta: se avisa y se sigue con los demás.
 //   - Pasa si lo que hizo el modelo === `should_trigger`; una consulta que
 //     revienta cuenta como FALLO, con el error de motivo.
-//   - El informe: «[PASS   ] fichero — expected trigger, got skip», el motivo
-//     debajo de cada fallo y «N/M trigger tests passed». Sale ≠ 0 si falla
-//     alguna.
+//   - El informe: una línea por consulta con el veredicto, el fichero y lo que
+//     se esperaba frente a lo que hizo; el motivo debajo de cada fallo, y al
+//     final cuántas pasaron de cuántas. Sale ≠ 0 si falla alguna.
 // Lo que NO se copia: su `/plugin eval` todavía no corre las pruebas de disparo
 // (sólo valida las consultas). Aquí no se le pregunta a nadie si llamaría: se
 // corre UN turno de verdad y se mira si llamó. Eso lo hace scripts/len-bench-disparos.ts; esto
