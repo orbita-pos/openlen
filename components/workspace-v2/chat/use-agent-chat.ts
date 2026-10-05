@@ -30,6 +30,7 @@ import type { AgentAction } from "../agent-action-card";
 import type { AgentConfirm } from "../agent-confirm-card";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { ejecutarUndo, ficherosDelEvento, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
+import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "../panels/turno-cerrado";
 import { NIVEL_POR_DEFECTO, type EsfuerzoAgente, type NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import type { AgentMode } from "@/lib/agent/dynamis";
@@ -1383,6 +1384,7 @@ export function useAgentChat({
                 // LA CARPETA (pieza 9 de Len 2.5): lo que cambió de la carpeta
                 // una herramienta, con la versión de su «antes».
                 ficherosTocados.push(...ficherosDelEvento(payload));
+                notifyFolderChanged(projectId);
               } else if (evName === "html") {
                 const html = strField(payload, "html");
                 if (html) {
@@ -1844,6 +1846,9 @@ export function useAgentChat({
         // lo rechazan con «Illegal invocation».
         fetchImpl: (...args) => fetch(...args),
         pintar: (html, page) => onLocalUpdate(html, page),
+        // Los ficheros devueltos no cambian el documento: el lienzo se recarga
+        // con el aviso (lib/lienzo/carpeta-cambiada.ts).
+        ficherosRestaurados: () => notifyFolderChanged(projectId),
         marcarRevertido: () =>
           updateTurn(turn.id, { status: "reverted", undoEnCurso: false }),
         marcarFallo: (fallo) =>

@@ -189,6 +189,9 @@ export interface DepsDeUndo {
   marcarRevertido(): void;
   /** El servidor no lo aceptó: el turno SIGUE aplicado y hay que decirlo. */
   marcarFallo(fallo: FalloDeUndo): void;
+  /** LA CARPETA (pieza 9): los ficheros ya volvieron. No cambian el documento,
+   *  así que quien enseña la página tiene que enterarse por aquí. */
+  ficherosRestaurados?(): void;
 }
 
 /**
@@ -232,6 +235,7 @@ export async function ejecutarUndo(
       return false;
     }
   }
+  if ((plan.files ?? []).length > 0) deps.ficherosRestaurados?.();
   // Sólo ficheros: no hay documento que pintar.
   if (plan.versionId === null) {
     deps.marcarRevertido();

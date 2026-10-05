@@ -15,6 +15,7 @@
 // (`preventDefault`: en /new React escucha en el propio `document`).
 
 import { useEffect, useRef, useState } from "react";
+import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 
 export interface EtiquetasDelEditor {
   readonly editar: string;
@@ -94,6 +95,9 @@ export function EditorDeFichero({
           canal.postMessage({ projectId });
           canal.close();
         }
+        // Un fichero de la carpeta (no una página) no cambia el documento: el
+        // lienzo se recarga con el aviso (lib/lienzo/carpeta-cambiada.ts).
+        if (!ruta.endsWith(".html")) notifyFolderChanged(projectId);
         onGuardado(j.contenido);
         return;
       }

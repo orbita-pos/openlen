@@ -572,3 +572,35 @@ describe("los ficheros del turno llegan al Deshacer", () => {
     expect(chat).toMatch(/ficherosTocados\?: ReadonlyArray<\{ readonly ruta: string; readonly versionPrevia: string \| null \}>/);
   });
 });
+
+// Y EL LIENZO SE ENTERA (revisión final de la pieza 9): restaurar ficheros no
+// cambia el documento, así que sin este aviso el iframe seguiría con el
+// `js/app.js` del turno deshecho.
+describe("deshacer con ficheros avisa de que la carpeta cambió", () => {
+  const ficheroOk = () => new Response(JSON.stringify({ path: "/js/app.js", content: "a", versionPrevia: "fx" }), { status: 200 });
+
+  it("🔴 tras restaurar los ficheros, avisa una vez", async () => {
+    const e = espias();
+    const aviso = vi.fn();
+    const fetchImpl = vi.fn(async (url: string) => (url.includes("/ficheros/") ? ficheroOk() : restaurado("<html>antes</html>")));
+    await ejecutarUndo(
+      { kind: "restaurar", page: null, versionId: "v1", files: [{ ruta: "/js/app.js", versionId: "f1" }] },
+      { ...e.deps, fetchImpl: fetchImpl as unknown as typeof fetch, ficherosRestaurados: aviso },
+    );
+    expect(aviso).toHaveBeenCalledTimes(1);
+  });
+
+  it("si un fichero falla, no avisa; sin ficheros, tampoco", async () => {
+    const e = espias();
+    const aviso = vi.fn();
+    await ejecutarUndo(
+      { kind: "restaurar", page: null, versionId: "v1", files: [{ ruta: "/js/app.js", versionId: "f1" }] },
+      { ...e.deps, fetchImpl: (async () => error(500)) as unknown as typeof fetch, ficherosRestaurados: aviso },
+    );
+    await ejecutarUndo(
+      { kind: "restaurar", page: null, versionId: "v1" },
+      { ...e.deps, fetchImpl: (async () => restaurado("<html>x</html>")) as unknown as typeof fetch, ficherosRestaurados: aviso },
+    );
+    expect(aviso).not.toHaveBeenCalled();
+  });
+});
