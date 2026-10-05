@@ -78,6 +78,9 @@ describe("buildFunctionDeclarations", () => {
       // ⚰️ TodoWrite, retirada en F4 (plans/len-agente-2026).
       // Pieza 3 de Len 2.5: el nombre y el esquema de DeepSeek.
       "ask_user_question",
+      // Pieza 7: el modo plan — la entrada de Claude Code, la salida de DeepSeek.
+      "enter_plan_mode",
+      "exit_plan_mode",
       "revertir_ultimo_cambio",
       // Pieza 5 de Len 2.5: buscar en las charlas pasadas, como DeepSeek.
       "session_search",

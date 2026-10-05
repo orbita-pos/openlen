@@ -266,6 +266,28 @@
       "minimize": "Minimize to Len",
       "open": "Open the chat",
       "resize": "Drag to resize"
+    },
+    "plan": {
+      "option": "Plan first",
+      "optionHint": "Len looks around first and proposes a plan; nothing changes until you approve it.",
+      "chip": "Plan",
+      "chipOff": "Leave plan mode",
+      "reviewLabel": "Plan to review",
+      "reviewQuestion": "Approve this plan?",
+      "approve": "Approve",
+      "approveHint": "Len carries out the plan now.",
+      "keep": "Request changes",
+      "keepHint": "Len keeps planning with what you tell it.",
+      "feedbackPlaceholder": "What should change in the plan?",
+      "sendFeedback": "Send changes",
+      "consentLabel": "Plan mode",
+      "consentQuestion": "Len wants to plan before changing anything. Plan first?",
+      "planFirst": "Plan first",
+      "planFirstHint": "Nothing changes until you approve the plan.",
+      "skip": "Skip planning",
+      "skipHint": "Len carries on with your request now.",
+      "showPlan": "See the whole plan",
+      "hidePlan": "Hide the plan"
     }
   }
 }

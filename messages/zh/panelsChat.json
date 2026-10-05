@@ -266,6 +266,28 @@
       "minimize": "最小化为 Len",
       "open": "打开聊天",
       "resize": "拖动以调整大小"
+    },
+    "plan": {
+      "option": "先做计划",
+      "optionHint": "Len 会先查看并提出计划；在你批准之前什么都不会改动。",
+      "chip": "计划",
+      "chipOff": "退出计划模式",
+      "reviewLabel": "待审计划",
+      "reviewQuestion": "批准这个计划吗？",
+      "approve": "批准",
+      "approveHint": "Len 现在开始执行计划。",
+      "keep": "要求修改",
+      "keepHint": "Len 会按你的意见继续完善计划。",
+      "feedbackPlaceholder": "计划中有哪些要改？",
+      "sendFeedback": "发送修改意见",
+      "consentLabel": "计划模式",
+      "consentQuestion": "Len 想在改动任何内容之前先做计划。先做计划吗？",
+      "planFirst": "先做计划",
+      "planFirstHint": "在你批准计划之前什么都不会改动。",
+      "skip": "不做计划",
+      "skipHint": "Len 现在继续处理你的请求。",
+      "showPlan": "查看完整计划",
+      "hidePlan": "收起计划"
     }
   }
 }

@@ -36,6 +36,8 @@
       "leer_de_internet": "指定されたページを読み込み中",
       "preguntar": "確認しています",
       "ask_user_question": "確認しています",
+      "enter_plan_mode": "先に計画するか確認中",
+      "exit_plan_mode": "計画を提示中",
       "session_search": "過去の会話を検索中",
       "session_event_search": "以前の会話の中を検索中",
       "session_event_read": "以前の会話を読んでいます",

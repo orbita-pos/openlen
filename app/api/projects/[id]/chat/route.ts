@@ -102,6 +102,16 @@ const ActionSchema = z.object({
           .transform((a) => a.slice(0, 10))
           .optional(),
         multiSelect: z.boolean().optional(),
+        // Pieza 7: la revisión del plan o el consentimiento (`QuestionIntent`),
+        // para que la tarjeta se pinte igual al recargar. Una que no vale se cae
+        // sola, sin tirar el guardado.
+        intent: z
+          .union([
+            z.object({ kind: z.literal("plan-review"), plan: z.string().min(1) }),
+            z.object({ kind: z.literal("plan-consent") }),
+          ])
+          .optional()
+          .catch(undefined),
       }),
     )
     .transform((a) => a.slice(0, 20))

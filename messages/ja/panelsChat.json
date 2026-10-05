@@ -266,6 +266,28 @@
       "minimize": "Len に最小化",
       "open": "チャットを開く",
       "resize": "ドラッグでサイズを変更"
+    },
+    "plan": {
+      "option": "先に計画する",
+      "optionHint": "Lenがまず確認して計画を提案します。承認するまで何も変わりません。",
+      "chip": "計画",
+      "chipOff": "計画モードを終了",
+      "reviewLabel": "確認待ちの計画",
+      "reviewQuestion": "この計画を承認しますか？",
+      "approve": "承認する",
+      "approveHint": "Lenが今すぐ計画を実行します。",
+      "keep": "変更を依頼",
+      "keepHint": "Lenはあなたの指摘をもとに計画を続けます。",
+      "feedbackPlaceholder": "計画のどこを変えますか？",
+      "sendFeedback": "変更を送信",
+      "consentLabel": "計画モード",
+      "consentQuestion": "Lenは何かを変更する前に計画したいと考えています。先に計画しますか？",
+      "planFirst": "先に計画する",
+      "planFirstHint": "計画を承認するまで何も変わりません。",
+      "skip": "計画しない",
+      "skipHint": "Lenは今すぐ依頼の作業を続けます。",
+      "showPlan": "計画をすべて見る",
+      "hidePlan": "計画を隠す"
     }
   }
 }

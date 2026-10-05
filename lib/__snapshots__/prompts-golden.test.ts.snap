@@ -635,6 +635,30 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "enter_plan_mode",
+    "description": "Ask the user to switch this conversation to plan mode before a change that isn't trivial, so you explore first and agree on the approach instead of redoing work. Use it when any of these is true: the request adds something new (a section, a page, a form, a feature); it can be done in more than one reasonable way; it changes how something that already works behaves; it means choosing between approaches (where the data lives, how something is laid out); it will touch more than two or three files; the request is vague and you need to look before you know how big it is; or the result depends on the user's taste — if you were about to ask them how they want it, plan instead. Skip it for small, clear changes (a text, a color, an obvious fix) and when the user already said exactly what they want. When unsure, plan. The user must accept; if they decline, carry on with the request without plan mode.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {}
+    }
+  },
+  {
+    "name": "exit_plan_mode",
+    "description": "Use only in plan mode. Present your plan for the user's review and, on approval, leave plan mode. The user may approve (carry out the plan from your next step) or keep planning — their feedback comes back in the tool result; revise and present again.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "plan": {
+          "type": "STRING",
+          "description": "The complete plan, as markdown, starting with a # heading that names it."
+        }
+      },
+      "required": [
+        "plan"
+      ]
+    }
+  },
+  {
     "name": "revertir_ultimo_cambio",
     "description": "Undoes YOUR last saved change to a page and keeps what the user edited by hand after it; if their edit touches the same thing as yours, it undoes nothing and tells you so. \\"Undo that\\" or \\"put it back the way it was\\" is this, NEVER editing backwards from memory. Afterwards, read the page before editing it again.",
     "parameters": {
@@ -1232,6 +1256,30 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
       },
       "required": [
         "questions"
+      ]
+    }
+  },
+  {
+    "name": "enter_plan_mode",
+    "description": "Ask the user to switch this conversation to plan mode before a change that isn't trivial, so you explore first and agree on the approach instead of redoing work. Use it when any of these is true: the request adds something new (a section, a page, a form, a feature); it can be done in more than one reasonable way; it changes how something that already works behaves; it means choosing between approaches (where the data lives, how something is laid out); it will touch more than two or three files; the request is vague and you need to look before you know how big it is; or the result depends on the user's taste — if you were about to ask them how they want it, plan instead. Skip it for small, clear changes (a text, a color, an obvious fix) and when the user already said exactly what they want. When unsure, plan. The user must accept; if they decline, carry on with the request without plan mode.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {}
+    }
+  },
+  {
+    "name": "exit_plan_mode",
+    "description": "Use only in plan mode. Present your plan for the user's review and, on approval, leave plan mode. The user may approve (carry out the plan from your next step) or keep planning — their feedback comes back in the tool result; revise and present again.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "plan": {
+          "type": "STRING",
+          "description": "The complete plan, as markdown, starting with a # heading that names it."
+        }
+      },
+      "required": [
+        "plan"
       ]
     }
   },

@@ -20,7 +20,7 @@
 // sobre la web publicada.
 
 import type { EventoSse } from "./sse";
-import { isQuestionTool } from "@/lib/agent/ask-user-question";
+import { asksTheOwner } from "@/lib/agent/ask-user-question";
 import {
   correosDe,
   esElTelefonoDado,
@@ -63,7 +63,7 @@ export function preguntoLen(eventos: readonly EventoSse[]): boolean {
   return eventos.some((e) => {
     const d = e.datos as { tool?: unknown; status?: unknown } | null;
     // Con el nombre de hoy (`ask_user_question`, pieza 3) o el de antes.
-    return e.nombre === "action" && typeof d?.tool === "string" && isQuestionTool(d.tool) && d.status === "done";
+    return e.nombre === "action" && typeof d?.tool === "string" && asksTheOwner(d.tool) && d.status === "done";
   });
 }
 

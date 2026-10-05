@@ -77,6 +77,21 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
     expect(guardada().respuesta).toHaveLength(200);
   });
 
+  it("🔴 pieza 7: la intención de la pregunta (la revisión del plan) llega a guardarse; una que no vale se cae", async () => {
+    const revision = { id: "plan-review", question: "Approve this plan and leave plan mode?", intent: { kind: "plan-review", plan: "# Reseñas" } };
+    const res = await guardar(
+      turno([
+        { tool: "exit_plan_mode", status: "done", summary: "", preguntas: [revision], respuesta: "Approve" },
+        { tool: "enter_plan_mode", status: "done", summary: "", preguntas: [{ id: "plan-mode", question: "¿Planear?", intent: { kind: "otra" } }] },
+      ]),
+    );
+    expect(res.status).toBe(200);
+    const acciones = vi.mocked(appendChatMessage).mock.calls[0]![1].actions!;
+    expect(acciones[0]!.preguntas![0]).toMatchObject({ intent: { kind: "plan-review", plan: "# Reseñas" } });
+    // `undefined`: el JSON de la fila no la lleva.
+    expect(acciones[1]!.preguntas![0]!.intent).toBeUndefined();
+  });
+
   it("una observación larga se RECORTA y el turno se guarda igual", async () => {
     const res = await guardar(
       turno([{ tool: "verificar_diseno", status: "done", summary: "ok", observacion: "x".repeat(5000) }]),

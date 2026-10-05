@@ -40,6 +40,7 @@ import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { ASK_USER_QUESTION } from "@/lib/agent/ask-user-question";
 import { SESSION_QUERY_DECLARATIONS, SESSION_QUERY_PROMPT } from "@/lib/agent/session-query-tools";
+import { PLAN_MODE_DECLARATIONS } from "@/lib/agent/plan-mode-tools";
 
 export const AGENT_MODULES = [
   // SÓLO CHAT desde el 2026-08-29. `collections` murió con el hub de Módulos:
@@ -367,6 +368,11 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
         required: ["questions"],
       },
     },
+    // PIEZA 7 DE LEN 2.5: el modo plan — la entrada de Claude Code (el dueño
+    // acepta) y la salida de DeepSeek (el plan se revisa) en
+    // `lib/agent/plan-mode-tools.ts`. Siempre declaradas, como la de DeepSeek:
+    // el catálogo no cambia entre modos (la caché).
+    ...PLAN_MODE_DECLARATIONS,
     {
       name: "revertir_ultimo_cambio",
       // F4: RV1–RV7 de plans/len-agente-2026/notas/f4-tabla-de-reglas.md. El

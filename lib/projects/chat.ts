@@ -31,13 +31,50 @@ export const ESTADO_EN_CURSO = "en_curso";
 export async function getChatMessages(
   projectId: string,
 ): Promise<StoredChatTurn[]> {
-  const rows = await db
-    .select(columnasDelPanel())
-    .from(schema.projectChatMessages)
-    .where(enCurso(projectId))
-    .orderBy(asc(schema.projectChatMessages.createdAt))
-    .limit(CHAT_LIMIT);
-  return rows.map(rowToTurn);
+  const [rows, planMode] = await Promise.all([
+    db
+      .select(columnasDelPanel())
+      .from(schema.projectChatMessages)
+      .where(enCurso(projectId))
+      .orderBy(asc(schema.projectChatMessages.createdAt))
+      .limit(CHAT_LIMIT),
+    planModeOfConversation(projectId),
+  ]);
+  const turns = rows.map(rowToTurn);
+  // Pieza 7: la foto va en el último turno cerrado, que es donde la busca el
+  // chat (`lastPlanMode`).
+  if (planMode) {
+    for (let i = turns.length - 1; i >= 0; i--) {
+      if (turns[i]!.enCurso) continue;
+      turns[i] = { ...turns[i]!, planMode: true };
+      break;
+    }
+  }
+  return turns;
+}
+
+/**
+ * PIEZA 7 · ¿sigue la charla en modo plan? Lo que pliega el servidor al empezar
+ * el turno (`planModeFromRows`): la última fila cerrada CON transcripción. De UNA
+ * fila, y es a propósito: leer `transcript->>'planMode'` obliga a Postgres a
+ * descomprimir la transcripción entera (hasta `TOPE_TRANSCRIPCION`), y en las
+ * 50 filas del panel eran megas en cada carga de proyecto. Si falla, la charla
+ * se carga igual, sin modo plan: el turno siguiente lo dice (`plan`).
+ */
+async function planModeOfConversation(projectId: string): Promise<boolean> {
+  const t = schema.projectChatMessages;
+  try {
+    const rows = await db
+      .select({ planMode: sql<string | null>`${t.transcript}->>'planMode'` })
+      .from(t)
+      .where(and(enCurso(projectId), ne(t.status, ESTADO_EN_CURSO), sql`jsonb_typeof(${t.transcript}) = 'object'`))
+      .orderBy(desc(t.createdAt))
+      .limit(1);
+    return rows[0]?.planMode === "true";
+  } catch (err) {
+    console.warn("[chat] no se pudo leer el modo plan de la charla", err);
+    return false;
+  }
 }
 
 /**

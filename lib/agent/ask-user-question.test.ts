@@ -1,7 +1,7 @@
 // ask_user_question (pieza 3 de Len 2.5): el esquema de DeepSeek, validado antes
 // de enseñar nada al dueño.
 import { describe, expect, it } from "vitest";
-import { isQuestionTool, questionsFrom, questionText, validateQuestions } from "./ask-user-question";
+import { isQuestionTool, questionsFrom, questionText, validateQuestions, asksTheOwner } from "./ask-user-question";
 
 describe("validateQuestions", () => {
   it("acepta la forma de DeepSeek y la normaliza", () => {
@@ -77,5 +77,36 @@ describe("questionsFrom (lo que llega al chat)", () => {
     expect(questionsFrom(qs)).toEqual(qs);
     expect(questionsFrom("¿?")).toBeNull();
     expect(questionsFrom([{ question: "sin id" }])).toBeNull();
+  });
+});
+
+describe("la intención de la pregunta (pieza 7: revisión del plan y consentimiento)", () => {
+  const revision = { id: "plan-review", question: "Approve this plan and leave plan mode?", intent: { kind: "plan-review", plan: "# Plan" } };
+
+  it("🔴 el modelo no la puede poner: validateQuestions la quita", () => {
+    const r = validateQuestions([revision]);
+    expect(r.ok && "intent" in r.questions[0]).toBe(false);
+  });
+
+  it("el chat la conserva cuando la manda el servidor con una forma válida", () => {
+    expect(questionsFrom([revision])?.[0]?.intent).toEqual({ kind: "plan-review", plan: "# Plan" });
+    expect(questionsFrom([{ id: "plan-mode", question: "¿Planear?", intent: { kind: "plan-consent" } }])?.[0]?.intent).toEqual({
+      kind: "plan-consent",
+    });
+  });
+
+  it("una intención mal formada se cae y la pregunta se queda", () => {
+    expect(questionsFrom([{ ...revision, intent: { kind: "plan-review", plan: "" } }])?.[0]).toEqual({
+      id: "plan-review",
+      question: "Approve this plan and leave plan mode?",
+    });
+    expect(questionsFrom([{ ...revision, intent: { kind: "otra" } }])?.[0]?.intent).toBeUndefined();
+  });
+});
+
+describe("asksTheOwner (pieza 7)", () => {
+  it("la pregunta y las dos del modo plan le preguntan al dueño; las demás no", () => {
+    expect(["ask_user_question", "preguntar", "enter_plan_mode", "exit_plan_mode"].map(asksTheOwner)).toEqual([true, true, true, true]);
+    expect(asksTheOwner("Read")).toBe(false);
   });
 });

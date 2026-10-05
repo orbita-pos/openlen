@@ -20,12 +20,19 @@ export interface QuestionOption {
   description?: string;
 }
 
+/** PIEZA 7 · para qué es la pregunta cuando no es del modelo: la revisión del
+ *  plan (`exit_plan_mode`) o el consentimiento para entrar en modo plan
+ *  (`enter_plan_mode`). La pone SÓLO el servidor; el chat la usa para pintar la
+ *  tarjeta (como el `intent` de DeepSeek: «presentation only»). */
+export type QuestionIntent = { kind: "plan-review"; plan: string } | { kind: "plan-consent" };
+
 export interface UserQuestion {
   id: string;
   question: string;
   header?: string;
   options?: QuestionOption[];
   multiSelect?: boolean;
+  intent?: QuestionIntent;
 }
 
 export interface QuestionAnswer {
@@ -87,14 +94,28 @@ export function validateQuestions(raw: unknown): { ok: true; questions: UserQues
   return { ok: true, questions };
 }
 
+/** La intención, si tiene una forma que el chat sabe pintar; si no, ninguna. */
+function intentFrom(raw: unknown): QuestionIntent | null {
+  if (!isObject(raw)) return null;
+  if (raw.kind === "plan-consent") return { kind: "plan-consent" };
+  if (raw.kind === "plan-review" && typeof raw.plan === "string" && raw.plan.trim()) return { kind: "plan-review", plan: raw.plan };
+  return null;
+}
+
 /** Las preguntas tal como llegan al chat (la forma ya normalizada del servidor,
- *  con `multiSelect`), validadas con las mismas reglas; `null` si no valen. */
+ *  con `multiSelect`), validadas con las mismas reglas; `null` si no valen. La
+ *  intención (pieza 7) se conserva aquí y sólo aquí: lo que manda el modelo
+ *  pasa por `validateQuestions`, que no la conoce. */
 export function questionsFrom(raw: unknown): UserQuestion[] | null {
   if (!Array.isArray(raw)) return null;
   const v = validateQuestions(
     raw.map((q) => (isObject(q) && q.multiSelect !== undefined ? { ...q, multi_select: q.multiSelect } : q)),
   );
-  return v.ok ? v.questions : null;
+  if (!v.ok) return null;
+  return v.questions.map((q, i) => {
+    const intent = intentFrom((raw[i] as Record<string, unknown>).intent);
+    return intent ? { ...q, intent } : q;
+  });
 }
 
 /** La(s) pregunta(s) como texto plano: para la tarjeta de antes, la voz y el
@@ -120,6 +141,18 @@ export function answerSummary(answers: readonly QuestionAnswer[]): string {
 /** ¿Es la herramienta de preguntar, con su nombre de hoy o con el de antes? */
 export function isQuestionTool(name: string): boolean {
   return name === ASK_USER_QUESTION || name === LEGACY_QUESTION_TOOL;
+}
+
+/** PIEZA 7 · las herramientas que le preguntan al dueño y esperan: la pregunta
+ *  y las dos del modo plan (el consentimiento para entrar, la revisión del
+ *  plan). Su tarjeta es una pregunta en el chat, en la barra, en el aviso del
+ *  cierre y en Len-Bench. Con los nombres en texto: `plan-mode.ts` ya importa
+ *  de aquí. */
+const ASKS_THE_OWNER: ReadonlySet<string> = new Set([ASK_USER_QUESTION, LEGACY_QUESTION_TOOL, "enter_plan_mode", "exit_plan_mode"]);
+
+/** ¿Le pregunta al dueño y espera su respuesta? */
+export function asksTheOwner(name: string): boolean {
+  return ASKS_THE_OWNER.has(name);
 }
 
 /** Los nombres viejos que siguen valiendo en lo GUARDADO, con el de hoy. */

@@ -266,6 +266,28 @@
       "minimize": "Riduci a Len",
       "open": "Apri la chat",
       "resize": "Trascina per ridimensionare"
+    },
+    "plan": {
+      "option": "Pianifica prima",
+      "optionHint": "Len guarda prima e ti propone un piano; non cambia nulla finché non lo approvi.",
+      "chip": "Piano",
+      "chipOff": "Esci dalla modalità piano",
+      "reviewLabel": "Piano da rivedere",
+      "reviewQuestion": "Approvi questo piano?",
+      "approve": "Approva",
+      "approveHint": "Len esegue il piano adesso.",
+      "keep": "Chiedi modifiche",
+      "keepHint": "Len continua a pianificare con quello che gli dici.",
+      "feedbackPlaceholder": "Cosa cambieresti nel piano?",
+      "sendFeedback": "Invia modifiche",
+      "consentLabel": "Modalità piano",
+      "consentQuestion": "Len vuole pianificare prima di cambiare qualsiasi cosa. Pianificare prima?",
+      "planFirst": "Pianifica prima",
+      "planFirstHint": "Non cambia nulla finché non approvi il piano.",
+      "skip": "Senza piano",
+      "skipHint": "Len prosegue con la tua richiesta adesso.",
+      "showPlan": "Vedi tutto il piano",
+      "hidePlan": "Nascondi il piano"
     }
   }
 }

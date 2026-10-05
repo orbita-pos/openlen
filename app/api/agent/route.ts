@@ -56,6 +56,7 @@ import { randomUUID } from "node:crypto";
 
 import { abrirTurno, cerrarTurno, esperarRespuesta, leerDireccion } from "@/lib/agent/direcciones";
 import { ASK_USER_TIMEOUT_MS, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { planModeFromRows, resolveTurnPlanMode, withPlanSection } from "@/lib/agent/plan-mode";
 import { crearDiarioDelTurno } from "@/lib/agent/diario-del-turno";
 import { corteDelTurno, crearRegistroDelTurno } from "@/lib/agent/registro-del-turno";
 import { actualizarSuite, marcarRegresiones, migrarSuite, vivas } from "@/lib/agent/pruebas-de-la-pagina";
@@ -256,6 +257,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
      *  `ask_user_question` dentro del turno (el chat). La voz y Len-Bench no lo
      *  mandan: para ellos la pregunta sigue cerrando el turno. */
     answersQuestions?: unknown;
+    /** Pieza 7: el modo plan que el dueño veía al mandar (la ficha «Plan» del
+     *  compositor). Sólo `true`/`false` cuentan; sin él, lo plegado. */
+    plan?: unknown;
   } | null;
 
   const projectId = typeof body?.projectId === "string" ? body.projectId.trim() : "";
@@ -284,6 +288,10 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   const mode = modeOfTurn(body?.mode);
   // Pieza 3: sólo el literal `true` cuenta (entra de fuera).
   const answersQuestions = body?.answersQuestions === true;
+  // Pieza 7: la elección del dueño, con el mismo pestillo (lo que veía al
+  // mandar). Basura o ausente (voz, Len-Bench, un cliente viejo) = `null`: no
+  // es «apagado», es «lo que ya estaba».
+  const planElegido = typeof body?.plan === "boolean" ? body.plan : null;
   // LA HORA DEL USUARIO (plans/len-resultados/diseno.md §7). Se sanea: entra de
   // fuera. Basura -> null -> la zona guardada.
   const zonaDelCuerpo = zonaValida(body?.zonaHoraria);
@@ -726,6 +734,16 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // la primera vuelta y en la segunda Len ya no la tenía delante.
   if (attachedInline) messages[messages.length - 1] = { ...messages[messages.length - 1]!, images: [attachedInline] };
 
+  // PIEZA 7 · EL MODO PLAN DEL TURNO, como el de DeepSeek: plegado de la última
+  // fila con transcripción y, si el dueño eligió otra cosa al mandar, gana él y
+  // el modelo lo lee con la narración de DeepSeek, justo antes de su petición
+  // (allí es un mensaje de usuario inyectado entre turnos). Sólo lo cambian
+  // `enter_plan_mode` y `exit_plan_mode` (`deps.planMode`, más abajo); la
+  // sección entra o sale del prompt en CADA petición (`withPlanSection`).
+  const planDelTurno = resolveTurnPlanMode({ folded: planModeFromRows(filasDelHistorial), selected: planElegido });
+  let planActivo = planDelTurno.active;
+  if (planDelTurno.notice) messages.splice(messages.length - 1, 0, { role: "user", content: planDelTurno.notice });
+
   // LA DIRECCION A LA QUE SE LE PUEDE CORREGIR EL RUMBO. El SSE es de una sola
   // via, asi que la correccion del usuario entra por otra peticion
   // (POST /api/agent/dirigir) y necesita saber a que turno va.
@@ -919,8 +937,13 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
               centicredits: cobrado ?? (chargedByTools > 0 ? chargedByTools : undefined),
               durationMs: Date.now() - empezo,
               // H4 · lo que vio el modelo; de aquí sale el historial del turno siguiente.
+              // Pieza 7: y si cerró en modo plan, que es de donde se pliega el
+              // estado del turno siguiente.
               transcript: transcripcionDelTurno
-                ? transcripcionParaGuardar(transcripcionDelTurno, agentSession.leidos ?? new Map())
+                ? {
+                    ...transcripcionParaGuardar(transcripcionDelTurno, agentSession.leidos ?? new Map()),
+                    ...(planActivo ? { planMode: true as const } : {}),
+                  }
                 : null,
             });
           } catch (err) {
@@ -1016,18 +1039,35 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         // en el almacén del turno (`POST /api/agent/responder`). El evento
         // re-arma el reloj de silencio, y la espera (120 s) queda por debajo de
         // él (180 s). El ■ la suelta.
+        // PIEZA 7 · el modo plan, para las dos herramientas que lo cambian. Cada
+        // cambio se le dice al chat (`plan`), que mueve su ficha.
+        const planMode = {
+          active: () => planActivo,
+          set: (activo: boolean) => {
+            if (activo === planActivo) return;
+            planActivo = activo;
+            emit("plan", { active: activo });
+          },
+        };
+        // El modo con el que empieza el turno (y `plan` otra vez a cada cambio):
+        // la ficha del chat sigue al servidor, no a su copia. Aquí y no junto a
+        // `turno`: un turno que la puerta de créditos para no llega a empezar.
+        emit("plan", { active: planActivo });
         const depsDelTurno = answersQuestions
           ? {
               ...deps,
+              planMode,
               askUser: async (questions: UserQuestion[]) => {
                 emit("question", { questions });
                 return esperarRespuesta(turnoId, { timeoutMs: ASK_USER_TIMEOUT_MS, signal: upstreamAbort.signal });
               },
             }
-          : deps;
+          : { ...deps, planMode };
         const result = await runAgentLoop({
           messages,
           tools,
+          // Pieza 7: en modo plan el bucle no empuja a editar.
+          planModeActive: () => planActivo,
           // El ■ también corta la espera entre reintentos del proveedor
           // (`lib/agent/retry-policy.ts`).
           signal: upstreamAbort.signal,
@@ -1114,7 +1154,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           // (`lib/agent/retry-policy.ts`, como DeepSeek). Cada evento del modelo
           // rearma el reloj de silencio.
           openStream: (msgs) => {
-            const s = conSenales(streamWithRetry(() => brain.openStream(msgs), { signal: upstreamAbort.signal }), reloj.vivo);
+            // Pieza 7: la sección del modo plan, con el estado de AHORA.
+            const conModo = withPlanSection(msgs, planActivo);
+            const s = conSenales(streamWithRetry(() => brain.openStream(conModo), { signal: upstreamAbort.signal }), reloj.vivo);
             // `envuelve` deja pasar cada evento tal cual y se queda una copia:
             // no cambia el orden, ni el contenido, ni el momento en que llega.
             return grabadora ? grabadora.envuelve(s) : s;
@@ -1123,7 +1165,8 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           // compose a closing summary when a step-budget cap is hit, so the turn
           // ends with "here's what I did / what's pending" instead of a red error.
           closeOut: (msgs) => {
-            const s = conSenales(streamWithRetry(() => brain.closeOut(msgs), { signal: upstreamAbort.signal }), reloj.vivo);
+            const conModo = withPlanSection(msgs, planActivo);
+            const s = conSenales(streamWithRetry(() => brain.closeOut(conModo), { signal: upstreamAbort.signal }), reloj.vivo);
             return grabadora ? grabadora.envuelveCierre(s) : s;
           },
           // EL DIARIO SE ESCRIBE AQUÍ, y no dentro de `runAgentTool`, porque

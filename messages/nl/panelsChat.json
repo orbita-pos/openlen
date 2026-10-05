@@ -266,6 +266,28 @@
       "minimize": "Minimaliseren naar Len",
       "open": "Chat openen",
       "resize": "Sleep om het formaat te wijzigen"
+    },
+    "plan": {
+      "option": "Eerst plannen",
+      "optionHint": "Len kijkt eerst rond en stelt een plan voor; er verandert niets tot je het goedkeurt.",
+      "chip": "Plan",
+      "chipOff": "Planmodus verlaten",
+      "reviewLabel": "Plan om te beoordelen",
+      "reviewQuestion": "Dit plan goedkeuren?",
+      "approve": "Goedkeuren",
+      "approveHint": "Len voert het plan nu uit.",
+      "keep": "Wijzigingen vragen",
+      "keepHint": "Len plant verder met wat je zegt.",
+      "feedbackPlaceholder": "Wat moet er anders in het plan?",
+      "sendFeedback": "Wijzigingen versturen",
+      "consentLabel": "Planmodus",
+      "consentQuestion": "Len wil plannen voordat er iets verandert. Eerst plannen?",
+      "planFirst": "Eerst plannen",
+      "planFirstHint": "Er verandert niets tot je het plan goedkeurt.",
+      "skip": "Zonder plan",
+      "skipHint": "Len gaat nu verder met je verzoek.",
+      "showPlan": "Hele plan bekijken",
+      "hidePlan": "Plan verbergen"
     }
   }
 }

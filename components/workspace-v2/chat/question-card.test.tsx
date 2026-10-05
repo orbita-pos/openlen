@@ -139,3 +139,74 @@ describe("QuestionCardView", () => {
     expect(onAnswer).toHaveBeenCalledTimes(1);
   });
 });
+
+// PIEZA 7 · la misma tarjeta para el modo plan. La revisión enseña el plan y se
+// contesta con «Aprobar» o «Pedir cambios» (los comentarios vuelven literales);
+// el consentimiento es un sí o un no de un toque. Los textos son del chat
+// (traducidos), pero la respuesta lleva la etiqueta canónica que lee el servidor.
+describe("QuestionCardView — el modo plan", () => {
+  const PLAN = "# Reseñas con estrellas\n\nUna sección nueva.\n\n## Cómo lo comprobaré\n- Dejo una reseña y la veo";
+  const revision: UserQuestion = {
+    id: "plan-review",
+    header: "Plan review",
+    question: "Approve this plan and leave plan mode?",
+    options: [{ label: "Approve" }, { label: "Keep planning" }],
+    intent: { kind: "plan-review", plan: PLAN },
+  };
+  const permiso: UserQuestion = {
+    id: "plan-mode",
+    header: "Plan mode",
+    question: "Switch to plan mode?",
+    options: [{ label: "Plan first" }, { label: "Skip planning" }],
+    intent: { kind: "plan-consent" },
+  };
+
+  it("la revisión enseña el plan, y «Aprobar» manda Approve", () => {
+    const onAnswer = vi.fn();
+    const host = montar({ questions: [revision], onAnswer });
+    expect(host.textContent).toContain("newChat.plan.reviewLabel");
+    expect(host.textContent).toContain("Reseñas con estrellas");
+    expect(host.textContent).toContain("• Dejo una reseña y la veo");
+    expect(host.textContent).not.toContain("# ");
+    pulsarBoton(host, "newChat.plan.approve");
+    expect(onAnswer).toHaveBeenCalledWith([{ id: "plan-review", selected: ["Approve"] }]);
+  });
+
+  it("«Pedir cambios» abre el campo y manda Keep planning con lo escrito", () => {
+    const onAnswer = vi.fn();
+    const host = montar({ questions: [revision], onAnswer });
+    pulsarBoton(host, "newChat.plan.keep");
+    escribir(host.querySelector("textarea")!, "más corto");
+    pulsarBoton(host, "newChat.plan.sendFeedback");
+    expect(onAnswer).toHaveBeenCalledWith([{ id: "plan-review", selected: ["Keep planning"], custom: "más corto" }]);
+  });
+
+  it("contestada, dice lo que elegiste traducido y deja ver el plan", () => {
+    const host = montar({ questions: [revision], answer: "Approve" });
+    expect(host.textContent).toContain("newChat.question.answered(newChat.plan.approve)");
+    expect(host.textContent).not.toContain("Reseñas con estrellas");
+    pulsarBoton(host, "newChat.plan.showPlan");
+    expect(host.textContent).toContain("Reseñas con estrellas");
+  });
+
+  it("el consentimiento: su pregunta traducida, un toque, y sin «otra»", () => {
+    const onAnswer = vi.fn();
+    const host = montar({ questions: [permiso], onAnswer });
+    expect(host.textContent).toContain("newChat.plan.consentQuestion");
+    expect(boton(host, "newChat.question.other")).toBeUndefined();
+    act(() => opciones(host)[0]!.click());
+    expect(onAnswer).toHaveBeenCalledWith([{ id: "plan-mode", selected: ["Plan first"] }]);
+  });
+
+  it("BRAZO DE CONTROL: una pregunta del modelo con una opción «Approve» no se traduce", () => {
+    const host = montar({ questions: [{ id: "q", question: "¿Publico?", options: [{ label: "Approve" }, { label: "No" }] }], onAnswer: () => undefined });
+    expect(opciones(host)[0]!.textContent).toContain("Approve");
+    expect(host.textContent).not.toContain("newChat.plan");
+  });
+});
+
+function pulsarBoton(host: HTMLElement, texto: string) {
+  const b = boton(host, texto);
+  if (!b) throw new Error(`no hay botón «${texto}»`);
+  act(() => b.click());
+}

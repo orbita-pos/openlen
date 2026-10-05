@@ -28,8 +28,9 @@ import {
 import { noCreditsText, notifyCreditBalanceChanged } from "@/lib/credits-client";
 import type { AgentAction } from "../agent-action-card";
 import { upsertActionInto } from "./action-cards";
-import { answerSummary, isQuestionTool, questionsFrom, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { answerSummary, asksTheOwner, questionsFrom, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { composeAnswerMessage, fallbackDelivery, outcomeOfResponder } from "./question-answer";
+import { lastPlanMode, planAnswersForMessage, planModeAfterAnswer, togglePlanSelection } from "./plan-mode-state";
 import type { AgentConfirm } from "../agent-confirm-card";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { ejecutarUndo, ficherosDelEvento, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
@@ -307,6 +308,20 @@ export function useAgentChat({
   // turno como el esfuerzo y NO se guarda (ver `mode-picker.tsx`). El selector
   // sólo se pinta si el servidor lo ofrece, que es con la terminal encendida.
   const [mode, setMode] = useState<AgentMode>("len");
+  // PIEZA 7 · EL MODO PLAN. `planKnown` es lo que dice el servidor (el último
+  // turno cerrado y los eventos `plan` del turno en vuelo); `planWanted`, lo que
+  // el dueño eligió y aún no ha viajado. Al servidor sólo viaja la elección
+  // (`plan-mode-state.ts` dice por qué). Los refs, para que `send` y
+  // `answerQuestion` lean el valor de AHORA.
+  const [planKnown, setPlanKnown] = useState<boolean>(() => lastPlanMode(initialChat ?? []));
+  const [planWanted, setPlanWanted] = useState<boolean | null>(null);
+  const planKnownRef = useRef(planKnown);
+  planKnownRef.current = planKnown;
+  const planWantedRef = useRef(planWanted);
+  planWantedRef.current = planWanted;
+  /** La elección que viajó con el turno en vuelo: se da por aplicada cuando el
+   *  servidor dice con qué modo empezó. */
+  const planSentRef = useRef<boolean | null>(null);
   const [dynamisOffered, setDynamisOffered] = useState(false);
   const [sending, setSending] = useState(false);
   // Agent mode — DEFAULT ON since graduation (alpha ruling 2026-07-08):
@@ -491,7 +506,7 @@ export function useAgentChat({
   const initialChatSig = (initialChat ?? [])
     // `enCurso` y `cortado` viajan con `status: "applied"`: sin ellos en la
     // firma, un turno que termina en el servidor no volvería a converger.
-    .map((s) => `${s.id}:${s.status}:${s.enCurso ? "c" : ""}${s.cortado ? "x" : ""}`)
+    .map((s) => `${s.id}:${s.status}:${s.enCurso ? "c" : ""}${s.cortado ? "x" : ""}${s.planMode ? "p" : ""}`)
     .join("|");
   const chatSeededRef = useRef(false);
   useEffect(() => {
@@ -501,6 +516,10 @@ export function useAgentChat({
       return;
     }
     const server = initialChatRef.current ?? [];
+    // PIEZA 7: lo que dice el servidor del modo plan, salvo con un turno propio
+    // en vuelo (su fila aún no está, y sus eventos son más nuevos). Cubre el
+    // turno reenganchado, que no trae eventos.
+    if (!enVueloRef.current) setPlanKnown(lastPlanMode(server));
     // Server turns first (chronological, the authority). Keep the local
     // DesignTurn where we have it — it carries preEditHtml for in-session
     // Undo — but take status from the server (another tab may have undone
@@ -1163,6 +1182,8 @@ export function useAgentChat({
         let finalActions: AgentAction[] = [];
         try {
           scanController.start();
+          // Pieza 7: la elección del modo plan que viaja con ESTE turno.
+          planSentRef.current = planWantedRef.current;
           const res = await fetch("/api/agent", {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -1196,6 +1217,10 @@ export function useAgentChat({
               // PIEZA 3: este chat SABE contestar las preguntas de Len dentro del
               // turno (la tarjeta con opciones y `POST /api/agent/responder`).
               answersQuestions: true,
+              // PIEZA 7: la elección del dueño, si tocó la ficha (como el `/plan`
+              // de DeepSeek: un evento). Sin elección no viaja nada y el servidor
+              // sigue con lo que ya estaba.
+              ...(planSentRef.current !== null ? { plan: planSentRef.current } : {}),
               // Same value + same conditional shape ai-design sends below —
               // absent/empty means home, cloned for parity.
               ...(turnPage ? { page: turnPage } : {}),
@@ -1293,6 +1318,19 @@ export function useAgentChat({
                   ),
                 );
                 reintentando = true;
+              } else if (evName === "plan") {
+                // PIEZA 7: el modo con el que empezó el turno, y cada cambio
+                // (aceptar entrar, aprobar el plan). La elección que viajó ya
+                // está aplicada.
+                const active = (payload as { active?: unknown } | null)?.active;
+                if (typeof active === "boolean") {
+                  setPlanKnown(active);
+                  const enviada = planSentRef.current;
+                  if (enviada !== null) {
+                    planSentRef.current = null;
+                    setPlanWanted((w) => (w === enviada ? null : w));
+                  }
+                }
               } else if (evName === "question") {
                 // PIEZA 3: Len pregunta y ESPERA (`ask_user_question`, 120 s). La
                 // tarjeta se contesta con un toque y la respuesta vuelve al
@@ -1406,7 +1444,7 @@ export function useAgentChat({
                 const preguntas = questionsFrom((payload as { preguntas?: unknown } | null)?.preguntas);
                 const respuesta = (payload as { respuesta?: unknown } | null)?.respuesta;
                 // Su tarjeta llegó: ya no espera.
-                if (isQuestionTool(tool) && status !== "running") updateTurn(turnId, { pendingQuestions: undefined, answeredLive: undefined });
+                if (asksTheOwner(tool) && status !== "running") updateTurn(turnId, { pendingQuestions: undefined, answeredLive: undefined });
                 if (tool) {
                   const action: AgentAction = {
                     tool,
@@ -2067,8 +2105,17 @@ export function useAgentChat({
           // Sin red: cae al mensaje normal, abajo.
         }
       }
-      const mensaje = composeAnswerMessage(questions, answers);
+      // Pieza 7: con las etiquetas del modo plan en el idioma del dueño.
+      const mensaje = composeAnswerMessage(questions, planAnswersForMessage(questions, answers, (k) => t(k as never)));
       if (!mensaje.trim()) return;
+      // PIEZA 7: contestar después la tarjeta del modo plan es la puerta del
+      // dueño: aceptar entrar lo enciende, aprobar el plan lo apaga.
+      const tras = planModeAfterAnswer(questions, answers);
+      if (tras !== null) {
+        const eleccion = tras === planKnownRef.current ? null : tras;
+        planWantedRef.current = eleccion;
+        setPlanWanted(eleccion);
+      }
       // 🔴 Con el turno aún en vuelo (el que preguntó, cerrándose justo al vencer
       // la espera), `send()` la tiraría en silencio: queda en cola y sale en
       // cuanto el turno acaba (el efecto de abajo).
@@ -2078,7 +2125,7 @@ export function useAgentChat({
       }
       void send(mensaje);
     },
-    [reenganche, send, sending, updateTurn],
+    [reenganche, send, sending, t, updateTurn],
   );
   useEffect(() => {
     if (sending || reenganche !== null || !respuestaEnColaRef.current) return;
@@ -2101,6 +2148,12 @@ export function useAgentChat({
     }).catch(() => {});
   }, []);
 
+  // PIEZA 7 · la ficha «Plan» y la opción del «+»: eligen lo contrario de lo que
+  // se ve; volver a lo que ya era deshace la elección.
+  const togglePlan = useCallback(() => {
+    setPlanWanted((w) => togglePlanSelection({ wanted: w, known: planKnownRef.current }));
+  }, []);
+
   const removeComentario = useCallback((id: number) => comentariosDelChat.quitar(projectId, id), [projectId]);
 
   /**
@@ -2114,6 +2167,9 @@ export function useAgentChat({
    */
   const conversationChanged = useCallback(() => {
     setTurns([]);
+    // Una charla nueva empieza sin modo plan (el servidor pliega de sus filas).
+    setPlanKnown(false);
+    setPlanWanted(null);
     onChatChangeRef.current?.();
   }, []);
 
@@ -2155,6 +2211,11 @@ export function useAgentChat({
     handlePublished,
     answerQuestion,
     conversationChanged,
+    /** Pieza 7: el modo plan que se ve (lo elegido, o lo que dice el servidor). */
+    planMode: planWanted ?? planKnown,
+    togglePlan,
+    /** El chat clásico (`ai-design`, la vía de escape) no tiene modo plan. */
+    planOffered: agentModeUI,
   };
 }
 

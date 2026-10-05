@@ -36,6 +36,8 @@
       "leer_de_internet": "알려준 페이지를 읽는 중",
       "preguntar": "질문하는 중",
       "ask_user_question": "질문하는 중",
+      "enter_plan_mode": "먼저 계획할지 묻는 중",
+      "exit_plan_mode": "계획을 보여 주는 중",
       "session_search": "이전 대화 검색 중",
       "session_event_search": "이전 대화 안에서 검색 중",
       "session_event_read": "이전 대화 읽는 중",

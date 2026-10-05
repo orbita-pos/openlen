@@ -266,6 +266,28 @@
       "minimize": "Minimizar para o Len",
       "open": "Abrir o chat",
       "resize": "Arraste para mudar o tamanho"
+    },
+    "plan": {
+      "option": "Planejar primeiro",
+      "optionHint": "O Len olha primeiro e propõe um plano; nada muda até você aprovar.",
+      "chip": "Plano",
+      "chipOff": "Sair do modo plano",
+      "reviewLabel": "Plano para revisar",
+      "reviewQuestion": "Aprovar este plano?",
+      "approve": "Aprovar",
+      "approveHint": "O Len executa o plano agora.",
+      "keep": "Pedir mudanças",
+      "keepHint": "O Len continua planejando com o que você disser.",
+      "feedbackPlaceholder": "O que mudaria no plano?",
+      "sendFeedback": "Enviar mudanças",
+      "consentLabel": "Modo plano",
+      "consentQuestion": "O Len quer planejar antes de mudar qualquer coisa. Planejar primeiro?",
+      "planFirst": "Planejar primeiro",
+      "planFirstHint": "Nada muda até você aprovar o plano.",
+      "skip": "Sem plano",
+      "skipHint": "O Len segue com o seu pedido agora.",
+      "showPlan": "Ver o plano inteiro",
+      "hidePlan": "Ocultar o plano"
     }
   }
 }

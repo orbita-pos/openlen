@@ -79,6 +79,8 @@ import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { createConcurrencyLimit } from "@/lib/agent/concurrency-limit";
 import { ASK_USER_QUESTION, answerSummary, questionText, validateQuestions, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
+import { toolEnterPlanMode, toolExitPlanMode } from "@/lib/agent/plan-mode-tools";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import {
   SESSION_EVENT_READ,
@@ -123,6 +125,10 @@ export interface AgentDeps {
    *  respuestas o `null` si no llegaron a tiempo (o el ■). Sin él, la pregunta
    *  cierra el turno, como siempre: así siguen la voz y Len-Bench. */
   askUser?(questions: UserQuestion[]): Promise<QuestionAnswer[] | null>;
+  /** Pieza 7: el modo plan del turno (`lib/agent/plan-mode.ts`). Lo guarda la
+   *  ruta; sólo `enter_plan_mode` y `exit_plan_mode` lo cambian. Sin él, el
+   *  modo plan no existe y las dos lo dicen. */
+  planMode?: { active(): boolean; set(active: boolean): void };
   /** Pieza 5: las filas del chat del proyecto, para buscar en sus charlas
    *  (`session_search`). Sin él, las herramientas lo dicen. */
   chatRows?(projectId: string): Promise<ChatRowForSearch[]>;
@@ -1994,6 +2000,11 @@ async function ejecutarHerramienta(
         return await toolPublicar(session, deps, args);
       case ASK_USER_QUESTION:
         return await toolAskUserQuestion(session, deps, args);
+      // Pieza 7: el modo plan, como DeepSeek (la salida) y Claude Code (la entrada).
+      case ENTER_PLAN_MODE:
+        return await toolEnterPlanMode(session, deps, args);
+      case EXIT_PLAN_MODE:
+        return await toolExitPlanMode(session, deps, args);
       // Pieza 5: buscar en las charlas pasadas, como DeepSeek.
       case SESSION_SEARCH:
         return await toolSessionSearch(session, deps, args);

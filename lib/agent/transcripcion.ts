@@ -86,6 +86,9 @@ export interface LecturaGuardada {
 export interface TranscripcionGuardada {
   readonly mensajes: Message[];
   readonly leidos: LecturaGuardada[];
+  /** PIEZA 7 · el turno cerró en modo plan: la foto de la que se pliega el
+   *  estado al empezar el siguiente (`planModeFromRows`). Ausente = no. */
+  readonly planMode?: true;
 }
 
 /** Una fila de `projectChatMessages`, con lo que hace falta para el historial. */

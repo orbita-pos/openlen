@@ -5,6 +5,8 @@
 // (`turno`, `cambios`, el `done` con `centicredits`…), así que el chat los lee
 // por el mismo camino que los de verdad. Sólo existe en desarrollo.
 
+import { planConsentQuestion, planReviewQuestion } from "@/lib/agent/plan-mode";
+
 /** Las preguntas de los guiones de ask_user_question: una de una sola respuesta,
  *  con la recomendada, y otra de varias. */
 const PREGUNTAS_DE_EJEMPLO = [
@@ -25,11 +27,31 @@ const PREGUNTAS_DE_EJEMPLO = [
   },
 ];
 
+/** El plan de los guiones del modo plan (pieza 7): como lo escribiría Len, en
+ *  palabras del dueño y terminando con cómo lo comprobará. */
+const PLAN_DE_EJEMPLO = [
+  "# Reseñas con estrellas en la portada",
+  "",
+  "Una sección nueva debajo de los pasteles donde tus clientes dejan su opinión, con estrellas del 1 al 5.",
+  "",
+  "## Qué voy a hacer",
+  "- Añadir la sección «Lo que dicen» con el estilo de tu página.",
+  "- Guardar cada reseña en una tabla nueva, que sólo tú puedes borrar.",
+  "- Enseñar las 6 más recientes y la media de estrellas.",
+  "",
+  "## Cómo lo comprobaré",
+  "- Dejo una reseña de prueba y miro que aparece arriba de la lista.",
+  "- Pruebo a mandar una sin estrellas: tiene que pedirlas.",
+  "- Miro la página en el móvil para ver que no se desborda.",
+].join("\n");
+
 export type ScenarioId =
   | "edit"
   | "question"
   | "askLive"
   | "askEnded"
+  | "planReview"
+  | "planConsent"
   | "terminal"
   | "publish"
   | "reply"
@@ -49,6 +71,8 @@ export const SCENARIOS: readonly ScenarioId[] = [
   "question",
   "askLive",
   "askEnded",
+  "planReview",
+  "planConsent",
   "terminal",
   "publish",
   "reply",
@@ -69,6 +93,8 @@ export const SCENARIO_LABEL: Readonly<Record<ScenarioId, string>> = {
   question: "Pregunta (preguntar, fila vieja)",
   askLive: "Pregunta con opciones (espera dentro del turno)",
   askEnded: "Pregunta con opciones (cerró el turno)",
+  planReview: "Modo plan: revisar el plan (espera dentro del turno)",
+  planConsent: "Modo plan: Len pide planear primero",
   terminal: "Terminal + web",
   publish: "Publicar",
   reply: "Borrador de respuesta",
@@ -213,6 +239,41 @@ export function scriptFor(id: ScenarioId, turnoId: string): ScriptStep[] {
           preguntas: PREGUNTAS_DE_EJEMPLO,
         }),
         wait(100, "done", DONE({ centicredits: 12, durationMs: 61_000 })),
+      ];
+    // Pieza 7 de Len 2.5: el modo plan. «planReview» presenta el plan y espera
+    // la revisión dentro del turno; «planConsent» es Len pidiendo entrar.
+    case "planReview":
+      return [
+        ...head,
+        wait(200, "plan", { active: true }),
+        wait(800, "action", { tool: "Read", status: "running", summary: "/index.html" }),
+        wait(600, "action", { tool: "Read", status: "done", summary: "/index.html" }),
+        wait(300, "action", { tool: "exit_plan_mode", status: "running", summary: "" }),
+        wait(300, "question", { questions: [planReviewQuestion(PLAN_DE_EJEMPLO)] }),
+        wait(60_000, "action", {
+          tool: "exit_plan_mode",
+          status: "done",
+          summary: "",
+          pregunta: "Approve this plan and leave plan mode?",
+          preguntas: [planReviewQuestion(PLAN_DE_EJEMPLO)],
+        }),
+        wait(100, "done", DONE({ centicredits: 18, durationMs: 62_000 })),
+      ];
+    case "planConsent":
+      return [
+        ...head,
+        wait(200, "plan", { active: false }),
+        wait(800, "text", { text: "Esto toca varias partes de la página; mejor lo planeamos antes.\n\n" }),
+        wait(200, "action", { tool: "enter_plan_mode", status: "running", summary: "" }),
+        wait(300, "question", { questions: [planConsentQuestion()] }),
+        wait(60_000, "action", {
+          tool: "enter_plan_mode",
+          status: "done",
+          summary: "",
+          pregunta: planConsentQuestion().question,
+          preguntas: [planConsentQuestion()],
+        }),
+        wait(100, "done", DONE({ centicredits: 6, durationMs: 61_000 })),
       ];
     case "askEnded":
       return [

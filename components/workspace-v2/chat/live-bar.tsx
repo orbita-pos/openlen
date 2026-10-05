@@ -81,7 +81,13 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
       verb = status.reason === "question" ? t("newChat.live.waitingAnswer") : t("newChat.live.waitingApproval");
       // Pieza 3: dentro del turno no está «en pausa»: Len sigue al contestar.
       meta = status.reason === "question" && status.live ? t("newChat.live.yourTurnLive") : t("newChat.live.yourTurn");
-      why = status.question || null;
+      // Pieza 7: la del modo plan, en el idioma del dueño.
+      why =
+        status.reason === "question" && status.intent === "plan-review"
+          ? t("newChat.plan.reviewQuestion")
+          : status.reason === "question" && status.intent === "plan-consent"
+            ? t("newChat.plan.consentQuestion")
+            : status.question || null;
       break;
     case "done":
       verb = t("newChat.live.done");

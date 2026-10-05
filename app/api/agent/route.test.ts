@@ -6,6 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // conocía. Es `import type`, así que se borra al compilar y no despierta al
 // módulo mockeado.
 import type { AgentLoopArgs } from "@/lib/agent/loop";
+import type { Message } from "@/lib/ai-gateway";
+import { streamWithRetry } from "@/lib/agent/retry";
+import { PLAN_OFF_NOTICE, PLAN_ON_NOTICE, PLAN_POLICY } from "@/lib/agent/plan-mode";
 import type { VisualVerdict } from "@/lib/agent/verify";
 import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 
@@ -605,6 +608,138 @@ describe("POST /api/agent — la pregunta que espera", () => {
     expect(depsVistas!.askUser).toBeUndefined();
     expect(eventos.some((e) => e.event === "question")).toBe(false);
     expect(mocks.esperarRespuesta).not.toHaveBeenCalled();
+  });
+});
+
+// PIEZA 7 · EL MODO PLAN EN LA RUTA. El estado se pliega de la última fila con
+// transcripción; la elección del dueño viaja en el cuerpo (`plan`) y, si
+// difiere, el modelo lo lee con la narración de DeepSeek; la sección entra y
+// sale del prompt de sistema en CADA petición (al aprobar a media vuelta, la
+// siguiente ya sale sin ella), y la fila guarda si el turno cerró en modo plan.
+describe("POST /api/agent — el modo plan", () => {
+  const SYS = "You are Len.";
+  let enviados: Message[][] = [];
+  const conSeccion = (m: Message[]) => typeof m[0]?.content === "string" && m[0].content === `${SYS}\n\n${PLAN_POLICY}`;
+  const sinSeccion = (m: Message[]) => m[0]?.content === SYS;
+  const filaEnPlan = { userText: "antes", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant", content: "plan" }], leidos: [], planMode: true } };
+  const filaSinPlan = { userText: "antes", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant", content: "hecho" }], leidos: [] } };
+  const cierre = { finalText: "ok", turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false, mutoDurable: true, transcripcion: [{ role: "assistant", content: "ok" }] };
+  const filaGuardada = () =>
+    (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { planMode?: true } | null }])[1].transcript;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+    mocks.creditsForUsage.mockReturnValue(1);
+    mocks.buildAgentMessages.mockReturnValue({
+      ok: true as const,
+      messages: [
+        { role: "system", content: SYS },
+        { role: "user", content: "manual" },
+        { role: "user", content: "añade reseñas" },
+      ],
+      systemPrompt: SYS,
+      contextBlock: "",
+    } as never);
+    enviados = [];
+    mocks.createAgentBrain.mockReturnValue({
+      modelId: "test",
+      creditRate: () => "deepseek-flash",
+      openStream: (m: Message[]) => {
+        enviados.push(m);
+        return (async function* () {})();
+      },
+    } as never);
+    vi.mocked(streamWithRetry).mockImplementation(((f: () => unknown) => f()) as never);
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.openStream(args.messages);
+      return cierre;
+    });
+  });
+  afterEach(() => {
+    mocks.runAgentLoop.mockReset();
+    mocks.runAgentTool.mockReset();
+    mocks.buildAgentMessages.mockReset();
+    mocks.buildAgentMessages.mockReturnValue({ ok: true as const, messages: [{ role: "user", content: "cambia el título" }] });
+    mocks.createAgentBrain.mockReset();
+    mocks.createAgentBrain.mockReturnValue({ modelId: "test", creditRate: () => "deepseek-flash" });
+    mocks.turnosParaElHistorial.mockReset();
+    mocks.turnosParaElHistorial.mockResolvedValue([]);
+    vi.mocked(streamWithRetry).mockReset();
+  });
+  const turno = async (extra: Record<string, unknown> = {}) =>
+    readEvents(await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "añade reseñas", ...extra }) })));
+
+  it("sin elección en el cuerpo, sigue lo plegado: la sección va y no hay narración", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
+    await turno();
+    expect(conSeccion(enviados[0]!)).toBe(true);
+    expect(enviados[0]!.some((m) => m.content === PLAN_ON_NOTICE || m.content === PLAN_OFF_NOTICE)).toBe(false);
+    expect(filaGuardada()?.planMode).toBe(true);
+  });
+
+  it("el dueño lo enciende: sección y la narración justo antes de su petición", async () => {
+    await turno({ plan: true });
+    const m = enviados[0]!;
+    expect(conSeccion(m)).toBe(true);
+    expect(m.at(-2)).toEqual({ role: "user", content: PLAN_ON_NOTICE });
+    expect(m.at(-1)?.content).toBe("añade reseñas");
+  });
+
+  it("el dueño lo apaga: sin sección, con su narración, y la fila sin la foto", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
+    await turno({ plan: false });
+    expect(sinSeccion(enviados[0]!)).toBe(true);
+    expect(enviados[0]!.at(-2)).toEqual({ role: "user", content: PLAN_OFF_NOTICE });
+    expect(filaGuardada()?.planMode).toBeUndefined();
+  });
+
+  it("🔴 aprobado a media vuelta: la petición SIGUIENTE sale sin la sección, se avisa al chat y se guarda apagado", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
+    const visto: boolean[] = [];
+    mocks.runAgentTool.mockImplementation(async (_s: unknown, deps: Record<string, unknown>) => {
+      (deps.planMode as { set(v: boolean): void }).set(false);
+      return { response: { ok: true, approved: true } };
+    });
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.openStream(args.messages);
+      visto.push(args.planModeActive!());
+      await args.runTool("exit_plan_mode", { plan: "# Reseñas" });
+      visto.push(args.planModeActive!());
+      args.openStream(args.messages);
+      return cierre;
+    });
+    const eventos = await turno();
+    expect(conSeccion(enviados[0]!)).toBe(true);
+    expect(sinSeccion(enviados[1]!)).toBe(true);
+    expect(visto).toEqual([true, false]);
+    // El estado al empezar y el cambio.
+    expect(eventos.filter((e) => e.event === "plan").map((e) => e.data)).toEqual([{ active: true }, { active: false }]);
+    expect(filaGuardada()?.planMode).toBeUndefined();
+  });
+
+  it("una elección que no es un booleano no cuenta (y un cliente viejo no apaga nada)", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
+    await turno({ plan: "yes" });
+    expect(conSeccion(enviados[0]!)).toBe(true);
+    expect(enviados[0]!.at(-2)?.content).toBe("manual");
+  });
+
+  it("BRAZO DE CONTROL: sin modo plan ni elección, el prompt es el de siempre", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([filaSinPlan]);
+    await turno();
+    expect(sinSeccion(enviados[0]!)).toBe(true);
+    expect(filaGuardada()?.planMode).toBeUndefined();
   });
 });
 

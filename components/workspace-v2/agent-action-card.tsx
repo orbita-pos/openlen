@@ -6,7 +6,7 @@ import { AlertTriangle, Check, ChevronDown, ChevronRight, ExternalLink, Loader }
 import { SalidaEnLaTarjeta, type DondeEstaLaSalida } from "./salida-en-la-tarjeta";
 
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
-import { isQuestionTool, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { asksTheOwner, type UserQuestion } from "@/lib/agent/ask-user-question";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 
@@ -169,6 +169,9 @@ export const KNOWN_TOOLS = new Set([
   // Se queda por lo guardado: pasó a llamarse ask_user_question (pieza 3).
   "preguntar",
   "ask_user_question",
+  // Pieza 7 de Len 2.5: el modo plan (pedir planear, presentar el plan).
+  "enter_plan_mode",
+  "exit_plan_mode",
   // Pieza 5 de Len 2.5: buscar y leer en las charlas pasadas.
   "session_search",
   "session_event_search",
@@ -210,7 +213,7 @@ export const KNOWN_TOOLS = new Set([
 // Exported for unit testing (agent-action-card.test.ts).
 export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTranslations<"wsPage">>): string {
   // Pieza 3: la pregunta que el dueño contestó dentro del turno dice qué contestó.
-  if (isQuestionTool(action.tool) && action.respuesta) return action.respuesta;
+  if (asksTheOwner(action.tool) && action.respuesta) return action.respuesta;
   if (action.tool === "trabajar_en_pagina" && action.summary === "") {
     return t("agent.action.home");
   }

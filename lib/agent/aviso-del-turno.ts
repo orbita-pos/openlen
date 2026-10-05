@@ -10,7 +10,7 @@
 // Len, que ya habla el idioma del usuario.
 
 import type { LenTurnoEvent } from "@/lib/notifications/types";
-import { isQuestionTool } from "@/lib/agent/ask-user-question";
+import { asksTheOwner } from "@/lib/agent/ask-user-question";
 
 /** Lo que cabe en una notificación sin que el sistema lo corte a su manera. */
 export const MAX_AVISO = 140;
@@ -40,6 +40,6 @@ export function avisoDelTurno(o: {
     // La pregunta sin contestar cierra el turno esperando al usuario: sin su
     // respuesta, Len no sigue. Es el aviso que más importa no perderse. Una
     // contestada DENTRO del turno (pieza 3: `respuesta`) ya no lo es.
-    pregunta: o.tarjetas.some((t) => isQuestionTool(t.tool) && !t.respuesta),
+    pregunta: o.tarjetas.some((t) => asksTheOwner(t.tool) && !t.respuesta),
   };
 }

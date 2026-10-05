@@ -266,6 +266,28 @@
       "minimize": "Len으로 최소화",
       "open": "채팅 열기",
       "resize": "드래그해서 크기 변경"
+    },
+    "plan": {
+      "option": "먼저 계획하기",
+      "optionHint": "Len이 먼저 살펴보고 계획을 제안합니다. 승인하기 전에는 아무것도 바뀌지 않아요.",
+      "chip": "계획",
+      "chipOff": "계획 모드 끝내기",
+      "reviewLabel": "검토할 계획",
+      "reviewQuestion": "이 계획을 승인할까요?",
+      "approve": "승인",
+      "approveHint": "Len이 지금 계획을 실행합니다.",
+      "keep": "변경 요청",
+      "keepHint": "Len이 말씀하신 내용으로 계속 계획합니다.",
+      "feedbackPlaceholder": "계획에서 무엇을 바꿀까요?",
+      "sendFeedback": "변경 내용 보내기",
+      "consentLabel": "계획 모드",
+      "consentQuestion": "Len이 무언가를 바꾸기 전에 계획하려고 해요. 먼저 계획할까요?",
+      "planFirst": "먼저 계획하기",
+      "planFirstHint": "계획을 승인하기 전에는 아무것도 바뀌지 않아요.",
+      "skip": "계획 없이",
+      "skipHint": "Len이 지금 요청을 계속 진행합니다.",
+      "showPlan": "계획 전체 보기",
+      "hidePlan": "계획 숨기기"
     }
   }
 }
