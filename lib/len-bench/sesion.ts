@@ -189,12 +189,18 @@ export async function tocarPublicar(o: {
 }
 
 /** Lo que Len le escribió al dueño en el turno: la suma de sus eventos `text`
- *  (la ruta reenvía cada evento del bucle como `event: <type>`). */
+ *  (la ruta reenvía cada evento del bucle como `event: <type>`), menos lo que un
+ *  `retry` retiró (el intento fallido no existió, `lib/agent/loop.ts`). */
 export function textoDeLen(eventos: readonly EventoSse[]): string {
-  return eventos
-    .filter((e) => e.nombre === "text")
-    .map((e) => String((e.datos as { text?: unknown } | null)?.text ?? ""))
-    .join("");
+  let texto = "";
+  for (const e of eventos) {
+    if (e.nombre === "text") texto += String((e.datos as { text?: unknown } | null)?.text ?? "");
+    else if (e.nombre === "retry") {
+      const descartar = (e.datos as { discardChars?: unknown } | null)?.discardChars;
+      if (typeof descartar === "number") texto = texto.slice(0, Math.max(0, texto.length - descartar));
+    }
+  }
+  return texto;
 }
 
 /** Las herramientas que Len llamó en el turno, sin repetir y en el orden de la

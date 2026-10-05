@@ -301,7 +301,8 @@ describe("transporte de texto en streaming", () => {
     const fetchImpl = vi.fn(async () => { throw new Error("socket hang up"); });
     const c = createFireworksStreamClient({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
     const events = await drain(c.stream(REQUEST));
-    expect(events).toEqual([{ type: "done", stopReason: { kind: "error", error: "socket hang up" } }]);
+    // Con su código desde Len 2.5: una caída de red es reintentable (`lib/agent/retry-policy.ts`).
+    expect(events).toEqual([{ type: "done", stopReason: { kind: "error", error: "socket hang up", code: "transport" } }]);
   });
 });
 
@@ -455,5 +456,90 @@ describe("cuando el proveedor rechaza el esfuerzo", () => {
     const eventos = await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "medium" }));
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(eventos.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error" } });
+  });
+});
+
+describe("el código del fallo, para que el bucle sepa reintentar", () => {
+  it("un 503 sale con code «server»", async () => {
+    const { client: c } = client("", { status: 503 });
+    const events = await drain(c.stream(REQUEST));
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", code: "server" } });
+  });
+
+  it("un 429 sale con code «rate_limit»", async () => {
+    const { client: c } = client("too many", { status: 429 });
+    const events = await drain(c.stream(REQUEST));
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", code: "rate_limit" } });
+  });
+
+  it("la red caída (fetch lanza) sale con code «transport»", async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    });
+    const c = createFireworksStreamClient({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+    const events = await drain(c.stream(REQUEST));
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", code: "transport" } });
+  });
+
+  it("un corte a media lectura sale con code «transport»", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(chunk({ content: "hola" })));
+        controller.error(new Error("socket hang up"));
+      },
+    });
+    const fetchImpl = vi.fn(async () => new Response(body, { status: 200 }));
+    const c = createFireworksStreamClient({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+    const events = await drain(c.stream(REQUEST));
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", code: "transport" } });
+  });
+
+  it("BRAZO DE CONTROL: un 400 sale SIN code", async () => {
+    const { client: c } = client("bad request", { status: 400 });
+    const events = await drain(c.stream(REQUEST));
+    const last = events.at(-1) as { type: "done"; stopReason: { kind: string; code?: string } };
+    expect(last.stopReason.kind).toBe("error");
+    expect(last.stopReason.code).toBeUndefined();
+  });
+
+  it("BRAZO DE CONTROL: el ■ (señal abortada) sigue saliendo como cancelado, sin code", async () => {
+    const ctrl = new AbortController();
+    ctrl.abort();
+    const fetchImpl = vi.fn(async () => {
+      throw new DOMException("aborted", "AbortError");
+    });
+    const c = createFireworksStreamClient({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+    const events = await drain(c.stream(REQUEST, { signal: ctrl.signal }));
+    expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "cancelled" } });
+  });
+});
+
+describe("cortes a mitad del stream (revisión de la pieza 1)", () => {
+  it("si la conexión se cierra a media respuesta (sin finish_reason), sale con code «transport» y lo escrito llega", async () => {
+    const { client: c } = client(chunk({ content: "Voy a cambi" }));
+    const events = await drain(c.stream(REQUEST));
+    expect(events.some((e) => e.type === "text_delta")).toBe(true);
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", code: "transport" } });
+  });
+
+  it("si no llega NADA (un 200 vacío), sale con code «empty_response»", async () => {
+    const { client: c } = client("");
+    const events = await drain(c.stream(REQUEST));
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", code: "empty_response" } });
+  });
+
+  it("un error del proveedor DENTRO del stream sale con su mensaje y su código, sin seguir leyendo", async () => {
+    const { client: c } = client(
+      chunk({ content: "Hola" }) + `data: ${JSON.stringify({ error: { message: "server overloaded", type: "internal_server_error" } })}\n\n` + chunk({ content: "no debe llegar" }, "stop"),
+    );
+    const events = await drain(c.stream(REQUEST));
+    expect(events.filter((e) => e.type === "text_delta").map((e) => (e as { text: string }).text)).toEqual(["Hola"]);
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", code: "server", error: expect.stringContaining("server overloaded") } });
+  });
+
+  it("BRAZO DE CONTROL: un final limpio sigue siendo end_turn", async () => {
+    const { client: c } = client(chunk({ content: "Listo." }, "stop") + "data: [DONE]\n\n");
+    const events = await drain(c.stream(REQUEST));
+    expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "end_turn" } });
   });
 });

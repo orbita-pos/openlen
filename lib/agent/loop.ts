@@ -33,6 +33,8 @@ import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { terminalEncendida } from "@/lib/agent/terminal/declaracion";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
+import type { ProviderErrorCode } from "@/lib/ai/provider-error-code";
+import { MAX_PROVIDER_RETRIES, isRetryable, retryDelayMs, sleepAbortable } from "./retry-policy";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -62,6 +64,11 @@ export type AgentErrorCode =
 
 export type AgentStreamEvent =
   | { type: "text"; text: string }
+  // UN REINTENTO DEL PROVEEDOR (como DeepSeek: el paso se repite entero). Lo
+  // que el intento fallido llegó a escribir NO entra en la conversación, y el
+  // chat y el registro lo retiran con `discardChars`. Claude Code enseña lo
+  // mismo: «reintentando en X s · intento N».
+  | { type: "retry"; attempt: number; maxAttempts: number; delayMs: number; discardChars: number }
   // LO QUE EL USUARIO ESCRIBIÓ A MEDIA FAENA. Se emite en cuanto el bucle lo
   // recoge, para que el panel pueda pintarlo en su sitio de la conversación:
   // sin esto, la corrección desaparecería y el usuario vería al Agente cambiar
@@ -252,6 +259,11 @@ export interface AgentLoopArgs {
   /** Abre un stream de modelo para un set de mensajes. El route inyecta el
    *  GeminiProvider real; los tests inyectan streams guionados. */
   openStream(messages: Message[]): AsyncIterable<StreamEvent>;
+  /** El ■ del turno: corta la espera entre reintentos (el stream ya lo corta
+   *  su propio `fetch`). Lo pasa la ruta (`upstreamAbort.signal`). */
+  signal?: AbortSignal;
+  /** Para las pruebas: la espera entre reintentos. Por defecto, `sleepAbortable`. */
+  sleep?(ms: number, signal?: AbortSignal): Promise<void>;
   /** F5 — los ojos del agente. Cuando está presente y el turno MUTÓ el
    *  documento, se llama UNA vez justo antes de cerrar (con el último HTML
    *  emitido); si devuelve !ok, la crítica se inyecta como mensaje de sistema
@@ -1341,54 +1353,96 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     const retener = dichoAntesDelAviso !== null && dichoAntesDelAviso.vuelta === turns - 1;
     let retenido = "";
 
-    for await (const ev of args.openStream(messages)) {
-      if (ev.type === "text_delta" && retener) {
-        turnText += ev.text;
-        retenido += ev.text;
-      } else if (ev.type === "text_delta") {
-        // EL SEPARADOR ENTRE VUELTAS, y sólo aquí: `turnText.length === 0`
-        // identifica el PRIMER trozo de ESTA vuelta —se reinicia arriba— y la
-        // bandera dice si alguna anterior habló. Una sola vuelta no gana nada.
-        //
-        // 🔴 VA AL CLIENTE, NO A `turnText`. Éste es el `content` del mensaje
-        // que se le manda al MODELO: meterle un salto de línea a la cabeza sería
-        // ensuciar la conversación para arreglar la pantalla.
-        if (algunaVueltaYaDijoAlgo && turnText.length === 0) {
-          args.emit({ type: "text", text: "\n\n" });
+    // ─── REINTENTOS DEL PROVEEDOR (como el arnés de DeepSeek) ────────────
+    //
+    // Un 429, un 5xx o una red caída repiten el PASO entero
+    // (`lib/agent/retry-policy.ts`): lo que el intento fallido llegó a escribir
+    // no entra en `messages` y se le retira al dueño con `discardChars`. Un
+    // fallo sin código (un 400) es nuestro y sale como siempre. El ■ durante la
+    // espera corta sin otro intento. `turns` no se vuelve a sumar.
+    const yaHablabaAntesDelIntento: boolean = algunaVueltaYaDijoAlgo;
+    for (let intento = 1; ; intento++) {
+      let emitidoEnElIntento = 0;
+      let falloReintentable: ProviderErrorCode | undefined;
+
+      for await (const ev of args.openStream(messages)) {
+        if (ev.type === "text_delta" && retener) {
+          turnText += ev.text;
+          retenido += ev.text;
+        } else if (ev.type === "text_delta") {
+          // EL SEPARADOR ENTRE VUELTAS, y sólo aquí: `turnText.length === 0`
+          // identifica el PRIMER trozo de ESTA vuelta —se reinicia arriba— y la
+          // bandera dice si alguna anterior habló. Una sola vuelta no gana nada.
+          //
+          // 🔴 VA AL CLIENTE, NO A `turnText`. Éste es el `content` del mensaje
+          // que se le manda al MODELO: meterle un salto de línea a la cabeza sería
+          // ensuciar la conversación para arreglar la pantalla.
+          if (algunaVueltaYaDijoAlgo && turnText.length === 0) {
+            args.emit({ type: "text", text: "\n\n" });
+            emitidoEnElIntento += 2;
+          }
+          turnText += ev.text;
+          algunaVueltaYaDijoAlgo = true;
+          args.emit({ type: "text", text: ev.text });
+          emitidoEnElIntento += ev.text.length;
+        } else if (ev.type === "reasoning") {
+          turnReasoning += ev.text;
+        } else if (ev.type === "function_call") {
+          calls.push({
+            name: ev.name,
+            args: ev.args,
+          });
+        } else if (ev.type === "usage") {
+          // El uso de un intento fallido, si llegó, también se cobra: cada
+          // reintento es otra petición facturada (DeepSeek lo dice igual).
+          inputTokens += ev.inputTokens;
+          outputTokens += ev.outputTokens;
+          cachedTokens += ev.cachedTokens;
+          thinkingTokens += ev.thinkingTokens;
+        } else if (ev.type === "done") {
+          // A stream that ends on anything but a clean end_turn must NOT read
+          // as success: error (SAFETY/RECITATION/5xx), cancelled (abort), and
+          // max_tokens (truncated response) all surface as an error event and
+          // stop the loop — a truncated turn's partial text is not a real answer.
+          if (ev.stopReason.kind === "error") {
+            if (isRetryable(ev.stopReason.code) && intento <= MAX_PROVIDER_RETRIES && !args.signal?.aborted) {
+              falloReintentable = ev.stopReason.code;
+            } else {
+              args.emit({ type: "error", message: ev.stopReason.error, code: "upstream" });
+              errorCode = "upstream";
+              sawError = true;
+            }
+          } else if (ev.stopReason.kind === "cancelled") {
+            args.emit({ type: "error", message: "El agente fue cancelado.", code: "cancelled" });
+            errorCode = "cancelled";
+            sawError = true;
+          } else if (ev.stopReason.kind === "max_tokens") {
+            // NO se decide aquí: se anota. Si la vuelta se puede continuar, esto
+            // no es un error y emitirlo ya habría pintado el turno de rojo.
+            truncado = true;
+          }
         }
-        turnText += ev.text;
-        algunaVueltaYaDijoAlgo = true;
-        args.emit({ type: "text", text: ev.text });
-      } else if (ev.type === "reasoning") {
-        turnReasoning += ev.text;
-      } else if (ev.type === "function_call") {
-        calls.push({
-          name: ev.name,
-          args: ev.args,
-        });
-      } else if (ev.type === "usage") {
-        inputTokens += ev.inputTokens;
-        outputTokens += ev.outputTokens;
-        cachedTokens += ev.cachedTokens;
-        thinkingTokens += ev.thinkingTokens;
-      } else if (ev.type === "done") {
-        // A stream that ends on anything but a clean end_turn must NOT read
-        // as success: error (SAFETY/RECITATION/5xx), cancelled (abort), and
-        // max_tokens (truncated response) all surface as an error event and
-        // stop the loop — a truncated turn's partial text is not a real answer.
-        if (ev.stopReason.kind === "error") {
-          args.emit({ type: "error", message: ev.stopReason.error, code: "upstream" });
-          errorCode = "upstream";
-          sawError = true;
-        } else if (ev.stopReason.kind === "cancelled") {
-          args.emit({ type: "error", message: "El agente fue cancelado.", code: "cancelled" });
-          errorCode = "cancelled";
-          sawError = true;
-        } else if (ev.stopReason.kind === "max_tokens") {
-          // NO se decide aquí: se anota. Si la vuelta se puede continuar, esto
-          // no es un error y emitirlo ya habría pintado el turno de rojo.
-          truncado = true;
-        }
+      }
+
+      if (!falloReintentable) break;
+
+      const delayMs = retryDelayMs(intento);
+      args.emit({ type: "retry", attempt: intento, maxAttempts: MAX_PROVIDER_RETRIES, delayMs, discardChars: emitidoEnElIntento });
+      await (args.sleep ?? sleepAbortable)(delayMs, args.signal);
+      // El intento fallido no existió: se vacía lo que dejó ANTES de mirar el ■.
+      // Si no, en una vuelta retenida lo retenido del intento descartado salía
+      // al dueño detrás del «cancelado» (lo cazó la revisión de la pieza).
+      turnText = "";
+      turnReasoning = "";
+      calls.length = 0;
+      truncado = false;
+      retenido = "";
+      algunaVueltaYaDijoAlgo = yaHablabaAntesDelIntento;
+      if (args.signal?.aborted) {
+        args.emit({ type: "error", message: "El agente fue cancelado.", code: "cancelled" });
+        errorCode = "cancelled";
+        sawError = true;
+        break;
       }
     }
 

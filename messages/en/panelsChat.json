@@ -201,7 +201,10 @@
       "doneHint": "ask for something else",
       "stopped": "Stopped",
       "stoppedHint": "what it already did stays",
-      "failed": "Couldn't finish"
+      "failed": "Couldn't finish",
+      "retrying": "Retrying",
+      "retryingHint": "no response · in {seconds} s · attempt {attempt} of {max}",
+      "retryingAttempt": "attempt {attempt} of {max}"
     },
     "question": {
       "label": "Len is asking",

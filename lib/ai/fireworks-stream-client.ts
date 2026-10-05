@@ -20,6 +20,7 @@ import {
 } from "../generation/model-policy";
 import { providerUsage } from "./fireworks-client";
 import { admiteEsfuerzo, marcarSinEsfuerzo, rechazoDeEsfuerzo } from "./esfuerzo-no-admitido";
+import { codeForHttpStatus, codeForInBandError, type ProviderErrorCode } from "./provider-error-code";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { presupuestoDeEsfuerzo, type EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 
@@ -43,7 +44,9 @@ export type FireworksStopReason =
   | { readonly kind: "end_turn" }
   | { readonly kind: "max_tokens" }
   | { readonly kind: "cancelled" }
-  | { readonly kind: "error"; readonly error: string };
+  // `code`: los fallos que el BUCLE del agente sabe reintentar
+  // (`lib/agent/retry-policy.ts`, como DeepSeek). Sin código = defecto nuestro.
+  | { readonly kind: "error"; readonly error: string; readonly code?: ProviderErrorCode };
 
 export interface FireworksStreamToolCall {
   readonly id: string;
@@ -119,8 +122,9 @@ export interface FireworksStreamRequest {
    *     3 picos de arranque >2s en standard contra 0 en priority. Consistente
    *     con admision, no con velocidad.
    *  3. LO QUE COMPRA, con el numero de Fireworks (0% de 503 contra 0.082%):
-   *     a 1.000 usuarios son ~16 rechazos al mes, y esos YA se reintentan solos
-   *     (`fireworks-client.ts` reintenta 429/502/503/504).
+   *     a 1.000 usuarios son ~16 rechazos al mes. Los de ESTE cliente los
+   *     reintenta el BUCLE del agente (`lib/agent/retry-policy.ts`, como
+   *     DeepSeek); `fireworks-client.ts` reintenta los suyos aparte.
    *  4. NO SE PUEDE VERIFICAR. El `usage` de Fireworks no devuelve que via
    *     sirvio — sondeado. Vercel si lo hace a proposito ("a missing value is
    *     an honest signal that you weren't billed at the fast rate"). Cobrar el
@@ -231,12 +235,13 @@ function record(value: unknown): Record<string, unknown> | null {
 /** `length` es truncamiento, y la ruta ya sabe distinguirlo de un final limpio.
  *  Un stream que terminó sin nombrar jamás su razón NO terminó: decir que sí
  *  entrega media página como si estuviera completa. */
-function stopReasonFor(finishReason: string | null): FireworksStopReason {
+/** Con `finish_reason`. Sin él, el stream se cerró antes de tiempo y lo decide
+ *  quien llama (corte a medias o respuesta vacía, ver el final de `stream`). */
+function stopReasonFor(finishReason: string): FireworksStopReason {
   if (finishReason === "length") return { kind: "max_tokens" };
   // `tool_calls` es un final limpio: el modelo cerró el turno para que alguien
   // ejecute algo. Tratarlo como error mataría el Agente en su primera acción.
-  if (finishReason) return { kind: "end_turn" };
-  return { kind: "error", error: "stream ended without a finish reason" };
+  return { kind: "end_turn" };
 }
 
 export function createFireworksStreamClient(options: FireworksStreamClientOptions = {}): FireworksStreamClient {
@@ -336,7 +341,12 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
         response = await pedir(admiteEsfuerzo(modelId));
       } catch (error) {
         const aborted = opts.signal?.aborted === true;
-        yield { type: "done", stopReason: aborted ? { kind: "cancelled" } : { kind: "error", error: String(error instanceof Error ? error.message : error) } };
+        yield {
+          type: "done",
+          stopReason: aborted
+            ? { kind: "cancelled" }
+            : { kind: "error", error: String(error instanceof Error ? error.message : error), code: "transport" },
+        };
         return;
       }
 
@@ -363,17 +373,22 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
           try {
             response = await pedir(false);
           } catch (error) {
-            yield { type: "done", stopReason: { kind: "error", error: String(error instanceof Error ? error.message : error) } };
+            yield { type: "done", stopReason: { kind: "error", error: String(error instanceof Error ? error.message : error), code: "transport" } };
             return;
           }
           if (!response.ok || !response.body) {
             let reintento = `http_${response.status}`;
             try { reintento = `${reintento}: ${(await response.text()).slice(0, 300)}`; } catch { /* sin cuerpo */ }
-            yield { type: "done", stopReason: { kind: "error", error: reintento } };
+            const code = codeForHttpStatus(response.status);
+            yield { type: "done", stopReason: { kind: "error", error: reintento, ...(code ? { code } : {}) } };
             return;
           }
         } else {
-          yield { type: "done", stopReason: { kind: "error", error: `http_${response.status}${crudo ? `: ${crudo.slice(0, 300)}` : ""}` } };
+          const code = codeForHttpStatus(response.status);
+          yield {
+            type: "done",
+            stopReason: { kind: "error", error: `http_${response.status}${crudo ? `: ${crudo.slice(0, 300)}` : ""}`, ...(code ? { code } : {}) },
+          };
           return;
         }
       }
@@ -385,6 +400,10 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
       const pendingCalls = new Map<number, { id?: string; name?: string; args: string }>();
       let buffer = "";
       let cancelled = false;
+      /** Llegó ALGO de la respuesta (texto, pensamiento o una llamada). Decide,
+       *  si el stream se cierra sin `finish_reason`, entre un corte a medias
+       *  («transport») y una respuesta vacía («empty_response»), como DeepSeek. */
+      let algoLlego = false;
 
       // Un generador puede abandonarse a media lectura (el consumidor hace
       // `break`): sin esto el socket de arriba se queda abierto.
@@ -404,6 +423,17 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             try { parsed = JSON.parse(data); } catch { continue; }
             const root = record(parsed);
             if (!root) continue;
+            // UN ERROR DENTRO DEL STREAM (`data: {"error": …}`): el proveedor
+            // falló a media respuesta. Se corta aquí, con su mensaje real y su
+            // código, para que el bucle lo reintente (antes se ignoraba y salía
+            // como «stream ended without a finish reason», sin código).
+            const inBandError = record(root.error);
+            if (inBandError) {
+              const message = typeof inBandError.message === "string" ? inBandError.message : JSON.stringify(inBandError);
+              const code = codeForInBandError(inBandError);
+              yield { type: "done", stopReason: { kind: "error", error: `in_stream_error: ${message.slice(0, 300)}`, ...(code ? { code } : {}) } };
+              return;
+            }
             if (record(root.usage)) usageEnvelope = root;
             const choice = record((root.choices as unknown[] | undefined)?.[0]);
             if (!choice) continue;
@@ -411,14 +441,17 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             const delta = record(choice.delta);
             if (!delta) continue;
             if (typeof delta.reasoning_content === "string" && delta.reasoning_content.length > 0) {
+              algoLlego = true;
               yield { type: "reasoning_delta", text: delta.reasoning_content };
             }
             if (typeof delta.content === "string" && delta.content.length > 0) {
+              algoLlego = true;
               yield { type: "text_delta", text: delta.content };
             }
             for (const entry of Array.isArray(delta.tool_calls) ? delta.tool_calls : []) {
               const call = record(entry);
               if (!call) continue;
+              algoLlego = true;
               const index = typeof call.index === "number" && Number.isInteger(call.index) ? call.index : pendingCalls.size;
               const previous = pendingCalls.get(index) ?? { args: "" };
               const fn = record(call.function);
@@ -434,7 +467,7 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
       } catch (error) {
         if (opts.signal?.aborted) cancelled = true;
         else {
-          yield { type: "done", stopReason: { kind: "error", error: String(error instanceof Error ? error.message : error) } };
+          yield { type: "done", stopReason: { kind: "error", error: String(error instanceof Error ? error.message : error), code: "transport" } };
           return;
         }
       } finally {
@@ -468,7 +501,17 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
           thinkingTokens: usage.thinkingTokens,
         };
       }
-      yield { type: "done", stopReason: cancelled ? { kind: "cancelled" } : stopReasonFor(finishReason) };
+      yield {
+        type: "done",
+        stopReason: cancelled
+          ? { kind: "cancelled" }
+          : finishReason === null
+            // Sin `finish_reason` el stream se cerró antes de tiempo: a medias
+            // si algo llegó, vacío si no. Los dos son reintentables (DeepSeek:
+            // TRANSPORT / EMPTY_RESPONSE); lo del intento lo retira el bucle.
+            ? { kind: "error", error: "stream ended without a finish reason", code: algoLlego ? "transport" : "empty_response" }
+            : stopReasonFor(finishReason),
+      };
     },
   };
 }

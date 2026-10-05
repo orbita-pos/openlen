@@ -79,6 +79,8 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
   return {
     observar(ev) {
       if (ev.type === "text") texto += ev.text;
+      // El intento fallido no existió (`lib/agent/loop.ts`, reintentos).
+      else if (ev.type === "retry") texto = texto.slice(0, Math.max(0, texto.length - ev.discardChars));
       else if (ev.type === "action" && ev.status !== "running") {
         tarjetas.push({
           tool: ev.tool,

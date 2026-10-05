@@ -201,7 +201,10 @@
       "doneHint": "chiedigli altro",
       "stopped": "Fermato",
       "stoppedHint": "quello che ha già fatto resta",
-      "failed": "Non è riuscito a finire"
+      "failed": "Non è riuscito a finire",
+      "retrying": "Nuovo tentativo",
+      "retryingHint": "nessuna risposta · tra {seconds} s · tentativo {attempt} di {max}",
+      "retryingAttempt": "tentativo {attempt} di {max}"
     },
     "question": {
       "label": "Len ti chiede",

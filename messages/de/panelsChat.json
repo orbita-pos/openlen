@@ -201,7 +201,10 @@
       "doneHint": "bitte um etwas anderes",
       "stopped": "Gestoppt",
       "stoppedHint": "was schon erledigt ist, bleibt",
-      "failed": "Konnte nicht fertig werden"
+      "failed": "Konnte nicht fertig werden",
+      "retrying": "Neuer Versuch",
+      "retryingHint": "keine Antwort · in {seconds} s · Versuch {attempt} von {max}",
+      "retryingAttempt": "Versuch {attempt} von {max}"
     },
     "question": {
       "label": "Len fragt dich",

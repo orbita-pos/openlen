@@ -201,7 +201,10 @@
       "doneHint": "ほかのことも頼めます",
       "stopped": "停止しました",
       "stoppedHint": "すでに終えた作業は残ります",
-      "failed": "最後まで終えられませんでした"
+      "failed": "最後まで終えられませんでした",
+      "retrying": "再試行中",
+      "retryingHint": "応答なし · {seconds} 秒後 · {max} 回中 {attempt} 回目",
+      "retryingAttempt": "{max} 回中 {attempt} 回目"
     },
     "question": {
       "label": "Len からの質問",

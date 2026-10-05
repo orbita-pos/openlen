@@ -2,7 +2,7 @@
 // inventario sección C). Puro: sale del último turno y de si hay uno en marcha.
 import { describe, expect, it } from "vitest";
 
-import { activityOf, liveStatus, questionOf } from "./live-status";
+import { activityOf, isRunning, liveStatus, questionOf, retryPhase } from "./live-status";
 import type { DesignTurn } from "./use-agent-chat";
 
 const turn = (patch: Partial<DesignTurn> = {}): DesignTurn => ({
@@ -15,6 +15,29 @@ const turn = (patch: Partial<DesignTurn> = {}): DesignTurn => ({
 });
 
 describe("la barra viva", () => {
+  it("en un reintento del proveedor dice que reintenta, en qué intento va y hasta cuándo espera", () => {
+    const s = liveStatus(turn({ status: "streaming", startedAt: 1, retrying: { attempt: 2, maxAttempts: 5, until: 9_000 } }), { busy: true });
+    expect(s).toEqual({ kind: "retrying", face: "pensando", attempt: 2, maxAttempts: 5, until: 9_000 });
+  });
+
+  it("mientras espera dice «en X s» (redondeado hacia arriba); al acabar la espera, el intento nuevo ya está pensando", () => {
+    const s = { kind: "retrying", face: "pensando", attempt: 2, maxAttempts: 5, until: 9_000 } as const;
+    expect(retryPhase(s, 6_500)).toEqual({ waiting: true, seconds: 3 });
+    expect(retryPhase(s, 8_999)).toEqual({ waiting: true, seconds: 1 });
+    expect(retryPhase(s, 9_000)).toEqual({ waiting: false });
+  });
+
+  it("el ■ sigue mientras reintenta (está trabajando); no con el turno terminado", () => {
+    expect(isRunning({ kind: "retrying", face: "pensando", attempt: 1, maxAttempts: 5, until: 1 })).toBe(true);
+    expect(isRunning({ kind: "thinking", face: "pensando", startedAt: 1 })).toBe(true);
+    expect(isRunning({ kind: "done", face: "terminado" })).toBe(false);
+  });
+
+  it("BRAZO DE CONTROL: sin reintento, la misma vuelta sigue en «pensando»", () => {
+    const s = liveStatus(turn({ status: "streaming", startedAt: 1 }), { busy: true });
+    expect(s.kind).toBe("thinking");
+  });
+
   it("sin conversación no dice nada", () => {
     expect(liveStatus(undefined, { busy: false }).kind).toBe("idle");
   });
