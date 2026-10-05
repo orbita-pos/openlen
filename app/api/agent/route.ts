@@ -18,7 +18,7 @@ import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { persistPage } from "@/lib/page-engine/persist";
 import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
-import { documentoMedible, vistaParaMedir } from "@/lib/lienzo/documento";
+import { carpetaDeLaVista, documentoMedible, vistaConCarpeta, vistaParaMedir } from "@/lib/lienzo/documento";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { formaDelTurno, lineaDeForma } from "@/lib/agent/forma-del-turno";
 import {
@@ -75,6 +75,7 @@ import { usarPagina } from "@/lib/agent/usar-pagina";
 import {
   createVisualQualityRendererPool,
   renderVisualQualityViewports,
+  type VisualQualityRenderOptions,
   type VisualQualityRendererPool,
   type VisualQualityViewports,
 } from "@/lib/ai/visual-quality-renderer";
@@ -323,7 +324,15 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // La mecánica y sus guardas viven en `lib/ai/medir-una-vez.ts`: la clave es
   // el documento ENTERO, no un hash, así que es imposible que devuelva la
   // medida de otra página — que era justo el miedo que dejó esto sin hacer.
-  const medirDocumento = async (html: string): Promise<VisualQualityViewports | null> => {
+  //
+  // LA CARPETA (pieza 9 de Len 2.5, carril B): `opts.carpeta` son los ficheros
+  // que la página pide (`/js/app.js`), y entran en la clave del memo. Sin
+  // carpeta, el navegador recibe el documento solo, como siempre.
+  const medirDocumento = async (
+    html: string,
+    _internals?: Record<string, never>,
+    opts?: VisualQualityRenderOptions,
+  ): Promise<VisualQualityViewports | null> => {
     poolDelTurno ??= createVisualQualityRendererPool(1).catch((e: unknown) => {
       // FAIL-SOFT. Si el navegador no arranca, los ojos NO se quedan ciegos: se
       // mide como se medía antes, uno por llamada. Que falle por su motivo, no
@@ -334,6 +343,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
       return null;
     });
     const pool = await poolDelTurno;
+    if (opts?.carpeta) return pool ? pool.render(html, opts) : renderVisualQualityViewports(html, {}, opts);
     return pool ? pool.render(html) : renderVisualQualityViewports(html);
   };
   const medidaDelTurno = medirUnaVezPorDocumento(medirDocumento);
@@ -1050,6 +1060,10 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
             await fotoAntes;
             const outcome = await runAgentTool(agentSession, deps, name, args);
             diario.anotar(name, outcome.response, args);
+            // LA CARPETA (pieza 9 de Len 2.5, carril B): los ficheros que cambió
+            // esta herramienta, cada uno con la versión de su «antes», para
+            // que «Deshacer» los devuelva con la página o no se ofrezca.
+            if (outcome.ficherosTocados?.length) emit("ficheros", { ficherosTocados: outcome.ficherosTocados });
             return outcome;
           },
           // 🔴 EL MOMENTO `tsc`: lo medido vuelve AL MODELO, no sólo al usuario.
@@ -1077,8 +1091,15 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
                   // Las fotos del dueño, incrustadas: medir sin ellas da
                   // lecturas de contraste sobre fondos que en la página real no
                   // están vacíos. Es lo mismo que hacen los ojos aquí abajo.
-                  const paraMedir = documentoMedible(await inlineOwnAssets(gemelo), vistaDelTurno);
-                  return componerMedicion(await medirDelTurno(paraMedir), gemelo);
+                  // LA CARPETA (pieza 9, carril B): se relee aquí, no al
+                  // empezar: el turno pudo escribir `js/app.js` hace un paso.
+                  const vista = await vistaConCarpeta(vistaDelTurno, deps, projectId);
+                  const paraMedir = documentoMedible(await inlineOwnAssets(gemelo), vista);
+                  const carpeta = carpetaDeLaVista(vista);
+                  return componerMedicion(
+                    await (carpeta ? medirDelTurno(paraMedir, {}, { carpeta }) : medirDelTurno(paraMedir)),
+                    gemelo,
+                  );
                 },
           // ⚰️ Aquí iba `lineaBase`, el documento del arranque etiquetado con los
           // ids del motor. Len 2.0 (T9): la base la trae cada escritura
@@ -1133,7 +1154,8 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
                       // De la fila que se acaba de releer: si el turno cambió
                       // los ajustes (activar el chat, por ejemplo), los ojos
                       // miran la página CON su burbuja, que es la que se guardó.
-                      vista: vistaParaMedir(projectId, row, page ?? null),
+                      // Y LA CARPETA (pieza 9, carril B), releída como la fila.
+                      vista: await vistaConCarpeta(vistaParaMedir(projectId, row, page ?? null), deps, projectId),
                     };
                   })();
                   if (fresco.kind === "desconocido") {

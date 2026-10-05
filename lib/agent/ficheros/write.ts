@@ -10,7 +10,7 @@
  * en Claude Code no hay «copiar el esqueleto de la home», se lee `index.html` y
  * se escribe (decisión B7). Como `planearEdit`, esto no guarda nada.
  */
-import { esFicheroDeSupabase } from "./supabase";
+import { classifyFolderPath } from "./folder";
 import { paginaDeRuta, resolverRuta } from "./sitio";
 import { normalizarFinales, type Leidos, type SitioLegible } from "./read";
 import { CAMBIADO_DESDE_LA_LECTURA, NO_LEIDO, NOTA_ESTADO_AL_DIA, type PlanDeEdit } from "./edit";
@@ -66,15 +66,15 @@ export function planearWrite(entrada: EntradaWrite, sitio: SitioLegible, leidos:
   const crudo = sitio.contenido(ruta);
 
   if (crudo === null) {
-    // Claude Code crearía cualquier fichero. Aquí los ficheros son páginas y no
-    // hay dónde guardar otra cosa: se dice, y se sugiere la ruta que sí es.
-    if (!paginaDeRuta(ruta) && !esFicheroDeSupabase(ruta)) {
+    // Claude Code crearía cualquier fichero. Aquí, las páginas y la CARPETA del
+    // proyecto (pieza 9 de Len 2.5: los ficheros de texto de `folder.ts`); lo
+    // demás se dice con su motivo, y se sugiere la página que se quiso crear.
+    const carpeta = paginaDeRuta(ruta) ? null : classifyFolderPath(ruta);
+    if (carpeta && !carpeta.ok) {
       const parecida = paginaQueQuisoCrear(ruta);
       return {
         ok: false,
-        resultado: fallo(
-          `Cannot create ${ruta}: this site only has pages, at /index.html and /<slug>/index.html, and its Supabase files, under /supabase/.${parecida ? ` Did you mean ${parecida}?` : ""}`,
-        ),
+        resultado: fallo(`Cannot create ${ruta}: ${sinRuta(carpeta.reason, ruta)}${parecida ? ` Did you mean ${parecida}?` : ""}`),
       };
     }
     return {
@@ -100,4 +100,9 @@ export function planearWrite(entrada: EntradaWrite, sitio: SitioLegible, leidos:
     respuesta: ({ guardadoIgual }) =>
       `Replaced the whole content of ${entrada.file_path}.${guardadoIgual ? NOTA_ESTADO_AL_DIA : ""}`,
   };
+}
+
+/** El motivo de `folder.ts` sin la ruta delante, que el mensaje ya la dice. */
+function sinRuta(motivo: string, ruta: string): string {
+  return motivo.startsWith(`${ruta}: `) ? motivo.slice(ruta.length + 2) : motivo;
 }

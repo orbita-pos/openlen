@@ -168,12 +168,47 @@ openlen.com, www.openlen.com {
 	# page's homepage went out with no cache header and CF returned
 	# cf-cache-status: DYNAMIC — an origin hit on every visit. Match HTML as
 	# "not an asset and not a proxied path" so root + clean URLs are covered.
-	@assets path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
+	#
+	# LA CARPETA (pieza 9 de Len 2.5, carril B, con las notas de C). Lo
+	# inmutable es sólo lo que lleva el hash en el nombre —/assets/, que migra
+	# publishToDir, y /uploads/— y los binarios. Un .js/.css/.svg de nombre fijo
+	# (el `js/app.js` de la carpeta) ya NO: se quedaría un mes en el navegador
+	# y en el borde.
+	#
+	# 🔴 Ninguna de estas cabeceras se estampa en un host lienzo-*: allí
+	# responde Next con las suyas, y `header` + `reverse_proxy` las DUPLICA.
+	# Cada `not` va en su línea: dos en un mismo `not { }` serían otra cosa.
+	@assets {
+		path *.jpg *.jpeg *.png *.gif *.webp *.ico *.woff *.woff2 *.avif /assets/* /uploads/*
+		not header_regexp Host ^lienzo-
+	}
 	header @assets Cache-Control "public, immutable, max-age=2592000"
 
+	# Los ficheros de la carpeta, como `public/` en Vercel: se revalidan siempre
+	# (ETag → 304), o un js/app.js nuevo no llegaría — y un sw.js viejo seguiría
+	# sirviendo la versión de antes.
+	@carpeta {
+		path *.js *.mjs *.css *.json *.webmanifest *.txt *.svg *.md
+		not path /assets/* /uploads/*
+		not header_regexp Host ^lienzo-
+	}
+	header @carpeta Cache-Control "public, max-age=0, must-revalidate"
+	# Los dos tipos que la tabla de Go no trae (.mjs sí está).
+	@webmanifest {
+		path *.webmanifest
+		not header_regexp Host ^lienzo-
+	}
+	header @webmanifest Content-Type "application/manifest+json"
+	@markdown {
+		path *.md
+		not header_regexp Host ^lienzo-
+	}
+	header @markdown Content-Type "text/markdown; charset=utf-8"
+
 	@doc {
-		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
+		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif *.mjs *.json *.webmanifest *.txt *.md
 		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/*
+		not header_regexp Host ^lienzo-
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
@@ -187,6 +222,26 @@ openlen.com, www.openlen.com {
 	@not_cloudflare not remote_ip 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
 	vars cf_client_ip {http.request.header.cf-connecting-ip}
 	vars @not_cloudflare cf_client_ip {http.request.remote.host}
+
+	# EL LIENZO (pieza 9 de Len 2.5, carril B): en un host lienzo-* TODO va a
+	# Next, que sólo contesta el lienzo (middleware.ts → app/api/lienzo/site):
+	# la página en su ruta y los ficheros de la carpeta. Sin X-Frame-Options (lo
+	# enmarca openlen.com; frame-ancestors lo pone la ruta) y sin las cabeceras
+	# de caché de arriba: un borrador no se guarda en el borde.
+	#
+	# ⚠️ EL ORDEN DE LOS `handle` LO DECIDE CADDY, no el fichero, y cambia con
+	# la versión. MEDIDO el 2026-10-04 con Caddy 2.11.4 (`caddy adapt` y curl
+	# contra uno local): éste va PRIMERO, antes de los de una ruta (/c/*,
+	# /assets/*…). Versiones anteriores pueden poner antes los de una ruta. Con
+	# los dos órdenes lo único que cambia en un host lienzo es /assets/* y
+	# /uploads/*: al disco o a Next (→ 404). Son carpetas RESERVADAS de la
+	# carpeta, así que ningún fichero del dueño vive ahí. Lo fija
+	# lib/lienzo/caddy-lienzo.test.ts.
+	@lienzo header_regexp Host ^lienzo-[0-9a-f]{32}\.
+	handle @lienzo {
+		header -X-Frame-Options
+		reverse_proxy 127.0.0.1:3000
+	}
 
 	# Analytics beacons → Next.js, preserving CF-* headers for IP /
 	# country resolution at the app layer (request log is off here —
@@ -208,8 +263,9 @@ openlen.com, www.openlen.com {
 	# origen de otro sitio que la app. Quién entra lo decide Next: GET
 	# /api/lienzo/[docId] da 404 fuera de un host lienzo-*. Aquí sólo se deja
 	# pasar y se quita X-Frame-Options, que impediría enmarcarlo desde
-	# openlen.com (frame-ancestors lo pone la ruta). Todo lo demás en un host
-	# lienzo-* ya da 404: no existe /var/www/openlen/lienzo-<id>/current.
+	# openlen.com (frame-ancestors lo pone la ruta). Es la forma VIEJA de la
+	# URL del documento: desde la pieza 9 el lienzo va entero por `@lienzo`
+	# (arriba); éste queda para las pestañas abiertas con la URL de antes.
 	# Excluido de @doc arriba: un borrador NO se cachea en el borde.
 	handle /api/lienzo/* {
 		header -X-Frame-Options

@@ -72,7 +72,7 @@ export async function POST(req: Request): Promise<Response> {
   // pura antes de gastar trabajo, y el resultado final se vuelve a comprobar.
   const hostDeLaPeticion = req.headers.get("host");
   const construir = (docId: string) =>
-    urlDelDocumento({ projectId: body.projectId as string, docId, hostDeLaPeticion });
+    urlDelDocumento({ projectId: body.projectId as string, docId, pagina, hostDeLaPeticion });
   if (construir("comprobacion") === null) return json({ error: "sin_host" }, 503);
 
   const html = documentoDeVista(body.html, {

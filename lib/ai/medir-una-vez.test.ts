@@ -65,3 +65,33 @@ describe("una medida por documento", () => {
     expect(veces).toBe(2);
   });
 });
+
+// LA CARPETA (pieza 9 de Len 2.5): el mismo documento con otro `js/app.js` es
+// otra página. La carpeta forma parte de la clave, y llega al medidor.
+describe("una medida por documento Y su carpeta", () => {
+  const carpeta = (app: string) => ({ carpeta: { files: { "/js/app.js": app }, pagina: null } });
+
+  it("🔴 la carpeta llega al medidor; otro fichero son dos medidas", async () => {
+    const vistas: unknown[] = [];
+    const m = medirUnaVezPorDocumento(async (_html: string, _i?: unknown, opts?: unknown) => {
+      vistas.push(opts);
+      return { ok: true };
+    });
+    await m.medir("<html>a</html>", {}, carpeta("1"));
+    await m.medir("<html>a</html>", {}, carpeta("2"));
+    await m.medir("<html>a</html>", {}, carpeta("2"));
+    expect(vistas).toEqual([carpeta("1"), carpeta("2")]);
+    expect(m.reusos()).toBe(1);
+  });
+
+  it("BRAZO DE CONTROL: sin carpeta se llama como siempre, con el documento solo", async () => {
+    const llamadas: unknown[][] = [];
+    const m = medirUnaVezPorDocumento(async (...args: unknown[]) => {
+      llamadas.push(args);
+      return { ok: true };
+    });
+    await m.medir("<html>a</html>");
+    await m.medir("<html>a</html>", {}, carpeta("1"));
+    expect(llamadas).toEqual([["<html>a</html>"], ["<html>a</html>", {}, carpeta("1")]]);
+  });
+});

@@ -314,3 +314,31 @@ describe("usar_pagina — entrar como un usuario de la página", () => {
     expect(lastStep).not.toContain("Hola, ana");
   }, 90_000);
 });
+
+// LA CARPETA (pieza 9 de Len 2.5): el JavaScript que vive en `/js/app.js` llega
+// a la visita como llegaría a la publicada. Sin la carpeta, el mismo botón no
+// tiene a nadie detrás: es lo que Len vería, y diría, si no viajara.
+describe("usar_pagina — la carpeta del proyecto", () => {
+  const pagina = marco(`
+    <p id="msg">Sin aplicar</p>
+    <button id="aplicar">Aplicar</button>
+    <script src="/js/app.js"></script>`);
+  const APP = 'document.getElementById("aplicar").addEventListener("click", function () { document.getElementById("msg").textContent = "Aplicado"; });';
+  const vista = (files?: Record<string, string>) => ({
+    projectId: "p-carpeta",
+    title: null,
+    sub: null,
+    pagina: null,
+    settings: undefined,
+    logoUrl: null,
+    ...(files ? { files } : {}),
+  });
+
+  it("🔴 el script de /js/app.js llega y el botón pinta; BRAZO DE CONTROL: sin la carpeta, nadie lo escucha", async () => {
+    const pasos: PasoDeUso[] = [{ pulsa: "Aplicar" }];
+    const con = (await usarPagina({ html: pagina, pasos, ruta: "/index.html", vista: vista({ "/js/app.js": APP }) })).informe;
+    const sin = (await usarPagina({ html: pagina, pasos, ruta: "/index.html", vista: vista() })).informe;
+    expect(con).toContain("«Sin aplicar» → «Aplicado»");
+    expect(sin).toContain("there is nothing behind it");
+  }, 90_000);
+});

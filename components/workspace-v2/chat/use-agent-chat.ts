@@ -29,7 +29,8 @@ import { noCreditsText, notifyCreditBalanceChanged } from "@/lib/credits-client"
 import type { AgentAction } from "../agent-action-card";
 import type { AgentConfirm } from "../agent-confirm-card";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
-import { ejecutarUndo, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
+import { ejecutarUndo, ficherosDelEvento, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
+import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "../panels/turno-cerrado";
 import { NIVEL_POR_DEFECTO, type EsfuerzoAgente, type NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import type { AgentMode } from "@/lib/agent/dynamis";
@@ -121,6 +122,11 @@ export interface DesignTurn {
    *  ./undo-turn. Local: los turnos restaurados no traen preimagen y ya
    *  esconden el botón por otro motivo. */
   paginasTocadas?: (string | null)[];
+  /** LA CARPETA (pieza 9 de Len 2.5): los ficheros que el turno cambió, cada
+   *  uno con la versión de su «antes» (evento `ficheros`). Deshacer los
+   *  devuelve con la página o no se ofrece — ver ./undo-turn. Local, como
+   *  `paginasTocadas`. */
+  ficherosTocados?: ReadonlyArray<{ readonly ruta: string; readonly versionPrevia: string | null }>;
   /** El turno se cortó DESPUÉS de haber cambiado la página. Se pinta como
    *  aviso sobre un turno aplicado, no como error: el cambio ya vive en la
    *  base y decir «falló» manda al usuario a repetirlo. */
@@ -1114,6 +1120,10 @@ export function useAgentChat({
         // permite saber, al cerrar el turno, si la única preimagen que tenemos
         // (la de `turnPage`) cubre de verdad lo que cambió.
         const paginasTocadas: (string | null)[] = [];
+        // LA CARPETA (pieza 9 de Len 2.5, carril B): los ficheros que el turno
+        // cambió, en orden (evento `ficheros`). Para Deshacer: van con la
+        // página o el botón no se ofrece.
+        const ficherosTocados: Array<{ ruta: string; versionPrevia: string | null }> = [];
         // LA DIRECCIÓN DEL DESHACER, y se queda el PRIMERO. `persistPage`
         // archiva un «antes» por cada escritura, así que un turno con dos
         // `editar_pagina` deja dos versiones — y sólo la primera es el
@@ -1370,6 +1380,11 @@ export function useAgentChat({
                 const ficheros = (payload as { ficheros?: unknown } | null)?.ficheros;
                 const validos = Array.isArray(ficheros) ? ficheros.filter(esFicheroCambiado) : [];
                 if (validos.length > 0) cambiosEnVivo.guardar(projectId, { turnId, pedido: prompt, ficheros: validos });
+              } else if (evName === "ficheros") {
+                // LA CARPETA (pieza 9 de Len 2.5): lo que cambió de la carpeta
+                // una herramienta, con la versión de su «antes».
+                ficherosTocados.push(...ficherosDelEvento(payload));
+                notifyFolderChanged(projectId);
               } else if (evName === "html") {
                 const html = strField(payload, "html");
                 if (html) {
@@ -1616,6 +1631,7 @@ export function useAgentChat({
             // la página en la que empezó (de donde viene la preimagen); estas
             // son las que tocó. Cuando no coinciden, Deshacer no puede cumplir.
             paginasTocadas: [...paginasTocadas],
+            ...(ficherosTocados.length > 0 ? { ficherosTocados: [...ficherosTocados] } : {}),
             versionPrevia,
             // Aplicado CON aviso: el cambio está y el usuario tiene que ver el
             // aviso. La marca de corte, en cambio, sólo si de verdad se cortó
@@ -1830,6 +1846,9 @@ export function useAgentChat({
         // lo rechazan con «Illegal invocation».
         fetchImpl: (...args) => fetch(...args),
         pintar: (html, page) => onLocalUpdate(html, page),
+        // Los ficheros devueltos no cambian el documento: el lienzo se recarga
+        // con el aviso (lib/lienzo/carpeta-cambiada.ts).
+        ficherosRestaurados: () => notifyFolderChanged(projectId),
         marcarRevertido: () =>
           updateTurn(turn.id, { status: "reverted", undoEnCurso: false }),
         marcarFallo: (fallo) =>

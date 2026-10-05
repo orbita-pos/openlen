@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import type { AgentMode } from "@/lib/agent/dynamis";
-import { NOMBRE_BASH, PARA_LA_TERMINAL, PARA_SOLO_LA_TERMINAL, terminalEncendida, terminalOnly } from "./declaracion";
+import { DECLARACION_BASH, NOMBRE_BASH, PARA_LA_TERMINAL, PARA_SOLO_LA_TERMINAL, terminalEncendida, terminalOnly } from "./declaracion";
 
 const CON = { OPENLEN_TERMINAL: "1" };
 const SIN = { OPENLEN_TERMINAL: "0" };
@@ -111,5 +111,20 @@ describe("Len Dynamis: sólo la terminal para los ficheros", () => {
   it("en Len (el modo por defecto), todo sale como con la terminal", () => {
     expect(todo(CON, "len")).toBe(todo(CON));
     expect(nombres(CON)).toEqual(expect.arrayContaining(["Read", "Edit", "Write"]));
+  });
+});
+
+// LA CARPETA (pieza 9 de Len 2.5): la lista de ficheros de `bash` es el único
+// sitio donde el modelo lee qué ficheros tiene el proyecto. Sin nombrar la
+// carpeta, Len metería el JavaScript en la página como siempre.
+describe("la lista de ficheros de bash nombra la carpeta", () => {
+  const d = String(DECLARACION_BASH.description);
+  it("los ficheros de la web, con sw.js y manifest.json", () => {
+    expect(d).toContain("/js, /css, /data/*.json, /sw.js, /manifest.json");
+    expect(d).toContain(".js .mjs .css .json .webmanifest .txt .svg .md");
+  });
+  it("/tests, que no se publica, y que rm borra un fichero de la carpeta", () => {
+    expect(d).toContain("/tests holds Playwright tests, never published");
+    expect(d).toContain("rm deletes a folder file");
   });
 });

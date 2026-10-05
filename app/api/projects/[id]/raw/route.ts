@@ -68,7 +68,7 @@ export async function GET(
     const hostDeLaPeticion = req.headers.get("host");
     // Con la función pura antes de hornear: sin dominio de lienzo (o con un id
     // que no es un uuid) no se gasta nada y se cae a la reserva de abajo.
-    if (urlDelDocumento({ projectId: id, docId: "comprobacion", hostDeLaPeticion }) !== null) {
+    if (urlDelDocumento({ projectId: id, docId: "comprobacion", pagina, hostDeLaPeticion }) !== null) {
       const vista = documentoDeVista(html, {
         projectId: id,
         title: row.title ?? null,
@@ -78,7 +78,7 @@ export async function GET(
         logoUrl: row.logoUrl ?? null,
       });
       const docId = guardarDocumento({ html: vista, projectId: id, userId: session.user.id, pagina });
-      const destino = urlDelDocumento({ projectId: id, docId, hostDeLaPeticion });
+      const destino = urlDelDocumento({ projectId: id, docId, pagina, hostDeLaPeticion });
       if (destino) {
         return new Response(null, {
           status: 303,

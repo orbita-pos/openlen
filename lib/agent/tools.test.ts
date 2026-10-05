@@ -2073,3 +2073,77 @@ describe("el aviso de pivotar cuenta vacías SEGUIDAS", () => {
 //   (b) guarda su copia, con el script VIEJO, y deshace el comportamiento que
 //       el propio turno acababa de escribir.
 const CON_SCRIPT_VIEJO = `<!doctype html><html><head><title>Decks</title><meta name="description" content="Decks"></head><body><h1>Mis decks</h1><p>Arrastra tus cartas.</p><script>window.estado = 'viejo';</script></body></html>`;
+
+// ── LA CARPETA en los ojos (pieza 9 de Len 2.5) ─────────────────────────────
+//
+// `mirar_pagina` y `usar_pagina` abren la página en el Chromium del servidor:
+// si sus ficheros (`/js/app.js`, `/data/menu.json`) no viajan con la vista, Len
+// ve rota una página que publicada funciona. Sólo viaja lo que se publica.
+describe("la carpeta viaja con la vista de mirar_pagina y usar_pagina", () => {
+  const CARPETA = {
+    "/js/app.js": "document.title = 'cargó'",
+    "/data/menu.json": "[]",
+    "/tests/menu.spec.ts": "no se publica",
+    "/supabase/migrations/0001_init.sql": "create table t ();",
+  };
+  const PUBLICABLE = { "/js/app.js": "document.title = 'cargó'", "/data/menu.json": "[]" };
+
+  it("🔴 mirar_pagina: la vista lleva los ficheros publicables", async () => {
+    const { deps } = makeDeps();
+    const vistas: Record<string, unknown>[] = [];
+    await runAgentTool(makeSession(), {
+      ...deps,
+      projectFiles: async () => CARPETA,
+      observarPagina: async (input: Record<string, unknown>) => {
+        vistas.push(input.vista as Record<string, unknown>);
+        return { respuesta: "x" };
+      },
+    }, "mirar_pagina", { tipo: "medir", pregunta: "¿se lee?" });
+    assert.deepEqual(vistas[0]!.files, PUBLICABLE);
+  });
+
+  it("🔴 usar_pagina: la vista lleva los ficheros publicables", async () => {
+    const { deps } = makeDeps();
+    const visitas: Record<string, unknown>[] = [];
+    await runAgentTool(makeSession(), {
+      ...deps,
+      projectFiles: async () => CARPETA,
+      usarPagina: async (input: Record<string, unknown>) => {
+        visitas.push(input);
+        return { informe: "1. pulsa «Agregar» → pulsé." };
+      },
+    }, "usar_pagina", { pasos: [{ pulsa: "Agregar" }] });
+    assert.deepEqual((visitas[0]!.vista as Record<string, unknown>).files, PUBLICABLE);
+  });
+
+  it("BRAZO DE CONTROL: sin ficheros publicables, la vista es la de siempre", async () => {
+    const { deps } = makeDeps();
+    const vistas: Record<string, unknown>[] = [];
+    const conOjos = {
+      ...deps,
+      observarPagina: async (input: Record<string, unknown>) => {
+        vistas.push(input.vista as Record<string, unknown>);
+        return { respuesta: "x" };
+      },
+    };
+    await runAgentTool(makeSession(), { ...conOjos, projectFiles: async () => ({ "/tests/a.spec.ts": "t" }) }, "mirar_pagina", { tipo: "medir", pregunta: "¿?" });
+    await runAgentTool(makeSession(), conOjos, "mirar_pagina", { tipo: "medir", pregunta: "¿?" });
+    assert.equal("files" in vistas[0]!, false);
+    assert.equal("files" in vistas[1]!, false);
+  });
+
+  it("si la carpeta no se puede leer, se mira igual sin ella (fallo blando)", async () => {
+    const { deps } = makeDeps();
+    const vistas: Record<string, unknown>[] = [];
+    const out = await runAgentTool(makeSession(), {
+      ...deps,
+      projectFiles: async () => { throw new Error("la base no contesta"); },
+      observarPagina: async (input: Record<string, unknown>) => {
+        vistas.push(input.vista as Record<string, unknown>);
+        return { respuesta: "x" };
+      },
+    }, "mirar_pagina", { tipo: "medir", pregunta: "¿?" });
+    assert.equal(out.response.ok, true);
+    assert.equal("files" in vistas[0]!, false);
+  });
+});

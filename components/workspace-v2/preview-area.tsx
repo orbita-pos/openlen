@@ -45,6 +45,7 @@ import { buildUntrustedSrcDoc } from "./preview-prelude";
 import { PageBuildingLoader } from "./page-building-loader";
 import { ScanOverlay } from "./scan-overlay";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
+import { onFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 
 // ---------------------------------------------------------------------------
 
@@ -597,6 +598,27 @@ export function PreviewArea({
   marcarListoRef.current = lienzo.marcarListo;
   const urlRemota = lienzo.estado.modo === "remoto" ? lienzo.estado.url : null;
   const modoRemoto = remotoActivo && urlRemota !== null;
+
+  // LA CARPETA CAMBIÓ (pieza 9 de Len 2.5): un `js/app.js` o un CSS nuevo no
+  // cambian el documento, así que nada lo resubiría. Se recarga el MISMO
+  // documento, que vuelve a pedir sus ficheros (el host del lienzo los sirve
+  // sin caché). Sólo en el remoto —en local no hay carpeta que cargar— y
+  // juntando los avisos de una tanda en una recarga.
+  const modoRemotoRef = useRef(modoRemoto);
+  modoRemotoRef.current = modoRemoto;
+  useEffect(() => {
+    if (!projectId) return;
+    let reloj: ReturnType<typeof setTimeout> | null = null;
+    const quitar = onFolderChanged(projectId, () => {
+      if (!modoRemotoRef.current) return;
+      if (reloj) clearTimeout(reloj);
+      reloj = setTimeout(() => setRefreshTick((t) => t + 1), 300);
+    });
+    return () => {
+      quitar();
+      if (reloj) clearTimeout(reloj);
+    };
+  }, [projectId]);
   const esperandoRemoto = remotoActivo && lienzo.estado.modo === "esperando";
   const vistaLimitada = remotoActivo && lienzo.estado.modo === "local";
   const iframeFuente = previewUrl ? { src: previewUrl } : modoRemoto ? { src: urlRemota! } : esperandoRemoto ? { src: "about:blank" } : { srcDoc: finalSrcDoc };

@@ -23,7 +23,8 @@ import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 // aquí abajo llegó a afirmar un mínimo distinto del que se comprobaba.
 import { UMBRAL_CONTRASTE } from "@/lib/ai/contraste";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
-import { documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
+import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
+import type { OpcionesDelDocumento } from "@/lib/ai/origen-de-medida";
 // Las frases de «lo que la medición no pudo comprobar», en un solo sitio. Import
 // de valor y sin coste: `aviso-medido` no importa nada — ni la pasarela, ni las
 // herramientas, ni Chromium.
@@ -323,7 +324,7 @@ export interface VerifyProviderLike {
 
 export interface VerifyInternals {
   provider?: VerifyProviderLike;
-  render?: (html: string) => Promise<InlineImage | null>;
+  render?: (html: string, opts?: Parameters<typeof renderHtmlToInlineImage>[1]) => Promise<InlineImage | null>;
   // ⚰️ Aquí vivía `resolverOpId`: la RUTA del culpable se traducía fuera, sobre
   // el documento etiquetado de la sesión, y había que CORROBORAR porque una
   // ruta posicional resuelta sobre un documento divergido no falla —acierta a
@@ -334,6 +335,9 @@ export interface VerifyInternals {
    *  foto porque son dos navegadores distintos y sólo uno sabe medir. */
   medir?: (
     html: string,
+    internals?: Record<string, never>,
+    /** LA CARPETA (pieza 9 de Len 2.5): los ficheros que la página pide. */
+    opts?: { carpeta?: OpcionesDelDocumento },
   ) => Promise<{
     unreadableText?: readonly {
       contrast: number;
@@ -773,8 +777,15 @@ async function runVerify(
   // `medir`: un doble de prueba que sustituye el navegador de la foto no puede
   // acabar arrancando Chrome de verdad por la puerta de al lado. Con los dos
   // por omisión (producción), corre el medidor real.
-  const medir =
+  const medirSin =
     internals.medir ?? (internals.render ? async () => null : renderVisualQualityViewports);
+  // LA CARPETA (pieza 9 de Len 2.5): los dos navegadores —la foto y la
+  // medida— contestan los ficheros que la página pide (`<script
+  // src="/js/app.js">`), o la verían rota cuando publicada funciona. Sin
+  // ficheros no viaja nada: la llamada es la de siempre.
+  const carpeta = carpetaDeLaVista(params.vista);
+  const medir = (html: string, laCarpeta = carpeta) =>
+    laCarpeta ? medirSin(html, {}, { carpeta: laCarpeta }) : medirSin(html);
   const medicion = medir(paraMedir).catch(() => null);
 
   // Si el modelo declaró qué debe pasar, se comprueba ESO. Si no, se pulsa a
@@ -816,6 +827,7 @@ async function runVerify(
   const image = await render(paraRenderizar, {
     onErrors: (e) => hechos.gritos.push(...e),
     onBlocked: (u) => hechos.bloqueadas.push(...u),
+    ...(carpeta ? { carpeta } : {}),
     ...(conGuion
       ? {
           // `propia: false` en las GUARDADAS: a ellas no se les aplica como
@@ -889,10 +901,13 @@ async function runVerify(
       params.vista ?? null,
     );
     const susHechos = hechosVacios();
-    const suMedicion = medir(suMedida).catch(() => null);
+    // La misma carpeta, pero lo relativo se resuelve desde SU ruta.
+    const suCarpeta = carpeta ? { ...carpeta, pagina: otra.page } : undefined;
+    const suMedicion = medir(suMedida, suCarpeta).catch(() => null);
     const suImagen = await render(suRender, {
       onErrors: (e) => susHechos.gritos.push(...e),
       onBlocked: (u) => susHechos.bloqueadas.push(...u),
+      ...(suCarpeta ? { carpeta: suCarpeta } : {}),
     }).catch(() => null);
     plegarMedicion(susHechos, await suMedicion);
     const etiqueta = etiquetaDePagina(otra.page);
@@ -1540,7 +1555,10 @@ export async function observarPagina(
     // el usuario miraban páginas distintas. Fallo blando, como allí: si el
     // binding nativo no carga se mide crudo, que ya es útil.
     const medir = internals.medir ?? renderVisualQualityViewports;
-    const m = await medir(documentoMedible(params.html, params.vista ?? null)).catch(() => null);
+    const doc = documentoMedible(params.html, params.vista ?? null);
+    // LA CARPETA (pieza 9 de Len 2.5): como en los ojos.
+    const carpeta = carpetaDeLaVista(params.vista);
+    const m = await (carpeta ? medir(doc, {}, { carpeta }) : medir(doc)).catch(() => null);
     if (!m) return null;
 
     const partes: string[] = [];
@@ -1635,7 +1653,8 @@ export async function observarPagina(
   // calcula su color en vez de asumir blanco (`lib/publish/assistant-widget.ts`).
   // Avisar de un contraste que sabemos calcular es darle trabajo al usuario.
   const render = internals.render ?? renderHtmlToInlineImage;
-  const image = await render(params.html).catch(() => null);
+  const carpeta = carpetaDeLaVista(params.vista);
+  const image = await (carpeta ? render(params.html, { carpeta }) : render(params.html)).catch(() => null);
   if (!image) return null;
 
   const provider = internals.provider ?? describeProvider();

@@ -229,6 +229,12 @@ export const projects = pgTable(
     // rollback, where the live pages are unknown) — pages are then skipped
     // by the comparison, so legacy rows never show a false "changed".
     publishedPagesHash: text("publishedPagesHash"),
+    // LA CARPETA (pieza 9 de Len 2.5): la huella de sus ficheros publicables
+    // (`folderFingerprint`, lib/projects/files-hash.ts), al día con cada
+    // escritura (lib/backend/files.ts), y la de la última publicación.
+    // Distintas ⇒ «cambios sin publicar». Sin carpeta, las dos NULL.
+    filesHash: text("filesHash"),
+    publishedFilesHash: text("publishedFilesHash"),
     // First 12 chars of sha256(optimized published HTML). Points at the
     // on-disk release dir under /var/www/openlen/<sub>/releases/<sha>/.
     // The TopBar "Previous deploys" UI joins this against listReleases()
@@ -925,10 +931,11 @@ export const projectBackends = pgTable("projectBackends", {
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
 
-// Los ficheros del proyecto que no son páginas: las migraciones de su backend
-// (`/supabase/migrations/*.sql`, plans/pages-backend/design.md), que Len
-// escribe con Write o con `supabase migration new` y aplica con
-// `supabase db push`. Sólo bajo `/supabase/` (lib/agent/ficheros/supabase.ts).
+// LA CARPETA DEL PROYECTO: los ficheros que no son páginas, como en un proyecto
+// de Vercel + Supabase (pieza 9 de Len 2.5) — `/supabase/` (las migraciones del
+// backend, que Len aplica con `supabase db push`), `/tests/` y los de la web
+// (`js/`, `css/`, `data/*.json`, `sw.js`…). Qué ruta vale lo decide
+// lib/agent/ficheros/folder.ts.
 export const projectFiles = pgTable(
   "projectFiles",
   {
@@ -940,6 +947,29 @@ export const projectFiles = pgTable(
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.projectId, t.path] })],
+);
+
+// Las versiones de los ficheros de la carpeta (pieza 9): el «antes» de cada
+// cambio, para deshacer. Aparte de `projectVersions` a propósito: ésa la leen
+// el panel de Versiones, el registro de cambios de Len y lo que el dueño tocó a
+// mano, todos por PÁGINA; un fichero ahí se colaría en los tres. `content` nulo
+// = el fichero no existía (deshacer lo borra). 20 por (proyecto, ruta).
+export const projectFileVersions = pgTable(
+  "projectFileVersions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    path: text("path").notNull(),
+    content: text("content"),
+    label: text("label").notNull(),
+    source: text("source").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("projectFileVersions_project_path_idx").on(t.projectId, t.path, t.createdAt)],
 );
 
 export const memberLoginTokens = pgTable("memberLoginTokens", {
