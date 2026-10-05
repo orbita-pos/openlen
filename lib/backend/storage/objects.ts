@@ -20,6 +20,7 @@ import {
   testPermission,
   updateObject,
   upsertObject,
+  type ObjectMetadata,
   type ObjectRow,
 } from "./db";
 import { ERRORS } from "./errors";
@@ -63,7 +64,7 @@ export async function serveObject(
   obj: ObjectRow,
   o: { visibility: "public" | "private"; head?: boolean },
 ): Promise<Response> {
-  const meta = obj.metadata ?? {};
+  const meta: Partial<ObjectMetadata> = obj.metadata ?? {};
   const download = new URL(req.url).searchParams.get("download") ?? undefined;
   const headers = objectHeaders(meta, { visibility: o.visibility, download });
   if (!obj.version) throw ERRORS.NoSuchKey();

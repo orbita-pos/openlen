@@ -43,7 +43,7 @@ function falso() {
         const m = typeof input.Range === "string" ? /^bytes=(\d+)-(\d+)$/.exec(input.Range) : null;
         const slice = m ? b.subarray(Number(m[1]), Number(m[2]) + 1) : b;
         return {
-          Body: new Response(slice).body,
+          Body: new Response(new Uint8Array(slice)).body,
           ContentLength: slice.byteLength,
           ...(m ? { ContentRange: `bytes ${m[1]}-${m[2]}/${b.byteLength}` } : {}),
         };
