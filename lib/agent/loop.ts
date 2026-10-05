@@ -661,6 +661,8 @@ export function sobreQue(argsDeLaLlamada: Record<string, unknown>): string {
     texto("pattern") ??
     rel(texto("path")) ??
     consultas?.slice(0, 60) ??
+    // Pieza 5: lo que se busca en las charlas pasadas (`session_search`).
+    texto("query")?.slice(0, 60) ??
     texto("url")?.slice(0, 60) ??
     (comando ? resumenDelComando(comando) : "")
   );

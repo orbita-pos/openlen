@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
-import { runAgentLoop, type AgentStreamEvent } from "./loop";
+import { runAgentLoop, sobreQue, type AgentStreamEvent } from "./loop";
 import { etiquetarConPosiciones } from "./ficheros/posiciones";
 
 // Repite el ÚLTIMO guion cuando se acaba: así una prueba con \`maxTurns\` llega
@@ -4274,5 +4274,12 @@ describe("compactación dentro del turno (como el arnés de DeepSeek)", () => {
     const vuelta2 = vistos.find((m) => !esResumen(m) && m.at(-1)!.content.includes("mejor en azul"));
     expect(vuelta2).toBeDefined();
     expect(JSON.stringify(vuelta2)).toContain(largo);
+  });
+});
+
+describe("sobreQue: el resumen de la tarjeta de cada llamada", () => {
+  it("pieza 5: la tarjeta de buscar en charlas pasadas enseña lo que se busca", () => {
+    expect(sobreQue({ query: "horario de la tienda" })).toBe("horario de la tienda");
+    expect(sobreQue({ query: "x".repeat(100) })).toHaveLength(60);
   });
 });

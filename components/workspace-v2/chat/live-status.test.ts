@@ -117,6 +117,8 @@ describe("la barra viva", () => {
     expect(questionOf(t)).toBe("¿Cuántas horas antes?");
     expect(questionsOf(t)).toEqual(preguntas);
     expect(activityOf("ask_user_question")).toBe("asking");
+    // Pieza 5: buscar y leer en las charlas pasadas es leer.
+    expect(["session_search", "session_event_search", "session_event_read"].map(activityOf)).toEqual(["reading", "reading", "reading"]);
   });
 
   it("🔴 pieza 3: una pregunta contestada DENTRO del turno ya no es esperar", () => {

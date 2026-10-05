@@ -169,6 +169,10 @@ export const KNOWN_TOOLS = new Set([
   // Se queda por lo guardado: pasó a llamarse ask_user_question (pieza 3).
   "preguntar",
   "ask_user_question",
+  // Pieza 5 de Len 2.5: buscar y leer en las charlas pasadas.
+  "session_search",
+  "session_event_search",
+  "session_event_read",
   // H2 (2026-09-25): cargar una herramienta diferida. Retirada en Len 2.1;
   // se queda por el historial.
   "ToolSearch",

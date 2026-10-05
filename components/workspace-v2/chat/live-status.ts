@@ -83,6 +83,10 @@ const ACTIVITY_OF: Readonly<Record<string, Activity>> = {
   preguntar: "asking",
   // Pieza 3 de Len 2.5: el nombre de hoy (`preguntar` se queda por lo guardado).
   ask_user_question: "asking",
+  // Pieza 5: buscar y leer en las charlas pasadas es leer.
+  session_search: "reading",
+  session_event_search: "reading",
+  session_event_read: "reading",
 };
 
 export function activityOf(tool: string): Activity {
