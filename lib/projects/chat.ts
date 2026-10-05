@@ -31,14 +31,50 @@ export const ESTADO_EN_CURSO = "en_curso";
 export async function getChatMessages(
   projectId: string,
 ): Promise<StoredChatTurn[]> {
-  const rows = await db
-    // Pieza 7: de la transcripción, sólo si el turno cerró en modo plan.
-    .select({ ...columnasDelPanel(), planMode: sql<string | null>`${schema.projectChatMessages.transcript}->>'planMode'` })
-    .from(schema.projectChatMessages)
-    .where(enCurso(projectId))
-    .orderBy(asc(schema.projectChatMessages.createdAt))
-    .limit(CHAT_LIMIT);
-  return rows.map(rowToTurn);
+  const [rows, planMode] = await Promise.all([
+    db
+      .select(columnasDelPanel())
+      .from(schema.projectChatMessages)
+      .where(enCurso(projectId))
+      .orderBy(asc(schema.projectChatMessages.createdAt))
+      .limit(CHAT_LIMIT),
+    planModeOfConversation(projectId),
+  ]);
+  const turns = rows.map(rowToTurn);
+  // Pieza 7: la foto va en el último turno cerrado, que es donde la busca el
+  // chat (`lastPlanMode`).
+  if (planMode) {
+    for (let i = turns.length - 1; i >= 0; i--) {
+      if (turns[i]!.enCurso) continue;
+      turns[i] = { ...turns[i]!, planMode: true };
+      break;
+    }
+  }
+  return turns;
+}
+
+/**
+ * PIEZA 7 · ¿sigue la charla en modo plan? Lo que pliega el servidor al empezar
+ * el turno (`planModeFromRows`): la última fila cerrada CON transcripción. De UNA
+ * fila, y es a propósito: leer `transcript->>'planMode'` obliga a Postgres a
+ * descomprimir la transcripción entera (hasta `TOPE_TRANSCRIPCION`), y en las
+ * 50 filas del panel eran megas en cada carga de proyecto. Si falla, la charla
+ * se carga igual, sin modo plan: el turno siguiente lo dice (`plan`).
+ */
+async function planModeOfConversation(projectId: string): Promise<boolean> {
+  const t = schema.projectChatMessages;
+  try {
+    const rows = await db
+      .select({ planMode: sql<string | null>`${t.transcript}->>'planMode'` })
+      .from(t)
+      .where(and(enCurso(projectId), ne(t.status, ESTADO_EN_CURSO), sql`jsonb_typeof(${t.transcript}) = 'object'`))
+      .orderBy(desc(t.createdAt))
+      .limit(1);
+    return rows[0]?.planMode === "true";
+  } catch (err) {
+    console.warn("[chat] no se pudo leer el modo plan de la charla", err);
+    return false;
+  }
 }
 
 /**
@@ -391,11 +427,8 @@ async function trim(projectId: string): Promise<void> {
     .where(inArray(schema.projectChatMessages.id, excess));
 }
 
-/** La fila de la base como turno del panel. Exportada para su prueba
- *  (`chat-row.test.ts`). `planMode` es `transcript->>'planMode'` cuando la
- *  consulta lo pide (pieza 7): texto, porque así sale de un jsonb. */
-export function rowToTurn(
-  row: Omit<typeof schema.projectChatMessages.$inferSelect, "transcript"> & { planMode?: string | null },
+function rowToTurn(
+  row: Omit<typeof schema.projectChatMessages.$inferSelect, "transcript">,
 ): StoredChatTurn {
   const turn: StoredChatTurn = {
     id: row.id,
@@ -419,8 +452,6 @@ export function rowToTurn(
   // Lo que cobró y tardó, si el servidor lo apuntó (plans/new-chat/).
   if (typeof row.centicredits === "number") turn.centicredits = row.centicredits;
   if (typeof row.durationMs === "number") turn.durationMs = row.durationMs;
-  // Pieza 7: el turno cerró en modo plan; el chat enciende su ficha al recargar.
-  if (row.planMode === "true") turn.planMode = true;
   return turn;
 }
 

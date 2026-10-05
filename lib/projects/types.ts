@@ -296,8 +296,9 @@ export type DegradationCode =
 export interface StoredChatTurn {
   id: string;
   userText: string;
-  /** Pieza 7: el turno cerró en modo plan (la foto de su transcripción). El
-   *  chat enciende su ficha «Plan» si el último turno lo trae. */
+  /** Pieza 7: tras este turno la charla seguía en modo plan (lo que pliega el
+   *  servidor; `getChatMessages` lo pone en el último turno cerrado). El chat
+   *  enciende su ficha «Plan» si el último turno lo trae. */
   planMode?: true;
   /** Image the user attached to this turn — shown in the restored bubble. */
   attachedImage?: { url: string; alt?: string };
