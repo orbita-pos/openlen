@@ -1233,6 +1233,35 @@ describe("runAgentLoop — ask_user_question (antes preguntar)", () => {
     expect(events.some((e) => e.type === "direccion")).toBe(true);
   });
 
+  it("ALINEAR · el resultado dice si el turno ACABÓ esperando al dueño (pregunta vencida o descartada), y no si siguió", async () => {
+    const pregunta = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted([{ type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿?" }] } }, done]),
+      runTool: async (_n, args) => ({ response: { ok: true, preguntado: true }, pregunta: preguntaDe(args) }),
+      emit: () => {},
+    });
+    expect(pregunta.endedOnQuestion).toBe(true);
+    const descartada = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted([{ type: "function_call", name: "exit_plan_mode", args: { plan: "# P" } }, done]),
+      runTool: async () => ({ response: { ok: false, error: "dismissed" }, dismissed: true }),
+      emit: () => {},
+    });
+    expect(descartada.endedOnQuestion).toBe(true);
+    const direcciones: (string | null)[] = [null, "sigue"];
+    const siguio = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿?" }] } }, done],
+        [{ type: "text_delta", text: "Vale." }, done],
+      ),
+      runTool: async (_n, args) => ({ response: { ok: true, preguntado: true }, pregunta: preguntaDe(args) }),
+      leerDireccion: () => direcciones.shift() ?? null,
+      emit: () => {},
+    });
+    expect(siguio.endedOnQuestion).toBeUndefined();
+  });
+
   it("LOTE 7-8 (2) · BRAZO DE CONTROL: sin nada escrito, la pregunta sigue cerrando el turno", async () => {
     let llamadas = 0;
     const r = await runAgentLoop({

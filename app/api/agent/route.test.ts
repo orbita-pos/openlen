@@ -2587,7 +2587,7 @@ describe("POST /api/agent — el encargo", () => {
     mocks.getCreditState.mockResolvedValue(saldo(50));
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
       args.emit({ type: "action", tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Qué colores?" } as never);
-      return cierre;
+      return { ...cierre, endedOnQuestion: true };
     });
     const eventos = await turno({ goal: "create" });
     expect(done(eventos).round).toBeUndefined();
@@ -2602,12 +2602,26 @@ describe("POST /api/agent — el encargo", () => {
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
       // La tarjeta del descarte: `done`, con sus preguntas, sin `pregunta` ni `respuesta`.
       args.emit({ type: "action", tool: "exit_plan_mode", status: "done", summary: "", preguntas: [{ id: "plan-review", question: "Approve this plan and leave plan mode?" }] } as never);
-      return cierre;
+      return { ...cierre, endedOnQuestion: true };
     });
     const eventos = await turno({ goal: "create" });
     expect(done(eventos).round).toBeUndefined();
     await new Promise((r) => setTimeout(r, 20));
     expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("ALINEAR · una ronda con una pregunta sin `respuesta` que SIGUIÓ (el dueño escribió) encadena, como DeepSeek", async () => {
+    mocks.getCreditState.mockResolvedValue(saldo(50));
+    let vueltas = 0;
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      vueltas += 1;
+      if (vueltas === 1) args.emit({ type: "action", tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Qué colores?" } as never);
+      // Sin `endedOnQuestion`: el turno no acabó en la pregunta.
+      return cierre;
+    });
+    const eventos = await turno({ goal: "create" });
+    expect((done(eventos).round as { next?: string } | undefined)?.next).toMatch(/^[0-9a-f-]{36}$/);
+    await vi.waitFor(() => expect(mocks.runAgentLoop).toHaveBeenCalledTimes(2));
   });
 
   it("al tope de rondas, atascado con `round-limit` y su mensaje literal", async () => {

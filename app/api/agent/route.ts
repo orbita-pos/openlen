@@ -56,7 +56,7 @@ import { runAgentLoop, type AgentErrorCode, type AgentLoopResult, type VerifyOut
 import { randomUUID } from "node:crypto";
 
 import { abrirTurno, cerrarTurno, esperarRespuesta, leerDireccion, rondaSiguiente } from "@/lib/agent/direcciones";
-import { ASK_USER_TIMEOUT_MS, asksTheOwner, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { ASK_USER_TIMEOUT_MS, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { planModeFromRows, resolveTurnPlanMode, withPlanSection } from "@/lib/agent/plan-mode";
 import {
   GoalError,
@@ -1858,7 +1858,11 @@ async function correrTurno(
         if (goalActual) {
           const cancelado = canceladoAProposito && result.errorCode === "cancelled";
           const revento = result.terminalError && !cancelado && result.topeAlcanzado === null;
-          const preguntaSinContestar = registro.tarjetas.some((t) => asksTheOwner(t.tool) && !t.respuesta);
+          // El conductor de DeepSeek no mira preguntas: reserva la ronda siguiente
+          // al quedar libre. Aquí una pregunta CIERRA el turno (pieza 3), y sólo
+          // entonces se espera al dueño; si el turno siguió (lo escrito por el
+          // dueño, lote 7-8), encadena como allí. Lo dice el bucle, no las tarjetas.
+          const preguntaSinContestar = result.endedOnQuestion === true;
           if (cancelado) {
             if (rondaDelTurno && goalActual.phase === "active") goal.commit(pauseGoal(goalActual, goalActual), "disarmed");
             else if (goalArmado) goal.commit(goalActual, "disarmed");
