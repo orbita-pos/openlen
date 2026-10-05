@@ -17,10 +17,11 @@
  * `lib/agent/plan-mode.ts`.
  */
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
-import { answerSummary, questionText } from "@/lib/agent/ask-user-question";
+import { QUESTION_DISMISSED, answerSummary, questionText } from "@/lib/agent/ask-user-question";
 import {
   ENTER_PLAN_MODE,
   EXIT_PLAN_MODE,
+  PLAN_REVIEW_DISMISSED_ERROR,
   consentGiven,
   planConsentQuestion,
   planReviewQuestion,
@@ -77,8 +78,11 @@ export async function toolEnterPlanMode(
   const answers = await deps.askUser(preguntas);
   // Sin respuesta a tiempo (o ■): como `ask_user_question`, la pregunta cierra
   // el turno. Si el dueño acepta después, el chat enciende el modo con su
-  // mensaje (la puerta del dueño), así que aquí no se toca nada.
-  if (!answers) return { response: { ok: true, preguntado: true }, pregunta: questionText(preguntas), preguntas };
+  // mensaje (la puerta del dueño), así que aquí no se toca nada. Lote 7-8:
+  // descartada (sólo por la API: esta tarjeta no tiene «Pedir cambios»), igual.
+  if (!answers || answers === QUESTION_DISMISSED) {
+    return { response: { ok: true, preguntado: true }, pregunta: questionText(preguntas), preguntas };
+  }
   const respuesta = answerSummary(answers);
   if (!consentGiven(answers)) {
     return { response: { ok: false, error: "The user declined plan mode; carry on with the request without it." }, preguntas, respuesta };
@@ -115,6 +119,10 @@ export async function toolExitPlanMode(
   // 🔴 `null` (no contestó a tiempo, ■) NUNCA aprueba: el turno cierra con la
   // tarjeta y el modo sigue. Si aprueba después, el chat lo apaga con su mensaje.
   if (!answers) return { response: { ok: true, preguntado: true }, pregunta: questionText(preguntas), preguntas };
+  // LOTE 7-8 · DESCARTADA para hablar (el «discuss» de DeepSeek): su error
+  // literal, el modo sigue y el bucle cierra el turno; lo que escriba el dueño
+  // es el turno siguiente, todavía en modo plan.
+  if (answers === QUESTION_DISMISSED) return { response: { ok: false, error: PLAN_REVIEW_DISMISSED_ERROR }, preguntas, dismissed: true };
   const respuesta = answerSummary(answers);
   const outcome = reviewOutcome(answers);
   if (!outcome.approved) return { response: { ok: false, error: outcome.error }, preguntas, respuesta };

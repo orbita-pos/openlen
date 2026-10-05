@@ -2036,6 +2036,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     /** La pregunta con la que este turno se cierra, si alguna herramienta la
      *  produjo. Ver el bloque que la consume al salir del bucle de llamadas. */
     let pregunta = "";
+    /** Lote 7-8 · el dueño descartó una pregunta para hablar: el turno cierra
+     *  tras la tanda (ver el bloque que lo consume, antes del de `pregunta`). */
+    let ownerTookOver = false;
     /** Pieza 8 · lo que las herramientas de la tanda dejan para el paso
      *  siguiente (`ToolOutcome.notice`, el `deferContext` de DeepSeek). */
     const avisos: string[] = [];
@@ -2181,7 +2184,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         args.emit({
           type: "action",
           tool: call.name,
-          status: ok ? (descartada ? "warning" : "done") : "error",
+          // Lote 7-8: una pregunta DESCARTADA para hablar no es un fallo (DeepSeek
+          // pinta su `ASK_CANCELLED` como `ok`), aunque el modelo lea un error.
+          status: ok || outcome.dismissed ? (descartada ? "warning" : "done") : "error",
           summary: outcome.action?.summary ?? summary,
           // Se reenvían sólo si la herramienta los puso, para que el evento de
           // las que no los conocen salga byte-idéntico al de antes.
@@ -2286,6 +2291,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         }
 
         if (outcome.pregunta) pregunta = outcome.pregunta;
+        if (outcome.dismissed) ownerTookOver = true;
         if (outcome.notice) avisos.push(outcome.notice);
         const respuesta = outcome.response;
         // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
@@ -2375,6 +2381,17 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // edición y una pregunta en la misma vuelta, la edición se aplica y se
     // emite igual. Cortar en seco perdería trabajo que el usuario ya tiene
     // delante en el lienzo.
+    // LOTE 7-8 · EL DUEÑO DESCARTÓ LA PREGUNTA PARA HABLAR: el turno cierra aquí,
+    // como Claude Code cuando el usuario rechaza, sin otra llamada al modelo (lo
+    // de arriba: pedirle que se pare no basta). La llamada y su error —el de
+    // DeepSeek— quedan en la conversación, como con el ■ a mitad de tanda: el
+    // turno siguiente los lee antes del mensaje del dueño.
+    if (ownerTookOver) {
+      messages.push(delAsistente(turnText, calls));
+      messages.push({ role: "user", content: "", functionResponses });
+      return buildResult(false);
+    }
+
     if (pregunta) {
       // El texto lo escribió el modelo, en el idioma del usuario — el servidor
       // decide CUÁNDO se para, no QUÉ se dice. Se emite salvo que ya lo haya

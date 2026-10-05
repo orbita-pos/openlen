@@ -6,6 +6,7 @@ import {
   cancelar,
   cerrarTurno,
   dirigir,
+  dismissQuestion,
   esperarRespuesta,
   leerDireccion,
   responder,
@@ -15,6 +16,7 @@ import {
   siguienteDeLaFila,
   MAX_DIRECCION,
 } from "./direcciones";
+import { QUESTION_DISMISSED, type QuestionAnswer } from "./ask-user-question";
 
 beforeEach(() => _vaciarTodo());
 
@@ -184,6 +186,29 @@ describe("la respuesta a una pregunta de Len, dentro del turno", () => {
     expect(await espera).toEqual(respuesta);
   });
 
+  it("LOTE 7-8 · descartar: quien espera recibe el descarte, no una respuesta", async () => {
+    abrirTurno("t1", "u1");
+    const espera = esperarRespuesta("t1", { timeoutMs: 60_000 });
+    expect(dismissQuestion("t1", "u1")).toBe("ok");
+    expect(await espera).toBe(QUESTION_DISMISSED);
+  });
+
+  it("🔴 descartar: el turno de otro es ajeno; sin nadie esperando, sin_pregunta", () => {
+    abrirTurno("t1", "u1");
+    void esperarRespuesta("t1", { timeoutMs: 60_000 });
+    expect(dismissQuestion("t1", "otro")).toBe("ajeno");
+    expect(dismissQuestion("nadie", "u1")).toBe("no_existe");
+    expect(dismissQuestion("t1", "u1")).toBe("ok");
+    expect(dismissQuestion("t1", "u1")).toBe("sin_pregunta");
+  });
+
+  it("🔴 tras descartar, una respuesta no es ya_respondida: cae a mensaje (no se pierde un «Aprobar» tardío)", () => {
+    abrirTurno("t1", "u1");
+    void esperarRespuesta("t1", { timeoutMs: 60_000 });
+    dismissQuestion("t1", "u1");
+    expect(responder("t1", "u1", respuesta)).toBe("sin_pregunta");
+  });
+
   it("una forma que no vale es invalida y no resuelve", () => {
     abrirTurno("t1", "u1");
     void esperarRespuesta("t1", { timeoutMs: 60_000 });
@@ -197,7 +222,7 @@ describe("la respuesta a una pregunta de Len, dentro del turno", () => {
     abrirTurno("t1", "u1");
     const espera = esperarRespuesta("t1", { timeoutMs: 60_000 });
     responder("t1", "u1", [{ id: "plazo", selected: [], custom: "x".repeat(5000) }]);
-    expect((await espera)?.[0]?.custom?.length).toBe(2000);
+    expect(((await espera) as QuestionAnswer[])[0]?.custom?.length).toBe(2000);
   });
 
   it("vence con null a los timeoutMs, y después ya no hay pregunta que contestar", async () => {

@@ -78,7 +78,16 @@ import type { AgentMode } from "@/lib/agent/dynamis";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { createConcurrencyLimit } from "@/lib/agent/concurrency-limit";
-import { ASK_USER_QUESTION, answerSummary, questionText, validateQuestions, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
+import {
+  ASK_CANCELLED_ERROR,
+  ASK_USER_QUESTION,
+  QUESTION_DISMISSED,
+  answerSummary,
+  questionText,
+  validateQuestions,
+  type AskUserResult,
+  type UserQuestion,
+} from "@/lib/agent/ask-user-question";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { toolEnterPlanMode, toolExitPlanMode } from "@/lib/agent/plan-mode-tools";
 import type { GoalActivation, GoalSnapshot } from "@/lib/agent/goal";
@@ -124,9 +133,10 @@ export interface FileVersionNote {
 export interface AgentDeps {
   /** Pieza 3 de Len 2.5: quien CONTESTA las preguntas de `ask_user_question`
    *  dentro del turno (lo pone la ruta cuando el chat lo pide). Devuelve las
-   *  respuestas o `null` si no llegaron a tiempo (o el ■). Sin él, la pregunta
-   *  cierra el turno, como siempre: así siguen la voz y Len-Bench. */
-  askUser?(questions: UserQuestion[]): Promise<QuestionAnswer[] | null>;
+   *  respuestas, el descarte del dueño (`QUESTION_DISMISSED`, lote 7-8) o
+   *  `null` si no llegaron a tiempo (o el ■). Sin él, la pregunta cierra el
+   *  turno, como siempre: así siguen la voz y Len-Bench. */
+  askUser?(questions: UserQuestion[]): Promise<AskUserResult>;
   /** Pieza 7: el modo plan del turno (`lib/agent/plan-mode.ts`). Lo guarda la
    *  ruta; sólo `enter_plan_mode` y `exit_plan_mode` lo cambian. Sin él, el
    *  modo plan no existe y las dos lo dicen. */
@@ -782,6 +792,11 @@ export interface ToolOutcome {
    *  paso siguiente, detrás de los resultados de la tanda (el cierre de un
    *  encargo). Lo añade el bucle al mensaje que lleva las respuestas. */
   notice?: string;
+  /** LOTE 7-8 · el dueño DESCARTÓ la pregunta para hablar (el `ASK_CANCELLED`
+   *  de DeepSeek). El modelo lee el error de `response`; la tarjeta NO es un
+   *  fallo (DeepSeek la pinta `ok`) y el bucle cierra el turno tras la tanda,
+   *  como Claude Code cuando el usuario rechaza: el dueño tiene la palabra. */
+  dismissed?: true;
   /** H12-a · guardar ya chocó dos veces seguidas en este turno: el bucle no
    *  ejecuta más escrituras y cierra. Lo pone `contarConflictos`. */
   guardarSinSalida?: true;
@@ -1792,6 +1807,8 @@ async function toolAskUserQuestion(
   // una aprobación: cae a lo de siempre, la pregunta cierra el turno.
   if (deps.askUser) {
     const answers = await deps.askUser(v.questions);
+    // Lote 7-8: descartada para hablar, el error de DeepSeek; el bucle cierra.
+    if (answers === QUESTION_DISMISSED) return { response: { ok: false, error: ASK_CANCELLED_ERROR }, preguntas: v.questions, dismissed: true };
     if (answers) return { response: { ok: true, answers }, preguntas: v.questions, respuesta: answerSummary(answers) };
   }
   return {

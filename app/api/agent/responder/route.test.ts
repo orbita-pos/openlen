@@ -8,6 +8,7 @@ vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: async () => quien.use
 
 import { POST } from "./route";
 import { _vaciarTodo, abrirTurno, esperarRespuesta } from "@/lib/agent/direcciones";
+import { QUESTION_DISMISSED } from "@/lib/agent/ask-user-question";
 
 const pedir = (cuerpo: unknown) =>
   POST(new Request("http://localhost/api/agent/responder", { method: "POST", body: JSON.stringify(cuerpo), headers: { "content-type": "application/json" } }));
@@ -56,6 +57,22 @@ describe("POST /api/agent/responder", () => {
     const otra = await pedir({ turnoId: "t1", answers: respuesta });
     expect(otra.status).toBe(409);
     expect(await otra.json()).toEqual({ error: "ya_respondida" });
+  });
+
+  it("LOTE 7-8 · dismiss: 200 y quien espera recibe el descarte", async () => {
+    abrirTurno("t1", "u1");
+    const espera = esperarRespuesta("t1", { timeoutMs: 60_000 });
+    const r = await pedir({ turnoId: "t1", dismiss: true });
+    expect(r.status).toBe(200);
+    expect(await espera).toBe(QUESTION_DISMISSED);
+  });
+
+  it("dismiss sin nadie esperando: 409 sin_pregunta; de otro: 404", async () => {
+    abrirTurno("t1", "u1");
+    const sin = await pedir({ turnoId: "t1", dismiss: true });
+    expect([sin.status, await sin.json()]).toEqual([409, { error: "sin_pregunta" }]);
+    quien.userId = "otro";
+    expect((await pedir({ turnoId: "t1", dismiss: true })).status).toBe(404);
   });
 
   it("400 con una respuesta mal formada", async () => {

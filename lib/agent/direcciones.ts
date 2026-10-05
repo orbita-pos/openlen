@@ -18,7 +18,7 @@
 // la corrección llega a un proceso y el turno vive en el otro. Ése es el
 // disparador para moverlo a la base, y no antes ([[no-redis-or-queue-until-trigger]]).
 
-import type { QuestionAnswer } from "@/lib/agent/ask-user-question";
+import { QUESTION_DISMISSED, type AskUserResult, type QuestionAnswer } from "@/lib/agent/ask-user-question";
 
 /** Cuánto texto se acepta. Una corrección es una frase, no un documento. */
 export const MAX_DIRECCION = 2000;
@@ -52,7 +52,7 @@ interface TurnoAbierto {
   /** Pieza 3 de Len 2.5: la pregunta de `ask_user_question` que ESPERA
    *  respuesta ahora mismo (como mucho una: la herramienta es exclusiva), y si
    *  la última ya se contestó — para que un doble clic no la resuelva dos veces. */
-  readonly pregunta: { resolver?: (r: QuestionAnswer[] | null) => void; respondida: boolean };
+  readonly pregunta: { resolver?: (r: AskUserResult) => void; respondida: boolean };
 }
 
 // 🔴 EN `globalThis`, NO en un `const` del módulo. MEDIDO el 2026-09-03 con el
@@ -168,18 +168,19 @@ const MAX_ETIQUETA = 120;
  * Resuelve con las respuestas, o con `null` si vence `timeoutMs` (el límite de
  * espera: Len corre en un servidor, no en una terminal abierta), con el ■ o si
  * el turno se cierra. `null` NUNCA es una aprobación: la herramienta cierra el
- * turno con la pregunta y la respuesta abre el siguiente.
+ * turno con la pregunta y la respuesta abre el siguiente. Lote 7-8: o con el
+ * descarte del dueño (`QUESTION_DISMISSED`, `dismissQuestion`).
  */
 export function esperarRespuesta(
   turnoId: string,
   o: { readonly timeoutMs: number; readonly signal?: AbortSignal },
-): Promise<QuestionAnswer[] | null> {
+): Promise<AskUserResult> {
   const turno = abiertos.get(turnoId);
   if (!turno || o.signal?.aborted) return Promise.resolve(null);
   return new Promise((resolve) => {
     let reloj: ReturnType<typeof setTimeout> | undefined;
     const alAbortar = () => terminar(null);
-    function terminar(r: QuestionAnswer[] | null): void {
+    function terminar(r: AskUserResult): void {
       if (turno!.pregunta.resolver !== terminar) return;
       turno!.pregunta.resolver = undefined;
       if (reloj) clearTimeout(reloj);
@@ -231,6 +232,23 @@ export function responder(turnoId: string, userId: string, raw: unknown): Result
   if (!respuestas) return "invalida";
   turno.pregunta.respondida = true;
   resolver(respuestas);
+  return "ok";
+}
+
+/**
+ * LOTE 7-8 · DESCARTAR LA PREGUNTA QUE ESPERA (el `dismiss` de DeepSeek): el
+ * dueño quiere hablar en vez de elegir. Mismo control de dueño que `responder`.
+ * 🔴 NO la marca como respondida: un «Aprobar» que llegue en el milisegundo
+ * entre el descarte y el cierre no es `ya_respondida` (se ignoraría), es
+ * `sin_pregunta` y sale como mensaje.
+ */
+export function dismissQuestion(turnoId: string, userId: string): Exclude<ResultadoResponder, "invalida"> {
+  const turno = abiertos.get(turnoId);
+  if (!turno) return "no_existe";
+  if (turno.userId !== userId) return "ajeno";
+  const resolver = turno.pregunta.resolver;
+  if (!resolver) return turno.pregunta.respondida ? "ya_respondida" : "sin_pregunta";
+  resolver(QUESTION_DISMISSED);
   return "ok";
 }
 

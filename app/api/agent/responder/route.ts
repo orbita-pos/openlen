@@ -10,10 +10,12 @@
 // 409 con su código si nadie espera (`sin_pregunta`: el chat la manda como
 // mensaje normal y abre el turno siguiente) o ya se contestó (`ya_respondida`:
 // el chat no hace nada) · 400 si la respuesta no tiene la forma de DeepSeek.
+// Lote 7-8: `{ turnoId, dismiss: true }` DESCARTA la pregunta en vez de
+// contestarla («Pedir cambios» en la revisión del plan), con los mismos códigos.
 
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
-import { responder } from "@/lib/agent/direcciones";
+import { dismissQuestion, responder } from "@/lib/agent/direcciones";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,8 +38,17 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
     return json({ error: "cuerpo_invalido" }, 400);
   }
 
-  const { turnoId, answers } = (cuerpo ?? {}) as { turnoId?: unknown; answers?: unknown };
+  const { turnoId, answers, dismiss } = (cuerpo ?? {}) as { turnoId?: unknown; answers?: unknown; dismiss?: unknown };
   if (typeof turnoId !== "string" || !turnoId) return json({ error: "falta_turno" }, 400);
+
+  // LOTE 7-8 · «Pedir cambios» en la revisión del plan: se descarta la espera
+  // (el `dismiss` de DeepSeek) en vez de contestar.
+  if (dismiss === true) {
+    const d = dismissQuestion(turnoId, userId);
+    if (d === "ok") return json({ ok: true });
+    if (d === "sin_pregunta" || d === "ya_respondida") return json({ error: d }, 409);
+    return json({ error: "turno_no_encontrado" }, 404);
+  }
 
   const r = responder(turnoId, userId, answers);
   if (r === "ok") return json({ ok: true });
