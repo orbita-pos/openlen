@@ -30,6 +30,7 @@ import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "@/lib/agent/terminal/cambios-del-comando";
+import { currentToolCall, currentToolName } from "@/lib/agent/ask-user-question";
 
 /** La misma marca que usa Claude Code. */
 export const RESULTADO_VACIADO = "[Earlier tool result removed to save space]";
@@ -116,9 +117,11 @@ function limpio<M extends Message | MensajeDelHistorial>(m: M): M {
     role: m.role,
     content: typeof m.content === "string" ? m.content : "",
     ...(m.role === "assistant" && typeof m.reasoning === "string" && m.reasoning ? { reasoning: m.reasoning } : {}),
-    ...(m.functionCalls?.length ? { functionCalls: m.functionCalls.map((c) => ({ name: c.name, args: c.args ?? {} })) } : {}),
+    // Con el nombre de HOY (pieza 3: `preguntar` → `ask_user_question`): el
+    // modelo no puede leer una llamada a una herramienta que ya no tiene.
+    ...(m.functionCalls?.length ? { functionCalls: m.functionCalls.map(currentToolCall) } : {}),
     ...(m.functionResponses?.length
-      ? { functionResponses: m.functionResponses.map((r) => ({ name: r.name, response: r.response ?? {} })) }
+      ? { functionResponses: m.functionResponses.map((r) => ({ name: currentToolName(r.name), response: r.response ?? {} })) }
       : {}),
   } as M;
 }

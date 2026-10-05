@@ -91,3 +91,21 @@ export function questionText(questions: readonly UserQuestion[]): string {
 export function isQuestionTool(name: string): boolean {
   return name === ASK_USER_QUESTION || name === LEGACY_QUESTION_TOOL;
 }
+
+/** Los nombres viejos que siguen valiendo en lo GUARDADO, con el de hoy. */
+const LEGACY_TOOL_NAMES: Readonly<Record<string, string>> = { [LEGACY_QUESTION_TOOL]: ASK_USER_QUESTION };
+
+/** El nombre de hoy de una herramienta que pudo guardarse con el de antes. */
+export function currentToolName(name: string): string {
+  return Object.hasOwn(LEGACY_TOOL_NAMES, name) ? LEGACY_TOOL_NAMES[name] : name;
+}
+
+/** Una llamada guardada, con el nombre y la forma de hoy: `preguntar({ texto })`
+ *  pasa a `ask_user_question({ questions: [{ id: "q1", question: texto }] })`,
+ *  para que el modelo nunca lea una llamada a una herramienta que no tiene. */
+export function currentToolCall(call: { name: string; args?: Record<string, unknown> }): { name: string; args: Record<string, unknown> } {
+  const args = call.args ?? {};
+  if (call.name !== LEGACY_QUESTION_TOOL) return { name: call.name, args };
+  const texto = typeof args.texto === "string" ? args.texto : "";
+  return { name: ASK_USER_QUESTION, args: { questions: [{ id: "q1", question: texto }] } };
+}

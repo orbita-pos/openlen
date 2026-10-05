@@ -403,6 +403,7 @@ export default defineConfig({
       "lib/agent/concurrency-limit.test.ts",
       // Pieza 3 de Len 2.5: ask_user_question, como DeepSeek. LISTA BLANCA.
       "lib/agent/ask-user-question.test.ts",
+      "lib/agent/historial-saneado.test.ts",
       // Deshacer lo de Len sobre lo que hay AHORA, sin llevarse lo que el dueño
       // editó a mano (H06, auditoría 2026-09-22). Núcleo puro — pero `include`
       // es LISTA BLANCA y sin esta línea la prueba existiría y no correría.
