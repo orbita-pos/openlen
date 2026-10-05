@@ -236,7 +236,7 @@ function TablesTab({ projectId, tables }: { projectId: string; tables: readonly 
 
   return (
     <>
-      <nav aria-label={t("list")} className="w-52 shrink-0 overflow-y-auto border-r border-zinc-200 p-2 dark:border-zinc-800">
+      <nav aria-label={t("list")} className="w-52 shrink-0 overflow-y-auto nice-scroll border-r border-zinc-200 p-2 dark:border-zinc-800">
         {tables.map((x) => (
           <button
             key={x.name}
@@ -386,7 +386,7 @@ function RowsGrid({ projectId, table }: { projectId: string; table: TableInfo })
       </div>
       {error && <p role="alert" className="border-b border-red-200 bg-red-50 px-4 py-2 text-[12px] text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
 
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto nice-scroll">
         <table className="min-w-full border-separate border-spacing-0 text-[12.5px]">
           <thead className="sticky top-0 z-10 bg-app">
             <tr>
@@ -500,6 +500,7 @@ function RowsGrid({ projectId, table }: { projectId: string; table: TableInfo })
 
 function UsersTab({ projectId }: { projectId: string }) {
   const t = useTranslations("wsChrome.database.users");
+  const tDb = useTranslations("wsChrome.database");
   const locale = useLocale();
   const base = `/api/projects/${projectId}/backend/users`;
   const [page, setPage] = useState(1);
@@ -560,7 +561,7 @@ function UsersTab({ projectId }: { projectId: string }) {
         className="flex flex-wrap items-center gap-2 border-b border-zinc-200 px-4 py-2 dark:border-zinc-800"
       >
         <span className="text-[12px] text-zinc-500">{data ? t("total", { count: data.total }) : ""}</span>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
           <input
             type="email"
             required
@@ -568,7 +569,7 @@ function UsersTab({ projectId }: { projectId: string }) {
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t("invitePlaceholder")}
             aria-label={t("invitePlaceholder")}
-            className="h-7 w-56 rounded-md bg-[color:var(--bg)] px-2.5 text-[12px] ring-1 ring-zinc-300 focus:outline-none focus:ring-2 focus:ring-coral-500 dark:ring-zinc-700"
+            className="h-7 min-w-0 flex-1 rounded-md bg-[color:var(--bg)] px-2.5 sm:w-56 sm:flex-none text-[12px] ring-1 ring-zinc-300 focus:outline-none focus:ring-2 focus:ring-coral-500 dark:ring-zinc-700"
           />
           <button
             type="submit"
@@ -583,8 +584,10 @@ function UsersTab({ projectId }: { projectId: string }) {
       {error && <p role="alert" className="border-b border-red-200 bg-red-50 px-4 py-2 text-[12px] text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
       {notice && <p role="status" className="border-b border-emerald-200 bg-emerald-50 px-4 py-2 text-[12px] text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">{notice}</p>}
 
-      <div className="flex-1 min-h-0 overflow-auto">
-        {data && data.users.length === 0 ? (
+      <div className="flex-1 min-h-0 overflow-auto nice-scroll">
+        {!data && !error ? (
+          <p className="p-8 text-center text-[13px] text-zinc-500">{tDb("loading")}</p>
+        ) : data && data.users.length === 0 ? (
           <p className="p-8 text-center text-[13px] text-zinc-500">{t("empty")}</p>
         ) : (
           <table className="min-w-full border-separate border-spacing-0 text-[12.5px]">
