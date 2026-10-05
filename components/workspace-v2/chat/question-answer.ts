@@ -21,6 +21,14 @@ export function composeAnswerMessage(questions: readonly UserQuestion[], answers
     .join("\n");
 }
 
+/** Cuándo sale la respuesta como mensaje normal. Con un turno todavía en vuelo
+ *  (el que preguntó, cerrándose justo al vencer la espera), `send()` la tiraría
+ *  sin decir nada: espera a que acabe y sale entonces, como los mensajes en cola
+ *  de Claude Code. */
+export function fallbackDelivery(busy: boolean): "now" | "after-turn" {
+  return busy ? "after-turn" : "now";
+}
+
 export type ResponderOutcome = "answered" | "ignore" | "fallback";
 
 /** Qué hacer con lo que contestó `POST /api/agent/responder`. */

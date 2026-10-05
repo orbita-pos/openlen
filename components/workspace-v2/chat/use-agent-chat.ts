@@ -29,7 +29,7 @@ import { noCreditsText, notifyCreditBalanceChanged } from "@/lib/credits-client"
 import type { AgentAction } from "../agent-action-card";
 import { upsertActionInto } from "./action-cards";
 import { answerSummary, isQuestionTool, questionsFrom, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
-import { composeAnswerMessage, outcomeOfResponder } from "./question-answer";
+import { composeAnswerMessage, fallbackDelivery, outcomeOfResponder } from "./question-answer";
 import type { AgentConfirm } from "../agent-confirm-card";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { ejecutarUndo, ficherosDelEvento, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
@@ -2045,6 +2045,8 @@ export function useAgentChat({
    * espera (venció, cerró, o es una fila vieja), sale como un mensaje normal y
    * abre el siguiente: la respuesta nunca se pierde.
    */
+  /** La respuesta que salió como mensaje con un turno aún en vuelo: espera aquí. */
+  const respuestaEnColaRef = useRef<string | null>(null);
   const answerQuestion = useCallback(
     async (turnId: string, questions: readonly UserQuestion[], answers: QuestionAnswer[]) => {
       const turn = turnsRef.current.find((x) => x.id === turnId);
@@ -2066,10 +2068,24 @@ export function useAgentChat({
         }
       }
       const mensaje = composeAnswerMessage(questions, answers);
-      if (mensaje.trim()) void send(mensaje);
+      if (!mensaje.trim()) return;
+      // 🔴 Con el turno aún en vuelo (el que preguntó, cerrándose justo al vencer
+      // la espera), `send()` la tiraría en silencio: queda en cola y sale en
+      // cuanto el turno acaba (el efecto de abajo).
+      if (fallbackDelivery(sending || reenganche !== null) === "after-turn") {
+        respuestaEnColaRef.current = mensaje;
+        return;
+      }
+      void send(mensaje);
     },
-    [send, updateTurn],
+    [reenganche, send, sending, updateTurn],
   );
+  useEffect(() => {
+    if (sending || reenganche !== null || !respuestaEnColaRef.current) return;
+    const mensaje = respuestaEnColaRef.current;
+    respuestaEnColaRef.current = null;
+    void send(mensaje);
+  }, [reenganche, send, sending]);
 
   const changeEsfuerzo = useCallback((e: EsfuerzoAgente) => {
     // OPTIMISTA A PROPÓSITO, y aquí sí es correcto: la preferencia sólo

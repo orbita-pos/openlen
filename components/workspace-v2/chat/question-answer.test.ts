@@ -1,7 +1,7 @@
 // CONTESTAR A LEN DESDE LA TARJETA (pieza 3 de Len 2.5): dentro del turno si
 // todavía espera, o como un mensaje normal que abre el siguiente.
 import { describe, expect, it } from "vitest";
-import { composeAnswerMessage, outcomeOfResponder } from "./question-answer";
+import { composeAnswerMessage, fallbackDelivery, outcomeOfResponder } from "./question-answer";
 
 const plazo = { id: "plazo", question: "¿Cuánto tarda la entrega?" };
 const envio = { id: "envio", question: "¿Envías a todo el país?" };
@@ -41,5 +41,12 @@ describe("outcomeOfResponder", () => {
   it("una forma que el servidor no acepta o un fallo suyo también caen al mensaje: la respuesta no se pierde", () => {
     expect(outcomeOfResponder(400, "respuesta_invalida")).toBe("fallback");
     expect(outcomeOfResponder(500, undefined)).toBe("fallback");
+  });
+});
+
+describe("fallbackDelivery", () => {
+  it("🔴 con un turno todavía en vuelo, la respuesta espera a que acabe (send() la tiraría); si no, sale ya", () => {
+    expect(fallbackDelivery(true)).toBe("after-turn");
+    expect(fallbackDelivery(false)).toBe("now");
   });
 });
