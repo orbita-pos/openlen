@@ -26,4 +26,15 @@ describe("la fila del turno que escribe el servidor", () => {
     const fila = crearRegistroDelTurno().fila({ id: "t", userText: "x", page: null, toolResults: null });
     expect(fila.status).toBe("applied");
   });
+
+  it("un reintento retira de la fila lo que el intento fallido llegó a escribir", () => {
+    const r = crearRegistroDelTurno();
+    r.observar({ type: "text", text: "Miro la página." });
+    r.observar({ type: "text", text: "\n\n" });
+    r.observar({ type: "text", text: "Ya v" });
+    r.observar({ type: "retry", attempt: 1, maxAttempts: 5, delayMs: 500, discardChars: 6 });
+    r.observar({ type: "text", text: "\n\n" });
+    r.observar({ type: "text", text: "Ya está." });
+    expect(r.texto).toBe("Miro la página.\n\nYa está.");
+  });
 });

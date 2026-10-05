@@ -973,6 +973,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
         const result = await runAgentLoop({
           messages,
           tools,
+          // El ■ también corta la espera entre reintentos del proveedor
+          // (`lib/agent/retry-policy.ts`).
+          signal: upstreamAbort.signal,
           // Con la MISMA cuenta que el cobro de abajo. Sin gasto todavía no se
           // pregunta: `creditsForUsage` tiene un suelo de 1 y un saldo mínimo
           // cerraría el turno antes de empezar.
@@ -1345,7 +1348,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
           // ni el momento en que llega al cliente.
           emit: (ev) => {
             registro.observar(ev);
-            if (ev.type === "text" || ev.type === "action") avance.tocar();
+            // Un reintento ES avance: sin él, una espera de 10 s se acercaría
+            // al reloj de silencio.
+            if (ev.type === "text" || ev.type === "action" || ev.type === "retry") avance.tocar();
             emit(ev.type, ev);
           },
           onMutacion: () => {
