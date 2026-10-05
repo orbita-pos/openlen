@@ -3,7 +3,7 @@
 // Sin dependencias a propósito: lo importan módulos que tocan la base
 // (lib/limits.ts, lib/credits.ts) y componentes de cliente por igual.
 //
-// 04/10: Max entra como tercer plan (Pro $10 y Max $20, «vender a mayoreo»).
+// 04/10: Max entra como tercer plan (Pro $9.99 y Max $19.99, «vender a mayoreo»).
 // Max es Pro con más créditos: mismos topes en todo lo demás (decisión de
 // Jesús), así que los mapas por plan le dan los valores de Pro.
 

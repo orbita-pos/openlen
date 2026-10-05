@@ -1,4 +1,4 @@
-// El checkout, con dos planes de pago (04/10: Pro $10 y Max $20).
+// El checkout, con dos planes de pago (04/10: Pro $9.99 y Max $19.99).
 //
 // - Lee `plan=max` (la portada ya lo mandaba y nadie lo leía: «Pásate a Max»
 //   vendía Pro).

@@ -35,8 +35,8 @@ Edit, then `systemctl restart openlen-app`. Full reference: `infra/app/env.examp
 **Phase 2 (enable later):**
 - `GOOGLE_CLIENT_ID/SECRET`, `GITHUB_ID/SECRET` — OAuth login
 - `POLAR_SERVER=sandbox` + `POLAR_ACCESS_TOKEN` + `POLAR_PRODUCT_PRO_ID` +
-  `POLAR_PRODUCT_MAX_ID` + `POLAR_WEBHOOK_SECRET` — billing (ver «Pro $10 y Max
-  $20» abajo). Keep `sandbox` until Phase 2 passes; flip to
+  `POLAR_PRODUCT_MAX_ID` + `POLAR_WEBHOOK_SECRET` — billing (ver «Pro $9.99 y Max
+  $19.99» abajo). Keep `sandbox` until Phase 2 passes; flip to
   `production` only to take real money. Webhook URL in Polar:
   `${NEXTAUTH_URL}/api/billing/webhook` (format: Raw).
 - `GITHUB_DEPLOY_*`, `VERCEL_*` — Deploy-dropdown export targets
@@ -193,7 +193,7 @@ service / browser — those are the manual checklist below.
   as a random editor bug rather than missing config.
 - **Polar stays in sandbox** until you set `POLAR_SERVER=production`.
 
-## Pro $10 y Max $20, y el recordatorio de renovación (salida de octubre 2026)
+## Pro $9.99 y Max $19.99, y el recordatorio de renovación (salida de octubre 2026)
 
 El cobro lee los créditos de `lib/marketing/plan-price.ts` (Pro 200, Max 500) y el
 plan sale del PRODUCTO de Polar: Max si es `POLAR_PRODUCT_MAX_ID`, cualquier otro es
@@ -202,9 +202,9 @@ lo mismo que un Pro nuevo.
 
 **En Polar, ANTES del deploy:**
 
-1. El producto Pro: precio nuevo $10/mes. Polar sólo lo aplica a las suscripciones
+1. El producto Pro: precio nuevo $9.99/mes. Polar sólo lo aplica a las suscripciones
    nuevas; las de $3.99 siguen igual.
-2. Un producto nuevo, Max, $20/mes, misma moneda. Su id va a
+2. Un producto nuevo, Max, $19.99/mes, misma moneda. Su id va a
    `/etc/openlen/openlen.env` como `POLAR_PRODUCT_MAX_ID`.
 3. Portal del cliente: activar **Enable subscription plan changes**. Es por donde
    un Pro pasa a Max (la app manda al portal a quien ya paga).

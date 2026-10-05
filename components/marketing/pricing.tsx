@@ -48,7 +48,7 @@ export async function Pricing() {
   const locale = await getLocale();
   const templateCount = await countTemplates().catch(() => 0);
 
-  // TRES PLANES Y EL SELF-HOST APARTE (04/10). Gratis, Pro $10 y Max $20 son
+  // TRES PLANES Y EL SELF-HOST APARTE (04/10). Gratis, Pro $9.99 y Max $19.99 son
   // la misma cosa —Len trabajando para ti— con más o menos créditos; el
   // self-host es otra decisión (correrlo tú) y baja a una tira bajo las
   // tarjetas, al lado del trabajo a medida.

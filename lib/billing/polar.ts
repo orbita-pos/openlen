@@ -48,7 +48,7 @@ export function billingConfigured(): boolean {
   return !!(env("POLAR_ACCESS_TOKEN") && env("POLAR_PRODUCT_PRO_ID"));
 }
 
-/** Los dos planes de pago que vende Polar (04/10: Pro $10 y Max $20). */
+/** Los dos planes de pago que vende Polar (04/10: Pro $9.99 y Max $19.99). */
 export type PaidPlan = "pro" | "max";
 
 /** El plan de una suscripción, por su producto. Max sólo si es el producto de
