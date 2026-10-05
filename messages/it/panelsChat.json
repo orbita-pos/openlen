@@ -288,6 +288,25 @@
       "skipHint": "Len prosegue con la tua richiesta adesso.",
       "showPlan": "Vedi tutto il piano",
       "hidePlan": "Nascondi il piano"
+    },
+    "goal": {
+      "option": "Obiettivo",
+      "optionHint": "Len va avanti da solo, giro dopo giro, finché non è finito.",
+      "optionTaken": "C'è già un obiettivo: toglilo o aspetta che finisca.",
+      "chip": "Obiettivo",
+      "chipOff": "Non farne un obiettivo",
+      "placeholder": "Descrivi l'obiettivo intero; Len andrà avanti fino alla fine…",
+      "label": "Obiettivo",
+      "round": "Giro {round} di {max}",
+      "running": "In corso",
+      "paused": "In pausa",
+      "blocked": "Bloccato",
+      "roundLimit": "Raggiunto il limite di {max} giri.",
+      "noCredits": "Fermato: credito esaurito.",
+      "resume": "Riprendi",
+      "clear": "Togli",
+      "clearFailed": "Non è stato possibile togliere l'obiettivo.",
+      "roundLine": "Obiettivo · giro {round} di {max}"
     }
   }
 }

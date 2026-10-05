@@ -288,6 +288,25 @@
       "skipHint": "Len 现在继续处理你的请求。",
       "showPlan": "查看完整计划",
       "hidePlan": "收起计划"
+    },
+    "goal": {
+      "option": "目标",
+      "optionHint": "Len 会一轮接一轮地自己推进，直到完成。",
+      "optionTaken": "已经有一个目标了：请移除它或等它完成。",
+      "chip": "目标",
+      "chipOff": "不设为目标",
+      "placeholder": "描述完整的目标；Len 会一直做到完成……",
+      "label": "目标",
+      "round": "第 {round} 轮，共 {max} 轮",
+      "running": "进行中",
+      "paused": "已暂停",
+      "blocked": "卡住了",
+      "roundLimit": "已达到 {max} 轮的上限。",
+      "noCredits": "已停止：余额不足。",
+      "resume": "继续",
+      "clear": "移除",
+      "clearFailed": "无法移除目标。",
+      "roundLine": "目标 · 第 {round} 轮，共 {max} 轮"
     }
   }
 }

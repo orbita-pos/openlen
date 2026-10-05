@@ -31,6 +31,7 @@ import { upsertActionInto } from "./action-cards";
 import { answerSummary, asksTheOwner, questionsFrom, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { composeAnswerMessage, fallbackDelivery, outcomeOfResponder } from "./question-answer";
 import { lastPlanMode, planAnswersForMessage, planModeAfterAnswer, togglePlanSelection } from "./plan-mode-state";
+import { canCreateGoal, goalOrder, goalViewOf, lastGoal, roundAfterDone, roundOfTurn, roundTextFor, type GoalView } from "./goal-state";
 import type { AgentConfirm } from "../agent-confirm-card";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { ejecutarUndo, ficherosDelEvento, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
@@ -322,6 +323,18 @@ export function useAgentChat({
   /** La elección que viajó con el turno en vuelo: se da por aplicada cuando el
    *  servidor dice con qué modo empezó. */
   const planSentRef = useRef<boolean | null>(null);
+  // PIEZA 8 · EL ENCARGO. `goalKnown` es lo que dice el servidor (el último
+  // turno cerrado, y los eventos `goal`/`done` del turno en vuelo); `goalChip`,
+  // la ficha «Encargo» del compositor (lo que se mande será el objetivo). Al
+  // servidor viaja la orden (`goal: "create" | "resume"`), nunca el estado.
+  const [goalKnown, setGoalKnown] = useState<GoalView | null>(() => lastGoal(initialChat ?? []));
+  const goalKnownRef = useRef(goalKnown);
+  goalKnownRef.current = goalKnown;
+  const [goalChip, setGoalChip] = useState(false);
+  const goalChipRef = useRef(goalChip);
+  goalChipRef.current = goalChip;
+  /** La cadena de rondas paró porque no quedaba saldo (`done.round.stopped`). */
+  const [goalStoppedForCredits, setGoalStoppedForCredits] = useState(false);
   const [dynamisOffered, setDynamisOffered] = useState(false);
   const [sending, setSending] = useState(false);
   // Agent mode — DEFAULT ON since graduation (alpha ruling 2026-07-08):
@@ -520,6 +533,8 @@ export function useAgentChat({
     // en vuelo (su fila aún no está, y sus eventos son más nuevos). Cubre el
     // turno reenganchado, que no trae eventos.
     if (!enVueloRef.current) setPlanKnown(lastPlanMode(server));
+    // PIEZA 8: y el encargo, por lo mismo.
+    if (!enVueloRef.current) setGoalKnown(lastGoal(server));
     // Server turns first (chronological, the authority). Keep the local
     // DesignTurn where we have it — it carries preEditHtml for in-session
     // Undo — but take status from the server (another tab may have undone
@@ -671,7 +686,7 @@ export function useAgentChat({
         return;
       }
       if (!r.ok) return;
-      const cuerpo = (await r.json().catch(() => null)) as { turno?: StoredChatTurn; turnoId?: string } | null;
+      const cuerpo = (await r.json().catch(() => null)) as { turno?: StoredChatTurn; turnoId?: string; siguiente?: unknown } | null;
       if (!vivo || !cuerpo?.turno) return;
       const turno = cuerpo.turno;
       if (turno.enCurso) {
@@ -690,7 +705,17 @@ export function useAgentChat({
         );
         return;
       }
-      setTurns((prev) => prev.map((x) => (x.id === fila ? restoreTurn(turno) : x)));
+      // PIEZA 8: el encargo como quedó y, si esta ronda dio paso a otra, la
+      // siguiente se pinta en marcha (el efecto de arriba la recoge y la sigue).
+      const goalTras = turno.goal ? goalViewOf(turno.goal, turno.goal.activation) : null;
+      if (goalTras) setGoalKnown(goalTras);
+      const siguiente = typeof cuerpo.siguiente === "string" ? cuerpo.siguiente : null;
+      setTurns((prev) => {
+        const restaurados = prev.map((x) => (x.id === fila ? restoreTurn(turno) : x));
+        return siguiente && !restaurados.some((x) => x.id === siguiente)
+          ? [...restaurados, rondaEnCamino(siguiente, goalTras)]
+          : restaurados;
+      });
       terminar();
     };
     void leer();
@@ -1001,19 +1026,32 @@ export function useAgentChat({
       imageOverride?: AttachedImage | null,
       /** Desde el compositor: los comentarios de líneas que esperan van DENTRO
        *  del mensaje (la #8). Reintentar no los pasa: su texto ya los lleva. */
-      opciones?: { readonly comentarios: readonly ComentarioDeLinea[] },
+      opciones?: {
+        readonly comentarios?: readonly ComentarioDeLinea[];
+        /** Pieza 8: «Reanudar» el encargo — un turno sin mensaje: la ronda siguiente. */
+        readonly goal?: "resume";
+      },
     ) => {
       const escrito = rawPrompt.trim();
       // Lo que escribes tiene su tope; con los comentarios, el del mensaje entero.
-      if (escrito.length > (opciones ? MAX_TEXTO_ESCRITO : MAX_PROMPT)) return;
+      if (escrito.length > (opciones?.comentarios ? MAX_TEXTO_ESCRITO : MAX_PROMPT)) return;
       const comentarios = opciones?.comentarios ?? [];
       const prompt = textoConComentarios(escrito, comentarios, {
         titulo: t("comentarios.titulo"),
         deAntes: t("comentarios.deAntes"),
       });
+      // PIEZA 8 · la orden del dueño al encargo que viaja con ESTE turno: crear
+      // (la ficha puesta: lo escrito es el objetivo) o reanudar. Con ella, el
+      // turno es una ronda y su texto es el mensaje de esa ronda.
+      const ordenDelEncargo = opciones?.goal ?? goalOrder(goalChipRef.current, goalKnownRef.current);
+      const textoDelTurno = roundTextFor(ordenDelEncargo, prompt, goalKnownRef.current);
       // Con un turno aún trabajando en el servidor, otro turno sobre la misma
       // página serían dos agentes editándola a la vez: se corrige o se para.
-      if (!prompt || sending || reenganche) return;
+      if ((!prompt && ordenDelEncargo !== "resume") || sending || reenganche) return;
+      if (ordenDelEncargo) {
+        setGoalChip(false);
+        setGoalStoppedForCredits(false);
+      }
       if (comentarios.length > 0) comentariosDelChat.vaciar(projectId);
 
       // imageOverride lets Retry re-send the failed turn's original image;
@@ -1033,7 +1071,7 @@ export function useAgentChat({
 
       const newTurn: DesignTurn = {
         id: turnId,
-        userText: prompt,
+        userText: textoDelTurno,
         attachedImage: img ?? undefined,
         // El alcance viaja EN el turno, no sólo en la petición: es la misma
         // prueba que la imagen. Se lee AQUÍ, antes de que el envío lo suelte
@@ -1170,6 +1208,9 @@ export function useAgentChat({
         // Lo que cobró y tardó, en números: la frase la compone quien pinta.
         let centicredits: number | undefined;
         let durationMs: number | undefined;
+        /** Pieza 8: el encargo tras el turno y la ronda que el servidor encadenó. */
+        let goalTrasElTurno: GoalView | null = null;
+        let rondaTrasElTurno: ReturnType<typeof roundAfterDone> = null;
         let errorMessage: string | null = null;
         // F4 Task 7 — set when the route's kill-switch fires (`code:
         // "agent_off"`): NOT an error to show the user, a signal to
@@ -1221,6 +1262,8 @@ export function useAgentChat({
               // de DeepSeek: un evento). Sin elección no viaja nada y el servidor
               // sigue con lo que ya estaba.
               ...(planSentRef.current !== null ? { plan: planSentRef.current } : {}),
+              // PIEZA 8: la orden del dueño al encargo (el `/goal` de DeepSeek).
+              ...(ordenDelEncargo ? { goal: ordenDelEncargo } : {}),
               // Same value + same conditional shape ai-design sends below —
               // absent/empty means home, cloned for parity.
               ...(turnPage ? { page: turnPage } : {}),
@@ -1331,6 +1374,11 @@ export function useAgentChat({
                     setPlanWanted((w) => (w === enviada ? null : w));
                   }
                 }
+              } else if (evName === "goal") {
+                // PIEZA 8: el encargo con el que empezó el turno, y cada cambio
+                // (crearlo, completarlo, atascarlo, pausarlo).
+                const p = payload as { goal?: unknown; activation?: unknown } | null;
+                setGoalKnown(p?.goal === null ? null : goalViewOf(p?.goal, p?.activation));
               } else if (evName === "question") {
                 // PIEZA 3: Len pregunta y ESPERA (`ask_user_question`, 120 s). La
                 // tarjeta se contesta con un toque y la respuesta vuelve al
@@ -1627,6 +1675,15 @@ export function useAgentChat({
                 if (typeof cc === "number" && Number.isFinite(cc) && cc >= 0) centicredits = cc;
                 const ms = (payload as { durationMs?: unknown } | null)?.durationMs;
                 if (typeof ms === "number" && Number.isFinite(ms) && ms >= 0) durationMs = ms;
+                // PIEZA 8: el encargo como queda y lo que sigue (la ronda que el
+                // servidor ya abrió, o que paró por el saldo).
+                const d = payload as { goal?: unknown; goalActivation?: unknown } | null;
+                if (d?.goal !== undefined) {
+                  goalTrasElTurno = goalViewOf(d.goal, d.goalActivation);
+                  setGoalKnown(goalTrasElTurno);
+                }
+                rondaTrasElTurno = roundAfterDone(payload);
+                if (rondaTrasElTurno && "stopped" in rondaTrasElTurno) setGoalStoppedForCredits(true);
                 break agentOuter;
               } else if (evName === "error") {
                 const code = (payload as { code?: unknown } | null)?.code;
@@ -1684,6 +1741,15 @@ export function useAgentChat({
             scanController.cancel();
             seguirEnElServidor(turnId);
             return;
+          }
+
+          // PIEZA 8 · LA RONDA SIGUIENTE ya corre en el servidor (la abrió antes
+          // del `done`): se pinta en marcha detrás de ésta y el efecto de Len
+          // 2.1 la sigue desde su fila, como un turno que llega en curso.
+          if (rondaTrasElTurno && "next" in rondaTrasElTurno) {
+            const next = rondaTrasElTurno.next;
+            const goalDeLaRonda = goalTrasElTurno;
+            setTurns((prev) => (prev.some((x) => x.id === next) ? prev : [...prev, rondaEnCamino(next, goalDeLaRonda)]));
           }
 
           // UN TURNO QUE YA MUTÓ NO PUEDE TERMINAR EN ROJO.
@@ -1772,7 +1838,8 @@ export function useAgentChat({
             id: turnId,
             // El mismo texto que se está viendo en pantalla — mismo `↳`, mismo
             // orden. Sin correcciones es `prompt` y nada más, byte a byte.
-            userText: [prompt, ...correcciones.map((c) => `↳ ${c}`)].join("\n"),
+            // Pieza 8: en una ronda, su mensaje (el que guarda el servidor).
+            userText: [textoDelTurno, ...correcciones.map((c) => `↳ ${c}`)].join("\n"),
             attachedImage: img ?? undefined,
             // El aviso viaja a la transcripción: al recargar, el turno tiene
             // que seguir contando que se cortó. Sin esto el usuario ve un turno
@@ -1919,12 +1986,41 @@ export function useAgentChat({
   const handleRetry = useCallback(
     (turn: DesignTurn) => {
       setTurns((prev) => prev.filter((t) => t.id !== turn.id));
+      // PIEZA 8: reintentar una ronda del encargo es reanudarlo (la ronda
+      // siguiente), no mandarle a Len su mensaje de ronda como si fuera tuyo.
+      if (roundOfTurn(turn.userText)) {
+        void send("", undefined, { goal: "resume" });
+        return;
+      }
       // Re-send with the turn's ORIGINAL image (the live composer was cleared
       // after the first send), so a vision/image edit retries as the same request.
       void send(turn.userText, turn.attachedImage ?? null);
     },
     [send],
   );
+
+  // PIEZA 8 · LOS CONTROLES DEL ENCARGO. La ficha «Encargo» (la puerta del
+  // dueño: lo que mande será el objetivo), «Reanudar» (un turno: la ronda
+  // siguiente) y «Quitar» (`/goal clear`, una ruta aparte: no es un turno).
+  const toggleGoalChip = useCallback(() => setGoalChip((x) => !x), []);
+  const resumeGoal = useCallback(() => {
+    void send("", undefined, { goal: "resume" });
+  }, [send]);
+  const clearGoal = useCallback(async () => {
+    try {
+      const r = await fetch("/api/agent/encargo", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ projectId, action: "clear" }),
+      });
+      if (r.ok) {
+        setGoalKnown(null);
+        setGoalStoppedForCredits(false);
+      }
+    } catch {
+      // Sin red: la tarjeta sigue ahí, que es el aviso.
+    }
+  }, [projectId]);
 
   const handleCancel = useCallback(() => {
     // 🔴 PARAR ES UNA PETICIÓN, NO CERRAR LA CONEXIÓN (Len 2.1). El servidor
@@ -2170,6 +2266,10 @@ export function useAgentChat({
     // Una charla nueva empieza sin modo plan (el servidor pliega de sus filas).
     setPlanKnown(false);
     setPlanWanted(null);
+    // Y sin encargo: el de antes se queda en la charla archivada.
+    setGoalKnown(null);
+    setGoalChip(false);
+    setGoalStoppedForCredits(false);
     onChatChangeRef.current?.();
   }, []);
 
@@ -2216,6 +2316,16 @@ export function useAgentChat({
     togglePlan,
     /** El chat clásico (`ai-design`, la vía de escape) no tiene modo plan. */
     planOffered: agentModeUI,
+    /** Pieza 8: el encargo que se ve, la ficha «Encargo» y sus controles. El
+     *  chat clásico (`ai-design`) no lo tiene. */
+    goal: goalKnown,
+    goalChip,
+    goalAvailable: canCreateGoal(goalKnown),
+    goalStoppedForCredits,
+    toggleGoalChip,
+    resumeGoal,
+    clearGoal,
+    goalOffered: agentModeUI,
   };
 }
 
@@ -2255,6 +2365,20 @@ export function restoreTurn(s: StoredChatTurn): DesignTurn {
     ...(typeof s.centicredits === "number" ? { centicredits: s.centicredits } : {}),
     ...(typeof s.durationMs === "number" ? { durationMs: s.durationMs } : {}),
   };
+}
+
+/** PIEZA 8 · la ronda siguiente de un encargo, que el servidor ya abrió: se
+ *  pinta en marcha y se sigue desde su fila, como un turno de Len 2.1. Su texto
+ *  es el mensaje de esa ronda, el mismo que guardará el servidor. */
+function rondaEnCamino(id: string, goal: GoalView | null): DesignTurn {
+  return restoreTurn({
+    id,
+    userText: goal ? roundTextFor("resume", "", goal) : "",
+    assistantReasoning: "",
+    status: "applied",
+    appliedAt: Date.now(),
+    enCurso: true,
+  });
 }
 
 // Pull a string field off an unknown SSE payload, "" when absent/non-string.

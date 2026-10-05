@@ -86,3 +86,75 @@ describe("el modo plan en el compositor", () => {
     expect(opcionPlan(host)).toBeUndefined();
   });
 });
+
+// LA PUERTA DEL DUEÑO AL ENCARGO (pieza 8): «Encargo» en el «+» pone la ficha,
+// su ✕ la quita, y con un encargo vivo no se ofrece otro (como `/goal`).
+function ConEncargo({ disponible = true, conEncargo = true }: { disponible?: boolean; conEncargo?: boolean }) {
+  const [encargo, setEncargo] = useState(false);
+  const ta = useRef<HTMLTextAreaElement | null>(null);
+  return (
+    <ChatComposer
+      value=""
+      onChange={() => {}}
+      onSubmit={() => {}}
+      onStop={() => {}}
+      busy={false}
+      textareaRef={ta}
+      comments={[]}
+      onRemoveComment={() => {}}
+      scopedSelection={null}
+      sectionSelectMode={false}
+      attachedImage={null}
+      onAttachImage={() => {}}
+      onClearAttachedImage={() => {}}
+      effort="auto"
+      effortLevels={["low", "medium", "high"]}
+      effortResolvesTo="medium"
+      onEffortChange={() => {}}
+      mode="len"
+      goalChip={encargo}
+      goalAvailable={disponible}
+      {...(conEncargo ? { onToggleGoal: () => setEncargo((x) => !x) } : {})}
+    />
+  );
+}
+
+function montarEncargo(props: Parameters<typeof ConEncargo>[0] = {}) {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  roots.push(root);
+  act(() => root.render(<ConEncargo {...props} />));
+  return host;
+}
+const opcionEncargo = (host: HTMLElement) =>
+  [...host.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent?.includes("newChat.goal.option")) as
+    | HTMLButtonElement
+    | undefined;
+const fichaEncargo = (host: HTMLElement) => [...host.querySelectorAll("b")].find((b) => b.textContent === "newChat.goal.chip");
+
+describe("el encargo en el compositor", () => {
+  it("«Encargo» pone la ficha, cambia la pista de la caja, y su ✕ la quita", () => {
+    const host = montarEncargo();
+    pulsar(host.querySelector('[aria-label="newChat.composer.plus"]'));
+    pulsar(opcionEncargo(host));
+    expect(fichaEncargo(host)).toBeDefined();
+    expect(host.querySelector("textarea")?.getAttribute("placeholder")).toBe("newChat.goal.placeholder");
+    pulsar(host.querySelector('[aria-label="newChat.goal.chipOff"]'));
+    expect(fichaEncargo(host)).toBeUndefined();
+  });
+
+  it("con un encargo vivo, la opción no se puede elegir y dice por qué", () => {
+    const host = montarEncargo({ disponible: false });
+    pulsar(host.querySelector('[aria-label="newChat.composer.plus"]'));
+    const opcion = opcionEncargo(host)!;
+    expect(opcion.disabled).toBe(true);
+    expect(opcion.textContent).toContain("newChat.goal.optionTaken");
+  });
+
+  it("BRAZO DE CONTROL: sin quien lo cambie, ni opción", () => {
+    const host = montarEncargo({ conEncargo: false });
+    pulsar(host.querySelector('[aria-label="newChat.composer.plus"]'));
+    expect(opcionEncargo(host)).toBeUndefined();
+  });
+});

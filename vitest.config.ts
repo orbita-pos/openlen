@@ -410,6 +410,10 @@ export default defineConfig({
       // Pieza 7 de Len 2.5: el modo plan, como DeepSeek. LISTA BLANCA.
       "lib/agent/plan-mode.test.ts",
       "lib/agent/plan-mode-tools.test.ts",
+      // Pieza 8 de Len 2.5: el encargo (el goal de DeepSeek).
+      "lib/agent/goal.test.ts",
+      "lib/agent/goal-activation.test.ts",
+      "lib/agent/goal-tools.test.ts",
       "lib/projects/chat-row.test.ts",
       // Deshacer lo de Len sobre lo que hay AHORA, sin llevarse lo que el dueño
       // editó a mano (H06, auditoría 2026-09-22). Núcleo puro — pero `include`
@@ -573,6 +577,8 @@ export default defineConfig({
       "app/api/inbox/[conversationId]/reply/route.test.ts",
       // Len 2.1: volver a mirar un turno que sigue trabajando sin cliente.
       "app/api/agent/turno/[fila]/route.test.ts",
+      // Pieza 8: quitar el encargo.
+      "app/api/agent/encargo/route.test.ts",
       "app/api/usage/route.test.ts",
       // Task 5 — the fill surface that had no gate at all. Mocks fillTemplate
       // so the test drives the route's gate, not the filler's own sanitizer.

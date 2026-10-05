@@ -288,6 +288,25 @@
       "skipHint": "Len sigue con lo que pediste ahora.",
       "showPlan": "Ver el plan entero",
       "hidePlan": "Ocultar el plan"
+    },
+    "goal": {
+      "option": "Encargo",
+      "optionHint": "Len sigue solo, ronda tras ronda, hasta terminarlo.",
+      "optionTaken": "Ya hay un encargo: quítalo o espera a que acabe.",
+      "chip": "Encargo",
+      "chipOff": "No hacerlo encargo",
+      "placeholder": "Describe el encargo entero; Len seguirá hasta terminarlo…",
+      "label": "Encargo",
+      "round": "Ronda {round} de {max}",
+      "running": "En marcha",
+      "paused": "En pausa",
+      "blocked": "Atascado",
+      "roundLimit": "Llegó al tope de {max} rondas.",
+      "noCredits": "Se paró: no queda saldo.",
+      "resume": "Reanudar",
+      "clear": "Quitar",
+      "clearFailed": "No se pudo quitar el encargo.",
+      "roundLine": "Encargo · ronda {round} de {max}"
     }
   }
 }

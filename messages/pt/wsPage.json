@@ -52,7 +52,10 @@
       "ver_mensajes": "Vendo suas mensagens",
       "preparar_respuesta": "Preparando sua resposta",
       "web_search": "Pesquisando na internet",
-      "web_fetch": "Lendo uma página da web"
+      "web_fetch": "Lendo uma página da web",
+      "get_goal": "Vendo o objetivo",
+      "create_goal": "Criando o objetivo",
+      "update_goal": "Atualizando o objetivo"
     },
     "action": {
       "home": "Início",

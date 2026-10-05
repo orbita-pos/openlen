@@ -46,6 +46,9 @@ interface TurnoAbierto {
   /** La fila de la conversación que escribe este turno (el id que eligió el
    *  cliente). Con ella se sabe si una fila `en_curso` sigue viva. */
   readonly filaId?: string;
+  /** Pieza 8: el proyecto del turno — quitar un encargo no puede pisar una
+   *  ronda que sigue viva (`turnoVivoDelProyecto`). */
+  readonly projectId?: string;
   /** Pieza 3 de Len 2.5: la pregunta de `ask_user_question` que ESPERA
    *  respuesta ahora mismo (como mucho una: la herramienta es exclusiva), y si
    *  la última ya se contestó — para que un doble clic no la resuelva dos veces. */
@@ -87,7 +90,7 @@ export function abrirTurno(
   turnoId: string,
   userId: string,
   ahora = Date.now(),
-  extra: { readonly abortar?: () => void; readonly filaId?: string } = {},
+  extra: { readonly abortar?: () => void; readonly filaId?: string; readonly projectId?: string } = {},
 ): void {
   barrer(ahora);
   abiertos.set(turnoId, {
@@ -97,7 +100,16 @@ export function abrirTurno(
     pregunta: { respondida: false },
     ...(extra.abortar ? { abortar: extra.abortar } : {}),
     ...(extra.filaId ? { filaId: extra.filaId } : {}),
+    ...(extra.projectId ? { projectId: extra.projectId } : {}),
   });
+}
+
+/** Pieza 8: ¿corre ahora un turno de este usuario en este proyecto? */
+export function turnoVivoDelProyecto(projectId: string, userId: string): boolean {
+  for (const t of abiertos.values()) {
+    if (t.projectId === projectId && t.userId === userId) return true;
+  }
+  return false;
 }
 
 export type ResultadoDirigir = "ok" | "no_existe" | "ajeno" | "vacio";
@@ -269,7 +281,31 @@ export function cerrarTurno(turnoId: string): void {
   abiertos.delete(turnoId);
 }
 
+// PIEZA 8 DE LEN 2.5 · LA RONDA QUE SIGUE A UNA FILA. Al cerrar una ronda del
+// encargo, la ruta abre la siguiente; quien sigue la conversación releyendo la
+// fila (el chat, `GET /api/agent/turno/[fila]`) necesita saber a cuál pasar. Es
+// del proceso, como lo demás de aquí: tras un reinicio no hay cadena que seguir.
+const CLAVE_RONDAS = Symbol.for("openlen.agente.rondas");
+type GlobalRondas = typeof globalThis & { [CLAVE_RONDAS]?: Map<string, string> };
+const siguientes: Map<string, string> =
+  (globalThis as GlobalRondas)[CLAVE_RONDAS] ?? ((globalThis as GlobalRondas)[CLAVE_RONDAS] = new Map());
+
+export function rondaSiguiente(filaId: string, siguiente: string): void {
+  siguientes.set(filaId, siguiente);
+  while (siguientes.size > MAX_ABIERTOS) {
+    const primero = siguientes.keys().next();
+    if (primero.done) break;
+    siguientes.delete(primero.value);
+  }
+}
+
+/** La fila de la ronda que siguió a ésta, si la hubo. */
+export function siguienteDeLaFila(filaId: string): string | null {
+  return siguientes.get(filaId) ?? null;
+}
+
 /** Sólo para las pruebas: deja el almacén como recién arrancado. */
 export function _vaciarTodo(): void {
   abiertos.clear();
+  siguientes.clear();
 }

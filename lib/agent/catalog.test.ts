@@ -13,6 +13,7 @@ import {
   documentosDeLaPlataforma,
 } from "./manual-de-la-plataforma";
 import { clauseMarker } from "@/lib/ai/js-clause";
+import { GOAL_GUIDANCE } from "@/lib/agent/goal";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 
 // Las nueve conductas `data-ol-*`, retiradas el 2026-10-04. Ningún prompt puede
@@ -81,6 +82,10 @@ describe("buildFunctionDeclarations", () => {
       // Pieza 7: el modo plan — la entrada de Claude Code, la salida de DeepSeek.
       "enter_plan_mode",
       "exit_plan_mode",
+      // Pieza 8: el encargo, las tres de DeepSeek.
+      "get_goal",
+      "create_goal",
+      "update_goal",
       "revertir_ultimo_cambio",
       // Pieza 5 de Len 2.5: buscar en las charlas pasadas, como DeepSeek.
       "session_search",
@@ -644,6 +649,10 @@ describe("lo que el Agente cree que puede", () => {
 
   it("y comprueba lo que no controla ANTES de construirlo", () => {
     expect(buildAgentSystemPrompt()).toContain("Before building something that depends on what you don't control");
+  });
+
+  it("pieza 8: lleva la política del encargo de DeepSeek, siempre", () => {
+    expect(buildAgentSystemPrompt()).toContain(GOAL_GUIDANCE);
   });
 
   // ⚰️ AQUÍ SE EXIGÍA que el prompt siguiera diciendo «el BOTÓN FLOTANTE DE

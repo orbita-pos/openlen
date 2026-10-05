@@ -801,6 +801,10 @@ const READ_ONLY_TOOLS = new Set([
   // Pieza 7: entrar en modo plan y presentar el plan no cambian la página.
   ENTER_PLAN_MODE,
   EXIT_PLAN_MODE,
+  // Pieza 8: leer, crear y actualizar el encargo no cambian la página.
+  "get_goal",
+  "create_goal",
+  "update_goal",
   // Pieza 5: buscar y leer en las charlas pasadas no cambia nada.
   "session_search",
   "session_event_search",
@@ -2032,6 +2036,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     /** La pregunta con la que este turno se cierra, si alguna herramienta la
      *  produjo. Ver el bloque que la consume al salir del bucle de llamadas. */
     let pregunta = "";
+    /** Pieza 8 · lo que las herramientas de la tanda dejan para el paso
+     *  siguiente (`ToolOutcome.notice`, el `deferContext` de DeepSeek). */
+    const avisos: string[] = [];
     // Los nombres que el modelo puede llamar en ESTE turno. Salen de las
     // declaraciones que se le mandaron, no de una lista escrita a mano: una
     // lista a mano no avisa de lo que falta, y aquí faltarían justo las
@@ -2279,6 +2286,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         }
 
         if (outcome.pregunta) pregunta = outcome.pregunta;
+        if (outcome.notice) avisos.push(outcome.notice);
         const respuesta = outcome.response;
         // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
         // viene de `declararCambio` (hash antes ≠ hash después); lo durable cubre
@@ -2394,9 +2402,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     //
     // Y va DESPUÉS del `assistant`, así que el modelo lo lee en su siguiente
     // paso —el que iba a dar de todas formas—: cero llamadas nuevas.
+    // Pieza 8: y detrás, lo que las herramientas dejaron para este paso (el
+    // cierre de un encargo), como el `deferContext` de DeepSeek.
+    const medido = await medirYRedactar();
     messages.push({
       role: "user",
-      content: await medirYRedactar(),
+      content: [medido, ...avisos].filter((x) => x.length > 0).join("\n\n"),
       functionResponses,
     });
     // H12 · quien insiste en lo que se le rechaza no avanza: se le cierra.

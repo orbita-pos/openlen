@@ -6,6 +6,7 @@
 // por el mismo camino que los de verdad. Sólo existe en desarrollo.
 
 import { planConsentQuestion, planReviewQuestion } from "@/lib/agent/plan-mode";
+import type { GoalSnapshot } from "@/lib/agent/goal";
 
 /** Las preguntas de los guiones de ask_user_question: una de una sola respuesta,
  *  con la recomendada, y otra de varias. */
@@ -52,6 +53,8 @@ export type ScenarioId =
   | "askEnded"
   | "planReview"
   | "planConsent"
+  | "goalRounds"
+  | "goalPaused"
   | "terminal"
   | "publish"
   | "reply"
@@ -73,6 +76,8 @@ export const SCENARIOS: readonly ScenarioId[] = [
   "askEnded",
   "planReview",
   "planConsent",
+  "goalRounds",
+  "goalPaused",
   "terminal",
   "publish",
   "reply",
@@ -95,6 +100,8 @@ export const SCENARIO_LABEL: Readonly<Record<ScenarioId, string>> = {
   askEnded: "Pregunta con opciones (cerró el turno)",
   planReview: "Modo plan: revisar el plan (espera dentro del turno)",
   planConsent: "Modo plan: Len pide planear primero",
+  goalRounds: "Encargo: dos rondas y el cierre",
+  goalPaused: "Encargo en pausa",
   terminal: "Terminal + web",
   publish: "Publicar",
   reply: "Borrador de respuesta",
@@ -157,6 +164,19 @@ ${o.form ? `<section id="encargos"><h2>Encarga tu pastel</h2><form><input placeh
 <footer>Tel. 951 123 4567</footer>
 </body></html>`;
 }
+
+/** El encargo de los guiones de la pieza 8, con la forma de `GoalSnapshot`. */
+export const ENCARGO_DE_EJEMPLO: GoalSnapshot = {
+  id: "goal-demo",
+  revision: 1,
+  objective: "Haz la tienda entera: catálogo de pasteles, carrito y pago con tarjeta.",
+  phase: "active",
+  maxGoalRounds: 256,
+  roundsStarted: 1,
+};
+
+/** La ronda que sigue a la 1 en el guion: la sigue el chat sondeando su fila. */
+export const nextRoundOf = (turnoId: string) => `${turnoId}-r2`;
 
 const DONE = (extra: Record<string, unknown> = {}) => ({ turns: 4, toolCalls: 6, centicredits: 118, durationMs: 26_400, ...extra });
 
@@ -259,6 +279,33 @@ export function scriptFor(id: ScenarioId, turnoId: string): ScriptStep[] {
         }),
         wait(100, "done", DONE({ centicredits: 18, durationMs: 62_000 })),
       ];
+    // Pieza 8 de Len 2.5: el encargo. «goalRounds» es la ronda 1 en vivo; la 2
+    // la abre «el servidor» y el chat la sigue desde su fila (`view.tsx`), y
+    // cierra con el encargo completo. «goalPaused», uno que quedó en pausa.
+    case "goalRounds":
+      return [
+        ...head,
+        wait(150, "goal", { goal: ENCARGO_DE_EJEMPLO, activation: "armed" }),
+        wait(700, "text", { text: "Empiezo por el catálogo: los pasteles con su foto y su precio.\n\n" }),
+        wait(300, "action", { tool: "Read", status: "running", summary: "index.html" }),
+        wait(600, "action", { tool: "Read", status: "done", summary: "index.html" }),
+        wait(300, "action", { tool: "Edit", status: "running", summary: "index.html" }),
+        wait(900, "action", { tool: "Edit", status: "done", summary: "index.html" }),
+        wait(300, "text", { text: "El catálogo ya está. Sigo con el carrito en la ronda siguiente." }),
+        wait(100, "done", DONE({ goal: ENCARGO_DE_EJEMPLO, goalActivation: "armed", round: { next: nextRoundOf(turnoId) } })),
+      ];
+    case "goalPaused": {
+      const enPausa: GoalSnapshot = { ...ENCARGO_DE_EJEMPLO, revision: 2, phase: "paused", roundsStarted: 2 };
+      return [
+        ...head,
+        wait(150, "goal", { goal: { ...ENCARGO_DE_EJEMPLO, roundsStarted: 2 }, activation: "armed" }),
+        wait(600, "action", { tool: "update_goal", status: "running", summary: "" }),
+        wait(400, "goal", { goal: enPausa, activation: "disarmed" }),
+        wait(100, "action", { tool: "update_goal", status: "done", summary: "" }),
+        wait(300, "text", { text: "Paré el encargo como pediste. Cuando quieras, lo reanudas desde la tarjeta." }),
+        wait(100, "done", DONE({ goal: enPausa, goalActivation: "disarmed" })),
+      ];
+    }
     case "planConsent":
       return [
         ...head,

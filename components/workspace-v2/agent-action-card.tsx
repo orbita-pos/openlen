@@ -172,6 +172,10 @@ export const KNOWN_TOOLS = new Set([
   // Pieza 7 de Len 2.5: el modo plan (pedir planear, presentar el plan).
   "enter_plan_mode",
   "exit_plan_mode",
+  // Pieza 8 de Len 2.5: el encargo (mirarlo, crearlo, actualizarlo).
+  "get_goal",
+  "create_goal",
+  "update_goal",
   // Pieza 5 de Len 2.5: buscar y leer en las charlas pasadas.
   "session_search",
   "session_event_search",

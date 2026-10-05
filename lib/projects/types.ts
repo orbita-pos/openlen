@@ -300,6 +300,19 @@ export interface StoredChatTurn {
    *  servidor; `getChatMessages` lo pone en el último turno cerrado). El chat
    *  enciende su ficha «Plan» si el último turno lo trae. */
   planMode?: true;
+  /** Pieza 8: el encargo tras este turno (`GoalSnapshot` de `lib/agent/goal.ts`)
+   *  con la activación del proceso. `getChatMessages` lo pone en el último turno
+   *  cerrado; el sondeo de una fila, en esa fila. */
+  goal?: {
+    id: string;
+    revision: number;
+    objective: string;
+    phase: "active" | "paused" | "blocked" | "complete";
+    blockedReason?: { code: string; message: string };
+    maxGoalRounds: number;
+    roundsStarted: number;
+    activation: "armed" | "disarmed";
+  };
   /** Image the user attached to this turn — shown in the restored bubble. */
   attachedImage?: { url: string; alt?: string };
   assistantReasoning: string;

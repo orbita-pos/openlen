@@ -9,6 +9,8 @@ import type { AgentLoopArgs } from "@/lib/agent/loop";
 import type { Message } from "@/lib/ai-gateway";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { PLAN_OFF_NOTICE, PLAN_ON_NOTICE, PLAN_POLICY } from "@/lib/agent/plan-mode";
+import { goalRoundPrompt, type GoalSnapshot } from "@/lib/agent/goal";
+import { _resetGoalActivation, armGoal, goalActivation } from "@/lib/agent/goal-activation";
 import type { VisualVerdict } from "@/lib/agent/verify";
 import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 
@@ -65,6 +67,7 @@ const mocks = vi.hoisted(() => ({
   leerDireccion: vi.fn(() => null as string | null),
   abrirTurno: vi.fn(),
   esperarRespuesta: vi.fn(async (_turnoId: string, _o: { timeoutMs: number; signal?: AbortSignal }) => null as unknown),
+  rondaSiguiente: vi.fn(),
   // Len 2.1: el aviso de turno terminado sin nadie mirando.
   scheduleNotification: vi.fn(async () => {}),
   createPool: vi.fn(),
@@ -101,6 +104,13 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
+// El correo del dueño sale de la base (`ownerEmail`). Sin este doble, cada turno
+// de estas pruebas esperaba ~2,7 s a una base que aquí no existe — y las rondas
+// del encargo (pieza 8), que son varios turnos seguidos, no cabían en el plazo.
+vi.mock("@/lib/movil/llaves", async (real) => ({
+  ...(await real<typeof import("@/lib/movil/llaves")>()),
+  correoDelUsuario: async () => null,
+}));
 vi.mock("@/lib/agent/herramientas-de-ficheros", async (real) => ({
   ...(await real<typeof import("@/lib/agent/herramientas-de-ficheros")>()),
   cargarFicherosDeLaTerminal: mocks.cargarFicherosDeLaTerminal,
@@ -191,6 +201,8 @@ vi.mock("@/lib/agent/direcciones", () => ({
   cerrarTurno: vi.fn(),
   leerDireccion: mocks.leerDireccion,
   esperarRespuesta: mocks.esperarRespuesta,
+  // Pieza 8: la ronda siguiente de una fila (el sondeo del chat la lee).
+  rondaSiguiente: mocks.rondaSiguiente,
   MAX_DIRECCION: 2000,
 }));
 // El renderizador de Chromium. Se dobla para poder CONTAR arranques: el punto
@@ -2413,5 +2425,214 @@ describe("POST /api/agent — la compactación dentro del turno", () => {
     );
     expect(spill?.maxInlineTokens).toBe(12_500);
     expect(mocks.runAgentTool).toHaveBeenCalledWith(expect.anything(), expect.anything(), "bash", { command: "true" });
+  });
+});
+
+// PIEZA 8 · EL ENCARGO EN LA RUTA (el goal de DeepSeek). Una ronda es un turno:
+// al cerrar uno con el encargo activo y armado, la ruta abre el siguiente ella
+// misma con el mensaje de ronda, y el `done` dice cuál es. El historial de estas
+// pruebas sale de las filas que la propia ruta guarda, así que cada ronda pliega
+// la foto que dejó la anterior.
+describe("POST /api/agent — el encargo", () => {
+  const SYS = "You are Len.";
+  const OBJETIVO = "la tienda entera";
+  const saldo = (balance: number) => ({ plan: "free", balance, allotment: 20, refillsAt: null });
+  const cierre = { finalText: "ok", turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false, mutoDurable: true, transcripcion: [{ role: "assistant", content: "ok" }] };
+  type FilaGuardada = { userText: string; transcript: { goal?: GoalSnapshot | null } | null };
+  const filas = () => mocks.registrarTurnoDelServidor.mock.calls.map((c) => (c as unknown as [string, FilaGuardada])[1]);
+  const encargo = (o: Partial<GoalSnapshot> = {}): GoalSnapshot => ({
+    id: "goal-1", revision: 1, objective: OBJETIVO, phase: "active", maxGoalRounds: 256, roundsStarted: 1, ...o,
+  });
+  const filaCon = (goal: GoalSnapshot) => ({ userText: "antes", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant", content: "hecho" }], leidos: [], goal } });
+  let historialInicial: unknown[] = [];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    _resetGoalActivation();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    // Sin saldo por defecto: cada prueba da el que necesita, así ninguna cadena
+    // sigue sola más allá de la prueba.
+    mocks.getCreditState.mockResolvedValue(saldo(0));
+    mocks.creditsForUsage.mockReturnValue(1);
+    mocks.buildAgentMessages.mockImplementation(((a: { prompt: string }) => ({
+      ok: true as const,
+      messages: [{ role: "system", content: SYS }, { role: "user", content: a.prompt }],
+      systemPrompt: SYS,
+      contextBlock: "",
+    })) as never);
+    mocks.createAgentBrain.mockReturnValue({ modelId: "test", creditRate: () => "deepseek-flash", openStream: () => (async function* () {})() } as never);
+    vi.mocked(streamWithRetry).mockImplementation(((f: () => unknown) => f()) as never);
+    historialInicial = [];
+    mocks.turnosParaElHistorial.mockImplementation(async () => [
+      ...historialInicial,
+      ...filas().map((f) => ({ userText: f.userText, assistantReasoning: "", transcript: f.transcript })),
+    ]);
+    mocks.runAgentLoop.mockImplementation(async () => cierre);
+  });
+  afterEach(() => {
+    mocks.runAgentLoop.mockReset();
+    mocks.runAgentTool.mockReset();
+    mocks.buildAgentMessages.mockReset();
+    mocks.buildAgentMessages.mockReturnValue({ ok: true as const, messages: [{ role: "user", content: "cambia el título" }] });
+    mocks.createAgentBrain.mockReset();
+    mocks.createAgentBrain.mockReturnValue({ modelId: "test", creditRate: () => "deepseek-flash" });
+    mocks.turnosParaElHistorial.mockReset();
+    mocks.turnosParaElHistorial.mockResolvedValue([]);
+    mocks.getCreditState.mockReset();
+    vi.mocked(streamWithRetry).mockReset();
+    _resetGoalActivation();
+  });
+  const turno = async (extra: Record<string, unknown> = {}) =>
+    readEvents(await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: OBJETIVO, ...extra }) })));
+  const promptDe = (i: number) => (mocks.buildAgentMessages.mock.calls[i] as unknown as [{ prompt: string }])[0].prompt;
+  const done = (ev: Awaited<ReturnType<typeof turno>>) => ev.find((e) => e.event === "done")!.data;
+
+  it("la puerta del dueño: este turno es la ronda 1, se guarda y se encadena la 2", async () => {
+    // La puerta de la 1, la cuenta al cerrar la 1, la puerta de la 2; al cerrar
+    // la 2, sin saldo: la cadena para ahí.
+    mocks.getCreditState.mockResolvedValueOnce(saldo(50)).mockResolvedValueOnce(saldo(50)).mockResolvedValueOnce(saldo(50));
+    const eventos = await turno({ goal: "create" });
+    expect(promptDe(0)).toBe(goalRoundPrompt({ objective: OBJETIVO, maxGoalRounds: 256 }, 1));
+    const primera = filas()[0]!;
+    expect(primera.userText).toBe(promptDe(0));
+    expect(primera.transcript?.goal).toMatchObject({ objective: OBJETIVO, phase: "active", roundsStarted: 1, revision: 1 });
+    expect((done(eventos).round as { next?: string } | undefined)?.next).toMatch(/^[0-9a-f-]{36}$/);
+    expect(eventos.some((e) => e.event === "goal")).toBe(true);
+    await vi.waitFor(() => expect(filas()).toHaveLength(2));
+    expect(promptDe(1)).toBe(goalRoundPrompt({ objective: OBJETIVO, maxGoalRounds: 256 }, 2));
+    expect(filas()[1]!.transcript?.goal).toMatchObject({ roundsStarted: 2, phase: "active" });
+    // 🔴 La fila de la 1 se escribió ANTES de que empezara la 2.
+    expect(mocks.registrarTurnoDelServidor.mock.invocationCallOrder[0]!).toBeLessThan(mocks.runAgentLoop.mock.invocationCallOrder[1]!);
+    // Y al cerrar la 2 sin saldo, desarmado.
+    const id = (filas()[1]!.transcript!.goal as GoalSnapshot).id;
+    await vi.waitFor(() => expect(goalActivation("p1", id)).toBe("disarmed"));
+  });
+
+  it("sin saldo al encadenar, no se abre otra ronda y el `done` lo dice", async () => {
+    mocks.getCreditState.mockResolvedValueOnce(saldo(50));
+    const eventos = await turno({ goal: "create" });
+    expect(done(eventos).round).toEqual({ stopped: "credits" });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("🔴 el push no sale en la ronda que encadena; sí al final de la cadena", async () => {
+    // 1 (del dueño), 2 (encadena la 3) y 3 (para sin saldo).
+    for (let i = 0; i < 5; i++) mocks.getCreditState.mockResolvedValueOnce(saldo(50));
+    await turno({ goal: "create" });
+    await vi.waitFor(() => expect(filas()).toHaveLength(3));
+    await vi.waitFor(() => expect(mocks.scheduleNotification).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.scheduleNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it("■ en una ronda: en pausa, y no se encadena", async () => {
+    mocks.getCreditState.mockResolvedValueOnce(saldo(50)).mockResolvedValue(saldo(50));
+    mocks.runAgentLoop.mockImplementation(async () => {
+      const extra = (mocks.abrirTurno.mock.calls.at(-1) as unknown as [string, string, number, { abortar: () => void }])[3];
+      extra.abortar();
+      return { ...cierre, terminalError: true, errorCode: "cancelled" };
+    });
+    await turno({ goal: "create" });
+    expect(filas()[0]!.transcript?.goal).toMatchObject({ phase: "paused", revision: 2 });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("un turno que revienta desarma y no encadena", async () => {
+    mocks.getCreditState.mockResolvedValue(saldo(50));
+    mocks.runAgentLoop.mockImplementation(async () => ({ ...cierre, terminalError: true, errorCode: "upstream", topeAlcanzado: null }));
+    const eventos = await turno({ goal: "create" });
+    expect(done(eventos)?.round).toBeUndefined();
+    const id = (filas()[0]!.transcript!.goal as GoalSnapshot).id;
+    expect(goalActivation("p1", id)).toBe("disarmed");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("una ronda que cierra con una pregunta sin contestar no encadena (sigue armado)", async () => {
+    mocks.getCreditState.mockResolvedValue(saldo(50));
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.emit({ type: "action", tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Qué colores?" } as never);
+      return cierre;
+    });
+    const eventos = await turno({ goal: "create" });
+    expect(done(eventos).round).toBeUndefined();
+    const id = (filas()[0]!.transcript!.goal as GoalSnapshot).id;
+    expect(goalActivation("p1", id)).toBe("armed");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("al tope de rondas, atascado con `round-limit` y su mensaje literal", async () => {
+    mocks.getCreditState.mockResolvedValue(saldo(50));
+    historialInicial = [filaCon(encargo({ phase: "paused", roundsStarted: 2, maxGoalRounds: 3, revision: 4 }))];
+    await turno({ goal: "resume", prompt: "" });
+    expect(promptDe(0)).toBe(goalRoundPrompt({ objective: OBJETIVO, maxGoalRounds: 3 }, 3));
+    expect(filas()[0]!.transcript?.goal).toMatchObject({
+      phase: "blocked",
+      roundsStarted: 3,
+      blockedReason: { code: "round-limit", message: "Goal reached its configured limit of 3 rounds." },
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("reanudar uno completo: 409 sin abrir turno", async () => {
+    historialInicial = [filaCon(encargo({ phase: "complete" }))];
+    const res = await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "", goal: "resume" }) }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: "goal_not_resumable" });
+    expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+  });
+
+  it("la autoridad: ronda, y del dueño en cuanto corrige el rumbo; un turno suyo siempre del dueño", async () => {
+    mocks.getCreditState.mockResolvedValueOnce(saldo(50));
+    const vistas: unknown[] = [];
+    mocks.runAgentTool.mockImplementation(async (_s: unknown, deps: { goal: { authority(): unknown } }) => {
+      vistas.push(deps.goal.authority());
+      return { response: { ok: true } };
+    });
+    mocks.leerDireccion.mockReturnValueOnce(null).mockReturnValueOnce("para el encargo");
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.leerDireccion?.();
+      await args.runTool("get_goal", {});
+      args.leerDireccion?.();
+      await args.runTool("get_goal", {});
+      return cierre;
+    });
+    await turno({ goal: "create", round: { goalId: "x", revision: 1, round: 9 } });
+    const id = (filas()[0]!.transcript!.goal as GoalSnapshot).id;
+    expect(vistas).toEqual([{ kind: "goal-round", goalId: id, revision: 1, round: 1 }, { kind: "direct-human" }]);
+  });
+
+  it("BRAZO DE CONTROL: un encargo activo pero DESARMADO (tras reiniciar) no encadena al cerrar un turno del dueño", async () => {
+    mocks.getCreditState.mockResolvedValue(saldo(50));
+    historialInicial = [filaCon(encargo())];
+    const eventos = await turno({ prompt: "cambia el título" });
+    expect(promptDe(0)).toBe("cambia el título");
+    expect(done(eventos).round).toBeUndefined();
+    expect(filas()[0]!.transcript?.goal).toMatchObject({ id: "goal-1", roundsStarted: 1 });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("un turno del dueño con el encargo armado (lo creó el modelo) encadena la ronda 1", async () => {
+    mocks.getCreditState.mockResolvedValueOnce(saldo(50)).mockResolvedValueOnce(saldo(50)).mockResolvedValueOnce(saldo(50));
+    historialInicial = [filaCon(encargo({ roundsStarted: 0 }))];
+    armGoal("p1", "goal-1");
+    const eventos = await turno({ prompt: "sigue" });
+    expect((done(eventos).round as { next?: string }).next).toBeTruthy();
+    await vi.waitFor(() => expect(filas()).toHaveLength(2));
+    expect(promptDe(1)).toBe(goalRoundPrompt({ objective: OBJETIVO, maxGoalRounds: 256 }, 1));
   });
 });

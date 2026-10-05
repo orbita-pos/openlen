@@ -81,8 +81,9 @@ describe("Len Dynamis: sólo la terminal para los ficheros", () => {
   });
 
   it("🔴 en Dynamis, ni el prompt, ni las descripciones, ni /AGENTS.md nombran una herramienta que no tiene", () => {
-    // «Read-only» no es la herramienta.
-    expect(todo(CON, "dynamis")).not.toMatch(/\b(Read|Edit|Write|Grep|Glob)\b(?!-)/);
+    // «Read-only» no es la herramienta; «Read the current session goal» (la
+    // descripción de `get_goal`, literal de DeepSeek, pieza 8) tampoco: es el verbo.
+    expect(todo(CON, "dynamis")).not.toMatch(/\b(Read|Edit|Write|Grep|Glob)\b(?!-| the current session goal)/);
   });
 
   // 🔴 LA LÁPIDA de la palanca vieja: el valor que antes quitaba Read, Edit y

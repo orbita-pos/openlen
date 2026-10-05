@@ -52,7 +52,10 @@
       "ver_mensajes": "Consultation de vos messages",
       "preparar_respuesta": "Préparation de votre réponse",
       "web_search": "Recherche sur le web",
-      "web_fetch": "Lecture d’une page web"
+      "web_fetch": "Lecture d’une page web",
+      "get_goal": "Consultation de l'objectif",
+      "create_goal": "Création de l'objectif",
+      "update_goal": "Mise à jour de l'objectif"
     },
     "action": {
       "home": "Accueil",

@@ -12,7 +12,7 @@
 
 import { useState, type ReactNode, type RefObject } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowUp, Crosshair, ImageIcon, ListChecks, MessageSquare, Plus, Square, X } from "lucide-react";
+import { ArrowUp, Crosshair, Flag, ImageIcon, ListChecks, MessageSquare, Plus, Square, X } from "lucide-react";
 
 import { MandoEsfuerzo } from "../panels/mando-esfuerzo";
 import { ModePicker } from "../panels/mode-picker";
@@ -46,6 +46,9 @@ export function ChatComposer({
   onModeChange,
   planMode = false,
   onTogglePlan,
+  goalChip = false,
+  goalAvailable = true,
+  onToggleGoal,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -73,6 +76,12 @@ export function ChatComposer({
    *  se ofrece (el chat clásico no lo tiene). */
   planMode?: boolean;
   onTogglePlan?: () => void;
+  /** Pieza 8: la ficha «Encargo» (el mensaje será el objetivo), si se puede
+   *  poner (sin un encargo vivo) y quien la cambia. Sin `onToggleGoal` no se
+   *  ofrece. */
+  goalChip?: boolean;
+  goalAvailable?: boolean;
+  onToggleGoal?: () => void;
 }) {
   const t = useTranslations("panelsChat");
   const [plusOpen, setPlusOpen] = useState(false);
@@ -87,7 +96,7 @@ export function ChatComposer({
   return (
     <div>
       <div className="nc-composer relative rounded-[16px] border bd-strong bg-elev px-3 pb-[7px] pt-2 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition">
-        {(comments.length > 0 || scopedSelection || attachedImage || (planMode && onTogglePlan)) && (
+        {(comments.length > 0 || scopedSelection || attachedImage || (planMode && onTogglePlan) || (goalChip && onToggleGoal)) && (
           <div className="mb-1 flex flex-wrap gap-1.5">
             {/* PIEZA 7 · LA FICHA «PLAN», la de DeepSeek: está mientras dura el
                 modo plan y su ✕ lo apaga. Mientras Len trabaja no se toca (se
@@ -96,6 +105,14 @@ export function ChatComposer({
               <Chip title={t("newChat.plan.optionHint")} onRemove={busy ? undefined : onTogglePlan} removeLabel={t("newChat.plan.chipOff")}>
                 <ListChecks size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
                 <b className="shrink-0 font-semibold">{t("newChat.plan.chip")}</b>
+              </Chip>
+            )}
+            {/* PIEZA 8 · LA FICHA «ENCARGO», el `/goal <objetivo>` de DeepSeek:
+                lo que mandes es el objetivo, y Len sigue solo hasta terminarlo. */}
+            {goalChip && onToggleGoal && (
+              <Chip title={t("newChat.goal.optionHint")} onRemove={busy ? undefined : onToggleGoal} removeLabel={t("newChat.goal.chipOff")}>
+                <Flag size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+                <b className="shrink-0 font-semibold">{t("newChat.goal.chip")}</b>
               </Chip>
             )}
             {comments.map((c) => (
@@ -138,7 +155,9 @@ export function ChatComposer({
           placeholder={
             busy
               ? t("composer.placeholderRunning")
-              : scopedSelection
+              : goalChip && onToggleGoal
+                ? t("newChat.goal.placeholder")
+                : scopedSelection
                 ? t("composer.placeholderScoped", { target: scopedSelection.hint.split(" ")[0] ?? "" })
                 : t("composer.placeholder")
           }
@@ -189,6 +208,20 @@ export function ChatComposer({
                     onClick={() => {
                       setPlusOpen(false);
                       onTogglePlan();
+                    }}
+                  />
+                )}
+                {onToggleGoal && (
+                  <PlusOption
+                    icon={<Flag size={15} />}
+                    title={t("newChat.goal.option")}
+                    hint={goalAvailable ? t("newChat.goal.optionHint") : t("newChat.goal.optionTaken")}
+                    on={goalChip}
+                    onLabel={t("newChat.composer.on")}
+                    disabled={!goalAvailable}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      onToggleGoal();
                     }}
                   />
                 )}
@@ -324,6 +357,7 @@ function PlusOption({
   on,
   onLabel,
   onClick,
+  disabled = false,
 }: {
   icon: ReactNode;
   title: string;
@@ -331,13 +365,15 @@ function PlusOption({
   on: boolean;
   onLabel: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="nc-up flex w-full items-center gap-2.5 rounded-[10px] p-2 text-left hover:bg-side"
+      disabled={disabled}
+      className="nc-up flex w-full items-center gap-2.5 rounded-[10px] p-2 text-left hover:bg-side disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent"
     >
       <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] bg-accent-soft text-[var(--nc-accent-text)]">
         {icon}

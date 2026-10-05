@@ -288,6 +288,25 @@
       "skipHint": "Len이 지금 요청을 계속 진행합니다.",
       "showPlan": "계획 전체 보기",
       "hidePlan": "계획 숨기기"
+    },
+    "goal": {
+      "option": "목표",
+      "optionHint": "끝날 때까지 Len이 라운드를 거듭하며 스스로 진행합니다.",
+      "optionTaken": "이미 목표가 있습니다. 지우거나 끝날 때까지 기다려 주세요.",
+      "chip": "목표",
+      "chipOff": "목표로 하지 않기",
+      "placeholder": "목표 전체를 설명해 주세요. Len이 끝까지 진행합니다…",
+      "label": "목표",
+      "round": "라운드 {round}/{max}",
+      "running": "진행 중",
+      "paused": "일시 중지됨",
+      "blocked": "막힘",
+      "roundLimit": "최대 {max} 라운드에 도달했습니다.",
+      "noCredits": "중지됨: 잔액이 없습니다.",
+      "resume": "다시 시작",
+      "clear": "지우기",
+      "clearFailed": "목표를 지우지 못했습니다.",
+      "roundLine": "목표 · 라운드 {round}/{max}"
     }
   }
 }

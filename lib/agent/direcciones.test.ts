@@ -10,6 +10,9 @@ import {
   leerDireccion,
   responder,
   turnoDeLaFila,
+  turnoVivoDelProyecto,
+  rondaSiguiente,
+  siguienteDeLaFila,
   MAX_DIRECCION,
 } from "./direcciones";
 
@@ -223,5 +226,26 @@ describe("la respuesta a una pregunta de Len, dentro del turno", () => {
 
   it("sin turno abierto no hay a quién esperar: null", async () => {
     expect(await esperarRespuesta("nadie", { timeoutMs: 60_000 })).toBeNull();
+  });
+});
+
+// PIEZA 8 · el encargo: quitarlo no puede pisar una ronda viva, y el chat que
+// sondea una fila tiene que saber a qué ronda pasar.
+describe("el encargo en el almacén", () => {
+  it("un turno vivo del proyecto se ve, del dueño y de ese proyecto", () => {
+    abrirTurno("t1", "u1", Date.now(), { projectId: "p1" });
+    expect(turnoVivoDelProyecto("p1", "u1")).toBe(true);
+    expect(turnoVivoDelProyecto("p2", "u1")).toBe(false);
+    expect(turnoVivoDelProyecto("p1", "u2")).toBe(false);
+    cerrarTurno("t1");
+    expect(turnoVivoDelProyecto("p1", "u1")).toBe(false);
+  });
+
+  it("la ronda que siguió a una fila", () => {
+    expect(siguienteDeLaFila("f1")).toBeNull();
+    rondaSiguiente("f1", "f2");
+    expect(siguienteDeLaFila("f1")).toBe("f2");
+    _vaciarTodo();
+    expect(siguienteDeLaFila("f1")).toBeNull();
   });
 });

@@ -4355,3 +4355,41 @@ describe("el modo plan no recibe la insistencia", () => {
     expect((await leerYContar(undefined)).some(insistencia)).toBe(true);
   });
 });
+
+// ─── PIEZA 8 · EL ENCARGO ───────────────────────────────────────────────────
+// El `deferContext` de DeepSeek: lo que una herramienta deja para el paso
+// siguiente (el cierre de un encargo) viaja en el mensaje de las respuestas.
+describe("el encargo en el bucle", () => {
+  it("el aviso de una herramienta llega al modelo con las respuestas de la tanda", async () => {
+    const vistos: Message[][] = [];
+    const stream = scripted(
+      [{ type: "function_call", name: "update_goal", args: { goal_id: "goal-1", revision: 1, action: "complete" } }, done],
+      [{ type: "text_delta", text: "Hecho." }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "<goal_round>…</goal_round>" }], tools: [],
+      openStream: (m) => { vistos.push([...m]); return stream(m); },
+      runTool: async () => ({ response: { ok: true }, notice: "<goal_complete>\nescribe el cierre\n</goal_complete>" }),
+      emit: () => {},
+    });
+    const conRespuestas = vistos[1]!.at(-1)!;
+    expect(conRespuestas.functionResponses?.[0]?.name).toBe("update_goal");
+    expect(conRespuestas.content).toContain("<goal_complete>\nescribe el cierre\n</goal_complete>");
+  });
+
+  it("get_goal, create_goal y update_goal no gastan presupuesto de acciones", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [], maxToolCalls: 1,
+      openStream: scripted([
+        { type: "function_call", name: "editar_pagina", args: {} },
+        { type: "function_call", name: "get_goal", args: {} },
+        { type: "function_call", name: "create_goal", args: { objective: "la tienda" } },
+        { type: "function_call", name: "update_goal", args: { goal_id: "g", revision: 1, action: "complete" } },
+        done,
+      ], [{ type: "text_delta", text: "Listo." }, done]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(r.terminalError).toBe(false);
+  });
+});

@@ -288,6 +288,25 @@
       "skipHint": "Len carries on with your request now.",
       "showPlan": "See the whole plan",
       "hidePlan": "Hide the plan"
+    },
+    "goal": {
+      "option": "Goal",
+      "optionHint": "Len keeps going on its own, round after round, until it's done.",
+      "optionTaken": "There's already a goal: remove it or wait for it to finish.",
+      "chip": "Goal",
+      "chipOff": "Don't make it a goal",
+      "placeholder": "Describe the whole goal; Len will keep going until it's done…",
+      "label": "Goal",
+      "round": "Round {round} of {max}",
+      "running": "Running",
+      "paused": "Paused",
+      "blocked": "Stuck",
+      "roundLimit": "Reached the limit of {max} rounds.",
+      "noCredits": "Stopped: out of credits.",
+      "resume": "Resume",
+      "clear": "Remove",
+      "clearFailed": "Couldn't remove the goal.",
+      "roundLine": "Goal · round {round} of {max}"
     }
   }
 }

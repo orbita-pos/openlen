@@ -52,7 +52,10 @@
       "ver_mensajes": "Nachrichten ansehen",
       "preparar_respuesta": "Antwort vorbereiten",
       "web_search": "Suche im Web",
-      "web_fetch": "Liest eine Webseite"
+      "web_fetch": "Liest eine Webseite",
+      "get_goal": "Ziel ansehen",
+      "create_goal": "Ziel anlegen",
+      "update_goal": "Ziel aktualisieren"
     },
     "action": {
       "home": "Startseite",
