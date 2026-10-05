@@ -34,6 +34,12 @@ export interface QuestionAnswer {
   custom?: string;
 }
 
+/** Cuánto espera la pregunta a que el dueño conteste dentro del turno: el
+ *  `timeout` por defecto del modo `timed` de DeepSeek (tool-ask-user, 120 s).
+ *  Queda por debajo del reloj de silencio de la ruta (180 s). Al vencer NO es
+ *  una aprobación: el turno cierra con la pregunta. */
+export const ASK_USER_TIMEOUT_MS = 120_000;
+
 /** Una pregunta, no un ensayo: lo que no quepa aquí es el modelo pensando en
  *  voz alta, y eso va en su texto. 600 era el tope de `preguntar`. */
 const QUESTION_MAX = 600;
@@ -85,6 +91,20 @@ export function validateQuestions(raw: unknown): { ok: true; questions: UserQues
  *  cierre del turno cuando nadie contesta. */
 export function questionText(questions: readonly UserQuestion[]): string {
   return questions.map((q) => q.question).join("\n");
+}
+
+/** «(Recommended)» lo escribe el modelo al final de la etiqueta (la regla de
+ *  DeepSeek); al dueño se le enseña aparte, traducido. */
+export const RECOMMENDED_SUFFIX = /\s*\(Recommended\)\s*$/i;
+
+/** Lo que contestó el dueño, en una línea, para encoger la tarjeta
+ *  («Respondiste: 48 horas»): lo elegido y lo escrito, pregunta a pregunta. */
+export function answerSummary(answers: readonly QuestionAnswer[]): string {
+  return answers
+    .map((a) => [...a.selected.map((s) => s.replace(RECOMMENDED_SUFFIX, "")), ...(a.custom ? [a.custom] : [])].join(", "))
+    .filter(Boolean)
+    .join(" · ")
+    .slice(0, 200);
 }
 
 /** ¿Es la herramienta de preguntar, con su nombre de hoy o con el de antes? */

@@ -1160,6 +1160,27 @@ describe("runAgentLoop — ask_user_question (antes preguntar)", () => {
     expect(events.some((e) => e.type === "html")).toBe(true);
   });
 
+  it("pieza 3: contestada DENTRO del turno, el turno sigue y la tarjeta lleva la pregunta y la respuesta", async () => {
+    const events: AgentStreamEvent[] = [];
+    const vistos: Message[][] = [];
+    const preguntas = [{ id: "plazo", question: "¿Cuánto tarda?" }];
+    const guion = scripted(
+      [{ type: "function_call", name: "ask_user_question", args: { questions: preguntas } }, done],
+      [{ type: "text_delta", text: "Puesto: 48 horas." }, done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "pon el plazo" }], tools: [],
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => ({ response: { ok: true, answers: [{ id: "plazo", selected: ["48 horas"] }] }, preguntas, respuesta: "48 horas" }),
+      emit: (e) => events.push(e),
+    });
+    expect(r.finalText).toBe("Puesto: 48 horas.");
+    expect(vistos[1]!.at(-1)!.functionResponses![0]!.response).toEqual({ ok: true, answers: [{ id: "plazo", selected: ["48 horas"] }] });
+    const tarjeta = events.find((e) => e.type === "action" && (e as { status: string }).status === "done") as Record<string, unknown>;
+    expect(tarjeta.preguntas).toEqual(preguntas);
+    expect(tarjeta.respuesta).toBe("48 horas");
+  });
+
   it("preguntar (ask_user_question) no gasta presupuesto de acciones", async () => {
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [], maxToolCalls: 1,

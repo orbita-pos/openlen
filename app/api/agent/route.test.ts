@@ -61,6 +61,7 @@ const mocks = vi.hoisted(() => ({
   verifyEditedPage: vi.fn(),
   leerDireccion: vi.fn(() => null as string | null),
   abrirTurno: vi.fn(),
+  esperarRespuesta: vi.fn(async (_turnoId: string, _o: { timeoutMs: number; signal?: AbortSignal }) => null as unknown),
   // Len 2.1: el aviso de turno terminado sin nadie mirando.
   scheduleNotification: vi.fn(async () => {}),
   createPool: vi.fn(),
@@ -186,6 +187,7 @@ vi.mock("@/lib/agent/direcciones", () => ({
   abrirTurno: mocks.abrirTurno,
   cerrarTurno: vi.fn(),
   leerDireccion: mocks.leerDireccion,
+  esperarRespuesta: mocks.esperarRespuesta,
   MAX_DIRECCION: 2000,
 }));
 // El renderizador de Chromium. Se dobla para poder CONTAR arranques: el punto
@@ -546,6 +548,63 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
       expect(eventos.map((e) => e.event)).not.toContain("cambios");
       expect(orden).toEqual(["herramienta", "herramienta"]);
     });
+  });
+});
+
+// PIEZA 3 DE LEN 2.5: ask_user_question espera la respuesta DENTRO del turno,
+// pero sólo si el cliente sabe contestar (`answersQuestions`): la voz y Len-Bench
+// no lo mandan y siguen como siempre (la pregunta cierra el turno).
+describe("POST /api/agent — la pregunta que espera", () => {
+  const preguntas = [{ id: "plazo", question: "¿Cuánto tarda?" }];
+  let depsVistas: Record<string, unknown> | null = null;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<!doctype html><html><body><h1>Hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 50, allotment: 20, refillsAt: null });
+    depsVistas = null;
+    mocks.runAgentTool.mockImplementation(async (_s: unknown, deps: Record<string, unknown>) => {
+      depsVistas = deps;
+      const askUser = deps.askUser as ((q: unknown) => Promise<unknown>) | undefined;
+      const answers = askUser ? await askUser(preguntas) : null;
+      return { response: { ok: true, ...(answers ? { answers } : {}) } };
+    });
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("ask_user_question", { questions: preguntas });
+      return { turns: 1, toolCalls: 1, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    mocks.esperarRespuesta.mockResolvedValue([{ id: "plazo", selected: ["48 horas"] }]);
+  });
+  afterEach(() => {
+    mocks.runAgentTool.mockReset();
+    mocks.runAgentLoop.mockReset();
+    mocks.esperarRespuesta.mockReset();
+  });
+  const turno = async (extra: Record<string, unknown>) =>
+    readEvents(await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "pon el plazo", ...extra }) })));
+
+  it("con answersQuestions: emite la pregunta y espera su respuesta en el almacén del turno", async () => {
+    const eventos = await turno({ answersQuestions: true });
+    expect(eventos.find((e) => e.event === "question")?.data).toEqual({ questions: preguntas });
+    expect(mocks.esperarRespuesta).toHaveBeenCalledTimes(1);
+    expect(mocks.esperarRespuesta.mock.calls[0]![1]).toMatchObject({ timeoutMs: 120_000 });
+  });
+
+  it("sin él (la voz, Len-Bench), no hay quien conteste: ni evento ni espera (brazo de control)", async () => {
+    const eventos = await turno({});
+    // La herramienta SÍ corrió (si no, la prueba no mediría nada) y sin quien conteste.
+    expect(depsVistas).not.toBeNull();
+    expect(depsVistas!.askUser).toBeUndefined();
+    expect(eventos.some((e) => e.event === "question")).toBe(false);
+    expect(mocks.esperarRespuesta).not.toHaveBeenCalled();
   });
 });
 

@@ -1475,6 +1475,36 @@ describe("ask_user_question (antes preguntar)", () => {
     assert.ok((out.pregunta ?? "").length <= 600);
   });
 
+  // Pieza 3: con quien sepa contestar (`deps.askUser`, lo pone la ruta cuando
+  // el chat lo pide), la herramienta ESPERA y la respuesta es su resultado.
+  const preguntas = [{ id: "plazo", question: "¿Cuánto tarda la entrega?", options: [{ label: "48 horas (Recommended)" }, { label: "Una semana" }] }];
+
+  it("con quien conteste, la respuesta es el resultado y el turno SIGUE (sin `pregunta`)", async () => {
+    const { deps } = makeDeps();
+    const vistas: unknown[] = [];
+    const conDueno = { ...deps, askUser: async (qs: unknown) => { vistas.push(qs); return [{ id: "plazo", selected: ["48 horas (Recommended)"] }]; } };
+    const out = await runAgentTool(makeSession(), conDueno, "ask_user_question", { questions: preguntas });
+    assert.deepEqual(out.response, { ok: true, answers: [{ id: "plazo", selected: ["48 horas (Recommended)"] }] });
+    assert.equal(out.pregunta, undefined);
+    assert.equal(out.respuesta, "48 horas");
+    assert.deepEqual(vistas, [preguntas]);
+  });
+
+  it("si nadie contesta a tiempo (null), cierra el turno con la pregunta, como siempre", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), { ...deps, askUser: async () => null }, "ask_user_question", { questions: preguntas });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.pregunta, "¿Cuánto tarda la entrega?");
+  });
+
+  it("una pregunta mal formada no llega a quien contesta", async () => {
+    const { deps } = makeDeps();
+    let llamado = false;
+    const out = await runAgentTool(makeSession(), { ...deps, askUser: async () => { llamado = true; return null; } }, "ask_user_question", { questions: [{ question: "sin id" }] });
+    assert.equal(out.response.ok, false);
+    assert.equal(llamado, false);
+  });
+
   it("el nombre viejo ya no es una herramienta (sólo se entiende en lo guardado)", async () => {
     const { deps } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "preguntar", { texto: "¿?" });

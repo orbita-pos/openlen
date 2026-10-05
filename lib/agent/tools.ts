@@ -78,7 +78,7 @@ import type { AgentMode } from "@/lib/agent/dynamis";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { createConcurrencyLimit } from "@/lib/agent/concurrency-limit";
-import { ASK_USER_QUESTION, questionText, validateQuestions, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { ASK_USER_QUESTION, answerSummary, questionText, validateQuestions, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
 import {
   toolPrepararRespuesta,
   toolVerFormularios,
@@ -109,6 +109,11 @@ export interface FileVersionNote {
 }
 
 export interface AgentDeps {
+  /** Pieza 3 de Len 2.5: quien CONTESTA las preguntas de `ask_user_question`
+   *  dentro del turno (lo pone la ruta cuando el chat lo pide). Devuelve las
+   *  respuestas o `null` si no llegaron a tiempo (o el ■). Sin él, la pregunta
+   *  cierra el turno, como siempre: así siguen la voz y Len-Bench. */
+  askUser?(questions: UserQuestion[]): Promise<QuestionAnswer[] | null>;
   /** LA CARPETA (pieza 9 de Len 2.5): los ficheros del proyecto que no son
    *  páginas —`/supabase/`, `/tests/`, `js/`, `css/`, `data/`…—, por ruta.
    *  Opcional: sin él no hay carpeta. */
@@ -884,6 +889,9 @@ export interface ToolOutcome {
   /** Pieza 3 de Len 2.5: las preguntas de `ask_user_question`, con sus
    *  opciones, para la tarjeta del chat. Van con `pregunta` (su texto plano). */
   preguntas?: UserQuestion[];
+  /** Pieza 3: lo que contestó el dueño dentro del turno, en una línea, para
+   *  que la tarjeta se encoja a «Respondiste: …». */
+  respuesta?: string;
   /**
    * ¿ESTA EDICIÓN CAMBIÓ EL COMPORTAMIENTO de la página? Es la MISMA decisión
    * con la que se le pide `prueba` al modelo (`cambioConducta`, sin contar el
@@ -1721,7 +1729,7 @@ async function toolPublicar(
  */
 async function toolAskUserQuestion(
   _session: AgentSession,
-  _deps: AgentDeps,
+  deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
   // Pieza 3 de Len 2.5: la forma de DeepSeek, validada ANTES de enseñar nada
@@ -1729,6 +1737,14 @@ async function toolAskUserQuestion(
   // y el dueño no ve tarjeta.
   const v = validateQuestions(args.questions);
   if (!v.ok) return { response: { ok: false, error: v.error } };
+  // ESPERA DENTRO DEL TURNO, como DeepSeek (`ctx.userQuestions.ask`): la
+  // respuesta del dueño es el resultado de la herramienta y Len sigue. Sólo si
+  // hay quien conteste (`deps.askUser`); `null` (no llegó a tiempo, ■) NO es
+  // una aprobación: cae a lo de siempre, la pregunta cierra el turno.
+  if (deps.askUser) {
+    const answers = await deps.askUser(v.questions);
+    if (answers) return { response: { ok: true, answers }, preguntas: v.questions, respuesta: answerSummary(answers) };
+  }
   return {
     // `ok: true` de verdad: preguntar es una acción que sale bien. El turno
     // termina porque el dueño tiene la palabra, no porque algo haya fallado.
