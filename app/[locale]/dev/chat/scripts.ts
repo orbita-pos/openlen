@@ -183,6 +183,16 @@ const DONE = (extra: Record<string, unknown> = {}) => ({ turns: 4, toolCalls: 6,
 const BEFORE_FILE = demoPage({ photos: false, form: false });
 const AFTER_FILE = demoPage({ photos: true, form: true });
 
+/** Lote 7-8 · lo que queda del turno cuando el dueño descarta la revisión del
+ *  plan («Pedir cambios»): el servidor lo cierra con la tarjeta `done` y sus
+ *  preguntas, sin `pregunta` (`exit_plan_mode` con `dismissed`), y el `done`. */
+export function dismissedReviewSteps(): ScriptStep[] {
+  return [
+    wait(150, "action", { tool: "exit_plan_mode", status: "done", summary: "", preguntas: [planReviewQuestion(PLAN_DE_EJEMPLO)] }),
+    wait(100, "done", DONE({ centicredits: 18, durationMs: 9_000 })),
+  ];
+}
+
 export function scriptFor(id: ScenarioId, turnoId: string): ScriptStep[] {
   const head = [wait(150, "turno", { turnoId })];
   switch (id) {

@@ -29,7 +29,7 @@ import { noCreditsText, notifyCreditBalanceChanged } from "@/lib/credits-client"
 import type { AgentAction } from "../agent-action-card";
 import { upsertActionInto } from "./action-cards";
 import { answerSummary, asksTheOwner, questionsFrom, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
-import { composeAnswerMessage, fallbackDelivery, outcomeOfResponder } from "./question-answer";
+import { composeAnswerMessage, fallbackDelivery, liveQuestionTurno, outcomeOfResponder } from "./question-answer";
 import { lastPlanMode, planAnswersForMessage, planModeAfterAnswer, togglePlanSelection } from "./plan-mode-state";
 import { canCreateGoal, goalOrder, goalViewOf, lastGoal, roundAfterDone, roundOfTurn, roundTextFor, type GoalView } from "./goal-state";
 import type { AgentConfirm } from "../agent-confirm-card";
@@ -2183,9 +2183,11 @@ export function useAgentChat({
   const respuestaEnColaRef = useRef<string | null>(null);
   const answerQuestion = useCallback(
     async (turnId: string, questions: readonly UserQuestion[], answers: QuestionAnswer[]) => {
-      const turn = turnsRef.current.find((x) => x.id === turnId);
-      const turnoId = turnoIdRef.current;
-      if (turn?.status === "streaming" && turn.pendingQuestions?.length && turnoId) {
+      const turnoId = liveQuestionTurno(
+        turnsRef.current.find((x) => x.id === turnId),
+        turnoIdRef.current,
+      );
+      if (turnoId) {
         try {
           const r = await fetch("/api/agent/responder", {
             method: "POST",
@@ -2229,6 +2231,28 @@ export function useAgentChat({
     respuestaEnColaRef.current = null;
     void send(mensaje);
   }, [reenganche, send, sending]);
+
+  /**
+   * LOTE 7-8 · «PEDIR CAMBIOS» EN LA REVISIÓN DEL PLAN, como el «discuss» de
+   * DeepSeek (`PlanReviewPanel`: `pending.dismiss()`): no hay caja en la
+   * tarjeta. El foco va al compositor y, si el turno espera la revisión, se
+   * descarta: el servidor cierra el turno en modo plan y lo que escriba el
+   * dueño es el turno siguiente. Si la revisión ya cerró el turno (no contestó
+   * en 120 s), sólo el foco.
+   */
+  const dismissQuestion = useCallback(async (turnId: string) => {
+    taRef.current?.focus();
+    const turnoId = liveQuestionTurno(
+      turnsRef.current.find((x) => x.id === turnId),
+      turnoIdRef.current,
+    );
+    if (!turnoId) return;
+    await fetch("/api/agent/responder", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ turnoId, dismiss: true }),
+    }).catch(() => undefined);
+  }, []);
 
   const changeEsfuerzo = useCallback((e: EsfuerzoAgente) => {
     // OPTIMISTA A PROPÓSITO, y aquí sí es correcto: la preferencia sólo
@@ -2310,6 +2334,7 @@ export function useAgentChat({
     handleUndo,
     handlePublished,
     answerQuestion,
+    dismissQuestion,
     conversationChanged,
     /** Pieza 7: el modo plan que se ve (lo elegido, o lo que dice el servidor). */
     planMode: planWanted ?? planKnown,

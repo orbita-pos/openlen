@@ -278,8 +278,6 @@
       "approveHint": "Len esegue il piano adesso.",
       "keep": "Chiedi modifiche",
       "keepHint": "Len continua a pianificare con quello che gli dici.",
-      "feedbackPlaceholder": "Cosa cambieresti nel piano?",
-      "sendFeedback": "Invia modifiche",
       "consentLabel": "Modalità piano",
       "consentQuestion": "Len vuole pianificare prima di cambiare qualsiasi cosa. Pianificare prima?",
       "planFirst": "Pianifica prima",

@@ -278,8 +278,6 @@
       "approveHint": "Len carries out the plan now.",
       "keep": "Request changes",
       "keepHint": "Len keeps planning with what you tell it.",
-      "feedbackPlaceholder": "What should change in the plan?",
-      "sendFeedback": "Send changes",
       "consentLabel": "Plan mode",
       "consentQuestion": "Len wants to plan before changing anything. Plan first?",
       "planFirst": "Plan first",

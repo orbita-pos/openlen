@@ -1,7 +1,7 @@
 // CONTESTAR A LEN DESDE LA TARJETA (pieza 3 de Len 2.5): dentro del turno si
 // todavía espera, o como un mensaje normal que abre el siguiente.
 import { describe, expect, it } from "vitest";
-import { composeAnswerMessage, fallbackDelivery, outcomeOfResponder } from "./question-answer";
+import { composeAnswerMessage, fallbackDelivery, liveQuestionTurno, outcomeOfResponder } from "./question-answer";
 
 const plazo = { id: "plazo", question: "¿Cuánto tarda la entrega?" };
 const envio = { id: "envio", question: "¿Envías a todo el país?" };
@@ -48,5 +48,18 @@ describe("fallbackDelivery", () => {
   it("🔴 con un turno todavía en vuelo, la respuesta espera a que acabe (send() la tiraría); si no, sale ya", () => {
     expect(fallbackDelivery(true)).toBe("after-turn");
     expect(fallbackDelivery(false)).toBe("now");
+  });
+});
+
+describe("liveQuestionTurno (lote 7-8)", () => {
+  it("el turno que espera la tarjeta, mientras corre y la espera", () => {
+    expect(liveQuestionTurno({ status: "streaming", pendingQuestions: [plazo] }, "t1")).toBe("t1");
+  });
+  it("nadie espera: el turno cerró, no hay preguntas pendientes o no hay id", () => {
+    expect(liveQuestionTurno({ status: "applied", pendingQuestions: [plazo] }, "t1")).toBeNull();
+    expect(liveQuestionTurno({ status: "streaming" }, "t1")).toBeNull();
+    expect(liveQuestionTurno({ status: "streaming", pendingQuestions: [] }, "t1")).toBeNull();
+    expect(liveQuestionTurno({ status: "streaming", pendingQuestions: [plazo] }, null)).toBeNull();
+    expect(liveQuestionTurno(undefined, "t1")).toBeNull();
   });
 });

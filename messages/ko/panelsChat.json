@@ -278,8 +278,6 @@
       "approveHint": "Len이 지금 계획을 실행합니다.",
       "keep": "변경 요청",
       "keepHint": "Len이 말씀하신 내용으로 계속 계획합니다.",
-      "feedbackPlaceholder": "계획에서 무엇을 바꿀까요?",
-      "sendFeedback": "변경 내용 보내기",
       "consentLabel": "계획 모드",
       "consentQuestion": "Len이 무언가를 바꾸기 전에 계획하려고 해요. 먼저 계획할까요?",
       "planFirst": "먼저 계획하기",
