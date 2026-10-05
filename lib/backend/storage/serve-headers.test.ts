@@ -38,6 +38,17 @@ describe("objectHeaders", () => {
     expect(objectHeaders(meta("image/png"), { visibility: "public" }).get("cache-control")).toBe("max-age=3600");
   });
 
+  // La subida cruda guarda la cabecera `cache-control` que mande el cliente,
+  // como Supabase: lo privado no puede salir con lo que deja a una caché
+  // compartida guardarlo (RFC 9111 §3.5: `public` y `s-maxage` le abren la
+  // puerta aunque la petición traiga Authorization).
+  it("lo privado no lleva public ni s-maxage aunque los guardara el que lo subió", () => {
+    const h = objectHeaders({ ...meta("image/png"), cacheControl: "public, s-maxage=31536000, max-age=60, proxy-revalidate" }, { visibility: "private" });
+    expect(h.get("cache-control")).toBe("private, max-age=60");
+    const solo = objectHeaders({ ...meta("image/png"), cacheControl: "Public,S-MaxAge=9" }, { visibility: "private" });
+    expect(solo.get("cache-control")).toBe("private, no-cache");
+  });
+
   it("ETag, Last-Modified, Accept-Ranges y X-Robots-Tag de Supabase", () => {
     const h = objectHeaders(meta("image/png"), { visibility: "public" });
     expect(h.get("etag")).toBe('"abc"');

@@ -46,6 +46,19 @@ function toFilenameFallback(value: string): string {
   return HTTP_TOKEN.test(fallback) ? fallback : `"${fallback}"`;
 }
 
+/** Lo que deja a una caché COMPARTIDA guardar una respuesta aunque la petición
+ *  traiga Authorization (RFC 9111 §3.5). La subida cruda guarda el
+ *  `cache-control` que mande el cliente, como Supabase: en lo privado, fuera. */
+const SHARED_CACHE_DIRECTIVE = /^(public|s-maxage(=.*)?|proxy-revalidate)$/i;
+
+function privateCacheControl(cc: string): string {
+  const kept = cc
+    .split(",")
+    .map((d) => d.trim())
+    .filter((d) => d && !SHARED_CACHE_DIRECTIVE.test(d));
+  return `private, ${kept.length > 0 ? kept.join(", ") : "no-cache"}`;
+}
+
 export function objectHeaders(meta: Partial<ObjectMetadata>, o: ObjectHeaderOptions): Headers {
   const h = new Headers();
   h.set("Accept-Ranges", "bytes");
@@ -61,7 +74,7 @@ export function objectHeaders(meta: Partial<ObjectMetadata>, o: ObjectHeaderOpti
     if (!Number.isNaN(d.getTime())) h.set("Last-Modified", d.toUTCString());
   }
   const cc = meta.cacheControl || "no-cache";
-  h.set("Cache-Control", o.visibility === "private" ? `private, ${cc}` : cc);
+  h.set("Cache-Control", o.visibility === "private" ? privateCacheControl(cc) : cc);
   if (o.download !== undefined) {
     h.set(
       "Content-Disposition",
