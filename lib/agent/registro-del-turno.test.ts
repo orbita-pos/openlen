@@ -45,6 +45,12 @@ describe("la fila del turno que escribe el servidor", () => {
     expect(r.tarjetas[0]).toMatchObject({ pregunta: "¿Cuánto tarda?", preguntas, respuesta: "48 horas" });
   });
 
+  it("ALINEAR · la pregunta descartada guarda su marca de «cancelada»", () => {
+    const r = crearRegistroDelTurno();
+    r.observar({ type: "action", tool: "exit_plan_mode", status: "done", summary: "", preguntas: [{ id: "plan-review", question: "?" }], dismissed: true });
+    expect(r.tarjetas[0]).toMatchObject({ dismissed: true });
+  });
+
   it("una compactación a media vuelta retira lo que el intento llegó a escribir; sin descarte, no toca nada", () => {
     const r = crearRegistroDelTurno();
     r.observar({ type: "text", text: "Miro." });

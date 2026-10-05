@@ -191,7 +191,8 @@ export function retryPhase(
 function lastQuestion(turn: Pick<DesignTurn, "actions" | "status">) {
   if (turn.status !== "applied") return null;
   const last = turn.actions?.[turn.actions.length - 1];
-  if (!last || !asksTheOwner(last.tool) || last.status === "error" || last.respuesta) return null;
+  // Alinear con DeepSeek: una CANCELADA (`dismissed`) ya no espera a nadie.
+  if (!last || !asksTheOwner(last.tool) || last.status === "error" || last.respuesta || last.dismissed) return null;
   return last;
 }
 

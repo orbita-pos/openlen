@@ -375,6 +375,9 @@ export interface StoredChatTurn {
     }>;
     /** Lo que contestó el dueño dentro del turno, en una línea. */
     respuesta?: string;
+    /** El dueño descartó la pregunta («Pedir cambios»): se pinta «cancelada»,
+     *  como el `ASK_CANCELLED` de DeepSeek. */
+    dismissed?: true;
     /** QUÉ cambió, resuelto en el servidor mientras los `data-op-id` valían.
      *  Va aquí y no en el turno porque `actions` es la ÚNICA parte del turno
      *  que se guarda como JSON — `appendChatMessage` escribe columnas

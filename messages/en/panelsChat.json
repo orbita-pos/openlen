@@ -213,6 +213,7 @@
       "label": "Len is asking",
       "hint": "Answer below, in your own words.",
       "answered": "You answered: {answer}",
+      "cancelled": "Cancelled before answers were submitted",
       "send": "Answer",
       "other": "Something else",
       "otherPlaceholder": "Write your answer",

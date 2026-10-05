@@ -120,6 +120,8 @@ const ActionSchema = z.object({
     .string()
     .transform((s) => s.slice(0, 200))
     .optional(),
+  // Alinear con DeepSeek: la pregunta descartada se queda «cancelada» al recargar.
+  dismissed: z.literal(true).optional().catch(undefined),
   /**
    * QUÉ cambió, resuelto por el servidor mientras los `data-op-id` valían.
    *

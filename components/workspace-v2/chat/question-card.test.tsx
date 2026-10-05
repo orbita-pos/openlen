@@ -184,6 +184,16 @@ describe("QuestionCardView — el modo plan", () => {
     expect(host.textContent).toContain("Reseñas con estrellas");
   });
 
+  it("ALINEAR · cancelada: lo dice (`newChat.question.cancelled`), deja ver el plan y no pide nada", () => {
+    const host = montar({ questions: [revision], cancelled: true, onAnswer: vi.fn(), onDismiss: vi.fn() });
+    expect(host.textContent).toContain("newChat.question.cancelled");
+    expect(boton(host, "newChat.plan.approve")).toBeUndefined();
+    expect(boton(host, "newChat.plan.keep")).toBeUndefined();
+    expect(host.textContent).not.toContain("Reseñas con estrellas");
+    pulsarBoton(host, "newChat.plan.showPlan");
+    expect(host.textContent).toContain("Reseñas con estrellas");
+  });
+
   it("contestada, dice lo que elegiste traducido y deja ver el plan", () => {
     const host = montar({ questions: [revision], answer: "Approve" });
     expect(host.textContent).toContain("newChat.question.answered(newChat.plan.approve)");

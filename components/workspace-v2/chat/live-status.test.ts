@@ -111,6 +111,13 @@ describe("la barra viva", () => {
     });
   });
 
+  it("ALINEAR · una pregunta CANCELADA no es «te toca»: ni pregunta, ni barra de espera", () => {
+    const preguntas = [{ id: "plan-review", question: "Approve this plan and leave plan mode?" }];
+    const t = turn({ actions: [{ tool: "exit_plan_mode", status: "done", summary: "", preguntas, dismissed: true }] });
+    expect(questionOf(t)).toBeNull();
+    expect(liveStatus(t, { busy: false }).kind).not.toBe("waiting");
+  });
+
   it("pieza 3: con el nombre nuevo es lo mismo, y trae sus opciones para la tarjeta", () => {
     const preguntas = [{ id: "plazo", question: "¿Cuántas horas antes?", options: [{ label: "24" }, { label: "48" }] }];
     const t = turn({ actions: [{ tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Cuántas horas antes?", preguntas }] });

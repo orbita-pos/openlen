@@ -77,6 +77,12 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
     expect(guardada().respuesta).toHaveLength(200);
   });
 
+  it("ALINEAR · la marca de «cancelada» llega a guardarse", async () => {
+    const res = await guardar(turno([{ tool: "exit_plan_mode", status: "done", summary: "", preguntas: [{ id: "plan-review", question: "?" }], dismissed: true }]));
+    expect(res.status).toBe(200);
+    expect(guardada()).toMatchObject({ dismissed: true });
+  });
+
   it("🔴 pieza 7: la intención de la pregunta (la revisión del plan) llega a guardarse; una que no vale se cae", async () => {
     const revision = { id: "plan-review", question: "Approve this plan and leave plan mode?", intent: { kind: "plan-review", plan: "# Reseñas" } };
     const res = await guardar(

@@ -768,6 +768,36 @@ describe("POST /api/agent — el modo plan", () => {
     expect(filaGuardada()).toEqual({ mensajes: [], leidos: [], planMode: true });
   });
 
+  it("ALINEAR · el dueño enciende el modo y el turno revienta SIN HACER NADA: la fila se guarda con el estado, cortada", async () => {
+    mocks.runAgentLoop.mockImplementation(async () => {
+      throw new Error("se cayó el proveedor");
+    });
+    await turno({ plan: true });
+    expect(mocks.registrarTurnoDelServidor).toHaveBeenCalledTimes(1);
+    const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { status: string; transcript: unknown }])[1];
+    expect(fila.transcript).toEqual({ mensajes: [], leidos: [], planMode: true });
+    // Una fila vacía «aplicada» parecería un turno limpio (H05): va cortada.
+    expect(fila.status).toBe("cortado");
+    expect(mocks.quitarFilaDelTurno).not.toHaveBeenCalled();
+  });
+
+  it("ALINEAR · un turno que la puerta de créditos paró no deja fila aunque el dueño encendiera el modo (no llegó a empezar)", async () => {
+    mocks.getCreditState.mockResolvedValueOnce({ plan: "free", balance: 0, allotment: 20, refillsAt: null });
+    await turno({ plan: true });
+    expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+    expect(mocks.registrarTurnoDelServidor).not.toHaveBeenCalled();
+  });
+
+  it("ALINEAR · BRAZO DE CONTROL: revienta sin hacer nada y sin cambiar el estado → no hay fila", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
+    mocks.runAgentLoop.mockImplementation(async () => {
+      throw new Error("se cayó el proveedor");
+    });
+    await turno();
+    expect(mocks.registrarTurnoDelServidor).not.toHaveBeenCalled();
+    expect(mocks.quitarFilaDelTurno).toHaveBeenCalledTimes(1);
+  });
+
   it("LOTE 7-8 · BRAZO DE CONTROL: un turno caído que no cambió nada sigue guardando transcript null", async () => {
     mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
@@ -2587,7 +2617,7 @@ describe("POST /api/agent — el encargo", () => {
     mocks.getCreditState.mockResolvedValue(saldo(50));
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
       args.emit({ type: "action", tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Qué colores?" } as never);
-      return cierre;
+      return { ...cierre, endedOnQuestion: true };
     });
     const eventos = await turno({ goal: "create" });
     expect(done(eventos).round).toBeUndefined();
@@ -2602,12 +2632,26 @@ describe("POST /api/agent — el encargo", () => {
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
       // La tarjeta del descarte: `done`, con sus preguntas, sin `pregunta` ni `respuesta`.
       args.emit({ type: "action", tool: "exit_plan_mode", status: "done", summary: "", preguntas: [{ id: "plan-review", question: "Approve this plan and leave plan mode?" }] } as never);
-      return cierre;
+      return { ...cierre, endedOnQuestion: true };
     });
     const eventos = await turno({ goal: "create" });
     expect(done(eventos).round).toBeUndefined();
     await new Promise((r) => setTimeout(r, 20));
     expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("ALINEAR · una ronda con una pregunta sin `respuesta` que SIGUIÓ (el dueño escribió) encadena, como DeepSeek", async () => {
+    mocks.getCreditState.mockResolvedValue(saldo(50));
+    let vueltas = 0;
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      vueltas += 1;
+      if (vueltas === 1) args.emit({ type: "action", tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Qué colores?" } as never);
+      // Sin `endedOnQuestion`: el turno no acabó en la pregunta.
+      return cierre;
+    });
+    const eventos = await turno({ goal: "create" });
+    expect((done(eventos).round as { next?: string } | undefined)?.next).toMatch(/^[0-9a-f-]{36}$/);
+    await vi.waitFor(() => expect(mocks.runAgentLoop).toHaveBeenCalledTimes(2));
   });
 
   it("al tope de rondas, atascado con `round-limit` y su mensaje literal", async () => {

@@ -213,6 +213,7 @@
       "label": "Len vous demande",
       "hint": "Répondez ci-dessous, avec vos mots.",
       "answered": "Vous avez répondu : {answer}",
+      "cancelled": "Annulée sans envoyer de réponse",
       "send": "Répondre",
       "other": "Autre réponse",
       "otherPlaceholder": "Écrivez votre réponse",

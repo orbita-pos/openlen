@@ -146,6 +146,9 @@ export type AgentStreamEvent =
       preguntas?: UserQuestion[];
       /** Pieza 3: lo que contestó el dueño dentro del turno, en una línea. */
       respuesta?: string;
+      /** Alinear con DeepSeek: el dueño DESCARTÓ la pregunta (su `ASK_CANCELLED`).
+       *  La tarjeta se pinta «cancelada», asentada: ya no pide nada. */
+      dismissed?: true;
     }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
@@ -407,6 +410,11 @@ export interface AgentLoopResult {
    *  sale de ahí, como la transcripción de Claude Code. El bucle trabaja sobre
    *  una COPIA de `messages`, así que tiene que devolverlo. */
   transcripcion?: Message[];
+  /** El turno ACABÓ esperando al dueño: una pregunta sin contestar (vencida o
+   *  sin quien conteste) o descartada para hablar. Lo lee el conductor del
+   *  encargo: aquí una pregunta cierra el turno, así que esa ronda no encadena.
+   *  Ausente si el turno siguió (lo escrito por el dueño, lote 7-8). */
+  endedOnQuestion?: true;
   /** `thinkingTokens` es un SUBCONJUNTO de `outputTokens`, no un extra: lo
    *  afirma el validador del proveedor, que descarta la respuesta si
    *  `thinkingTokens > outputTokens` (`lib/ai/fireworks-client.ts`). Se
@@ -1196,6 +1204,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    *  y `turnText` se reinicia en cada vuelta: sin esto, una continuación
    *  devolvería sólo la segunda mitad de su propia frase. */
   let textoArrastrado = "";
+  /** El turno acabó esperando al dueño (ver `AgentLoopResult.endedOnQuestion`). */
+  let endedOnQuestion = false;
   let continuaciones = 0;
 
   const buildResult = (
@@ -1216,6 +1226,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     mutoDurable,
     aplicado: [...aplicado],
     rechazos: [...rechazos],
+    ...(endedOnQuestion ? { endedOnQuestion: true as const } : {}),
   });
 
   /**
@@ -2202,6 +2213,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           ...(outcome.pregunta ? { pregunta: outcome.pregunta } : {}),
           ...(outcome.preguntas?.length ? { preguntas: outcome.preguntas } : {}),
           ...(outcome.respuesta ? { respuesta: outcome.respuesta } : {}),
+          ...(outcome.dismissed ? { dismissed: true as const } : {}),
         });
         if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
 
@@ -2399,6 +2411,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     if (ownerTookOver && !pendiente) {
       messages.push(delAsistente(turnText, calls));
       messages.push({ role: "user", content: "", functionResponses });
+      endedOnQuestion = true;
       return buildResult(false);
     }
 
@@ -2414,6 +2427,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // falta una respuesta que sólo una persona puede dar. Claude Code separa
       // esos dos finales por lo mismo — `blocked` (el usuario puede
       // desbloquear) no es `done` (salió bien) ni `failed`.
+      endedOnQuestion = true;
       return buildResult(false);
     }
 
