@@ -4322,3 +4322,36 @@ describe("la retención de resultados grandes (spill-policy de DeepSeek)", () =>
     expect(String((await correr("session_event_read", false)).vista.tool_result)).toHaveLength(5000);
   });
 });
+
+// ─── PIEZA 7 · EL MODO PLAN ─────────────────────────────────────────────────
+// En modo plan no cambiar nada es lo que se pide: el empujón de «anunciaste un
+// cambio y no lo hiciste» no puede mandarle a editar a media exploración.
+describe("el modo plan no recibe la insistencia", () => {
+  const insistencia = (m: Message[]) =>
+    m.some((x) => x.role === "user" && typeof x.content === "string" && x.content.includes("you ended the turn WITHOUT"));
+  const leerYContar = async (planModeActive: (() => boolean) | undefined) => {
+    const vistos: Message[][] = [];
+    const stream = scripted(
+      [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, done],
+      [{ type: "text_delta", text: "Ya miré la página; ahora te propongo el plan." }, done],
+      [{ type: "text_delta", text: "OK" }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "añade reseñas" }], tools: [],
+      openStream: (m) => { vistos.push([...m]); return stream(m); },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+      ...(planModeActive ? { planModeActive } : {}),
+    });
+    return vistos;
+  };
+
+  it("🔴 en modo plan, leer y contar cierra sin empujón", async () => {
+    expect((await leerYContar(() => true)).some(insistencia)).toBe(false);
+  });
+
+  it("BRAZO DE CONTROL: fuera del modo plan, el mismo turno lo recibe", async () => {
+    expect((await leerYContar(() => false)).some(insistencia)).toBe(true);
+    expect((await leerYContar(undefined)).some(insistencia)).toBe(true);
+  });
+});

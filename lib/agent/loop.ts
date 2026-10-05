@@ -32,6 +32,7 @@ import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
 import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { DEFAULT_MAX_PARALLEL_TOOL_CALLS, isConcurrencySafe } from "@/lib/agent/tool-concurrency";
 import { ASK_USER_QUESTION, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { scheduleToolCalls, type Prepared } from "@/lib/agent/tool-scheduler";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
@@ -289,6 +290,10 @@ export interface AgentLoopArgs {
    *  (`compaction/spill.ts`): un resultado de más de `maxInlineTokens` llega
    *  recortado y su texto entero queda donde `save` lo deje. Sin esto, enteros. */
   spill?: { maxInlineTokens: number; save(path: string, text: string): Promise<boolean> };
+  /** Pieza 7: ¿está el turno en modo plan AHORA? (cambia a media vuelta al
+   *  aprobar el plan). En modo plan no cambiar nada es lo que se pide, así que
+   *  el empujón de «anunciaste un cambio y no lo hiciste» no salta. */
+  planModeActive?: () => boolean;
   /** Para las pruebas: la espera entre reintentos. Por defecto, `sleepAbortable`. */
   sleep?(ms: number, signal?: AbortSignal): Promise<void>;
   /** La compactación dentro del turno (`lib/agent/compaction/`). Sin ella, el
@@ -793,6 +798,9 @@ const READ_ONLY_TOOLS = new Set([
   // nada y se cobraba como si sí (medido 7 de 7 el 2026-09-08). Len 2.0 no se
   // muda: cada Edit dice su fichero.
   ASK_USER_QUESTION,
+  // Pieza 7: entrar en modo plan y presentar el plan no cambian la página.
+  ENTER_PLAN_MODE,
+  EXIT_PLAN_MODE,
   // Pieza 5: buscar y leer en las charlas pasadas no cambia nada.
   "session_search",
   "session_event_search",
@@ -1711,7 +1719,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       //
       // ⚰️ Iba DESPUÉS DEL RECLAMO DE TAREAS y no se sumaba a él; el reclamo se
       // fue con TodoWrite (F4 de plans/len-agente-2026).
-      if (puedeActuar && !actuo && !yaSeInsistio && turnText.trim().length > 0) {
+      // Pieza 7: en modo plan, no. Mandarle «aplícalo AHORA» a media
+      // exploración sería empujarle a editar lo que aún no se ha aprobado.
+      if (puedeActuar && !actuo && !yaSeInsistio && !args.planModeActive?.() && turnText.trim().length > 0) {
         yaSeInsistio = true;
         dichoAntesDelAviso = { vuelta: turns, texto: turnText };
         messages.push(delAsistente(turnText));
