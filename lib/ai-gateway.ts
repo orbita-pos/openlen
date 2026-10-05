@@ -30,6 +30,8 @@
 
 // ─── Public types ──────────────────────────────────────────────────────────
 
+import type { ProviderErrorCode } from "@/lib/ai/provider-error-code";
+
 export type Role = "system" | "user" | "assistant";
 
 export interface FunctionCall {
@@ -157,7 +159,9 @@ export type StopReason =
   | { kind: "end_turn" }
   | { kind: "max_tokens" }
   | { kind: "cancelled" }
-  | { kind: "error"; error: string };
+  // `code`: lo pone el cliente de Fireworks; el bucle del agente reintenta los
+  // que sabe (`lib/agent/retry-policy.ts`). Ver `lib/ai/provider-error-code.ts`.
+  | { kind: "error"; error: string; code?: ProviderErrorCode };
 
 export type GatewayErrorKind =
   | "api"

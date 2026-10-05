@@ -20,6 +20,7 @@ import {
 } from "../generation/model-policy";
 import { providerUsage } from "./fireworks-client";
 import { admiteEsfuerzo, marcarSinEsfuerzo, rechazoDeEsfuerzo } from "./esfuerzo-no-admitido";
+import { codeForHttpStatus, type ProviderErrorCode } from "./provider-error-code";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { presupuestoDeEsfuerzo, type EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 
@@ -43,7 +44,9 @@ export type FireworksStopReason =
   | { readonly kind: "end_turn" }
   | { readonly kind: "max_tokens" }
   | { readonly kind: "cancelled" }
-  | { readonly kind: "error"; readonly error: string };
+  // `code`: los fallos que el BUCLE del agente sabe reintentar
+  // (`lib/agent/retry-policy.ts`, como DeepSeek). Sin código = defecto nuestro.
+  | { readonly kind: "error"; readonly error: string; readonly code?: ProviderErrorCode };
 
 export interface FireworksStreamToolCall {
   readonly id: string;
@@ -119,8 +122,9 @@ export interface FireworksStreamRequest {
    *     3 picos de arranque >2s en standard contra 0 en priority. Consistente
    *     con admision, no con velocidad.
    *  3. LO QUE COMPRA, con el numero de Fireworks (0% de 503 contra 0.082%):
-   *     a 1.000 usuarios son ~16 rechazos al mes, y esos YA se reintentan solos
-   *     (`fireworks-client.ts` reintenta 429/502/503/504).
+   *     a 1.000 usuarios son ~16 rechazos al mes. Los de ESTE cliente los
+   *     reintenta el BUCLE del agente (`lib/agent/retry-policy.ts`, como
+   *     DeepSeek); `fireworks-client.ts` reintenta los suyos aparte.
    *  4. NO SE PUEDE VERIFICAR. El `usage` de Fireworks no devuelve que via
    *     sirvio — sondeado. Vercel si lo hace a proposito ("a missing value is
    *     an honest signal that you weren't billed at the fast rate"). Cobrar el
@@ -336,7 +340,12 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
         response = await pedir(admiteEsfuerzo(modelId));
       } catch (error) {
         const aborted = opts.signal?.aborted === true;
-        yield { type: "done", stopReason: aborted ? { kind: "cancelled" } : { kind: "error", error: String(error instanceof Error ? error.message : error) } };
+        yield {
+          type: "done",
+          stopReason: aborted
+            ? { kind: "cancelled" }
+            : { kind: "error", error: String(error instanceof Error ? error.message : error), code: "transport" },
+        };
         return;
       }
 
@@ -363,17 +372,22 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
           try {
             response = await pedir(false);
           } catch (error) {
-            yield { type: "done", stopReason: { kind: "error", error: String(error instanceof Error ? error.message : error) } };
+            yield { type: "done", stopReason: { kind: "error", error: String(error instanceof Error ? error.message : error), code: "transport" } };
             return;
           }
           if (!response.ok || !response.body) {
             let reintento = `http_${response.status}`;
             try { reintento = `${reintento}: ${(await response.text()).slice(0, 300)}`; } catch { /* sin cuerpo */ }
-            yield { type: "done", stopReason: { kind: "error", error: reintento } };
+            const code = codeForHttpStatus(response.status);
+            yield { type: "done", stopReason: { kind: "error", error: reintento, ...(code ? { code } : {}) } };
             return;
           }
         } else {
-          yield { type: "done", stopReason: { kind: "error", error: `http_${response.status}${crudo ? `: ${crudo.slice(0, 300)}` : ""}` } };
+          const code = codeForHttpStatus(response.status);
+          yield {
+            type: "done",
+            stopReason: { kind: "error", error: `http_${response.status}${crudo ? `: ${crudo.slice(0, 300)}` : ""}`, ...(code ? { code } : {}) },
+          };
           return;
         }
       }
@@ -434,7 +448,7 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
       } catch (error) {
         if (opts.signal?.aborted) cancelled = true;
         else {
-          yield { type: "done", stopReason: { kind: "error", error: String(error instanceof Error ? error.message : error) } };
+          yield { type: "done", stopReason: { kind: "error", error: String(error instanceof Error ? error.message : error), code: "transport" } };
           return;
         }
       } finally {
