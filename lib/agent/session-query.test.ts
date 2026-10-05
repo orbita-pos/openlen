@@ -38,7 +38,7 @@ describe("sessionsFromRows", () => {
     const s = sessionsFromRows(filas);
     const vieja = s.find((x) => x.id === "c-vieja")!;
     const actual = s.find((x) => x.id === CURRENT_SESSION)!;
-    expect(vieja.title).toBe("Pon el horario de la tienda");
+    expect(vieja.title).toBe("Pon el horario de la");
     expect(vieja.events.map((e) => `${e.seq}:${e.type}`)).toEqual(["1:user", "2:assistant", "3:user", "4:assistant"]);
     expect(actual.events).toHaveLength(2);
     expect(actual.events.some((e) => e.rowId === "b2")).toBe(false);
@@ -57,8 +57,8 @@ describe("sessionSearch", () => {
   it("busca texto literal sin mayúsculas en todas las charlas y da la mejor coincidencia de cada una", () => {
     const out = sessionSearch(s, { query: "HORARIO" });
     expect(out).toContain("Session search results (2):");
-    expect(out).toContain(`Session ${CURRENT_SESSION} — Cambia el horario: los sábados también`);
-    expect(out).toContain("Session c-vieja — Pon el horario de la tienda");
+    expect(out).toContain(`Session ${CURRENT_SESSION} — Cambia el horario: los sábados`);
+    expect(out).toContain("Session c-vieja — Pon el horario de la");
     expect(out).toMatch(/Best match: seq \d+ \| (user|assistant) \| 2026-/);
     expect(out).toMatch(/Snippet: .*horario/i);
   });
@@ -109,7 +109,7 @@ describe("eventSearch y leer un evento", () => {
   it("lee el evento entero con sus vecinos antes y después", () => {
     const hit = findEvent(s, "c-vieja", 3)!;
     const out = formatEventRead(hit.session, hit.event, { actions: [] }, 1, 1);
-    expect(out).toContain("Session c-vieja — Pon el horario de la tienda");
+    expect(out).toContain("Session c-vieja — Pon el horario de la");
     expect(out).toContain("Target event seq 3:");
     expect(out).toContain('"text": "Y el descuento del 20% para estudiantes"');
     expect(out).toContain("Before:\n- seq 2 | assistant |");
@@ -137,5 +137,32 @@ describe("las rondas del encargo (lote 7-8), como DeepSeek", () => {
 
   it("y también por su texto fijo: se indexa entero, como allí", () => {
     expect(sessionSearch(s, { query: "Treat the current project" })).toContain("Best match: seq 1 | user");
+  });
+});
+
+// LOTE 7-8 (2) · EL TÍTULO DE LA CHARLA, COMO DEEPSEEK (session-title): del primer
+// mensaje HUMANO —una ronda del encargo es `source.kind: 'goal'` y no cuenta—, con
+// su respaldo determinista (bundle base: 5 palabras, 40 bytes); sin ninguno,
+// `untitled` (tool-session-query/src/workspace-access.ts).
+describe("el título de la charla, como DeepSeek (lote 7-8 (2))", () => {
+  it("sale del primer mensaje HUMANO: las rondas del encargo no cuentan", () => {
+    const s = sessionsFromRows([
+      fila({ id: "r1", at: "2026-10-05T12:00:00Z", userText: goalRoundPrompt({ objective: "Montar la tienda", maxGoalRounds: 256 }, 1) }),
+      fila({ id: "h1", at: "2026-10-05T12:10:00Z", userText: "Cambia el color del botón a verde oscuro" }),
+    ]);
+    expect(s[0]!.title).toBe("Cambia el color del botón");
+  });
+
+  it("una charla de sólo rondas es `untitled`, como allí", () => {
+    const s = sessionsFromRows([fila({ id: "r1", at: "2026-10-05T12:00:00Z", userText: goalRoundPrompt({ objective: "Montar la tienda", maxGoalRounds: 256 }, 1) })]);
+    expect(sessionSearch(s, { query: "tienda" })).toContain(`Session ${CURRENT_SESSION} — untitled`);
+  });
+
+  it("5 palabras y 40 bytes como mucho, sin partir un carácter", () => {
+    const s = sessionsFromRows([fila({ id: "h", at: "2026-10-05T12:00:00Z", userText: "Añádeme   una sección\ncon reseñas y estrellas, por favor" })]);
+    expect(s[0]!.title).toBe("Añádeme una sección con reseñas");
+    const largo = sessionsFromRows([fila({ id: "h", at: "2026-10-05T12:00:00Z", userText: "ñ".repeat(25) })]);
+    expect(new TextEncoder().encode(largo[0]!.title).length).toBeLessThanOrEqual(40);
+    expect(largo[0]!.title).toBe("ñ".repeat(20));
   });
 });
