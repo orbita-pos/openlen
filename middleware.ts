@@ -191,6 +191,7 @@ export const config = {
   // which start with a bare `p`.
   // `rest/v1/` y `auth/v1/` (con su barra) son el backend de las páginas, la
   // API de Supabase (lib/backend): sin ellos aquí, una llamada de supabase-js
-  // volvería redirigida a /es/rest/v1/… .
-  matcher: ["/((?!api|_next|_vercel|served|c|p/|rest/v1/|auth/v1/|.*\\..*).*)"],
+  // volvería redirigida a /es/rest/v1/… . `storage/v1/` (carril D): el Storage
+  // de las páginas (lib/backend/storage), igual.
+  matcher: ["/((?!api|_next|_vercel|served|c|p/|rest/v1/|auth/v1/|storage/v1/|.*\\..*).*)"],
 };

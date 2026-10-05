@@ -31,11 +31,10 @@ export interface BackendProject {
   readonly db: ProjectDatabase;
   readonly auth: { readonly config: AuthConfig; readonly sendMail: SendAuthMail };
   /* ── carril D: storage ── Sin esto, el almacén del entorno (R2) y los
-   * límites por defecto; `ensure` monta el esquema `storage` la primera vez. */
+   * límites por defecto (las pruebas traen los suyos). */
   readonly storage?: {
     readonly store: BlobStore | null;
     readonly limits?: StorageLimits;
-    readonly ensure?: () => Promise<void>;
   };
 }
 

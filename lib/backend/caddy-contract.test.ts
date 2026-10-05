@@ -46,4 +46,31 @@ describe("el middleware de idiomas no toca el backend", () => {
     expect(matches("/auth/v1/verify")).toBe(false);
     expect(matches("/auth/v1/token")).toBe(false);
   });
+
+  /* ── carril D: storage ── */
+  it("ni /storage/v1 (las rutas sin punto: buckets, listar, firmar)", () => {
+    expect(matches("/storage/v1/bucket")).toBe(false);
+    expect(matches("/storage/v1/object/list/fotos")).toBe(false);
+    expect(matches("/storage/v1/object/sign/fotos/u1/avatar")).toBe(false);
+  });
+});
+
+/* ── carril D: storage ── (lib/backend/storage, plan-2-5/d-storage.md) */
+describe("Caddy pasa /storage/v1 a Next y no le pone caché", () => {
+  it("hay un handle /storage/v1/* en el bloque de las páginas, hacia Next", () => {
+    const bloque = paginas.match(/handle \/storage\/v1\/\*\s*\{[\s\S]{0,200}?\n\t\}/);
+    expect(bloque, "falta el handle /storage/v1/*").not.toBeNull();
+    expect(bloque![0]).toContain("reverse_proxy 127.0.0.1:3000");
+  });
+
+  it("está en la línea `not path` de @doc (la de /api/f/*)", () => {
+    const linea = paginas.split("\n").find((l) => l.includes("not path") && l.includes("/api/f/*"));
+    expect(linea).toContain("/storage/v1/*");
+  });
+
+  it("@assets no le pone su caché de un mes a un .png de Storage (puede ser privado)", () => {
+    const i = paginas.indexOf("@assets");
+    const assets = paginas.slice(i, paginas.indexOf("\n\theader @assets", i));
+    expect(assets).toContain("not path /storage/v1/*");
+  });
 });

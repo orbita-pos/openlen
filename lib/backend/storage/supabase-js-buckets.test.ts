@@ -3,12 +3,15 @@
 // Buckets contra la LIBRERÍA REAL: `supabase.storage` de @supabase/supabase-js
 // 2.117.2 con su `fetch` apuntado a nuestro manejador, y la base en PGlite.
 import { createClient } from "@supabase/supabase-js";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { handleBackendRequest, type BackendProject } from "../router";
 import { TEST_URL, type TestProject } from "../testing/project";
 import { MemoryBlobStore } from "./blob-store";
 import { newStorageTestProject } from "./testing";
+
+// Montar el esquema real (GoTrue + las 73 de storage) en PGlite tarda; en paralelo, más que los 5 s de serie.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 60_000 });
 
 // Lo que Len escribiría: un bucket que cualquiera puede ver (la política de la
 // documentación de Supabase para listar buckets).

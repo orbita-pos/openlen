@@ -2,7 +2,7 @@
 //
 // Las consultas de storage como el rol de la petición: lo que decide RLS, y lo
 // que se hace como `supabase_storage_admin` (su `asSuperUser`).
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { TEST_REF, type TestProject } from "../testing/project";
 import { MemoryBlobStore } from "./blob-store";
@@ -11,6 +11,9 @@ import { StorageError } from "./errors";
 import type { StorageContext } from "./handler";
 import { storageLimits } from "./limits";
 import { newStorageTestProject } from "./testing";
+
+// Montar el esquema real (GoTrue + las 73 de storage) en PGlite tarda; en paralelo, más que los 5 s de serie.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 60_000 });
 
 const MIGRACION = `
 insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true);

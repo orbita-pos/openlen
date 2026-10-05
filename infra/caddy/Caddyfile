@@ -168,12 +168,16 @@ openlen.com, www.openlen.com {
 	# page's homepage went out with no cache header and CF returned
 	# cf-cache-status: DYNAMIC — an origin hit on every visit. Match HTML as
 	# "not an asset and not a proxied path" so root + clean URLs are covered.
-	@assets path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
+	# carril D: un .png de Storage puede ser PRIVADO; Next pone su Cache-Control.
+	@assets {
+		path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
+		not path /storage/v1/*
+	}
 	header @assets Cache-Control "public, immutable, max-age=2592000"
 
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
-		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/*
+		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/* /storage/v1/*
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
@@ -236,6 +240,18 @@ openlen.com, www.openlen.com {
 		}
 	}
 	handle /auth/v1/* {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {vars.cf_client_ip}
+		}
+	}
+
+	# carril D: el Storage de las páginas (/storage/v1, lib/backend/storage). Lo
+	# atiende Next y SÓLO en <ref>.openlen.app: en el host de una página Next
+	# contesta 404, porque un SVG o un HTML que sube un visitante no puede tener
+	# el origen de la página. Excluido de @assets y de @doc: Next pone el
+	# Cache-Control de cada objeto (los privados, `private`). Cloudflare corta
+	# los cuerpos en 100 MB; el tope por fichero es 50 MB.
+	handle /storage/v1/* {
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
 		}

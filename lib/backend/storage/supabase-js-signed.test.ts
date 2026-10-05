@@ -2,13 +2,16 @@
 //
 // URLs firmadas de bajada y de subida contra la LIBRERÍA REAL.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { signJwt } from "../keys";
 import { handleBackendRequest, type BackendProject } from "../router";
 import { TEST_URL, type TestProject } from "../testing/project";
 import { MemoryBlobStore } from "./blob-store";
 import { newStorageTestProject } from "./testing";
+
+// Montar el esquema real (GoTrue + las 73 de storage) en PGlite tarda; en paralelo, más que los 5 s de serie.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 60_000 });
 
 const U1 = "11111111-1111-4111-8111-111111111111";
 const U2 = "22222222-2222-4222-8222-222222222222";

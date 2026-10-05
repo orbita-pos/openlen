@@ -3,12 +3,15 @@
 // El esquema `storage` de Supabase montado en la base de un proyecto (PGlite,
 // Postgres 18 de verdad): sus tablas, sus migraciones, y lo que puede y no
 // puede hacer el rol de desarrollador del proyecto con él.
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { asRole } from "../testing/pglite";
 import type { TestProject } from "../testing/project";
 import { initStorageSchema } from "./schema";
 import { newStorageTestProject } from "./testing";
+
+// Montar el esquema real (GoTrue + las 73 de storage) en PGlite tarda; en paralelo, más que los 5 s de serie.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 60_000 });
 
 const DEV = "ol_abcdefghijklmnopqrst";
 // Lo que Len escribiría: el patrón de la documentación de Supabase («Storage Access Control»).

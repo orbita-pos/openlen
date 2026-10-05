@@ -10,6 +10,9 @@ import { TEST_REF, TEST_SITE, TEST_URL, type TestProject } from "../testing/proj
 import { MemoryBlobStore } from "./blob-store";
 import { newStorageTestProject } from "./testing";
 
+// Montar el esquema real (GoTrue + las 73 de storage) en PGlite tarda; en paralelo, más que los 5 s de serie.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 60_000 });
+
 let t: TestProject;
 let project: BackendProject;
 beforeAll(async () => {

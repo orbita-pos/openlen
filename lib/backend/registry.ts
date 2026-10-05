@@ -20,6 +20,8 @@ import { sendAuthEmail } from "./auth/mail";
 import { hashSecretKey, newDatabasePassword, newJwtSecret, newProjectRef, newPublishableKey, newSecretKey } from "./keys";
 import { projectDatabase } from "./pg";
 import { devRoleOf, provisionDatabase } from "./provision";
+/* ── carril D ── */
+import { ensureStorageProvisioned } from "./storage/provision";
 import type { BackendProject } from "./router";
 
 export interface BackendRecord {
@@ -81,9 +83,15 @@ export async function ensureBackend(projectId: string): Promise<BackendRecord> {
 }
 
 export async function ensureProvisioned(rec: BackendRecord): Promise<void> {
-  if (rec.provisionedAt) return;
-  await provisionDatabase({ ref: rec.ref, dbPassword: decryptToken(rec.dbPasswordEncrypted) });
-  await db.update(schema.projectBackends).set({ provisionedAt: new Date() }).where(eq(schema.projectBackends.projectId, rec.projectId));
+  if (!rec.provisionedAt) {
+    await provisionDatabase({ ref: rec.ref, dbPassword: decryptToken(rec.dbPasswordEncrypted) });
+    await db.update(schema.projectBackends).set({ provisionedAt: new Date() }).where(eq(schema.projectBackends.projectId, rec.projectId));
+  }
+  /* ── carril D: storage ── El esquema `storage` también en las bases creadas
+   * antes de que hubiera Storage (ésas no vuelven a provisionDatabase). Una vez
+   * por proceso: lib/backend/storage/provision.ts. */
+  await ensureStorageProvisioned(rec.ref);
+  /* ── fin carril D ── */
 }
 
 export function projectUrl(ref: string): string {

@@ -3,12 +3,15 @@
 // Lo público (`getPublicUrl`, que storage-js arma sin pedir nada) y lo que se
 // sirve de un objeto, contra la LIBRERÍA REAL.
 import { createClient } from "@supabase/supabase-js";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { handleBackendRequest, type BackendProject } from "../router";
 import { TEST_URL, type TestProject } from "../testing/project";
 import { MemoryBlobStore } from "./blob-store";
 import { newStorageTestProject } from "./testing";
+
+// Montar el esquema real (GoTrue + las 73 de storage) en PGlite tarda; en paralelo, más que los 5 s de serie.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 60_000 });
 
 const MIGRACION = `
 insert into storage.buckets (id, name, public) values ('web', 'web', true);

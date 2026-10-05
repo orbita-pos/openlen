@@ -134,12 +134,6 @@ export async function handleStorage(req: Request, sub: string, project: BackendP
   if (!isProjectHost(req, project.ref)) return json({ message: "no Route matched with those values" }, 404);
   const store = storeFor(project);
   if (!store) return json({ message: "Storage is not available on this server" }, 503);
-  try {
-    await project.storage?.ensure?.();
-  } catch (err) {
-    console.error("[storage] no se pudo montar el esquema storage", project.ref, err);
-    return json({ message: "The project storage is not ready yet. Try again in a moment." }, 503);
-  }
 
   const method = req.method.toUpperCase();
   const path = sub || "/";
