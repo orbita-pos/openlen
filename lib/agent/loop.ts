@@ -661,6 +661,8 @@ export function sobreQue(argsDeLaLlamada: Record<string, unknown>): string {
     texto("pattern") ??
     rel(texto("path")) ??
     consultas?.slice(0, 60) ??
+    // Pieza 5: lo que se busca en las charlas pasadas (`session_search`).
+    texto("query")?.slice(0, 60) ??
     texto("url")?.slice(0, 60) ??
     (comando ? resumenDelComando(comando) : "")
   );
@@ -784,6 +786,10 @@ const READ_ONLY_TOOLS = new Set([
   // nada y se cobraba como si sí (medido 7 de 7 el 2026-09-08). Len 2.0 no se
   // muda: cada Edit dice su fichero.
   ASK_USER_QUESTION,
+  // Pieza 5: buscar y leer en las charlas pasadas no cambia nada.
+  "session_search",
+  "session_event_search",
+  "session_event_read",
   // ⚰️ Aquí iba `ToolSearch` (H2), retirada con las diferidas en Len 2.1, y
   // `TodoWrite`, retirada en F4 (plans/len-agente-2026).
 ]);

@@ -1512,6 +1512,52 @@ describe("ask_user_question (antes preguntar)", () => {
   });
 });
 
+// Pieza 5 de Len 2.5: buscar en las charlas del proyecto, como session-query de
+// DeepSeek. La base es un doble (`chatRows`, `chatTranscript`).
+describe("session_search, session_event_search y session_event_read", () => {
+  const filas = [
+    { id: "a1", conversation: "c-vieja", userText: "Pon el horario de la tienda", assistantReasoning: "Listo: lunes a viernes de 9 a 18.", actions: null, createdAt: new Date("2026-09-01T10:00:00Z"), status: "applied" },
+  ];
+  const conChat = (deps: AgentDeps, pedidos: string[]) => ({
+    ...deps,
+    chatRows: async (projectId: string) => { pedidos.push(projectId); return filas; },
+    chatTranscript: async () => ({ mensajes: [{ role: "assistant", content: "", functionCalls: [{ name: "Edit", args: { file_path: "/index.html" } }] }], leidos: [] }),
+  });
+
+  it("busca en las charlas DEL PROYECTO del turno, y nada más", async () => {
+    const { deps } = makeDeps();
+    const pedidos: string[] = [];
+    const session = makeSession();
+    const out = await runAgentTool(session, conChat(deps, pedidos), "session_search", { query: "horario" });
+    assert.equal(out.response.ok, true);
+    assert.match(String(out.response.tool_result ?? out.response.resultado), /Session c-vieja — Pon el horario de la tienda/);
+    assert.deepEqual(pedidos, [session.projectId]);
+  });
+
+  it("lee un evento entero, y el del asistente trae la transcripción del turno", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), conChat(deps, []), "session_event_read", { session_id: "c-vieja", seq: 2 });
+    assert.equal(out.response.ok, true);
+    const texto = String(out.response.tool_result ?? out.response.resultado);
+    assert.match(texto, /Target event seq 2:/);
+    assert.match(texto, /"functionCalls"/);
+  });
+
+  it("un argumento que no vale o un evento que no existe se le dicen al modelo", async () => {
+    const { deps } = makeDeps();
+    const vacia = await runAgentTool(makeSession(), conChat(deps, []), "session_search", { query: "  " });
+    assert.equal(vacia.response.ok, false);
+    const nada = await runAgentTool(makeSession(), conChat(deps, []), "session_event_read", { session_id: "c-vieja", seq: 99 });
+    assert.equal(nada.response.ok, false);
+  });
+
+  it("sin acceso al chat (otro entorno), lo dice", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "session_event_search", { query: "x" });
+    assert.equal(out.response.ok, false);
+  });
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // BUSCAR Y LEER EN INTERNET (F2 de plans/len-agente-2026).
 //

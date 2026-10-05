@@ -39,6 +39,7 @@ import type { AgentMode } from "@/lib/agent/dynamis";
 import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { ASK_USER_QUESTION } from "@/lib/agent/ask-user-question";
+import { SESSION_QUERY_DECLARATIONS, SESSION_QUERY_PROMPT } from "@/lib/agent/session-query-tools";
 
 export const AGENT_MODULES = [
   // SÓLO CHAT desde el 2026-08-29. `collections` murió con el hub de Módulos:
@@ -383,6 +384,9 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
         },
       },
     },
+    // PIEZA 5 DE LEN 2.5: buscar en las charlas pasadas del proyecto, con las
+    // tres de session-query de DeepSeek (`lib/agent/session-query-tools.ts`).
+    ...SESSION_QUERY_DECLARATIONS,
     // LEN SABE DE TUS RESULTADOS (plans/len-resultados/diseno.md): como los
     // conectores de Grok, dots y Claude, una herramienta por fuente. Sólo leen.
     // Se describen por PARA QUÉ sirven, no por qué palabras las disparan: así
@@ -497,6 +501,7 @@ HOW TO WORK:
 - A single response can carry several tool calls. When the ones you are about to make don't depend on each other, send them together in that response — it saves time, so do it whenever you can. When a call needs another one's result to know what to put in it, they DON'T go together: make them one after the other.
 - The <new-diagnostics> and a tool's "aviso" field are checked facts about what YOUR last edit left on the page: fix them in this turn or tell the user; never finish while keeping quiet about them.
 - Long work doesn't have to be rushed: when the conversation grows long, its older part is summarized automatically and you keep working from that summary, so finish what was asked instead of wrapping up early or leaving it half done.
+- ${SESSION_QUERY_PROMPT}
 
 THE SITE IS FILES:
 Each page is a file: /index.html is the home page and /<slug>/index.html each of the others. Read to read, Edit to change an exact piece, Write to create a new page or rewrite a whole one, Grep to search the whole site and Glob to list files. The project's state comes in your context; the pages don't, so whatever you say about a page —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: otherwise, read it first or don't describe it.
