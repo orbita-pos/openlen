@@ -37,4 +37,15 @@ describe("la fila del turno que escribe el servidor", () => {
     r.observar({ type: "text", text: "Ya está." });
     expect(r.texto).toBe("Miro la página.\n\nYa está.");
   });
+
+  it("una compactación a media vuelta retira lo que el intento llegó a escribir; sin descarte, no toca nada", () => {
+    const r = crearRegistroDelTurno();
+    r.observar({ type: "text", text: "Miro." });
+    r.observar({ type: "compaction_start" });
+    r.observar({ type: "compaction", pruned: 0, summarized: true, discardChars: 0 });
+    r.observar({ type: "text", text: " Ya v" });
+    r.observar({ type: "compaction", pruned: 1, summarized: true, discardChars: 5 });
+    r.observar({ type: "text", text: " Ya está." });
+    expect(r.texto).toBe("Miro. Ya está.");
+  });
 });

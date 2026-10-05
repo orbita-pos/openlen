@@ -2163,3 +2163,44 @@ describe("POST /api/agent — los ficheros que tocó el turno viajan al cliente"
     expect(eventos.some((e) => e.event === "ficheros")).toBe(false);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LA COMPACTACIÓN (pieza 2 de Len 2.5, plans/len-agente-2026/plan-2-5): la ruta
+// le pasa al bucle la política de DeepSeek sobre la ventana EFECTIVA, y el techo
+// que rechaza un turno pasa a ser la ventana REAL del modelo.
+describe("POST /api/agent — la compactación dentro del turno", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<html><body><h1>El Farol</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ balance: 100 });
+  });
+
+  it("el bucle recibe la política de DeepSeek (240k efectivos), el historial como primer resumible, y el techo es la ventana real", async () => {
+    let compaction: AgentLoopArgs["compaction"];
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      compaction = args.compaction;
+      return { finalText: "listo", turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    await readEvents(
+      await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "hazme el sitio" }) })),
+    );
+    // floor(min(240.000 × 0,8, 240.000 − 65.536 − 65.536)) y 16 % de (240.000 − 65.536).
+    expect(compaction?.policy).toEqual({ thresholdTokens: 108_928, retainTokens: 27_914 });
+    // [sistema, manual (/AGENTS.md), …historial, petición]: se resume desde el historial.
+    expect(compaction?.firstIndex).toBe(2);
+    // Sin terminal arrancada no hay dónde dejar el resultado entero: lo dice, y
+    // el aviso de la poda no nombra ningún fichero.
+    expect(await compaction?.saveRecovery?.("/tmp/pruned/1-3-0.txt", "texto")).toBe(false);
+    const { maxPromptTokens } = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ maxPromptTokens: number }])[0];
+    expect(maxPromptTokens).toBe(1_048_576 - 65_536);
+  });
+});
