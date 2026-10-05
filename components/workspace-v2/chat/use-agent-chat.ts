@@ -27,6 +27,7 @@ import {
 
 import { noCreditsText, notifyCreditBalanceChanged } from "@/lib/credits-client";
 import type { AgentAction } from "../agent-action-card";
+import { upsertActionInto } from "./action-cards";
 import type { AgentConfirm } from "../agent-confirm-card";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { ejecutarUndo, ficherosDelEvento, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
@@ -204,26 +205,6 @@ const STOP_FALLBACK_MS = 20_000;
 // means here. Once true, `send()` skips the agent branch outright and goes
 // straight to classic ai-design for every later turn in this session.
 let agentKilledThisSession = false;
-
-// Agent-mode: upsert one card into an ordered list of tool cards — replace a
-// trailing `running` card for the same tool instead of stacking a duplicate,
-// otherwise append. Pure so it's shared between the live React-state upsert
-// (`upsertAction`) and `send()`'s local accumulator, which needs the same
-// final list (independent of React's render/flush timing) to hand to
-// `persistTurn` once the turn settles.
-function upsertActionInto(
-  actions: AgentAction[] | undefined,
-  action: AgentAction,
-): AgentAction[] {
-  const next = actions ? [...actions] : [];
-  const last = next[next.length - 1];
-  if (last && last.tool === action.tool && last.status === "running") {
-    next[next.length - 1] = action;
-  } else {
-    next.push(action);
-  }
-  return next;
-}
 
 export interface AgentChatOptions {
   projectId: string;
@@ -587,8 +568,8 @@ export function useAgentChat({
   }, []);
 
   // Agent-mode: upsert a tool card. Each tool call emits `running` then
-  // `done`/`error` — replace the trailing `running` card for that tool
-  // instead of stacking a duplicate; otherwise append a new card.
+  // `done`/`error`; with tools in parallel (pieza 4) several can be running at
+  // once — see `upsertActionInto` for which card an outcome replaces.
   const upsertAction = useCallback((id: string, action: AgentAction) => {
     setTurns((prev) =>
       prev.map((t) =>

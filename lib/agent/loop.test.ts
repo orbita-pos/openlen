@@ -3776,8 +3776,53 @@ describe("H15 · el razonamiento vuelve al modelo dentro del turno", () => {
   });
 });
 
-describe("F1 · las lecturas del principio de la vuelta, en paralelo detrás de la palanca de la terminal", () => {
-  const vuelta = [
+describe("pieza 4 · las llamadas de una vuelta, planificadas como DeepSeek", () => {
+  const lento = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  async function correr(
+    vuelta: StreamEvent[],
+    o: {
+      maxParallelToolCalls?: number;
+      duracion?: (name: string, a: Record<string, unknown>) => number;
+      maxToolCalls?: number;
+      alEmpezar?: (name: string, a: Record<string, unknown>) => void;
+      signal?: AbortSignal;
+    } = {},
+  ) {
+    const log: string[] = [];
+    const events: AgentStreamEvent[] = [];
+    let enVuelo = 0;
+    let maxEnVuelo = 0;
+    let respuestas: string[] = [];
+    const guion = scripted(vuelta, [{ type: "text_delta", text: "fin" }, usage(1), done]);
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      ...(o.maxParallelToolCalls ? { maxParallelToolCalls: o.maxParallelToolCalls } : {}),
+      ...(o.maxToolCalls ? { maxToolCalls: o.maxToolCalls } : {}),
+      ...(o.signal ? { signal: o.signal } : {}),
+      openStream: (messages) => {
+        const ultima = messages[messages.length - 1];
+        if (ultima?.functionResponses) respuestas = ultima.functionResponses.map((f) => String(f.response.tool_result ?? f.response.error));
+        return guion(messages);
+      },
+      runTool: async (name, a) => {
+        enVuelo++;
+        maxEnVuelo = Math.max(maxEnVuelo, enVuelo);
+        const id = `${name} ${String(a.file_path ?? a.query ?? "")}`;
+        log.push(`empieza ${id}`);
+        o.alEmpezar?.(name, a);
+        await lento(o.duracion?.(name, a) ?? 20);
+        enVuelo--;
+        log.push(`acaba ${id}`);
+        return { response: { ok: true, tool_result: id } };
+      },
+      emit: (e) => events.push(e),
+    });
+    return { r, log, maxEnVuelo, respuestas, events };
+  }
+
+  const lecturasYEdit = [
     { type: "function_call", name: "Read", args: { file_path: "/a" } },
     { type: "function_call", name: "Read", args: { file_path: "/b" } },
     { type: "function_call", name: "Edit", args: { file_path: "/c" } },
@@ -3786,44 +3831,8 @@ describe("F1 · las lecturas del principio de la vuelta, en paralelo detrás de 
     done,
   ] as StreamEvent[];
 
-  async function correr(palanca: string | undefined) {
-    const antes = process.env.OPENLEN_TERMINAL;
-    if (palanca === undefined) delete process.env.OPENLEN_TERMINAL;
-    else process.env.OPENLEN_TERMINAL = palanca;
-    const log: string[] = [];
-    let enVuelo = 0;
-    let maxEnVuelo = 0;
-    let respuestas: string[] = [];
-    const guion = scripted(vuelta, [{ type: "text_delta", text: "fin" }, usage(1), done]);
-    try {
-      await runAgentLoop({
-        messages: [{ role: "user", content: "x" }],
-        tools: [],
-        openStream: (messages) => {
-          const ultima = messages[messages.length - 1];
-          if (ultima?.functionResponses) respuestas = ultima.functionResponses.map((f) => String(f.response.tool_result));
-          return guion(messages);
-        },
-        runTool: async (name, a) => {
-          enVuelo++;
-          maxEnVuelo = Math.max(maxEnVuelo, enVuelo);
-          log.push(`empieza ${name} ${String(a.file_path)}`);
-          await new Promise((r) => setTimeout(r, 20));
-          enVuelo--;
-          log.push(`acaba ${name} ${String(a.file_path)}`);
-          return { response: { ok: true, tool_result: `${name} ${String(a.file_path)}` } };
-        },
-        emit: () => undefined,
-      });
-    } finally {
-      if (antes === undefined) delete process.env.OPENLEN_TERMINAL;
-      else process.env.OPENLEN_TERMINAL = antes;
-    }
-    return { log, maxEnVuelo, respuestas };
-  }
-
-  it("con la palanca: las dos lecturas del principio a la vez; el Edit y la lectura de detrás, en serie después; las respuestas, en el orden del modelo", async () => {
-    const { log, maxEnVuelo, respuestas } = await correr("1");
+  it("las dos lecturas del principio a la vez; el Edit, barrera; la lectura de detrás, después; respuestas en el orden del modelo", async () => {
+    const { log, maxEnVuelo, respuestas } = await correr(lecturasYEdit);
     expect(maxEnVuelo).toBe(2);
     expect(log.slice(0, 2)).toEqual(["empieza Read /a", "empieza Read /b"]);
     expect(log.indexOf("empieza Edit /c")).toBeGreaterThan(log.indexOf("acaba Read /b"));
@@ -3831,11 +3840,109 @@ describe("F1 · las lecturas del principio de la vuelta, en paralelo detrás de 
     expect(respuestas).toEqual(["Read /a", "Read /b", "Edit /c", "Read /d"]);
   });
 
-  it("sin la palanca, todo en serie como hoy (brazo de control)", async () => {
-    // Encendida por defecto desde N45: apagarla es el literal "0".
-    const { maxEnVuelo, respuestas } = await correr("0");
+  it("también las de DETRÁS de una barrera van juntas (F1 sólo juntaba las del principio)", async () => {
+    const { log } = await correr([
+      { type: "function_call", name: "Edit", args: { file_path: "/c" } },
+      { type: "function_call", name: "Read", args: { file_path: "/a" } },
+      { type: "function_call", name: "Grep", args: { file_path: "/b" } },
+      usage(10),
+      done,
+    ] as StreamEvent[]);
+    expect(log.indexOf("empieza Grep /b")).toBeLessThan(log.indexOf("acaba Read /a"));
+  });
+
+  it("con tope 1, todo en serie (brazo de control)", async () => {
+    const { maxEnVuelo, respuestas } = await correr(lecturasYEdit, { maxParallelToolCalls: 1 });
     expect(maxEnVuelo).toBe(1);
     expect(respuestas).toEqual(["Read /a", "Read /b", "Edit /c", "Read /d"]);
+  });
+
+  it("la tarjeta de cada una sale AL EMPEZAR, y su 'done' en el orden del modelo aunque acabe antes", async () => {
+    const { events } = await correr(
+      [
+        { type: "function_call", name: "Read", args: { file_path: "/lenta" } },
+        { type: "function_call", name: "Read", args: { file_path: "/rapida" } },
+        usage(10),
+        done,
+      ] as StreamEvent[],
+      { duracion: (_n, a) => (a.file_path === "/lenta" ? 40 : 1) },
+    );
+    const tarjetas = events
+      .filter((e) => e.type === "action")
+      .map((e) => `${(e as { status: string }).status} ${(e as { summary: string }).summary}`);
+    expect(tarjetas).toEqual(["running lenta", "running rapida", "done lenta", "done rapida"]);
+  });
+
+  it("🔴 usar_pagina con un clic no se solapa con nada", async () => {
+    const { log } = await correr([
+      { type: "function_call", name: "Read", args: { file_path: "/a" } },
+      { type: "function_call", name: "usar_pagina", args: { pasos: [{ pulsa: "Enviar" }] } },
+      { type: "function_call", name: "Read", args: { file_path: "/b" } },
+      usage(10),
+      done,
+    ] as StreamEvent[]);
+    expect(log.indexOf("empieza usar_pagina ")).toBeGreaterThan(log.indexOf("acaba Read /a"));
+    expect(log.indexOf("empieza Read /b")).toBeGreaterThan(log.indexOf("acaba usar_pagina "));
+  });
+
+  it("🔴 el ■ a mitad de grupo: las empezadas se quedan, las demás 'abortadas' sin tarjeta, ninguna empieza después, cierra cancelado", async () => {
+    const ac = new AbortController();
+    const { r, log, respuestas, events } = await correr(
+      [
+        { type: "function_call", name: "Read", args: { file_path: "/a" } },
+        { type: "function_call", name: "Read", args: { file_path: "/b" } },
+        { type: "function_call", name: "Read", args: { file_path: "/c" } },
+        { type: "function_call", name: "Edit", args: { file_path: "/x" } },
+        usage(10),
+        done,
+      ] as StreamEvent[],
+      {
+        maxParallelToolCalls: 2,
+        signal: ac.signal,
+        alEmpezar: (_n, a) => {
+          if (a.file_path === "/b") ac.abort();
+        },
+      },
+    );
+    expect(log.filter((l) => l.startsWith("empieza"))).toEqual(["empieza Read /a", "empieza Read /b"]);
+    expect(r.errorCode).toBe("cancelled");
+    expect(events.filter((e) => e.type === "action" && (e as { status: string }).status === "running")).toHaveLength(2);
+    // La transcripción del turno queda equilibrada: las cuatro llamadas con su respuesta.
+    const ultimo = r.transcripcion?.[r.transcripcion.length - 1];
+    expect(ultimo?.functionResponses?.map((f) => String(f.response.tool_result ?? f.response.error))).toEqual([
+      "Read /a",
+      "Read /b",
+      "tool call aborted before dispatch",
+      "tool call aborted before dispatch",
+    ]);
+    expect(respuestas).toEqual([]);
+  });
+
+  it("🔴 el tope de acciones a mitad de grupo: no empieza la que topa, la empezada se confirma y el cierre la ve", async () => {
+    const { log, r } = await correr(
+      [
+        { type: "function_call", name: "web_search", args: { query: "uno" } },
+        { type: "function_call", name: "web_search", args: { query: "dos" } },
+        usage(10),
+        done,
+      ] as StreamEvent[],
+      { maxToolCalls: 1 },
+    );
+    expect(log.filter((l) => l.startsWith("empieza"))).toEqual(["empieza web_search uno"]);
+    expect(r.topeAlcanzado).toBe("tool_limit");
+  });
+
+  it("una errata y una inexistente en mitad del grupo responden en su sitio", async () => {
+    const { respuestas } = await correr([
+      { type: "function_call", name: "Read", args: { file_path: "/a" } },
+      { type: "function_call", name: "NoExiste", args: {} },
+      { type: "function_call", name: "Read", args: { file_path: "/b" } },
+      usage(10),
+      done,
+    ] as StreamEvent[]);
+    expect(respuestas[0]).toBe("Read /a");
+    expect(respuestas[2]).toBe("Read /b");
+    expect(respuestas).toHaveLength(3);
   });
 });
 

@@ -722,6 +722,30 @@ describe("usar_pagina", () => {
     assert.match(String(out.response.error), /Don't take it as meaning it works or that it doesn't/);
   });
 
+  // Pieza 4 de Len 2.5: con herramientas en paralelo, dos visitas sin clics
+  // pueden pedirse a la vez; cada una arranca su Chromium (§11: tope 2).
+  it("pieza 4: como mucho DOS visitas a la vez por turno, aunque el bucle pida tres", async () => {
+    const { deps } = makeDeps();
+    let enVuelo = 0;
+    let max = 0;
+    const conVisitaLenta = {
+      ...deps,
+      usarPagina: async () => {
+        enVuelo++;
+        max = Math.max(max, enVuelo);
+        await new Promise((r) => setTimeout(r, 20));
+        enVuelo--;
+        return { informe: "1. lee «Inicio» → «Inicio»." };
+      },
+    };
+    const session = makeSession();
+    const outs = await Promise.all(
+      [1, 2, 3].map(() => runAgentTool(session, conVisitaLenta, "usar_pagina", { pasos: [{ lee: "Inicio" }] })),
+    );
+    assert.equal(max, 2);
+    assert.deepEqual(outs.map((o) => o.response.ok), [true, true, true]);
+  });
+
   // Entrar como un usuario de la página, como Lovable (lib/backend/auth/
   // visit-session.ts): un solo usuario → ése; varios sin decir cuál → no
   // visita y pregunta en el chat; nunca crea una cuenta.

@@ -30,7 +30,8 @@ import {
 import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/lib/agent/diagnosticos";
 import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
 import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
-import { terminalEncendida } from "@/lib/agent/terminal/declaracion";
+import { DEFAULT_MAX_PARALLEL_TOOL_CALLS, isConcurrencySafe } from "@/lib/agent/tool-concurrency";
+import { scheduleToolCalls, type Prepared } from "@/lib/agent/tool-scheduler";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import type { ProviderErrorCode } from "@/lib/ai/provider-error-code";
@@ -273,6 +274,9 @@ export interface AgentLoopArgs {
   /** El ■ del turno: corta la espera entre reintentos (el stream ya lo corta
    *  su propio `fetch`). Lo pasa la ruta (`upstreamAbort.signal`). */
   signal?: AbortSignal;
+  /** Pieza 4 (como DeepSeek): cuántas llamadas seguras de una vuelta corren a
+   *  la vez. Por defecto `DEFAULT_MAX_PARALLEL_TOOL_CALLS` (10); 1 = en serie. */
+  maxParallelToolCalls?: number;
   /** Para las pruebas: la espera entre reintentos. Por defecto, `sleepAbortable`. */
   sleep?(ms: number, signal?: AbortSignal): Promise<void>;
   /** La compactación dentro del turno (`lib/agent/compaction/`). Sin ella, el
@@ -778,23 +782,6 @@ const READ_ONLY_TOOLS = new Set([
   // ⚰️ Aquí iba `ToolSearch` (H2), retirada con las diferidas en Len 2.1, y
   // `TodoWrite`, retirada en F4 (plans/len-agente-2026).
 ]);
-/** Las lecturas que pueden correr a la vez (F1): no cambian ni la página ni
- *  nada del proyecto. `preguntar` no: cierra el turno. */
-// F2: `web_search` y `web_fetch` tampoco tocan el proyecto. Como `ver_visitas`,
-// NO van en READ_ONLY_TOOLS: buscar y contestar con lo encontrado es el trabajo.
-const EN_PARALELO = new Set([
-  "Read",
-  "Grep",
-  "Glob",
-  "mirar_pagina",
-  "usar_pagina",
-  "ver_visitas",
-  "ver_formularios",
-  "ver_mensajes",
-  "web_search",
-  "web_fetch",
-]);
-
 /** Cuántas vueltas gana el turno cuando el usuario corrige el rumbo.
  *
  *  POR QUÉ SE LE DA MÁS: corregir a media faena es la señal más barata y más
@@ -863,6 +850,11 @@ const CONFLICTO_SIN_SALIDA =
  *  choque: no se ejecuta, porque sólo podía chocar otra vez. */
 const GUARDAR_YA_CHOCO =
   "not run: saving already clashed twice in a row in this turn, and this one would have clashed too.";
+
+/** Lo que recibe una llamada que no llegó a empezar porque el dueño pulsó ■:
+ *  el texto de DeepSeek (`appendSkippedToolCall`, tool-calls.ts @ 5badb15,
+ *  MIT). Así la transcripción queda con cada llamada y su respuesta. */
+export const TOOL_ABORTED_BEFORE_DISPATCH = "tool call aborted before dispatch";
 
 interface PendingCall {
   name: string;
@@ -990,7 +982,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // request (lo que el usuario está viendo en el canvas) y si el ciclo de
   // verificación ya corrió (corre a lo sumo UNA vez por request — un segundo
   // ciclo podría oscilar entre dos arreglos y quemar presupuesto sin fin).
-  let lastMutation: { html: string; page: string | null; taggedHtml?: string } | null = null;
+  // Con `as` y no con anotación: desde la pieza 4 se asigna dentro del `commit`
+  // del planificador, un cierre que el análisis de flujo de TypeScript no sigue,
+  // y con `: T | null = null` lo daría por `null` para siempre.
+  let lastMutation = null as { html: string; page: string | null; taggedHtml?: string } | null;
   // TODAS las páginas que este turno mutó, no sólo la última.
   //
   // 🔴 Medido el 2026-09-20 en producción (`proj=2d6cad43`): Len creó una
@@ -2037,243 +2032,273 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       messages.push({ role: "user", content: "", functionResponses });
     };
 
-    // F1 (plans/len-agente-2026), detrás de la palanca de la terminal: las
-    // LECTURAS del principio de la vuelta se lanzan a la vez, como en el arnés
-    // de DeepSeek, y sus resultados se procesan abajo en el orden del modelo.
-    // Sólo las de ANTES de la primera llamada que no es lectura: un Read detrás
-    // de un Edit tiene que ver lo editado. Y no la que el freno de «ya falló
-    // dos veces» no dejaría correr.
-    const adelantadas = new Map<(typeof calls)[number], Promise<ToolOutcome>>();
-    if (terminalEncendida()) {
-      for (const original of calls) {
-        const r = declaradas.length ? repararNombre(original.name, declaradas) : { arreglado: original.name };
-        if (!("arreglado" in r) || !EN_PARALELO.has(r.arreglado)) break;
-        const llamada = r.arreglado === original.name ? original : { ...original, name: r.arreglado };
-        if ((failedSignatures.get(`${llamada.name}\u0000${stableStringify(llamada.args)}`) ?? 0) >= FAIL_REPEAT_LIMIT) break;
-        const p = args.runTool(llamada.name, llamada.args);
-        // Si el bucle sale antes de esperarla, su fallo no tumba el proceso.
-        p.catch(() => undefined);
-        adelantadas.set(original, p);
-      }
-    }
+    // 🔴 PIEZA 4 · LAS LLAMADAS DE LA VUELTA, PLANIFICADAS COMO DEEPSEEK
+    // (`lib/agent/tool-scheduler.ts`): las seguras seguidas (`tool-concurrency.ts`)
+    // a la vez, con tope; cada exclusiva es una barrera; las guardas, la tarjeta
+    // al empezar y todo lo de después van en el orden del modelo. Con el ■ no
+    // empieza ninguna más. Sustituye a F1, que sólo juntaba las lecturas del
+    // principio, sin tope, y seguía ejecutando la tanda entera tras el ■.
+    type Rechazo = { kind: "rechazo"; name: string; motivo: string; args: Record<string, unknown>; response: Record<string, unknown> };
+    type Ejecutada = { kind: "ejecutada"; call: PendingCall; readOnly: boolean; summary: string; sig: string; outcome: ToolOutcome };
+    const reparar = (original: PendingCall) =>
+      declaradas.length ? repararNombre(original.name, declaradas) : { arreglado: original.name };
+    const nombreDe = (original: PendingCall): string => {
+      const r = reparar(original);
+      return "arreglado" in r ? r.arreglado : original.name;
+    };
+    // Las guardas CONTESTAN sin ejecutar; sus efectos (la cuenta, el diario) se
+    // apuntan al confirmar, para que salgan en el orden del modelo.
+    const rechazar = (
+      name: string,
+      original: PendingCall,
+      motivo: string,
+      response: Record<string, unknown>,
+    ): Prepared<Rechazo | Ejecutada> => ({ kind: "result", value: { kind: "rechazo", name, motivo, args: original.args, response } });
 
-    for (const original of calls) {
-      // LA ERRATA SE ARREGLA ANTES DE COBRAR. El presupuesto se descuenta más
-      // abajo, así que reparar aquí es lo que hace que un fallo de tecleo no
-      // cueste una plaza.
-      const reparo = declaradas.length ? repararNombre(original.name, declaradas) : { arreglado: original.name };
-      if (!("arreglado" in reparo)) {
-        // No hay herramienta que ejecutar, así que NO se emite tarjeta: pintar
-        // una en rojo con un nombre inexistente le cuenta al usuario una avería
-        // que no es suya. Se le devuelve al modelo una corrección legible y el
-        // turno sigue, sin tocar presupuesto ni firmas fallidas.
-        const error_de_uso =
-          `There is no tool called "${original.name}".` +
-          (reparo.sugerido ? ` The closest one is "${reparo.sugerido}".` : "") +
-          " Call one of the tools you have declared, with its exact name.";
-        rechazos.push({ tool: original.name, motivo: error_de_uso });
-        rechazadasEnLaVuelta += 1;
-        args.onRechazo?.(original.name, original.args, error_de_uso);
-        functionResponses.push({ name: original.name, response: { ok: false, error_de_uso } });
-        continue;
-      }
-      const call = reparo.arreglado === original.name
-        ? original
-        : { ...original, name: reparo.arreglado };
-
-      // H12-a · una escritura detrás del segundo choque no se ejecuta: sólo
-      // podía chocar otra vez. Las lecturas siguen. Ver `CONFLICTO_SIN_SALIDA`.
-      if (guardarSinSalida && !READ_ONLY_TOOLS.has(call.name)) {
-        rechazos.push({ tool: call.name, motivo: GUARDAR_YA_CHOCO });
-        rechazadasEnLaVuelta += 1;
-        args.onRechazo?.(call.name, call.args, GUARDAR_YA_CHOCO);
-        functionResponses.push({ name: call.name, response: { ok: false, error: GUARDAR_YA_CHOCO } });
-        continue;
-      }
-
-      // No-progress guard: this exact call already failed FAIL_REPEAT_LIMIT
-      // times — don't run it again. Feed the model a nudge (as a functionResponse
-      // so the FC protocol stays balanced) to change approach. A refused call
-      // doesn't run, so it doesn't touch the caps; termination is still
-      // guaranteed because a mutating turn advances maxTurns → finishOnCap.
-      const sig = `${call.name}\u0000${stableStringify(call.args)}`;
-      if ((failedSignatures.get(sig) ?? 0) >= FAIL_REPEAT_LIMIT) {
-        const error =
-          "You already tried this same action with the same parameters and it failed several times. DON'T repeat it: change approach (another tool or different parameters), or tell the user what you could do and what you couldn't.";
-        rechazos.push({ tool: call.name, motivo: error });
-        rechazadasEnLaVuelta += 1;
-        args.onRechazo?.(call.name, call.args, error);
-        functionResponses.push({ name: call.name, response: { ok: false, error } });
-        continue;
-      }
-
-      const readOnly = READ_ONLY_TOOLS.has(call.name);
-      if (!readOnly) {
-        if (budgetedToolCalls >= maxToolCalls) {
-          empujarLoEjecutado();
-          return await finishOnCap("tool_limit");
+    const ronda = await scheduleToolCalls<PendingCall, Rechazo | Ejecutada>({
+      calls,
+      maxParallel: args.maxParallelToolCalls ?? DEFAULT_MAX_PARALLEL_TOOL_CALLS,
+      signal: args.signal,
+      isParallel: (original) => {
+        const r = reparar(original);
+        return "arreglado" in r && isConcurrencySafe(r.arreglado, original.args);
+      },
+      prepare: (original) => {
+        // LA ERRATA SE ARREGLA ANTES DE COBRAR. El presupuesto se descuenta más
+        // abajo, así que reparar aquí es lo que hace que un fallo de tecleo no
+        // cueste una plaza.
+        const reparo = reparar(original);
+        if (!("arreglado" in reparo)) {
+          // No hay herramienta que ejecutar, así que NO se emite tarjeta: pintar
+          // una en rojo con un nombre inexistente le cuenta al usuario una avería
+          // que no es suya. Se le devuelve al modelo una corrección legible y el
+          // turno sigue, sin tocar presupuesto ni firmas fallidas.
+          const error_de_uso =
+            `There is no tool called "${original.name}".` +
+            (reparo.sugerido ? ` The closest one is "${reparo.sugerido}".` : "") +
+            " Call one of the tools you have declared, with its exact name.";
+          return rechazar(original.name, original, error_de_uso, { ok: false, error_de_uso });
         }
-        budgetedToolCalls += 1;
-      }
-      toolCalls += 1;
+        const call = reparo.arreglado === original.name
+          ? original
+          : { ...original, name: reparo.arreglado };
 
-      const summary = sobreQue(call.args);
-      args.emit({ type: "action", tool: call.name, status: "running", summary });
+        // H12-a · una escritura detrás del segundo choque no se ejecuta: sólo
+        // podía chocar otra vez. Las lecturas siguen. Ver `CONFLICTO_SIN_SALIDA`.
+        if (guardarSinSalida && !READ_ONLY_TOOLS.has(call.name)) {
+          return rechazar(call.name, original, GUARDAR_YA_CHOCO, { ok: false, error: GUARDAR_YA_CHOCO });
+        }
 
-      const outcome = await (adelantadas.get(original) ?? args.runTool(call.name, call.args));
-      if (!readOnly) ejecutadasDeTrabajo += 1;
-      if (outcome.guardarSinSalida) guardarSinSalida = true;
-      const ok = outcome.response.ok !== false;
-      // 🔴 H01 · LO QUE LA HERRAMIENTA DICE DE SU PROPIO EFECTO. Las puertas de
-      // edición lo declaran (`declararCambio`: `cambio` / `sin_cambio` /
-      // `no_se`); el resto no lo dice y se juzga por si escribió.
-      const cambioDeclarado = outcome.response.cambio;
-      const nula = cambioDeclarado === "sin_cambio";
-      if (ok && !nula && !READ_ONLY_TOOLS.has(call.name)) actuo = true;
-      // El ámbar y su aviso: `avisoParaElDueno` sólo habla sin `ok:false`.
-      // 🔴 N41: la ROJA ya no lleva lo que leyó el modelo (`motivoDelFallo`
-      // pintaba «falló · the user has never said… you made that name up»): lleva
-      // el `ownerReason` que la herramienta declaró, o nada.
-      const descartada = avisoParaElDueno(outcome.response);
-      if (!ok) failedSignatures.set(sig, (failedSignatures.get(sig) ?? 0) + 1);
-      args.emit({
-        type: "action",
-        tool: call.name,
-        status: ok ? (descartada ? "warning" : "done") : "error",
-        summary: outcome.action?.summary ?? summary,
-        // Se reenvían sólo si la herramienta los puso, para que el evento de
-        // las que no los conocen salga byte-idéntico al de antes.
-        ...(outcome.action?.cambio ? { cambio: outcome.action.cambio } : {}),
-        ...(outcome.action?.edits !== undefined ? { edits: outcome.action.edits } : {}),
-        ...(outcome.action?.ops?.length ? { ops: outcome.action.ops } : {}),
-        ...(outcome.action?.valores ? { valores: outcome.action.valores } : {}),
-        // EL PORQUÉ, a la tarjeta: el aviso del ámbar, o el motivo del dueño de
-        // una roja. El texto entero que leyó el modelo se queda en el diario.
-        ...(descartada ? { motivo: descartada } : {}),
-        ...(!ok && outcome.ownerReason ? { ownerReason: outcome.ownerReason } : {}),
-        // La pregunta con la que `preguntar` cierra el turno, para la tarjeta.
-        ...(outcome.pregunta ? { pregunta: outcome.pregunta } : {}),
-      });
-      if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
+        // No-progress guard: this exact call already failed FAIL_REPEAT_LIMIT
+        // times — don't run it again. Feed the model a nudge (as a functionResponse
+        // so the FC protocol stays balanced) to change approach. A refused call
+        // doesn't run, so it doesn't touch the caps; termination is still
+        // guaranteed because a mutating turn advances maxTurns → finishOnCap.
+        const sig = `${call.name}\u0000${stableStringify(call.args)}`;
+        if ((failedSignatures.get(sig) ?? 0) >= FAIL_REPEAT_LIMIT) {
+          const error =
+            "You already tried this same action with the same parameters and it failed several times. DON'T repeat it: change approach (another tool or different parameters), or tell the user what you could do and what you couldn't.";
+          return rechazar(call.name, original, error, { ok: false, error });
+        }
 
-      if (outcome.updatedHtml) {
+        const readOnly = READ_ONLY_TOOLS.has(call.name);
+        if (!readOnly) {
+          // El tope: ni ésta ni las de detrás empiezan; las ya empezadas se
+          // confirman y el turno cierra contándolas (abajo, `ronda.stopped`).
+          if (budgetedToolCalls >= maxToolCalls) return { kind: "stop" };
+          budgetedToolCalls += 1;
+        }
+        toolCalls += 1;
+
+        // La tarjeta sale AL EMPEZAR (como DeepSeek y Claude Code): con varias a
+        // la vez, el dueño ve todas las que están en marcha.
+        const summary = sobreQue(call.args);
+        args.emit({ type: "action", tool: call.name, status: "running", summary });
+        return {
+          kind: "dispatch",
+          run: async () => ({ kind: "ejecutada", call, readOnly, summary, sig, outcome: await args.runTool(call.name, call.args) }),
+        };
+      },
+      commit: (_original, _indice, paso) => {
+        if (paso.kind === "rechazo") {
+          rechazos.push({ tool: paso.name, motivo: paso.motivo });
+          rechazadasEnLaVuelta += 1;
+          args.onRechazo?.(paso.name, paso.args, paso.motivo);
+          functionResponses.push({ name: paso.name, response: paso.response });
+          return;
+        }
+        const { call, readOnly, summary, sig, outcome } = paso;
+        if (!readOnly) ejecutadasDeTrabajo += 1;
+        if (outcome.guardarSinSalida) guardarSinSalida = true;
+        const ok = outcome.response.ok !== false;
+        // 🔴 H01 · LO QUE LA HERRAMIENTA DICE DE SU PROPIO EFECTO. Las puertas de
+        // edición lo declaran (`declararCambio`: `cambio` / `sin_cambio` /
+        // `no_se`); el resto no lo dice y se juzga por si escribió.
+        const cambioDeclarado = outcome.response.cambio;
+        const nula = cambioDeclarado === "sin_cambio";
+        if (ok && !nula && !READ_ONLY_TOOLS.has(call.name)) actuo = true;
+        // El ámbar y su aviso: `avisoParaElDueno` sólo habla sin `ok:false`.
+        // 🔴 N41: la ROJA ya no lleva lo que leyó el modelo (`motivoDelFallo`
+        // pintaba «falló · the user has never said… you made that name up»): lleva
+        // el `ownerReason` que la herramienta declaró, o nada.
+        const descartada = avisoParaElDueno(outcome.response);
+        if (!ok) failedSignatures.set(sig, (failedSignatures.get(sig) ?? 0) + 1);
         args.emit({
-          type: "html",
-          html: outcome.updatedHtml,
-          page: outcome.page ?? null,
-          // Sólo si la herramienta lo puso, para que el evento de las que no
-          // archivan nada salga byte-idéntico al de antes.
-          ...(outcome.versionPrevia ? { versionPrevia: outcome.versionPrevia } : {}),
+          type: "action",
+          tool: call.name,
+          status: ok ? (descartada ? "warning" : "done") : "error",
+          summary: outcome.action?.summary ?? summary,
+          // Se reenvían sólo si la herramienta los puso, para que el evento de
+          // las que no los conocen salga byte-idéntico al de antes.
+          ...(outcome.action?.cambio ? { cambio: outcome.action.cambio } : {}),
+          ...(outcome.action?.edits !== undefined ? { edits: outcome.action.edits } : {}),
+          ...(outcome.action?.ops?.length ? { ops: outcome.action.ops } : {}),
+          ...(outcome.action?.valores ? { valores: outcome.action.valores } : {}),
+          // EL PORQUÉ, a la tarjeta: el aviso del ámbar, o el motivo del dueño de
+          // una roja. El texto entero que leyó el modelo se queda en el diario.
+          ...(descartada ? { motivo: descartada } : {}),
+          ...(!ok && outcome.ownerReason ? { ownerReason: outcome.ownerReason } : {}),
+          // La pregunta con la que `preguntar` cierra el turno, para la tarjeta.
+          ...(outcome.pregunta ? { pregunta: outcome.pregunta } : {}),
         });
-        // 🔴 EL GEMELO VIAJA CON LA MUTACIÓN. Leerlo de la sesión al verificar
-        // sería leer la página equivocada: `trabajar_en_pagina` mueve la sesión
-        // a otra página a mitad de turno y `lastMutation` sigue siendo ésta.
-        //
-        // Y UNA EDICIÓN NULA NO ES UNA MUTACIÓN (H01): la página es byte a byte
-        // la de antes, así que no hay nada nuevo que medir ni que mirar. La
-        // puerta devuelve el documento igual (`updatedHtml` va siempre que
-        // guardó), y sin esta guarda un turno cuya única edición fue nula
-        // pagaba unos ojos sobre una página que nadie tocó.
-        if (!nula) {
-          // EL GEMELO CON POSICIONES, hecho aquí y en un solo sitio: lo miden la
-          // medición de la tanda y los ojos del cierre, y cada nodo trae su
-          // línea del fichero (Len 2.0, T9).
-          const tal = sinOpIds(outcome.updatedHtml);
-          lastMutation = {
+        if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
+
+        if (outcome.updatedHtml) {
+          args.emit({
+            type: "html",
             html: outcome.updatedHtml,
             page: outcome.page ?? null,
-            taggedHtml: etiquetarConPosiciones(tal),
-          };
-          porMedir.set(lastMutation.page, { html: tal, gemelo: lastMutation.taggedHtml! });
-          // El mapa se llena aquí, junto a `lastMutation` y por la misma razón:
-          // es el único sitio donde se sabe QUÉ página acaba de cambiar. Se
-          // sobrescribe la entrada, así que de cada página queda su ÚLTIMA
-          // versión — que es la que hay que mirar.
-          ultimaPorPagina.set(outcome.page ?? null, lastMutation);
+            // Sólo si la herramienta lo puso, para que el evento de las que no
+            // archivan nada salga byte-idéntico al de antes.
+            ...(outcome.versionPrevia ? { versionPrevia: outcome.versionPrevia } : {}),
+          });
+          // 🔴 EL GEMELO VIAJA CON LA MUTACIÓN. Leerlo de la sesión al verificar
+          // sería leer la página equivocada: `trabajar_en_pagina` mueve la sesión
+          // a otra página a mitad de turno y `lastMutation` sigue siendo ésta.
+          //
+          // Y UNA EDICIÓN NULA NO ES UNA MUTACIÓN (H01): la página es byte a byte
+          // la de antes, así que no hay nada nuevo que medir ni que mirar. La
+          // puerta devuelve el documento igual (`updatedHtml` va siempre que
+          // guardó), y sin esta guarda un turno cuya única edición fue nula
+          // pagaba unos ojos sobre una página que nadie tocó.
+          if (!nula) {
+            // EL GEMELO CON POSICIONES, hecho aquí y en un solo sitio: lo miden la
+            // medición de la tanda y los ojos del cierre, y cada nodo trae su
+            // línea del fichero (Len 2.0, T9).
+            const tal = sinOpIds(outcome.updatedHtml);
+            lastMutation = {
+              html: outcome.updatedHtml,
+              page: outcome.page ?? null,
+              taggedHtml: etiquetarConPosiciones(tal),
+            };
+            porMedir.set(lastMutation.page, { html: tal, gemelo: lastMutation.taggedHtml! });
+            // El mapa se llena aquí, junto a `lastMutation` y por la misma razón:
+            // es el único sitio donde se sabe QUÉ página acaba de cambiar. Se
+            // sobrescribe la entrada, así que de cada página queda su ÚLTIMA
+            // versión — que es la que hay que mirar.
+            ultimaPorPagina.set(outcome.page ?? null, lastMutation);
+          }
         }
-      }
-      // LA LÍNEA BASE DE CADA PÁGINA: cómo estaba antes de la PRIMERA escritura
-      // del turno sobre ella. Las siguientes no la mueven.
-      if (outcome.htmlPrevio !== undefined && !previoPorPagina.has(outcome.page ?? null)) {
-        previoPorPagina.set(outcome.page ?? null, outcome.htmlPrevio);
-      }
-      // F1 (plans/len-agente-2026): un comando de la terminal puede escribir
-      // VARIAS páginas. Cada una, igual que la primera: al lienzo, a medir, y
-      // con su línea base.
-      for (const otra of outcome.masPaginas ?? []) {
-        args.emit({ type: "html", html: otra.html, page: otra.page, ...(otra.versionPrevia ? { versionPrevia: otra.versionPrevia } : {}) });
-        if (!nula) {
-          const tal = sinOpIds(otra.html);
-          lastMutation = { html: otra.html, page: otra.page, taggedHtml: etiquetarConPosiciones(tal) };
-          porMedir.set(otra.page, { html: tal, gemelo: lastMutation.taggedHtml! });
-          ultimaPorPagina.set(otra.page, lastMutation);
+        // LA LÍNEA BASE DE CADA PÁGINA: cómo estaba antes de la PRIMERA escritura
+        // del turno sobre ella. Las siguientes no la mueven.
+        if (outcome.htmlPrevio !== undefined && !previoPorPagina.has(outcome.page ?? null)) {
+          previoPorPagina.set(outcome.page ?? null, outcome.htmlPrevio);
         }
-        if (otra.htmlPrevio !== undefined && !previoPorPagina.has(otra.page)) previoPorPagina.set(otra.page, otra.htmlPrevio);
-      }
-      // Lo que la escritura dejó mal, para el `<new-diagnostics>` de la tanda.
-      if (outcome.diagnosticos?.length) diagnosticosDeLaTanda.push(...outcome.diagnosticos);
-      // Lo durable incluye los cambios de AJUSTES, que no emiten html: módulos,
-      // hoy, los módulos (`activar_modulo`). `runAgentTool` los cuenta.
-      if (!mutoDurable && (outcome.mutoDurable || outcome.updatedHtml)) {
-        mutoDurable = true;
-        args.onMutacion?.();
-      }
+        // F1 (plans/len-agente-2026): un comando de la terminal puede escribir
+        // VARIAS páginas. Cada una, igual que la primera: al lienzo, a medir, y
+        // con su línea base.
+        for (const otra of outcome.masPaginas ?? []) {
+          args.emit({ type: "html", html: otra.html, page: otra.page, ...(otra.versionPrevia ? { versionPrevia: otra.versionPrevia } : {}) });
+          if (!nula) {
+            const tal = sinOpIds(otra.html);
+            lastMutation = { html: otra.html, page: otra.page, taggedHtml: etiquetarConPosiciones(tal) };
+            porMedir.set(otra.page, { html: tal, gemelo: lastMutation.taggedHtml! });
+            ultimaPorPagina.set(otra.page, lastMutation);
+          }
+          if (otra.htmlPrevio !== undefined && !previoPorPagina.has(otra.page)) previoPorPagina.set(otra.page, otra.htmlPrevio);
+        }
+        // Lo que la escritura dejó mal, para el `<new-diagnostics>` de la tanda.
+        if (outcome.diagnosticos?.length) diagnosticosDeLaTanda.push(...outcome.diagnosticos);
+        // Lo durable incluye los cambios de AJUSTES, que no emiten html: módulos,
+        // hoy, los módulos (`activar_modulo`). `runAgentTool` los cuenta.
+        if (!mutoDurable && (outcome.mutoDurable || outcome.updatedHtml)) {
+          mutoDurable = true;
+          args.onMutacion?.();
+        }
 
-      // A confirm outcome (publicar) NEVER carries out its action. Surface the
-      // confirm card to the user and hand the model a fixed "waiting" state so
-      // it closes the turn asking for the tap — never a payload it could read
-      // as "already published".
-      if (outcome.confirm) {
-        args.emit({ type: "confirm", ...outcome.confirm });
-        // El estado FIJO de espera, distinto por acción. Nunca un payload que
-        // el modelo pueda leer como «ya está hecho».
-        functionResponses.push({
-          name: call.name,
-          response:
-            outcome.confirm.action === "publicar"
-              ? { ok: true, estado: "esperando_confirmacion_del_usuario", subdominio: outcome.confirm.subdominio }
-              : {
-                  ok: true,
-                  estado: "borrador_en_una_tarjeta_nada_enviado",
-                  nota: "The draft is in a card with its button. NOTHING has been sent: tell the user to review it and send it themselves. Never say it was already sent.",
-                },
-        });
-        continue;
-      }
+        // A confirm outcome (publicar) NEVER carries out its action. Surface the
+        // confirm card to the user and hand the model a fixed "waiting" state so
+        // it closes the turn asking for the tap — never a payload it could read
+        // as "already published".
+        if (outcome.confirm) {
+          args.emit({ type: "confirm", ...outcome.confirm });
+          // El estado FIJO de espera, distinto por acción. Nunca un payload que
+          // el modelo pueda leer como «ya está hecho».
+          functionResponses.push({
+            name: call.name,
+            response:
+              outcome.confirm.action === "publicar"
+                ? { ok: true, estado: "esperando_confirmacion_del_usuario", subdominio: outcome.confirm.subdominio }
+                : {
+                    ok: true,
+                    estado: "borrador_en_una_tarjeta_nada_enviado",
+                    nota: "The draft is in a card with its button. NOTHING has been sent: tell the user to review it and send it themselves. Never say it was already sent.",
+                  },
+          });
+          return;
+        }
 
-      if (outcome.pregunta) pregunta = outcome.pregunta;
-      const respuesta = outcome.response;
-      // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
-      // viene de `declararCambio` (hash antes ≠ hash después); lo durable cubre
-      // las que no tocan el documento — módulos, páginas.
-      //
-      // 🔴 H01 (2026-09-22): LO QUE LA HERRAMIENTA DECLARA MANDA. La condición
-      // era `cambio === "cambio" || mutoDurable || updatedHtml`, y las puertas
-      // de edición devuelven `updatedHtml` SIEMPRE que guardan — también cuando
-      // acaban de declarar `sin_cambio`. Así una edición nula pasaba por hecha:
-      // la tarea sin hacer no se reclamaba, y al topar el cierre recibía «SÍ se
-      // aplicó» sobre algo que no pasó (G1 y G3 de la auditoría). Es la forma
-      // de Claude Code: la acción informa de su propio efecto, y una edición
-      // que no cambia nada no cuenta como hecha.
-      //
-      // `no_se` SÍ cuenta, y es una decisión: sólo sale cuando no había
-      // documento anterior que comparar, o sea cuando la escritura CREÓ lo que
-      // hay. Descontarla haría reclamar una página que sí existe.
-      const esEvidencia =
-        cambioDeclarado === undefined
-          ? Boolean(outcome.mutoDurable || outcome.updatedHtml)
-          : cambioDeclarado !== "sin_cambio";
-      if (esEvidencia) {
-        // El MISMO sitio que cuenta la evidencia guarda su nombre: si se
-        // contaran en dos lados, uno se quedaría atrás — que es la clase de
-        // fallo que este repositorio ya tiene documentada tres veces.
-        aplicado.push(outcome.action?.summary ?? (summary || call.name));
-        // I6 — y el estado en que la deja. Aquí mismo, por el mismo motivo.
-        const rotas = (outcome.response as { referencias_rotas?: unknown }).referencias_rotas;
-        rotoPorLaUltima = Array.isArray(rotas) ? rotas.map(String) : [];
-      }
+        if (outcome.pregunta) pregunta = outcome.pregunta;
+        const respuesta = outcome.response;
+        // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
+        // viene de `declararCambio` (hash antes ≠ hash después); lo durable cubre
+        // las que no tocan el documento — módulos, páginas.
+        //
+        // 🔴 H01 (2026-09-22): LO QUE LA HERRAMIENTA DECLARA MANDA. La condición
+        // era `cambio === "cambio" || mutoDurable || updatedHtml`, y las puertas
+        // de edición devuelven `updatedHtml` SIEMPRE que guardan — también cuando
+        // acaban de declarar `sin_cambio`. Así una edición nula pasaba por hecha:
+        // la tarea sin hacer no se reclamaba, y al topar el cierre recibía «SÍ se
+        // aplicó» sobre algo que no pasó (G1 y G3 de la auditoría). Es la forma
+        // de Claude Code: la acción informa de su propio efecto, y una edición
+        // que no cambia nada no cuenta como hecha.
+        //
+        // `no_se` SÍ cuenta, y es una decisión: sólo sale cuando no había
+        // documento anterior que comparar, o sea cuando la escritura CREÓ lo que
+        // hay. Descontarla haría reclamar una página que sí existe.
+        const esEvidencia =
+          cambioDeclarado === undefined
+            ? Boolean(outcome.mutoDurable || outcome.updatedHtml)
+            : cambioDeclarado !== "sin_cambio";
+        if (esEvidencia) {
+          // El MISMO sitio que cuenta la evidencia guarda su nombre: si se
+          // contaran en dos lados, uno se quedaría atrás — que es la clase de
+          // fallo que este repositorio ya tiene documentada tres veces.
+          aplicado.push(outcome.action?.summary ?? (summary || call.name));
+          // I6 — y el estado en que la deja. Aquí mismo, por el mismo motivo.
+          const rotas = (outcome.response as { referencias_rotas?: unknown }).referencias_rotas;
+          rotoPorLaUltima = Array.isArray(rotas) ? rotas.map(String) : [];
+        }
 
-      functionResponses.push({ name: call.name, response: respuesta });
+        functionResponses.push({ name: call.name, response: respuesta });
+      },
+      skip: (original) => {
+        functionResponses.push({ name: nombreDe(original), response: { ok: false, error: TOOL_ABORTED_BEFORE_DISPATCH } });
+      },
+    });
+    if (ronda.stopped) {
+      empujarLoEjecutado();
+      return await finishOnCap("tool_limit");
+    }
+    if (ronda.aborted) {
+      // EL ■ A MITAD DE LA TANDA: lo empezado se quedó (tarjetas, html,
+      // respuestas); lo demás tiene su respuesta de abortada. Se apunta todo en
+      // la conversación —la transcripción equilibrada es el historial del turno
+      // siguiente— y se cierra como cualquier ■, sin medir: el dueño pidió parar.
+      messages.push(delAsistente(turnText, calls));
+      messages.push({ role: "user", content: "", functionResponses });
+      args.emit({ type: "error", message: "El agente fue cancelado.", code: "cancelled" });
+      return buildResult(true, null, "cancelled");
     }
 
     // La cuenta de la vuelta, ahora que se sabe qué se ejecutó de verdad.

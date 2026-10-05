@@ -397,6 +397,10 @@ export default defineConfig({
       // La compactación dentro del turno (pieza 2 de Len 2.5): todo el módulo.
       "lib/agent/compaction/**/*.test.ts",
       "lib/agent/retry-policy.test.ts",
+      // Pieza 4 de Len 2.5: herramientas en paralelo, como DeepSeek. LISTA BLANCA.
+      "lib/agent/tool-concurrency.test.ts",
+      "lib/agent/tool-scheduler.test.ts",
+      "lib/agent/concurrency-limit.test.ts",
       // Deshacer lo de Len sobre lo que hay AHORA, sin llevarse lo que el dueño
       // editó a mano (H06, auditoría 2026-09-22). Núcleo puro — pero `include`
       // es LISTA BLANCA y sin esta línea la prueba existiría y no correría.

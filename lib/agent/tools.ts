@@ -77,6 +77,7 @@ import type { TerminalDeLen } from "@/lib/agent/terminal/terminal";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
+import { createConcurrencyLimit } from "@/lib/agent/concurrency-limit";
 import {
   toolPrepararRespuesta,
   toolVerFormularios,
@@ -699,6 +700,9 @@ export interface AgentSession {
   /** LEN 2.0 · las rutas escritas este turno, la más reciente primero: el
    *  «orden por fecha» de Grep y Glob (decisión B6). */
   escritos?: string[];
+  /** Pieza 4 de Len 2.5: el tope de visitas de `usar_pagina` a la vez de ESTE
+   *  turno (`MAX_CONCURRENT_VISITS`). Se crea con la primera visita. */
+  visitLimit?: <T>(fn: () => Promise<T>) => Promise<T>;
   /** Cómo estaba cada fichero antes de su PRIMERA escritura de este turno. Lo
    *  que la página ya decía sigue siendo de la página aunque un Edit anterior
    *  del mismo turno lo quitara: los avisos de procedencia lo cuentan como
@@ -1162,6 +1166,12 @@ const PHOTO_PIVOT_NOTE =
 const MAX_MIRADAS_DESCRIBIR = 2;
 const MAX_MIRADAS_MEDIR = 4;
 
+/** Pieza 4: visitas de `usar_pagina` a la vez en un turno. Cada una arranca su
+ *  Chromium; con herramientas en paralelo, dos llamadas seguras pueden pedir
+ *  visita a la vez (§11 de la investigación: tope 2 por la carga del navegador
+ *  del servidor). */
+export const MAX_CONCURRENT_VISITS = 2;
+
 async function toolMirarPagina(
   session: AgentSession,
   deps: AgentDeps,
@@ -1302,14 +1312,12 @@ async function toolUsarPagina(
     end = r.end;
   }
 
-  const visto = await deps
-    .usarPagina({
-      html,
-      pasos: v.pasos,
-      ruta: pedida.ruta,
-      vista: await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId),
-      signedInAs,
-    })
+  const usarPagina = deps.usarPagina;
+  const vista = await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId);
+  // Pieza 4: con herramientas en paralelo, como mucho `MAX_CONCURRENT_VISITS`
+  // Chromium a la vez en el turno; la que sobra espera su plaza.
+  const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
+  const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta: pedida.ruta, vista, signedInAs }))
     .catch(() => null)
     .finally(() => end?.().catch(() => undefined));
   if (!visto) {
