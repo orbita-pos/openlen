@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   checkParity,
   extractCommits,
+  extractCommitsDeDiccionario,
   extractRutas,
   checkRutas,
   checkCifrasSinCommit,
@@ -10,8 +11,6 @@ import {
   checkDenylist,
   checkAbierto,
   checkIndice,
-  catalogToolNames,
-  toolNameConstants,
   checkToolGroups,
   enPalabras,
   mencionaEl,
@@ -64,17 +63,6 @@ test("cada entrada del índice apunta a un id que existe", () => {
   assert.deepEqual(checkIndice(src.replace('id="la-curva">', 'id="otra">'), "f"), [
     "f: el índice apunta a #la-curva y no hay ningún id así",
   ]);
-});
-
-test("catálogo: se leen los nombres de herramientas", () => {
-  const src = `  {\n      name: "leer_estado",\n      description: "x",\n  },\n  {\n      name: "editar_texto",\n`;
-  assert.deepEqual(catalogToolNames(src), ["leer_estado", "editar_texto"]);
-});
-
-test("catálogo: también los nombres con mayúscula y los de una constante NOMBRE_*", () => {
-  assert.deepEqual(catalogToolNames(`  {\n    name: "Read",\n  },\n`), ["Read"]);
-  const src = `export const NOMBRE_TODO_WRITE = "TodoWrite";\nconst DESCRIPCION = "x";\n`;
-  assert.deepEqual(toolNameConstants(src), ["TodoWrite"]);
 });
 
 test("los grupos de la tarjeta cuadran con el catálogo", () => {
@@ -172,4 +160,9 @@ test("rutas: sin commit tiene que estar en master; con commit, en ese commit", (
   assert.equal(mal.length, 2);
   assert.match(mal[0], /x\.mdx: cita lib\/b\.ts en master y ahí no existe/);
   assert.match(mal[1], /cita lib\/a\.ts en d07a8152/);
+});
+
+test("los commits de la portada también se comprueban (commit y notaCommit, no el texto)", () => {
+  const src = '{ k: "a", commit: "3bf4d721" }, { commit: "" }, notaCommit: "4bb70542", texto: "un commit cualquiera"';
+  assert.deepEqual(extractCommitsDeDiccionario(src), ["3bf4d721", "4bb70542"]);
 });

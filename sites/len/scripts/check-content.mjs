@@ -6,6 +6,7 @@ import { execFileSync } from "node:child_process";
 import {
   checkParity,
   extractCommits,
+  extractCommitsDeDiccionario,
   extractRutas,
   checkRutas,
   checkCifrasSinCommit,
@@ -13,8 +14,6 @@ import {
   checkDenylist,
   checkAbierto,
   checkIndice,
-  catalogToolNames,
-  toolNameConstants,
   checkToolGroups,
   checkTitularTotal,
   checkNotasDeGrupo,
@@ -65,20 +64,26 @@ for (const [i, p] of mdx.entries()) {
     ...checkIndice(src, rel[i]),
     ...checkRutas(extractRutas(src), existeEn, rel[i]),
   );
-  hashes.push(...extractCommits(src));
+  hashes.push(...extractCommits(src), ...extractCommitsDeDiccionario(src));
 }
 errors.push(...checkCommits(hashes, isPublicCommit));
 
 const groups = JSON.parse(readFileSync(join(SITE, "data", "herramientas.json"), "utf8"));
-const AGENTE = join(REPO, "lib", "agent");
-const catalog = [
-  ...catalogToolNames(readFileSync(join(AGENTE, "catalog.ts"), "utf8")),
-  ...catalogToolNames(readFileSync(join(AGENTE, "ficheros", "declaraciones.ts"), "utf8")),
-  // F2: `web_search` y `web_fetch` llevan su nombre en una constante.
-  ...toolNameConstants(readFileSync(join(AGENTE, "web", "herramientas.ts"), "utf8")),
-  // ⚰️ `ficheros/tool-search.ts` (ToolSearch) se retiró en Len 2.1 (2026-09-30), y
-  // `ficheros/todo-write.ts` (TodoWrite) en F4 de plans/len-agente-2026.
-];
+// LAS QUE LEN RECIBE DE VERDAD, del propio catálogo (`catalogo-de-len.mts`).
+// Antes se LEÍAN los nombres de tres ficheros (`catalog.ts`, `declaraciones.ts`
+// y las constantes de `web/herramientas.ts`), y Len 2.5 declaró las suyas en
+// otros cinco: la puerta contaba 18 con 26 de verdad, y seguía dando por buena
+// `preguntar` (que ya es `ask_user_question`) y Grep y Glob (que la terminal
+// sustituye). Preguntárselo al catálogo no se queda viejo.
+const catalog = JSON.parse(
+  execFileSync(process.execPath, [join(REPO, "node_modules", "tsx", "dist", "cli.mjs"), join(SITE, "scripts", "catalogo-de-len.mts")], {
+    cwd: REPO,
+    encoding: "utf8",
+  })
+    .trim()
+    .split("\n")
+    .at(-1),
+);
 errors.push(...checkToolGroups(groups, catalog));
 
 // Los diccionarios: ni modelos ni proveedores, y los números que la tarjeta
@@ -86,7 +91,7 @@ errors.push(...checkToolGroups(groups, catalog));
 for (const p of walk(join(SITE, "i18n"))) {
   const src = readFileSync(p, "utf8");
   const file = relative(SITE, p).replaceAll("\\", "/");
-  errors.push(...checkDenylist(src, file));
+  errors.push(...checkDenylist(src, file), ...checkCommits(extractCommitsDeDiccionario(src), isPublicCommit).map((e) => `${file}: ${e}`));
   const lang = /(?:^|\/)(en|es)\.ts$/.exec(file)?.[1];
   if (!lang) continue;
   errors.push(...checkTitularTotal(src, file, catalog.length, lang), ...checkNotasDeGrupo(src, file, groups, lang));

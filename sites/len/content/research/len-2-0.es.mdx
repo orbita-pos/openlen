@@ -8,7 +8,7 @@ export const meta = {
   cover: "primera",
   readingMinutes: 5,
   author: "Equipo OpenLen",
-  cifra: { valor: "50 → 83 %", nota: "en los encargos que el 1.5 no hacía bien", commit: "b5d12836" },
+  cifra: { valor: "50 → 83 %", nota: "en los encargos que el 1.5 no hacía bien", commit: "4bb70542" },
   indice: [
     { id: "que-cambio", texto: "Qué cambió" },
     { id: "lo-nuevo", texto: "Todo lo nuevo" },
@@ -21,7 +21,7 @@ export const meta = {
 
 <h2 id="que-cambio">Qué cambió</h2>
 
-Hasta el 1.5, Len veía tu página como una lista de piezas numeradas y la cambiaba con un vocabulario propio: el texto de la pieza 14, los atributos de la 22. Ese vocabulario había que enseñárselo al modelo cada vez, y le costaba usarlo bien. En el 2.0 cada página es un fichero, y Len lo trabaja con las herramientas con las que los modelos ya saben programar: leer un fichero, cambiar un trozo exacto de texto, escribir uno nuevo y buscar en todo el sitio. <Fuente commit="adb5a5c1" />
+Hasta el 1.5, Len veía tu página como una lista de piezas numeradas y la cambiaba con un vocabulario propio: el texto de la pieza 14, los atributos de la 22. Ese vocabulario había que enseñárselo al modelo cada vez, y le costaba usarlo bien. En el 2.0 cada página es un fichero, y Len lo trabaja con las herramientas con las que los modelos ya saben programar: leer un fichero, cambiar un trozo exacto de texto, escribir uno nuevo y buscar en todo el sitio. <Fuente commit="a6880d38" />
 
 <div className="pull">Para cambiar un dato en todo tu sitio, primero hay que buscarlo en todo tu sitio.</div>
 
@@ -40,7 +40,7 @@ Hasta el 1.5, Len veía tu página como una lista de piezas numeradas y la cambi
 - **Si un script suyo no funciona, lo sabe al momento**, con la línea exacta del error.
 - **Si su respuesta se corta a medio camino, lo reintenta**, hasta tres veces.
 
-Todo está en el código del 2.0. <Fuente commit="adb5a5c1" />
+Todo está en el código del 2.0. <Fuente commit="a6880d38" />
 
 <h2 id="como">Cómo lo medimos</h2>
 
@@ -52,7 +52,7 @@ Len-Bench es código abierto, como el resto de OpenLen. Los 31 encargos, las pru
 
 <h2 id="lo-que-salio">Lo que salió</h2>
 
-<Figura pie={<>Tres corridas por encargo, el 27 de septiembre de 2026. El ± es el intervalo del 95 %, emparejado por encargo. <Fuente commit="b5d12836" /></>}>
+<Figura pie={<>Tres corridas por encargo, el 27 de septiembre de 2026. El ± es el intervalo del 95 %, emparejado por encargo. <Fuente commit="4bb70542" /></>}>
 <table>
   <thead>
     <tr><th></th><th>Len 1.5</th><th>Len 2.0</th><th>Diferencia</th></tr>
@@ -66,7 +66,7 @@ Len-Bench es código abierto, como el resto de OpenLen. Los 31 encargos, las pru
 </table>
 </Figura>
 
-En capacidad, <Cifra valor="50 → 83 %" commit="b5d12836">en los encargos que el 1.5 no hacía bien</Cifra>. Con 12 encargos el margen es ancho, y lo decimos: el intervalo va de −6 a +73 puntos. Lo que sí se ve caso por caso son tres encargos que el 1.5 falló las tres veces en cada una de nuestras mediciones —que funcionen los botones de WhatsApp de las cuatro páginas, quitar un producto de todas partes y cambiar el nombre del negocio— y que el 2.0 hace las tres.
+En capacidad, <Cifra valor="50 → 83 %" commit="4bb70542">en los encargos que el 1.5 no hacía bien</Cifra>. Con 12 encargos el margen es ancho, y lo decimos: el intervalo va de −6 a +73 puntos. Lo que sí se ve caso por caso son tres encargos que el 1.5 falló las tres veces en cada una de nuestras mediciones —que funcionen los botones de WhatsApp de las cuatro páginas, quitar un producto de todas partes y cambiar el nombre del negocio— y que el 2.0 hace las tres.
 
 En el sellado, la primera lectura fue más baja: 62,2 % contra 68,9 %. Al revisar a mano cada corrida que no salió perfecta, varias suspendían por la prueba y no por Len: un mapa incrustado que la prueba no reconocía, o un enlace a `/nosotros` sin barra final que abre la misma página. Lo corregimos igual en las dos versiones, corrida por corrida y con su motivo escrito. Las tres lecturas están en el repositorio.
 
@@ -81,5 +81,5 @@ Antes de medir nos pusimos una regla: el 2.0 tenía que sacarle al 1.5 al menos 
 La dejamos escrita aquí. Para las próximas versiones no habrá una cifra mágica: publicaremos la tabla con la versión anterior al lado y su margen, y el nombre se decide con ella delante.
 
 <Abierto id="abierto" titulo="Lo que sigue abierto">
-Cuatro cosas. **A veces rellena lo que falta**: en uno de cada tres intentos puso reseñas «de arranque» inventadas en vez de las que el dueño tenía; lo dijo, pero las puso. **Una vez tocó lo que no se le pidió**: al cambiar un titular, borró una frase de la marca. **Un total de caja no sobrevivió a una recarga muy rápida**, en uno de tres intentos. Y **tarda más**: 232 segundos de media por encargo, frente a 148 del 1.5. Todo está en los resultados, caso por caso. <Fuente commit="b5d12836" />
+Cuatro cosas. **A veces rellena lo que falta**: en uno de cada tres intentos puso reseñas «de arranque» inventadas en vez de las que el dueño tenía; lo dijo, pero las puso. **Una vez tocó lo que no se le pidió**: al cambiar un titular, borró una frase de la marca. **Un total de caja no sobrevivió a una recarga muy rápida**, en uno de tres intentos. Y **tarda más**: 232 segundos de media por encargo, frente a 148 del 1.5. Todo está en los resultados, caso por caso. <Fuente commit="4bb70542" />
 </Abierto>

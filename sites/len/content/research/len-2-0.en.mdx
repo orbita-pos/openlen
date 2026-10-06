@@ -8,7 +8,7 @@ export const meta = {
   cover: "primera",
   readingMinutes: 5,
   author: "OpenLen team",
-  cifra: { valor: "50 → 83 %", nota: "on the requests 1.5 didn’t get right", commit: "b5d12836" },
+  cifra: { valor: "50 → 83 %", nota: "on the requests 1.5 didn’t get right", commit: "4bb70542" },
   indice: [
     { id: "que-cambio", texto: "What changed" },
     { id: "lo-nuevo", texto: "Everything new" },
@@ -21,7 +21,7 @@ export const meta = {
 
 <h2 id="que-cambio">What changed</h2>
 
-Up to 1.5, Len saw your page as a list of numbered pieces and changed it with a vocabulary of its own: the text of piece 14, the attributes of piece 22. That vocabulary had to be taught to the model every time, and it struggled to use it well. In 2.0 every page is a file, and Len works on it with the tools models already know how to program with: read a file, change an exact piece of text, write a new one and search the whole site. <Fuente commit="adb5a5c1" />
+Up to 1.5, Len saw your page as a list of numbered pieces and changed it with a vocabulary of its own: the text of piece 14, the attributes of piece 22. That vocabulary had to be taught to the model every time, and it struggled to use it well. In 2.0 every page is a file, and Len works on it with the tools models already know how to program with: read a file, change an exact piece of text, write a new one and search the whole site. <Fuente commit="a6880d38" />
 
 <div className="pull">To change a detail across your whole site, you first have to search your whole site for it.</div>
 
@@ -40,7 +40,7 @@ Up to 1.5, Len saw your page as a list of numbered pieces and changed it with a 
 - **If one of its scripts doesn’t work, it knows right away**, with the exact line of the error.
 - **If its answer gets cut off halfway, it retries**, up to three times.
 
-It is all in the 2.0 code. <Fuente commit="adb5a5c1" />
+It is all in the 2.0 code. <Fuente commit="a6880d38" />
 
 <h2 id="como">How we measured it</h2>
 
@@ -52,7 +52,7 @@ Len-Bench is open source, like the rest of OpenLen. The 31 requests, the checks 
 
 <h2 id="lo-que-salio">What came out</h2>
 
-<Figura pie={<>Three runs per request, September 27, 2026. The ± is the 95 % interval, paired by request. <Fuente commit="b5d12836" /></>}>
+<Figura pie={<>Three runs per request, September 27, 2026. The ± is the 95 % interval, paired by request. <Fuente commit="4bb70542" /></>}>
 <table>
   <thead>
     <tr><th></th><th>Len 1.5</th><th>Len 2.0</th><th>Difference</th></tr>
@@ -66,7 +66,7 @@ Len-Bench is open source, like the rest of OpenLen. The 31 requests, the checks 
 </table>
 </Figura>
 
-On capability, <Cifra valor="50 → 83 %" commit="b5d12836">on the requests 1.5 didn’t get right</Cifra>. With 12 requests the margin is wide, and we say so: the interval runs from −6 to +73 points. What does show case by case are three requests that 1.5 failed all three times in every one of our measurements —making the WhatsApp buttons work on all four pages, removing a product everywhere and changing the business name— and that 2.0 gets right all three times.
+On capability, <Cifra valor="50 → 83 %" commit="4bb70542">on the requests 1.5 didn’t get right</Cifra>. With 12 requests the margin is wide, and we say so: the interval runs from −6 to +73 points. What does show case by case are three requests that 1.5 failed all three times in every one of our measurements —making the WhatsApp buttons work on all four pages, removing a product everywhere and changing the business name— and that 2.0 gets right all three times.
 
 On the sealed set, the first reading was lower: 62.2 % against 68.9 %. When we reviewed by hand every run that wasn’t perfect, several failed because of the check and not because of Len: an embedded map the check didn’t recognize, or a link to `/nosotros` without a trailing slash that opens the same page. We corrected it the same way for both versions, run by run and with the reason written down. All three readings are in the repository.
 
@@ -81,5 +81,5 @@ Before measuring we set a rule: 2.0 had to beat 1.5 by at least 25 points on the
 We leave it written here. For future versions there won’t be a magic number: we will publish the table with the previous version next to it and its margin, and the name gets decided with that in front of us.
 
 <Abierto id="abierto" titulo="What is still open">
-Four things. **It sometimes fills in what’s missing**: in one of three attempts it put in made-up “starter” reviews instead of the owner’s own; it said so, but it put them in. **Once it touched what it wasn’t asked to**: while changing a headline, it deleted a brand line. **A checkout total didn’t survive a very fast reload**, in one of three attempts. And **it is slower**: 232 seconds per request on average, against 148 for 1.5. It is all in the results, case by case. <Fuente commit="b5d12836" />
+Four things. **It sometimes fills in what’s missing**: in one of three attempts it put in made-up “starter” reviews instead of the owner’s own; it said so, but it put them in. **Once it touched what it wasn’t asked to**: while changing a headline, it deleted a brand line. **A checkout total didn’t survive a very fast reload**, in one of three attempts. And **it is slower**: 232 seconds per request on average, against 148 for 1.5. It is all in the results, case by case. <Fuente commit="4bb70542" />
 </Abierto>

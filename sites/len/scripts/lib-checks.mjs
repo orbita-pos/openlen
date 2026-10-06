@@ -31,6 +31,13 @@ export function extractCommits(src) {
   return [...src.matchAll(/commit="([0-9a-f]{7,40})"/g)].map((m) => m[1]);
 }
 
+/** Los de los diccionarios de la portada: `commit: "<hash>"` y `notaCommit`.
+ *  Hasta Len 2.5 la puerta sólo miraba los del MDX, y la portada enlazaba a
+ *  commits que GitHub ya no tenía (la reescritura del 05/10) sin que nada lo dijera. */
+export function extractCommitsDeDiccionario(src) {
+  return [...src.matchAll(/\b(?:commit|notaCommit):\s*"([0-9a-f]{7,40})"/g)].map((m) => m[1]);
+}
+
 // ── Las rutas que cita cada <Fuente> ─────────────────────────────────────────
 //
 // Sin `commit`, el enlace va a `master`: el fichero tiene que existir ALLÍ, o es
@@ -87,18 +94,8 @@ export function checkIndice(src, file) {
     .map((id) => `${file}: el índice apunta a #${id} y no hay ningún id así`);
 }
 
-// Desde Len 2.0 el catálogo no está en un solo fichero: las cinco de ficheros
-// (Read, Edit…) se declaran en `lib/agent/ficheros/declaraciones.ts`, con
-// mayúscula, y las de internet (`lib/agent/web/herramientas.ts`) llevan su
-// nombre en una constante `NOMBRE_*`, como TodoWrite y ToolSearch antes de irse. Leer sólo `catalog.ts` dejaba fuera siete herramientas de 19.
-export function catalogToolNames(catalogSrc) {
-  return [...catalogSrc.matchAll(/^\s+name:\s*"([A-Za-z_]+)",?\s*$/gm)].map((m) => m[1]);
-}
-
-export function toolNameConstants(src) {
-  return [...src.matchAll(/^export const NOMBRE_[A-Z_]+\s*=\s*"([A-Za-z_]+)";/gm)].map((m) => m[1]);
-}
-
+// Los nombres del catálogo los da el propio catálogo (`catalogo-de-len.mts`);
+// esto sólo compara la tarjeta con ellos.
 export function checkToolGroups(groups, catalogNames) {
   const errors = [];
   const listed = groups.flatMap((g) => g.herramientas);
