@@ -94,13 +94,22 @@ describe("herramientasDeLen", () => {
   it("el `tool` de los eventos `action`, una vez cada una y en el orden en que empezó", () => {
     expect(
       herramientasDeLen([
-        { nombre: "action", datos: { type: "action", tool: "ver_mensajes", status: "running" } },
+        { nombre: "action", datos: { type: "action", tool: "list_messages", status: "running" } },
         { nombre: "text", datos: { type: "text", text: "Juan te escribió" } },
-        { nombre: "action", datos: { type: "action", tool: "ver_mensajes", status: "done" } },
-        { nombre: "action", datos: { type: "action", tool: "preparar_respuesta", status: "running" } },
+        { nombre: "action", datos: { type: "action", tool: "list_messages", status: "done" } },
+        { nombre: "action", datos: { type: "action", tool: "draft_reply", status: "running" } },
         { nombre: "confirm", datos: { type: "confirm", action: "responder", tool: "no-es-una-accion" } },
       ]),
-    ).toEqual(["ver_mensajes", "preparar_respuesta"]);
+    ).toEqual(["list_messages", "draft_reply"]);
+  });
+  it("una grabación de antes del 2026-10-06 sale con los nombres de hoy, y puntúa igual", () => {
+    expect(
+      herramientasDeLen([
+        { nombre: "action", datos: { type: "action", tool: "ver_mensajes", status: "running" } },
+        { nombre: "action", datos: { type: "action", tool: "list_messages", status: "done" } },
+        { nombre: "action", datos: { type: "action", tool: "preparar_respuesta", status: "running" } },
+      ]),
+    ).toEqual(["list_messages", "draft_reply"]);
   });
 });
 
@@ -109,6 +118,13 @@ describe("tarjetaDePublicar", () => {
     expect(
       tarjetaDePublicar([
         { nombre: "text", datos: { type: "text", text: "toca Publicar" } },
+        { nombre: "confirm", datos: { type: "confirm", action: "publish", subdominio: "robleyluz", idiomas: [], republicar: false } },
+      ]),
+    ).toEqual({ subdominio: "robleyluz", idiomas: [], republicar: false });
+  });
+  it("y la de una grabación de antes, con «publicar», también", () => {
+    expect(
+      tarjetaDePublicar([
         { nombre: "confirm", datos: { type: "confirm", action: "publicar", subdominio: "robleyluz", idiomas: [], republicar: false } },
       ]),
     ).toEqual({ subdominio: "robleyluz", idiomas: [], republicar: false });

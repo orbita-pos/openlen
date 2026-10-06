@@ -83,7 +83,7 @@ describe("revisarCaso — las reglas 2, 3 y 4, y que las rotas rompan algo", () 
   // Casos de resultados (plans/len-resultados/): la rota se distingue por lo
   // que Len DICE o por lo que se planta después, no por la página.
   it("con la misma página pero otro turno de Len, o un estado plantado después, NO es idéntica", () => {
-    const bien = { len: ["Hoy llevas 3."], herramientas: ["ver_visitas"], tarjetas: [] };
+    const bien = { len: ["Hoy llevas 3."], herramientas: ["get_visits"], tarjetas: [] };
     const sinRojos = { solucion: [res("datos", true)], variantes: [{ nombre: "inicio", graders: [res("datos", false), res("enlaces", false), res("sigue-lo-demas", false)] }] };
     const conTurno = revisarCaso(
       { ...caso, solucionTurno: bien, rotas: [{ nombre: "de-memoria", datos: { html: "<p>bien</p>" }, turno: { ...bien, herramientas: [] } }] },

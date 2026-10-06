@@ -98,33 +98,33 @@ describe("cargarConsultas — una carpeta, con sus avisos", () => {
 
 describe("veredicto — pasa si (llamó) === should_trigger", () => {
   it("las cuatro esquinas", () => {
-    expect(veredicto(true, ["ver_visitas"], "ver_visitas")).toEqual({ llamo: true, veredicto: "pasa" });
-    expect(veredicto(true, ["ver_mensajes"], "ver_visitas")).toEqual({ llamo: false, veredicto: "falla" });
-    expect(veredicto(false, [], "ver_visitas")).toEqual({ llamo: false, veredicto: "pasa" });
+    expect(veredicto(true, ["get_visits"], "get_visits")).toEqual({ llamo: true, veredicto: "pasa" });
+    expect(veredicto(true, ["list_messages"], "get_visits")).toEqual({ llamo: false, veredicto: "falla" });
+    expect(veredicto(false, [], "get_visits")).toEqual({ llamo: false, veredicto: "pasa" });
     // Llamar DE MÁS también falla: es lo que miden los casi-aciertos.
-    expect(veredicto(false, ["ver_formularios", "ver_visitas"], "ver_visitas")).toEqual({ llamo: true, veredicto: "falla" });
+    expect(veredicto(false, ["list_form_submissions", "get_visits"], "get_visits")).toEqual({ llamo: true, veredicto: "falla" });
   });
 });
 
 describe("el informe, con la forma del suyo", () => {
   const c = (fichero: string, shouldTrigger: boolean): ConsultaDeDisparo => ({ fichero, query: fichero, shouldTrigger });
   const resultados: ResultadoDeDisparo[] = [
-    { consulta: c("ayer.md", true), llamo: true, veredicto: "pasa", motivo: "llamó a ver_visitas", usd: 0.004 },
-    { consulta: c("contador.md", false), llamo: true, veredicto: "falla", motivo: "llamó a ver_visitas, editar", usd: 0.02 },
+    { consulta: c("ayer.md", true), llamo: true, veredicto: "pasa", motivo: "llamó a get_visits", usd: 0.004 },
+    { consulta: c("contador.md", false), llamo: true, veredicto: "falla", motivo: "llamó a get_visits, editar", usd: 0.02 },
     { consulta: c("mes.md", true), llamo: null, veredicto: "saltada", motivo: "tope de gasto", usd: 0 },
   ];
 
   it("una línea por consulta, el motivo bajo cada fallo y el total", () => {
-    const texto = informe({ herramienta: "ver_visitas", dir: "d/ver_visitas", consultas: resultados.map((r) => r.consulta), avisos: ["Sólo hay 3 consultas"], resultados });
+    const texto = informe({ herramienta: "get_visits", dir: "d/get_visits", consultas: resultados.map((r) => r.consulta), avisos: ["Sólo hay 3 consultas"], resultados });
     expect(texto.split("\n")).toEqual([
-      "Evaluando ver_visitas (d/ver_visitas)",
+      "Evaluando get_visits (d/get_visits)",
       "",
       "! Sólo hay 3 consultas",
       "",
       "Pruebas de disparo:",
       "  [PASA   ] ayer.md — debía llamar, llamó",
       "  [FALLA  ] contador.md — no debía llamar, llamó",
-      "            llamó a ver_visitas, editar",
+      "            llamó a get_visits, editar",
       "  [SALTADA] mes.md — debía llamar",
       "",
       "1/2 pruebas de disparo pasaron (1 saltada).",
@@ -150,7 +150,7 @@ describe("las carpetas de verdad (lib/len-bench/disparos/)", () => {
   it("cada carpeta nombra una herramienta que Len tiene: si no, cada «debía llamar» fallaría sin medir nada", () => {
     const deLen = new Set(buildFunctionDeclarations().map((d) => String(d.name)));
     expect(carpetas.map((c) => c.herramienta).filter((h) => !deLen.has(h))).toEqual([]);
-    expect(carpetas.map((c) => c.herramienta)).toEqual(["ver_formularios", "ver_mensajes", "ver_visitas"]);
+    expect(carpetas.map((c) => c.herramienta)).toEqual(["get_visits", "list_form_submissions", "list_messages"]);
   });
 
   it("se leen sin un aviso, con al menos cinco consultas y casi-aciertos en cada una", () => {
