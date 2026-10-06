@@ -10,10 +10,12 @@
 //   · local     → iframe srcdoc con SANDBOX_LOCAL, la reserva
 //
 // QUÉ CUBRE ESTA MATRIZ, Y QUÉ NO. Se enumera, no se afirma que todo va bien —
-// es como lo dice Claude Code en su informe de `preview`: «…», y su propia
-// descripción declara sus límites por delante (qué peticiones de la página se
-// rechazan y qué queda desactivado). Nunca dice «igual que
-// publicada» a secas. Aquí igual:
+// es como lo hace Claude Code en su informe de `preview`: dice qué comprueban
+// sus pruebas (desbordes, recortes, colores que dependen del tema, cargas
+// bloqueadas, errores de consola) y dice, aparte y en mayúsculas, que NO
+// comprueban si la página se ve bien; y su propia descripción declara sus
+// límites por delante (qué peticiones de la página se rechazan y qué queda
+// desactivado). Nunca dice «igual que publicada» a secas. Aquí igual:
 //
 //   CUBRE  diez capacidades iguales (origen real, localStorage, sessionStorage,
 //          indexedDB, serviceWorker, prompt, confirm, window.open, ancla y
@@ -218,9 +220,9 @@ async function medir(url: string, marco: "principal" | "hijo"): Promise<Fila> {
   }
 }
 
-// LO QUE ESTA MATRIZ CUBRE, dicho como lo dice Claude Code en su informe de
-// `preview` («they cover … — not whether the page looks right»): se enumera el
-// alcance en vez de afirmar que todo va bien. Aquí son estas diez capacidades,
+// LO QUE ESTA MATRIZ CUBRE, dicho como lo hace Claude Code en su informe de
+// `preview` (lo que comprueba, y aparte que NO comprueba si se ve bien): se
+// enumera el alcance en vez de afirmar que todo va bien. Aquí son estas diez capacidades,
 // y la cookie va aparte porque NO es igual y se fija abajo tal cual sale.
 const IGUALES = [
   "origen_real", "localStorage", "sessionStorage", "indexedDB", "serviceWorker",

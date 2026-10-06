@@ -135,11 +135,11 @@ export interface FalloSpec {
  * el censo antes de pulsar.
  *
  * LA FORMA DEL ARREGLO NO ES MEDIR DOS VECES, es que la acción falle antes. Es
- * lo que hace Claude Code, provocado en su propio arnés: un `Edit` con
- * `old_string === new_string` devuelve «…» y no toca el fichero; y su contrato le dice
- * al modelo que no relea lo que acaba de editar para comprobarlo, porque si el
- * cambio hubiera fallado la edición habría dado error. La acción reporta su
- * propio efecto.
+ * lo que hace Claude Code, provocado en su propio arnés: un `Edit` cuyo texto
+ * nuevo es idéntico al viejo falla diciendo que no hay nada que cambiar, y no
+ * toca el fichero; y a su modelo no se le pide releer lo que acaba de editar,
+ * porque si el cambio no se hubiera hecho la edición habría dado error. La
+ * acción reporta su propio efecto.
  *
  * ⚠️ VA COMO CADENA, no como función: `evaluateOnNewDocument(() => …)` pasa por
  * esbuild/tsx, que inyecta el ayudante `__name`, y ése no existe dentro del
@@ -730,7 +730,9 @@ const listarFallos = (fs: readonly FalloSpec[]): string =>
  * 5**: ni una sola vez ha acertado acusando.
  *
  * 🔴 LA FORMA ES LA DEL `Edit` DE CLAUDE CODE, medida contra el arnés real y no
- * recordada: con un `old_string` que casa dos veces contesta «…» y devuelve la cadena
+ * recordada: con un `old_string` que casa dos veces, su error cuenta cuántas
+ * veces casa, dice que `replace_all` está apagado, ofrece encenderlo si se
+ * querían todas o dar más contexto si se quería una, y devuelve la cadena
  * literal debajo. Tres propiedades, y las tres faltaban aquí:
  *
  *   1. el HECHO contado («casa 2 veces»), nunca un veredicto («falló»);
@@ -738,8 +740,8 @@ const listarFallos = (fs: readonly FalloSpec[]): string =>
  *   3. el arreglo NOMBRADO y ramificado por intención (`replace_all` si querías
  *      todas, más contexto si querías una).
  *
- * Y ninguna de sus formas —tampoco «…» ni
- * «el fichero no existe»— le pide al usuario que vaya a mirar nada. Eso último
+ * Y ninguna de sus formas —tampoco la de un texto que no aparece ni la de un
+ * fichero que no existe— le pide al usuario que vaya a mirar nada. Eso último
  * es exactamente lo que hacía `notaSpec` con su «dime si quieres que lo revise».
  */
 function partirFallos(fallos: readonly FalloSpec[]): {

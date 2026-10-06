@@ -7,7 +7,8 @@ import { join } from "node:path";
  *
  * POR QUÉ EXISTE. El 2026-09-13 las cinco descripciones se reescribieron con la
  * forma de Claude Code, que no describe la CALIDAD de cada nivel
- * sino la OCASIÓN de usarlo: «…»
+ * sino la OCASIÓN de usarlo: el esfuerzo es cuánto piensa antes de contestar,
+ * el alto es para un fallo difícil y el bajo para un arreglo rápido.
  *
  * El motivo del cambio, y lo que esta prueba sujeta: las anteriores no le daban
  * contra a NINGÚN peldaño. Leídas en fila, cada una sonaba mejor que la de
