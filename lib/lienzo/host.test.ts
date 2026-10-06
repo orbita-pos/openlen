@@ -32,6 +32,16 @@ describe("la etiqueta del lienzo", () => {
     expect(etiquetaDeLienzo(ID, { AUTH_SECRET: "  " })).toBeNull();
   });
 
+  // 🔴 MEDIDO EN PRODUCCIÓN tras el deploy de 2.5 (06/10): `/api/lienzo` → 503
+  // «sin_host» y todos los editores en la vista limitada. La caja (y el
+  // `.env.local`) nombran el secreto `NEXTAUTH_SECRET`, que Auth.js acepta como
+  // alias de `AUTH_SECRET`; el lienzo sólo leía el segundo.
+  it("con el secreto de Auth.js por su otro nombre, NEXTAUTH_SECRET, la misma etiqueta", () => {
+    expect(etiquetaDeLienzo(ID, { NEXTAUTH_SECRET: "s3cr3t" })).toBe(etiquetaDeLienzo(ID, env));
+    expect(etiquetaDeLienzo(ID, { AUTH_SECRET: "s3cr3t", NEXTAUTH_SECRET: "otro" })).toBe(etiquetaDeLienzo(ID, env));
+    expect(etiquetaDeLienzo(ID, { AUTH_SECRET: " ", NEXTAUTH_SECRET: "s3cr3t" })).toBe(etiquetaDeLienzo(ID, env));
+  });
+
   it("no se fabrica de algo que no es un UUID", () => {
     expect(etiquetaDeLienzo("../../etc", env)).toBeNull();
     expect(etiquetaDeLienzo("", env)).toBeNull();

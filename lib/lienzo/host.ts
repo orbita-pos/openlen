@@ -36,9 +36,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  *
  * Sin secreto no hay etiqueta: el lienzo cae a la reserva (`srcdoc`), que es
  * lo que ya pasa sin dominio de lienzo.
+ *
+ * El secreto es el de Auth.js, con sus dos nombres: `NEXTAUTH_SECRET` es el que
+ * tienen la caja y el `.env.local`. Leer sólo `AUTH_SECRET` dejó todos los
+ * editores de producción en la reserva tras el deploy de 2.5 (06/10).
  */
 export function etiquetaDeLienzo(projectId: string, env: Entorno = process.env): string | null {
-  const secreto = env.AUTH_SECRET?.trim();
+  const secreto = env.AUTH_SECRET?.trim() || env.NEXTAUTH_SECRET?.trim();
   if (!secreto || !UUID.test(projectId)) return null;
   const huella = createHmac("sha256", secreto).update(`openlen-lienzo:${projectId.toLowerCase()}`).digest("hex");
   return LIENZO_PREFIJO + huella.slice(0, 32);
