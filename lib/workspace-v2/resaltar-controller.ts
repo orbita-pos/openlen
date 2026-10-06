@@ -13,15 +13,21 @@
 // suscrito —el lienzo no está montado— el aviso se pierde y no pasa nada; el
 // usuario ve el panel igual y no hay a dónde ir de todas formas.
 
+/** El hijo `n` de `<body>`, o —para una sección de dentro de un contenedor— la
+ *  ruta de hijo en hijo desde `<body>` (`SeccionCambiada.ruta`). */
+export type DestinoDeResalte = number | readonly number[];
+
 export interface ResaltarController {
   /** El lienzo se apunta. Devuelve la baja. */
-  subscribe(fn: (indice: number) => void): () => void;
-  /** El Chat pide señalar el hijo `indice` de `<body>`. */
-  resaltar(indice: number): void;
+  subscribe(fn: (destino: DestinoDeResalte) => void): () => void;
+  /** El Chat pide señalar una sección. */
+  resaltar(destino: DestinoDeResalte): void;
 }
 
+const posicion = (n: number) => Number.isInteger(n) && n >= 0;
+
 export function createResaltarController(): ResaltarController {
-  const listeners = new Set<(indice: number) => void>();
+  const listeners = new Set<(destino: DestinoDeResalte) => void>();
   return {
     subscribe(fn) {
       listeners.add(fn);
@@ -29,13 +35,15 @@ export function createResaltarController(): ResaltarController {
         listeners.delete(fn);
       };
     },
-    resaltar(indice) {
+    resaltar(destino) {
       // Un índice negativo es una sección QUITADA: ya no está en la página, así
-      // que no hay nada que señalar. Se corta aquí y no en cada suscriptor.
-      if (!Number.isInteger(indice) || indice < 0) return;
+      // que no hay nada que señalar. Se corta aquí y no en cada suscriptor. Una
+      // ruta, igual: vacía o con un paso que no es una posición, no va a nada.
+      const valido = typeof destino === "number" ? posicion(destino) : destino.length > 0 && destino.every(posicion);
+      if (!valido) return;
       for (const fn of listeners) {
         try {
-          fn(indice);
+          fn(destino);
         } catch {
           // Un suscriptor que revienta no puede llevarse a los demás por
           // delante, ni al turno que acaba de terminar.

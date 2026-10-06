@@ -1239,7 +1239,7 @@ function CambiosDelTurno({ turn, mismaPagina }: { turn: DesignTurn; mismaPagina:
           {c.indice >= 0 && mismaPagina && (
             <button
               type="button"
-              onClick={() => resaltarController.resaltar(c.indice)}
+              onClick={() => resaltarController.resaltar(c.ruta ?? c.indice)}
               className="shrink-0 ml-auto text-accent hover:underline"
             >
               {t("diff.ver")}

@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { createResaltarController } from "./resaltar-controller";
+import { createResaltarController, type DestinoDeResalte } from "./resaltar-controller";
 
 describe("resaltarController", () => {
   it("le pasa el índice a quien esté escuchando", () => {
     const c = createResaltarController();
-    const visto: number[] = [];
+    const visto: DestinoDeResalte[] = [];
     c.subscribe((i) => visto.push(i));
     c.resaltar(3);
     expect(visto).toEqual([3]);
@@ -44,5 +44,18 @@ describe("resaltarController", () => {
     c.subscribe(bueno);
     expect(() => c.resaltar(1)).not.toThrow();
     expect(bueno).toHaveBeenCalledWith(1);
+  });
+
+  // Una sección de DENTRO de un contenedor (`<main>` con sus `<section>`) llega
+  // con su ruta desde `<body>` (lib/workspace-v2/diff-de-turno.ts).
+  it("una ruta llega tal cual; una ruta rota no se manda", () => {
+    const c = createResaltarController();
+    const visto: unknown[] = [];
+    c.subscribe((destino) => visto.push(destino));
+    c.resaltar([1, 2]);
+    c.resaltar([]);
+    c.resaltar([1, -1]);
+    c.resaltar([0.5]);
+    expect(visto).toEqual([[1, 2]]);
   });
 });

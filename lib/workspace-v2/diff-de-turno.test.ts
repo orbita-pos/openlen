@@ -112,6 +112,83 @@ describe("seccionesCambiadas", () => {
   });
 });
 
+// LAS SECCIONES DENTRO DE UN CONTENEDOR. Medido en un turno real el 05/10: la
+// página era `<main>` con sus `<section>` dentro, Len cambió «Dónde» y la
+// tarjeta dijo «Cambió Horario» — el primer encabezado del `<main>`, que era lo
+// único que este diff miraba. Ahora baja al contenedor y nombra la sección de
+// verdad; `ruta` lleva al lienzo hasta ella (los de primer nivel no la traen).
+describe("seccionesCambiadas dentro de un contenedor de secciones", () => {
+  const HORARIO = "<section><h2>Horario</h2><p>Lunes a sábado</p></section>";
+  const DONDE = "<section><h2>Dónde</h2><p>Av. Chapultepec 120</p></section>";
+  const CARTA = "<section><h2>Carta de cafés</h2><p>Espresso $35</p></section>";
+  const CABECERA = "<header><h1>Café Brío</h1></header>";
+  const main = (...s: string[]) => `<main>${s.join("")}</main>`;
+
+  it("🔴 el caso medido: cambiar «Dónde» dice «Dónde», no el primer encabezado del <main>", () => {
+    const despues = doc(CABECERA, main(HORARIO, DONDE.replace("Av. Chapultepec 120", "Av. Chapultepec 122")));
+    expect(seccionesCambiadas(doc(CABECERA, main(HORARIO, DONDE)), despues)).toEqual([
+      { tipo: "cambiada", etiqueta: "Dónde", indice: 1, ruta: [1, 1] },
+    ]);
+  });
+
+  it("una sección nueva dentro del <main> es una sección añadida, con su ruta", () => {
+    expect(seccionesCambiadas(doc(CABECERA, main(HORARIO, DONDE)), doc(CABECERA, main(HORARIO, DONDE, CARTA)))).toEqual([
+      { tipo: "anadida", etiqueta: "Carta de cafés", indice: 1, ruta: [1, 2] },
+    ]);
+  });
+
+  it("también cuando el <main> tenía UNA sola sección y pasa a tener dos", () => {
+    expect(seccionesCambiadas(doc(main(HORARIO)), doc(main(HORARIO, CARTA)))).toEqual([
+      { tipo: "anadida", etiqueta: "Carta de cafés", indice: 0, ruta: [0, 1] },
+    ]);
+  });
+
+  it("renombrar la PRIMERA sección no se lleva el <main> entero por delante", () => {
+    const r = seccionesCambiadas(doc(main(HORARIO, DONDE)), doc(main(HORARIO.replace("Horario", "Horas"), DONDE)));
+    expect(r.map((x) => `${x.tipo} ${x.etiqueta}`).sort()).toEqual(["anadida Horas", "quitada Horario"]);
+    // La añadida es la SECCIÓN (dentro del <main>), no el <main> con otro nombre:
+    // antes salía igual por casualidad, quitando y añadiendo el <main> entero.
+    expect(r.find((x) => x.tipo === "anadida")).toEqual({ tipo: "anadida", etiqueta: "Horas", indice: 0, ruta: [0, 0] });
+  });
+
+  it("una sección quitada de dentro sale sin índice ni ruta", () => {
+    expect(seccionesCambiadas(doc(main(HORARIO, DONDE, CARTA)), doc(main(HORARIO, CARTA)))).toEqual([
+      { tipo: "quitada", etiqueta: "Dónde", indice: -1 },
+    ]);
+  });
+
+  it("baja más de un nivel: <div id=app> → <main> → la sección", () => {
+    const app = (...s: string[]) => `<div id="app">${CABECERA}${main(...s)}</div>`;
+    expect(seccionesCambiadas(doc(app(HORARIO, DONDE)), doc(app(HORARIO, DONDE.replace("120", "122"))))).toEqual([
+      { tipo: "cambiada", etiqueta: "Dónde", indice: 0, ruta: [0, 1, 1] },
+    ]);
+  });
+
+  it("MOVER una sección dentro del <main> sin tocarla tampoco produce nada", () => {
+    expect(seccionesCambiadas(doc(main(HORARIO, DONDE, CARTA)), doc(main(HORARIO, CARTA, DONDE)))).toEqual([]);
+  });
+
+  it("si lo que cambió es el contenedor mismo, se dice sin inventar un nombre", () => {
+    const r = seccionesCambiadas(doc(main(HORARIO, DONDE)), doc(main(HORARIO, DONDE).replace("<main>", '<main class="bg-stone-50">')));
+    expect(r).toEqual([{ tipo: "cambiada", etiqueta: "", indice: 0 }]);
+  });
+
+  it("BRAZO DE CONTROL: una sección con su encabezado y tarjetas dentro NO es un contenedor", () => {
+    const rasgos = (c: string) =>
+      `<section><h2>Por qué Brío</h2><div class="grid"><article><h3>Tostado</h3><p>${c}</p></article><article><h3>Origen</h3><p>Huatusco</p></article></div></section>`;
+    expect(seccionesCambiadas(doc(CABECERA, rasgos("martes")), doc(CABECERA, rasgos("jueves")))).toEqual([
+      { tipo: "cambiada", etiqueta: "Por qué Brío", indice: 1 },
+    ]);
+  });
+
+  it("BRAZO DE CONTROL: la cabecera con su menú es UNA parte, no un contenedor", () => {
+    const cab = (enlace: string) => `<header><nav><a>${enlace}</a></nav><div><h1>Café Brío</h1></div></header>`;
+    expect(seccionesCambiadas(doc(cab("Carta")), doc(cab("Menú")))).toEqual([
+      { tipo: "cambiada", etiqueta: "Café Brío", indice: 0 },
+    ]);
+  });
+});
+
 // 🔴 EL MAPEO DE LOS SEIS VERBOS. Sin esto, `attrs` y `text` -- las dos que el
 // modelo usa para cambiar un `href` o el texto de un nodo, o sea el caso mas
 // comun -- se pintaban «anadida». Visto en produccion el 2026-09-17: cambiar un

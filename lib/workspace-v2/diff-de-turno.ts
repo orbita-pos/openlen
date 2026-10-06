@@ -96,11 +96,11 @@ export function agruparCambios(cambios: readonly SeccionCambiada[]): CambioAgrup
       continue;
     }
     const previa = out[i];
-    out[i] = {
-      ...previa,
-      veces: previa.veces + 1,
-      indice: previa.indice >= 0 ? previa.indice : c.indice,
-    };
+    // La ruta va con su índice: si se toma el de la posterior, también su ruta.
+    out[i] =
+      previa.indice >= 0
+        ? { ...previa, veces: previa.veces + 1 }
+        : { ...previa, veces: previa.veces + 1, indice: c.indice, ...(c.ruta ? { ruta: c.ruta } : {}) };
   }
 
   return out;
@@ -115,6 +115,10 @@ export interface SeccionCambiada {
    *  se le manda al lienzo para ir a ella. `-1` en las quitadas: ya no están
    *  ahí, así que no hay nada a lo que ir. */
   readonly indice: number;
+  /** Sólo en una sección de DENTRO de un contenedor (`<main>` con sus
+   *  `<section>`): las posiciones de hijo en hijo desde `<body>` en el documento
+   *  de DESPUÉS, para que el lienzo llegue a ella. `indice` es su primer paso. */
+  readonly ruta?: readonly number[];
 }
 
 /** Más de esto es una lista que el usuario hojea en vez de leer, y un rediseño
@@ -155,15 +159,46 @@ function visibleText(el: Element): string {
   return out;
 }
 
+const ENCABEZADOS = "h1, h2, h3, h4, h5, h6";
+const ES_ENCABEZADO = /^H[1-6]$/;
+/** Lo que se pinta como una parte de la página por sí misma. */
+const SECCIONADORAS = new Set(["SECTION", "ARTICLE", "HEADER", "FOOTER", "NAV", "ASIDE", "MAIN"]);
+/** Lo que puede ENVOLVER secciones. No `<header>`, `<footer>` ni `<nav>`: una
+ *  cabecera con su menú y su titular es UNA parte para quien la mira. */
+const ENVOLVENTES = new Set(["MAIN", "DIV", "SECTION"]);
+
+function esSeccion(el: Element): boolean {
+  return SECCIONADORAS.has(el.tagName) || el.querySelector(ENCABEZADOS) !== null;
+}
+
+/**
+ * Un CONTENEDOR de secciones: un `<main>`, un `<div id="app">`… sin encabezado
+ * propio y con dos o más secciones dentro. Su primer encabezado es el de su
+ * primera sección, no el suyo — y así la tarjeta decía «Cambió Horario» cuando
+ * Len había tocado «Dónde» (medido el 05/10). En un contenedor se baja a sus
+ * hijos, que es lo que diría una persona.
+ *
+ * Una sección con su encabezado y tarjetas dentro (cada una con su `<h3>`) NO
+ * lo es: tiene encabezado propio, y «Cambió Por qué Brío» es lo que se lee.
+ */
+function esContenedor(el: Element): boolean {
+  if (!ENVOLVENTES.has(el.tagName)) return false;
+  const hijos = Array.from(el.children);
+  if (hijos.some((h) => ES_ENCABEZADO.test(h.tagName))) return false;
+  return hijos.filter(esSeccion).length >= 2;
+}
+
 function etiquetaDe(el: Element): string {
-  const encabezado = el.querySelector("h1, h2, h3, h4, h5, h6");
+  // Un contenedor no se nombra con el encabezado de su primera sección: si lo
+  // que cambió es él mismo (una clase), se dice sin nombre antes que mentir.
+  const encabezado = esContenedor(el) ? null : el.querySelector(ENCABEZADOS);
   const texto = encabezado ? visibleText(encabezado) : "";
   if (texto.trim()) return recorta(texto);
   const id = el.getAttribute("id");
   if (id?.trim()) return recorta(`#${id}`);
   const aria = el.getAttribute("aria-label");
   if (aria?.trim()) return recorta(aria);
-  return el.tagName.toLowerCase();
+  return esContenedor(el) ? "" : el.tagName.toLowerCase();
 }
 
 /**
@@ -215,19 +250,43 @@ function seccionesDe(html: string): Element[] {
   }
 }
 
+/** Lo PROPIO de un elemento, sin sus hijos: la etiqueta con sus atributos y el
+ *  texto suelto. Si un contenedor difiere y esto no, lo único que pasó dentro
+ *  es que algo se movió — y mover no es cambiar. */
+function firmaPropia(el: Element): string {
+  let texto = "";
+  el.childNodes.forEach((n) => {
+    if (n.nodeType === 3) texto += n.textContent ?? "";
+  });
+  return `${(el.cloneNode(false) as Element).outerHTML}\0${texto.replace(/\s+/g, " ").trim()}`;
+}
+
+/** Hasta dónde se baja: `<body>` → `<div id="app">` → `<main>` → la sección. */
+const MAX_NIVELES = 3;
+
+/** Dónde está una sección del DESPUÉS. Las de primer nivel, su índice tal cual,
+ *  como siempre; las de dentro de un contenedor, además su ruta. */
+function destino(ruta: readonly number[]): { indice: number; ruta?: readonly number[] } {
+  return ruta.length === 1 ? { indice: ruta[0]! } : { indice: ruta[0]!, ruta };
+}
+
 /**
  * Las secciones que cambiaron entre dos versiones del documento.
  *
  * Empareja por CLAVE y en orden: las que casan y difieren salen `cambiada`, las
  * que sobran en el después salen `anadida` y las que sobran en el antes,
  * `quitada`. Mover una sección sin tocarla no produce nada, que es lo honesto:
- * el usuario no perdió ni ganó contenido.
+ * el usuario no perdió ni ganó contenido. En un contenedor de secciones
+ * (`esContenedor`) se hace lo mismo con sus hijos.
  */
 export function seccionesCambiadas(antes: string, despues: string): SeccionCambiada[] {
   const a = seccionesDe(antes);
   const d = seccionesDe(despues);
   if (a.length === 0 && d.length === 0) return [];
+  return compararSecciones(a, d, []);
+}
 
+function compararSecciones(a: readonly Element[], d: readonly Element[], prefijo: readonly number[]): SeccionCambiada[] {
   // Índices por clave, en orden de documento. Un sitio con tres `<section>` sin
   // id ni encabezado comparte clave, y se emparejan por orden de aparición —
   // que es lo mejor que se puede hacer sin identidad real.
@@ -239,21 +298,56 @@ export function seccionesCambiadas(antes: string, despues: string): SeccionCambi
     else porClave.set(k, [i]);
   });
 
+  /** Del índice en el después al índice en el antes. */
+  const pareja = new Map<number, number>();
   const usadasDelAntes = new Set<number>();
+  d.forEach((el, i) => {
+    const j = porClave.get(claveDe(el))?.shift();
+    if (j === undefined) return;
+    pareja.set(i, j);
+    usadasDelAntes.add(j);
+  });
+
+  // Segunda vuelta, SÓLO para contenedores: su clave es el encabezado de su
+  // PRIMERA sección, así que renombrar ésa —o que el `<main>` pase de una
+  // sección a dos— la cambia, y salía el `<main>` entero quitado y añadido. Se
+  // emparejan por etiqueta HTML e `id`, en orden. Una sección normal renombrada
+  // sigue saliendo quitada + añadida: el diff adivina, y lo dice.
+  d.forEach((el, i) => {
+    if (pareja.has(i)) return;
+    const id = el.getAttribute("id") ?? "";
+    const j = a.findIndex(
+      (x, k) =>
+        !usadasDelAntes.has(k) &&
+        x.tagName === el.tagName &&
+        (x.getAttribute("id") ?? "") === id &&
+        (esContenedor(x) || esContenedor(el)),
+    );
+    if (j < 0) return;
+    pareja.set(i, j);
+    usadasDelAntes.add(j);
+  });
+
   const out: SeccionCambiada[] = [];
 
   d.forEach((el, i) => {
-    const k = claveDe(el);
-    const candidatas = porClave.get(k);
-    const j = candidatas?.shift();
+    const ruta = [...prefijo, i];
+    const j = pareja.get(i);
     if (j === undefined) {
-      out.push({ tipo: "anadida", etiqueta: etiquetaDe(el), indice: i });
+      out.push({ tipo: "anadida", etiqueta: etiquetaDe(el), ...destino(ruta) });
       return;
     }
-    usadasDelAntes.add(j);
-    if (firmaDe(a[j]) !== firmaDe(el)) {
-      out.push({ tipo: "cambiada", etiqueta: etiquetaDe(el), indice: i });
+    const previo = a[j]!;
+    if (firmaDe(previo) === firmaDe(el)) return;
+    if (ruta.length <= MAX_NIVELES && (esContenedor(previo) || esContenedor(el))) {
+      const dentro = compararSecciones(Array.from(previo.children), Array.from(el.children), ruta);
+      if (dentro.length > 0) {
+        out.push(...dentro);
+        return;
+      }
+      if (firmaPropia(previo) === firmaPropia(el)) return;
     }
+    out.push({ tipo: "cambiada", etiqueta: etiquetaDe(el), ...destino(ruta) });
   });
 
   a.forEach((el, i) => {

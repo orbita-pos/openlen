@@ -78,7 +78,7 @@ export function ChangesCard({
             <button
               type="button"
               aria-describedby={`${rowId}-${i}`}
-              onClick={() => resaltarController.resaltar(c.indice)}
+              onClick={() => resaltarController.resaltar(c.ruta ?? c.indice)}
               className="shrink-0 rounded-md px-1.5 py-1 text-[12.5px] font-semibold text-[var(--nc-accent-text)] hover:bg-accent-soft"
             >
               {t("diff.ver")}

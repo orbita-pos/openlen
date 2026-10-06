@@ -721,11 +721,14 @@ export function PreviewArea({
   // si el lienzo no está montado, no hay a dónde ir de todas formas.
   useEffect(
     () =>
-      resaltarController.subscribe((indice) => {
-        iframeLocalRef.current?.contentWindow?.postMessage(
-          { type: "openlen:resaltar-seccion", indice },
-          "*",
-        );
+      resaltarController.subscribe((destino) => {
+        // Una sección de dentro de un contenedor llega con su ruta; `indice`
+        // (su primer paso) va siempre, por si la ruta no se resuelve.
+        const mensaje =
+          typeof destino === "number"
+            ? { type: "openlen:resaltar-seccion", indice: destino }
+            : { type: "openlen:resaltar-seccion", indice: destino[0], ruta: destino };
+        iframeLocalRef.current?.contentWindow?.postMessage(mensaje, "*");
       }),
     [],
   );

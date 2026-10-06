@@ -90,7 +90,14 @@ ${PERSEGUIR_SCROLL_JS}
   window.addEventListener('message', function (e) {
     var d = e && e.data;
     if (!d || d.type !== 'openlen:resaltar-seccion' || typeof d.indice !== 'number') return;
-    var el = document.body && document.body.children[d.indice];
+    // Una seccion de DENTRO de un contenedor (un main con sus section) trae su
+    // ruta de hijo en hijo desde body. Si no se resuelve, se va a su primer paso.
+    var el = null;
+    if (Array.isArray(d.ruta) && document.body) {
+      el = document.body;
+      for (var k = 0; k < d.ruta.length && el; k++) el = el.children[d.ruta[k]];
+    }
+    if (!el) el = document.body && document.body.children[d.indice];
     if (!el) return;
     window.__olPerseguir({ el: el, suave: true });
     // El destello GUARDA y RESTAURA lo que había: la página es del usuario y
