@@ -16,6 +16,7 @@ import { WebSocketServer } from "ws";
 import { authorizeSocket } from "./auth";
 import { Session, type Channel, type Hub, type RealtimeProject } from "./channel";
 import { realtimeLimits, type RealtimeLimits } from "./limits";
+import { PresenceRegistry } from "./presence";
 
 export type { RealtimeProject } from "./channel";
 
@@ -67,6 +68,7 @@ export function createRealtimeServer(o: RealtimeServerOptions): { server: http.S
     members(key) {
       return [...(topics.get(key) ?? [])];
     },
+    presence: new PresenceRegistry<Channel>(),
   };
   const sessions = new Set<Session>();
   const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_FRAME_BYTES, perMessageDeflate: false });

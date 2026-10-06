@@ -9,11 +9,14 @@
 // `ref` del proyecto y si es privado (su `tenant_topic`): dos proyectos con el
 // mismo nombre de canal no se oyen.
 
+import { randomUUID } from "node:crypto";
+
 import type { WebSocket } from "ws";
 
 import type { ProjectDatabase } from "../db";
 import { confirmToken, type Confirmed, type RealtimeKeys } from "./auth";
 import { payloadTooLarge, type RealtimeLimits } from "./limits";
+import type { PresenceDiff, PresenceRegistry } from "./presence";
 import { decodeFrame, encodeText, encodeUserBroadcast, InvalidMessageError, type PhxMessage, type UserBroadcastPush } from "./serializer";
 
 /** Un proyecto, tal como lo ve el servidor de Realtime. */
@@ -29,6 +32,7 @@ export interface Hub {
   add(ch: Channel): void;
   remove(ch: Channel): void;
   members(key: string): Iterable<Channel>;
+  readonly presence: PresenceRegistry<Channel>;
 }
 
 export interface SessionOptions {
@@ -87,6 +91,12 @@ export function postgresChangesId(params: PostgresChangesParams): number {
 export class Channel {
   claims: Record<string, unknown>;
   accessToken: string;
+  /** Su `presence_key`: la del join, o un uuid. */
+  readonly presenceKey: string;
+  /** Su `presence_enabled?`: lo pidió al unirse, o hizo un `track`. */
+  presenceEnabled: boolean;
+  /** Su `presence_client_rate_limit`. */
+  presenceWindow: { counter: number; resetAt: number | null } = { counter: 0, resetAt: null };
   private tokenTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
@@ -101,6 +111,8 @@ export class Channel {
   ) {
     this.claims = confirmed.claims;
     this.accessToken = accessToken;
+    this.presenceKey = config.presenceKey || randomUUID();
+    this.presenceEnabled = config.presenceEnabled;
     this.scheduleTokenCheck(confirmed.msUntilRecheck);
   }
 
@@ -193,6 +205,8 @@ export class Session {
         return this.textBroadcast(ch, m);
       case "access_token":
         return this.refreshToken(ch, m);
+      case "presence":
+        return this.presence(ch, m);
       default:
         // Su `handle_in` de lo desconocido: se ignora (lo apunta en el registro).
         return;
@@ -251,6 +265,8 @@ export class Session {
     this.hub.add(ch);
     // Su `state`: los filtros de postgres_changes con su id.
     this.reply(m, "ok", { postgres_changes: config.postgresChanges.map((p) => ({ ...p, id: postgresChangesId(p) })) });
+    // Su `:sync_presence` tras unirse, si lo pidió.
+    if (ch.presenceEnabled) this.push(ch.topic, "presence_state", this.hub.presence.state(ch.key), ch.joinRef);
   }
 
   private removeChannel(ch: Channel): void {
@@ -258,6 +274,54 @@ export class Session {
     this.channels.delete(ch.topic);
     this.hub.remove(ch);
     ch.dispose();
+    // Phoenix.Presence lo saca al morir el proceso del canal.
+    const diff = this.hub.presence.untrack(ch.key, ch);
+    if (diff) this.presenceDiff(ch, diff);
+  }
+
+  /** El diff a todos los del tema (en un canal público todos lo reciben, su
+   *  MessageDispatcher con `presence_read? = true`). */
+  private presenceDiff(ch: Channel, diff: PresenceDiff): void {
+    const frame = encodeText({ joinRef: null, ref: null, topic: ch.topic, event: "presence_diff", payload: diff });
+    for (const member of this.hub.members(ch.key)) member.session.sendText(frame);
+  }
+
+  /** Su `PresenceHandler.handle`: `track` y `untrack`, con su límite por cliente. */
+  private presence(ch: Channel, m: PhxMessage): void {
+    const p = isObject(m.payload) ? m.payload : {};
+    if (typeof p.event !== "string") return this.reply(m, "ok", {});
+    // Su `limit_client_presence_event`: N llamadas por ventana.
+    const now = Date.now();
+    const w = ch.presenceWindow;
+    if (w.resetAt === null || now > w.resetAt) {
+      w.counter = 1;
+      w.resetAt = now + this.o.limits.clientPresenceWindowMs;
+    } else if (w.counter >= this.o.limits.clientPresenceMaxCalls) {
+      return this.shutdown(ch, "Client presence rate limit exceeded");
+    } else {
+      w.counter++;
+    }
+    const event = p.event.toLowerCase();
+    if (event === "untrack") {
+      const diff = this.hub.presence.untrack(ch.key, ch);
+      if (diff) this.presenceDiff(ch, diff);
+      return this.reply(m, "ok", {});
+    }
+    if (event !== "track") return this.reply(m, "error", {});
+    const payload = "payload" in p ? p.payload : {};
+    if (!isObject(payload)) return this.reply(m, "error", { reason: "Presence track payload must be a map" });
+    if (payloadTooLarge(Buffer.byteLength(JSON.stringify(payload)), this.o.limits)) return this.shutdown(ch, "Track message size exceeded");
+    // Su `:no_payload_change`: la misma carga no hace nada.
+    const before = this.hub.presence.payloadOf(ch.key, ch);
+    if (before && JSON.stringify(before) === JSON.stringify(payload)) return this.reply(m, "ok", {});
+    const diff = this.hub.presence.track(ch.key, ch, ch.presenceKey, payload);
+    this.reply(m, "ok", {});
+    this.presenceDiff(ch, diff);
+    // Un `track` con presence apagado lo enciende y le manda el estado (`:resync`).
+    if (!ch.presenceEnabled) {
+      ch.presenceEnabled = true;
+      this.push(ch.topic, "presence_state", this.hub.presence.state(ch.key), ch.joinRef);
+    }
   }
 
   /** Su `handle_in("access_token", …)`. */
