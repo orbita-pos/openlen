@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import { runAgentLoop, sobreQue, type AgentStreamEvent } from "./loop";
-import { etiquetarConPosiciones } from "./ficheros/posiciones";
 
 // Repite el ÚLTIMO guion cuando se acaba: así una prueba con \`maxTurns\` llega
 // al tope sin escribir doce vueltas. Desde H1 (2026-09-25) el bucle no topa por
@@ -170,62 +169,6 @@ describe("runAgentLoop", () => {
     expect(fallo).toBeDefined();
     expect("motivo" in fallo!).toBe(false);
     expect("ownerReason" in fallo!).toBe(false);
-  });
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // UNA PROMESA ROTA SE DICE, Y SE VE (2026-09-18, Tarea 4).
-  //
-  // Los ojos ya recomprueban las promesas que la página cumplió antes. Lo que
-  // faltaba es que, cuando una deja de cumplirse, salga de los ojos: hasta aquí
-  // moría en el veredicto.
-  //
-  // Va ANTES de las ramas del veredicto y fuera de todas: un turno puede salir
-  // «bien» y haberse llevado por delante el carrito de hace seis turnos.
-  it("🔴 una promesa rota sale en ámbar aunque el turno salga BIEN", async () => {
-    const events: AgentStreamEvent[] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: scripted(
-        [{ type: "function_call", name: "editar_html", args: {} }, done],
-        [{ type: "text_delta", text: "hecho" }, done],
-      ),
-      runTool: async () => ({ response: { ok: true }, updatedHtml: "<html></html>" }),
-      verifyTurn: async () => ({
-        estado: "bien" as const,
-        conMedida: true,
-        regresiones: [{ id: "p1", paso: 1, mensaje: "#total ya no cambia al pulsar #agregar" }],
-      }),
-      emit: (e) => events.push(e),
-    });
-    const ambar = events.find(
-      (e) => e.type === "action" && e.status === "warning" && e.summary === "regresion",
-    );
-    expect(ambar).toBeDefined();
-    expect((ambar as { motivo?: string }).motivo).toContain("#total ya no cambia");
-    // Y SE DICE: el texto va a la conversación, que es como entra en el
-    // historial que el modelo lee en el turno siguiente — los ojos corren al
-    // cerrar, así que no puede arreglarlo sobre la marcha.
-    const dicho = events.filter((e) => e.type === "text").map((e) => e.text).join(" ");
-    expect(dicho).toContain("#total ya no cambia");
-  });
-
-  // CONTRA-PRUEBA: un veredicto sin regresiones no pinta nada. Sin esto, una
-  // tarjeta ámbar en cada turno sano enseñaría al dueño a no mirarlas.
-  it("CONTRA-PRUEBA: sin regresiones no hay tarjeta ámbar de la suite", async () => {
-    const events: AgentStreamEvent[] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: scripted(
-        [{ type: "function_call", name: "editar_html", args: {} }, done],
-        [{ type: "text_delta", text: "hecho" }, done],
-      ),
-      runTool: async () => ({ response: { ok: true }, updatedHtml: "<html></html>" }),
-      verifyTurn: async () => ({ estado: "bien" as const, conMedida: true }),
-      emit: (e) => events.push(e),
-    });
-    expect(
-      events.some((e) => e.type === "action" && e.summary === "regresion"),
-    ).toBe(false);
   });
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -1321,343 +1264,6 @@ describe("runAgentLoop — ask_user_question (antes preguntar)", () => {
   });
 });
 
-// ── F5 — verificación visual (los ojos del agente) ─────────────────────────
-describe("runAgentLoop — verifyTurn", () => {
-  const editThenClose = () =>
-    scripted(
-      [{ type: "function_call", name: "editar_pagina", args: { resumen: "hero" } }, done],
-      [{ type: "text_delta", text: "Listo, cambié el hero." }, done],
-      [{ type: "text_delta", text: "Arreglado el contraste." }, done],
-    );
-  const okEdit = async () => ({
-    response: { ok: true },
-    updatedHtml: "<!doctype html><html><body>v2</body></html>",
-  });
-
-  it("NO verifica un turno sin mutaciones", async () => {
-    let verifies = 0;
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "hola" }], tools: [],
-      openStream: scripted([{ type: "text_delta", text: "¡Hola!" }, done]),
-      runTool: async () => { throw new Error("no tools"); },
-      verifyTurn: async () => { verifies++; return { estado: "bien" as const }; },
-      emit: () => {},
-    });
-    expect(verifies).toBe(0);
-    expect(r.finalText).toBe("¡Hola!");
-  });
-
-  // EL GEMELO LLEGA A LOS OJOS. Len 2.0 (T9): lo hace el bucle —el gemelo CON
-  // POSICIONES de lo guardado—, en un solo sitio, así que ninguna herramienta
-  // puede olvidarse de traerlo. Sin él los ojos medirían el documento guardado
-  // y lo que encuentren no traería línea.
-  it("el gemelo con posiciones de la mutación llega a los ojos", async () => {
-    let visto: { html: string; taggedHtml?: string } | null = null;
-    await runAgentLoop({
-      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-      openStream: editThenClose(),
-      runTool: async () => ({
-        response: { ok: true },
-        updatedHtml: "<!doctype html><html><body>v2</body></html>",
-      }),
-      verifyTurn: async (info) => { visto = info; return { estado: "bien" as const }; },
-      emit: () => {},
-    });
-    expect(visto).not.toBeNull();
-    expect(visto!.taggedHtml).toBe(etiquetarConPosiciones("<!doctype html><html><body>v2</body></html>"));
-    expect(visto!.taggedHtml).toContain('<body data-op-id="L1C22">');
-    // Y el guardado sigue viajando aparte: es lo que se FOTOGRAFIA.
-    expect(visto!.html).toContain("v2");
-    expect(visto!.html).not.toContain("data-op-id");
-  });
-
-  it("verifica tras mutar; ok → cierra con la card en 'ok'", async () => {
-    const events: AgentStreamEvent[] = [];
-    let sawHtml: string | null = null;
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-      openStream: editThenClose(),
-      runTool: okEdit,
-      verifyTurn: async ({ html }) => { sawHtml = html; return { estado: "bien" as const }; },
-      emit: (e) => events.push(e),
-    });
-    expect(sawHtml).toContain("v2"); // verifica el HTML MUTADO, no el original
-    expect(r.finalText).toContain("Listo");
-    const verify = events.filter((e) => e.type === "action" && (e as any).tool === "verificar_diseno");
-    expect(verify.map((v: any) => [v.status, v.summary])).toEqual([["running", ""], ["done", "ok"]]);
-  });
-
-  /**
-   * ⚰️ EL CICLO DE ARREGLO Y EL REVERT — RETIRADOS (Jesús, 2026-09-04).
-   *
-   * Aquí vivían nueve pruebas que sujetaban dos comportamientos:
-   *
-   *  - que una rotura le INYECTARA al modelo una instrucción de arreglo que el
-   *    usuario no pidió («verificación visual automática»), y
-   *  - que si ese ciclo no bajaba el número de problemas, se DESHICIERA su
-   *    edición (`restaurarHtml`).
-   *
-   * Lo segundo es lo mismo que se retiró de Crear el mismo día: tirar el
-   * trabajo del modelo porque nuestro medidor no lo aprueba. La regla es que
-   * corrige el USUARIO, no la tubería. Para deshacer ya está el Undo, que es
-   * suyo.
-   *
-   * No se borran a secas: las sustituyen las dos de abajo, que vigilan el
-   * sentido contrario. Los ojos siguen mirando y siguen DICIÉNDOLO —la tarjeta
-   * cierra en `issues`— pero el turno acaba con lo que el modelo hizo.
-   */
-  it("una rotura NO abre ciclo de arreglo: cierra con lo que hizo el modelo", async () => {
-    const events: AgentStreamEvent[] = [];
-    const streams: Message[][] = [];
-    let verifies = 0;
-    const stream = editThenClose();
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-      openStream: (msgs) => { streams.push([...msgs]); return stream(msgs); },
-      runTool: okEdit,
-      verifyTurn: async () => {
-        verifies++;
-        return { estado: "roto" as const, critique: "- el hero quedó con texto encimado" };
-      },
-      emit: (e) => events.push(e),
-    });
-
-    // UNA mirada. La segunda existía sólo para comprobar si el arreglo arregló,
-    // y ya no hay arreglo que comprobar.
-    expect(verifies).toBe(1);
-    // Y a nadie se le manda arreglar nada: ningún turno lleva la instrucción.
-    const inyectada = streams.some((msgs) =>
-      msgs.some((m) => m.role === "user" && String(m.content).includes("verificación visual automática")),
-    );
-    expect(inyectada, "le inyectamos un arreglo que el usuario no pidió").toBe(false);
-    expect(r.terminalError).toBe(false);
-    // Pero SE DICE: la tarjeta cierra en `issues`, no en verde.
-    //
-    // ⚠️ «NO EN VERDE» ERA LO QUE ESTA LÍNEA NO COMPROBABA (2026-09-04). Sólo
-    // afirmaba el `summary`, y el `status` seguía siendo `done` — o sea el tick
-    // verde, justo lo que el comentario decía descartar. El icono contradecía a
-    // su propia etiqueta y la prueba pasaba igual. Ahora se fija el PAR, que es
-    // lo que el usuario ve.
-    const verify = events.filter((e) => e.type === "action" && (e as any).tool === "verificar_diseno");
-    expect(verify.map((v: any) => [v.status, v.summary])).toEqual([
-      ["running", ""],
-      ["warning", "issues"],
-    ]);
-  });
-
-  // 🔴 LO MEDIDO TIENE QUE LLEGAR AL USUARIO, o medir no sirve de nada.
-  //
-  // Sin ciclo de arreglo el modelo NO se entera de la crítica, así que el texto
-  // que él escribió no puede contarla. Antes se cerraba con `finalText =
-  // turnText` y los problemas morían en una tarjeta de cuatro palabras: se
-  // medía y no se decía, y el usuario no puede pedir que se arregle lo que
-  // nadie le ha contado. La rama hermana (`observado`) ya lo hacía bien.
-  it("una rotura SE DICE: los problemas salen como texto y quedan en finalText", async () => {
-    const events: AgentStreamEvent[] = [];
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-      openStream: editThenClose(),
-      runTool: okEdit,
-      verifyTurn: async () => ({
-        estado: "roto" as const,
-        critique: "- el hero quedó con texto encimado\n- el precio no se lee",
-      }),
-      emit: (e) => events.push(e),
-    });
-
-    const dicho = events
-      .filter((e) => e.type === "text")
-      .map((e) => (e as { text: string }).text)
-      .join("\n");
-    expect(dicho, "el usuario nunca se enteró de lo que se midió").toContain(
-      "el hero quedó con texto encimado",
-    );
-    expect(dicho).toContain("el precio no se lee");
-    // Y sobrevive a recargar la conversación.
-    expect(r.finalText).toContain("el precio no se lee");
-    // Lo que el modelo dijo NO se pierde: se añade, no se sustituye.
-    expect(r.finalText).toContain("Listo");
-  });
-
-  // ⚰️ AQUÍ SE COMPROBABA que el bucle no llamara a `restaurarHtml` (2026-09-04).
-  // Esa dependencia ya no existe: se declaraba en `AgentLoopArgs`, la ruta la
-  // implementaba contra `persistPage`… y NADIE la llamaba desde que `12f6a11e`
-  // retiró el revert. Barrida entera — bucle, ruta y arnés.
-  //
-  // Lo que la prueba defendía sigue defendido, y por construcción en vez de por
-  // aserción: el bucle no tiene con qué revertir. Que la edición del modelo se
-  // queda lo fija la prueba de arriba, que cierra el turno con lo que él hizo.
-  it("una rotura no toca el documento: el turno cierra con la edición del modelo", async () => {
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-      openStream: editThenClose(),
-      runTool: okEdit,
-      verifyTurn: async () => ({ estado: "roto" as const, critique: "- sigue mal" }),
-      emit: () => {},
-    });
-    expect(r.terminalError).toBe(false);
-    expect(r.finalText).toContain("Listo");
-  });
-
-  it("sin presupuesto para arreglar, NO verifica (encontrar sin poder arreglar no sirve)", async () => {
-    let verifies = 0;
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: scripted(
-        [{ type: "function_call", name: "editar_pagina", args: {} }, done],
-        [{ type: "text_delta", text: "Listo." }, done],
-      ),
-      runTool: okEdit,
-      verifyTurn: async () => { verifies++; return { estado: "roto" as const, critique: "- roto" }; },
-      maxTurns: 1, // el único turno mutante agotó el tope
-      emit: () => {},
-    });
-    expect(verifies).toBe(0);
-  });
-
-  it("un verifyTurn que revienta es fail-open — el turno cierra normal", async () => {
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: editThenClose(),
-      runTool: okEdit,
-      verifyTurn: async () => { throw new Error("chrome murió"); },
-      emit: () => {},
-    });
-    expect(r.finalText).toContain("Listo");
-    expect(r.terminalError).toBe(false);
-  });
-
-  // ── NO PUDE MIRAR ≠ ESTÁ BIEN ───────────────────────────────────────────
-  //
-  // Los ojos fallan ABIERTOS por diseño: Chrome caído, sin key, timeout o JSON
-  // malformado devuelven un veredicto benigno. Eso está bien —una verificación
-  // que no arranca no puede tumbar el turno del usuario—, pero la ruta lo
-  // convertía en `ok: true`, así que dentro del producto no quedaba NADA que
-  // distinguiera «miré y está bien» de «no pude mirar». Con Chromium caído en
-  // el box, la verificación aprobaba todo en silencio.
-  it("no_mirado NO dispara ciclo de arreglo (no hay nada que arreglar)", async () => {
-    let verifies = 0;
-    const streams: Message[][] = [];
-    const stream = editThenClose();
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-      openStream: (msgs) => { streams.push([...msgs]); return stream(msgs); },
-      runTool: okEdit,
-      verifyTurn: async () => {
-        verifies++;
-        return { estado: "no_mirado" as const, motivo: "chrome no arrancó" };
-      },
-      emit: () => {},
-    });
-    expect(verifies).toBe(1);
-    // Un solo par de streams: no hubo vuelta de arreglo. Cobrarle al usuario un
-    // ciclo por una comprobación que no ocurrió sería peor que no comprobar.
-    expect(streams.length).toBe(2);
-    expect(r.finalText).toContain("Listo");
-    expect(r.terminalError).toBe(false);
-  });
-
-  // ⚠️ Y CIERRA EN `warning`, no en `done` (2026-09-04). Esta prueba fijaba
-  // `["done", "no-mirado"]`, o sea la mitad del arreglo: la ETIQUETA decía «sin
-  // comprobar» y el ICONO seguía siendo el mismo tick verde de una verificación
-  // de verdad — que es exactamente el fallo que el nombre de esta prueba dice
-  // haber cerrado. El texto se arregló y el icono no, y esto lo sujetaba.
-  it("pero SÍ se dice: la tarjeta cierra en 'no-mirado' y en ámbar, no en 'ok'", async () => {
-    const events: AgentStreamEvent[] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-      openStream: editThenClose(),
-      runTool: okEdit,
-      verifyTurn: async () => ({ estado: "no_mirado" as const, motivo: "sin key" }),
-      emit: (e) => events.push(e),
-    });
-    const verify = events.filter(
-      (e) => e.type === "action" && (e as any).tool === "verificar_diseno",
-    );
-    expect(verify.map((v: any) => [v.status, v.summary])).toEqual([
-      ["running", ""],
-      ["warning", "no-mirado"],
-    ]);
-  });
-
-  // ── Y EL CUARTO DESENLACE: se miró, pero no se midió ──────────────────────
-  //
-  // 🔴 Los ojos son DOS renders. Si el del medidor se cae, el desborde en móvil
-  // y el contraste NO se comprobaron, y el veredicto sale limpio igual. Hasta
-  // el 2026-09-16 eso enseñaba el mismo «sin problemas» que una verificación
-  // entera — el mismo defecto que arregló `no-mirado`, un caso más arriba.
-  const tarjetasDe = async (verdict: unknown) => {
-    const events: AgentStreamEvent[] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-      openStream: editThenClose(),
-      runTool: okEdit,
-      verifyTurn: async () => verdict as never,
-      emit: (e) => events.push(e),
-    });
-    return events
-      .filter((e) => e.type === "action" && (e as any).tool === "verificar_diseno")
-      .map((v: any) => [v.status, v.summary]);
-  };
-
-  it("🔴 midió y salió limpia → 'ok'", async () => {
-    expect(await tarjetasDe({ estado: "bien", conMedida: true })).toEqual([
-      ["running", ""],
-      ["done", "ok"],
-    ]);
-  });
-
-  it("🔴 se miró la captura pero NO se midió → 'ok-sin-medida', no 'ok'", async () => {
-    expect(await tarjetasDe({ estado: "bien", conMedida: false })).toEqual([
-      ["running", ""],
-      ["done", "ok-sin-medida"],
-    ]);
-  });
-
-  // CONTRA-PRUEBA, y es la que evita el peor arreglo posible. `conMedida` es
-  // OPCIONAL: hay implementaciones de `verifyTurn` que no lo mandan (el arnés
-  // de evals, los dobles). Si la degradación se disparara con `!conMedida`,
-  // todas ellas enseñarían «solo el JavaScript» de turnos que sí midieron — un
-  // aviso permanente y falso. Sólo degrada un `false` EXPLÍCITO.
-  it("un verifyTurn que no manda conMedida sigue saliendo 'ok'", async () => {
-    expect(await tarjetasDe({ estado: "bien" })).toEqual([
-      ["running", ""],
-      ["done", "ok"],
-    ]);
-  });
-
-  it("y un verifyTurn que revienta cae en no_mirado, no en el visto bueno", async () => {
-    const events: AgentStreamEvent[] = [];
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: editThenClose(),
-      runTool: okEdit,
-      verifyTurn: async () => { throw new Error("chrome murió"); },
-      emit: (e) => events.push(e),
-    });
-    // Sigue siendo fail-open: el turno cierra normal.
-    expect(r.finalText).toContain("Listo");
-    expect(r.terminalError).toBe(false);
-    // Pero ya no miente sobre haber mirado.
-    const verify = events.filter(
-      (e) => e.type === "action" && (e as any).tool === "verificar_diseno",
-    );
-    expect(verify.map((v: any) => v.summary)).toEqual(["", "no-mirado"]);
-  });
-
-  it("sin verifyTurn el comportamiento es idéntico al de antes", async () => {
-    const events: AgentStreamEvent[] = [];
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: editThenClose(),
-      runTool: okEdit,
-      emit: (e) => events.push(e),
-    });
-    expect(r.finalText).toContain("Listo");
-    expect(events.some((e) => e.type === "action" && (e as any).tool === "verificar_diseno")).toBe(false);
-  });
-});
-
 // ─────────────────────────────────────────────────────────────────────────────
 // HALLAZGO 4B — «un turno que ya mutó no puede terminar como fallo puro».
 //
@@ -2195,70 +1801,24 @@ function mirando(
   };
 }
 
-describe("runAgentLoop — lo medido vuelve al modelo", () => {
-  // Una tanda que edita: es la condición para medir. Len 2.0 (T9): el bucle
-  // hace el GEMELO CON POSICIONES de lo guardado, así que cada nodo que el
-  // navegador señala trae su línea del fichero.
+// ⚰️ Este bloque se llamaba «lo medido vuelve al modelo» y probaba sobre todo
+// `medirParaElModelo` —el navegador que medía cada tanda—, retirado el
+// 2026-10-06 (plans/crear-es-len). Quedan los diagnósticos ESTÁTICOS de las
+// escrituras (`outcome.diagnosticos`), que siguen llegando al modelo.
+describe("runAgentLoop — lo que dejan las escrituras vuelve al modelo", () => {
   const edita = (): StreamEvent[] => [
     { type: "function_call", name: "Edit", args: {} },
     done,
   ];
   const VISIBLE = '<html>\n<body>\n<div class="grid">x</div>\n</body>\n</html>';
-  const GEMELO = etiquetarConPosiciones(VISIBLE);
   const herramientaQueEdita = async () => ({
     response: { ok: true },
     action: { tool: "Edit", ok: true, summary: "editado" },
     updatedHtml: VISIBLE,
     page: null as string | null,
   });
-  const desbordado = {
-    mobileOverflow: true,
-    overflowCulprit: "div.grid",
-    overflowCulpritRight: 482,
-    overflowCulpritKind: "caja" as const,
-    // La línea y la columna del <div> en el fichero: su id en el gemelo.
-    overflowCulpritOpId: "L3C1",
-  };
 
-  it("🔴 viaja en el content del mensaje, NO dentro del resultado de la herramienta", async () => {
-    const vistos: Message[][] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "arregla el móvil" }],
-      tools: [],
-      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "Hecho." }, done])),
-      runTool: herramientaQueEdita,
-      emit: () => {},
-      medirParaElModelo: async () => desbordado,
-    });
-    const segunda = vistos[1] ?? [];
-    const conRespuestas = segunda.find((m) => m.functionResponses);
-    expect(conRespuestas).toBeDefined();
-    // El aviso está en el sobre, anclado a su línea...
-    expect(conRespuestas?.content).toContain("<new-diagnostics>");
-    expect(conRespuestas?.content).toContain("/index.html:\n  ⚠ [Line 3:1]");
-    expect(conRespuestas?.content).toContain("482px");
-    // ...y NO dentro de la respuesta de la herramienta, que es suya.
-    expect(JSON.stringify(conRespuestas?.functionResponses)).not.toContain("482px");
-  });
-
-  it("se le mide el GEMELO CON POSICIONES, que es donde viven las líneas", async () => {
-    const medidos: string[] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }],
-      tools: [],
-      openStream: scripted(edita(), [{ type: "text_delta", text: "ok" }, done]),
-      runTool: herramientaQueEdita,
-      emit: () => {},
-      medirParaElModelo: async (html) => {
-        medidos.push(html);
-        return null;
-      },
-    });
-    expect(medidos).toEqual([GEMELO]);
-    expect(GEMELO).toContain('<div data-op-id="L3C1" class="grid">');
-  });
-
-  it("sin la dependencia el mensaje sale byte a byte como antes", async () => {
+  it("una tanda sin diagnósticos deja el mensaje byte a byte como antes", async () => {
     const vistos: Message[][] = [];
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }],
@@ -2271,466 +1831,13 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
     expect(conRespuestas?.content).toBe("");
   });
 
-  // ⚰️ ESTA PRUEBA SE LLAMABA «una página sana no escribe nada en el sobre», y
-  // el nombre mentía: lo que mide es `{}`, una medición VACÍA — o sea una
-  // página SIN MEDIR, no una página sana. La diferencia no importaba mientras
-  // los dos casos callaran; desde el 2026-09-07 una página medida y limpia SÍ
-  // habla, y el nombre viejo habría quedado sujetando lo contrario de lo que
-  // pasa. Un campo ausente no es un cero.
-  it("una página SIN MEDIR no escribe nada en el sobre", async () => {
-    const vistos: Message[][] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }],
-      tools: [],
-      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
-      runTool: herramientaQueEdita,
-      emit: () => {},
-      medirParaElModelo: async () => ({}),
-    });
-    expect((vistos[1] ?? []).find((m) => m.functionResponses)?.content).toBe("");
-  });
-
-  // 🔴 Y LA CONTRARIA, que es la que faltaba: medida de verdad y limpia, se
-  // DICE. El silencio no es evidencia de nada — medido el 2026-09-07 con un
-  // evaluador aparte, que se negó a dar por cumplida «la página no desborda en
-  // móvil» leyendo un turno donde el agente decía «listo» y no había ninguna
-  // medición detrás. Sin esta frase, esa condición no se cumple jamás.
-  it("una página MEDIDA Y LIMPIA sí se lo dice al modelo", async () => {
-    const vistos: Message[][] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }],
-      tools: [],
-      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
-      runTool: herramientaQueEdita,
-      emit: () => {},
-      medirParaElModelo: async () => ({
-        mobileOverflow: false,
-        unreadableText: [],
-        runtimeErrors: [],
-        clasesMuertas: [],
-      }),
-    });
-    const contenido = (vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "";
-    expect(contenido).toContain("found no defects");
-    expect(contenido).toContain("That is ALL this measurement looks at");
-  });
-
-  // ── LOS LÍMITES DE LA MEDIDA, AL MODELO Y NO AL USUARIO ───────────────────
-  //
-  // 🔴 EL ARREGLO DEL 2026-09-16. Estos dos hechos salían por `observaciones`
-  // del veredicto, y la rama `observado` EMITE esa lista verbatim a la
-  // conversación: medido en dos turnos pagados, la respuesta de Len a «cambiame
-  // el titular» le enseñaba al usuario «prompt devuelve null, confirm false» —
-  // castellano fijo del servidor, fuera cual fuera el idioma del usuario.
-  it("🔴 los límites llegan al MODELO por el sobre, no a la conversación", async () => {
-    const vistos: Message[][] = [];
-    const emitido: string[] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }],
-      tools: [],
-      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
-      runTool: herramientaQueEdita,
-      emit: (ev) => {
-        if (ev.type === "text") emitido.push(ev.text);
-      },
-      medirParaElModelo: async () => ({
-        mobileOverflow: false,
-        unreadableText: [],
-        runtimeErrors: [],
-        clasesMuertas: [],
-        dialogosNativos: ["prompt: Nombre:"],
-        llamadasSoloPublicada: ["/api/f/mi-negocio → 404"],
-      }),
-    });
-    const contenido = (vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "";
-    expect(contenido).toContain("<measurement-limits>");
-    expect(contenido).toContain("`prompt()`");
-    expect(contenido).toContain("/api/f/mi-negocio");
-    // Y NADA de eso se le emitió al usuario.
-    const alUsuario = emitido.join(" ");
-    expect(alUsuario).not.toContain("prompt()");
-    expect(alUsuario).not.toContain("/api/f/mi-negocio");
-  });
-
-  // ── LA OBSERVACIÓN DEL CRÍTICO CON VISIÓN: A LA TARJETA, NO A LA BOCA ────
-  //
-  // 🔴 EL ARREGLO DEL 2026-09-16, y es OTRO distinto del de arriba. Aquél sacó
-  // de la conversación lo que la MEDICIÓN no comprueba; éste saca lo que el
-  // crítico con visión VE. Medido en dos corridas de pago: a «cambiame el
-  // titular» Len contestaba «Hecho: el titular ahora dice X. El titular
-  // solicitado X aparece correctamente en el hero. Los campos del formulario
-  // muestran solo placeholders, lo cual es normal.» — le repetía al usuario lo
-  // que él acababa de decirle. Y era INCONDICIONAL, no intermitente.
-  it("🔴 lo que VIO el crítico no se pega a la respuesta: va en la tarjeta", async () => {
-    const emitido: string[] = [];
-    const tarjetas: { tool: string; observacion?: string }[] = [];
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "x" }],
-      tools: [],
-      openStream: scripted(edita(), [{ type: "text_delta", text: "Hecho: el titular ya dice X." }, done]),
-      runTool: herramientaQueEdita,
-      emit: (ev) => {
-        if (ev.type === "text") emitido.push(ev.text);
-        else if (ev.type === "action") {
-          tarjetas.push({ tool: ev.tool, ...(ev.observacion ? { observacion: ev.observacion } : {}) });
-        }
-      },
-      verifyTurn: async () => ({
-        estado: "observado",
-        notas: ["El titular solicitado X aparece correctamente en el hero."],
-      }),
-    });
-    // 1. NO viaja en la respuesta al usuario, ni por `finalText` ni por texto.
-    expect(r.finalText ?? "").toBe("Hecho: el titular ya dice X.");
-    expect(emitido.join(" ")).not.toContain("aparece correctamente");
-    // 2. Pero NO SE TIRA: la llamada de visión ya se pagó, y en el caso sano
-    //    esa frase es lo único que produce. Cuelga de la tarjeta.
-    // La ÚLTIMA: `verificar_diseno` emite `running` antes que `done`, y la
-    // primera no lleva observación porque todavía no se ha mirado nada.
-    const visual = tarjetas.filter((t) => t.tool === "verificar_diseno").at(-1);
-    expect(visual?.observacion, "la observación se perdió por el camino").toContain(
-      "aparece correctamente",
-    );
-  });
-
-  it("BRAZO DE CONTROL: sin observación, la tarjeta no inventa uno", async () => {
-    // Si `observacion` saliera siempre —aunque fuera vacío— la prueba de arriba
-    // pasaría igual y la tarjeta enseñaría un hueco en la interfaz.
-    const tarjetas: { tool: string; tiene: boolean }[] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }],
-      tools: [],
-      openStream: scripted(edita(), [{ type: "text_delta", text: "listo" }, done]),
-      runTool: herramientaQueEdita,
-      emit: (ev) => {
-        if (ev.type === "action") tarjetas.push({ tool: ev.tool, tiene: "observacion" in ev });
-      },
-      verifyTurn: async () => ({ estado: "bien" }),
-    });
-    const visual = tarjetas.filter((t) => t.tool === "verificar_diseno");
-    expect(visual.length).toBeGreaterThan(0);
-    expect(visual.every((t) => !t.tiene)).toBe(true);
-  });
-
-  // Y el caso que más importa de los tres: «medido, y limpio» enumera CUATRO
-  // ceros, así que decir «0 errores de JavaScript» de una página cuyo botón
-  // abre un prompt() que nosotros cancelamos es la afirmación de más que ese
-  // bloque existe para no hacer. Los dos bloques viajan juntos.
-  it("🔴 «limpio» y los límites salen JUNTOS, o «limpio» afirma de más", async () => {
-    const vistos: Message[][] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }],
-      tools: [],
-      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
-      runTool: herramientaQueEdita,
-      emit: () => {},
-      medirParaElModelo: async () => ({
-        mobileOverflow: false,
-        unreadableText: [],
-        runtimeErrors: [],
-        clasesMuertas: [],
-        dialogosNativos: ["prompt: Nombre:"],
-      }),
-    });
-    const contenido = (vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "";
-    expect(contenido).toContain("found no defects");
-    expect(contenido).toContain("<measurement-limits>");
-  });
-
   // ⚰️ «un rechazo del almacén llega al modelo como defecto» (el carrito del
   // 2026-09-18): el sustituto de `/api/d` contestaba en la medida con las reglas
   // del servidor y sus rechazos llegaban como diagnóstico. Se retiró con
   // `data-ol-stores` el 2026-10-04.
 
-  it("CONTRA-PRUEBA: sin diálogos ni llamadas, el sobre de límites no aparece", async () => {
-    const vistos: Message[][] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }],
-      tools: [],
-      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
-      runTool: herramientaQueEdita,
-      emit: () => {},
-      medirParaElModelo: async () => ({
-        mobileOverflow: false,
-        unreadableText: [],
-        runtimeErrors: [],
-        clasesMuertas: [],
-      }),
-    });
-    const contenido = (vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "";
-    expect(contenido).not.toContain("<measurement-limits>");
-  });
-
-  /**
-   * 🔴 EL LLAMADOR QUE SE OLVIDA DE UN EJE NO PUEDE COBRARSE UN «LIMPIO».
-   *
-   * Al añadir `clasesMuertas` (2026-09-08) esta prueba de arriba se puso roja
-   * sola: pasaba tres ejes y reclamaba «limpio». Bien — es la regla de «un campo
-   * ausente no es un cero» funcionando END-TO-END y no sólo en la unidad.
-   *
-   * Se fija por separado porque es lo que protege del fallo real: hay DOS
-   * implementaciones de `medirParaElModelo` —la ruta y el arnés— y si una añade
-   * el eje y la otra no, la que se quede atrás seguiría diciendo «limpio»
-   * mientras deja de mirar una cosa. Aquí se queda MUDA, que es lo correcto.
-   */
-  it("🔴 una medición a la que le falta un eje NO dice «limpio»: calla", async () => {
-    const vistos: Message[][] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }],
-      tools: [],
-      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
-      runTool: herramientaQueEdita,
-      emit: () => {},
-      // Los tres de siempre, sin el cuarto.
-      medirParaElModelo: async () => ({ mobileOverflow: false, unreadableText: [], runtimeErrors: [] }),
-    });
-    expect((vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "").toBe("");
-  });
-
-  // Y la clase muerta llega al modelo con su literal y su sustituto, que es lo
-  // único que la hace accionable: se busca por la clase, no por el nodo.
-  it("una clase que no pinta nada llega al modelo, con el arreglo dentro", async () => {
-    const vistos: Message[][] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }],
-      tools: [],
-      openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
-      runTool: herramientaQueEdita,
-      emit: () => {},
-      medirParaElModelo: async () => ({
-        mobileOverflow: false,
-        unreadableText: [],
-        runtimeErrors: [],
-        clasesMuertas: [
-          {
-            enClase: "mt-3 text-sm text( --ol-fg-muted )",
-            muerta: "text( --ol-fg-muted )",
-            enSuLugar: "text-[var(--ol-fg-muted)]",
-          },
-        ],
-      }),
-    });
-    const contenido = (vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "";
-    expect(contenido).toContain("text( --ol-fg-muted )");
-    expect(contenido).toContain("text-[var(--ol-fg-muted)]");
-    // Y NO se cuela un «limpio» junto al defecto.
-    expect(contenido).not.toContain("found no defects");
-  });
-
-  it("si el medidor lanza, el turno sigue y el usuario se queda con su cambio", async () => {
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "x" }],
-      tools: [],
-      openStream: scripted(edita(), [{ type: "text_delta", text: "Hecho." }, done]),
-      runTool: herramientaQueEdita,
-      emit: () => {},
-      medirParaElModelo: async () => {
-        throw new Error("Chromium no arrancó");
-      },
-    });
-    expect(r.finalText).toContain("Hecho.");
-    expect(r.terminalError).toBe(false);
-  });
-
-  it("no se mide dos veces el mismo documento", async () => {
-    let veces = 0;
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }],
-      tools: [],
-      openStream: scripted(edita(), edita(), [{ type: "text_delta", text: "ok" }, done]),
-      // Las dos tandas devuelven EL MISMO gemelo: la segunda no tocó nada.
-      runTool: herramientaQueEdita,
-      emit: () => {},
-      medirParaElModelo: async () => {
-        veces += 1;
-        return {};
-      },
-    });
-    expect(veces).toBe(1);
-  });
-
-  it("el mismo defecto no se le repite en la segunda tanda", async () => {
-    const vistos: Message[][] = [];
-    let n = 0;
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }],
-      tools: [],
-      openStream: mirando(vistos, scripted(edita(), edita(), [{ type: "text_delta", text: "ok" }, done])),
-      // Cada tanda entrega un documento DISTINTO, así que sí se vuelve a medir.
-      runTool: async () => {
-        n += 1;
-        return { ...(await herramientaQueEdita()), updatedHtml: VISIBLE.replace(">x<", `>x${n}<`) };
-      },
-      emit: () => {},
-      medirParaElModelo: async () => desbordado,
-    });
-    // La ÚLTIMA foto lleva el historial entero. Contar sobre `vistos.flat()`
-    // contaría el mismo mensaje una vez por vuelta.
-    const ultima = vistos.at(-1) ?? [];
-    const sobres = ultima.filter((m) => m.functionResponses).map((m) => m.content);
-    expect(sobres).toHaveLength(2);
-    expect(sobres.filter((c) => c && c.includes("[Line 3:1]"))).toHaveLength(1);
-  });
-
-  // ── LA LÍNEA BASE ───────────────────────────────────────────────────────
-  //
-  // La forma de Claude Code: se mide ANTES de editar y sólo se reporta la
-  // diferencia. Len 2.0 (T9): la base es la de CADA fichero —cómo estaba antes
-  // de la primera escritura del turno sobre él, que la herramienta trae en
-  // `htmlPrevio`—, no sólo la de la página con la que arrancó el turno.
-  describe("la línea base", () => {
-    const BASE = '<html>\n<body>\n<div class="grid">antes</div>\n</body>\n</html>';
-    const GEMELO_BASE = etiquetarConPosiciones(BASE);
-    const conBase = async () => ({ ...(await herramientaQueEdita()), htmlPrevio: BASE });
-    const sobresDe = (vistos: Message[][]) =>
-      (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content as string);
-
-    it("🔴 un defecto que YA venía en el fichero NO se le dice", async () => {
-      const vistos: Message[][] = [];
-      await runAgentLoop({
-        messages: [{ role: "user", content: "cambia el título" }],
-        tools: [],
-        openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
-        runTool: conBase,
-        emit: () => {},
-        // La misma medida para lo guardado Y para la base: el desborde estaba
-        // ahí antes de que el modelo tocara nada.
-        medirParaElModelo: async () => desbordado,
-      });
-      const sobres = sobresDe(vistos);
-      expect(sobres.join("")).not.toContain("[Line 3:1]");
-      expect(sobres.every((c) => c === "")).toBe(true);
-    });
-
-    it("CONTRA-PRUEBA: si la base estaba limpia, el defecto ES suyo y se le dice", async () => {
-      const vistos: Message[][] = [];
-      await runAgentLoop({
-        messages: [{ role: "user", content: "x" }],
-        tools: [],
-        openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
-        runTool: conBase,
-        emit: () => {},
-        medirParaElModelo: async (html) => (html === GEMELO_BASE ? {} : desbordado),
-      });
-      expect(sobresDe(vistos).join("")).toContain("[Line 3:1]");
-    });
-
-    it("🔴 la base NO se mide cuando la página salió bien — es el caso normal y no paga render", async () => {
-      const medidos: string[] = [];
-      await runAgentLoop({
-        messages: [{ role: "user", content: "x" }],
-        tools: [],
-        openStream: scripted(edita(), [{ type: "text_delta", text: "ok" }, done]),
-        runTool: conBase,
-        emit: () => {},
-        medirParaElModelo: async (html) => {
-          medidos.push(html);
-          return {};
-        },
-      });
-      expect(medidos).toEqual([GEMELO]);
-    });
-
-    it("la base se mide UNA vez aunque haya varias tandas con defecto", async () => {
-      let n = 0;
-      const medidos: string[] = [];
-      await runAgentLoop({
-        messages: [{ role: "user", content: "x" }],
-        tools: [],
-        openStream: scripted(edita(), edita(), [{ type: "text_delta", text: "ok" }, done]),
-        runTool: async () => {
-          n += 1;
-          return { ...(await herramientaQueEdita()), updatedHtml: VISIBLE.replace(">x<", `>x${n}<`), htmlPrevio: BASE };
-        },
-        emit: () => {},
-        medirParaElModelo: async (html) => {
-          medidos.push(html);
-          return html === GEMELO_BASE ? {} : desbordado;
-        },
-      });
-      expect(medidos.filter((h) => h === GEMELO_BASE)).toHaveLength(1);
-    });
-
-    it("🔴 una base que falla NO se reintenta tanda tras tanda", async () => {
-      let n = 0;
-      const medidos: string[] = [];
-      await runAgentLoop({
-        messages: [{ role: "user", content: "x" }],
-        tools: [],
-        openStream: scripted(edita(), edita(), [{ type: "text_delta", text: "ok" }, done]),
-        runTool: async () => {
-          n += 1;
-          return { ...(await herramientaQueEdita()), updatedHtml: VISIBLE.replace(">x<", `>x${n}<`), htmlPrevio: BASE };
-        },
-        emit: () => {},
-        // La base no se puede medir NUNCA; lo guardado sí.
-        medirParaElModelo: async (html) => {
-          medidos.push(html);
-          return html === GEMELO_BASE ? null : desbordado;
-        },
-      });
-      expect(medidos.filter((h) => h === GEMELO_BASE)).toHaveLength(1);
-    });
-
-    it("🔴 cada fichero se resta contra SU base, no contra la de otra página", async () => {
-      const vistos: Message[][] = [];
-      const MENU_ANTES = '<html>\n<body>\n<div class="grid">menú viejo</div>\n</body>\n</html>';
-      await runAgentLoop({
-        messages: [{ role: "user", content: "x" }],
-        tools: [],
-        openStream: mirando(
-          vistos,
-          scripted(
-            [
-              { type: "function_call", name: "Edit", args: { file_path: "/index.html" } },
-              { type: "function_call", name: "Edit", args: { file_path: "/menu/index.html" } },
-              done,
-            ],
-            [{ type: "text_delta", text: "ok" }, done],
-          ),
-        ),
-        runTool: async (_n, a) =>
-          a.file_path === "/menu/index.html"
-            ? { ...(await herramientaQueEdita()), page: "menu", htmlPrevio: MENU_ANTES }
-            : { ...(await herramientaQueEdita()), htmlPrevio: BASE },
-        emit: () => {},
-        // La Home venía limpia; /menu ya se desbordaba.
-        medirParaElModelo: async (html) => (html === GEMELO_BASE ? {} : desbordado),
-      });
-      const sobre = sobresDe(vistos).join("");
-      expect(sobre).toContain("/index.html:\n  ⚠ [Line 3:1]");
-      expect(sobre).not.toContain("/menu/index.html:");
-    });
-
-    it("sin `htmlPrevio` no se sabe cómo estaba: lo medido se dice entero", async () => {
-      const vistos: Message[][] = [];
-      await runAgentLoop({
-        messages: [{ role: "user", content: "x" }],
-        tools: [],
-        openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
-        runTool: herramientaQueEdita,
-        emit: () => {},
-        medirParaElModelo: async () => desbordado,
-      });
-      expect(sobresDe(vistos).join("")).toContain("[Line 3:1]");
-    });
-
-    it("🔴 se pidió base y no se pudo medir ⇒ no se habla: sin base, «nuevo» no se puede saber", async () => {
-      const vistos: Message[][] = [];
-      await runAgentLoop({
-        messages: [{ role: "user", content: "x" }],
-        tools: [],
-        openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
-        runTool: conBase,
-        emit: () => {},
-        medirParaElModelo: async (html) => (html === GEMELO_BASE ? null : desbordado),
-      });
-      expect(sobresDe(vistos).join("")).not.toContain("[Line 3:1]");
-    });
-  });
-
   // LO QUE DEJÓ LA ESCRITURA —un enlace que marca otro número, una red social
-  // que nadie dio— viaja en el MISMO sobre que lo medido, y una sola vez.
+  // que nadie dio— viaja en el `<new-diagnostics>` de la tanda, y una sola vez.
   it("🔴 los diagnósticos de la escritura van en el `<new-diagnostics>` de la tanda, una vez", async () => {
     const vistos: Message[][] = [];
     const diag = {
@@ -3076,139 +2183,6 @@ describe("H1 · sin tope de vueltas, como Claude Code (2026-09-25)", () => {
   });
 });
 
-// ─── EL RECUENTO DE COBERTURA EN LA TARJETA ──────────────────────────────────
-//
-// 🔴 MEDIDO en producción el 2026-09-20 (`proj=2d6cad43`, turno del 19/09): Len
-// creó una página `viajes` y después retocó la Home. Los ojos verifican
-// `lastMutation` —la ÚLTIMA página mutada— así que miraron la Home, y la página
-// de viajes, que era el ENTREGABLE, no se miró nunca. La tarjeta decía «sin
-// fallos medidos» y el usuario lo leyó como «se miró y está bien».
-//
-// Esto NO arregla la cobertura: sigue mirándose una sola página. Lo que prueba
-// es que el turno lo DICE, que es la forma de Claude Code — su informe de
-// `preview` abre siempre con `N of M captures`, antes de cualquier juicio.
-describe("runAgentLoop — cuántas páginas se miraron", () => {
-  const dosPaginasLuegoCierra = () =>
-    scripted(
-      [{ type: "function_call", name: "editar_pagina", args: { resumen: "viajes" } }, done],
-      [{ type: "function_call", name: "editar_pagina", args: { resumen: "pie" } }, done],
-      [{ type: "text_delta", text: "Listo." }, done],
-    );
-
-  function editaEn(paginas: (string | null)[]) {
-    let i = 0;
-    return async () => {
-      const page = paginas[Math.min(i, paginas.length - 1)] ?? null;
-      i += 1;
-      return {
-        response: { ok: true },
-        updatedHtml: "<!doctype html><html><body>v" + i + "</body></html>",
-        page,
-      };
-    };
-  }
-
-  // `Extract` y no un `&`: sumarle campos al UNION deja un tipo que sigue
-  // pudiendo ser el evento de texto, y entonces `summary` no existe. Lo cazó
-  // `tsc` con las pruebas ya en verde — vitest transpila sin comprobar tipos.
-  type TarjetaAccion = Extract<AgentStreamEvent, { type: "action" }>;
-
-  function tarjetaDeVerificacion(events: AgentStreamEvent[]): TarjetaAccion | undefined {
-    return events.find(
-      (e): e is TarjetaAccion =>
-        e.type === "action" && e.tool === "verificar_diseno" && e.status !== "running",
-    );
-  }
-
-  it("🔴 tocó dos páginas: los ojos reciben LAS DOS, y la tarjeta lo dice", async () => {
-    const events: AgentStreamEvent[] = [];
-    let visto: { page: string | null; otrasPaginas?: readonly { page: string | null }[] } | null =
-      null;
-    await runAgentLoop({
-      messages: [{ role: "user", content: "haz una página de viajes" }], tools: [],
-      openStream: dosPaginasLuegoCierra(),
-      runTool: editaEn(["viajes", null]),
-      verifyTurn: async (info) => {
-        visto = info;
-        return { estado: "bien" as const, conMedida: true };
-      },
-      emit: (e) => events.push(e),
-    });
-    // 🔴 LO QUE IMPORTA: la página de viajes LLEGA a los ojos. Antes del
-    // 2026-09-20 sólo llegaba la última mutada —la Home— y el entregable no se
-    // miraba nunca.
-    expect(visto).not.toBeNull();
-    expect(visto!.page).toBe(null); // la principal sigue siendo la última mutada
-    expect(visto!.otrasPaginas?.map((p) => p.page)).toEqual(["viajes"]);
-    const card = tarjetaDeVerificacion(events);
-    expect(card!.paginasTocadas).toBe(2);
-    expect(card!.paginasMiradas).toBe(2);
-  });
-
-  // EL TOPE, y que lo que deja fuera NO se calla. La tarjeta dice «4 de 5», que
-  // es la disciplina del informe de `preview` de Claude Code: nunca
-  // recortar en silencio.
-  it("🔴 con más páginas que el tope, se miran las primeras y la tarjeta confiesa", async () => {
-    const events: AgentStreamEvent[] = [];
-    let visto: { otrasPaginas?: readonly { page: string | null }[] } | null = null;
-    await runAgentLoop({
-      messages: [{ role: "user", content: "monta el sitio entero" }], tools: [],
-      openStream: scripted(
-        // Argumentos DISTINTOS en cada vuelta: el bucle poda la llamada
-        // repetida idéntica, así que cinco iguales no son cinco mutaciones.
-        ...Array.from({ length: 5 }, (_, i) => [
-          { type: "function_call" as const, name: "editar_pagina", args: { resumen: `p${i}` } },
-          done,
-        ]),
-        [{ type: "text_delta", text: "Listo." }, done],
-      ),
-      runTool: editaEn(["a", "b", "c", "d", null]),
-      verifyTurn: async (info) => {
-        visto = info;
-        return { estado: "bien" as const, conMedida: true };
-      },
-      emit: (e) => events.push(e),
-    });
-    const card = tarjetaDeVerificacion(events);
-    expect(card!.paginasTocadas).toBe(5);
-    expect(card!.paginasMiradas).toBe(4);
-    // Y las que se miran son las que el turno tocó PRIMERO: el entregable se
-    // crea al principio, el retoque del pie va al final.
-    expect(visto!.otrasPaginas?.map((p) => p.page)).toEqual(["a", "b", "c"]);
-  });
-
-  it("una sola página: la tarjeta sale como salía, sin recuento", async () => {
-    const events: AgentStreamEvent[] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
-      openStream: dosPaginasLuegoCierra(),
-      runTool: editaEn([null]),
-      verifyTurn: async () => ({ estado: "bien" as const, conMedida: true }),
-      emit: (e) => events.push(e),
-    });
-    const card = tarjetaDeVerificacion(events);
-    expect(card).toBeDefined();
-    expect(card!.paginasTocadas).toBeUndefined();
-    expect(card!.paginasMiradas).toBeUndefined();
-  });
-
-  // Si NADIE miró, «sin comprobar» ya lo dice entero: «0 de 2 páginas · sin
-  // comprobar» es la misma frase dos veces.
-  it("CONTRA-PRUEBA: cuando nadie miró, no se añade recuento", async () => {
-    const events: AgentStreamEvent[] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "haz una página de viajes" }], tools: [],
-      openStream: dosPaginasLuegoCierra(),
-      runTool: editaEn(["viajes", null]),
-      verifyTurn: async () => ({ estado: "no_mirado" as const, motivo: "Chrome no arrancó" }),
-      emit: (e) => events.push(e),
-    });
-    const card = tarjetaDeVerificacion(events);
-    expect(card!.summary).toBe("no-mirado");
-    expect(card!.paginasTocadas).toBeUndefined();
-  });
-});
-
 // ─── LOS SEIS GUIONES DE LA AUDITORÍA (2026-09-22) ─────────────────────────
 //
 // `plans/auditoria-len-vs-claude-code-2026-09-22.md`, §4. Cada uno es un rojo
@@ -3260,21 +2234,6 @@ describe("H01 · H03 — una edición nula no es un hecho, y leer no es actuar",
     expect(r.finalText).toBe("Anotado.");
   });
 
-  it("una edición nula no llega a los ojos: la página no cambió", async () => {
-    let ojos = 0;
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: scripted(
-        [{ type: "function_call", name: "editar_texto", args: { resumen: "teléfono" } }, done],
-        [{ type: "text_delta", text: "No hacía falta: ya estaba." }, done],
-      ),
-      runTool: async () => nula,
-      verifyTurn: async () => { ojos += 1; return { estado: "bien" as const }; },
-      emit: () => {},
-    });
-    expect(ojos).toBe(0);
-  });
-
   it("…y `aplicado` sólo lleva lo que se movió", async () => {
     let i = 0;
     const r = await runAgentLoop({
@@ -3296,36 +2255,6 @@ describe("H01 · H03 — una edición nula no es un hecho, y leer no es actuar",
       emit: () => {},
     });
     expect(r.aplicado).toEqual(["titular"]);
-  });
-});
-
-describe("H05 — un turno que topa dice que no se miró", () => {
-  it("🔴 el cierre por tope sabe que la página no se comprobó", async () => {
-    let recibido = "";
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 1,
-      openStream: scripted([{ type: "function_call", name: "editar_texto", args: { resumen: "a" } }, done]),
-      runTool: async () => ({ response: { ok: true, cambio: "cambio" }, updatedHtml: "<p/>", page: null }),
-      verifyTurn: async () => ({ estado: "bien" as const }),
-      closeOut: (m) => {
-        recibido = String(m.at(-1)?.content ?? "");
-        return (async function* () { yield { type: "text_delta" as const, text: "Topé." }; })();
-      },
-      emit: () => {},
-    });
-    expect(recibido).toContain("HAS NOT BEEN CHECKED");
-  });
-
-  it("BRAZO DE CONTROL: sin ojos cableados, el tope no inventa una tarjeta", async () => {
-    const events: AgentStreamEvent[] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 1,
-      openStream: scripted([{ type: "function_call", name: "editar_texto", args: { resumen: "a" } }, done]),
-      runTool: async () => ({ response: { ok: true, cambio: "cambio" }, updatedHtml: "<p/>", page: null }),
-      closeOut: () => (async function* () { yield { type: "text_delta" as const, text: "Topé." }; })(),
-      emit: (e) => events.push(e),
-    });
-    expect(events.some((e) => e.type === "action" && e.tool === "verificar_diseno")).toBe(false);
   });
 });
 
@@ -3379,48 +2308,6 @@ describe("H12 — lo que rechazan las guardas se cuenta y no quema el turno", ()
     // antes en el tope, y el tope no se cobra (regla del 2026-07-07). Cerrarlo
     // con elegancia no puede cambiar quién paga por un modelo que insiste.
     expect(r.sinCobro).toBe("rechazos");
-  });
-});
-
-describe("H04 — el cierre se redacta con lo medido delante", () => {
-  const edita = [{ type: "function_call" as const, name: "editar_texto", args: { resumen: "titular" } }, done];
-  const cierra = [{ type: "text_delta" as const, text: "Listo." }, done];
-  const runTool = async () => ({ response: { ok: true, cambio: "cambio" }, updatedHtml: "<p>v2</p>", page: null });
-
-  it("una promesa rota sola también le llega al modelo antes de hablar", async () => {
-    let recibido = "";
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: scripted(edita, cierra),
-      runTool,
-      verifyTurn: async () => ({
-        estado: "bien" as const,
-        regresiones: [{ id: "p1", paso: 1, mensaje: "#total ya no cambia al pulsar #agregar" }],
-      }),
-      closeOut: (m) => {
-        recibido = m.map((x) => (typeof x.content === "string" ? x.content : "")).join(" | ");
-        return (async function* () { yield { type: "text_delta" as const, text: "Ojo: el total dejó de sumar." }; })();
-      },
-      emit: () => {},
-    });
-    expect(recibido).toContain("#total ya no cambia");
-  });
-
-  it("BRAZO DE CONTROL: una OBSERVACIÓN no gasta la segunda redacción", async () => {
-    let redacciones = 0;
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: scripted(edita, cierra),
-      runTool,
-      verifyTurn: async () => ({ estado: "observado" as const, notas: ["las tarjetas no tienen foto"] }),
-      closeOut: () => {
-        redacciones += 1;
-        return (async function* () { yield { type: "text_delta" as const, text: "no debería" }; })();
-      },
-      emit: () => {},
-    });
-    expect(redacciones).toBe(0);
-    expect(r.finalText).toBe("Listo.");
   });
 });
 
@@ -3545,9 +2432,10 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
     expect(orden.indexOf("t:Ahora sí lo aplico.")).toBeLessThan(orden.indexOf("a:editar_texto"));
   });
 
-  it("G3 · al topar se mira la página, y la edición nula no llega como hecha", async () => {
-    const events: AgentStreamEvent[] = [];
-    let ojos = 0;
+  // ⚰️ G3 decía también «al topar se mira la página» (la tarjeta de los ojos
+  // en un turno que topa). Los ojos al cerrar se retiraron el 2026-10-06
+  // (plans/crear-es-len); queda la mitad que sigue viva.
+  it("G3 · al topar, la edición nula no llega como hecha", async () => {
     let cierre = "";
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "teléfono, titular y otra" }], tools, maxTurns: 2,
@@ -3557,17 +2445,17 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
         llama("editar_texto", { resumen: "otra" }),
       ),
       runTool: async (_n, a) => a.resumen === "teléfono en el pie" ? nula("teléfono en el pie") : real(String(a.resumen)),
-      verifyTurn: async () => { ojos += 1; return { estado: "bien" as const }; },
       closeOut: (m) => {
         cierre = ultimoDelUsuario(m);
         return (async function* () { yield { type: "text_delta" as const, text: "Cambié el titular." }; })();
       },
-      emit: (e) => events.push(e),
+      emit: () => {},
     });
     expect(r.topeAlcanzado).toBe("turn_limit");
     expect(cierre, "el cierre recibía la edición nula como «SÍ se aplicó»").not.toContain("«teléfono en el pie»");
-    const mirada = events.find((e) => e.type === "action" && e.tool === "verificar_diseno" && e.status !== "running");
-    expect(mirada, `un turno que topa no se miraba (ojos llamados = ${ojos})`).toBeDefined();
+    // BRAZO DE CONTROL: la edición real sí llega como hecha, así que la de
+    // arriba no pasa por un cierre vacío.
+    expect(cierre).toContain("«titular»");
   });
 
   it("G4 · leer y luego decir «Listo, cambié…» no escapa a la insistencia", async () => {
@@ -3680,39 +2568,6 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
     });
   });
 
-  it("G6 · el cierre se escribe con el veredicto de los ojos delante", async () => {
-    const events: AgentStreamEvent[] = [];
-    let recibido = "";
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "pon el titular en blanco" }], tools,
-      openStream: scripted(
-        llama("editar_texto", { resumen: "titular" }),
-        dice("Listo, quedó perfecto y se lee de maravilla."),
-      ),
-      runTool: async () => real("titular"),
-      verifyTurn: async () => ({ estado: "roto" as const, critique: "- el titular (#fff sobre #fff) es ilegible a 1.00:1" }),
-      closeOut: (m) => {
-        recibido = m.map((x) => (typeof x.content === "string" ? x.content : "")).join("\n");
-        return (async function* () {
-          yield { type: "text_delta" as const, text: "Cambié el titular, pero quedó ilegible: blanco sobre blanco." };
-        })();
-      },
-      emit: (e) => events.push(e),
-    });
-    expect(recibido, "el modelo nunca leía el veredicto antes de hablar").toContain("ilegible a 1.00:1");
-    // H4 (2026-09-26): lo medido se DICE —decisión de Jesús del 04/09—, pero el
-    // cierre ya no le pide al modelo que ofrezca arreglarlo: ofrecer trabajo que
-    // nadie pidió es ensanchar el alcance («Delivering work» de Claude Code).
-    expect(recibido).toContain("what problem the page has");
-    expect(recibido).not.toMatch(/ofr[eé]cete/);
-    const iVeredicto = events.findIndex((e) => e.type === "action" && e.tool === "verificar_diseno" && e.status === "warning");
-    const iUltimoTexto = events.map((e) => e.type).lastIndexOf("text");
-    expect(iVeredicto).toBeGreaterThanOrEqual(0);
-    expect(iUltimoTexto, "lo último que redactó el modelo iba ANTES de los ojos").toBeGreaterThan(iVeredicto);
-    expect(r.finalText, "el final era «perfecto» con la lista de defectos pegada debajo").not.toMatch(
-      /perfecto[\s\S]*- el titular \(#fff sobre #fff\)/,
-    );
-  });
 });
 
 // H4, parte 3: la ruta guarda lo que vio el modelo en este turno para
@@ -4552,5 +3407,22 @@ describe("runAgentLoop — la página a medias (plans/crear-es-len)", () => {
       emit: (e) => events.push(e),
     });
     expect(events.some((e) => e.type === "page_preview")).toBe(false);
+  });
+});
+
+describe("runAgentLoop — sin medición obligatoria al cerrar (plans/crear-es-len)", () => {
+  it("un turno que mutó cierra sin la tarjeta verificar_diseno: mirar lo decide Len, como en Claude Code y DeepSeek", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "cambia el hero" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "Write", args: { file_path: "/index.html", content: "<h1>v2</h1>" } }, done],
+        [{ type: "text_delta", text: "Listo." }, done],
+      ),
+      runTool: async () => ({ response: { ok: true }, updatedHtml: "<h1>v2</h1>" }),
+      emit: (e) => events.push(e),
+    });
+    expect(r.finalText).toContain("Listo");
+    expect(events.some((e) => e.type === "action" && (e as { tool?: string }).tool === "verificar_diseno")).toBe(false);
   });
 });

@@ -1754,9 +1754,10 @@ LINKS (<a href>):
 THE PROJECT'S FOLDER:
 Besides its pages, the project is a folder like any Vercel + Supabase project: /js, /css, /data/*.json, /sw.js, /manifest.json and any other text file (.js .mjs .css .json .webmanifest .txt .svg .md), anywhere except the reserved roots (/api, /c, /assets, /uploads, /rest, /auth, /storage, /functions, /realtime). They are read and changed like the pages, every change can be undone with the turn, and publishing ships them as they are, next to the pages. Reference them by path: \`<script src="/js/app.js" type="module">\`, \`fetch("/data/menu.json")\`.
 - /tests holds Playwright tests (never published); /supabase holds the backend's migrations.
-- mirar_pagina, usar_pagina and the checks after each turn load these files the way the published site does. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
+- mirar_pagina and usar_pagina load these files the way the published site does. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - An installable app is a /manifest.json plus a service worker at /sw.js; if the site stops using one, the platform publishes a /sw.js that removes itself, so no visitor stays on an old version.
 - Up to 500 files and 10 MB; 1 MB per file (256 KB per test file).
+Before you say a change is done, check it: mirar_pagina tipo="medir" is free and tells you what overflows, the contrast and the JavaScript errors; usar_pagina tries it like a visitor. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.
 
 THE BACKEND (Supabase):
 This project has its own Supabase backend —a Postgres database behind the REST API, Auth with email and password, Storage for files (photos, videos, PDFs), and Realtime for live updates— at the URL and with the publishable key that PROJECT STATE gives you under \`supabase\` (\`supabase status\` in the terminal prints them too). Edge Functions don't exist here yet: if something needs them, say so. Anything that has to live on a server —a cart that is still there tomorrow, reviews everyone sees, a menu the user maintains, people who sign in— goes here.
@@ -1808,9 +1809,10 @@ LINKS (<a href>):
 THE PROJECT'S FOLDER:
 Besides its pages, the project is a folder like any Vercel + Supabase project: /js, /css, /data/*.json, /sw.js, /manifest.json and any other text file (.js .mjs .css .json .webmanifest .txt .svg .md), anywhere except the reserved roots (/api, /c, /assets, /uploads, /rest, /auth, /storage, /functions, /realtime). They are read and changed like the pages, every change can be undone with the turn, and publishing ships them as they are, next to the pages. Reference them by path: \`<script src="/js/app.js" type="module">\`, \`fetch("/data/menu.json")\`.
 - /tests holds Playwright tests (never published); /supabase holds the backend's migrations.
-- mirar_pagina, usar_pagina and the checks after each turn load these files the way the published site does. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
+- mirar_pagina and usar_pagina load these files the way the published site does. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - An installable app is a /manifest.json plus a service worker at /sw.js; if the site stops using one, the platform publishes a /sw.js that removes itself, so no visitor stays on an old version.
 - Up to 500 files and 10 MB; 1 MB per file (256 KB per test file).
+Before you say a change is done, check it: mirar_pagina tipo="medir" is free and tells you what overflows, the contrast and the JavaScript errors; usar_pagina tries it like a visitor. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.
 
 THE BACKEND (Supabase):
 This project has its own Supabase backend —a Postgres database behind the REST API, Auth with email and password, Storage for files (photos, videos, PDFs), and Realtime for live updates— at the URL and with the publishable key that PROJECT STATE gives you under \`supabase\` (\`supabase status\` in the terminal prints them too). Edge Functions don't exist here yet: if something needs them, say so. Anything that has to live on a server —a cart that is still there tomorrow, reviews everyone sees, a menu the user maintains, people who sign in— goes here.

@@ -80,6 +80,8 @@ export interface FilaDeProyecto {
  * el arnés de evals. Escrito tres veces se queda viejo dos: es literalmente el
  * fallo que ya se documentó con `medirParaElModelo` —el arnés midiendo un turno
  * que producción no manda— y que hoy vigila `aviso-medido.test.ts`.
+ * (⚰️ Los ojos al cerrar y `medirParaElModelo` se retiraron el 2026-10-06,
+ * plans/crear-es-len; hoy lo llaman las herramientas con las que Len mira.)
  *
  * 🔴 `logoUrl` VA SIEMPRE A null, y no es un olvido. `inject_logo` sólo toca el
  * `<head>`: un `<link rel="icon">` y, si falta, un `og:image`

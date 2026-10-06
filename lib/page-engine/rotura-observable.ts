@@ -25,7 +25,8 @@ import type { PrepareReport } from "./contract";
  *
  * Devuelve `[]` cuando no hay ninguna, que es el caso normal: una lista vacía
  * es «no se midió nada afirmable», no «la página está bien». Esa distinción es
- * la misma que `medicionLimpia` guarda en `lib/agent/aviso-medido.ts`.
+ * la misma que guardaba `medicionLimpia` (retirada el 2026-10-06 con la
+ * medición tras editar).
  */
 export function roturaObservable(report: PrepareReport): string[] {
   return [
