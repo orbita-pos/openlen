@@ -207,7 +207,7 @@ WHAT PUBLISHING REQUIRES
 None of this says WHAT to build: not the sections, not their order, not what the page tells. These are the conditions for the document to survive being published, and at the end the level of finish that is expected.
 
 • The page is ONE complete, self-contained \`<!doctype html>\` document. No JSX and no markup from any framework. The format of YOUR response isn't set by this guide: your own instruction block sets it.
-• The three things the look depends on live in the \`<head>\`: Tailwind via CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`), the Google Fonts stylesheets (\`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\`) and the page's own CSS in a \`<style>\`. The document you edit already has them: add what you are missing INSIDE them —a new family, new rules— instead of duplicating them.
+• The three things the look depends on live in the \`<head>\`: Tailwind via CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`), the Google Fonts stylesheets (\`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\`) and the page's own CSS in a \`<style>\`. When the document already has them, add what you are missing INSIDE them —a new family, new rules— instead of duplicating them; a page you write from scratch gets all three.
 • JavaScript: your code SURVIVES publishing — write it when the page really gains something from it: filtering a list, a gallery with a lightbox, tabs, a countdown, searching inside the page itself. Put it ALL in ONE \`<script>\`, the last one in the \`<body>\`: that is not a limit of the system, it is so it can be edited later in one piece. Wire handlers with \`addEventListener\` INSIDE the script, not with \`onclick=\` (or any \`on*\`) attributes: your save keeps them, but the editor strips them when the user touches that element by hand or undoes a change, and the button goes dead without anyone noticing. ALWAYS write BOTH HALVES: the behavior and the CSS for the state that behavior turns on — a class the script sets and nobody defines in the CSS leaves the control silent; it runs and nobody notices. The page has to be complete and readable WITHOUT that script: it improves the page, it never builds the content. Never hide content in CSS and reveal it from the script: if the script is dropped, the page ships blank. When plain CSS already solves it —\`<details>\`/\`<summary>\`, a checkbox with \`peer-checked:\`, \`:target\`, \`@keyframes\`— prefer that; for everything else, write the script.
 • \`<iframe>\`s from Google Maps, YouTube and Vimeo survive everything, including what the user edits by hand. Put them in directly, there is no transformation at publish time:
   – MAP: \`<iframe src="https://maps.google.com/maps?q=<address>&output=embed" loading="lazy">\` — it needs no key and no account. If the business has a physical address, put it where you give the contact details: a local business without a map is half done.
@@ -1692,6 +1692,14 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
 
 exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/docs/guia-de-diseno.md) — la salida entera, sin cambios accidentales 1`] = `
 "DESIGN GUIDE (for the pages you create yourself and for a redesign you are asked for; what you add to a page that already exists is written the way that page is):
+
+WHEN THE PAGE IS EMPTY (you are writing it from scratch):
+- The brief is sometimes specific, often vague. Design the whole page yourself: the structure, the palette, the typography, the rhythm and what the page even contains are yours to decide — a vague brief is your cue to apply judgment, not to fall back on something safe.
+- There is no default shape. Nav on top, centered hero, three columns of benefits, testimonials, closing call and footer is ONE shape, not THE shape: it is the one that comes out by itself when nobody decides. Let the shape grow out of the content. Something to be read wants a column; something to be looked at wants a grid; something that happens over time wants a line; something to be compared wants a table; something with a single idea can fit in two blocks and be finished.
+- Three habits to CHOOSE, not inherit: splitting the content into cards in threes, always opening with the same centered hero, and adding a section because one seems to be missing. Keep them when this page asks for them —a long text is glad of its table of contents, a shop is glad of its navigation— and leave them out when it doesn't.
+- Write the whole document with Write, <head> included: a descriptive <title> that names the product, Tailwind via CDN, the Google Fonts you use and your own <style>.
+- Every other page of the site is one more file, /<slug>/index.html, written the same way.
+
 COLOR, SHAPE AND TYPE
 Every color, radius and family comes from a CSS custom property, declared in \`:root\` and used with \`var()\`, with names of your choosing. Never repeat a literal color across the page: no \`#rrggbb\` literals outside the \`:root\` blocks. The editor's Theme controls write into those variables —they find them by how the page uses them: the \`body\`'s background and color, the buttons' background, the \`border-radius\` values, the type of the \`body\` and of the headings—, so a color written by hand into a rule is one they can't change.
 On a page you create yourself, also write its dark version: a block that redefines those variables with dark values thought out by hand —not a mechanical inversion— under a class or an attribute of \`<html>\` (\`:root.dark\`, \`:root[data-theme="dark"]\`…). That is what the editor's switch turns on; one that depends only on \`prefers-color-scheme\` is one it can't turn on.
@@ -1764,7 +1772,7 @@ WHAT PUBLISHING REQUIRES
 None of this says WHAT to build: not the sections, not their order, not what the page tells. These are the conditions for the document to survive being published; the level of finish is in /.openlen/docs/guia-de-diseno.md.
 
 • The page is ONE complete, self-contained \`<!doctype html>\` document. No JSX and no markup from any framework. The format of YOUR response isn't set by this guide: your own instruction block sets it.
-• The three things the look depends on live in the \`<head>\`: Tailwind via CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`), the Google Fonts stylesheets (\`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\`) and the page's own CSS in a \`<style>\`. The document you edit already has them: add what you are missing INSIDE them —a new family, new rules— instead of duplicating them.
+• The three things the look depends on live in the \`<head>\`: Tailwind via CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`), the Google Fonts stylesheets (\`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\`) and the page's own CSS in a \`<style>\`. When the document already has them, add what you are missing INSIDE them —a new family, new rules— instead of duplicating them; a page you write from scratch gets all three.
 • The \`<iframe>\`s you write survive everything: saving, publishing and whatever the user edits by hand. Put them in directly, there is no transformation at publish time:
   – MAP: \`<iframe src="https://maps.google.com/maps?q=<address>&output=embed" loading="lazy">\` — it needs no key and no account. If the business has a physical address, put it where you give the contact details: a local business without a map is half done.
   – VIDEO: \`<iframe src="https://www.youtube.com/embed/<ID>">\` or \`https://player.vimeo.com/video/<ID>\`, and ONLY if the brief gives you the link — a made-up ID is a broken player.
@@ -1778,7 +1786,7 @@ IMAGES
 • No external image URL (unsplash, picsum, placehold.co…), not even one that comes in the request: a server we don't control is a 404 on the published page, and that the visitor does see.
 
 MORE, IN /.openlen/docs (read them when you need them):
-- /.openlen/docs/guia-de-diseno.md: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch or a redesign. What you add to a page that already exists is written the way that page is.
+- /.openlen/docs/guia-de-diseno.md: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch (an empty /index.html is one) or a redesign. What you add to a page that already exists is written the way that page is.
 - /.openlen/docs/librerias.md: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one."
 `;
 
@@ -1818,7 +1826,7 @@ WHAT PUBLISHING REQUIRES
 None of this says WHAT to build: not the sections, not their order, not what the page tells. These are the conditions for the document to survive being published; the level of finish is in /.openlen/docs/guia-de-diseno.md.
 
 • The page is ONE complete, self-contained \`<!doctype html>\` document. No JSX and no markup from any framework. The format of YOUR response isn't set by this guide: your own instruction block sets it.
-• The three things the look depends on live in the \`<head>\`: Tailwind via CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`), the Google Fonts stylesheets (\`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\`) and the page's own CSS in a \`<style>\`. The document you edit already has them: add what you are missing INSIDE them —a new family, new rules— instead of duplicating them.
+• The three things the look depends on live in the \`<head>\`: Tailwind via CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`), the Google Fonts stylesheets (\`<link rel="stylesheet" href="https://fonts.googleapis.com/…">\`) and the page's own CSS in a \`<style>\`. When the document already has them, add what you are missing INSIDE them —a new family, new rules— instead of duplicating them; a page you write from scratch gets all three.
 • The \`<iframe>\`s you write survive everything: saving, publishing and whatever the user edits by hand. Put them in directly, there is no transformation at publish time:
   – MAP: \`<iframe src="https://maps.google.com/maps?q=<address>&output=embed" loading="lazy">\` — it needs no key and no account. If the business has a physical address, put it where you give the contact details: a local business without a map is half done.
   – VIDEO: \`<iframe src="https://www.youtube.com/embed/<ID>">\` or \`https://player.vimeo.com/video/<ID>\`, and ONLY if the brief gives you the link — a made-up ID is a broken player.
@@ -1832,6 +1840,6 @@ IMAGES
 • No external image URL (unsplash, picsum, placehold.co…), not even one that comes in the request: a server we don't control is a 404 on the published page, and that the visitor does see.
 
 MORE, IN /.openlen/docs (read them when you need them):
-- /.openlen/docs/guia-de-diseno.md: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch or a redesign. What you add to a page that already exists is written the way that page is.
+- /.openlen/docs/guia-de-diseno.md: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch (an empty /index.html is one) or a redesign. What you add to a page that already exists is written the way that page is.
 - /.openlen/docs/librerias.md: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one."
 `;

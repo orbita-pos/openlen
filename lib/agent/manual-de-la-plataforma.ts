@@ -160,8 +160,20 @@ const MARCA_LIBRERIAS = "AVAILABLE LIBRARIES";
  *  y el acabado se va a la guía. */
 const PROMESA_DEL_ACABADO = ", and at the end the level of finish that is expected.";
 
+// LO QUE SABÍA CREAR (plans/crear-es-len, 2026-10-06). Crear dejó de ser una
+// superficie aparte y pasó a ser el primer mensaje a Len; esto es lo que sólo
+// decía su prompt (`app/api/generate/system-prompt.ts`), mudado sin reescribir
+// a la guía que el índice ya manda leer antes de escribir desde cero. El resto
+// de aquel prompt —contrato, librerías, JavaScript— Len ya lo tenía.
+const FROM_SCRATCH = `WHEN THE PAGE IS EMPTY (you are writing it from scratch):
+- The brief is sometimes specific, often vague. Design the whole page yourself: the structure, the palette, the typography, the rhythm and what the page even contains are yours to decide — a vague brief is your cue to apply judgment, not to fall back on something safe.
+- There is no default shape. Nav on top, centered hero, three columns of benefits, testimonials, closing call and footer is ONE shape, not THE shape: it is the one that comes out by itself when nobody decides. Let the shape grow out of the content. Something to be read wants a column; something to be looked at wants a grid; something that happens over time wants a line; something to be compared wants a table; something with a single idea can fit in two blocks and be finished.
+- Three habits to CHOOSE, not inherit: splitting the content into cards in threes, always opening with the same centered hero, and adding a section because one seems to be missing. Keep them when this page asks for them —a long text is glad of its table of contents, a shop is glad of its navigation— and leave them out when it doesn't.
+- Write the whole document with Write, <head> included: a descriptive <title> that names the product, Tailwind via CDN, the Google Fonts you use and your own <style>.
+- Every other page of the site is one more file, /<slug>/index.html, written the same way.`;
+
 const INDICE = `MORE, IN ${CARPETA_DOCS} (read them when you need them):
-- ${RUTA_GUIA}: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch or a redesign. What you add to a page that already exists is written the way that page is.
+- ${RUTA_GUIA}: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch (an empty /index.html is one) or a redesign. What you add to a page that already exists is written the way that page is.
 - ${RUTA_LIBRERIAS}: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.`;
 
 const encontrar = (texto: string, marca: string, desde = 0): number => {
@@ -206,7 +218,7 @@ export function partirElManual(entero: string = manualSinPartir()): ManualPartid
   return {
     agents,
     docs: {
-      [RUTA_GUIA]: `${cabecera}\n${gusto}`,
+      [RUTA_GUIA]: `${cabecera}\n\n${FROM_SCRATCH}\n\n${gusto}`,
       [RUTA_LIBRERIAS]: librerias,
     },
   };
