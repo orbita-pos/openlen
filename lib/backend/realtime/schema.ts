@@ -92,11 +92,14 @@ export async function initRealtimeSchema(db: SqlRunner, opts: { devRole: string 
 
   // Como storage con `supabase_storage_admin`: hereda el ser dueño (políticas
   // en realtime.messages, los canales privados) y NO puede `set role`.
-  // `authenticator` lee las suscripciones: `apply_rls` vuelve al usuario de la
-  // sesión (`set_config('role', null)`) antes de leerlas, y es el pool del
-  // servicio (ver la decisión de `list_changes` partida en d-tiempo-real.md).
+  // `authenticator` usa el esquema: `apply_rls` vuelve al usuario de la sesión
+  // (`set_config('role', null)`) y sigue con sus tipos y funciones (es
+  // NOINHERIT: no le llega el USAGE de anon), y es el pool del servicio (ver la
+  // decisión de `list_changes` partida en d-tiempo-real.md). Las suscripciones
+  // NO hace falta que las lea: `apply_rls` las lee en su DECLARE, aún como
+  // `supabase_realtime_admin`. Medido con production-roles.pglite.test.ts.
   await db.exec(`
     grant supabase_realtime_admin to ${dev} with inherit true, set false;
-    grant select on realtime.subscription to authenticator;
+    grant usage on schema realtime to authenticator;
   `);
 }

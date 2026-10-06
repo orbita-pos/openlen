@@ -14,6 +14,8 @@ import type { Duplex } from "node:stream";
 import { WebSocketServer } from "ws";
 
 import { authorizeSocket } from "./auth";
+import { PostgresChangesHub, type ChangeSourceFactory } from "./changes";
+import { DEFAULT_POLLER_TIMING } from "./poller";
 import { Session, type Channel, type Hub, type RealtimeProject } from "./channel";
 import { realtimeLimits, type RealtimeLimits } from "./limits";
 import { PresenceRegistry } from "./presence";
@@ -28,6 +30,10 @@ export interface RealtimeServerOptions {
   readonly channelErrorBackoffMs?: number;
   /** Su CONNECT_ERROR_BACKOFF_MS (2 s): lo que espera un apretón que no entra. */
   readonly connectErrorBackoffMs?: number;
+  /** El slot de cada proyecto para postgres_changes (sin esto, su error). */
+  readonly changeSource?: ChangeSourceFactory;
+  /** Su `poll_interval_ms` (100). */
+  readonly pollIntervalMs?: number;
 }
 
 const WEBSOCKET_PATH = "/realtime/v1/websocket";
@@ -69,6 +75,10 @@ export function createRealtimeServer(o: RealtimeServerOptions): { server: http.S
       return [...(topics.get(key) ?? [])];
     },
     presence: new PresenceRegistry<Channel>(),
+    changes: new PostgresChangesHub({
+      changeSource: o.changeSource,
+      timing: { ...DEFAULT_POLLER_TIMING, ...(o.pollIntervalMs ? { pollIntervalMs: o.pollIntervalMs } : {}) },
+    }),
   };
   const sessions = new Set<Session>();
   const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_FRAME_BYTES, perMessageDeflate: false });
@@ -145,6 +155,7 @@ export function createRealtimeServer(o: RealtimeServerOptions): { server: http.S
     server,
     async close() {
       for (const s of sessions) s.close(1001, "Server requested disconnect");
+      await hub.changes.closeAll();
       await new Promise<void>((r) => wss.close(() => r()));
       await new Promise<void>((r) => server.close(() => r()));
     },

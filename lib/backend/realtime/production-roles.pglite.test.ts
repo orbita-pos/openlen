@@ -11,7 +11,10 @@ import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 import { uuid_ossp } from "@electric-sql/pglite/contrib/uuid_ossp";
 import { describe, expect, it, vi } from "vitest";
 
-import type { SqlRunner } from "../db";
+import type { ProjectDatabase, SqlRunner } from "../db";
+import { pgliteProjectDatabase } from "../testing/pglite";
+import { createSubscriptions, parseSubscriptionParams } from "./subscriptions";
+import { installWalCapture, queueChangeSource } from "./testing";
 
 vi.setConfig({ testTimeout: 60_000, hookTimeout: 120_000 });
 
@@ -80,6 +83,57 @@ describe("Realtime con los roles de producción (sin superusuario)", () => {
     const pub = await db.pg.query(`select tablename from pg_publication_tables where pubname = 'supabase_realtime'`);
     expect(pub.rows).toEqual([{ tablename: "mensajes" }]);
     await expect(db.pg.exec(`set role supabase_realtime_admin`)).rejects.toThrow(/permission denied to set role/);
+    await db.pg.close();
+  });
+
+  // 🔴 La mitad SIN privilegios de `list_changes` partida (poller.ts): la
+  // publicación, el alta de suscripciones y `apply_rls`, por una sesión de
+  // `authenticator` como en producción —no el superusuario de PGlite—. RLS
+  // decide quién ve cada fila.
+  it("las suscripciones y apply_rls por authenticator: cada uno ve lo suyo", async () => {
+    await cluster(`grant set on parameter log_min_messages to ${ADMIN};`);
+    await ensureRealtimeProvisioned(REF);
+    await as(DEV);
+    await db.pg.exec(`
+      create table public.mensajes (id bigint generated always as identity primary key, user_id uuid not null, texto text);
+      alter table public.mensajes enable row level security;
+      create policy "lo suyo" on public.mensajes for select to authenticated using ((select auth.uid()) = user_id);
+      alter publication supabase_realtime add table public.mensajes;
+    `);
+    await as("postgres");
+    await installWalCapture(db.pg, ["public.mensajes"]);
+
+    const authenticatorDb: ProjectDatabase = {
+      transaction: async (fn) => {
+        await as("authenticator");
+        try {
+          return await pgliteProjectDatabase(db.pg).transaction(fn);
+        } finally {
+          await as("postgres");
+        }
+      },
+    };
+    const U1 = "11111111-1111-4111-8111-111111111111";
+    const U2 = "22222222-2222-4222-8222-222222222222";
+    const parsed = parseSubscriptionParams({ event: "INSERT", schema: "public", table: "mensajes" });
+    if (!parsed.ok) throw new Error(parsed.error);
+    await createSubscriptions(authenticatorDb, [
+      { id: "aaaaaaaa-0000-4000-8000-000000000001", claims: { role: "authenticated", sub: U1 }, params: parsed.params },
+      { id: "aaaaaaaa-0000-4000-8000-000000000002", claims: { role: "authenticated", sub: U2 }, params: parsed.params },
+    ]);
+    await db.pg.query(`insert into public.mensajes (user_id, texto) values ($1, 'de u1')`, [U1]);
+    const listed = await queueChangeSource(db.pg, authenticatorDb).listChanges({ maxChanges: 100, maxRecordBytes: 1_048_576 });
+    expect(listed!.rows).toHaveLength(1);
+    expect(listed!.rows[0]).toMatchObject({ type: "INSERT", subscription_ids: ["aaaaaaaa-0000-4000-8000-000000000001"] });
+    expect(JSON.parse(listed!.rows[0]!.record)).toMatchObject({ user_id: U1, texto: "de u1" });
+
+    // BRAZO DE CONTROL: sin el USAGE de authenticator en el esquema (schema.ts),
+    // apply_rls no sigue tras volver al usuario de la sesión.
+    await as(ADMIN);
+    await db.pg.exec(`revoke usage on schema realtime from authenticator`);
+    await as("postgres");
+    await db.pg.query(`insert into public.mensajes (user_id, texto) values ($1, 'otra')`, [U1]);
+    await expect(queueChangeSource(db.pg, authenticatorDb).listChanges({ maxChanges: 100, maxRecordBytes: 1_048_576 })).rejects.toThrow(/permission denied for schema realtime/);
     await db.pg.close();
   });
 

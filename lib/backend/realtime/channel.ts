@@ -16,6 +16,7 @@ import type { WebSocket } from "ws";
 import type { ProjectDatabase } from "../db";
 import { confirmToken, type Confirmed, type RealtimeKeys } from "./auth";
 import { payloadTooLarge, type RealtimeLimits } from "./limits";
+import type { PostgresChangesHub } from "./changes";
 import type { PresenceDiff, PresenceRegistry } from "./presence";
 import { decodeFrame, encodeText, encodeUserBroadcast, InvalidMessageError, type PhxMessage, type UserBroadcastPush } from "./serializer";
 
@@ -33,6 +34,7 @@ export interface Hub {
   remove(ch: Channel): void;
   members(key: string): Iterable<Channel>;
   readonly presence: PresenceRegistry<Channel>;
+  readonly changes: PostgresChangesHub;
 }
 
 export interface SessionOptions {
@@ -97,6 +99,10 @@ export class Channel {
   presenceEnabled: boolean;
   /** Su `presence_client_rate_limit`. */
   presenceWindow: { counter: number; resetAt: number | null } = { counter: 0, resetAt: null };
+  /** El id de cada filtro de postgres_changes (el que conoce el cliente). */
+  readonly postgresChangesIds = new Map<PostgresChangesParams, number>();
+  /** id del filtro → uuid de su fila en `realtime.subscription` (changes.ts). */
+  readonly subscriptionUuids = new Map<number, string>();
   private tokenTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
@@ -113,6 +119,7 @@ export class Channel {
     this.accessToken = accessToken;
     this.presenceKey = config.presenceKey || randomUUID();
     this.presenceEnabled = config.presenceEnabled;
+    for (const p of config.postgresChanges) this.postgresChangesIds.set(p, postgresChangesId(p));
     this.scheduleTokenCheck(confirmed.msUntilRecheck);
   }
 
@@ -264,9 +271,16 @@ export class Session {
     this.channels.set(m.topic, ch);
     this.hub.add(ch);
     // Su `state`: los filtros de postgres_changes con su id.
-    this.reply(m, "ok", { postgres_changes: config.postgresChanges.map((p) => ({ ...p, id: postgresChangesId(p) })) });
+    this.reply(m, "ok", { postgres_changes: config.postgresChanges.map((p) => ({ ...p, id: ch.postgresChangesIds.get(p)! })) });
     // Su `:sync_presence` tras unirse, si lo pidió.
     if (ch.presenceEnabled) this.push(ch.topic, "presence_state", this.hub.presence.state(ch.key), ch.joinRef);
+    // Su `start_postgres_subscribe`: después de contestar al join.
+    if (config.postgresChanges.length > 0) void this.hub.changes.subscribe(ch);
+  }
+
+  /** Su `push_system_message`. */
+  pushSystem(ch: Channel, extension: string, status: "ok" | "error", message: string): void {
+    this.push(ch.topic, "system", { extension, status, message, channel: ch.sub }, ch.joinRef);
   }
 
   private removeChannel(ch: Channel): void {
@@ -277,6 +291,8 @@ export class Session {
     // Phoenix.Presence lo saca al morir el proceso del canal.
     const diff = this.hub.presence.untrack(ch.key, ch);
     if (diff) this.presenceDiff(ch, diff);
+    // Y sus suscripciones de postgres_changes (su `terminate`).
+    void this.hub.changes.unsubscribe(ch);
   }
 
   /** El diff a todos los del tema (en un canal público todos lo reciben, su
@@ -334,6 +350,9 @@ export class Session {
     ch.accessToken = t;
     ch.claims = c.claims;
     ch.scheduleTokenCheck(c.msUntilRecheck);
+    // Su `apply_access_token`: las suscripciones con los claims nuevos (la
+    // misma fila: `on conflict … do update set claims`).
+    if (ch.config.postgresChanges.length > 0) void this.hub.changes.subscribe(ch);
   }
 
   /** Su BroadcastHandler para un canal público: el mensaje tal cual a los del
