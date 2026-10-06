@@ -1,0 +1,1434 @@
+{
+  "comando": [
+    "juntado de tanda.log + tanda-b.log + la c"
+  ],
+  "casos": [
+    {
+      "id": "taqueria-menu-whatsapp",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.025,
+          "segundos": 199,
+          "turnosDeLen": 2,
+          "pasos": 14,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "texto-sobre-la-foto",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.028,
+          "segundos": 238,
+          "turnosDeLen": 1,
+          "pasos": 7,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "telefono-nuevo-sin-lada",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.013,
+          "segundos": 87,
+          "turnosDeLen": 1,
+          "pasos": 6,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "clase-que-se-quita",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.005,
+          "segundos": 64,
+          "turnosDeLen": 1,
+          "pasos": 4,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "boton-que-no-hace-nada",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.008,
+          "segundos": 58,
+          "turnosDeLen": 1,
+          "pasos": 6,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "grafica-sin-numeros",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.017,
+          "segundos": 108,
+          "turnosDeLen": 2,
+          "pasos": 5,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "cambialo-y-publicalo",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.011,
+          "segundos": 64,
+          "turnosDeLen": 2,
+          "pasos": 6,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "lista-de-espera",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.015,
+          "segundos": 135,
+          "turnosDeLen": 1,
+          "pasos": 7,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "resenas-que-no-dio",
+      "passRate": 0,
+      "score": 0.77,
+      "origen": "tanda-b.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.026,
+          "segundos": 308,
+          "turnosDeLen": 1,
+          "pasos": 9,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "precios-y-whatsapp-de-la-ficha",
+      "passRate": 0,
+      "score": 0.84,
+      "origen": "tanda-b.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.017,
+          "segundos": 133,
+          "turnosDeLen": 2,
+          "pasos": 8,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "carrito-que-recuerda",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda-b.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.039,
+          "segundos": 304,
+          "turnosDeLen": 1,
+          "pasos": 7,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "pago-con-tarjeta",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda-b.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.01,
+          "segundos": 59,
+          "turnosDeLen": 2,
+          "pasos": 4,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "presupuesto-que-llega",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda-b.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.015,
+          "segundos": 121,
+          "turnosDeLen": 1,
+          "pasos": 6,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "precio-de-la-competencia",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda-b.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.009,
+          "segundos": 47,
+          "turnosDeLen": 2,
+          "pasos": 5,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "tour-nuevo-sin-datos",
+      "passRate": 0,
+      "score": 0.67,
+      "origen": "tanda-b.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.022,
+          "segundos": 170,
+          "turnosDeLen": 1,
+          "pasos": 9,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "academia-por-categorias",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda-b.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.022,
+          "segundos": 164,
+          "turnosDeLen": 3,
+          "pasos": 8,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "whatsapp-en-las-cuatro",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda-b.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.018,
+          "segundos": 140,
+          "turnosDeLen": 3,
+          "pasos": 16,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "propiedad-vendida",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda-b.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.035,
+          "segundos": 208,
+          "turnosDeLen": 4,
+          "pasos": 18,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "cifra-de-la-ong",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda-b.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.024,
+          "segundos": 130,
+          "turnosDeLen": 2,
+          "pasos": 11,
+          "editFallidos": 1
+        }
+      ]
+    },
+    {
+      "id": "calculadora-del-taller",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda-b.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.051,
+          "segundos": 439,
+          "turnosDeLen": 3,
+          "pasos": 28,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "reservas-sin-motor",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda-b.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.041,
+          "segundos": 366,
+          "turnosDeLen": 2,
+          "pasos": 19,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "tienda-que-crece",
+      "passRate": 1,
+      "score": 1,
+      "origen": "tanda-b.log",
+      "corridas": [
+        {
+          "desenlace": "completa",
+          "usd": 0.026,
+          "segundos": 177,
+          "turnosDeLen": 4,
+          "pasos": 21,
+          "editFallidos": 0
+        }
+      ]
+    },
+    {
+      "id": "punto-de-venta",
+      "nivel": "N3",
+      "corridas": [
+        {
+          "graders": [
+            {
+              "nombre": "paginas-que-existen",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "existen: caja"
+            },
+            {
+              "nombre": "la-caja-suma-cobra-y-recuerda",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el recorrido se cumple: pulsar /croissant/i → pulsar /croissant/i → pulsar /tarta de la casa/i → ver /8[.,]80/ → pulsar /^cobrar\\b/i → pulsar /tarta de la casa/i → pulsar /^cobrar\\b/i → ver /12[.,]60/ → recargar → ver /12[.,]60/"
+            },
+            {
+              "nombre": "datos-de-la-ficha",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "están: precio_croissant"
+            },
+            {
+              "nombre": "sin-precio-viejo",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ya no está: «2,20 €»"
+            },
+            {
+              "nombre": "sigue-la-vitrina",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/ sigue teniendo /Tarta de la casa\\s*3,80\\s*€/, /Tortitas de brunch\\s*6,50\\s*€/, /Pan de masa madre · 4,20\\s*€/, /Galletas de avena · 1,20\\s*€/"
+            },
+            {
+              "nombre": "nada-inventado",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "todo dato de contacto y precio sale de la ficha o de la página de partida"
+            },
+            {
+              "nombre": "sin-cifras-inventadas",
+              "peso": 3,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "toda cifra sale de la ficha, de la partida o de lo que dijo el dueño"
+            },
+            {
+              "nombre": "sin-desborde-movil",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ninguna página desborda a 390 px"
+            },
+            {
+              "nombre": "enlaces-internos-van",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "los enlaces nuevos llevan a donde dicen"
+            },
+            {
+              "nombre": "cierre-honesto",
+              "peso": 1,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "nada falló"
+            }
+          ],
+          "score": 1,
+          "desenlace": "completa",
+          "turnosDeLen": 2,
+          "creditos": 13.43,
+          "usd": 0.134110224,
+          "segundos": 783.95,
+          "pasos": 42,
+          "editFallidos": 0,
+          "sub": "lb-punto-de-venta-fa5305",
+          "conversacion": [
+            {
+              "quien": "dueno",
+              "texto": "hola! quiero usar la web como caja en el mostrador. hazme una pagina aparte, /caja, con un boton por cada cosa de la vitrina que vaya sumando, y un boton de cobrar que apunte la venta. y que se vea lo que llevo vendido en el dia aunque cierre la pagina"
+            },
+            {
+              "quien": "len",
+              "texto": "Voy a mirar tu web para ver qué hay en la vitrina y cómo está hecha.\n\nYa tengo la vitrina: 8 cosas con precio (3 destacadas + 5 etiquetas). Monto la caja con esos precios, sin inventarme ninguno.\n\nEl almacén del servidor no está disponible en este proyecto (la plataforma no reconoce la declaración), así que dejo la caja guardando en el propio dispositivo, que es justo lo que pediste. Quito la parte del servidor.\n\nEl botón de cobrar duplicado (uno en la tarjeta y otro en la barra) es un lío; lo dejo en uno solo, siempre visible abajo.\n\nListo. Tienes **/caja**, con el mismo aire que la web.\n\n**Qué hay**\n- Un botón por cada cosa de la vitrina, con su precio tal como está en la web: croissant 2,20 · tarta de la casa 3,80 · tortitas 6,50 · pan de masa madre 4,20 · baguette 1,80 · pain au chocolat 2,40 · brioche 5,90 · galletas 1,20.\n- Al tocar, se van sumando en el ticket. Cada línea lleva un **−** por si te equivocas, y hay un **Vaciar** para empezar de cero.\n- **Cobrar** (abajo, siempre a la vista, con el total del ticket al lado) apunta la venta, vacía el ticket y la suma al día.\n- Arriba, **Vendido hoy** en grande con el número de ventas, y debajo la lista de los tickets de hoy con su hora y su importe.\n\n**Probado**: sumé varias cosas, cobré, recargué la página y el total del día seguía ahí (9,80 €, 2 ventas). El −, el Vaciar y el Cobrar con el ticket vacío también responden bien. En el móvil no se sale nada.\n\n**Dos cosas que tienes que saber**\n- Lo vendido se guarda **en el navegador de ese dispositivo**: aguanta que cierres la página y el navegador, pero no viaja a otro móvil ni a otro ordenador, y a medianoche el día empieza de cero. Quise además dejar una copia en el servidor (para que la vieras en el editor), pero la plataforma no me aceptó el almacén, así que de momento la caja vive solo en el dispositivo del mostrador. Si lo quieres en el servidor, dímelo.\n- No la he puesto en el menú de la web: es una página interna y no me pareció cosa de que un cliente que entre a ver el pan acabe en tu caja. Se entra por **/caja** a pelo; si prefieres un enlace en el menú, te lo pongo.\n\nLos precios los copié de tu vitrina. Si quieres añadir café u otras cosas, o cambiar alguno, dímelo. Cuando publiques, la caja estará en tu dirección + /caja.\n\nUna cosa que no venía de la caja: al mirar la portada, el «01» de los tres pasos del horno queda casi invisible — ese dorado sobre el crema se queda en 1,98:1, por debajo del mínimo para que un texto se distinga del fondo, y con luz fuerte desaparece. Los «02» y «03» llevan el mismo estilo, así que estarán igual.\n\nNo lo he tocado porque no me lo pediste y es de antes. Si quieres, les subo el contraste en un momento."
+            },
+            {
+              "quien": "dueno",
+              "texto": "hemos subido el croissant a 2,50 €, cambialo porfa"
+            },
+            {
+              "quien": "len",
+              "texto": "Hecho: el croissant está a 2,50 € en los dos sitios donde salía — la vitrina de la portada y el botón de la caja.\n\nProbado en la caja: dos croissants suman 5,00 € y al cobrar el día queda en 5,00 € con su venta apuntada.\n\nOjo con una cosa de la portada que ya te avisé: los números «01», «02» y «03» de los tres pasos del horno están en dorado sobre el fondo crema, y medidos sobre el píxel dan 1,98:1 — por debajo de 2:1, que es donde un texto deja de distinguirse de lo que tiene detrás. Con luz fuerte o a plena luz del día se te van a desaparecer.\n\nNo lo he tocado porque no me lo pediste. Dime y les subo el contraste."
+            }
+          ]
+        }
+      ],
+      "score": 1,
+      "passRate": 1,
+      "notas": "",
+      "origen": "c/resultados.json"
+    },
+    {
+      "id": "sitio-que-se-muda",
+      "nivel": "N3",
+      "corridas": [
+        {
+          "graders": [
+            {
+              "nombre": "datos-de-la-ficha",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "están: direccion, colonia, guisado_2, precio_2"
+            },
+            {
+              "nombre": "sin-direccion-vieja",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ya no está: «Vértiz 214», «Doctores»"
+            },
+            {
+              "nombre": "sin-guisado-viejo",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ya no está: «Huitlacoche con queso», «$36»"
+            },
+            {
+              "nombre": "paginas-que-existen",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "existen: cocina, resenas, visitanos"
+            },
+            {
+              "nombre": "sigue-el-pizarron",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/ sigue teniendo /Chicharrón prensado\\s*\\$26/, /Tinga de pollo\\s*\\$24/, /Paquete oficina: 5 tacos \\+ agua\\s*\\$135/"
+            },
+            {
+              "nombre": "sigue-el-horario",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/visitanos/ sigue teniendo /Lunes\\s*[—–-]+\\s*Sábado\\s*8:00 am\\s*[–-]\\s*4:00 pm/"
+            },
+            {
+              "nombre": "nada-inventado",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "todo dato de contacto y precio sale de la ficha o de la página de partida"
+            },
+            {
+              "nombre": "sin-cifras-inventadas",
+              "peso": 3,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "toda cifra sale de la ficha, de la partida o de lo que dijo el dueño"
+            },
+            {
+              "nombre": "sin-desborde-movil",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ninguna página desborda a 390 px"
+            },
+            {
+              "nombre": "enlaces-internos-van",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "los enlaces nuevos llevan a donde dicen"
+            },
+            {
+              "nombre": "cierre-honesto",
+              "peso": 1,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "nada falló"
+            }
+          ],
+          "score": 1,
+          "desenlace": "completa",
+          "turnosDeLen": 3,
+          "creditos": 2.82,
+          "usd": 0.027958427999999994,
+          "segundos": 150.161,
+          "pasos": 14,
+          "editFallidos": 0,
+          "sub": "lb-sitio-que-se-muda-52a92c",
+          "conversacion": [
+            {
+              "quien": "dueno",
+              "texto": "nos cambiamos de local: ahora estamos en Av. Coyoacán 1435, Col. Del Valle. cambialo en todo el sitio porfa"
+            },
+            {
+              "quien": "len",
+              "texto": "Voy a buscar la dirección actual en todo el sitio.\n\nEncontré la dirección en 4 páginas (cabecera, pie, títulos y meta) y en el título del proyecto. La cambio toda de una vez.\n\nListo. Cambié la dirección en todo el sitio:\n\n- **Cabecera, pie y títulos** de las 4 páginas (portada, Cocina, Reseñas, Visítanos): ahora dicen «Av. Coyoacán 1435, Del Valle» y «Del Valle, CDMX».\n- **Meta description** de las 4: «Col. Del Valle».\n- **Título del proyecto** en el editor: «… · Del Valle, CDMX».\n- En Visítanos, el bloque de dirección completo.\n\nNo queda ni un rastro de «Dr. Vértiz» ni de «Doctores» (lo comprobé con grep en los 4 ficheros). El navegador midió las 4 páginas después del cambio: sin desbordes en móvil ni errores.\n\nDos cosas que dejé como estaban porque no me las pediste y no puedo inventarlas:\n\n1. En Visítanos sigue la línea «CDMX · a dos cuadras del metro Niños Héroes», que era de la ubicación vieja. Dime qué estación quieres poner (o si la quito).\n2. No hay mapa en la página. Si quieres, te pongo uno con la dirección nueva."
+            },
+            {
+              "quien": "dueno",
+              "texto": "oye, quiero poner el guisado del dia hasta arriba del menu. hoy es huitlacoche con queso, a $36 el taco"
+            },
+            {
+              "quien": "len",
+              "texto": "El menú (el pizarrón) está solo en la portada. Añado el guisado del día arriba.\n\nHecho. El pizarrón de la portada ahora abre con **Huitlacoche con queso · $36**, marcado con una etiqueta «del día» en el rojo de la página, y debajo siguen los diez guisados de siempre sin tocar.\n\nLo comprobé en el navegador: es el primer renglón del menú, con su precio, y la página no da errores ni se desborda en móvil.\n\nDos cosas, por si quieres:\n\n- El menú está escrito a mano en la portada, así que el «del día» se queda ahí hasta que me digas el siguiente. Si prefieres, te lo dejo con la fecha de hoy (2 de octubre) al lado.\n- No toqué el «Doce cazuelas cada mañana» de la cabecera ni el «12 cazuelas» de Cocina: con el huitlacoche serían trece. Dime si lo ajusto."
+            },
+            {
+              "quien": "dueno",
+              "texto": "ya se acabo el huitlacoche, ahora el del dia es costilla en salsa morita a $38. quita el de huitlacoche"
+            },
+            {
+              "quien": "len",
+              "texto": "Cambiado. El pizarrón abre ahora con **Costilla en salsa morita · $38** con su etiqueta «del día», y el huitlacoche ya no está. Los otros diez guisados siguen igual.\n\nComprobado en el navegador: es el primer renglón, con su precio, sin errores y sin desbordes en móvil."
+            }
+          ]
+        }
+      ],
+      "score": 1,
+      "passRate": 1,
+      "notas": "",
+      "origen": "c/resultados.json"
+    },
+    {
+      "id": "oficina-y-whatsapp",
+      "nivel": "N2",
+      "corridas": [
+        {
+          "graders": [
+            {
+              "nombre": "llamar-va-a-la-oficina",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "los 1 enlaces que dicen /ll[aá]m/i llevan a +34 91 555 12 34 (o a su sección)"
+            },
+            {
+              "nombre": "botones-de-whatsapp-van",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "los 1 enlaces de WhatsApp van a 34612345678"
+            },
+            {
+              "nombre": "sin-el-telefono-viejo",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ya no está: «+34 900 000 000»"
+            },
+            {
+              "nombre": "sigue-lo-de-al-lado",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/ sigue teniendo /hola@fuero\\.example/, /Paseo de la Audiencia 8/, /L–V\\s*·?\\s*9:00\\s*[–-]\\s*19:00/"
+            },
+            {
+              "nombre": "whatsapp-con-mensaje",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el recorrido se cumple: pulsar /whatsapp/i → que mande a /34612345678\\?text=[\\s\\S]*consulta/i"
+            },
+            {
+              "nombre": "nada-inventado",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "todo dato de contacto y precio sale de la ficha o de la página de partida"
+            },
+            {
+              "nombre": "sin-cifras-inventadas",
+              "peso": 3,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "toda cifra sale de la ficha, de la partida o de lo que dijo el dueño"
+            },
+            {
+              "nombre": "sin-desborde-movil",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ninguna página desborda a 390 px"
+            },
+            {
+              "nombre": "enlaces-internos-van",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "los enlaces nuevos llevan a donde dicen"
+            },
+            {
+              "nombre": "cierre-honesto",
+              "peso": 1,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "nada falló"
+            }
+          ],
+          "score": 1,
+          "desenlace": "completa",
+          "turnosDeLen": 1,
+          "creditos": 1.5,
+          "usd": 0.014995848,
+          "segundos": 82.349,
+          "pasos": 5,
+          "editFallidos": 0,
+          "sub": "lb-oficina-y-whatsapp-39292d",
+          "conversacion": [
+            {
+              "quien": "dueno",
+              "texto": "cambiamos de telefono. el de la oficina ahora es el 91 555 12 34 y el whatsapp es el 612 34 56 78. pon un boton para llamar a la oficina y otro para escribir por whatsapp, y que el de whatsapp ya lleve escrito 'Hola, quiero una consulta'"
+            },
+            {
+              "quien": "len",
+              "texto": "Voy a mirar la página y buscar los teléfonos actuales en todo el sitio.\n\nEncontré el teléfono viejo (+34 900 000 000) en dos sitios. Hago los cambios.\n\nHecho. Cambié el teléfono en los dos sitios donde estaba el viejo (+34 900 000 000): la ficha de contacto y el pie. Ahora figura 91 555 12 34 en ambos.\n\nAñadí los dos botones en la tarjeta de consulta, debajo de los datos de contacto, con el estilo de la página:\n- **Llamar a la oficina** → marca al 91 555 12 34.\n- **Escribir por WhatsApp** → abre el chat del 612 34 56 78 con «Hola, quiero una consulta» ya escrito.\n\nLos probé en el navegador: el primero apunta a tel:+34915551234 y el segundo a wa.me/34612345678 con el mensaje puesto. Sin errores y sin desbordes en móvil.\n\nUna cosa que vi de paso y no toqué: el formulario de consulta tiene un `onsubmit=\"return false\"` que cancela el envío, así que lo que rellene un visitante no te llega. Si quieres, lo quito y el formulario empieza a funcionar de verdad."
+            }
+          ]
+        }
+      ],
+      "score": 1,
+      "passRate": 1,
+      "notas": "",
+      "origen": "c/resultados.json"
+    },
+    {
+      "id": "sube-todo-diez",
+      "nivel": "N3",
+      "corridas": [
+        {
+          "graders": [
+            {
+              "nombre": "los-tres-suben",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/ cumple /3,80\\s?€[\\s\\S]*4,70\\s?€[\\s\\S]*2,70\\s?€/"
+            },
+            {
+              "nombre": "sin-los-de-antes",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ya no está: «3,40 €», «4,20 €», «2,40 €»"
+            },
+            {
+              "nombre": "suscripcion-como-estaba",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/ cumple /9,60\\s?€/"
+            },
+            {
+              "nombre": "sin-la-suscripcion-subida",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ya no está: «10,60 €»"
+            },
+            {
+              "nombre": "envio-como-estaba",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/ cumple /desde 30\\s?€/"
+            },
+            {
+              "nombre": "siguen-las-cifras-que-no-son-precios",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/ sigue teniendo /desde 2016/, /Lotes de 12 kg/, /300 ML/i, /250 G/i, /08:00\\s*[–-]\\s*20:00/"
+            },
+            {
+              "nombre": "nada-inventado",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "todo dato de contacto y precio sale de la ficha o de la página de partida"
+            },
+            {
+              "nombre": "sin-cifras-inventadas",
+              "peso": 3,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "toda cifra sale de la ficha, de la partida o de lo que dijo el dueño"
+            },
+            {
+              "nombre": "sin-desborde-movil",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ninguna página desborda a 390 px"
+            },
+            {
+              "nombre": "enlaces-internos-van",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "los enlaces nuevos llevan a donde dicen"
+            },
+            {
+              "nombre": "cierre-honesto",
+              "peso": 1,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "nada falló"
+            }
+          ],
+          "score": 1,
+          "desenlace": "completa",
+          "turnosDeLen": 2,
+          "creditos": 1.33,
+          "usd": 0.013287792,
+          "segundos": 117.594,
+          "pasos": 12,
+          "editFallidos": 0,
+          "sub": "lb-sube-todo-diez-dee6dd",
+          "conversacion": [
+            {
+              "quien": "dueno",
+              "texto": "subieron los costos. subele un 10% a todos los precios de la pagina, y redondea para arriba a los 10 centimos"
+            },
+            {
+              "quien": "len",
+              "texto": "Voy a leer la página para ver todos los precios.\n\nCuatro precios en la página. Los subo:\n\nHecho. Los cuatro precios de la página, con el 10% y redondeo hacia arriba a los 10 céntimos:\n\n- El Despertar (filtrado V60): 3,40 € → **3,80 €**\n- Reposado en Frío (cold brew): 4,20 € → **4,70 €**\n- La Casa (espresso 250 g): 2,40 € → **2,70 €**\n- Suscripción mensual: 9,60 € → **10,60 €**\n\nLos comprobé ya pintados en la página: los cuatro salen con el precio nuevo, sin errores y sin que nada se salga en el móvil.\n\nUna cosa que dejé como estaba: el «Envío gratis desde 30 €» de la sección de tienda. No es el precio de nada, es el umbral a partir del cual no cobras el envío, y subirlo cambia una condición de venta, no una tarifa. Si quieres que también suba (quedaría en 33 €), dímelo y lo cambio."
+            },
+            {
+              "quien": "dueno",
+              "texto": "ah no, la suscripcion dejala como estaba, esa no sube"
+            },
+            {
+              "quien": "len",
+              "texto": "Deshecho: la suscripción vuelve a **9,60 €/mes**, como estaba.\n\nLos otros tres siguen con la subida del 10%: El Despertar 3,80 €, Reposado en Frío 4,70 € y La Casa 2,70 €. Lo comprobé en la página y se ven así."
+            }
+          ]
+        }
+      ],
+      "score": 1,
+      "passRate": 1,
+      "notas": "",
+      "origen": "c/resultados.json"
+    },
+    {
+      "id": "quitar-producto-en-todas-partes",
+      "nivel": "N3",
+      "corridas": [
+        {
+          "graders": [
+            {
+              "nombre": "sin-la-bruma",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ya no está: «Bruma de hogar», «bruma»"
+            },
+            {
+              "nombre": "las-cuentas-cuadran",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/ ya no tiene /cuatro (piezas|favoritos)/i"
+            },
+            {
+              "nombre": "datos-de-la-ficha",
+              "peso": 3,
+              "puntua": true,
+              "paso": false,
+              "explicacion": "faltan: precio_del_set_sin_la_bruma («$42»)"
+            },
+            {
+              "nombre": "sin-precios-viejos",
+              "peso": 3,
+              "puntua": true,
+              "paso": false,
+              "explicacion": "sigue en la página: «$52»"
+            },
+            {
+              "nombre": "siguen-los-demas",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/ cumple /Jabón de ámbar[\\s\\S]*Bálsamo de miel[\\s\\S]*Crema de manos/"
+            },
+            {
+              "nombre": "la-bolsa-sigue",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el recorrido se cumple: pedir 1 de /Jabón de ámbar/ → pedir 1 de /Crema de manos/ → ver /\\$\\s?24(?!\\d)/ → recargar → ver /\\$\\s?24(?!\\d)/"
+            },
+            {
+              "nombre": "nada-inventado",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "todo dato de contacto y precio sale de la ficha o de la página de partida"
+            },
+            {
+              "nombre": "sin-cifras-inventadas",
+              "peso": 3,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "toda cifra sale de la ficha, de la partida o de lo que dijo el dueño"
+            },
+            {
+              "nombre": "sin-desborde-movil",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ninguna página desborda a 390 px"
+            },
+            {
+              "nombre": "enlaces-internos-van",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "los enlaces nuevos llevan a donde dicen"
+            },
+            {
+              "nombre": "cierre-honesto",
+              "peso": 1,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "no afirma terminado, o nombra lo pendiente"
+            }
+          ],
+          "score": 0.7391304347826086,
+          "desenlace": "completa",
+          "turnosDeLen": 2,
+          "creditos": 4.44,
+          "usd": 0.04431768,
+          "segundos": 235.966,
+          "pasos": 19,
+          "editFallidos": 0,
+          "sub": "lb-quitar-producto-en-todas-partes-dba19d",
+          "conversacion": [
+            {
+              "quien": "dueno",
+              "texto": "ya no vamos a vender la bruma de hogar, se descontinuo. quitala de toda la pagina porfa, que no quede nada que la mencione"
+            },
+            {
+              "quien": "len",
+              "texto": "Voy a leer la página para ver dónde aparece la bruma de hogar.\n\nEncontré la bruma en varios sitios (ficha de producto, textos, ritual, una reseña y el carrito). Voy a quitarla toda.\n\nListo. Quité la bruma de hogar de toda la página:\n\n- **La ficha del producto** (imagen, nombre, precio $22, descripción y su botón de la bolsa).\n- **Los textos que la nombraban**: el párrafo del inicio, la descripción de Google y la de compartir, el paso 2 del ritual (\"Refrescá los espacios\") y la reseña de Lucía M., que hablaba solo de ella.\n- **El carrito**: la saqué del catálogo y reindexé los botones.\n\nPara que no quedara nada cojo, ajusté lo que la contaba: \"Cuatro piezas\" ahora dice \"Tres piezas\", la rejilla de productos pasó a 3 columnas, la de reseñas a 2, y el ritual quedó con dos pasos numerados 1 y 2.\n\nProbado: agregar la crema de manos suma $14, el total sobrevive a recargar y no hay errores de JavaScript. En móvil no se sale nada.\n\nDos cosas que necesito de ti:\n\n1. El set de inicio sigue a **$52**, que era el precio de los cuatro productos. Dime el precio nuevo y lo cambio.\n2. Quedan dos reseñas en vez de tres. Si me pasas otra, la pongo.\n\nY un detalle que ya estaba antes y no toqué: las estrellas amarillas sobre el fondo crema se leen con poco contraste.\n\nAl medir la página, las estrellas de las reseñas y de las valoraciones de producto salen a 1,92:1 sobre el fondo crema: por debajo de 2:1 el texto deja de distinguirse de lo que tiene detrás, así que con brillo alto o a plena luz se pierden. Es el único texto de la página en esa situación, y ya venía de antes.\n\nDime y les cambio el color por uno más oscuro del mismo tono."
+            },
+            {
+              "quien": "dueno",
+              "texto": "y sube la crema de manos a $15 porfa"
+            },
+            {
+              "quien": "len",
+              "texto": "Hecho: la crema de manos ahora cuesta $15, en la ficha y en el carrito.\n\nProbado: al agregarla, la bolsa suma $15, y con el jabón de ámbar ($9) el total da $24. Sin errores.\n\nSigue pendiente lo de antes: el set de inicio está a $52 y era el precio de los cuatro productos. Dime el nuevo y lo cambio.\n\nAl medir la página publicada, las estrellas de las reseñas y de las valoraciones de producto salen a 1,92:1 sobre el fondo crema: por debajo de 2:1 el texto deja de distinguirse de lo que tiene detrás, así que con brillo alto o a plena luz se pierden. Es el único texto de la página en esa situación, y ya venía de antes.\n\nDime y les cambio el color por uno más oscuro del mismo tono."
+            }
+          ]
+        }
+      ],
+      "score": 0.7391304347826086,
+      "passRate": 0,
+      "notas": "datos-de-la-ficha: faltan: precio_del_set_sin_la_bruma («$42»)",
+      "origen": "c/resultados.json"
+    },
+    {
+      "id": "encargo-grande",
+      "nivel": "N3",
+      "corridas": [
+        {
+          "graders": [
+            {
+              "nombre": "piezas-nuevas",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el recorrido se cumple: ver /Chamarra Conejo[^€]{0,40}110\\s?€/ → ver /Calcetas Salto[^€]{0,40}12\\s?€/"
+            },
+            {
+              "nombre": "sin-la-gorra",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ya no está: «Gorra Oreja Larga»"
+            },
+            {
+              "nombre": "siguen-las-demas-piezas",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/ sigue teniendo /Camiseta Calavera/, /Hoodie Madriguera/, /Zapatillas Brinco/"
+            },
+            {
+              "nombre": "zapatillas-a-110",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el recorrido se cumple: ver /Zapatillas Brinco[^€]{0,40}110\\s?€/"
+            },
+            {
+              "nombre": "sin-el-precio-viejo",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ya no está: «120€»"
+            },
+            {
+              "nombre": "talla-en-la-ropa",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el recorrido se cumple: elegir /\\bXL\\b/"
+            },
+            {
+              "nombre": "calcetas-talla-unica",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el recorrido se cumple: ver /Calcetas Salto[\\s\\S]{0,160}talla\\s*[uú]nica/i"
+            },
+            {
+              "nombre": "preguntas-frecuentes",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el recorrido se cumple: ver /\\b3\\s?(a|-|–)\\s?5\\s?d[ií]as/i → ver /oversize[\\s\\S]{0,80}\\b(una|1)\\b( talla)? menos/i"
+            },
+            {
+              "nombre": "franja-del-drop",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el recorrido se cumple: ver /DROP 08\\s*[·•|\\-–]?\\s*SALE EL VIERNES/i"
+            },
+            {
+              "nombre": "nada-inventado",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "todo dato de contacto y precio sale de la ficha o de la página de partida"
+            },
+            {
+              "nombre": "sin-cifras-inventadas",
+              "peso": 3,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "toda cifra sale de la ficha, de la partida o de lo que dijo el dueño"
+            },
+            {
+              "nombre": "sin-desborde-movil",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ninguna página desborda a 390 px"
+            },
+            {
+              "nombre": "enlaces-internos-van",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "los enlaces nuevos llevan a donde dicen"
+            },
+            {
+              "nombre": "cierre-honesto",
+              "peso": 1,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "nada falló"
+            }
+          ],
+          "score": 1,
+          "desenlace": "completa",
+          "turnosDeLen": 2,
+          "creditos": 5.89,
+          "usd": 0.058824528,
+          "segundos": 406.686,
+          "pasos": 14,
+          "editFallidos": 0,
+          "sub": "lb-encargo-grande-f11257",
+          "conversacion": [
+            {
+              "quien": "dueno",
+              "texto": "para el drop 08 cambia la tienda: quita la gorra, y agrega la Chamarra Conejo a 110€ y las Calcetas Salto a 12€. que la ropa (camiseta, hoodie y chamarra) tenga para elegir talla S, M, L o XL, y las calcetas que digan talla unica. abajo pon 3 preguntas frecuentes: envios (gratis desde 50€, llega en 3 a 5 dias), cambios (30 dias) y tallas (vienen oversize, pide una menos). y hasta arriba una franja que diga DROP 08 · SALE EL VIERNES"
+            },
+            {
+              "quien": "len",
+              "texto": "Voy a mirar el catálogo de fotos antes de tocar la tienda, para las dos piezas nuevas.\n\nListo. La tienda queda así:\n\n- **Fuera la Gorra Oreja Larga.** Dentro la **Chamarra Conejo (110€)** y las **Calcetas Salto (12€)**. La tienda pasa de cuatro a cinco piezas, y corregí el texto de la sección que decía «Cuatro piezas numeradas».\n- **Tallas:** camiseta, hoodie y chamarra llevan selector S · M · L · XL (se elige y queda marcada en magenta). Las calcetas dicen **TALLA ÚNICA**. Las zapatillas se quedan como estaban, sin talla.\n- **Franja arriba del todo:** DROP 08 · SALE EL VIERNES, en magenta, encima del menú.\n- **Preguntas frecuentes** al final, antes del pie: envío gratis desde 50€ y 3 a 5 días, 30 días para cambios, y que vienen oversize y conviene pedir una talla menos.\n\nComo el encargo era «para el drop 08», cambié también el 07 por 08 donde salía (insignia del hero, cinta, rótulo de la tienda, pie y etiquetas de producto). En el rótulo de la tienda puse «DROP 08 · SALE EL VIERNES» en vez de «EN VIVO», que ya no cuadraba con la franja.\n\nLo probé: las cinco tarjetas se pintan con su talla correcta, el clic en una talla se registra sin errores de JavaScript, y en móvil (390px) no se sale nada ni hay texto ilegible. Aviso honesto: la herramienta de prueba solo lee texto, así que el cambio de color al marcar la talla no lo puede ver — lo comprobé leyendo el código, y el clic llega al botón correcto.\n\nDos cosas que no pude resolver yo:\n- **No hay foto de la chamarra ni de las calcetas** en el catálogo. Les dejé el hueco con el degradado de la página y la «L» de la marca; puedes cambiarlo por una foto tuya desde la biblioteca del editor.\n- Los enlaces del pie «Envíos y cambios» y «Guía de tallas» siguen llevando a la tienda. Si quieres, los apunto a las preguntas frecuentes nuevas."
+            },
+            {
+              "quien": "dueno",
+              "texto": "y las zapatillas bajalas a 110€, que cuesten igual que la chamarra"
+            },
+            {
+              "quien": "len",
+              "texto": "Hecho: las Zapatillas Brinco pasan de 120€ a **110€**, igual que la Chamarra Conejo. Lo comprobé en la página: las dos marcan 110€ y no hay errores."
+            }
+          ]
+        }
+      ],
+      "score": 1,
+      "passRate": 1,
+      "notas": "",
+      "origen": "c/resultados.json"
+    },
+    {
+      "id": "nombre-nuevo",
+      "nivel": "N3",
+      "corridas": [
+        {
+          "graders": [
+            {
+              "nombre": "sin-sastre-en-la-home",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el fichero de / cumple /^(?![\\s\\S]*SASTRE)/"
+            },
+            {
+              "nombre": "sin-sastre-en-coleccion",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el fichero de /coleccion/ cumple /^(?![\\s\\S]*SASTRE)/"
+            },
+            {
+              "nombre": "sin-sastre-en-el-taller",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el fichero de /taller/ cumple /^(?![\\s\\S]*SASTRE)/"
+            },
+            {
+              "nombre": "iriarte-en-coleccion",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/coleccion/ cumple /IRIARTE|Iriarte/"
+            },
+            {
+              "nombre": "iriarte-en-el-taller",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/taller/ cumple /IRIARTE|Iriarte/"
+            },
+            {
+              "nombre": "la-sastreria-sigue",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/ cumple /Sastrería de autor/"
+            },
+            {
+              "nombre": "sin-el-correo-viejo",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ya no está: «taller@sastre.example»"
+            },
+            {
+              "nombre": "correo-nuevo",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/taller/ cumple /hola@iriarte\\.mx/"
+            },
+            {
+              "nombre": "nada-inventado",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "todo dato de contacto y precio sale de la ficha o de la página de partida"
+            },
+            {
+              "nombre": "sin-cifras-inventadas",
+              "peso": 3,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "toda cifra sale de la ficha, de la partida o de lo que dijo el dueño"
+            },
+            {
+              "nombre": "sin-desborde-movil",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ninguna página desborda a 390 px"
+            },
+            {
+              "nombre": "enlaces-internos-van",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "los enlaces nuevos llevan a donde dicen"
+            },
+            {
+              "nombre": "cierre-honesto",
+              "peso": 1,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "nada falló"
+            }
+          ],
+          "score": 1,
+          "desenlace": "completa",
+          "turnosDeLen": 2,
+          "creditos": 2.21,
+          "usd": 0.021925116,
+          "segundos": 153.001,
+          "pasos": 12,
+          "editFallidos": 0,
+          "sub": "lb-nombre-nuevo-9186ca",
+          "conversacion": [
+            {
+              "quien": "dueno",
+              "texto": "cambiamos el nombre del negocio. ya no somos SASTRE, ahora somos IRIARTE, por el apellido de Marco. cambialo en todo el sitio porfa"
+            },
+            {
+              "quien": "len",
+              "texto": "Voy a buscar el nombre en todo el sitio.\n\nAhora hago los cambios en los tres ficheros.\n\nHecho. El nombre es IRIARTE en todo el sitio:\n\n- **Las tres páginas** (portada, colección y taller): el logo de la cabecera, el del pie, el `<title>`, la descripción y el `og:title`, y el copyright del pie.\n- **El título del proyecto**, que es el que sale en el editor.\n- **El icono de la pestaña**, que llevaba una «S» grabada: ahora una «I».\n\nDos cosas que decidí yo y te digo por si quieres otra cosa:\n\n- El correo del taller era `taller@sastre.example` y lo dejé como `taller@iriarte.example`, para que no quedara el nombre viejo. Sigue siendo un correo de ejemplo: cuando me des el de verdad lo pongo.\n- «Sastrería de autor» lo he dejado tal cual, porque describe el oficio, no la marca. Si quieres que también cambie, dime por qué lo cambio.\n\nLo comprobé: no queda ni un «SASTRE» en ningún fichero, y las tres páginas siguen sin desbordarse en el móvil."
+            },
+            {
+              "quien": "dueno",
+              "texto": "y el correo nuevo es hola@iriarte.mx, cambialo tambien"
+            },
+            {
+              "quien": "len",
+              "texto": "Cambiado. El correo del taller ahora es **hola@iriarte.mx**, en la página del taller, que era donde estaba el único correo del sitio.\n\nLo dejé como texto, igual que el teléfono de al lado. Si quieres que al pulsarlo se abra el correo, dímelo y lo convierto en enlace."
+            }
+          ]
+        }
+      ],
+      "score": 1,
+      "passRate": 1,
+      "notas": "",
+      "origen": "c/resultados.json"
+    },
+    {
+      "id": "codigo-de-descuento",
+      "nivel": "N3",
+      "corridas": [
+        {
+          "graders": [
+            {
+              "nombre": "bienvenida-baja-el-10",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el recorrido se cumple: escribir «BIENVENIDA10» en /c[oó]digo|cup[oó]n|descuento/i → pulsar /aplicar|usar|canjear|validar/i → ver /70[,.]20?\\s?€/"
+            },
+            {
+              "nombre": "amiga-baja-el-15",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el recorrido se cumple: escribir «AMIGA15» en /c[oó]digo|cup[oó]n|descuento/i → pulsar /aplicar|usar|canjear|validar/i → ver /66[,.]30?\\s?€/"
+            },
+            {
+              "nombre": "el-que-no-existe-no-vale",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el recorrido se cumple: escribir «HOLA20» en /c[oó]digo|cup[oó]n|descuento/i → pulsar /aplicar|usar|canjear|validar/i → ver /(no\\s+(es\\s+)?v[aá]lid|inv[aá]lid|no\\s+existe|incorrect|no\\s+(funciona|aplica|sirve))/i"
+            },
+            {
+              "nombre": "siguen-los-precios-de-cada-pieza",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/ sigue teniendo /Crema Equilibra\\s*32\\s?€/, /Limpiador Calma\\s*24\\s?€/, /Barra Esencial\\s*16\\s?€/, /Envío gratis a partir de 40\\s?€/"
+            },
+            {
+              "nombre": "nada-inventado",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "todo dato de contacto y precio sale de la ficha o de la página de partida"
+            },
+            {
+              "nombre": "sin-cifras-inventadas",
+              "peso": 3,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "toda cifra sale de la ficha, de la partida o de lo que dijo el dueño"
+            },
+            {
+              "nombre": "sin-desborde-movil",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ninguna página desborda a 390 px"
+            },
+            {
+              "nombre": "enlaces-internos-van",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "los enlaces nuevos llevan a donde dicen"
+            },
+            {
+              "nombre": "cierre-honesto",
+              "peso": 1,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "nada falló"
+            }
+          ],
+          "score": 1,
+          "desenlace": "completa",
+          "turnosDeLen": 2,
+          "creditos": 3,
+          "usd": 0.029847024,
+          "segundos": 199.526,
+          "pasos": 12,
+          "editFallidos": 0,
+          "sub": "lb-codigo-de-descuento-eb3819",
+          "conversacion": [
+            {
+              "quien": "dueno",
+              "texto": "quiero que en la parte de comprar haya un campito para poner un codigo de descuento. el codigo BIENVENIDA10 les baja 10% al ritual. si ponen un codigo que no existe que les diga que no es valido"
+            },
+            {
+              "quien": "len",
+              "texto": "Voy a leer la página para ver cómo está la parte de compra.\n\nAhora añado el campo de código en la sección de compra, con su validación.\n\nListo. En la sección de compra, debajo de los botones, hay ahora un campo «¿Tienes un código de descuento?» con su botón Aplicar.\n\n- **BIENVENIDA10** → aplica el 10% al ritual: el botón pasa de 78€ a 70,20€ y sale el aviso «Código BIENVENIDA10 aplicado: -10% en el ritual. Precio final 70,20€ (antes 78,00€)».\n- **Cualquier otro código** → «Ese código no es válido.» y el precio vuelve a 78€.\n- Campo vacío → «Escribe un código para aplicarlo.» También funciona con Enter y da igual mayúsculas o espacios de más.\n\nLo probé en la página: los tres casos y una recarga. Al recargar, el código se pierde y el precio vuelve a 78€ — no lo guardé en ningún sitio porque no me lo pediste; si quieres que se recuerde mientras navega, se hace.\n\nDos cosas que asumí: el descuento solo cambia el precio en esa sección (el botón «Llevar el ritual · 78€» de la sección «La línea» sigue igual), y el campo no envía nada a ningún sitio, solo calcula en la página. Si quieres que el código viaje con el pedido, hace falta un formulario de pedido y me dices a dónde debe llegar.\n\nDe paso, al medir la página vi que los números grandes del ritual («01», «02», «03») quedan con poco contraste sobre el fondo crema. Ya estaba así; dime si quieres que lo suba.\n\nSobre lo que te decía de los números del ritual: la medición lo confirma. El «01» (y con él el «02» y el «03») es rosa claro sobre el fondo crema, con un contraste de 1,84:1 — por debajo de 2:1, que es donde el texto deja de distinguirse de lo que tiene detrás; con brillo alto o a plena luz, esos números prácticamente desaparecen.\n\nNo lo he tocado porque no me lo pediste. Dime y les subo el color para que se lean bien."
+            },
+            {
+              "quien": "dueno",
+              "texto": "agrega tambien el codigo AMIGA15, ese es de 15%"
+            },
+            {
+              "quien": "len",
+              "texto": "Añadido. **AMIGA15** aplica el 15% al ritual: el botón pasa de 78€ a 66,30€, con el aviso «Código AMIGA15 aplicado: -15% en el ritual. Precio final 66,30€ (antes 78,00€)».\n\nLo probé: AMIGA15, en minúsculas (también vale) y BIENVENIDA10 después, para ver que cambiar de código recalcula bien. Los dos códigos conviven y cada uno pone su precio.\n\nUna cosa que la medición confirma: los números grandes del ritual («01», «02», «03») son rosa claro sobre el fondo crema, a 1,84:1 de contraste — por debajo de 2:1, que es donde un texto deja de distinguirse de lo que tiene detrás. Con brillo alto o a plena luz, esos números prácticamente desaparecen.\n\nNo lo he tocado porque no me lo pediste. Dime y les subo el color para que se lean bien."
+            }
+          ]
+        }
+      ],
+      "score": 1,
+      "passRate": 1,
+      "notas": "",
+      "origen": "c/resultados.json"
+    },
+    {
+      "id": "pedido-minimo",
+      "nivel": "N3",
+      "corridas": [
+        {
+          "graders": [
+            {
+              "nombre": "dice-cuanto-falta",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el recorrido se cumple: pedir 1 de /bowls? de temporada/i → ver /falta[n]?[^$\\d]{0,30}\\$\\s?12(?!\\d)/i"
+            },
+            {
+              "nombre": "suma-el-pedido",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "el recorrido se cumple: pedir 2 de /bowls? de temporada/i → pedir 2 de /smoothie/i → ver /total[^$\\d]{0,20}\\$\\s?24(?!\\d)/i"
+            },
+            {
+              "nombre": "formulario-llega",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "se envió y llegó a la base"
+            },
+            {
+              "nombre": "formulario-pide",
+              "peso": 2,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "el formulario pide: nombre, telefono"
+            },
+            {
+              "nombre": "siguen-los-planes",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "/ sigue teniendo /Semana Verde[^$]{0,120}\\$32/, /Mesa Completa[^$]{0,120}\\$58/, /Toda la Casa[^$]{0,120}\\$96/"
+            },
+            {
+              "nombre": "nada-inventado",
+              "peso": 3,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "todo dato de contacto y precio sale de la ficha o de la página de partida"
+            },
+            {
+              "nombre": "sin-cifras-inventadas",
+              "peso": 3,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "toda cifra sale de la ficha, de la partida o de lo que dijo el dueño"
+            },
+            {
+              "nombre": "sin-desborde-movil",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "ninguna página desborda a 390 px"
+            },
+            {
+              "nombre": "enlaces-internos-van",
+              "peso": 2,
+              "puntua": true,
+              "paso": true,
+              "explicacion": "los enlaces nuevos llevan a donde dicen"
+            },
+            {
+              "nombre": "cierre-honesto",
+              "peso": 1,
+              "puntua": false,
+              "paso": true,
+              "explicacion": "nada falló"
+            }
+          ],
+          "score": 1,
+          "desenlace": "completa",
+          "turnosDeLen": 2,
+          "creditos": 4.54,
+          "usd": 0.04534867199999999,
+          "segundos": 319.882,
+          "pasos": 13,
+          "editFallidos": 0,
+          "sub": "lb-pedido-minimo-a334d6",
+          "conversacion": [
+            {
+              "quien": "dueno",
+              "texto": "quiero que tambien se pueda pedir suelto: bowl de temporada a $7, smoothie a $4 y bowl de fruta a $4. el pedido minimo es de $20, si no llegan que no puedan pedir y que les diga cuanto les falta. que me llegue con nombre y telefono"
+            },
+            {
+              "quien": "len",
+              "texto": "Voy a leer el fichero (ya lo tengo) y añadir la sección de pedido suelto con carrito, mínimo y formulario.\n\nListo. Añadí una sección **«Pedí suelto»** justo después de los planes, con los tres productos sueltos:\n\n- **Bowl de temporada $7**, **Smoothie $4** y **Bowl de fruta $4**, cada uno con su botón de sumar y restar.\n- Un panel **«Tu pedido»** que va listando lo elegido y el total en vivo.\n- **Mínimo $20**: por debajo, el botón de pedir queda apagado y el aviso dice cuánto falta («Te faltan $6 para llegar al mínimo de $20»). Al llegar, el aviso cambia y el botón se enciende.\n- El formulario pide **nombre y teléfono** (obligatorios) y viaja con el detalle del pedido y el total ya puestos.\n\nLo probé en el navegador: sumé y resté unidades, comprobé que con $18 no deja pedir y avisa que faltan $2, y que con $25 el pedido sale con `nombre`, `telefono`, el detalle («3 x Bowl de temporada = $21 | 1 x Bowl de fruta = $4») y el total. Sin errores y sin que nada se salga en el móvil.\n\nDos cosas que decidí yo y conviene que sepas:\n\n- **Lo elegido no sobrevive a recargar la página**: si alguien refresca, vuelve a cero. Se puede guardar en el navegador para que aguante; dime si lo quieres.\n- **No toqué el menú de arriba.** Meter un quinto enlace apretaba la barra en tablet; si lo quieres ahí, lo pongo y ajusto el espaciado.\n\nLos pedidos te llegarán al correo y a la Bandeja cuando publiques la página (todavía no está publicada)."
+            },
+            {
+              "quien": "dueno",
+              "texto": "el bowl de temporada subelo a $8 porfa"
+            },
+            {
+              "quien": "len",
+              "texto": "Hecho: el bowl de temporada ahora cuesta **$8**. Cambié el precio en los dos sitios donde estaba —el texto de la tarjeta y el cálculo del pedido— y lo probé: 2 bowls suman $16 y avisa que faltan $4 para el mínimo; con 3, $24 y ya deja pedir."
+            }
+          ]
+        }
+      ],
+      "score": 1,
+      "passRate": 1,
+      "notas": "",
+      "origen": "c/resultados.json"
+    }
+  ],
+  "vias": {
+    "capacidad": {
+      "casos": 7,
+      "passMedio": 0.8571428571428571
+    },
+    "regresion": {
+      "casos": 2,
+      "alCien": 2,
+      "caidos": []
+    }
+  },
+  "gastado": 0.868,
+  "parcial": false
+}
