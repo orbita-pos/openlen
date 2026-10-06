@@ -149,6 +149,9 @@ export type StreamEvent =
    *  (`asAgentStream` junta los trozos). El loop lo devuelve al modelo con el
    *  mensaje del asistente (H15) y nunca se lo emite al dueño. */
   | { type: "reasoning"; text: string }
+  /** Un trozo de los argumentos de una llamada, en vivo (`streamToolArgs`).
+   *  Sólo se ENSEÑA (`lib/agent/write-preview.ts`); se ejecuta la armada. */
+  | { type: "function_call_delta"; index: number; name?: string; argsDelta: string }
   | {
       type: "function_call";
       name: string;

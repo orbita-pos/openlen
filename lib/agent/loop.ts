@@ -44,6 +44,7 @@ import { contenidoDeRespuesta } from "./fireworks-bridge";
 import { CLAVE_TOOL_RESULT } from "./ficheros/resultado";
 import { estimateTokens } from "./compaction/estimate";
 import type { CompactionPolicy } from "./compaction/policy";
+import { createWritePreview } from "./write-preview";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -170,6 +171,9 @@ export type AgentStreamEvent =
   // sólo el PRIMER id es «antes del turno»; quien lo consuma se queda con
   // ése, no con el último.
   | { type: "html"; html: string; page: string | null; versionPrevia?: string | null }
+  // LA PÁGINA A MEDIAS (los «live tool deltas» de DeepSeek): lo que un Write
+  // de una página lleva escrito. Sólo se pinta; lo que cuenta es `html`.
+  | { type: "page_preview"; html: string; page: string | null }
   // F6a · UN COMANDO DE LA TERMINAL y su salida, la misma que leyó el modelo,
   // para la lente «Terminal» del lienzo. Sólo lo emite `bash`; sin la palanca
   // (`OPENLEN_TERMINAL`) no sale nunca y el cable es el de antes.
@@ -1500,6 +1504,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       let desbordado = false;
 
       messagesAtLastCall = messages.length;
+      // Una por intento: un reintento vuelve a escribir desde cero.
+      const writePreview = createWritePreview();
       for await (const ev of args.openStream(messages)) {
         if (ev.type === "text_delta" && retener) {
           turnText += ev.text;
@@ -1522,6 +1528,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           emitidoEnElIntento += ev.text.length;
         } else if (ev.type === "reasoning") {
           turnReasoning += ev.text;
+        } else if (ev.type === "function_call_delta") {
+          const preview = writePreview.push(ev);
+          if (preview) args.emit({ type: "page_preview", html: preview.html, page: preview.page });
         } else if (ev.type === "function_call") {
           calls.push({
             name: ev.name,

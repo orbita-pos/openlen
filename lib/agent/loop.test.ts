@@ -4512,3 +4512,45 @@ describe("el encargo en el bucle", () => {
     expect(r.terminalError).toBe(false);
   });
 });
+
+describe("runAgentLoop — la página a medias (plans/crear-es-len)", () => {
+  it("un Write de /index.html emite page_preview mientras llegan los trozos, y después el html de siempre", async () => {
+    const contenido = "<!doctype html><title>T</title>" + "<p>x</p>".repeat(400); // > 1.500 caracteres
+    const args = JSON.stringify({ file_path: "/index.html", content: contenido });
+    const mitad = Math.floor(args.length / 2);
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "hazme la página" }], tools: [],
+      openStream: scripted(
+        [
+          { type: "function_call_delta", index: 0, name: "Write", argsDelta: args.slice(0, mitad) },
+          { type: "function_call_delta", index: 0, name: "Write", argsDelta: args.slice(mitad) },
+          { type: "function_call", name: "Write", args: JSON.parse(args) as Record<string, unknown> },
+          done,
+        ],
+        [{ type: "text_delta", text: "Lista." }, done],
+      ),
+      runTool: async () => ({ response: { ok: true }, updatedHtml: contenido }),
+      emit: (e) => events.push(e),
+    });
+    const tipos = events.map((e) => e.type);
+    expect(tipos).toContain("page_preview");
+    expect(tipos.indexOf("page_preview")).toBeLessThan(tipos.indexOf("html"));
+    expect(events.find((e) => e.type === "page_preview")).toMatchObject({ page: null });
+  });
+
+  it("un Write de /js/app.js no emite ninguna vista previa", async () => {
+    const args = JSON.stringify({ file_path: "/js/app.js", content: "x".repeat(4000) });
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call_delta", index: 0, name: "Write", argsDelta: args }, { type: "function_call", name: "Write", args: JSON.parse(args) as Record<string, unknown> }, done],
+        [{ type: "text_delta", text: "ok" }, done],
+      ),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: (e) => events.push(e),
+    });
+    expect(events.some((e) => e.type === "page_preview")).toBe(false);
+  });
+});

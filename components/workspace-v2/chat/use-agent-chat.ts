@@ -1177,6 +1177,13 @@ export function useAgentChat({
         // el dueño retiró y no la que la sustituyó.
         const correcciones: string[] = [];
         let latestAgentHtml: string | null = null;
+        // ¿Hay en el lienzo una página A MEDIAS de este turno? Si el turno
+        // acaba sin su `html` (una guarda rechazó el Write, se cortó, se
+        // canceló), se devuelve el último documento GUARDADO de esa página —el
+        // de antes del turno, o el de un Write anterior del mismo turno—: medio
+        // HTML pintado no es la página de nadie.
+        let previewPainted = false;
+        let savedTurnPageHtml: string | null = null;
         // Cada evento `html` deja aquí la página que escribió. Es lo único que
         // permite saber, al cerrar el turno, si la única preimagen que tenemos
         // (la de `turnPage`) cubre de verdad lo que cambió.
@@ -1563,6 +1570,18 @@ export function useAgentChat({
                 // una herramienta, con la versión de su «antes».
                 ficherosTocados.push(...ficherosDelEvento(payload));
                 notifyFolderChanged(projectId);
+              } else if (evName === "page_preview") {
+                // Sólo la página que el dueño tiene delante, y marcada como no
+                // confiable, como el goteo del chat viejo (`html_chunk`).
+                const html = strField(payload, "html");
+                const evPage =
+                  payload && typeof payload === "object" && typeof (payload as { page?: unknown }).page === "string"
+                    ? (payload as { page: string }).page
+                    : null;
+                if (html && evPage === turnPage) {
+                  previewPainted = true;
+                  onLocalUpdate(html, evPage, true);
+                }
               } else if (evName === "html") {
                 const html = strField(payload, "html");
                 if (html) {
@@ -1583,6 +1602,10 @@ export function useAgentChat({
                       ? (payload as { page: string }).page
                       : null;
                   paginasTocadas.push(evPage);
+                  if (evPage === turnPage) {
+                    previewPainted = false;
+                    savedTurnPageHtml = html;
+                  }
                   // EL NOMBRE DEL CAMPO NO ES UNA CONVENCIÓN: es el del evento
                   // del bucle. Tipado contra él a propósito — si allí se
                   // renombra, esto deja de compilar en vez de quedarse mudo, que
@@ -1904,6 +1927,7 @@ export function useAgentChat({
             seguirEnElServidor(turnId);
           }
         } finally {
+          if (previewPainted) onLocalUpdate(savedTurnPageHtml ?? preEditHtml, turnPage);
           if (abortRef.current === abort) {
             abortRef.current = null;
             agentStreamOpenRef.current = false;
