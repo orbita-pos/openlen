@@ -45,7 +45,7 @@ export const es = {
     ctaSecundario: "Qué sabe hacer",
     altCielo: "Un cielo pintado al amanecer con un anillo de luz coral entre las nubes.",
     cielo: {
-      titulo: "Len 2.0",
+      titulo: "Len 2.5",
       texto: "Lo que antes era contratar a alguien, ahora es escribirle un mensaje.",
       cta: "Cómo trabaja →",
     },
@@ -62,59 +62,59 @@ export const es = {
         {
           k: "funciona",
           t: "Que funcione, no solo que se vea",
-          p: "Formularios que te llegan, un carrito que guarda en una base de datos, un asistente que contesta a tus visitantes.",
-          commit: "fa5443c7",
+          p: "Tu página con su propia base de datos: cuentas para tus visitantes, fotos que suben ellos y cambios que se ven al momento en todas las pantallas. Y formularios que te llegan.",
+          commit: "3bf4d721",
         },
         {
           k: "pruebas",
           t: "Deja pruebas de lo que construye",
           p: "Cuando algo de tu página se mueve —un carrito, unas pestañas, un menú— escribe una prueba y la corre en un navegador de verdad. En cada cambio siguiente la vuelve a correr: si algo que ya funcionaba se rompe, te avisa.",
-          commit: "f3b10e53",
+          commit: "7c483747",
         },
         {
           k: "mira",
           t: "Mira antes de entregar",
           p: "Abre la página y la mide: contraste en el píxel, desbordes en el móvil y errores de JavaScript. En todas las páginas que tocó, no solo en la última.",
-          commit: "10c1cdaa",
+          commit: "0ba909b2",
         },
         {
           k: "cuenta",
           t: "Te dice qué comprobó",
           p: "Qué hizo, qué comprobó y qué no. Si algo no salió, lo dice, y te dice qué faltó.",
-          commit: "f8e9e8cd",
+          commit: "110d8f70",
         },
         {
           k: "cobro",
           t: "No te cobra lo que no hizo",
           p: "Si un turno se atasca y no llega a ningún lado, no se cobra.",
-          commit: "bfa5a400",
+          commit: "a370742c",
         },
       ],
     },
     cifras: {
-      antetitulo: "Len 1.5 → Len 2.0",
+      antetitulo: "La última medición: Len 1.5 → Len 2.0",
       titulo: "Qué cambió desde el 1.5, medido.",
       leer: "Cómo lo medimos",
       items: [
         {
           valor: "50 → 83 %",
           texto: "en los encargos que el 1.5 no hacía bien: 12 encargos, tres veces cada uno, las dos versiones la misma noche y con el mismo modelo",
-          commit: "b5d12836",
+          commit: "4bb70542",
         },
         {
           valor: "82 → 96 %",
           texto: "en 15 encargos sellados, que nadie vio mientras se construía el 2.0, calificados con el mismo criterio en las dos versiones",
-          commit: "b5d12836",
+          commit: "4bb70542",
         },
       ],
       nota: "Con 12 y 15 encargos el margen es ancho: ±39 y ±17 puntos. En los 19 que el 1.5 ya hacía bien, el 2.0 no empeora (98 %, contando arreglos que no volvimos a medir) y cuesta menos por encargo. Y un fallo que le queda: a veces rellena con reseñas inventadas cuando le falta un dato.",
-      notaCommit: "b5d12836",
+      notaCommit: "4bb70542",
     },
     tarjeta: {
-      antetitulo: "Len · octubre 2026",
-      titulo: "Diecinueve herramientas, un solo desarrollador",
+      antetitulo: "Len 2.5 · octubre 2026",
+      titulo: "Veintiséis herramientas, un solo desarrollador",
       texto:
-        "Trabaja tu sitio como un programador trabaja su código: cada página es un fichero que lee, busca y cambia con precisión. Y antes de entregar, usa la página como la usaría un visitante: pulsa, escribe, recarga y mira qué pasó.",
+        "Trabaja tu sitio como un programador trabaja su código: cada página es un fichero, y tiene su propia terminal para buscar y cambiar con precisión. Si se lo pides, te propone un plan antes de tocar nada. Y antes de entregar, usa la página como la usaría un visitante: pulsa, escribe, recarga y mira qué pasó.",
       como: "Cómo trabaja →",
       grupos: {
         mirar: {
@@ -123,9 +123,9 @@ export const es = {
             "Mide la página en un navegador real —contraste en el píxel, desbordes en móvil, errores de JS— y la usa como un visitante: pulsa botones, llena formularios y recarga para ver qué cambió.",
         },
         leer: {
-          titulo: "Leer y buscar",
+          titulo: "Leer, buscar y la terminal",
           texto:
-            "Cada página es un fichero: lo lee y busca en todo el sitio el dato que va a cambiar. Y lo que está publicado en otra parte —un horario, un precio— lo busca y lo lee en internet.",
+            "Cada página es un fichero, y tiene una terminal como la de un programador para buscar en todo el sitio y cambiar muchos ficheros a la vez. Lo publicado en otra parte, lo busca en internet.",
         },
         editar: {
           titulo: "Escribir",
@@ -135,7 +135,7 @@ export const es = {
         datos: {
           titulo: "Datos y módulos",
           texto:
-            "Enciende el chat, que es un módulo real de OpenLen y no un formulario pintado. Lo que guarda tu página —un catálogo, unas reseñas, unos pedidos— vive en ficheros de datos que sobreviven a recargar.",
+            "Enciende el chat, un módulo real de OpenLen. Y lo que guarda tu página vive en su propia base de datos, con las cuentas y las fotos de tus visitantes.",
         },
         resultados: {
           titulo: "Tus resultados",
@@ -144,7 +144,16 @@ export const es = {
         },
         contigo: {
           titulo: "Contigo",
-          texto: "Te pregunta el dato que le falta en vez de inventarlo, y publica cuando tú lo confirmas.",
+          texto: "Te pregunta con opciones el dato que le falta en vez de inventarlo, y publica cuando tú lo confirmas.",
+        },
+        planear: {
+          titulo: "Planear y encargos",
+          texto:
+            "Si se lo pides, te propone un plan y no toca nada hasta que lo apruebas. Un encargo largo lo trabaja solo, ronda tras ronda.",
+        },
+        recordar: {
+          titulo: "Recordar",
+          texto: "Busca en las charlas pasadas de tu proyecto lo que ya hablaron.",
         },
       },
     },

@@ -13,6 +13,8 @@ import Version15_en, { meta as version15_en } from "./len-1-5.en.mdx";
 import Version15_es, { meta as version15_es } from "./len-1-5.es.mdx";
 import Version20_en, { meta as version20_en } from "./len-2-0.en.mdx";
 import Version20_es, { meta as version20_es } from "./len-2-0.es.mdx";
+import Version25_en, { meta as version25_en } from "./len-2-5.en.mdx";
+import Version25_es, { meta as version25_es } from "./len-2-5.es.mdx";
 
 export type Articulo = { meta: MetaArticulo; Cuerpo: ComponentType };
 
@@ -24,6 +26,7 @@ const TODOS: Record<Lang, Articulo[]> = {
     { meta: oscuro_en, Cuerpo: Oscuro_en },
     { meta: version15_en, Cuerpo: Version15_en },
     { meta: version20_en, Cuerpo: Version20_en },
+    { meta: version25_en, Cuerpo: Version25_en },
   ],
   es: [
     { meta: hecho_es, Cuerpo: Hecho_es },
@@ -32,6 +35,7 @@ const TODOS: Record<Lang, Articulo[]> = {
     { meta: oscuro_es, Cuerpo: Oscuro_es },
     { meta: version15_es, Cuerpo: Version15_es },
     { meta: version20_es, Cuerpo: Version20_es },
+    { meta: version25_es, Cuerpo: Version25_es },
   ],
 };
 

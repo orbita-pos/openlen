@@ -1,0 +1,84 @@
+export const meta = {
+  slug: "len-2-5",
+  title: "Len 2.5: what changed since 2.0",
+  dek: "Almost everything around Len changed since 2.0: it has a terminal, your page has its own database, and Len learned to ask you with options, plan with you and work through a long job on its own. This is everything new, how we tested it, and what went wrong when we shipped it.",
+  date: "2026-10-06",
+  category: "Research",
+  topic: "Releases",
+  cover: "segunda",
+  readingMinutes: 7,
+  author: "OpenLen team",
+  cifra: { valor: "26", nota: "tools: ten in, three out", commit: "a820faa6" },
+  indice: [
+    { id: "what-changed", texto: "What changed" },
+    { id: "your-page", texto: "Your page, with a database" },
+    { id: "with-you", texto: "Working with you" },
+    { id: "under-the-hood", texto: "Under the hood" },
+    { id: "how", texto: "How we tested it" },
+    { id: "shipping", texto: "What went wrong when we shipped" },
+    { id: "no-table", texto: "Why there is no table" },
+    { id: "open", texto: "What is still open" },
+  ],
+}
+
+<h2 id="what-changed">What changed</h2>
+
+In 2.0, Len learned to work on your site the way a programmer works on code: every page is a file it reads, searches and changes precisely. 2.5 gives it what that programmer was still missing. A **terminal**, to work on the whole site at once. A **real database** behind your page, instead of data files. And a way of working **with you**: asking you, with options, for what it can't know, showing you a plan before touching anything, and carrying a long job through on its own until it's done.
+
+<Cifra valor="26" commit="a820faa6">tools. Ten came in and three went out: the two for finding files, which the terminal now does, and the one for asking without options, which now has them</Cifra>.
+
+<div className="pull">A developer doesn't ask you everything, and doesn't make things up either: they ask you what only you know, with options.</div>
+
+<h2 id="your-page">Your page, with a database</h2>
+
+Up to 2.0, whatever your page stored —a catalog, some reviews, some orders— lived in data files. Now every page that needs one has **its own database**, with what a real website needs:
+
+- **Tables with rules** for who can read and write what, so one visitor never sees another's data. <Fuente commit="2f750cea" />
+- **Accounts for your visitors**: sign up, sign in, sign out. <Fuente commit="c178149e" />
+- **Photos and files your visitors upload**, stored separately and served under their own rules. <Fuente commit="f11dc3a4" />
+- **Real-time changes**: what one visitor writes shows up instantly on everyone else's screen, no reload. A wall, a chat, a scoreboard. <Fuente commit="9c42f1d7" />
+- **A dashboard for you**, with your tables and your users. <Fuente commit="8b4da774" />
+
+It speaks the same API as Supabase, so the code Len writes for your page is the code any programmer who knows it would write, not a format we made up. Len sets up the database from its terminal, with migrations, the way a programmer would. <Fuente commit="ddb8c82f" />
+
+And your site can carry **its own folder of files** —JavaScript, styles, data— published alongside the pages. The editor's preview loads them exactly the way the published page does. <Fuente commit="dff82725" />
+
+<h2 id="with-you">Working with you</h2>
+
+- **It asks you, with options**, for what it can't know —opening hours, a price, where a section should go— and waits for your answer inside the same piece of work: one tap and it carries on. You can pick several, or write your own. <Fuente commit="dd22c22f" />
+- **It plans with you**: if you ask, it first looks around without touching anything, shows you the plan in the chat and waits. Approve it and it does it; or tell it what to change. <Fuente commit="a933c48b" />
+- **Long jobs**: give it a goal and it works on it alone, round after round, until it calls it done. Every round shows up in the chat, and you can pause it or drop it whenever you like. <Fuente commit="ed4dfb09" />
+- **It remembers past conversations**: it searches your project's earlier chats for what you already discussed, instead of asking you again. <Fuente commit="0a4bef1b" />
+- **It searches and reads the web** for what is published somewhere else, like a museum's opening hours or a competitor's price. <Fuente commit="678ddafc" />
+- **The chat is new**: each step Len takes in its own card, what it checked in plain sight, and a button to stop it at any moment. <Fuente commit="e293c34a" />
+
+<h2 id="under-the-hood">Under the hood</h2>
+
+- **The terminal.** Len searches the whole site, changes many files at once and moves what needs moving. It runs no programs on our servers: the terminal is interpreted over your project's files, and everything it writes goes through the same checks as a normal edit. You see every command in the Terminal tab. <Fuente commit="e1f5aaa6" /> <Fuente commit="d9464c88" />
+- **Several things at once**: when what it's about to do doesn't depend on anything else —reading three pages, say— it does it all at once. <Fuente commit="dc684d42" />
+- **If the service hiccups, it retries on its own**, waiting a little longer each time, instead of leaving your job half done. <Fuente commit="83eebf81" />
+- **Long conversations without losing the thread**: when a chat gets very long, it summarizes the old parts and keeps going with what matters. <Fuente commit="8d22f480" />
+
+<h2 id="how">How we tested it</h2>
+
+Every piece arrived with its tests. The database tests run against a real database, not a stand-in, and the API was tested with the same library your page would use. <Fuente commit="2f750cea" />
+
+Before shipping, we gave Len real jobs, with the real model: asking, planning, chaining the rounds of a long job. Those turns found three bugs the tests had missed, like a question that didn't show up when Len opened with one. We fixed them before shipping. <Fuente commit="222bc337" />
+
+Once it was live, in production, we asked Len for a real photo wall: a database, photos uploaded by visitors and real-time updates. It built it and checked it on its own.
+
+<h2 id="shipping">What went wrong when we shipped</h2>
+
+That same test caught something we had missed. Since the release, the editor's preview couldn't load the page from its own address and fell back to a **limited view**: no forms, no data saved in the browser, none of the folder's files — exactly the new things.
+
+It was two bugs, one behind the other. The first —a secret the server keeps under a different name— hid the second, which is why we didn't see them together. <Fuente commit="f7ede2b4" /> With the first fixed, the second showed up: the server forwarded the preview as if it were going to another machine, and failed. Our tests didn't catch it because they didn't run the way the real server runs. <Fuente commit="fcce4a66" />
+
+What we changed, besides the two fixes: before every release we now rehearse a production build under the same conditions as the server, with the full flows, and a release carries everything that's ready instead of one fix at a time.
+
+<h2 id="no-table">Why there is no table</h2>
+
+When we published 2.0, we wrote that every version would come with its table against the previous one. This one doesn't, and we're saying so here: 2.5 was not measured against 2.0 with the test battery. Almost everything new is something that battery doesn't ask for —asking with options, planning, multi-round jobs, a database— and measuring it takes new tasks. We chose to ship it tested with real turns and leave the comparison pending, in plain sight.
+
+<Abierto id="open" titulo="What is still open">
+Four things. **The table against 2.0**, for the reason above. **A long job has no credit cap of its own**: it stops when Len calls it done, when you pause it, at 256 rounds or when your balance runs out, and each round is charged like any other work. **The terminal interprets, it doesn't execute**: it installs no packages and runs no programs, and running the folder's tests with a real test runner waits on an isolated machine we don't have yet. And **in the terminal, a command that ends with a non-zero code shows up in red** even when nothing broke —a `grep` that finds nothing in the middle of a chain—, which looks scarier than it should. <Fuente ruta="lib/agent/terminal/codigo-de-salida.ts" commit="a820faa6" />
+</Abierto>

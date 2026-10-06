@@ -1,0 +1,84 @@
+export const meta = {
+  slug: "len-2-5",
+  title: "Len 2.5: qué cambió desde el 2.0",
+  dek: "Desde el 2.0 cambió casi todo lo que rodea a Len: tiene una terminal, tu página tiene su propia base de datos, y Len aprendió a preguntarte con opciones, a planear contigo y a trabajar solo en un encargo largo. Esto es todo lo nuevo, cómo lo probamos y lo que salió mal al desplegarlo.",
+  date: "2026-10-06",
+  category: "Research",
+  topic: "Versiones",
+  cover: "segunda",
+  readingMinutes: 7,
+  author: "Equipo OpenLen",
+  cifra: { valor: "26", nota: "herramientas: entran diez y salen tres", commit: "a820faa6" },
+  indice: [
+    { id: "que-cambio", texto: "Qué cambió" },
+    { id: "tu-pagina", texto: "Tu página, con base de datos" },
+    { id: "contigo", texto: "Trabajar contigo" },
+    { id: "por-dentro", texto: "Por dentro" },
+    { id: "como", texto: "Cómo lo probamos" },
+    { id: "al-desplegar", texto: "Lo que salió mal al desplegar" },
+    { id: "sin-tabla", texto: "Por qué no hay tabla" },
+    { id: "abierto", texto: "Lo que sigue abierto" },
+  ],
+}
+
+<h2 id="que-cambio">Qué cambió</h2>
+
+En el 2.0, Len aprendió a trabajar tu sitio como un programador trabaja su código: cada página es un fichero que lee, busca y cambia con precisión. El 2.5 le da lo que a ese programador le faltaba. Una **terminal** para trabajar el sitio entero de una vez. Una **base de datos de verdad** detrás de tu página, en vez de ficheros de datos. Y una forma de trabajar **contigo**: preguntarte con opciones lo que no sabe, enseñarte un plan antes de tocar nada y seguir solo en un encargo largo hasta terminarlo.
+
+<Cifra valor="26" commit="a820faa6">herramientas. Entran diez y salen tres: las dos de buscar ficheros, que ahora hace la terminal, y la de preguntar sin opciones, que ahora las tiene</Cifra>.
+
+<div className="pull">Un desarrollador no te pregunta todo, ni se lo inventa: te pregunta lo que solo tú sabes, con opciones.</div>
+
+<h2 id="tu-pagina">Tu página, con base de datos</h2>
+
+Hasta el 2.0, lo que guardaba tu página —un catálogo, unas reseñas, unos pedidos— vivía en ficheros de datos. Ahora cada página que lo necesita tiene **su propia base de datos**, con todo lo que una web de verdad necesita:
+
+- **Tablas con reglas** de quién puede leer y escribir cada cosa, para que un visitante no vea los datos de otro. <Fuente commit="2f750cea" />
+- **Cuentas para tus visitantes**: registrarse, entrar y salir. <Fuente commit="c178149e" />
+- **Fotos y ficheros que suben tus visitantes**, guardados aparte y servidos con sus propias reglas. <Fuente commit="f11dc3a4" />
+- **Cambios en tiempo real**: lo que escribe un visitante aparece al momento en las pantallas de los demás, sin recargar. Un muro, un chat, un marcador. <Fuente commit="9c42f1d7" />
+- **Un panel para ti**, con tus tablas y tus usuarios. <Fuente commit="8b4da774" />
+
+Habla la misma API que Supabase, así que el código que Len escribe para tu página es el que escribiría cualquier programador que la conozca, no un formato inventado por nosotros. Len crea la base desde su terminal, con migraciones, como lo haría un programador. <Fuente commit="ddb8c82f" />
+
+Y tu sitio puede llevar **su propia carpeta de ficheros** —JavaScript, estilos, datos— que se publica junto a las páginas. La vista previa del editor los carga igual que la página publicada. <Fuente commit="dff82725" />
+
+<h2 id="contigo">Trabajar contigo</h2>
+
+- **Te pregunta con opciones** lo que no puede saber —un horario, un precio, dónde va una sección—, y espera tu respuesta dentro del mismo trabajo: contestas con un toque y sigue. Puedes elegir varias o escribir otra. <Fuente commit="dd22c22f" />
+- **Planea contigo**: si se lo pides, primero explora sin tocar nada, te enseña el plan en el chat y espera. Lo apruebas y lo hace; o le dices qué cambiar. <Fuente commit="a933c48b" />
+- **Encargos largos**: le das un objetivo y lo trabaja solo, en rondas seguidas, hasta darlo por terminado. Cada ronda se ve en el chat, y lo puedes pausar o quitar cuando quieras. <Fuente commit="ed4dfb09" />
+- **Recuerda conversaciones pasadas**: busca en las charlas anteriores de tu proyecto lo que ya hablaron, en vez de volver a preguntártelo. <Fuente commit="0a4bef1b" />
+- **Busca y lee en internet** lo que está publicado en otra parte, como el horario de un museo o un precio de la competencia. <Fuente commit="678ddafc" />
+- **El chat es nuevo**: cada paso de Len en una tarjeta, lo que comprobó a la vista y un botón para pararlo en cualquier momento. <Fuente commit="e293c34a" />
+
+<h2 id="por-dentro">Por dentro</h2>
+
+- **La terminal.** Len busca en todo el sitio, cambia muchos ficheros a la vez y mueve lo que hay que mover. No ejecuta programas en nuestros servidores: la terminal se interpreta sobre los ficheros de tu proyecto, y todo lo que escribe pasa por las mismas comprobaciones que una edición normal. Tú ves cada comando en la pestaña «Terminal». <Fuente commit="e1f5aaa6" /> <Fuente commit="d9464c88" />
+- **Varias cosas a la vez**: cuando lo que va a hacer no depende de otra cosa, por ejemplo leer tres páginas, lo hace a la vez. <Fuente commit="dc684d42" />
+- **Si el servicio falla un momento, lo reintenta solo**, esperando un poco más cada vez, en vez de dejar tu encargo a medias. <Fuente commit="83eebf81" />
+- **Conversaciones largas sin perder el hilo**: cuando una charla se hace muy larga, resume lo antiguo y sigue con lo que importa. <Fuente commit="8d22f480" />
+
+<h2 id="como">Cómo lo probamos</h2>
+
+Cada pieza llegó con sus pruebas. Las de la base de datos corren contra una base de datos real, no contra una imitación, y la API se probó con la misma librería que usaría tu página. <Fuente commit="2f750cea" />
+
+Antes de desplegar le dimos a Len encargos reales, con el modelo de verdad: que preguntara, que planeara, que encadenara las rondas de un encargo. Esos turnos encontraron tres fallos que las pruebas no habían visto, como una pregunta que no se pintaba cuando Len empezaba preguntando. Los arreglamos antes del despliegue. <Fuente commit="222bc337" />
+
+Ya desplegado, en producción, le pedimos a Len un muro de fotos de verdad: base de datos, fotos que suben los visitantes y cambios en tiempo real. Lo construyó y lo comprobó solo.
+
+<h2 id="al-desplegar">Lo que salió mal al desplegar</h2>
+
+Esa misma prueba encontró algo que se nos había escapado. Desde el despliegue, la vista previa del editor no cargaba la página desde su propia dirección y caía a una **vista limitada**. Ahí no funcionan los formularios, los datos guardados en el navegador ni los ficheros de la carpeta, justo lo nuevo.
+
+Eran dos fallos, uno detrás de otro. El primero —un secreto que el servidor guarda con otro nombre— tapaba al segundo, y por eso no los vimos juntos. <Fuente commit="f7ede2b4" /> Arreglado el primero, apareció el segundo: el servidor reenviaba la vista previa como si fuera a otra máquina y fallaba. En nuestras pruebas no salía porque no corrían como corre el servidor de verdad. <Fuente commit="fcce4a66" />
+
+Lo que cambiamos, además de los dos arreglos: antes de cada despliegue ensayamos ahora una compilación de producción en las mismas condiciones que el servidor, con los recorridos enteros, y un despliegue lleva todo lo que esté listo en vez de uno por arreglo.
+
+<h2 id="sin-tabla">Por qué no hay tabla</h2>
+
+Al publicar el 2.0 escribimos que cada versión vendría con su tabla frente a la anterior. Esta no la trae, y lo decimos aquí: el 2.5 no se midió con la batería frente al 2.0. Casi todo lo nuevo son cosas que esa batería no pide —preguntar con opciones, planear, encargos de varias rondas, una base de datos—, y medirlas pide encargos nuevos. Preferimos llevarlo a producción probado con turnos reales y dejar la comparación pendiente, a la vista.
+
+<Abierto id="abierto" titulo="Lo que sigue abierto">
+Cuatro cosas. **La tabla frente al 2.0**, por lo que contamos arriba. **Un encargo no tiene un tope de créditos propio**: para cuando Len lo da por terminado, cuando lo pausas, a las 256 rondas o cuando se acaba tu saldo, y cada ronda se cobra como cualquier trabajo. **La terminal interpreta, no ejecuta**: no instala paquetes ni corre programas, y correr las pruebas de la carpeta con un corredor de pruebas de verdad espera a una máquina aislada que todavía no tenemos. Y **en la terminal, un comando que termina con un código distinto de cero sale en rojo** aunque no sea una avería —un `grep` que no encuentra nada en medio de una cadena—, y eso asusta más de lo que debería. <Fuente ruta="lib/agent/terminal/codigo-de-salida.ts" commit="a820faa6" />
+</Abierto>

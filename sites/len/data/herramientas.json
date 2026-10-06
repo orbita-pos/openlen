@@ -1,9 +1,11 @@
 [
   { "id": "mirar",      "herramientas": ["mirar_pagina", "usar_pagina"] },
-  { "id": "leer",       "herramientas": ["Read", "Grep", "Glob", "web_search", "web_fetch"] },
+  { "id": "leer",       "herramientas": ["Read", "bash", "web_search", "web_fetch"] },
   { "id": "editar",     "herramientas": ["Edit", "Write", "revertir_ultimo_cambio"] },
   { "id": "fotos",      "herramientas": ["elegir_foto", "editar_imagen"] },
   { "id": "datos",      "herramientas": ["activar_modulo"] },
   { "id": "resultados", "herramientas": ["ver_visitas", "ver_formularios", "ver_mensajes", "preparar_respuesta"] },
-  { "id": "contigo",    "herramientas": ["preguntar", "publicar"] }
+  { "id": "contigo",    "herramientas": ["ask_user_question", "publicar"] },
+  { "id": "planear",    "herramientas": ["enter_plan_mode", "exit_plan_mode", "get_goal", "create_goal", "update_goal"] },
+  { "id": "recordar",   "herramientas": ["session_search", "session_event_search", "session_event_read"] }
 ]
