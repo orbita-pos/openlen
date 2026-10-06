@@ -1,0 +1,19 @@
+/**
+ * EL PROYECTO EN BLANCO — la «New Session» de DeepSeek
+ * (`packages/client/ui-workspace/README.md:30,76,78` de deepseek-harness):
+ * existe antes del primer mensaje, se reutiliza en vez de crear otro, y lo que
+ * está en blanco no sale en la lista salvo el que tienes abierto.
+ *
+ * En blanco = sin portada, sin páginas y sin conversación. Con conversación ya
+ * no lo es aunque Len no llegara a escribir: lo que el usuario dijo es suyo.
+ *
+ * Puro: lo usan el servidor (la lista, `findOrCreateBlankProject`) y el cliente
+ * (`/new` decide si pinta el estado vacío).
+ */
+export function isBlankProject(p: {
+  readonly html: string | null | undefined;
+  readonly pages: Readonly<Record<string, unknown>> | null | undefined;
+  readonly chatTurns: number;
+}): boolean {
+  return !(p.html ?? "").trim() && Object.keys(p.pages ?? {}).length === 0 && p.chatTurns === 0;
+}

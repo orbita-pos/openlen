@@ -27,6 +27,7 @@ import { folderFingerprint } from "@/lib/projects/files-hash";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import { getChatMessages } from "@/lib/projects/chat";
 import { titleFromHtml, UNTITLED_PROJECT_TITLE } from "@/lib/projects/titulo-del-html";
+import { isBlankProject } from "@/lib/projects/blank";
 import {
   pageEdgePaths,
   pagesForPublish,
@@ -214,6 +215,8 @@ export interface ProjectSummary {
   publishedAt: Date | null;
   hasUnpublishedChanges: boolean;
   sectionCount: number;
+  /** Sin portada, sin páginas y sin conversación (`lib/projects/blank.ts`). */
+  isBlank: boolean;
   /** Results-loop stats (visits/clicks/leads in a recent window). Populated by
    *  the /projects + /business pages, not by listProjects itself. */
   stats?: { views: number; clicks: number; leads: number };
@@ -312,9 +315,34 @@ export async function createProject(
   // Render a card thumbnail in the background so the project doesn't show the
   // placeholder icon in /projects. Fire-and-forget: never delays the create
   // response, never fails it. (Paste + template clones render/inherit in their
-  // own routes.)
-  void renderProjectThumbnail({ projectId: id, html: input.html });
+  // own routes.) Una página vacía no tiene miniatura que pintar.
+  if (input.html.trim()) void renderProjectThumbnail({ projectId: id, html: input.html });
   return id;
+}
+
+/**
+ * EL PROYECTO EN BLANCO del usuario, o uno nuevo si no tiene — como «New
+ * Session» de DeepSeek, que toma el primer blanco que hay antes de crear otro.
+ * Dos pestañas a la vez pueden crear dos: no rompe nada, el sobrante no sale
+ * en la lista y se reutilizará la próxima vez.
+ */
+export async function findOrCreateBlankProject(userId: string): Promise<string> {
+  const p = schema.projects;
+  const [existing] = await db
+    .select({ id: p.id })
+    .from(p)
+    .where(
+      and(
+        eq(p.userId, userId),
+        sqlOp`coalesce(btrim(${p.data}->>'html'), '') = ''`,
+        sqlOp`coalesce(${p.data}->'pages', '{}'::jsonb) = '{}'::jsonb`,
+        sqlOp`not exists (select 1 from ${schema.projectChatMessages} m where m."projectId" = ${p}."id")`,
+      ),
+    )
+    .orderBy(desc(p.updatedAt))
+    .limit(1);
+  if (existing) return existing.id;
+  return createProject(userId, { brief: "", html: "" });
 }
 
 /**
@@ -362,6 +390,13 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       filesHash: schema.projects.filesHash,
       publishedFilesHash: schema.projects.publishedFilesHash,
       data: schema.projects.data,
+      // ¿Tiene conversación? Basta con saber si hay una fila: para estar en
+      // blanco (`isBlankProject`) no puede haber ninguna.
+      // ⚠️ `${schema.projects}."id"` y no `${schema.projects.id}`: dentro de un
+      // campo del `select`, Drizzle escribe la columna SIN tabla (`"id"`), y en
+      // la subconsulta `"id"` es el de la fila del chat. Medido: salía siempre
+      // «sin conversación».
+      hasChat: sqlOp<boolean>`exists (select 1 from ${schema.projectChatMessages} m where m."projectId" = ${schema.projects}."id")`,
       createdAt: schema.projects.createdAt,
       updatedAt: schema.projects.updatedAt,
     })
@@ -388,6 +423,7 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       publishedAt: row.publishedAt,
       hasUnpublishedChanges: computeUnpublishedChanges({ ...row, currentHtml }),
       sectionCount: countSections(currentHtml),
+      isBlank: isBlankProject({ html: currentHtml, pages: row.data?.pages, chatTurns: row.hasChat ? 1 : 0 }),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -472,6 +508,7 @@ export async function getProject(
     // la única vista donde el usuario la ve.
     hasUnpublishedChanges: computeUnpublishedChanges({ ...row, currentHtml: rawHtml }),
     sectionCount: countSections(currentHtml),
+    isBlank: isBlankProject({ html: rawHtml, pages: row.data?.pages, chatTurns: chatHistory.length }),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     data,
