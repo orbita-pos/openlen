@@ -324,8 +324,11 @@ export class Session {
     this.reply(m, "ok", { postgres_changes: config.postgresChanges.map((p) => ({ ...p, id: ch.postgresChangesIds.get(p)! })) });
     // Su `:sync_presence` tras unirse, si lo pidió (y, si es privado, si puede leerla).
     if (ch.presenceEnabled && this.canReadPresence(ch)) this.push(ch.topic, "presence_state", this.hub.presence.state(ch.key), ch.joinRef);
-    // Su `start_postgres_subscribe`: después de contestar al join.
-    if (config.postgresChanges.length > 0) void this.hub.changes.subscribe(ch);
+    // Su `start_postgres_subscribe`: después de contestar al join, y DENTRO de
+    // la cola del tema (en su proceso del canal, como todo): un `access_token`
+    // que llega con el alta en marcha espera, en vez de dar de alta otros uuids
+    // y dejar los primeros colgados con el sondeo del proyecto abierto.
+    if (config.postgresChanges.length > 0) await this.hub.changes.subscribe(ch);
   }
 
   /** Su `push_system_message`. */
@@ -441,8 +444,8 @@ export class Session {
     ch.claims = c.claims;
     ch.scheduleTokenCheck(c.msUntilRecheck);
     // Su `apply_access_token`: las suscripciones con los claims nuevos (la
-    // misma fila: `on conflict … do update set claims`).
-    if (ch.config.postgresChanges.length > 0) void this.hub.changes.subscribe(ch);
+    // misma fila: `on conflict … do update set claims`), en la cola del tema.
+    if (ch.config.postgresChanges.length > 0) await this.hub.changes.subscribe(ch);
   }
 
   /** Su BroadcastHandler para un canal público: el mensaje tal cual a los del

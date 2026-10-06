@@ -8,7 +8,7 @@
 // (testing.ts). Todo lo demás —la publicación, las suscripciones, apply_rls,
 // el reparto— es el código de producción.
 import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { signJwt } from "../keys";
 import type { TestProject } from "../testing/project";
@@ -41,11 +41,19 @@ let rt: ReturnType<typeof createRealtimeServer>;
 let port = 0;
 const fuentes: { abiertas: number; cerradas: number } = { abiertas: 0, cerradas: 0 };
 const clientes: SupabaseClient[] = [];
+// La ida y vuelta de un Postgres por red (PGlite contesta en el mismo proceso):
+// a 0 salvo en la prueba que la necesita.
+let latenciaMs = 0;
 
 beforeAll(async () => {
   t = await newRealtimeTestProject(MIGRACION);
   await installWalCapture(t.pg, ["public.mensajes", "public.fuera"]);
-  const project: RealtimeProject = { ref: "abcdefghijklmnopqrst", publishableKey: t.project.publishableKey, secretKeyHash: t.project.secretKeyHash, jwtSecret: t.project.jwtSecret, db: t.project.db };
+  const project: RealtimeProject = { ref: "abcdefghijklmnopqrst", publishableKey: t.project.publishableKey, secretKeyHash: t.project.secretKeyHash, jwtSecret: t.project.jwtSecret,
+    db: { transaction: async (fn) => {
+      if (latenciaMs > 0) await espera(latenciaMs);
+      return t.project.db.transaction(fn);
+    } },
+  };
   rt = createRealtimeServer({
     resolveProject: async () => project,
     channelErrorBackoffMs: 0,
@@ -161,6 +169,35 @@ describe("postgres_changes como Supabase Realtime", () => {
     await inserta(U2, "ahora sí");
     await espera(400);
     expect(r.vistos.map((v) => v.new.texto)).toEqual(["ahora sí"]);
+  });
+
+  // supabase-js manda su `access_token` justo después del join: puede llegar con
+  // el alta de las suscripciones todavía en marcha. Con mensajes crudos y la
+  // base lenta, para que pase seguro: join y access_token seguidos, y fuera.
+  it("🔴 un token que llega mientras se da de alta no deja suscripciones colgadas", async () => {
+    const jwt1 = await signJwt(t.project.jwtSecret, { sub: U1, role: "authenticated" }, 3600);
+    const jwt2 = await signJwt(t.project.jwtSecret, { sub: U2, role: "authenticated" }, 3600);
+    const cuenta = async () => (await t.pg.query<{ n: number }>(`select count(*)::int as n from realtime.subscription`)).rows[0]!.n;
+    const antes = await cuenta();
+    latenciaMs = 150;
+    onTestFinished(() => {
+      latenciaMs = 0;
+    });
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/realtime/v1/websocket?apikey=${t.project.publishableKey}&vsn=2.0.0`);
+    await new Promise<void>((r) => (ws.onopen = () => r()));
+    const vistos: unknown[] = [];
+    ws.onmessage = (e) => vistos.push(JSON.parse(String(e.data)));
+    const topic = "realtime:carrera";
+    const config = { broadcast: { self: false, ack: false }, presence: { key: "", enabled: false }, postgres_changes: [{ event: "INSERT", schema: "public", table: "mensajes" }], private: false };
+    ws.send(JSON.stringify(["1", "1", topic, "phx_join", { config, access_token: jwt1 }]));
+    ws.send(JSON.stringify(["1", "2", topic, "access_token", { access_token: jwt2 }]));
+    await espera(400);
+    ws.send(JSON.stringify(["1", "3", topic, "phx_leave", {}]));
+    await espera(400);
+    ws.close();
+    await espera(300);
+    expect(vistos).toContainEqual(["1", "1", topic, "phx_reply", expect.objectContaining({ status: "ok" })]);
+    expect(await cuenta()).toBe(antes);
   });
 
   it("🔴 al irse el último, el sondeo suelta la fuente y no quedan suscripciones", async () => {
