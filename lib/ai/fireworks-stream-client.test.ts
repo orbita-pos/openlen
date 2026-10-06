@@ -304,6 +304,36 @@ describe("transporte de texto en streaming", () => {
     // Con su código desde Len 2.5: una caída de red es reintentable (`lib/agent/retry-policy.ts`).
     expect(events).toEqual([{ type: "done", stopReason: { kind: "error", error: "socket hang up", code: "transport" } }]);
   });
+
+  it("con streamToolArgs cede los trozos de los argumentos EN VIVO, y la llamada armada sale igual", async () => {
+    // Los «live tool deltas» de DeepSeek: el lienzo pinta un Write mientras se
+    // escribe. El trozo lleva el nombre de la llamada aunque el proveedor sólo
+    // lo mande en el primero.
+    const { client: c } = client(
+      chunk({ tool_calls: [{ index: 0, id: "call_1", function: { name: "Write", arguments: '{"file_path":"/index.html",' } }] })
+      + chunk({ tool_calls: [{ index: 0, function: { arguments: '"content":"<h1>Hola' } }] })
+      + chunk({ tool_calls: [{ index: 0, function: { arguments: '</h1>"}' } }] }, "tool_calls"),
+    );
+    const events = await drain(c.stream({ ...REQUEST, streamToolArgs: true, tools: [{ type: "function", function: { name: "Write" } }] }));
+    expect(events.filter((e) => e.type === "function_call_delta")).toEqual([
+      { type: "function_call_delta", index: 0, name: "Write", argsDelta: '{"file_path":"/index.html",' },
+      { type: "function_call_delta", index: 0, name: "Write", argsDelta: '"content":"<h1>Hola' },
+      { type: "function_call_delta", index: 0, name: "Write", argsDelta: '</h1>"}' },
+    ]);
+    expect(events.find((e) => e.type === "function_call")).toEqual({
+      type: "function_call",
+      name: "Write",
+      args: { file_path: "/index.html", content: "<h1>Hola</h1>" },
+    });
+  });
+
+  it("sin streamToolArgs no sale ni un trozo: el cable de siempre", async () => {
+    const { client: c } = client(
+      chunk({ tool_calls: [{ index: 0, id: "call_1", function: { name: "Write", arguments: '{"file_path":"/index.html","content":"x"}' } }] }, "tool_calls"),
+    );
+    const events = await drain(c.stream({ ...REQUEST, tools: [{ type: "function", function: { name: "Write" } }] }));
+    expect(events.some((e) => e.type === "function_call_delta")).toBe(false);
+  });
 });
 
 describe("varias imágenes en un turno", () => {

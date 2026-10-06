@@ -35,6 +35,11 @@ export type FireworksStreamEvent =
   // llegada—, así que se ceden ARMADAS al cerrar el turno. El texto sigue
   // saliendo en vivo: el modelo narra primero y actúa después, que es justo lo
   // que hace sentir vivo al Agente.
+  // LOS TROZOS DE LOS ARGUMENTOS, en vivo y SÓLO si se piden
+  // (`streamToolArgs`): son los «live tool deltas» de DeepSeek, con los que el
+  // lienzo pinta un Write mientras se escribe. La llamada armada de abajo sigue
+  // saliendo igual: el trozo sólo se enseña, nunca se ejecuta.
+  | { readonly type: "function_call_delta"; readonly index: number; readonly name?: string; readonly argsDelta: string }
   | { readonly type: "function_call"; readonly name: string; readonly args: Record<string, unknown> }
   // Misma forma discriminada que el transporte de Gemini, para que el consumidor
   // los lea con el mismo `switch` y ninguno de los dos necesite un adaptador.
@@ -103,6 +108,9 @@ export interface FireworksStreamRequest {
   readonly reasoningEffortWord?: "max";
   /** Declaraciones en formato OpenAI. Sin herramientas el turno es sólo texto. */
   readonly tools?: readonly Record<string, unknown>[];
+  /** Ceder `function_call_delta` mientras llegan los argumentos. Sin él, el
+   *  cable sale como siempre. */
+  readonly streamToolArgs?: boolean;
   /** Píxeles para el ÚLTIMO mensaje de usuario. Sólo los papeles con visión. */
   readonly images?: readonly InlineImage[];
   /** Pide un objeto JSON sin imponer un esquema: el modo estricto de Fireworks
@@ -461,6 +469,11 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
                 ...(typeof fn?.name === "string" && fn.name ? { name: fn.name } : previous.name ? { name: previous.name } : {}),
                 args: previous.args + (typeof fn?.arguments === "string" ? fn.arguments : ""),
               });
+              const trozo = typeof fn?.arguments === "string" ? fn.arguments : "";
+              if (request.streamToolArgs && trozo.length > 0) {
+                const nombre = pendingCalls.get(index)?.name;
+                yield { type: "function_call_delta", index, ...(nombre ? { name: nombre } : {}), argsDelta: trozo };
+              }
             }
             if (opts.signal?.aborted) { cancelled = true; break outer; }
           }
