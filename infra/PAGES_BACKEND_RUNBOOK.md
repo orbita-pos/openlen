@@ -97,6 +97,34 @@ existían. No crearlos a mano.
 Borrar un proyecto desde la app se lleva sus ficheros (`<ref>/` en el bucket). Los de un proyecto borrado a mano se ven
 en el bucket bajo su `ref`.
 
+## 4c. Realtime de las páginas (carril D de Len 2.5: `/realtime/v1`, `lib/backend/realtime`)
+
+Un servicio Node aparte (`openlen-realtime`, `127.0.0.1:4100`): Next no sostiene WebSockets. Broadcast y presence no
+tocan la base; `postgres_changes` lee la WAL con wal2json desde un slot TEMPORAL por proyecto con suscriptores, y los
+canales privados miran RLS en `realtime.messages`. El esquema `realtime` lo monta la app sola, como el de Storage.
+
+En este orden (el 2 reinicia el clúster de las páginas: unos segundos sin `/rest/v1`, `/auth/v1` ni `/storage/v1`;
+mejor a una hora tranquila):
+
+1. El código desplegado (lleva `/opt/openlen-app/realtime/server.mjs`, el bloque de Caddy y la unidad en `infra/app/`).
+2. `sudo bash infra/db/setup-pages-cluster.sh` otra vez: instala `postgresql-17-wal2json`, pone `wal_level = logical`,
+   `max_replication_slots = 64` y `max_slot_wal_keep_size = 2GB`, reinicia el clúster, le da al administrador `SET ON
+   PARAMETER log_min_messages` y crea `openlen_realtime` (LOGIN REPLICATION, nada más) con `PAGES_REALTIME_PASSWORD` en
+   `/etc/openlen/openlen.env`. Es idempotente.
+3. `sudo install -m 644 /opt/openlen-app/../<repo>/infra/app/openlen-realtime.service /etc/systemd/system/` (o
+   `install-app.sh`), `sudo systemctl daemon-reload && sudo systemctl enable --now openlen-realtime`. A partir de aquí
+   el deploy la reinicia tras cada swap.
+4. Opcionales en `/etc/openlen/openlen.env` (los de Supabase por defecto): `PAGES_REALTIME_MAX_CONCURRENT_USERS` (200),
+   `PAGES_REALTIME_MAX_EVENTS_PER_SECOND` (100), `PAGES_REALTIME_MAX_JOINS_PER_SECOND` (100),
+   `PAGES_REALTIME_MAX_CHANNELS_PER_CLIENT` (100), `PAGES_REALTIME_MAX_PAYLOAD_SIZE_KB` (3000).
+
+Sin el paso 2, broadcast y presence funcionan y `postgres_changes` contesta su error («Realtime was unable to connect
+to the project database» o el de crear el slot): no se finge.
+
+🔴 Lo que sólo se puede probar en la caja: el slot de wal2json de verdad (PGlite no tiene replicación lógica y el
+Postgres de la máquina de desarrollo no trae wal2json). Lo demás —la publicación, las suscripciones, `apply_rls`, el
+reparto— está probado con el código de producción. El formato de wal2json se compara en el paso 5.
+
 ## 5. Comprobar
 
 ```bash
@@ -110,6 +138,16 @@ curl -s https://<ref>.openlen.app/storage/v1/bucket -H "apikey: <sb_secret_…>"
 # Y en el host de la PÁGINA tiene que dar 404 (un fichero subido nunca vive en el origen de la página):
 curl -s -o /dev/null -w "%{http_code}\n" https://<sub>.openlen.app/storage/v1/bucket -H "apikey: <sb_secret_…>"
 # → 404
+
+# Realtime (carril D): el servicio y su puerta (sin upgrade contesta como HTTP).
+systemctl is-active openlen-realtime
+curl -s https://<ref>.openlen.app/realtime/v1/websocket -H "apikey: <sb_publishable_…>"
+# → {"error":"Upgrade required"} (400). Un 502 = la unidad no está corriendo.
+# El slot de verdad: con un canal de postgres_changes abierto en una página, en la caja
+sudo -u postgres psql -p 5433 -d ol_<ref> -Xc "select slot_name, plugin, temporary, active from pg_replication_slots"
+# → realtime_<ref> | wal2json | t | t   (y al cerrar la pestaña, desaparece)
+# Y que wal2json da lo que apply_rls espera: una fila nueva en una tabla publicada tiene que llegar al navegador
+# con `new` (y la de otro usuario NO, si su RLS lo separa).
 ```
 
 - En el editor, una página con backend enseña el icono «Base de datos» en el rail (sólo si su base existe).

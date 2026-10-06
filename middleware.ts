@@ -206,14 +206,15 @@ export const config = {
   // `rest/v1/` y `auth/v1/` (con su barra) son el backend de las páginas, la
   // API de Supabase (lib/backend): sin ellos aquí, una llamada de supabase-js
   // volvería redirigida a /es/rest/v1/… . `storage/v1/` (carril D): el Storage
-  // de las páginas (lib/backend/storage), igual.
+  // de las páginas (lib/backend/storage), igual. Y `realtime/v1/` (carril D):
+  // en producción va a su servicio, no a Next; en local, que no lo redirija.
   //
   // EL LIENZO (pieza 9 de Len 2.5): en un host `lienzo-*` el middleware corre
   // en TODA ruta —también las de fichero (`/js/app.js`) y las de `/api`, que el
   // patrón de arriba deja fuera—, para mandarlas al lienzo. Next compara el
   // valor anclado y contra el host sin puerto.
   matcher: [
-    "/((?!api|_next|_vercel|served|c|p/|rest/v1/|auth/v1/|storage/v1/|.*\\..*).*)",
+    "/((?!api|_next|_vercel|served|c|p/|rest/v1/|auth/v1/|storage/v1/|realtime/v1/|.*\\..*).*)",
     { source: "/:path*", has: [{ type: "host", value: "lienzo-[0-9a-f]{32}\\..*" }] },
   ],
 };

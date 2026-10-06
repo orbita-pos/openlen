@@ -73,6 +73,10 @@ install -m 644 "${SCRIPT_DIR}/openlen-backup-system.timer"      /etc/systemd/sys
 # mano en prod; cazado en el ensayo DR cuando el box resucitado no lo tenía).
 install -m 644 "${SCRIPT_DIR}/openlen-notifications-drain.service" /etc/systemd/system/openlen-notifications-drain.service 2>/dev/null || true
 install -m 644 "${SCRIPT_DIR}/openlen-notifications-drain.timer"   /etc/systemd/system/openlen-notifications-drain.timer   2>/dev/null || true
+# carril D (Len 2.5, pieza 15): el servicio de Realtime de las páginas. Se
+# habilita a mano cuando el clúster de las páginas tenga replicación lógica
+# (infra/PAGES_BACKEND_RUNBOOK.md §4c):  systemctl enable --now openlen-realtime
+install -m 644 "${SCRIPT_DIR}/openlen-realtime.service" /etc/systemd/system/openlen-realtime.service 2>/dev/null || true
 # Los timers de backup ejecutan desde /opt/openlen-backup (el swap del deploy
 # borra /opt/openlen-app); dejar los scripts instalados ahí.
 install -d -m 755 /opt/openlen-backup

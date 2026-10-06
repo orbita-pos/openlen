@@ -214,7 +214,7 @@ openlen.com, www.openlen.com {
 
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif *.mjs *.json *.webmanifest *.txt *.md
-		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/* /storage/v1/*
+		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/* /storage/v1/* /realtime/v1/*
 		not header_regexp Host ^lienzo-
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
@@ -312,6 +312,18 @@ openlen.com, www.openlen.com {
 	# los cuerpos en 100 MB; el tope por fichero es 50 MB.
 	handle /storage/v1/* {
 		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {vars.cf_client_ip}
+		}
+	}
+
+	# carril D: el Realtime de las páginas (/realtime/v1, lib/backend/realtime).
+	# NO es Next: un servicio aparte (infra/app/openlen-realtime.service), porque
+	# Next no sostiene WebSockets. `reverse_proxy` pasa el upgrade solo. Contesta
+	# en `<ref>.openlen.app`, la URL del proyecto que usa supabase-js. Excluido de
+	# @doc: nada de esto se cachea en el borde. Mientras la unidad no esté
+	# habilitada (runbook §4c), Caddy contesta 502 aquí y nada más se entera.
+	handle /realtime/v1/* {
+		reverse_proxy 127.0.0.1:4100 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
 		}
 	}

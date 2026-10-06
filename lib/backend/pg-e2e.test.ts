@@ -225,5 +225,70 @@ describe.skipIf(!E2E_URL)("el backend de las páginas contra un Postgres de verd
     expect([...new Uint8Array(await down.data!.arrayBuffer())]).toEqual([1, 2, 3]);
     expect(store.keys()).toHaveLength(1);
   }, 60_000);
+
+  /* Realtime (pieza 15). El clúster necesita lo que hace root en
+   * setup-pages-cluster.sh §3b: `grant set on parameter log_min_messages to
+   * <admin>`. Sin wal2json aquí, el slot es lo único que no se prueba: el `data`
+   * de wal2json se escribe a mano y pasa por la MISMA mitad de `list_changes`
+   * que en producción, por el pool de authenticator con el driver `pg`. */
+  it("🔴 Realtime: el admin limitado monta el esquema, y por authenticator la suscripción y apply_rls separan a cada uno", async () => {
+    const { ensureRealtimeProvisioned, forgetRealtimeProvisioned } = await import("./realtime/provision");
+    const { createSubscriptions, deleteSubscriptions, parseSubscriptionParams } = await import("./realtime/subscriptions");
+    const { changeSource } = await import("./realtime/poller");
+    forgetRealtimeProvisioned();
+    await ensureRealtimeProvisioned(ref);
+    const m = await withAdmin(dev, (r) => r.query(`select count(*)::int as n from realtime.schema_migrations`));
+    expect(m.rows[0]?.n).toBe(88);
+
+    await withDeveloper(dev, dev, dbPassword, (r) =>
+      r.exec(`
+        create table public.avisos (id bigint generated always as identity primary key, user_id uuid not null, texto text);
+        alter table public.avisos enable row level security;
+        create policy "los suyos" on public.avisos for select to authenticated using ((select auth.uid()) = user_id);
+        alter publication supabase_realtime add table public.avisos;
+      `),
+    );
+    const U1 = "11111111-1111-4111-8111-111111111111";
+    const U2 = "22222222-2222-4222-8222-222222222222";
+    const parsed = parseSubscriptionParams({ event: "INSERT", schema: "public", table: "avisos" });
+    if (!parsed.ok) throw new Error(parsed.error);
+    const s1 = "aaaaaaaa-0000-4000-8000-000000000001";
+    const s2 = "aaaaaaaa-0000-4000-8000-000000000002";
+    await createSubscriptions(project.db, [
+      { id: s1, claims: { role: "authenticated", sub: U1 }, params: parsed.params },
+      { id: s2, claims: { role: "authenticated", sub: U2 }, params: parsed.params },
+    ]);
+    const fila = await withAdmin(dev, (r) => r.query(`insert into public.avisos (user_id, texto) values ($1, 'hola') returning id`, [U1]));
+    const id = Number(fila.rows[0]?.id);
+    const data = JSON.stringify({
+      action: "I",
+      timestamp: "2026-10-05 12:00:00.000000+00",
+      schema: "public",
+      table: "avisos",
+      columns: [
+        { name: "id", type: "bigint", typeoid: 20, value: id },
+        { name: "user_id", type: "uuid", typeoid: 2950, value: U1 },
+        { name: "texto", type: "text", typeoid: 25, value: "hola" },
+      ],
+      pk: [{ name: "id", type: "bigint", typeoid: 20 }],
+    });
+    const leidas: { actions: string; addTables: string }[] = [];
+    const fuente = changeSource(project.db, {
+      open: async () => {},
+      close: async () => {},
+      read: async (o) => {
+        leidas.push({ actions: o.actions, addTables: o.addTables });
+        return [data];
+      },
+    });
+    const listed = await fuente.listChanges({ maxChanges: 100, maxRecordBytes: 1_048_576 });
+    expect(leidas).toEqual([{ actions: "insert,update,delete", addTables: "public.avisos" }]);
+    expect(listed!.rows).toHaveLength(1);
+    expect(listed!.rows[0]).toMatchObject({ type: "INSERT", subscription_ids: [s1], commit_timestamp: "2026-10-05T12:00:00.000Z" });
+    expect(JSON.parse(listed!.rows[0]!.record)).toEqual({ id, user_id: U1, texto: "hola" });
+    await deleteSubscriptions(project.db, [s1, s2]);
+    const quedan = await withAdmin(dev, (r) => r.query(`select count(*)::int as n from realtime.subscription`));
+    expect(quedan.rows[0]?.n).toBe(0);
+  }, 120_000);
   /* ── fin carril D ── */
 });

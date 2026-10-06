@@ -22,6 +22,7 @@ import { projectDatabase } from "./pg";
 import { devRoleOf, provisionDatabase } from "./provision";
 /* ── carril D ── */
 import { ensureStorageProvisioned } from "./storage/provision";
+import { ensureRealtimeProvisioned } from "./realtime/provision";
 import type { BackendProject } from "./router";
 
 export interface BackendRecord {
@@ -94,6 +95,11 @@ export async function ensureProvisioned(rec: BackendRecord): Promise<void> {
    * intentar la siguiente petición; la ruta de Storage lo exige ella misma. */
   await ensureStorageProvisioned(rec.ref).catch((err: unknown) => {
     console.error("[storage] no se pudo montar el esquema storage", rec.ref, err);
+  });
+  /* El esquema `realtime` (pieza 15), igual: antes de la primera migración de
+   * Len que publique una tabla, y sin tumbar lo que ya funcionaba. */
+  await ensureRealtimeProvisioned(rec.ref).catch((err: unknown) => {
+    console.error("[realtime] no se pudo montar el esquema realtime", rec.ref, err);
   });
   /* ── fin carril D ── */
 }

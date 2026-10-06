@@ -8,7 +8,9 @@
 # proyecto pide su base (lib/backend/provision.ts). Carril D: también
 # `supabase_storage_admin`, el dueño del esquema `storage`, que crea la app
 # como este mismo administrador (lib/backend/storage/provision.ts), sin
-# CREATEROLE ni LOGIN. Aparte para que el
+# CREATEROLE ni LOGIN; y `supabase_realtime_admin`, el del esquema `realtime`
+# (lib/backend/realtime/provision.ts). Lo de Realtime que sólo puede hacer un
+# superusuario va en el paso 3b. Aparte para que el
 # administrador de las páginas no tenga NADA que ver con la base de la app.
 #
 # El administrador NO es superusuario: CREATEDB + CREATEROLE + BYPASSRLS y
@@ -47,6 +49,12 @@ else
   pg_createcluster "$PG_MAJOR" "$CLUSTER" --port "$PORT" -- --auth-local=peer --auth-host=scram-sha-256
 fi
 
+# carril D (pieza 15): el decodificador de wal2json que usa Realtime (PGDG).
+if ! dpkg -s "postgresql-$PG_MAJOR-wal2json" >/dev/null 2>&1; then
+  echo "== instalando postgresql-$PG_MAJOR-wal2json"
+  apt-get install -y "postgresql-$PG_MAJOR-wal2json"
+fi
+
 CONF_DIR="/etc/postgresql/$PG_MAJOR/$CLUSTER/conf.d"
 mkdir -p "$CONF_DIR"
 # Sólo loopback: lo usa Next, en esta misma caja. Conexiones: un pool pequeño
@@ -55,6 +63,14 @@ cat > "$CONF_DIR/openlen-pages.conf" <<'CONF'
 listen_addresses = '127.0.0.1'
 max_connections = 220
 password_encryption = scram-sha-256
+# carril D (Len 2.5, pieza 15): postgres_changes de Realtime lee la WAL con
+# wal2json desde un slot TEMPORAL por proyecto con suscriptores (se va con su
+# conexión). `logical` pide reiniciar el clúster. El tope de WAL retenida es
+# para que un slot atascado no llene el disco: pasado, Postgres lo invalida
+# (y el servicio abre otro).
+wal_level = logical
+max_replication_slots = 64
+max_slot_wal_keep_size = 2GB
 CONF
 chown -R postgres:postgres "/etc/postgresql/$PG_MAJOR/$CLUSTER"
 
@@ -92,6 +108,30 @@ select format('alter role %I with login createdb createrole bypassrls nosuperuse
 select format('alter role %I set createrole_self_grant = %L', :'admin', 'set, inherit') \gexec
 SQL
 echo "== $ADMIN listo (CREATEDB CREATEROLE BYPASSRLS, createrole_self_grant = 'set, inherit')"
+
+# ── 3b. Realtime (carril D, pieza 15) ───────────────────────────────────────
+# Sólo un superusuario puede dar estas dos cosas:
+#   · `SET ON PARAMETER log_min_messages` al administrador: la función
+#     `realtime.list_changes` de Supabase lo lleva (`SET log_min_messages TO
+#     'fatal'`), y sin él no la puede crear (medido con
+#     lib/backend/realtime/production-roles.pglite.test.ts).
+#   · El rol `openlen_realtime`, LOGIN REPLICATION y NADA más (ni miembro de
+#     nada): el que lee el slot de wal2json. El administrador NO recibe
+#     REPLICATION: su sesión llega a los roles de todos los proyectos, y por el
+#     slot no corre código del proyecto (lib/backend/realtime/wal-reader.ts).
+REALTIME_PW="$(env_get PAGES_REALTIME_PASSWORD)"
+if [[ -z "$REALTIME_PW" ]]; then
+  REALTIME_PW="$(openssl rand -hex 24)"
+  echo "PAGES_REALTIME_PASSWORD=$REALTIME_PW" >> "$ENV_FILE"
+  echo "== PAGES_REALTIME_PASSWORD añadida a $ENV_FILE"
+fi
+psql_pages -v admin="$ADMIN" -v pw="$REALTIME_PW" <<'SQL'
+select format('grant set on parameter log_min_messages to %I', :'admin') \gexec
+select 'create role openlen_realtime login replication'
+ where not exists (select from pg_roles where rolname = 'openlen_realtime') \gexec
+select format('alter role openlen_realtime with login replication nosuperuser nocreatedb nocreaterole nobypassrls password %L', :'pw') \gexec
+SQL
+echo "== openlen_realtime listo (LOGIN REPLICATION) y log_min_messages para $ADMIN"
 
 # ── 4. Comprobación ─────────────────────────────────────────────────────────
 PGPASSWORD="$ADMIN_PW" psql "postgresql://$ADMIN@127.0.0.1:$PORT/postgres" -XAtc \
