@@ -186,8 +186,10 @@ export function LenTurn({
   const hasSteps = visibleSteps(turn.actions).length > 0;
   const showChanges = turn.status === "applied" || turn.status === "reverted";
 
-  // Nada que enseñar todavía: la barra viva dice «Pensando».
-  if (streaming && !hasSteps && text.length === 0) return null;
+  // Nada que enseñar todavía: la barra viva dice «Pensando». Una pregunta que
+  // espera SÍ es algo (va fuera de los pasos, en su tarjeta): si Len empieza
+  // preguntando, sin texto ni pasos antes, sin esto no se pintaba nada.
+  if (streaming && !hasSteps && text.length === 0 && !liveQuestions) return null;
 
   return (
     <div className="nc-turn nc-up flex flex-col gap-2.5" data-last={isLast}>
