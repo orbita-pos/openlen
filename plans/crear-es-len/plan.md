@@ -19,7 +19,7 @@
 Se ejecuta en una sesión de **Claude Code en la nube**, con los **100 $ de crédito de nube** de Jesús.
 
 - **Rama**: `crear-es-len`, ya en `origin` con `plans/crear-es-len/diseno.md` y `plan.md`. `plans/` está en `.gitignore`: para commitear algo de esa carpeta, `git add -f`. Si la sesión arranca en `master`, primero `git fetch origin crear-es-len && git switch crear-es-len`.
-- **Alcance en la nube: Tareas 1 a 10, y PARAR.**
+- **Alcance en la nube: Tareas 1 a 10 de este plan, después la Parte B entera (`plans/crear-es-len/plan-herramientas.md`, Tareas B1 a B4: las 11 herramientas en inglés), y PARAR.** La Parte B va después de la 10 porque renombra también lo que la Parte A escribe.
   - La 11 (medición pagada, con Fireworks de verdad y el OK de Jesús) no se hace en la nube.
   - La 12 (borrar Crear) depende de la 11, así que tampoco.
 - **Lo que no se puede hacer allí** se anota en `plans/crear-es-len/pendiente-local.md` (tarea, paso, por qué) y se sigue:
