@@ -1,4 +1,4 @@
-// Entrar como un usuario de la página en la visita de Len (`usar_pagina`).
+// Entrar como un usuario de la página en la visita de Len (`use_page`).
 //
 // Es lo que hace Lovable (su changelog, 08/08/2026): si la app tiene un solo
 // usuario, entra como ése; si tiene varios y no se le dijo cuál, pregunta en el

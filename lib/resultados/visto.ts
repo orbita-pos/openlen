@@ -4,7 +4,7 @@
  *
  * Un formulario está visto si tiene `seenAt` (Len lo abrió entero) o si llegó
  * antes de `users.lastSeenLeadsAt` (el usuario abrió la pestaña Formularios).
- * El globito de la bandeja y `ver_formularios` cuentan con ESTA condición: si
+ * El globito de la bandeja y `list_form_submissions` cuentan con ESTA condición: si
  * cada uno tuviera la suya, Len y el globito dirían números distintos.
  */
 import { and, eq, gt, isNull, type SQL } from "drizzle-orm";

@@ -1,5 +1,5 @@
 // F1 agent tool runtime — the three tool bodies the model can call
-// (leer_estado, editar_pagina, activar_modulo), all built on existing
+// (leer_estado, editar_pagina, toggle_module), all built on existing
 // cores (settings-patch, html-ops, versions, chat/store).
 // No new persistence logic here — this wires the model's function calls
 // to the same read-modify-write paths the UI buttons already use.
@@ -110,7 +110,7 @@ import {
   type ResultadosDeps,
 } from "@/lib/agent/resultados";
 
-// editar_imagen: the source image must decode as one of the formats Gemini's
+// edit_image: the source image must decode as one of the formats Gemini's
 // image edit accepts, and stays under the same 6MB cap the ai-edit-image route
 // enforces on its decoded source.
 const IMAGE_EDIT_ALLOWED_MIME = new Set(["image/png", "image/jpeg", "image/webp"]);
@@ -229,16 +229,16 @@ export interface AgentDeps {
     opts: { email: string | null; displayName: string },
   ): Promise<void>;
   /** `hasUnpublishedChanges` del proyecto, leído DESPUÉS de escribir: la misma
-   *  decisión que pinta la franja de la Bandeja. `activar_modulo` lo usa para
+   *  decisión que pinta la franja de la Bandeja. `toggle_module` lo usa para
    *  no decir «ya lo ven» cuando la página publicada todavía no lo tiene. */
   cambiosSinPublicar(projectId: string, userId: string): Promise<boolean>;
   /** This project's uploaded audio assets — the only tracks poner_musica
    *  may point the page music player at (never external URLs). */
   listAudioAssets(projectId: string): Promise<{ url: string; name: string }[]>;
   /** The "Imágenes by OpenLen" curated-photo catalog manifest, raw and
-   *  unvalidated — elegir_foto runs it through searchCuratedPhotos. */
+   *  unvalidated — find_photo runs it through searchCuratedPhotos. */
   fetchImageManifest(): Promise<unknown>;
-  /** EL DERECHO A PREGUNTAR — `mirar_pagina`. Contesta una pregunta sobre el
+  /** EL DERECHO A PREGUNTAR — `view_page`. Contesta una pregunta sobre el
    *  documento con DATOS, no con un veredicto: `medir` desde Chromium (gratis)
    *  y `describir` desde el papel con visión (cuesta).
    *
@@ -254,7 +254,7 @@ export interface AgentDeps {
      *  documento que el lienzo le enseña al usuario. Ver `MiradaParams.vista`. */
     vista?: ContextoDeVista | null;
   }): Promise<{ respuesta: string } | null>;
-  /** USAR LA PÁGINA — `usar_pagina` (H9). Una visita en Chromium con los pasos
+  /** USAR LA PÁGINA — `use_page` (H9). Una visita en Chromium con los pasos
    *  que da Len; devuelve HECHOS de cada paso, no un veredicto. Opcional por lo
    *  mismo que `observarPagina`: quien no la cablea no arranca un navegador por
    *  sorpresa, y la herramienta dice que no está disponible. */
@@ -265,12 +265,12 @@ export interface AgentDeps {
     vista?: ContextoDeVista | null;
     signedInAs?: SignedInAs | null;
   }): Promise<{ informe: string }>;
-  /** `usar_pagina` con `sign_in_as`: abre una sesión de verdad del backend de
+  /** `use_page` con `sign_in_as`: abre una sesión de verdad del backend de
    *  la página como uno de sus usuarios (lib/backend/auth/visit-session.ts), y
    *  la clave donde supabase-js la busca. `null` si no hay backend al que entrar. */
   signInForVisit?(projectId: string, who: string): Promise<{ storageKey: string; result: VisitSignIn } | null>;
   /** Download an on-page image as base64 — SSRF-guarded (validateUrl, same as
-   *  the proxy-image route) + capped + MIME-allowlisted. editar_imagen only
+   *  the proxy-image route) + capped + MIME-allowlisted. edit_image only
    *  ever passes a URL it already found verbatim in the current document. */
   fetchImage(url: string): Promise<FetchedImage>;
   /** Store edited bytes as a project asset; returns the new asset URL to swap
@@ -300,7 +300,7 @@ export interface AgentDeps {
     preferencia: string,
   ): Promise<{ ok: true; yaExistia: boolean } | { ok: false; reason: "llena" | "no_guardado" }>;
   /** Los puntos de guardado de ESTA página, del más nuevo al más viejo — el
-   *  mismo `listVersions` que lee el panel de Versiones. `revertir_ultimo_cambio`
+   *  mismo `listVersions` que lee el panel de Versiones. `undo_last_change`
    *  es su único llamador aquí: los snapshots ya existían, lo que faltaba era
    *  que el Agente pudiera llegar a ellos. */
   listVersions(
@@ -308,7 +308,7 @@ export interface AgentDeps {
     userId: string,
     page: string | null,
   ): Promise<{ id: string; label: string; source?: string }[]>;
-  /** El documento guardado en ESA versión. Lo necesita `revertir_ultimo_cambio`
+  /** El documento guardado en ESA versión. Lo necesita `undo_last_change`
    *  para deshacer lo de Len sobre lo que hay ahora sin llevarse lo que el
    *  dueño editó después (H06). Opcional: sin ella, la herramienta restaura
    *  como antes. */
@@ -338,7 +338,7 @@ export interface AgentDeps {
 // network self-fetch would
 // need one more moving part (the app's own origin) for zero benefit, since the
 // file never changes per-request. Cached in-process for 10 min so a burst of
-// elegir_foto calls in one chat turn doesn't re-read+re-parse the JSON.
+// find_photo calls in one chat turn doesn't re-read+re-parse the JSON.
 const IMAGE_MANIFEST_TTL_MS = 10 * 60 * 1000;
 let imageManifestCache: { data: unknown; expiresAt: number } | null = null;
 
@@ -708,7 +708,7 @@ export interface AgentSession {
    *  agent-provisioned owner chat_user is created WITH an email — mirrors
    *  what the settings route passes to getOrCreateOwnerChatUser. */
   ownerEmail: string | null;
-  /** Successful editar_imagen calls so far this request. The route inits it to
+  /** Successful edit_image calls so far this request. The route inits it to
    *  0; the tool caps it at 1 per turn (each edit is a paid Gemini image op). */
   imageEditsThisTurn: number;
   /** Guardados SEGUIDOS que chocaron con `CONFLICTO_AL_GUARDAR` este turno;
@@ -719,7 +719,7 @@ export interface AgentSession {
   // `editar_runtime` en Len 2.0: ninguna herramienta los escribía ya.
   // ⚰️ `entroACiegas` e `idsVistos` eran del plano B (sólo el índice en el
   // contexto): se fueron con él (T8c).
-  /** elegir_foto calls so far this request. Read-only + exempt from the action
+  /** find_photo calls so far this request. Read-only + exempt from the action
    *  budget, but the curated catalog is finite: after the 2nd empty result the
    *  tool tells the model to pivot instead of retrying variants, and a hard
    *  per-turn ceiling refuses further searches — so a hunt for a genre the
@@ -738,7 +738,7 @@ export interface AgentSession {
   // Lo que SÍ para ese caso es la comprobación de `mensajeDelUsuario`, que
   // sigue en pie y no depende del turno: un nombre que el dueño no escribió se
   // rechaza en la primera llamada y en la quinta.
-  /** Lo que el usuario escribió ESTE turno, tal cual. Sólo lo lee `publicar`,
+  /** Lo que el usuario escribió ESTE turno, tal cual. Sólo lo lee `publish`,
    *  para distinguir un subdominio que dio el DUEÑO de uno que el modelo se
    *  inventó — ver su comentario. Opcional: sin él la comprobación no se aplica,
    *  así que un llamador que no lo pase no bloquea nada por sorpresa. */
@@ -765,7 +765,7 @@ export interface AgentSession {
   /** LEN 2.0 · las rutas escritas este turno, la más reciente primero: el
    *  «orden por fecha» de Grep y Glob (decisión B6). */
   escritos?: string[];
-  /** Pieza 4 de Len 2.5: el tope de visitas de `usar_pagina` a la vez de ESTE
+  /** Pieza 4 de Len 2.5: el tope de visitas de `use_page` a la vez de ESTE
    *  turno (`MAX_CONCURRENT_VISITS`). Se crea con la primera visita. */
   visitLimit?: <T>(fn: () => Promise<T>) => Promise<T>;
   /** Cómo estaba cada fichero antes de su PRIMERA escritura de este turno. Lo
@@ -910,7 +910,7 @@ export interface ToolOutcome {
    *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única
    *  vía que llama al endpoint real (spec §4.4). */
   confirm?:
-    | { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean }
+    | { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean }
     // El borrador de respuesta (plans/len-resultados/): la tarjeta sólo manda
     // si el usuario toca.
     | RespuestaPreparada;
@@ -1071,7 +1071,7 @@ function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: strin
   }
 }
 
-// The settings write of activar_modulo (it was shared with
+// The settings write of toggle_module (it was shared with
 // conectar_datos_vivos, retired in Len 2.1). validate -> apply ->
 // chat-provision-if-needed -> save, the
 // SAME pipeline the button/route path uses (applySettingsPatch may do more
@@ -1119,11 +1119,11 @@ export async function toolActivarModulo(
   deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
-  const modulo = args.modulo;
+  const modulo = args.module;
   if (typeof modulo !== "string" || !(AGENT_MODULES as readonly string[]).includes(modulo)) {
     return { response: { ok: false, error: "unknown module" } };
   }
-  const encender = args.encender !== false;
+  const encender = args.on !== false;
 
   // Loaded up-front (moved ahead of buildModulePatch) so the whatsapp case can
   // resolve its number-fallback chain from the existing row before the patch
@@ -1175,17 +1175,18 @@ export async function toolActivarModulo(
   return {
     response: {
       ok: true,
-      modulo,
-      encendido: encender,
+      module: modulo,
+      enabled: encender,
       // EL NOMBRE TIENE QUE VALER PARA LAS DOS DIRECCIONES. Se llamaba
       // `visible_para_visitantes`, y al APAGAR sale en `true` —el cambio ya
       // está en efecto—, que leído como «visible» dice justo lo contrario del
       // aviso de al lado. Len tenía delante un campo estructurado que
       // contradecía el texto; el campo era el equivocado, no el aviso.
-      ya_en_efecto_para_visitantes: visible,
-      ...(aviso ? { aviso } : {}),
+      // (En inglés desde el 2026-10-06: era `ya_en_efecto_para_visitantes`.)
+      already_live_for_visitors: visible,
+      ...(aviso ? { note: aviso } : {}),
     },
-    action: { tool: "activar_modulo", ok: true, summary: modulo },
+    action: { tool: "toggle_module", ok: true, summary: modulo },
   };
 }
 
@@ -1193,7 +1194,7 @@ export async function toolActivarModulo(
 // la historia de producción. Fijaba el rubro del Marketing Kit, que la pestaña
 // Marketing elige sola (`marketing-view.tsx`).
 
-// Runaway backstop for a read-only tool: the loop exempts elegir_foto from the
+// Runaway backstop for a read-only tool: the loop exempts find_photo from the
 // action budget AND (now) from the turn cap, so the ONLY thing bounding a
 // search-only chain is ABSOLUTE_MAX_TOOL_CALLS — which surfaces a red error.
 // This ceiling stops the tool returning fresh results well before that, so the
@@ -1235,18 +1236,18 @@ const PHOTO_PIVOT_NOTE =
   + "Then GO ON with the rest of what they asked: running out of a photo doesn't cancel the rest or make you ask permission to continue. "
   + "In your answer say which photo there wasn't and what you put in its place.";
 
-// ─── mirar_pagina: el derecho a preguntar ────────────────────────────────────
+// ─── view_page: el derecho a preguntar ────────────────────────────────────
 //
 // TOPES SEPARADOS POR COSTE, y no por simetría: `describir` llama al modelo con
 // visión y gasta; `medir` es Chromium y no gasta un crédito, así que no tiene
-// por qué compartir techo con la cara. Misma doctrina que `elegir_foto`: pasado
+// por qué compartir techo con la cara. Misma doctrina que `find_photo`: pasado
 // el tope se ENDURECE la respuesta, no se bloquea la llamada — bloquear no
 // ahorra nada (la vuelta ya se gastó) y puede dejar al Agente sin un dato que
 // existía.
 const MAX_MIRADAS_DESCRIBIR = 2;
 const MAX_MIRADAS_MEDIR = 4;
 
-/** Pieza 4: visitas de `usar_pagina` a la vez en un turno. Cada una arranca su
+/** Pieza 4: visitas de `use_page` a la vez en un turno. Cada una arranca su
  *  Chromium; con herramientas en paralelo, dos llamadas seguras pueden pedir
  *  visita a la vez (§11 de la investigación: tope 2 por la carga del navegador
  *  del servidor). */
@@ -1257,26 +1258,28 @@ async function toolMirarPagina(
   deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
-  const tipo = args.tipo === "describir" ? "describir" : args.tipo === "medir" ? "medir" : null;
+  // Los parámetros del modelo, en inglés desde el 2026-10-06 (`mode`,
+  // `question`, `area`); dentro, `observarPagina` sigue con los suyos.
+  const tipo = args.mode === "describe" ? "describir" : args.mode === "measure" ? "medir" : null;
   if (!tipo) {
     return {
       response: {
         ok: false,
-        error: '"tipo" has to be "medir" (the browser answers it, free) or "describir" (a model looks at it, it costs credits).',
+        error: '"mode" has to be "measure" (the browser answers it, free) or "describe" (a model looks at it, it costs credits).',
       },
     };
   }
-  const pregunta = typeof args.pregunta === "string" ? args.pregunta.trim() : "";
+  const pregunta = typeof args.question === "string" ? args.question.trim() : "";
   if (!pregunta) {
-    return { response: { ok: false, error: '"pregunta" is missing: say what you want to know about the page.' } };
+    return { response: { ok: false, error: '"question" is missing: say what you want to know about the page.' } };
   }
-  const zona = typeof args.zona === "string" && args.zona.trim() ? args.zona.trim() : undefined;
+  const zona = typeof args.area === "string" && args.area.trim() ? args.area.trim() : undefined;
 
   if (!deps.observarPagina) {
     return {
       response: {
         ok: false,
-        error: "mirar_pagina isn't available in this environment. Go on with what the user asked you.",
+        error: "view_page isn't available in this environment. Go on with what the user asked you.",
       },
     };
   }
@@ -1290,7 +1293,7 @@ async function toolMirarPagina(
     return {
       response: {
         ok: true,
-        nota: `You already took too many looks of type "${tipo}" in this turn. Stop looking and decide with what you already know: you have the document, which is the half the screenshot is missing.`,
+        note: `You already took too many looks of mode "${args.mode}" in this turn. Stop looking and decide with what you already know: you have the document, which is the half the screenshot is missing.`,
       },
     };
   }
@@ -1332,12 +1335,12 @@ async function toolMirarPagina(
 
   // Read-only: sin tarjeta de acción y sin documento nuevo. La página no
   // cambió — preguntar no es editar.
-  return { response: { ok: true, respuesta: visto.respuesta } };
+  return { response: { ok: true, answer: visto.respuesta } };
 }
 
-// ─── usar_pagina: usarla como un visitante (H9) ──────────────────────────────
+// ─── use_page: usarla como un visitante (H9) ──────────────────────────────
 //
-// SIN TOPE POR TURNO, a diferencia de `mirar_pagina`: no gasta créditos (es
+// SIN TOPE POR TURNO, a diferencia de `view_page`: no gasta créditos (es
 // Chromium) y Claude Code no pone plazo a comprobar. Lo que la contiene es el
 // tope de pasos por visita y el reloj de la visita, en el motor.
 async function toolUsarPagina(
@@ -1346,13 +1349,13 @@ async function toolUsarPagina(
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
   // La entrada se comprueba ANTES de abrir nada, como el ejecutor de Claude Code.
-  const v = validarPasos(args.pasos);
+  const v = validarPasos(args.steps);
   if (!v.ok) return { response: { ok: false, error: v.error } };
   if (!deps.usarPagina) {
     return {
       response: {
         ok: false,
-        error: "usar_pagina isn't available in this environment. Go on with what the user asked you, and when you close say you couldn't test it.",
+        error: "use_page isn't available in this environment. Go on with what the user asked you, and when you close say you couldn't test it.",
       },
     };
   }
@@ -1410,7 +1413,7 @@ async function toolUsarPagina(
       },
     };
   }
-  return { response: { ok: true, visita: visto.informe } };
+  return { response: { ok: true, visit: visto.informe } };
 }
 
 /** Por qué `sign_in_as` no abrió sesión, dicho para que Len sepa qué hacer. */
@@ -1419,7 +1422,7 @@ function whySignInFailed(r: Exclude<VisitSignIn, { ok: true }>, who: string): st
   if (r.reason === "banned") return `«${who}» is banned in the page's backend: a visit can't sign in as them.`;
   const listed = `${r.emails.join(", ")}${r.total > r.emails.length ? ` (and ${r.total - r.emails.length} more)` : ""}`;
   if (r.reason === "pick_one") {
-    return `the page has ${r.total} users and nobody said which one to sign in as: ask the user in chat which one to use, then call usar_pagina again with sign_in_as set to that email. Users: ${listed}.`;
+    return `the page has ${r.total} users and nobody said which one to sign in as: ask the user in chat which one to use, then call use_page again with sign_in_as set to that email. Users: ${listed}.`;
   }
   return r.total === 0
     ? `no user of the page has the email «${who}»; the page has no users yet.`
@@ -1440,14 +1443,14 @@ async function toolElegirFoto(
     return {
       response: {
         ok: true,
-        fotos: [],
-        nota: `You already did too many photo searches in this turn. Stop searching: use the ones you already found or pivot. ${PHOTO_PIVOT_NOTE}`,
+        photos: [],
+        note: `You already did too many photo searches in this turn. Stop searching: use the ones you already found or pivot. ${PHOTO_PIVOT_NOTE}`,
       },
     };
   }
 
-  const busqueda = typeof args.busqueda === "string" ? args.busqueda : undefined;
-  const estilo = typeof args.estilo === "string" ? args.estilo : undefined;
+  const busqueda = typeof args.query === "string" ? args.query : undefined;
+  const estilo = typeof args.style === "string" ? args.style : undefined;
 
   const manifest = await deps.fetchImageManifest();
   const fotos = searchCuratedPhotos(manifest, { busqueda, estilo });
@@ -1461,8 +1464,8 @@ async function toolElegirFoto(
     return {
       response: {
         ok: true,
-        fotos: [],
-        nota: pivot
+        photos: [],
+        note: pivot
           ? PHOTO_PIVOT_NOTE
           : "no results for that search — try ONE more time with another term or remove the style filter. If there's nothing then either, don't insist: the catalog is curated and limited.",
       },
@@ -1480,7 +1483,7 @@ async function toolElegirFoto(
   return {
     response: {
       ok: true,
-      fotos: fotos.map((f) => ({ url: f.url, alt: f.alt, estilo: f.style })),
+      photos: fotos.map((f) => ({ url: f.url, alt: f.alt, style: f.style })),
     },
   };
 }
@@ -1492,7 +1495,7 @@ function escapeRegExp(s: string): string {
 /** True iff `url` appears as the VALUE of an image-bearing attribute (src /
  *  content=og:image / href=preload), inside a CSS `url(...)`, or as a full
  *  candidate in a `srcset` — never merely as substring text nor as a prefix of
- *  a longer URL. editar_imagen's anti-injection gate uses this so a
+ *  a longer URL. edit_image's anti-injection gate uses this so a
  *  prompt-injected bare URL sitting in page copy can't be fetched+edited. */
 export function urlIsPageImage(html: string, url: string): boolean {
   if (!url) return false;
@@ -1523,10 +1526,10 @@ async function toolEditarImagen(
   deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
-  const imagenUrl = typeof args.imagen_url === "string" ? args.imagen_url : "";
-  const instruccion = typeof args.instruccion === "string" ? args.instruccion.trim() : "";
-  if (!imagenUrl) return { response: { ok: false, error: "imagen_url is required" } };
-  if (!instruccion) return { response: { ok: false, error: "instruccion is required" } };
+  const imagenUrl = typeof args.image_url === "string" ? args.image_url : "";
+  const instruccion = typeof args.instruction === "string" ? args.instruction.trim() : "";
+  if (!imagenUrl) return { response: { ok: false, error: "image_url is required" } };
+  if (!instruccion) return { response: { ok: false, error: "instruction is required" } };
 
   // Per-turn cap FIRST — a paid Gemini image op is expensive, so a second call
   // is refused before any fetch/edit/upload. Only successful edits count (a
@@ -1550,7 +1553,7 @@ async function toolEditarImagen(
     return {
       response: {
         ok: false,
-        error: "imagen_url must be the exact URL of an image that is ALREADY on the site (not an external or made-up URL)",
+        error: "image_url must be the exact URL of an image that is ALREADY on the site (not an external or made-up URL)",
       },
     };
   }
@@ -1608,11 +1611,11 @@ async function toolEditarImagen(
   return {
     response: {
       ok: true,
-      nueva_url: nuevaUrl,
+      new_url: nuevaUrl,
       // Qué ficheros cambiaron: lo que Len tenía leído de ellos ya no vale.
-      ficheros: cambiados.map((c) => rutaRelativa(c.ruta)),
+      files: cambiados.map((c) => rutaRelativa(c.ruta)),
     },
-    action: { tool: "editar_imagen", ok: true, summary: instruccion.slice(0, 60) },
+    action: { tool: "edit_image", ok: true, summary: instruccion.slice(0, 60) },
     ...(pintada
       ? { updatedHtml: pintada.html, page: pintada.page, versionPrevia: pintada.versionPrevia }
       : {}),
@@ -1634,7 +1637,7 @@ async function toolPublicar(
   if (!row) return { response: { ok: false, error: "project not found" } };
 
   const current = row.subdomain; // string | null — the project's active claim
-  const raw = typeof args.subdominio === "string" ? args.subdominio.trim().toLowerCase() : "";
+  const raw = typeof args.subdomain === "string" ? args.subdomain.trim().toLowerCase() : "";
 
   // Resolve the target subdomain. Final authority is always the endpoint (regex
   // / reserved / cap re-checked there); here we only decide republish vs claim.
@@ -1739,7 +1742,7 @@ async function toolPublicar(
           // se le señala la herramienta que HACE eso, y llamarla cierra el turno
           // de verdad: la parada la ejecuta el servidor, no la buena voluntad
           // del modelo.
-          "this project doesn't have a subdomain yet, and you don't choose the subdomain. Ask the user what address they want with `ask_user_question`; then, yes, call publicar with what they answer.",
+          "this project doesn't have a subdomain yet, and you don't choose the subdomain. Ask the user what address they want with `ask_user_question`; then, yes, call publish with what they answer.",
       },
       ownerReason: { code: "address_needed" },
     };
@@ -1748,7 +1751,7 @@ async function toolPublicar(
   // idiomas: keep only real PUBLISH_LOCALES codes, cap at the endpoint's max
   // of 9. Everything dropped — invalid codes AND valid-but-over-cap overflow —
   // is noted back to the model, never silently vanished.
-  const rawIdiomas = Array.isArray(args.idiomas) ? args.idiomas : [];
+  const rawIdiomas = Array.isArray(args.languages) ? args.languages : [];
   const strIdiomas = rawIdiomas.filter((c): c is string => typeof c === "string");
   const validos = strIdiomas.filter((c) => isPublishLocale(c));
   const idiomas = validos.slice(0, MAX_PUBLISH_LOCALES);
@@ -1760,14 +1763,16 @@ async function toolPublicar(
   return {
     response: {
       ok: true,
-      estado: "esperando_confirmacion_del_usuario",
-      subdominio,
-      idiomas,
-      republicar,
-      ...(ignorados.length ? { idiomas_ignorados: ignorados } : {}),
+      state: "waiting_for_user_confirmation",
+      subdomain: subdominio,
+      languages: idiomas,
+      republish: republicar,
+      ...(ignorados.length ? { ignored_languages: ignorados } : {}),
     },
-    action: { tool: "publicar", ok: true, summary: subdominio },
-    confirm: { action: "publicar", subdominio, idiomas, republicar },
+    action: { tool: "publish", ok: true, summary: subdominio },
+    // La tarjeta de confirmación (`agent-confirm-card.tsx`) lee sus claves de
+    // siempre; sólo la acción tiene el nombre de la herramienta.
+    confirm: { action: "publish", subdominio, idiomas, republicar },
   };
 }
 
@@ -1889,14 +1894,14 @@ async function toolRevertirUltimoCambio(
       return {
         response: {
           ok: true,
-          fichero: rutaRelativa(ruta),
-          revertido_a: antesV.label,
-          conservado: "what the user edited by hand after your change is still on the page",
+          file: rutaRelativa(ruta),
+          reverted_to: antesV.label,
+          kept: "what the user edited by hand after your change is still on the page",
         },
         updatedHtml: guardado.html,
         page,
         versionPrevia: guardado.versionPrevia,
-        action: { tool: "revertir_ultimo_cambio", ok: true, summary: antesV.label },
+        action: { tool: "undo_last_change", ok: true, summary: antesV.label },
       };
     }
   }
@@ -1932,13 +1937,13 @@ async function toolRevertirUltimoCambio(
   }
 
   return {
-    response: { ok: true, fichero: rutaRelativa(ruta), revertido_a: destino.label },
+    response: { ok: true, file: rutaRelativa(ruta), reverted_to: destino.label },
     updatedHtml: restaurado.html,
     page,
     // Restaurar archiva el estado previo, así que este turno TAMBIÉN se
     // puede deshacer: sin esta línea el botón desaparecía justo aquí.
     versionPrevia: restaurado.versionPrevia,
-    action: { tool: "revertir_ultimo_cambio", ok: true, summary: destino.label },
+    action: { tool: "undo_last_change", ok: true, summary: destino.label },
   };
 }
 
@@ -2026,17 +2031,17 @@ async function ejecutarHerramienta(
   }
   {
     switch (name) {
-      case "activar_modulo":
+      case "toggle_module":
         return await toolActivarModulo(session, deps, args);
-      case "elegir_foto":
+      case "find_photo":
         return await toolElegirFoto(session, deps, args);
-      case "mirar_pagina":
+      case "view_page":
         return await toolMirarPagina(session, deps, args);
-      case "usar_pagina":
+      case "use_page":
         return await toolUsarPagina(session, deps, args);
-      case "editar_imagen":
+      case "edit_image":
         return await toolEditarImagen(session, deps, args);
-      case "publicar":
+      case "publish":
         return await toolPublicar(session, deps, args);
       case ASK_USER_QUESTION:
         return await toolAskUserQuestion(session, deps, args);
@@ -2063,15 +2068,15 @@ async function ejecutarHerramienta(
         return await toolWebSearch(session, deps, args);
       case NOMBRE_WEB_FETCH:
         return await toolWebFetch(session, deps, args);
-      case "revertir_ultimo_cambio":
+      case "undo_last_change":
         return await toolRevertirUltimoCambio(session, deps, args);
-      case "ver_visitas":
+      case "get_visits":
         return await toolVerVisitas(session, deps, args);
-      case "ver_formularios":
+      case "list_form_submissions":
         return await toolVerFormularios(session, deps, args);
-      case "ver_mensajes":
+      case "list_messages":
         return await toolVerMensajes(session, deps, args);
-      case "preparar_respuesta":
+      case "draft_reply":
         return await toolPrepararRespuesta(session, deps, args);
       default:
         return { response: { ok: false, error: "unknown tool" } };

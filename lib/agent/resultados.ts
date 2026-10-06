@@ -9,13 +9,18 @@
  *
  * NO van en `READ_ONLY_TOOLS` (`loop.ts`) a propósito: una lectura de ahí no
  * cuenta como «actuó», y un turno que contesta «¿cómo van mis visitas?» con
- * `ver_visitas` se llevaría la insistencia («no hiciste nada») y una vuelta de
+ * `get_visits` se llevaría la insistencia («no hiciste nada») y una vuelta de
  * más empujando a editar. Contestar con el número ES el trabajo de ese turno.
+ *
+ * EN INGLÉS desde el 2026-10-06 (plans/crear-es-len/plan-herramientas.md): los
+ * nombres, los parámetros y las RESPUESTAS, como las herramientas de DeepSeek.
+ * Las consultas de `lib/resultados/` siguen con sus nombres (las lee también la
+ * interfaz); la traducción se hace aquí, en la frontera con el modelo.
  */
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
-import type { ResumenDeVisitas } from "@/lib/resultados/visitas";
-import type { FiltroDeFormularios, FormularioAbierto, ResumenDeFormularios } from "@/lib/resultados/formularios";
-import type { ConversacionAbierta, FiltroDeMensajes, ResumenDeMensajes } from "@/lib/resultados/mensajes";
+import type { CuentaDeVisitas, ResumenDeVisitas } from "@/lib/resultados/visitas";
+import type { FiltroDeFormularios, FormularioAbierto, FormularioEnLista, ResumenDeFormularios } from "@/lib/resultados/formularios";
+import type { ConversacionAbierta, ConversacionEnLista, FiltroDeMensajes, ResumenDeMensajes } from "@/lib/resultados/mensajes";
 import { fechaValida, ZONA_SIN_DATO } from "@/lib/resultados/zona";
 import { numeroDeWhatsApp } from "@/lib/resultados/enlaces-de-respuesta";
 
@@ -41,16 +46,42 @@ const NOTA_DESPUBLICADA =
   "Only the published page counts: the editor and the preview don't add visits. These are from when it was published; now it isn't. Don't give it any other explanation.";
 
 const zonaDe = (s: AgentSession) => s.zonaHoraria ?? ZONA_SIN_DATO;
+
+// ─── LO QUE LEE EL MODELO, EN INGLÉS ─────────────────────────────────────────
+const visitCount = (c: CuentaDeVisitas) => ({ views: c.vistas, people: c.personas, clicks: c.clics });
+const visitDetail = (r: ResumenDeVisitas["rango"]) => ({
+  from: r.desde,
+  to: r.hasta,
+  total: visitCount(r.total),
+  per_day: r.porDia.map((d) => ({ day: d.dia, views: d.vistas })),
+  pages: r.paginas.map((p) => ({ page: p.pagina, views: p.vistas })),
+  sources: r.deDonde.map((o) => ({ source: o.origen, views: o.vistas })),
+  devices: r.dispositivos.map((d) => ({ device: d.dispositivo, views: d.vistas })),
+});
+const formInList = (f: FormularioEnLista) => ({ id: f.id, date: f.fecha, page: f.pagina, from: f.de, line: f.linea, seen: f.visto });
+const openForm = (f: FormularioAbierto) => ({
+  id: f.id,
+  date: f.fecha,
+  page: f.pagina,
+  fields: f.datos,
+  contact: { name: f.contacto.nombre, email: f.contacto.correo, phone: f.contacto.telefono },
+});
+const conversationInList = (c: ConversacionEnLista) => ({ id: c.id, with: c.con, last: c.ultimo, date: c.fecha, unread: c.sinLeer });
+const openConversation = (c: ConversacionAbierta) => ({
+  id: c.id,
+  with: c.con,
+  messages: c.mensajes.map((m) => ({ from: m.de === "visitante" ? "visitor" : "business", text: m.texto, date: m.fecha })),
+});
 const error = (texto: string): ToolOutcome => ({ response: { ok: false, error: texto } });
 const sinDeps = error("it isn't available in this environment");
 
 function rangoDe(args: Record<string, unknown>): { desde?: string; hasta?: string } | string {
   const rango: { desde?: string; hasta?: string } = {};
-  for (const clave of ["desde", "hasta"] as const) {
+  for (const [clave, interna] of [["from", "desde"], ["to", "hasta"]] as const) {
     if (args[clave] === undefined || args[clave] === null || args[clave] === "") continue;
     const f = fechaValida(args[clave]);
     if (!f) return `"${clave}" is a YYYY-MM-DD date (in the user's time) and it came as «${String(args[clave])}».`;
-    rango[clave] = f;
+    rango[interna] = f;
   }
   return rango;
 }
@@ -72,87 +103,87 @@ export async function toolVerVisitas(session: AgentSession, deps: AgentDeps, arg
   return {
     response: {
       ok: true,
-      zona: r.zona,
-      publicada,
-      ...(publicada ? {} : { nota_publicada: sinNada ? NOTA_SIN_PUBLICAR : NOTA_DESPUBLICADA }),
-      hoy: r.hoy,
-      ayer: r.ayer,
-      ultimos_7_dias: r.ultimos7,
-      ultimos_30_dias: r.ultimos30,
-      detalle: r.rango,
-      ...(r.recortadoDesde ? { nota_rango: `There is only detail from ${r.recortadoDesde}: anything earlier isn't kept day by day.` } : {}),
-      ...(r.zona === ZONA_SIN_DATO ? { nota_zona: NOTA_ZONA } : {}),
+      time_zone: r.zona,
+      published: publicada,
+      ...(publicada ? {} : { published_note: sinNada ? NOTA_SIN_PUBLICAR : NOTA_DESPUBLICADA }),
+      today: visitCount(r.hoy),
+      yesterday: visitCount(r.ayer),
+      last_7_days: visitCount(r.ultimos7),
+      last_30_days: visitCount(r.ultimos30),
+      detail: visitDetail(r.rango),
+      ...(r.recortadoDesde ? { range_note: `There is only detail from ${r.recortadoDesde}: anything earlier isn't kept day by day.` } : {}),
+      ...(r.zona === ZONA_SIN_DATO ? { time_zone_note: NOTA_ZONA } : {}),
     },
-    action: { tool: "ver_visitas", ok: true, summary: "" },
+    action: { tool: "get_visits", ok: true, summary: "" },
   };
 }
 
 export async function toolVerFormularios(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   if (!deps.resultados) return sinDeps;
   const zona = zonaDe(session);
-  const cuales = args.cuales ?? "nuevos";
-  if (cuales === "uno") {
+  const which = args.which ?? "new";
+  if (which === "one") {
     const id = typeof args.id === "string" ? args.id.trim() : "";
-    if (!id) return error('With cuales="uno" the form\'s "id" is needed (it comes from the list).');
+    if (!id) return error('With which="one" the form\'s "id" is needed (it comes from the list).');
     const f = await deps.resultados.formulario(session.projectId, zona, id, { marcarVisto: true });
     if (!f) return error(`There is no form «${id}» on this page.`);
     return {
-      response: { ok: true, ...f, nota: NOTA_DE_VISITANTES },
-      action: { tool: "ver_formularios", ok: true, summary: "" },
+      response: { ok: true, ...openForm(f), note: NOTA_DE_VISITANTES },
+      action: { tool: "list_form_submissions", ok: true, summary: "" },
     };
   }
-  if (cuales !== "nuevos" && cuales !== "fecha") return error('"cuales" is "nuevos", "fecha" or "uno".');
+  if (which !== "new" && which !== "by_date") return error('"which" is "new", "by_date" or "one".');
   const rango = rangoDe(args);
   if (typeof rango === "string") return error(rango);
-  const filtro: FiltroDeFormularios = cuales === "nuevos" ? { cuales } : { cuales, ...rango };
+  const filtro: FiltroDeFormularios = which === "new" ? { cuales: "nuevos" } : { cuales: "fecha", ...rango };
   const r = await deps.resultados.formularios(session.projectId, session.userId, zona, filtro);
   return {
     response: {
       ok: true,
-      zona: r.zona,
-      sin_ver: r.sinVer,
-      hoy: r.hoy,
-      ayer: r.ayer,
+      time_zone: r.zona,
+      unseen: r.sinVer,
+      today: r.hoy,
+      yesterday: r.ayer,
       total: r.total,
-      lista: r.lista,
-      nota: NOTA_DE_VISITANTES,
-      ...(r.zona === ZONA_SIN_DATO ? { nota_zona: NOTA_ZONA } : {}),
+      items: r.lista.map(formInList),
+      note: NOTA_DE_VISITANTES,
+      ...(r.zona === ZONA_SIN_DATO ? { time_zone_note: NOTA_ZONA } : {}),
     },
-    action: { tool: "ver_formularios", ok: true, summary: "" },
+    action: { tool: "list_form_submissions", ok: true, summary: "" },
   };
 }
 
 export async function toolVerMensajes(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   if (!deps.resultados) return sinDeps;
   const zona = zonaDe(session);
-  const cuales = args.cuales ?? "sin_leer";
-  if (cuales === "una") {
+  const which = args.which ?? "unread";
+  if (which === "one") {
     const id = typeof args.id === "string" ? args.id.trim() : "";
-    if (!id) return error('With cuales="una" the conversation\'s "id" is needed (it comes from the list).');
+    if (!id) return error('With which="one" the conversation\'s "id" is needed (it comes from the list).');
     const c = await deps.resultados.conversacion(session.projectId, zona, id);
     if (!c) return error(`There is no conversation «${id}» on this page.`);
     return {
-      response: { ok: true, ...c, nota: NOTA_DE_VISITANTES },
-      action: { tool: "ver_mensajes", ok: true, summary: "" },
+      response: { ok: true, ...openConversation(c), note: NOTA_DE_VISITANTES },
+      action: { tool: "list_messages", ok: true, summary: "" },
     };
   }
-  if (cuales !== "sin_leer" && cuales !== "fecha") return error('"cuales" is "sin_leer", "fecha" or "una".');
+  if (which !== "unread" && which !== "by_date") return error('"which" is "unread", "by_date" or "one".');
   const rango = rangoDe(args);
   if (typeof rango === "string") return error(rango);
-  const filtro: FiltroDeMensajes = cuales === "sin_leer" ? { cuales } : { cuales, ...rango };
+  const filtro: FiltroDeMensajes = which === "unread" ? { cuales: "sin_leer" } : { cuales: "fecha", ...rango };
   const r = await deps.resultados.mensajes(session.projectId, zona, filtro);
   return {
     response: {
       ok: true,
-      zona: r.zona,
-      chat_activado: r.hayChat,
-      conversaciones_sin_leer: r.conversacionesSinLeer,
-      mensajes_sin_leer: r.mensajesSinLeer,
-      conversaciones: r.conversaciones,
-      lista: r.lista,
-      nota: NOTA_DE_VISITANTES,
+      time_zone: r.zona,
+      chat_enabled: r.hayChat,
+      unread_conversations: r.conversacionesSinLeer,
+      unread_messages: r.mensajesSinLeer,
+      conversations: r.conversaciones,
+      items: r.lista.map(conversationInList),
+      note: NOTA_DE_VISITANTES,
     },
-    action: { tool: "ver_mensajes", ok: true, summary: "" },
+    action: { tool: "list_messages", ok: true, summary: "" },
   };
 }
 
@@ -172,19 +203,20 @@ const MAX_TEXTO = 2000;
 
 /**
  * EL BORRADOR QUE NO SE MANDA SOLO (plans/len-resultados/diseno.md §5). Va por
- * el mismo camino que `publicar`: un `confirm` que pinta una tarjeta; sólo el
+ * el mismo camino que `publish`: un `confirm` que pinta una tarjeta; sólo el
  * toque del usuario manda. Esta herramienta NO escribe en la base ni marca
  * nada: ni el chat como leído ni el formulario como visto.
  */
 export async function toolPrepararRespuesta(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   if (!deps.resultados) return sinDeps;
-  const para = args.para === "chat" || args.para === "formulario" ? args.para : null;
+  // `channel` del modelo; dentro, la tarjeta sigue con su `para` de siempre.
+  const para = args.channel === "chat" ? "chat" : args.channel === "form" ? "formulario" : null;
   const id = typeof args.id === "string" ? args.id.trim() : "";
-  const texto = typeof args.texto === "string" ? args.texto.trim() : "";
-  if (!para) return error('"para" is "chat" or "formulario".');
-  if (!id) return error('The "id" of the conversation or the form is missing (it comes from ver_mensajes or ver_formularios).');
-  if (!texto) return error('"texto" is the message exactly as the visitor will read it, and it came empty.');
-  if (texto.length > MAX_TEXTO) return error(`"texto" goes over ${MAX_TEXTO} characters: shorten it.`);
+  const texto = typeof args.text === "string" ? args.text.trim() : "";
+  if (!para) return error('"channel" is "chat" or "form".');
+  if (!id) return error('The "id" of the conversation or the form is missing (it comes from list_messages or list_form_submissions).');
+  if (!texto) return error('"text" is the message exactly as the visitor will read it, and it came empty.');
+  if (texto.length > MAX_TEXTO) return error(`"text" goes over ${MAX_TEXTO} characters: shorten it.`);
   const zona = zonaDe(session);
 
   let confirm: RespuestaPreparada;
@@ -204,7 +236,7 @@ export async function toolPrepararRespuesta(session: AgentSession, deps: AgentDe
   }
   return {
     response: { ok: true },
-    action: { tool: "preparar_respuesta", ok: true, summary: confirm.con ?? "" },
+    action: { tool: "draft_reply", ok: true, summary: confirm.con ?? "" },
     confirm,
   };
 }

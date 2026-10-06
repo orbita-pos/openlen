@@ -37,15 +37,15 @@ describe("puente del Agente al cable de Fireworks", () => {
       {
         role: "assistant", content: "voy",
         functionCalls: [
-          { name: "activar_modulo", args: { modulo: "bookings" } },
-          { name: "activar_modulo", args: { modulo: "members" } },
+          { name: "toggle_module", args: { modulo: "bookings" } },
+          { name: "toggle_module", args: { modulo: "members" } },
         ],
       },
       {
         role: "user", content: "",
         functionResponses: [
-          { name: "activar_modulo", response: { ok: true, modulo: "bookings" } },
-          { name: "activar_modulo", response: { ok: true, modulo: "members" } },
+          { name: "toggle_module", response: { ok: true, modulo: "bookings" } },
+          { name: "toggle_module", response: { ok: true, modulo: "members" } },
         ],
       },
     ]);

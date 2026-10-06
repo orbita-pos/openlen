@@ -4,6 +4,7 @@
 // sus palabras (`commentary`). Len no sabe que es una llamada: es su turno de
 // siempre, y queda en el historial del chat.
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
+import { currentToolName } from "@/lib/agent/tool-renames";
 import type { EventoSse } from "@/lib/len-bench/sse";
 
 export type EventoParaLaVoz = {
@@ -16,7 +17,7 @@ export type TarjetaDeLlamada =
   | { tipo: "visitas" }
   | { tipo: "texto"; texto: string }
   | { tipo: "respuesta"; respuesta: RespuestaPreparada }
-  | { tipo: "publicar"; confirm: { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean } };
+  | { tipo: "publicar"; confirm: { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean } };
 
 export interface DepsDelPuente {
   pedirALen(prompt: string, alEvento: (e: EventoSse) => void): Promise<void>;
@@ -47,35 +48,37 @@ export function recortarParaLaVoz(texto: string, max = MAX_CARACTERES_PARA_LA_VO
   return `${punto > 0 ? corte.slice(0, punto + 1) : corte} …`;
 }
 
+// Con los nombres de hoy (las 11 pasaron al inglés el 2026-10-06); lo que llegue
+// con uno de antes se traduce en `fraseDeAvance`.
 const AVANCES: Record<string, string> = {
-  ver_visitas: "Len está mirando las visitas de la página.",
-  ver_mensajes: "Len está leyendo los mensajes del chat.",
-  ver_formularios: "Len está mirando los formularios que llegaron.",
-  preparar_respuesta: "Len está preparando el borrador de la respuesta.",
+  get_visits: "Len está mirando las visitas de la página.",
+  list_messages: "Len está leyendo los mensajes del chat.",
+  list_form_submissions: "Len está mirando los formularios que llegaron.",
+  draft_reply: "Len está preparando el borrador de la respuesta.",
   Read: "Len está leyendo la página.",
   Grep: "Len está leyendo la página.",
   Glob: "Len está leyendo la página.",
   Edit: "Len está cambiando la página.",
   Write: "Len está cambiando la página.",
-  mirar_pagina: "Len está comprobando cómo quedó la página.",
-  usar_pagina: "Len está comprobando cómo quedó la página.",
+  view_page: "Len está comprobando cómo quedó la página.",
+  use_page: "Len está comprobando cómo quedó la página.",
   verificar_diseno: "Len está comprobando cómo quedó la página.",
-  publicar: "Len está preparando la publicación.",
+  publish: "Len está preparando la publicación.",
 };
 
 export function fraseDeAvance(herramienta: string): string | null {
-  return AVANCES[herramienta] ?? null;
+  return AVANCES[currentToolName(herramienta)] ?? null;
 }
 
 /** La tarjeta que pide un `confirm` del turno: el borrador o «Publicar». La
  *  usan la llamada y el chat de la app: una sola lectura del evento. */
 export function tarjetaDeConfirmacion(d: Record<string, unknown>): TarjetaDeLlamada | null {
   if (d.action === "responder") return { tipo: "respuesta", respuesta: d as unknown as RespuestaPreparada };
-  if (d.action === "publicar" && typeof d.subdominio === "string") {
+  if (d.action === "publish" && typeof d.subdominio === "string") {
     return {
       tipo: "publicar",
       confirm: {
-        action: "publicar",
+        action: "publish",
         subdominio: d.subdominio,
         idiomas: Array.isArray(d.idiomas) ? d.idiomas.filter((x): x is string => typeof x === "string") : [],
         republicar: d.republicar === true,
@@ -155,7 +158,7 @@ export function crearPuenteALen(deps: DepsDelPuente) {
         // Ni lo de un intento que desbordó y se repitió tras compactar.
         else if (e.nombre === "compaction" && typeof d.discardChars === "number") texto = texto.slice(0, Math.max(0, texto.length - d.discardChars));
         else if (e.nombre === "action" && typeof d.tool === "string") {
-          usadas.add(d.tool);
+          usadas.add(currentToolName(d.tool));
           const f = fraseDeAvance(d.tool);
           if (f && !avisadas.has(f)) {
             avisadas.add(f);
@@ -188,8 +191,8 @@ export function crearPuenteALen(deps: DepsDelPuente) {
       voz("session.commentary.append", delegationId, "Se perdió la conexión con Len, pero Len sigue trabajando en el servidor y avisará cuando termine.");
       return;
     }
-    if (usadas.has("ver_visitas")) deps.mostrarTarjeta({ tipo: "visitas" });
-    if (usadas.has("ver_mensajes") || usadas.has("ver_formularios")) deps.mostrarTarjeta({ tipo: "texto", texto });
+    if (usadas.has("get_visits")) deps.mostrarTarjeta({ tipo: "visitas" });
+    if (usadas.has("list_messages") || usadas.has("list_form_submissions")) deps.mostrarTarjeta({ tipo: "texto", texto });
     for (const t of confirmaciones) deps.mostrarTarjeta(t);
     voz(
       "session.commentary.append",

@@ -78,7 +78,7 @@ describe("runAgentLoop", () => {
     const seen: string[] = [];
     const callsSeen: Message[][] = [];
     const scriptedStream = scripted(
-      [{ type: "function_call", name: "activar_modulo", args: { modulo: "members" } }, usage(10, 30), done],
+      [{ type: "function_call", name: "toggle_module", args: { module: "members" } }, usage(10, 30), done],
       [{ type: "text_delta", text: "Listo, activé cuentas." }, usage(8, 20), done],
     );
     const r = await runAgentLoop({
@@ -90,7 +90,7 @@ describe("runAgentLoop", () => {
       runTool: async (name) => { seen.push(name); return { response: { ok: true }, action: { tool: name, ok: true, summary: "members" } }; },
       emit: (e) => events.push(e),
     });
-    expect(seen).toEqual(["activar_modulo"]);
+    expect(seen).toEqual(["toggle_module"]);
     expect(r.finalText).toContain("Listo");
     expect(r.usage.outputTokens).toBe(18);
     // Cached tokens sum across turns just like input/output — F3-T2.
@@ -104,7 +104,7 @@ describe("runAgentLoop", () => {
     const secondCallMessages = callsSeen[1];
     expect(secondCallMessages.length).toBeGreaterThan(callsSeen[0].length);
     const assistantTurn = secondCallMessages.find((m) => m.role === "assistant");
-    expect(assistantTurn?.functionCalls?.[0]).toEqual({ name: "activar_modulo", args: { modulo: "members" } });
+    expect(assistantTurn?.functionCalls?.[0]).toEqual({ name: "toggle_module", args: { module: "members" } });
     const functionResponseTurn = secondCallMessages.find((m) => m.functionResponses);
     expect(functionResponseTurn).toBeDefined();
   });
@@ -139,7 +139,7 @@ describe("runAgentLoop", () => {
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],
       openStream: scripted(
-        [{ type: "function_call", name: "publicar", args: {} }, done],
+        [{ type: "function_call", name: "publish", args: {} }, done],
         [{ type: "text_delta", text: "¿qué dirección quieres?" }, done],
       ),
       runTool: async () => ({
@@ -244,7 +244,7 @@ describe("runAgentLoop", () => {
 
   it("caps runaway loops at maxTurns", async () => {
     const events: AgentStreamEvent[] = [];
-    // editar_pagina is a mutating tool — Read/elegir_foto are read-only
+    // editar_pagina is a mutating tool — Read/find_photo are read-only
     // and exempt from maxTurns, so they'd defeat this test's premise.
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 3,
@@ -264,7 +264,7 @@ describe("runAgentLoop", () => {
 
   it("read-only-only turns (photo hunts / state reads) don't count toward maxTurns", async () => {
     // Repro of the terror-hero bug: the model spent every turn calling the
-    // read-only elegir_foto and died on turn_limit before it ever edited.
+    // read-only find_photo and died on turn_limit before it ever edited.
     // Read-only tools are exempt from maxToolCalls (F3-T5) — they must be
     // exempt from maxTurns too, or the turn cap defeats that exemption. Only
     // ABSOLUTE_MAX_TOOL_CALLS bounds a pure read-only chain.
@@ -272,8 +272,8 @@ describe("runAgentLoop", () => {
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "hero de terror" }], tools: [], maxTurns: 2,
       openStream: scripted(
-        [{ type: "function_call", name: "elegir_foto", args: {} }, done],
-        [{ type: "function_call", name: "elegir_foto", args: {} }, done],
+        [{ type: "function_call", name: "find_photo", args: {} }, done],
+        [{ type: "function_call", name: "find_photo", args: {} }, done],
         [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, done],
         [{ type: "text_delta", text: "No hay fotos de terror; oscurecí el tema." }, done],
       ),
@@ -294,7 +294,7 @@ describe("runAgentLoop", () => {
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 2,
       openStream: scripted([
-        { type: "function_call", name: "elegir_foto", args: {} },
+        { type: "function_call", name: "find_photo", args: {} },
         { type: "function_call", name: "editar_pagina", args: {} },
         done,
       ]),
@@ -308,7 +308,7 @@ describe("runAgentLoop", () => {
 
   it("caps runaway loops at maxToolCalls", async () => {
     const events: AgentStreamEvent[] = [];
-    // editar_pagina is a budgeted (non-read-only) tool — Read/elegir_foto
+    // editar_pagina is a budgeted (non-read-only) tool — Read/find_photo
     // are exempt from maxToolCalls (F3-T5) so they'd defeat this test's premise.
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [], maxToolCalls: 1,
@@ -327,12 +327,12 @@ describe("runAgentLoop", () => {
     expect(err.message).toContain("límite de pasos");
   });
 
-  it("F3-T5: read-only tools (elegir_foto) don't count toward maxToolCalls — a photo hunt doesn't burn the budget", async () => {
+  it("F3-T5: read-only tools (find_photo) don't count toward maxToolCalls — a photo hunt doesn't burn the budget", async () => {
     const events: AgentStreamEvent[] = [];
     const seen: string[] = [];
     const photoCalls: StreamEvent[] = Array.from({ length: 12 }, (): StreamEvent => ({
       type: "function_call",
-      name: "elegir_foto",
+      name: "find_photo",
       args: {},
     }));
     const r = await runAgentLoop({
@@ -341,7 +341,7 @@ describe("runAgentLoop", () => {
         [
           ...photoCalls,
           { type: "function_call", name: "editar_pagina", args: {} },
-          { type: "function_call", name: "activar_modulo", args: { modulo: "chat" } },
+          { type: "function_call", name: "toggle_module", args: { module: "chat" } },
           done,
         ],
         [{ type: "text_delta", text: "Listo, puse las fotos." }, done],
@@ -349,10 +349,10 @@ describe("runAgentLoop", () => {
       runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
       emit: (e) => events.push(e),
     });
-    // All 14 calls actually ran — the 12 elegir_foto ones just didn't count
+    // All 14 calls actually ran — the 12 find_photo ones just didn't count
     // against the 10-call budget, which only the 2 non-exempt calls touch.
     expect(seen).toHaveLength(14);
-    expect(seen.filter((n) => n === "elegir_foto")).toHaveLength(12);
+    expect(seen.filter((n) => n === "find_photo")).toHaveLength(12);
     expect(r.finalText).toBe("Listo, puse las fotos.");
     expect(events.some((e) => e.type === "error")).toBe(false);
     expect(r.terminalError).toBe(false);
@@ -396,7 +396,7 @@ describe("runAgentLoop", () => {
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],
       openStream: scripted(
-        [fc("Read", { file_path: "/menu/index.html" }), fc("Grep", { pattern: "600 11" }), fc("Glob", { pattern: "*/index.html" }), fc("mirar_pagina", {}), done],
+        [fc("Read", { file_path: "/menu/index.html" }), fc("Grep", { pattern: "600 11" }), fc("Glob", { pattern: "*/index.html" }), fc("view_page", {}), done],
         [{ type: "text_delta", text: "Listo." }, done],
       ),
       runTool: async () => ({ response: { ok: true } }),
@@ -414,7 +414,7 @@ describe("runAgentLoop", () => {
     const seen: string[] = [];
     const calls: StreamEvent[] = Array.from({ length: 27 }, (_, i): StreamEvent => ({
       type: "function_call",
-      name: i % 2 === 0 ? "elegir_foto" : "editar_pagina",
+      name: i % 2 === 0 ? "find_photo" : "editar_pagina",
       args: { n: i },
     }));
     const r = await runAgentLoop({
@@ -747,11 +747,11 @@ describe("runAgentLoop", () => {
     expect(r.errorCode).toBeNull();
   });
 
-  it("a confirm outcome emits a confirm event, feeds the model esperando_confirmacion, and continues", async () => {
+  it("a confirm outcome emits a confirm event, feeds the model waiting_for_user_confirmation, and continues", async () => {
     const events: AgentStreamEvent[] = [];
     const callsSeen: Message[][] = [];
     const stream = scripted(
-      [{ type: "function_call", name: "publicar", args: { subdominio: "mi-negocio" } }, done],
+      [{ type: "function_call", name: "publish", args: { subdomain: "mi-negocio" } }, done],
       [{ type: "text_delta", text: "Preparé la publicación. Toca Publicar para confirmar." }, done],
     );
     const r = await runAgentLoop({
@@ -763,8 +763,8 @@ describe("runAgentLoop", () => {
       // The tool NEVER publishes — it returns a confirm payload the user must tap.
       runTool: async () => ({
         response: { ok: true },
-        action: { tool: "publicar", ok: true, summary: "mi-negocio" },
-        confirm: { action: "publicar", subdominio: "mi-negocio", idiomas: ["es"], republicar: false },
+        action: { tool: "publish", ok: true, summary: "mi-negocio" },
+        confirm: { action: "publish", subdominio: "mi-negocio", idiomas: ["es"], republicar: false },
       }),
       emit: (e) => events.push(e),
     });
@@ -772,7 +772,7 @@ describe("runAgentLoop", () => {
     const confirmEv = events.find((e) => e.type === "confirm");
     expect(confirmEv).toMatchObject({
       type: "confirm",
-      action: "publicar",
+      action: "publish",
       subdominio: "mi-negocio",
       idiomas: ["es"],
       republicar: false,
@@ -786,9 +786,10 @@ describe("runAgentLoop", () => {
     const frTurn = second.find((m) => m.functionResponses);
     const fr = (frTurn as { functionResponses: { name: string; response: Record<string, unknown> }[] })
       .functionResponses[0];
-    expect(fr.name).toBe("publicar");
+    expect(fr.name).toBe("publish");
     expect(fr.response.ok).toBe(true);
-    expect(fr.response.estado).toBe("esperando_confirmacion_del_usuario");
+    expect(fr.response.state).toBe("waiting_for_user_confirmation");
+    expect(fr.response.subdomain).toBe("mi-negocio");
     // A turn that ends waiting on a confirm card still finishes clean —
     // charges credits (F2-T9); it's the model's own end_turn, not an error.
     expect(r.terminalError).toBe(false);
@@ -796,11 +797,11 @@ describe("runAgentLoop", () => {
 
   // EL BORRADOR DE RESPUESTA (plans/len-resultados/): mismo camino que publicar,
   // otra espera. El modelo lee «nada enviado», nunca algo que suene a hecho.
-  it("el borrador de preparar_respuesta sale como confirm y el modelo lee que NADA se envió", async () => {
+  it("el borrador de draft_reply sale como confirm y el modelo lee que NADA se envió", async () => {
     const events: AgentStreamEvent[] = [];
     const callsSeen: Message[][] = [];
     const stream = scripted(
-      [{ type: "function_call", name: "preparar_respuesta", args: { para: "chat", id: "c1", texto: "Sí, abrimos el domingo" } }, done],
+      [{ type: "function_call", name: "draft_reply", args: { channel: "chat", id: "c1", text: "Sí, abrimos el domingo" } }, done],
       [{ type: "text_delta", text: "Te dejé el borrador; revísalo y mándalo con «Enviar»." }, done],
     );
     const borrador = {
@@ -815,7 +816,7 @@ describe("runAgentLoop", () => {
       },
       runTool: async () => ({
         response: { ok: true },
-        action: { tool: "preparar_respuesta", ok: true, summary: "Juan" },
+        action: { tool: "draft_reply", ok: true, summary: "Juan" },
         confirm: borrador,
       }),
       emit: (e) => events.push(e),
@@ -825,8 +826,8 @@ describe("runAgentLoop", () => {
     const frTurn = callsSeen[1].find((m) => m.functionResponses);
     const fr = (frTurn as { functionResponses: { name: string; response: Record<string, unknown> }[] })
       .functionResponses[0];
-    expect(fr.response.estado).toBe("borrador_en_una_tarjeta_nada_enviado");
-    expect(fr.response).not.toHaveProperty("subdominio");
+    expect(fr.response.state).toBe("draft_in_a_card_nothing_sent");
+    expect(fr.response).not.toHaveProperty("subdomain");
   });
 
   it("emits html events when a tool updates the doc", async () => {
@@ -1032,7 +1033,7 @@ describe("runAgentLoop — ask_user_question (antes preguntar)", () => {
       openStream: scripted(
         [{ type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿Qué dirección quieres?" }] } }, done],
         // Este segundo stream NO debe llegar a abrirse: el turno terminó.
-        [{ type: "function_call", name: "publicar", args: { subdominio: "mi-negocio" } }, done],
+        [{ type: "function_call", name: "publish", args: { subdomain: "mi-negocio" } }, done],
       ),
       runTool: async (name, args) => {
         seen.push(name);
@@ -1441,7 +1442,7 @@ describe("cierra sin llamar a nada", () => {
 
   // 🔴 BRAZO DE CONTROL, y no es teórico: la primera versión de esto miraba
   // `mutoDurable` en vez de `toolCalls`, y una prueba que YA existía lo cazó.
-  // Son cosas distintas — `activar_modulo` y `publicar` llaman a una
+  // Son cosas distintas — `toggle_module` y `publicar` llaman a una
   // herramienta sin marcar mutación durable— así que con aquella guarda se
   // pagaba una vuelta de más al final de turnos que habían hecho su trabajo.
   it("pero a un turno que ya llamó a una herramienta no se le insiste", async () => {
@@ -1705,6 +1706,28 @@ describe("la llamada mal escrita se repara, no se cobra", () => {
     const ultima = JSON.stringify(vueltas.at(-1) ?? []);
     expect(ultima).toContain("error_de_uso");
     expect(ultima).toContain("editar_texto");
+  });
+
+  // Las 11 pasaron al inglés el 2026-10-06. Un modelo que todavía recuerde el
+  // nombre de antes (de un historial viejo, o de su propia costumbre) no
+  // encontraría el nuevo por «la más parecida»: se le dice cuál es.
+  it("llamar a una herramienta por su nombre viejo dice cómo se llama ahora", async () => {
+    const vueltas: Message[][] = [];
+    const vistos: string[] = [];
+    const guion = scripted(
+      [{ type: "function_call", name: "mirar_pagina", args: { tipo: "medir", pregunta: "¿se lee?" } }, usage(10), done],
+      [{ type: "text_delta", text: "ok" }, usage(5), done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "mira la página" }],
+      tools: [{ name: "view_page" }, ...(DECLARADAS as unknown[])] as unknown as Parameters<typeof runAgentLoop>[0]["tools"],
+      openStream: (m: Message[]) => { vueltas.push(structuredClone(m)); return guion(m); },
+      runTool: async (n) => { vistos.push(n); return { response: { ok: true } }; },
+      emit: () => {},
+    });
+    expect(vistos).toEqual([]);
+    expect(r.toolCalls).toBe(0);
+    expect(JSON.stringify(vueltas.at(-1) ?? [])).toContain('It is called \\"view_page\\" now');
   });
 });
 
@@ -2692,8 +2715,8 @@ describe("H15 · el razonamiento vuelve al modelo dentro del turno", () => {
   it("🔴 cada mensaje del asistente lleva el razonamiento de SU vuelta", async () => {
     const vistos: Message[][] = [];
     const guion = scripted(
-      [pensado("busco la marca"), { type: "function_call", name: "activar_modulo", args: { modulo: "members" } }, usage(5), done],
-      [pensado("ahora el pie"), { type: "function_call", name: "activar_modulo", args: { modulo: "bookings" } }, usage(5), done],
+      [pensado("busco la marca"), { type: "function_call", name: "toggle_module", args: { module: "members" } }, usage(5), done],
+      [pensado("ahora el pie"), { type: "function_call", name: "toggle_module", args: { module: "bookings" } }, usage(5), done],
       [{ type: "text_delta", text: "Listo." }, usage(5), done],
     );
     const r = await runAgentLoop({
@@ -2745,7 +2768,7 @@ describe("H15 · el razonamiento vuelve al modelo dentro del turno", () => {
   it("una vuelta que no pensó no lleva el campo", async () => {
     const vistos: Message[][] = [];
     const guion = scripted(
-      [{ type: "function_call", name: "activar_modulo", args: { modulo: "members" } }, done],
+      [{ type: "function_call", name: "toggle_module", args: { module: "members" } }, done],
       [{ type: "text_delta", text: "Listo." }, done],
     );
     await runAgentLoop({
@@ -2762,7 +2785,7 @@ describe("H15 · el razonamiento vuelve al modelo dentro del turno", () => {
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],
       openStream: scripted(
-        [pensado("SECRETO-PENSADO"), { type: "function_call", name: "activar_modulo", args: { modulo: "members" } }, done],
+        [pensado("SECRETO-PENSADO"), { type: "function_call", name: "toggle_module", args: { module: "members" } }, done],
         [pensado("SECRETO-PENSADO"), { type: "text_delta", text: "Listo." }, done],
       ),
       runTool: async (name) => ({ response: { ok: true }, action: { tool: name, ok: true, summary: name } }),
@@ -2869,16 +2892,16 @@ describe("pieza 4 · las llamadas de una vuelta, planificadas como DeepSeek", ()
     expect(tarjetas).toEqual(["running lenta", "running rapida", "done lenta", "done rapida"]);
   });
 
-  it("🔴 usar_pagina con un clic no se solapa con nada", async () => {
+  it("🔴 use_page con un clic no se solapa con nada", async () => {
     const { log } = await correr([
       { type: "function_call", name: "Read", args: { file_path: "/a" } },
-      { type: "function_call", name: "usar_pagina", args: { pasos: [{ pulsa: "Enviar" }] } },
+      { type: "function_call", name: "use_page", args: { steps: [{ click: "Enviar" }] } },
       { type: "function_call", name: "Read", args: { file_path: "/b" } },
       usage(10),
       done,
     ] as StreamEvent[]);
-    expect(log.indexOf("empieza usar_pagina ")).toBeGreaterThan(log.indexOf("acaba Read /a"));
-    expect(log.indexOf("empieza Read /b")).toBeGreaterThan(log.indexOf("acaba usar_pagina "));
+    expect(log.indexOf("empieza use_page ")).toBeGreaterThan(log.indexOf("acaba Read /a"));
+    expect(log.indexOf("empieza Read /b")).toBeGreaterThan(log.indexOf("acaba use_page "));
   });
 
   it("🔴 el ■ a mitad de grupo: las empezadas se quedan, las demás 'abortadas' sin tarjeta, ninguna empieza después, cierra cancelado", async () => {

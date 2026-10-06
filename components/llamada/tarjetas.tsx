@@ -1,6 +1,6 @@
 "use client";
 // Las tarjetas que salen mientras Len habla. Visitas: los números de
-// /api/voz/visitas, que son los de `ver_visitas`. Borrador y publicar: las
+// /api/voz/visitas, que son los de `get_visits`. Borrador y publicar: las
 // MISMAS tarjetas del chat (el toque del usuario es lo único que manda o publica).
 // Esas dos pintan con clases que sólo existen dentro de `.workspace-v2` (los
 // tokens de app/[locale]/new/tokens.css, que la página de la llamada carga):

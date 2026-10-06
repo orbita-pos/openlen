@@ -272,7 +272,7 @@ export function diagnosticosMedidos(
  *
  * Los cuatro canales que le devuelven al modelo lo que salio de MEDIR la pagina
  * —`<medido-tras-editar>`, `<limites-de-la-medida>` y las dos ramas de
- * `mirar_pagina`— citan cosas que escribió la página: el texto de un nodo
+ * `view_page`— citan cosas que escribió la página: el texto de un nodo
  * ilegible, el selector que se desborda, los nombres de clase, los mensajes que
  * la página lanza por consola y las rutas a las que llama. Nada de eso lo
  * escribimos nosotros.

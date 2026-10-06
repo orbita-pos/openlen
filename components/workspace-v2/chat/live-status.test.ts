@@ -165,7 +165,7 @@ describe("la barra viva", () => {
   });
 
   it("una tarjeta de publicar sin tocar espera tu aprobación; resuelta, ya no", () => {
-    const t = turn({ confirm: { action: "publicar", subdominio: "luna", idiomas: [], republicar: false } });
+    const t = turn({ confirm: { action: "publish", subdominio: "luna", idiomas: [], republicar: false } });
     expect(liveStatus(t, { busy: false })).toMatchObject({ kind: "waiting", reason: "publish" });
     expect(liveStatus(t, { busy: false, settledConfirms: new Set(["t1"]) }).kind).toBe("done");
   });

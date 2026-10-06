@@ -175,7 +175,7 @@ export function computeUnpublishedChanges(row: {
 /** `hasUnpublishedChanges` de UN proyecto, leído ahora mismo de la fila.
  *
  *  Para quien acaba de escribir y necesita saber si la página publicada ya lo
- *  refleja sin cargar el proyecto entero: `activar_modulo` de Len, que antes
+ *  refleja sin cargar el proyecto entero: `toggle_module` de Len, que antes
  *  decía «ya responde a los visitantes» mientras la franja de la Bandeja decía
  *  «cuando publiques». Es la MISMA decisión que pinta esa franja
  *  (`computeUnpublishedChanges` sobre el html CRUDO, igual que `getProject`),

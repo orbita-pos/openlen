@@ -58,7 +58,7 @@ interface PatchBody {
   /** El asistente de la página. Merged into settings.assistant. Antes vivía en
    *  su propia ruta (`PATCH /api/projects/[id]/assistant`); entra aquí para que
    *  TODA escritura de ajustes pase por el mismo embudo — y para que
-   *  `activar_modulo` pueda encenderlo. */
+   *  `toggle_module` pueda encenderlo. */
   assistant?: {
     enabled?: boolean;
     facts?: string;

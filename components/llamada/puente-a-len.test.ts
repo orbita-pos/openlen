@@ -25,8 +25,8 @@ describe("crearPuenteALen", () => {
   it("delegar pide a Len lo que se oyó, avisa en silencio y le pasa a la voz el resultado", async () => {
     const { deps, voz, tarjetas, puente } = preparar([
       turno,
-      { nombre: "action", datos: { tool: "ver_visitas", status: "running" } },
-      { nombre: "action", datos: { tool: "ver_visitas", status: "done" } },
+      { nombre: "action", datos: { tool: "get_visits", status: "running" } },
+      { nombre: "action", datos: { tool: "get_visits", status: "done" } },
       { nombre: "text", datos: { text: "Esta semana llevas **312** visitas." } },
       done,
     ]);
@@ -34,7 +34,7 @@ describe("crearPuenteALen", () => {
     puente.oir("mi página?");
     await puente.delegar("d1");
     expect(deps.pedirALen).toHaveBeenCalledWith("¿Cómo va mi página?", expect.any(Function));
-    expect(voz[0]).toEqual({ type: "session.thinking.append", delegation_id: "d1", content: fraseDeAvance("ver_visitas") });
+    expect(voz[0]).toEqual({ type: "session.thinking.append", delegation_id: "d1", content: fraseDeAvance("get_visits") });
     expect(voz.filter((e) => e.type === "session.thinking.append")).toHaveLength(1);
     const final = voz.at(-1)!;
     expect(final.type).toBe("session.commentary.append");
@@ -78,9 +78,9 @@ describe("crearPuenteALen", () => {
     const respuesta = { action: "responder", para: "chat", id: "c1", con: "Juan", texto: "¡Hola!", botones: ["enviar"], correo: null, whatsapp: null };
     const { tarjetas, puente } = preparar([
       turno,
-      { nombre: "action", datos: { tool: "ver_mensajes", status: "done" } },
+      { nombre: "action", datos: { tool: "list_messages", status: "done" } },
       { nombre: "confirm", datos: respuesta },
-      { nombre: "confirm", datos: { action: "publicar", subdominio: "espiga", idiomas: [], republicar: false } },
+      { nombre: "confirm", datos: { action: "publish", subdominio: "espiga", idiomas: [], republicar: false } },
       { nombre: "text", datos: { text: "Te dejé el borrador." } },
       done,
     ]);
@@ -89,7 +89,7 @@ describe("crearPuenteALen", () => {
     expect(tarjetas).toEqual([
       { tipo: "texto", texto: "Te dejé el borrador." },
       { tipo: "respuesta", respuesta },
-      { tipo: "publicar", confirm: { action: "publicar", subdominio: "espiga", idiomas: [], republicar: false } },
+      { tipo: "publicar", confirm: { action: "publish", subdominio: "espiga", idiomas: [], republicar: false } },
     ]);
   });
 
@@ -174,7 +174,9 @@ describe("recortarParaLaVoz", () => {
 
 describe("fraseDeAvance", () => {
   it("una frase por herramienta conocida; nada para las demás", () => {
-    expect(fraseDeAvance("ver_visitas")).toMatch(/visitas/);
+    expect(fraseDeAvance("get_visits")).toMatch(/visitas/);
+    // Una tarjeta o grabación de antes del 2026-10-06 trae el nombre viejo.
+    expect(fraseDeAvance("ver_visitas")).toBe(fraseDeAvance("get_visits"));
     expect(fraseDeAvance("Edit")).toMatch(/cambiando la página/);
     expect(fraseDeAvance("TodoWrite")).toBeNull();
   });

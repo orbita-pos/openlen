@@ -9,13 +9,13 @@
  * camino que ya tiene su botón o su herramienta:
  *
  * - `titulo`  → `renameProject`, el de `PATCH /api/projects/[id]` (1–200 caracteres).
- * - `modulos` → `activar_modulo` entero (validar → aplicar → provisionar el
+ * - `modulos` → `toggle_module` entero (validar → aplicar → provisionar el
  *   chat → guardar), y su aviso de si los visitantes ya lo ven va a la salida.
  * - `idiomas` → se ven pero NO se cambian aquí: hoy se eligen al publicar
- *   (`publicar` añade; quitar es del modal de Publicar). Cambiarlos desde la
+ *   (`publish` añade; quitar es del modal de Publicar). Cambiarlos desde la
  *   terminal es una decisión de Jesús, no de esta tarea.
  *
- * Publicar sigue siendo un toque del usuario. No se retira `activar_modulo`.
+ * Publicar sigue siendo un toque del usuario. No se retira `toggle_module`.
  */
 import "server-only";
 
@@ -113,14 +113,14 @@ export async function guardarAjustes(
   const { toolActivarModulo } = await import("@/lib/agent/tools");
   for (const modulo of AGENT_MODULES as readonly AgentModule[]) {
     if (nuevo.modulos[modulo] === antes.modulos[modulo]) continue;
-    const o = await toolActivarModulo(session, deps, { modulo, encender: nuevo.modulos[modulo] });
+    const o = await toolActivarModulo(session, deps, { module: modulo, on: nuevo.modulos[modulo] });
     if (o.response.ok === false) {
       notas.push(`${modulo}: not changed — ${String(o.response.error ?? "it was rejected")}.`);
       incompleto = true;
       continue;
     }
     escrituras.push(o);
-    const aviso = typeof o.response.aviso === "string" ? ` ${o.response.aviso}` : "";
+    const aviso = typeof o.response.note === "string" ? ` ${o.response.note}` : "";
     notas.push(`${modulo}: ${nuevo.modulos[modulo] ? "on" : "off"}.${aviso}`);
   }
   const ahora = await deps.loadProject(session.projectId, session.userId);

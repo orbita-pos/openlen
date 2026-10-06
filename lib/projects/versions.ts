@@ -314,7 +314,7 @@ interface RestoreResult {
    *
    *  Es lo que hace que el propio restaurar sea deshacible desde el Chat: la
    *  fila ya se creaba, sólo que su id no salía de aquí y el turno de
-   *  `revertir_ultimo_cambio` se quedaba sin dirección a la que volver. */
+   *  `undo_last_change` se quedaba sin dirección a la que volver. */
   versionPrevia: string | null;
 }
 

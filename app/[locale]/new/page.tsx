@@ -123,7 +123,7 @@ import { abrirDesdeElTaller } from "@/components/workspace-v2/abrir-fuera";
 // ⚰️ Aquí vivía `LLAVE_ARREGLO`, el traspaso del «Arréglalo» de la medida de
 // Crear a su primer turno de chat por `sessionStorage`. Crear es Len desde el
 // 2026-10-06 (plans/crear-es-len): ya no hay dos pantallas entre las que saltar,
-// y lo que Len mide lo mide él (`mirar_pagina`).
+// y lo que Len mide lo mide él (`view_page`).
 
 // Outer shell exists so `useSearchParams()` in the inner component has a
 // Suspense boundary, matching the /new V1 pattern.

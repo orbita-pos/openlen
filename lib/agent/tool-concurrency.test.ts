@@ -11,13 +11,13 @@ describe("isConcurrencySafe", () => {
   });
 
   it("las lecturas, la web y los datos del dueño son seguras", () => {
-    for (const n of ["Read", "Grep", "Glob", NOMBRE_WEB_SEARCH, NOMBRE_WEB_FETCH, "ver_visitas", "ver_formularios", "ver_mensajes", "mirar_pagina"]) {
+    for (const n of ["Read", "Grep", "Glob", NOMBRE_WEB_SEARCH, NOMBRE_WEB_FETCH, "get_visits", "list_form_submissions", "list_messages", "view_page"]) {
       expect(isConcurrencySafe(n, {}), n).toBe(true);
     }
   });
 
   it("lo que escribe, pregunta o depende del orden es exclusivo", () => {
-    for (const n of ["Edit", "Write", NOMBRE_BASH, "publicar", "revertir_ultimo_cambio", "activar_modulo", "editar_imagen", "preguntar", "preparar_respuesta", "elegir_foto"]) {
+    for (const n of ["Edit", "Write", NOMBRE_BASH, "publish", "undo_last_change", "toggle_module", "edit_image", "preguntar", "draft_reply", "find_photo"]) {
       expect(isConcurrencySafe(n, {}), n).toBe(false);
     }
   });
@@ -34,16 +34,16 @@ describe("isConcurrencySafe", () => {
     expect(isConcurrencySafe("constructor", {})).toBe(false);
   });
 
-  it("usar_pagina: segura sólo sin sign_in_as y sin ningún clic", () => {
-    expect(isConcurrencySafe("usar_pagina", { pasos: [{ lee: "Carrito" }, { recarga: true }, { escribe: "ana", en: "Nombre" }] })).toBe(true);
-    expect(isConcurrencySafe("usar_pagina", { pasos: [{ lee: "x" }, { pulsa: "Enviar" }] })).toBe(false);
-    expect(isConcurrencySafe("usar_pagina", { pasos: [{ lee: "x" }], sign_in_as: "ana@ejemplo.mx" })).toBe(false);
+  it("use_page: segura sólo sin sign_in_as y sin ningún clic", () => {
+    expect(isConcurrencySafe("use_page", { steps: [{ read: "Carrito" }, { reload: true }, { type: "ana", into: "Nombre" }] })).toBe(true);
+    expect(isConcurrencySafe("use_page", { steps: [{ read: "x" }, { click: "Enviar" }] })).toBe(false);
+    expect(isConcurrencySafe("use_page", { steps: [{ read: "x" }], sign_in_as: "ana@ejemplo.mx" })).toBe(false);
   });
 
-  it("usar_pagina con argumentos que no valen es exclusiva (como DeepSeek: lo inválido no se arriesga)", () => {
-    expect(isConcurrencySafe("usar_pagina", {})).toBe(false);
-    expect(isConcurrencySafe("usar_pagina", { pasos: "lee" })).toBe(false);
-    expect(isConcurrencySafe("usar_pagina", { pasos: [null] })).toBe(false);
-    expect(isConcurrencySafe("usar_pagina", { pasos: [{ lee: "x" }], sign_in_as: "" })).toBe(true);
+  it("use_page con argumentos que no valen es exclusiva (como DeepSeek: lo inválido no se arriesga)", () => {
+    expect(isConcurrencySafe("use_page", {})).toBe(false);
+    expect(isConcurrencySafe("use_page", { steps: "lee" })).toBe(false);
+    expect(isConcurrencySafe("use_page", { steps: [null] })).toBe(false);
+    expect(isConcurrencySafe("use_page", { steps: [{ read: "x" }], sign_in_as: "" })).toBe(true);
   });
 });

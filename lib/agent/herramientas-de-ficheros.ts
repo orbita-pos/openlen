@@ -557,8 +557,8 @@ function conDiagnosticos(ds: ToolOutcome["diagnosticos"]): Pick<ToolOutcome, "di
 }
 
 /**
- * LA PÁGINA DE UNA HERRAMIENTA QUE NO EDITA POR RUTA (`mirar_pagina`,
- * `revertir_ultimo_cambio`). Len 2.0 no tiene página activa: la que se dice en
+ * LA PÁGINA DE UNA HERRAMIENTA QUE NO EDITA POR RUTA (`view_page`,
+ * `undo_last_change`). Len 2.0 no tiene página activa: la que se dice en
  * `file_path`; si no se dice, la última escrita en este turno cuando eso es lo
  * que tiene sentido (deshacer), y si no, la que el dueño tiene abierta en el
  * editor — el «fichero abierto en el IDE» de Claude Code.
@@ -602,7 +602,7 @@ type Guardado =
  * Guarda un fichero por el camino de siempre. Es `persistHtmlChange` sin la
  * sesión de un documento activo: aquí cada escritura dice a qué fichero va.
  * La usan también las herramientas que escriben sin ser Edit/Write
- * (`editar_imagen`, `revertir_ultimo_cambio`).
+ * (`edit_image`, `undo_last_change`).
  */
 export async function guardarFichero(
   session: AgentSession,

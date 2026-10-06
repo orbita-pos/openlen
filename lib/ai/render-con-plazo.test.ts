@@ -7,7 +7,7 @@
 // no fue el diálogo: fue que NADIE acotaba el render.
 //
 // Los tres sitios que comparten el navegador del turno —la medida que vuelve al
-// modelo tras editar, `mirar_pagina` y los ojos— sólo tenían tope en uno.
+// modelo tras editar, `view_page` y los ojos— sólo tenían tope en uno.
 //
 // LO QUE ESTO SUJETA, y que es la mitad que se olvida: soltar la promesa NO
 // BASTA. El pool encadena los renders en `tails[index]`, así que un render que

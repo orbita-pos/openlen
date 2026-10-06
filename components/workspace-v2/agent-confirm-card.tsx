@@ -12,7 +12,7 @@ import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 // (for a new claim) then the publish POST. The card is one-shot: after a
 // successful publish or a cancel it goes inert.
 
-export type AgentConfirm = { action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean };
+export type AgentConfirm = { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean };
 
 type CardState =
   | { kind: "idle" }
@@ -39,7 +39,7 @@ export function AgentConfirmCard({
   // elige es el llamador: ramificar aquí dentro obligaba a un `return` antes
   // de varios `useCallback`, y eso es llamar hooks condicionalmente — lo cazó
   // el lint, no el compilador.
-  confirm: Extract<AgentConfirm, { action: "publicar" }>;
+  confirm: Extract<AgentConfirm, { action: "publish" }>;
   onPublished: (url: string) => void;
   /** «Cancelar»: la tarjeta se apaga. El chat nuevo lo usa para dejar de decir
    *  «Esperando tu aprobación» (plans/new-chat/). */

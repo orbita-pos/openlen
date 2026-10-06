@@ -21,7 +21,7 @@
 // esquema del historial) y el cliente (las tarjetas).
 
 export const OWNER_REASON_CODES = [
-  /** `publicar` sin una dirección que el dueño haya dicho: falta o Len se la
+  /** `publish` sin una dirección que el dueño haya dicho: falta o Len se la
    *  inventó. La dirección la elige el dueño. */
   "address_needed",
   /** La dirección no cumple la forma (minúsculas, números y guiones). */

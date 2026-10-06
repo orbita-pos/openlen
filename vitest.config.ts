@@ -385,6 +385,7 @@ export default defineConfig({
       // `guardadas`. LISTA BLANCA.
       "lib/agent/catalog.test.ts",
       "lib/agent/tool-renames.test.ts",
+      "lib/agent/tools-in-english.test.ts",
       // Len 2.0: el sitio como ficheros, con el contrato de Read/Edit/Write/
       // Grep/Glob de Claude Code (plans/len-2/ficheros-plan.md). Piezas puras.
       "lib/agent/ficheros/**/*.test.ts",

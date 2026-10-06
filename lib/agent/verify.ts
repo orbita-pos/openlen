@@ -16,7 +16,7 @@
 //
 // ⚠️ DESDE EL 2026-10-06 EL BUCLE YA NO LLAMA A `verifyTurn` (plans/crear-es-len,
 // como DeepSeek: el arnés no obliga a mirar). Lo de aquí que sigue vivo lo usa
-// Len cuando decide mirar —`mirar_pagina` (`observarPagina`)— y
+// Len cuando decide mirar —`view_page` (`observarPagina`)— y
 // `verifyEditedPage` sólo lo llama `scripts/medir-ojos.ts`.
 
 import type { InlineImage, StreamEvent } from "@/lib/ai-gateway";
@@ -1512,7 +1512,7 @@ export interface MiradaParams {
    * el usuario tiene delante — igual que `VerifyParams.vista`.
    *
    * 🔴 ESTO FALTABA, y es el mismo defecto que arregló `f63b0cb9` en los ojos:
-   * `mirar_pagina` medía el documento PELADO mientras el lienzo le enseñaba al
+   * `view_page` medía el documento PELADO mientras el lienzo le enseñaba al
    * usuario el horneado (asistente, chat, sello). Dos páginas distintas, y la
    * herramienta que el modelo llama a mano hasta cuatro veces por turno era la
    * que miraba la que no existe.

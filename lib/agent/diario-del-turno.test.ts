@@ -150,7 +150,7 @@ describe("crearDiarioDelTurno — lo que se envió", () => {
   it("CONTRA-PRUEBA: sin argumentos, la entrada no lleva la clave", () => {
     const diario = crearDiarioDelTurno();
     diario.anotar("leer_estado", { ok: true });
-    diario.anotar("mirar_pagina", { ok: true }, {});
+    diario.anotar("view_page", { ok: true }, {});
     for (const entrada of diario.entradas()!) {
       expect("args" in entrada).toBe(false);
     }

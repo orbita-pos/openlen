@@ -19,6 +19,7 @@ import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/lib/agent/diagnosticos";
 import { DEFAULT_MAX_PARALLEL_TOOL_CALLS, isConcurrencySafe } from "@/lib/agent/tool-concurrency";
 import { ASK_USER_QUESTION, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { currentToolName } from "@/lib/agent/tool-renames";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { scheduleToolCalls, type Prepared } from "@/lib/agent/tool-scheduler";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
@@ -168,7 +169,7 @@ export type AgentStreamEvent =
   // The publish gate (Task 7): the model prepared a publish but MUST NOT
   // publish itself. The panel renders a confirm card whose button hits the
   // real publish endpoint — the user's tap is the only thing that publishes.
-  | { type: "confirm"; action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean }
+  | { type: "confirm"; action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean }
   // El borrador de respuesta (plans/len-resultados/): la tarjeta lo manda sólo si el usuario toca.
   | ({ type: "confirm" } & RespuestaPreparada)
   | { type: "done"; turns: number; toolCalls: number }
@@ -222,8 +223,8 @@ export interface AgentLoopArgs {
   // con la tarjeta `verificar_diseno`) y `medirParaElModelo` (el navegador que
   // medía cada tanda y se lo devolvía al modelo). Se retiraron los dos el
   // 2026-10-06 (plans/crear-es-len, D2): DeepSeek no mide nada por su cuenta, ni
-  // al cerrar ni tras editar. Len sabe lo que mira él (`mirar_pagina`,
-  // `usar_pagina`); los diagnósticos ESTÁTICOS de las herramientas
+  // al cerrar ni tras editar. Len sabe lo que mira él (`view_page`,
+  // `use_page`); los diagnósticos ESTÁTICOS de las herramientas
   // (`outcome.diagnosticos`) siguen llegándole.
   // ⚰️ Aquí vivía `lineaBase`: el documento con el que arrancó el turno, que
   // pasaba la ruta, y sólo servía para la página del arranque. Len 2.0 (T9) la
@@ -568,7 +569,7 @@ function stableStringify(v: unknown): string {
     .join(",")}}`;
 }
 
-// Product finding: photo hunts (elegir_foto) and mid-chain state re-reads
+// Product finding: photo hunts (find_photo) and mid-chain state re-reads
 // (leer_estado, retired in H3) are read-only — they never mutate the project — but a photo
 // search that takes a few tries was eating the same maxToolCalls budget as
 // real edits. These two are exempt from that counter (which, since H1, only
@@ -584,7 +585,7 @@ function stableStringify(v: unknown): string {
 //
 // `preguntar` entra por lo mismo y por una razón de más: cierra el turno, así
 // que descontarla del presupuesto sería cobrarle al usuario por la vuelta en la
-// que el Agente decide callarse y esperarle. `revertir_ultimo_cambio` NO entra
+// que el Agente decide callarse y esperarle. `undo_last_change` NO entra
 // — escribe en la base.
 /**
  * LA LLAMADA MAL ESCRITA.
@@ -658,14 +659,14 @@ export function repararNombre(
 const READ_ONLY_TOOLS = new Set([
   // ⚰️ `leer_estado` estaba aquí; se retiró en H3 (2026-09-25): los almacenes
   // y la memoria se leen con Read.
-  "elegir_foto",
-  // Preguntar qué se ve no cambia la página. Como `elegir_foto`, no descuenta
+  "find_photo",
+  // Preguntar qué se ve no cambia la página. Como `find_photo`, no descuenta
   // presupuesto de acciones: su propio tope por turno es lo que la contiene, y
   // cobrarle una acción al Agente por COMPROBAR antes de editar sería cobrarle
   // justo por el paso que evita la edición equivocada.
-  "mirar_pagina",
+  "view_page",
   // H9: usar la página es una visita aparte; el fichero no cambia.
-  "usar_pagina",
+  "use_page",
   // Len 2.0: leer ficheros no cambia nada (ver la nota de arriba).
   "Read",
   "Grep",
@@ -856,7 +857,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   };
   let turns = 0;
   // Only turns that MUTATE count toward maxTurns. A turn whose calls were all
-  // read-only (elegir_foto photo hunts, leer_estado re-reads) is exempt —
+  // read-only (find_photo photo hunts, leer_estado re-reads) is exempt —
   // otherwise the turn cap silently defeats the same read-only exemption
   // maxToolCalls already grants (READ_ONLY_TOOLS), and a photo hunt for a genre
   // the curated catalog lacks dies on turn_limit before the model ever edits
@@ -902,7 +903,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // línea base de cada una (`baseDe`) y «medido, y limpio». Retirada el
   // 2026-10-06 (plans/crear-es-len): DeepSeek no le devuelve al modelo
   // diagnósticos por su cuenta, y la regla es DeepSeek. Lo medido llega cuando
-  // Len lo pide (`mirar_pagina tipo="medir"`).
+  // Len lo pide (`view_page mode="measure"`).
   /**
    * EL MOMENTO `tsc`: lo que dejaron las escrituras de la tanda, en UN
    * `<new-diagnostics>` como el de Claude Code (`lib/agent/diagnosticos.ts`) —
@@ -1093,7 +1094,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // ⚰️ Aquí se emitía la tarjeta «no mirado» de `verifyTurn` (H05) y el cierre
     // añadía «AND THE PAGE HAS NOT BEEN CHECKED». Se retiraron con la medición
     // obligatoria el 2026-10-06 (plans/crear-es-len): como en DeepSeek, mirar la
-    // página lo decide Len (`mirar_pagina`); el arnés no lo promete.
+    // página lo decide Len (`view_page`); el arnés no lo promete.
     if (args.closeOut) {
       let wrapText = "";
       // 🔴 LOS HECHOS, NO LA MEMORIA — medido el 2026-09-11 con `tope-no-miente`.
@@ -1468,7 +1469,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // `toolCalls === 0` —ninguna llamada en TODO el request—, no
       // `!mutoDurable`: son cosas distintas y la diferencia la cazó una prueba
       // que ya existía. Un turno que llamó a una herramienta ACTUÓ, aunque esa
-      // herramienta no marque mutación durable (activar_modulo, publicar…);
+      // herramienta no marque mutación durable (toggle_module, publish…);
       // empujarlo sería pagar una vuelta de más por un turno que hizo su
       // trabajo. Lo que se corrige es cerrar sin haber llamado a NADA.
       //
@@ -1478,7 +1479,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // cobrado sobre una página intacta (G4 de
       // `plans/auditoria-len-vs-claude-code-2026-09-22.md`). Ahora se mira
       // `actuo`: alguna llamada que no es de lectura, que salió bien y que no
-      // dejó la página byte a byte igual. Un `activar_modulo` o una tarjeta de
+      // dejó la página byte a byte igual. Un `toggle_module` o una tarjeta de
       // publicar SÍ actuaron —el brazo de control de su prueba lo sujeta— y
       // una lectura o una edición nula no.
       //
@@ -1499,7 +1500,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // `verificar_diseno` (con las promesas rotas y la cobertura de páginas).
       // Retirados el 2026-10-06 (plans/crear-es-len, D2): como en DeepSeek y en
       // Claude Code, el arnés no obliga a mirar; Len mira cuando lo decide
-      // (`mirar_pagina`), y `/AGENTS.md` le pide comprobar antes de decir que
+      // (`view_page`), y `/AGENTS.md` le pide comprobar antes de decir que
       // está hecho. El cliente sigue pintando las tarjetas de turnos viejos.
       finalText = turnText;
       // Igual que la rama de error: por el constructor, no a mano.
@@ -1592,9 +1593,17 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // una en rojo con un nombre inexistente le cuenta al usuario una avería
           // que no es suya. Se le devuelve al modelo una corrección legible y el
           // turno sigue, sin tocar presupuesto ni firmas fallidas.
+          // UN NOMBRE DE ANTES (las 11 que pasaron al inglés el 2026-10-06):
+          // se le dice cómo se llama ahora, que es lo que necesita para la
+          // siguiente llamada; la «más parecida» no la encontraría.
+          const ahora = currentToolName(original.name);
           const error_de_uso =
             `There is no tool called "${original.name}".` +
-            (reparo.sugerido ? ` The closest one is "${reparo.sugerido}".` : "") +
+            (ahora !== original.name
+              ? ` It is called "${ahora}" now.`
+              : reparo.sugerido
+                ? ` The closest one is "${reparo.sugerido}".`
+                : "") +
             " Call one of the tools you have declared, with its exact name.";
           return rechazar(original.name, original, error_de_uso, { ok: false, error_de_uso });
         }
@@ -1708,13 +1717,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // Lo que la escritura dejó mal, para el `<new-diagnostics>` de la tanda.
         if (outcome.diagnosticos?.length) diagnosticosDeLaTanda.push(...outcome.diagnosticos);
         // Lo durable incluye los cambios de AJUSTES, que no emiten html: módulos,
-        // hoy, los módulos (`activar_modulo`). `runAgentTool` los cuenta.
+        // hoy, los módulos (`toggle_module`). `runAgentTool` los cuenta.
         if (!mutoDurable && (outcome.mutoDurable || outcome.updatedHtml)) {
           mutoDurable = true;
           args.onMutacion?.();
         }
 
-        // A confirm outcome (publicar) NEVER carries out its action. Surface the
+        // A confirm outcome (publish) NEVER carries out its action. Surface the
         // confirm card to the user and hand the model a fixed "waiting" state so
         // it closes the turn asking for the tap — never a payload it could read
         // as "already published".
@@ -1725,12 +1734,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           functionResponses.push({
             name: call.name,
             response:
-              outcome.confirm.action === "publicar"
-                ? { ok: true, estado: "esperando_confirmacion_del_usuario", subdominio: outcome.confirm.subdominio }
+              // En inglés desde el 2026-10-06, como las herramientas que lo producen.
+              outcome.confirm.action === "publish"
+                ? { ok: true, state: "waiting_for_user_confirmation", subdomain: outcome.confirm.subdominio }
                 : {
                     ok: true,
-                    estado: "borrador_en_una_tarjeta_nada_enviado",
-                    nota: "The draft is in a card with its button. NOTHING has been sent: tell the user to review it and send it themselves. Never say it was already sent.",
+                    state: "draft_in_a_card_nothing_sent",
+                    note: "The draft is in a card with its button. NOTHING has been sent: tell the user to review it and send it themselves. Never say it was already sent.",
                   },
           });
           return;

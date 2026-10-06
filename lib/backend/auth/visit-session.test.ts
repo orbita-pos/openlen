@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// Entrar como un usuario de la página en la visita de Len (`usar_pagina`), como
+// Entrar como un usuario de la página en la visita de Len (`use_page`), como
 // lo hace Lovable: si la app tiene un solo usuario, entra como ése; si tiene
 // varios y no se dijo cuál, no entra y pregunta; nunca crea una cuenta. La
 // sesión es una de verdad de GoTrue, y se prueba con la LIBRERÍA REAL:

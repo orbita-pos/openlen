@@ -175,7 +175,7 @@ export interface DesignTurn {
    *  `done` (it finalizes to applied but the card stays tappable). Local-only,
    *  never persisted (F2-T11 decision) — see the `persistTurn` comment for why. */
   confirm?: AgentConfirm;
-  /** El borrador de `preparar_respuesta` (plans/len-resultados/): una tarjeta
+  /** El borrador de `draft_reply` (plans/len-resultados/): una tarjeta
    *  que sólo manda si el usuario toca. Local, como `confirm`: no se guarda. */
   respuesta?: RespuestaPreparada;
   /** Agent-mode: the turn finished without any `html` event (answer-only or
@@ -1661,13 +1661,13 @@ export function useAgentChat({
                 };
                 const subdominio =
                   typeof c.subdominio === "string" ? c.subdominio : "";
-                if (c.action === "publicar" && subdominio) {
+                if (c.action === "publish" && subdominio) {
                   const idiomas = Array.isArray(c.idiomas)
                     ? c.idiomas.filter((x): x is string => typeof x === "string")
                     : [];
                   updateTurn(turnId, {
                     confirm: {
-                      action: "publicar",
+                      action: "publish",
                       subdominio,
                       idiomas,
                       republicar: c.republicar === true,
@@ -1860,7 +1860,7 @@ export function useAgentChat({
             //     idéntico: las dos superficies se contradecían y sólo una se
             //     ve desde el Chat. Ahora el servidor dice el hecho y se cree.
             //
-            // (b) Al revés: `activar_modulo` y compañía mutan de forma durable
+            // (b) Al revés: `toggle_module` y compañía mutan de forma durable
             //     SIN emitir html, y el pie decía «No cambió nada de la página»
             //     sobre un turno que sí cambió cosas. `mutoDurable` ya viajaba
             //     en el terminal y sólo se usaba para elegir rojo o ámbar.

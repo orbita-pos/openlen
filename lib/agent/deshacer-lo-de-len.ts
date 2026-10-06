@@ -2,7 +2,7 @@
 // llevarse lo que el dueño editó después.
 //
 // 🔴 EL FALLO QUE CIERRA (H06 de `plans/auditoria-len-vs-claude-code-2026-09-22.md`).
-// `revertir_ultimo_cambio` restauraba `versiones[1]`, fuera de quien fuera. El
+// `undo_last_change` restauraba `versiones[1]`, fuera de quien fuera. El
 // editor sólo guarda versión de una edición de contenido si pasaron cinco
 // minutos desde la anterior, así que había dos caminos y los dos eran malos:
 //
@@ -31,7 +31,7 @@
  * posición, o -1 si en esa página Len no escribió nunca.
  *
  * Una sola definición para las dos preguntas que dependen de ella: qué se
- * deshace (`revertir_ultimo_cambio`) y qué cambió el dueño desde entonces (el
+ * deshace (`undo_last_change`) y qué cambió el dueño desde entonces (el
  * bloque de contexto de `cambios-del-dueno.ts`). Si una mirara la última
  * versión y la otra la última de Len, contestarían sobre dos «antes» distintos.
  */

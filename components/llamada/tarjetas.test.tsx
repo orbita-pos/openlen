@@ -76,7 +76,7 @@ describe("las tarjetas del chat dentro de la llamada", () => {
   it("la de publicar, también", () => {
     const el = pintar({
       projectId: "p1",
-      tarjetas: [{ tipo: "publicar", confirm: { action: "publicar", subdominio: "pizarron", idiomas: [], republicar: false } }],
+      tarjetas: [{ tipo: "publicar", confirm: { action: "publish", subdominio: "pizarron", idiomas: [], republicar: false } }],
     });
     const boton = el.querySelector("button");
     expect(boton).not.toBeNull();

@@ -136,7 +136,7 @@ describe("ninguna superficie manda gusto nuestro", () => {
   // disponible. El prompt del Agente ya no los nombra ni en español
   // (auditoría del 2026-09-29: Claude Code no enumera lo que no existe); que
   // no finja haber activado uno lo sujetan dos puertas de código, el enum de
-  // `activar_modulo` y `INSISTE_SIN_EFECTO`.
+  // `toggle_module` y `INSISTE_SIN_EFECTO`.
   const RETIRADOS = [
     "Members module", "Bookings module", "Orders module",
     "Comments module", "Broadcast module",
@@ -472,7 +472,10 @@ describe("el contrato dicho para cada superficie", () => {
       expect(p).not.toContain("• Tailwind via CDN:");
       expect(p).not.toContain("• Your own CSS goes in a");
       // Y lo que SÍ reciben: dónde viven esas tres cosas, sin ordenar crearlas.
-      expect(p).toContain("The document you edit already has them");
+      // (Desde el 2026-10-06 Len también escribe desde cero —Crear es su
+      // primer mensaje—, así que la frase dice las dos cosas: si ya están, se
+      // añade dentro; si la página es nueva, lleva las tres.)
+      expect(p).toContain("When the document already has them, add what you are missing INSIDE them");
     }
   });
 

@@ -114,7 +114,7 @@ export function vistaParaMedir(
  * ya es útil, y no poder leerla no puede dejar ciego a Len.
  *
  * `deps` es estructural (el `projectFiles` de `AgentDeps`): lo llaman la
- * herramienta (`mirar_pagina`, `usar_pagina`) y la ruta del agente (los ojos y
+ * herramienta (`view_page`, `use_page`) y la ruta del agente (los ojos y
  * la medida que vuelve al modelo).
  */
 export async function vistaConCarpeta(

@@ -110,25 +110,25 @@ describe("transporte de texto en streaming", () => {
     // caracteres: leerlos ingenuamente parte el JSON a la mitad.
     const { client: c } = client(
       chunk({ content: "Voy a activar reservas." })
-      + chunk({ tool_calls: [{ index: 0, id: "call_1", function: { name: "activar_modulo", arguments: '{"mod' } }] })
+      + chunk({ tool_calls: [{ index: 0, id: "call_1", function: { name: "toggle_module", arguments: '{"mod' } }] })
       + chunk({ tool_calls: [{ index: 0, function: { arguments: 'ulo":"bookings"}' } }] }, "tool_calls"),
     );
-    const events = await drain(c.stream({ ...REQUEST, tools: [{ type: "function", function: { name: "activar_modulo" } }] }));
+    const events = await drain(c.stream({ ...REQUEST, tools: [{ type: "function", function: { name: "toggle_module" } }] }));
     // El texto sale EN VIVO y la llamada al cerrar el turno: el Agente narra y
     // luego actúa, que es lo que lo hace sentir vivo.
     expect(events[0]).toEqual({ type: "text_delta", text: "Voy a activar reservas." });
-    expect(events[1]).toEqual({ type: "function_call", name: "activar_modulo", args: { modulo: "bookings" } });
+    expect(events[1]).toEqual({ type: "function_call", name: "toggle_module", args: { modulo: "bookings" } });
     expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "end_turn" } });
   });
 
   it("conserva el orden de varias llamadas en un turno", async () => {
     const { client: c } = client(
-      chunk({ tool_calls: [{ index: 1, id: "b", function: { name: "publicar", arguments: "{}" } }] })
+      chunk({ tool_calls: [{ index: 1, id: "b", function: { name: "publish", arguments: "{}" } }] })
       + chunk({ tool_calls: [{ index: 0, id: "a", function: { name: "leer_estado", arguments: "{}" } }] }, "tool_calls"),
     );
     const events = await drain(c.stream(REQUEST));
     expect(events.filter((e) => e.type === "function_call").map((e) => (e as { name: string }).name))
-      .toEqual(["leer_estado", "publicar"]);
+      .toEqual(["leer_estado", "publish"]);
   });
 
   it("no ejecuta a medias una llamada cuyos argumentos no son JSON", async () => {

@@ -71,8 +71,6 @@ import {
 import { armGoal, disarmGoal, goalActivation } from "@/lib/agent/goal-activation";
 import { crearDiarioDelTurno } from "@/lib/agent/diario-del-turno";
 import { corteDelTurno, crearRegistroDelTurno } from "@/lib/agent/registro-del-turno";
-import { actualizarSuite, marcarRegresiones, migrarSuite, vivas } from "@/lib/agent/pruebas-de-la-pagina";
-import type { FalloSpec } from "@/lib/agent/prueba-js";
 import {
   abrirFilaDelTurno,
   avanceDelTurno,
@@ -368,7 +366,7 @@ async function correrTurno(
   // MEDIDO el 2026-09-03 sobre una plantilla real de 59,6 KB: abrir Chromium y
   // medir cuesta 4,80 s; medir con el navegador YA abierto, 2,16 s. El arranque
   // son ~2,6 s y se pagaba ENTERO en cada mirada — las dos verificaciones del
-  // turno y cada `mirar_pagina` que pida el modelo. En una página de 8,8 KB la
+  // turno y cada `view_page` que pida el modelo. En una página de 8,8 KB la
   // medición baja a 1,63 s, así que el arranque llega a ser MÁS caro que el
   // trabajo.
   //
@@ -391,7 +389,7 @@ async function correrTurno(
   // que vuelve al modelo tras editar (`medirParaElModelo`) y la de los ojos al
   // cerrar. +2,16 s en caliente, por nada. (⚰️ Esas dos se retiraron el
   // 2026-10-06, plans/crear-es-len; el memo lo comparten hoy las miradas que
-  // pide Len, `mirar_pagina` y `usar_pagina`.)
+  // pide Len, `view_page` y `use_page`.)
   //
   // ⚰️ Esto se dejó sin memoizar el 2026-09-05 con un motivo escrito —«miden
   // documentos distintos: los ojos inyectan el script y las fotos por su
@@ -460,11 +458,11 @@ async function correrTurno(
       await debitCredits(uid, centicreditos);
       chargedByTools += centicreditos;
     }),
-    // `mirar_pagina` mide por el mismo navegador que los ojos: es la herramienta
+    // `view_page` mide por el mismo navegador que los ojos: es la herramienta
     // que más veces lo abre en un turno.
     observarPagina: (input: Parameters<typeof observarPagina>[0]) =>
       observarPagina(input, { medir: medirDelTurno }),
-    // `usar_pagina` (H9) abre SU navegador por visita y no el del turno: cada
+    // `use_page` (H9) abre SU navegador por visita y no el del turno: cada
     // visita tiene que empezar limpia (sin lo guardado por la anterior) y lleva
     // su propio preludio.
     usarPagina,
@@ -655,7 +653,7 @@ async function correrTurno(
       publishedAt: project.publishedAt,
       // LA DERIVA, en una lectura aparte: `loadProject` trae el borrador, y
       // las huellas de lo publicado están en otras columnas de la misma fila.
-      // Es una consulta por turno, la misma que ya hacen `activar_modulo` y la
+      // Es una consulta por turno, la misma que ya hacen `toggle_module` y la
       // franja de la Bandeja. Sin ella el ESTADO dice «publicado» de una
       // release que puede ser la de anteayer, y el Agente contesta «ya
       // contesta la IA» sin llamar a una sola herramienta.
@@ -962,20 +960,11 @@ async function correrTurno(
       const registro = crearRegistroDelTurno();
       /** H4 · lo que vio el modelo en este turno (`AgentLoopResult.transcripcion`). */
       let transcripcionDelTurno: Message[] | null = null;
-      // CÓMO QUEDA LA SUITE DE LA PÁGINA al cerrar el turno. Se recoge aquí
-      // —como el registro o `mutoDurable`— porque quien lo sabe es el veredicto
-      // de los ojos, que ocurre dentro del bucle, y quien lo guarda es la
-      // escritura del final. Ver PROMPT-la-suite-de-la-pagina.md.
-      type SuiteDelTurno = {
-        turno?: { codigo: string; fallos: readonly FalloSpec[]; pagina: string | null };
-        retirar: string[];
-        /** Ids de las promesas que este turno llegó a correr, y de las que
-         *  fallaron. Las necesita el contador: sin «cuáles se comprobaron», un
-         *  turno en la home daría por arregladas las del menú. */
-        comprobadas: string[];
-        rotas: string[];
-      };
-      let suiteDelTurno: SuiteDelTurno | null = null;
+      // ⚰️ Aquí se recogía `suiteDelTurno`, CÓMO QUEDABA LA SUITE DE LA PÁGINA
+      // al cerrar el turno. Lo llenaba el veredicto de los ojos (`verifyTurn`),
+      // retirado el 2026-10-06 con las promesas rotas (plans/crear-es-len,
+      // tarea 10); sin él no lo llenaba nadie y la escritura del final era
+      // código muerto. `lib/agent/pruebas-de-la-pagina.ts` sigue.
       // LO QUE COBRÓ EL TURNO (centicréditos) y CUÁNDO EMPEZÓ: el cierre del chat
       // los enseña (plans/new-chat/, decisión de Jesús del 03/10), en el `done` y
       // en la fila para que no desaparezcan al recargar. `null` = aún no se cobró.
@@ -1338,8 +1327,8 @@ async function correrTurno(
           // cerrar, con su tarjeta `verificar_diseno`), los dos tras la palanca
           // `OPENLEN_AGENT_VISION`. Retirados el 2026-10-06 (plans/crear-es-len):
           // DeepSeek no mide nada por su cuenta, y la regla es DeepSeek. Lo que
-          // queda del navegador del turno es lo que pide Len: `mirar_pagina` y
-          // `usar_pagina`, por `medirDelTurno` (arriba).
+          // queda del navegador del turno es lo que pide Len: `view_page` y
+          // `use_page`, por `medirDelTurno` (arriba).
           // Deja pasar el evento TAL CUAL y se queda una copia de lo que hace
           // falta para registrar el turno: no cambia el orden, ni el contenido,
           // ni el momento en que llega al cliente.
@@ -1366,63 +1355,8 @@ async function correrTurno(
         transcripcionDelTurno = result.transcripcion ?? null;
         corte = corteDelTurno({ ...result, mutoDurable: mutoDurable || estadoCambiado() });
 
-        // LA SUITE DE LA PÁGINA, guardada. Dos cosas a la vez y en este orden:
-        // se retiran las promesas que el navegador declaró sin sentido —su
-        // selector ya no señala a nada— y entra la del turno SI nació en verde.
-        // La decisión vive en `actualizarSuite`, no aquí.
-        //
-        // Fail-soft como el borrado del objetivo: el trabajo del turno ya está
-        // hecho y cobrado, y perderlo por no poder guardar una comprobación
-        // sería cambiar un problema pequeño por uno grande.
-        // El `as` rompe el estrechamiento, y hace falta: lo asigna un callback
-        // que TypeScript no sigue, así que aquí lo lee como `null` —y dentro
-        // del `if`, como `never`— por mucho que se anote el tipo.
-        const cambios = suiteDelTurno as SuiteDelTurno | null;
-        if (cambios && (cambios.turno || cambios.retirar.length > 0)) {
-          try {
-            await deps.saveProjectData(projectId, userId, (actual) => {
-              // CONTRA EL DOCUMENTO QUE DE VERDAD QUEDÓ. Se lee de `actual` —lo
-              // que hay en la base ahora— y no del html del turno: entre medias
-              // pudo entrar otra escritura, y limpiar la suite contra un
-              // documento viejo mataría promesas que siguen en pie.
-              //
-              // Vacío ⇒ no se limpia. Una página que no se puede leer no puede
-              // servir de excusa para vaciar nada.
-              const documento = pageSlug
-                ? actual.pages?.[pageSlug]?.html ?? ""
-                : actual.html ?? "";
-              // EL CONTADOR, antes de tocar nada más: marca las que se han
-              // roto, desmarca las que han vuelto, y cuenta las tres cosas. De
-              // este número sale la decisión que el plan dejó abierta — si una
-              // regresión puede llegar a declarar rota la página.
-              // Migrada también aquí: lo que se escribe de vuelta ya va en JS,
-              // y así la migración queda guardada sin un paso aparte.
-              const { suite: marcadas, cuenta } = marcarRegresiones(migrarSuite(actual.pruebas ?? []).suite, {
-                comprobadas: cambios.comprobadas,
-                rotas: cambios.rotas,
-              });
-              if (cuenta.nuevas || cuenta.siguenRotas || cuenta.arregladas) {
-                // Dentro del actualizador: si la escritura se reintentara, esta
-                // línea saldría dos veces. Es barato y se lee igual; sacarla
-                // fuera costaría otro `as` para esquivar el estrechamiento.
-                // eslint-disable-next-line no-console
-                console.log(
-                  `[agent] suite de la pagina: nuevas=${cuenta.nuevas} siguen=${cuenta.siguenRotas} arregladas=${cuenta.arregladas}`,
-                );
-              }
-              const suite = actualizarSuite(marcadas, {
-                ...cambios,
-                ...(documento ? { documento, pagina: pageSlug } : {}),
-              });
-              return suite.length > 0
-                ? { ...actual, pruebas: suite }
-                : (({ pruebas: _sin, ...resto }) => resto)(actual);
-            });
-          } catch (err) {
-            // eslint-disable-next-line no-console
-            console.error("[agent] no se pudo guardar la suite de la pagina: %o", err);
-          }
-        }
+        // ⚰️ Aquí se guardaba la suite de la página (`marcarRegresiones` →
+        // `actualizarSuite`). Ver arriba, donde se recogía: se fue con los ojos.
         // F2-T9 billing ruling (Jesús 2026-07-07): a turn that ended on a
         // terminal error (stopReason error/cancelled/max_tokens, or the
         // maxTurns/maxToolCalls caps) debits 0 credits — the user got no
