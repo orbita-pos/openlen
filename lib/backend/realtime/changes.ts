@@ -21,6 +21,10 @@ interface ProjectChanges {
 
 export class PostgresChangesHub {
   private readonly projects = new Map<string, ProjectChanges>();
+  /** El sondeo que está soltando su fuente, por proyecto: el siguiente no la
+   *  abre hasta que acaba. El slot es UNO por proyecto (`realtime_<ref>`), como
+   *  su ReplicationPoller, registrado uno por tenant. */
+  private readonly stopping = new Map<string, Promise<void>>();
 
   constructor(
     private readonly o: {
@@ -84,7 +88,10 @@ export class PostgresChangesHub {
       for (const u of uuids) state.subs.delete(u);
       if (state.subs.size === 0) {
         this.projects.delete(project.ref);
-        await state.poller.stop().catch((err: unknown) => console.error("[realtime] parar el sondeo", project.ref, err));
+        const stopped = state.poller.stop().catch((err: unknown) => console.error("[realtime] parar el sondeo", project.ref, err));
+        this.stopping.set(project.ref, stopped);
+        await stopped;
+        if (this.stopping.get(project.ref) === stopped) this.stopping.delete(project.ref);
       }
     }
     if (project.db) await deleteSubscriptions(project.db, uuids).catch((err: unknown) => console.error("[realtime] borrar suscripciones", project.ref, err));
@@ -104,7 +111,9 @@ export class PostgresChangesHub {
     );
     const state: ProjectChanges = { poller, subs };
     this.projects.set(project.ref, state);
-    poller.start();
+    const previous = this.stopping.get(project.ref);
+    if (previous) void previous.then(() => poller.start());
+    else poller.start();
     return state;
   }
 
@@ -128,6 +137,6 @@ export class PostgresChangesHub {
   async closeAll(): Promise<void> {
     const all = [...this.projects.values()];
     this.projects.clear();
-    await Promise.all(all.map((s) => s.poller.stop().catch(() => {})));
+    await Promise.all([...all.map((s) => s.poller.stop().catch(() => {})), ...this.stopping.values()]);
   }
 }

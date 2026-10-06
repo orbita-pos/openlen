@@ -18,6 +18,7 @@ import { handleBroadcastApi, isBroadcastApi } from "./broadcast-api";
 import { PostgresChangesHub, type ChangeSourceFactory } from "./changes";
 import { DEFAULT_POLLER_TIMING } from "./poller";
 import { Session, type Channel, type Hub, type RealtimeProject } from "./channel";
+import { MessagesJanitor, type JanitorOptions } from "./janitor";
 import { realtimeLimits, type RealtimeLimits } from "./limits";
 import { PresenceRegistry } from "./presence";
 
@@ -35,6 +36,8 @@ export interface RealtimeServerOptions {
   readonly changeSource?: ChangeSourceFactory;
   /** Su `poll_interval_ms` (100). */
   readonly pollIntervalMs?: number;
+  /** Su Janitor (las particiones viejas de `realtime.messages`); `false`, sin él. */
+  readonly janitor?: JanitorOptions | false;
 }
 
 const WEBSOCKET_PATH = "/realtime/v1/websocket";
@@ -58,6 +61,8 @@ export function createRealtimeServer(o: RealtimeServerOptions): { server: http.S
   const limits: RealtimeLimits = { ...realtimeLimits(), ...o.limits };
   const channelErrorBackoffMs = o.channelErrorBackoffMs ?? 5000;
   const connectErrorBackoffMs = o.connectErrorBackoffMs ?? 2000;
+  const janitor = o.janitor === false ? null : new MessagesJanitor(o.janitor);
+  janitor?.start();
 
   const topics = new Map<string, Set<Channel>>();
   const windows = new Map<string, { second: number; count: number }>();
@@ -200,6 +205,7 @@ export function createRealtimeServer(o: RealtimeServerOptions): { server: http.S
     server,
     async close() {
       for (const s of sessions) s.close(1001, "Server requested disconnect");
+      await janitor?.stop();
       await hub.changes.closeAll();
       await new Promise<void>((r) => wss.close(() => r()));
       await new Promise<void>((r) => server.close(() => r()));

@@ -44,6 +44,11 @@ const clientes: SupabaseClient[] = [];
 // La ida y vuelta de un Postgres por red (PGlite contesta en el mismo proceso):
 // a 0 salvo en la prueba que la necesita.
 let latenciaMs = 0;
+// Un cierre de la fuente que tarda (soltar el slot por red), y cuántas hay
+// abiertas a la vez: el slot del proyecto es UNO (`realtime_<ref>`).
+let cierreLentoMs = 0;
+let vivas = 0;
+let maxVivas = 0;
 
 beforeAll(async () => {
   t = await newRealtimeTestProject(MIGRACION);
@@ -64,12 +69,15 @@ beforeAll(async () => {
       return {
         open: async () => {
           fuentes.abiertas++;
+          maxVivas = Math.max(maxVivas, ++vivas);
           await s.open();
         },
         listChanges: (o) => s.listChanges(o),
         close: async () => {
-          fuentes.cerradas++;
+          if (cierreLentoMs > 0) await espera(cierreLentoMs);
           await s.close();
+          fuentes.cerradas++;
+          vivas--;
         },
       };
     },
@@ -198,6 +206,30 @@ describe("postgres_changes como Supabase Realtime", () => {
     await espera(300);
     expect(vistos).toContainEqual(["1", "1", topic, "phx_reply", expect.objectContaining({ status: "ok" })]);
     expect(await cuenta()).toBe(antes);
+  });
+
+  it("🔴 un sondeo nuevo no abre la fuente hasta que el viejo la suelta (un slot por proyecto)", async () => {
+    for (const c of clientes.splice(0)) await c.removeAllChannels();
+    await espera(400);
+    cierreLentoMs = 300;
+    onTestFinished(() => {
+      cierreLentoMs = 0;
+    });
+    const a = await cliente(U1);
+    await escucha(a, "relevo-1", { event: "INSERT" });
+    maxVivas = vivas;
+    // El último se va (el sondeo empieza a soltar la fuente, despacio) y otro
+    // llega enseguida al mismo proyecto (supabase-js tarda en devolver la baja:
+    // no se la espera).
+    const fuera = a.removeAllChannels();
+    await espera(50);
+    const b = await escucha(await cliente(U2), "relevo-2", { event: "INSERT" });
+    await fuera;
+    expect(maxVivas).toBe(1);
+    await espera(500);
+    await inserta(U2, "tras el relevo");
+    await espera(400);
+    expect(b.vistos.map((v) => v.new.texto)).toEqual(["tras el relevo"]);
   });
 
   it("🔴 al irse el último, el sondeo suelta la fuente y no quedan suscripciones", async () => {

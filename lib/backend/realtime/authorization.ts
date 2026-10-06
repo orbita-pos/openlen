@@ -48,9 +48,12 @@ async function setConnConfig(q: TxQuery, ctx: AuthorizationContext): Promise<voi
 const asOwner = `select set_config('role', 'supabase_realtime_admin', true)`;
 
 /** Su `create_messages_partitions`: de ayer a dentro de tres días. Una vez por
- *  proceso, proyecto y día. */
+ *  proceso, proyecto y día. El proyecto queda apuntado para el Janitor
+ *  (janitor.ts), como su tenant conectado. */
 const partitioned = new Map<string, string>();
+const withMessages = new Map<string, ProjectDatabase>();
 export async function ensureMessagePartitions(db: ProjectDatabase, ref: string, now = new Date()): Promise<void> {
+  withMessages.set(ref, db);
   const today = now.toISOString().slice(0, 10);
   if (partitioned.get(ref) === today) return;
   const day = (offset: number) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + offset)).toISOString().slice(0, 10);
@@ -66,9 +69,20 @@ export async function ensureMessagePartitions(db: ProjectDatabase, ref: string, 
   partitioned.set(ref, today);
 }
 
-/** Para las pruebas. */
-export function forgetMessagePartitions(): void {
-  partitioned.clear();
+/** Los proyectos con canales privados en este proceso (los del Janitor). */
+export function projectsWithMessages(): [ref: string, db: ProjectDatabase][] {
+  return [...withMessages];
+}
+
+/** Uno (su base ya no contesta) o, en las pruebas, todos. */
+export function forgetMessagePartitions(ref?: string): void {
+  if (ref === undefined) {
+    partitioned.clear();
+    withMessages.clear();
+    return;
+  }
+  partitioned.delete(ref);
+  withMessages.delete(ref);
 }
 
 /** Su `get_read_authorizations`: lee broadcast (y presence, si está activo). */

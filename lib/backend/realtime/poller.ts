@@ -198,6 +198,8 @@ export class ProjectPoller {
   ) {}
 
   start(): void {
+    // Parado antes de arrancar (esperaba a que el anterior soltara el slot).
+    if (this.stopped) return;
     this.opened = this.source.open().then(
       () => this.schedule(0),
       (err: unknown) => this.onError(err),

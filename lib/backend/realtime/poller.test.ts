@@ -45,4 +45,26 @@ describe("ProjectPoller", () => {
     expect(pasos.slice(0, 5)).toEqual(["open", "list", "close", "open", "list"]);
     expect(vistas.map((r) => JSON.parse(r.record))).toEqual([{ n: 1 }]);
   });
+
+  it("parado antes de arrancar (esperaba al slot del anterior), no abre la fuente", async () => {
+    const pasos: string[] = [];
+    const fuente: ChangeSource = {
+      open: async () => {
+        pasos.push("open");
+      },
+      close: async () => {
+        pasos.push("close");
+      },
+      listChanges: async () => {
+        pasos.push("list");
+        return { rows: [], slotChangesCount: 0 };
+      },
+    };
+    const p = new ProjectPoller(fuente, () => {}, { pollIntervalMs: 5, maxChanges: 100, maxRecordBytes: 1000 }, () => {});
+    await p.stop();
+    p.start();
+    await espera(50);
+    expect(pasos).not.toContain("open");
+    expect(pasos).not.toContain("list");
+  });
 });
