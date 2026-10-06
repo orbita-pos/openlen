@@ -217,6 +217,14 @@ export class ProjectPoller {
       listed = await this.source.listChanges({ maxChanges: this.timing.maxChanges, maxRecordBytes: this.timing.maxRecordBytes });
     } catch (err) {
       this.onError(err);
+      // Si fue la conexión del slot, el slot temporal se fue con ella: se
+      // cierra y se abre otra vez (su `retry_or_stop` reconecta igual).
+      try {
+        await this.source.close();
+        if (!this.stopped) await this.source.open();
+      } catch (reopen) {
+        this.onError(reopen);
+      }
       return this.schedule(this.timing.pollIntervalMs * IDLE_MULTIPLIER);
     }
     if (this.stopped) return;
