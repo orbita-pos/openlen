@@ -15,6 +15,7 @@ import type { WebSocket } from "ws";
 
 import type { ProjectDatabase } from "../db";
 import { confirmToken, type Confirmed, type RealtimeKeys } from "./auth";
+import { emptyPolicies, ensureMessagePartitions, readAuthorizations, writeAuthorization, type Policies } from "./authorization";
 import { payloadTooLarge, type RealtimeLimits } from "./limits";
 import type { PostgresChangesHub } from "./changes";
 import type { PresenceDiff, PresenceRegistry } from "./presence";
@@ -103,6 +104,8 @@ export class Channel {
   readonly postgresChangesIds = new Map<PostgresChangesParams, number>();
   /** id del filtro → uuid de su fila en `realtime.subscription` (changes.ts). */
   readonly subscriptionUuids = new Map<number, string>();
+  /** Las de un canal privado (authorization.ts); null en uno público. */
+  policies: Policies | null = null;
   private tokenTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
@@ -174,6 +177,8 @@ function toBytes(data: Buffer | ArrayBuffer | Buffer[]): Uint8Array {
 export class Session {
   readonly channels = new Map<string, Channel>();
   private closed = false;
+  /** Lo de un mismo tema, en orden (el proceso de un canal en Phoenix). */
+  private readonly chains = new Map<string, Promise<void>>();
 
   constructor(
     private readonly ws: WebSocket,
@@ -198,6 +203,19 @@ export class Session {
       }
       throw err;
     }
+    // En orden por tema: un join con su espera no frena el latido ni otros
+    // canales, y dos broadcasts del mismo canal no se adelantan.
+    const decoded = frame;
+    const prev = this.chains.get(decoded.topic) ?? Promise.resolve();
+    const next = prev.then(() => this.handle(decoded)).catch((err: unknown) => console.error("[realtime] mensaje", this.project.ref, err));
+    this.chains.set(decoded.topic, next);
+    void next.finally(() => {
+      if (this.chains.get(decoded.topic) === next) this.chains.delete(decoded.topic);
+    });
+    await next;
+  }
+
+  private async handle(frame: PhxMessage | UserBroadcastPush): Promise<void> {
     if ("kind" in frame) return this.userBroadcast(frame);
     const m = frame;
     if (m.topic === "phoenix" && m.event === "heartbeat") return this.reply(m, "ok", {});
@@ -267,13 +285,35 @@ export class Session {
     if (!c.ok) return fail(joinTokenError(c));
 
     const config = parseConfig(params);
+
+    // Su `maybe_assign_policies`: un canal privado entra si RLS le deja leer
+    // broadcast (o presence, si lo activa).
+    let policies: Policies | null = null;
+    if (config.private) {
+      const db = this.project.db;
+      if (!db) return fail("UnableToConnectToProject: Realtime was unable to connect to the project database");
+      const denied = `Unauthorized: You do not have permissions to read from this Channel topic: ${sub}`;
+      try {
+        await ensureMessagePartitions(db, this.project.ref);
+        policies = await readAuthorizations(db, { topic: sub, claims: c.claims }, emptyPolicies(), { presenceEnabled: config.presenceEnabled });
+      } catch (err) {
+        console.error("[realtime] políticas", this.project.ref, err);
+        // Su `:rls_policy_error` (un error de Postgres) es «no»; lo demás, no llegar a la base.
+        const sqlstate = typeof (err as { code?: unknown }).code === "string";
+        return fail(sqlstate ? denied : "UnableToConnectToProject: Realtime was unable to connect to the project database");
+      }
+      if (this.closed) return;
+      if (!policies.broadcast.read && !policies.presence.read) return fail(denied);
+    }
+
     const ch = new Channel(this, m.topic, sub, m.joinRef, config, c, token);
+    ch.policies = policies;
     this.channels.set(m.topic, ch);
     this.hub.add(ch);
     // Su `state`: los filtros de postgres_changes con su id.
     this.reply(m, "ok", { postgres_changes: config.postgresChanges.map((p) => ({ ...p, id: ch.postgresChangesIds.get(p)! })) });
-    // Su `:sync_presence` tras unirse, si lo pidió.
-    if (ch.presenceEnabled) this.push(ch.topic, "presence_state", this.hub.presence.state(ch.key), ch.joinRef);
+    // Su `:sync_presence` tras unirse, si lo pidió (y, si es privado, si puede leerla).
+    if (ch.presenceEnabled && this.canReadPresence(ch)) this.push(ch.topic, "presence_state", this.hub.presence.state(ch.key), ch.joinRef);
     // Su `start_postgres_subscribe`: después de contestar al join.
     if (config.postgresChanges.length > 0) void this.hub.changes.subscribe(ch);
   }
@@ -295,15 +335,20 @@ export class Session {
     void this.hub.changes.unsubscribe(ch);
   }
 
-  /** El diff a todos los del tema (en un canal público todos lo reciben, su
-   *  MessageDispatcher con `presence_read? = true`). */
+  /** Su `can_read_presence?`: en un canal público, siempre. */
+  private canReadPresence(ch: Channel): boolean {
+    return !ch.policies || ch.policies.presence.read === true;
+  }
+
+  /** El diff a todos los del tema que pueden leerla (en un canal público,
+   *  todos: su MessageDispatcher con `presence_read? = true`). */
   private presenceDiff(ch: Channel, diff: PresenceDiff): void {
     const frame = encodeText({ joinRef: null, ref: null, topic: ch.topic, event: "presence_diff", payload: diff });
-    for (const member of this.hub.members(ch.key)) member.session.sendText(frame);
+    for (const member of this.hub.members(ch.key)) if (member.session.canReadPresence(member)) member.session.sendText(frame);
   }
 
   /** Su `PresenceHandler.handle`: `track` y `untrack`, con su límite por cliente. */
-  private presence(ch: Channel, m: PhxMessage): void {
+  private async presence(ch: Channel, m: PhxMessage): Promise<void> {
     const p = isObject(m.payload) ? m.payload : {};
     if (typeof p.event !== "string") return this.reply(m, "ok", {});
     // Su `limit_client_presence_event`: N llamadas por ventana.
@@ -324,6 +369,21 @@ export class Session {
       return this.reply(m, "ok", {});
     }
     if (event !== "track") return this.reply(m, "error", {});
+    // Un canal privado escribe presence si RLS le deja (su `authorize`, la
+    // primera vez; antes, la lectura si no se miró al unirse).
+    if (ch.policies && this.project.db) {
+      if (ch.policies.presence.write === null) {
+        const ctx = { topic: ch.sub, claims: ch.claims };
+        try {
+          if (ch.policies.presence.read === null) ch.policies = await readAuthorizations(this.project.db, ctx, ch.policies, { presenceEnabled: true });
+          ch.policies = await writeAuthorization(this.project.db, ctx, ch.policies, "presence");
+        } catch (err) {
+          console.error("[realtime] políticas de presence", this.project.ref, err);
+          return this.reply(m, "error", {});
+        }
+      }
+      if (ch.policies.presence.write !== true) return this.reply(m, "error", {});
+    }
     const payload = "payload" in p ? p.payload : {};
     if (!isObject(payload)) return this.reply(m, "error", { reason: "Presence track payload must be a map" });
     if (payloadTooLarge(Buffer.byteLength(JSON.stringify(payload)), this.o.limits)) return this.shutdown(ch, "Track message size exceeded");
@@ -336,7 +396,7 @@ export class Session {
     // Un `track` con presence apagado lo enciende y le manda el estado (`:resync`).
     if (!ch.presenceEnabled) {
       ch.presenceEnabled = true;
-      this.push(ch.topic, "presence_state", this.hub.presence.state(ch.key), ch.joinRef);
+      if (this.canReadPresence(ch)) this.push(ch.topic, "presence_state", this.hub.presence.state(ch.key), ch.joinRef);
     }
   }
 
@@ -347,6 +407,26 @@ export class Session {
     const c = await confirmToken(t, this.project);
     if (!this.channels.has(ch.topic)) return;
     if (!c.ok) return this.shutdown(ch, c.reason === "missing_claims" ? "Fields `role` and `exp` are required in JWT" : c.message);
+    // Su `apply_access_token` en un canal privado: las políticas, otra vez con
+    // los claims nuevos (las de escribir, a calcular de nuevo).
+    if (ch.policies && this.project.db) {
+      const previous = ch.policies;
+      const denied = `You do not have permissions to read from this Channel topic: ${ch.sub}`;
+      let next: Policies;
+      try {
+        next = await readAuthorizations(this.project.db, { topic: ch.sub, claims: c.claims }, emptyPolicies(), { presenceEnabled: ch.presenceEnabled });
+      } catch (err) {
+        console.error("[realtime] políticas", this.project.ref, err);
+        return this.shutdown(ch, denied);
+      }
+      if (!this.channels.has(ch.topic)) return;
+      if (!next.broadcast.read && !next.presence.read) return this.shutdown(ch, denied);
+      // Su `check_read_permissions_revoked`.
+      if ((previous.broadcast.read === true && next.broadcast.read === false) || (previous.presence.read === true && next.presence.read === false)) {
+        return this.shutdown(ch, `You no longer have permission to read from this Channel topic: ${ch.sub}`);
+      }
+      ch.policies = next;
+    }
     ch.accessToken = t;
     ch.claims = c.claims;
     ch.scheduleTokenCheck(c.msUntilRecheck);
@@ -360,12 +440,31 @@ export class Session {
   private fanOut(ch: Channel, frame: { text: string } | { binary: Uint8Array }): void {
     for (const member of this.hub.members(ch.key)) {
       if (member === ch && !ch.config.broadcastSelf) continue;
+      // Su MessageDispatcher: en un privado, sólo quien puede leer broadcast.
+      if (member.policies && member.policies.broadcast.read !== true) continue;
       if ("text" in frame) member.session.sendText(frame.text);
       else member.session.sendBinary(frame.binary);
     }
   }
 
-  private textBroadcast(ch: Channel, m: PhxMessage): void {
+  /** Su BroadcastHandler para un canal privado: escribe si RLS le deja (la
+   *  primera vez se mira; luego, guardado hasta un token nuevo). Si no, nada
+   *  —ni la respuesta del `ack`, como el suyo (`{:noreply}`)—. */
+  private async canBroadcast(ch: Channel): Promise<boolean> {
+    if (!ch.policies) return true;
+    if (ch.policies.broadcast.write === null && this.project.db) {
+      try {
+        ch.policies = await writeAuthorization(this.project.db, { topic: ch.sub, claims: ch.claims }, ch.policies, "broadcast");
+      } catch (err) {
+        console.error("[realtime] políticas de broadcast", this.project.ref, err);
+        return false;
+      }
+    }
+    return ch.policies.broadcast.write === true;
+  }
+
+  private async textBroadcast(ch: Channel, m: PhxMessage): Promise<void> {
+    if (!(await this.canBroadcast(ch))) return;
     const size = Buffer.byteLength(JSON.stringify(m.payload ?? null));
     if (payloadTooLarge(size, this.o.limits)) {
       if (ch.config.broadcastAck) this.reply(m, "error", "payload_size_exceeded");
@@ -375,9 +474,10 @@ export class Session {
     if (ch.config.broadcastAck) this.reply(m, "ok", {});
   }
 
-  private userBroadcast(b: UserBroadcastPush): void {
+  private async userBroadcast(b: UserBroadcastPush): Promise<void> {
     const ch = this.channels.get(b.topic);
     if (!ch) return this.reply(b, "error", { reason: "unmatched topic" });
+    if (!(await this.canBroadcast(ch))) return;
     if (payloadTooLarge(b.payload.length, this.o.limits)) {
       if (ch.config.broadcastAck) this.reply(b, "error", "payload_size_exceeded");
       return;
