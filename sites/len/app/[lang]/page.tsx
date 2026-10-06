@@ -158,7 +158,7 @@ export default async function Portada({ params }: { params: Promise<{ lang: stri
                 <span className="k">{x.k}</span>
                 <h3>{x.t}</h3>
                 <p>{x.p}</p>
-                <EstadoPrincipio estado={x.estado as "vigilado" | "construccion" | "medicion"}>{x.chip}</EstadoPrincipio>
+                <EstadoPrincipio estado={x.estado as "vigilado" | "construccion" | "medicion" | "decision" | "retirado"}>{x.chip}</EstadoPrincipio>
               </div>
             ))}
           </div>

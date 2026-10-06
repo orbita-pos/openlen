@@ -24,17 +24,13 @@ Y hay una medida: el caso que pide el mismo cambio en cuatro páginas se cerró 
 
 <section className="principio">
 ## Una condición que otro confirma, con tope de gasto
-<EstadoPrincipio estado="medicion">Construido, en medición</EstadoPrincipio>
+<EstadoPrincipio estado="retirado">Retirado el 30 de septiembre</EstadoPrincipio>
 
-**Qué promete.** El trabajo no termina porque Len lo diga: termina cuando una condición que tú aprobaste la comprueba un evaluador aparte. Y con tope: ante la duda, para. <Fuente ruta="lib/agent/objetivo/evaluar-condicion.ts" />
+**Qué prometía.** El trabajo no terminaba porque Len lo dijera: terminaba cuando una condición que tú aprobabas la comprobaba un evaluador aparte. Y con tope de gasto: ante la duda, paraba.
 
-**Por qué.** Un agente que decide solo cuándo ha terminado, y además gasta mientras decide, es un agente que puede gastarte el presupuesto persiguiendo su propia idea de «listo».
+**Por qué se retiró.** Nadie lo usaba. Len no lo propuso <Cifra valor="ni una vez en 1.963 turnos" commit="1432d1a9">grabados</Cifra>, y ningún proyecto en producción tenía una condición puesta. Era maquinaria con su tarjeta, su evaluador y sus pruebas que nunca se disparaba, y la quitamos entera.
 
-**Cómo lo comprobamos, y qué salió.** Durante meses la única puerta al objetivo fue que Len lo propusiera, así que «cuántas veces propone» era la medida de si la maquinaria se podía alcanzar siquiera. Medida donde importa —las corridas en las que el encargo NO cabía en un turno—, la respuesta fue <Cifra valor="0 propuestas en 11 corridas" commit="10ee5b49" />.
-
-La primera vez que lo medimos salió <Cifra valor="0 de 7" commit="3f05897c" />, y ahí hubo un matiz que nos costó cuatro equivocaciones aprender: en cinco de aquellas siete corridas **no proponer era lo correcto**, porque el encargo cabía en un turno y la propia herramienta dice que sólo se propone para trabajo de varios turnos. Un caso anterior suspendía a Len por obedecer. <Fuente commit="d8f07f46" /> Por eso se volvió a medir sólo donde el encargo no cabía.
-
-Y por eso, desde el 8 de septiembre, ya no es la única puerta: el dueño escribe la condición y la pone él, sin esperar a que Len la proponga. <Fuente commit="10ee5b49" /> Hasta esa tarde esta sección decía que proponer era la única vía —lo era cuando se midió, y dejó de serlo el mismo día—. La cifra sigue diciendo algo, pero ya no dice si la función se alcanza: dice que el modelo sigue sin usarla.
+**Lo que hay hoy.** Para el trabajo largo, Len 2.5 tiene el encargo: le das un objetivo y trabaja en rondas hasta darlo por terminado. Lo decide Len, no un evaluador aparte. A cambio, cada ronda se ve en el chat, la paras cuando quieras, y para sola a las 256 rondas o cuando se acaba tu saldo. <Fuente commit="ed4dfb09" />
 </section>
 
 <section className="principio">

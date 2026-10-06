@@ -24,17 +24,13 @@ And there is a measurement: the case that asks for the same change on four pages
 
 <section className="principio">
 ## A condition someone else confirms, with a spending cap
-<EstadoPrincipio estado="medicion">Built, being measured</EstadoPrincipio>
+<EstadoPrincipio estado="retirado">Retired on September 30</EstadoPrincipio>
 
-**What it promises.** The work isn’t done because Len says so: it’s done when a condition you approved is checked by a separate evaluator. And with a cap: when in doubt, it stops. <Fuente ruta="lib/agent/objetivo/evaluar-condicion.ts" />
+**What it promised.** The work didn’t end because Len said so: it ended when a separate evaluator checked a condition you had approved. And with a spending cap: when in doubt, it stopped.
 
-**Why.** An agent that decides on its own when it has finished — and spends money while deciding — is an agent that can burn your budget chasing its own idea of “done”.
+**Why we retired it.** Nobody used it. Len didn’t propose it <Cifra valor="once in 1,963 turns" commit="1432d1a9">we recorded</Cifra>, and no project in production had a condition set. It was machinery —a card, an evaluator, tests— that never fired, and we removed all of it.
 
-**How we check it, and what came out.** For months the only gate to a goal was Len proposing one, so “how often does it propose” was the measure of whether that machinery was reachable at all. Measured where it matters —the runs where the job did NOT fit in a single turn— the answer was <Cifra valor="0 proposals across 11 runs" commit="10ee5b49" />.
-
-The first time we measured it the answer was <Cifra valor="0 of 7" commit="3f05897c" />, and there was a nuance it took us four mistakes to learn: in five of those seven runs **not proposing was the right answer**, because the job fitted in a single turn and the tool itself says to propose only for multi-turn work. An earlier test case failed Len for obeying. <Fuente commit="d8f07f46" /> That is why we measured again, only where the job didn’t fit.
-
-And that is why, since 8 September, it is no longer the only gate: the owner writes the condition and sets it directly, without waiting for Len to propose it. <Fuente commit="10ee5b49" /> Until that afternoon this section said proposing was the only route — true when we measured it, false by the end of the same day. The number still says something, but it no longer says whether the feature is reachable: it says the model still doesn’t use it.
+**What there is today.** For long work, Len 2.5 has the long job: you give it a goal and it works in rounds until it calls it done. Len decides that, not a separate evaluator. In exchange, every round shows up in the chat, you can stop it whenever you want, and it stops on its own at 256 rounds or when your balance runs out. <Fuente commit="ed4dfb09" />
 </section>
 
 <section className="principio">

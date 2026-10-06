@@ -65,6 +65,7 @@ const COLOR = {
   construccion: "#c9a227",
   medicion: "#c9a227",
   decision: "#6a645a",
+  retirado: "#9a9284",
 } as const;
 
 export function EstadoPrincipio({ estado, children }: { estado: keyof typeof COLOR; children: ReactNode }) {
