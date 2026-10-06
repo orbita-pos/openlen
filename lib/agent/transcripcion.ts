@@ -30,7 +30,7 @@ import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "@/lib/agent/terminal/cambios-del-comando";
-import { currentToolCall, currentToolName } from "@/lib/agent/ask-user-question";
+import { currentToolCall, currentToolName } from "@/lib/agent/tool-renames";
 import type { GoalSnapshot } from "@/lib/agent/goal";
 import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 

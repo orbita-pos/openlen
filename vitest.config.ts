@@ -384,6 +384,7 @@ export default defineConfig({
       // Los ojos del arnés de evals: sin esto vuelve a mirar sin `spec` ni
       // `guardadas`. LISTA BLANCA.
       "lib/agent/catalog.test.ts",
+      "lib/agent/tool-renames.test.ts",
       // Len 2.0: el sitio como ficheros, con el contrato de Read/Edit/Write/
       // Grep/Glob de Claude Code (plans/len-2/ficheros-plan.md). Piezas puras.
       "lib/agent/ficheros/**/*.test.ts",

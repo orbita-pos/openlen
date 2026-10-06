@@ -10,7 +10,7 @@
 //
 // Puro: ni red, ni base, ni bindings nativos.
 
-import { currentToolName } from "@/lib/agent/ask-user-question";
+import { currentToolName } from "@/lib/agent/tool-renames";
 
 /** Un mensaje del historial tal y como lo acepta el servidor. */
 export interface MensajeSaneado {
