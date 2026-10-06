@@ -98,8 +98,9 @@ con el mismo entorno, o por su causa):
   `pendiente-local.md` (Parte A: tareas 3 y 9; Parte B: un turno real con las
   herramientas nuevas, conversaciones viejas, llamada y móvil, disparos de
   Len-Bench).
-- Tarea 11 (medición pagada) y Tarea 12 (borrar Crear): sin empezar, como se
-  pidió.
+- Tarea 11 (medición pagada): **cancelada por Jesús el 06/10**, porque el
+  criterio no servía (ver `medicion/README.md`). No se corrió ni se gastó nada.
+- Tarea 12 (borrar Crear): sin empezar.
 - La suite de la página (`data.pruebas`) se quedó sin escritor ni lector tras
   la Tarea 10. Decidido el 06/10: se deja como está por ahora (ver
   `pendiente-local.md`).

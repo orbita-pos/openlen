@@ -40,7 +40,7 @@ navegador, sesión o Fireworks de verdad:
 | B2 | Abrir un proyecto con turnos guardados ANTES del 06/10 (que llamaron a `mirar_pagina`, `ver_visitas`…) y pedirle algo a Len: el turno sigue sin error (el historial se lee con los nombres de hoy). | Base de producción (o una copia) con turnos viejos. |
 | B3 | En ese mismo proyecto, las tarjetas viejas del chat se pintan con su etiqueta («Mirando tus visitas», «Comprobando la página»…), nunca con el nombre crudo. Y la cara del chat cambia de estado igual que antes. | Navegador + sesión. |
 | B3 | La llamada (`/llamada`) y la app móvil: la frase de avance mientras Len trabaja, y la tarjeta «Publicar» cuando Len la deja (ahora llega con `action: "publish"`). | Micrófono / dispositivo + sesión. |
-| B4 | Las pruebas de disparo de Len-Bench (`npm run bench:len:disparos -- --yes`) **no se corrieron**: gastan dinero (un turno por consulta). Las carpetas se renombraron a `get_visits/`, `list_form_submissions/` y `list_messages/`, así que `--solo=` lleva ya los nombres nuevos. | Gasto real; fuera del presupuesto de esta sesión y de lo pedido (la medición es la Tarea 11). |
+| B4 | Las pruebas de disparo de Len-Bench (`npm run bench:len:disparos -- --yes`) **no se corrieron**: gastan dinero (un turno por consulta). Las carpetas se renombraron a `get_visits/`, `list_form_submissions/` y `list_messages/`, así que `--solo=` lleva ya los nombres nuevos. | Gasto real; fuera del presupuesto de esta sesión y de lo pedido. |
 
 ### Cosas que mirar
 
