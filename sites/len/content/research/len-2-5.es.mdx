@@ -16,7 +16,7 @@ export const meta = {
     { id: "por-dentro", texto: "Por dentro" },
     { id: "como", texto: "Cómo lo probamos" },
     { id: "al-desplegar", texto: "Lo que salió mal al desplegar" },
-    { id: "sin-tabla", texto: "Por qué no hay tabla" },
+    { id: "lo-medido", texto: "Lo que medimos" },
     { id: "abierto", texto: "Lo que sigue abierto" },
   ],
 }
@@ -75,10 +75,26 @@ Eran dos fallos, uno detrás de otro. El primero —un secreto que el servidor g
 
 Lo que cambiamos, además de los dos arreglos: antes de cada despliegue ensayamos ahora una compilación de producción en las mismas condiciones que el servidor, con los recorridos enteros, y un despliegue lleva todo lo que esté listo en vez de uno por arreglo.
 
-<h2 id="sin-tabla">Por qué no hay tabla</h2>
+<h2 id="lo-medido">Lo que medimos</h2>
 
-Al publicar el 2.0 escribimos que cada versión vendría con su tabla frente a la anterior. Esta no la trae, y lo decimos aquí: el 2.5 no se midió con la batería frente al 2.0. Casi todo lo nuevo son cosas que esa batería no pide —preguntar con opciones, planear, encargos de varias rondas, una base de datos—, y medirlas pide encargos nuevos. Preferimos llevarlo a producción probado con turnos reales y dejar la comparación pendiente, a la vista.
+Corrimos los 31 encargos de Len-Bench con la base de 2.5 —el código del 2 de octubre, con la terminal— y los comparamos, encargo por encargo, con los del 2.0: los mismos encargos, las mismas pruebas sobre la página publicada y el mismo modelo. <Fuente ruta="lib/agent/evals/resultados/2026-10-02-len-2.0-vs-2.5-base/README.md" commit="e4058f56" />
+
+<Figura pie={<>Len 2.0: tres corridas por encargo, el 27 de septiembre de 2026. Base de 2.5: una corrida por encargo, el 2 de octubre. El ± es el intervalo del 95 %, emparejado por encargo. <Fuente commit="e4058f56" /></>}>
+<table>
+  <thead>
+    <tr><th></th><th>Len 2.0</th><th>Base de 2.5</th><th>Diferencia</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Capacidad (12 encargos)</td><td className="n">83,3 %</td><td className="n">91,7 %</td><td>+8,3 ± 27,3</td></tr>
+    <tr><td>Regresión (19)</td><td className="n">91,2 %</td><td className="n">84,2 %</td><td>−7,0 ± 19,7</td></tr>
+    <tr><td>Tiempo por encargo</td><td className="n">232 s</td><td className="n">199 s</td><td>más rápido</td></tr>
+    <tr><td>Coste por encargo</td><td className="n">$0,028</td><td className="n">$0,028</td><td>igual</td></tr>
+  </tbody>
+</table>
+</Figura>
+
+Construyendo y editando páginas queda a la par del 2.0, y lo hace más rápido: <Cifra valor="232 → 199 s" commit="e4058f56">por encargo, al mismo coste</Cifra>. En regresión cayeron tres encargos, cada uno con su motivo en los resultados; en uno, Len dejó un botón de WhatsApp llevando a una sección de la propia página, y así lo razonó. Lo demás de 2.5 —preguntar con opciones, planear, encargos de varias rondas, una base de datos— es lo que esta batería no pide.
 
 <Abierto id="abierto" titulo="Lo que sigue abierto">
-Cuatro cosas. **La tabla frente al 2.0**, por lo que contamos arriba. **Un encargo no tiene un tope de créditos propio**: para cuando Len lo da por terminado, cuando lo pausas, a las 256 rondas o cuando se acaba tu saldo, y cada ronda se cobra como cualquier trabajo. **La terminal interpreta, no ejecuta**: no instala paquetes ni corre programas, y correr las pruebas de la carpeta con un corredor de pruebas de verdad espera a una máquina aislada que todavía no tenemos. Y **en la terminal, un comando que termina con un código distinto de cero sale en rojo** aunque no sea una avería —un `grep` que no encuentra nada en medio de una cadena—, y eso asusta más de lo que debería. <Fuente ruta="lib/agent/terminal/codigo-de-salida.ts" commit="a820faa6" />
+Tres cosas. **Un encargo no tiene un tope de créditos propio**: para cuando Len lo da por terminado, cuando lo pausas, a las 256 rondas o cuando se acaba tu saldo, y cada ronda se cobra como cualquier trabajo. **La terminal interpreta, no ejecuta**: no instala paquetes ni corre programas, y correr las pruebas de la carpeta con un corredor de pruebas de verdad espera a una máquina aislada que todavía no tenemos. Y **en la terminal, un comando que termina con un código distinto de cero sale en rojo** aunque no sea una avería —un `grep` que no encuentra nada en medio de una cadena—, y eso asusta más de lo que debería. <Fuente ruta="lib/agent/terminal/codigo-de-salida.ts" commit="a820faa6" />
 </Abierto>

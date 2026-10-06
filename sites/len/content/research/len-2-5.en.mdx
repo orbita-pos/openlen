@@ -16,7 +16,7 @@ export const meta = {
     { id: "under-the-hood", texto: "Under the hood" },
     { id: "how", texto: "How we tested it" },
     { id: "shipping", texto: "What went wrong when we shipped" },
-    { id: "no-table", texto: "Why there is no table" },
+    { id: "measured", texto: "What we measured" },
     { id: "open", texto: "What is still open" },
   ],
 }
@@ -75,10 +75,26 @@ It was two bugs, one behind the other. The first —a secret the server keeps un
 
 What we changed, besides the two fixes: before every release we now rehearse a production build under the same conditions as the server, with the full flows, and a release carries everything that's ready instead of one fix at a time.
 
-<h2 id="no-table">Why there is no table</h2>
+<h2 id="measured">What we measured</h2>
 
-When we published 2.0, we wrote that every version would come with its table against the previous one. This one doesn't, and we're saying so here: 2.5 was not measured against 2.0 with the test battery. Almost everything new is something that battery doesn't ask for —asking with options, planning, multi-round jobs, a database— and measuring it takes new tasks. We chose to ship it tested with real turns and leave the comparison pending, in plain sight.
+We ran Len-Bench's 31 tasks on the base of 2.5 —the code of October 2, with the terminal— and compared them, task by task, with 2.0's: same tasks, same tests on the published page, same model. <Fuente ruta="lib/agent/evals/resultados/2026-10-02-len-2.0-vs-2.5-base/README.md" commit="e4058f56" />
+
+<Figura pie={<>Len 2.0: three runs per task, September 27, 2026. Base of 2.5: one run per task, October 2. The ± is the 95 % interval, paired by task. <Fuente commit="e4058f56" /></>}>
+<table>
+  <thead>
+    <tr><th></th><th>Len 2.0</th><th>Base of 2.5</th><th>Difference</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Capability (12 tasks)</td><td className="n">83.3 %</td><td className="n">91.7 %</td><td>+8.3 ± 27.3</td></tr>
+    <tr><td>Regression (19)</td><td className="n">91.2 %</td><td className="n">84.2 %</td><td>−7.0 ± 19.7</td></tr>
+    <tr><td>Time per task</td><td className="n">232 s</td><td className="n">199 s</td><td>faster</td></tr>
+    <tr><td>Cost per task</td><td className="n">$0.028</td><td className="n">$0.028</td><td>same</td></tr>
+  </tbody>
+</table>
+</Figura>
+
+At building and editing pages it is on par with 2.0, and it gets there faster: <Cifra valor="232 → 199 s" commit="e4058f56">per task, at the same cost</Cifra>. Three regression tasks dropped, each with its reason in the results; in one, Len left a WhatsApp button pointing to a section of the page itself, and said as much in its reasoning. The rest of 2.5 —asking with options, planning, multi-round jobs, a database— is what this battery doesn't ask for.
 
 <Abierto id="open" titulo="What is still open">
-Four things. **The table against 2.0**, for the reason above. **A long job has no credit cap of its own**: it stops when Len calls it done, when you pause it, at 256 rounds or when your balance runs out, and each round is charged like any other work. **The terminal interprets, it doesn't execute**: it installs no packages and runs no programs, and running the folder's tests with a real test runner waits on an isolated machine we don't have yet. And **in the terminal, a command that ends with a non-zero code shows up in red** even when nothing broke —a `grep` that finds nothing in the middle of a chain—, which looks scarier than it should. <Fuente ruta="lib/agent/terminal/codigo-de-salida.ts" commit="a820faa6" />
+Three things. **A long job has no credit cap of its own**: it stops when Len calls it done, when you pause it, at 256 rounds or when your balance runs out, and each round is charged like any other work. **The terminal interprets, it doesn't execute**: it installs no packages and runs no programs, and running the folder's tests with a real test runner waits on an isolated machine we don't have yet. And **in the terminal, a command that ends with a non-zero code shows up in red** even when nothing broke —a `grep` that finds nothing in the middle of a chain—, which looks scarier than it should. <Fuente ruta="lib/agent/terminal/codigo-de-salida.ts" commit="a820faa6" />
 </Abierto>

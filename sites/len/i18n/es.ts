@@ -92,23 +92,23 @@ export const es = {
       ],
     },
     cifras: {
-      antetitulo: "La última medición: Len 1.5 → Len 2.0",
-      titulo: "Qué cambió desde el 1.5, medido.",
+      antetitulo: "Len 2.0 → Len 2.5",
+      titulo: "Qué cambió desde el 2.0, medido.",
       leer: "Cómo lo medimos",
       items: [
         {
-          valor: "50 → 83 %",
-          texto: "en los encargos que el 1.5 no hacía bien: 12 encargos, tres veces cada uno, las dos versiones la misma noche y con el mismo modelo",
-          commit: "4bb70542",
+          valor: "232 → 199 s",
+          texto: "por encargo, en los mismos 31 encargos de nuestro banco de pruebas y al mismo coste",
+          commit: "e4058f56",
         },
         {
-          valor: "82 → 96 %",
-          texto: "en 15 encargos sellados, que nadie vio mientras se construía el 2.0, calificados con el mismo criterio en las dos versiones",
-          commit: "4bb70542",
+          valor: "2,8 → 1,9",
+          texto: "turnos por encargo: termina con menos idas y vueltas contigo",
+          commit: "e4058f56",
         },
       ],
-      nota: "Con 12 y 15 encargos el margen es ancho: ±39 y ±17 puntos. En los 19 que el 1.5 ya hacía bien, el 2.0 no empeora (98 %, contando arreglos que no volvimos a medir) y cuesta menos por encargo. Y un fallo que le queda: a veces rellena con reseñas inventadas cuando le falta un dato.",
-      notaCommit: "4bb70542",
+      nota: "Construyendo y editando páginas queda a la par del 2.0; la tabla completa, encargo por encargo, está en el artículo. Lo nuevo de 2.5 —preguntas con opciones, planes, encargos largos y la base de datos— es lo que ese banco no mide.",
+      notaCommit: "e4058f56",
     },
     tarjeta: {
       antetitulo: "Len 2.5 · octubre 2026",

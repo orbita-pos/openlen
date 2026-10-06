@@ -94,23 +94,23 @@ export const en: Diccionario = {
       ],
     },
     cifras: {
-      antetitulo: "Our latest measurement: Len 1.5 → Len 2.0",
-      titulo: "What changed since 1.5, measured.",
+      antetitulo: "Len 2.0 → Len 2.5",
+      titulo: "What changed since 2.0, measured.",
       leer: "How we measured it",
       items: [
         {
-          valor: "50 → 83 %",
-          texto: "on the requests 1.5 didn’t get right: 12 requests, three runs each, both versions on the same night and with the same model",
-          commit: "4bb70542",
+          valor: "232 → 199 s",
+          texto: "per task, on the same 31 tasks from our test bench and at the same cost",
+          commit: "e4058f56",
         },
         {
-          valor: "82 → 96 %",
-          texto: "on 15 sealed requests nobody saw while 2.0 was being built, graded with the same criteria for both versions",
-          commit: "4bb70542",
+          valor: "2.8 → 1.9",
+          texto: "turns per task: it gets there with less back-and-forth with you",
+          commit: "e4058f56",
         },
       ],
-      nota: "With 12 and 15 requests the margin is wide: ±39 and ±17 points. On the 19 that 1.5 already got right, 2.0 doesn’t get worse (98 %, counting fixes we didn’t measure again) and it costs less per request. And one failure it still has: when a detail is missing, it sometimes fills in with made-up reviews.",
-      notaCommit: "4bb70542",
+      nota: "At building and editing pages it is on par with 2.0; the full table, task by task, is in the article. What’s new in 2.5 —questions with options, plans, long jobs and the database— is what that bench doesn’t measure.",
+      notaCommit: "e4058f56",
     },
     tarjeta: {
       antetitulo: "Len 2.5 · October 2026",

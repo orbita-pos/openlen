@@ -73,7 +73,7 @@ export default async function Portada({ params }: { params: Promise<{ lang: stri
               <div className="eyebrow">{p.cifras.antetitulo}</div>
               <h2>{p.cifras.titulo}</h2>
             </div>
-            <Link className="btn ghost" href={`/${lang}/research/len-1-5/`}>
+            <Link className="btn ghost" href={`/${lang}/research/len-2-5/`}>
               {p.cifras.leer}
             </Link>
           </div>
