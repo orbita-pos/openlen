@@ -14,6 +14,7 @@ import type { Duplex } from "node:stream";
 import { WebSocketServer } from "ws";
 
 import { authorizeSocket } from "./auth";
+import { handleBroadcastApi, isBroadcastApi } from "./broadcast-api";
 import { PostgresChangesHub, type ChangeSourceFactory } from "./changes";
 import { DEFAULT_POLLER_TIMING } from "./poller";
 import { Session, type Channel, type Hub, type RealtimeProject } from "./channel";
@@ -59,7 +60,20 @@ export function createRealtimeServer(o: RealtimeServerOptions): { server: http.S
   const connectErrorBackoffMs = o.connectErrorBackoffMs ?? 2000;
 
   const topics = new Map<string, Set<Channel>>();
+  const windows = new Map<string, { second: number; count: number }>();
+  const sessionsByProject = new Map<string, Set<Session>>();
   const hub: Hub = {
+    hit(ref, kind, n = 1) {
+      const key = `${ref}:${kind}`;
+      const second = Math.floor(Date.now() / 1000);
+      const w = windows.get(key);
+      if (!w || w.second !== second) {
+        windows.set(key, { second, count: n });
+        return n;
+      }
+      w.count += n;
+      return w.count;
+    },
     add(ch) {
       let set = topics.get(ch.key);
       if (!set) topics.set(ch.key, (set = new Set()));
@@ -95,12 +109,38 @@ export function createRealtimeServer(o: RealtimeServerOptions): { server: http.S
     const token = (typeof header === "string" ? header : null) ?? url.searchParams.get("apikey");
     const auth = await authorizeSocket(token, project);
     if (!auth.ok) return fail(auth.status, auth.error);
+    // Su `TenantRateLimiters.check_tenant`: sockets a la vez por proyecto.
+    if ((sessionsByProject.get(project.ref)?.size ?? 0) >= limits.maxConcurrentUsers) return fail(429, "Too many connected users");
     return { ok: true, project, token: token! };
+  }
+
+  /** Su `:open_cors`: la página llama desde otro origen. */
+  function cors(req: http.IncomingMessage, res: http.ServerResponse): void {
+    res.setHeader("access-control-allow-origin", req.headers.origin ?? "*");
+    res.setHeader("vary", "Origin");
   }
 
   const server = http.createServer((req, res) => {
     void (async () => {
       const url = new URL(req.url ?? "/", "http://realtime");
+      if (isBroadcastApi(url.pathname)) {
+        cors(req, res);
+        if (req.method === "OPTIONS") {
+          res.writeHead(204, {
+            "access-control-allow-methods": "POST, OPTIONS",
+            "access-control-allow-headers": req.headers["access-control-request-headers"] ?? "authorization, apikey, content-type, x-client-info",
+            "access-control-max-age": "86400",
+          });
+          res.end();
+          return;
+        }
+        const project = await o.resolveProject(req.headers.host ?? "");
+        if (!project) {
+          res.writeHead(404, { "content-type": "application/json" }).end(JSON.stringify({ message: "Tenant not found" }));
+          return;
+        }
+        return handleBroadcastApi(req, res, url, project, hub, limits);
+      }
       if (url.pathname === WEBSOCKET_PATH) {
         // La misma puerta que el apretón, contestada como HTTP.
         const g = await gate(req, url);
@@ -125,6 +165,9 @@ export function createRealtimeServer(o: RealtimeServerOptions): { server: http.S
       wss.handleUpgrade(req, socket, head, (ws) => {
         const session = new Session(ws, g.project, g.token, hub, { channelErrorBackoffMs, limits });
         sessions.add(session);
+        let mine = sessionsByProject.get(g.project.ref);
+        if (!mine) sessionsByProject.set(g.project.ref, (mine = new Set()));
+        mine.add(session);
         let alive = true;
         const ping = setInterval(() => {
           if (!alive) return ws.terminate();
@@ -144,6 +187,8 @@ export function createRealtimeServer(o: RealtimeServerOptions): { server: http.S
         ws.on("close", () => {
           clearInterval(ping);
           sessions.delete(session);
+          mine.delete(session);
+          if (mine.size === 0 && sessionsByProject.get(g.project.ref) === mine) sessionsByProject.delete(g.project.ref);
           session.closedByPeer();
         });
         ws.on("error", () => {});

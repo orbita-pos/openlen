@@ -36,6 +36,9 @@ export interface Hub {
   members(key: string): Iterable<Channel>;
   readonly presence: PresenceRegistry<Channel>;
   readonly changes: PostgresChangesHub;
+  /** Su RateCounter por proyecto: suma `n` en la ventana de este segundo y
+   *  devuelve el total de la ventana. */
+  hit(ref: string, kind: "events" | "joins", n?: number): number;
 }
 
 export interface SessionOptions {
@@ -277,6 +280,13 @@ export class Session {
     const previous = this.channels.get(m.topic);
     if (previous) this.removeChannel(previous);
 
+    // Sus `limit_joins` y `limit_channels`.
+    if (this.hub.hit(this.project.ref, "joins") > this.o.limits.maxJoinsPerSecond) {
+      this.reply(m, "error", { reason: "ClientJoinRateLimitReached: Too many joins per second" });
+      return this.close(1008, "Too many joins per second");
+    }
+    if (this.channels.size >= this.o.limits.maxChannelsPerClient) return fail("ChannelRateLimitReached: Too many channels");
+
     // Su `assign_access_token`: un `sb_…` en el join no cuenta, manda el del socket.
     const asked = typeof params.access_token === "string" ? params.access_token : typeof params.user_token === "string" ? params.user_token : null;
     const token = asked && !asked.startsWith("sb_") ? asked : this.socketToken;
@@ -463,7 +473,16 @@ export class Session {
     return ch.policies.broadcast.write === true;
   }
 
+  /** Su `:check_rate_counter`: pasado el tope de eventos por segundo del
+   *  proyecto, el canal se cierra con su mensaje. */
+  private overEventRate(ch: Channel): boolean {
+    if (this.hub.hit(this.project.ref, "events") <= this.o.limits.maxEventsPerSecond) return false;
+    this.shutdown(ch, "Too many messages per second");
+    return true;
+  }
+
   private async textBroadcast(ch: Channel, m: PhxMessage): Promise<void> {
+    if (this.overEventRate(ch)) return;
     if (!(await this.canBroadcast(ch))) return;
     const size = Buffer.byteLength(JSON.stringify(m.payload ?? null));
     if (payloadTooLarge(size, this.o.limits)) {
@@ -477,6 +496,7 @@ export class Session {
   private async userBroadcast(b: UserBroadcastPush): Promise<void> {
     const ch = this.channels.get(b.topic);
     if (!ch) return this.reply(b, "error", { reason: "unmatched topic" });
+    if (this.overEventRate(ch)) return;
     if (!(await this.canBroadcast(ch))) return;
     if (payloadTooLarge(b.payload.length, this.o.limits)) {
       if (ch.config.broadcastAck) this.reply(b, "error", "payload_size_exceeded");
