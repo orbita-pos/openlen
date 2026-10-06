@@ -30,7 +30,7 @@ describe("serializador V2 (texto)", () => {
   it("lee lo que manda el cliente al unirse", () => {
     const raw = codificaCliente({ join_ref: "1", ref: "1", topic: "realtime:sala", event: "phx_join", payload: { config: { broadcast: { self: false } } } });
     expect(typeof raw).toBe("string");
-    expect(decodeFrame(raw)).toEqual({ joinRef: "1", ref: "1", topic: "realtime:sala", event: "phx_join", payload: { config: { broadcast: { self: false } } } });
+    expect(decodeFrame(raw as string)).toEqual({ joinRef: "1", ref: "1", topic: "realtime:sala", event: "phx_join", payload: { config: { broadcast: { self: false } } } });
   });
 
   it("lo que escribimos, el cliente lo lee igual", () => {
@@ -73,7 +73,7 @@ describe("broadcast de usuario (binario)", () => {
 
     const bin = encodeUserBroadcast({ topic: "realtime:sala", event: "bin", payload: new Uint8Array([9, 8]), json: false });
     const b = decodificaCliente(bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength) as ArrayBuffer);
-    expect([...new Uint8Array(b.payload && (b.payload as { payload: ArrayBuffer }).payload)]).toEqual([9, 8]);
+    expect([...new Uint8Array((b.payload as { payload: ArrayBuffer }).payload)]).toEqual([9, 8]);
   });
 
   it("un tema de más de 255 bytes no se puede escribir (su byte_size!)", () => {

@@ -44,7 +44,7 @@ const READ_SQL = `select data from pg_catalog.pg_logical_slot_get_changes(
 
 /** Lo que usamos de un `pg.Client`. */
 export interface ReplicationClient {
-  connect(): Promise<void>;
+  connect(): Promise<unknown>;
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
   end(): Promise<void>;
 }
