@@ -118,6 +118,10 @@ mejor a una hora tranquila):
    `PAGES_REALTIME_MAX_EVENTS_PER_SECOND` (100), `PAGES_REALTIME_MAX_JOINS_PER_SECOND` (100),
    `PAGES_REALTIME_MAX_CHANNELS_PER_CLIENT` (100), `PAGES_REALTIME_MAX_PAYLOAD_SIZE_KB` (3000).
 
+El servicio lleva el Janitor de Supabase: a los 10 minutos de arrancar y luego cada 4 horas, en cada proyecto con
+canales privados desde que arrancó, borra las particiones diarias de `realtime.messages` de hace más de 72 horas y crea
+las de los días que vienen. No hay nada que activar.
+
 Sin el paso 2, broadcast y presence funcionan y `postgres_changes` contesta su error («Realtime was unable to connect
 to the project database» o el de crear el slot): no se finge.
 
