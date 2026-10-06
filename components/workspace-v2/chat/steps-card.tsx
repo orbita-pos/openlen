@@ -204,8 +204,16 @@ function StepRow({
       </span>
       <span className="shrink-0 max-w-full break-words font-semibold">{label}</span>
       <span className={`min-w-0 flex-1 truncate ${tone === "warn" ? "nc-warn" : "fg-muted"}${action.tool === "bash" ? " font-mono text-[12px]" : ""}`}>
-        {action.status === "error" ? [t("agent.failed"), reason].filter(Boolean).join(" · ") : detail}
+        {action.status === "error" && action.tool !== "bash" ? [t("agent.failed"), reason].filter(Boolean).join(" · ") : detail}
       </span>
+      {/* LA TERMINAL QUE FALLA ENSEÑA SU COMANDO, como Claude Code (`Bash(ls /x)`
+          y debajo «Exit code 2»): sólo «falló» no decía QUÉ falló, y un `ls` de
+          una carpeta que aún no existe parecía una avería (humo del 06/10). El
+          comando cede al truncar; el «falló», no. Su salida y su código, al
+          desplegar. Como `agent-action-card.tsx`. */}
+      {action.status === "error" && action.tool === "bash" ? (
+        <span className="shrink-0 fg-muted text-[12px]">{t("agent.failed")}</span>
+      ) : null}
       <span className="flex shrink-0 items-center gap-1.5 text-[11.5px] fg-faint">
         {action.status === "running" ? (
           <span className="nc-spin" style={{ borderColor: "var(--border-strong)", borderTopColor: "var(--accent)" }} />
