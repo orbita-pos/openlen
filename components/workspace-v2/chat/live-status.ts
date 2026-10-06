@@ -9,6 +9,7 @@
 
 import type { DesignTurn } from "./use-agent-chat";
 import { asksTheOwner, questionText, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { currentToolName } from "@/lib/agent/tool-renames";
 
 /** Qué clase de trabajo hace la herramienta, en palabras de quien no programa. */
 export type Activity =
@@ -46,7 +47,7 @@ const ACTIVITY_OF: Readonly<Record<string, Activity>> = {
   Read: "reading",
   Grep: "reading",
   Glob: "reading",
-  mirar_pagina: "reading",
+  view_page: "reading",
   buscar_en_pagina: "reading",
   Edit: "editing",
   Write: "editing",
@@ -64,22 +65,22 @@ const ACTIVITY_OF: Readonly<Record<string, Activity>> = {
   editar_dato: "editing",
   quitar_dato: "editing",
   bash: "terminal",
-  elegir_foto: "photos",
-  editar_imagen: "image",
+  find_photo: "photos",
+  edit_image: "image",
   web_search: "web",
   web_fetch: "web",
   leer_de_internet: "web",
   verificar_diseno: "checking",
-  usar_pagina: "checking",
-  publicar: "publishing",
+  use_page: "checking",
+  publish: "publishing",
   recordar_preferencia: "remembering",
-  ver_visitas: "results",
-  ver_formularios: "results",
-  ver_mensajes: "results",
-  preparar_respuesta: "reply",
-  activar_modulo: "module",
+  get_visits: "results",
+  list_form_submissions: "results",
+  list_messages: "results",
+  draft_reply: "reply",
+  toggle_module: "module",
   conectar_datos_vivos: "module",
-  revertir_ultimo_cambio: "undoing",
+  undo_last_change: "undoing",
   preguntar: "asking",
   // Pieza 3 de Len 2.5: el nombre de hoy (`preguntar` se queda por lo guardado).
   ask_user_question: "asking",
@@ -93,7 +94,8 @@ const ACTIVITY_OF: Readonly<Record<string, Activity>> = {
 };
 
 export function activityOf(tool: string): Activity {
-  return ACTIVITY_OF[tool] ?? "working";
+  // Con el nombre de hoy: una fila guardada antes del 2026-10-06 trae el de antes.
+  return ACTIVITY_OF[currentToolName(tool)] ?? "working";
 }
 
 const FACE_OF: Readonly<Record<Activity, FaceState>> = {

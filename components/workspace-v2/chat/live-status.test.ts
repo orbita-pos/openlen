@@ -74,12 +74,18 @@ describe("la barra viva", () => {
         startedAt: 1,
         actions: [
           { tool: "Read", status: "done", summary: "index.html" },
-          { tool: "elegir_foto", status: "running", summary: "" },
+          { tool: "find_photo", status: "running", summary: "" },
         ],
       }),
       { busy: true },
     );
     expect(s).toMatchObject({ kind: "working", activity: "photos", face: "buscando" });
+  });
+
+  it("una fila de antes del 2026-10-06, con el nombre viejo, dice lo mismo", () => {
+    expect(activityOf("elegir_foto")).toBe(activityOf("find_photo"));
+    expect(activityOf("mirar_pagina")).toBe("reading");
+    expect(activityOf("ver_visitas")).toBe("results");
   });
 
   it("escribiendo sin herramienta: trabajando, sin actividad", () => {

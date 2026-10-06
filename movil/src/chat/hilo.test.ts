@@ -180,7 +180,10 @@ describe("marcar y sinLoEnviado", () => {
 describe("claveDeAvance", () => {
   it("cada herramienta, su frase; una desconocida, «trabajando»; ninguna, nada", () => {
     expect(claveDeAvance("Edit")).toBe("cambiando");
+    expect(claveDeAvance("view_page")).toBe("comprobando");
+    // Una fila de antes del 2026-10-06 trae el nombre viejo: la misma frase.
     expect(claveDeAvance("mirar_pagina")).toBe("comprobando");
+    expect(claveDeAvance("ver_visitas")).toBe(claveDeAvance("get_visits"));
     expect(claveDeAvance("TodoWrite")).toBe("trabajando");
     expect(claveDeAvance(null)).toBeNull();
   });

@@ -6,7 +6,7 @@ import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { enlaceDeCorreo, enlaceDeWhatsApp } from "@/lib/resultados/enlaces-de-respuesta";
 
 // EL BORRADOR QUE NO SE MANDA SOLO (plans/len-resultados/diseno.md §5). Len lo
-// deja con `preparar_respuesta`; el usuario lo corrige si quiere y lo manda con
+// deja con `draft_reply`; el usuario lo corrige si quiere y lo manda con
 // un toque. «Enviar» contesta como el negocio por la bandeja; correo y
 // WhatsApp abren SU aplicación con el texto puesto. Como la de publicar, no se
 // guarda: al recargar, el borrador sigue en el texto de Len. Los textos llegan
