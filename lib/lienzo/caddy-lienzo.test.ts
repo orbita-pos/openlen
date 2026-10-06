@@ -44,10 +44,11 @@ describe("Caddy y el lienzo", () => {
     expect(pasan.length).toBeGreaterThan(5);
     for (const ruta of pasan) {
       if (ruta === "/api/lienzo/*") continue;
-      // carril D: /storage/v1 sólo contesta en `<ref>.openlen.app`, la URL del
-      // proyecto (lib/backend/storage); en el host de la página da 404 también
+      // carril D: /storage/v1 y /realtime/v1 sólo contestan en
+      // `<ref>.openlen.app`, la URL del proyecto (lib/backend/storage,
+      // lib/backend/realtime); en el host de la página dan 404 también
       // PUBLICADA, así que avisar «sólo funciona publicada» sería mentir.
-      if (ruta === "/storage/v1/*") continue;
+      if (ruta === "/storage/v1/*" || ruta === "/realtime/v1/*") continue;
       expect(RUTAS_SOLO_PUBLICADA, `${ruta} pasa a Next y el aviso del lienzo no lo conoce`).toContain(ruta.replace(/\*$/, ""));
     }
   });

@@ -1,0 +1,45 @@
+# carril D (Len 2.5, pieza 15): el servicio de Realtime de las páginas
+# (/realtime/v1, lib/backend/realtime). Un proceso aparte de Next: sus
+# manejadores de ruta no sostienen WebSockets. Caddy le pasa /realtime/v1/*
+# (infra/caddy/Caddyfile, bloque *.openlen.app).
+#
+# PREPARADA, NO APLICADA. La instala install-app.sh y se habilita a mano
+# (infra/PAGES_BACKEND_RUNBOOK.md §4c); el deploy la reinicia tras el swap si
+# está habilitada (el bundle vive en /opt/openlen-app/realtime/server.mjs).
+#
+# Memoria: un proceso de Node con `ws`, decenas de MB (la caja tiene 3.819 MB y
+# la app puede ocupar 3,4 GB: por eso no Elixir). Tope duro bajo para que, si
+# algo se dispara, el kernel no elija a Postgres.
+[Unit]
+Description=OpenLen — Realtime de las páginas (/realtime/v1)
+After=network-online.target postgresql.service
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=openlen-deploy
+Group=www-data
+WorkingDirectory=/opt/openlen-app
+Environment=NODE_ENV=production
+Environment=PAGES_REALTIME_PORT=4100
+Environment=PUBLISH_BASE_HOST=openlen.app
+EnvironmentFile=/etc/openlen/openlen.env
+ExecStart=/usr/bin/node /opt/openlen-app/realtime/server.mjs
+Restart=on-failure
+RestartSec=5s
+RestartSteps=5
+RestartMaxDelaySec=60s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openlen-realtime
+MemoryAccounting=true
+MemoryHigh=192M
+MemoryMax=256M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

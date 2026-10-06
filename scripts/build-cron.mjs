@@ -35,3 +35,16 @@ for (const t of targets) {
   await build({ ...common, entryPoints: [t.entry], outfile: t.out });
   console.log(`bundled ${t.entry} -> ${t.out}`);
 }
+
+// carril D (Len 2.5, pieza 15): el servicio de Realtime de las páginas, un
+// proceso aparte (infra/app/openlen-realtime.service). Lo que importa de
+// lib/backend lleva `import "server-only"`, que fuera de Next lanza: aquí es el
+// módulo vacío, como en vitest. No toca nada de publicar (sin crates nativos):
+// lib/backend/realtime/project-lookup.ts existe para eso.
+await build({
+  ...common,
+  entryPoints: ["scripts/realtime-server.ts"],
+  outfile: ".next/standalone/realtime/server.mjs",
+  alias: { "server-only": "./node_modules/server-only/empty.js" },
+});
+console.log("bundled scripts/realtime-server.ts -> .next/standalone/realtime/server.mjs");

@@ -577,6 +577,9 @@ pid=`$(systemctl show -p MainPID --value openlen-app)
 test "`$pid" -gt 0
 $fableProcCheck
 curl -sI -o /dev/null -w '  smoke: HTTP %{http_code} (%{time_total}s)' http://127.0.0.1:3000/
+# carril D (Len 2.5, pieza 15): el Realtime de las paginas lee su bundle de la
+# carpeta que se acaba de cambiar. Solo si esta habilitado (runbook §4c).
+if systemctl is-enabled --quiet openlen-realtime 2>/dev/null; then systemctl restart openlen-realtime; fi
 "@
 $swapCmd = $swapCmd.Replace("__TARGET_MODE__", $targetMode).Replace("__TARGET_ROLLOUT_PERCENT__", $targetRolloutPercent).Replace("__BACKUP_DIR__", $backupDir).Replace("__REMOTE_DIR__", $remoteDir).Replace("__STAGING_DIR__", $stagingDir)
 

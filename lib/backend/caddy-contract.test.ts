@@ -55,6 +55,12 @@ describe("el middleware de idiomas no toca el backend", () => {
     expect(matches("/storage/v1/object/list/fotos")).toBe(false);
     expect(matches("/storage/v1/object/sign/fotos/u1/avatar")).toBe(false);
   });
+
+  /* ── carril D: realtime ── En producción no llega a Next; en local sí. */
+  it("ni /realtime/v1", () => {
+    expect(matches("/realtime/v1/websocket")).toBe(false);
+    expect(matches("/realtime/v1/api/broadcast")).toBe(false);
+  });
 });
 
 /* ── carril D: storage ── (lib/backend/storage, plan-2-5/d-storage.md) */
@@ -74,6 +80,15 @@ describe("Caddy pasa /storage/v1 a Next y no le pone caché", () => {
     const i = paginas.indexOf("@assets");
     const assets = paginas.slice(i, paginas.indexOf("\n\theader @assets", i));
     expect(assets).toContain("not path /storage/v1/*");
+  });
+
+  /* ── carril D: realtime ── (pieza 15) Va a su servicio, no a Next. */
+  it("hay un handle /realtime/v1/* hacia el servicio de Realtime (:4100), fuera de la caché pública", () => {
+    const bloque = paginas.match(/handle \/realtime\/v1\/\*\s*\{[\s\S]{0,200}?\n\t\}/);
+    expect(bloque, "falta el handle /realtime/v1/*").not.toBeNull();
+    expect(bloque![0]).toContain("reverse_proxy 127.0.0.1:4100");
+    const linea = paginas.split("\n").find((l) => l.includes("not path") && l.includes("/api/f/*"));
+    expect(linea).toContain("/realtime/v1/*");
   });
 
   // Los de la carpeta (pieza 9, carril B): `header` + `reverse_proxy` DUPLICA
