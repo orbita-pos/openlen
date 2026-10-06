@@ -10,7 +10,7 @@ vi.mock("next-intl", () => ({
 }));
 
 import { goalRoundPrompt } from "@/lib/agent/goal";
-import { UserMessage } from "./chat-turn";
+import { answerOfNextTurn, UserMessage } from "./chat-turn";
 import type { DesignTurn } from "./use-agent-chat";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -54,5 +54,32 @@ describe("las rondas del encargo en la charla", () => {
 
   it("BRAZO DE CONTROL: un mensaje normal, tal cual", () => {
     expect(pintar("cambia el título").textContent).toContain("cambia el título");
+  });
+});
+
+// La pregunta que quedó abierta y el turno SIGUIENTE es una ronda (medido en un
+// turno real el 05/10: la tarjeta decía «Respondiste: <goal_round>»).
+describe("la respuesta a una pregunta cuando el turno siguiente es una ronda", () => {
+  const siguiente = (userText: string) => ({ id: "n", userText, assistantReasoning: "", status: "applied" }) as DesignTurn;
+
+  it("la ronda 1 la escribió el dueño: su objetivo es la respuesta", () => {
+    expect(answerOfNextTurn(siguiente(goalRoundPrompt(meta, 1)))).toEqual({ answer: "Hazme la tienda entera", cancelled: false });
+  });
+
+  it("una ronda posterior no la escribió nadie: la pregunta queda cancelada, sin respuesta", () => {
+    expect(answerOfNextTurn(siguiente(goalRoundPrompt(meta, 2)))).toEqual({ answer: null, cancelled: true });
+  });
+
+  it("si el dueño escribió a media ronda, eso es lo que contestó", () => {
+    expect(answerOfNextTurn(siguiente(`${goalRoundPrompt(meta, 2)}\n↳ que sea azul`))).toEqual({ answer: "que sea azul", cancelled: false });
+  });
+
+  it("nunca enseña el mensaje interno de la ronda", () => {
+    for (const r of [1, 2, 7]) expect(JSON.stringify(answerOfNextTurn(siguiente(goalRoundPrompt(meta, r))))).not.toContain("<goal_round>");
+  });
+
+  it("BRAZO DE CONTROL: un mensaje normal es la respuesta tal cual; sin turno siguiente, nada", () => {
+    expect(answerOfNextTurn(siguiente("48 horas"))).toEqual({ answer: "48 horas", cancelled: false });
+    expect(answerOfNextTurn(undefined)).toEqual({ answer: null, cancelled: false });
   });
 });

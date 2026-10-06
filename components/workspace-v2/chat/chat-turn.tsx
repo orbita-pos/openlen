@@ -38,6 +38,21 @@ export function splitCorrections(userText: string): { text: string; corrections:
   return { text: parts[0] ?? "", corrections: parts.slice(1) };
 }
 
+/** Lo que el dueño contestó a la pregunta de un turno con el SIGUIENTE, como lo
+ *  ve en su burbuja (`UserMessage`). Si el siguiente es una ronda del encargo,
+ *  su mensaje es el `<goal_round>` que sólo lee el modelo: la ronda 1 la
+ *  escribió el dueño —su objetivo—; una posterior la abrió el conductor o
+ *  «reanudar», y la pregunta quedó sin respuesta (el `ASK_CANCELLED` de
+ *  DeepSeek), salvo lo que escribiera a media ronda. */
+export function answerOfNextTurn(next: DesignTurn | undefined): { answer: string | null; cancelled: boolean } {
+  if (!next) return { answer: null, cancelled: false };
+  const { text, corrections } = splitCorrections(next.userText);
+  const ronda = roundOfTurn(text);
+  if (!ronda) return { answer: next.userText, cancelled: false };
+  if (ronda.round === 1) return { answer: ronda.objective, cancelled: false };
+  return corrections.length > 0 ? { answer: corrections.join("\n"), cancelled: false } : { answer: null, cancelled: true };
+}
+
 export function UserMessage({ turn, initial }: { turn: DesignTurn; initial: string }) {
   const t = useTranslations("panelsChat");
   const { text: escrito, corrections } = splitCorrections(turn.userText);
@@ -180,6 +195,7 @@ export function LenTurn({
   // sólo en el último turno, y sólo si nadie la contestó ya).
   const liveQuestions = turn.status === "streaming" && turn.pendingQuestions?.length ? turn.pendingQuestions : null;
   const endedQuestions: readonly UserQuestion[] | null = question === null ? null : (questionsOf(turn) ?? (question ? [{ id: "q1", question }] : null));
+  const nextAnswer = answerOfNextTurn(next);
   const text = withoutTrailingQuestion(turn.assistantReasoning, question);
   const streaming = turn.status === "streaming";
   const samePage = mismaPagina(turn.page, currentPage);
@@ -226,7 +242,8 @@ export function LenTurn({
         <QuestionCard
           question={question}
           questions={endedQuestions}
-          answer={next ? next.userText : null}
+          answer={nextAnswer.answer}
+          cancelled={nextAnswer.cancelled}
           onAnswer={!next && isLast && endedQuestions ? (answers) => onAnswerQuestion(turn.id, endedQuestions, answers) : undefined}
           onDismiss={!next && isLast && endedQuestions ? () => onDismissQuestion(turn.id) : undefined}
         />
