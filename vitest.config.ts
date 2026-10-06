@@ -640,6 +640,7 @@ export default defineConfig({
       "lib/projects/blank-project.pg.test.ts",
       "lib/projects/blank.test.ts",
       "lib/projects/chat-photos.test.ts",
+      "lib/workspace-v2/upload-photos.test.ts",
       "lib/projects/escritores-de-data.test.ts",
       "lib/notifications/**/*.test.ts",
     ],

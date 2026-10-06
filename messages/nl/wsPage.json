@@ -257,6 +257,7 @@
     "blockMoved": "Blok verplaatst"
   },
   "toast": {
+    "photosNotUploaded": "{count, plural, one {Een foto kon niet worden geüpload} other {# foto's konden niet worden geüpload}} — het bericht gaat zonder.",
     "publishedTitle": "Gepubliceerd",
     "publishedBody": "Je pagina is live op {subdomain}.{host}",
     "openSite": "Site openen",

@@ -247,6 +247,16 @@ export interface AgentChatOptions {
    * pulsar «Enviar» después es preguntar dos veces lo mismo. */
   pendingDraftAutoSend?: boolean;
   onPendingDraftConsumed?: () => void;
+  /** LO QUE VIAJA CON EL BORRADOR que se manda solo (plans/crear-es-len): las
+   *  fotos y la referencia por URL del estado vacío, el primer mensaje de un
+   *  proyecto en blanco. Se consume con el borrador. */
+  pendingAttachments?: PendingAttachments | null;
+}
+
+/** Las fotos (ya subidas) y la referencia que acompañan a un borrador. */
+export interface PendingAttachments {
+  readonly images: readonly AttachedImage[];
+  readonly styleDirection: StyleDirection | null;
 }
 
 export function useAgentChat({
@@ -262,6 +272,7 @@ export function useAgentChat({
   pendingDraft = null,
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
+  pendingAttachments = null,
 }: AgentChatOptions) {
   const t = useTranslations("panelsChat");
   // Agent-mode messages live under the wsPage namespace (shared with the
@@ -2025,9 +2036,15 @@ export function useAgentChat({
   useEffect(() => {
     if (!pendingDraftAutoSend || !pendingDraft) return;
     const texto = pendingDraft;
+    const adjuntos = pendingAttachments;
     onPendingDraftConsumed?.();
-    void send(texto);
-  }, [pendingDraftAutoSend, pendingDraft, onPendingDraftConsumed, send]);
+    // El primer mensaje de un proyecto en blanco lleva sus fotos y su
+    // referencia (plans/crear-es-len); el resto de borradores, nada más.
+    void send(texto, undefined, {
+      ...(adjuntos?.images.length ? { images: adjuntos.images } : {}),
+      ...(adjuntos?.styleDirection ? { styleDirection: adjuntos.styleDirection } : {}),
+    });
+  }, [pendingDraftAutoSend, pendingDraft, pendingAttachments, onPendingDraftConsumed, send]);
 
   const handleRetry = useCallback(
     (turn: DesignTurn) => {

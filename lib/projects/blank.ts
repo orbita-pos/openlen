@@ -17,3 +17,15 @@ export function isBlankProject(p: {
 }): boolean {
   return !(p.html ?? "").trim() && Object.keys(p.pages ?? {}).length === 0 && p.chatTurns === 0;
 }
+
+/**
+ * LA LISTA, COMO LA DE DEEPSEEK: un proyecto en blanco no sale, salvo el que
+ * está abierto (`openId`) —ése se rotula «Proyecto nuevo»—. Una fila sin la
+ * marca (`isBlank` ausente, de una respuesta vieja) sale siempre.
+ */
+export function visibleProjects<T extends { readonly id: string; readonly isBlank?: boolean }>(
+  projects: readonly T[],
+  openId: string | null,
+): T[] {
+  return projects.filter((p) => !p.isBlank || p.id === openId);
+}

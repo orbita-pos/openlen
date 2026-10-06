@@ -257,6 +257,7 @@
     "blockMoved": "ブロックを移動しました"
   },
   "toast": {
+    "photosNotUploaded": "{count, plural, other {# 枚の写真をアップロードできませんでした}}。写真なしで送信します。",
     "publishedTitle": "公開しました",
     "publishedBody": "ページは {subdomain}.{host} で公開中です",
     "openSite": "サイトを開く",

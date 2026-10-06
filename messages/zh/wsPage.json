@@ -257,6 +257,7 @@
     "blockMoved": "已移动块"
   },
   "toast": {
+    "photosNotUploaded": "{count, plural, other {有 # 张照片上传失败}}，消息将不带照片发送。",
     "publishedTitle": "已发布",
     "publishedBody": "你的页面已上线：{subdomain}.{host}",
     "openSite": "打开站点",

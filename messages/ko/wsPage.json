@@ -257,6 +257,7 @@
     "blockMoved": "블록 이동됨"
   },
   "toast": {
+    "photosNotUploaded": "{count, plural, other {사진 #장을 업로드하지 못했습니다}}. 사진 없이 보냅니다.",
     "publishedTitle": "게시됨",
     "publishedBody": "{subdomain}.{host} 에서 페이지가 공개되었습니다",
     "openSite": "사이트 열기",

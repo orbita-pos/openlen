@@ -257,6 +257,7 @@
     "blockMoved": "Blocco spostato"
   },
   "toast": {
+    "photosNotUploaded": "{count, plural, one {Una foto non è stata caricata} other {# foto non sono state caricate}}: il messaggio parte senza.",
     "publishedTitle": "Pubblicata",
     "publishedBody": "La tua pagina è online su {subdomain}.{host}",
     "openSite": "Apri il sito",

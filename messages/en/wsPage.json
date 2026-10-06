@@ -257,6 +257,7 @@
     "blockMoved": "Block moved"
   },
   "toast": {
+    "photosNotUploaded": "{count, plural, one {A photo couldn't be uploaded} other {# photos couldn't be uploaded}} — the message goes without them.",
     "publishedTitle": "Published",
     "publishedBody": "Your page is live at {subdomain}.{host}",
     "openSite": "Open site",

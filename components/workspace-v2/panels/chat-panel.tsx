@@ -64,6 +64,7 @@ import {
   useAgentChat,
   type AttachedImage,
   type DesignTurn,
+  type PendingAttachments,
   type ScopedSelection,
 } from "../chat/use-agent-chat";
 
@@ -123,6 +124,8 @@ interface ChatPanelProps {
    * pulsar «Enviar» después es preguntar dos veces lo mismo. */
   pendingDraftAutoSend?: boolean;
   onPendingDraftConsumed?: () => void;
+  /** Ver `AgentChatOptions.pendingAttachments`. */
+  pendingAttachments?: PendingAttachments | null;
   /** Multi-page: the site's subpages + a switcher, so the composer can offer a
    *  "which page am I editing" picker that jumps to the chosen page. */
   sitePages?: SitePageSummary[];
@@ -144,6 +147,7 @@ export function ChatPanel({
   pendingDraft = null,
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
+  pendingAttachments = null,
   sitePages = [],
 }: ChatPanelProps) {
   if (flatProjectId && onFlatHtmlUpdate) {
@@ -167,6 +171,7 @@ export function ChatPanel({
         pendingDraft={pendingDraft}
         pendingDraftAutoSend={pendingDraftAutoSend}
         onPendingDraftConsumed={onPendingDraftConsumed}
+        pendingAttachments={pendingAttachments}
       />
     );
   }
@@ -249,6 +254,7 @@ function AIDesignChat({
   pendingDraft = null,
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
+  pendingAttachments = null,
   sitePages = [],
 }: {
   projectId: string;
@@ -281,6 +287,7 @@ function AIDesignChat({
    * pulsar «Enviar» después es preguntar dos veces lo mismo. */
   pendingDraftAutoSend?: boolean;
   onPendingDraftConsumed?: () => void;
+  pendingAttachments?: PendingAttachments | null;
   sitePages?: SitePageSummary[];
 }) {
   // LA LÓGICA ENTERA vive en `useAgentChat` (../chat/use-agent-chat.ts), la
@@ -327,6 +334,7 @@ function AIDesignChat({
     pendingDraft,
     pendingDraftAutoSend,
     onPendingDraftConsumed,
+    pendingAttachments,
   });
 
 

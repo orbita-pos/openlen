@@ -50,6 +50,7 @@ import type { ProjectStatus, ProjectSummary } from "@/lib/projects";
 import VisibilityToggle from "@/components/community/visibility-toggle";
 import HandleDialog from "@/components/community/handle-dialog";
 import { publishedHost, publishedUrl, subdomainFromTitle } from "@/lib/publish/base-host";
+import { visibleProjects } from "@/lib/projects/blank";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Projects page — toolbar + filters + grid/list + bulk actions.
@@ -111,7 +112,9 @@ export function ProjectsView({
   const toast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [projects, setProjects] = useState(initial);
+  // Los proyectos en blanco no salen (plans/crear-es-len, como las sesiones en
+  // blanco de DeepSeek): aquí no hay ninguno abierto.
+  const [projects, setProjects] = useState(() => visibleProjects(initial, null));
   const [view, setView] = useState<ViewMode>("grid");
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<FilterId>("all");

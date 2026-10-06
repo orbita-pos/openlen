@@ -15,17 +15,13 @@ import { tomarReferenciasEnTransito } from "@/lib/referencia-en-transito";
 import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { PublishModal } from "@/components/workspace/publish-modal";
-import { useGeneration } from "@/lib/use-generation";
 import {
   isGenerationBriefLengthValid,
   prepareGenerationBriefInput,
   shouldSyncGenerationBriefParam,
   trimGenerationBrief,
 } from "@/lib/generation/brief-contract";
-import { setGenerationBusy } from "@/lib/generation-busy";
 import { scanController } from "@/lib/workspace-v2/scan-controller";
-import { classifyAiError } from "@/components/workspace-v2/ai-error-message";
-import { creditRefillLabel } from "@/lib/credits-client";
 import type {
   FormConfig,
   Degradation,
@@ -88,8 +84,6 @@ import {
 import type { DropIntent } from "@/components/workspace-v2/use-drop-place";
 import { imageFetchUrl } from "@/lib/image-fetch-url";
 import { gradientBgPlan, parseSimpleGradient } from "@/lib/gradients";
-import { PageAssembling } from "@/components/workspace-v2/page-assembling";
-import { paginaEnPantalla, yaEsPagina } from "@/components/workspace-v2/pagina-en-pantalla";
 import { stripEditorInstrumentationFragment } from "@/components/workspace-v2/strip-editor-instrumentation";
 import {
   claveDeEdicion,
@@ -115,6 +109,10 @@ import {
   type ProjectLoadFailure,
 } from "@/lib/workspace-v2/project-load-failure";
 import { ProjectUnavailable } from "@/components/workspace-v2/project-unavailable";
+import { isBlankProject } from "@/lib/projects/blank";
+import { UNTITLED_PROJECT_TITLE } from "@/lib/projects/titulo-del-html";
+import { uploadPhotos } from "@/lib/workspace-v2/upload-photos";
+import type { PendingAttachments } from "@/components/workspace-v2/chat/use-agent-chat";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
 import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import type { SitePage } from "@/lib/projects/types";
@@ -122,18 +120,10 @@ import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { AddressBar } from "@/components/workspace-v2/address-bar";
 import { abrirDesdeElTaller } from "@/components/workspace-v2/abrir-fuera";
 
-/**
- * EL TRASPASO DEL «ARRÉGLALO» ENTRE LAS DOS PANTALLAS.
- *
- * La medida del navegador se enseña MIENTRAS se crea la página; el chat vive en
- * el taller, al que se llega con un `window.location.href` — una carga completa,
- * así que el estado de React no sobrevive al salto.
- *
- * `sessionStorage` sí sobrevive, es de esta pestaña y no mete el texto de un
- * defecto en la URL. Se lee UNA vez y se borra: un arreglo que se re-pidiera en
- * cada recarga sería peor que no tener botón.
- */
-const LLAVE_ARREGLO = "openlen:arreglar";
+// ⚰️ Aquí vivía `LLAVE_ARREGLO`, el traspaso del «Arréglalo» de la medida de
+// Crear a su primer turno de chat por `sessionStorage`. Crear es Len desde el
+// 2026-10-06 (plans/crear-es-len): ya no hay dos pantallas entre las que saltar,
+// y lo que Len mide lo mide él (`mirar_pagina`).
 
 // Outer shell exists so `useSearchParams()` in the inner component has a
 // Suspense boundary, matching the /new V1 pattern.
@@ -292,6 +282,7 @@ function leerTemaDePagina(v: unknown): TemaDePagina | undefined {
 
 function NewV2Inner() {
   const t = useTranslations("wsPage");
+  const tProjects = useTranslations("projects");
   const tSections = useTranslations("panelsA");
   const tAsset = useTranslations("modalsAsset");
   const tws = useTranslations("wsChrome");
@@ -584,30 +575,11 @@ function NewV2Inner() {
   } | null>(null);
   const [originalRestoring, setOriginalRestoring] = useState(false);
   const [pendingChatDraft, setPendingChatDraft] = useState<string | null>(null);
-  // ¿El borrador se manda solo? Sólo lo pone el botón «Arréglalo» de la medida
-  // del navegador: pulsar un botón que dice «arréglalo» y tener que pulsar
-  // «Enviar» después es preguntar dos veces lo mismo. Los demás borradores —la
-  // propuesta de copia tras un cambio— siguen esperando al usuario.
+  // ¿El borrador se manda solo? Sólo lo pone el envío desde el estado vacío de
+  // un proyecto en blanco (`handleHeroSend`): el usuario YA pulsó enviar allí,
+  // y hacerle pulsar otra vez en el chat sería preguntar dos veces lo mismo. Los
+  // demás borradores —la propuesta de copia tras un cambio— esperan al usuario.
   const [pendingChatAutoSend, setPendingChatAutoSend] = useState(false);
-
-  // Al abrir el taller: si venimos de pulsar «Arréglalo», la medida está
-  // guardada. Se recoge, se borra la llave y se manda por el chat como si la
-  // hubiera escrito el usuario — que es exactamente lo que ocurrió.
-  useEffect(() => {
-    if (!projectParam) return;
-    let guardado: string | null = null;
-    try {
-      guardado = window.sessionStorage.getItem(LLAVE_ARREGLO);
-      if (guardado) window.sessionStorage.removeItem(LLAVE_ARREGLO);
-    } catch {
-      // Una pestaña privada o el almacenamiento bloqueado no pueden costar la
-      // página: sin traspaso, el taller abre normal y la medida se pierde.
-      return;
-    }
-    if (!guardado) return;
-    setPendingChatAutoSend(true);
-    setPendingChatDraft(guardado);
-  }, [projectParam]);
   // The page's theme tokens as first observed this project load — drives the
   // inspector's "Original" reset (re-applies these resolved values).
   const [originalTheme, setOriginalTheme] = useState<{
@@ -726,8 +698,9 @@ function NewV2Inner() {
   // un selector que no compra nada es exactamente la mentira que se arregló en
   // `lib/document/page-effort.ts`. Su maquinaria sigue intacta.
   const [effort, setEffort] = useState<PageEffort>("low");
-  const generation = useGeneration();
-  const aiGenState = generation.state;
+  // ⚰️ Aquí vivía `useGeneration` —el cliente de `/api/generate`— con su estado
+  // `generating`. Crear es el primer mensaje a Len desde el 2026-10-06
+  // (plans/crear-es-len): ver «EL PROYECTO EN BLANCO» más abajo.
   // ⚰️ AQUÍ VIVÍA TODO EL PERFIL DE NEGOCIO EN EL TALLER, retirado el
   // 2026-08-31: la lista de perfiles, el que estaba activo, el conmutador del
   // rail, el modal de alta, el enlace profundo `?profile=<id>` y el aviso
@@ -770,7 +743,6 @@ function NewV2Inner() {
   // Brief can be pre-filled from a deep link (homepage hero CTA, projects
   // example cards, etc.) via ?brief=<urlencoded>.
   const briefParam = searchParams.get("brief");
-  const autostartParam = searchParams.get("autostart");
   const preparedBriefParam = useMemo(
     () => prepareGenerationBriefInput(briefParam),
     [briefParam],
@@ -842,12 +814,6 @@ function NewV2Inner() {
       aiFotos,
     ],
   );
-  const aiGenerating = aiGenState.kind === "generating";
-  // Mobile: the brief panel covers the canvas, so close it the moment the
-  // stream starts — the user should watch their page assemble, not the form.
-  useEffect(() => {
-    if (isMobile && aiGenState.kind === "generating") setLeftCollapsed(true);
-  }, [isMobile, aiGenState.kind]);
   // Mobile, otra vez: el Chat tapa el lienzo, así que cuando pide abrir una
   // lente —una fila de la tarjeta de cambios, una ruta (la #9 de
   // plans/len-agente-2026)— el panel se aparta. Si no, la lente se abría DETRÁS.
@@ -889,115 +855,112 @@ function NewV2Inner() {
   useEffect(() => {
     if (!leftCollapsed) volverAlChat.current = false;
   }, [leftCollapsed]);
-  const [genSlow, setGenSlow] = useState(false);
-  const startAiGeneration = useCallback(
-    (prompt: string) => {
-      if (aiGenerating) return;
-      const brief = trimGenerationBrief(prompt);
-      if (!isGenerationBriefLengthValid(brief)) return;
-      // DOS ORIGENES, UN LOTE. Las del heroe cruzan por `sessionStorage` —no
-      // caben en la URL— y se LEEN Y SE BORRAN aqui: es un pase de un solo uso.
-      // Las adjuntadas en este mismo compositor ya estan en el estado.
-      //
-      // Manda el compositor, Y NO SE MEZCLAN LOS DOS ORIGENES. Si el usuario
-      // adjunto algo AQUI, es lo que tiene delante; unas fotos invisibles del
-      // heroe colandose en su lote seria el peor tipo de sorpresa, y ahora que
-      // caben varias esa mezcla si podria pasar desapercibida. Aun asi se
-      // consume el transito para que no quede esperando a la siguiente.
+  // ─── EL PROYECTO EN BLANCO (plans/crear-es-len, 2026-10-06) ───────────────
+  //
+  // Crear es el PRIMER MENSAJE A LEN en un proyecto en blanco, como la «New
+  // Session» de DeepSeek (`packages/client/ui-workspace/README.md`): `/new` sin
+  // proyecto toma el blanco que ya hubiera (o crea uno) y lo abre; con él
+  // abierto, el centro es el estado vacío del chat, y enviar es un mensaje
+  // normal a `/api/agent`. NADA SE MANDA SOLO: un brief en la URL (la portada,
+  // un enlace viejo con `autostart=1`) sólo RELLENA el compositor.
+  const [blankFailure, setBlankFailure] = useState<ProjectLoadFailure | null>(null);
+  const [blankAttempt, setBlankAttempt] = useState(0);
+  const resolvingBlank = entryMode === "ai" && startSurface === "crear";
+  useEffect(() => {
+    if (!resolvingBlank) return;
+    let vivo = true;
+    setBlankFailure(null);
+    void fetch("/api/projects", { method: "POST" })
+      .then(async (r) => {
+        if (!r.ok) throw r.status;
+        const d = (await r.json().catch(() => null)) as { id?: unknown } | null;
+        if (typeof d?.id !== "string" || !d.id) throw 0;
+        // El brief que trajera la URL ya está en `aiPrompt` (nace de él), y el
+        // componente no se vuelve a montar al cambiar la URL: no hace falta
+        // llevarlo. `mode` y `autostart` se quedan atrás.
+        if (vivo) router.replace(`/new?project=${encodeURIComponent(d.id)}`);
+      })
+      .catch((status: unknown) => {
+        if (!vivo) return;
+        setBlankFailure(typeof status === "number" && status > 0 ? projectLoadFailureFromStatus(status) : "failed");
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [resolvingBlank, blankAttempt, router]);
+  // Con el proyecto ya abierto, un `brief` (o `autostart`, o `mode`) en la URL
+  // sobra: el texto ya está escrito en el compositor. Se quita para que
+  // recargar no lo vuelva a escribir encima de lo que el usuario cambió.
+  useEffect(() => {
+    if (!projectParam) return;
+    if (briefParam === null && modeParam === null && searchParams.get("autostart") === null) return;
+    const qs = new URLSearchParams(searchParams.toString());
+    qs.delete("brief");
+    qs.delete("mode");
+    qs.delete("autostart");
+    router.replace(`/new?${qs.toString()}`);
+  }, [projectParam, briefParam, modeParam, searchParams, router]);
+  // ¿Ya se mandó el primer mensaje desde el estado vacío? Desde ese momento el
+  // proyecto ya no está en blanco —tiene conversación— aunque la fila tarde en
+  // volver con la convergencia: la vista se transforma YA, sin recargar.
+  const [heroSent, setHeroSent] = useState(false);
+  const [heroSending, setHeroSending] = useState(false);
+  const [pendingChatAttachments, setPendingChatAttachments] = useState<PendingAttachments | null>(null);
+  useEffect(() => {
+    setHeroSent(false);
+  }, [projectParam]);
+  // EL ESTADO VACÍO DEL CHAT DE LEN: un proyecto en blanco no tiene lienzo que
+  // enseñar todavía. Como el «Session Intent hero» de DeepSeek, el centro es el
+  // compositor, y enviar es el primer mensaje.
+  const proyectoEnBlanco =
+    entryMode === "editing" &&
+    !!loadedProject &&
+    !heroSent &&
+    isBlankProject({
+      html: loadedProject.html,
+      pages: loadedProject.pages,
+      chatTurns: loadedProject.chatHistory.length,
+    });
+  // Con el estado vacío en el centro, la barra lateral va plegada, como iba la
+  // entrada de Crear: el chat todavía no tiene nada que enseñar. Una vez por
+  // proyecto, para que abrirla a mano no se deshaga sola.
+  const blankCollapsedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!proyectoEnBlanco || !loadedProjectId) return;
+    if (blankCollapsedFor.current === loadedProjectId) return;
+    blankCollapsedFor.current = loadedProjectId;
+    setLeftCollapsed(true);
+  }, [proyectoEnBlanco, loadedProjectId]);
+  // ENVIAR DESDE LA ENTRADA. El usuario ya pulsó enviar: el borrador que se
+  // manda solo aquí es SU envío, no uno automático. Las fotos se suben antes
+  // (Len las recibe por su dirección) y la referencia viaja con el mensaje.
+  const handleHeroSend = useCallback(async () => {
+    if (!loadedProjectId || heroSending) return;
+    const brief = trimGenerationBrief(aiPrompt);
+    if (!isGenerationBriefLengthValid(brief)) return;
+    setHeroSending(true);
+    try {
+      // DOS ORIGENES, UN LOTE, como hacía Crear. Las del heroe cruzan por
+      // `sessionStorage` —no caben en la URL— y se LEEN Y SE BORRAN aqui. Manda
+      // el compositor, Y NO SE MEZCLAN: si el usuario adjunto algo AQUI, es lo
+      // que tiene delante; aun asi se consume el transito.
       const delTransito = tomarReferenciasEnTransito();
       const fotos = aiFotos.length > 0 ? aiFotos : delTransito;
-      void generation.generate(brief, aiReference, fotos.map((f) => f.dataUrl));
+      const subidas = fotos.length > 0 ? await uploadPhotos(fotos, loadedProjectId) : { images: [], failed: 0 };
+      if (subidas.failed > 0) toast.error(t("toast.photosNotUploaded", { count: subidas.failed }));
+      setPendingChatAttachments({ images: subidas.images, styleDirection: aiReference });
+      setPendingChatDraft(brief);
+      setPendingChatAutoSend(true);
+      setHeroSent(true);
+      setMode("chat");
+      setLeftCollapsed(false);
       setAiFotos([]);
-    },
-    [aiGenerating, generation, aiReference, aiFotos],
-  );
-  const handleAiGenerate = useCallback(() => {
-    startAiGeneration(aiPrompt);
-  }, [aiPrompt, startAiGeneration]);
-  // A deep link with `?autostart=1` (the homepage hero) kicks generation
-  // off on arrival. The param is stripped right after so a manual reload of
-  // this URL doesn't re-fire — and re-bill — the generation.
-  const autostartedRef = useRef(false);
-  useEffect(() => {
-    if (autostartParam !== "1") {
-      autostartedRef.current = false;
-      return;
+      setAiReference(null);
+      setAiPrompt("");
+    } finally {
+      setHeroSending(false);
     }
-    if (autostartedRef.current) return;
-    autostartedRef.current = true;
-    if (preparedBriefParam.autostartAllowed) {
-      startAiGeneration(preparedBriefParam.value);
-    }
-    const normalizedBriefParam = preparedBriefParam.value || null;
-    normalizedBriefParamRef.current =
-      normalizedBriefParam === briefParam
-        ? null
-        : { value: normalizedBriefParam };
-    router.replace(
-      preparedBriefParam.value
-        ? `/new?mode=ai&brief=${encodeURIComponent(preparedBriefParam.value)}`
-        : "/new?mode=ai",
-    );
-  }, [
-    autostartParam,
-    briefParam,
-    preparedBriefParam,
-    router,
-    startAiGeneration,
-  ]);
-  // After ~8s of a silent generation (no reasoning, no HTML yet) surface a
-  // "server saturated" note so the long wait doesn't read as a freeze.
-  useEffect(() => {
-    if (
-      aiGenState.kind !== "generating" ||
-      aiGenState.reasoning ||
-      aiGenState.html ||
-      aiGenState.notice
-    ) {
-      // `notice` is set only during the critic / regen phases — a known
-      // progress step, not a silent freeze. Suppress the "server saturated"
-      // note there so it can't override the abstract "Improving the design…"
-      // text (the initial silent-wait note stays html-gated as before).
-      setGenSlow(false);
-      return;
-    }
-    const t = setTimeout(() => setGenSlow(true), 8000);
-    return () => clearTimeout(t);
-  }, [aiGenState]);
-  // Keep the last painted preview so the "done" beat can hold the finished
-  // page on screen (✓ ready) instead of cutting straight to a white flash.
-  const lastPreviewHtmlRef = useRef("");
-  useEffect(() => {
-    // Sólo se recuerda lo que YA es una página. Un documento a medio abrir
-    // —el preámbulo de una reescritura— pisaría el recuerdo con un stub y la
-    // pantalla se quedaría igual de vacía que antes.
-    if (aiGenState.kind === "generating" && yaEsPagina(aiGenState.html)) {
-      lastPreviewHtmlRef.current = aiGenState.html;
-    }
-  }, [aiGenState]);
-  // When generation completes and the project has been persisted, hold the
-  // finished page for a beat (✓ ready), then drop the user into editing.
-  useEffect(() => {
-    if (aiGenState.kind !== "done") return;
-    // Only redirect while still IN the AI entry flow. A generation that
-    // finishes in the background after the user soft-navigated elsewhere (e.g.
-    // back to a project they were editing) must not hard-redirect them away —
-    // if entryMode left "ai", this effect re-runs and the cleanup cancels the
-    // pending hop.
-    if (entryMode !== "ai") return;
-    const projectId = aiGenState.projectId;
-    const timer = setTimeout(() => {
-      window.location.href = `/${locale}/new?project=${projectId}`;
-    }, 1100);
-    return () => clearTimeout(timer);
-  }, [aiGenState, entryMode]);
-  // Publish the in-flight generation state so the header's locale switcher can
-  // disable itself — switching locale navigates + remounts /new, which would
-  // drop the page being built. Cleared on unmount.
-  useEffect(() => {
-    setGenerationBusy(aiGenerating);
-    return () => setGenerationBusy(false);
-  }, [aiGenerating]);
+  }, [loadedProjectId, heroSending, aiPrompt, aiFotos, aiReference, toast, t]);
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const data = e.data;
@@ -3270,7 +3233,14 @@ function NewV2Inner() {
   return (
     <div className="workspace-v2 h-full flex flex-col">
       <TopBar
-        projectName={projectName}
+        // El proyecto en blanco se llama «Proyecto nuevo» mientras su título
+        // sea el de relleno: lo deja en cuanto Len guarda una portada con
+        // `<title>` (`adoptPlaceholderTitle`).
+        projectName={
+          (proyectoEnBlanco || heroSent) && projectName === UNTITLED_PROJECT_TITLE
+            ? tProjects("newProject")
+            : projectName
+        }
         onRename={persistRename}
         projectLogoUrl={loadedProject?.logoUrl ?? null}
         projectLoading={projectLoadingFromUrl}
@@ -3411,7 +3381,8 @@ function NewV2Inner() {
           onClearScope={() => setScopedSelection(null)}
           pendingDraft={pendingChatDraft}
           pendingDraftAutoSend={pendingChatAutoSend}
-          onPendingDraftConsumed={() => { setPendingChatDraft(null); setPendingChatAutoSend(false); }}
+          pendingAttachments={pendingChatAttachments}
+          onPendingDraftConsumed={() => { setPendingChatDraft(null); setPendingChatAutoSend(false); setPendingChatAttachments(null); }}
           sitePages={sitePages}
           activeSitePage={activeSitePage}
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
@@ -3496,112 +3467,49 @@ function NewV2Inner() {
             <PreviewPlaceholder mode="template" />
           ))}
         {entryMode === "ai" && (
-          aiGenState.kind === "generating" || aiGenState.kind === "done" ? (
-            <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-preview-a">
-              <PageAssembling
-                html={
-                  aiGenState.kind === "generating"
-                    ? paginaEnPantalla(aiGenState.html, lastPreviewHtmlRef.current)
-                    : lastPreviewHtmlRef.current
-                }
-                streaming={false}
-                done={aiGenState.kind === "done"}
-                slow={genSlow}
-                medido={
-                  aiGenState.kind === "generating" ? aiGenState.medido : undefined
-                }
-                onArreglar={
-                  aiGenState.kind === "generating" && aiGenState.medido
-                    ? () => {
-                        // Se le pide a Len lo MISMO que el usuario acaba de leer.
-                        // La medida va verbatim: «el documento se desborda a lo
-                        // ancho en móvil (390px)» dice qué arreglar, y traducirla
-                        // a prosa nuestra sería perder el dato.
-                        const texto = `El navegador midió esto en mi página y quiero que lo arregles:\n\n${aiGenState.medido}`;
-                        try {
-                          window.sessionStorage.setItem(LLAVE_ARREGLO, texto);
-                        } catch {
-                          // Sin almacenamiento no hay traspaso posible: mejor
-                          // llevarle a su página que dejarle el botón muerto.
-                        }
-                        // NO se navega aquí: la medida llega ANTES de que el
-                        // proyecto exista —se mide lo que se acaba de escribir—
-                        // así que todavía no hay a dónde ir. Se deja el encargo
-                        // puesto y lo recoge el salto al taller que ya ocurre al
-                        // terminar la generación.
-                      }
-                    : undefined
-                }
-                caption={
-                  aiGenState.kind === "generating"
-                    ? aiGenState.notice
-                      ? t("aiStatus.improving")
-                      : aiGenState.html
-                        ? t("aiStatus.designing")
-                        : t("aiStatus.thinking")
-                    : undefined
-                }
+          // SIN PROYECTO, LA ENTRADA DE CREAR YA NO VIVE AQUÍ (plans/crear-es-len):
+          // `/new` abre el proyecto en blanco, y su estado vacío es el compositor
+          // (rama `editing`, más abajo). Esta rama sólo espera al blanco, o dice
+          // por qué no llegó; y sigue pintando las otras dos superficies.
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-app">
+            {/* ⚰️ LAS TRES PESTAÑAS ESTABAN AQUÍ, flotando en el centro justo
+                debajo de la barra. Subieron A la barra el 2026-08-31: son la
+                navegación global, y ahí competían por el centro con el propio
+                contenido de la pantalla (el brief, la rejilla de páginas). */}
+            {startSurface === "mispaginas" ? (
+              <ProjectsSection
+                onOpenExplore={() => router.replace("/new?view=explore")}
               />
-            </section>
-          ) : aiGenState.kind === "error" && aiGenState.noCredits ? (
-            // Quedarse sin créditos NO es una generación fallida: reintentar
-            // no puede funcionar. Panel propio, con la fecha de vuelta y la
-            // única acción que sí sirve.
-            <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-preview-a">
-              <div className="flex-1 min-h-0 flex items-center justify-center px-6">
-                <div className="text-center max-w-md">
-                  <div className="text-[13px] text-amber-700 dark:text-amber-300 mb-1">
-                    {t("aiError.noCredits.title")}
-                  </div>
-                  <div className="text-[12px] fg-muted">
-                    {t("aiError.noCredits.reason")}
-                  </div>
-                  <div className="mt-3 text-[11px] fg-faint">
-                    {(() => {
-                      const day = creditRefillLabel(
-                        aiGenState.noCredits.refillsAt,
-                        locale,
-                      );
-                      return day
-                        ? t("aiError.noCredits.refillAt", { date: day })
-                        : t("aiError.noCredits.refill");
-                    })()}
-                  </div>
-                  <a
-                    href={`/api/billing/checkout?locale=${locale}`}
-                    className="mt-4 inline-flex items-center justify-center h-8 px-4 rounded-md bg-[var(--accent-strong)] text-white text-[12px] font-medium shadow-coral hover:brightness-105 transition"
-                  >
-                    {t("aiError.noCredits.cta")}
-                  </a>
-                </div>
+            ) : startSurface === "comunidad" ? (
+              <ExploreView />
+            ) : blankFailure ? (
+              <ProjectUnavailable
+                failure={blankFailure}
+                projectId=""
+                onRetry={() => setBlankAttempt((n) => n + 1)}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center bg-preview-a">
+                <div className="text-[12px] fg-faint">{t("editing.loading")}</div>
               </div>
-            </section>
-          ) : aiGenState.kind === "error" ? (
-            <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-preview-a">
-              <div className="flex-1 min-h-0 flex items-center justify-center px-6">
-                <div className="text-center max-w-md">
-                  <div className="text-[13px] text-red-600 dark:text-red-400 mb-1">
-                    {t("aiError.title")}
-                  </div>
-                  {/* El detalle técnico no se pierde: queda en el title para
-                      depurar sin asustar a quien no programa. */}
-                  <div className="text-[12px] fg-muted" title={aiGenState.message}>
-                    {t(`aiError.reason.${classifyAiError(aiGenState.message)}`)}
-                  </div>
-                  <div className="mt-3 text-[11px] fg-faint">
-                    {t("aiError.tweak")}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAiGenerate}
-                    className="mt-4 inline-flex items-center justify-center h-8 px-4 rounded-md bg-[var(--accent-strong)] text-white text-[12px] font-medium shadow-coral hover:brightness-105 transition"
-                  >
-                    {t("aiError.retry")}
-                  </button>
-                </div>
+            )}
+          </div>
+        )}
+        {entryMode === "paste" && (
+          // SIN PROYECTO NO HAY BARRA LATERAL (las dos pantallas del taller,
+          // `enElEditor`), y el panel de pegar vivía sólo ahí: esta pantalla
+          // decía «Pega tu HTML en la barra lateral» sin barra y sin cuadro. Va
+          // aquí, en el centro, con el ancho de un formulario.
+          <section className="relative flex flex-col flex-1 min-w-0 bg-preview-a">
+            <div className="flex-1 min-h-0 flex justify-center px-4 py-6">
+              <div className="w-full max-w-2xl min-h-0 flex flex-col rounded-xl ring-1 ring-[color:var(--border)] bg-elev">
+                <PastePanel />
               </div>
-            </section>
-          ) : previewingTemplate ? (
+            </div>
+          </section>
+        )}
+        {entryMode === "editing" && proyectoEnBlanco &&
+          (previewingTemplate ? (
             <div className="flex-1 min-w-0 flex flex-col">
               {templateError && (
                 <div className="h-7 shrink-0 flex items-center justify-center gap-2 text-[11.5px] bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-b bd">
@@ -3626,49 +3534,28 @@ function NewV2Inner() {
               />
             </div>
           ) : (
+            // EL ESTADO VACÍO DEL CHAT DE LEN (plans/crear-es-len): el
+            // compositor de la entrada de siempre, y enviar es el primer
+            // mensaje (`handleHeroSend`).
             <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-app">
-              {/* ⚰️ LAS TRES PESTAÑAS ESTABAN AQUÍ, flotando en el centro justo
-                  debajo de la barra. Subieron A la barra el 2026-08-31: son la
-                  navegación global, y ahí competían por el centro con el propio
-                  contenido de la pantalla (el brief, la rejilla de páginas). */}
-              {startSurface === "mispaginas" ? (
-                <ProjectsSection
-                  onOpenExplore={() => router.replace("/new?view=explore")}
-                />
-              ) : startSurface === "comunidad" ? (
-                <ExploreView />
-              ) : (
-                <StartLanding
-                  aiState={aiBriefFormState}
-                  onGenerate={handleAiGenerate}
-                  generating={aiGenerating}
-                  effort={effort}
-                  onEffortChange={setEffort}
-                  onPreviewTemplate={(tpl) => {
-                    setPreviewingTemplate(tpl);
-                    setTemplateError(null);
-                  }}
-                  onPaste={() => router.push("/new?mode=paste")}
-                />
-              )}
+              <StartLanding
+                aiState={aiBriefFormState}
+                onGenerate={() => void handleHeroSend()}
+                generating={heroSending}
+                effort={effort}
+                onEffortChange={setEffort}
+                onPreviewTemplate={(tpl) => {
+                  setPreviewingTemplate(tpl);
+                  setTemplateError(null);
+                }}
+                onPaste={() => router.push("/new?mode=paste")}
+              />
             </div>
-          )
-        )}
-        {entryMode === "paste" && (
-          // SIN PROYECTO NO HAY BARRA LATERAL (las dos pantallas del taller,
-          // `enElEditor`), y el panel de pegar vivía sólo ahí: esta pantalla
-          // decía «Pega tu HTML en la barra lateral» sin barra y sin cuadro. Va
-          // aquí, en el centro, con el ancho de un formulario.
-          <section className="relative flex flex-col flex-1 min-w-0 bg-preview-a">
-            <div className="flex-1 min-h-0 flex justify-center px-4 py-6">
-              <div className="w-full max-w-2xl min-h-0 flex flex-col rounded-xl ring-1 ring-[color:var(--border)] bg-elev">
-                <PastePanel />
-              </div>
-            </div>
-          </section>
-        )}
-        {entryMode === "editing" && !previewingTemplate &&
-          (loadedProject && activeDoc ? (
+          ))}
+        {entryMode === "editing" && !proyectoEnBlanco && !previewingTemplate &&
+          // Con el primer mensaje mandado, el lienzo aparece VACÍO y se va
+          // llenando con la página a medias que Len escribe (`page_preview`).
+          (loadedProject && (activeDoc || heroSent || loadedProject.chatHistory.length > 0) ? (
             <>
               <PreviewArea
                 doc={activeDoc}
