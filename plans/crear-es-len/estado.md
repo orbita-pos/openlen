@@ -100,5 +100,6 @@ con el mismo entorno, o por su causa):
   Len-Bench).
 - Tarea 11 (medición pagada) y Tarea 12 (borrar Crear): sin empezar, como se
   pidió.
-- Una decisión, no un arreglo: la suite de la página (`data.pruebas`) se quedó
-  sin escritor tras la Tarea 10 (ver `pendiente-local.md`).
+- La suite de la página (`data.pruebas`) se quedó sin escritor ni lector tras
+  la Tarea 10. Decidido el 06/10: se deja como está por ahora (ver
+  `pendiente-local.md`).

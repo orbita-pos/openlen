@@ -57,6 +57,7 @@ navegador, sesión o Fireworks de verdad:
   retiró `verifyTurn`, que era quien llenaba `suiteDelTurno`; el bloque que la
   guardaba al cerrar el turno se quedó muerto y se borró en B2. Las promesas
   guardadas siguen en la base y `lib/agent/pruebas-de-la-pagina.ts` sigue
-  existiendo, pero ningún turno las corre ni las actualiza. Decidir si se
-  retira entera (tipo, módulo y `guardadas` de `verify.ts`) — no lo pedía
-  ningún plan, así que no se tocó.
+  existiendo, pero ningún turno las corre ni las actualiza, y ningún llamador
+  de `verifyEditedPage` le pasa `guardadas`. **Decidido el 06/10: se deja como
+  está por ahora** (se planteó retirarla entera o darle otro escritor, p. ej.
+  `use_page`). Las filas con `data.pruebas` quedan inertes.
