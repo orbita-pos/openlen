@@ -188,13 +188,15 @@ describe("R2BlobStore: el bucket de R2 que no existe o al que el token no llega"
     log.mockRestore();
   });
 
-  it("el token sin acceso al bucket (403): el mismo 503, que lo dice", async () => {
+  // Con un token limitado por bucket, R2 contesta 403 también si el bucket no
+  // existe (medido contra R2 el 05/10): el registro nombra las dos causas.
+  it("el token sin acceso al bucket, o el bucket que no existe con token limitado (403): el mismo 503", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const s = new R2BlobStore({ send: failing(s3Error("AccessDenied", 403)), bucket: "openlen-page-storage" });
     const res = storageErrorResponse(await s.put("k", flujo([1]), OPC).catch((e: unknown) => e));
     expect(res.status).toBe(503);
     expect((await res.json()).message).toBe("Storage is not available on this server: it has no access to its storage bucket");
-    expect(String(log.mock.calls[0]![0])).toContain("añádelo al token de la app");
+    expect(String(log.mock.calls[0]![0])).toContain("o no existe, o el token de la app no lo tiene");
     log.mockRestore();
   });
 

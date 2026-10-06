@@ -51,7 +51,10 @@ function storeNotMounted(err: unknown, bucket: string): StorageError | null {
     console.error(`[storage] el bucket de R2 «${bucket}» no existe: créalo en R2 (privado, sin dominio) y añádelo al token de la app (infra/PAGES_BACKEND_RUNBOOK.md §4b)`);
     message = "its storage bucket does not exist";
   } else if (e?.$metadata?.httpStatusCode === 403) {
-    console.error(`[storage] R2 niega el acceso al bucket «${bucket}» (${name}): añádelo al token de la app (infra/PAGES_BACKEND_RUNBOOK.md §4b)`);
+    // Con un token limitado por bucket (el de la app lo está), R2 contesta así
+    // TAMBIÉN cuando el bucket no existe: 403 AccessDenied, no NoSuchBucket
+    // (medido contra R2 el 05/10).
+    console.error(`[storage] R2 niega el acceso al bucket «${bucket}» (${name}): o no existe, o el token de la app no lo tiene; créalo en R2 (privado, sin dominio) y añádelo al token (infra/PAGES_BACKEND_RUNBOOK.md §4b)`);
     message = "it has no access to its storage bucket";
   } else {
     return null;
