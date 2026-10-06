@@ -17,6 +17,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 import type { ProjectData } from "@/lib/projects/types";
+import type { ChatPhoto } from "@/lib/projects/chat-photos";
 import type { TranscripcionGuardada } from "@/lib/agent/transcripcion";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -343,11 +344,11 @@ export const projectChatMessages = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     userText: text("userText").notNull(),
-    // The image the user attached to this turn, if any.
-    attachedImage: jsonb("attachedImage").$type<{
-      url: string;
-      alt?: string;
-    }>(),
+    // The image the user attached to this turn, if any. Crear es Len
+    // (2026-10-06): hasta 4 — UNA se guarda como objeto (como siempre) y dos o
+    // más como lista. Sin migración: se lee con `photosOf`
+    // (lib/projects/chat-photos.ts).
+    attachedImage: jsonb("attachedImage").$type<ChatPhoto | ChatPhoto[]>(),
     assistantReasoning: text("assistantReasoning").notNull(),
     // Multi-page: which document this turn edited. NULL = the home document
     // (data.html); a slug = data.pages[slug].html. Mirrors projectVersions.page.

@@ -47,7 +47,7 @@ describe("buildAgentContext", () => {
     const s = buildAgentContext({
       state: {},
       userBrief: null,
-      attachedImage: { url: "https://images.openlen.com/foo.webp", alt: "Foto de taco" },
+      attachedImages: [{ url: "https://images.openlen.com/foo.webp", alt: "Foto de taco" }],
     });
     expect(s).toContain("IMAGE ATTACHED BY THE USER");
     expect(s).toContain("https://images.openlen.com/foo.webp");
@@ -77,7 +77,7 @@ describe("buildAgentContext", () => {
     const s = buildAgentContext({
       state: {},
       userBrief: null,
-      attachedImage: { url: "http://localhost:3000/api/projects/p1/assets/casa.png" },
+      attachedImages: [{ url: "http://localhost:3000/api/projects/p1/assets/casa.png" }],
     });
     expect(s).toContain("http://localhost:3000/api/projects/p1/assets/casa.png");
     expect(s).toContain("DON'T TALK ABOUT IT");
@@ -96,17 +96,36 @@ describe("buildAgentContext", () => {
     expect(s).not.toContain("IMAGE ATTACHED BY THE USER");
   });
 
+  // Crear es Len: hasta 4 fotos por mensaje, cada una con su dirección y su
+  // etiqueta, y la regla de Crear de no promediarlas.
+  it("con varias fotos las nombra una a una, por su etiqueta, y no las promedia", () => {
+    const s = buildAgentContext({
+      state: {},
+      userBrief: null,
+      attachedImages: [
+        { url: "https://images.openlen.com/logo.png", alt: "Logo", visible: true },
+        { url: "https://images.openlen.com/local.jpg", visible: true },
+      ],
+    });
+    expect(s).toContain("IMAGES ATTACHED BY THE USER (2)");
+    expect(s).toContain("Image 1: https://images.openlen.com/logo.png (alt text: Logo)");
+    expect(s).toContain("Image 2: https://images.openlen.com/local.jpg");
+    expect(s).toContain("you CAN SEE THEM");
+    expect(s).toContain("they are NOT averaged");
+    expect(s).not.toContain("IMAGE ATTACHED BY THE USER:");
+  });
+
   // F5 — los píxeles viajan adjuntos: el bloque lo dice SOLO con visible=true.
   it("visible=true adds the PUEDES VERLA line; without it the text is the F2 shape", () => {
     const base = { state: {}, userBrief: null };
     const seen = buildAgentContext({
       ...base,
-      attachedImage: { url: "https://images.openlen.com/foo.webp", visible: true },
+      attachedImages: [{ url: "https://images.openlen.com/foo.webp", visible: true }],
     });
     expect(seen).toContain("CAN SEE IT");
     const blind = buildAgentContext({
       ...base,
-      attachedImage: { url: "https://images.openlen.com/foo.webp" },
+      attachedImages: [{ url: "https://images.openlen.com/foo.webp" }],
     });
     expect(blind).not.toContain("CAN SEE IT");
     expect(blind).toContain("IMAGE ATTACHED BY THE USER");

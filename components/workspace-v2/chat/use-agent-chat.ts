@@ -40,6 +40,7 @@ import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "../pane
 import { NIVEL_POR_DEFECTO, type EsfuerzoAgente, type NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import type { StoredChatTurn } from "@/lib/projects/types";
+import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { fusionarConversacion } from "@/lib/chat/fusionar-conversacion";
@@ -88,6 +89,9 @@ export interface DesignTurn {
   /** Image attached to this turn — rendered in the user bubble as proof
    *  it was actually sent with the message. */
   attachedImage?: AttachedImage;
+  /** Crear es Len: todas las fotos del turno, sólo cuando son dos o más
+   *  (`attachedImage` es entonces la primera). */
+  attachedImages?: readonly AttachedImage[];
   /**
    * El elemento al que se acotó ESTE turno — misma prueba que la imagen.
    *
@@ -1030,6 +1034,9 @@ export function useAgentChat({
         readonly comentarios?: readonly ComentarioDeLinea[];
         /** Pieza 8: «Reanudar» el encargo — un turno sin mensaje: la ronda siguiente. */
         readonly goal?: "resume";
+        /** Crear es Len: VARIAS fotos (hasta `MAX_PHOTOS_PER_MESSAGE`). Ganan
+         *  sobre la del compositor y sobre `imageOverride`. */
+        readonly images?: readonly AttachedImage[];
       },
     ) => {
       const escrito = rawPrompt.trim();
@@ -1057,6 +1064,11 @@ export function useAgentChat({
       // imageOverride lets Retry re-send the failed turn's original image;
       // undefined = use the live composer image, null = explicitly none.
       const img = imageOverride !== undefined ? imageOverride : attachedImage;
+      const imgs: readonly AttachedImage[] = opciones?.images?.length
+        ? opciones.images.slice(0, MAX_PHOTOS_PER_MESSAGE)
+        : img
+          ? [img]
+          : [];
       // Snapshot the page scope at send time — preEditHtml is THIS page's
       // document, and the drip / apply / revert / undo legs must all write
       // back to the same slot even if the user switches pages mid-stream.
@@ -1072,7 +1084,8 @@ export function useAgentChat({
       const newTurn: DesignTurn = {
         id: turnId,
         userText: textoDelTurno,
-        attachedImage: img ?? undefined,
+        attachedImage: imgs[0],
+        ...(imgs.length > 1 ? { attachedImages: imgs } : {}),
         // El alcance viaja EN el turno, no sólo en la petición: es la misma
         // prueba que la imagen. Se lee AQUÍ, antes de que el envío lo suelte
         // del compositor unas líneas más abajo.
@@ -1122,7 +1135,8 @@ export function useAgentChat({
         : null;
       // Same snapshot discipline for any attached image — the in-flight
       // request keeps the one that was set when Send fired.
-      const turnImage = img ? { url: img.url, alt: img.alt } : null;
+      const turnImage = imgs[0] ? { url: imgs[0].url, alt: imgs[0].alt } : null;
+      const turnImages = imgs.map((f) => ({ url: f.url, alt: f.alt }));
 
       // Agent mode (flag-gated) — talk to /api/agent instead of ai-design.
       // Same SSE reader/line-parse shape as below, different event dispatch:
@@ -1275,7 +1289,7 @@ export function useAgentChat({
               // absent/empty means home, cloned for parity.
               ...(turnPage ? { page: turnPage } : {}),
               ...(turnScope ? { scope: turnScope } : {}),
-              ...(turnImage ? { attachedImage: turnImage } : {}),
+              ...(turnImages.length > 0 ? { attachedImages: turnImages } : {}),
             }),
             signal: abort.signal,
           });
@@ -1866,7 +1880,8 @@ export function useAgentChat({
             // orden. Sin correcciones es `prompt` y nada más, byte a byte.
             // Pieza 8: en una ronda, su mensaje (el que guarda el servidor).
             userText: [textoDelTurno, ...correcciones.map((c) => `↳ ${c}`)].join("\n"),
-            attachedImage: img ?? undefined,
+            attachedImage: imgs[0],
+            ...(imgs.length > 1 ? { attachedImages: [...imgs] } : {}),
             // El aviso viaja a la transcripción: al recargar, el turno tiene
             // que seguir contando que se cortó. Sin esto el usuario ve un turno
             // aplicado y limpio sobre un trabajo a medias.
@@ -2021,7 +2036,7 @@ export function useAgentChat({
       }
       // Re-send with the turn's ORIGINAL image (the live composer was cleared
       // after the first send), so a vision/image edit retries as the same request.
-      void send(turn.userText, turn.attachedImage ?? null);
+      void send(turn.userText, turn.attachedImage ?? null, turn.attachedImages ? { images: turn.attachedImages } : undefined);
     },
     [send],
   );
@@ -2388,6 +2403,7 @@ export function restoreTurn(s: StoredChatTurn): DesignTurn {
     id: s.id,
     userText: s.userText,
     attachedImage: s.attachedImage,
+    ...(s.attachedImages ? { attachedImages: s.attachedImages } : {}),
     assistantReasoning: s.assistantReasoning,
     // Len 2.1: sigue trabajando en el servidor. Se pinta en marcha, contando
     // desde que empezó, y el panel relee su fila hasta que cierra.

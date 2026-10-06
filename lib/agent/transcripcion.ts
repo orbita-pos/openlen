@@ -32,6 +32,7 @@ import { normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "@/lib/agent/terminal/cambios-del-comando";
 import { currentToolCall, currentToolName } from "@/lib/agent/ask-user-question";
 import type { GoalSnapshot } from "@/lib/agent/goal";
+import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 
 /** La misma marca que usa Claude Code. */
 export const RESULTADO_VACIADO = "[Earlier tool result removed to save space]";
@@ -100,8 +101,9 @@ export interface FilaDelHistorial {
   readonly userText: string;
   readonly assistantReasoning: string;
   readonly transcript: TranscripcionGuardada | null;
-  /** La foto que el dueño adjuntó a ese turno (columna `attachedImage`). */
-  readonly attachedImage?: { readonly url: string; readonly alt?: string } | null;
+  /** Las fotos que el dueño adjuntó a ese turno (columna `attachedImage`):
+   *  un objeto en las filas de siempre, una lista con dos o más (`photosOf`). */
+  readonly attachedImage?: ChatPhoto | readonly ChatPhoto[] | null;
 }
 
 /**
@@ -243,17 +245,25 @@ export function notaDeLaFoto(foto: { url: string; alt?: string }, estado: "vista
   return `[Attached photo: ${foto.url}${alt}${porque}]`;
 }
 
-/** Tu mensaje de un turno pasado: el texto y, si mandaste foto, su nota y sus
- *  píxeles. Sin foto, el mensaje de siempre, byte a byte. */
+/** Tu mensaje de un turno pasado: el texto y, si mandaste fotos, una nota por
+ *  foto y los píxeles de las que se consiguieron. Sin foto, el mensaje de
+ *  siempre, byte a byte; con una, el de siempre también. */
 function mensajeDelDueno(f: FilaDelHistorial, fotos: FotosDeLaConversacion): MensajeDelHistorial {
-  if (!f.attachedImage) return { role: "user", content: f.userText, opensTurn: true };
-  const foto = fotos.get(f.attachedImage.url) ?? null;
-  const estado = foto === NO_CABE ? NO_CABE : foto ? "vista" : "no-cargo";
+  const adjuntas = photosOf(f.attachedImage);
+  if (adjuntas.length === 0) return { role: "user", content: f.userText, opensTurn: true };
+  const notas: string[] = [];
+  const imagenes: InlineImage[] = [];
+  for (const adjunta of adjuntas) {
+    const foto = fotos.get(adjunta.url) ?? null;
+    const estado = foto === NO_CABE ? NO_CABE : foto ? "vista" : "no-cargo";
+    notas.push(notaDeLaFoto(adjunta, estado));
+    if (foto && foto !== NO_CABE) imagenes.push(foto);
+  }
   return {
     role: "user",
     opensTurn: true,
-    content: `${f.userText}\n\n${notaDeLaFoto(f.attachedImage, estado)}`,
-    ...(foto && foto !== NO_CABE ? { images: [foto] } : {}),
+    content: `${f.userText}\n\n${notas.join("\n")}`,
+    ...(imagenes.length > 0 ? { images: imagenes } : {}),
   };
 }
 

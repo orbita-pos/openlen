@@ -1748,6 +1748,32 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     expect((mocks.createAgentBrain.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0]).not.toHaveProperty("attachedImage");
   });
 
+  // Crear es Len: hasta 4 fotos en un mensaje, como los adjuntos de DeepSeek.
+  it("varias fotos en ESTE mensaje: todas pegadas a tu mensaje, en orden, y la fila las guarda como lista", async () => {
+    const A = { mimeType: "image/jpeg", dataBase64: "AAAA" };
+    const B = { mimeType: "image/png", dataBase64: "BBBB" };
+    mocks.conseguirFotos.mockResolvedValueOnce(new Map([["https://u/a.jpg", A], ["https://u/b.png", B]]));
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({
+            projectId: "p1",
+            prompt: "hazme la página",
+            // La de `attachedImage` repetida es la misma foto: no cuenta dos veces.
+            attachedImages: [{ url: "https://u/a.jpg", alt: "logo" }, { url: "https://u/b.png" }, { url: "javascript:alert(1)" }],
+            attachedImage: { url: "https://u/a.jpg", alt: "logo" },
+          }),
+        }),
+      ),
+    );
+    const args = mocks.runAgentLoop.mock.calls.at(-1)![0] as { messages: { content: string; images?: unknown[] }[] };
+    expect(args.messages.at(-1)!.images).toEqual([A, B]);
+    expect(mocks.conseguirFotos).toHaveBeenCalledWith(["https://u/a.jpg", "https://u/b.png"], expect.anything());
+    const fila = (mocks.abrirFilaDelTurno.mock.calls.at(-1) as unknown as [string, { attachedImage: unknown }])[1];
+    expect(fila.attachedImage).toEqual([{ url: "https://u/a.jpg", alt: "logo" }, { url: "https://u/b.png" }]);
+  });
+
   it("A · fotos que no caben juntas (20 MiB, como DeepSeek): la más vieja va sin píxeles y el turno sigue", async () => {
     // Dos fotos de 11 MiB de base64: juntas pasan del presupuesto.
     const grande = (n: string) => ({ mimeType: "image/jpeg", dataBase64: n.repeat(11 * 1024 * 1024) });

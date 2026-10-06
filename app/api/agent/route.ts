@@ -40,6 +40,7 @@ import {
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversacion";
 import { turnosParaElHistorial } from "@/lib/projects/chat";
+import { MAX_PHOTOS_PER_MESSAGE, photosForRow, photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
 import { DYNAMIS_MAX_OUTPUT_TOKENS, modeOfTurn } from "@/lib/agent/dynamis";
@@ -112,7 +113,7 @@ import { MAX_PROMPT } from "@/lib/workspace-v2/comentarios-de-lineas";
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/agent — the OpenLen Agent's agentic loop (F1 Task 9).
 //
-// Body: { projectId, prompt, history?, attachedImage?, scope? }
+// Body: { projectId, prompt, history?, attachedImage?, attachedImages?, scope? }
 // attachedImage/scope validated with the same limits/posture as
 // /api/templates/ai-design (F2 Task 8) — see the constants + validation
 // block below.
@@ -262,6 +263,8 @@ type CuerpoDelTurno = {
   dichoAntes?: unknown;
   scope?: ScopeBody;
   attachedImage?: AttachedImageBody;
+  /** Crear es Len: hasta `MAX_PHOTOS_PER_MESSAGE` fotos en un mensaje. */
+  attachedImages?: unknown;
   /** EL ESFUERZO DE ESTE TURNO, fijado por el cliente al ENVIAR. Ver
    *  `esfuerzoDelTurno` más abajo: se manda por turno, no se lee en vivo. */
   esfuerzo?: unknown;
@@ -554,29 +557,32 @@ async function correrTurno(
     }
   }
 
-  // Validate the attached image (optional) — same shape/limits/posture as
-  // ai-design: must be a valid http(s) URL (root-relative resolved against
-  // req.url), invalid attachments are silently dropped rather than a 400
-  // (the prompt itself still has value).
-  let attachedImage: { url: string; alt?: string } | null = null;
-  if (body?.attachedImage && typeof body.attachedImage === "object") {
-    const url =
-      typeof body.attachedImage.url === "string" ? body.attachedImage.url.trim() : "";
-    if (url.length > 0 && url.length <= ATTACHED_URL_MAX) {
-      try {
-        const parsed = new URL(url, req.url);
-        if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-          const alt =
-            typeof body.attachedImage.alt === "string"
-              ? body.attachedImage.alt.trim().slice(0, ATTACHED_ALT_MAX)
-              : "";
-          attachedImage = alt ? { url: parsed.href, alt } : { url: parsed.href };
-        }
-      } catch {
-        /* leave attachedImage null */
-      }
+  // LAS FOTOS DEL MENSAJE: `attachedImages` (hasta 4, como Crear) y el
+  // `attachedImage` de siempre, que sigue llegando del chat. Misma validación
+  // de antes para cada una —same shape/limits/posture as ai-design: a valid
+  // http(s) URL, root-relative resolved against req.url—; una inválida se
+  // descarta en silencio en vez de un 400 (el mensaje sigue valiendo).
+  const leerFoto = (raw: unknown): ChatPhoto | null => {
+    if (!raw || typeof raw !== "object") return null;
+    const r = raw as AttachedImageBody;
+    const url = typeof r.url === "string" ? r.url.trim() : "";
+    if (url.length === 0 || url.length > ATTACHED_URL_MAX) return null;
+    try {
+      const parsed = new URL(url, req.url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+      const alt = typeof r.alt === "string" ? r.alt.trim().slice(0, ATTACHED_ALT_MAX) : "";
+      return alt ? { url: parsed.href, alt } : { url: parsed.href };
+    } catch {
+      return null;
     }
+  };
+  const attachedImages: ChatPhoto[] = [];
+  for (const raw of [...(Array.isArray(body?.attachedImages) ? body.attachedImages : []), body?.attachedImage]) {
+    const foto = leerFoto(raw);
+    // La misma foto dos veces (el chat manda las dos claves) es una sola.
+    if (foto && !attachedImages.some((f) => f.url === foto.url)) attachedImages.push(foto);
   }
+  attachedImages.splice(MAX_PHOTOS_PER_MESSAGE);
 
   // La puerta valida la credencial del papel que de verdad razona este turno —
   // ver lib/ai/turn-credentials.ts. Aqui vivia tambien un `PROVIDER` de Gemini
@@ -615,15 +621,18 @@ async function correrTurno(
   // De la más nueva a la más vieja: la del turno primero. Si no caben juntas en
   // la petición, las más viejas van sin píxeles y con su dirección, como DeepSeek
   // (`fotosQueCaben`); el turno sigue.
-  const masNuevaPrimero = [attachedImage?.url, ...[...filasDelHistorial].reverse().map((f) => f.attachedImage?.url)].filter(
-    (u): u is string => !!u,
-  );
+  const masNuevaPrimero = [
+    ...attachedImages.map((f) => f.url),
+    ...[...filasDelHistorial].reverse().flatMap((f) => photosOf(f.attachedImage).map((p) => p.url)),
+  ];
   const fotos = fotosQueCaben(masNuevaPrimero, await conseguirFotos(masNuevaPrimero, { origen: req.url, signal: req.signal }));
   const pixelesDe = (url: string): InlineImage | null => {
     const f = fotos.get(url);
     return f && f !== NO_CABE ? f : null;
   };
-  const attachedInline: InlineImage | null = attachedImage ? pixelesDe(attachedImage.url) : null;
+  const attachedInlines: InlineImage[] = attachedImages
+    .map((f) => pixelesDe(f.url))
+    .filter((p): p is InlineImage => p !== null);
   if (fotos.size > 0) {
     const valores = [...fotos.values()];
     const vistas = valores.filter((f) => f && f !== NO_CABE).length;
@@ -755,9 +764,7 @@ async function correrTurno(
     // que no tocó nada. Es un hecho estructural, no una lectura de su prosa.
     // Un historial vacío (primer turno) no dispara nada.
     turnoAnteriorMudo: turnoAnteriorMudoDe(history),
-    attachedImage: attachedImage
-      ? { ...attachedImage, ...(attachedInline ? { visible: true } : {}) }
-      : null,
+    attachedImages: attachedImages.map((f) => (pixelesDe(f.url) ? { ...f, visible: true } : f)),
     seleccion,
     maxPromptTokens: MAX_PROMPT_TOKENS,
   };
@@ -805,7 +812,7 @@ async function correrTurno(
           degradaciones: argsDelTurno.degradaciones,
           turnoAnteriorMudo: argsDelTurno.turnoAnteriorMudo,
           conPin: seleccion !== null,
-          conImagen: attachedImage !== null,
+          conImagen: attachedImages.length > 0,
           activePage: pageSlug,
         }),
       ),
@@ -818,7 +825,7 @@ async function correrTurno(
   // LA FOTO DE ESTE TURNO, PEGADA A TU MENSAJE (A): viaja en todas las vueltas
   // y en el cierre, como una imagen pegada en Claude Code. Antes se anclaba a
   // la primera vuelta y en la segunda Len ya no la tenía delante.
-  if (attachedInline) messages[messages.length - 1] = { ...messages[messages.length - 1]!, images: [attachedInline] };
+  if (attachedInlines.length > 0) messages[messages.length - 1] = { ...messages[messages.length - 1]!, images: attachedInlines };
 
   // PIEZA 7 · EL MODO PLAN DEL TURNO, como el de DeepSeek: plegado de la última
   // fila con transcripción y, si el dueño eligió otra cosa al mandar, gana él y
@@ -1136,7 +1143,7 @@ async function correrTurno(
         };
         // La fila, abierta: desde aquí el turno se puede volver a mirar.
         try {
-          await abrirFilaDelTurno(projectId, { id: filaId, userText: prompt, page: pageSlug, attachedImage });
+          await abrirFilaDelTurno(projectId, { id: filaId, userText: prompt, page: pageSlug, attachedImage: photosForRow(attachedImages) });
           filaAbierta = true;
         } catch (err) {
           console.warn("[agent] no se pudo abrir la fila del turno", err);

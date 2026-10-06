@@ -561,14 +561,20 @@ function TurnView({
           <div className="inline-block max-w-full rounded-2xl px-3 py-2 text-left bg-accent-soft text-accent border border-[color:var(--accent)]/30">
             {turn.attachedImage && (
               <div className="mb-1.5 flex items-center gap-1.5">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={turn.attachedImage.url}
-                  alt=""
-                  className="h-9 w-9 rounded object-cover ring-1 ring-[color:var(--accent)]/30"
-                />
+                {/* Una foto, como siempre; con dos o más (Crear es Len), todas. */}
+                {(turn.attachedImages ?? [turn.attachedImage]).map((f) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={f.url}
+                    src={f.url}
+                    alt=""
+                    className="h-9 w-9 rounded object-cover ring-1 ring-[color:var(--accent)]/30"
+                  />
+                ))}
                 <span className="text-[10px] fg-faint ui-small">
-                  {t("turn.imageSent")}
+                  {turn.attachedImages && turn.attachedImages.length > 1
+                    ? t("turn.imagesSent", { count: turn.attachedImages.length })
+                    : t("turn.imageSent")}
                 </span>
               </div>
             )}

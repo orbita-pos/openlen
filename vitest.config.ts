@@ -638,6 +638,7 @@ export default defineConfig({
       // Crear es Len: el proyecto en blanco y su título (plans/crear-es-len).
       "lib/projects/blank-project.pg.test.ts",
       "lib/projects/blank.test.ts",
+      "lib/projects/chat-photos.test.ts",
       "lib/projects/escritores-de-data.test.ts",
       "lib/notifications/**/*.test.ts",
     ],

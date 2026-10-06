@@ -12,6 +12,7 @@ import type { FilaDelHistorial, TranscripcionGuardada } from "@/lib/agent/transc
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import { parseGoalSnapshot, type GoalSnapshot } from "@/lib/agent/goal";
 import { goalActivation } from "@/lib/agent/goal-activation";
+import { photosForRow, photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 
 /** Las columnas de la fila SIN la transcripción (H4): el panel del chat no la
  *  usa, y son los resultados enteros de cada turno. Se calculan al usarse, no
@@ -204,6 +205,13 @@ export async function transcripcionDeLaFila(projectId: string, id: string): Prom
   return rows[0]?.transcript ?? null;
 }
 
+/** Las fotos de un turno del cliente, como se guardan (`photosForRow`). Con
+ *  dos o más vienen en `attachedImages`: escribir sólo `attachedImage` pisaría
+ *  la lista que la ruta de Len guardó al abrir la fila. */
+function fotosDelTurno(turn: Pick<StoredChatTurn, "attachedImage" | "attachedImages">): ChatPhoto | ChatPhoto[] | null {
+  return photosForRow(turn.attachedImages ?? (turn.attachedImage ? [turn.attachedImage] : []));
+}
+
 /** Append one settled turn. The turn id is the PK, so a retried append is an
  *  idempotent no-op. Trims the project's log to the most-recent CHAT_LIMIT. */
 export async function appendChatMessage(
@@ -216,7 +224,7 @@ export async function appendChatMessage(
       id: turn.id,
       projectId,
       userText: turn.userText.slice(0, 4000),
-      attachedImage: turn.attachedImage ?? null,
+      attachedImage: fotosDelTurno(turn),
       assistantReasoning: turn.assistantReasoning.slice(0, 20_000),
       page: turn.page ?? null,
       actions: turn.actions ?? null,
@@ -237,7 +245,7 @@ export async function appendChatMessage(
       target: schema.projectChatMessages.id,
       set: {
         userText: turn.userText.slice(0, 4000),
-        attachedImage: turn.attachedImage ?? null,
+        attachedImage: fotosDelTurno(turn),
         assistantReasoning: turn.assistantReasoning.slice(0, 20_000),
         page: turn.page ?? null,
         actions: turn.actions ?? null,
@@ -318,7 +326,7 @@ export async function registrarTurnoDelServidor(
       id: turn.id,
       projectId,
       userText: turn.userText.slice(0, 4000),
-      attachedImage: turn.attachedImage ?? null,
+      attachedImage: fotosDelTurno(turn),
       assistantReasoning: turn.assistantReasoning.slice(0, 20_000),
       page: turn.page ?? null,
       actions: turn.actions ?? null,
@@ -353,7 +361,8 @@ export async function abrirFilaDelTurno(
     readonly id: string;
     readonly userText: string;
     readonly page: string | null;
-    readonly attachedImage?: { url: string; alt?: string } | null;
+    /** Lo que se guarda tal cual: `photosForRow` (una foto, un objeto). */
+    readonly attachedImage?: ChatPhoto | ChatPhoto[] | null;
   },
 ): Promise<void> {
   await db
@@ -489,7 +498,11 @@ function rowToTurn(
     // The row's createdAt doubles as the turn's applied-at timestamp.
     appliedAt: row.createdAt.getTime(),
   };
-  if (row.attachedImage) turn.attachedImage = row.attachedImage;
+  // Una foto, como siempre; dos o más (Crear es Len), la primera en
+  // `attachedImage` y todas en `attachedImages`.
+  const fotos = photosOf(row.attachedImage);
+  if (fotos.length > 0) turn.attachedImage = fotos[0]!;
+  if (fotos.length > 1) turn.attachedImages = fotos;
   if (row.page) turn.page = row.page; // NULL stays undefined = home
   // F2-T11: NULL/absent stays undefined on both — restoreTurn (chat-panel.tsx)
   // treats undefined exactly like a pre-F2 row (no cards, "Applied" verb ok).

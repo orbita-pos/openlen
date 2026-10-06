@@ -210,6 +210,38 @@ export function seleccionBlock(sel: SeleccionDelDueno | null | undefined): strin
   return `<system-reminder>\n${cuerpo}\n\nIt may or may not matter for what you are doing now.\n</system-reminder>\n\n`;
 }
 
+/** Una foto del mensaje, como la ve el contexto: `visible` = sus píxeles van
+ *  pegados al mensaje y el modelo PUEDE VERLA. */
+export interface AttachedImageForContext {
+  readonly url: string;
+  readonly alt?: string;
+  readonly visible?: boolean;
+}
+
+/**
+ * VARIAS FOTOS EN UN MENSAJE (Crear es Len, 2026-10-06). Lo que decía Crear de
+ * sus referencias (`app/api/generate/route.ts`, «ATTACHED REFERENCES») junto
+ * con lo que dice Len de una foto suelta: aquí SÍ tienen dirección, así que las
+ * que pertenecen a la página se colocan, y las de inspiración sólo se miran.
+ * Las etiquetas («Image 1…») son las que pone `withImages` en
+ * `lib/ai/fireworks-stream-client.ts` a las que llegan con píxeles.
+ */
+function attachedImagesBlock(imagenes: readonly AttachedImageForContext[]): string {
+  const lineas = imagenes
+    .map((f, i) => `Image ${i + 1}: ${f.url}${f.alt ? ` (alt text: ${f.alt})` : ""}`)
+    .join("\n");
+  const vistas = imagenes.filter((f) => f.visible).length;
+  const seeLine =
+    vistas === imagenes.length
+      ? "\nThey are ATTACHED to this turn, labeled in that order, and you CAN SEE THEM."
+      : vistas > 0
+        ? `\n${vistas} of them are ATTACHED to this turn and you CAN SEE THEM; of the rest you only have the address.`
+        : "";
+  return `IMAGES ATTACHED BY THE USER (${imagenes.length}), in this order:\n${lineas}${seeLine}
+They are NOT the same idea cut into pieces and they are NOT averaged. Usually each one brings something different —a logo, the premises or the product, a mood board—. Read them ONE BY ONE and take from each what only it tells you; if two contradict each other, the user's message wins, and if it doesn't settle it, Image 1 wins.
+The ones that belong ON the page (a logo, the premises, a product) are REAL image URLs the user attached on purpose — place each one using its EXACT URL (verbatim) as the src of an <img> (or as a CSS background-image), with alt text true to what it shows. A mood board is for looking at, not for inserting. NEVER make up or change a URL, and DON'T TALK ABOUT the addresses: OpenLen's uploader wrote them, they work in the editor and they are baked in when publishing, even if they start with localhost. Don't refuse and don't replace them with placeholders.\n\n`;
+}
+
 export function buildAgentContext(args: {
   /** Inyectable sólo para las pruebas: sin esto el bloque HOY cambiaría cada
    *  día y ninguna prueba podría fijarlo. */
@@ -246,8 +278,10 @@ export function buildAgentContext(args: {
    *  placeholder if one exists. Absent/omitted ⇒ no block.
    *  F5 — `visible: true` means the route ALSO attached the image's pixels to
    *  the first model turn (inlineData), so the block tells the model it can
-   *  actually SEE the image, not just its URL. */
-  attachedImage?: { url: string; alt?: string; visible?: boolean } | null;
+   *  actually SEE the image, not just its URL.
+   *  Crear es Len (2026-10-06) — hasta 4 por mensaje (`MAX_PHOTOS_PER_MESSAGE`).
+   *  Con UNA, el bloque es byte a byte el de siempre. */
+  attachedImages?: readonly AttachedImageForContext[] | null;
   /** Lo que el dueño señaló en el lienzo. Ver `SeleccionDelDueno`. */
   seleccion?: SeleccionDelDueno | null;
 }): string {
@@ -257,15 +291,19 @@ export function buildAgentContext(args: {
     : "";
 
   let imageBlock = "";
-  if (args.attachedImage) {
-    const altLine = args.attachedImage.alt ? `\nAlt text: ${args.attachedImage.alt}` : "";
+  const imagenes = args.attachedImages ?? [];
+  if (imagenes.length > 1) {
+    imageBlock = attachedImagesBlock(imagenes);
+  } else if (imagenes.length === 1) {
+    const attachedImage = imagenes[0]!;
+    const altLine = attachedImage.alt ? `\nAlt text: ${attachedImage.alt}` : "";
     // F5: cuando los píxeles viajan adjuntos al turno, díselo — puede diseñar
     // CON la imagen (colores, orientación, contenido) en vez de colocarla a
     // ciegas. Sin visible, el texto queda byte-idéntico a F2 (pinned).
-    const seeLine = args.attachedImage.visible
+    const seeLine = attachedImage.visible
       ? `\nThe image is ATTACHED to this turn and you CAN SEE IT: use it to decide where and how to place it — match the palette and the layout to its colors, orientation and content, and write an alt that is true to what it shows.`
       : "";
-    imageBlock = `IMAGE ATTACHED BY THE USER: ${args.attachedImage.url}${altLine}${seeLine}\nThis is a REAL image URL that the user attached on purpose — place it using this EXACT URL (verbatim) as the src of an <img> (or as a CSS background-image). NEVER make up or change the URL. And DON'T TALK ABOUT IT: OpenLen's uploader wrote it, it works in the editor and it is baked in when publishing. There is nothing to warn about, not even if it starts with localhost. Don't refuse, don't replace it with a placeholder, and DON'T ask them to upload it again "some other way" — it is the same uploader and it would give the same address. Place it and talk about the DESIGN, not the address. If the page already has a placeholder for this image (a <div> with a gradient, an empty box with a border), REPLACE that whole element with the <img> — don't nest it inside. Always include alt text (use the user's if they gave one; if not, infer it from the context).\n\n`;
+    imageBlock = `IMAGE ATTACHED BY THE USER: ${attachedImage.url}${altLine}${seeLine}\nThis is a REAL image URL that the user attached on purpose — place it using this EXACT URL (verbatim) as the src of an <img> (or as a CSS background-image). NEVER make up or change the URL. And DON'T TALK ABOUT IT: OpenLen's uploader wrote it, it works in the editor and it is baked in when publishing. There is nothing to warn about, not even if it starts with localhost. Don't refuse, don't replace it with a placeholder, and DON'T ask them to upload it again "some other way" — it is the same uploader and it would give the same address. Place it and talk about the DESIGN, not the address. If the page already has a placeholder for this image (a <div> with a gradient, an empty box with a border), REPLACE that whole element with the <img> — don't nest it inside. Always include alt text (use the user's if they gave one; if not, infer it from the context).\n\n`;
   }
 
   // El modelo no sabe qué día es, y eso no es cosmético: pidiéndole una cuenta
@@ -361,7 +399,7 @@ export interface BuildAgentMessagesArgs {
   /** Prior turns, ALREADY hardened to {role, content} + capped by the caller
    *  (the route slices to 36 + 4000 chars). */
   history: readonly MensajeDelHistorial[];
-  attachedImage?: { url: string; alt?: string; visible?: boolean } | null;
+  attachedImages?: readonly AttachedImageForContext[] | null;
   /** Ver buildAgentContext.seleccion. */
   seleccion?: SeleccionDelDueno | null;
   /** Pre-flight size ceiling; over it → { ok:false, reason:"too_large" }. */
@@ -408,7 +446,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     dichoAntes: args.dichoAntes,
     degradaciones: args.degradaciones,
     conversacionRecortada: args.conversacionRecortada,
-    attachedImage: args.attachedImage,
+    attachedImages: args.attachedImages,
     seleccion: args.seleccion,
   });
   const avisos = avisosDelTurno({
@@ -427,7 +465,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   // aparece después de haber decidido que cabía. El manual también.
   // Y las fotos (A): viajan pegadas a su mensaje en todas las vueltas, así que
   // ocupan contexto como en Claude Code. La del turno cuenta si se vio.
-  const fotos = args.history.reduce((n, m) => n + (m.images?.length ?? 0), 0) + (args.attachedImage?.visible ? 1 : 0);
+  const fotos = args.history.reduce((n, m) => n + (m.images?.length ?? 0), 0) + (args.attachedImages ?? []).filter((f) => f.visible).length;
   const fijo = manual + contextBlock + args.prompt + avisos;
   const cabe = (caracteresDelHistorial: number) =>
     Math.ceil((fijo.length + caracteresDelHistorial + systemPrompt.length) / 3.5) + fotos * TOKENS_POR_FOTO <=
