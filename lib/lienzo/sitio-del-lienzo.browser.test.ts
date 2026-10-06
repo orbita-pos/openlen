@@ -20,7 +20,8 @@ vi.mock("@/lib/backend/files", () => ({
 import { GET } from "@/app/api/lienzo/site/[[...path]]/route";
 import { guardarDocumento, vaciarAlmacenParaPruebas } from "@/lib/lienzo/almacen";
 import { urlDelDocumento } from "@/lib/lienzo/host";
-import { lienzoRewrite } from "@/lib/lienzo/site-rewrite";
+import { resolveRewrites } from "@/lib/lienzo/resolve-rewrites";
+import { LIENZO_REWRITES } from "@/lib/lienzo/site-rewrite";
 
 const ID = "4f9c10cb-8781-48f1-b291-c5d146579f09";
 const MENU = `<!doctype html><html><head><meta charset="utf-8"><title>antes</title></head><body>
@@ -35,13 +36,14 @@ let server: Server;
 let puerto = 0;
 
 beforeAll(async () => {
-  // El servidor hace lo que harían Caddy (`@lienzo`) y el middleware: en un
-  // host lienzo, toda ruta va a la del sitio.
+  // El servidor hace lo que harían Caddy (`@lienzo`) y las `rewrites` de
+  // next.config, con el código del router de Next: en un host lienzo, toda
+  // ruta va a la del sitio.
   server = createServer(async (req, res) => {
     const host = req.headers.host ?? "";
     const url = new URL(req.url ?? "/", `http://${host}`);
-    const destino = lienzoRewrite(host, url.pathname);
-    if (!destino) {
+    const destino = resolveRewrites(LIENZO_REWRITES, host, url.pathname).pathname;
+    if (!destino.startsWith("/api/lienzo/site")) {
       res.writeHead(404).end();
       return;
     }

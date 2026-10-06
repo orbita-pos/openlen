@@ -5,8 +5,8 @@ import { LIENZO_PARAM, etiquetaDeLienzo, etiquetaDelHost, frameAncestors } from 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/lienzo/site/<ruta> — EL SITIO ENTERO DEL LIENZO (pieza 9 de Len 2.5).
 //
-// En un host `lienzo-<etiqueta>.<dominio>` el middleware manda aquí TODO
-// (`lib/lienzo/site-rewrite.ts`), con la ruta que pidió el navegador. Se
+// En un host `lienzo-<etiqueta>.<dominio>` las `rewrites` de next.config mandan
+// aquí TODO (`lib/lienzo/site-rewrite.ts`), con la ruta que pidió el navegador. Se
 // contestan dos cosas, como las contestaría la publicada:
 //
 //   · un fichero de la carpeta (`/js/app.js`, `/data/menu.json`): lo GUARDADO

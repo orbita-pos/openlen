@@ -5,7 +5,6 @@ import authConfig from "@/auth.config";
 import { routing } from "@/i18n/routing";
 import { destinoDelLogin } from "@/lib/login/destino";
 import { etiquetaDelHost } from "@/lib/lienzo/prefijo";
-import { lienzoRewrite } from "@/lib/lienzo/site-rewrite";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Middleware = next-intl locale routing + Auth.js route guard, composed.
@@ -131,16 +130,11 @@ export default function middleware(req: NextRequest): ReturnType<typeof intlMidd
   const { pathname, search } = req.nextUrl;
 
   // EL LIENZO (pieza 9 de Len 2.5): en un host `lienzo-*` sólo responde el
-  // lienzo. Todo —la página en su ruta y los ficheros de la carpeta— va a su
-  // ruta (`lib/lienzo/site-rewrite.ts`); ninguna página de la app (el login,
-  // el taller) se pinta en un origen donde corre el JavaScript del dueño. Sus
-  // propias rutas (`/api/lienzo/<docId>`) pasan tal cual: por el resto de esta
-  // función les pondría un idioma delante.
-  const hostDeLaPeticion = req.headers.get("host");
-  if (etiquetaDelHost(hostDeLaPeticion)) {
-    const destino = lienzoRewrite(hostDeLaPeticion, pathname);
-    return destino ? NextResponse.rewrite(new URL(`${destino}${search}`, req.url)) : NextResponse.next();
-  }
+  // lienzo, y lo manda allí `rewrites()` de next.config, que corre DESPUÉS de
+  // esto (`lib/lienzo/site-rewrite.ts`: ahí está por qué no es este
+  // middleware). Aquí sólo se deja pasar: el resto de esta función le pondría
+  // un idioma delante o lo mandaría al login.
+  if (etiquetaDelHost(req.headers.get("host"))) return NextResponse.next();
   const bare = pathWithoutLocale(pathname);
 
   // The workspace lives at /new. Old /new-v2 links + bookmarks → /new,
@@ -208,13 +202,7 @@ export const config = {
   // volvería redirigida a /es/rest/v1/… . `storage/v1/` (carril D): el Storage
   // de las páginas (lib/backend/storage), igual. Y `realtime/v1/` (carril D):
   // en producción va a su servicio, no a Next; en local, que no lo redirija.
-  //
-  // EL LIENZO (pieza 9 de Len 2.5): en un host `lienzo-*` el middleware corre
-  // en TODA ruta —también las de fichero (`/js/app.js`) y las de `/api`, que el
-  // patrón de arriba deja fuera—, para mandarlas al lienzo. Next compara el
-  // valor anclado y contra el host sin puerto.
   matcher: [
     "/((?!api|_next|_vercel|served|c|p/|rest/v1/|auth/v1/|storage/v1/|realtime/v1/|.*\\..*).*)",
-    { source: "/:path*", has: [{ type: "host", value: "lienzo-[0-9a-f]{32}\\..*" }] },
   ],
 };

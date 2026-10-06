@@ -4,7 +4,7 @@
 // HMAC del id), así que ya no puede entrar en el cliente ni en el middleware,
 // que corre en el borde. Lo que necesitan los dos —el prefijo
 // (`lib/subdomain/validate.ts`) y leer la etiqueta de un host
-// (`lib/lienzo/site-rewrite.ts`, desde `middleware.ts`)— vive aquí, puro.
+// (`middleware.ts`)— vive aquí, puro.
 
 export const LIENZO_PREFIJO = "lienzo-";
 
