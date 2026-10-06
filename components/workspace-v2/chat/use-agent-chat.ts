@@ -41,6 +41,7 @@ import { NIVEL_POR_DEFECTO, type EsfuerzoAgente, type NivelEsfuerzo } from "@/li
 import type { AgentMode } from "@/lib/agent/dynamis";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
+import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { fusionarConversacion } from "@/lib/chat/fusionar-conversacion";
@@ -1037,6 +1038,8 @@ export function useAgentChat({
         /** Crear es Len: VARIAS fotos (hasta `MAX_PHOTOS_PER_MESSAGE`). Ganan
          *  sobre la del compositor y sobre `imageOverride`. */
         readonly images?: readonly AttachedImage[];
+        /** Crear es Len: la referencia por URL, que viaja con ESTE mensaje. */
+        readonly styleDirection?: StyleDirection | null;
       },
     ) => {
       const escrito = rawPrompt.trim();
@@ -1290,6 +1293,7 @@ export function useAgentChat({
               ...(turnPage ? { page: turnPage } : {}),
               ...(turnScope ? { scope: turnScope } : {}),
               ...(turnImages.length > 0 ? { attachedImages: turnImages } : {}),
+              ...(opciones?.styleDirection ? { styleDirection: opciones.styleDirection } : {}),
             }),
             signal: abort.signal,
           });

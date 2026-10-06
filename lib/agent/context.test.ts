@@ -666,3 +666,23 @@ describe("los avisos del turno van al final, no enterrados", () => {
     expect(ctx).not.toContain("WHAT IS ALREADY KNOWN TO BE BROKEN");
   });
 });
+
+// Crear es Len: la referencia por URL viaja con el mensaje, el mismo bloque que Crear.
+describe("buildAgentContext — la referencia por URL", () => {
+  const direccion = {
+    hostname: "",
+    palette: [{ role: "bg", hex: "#112233" }],
+    polarity: "dark" as const,
+    fontFamily: "Inter",
+    radius: "soft" as const,
+  };
+  it("con referencia, el bloque de Crear cierra el contexto", () => {
+    const s = buildAgentContext({ state: {}, userBrief: null, styleDirection: direccion });
+    expect(s).toContain("<visual-direction>");
+    expect(s).toContain("#112233 (bg)");
+    expect(s.trimEnd().endsWith("</visual-direction>")).toBe(true);
+  });
+  it("sin ella, ni rastro", () => {
+    expect(buildAgentContext({ state: {}, userBrief: null })).not.toContain("<visual-direction>");
+  });
+});

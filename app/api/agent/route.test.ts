@@ -1752,6 +1752,7 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
   it("varias fotos en ESTE mensaje: todas pegadas a tu mensaje, en orden, y la fila las guarda como lista", async () => {
     const A = { mimeType: "image/jpeg", dataBase64: "AAAA" };
     const B = { mimeType: "image/png", dataBase64: "BBBB" };
+    mocks.turnosParaElHistorial.mockResolvedValue([]);
     mocks.conseguirFotos.mockResolvedValueOnce(new Map([["https://u/a.jpg", A], ["https://u/b.png", B]]));
     await readEvents(
       await POST(
@@ -1772,6 +1773,33 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     expect(mocks.conseguirFotos).toHaveBeenCalledWith(["https://u/a.jpg", "https://u/b.png"], expect.anything());
     const fila = (mocks.abrirFilaDelTurno.mock.calls.at(-1) as unknown as [string, { attachedImage: unknown }])[1];
     expect(fila.attachedImage).toEqual([{ url: "https://u/a.jpg", alt: "logo" }, { url: "https://u/b.png" }]);
+  });
+
+  it("la referencia por URL va en tu mensaje (el bloque de Crear), y la fila guarda sólo lo que escribiste", async () => {
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({
+            projectId: "p1",
+            prompt: "hazme la página",
+            styleDirection: { palette: [{ role: "bg", hex: "#112233" }], polarity: "dark", fontFamily: "Inter", radius: "soft" },
+          }),
+        }),
+      ),
+    );
+    // El bloque lo monta el contexto (`buildAgentContext`, probado en
+    // lib/agent/context.test.ts); aquí, que la dirección le llega validada.
+    const enviado = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ styleDirection: unknown }])[0];
+    expect(enviado.styleDirection).toEqual({
+      hostname: "",
+      palette: [{ role: "bg", hex: "#112233" }],
+      polarity: "dark",
+      fontFamily: "Inter",
+      radius: "soft",
+    });
+    const fila = (mocks.abrirFilaDelTurno.mock.calls.at(-1) as unknown as [string, { userText: string }])[1];
+    expect(fila.userText).toBe("hazme la página");
   });
 
   it("A · fotos que no caben juntas (20 MiB, como DeepSeek): la más vieja va sin píxeles y el turno sigue", async () => {

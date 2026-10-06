@@ -18,6 +18,8 @@ import { adjuntoDelManual, buildManualDeLaPlataforma } from "@/lib/agent/manual-
 import type { AgentMode } from "@/lib/agent/dynamis";
 import { textoDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO } from "@/lib/agent/ficheros/memoria";
+import { directionToBriefBlock } from "@/lib/style-match/direction";
+import type { StyleDirection } from "@/lib/style-match/direction-types";
 
 /**
  * El bloque para el prompt, o `""` cuando no hay nada.
@@ -284,6 +286,11 @@ export function buildAgentContext(args: {
   attachedImages?: readonly AttachedImageForContext[] | null;
   /** Lo que el dueño señaló en el lienzo. Ver `SeleccionDelDueno`. */
   seleccion?: SeleccionDelDueno | null;
+  /** LA REFERENCIA POR URL de este mensaje (Crear es Len, 2026-10-06): el
+   *  mismo bloque que Crear ponía delante del brief (`directionToBriefBlock`),
+   *  aquí al final del contexto, justo antes de lo que pide el dueño. Ausente ⇒
+   *  salida byte-idéntica. */
+  styleDirection?: StyleDirection | null;
 }): string {
   const brief = (args.userBrief ?? "").trim();
   const briefBlock = brief
@@ -350,7 +357,7 @@ ${dichoBlock}`
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${recorteBlock}${memoriaBlock}${hoy}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${briefBlock}${seleccionBlock(args.seleccion)}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}`;
+  return `${recorteBlock}${memoriaBlock}${hoy}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${briefBlock}${seleccionBlock(args.seleccion)}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
 }
 
 
@@ -400,6 +407,8 @@ export interface BuildAgentMessagesArgs {
    *  (the route slices to 36 + 4000 chars). */
   history: readonly MensajeDelHistorial[];
   attachedImages?: readonly AttachedImageForContext[] | null;
+  /** Ver buildAgentContext.styleDirection. */
+  styleDirection?: StyleDirection | null;
   /** Ver buildAgentContext.seleccion. */
   seleccion?: SeleccionDelDueno | null;
   /** Pre-flight size ceiling; over it → { ok:false, reason:"too_large" }. */
@@ -447,6 +456,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     degradaciones: args.degradaciones,
     conversacionRecortada: args.conversacionRecortada,
     attachedImages: args.attachedImages,
+    styleDirection: args.styleDirection,
     seleccion: args.seleccion,
   });
   const avisos = avisosDelTurno({

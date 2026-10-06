@@ -13,7 +13,8 @@ import { generateSystemMessage } from "./system-prompt";
 import { randomUUID } from "node:crypto";
 import { appendChatMessage } from "@/lib/projects/chat";
 import { detectSlotPath } from "@/lib/html-engine";
-import { directionToBriefBlock, type StyleDirection } from "@/lib/style-match/direction";
+import { directionToBriefBlock } from "@/lib/style-match/direction";
+import { parseStyleDirection } from "@/lib/style-match/parse-direction";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import { generateHtmlStream, laEscribeElRazonador } from "@/lib/ai-stream/generate";
 import { getEscritorGuardado } from "@/lib/ai/escritor-guardado";
@@ -98,45 +99,6 @@ const RESERVA_PARA_GUARDAR_MS = 45_000;
 // catálogos de marcas, presentado al modelo como "the design taste catalog".
 // El system prompt ya no lo llevaba, pero esto sí — y por eso una guarda que
 // sólo miraba el system prompt pasaba en verde.
-
-/** La dirección visual que el cliente adjunta, validada campo a campo.
- *
- *  Nada de confiar en la forma: esto acaba dentro del prompt, y un objeto con
- *  un `character` de 50.000 caracteres o una paleta de mil entradas sería una
- *  forma barata de inflar cada generación. `directionToBriefBlock` recorta al
- *  final, pero recortar es la última red, no la primera. */
-function parseStyleDirection(body: unknown): StyleDirection | null {
-  const raw = (body as { styleDirection?: unknown })?.styleDirection;
-  if (!raw || typeof raw !== "object") return null;
-  const d = raw as Record<string, unknown>;
-  const palette = Array.isArray(d.palette)
-    ? d.palette
-        .filter(
-          (p): p is { role: string; hex: string } =>
-            !!p && typeof p === "object" &&
-            typeof (p as { hex?: unknown }).hex === "string" &&
-            /^#[0-9a-f]{6}$/i.test((p as { hex: string }).hex) &&
-            typeof (p as { role?: unknown }).role === "string",
-        )
-        .slice(0, 6)
-        .map((p) => ({ role: p.role.slice(0, 24), hex: p.hex }))
-    : [];
-  if (palette.length === 0) return null;
-  const radius = ["sharp", "soft", "rounded", "pill"].includes(String(d.radius))
-    ? (d.radius as StyleDirection["radius"])
-    : "soft";
-  const character = typeof d.character === "string" && d.character.trim().length >= 10
-    ? d.character.trim().slice(0, 320)
-    : undefined;
-  return {
-    hostname: "",
-    palette,
-    polarity: d.polarity === "dark" ? "dark" : "light",
-    fontFamily: typeof d.fontFamily === "string" ? d.fontFamily.slice(0, 60) : "sans-serif",
-    radius,
-    ...(character ? { character } : {}),
-  };
-}
 
 export async function POST(req: Request): Promise<Response> {
   let body: unknown;

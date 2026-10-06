@@ -40,6 +40,7 @@ import {
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversacion";
 import { turnosParaElHistorial } from "@/lib/projects/chat";
+import { parseStyleDirection } from "@/lib/style-match/parse-direction";
 import { MAX_PHOTOS_PER_MESSAGE, photosForRow, photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
@@ -265,6 +266,8 @@ type CuerpoDelTurno = {
   attachedImage?: AttachedImageBody;
   /** Crear es Len: hasta `MAX_PHOTOS_PER_MESSAGE` fotos en un mensaje. */
   attachedImages?: unknown;
+  /** Crear es Len: la referencia por URL, validada con `parseStyleDirection`. */
+  styleDirection?: unknown;
   /** EL ESFUERZO DE ESTE TURNO, fijado por el cliente al ENVIAR. Ver
    *  `esfuerzoDelTurno` más abajo: se manda por turno, no se lee en vivo. */
   esfuerzo?: unknown;
@@ -765,6 +768,10 @@ async function correrTurno(
     // Un historial vacío (primer turno) no dispara nada.
     turnoAnteriorMudo: turnoAnteriorMudoDe(history),
     attachedImages: attachedImages.map((f) => (pixelesDe(f.url) ? { ...f, visible: true } : f)),
+    // LA REFERENCIA POR URL (plans/crear-es-len): el mismo bloque que Crear
+    // ponía delante del brief, en el contexto de ESTE turno. Sólo para el
+    // modelo: la fila guarda lo que el dueño escribió (`prompt`), no el bloque.
+    styleDirection: parseStyleDirection(body),
     seleccion,
     maxPromptTokens: MAX_PROMPT_TOKENS,
   };
