@@ -172,6 +172,18 @@ describe("QuestionCardView — el modo plan", () => {
     expect(onAnswer).toHaveBeenCalledWith([{ id: "plan-review", selected: ["Approve"] }]);
   });
 
+  it("🔴 el plan pinta su **negrita** y su `código` en vez de las marcas (visto en un turno real)", () => {
+    const conFormato: UserQuestion = {
+      ...revision,
+      intent: { kind: "plan-review", plan: "# FAQ\n\n1. **¿Hacen entregas?** — No.\n- La pongo en `index.html`" },
+    };
+    const host = montar({ questions: [conFormato], onAnswer: () => undefined, onDismiss: () => undefined });
+    expect(host.textContent).not.toContain("**");
+    expect(host.textContent).not.toContain("`");
+    expect([...host.querySelectorAll("strong")].map((s) => s.textContent)).toContain("¿Hacen entregas?");
+    expect([...host.querySelectorAll("code")].map((c) => c.textContent)).toContain("index.html");
+  });
+
   it("LOTE 7-8 · «Pedir cambios» no abre caja: descarta (onDismiss) y no contesta nada", () => {
     const onAnswer = vi.fn();
     const onDismiss = vi.fn();

@@ -203,8 +203,11 @@ export function formatEventRead(session: Session, event: SessionEvent, extra: Re
 export function requireSession(sessions: readonly Session[], sessionId: string | undefined): Session {
   const id = sessionId ?? CURRENT_SESSION;
   const session = sessions.find((s) => s.id === id);
-  if (!session) throw new SessionQueryInputError(`no session "${id}" in this project; find one with session_search.`);
-  return session;
+  if (session) return session;
+  // La charla en curso existe siempre, como en DeepSeek: recién empezada sólo
+  // tiene el turno que corre (que no es historia), y está vacía, no ausente.
+  if (sessionId === undefined) return { id: CURRENT_SESSION, title: "", createdAt: Date.now(), events: [] };
+  throw new SessionQueryInputError(`no session "${id}" in this project; find one with session_search.`);
 }
 
 function matches(

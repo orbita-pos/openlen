@@ -17,6 +17,7 @@ import { Check, HelpCircle, ListChecks, X } from "lucide-react";
 import { RECOMMENDED_SUFFIX, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { APPROVE_LABEL, planTitle } from "@/lib/agent/plan-mode";
 import { PLAN_LABEL_KEYS } from "./plan-mode-state";
+import { TextoDeLen } from "../texto-de-len";
 
 type Translate = (key: string, values?: Record<string, string>) => string;
 
@@ -311,13 +312,25 @@ function PlanBody({ plan }: { plan: string }) {
       {titulo ? <p className="m-0 mb-1.5 text-[14px] font-semibold">{titulo}</p> : null}
       {lineas.map((linea, i) => {
         if (i === primero) return null;
+        // Cada línea con su **negrita** y su `código` pintados, como el texto
+        // de Len en el chat (visto en un turno real: salían las marcas).
         const encabezado = /^#{1,6}\s+(.+?)\s*$/.exec(linea);
-        if (encabezado) return <p key={i} className="m-0 mt-2 font-semibold">{encabezado[1]}</p>;
+        if (encabezado)
+          return (
+            <p key={i} className="m-0 mt-2 font-semibold">
+              <TextoDeLen texto={encabezado[1]!} />
+            </p>
+          );
         const vineta = /^\s*[-*]\s+(.*)$/.exec(linea);
-        if (vineta) return <p key={i} className="m-0 pl-2">{`• ${vineta[1]}`}</p>;
+        if (vineta)
+          return (
+            <p key={i} className="m-0 pl-2">
+              • <TextoDeLen texto={vineta[1]!} />
+            </p>
+          );
         return linea.trim() ? (
           <p key={i} className="m-0 whitespace-pre-wrap break-words">
-            {linea}
+            <TextoDeLen texto={linea} />
           </p>
         ) : (
           <div key={i} className="h-1.5" />

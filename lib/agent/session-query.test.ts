@@ -106,6 +106,13 @@ describe("eventSearch y leer un evento", () => {
     expect(() => eventSearch(s, { session_id: "inventada", query: "x" })).toThrow(SessionQueryInputError);
   });
 
+  it("🔴 una charla recién empezada (sólo el turno que corre) es la actual, vacía: sin coincidencias, no un error (visto en un turno real)", () => {
+    const nueva = sessionsFromRows([filas[0]!, filas[1]!, filas[3]!]);
+    const out = eventSearch(nueva, { query: "Preguntas" });
+    expect(out).toContain(`Session ${CURRENT_SESSION}`);
+    expect(out).toContain("No prior event matches found.");
+  });
+
   it("lee el evento entero con sus vecinos antes y después", () => {
     const hit = findEvent(s, "c-vieja", 3)!;
     const out = formatEventRead(hit.session, hit.event, { actions: [] }, 1, 1);
