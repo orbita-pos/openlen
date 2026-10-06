@@ -39,7 +39,7 @@ import { webDelServidor, type WebDeps } from "@/lib/agent/web/buscar";
 import { NOMBRE_WEB_FETCH, NOMBRE_WEB_SEARCH, toolWebFetch, toolWebSearch } from "@/lib/agent/web/herramientas";
 import { activeHtml } from "@/lib/page-engine/persist";
 import { actualizarData } from "@/lib/projects/escribir-data";
-import { leerCambiosSinPublicar, renameProject, setProjectUserBrief } from "@/lib/projects";
+import { adoptPlaceholderTitle, leerCambiosSinPublicar, renameProject, setProjectUserBrief } from "@/lib/projects";
 import { extForMime, getAssetStorage } from "@/lib/projects/assets";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 import { validateSubdomain } from "@/lib/subdomain/validate";
@@ -529,6 +529,10 @@ export function realDeps(
       if (!r.ok) {
         throw new Error(r.motivo === "conflicto" ? CONFLICTO_AL_GUARDAR : "project not found");
       }
+      // EL TÍTULO DEL PROYECTO EN BLANCO (plans/crear-es-len): en cuanto la
+      // portada tiene `<title>`, el de relleno se va. Sin `await`: no retrasa
+      // el turno, y la función no lanza.
+      void adoptPlaceholderTitle(projectId, userId, r.data.html ?? "");
     },
     async snapshotVersion(args) {
       // Best-effort, same as the ai-design route: a snapshot failure must

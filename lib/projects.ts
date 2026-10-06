@@ -26,7 +26,7 @@ import { copyFolderForDuplicate, listProjectFiles } from "@/lib/backend/files";
 import { folderFingerprint } from "@/lib/projects/files-hash";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import { getChatMessages } from "@/lib/projects/chat";
-import { titleFromHtml } from "@/lib/projects/titulo-del-html";
+import { titleFromHtml, UNTITLED_PROJECT_TITLE } from "@/lib/projects/titulo-del-html";
 import {
   pageEdgePaths,
   pagesForPublish,
@@ -292,7 +292,7 @@ export async function createProject(
     input.title?.trim() ||
     titleFromHtml(input.html) ||
     input.brief.slice(0, 60).trim() ||
-    "Untitled page";
+    UNTITLED_PROJECT_TITLE;
   await db.insert(schema.projects).values({
     id,
     userId,
@@ -315,6 +315,32 @@ export async function createProject(
   // own routes.)
   void renderProjectThumbnail({ projectId: id, html: input.html });
   return id;
+}
+
+/**
+ * EL TÍTULO DEL PROYECTO, del `<title>` de su portada — lo que Crear hacía al
+ * guardar (`createProject` → `titleFromHtml`) y `persistPage` no hace nunca.
+ * Sólo pisa el de RELLENO: el `WHERE` lo garantiza en la misma sentencia, así
+ * que un nombre que el dueño haya puesto no se toca ni en una carrera.
+ * No lanza: un título es un detalle, no puede tumbar un guardado.
+ */
+export async function adoptPlaceholderTitle(projectId: string, userId: string, homeHtml: string): Promise<void> {
+  const title = titleFromHtml(homeHtml);
+  if (!title) return;
+  try {
+    await db
+      .update(schema.projects)
+      .set({ title })
+      .where(
+        and(
+          eq(schema.projects.id, projectId),
+          eq(schema.projects.userId, userId),
+          eq(schema.projects.title, UNTITLED_PROJECT_TITLE),
+        ),
+      );
+  } catch (err) {
+    console.warn("[projects] no se pudo adoptar el título", err);
+  }
 }
 
 export async function listProjects(userId: string): Promise<ProjectSummary[]> {

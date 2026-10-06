@@ -635,6 +635,8 @@ export default defineConfig({
       "lib/projects/chat-en-curso.pg.test.ts",
       // El chat nuevo: las charlas archivables y el 👍/👎 (plans/new-chat/).
       "lib/projects/chat-conversations.pg.test.ts",
+      // Crear es Len: el proyecto en blanco y su título (plans/crear-es-len).
+      "lib/projects/blank-project.pg.test.ts",
       "lib/projects/escritores-de-data.test.ts",
       "lib/notifications/**/*.test.ts",
     ],
