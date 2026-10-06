@@ -139,6 +139,9 @@ curl -s https://<ref>.openlen.app/auth/v1/health
 # Storage (carril D): la lista de buckets con la clave secreta del proyecto (sale del panel).
 curl -s https://<ref>.openlen.app/storage/v1/bucket -H "apikey: <sb_secret_…>" -H "authorization: Bearer <sb_secret_…>"
 # → [] (o sus buckets). Un 503 «Storage is not available» = faltan las credenciales de R2.
+# Listar NO toca R2: el bucket de R2 sólo se prueba subiendo un fichero. Si al subir sale
+# «…: its storage bucket does not exist» o «…: it has no access to its storage bucket» (503), es el §4b:
+# crear el bucket o añadirlo al token `openlen-app`. El registro de openlen-app dice cuál.
 # Y en el host de la PÁGINA tiene que dar 404 (un fichero subido nunca vive en el origen de la página):
 curl -s -o /dev/null -w "%{http_code}\n" https://<sub>.openlen.app/storage/v1/bucket -H "apikey: <sb_secret_…>"
 # → 404

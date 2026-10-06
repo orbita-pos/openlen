@@ -1,8 +1,8 @@
 // El almacén de R2 (Jesús, 04/10) sin red: un doble de `send` que apunta
 // cada comando de S3 que se mandaría, y guarda lo subido para devolverlo.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { StorageError } from "./errors";
+import { StorageError, storageErrorResponse } from "./errors";
 import { pageBlobStore, R2BlobStore, type S3Send } from "./r2-blob-store";
 
 const MiB = 1024 * 1024;
@@ -162,6 +162,45 @@ describe("R2BlobStore: bajar, copiar, borrar", () => {
     await s.put("otro/1", flujo([1]), OPC);
     expect(await s.deletePrefix("ref/")).toBe(3);
     expect([...f.objects.keys()]).toEqual(["otro/1"]);
+  });
+});
+
+describe("R2BlobStore: el bucket de R2 que no existe o al que el token no llega", () => {
+  // La forma de los errores de @aws-sdk/client-s3: `name` y `$metadata`.
+  const s3Error = (name: string, httpStatusCode: number) => Object.assign(new Error(name), { name, $metadata: { httpStatusCode } });
+  const failing = (err: Error): S3Send => async () => {
+    throw err;
+  };
+
+  it("sin bucket: ni «no encontrado» al bajar ni un 500 sin forma al subir; 503 que dice qué falta", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const s = new R2BlobStore({ send: failing(s3Error("NoSuchBucket", 404)), bucket: "openlen-page-storage" });
+    const got = await s.get("k").catch((e: unknown) => e);
+    expect(got).toBeInstanceOf(StorageError);
+    const res = storageErrorResponse(got);
+    expect(res.status).toBe(503);
+    expect((await res.json()).message).toBe("Storage is not available on this server: its storage bucket does not exist");
+    await expect(s.put("k", flujo([1]), OPC)).rejects.toMatchObject({ userStatusCode: 503 });
+    await expect(s.copy("a", "b")).rejects.toMatchObject({ userStatusCode: 503 });
+    // Al operador, en el registro: qué bucket y qué hacer.
+    expect(String(log.mock.calls[0]![0])).toContain("«openlen-page-storage» no existe");
+    expect(String(log.mock.calls[0]![0])).toContain("PAGES_BACKEND_RUNBOOK.md §4b");
+    log.mockRestore();
+  });
+
+  it("el token sin acceso al bucket (403): el mismo 503, que lo dice", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const s = new R2BlobStore({ send: failing(s3Error("AccessDenied", 403)), bucket: "openlen-page-storage" });
+    const res = storageErrorResponse(await s.put("k", flujo([1]), OPC).catch((e: unknown) => e));
+    expect(res.status).toBe(503);
+    expect((await res.json()).message).toBe("Storage is not available on this server: it has no access to its storage bucket");
+    expect(String(log.mock.calls[0]![0])).toContain("añádelo al token de la app");
+    log.mockRestore();
+  });
+
+  it("un objeto que no está sigue siendo null, y el 404 sin nombre de un HEAD también", async () => {
+    expect(await new R2BlobStore({ send: failing(s3Error("NoSuchKey", 404)), bucket: "b" }).get("k")).toBeNull();
+    expect(await new R2BlobStore({ send: failing(s3Error("NotFound", 404)), bucket: "b" }).get("k")).toBeNull();
   });
 });
 

@@ -12,7 +12,7 @@
 // hace `@aws-sdk/lib-storage`, sin esa dependencia). Pasarse de `maxBytes` o
 // que el cuerpo se corte: `AbortMultipartUpload`, y no queda nada.
 
-import { ERRORS } from "./errors";
+import { ERRORS, StorageError } from "./errors";
 import type { BlobStore, PutOptions } from "./blob-store";
 
 /** Un comando de S3 por su nombre (`PutObject`…) y su entrada. */
@@ -38,12 +38,36 @@ function s3ErrorName(err: unknown): string | undefined {
   return e?.name ?? e?.Code;
 }
 
+/** El bucket de R2 no existe, o el token de la app no llega a él (403): no es
+ *  de la página sino del montaje (infra/PAGES_BACKEND_RUNBOOK.md §4b). Sale
+ *  como el 503 de «Storage is not available on this server» (handler.ts),
+ *  diciendo qué falta, y no como «Object not found» al bajar ni como un 500
+ *  sin forma al subir. Al operador, en el registro, el bucket y qué hacer. */
+function storeNotMounted(err: unknown, bucket: string): StorageError | null {
+  const e = err as { name?: string; Code?: string; $metadata?: { httpStatusCode?: number } } | null;
+  const name = e?.name ?? e?.Code;
+  let message: string;
+  if (name === "NoSuchBucket") {
+    console.error(`[storage] el bucket de R2 «${bucket}» no existe: créalo en R2 (privado, sin dominio) y añádelo al token de la app (infra/PAGES_BACKEND_RUNBOOK.md §4b)`);
+    message = "its storage bucket does not exist";
+  } else if (e?.$metadata?.httpStatusCode === 403) {
+    console.error(`[storage] R2 niega el acceso al bucket «${bucket}» (${name}): añádelo al token de la app (infra/PAGES_BACKEND_RUNBOOK.md §4b)`);
+    message = "it has no access to its storage bucket";
+  } else {
+    return null;
+  }
+  return new StorageError({ code: "InternalError", httpStatusCode: 503, message: `Storage is not available on this server: ${message}` }).withStatusCode(503);
+}
+
 export class R2BlobStore implements BlobStore {
   readonly bucket: string;
   private readonly send: S3Send;
 
   constructor(o: { send: S3Send; bucket: string }) {
-    this.send = o.send;
+    this.send = (name, input) =>
+      o.send(name, input).catch((err: unknown) => {
+        throw storeNotMounted(err, o.bucket) ?? err;
+      });
     this.bucket = o.bucket;
   }
 
