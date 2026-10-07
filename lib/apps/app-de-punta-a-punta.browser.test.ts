@@ -57,15 +57,28 @@ const CASCARON =
 const FICHEROS: Record<string, string> = {
   "/src/main.jsx": [
     'import { createRoot } from "react-dom/client";',
+    // D3: el router por sus DOS nombres a la vez, y los iconos. Si hubiera dos
+    // copias de React, sus hooks fallarían aquí («Invalid hook call»).
+    'import { HashRouter, Routes, Route } from "react-router-dom";',
     'import App from "./App";',
+    'import Ajustes from "./Ajustes";',
     'import "./index.css";',
-    'createRoot(document.getElementById("root")).render(<App />);',
+    'createRoot(document.getElementById("root")).render(<HashRouter><Routes><Route path="/" element={<App />} /><Route path="/ajustes" element={<Ajustes />} /></Routes></HashRouter>);',
+  ].join("\n"),
+  "/src/Ajustes.jsx": [
+    'import { useNavigate } from "react-router";',
+    "export default function Ajustes() {",
+    "  const ir = useNavigate();",
+    '  return <button data-prueba="volver" onClick={() => ir("/")}>Volver</button>;',
+    "}",
   ].join("\n"),
   "/src/App.tsx": [
     'import { useState } from "react";',
     'import productos from "./data/productos.json";',
     'import Producto from "@/components/Producto";',
     'import { supabase } from "@/lib/supabase";',
+    'import { Link } from "react-router-dom";',
+    'import { ShoppingCart } from "lucide-react";',
     "type Linea = { nombre: string; precio: number; cantidad: number };",
     "const dinero = (centavos: number) => `$${(centavos / 100).toFixed(2)}`;",
     "export default function App() {",
@@ -82,6 +95,8 @@ const FICHEROS: Record<string, string> = {
     '      <ul>{carrito.map((l) => <li key={l.nombre} data-prueba="linea">{l.nombre} × {l.cantidad}</li>)}</ul>',
     '      <p data-prueba="total">{dinero(total)}</p>',
     '      <p data-prueba="supabase">{typeof supabase.from}</p>',
+    '      <ShoppingCart data-prueba="icono" />',
+    '      <Link to="/ajustes" data-prueba="ir-ajustes">Ajustes</Link>',
     "    </main>",
     "  );",
     "}",
@@ -104,12 +119,20 @@ const PROGRAMA = `(async () => {
   boton("pan").click();
   boton("cafe").click();
   await esperar(() => document.querySelector('[data-prueba="total"]')?.textContent === "$82.00");
-  return {
+  const leido = {
     total: document.querySelector('[data-prueba="total"]')?.textContent,
     lineas: [...document.querySelectorAll('[data-prueba="linea"]')].map((l) => l.textContent),
     supabase: document.querySelector('[data-prueba="supabase"]')?.textContent,
     fondo: getComputedStyle(document.body).backgroundColor,
+    icono: document.querySelector('[data-prueba="icono"]')?.tagName.toLowerCase(),
   };
+  // Las pantallas, por hash: ir y volver con el router.
+  document.querySelector('[data-prueba="ir-ajustes"]').click();
+  const volver = await esperar(() => document.querySelector('[data-prueba="volver"]'));
+  const pantalla = location.hash;
+  volver?.click();
+  await esperar(() => document.querySelector('[data-prueba="total"]'));
+  return { ...leido, pantalla, deVuelta: location.hash + " " + document.querySelector('[data-prueba="total"]')?.textContent };
 })()`;
 
 const ESPERADO = {
@@ -117,6 +140,9 @@ const ESPERADO = {
   lineas: ["Café × 2", "Pan × 1"],
   supabase: "function",
   fondo: "rgb(1, 2, 3)",
+  icono: "svg",
+  pantalla: "#/ajustes",
+  deVuelta: "#/ $0.00",
 };
 
 const TIPOS: Record<string, string> = {

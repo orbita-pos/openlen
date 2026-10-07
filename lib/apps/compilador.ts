@@ -24,6 +24,12 @@
 //      y un `.json` lleva `with { type: "json" }`. Un nombre que no está en el
 //      catálogo, o un fichero que no existe, es un ERROR con su ruta y su
 //      línea: vuelve a Len en el acto, como un compilador.
+//   4. Comprueba los NOMBRES que se importan de cada paquete
+//      (`import { Cafe } from "lucide-react"`) contra lo que exporta de verdad su
+//      fichero (`exportaciones.json`, que sale de sus bytes). Sin esto, un icono
+//      que no está deja la app EN BLANCO en el navegador, con un error que sólo
+//      se ve al mirarla; aquí es un error del fichero, con su línea, y con los
+//      nombres parecidos que sí hay.
 //
 // Cada sustitución deja el mismo número de saltos de línea que quita, así que
 // las líneas siguen cuadrando después del paso 3.
@@ -37,6 +43,10 @@ import { transform, type Transform } from "sucrase";
 // ojos de Len contestan cada petición sin `await` (`localResponseFor`).
 import { parse } from "es-module-lexer/js";
 import { catalogo as catalogoDe, dependenciaDe } from "./dependencias";
+import { PISTAS_DEL_ENRUTADOR } from "./enrutador";
+// Lo que exporta cada fichero de cada catálogo, leído de sus bytes por
+// `npm run apps:vendor` (que lo comprueba con `--comprobar`).
+import EXPORTACIONES from "./exportaciones.json";
 
 /** Lo que el compilador traduce SIEMPRE: el navegador no ejecuta ni JSX ni TS. */
 const SIEMPRE = [".jsx", ".tsx", ".ts"] as const;
@@ -154,6 +164,84 @@ function conSusLineas(sustituto: string, original: string): string {
   return sustituto + "\n".repeat((original.match(/\n/g) ?? []).length);
 }
 
+/** Lo que el modelo escribe por reflejo y no está, con lo que va en su lugar. */
+const PISTAS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  "react-router.js": PISTAS_DEL_ENRUTADOR,
+};
+
+function exportacionesDe(nombreCatalogo: string, fichero: string): readonly string[] | null {
+  const delCatalogo = (EXPORTACIONES as Readonly<Record<string, Readonly<Record<string, readonly string[]>>>>)[nombreCatalogo];
+  return delCatalogo && Object.hasOwn(delCatalogo, fichero) ? delCatalogo[fichero]! : null;
+}
+
+/** Distancia de edición, sin distinguir mayúsculas. */
+function distancia(a: string, b: string): number {
+  const x = a.toLowerCase();
+  const y = b.toLowerCase();
+  let fila = Array.from({ length: y.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= x.length; i++) {
+    const nueva = [i];
+    for (let j = 1; j <= y.length; j++) {
+      nueva.push(Math.min(fila[j]! + 1, nueva[j - 1]! + 1, fila[j - 1]! + (x[i - 1] === y[j - 1] ? 0 : 1)));
+    }
+    fila = nueva;
+  }
+  return fila[y.length]!;
+}
+
+/** Los nombres de la lista que más se parecen a `nombre`: los que lo contienen
+ *  (o están contenidos en él) primero, luego por distancia. */
+export function parecidos(nombre: string, lista: readonly string[], cuantos = 6): string[] {
+  const n = nombre.toLowerCase().replace(/icon$/, "");
+  return lista
+    .filter((c) => !c.endsWith("Icon"))
+    .map((c) => {
+      const l = c.toLowerCase();
+      const contiene = n.length >= 3 && (l.includes(n) || n.includes(l));
+      return { c, puntos: (contiene ? 0 : 100) + distancia(n, l) };
+    })
+    .filter((x) => x.puntos < 100 + Math.max(3, Math.floor(n.length / 2)))
+    .sort((a, b) => a.puntos - b.puntos || a.c.localeCompare(b.c))
+    .slice(0, cuantos)
+    .map((x) => x.c);
+}
+
+/** Los nombres que una sentencia toma de su módulo: `import X, { a, b as c }`
+ *  → `["default", "a", "b"]`; `export { a } from` → `["a"]`. `null` si no se
+ *  pueden saber (`import * as`, `export *`, o una forma que no se reconoce). */
+function nombresImportados(sentencia: string): string[] | null {
+  const m = /^(import|export)\s*([\s\S]*?)\s*from\s*["'`]/.exec(sentencia);
+  if (!m) return [];
+  const clausula = m[2]!.trim();
+  if (clausula.startsWith("*") || /,\s*\*/.test(clausula)) return null;
+  const nombres: string[] = [];
+  const llaves = /\{([\s\S]*)\}/.exec(clausula);
+  const fuera = (llaves ? clausula.replace(llaves[0], "") : clausula).replace(/,/g, " ").trim();
+  if (m[1] === "import" && fuera && fuera !== "type") nombres.push("default");
+  for (const parte of (llaves?.[1] ?? "").split(",")) {
+    const p = parte.trim().replace(/^type\s+/, "");
+    if (!p) continue;
+    const importado = p.split(/\s+as\s+/)[0]!.trim().replace(/^["']|["']$/g, "");
+    if (importado) nombres.push(importado);
+  }
+  return nombres;
+}
+
+/** El error de un nombre que el paquete no exporta, con lo que va en su lugar. */
+function mensajeDeNombre(especificador: string, fichero: string, nombre: string, hay: readonly string[]): string {
+  const pista = PISTAS[fichero]?.[nombre];
+  if (pista) return `"${nombre}" is not available from "${especificador}": ${pista}`;
+  if (nombre === "default") {
+    return `"${especificador}" has no default export here: import what you need by name (import { … } from "${especificador}").`;
+  }
+  const cerca = parecidos(nombre, hay);
+  const sugerencia = cerca.length > 0 ? ` Closest: ${cerca.join(", ")}.` : "";
+  if (fichero === "lucide-react.js") {
+    return `"${nombre}" is not one of the icons available here: "lucide-react" has a selection, not all of lucide.${sugerencia} Or draw it as an inline <svg>.`;
+  }
+  return `"${especificador}" has no export named "${nombre}" here.${sugerencia}`;
+}
+
 const CACHE_MAX = 500;
 const cache = new Map<string, Compilado>();
 
@@ -243,8 +331,14 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
     const resuelto = resolver(especificador, ruta, ctx.carpeta);
     if (resuelto === null) {
       // UN NOMBRE: o es del catálogo (lo resuelve el import map) o no existe.
-      if (ctx.catalogo && dependenciaDe(ctx.catalogo, especificador)) {
+      const dependencia = ctx.catalogo ? dependenciaDe(ctx.catalogo, especificador) : null;
+      if (ctx.catalogo && dependencia) {
         paquetes.add(especificador);
+        const hay = exportacionesDe(ctx.catalogo, dependencia.fichero);
+        const tomados = dinamico || !hay ? null : nombresImportados(js.slice(imp.importStart, imp.importEnd));
+        for (const nombre of tomados ?? []) {
+          if (!hay!.includes(nombre)) error(imp.start, mensajeDeNombre(especificador, dependencia.fichero, nombre, hay!));
+        }
         continue;
       }
       if (/^[a-z][a-z0-9+.-]*:/i.test(especificador)) {

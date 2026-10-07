@@ -55,7 +55,16 @@ export interface Catalogo {
 
 export const CATALOGOS: Readonly<Record<string, Catalogo>> = {
   "2026-10": {
-    versiones: { react: "19.2.6", "react-dom": "19.2.6", "@supabase/supabase-js": "2.117.2" },
+    versiones: {
+      react: "19.2.6",
+      "react-dom": "19.2.6",
+      "@supabase/supabase-js": "2.117.2",
+      // D3 (2026-10-07): añadidos al catálogo ya construido SIN cambiar un byte
+      // de lo que había (ficheros nuevos). La 8 de react-router pide React
+      // 19.2.7, y éste se quedó en 19.2.6.
+      "react-router": "7.18.4",
+      "lucide-react": "1.16.0",
+    },
     dependencias: [
       { especificador: "react", fichero: "react.js", para: "React: componentes, estado y efectos." },
       { especificador: "react/jsx-runtime", fichero: "react-jsx-runtime.js", para: "El runtime de JSX (lo usa el compilador)." },
@@ -66,6 +75,11 @@ export const CATALOGOS: Readonly<Record<string, Catalogo>> = {
         fichero: "supabase-js.js",
         para: "El backend del proyecto: base de datos, Auth, Storage y Realtime.",
       },
+      // Los dos nombres, el MISMO fichero: un solo módulo en el navegador, así
+      // que un `<Link>` de uno funciona dentro del `<HashRouter>` del otro.
+      { especificador: "react-router", fichero: "react-router.js", para: "Las pantallas: HashRouter, Routes, Route, Link, useNavigate." },
+      { especificador: "react-router-dom", fichero: "react-router.js", para: "Lo mismo que react-router, con el nombre de antes." },
+      { especificador: "lucide-react", fichero: "lucide-react.js", para: "Iconos como componentes (<ShoppingCart />): una selección, no todos." },
     ],
     internos: ["react-todo.js"],
   },
@@ -92,7 +106,8 @@ export function rutaDeVendor(nombreCatalogo: string, fichero: string): string {
 /** Todos los ficheros de un catálogo: los que se nombran y los internos. */
 export function ficherosDelCatalogo(nombreCatalogo: string): string[] {
   const c = catalogo(nombreCatalogo);
-  return c ? [...c.dependencias.map((d) => d.fichero), ...c.internos] : [];
+  // Sin repetir: dos nombres pueden ser el mismo fichero (react-router-dom).
+  return c ? [...new Set([...c.dependencias.map((d) => d.fichero), ...c.internos])] : [];
 }
 
 /** El import map de un catálogo: especificador → ruta del mismo origen. */

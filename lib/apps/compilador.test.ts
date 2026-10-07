@@ -170,6 +170,56 @@ describe("los imports", () => {
   });
 });
 
+describe("los nombres que se importan de un paquete (D3)", () => {
+  const CARPETA = { "/src/App.jsx": "" };
+  const errores = (f: string) => {
+    const r = compilarFuente("/src/App.jsx", f, app(CARPETA));
+    return r.ok ? [] : r.errores;
+  };
+
+  it("lo que el paquete exporta pasa, con y sin alias, por los dos nombres del router", () => {
+    expect(errores('import React, { useState as uS } from "react";\nReact; uS;')).toEqual([]);
+    expect(errores('import { HashRouter, Routes, Route, Link } from "react-router-dom";\nHashRouter; Routes; Route; Link;')).toEqual([]);
+    expect(errores('import { useNavigate } from "react-router";\nuseNavigate;')).toEqual([]);
+    expect(errores('export { NavLink } from "react-router-dom";')).toEqual([]);
+    // El nombre viejo y el nuevo de lucide, y el sufijo Icon: los tres.
+    expect(errores('import { CheckCircle2, CircleCheck, CoffeeIcon, ShoppingCart } from "lucide-react";\nCheckCircle2; CircleCheck; CoffeeIcon; ShoppingCart;')).toEqual([]);
+    // Lo que añade el propio compilador (el runtime de JSX) también existe.
+    expect(errores("export default function A() { return <><b>x</b><i>y</i></>; }")).toEqual([]);
+  });
+
+  it("🔴 un icono que no está es un error con su línea y los parecidos que sí hay", () => {
+    const e = errores('import { useState } from "react";\nimport { Coffe, Plus } from "lucide-react";\nCoffe; Plus; useState;');
+    expect(e).toHaveLength(1);
+    expect(e[0]).toMatchObject({ ruta: "/src/App.jsx", linea: 2 });
+    expect(e[0]!.mensaje).toMatch(/"Coffe" is not one of the icons available here/);
+    expect(e[0]!.mensaje).toMatch(/Closest: Coffee\b/);
+    expect(e[0]!.mensaje).toMatch(/inline <svg>/);
+  });
+
+  it("🔴 BrowserRouter no está, y el error dice que las pantallas van por hash", () => {
+    const e = errores('import { BrowserRouter, Routes } from "react-router-dom";\nBrowserRouter; Routes;');
+    expect(e).toHaveLength(1);
+    expect(e[0]!.mensaje).toMatch(/"BrowserRouter" is not available from "react-router-dom": .*hash routes.*use HashRouter/);
+  });
+
+  it("los routers de datos tampoco, y se dice cómo hacerlo", () => {
+    const e = errores('import { createHashRouter, RouterProvider, useLoaderData } from "react-router-dom";\ncreateHashRouter; RouterProvider; useLoaderData;');
+    expect(e).toHaveLength(3);
+    for (const x of e) expect(x.mensaje).toMatch(/data routers .* <HashRouter> with <Routes>/);
+  });
+
+  it("un default que no existe, y un nombre que no es de ningún sitio", () => {
+    expect(errores('import Router from "react-router-dom";\nRouter;')[0]!.mensaje).toMatch(/has no default export here: import what you need by name/);
+    expect(errores('import { useStat } from "react";\nuseStat;')[0]!.mensaje).toMatch(/"react" has no export named "useStat" here\. Closest: useState/);
+  });
+
+  it("import * as y los import() no se pueden comprobar: pasan", () => {
+    expect(errores('import * as Iconos from "lucide-react";\nIconos;')).toEqual([]);
+    expect(errores('const m = import("lucide-react");\nm;')).toEqual([]);
+  });
+});
+
 describe("import.meta.env", () => {
   it("se sustituye por los valores públicos del proyecto, más MODE/DEV/PROD", () => {
     const f = "export const url = import.meta.env.VITE_SUPABASE_URL;\nexport const dev = import.meta.env.DEV;";

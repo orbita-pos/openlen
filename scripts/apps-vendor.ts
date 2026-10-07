@@ -25,8 +25,11 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { build } from "esbuild";
+import { build, type Plugin } from "esbuild";
+import { parse } from "es-module-lexer/js";
 import { CATALOGO_ACTUAL, catalogo, ficherosDelCatalogo, type ModoVendor } from "../lib/apps/dependencias";
+import { EXPORTS_DEL_ENRUTADOR } from "../lib/apps/enrutador";
+import { ICONOS_DE_LAS_APPS } from "../lib/apps/iconos";
 
 const require = createRequire(import.meta.url);
 const RAIZ = path.resolve(import.meta.dirname, "..");
@@ -49,6 +52,54 @@ function fachada(ns: string, modulo: string, conDefault: boolean): string {
     (conDefault ? `export default ${ns};\n` : "") +
     `export const { ${nombres(modulo).join(", ")} } = ${ns};\n`
   );
+}
+
+/**
+ * REACT, DESDE SUS FACHADAS. Lo que importa React dentro de otra librería del
+ * catálogo (el router, los iconos) se deja fuera de su bundle y apunta a la
+ * fachada vecina (`./react.js`): así sigue habiendo UNA copia de React, la de
+ * `react-todo.js`. Relativo y no por su nombre, para no depender del import map.
+ */
+const reactDesdeLasFachadas: Plugin = {
+  name: "react-desde-las-fachadas",
+  setup(b) {
+    const fachadas: Record<string, string> = {
+      react: "./react.js",
+      "react/jsx-runtime": "./react-jsx-runtime.js",
+      "react-dom": "./react-dom.js",
+      "react-dom/client": "./react-dom-client.js",
+    };
+    b.onResolve({ filter: /^react(-dom)?(\/.*)?$/ }, (args) => {
+      const fachada = fachadas[args.path];
+      if (!fachada) throw new Error(`apps:vendor — "${args.path}" no tiene fachada en el catálogo`);
+      return { path: fachada, external: true };
+    });
+  },
+};
+
+/**
+ * LOS ICONOS CON SUS ALIAS. `lucide-react` exporta cada icono con varios
+ * nombres (`CircleCheck`, `CheckCircle2`, `CircleCheckIcon`, `LucideCircleCheck`).
+ * Se exportan todos menos los `Lucide*`, que nadie escribe: los modelos usan el
+ * nombre viejo o el nuevo, con o sin `Icon`. Un alias más no añade un icono,
+ * sólo un nombre que apunta al mismo.
+ */
+function iconosConSusAlias(): string[] {
+  const barril = readFileSync(require.resolve("lucide-react/dist/esm/lucide-react.mjs"), "utf8");
+  const aliasDe = new Map<string, string[]>();
+  const ficheroDe = new Map<string, string>();
+  for (const m of barril.matchAll(/export \{([^}]*)\} from '\.\/icons\/([a-z0-9-]+)\.mjs';/g)) {
+    const nombres = [...m[1]!.matchAll(/default as (\w+)/g)].map((n) => n[1]!);
+    aliasDe.set(m[2]!, nombres);
+    for (const n of nombres) ficheroDe.set(n, m[2]!);
+  }
+  const ficheros = new Set<string>();
+  for (const icono of ICONOS_DE_LAS_APPS) {
+    const f = ficheroDe.get(icono);
+    if (!f) throw new Error(`apps:vendor — lucide-react no tiene el icono «${icono}» (lib/apps/iconos.ts)`);
+    ficheros.add(f);
+  }
+  return [...ficheros].flatMap((f) => aliasDe.get(f)!.filter((n) => !n.startsWith("Lucide"))).sort();
 }
 
 /** Un paquete de npm que acabó dentro de un bundle. */
@@ -117,14 +168,23 @@ async function construir(modo: ModoVendor, destino: string): Promise<Incluido[]>
         "export { React, ReactDOM, ReactDOMClient, JSXRuntime };\n",
     );
     writeFileSync(path.join(fuentes, "supabase-js.js"), 'export * from "@supabase/supabase-js";\n');
-    for (const nombre of ["react-todo.js", "supabase-js.js"]) {
+    // D3 (2026-10-07): el router y los iconos, cada uno con SU lista cerrada.
+    writeFileSync(path.join(fuentes, "react-router.js"), `export { ${EXPORTS_DEL_ENRUTADOR.join(", ")} } from "react-router";\n`);
+    writeFileSync(path.join(fuentes, "lucide-react.js"), `export { ${iconosConSusAlias().join(", ")} } from "lucide-react";\n`);
+    const conReactFuera = new Set(["react-router.js", "lucide-react.js"]);
+    for (const nombre of ["react-todo.js", "supabase-js.js", "react-router.js", "lucide-react.js"]) {
+      const opciones = { ...comun, entryPoints: [path.join(fuentes, nombre)], ...(conReactFuera.has(nombre) ? { plugins: [reactDesdeLasFachadas] } : {}) };
       // Dos pasadas: la primera dice qué paquetes entran; la segunda los nombra
       // en la cabecera. esbuild es determinista, así que la segunda es la misma
       // salida más el aviso.
-      const r = await build({ ...comun, entryPoints: [path.join(fuentes, nombre)], write: false, outfile: path.join(destino, nombre) });
-      const lista = incluidos(r.metafile!.inputs);
+      const r = await build({ ...opciones, write: false, outfile: path.join(destino, nombre) });
+      // Lo que ESTÁ en la salida, no todo lo que esbuild leyó: el router lee
+      // `cookie` y `set-cookie-parser` para su modo servidor, y el tree-shaking
+      // los deja fuera. Sus licencias no van donde no va su código.
+      const salida = Object.values(r.metafile!.outputs)[0]!;
+      const lista = incluidos(Object.fromEntries(Object.entries(salida.inputs).filter(([, v]) => v.bytesInOutput > 0)));
       todos.push(...lista);
-      await build({ ...comun, entryPoints: [path.join(fuentes, nombre)], outfile: path.join(destino, nombre), banner: { js: aviso(lista) } });
+      await build({ ...opciones, outfile: path.join(destino, nombre), banner: { js: aviso(lista) } });
     }
     writeFileSync(path.join(destino, "react.js"), fachada("React", "react", true));
     writeFileSync(path.join(destino, "react-jsx-runtime.js"), fachada("JSXRuntime", "react/jsx-runtime", false));
@@ -147,6 +207,37 @@ function licencias(lista: readonly Incluido[]): string {
       })
       .join("\n") + "\n"
   );
+}
+
+/**
+ * LO QUE EXPORTA CADA FICHERO, para que el compilador diga en el acto que
+ * `import { Cafe } from "lucide-react"` no existe, en vez de que la app se
+ * quede en blanco en el navegador. Se lee de los bytes ya construidos con el
+ * mismo analizador que usa el compilador, así que no puede discrepar de ellos.
+ * Es igual en los dos modos: se lee el de producción.
+ */
+const RUTA_EXPORTACIONES = path.join(RAIZ, "lib", "apps", "exportaciones.json");
+
+function exportacionesDe(dir: string, ficheros: readonly string[]): Record<string, string[]> {
+  return Object.fromEntries(
+    ficheros.map((f) => {
+      const [, exps] = parse(readFileSync(path.join(dir, f), "utf8"));
+      const nombres = exps.flatMap((e) => ("name" in e ? [e.name] : []));
+      // Un `export * from` no dice sus nombres: la lista quedaría corta y el
+      // compilador rechazaría imports buenos. Un bundle no debería tenerlo.
+      if (nombres.length !== exps.length) throw new Error(`apps:vendor — ${f} tiene un «export *»: no se pueden listar sus nombres`);
+      return [f, [...new Set(nombres)].sort()];
+    }),
+  );
+}
+
+/** El JSON de todos los catálogos, con éste al día. Estable: claves ordenadas. */
+function textoDeExportaciones(nombre: string, deEste: Record<string, string[]>): string {
+  const todas = existsSync(RUTA_EXPORTACIONES)
+    ? (JSON.parse(readFileSync(RUTA_EXPORTACIONES, "utf8")) as Record<string, Record<string, string[]>>)
+    : {};
+  todas[nombre] = Object.fromEntries(Object.entries(deEste).sort(([a], [b]) => a.localeCompare(b)));
+  return JSON.stringify(Object.fromEntries(Object.entries(todas).sort(([a], [b]) => a.localeCompare(b))), null, 2) + "\n";
 }
 
 function huella(fichero: string): string {
@@ -200,6 +291,11 @@ async function main(): Promise<void> {
         const licenciasAlDia = existsSync(rutaLicencias) && readFileSync(rutaLicencias, "utf8") === textoLicencias;
         if (soloComprobar && !licenciasAlDia) throw new Error(`LICENCIAS.txt del catálogo ${nombre} no está al día (npm run apps:vendor)`);
         if (!licenciasAlDia) writeFileSync(rutaLicencias, textoLicencias);
+        // Lo mismo con lo que exporta cada fichero: sale de los bytes guardados.
+        const exportaciones = textoDeExportaciones(nombre, exportacionesDe(path.join(guardado, "produccion"), ficherosDelCatalogo(nombre)));
+        const exportacionesAlDia = existsSync(RUTA_EXPORTACIONES) && readFileSync(RUTA_EXPORTACIONES, "utf8") === exportaciones;
+        if (soloComprobar && !exportacionesAlDia) throw new Error(`lib/apps/exportaciones.json no está al día con el catálogo ${nombre} (npm run apps:vendor)`);
+        if (!exportacionesAlDia) writeFileSync(RUTA_EXPORTACIONES, exportaciones);
         console.log(`apps:vendor — ${nombre} ya está construido y coincide byte a byte.`);
         return;
       }
@@ -217,6 +313,10 @@ async function main(): Promise<void> {
       }
     }
     writeFileSync(path.join(guardado, "LICENCIAS.txt"), textoLicencias);
+    writeFileSync(
+      RUTA_EXPORTACIONES,
+      textoDeExportaciones(nombre, exportacionesDe(path.join(guardado, "produccion"), ficherosDelCatalogo(nombre))),
+    );
     writeFileSync(
       rutaManifiesto,
       JSON.stringify(
