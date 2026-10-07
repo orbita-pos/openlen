@@ -1521,6 +1521,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     /** La pregunta con la que este turno se cierra, si alguna herramienta la
      *  produjo. Ver el bloque que la consume al salir del bucle de llamadas. */
     let pregunta = "";
+    /** La pregunta lleva `intent` (la del modo plan): su texto es nuestro y en
+     *  inglés, y la tarjeta la pinta traducida. Cierra el turno sin decirla. */
+    let preguntaSinTexto = false;
     /** Lote 7-8 · el dueño descartó una pregunta para hablar: el turno cierra
      *  tras la tanda (ver el bloque que lo consume, antes del de `pregunta`). */
     let ownerTookOver = false;
@@ -1749,7 +1752,12 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           return;
         }
 
-        if (outcome.pregunta) pregunta = outcome.pregunta;
+        if (outcome.pregunta) {
+          pregunta = outcome.pregunta;
+          // La del modo plan es NUESTRA (fija, en inglés) y su tarjeta la pinta
+          // traducida por su `intent`: cierra el turno igual, pero sin texto.
+          preguntaSinTexto = (outcome.preguntas ?? []).length > 0 && outcome.preguntas!.every((q) => q.intent);
+        }
         if (outcome.dismissed) ownerTookOver = true;
         if (outcome.notice) avisos.push(outcome.notice);
         const respuesta = outcome.response;
@@ -1866,8 +1874,16 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // El texto lo escribió el modelo, en el idioma del usuario — el servidor
       // decide CUÁNDO se para, no QUÉ se dice. Se emite salvo que ya lo haya
       // dicho en su prosa, para no leerlo dos veces.
-      if (!turnText.includes(pregunta)) args.emit({ type: "text", text: pregunta });
-      finalText = turnText.trim() ? `${turnText.trim()}\n\n${pregunta}` : pregunta;
+      //
+      // 🔴 SALVO LA DEL MODO PLAN (`intent`): ésa no la escribió el modelo, es
+      // nuestra, fija y en inglés —«Switch to plan mode?…» le llegaba así al
+      // dueño (ensayo de caja, 07/10)—. Como DeepSeek, va en su tarjeta.
+      if (preguntaSinTexto) {
+        finalText = turnText.trim();
+      } else {
+        if (!turnText.includes(pregunta)) args.emit({ type: "text", text: pregunta });
+        finalText = turnText.trim() ? `${turnText.trim()}\n\n${pregunta}` : pregunta;
+      }
       // 🔴 ESTA SALIDA NO PASA POR EL EMBUDO, y es a propósito: el turno cierra
       // porque una herramienta PREGUNTÓ al usuario. Empujar al modelo a seguir
       // hacia el objetivo aquí sería mandarlo a trabajar cuando no puede: le

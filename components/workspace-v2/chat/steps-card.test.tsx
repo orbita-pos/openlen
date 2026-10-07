@@ -61,6 +61,15 @@ describe("la tarjeta de los pasos", () => {
     expect(host.textContent).not.toMatch(/ver_visitas|mirar_pagina|usar_pagina/);
   });
 
+  it("🔴 la pregunta abierta no sale como paso aunque otras llamadas de su tanda vayan detrás", () => {
+    const host = pintar([
+      { tool: "enter_plan_mode", status: "done", summary: "", pregunta: "Switch to plan mode?", preguntas: [{ id: "plan-mode", question: "Switch to plan mode?" }] } as AgentAction,
+      { tool: "find_photo", status: "done", summary: "madera" } as AgentAction,
+    ]);
+    expect(host.textContent).not.toContain("agent.tool.enter_plan_mode");
+    expect(host.textContent).toContain("agent.tool.find_photo");
+  });
+
   it("las demás herramientas que fallan siguen como estaban: «falló» y su motivo para el dueño (N41)", () => {
     const host = pintar([{ tool: "Write", status: "error", summary: "/js/app.js" } as AgentAction]);
     expect(host.textContent).toContain("agent.failed");

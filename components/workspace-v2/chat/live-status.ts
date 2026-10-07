@@ -8,6 +8,7 @@
 // Es la forma de la barra de estado de Claude Code: dice qué hace, no cómo.
 
 import type { DesignTurn } from "./use-agent-chat";
+import type { AgentAction } from "../agent-action-card";
 import { asksTheOwner, questionText, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { currentToolName } from "@/lib/agent/tool-renames";
 
@@ -190,12 +191,28 @@ export function retryPhase(
  *  la herramienta de preguntar (con su nombre de hoy o el de antes), que no
  *  falló y que nadie contestó dentro del turno (pieza 3: con `respuesta`, Len
  *  ya la tuvo y siguió). */
+/**
+ * DÓNDE ESTÁ LA PREGUNTA QUE ESPERA AL DUEÑO, o -1. La última de las que le
+ * preguntan, si sigue abierta. No la última TARJETA: el modelo puede mandar la
+ * pregunta en la misma tanda que otras llamadas, que van detrás (ensayo de caja
+ * de crear-es-len, 07/10: `enter_plan_mode` con `find_photo` y `Read`, y el
+ * chat no la veía). Como DeepSeek, la pregunta sale de su llamada.
+ */
+export function openQuestionIndex(actions: readonly AgentAction[] | undefined): number {
+  const list = actions ?? [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    const a = list[i]!;
+    if (!asksTheOwner(a.tool)) continue;
+    // Alinear con DeepSeek: una CANCELADA (`dismissed`) ya no espera a nadie.
+    return a.status === "error" || a.respuesta || a.dismissed ? -1 : i;
+  }
+  return -1;
+}
+
 function lastQuestion(turn: Pick<DesignTurn, "actions" | "status">) {
   if (turn.status !== "applied") return null;
-  const last = turn.actions?.[turn.actions.length - 1];
-  // Alinear con DeepSeek: una CANCELADA (`dismissed`) ya no espera a nadie.
-  if (!last || !asksTheOwner(last.tool) || last.status === "error" || last.respuesta || last.dismissed) return null;
-  return last;
+  const i = openQuestionIndex(turn.actions);
+  return i < 0 ? null : turn.actions![i]!;
 }
 
 /** La pregunta con la que acabó el turno, si acabó preguntando. */

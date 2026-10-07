@@ -152,6 +152,34 @@ describe("la barra viva", () => {
     expect(liveStatus(t, { busy: false })).toEqual({ kind: "done", face: "terminado" });
   });
 
+  // Ensayo de caja de crear-es-len (07/10): el modelo mandó `enter_plan_mode`
+  // EN LA MISMA TANDA que `find_photo` y `Read`; la pregunta no era la última
+  // tarjeta y el chat no la veía: ni barra de espera ni tarjeta para aceptar.
+  // Como DeepSeek, la pregunta abierta sale de su llamada, esté donde esté.
+  it("🔴 la pregunta sin contestar cuenta aunque otras llamadas de su tanda vayan detrás", () => {
+    const preguntas = [{ id: "plan-mode", question: "Switch to plan mode?", intent: { kind: "plan-consent" as const } }];
+    const t = turn({
+      actions: [
+        { tool: "Read", status: "done", summary: "/index.html" },
+        { tool: "enter_plan_mode", status: "done", summary: "", pregunta: "Switch to plan mode?", preguntas },
+        { tool: "find_photo", status: "done", summary: "madera" },
+        { tool: "Read", status: "done", summary: "librerias.md" },
+      ],
+    });
+    expect(questionsOf(t)).toEqual(preguntas);
+    expect(liveStatus(t, { busy: false })).toMatchObject({ kind: "waiting", reason: "question", intent: "plan-consent" });
+  });
+
+  it("BRAZO DE CONTROL: una pregunta ya contestada en medio del turno no cuenta", () => {
+    const t = turn({
+      actions: [
+        { tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Color?", respuesta: "azul" },
+        { tool: "Edit", status: "done", summary: "/index.html" },
+      ],
+    });
+    expect(questionOf(t)).toBeNull();
+  });
+
   it("🔴 pieza 7: una revisión del plan sin contestar al cerrar el turno es esperar, con su tarjeta", () => {
     const preguntas = [{ id: "plan-review", question: "Approve this plan and leave plan mode?", intent: { kind: "plan-review" as const, plan: "# Plan" } }];
     const t = turn({ actions: [{ tool: "exit_plan_mode", status: "done", summary: "", pregunta: "Approve this plan and leave plan mode?", preguntas }] });

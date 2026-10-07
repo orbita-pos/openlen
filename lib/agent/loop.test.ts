@@ -1063,6 +1063,27 @@ describe("runAgentLoop — ask_user_question (antes preguntar)", () => {
     expect(textos.join("")).toContain("¿Qué dirección quieres?");
   });
 
+  // Ensayo de caja de crear-es-len (07/10): la pregunta de `enter_plan_mode`
+  // es NUESTRA, fija y en inglés, y la tarjeta la pinta traducida por su
+  // `intent`. Emitirla como texto dejaba al dueño un «Switch to plan mode?…» en
+  // inglés como respuesta de Len. Como DeepSeek: la pregunta va en su tarjeta.
+  it("🔴 una pregunta con intent (la del modo plan) cierra el turno SIN emitir su texto", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hazme la página" }], tools: [],
+      openStream: scripted([{ type: "function_call", name: "enter_plan_mode", args: {} }, done]),
+      runTool: async () => ({
+        response: { ok: true, preguntado: true },
+        pregunta: "Switch to plan mode?",
+        preguntas: [{ id: "plan-mode", question: "Switch to plan mode?", intent: { kind: "plan-consent" } }],
+      }),
+      emit: (e) => events.push(e),
+    });
+    expect(r.endedOnQuestion).toBe(true);
+    expect(events.filter((e) => e.type === "text").map((e) => (e as { text: string }).text).join("")).not.toContain("Switch to plan mode?");
+    expect(r.finalText).not.toContain("Switch to plan mode?");
+  });
+
   it("no la dice DOS veces cuando el modelo ya la escribió en su prosa", async () => {
     const events: AgentStreamEvent[] = [];
     await runAgentLoop({
