@@ -211,6 +211,16 @@ export async function respuestaDeLen(p: { projectId: string; hiloId: string; tex
   return true;
 }
 
+/** ¿Len ya contestó en el hilo por el turno `filaId`? */
+export async function hiloTieneRespuestaDe(hiloId: string, filaId: string): Promise<boolean> {
+  const filas = await db
+    .select({ id: schema.codeThreadMessages.id })
+    .from(schema.codeThreadMessages)
+    .where(and(eq(schema.codeThreadMessages.threadId, hiloId), eq(schema.codeThreadMessages.filaId, filaId), isNull(schema.codeThreadMessages.autorId)))
+    .limit(1);
+  return filas.length > 0;
+}
+
 export async function hiloDelProyecto(projectId: string, hiloId: string) {
   const [h] = await db
     .select({ id: schema.codeThreads.id, estado: schema.codeThreads.estado, ruta: schema.codeThreads.ruta, linea: schema.codeThreads.linea })

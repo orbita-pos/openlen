@@ -167,6 +167,12 @@
       "asunto": "{quien} 님이 {titulo}에서 나를 언급했습니다",
       "donde": "{ruta} {linea}번째 줄:",
       "ver": "스레드 열기"
+    },
+    "hilo": {
+      "fallo": "하지 못했습니다: {motivo}",
+      "falloSinMotivo": "처리하지 못했습니다. 스레드에서 다시 요청해 주세요.",
+      "topeAgotado": "이 프로젝트 멤버의 월간 Len 한도를 모두 썼습니다. 소유자가 «초대»에서 한도를 올릴 수 있습니다.",
+      "sinCreditos": "프로젝트 소유자 계정에 남은 크레딧이 없습니다."
     }
   }
 }

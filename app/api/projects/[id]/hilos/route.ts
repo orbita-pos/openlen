@@ -12,7 +12,7 @@ import { z } from "zod";
 
 import { puede } from "@/lib/projects/acceso";
 import { crearHilo, listarHilos, mencionesSinVer, personasDelProyecto } from "@/lib/projects/hilos";
-import { avisarMenciones, CuerpoDelMensaje, json, quienEnElProyecto } from "./_comun";
+import { avisarMenciones, CuerpoDelMensaje, json, pedirleALen, quienEnElProyecto } from "./_comun";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,5 +66,9 @@ export async function POST(req: Request, ctx: Ctx): Promise<Response> {
     linea: body.data.linea,
     ...(body.data.idioma ? { idioma: body.data.idioma } : {}),
   });
-  return json({ hiloId: escrito.hiloId, mensajeId: escrito.mensajeId, mencionados: escrito.mencionados });
+  // `@Len`: el turno arranca aquí, en el servidor; el chat lo sigue si está abierto.
+  const filaId = body.data.len
+    ? await pedirleALen({ req, projectId: id, userId: q.userId, hiloId: escrito.hiloId, texto: body.data.texto, ...(body.data.idioma ? { idioma: body.data.idioma } : {}) })
+    : null;
+  return json({ hiloId: escrito.hiloId, mensajeId: escrito.mensajeId, mencionados: escrito.mencionados, filaId });
 }

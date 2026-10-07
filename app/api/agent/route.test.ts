@@ -18,7 +18,9 @@ const mocks = vi.hoisted(() => ({
   cabeEnElTope: vi.fn(async () => true),
   margenDeMiembros: vi.fn(async (): Promise<number | null> => null),
   sumarGasto: vi.fn(async () => undefined),
-  // Los hilos en el código: el turno pedido desde un hilo contesta en él.
+  // Los hilos en el código: el turno pedido desde un hilo contesta en él. La
+  // ruta registra su corredor al cargarse; aquí se guarda para llamarlo.
+  corredor: null as null | ((u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: { hilo: { hiloId: string; ruta: string; linea: number; contexto: string } }) => Promise<Response>),
   hiloDelProyecto: vi.fn(async (): Promise<{ id: string } | null> => null),
   respuestaDeLen: vi.fn(async () => true),
   guardarCambiosDelTurno: vi.fn(async () => false),
@@ -93,6 +95,11 @@ const mocks = vi.hoisted(() => ({
 
 // Compartir el proyecto: aquí quien pide es el dueño (ver acceso-de-prueba.ts).
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
+vi.mock("@/lib/agent/turnos-desde-el-servidor", () => ({
+  registrarCorredorDeTurnos: (f: NonNullable<typeof mocks.corredor>) => {
+    mocks.corredor = f;
+  },
+}));
 vi.mock("@/lib/projects/hilos", () => ({
   hiloDelProyecto: mocks.hiloDelProyecto,
   respuestaDeLen: mocks.respuestaDeLen,
@@ -2524,7 +2531,7 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     expect(mocks.runAgentLoop).not.toHaveBeenCalled();
   });
 
-  it("🔴 un turno pedido desde un hilo del código contesta en el hilo; uno de otro proyecto se ignora", async () => {
+  it("🔴 un turno lanzado desde un hilo del código: el modelo lee el contexto, la fila guarda lo escrito y Len contesta en el hilo", async () => {
     mocks.runAgentLoop.mockResolvedValue({
       finalText: "Cambiado el título.", turns: 1, toolCalls: 1,
       usage: { inputTokens: 10, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
@@ -2532,15 +2539,29 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     });
     mocks.creditsForUsage.mockReturnValue(5);
     mocks.hiloDelProyecto.mockResolvedValue({ id: "h1" });
-    await readEvents(await pedir({ hiloId: "h1", turnId: "11111111-1111-4111-8111-111111111111" }));
+    const fila = "11111111-1111-4111-8111-111111111111";
+    const hilo = { hiloId: "h1", ruta: "/src/App.jsx", linea: 3, contexto: "[Requested from a comment thread]" };
+    const res = await mocks.corredor!("ana", { projectId: "p1", prompt: "@Len pon el título en azul", turnId: fila }, { url: "http://x/api/projects/p1/hilos", signal: new AbortController().signal }, { hilo });
+    await readEvents(res);
     expect(mocks.hiloDelProyecto).toHaveBeenCalledWith("p1", "h1");
-    expect(mocks.respuestaDeLen).toHaveBeenCalledWith(
-      expect.objectContaining({ projectId: "p1", hiloId: "h1", filaId: "11111111-1111-4111-8111-111111111111" }),
-    );
+    const paraElModelo = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string }])[0];
+    expect(paraElModelo.prompt).toBe("[Requested from a comment thread]\n\n@Len pon el título en azul");
+    const filaAbierta = (mocks.abrirFilaDelTurno.mock.calls.at(-1) as unknown as [string, { userText: string; origen?: unknown }])[1];
+    expect(filaAbierta).toMatchObject({ userText: "@Len pon el título en azul", origen: { hiloId: "h1", ruta: "/src/App.jsx", linea: 3 } });
+    expect(mocks.respuestaDeLen).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p1", hiloId: "h1", filaId: fila }));
+    // Y sigue siendo un turno de un miembro: lo paga el dueño.
+    expect(mocks.debitCredits).toHaveBeenCalledWith("dueno-1", 5);
+  });
 
-    mocks.respuestaDeLen.mockClear();
-    mocks.hiloDelProyecto.mockResolvedValue(null);
-    await readEvents(await pedir({ hiloId: "de-otro" }));
+  it("el cuerpo de una petición no puede decir que viene de un hilo (sólo el servidor lo lanza)", async () => {
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "Hecho.", turns: 1, toolCalls: 1,
+      usage: { inputTokens: 10, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: true,
+    });
+    mocks.hiloDelProyecto.mockResolvedValue({ id: "h1" });
+    await readEvents(await pedir({ hiloId: "h1" }));
+    expect(mocks.hiloDelProyecto).not.toHaveBeenCalled();
     expect(mocks.respuestaDeLen).not.toHaveBeenCalled();
   });
 });

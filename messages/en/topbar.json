@@ -167,6 +167,12 @@
       "asunto": "{quien} mentioned you in {titulo}",
       "donde": "In {ruta}, line {linea}:",
       "ver": "Open the thread"
+    },
+    "hilo": {
+      "fallo": "I couldn’t do it: {motivo}",
+      "falloSinMotivo": "I couldn’t get to it. Ask me again from the thread.",
+      "topeAgotado": "this project’s monthly Len limit for members is used up. The owner can raise it under Invite.",
+      "sinCreditos": "there are no credits left on the project owner’s account."
     }
   }
 }

@@ -167,6 +167,12 @@
       "asunto": "{quien} heeft je genoemd in {titulo}",
       "donde": "In {ruta}, regel {linea}:",
       "ver": "Draad openen"
+    },
+    "hilo": {
+      "fallo": "Het lukte me niet: {motivo}",
+      "falloSinMotivo": "Ik ben er niet aan toegekomen. Vraag het me opnieuw vanuit de draad.",
+      "topeAgotado": "de maandelijkse Len-limiet voor leden van dit project is op. De eigenaar kan die verhogen onder ‘Uitnodigen’.",
+      "sinCreditos": "er zijn geen credits meer op het account van de eigenaar van het project."
     }
   }
 }

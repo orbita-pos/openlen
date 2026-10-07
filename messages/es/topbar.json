@@ -167,6 +167,12 @@
       "asunto": "{quien} te mencionó en {titulo}",
       "donde": "En {ruta}, línea {linea}:",
       "ver": "Abrir el hilo"
+    },
+    "hilo": {
+      "fallo": "No pude hacerlo: {motivo}",
+      "falloSinMotivo": "No llegué a hacerlo. Pídemelo otra vez desde el hilo.",
+      "topeAgotado": "se acabó el tope mensual de Len para los miembros de este proyecto. El dueño puede subirlo en «Invitar».",
+      "sinCreditos": "no quedan créditos en la cuenta del dueño del proyecto."
     }
   }
 }

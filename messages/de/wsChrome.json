@@ -276,10 +276,10 @@
         "reabrir": "Wieder öffnen",
         "resuelto": "Erledigt",
         "len": "Len",
-        "enCola": "An Len gesendet: Den Durchgang siehst du im Chat, die Antwort hier.",
         "soloEditoresLen": "Nur wer bearbeiten darf, kann Len um Änderungen bitten.",
         "error": "Das hat nicht geklappt. Versuch es noch einmal.",
-        "mencionado": "Du wurdest hier erwähnt"
+        "mencionado": "Du wurdest hier erwähnt",
+        "trabajando": "Len ist dran …"
       }
     }
   },

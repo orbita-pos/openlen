@@ -18,7 +18,8 @@
   "turn": {
     "imageSent": "이미지 전송됨",
     "imagesSent": "이미지 {count}개 전송됨",
-    "homePage": "홈"
+    "homePage": "홈",
+    "desdeElHilo": "스레드에서 · {donde}"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d> 만에 완료",

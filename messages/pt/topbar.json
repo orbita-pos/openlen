@@ -167,6 +167,12 @@
       "asunto": "{quien} mencionou você em {titulo}",
       "donde": "Em {ruta}, linha {linea}:",
       "ver": "Abrir a conversa"
+    },
+    "hilo": {
+      "fallo": "Não consegui fazer: {motivo}",
+      "falloSinMotivo": "Não cheguei a fazer. Peça de novo pela conversa.",
+      "topeAgotado": "o limite mensal do Len para os membros deste projeto acabou. O dono pode aumentá-lo em «Convidar».",
+      "sinCreditos": "não há mais créditos na conta do dono do projeto."
     }
   }
 }

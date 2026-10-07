@@ -8,7 +8,7 @@ import { puede } from "@/lib/projects/acceso";
 import { cambiarEstado, hiloDelProyecto, responderHilo } from "@/lib/projects/hilos";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
-import { avisarMenciones, CuerpoDelMensaje, json, quienEnElProyecto } from "../_comun";
+import { avisarMenciones, CuerpoDelMensaje, json, pedirleALen, quienEnElProyecto } from "../_comun";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +36,10 @@ export async function POST(req: Request, ctx: Ctx): Promise<Response> {
       ...(body.data.idioma ? { idioma: body.data.idioma } : {}),
     });
   }
-  return json({ mensajeId: escrito.mensajeId, mencionados: escrito.mencionados });
+  const filaId = body.data.len
+    ? await pedirleALen({ req, projectId: id, userId: q.userId, hiloId, texto: body.data.texto, ...(body.data.idioma ? { idioma: body.data.idioma } : {}) })
+    : null;
+  return json({ mensajeId: escrito.mensajeId, mencionados: escrito.mencionados, filaId });
 }
 
 const Estado = z.object({ estado: z.enum(["abierto", "resuelto"]) });

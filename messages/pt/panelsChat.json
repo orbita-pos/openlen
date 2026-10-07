@@ -18,7 +18,8 @@
   "turn": {
     "imageSent": "Imagem enviada",
     "imagesSent": "{count} imagens enviadas",
-    "homePage": "Início"
+    "homePage": "Início",
+    "desdeElHilo": "da conversa · {donde}"
   },
   "proceso": {
     "completadoEn": "Concluído em <d>{duracion}</d>",

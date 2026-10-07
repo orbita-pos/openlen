@@ -276,10 +276,10 @@
         "reabrir": "重新打开",
         "resuelto": "已解决",
         "len": "Len",
-        "enCola": "已发给 Len：在聊天中可以看到处理过程，回复会显示在这里。",
         "soloEditoresLen": "只有可编辑的人才能让 Len 修改。",
         "error": "没有成功，请重试。",
-        "mencionado": "有人在这里提到了你"
+        "mencionado": "有人在这里提到了你",
+        "trabajando": "Len 正在处理……"
       }
     }
   },

@@ -37,7 +37,8 @@ import { useConversations } from "./use-conversations";
 import { setChatLayout, useChatLayout, useFloatBox, type FloatBox } from "./use-chat-version";
 import type { LiveStatus } from "./live-status";
 import { useIsMobile } from "../use-is-mobile";
-import { pedidosALen } from "@/lib/workspace-v2/pedidos-a-len";
+import { turnosDelHilo } from "@/lib/workspace-v2/turnos-del-hilo";
+import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import { useTurnFeedback } from "./use-turn-feedback";
 
 export interface NewChatPanelProps {
@@ -128,11 +129,11 @@ function AgentChatView({
 }) {
   const t = useTranslations("panelsChat");
   const tAgent = useTranslations("wsPage.agent");
-  // LO PEDIDO A LEN DESDE UN HILO DEL CÓDIGO: se manda como un mensaje más, con
-  // su `hiloId`, en cuanto Len está libre (lib/workspace-v2/pedidos-a-len.ts).
-  const pedidoALen = useSyncExternalStore(
-    pedidosALen.subscribe,
-    () => pedidosALen.primero(projectId),
+  // `@Len` DESDE UN HILO DEL CÓDIGO: el servidor ya empezó el turno; aquí se
+  // pinta en marcha y se sigue (lib/workspace-v2/turnos-del-hilo.ts).
+  const turnoDelHilo = useSyncExternalStore(
+    turnosDelHilo.subscribe,
+    () => turnosDelHilo.primero(projectId),
     () => null,
   );
   const tSidebar = useTranslations("wsChrome");
@@ -151,13 +152,12 @@ function AgentChatView({
     onPendingDraftConsumed,
     pendingAttachments,
   });
-  // Un lector no le pide nada a Len (el servidor tampoco lo dejaría).
-  const { send: enviarALen } = chat;
+  const { seguirTurnoDelHilo } = chat;
   useEffect(() => {
-    if (!pedidoALen || chat.busy || soloLectura) return;
-    pedidosALen.atendido(projectId, pedidoALen);
-    void enviarALen(pedidoALen.texto, null, { hiloId: pedidoALen.hiloId });
-  }, [pedidoALen, chat.busy, soloLectura, projectId, enviarALen]);
+    if (!turnoDelHilo) return;
+    turnosDelHilo.recogido(projectId, turnoDelHilo);
+    seguirTurnoDelHilo(turnoDelHilo);
+  }, [turnoDelHilo, projectId, seguirTurnoDelHilo]);
   const memory = useAgentMemory();
   const feedback = useTurnFeedback(projectId);
   const conversations = useConversations(projectId, chat.conversationChanged);
@@ -256,7 +256,7 @@ function AgentChatView({
         ) : (
           chat.turns.map((turn, i) => (
             <div key={turn.id} className="flex flex-col gap-4">
-              <UserMessage turn={turn} initial={initial} />
+              <UserMessage turn={turn} initial={initial} onAbrirOrigen={(ruta) => abrirEnElCodigo.abrir(projectId, ruta)} />
               <LenTurn
                 turn={turn}
                 next={chat.turns[i + 1]}

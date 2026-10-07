@@ -4,9 +4,10 @@
 // línea, con sus mensajes, contestar y resolver; y el `@` que autocompleta a
 // Len y a la gente del proyecto, que comparte la caja de comentar una línea.
 //
-// `@Len` en un hilo: el pedido va al chat (lib/workspace-v2/pedidos-a-len.ts),
-// que lo manda como un mensaje más con el `hiloId`; Len contesta aquí al cerrar
-// el turno. Mientras tanto el hilo se relee más a menudo.
+// `@Len` en un hilo, como en Claude Tag: el turno arranca EN EL SERVIDOR al
+// publicar (no depende del chat); el chat, si está abierto, lo sigue en vivo
+// (lib/workspace-v2/turnos-del-hilo.ts), y Len contesta aquí al cerrar.
+// Mientras tanto el hilo dice «Len está en ello» y se relee más a menudo.
 
 import {
   useCallback,
@@ -20,7 +21,7 @@ import {
 } from "react";
 
 import { arrobaEnCurso, hayMencion, mencionesDe, opcionesDeMencion, ponerMencion, type PersonaMencionable } from "@/lib/workspace-v2/menciones";
-import { pedidosALen } from "@/lib/workspace-v2/pedidos-a-len";
+import { turnosDelHilo } from "@/lib/workspace-v2/turnos-del-hilo";
 
 export interface EtiquetasDeHilos {
   /** En la caja de comentar una línea, cuando hay gente o Len a quien mencionar. */
@@ -33,8 +34,8 @@ export interface EtiquetasDeHilos {
   readonly reabrir: string;
   readonly resuelto: string;
   readonly len: string;
-  /** Tras pedirle algo a Len desde el hilo. */
-  readonly enCola: string;
+  /** Mientras Len trabaja en lo que se le pidió desde el hilo. */
+  readonly trabajando: string;
   readonly soloEditoresLen: string;
   readonly error: string;
 }
@@ -69,18 +70,8 @@ interface DatosDeHilos {
 /** Se emite al marcar menciones como vistas: quien pinta las «@» las relee. */
 export const HILOS_VISTOS = "openlen:hilos-vistos";
 
-/** Lo que le llega a Len: lo escrito y dónde, con lo dicho antes en el hilo. */
-export function pedidoParaLen(texto: string, hilo: { ruta: string; linea: number; codigo: string }, antes: readonly MensajeDelHilo[] = []): string {
-  const contexto = antes
-    .slice(-6)
-    .map((m) => `- ${m.autorId ? (m.autor ?? "?") : "Len"}: ${m.texto}`)
-    .join("\n");
-  const donde = `${hilo.ruta}:${hilo.linea}${hilo.codigo.trim() ? ` \`${hilo.codigo.trim().slice(0, 160)}\`` : ""}`;
-  return [texto.trim(), "", `(${donde})`, ...(contexto ? ["", contexto] : [])].join("\n");
-}
-
 /** ¿Espera el hilo una respuesta de Len? (lo último lo escribió alguien y nombra a Len) */
-const esperaALen = (h: Hilo) => {
+export const esperaALen = (h: Hilo) => {
   const ultimo = h.mensajes.at(-1);
   return h.estado === "abierto" && Boolean(ultimo?.autorId) && /(^|[^\w@])@len\b/i.test(ultimo?.texto ?? "");
 };
@@ -123,7 +114,7 @@ export function useHilos(projectId: string | null | undefined, ruta: string | nu
   const idioma = typeof document !== "undefined" ? document.documentElement.lang || undefined : undefined;
   const personas = useMemo(() => (datos ? datos.personas.filter((p) => p.userId !== datos.yo) : []), [datos]);
 
-  const escribir = async (url: string, cuerpo: Record<string, unknown>, texto: string, hiloPara: (id: string) => { ruta: string; linea: number; codigo: string; antes: readonly MensajeDelHilo[] }) => {
+  const escribir = async (url: string, cuerpo: Record<string, unknown>, texto: string, dondeDe: (hiloId: string) => { ruta: string; linea: number }) => {
     const m = mencionesDe(texto, personas);
     setError(false);
     const r = await fetch(url, {
@@ -135,12 +126,10 @@ export function useHilos(projectId: string | null | undefined, ruta: string | nu
       setError(true);
       return false;
     }
-    const j = (await r.json().catch(() => ({}))) as { hiloId?: string };
+    const j = (await r.json().catch(() => ({}))) as { hiloId?: string; filaId?: string | null };
     const hiloId = j.hiloId ?? (cuerpo.hiloId as string | undefined);
-    if (m.len && hiloId) {
-      const h = hiloPara(hiloId);
-      pedidosALen.pedir(projectId, { hiloId, texto: pedidoParaLen(texto, h, h.antes) });
-    }
+    // El servidor ya empezó el turno de Len: el chat, si está abierto, lo sigue.
+    if (j.filaId && hiloId) turnosDelHilo.anunciar(projectId, { filaId: j.filaId, texto, origen: { hiloId, ...dondeDe(hiloId) } });
     await cargar();
     return true;
   };
@@ -153,10 +142,10 @@ export function useHilos(projectId: string | null | undefined, ruta: string | nu
     lineas: [...new Set((datos?.hilos ?? []).map((h) => h.linea))],
     crear: (linea: number, codigo: string, texto: string) =>
       base && ruta
-        ? escribir(base, { ruta, linea, codigo }, texto, () => ({ ruta, linea, codigo, antes: [] }))
+        ? escribir(base, { ruta, linea, codigo }, texto, () => ({ ruta, linea }))
         : Promise.resolve(false),
     responder: (hilo: Hilo, texto: string) =>
-      base ? escribir(`${base}/${hilo.id}`, { hiloId: hilo.id }, texto, () => ({ ...hilo, antes: hilo.mensajes })) : Promise.resolve(false),
+      base ? escribir(`${base}/${hilo.id}`, { hiloId: hilo.id }, texto, () => ({ ruta: hilo.ruta, linea: hilo.linea })) : Promise.resolve(false),
     cambiarEstado: async (hilo: Hilo, estado: "abierto" | "resuelto") => {
       if (!base) return;
       await fetch(`${base}/${hilo.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ estado }) }).catch(() => null);
@@ -255,7 +244,7 @@ export function HiloEnLinea({ hilo, ctx, labels }: { hilo: Hilo; ctx: ContextoDe
     setEnviando(false);
     if (!ok) return setAviso(labels.error);
     setRespuesta("");
-    setAviso(m.len ? labels.enCola : null);
+    setAviso(null);
   };
   return (
     <span
@@ -302,6 +291,12 @@ export function HiloEnLinea({ hilo, ctx, labels }: { hilo: Hilo; ctx: ContextoDe
             />
             {arroba.menu}
           </span>
+          {esperaALen(hilo) && (
+            <span className="mt-1 flex items-center gap-1.5 text-[10.5px] text-accent" data-len-trabajando="">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--accent)]" />
+              {labels.trabajando}
+            </span>
+          )}
           {aviso && <span className="mt-1 block text-[10.5px] fg-faint">{aviso}</span>}
           <span className="mt-1 flex justify-end gap-1.5">
             <button

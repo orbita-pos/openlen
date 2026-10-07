@@ -276,10 +276,10 @@
         "reabrir": "Reabrir",
         "resuelto": "Resuelto",
         "len": "Len",
-        "enCola": "Enviado a Len: verás el turno en el chat y la respuesta aquí.",
         "soloEditoresLen": "Solo quien puede editar puede pedirle cambios a Len.",
         "error": "No se pudo. Inténtalo de nuevo.",
-        "mencionado": "Te mencionaron aquí"
+        "mencionado": "Te mencionaron aquí",
+        "trabajando": "Len está en ello…"
       }
     }
   },

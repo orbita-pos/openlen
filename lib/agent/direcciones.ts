@@ -118,6 +118,13 @@ export function turnoVivoDelProyecto(projectId: string, userId: string): boolean
   return false;
 }
 
+/** ¿Corre ahora un turno en este proyecto, de quien sea? (un `@Len` desde un
+ *  hilo del código espera a que acabe: dos Len a la vez editarían lo mismo). */
+export function hayTurnoVivoEnElProyecto(projectId: string): boolean {
+  for (const t of abiertos.values()) if (t.projectId === projectId) return true;
+  return false;
+}
+
 export type ResultadoDirigir = "ok" | "no_existe" | "ajeno" | "vacio";
 
 /**

@@ -276,10 +276,10 @@
         "reabrir": "Reopen",
         "resuelto": "Resolved",
         "len": "Len",
-        "enCola": "Sent to Len: you’ll see the turn in the chat and the reply here.",
         "soloEditoresLen": "Only people who can edit can ask Len for changes.",
         "error": "That didn’t work. Try again.",
-        "mencionado": "You were mentioned here"
+        "mencionado": "You were mentioned here",
+        "trabajando": "Len is working on it…"
       }
     }
   },

@@ -18,7 +18,8 @@
   "turn": {
     "imageSent": "Bild gesendet",
     "imagesSent": "{count} Bilder gesendet",
-    "homePage": "Startseite"
+    "homePage": "Startseite",
+    "desdeElHilo": "aus der Unterhaltung · {donde}"
   },
   "proceso": {
     "completadoEn": "Abgeschlossen in <d>{duracion}</d>",

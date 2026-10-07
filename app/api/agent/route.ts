@@ -3,6 +3,7 @@ import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { accesoAlProyecto, puede } from "@/lib/projects/acceso";
 import { conAutor } from "@/lib/projects/autor-del-cambio";
 import { hiloDelProyecto, respuestaDeLen } from "@/lib/projects/hilos";
+import { registrarCorredorDeTurnos, type PedidoDelHilo } from "@/lib/agent/turnos-desde-el-servidor";
 import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miembros";
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
@@ -297,9 +298,6 @@ type CuerpoDelTurno = {
   naceComo?: unknown;
   /** El idioma de la interfaz, para el `lang` del cascarón de una app que nace. */
   idioma?: unknown;
-  /** HILOS EN EL CÓDIGO: el turno se pidió con `@Len` desde un hilo; al cerrar,
-   *  Len contesta en él (lib/projects/hilos.ts). */
-  hiloId?: unknown;
 };
 
 /** La ronda de un encargo que abre el conductor (pieza 8). Nunca sale del cuerpo. */
@@ -316,7 +314,7 @@ async function correrTurno(
   userId: string,
   body: CuerpoDelTurno | null,
   req: { url: string; signal: AbortSignal },
-  opts: { round?: RondaDelEncargo } = {},
+  opts: { round?: RondaDelEncargo; hilo?: PedidoDelHilo } = {},
 ): Promise<Response> {
   const projectId = typeof body?.projectId === "string" ? body.projectId.trim() : "";
   // `let`: en una ronda del encargo (pieza 8) el mensaje del turno es el de
@@ -387,9 +385,10 @@ async function correrTurno(
       if (!(await cabeEnElTope(projectId, 1))) return errorJson(402, "the project's monthly limit for members is used up", "tope_de_miembros");
     }
   }
-  // El hilo del que viene el turno, si es de ESTE proyecto (si no, se ignora).
-  const hiloPedido = typeof body?.hiloId === "string" ? body.hiloId.slice(0, 100) : "";
-  const hiloDelTurno = hiloPedido && (await hiloDelProyecto(projectId, hiloPedido).catch(() => null)) ? hiloPedido : null;
+  // HILOS EN EL CÓDIGO: un `@Len` desde un hilo lo lanza el SERVIDOR
+  // (lib/agent/turnos-desde-el-servidor.ts), nunca el cuerpo de una petición.
+  // Al cerrar, Len contesta en el hilo; el contexto del hilo va sólo al modelo.
+  const hiloDelTurno = opts.hilo && (await hiloDelProyecto(projectId, opts.hilo.hiloId).catch(() => null)) ? opts.hilo : null;
   // F4 Task 1 — multi-page base: page slug, validated CLONED from
   // app/api/templates/ai-design/route.ts (read that file first if editing
   // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in
@@ -829,7 +828,9 @@ async function correrTurno(
       turnosTotales > 0 ? { visibles: ventanaVisible, totales: turnosTotales } : null,
     // Y lo que el dueño dijo en los turnos que ya no se ven (H08-a).
     dichoAntes,
-    prompt,
+    // Desde un hilo del código, el modelo lee también dónde y lo dicho antes;
+    // la fila (y el chat) guardan sólo lo que se escribió.
+    prompt: hiloDelTurno ? `${hiloDelTurno.contexto}\n\n${prompt}` : prompt,
     history,
     // ¿El turno anterior fue MUDO? Se deriva del historial que acaba de
     // sanearse: el último mensaje del asistente sin `functionCalls` significa
@@ -1142,7 +1143,7 @@ async function correrTurno(
           // Pedido desde un hilo del código: Len contesta EN EL HILO con lo que
           // dijo al cerrar (y el hilo enlaza al turno del chat).
           if (hiloDelTurno) {
-            await respuestaDeLen({ projectId, hiloId: hiloDelTurno, texto: registro.texto, filaId }).catch((err: unknown) =>
+            await respuestaDeLen({ projectId, hiloId: hiloDelTurno.hiloId, texto: registro.texto, filaId }).catch((err: unknown) =>
               console.warn("[agent] no se pudo contestar en el hilo", err),
             );
           }
@@ -1258,6 +1259,7 @@ async function correrTurno(
             page: pageSlug,
             attachedImage: photosForRow(attachedImages),
             autorId: miembro ? quien : null,
+            ...(hiloDelTurno ? { origen: { hiloId: hiloDelTurno.hiloId, ruta: hiloDelTurno.ruta, linea: hiloDelTurno.linea } } : {}),
           });
           filaAbierta = true;
         } catch (err) {
@@ -1882,5 +1884,11 @@ async function correrTurno(
 function errorJson(status: number, message: string, code?: string): Response {
   return jsonResponse(code ? { error: message, code } : { error: message }, status);
 }
+
+// `@Len` desde un hilo del código: el servidor llama al turno sin la puerta
+// HTTP, como la ronda de un encargo (lib/agent/turnos-desde-el-servidor.ts).
+registrarCorredorDeTurnos((userId, body, req, opts) =>
+  conAutor(userId, () => correrTurno(userId, body as CuerpoDelTurno, req, opts)),
+);
 
 export const OPTIONS = respuestaPrevia;

@@ -209,6 +209,7 @@ export default defineConfig({
       // Compartir el proyecto: quién entra a qué, y las invitaciones.
       "lib/projects/miembros.pg.test.ts",
       "lib/projects/hilos.pg.test.ts",
+      "lib/agent/turnos-desde-el-servidor.test.ts",
       "lib/projects/autor-del-cambio.test.ts",
       "lib/projects/correos-del-proyecto.test.ts",
       "lib/projects/nacer-como-app.pg.test.ts",

@@ -13,7 +13,7 @@ import { EditorView } from "@codemirror/view";
 import { CodeView } from "./code-view";
 import { comentariosDelChat } from "@/lib/workspace-v2/comentarios-de-lineas";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
-import { pedidosALen } from "@/lib/workspace-v2/pedidos-a-len";
+import { turnosDelHilo } from "@/lib/workspace-v2/turnos-del-hilo";
 
 // `next/dynamic` carga el editor aparte: aquí, con React.lazy, para esperarlo.
 vi.mock("next/dynamic", async () => {
@@ -728,7 +728,7 @@ describe("CodeView — hilos en una línea con @Len y @persona", () => {
     reabrir: "Reabrir",
     resuelto: "Resuelto",
     len: "Len",
-    enCola: "Enviado a Len",
+    trabajando: "Len está en ello…",
     soloEditoresLen: "Solo editores",
     error: "No se pudo",
   };
@@ -797,22 +797,33 @@ describe("CodeView — hilos en una línea con @Len y @persona", () => {
     expect(post.cuerpo).toMatchObject({ ruta: "/index.html", linea: 1, codigo: "<h1>Portada</h1>", texto: "@Ana ¿esto va así?", menciones: ["u-ana"], len: false });
     expect(comentariosDelChat.lista(proyecto)).toEqual([]);
     expect(el.querySelector("[data-hilo]")!.textContent).toContain("¿esto va así?");
-    expect(pedidosALen.primero(proyecto)).toBeNull();
+    expect(turnosDelHilo.primero(proyecto)).toBeNull();
   });
 
-  it("🔴 con @Len, además deja el pedido para el chat, con el hilo, la línea y el código", async () => {
+  it("🔴 con @Len, el servidor empieza el turno: se anuncia al chat con lo escrito y de dónde, y el hilo dice que Len está en ello", async () => {
     const { el } = await pintar({ labels: conHilos });
     await esperar(() => llamadas.some((l) => l.url.includes("/hilos?ruta=")));
+    respuesta = ((anterior) => (m: string, url: string, cuerpo: unknown) =>
+      m === "POST" && url.endsWith("/hilos")
+        ? new Response(JSON.stringify({ hiloId: "h1", mensajeId: "m1", mencionados: [], filaId: "fila-1" }))
+        : anterior(m, url, cuerpo))(respuesta);
     const area = await abrirCaja(el);
     escribir(area, "@Len pon el título en azul");
+    hilos = [
+      {
+        id: "h1", ruta: "/index.html", linea: 1, codigo: "<h1>Portada</h1>", estado: "abierto", creadoPor: "yo", sinVer: 0,
+        mensajes: [{ id: "m1", autorId: "yo", autor: "Yo", texto: "@Len pon el título en azul", filaId: null, createdAt: "2026-10-07T10:00:00Z" }],
+      },
+    ];
     tecla(area, "Enter");
-    await esperar(() => pedidosALen.primero(proyecto));
-    const pedido = pedidosALen.primero(proyecto)!;
-    expect(pedido.hiloId).toBe("h1");
-    expect(pedido.texto).toContain("@Len pon el título en azul");
-    expect(pedido.texto).toContain("/index.html:1 `<h1>Portada</h1>`");
+    await esperar(() => turnosDelHilo.primero(proyecto));
+    const turno = turnosDelHilo.primero(proyecto)!;
+    // Lo que enseña el chat es lo escrito, tal cual: el contexto lo pone el servidor, sólo para Len.
+    expect(turno).toEqual({ filaId: "fila-1", texto: "@Len pon el título en azul", origen: { hiloId: "h1", ruta: "/index.html", linea: 1 } });
     expect(llamadas.find((l) => l.metodo === "POST" && l.url.endsWith("/hilos"))!.cuerpo).toMatchObject({ len: true });
-    pedidosALen.atendido(proyecto, pedido);
+    await esperar(() => el.querySelector("[data-len-trabajando]"));
+    expect(el.querySelector("[data-len-trabajando]")!.textContent).toContain("Len está en ello…");
+    turnosDelHilo.recogido(proyecto, turno);
   });
 
   it("sin @, comentar sigue esperando al próximo mensaje del chat, como siempre", async () => {

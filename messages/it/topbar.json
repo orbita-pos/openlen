@@ -167,6 +167,12 @@
       "asunto": "{quien} ti ha menzionato in {titulo}",
       "donde": "In {ruta}, riga {linea}:",
       "ver": "Apri la conversazione"
+    },
+    "hilo": {
+      "fallo": "Non sono riuscito a farlo: {motivo}",
+      "falloSinMotivo": "Non ci sono arrivato. Chiedimelo di nuovo dalla conversazione.",
+      "topeAgotado": "il limite mensile di Len per i membri di questo progetto è esaurito. Il proprietario può aumentarlo in «Invita».",
+      "sinCreditos": "non ci sono più crediti sull’account del proprietario del progetto."
     }
   }
 }

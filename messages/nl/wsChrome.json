@@ -284,10 +284,10 @@
         "reabrir": "Heropenen",
         "resuelto": "Afgerond",
         "len": "Len",
-        "enCola": "Naar Len gestuurd: de beurt zie je in de chat, het antwoord hier.",
         "soloEditoresLen": "Alleen wie mag bewerken, kan Len om wijzigingen vragen.",
         "error": "Dat lukte niet. Probeer het opnieuw.",
-        "mencionado": "Je bent hier genoemd"
+        "mencionado": "Je bent hier genoemd",
+        "trabajando": "Len is ermee bezig…"
       }
     }
   },

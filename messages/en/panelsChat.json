@@ -18,7 +18,8 @@
   "turn": {
     "imageSent": "Image sent",
     "imagesSent": "{count} images sent",
-    "homePage": "Home"
+    "homePage": "Home",
+    "desdeElHilo": "from the thread · {donde}"
   },
   "proceso": {
     "completadoEn": "Completed in <d>{duracion}</d>",

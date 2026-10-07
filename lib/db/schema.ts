@@ -406,6 +406,10 @@ export const projectChatMessages = pgTable(
     // turno lo paga el dueño, pero el historial dice quién lo pidió. NULL = el
     // dueño, o una fila anterior a esta columna. `npm run miembros:migrate`.
     autorId: text("autorId"),
+    // Pedido con `@Len` desde un hilo del código (lib/projects/hilos.ts): el
+    // hilo, el fichero y la línea, para la etiqueta del chat. NULL = desde el chat.
+    // `npm run hilos:migrate`.
+    origen: jsonb("origen").$type<{ hiloId: string; ruta: string; linea: number }>(),
     status: text("status").notNull(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     // LA CHARLA A LA QUE PERTENECE (plans/new-chat/, «Empezar de cero»). NULL =

@@ -1251,7 +1251,7 @@ export function PreviewArea({
                   reabrir: t("preview.ide.hilos.reabrir"),
                   resuelto: t("preview.ide.hilos.resuelto"),
                   len: t("preview.ide.hilos.len"),
-                  enCola: t("preview.ide.hilos.enCola"),
+                  trabajando: t("preview.ide.hilos.trabajando"),
                   soloEditoresLen: t("preview.ide.hilos.soloEditoresLen"),
                   error: t("preview.ide.hilos.error"),
                 },

@@ -365,6 +365,8 @@ export async function abrirFilaDelTurno(
     readonly attachedImage?: ChatPhoto | ChatPhoto[] | null;
     /** Quién lo pidió, si no fue el dueño (compartir el proyecto). */
     readonly autorId?: string | null;
+    /** Pedido con `@Len` desde un hilo del código: de dónde (el chat lo enseña). */
+    readonly origen?: { hiloId: string; ruta: string; linea: number } | null;
   },
 ): Promise<void> {
   await db
@@ -375,6 +377,7 @@ export async function abrirFilaDelTurno(
       userText: turn.userText.slice(0, 4000),
       attachedImage: turn.attachedImage ?? null,
       autorId: turn.autorId ?? null,
+      origen: turn.origen ?? null,
       assistantReasoning: "",
       page: turn.page ?? null,
       status: ESTADO_EN_CURSO,
@@ -531,6 +534,8 @@ function rowToTurn(
   // Lo que cobró y tardó, si el servidor lo apuntó (plans/new-chat/).
   if (typeof row.centicredits === "number") turn.centicredits = row.centicredits;
   if (typeof row.durationMs === "number") turn.durationMs = row.durationMs;
+  // Pedido con `@Len` desde un hilo del código: la etiqueta «desde el hilo».
+  if (row.origen) turn.origen = row.origen;
   return turn;
 }
 

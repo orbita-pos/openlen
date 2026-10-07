@@ -3,7 +3,13 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { accesoAlProyecto, type AccesoAlProyecto } from "@/lib/projects/acceso";
-import { MAX_TEXTO_DEL_HILO } from "@/lib/projects/hilos";
+import { MAX_TEXTO_DEL_HILO, listarHilos } from "@/lib/projects/hilos";
+import { fraseDeFalloDelHilo, idiomaDelCorreo } from "@/lib/projects/correos-del-proyecto";
+import { lanzarTurnoDelHilo } from "@/lib/agent/turnos-desde-el-servidor";
+
+async function listarHilosPorId(projectId: string, userId: string, hiloId: string) {
+  return (await listarHilos(projectId, userId)).filter((h) => h.id === hiloId);
+}
 import { scheduleNotification } from "@/lib/notifications/dispatch";
 
 export function json(body: unknown, status = 200): Response {
@@ -56,4 +62,37 @@ export async function avisarMenciones(p: {
       idioma: p.idioma ?? null,
     }).catch((err) => console.error("[hilos] no se pudo programar el aviso de mención", err));
   }
+}
+
+/**
+ * `@Len` en un hilo: el turno arranca EN EL SERVIDOR (como Claude Tag), con lo
+ * dicho antes en el hilo como contexto SÓLO para el modelo. Devuelve su fila,
+ * para que el chat lo siga si está abierto.
+ */
+export async function pedirleALen(p: {
+  req: Request;
+  projectId: string;
+  userId: string;
+  hiloId: string;
+  texto: string;
+  idioma?: string;
+}): Promise<string | null> {
+  const [hilo] = await listarHilosPorId(p.projectId, p.userId, p.hiloId);
+  if (!hilo) return null;
+  // Lo dicho ANTES de este mensaje (el último es el que lo pide).
+  const antes = hilo.mensajes.slice(0, -1).slice(-8);
+  const contexto = [
+    `[Requested from a comment thread in the code: \`${hilo.ruta}:${hilo.linea}\`${hilo.codigo.trim() ? ` — \`${hilo.codigo.trim().slice(0, 200)}\`` : ""}. Your final reply is also posted in that thread.]`,
+    ...(antes.length > 0 ? ["Earlier in the thread:", ...antes.map((m) => `- ${m.autorId ? (m.autor ?? "?") : "Len"}: ${m.texto}`)] : []),
+  ].join("\n");
+  const idioma = idiomaDelCorreo(p.idioma);
+  const { filaId } = await lanzarTurnoDelHilo({
+    userId: p.userId,
+    projectId: p.projectId,
+    texto: p.texto,
+    hilo: { hiloId: hilo.id, ruta: hilo.ruta, linea: hilo.linea, contexto },
+    origen: p.req.url,
+    fraseDeFallo: (fallo) => fraseDeFalloDelHilo(idioma, fallo),
+  });
+  return filaId;
 }

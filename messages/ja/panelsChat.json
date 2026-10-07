@@ -18,7 +18,8 @@
   "turn": {
     "imageSent": "画像を送信しました",
     "imagesSent": "{count} 枚の画像を送信しました",
-    "homePage": "ホーム"
+    "homePage": "ホーム",
+    "desdeElHilo": "スレッドから · {donde}"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d>で完了",

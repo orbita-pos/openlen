@@ -167,6 +167,12 @@
       "asunto": "{quien} 在 {titulo} 中提到了你",
       "donde": "{ruta} 第 {linea} 行：",
       "ver": "打开讨论"
+    },
+    "hilo": {
+      "fallo": "没能完成：{motivo}",
+      "falloSinMotivo": "我没能处理。请在讨论里再让我做一次。",
+      "topeAgotado": "本项目成员的 Len 月度上限已用完。所有者可以在「邀请」中提高上限。",
+      "sinCreditos": "项目所有者的账户里已经没有额度了。"
     }
   }
 }

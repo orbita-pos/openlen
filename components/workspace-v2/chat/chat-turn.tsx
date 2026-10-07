@@ -10,7 +10,7 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { Crosshair, CornerDownRight, Flag } from "lucide-react";
+import { AtSign, Crosshair, CornerDownRight, Flag } from "lucide-react";
 
 import { TextoDeLen } from "../texto-de-len";
 import { AgentConfirmCard } from "../agent-confirm-card";
@@ -53,7 +53,16 @@ export function answerOfNextTurn(next: DesignTurn | undefined): { answer: string
   return corrections.length > 0 ? { answer: corrections.join("\n"), cancelled: false } : { answer: null, cancelled: true };
 }
 
-export function UserMessage({ turn, initial }: { turn: DesignTurn; initial: string }) {
+export function UserMessage({
+  turn,
+  initial,
+  onAbrirOrigen,
+}: {
+  turn: DesignTurn;
+  initial: string;
+  /** Pedido desde un hilo del código: abrir ese fichero en «Código». */
+  onAbrirOrigen?: (ruta: string) => void;
+}) {
   const t = useTranslations("panelsChat");
   const { text: escrito, corrections } = splitCorrections(turn.userText);
   // Una foto, como siempre; con dos o más (Crear es Len), todas.
@@ -102,6 +111,19 @@ export function UserMessage({ turn, initial }: { turn: DesignTurn; initial: stri
               <Crosshair size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
               <span className="min-w-0 truncate font-mono">{turn.scope.hint}</span>
             </div>
+          )}
+          {turn.origen && (
+            <button
+              type="button"
+              onClick={() => onAbrirOrigen?.(turn.origen!.ruta)}
+              className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-left text-[11.5px] fg-muted hover:fg"
+              data-origen-del-turno=""
+            >
+              <AtSign size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+              <span className="min-w-0 truncate">
+                {t("turn.desdeElHilo", { donde: `${turn.origen.ruta.replace(/^\/+/, "")}:${turn.origen.linea}` })}
+              </span>
+            </button>
           )}
           {ronda && (
             <div className="mb-1 flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--nc-accent-text)]">

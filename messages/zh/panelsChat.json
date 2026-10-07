@@ -18,7 +18,8 @@
   "turn": {
     "imageSent": "图片已发送",
     "imagesSent": "已发送 {count} 张图片",
-    "homePage": "首页"
+    "homePage": "首页",
+    "desdeElHilo": "来自讨论 · {donde}"
   },
   "proceso": {
     "completadoEn": "用时 <d>{duracion}</d> 完成",

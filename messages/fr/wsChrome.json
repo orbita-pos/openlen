@@ -276,10 +276,10 @@
         "reabrir": "Rouvrir",
         "resuelto": "Résolu",
         "len": "Len",
-        "enCola": "Envoyé à Len : vous verrez le tour dans le chat et la réponse ici.",
         "soloEditoresLen": "Seules les personnes qui peuvent modifier peuvent demander des changements à Len.",
         "error": "Ça n’a pas fonctionné. Réessayez.",
-        "mencionado": "On vous a mentionné ici"
+        "mencionado": "On vous a mentionné ici",
+        "trabajando": "Len s’en occupe…"
       }
     }
   },

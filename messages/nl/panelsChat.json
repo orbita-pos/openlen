@@ -18,7 +18,8 @@
   "turn": {
     "imageSent": "Afbeelding verstuurd",
     "imagesSent": "{count} afbeeldingen verstuurd",
-    "homePage": "Home"
+    "homePage": "Home",
+    "desdeElHilo": "vanuit de draad · {donde}"
   },
   "proceso": {
     "completadoEn": "Voltooid in <d>{duracion}</d>",

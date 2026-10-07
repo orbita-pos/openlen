@@ -120,3 +120,14 @@ export function correoDeMencion(
   const text = [subject, "", donde, datos.texto, "", datos.url].join("\n");
   return { subject, html, text };
 }
+
+/** La frase de Len en un hilo cuando el turno no llegó a contestar. Los fallos
+ *  conocidos (el tope de los miembros, sin créditos) se dicen en el idioma de
+ *  quien escribió; los demás, con la frase que dio el servidor. */
+export function fraseDeFalloDelHilo(idioma: IdiomaDelCorreo, fallo: { motivo: string; code?: string } | null): string {
+  const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.hilo" });
+  if (!fallo) return t("falloSinMotivo");
+  const motivo =
+    fallo.code === "tope_de_miembros" ? t("topeAgotado") : fallo.code === "no_credits" ? t("sinCreditos") : fallo.motivo.slice(0, 300);
+  return t("fallo", { motivo });
+}

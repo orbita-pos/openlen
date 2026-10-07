@@ -88,6 +88,8 @@ export type TurnStatus = "streaming" | "applied" | "error" | "reverted";
 export interface DesignTurn {
   id: string;
   userText: string;
+  /** Pedido con `@Len` desde un hilo del código: la etiqueta «desde el hilo». */
+  origen?: { hiloId: string; ruta: string; linea: number };
   /** Image attached to this turn — rendered in the user bubble as proof
    *  it was actually sent with the message. */
   attachedImage?: AttachedImage;
@@ -650,6 +652,27 @@ export function useAgentChat({
     );
   }, []);
 
+  /** `@Len` DESDE UN HILO DEL CÓDIGO: el servidor ya lo empezó (como Claude
+   *  Tag); se pinta en marcha y el efecto de abajo lo sigue desde su fila. */
+  const seguirTurnoDelHilo = useCallback((turno: { filaId: string; texto: string; origen: NonNullable<DesignTurn["origen"]> }) => {
+    setTurns((prev) =>
+      prev.some((t) => t.id === turno.filaId)
+        ? prev
+        : [
+            ...prev,
+            restoreTurn({
+              id: turno.filaId,
+              userText: turno.texto,
+              assistantReasoning: "",
+              status: "applied",
+              appliedAt: Date.now(),
+              enCurso: true,
+              origen: turno.origen,
+            }),
+          ],
+    );
+  }, []);
+
   /** LEN 2.1 · Este turno sigue en el servidor y esta vista ya no tiene su
    *  stream: se pinta en marcha y se relee su fila (efecto de abajo). */
   const seguirEnElServidor = useCallback((id: string) => {
@@ -1070,8 +1093,6 @@ export function useAgentChat({
         /** El primer mensaje de un proyecto en blanco que nace como app. */
         readonly naceComo?: PideNacer["naceComo"];
         readonly idioma?: string;
-        /** Pedido con `@Len` desde un hilo del código: Len contesta además allí. */
-        readonly hiloId?: string;
       },
     ) => {
       const escrito = rawPrompt.trim();
@@ -1330,8 +1351,6 @@ export function useAgentChat({
               ...(opciones?.styleDirection ? { styleDirection: opciones.styleDirection } : {}),
               // UNA APP NACE con este mensaje (la tarjeta App del estado vacío).
               ...camposDeNacer(opciones),
-              // Desde un hilo del código (`@Len`): Len contesta en él al cerrar.
-              ...(opciones?.hiloId ? { hiloId: opciones.hiloId } : {}),
             }),
             signal: abort.signal,
           });
@@ -2448,6 +2467,7 @@ export function useAgentChat({
     resumeGoal,
     clearGoal,
     goalOffered: agentModeUI,
+    seguirTurnoDelHilo,
   };
 }
 
@@ -2487,6 +2507,7 @@ export function restoreTurn(s: StoredChatTurn): DesignTurn {
     // Lo que cobró y tardó, si el servidor lo apuntó (plans/new-chat/).
     ...(typeof s.centicredits === "number" ? { centicredits: s.centicredits } : {}),
     ...(typeof s.durationMs === "number" ? { durationMs: s.durationMs } : {}),
+    ...(s.origen ? { origen: s.origen } : {}),
   };
 }
 

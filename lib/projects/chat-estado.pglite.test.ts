@@ -63,7 +63,7 @@ beforeEach(async () => {
       "userText" text not null, "attachedImage" jsonb, "assistantReasoning" text not null,
       "page" text, "actions" jsonb, "noDocChange" boolean, "toolResults" jsonb, "transcript" jsonb,
       "status" text not null, "createdAt" timestamp not null default now(),
-      "conversation" text, "centicredits" integer, "durationMs" integer, "autorId" text);
+      "conversation" text, "centicredits" integer, "durationMs" integer, "autorId" text, "origen" jsonb);
     create table "projectMembers" ("id" text primary key, "projectId" text not null, "userId" text not null, "rol" text not null);
     insert into "projects" ("id", "userId") values ('p1', 'u1'), ('p2', 'u2');
   `);
