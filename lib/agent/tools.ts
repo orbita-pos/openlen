@@ -49,7 +49,7 @@ import {
   type SettingsPatchBody,
   type SettingsPatchOutcome,
 } from "@/lib/projects/settings-patch";
-import type { ProjectData } from "@/lib/projects/types";
+import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import {
@@ -682,6 +682,11 @@ export interface AgentSession {
   /** El modo del turno (`lib/agent/dynamis.ts`). Ausente = Len. Lo lee el
    *  /AGENTS.md que ve la terminal: en Dynamis no nombra Read, Edit ni Write. */
   mode?: AgentMode;
+  /** UNA APP WEB (F3 de la spec local 2026-10-07-apps): `project.data.app` al
+   *  empezar el turno. Ausente o `null` = una página. Lo leen el manual que
+   *  devuelve Read, las guardas de la escritura y las herramientas que en una
+   *  app hacen otra cosa (deshacer, publicar). */
+  app?: AppDeProyecto | null;
   // ⚰️ Aquí vivían `taggedHtml` (el documento activo con ids, contra el que se
   // aplicaban las ops) y `baseHtml` (contra qué comparar si otro escribió). Len
   // 2.0 edita ficheros (plans/len-2/ficheros-plan.md): cada herramienta lee la
@@ -1011,10 +1016,15 @@ export function summarizeProjectState(
     /** El backend del proyecto (plans/pages-backend/design.md): lo que la
      *  página pone en `createClient`. `null`/ausente ⇒ no hay en este servidor. */
     supabase?: { url: string; publishableKey: string } | null;
+    /** En una APP, las rutas de su carpeta (`/src/App.jsx`…): el código de una
+     *  app no son páginas, y sin la lista Len empezaría cada turno a ciegas,
+     *  listando /src. En una página no se pasa: su estado no cambia. */
+    ficherosDeLaCarpeta?: readonly string[];
   },
   /** La página que el dueño tiene abierta en el editor; `null` es la Home. */
   page: string | null = null,
 ): Record<string, unknown> {
+  const app = row.data.app ?? null;
   const modulos = {} as Record<AgentModule, boolean>;
   for (const m of AGENT_MODULES) {
     modulos[m] = row.data.settings?.[MODULE_SETTINGS_KEY[m]]?.enabled === true;
@@ -1051,10 +1061,22 @@ export function summarizeProjectState(
     // Home —el nombre que pedía `trabajar_en_pagina`, que ya no existe—. La
     // Home va en la lista: medido el 2026-08-26, sin ella el Agente contestaba
     // que un sitio de dos páginas tenía una.
-    ficheros: ficherosDelSitio(row.data),
+    //
+    // En una APP, también su carpeta: ahí vive el código (F3 de la spec local
+    // 2026-10-07-apps). Sin /memoria ni /ajustes, que no son de la app y la
+    // memoria ya va en el contexto.
+    ficheros: app
+      ? [
+          ...new Set([
+            ...ficherosDelSitio(row.data),
+            ...(row.ficherosDeLaCarpeta ?? []).filter((r) => !r.startsWith("/memoria/") && !r.startsWith("/ajustes/")),
+          ]),
+        ].sort()
+      : ficherosDelSitio(row.data),
     // La que el dueño tiene abierta en el editor, como el «fichero abierto en
-    // el IDE» de Claude Code: puede que la petición sea sobre ésa, o no.
-    abierta_en_el_editor: rutaDePagina(page),
+    // el IDE» de Claude Code: puede que la petición sea sobre ésa, o no. En
+    // una app el lienzo enseña la app entera: no hay página abierta que decir.
+    ...(app ? { app: { entrada: app.entrada, catalogo: app.catalogo } } : { abierta_en_el_editor: rutaDePagina(page) }),
     modulos,
     // Lo que la página pone en `createClient(url, key)` (THE BACKEND, en el
     // manual). Con los nombres que tienen en Supabase.

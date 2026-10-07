@@ -27,6 +27,8 @@ import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contrac
 import { bloqueDeLibrerias } from "@/lib/librerias";
 import { paraSoloLaTerminal, terminalOnly } from "@/lib/agent/terminal/declaracion";
 import type { AgentMode } from "@/lib/agent/dynamis";
+import { GUIA_DE_LA_APP, manualDeLaApp } from "@/lib/agent/modo-app";
+import type { AppDeProyecto } from "@/lib/projects/types";
 import {
   CARPETA_DOCS,
   CIERRE_DEL_ADJUNTO,
@@ -213,24 +215,29 @@ export function partirElManual(entero: string = manualSinPartir()): ManualPartid
 }
 
 /** El contenido de /AGENTS.md: lo que Read devuelve y lo que se adjunta. En Len
- *  Dynamis no nombra Read, Edit ni Write, que no tiene. */
+ *  Dynamis no nombra Read, Edit ni Write, que no tiene. En una APP es el suyo
+ *  (`lib/agent/modo-app.ts`), con las secciones que valen en los dos sitios
+ *  tomadas enteras de éste. */
 export function buildManualDeLaPlataforma(
   env: Readonly<Record<string, string | undefined>> = process.env,
   mode: AgentMode = "len",
+  app: AppDeProyecto | null = null,
 ): string {
-  const { agents } = partirElManual();
+  const agents = app ? manualDeLaApp(manualSinPartir(), app) : partirElManual().agents;
   return terminalOnly(mode, env) ? paraSoloLaTerminal(agents) : agents;
 }
 
-/** Los ficheros de /.openlen/docs, por su ruta. */
-export function documentosDeLaPlataforma(): Readonly<Record<string, string>> {
-  return partirElManual().docs;
+/** Los ficheros de /.openlen/docs, por su ruta. Una app tiene su guía de
+ *  diseño en la MISMA ruta, y no tiene la de las librerías de las páginas
+ *  (sus paquetes son los de su catálogo, en /AGENTS.md). */
+export function documentosDeLaPlataforma(app: AppDeProyecto | null = null): Readonly<Record<string, string>> {
+  return app ? { [RUTA_GUIA]: GUIA_DE_LA_APP } : partirElManual().docs;
 }
 
 /** El texto de un fichero del manual por su ruta, o `null` si no es ninguno. */
-export function textoDeLaPlataforma(ruta: string, mode: AgentMode = "len"): string | null {
-  if (ruta === RUTA_MANUAL) return buildManualDeLaPlataforma(process.env, mode);
-  const docs = documentosDeLaPlataforma();
+export function textoDeLaPlataforma(ruta: string, mode: AgentMode = "len", app: AppDeProyecto | null = null): string | null {
+  if (ruta === RUTA_MANUAL) return buildManualDeLaPlataforma(process.env, mode, app);
+  const docs = documentosDeLaPlataforma(app);
   return Object.hasOwn(docs, ruta) ? docs[ruta]! : null;
 }
 

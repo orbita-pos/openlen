@@ -38,7 +38,8 @@ export interface Dependencia {
   readonly especificador: string;
   /** El fichero, dentro del catálogo. */
   readonly fichero: string;
-  /** Para qué sirve, en una línea: lo leerá el manual de Len. */
+  /** Para qué sirve, en una línea. EN INGLÉS: lo lee Len en su manual
+   *  (`lib/agent/modo-app.ts`), y todo lo que lee Len va en inglés. */
   readonly para: string;
 }
 
@@ -66,20 +67,20 @@ export const CATALOGOS: Readonly<Record<string, Catalogo>> = {
       "lucide-react": "1.16.0",
     },
     dependencias: [
-      { especificador: "react", fichero: "react.js", para: "React: componentes, estado y efectos." },
-      { especificador: "react/jsx-runtime", fichero: "react-jsx-runtime.js", para: "El runtime de JSX (lo usa el compilador)." },
-      { especificador: "react-dom", fichero: "react-dom.js", para: "createPortal, flushSync." },
-      { especificador: "react-dom/client", fichero: "react-dom-client.js", para: "createRoot: montar la app." },
+      { especificador: "react", fichero: "react.js", para: "components, state and effects (useState, useEffect, useMemo…)." },
+      { especificador: "react/jsx-runtime", fichero: "react-jsx-runtime.js", para: "the JSX runtime; the compiler uses it, you never import it." },
+      { especificador: "react-dom", fichero: "react-dom.js", para: "createPortal and flushSync." },
+      { especificador: "react-dom/client", fichero: "react-dom-client.js", para: "createRoot, to mount the app." },
       {
         especificador: "@supabase/supabase-js",
         fichero: "supabase-js.js",
-        para: "El backend del proyecto: base de datos, Auth, Storage y Realtime.",
+        para: "the project's backend: database, Auth, Storage and Realtime.",
       },
       // Los dos nombres, el MISMO fichero: un solo módulo en el navegador, así
       // que un `<Link>` de uno funciona dentro del `<HashRouter>` del otro.
-      { especificador: "react-router", fichero: "react-router.js", para: "Las pantallas: HashRouter, Routes, Route, Link, useNavigate." },
-      { especificador: "react-router-dom", fichero: "react-router.js", para: "Lo mismo que react-router, con el nombre de antes." },
-      { especificador: "lucide-react", fichero: "lucide-react.js", para: "Iconos como componentes (<ShoppingCart />): una selección, no todos." },
+      { especificador: "react-router", fichero: "react-router.js", para: "the screens: HashRouter, Routes, Route, Link, NavLink, Navigate, Outlet, useNavigate, useParams, useLocation, useSearchParams." },
+      { especificador: "react-router-dom", fichero: "react-router.js", para: "the same as react-router, by its older name." },
+      { especificador: "lucide-react", fichero: "lucide-react.js", para: "icons as components (<ShoppingCart className=\"h-5 w-5\" />): a selection, not all of lucide." },
     ],
     internos: ["react-todo.js"],
   },

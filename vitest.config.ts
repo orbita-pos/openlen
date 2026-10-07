@@ -446,6 +446,8 @@ export default defineConfig({
       "lib/agent/reloj-de-silencio.test.ts",
       "lib/agent/context.test.ts",
       "lib/agent/manual-de-la-plataforma.test.ts",
+      // F3 de las apps web: lo que lee Len cuando el proyecto es una app.
+      "lib/agent/modo-app.test.ts",
       "lib/agent/subagente.test.ts",
       "lib/agent/facts-kept.test.ts",
       "lib/agent/contenido-perdido.test.ts",

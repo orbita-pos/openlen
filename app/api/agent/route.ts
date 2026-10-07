@@ -475,8 +475,12 @@ async function correrTurno(
   // para que sea el mismo documento que el taller le está enseñando al usuario.
   // Ver D5 de la spec 2026-09-15.
   const vistaDelTurno = vistaParaMedir(projectId, project, pageSlug);
+  // UNA APP WEB (F3 de la spec local 2026-10-07-apps): su prompt, su manual y
+  // sus herramientas son los suyos (`lib/agent/modo-app.ts`). Se decide UNA vez
+  // por turno, con la fila del principio, como todo lo demás que lee el prompt.
+  const appDelTurno = project.data?.app ?? null;
   // Todas cargadas: las diferidas y ToolSearch (H2) se retiraron en Len 2.1.
-  const tools = buildFunctionDeclarations(process.env, {}, mode);
+  const tools = buildFunctionDeclarations(process.env, {}, mode, appDelTurno);
   // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador
   // sólo se acepta un NOMBRE de herramienta que exista, sin argumentos, y un
   // resumen acotado. Vive fuera para que el arnés de evals reproduzca una
@@ -658,6 +662,11 @@ async function correrTurno(
         console.warn("[agent] no se pudo leer el backend del proyecto", err);
         return null;
       }),
+      // En una app, las rutas de su carpeta: su código. Si no se puede leer, el
+      // turno sigue sin la lista (Len la saca con la terminal).
+      ...(appDelTurno
+        ? { ficherosDeLaCarpeta: Object.keys((await deps.projectFiles?.(projectId).catch(() => null)) ?? {}) }
+        : {}),
     },
     // La pagina ACTIVA: los rasgos del documento (tokens, modo, fuentes)
     // describen el que se va a editar, no siempre la Home.
@@ -725,6 +734,7 @@ async function correrTurno(
   const zonaDelTurno = zonaDelCuerpo ?? (await leerZona(userId).catch(() => null)) ?? ZONA_SIN_DATO;
   const argsDelTurno = {
     mode,
+    app: appDelTurno,
     zona: zonaDelTurno,
     state,
     userBrief: project.userBrief,
@@ -856,6 +866,7 @@ async function correrTurno(
     projectId,
     userId,
     mode,
+    app: appDelTurno,
     // H3 — la memoria que va en el contexto cuenta como LEÍDA, como el CLAUDE.md
     // que Claude Code siembra al empezar: se le añade una línea sin un Read.
     leidos: new Map([

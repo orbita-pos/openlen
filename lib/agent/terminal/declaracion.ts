@@ -103,6 +103,11 @@ export const PARA_SOLO_LA_TERMINAL: readonly (readonly [string, string])[] = [
     "Read to read, Edit to change an exact piece, Write to create a new page or rewrite a whole one, and bash, a terminal over the same files, to search the whole site (grep -rn), list them (find) or change many at once (sed -i).",
     "bash, a terminal over those files, to read them (cat, sed -n), search the whole site (grep -rn), list them (find) and change them (sed -i, or a heredoc to write a whole one).",
   ],
+  // El de una app (`lib/agent/modo-app.ts`), que dice «fichero» donde la página dice «página».
+  [
+    "Read to read, Edit to change an exact piece, Write to create a new file or rewrite a whole one, and bash, a terminal over the same files, to search the whole site (grep -rn), list them (find) or change many at once (sed -i).",
+    "bash, a terminal over those files, to read them (cat, sed -n), search the whole site (grep -rn), list them (find) and change them (sed -i, or a heredoc to write a whole one).",
+  ],
   ["with the smallest Edit that does it", "with the smallest change that does it"],
   ["or rewrite it whole with Write to improve it", "or rewrite it whole to improve it"],
   ["are changed the same way, with Edit.", "are changed the same way, with bash."],

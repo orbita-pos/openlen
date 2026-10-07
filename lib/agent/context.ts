@@ -16,6 +16,7 @@ import type { Message } from "@/lib/ai-gateway";
 import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
 import { adjuntoDelManual, buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import type { AgentMode } from "@/lib/agent/dynamis";
+import type { AppDeProyecto } from "@/lib/projects/types";
 import { textoDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO } from "@/lib/agent/ficheros/memoria";
 
@@ -338,6 +339,9 @@ export interface BuildAgentMessagesArgs {
   /** El modo del turno (`lib/agent/dynamis.ts`): en Dynamis, el prompt y el
    *  manual se dicen con la terminal sola. Ausente = Len. */
   mode?: AgentMode;
+  /** UNA APP WEB (`project.data.app`): el prompt y el manual son los suyos
+   *  (`lib/agent/modo-app.ts`). Ausente = una página. */
+  app?: AppDeProyecto | null;
   /** La zona del usuario (IANA), la misma de `AgentSession.zonaHoraria`: el HOY
    *  del contexto es SU día (plans/len-resultados/diseno.md §7). */
   zona?: string;
@@ -396,7 +400,7 @@ export const PETICION_DEL_USUARIO = "WHAT THE USER ASKS YOU NOW:\n";
  *  antes del historial: es el punto de generación, y es donde la tarea 4
  *  necesita poder colgar los avisos por turno. */
 export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMessagesResult {
-  const systemPrompt = buildAgentSystemPrompt(process.env, args.mode);
+  const systemPrompt = buildAgentSystemPrompt(process.env, args.mode, args.app ?? null);
   const contextBlock = buildAgentContext({
     zona: args.zona,
     state: args.state,
@@ -422,7 +426,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   // justo después del prompt de sistema, como Claude Code sus ficheros de
   // instrucciones. No cambia entre peticiones, así que va en el prefijo fijo y
   // se lee de caché; el contexto, que sí cambia, sigue en el último mensaje.
-  const manual = adjuntoDelManual(buildManualDeLaPlataforma(process.env, args.mode));
+  const manual = adjuntoDelManual(buildManualDeLaPlataforma(process.env, args.mode, args.app ?? null));
   // Los avisos cuentan para el techo: son parte del turno, no un extra que
   // aparece después de haber decidido que cabía. El manual también.
   // Y las fotos (A): viajan pegadas a su mensaje en todas las vueltas, así que
