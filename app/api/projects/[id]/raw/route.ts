@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { bakeModulesForPreview } from "@/lib/publish/preview-bake";
 import { embedSandboxHeaders, isFramedRequest } from "@/lib/publish/embed-sandbox";
+import { entornoPublicoDeLaApp } from "@/lib/apps/entorno";
 import { guardarDocumento } from "@/lib/lienzo/almacen";
 import { documentoDeVista } from "@/lib/lienzo/documento";
 import { lienzoApagado, urlDelDocumento } from "@/lib/lienzo/host";
@@ -69,6 +70,8 @@ export async function GET(
     // Con la función pura antes de hornear: sin dominio de lienzo (o con un id
     // que no es un uuid) no se gasta nada y se cae a la reserva de abajo.
     if (urlDelDocumento({ projectId: id, docId: "comprobacion", pagina, hostDeLaPeticion }) !== null) {
+      const app = row.data?.app ?? null;
+      const entorno = app ? await entornoPublicoDeLaApp(id) : undefined;
       const vista = documentoDeVista(html, {
         projectId: id,
         title: row.title ?? null,
@@ -76,8 +79,16 @@ export async function GET(
         pagina,
         settings: row.data?.settings,
         logoUrl: row.logoUrl ?? null,
+        app,
       });
-      const docId = guardarDocumento({ html: vista, projectId: id, userId: session.user.id, pagina });
+      const docId = guardarDocumento({
+        html: vista,
+        projectId: id,
+        userId: session.user.id,
+        pagina,
+        app,
+        ...(entorno ? { entorno } : {}),
+      });
       const destino = urlDelDocumento({ projectId: id, docId, pagina, hostDeLaPeticion });
       if (destino) {
         return new Response(null, {

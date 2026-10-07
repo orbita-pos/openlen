@@ -163,6 +163,10 @@ export interface AgentDeps {
    *  páginas —`/supabase/`, `/tests/`, `js/`, `css/`, `data/`…—, por ruta.
    *  Opcional: sin él no hay carpeta. */
   projectFiles?(projectId: string): Promise<Record<string, string>>;
+  /** APPS WEB (spec local 2026-10-07-apps): lo que vale `import.meta.env` en la
+   *  app —la URL de su backend y su clave PUBLICABLE—, para que los ojos de Len
+   *  midan la app hablando con su backend. Opcional: sin él, sólo MODE/DEV/PROD. */
+  entornoDeLaApp?(projectId: string): Promise<Record<string, string>>;
   /** Guardar uno, archivando antes su «antes» (`projectFileVersions`). */
   saveProjectFile?(projectId: string, path: string, content: string, version: FileVersionNote): Promise<{ versionPrevia: string | null }>;
   /** Borrar uno, archivando lo que tenía. */
@@ -437,6 +441,10 @@ export function realDeps(
     async projectFiles(projectId) {
       const { listProjectFiles } = await import("@/lib/backend/files");
       return listProjectFiles(projectId);
+    },
+    async entornoDeLaApp(projectId) {
+      const { entornoPublicoDeLaApp } = await import("@/lib/apps/entorno");
+      return entornoPublicoDeLaApp(projectId);
     },
     async saveProjectFile(projectId, path, content, version) {
       const { saveProjectFile } = await import("@/lib/backend/files");

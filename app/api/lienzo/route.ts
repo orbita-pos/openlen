@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
+import { entornoPublicoDeLaApp } from "@/lib/apps/entorno";
 import { guardarDocumento } from "@/lib/lienzo/almacen";
 import { documentoDeVista } from "@/lib/lienzo/documento";
 import { lienzoApagado, urlDelDocumento } from "@/lib/lienzo/host";
@@ -75,6 +76,11 @@ export async function POST(req: Request): Promise<Response> {
     urlDelDocumento({ projectId: body.projectId as string, docId, pagina, hostDeLaPeticion });
   if (construir("comprobacion") === null) return json({ error: "sin_host" }, 503);
 
+  // UNA APP WEB (spec local 2026-10-07-apps): su documento lleva el import map
+  // y el almacén recuerda la app y su `import.meta.env`, que es lo que
+  // `/api/lienzo/site` necesita para compilar sus módulos.
+  const app = fila.data?.app ?? null;
+  const entorno = app ? await entornoPublicoDeLaApp(body.projectId) : undefined;
   const html = documentoDeVista(body.html, {
     projectId: body.projectId,
     title: fila.title ?? null,
@@ -82,8 +88,16 @@ export async function POST(req: Request): Promise<Response> {
     pagina,
     settings: fila.data?.settings,
     logoUrl: fila.logoUrl ?? null,
+    app,
   });
-  const docId = guardarDocumento({ html, projectId: body.projectId, userId: session.user.id, pagina });
+  const docId = guardarDocumento({
+    html,
+    projectId: body.projectId,
+    userId: session.user.id,
+    pagina,
+    app,
+    ...(entorno ? { entorno } : {}),
+  });
   const url = construir(docId);
   // ⚠️ ESTE `null` NO PUEDE OCURRIR, y se deja a propósito. `urlDelDocumento`
   // sólo depende del projectId y del entorno, no del docId, así que si la

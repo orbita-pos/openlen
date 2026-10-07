@@ -39,6 +39,7 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 import { allowEgressOrigin } from "@/lib/security/egress-proxy";
 import { randomUUID } from "node:crypto";
 import { contentTypeFor, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { rutaDeVendorValida } from "@/lib/apps/dependencias";
 
 export interface DocumentoServido {
   /** El URL que hay que abrir en el navegador. */
@@ -172,7 +173,12 @@ function crear(): Promise<OrigenDeMedida> {
           if (opciones.files) {
             ficherosPorDocumento.set(
               id,
-              new Map(Object.entries(opciones.files).filter(([ruta]) => isPublishableFolderPath(ruta))),
+              // Las dependencias de una app (`/openlen/vendor/…`) viven en una
+              // raíz RESERVADA de la carpeta, así que el filtro de lo
+              // publicable las dejaría fuera: se aceptan por su nombre exacto.
+              new Map(
+                Object.entries(opciones.files).filter(([ruta]) => isPublishableFolderPath(ruta) || rutaDeVendorValida(ruta) !== null),
+              ),
             );
           }
           const pagina = opciones.pagina ? `${encodeURIComponent(opciones.pagina)}/` : "";

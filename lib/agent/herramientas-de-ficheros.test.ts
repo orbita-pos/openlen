@@ -1482,7 +1482,7 @@ describe("la carpeta del proyecto (pieza 9)", () => {
     assert.match(texto(a), /reserved/);
     const b = await runAgentTool(makeSession(), deps, "Write", { file_path: "/logo.png", content: "1" });
     assert.equal(b.response.ok, false);
-    assert.match(texto(b), /\.js \.mjs \.css/);
+    assert.match(texto(b), /\.js \.mjs \.jsx \.tsx \.ts \.css/);
     assert.deepEqual(archivos, {});
   });
 

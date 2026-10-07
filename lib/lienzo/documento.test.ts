@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { ProjectData } from "@/lib/projects/types";
-import { documentoDeVista, documentoMedible, vistaParaMedir, type ContextoDeVista } from "./documento";
+import { carpetaDeLaVista, documentoDeVista, documentoMedible, vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "./documento";
 
 const DOC =
   '<!doctype html><html><head><title>t</title><base href="https://otro.example/"></head><body>' +
@@ -85,7 +85,13 @@ describe("vistaParaMedir: una sola forma de armar el contexto", () => {
       pagina: null,
       settings: undefined,
       logoUrl: null,
+      app: null,
     });
+  });
+
+  it("una app lleva su app (spec local 2026-10-07-apps)", () => {
+    const app = { catalogo: "2026-10", entrada: "/src/main.jsx" };
+    expect(vistaParaMedir("p1", { data: { app } }, null).app).toEqual(app);
   });
 });
 
@@ -205,5 +211,68 @@ describe("las superficies que miden hornean el documento de vista", () => {
     const src = readFileSync(join(process.cwd(), "app/api/lienzo/route.ts"), "utf8");
     expect(src).toContain("documentoDeVista(");
     expect(src).not.toContain("documentoMedible(");
+  });
+});
+
+// ── LAS APPS WEB (spec local 2026-10-07-apps) ───────────────────────────────
+describe("una app en la vista", () => {
+  const APP = { catalogo: "2026-10", entrada: "/src/main.jsx" };
+  const CASCARON =
+    '<!doctype html><html><head><meta charset="utf-8"><title>App</title></head><body><div id="root"></div>' +
+    '<script type="module" src="/src/main.jsx"></script></body></html>';
+
+  it("🔴 documentoDeVista le pone el import map del catálogo, delante de todo, ya sellado", () => {
+    const html = documentoDeVista(CASCARON, ctx({ app: APP }));
+    expect(html).toMatch(/<script type="importmap" data-openlen-importmap>/);
+    expect(html.indexOf('type="importmap"')).toBeLessThan(html.indexOf('src="/src/main.jsx"'));
+    expect(html).toContain('"react":"/openlen/vendor/2026-10/react.js"');
+  });
+
+  it("CONTRA-PRUEBA: una página no lleva import map", () => {
+    expect(documentoDeVista(CASCARON, ctx())).not.toContain("importmap");
+  });
+
+  it("documentoMedible: aunque el horneado falle, una app se mide CON su import map", () => {
+    const html = documentoMedible(CASCARON, ctx({ app: APP }), () => {
+      throw new Error("binding caído");
+    });
+    expect(html).toContain("data-openlen-importmap");
+  });
+
+  it("carpetaDeLaVista: los fuentes compilados y el catálogo, en el modo de desarrollo", () => {
+    const carpeta = carpetaDeLaVista(
+      ctx({
+        app: APP,
+        files: {
+          "/src/main.jsx": 'import App from "./App";\nimport { createRoot } from "react-dom/client";\ncreateRoot(document.body).render(<App />);',
+          "/src/App.jsx": "export default () => <h1>Hola</h1>;",
+          "/data/menu.json": "[]",
+        },
+      }),
+    );
+    expect(carpeta?.files["/src/main.jsx"]).toContain('from "/src/App.jsx"');
+    expect(carpeta?.files["/src/App.jsx"]).not.toContain("<h1>");
+    expect(carpeta?.files["/data/menu.json"]).toBe("[]");
+    expect(Object.keys(carpeta?.files ?? {})).toContain("/openlen/vendor/2026-10/react-todo.js");
+  });
+
+  it("carpetaDeLaVista: una app sin ficheros trae igualmente su catálogo; una página sin ficheros, nada", () => {
+    expect(Object.keys(carpetaDeLaVista(ctx({ app: APP }))?.files ?? {})).toContain("/openlen/vendor/2026-10/react.js");
+    expect(carpetaDeLaVista(ctx())).toBeUndefined();
+  });
+
+  it("vistaConCarpeta: una app trae su import.meta.env; una página no lo pide", async () => {
+    let pedido = 0;
+    const deps = {
+      projectFiles: async () => ({ "/src/main.jsx": "" }),
+      entornoDeLaApp: async () => {
+        pedido++;
+        return { VITE_SUPABASE_URL: "https://x.openlen.app" };
+      },
+    };
+    const conApp = await vistaConCarpeta(ctx({ app: APP }), deps, "p1");
+    expect(conApp.entorno).toEqual({ VITE_SUPABASE_URL: "https://x.openlen.app" });
+    await vistaConCarpeta(ctx(), deps, "p1");
+    expect(pedido).toBe(1);
   });
 });

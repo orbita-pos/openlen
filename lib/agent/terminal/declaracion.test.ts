@@ -122,7 +122,7 @@ describe("la lista de ficheros de bash nombra la carpeta", () => {
   const d = String(DECLARACION_BASH.description);
   it("los ficheros de la web, con sw.js y manifest.json", () => {
     expect(d).toContain("/js, /css, /data/*.json, /sw.js, /manifest.json");
-    expect(d).toContain(".js .mjs .css .json .webmanifest .txt .svg .md");
+    expect(d).toContain(".js .mjs .jsx .tsx .ts .css .json .webmanifest .txt .svg .md");
   });
   it("/tests, que no se publica, y que rm borra un fichero de la carpeta", () => {
     expect(d).toContain("/tests holds Playwright tests, never published");

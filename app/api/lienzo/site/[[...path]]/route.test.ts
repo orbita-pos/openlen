@@ -119,3 +119,63 @@ describe("GET /api/lienzo/site — los ficheros de la carpeta", () => {
     expect((await pide("lienzo-4f9c10cb878148f1b291c5d146579f09.openlen.app", "/js/app.js")).status).toBe(404);
   });
 });
+
+// ── LAS APPS WEB (spec local 2026-10-07-apps) ───────────────────────────────
+describe("GET /api/lienzo/site — una app web", () => {
+  const APP = { catalogo: "2026-10", entrada: "/src/main.jsx" };
+  beforeEach(() => {
+    mocks.carpetas[P1] = {
+      ...mocks.carpetas[P1],
+      "/src/main.jsx": 'import App from "./App";\nimport { createRoot } from "react-dom/client";\ncreateRoot(document.body).render(<App />);',
+      "/src/App.tsx": "export default function App(): JSX.Element { return <h1>{import.meta.env.VITE_SUPABASE_URL}</h1>; }",
+      "/src/Roto.jsx": "export default () => <div",
+    };
+  });
+  const vivo = (extra: { app?: typeof APP | null; entorno?: Record<string, string> } = { app: APP }) =>
+    guardarDocumento({ html: "<div id=root></div>", projectId: P1, userId: "u1", pagina: null, ...extra });
+
+  it("🔴 un fuente se sirve COMPILADO, como JavaScript, con los imports resueltos y su entorno", async () => {
+    vivo({ app: APP, entorno: { VITE_SUPABASE_URL: "https://abc.openlen.app" } });
+    const main = await pide(host(P1), "/src/main.jsx");
+    expect(main.status).toBe(200);
+    expect(main.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
+    expect(main.headers.get("cache-control")).toBe("no-store");
+    const js = await main.text();
+    expect(js).toContain('from "/src/App.tsx"');
+    expect(js).not.toContain("<App />");
+    expect(await (await pide(host(P1), "/src/App.tsx")).text()).toContain("https://abc.openlen.app");
+  });
+
+  it("las dependencias del catálogo, inmutables; una que no existe, 404", async () => {
+    vivo();
+    const r = await pide(host(P1), "/openlen/vendor/2026-10/react.js");
+    expect(r.status).toBe(200);
+    expect(r.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
+    expect(r.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+    expect(await r.text()).toContain('from "./react-todo.js"');
+    expect((await pide(host(P1), "/openlen/vendor/2026-10/axios.js")).status).toBe(404);
+  });
+
+  it("un fuente que no compila llega como un módulo que lanza su error con fichero y línea", async () => {
+    vivo();
+    const r = await pide(host(P1), "/src/Roto.jsx");
+    expect(r.status).toBe(200);
+    expect(await r.text()).toMatch(/^throw new SyntaxError\(.*\/src\/Roto\.jsx:1:/);
+  });
+
+  it("en una PÁGINA, /js/app.js sigue como está y un .tsx se compila", async () => {
+    vivo({ app: null });
+    expect(await (await pide(host(P1), "/js/app.js")).text()).toBe("document.title = 'cargó'");
+    expect(await (await pide(host(P1), "/src/App.tsx")).text()).not.toContain("<h1>");
+  });
+
+  it("🔴 /tests y /supabase siguen sin servirse, aunque sean .ts", async () => {
+    vivo();
+    expect((await pide(host(P1), "/tests/a.spec.ts")).status).toBe(404);
+  });
+
+  it("🔴 sin un documento vivo del proyecto, ni dependencias ni fuentes", async () => {
+    expect((await pide(host(P1), "/openlen/vendor/2026-10/react.js")).status).toBe(404);
+    expect((await pide(host(P1), "/src/main.jsx")).status).toBe(404);
+  });
+});
