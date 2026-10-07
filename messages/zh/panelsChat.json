@@ -104,7 +104,8 @@
     "modeLenDesc": "日常使用：快，几乎什么都能做",
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "适合大任务：每一步之前都尽全力思考。更慢，也更耗额度",
-    "effortDynamis": "Len Odyssey 始终尽全力思考"
+    "effortDynamis": "Len Odyssey 始终尽全力思考",
+    "soloLectura": "你可以查看此项目，但不能修改。请向所有者申请编辑权限。"
   },
   "noChange": {
     "label": "页面没有任何变化"

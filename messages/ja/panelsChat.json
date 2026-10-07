@@ -104,7 +104,8 @@
     "modeLenDesc": "ふだん使い：速くて、ほとんどのことに",
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "大きな依頼に：一歩ごとに限界まで考えます。時間がかかり、クレジットも多く使います",
-    "effortDynamis": "Len Odyssey は常に限界まで考えます"
+    "effortDynamis": "Len Odyssey は常に限界まで考えます",
+    "soloLectura": "このプロジェクトは閲覧のみ可能です。編集するにはオーナーに編集者権限を依頼してください。"
   },
   "noChange": {
     "label": "ページに変更はありません"

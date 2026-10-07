@@ -104,7 +104,8 @@
     "modeLenDesc": "The everyday one: fast, for almost anything",
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "For big jobs: thinks as hard as it can before each step. Slower, and uses more credits",
-    "effortDynamis": "Len Odyssey always thinks as hard as it can"
+    "effortDynamis": "Len Odyssey always thinks as hard as it can",
+    "soloLectura": "You can view this project, but not change it. Ask the owner for editor access."
   },
   "noChange": {
     "label": "Nothing on the page changed"

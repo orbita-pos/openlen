@@ -264,7 +264,7 @@
       "motivoGrande": "超过 1 MB",
       "motivoNombre": "名称含有空格或不允许的字符",
       "motivoDemasiados": "一次太多（最多 {max} 个）",
-      "reemplazar": "{count, plural, other {{lista} 已存在。要替换吗？}}",
+      "reemplazar": "{count, plural, one {{lista} 已存在。要替换吗？} other {{lista} 已存在。要替换吗？}}",
       "abrirAlLado": "拖放到这里以在旁边打开",
       "subiendo": "上传中…"
     }

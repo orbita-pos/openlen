@@ -50,6 +50,8 @@ export interface NewChatPanelProps {
   pendingAttachments?: PendingAttachments | null;
   /** En el móvil el panel tapa la pantalla: la ✕ de la cabecera lo cierra. */
   onClose?: () => void;
+  /** Un lector del proyecto compartido: lee la conversación, no escribe. */
+  soloLectura?: boolean;
 }
 
 const SUGGESTIONS = ["photos", "form", "mobile", "publish"] as const;
@@ -109,6 +111,7 @@ function AgentChatView({
   onPendingDraftConsumed,
   pendingAttachments = null,
   onClose,
+  soloLectura = false,
 }: NewChatPanelProps & {
   projectId: string;
   onLocalUpdate: NonNullable<NewChatPanelProps["onFlatHtmlUpdate"]>;
@@ -269,34 +272,40 @@ function AgentChatView({
             onClear={() => void chat.clearGoal()}
           />
         )}
-        <ChatComposer
-          value={chat.draft}
-          onChange={chat.setDraft}
-          onSubmit={chat.submit}
-          onStop={chat.handleCancel}
-          busy={chat.busy}
-          textareaRef={chat.taRef}
-          comments={chat.comentarios}
-          onRemoveComment={chat.removeComentario}
-          scopedSelection={scopedSelection}
-          onClearScope={onClearScope}
-          sectionSelectMode={sectionSelectMode}
-          onToggleSectionSelect={onToggleSectionSelect}
-          attachedImage={chat.attachedImage}
-          onAttachImage={() => chat.setImageModalOpen(true)}
-          onClearAttachedImage={() => chat.setAttachedImage(null)}
-          effort={chat.esfuerzo}
-          effortLevels={chat.esfuerzoNiveles}
-          effortResolvesTo={chat.esfuerzoResuelveA}
-          onEffortChange={chat.changeEsfuerzo}
-          mode={chat.mode}
-          {...(chat.modeOffered ? { onModeChange: chat.setMode } : {})}
-          planMode={chat.planMode}
-          {...(chat.planOffered ? { onTogglePlan: chat.togglePlan } : {})}
-          goalChip={chat.goalChip}
-          goalAvailable={chat.goalAvailable}
-          {...(chat.goalOffered ? { onToggleGoal: chat.toggleGoalChip } : {})}
-        />
+        {soloLectura ? (
+          <p className="m-3 rounded-xl border bd bg-elev px-3 py-2.5 text-[12.5px] fg-muted" data-solo-lectura="">
+            {t("composer.soloLectura")}
+          </p>
+        ) : (
+          <ChatComposer
+            value={chat.draft}
+            onChange={chat.setDraft}
+            onSubmit={chat.submit}
+            onStop={chat.handleCancel}
+            busy={chat.busy}
+            textareaRef={chat.taRef}
+            comments={chat.comentarios}
+            onRemoveComment={chat.removeComentario}
+            scopedSelection={scopedSelection}
+            onClearScope={onClearScope}
+            sectionSelectMode={sectionSelectMode}
+            onToggleSectionSelect={onToggleSectionSelect}
+            attachedImage={chat.attachedImage}
+            onAttachImage={() => chat.setImageModalOpen(true)}
+            onClearAttachedImage={() => chat.setAttachedImage(null)}
+            effort={chat.esfuerzo}
+            effortLevels={chat.esfuerzoNiveles}
+            effortResolvesTo={chat.esfuerzoResuelveA}
+            onEffortChange={chat.changeEsfuerzo}
+            mode={chat.mode}
+            {...(chat.modeOffered ? { onModeChange: chat.setMode } : {})}
+            planMode={chat.planMode}
+            {...(chat.planOffered ? { onTogglePlan: chat.togglePlan } : {})}
+            goalChip={chat.goalChip}
+            goalAvailable={chat.goalAvailable}
+            {...(chat.goalOffered ? { onToggleGoal: chat.toggleGoalChip } : {})}
+          />
+        )}
       </div>
       <ReplaceAssetModal
         open={chat.imageModalOpen}

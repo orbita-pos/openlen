@@ -188,6 +188,8 @@ interface LeftSidebarProps {
    *  pointing the user at the iframe (instead of the slot form). */
   flatProjectHtml?: string;
   flatProjectId?: string;
+  /** Un lector del proyecto compartido: el chat se lee, no se escribe. */
+  soloLectura?: boolean;
   /** Multi-page: slug of the site page the canvas is editing (null = home).
    *  Forwarded to ChatPanel so chat edits land in the right document. */
   flatProjectPage?: string | null;
@@ -287,6 +289,7 @@ export function LeftSidebar({
   hasDatabase = false,
   flatProjectHtml,
   flatProjectId,
+  soloLectura = false,
   flatProjectPage = null,
   onFlatHtmlUpdate,
   flatProjectChat,
@@ -513,6 +516,7 @@ export function LeftSidebar({
             {mode === "chat" && newChat && (
               <NewChatPanel
                 flatProjectId={flatProjectId}
+                soloLectura={soloLectura}
                 flatProjectHtml={flatProjectHtml}
                 flatProjectPage={flatProjectPage}
                 onFlatHtmlUpdate={onFlatHtmlUpdate}

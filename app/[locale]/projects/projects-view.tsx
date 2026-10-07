@@ -101,11 +101,18 @@ const BILLING_ERROR_CODES: BillingErrorCode[] = [
   "portal_failed",
 ];
 
+/** Un proyecto de otro en el que eres miembro (compartir el proyecto). */
+export type SharedProjectSummary = ProjectSummary & {
+  compartido: { rol: "editor" | "lector"; duenoEmail: string; duenoName: string | null };
+};
+
 export function ProjectsView({
   projects: initial,
+  shared = [],
   onOpenExplore,
 }: {
   projects: ProjectSummary[];
+  shared?: SharedProjectSummary[];
   onOpenExplore?: () => void;
 }) {
   const t = useTranslations("projects");
@@ -425,7 +432,7 @@ export function ProjectsView({
       )}
 
       <main className="flex-1 pb-32">
-        {total === 0 ? (
+        {total === 0 && shared.length > 0 ? null : total === 0 ? (
           <EmptyState />
         ) : filtered.length === 0 && q ? (
           <NoResults q={q} onClear={() => setQ("")} />
@@ -473,6 +480,7 @@ export function ProjectsView({
             </div>
           </div>
         )}
+        {shared.length > 0 && <Compartidos proyectos={shared} />}
       </main>
 
       <BulkBar
@@ -1800,4 +1808,37 @@ function triggerDownload(blob: Blob, filename: string) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * LOS COMPARTIDOS CONTIGO (compartir el proyecto): sólo abrirlos. Sin menú —
+ * borrar, duplicar o archivar son del dueño— ni estadísticas, que también.
+ */
+function Compartidos({ proyectos }: { proyectos: SharedProjectSummary[] }) {
+  const t = useTranslations("projects");
+  return (
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-8" data-compartidos="">
+      <h2 className="mb-3 text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">{t("compartidos.titulo")}</h2>
+      <ul className="rounded-xl bg-white dark:bg-[#0a0a0a] ring-1 ring-zinc-200 dark:ring-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-900 overflow-hidden">
+        {proyectos.map((p) => (
+          <li key={p.id}>
+            <Link
+              href={`/new?project=${p.id}`}
+              className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 transition"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13.5px] font-medium text-zinc-900 dark:text-zinc-100">{p.title}</span>
+                <span className="block truncate text-[12px] text-zinc-500 dark:text-zinc-400">
+                  {t("compartidos.de", { nombre: p.compartido.duenoName?.trim() || p.compartido.duenoEmail })}
+                </span>
+              </span>
+              <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-zinc-200 dark:ring-zinc-800 text-zinc-600 dark:text-zinc-400">
+                {p.compartido.rol === "editor" ? t("compartidos.rolEditor") : t("compartidos.rolLector")}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }

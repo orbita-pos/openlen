@@ -214,5 +214,11 @@
     "bulkDeleted": "{count, plural, other {已删除 # 个页面}}",
     "bulkArchived": "{count, plural, other {已归档 # 个页面}}",
     "somethingWrong": "出了点问题"
+  },
+  "compartidos": {
+    "titulo": "与你共享",
+    "de": "来自 {nombre}",
+    "rolEditor": "编辑者",
+    "rolLector": "仅查看"
   }
 }

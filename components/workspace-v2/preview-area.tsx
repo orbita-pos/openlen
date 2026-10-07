@@ -93,6 +93,8 @@ interface PreviewAreaProps {
    *  swap, plus inline-edit if the project is flat). When false, the
    *  iframe shows the page exactly as a visitor would. */
   editingActive?: boolean;
+  /** Un lector del proyecto compartido: la lente Código, de sólo lectura. */
+  soloLectura?: boolean;
   /** El JavaScript del modelo, YA AUTORIZADO por el servidor (`getProject`).
    *  Se injerta sólo fuera de los modos de edición — ver `derive`. */
   /** Callback fired with the iframe element after mount. Parent stashes
@@ -249,6 +251,7 @@ export function PreviewArea({
   openInNewTabUrl = null,
   sectionSelectMode = false,
   editingActive = false,
+  soloLectura = false,
   onIframeRef,
   redesigning = false,
   inspectMode = false,
@@ -1181,6 +1184,7 @@ export function PreviewArea({
             projectId={previewUrl ? null : projectId}
             rutaActual={rutaDePagina(pagina)}
             peticion={peticionDeCodigoVigente}
+            soloLectura={soloLectura}
             onClose={() => setLente("pagina")}
             labels={{
               comentar: {

@@ -104,7 +104,8 @@
     "modeLenDesc": "Celui de tous les jours : rapide, pour presque tout",
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "Pour les gros travaux : réfléchit au maximum avant chaque étape. Plus lent, et consomme plus de crédits",
-    "effortDynamis": "Len Odyssey réfléchit toujours au maximum"
+    "effortDynamis": "Len Odyssey réfléchit toujours au maximum",
+    "soloLectura": "Vous pouvez voir ce projet, mais pas le modifier. Demandez au propriétaire un accès éditeur."
   },
   "noChange": {
     "label": "Rien n'a changé sur la page"

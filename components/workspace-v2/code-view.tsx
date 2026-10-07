@@ -154,6 +154,9 @@ export interface EtiquetasDelIde {
 interface CodeViewProps {
   /** El documento de la página abierta, tal como está en el lienzo. */
   readonly html: string;
+  /** Un lector del proyecto compartido (lib/projects/acceso.ts): todo de sólo
+   *  lectura. El servidor lo hace cumplir; esto esconde lo que no podría hacer. */
+  readonly soloLectura?: boolean;
   /** Con proyecto, el explorador de TODOS sus ficheros (los mismos que ve Len
    *  en su terminal). Sin él —la vista previa de una plantilla—, sólo `html`. */
   readonly projectId?: string | null;
@@ -271,6 +274,11 @@ function avisarAlTaller(projectId: string, rutas: readonly string[]): void {
 
 const nombreDe = (ruta: string) => ruta.slice(ruta.lastIndexOf("/") + 1);
 
+/** El árbol entero de sólo lectura (un lector del proyecto compartido). */
+function todoDeSoloLectura(nodos: readonly NodoDelArbol[]): NodoDelArbol[] {
+  return nodos.map((n) => ({ ...n, soloLectura: true, hijos: todoDeSoloLectura(n.hijos) }));
+}
+
 /** ¿Lo que se arrastra son archivos de tu ordenador (y no algo de la lente)? */
 const sonDelOrdenador = (dt: DataTransfer | null | undefined) => Boolean(dt && Array.from(dt.types ?? []).includes("Files"));
 
@@ -327,10 +335,13 @@ function Explorador({
   rutaActual,
   peticion,
   labels,
+  soloLectura = false,
 }: {
   projectId: string;
   rutaActual: string;
   peticion: PeticionDeCodigo | null;
+  /** Un lector del proyecto compartido: todo se ve, nada se cambia. */
+  soloLectura?: boolean;
   labels: CodeViewProps["labels"];
 }) {
   const ide = labels.ide;
@@ -422,7 +433,7 @@ function Explorador({
     });
   }, [lista, guardados]);
 
-  const arbol = useMemo(
+  const arbolBase = useMemo(
     () =>
       typeof lista === "string"
         ? arbolDeFicheros([{ ruta: rutaActual }])
@@ -433,10 +444,13 @@ function Explorador({
           ]),
     [lista, rutaActual, carpetasVacias],
   );
+  // Un lector (compartir el proyecto) lo ve todo como `/.openlen`: sin
+  // crear, renombrar, borrar, mover ni subir.
+  const arbol = useMemo(() => (soloLectura ? todoDeSoloLectura(arbolBase) : arbolBase), [arbolBase, soloLectura]);
   // Las carpetas abiertas se deciden UNA vez, al llegar la lista; luego mandan los clics.
   useEffect(() => {
-    if (typeof lista !== "string" && abiertas === null) setAbiertas(abiertasAlEntrar(arbol, activa));
-  }, [lista, arbol, abiertas, activa]);
+    if (typeof lista !== "string" && abiertas === null) setAbiertas(abiertasAlEntrar(arbolBase, activa));
+  }, [lista, arbolBase, abiertas, activa]);
 
   const pedirPerezoso = useCallback(
     (ruta: string) => {
@@ -493,7 +507,7 @@ function Explorador({
   };
 
   // ── Lo que se ve de cada archivo ──────────────────────────────────────────
-  const editable = (ruta: string) => guardados.has(ruta) && !esDeSoloLectura(ruta);
+  const editable = (ruta: string) => !soloLectura && guardados.has(ruta) && !esDeSoloLectura(ruta);
   const bufferDe = (ruta: string): Buffer | null => {
     if (buffers[ruta]) return buffers[ruta]!;
     const g = guardados.get(ruta);
@@ -944,6 +958,7 @@ function Explorador({
     e.stopPropagation();
     const a = arrastre.current;
     terminarArrastre();
+    if (soloLectura) return;
     // Archivos de tu ordenador: se suben ahí.
     if (!a && sonDelOrdenador(e.dataTransfer)) {
       void subirDelOrdenador(lectorDeLoSoltado(e.dataTransfer), carpeta);
@@ -954,6 +969,7 @@ function Explorador({
     if (destino) void renombrar(a.ruta, destino, a.tipo);
   };
   const encimaDeCarpeta = (e: ReactDragEvent, carpeta: string, plegada: boolean) => {
+    if (soloLectura) return;
     const a = arrastre.current;
     const delOrdenador = !a && sonDelOrdenador(e.dataTransfer);
     if (!delOrdenador && (!a || a.de !== "arbol" || destinoAlSoltar(a.ruta, carpeta) === null)) return;
@@ -1025,12 +1041,16 @@ function Explorador({
         <div className="flex items-center gap-0.5 px-3 py-1">
           <span className="text-[10.5px] uppercase tracking-wide fg-faint ui-small">{labels.files}</span>
           <span className="ml-auto flex items-center">
-            <IconBtn label={ide.nuevoArchivo} size="sm" onClick={() => empezarNuevo("fichero", seleccion)}>
-              <FilePlus size={13} />
-            </IconBtn>
-            <IconBtn label={ide.nuevaCarpeta} size="sm" onClick={() => empezarNuevo("carpeta", seleccion)}>
-              <FolderPlus size={13} />
-            </IconBtn>
+            {!soloLectura && (
+              <>
+                <IconBtn label={ide.nuevoArchivo} size="sm" onClick={() => empezarNuevo("fichero", seleccion)}>
+                  <FilePlus size={13} />
+                </IconBtn>
+                <IconBtn label={ide.nuevaCarpeta} size="sm" onClick={() => empezarNuevo("carpeta", seleccion)}>
+                  <FolderPlus size={13} />
+                </IconBtn>
+              </>
+            )}
             <IconBtn label={ide.actualizar} size="sm" onClick={() => setRecarga((n) => n + 1)}>
               <RefreshCw size={12} />
             </IconBtn>
@@ -1763,7 +1783,7 @@ function Bloque({ etiqueta, codigo, lenguaje, labels }: { etiqueta: string; codi
   );
 }
 
-export function CodeView({ html, projectId, rutaActual = "/index.html", peticion = null, onClose, labels }: CodeViewProps) {
+export function CodeView({ html, projectId, rutaActual = "/index.html", peticion = null, onClose, labels, soloLectura = false }: CodeViewProps) {
   const cierreRef = useRef<HTMLDivElement>(null);
 
   // Escape cierra, como cualquier panel superpuesto. Se engancha al documento
@@ -1792,7 +1812,7 @@ export function CodeView({ html, projectId, rutaActual = "/index.html", peticion
       </div>
       {projectId ? (
         <div className="min-h-0 flex-1">
-          <Explorador projectId={projectId} rutaActual={rutaActual} peticion={peticion} labels={labels} />
+          <Explorador projectId={projectId} rutaActual={rutaActual} peticion={peticion} labels={labels} soloLectura={soloLectura} />
         </div>
       ) : (
         <div className="flex-1 overflow-auto nice-scroll">

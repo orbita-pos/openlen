@@ -264,7 +264,7 @@
       "motivoGrande": "1MB를 넘습니다",
       "motivoNombre": "이름에 공백이나 허용되지 않는 문자가 있습니다",
       "motivoDemasiados": "한 번에 너무 많습니다(최대 {max}개)",
-      "reemplazar": "{count, plural, other {{lista}이(가) 이미 있습니다. 바꿀까요?}}",
+      "reemplazar": "{count, plural, one {{lista}이(가) 이미 있습니다. 바꿀까요?} other {{lista}이(가) 이미 있습니다. 바꿀까요?}}",
       "abrirAlLado": "여기에 놓으면 옆에 엽니다",
       "subiendo": "업로드 중…"
     }

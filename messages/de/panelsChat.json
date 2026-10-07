@@ -104,7 +104,8 @@
     "modeLenDesc": "Der für jeden Tag: schnell, für fast alles",
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "Für große Aufträge: denkt vor jedem Schritt so gründlich wie möglich. Langsamer und verbraucht mehr Credits",
-    "effortDynamis": "Len Odyssey denkt immer so gründlich wie möglich"
+    "effortDynamis": "Len Odyssey denkt immer so gründlich wie möglich",
+    "soloLectura": "Du kannst dieses Projekt ansehen, aber nicht ändern. Bitte den Eigentümer um Bearbeitungszugriff."
   },
   "noChange": {
     "label": "Auf der Seite hat sich nichts geändert"

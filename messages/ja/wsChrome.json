@@ -264,7 +264,7 @@
       "motivoGrande": "1 MB を超えています",
       "motivoNombre": "名前に空白や使えない文字が含まれています",
       "motivoDemasiados": "一度に多すぎます（最大 {max}）",
-      "reemplazar": "{count, plural, other {{lista} はすでにあります。置き換えますか？}}",
+      "reemplazar": "{count, plural, one {{lista} はすでにあります。置き換えますか？} other {{lista} はすでにあります。置き換えますか？}}",
       "abrirAlLado": "ここにドロップすると横に開きます",
       "subiendo": "アップロード中…"
     }

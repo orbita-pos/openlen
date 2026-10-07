@@ -214,5 +214,11 @@
   },
   "sections": {
     "comingSoon": "Komt hier in de volgende stap."
+  },
+  "compartidos": {
+    "titulo": "Gedeeld met jou",
+    "de": "van {nombre}",
+    "rolEditor": "Bewerker",
+    "rolLector": "Alleen bekijken"
   }
 }

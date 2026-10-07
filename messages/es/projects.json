@@ -214,5 +214,11 @@
   },
   "sections": {
     "comingSoon": "Lo conectamos aquí en el siguiente paso."
+  },
+  "compartidos": {
+    "titulo": "Compartidos contigo",
+    "de": "de {nombre}",
+    "rolEditor": "Editor",
+    "rolLector": "Solo lectura"
   }
 }

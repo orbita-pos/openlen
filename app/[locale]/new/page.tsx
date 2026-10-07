@@ -34,6 +34,7 @@ import { InboxHub } from "@/components/inbox/inbox-hub";
 import { FranjaDeEstado, type OnAjustesGuardados } from "@/components/inbox/franja-de-estado";
 import { ExploreView } from "@/components/community/explore-view";
 import { ProjectsSection } from "../projects/projects-section";
+import { MiembrosDialog } from "@/components/workspace-v2/miembros-dialog";
 import { AnalyticsSection } from "../analytics/analytics-section";
 import { MarketingView } from "@/components/workspace-v2/marketing-view";
 import { DatabaseView } from "@/components/workspace-v2/database-view";
@@ -189,6 +190,10 @@ interface LoadedProject {
    *  (una app que nace, una página que se convierte) y con su Deshacer: lo trae
    *  el refetch de `onChatChange`. */
   app: AppDeProyecto | null;
+  /** COMPARTIR EL PROYECTO (lib/projects/acceso.ts): tú eres el dueño, un
+   *  editor o un lector. Un lector no edita nada; el servidor lo hace cumplir,
+   *  esto sólo esconde lo que no podría hacer. */
+  rol: "dueno" | "editor" | "lector";
 }
 
 /** Las frases concretas de un código de degradación, sin repetir.
@@ -532,6 +537,8 @@ function NewV2Inner() {
   }, [pageParam, loadedProject, searchParams, router]);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [customDomainOpen, setCustomDomainOpen] = useState(false);
+  // Los miembros del proyecto (compartir el proyecto).
+  const [miembrosOpen, setMiembrosOpen] = useState(false);
   const [vercelOpen, setVercelOpen] = useState(false);
   const [githubOpen, setGithubOpen] = useState(false);
   const [deployErrorKey, setDeployErrorKey] = useState<string | null>(null);
@@ -1214,6 +1221,7 @@ function NewV2Inner() {
                 degradationsDismissed?: boolean;
                 app?: AppDeProyecto;
               };
+              rol?: "dueno" | "editor" | "lector";
             };
           }
         | null;
@@ -1254,6 +1262,7 @@ function NewV2Inner() {
         degradations: p.data?.degradations,
         degradationsDismissed: p.data?.degradationsDismissed,
         app: p.data?.app ?? null,
+        rol: p.rol ?? "dueno",
       });
       setProjectName(p.title);
       setProjectLoadFailure(null);
@@ -1354,9 +1363,12 @@ function NewV2Inner() {
   // ni elegir un elemento para el chat; se cambia hablando con Len o en la
   // lente Código.
   const esApp = !!loadedProject?.app;
+  // Un lector de un proyecto compartido sólo mira.
+  const soloLector = loadedProject?.rol === "lector";
   const editingActive =
     inspectMode &&
     !esApp &&
+    !soloLector &&
     entryMode === "editing" &&
     !!loadedProject &&
     // Suppress the editor (inline-edit + element-inspect) while the Chat tab's
@@ -1369,7 +1381,7 @@ function NewV2Inner() {
   // the Edit toggle: dragging a file over the page (or pasting an image) is
   // unambiguous intent, and the iframe script is visually silent when idle.
   const dropEnabled =
-    entryMode === "editing" && !!loadedProject && !sectionSelectMode && !esApp;
+    entryMode === "editing" && !!loadedProject && !sectionSelectMode && !esApp && !soloLector;
   // Si el proyecto PASA a ser una app con el lápiz encendido (nace o se
   // convierte en este mismo turno), se apaga: el inspector no tiene nada que
   // inspeccionar en una app.
@@ -3273,19 +3285,22 @@ function NewV2Inner() {
         projectLoading={projectLoadingFromUrl}
         projectUnavailable={projectUnavailable}
         savingStatus={savingStatus}
-        onPublish={onPublish}
+        // Un lector no publica; elegir dominio, integraciones y miembros,
+        // sólo el dueño (lib/projects/acceso.ts lo hace cumplir en el servidor).
+        onPublish={soloLector ? undefined : onPublish}
         published={published}
         projectId={loadedProject?.id}
+        onMiembros={loadedProject ? () => setMiembrosOpen(true) : undefined}
         onRolledBack={() => {
           if (loadedProject?.id) {
             void refetchProject(loadedProject.id);
           }
         }}
         onCustomDomain={
-          loadedProject ? () => setCustomDomainOpen(true) : undefined
+          loadedProject?.rol === "dueno" ? () => setCustomDomainOpen(true) : undefined
         }
         onDeployVercel={
-          loadedProject
+          loadedProject?.rol === "dueno"
             ? () => {
                 setDeployErrorKey(null);
                 setVercelOpen(true);
@@ -3293,7 +3308,7 @@ function NewV2Inner() {
             : undefined
         }
         onDeployGitHub={
-          loadedProject
+          loadedProject?.rol === "dueno"
             ? () => {
                 setDeployErrorKey(null);
                 setGithubOpen(true);
@@ -3359,6 +3374,7 @@ function NewV2Inner() {
           flatProjectHtml={loadedProject ? activeDoc : undefined}
           flatProjectPage={activeSitePage}
           flatProjectId={loadedProject?.id}
+          soloLectura={soloLector}
           onFlatHtmlUpdate={(newHtml, pageOverride, untrusted) => {
             // Va en el MISMO handler que el html para que no puedan
             // desincronizarse: un drip crudo del chat marca el documento como
@@ -3616,6 +3632,7 @@ function NewV2Inner() {
                 editableInjection={editableInjection}
                 sectionSelectMode={sectionSelectMode}
                 editingActive={editingActive}
+                soloLectura={soloLector}
                 inspectMode={inspectMode}
                 onToggleInspect={esApp ? undefined : toggleInspect}
                 esApp={esApp}
@@ -3966,6 +3983,16 @@ function NewV2Inner() {
 
           Lo último que sujetaba la franja era «Live at …», y eso vive en la
           barra de dirección, encima del lienzo, donde el visitante lo leería. */}
+      {loadedProject && (
+        <MiembrosDialog
+          key={`miembros-${loadedProject.id}`}
+          projectId={loadedProject.id}
+          projectTitle={loadedProject.title}
+          open={miembrosOpen}
+          onClose={() => setMiembrosOpen(false)}
+          onSalir={() => router.push("/new?view=projects")}
+        />
+      )}
       {loadedProject && (
         <CustomDomainModal
           key={loadedProject.id}

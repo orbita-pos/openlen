@@ -104,7 +104,8 @@
     "modeLenDesc": "El de todos los días: rápido y para casi todo",
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "Para encargos grandes: piensa todo lo que puede antes de cada paso. Tarda más y gasta más créditos",
-    "effortDynamis": "Len Odyssey siempre piensa todo lo que puede"
+    "effortDynamis": "Len Odyssey siempre piensa todo lo que puede",
+    "soloLectura": "Puedes ver este proyecto, pero no cambiarlo. Pídele al dueño acceso de editor."
   },
   "noChange": {
     "label": "No cambió nada de la página"
