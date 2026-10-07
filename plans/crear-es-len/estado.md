@@ -144,12 +144,87 @@ con el mismo entorno, o por su causa):
   relativa contiene `/tmp/…`; pasa desde un worktree en `/tmp`; `lib/fs` no se
   tocó).
 
+## Ensayo de caja en local (06/10, noche) — lo de `pendiente-local.md`
+
+Worktree de `crear-es-len` en la máquina de Jesús. `npm run build` de
+producción (`OPENLEN_DIST_DIR=.next-ensayo`) y `next start -H 127.0.0.1 -p 3007`,
+con el entorno de Len-Bench (R2, Cloudflare, Resend y Exa vacíos;
+`PUBLISH_ROOT` en `plans/len-2/publicadas`), una base Postgres de usar y tirar
+en `127.0.0.1:5547` (esquema con `drizzle-kit push`) y la clave REAL de
+Fireworks. Cuenta de prueba registrada en `/es/register`. 9 turnos reales del
+modelo (más la confirmación de publicar):
+**31,44 créditos (~0,31 $)**, con OK de Jesús hasta 2 $.
+
+**Puertas en local:** `npm run typecheck` limpio; `npm run test:node` 676 de
+676 (antes y después de los arreglos de abajo); las pruebas tocadas en verde.
+
+| Paso | Resultado |
+|---|---|
+| a) `/new` sin proyecto | ✅ Abre un blanco (`?project=<id>`) con el compositor centrado y «Proyecto nuevo» arriba. Enviar → el chat de Len con el mensaje; la página se guarda; al recargar sigue, con el título sacado del `<title>` («Café Nube — Cafetería de especialidad en Oaxaca»). 6,59 créditos, 5 min 22 s. El lienzo se pintó a medias mientras escribía (en este turno el modelo mandó la ruta primero). |
+| b) Dos fotos + referencia por URL | ✅ La burbuja dice «2 imágenes enviadas» con sus dos miniaturas; el servidor: «fotos de la conversación — 2 de 2 a la vista». La página usa la paleta MEDIDA de stripe.com (`#533afd`, `#000eff`, `#b9b9f9`, `#e5edf5`, `#0a2540`) y las dos fotos; título del `<title>`. (Las miniaturas salen rotas en el ensayo: sin R2 las fotos caen a `public/uploads/`, y `next start` no sirve lo que se añade a `public/` después del build. En producción van a R2.) |
+| c) Portada de marketing con brief | ✅ Llega ESCRITO al compositor del mismo blanco y NO se envía (ningún POST a `/api/agent`). Ver la nota de `fixRedirectHost` abajo. |
+| d) `/new` otra vez sin enviar | ✅ El MISMO id. Y cuando el blanco ya tiene página, `/new` da otro blanco nuevo. |
+| e) Lista de proyectos | ✅ «0 páginas» con el blanco abierto; arriba dice «Proyecto nuevo». |
+| f) «Reescribe la portada entera» | ❌ → ✅ tras el arreglo `0dceeacf` (abajo). Antes del arreglo, la vista a medias salía UNA vez, medio segundo antes de guardar. Después: la vista a medias creció 1.644 → 3.145 → 4.645 → 6.148 caracteres en 5 s, y ■ en ese momento devolvió el lienzo a la página de antes en 0,2 s (mismo `<h1>`, mismos 310.094 caracteres), con 0 créditos. |
+| g) Selector de modelo y red | ✅ El compositor de la entrada no tiene selector (sólo «+» y dictar). En la red, ninguna llamada a `/api/generate` ni a `/api/crear/escritor`; el build no lista ninguna de las dos. |
+| 3) Herramientas nuevas, turno real | ✅ `get_visits` (respuesta con `today`/`views`…), `view_page` (`mode: "measure"`/`"describe"`, `question`, `area`), `use_page` (`steps` con `click`/`into`/`type`/`read`), `find_photo`, `publish` → la tarjeta «Publicar tu página» con Publicar/Cancelar; al pulsar, «Publicada en cafe-nube-ensayo.openlen.app» (en la carpeta local). Ninguna de las 9 grabaciones tiene «There is no tool called» ni «It is called … now». La única llamada que falló fue un paso mal armado de `use_page`; su error en inglés lo corrigió en el reintento. |
+| 4) Conversación de ANTES | ❌ → ✅ tras el arreglo `12cec48d` (abajo). Fila sembrada a mano en la base de prueba con `ver_visitas`, `mirar_pagina {tipo:"medir", pregunta}` y `usar_pagina {pasos:[{pulsa},{lee},{en,escribe}]}` en `actions`, `toolResults` y `transcript`. Un turno nuevo sobre ese historial: sin error, y Len siguió con los nombres de hoy (`Read`, `Edit`, `use_page`, `view_page`). |
+| 5) Llamada y móvil | ⚪ Sin probar en vivo: piden micrófono, la voz en tiempo real y un dispositivo. Sus pruebas en local: `components/llamada` + `movil/src`, 20 ficheros y 120 pruebas en verde (las frases de avance de `puente-a-len` y la tarjeta de publicar de `hilo`). |
+
+### Lo que se arregló en la rama
+
+- **`0dceeacf` — el lienzo a medias esperaba a la ruta del `Write`.** El orden
+  de las claves lo elige el modelo: en las tres «reescribe la portada» mandó
+  `content` antes que `file_path` (en las dos creaciones, al revés), y
+  `createWritePreview` no pintaba nada sin ruta. Ahora, mientras la ruta no
+  llega, un contenido que empieza como documento se pinta en la página activa
+  del turno (`activePage` → `agentSession.page`); cuando llega, manda la ruta.
+  Si al final era otra página, el cliente ya devolvía el lienzo a lo guardado
+  al cerrar (`previewPainted`). Pruebas nuevas en `write-preview.test.ts`.
+- **`12cec48d` — la tarjeta de los pasos pintaba crudos los nombres de antes.**
+  `StepRow` (`steps-card.tsx`) usaba `action.tool` tal cual para la etiqueta
+  (el icono ya pasaba por `activityOf`, que traduce). Ahora resuelve con
+  `currentToolName`, como `agent-action-card`. Visto en el navegador: «Mirando
+  tus visitas», «Comprobando la página», «Probando la página». Prueba nueva en
+  `steps-card.test.tsx`.
+
+### Visto y NO arreglado (ya pasa en `master` o es del entorno)
+
+- **■ a mitad de un `Write` sale como «El modelo tuvo un problema»**, no como
+  «Detenido», y la fila queda `applied` con `motivo=upstream` (0 créditos, eso
+  sí). Causa: `lib/ai/fireworks-stream-client.ts`, tras cortar, arma las
+  llamadas a medias ANTES de mirar `cancelled` y devuelve «tool arguments were
+  not JSON: Write». El mismo código está en `master`; la rama sólo lo hace más
+  visible, porque ahora se ve el `Write` mientras se escribe. Arreglo propuesto
+  (pequeño): si `cancelled`, saltarse el armado y ceder `{ kind: "cancelled" }`.
+- **En producción en local, cualquier redirección a `localhost` acaba en
+  `https://openlen.com`** (`fixRedirectHost`, `middleware.ts:103`, que existe
+  para la caja). Así la portada de marketing → `/new?brief=` (que redirige para
+  añadir `mode=ai`) y `localhost:3007/` → `/es` saltaban a producción. En la
+  caja el host es openlen.com y está bien. Para el ensayo: navegar a la URL
+  final o usar `http://ensayo.localhost:3007` (no se reescribe).
+- **El lienzo por origen** apunta en producción a
+  `https://lienzo-<etiqueta>.<PUBLISH_BASE_HOST>`, que en local no existe; cae
+  solo a la vista limitada (`srcdoc`). Para el ensayo, `OPENLEN_LIENZO_ORIGEN=0`.
+- **La primera frase de Len sale en inglés** en los turnos que empiezan una
+  página o una reescritura grande, aunque el brief sea en español («I'll start
+  by reading the design guide…», «The user wants a full rewrite…»). El cierre
+  y los turnos siguientes, en español. No se comparó con `master`: es para
+  mirar, no está claro que sea de la rama.
+- **Tras cortar con ■ una reescritura**, el turno siguiente («¿cómo va mi
+  página?») contestó Y rehízo la reescritura cortada, que seguía en su
+  historial. Conducta del modelo, no de las herramientas.
+- **Recargar con una pregunta de Len pendiente** pinta «Escribiendo» sin la
+  tarjeta de la pregunta hasta que vence la espera (2 min, `ASK_USER_TIMEOUT_MS`);
+  después la tarjeta vuelve y la respuesta abre el turno siguiente. Pieza 3 de
+  Len 2.5, no de esta rama.
+
 ## Lo que queda
 
-- Las verificaciones con navegador, sesión y Fireworks de verdad:
-  `pendiente-local.md` (Parte A: tareas 3 y 9; Parte B: un turno real con las
-  herramientas nuevas, conversaciones viejas, llamada y móvil, disparos de
-  Len-Bench).
+- ~~Las verificaciones con navegador, sesión y Fireworks de verdad~~: hechas en
+  el ensayo de caja de arriba, salvo la llamada y el móvil en vivo, y los
+  disparos pagados de Len-Bench (`npm run bench:len:disparos`), que no se
+  pidieron.
 - Tarea 11 (medición pagada): **cancelada por Jesús el 06/10**, porque el
   criterio no servía (ver `medicion/README.md`). No se corrió ni se gastó nada.
 - Tarea 12 (borrar Crear): hecha. Su ensayo de caja (paso 6: build de
