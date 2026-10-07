@@ -221,11 +221,23 @@ comprobado después en el build de producción en 127.0.0.1 con Fireworks real
 Puertas: typecheck limpio, las pruebas tocadas en verde, `test:node` 676 de 676,
 `npm run build` compila.
 
-### Visto y NO arreglado
+### Cuarta ronda (07/10): el razonamiento viejo, como DeepSeek
 
-- **El razonamiento de turnos viejos vuelve en el historial (H15)**, y uno que
-  citaba un aviso ya retirado lo sigue «oyendo»: así siguió rehaciéndose la
-  reescritura en Brisa y Monte. Se va solo cuando esos turnos salen de la ventana.
+DeepSeek **también** devuelve el razonamiento de turnos anteriores («Reasoning
+content from a prior assistant turn is passed back verbatim», README de
+`llm-deepseek`), así que quitarlo no sería hacerlo como DeepSeek. La diferencia
+era otra: DeepSeek guarda en la sesión el contexto con el que el modelo razonó
+(su `runtime-context` es un mensaje durable), y Len mandaba los avisos de cada
+turno y los tiraba. Un «The system notice says…» de un turno viejo, sin el aviso
+al lado, se leía como si el aviso fuera de AHORA.
+
+`ffa3a95a`: `buildAgentMessages` devuelve los avisos del turno, la ruta los guarda
+en la transcripción (`avisos`) y `historialDesdeLaBase` los repone detrás de las
+palabras del dueño, como se mandaron. Comprobado: «Hola» (turno mudo) → «¿Qué dice
+el botón principal?» lleva el aviso de mudo, y queda guardado en SU fila; la
+reposición en el historial, con pruebas. Las filas de antes de este cambio no
+tienen sus avisos guardados y no se pueden reconstruir: ésas se van cuando salen
+de la ventana.
 
 ## Lo que queda
 
