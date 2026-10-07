@@ -360,6 +360,8 @@ export default defineConfig({
       "app/api/lienzo/[docId]/route.test.ts",
       // El lienzo sirve el sitio entero (pieza 9 de Len 2.5).
       "app/api/lienzo/site/**/*.test.ts",
+      // Las fotos subidas sin R2 que `next start` no sirve solo (crear-es-len, 06/10).
+      "app/uploads/**/*.test.ts",
       "lib/lecturas-de-users-proyectan.test.ts",
       "lib/ninguna-prueba-a-oscuras.test.ts",
       "components/workspace-v2/panels/mando-esfuerzo.test.tsx",
