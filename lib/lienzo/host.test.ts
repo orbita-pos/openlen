@@ -109,6 +109,17 @@ describe("la URL del documento", () => {
     );
   });
 
+  // Ensayo de caja de crear-es-len (06/10): un build de producción corrido en
+  // local apuntaba el lienzo a https://lienzo-….openlen.app —producción, que
+  // no tiene el borrador— y caía siempre a la vista limitada.
+  it("🔴 en producción, una petición LOCAL va por http a *.localhost, como en desarrollo", () => {
+    for (const host of ["localhost:3007", "127.0.0.1:3007", "ensayo.localhost:3007"]) {
+      expect(urlDelDocumento({ projectId: ID, docId: "abc", pagina: null, hostDeLaPeticion: host }, prod), host).toBe(
+        `http://${E}.localhost:3007/?__lienzo=abc`,
+      );
+    }
+  });
+
   it("un projectId que no es UUID, o sin secreto, no produce URL", () => {
     expect(urlDelDocumento({ projectId: "x", docId: "abc", pagina: null, hostDeLaPeticion: null }, prod)).toBeNull();
     const sinSecreto = { NODE_ENV: "production", LIENZO_BASE_HOST: "openlen.app" };
