@@ -61,3 +61,37 @@ navegador, sesión o Fireworks de verdad:
   de `verifyEditedPage` le pasa `guardadas`. **Decidido el 06/10: se deja como
   está por ahora** (se planteó retirarla entera o darle otro escritor, p. ej.
   `use_page`). Las filas con `data.pruebas` quedan inertes.
+
+## Tarea 12 — borrar Crear (06/10)
+
+| Paso | Qué | Por qué no en la nube |
+|---|---|---|
+| 6 | **Ensayo de caja completo**: `npm run build` y el servidor de producción en 127.0.0.1 (https si aplica), y los cinco flujos de la Tarea 9 con captura (el blanco desde `/new`, dos fotos + referencia por URL, el brief de la portada que llega escrito y NO se envía, `/new` otra vez = el mismo blanco, la lista sin el blanco). Además: que el compositor ya no enseña el selector de modelo, y que en la pestaña de red no aparece ninguna llamada a `/api/generate` ni a `/api/crear/escritor`. | Navegador + sesión + Fireworks de verdad. (El `npm run build` sí pasa en la nube: ver «el build» abajo.) |
+
+### El build en la nube
+
+`npm run build` **pasa** en la rama (compila, recoge los datos de las páginas y
+lista las rutas: ni `/api/generate` ni `/api/crear/escritor`). Un primer intento
+falló en `next/font` al bajar las fuentes de Google y el de `master` falló
+porque el Postgres de pruebas se había caído; repetido con la red y la base en
+pie, pasó. Lo que el build no prueba es la página en un navegador: eso es el
+paso 6 de arriba.
+
+### Cabos sueltos que se vieron y NO se tocaron (no los pedía nadie)
+
+- **`setGenerationBusy` no tiene llamador desde la Tarea 9.** Era `/new` quien
+  encendía la señal mientras Crear escribía, para que el selector de idioma se
+  desactivara (cambiar de idioma navega y perdía la generación). Hoy nada la
+  enciende. Con Len el turno sigue en el servidor aunque la página se vaya, así
+  que es menos grave, pero el selector de idioma ya no se bloquea nunca.
+- **Código muerto de antes** (ya lo era en `master`, no por esto):
+  `lib/templates/select-reference.ts` (la referencia de plantilla de Crear),
+  `lib/page-engine/repair-guard.ts`, y el componente `AiBriefPanel` (sólo se
+  importan sus tipos).
+- **`contratoParaSuperficie`** (`lib/publish-contract-min.ts`): sus banderas
+  `respuestaEsElDocumento`, `elEnlaceCreaLaPagina` y `escribeElHead` sólo valían
+  `true` para Crear; hoy las dos superficies pasan `false`. Se podría simplificar.
+- **Los eventos de uso ya no tienen ninguno de origen servidor.** Se mantuvo el
+  campo `origen` y la comprobación del navegador, por si vuelve uno.
+- **Una pestaña abierta durante el despliegue** con el JavaScript viejo
+  llamaría a `/api/generate` y recibiría un 404: al recargar ya va a Len.

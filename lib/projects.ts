@@ -52,8 +52,8 @@ import { deployUrlFor, publishBaseHost } from "@/lib/publish/deploy-url";
 // ─────────────────────────────────────────────────────────────────────────────
 // Project persistence helpers.
 //
-// Kept in a single module so /api/generate, /api/regenerate-section, and the
-// listing pages all derive title, tags, and thumbnail the same way. Nothing
+// Kept in a single module so every creation path and the listing pages
+// derive title, tags, and thumbnail the same way. Nothing
 // here touches auth — callers must verify ownership before passing a userId.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -253,10 +253,9 @@ function asVisibility(raw: string): ProjectVisibility {
 }
 
 export interface CreateProjectInput {
-  /** El JavaScript que escribió el modelo, si esta creación lo capturó.
-   *  SÓLO lo pasa /api/generate: pegar HTML, clonar una plantilla, duplicar o
-   *  sembrar comunidad lo dejan sin poner, y la columna nace NULL. Se sella
-   *  aquí dentro con el id y el HTML de este mismo insert. */
+  // ⚰️ Aquí se documentaba el JavaScript que capturaba la creación, que sólo
+  // pasaba `/api/generate` (retirada con Crear el 2026-10-06); el campo ya no
+  // existía.
   /** Publish-ready HTML — the project's source of truth. */
   html: string;
   /** The brief the page was generated from — stored on the `brief` column
@@ -278,8 +277,9 @@ export interface CreateProjectInput {
   degradations?: Degradation[];
   /** Las páginas del sitio además de la portada.
    *
-   *  Sólo las pone /api/generate, y sólo cuando el modelo declaró más de una
-   *  página en su propia navegación (ver lib/projects/paginas-declaradas.ts).
+   *  Las escribe Len (un `Write` a `/<slug>/index.html`) o el panel de
+   *  páginas. Hasta el 2026-10-06 también las ponía `/api/generate` cuando el
+   *  modelo declaraba más de una página en su navegación; se fue con Crear.
    *  Pegar HTML, clonar una plantilla o sembrar comunidad no traen ninguna, y
    *  la clave ni siquiera aparece en `data` — que es como se lee un proyecto
    *  escrito antes de que esto existiera. */

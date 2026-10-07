@@ -25,7 +25,7 @@
 //     no se lee, lanzó— con su dirección.
 //  3. NO habla de lo que no sabe. Tipografía y geometría se miden y NO entran
 //     aquí: no nombran un nodo, así que mandarían al modelo a buscar a ciegas.
-//     Ver `objective-breakage.ts`, que es de Crear y sí las cuenta.
+//     Ver `objective-breakage.ts`, que nació para Crear y sí las cuenta.
 //
 // 🔴 QUÉ HACE EL MODELO CON ESTO — MEDIDO, 12 corridas pagadas el 2026-09-06
 // sobre las dos páginas rotas del corpus (`documentacion#3`, desborde;
@@ -41,8 +41,9 @@
 //   0/6 lo arregló por su cuenta — Y ESO ES LO CORRECTO, no un fallo que
 //                             perseguir: el sobre dice «si procede», y el
 //                             usuario había pedido otra cosa. La regla de la
-//                             casa es que corrige el USUARIO (ver la lápida de
-//                             la reparación automática en `api/generate`).
+//                             casa es que corrige el USUARIO (la reparación
+//                             automática de `api/generate` se retiró por eso,
+//                             y la ruta entera con Crear el 2026-10-06).
 //
 // 🔴 Y EL CASO QUE FALTABA, MEDIDO DESPUÉS (4 corridas, configuración de
 // PRODUCCIÓN con la línea base puesta, sobre dos páginas LIMPIAS y con encargos

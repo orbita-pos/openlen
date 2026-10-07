@@ -69,9 +69,10 @@ export function HeroPromptInput() {
   // cosas distintas que la pagina necesita a la vez—, y obligar a elegir una
   // era pagar el precio entero para no escribir esa linea.
   //
-  // Ahora la linea existe: `/api/generate` antepone un bloque al brief cuando
-  // llegan varias, diciendole que las lea por separado y con que criterio
-  // resolver si se contradicen. El riesgo se trata donde vive, en el prompt.
+  // Ahora la linea existe: el contexto de Len antepone un bloque cuando llegan
+  // varias (`attachedImagesBlock`, lib/agent/context.ts; hasta el 2026-10-06
+  // lo hacia `/api/generate`), diciendole que las lea por separado y con que
+  // criterio resolver si se contradicen. El riesgo se trata donde vive, en el prompt.
   const [referencias, setReferencias] = useState<
     { dataUrl: string; nombre: string; bytes: number }[]
   >([]);

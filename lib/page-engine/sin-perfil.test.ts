@@ -99,7 +99,7 @@ describe("el sembrado de marca ya no existe", () => {
       "lib/page-engine/prepare.ts",
       "lib/publish/filesystem.ts",
       "lib/publish/preview-bake.ts",
-      "app/api/generate/route.ts",
+      // ⚰️ `app/api/generate/route.ts` se fue con Crear el 2026-10-06.
       "app/api/projects/from-html/route.ts",
       "app/api/projects/from-template/route.ts",
       "app/api/templates/ai-design/route.ts",

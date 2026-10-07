@@ -34,17 +34,6 @@
     "removeImage": "이미지 제거",
     "attachedAlt": "첨부한 참고 이미지",
     "micSilent": "마이크는 열렸지만 아무것도 인식되지 않았습니다. Chrome이 올바른 입력을 사용하는지, 연결이 있는지 확인하세요. 음성 인식은 OpenLen이 아니라 브라우저의 음성 서비스에서 실행됩니다.",
-    "modelo": {
-      "abrir": "모델 선택",
-      "titulo": "모델 선택",
-      "subtitulo": "페이지를 쓰는 모델을 바꿉니다. 선택한 모델은 다음에도 저장됩니다.",
-      "auto": "자동 (권장)",
-      "autoDesc": "기본 모델 사용 (현재: {modelo})",
-      "reasonerDesc": "더 빠르지만 이미지는 읽지 못합니다",
-      "visualCriticDesc": "더 자세히 쓰고 첨부한 이미지도 읽습니다",
-      "sinVision": "이미지를 읽지 못하는데 이미지를 첨부했습니다",
-      "masCaro": "비용 약 {n}배"
-    },
     "asks": {
       "bakery": {
         "label": "나의 빵집",

@@ -1,8 +1,9 @@
 // AI brief panel — sidebar entry for `?mode=ai` in /new. Visually
 // mirrors ChatPanel (V2 design tokens, chat-style composer + empty-state
 // quick prompts) so the AI generation flow feels like the editing chat
-// the user already knows. Submits to the orchestrator via the parent's
-// `onGenerate` (which wraps `useGeneration.generate`).
+// the user already knows. Submitted through the parent's `onGenerate`, which
+// wrapped `useGeneration.generate` until Crear was retired (2026-10-06). Only
+// its types (`PageEffort`) are imported today; the panel itself isn't mounted.
 
 "use client";
 

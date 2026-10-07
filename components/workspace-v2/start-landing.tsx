@@ -32,13 +32,7 @@ import { ReferenceField } from "./reference-field";
 import { useDictado } from "@/components/marketing/use-dictado";
 import { reducirImagen } from "@/components/marketing/reducir-imagen";
 import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
-import {
-  ESCRITORES_ELEGIBLES,
-  escritorDeCrear,
-  type EscritorFijado,
-} from "@/lib/ai/provider-switch";
 import { registrarUso } from "@/lib/uso/cliente";
-import { SelectorDeModelo } from "./selector-de-modelo";
 
 export interface StartLandingProps {
   /** The shared AI brief form state ({ prompt, setPrompt }). */
@@ -334,45 +328,13 @@ export function HeroComposer({
     registrarUso("crear_escribio", {});
   };
 
-  // EL ESCRITOR FIJADO. `null` = «Automático», que es lo que Crear ha hecho
-  // siempre. Se lee del servidor al montar; si la lectura falla —o la columna
-  // todavía no está migrada— se queda en `null`, que es el comportamiento de
-  // siempre. Elegir modelo nunca debe poder romper la pantalla de entrada.
-  const [escritor, setEscritor] = useState<EscritorFijado>(null);
-  const [modeloAbierto, setModeloAbierto] = useState(false);
+  // ⚰️ Aquí vivía EL ESCRITOR FIJADO (`/api/crear/escritor`), el selector de
+  // qué modelo escribía Crear. Se retiró con Crear el 2026-10-06
+  // (plans/crear-es-len, tarea 12): lo que se envía es el primer mensaje a Len.
   // El menú del `+`, con el mismo gancho que el chat: Esc, clic fuera, flechas.
   const [plusOpen, setPlusOpen] = useState(false);
   const plus = useMandoDesplegable({ abierto: plusOpen, cerrar: () => setPlusOpen(false) });
   const tc = useTranslations("panelsChat");
-  useEffect(() => {
-    let vivo = true;
-    fetch("/api/crear/escritor")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { escritor?: EscritorFijado } | null) => {
-        if (vivo && d && ESCRITORES_ELEGIBLES.some((e) => e === d.escritor)) {
-          setEscritor(d.escritor as EscritorFijado);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      vivo = false;
-    };
-  }, []);
-
-  // OPTIMISTA A PROPÓSITO: el selector se cierra y la etiqueta cambia con el
-  // clic. Guardar es lo que puede tardar, y lo que se guarda es una preferencia
-  // — si el PUT falla, el siguiente montaje vuelve a lo que hay en la base y no
-  // se ha perdido nada que el usuario no pueda rehacer con otro clic.
-  const elegirEscritor = (e: EscritorFijado) => {
-    setEscritor(e);
-    registrarUso("crear_modelo_eligio", { escritor: e ?? "auto" });
-    void fetch("/api/crear/escritor", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ escritor: e }),
-    }).catch(() => {});
-  };
-
   // MISMO DICTADO QUE EL HEROE, mismo gancho. No se copia el codigo: si algun
   // dia Chrome cambia cuando cierra la sesion, se arregla en un sitio.
   const dictado = useDictado({
@@ -421,10 +383,6 @@ export function HeroComposer({
     registrarUso("crear_envio", {
       imagenes: state.fotos.length,
       referencia: state.reference !== null,
-      // Quién va a escribir DE VERDAD: lo fijado si cabe, y si no lo que manda
-      // la imagen. Misma función que el cable, para que el embudo no cuente un
-      // modelo distinto del que corrió.
-      escritor: escritorDeCrear(state.fotos.length > 0, escritor),
     });
     // El motor sigue vivo tras navegar si no se corta aqui.
     dictado.parar();
@@ -436,7 +394,7 @@ export function HeroComposer({
     // misma caja, las fichas encima del texto, el `+` con su menú, las opciones
     // como pastillas al final y el botón cuadrado. Bajo `.nc` por los tokens y
     // las animaciones de chat/new-chat.css. Lo que HACE no cambia: fotos,
-    // dictado, límite del brief, escritor, referencia y eventos de uso.
+    // dictado, límite del brief, referencia y eventos de uso.
     <div className="nc">
       <div className="nc-composer relative rounded-[16px] border bd-strong bg-elev px-3 pb-[7px] pt-2 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition">
         {/* Lo que va con el encargo, como fichas ARRIBA y dentro: las fotos y
@@ -590,29 +548,15 @@ export function HeroComposer({
               {dictado.escuchando ? <Square size={11} className="fill-current" /> : <Mic size={15} />}
             </button>
           )}
-          {/* QUÉ MOTOR ESCRIBE, como pastilla al final de la fila: el sitio del
-              mando de esfuerzo en el chat. Ver `selector-de-modelo.tsx`. */}
-          <div className="ml-auto flex min-w-0 items-center gap-1.5">
-            <SelectorDeModelo
-              escritor={escritor}
-              hasImages={state.fotos.length > 0}
-              onChange={elegirEscritor}
-              abierto={modeloAbierto}
-              onAbrir={(v) => {
-                setModeloAbierto(v);
-                if (v) registrarUso("crear_modelo_abrio", {});
-              }}
-              variant="pill"
-              t={(clave, valores) => tm(`heroPrompt.${clave}`, valores)}
-            />
-          </div>
+          {/* ⚰️ Aquí iba el selector de QUÉ MOTOR ESCRIBE; se fue con Crear
+              (2026-10-06). El botón se queda al final de la fila. */}
           <button
             type="button"
             onClick={enviar}
             disabled={!canGenerate}
             aria-label={t("aiBrief.generate")}
             title={t("aiBrief.generate")}
-            className={`ml-1 flex h-8 min-w-8 shrink-0 items-center justify-center rounded-[10px] text-white transition hover:-translate-y-px disabled:translate-y-0 disabled:cursor-default ${
+            className={`ml-auto flex h-8 min-w-8 shrink-0 items-center justify-center rounded-[10px] text-white transition hover:-translate-y-px disabled:translate-y-0 disabled:cursor-default ${
               generating || canGenerate ? "bg-[var(--accent-strong)]" : "bg-[var(--border-strong)]"
             }`}
           >

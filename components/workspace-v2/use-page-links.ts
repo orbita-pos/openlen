@@ -10,8 +10,9 @@ import { PERSEGUIR_SCROLL_JS } from "./perseguir-scroll";
 // taller, así que nada lo impedía.
 //
 // Resultado: la única forma de comprobar que la navegación de tu sitio funciona
-// era PUBLICAR. Para un sitio de tres páginas eso está mal, y desde que
-// `/api/generate` crea las subpáginas declaradas le pasa a todo el mundo en su
+// era PUBLICAR. Para un sitio de tres páginas eso está mal, y desde que un
+// sitio puede nacer con varias páginas (antes `/api/generate` creaba las
+// subpáginas declaradas; hoy las escribe Len) le pasa a todo el mundo en su
 // primera creación.
 //
 // Lo que hace este script: se queda con el clic ANTES que nadie (fase de

@@ -114,35 +114,10 @@ export const AI_IMAGE_EDIT_CREDIT_COST = 6 * CENTICREDITOS_POR_CREDITO;
  *  Debited only on a successful live (gemini) generation; mock is free. */
 export const SCENE_3D_CREDIT_COST = 3 * CENTICREDITOS_POR_CREDITO;
 
-/** Quality S2 multimodal reference — upper bound on the extra cost of the
- *  reference image attached to a generate / chat-edit call. NO separate debit
- *  is applied: the image is sent as a native `inlineData` part, so its input
- *  tokens are already included in the `promptTokenCount` Gemini reports and
- *  are billed automatically by `creditsForUsage`. A 1280-wide full-page JPG
- *  costs ≈258–516 image tokens on Flash (~free) and ≈$0.002 on Pro — under
- *  one credit either way, hence this generous round-up. Gemini does NOT cache
- *  user-message images across calls (unlike Anthropic), so every request
- *  re-sends the bytes; at this token volume the cost is negligible. This
- *  constant exists for documentation / future surfacing, not for debiting. */
-export const REFERENCE_IMAGE_CREDIT_OVERHEAD = 1 * CENTICREDITOS_POR_CREDITO;
-
-/** Quality S3 vision critic — credit overhead when the critic triggers a
- *  regeneration. Like REFERENCE_IMAGE_CREDIT_OVERHEAD this is DOCUMENTATION,
- *  not a separate debit: the regen runs a full second `generateHtmlStream`
- *  pass, so its real token cost is metered + debited automatically by that
- *  pass's `usage` event via `creditsForUsage` — exactly like the first pass.
- *  The critic call itself is NOT debited (its image input is ~free on Flash
- *  and its output is a tiny JSON verdict).
- *
- *  EL PEOR CASO REAL SON TRES PASADAS, no dos — este comentario decía dos y
- *  se equivocaba. La secuencia alcanzable: pasada inicial que sale truncada o
- *  con basura → reintento automático (`initial-retry`, 1 de cada 20) → y luego
- *  UNA mejora, sea por rotura medida en el render o por el crítico. Las dos
- *  mejoras comparten presupuesto (`mejoraGastada` en /api/generate), así que
- *  nunca son dos; el reintento no entra en ese presupuesto porque sin él el
- *  usuario se queda sin página. Este `+1` sigue siendo lo que cuesta la
- *  mejora; el reintento es la excepción que faltaba escribir. */
-export const REGEN_CREDIT_OVERHEAD = 1 * CENTICREDITOS_POR_CREDITO;
+// ⚰️ `REFERENCE_IMAGE_CREDIT_OVERHEAD` y `REGEN_CREDIT_OVERHEAD` documentaban
+// lo que costaban la referencia multimodal y la pasada extra del crítico en
+// `/api/generate` (no cobraban nada por sí mismas). Se fueron con Crear el
+// 2026-10-06 (plans/crear-es-len, tarea 12).
 
 
 
@@ -237,10 +212,10 @@ const RATES = TARIFAS_POR_MILLON;
 export type { CreditRate };
 
 /** La tarifa en dólares por millón de tokens, de la MISMA tabla con la que se
- *  cobra. La exponen `scripts/evals-pages.ts` y `scripts/agent-eval.ts` para
- *  calcular lo que cuesta una corrida: los dos tenían las cifras cableadas —y
- *  las de OTRO proveedor—, así que su tope de gasto estaba calculado sobre un
- *  precio que no era el real. Un tope con la tarifa equivocada no es un tope.
+ *  cobra. La exponían `scripts/evals-pages.ts` (retirado con Crear el
+ *  2026-10-06) y `scripts/agent-eval.ts` para calcular lo que cuesta una
+ *  corrida: los dos tenían las cifras cableadas —y las de OTRO proveedor—, así
+ *  que su tope de gasto estaba calculado sobre un precio que no era el real. Un tope con la tarifa equivocada no es un tope.
  *
  *  Devuelve la tarifa ENTERA, `cached` incluida. El tipo la recortaba, y eso
  *  no es un detalle de tipos: un llamador que calcula gasto sin la cacheada lo

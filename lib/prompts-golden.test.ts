@@ -35,7 +35,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "./agent/catalog";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "./agent/manual-de-la-plataforma";
 import { PUBLISHED_BASE_HOST } from "./publish/base-host";
-import { generateSystemMessage } from "../app/api/generate/system-prompt";
 import { aiDesignSystemMessage } from "../app/api/templates/ai-design/system-prompt";
 
 // EL HOST SE NORMALIZA, y no es cosmética: `PUBLISHED_BASE_HOST` es una const
@@ -50,7 +49,8 @@ function normaliza(prompt: string): string {
 const CON_TERMINAL = { OPENLEN_TERMINAL: "1" };
 
 const SUPERFICIES: ReadonlyArray<readonly [string, () => string]> = [
-  ["crear", () => generateSystemMessage({})],
+  // ⚰️ «crear» (`/api/generate`) se retiró el 2026-10-06: crear es el primer
+  // mensaje a Len, así que su prompt es el de «agente (Len)».
   ["editar (ai-design)", () => aiDesignSystemMessage()],
   ["agente (Len)", () => buildAgentSystemPrompt()],
   // El manual de la plataforma (/AGENTS.md) que el arnés le adjunta a Len detrás

@@ -64,7 +64,12 @@ export const users = pgTable("users", {
    *  Igual que `agentEffort`: un ajuste de la PERSONA, no del proyecto — en
    *  Claude Code la elección del selector se guarda en los ajustes del usuario
    *  y vale para las sesiones nuevas, no en el proyecto abierto. Guarda el PAPEL, nunca un id de modelo: así el modelo y su
-   *  tarifa siguen viajando juntos en `MODEL_POLICY`. */
+   *  tarifa siguen viajando juntos en `MODEL_POLICY`.
+   *
+   *  ⚰️ SIN USO desde el 2026-10-06: el selector y Crear se retiraron
+   *  (plans/crear-es-len, tarea 12) y ya nadie la lee ni la escribe. La
+   *  columna se queda porque está en producción y quitarla es una migración
+   *  aparte, que nadie ha decidido. */
   crearWriter: text("crearWriter"),
   image: text("image"),
   passwordHash: text("passwordHash"),

@@ -199,8 +199,9 @@ function withImages(message: Record<string, unknown>, images: readonly InlineIma
         ? [bloque(images[0])]
         : images.flatMap((image, i) => [
             // En inglés desde el 2026-10-03, con el resto de lo que lee el
-            // modelo. El bloque de Crear que las nombra vive en
-            // `app/api/generate/route.ts`.
+            // modelo. El bloque que las nombra vive en el contexto de Len
+            // (`attachedImagesBlock`, lib/agent/context.ts); hasta el
+            // 2026-10-06, también en la ruta de Crear.
             { type: "text", text: `Image ${i + 1}:` },
             bloque(image),
           ])),

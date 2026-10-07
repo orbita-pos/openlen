@@ -684,15 +684,10 @@ function NewV2Inner() {
     pendingInsertRef.current = { id: "motion", name: t("drop.sectionName") };
   };
 
-  // AI generation flow — owned here so the brief survives panel switches
-  // inside the same /new?mode=ai session. On completion, we redirect
-  // to ?project=<id> which drops the user into editing mode.
-  // La ruta libre (/api/generate) vuelve a ser la puerta: una llamada escribe
-  // el documento entero. Medido sobre los mismos cuatro briefs y el mismo
-  // modelo, escribir de una pasada dio cero defectos deterministas donde
-  // parchear una baseline dejó texto ilegible y una página sin padding, a la
-  // quinta parte del costo. El parcheo escribía el color en un turno y el
-  // fondo en otro, sin ver nunca los dos juntos.
+  // El brief del estado vacío vive aquí para que sobreviva a los cambios de
+  // panel; enviarlo es el primer mensaje a Len (ver «EL PROYECTO EN BLANCO»).
+  // ⚰️ Aquí se contaba por qué `/api/generate` escribía la página de una
+  // pasada; la ruta se fue con Crear el 2026-10-06 (plans/crear-es-len).
   //
   // El dial de esfuerzo queda aparcado: en esta ruta no compra nada todavía, y
   // un selector que no compra nada es exactamente la mentira que se arregló en
@@ -787,7 +782,8 @@ function NewV2Inner() {
     );
   }, [briefParam, preparedBriefParam]);
   // La referencia visual de "hazme una como esta". Vive junto al brief y no
-  // dentro del compositor porque quien llama a /api/generate es esta página.
+  // dentro del compositor porque quien manda el primer mensaje a Len es esta
+  // página.
   const [aiReference, setAiReference] = useState<StyleDirection | null>(null);
   // Las fotos adjuntas al brief, por lo mismo. Se limpian al generar: son de
   // ESE brief, y dejarlas puestas haria que la siguiente pagina naciera mirando

@@ -8,9 +8,10 @@
 // cuál vas. Con `Math.random()` cada llamada aterrizaba en otra réplica, así que
 // el prefijo —idéntico en todas— no se reutilizaba NUNCA.
 //
-// No es una llamada suelta: crear una página son la escritura, la pasada de
-// reparación y UNA MÁS POR SUBPÁGINA, todas con el mismo prompt de sistema.
-// Eran N réplicas distintas para un prefijo compartido.
+// No es una llamada suelta: crear una página son varias vueltas del bucle de
+// Len (antes, en Crear, la escritura y una más por subpágina), todas con el
+// mismo prompt de sistema. Con un aleatorio eran N réplicas distintas para un
+// prefijo compartido.
 //
 // El nombre `requestId` es la trampa: suena a identificador de traza, y por eso
 // un valor aleatorio parecía correcto. Es afinidad.
@@ -43,8 +44,10 @@ const PAGINA = `<!doctype html><html lang="es"><head><title>x</title></head><bod
 // incorrecto — es un valor VÁLIDO que anula un descuento en silencio, y ninguna
 // prueba de comportamiento lo notaría.
 describe("ningún aleatorio en la afinidad de la ruta de creación", () => {
-  // Antes eran dos; `repair-pass.ts` se fue con la pasada que ya no corre.
-  const FICHEROS = [join("lib", "ai-stream", "generate.ts")];
+  // Desde el 2026-10-06 crear es el primer mensaje a Len, así que la ruta de
+  // creación es la de Len. ⚰️ Antes miraba `lib/ai-stream/generate.ts` (y antes
+  // aún `repair-pass.ts`), que se fueron con Crear y con su pasada.
+  const FICHEROS = [join("app", "api", "agent", "route.ts"), join("lib", "agent", "brain.ts")];
 
   it.each(FICHEROS)("%s no usa Math.random() como requestId sin alternativa", (rel) => {
     const src = readFileSync(join(process.cwd(), rel), "utf8");
@@ -62,17 +65,14 @@ describe("ningún aleatorio en la afinidad de la ruta de creación", () => {
     }
   });
 
-  it("y la escritura pasa la afinidad del usuario", () => {
-    const src = readFileSync(join(process.cwd(), "lib", "ai-stream", "generate.ts"), "utf8");
-    // Las dos ramas de escritura (el razonador y el papel con visión) tienen
-    // que llevarla: son el mismo prompt de sistema en espacios de caché
-    // distintos, pero cada uno reutiliza el suyo.
-    //
-    // Se afirma el PREFIJO, no la llamada entera: el 2026-09-12 entró un tercer
-    // argumento (la postura de esfuerzo) y esta guarda se puso roja por algo
-    // que no era lo suyo. Lo que tiene que sujetar es que la afinidad sea la
-    // del usuario y no un aleatorio — el resto de la firma no es asunto suyo.
-    expect(src).toContain("createDeepSeekPageProvider(opts.operation, `u.${opts.userId}`");
-    expect(src).toContain("requestId: `u.${opts.userId}`");
+  it("y el turno de Len pasa una afinidad estable: la del proyecto", () => {
+    const src = readFileSync(join(process.cwd(), "app", "api", "agent", "route.ts"), "utf8");
+    // Todas las vueltas del bucle —y los turnos siguientes del mismo proyecto—
+    // comparten el prefijo, así que van a la misma réplica. Lo que tiene que
+    // sujetar es que sea estable y no un aleatorio; cuál exactamente (el
+    // proyecto) no es asunto de esta guarda más allá de no ser aleatorio.
+    // ⚰️ Aquí se afirmaba la del USUARIO en las dos ramas de escritura de
+    // Crear (`u.${userId}`), que se fueron con él el 2026-10-06.
+    expect(src).toContain("requestId: projectId");
   });
 });

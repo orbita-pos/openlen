@@ -1,5 +1,6 @@
-// Distilled design guidance for the AI surfaces (Gemini via
-// /api/generate + /api/templates/ai-design). Sourced from
+// Distilled design guidance for the AI surfaces: the Chat
+// (/api/templates/ai-design) and Len's platform manual. (It was written for
+// Gemini via /api/generate, retired with Crear on 2026-10-06.) Sourced from
 // docs/claude-design-prompts.md — the same briefs that produced the
 // curated templates (Mirror, Anchor, Foundry, …) with claude.ai
 // Opus 4.7.

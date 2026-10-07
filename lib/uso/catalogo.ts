@@ -10,15 +10,13 @@
 // usuario no cabe en ninguno.
 //
 // `origen` separa lo que puede mandar el navegador de lo que sólo escribe el
-// servidor: un fallo de generación no se puede fingir desde la consola.
+// servidor. Hoy todos son del navegador: el único del servidor, `crear_fallo`
+// (un fallo de `/api/generate`), se fue con Crear el 2026-10-06.
 //
 // El navegador importa de aquí sólo TIPOS (ver `cliente.ts`); zod se queda en
 // el servidor.
 
 import { z } from "zod";
-
-/** El formato de código de Claude Code, literal. */
-export const CODIGO = /^[a-z_]{1,40}$/;
 
 /** El `SLUG` de `lib/templates/admin-schemas.ts`, copiado a propósito: aquel
  *  fichero arrastra el sanitizador y esto lo importa una ruta. Que sean el mismo
@@ -32,41 +30,30 @@ export const EVENTOS = {
   crear_vista: { origen: "cliente", datos: vacio },
   /** Entró texto en el brief por primera vez en esta visita. */
   crear_escribio: { origen: "cliente", datos: vacio },
-  /** Se pulsó generar. La forma del encargo, nunca su contenido.
+  /** Se pulsó enviar: el primer mensaje a Len (desde el 2026-10-06, crear es
+   *  eso). La forma del encargo, nunca su contenido.
    *
-   *  `escritor` es el PAPEL que va a escribir (`reasoner` | `visual_critic`),
-   *  no un id de modelo: sin él el embudo no puede decir qué motor escribió
-   *  cada página, que es justo la pregunta que abre el selector. */
+   *  ⚰️ Llevaba `escritor`, el papel que iba a escribir en Crear; se fue con
+   *  el selector y con Crear. Los eventos guardados antes lo traen. */
   crear_envio: {
     origen: "cliente",
     datos: z
       .object({
         imagenes: z.number().int().min(0).max(20),
         referencia: z.boolean(),
-        escritor: z.enum(["reasoner", "visual_critic"]),
       })
       .strict(),
   },
-  /** Se abrió el selector de modelo. Mide si alguien lo busca siquiera. */
-  crear_modelo_abrio: { origen: "cliente", datos: vacio },
-  /** Se eligió una fila del selector. `auto` es la fila de defecto, que se
-   *  guarda como NULL — aquí viaja con nombre para poder contarla. */
-  crear_modelo_eligio: {
-    origen: "cliente",
-    datos: z.object({ escritor: z.enum(["auto", "reasoner", "visual_critic"]) }).strict(),
-  },
+  // ⚰️ `crear_modelo_abrio` y `crear_modelo_eligio` medían el selector de qué
+  // modelo escribía Crear; se fueron con él el 2026-10-06.
   /** Se abrió una plantilla del mosaico. */
   crear_plantilla: {
     origen: "cliente",
     datos: z.object({ plantilla: z.string().regex(SLUG_DE_PLANTILLA) }).strict(),
   },
-  /** `/api/generate` no entregó página. */
-  crear_fallo: {
-    origen: "servidor",
-    datos: z
-      .object({ codigo: z.string().regex(CODIGO), detalle: z.string().regex(CODIGO).optional() })
-      .strict(),
-  },
+  // ⚰️ `crear_fallo` (origen servidor): `/api/generate` no entregó página. Se
+  // fue con la ruta el 2026-10-06, y con él `registrarEnServidor` y
+  // `nombreDeError`, que sólo lo escribían a él.
 } as const;
 
 export type NombreEvento = keyof typeof EVENTOS;
@@ -74,7 +61,6 @@ export type DatosDe<N extends NombreEvento> = z.infer<(typeof EVENTOS)[N]["datos
 export type EventoDeCliente = {
   [N in NombreEvento]: (typeof EVENTOS)[N]["origen"] extends "cliente" ? N : never;
 }[NombreEvento];
-export type EventoDeServidor = Exclude<NombreEvento, EventoDeCliente>;
 
 const SESION = /^[A-Za-z0-9-]{8,64}$/;
 
@@ -102,16 +88,4 @@ export function validarEventoDeCliente(
   const limpios = validarDatos(nombre, datos);
   if (!limpios) return null;
   return { nombre: nombre as EventoDeCliente, sesion, datos: limpios as Record<string, unknown> };
-}
-
-/** El NOMBRE de un error como código —`TypeError` → `type_error`—, nunca su
- *  mensaje. Como en Claude Code. */
-export function nombreDeError(err: unknown): string {
-  const nombre = err instanceof Error ? err.name : "";
-  const codigo = nombre
-    .replace(/[^A-Za-z]/g, "")
-    .replace(/([a-z])([A-Z])/g, "$1_$2")
-    .toLowerCase()
-    .slice(0, 40);
-  return CODIGO.test(codigo) ? codigo : "desconocido";
 }

@@ -1,8 +1,9 @@
 # Crear es Len — estado al cerrar la sesión en la nube (06/10)
 
-Rama `crear-es-len`, todo empujado. Sin despliegue, sin tocar `master`, sin PR.
-Las Tareas 11 (medición pagada) y 12 (borrar Crear) **no se hicieron**: no
-estaban pedidas.
+Rama `crear-es-len`, todo empujado, en el PR orbita-pos/openlen#1. Sin
+despliegue y sin tocar `master`. La Tarea 11 (medición pagada) **se canceló**
+(ver `medicion/README.md`); la Tarea 12 (borrar Crear) **está hecha**, más
+abajo.
 
 ## Parte A — `plan.md`, Tareas 1–10: hechas
 
@@ -52,6 +53,57 @@ a `toggle_module` con `modulo`/`encender` y leía `aviso`) y la app móvil
 
 La base **no se migró**: los turnos guardados se traducen al leer.
 
+## Tarea 12 — borrar Crear: hecha
+
+Pedida por Jesús el 06/10, tras cancelar la 11. Commit «retirar(crear): …».
+
+**Lo que se borró** (el plan, y lo que el `grep` dijo que quedaba huérfano):
+
+- `app/api/generate/` (la ruta y su prompt), su cliente `lib/use-generation.ts`,
+  `app/api/crear/escritor/`, `lib/ai/escritor-guardado.ts` y el selector de
+  escritor (`selector-de-modelo.tsx`) con sus claves `heroPrompt.modelo.*` en los
+  10 idiomas.
+- Las subpáginas declaradas: `lib/generation/subpagina-prompt.ts`,
+  `lib/projects/paginas-declaradas.ts`, `lib/projects/construir-paginas-declaradas.ts`
+  y `lib/generation/repeticion-de-portada.ts`.
+- La tubería de Crear: `lib/ai-stream/generate.ts`, `lib/harden.ts` (el
+  envoltorio TS; la función Rust se queda) y `lib/page-engine/rotura-observable.ts`.
+- `scripts/evals-pages.ts` y `lib/evals/` (el cohorte y el marcador), con
+  `npm run evals:pages`: medían la tubería de Crear, y la 11 se canceló.
+- De `provider-switch.ts`, lo del selector (`ESCRITORES_ELEGIBLES`,
+  `escritorDeCrear`, el defecto de Crear…); se queda `writerForTurn(hasImages)`
+  para el Chat.
+- De `referencia-adjunta.ts`, la puerta del `data:` del cuerpo de Crear; se
+  queda `MAX_REFERENCIAS`, y `MAX_PHOTOS_PER_MESSAGE` pasa a ser ese mismo número.
+- Los eventos de uso `crear_modelo_abrio`, `crear_modelo_eligio` y `crear_fallo`
+  (con `registrarEnServidor` y `nombreDeError`, que sólo lo escribían a él);
+  `crear_envio` pierde `escritor`.
+- En `credits.ts`, dos constantes que sólo documentaban costes de Crear.
+
+**Lo que NO se borró, a propósito:** la columna `users.crearWriter` y su
+migración (está en producción; quitarla es una migración aparte), y la función
+Rust `harden_visual_quality`.
+
+**Las pruebas:** las que tenían a Crear por sujeto se fueron con él; las que lo
+usaban como contra-prueba miran ahora el contrato crudo (`PUBLISH_CONTRACT_MIN`).
+La guarda de la afinidad de caché se mudó a la ruta de creación de hoy (la de
+Len). El golden de los demás prompts **no cambió** (sólo salió el bloque de
+«crear»). `CLAUDE.md` y el `README.md` dicen lo nuevo, y los comentarios que
+describían `/api/generate` como vivo se corrigieron (los de historia se quedan).
+
+**Puertas:** `npm run typecheck` limpio; eslint sin errores (los 4 avisos de
+`page.tsx` ya estaban); `npm run test:node` 676 de 676; `npx vitest run`
+entero, con el Postgres de pruebas: **6.628 pasan y 42 fallan**, y los 42 son
+exactamente los de la lista de «La suite entera» de abajo (ya fallan en
+`master` o son del entorno; `system-prompt.test.ts` ya no está porque se fue con
+la ruta). Y `npm run build` **pasa**, sin `/api/generate` ni `/api/crear/*` en
+la lista de rutas.
+
+Cuatro guardas que leen ficheros como texto (y que por eso el typecheck no ve)
+se cayeron en la primera pasada de la suite y se arreglaron antes del commit:
+`sin-perfil`, `superficies-que-laten`, `memoria-en-las-tres-superficies` y
+`afinidad-cache`.
+
 ## Pruebas
 
 Por tarea: `npm run typecheck` limpio; eslint de lo tocado sin errores (sólo
@@ -100,7 +152,9 @@ con el mismo entorno, o por su causa):
   Len-Bench).
 - Tarea 11 (medición pagada): **cancelada por Jesús el 06/10**, porque el
   criterio no servía (ver `medicion/README.md`). No se corrió ni se gastó nada.
-- Tarea 12 (borrar Crear): sin empezar.
+- Tarea 12 (borrar Crear): hecha. Su ensayo de caja (paso 6: build de
+  producción, 127.0.0.1 y los cinco flujos de la Tarea 9 con captura) pide
+  navegador, sesión y Fireworks de verdad: está en `pendiente-local.md`.
 - La suite de la página (`data.pruebas`) se quedó sin escritor ni lector tras
   la Tarea 10. Decidido el 06/10: se deja como está por ahora (ver
   `pendiente-local.md`).
