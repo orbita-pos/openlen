@@ -3229,14 +3229,12 @@ function NewV2Inner() {
   return (
     <div className="workspace-v2 h-full flex flex-col">
       <TopBar
-        // El proyecto en blanco se llama «Proyecto nuevo» mientras su título
-        // sea el de relleno: lo deja en cuanto Len guarda una portada con
-        // `<title>` (`adoptPlaceholderTitle`).
-        projectName={
-          (proyectoEnBlanco || heroSent) && projectName === UNTITLED_PROJECT_TITLE
-            ? tProjects("newProject")
-            : projectName
-        }
+        // Mientras el título sea el de relleno, el proyecto se llama «Proyecto
+        // nuevo» en el idioma del dueño: lo deja en cuanto Len guarda una
+        // portada con `<title>` (`adoptPlaceholderTitle`). No sólo el blanco:
+        // un primer turno que no llegó a escribir la portada (una pregunta, un
+        // ■) dejaba «Untitled page» crudo en la barra (ensayo de caja, 07/10).
+        projectName={projectName === UNTITLED_PROJECT_TITLE ? tProjects("newProject") : projectName}
         onRename={persistRename}
         projectLogoUrl={loadedProject?.logoUrl ?? null}
         projectLoading={projectLoadingFromUrl}
