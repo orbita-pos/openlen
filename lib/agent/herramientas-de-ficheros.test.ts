@@ -1643,6 +1643,32 @@ describe("en una app", () => {
     assert.match(String(r.response.error), /Nothing was undone: after that turn, \/src\/App\.jsx was changed again/);
   });
 
+  it("editar_imagen encuentra la foto en el CÓDIGO de la app y la cambia ahí, archivando el antes", async () => {
+    const { deps, archivos, versiones } = conApp();
+    const FOTO = "https://images.openlen.com/cafe.webp";
+    archivos["/src/App.jsx"] = `export default function App() {\n  return <img src="${FOTO}" alt="Café" />;\n}`;
+    const conIA = {
+      ...deps,
+      async fetchImage() {
+        return { ok: true, base64: "b64", mimeType: "image/webp" };
+      },
+      async editImage() {
+        return { imageBase64: "b64editada", mimeType: "image/webp", cost: 4 };
+      },
+      async uploadAsset() {
+        return { url: "https://images.openlen.com/cafe-editada.webp" };
+      },
+    } as unknown as AgentDeps;
+    const r = await runAgentTool(sesion(), conIA, "editar_imagen", { imagen_url: FOTO, instruccion: "más luz" });
+    assert.equal(r.response.ok, true, JSON.stringify(r.response));
+    assert.match(archivos["/src/App.jsx"]!, /cafe-editada\.webp/);
+    assert.equal(versiones.at(-1)?.path, "/src/App.jsx");
+    assert.ok(r.appCambiada);
+    // CONTRA-PRUEBA: una URL que no está entera entre comillas en el código no se toca.
+    const otra = await runAgentTool(sesion(), conIA, "editar_imagen", { imagen_url: "https://images.openlen.com/cafe", instruccion: "x" });
+    assert.equal(otra.response.ok, false);
+  });
+
   it("🔴 una app que no compila no llega a la tarjeta de publicar: Len sabe qué arreglar antes", async () => {
     const { deps, archivos } = conApp();
     archivos["/src/App.jsx"] = "export default () => <div";

@@ -73,6 +73,7 @@ import {
   toolWrite,
 } from "@/lib/agent/herramientas-de-ficheros";
 import { ficherosDelSitio, leerFichero, rutaDePagina, rutaRelativa, sinOpIds } from "@/lib/agent/ficheros/sitio";
+import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { NOMBRE_BASH } from "@/lib/agent/terminal/declaracion";
 import { toolBash } from "@/lib/agent/terminal/herramienta";
@@ -1609,7 +1610,18 @@ async function toolEditarImagen(
   const conLaImagen = ficherosDelSitio(inicial.data).filter((ruta) =>
     urlIsPageImage(leerFichero(inicial.data, ruta) ?? "", imagenUrl),
   );
-  if (conLaImagen.length === 0) {
+  // UNA APP (F3): sus imágenes viven en el código de /src (`src="…"` en el
+  // JSX, `foto: "…"` en un JSON). Cuenta la URL EXACTA entre comillas en un
+  // fichero de la app: escrita ahí por Len o por el dueño, como un atributo de
+  // imagen en una página. Una URL suelta dentro de un texto, no.
+  const enElCodigo: string[] = [];
+  if (inicial.data.app && deps.projectFiles) {
+    const carpeta = await deps.projectFiles(session.projectId).catch(() => ({}) as Record<string, string>);
+    for (const [ruta, contenido] of Object.entries(carpeta)) {
+      if (isPublishableFolderPath(ruta) && urlEntreComillas(contenido, imagenUrl)) enElCodigo.push(ruta);
+    }
+  }
+  if (conLaImagen.length === 0 && enElCodigo.length === 0) {
     return {
       response: {
         ok: false,
@@ -1664,22 +1676,48 @@ async function toolEditarImagen(
     if (!guardado.ok) return { response: { ok: false, error: guardado.error } };
     cambiados.push({ ruta, html: guardado.html, page: guardado.page, versionPrevia: guardado.versionPrevia });
   }
+  // Y en el código de la app, cada fichero por su camino (con su «antes»
+  // archivado, para deshacer).
+  const enLaCarpeta: { ruta: string; versionPrevia: string | null }[] = [];
+  if (enElCodigo.length > 0 && deps.saveProjectFile && deps.projectFiles) {
+    const carpeta = await deps.projectFiles(session.projectId);
+    for (const ruta of enElCodigo) {
+      const antes = carpeta[ruta];
+      if (antes === undefined) continue;
+      const { versionPrevia } = await deps.saveProjectFile(session.projectId, ruta, antes.split(imagenUrl).join(nuevaUrl), {
+        before: antes,
+        label: `Imagen editada: ${instruccion.slice(0, 60)}`,
+        source: "chat",
+      });
+      enLaCarpeta.push({ ruta, versionPrevia });
+      session.leidos?.delete(ruta);
+    }
+  }
   // El lienzo pinta UNA página por evento: la que el dueño tiene abierta si
   // cambió, y si no la primera.
   const pintada = cambiados.find((c) => c.page === session.page) ?? cambiados[0];
+  const cascaron = pintada?.html ?? (await deps.loadProject(session.projectId, session.userId))?.data.html ?? "";
 
   return {
     response: {
       ok: true,
       nueva_url: nuevaUrl,
       // Qué ficheros cambiaron: lo que Len tenía leído de ellos ya no vale.
-      ficheros: cambiados.map((c) => rutaRelativa(c.ruta)),
+      ficheros: [...cambiados.map((c) => rutaRelativa(c.ruta)), ...enLaCarpeta.map((c) => rutaRelativa(c.ruta))],
     },
     action: { tool: "editar_imagen", ok: true, summary: instruccion.slice(0, 60) },
     ...(pintada
       ? { updatedHtml: pintada.html, page: pintada.page, versionPrevia: pintada.versionPrevia }
       : {}),
+    ...(enLaCarpeta.length > 0
+      ? { ficherosTocados: enLaCarpeta, mutoDurable: true, appCambiada: { cascaron: sinOpIds(cascaron) } }
+      : {}),
   };
+}
+
+/** ¿Está `url` en el texto como una cadena ENTERA entre comillas? */
+function urlEntreComillas(texto: string, url: string): boolean {
+  return ['"', "'", "`"].some((c) => texto.includes(`${c}${url}${c}`));
 }
 
 const MAX_PUBLISH_LOCALES = 9;

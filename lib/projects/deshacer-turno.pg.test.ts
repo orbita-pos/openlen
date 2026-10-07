@@ -12,7 +12,7 @@ import { and, eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { cambiosDelTurnoParaDeshacer, planearDeshacer } from "@/lib/projects/deshacer-turno-plan";
-import { TURNOS_GUARDADOS, deshacerTurno, escribirDeshacer, guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
+import { TURNOS_GUARDADOS, deshacerTurno, escribirDeshacer, guardarCambiosDelTurno, ultimoTurnoDeshacible } from "@/lib/projects/deshacer-turno";
 import type { ProjectData } from "@/lib/projects/types";
 
 const USUARIO = "prueba-deshacer-turno-user";
@@ -153,6 +153,14 @@ describe("deshacer un turno entero", () => {
     const ahora = await estado();
     expect(ahora.data).toEqual(DESPUES_DATA);
     expect(ahora.ficheros).toEqual(DESPUES_FICHEROS);
+  });
+
+  it("F3 · «deshaz eso»: el último turno sin deshacer; tras deshacerlo, su deshacer (que lo vuelve a poner)", async () => {
+    expect(await ultimoTurnoDeshacible(PROYECTO)).toBe(TURNO);
+    const r = await deshacerTurno({ projectId: PROYECTO, userId: USUARIO, turnId: TURNO });
+    if (!r.ok) throw new Error(JSON.stringify(r));
+    expect(await ultimoTurnoDeshacible(PROYECTO)).toBe(r.deshacerId);
+    expect(await ultimoTurnoDeshacible("proyecto-que-no-existe")).toBeNull();
   });
 
   it("ni un turno sin registro ni el proyecto de otro", async () => {
