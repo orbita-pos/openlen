@@ -41,6 +41,11 @@ const MIME: Record<string, string> = {
   ".webp": "image/webp", ".avif": "image/avif", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
   ".gif": "image/gif", ".svg": "image/svg+xml", ".ico": "image/x-icon", ".woff2": "font/woff2", ".woff": "font/woff",
   ".xml": "application/xml", ".txt": "text/plain",
+  // LOS FUENTES DE UNA APP se publican COMPILADOS en su misma ruta, y un
+  // `<script type="module">` exige un tipo de JavaScript: como el `@fuentes`
+  // del Caddyfile. Sin esto la app de un caso salía en blanco (MIME vacío).
+  ".mjs": "text/javascript", ".jsx": "text/javascript; charset=utf-8", ".tsx": "text/javascript; charset=utf-8",
+  ".ts": "text/javascript; charset=utf-8", ".webmanifest": "application/manifest+json", ".md": "text/markdown; charset=utf-8",
 };
 
 async function existeFichero(p: string): Promise<boolean> {

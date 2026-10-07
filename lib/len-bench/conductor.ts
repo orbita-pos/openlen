@@ -46,7 +46,8 @@ import { fallidasDeLaTraza, pasosDeProyecto } from "./pasos";
 import { puntuarCorrida } from "./puntuar";
 import { enviarTurno, herramientasDeLen, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
 import { servirPublicada } from "./servidor-publicada";
-import type { Desenlace, Encargo, Intercambio, ResultadoDeCorrida, ResultadoDeGrader } from "./tipos";
+import type { Desenlace, Encargo, Intercambio, ResultadoDeCorrida, ResultadoDeGrader, VerificacionDeLaApp } from "./tipos";
+import { verificarAppDelProyecto } from "./app-verificada";
 import { ficheroDeLaWeb, textoDeLaWeb, webASerializable } from "./web-sustituta";
 import type { AgentMode } from "@/lib/agent/dynamis";
 
@@ -145,6 +146,8 @@ export async function calificarDatos(
     /** Por qué NO se corren los graders de pago (el juez): el validador va a
      *  $0. Se reportan saltados y sin voto, como su «skipped: cost ceiling». */
     saltarPagados?: string;
+    /** Una app: su verificación al cerrar cada paso del guion (`app-verificada.ts`). */
+    verificaciones?: readonly VerificacionDeLaApp[];
   },
 ): Promise<{ graders: ResultadoDeGrader[]; sub: string; traza: readonly MensajeDelHistorial[] }> {
   exigirEntorno();
@@ -163,7 +166,30 @@ export async function calificarDatos(
   // Sin Lighthouse: tarda, escribe en la base y no lo mira ningún grader.
   // En Windows, el rename de la release de un sitio de varias páginas falla a
   // veces con EPERM un instante (ver `reintentar-publicar.ts`).
-  await conReintentoPorEperm(() => publishProject({ projectId, userId: o.owner.id, subdomain: sub, languages: [], skipFlightCheck: true }));
+  const publicar = () =>
+    conReintentoPorEperm(() => publishProject({ projectId, userId: o.owner.id, subdomain: sub, languages: [], skipFlightCheck: true }));
+  // UNA APP QUE NO COMPILA NO SE PUBLICA (`publishToDir` la rechaza), y el
+  // visitante no tendría nada: cada grader suspende con el porqué, en vez de
+  // tumbar la corrida (o el validador) como un fallo del arnés. Sólo en los
+  // casos de app: en uno de página, que publicar falle sigue siendo un error.
+  if (fila.data.app || e.naceComo) {
+    try {
+      await publicar();
+    } catch (err) {
+      const motivo = `la app no se pudo publicar: ${err instanceof Error ? err.message : String(err)}`;
+      const graders: ResultadoDeGrader[] = e.graders.map((g) => ({
+        nombre: g.nombre,
+        peso: g.peso,
+        puntua: g.puntua !== false && !(g.pago && extra.saltarPagados),
+        paso: false,
+        explicacion: g.pago && extra.saltarPagados ? `saltado: ${extra.saltarPagados}` : motivo,
+      }));
+      graders.push(cierreHonesto(graders, extra.conversacion));
+      return { graders, sub, traza: trazaDeLasFilas(await turnosParaElHistorial(projectId, CHAT_LIMIT)) };
+    }
+  } else {
+    await publicar();
+  }
   const final = await filaDelProyecto(projectId);
   // LA TRAZA para el juez (su foco `trace`): lo que vio el modelo en cada turno,
   // con lo que devolvió cada herramienta, de las filas que escribió el
@@ -182,6 +208,7 @@ export async function calificarDatos(
       loDeLaWeb: textoDeLaWeb(e.web),
       datos: final.data,
       inicio: e.inicio,
+      ...(extra.verificaciones ? { verificaciones: extra.verificaciones } : {}),
       publicadaPorLen,
       conversacion: extra.conversacion,
       traza,
@@ -267,9 +294,12 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
   let sub = "";
   let graders: ResultadoDeGrader[] = [];
   let editFallidos: number | undefined;
+  // UNA APP: su verificación al cerrar cada paso del guion (`app-verificada.ts`).
+  const verificaciones: VerificacionDeLaApp[] = [];
+  let primerTurno = true;
   try {
     if (e.sembrar) await e.sembrar({ projectId, ownerId: o.owner.id, zona, ahora: new Date() });
-    guion: for (const paso of e.guion) {
+    guion: for (const [n, paso] of e.guion.entries()) {
       let mensaje = paso.mensaje;
       for (let i = 0; i <= MAX_RESPUESTAS_POR_PASO; i++) {
         // Las filas del servidor, como las restaura el taller al recargar: una
@@ -292,10 +322,14 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
             esfuerzo: "auto",
             zonaHoraria: zona,
             ...(o.mode === "dynamis" ? { mode: "dynamis" as const } : {}),
+            // UNA APP QUE NACE: el primer mensaje lleva la tarjeta App, como
+            // el estado vacío (`camposDeNacer`).
+            ...(primerTurno && e.naceComo ? { naceComo: e.naceComo.como, idioma: e.naceComo.idioma } : {}),
           },
           timeoutMs: o.timeoutTurnoMs,
         });
         turnosDeLen++;
+        primerTurno = false;
         const texto = textoDeLen(eventos);
         conversacion.push({ quien: "dueno", texto: mensaje }, { quien: "len", texto });
         for (const h of herramientasDeLen(eventos)) if (!herramientas.includes(h)) herramientas.push(h);
@@ -346,9 +380,14 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
         }
         mensaje = d.decision.mensaje;
       }
+      // El dueño mira su app tras cada paso: tiene que compilar y arrancar.
+      if (e.naceComo || (await filaDelProyecto(projectId)).data.app) {
+        verificaciones.push({ paso: n, ...(await verificarAppDelProyecto(projectId)) });
+      }
     }
     const cal = await calificarDatos(e, projectId, o, {
       conversacion,
+      ...(verificaciones.length > 0 || e.naceComo ? { verificaciones } : {}),
       herramientas,
       tarjetas,
       zona,

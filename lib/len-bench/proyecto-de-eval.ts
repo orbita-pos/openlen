@@ -9,8 +9,9 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { dropPageDatabase, pageDatabaseRef } from "@/lib/backend/teardown";
-import type { ProjectData } from "@/lib/projects/types";
+import { folderFingerprint } from "@/lib/projects/files-hash";
 import { identidadDeEval } from "./eval-identity";
+import type { DatosDelCaso } from "./tipos";
 
 /** La cuenta de eval, estrictamente de EVAL_USER_EMAIL — sin valor por
  *  defecto, para que un valor que falte o no exista falle en voz alta en vez
@@ -35,23 +36,29 @@ export async function resolveEvalUser(): Promise<{ id: string; email: string }> 
   return rows[0];
 }
 
-/** Inserta un proyecto de usar y tirar y devuelve su id. */
+/** Inserta un proyecto de usar y tirar y devuelve su id. Los `ficheros` de un
+ *  caso de APP van a su carpeta (`projectFiles`), no a `data`. */
 export async function createThrowawayProject(
   userId: string,
   caseId: string,
-  data: ProjectData,
+  datos: DatosDelCaso,
   // Len-Bench pasa la fila que tendría el proyecto de un dueño real: el agente
   // lee título y brief, y el de por defecto nombra el caso que se califica.
   fila?: { title: string; brief: string },
 ): Promise<string> {
   const id = crypto.randomUUID();
+  const { ficheros, ...data } = datos;
   await db.insert(schema.projects).values({
     id,
     userId,
     title: fila?.title ?? `Agent Eval ${caseId}`,
     brief: fila?.brief ?? "Agent eval throwaway fixture — safe to delete.",
     data,
+    ...(ficheros ? { filesHash: folderFingerprint(ficheros) } : {}),
   });
+  if (ficheros && Object.keys(ficheros).length > 0) {
+    await db.insert(schema.projectFiles).values(Object.entries(ficheros).map(([path, content]) => ({ projectId: id, path, content })));
+  }
   return id;
 }
 

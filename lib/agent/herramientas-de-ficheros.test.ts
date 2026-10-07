@@ -1697,3 +1697,123 @@ describe("en una app", () => {
     }
   });
 });
+
+// TAREA #15 · UN TURNO DE APP DE PUNTA A PUNTA, guionizado: el bucle de verdad
+// (`runAgentLoop`), las herramientas de verdad (`runAgentTool`) sobre el doble
+// de la carpeta, y un «modelo» con guion que hace lo que haría Len con «hazme
+// un POS para una cafetería» sobre el esqueleto con el que nace una app. Lo que
+// mira: que lo que no compila le VUELVE al modelo en el `<new-diagnostics>` de
+// la tanda siguiente, que lo arreglado deja de decirse, y que publicar sale en
+// su tarjeta sólo cuando la app compila. Sin modelo ni red: $0.
+describe("un turno de app, guionizado (tarea #15)", () => {
+  it("🔴 POS de una cafetería: escribe, ve lo que no compila, lo arregla y deja la tarjeta de publicar", async () => {
+    const { runAgentLoop } = await import("./loop");
+    const { esqueletoDeApp } = await import("@/lib/apps/esqueleto");
+    const { erroresDeLaApp } = await import("./compila-la-app");
+    const e = esqueletoDeApp({ titulo: "Café Luna", idioma: "es" });
+    const c = conCarpeta({ html: e.html, app: e.app });
+    Object.assign(c.archivos, e.ficheros);
+    const s: AgentSession = {
+      ...makeSession(),
+      app: e.app,
+      mensajeDelUsuario: "hazme un POS para una cafetería y publícalo en cafe-luna",
+      userPrompt: "hazme un POS para una cafetería y publícalo en cafe-luna",
+    };
+
+    const CAJA_ROTA = `import { useState } from "react";
+export default function Caja() {
+  const [ticket, setTicket] = useState(0);
+  return (
+    <main className="p-6">
+      <button onClick={() => setTicket(ticket + 2.5)}>Café con leche</button>
+      <p>Ticket: {ticket.toFixed(2)} €
+    </main>
+  );
+}
+`;
+    const CAJA = CAJA_ROTA.replace("{ticket.toFixed(2)} €\n", "{ticket.toFixed(2)} €</p>\n");
+    const APP = `import { Routes, Route } from "react-router-dom";
+import Inicio from "./screens/Inicio";
+import Caja from "./screens/Caja";
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Inicio />} />
+      <Route path="/caja" element={<Caja />} />
+    </Routes>
+  );
+}
+`;
+    const call = (name: string, args: Record<string, unknown>) => ({ type: "function_call" as const, name, args });
+    const fin = { type: "done" as const, stopReason: { kind: "end_turn" as const } };
+    const guion = [
+      [call("Read", { file_path: "/src/App.jsx" }), fin],
+      [call("Write", { file_path: "/src/screens/Caja.jsx", content: CAJA_ROTA }), call("Write", { file_path: "/src/App.jsx", content: APP }), fin],
+      [call("Write", { file_path: "/src/screens/Caja.jsx", content: CAJA }), fin],
+      [call("publish", { subdomain: "cafe-luna" }), fin],
+      [{ type: "text_delta" as const, text: "Listo: la caja está en #/caja." }, fin],
+    ];
+    // Lo que el «modelo» recibió al abrir cada vuelta: el último mensaje.
+    const vistos: string[] = [];
+    let i = 0;
+    const eventos: { type: string }[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: s.userPrompt! }],
+      tools: [],
+      openStream: (messages) => {
+        vistos.push(JSON.stringify(messages.at(-1)));
+        const turno = guion[Math.min(i++, guion.length - 1)]!;
+        return (async function* () {
+          for (const ev of turno) yield ev;
+        })();
+      },
+      runTool: (name, args) => runAgentTool(s, c.deps, name, args),
+      emit: (ev) => eventos.push(ev),
+    });
+
+    assert.equal(r.terminalError, false);
+    // Tras la tanda que dejó Caja.jsx rota, el modelo lo LEE con fichero y línea.
+    assert.match(vistos[2]!, /<new-diagnostics>[\s\S]*\/src\/screens\/Caja\.jsx[\s\S]*the app doesn't load/);
+    // Y una vez arreglada, la tanda siguiente ya no lo dice.
+    assert.doesNotMatch(vistos[3]!, /new-diagnostics/);
+    // La carpeta compila y tiene su pantalla con su ruta.
+    assert.deepEqual(erroresDeLaApp(e.app, c.archivos), []);
+    assert.match(c.archivos["/src/App.jsx"]!, /path="\/caja"/);
+    // Publicar deja su tarjeta: la app compila.
+    const confirm = eventos.find((x) => x.type === "confirm") as { subdominio?: string } | undefined;
+    assert.equal(confirm?.subdominio, "cafe-luna");
+    assert.match(r.finalText, /caja/);
+  });
+
+  it("CONTRA-PRUEBA: si la deja rota, publicar no llega a la tarjeta", async () => {
+    const { runAgentLoop } = await import("./loop");
+    const { esqueletoDeApp } = await import("@/lib/apps/esqueleto");
+    const e = esqueletoDeApp({ titulo: "Café Luna" });
+    const c = conCarpeta({ html: e.html, app: e.app });
+    Object.assign(c.archivos, e.ficheros);
+    const s: AgentSession = { ...makeSession(), app: e.app, mensajeDelUsuario: "publícalo en cafe-luna" };
+    const fin = { type: "done" as const, stopReason: { kind: "end_turn" as const } };
+    const guion = [
+      [{ type: "function_call" as const, name: "Write", args: { file_path: "/src/screens/Caja.jsx", content: "export default () => <main" } }, fin],
+      [{ type: "function_call" as const, name: "publish", args: { subdomain: "cafe-luna" } }, fin],
+      [{ type: "text_delta" as const, text: "No se pudo." }, fin],
+    ];
+    let i = 0;
+    const eventos: { type: string }[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: () => {
+        const turno = guion[Math.min(i++, guion.length - 1)]!;
+        return (async function* () {
+          for (const ev of turno) yield ev;
+        })();
+      },
+      runTool: (name, args) => runAgentTool(s, c.deps, name, args),
+      emit: (ev) => eventos.push(ev),
+    });
+    assert.ok(c.archivos["/src/screens/Caja.jsx"], "la escritura llegó: lo que falla es publicar");
+    assert.equal(eventos.some((x) => x.type === "confirm"), false);
+  });
+});
