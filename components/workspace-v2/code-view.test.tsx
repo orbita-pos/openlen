@@ -845,8 +845,8 @@ describe("CodeView — hilos en una línea con @Len y @persona", () => {
 });
 
 describe("¿espera el hilo a Len?", () => {
-  const msj = (autorId: string | null, filaId: string | null, texto = "x") => ({ id: Math.random().toString(), autorId, autor: autorId, texto, filaId, createdAt: new Date() });
-  const hilo = (mensajes: ReturnType<typeof msj>[]) => ({ id: "h", ruta: "/a", linea: 1, codigo: "", estado: "abierto" as const, creadoPor: "yo", createdAt: new Date(), sinVer: 0, mensajes });
+  const msj = (autorId: string | null, filaId: string | null, texto = "x") => ({ id: Math.random().toString(), autorId, autor: autorId, texto, filaId, createdAt: "2026-10-07T10:00:00Z" });
+  const hilo = (mensajes: ReturnType<typeof msj>[]) => ({ id: "h", ruta: "/a", linea: 1, codigo: "", estado: "abierto" as const, creadoPor: "yo", createdAt: "2026-10-07T10:00:00Z", sinVer: 0, mensajes });
   it("🔴 mientras un pedido no tenga la respuesta de Len con su fila, aunque después hablen otros", () => {
     expect(esperaALen(hilo([msj("yo", "f1", "@Len hazlo"), msj("ana", null, "¿y esto?")]))).toBe(true);
     expect(esperaALen(hilo([msj("yo", "f1", "@Len hazlo"), msj(null, "f1", "Hecho.")]))).toBe(false);

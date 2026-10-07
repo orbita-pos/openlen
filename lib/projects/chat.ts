@@ -71,20 +71,19 @@ async function conAutores(
   if (rows.length === 0) return turns;
   try {
     const miembros = [...new Set(rows.map((r) => r.autorId).filter((x): x is string => Boolean(x)))];
-    const [dueno] = await db
-      .select({ userId: schema.projects.userId })
-      .from(schema.projects)
-      .where(eq(schema.projects.id, projectId))
-      .limit(1);
-    const ids = [...new Set([...(dueno ? [dueno.userId] : []), ...miembros])];
-    if (ids.length === 0) return turns;
+    // UNA consulta, sin `limit`: el dueño del proyecto y los miembros que pidieron algo.
     const gente = await db
-      .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
-      .from(schema.users)
-      .where(inArray(schema.users.id, ids));
+      .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email, duenoId: schema.projects.userId })
+      .from(schema.projects)
+      .innerJoin(
+        schema.users,
+        or(eq(schema.users.id, schema.projects.userId), miembros.length > 0 ? inArray(schema.users.id, miembros) : undefined),
+      )
+      .where(eq(schema.projects.id, projectId));
+    const duenoId = gente[0]?.duenoId;
     const nombre = new Map(gente.map((u) => [u.id, u.name?.trim() || u.email]));
     return turns.map((t, i) => {
-      const autor = nombre.get(rows[i]!.autorId ?? dueno?.userId ?? "");
+      const autor = nombre.get(rows[i]!.autorId ?? duenoId ?? "");
       return autor ? { ...t, autor } : t;
     });
   } catch (err) {
