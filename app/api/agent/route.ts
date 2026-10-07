@@ -1199,6 +1199,9 @@ async function correrTurno(
           tools,
           // Pieza 7: en modo plan el bucle no empuja a editar.
           planModeActive: () => planActivo,
+          // La página a medias de un `Write` que aún no dijo su ruta se pinta
+          // en la que el turno tiene abierta (`lib/agent/write-preview.ts`).
+          activePage: () => agentSession.page,
           // El ■ también corta la espera entre reintentos del proveedor
           // (`lib/agent/retry-policy.ts`).
           signal: upstreamAbort.signal,

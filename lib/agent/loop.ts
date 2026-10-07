@@ -206,6 +206,9 @@ export interface AgentLoopArgs {
    *  aprobar el plan). En modo plan no cambiar nada es lo que se pide, así que
    *  el empujón de «anunciaste un cambio y no lo hiciste» no salta. */
   planModeActive?: () => boolean;
+  /** La página en la que trabaja el turno ahora (`session.page`), para pintar
+   *  un `Write` que todavía no ha dicho su ruta (`write-preview.ts`). */
+  activePage?: () => string | null;
   /** Para las pruebas: la espera entre reintentos. Por defecto, `sleepAbortable`. */
   sleep?(ms: number, signal?: AbortSignal): Promise<void>;
   /** La compactación dentro del turno (`lib/agent/compaction/`). Sin ella, el
@@ -1247,7 +1250,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
       messagesAtLastCall = messages.length;
       // Una por intento: un reintento vuelve a escribir desde cero.
-      const writePreview = createWritePreview();
+      const writePreview = createWritePreview(undefined, args.activePage);
       for await (const ev of args.openStream(messages)) {
         if (ev.type === "text_delta" && retener) {
           turnText += ev.text;

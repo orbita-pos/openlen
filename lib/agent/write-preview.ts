@@ -77,9 +77,20 @@ export function readPartialWrite(argsSoFar: string): { filePath: string | null; 
   };
 }
 
+/** ¿Empieza como un documento HTML entero? Sólo eso se pinta sin ruta. */
+const EMPIEZA_COMO_DOCUMENTO = /^\s*(<!doctype\s+html|<html[\s>])/i;
+
 /** Junta los trozos por llamada y devuelve una vista previa cuando un `Write`
- *  de una PÁGINA lleva `step` caracteres nuevos desde la última. */
-export function createWritePreview(step: number = PREVIEW_STEP_CHARS) {
+ *  de una PÁGINA lleva `step` caracteres nuevos desde la última.
+ *
+ *  🔴 EL ORDEN DE LAS CLAVES LO ELIGE EL MODELO. Medido en el ensayo de caja
+ *  (06/10): en las tres «reescribe la portada» mandó `content` antes que
+ *  `file_path`, y sin ruta no se pintaba nada hasta medio segundo antes de
+ *  guardar. Mientras la ruta no llega, un contenido que empieza como documento
+ *  se pinta en `activePage` (la página en la que trabaja el turno); cuando
+ *  llega, manda la ruta. Si al final era otra, el cliente devuelve el lienzo a
+ *  lo guardado al cerrar el turno (`use-agent-chat.ts`, `previewPainted`). */
+export function createWritePreview(step: number = PREVIEW_STEP_CHARS, activePage?: () => string | null) {
   const calls = new Map<number, { name?: string; args: string; painted: number }>();
   return {
     push(delta: { readonly index: number; readonly name?: string; readonly argsDelta: string }): PagePreview | null {
@@ -92,12 +103,20 @@ export function createWritePreview(step: number = PREVIEW_STEP_CHARS) {
       calls.set(delta.index, call);
       if (call.name !== "Write") return null;
       const { filePath, content } = readPartialWrite(call.args);
-      if (filePath === null || content === null) return null;
-      const target = paginaDeRuta(filePath);
-      if (!target) return null;
+      if (content === null) return null;
+      let page: string | null;
+      if (filePath !== null) {
+        const target = paginaDeRuta(filePath);
+        if (!target) return null;
+        page = target.page;
+      } else if (activePage && EMPIEZA_COMO_DOCUMENTO.test(content)) {
+        page = activePage();
+      } else {
+        return null;
+      }
       if (content.length - call.painted < step) return null;
       call.painted = content.length;
-      return { page: target.page, html: content };
+      return { page, html: content };
     },
   };
 }

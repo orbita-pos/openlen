@@ -73,6 +73,42 @@ describe("createWritePreview — cuándo se pinta", () => {
     expect(p.push({ index: 0, argsDelta: "<h1>" })).toBeNull();
   });
 
+  // Medido en el ensayo de caja (06/10): en las tres «reescribe la portada» el
+  // modelo mandó `content` ANTES que `file_path`, y el lienzo no se pintó hasta
+  // medio segundo antes de guardar. El orden de las claves lo elige el modelo.
+  it("🔴 el contenido antes que la ruta pinta en la página activa si es un documento", () => {
+    const p = createWritePreview(1, () => "menu");
+    p.push({ index: 0, name: "Write", argsDelta: '{"content":"' });
+    expect(p.push({ index: 0, argsDelta: "<!DOCTYPE html><html>" })).toEqual({ page: "menu", html: "<!DOCTYPE html><html>" });
+  });
+
+  it("sin ruta todavía, lo que no empieza como documento no pinta", () => {
+    const p = createWritePreview(1, () => null);
+    p.push({ index: 0, name: "Write", argsDelta: '{"content":"' });
+    expect(p.push({ index: 0, argsDelta: "const a = 1;" })).toBeNull();
+  });
+
+  it("sin ruta y sin página activa, no pinta (como antes)", () => {
+    const p = createWritePreview(1);
+    p.push({ index: 0, name: "Write", argsDelta: '{"content":"' });
+    expect(p.push({ index: 0, argsDelta: "<!doctype html>" })).toBeNull();
+  });
+
+  it("cuando llega la ruta, manda la ruta", () => {
+    const p = createWritePreview(1, () => null);
+    p.push({ index: 0, name: "Write", argsDelta: '{"content":"<html>' });
+    expect(p.push({ index: 0, argsDelta: '</html>","file_path":"/menu/index.html"}' })).toEqual({
+      page: "menu",
+      html: "<html></html>",
+    });
+  });
+
+  it("🔴 si la ruta resulta no ser una página, deja de pintar", () => {
+    const p = createWritePreview(1, () => null);
+    p.push({ index: 0, name: "Write", argsDelta: '{"content":"<html>' });
+    expect(p.push({ index: 0, argsDelta: '</html>","file_path":"/plantilla.html"}' })).toBeNull();
+  });
+
   it("dos llamadas en paralelo se leen por su índice", () => {
     const p = createWritePreview(1);
     p.push({ index: 0, name: "Write", argsDelta: '{"file_path":"/index.html","content":"' });
