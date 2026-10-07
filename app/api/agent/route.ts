@@ -1195,7 +1195,7 @@ async function correrTurno(
               goal,
               askUser: async (questions: UserQuestion[]) => {
                 emit("question", { questions });
-                return esperarRespuesta(turnoId, { timeoutMs: ASK_USER_TIMEOUT_MS, signal: upstreamAbort.signal });
+                return esperarRespuesta(turnoId, { timeoutMs: ASK_USER_TIMEOUT_MS, signal: upstreamAbort.signal, preguntas: questions });
               },
             }
           : { ...deps, planMode, goal };

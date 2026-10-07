@@ -702,7 +702,7 @@ export function useAgentChat({
         return;
       }
       if (!r.ok) return;
-      const cuerpo = (await r.json().catch(() => null)) as { turno?: StoredChatTurn; turnoId?: string; siguiente?: unknown } | null;
+      const cuerpo = (await r.json().catch(() => null)) as { turno?: StoredChatTurn; turnoId?: string; siguiente?: unknown; preguntas?: unknown } | null;
       if (!vivo || !cuerpo?.turno) return;
       const turno = cuerpo.turno;
       if (turno.enCurso) {
@@ -715,6 +715,11 @@ export function useAgentChat({
                   userText: turno.userText,
                   assistantReasoning: turno.assistantReasoning,
                   actions: accionesAlRecargar(turno.actions),
+                  // La pregunta que Len espera AHORA (`ask_user_question`):
+                  // como DeepSeek, quien se reengancha la recibe otra vez y la
+                  // puede contestar. Sin esto la tarjeta no salía hasta que
+                  // vencía la espera. El servidor manda: sin pregunta, fuera.
+                  pendingQuestions: questionsFrom(cuerpo.preguntas) ?? undefined,
                 }
               : x,
           ),
