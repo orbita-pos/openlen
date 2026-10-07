@@ -1225,6 +1225,7 @@ export function PreviewArea({
                 carpetaVacia: t("preview.ide.carpetaVacia"),
                 cerrarAviso: t("preview.ide.cerrarAviso"),
                 noSeHizo: t("preview.ide.noSeHizo"),
+                dividir: t("preview.ide.dividir"),
                 frasesDelEditor: Object.fromEntries(
                   FRASES_DEL_EDITOR.map((f) => [f, t(`preview.ide.editor.${f.replace(/ /g, "_")}`)]),
                 ),

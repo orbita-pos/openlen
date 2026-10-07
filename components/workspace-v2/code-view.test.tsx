@@ -98,6 +98,7 @@ const labels = {
     carpetaVacia: "Vacía",
     cerrarAviso: "Cerrar el aviso",
     noSeHizo: "No se hizo:",
+    dividir: "Dividir a la derecha",
   },
 };
 
@@ -186,7 +187,9 @@ const pestanas = (el: HTMLElement) => [...el.querySelectorAll('[role="tab"]')].m
 const activa = (el: HTMLElement) => el.querySelector('[role="tab"][aria-selected="true"]')?.textContent;
 const botonDelArbol = (el: HTMLElement, nombre: string) =>
   [...el.querySelectorAll<HTMLButtonElement>("nav li button")].find((b) => b.querySelector(".truncate")?.textContent === nombre)!;
-const porEtiqueta = (el: HTMLElement, etiqueta: string) => el.querySelector<HTMLButtonElement>(`button[aria-label="${etiqueta}"]`)!;
+// Por comparación y no con un selector: «Ctrl+\» lleva una barra que CSS se come.
+const porEtiqueta = (el: HTMLElement, etiqueta: string) =>
+  [...el.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.getAttribute("aria-label") === etiqueta)!;
 const tecla = (target: Element, key: string, extra: KeyboardEventInit = {}) => {
   const e = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...extra });
   act(() => {
@@ -499,5 +502,122 @@ describe("CodeView sin proyecto (la vista previa de una plantilla)", () => {
     });
     expect(el.querySelector("nav")).toBeNull();
     expect([...el.querySelectorAll(".sx-etq")].map((s) => s.textContent)).toEqual(["h1", "h1"]);
+  });
+});
+
+describe("CodeView — dos editores lado a lado", () => {
+  const editorDe = (el: HTMLElement, g: number) => EditorView.findFromDOM(el.querySelector<HTMLElement>(`[data-grupo="${g}"] .cm-editor`)!)!;
+  const pestanasDe = (el: HTMLElement, g: number) => [...el.querySelectorAll(`[data-grupo="${g}"] [role="tab"]`)].map((t) => t.textContent);
+
+  it("«Dividir» abre el archivo también a la derecha; lo escrito en uno se ve en el otro", async () => {
+    const { el } = await pintar();
+    act(() => porEtiqueta(el, "Dividir a la derecha (Ctrl+\\)").click());
+    await esperar(() => el.querySelector('[data-grupo="1"] .cm-editor'));
+    expect(pestanasDe(el, 0)).toEqual(["index.html"]);
+    expect(pestanasDe(el, 1)).toEqual(["index.html"]);
+    // Con dos, no se ofrece dividir otra vez.
+    expect(porEtiqueta(el, "Dividir a la derecha (Ctrl+\\)")).toBeUndefined();
+    act(() => {
+      const v = editorDe(el, 0);
+      v.dispatch({ changes: { from: v.state.doc.length, insert: "<p>uno</p>" } });
+    });
+    await esperar(() => editorDe(el, 1).state.doc.toString().includes("uno"));
+    expect(editorDe(el, 1).state.doc.toString()).toBe("<h1>Portada</h1><p>uno</p>");
+    act(() => {
+      const v = editorDe(el, 1);
+      v.dispatch({ changes: { from: v.state.doc.length, insert: "<p>dos</p>" } });
+    });
+    await esperar(() => editorDe(el, 0).state.doc.toString().includes("dos"));
+    expect(editorDe(el, 0).state.doc.toString()).toBe("<h1>Portada</h1><p>uno</p><p>dos</p>");
+    // Cerrarlo en un lado no pregunta: lo escrito sigue en el otro.
+    act(() => el.querySelectorAll<HTMLButtonElement>('[data-grupo="1"] [aria-label^="Cerrar: index.html"]')[0]!.click());
+    expect(window.confirm).not.toHaveBeenCalled();
+    expect(el.querySelector('[data-grupo="1"]')).toBeNull();
+    expect(texto(el)).toContain("dos");
+  });
+
+  it("Ctrl+\\ divide; lo que se abre del árbol va al editor activo", async () => {
+    const { el } = await pintar();
+    tecla(document.body, "\\", { ctrlKey: true });
+    await esperar(() => el.querySelector('[data-grupo="1"] .cm-editor'));
+    act(() => botonDelArbol(el, "reservas.json").click());
+    await esperar(() => pestanasDe(el, 1).includes("reservas.json"));
+    expect(pestanasDe(el, 1)).toEqual(["index.html", "reservas.json"]);
+    expect(pestanasDe(el, 0)).toEqual(["index.html"]);
+  });
+
+  it("arrastrar una pestaña al otro editor la muda allí; un archivo del árbol, la abre", async () => {
+    const { el } = await pintar();
+    act(() => botonDelArbol(el, "reservas.json").click());
+    await esperar(() => activa(el) === "reservas.json");
+    act(() => porEtiqueta(el, "Dividir a la derecha (Ctrl+\\)").click());
+    await esperar(() => el.querySelector('[data-grupo="1"] .cm-editor'));
+    // La pestaña index.html del primero, al segundo.
+    const tab = [...el.querySelectorAll<HTMLElement>('[data-grupo="0"] [role="tab"]')].find((t) => t.textContent === "index.html")!.parentElement!;
+    act(() => {
+      tab.dispatchEvent(new Event("dragstart", { bubbles: true }));
+    });
+    act(() => {
+      el.querySelector('[data-grupo="1"]')!.dispatchEvent(new Event("drop", { bubbles: true, cancelable: true }));
+    });
+    expect(pestanasDe(el, 0)).toEqual(["reservas.json"]);
+    expect(pestanasDe(el, 1)).toEqual(["reservas.json", "index.html"]);
+    // Y un archivo del árbol soltado en el primero se abre en el primero.
+    act(() => {
+      botonDelArbol(el, "index.html").parentElement!.dispatchEvent(new Event("dragstart", { bubbles: true }));
+    });
+    act(() => {
+      el.querySelector('[data-grupo="0"]')!.dispatchEvent(new Event("drop", { bubbles: true, cancelable: true }));
+    });
+    await esperar(() => pestanasDe(el, 0).length === 2);
+    expect(pestanasDe(el, 0)).toEqual(["reservas.json", "index.html"]);
+  });
+});
+
+describe("CodeView — arrastrar y soltar en el árbol", () => {
+  const arrastrar = (desde: Element, hasta: Element) => {
+    act(() => {
+      desde.dispatchEvent(new Event("dragstart", { bubbles: true }));
+    });
+    act(() => {
+      hasta.dispatchEvent(new Event("dragover", { bubbles: true, cancelable: true }));
+    });
+    act(() => {
+      hasta.dispatchEvent(new Event("drop", { bubbles: true, cancelable: true }));
+    });
+  };
+
+  it("🔴 un archivo soltado en una carpeta se mueve a ella (y su pestaña lo sigue)", async () => {
+    respuesta = (m) => (m === "PATCH" ? new Response(JSON.stringify({ rutas: ["/menu/reservas.json"] })) : null);
+    const { el } = await pintar();
+    act(() => botonDelArbol(el, "reservas.json").click());
+    await esperar(() => activa(el) === "reservas.json");
+    arrastrar(botonDelArbol(el, "reservas.json").parentElement!, botonDelArbol(el, "menu").parentElement!);
+    await esperar(() => llamadas.some((l) => l.metodo === "PATCH"));
+    expect(llamadas.find((l) => l.metodo === "PATCH")!.cuerpo).toEqual({ de: "/datos/reservas.json", a: "/menu/reservas.json" });
+    await esperar(() => el.querySelector('[title="/menu/reservas.json"]'));
+    expect(el.querySelector('[role="tab"][aria-selected="true"]')!.closest("[title]")!.getAttribute("title")).toBe("/menu/reservas.json");
+  });
+
+  it("soltado en el hueco del árbol va a la raíz; soltado donde ya está, no hace nada", async () => {
+    respuesta = (m) => (m === "PATCH" ? new Response(JSON.stringify({ rutas: ["/reservas.json"] })) : null);
+    const { el } = await pintar();
+    const fila = botonDelArbol(el, "reservas.json").parentElement!;
+    // En un archivo de su misma carpeta: ya está ahí.
+    arrastrar(fila, fila);
+    expect(llamadas.some((l) => l.metodo === "PATCH")).toBe(false);
+    arrastrar(fila, el.querySelector("nav")!);
+    await esperar(() => llamadas.some((l) => l.metodo === "PATCH"));
+    expect(llamadas.find((l) => l.metodo === "PATCH")!.cuerpo).toEqual({ de: "/datos/reservas.json", a: "/reservas.json" });
+  });
+
+  it("una página no se arrastra, y lo de sólo lectura tampoco", async () => {
+    const { el } = await pintar();
+    expect(botonDelArbol(el, "menu").parentElement!.getAttribute("draggable")).toBe("true");
+    const pagina = [...el.querySelectorAll<HTMLButtonElement>("nav li button")].find(
+      (b) => b.querySelector(".truncate")?.textContent === "index.html" && b.closest("ul ul"),
+    )!;
+    expect(pagina.parentElement!.getAttribute("draggable")).toBe("false");
+    expect(botonDelArbol(el, ".openlen").parentElement!.getAttribute("draggable")).toBe("false");
   });
 });

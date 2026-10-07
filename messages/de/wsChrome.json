@@ -256,7 +256,8 @@
         "go": "los",
         "Fold_line": "Einklappen",
         "Unfold_line": "Ausklappen"
-      }
+      },
+      "dividir": "Rechts teilen"
     }
   },
   "placeholder": {

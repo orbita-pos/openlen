@@ -46,3 +46,14 @@ export function paginaDe(ruta: string): string | null | undefined {
   const m = /^\/([^/]+)\/index\.html$/.exec(ruta);
   return m ? m[1]! : undefined;
 }
+
+/**
+ * ARRASTRAR Y SOLTAR en el árbol: adónde va `arrastrada` si se suelta en
+ * `carpeta` (`""` es la raíz), o `null` si no hay nada que mover — ya está ahí,
+ * o es una carpeta que se soltaría dentro de sí misma.
+ */
+export function destinoAlSoltar(arrastrada: string, carpeta: string): string | null {
+  if (carpetaDe(arrastrada) === carpeta) return null;
+  if (carpeta !== "" && estaDentro(carpeta, arrastrada)) return null;
+  return rutaDentro(carpeta, arrastrada.slice(arrastrada.lastIndexOf("/") + 1));
+}

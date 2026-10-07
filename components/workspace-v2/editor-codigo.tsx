@@ -19,7 +19,7 @@
 // #8): `onNumero`. Las líneas que ya llevan comentario se marcan en el margen.
 
 import { useEffect, useRef } from "react";
-import { EditorState, RangeSet, StateEffect, StateField, type Extension } from "@codemirror/state";
+import { Annotation, EditorState, RangeSet, StateEffect, StateField, type Extension } from "@codemirror/state";
 import {
   EditorView,
   GutterMarker,
@@ -139,6 +139,9 @@ const tema = EditorView.theme({
   ".ol-marca-comentario": { color: "var(--accent)", paddingLeft: "4px" },
 });
 
+/** Marca lo que entra POR FUERA (`revision`): no es una tecla del dueño, y no se avisa con `onCambio`. */
+const deFuera = Annotation.define<boolean>();
+
 // ── Las líneas con comentario, en el margen ──────────────────────────────────
 class MarcaDeComentario extends GutterMarker {
   override toDOM() {
@@ -172,8 +175,9 @@ const margenDeComentarios = gutter({
 export interface EditorCodigoProps {
   readonly ruta: string;
   readonly valor: string;
-  /** Sube cuando el contenido cambia por fuera: el editor se reemplaza con `valor`. */
-  readonly revision: number;
+  /** Cambia cuando el contenido cambia por fuera (o en el otro editor del mismo
+   *  archivo): el editor se reemplaza con `valor`. */
+  readonly revision: number | string;
   readonly soloLectura?: boolean;
   readonly onCambio?: (texto: string) => void;
   readonly onGuardar?: () => void;
@@ -270,7 +274,7 @@ export default function EditorCodigo({
           EditorView.editable.of(!soloLectura),
           EditorView.contentAttributes.of({ "aria-label": etiqueta, spellcheck: "false", autocapitalize: "off" }),
           EditorView.updateListener.of((u) => {
-            if (u.docChanged) cb.current.onCambio?.(u.state.doc.toString());
+            if (u.docChanged && !u.transactions.every((t) => t.annotation(deFuera))) cb.current.onCambio?.(u.state.doc.toString());
           }),
         ],
       }),
@@ -290,7 +294,12 @@ export default function EditorCodigo({
     const v = vista.current;
     if (!v || vista0.current === revision) return;
     vista0.current = revision;
-    if (v.state.doc.toString() !== valor) v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: valor } });
+    if (v.state.doc.toString() !== valor) {
+      // Lo escrito en el OTRO editor llega a éste: el cursor se queda donde
+      // estaba (recortado si el texto encogió).
+      const cursor = Math.min(v.state.selection.main.head, valor.length);
+      v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: valor }, selection: { anchor: cursor }, annotations: deFuera.of(true) });
+    }
   }, [revision, valor]);
 
   useEffect(() => {

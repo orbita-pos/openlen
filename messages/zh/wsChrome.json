@@ -256,7 +256,8 @@
         "go": "跳转",
         "Fold_line": "折叠",
         "Unfold_line": "展开"
-      }
+      },
+      "dividir": "向右拆分"
     }
   },
   "placeholder": {

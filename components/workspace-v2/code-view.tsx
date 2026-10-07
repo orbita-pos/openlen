@@ -42,12 +42,13 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type DragEvent as ReactDragEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
 import dynamic from "next/dynamic";
-import { ChevronsDownUp, FilePlus, FolderPlus, MoreHorizontal, RefreshCw } from "lucide-react";
+import { ChevronsDownUp, Columns2, FilePlus, FolderPlus, MoreHorizontal, RefreshCw } from "lucide-react";
 import { esDeSoloLectura } from "@/lib/agent/terminal/ficheros";
 import type { PeticionDeCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import {
@@ -60,7 +61,27 @@ import {
 } from "@/lib/workspace-v2/arbol-de-ficheros";
 import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
 import { buscarEnFicheros, type FicheroBuscable, type ResultadosDeBusqueda } from "@/lib/workspace-v2/buscar-en-ficheros";
-import { carpetaDe, carpetaDestino, estaDentro, moverRuta, nombreValido, paginaDe, rutaDentro } from "@/lib/workspace-v2/explorador";
+import {
+  carpetaDe,
+  carpetaDestino,
+  destinoAlSoltar,
+  estaDentro,
+  moverRuta,
+  nombreValido,
+  paginaDe,
+  rutaDentro,
+} from "@/lib/workspace-v2/explorador";
+import {
+  abiertaEnAlguno,
+  abrirEn,
+  cerrarEn,
+  dividir,
+  moverPestana,
+  quitarDentro,
+  renombrarEn,
+  unGrupo,
+  type Editores,
+} from "@/lib/workspace-v2/grupos-de-editores";
 import { colorearLineas, lenguajeDe, type Lenguaje } from "@/lib/workspace-v2/colorear";
 import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 
@@ -113,6 +134,8 @@ export interface EtiquetasDelIde {
   readonly carpetaVacia: string;
   readonly cerrarAviso: string;
   readonly noSeHizo: string;
+  /** «Dividir a la derecha»: el archivo, también en un segundo editor al lado. */
+  readonly dividir: string;
   /** Las frases del editor (buscar y reemplazar, plegar), por su texto en inglés. */
   readonly frasesDelEditor?: Readonly<Record<string, string>>;
 }
@@ -183,12 +206,26 @@ interface Buffer {
   /** Sube cuando el texto cambia POR FUERA (ver `editor-codigo.tsx`). */
   readonly revision: number;
   readonly estado: EstadoDelBuffer;
+  /** Cada tecla, y en qué grupo: el MISMO archivo abierto en los dos editores
+   *  se ve igual en los dos (el otro se pone al día). */
+  readonly version?: number;
+  readonly autor?: number;
 }
+
+/** La revisión que ve el editor del grupo `g`: sube con lo de fuera y con lo
+ *  que se escribe en el OTRO grupo; lo que escribe él mismo no la mueve. */
+const revisionPara = (b: Buffer | null, g: number): string =>
+  b ? `${b.revision}.${b.autor === undefined || b.autor === g ? 0 : (b.version ?? 0)}` : "0";
+
+/** Lo que se arrastra: una fila del árbol o una pestaña (con su grupo). */
+type Arrastre =
+  | { readonly de: "arbol"; readonly ruta: string; readonly tipo: "carpeta" | "fichero" }
+  | { readonly de: "pestana"; readonly ruta: string; readonly grupo: number };
+const TIPO_ARRASTRE = "application/x-openlen-ruta";
 
 /** Lo que se recuerda de un proyecto mientras dura la pestaña del navegador. */
 interface Sesion {
-  readonly pestanas: readonly string[];
-  readonly activa: string | null;
+  readonly editores: Editores;
   readonly buffers: Readonly<Record<string, Buffer>>;
   readonly carpetasVacias: readonly string[];
 }
@@ -250,18 +287,20 @@ function Explorador({
   const [lista, setLista] = useState<ListaDeFicheros | "cargando" | "error">("cargando");
   const [perezosos, setPerezosos] = useState<Readonly<Record<string, string | "cargando" | "error">>>({});
   const [abiertas, setAbiertas] = useState<Set<string> | null>(null);
-  // LAS PESTAÑAS y lo escrito en ellas. Al entrar, lo que se recordaba de este
-  // proyecto; si no, la página abierta (o la que pidió el Chat).
-  const [pestanas, setPestanas] = useState<readonly string[]>(() => {
-    const base = recordada?.pestanas ?? [rutaActual];
-    return peticion && !base.includes(peticion.ruta) ? [...base, peticion.ruta] : base;
+  // LOS EDITORES (uno, o dos lado a lado), sus pestañas y lo escrito en ellas.
+  // Al entrar, lo que se recordaba de este proyecto; si no, la página abierta
+  // (o la que pidió el Chat).
+  const [editores, setEditores] = useState<Editores>(() => {
+    const base = recordada?.editores ?? unGrupo([rutaActual], rutaActual);
+    return peticion ? abrirEn(base, base.activo, peticion.ruta) : base;
   });
-  const [activa, setActiva] = useState<string | null>(() => peticion?.ruta ?? recordada?.activa ?? rutaActual);
+  const grupoActivo = editores.grupos[editores.activo] ?? editores.grupos[0]!;
+  const activa = grupoActivo.activa;
   const [buffers, setBuffers] = useState<Readonly<Record<string, Buffer>>>(() => recordada?.buffers ?? {});
   const [carpetasVacias, setCarpetasVacias] = useState<readonly string[]>(() => recordada?.carpetasVacias ?? []);
   useEffect(() => {
-    SESIONES.set(projectId, { pestanas, activa, buffers, carpetasVacias });
-  }, [projectId, pestanas, activa, buffers, carpetasVacias]);
+    SESIONES.set(projectId, { editores, buffers, carpetasVacias });
+  }, [projectId, editores, buffers, carpetasVacias]);
   // Cerrar la pestaña del NAVEGADOR con algo sin guardar avisa, como VS Code.
   useEffect(() => {
     const antes = (e: BeforeUnloadEvent) => {
@@ -284,7 +323,8 @@ function Explorador({
   // flechas, y la línea a la que saltar al abrir un resultado de contenido.
   const [consulta, setConsulta] = useState("");
   const [activo, setActivo] = useState(0);
-  const [salto, setSalto] = useState<{ readonly linea: number; readonly n: number } | null>(null);
+  // A qué línea ir, y de qué archivo (en el grupo que lo tenga delante).
+  const [salto, setSalto] = useState<{ readonly ruta: string; readonly linea: number; readonly n: number } | null>(null);
   const buscador = useRef<HTMLInputElement>(null);
 
   // La lista se vuelve a pedir tras cada cambio de aquí, y cuando Len cambia algo.
@@ -364,12 +404,11 @@ function Explorador({
 
   const esPerezoso = (ruta: string) => typeof lista !== "string" && lista.perezosos.includes(ruta);
 
-  /** Abrir en una pestaña (o ir a la suya), con sus carpetas desplegadas. */
-  const abrir = useCallback((ruta: string, linea: number | null = null) => {
-    setPestanas((p) => (p.includes(ruta) ? p : [...p, ruta]));
-    setActiva(ruta);
+  /** Abrir en una pestaña del grupo activo (o de `grupo`), con sus carpetas desplegadas. */
+  const abrir = useCallback((ruta: string, linea: number | null = null, grupo?: number) => {
+    setEditores((e) => abrirEn(e, grupo ?? e.activo, ruta));
     setSeleccion({ ruta, tipo: "fichero" });
-    setSalto(linea === null ? null : { linea, n: Date.now() });
+    setSalto(linea === null ? null : { ruta, linea, n: Date.now() });
     setAbiertas(conCarpetasHasta(ruta));
   }, []);
 
@@ -386,20 +425,20 @@ function Explorador({
     if (activa && esPerezoso(activa) && perezosos[activa] === undefined) pedirPerezoso(activa);
   });
 
-  const cerrarPestana = (ruta: string) => {
+  const cerrarPestana = (ruta: string, g: number) => {
+    const despues = cerrarEn(editores, g, ruta);
+    // Abierta también en el otro grupo, lo escrito sigue ahí: no hay nada que perder.
+    const sigue = abiertaEnAlguno(despues, ruta);
     const b = buffers[ruta];
-    if (b && b.texto !== b.base && !window.confirm(ide.confirmarCerrar(nombreDe(ruta)))) return;
-    setPestanas((p) => {
-      const i = p.indexOf(ruta);
-      const quedan = p.filter((r) => r !== ruta);
-      if (activa === ruta) setActiva(quedan[Math.min(i, quedan.length - 1)] ?? null);
-      return quedan;
-    });
-    setBuffers((prev) => {
-      const { [ruta]: _fuera, ...resto } = prev;
-      void _fuera;
-      return resto;
-    });
+    if (!sigue && b && b.texto !== b.base && !window.confirm(ide.confirmarCerrar(nombreDe(ruta)))) return;
+    setEditores(despues);
+    if (!sigue) {
+      setBuffers((prev) => {
+        const { [ruta]: _fuera, ...resto } = prev;
+        void _fuera;
+        return resto;
+      });
+    }
   };
 
   // ── Lo que se ve de cada archivo ──────────────────────────────────────────
@@ -516,8 +555,7 @@ function Explorador({
     }
     // Lo abierto, lo escrito y lo desplegado siguen a su ruta nueva.
     setCarpetasVacias((c) => c.map((x) => moverRuta(x, de, a)));
-    setPestanas((p) => p.map((x) => moverRuta(x, de, a)));
-    setActiva((x) => (x ? moverRuta(x, de, a) : x));
+    setEditores((e) => renombrarEn(e, de, a));
     setBuffers((prev) => Object.fromEntries(Object.entries(prev).map(([r, b]) => [moverRuta(r, de, a), b])));
     setAbiertas((s) => (s ? new Set([...s].map((x) => moverRuta(x, de, a))) : s));
     setSeleccion({ ruta: a, tipo: que });
@@ -529,11 +567,7 @@ function Explorador({
     if (!window.confirm(que === "carpeta" ? ide.confirmarBorrarCarpeta(ruta) : ide.confirmarBorrar(ruta))) return;
     const quitarDeAqui = () => {
       setCarpetasVacias((c) => c.filter((x) => !estaDentro(x, ruta)));
-      setPestanas((p) => {
-        const quedan = p.filter((x) => !estaDentro(x, ruta));
-        setActiva((x) => (x && estaDentro(x, ruta) ? (quedan.at(-1) ?? null) : x));
-        return quedan;
-      });
+      setEditores((e) => quitarDentro(e, ruta));
       setBuffers((prev) => Object.fromEntries(Object.entries(prev).filter(([r]) => !estaDentro(r, ruta))));
       setSeleccion(null);
     };
@@ -706,8 +740,23 @@ function Explorador({
           return (
             <li key={n.ruta}>
               <div
-                className={`group relative flex items-center ${elegida ? "bg-hover" : "hover:bg-hover"}`}
+                className={`group relative flex items-center ${
+                  sobre === n.ruta && n.tipo === "carpeta"
+                    ? "bg-accent-soft ring-1 ring-inset ring-[color:var(--accent)]"
+                    : elegida
+                      ? "bg-hover"
+                      : "hover:bg-hover"
+                }`}
                 onContextMenu={(e) => abrirMenu(e, n)}
+                // ARRASTRAR: lo que se puede mover (ni lo de sólo lectura, ni una página).
+                draggable={!n.soloLectura && !n.perezoso && paginaDe(n.ruta) === undefined}
+                onDragStart={(e) => empezarArrastre(e, { de: "arbol", ruta: n.ruta, tipo: n.tipo })}
+                onDragEnd={terminarArrastre}
+                // SOLTAR: en una carpeta, dentro; en un archivo, en su carpeta (como VS Code).
+                onDragOver={(e) =>
+                  encimaDeCarpeta(e, n.tipo === "carpeta" ? n.ruta : carpetaDe(n.ruta), n.tipo === "carpeta" && !abierta)
+                }
+                onDrop={(e) => soltarEnCarpeta(e, n.tipo === "carpeta" ? n.ruta : carpetaDe(n.ruta))}
               >
                 {n.tipo === "carpeta" ? (
                   <button
@@ -763,22 +812,91 @@ function Explorador({
     );
   };
 
-  const nodoActivo = activa ? buscarNodo(arbol, activa) : null;
-  const contenidoActivo: string | "cargando" | "error" | "no-esta" | null = !activa
-    ? null
-    : editable(activa)
-      ? bufferDe(activa)!.texto
-      : esPerezoso(activa)
-        ? (perezosos[activa] ?? "cargando")
+  /** Lo que enseña la pestaña de `ruta`: lo escrito, lo calculado al abrirlo, o por qué no hay nada. */
+  const contenidoDe = (ruta: string): string | "cargando" | "error" | "no-esta" =>
+    editable(ruta)
+      ? bufferDe(ruta)!.texto
+      : esPerezoso(ruta)
+        ? (perezosos[ruta] ?? "cargando")
         : typeof lista === "string"
           ? lista
-          : guardados.get(activa) ?? "no-esta";
+          : (guardados.get(ruta) ?? "no-esta");
+
+  // ── Arrastrar y soltar ────────────────────────────────────────────────────
+  // Lo arrastrado vive aquí (el `dataTransfer` sólo se lee al soltar, y no en
+  // todos los navegadores mientras se arrastra); al `dataTransfer` va la ruta
+  // en texto, que es lo que pide Firefox para empezar a arrastrar.
+  const arrastre = useRef<Arrastre | null>(null);
+  const [sobre, setSobre] = useState<string | null>(null);
+  const relojDeDesplegar = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const empezarArrastre = (e: ReactDragEvent, a: Arrastre) => {
+    arrastre.current = a;
+    e.dataTransfer?.setData(TIPO_ARRASTRE, a.ruta);
+    e.dataTransfer?.setData("text/plain", a.ruta);
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+  };
+  const terminarArrastre = () => {
+    arrastre.current = null;
+    setSobre(null);
+    if (relojDeDesplegar.current) clearTimeout(relojDeDesplegar.current);
+  };
+  /** Soltar en el árbol: `carpeta` es la carpeta de destino (`""`, la raíz). */
+  const soltarEnCarpeta = (e: ReactDragEvent, carpeta: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const a = arrastre.current;
+    terminarArrastre();
+    if (!a || a.de !== "arbol") return;
+    const destino = destinoAlSoltar(a.ruta, carpeta);
+    if (destino) void renombrar(a.ruta, destino, a.tipo);
+  };
+  const encimaDeCarpeta = (e: ReactDragEvent, carpeta: string, plegada: boolean) => {
+    const a = arrastre.current;
+    if (!a || a.de !== "arbol" || destinoAlSoltar(a.ruta, carpeta) === null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    if (sobre !== carpeta) {
+      setSobre(carpeta);
+      // Una carpeta plegada se abre si te quedas encima, como en VS Code.
+      if (relojDeDesplegar.current) clearTimeout(relojDeDesplegar.current);
+      if (plegada && carpeta) relojDeDesplegar.current = setTimeout(() => desplegar(carpeta), 600);
+    }
+  };
+  /** Soltar en un editor: un archivo del árbol se abre ahí; una pestaña del otro grupo se muda. */
+  const soltarEnGrupo = (e: ReactDragEvent, g: number) => {
+    const a = arrastre.current;
+    if (!a) return;
+    e.preventDefault();
+    terminarArrastre();
+    if (a.de === "pestana") setEditores((x) => moverPestana(x, a.grupo, g, a.ruta));
+    else if (a.tipo === "fichero") abrir(a.ruta, null, g);
+  };
+  const dividirActivo = () => setEditores((e) => dividir(e, e.activo));
+  // Ctrl/Cmd+\ divide el editor, como en VS Code.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "\\") {
+        e.preventDefault();
+        setEditores((x) => dividir(x, x.activo));
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+  const sucias = new Set(Object.entries(buffers).filter(([, b]) => b.texto !== b.base).map(([r]) => r));
 
   return (
     <div className="flex h-full min-h-0 flex-col md:flex-row">
       <nav
         aria-label={labels.files}
         onKeyDown={teclaEnElArbol}
+        // Soltar en el hueco del árbol (o en su cabecera) lleva a la raíz.
+        onDragOver={(e) => encimaDeCarpeta(e, "", false)}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setSobre(null);
+        }}
+        onDrop={(e) => soltarEnCarpeta(e, "")}
         className="max-h-56 shrink-0 overflow-auto nice-scroll border-b bd py-1 text-[12px] md:max-h-none md:w-60 md:border-b-0 md:border-r"
       >
         <div className="flex items-center gap-0.5 px-3 py-1">
@@ -877,47 +995,75 @@ function Explorador({
           }}
         />
       )}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <Pestanas
-          pestanas={pestanas}
-          activa={activa}
-          sucias={new Set(Object.entries(buffers).filter(([, b]) => b.texto !== b.base).map(([r]) => r))}
-          labels={ide}
-          onElegir={(r) => {
-            setActiva(r);
-            setSalto(null);
-            setSeleccion({ ruta: r, tipo: "fichero" });
-          }}
-          onCerrar={cerrarPestana}
-        />
-        {!activa || contenidoActivo === null ? (
-          <p className="p-4 text-[12px] fg-muted">{ide.vacio}</p>
-        ) : contenidoActivo === "cargando" ? (
-          <p className="p-3 text-[12px] fg-muted">{labels.loading}</p>
-        ) : contenidoActivo === "error" ? (
-          <p className="p-3 text-[12px] fg-muted">{labels.loadError}</p>
-        ) : contenidoActivo === "no-esta" ? (
-          <p className="p-3 text-[12px] fg-muted">
-            <span className="font-mono">{activa.replace(/^\//, "")}</span> · {labels.noEsta}
-          </p>
-        ) : (
-          <PanelDelArchivo
-            key={activa}
-            projectId={projectId}
-            ruta={activa}
-            texto={contenidoActivo}
-            buffer={editable(activa) ? bufferDe(activa) : null}
-            soloLectura={!editable(activa)}
-            notaDeSoloLectura={nodoActivo?.perezoso || esDeSoloLectura(activa) ? labels.readOnly : null}
-            salto={salto}
-            labels={labels}
-            onCambio={(texto) => ponerBuffer(activa, (b) => ({ ...b, texto }))}
-            onGuardar={() => void guardar(activa)}
-            onCargarAhora={(actual) =>
-              ponerBuffer(activa, (b) => ({ base: actual, texto: actual, revision: b.revision + 1, estado: { tipo: "listo" } }))
-            }
-          />
-        )}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col md:flex-row">
+        {editores.grupos.map((grupo, g) => {
+          const ruta = grupo.activa;
+          const contenido = ruta ? contenidoDe(ruta) : null;
+          const nodo = ruta ? buscarNodo(arbol, ruta) : null;
+          const varios = editores.grupos.length > 1;
+          return (
+            <div
+              key={g}
+              data-grupo={g}
+              // Pulsar en un editor lo hace el activo: ahí se abre lo que se pulse en el árbol.
+              onMouseDownCapture={() => editores.activo !== g && setEditores((e) => ({ ...e, activo: g }))}
+              onFocusCapture={() => editores.activo !== g && setEditores((e) => ({ ...e, activo: g }))}
+              onDragOver={(e) => {
+                if (arrastre.current && (arrastre.current.de === "pestana" || arrastre.current.tipo === "fichero")) e.preventDefault();
+              }}
+              onDrop={(e) => soltarEnGrupo(e, g)}
+              className={`flex min-h-0 min-w-0 flex-1 flex-col ${g > 0 ? "border-t bd md:border-l md:border-t-0" : ""} ${
+                varios && editores.activo === g ? "shadow-[inset_0_2px_0_var(--accent)]" : ""
+              }`}
+            >
+              <Pestanas
+                pestanas={grupo.pestanas}
+                activa={ruta}
+                sucias={sucias}
+                labels={ide}
+                onElegir={(r) => {
+                  setEditores((e) => abrirEn(e, g, r));
+                  setSalto(null);
+                  setSeleccion({ ruta: r, tipo: "fichero" });
+                }}
+                onCerrar={(r) => cerrarPestana(r, g)}
+                onArrastrar={(e, r) => empezarArrastre(e, { de: "pestana", ruta: r, grupo: g })}
+                onSoltarArrastre={terminarArrastre}
+              />
+              {!ruta || contenido === null ? (
+                <p className="p-4 text-[12px] fg-muted">{ide.vacio}</p>
+              ) : contenido === "cargando" ? (
+                <p className="p-3 text-[12px] fg-muted">{labels.loading}</p>
+              ) : contenido === "error" ? (
+                <p className="p-3 text-[12px] fg-muted">{labels.loadError}</p>
+              ) : contenido === "no-esta" ? (
+                <p className="p-3 text-[12px] fg-muted">
+                  <span className="font-mono">{ruta.replace(/^\//, "")}</span> · {labels.noEsta}
+                </p>
+              ) : (
+                <PanelDelArchivo
+                  key={ruta}
+                  projectId={projectId}
+                  ruta={ruta}
+                  texto={contenido}
+                  buffer={editable(ruta) ? bufferDe(ruta) : null}
+                  revision={revisionPara(editable(ruta) ? bufferDe(ruta) : null, g)}
+                  soloLectura={!editable(ruta)}
+                  notaDeSoloLectura={nodo?.perezoso || esDeSoloLectura(ruta) ? labels.readOnly : null}
+                  salto={salto && salto.ruta === ruta ? salto : null}
+                  labels={labels}
+                  onCambio={(texto) => ponerBuffer(ruta, (b) => ({ ...b, texto, version: (b.version ?? 0) + 1, autor: g }))}
+                  onGuardar={() => void guardar(ruta)}
+                  onDividir={editores.grupos.length < 2 ? dividirActivo : null}
+                  compacto={varios}
+                  onCargarAhora={(actual) =>
+                    ponerBuffer(ruta, (b) => ({ base: actual, texto: actual, revision: b.revision + 1, estado: { tipo: "listo" } }))
+                  }
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1090,6 +1236,8 @@ function Pestanas({
   labels,
   onElegir,
   onCerrar,
+  onArrastrar,
+  onSoltarArrastre,
 }: {
   pestanas: readonly string[];
   activa: string | null;
@@ -1097,6 +1245,9 @@ function Pestanas({
   labels: EtiquetasDelIde;
   onElegir: (ruta: string) => void;
   onCerrar: (ruta: string) => void;
+  /** Arrastrar una pestaña al otro editor la muda allí. */
+  onArrastrar?: (e: ReactDragEvent, ruta: string) => void;
+  onSoltarArrastre?: () => void;
 }) {
   if (pestanas.length === 0) return null;
   return (
@@ -1109,6 +1260,9 @@ function Pestanas({
             key={ruta}
             className={`group flex shrink-0 items-center gap-1 border-r bd pl-3 pr-1 text-[12px] ${es ? "bg-app fg" : "fg-muted hover:fg"}`}
             title={ruta}
+            draggable={Boolean(onArrastrar)}
+            onDragStart={(e) => onArrastrar?.(e, ruta)}
+            onDragEnd={() => onSoltarArrastre?.()}
             onAuxClick={(e) => {
               if (e.button === 1) onCerrar(ruta);
             }}
@@ -1146,25 +1300,34 @@ function PanelDelArchivo({
   ruta,
   texto,
   buffer,
+  revision,
   soloLectura,
   notaDeSoloLectura,
   salto,
   labels,
   onCambio,
   onGuardar,
+  onDividir,
   onCargarAhora,
+  compacto = false,
 }: {
   projectId: string;
   ruta: string;
   texto: string;
   buffer: Buffer | null;
+  /** La que ve ESTE editor (`revisionPara`): con dos grupos, cada uno la suya. */
+  revision: string;
   soloLectura: boolean;
   notaDeSoloLectura: string | null;
   salto: { readonly linea: number; readonly n: number } | null;
   labels: CodeViewProps["labels"];
   onCambio: (texto: string) => void;
   onGuardar: () => void;
+  /** «Dividir a la derecha»; `null` si ya hay dos editores. */
+  onDividir: (() => void) | null;
   onCargarAhora: (actual: string) => void;
+  /** Con dos editores lado a lado, la cabecera va sin la ayuda: la ruta primero. */
+  compacto?: boolean;
 }) {
   const [copiado, setCopiado] = useState(false);
   useEffect(() => {
@@ -1203,7 +1366,7 @@ function PanelDelArchivo({
         {notaDeSoloLectura ? (
           <span className="hidden truncate text-[10.5px] fg-faint ui-small md:block">{notaDeSoloLectura}</span>
         ) : (
-          <span className="hidden truncate text-[10.5px] fg-faint ui-small lg:block">{labels.ide.comentarAyuda}</span>
+          !compacto && <span className="hidden truncate text-[10.5px] fg-faint ui-small lg:block">{labels.ide.comentarAyuda}</span>
         )}
         <span className="ml-auto flex shrink-0 items-center gap-1.5">
           {!soloLectura && (
@@ -1225,6 +1388,11 @@ function PanelDelArchivo({
             {copiado ? <Check size={11} /> : <Copy size={11} />}
             {copiado ? labels.copied : labels.copy}
           </button>
+          {onDividir && (
+            <IconBtn label={`${labels.ide.dividir} (Ctrl+\\)`} size="sm" onClick={onDividir}>
+              <Columns2 size={13} />
+            </IconBtn>
+          )}
         </span>
       </header>
       {estado.tipo === "cambio" && (
@@ -1246,7 +1414,7 @@ function PanelDelArchivo({
         <EditorCodigo
           ruta={ruta}
           valor={texto}
-          revision={buffer?.revision ?? 0}
+          revision={revision}
           soloLectura={soloLectura}
           onCambio={onCambio}
           onGuardar={onGuardar}

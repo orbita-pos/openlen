@@ -264,7 +264,8 @@
         "go": "ir",
         "Fold_line": "Recolher",
         "Unfold_line": "Expandir"
-      }
+      },
+      "dividir": "Dividir à direita"
     }
   },
   "placeholder": {

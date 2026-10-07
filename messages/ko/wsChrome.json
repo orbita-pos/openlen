@@ -256,7 +256,8 @@
         "go": "이동",
         "Fold_line": "접기",
         "Unfold_line": "펼치기"
-      }
+      },
+      "dividir": "오른쪽으로 분할"
     }
   },
   "placeholder": {

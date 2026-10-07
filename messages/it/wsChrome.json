@@ -256,7 +256,8 @@
         "go": "vai",
         "Fold_line": "Comprimi",
         "Unfold_line": "Espandi"
-      }
+      },
+      "dividir": "Dividi a destra"
     }
   },
   "placeholder": {
