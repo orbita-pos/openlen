@@ -46,7 +46,7 @@ async function quien(ctx: Ctx): Promise<Quien> {
   const { id } = await ctx.params;
   const acceso = await accesoAlProyecto(id, userId);
   if (!acceso) return { ok: false, respuesta: json({ error: "not_found" }, 404) };
-  return { ok: true, id, userId, acceso, nombre: session.user?.name ?? null };
+  return { ok: true, id, userId, acceso, nombre: session.user?.name ?? session.user?.email ?? null };
 }
 
 const soloDueno = () => json({ error: "solo_dueno", message: "Only the project owner can manage members." }, 403);
@@ -73,7 +73,12 @@ export async function GET(_req: Request, ctx: Ctx): Promise<Response> {
   });
 }
 
-const Invitar = z.object({ email: z.string().trim().email().max(320), rol: z.enum(ROLES_DE_MIEMBRO as [string, ...string[]]) });
+const Invitar = z.object({
+  email: z.string().trim().email().max(320),
+  rol: z.enum(ROLES_DE_MIEMBRO as [string, ...string[]]),
+  /** El idioma de la interfaz de quien invita: el del correo. */
+  idioma: z.string().max(8).optional(),
+});
 
 export async function POST(req: Request, ctx: Ctx): Promise<Response> {
   const q = await quien(ctx);
@@ -91,6 +96,7 @@ export async function POST(req: Request, ctx: Ctx): Promise<Response> {
     projectTitle: p?.title ?? "",
     inviterName: q.nombre,
     rol,
+    idioma: body.data.idioma ?? null,
     acceptUrl: `${siteUrl}/api/miembros/aceptar?token=${encodeURIComponent(r.token)}`,
   }).catch((err) => console.error("[miembros] el correo de invitación falló", err));
   return json({ ok: true, invitado: body.data.email.toLowerCase(), rol });

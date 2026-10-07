@@ -14,6 +14,10 @@ import { _resetGoalActivation, armGoal, goalActivation } from "@/lib/agent/goal-
 // (plans/crear-es-len).
 
 const mocks = vi.hoisted(() => ({
+  // Compartir el proyecto: lo que un miembro gasta y le queda (lib/projects/miembros.ts).
+  cabeEnElTope: vi.fn(async () => true),
+  margenDeMiembros: vi.fn(async (): Promise<number | null> => null),
+  sumarGasto: vi.fn(async () => undefined),
   guardarCambiosDelTurno: vi.fn(async () => false),
   auth: vi.fn(),
   getCreditState: vi.fn(),
@@ -86,6 +90,11 @@ const mocks = vi.hoisted(() => ({
 
 // Compartir el proyecto: aquí quien pide es el dueño (ver acceso-de-prueba.ts).
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
+vi.mock("@/lib/projects/miembros", () => ({
+  cabeEnElTope: mocks.cabeEnElTope,
+  margenDeMiembros: mocks.margenDeMiembros,
+  sumarGasto: mocks.sumarGasto,
+}));
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 // El correo del dueño sale de la base (`ownerEmail`). Sin este doble, cada turno
 // de estas pruebas esperaba ~2,7 s a una base que aquí no existe — y las rondas
@@ -202,6 +211,7 @@ vi.mock("@/lib/agent/verify", () => ({
 }));
 
 import { POST } from "./route";
+import { fijarAccesoDePrueba } from "@/lib/projects/acceso-de-prueba";
 
 async function readEvents(res: Response): Promise<Array<{ event: string; data: Record<string, unknown> }>> {
   const text = await res.text();
@@ -2420,5 +2430,90 @@ describe("POST /api/agent — el encargo", () => {
     expect((done(eventos).round as { next?: string }).next).toBeTruthy();
     await vi.waitFor(() => expect(filas()).toHaveLength(2));
     expect(promptDe(1)).toBe(goalRoundPrompt({ objective: OBJETIVO, maxGoalRounds: 256 }, 1));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPARTIR EL PROYECTO: un EDITOR habla con Len en el proyecto del dueño. El
+// turno corre con el id del dueño (él paga), cuenta contra el tope de los
+// miembros, no puede abrir encargos; un lector no habla con Len.
+describe("POST /api/agent — un miembro del proyecto", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "ana", email: "ana@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<html><body><h1>hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "pro", balance: 5_000, allotment: 15_000, refillsAt: null });
+    mocks.techoDelTurno.mockReturnValue(3_000);
+    mocks.cabeEnElTope.mockResolvedValue(true);
+    mocks.margenDeMiembros.mockResolvedValue(null);
+    fijarAccesoDePrueba((_p, u) => (u === "ana" ? { rol: "editor", duenoId: "dueno-1" } : null));
+  });
+  afterEach(() => fijarAccesoDePrueba(null));
+
+  const pedir = (extra: Record<string, unknown> = {}) =>
+    POST(
+      new Request("http://localhost/api/agent", {
+        method: "POST",
+        body: JSON.stringify({ projectId: "p1", prompt: "cambia el título", ...extra }),
+      }),
+    );
+
+  it("🔴 el turno de un editor lee el proyecto del dueño, cobra al dueño y suma el gasto del miembro", async () => {
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "Hecho.", turns: 1, toolCalls: 1,
+      usage: { inputTokens: 10, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: true,
+    });
+    mocks.creditsForUsage.mockReturnValue(42);
+    await readEvents(await pedir());
+    expect(mocks.loadProject).toHaveBeenCalledWith("p1", "dueno-1");
+    expect(mocks.getCreditState).toHaveBeenCalledWith("dueno-1");
+    expect(mocks.debitCredits).toHaveBeenCalledWith("dueno-1", 42);
+    expect(mocks.sumarGasto).toHaveBeenCalledWith("p1", "ana", 42);
+  });
+
+  it("el techo del turno de un miembro es lo que le queda al proyecto, si es menos", async () => {
+    let excede: AgentLoopArgs["excedePresupuesto"];
+    mocks.margenDeMiembros.mockResolvedValue(500);
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      excede = args.excedePresupuesto;
+      return { finalText: "", turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 }, terminalError: false };
+    });
+    mocks.creditsForUsage.mockImplementation((i: number) => i);
+    await readEvents(await pedir());
+    const uso = (i: number) => ({ inputTokens: i, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 });
+    expect(excede!(uso(499))).toBe(false);
+    expect(excede!(uso(500))).toBe(true);
+  });
+
+  it("con el tope del proyecto agotado, 402 y Len no empieza", async () => {
+    mocks.cabeEnElTope.mockResolvedValue(false);
+    const res = await pedir();
+    expect(res.status).toBe(402);
+    expect(await res.json()).toMatchObject({ code: "tope_de_miembros" });
+    expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+  });
+
+  it("un editor no abre ni reanuda un encargo (corre solo, sin nadie delante: eso es del dueño)", async () => {
+    const res = await pedir({ goal: "create" });
+    expect(res.status).toBe(403);
+    expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+  });
+
+  it("un lector no habla con Len, y quien no es miembro ni sabe que el proyecto existe", async () => {
+    fijarAccesoDePrueba((_p, u) => (u === "ana" ? { rol: "lector", duenoId: "dueno-1" } : null));
+    expect((await pedir()).status).toBe(403);
+    mocks.auth.mockResolvedValue({ user: { id: "extrano", email: "x@example.com" } });
+    expect((await pedir()).status).toBe(404);
+    expect(mocks.loadProject).not.toHaveBeenCalled();
+    expect(mocks.runAgentLoop).not.toHaveBeenCalled();
   });
 });

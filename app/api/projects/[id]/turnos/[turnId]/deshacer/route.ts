@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { deshacerTurno } from "@/lib/projects/deshacer-turno";
 import { exigirAcceso } from "@/lib/projects/acceso";
+import { conAutorDeLaPeticion, quienDeLaSesion } from "@/lib/projects/autor-del-cambio";
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,7 @@ export const runtime = "nodejs";
 //   409 { error: "se_solapan", rutas } — alguien cambió después algo del turno
 //   409 { error: "sin_cambios", noSeDeshacen } — sólo cambió lo que no vuelve
 //   503 { error: "conflicto" }        — otro guardado se coló; se puede reintentar
-export async function POST(
+export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(
   _req: Request,
   ctx: { params: Promise<{ id: string; turnId: string }> },
 ): Promise<Response> {
@@ -51,7 +52,7 @@ export async function POST(
     case "conflicto":
       return json({ error: "conflicto" }, 503);
   }
-}
+});
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {

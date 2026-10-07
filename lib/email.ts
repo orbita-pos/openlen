@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { correoDeInvitacion, idiomaDelCorreo, type DatosDeLaInvitacion } from "@/lib/projects/correo-de-invitacion";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Email — Resend client with console-log fallback.
@@ -523,11 +524,7 @@ export async function sendAgentInviteEmail(
   });
 }
 
-function buildAgentInviteHtml(
-  input: AgentInviteEmail,
-  title: string,
-  fraseHtml = `You've been invited to help manage chat on <strong>${escape(title)}</strong>.`,
-): string {
+function buildAgentInviteHtml(input: AgentInviteEmail, title: string): string {
   return `<!doctype html>
 <html>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; background:#fafafa; margin:0; padding:32px; color:#0a0a0a;">
@@ -539,7 +536,7 @@ function buildAgentInviteHtml(
       </div>
       <h1 style="font-size:20px; margin:0 0 12px; letter-spacing:-0.02em;">You're invited</h1>
       <p style="font-size:14px; line-height:1.5; color:#525252; margin:0 0 24px;">
-        ${fraseHtml} Accept below — you'll create a free account if you don't have one yet.
+        You've been invited to help manage chat on <strong>${escape(title)}</strong>. Accept below — you'll create a free account if you don't have one yet.
       </p>
       <p style="margin:0 0 24px;">
         <a href="${escape(input.acceptUrl)}" style="display:inline-block; background:#FF5A36; color:#fff; padding:11px 18px; border-radius:8px; text-decoration:none; font-weight:500; font-size:14px;">Accept invitation</a>
@@ -555,47 +552,25 @@ function buildAgentInviteHtml(
 
 // ─── Compartir el proyecto — invitación de un miembro del editor ─────────────
 
-export interface ProjectInviteEmail {
+export interface ProjectInviteEmail extends DatosDeLaInvitacion {
   to: string;
-  projectTitle: string;
-  inviterName: string | null;
-  rol: "editor" | "lector";
-  acceptUrl: string;
+  /** El idioma de la interfaz de quien invita (no sabemos el de quien recibe). */
+  idioma?: string | null;
 }
 
 export async function sendProjectInviteEmail(input: ProjectInviteEmail): Promise<void> {
+  const correo = correoDeInvitacion(input, idiomaDelCorreo(input.idioma));
   const live = liveClientOrWarn("project invite email");
   if (!live) {
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.log(
-        `\n  📧 [DEV] Project invite (${input.rol}) to ${input.to} (${input.projectTitle})\n     ${input.acceptUrl}\n     (set RESEND_API_KEY in .env.local to send real emails)\n`,
+        `\n  📧 [DEV] ${correo.subject} → ${input.to}\n     ${input.acceptUrl}\n     (set RESEND_API_KEY in .env.local to send real emails)\n`,
       );
     }
     return;
   }
-  const title = input.projectTitle.trim() || "a project";
-  const who = input.inviterName?.trim() || "Someone";
-  const what = input.rol === "editor" ? "work on" : "view";
-  await enviar(live, "project invite email", {
-    from,
-    to: input.to,
-    subject: `${who} invited you to ${what} ${title} on OpenLen`,
-    html: buildAgentInviteHtml(
-      { to: input.to, projectTitle: title, acceptUrl: input.acceptUrl },
-      title,
-      `${escape(who)} invited you to ${what} <strong>${escape(title)}</strong>${input.rol === "editor" ? " — edit its code and pages, and ask Len for changes" : ""}.`,
-    ),
-    text: [
-      `${who} invited you to ${what} "${title}" on OpenLen.`,
-      "",
-      "Click the link below to accept. You'll need to create a free OpenLen account first if you don't have one — the link stays valid for 7 days.",
-      "",
-      input.acceptUrl,
-      "",
-      "If you weren't expecting this invitation, you can ignore this email.",
-    ].join("\n"),
-  });
+  await enviar(live, "project invite email", { from, to: input.to, ...correo });
 }
 
 // ─── Chat — offline-owner notification ───────────────────────────────────────

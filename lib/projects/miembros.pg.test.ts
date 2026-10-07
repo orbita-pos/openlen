@@ -8,6 +8,8 @@ import { eq, inArray } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { accesoAlProyecto, exigirAcceso, puede } from "@/lib/projects/acceso";
+import { conAutor } from "@/lib/projects/autor-del-cambio";
+import { createVersion, listVersions } from "@/lib/projects/versions";
 import {
   MAX_MIEMBROS,
   aceptarInvitacion,
@@ -107,5 +109,15 @@ describe("quién entra a un proyecto", () => {
     expect(await margenDeMiembros(PROYECTO)).toBe(35);
     await sumarGasto(PROYECTO, LUIS, 80);
     expect(await margenDeMiembros(PROYECTO)).toBe(0);
+  });
+
+  it("🔴 una versión que hizo un miembro lleva su nombre; la del dueño, no", async () => {
+    await db.delete(schema.projectVersions).where(eq(schema.projectVersions.projectId, PROYECTO));
+    await conAutor(ANA, () => createVersion({ projectId: PROYECTO, html: "<p>de Ana</p>", label: "Code editor: index.html", source: "chat" }));
+    await conAutor(DUENO, () => createVersion({ projectId: PROYECTO, html: "<p>del dueño</p>", label: "Code editor: index.html", source: "chat" }));
+    await createVersion({ projectId: PROYECTO, html: "<p>sin autor</p>", label: "Publicado", source: "publish" });
+    const lista = await listVersions({ projectId: PROYECTO, userId: DUENO });
+    // De la más nueva a la más vieja: sin autor, el dueño (sin firma), Ana.
+    expect(lista.map((v) => v.autor)).toEqual([null, null, "ana"]);
   });
 });

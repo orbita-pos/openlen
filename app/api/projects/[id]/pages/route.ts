@@ -7,6 +7,7 @@ import { actualizarData } from "@/lib/projects/escribir-data";
 import type { ProjectData } from "@/lib/projects/types";
 import { listSitePages } from "@/lib/projects/site-pages";
 import { exigirAcceso } from "@/lib/projects/acceso";
+import { conAutorDeLaPeticion, quienDeLaSesion } from "@/lib/projects/autor-del-cambio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,7 +69,7 @@ export async function GET(
   return json({ pages: listSitePages(row.data) }, 200);
 }
 
-export async function POST(
+export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
@@ -124,7 +125,7 @@ export async function POST(
   }
 
   return json({ ok: true, page: { slug: outcome.slug, title: outcome.title } }, 200);
-}
+});
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {

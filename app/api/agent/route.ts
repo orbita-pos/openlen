@@ -1,6 +1,7 @@
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { accesoAlProyecto, puede } from "@/lib/projects/acceso";
+import { conAutor } from "@/lib/projects/autor-del-cambio";
 import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miembros";
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
@@ -240,7 +241,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   if (!userId) return errorJson(401, "unauthorized");
 
   const body = (await req.json().catch(() => null)) as CuerpoDelTurno | null;
-  return correrTurno(userId, body, { url: req.url, signal: req.signal });
+  // Lo que el turno guarde (versiones de páginas y ficheros) lleva el nombre de
+  // quien lo pidió: un miembro, si no fue el dueño (lib/projects/autor-del-cambio.ts).
+  return conAutor(userId, () => correrTurno(userId, body, { url: req.url, signal: req.signal }));
 });
 
 /** Lo que manda el cliente en el cuerpo de un turno. Todo entra de fuera y se sanea abajo. */

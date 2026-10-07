@@ -8,6 +8,7 @@ import { pageTitle, validatePageSlug } from "@/lib/projects/site-pages";
 import { unpublishPageDir } from "@/lib/publish/filesystem";
 import { purgeSubdomain } from "@/lib/publish/cache-purge";
 import { exigirAcceso } from "@/lib/projects/acceso";
+import { conAutorDeLaPeticion, quienDeLaSesion } from "@/lib/projects/autor-del-cambio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,7 +68,7 @@ const PatchSchema = z.object({
   title: z.string().min(1).max(120),
 });
 
-export async function PATCH(
+export const PATCH = conAutorDeLaPeticion(quienDeLaSesion, async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string; slug: string }> },
 ): Promise<Response> {
@@ -114,9 +115,9 @@ export async function PATCH(
     { ok: true },
     200,
   );
-}
+});
 
-export async function DELETE(
+export const DELETE = conAutorDeLaPeticion(quienDeLaSesion, async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string; slug: string }> },
 ): Promise<Response> {
@@ -188,7 +189,7 @@ export async function DELETE(
   }
 
   return json({ ok: true }, 200);
-}
+});
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {

@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { restoreVersion } from "@/lib/projects/versions";
 import { exigirAcceso } from "@/lib/projects/acceso";
+import { conAutorDeLaPeticion, quienDeLaSesion } from "@/lib/projects/autor-del-cambio";
 
 export const runtime = "nodejs";
 
@@ -11,7 +12,7 @@ export const runtime = "nodejs";
 //
 // Returns the restored HTML + the page scope it landed on so the client can
 // refresh the right document without a round-trip through GET /api/projects.
-export async function POST(
+export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(
   _req: Request,
   ctx: { params: Promise<{ id: string; vid: string }> },
 ): Promise<Response> {
@@ -32,7 +33,7 @@ export async function POST(
   if (!result) return json({ error: "not found" }, 404);
 
   return json(result, 200);
-}
+});
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {

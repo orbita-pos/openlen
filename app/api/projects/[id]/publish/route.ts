@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
 import { db, schema } from "@/lib/db";
 import { exigirAcceso } from "@/lib/projects/acceso";
+import { conAutor } from "@/lib/projects/autor-del-cambio";
 import { auth } from "@/auth";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
@@ -74,12 +75,13 @@ export const POST = paraLaApp(async (
   }
 
   try {
-    const result = await publishProject({
+    // La versión «Publicado» lleva el nombre de quien publicó (lib/projects/autor-del-cambio.ts).
+    const result = await conAutor(userId, () => publishProject({
       projectId: id,
       userId: acceso.duenoId,
       subdomain: parsed.data.subdomain,
       languages: parsed.data.languages,
-    });
+    }));
     return json(result, 200);
   } catch (err) {
     if (err instanceof SubdomainInvalidError) {

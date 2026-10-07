@@ -8,6 +8,7 @@ import {
   listVersions,
 } from "@/lib/projects/versions";
 import { exigirAcceso } from "@/lib/projects/acceso";
+import { conAutorDeLaPeticion, quienDeLaSesion } from "@/lib/projects/autor-del-cambio";
 
 export const runtime = "nodejs";
 
@@ -66,7 +67,7 @@ interface PostBody {
 // project's CURRENT html (home or a site page) as a manual checkpoint.
 // The content is read server-side — this route never accepts html, so it
 // can't become a second (sanitize-bypassing) write path.
-export async function POST(
+export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ): Promise<Response> {
@@ -122,7 +123,7 @@ export async function POST(
   if (!versionId) return json({ error: "snapshot_failed" }, 500);
 
   return json({ ok: true, id: versionId }, 200);
-}
+});
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {

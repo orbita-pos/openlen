@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { restoreFileVersion } from "@/lib/projects/file-versions";
 import { exigirAcceso } from "@/lib/projects/acceso";
+import { conAutorDeLaPeticion, quienDeLaSesion } from "@/lib/projects/autor-del-cambio";
 
 export const runtime = "nodejs";
 
@@ -12,7 +13,7 @@ export const runtime = "nodejs";
 // `restoreFileVersion` archiva lo de ahora antes de escribir, así que el
 // propio Deshacer se deshace. La propiedad la comprueba esa función, que une
 // la versión con el dueño del proyecto: un id ajeno da 404.
-export async function POST(
+export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(
   _req: Request,
   ctx: { params: Promise<{ id: string; vid: string }> },
 ): Promise<Response> {
@@ -29,7 +30,7 @@ export async function POST(
   if (!result) return json({ error: "not found" }, 404);
 
   return json(result, 200);
-}
+});
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {

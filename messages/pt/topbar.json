@@ -150,6 +150,18 @@
       "yaEsMiembro": "Já é membro.",
       "limite": "No máximo {max} pessoas por projeto.",
       "generico": "Não deu certo. Tente de novo."
+    },
+    "email": {
+      "asuntoEditor": "{quien} convidou você para trabalhar em {titulo} no OpenLen",
+      "asuntoLector": "{quien} convidou você para ver {titulo} no OpenLen",
+      "fraseEditor": "{quien} convidou você para trabalhar em “{titulo}”: editar o código e as páginas, e pedir mudanças ao Len.",
+      "fraseLector": "{quien} convidou você para ver “{titulo}”.",
+      "titulo": "Você foi convidado",
+      "aceptar": "Aceitar o convite",
+      "cuenta": "Se ainda não tem conta no OpenLen, você cria uma grátis ao aceitar. O link vale por 7 dias.",
+      "pegar": "Ou cole este link no navegador:",
+      "ignorar": "Se você não esperava este convite, pode ignorar este e-mail.",
+      "alguien": "Alguém"
     }
   }
 }

@@ -2,7 +2,8 @@
 // gastan con Len, el tope del dueño y quién pidió cada turno. Idempotente (IF
 // NOT EXISTS). Mantener en sintonía con lib/db/schema.ts (`projectMembers`,
 // `projectInvites`, `projectMemberSpend`, `projects.topeMensualMiembros`,
-// `projectChatMessages.autorId`).
+// `projectChatMessages.autorId`, `projectVersions.autorId`,
+// `projectFileVersions.autorId`).
 //
 // 🔴 OBLIGATORIA en el mismo deploy que el código: `accesoAlProyecto`
 // (lib/projects/acceso.ts) lee `projectMembers` en cada petición que abre un
@@ -61,6 +62,9 @@ async function main() {
   `);
   await db.execute(sql`ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "topeMensualMiembros" integer;`);
   await db.execute(sql`ALTER TABLE "projectChatMessages" ADD COLUMN IF NOT EXISTS "autorId" text;`);
+  // Quién hizo cada versión (lib/projects/autor-del-cambio.ts).
+  await db.execute(sql`ALTER TABLE "projectVersions" ADD COLUMN IF NOT EXISTS "autorId" text;`);
+  await db.execute(sql`ALTER TABLE "projectFileVersions" ADD COLUMN IF NOT EXISTS "autorId" text;`);
   console.log("[miembros:migrate] projectMembers, projectInvites, projectMemberSpend y columnas listas");
   process.exit(0);
 }

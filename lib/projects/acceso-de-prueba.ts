@@ -23,10 +23,23 @@ export function puede(rol: RolEnProyecto, permiso: Permiso): boolean {
   return permiso === "ver" || rol === "dueno" || rol === "editor";
 }
 
-export async function accesoAlProyecto(_projectId: string, userId: string): Promise<AccesoAlProyecto | null> {
+type Fijado = (projectId: string, userId: string) => AccesoAlProyecto | null;
+let fijado: Fijado | null = null;
+
+/** Para una prueba que SÍ trata de miembros: quién entra y con qué rol.
+ *  `null` vuelve a «quien pide es el dueño». */
+export function fijarAccesoDePrueba(f: Fijado | null): void {
+  fijado = f;
+}
+
+export async function accesoAlProyecto(projectId: string, userId: string): Promise<AccesoAlProyecto | null> {
+  if (fijado) return fijado(projectId, userId);
   return userId ? { rol: "dueno", duenoId: userId } : null;
 }
 
-export async function exigirAcceso(projectId: string, userId: string, _permiso: Permiso): Promise<AccesoAlProyecto | Response> {
-  return (await accesoAlProyecto(projectId, userId)) ?? new Response(JSON.stringify({ error: "not_found" }), { status: 404 });
+export async function exigirAcceso(projectId: string, userId: string, permiso: Permiso): Promise<AccesoAlProyecto | Response> {
+  const acceso = await accesoAlProyecto(projectId, userId);
+  if (!acceso) return new Response(JSON.stringify({ error: "not_found" }), { status: 404 });
+  if (!puede(acceso.rol, permiso)) return new Response(JSON.stringify({ error: "solo_lectura" }), { status: 403 });
+  return acceso;
 }

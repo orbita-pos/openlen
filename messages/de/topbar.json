@@ -150,6 +150,18 @@
       "yaEsMiembro": "Bereits Mitglied.",
       "limite": "Höchstens {max} Personen pro Projekt.",
       "generico": "Das hat nicht geklappt. Versuch es noch einmal."
+    },
+    "email": {
+      "asuntoEditor": "{quien} hat dich eingeladen, auf OpenLen an {titulo} mitzuarbeiten",
+      "asuntoLector": "{quien} hat dich eingeladen, {titulo} auf OpenLen anzusehen",
+      "fraseEditor": "{quien} hat dich eingeladen, an „{titulo}“ mitzuarbeiten: Code und Seiten bearbeiten und Len um Änderungen bitten.",
+      "fraseLector": "{quien} hat dich eingeladen, „{titulo}“ anzusehen.",
+      "titulo": "Du bist eingeladen",
+      "aceptar": "Einladung annehmen",
+      "cuenta": "Wenn du noch kein OpenLen-Konto hast, erstellst du beim Annehmen kostenlos eins. Der Link gilt 7 Tage.",
+      "pegar": "Oder füge diesen Link in deinen Browser ein:",
+      "ignorar": "Wenn du diese Einladung nicht erwartet hast, kannst du diese E-Mail ignorieren.",
+      "alguien": "Jemand"
     }
   }
 }

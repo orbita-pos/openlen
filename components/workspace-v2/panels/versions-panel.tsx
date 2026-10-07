@@ -49,6 +49,8 @@ interface VersionItem {
   page: string | null;
   pinned: boolean;
   createdAt: string;
+  /** Quién la hizo, si no fue el dueño (compartir el proyecto). */
+  autor?: string | null;
 }
 
 interface VersionsPanelProps {
@@ -593,6 +595,7 @@ function VersionCard({
         <div className="mt-1.5 flex items-center justify-between gap-1.5">
           <span className="text-[10.5px] fg-faint truncate">
             {relativeTime(item.createdAt, t)}
+            {item.autor && <span data-autor-de-version=""> · {item.autor}</span>}
           </span>
           <span className="flex items-center gap-0.5">
             <button

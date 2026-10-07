@@ -223,6 +223,7 @@ function AgentChatView({
         {chat.turns.length === 0 ? (
           <EmptyState
             disabled={chat.busy}
+            sinSugerencias={soloLectura}
             onPick={(text) => {
               chat.setDraft(text);
               queueMicrotask(() => chat.taRef.current?.focus());
@@ -445,7 +446,16 @@ function ChatFrame({
   );
 }
 
-function EmptyState({ onPick, disabled }: { onPick: (text: string) => void; disabled: boolean }) {
+function EmptyState({
+  onPick,
+  disabled,
+  sinSugerencias = false,
+}: {
+  onPick: (text: string) => void;
+  disabled: boolean;
+  /** Un lector no escribe: proponerle qué pedir sería un botón que no lleva a nada. */
+  sinSugerencias?: boolean;
+}) {
   const t = useTranslations("panelsChat");
   return (
     <div className="nc-up my-auto grid justify-items-center gap-2 px-1 py-3 text-center">
@@ -454,7 +464,7 @@ function EmptyState({ onPick, disabled }: { onPick: (text: string) => void; disa
         {t("newChat.empty.title")}
       </h2>
       <p className="m-0 text-[13.5px] fg-muted">{t("newChat.empty.subtitle")}</p>
-      <div className="mt-[18px] flex flex-wrap justify-center gap-1.5">
+      <div className="mt-[18px] flex flex-wrap justify-center gap-1.5" hidden={sinSugerencias}>
         {SUGGESTIONS.map((key) => {
           const text = t(`newChat.empty.suggestions.${key}`);
           return (

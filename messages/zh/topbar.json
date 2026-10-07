@@ -150,6 +150,18 @@
       "yaEsMiembro": "已经是成员。",
       "limite": "每个项目最多 {max} 人。",
       "generico": "没有成功，请重试。"
+    },
+    "email": {
+      "asuntoEditor": "{quien} 邀请你在 OpenLen 上参与 {titulo}",
+      "asuntoLector": "{quien} 邀请你在 OpenLen 上查看 {titulo}",
+      "fraseEditor": "{quien} 邀请你参与“{titulo}”：编辑代码和页面，并让 Len 做修改。",
+      "fraseLector": "{quien} 邀请你查看“{titulo}”。",
+      "titulo": "你收到了邀请",
+      "aceptar": "接受邀请",
+      "cuenta": "如果你还没有 OpenLen 账号，接受邀请时即可免费创建。链接 7 天内有效。",
+      "pegar": "或将此链接粘贴到浏览器中：",
+      "ignorar": "如果你没有预期会收到此邀请，可以忽略这封邮件。",
+      "alguien": "有人"
     }
   }
 }

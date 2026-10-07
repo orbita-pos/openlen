@@ -8,7 +8,7 @@
  * esto sólo pinta lo que `/api/projects/[id]/miembros` devuelve.
  */
 import { useCallback, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { X } from "lucide-react";
 
 import { CENTICREDITOS_POR_CREDITO } from "@/lib/credits-client";
@@ -56,6 +56,7 @@ export function MiembrosDialog({
   onSalir: () => void;
 }) {
   const t = useTranslations("topbar");
+  const locale = useLocale();
   const [estado, setEstado] = useState<Estado | "cargando" | "error">("cargando");
   const [correo, setCorreo] = useState("");
   const [rol, setRol] = useState<Rol>("editor");
@@ -100,7 +101,7 @@ export function MiembrosDialog({
   const invitar = async () => {
     const email = correo.trim();
     if (!email) return;
-    const r = await llamar({ method: "POST", body: JSON.stringify({ email, rol }) });
+    const r = await llamar({ method: "POST", body: JSON.stringify({ email, rol, idioma: locale }) });
     if (!r.ok) return setAviso({ texto: errorDe(r.error), mal: true });
     setCorreo("");
     setAviso({ texto: t("miembros.enviada", { correo: email.toLowerCase() }), mal: false });

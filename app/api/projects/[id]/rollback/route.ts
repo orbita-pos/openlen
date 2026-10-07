@@ -6,6 +6,7 @@ import {
   rollbackProject,
 } from "@/lib/projects";
 import { exigirAcceso } from "@/lib/projects/acceso";
+import { conAutorDeLaPeticion, quienDeLaSesion } from "@/lib/projects/autor-del-cambio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ const RollbackBodySchema = z.object({
   sha: z.string().regex(/^[a-f0-9]{1,64}$/),
 });
 
-export async function POST(
+export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
@@ -70,7 +71,7 @@ export async function POST(
     console.error("[rollback] unexpected error:", err);
     return json({ error: "rollback_failed" }, 500);
   }
-}
+});
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {

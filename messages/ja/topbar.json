@@ -150,6 +150,18 @@
       "yaEsMiembro": "すでにメンバーです。",
       "limite": "1 プロジェクトにつき最大 {max} 人です。",
       "generico": "うまくいきませんでした。もう一度お試しください。"
+    },
+    "email": {
+      "asuntoEditor": "{quien} さんが OpenLen の {titulo} での作業にあなたを招待しました",
+      "asuntoLector": "{quien} さんが OpenLen の {titulo} の閲覧にあなたを招待しました",
+      "fraseEditor": "{quien} さんが「{titulo}」での作業にあなたを招待しました。コードやページを編集し、Len に変更を頼めます。",
+      "fraseLector": "{quien} さんが「{titulo}」の閲覧にあなたを招待しました。",
+      "titulo": "招待が届いています",
+      "aceptar": "招待を受ける",
+      "cuenta": "OpenLen のアカウントがない場合は、受け入れるときに無料で作成できます。リンクの有効期限は 7 日間です。",
+      "pegar": "または、このリンクをブラウザに貼り付けてください：",
+      "ignorar": "この招待に心当たりがない場合は、このメールを無視してください。",
+      "alguien": "誰か"
     }
   }
 }

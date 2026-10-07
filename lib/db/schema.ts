@@ -313,6 +313,9 @@ export const projectVersions = pgTable(
     // "restore" | "manual".
     source: text("source").notNull(),
     // Human-readable label (truncated chat prompt, "Published to X", etc.).
+    // QUIÉN pidió el cambio (compartir el proyecto: `lib/projects/autor-del-cambio.ts`).
+    // NULL = sin autor conocido (fila anterior, o un camino sin sesión).
+    autorId: text("autorId"),
     label: text("label").notNull(),
     // Full HTML at this snapshot. text() not jsonb — html is opaque to us.
     html: text("html").notNull(),
@@ -981,6 +984,8 @@ export const projectFileVersions = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     path: text("path").notNull(),
     content: text("content"),
+    // QUIÉN pidió el cambio (`lib/projects/autor-del-cambio.ts`). NULL = sin autor conocido.
+    autorId: text("autorId"),
     label: text("label").notNull(),
     source: text("source").notNull(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),

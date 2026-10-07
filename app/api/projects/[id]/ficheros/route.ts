@@ -24,6 +24,7 @@ import { soloLecturaDeLaTerminal } from "@/lib/agent/terminal/solo-lectura";
 import { esDeLaPlataforma } from "@/lib/agent/ficheros/manual";
 import { guardarAMano } from "@/lib/agent/terminal/editar-a-mano";
 import { operarAMano, type ResultadoAMano } from "@/lib/agent/terminal/operar-a-mano";
+import { conAutorDeLaPeticion, quienDeLaSesion } from "@/lib/projects/autor-del-cambio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,7 +86,7 @@ const MAX_FICHERO = 2_000_000;
  *                               422 { error: "rechazado", detalle }
  *                               404 si no existe, 400 sin los tres, 413 si es enorme
  */
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+export const PUT = conAutorDeLaPeticion(quienDeLaSesion, async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
   const userId = await duenoDe(id);
   if (typeof userId !== "string") return userId;
@@ -107,7 +108,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (r.motivo === "cambio") return json({ error: "cambio", actual: r.actual }, 409);
   if (r.motivo === "rechazado") return json({ error: "rechazado", detalle: r.detalle }, 422);
   return json({ error: "not_found" }, 404);
-}
+});
 
 /** Quién pide y con qué rol (lib/projects/acceso.ts); si no entra, la respuesta de error. */
 async function accesoDe(id: string, permiso: Permiso): Promise<AccesoAlProyecto | Response> {
@@ -148,7 +149,7 @@ async function cuerpoDe(req: Request): Promise<Record<string, unknown> | null> {
  *
  *   { ruta, contenido? } → 200 { rutas } · 409 { error: "existe" } · 422 { error: "rechazado", detalle }
  */
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
   const userId = await duenoDe(id);
   if (typeof userId !== "string") return userId;
@@ -156,32 +157,32 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!c || !esRuta(c.ruta) || (c.contenido !== undefined && typeof c.contenido !== "string")) return json({ error: "sin_cuerpo" }, 400);
   if (typeof c.contenido === "string" && c.contenido.length > MAX_FICHERO) return json({ error: "demasiado_grande" }, 413);
   return respuestaDe(await operarAMano(id, userId, { tipo: "crear", ruta: c.ruta, ...(typeof c.contenido === "string" ? { contenido: c.contenido } : {}) }));
-}
+});
 
 /**
  * PATCH — renombrar o mover un fichero o una carpeta (F2).
  *
  *   { de, a } → 200 { rutas } (las nuevas) · 409 «existe» o «pagina» · 422 «rechazado» · 404
  */
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+export const PATCH = conAutorDeLaPeticion(quienDeLaSesion, async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
   const userId = await duenoDe(id);
   if (typeof userId !== "string") return userId;
   const c = await cuerpoDe(req);
   if (!c || !esRuta(c.de) || !esRuta(c.a)) return json({ error: "sin_cuerpo" }, 400);
   return respuestaDe(await operarAMano(id, userId, { tipo: "renombrar", de: c.de, a: c.a }));
-}
+});
 
 /**
  * DELETE ?ruta=… — borrar un fichero o una carpeta entera (Supr). Las páginas
  * que haya dentro NO se borran aquí: vuelven en `409 { error: "pagina", rutas }`
  * y el cliente las quita con `DELETE /api/projects/[id]/pages/[slug]`.
  */
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+export const DELETE = conAutorDeLaPeticion(quienDeLaSesion, async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
   const userId = await duenoDe(id);
   if (typeof userId !== "string") return userId;
   const ruta = new URL(req.url).searchParams.get("ruta");
   if (!esRuta(ruta) || ruta === "/") return json({ error: "sin_cuerpo" }, 400);
   return respuestaDe(await operarAMano(id, userId, { tipo: "borrar", ruta }));
-}
+});

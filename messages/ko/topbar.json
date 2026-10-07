@@ -150,6 +150,18 @@
       "yaEsMiembro": "이미 멤버입니다.",
       "limite": "프로젝트당 최대 {max}명입니다.",
       "generico": "실패했습니다. 다시 시도하세요."
+    },
+    "email": {
+      "asuntoEditor": "{quien} 님이 OpenLen의 {titulo} 작업에 초대했습니다",
+      "asuntoLector": "{quien} 님이 OpenLen의 {titulo} 보기에 초대했습니다",
+      "fraseEditor": "{quien} 님이 “{titulo}” 작업에 초대했습니다. 코드와 페이지를 편집하고 Len에게 변경을 요청할 수 있습니다.",
+      "fraseLector": "{quien} 님이 “{titulo}” 보기에 초대했습니다.",
+      "titulo": "초대가 도착했습니다",
+      "aceptar": "초대 수락",
+      "cuenta": "아직 OpenLen 계정이 없다면 수락할 때 무료로 만들 수 있습니다. 링크는 7일 동안 유효합니다.",
+      "pegar": "또는 이 링크를 브라우저에 붙여 넣으세요:",
+      "ignorar": "이 초대를 예상하지 못했다면 이 이메일을 무시해도 됩니다.",
+      "alguien": "누군가"
     }
   }
 }
