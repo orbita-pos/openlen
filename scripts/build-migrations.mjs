@@ -136,6 +136,8 @@ const targets = [
   // idempotente. 🔴 OBLIGATORIA antes que el código: `getProject` SELECCIONA
   // las dos columnas para «cambios sin publicar».
   "folder-migrate",
+  // F2 de las apps web: lo que cambió cada turno, para deshacerlo entero.
+  "turn-changes-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

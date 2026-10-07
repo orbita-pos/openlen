@@ -972,6 +972,42 @@ export const projectFileVersions = pgTable(
   (t) => [index("projectFileVersions_project_path_idx").on(t.projectId, t.path, t.createdAt)],
 );
 
+// LO QUE CAMBIÓ CADA TURNO DE LEN, para deshacerlo ENTERO (F2 de las apps web,
+// spec local docs/superpowers/specs/2026-10-07-apps-design.md, H7). Una fila
+// por fichero que el turno cambió —páginas y carpeta—, con lo que había al
+// empezar y lo que dejó al acabar, sacados de las dos fotos que el turno ya
+// toma (`lib/agent/cambios-del-turno.ts`). `contentBefore` nulo = no existía;
+// `contentAfter` nulo = el turno lo borró. `undoable` falso = cambió pero no se
+// deshace con el turno (la base de datos de /supabase, la memoria, los
+// ajustes): se guarda sin contenido, para poder DECIR que no vuelve.
+// Deshacer comprueba que cada fichero sigue como lo dejó el turno y lo escribe
+// todo en UNA sentencia (`lib/projects/deshacer-turno.ts`).
+export const projectTurnChanges = pgTable(
+  "projectTurnChanges",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    /** El id del turno: el de su fila en `projectChatMessages`. */
+    turnId: text("turnId").notNull(),
+    path: text("path").notNull(),
+    contentBefore: text("contentBefore"),
+    contentAfter: text("contentAfter"),
+    undoable: boolean("undoable").notNull(),
+    /** Cuándo se deshizo. Un turno deshecho no se deshace otra vez: lo que se
+     *  deshace entonces es el deshacer, que tiene su propio turno. */
+    undoneAt: timestamp("undoneAt", { mode: "date" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("projectTurnChanges_project_turn_idx").on(t.projectId, t.turnId),
+    index("projectTurnChanges_project_createdAt_idx").on(t.projectId, t.createdAt),
+  ],
+);
+
 export const memberLoginTokens = pgTable("memberLoginTokens", {
   tokenHash: text("tokenHash").primaryKey(),
   projectId: text("projectId")

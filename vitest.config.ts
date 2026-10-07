@@ -204,6 +204,10 @@ export default defineConfig({
       "lib/projects/miniatura-en-vuelo.test.ts",
       // La carpeta (pieza 9 de Len 2.5): su huella publicable.
       "lib/projects/files-hash.test.ts",
+      // F2 de las apps web: deshacer un turno entero, todo o nada (el plan, puro;
+      // la sentencia, contra Postgres).
+      "lib/projects/deshacer-turno-plan.test.ts",
+      "lib/projects/deshacer-turno.pg.test.ts",
       "lib/publish/model-runtime-locales.test.ts",
       // Un idioma pedido que no sale tiene que OÍRSE: el fallo era mudo y por
       // eso la traducción vivió cinco meses sin producir una sola página.
@@ -565,6 +569,8 @@ export default defineConfig({
       "app/api/projects/[id]/ficheros/route.test.ts",
       // Una app web que no compila: 422 con fichero y línea (spec local 2026-10-07-apps).
       "app/api/projects/[id]/publish/route.test.ts",
+      // F2 de las apps web: deshacer un turno entero.
+      "app/api/projects/[id]/turnos/[turnId]/deshacer/route.test.ts",
       // Deshacer un fichero de la carpeta (pieza 9 de Len 2.5).
       "app/api/projects/*/ficheros/versions/**/*.test.ts",
       // Exportar lleva la carpeta (pieza 9 de Len 2.5).

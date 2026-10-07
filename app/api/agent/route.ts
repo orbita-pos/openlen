@@ -88,6 +88,8 @@ import { realDeps, runAgentTool, summarizeProjectState, type AgentDeps, type Age
 import { cerrarTerminalDeLaSesion } from "@/lib/agent/terminal/herramienta";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
+import { cambiosDelTurnoParaDeshacer } from "@/lib/projects/deshacer-turno-plan";
+import { guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
 import { observarPagina, verifyEditedPage } from "@/lib/agent/verify";
 import { usarPagina } from "@/lib/agent/usar-pagina";
 import {
@@ -1128,8 +1130,22 @@ async function correrTurno(
           try {
             const antes = await fotoAntes;
             if (!antes) return;
-            const ficheros = cambiosEntreFotos(antes, await cargarFicherosDeLaTerminal(agentSession, deps));
+            const despues = await cargarFicherosDeLaTerminal(agentSession, deps);
+            const ficheros = cambiosEntreFotos(antes, despues);
             if (ficheros.length > 0) emit("cambios", { ficheros });
+            // F2 DE LAS APPS WEB · DESHACER EL TURNO ENTERO (spec local
+            // 2026-10-07-apps, H7): las MISMAS dos fotos, guardadas con su
+            // contenido, para que «Deshacer» devuelva páginas y ficheros de una
+            // vez y se niegue si el dueño tocó después lo mismo
+            // (`lib/projects/deshacer-turno.ts`). Fail-soft: sin esto no hay
+            // Deshacer de servidor, y el chat usa el de siempre.
+            try {
+              if (await guardarCambiosDelTurno(projectId, filaId, cambiosDelTurnoParaDeshacer(antes, despues))) {
+                emit("deshacible", { turnId: filaId });
+              }
+            } catch (err) {
+              console.warn("[agent] no se pudieron guardar los cambios del turno para deshacerlo", err);
+            }
           } catch (err) {
             console.warn("[agent] no se pudieron calcular los cambios del turno", err);
           }

@@ -38,6 +38,7 @@ const veredicto = (v: Partial<VisualVerdict> = {}): VisualVerdict => ({
 });
 
 const mocks = vi.hoisted(() => ({
+  guardarCambiosDelTurno: vi.fn(async () => false),
   auth: vi.fn(),
   getCreditState: vi.fn(),
   noCreditsMessage: vi.fn(),
@@ -159,6 +160,8 @@ vi.mock("@/lib/resultados/zona-guardada", () => ({
   leerZona: mocks.leerZona,
 }));
 vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }));
+// F2 de las apps web: lo que cambió el turno, guardado para deshacerlo entero.
+vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.guardarCambiosDelTurno }));
 vi.mock("@/lib/projects/chat", () => ({
   turnosParaElHistorial: mocks.turnosParaElHistorial,
   registrarTurnoDelServidor: mocks.registrarTurnoDelServidor,
@@ -553,6 +556,34 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
       expect(eventos.find((e) => e.event === "cambios")?.data).toEqual({
         ficheros: [{ ruta: "/index.html", tipo: "texto", antes: "<h1>Hola</h1>\n", despues: "<h1>Oleaje</h1>\n" }],
       });
+    });
+
+    it("F2: las mismas fotos se guardan para deshacer el turno entero, y `deshacible` lo anuncia antes del `done`", async () => {
+      mocks.guardarCambiosDelTurno.mockResolvedValueOnce(true);
+      mocks.cargarFicherosDeLaTerminal
+        .mockResolvedValueOnce({ "/index.html": "<h1>Hola</h1>", "/src/App.jsx": "v1", "/memoria/dueno.md": "- a" })
+        .mockResolvedValueOnce({ "/index.html": "<h1>Oleaje</h1>", "/src/App.jsx": "v2", "/memoria/dueno.md": "- a\n- b" });
+      const eventos = await turno();
+      expect(mocks.guardarCambiosDelTurno).toHaveBeenCalledTimes(1);
+      const [proyecto, turnId, cambios] = mocks.guardarCambiosDelTurno.mock.calls[0] as unknown as [string, string, unknown];
+      expect(proyecto).toBe("p1");
+      expect(cambios).toEqual([
+        { ruta: "/index.html", antes: "<h1>Hola</h1>", despues: "<h1>Oleaje</h1>", deshacible: true },
+        { ruta: "/memoria/dueno.md", antes: null, despues: null, deshacible: false },
+        { ruta: "/src/App.jsx", antes: "v1", despues: "v2", deshacible: true },
+      ]);
+      const nombres = eventos.map((e) => e.event);
+      expect(eventos.find((e) => e.event === "deshacible")?.data).toEqual({ turnId });
+      expect(nombres.indexOf("deshacible")).toBeLessThan(nombres.indexOf("done"));
+    });
+
+    it("F2: si guardar para deshacer falla, el turno acaba igual y sin `deshacible`", async () => {
+      mocks.guardarCambiosDelTurno.mockRejectedValueOnce(new Error("sin tabla"));
+      mocks.cargarFicherosDeLaTerminal.mockResolvedValueOnce({ "/index.html": "a" }).mockResolvedValueOnce({ "/index.html": "b" });
+      const nombres = (await turno()).map((e) => e.event);
+      expect(nombres).toContain("cambios");
+      expect(nombres).toContain("done");
+      expect(nombres).not.toContain("deshacible");
     });
 
     it("sin cambios no hay evento, y si la foto falla el turno sigue sin tarjeta", async () => {
