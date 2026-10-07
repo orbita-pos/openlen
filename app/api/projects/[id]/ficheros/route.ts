@@ -12,13 +12,12 @@
 //   GET                  → { ficheros: [{ ruta, contenido }], perezosos: [ruta] }
 //   GET ?ruta=/.openlen/… → { ruta, contenido }   (los de sólo lectura se calculan al pedirlos)
 //
-// 401 sin sesión, 404 si el proyecto no es tuyo — el mismo par que las demás
-// rutas de proyecto (ver la cabecera de `datos/route.ts`).
-
-import { and, eq } from "drizzle-orm";
+// 401 sin sesión, 404 si no puedes abrir el proyecto — el mismo par que las
+// demás rutas de proyecto. Lo ven el dueño y sus miembros; escriben el dueño y
+// los editores (lib/projects/acceso.ts), y se guarda siempre con el id del dueño.
 
 import { auth } from "@/auth";
-import { db, schema } from "@/lib/db";
+import { exigirAcceso, type AccesoAlProyecto, type Permiso } from "@/lib/projects/acceso";
 import { realDeps, type AgentSession } from "@/lib/agent/tools";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { soloLecturaDeLaTerminal } from "@/lib/agent/terminal/solo-lectura";
@@ -38,27 +37,22 @@ function json(cuerpo: unknown, status = 200): Response {
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) return json({ error: "unauthorized" }, 401);
-  const propio = await db
-    .select({ id: schema.projects.id })
-    .from(schema.projects)
-    .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
-    .limit(1);
-  if (propio.length === 0) return json({ error: "not_found" }, 404);
+  const acceso = await accesoDe(id, "ver");
+  if (acceso instanceof Response) return acceso;
 
   // La sesión de un turno que no existe: sólo hace falta para leer, como las herramientas.
   const sesion: AgentSession = {
     projectId: id,
-    userId,
+    userId: acceso.duenoId,
     page: null,
     ownerEmail: null,
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
     busquedasVaciasSeguidas: 0,
   };
-  const deps = realDeps();
+  // Un miembro no ve `/.openlen/resultados` ni `/.openlen/bandeja`: son datos
+  // de los visitantes, y eso es del dueño (lib/projects/acceso.ts).
+  const deps = acceso.rol === "dueno" ? realDeps() : { ...realDeps(), resultados: undefined };
 
   const ruta = new URL(req.url).searchParams.get("ruta");
   if (ruta !== null) {
@@ -93,15 +87,8 @@ const MAX_FICHERO = 2_000_000;
  */
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) return json({ error: "unauthorized" }, 401);
-  const propio = await db
-    .select({ id: schema.projects.id })
-    .from(schema.projects)
-    .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
-    .limit(1);
-  if (propio.length === 0) return json({ error: "not_found" }, 404);
+  const userId = await duenoDe(id);
+  if (typeof userId !== "string") return userId;
 
   let cuerpo: { ruta?: unknown; contenido?: unknown; base?: unknown };
   try {
@@ -122,18 +109,18 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   return json({ error: "not_found" }, 404);
 }
 
-/** El usuario de la sesión, si el proyecto es suyo; si no, la respuesta de error. */
-async function duenoDe(id: string): Promise<string | Response> {
+/** Quién pide y con qué rol (lib/projects/acceso.ts); si no entra, la respuesta de error. */
+async function accesoDe(id: string, permiso: Permiso): Promise<AccesoAlProyecto | Response> {
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) return json({ error: "unauthorized" }, 401);
-  const propio = await db
-    .select({ id: schema.projects.id })
-    .from(schema.projects)
-    .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
-    .limit(1);
-  if (propio.length === 0) return json({ error: "not_found" }, 404);
-  return userId;
+  return exigirAcceso(id, userId, permiso);
+}
+
+/** Para escribir: el id del DUEÑO (con él se guarda) si quien pide puede editar. */
+async function duenoDe(id: string): Promise<string | Response> {
+  const acceso = await accesoDe(id, "editar");
+  return acceso instanceof Response ? acceso : acceso.duenoId;
 }
 
 const esRuta = (x: unknown): x is string => typeof x === "string" && x.startsWith("/") && x.length <= 300 && !x.includes("\0");

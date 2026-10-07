@@ -247,6 +247,12 @@ export const projects = pgTable(
     // to identify which entry is currently live. Updated atomically with
     // publishedHtml.
     publishedReleaseSha: text("publishedReleaseSha"),
+    // EL TOPE DE LOS MIEMBROS (compartir el proyecto): cuántos créditos al mes
+    // pueden gastar con Len, entre todos, quienes no son el dueño. Paga siempre
+    // el dueño —como un canal en Claude Tag, que paga la organización—; esto es
+    // lo que impide que un miembro le vacíe el saldo. NULL = sin tope.
+    // `npm run miembros:migrate`.
+    topeMensualMiembros: integer("topeMensualMiembros"),
     // ⚰️ LAS DOS COLUMNAS DE LA CÁPSULA se retiraron el 2026-08-26. El
     // JavaScript del modelo vive DENTRO de `data.html` y de cada
     // `data.pages[slug].html`, como cualquier `<script>` de cualquier página.
@@ -393,6 +399,10 @@ export const projectChatMessages = pgTable(
     transcript: jsonb("transcript").$type<TranscripcionGuardada>(),
     // 'applied' on insert; flipped to 'reverted' by Undo. 'error' turns are
     // never persisted (transient — they changed nothing).
+    // QUIÉN pidió el turno, cuando no fue el dueño (compartir el proyecto): el
+    // turno lo paga el dueño, pero el historial dice quién lo pidió. NULL = el
+    // dueño, o una fila anterior a esta columna. `npm run miembros:migrate`.
+    autorId: text("autorId"),
     status: text("status").notNull(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     // LA CHARLA A LA QUE PERTENECE (plans/new-chat/, «Empezar de cero»). NULL =
@@ -1225,6 +1235,60 @@ export const chatAgentInviteTokens = pgTable("chatAgentInviteTokens", {
   used: boolean("used").notNull().default(false),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
+
+// ─── Compartir el proyecto — miembros del EDITOR ─────────────────────────────
+// Quien no es el dueño y puede abrir el proyecto en el editor. A diferencia de
+// `chatAgents` (que atienden el chat de visitantes), éstos trabajan en la
+// página o la app: `editor` edita, habla con Len y publica; `lector` sólo mira.
+// Quién entra a qué lo decide UN sitio: `lib/projects/acceso.ts`.
+// `npm run miembros:migrate`.
+export const projectMembers = pgTable(
+  "projectMembers",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    rol: text("rol").$type<"editor" | "lector">().notNull(),
+    invitedBy: text("invitedBy"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("projectMembers_project_user_uq").on(t.projectId, t.userId),
+    index("projectMembers_userId_idx").on(t.userId),
+  ],
+);
+
+// Las invitaciones: el enlace va por correo y sólo se guarda su sha256; de un
+// uso, 7 días, y sólo la acepta quien entra con ESE correo (la forma de
+// `chatAgentInviteTokens`).
+export const projectInvites = pgTable(
+  "projectInvites",
+  {
+    tokenHash: text("tokenHash").primaryKey(),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    email: text("email").notNull(), // en minúsculas
+    rol: text("rol").$type<"editor" | "lector">().notNull(),
+    invitedBy: text("invitedBy").notNull(),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
+    used: boolean("used").notNull().default(false),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("projectInvites_projectId_idx").on(t.projectId)],
+);
+
+// Lo que gastó cada miembro con Len, por mes: de aquí sale el tope del
+// proyecto y el «quién gastó qué» del dueño. Una fila por proyecto, persona y
+// mes ('2026-10'), que se va sumando.
+export const projectMemberSpend = pgTable(
+  "projectMemberSpend",
+  {
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    userId: text("userId").notNull(),
+    mes: text("mes").notNull(),
+    creditos: integer("creditos").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.userId, t.mes] })],
+);
 
 // ─── Broadcast module — email your audience (members-only, v1) ──────────────
 // Applied in prod via `npm run broadcast:migrate`. Shares the members monthly

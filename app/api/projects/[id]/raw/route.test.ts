@@ -17,6 +17,8 @@ const mocks = vi.hoisted(() => ({
   bake: vi.fn(async (html: string) => `${html}<!--horneado-->`),
 }));
 
+// Compartir el proyecto: aquí quien pide es el dueño (ver acceso-de-prueba.ts).
+vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("drizzle-orm", () => ({ and: (...a: unknown[]) => a, eq: (l: unknown, r: unknown) => [l, r] }));
 vi.mock("@/lib/db", () => ({

@@ -7,6 +7,7 @@ import type { FormConfig, ProjectData } from "@/lib/projects/types";
 import { pageTitle, validatePageSlug } from "@/lib/projects/site-pages";
 import { unpublishPageDir } from "@/lib/publish/filesystem";
 import { purgeSubdomain } from "@/lib/publish/cache-purge";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,10 +46,13 @@ export async function GET(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id, slug: rawSlug } = await params;
+  const acceso = await exigirAcceso(id, session.user.id, "ver");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
   const slug = resolveSlug(rawSlug);
   if (!slug) return json({ error: "invalid" }, 400);
 
-  const row = await loadRow(id, session.user.id);
+  const row = await loadRow(id, duenoId);
   const page = row?.data?.pages?.[slug];
   if (!row || !page) return json({ error: "not_found" }, 404);
   return json(
@@ -70,6 +74,9 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id, slug: rawSlug } = await params;
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
   const slug = resolveSlug(rawSlug);
   if (!slug) return json({ error: "invalid" }, 400);
 
@@ -77,7 +84,7 @@ export async function PATCH(
   const parsed = PatchSchema.safeParse(body);
   if (!parsed.success) return json({ error: "invalid" }, 400);
 
-  const row = await loadRow(id, session.user.id);
+  const row = await loadRow(id, duenoId);
   const page = row?.data?.pages?.[slug];
   if (!row || !row.data || !page) return json({ error: "not_found" }, 404);
 
@@ -87,7 +94,7 @@ export async function PATCH(
   const titulo = parsed.data.title.trim();
   const escrito = await actualizarData({
     projectId: id,
-    userId: session.user.id,
+    userId: duenoId,
     aplicar: (actual) => {
       const actualPage = actual.pages?.[slug];
       if (!actualPage) return { error: "not_found" };
@@ -116,10 +123,13 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id, slug: rawSlug } = await params;
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
   const slug = resolveSlug(rawSlug);
   if (!slug) return json({ error: "invalid" }, 400);
 
-  const row = await loadRow(id, session.user.id);
+  const row = await loadRow(id, duenoId);
   if (!row || !row.data?.pages?.[slug]) return json({ error: "not_found" }, 404);
 
   // Su JavaScript se va con ella sin hacer nada: vive dentro de
@@ -132,7 +142,7 @@ export async function DELETE(
   // una subpágina no puede además revertir lo que se guardó mientras tanto.
   const escrito = await actualizarData({
     projectId: id,
-    userId: session.user.id,
+    userId: duenoId,
     aplicar: (actual) => {
       if (!actual.pages?.[slug]) return { error: "not_found" };
       const { [slug]: _removed, ...rest } = actual.pages;

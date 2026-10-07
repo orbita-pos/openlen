@@ -19,6 +19,8 @@ import { db, schema } from "@/lib/db";
 import { terminalEncendida } from "@/lib/agent/terminal/declaracion";
 import { comandosDeLaTranscripcion } from "@/lib/agent/terminal/historial";
 import { ejecutarEnLaTerminalDelUsuario } from "@/lib/agent/terminal/terminal-del-usuario";
+import { exigirAcceso } from "@/lib/projects/acceso";
+import { realDeps } from "@/lib/agent/tools";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,12 +43,8 @@ export async function GET(
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) return json({ error: "unauthorized" }, 401);
-  const propio = await db
-    .select({ id: schema.projects.id })
-    .from(schema.projects)
-    .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
-    .limit(1);
-  if (propio.length === 0) return json({ error: "not_found" }, 404);
+  const acceso = await exigirAcceso(id, userId, "ver");
+  if (acceso instanceof Response) return acceso;
 
   const t = schema.projectChatMessages;
   // El filtro de texto es sólo para no traer de la base las transcripciones
@@ -95,12 +93,8 @@ export async function POST(
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) return json({ error: "unauthorized" }, 401);
-  const propio = await db
-    .select({ id: schema.projects.id })
-    .from(schema.projects)
-    .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
-    .limit(1);
-  if (propio.length === 0) return json({ error: "not_found" }, 404);
+  const acceso = await exigirAcceso(id, userId, "editar");
+  if (acceso instanceof Response) return acceso;
   if (!terminalEncendida()) return json({ error: "apagada" }, 409);
 
   let cuerpo: { command?: unknown };
@@ -113,5 +107,8 @@ export async function POST(
   if (!command.trim()) return json({ error: "sin_comando" }, 400);
   if (command.length > MAX_COMANDO) return json({ error: "demasiado_largo" }, 413);
 
-  return json(await ejecutarEnLaTerminalDelUsuario(id, userId, command));
+  // Un miembro trabaja con los ficheros del dueño, pero sin `/.openlen/resultados`
+  // ni `/.openlen/bandeja` (datos de los visitantes), y en su propia terminal.
+  if (acceso.rol === "dueno") return json(await ejecutarEnLaTerminalDelUsuario(id, userId, command));
+  return json(await ejecutarEnLaTerminalDelUsuario(id, acceso.duenoId, command, { ...realDeps(), resultados: undefined }, userId));
 }

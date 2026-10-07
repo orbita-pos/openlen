@@ -7,6 +7,7 @@ import { entornoPublicoDeLaApp } from "@/lib/apps/entorno";
 import { guardarDocumento } from "@/lib/lienzo/almacen";
 import { documentoDeVista } from "@/lib/lienzo/documento";
 import { lienzoApagado, urlDelDocumento } from "@/lib/lienzo/host";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
 
@@ -30,6 +31,9 @@ export async function GET(
   if (!session?.user?.id) return text("unauthorized", 401);
 
   const { id } = await ctx.params;
+  const acceso = await exigirAcceso(id, session.user.id, "ver");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
   if (!id) return text("missing id", 400);
 
   const rows = await db
@@ -41,7 +45,7 @@ export async function GET(
     })
     .from(schema.projects)
     .where(
-      and(eq(schema.projects.id, id), eq(schema.projects.userId, session.user.id)),
+      and(eq(schema.projects.id, id), eq(schema.projects.userId, duenoId)),
     )
     .limit(1);
   const row = rows[0];
@@ -84,7 +88,7 @@ export async function GET(
       const docId = guardarDocumento({
         html: vista,
         projectId: id,
-        userId: session.user.id,
+        userId: duenoId,
         pagina,
         app,
         ...(entorno ? { entorno } : {}),

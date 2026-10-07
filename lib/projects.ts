@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, desc, eq, gte, isNotNull, isNull, ne, sql as sqlOp } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, sql as sqlOp, type SQL } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type {
   Degradation,
@@ -373,6 +373,17 @@ export async function adoptPlaceholderTitle(projectId: string, userId: string, h
 }
 
 export async function listProjects(userId: string): Promise<ProjectSummary[]> {
+  return resumenesDe(eq(schema.projects.userId, userId));
+}
+
+/** Los resúmenes de unos proyectos por su id (los compartidos contigo:
+ *  lib/projects/miembros.ts → `proyectosCompartidos`). */
+export async function listProjectsByIds(ids: readonly string[]): Promise<ProjectSummary[]> {
+  if (ids.length === 0) return [];
+  return resumenesDe(inArray(schema.projects.id, [...ids]));
+}
+
+async function resumenesDe(donde: SQL): Promise<ProjectSummary[]> {
   const rows = await db
     .select({
       id: schema.projects.id,
@@ -402,7 +413,7 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       updatedAt: schema.projects.updatedAt,
     })
     .from(schema.projects)
-    .where(eq(schema.projects.userId, userId))
+    .where(donde)
     .orderBy(desc(schema.projects.updatedAt))
     .limit(200);
 

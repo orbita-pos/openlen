@@ -5,11 +5,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // (just-bash, la guarda del JavaScript, ponerse al día) la prueban las de
 // node:test en lib/agent/herramientas-de-ficheros.test.ts.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
-const propios: { id: string }[] = [];
+// Lo que devuelve la consulta de `accesoAlProyecto` (lib/projects/acceso.ts):
+// el dueño del proyecto y, si quien pide es miembro, su rol.
+const propios: { duenoId: string; rol: "editor" | "lector" | null }[] = [];
 vi.mock("@/lib/db", () => {
-  const cadena = { from: () => cadena, where: () => cadena, limit: async () => propios };
-  return { db: { select: () => cadena }, schema: { projects: { id: "id", userId: "userId" } } };
+  const cadena = { from: () => cadena, leftJoin: () => cadena, where: () => cadena, limit: async () => propios };
+  return {
+    db: { select: () => cadena },
+    schema: { projects: { id: "id", userId: "userId" }, projectMembers: { projectId: "projectId", userId: "userId", rol: "rol" } },
+  };
 });
+vi.mock("@/lib/agent/tools", () => ({ realDeps: () => ({ resultados: {} }) }));
 vi.mock("@/lib/agent/terminal/terminal-del-usuario", () => ({ ejecutarEnLaTerminalDelUsuario: vi.fn() }));
 
 import { POST } from "./route";
@@ -26,7 +32,7 @@ describe("POST /api/projects/[id]/terminal — la terminal del usuario (la #17)"
   const antes = process.env.OPENLEN_TERMINAL;
   beforeEach(() => {
     process.env.OPENLEN_TERMINAL = "1";
-    propios.splice(0, propios.length, { id: "p1" });
+    propios.splice(0, propios.length, { duenoId: "u1", rol: null });
     vi.mocked(auth).mockReset();
     vi.mocked(ejecutarEnLaTerminalDelUsuario).mockReset();
   });
@@ -70,5 +76,19 @@ describe("POST /api/projects/[id]/terminal — la terminal del usuario (la #17)"
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ command: "pwd", salida: "/\n", exitCode: 0, cambio: false });
     expect(ejecutarEnLaTerminalDelUsuario).toHaveBeenCalledWith("p1", "u1", "pwd");
+  });
+
+  it("🔴 un editor tiene SU terminal sobre los ficheros del dueño, sin los datos de los visitantes; un lector, 403", async () => {
+    vi.mocked(ejecutarEnLaTerminalDelUsuario).mockResolvedValue({ command: "ls", salida: "", exitCode: 0, cambio: false });
+    comoUsuario("ana");
+    propios.splice(0, propios.length, { duenoId: "u1", rol: "editor" });
+    expect((await pedir({ command: "ls" })).status).toBe(200);
+    expect(ejecutarEnLaTerminalDelUsuario).toHaveBeenCalledWith("p1", "u1", "ls", { resultados: undefined }, "ana");
+    vi.mocked(ejecutarEnLaTerminalDelUsuario).mockClear();
+    propios.splice(0, propios.length, { duenoId: "u1", rol: "lector" });
+    expect((await pedir({ command: "ls" })).status).toBe(403);
+    propios.splice(0, propios.length, { duenoId: "u1", rol: null });
+    expect((await pedir({ command: "ls" })).status).toBe(404);
+    expect(ejecutarEnLaTerminalDelUsuario).not.toHaveBeenCalled();
   });
 });

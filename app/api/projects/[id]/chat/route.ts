@@ -8,6 +8,7 @@ import {
   appendChatMessage,
   updateChatMessageStatus,
 } from "@/lib/projects/chat";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Chat transcript — append-only log endpoints.
@@ -233,7 +234,10 @@ export async function POST(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
-  if (!(await ownsProject(id, session.user.id))) {
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
+  if (!(await ownsProject(id, duenoId))) {
     return json({ error: "not_found" }, 404);
   }
   const parsed = TurnSchema.safeParse(await req.json().catch(() => null));
@@ -258,7 +262,10 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
-  if (!(await ownsProject(id, session.user.id))) {
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
+  if (!(await ownsProject(id, duenoId))) {
     return json({ error: "not_found" }, 404);
   }
   const parsed = StatusSchema.safeParse(await req.json().catch(() => null));

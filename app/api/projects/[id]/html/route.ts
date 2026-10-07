@@ -7,6 +7,7 @@ import { validatePageSlug } from "@/lib/projects/site-pages";
 import { createVersion } from "@/lib/projects/versions";
 import { aplicarEdiciones, type Edicion } from "@/lib/page-engine/aplicar-ediciones";
 import { MAX_HTML_BYTES } from "@/lib/projects/limites-html";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/projects/[id]/html — the editor's hand edits, applied to one of
@@ -93,6 +94,9 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
 
   const body = (await req.json().catch(() => null)) as PatchBody | null;
   if (!body || !Array.isArray(body.edits)) {
@@ -114,7 +118,7 @@ export async function PATCH(
     .where(
       and(
         eq(schema.projects.id, id),
-        eq(schema.projects.userId, session.user.id),
+        eq(schema.projects.userId, duenoId),
       ),
     )
     .limit(1);
@@ -222,7 +226,7 @@ export async function PATCH(
   try {
     const escrito = await actualizarData({
       projectId: id,
-      userId: session.user.id,
+      userId: duenoId,
       aplicar: (actual) =>
         page
           ? { ...actual, pages: { ...actual.pages, [page]: { ...actual.pages?.[page], html } } }

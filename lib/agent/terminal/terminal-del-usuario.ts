@@ -50,13 +50,19 @@ export interface ComandoDelUsuario {
   readonly cambios?: CambiosDelComando;
 }
 
+/**
+ * `userId` es el DUEÑO del proyecto (con él se leen y guardan los ficheros);
+ * `quien`, la persona que teclea: un miembro del proyecto tiene su propia
+ * terminal, no la del dueño (compartir el proyecto, lib/projects/acceso.ts).
+ */
 export function ejecutarEnLaTerminalDelUsuario(
   projectId: string,
   userId: string,
   command: string,
   deps: AgentDeps = realDeps(),
+  quien: string = userId,
 ): Promise<ComandoDelUsuario> {
-  const clave = `${userId}\u0000${projectId}`;
+  const clave = `${quien}\u0000${projectId}`;
   let a = abiertas.get(clave);
   if (!a) {
     if (abiertas.size >= MAX_ABIERTAS) {

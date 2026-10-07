@@ -6,6 +6,7 @@ import { db, schema } from "@/lib/db";
 import { generatePreviewToken, hashPasscode } from "@/lib/projects/preview";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import type { PreviewSettings, ProjectData } from "@/lib/projects/types";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
 
@@ -80,7 +81,9 @@ export const GET = paraLaApp(async (
   const userId = await usuarioDeLaPeticion(req);
   if (!userId) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
-  const data = await loadOwnedData(id, userId);
+  const acceso = await exigirAcceso(id, userId, "ver");
+  if (acceso instanceof Response) return acceso;
+  const data = await loadOwnedData(id, acceso.duenoId);
   if (!data) return json({ error: "not_found" }, 404);
   return json(stateOf(data.preview), 200);
 });
@@ -100,10 +103,13 @@ export const POST = paraLaApp(async (
   const userId = await usuarioDeLaPeticion(req);
   if (!userId) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
+  const acceso = await exigirAcceso(id, userId, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
 
   const raw = await req.json().catch(() => ({}));
   const body: PostBody = raw && typeof raw === "object" ? (raw as PostBody) : {};
-  const data = await loadOwnedData(id, userId);
+  const data = await loadOwnedData(id, duenoId);
   if (!data) return json({ error: "not_found" }, 404);
 
   const prev = data.preview;
@@ -132,7 +138,7 @@ export const POST = paraLaApp(async (
     }
   }
 
-  const ok = await writePreview(id, userId, next);
+  const ok = await writePreview(id, duenoId, next);
   if (!ok) return json({ error: "db_update_failed" }, 500);
   return json(stateOf(next), 200);
 });
@@ -160,12 +166,14 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
 
-  const data = await loadOwnedData(id, session.user.id);
+  const data = await loadOwnedData(id, acceso.duenoId);
   if (!data) return json({ error: "not_found" }, 404);
   if (!data.preview) return json({ enabled: false }, 200);
 
-  const ok = await writePreview(id, session.user.id, null);
+  const ok = await writePreview(id, acceso.duenoId, null);
   if (!ok) return json({ error: "db_update_failed" }, 500);
   return json({ enabled: false }, 200);
 }

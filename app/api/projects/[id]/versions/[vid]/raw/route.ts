@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { getVersionHtml } from "@/lib/projects/versions";
 import { embedSandboxHeaders } from "@/lib/publish/embed-sandbox";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
 
@@ -18,12 +19,15 @@ export async function GET(
   if (!session?.user?.id) return text("unauthorized", 401);
 
   const { id, vid } = await ctx.params;
+  const acceso = await exigirAcceso(id, session.user.id, "ver");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
   if (!id || !vid) return text("missing id", 400);
 
   const html = await getVersionHtml({
     projectId: id,
     versionId: vid,
-    userId: session.user.id,
+    userId: duenoId,
   });
   if (html === null) return text("not found", 404);
 

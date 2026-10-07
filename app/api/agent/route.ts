@@ -1,5 +1,7 @@
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { accesoAlProyecto, puede } from "@/lib/projects/acceso";
+import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miembros";
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
@@ -358,6 +360,26 @@ async function correrTurno(
   // Reanudar un encargo y una ronda no traen mensaje: lo pone el de ronda.
   const sinMensajeDelDueno = pedidoDelEncargo === "resume" || opts.round !== undefined;
   if ((prompt.length === 0 && !sinMensajeDelDueno) || prompt.length > MAX_PROMPT) return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`, "promptLength");
+  // COMPARTIR EL PROYECTO (lib/projects/acceso.ts): un EDITOR también habla con
+  // Len. Desde aquí `userId` es el DUEÑO —con él se lee y se escribe el proyecto
+  // y él paga, como un canal en Claude Tag lo paga la organización— y `quien`,
+  // la persona que pidió el turno. Lo que gasta un miembro cuenta contra el
+  // tope del proyecto, y el turno no ve los datos de los visitantes. Las rondas
+  // del encargo las abre el servidor para el dueño: no pasan por aquí.
+  const quien = userId;
+  let miembro = false;
+  if (!opts.round) {
+    const acceso = await accesoAlProyecto(projectId, userId);
+    if (!acceso) return errorJson(404, "project not found");
+    if (!puede(acceso.rol, "editar")) return errorJson(403, "you can view this project but not edit it", "solo_lectura");
+    if (acceso.rol !== "dueno") {
+      miembro = true;
+      userId = acceso.duenoId;
+      // Un encargo corre rondas solo, sin nadie delante: eso lo decide el dueño.
+      if (pedidoDelEncargo) return errorJson(403, "only the project owner can start or resume a goal", "solo_dueno");
+      if (!(await cabeEnElTope(projectId, 1))) return errorJson(402, "the project's monthly limit for members is used up", "tope_de_miembros");
+    }
+  }
   // F4 Task 1 — multi-page base: page slug, validated CLONED from
   // app/api/templates/ai-design/route.ts (read that file first if editing
   // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in
@@ -466,7 +488,11 @@ async function correrTurno(
     ...realDeps(async (uid, centicreditos) => {
       await debitCredits(uid, centicreditos);
       chargedByTools += centicreditos;
+      if (miembro) await sumarGasto(projectId, quien, centicreditos);
     }),
+    // Un miembro no ve `/.openlen/resultados` ni `/.openlen/bandeja`, ni las
+    // herramientas de resultados: son datos de los visitantes, del dueño.
+    ...(miembro ? { resultados: undefined } : {}),
     // `view_page` mide por el mismo navegador que los ojos: es la herramienta
     // que más veces lo abre en un turno.
     observarPagina: (input: Parameters<typeof observarPagina>[0]) =>
@@ -1129,7 +1155,8 @@ async function correrTurno(
       // cerrar su caja de texto sin quedarse esperando.
       // `abortar` es la única forma de parar el turno desde fuera: la usa
       // `POST /api/agent/cancelar` (el ■ del panel y el plazo de Len-Bench).
-      abrirTurno(turnoId, userId, Date.now(), {
+      // A nombre de QUIEN lo pidió: el ■, las respuestas y la reconexión son suyas.
+      abrirTurno(turnoId, quien, Date.now(), {
         abortar: () => {
           canceladoAProposito = true;
           upstreamAbort.abort();
@@ -1160,7 +1187,12 @@ async function correrTurno(
         // LEN 2.1 · EL TECHO DE DINERO DEL TURNO: el del plan o el saldo, lo que
         // sea menos (`techoDelTurno`). El bucle lo pregunta antes de cada
         // llamada al modelo; al pasarlo, cierra contando lo hecho.
-        const techo = techoDelTurno(creditState);
+        let techo = techoDelTurno(creditState);
+        // Un miembro, además, con lo que le queda al proyecto este mes.
+        if (miembro) {
+          const margen = await margenDeMiembros(projectId);
+          if (margen != null) techo = Math.min(techo, margen);
+        }
         // LOS CAMBIOS DEL TURNO, la foto del principio (`cambios-del-turno.ts`,
         // la forma de DeepSeek): los ficheros del proyecto ANTES de que Len
         // escriba nada. Se saca a la vez que la fila y la primera llamada al
@@ -1203,7 +1235,13 @@ async function correrTurno(
         };
         // La fila, abierta: desde aquí el turno se puede volver a mirar.
         try {
-          await abrirFilaDelTurno(projectId, { id: filaId, userText: prompt, page: pageSlug, attachedImage: photosForRow(attachedImages) });
+          await abrirFilaDelTurno(projectId, {
+            id: filaId,
+            userText: prompt,
+            page: pageSlug,
+            attachedImage: photosForRow(attachedImages),
+            autorId: miembro ? quien : null,
+          });
           filaAbierta = true;
         } catch (err) {
           console.warn("[agent] no se pudo abrir la fila del turno", err);
@@ -1484,6 +1522,7 @@ async function correrTurno(
               ` / vueltas=${result.turns} llamadas=${result.toolCalls}`,
           );
           await debitCredits(userId, credits);
+          if (miembro) await sumarGasto(projectId, quien, credits);
           cobrado = credits;
         } else if (result.topeAlcanzado === "budget_limit") {
           // 🔴 AL TECHO SE COBRA LO GASTADO, HASTA EL TECHO (Jesús, 2026-09-30).
@@ -1499,6 +1538,7 @@ async function correrTurno(
               ` / vueltas=${result.turns} llamadas=${result.toolCalls} motivo=budget_limit`,
           );
           await debitCredits(userId, alTecho);
+          if (miembro) await sumarGasto(projectId, quien, alTecho);
           cobrado = alTecho;
         } else if (canceladoAProposito && result.errorCode === "cancelled") {
           // 🔴 EL ■ COBRA LO QUE SE USÓ, HASTA EL TECHO (Jesús, 03/10: «como
@@ -1521,6 +1561,7 @@ async function correrTurno(
               ` / vueltas=${result.turns} llamadas=${result.toolCalls} motivo=cancelled`,
           );
           if (usado > 0) await debitCredits(userId, usado);
+          if (miembro) await sumarGasto(projectId, quien, usado);
           cobrado = usado;
         } else if (!result.terminalError && result.sinCobro) {
           // 🔴 CERRADO CON ELEGANCIA, SIN COBRO (revisión pre-deploy del

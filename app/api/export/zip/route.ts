@@ -1,8 +1,7 @@
 import JSZip from "jszip";
-import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { isFolderPath } from "@/lib/agent/ficheros/folder";
-import { db, schema } from "@/lib/db";
+import { accesoAlProyecto, puede } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,12 +63,9 @@ export async function POST(req: Request): Promise<Response> {
   const projectId = (body as ExportBody).projectId;
   let carpeta: Array<[string, string]> = [];
   if (typeof projectId === "string" && projectId.length > 0) {
-    const [propio] = await db
-      .select({ id: schema.projects.id })
-      .from(schema.projects)
-      .where(and(eq(schema.projects.id, projectId), eq(schema.projects.userId, session.user.id)))
-      .limit(1);
-    if (propio) {
+    // El dueño y los editores (lib/projects/acceso.ts): descargar el código es trabajar en él.
+    const acceso = await accesoAlProyecto(projectId, session.user.id);
+    if (acceso && puede(acceso.rol, "editar")) {
       const { listProjectFiles } = await import("@/lib/backend/files");
       carpeta = Object.entries(await listProjectFiles(projectId)).filter(([ruta]) => isFolderPath(ruta));
     }

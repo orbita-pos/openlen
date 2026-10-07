@@ -4,6 +4,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ publishProject: vi.fn() }));
+// Compartir el proyecto: aquí quien pide es el dueño (ver acceso-de-prueba.ts).
+vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
 vi.mock("@/auth", () => ({ auth: vi.fn(async () => null) }));
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: vi.fn(async () => "u1") }));
 vi.mock("@/lib/projects", async () => {

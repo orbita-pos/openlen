@@ -7,6 +7,7 @@ import {
   getBaselineVersion,
   listVersions,
 } from "@/lib/projects/versions";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
 
@@ -23,6 +24,9 @@ export async function GET(
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
 
   const { id } = await ctx.params;
+  const acceso = await exigirAcceso(id, session.user.id, "ver");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
   if (!id) return json({ error: "missing id" }, 400);
 
   const url = new URL(req.url);
@@ -36,7 +40,7 @@ export async function GET(
     }
     const baseline = await getBaselineVersion({
       projectId: id,
-      userId: session.user.id,
+      userId: duenoId,
       page,
     });
     return json({ baseline }, 200);
@@ -44,7 +48,7 @@ export async function GET(
 
   const versions = await listVersions({
     projectId: id,
-    userId: session.user.id,
+    userId: duenoId,
   });
   return json({ versions }, 200);
 }
@@ -70,6 +74,9 @@ export async function POST(
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
 
   const { id } = await ctx.params;
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
   if (!id) return json({ error: "missing id" }, 400);
 
   const body = (await req.json().catch(() => null)) as PostBody | null;
@@ -82,7 +89,7 @@ export async function POST(
     .where(
       and(
         eq(schema.projects.id, id),
-        eq(schema.projects.userId, session.user.id),
+        eq(schema.projects.userId, duenoId),
       ),
     )
     .limit(1);

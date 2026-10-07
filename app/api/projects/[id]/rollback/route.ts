@@ -5,6 +5,7 @@ import {
   ReleaseUnavailableError,
   rollbackProject,
 } from "@/lib/projects";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +37,9 @@ export async function POST(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
 
   let body: unknown;
   try {
@@ -51,7 +55,7 @@ export async function POST(
   try {
     const result = await rollbackProject({
       projectId: id,
-      userId: session.user.id,
+      userId: duenoId,
       sha: parsed.data.sha,
     });
     return json(result, 200);

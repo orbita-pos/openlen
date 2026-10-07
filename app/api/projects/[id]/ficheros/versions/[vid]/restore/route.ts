@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { restoreFileVersion } from "@/lib/projects/file-versions";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
 
@@ -19,9 +20,12 @@ export async function POST(
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
 
   const { id, vid } = await ctx.params;
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
   if (!id || !vid) return json({ error: "missing id" }, 400);
 
-  const result = await restoreFileVersion({ projectId: id, userId: session.user.id, versionId: vid });
+  const result = await restoreFileVersion({ projectId: id, userId: duenoId, versionId: vid });
   if (!result) return json({ error: "not found" }, 404);
 
   return json(result, 200);

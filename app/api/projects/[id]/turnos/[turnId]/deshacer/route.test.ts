@@ -3,6 +3,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), deshacerTurno: vi.fn() }));
+// Compartir el proyecto: aquí quien pide es el dueño (ver acceso-de-prueba.ts).
+vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/projects/deshacer-turno", () => ({ deshacerTurno: mocks.deshacerTurno }));
 

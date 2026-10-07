@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { deshacerTurno } from "@/lib/projects/deshacer-turno";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
 
@@ -27,9 +28,12 @@ export async function POST(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id, turnId } = await ctx.params;
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
   if (!id || !turnId || turnId.length > 100) return json({ error: "missing id" }, 400);
 
-  const r = await deshacerTurno({ projectId: id, userId: session.user.id, turnId });
+  const r = await deshacerTurno({ projectId: id, userId: duenoId, turnId });
   if (r.ok) {
     return json({ paginas: r.paginas, ficheros: r.ficheros, noSeDeshacen: r.noSeDeshacen, deshacerId: r.deshacerId }, 200);
   }

@@ -7,6 +7,7 @@ import { documentoDeVista } from "@/lib/lienzo/documento";
 import { lienzoApagado, urlDelDocumento } from "@/lib/lienzo/host";
 import { MAX_HTML_BYTES } from "@/lib/projects/limites-html";
 import { validatePageSlug } from "@/lib/projects/site-pages";
+import { accesoAlProyecto } from "@/lib/projects/acceso";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/lienzo — sube el documento que el taller va a enseñar y devuelve la
@@ -49,6 +50,9 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: "demasiado_grande" }, 413);
   }
 
+  // El lienzo lo ven el dueño y sus miembros (lib/projects/acceso.ts).
+  const acceso = await accesoAlProyecto(body.projectId, session.user.id);
+  if (!acceso) return json({ error: "no_encontrado" }, 404);
   const [fila] = await db
     .select({
       data: schema.projects.data,
@@ -57,7 +61,7 @@ export async function POST(req: Request): Promise<Response> {
       logoUrl: schema.projects.logoUrl,
     })
     .from(schema.projects)
-    .where(and(eq(schema.projects.id, body.projectId), eq(schema.projects.userId, session.user.id)))
+    .where(and(eq(schema.projects.id, body.projectId), eq(schema.projects.userId, acceso.duenoId)))
     .limit(1);
   if (!fila) return json({ error: "no_encontrado" }, 404);
 

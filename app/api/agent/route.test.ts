@@ -84,6 +84,8 @@ const mocks = vi.hoisted(() => ({
   nacerComoApp: vi.fn(async (_p: unknown) => true),
 }));
 
+// Compartir el proyecto: aquí quien pide es el dueño (ver acceso-de-prueba.ts).
+vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 // El correo del dueño sale de la base (`ownerEmail`). Sin este doble, cada turno
 // de estas pruebas esperaba ~2,7 s a una base que aquí no existe — y las rondas

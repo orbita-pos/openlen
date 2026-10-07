@@ -5,7 +5,7 @@
 // project interleave instead of overwriting a shared blob. Callers verify
 // project ownership before invoking append/update — see the chat route.
 
-import { and, asc, desc, eq, getTableColumns, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { FilaDelHistorial, TranscripcionGuardada } from "@/lib/agent/transcripcion";
@@ -363,6 +363,8 @@ export async function abrirFilaDelTurno(
     readonly page: string | null;
     /** Lo que se guarda tal cual: `photosForRow` (una foto, un objeto). */
     readonly attachedImage?: ChatPhoto | ChatPhoto[] | null;
+    /** Quién lo pidió, si no fue el dueño (compartir el proyecto). */
+    readonly autorId?: string | null;
   },
 ): Promise<void> {
   await db
@@ -372,6 +374,7 @@ export async function abrirFilaDelTurno(
       projectId,
       userText: turn.userText.slice(0, 4000),
       attachedImage: turn.attachedImage ?? null,
+      autorId: turn.autorId ?? null,
       assistantReasoning: "",
       page: turn.page ?? null,
       status: ESTADO_EN_CURSO,
@@ -433,7 +436,19 @@ export async function leerTurnoDelUsuario(
     .select({ ...columnasDelPanel(), goal: sql<unknown>`${schema.projectChatMessages.transcript}->'goal'` })
     .from(schema.projectChatMessages)
     .innerJoin(schema.projects, eq(schema.projects.id, schema.projectChatMessages.projectId))
-    .where(and(eq(schema.projectChatMessages.id, id), eq(schema.projects.userId, userId)))
+    .where(
+      and(
+        eq(schema.projectChatMessages.id, id),
+        // El dueño, o un miembro del proyecto (compartir el proyecto, lib/projects/acceso.ts).
+        or(
+          eq(schema.projects.userId, userId),
+          inArray(
+            schema.projects.id,
+            db.select({ id: schema.projectMembers.projectId }).from(schema.projectMembers).where(eq(schema.projectMembers.userId, userId)),
+          ),
+        ),
+      ),
+    )
     .limit(1);
   const row = rows[0];
   if (!row) return null;

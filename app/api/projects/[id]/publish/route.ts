@@ -1,5 +1,8 @@
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
+import { db, schema } from "@/lib/db";
+import { exigirAcceso } from "@/lib/projects/acceso";
 import { auth } from "@/auth";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
@@ -46,6 +49,9 @@ export const POST = paraLaApp(async (
   const userId = await usuarioDeLaPeticion(req);
   if (!userId) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
+  // Publican el dueño y los editores (lib/projects/acceso.ts)…
+  const acceso = await exigirAcceso(id, userId, "editar");
+  if (acceso instanceof Response) return acceso;
 
   let body: unknown;
   try {
@@ -60,11 +66,17 @@ export const POST = paraLaApp(async (
       400,
     );
   }
+  // …pero la DIRECCIÓN la elige el dueño: un editor sólo vuelve a publicar
+  // en la que ya tiene el proyecto (reclamar otra cuenta contra su plan).
+  if (acceso.rol !== "dueno") {
+    const [p] = await db.select({ subdomain: schema.projects.subdomain }).from(schema.projects).where(eq(schema.projects.id, id)).limit(1);
+    if (!p?.subdomain || p.subdomain !== parsed.data.subdomain) return json({ error: "solo_dueno_direccion" }, 403);
+  }
 
   try {
     const result = await publishProject({
       projectId: id,
-      userId: userId,
+      userId: acceso.duenoId,
       subdomain: parsed.data.subdomain,
       languages: parsed.data.languages,
     });
