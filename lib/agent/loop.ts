@@ -30,7 +30,7 @@ import { compactIfNeeded } from "./compaction/compact";
 import { retainOversized } from "./compaction/spill";
 import { contenidoDeRespuesta } from "./fireworks-bridge";
 import { CLAVE_TOOL_RESULT } from "./ficheros/resultado";
-import { estimateTokens } from "./compaction/estimate";
+import { CHARS_PER_TOKEN, estimateTokens } from "./compaction/estimate";
 import type { CompactionPolicy } from "./compaction/policy";
 import { createWritePreview } from "./write-preview";
 
@@ -1251,7 +1251,19 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       messagesAtLastCall = messages.length;
       // Una por intento: un reintento vuelve a escribir desde cero.
       const writePreview = createWritePreview(undefined, args.activePage);
+      // LO QUE ESTE INTENTO GENERÓ, por si el proveedor no manda su uso (llega al
+      // FINAL del stream, y un ■ o un corte a mitad no lo trae). Ver abajo.
+      let usoDelProveedor = false;
+      let generadoEnElIntento = 0;
+      let pensadoEnElIntento = 0;
+      let argumentosEnVivo = 0;
+      const peticionDelIntento = estimateTokens(messages);
       for await (const ev of args.openStream(messages)) {
+        if (ev.type === "text_delta") generadoEnElIntento += ev.text.length;
+        else if (ev.type === "reasoning") pensadoEnElIntento += ev.text.length;
+        else if (ev.type === "function_call_delta") argumentosEnVivo += ev.argsDelta.length;
+        else if (ev.type === "function_call" && argumentosEnVivo === 0) generadoEnElIntento += JSON.stringify(ev.args).length;
+        else if (ev.type === "usage") usoDelProveedor = true;
         if (ev.type === "text_delta" && retener) {
           turnText += ev.text;
           retenido += ev.text;
@@ -1314,6 +1326,20 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
             truncado = true;
           }
         }
+      }
+
+      // 🔴 EL USO QUE NO LLEGÓ. Fireworks manda el uso al FINAL del stream: un ■
+      // o un corte a mitad no lo traen, y el turno cobraba 0 aunque el proveedor
+      // sí factura lo generado hasta ese momento (ensayo de caja de
+      // crear-es-len, 07/10). Como DeepSeek —«el usuario paga cada token que el
+      // modelo llegó a gastar, también en un turno cancelado»—, sin el uso del
+      // proveedor se cuenta lo que llegó: la petición y lo generado, con el
+      // mismo estimador de la compactación. Si no llegó ni un trozo, nada.
+      const generado = generadoEnElIntento + argumentosEnVivo + pensadoEnElIntento;
+      if (!usoDelProveedor && generado > 0) {
+        inputTokens += peticionDelIntento;
+        outputTokens += Math.ceil(generado / CHARS_PER_TOKEN);
+        thinkingTokens += Math.ceil(pensadoEnElIntento / CHARS_PER_TOKEN);
       }
 
       // ─── NO CABE: se compacta sin mirar el umbral y se repite UNA vez ────

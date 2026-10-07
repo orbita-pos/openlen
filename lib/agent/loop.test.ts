@@ -1016,6 +1016,53 @@ describe("runAgentLoop — TodoWrite, retirada (F4)", () => {
   });
 });
 
+// ── EL ■ ANTES DE QUE LLEGUE EL USO (crear-es-len, 07/10) ────────────────────
+//
+// Fireworks manda el uso al FINAL del stream: un ■ a mitad no lo trae, y el
+// turno cobraba 0 aunque el proveedor sí factura lo generado hasta el corte.
+// Como DeepSeek («el usuario paga cada token que el modelo llegó a gastar,
+// también en un turno cancelado»): sin uso del proveedor, se cuenta lo que llegó.
+describe("runAgentLoop — el uso de un intento cortado sin «usage»", () => {
+  it("🔴 un ■ a mitad del stream cuenta lo que se generó y la petición", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "reescribe la portada entera" }], tools: [],
+      openStream: scripted([
+        { type: "text_delta", text: "La escribo entera." },
+        { type: "function_call_delta", index: 0, name: "Write", argsDelta: '{"content":"' + "x".repeat(700) },
+        { type: "done", stopReason: { kind: "cancelled" } },
+      ]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(r.usage.inputTokens).toBeGreaterThan(0);
+    expect(r.usage.outputTokens).toBeGreaterThanOrEqual(200);
+  });
+
+  it("BRAZO DE CONTROL: con el uso del proveedor se cuenta ése, sin estimar nada", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: scripted([
+        { type: "text_delta", text: "Hola." },
+        { type: "usage", inputTokens: 10, outputTokens: 3, cachedTokens: 0, thinkingTokens: 0 },
+        { type: "done", stopReason: { kind: "cancelled" } },
+      ]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(r.usage).toMatchObject({ inputTokens: 10, outputTokens: 3 });
+  });
+
+  it("y un ■ antes del primer trozo no cuenta nada", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: scripted([{ type: "done", stopReason: { kind: "cancelled" } }]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(r.usage).toMatchObject({ inputTokens: 0, outputTokens: 0 });
+  });
+});
+
 // ── ask_user_question (antes preguntar): la parada la ejecuta el SERVIDOR ─────────────────────────────
 //
 // 🔴 «Esto lo decide el usuario» viajaba como `ok:false` con una ORDEN dentro

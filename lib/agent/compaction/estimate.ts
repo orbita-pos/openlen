@@ -5,7 +5,7 @@
 import type { Message } from "@/lib/ai-gateway";
 import { TOKENS_POR_FOTO } from "@/lib/agent/context";
 
-const CHARS_PER_TOKEN = 3.5;
+export const CHARS_PER_TOKEN = 3.5;
 
 export function estimateMessageTokens(m: Message): number {
   const chars =
