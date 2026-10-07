@@ -2,7 +2,16 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { ProjectData } from "@/lib/projects/types";
-import { carpetaDeLaVista, documentoDeVista, documentoMedible, vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "./documento";
+import {
+  carpetaDeLaVista,
+  documentoDeVista,
+  documentoMedible,
+  documentoParaLaFoto,
+  pantallaDe,
+  vistaConCarpeta,
+  vistaParaMedir,
+  type ContextoDeVista,
+} from "./documento";
 
 const DOC =
   '<!doctype html><html><head><title>t</title><base href="https://otro.example/"></head><body>' +
@@ -259,6 +268,26 @@ describe("una app en la vista", () => {
   it("carpetaDeLaVista: una app sin ficheros trae igualmente su catálogo; una página sin ficheros, nada", () => {
     expect(Object.keys(carpetaDeLaVista(ctx({ app: APP }))?.files ?? {})).toContain("/openlen/vendor/2026-10/react.js");
     expect(carpetaDeLaVista(ctx())).toBeUndefined();
+  });
+
+  it("🔴 documentoParaLaFoto: una app se fotografía CON su import map (sin él no arranca y la foto sale en blanco); una página, tal cual", () => {
+    expect(documentoParaLaFoto(CASCARON, { app: APP })).toContain("data-openlen-importmap");
+    expect(documentoParaLaFoto(CASCARON, { app: null })).toBe(CASCARON);
+    expect(documentoParaLaFoto(CASCARON, null)).toBe(CASCARON);
+  });
+
+  it("carpetaDeLaVista: una app pide esperar a la red y lleva la pantalla; una página, nada de eso", () => {
+    expect(carpetaDeLaVista(ctx({ app: APP, pantalla: "#/ventas" }))).toMatchObject({ hash: "#/ventas", esperarALaRed: true });
+    expect(carpetaDeLaVista(ctx({ app: APP }))).not.toHaveProperty("hash");
+    const pagina = carpetaDeLaVista(ctx({ files: { "/js/a.js": "1" }, pantalla: "#/ventas" }));
+    expect(pagina).not.toHaveProperty("hash");
+    expect(pagina).not.toHaveProperty("esperarALaRed");
+  });
+
+  it("pantallaDe: «ventas», «/ventas» y «#/ventas» son la misma; vacía o el principio, ninguna", () => {
+    for (const v of ["ventas", "/ventas", "#/ventas", " #/ventas "]) expect(pantallaDe(v), v).toBe("#/ventas");
+    expect(pantallaDe("#/ventas/12?x=1")).toBe("#/ventas/12?x=1");
+    for (const v of ["", "/", "#/", "con espacio", 3, undefined]) expect(pantallaDe(v), String(v)).toBeNull();
   });
 
   it("vistaConCarpeta: una app trae su import.meta.env; una página no lo pide", async () => {

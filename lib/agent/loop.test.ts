@@ -2781,6 +2781,84 @@ describe("runAgentLoop — lo medido vuelve al modelo", () => {
 // El separador viaja SÓLO al cliente, nunca a `turnText`: meterlo ahí le pondría
 // un salto de línea a la cabeza al mensaje que se le manda al modelo.
 // ─────────────────────────────────────────────────────────────────────────────
+// UNA APP WEB (F3 de la spec local 2026-10-07-apps): cambiar su CÓDIGO cambia lo
+// que se ve aunque el cascarón (/index.html) siga igual. El bucle lo mide y lo
+// mira como una página que cambió.
+describe("runAgentLoop — en una app, el código que cambia se mide y se mira", () => {
+  const CASCARON = '<!doctype html>\n<html>\n<body>\n<div id="root"></div>\n<script type="module" src="/src/main.jsx"></script>\n</body>\n</html>';
+  const escribe = (): StreamEvent[] => [{ type: "function_call", name: "Write", args: {} }, done];
+  const escribeElCodigo = async () => ({
+    response: { ok: true },
+    action: { tool: "Write", ok: true, summary: "/src/App.jsx", cambio: "cambio" as const },
+    appCambiada: { cascaron: CASCARON },
+  });
+
+  it("🔴 dos escrituras de /src con el MISMO cascarón se miden las dos, y la línea base se pide como base", async () => {
+    const llamadas: { base: boolean }[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "haz la caja" }],
+      tools: [],
+      openStream: scripted(escribe(), escribe(), [{ type: "text_delta", text: "Hecho." }, done]),
+      runTool: escribeElCodigo,
+      emit: () => {},
+      medirParaElModelo: async (_html, opciones) => {
+        llamadas.push({ base: opciones?.base === true });
+        // La app de ahora grita; la de antes del turno, no.
+        return opciones?.base ? { runtimeErrors: [] } : { runtimeErrors: ["boom (at /src/App.jsx:3:7)"] };
+      },
+    });
+    // Después de cada escritura (2), y la base una sola vez.
+    expect(llamadas.filter((l) => !l.base)).toHaveLength(2);
+    expect(llamadas.filter((l) => l.base)).toHaveLength(1);
+  });
+
+  it("🔴 un error de la app se ancla en SU fichero de /src, no en el cascarón", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "haz la caja" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(escribe(), [{ type: "text_delta", text: "Hecho." }, done])),
+      runTool: escribeElCodigo,
+      emit: () => {},
+      medirParaElModelo: async (_html, opciones) =>
+        opciones?.base ? { runtimeErrors: [] } : { runtimeErrors: ["Cannot read properties of undefined (reading 'precio') (at /src/Carrito.jsx:6:13)"] },
+    });
+    const sobre = (vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "";
+    expect(sobre).toContain("/src/Carrito.jsx:\n  ✘ [Line 6:13]");
+    expect(sobre).toContain("reading 'precio'");
+    expect(sobre).not.toContain("/index.html:");
+  });
+
+  it("CONTRA-PRUEBA: lo que la app ya hacía antes del turno no se le dice como nuevo", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(escribe(), [{ type: "text_delta", text: "Hecho." }, done])),
+      runTool: escribeElCodigo,
+      emit: () => {},
+      medirParaElModelo: async () => ({ runtimeErrors: ["viejo (at /src/Otro.jsx:1:1)"] }),
+    });
+    expect((vistos[1] ?? []).find((m) => m.functionResponses)?.content ?? "").not.toContain("viejo");
+  });
+
+  it("el cierre mira la app: el turno cuenta como mutación de la home", async () => {
+    let mirada: { html: string; page: string | null } | null = null;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: scripted(escribe(), [{ type: "text_delta", text: "Hecho." }, done]),
+      runTool: escribeElCodigo,
+      emit: () => {},
+      verifyTurn: async (m) => {
+        mirada = { html: m.html, page: m.page };
+        return { estado: "bien" as const };
+      },
+    });
+    expect(mirada).toEqual({ html: CASCARON, page: null });
+  });
+});
+
 describe("el texto de varias vueltas", () => {
   const recoger = (events: AgentStreamEvent[]) =>
     events

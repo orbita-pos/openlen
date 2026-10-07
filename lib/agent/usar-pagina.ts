@@ -33,7 +33,8 @@
 import type { Browser, ElementHandle, Page } from "puppeteer";
 
 import { TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
-import { origenDeMedida } from "@/lib/ai/origen-de-medida";
+import { esperarALaRed, origenDeMedida } from "@/lib/ai/origen-de-medida";
+import { textoDelError } from "@/lib/ai/sitio-del-error";
 import { lanzarChromium } from "@/lib/ai/visual-quality-renderer";
 import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
@@ -829,7 +830,8 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
       ev.dialogos.push(`${cual} came up saying ${q(d.message(), 120)}; I accepted it.`);
       void d.accept().catch(() => undefined);
     });
-    page.on("pageerror", (e) => errores.push(String((e as Error)?.message ?? e).slice(0, 200)));
+    // Con DÓNDE nació, si la traza lo dice: en una app, su fichero de /src.
+    page.on("pageerror", (e) => errores.push(textoDelError(e, 200)));
     page.on("console", (m) => {
       if (m.type() !== "error") return;
       const t = m.text();
@@ -850,10 +852,16 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
 
     // LA CARPETA (pieza 9 de Len 2.5): los ficheros de la vista se contestan
     // desde memoria (el guardia), y el documento vive en la ruta de su página.
-    const doc = origen.publicar(html, carpetaDeLaVista(p.vista));
+    const opciones = carpetaDeLaVista(p.vista);
+    const doc = origen.publicar(html, opciones);
+    // UNA APP: la visita empieza en la pantalla pedida (`#/ventas`) y espera a
+    // que la app pida sus datos —tras cargar y tras cada paso— (H12).
+    const inicio = doc.url + (opciones?.hash ?? "");
+    const enUnaApp = Boolean(p.vista?.app);
     const sinHash = (u: string) => u.split("#")[0];
     try {
-      await page.goto(doc.url, { waitUntil: "load", timeout: 20_000 });
+      await page.goto(inicio, { waitUntil: "load", timeout: 20_000 });
+      await esperarALaRed(page, opciones);
       if (sessionScript) await page.removeScriptToEvaluateOnNewDocument(sessionScript.identifier);
       const cambiantes = new Set<string>();
       let hechos = 0;
@@ -875,6 +883,7 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
           break;
         }
         await dormir(VENTANA_MS);
+        await esperarALaRed(page, opciones);
 
         const detalle = [...accion.detalle];
         // ¿Se fue la página? Por algo que el preludio no vio o por un `location`
@@ -882,7 +891,8 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
         let seFue = "";
         if (sinHash(page.url()) !== sinHash(doc.url)) {
           seFue = page.url();
-          await page.goto(doc.url, { waitUntil: "load", timeout: 20_000 }).catch(() => undefined);
+          await page.goto(inicio, { waitUntil: "load", timeout: 20_000 }).catch(() => undefined);
+          await esperarALaRed(page, opciones);
         }
         const despues = await foto(page);
         const cambios = seFue ? [] : contarCambios(accion.antes, despues, cambiantes, accion.propio);
@@ -903,7 +913,11 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
         if (seFue) detalle.push("the page tried to leave, so I loaded it again to carry on: what wasn't saved was lost.");
         for (const e of sale.envios) {
           const campos = e.campos.length ? e.campos.map(([k, v]) => `${k}=${q(v, 60)}`).join(", ") : "no field with a name";
-          if (e.cancelado) {
+          if (e.cancelado && enUnaApp) {
+            // En una app, TODO formulario lo maneja su código con
+            // `preventDefault`: es lo normal, no una entrega que se pierde.
+            detalle.push(`the app handled the form submission in its code. It carried: ${campos}.`);
+          } else if (e.cancelado) {
             detalle.push(`the page's script CANCELED the form submission (preventDefault). It carried: ${campos}.`);
             notas.add(
               "(note: a form whose submission the script cancels doesn't reach the user on the published page: OpenLen gives it its destination at publish time, and the `preventDefault` cancels that.)",

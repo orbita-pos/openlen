@@ -346,7 +346,10 @@ export interface AgentLoopArgs {
    * Debe ser fail-soft — devolver `null` si no pudo medir. Ausente ⇒ el bucle
    * se comporta exactamente como antes de que esto existiera.
    */
-  medirParaElModelo?(taggedHtml: string): Promise<MedicionCruda | null>;
+  /** `base`: es la LÍNEA BASE (el documento de antes de la primera escritura
+   *  del turno). En una app, quien mide la toma con la carpeta de entonces: el
+   *  cascarón es el mismo y lo que cambió es el código. */
+  medirParaElModelo?(taggedHtml: string, opciones?: { readonly base?: boolean }): Promise<MedicionCruda | null>;
   // ⚰️ Aquí vivía `lineaBase`: el documento con el que arrancó el turno, que
   // pasaba la ruta, y sólo servía para la página del arranque. Len 2.0 (T9) la
   // saca de cada escritura (`outcome.htmlPrevio`), así que hay base para todas
@@ -1056,7 +1059,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    *  versión: tal como la ve Read y su gemelo con posiciones. Len 2.0 edita
    *  varios ficheros en una tanda, y se miden todos, como Claude Code mira todos
    *  los que tienen línea base. */
-  const porMedir = new Map<string | null, { html: string; gemelo: string }>();
+  const porMedir = new Map<string | null, { html: string; gemelo: string; clave?: string }>();
+  /** Cuántas veces cambió el código de la app en este turno: entra en la clave
+   *  de la medida (ver `appCambiada`). */
+  let versionDeLaApp = 0;
   /** El último gemelo medido de cada página. Sin esto, una tanda que sólo lee o
    *  que cambia AJUSTES volvería a arrancar Chromium sobre la misma página. */
   const ultimoMedido = new Map<string | null, string>();
@@ -1093,7 +1099,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
     let base: MedicionCruda | null = null;
     try {
-      base = await args.medirParaElModelo(etiquetarConPosiciones(previo));
+      base = await args.medirParaElModelo(etiquetarConPosiciones(previo), { base: true });
     } catch {
       base = null;
     }
@@ -1121,8 +1127,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       for (const [page, doc] of porMedir) {
         // El fusible: tres fallos seguidos y no se vuelve a intentar este turno.
         if (avisos.apagado) break;
-        if (ultimoMedido.get(page) === doc.gemelo) continue;
-        ultimoMedido.set(page, doc.gemelo);
+        if (ultimoMedido.get(page) === (doc.clave ?? doc.gemelo)) continue;
+        ultimoMedido.set(page, doc.clave ?? doc.gemelo);
         let medicion: MedicionCruda | null = null;
         try {
           medicion = await args.medirParaElModelo(doc.gemelo);
@@ -2252,6 +2258,21 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
             // versión — que es la que hay que mirar.
             ultimaPorPagina.set(outcome.page ?? null, lastMutation);
           }
+        }
+        // UNA APP (F3 de la spec local 2026-10-07-apps): cambió su CÓDIGO. El
+        // cascarón es el mismo, pero lo que se ve no: se mide y se mira como si
+        // la página hubiera cambiado. La clave de la medida lleva la versión de
+        // la app —el gemelo es idéntico entre dos escrituras de /src, y sin
+        // ella la segunda no se mediría—, y la línea base es la del cascarón al
+        // empezar, medida con la carpeta de entonces (`medirParaElModelo` con
+        // `base`).
+        if (outcome.appCambiada && !nula) {
+          versionDeLaApp++;
+          const tal = sinOpIds(outcome.appCambiada.cascaron);
+          lastMutation = { html: outcome.appCambiada.cascaron, page: null, taggedHtml: etiquetarConPosiciones(tal) };
+          porMedir.set(null, { html: tal, gemelo: lastMutation.taggedHtml!, clave: `${lastMutation.taggedHtml}\0app@${versionDeLaApp}` });
+          ultimaPorPagina.set(null, lastMutation);
+          if (!previoPorPagina.has(null)) previoPorPagina.set(null, tal);
         }
         // LA LÍNEA BASE DE CADA PÁGINA: cómo estaba antes de la PRIMERA escritura
         // del turno sobre ella. Las siguientes no la mueven.

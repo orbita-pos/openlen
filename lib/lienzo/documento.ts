@@ -39,6 +39,17 @@ export interface ContextoDeVista {
   /** Lo que vale `import.meta.env` en la app: sólo valores públicos
    *  (`lib/apps/entorno.ts`). */
   entorno?: Readonly<Record<string, string>>;
+  /** UNA APP: la pantalla que se abre (`#/ventas`), la que Len pidió mirar o
+   *  usar. Ausente = el principio de la app. */
+  pantalla?: string | null;
+}
+
+/** `ventas`, `/ventas` o `#/ventas` → `#/ventas`; vacío → `null`. */
+export function pantallaDe(valor: unknown): string | null {
+  if (typeof valor !== "string") return null;
+  const limpia = valor.trim().replace(/^#/, "").replace(/^\/?/, "/");
+  if (limpia === "/" || /\s/.test(limpia) || limpia.length > 200) return null;
+  return `#${limpia}`;
 }
 
 /**
@@ -67,12 +78,18 @@ export function carpetaServida(
  *  vista no trae ficheros: así quien mide una página sin carpeta llama igual
  *  que siempre. Una app trae siempre algo: las dependencias de su catálogo. */
 export function carpetaDeLaVista(
-  vista: Pick<ContextoDeVista, "files" | "pagina" | "app" | "entorno"> | null | undefined,
-): { files: Readonly<Record<string, string>>; pagina: string | null } | undefined {
+  vista: Pick<ContextoDeVista, "files" | "pagina" | "app" | "entorno" | "pantalla"> | null | undefined,
+): { files: Readonly<Record<string, string>>; pagina: string | null; hash?: string; esperarALaRed?: boolean } | undefined {
   const app = vista?.app ?? null;
   const files = vista?.files ?? {};
   if (!vista || (!app && Object.keys(files).length === 0)) return undefined;
-  return { files: carpetaServida(files, app, vista.entorno), pagina: vista.pagina };
+  return {
+    files: carpetaServida(files, app, vista.entorno),
+    pagina: vista.pagina,
+    // UNA APP: la pantalla pedida, y esperar a que pida sus datos (H12).
+    ...(app && vista.pantalla ? { hash: vista.pantalla } : {}),
+    ...(app ? { esperarALaRed: true } : {}),
+  };
 }
 
 export function documentoDeVista(html: string, ctx: ContextoDeVista): string {
@@ -177,6 +194,17 @@ export async function vistaConCarpeta(
   if (!todos) return conEntorno;
   const files = Object.fromEntries(Object.entries(todos).filter(([ruta]) => isPublishableFolderPath(ruta)));
   return Object.keys(files).length > 0 ? { ...conEntorno, files } : conEntorno;
+}
+
+/**
+ * EL DOCUMENTO QUE SE FOTOGRAFÍA. Los ojos fotografían lo GUARDADO, sin hornear
+ * (el horneado metería nuestros módulos en la foto: ver `verify.ts`). Pero una
+ * APP sin su import map no arranca —sus fuentes compilados piden `react` por su
+ * nombre—, y la foto sería una pantalla en blanco que la app no tiene, juzgada
+ * como rota. Así que a una app se le pone el import map, y nada más.
+ */
+export function documentoParaLaFoto(html: string, vista: Pick<ContextoDeVista, "app"> | null | undefined): string {
+  return vista?.app ? conImportMap(html, vista.app.catalogo) : html;
 }
 
 /**

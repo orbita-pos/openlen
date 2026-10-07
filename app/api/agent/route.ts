@@ -87,6 +87,7 @@ import { conSenales, relojDeSilencio } from "@/lib/agent/reloj-de-silencio";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession } from "@/lib/agent/tools";
 import { cerrarTerminalDeLaSesion } from "@/lib/agent/terminal/herramienta";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
+import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
 import { cambiosDelTurnoParaDeshacer } from "@/lib/projects/deshacer-turno-plan";
 import { guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
@@ -1369,13 +1370,20 @@ async function correrTurno(
           medirParaElModelo:
             process.env.OPENLEN_AGENT_VISION === "0"
               ? undefined
-              : async (gemelo: string) => {
+              : async (gemelo: string, opciones?: { readonly base?: boolean }) => {
                   // Las fotos del dueño, incrustadas: medir sin ellas da
                   // lecturas de contraste sobre fondos que en la página real no
                   // están vacíos. Es lo mismo que hacen los ojos aquí abajo.
                   // LA CARPETA (pieza 9, carril B): se relee aquí, no al
                   // empezar: el turno pudo escribir `js/app.js` hace un paso.
-                  const vista = await vistaConCarpeta(vistaDelTurno, deps, projectId);
+                  let vista = await vistaConCarpeta(vistaDelTurno, deps, projectId);
+                  // UNA APP (F3): la LÍNEA BASE es la app de antes del turno. Su
+                  // cascarón casi nunca cambia: lo que cambió es el código, así
+                  // que se mide con la carpeta de antes de la primera escritura.
+                  const alEmpezar = agentSession.carpetaAlEmpezar;
+                  if (opciones?.base && vista.app && alEmpezar) {
+                    vista = { ...vista, files: Object.fromEntries([...alEmpezar].filter(([ruta]) => isPublishableFolderPath(ruta))) };
+                  }
                   const paraMedir = documentoMedible(await inlineOwnAssets(gemelo), vista);
                   const carpeta = carpetaDeLaVista(vista);
                   return componerMedicion(

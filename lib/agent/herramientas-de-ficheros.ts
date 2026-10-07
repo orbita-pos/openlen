@@ -18,6 +18,8 @@ import { persistPage } from "@/lib/page-engine/persist";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { MAX_SITE_PAGES, validatePageSlug } from "@/lib/projects/site-pages";
 import type { ProjectData } from "@/lib/projects/types";
+import { diagnosticosDeLaApp } from "@/lib/agent/compila-la-app";
+import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import { ejecutarRead, noExiste, normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
 import { coercerEntradaEdit, planearEdit, type PlanDeEdit } from "@/lib/agent/ficheros/edit";
 import { coercerEntradaWrite, planearWrite } from "@/lib/agent/ficheros/write";
@@ -34,7 +36,7 @@ import {
 } from "@/lib/agent/ficheros/sitio";
 import { CLAVE_TOOL_RESULT, fallo, type Resultado } from "@/lib/agent/ficheros/resultado";
 import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO, alcanceDeRuta, lineasNuevas } from "@/lib/agent/ficheros/memoria";
-import { classifyFolderPath, folderSaveProblem, isFolderPath } from "@/lib/agent/ficheros/folder";
+import { classifyFolderPath, folderSaveProblem, isFolderPath, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import { esDeLaPlataforma, MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
 import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/terminal/ajustes";
@@ -255,7 +257,23 @@ async function aplicarPlan(
     return await guardarMemoria(session, deps, v.memoria, plan, herramienta, detalle);
   }
   if (isFolderPath(plan.ruta)) {
-    return await guardarEnLaCarpeta(session, deps, v.folder, plan, herramienta, detalle);
+    const guardado = await guardarEnLaCarpeta(session, deps, v.folder, plan, herramienta, detalle, sinOpIds(data.html ?? ""));
+    // Lo que no compila, una vez por herramienta: la terminal lo pide ella
+    // misma al acabar el comando entero (`terminal/herramienta.ts`).
+    if (!guardado.appCambiada || herramienta === "bash") return guardado;
+    return { ...guardado, ...conDiagnosticos(await diagnosticosDeLaAppTrasEscribir(session, deps)) };
+  }
+  // UNA APP NO TIENE PÁGINAS (F3): una pantalla nueva es un componente y una
+  // ruta de hash. Un /<slug>/index.html sería una página estática FUERA de la
+  // app, publicada en /<slug>/ y tapando cualquier ruta de ese nombre.
+  if (session.app && plan.crea && plan.ruta !== "/index.html") {
+    return {
+      response: respuesta(
+        fallo(
+          `${plan.ruta}: this project is an app, and an app has no pages: a new screen is a component in /src and a <Route> in /src/App.jsx, reached at #/its-name.`,
+        ),
+      ),
+    };
   }
   const etiqueta = `${herramienta} ${detalle}`;
   // El sitio de ANTES de la primera escritura del turno: lo que ya decía en
@@ -287,16 +305,21 @@ async function aplicarPlan(
     htmlPrevio: guardado.previo === null ? null : sinOpIds(guardado.previo),
     // Lo que esta escritura dejó mal, anclado a línea: vuelve al modelo en el
     // `<new-diagnostics>` hermano, como en Claude Code (T9).
-    ...conDiagnosticos(
-      diagnosticosDeLaEscritura({
+    ...conDiagnosticos([
+      ...diagnosticosDeLaEscritura({
         ruta: plan.ruta,
         antes: guardado.previo === null ? null : sinOpIds(guardado.previo),
         despues: sinOpIds(guardado.html),
         fuentes: [session.userPrompt, session.brief, alEmpezar.get(plan.ruta), session.sitioAlEmpezar],
         ...(edit ? { edit } : {}),
         referenciasRotas: guardado.referenciasRotas,
+        ...(session.app ? { enUnaApp: true } : {}),
       }),
-    ),
+      // En una app, el cascarón tiene que seguir arrancándola (y lo que no
+      // compila, como tras cualquier escritura de la app). La terminal lo pide
+      // al acabar el comando.
+      ...(session.app && herramienta !== "bash" ? await diagnosticosDeLaAppTrasEscribir(session, deps) : []),
+    ]),
     ...(guardado.versionPrevia ? { versionPrevia: guardado.versionPrevia } : {}),
   };
 }
@@ -330,11 +353,15 @@ async function guardarEnLaCarpeta(
   plan: Extract<PlanDeEdit, { ok: true }>,
   herramienta: "Edit" | "Write" | "bash",
   detalle: string,
+  /** El /index.html de ahora: en una app, el cascarón que la arranca. */
+  cascaron: string,
 ): Promise<ToolOutcome> {
   if (!deps.saveProjectFile) return { response: respuesta(fallo(`${plan.ruta}: this project cannot save files here.`)) };
   const motivo = folderSaveProblem(plan.ruta, plan.contenido, folder);
   if (motivo) return { response: respuesta(fallo(motivo.startsWith("Cannot") ? motivo : `Cannot save ${plan.ruta}: ${motivo}`)) };
   const previo = folder.get(plan.ruta) ?? null;
+  // UNA APP: la carpeta de antes de la primera escritura del turno.
+  if (session.app) session.carpetaAlEmpezar ??= new Map(folder);
   const { versionPrevia } = await deps.saveProjectFile(session.projectId, plan.ruta, plan.contenido, {
     before: previo,
     ...etiquetaDeVersion(session, herramienta, detalle),
@@ -349,7 +376,33 @@ async function guardarEnLaCarpeta(
     // documento nuevo: sin `mutoDurable` el turno se cerraba como «No cambió
     // nada de la página» y sin Deshacer.
     ...(cambio === "cambio" ? { ficherosTocados: [{ ruta: plan.ruta, versionPrevia }], mutoDurable: true } : {}),
+    // UNA APP: lo que se ve cambió aunque el cascarón no (F3).
+    ...(cambio === "cambio" && session.app && isPublishableFolderPath(plan.ruta) ? { appCambiada: { cascaron } } : {}),
   };
+}
+
+/**
+ * Lo que no compila de la app tras una herramienta, con la carpeta YA guardada
+ * (`lib/agent/compila-la-app.ts`). Lo llaman Edit y Write al acabar, y la
+ * terminal una vez por comando —no por fichero—. Fail-soft: si la carpeta no
+ * se puede leer, no se dice nada (el lienzo y los ojos lo verán igual).
+ */
+export async function diagnosticosDeLaAppTrasEscribir(session: AgentSession, deps: AgentDeps): Promise<Diagnostico[]> {
+  if (!session.app) return [];
+  try {
+    const row = await deps.loadProject(session.projectId, session.userId);
+    if (!row) return [];
+    const v = await virtualesDe(session, deps, row.userBrief);
+    return diagnosticosDeLaApp({
+      app: session.app,
+      ahora: v.folder,
+      alEmpezar: session.carpetaAlEmpezar ?? null,
+      escritos: session.escritos ?? [],
+      cascaron: sinOpIds(row.data.html ?? ""),
+    });
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -472,6 +525,10 @@ export async function guardarLoDeLaTerminal(
       // página, no: la quita el dueño en el editor.
       if (isFolderPath(c.ruta) && deps.deleteProjectFile && Object.hasOwn(antes, c.ruta)) {
         const detalle = rutaRelativa(c.ruta);
+        // UNA APP: la carpeta de antes de la primera escritura del turno.
+        if (session.app) {
+          session.carpetaAlEmpezar ??= new Map(Object.entries(antes).filter(([r]) => isFolderPath(r)));
+        }
         const { versionPrevia } = await deps.deleteProjectFile(session.projectId, c.ruta, {
           before: antes[c.ruta]!,
           ...etiquetaDeVersion(session, "bash", `rm ${detalle}`),
@@ -483,6 +540,8 @@ export async function guardarLoDeLaTerminal(
           action: { tool: "bash", ok: true, summary: `rm ${detalle}`, cambio: "cambio" },
           ficherosTocados: [{ ruta: c.ruta, versionPrevia }],
           mutoDurable: true,
+          // Borrar un fichero de la app también cambia lo que se ve.
+          ...(session.app && isPublishableFolderPath(c.ruta) ? { appCambiada: { cascaron: antes["/index.html"] ?? "" } } : {}),
         });
         continue;
       }

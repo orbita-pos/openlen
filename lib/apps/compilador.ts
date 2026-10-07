@@ -422,6 +422,7 @@ export function compilarCarpeta(ctx: ContextoDeCompilacion & { readonly entrada?
       paquetesDe.set(ruta, r.paquetes);
     } else errores.push(...r.errores);
   }
+  errores.push(...nombresLocalesQueNoExisten(ficheros, localesDe));
   const grafo: string[] = [];
   const paquetes = new Set<string>();
   if (ctx.entrada && Object.hasOwn(ctx.carpeta, ctx.entrada)) {
@@ -437,6 +438,70 @@ export function compilarCarpeta(ctx: ContextoDeCompilacion & { readonly entrada?
     for (const m of grafo) for (const p of paquetesDe.get(m) ?? []) paquetes.add(p);
   }
   return { ficheros, errores, grafo, paquetes: [...paquetes].sort() };
+}
+
+/**
+ * LOS NOMBRES QUE UN FICHERO TOMA DE OTRO DEL PROYECTO y ése ya no exporta
+ * (F3). Es el fallo típico de un cambio a medias: se renombra `Carrito` a
+ * `Cesta` en su fichero y un import se queda atrás. El navegador lo dice al
+ * enlazar los módulos —y la app entera se queda en blanco—; aquí es un error del
+ * fichero que importa, con su línea y lo que sí exporta el otro.
+ *
+ * Sólo se puede ver con la carpeta entera, así que vive aquí y no en
+ * `compilarFuente`. Un `export *` en el destino deja su lista incompleta: ese
+ * destino no se comprueba.
+ */
+function nombresLocalesQueNoExisten(
+  ficheros: Readonly<Record<string, string>>,
+  localesDe: ReadonlyMap<string, readonly string[]>,
+): Diagnostico[] {
+  const exportan = new Map<string, Set<string> | null>();
+  const deDestino = (destino: string): Set<string> | null => {
+    if (!exportan.has(destino)) {
+      let nombres: Set<string> | null = null;
+      try {
+        const [, exps] = parse(ficheros[destino]!);
+        nombres = exps.every((e) => "name" in e) ? new Set(exps.map((e) => ("name" in e ? e.name : ""))) : null;
+      } catch {
+        nombres = null;
+      }
+      exportan.set(destino, nombres);
+    }
+    return exportan.get(destino)!;
+  };
+  const errores: Diagnostico[] = [];
+  for (const [ruta, locales] of localesDe) {
+    if (locales.length === 0) continue;
+    const js = ficheros[ruta]!;
+    let imports: ReturnType<typeof parse>[0];
+    try {
+      [imports] = parse(js);
+    } catch {
+      continue;
+    }
+    for (const imp of imports) {
+      if (imp.type !== "static" || typeof imp.specifier !== "string" || !locales.includes(imp.specifier)) continue;
+      // Un destino que no compiló ya tiene su propio error.
+      if (!Object.hasOwn(ficheros, imp.specifier) || !localesDe.has(imp.specifier)) continue;
+      const hay = deDestino(imp.specifier);
+      if (!hay) continue;
+      for (const nombre of nombresImportados(js.slice(imp.importStart, imp.importEnd)) ?? []) {
+        if (hay.has(nombre)) continue;
+        const lista = [...hay].filter((n) => n !== "default").sort();
+        const exporta = [hay.has("default") ? "a default export" : "", lista.join(", ")].filter(Boolean).join(" and ") || "nothing";
+        errores.push({
+          ruta,
+          linea: lineaDe(js, imp.start),
+          columna: null,
+          mensaje:
+            nombre === "default"
+              ? `${imp.specifier} has no default export: it exports ${exporta}, by name.`
+              : `${imp.specifier} has no export named "${nombre}": it exports ${exporta}.`,
+        });
+      }
+    }
+  }
+  return errores;
 }
 
 /** Un diagnóstico como lo lee Len: `ruta:línea:columna — mensaje`. */

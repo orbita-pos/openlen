@@ -275,6 +275,32 @@ describe("compilarCarpeta", () => {
     expect(r.errores.map((e) => e.ruta)).toEqual(["/src/App.tsx"]);
   });
 
+  it("🔴 un nombre que otro fichero del proyecto ya no exporta es un error del que importa, con su línea", () => {
+    const r = compilarCarpeta({
+      ...app({
+        "/src/main.jsx": 'import App from "./App";\nimport { Cesta, Total } from "./carrito";\nApp; Cesta; Total;',
+        "/src/App.jsx": "export default () => null;",
+        "/src/carrito.js": "export const Carrito = 1;\nexport function Total() {}",
+      }),
+      entrada: "/src/main.jsx",
+    });
+    expect(r.errores).toEqual([
+      { ruta: "/src/main.jsx", linea: 2, columna: null, mensaje: '/src/carrito.js has no export named "Cesta": it exports Carrito, Total.' },
+    ]);
+  });
+
+  it("un default que el otro fichero no tiene, también; y un export * no se puede comprobar", () => {
+    const r = compilarCarpeta({
+      ...app({
+        "/src/main.jsx": 'import x from "./a";\nimport { lo } from "./b";\nx; lo;',
+        "/src/a.js": "export const y = 1;",
+        "/src/b.js": 'export * from "./a";',
+      }),
+      entrada: "/src/main.jsx",
+    });
+    expect(r.errores.map((e) => e.mensaje)).toEqual(["/src/a.js has no default export: it exports y, by name."]);
+  });
+
   it("en una página, un /js/app.js con un import sin extensión se sirve como está", () => {
     const r = compilarCarpeta({ carpeta: { "/js/app.js": 'import "./x";' }, catalogo: null });
     expect(r.ficheros["/js/app.js"]).toBe('import "./x";');

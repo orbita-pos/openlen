@@ -21,7 +21,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { folderFingerprint } from "@/lib/projects/files-hash";
@@ -151,6 +151,23 @@ export async function deshacerTurno(p: { projectId: string; userId: string; turn
     // Si no, el proyecto se movió entre leerlo y escribirlo: otra vuelta.
   }
   return { ok: false, motivo: "conflicto" };
+}
+
+/**
+ * EL TURNO QUE «DESHAZ ESO» DESHACE (F3, en una app): el último registrado que
+ * sigue sin deshacer y cambió algo que vuelve. Puede ser el registro de un
+ * deshacer anterior: «deshaz eso» dos veces vuelve a ponerlo, como un Ctrl+Z
+ * que se deshace a sí mismo. `null` si no hay ninguno.
+ */
+export async function ultimoTurnoDeshacible(projectId: string): Promise<string | null> {
+  const t = schema.projectTurnChanges;
+  const [fila] = await db
+    .select({ turnId: t.turnId })
+    .from(t)
+    .where(and(eq(t.projectId, projectId), isNull(t.undoneAt), eq(t.undoable, true)))
+    .orderBy(desc(t.createdAt))
+    .limit(1);
+  return fila?.turnId ?? null;
 }
 
 /** Lo que dijo la sentencia del deshacer. */

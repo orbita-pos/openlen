@@ -29,7 +29,7 @@ import { stripOpIds } from "@/lib/html-ops";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import { debitCredits } from "@/lib/credits";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
-import { vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
+import { pantallaDe, vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 import type { SignedInAs } from "@/lib/agent/usar-pagina";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
@@ -50,6 +50,9 @@ import {
   type SettingsPatchOutcome,
 } from "@/lib/projects/settings-patch";
 import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
+import type { ResultadoDeDeshacer } from "@/lib/projects/deshacer-turno";
+import { erroresDeLaApp, problemasDelCascaron } from "@/lib/agent/compila-la-app";
+import { textoDeDiagnostico } from "@/lib/apps/compilador";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import {
@@ -69,7 +72,7 @@ import {
   toolRead,
   toolWrite,
 } from "@/lib/agent/herramientas-de-ficheros";
-import { ficherosDelSitio, leerFichero, rutaDePagina, rutaRelativa } from "@/lib/agent/ficheros/sitio";
+import { ficherosDelSitio, leerFichero, rutaDePagina, rutaRelativa, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { NOMBRE_BASH } from "@/lib/agent/terminal/declaracion";
 import { toolBash } from "@/lib/agent/terminal/herramienta";
@@ -312,6 +315,14 @@ export interface AgentDeps {
     userId: string,
     page: string | null,
   ): Promise<{ id: string; label: string; source?: string }[]>;
+  /** UNA APP (F3): deshace el último turno registrado entero, con el deshacer
+   *  de F2 (`lib/projects/deshacer-turno.ts`): todo o nada, y nada si el dueño
+   *  tocó después lo mismo. `sin_turno` = no hay ninguno que deshacer.
+   *  Opcional: sin ella, la herramienta lo dice. */
+  deshacerTurnoAnterior?(
+    projectId: string,
+    userId: string,
+  ): Promise<ResultadoDeDeshacer | { readonly ok: false; readonly motivo: "sin_turno" }>;
   /** El documento guardado en ESA versión. Lo necesita `revertir_ultimo_cambio`
    *  para deshacer lo de Len sobre lo que hay ahora sin llevarse lo que el
    *  dueño editó después (H06). Opcional: sin ella, la herramienta restaura
@@ -655,6 +666,12 @@ export function realDeps(
         .filter((v) => v.page === page)
         .map((v) => ({ id: v.id, label: v.label, source: v.source }));
     },
+    async deshacerTurnoAnterior(projectId, userId) {
+      const { deshacerTurno, ultimoTurnoDeshacible } = await import("@/lib/projects/deshacer-turno");
+      const turnId = await ultimoTurnoDeshacible(projectId);
+      if (!turnId) return { ok: false, motivo: "sin_turno" } as const;
+      return deshacerTurno({ projectId, userId, turnId });
+    },
     async versionHtml(projectId, userId, versionId) {
       const { getVersionHtml } = await import("@/lib/projects/versions");
       return getVersionHtml({ projectId, userId, versionId });
@@ -787,6 +804,10 @@ export interface AgentSession {
    *  un precio o un enlace que ya estaba en OTRA página no lo inventó Len al
    *  copiarlo (H13). Se toma en la primera escritura del turno. */
   sitioAlEmpezar?: string;
+  /** UNA APP (F3): su carpeta como estaba antes de la primera escritura del
+   *  turno. Contra ella se decide qué NO compila por culpa de este turno
+   *  (`lib/agent/compila-la-app.ts`), y con ella se mide la línea base. */
+  carpetaAlEmpezar?: Map<string, string>;
   /** F1 · la terminal de este turno (`lib/agent/terminal/`), si Len la usó, y
    *  cómo estaban sus ficheros tras el último comando: contra eso se decide
    *  qué cambió en el siguiente. Se cierra al acabar el turno. */
@@ -895,6 +916,12 @@ export interface ToolOutcome {
    *  `crear_pagina` no lo trae: una página que acaba de nacer no tiene «antes»
    *  al que volver, y `restaurar_version` tampoco — ya es un viaje al pasado. */
   versionPrevia?: string | null;
+  /** UNA APP (F3): la llamada cambió su código. El cascarón (/index.html) es
+   *  el mismo, pero lo que se VE no: el bucle lo mide y lo mira como si la
+   *  página hubiera cambiado. NO va en `updatedHtml`: eso repintaría el lienzo
+   *  con un documento que no cambió y la terminal leería el cascarón como el
+   *  contenido del fichero escrito. */
+  appCambiada?: { readonly cascaron: string };
   /** F1 · las OTRAS páginas que escribió la misma llamada (un `sed -i` de la
    *  terminal sobre varias): el bucle hace con cada una lo mismo que con
    *  `updatedHtml`/`page`/`htmlPrevio`/`versionPrevia`. */
@@ -1341,8 +1368,12 @@ async function toolMirarPagina(
       ...(zona ? { zona } : {}),
       // LA VISTA, para que lo que se mide sea el documento que el usuario tiene
       // delante y no el pelado. La fila ya está leída aquí arriba, así que no
-      // cuesta una consulta. Ver `MiradaParams.vista`.
-      vista: await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId),
+      // cuesta una consulta. Ver `MiradaParams.vista`. En una app, con la
+      // pantalla que se pidió (`#/ventas`).
+      vista: {
+        ...(await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId)),
+        ...(row.data.app ? { pantalla: pantallaDe(args.pantalla) } : {}),
+      },
     })
     .catch(() => null);
   if (!visto) {
@@ -1419,11 +1450,17 @@ async function toolUsarPagina(
   }
 
   const usarPagina = deps.usarPagina;
-  const vista = await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId);
+  // En una app, la visita empieza en la pantalla que se pidió (`#/ventas`).
+  const pantalla = row.data.app ? pantallaDe(args.pantalla) : null;
+  const vista = {
+    ...(await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId)),
+    ...(pantalla ? { pantalla } : {}),
+  };
   // Pieza 4: con herramientas en paralelo, como mucho `MAX_CONCURRENT_VISITS`
   // Chromium a la vez en el turno; la que sobra espera su plaza.
   const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
-  const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta: pedida.ruta, vista, signedInAs }))
+  const ruta = row.data.app ? `/${pantalla ?? "#/"}` : pedida.ruta;
+  const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta, vista, signedInAs }))
     .catch(() => null)
     .finally(() => end?.().catch(() => undefined));
   if (!visto) {
@@ -1659,6 +1696,32 @@ async function toolPublicar(
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "project not found" } };
 
+  // UNA APP QUE NO COMPILA NO SE PUBLICA (F3): `publishToDir` la rechazaría
+  // después del botón, con el dueño mirando. Se dice ANTES, a Len, con lo que
+  // hay que arreglar. Y sin idiomas: la traducción no ve el texto del JSX (H15),
+  // así que pedirlos sería prometer lo que no se hace.
+  const app = row.data.app ?? null;
+  if (app) {
+    const v = deps.projectFiles ? await deps.projectFiles(session.projectId).catch(() => null) : null;
+    const errores = v ? erroresDeLaApp(app, v) : [];
+    const cascaron = v ? problemasDelCascaron(app, sinOpIds(row.data.html ?? ""), v) : [];
+    if (errores.length > 0 || cascaron.length > 0) {
+      return {
+        response: {
+          ok: false,
+          error: `The app can't be published yet: fix this first (nothing was published).\n${[
+            ...errores.map(textoDeDiagnostico),
+            ...cascaron.map((d) => `${d.ruta} — ${d.mensaje}`),
+          ].join("\n")}`,
+        },
+      };
+    }
+    if (args.idiomas !== undefined) {
+      const { idiomas: _sinIdiomas, ...resto } = args;
+      args = resto;
+    }
+  }
+
   const current = row.subdomain; // string | null — the project's active claim
   const raw = typeof args.subdominio === "string" ? args.subdominio.trim().toLowerCase() : "";
 
@@ -1872,11 +1935,54 @@ async function toolAskUserQuestion(
  * con ids: lo que Len tenía leído de ese fichero deja de valer, y el propio
  * Edit se lo dirá si intenta editarlo sin releer.
  */
+/**
+ * «DESHAZ ESO» EN UNA APP (F3): el turno anterior ENTERO. En una app un turno
+ * toca cinco ficheros; volver la última versión de una página —el cascarón,
+ * que casi nunca cambia— «deshacía» el fichero equivocado y decía que sí.
+ */
+async function revertirTurnoDeLaApp(session: AgentSession, deps: AgentDeps): Promise<ToolOutcome> {
+  if (!deps.deshacerTurnoAnterior) {
+    return { response: { ok: false, error: "undoing a turn isn't available in this environment: tell the user to use Undo in the chat." } };
+  }
+  const r = await deps.deshacerTurnoAnterior(session.projectId, session.userId).catch(() => null);
+  if (!r) return { response: { ok: false, error: "the previous turn couldn't be undone this time: nothing was changed." } };
+  if (!r.ok) {
+    const error =
+      r.motivo === "se_solapan"
+        ? `Nothing was undone: after that turn, ${r.rutas.join(", ")} ${r.rutas.length === 1 ? "was" : "were"} changed again, and undoing it would take that away too. DON'T undo it on your own: ask the user with ask_user_question.`
+        : r.motivo === "sin_turno" || r.motivo === "sin_registro"
+          ? "There is no previous turn of yours to undo here (the oldest ones aren't kept): tell the user, and if they want something back, ask what."
+          : r.motivo === "ya_deshecho"
+            ? "That turn was already undone."
+            : r.motivo === "sin_cambios"
+              ? `That turn only changed what doesn't come back (${r.noSeDeshacen.join(", ")}): the database isn't undone; a new migration does it.`
+              : "The previous turn couldn't be undone this time: nothing was changed.";
+    return { response: { ok: false, error } };
+  }
+  // Lo de Len de antes ya no vale: los ficheros cambiaron por debajo.
+  for (const ruta of [...r.ficheros, ...r.paginas.map((p) => rutaDePagina(p.page))]) session.leidos?.delete(ruta);
+  const shell = r.paginas.find((p) => p.page === null);
+  const row = await deps.loadProject(session.projectId, session.userId);
+  const cascaron = shell?.html ?? row?.data.html ?? "";
+  return {
+    response: {
+      ok: true,
+      deshecho: [...r.paginas.map((p) => rutaDePagina(p.page)), ...r.ficheros],
+      ...(r.noSeDeshacen.length ? { no_vuelve: r.noSeDeshacen, nota: "The database isn't undone: a pushed migration stays." } : {}),
+    },
+    action: { tool: "revertir_ultimo_cambio", ok: true, summary: "Undid the previous turn", cambio: "cambio" },
+    mutoDurable: true,
+    ...(shell ? { updatedHtml: shell.html, page: null } : {}),
+    ...(r.ficheros.length > 0 ? { appCambiada: { cascaron } } : {}),
+  };
+}
+
 async function toolRevertirUltimoCambio(
   session: AgentSession,
   deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
+  if (session.app) return await revertirTurnoDeLaApp(session, deps);
   const inicial = await deps.loadProject(session.projectId, session.userId);
   if (!inicial) return { response: { ok: false, error: "project not found" } };
   const pedida = paginaPedida(session, inicial.data, args.file_path, { preferirLoEscrito: true });

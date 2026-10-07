@@ -1532,3 +1532,142 @@ describe("la carpeta del proyecto (pieza 9)", () => {
     assert.deepEqual(archivos, {});
   });
 });
+
+// UNA APP WEB (F3 de la spec local 2026-10-07-apps): el código vive en /src, lo
+// que no compila vuelve a Len en el acto, y una app no tiene páginas.
+describe("en una app", () => {
+  const APP = { catalogo: "2026-10", entrada: "/src/main.jsx" };
+  const CASCARON =
+    '<!doctype html><html lang="es"><head><title>Caja</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>';
+  const sesion = (): AgentSession => ({ ...makeSession(), app: APP });
+  const conApp = () => {
+    const c = conCarpeta({ html: CASCARON, app: APP });
+    c.archivos["/src/main.jsx"] = 'import { createRoot } from "react-dom/client";\nimport App from "./App";\ncreateRoot(document.getElementById("root")).render(<App />);';
+    c.archivos["/src/App.jsx"] = "export default function App() {\n  return <h1>Caja</h1>;\n}";
+    return c;
+  };
+  const diags = (o: { diagnosticos?: readonly { ruta: string; linea: number; mensaje: string; codigo?: string }[] }) => o.diagnosticos ?? [];
+
+  it("escribir código de la app la marca como cambiada (para medirla y mirarla), y si compila no dice nada", async () => {
+    const { deps, archivos } = conApp();
+    const s = sesion();
+    await runAgentTool(s, deps, "Read", { file_path: "/src/App.jsx" });
+    const w = await runAgentTool(s, deps, "Write", { file_path: "/src/App.jsx", content: "export default function App() {\n  return <h1>Caja 2</h1>;\n}" });
+    assert.equal(w.response.ok, true, JSON.stringify(w.response));
+    assert.match(archivos["/src/App.jsx"]!, /Caja 2/);
+    assert.equal(w.appCambiada?.cascaron, CASCARON);
+    assert.equal(w.updatedHtml, undefined, "el cascarón no cambió: el lienzo no se repinta con él");
+    assert.deepEqual(diags(w), []);
+  });
+
+  it("🔴 lo que no compila vuelve en el acto, con su fichero y su línea", async () => {
+    const { deps } = conApp();
+    const s = sesion();
+    const w = await runAgentTool(s, deps, "Write", { file_path: "/src/Carrito.jsx", content: "export default function Carrito() {\n  return <div>\n}" });
+    assert.equal(w.response.ok, true, "se guarda, como en cualquier editor");
+    const d = diags(w);
+    assert.equal(d.length, 1);
+    assert.equal(d[0]!.ruta, "/src/Carrito.jsx");
+    assert.equal(d[0]!.codigo, "compila");
+    assert.match(d[0]!.mensaje, /the app doesn't load/);
+  });
+
+  it("🔴 lo que rompe en OTRO fichero también: borrar lo que alguien importa", async () => {
+    const { deps } = conApp();
+    const s = sesion();
+    await runAgentTool(s, deps, "Read", { file_path: "/src/App.jsx" });
+    const w = await runAgentTool(s, deps, "Write", { file_path: "/src/App.jsx", content: "export const App = () => null;" });
+    const d = diags(w);
+    assert.deepEqual(d.map((x) => [x.ruta, x.linea]), [["/src/main.jsx", 2]]);
+    assert.match(d[0]!.mensaje, /has no default export: it exports App/);
+  });
+
+  it("CONTRA-PRUEBA: un fallo que el dueño ya tenía en otro fichero no se le carga a Len", async () => {
+    const { deps, archivos } = conApp();
+    archivos["/src/Viejo.jsx"] = "export default () => <div";
+    const s = sesion();
+    await runAgentTool(s, deps, "Read", { file_path: "/src/App.jsx" });
+    const w = await runAgentTool(s, deps, "Write", { file_path: "/src/App.jsx", content: "export default function App() {\n  return <h2>Caja</h2>;\n}" });
+    assert.deepEqual(diags(w), []);
+  });
+
+  it("🔴 una app no tiene páginas: un /<slug>/index.html se rechaza y dice qué hacer", async () => {
+    const { deps, store } = conApp();
+    const w = await runAgentTool(sesion(), deps, "Write", { file_path: "/ventas/index.html", content: "<!doctype html><p>x</p>" });
+    assert.equal(w.response.ok, false);
+    assert.match(texto(w), /an app has no pages: a new screen is a component in \/src and a <Route>/);
+    assert.equal(store.data.pages, undefined);
+  });
+
+  it("el cascarón que deja de cargar la app se dice en la escritura", async () => {
+    const { deps } = conApp();
+    const s = sesion();
+    await runAgentTool(s, deps, "Read", { file_path: "/index.html" });
+    const w = await runAgentTool(s, deps, "Edit", {
+      file_path: "/index.html",
+      old_string: '<script type="module" src="/src/main.jsx"></script>',
+      new_string: "",
+    });
+    assert.equal(w.response.ok, true);
+    assert.ok(diags(w).some((x) => x.ruta === "/index.html" && /The shell no longer loads the app/.test(x.mensaje)), JSON.stringify(diags(w)));
+  });
+
+  it("🔴 «deshaz eso» deshace el TURNO anterior entero, no la última versión del cascarón", async () => {
+    const { deps } = conApp();
+    const pedidos: string[] = [];
+    const conDeshacer = {
+      ...deps,
+      async deshacerTurnoAnterior(p: string) {
+        pedidos.push(p);
+        return { ok: true as const, paginas: [], ficheros: ["/src/App.jsx", "/src/Carrito.jsx"], noSeDeshacen: ["/supabase/migrations/2_b.sql"], deshacerId: "d1" };
+      },
+    } as unknown as AgentDeps;
+    const r = await runAgentTool(sesion(), conDeshacer, "revertir_ultimo_cambio", {});
+    assert.equal(r.response.ok, true, JSON.stringify(r.response));
+    assert.deepEqual(r.response.deshecho, ["/src/App.jsx", "/src/Carrito.jsx"]);
+    assert.deepEqual(r.response.no_vuelve, ["/supabase/migrations/2_b.sql"]);
+    assert.ok(r.appCambiada, "lo que se ve cambió: se mide y se mira");
+    assert.deepEqual(pedidos, ["p1"]);
+  });
+
+  it("…y si el dueño tocó después lo mismo, no deshace nada y dice qué", async () => {
+    const { deps } = conApp();
+    const conChoque = {
+      ...deps,
+      async deshacerTurnoAnterior() {
+        return { ok: false as const, motivo: "se_solapan" as const, rutas: ["/src/App.jsx"] };
+      },
+    } as unknown as AgentDeps;
+    const r = await runAgentTool(sesion(), conChoque, "revertir_ultimo_cambio", {});
+    assert.equal(r.response.ok, false);
+    assert.match(String(r.response.error), /Nothing was undone: after that turn, \/src\/App\.jsx was changed again/);
+  });
+
+  it("🔴 una app que no compila no llega a la tarjeta de publicar: Len sabe qué arreglar antes", async () => {
+    const { deps, archivos } = conApp();
+    archivos["/src/App.jsx"] = "export default () => <div";
+    const r = await runAgentTool(sesion(), deps, "publicar", { subdominio: "caja" });
+    assert.equal(r.response.ok, false);
+    assert.match(String(r.response.error), /The app can't be published yet[\s\S]*\/src\/App\.jsx:1/);
+    assert.equal(r.confirm, undefined);
+  });
+
+  it("🔴 la terminal lo dice UNA vez con el comando entero: renombrar en dos ficheros no da un error a medias", async () => {
+    const { deps, archivos } = conApp();
+    archivos["/src/App.jsx"] = 'import { Total } from "./total";\nexport default function App() {\n  return <Total />;\n}';
+    archivos["/src/total.jsx"] = "export function Total() {\n  return <b>0</b>;\n}";
+    const s = sesion();
+    try {
+      const r = await conTerminal(() => runAgentTool(s, deps, "bash", { command: "sed -i 's/Total/Suma/g' /src/total.jsx /src/App.jsx" }));
+      assert.equal(r.response.ok, true, JSON.stringify(r.response));
+      assert.match(archivos["/src/App.jsx"]!, /Suma/);
+      assert.deepEqual(diags(r), [], "tras el comando entero, todo compila");
+      assert.ok(r.appCambiada, "la app cambió");
+      // Y uno que sí deja algo roto, se dice.
+      const roto = await conTerminal(() => runAgentTool(s, deps, "bash", { command: "rm /src/total.jsx" }));
+      assert.deepEqual(diags(roto).map((x) => x.ruta), ["/src/App.jsx"]);
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
+});
