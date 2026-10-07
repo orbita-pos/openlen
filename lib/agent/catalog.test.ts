@@ -67,13 +67,13 @@ describe("buildFunctionDeclarations", () => {
       "Read",
       "Edit",
       "Write",
-      "activar_modulo",
-      "mirar_pagina",
+      "toggle_module",
+      "view_page",
       // H9: usarla, no sólo mirarla. Cargada desde el principio.
-      "usar_pagina",
-      "elegir_foto",
-      "editar_imagen",
-      "publicar",
+      "use_page",
+      "find_photo",
+      "edit_image",
+      "publish",
       "web_search",
       "web_fetch",
       // ⚰️ TodoWrite, retirada en F4 (plans/len-agente-2026).
@@ -86,18 +86,18 @@ describe("buildFunctionDeclarations", () => {
       "get_goal",
       "create_goal",
       "update_goal",
-      "revertir_ultimo_cambio",
+      "undo_last_change",
       // Pieza 5 de Len 2.5: buscar en las charlas pasadas, como DeepSeek.
       "session_search",
       "session_event_search",
       "session_event_read",
       // Len sabe de tus resultados (plans/len-resultados/): una por fuente,
       // siempre cargadas, como los conectores de Grok, dots y Claude.
-      "ver_visitas",
-      "ver_formularios",
-      "ver_mensajes",
+      "get_visits",
+      "list_form_submissions",
+      "list_messages",
       // Y el borrador: no manda nada, deja una tarjeta con su botón.
-      "preparar_respuesta",
+      "draft_reply",
       // La terminal (F1), encendida por defecto (N45).
       "bash",
     ]);
@@ -139,8 +139,8 @@ describe("buildFunctionDeclarations", () => {
     }
   });
 
-  it("mirar_pagina y revertir_ultimo_cambio dicen A QUÉ FICHERO, sin página activa", () => {
-    for (const nombre of ["mirar_pagina", "revertir_ultimo_cambio"]) {
+  it("view_page y undo_last_change dicen A QUÉ FICHERO, sin página activa", () => {
+    for (const nombre of ["view_page", "undo_last_change"]) {
       const d = buildFunctionDeclarations().find((x) => x.name === nombre) as any;
       expect(d.parameters.properties.file_path?.type, nombre).toBe("STRING");
       expect(d.parameters.required ?? [], nombre).not.toContain("file_path");
@@ -149,10 +149,10 @@ describe("buildFunctionDeclarations", () => {
 
   // 🔴 El esquema NO puede anunciar un módulo retirado: Reservas se retiró el
   // 2026-08-21 y el enum escrito a mano siguió ofreciéndolo.
-  it("activar_modulo enum matches AGENT_MODULES", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "activar_modulo") as any;
-    expect(d.parameters.properties.modulo.enum).toEqual([...AGENT_MODULES]);
-    expect(d.parameters.required).toContain("modulo");
+  it("toggle_module enum matches AGENT_MODULES", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "toggle_module") as any;
+    expect(d.parameters.properties.module.enum).toEqual([...AGENT_MODULES]);
+    expect(d.parameters.required).toContain("module");
   });
   // 🔴 REAPUNTADA el 2026-09-05, no retirada. Exigía el literal `/api/f/`, que
   // vivía en la línea de REGLAS DURAS. Esa línea se recortó a su mitad de
@@ -189,23 +189,23 @@ describe("buildFunctionDeclarations", () => {
   it("preparar_marketing ya no está en el catálogo", () => {
     expect(buildFunctionDeclarations().some((x) => x.name === "preparar_marketing")).toBe(false);
   });
-  it("elegir_foto exposes busqueda + estilo as optional strings, nothing required", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "elegir_foto") as any;
-    expect(d.parameters.properties.busqueda.type).toBe("STRING");
-    expect(d.parameters.properties.estilo.type).toBe("STRING");
-    // estilo is a free string (typos just yield zero matches, not an error) —
+  it("find_photo exposes query + style as optional strings, nothing required", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "find_photo") as any;
+    expect(d.parameters.properties.query.type).toBe("STRING");
+    expect(d.parameters.properties.style.type).toBe("STRING");
+    // style is a free string (typos just yield zero matches, not an error) —
     // no enum constraint, so the model can't get stuck on an out-of-date list.
-    expect(d.parameters.properties.estilo.enum).toBeUndefined();
+    expect(d.parameters.properties.style.enum).toBeUndefined();
     expect(d.parameters.required).toBeUndefined();
   });
-  it("editar_imagen requires imagen_url + instruccion as strings", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "editar_imagen") as any;
-    expect(d.parameters.properties.imagen_url.type).toBe("STRING");
-    expect(d.parameters.properties.instruccion.type).toBe("STRING");
-    expect(d.parameters.required).toEqual(["imagen_url", "instruccion"]);
+  it("edit_image requires image_url + instruction as strings", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "edit_image") as any;
+    expect(d.parameters.properties.image_url.type).toBe("STRING");
+    expect(d.parameters.properties.instruction.type).toBe("STRING");
+    expect(d.parameters.required).toEqual(["image_url", "instruction"]);
     // The description must steer the model away from external URLs and toward
-    // elegir_foto for brand-new photos.
-    expect(String(d.description)).toContain("elegir_foto");
+    // find_photo for brand-new photos.
+    expect(String(d.description)).toContain("find_photo");
   });
   /**
    * EL ENUM SALE DE LA FUENTE. Escrito a mano se quedaría atrás el día que se
@@ -248,19 +248,19 @@ describe("buildFunctionDeclarations", () => {
     expect(seccion.toLowerCase()).toContain("one-off");
     expect(seccion).toContain("Lines are only added");
   });
-  it("publicar exposes optional subdominio + idiomas(ARRAY of STRING), nothing required, enumerates PUBLISH_LOCALES", () => {
-    const d = buildFunctionDeclarations().find((x) => x.name === "publicar") as any;
+  it("publish exposes optional subdomain + languages(ARRAY of STRING), nothing required, enumerates PUBLISH_LOCALES", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "publish") as any;
     expect(d.parameters.type).toBe("OBJECT");
-    expect(d.parameters.properties.subdominio.type).toBe("STRING");
-    expect(d.parameters.properties.idiomas.type).toBe("ARRAY");
-    expect(d.parameters.properties.idiomas.items.type).toBe("STRING");
+    expect(d.parameters.properties.subdomain.type).toBe("STRING");
+    expect(d.parameters.properties.languages.type).toBe("ARRAY");
+    expect(d.parameters.properties.languages.items.type).toBe("STRING");
     // Both optional — the tool asks the user for a subdomain when there's no
     // claim, rather than failing schema validation.
     expect(d.parameters.required).toBeUndefined();
-    // The valid idiomas codes are enumerated in the idiomas parameter (F4: the
+    // The valid language codes are enumerated in the languages parameter (F4: the
     // detail of each parameter lives in it), generated from the PUBLISH_LOCALES
     // import (never hardcoded).
-    for (const l of PUBLISH_LOCALES) expect(String(d.parameters.properties.idiomas.description)).toContain(l.code);
+    for (const l of PUBLISH_LOCALES) expect(String(d.parameters.properties.languages.description)).toContain(l.code);
     // The user-tap gate must be conveyed to the model.
     expect(String(d.description).toLowerCase()).toContain("user");
   });
@@ -339,7 +339,7 @@ describe("buildAgentSystemPrompt", () => {
   });
 
   // Y su gemela para los módulos: la lista que el prompt enumera es la misma
-  // que el enum de `activar_modulo`, no una copia que se queda atrás.
+  // que el enum de `toggle_module`, no una copia que se queda atrás.
   it("cada módulo que el prompt enumera está en AGENT_MODULES", () => {
     const p = buildAgentSystemPrompt();
     const bloque = bloqueDe(p, "MODULES YOU CAN OPERATE");
@@ -432,7 +432,7 @@ describe("buildAgentSystemPrompt", () => {
     // sí se puede.
     expect(p).toContain("If something ALREADY EXISTS as a module, turn it on");
     expect(p).toContain("Everything else that lives in the browser, YOU build");
-    expect(p).toContain("activar_modulo");
+    expect(p).toContain("toggle_module");
     for (const m of AGENT_MODULES) expect(p).toContain(m);
     // Len 2.0 no trabaja con ids: ninguno de los dos marcadores se nombra.
     // `data-slot-path` sigue prohibido, pero desde el 2026-09-29 lo dice la
@@ -481,30 +481,30 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).not.toContain("preparar_marketing");
   });
   // El permiso de images.openlen.com vive desde el 2026-09-26 en la descripción
-  // de `elegir_foto` (siempre cargada): la sección FOTOS del prompt repetía la
+  // de `find_photo` (siempre cargada): la sección FOTOS del prompt repetía la
   // herramienta. Es lo que reconcilia la foto del catálogo con el «ninguna URL
   // de imagen externa» de la guía de diseño.
-  it("carries the F2 Task 5 elegir_foto knowledge and the images.openlen.com permission note", () => {
+  it("carries the F2 Task 5 find_photo knowledge and the images.openlen.com permission note", () => {
     const p = buildAgentSystemPrompt();
-    expect(p).toContain("elegir_foto");
-    const d = (buildFunctionDeclarations() as { name: string; description: string }[]).find((x) => x.name === "elegir_foto")!.description;
+    expect(p).toContain("find_photo");
+    const d = (buildFunctionDeclarations() as { name: string; description: string }[]).find((x) => x.name === "find_photo")!.description;
     expect(d).toContain("images.openlen.com");
     expect(d).toMatch(/doesn't count as an external image/);
   });
-  it("carries the F2 Task 6 editar_imagen knowledge: on-page-only, per-turn, and the elegir_foto cross-ref", () => {
+  it("carries the F2 Task 6 edit_image knowledge: on-page-only, per-turn, and the find_photo cross-ref", () => {
     const p = buildAgentSystemPrompt();
-    expect(p).toContain("editar_imagen");
+    expect(p).toContain("edit_image");
     expect(p).toContain("turn");
-    expect(p).toContain("elegir_foto");
+    expect(p).toContain("find_photo");
   });
   // Desde el 2026-09-26 esto vive en la DESCRIPCIÓN de `publicar`, no en el
   // prompt: el prompt lo repetía casi palabra por palabra, y en Claude Code lo
   // de cada herramienta va en su descripción.
-  it("carries the F2 Task 7 publicar knowledge: always waits for the user's tap", () => {
-    const decl = buildFunctionDeclarations().find((x) => x.name === "publicar")!;
+  it("carries the F2 Task 7 publish knowledge: always waits for the user's tap", () => {
+    const decl = buildFunctionDeclarations().find((x) => x.name === "publish")!;
     const d = String(decl.description);
     // The hard rule — the agent never publishes directly; the tap is the gate.
-    expect(d).toContain("subdominio");
+    expect(d).toContain("subdomain");
     expect(d).toContain("NEVER publishes on its own");
     expect(d).toContain('ONLY when the user taps "Publish"');
     // The agent can add/set languages but never clear them — that's the
@@ -523,7 +523,7 @@ describe("buildAgentSystemPrompt", () => {
   // NO poner un valor es una trampa, no una ayuda.
   it("nunca le ofrece al modelo un subdominio de muestra que pueda reclamar", () => {
     const p = buildAgentSystemPrompt();
-    const publicar = buildFunctionDeclarations().find((d) => d.name === "publicar");
+    const publicar = buildFunctionDeclarations().find((d) => d.name === "publish");
     // F4: la descripción y sus parámetros, que es lo que el modelo lee de ella.
     const description = JSON.stringify(publicar);
     for (const text of [p, description]) {
@@ -581,7 +581,7 @@ describe("buildAgentSystemPrompt", () => {
   // backend de Supabase), sin nada que activar. Estas aserciones no son ceremonia — un prompt que sigue ofreciendo
   // lo retirado hace que el modelo lo intente, falle, y el usuario pague el
   // turno. Ya pasó con Pedidos y con Reservas.
-  it("🔴 `activar_modulo` acepta el asistente, no sólo el chat", () => {
+  it("🔴 `toggle_module` acepta el asistente, no sólo el chat", () => {
     // Hasta el 2026-09-16 el asistente sólo se encendía desde un panel al que no
     // se llegaba. Que Len pueda encenderlo es la vía que encaja con la decisión
     // del 29/08: el dueño lo pide hablando, no yendo a un hub.
@@ -589,7 +589,7 @@ describe("buildAgentSystemPrompt", () => {
   });
 
   it("`collections` ya no es un módulo del Agente", () => {
-    // `activar_modulo` SE QUEDA: es como se enciende el Chat. Lo que muere es
+    // `toggle_module` SE QUEDA: es como se enciende el Chat. Lo que muere es
     // que `collections` sea uno de sus valores posibles.
     expect([...AGENT_MODULES]).toEqual(["chat", "assistant"]);
   });
@@ -622,8 +622,8 @@ describe("lo que el Agente cree que puede", () => {
     // Le decía al usuario «por ejemplo lamarea.openlen.com» mientras producción
     // publica en .app desde el 2026-08-23. `images.openlen.com` es otra cosa —
     // el catálogo de fotos— y por eso se mira sólo el patrón de subdominio.
-    expect(tools).not.toMatch(/<subdominio>\.openlen\.com/);
-    expect(tools).toContain("<subdominio>.");
+    expect(tools).not.toMatch(/<subdomain>\.openlen\.com/);
+    expect(tools).toContain("<subdomain>.");
   });
 
   it("🔴 no sustituye lo que ya funciona por su propia alternativa", () => {
@@ -783,9 +783,9 @@ describe("los almacenes data-ol-stores no vuelven", () => {
 
 // ── 🔴 UNA HERRAMIENTA QUE NO PUEDE CORRER NO SE DECLARA ────────────────────
 //
-// MEDIDO en la batería del 21/09: `mirar_pagina` se declara siempre, pero el
+// MEDIDO en la batería del 21/09: `view_page` se declara siempre, pero el
 // arnés nunca cablea `deps.observarPagina`, así que la llamada devuelve
-// «mirar_pagina no está disponible en este entorno». 2 de 8 casos la llamaron
+// «view_page no está disponible en este entorno». 2 de 8 casos la llamaron
 // y se comieron una vuelta entera del modelo para recibir eso.
 //
 // Es la regla de la casa sobre las palancas, escrita en CLAUDE.md a propósito
@@ -793,27 +793,27 @@ describe("los almacenes data-ol-stores no vuelven", () => {
 // «porque una palanca que no apunta a nada se lee como una alternativa que
 // existe». Una herramienta declarada es exactamente eso.
 describe("el catálogo declara lo que de verdad puede correr", () => {
-  it("🔴 sin observarPagina, `mirar_pagina` NO se declara", () => {
+  it("🔴 sin observarPagina, `view_page` NO se declara", () => {
     const con = buildFunctionDeclarations({}).map((d) => d.name);
     const sin = buildFunctionDeclarations({}, { mirarPagina: false }).map((d) => d.name);
-    expect(con).toContain("mirar_pagina");
-    expect(sin).not.toContain("mirar_pagina");
+    expect(con).toContain("view_page");
+    expect(sin).not.toContain("view_page");
     // Y NO SE LLEVA NADA MÁS POR DELANTE: sólo esa.
-    expect(sin).toEqual(con.filter((n) => n !== "mirar_pagina"));
+    expect(sin).toEqual(con.filter((n) => n !== "view_page"));
   });
 
-  it("🔴 sin usarPagina, `usar_pagina` NO se declara, y las dos se apagan por separado", () => {
+  it("🔴 sin usarPagina, `use_page` NO se declara, y las dos se apagan por separado", () => {
     const con = buildFunctionDeclarations({}).map((d) => d.name);
     const sin = buildFunctionDeclarations({}, { usarPagina: false }).map((d) => d.name);
-    expect(con).toContain("usar_pagina");
-    expect(sin).toEqual(con.filter((n) => n !== "usar_pagina"));
+    expect(con).toContain("use_page");
+    expect(sin).toEqual(con.filter((n) => n !== "use_page"));
     const ninguna = buildFunctionDeclarations({}, { usarPagina: false, mirarPagina: false }).map((d) => d.name);
-    expect(ninguna).toEqual(con.filter((n) => n !== "usar_pagina" && n !== "mirar_pagina"));
+    expect(ninguna).toEqual(con.filter((n) => n !== "use_page" && n !== "view_page"));
   });
 
   // CONTRA-PRUEBA: el defecto es declararla. Producción la tiene cableada, así
   // que omitir por omisión habría apagado la herramienta en el producto.
   it("CONTRA-PRUEBA: por omisión se sigue declarando", () => {
-    expect(buildFunctionDeclarations({}).map((d) => d.name)).toContain("mirar_pagina");
+    expect(buildFunctionDeclarations({}).map((d) => d.name)).toContain("view_page");
   });
 });

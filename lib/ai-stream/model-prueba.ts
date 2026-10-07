@@ -15,7 +15,8 @@ import {
 //
 // ⚰️ AQUÍ HABÍA OTRO SOBRE, el del DOCUMENTO: un `<script data-openlen-prueba>`
 // dentro de la página, para Crear y para la reescritura del Chat. Crear dejó de
-// pedir prueba el 2026-09-05 (lo guarda `app/api/generate/system-prompt.test.ts`)
+// pedir prueba el 2026-09-05 (lo guardaba `app/api/generate/system-prompt.test.ts`,
+// que se fue con Crear el 2026-10-06)
 // y la reescritura nunca lo enseñó, así que su lector no tenía quien le
 // escribiera. Y no era inocuo: la reescritura guarda el documento tal cual, y un
 // programa en ese `<script>` sin `type` se habría ejecutado en la página. Se

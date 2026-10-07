@@ -1,5 +1,5 @@
 // Las tarjetas de la llamada, con las clases del prototipo (.nx…). Los datos
-// de visitas son los de /api/voz/visitas = lo que lee Len con ver_visitas. El
+// de visitas son los de /api/voz/visitas = lo que lee Len con get_visits. El
 // borrador y publicar hacen lo mismo que las tarjetas del chat de la web
 // (AgentReplyCard, AgentConfirmCard): el toque del usuario es lo único que
 // manda o publica.

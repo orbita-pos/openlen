@@ -1,11 +1,11 @@
 // scripts/len-bench-disparos.ts — LAS PRUEBAS DE DISPARO de Len-Bench: ¿llama
-// Len a ver_visitas, ver_formularios y ver_mensajes cuando toca, y SÓLO cuando
+// Len a get_visits, list_form_submissions y list_messages cuando toca, y SÓLO cuando
 // toca? El `/plugin eval` de Claude Code, con un turno de verdad en vez de
 // preguntarle al modelo si llamaría (lib/len-bench/disparos.ts).
 //
 //   npm run bench:len:disparos                                    # carga, avisa e imprime el estimado: $0
-//   npm run bench:len:disparos -- --solo=ver_visitas --budget-usd=0.12 --yes
-//   npm run bench:len:disparos -- --solo=ver_visitas/cuanta-gente-ayer.md --yes
+//   npm run bench:len:disparos -- --solo=get_visits --budget-usd=0.12 --yes
+//   npm run bench:len:disparos -- --solo=get_visits/cuanta-gente-ayer.md --yes
 //
 // ⚠️ CON --yes GASTA DINERO REAL: UN turno de Len por consulta. Las guardas de
 // scripts/len-bench.ts: el estimado se imprime, nada corre sin --yes, el tope
@@ -149,7 +149,7 @@ async function correrConsulta(c: ConsultaDeDisparo, herramienta: string, o: Mont
   return { resultado: { ...res, usd: coste.usd }, ...(coste.aviso ? { aviso: coste.aviso } : {}) };
 }
 
-/** `--solo=ver_visitas` (la carpeta) o `--solo=ver_visitas/cuanta-gente-ayer.md` (una consulta). */
+/** `--solo=get_visits` (la carpeta) o `--solo=get_visits/cuanta-gente-ayer.md` (una consulta). */
 function filtrar(carpetas: CarpetaDeDisparos[], solo: readonly string[] | undefined): CarpetaDeDisparos[] {
   if (!solo) return carpetas;
   return carpetas

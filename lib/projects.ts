@@ -26,7 +26,8 @@ import { copyFolderForDuplicate, listProjectFiles } from "@/lib/backend/files";
 import { folderFingerprint } from "@/lib/projects/files-hash";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import { getChatMessages } from "@/lib/projects/chat";
-import { titleFromHtml } from "@/lib/projects/titulo-del-html";
+import { titleFromHtml, UNTITLED_PROJECT_TITLE } from "@/lib/projects/titulo-del-html";
+import { isBlankProject } from "@/lib/projects/blank";
 import {
   pageEdgePaths,
   pagesForPublish,
@@ -51,8 +52,8 @@ import { deployUrlFor, publishBaseHost } from "@/lib/publish/deploy-url";
 // ─────────────────────────────────────────────────────────────────────────────
 // Project persistence helpers.
 //
-// Kept in a single module so /api/generate, /api/regenerate-section, and the
-// listing pages all derive title, tags, and thumbnail the same way. Nothing
+// Kept in a single module so every creation path and the listing pages
+// derive title, tags, and thumbnail the same way. Nothing
 // here touches auth — callers must verify ownership before passing a userId.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -174,7 +175,7 @@ export function computeUnpublishedChanges(row: {
 /** `hasUnpublishedChanges` de UN proyecto, leído ahora mismo de la fila.
  *
  *  Para quien acaba de escribir y necesita saber si la página publicada ya lo
- *  refleja sin cargar el proyecto entero: `activar_modulo` de Len, que antes
+ *  refleja sin cargar el proyecto entero: `toggle_module` de Len, que antes
  *  decía «ya responde a los visitantes» mientras la franja de la Bandeja decía
  *  «cuando publiques». Es la MISMA decisión que pinta esa franja
  *  (`computeUnpublishedChanges` sobre el html CRUDO, igual que `getProject`),
@@ -214,6 +215,8 @@ export interface ProjectSummary {
   publishedAt: Date | null;
   hasUnpublishedChanges: boolean;
   sectionCount: number;
+  /** Sin portada, sin páginas y sin conversación (`lib/projects/blank.ts`). */
+  isBlank: boolean;
   /** Results-loop stats (visits/clicks/leads in a recent window). Populated by
    *  the /projects + /business pages, not by listProjects itself. */
   stats?: { views: number; clicks: number; leads: number };
@@ -250,10 +253,9 @@ function asVisibility(raw: string): ProjectVisibility {
 }
 
 export interface CreateProjectInput {
-  /** El JavaScript que escribió el modelo, si esta creación lo capturó.
-   *  SÓLO lo pasa /api/generate: pegar HTML, clonar una plantilla, duplicar o
-   *  sembrar comunidad lo dejan sin poner, y la columna nace NULL. Se sella
-   *  aquí dentro con el id y el HTML de este mismo insert. */
+  // ⚰️ Aquí se documentaba el JavaScript que capturaba la creación, que sólo
+  // pasaba `/api/generate` (retirada con Crear el 2026-10-06); el campo ya no
+  // existía.
   /** Publish-ready HTML — the project's source of truth. */
   html: string;
   /** The brief the page was generated from — stored on the `brief` column
@@ -275,8 +277,9 @@ export interface CreateProjectInput {
   degradations?: Degradation[];
   /** Las páginas del sitio además de la portada.
    *
-   *  Sólo las pone /api/generate, y sólo cuando el modelo declaró más de una
-   *  página en su propia navegación (ver lib/projects/paginas-declaradas.ts).
+   *  Las escribe Len (un `Write` a `/<slug>/index.html`) o el panel de
+   *  páginas. Hasta el 2026-10-06 también las ponía `/api/generate` cuando el
+   *  modelo declaraba más de una página en su navegación; se fue con Crear.
    *  Pegar HTML, clonar una plantilla o sembrar comunidad no traen ninguna, y
    *  la clave ni siquiera aparece en `data` — que es como se lee un proyecto
    *  escrito antes de que esto existiera. */
@@ -292,7 +295,7 @@ export async function createProject(
     input.title?.trim() ||
     titleFromHtml(input.html) ||
     input.brief.slice(0, 60).trim() ||
-    "Untitled page";
+    UNTITLED_PROJECT_TITLE;
   await db.insert(schema.projects).values({
     id,
     userId,
@@ -312,9 +315,60 @@ export async function createProject(
   // Render a card thumbnail in the background so the project doesn't show the
   // placeholder icon in /projects. Fire-and-forget: never delays the create
   // response, never fails it. (Paste + template clones render/inherit in their
-  // own routes.)
-  void renderProjectThumbnail({ projectId: id, html: input.html });
+  // own routes.) Una página vacía no tiene miniatura que pintar.
+  if (input.html.trim()) void renderProjectThumbnail({ projectId: id, html: input.html });
   return id;
+}
+
+/**
+ * EL PROYECTO EN BLANCO del usuario, o uno nuevo si no tiene — como «New
+ * Session» de DeepSeek, que toma el primer blanco que hay antes de crear otro.
+ * Dos pestañas a la vez pueden crear dos: no rompe nada, el sobrante no sale
+ * en la lista y se reutilizará la próxima vez.
+ */
+export async function findOrCreateBlankProject(userId: string): Promise<string> {
+  const p = schema.projects;
+  const [existing] = await db
+    .select({ id: p.id })
+    .from(p)
+    .where(
+      and(
+        eq(p.userId, userId),
+        sqlOp`coalesce(btrim(${p.data}->>'html'), '') = ''`,
+        sqlOp`coalesce(${p.data}->'pages', '{}'::jsonb) = '{}'::jsonb`,
+        sqlOp`not exists (select 1 from ${schema.projectChatMessages} m where m."projectId" = ${p}."id")`,
+      ),
+    )
+    .orderBy(desc(p.updatedAt))
+    .limit(1);
+  if (existing) return existing.id;
+  return createProject(userId, { brief: "", html: "" });
+}
+
+/**
+ * EL TÍTULO DEL PROYECTO, del `<title>` de su portada — lo que Crear hacía al
+ * guardar (`createProject` → `titleFromHtml`) y `persistPage` no hace nunca.
+ * Sólo pisa el de RELLENO: el `WHERE` lo garantiza en la misma sentencia, así
+ * que un nombre que el dueño haya puesto no se toca ni en una carrera.
+ * No lanza: un título es un detalle, no puede tumbar un guardado.
+ */
+export async function adoptPlaceholderTitle(projectId: string, userId: string, homeHtml: string): Promise<void> {
+  const title = titleFromHtml(homeHtml);
+  if (!title) return;
+  try {
+    await db
+      .update(schema.projects)
+      .set({ title })
+      .where(
+        and(
+          eq(schema.projects.id, projectId),
+          eq(schema.projects.userId, userId),
+          eq(schema.projects.title, UNTITLED_PROJECT_TITLE),
+        ),
+      );
+  } catch (err) {
+    console.warn("[projects] no se pudo adoptar el título", err);
+  }
 }
 
 export async function listProjects(userId: string): Promise<ProjectSummary[]> {
@@ -336,6 +390,13 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       filesHash: schema.projects.filesHash,
       publishedFilesHash: schema.projects.publishedFilesHash,
       data: schema.projects.data,
+      // ¿Tiene conversación? Basta con saber si hay una fila: para estar en
+      // blanco (`isBlankProject`) no puede haber ninguna.
+      // ⚠️ `${schema.projects}."id"` y no `${schema.projects.id}`: dentro de un
+      // campo del `select`, Drizzle escribe la columna SIN tabla (`"id"`), y en
+      // la subconsulta `"id"` es el de la fila del chat. Medido: salía siempre
+      // «sin conversación».
+      hasChat: sqlOp<boolean>`exists (select 1 from ${schema.projectChatMessages} m where m."projectId" = ${schema.projects}."id")`,
       createdAt: schema.projects.createdAt,
       updatedAt: schema.projects.updatedAt,
     })
@@ -362,6 +423,7 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       publishedAt: row.publishedAt,
       hasUnpublishedChanges: computeUnpublishedChanges({ ...row, currentHtml }),
       sectionCount: countSections(currentHtml),
+      isBlank: isBlankProject({ html: currentHtml, pages: row.data?.pages, chatTurns: row.hasChat ? 1 : 0 }),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -446,6 +508,7 @@ export async function getProject(
     // la única vista donde el usuario la ve.
     hasUnpublishedChanges: computeUnpublishedChanges({ ...row, currentHtml: rawHtml }),
     sectionCount: countSections(currentHtml),
+    isBlank: isBlankProject({ html: rawHtml, pages: row.data?.pages, chatTurns: chatHistory.length }),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     data,

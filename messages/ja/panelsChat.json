@@ -17,6 +17,7 @@
   },
   "turn": {
     "imageSent": "画像を送信しました",
+    "imagesSent": "{count} 枚の画像を送信しました",
     "homePage": "ホーム"
   },
   "proceso": {

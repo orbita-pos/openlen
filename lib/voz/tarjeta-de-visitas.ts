@@ -1,5 +1,5 @@
 // Los datos de la tarjeta de visitas salen del MISMO resumen que lee Len con
-// `ver_visitas`: si la tarjeta los calculara por su cuenta, la pantalla podría
+// `get_visits`: si la tarjeta los calculara por su cuenta, la pantalla podría
 // contradecir lo que la voz acaba de decir.
 import type { ResumenDeVisitas } from "@/lib/resultados/visitas";
 

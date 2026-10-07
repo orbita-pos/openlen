@@ -6,7 +6,7 @@ import { deLen, laPaginaSigue, preguntoAlServidor, sinSuposiciones } from "./com
 import { diceHoy, inventaDeDonde } from "./lectura";
 import { aLas, haceUnRato, panaderia, plantarVistas } from "./sembrar";
 
-const TURNO_BUENO = { len: ["Hoy llevas 3 visitas, de 3 personas. Ayer fueron 5."], herramientas: ["ver_visitas"], tarjetas: [] };
+const TURNO_BUENO = { len: ["Hoy llevas 3 visitas, de 3 personas. Ayer fueron 5."], herramientas: ["get_visits"], tarjetas: [] };
 
 export const VISITAS_DE_HOY: Encargo = {
   id: "visitas-de-hoy",
@@ -21,7 +21,7 @@ export const VISITAS_DE_HOY: Encargo = {
     await plantarVistas(s.projectId, 20, aLas(s, 3, 12), "antes");
   },
   graders: [
-    preguntoAlServidor("ver_visitas"),
+    preguntoAlServidor("get_visits"),
     {
       nombre: "dice-las-de-hoy",
       peso: 2,
@@ -50,7 +50,7 @@ export const VISITAS_DE_HOY: Encargo = {
   rotas: [
     { nombre: "de-memoria", datos: panaderia(), turno: { len: ["Hoy llevas 3 visitas."], herramientas: [], tarjetas: [] } },
     // La trampa que esto arregla: contado en UTC, las 3 de hoy caen en «ayer».
-    { nombre: "cuenta-en-utc", datos: panaderia(), turno: { len: ["Hoy llevas 0 visitas; ayer tuviste 3."], herramientas: ["ver_visitas"], tarjetas: [] } },
+    { nombre: "cuenta-en-utc", datos: panaderia(), turno: { len: ["Hoy llevas 0 visitas; ayer tuviste 3."], herramientas: ["get_visits"], tarjetas: [] } },
     { nombre: "toco-la-pagina", datos: panaderia({ descripcion: "Pan dulce artesanal." }), turno: TURNO_BUENO },
     // Lo que dijo de verdad en el humo del 30/09.
     {

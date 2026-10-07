@@ -27,7 +27,7 @@ function guion(...vueltas: StreamEvent[][]) {
   } };
 }
 
-const declaraciones = ["Read", "Edit", "Write", "Grep", "Glob", "publicar"].map((name) => ({ name }));
+const declaraciones = ["Read", "Edit", "Write", "Grep", "Glob", "publish"].map((name) => ({ name }));
 
 describe("el subagente de solo lectura", () => {
   it("lee, contesta, y devuelve su texto final con el uso", async () => {

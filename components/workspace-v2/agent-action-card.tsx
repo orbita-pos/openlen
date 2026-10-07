@@ -7,6 +7,7 @@ import { SalidaEnLaTarjeta, type DondeEstaLaSalida } from "./salida-en-la-tarjet
 
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import { asksTheOwner, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { currentToolName } from "@/lib/agent/tool-renames";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 
@@ -145,22 +146,26 @@ export const KNOWN_TOOLS = new Set([
   "editar_atributos",
   "editar_html",
   "editar_runtime",
-  "activar_modulo",
+  // Las 11 que pasaron al inglés el 2026-10-06 (plans/crear-es-len/
+  // plan-herramientas.md) van con su nombre de HOY: una fila guardada con el de
+  // antes (`activar_modulo`…) se resuelve con `currentToolName` al pintarse, así
+  // que el viejo no hace falta aquí ni en los mensajes.
+  "toggle_module",
   "cambiar_tema",
   "aplicar_tematica",
   "preparar_marketing",
   "crear_pagina",
-  "elegir_foto",
+  "find_photo",
   // 2026-09-02 — el derecho a preguntar qué hay en la página. Sin esta línea la
-  // tarjeta enseñaría «mirar_pagina» crudo, que es justo el defecto que este
+  // tarjeta enseñaría «view_page» crudo, que es justo el defecto que este
   // conjunto y su prueba vinieron a cazar.
-  "mirar_pagina",
+  "view_page",
   // H9 (2026-09-26): usar la página como un visitante.
-  "usar_pagina",
-  "editar_imagen",
+  "use_page",
+  "edit_image",
   "recordar_preferencia",
   "conectar_datos_vivos",
-  "publicar",
+  "publish",
   "trabajar_en_pagina",
   "buscar_en_pagina",
   // Retirada en F2 (plans/len-agente-2026); se queda por el historial.
@@ -189,7 +194,7 @@ export const KNOWN_TOOLS = new Set([
   // La lista de Claude Code, que sustituyó a declarar_tareas (H2). Retirada en
   // F4 (plans/len-agente-2026); se queda, como aquélla, por el historial.
   "TodoWrite",
-  "revertir_ultimo_cambio",
+  "undo_last_change",
   "verificar_diseno",
   "redisenar_pagina",
   // Los almacenes de datos (2026-08-29). Sin estar AQUÍ, la tarjeta enseña el
@@ -198,10 +203,10 @@ export const KNOWN_TOOLS = new Set([
   "editar_dato",
   "quitar_dato",
   // Len sabe de tus resultados (plans/len-resultados/).
-  "ver_visitas",
-  "ver_formularios",
-  "ver_mensajes",
-  "preparar_respuesta",
+  "get_visits",
+  "list_form_submissions",
+  "list_messages",
+  "draft_reply",
 ]);
 
 // F4-T8 i18n sweep: `summary` is otherwise an opaque identifier (a module
@@ -352,8 +357,10 @@ export function AgentActionCard({
 }) {
   const t = useTranslations("wsPage");
   const [abierta, setAbierta] = useState(false);
-  const label = KNOWN_TOOLS.has(action.tool)
-    ? t(`agent.tool.${action.tool}`)
+  // El nombre de hoy: una fila guardada antes del 2026-10-06 trae el de antes.
+  const tool = currentToolName(action.tool);
+  const label = KNOWN_TOOLS.has(tool)
+    ? t(`agent.tool.${tool}`)
     : action.tool;
   const summary = summaryLabel(action, t);
   const cobertura = coberturaTitle(action, t);

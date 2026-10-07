@@ -264,7 +264,7 @@ describe("laPaginaNoCambio", () => {
   });
 
   // ── LA DIVERGENCIA (b), al revés ─────────────────────────────────────────
-  // `activar_modulo` y compañía mutan de forma durable SIN emitir documento.
+  // `toggle_module` y compañía mutan de forma durable SIN emitir documento.
   // El sitio viejo miraba sólo el documento, así que al recargar el turno
   // perdía el pie de Aplicado/Deshacer que sí tenía en vivo.
   it("un cambio de AJUSTES cuenta como cambio aunque no haya documento", () => {

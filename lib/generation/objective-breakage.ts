@@ -69,10 +69,10 @@ export function objectiveBreakage(page: MeasuredPage | null | undefined): string
   if (!page) return [];
   const reasons: string[] = [];
   if (page.mobileOverflow === true) {
-    // 🔴 ESTO LO LEE UNA PERSONA, no un modelo: sale tal cual en la pantalla de
-    // generación (`emit("medida")` → `use-generation.ts` → `page-assembling`).
-    // Por eso se dice QUÉ CLASE de problema es y cuánto mide, y NO el selector
-    // del nodo: a un creador no técnico `div.bg-surface.border` no le dice nada.
+    // 🔴 ESTO LO LEÍA UNA PERSONA, no un modelo: salía tal cual en la pantalla
+    // de generación de Crear (`emit("medida")` → `use-generation.ts` →
+    // `page-assembling`), retirada el 2026-10-06. Por eso se dice QUÉ CLASE de
+    // problema es y cuánto mide, y NO el selector del nodo: a un creador no técnico `div.bg-surface.border` no le dice nada.
     // La dirección exacta es para el modelo, y ése tiene su propio canal
     // (`lib/agent/aviso-medido.ts`).
     const ancho = page.overflowCulpritRight

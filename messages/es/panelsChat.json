@@ -17,6 +17,7 @@
   },
   "turn": {
     "imageSent": "Imagen enviada",
+    "imagesSent": "{count} imágenes enviadas",
     "homePage": "Inicio"
   },
   "proceso": {

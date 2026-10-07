@@ -157,14 +157,14 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
   // volvería a decir «falló» a secas.
   it("🔴 el motivo del dueño de una roja LLEGA a guardarse", async () => {
     const res = await guardar(
-      turno([{ tool: "publicar", status: "error", summary: "x", ownerReason: { code: "address_invalid", address: "mi negocio" } }]),
+      turno([{ tool: "publish", status: "error", summary: "x", ownerReason: { code: "address_invalid", address: "mi negocio" } }]),
     );
     expect(res.status).toBe(200);
     expect(guardada().ownerReason).toEqual({ code: "address_invalid", address: "mi negocio" });
   });
 
   it("un motivo del dueño con un código desconocido se QUITA, sin tirar el turno", async () => {
-    const res = await guardar(turno([{ tool: "publicar", status: "error", summary: "x", ownerReason: { code: "inventado" } }]));
+    const res = await guardar(turno([{ tool: "publish", status: "error", summary: "x", ownerReason: { code: "inventado" } }]));
     expect(res.status).toBe(200);
     expect(guardada().ownerReason).toBeUndefined();
   });

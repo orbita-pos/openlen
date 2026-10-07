@@ -17,6 +17,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 import type { ProjectData } from "@/lib/projects/types";
+import type { ChatPhoto } from "@/lib/projects/chat-photos";
 import type { TranscripcionGuardada } from "@/lib/agent/transcripcion";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,7 +64,12 @@ export const users = pgTable("users", {
    *  Igual que `agentEffort`: un ajuste de la PERSONA, no del proyecto — en
    *  Claude Code la elección del selector se guarda en los ajustes del usuario
    *  y vale para las sesiones nuevas, no en el proyecto abierto. Guarda el PAPEL, nunca un id de modelo: así el modelo y su
-   *  tarifa siguen viajando juntos en `MODEL_POLICY`. */
+   *  tarifa siguen viajando juntos en `MODEL_POLICY`.
+   *
+   *  ⚰️ SIN USO desde el 2026-10-06: el selector y Crear se retiraron
+   *  (plans/crear-es-len, tarea 12) y ya nadie la lee ni la escribe. La
+   *  columna se queda porque está en producción y quitarla es una migración
+   *  aparte, que nadie ha decidido. */
   crearWriter: text("crearWriter"),
   image: text("image"),
   passwordHash: text("passwordHash"),
@@ -343,11 +349,11 @@ export const projectChatMessages = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     userText: text("userText").notNull(),
-    // The image the user attached to this turn, if any.
-    attachedImage: jsonb("attachedImage").$type<{
-      url: string;
-      alt?: string;
-    }>(),
+    // The image the user attached to this turn, if any. Crear es Len
+    // (2026-10-06): hasta 4 — UNA se guarda como objeto (como siempre) y dos o
+    // más como lista. Sin migración: se lee con `photosOf`
+    // (lib/projects/chat-photos.ts).
+    attachedImage: jsonb("attachedImage").$type<ChatPhoto | ChatPhoto[]>(),
     assistantReasoning: text("assistantReasoning").notNull(),
     // Multi-page: which document this turn edited. NULL = the home document
     // (data.html); a slug = data.pages[slug].html. Mirrors projectVersions.page.

@@ -10,7 +10,7 @@
 //
 // Puro: ni red, ni base, ni bindings nativos.
 
-import { currentToolName } from "@/lib/agent/ask-user-question";
+import { currentToolName } from "@/lib/agent/tool-renames";
 
 /** Un mensaje del historial tal y como lo acepta el servidor. */
 export interface MensajeSaneado {
@@ -187,6 +187,17 @@ export function ventanaVisibleDe(history: readonly MensajeContado[]): number {
   return history.filter(peticionDelDueno(history)).length;
 }
 
+/**
+ * LO QUE EL MODELO LEE DETRÁS DE UN TURNO QUE EL DUEÑO PARÓ, como el
+ * «[Request interrupted by user]» de Claude Code; la pone `historialDesdeLaBase`
+ * cuando la transcripción dice `detenido` (el `interrupted` de DeepSeek). Sin
+ * ella, un «La escribo entera.» cortado a mitad del Write se leía como una
+ * promesa pendiente (ensayo de caja de crear-es-len, 06/10). Sólo el hecho:
+ * qué hacer con él lo decide el modelo con lo que diga el dueño después.
+ */
+export const MARCA_DE_TURNO_DETENIDO =
+  "[Request interrupted by the owner (■): this turn did not finish, and only what is above got done.]";
+
 /** ¿El turno anterior fue MUDO? Mudo = el asistente respondió a la última
  *  petición del dueño sin llamar a ninguna herramienta. Es un hecho
  *  estructural, no una lectura de su prosa. Un historial vacío (primer turno)
@@ -211,7 +222,13 @@ export function turnoAnteriorMudoDe(history: readonly MensajeContado[]): boolean
       break;
     }
   }
-  const delTurno = history.slice(desde + 1).filter((h) => h.role === "assistant");
+  const tras = history.slice(desde + 1);
+  // 🔴 PARADO NO ES MUDO. Lo paró el dueño con ■ antes de llegar a la primera
+  // herramienta: el aviso de mudo («If the user asked you for a change and it
+  // still isn't applied, apply it NOW») hacía que el turno siguiente rehiciera
+  // lo que el dueño acababa de parar (ensayo de caja de crear-es-len, 06/10).
+  if (tras.some((h) => h.role === "user" && h.content === MARCA_DE_TURNO_DETENIDO)) return false;
+  const delTurno = tras.filter((h) => h.role === "assistant");
   if (delTurno.length === 0) return false;
   return !delTurno.some((h) => (h.functionCalls?.length ?? 0) > 0);
 }

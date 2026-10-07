@@ -15,7 +15,7 @@ export { deLen } from "./lectura";
  *
  * Con foco `traza`: «inventado» sólo se puede juzgar viendo lo que devolvió la
  * herramienta. Con la conversación sola, el 30/09 suspendió tres de tres «son de
- * cuando estuvo publicada», que es lo que contesta `ver_visitas`.
+ * cuando estuvo publicada», que es lo que contesta `get_visits`.
  */
 export function sinSuposiciones(): Grader {
   return juez({

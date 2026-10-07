@@ -12,12 +12,7 @@
 
 import { db, schema } from "@/lib/db";
 
-import {
-  validarDatos,
-  type DatosDe,
-  type EventoDeServidor,
-  type NombreEvento,
-} from "./catalogo";
+import type { NombreEvento } from "./catalogo";
 
 export interface FilaDeUso {
   userId: string;
@@ -51,16 +46,5 @@ export async function guardarEventos(filas: readonly FilaDeUso[]): Promise<void>
   }
 }
 
-/** Un evento que sólo puede escribir el servidor. */
-export async function registrarEnServidor<N extends EventoDeServidor>(
-  nombre: N,
-  datos: DatosDe<N>,
-  ctx: { userId: string; headers: Headers },
-): Promise<void> {
-  if (!puedeRegistrar(ctx.headers)) return;
-  const limpios = validarDatos(nombre, datos);
-  if (!limpios) return;
-  await guardarEventos([
-    { userId: ctx.userId, nombre, sesion: null, datos: limpios as Record<string, unknown> },
-  ]);
-}
+// ⚰️ Aquí vivía `registrarEnServidor`, para los eventos de origen servidor. El
+// único, `crear_fallo`, se fue con `/api/generate` el 2026-10-06.

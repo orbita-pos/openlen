@@ -15,11 +15,11 @@ const ctx = (len: string[], dueno = "¿cómo van las visitas?") =>
 /** Un turno tal y como lo vio el modelo: lo que la herramienta devolvió va dentro. */
 const TRAZA: MensajeDelHistorial[] = [
   { role: "user", content: "¿cómo van las visitas?" },
-  { role: "assistant", content: "", functionCalls: [{ name: "ver_visitas", args: {} }] },
+  { role: "assistant", content: "", functionCalls: [{ name: "get_visits", args: {} }] },
   {
     role: "user",
     content: "",
-    functionResponses: [{ name: "ver_visitas", response: { ok: true, hoy: 3, nota_publicada: "Estas son de cuando estuvo publicada." } }],
+    functionResponses: [{ name: "get_visits", response: { ok: true, today: 3, published_note: "Estas son de cuando estuvo publicada." } }],
   },
   { role: "assistant", content: "Hoy llevas 3. Son de cuando estuvo publicada." },
 ];
@@ -93,7 +93,7 @@ describe("lo que ve el juez", () => {
   it("con foco «traza», el turno entero como lo vio el modelo, CON lo que devolvieron las herramientas: una línea JSON por mensaje, como su `trace`", () => {
     const t = textoDelFoco({ traza: TRAZA } as unknown as ContextoDeCalificacion, "traza");
     expect(t).toBe(TRAZA.map((m) => JSON.stringify(m)).join("\n"));
-    expect(t).toContain('"nota_publicada":"Estas son de cuando estuvo publicada."');
+    expect(t).toContain('"published_note":"Estas son de cuando estuvo publicada."');
   });
 
   it("sin traza no hay nada que juzgar, y no se paga", async () => {
@@ -134,6 +134,18 @@ describe("trazaDeLasFilas — la traza sale de las filas que escribió el servid
       { userText: "¿cómo van las visitas?", assistantReasoning: "Hoy llevas 3.", transcript: { mensajes: TRAZA.slice(1), leidos: [] } },
     ]);
     // El pedido del dueño lleva la marca de que abrió el turno (N39, `opensTurn`).
+    expect(traza).toEqual([{ ...TRAZA[0]!, opensTurn: true }, ...TRAZA.slice(1)]);
+  });
+
+  it("una fila de antes del 2026-10-06 llega al juez con el nombre de hoy", () => {
+    const vieja = TRAZA.slice(1).map((m) => ({
+      ...m,
+      ...(m.functionCalls ? { functionCalls: m.functionCalls.map((c) => ({ ...c, name: "ver_visitas" })) } : {}),
+      ...(m.functionResponses ? { functionResponses: m.functionResponses.map((r) => ({ ...r, name: "ver_visitas" })) } : {}),
+    }));
+    const traza = trazaDeLasFilas([
+      { userText: "¿cómo van las visitas?", assistantReasoning: "Hoy llevas 3.", transcript: { mensajes: vieja, leidos: [] } },
+    ]);
     expect(traza).toEqual([{ ...TRAZA[0]!, opensTurn: true }, ...TRAZA.slice(1)]);
   });
 

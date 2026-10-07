@@ -78,16 +78,17 @@ LINKS (<a href>):
 THE PROJECT'S FOLDER:
 Besides its pages, the project is a folder like any Vercel + Supabase project: /js, /css, /data/*.json, /sw.js, /manifest.json and any other text file (${WEB_EXTENSIONS.join(" ")}), anywhere except the reserved roots (${RAICES_DEL_SITIO}). They are read and changed like the pages, every change can be undone with the turn, and publishing ships them as they are, next to the pages. Reference them by path: \`<script src="/js/app.js" type="module">\`, \`fetch("/data/menu.json")\`.
 - /tests holds Playwright tests (never published); /supabase holds the backend's migrations.
-- mirar_pagina, usar_pagina and the checks after each turn load these files the way the published site does. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
+- view_page and use_page load these files the way the published site does. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - An installable app is a /manifest.json plus a service worker at /sw.js; if the site stops using one, the platform publishes a /sw.js that removes itself, so no visitor stays on an old version.
 - Up to ${MAX_FOLDER_FILES} files and ${MAX_FOLDER_BYTES / 1024 / 1024} MB; ${MAX_FOLDER_FILE_BYTES / 1024 / 1024} MB per file (${MAX_TEST_FILE_BYTES / 1024} KB per test file).
+Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors; use_page tries it like a visitor. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.
 
 THE BACKEND (Supabase):
 This project has its own Supabase backend —a Postgres database behind the REST API, Auth with email and password, Storage for files (photos, videos, PDFs), and Realtime for live updates— at the URL and with the publishable key that PROJECT STATE gives you under \`supabase\` (\`supabase status\` in the terminal prints them too). Edge Functions don't exist here yet: if something needs them, say so. Anything that has to live on a server —a cart that is still there tomorrow, reviews everyone sees, a menu the user maintains, people who sign in— goes here.
 - In the page, supabase-js as usual: \`<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>\` and \`supabase.createClient(url, publishableKey)\`. The publishable key is meant to be in the page; a secret key, never.
 - The tables, their policies, functions and triggers are migrations: \`supabase migration new <name>\` creates /supabase/migrations/<timestamp>_<name>.sql, you write the SQL in it with Write or Edit, and \`supabase db push\` applies it. Enable row level security on every table you create and write its policies: with RLS on and no policy the page reads nothing and writes nothing, and without RLS anyone can read and change everything. Users are auth.users: \`references auth.users(id)\`, and \`auth.uid()\` in the policies.
 - To change what was already pushed, write a NEW migration. There is no \`supabase db reset\` here: this is the live database, with the visitors' data in it.
-- usar_pagina uses this same live database: what a visit sends to the backend stays there. To test what is behind signing in, it can sign in as one of the page's users (\`sign_in_as\`); it doesn't create accounts.
+- use_page uses this same live database: what a visit sends to the backend stays there. To test what is behind signing in, it can sign in as one of the page's users (\`sign_in_as\`); it doesn't create accounts.
 - Files go to Storage, with supabase-js as usual: \`supabase.storage.from(bucket).upload(path, file)\`, \`getPublicUrl(path)\` for a public bucket, \`createSignedUrl(path, seconds)\` for a private one. Create buckets in a migration (\`insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true);\`). Who can upload, see, change or delete files is decided by policies on \`storage.objects\`, the same way as for tables; \`(storage.foldername(name))[1] = (select auth.uid()::text)\` keeps each user in their own folder. With no policy, only the secret key gets in. Limits: 50 MB per file and 1 GB per project. Image transformations and resumable uploads don't exist here yet.
 - Live updates go through Realtime, with supabase-js as usual: \`supabase.channel(name)\` with \`.on('broadcast', { event }, …)\` and \`send()\` for messages between visitors, \`.track()\` and \`presenceState()\` for who is here, and \`.on('postgres_changes', { event, schema: 'public', table }, …)\` for changes to a table. A table is heard only after a migration adds it to the publication (\`alter publication supabase_realtime add table public.messages;\`), and its RLS policies decide who hears each change. Private channels (\`{ config: { private: true } }\`) are allowed by policies on \`realtime.messages\` with \`realtime.topic()\`. Limits: 200 connections and 100 messages per second per project.
 
@@ -160,8 +161,20 @@ const MARCA_LIBRERIAS = "AVAILABLE LIBRARIES";
  *  y el acabado se va a la guía. */
 const PROMESA_DEL_ACABADO = ", and at the end the level of finish that is expected.";
 
+// LO QUE SABÍA CREAR (plans/crear-es-len, 2026-10-06). Crear dejó de ser una
+// superficie aparte y pasó a ser el primer mensaje a Len; esto es lo que sólo
+// decía su prompt (`app/api/generate/system-prompt.ts`), mudado sin reescribir
+// a la guía que el índice ya manda leer antes de escribir desde cero. El resto
+// de aquel prompt —contrato, librerías, JavaScript— Len ya lo tenía.
+const FROM_SCRATCH = `WHEN THE PAGE IS EMPTY (you are writing it from scratch):
+- The brief is sometimes specific, often vague. Design the whole page yourself: the structure, the palette, the typography, the rhythm and what the page even contains are yours to decide — a vague brief is your cue to apply judgment, not to fall back on something safe.
+- There is no default shape. Nav on top, centered hero, three columns of benefits, testimonials, closing call and footer is ONE shape, not THE shape: it is the one that comes out by itself when nobody decides. Let the shape grow out of the content. Something to be read wants a column; something to be looked at wants a grid; something that happens over time wants a line; something to be compared wants a table; something with a single idea can fit in two blocks and be finished.
+- Three habits to CHOOSE, not inherit: splitting the content into cards in threes, always opening with the same centered hero, and adding a section because one seems to be missing. Keep them when this page asks for them —a long text is glad of its table of contents, a shop is glad of its navigation— and leave them out when it doesn't.
+- Write the whole document with Write, <head> included: a descriptive <title> that names the product, Tailwind via CDN, the Google Fonts you use and your own <style>.
+- Every other page of the site is one more file, /<slug>/index.html, written the same way.`;
+
 const INDICE = `MORE, IN ${CARPETA_DOCS} (read them when you need them):
-- ${RUTA_GUIA}: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch or a redesign. What you add to a page that already exists is written the way that page is.
+- ${RUTA_GUIA}: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch (an empty /index.html is one) or a redesign. What you add to a page that already exists is written the way that page is.
 - ${RUTA_LIBRERIAS}: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.`;
 
 const encontrar = (texto: string, marca: string, desde = 0): number => {
@@ -206,7 +219,7 @@ export function partirElManual(entero: string = manualSinPartir()): ManualPartid
   return {
     agents,
     docs: {
-      [RUTA_GUIA]: `${cabecera}\n${gusto}`,
+      [RUTA_GUIA]: `${cabecera}\n\n${FROM_SCRATCH}\n\n${gusto}`,
       [RUTA_LIBRERIAS]: librerias,
     },
   };

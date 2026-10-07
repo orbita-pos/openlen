@@ -15,23 +15,11 @@ import type { ToolOutcome } from "@/lib/agent/tools";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { avisoParaElDueno } from "@/lib/agent/motivo-del-fallo";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
-import { avisoDeRegresion, type Regresion } from "@/lib/agent/pruebas-de-la-pagina";
-// Import de VALOR a propósito, y no viola la regla de arriba: `aviso-medido` no
-// importa nada — ni la pasarela, ni las herramientas, ni Chromium. Es texto y
-// un `Set`.
-import {
-  AvisosDelTurno,
-  diagnosticosMedidos,
-  medicionLimpia,
-  redactarLimites,
-  type MedicionCruda,
-} from "@/lib/agent/aviso-medido";
 // Len 2.0 (T9): los diagnósticos anclados a línea. Puros, como los de arriba.
 import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/lib/agent/diagnosticos";
-import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
-import { rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { DEFAULT_MAX_PARALLEL_TOOL_CALLS, isConcurrencySafe } from "@/lib/agent/tool-concurrency";
 import { ASK_USER_QUESTION, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { currentToolName } from "@/lib/agent/tool-renames";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { scheduleToolCalls, type Prepared } from "@/lib/agent/tool-scheduler";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
@@ -42,8 +30,9 @@ import { compactIfNeeded } from "./compaction/compact";
 import { retainOversized } from "./compaction/spill";
 import { contenidoDeRespuesta } from "./fireworks-bridge";
 import { CLAVE_TOOL_RESULT } from "./ficheros/resultado";
-import { estimateTokens } from "./compaction/estimate";
+import { CHARS_PER_TOKEN, estimateTokens } from "./compaction/estimate";
 import type { CompactionPolicy } from "./compaction/policy";
+import { createWritePreview } from "./write-preview";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -170,6 +159,9 @@ export type AgentStreamEvent =
   // sólo el PRIMER id es «antes del turno»; quien lo consuma se queda con
   // ése, no con el último.
   | { type: "html"; html: string; page: string | null; versionPrevia?: string | null }
+  // LA PÁGINA A MEDIAS (los «live tool deltas» de DeepSeek): lo que un Write
+  // de una página lleva escrito. Sólo se pinta; lo que cuenta es `html`.
+  | { type: "page_preview"; html: string; page: string | null }
   // F6a · UN COMANDO DE LA TERMINAL y su salida, la misma que leyó el modelo,
   // para la lente «Terminal» del lienzo. Sólo lo emite `bash`; sin la palanca
   // (`OPENLEN_TERMINAL`) no sale nunca y el cable es el de antes.
@@ -177,104 +169,21 @@ export type AgentStreamEvent =
   // The publish gate (Task 7): the model prepared a publish but MUST NOT
   // publish itself. The panel renders a confirm card whose button hits the
   // real publish endpoint — the user's tap is the only thing that publishes.
-  | { type: "confirm"; action: "publicar"; subdominio: string; idiomas: string[]; republicar: boolean }
+  | { type: "confirm"; action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean }
   // El borrador de respuesta (plans/len-resultados/): la tarjeta lo manda sólo si el usuario toca.
   | ({ type: "confirm" } & RespuestaPreparada)
   | { type: "done"; turns: number; toolCalls: number }
   | { type: "error"; message: string; code?: AgentErrorCode };
 
-/**
- * Resultado del hook de verificación visual (F5 — "los ojos"). TRES variantes,
- * y la tercera es la que faltaba.
- *
- * 🔴 «NO PUDE MIRAR» NO ES «ESTÁ BIEN». Los ojos fallan ABIERTOS por diseño
- * —Chrome caído, sin key, timeout, JSON malformado devuelven un veredicto
- * benigno con `fallback: true`— y eso está bien: una verificación que no
- * arranca no puede tumbar el turno del usuario. Lo que estaba mal es que la
- * ruta convertía ese fallback en `ok: true`, así que dentro del producto no
- * quedaba NADA que distinguiera «miré y está bien» de «no pude mirar». Con
- * Chromium caído en el box, la verificación aprobaba todo en silencio y sólo el
- * diario lo sabía.
- *
- * `no_mirado` no dispara ciclo de arreglo —no hay nada que arreglar, no hay
- * crítica— pero SÍ se ve: la tarjeta lo dice, en vez de enseñar el visto bueno
- * de una comprobación que no ocurrió.
- */
-export type VerifyOutcome = (
-  /**
-   * SE MIRÓ Y NO SE ENCONTRÓ NADA.
-   *
-   * 🔴 `conMedida` NO es un detalle: es lo que separa «se midió y salió limpio»
-   * de «nadie midió y por eso no salió nada». Los ojos son DOS renders, y si el
-   * del medidor se cae el veredicto sale `broken:false` igual que uno limpio.
-   * Hasta el 2026-09-16 la tarjeta enseñaba «sin problemas» en los dos casos —
-   * el mismo defecto que ya se arregló una vez con `no-mirado`, un render más
-   * abajo. Con esto la tarjeta puede decir QUÉ comprobó sin afirmar un eje que
-   * nadie miró. Ver `VisualVerdict.conMedida`.
-   */
-  | { estado: "bien"; conMedida?: boolean }
-  | {
-      estado: "roto";
-      /** Los problemas encontrados, una línea por problema, EN EL IDIOMA DEL
-       *  USUARIO. Se le emiten tal cual al cerrar el turno: son lo único que le
-       *  dice qué se midió, y sin ellos no puede pedir que se arregle.
-       *
-       *  ⚰️ Aquí había un `problemas?: number` para comparar la cuenta entre la
-       *  primera pasada y la segunda. No hay segunda pasada desde el
-       *  2026-09-04, así que esa cuenta no se comparaba con nada. */
-      critique: string;
-    }
-  /**
-   * SE MIRÓ, y lo que se vio NO es un defecto que se pueda AFIRMAR desde la
-   * captura.
-   *
-   * 🔴 Es la paridad que le faltaba al Agente con Crear. Allí el crítico
-   * informa y no gasta desde que se midió que puntuaba bajo por las FOTOS
-   * —«Bolillo muestra un océano»— y pedía regenerar, y cada regeneración
-   * costaba una página entera de tokens y un crédito del usuario sin arreglar
-   * nada (app/api/generate/route.ts). Aquí el juicio del crítico seguía
-   * abriendo ciclo igual que un TypeError: el 2026-09-02 eso costó ocho
-   * búsquedas de foto para un rubro que el catálogo no cubre.
-   *
-   * La regla que sale de ahí, y que este estado hace cumplir: un veredicto
-   * sobre el que el bucle NO PUEDE ACTUAR jamás debe abrir un bucle.
-   *
-   * Las notas viajan al modelo como contexto del cierre — callárselas sería
-   * peor que la orden, porque el usuario merece saber por qué esas tarjetas no
-   * tienen foto. Lo que cambia es que se DICE, no que se GASTA.
-   */
-  | { estado: "observado"; notas: string[] }
-  | { estado: "no_mirado"; motivo: string }
-) & {
-  /**
-   * LAS PROMESAS QUE ESTA PÁGINA YA CUMPLÍA Y HAN DEJADO DE CUMPLIRSE.
-   *
-   * Va FUERA de la unión —intersección— porque es ortogonal al veredicto: un
-   * turno puede salir «bien» y haberse llevado por delante el carrito de hace
-   * seis turnos. Meterla dentro de una rama la habría atado a un estado que no
-   * tiene nada que ver.
-   *
-   * No abre ciclo y no declara rota la página: se dice y se guarda. Ver
-   * `lib/agent/pruebas-de-la-pagina.ts`.
-   */
-  readonly regresiones?: readonly Regresion[];
-  /**
-   * CUÁNTAS PÁGINAS MIRARON LOS OJOS DE VERDAD — las que llegaron a tener
-   * captura, no las que se les pidió.
-   *
-   * También fuera de la unión, y por lo mismo: es de la MEDIDA, no del
-   * desenlace. Sin esto el recuento de la tarjeta contaría lo que se mandó, así
-   * que una página cuyo render se cayera saldría como «2 de 2» habiendo mirado
-   * una — la mentira exacta que este recuento existe para impedir.
-   *
-   * Ausente ⇒ el bucle cae en lo que pidió (implementaciones que no lo mandan,
-   * como el arnés de evals).
-   */
-  readonly paginasMiradas?: number;
-};
+// ⚰️ Aquí vivía `VerifyOutcome`, el veredicto de los ojos al cerrar
+// (`bien` / `roto` / `observado` / `no_mirado`, con las promesas rotas y la
+// cobertura de páginas). Se fue con `verifyTurn` el 2026-10-06
+// (plans/crear-es-len).
 
-// El nombre de "herramienta" bajo el que la verificación visual aparece en el
-// panel (una action card normal — el panel la localiza via agent.tool.*).
+// El nombre de "herramienta" bajo el que la verificación visual aparecía en el
+// panel (una action card normal — el panel la localiza via agent.tool.*). El
+// bucle ya no la emite (2026-10-06); se queda porque los turnos guardados la
+// traen, y el cliente las sigue pintando.
 export const VERIFY_TOOL = "verificar_diseno";
 
 export interface AgentLoopArgs {
@@ -297,6 +206,9 @@ export interface AgentLoopArgs {
    *  aprobar el plan). En modo plan no cambiar nada es lo que se pide, así que
    *  el empujón de «anunciaste un cambio y no lo hiciste» no salta. */
   planModeActive?: () => boolean;
+  /** La página en la que trabaja el turno ahora (`session.page`), para pintar
+   *  un `Write` que todavía no ha dicho su ruta (`write-preview.ts`). */
+  activePage?: () => string | null;
   /** Para las pruebas: la espera entre reintentos. Por defecto, `sleepAbortable`. */
   sleep?(ms: number, signal?: AbortSignal): Promise<void>;
   /** La compactación dentro del turno (`lib/agent/compaction/`). Sin ella, el
@@ -310,43 +222,13 @@ export interface AgentLoopArgs {
      *  leer (`spill-policy` de DeepSeek); `false` si no pudo. */
     saveRecovery?(path: string, text: string): Promise<boolean>;
   };
-  /** F5 — los ojos del agente. Cuando está presente y el turno MUTÓ el
-   *  documento, se llama UNA vez justo antes de cerrar (con el último HTML
-   *  emitido); si devuelve !ok, la crítica se inyecta como mensaje de sistema
-   *  y el modelo recibe UN ciclo de arreglo dentro de los mismos topes. Debe
-   *  ser fail-open: cualquier throw se trata como ok. */
-  verifyTurn?(info: {
-    html: string;
-    page: string | null;
-    /** El gemelo etiquetado de `html`, si la herramienta lo trajo. Los ojos
-     *  miden ÉSTE: es el mismo documento con `data-op-id`, así que cada sonda
-     *  lee la dirección del nodo que acaba de medir en vez de describirlo.
-     *  Ausente ⇒ se mide `html` y las sondas salen sin dirección, como antes. */
-    taggedHtml?: string;
-    /** LAS OTRAS PÁGINAS que este turno mutó — la última versión de cada una.
-     *  Se renderizan y se MIDEN igual que la principal, con hechos propios, y
-     *  sus capturas viajan en la MISMA llamada con visión. Ausente/vacío ⇒ el
-     *  turno tocó una sola y todo se comporta byte a byte como antes. */
-    otrasPaginas?: readonly { html: string; page: string | null; taggedHtml?: string }[];
-  }): Promise<VerifyOutcome>;
-  /**
-   * EL MOMENTO `tsc`: mide la página que la tanda acaba de guardar, para que lo
-   * medido vuelva al MODELO y no sólo al usuario.
-   *
-   * Se llama tras cada tanda de herramientas que TOCÓ el documento, con el
-   * gemelo CON POSICIONES (cada `data-op-id` es la línea y la columna de su
-   * etiqueta en el fichero: `etiquetarConPosiciones`), y lo que devuelve viaja
-   * en el mismo mensaje que las respuestas de esas herramientas — no dentro de
-   * ellas. Es la forma medida en Claude Code: los
-   * diagnósticos nuevos son un mensaje HERMANO del resultado, nunca parte de
-   * su payload.
-   *
-   * Cero llamadas nuevas al modelo: el paso siguiente lo iba a dar igual.
-   *
-   * Debe ser fail-soft — devolver `null` si no pudo medir. Ausente ⇒ el bucle
-   * se comporta exactamente como antes de que esto existiera.
-   */
-  medirParaElModelo?(taggedHtml: string): Promise<MedicionCruda | null>;
+  // ⚰️ Aquí vivían `verifyTurn` (los ojos al cerrar: UNA mirada obligatoria
+  // con la tarjeta `verificar_diseno`) y `medirParaElModelo` (el navegador que
+  // medía cada tanda y se lo devolvía al modelo). Se retiraron los dos el
+  // 2026-10-06 (plans/crear-es-len, D2): DeepSeek no mide nada por su cuenta, ni
+  // al cerrar ni tras editar. Len sabe lo que mira él (`view_page`,
+  // `use_page`); los diagnósticos ESTÁTICOS de las herramientas
+  // (`outcome.diagnosticos`) siguen llegándole.
   // ⚰️ Aquí vivía `lineaBase`: el documento con el que arrancó el turno, que
   // pasaba la ruta, y sólo servía para la página del arranque. Len 2.0 (T9) la
   // saca de cada escritura (`outcome.htmlPrevio`), así que hay base para todas
@@ -511,16 +393,6 @@ export interface AgentLoopResult {
 // y un cuelgue lo corta el reloj de SILENCIO de la ruta, no uno de pared.
 // `maxTurns`/`maxToolCalls` quedan OPCIONALES en `AgentLoopArgs`, como el
 // `maxTurns` de la definición de un agente de Claude Code.
-/**
- * CUÁNTAS PÁGINAS MIRAN LOS OJOS EN UN TURNO.
- *
- * Los ojos son UNA llamada con visión con N capturas dentro (la forma del
- * informe de `preview` de Claude Code), así que esto no acota
- * llamadas —no hay una por página— sino cuántas imágenes se le meten a la
- * misma y cuántos arranques de navegador paga el turno. Lo que queda fuera del
- * tope no se calla: la tarjeta lo dice con «4 de 6 páginas».
- */
-const TOPE_PAGINAS_MIRADAS = 4;
 // No-progress guard: the SAME tool call (name + identical args) that has already
 // returned ok:false this many times is refused the next time instead of run
 // again — the model gets a nudge to change approach rather than looping on a
@@ -700,7 +572,7 @@ function stableStringify(v: unknown): string {
     .join(",")}}`;
 }
 
-// Product finding: photo hunts (elegir_foto) and mid-chain state re-reads
+// Product finding: photo hunts (find_photo) and mid-chain state re-reads
 // (leer_estado, retired in H3) are read-only — they never mutate the project — but a photo
 // search that takes a few tries was eating the same maxToolCalls budget as
 // real edits. These two are exempt from that counter (which, since H1, only
@@ -716,7 +588,7 @@ function stableStringify(v: unknown): string {
 //
 // `preguntar` entra por lo mismo y por una razón de más: cierra el turno, así
 // que descontarla del presupuesto sería cobrarle al usuario por la vuelta en la
-// que el Agente decide callarse y esperarle. `revertir_ultimo_cambio` NO entra
+// que el Agente decide callarse y esperarle. `undo_last_change` NO entra
 // — escribe en la base.
 /**
  * LA LLAMADA MAL ESCRITA.
@@ -790,14 +662,14 @@ export function repararNombre(
 const READ_ONLY_TOOLS = new Set([
   // ⚰️ `leer_estado` estaba aquí; se retiró en H3 (2026-09-25): los almacenes
   // y la memoria se leen con Read.
-  "elegir_foto",
-  // Preguntar qué se ve no cambia la página. Como `elegir_foto`, no descuenta
+  "find_photo",
+  // Preguntar qué se ve no cambia la página. Como `find_photo`, no descuenta
   // presupuesto de acciones: su propio tope por turno es lo que la contiene, y
   // cobrarle una acción al Agente por COMPROBAR antes de editar sería cobrarle
   // justo por el paso que evita la edición equivocada.
-  "mirar_pagina",
+  "view_page",
   // H9: usar la página es una visita aparte; el fichero no cambia.
-  "usar_pagina",
+  "use_page",
   // Len 2.0: leer ficheros no cambia nada (ver la nota de arriba).
   "Read",
   "Grep",
@@ -988,7 +860,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   };
   let turns = 0;
   // Only turns that MUTATE count toward maxTurns. A turn whose calls were all
-  // read-only (elegir_foto photo hunts, leer_estado re-reads) is exempt —
+  // read-only (find_photo photo hunts, leer_estado re-reads) is exempt —
   // otherwise the turn cap silently defeats the same read-only exemption
   // maxToolCalls already grants (READ_ONLY_TOOLS), and a photo hunt for a genre
   // the curated catalog lacks dies on turn_limit before the model ever edits
@@ -1016,96 +888,30 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    *  denunciara una avería ya reparada — y un aviso que no sabe desaparecer
    *  enseña a ignorarlos todos. */
   let rotoPorLaUltima: string[] = [];
-  // F5 — verificación visual: el último documento emitido por un tool este
-  // request (lo que el usuario está viendo en el canvas) y si el ciclo de
-  // verificación ya corrió (corre a lo sumo UNA vez por request — un segundo
-  // ciclo podría oscilar entre dos arreglos y quemar presupuesto sin fin).
-  // Con `as` y no con anotación: desde la pieza 4 se asigna dentro del `commit`
-  // del planificador, un cierre que el análisis de flujo de TypeScript no sigue,
-  // y con `: T | null = null` lo daría por `null` para siempre.
-  let lastMutation = null as { html: string; page: string | null; taggedHtml?: string } | null;
-  // TODAS las páginas que este turno mutó, no sólo la última.
-  //
-  // 🔴 Medido el 2026-09-20 en producción (`proj=2d6cad43`): Len creó una
-  // página `viajes` y después retocó la Home, y como los ojos verifican
-  // `lastMutation` —la ÚLTIMA mutada— miraron la Home. El entregable no se
-  // miró nunca, y la tarjeta decía «sin fallos medidos».
-  //
-  // La ÚLTIMA mutación DE CADA página, no sólo la última de todas: es lo que
-  // los ojos necesitan para mirarlas todas. El `Map` conserva el orden de
-  // inserción, así que el primero es el que el turno tocó primero — que suele
-  // ser el entregable, y el último un retoque incidental del pie.
-  //
-  // 🔴 MEDIDO el 2026-09-20 en producción: un turno creó `/viajes` y luego
-  // retocó la Home, y como se verificaba `lastMutation` los ojos miraron la
-  // Home. El entregable no se miró NUNCA y la tarjeta decía «sin fallos
-  // medidos». De ahí sale esto y el recuento de la tarjeta.
-  const ultimaPorPagina = new Map<string | null, { html: string; page: string | null; taggedHtml?: string }>();
+  // ⚰️ Aquí vivían `lastMutation` y `ultimaPorPagina` —la última mutación del
+  // turno y la última de cada página—, que sólo leían los ojos del cierre y la
+  // medición tras editar. Retirados el 2026-10-06 (plans/crear-es-len).
   // ⚰️ Aquí vivían `verificaciones`, `problemasPrevios` y `mejorCandidato`
   // (KEEP-BEST), las tres del ciclo de arreglo que se retiró en `12f6a11e`.
   // `mejorCandidato` ya no se leía en ninguna parte; las otras dos sólo
   // alimentaban una segunda pasada que era inalcanzable. Ver el bloque de los
   // ojos, más abajo, para el porqué entero.
-  /** El fusible del medidor: tres fallos seguidos y no se vuelve a medir este
-   *  turno. Vive aquí —y no en la ruta— porque su vida es la de este bucle. */
-  const avisos = new AvisosDelTurno();
   /** Lo que ya se le entregó al modelo este turno: una tanda no le repite a la
    *  siguiente lo que ya oyó (el `delivered` del registro de Claude Code). */
   const entregados = new NuevosDiagnosticos();
-  /** Las páginas que cambiaron desde la última medición, cada una con su última
-   *  versión: tal como la ve Read y su gemelo con posiciones. Len 2.0 edita
-   *  varios ficheros en una tanda, y se miden todos, como Claude Code mira todos
-   *  los que tienen línea base. */
-  const porMedir = new Map<string | null, { html: string; gemelo: string }>();
-  /** El último gemelo medido de cada página. Sin esto, una tanda que sólo lee o
-   *  que cambia AJUSTES volvería a arrancar Chromium sobre la misma página. */
-  const ultimoMedido = new Map<string | null, string>();
-  /** Cómo estaba cada página ANTES de la primera escritura del turno sobre ella
-   *  (`outcome.htmlPrevio`); `null` si el turno la creó. */
-  const previoPorPagina = new Map<string | null, string | null>();
-  /** La línea base medida de cada página, perezosa y UNA vez por página, salga
-   *  bien o mal: si sale mal no se reintenta, que el fusible cuenta fallos
-   *  CONSECUTIVOS y un reintento por tanda podría pagar un Chrome por edición. */
-  const basePorPagina = new Map<string | null, readonly Diagnostico[] | "no-medida">();
   /** Lo que las escrituras de esta tanda dejaron mal (`outcome.diagnosticos`). */
   let diagnosticosDeLaTanda: Diagnostico[] = [];
+  // ⚰️ Aquí vivía la MEDICIÓN CON NAVEGADOR QUE VOLVÍA AL MODELO tras cada tanda
+  // (`medirParaElModelo`): el fusible del medidor, las páginas por medir, la
+  // línea base de cada una (`baseDe`) y «medido, y limpio». Retirada el
+  // 2026-10-06 (plans/crear-es-len): DeepSeek no le devuelve al modelo
+  // diagnósticos por su cuenta, y la regla es DeepSeek. Lo medido llega cuando
+  // Len lo pide (`view_page mode="measure"`).
   /**
-   * La línea base de una página, medida al primer defecto y no antes.
-   *
-   * 🔴 SIN LÍNEA BASE NO SE HABLA de lo medido, y es la regla de Claude Code: el
-   * sobre dice «nuevo», y sin base eso no se puede saber. Medirla siempre
-   * costaría un render (2,16 s en caliente) en todos los turnos que editan; así
-   * se paga sólo en los que iban a decir algo.
-   *
-   * La base es la del PROPIO fichero: la de la página en su primera escritura
-   * del turno. Una página que el turno creó no traía nada; una de la que no se
-   * sabe cómo estaba («sin-base») se dice entera, como se hacía antes con las
-   * que no eran la del arranque.
-   */
-  const baseDe = async (page: string | null): Promise<readonly Diagnostico[] | "no-medida" | "sin-base"> => {
-    if (!previoPorPagina.has(page) || !args.medirParaElModelo) return "sin-base";
-    const hecha = basePorPagina.get(page);
-    if (hecha) return hecha;
-    const previo = previoPorPagina.get(page) ?? null;
-    if (previo === null) {
-      basePorPagina.set(page, []);
-      return [];
-    }
-    let base: MedicionCruda | null = null;
-    try {
-      base = await args.medirParaElModelo(etiquetarConPosiciones(previo));
-    } catch {
-      base = null;
-    }
-    const r = base ? diagnosticosMedidos(base, rutaDePagina(page), previo) : "no-medida";
-    basePorPagina.set(page, r);
-    return r;
-  };
-  /**
-   * EL MOMENTO `tsc`: lo que dejaron las escrituras de la tanda y lo que midió
-   * el navegador en las páginas que cambiaron, en UN `<new-diagnostics>` como el
-   * de Claude Code (`lib/agent/diagnosticos.ts`) — sólo lo nuevo, anclado a
-   * línea — más «medido, y limpio» y los límites de la medida, que son nuestros.
+   * EL MOMENTO `tsc`: lo que dejaron las escrituras de la tanda, en UN
+   * `<new-diagnostics>` como el de Claude Code (`lib/agent/diagnosticos.ts`) —
+   * sólo lo nuevo, anclado a línea. Son los diagnósticos ESTÁTICOS de las
+   * herramientas (sin navegador), y no se tocaron con la medición.
    *
    * Devuelve `""` —no `null`— porque su destino es el `content` del mensaje que
    * lleva las respuestas de las herramientas, y ese campo era `""` antes de que
@@ -1116,54 +922,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // fichero de antes): sólo se quita lo ya entregado.
     const nuevos: Diagnostico[] = entregados.nuevos(diagnosticosDeLaTanda);
     diagnosticosDeLaTanda = [];
-    const extras: string[] = [];
-    if (args.medirParaElModelo) {
-      for (const [page, doc] of porMedir) {
-        // El fusible: tres fallos seguidos y no se vuelve a intentar este turno.
-        if (avisos.apagado) break;
-        if (ultimoMedido.get(page) === doc.gemelo) continue;
-        ultimoMedido.set(page, doc.gemelo);
-        let medicion: MedicionCruda | null = null;
-        try {
-          medicion = await args.medirParaElModelo(doc.gemelo);
-        } catch {
-          medicion = null;
-        }
-        if (!medicion) {
-          // FAIL-SOFT, y CONTADO. No medir no es medir bien, pero tampoco puede
-          // tumbar un turno: el usuario pidió un cambio y el cambio está hecho.
-          if (avisos.fallo()) {
-            // eslint-disable-next-line no-console
-            console.warn(
-              `[agent] la medición tras editar se apaga este turno tras ${AvisosDelTurno.MAX_FALLOS} fallos seguidos`,
-            );
-          }
-          continue;
-        }
-        avisos.ok();
-        const ruta = rutaDePagina(page);
-        const medidos = diagnosticosMedidos(medicion, ruta, doc.html);
-        if (medidos.length === 0) {
-          // 🔴 MEDIDO, Y LIMPIO, SE DICE: el silencio no es evidencia, y sin esta
-          // frase una condición como «no desborda en móvil» no se cumpliría
-          // nunca (medido el 2026-09-07 con un evaluador aparte). Calla si algún
-          // eje no se midió: no afirma un cero que nadie comprobó.
-          const limpio = medicionLimpia(medicion, ruta);
-          if (limpio) extras.push(limpio);
-        } else {
-          const base = await baseDe(page);
-          // Se pidió base y no se pudo medir ⇒ no se habla del defecto.
-          if (base !== "no-medida") nuevos.push(...entregados.nuevos(medidos, base === "sin-base" ? [] : base));
-        }
-        // LOS LÍMITES DE LA MEDIDA viajan siempre que los haya, también con
-        // «limpio»: decir «0 errores de JavaScript» de una página cuyo botón abre
-        // un `prompt()` que la medición canceló es afirmar de más.
-        const limites = redactarLimites(medicion);
-        if (limites) extras.push(limites);
-      }
-    }
-    porMedir.clear();
-    return [redactarDiagnosticos(nuevos), ...extras].filter(Boolean).join("\n");
+    return redactarDiagnosticos(nuevos) ?? "";
   };
 
   /** Ver `AgentLoopResult.rechazos`. */
@@ -1335,17 +1094,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   };
 
   const finishOnCap = async (code: TopeCode): Promise<AgentLoopResult> => {
-    // 🔴 H05 · UN TURNO QUE TOPA TAMBIÉN SE CUENTA COMO NO MIRADO. Los ojos
-    // exigen presupuesto, así que al topar no corrían y el turno cerraba SIN
-    // tarjeta de verificación: la página había cambiado y nada decía que nadie
-    // la hubiera comprobado (G3 y C06 de la auditoría del 2026-09-22; en
-    // producción, cuatro topes del 14-15/09 sin tarjeta). No se paga una mirada
-    // aquí —el dinero de esa llamada no es una decisión de este bucle—: se DICE,
-    // en la tarjeta y en los hechos que recibe el cierre.
-    const sinComprobar = Boolean(args.verifyTurn && lastMutation);
-    if (sinComprobar) {
-      args.emit({ type: "action", tool: VERIFY_TOOL, status: "warning", summary: "no-mirado" });
-    }
+    // ⚰️ Aquí se emitía la tarjeta «no mirado» de `verifyTurn` (H05) y el cierre
+    // añadía «AND THE PAGE HAS NOT BEEN CHECKED». Se retiraron con la medición
+    // obligatoria el 2026-10-06 (plans/crear-es-len): como en DeepSeek, mirar la
+    // página lo decide Len (`view_page`); el arnés no lo promete.
     if (args.closeOut) {
       let wrapText = "";
       // 🔴 LOS HECHOS, NO LA MEMORIA — medido el 2026-09-11 con `tope-no-miente`.
@@ -1379,16 +1131,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         rotoPorLaUltima.length > 0
           ? `\n\n🔴 AND THE PAGE IS LEFT BROKEN, measured by us: its JavaScript looks for ${rotoPorLaUltima.length} element(s) that no longer exist (${rotoPorLaUltima.join(", ")}). When that happens the whole script stops running, so the page lost ALL its interactivity, not just that part. TELL the user clearly and tell them you will fix it in the next message. DON'T close saying it is done.`
           : "";
-      const noSeMiro = sinComprobar
-        ? "\n\nAND THE PAGE HAS NOT BEEN CHECKED: there was no budget left to look at it. Don't say it is fine; say you haven't checked it."
-        : "";
       for await (const ev of args.closeOut([
         ...messages,
         {
           role: "user",
           content:
             (code === "budget_limit" ? WRAP_UP_PRESUPUESTO : WRAP_UP_INSTRUCTION) +
-            hechosDelTurno + estadoDeLaPagina + noSeMiro,
+            hechosDelTurno + estadoDeLaPagina,
         },
       ])) {
         if (ev.type === "text_delta") {
@@ -1500,7 +1249,21 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       let desbordado = false;
 
       messagesAtLastCall = messages.length;
+      // Una por intento: un reintento vuelve a escribir desde cero.
+      const writePreview = createWritePreview(undefined, args.activePage);
+      // LO QUE ESTE INTENTO GENERÓ, por si el proveedor no manda su uso (llega al
+      // FINAL del stream, y un ■ o un corte a mitad no lo trae). Ver abajo.
+      let usoDelProveedor = false;
+      let generadoEnElIntento = 0;
+      let pensadoEnElIntento = 0;
+      let argumentosEnVivo = 0;
+      const peticionDelIntento = estimateTokens(messages);
       for await (const ev of args.openStream(messages)) {
+        if (ev.type === "text_delta") generadoEnElIntento += ev.text.length;
+        else if (ev.type === "reasoning") pensadoEnElIntento += ev.text.length;
+        else if (ev.type === "function_call_delta") argumentosEnVivo += ev.argsDelta.length;
+        else if (ev.type === "function_call" && argumentosEnVivo === 0) generadoEnElIntento += JSON.stringify(ev.args).length;
+        else if (ev.type === "usage") usoDelProveedor = true;
         if (ev.type === "text_delta" && retener) {
           turnText += ev.text;
           retenido += ev.text;
@@ -1522,6 +1285,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           emitidoEnElIntento += ev.text.length;
         } else if (ev.type === "reasoning") {
           turnReasoning += ev.text;
+        } else if (ev.type === "function_call_delta") {
+          const preview = writePreview.push(ev);
+          if (preview) args.emit({ type: "page_preview", html: preview.html, page: preview.page });
         } else if (ev.type === "function_call") {
           calls.push({
             name: ev.name,
@@ -1560,6 +1326,20 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
             truncado = true;
           }
         }
+      }
+
+      // 🔴 EL USO QUE NO LLEGÓ. Fireworks manda el uso al FINAL del stream: un ■
+      // o un corte a mitad no lo traen, y el turno cobraba 0 aunque el proveedor
+      // sí factura lo generado hasta ese momento (ensayo de caja de
+      // crear-es-len, 07/10). Como DeepSeek —«el usuario paga cada token que el
+      // modelo llegó a gastar, también en un turno cancelado»—, sin el uso del
+      // proveedor se cuenta lo que llegó: la petición y lo generado, con el
+      // mismo estimador de la compactación. Si no llegó ni un trozo, nada.
+      const generado = generadoEnElIntento + argumentosEnVivo + pensadoEnElIntento;
+      if (!usoDelProveedor && generado > 0) {
+        inputTokens += peticionDelIntento;
+        outputTokens += Math.ceil(generado / CHARS_PER_TOKEN);
+        thinkingTokens += Math.ceil(pensadoEnElIntento / CHARS_PER_TOKEN);
       }
 
       // ─── NO CABE: se compacta sin mirar el umbral y se repite UNA vez ────
@@ -1718,7 +1498,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // `toolCalls === 0` —ninguna llamada en TODO el request—, no
       // `!mutoDurable`: son cosas distintas y la diferencia la cazó una prueba
       // que ya existía. Un turno que llamó a una herramienta ACTUÓ, aunque esa
-      // herramienta no marque mutación durable (activar_modulo, publicar…);
+      // herramienta no marque mutación durable (toggle_module, publish…);
       // empujarlo sería pagar una vuelta de más por un turno que hizo su
       // trabajo. Lo que se corrige es cerrar sin haber llamado a NADA.
       //
@@ -1728,7 +1508,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // cobrado sobre una página intacta (G4 de
       // `plans/auditoria-len-vs-claude-code-2026-09-22.md`). Ahora se mira
       // `actuo`: alguna llamada que no es de lectura, que salió bien y que no
-      // dejó la página byte a byte igual. Un `activar_modulo` o una tarjeta de
+      // dejó la página byte a byte igual. Un `toggle_module` o una tarjeta de
       // publicar SÍ actuaron —el brazo de control de su prueba lo sujeta— y
       // una lectura o una edición nula no.
       //
@@ -1744,293 +1524,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         continue;
       }
 
-      // F5 — los ojos: el modelo quiere cerrar y este request mutó el
-      // documento. Antes de dejarlo ir, se mira UNA vez y se dice lo que se ve.
-      //
-      // ⚰️ AQUÍ VIVÍA UNA SEGUNDA PASADA, la que comprobaba «si el arreglo
-      // ARREGLÓ» — sólo la capa determinista, sin visión. Retirada en el
-      // barrido del 2026-09-04: `12f6a11e` se había llevado el ciclo de arreglo
-      // esa misma mañana, y sin ciclo no hay arreglo que re-comprobar. Estaba
-      // INALCANZABLE desde entonces, no sólo inútil: su guarda pedía
-      // `problemasPrevios > 0`, y el único sitio que ponía esa cuenta por
-      // encima de cero era la rama `roto`, que hace `return` dos líneas
-      // después. O sea que `segunda` no podía ser cierto nunca — y el fichero
-      // seguía describiendo con detalle un comportamiento que el código no
-      // podía ejecutar, que es la forma más cara de mentir que tiene un repo.
-      //
-      // Con ella se van `verificaciones`, `problemasPrevios`, el campo
-      // `problemas` de `VerifyOutcome` y `soloDeterminista` en toda la cadena.
-      //
-      // EL PRESUPUESTO SÍ SE QUEDA, con otro motivo. Antes era «sin presupuesto,
-      // encontrar un problema que ya no se puede arreglar no sirve»; ya no
-      // arreglamos, así que decirlo serviría igual. Pero mirar cuesta un
-      // arranque de Chrome y una llamada con visión, y cobrárselos a un turno
-      // que ya agotó su cuerda es lo que este bloque nunca ha querido hacer.
-      if (
-        args.verifyTurn &&
-        lastMutation &&
-        mutatingTurns < maxTurns &&
-        budgetedToolCalls < maxToolCalls
-      ) {
-        args.emit({ type: "action", tool: VERIFY_TOOL, status: "running", summary: "" });
-        // LAS OTRAS PÁGINAS DEL TURNO. La principal sigue siendo la última
-        // mutada —es la que el usuario tiene delante, y la que lleva `spec`,
-        // `guardadas` y `vista`—; las demás se suman para que los ojos las
-        // vean y las MIDAN también. Van en el orden en que el turno las tocó,
-        // así que si el tope recorta, lo que cae es lo último retocado y no el
-        // entregable.
-        // En un `const` porque el `filter` es un cierre, y TypeScript no
-        // estrecha un `let` dentro de uno.
-        const principal = lastMutation;
-        const otrasPaginas = [...ultimaPorPagina.values()]
-          .filter((p) => p.page !== principal.page)
-          .slice(0, TOPE_PAGINAS_MIRADAS - 1);
-        let verdict: VerifyOutcome;
-        try {
-          verdict = await args.verifyTurn({
-            ...lastMutation,
-            ...(otrasPaginas.length > 0 ? { otrasPaginas } : {}),
-          });
-        } catch (e) {
-          // Fail-open: los ojos jamás rompen un turno. Pero el turno sigue
-          // sabiendo que NADIE MIRÓ — antes esto devolvía `ok: true` y el visto
-          // bueno era indistinguible de una verificación de verdad.
-          verdict = {
-            estado: "no_mirado",
-            motivo: e instanceof Error ? e.message : "la verificación lanzó",
-          };
-        }
-        // ─── EL RECUENTO DE COBERTURA ────────────────────────────────────
-        //
-        // Va con las TRES tarjetas de cierre («miró y bien», «miró y hay
-        // rotura», «observó algo»), y NO con `no-mirado`: «sin comprobar» ya
-        // lo dice entero y «0 de 2 · sin comprobar» es la misma frase dos
-        // veces. Ver `summaryLabel` en `agent-action-card.tsx`.
-        //
-        // `miradas` se DERIVA de lo que se le pasó a `verifyTurn`, no es un 1
-        // escrito a mano: el día que se verifiquen varias páginas este número
-        // ya cuenta bien sin que nadie se acuerde de venir a tocarlo.
-        const cobertura =
-          ultimaPorPagina.size > 1
-            ? {
-                // LO QUE LOS OJOS DICEN HABER MIRADO, no lo que se les pidió:
-                // una página cuya captura se cayó no se miró, y contarla haría
-                // que la tarjeta dijera «2 de 2» habiendo visto una.
-                paginasMiradas: verdict.paginasMiradas ?? 1 + otrasPaginas.length,
-                paginasTocadas: ultimaPorPagina.size,
-              }
-            : {};
-        // ─── LAS PROMESAS QUE SE ROMPIERON ───────────────────────────────
-        //
-        // Va ANTES de las ramas y fuera de todas ellas, porque es ortogonal al
-        // veredicto: un turno puede salir «bien» y haberse llevado por delante
-        // el carrito construido hace seis turnos. Son dos cosas distintas y se
-        // dicen las dos.
-        //
-        // 🔴 ÁMBAR Y NO ROJA, y tampoco abre ciclo. Esta casa ya degradó una
-        // vez el canal de las pruebas tras medir que acertaba 0 de 3, así que
-        // una regresión se DICE y se guarda; se promueve a rotura cuando el
-        // contador diga que acierta, no antes.
-        //
-        // 🔴 Y QUIEN ACTÚA ES EL DUEÑO. Los ojos corren aquí, al CERRAR el
-        // turno, así que el modelo no puede arreglarlo sobre la marcha. El
-        // texto entra en `turnText` —y con él en `finalText` por todas las
-        // ramas de abajo—, que es el camino por el que la rama `observado` ya
-        // mete su contexto en el historial: el modelo lo lee en el turno
-        // siguiente. Empujarlo a `messages` aquí sería una escritura MUERTA,
-        // que es el error que el comentario de `observado` documenta abajo.
-        const regresiones = verdict.regresiones ?? [];
-        const avisoRegresion = regresiones.length > 0 ? avisoDeRegresion(regresiones) : "";
-        if (avisoRegresion) {
-          args.emit({
-            type: "action",
-            tool: VERIFY_TOOL,
-            status: "warning",
-            summary: "regresion",
-            motivo: avisoRegresion,
-          });
-        }
-        // Lo que se ha medido y es AFIRMABLE: la rotura y las promesas rotas.
-        // `observado` no entra: por definición es lo que no se puede afirmar, y
-        // desde el 2026-09-16 va a la tarjeta y no a la boca de Len — se midió
-        // que le repetía al dueño lo que él mismo acababa de decir.
-        const critica = verdict.estado === "roto" ? verdict.critique.trim() : "";
-        if (verdict.estado === "roto") {
-          // La tarjeta sale ANTES de la redacción, para que lo último que el
-          // dueño lee del modelo vaya detrás del veredicto. Lleva la lista
-          // medida en `motivo`: es lo único que dice qué se midió, y con la
-          // redacción de H04 ya no se pega como texto.
-          args.emit({
-            type: "action",
-            tool: VERIFY_TOOL,
-            status: "warning",
-            summary: "issues",
-            ...cobertura,
-            ...(critica ? { motivo: critica } : {}),
-          });
-        }
-        const medido = [critica, avisoRegresion].filter(Boolean).join("\n\n");
-        const redactado = medido ? await redactarConLoMedido(turnText, medido) : "";
-        if (redactado) {
-          turnText = turnText.trim() ? `${turnText.trim()}\n\n${redactado}` : redactado;
-        } else if (medido) {
-          // Sin `closeOut` o sin texto: la lista, verbatim, como hasta hoy.
-          args.emit({ type: "text", text: medido });
-          turnText = turnText.trim() ? `${turnText.trim()}\n\n${medido}` : medido;
-        }
-        if (verdict.estado === "roto") {
-          // ⚰️ EL CICLO DE ARREGLO Y EL REVERT, RETIRADOS (Jesús, 2026-09-04).
-          //
-          // Aquí pasaban dos cosas que el usuario no pidió:
-          //
-          //  1. Se le inyectaba al modelo un mensaje de sistema —literalmente
-          //     «el usuario NO escribió esto»— mandándole arreglar lo que
-          //     nuestros ojos habían juzgado, dentro del mismo turno.
-          //  2. Si ese ciclo no bajaba el número de problemas, se DESHACÍA su
-          //     edición y se restauraba el documento anterior (`restaurarHtml`).
-          //
-          // Lo segundo es exactamente lo que se retiró de Crear esta misma
-          // mañana, en la otra superficie: tirar el trabajo del modelo porque
-          // nuestro medidor no lo aprueba. El usuario le pidió un cambio a Len,
-          // Len lo hizo, y se lo deshacíamos sin preguntar. Para deshacer ya
-          // está el Undo, que es suyo.
-          //
-          // La regla es que corrige el USUARIO. Los ojos siguen mirando y siguen
-          // DICIÉNDOLO —la tarjeta sale con `issues` y el texto del turno lo
-          // cuenta—, pero el turno cierra con lo que el modelo hizo.
-          //
-          // 🔴 «Y EL TEXTO DEL TURNO LO CUENTA» NO ERA CIERTO (2026-09-04, la
-          // misma tarde). La línea de abajo era `finalText = turnText`, y
-          // `turnText` lo escribió el modelo ANTES de que los ojos miraran: sin
-          // ciclo de arreglo el modelo nunca se entera de la crítica, así que no
-          // había forma de que la contara. Lo medido llegaba a una tarjeta de
-          // cuatro palabras y a ningún sitio más.
-          //
-          // Es la doctrina entera puesta del revés: se MIDE y se DICE, y quien
-          // corrige es el usuario — que no puede pedir que se arregle algo que
-          // nadie le ha dicho. Y era ASIMÉTRICO al revés: la rama `observado`,
-          // que trae lo que NO se puede afirmar, sí se emitía; ésta, que trae
-          // los defectos afirmables, no.
-          //
-          // Se emite igual que `observado` —verbatim, sin envoltorio nuestro— y
-          // por su misma razón: `issues` viene en el idioma del usuario, y un
-          // prefijo en español rompería los otros nueve. Va también a
-          // `finalText` o desaparecería al recargar la conversación.
-          // `warning`, no `done`: la etiqueta dice «con problemas» y hasta hoy
-          // salía con el mismo tick verde que «sin problemas». Tampoco `error`
-          // —la verificación no falló, encontró cosas— y ese matiz no es de
-          // gusto: `status` lo leen el historial que se le manda al modelo y
-          // los veredictos de los evals. Ver `agent-action-card.tsx`.
-          // La tarjeta y lo medido ya salieron arriba —la redacción de H04 o,
-          // si no la hubo, la lista verbatim—, así que aquí sólo se cierra.
-          //
-          // Lo que SÍ se sigue comprobando es que haya algo que decir: un
-          // `critique` vacío emitiría una burbuja en blanco. Hoy no puede pasar
-          // —`parseVisualVerdict` convierte un `broken:true` sin issues en
-          // `broken:false`— pero `verifyTurn` es una dependencia inyectada.
-          finalText = turnText;
-          return await cerrarTurno();
-        }
-        // OBSERVADO: se vio algo, y no es un defecto afirmable. Contexto para
-        // el cierre, no una orden — y NUNCA un ciclo de arreglo. Ver el
-        // comentario de `VerifyOutcome`.
-        if (verdict.estado === "observado") {
-          // LA OBSERVACIÓN SE EMITE. No se empuja a `messages`.
-          //
-          // 🔴 La primera versión de esto hacía `messages.push(...)` «para que
-          // el modelo se las cuente al usuario». Era una escritura MUERTA: el
-          // turno cierra dos líneas más abajo, nadie vuelve a leer ese array, y
-          // el turno siguiente reconstruye `messages` desde la base con
-          // `buildAgentMessages`. Habría aparentado funcionar para siempre.
-          //
-          // Se emite como TEXTO, igual que hace la rama de `pregunta` más
-          // abajo, y por su misma doctrina: el texto lo escribió el modelo con
-          // visión, EN EL IDIOMA DEL USUARIO — el servidor decide CUÁNDO se
-          // dice, no QUÉ se dice. Por eso va verbatim y sin envoltorio nuestro:
-          // un prefijo en español rompería los otros nueve idiomas.
-          //
-          // Y va también a `finalText`, o al recargar la conversación
-          // desaparecería — la misma avería con otro disfraz. De paso, así
-          // entra en el historial y el turno siguiente ya lo sabe.
-          //
-          // ⚠️ COSTE CONOCIDO: en una página con marcadores intencionales, el
-          // crítico los observa CADA turno, así que esto puede repetirse. La
-          // guarda de abajo sólo caza la repetición literal. Reducirlo de
-          // verdad pide recordar qué se dijo ya, y eso es otro trabajo.
-          finalText = turnText;
-          const nota = verdict.notas.length > 0 ? verdict.notas.join(" ") : "";
-          if (nota) {
-            // eslint-disable-next-line no-console
-            console.log(`[agent-verify] observado (no gasta): ${verdict.notas.join("; ")}`);
-          }
-          args.emit({
-            type: "action",
-            tool: VERIFY_TOOL,
-            status: "done",
-            summary: "ok",
-            // LA OBSERVACIÓN VA EN LA TARJETA, NO EN LA BOCA DE LEN.
-            //
-            // ⚰️ Hasta el 2026-09-16 esto hacía `finalText = turnText + nota` y
-            // lo emitía como texto, así que la observación del crítico con
-            // visión se pegaba LITERAL al final de la respuesta al usuario.
-            // MEDIDO en dos corridas de pago: a «cambiame el titular» Len
-            // contestaba «Hecho: el titular ahora dice X. El titular solicitado
-            // X aparece correctamente en el hero. Los campos del formulario
-            // muestran solo placeholders, lo cual es normal.» — le repetía al
-            // usuario lo que él acababa de decirle. No era un fallo de idioma:
-            // ese texto sí lo escribe el modelo en el idioma del usuario. Era
-            // RUIDO, y era incondicional, no intermitente.
-            //
-            // Es la misma línea que ya trazaron `f4487334` (lo que la medición
-            // no comprueba deja de salirle al usuario) y `2f5314f7` (la tarjeta
-            // dice qué comprobó): lo del instrumento va a la tarjeta.
-            //
-            // 🔴 Y NO SE TIRA, que era la otra salida y es peor: esa frase la
-            // escribió una llamada de visión que YA se ha pagado, y en el caso
-            // sano es lo único que produce. Cuelga del `title` de la tarjeta,
-            // junto a la cobertura — el sitio que este repo ya construyó para
-            // el texto largo que no cabe en la línea.
-            //
-            // Viene en el idioma del usuario, escrita por el modelo con visión:
-            // el servidor decide DÓNDE se enseña, no QUÉ dice. Por eso viaja
-            // verbatim y sin envoltorio nuestro, que rompería los otros nueve
-            // idiomas.
-            ...(nota ? { observacion: nota } : {}),
-            ...cobertura,
-          });
-          return await cerrarTurno();
-        }
-        // Se miró y está bien.
-        // `no_mirado` NO dispara ciclo de arreglo: no hay crítica que dar y
-        // cobrarle al usuario una vuelta por una comprobación que no ocurrió
-        // sería peor que no comprobar. Pero se DICE.
-        // `no_mirado` también deja de salir con tick verde. La etiqueta se
-        // arregló el 2026-09-04 por la mañana («sin comprobar») pero el icono
-        // seguía diciendo lo contrario, que es justo el caso que el comentario
-        // de `summaryLabel` describe: los ojos fallan ABIERTOS y eso enseñaba
-        // el mismo visto bueno que una verificación de verdad.
-        const noMiro = verdict.estado === "no_mirado";
-        // Y EL TERCER DESENLACE, que hasta hoy se disfrazaba del segundo: se
-        // miró la CAPTURA y se leyeron los errores de JavaScript, pero el
-        // medidor determinista no contestó, así que el desborde en móvil y el
-        // contraste NO se comprobaron. Salía con el mismo «sin problemas» que
-        // una verificación entera. `ok-sin-medida` deja que la tarjeta diga qué
-        // cubrió de verdad. Ver `VerifyOutcome` y `VisualVerdict.conMedida`.
-        //
-        // `conMedida` es opcional en el tipo —hay implementaciones de
-        // `verifyTurn` que no lo mandan, como el arnés de evals— y un `false`
-        // por ausencia diría «no se midió» de un turno que sí midió. Así que
-        // sólo se degrada cuando llega EXPLÍCITAMENTE en false.
-        const sinMedida = verdict.estado === "bien" && verdict.conMedida === false;
-        args.emit({
-          type: "action",
-          tool: VERIFY_TOOL,
-          status: noMiro ? "warning" : "done",
-          summary: noMiro ? "no-mirado" : sinMedida ? "ok-sin-medida" : "ok",
-          // Sin recuento cuando NADIE miró: ver el comentario de `cobertura`.
-          ...(noMiro ? {} : cobertura),
-        });
-      }
+      // ⚰️ F5 — LOS OJOS AL CERRAR (`verifyTurn`): antes de dejar ir un turno
+      // que mutó el documento, se miraba UNA vez y se emitía la tarjeta
+      // `verificar_diseno` (con las promesas rotas y la cobertura de páginas).
+      // Retirados el 2026-10-06 (plans/crear-es-len, D2): como en DeepSeek y en
+      // Claude Code, el arnés no obliga a mirar; Len mira cuando lo decide
+      // (`view_page`), y `/AGENTS.md` le pide comprobar antes de decir que
+      // está hecho. El cliente sigue pintando las tarjetas de turnos viejos.
       finalText = turnText;
       // Igual que la rama de error: por el constructor, no a mano.
       return await cerrarTurno();
@@ -2047,6 +1547,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     /** La pregunta con la que este turno se cierra, si alguna herramienta la
      *  produjo. Ver el bloque que la consume al salir del bucle de llamadas. */
     let pregunta = "";
+    /** La pregunta lleva `intent` (la del modo plan): su texto es nuestro y en
+     *  inglés, y la tarjeta la pinta traducida. Cierra el turno sin decirla. */
+    let preguntaSinTexto = false;
     /** Lote 7-8 · el dueño descartó una pregunta para hablar: el turno cierra
      *  tras la tanda (ver el bloque que lo consume, antes del de `pregunta`). */
     let ownerTookOver = false;
@@ -2122,9 +1625,17 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // una en rojo con un nombre inexistente le cuenta al usuario una avería
           // que no es suya. Se le devuelve al modelo una corrección legible y el
           // turno sigue, sin tocar presupuesto ni firmas fallidas.
+          // UN NOMBRE DE ANTES (las 11 que pasaron al inglés el 2026-10-06):
+          // se le dice cómo se llama ahora, que es lo que necesita para la
+          // siguiente llamada; la «más parecida» no la encontraría.
+          const ahora = currentToolName(original.name);
           const error_de_uso =
             `There is no tool called "${original.name}".` +
-            (reparo.sugerido ? ` The closest one is "${reparo.sugerido}".` : "") +
+            (ahora !== original.name
+              ? ` It is called "${ahora}" now.`
+              : reparo.sugerido
+                ? ` The closest one is "${reparo.sugerido}".`
+                : "") +
             " Call one of the tools you have declared, with its exact name.";
           return rechazar(original.name, original, error_de_uso, { ok: false, error_de_uso });
         }
@@ -2226,61 +1737,25 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
             // archivan nada salga byte-idéntico al de antes.
             ...(outcome.versionPrevia ? { versionPrevia: outcome.versionPrevia } : {}),
           });
-          // 🔴 EL GEMELO VIAJA CON LA MUTACIÓN. Leerlo de la sesión al verificar
-          // sería leer la página equivocada: `trabajar_en_pagina` mueve la sesión
-          // a otra página a mitad de turno y `lastMutation` sigue siendo ésta.
-          //
-          // Y UNA EDICIÓN NULA NO ES UNA MUTACIÓN (H01): la página es byte a byte
-          // la de antes, así que no hay nada nuevo que medir ni que mirar. La
-          // puerta devuelve el documento igual (`updatedHtml` va siempre que
-          // guardó), y sin esta guarda un turno cuya única edición fue nula
-          // pagaba unos ojos sobre una página que nadie tocó.
-          if (!nula) {
-            // EL GEMELO CON POSICIONES, hecho aquí y en un solo sitio: lo miden la
-            // medición de la tanda y los ojos del cierre, y cada nodo trae su
-            // línea del fichero (Len 2.0, T9).
-            const tal = sinOpIds(outcome.updatedHtml);
-            lastMutation = {
-              html: outcome.updatedHtml,
-              page: outcome.page ?? null,
-              taggedHtml: etiquetarConPosiciones(tal),
-            };
-            porMedir.set(lastMutation.page, { html: tal, gemelo: lastMutation.taggedHtml! });
-            // El mapa se llena aquí, junto a `lastMutation` y por la misma razón:
-            // es el único sitio donde se sabe QUÉ página acaba de cambiar. Se
-            // sobrescribe la entrada, así que de cada página queda su ÚLTIMA
-            // versión — que es la que hay que mirar.
-            ultimaPorPagina.set(outcome.page ?? null, lastMutation);
-          }
-        }
-        // LA LÍNEA BASE DE CADA PÁGINA: cómo estaba antes de la PRIMERA escritura
-        // del turno sobre ella. Las siguientes no la mueven.
-        if (outcome.htmlPrevio !== undefined && !previoPorPagina.has(outcome.page ?? null)) {
-          previoPorPagina.set(outcome.page ?? null, outcome.htmlPrevio);
+          // ⚰️ Aquí se guardaba la mutación —el gemelo con posiciones, la última
+          // de cada página y su línea base— para la medición tras editar y los
+          // ojos del cierre, retirados el 2026-10-06 (plans/crear-es-len).
         }
         // F1 (plans/len-agente-2026): un comando de la terminal puede escribir
-        // VARIAS páginas. Cada una, igual que la primera: al lienzo, a medir, y
-        // con su línea base.
+        // VARIAS páginas. Cada una, igual que la primera, al lienzo.
         for (const otra of outcome.masPaginas ?? []) {
           args.emit({ type: "html", html: otra.html, page: otra.page, ...(otra.versionPrevia ? { versionPrevia: otra.versionPrevia } : {}) });
-          if (!nula) {
-            const tal = sinOpIds(otra.html);
-            lastMutation = { html: otra.html, page: otra.page, taggedHtml: etiquetarConPosiciones(tal) };
-            porMedir.set(otra.page, { html: tal, gemelo: lastMutation.taggedHtml! });
-            ultimaPorPagina.set(otra.page, lastMutation);
-          }
-          if (otra.htmlPrevio !== undefined && !previoPorPagina.has(otra.page)) previoPorPagina.set(otra.page, otra.htmlPrevio);
         }
         // Lo que la escritura dejó mal, para el `<new-diagnostics>` de la tanda.
         if (outcome.diagnosticos?.length) diagnosticosDeLaTanda.push(...outcome.diagnosticos);
         // Lo durable incluye los cambios de AJUSTES, que no emiten html: módulos,
-        // hoy, los módulos (`activar_modulo`). `runAgentTool` los cuenta.
+        // hoy, los módulos (`toggle_module`). `runAgentTool` los cuenta.
         if (!mutoDurable && (outcome.mutoDurable || outcome.updatedHtml)) {
           mutoDurable = true;
           args.onMutacion?.();
         }
 
-        // A confirm outcome (publicar) NEVER carries out its action. Surface the
+        // A confirm outcome (publish) NEVER carries out its action. Surface the
         // confirm card to the user and hand the model a fixed "waiting" state so
         // it closes the turn asking for the tap — never a payload it could read
         // as "already published".
@@ -2291,18 +1766,24 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           functionResponses.push({
             name: call.name,
             response:
-              outcome.confirm.action === "publicar"
-                ? { ok: true, estado: "esperando_confirmacion_del_usuario", subdominio: outcome.confirm.subdominio }
+              // En inglés desde el 2026-10-06, como las herramientas que lo producen.
+              outcome.confirm.action === "publish"
+                ? { ok: true, state: "waiting_for_user_confirmation", subdomain: outcome.confirm.subdominio }
                 : {
                     ok: true,
-                    estado: "borrador_en_una_tarjeta_nada_enviado",
-                    nota: "The draft is in a card with its button. NOTHING has been sent: tell the user to review it and send it themselves. Never say it was already sent.",
+                    state: "draft_in_a_card_nothing_sent",
+                    note: "The draft is in a card with its button. NOTHING has been sent: tell the user to review it and send it themselves. Never say it was already sent.",
                   },
           });
           return;
         }
 
-        if (outcome.pregunta) pregunta = outcome.pregunta;
+        if (outcome.pregunta) {
+          pregunta = outcome.pregunta;
+          // La del modo plan es NUESTRA (fija, en inglés) y su tarjeta la pinta
+          // traducida por su `intent`: cierra el turno igual, pero sin texto.
+          preguntaSinTexto = (outcome.preguntas ?? []).length > 0 && outcome.preguntas!.every((q) => q.intent);
+        }
         if (outcome.dismissed) ownerTookOver = true;
         if (outcome.notice) avisos.push(outcome.notice);
         const respuesta = outcome.response;
@@ -2419,8 +1900,16 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // El texto lo escribió el modelo, en el idioma del usuario — el servidor
       // decide CUÁNDO se para, no QUÉ se dice. Se emite salvo que ya lo haya
       // dicho en su prosa, para no leerlo dos veces.
-      if (!turnText.includes(pregunta)) args.emit({ type: "text", text: pregunta });
-      finalText = turnText.trim() ? `${turnText.trim()}\n\n${pregunta}` : pregunta;
+      //
+      // 🔴 SALVO LA DEL MODO PLAN (`intent`): ésa no la escribió el modelo, es
+      // nuestra, fija y en inglés —«Switch to plan mode?…» le llegaba así al
+      // dueño (ensayo de caja, 07/10)—. Como DeepSeek, va en su tarjeta.
+      if (preguntaSinTexto) {
+        finalText = turnText.trim();
+      } else {
+        if (!turnText.includes(pregunta)) args.emit({ type: "text", text: pregunta });
+        finalText = turnText.trim() ? `${turnText.trim()}\n\n${pregunta}` : pregunta;
+      }
       // 🔴 ESTA SALIDA NO PASA POR EL EMBUDO, y es a propósito: el turno cierra
       // porque una herramienta PREGUNTÓ al usuario. Empujar al modelo a seguir
       // hacia el objetivo aquí sería mandarlo a trabajar cuando no puede: le

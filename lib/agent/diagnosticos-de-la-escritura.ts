@@ -268,7 +268,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
           // mudo» no se puede afirmar — en la pasada por las plantillas, un
           // botón ponía `amt-on` (inerte) y además se pintaba con estilos en
           // línea, así que funcionaba. Lo que pasa en pantalla lo mira
-          // `usar_pagina`, no esto.
+          // `use_page`, no esto.
           `Your script sets the class «${x.clase}» and nothing uses it: no rule in the page's CSS names it, Tailwind doesn't know it and the script doesn't read it. Setting it changes nothing on screen. If it is the state of a control (open, active, selected…), it is missing its CSS; if it's not needed, remove it.`,
         ),
       );

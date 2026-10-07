@@ -3,13 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   turnoDeLaFila: vi.fn(),
+  preguntaPendiente: vi.fn((): unknown => null),
   siguienteDeLaFila: vi.fn((): string | null => null),
   leerTurnoDelUsuario: vi.fn(),
   marcarCortadaSiSigueEnCurso: vi.fn(async () => {}),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
-vi.mock("@/lib/agent/direcciones", () => ({ turnoDeLaFila: mocks.turnoDeLaFila, siguienteDeLaFila: mocks.siguienteDeLaFila }));
+vi.mock("@/lib/agent/direcciones", () => ({
+  turnoDeLaFila: mocks.turnoDeLaFila,
+  siguienteDeLaFila: mocks.siguienteDeLaFila,
+  preguntaPendiente: mocks.preguntaPendiente,
+}));
 vi.mock("@/lib/projects/chat", () => ({
   leerTurnoDelUsuario: mocks.leerTurnoDelUsuario,
   marcarCortadaSiSigueEnCurso: mocks.marcarCortadaSiSigueEnCurso,
@@ -47,6 +52,18 @@ describe("GET /api/agent/turno/[fila] — volver a mirar un turno que sigue", ()
     expect(mocks.leerTurnoDelUsuario).toHaveBeenCalledWith("fila-1", "u1");
     expect(mocks.turnoDeLaFila).toHaveBeenCalledWith("fila-1", "u1");
     expect(mocks.marcarCortadaSiSigueEnCurso).not.toHaveBeenCalled();
+  });
+
+  // Como DeepSeek: quien se reengancha con una pregunta en el aire la recibe
+  // otra vez, y la puede contestar (ensayo de caja de crear-es-len, 06/10).
+  it("🔴 un turno vivo que espera la respuesta a una pregunta la devuelve", async () => {
+    const preguntas = [{ id: "plazo", question: "¿En cuánto tiempo?" }];
+    mocks.leerTurnoDelUsuario.mockResolvedValue(enCurso);
+    mocks.turnoDeLaFila.mockReturnValue("t-123");
+    mocks.preguntaPendiente.mockReturnValue(preguntas);
+    const { cuerpo } = await pedir();
+    expect(cuerpo).toEqual({ turno: enCurso, turnoId: "t-123", preguntas });
+    expect(mocks.preguntaPendiente).toHaveBeenCalledWith("t-123", "u1");
   });
 
   it("🔴 una fila en curso que nadie corre (reinicio a mitad) se cierra como cortada", async () => {

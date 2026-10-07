@@ -3,7 +3,6 @@ import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
-import { componerMedicion } from "@/lib/agent/aviso-medido";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import {
   getCreditState,
@@ -17,8 +16,6 @@ import { seleccionDelLienzo } from "@/lib/agent/seleccion-del-lienzo";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { persistPage } from "@/lib/page-engine/persist";
-import { inlineOwnAssets } from "@/lib/projects/inline-own-assets";
-import { carpetaDeLaVista, documentoMedible, vistaConCarpeta, vistaParaMedir } from "@/lib/lienzo/documento";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { formaDelTurno, lineaDeForma } from "@/lib/agent/forma-del-turno";
 import {
@@ -40,6 +37,8 @@ import {
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversacion";
 import { turnosParaElHistorial } from "@/lib/projects/chat";
+import { parseStyleDirection } from "@/lib/style-match/parse-direction";
+import { MAX_PHOTOS_PER_MESSAGE, photosForRow, photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
 import { DYNAMIS_MAX_OUTPUT_TOKENS, modeOfTurn } from "@/lib/agent/dynamis";
@@ -52,7 +51,7 @@ import { guardarZona, leerZona } from "@/lib/resultados/zona-guardada";
 import { getVersionHtml, listVersions } from "@/lib/projects/versions";
 import { loQueCambioElDueno } from "@/lib/agent/cambios-del-dueno";
 import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
-import { runAgentLoop, type AgentErrorCode, type AgentLoopResult, type VerifyOutcome } from "@/lib/agent/loop";
+import { runAgentLoop, type AgentErrorCode, type AgentLoopResult } from "@/lib/agent/loop";
 import { randomUUID } from "node:crypto";
 
 import { abrirTurno, cerrarTurno, esperarRespuesta, leerDireccion, rondaSiguiente } from "@/lib/agent/direcciones";
@@ -72,8 +71,6 @@ import {
 import { armGoal, disarmGoal, goalActivation } from "@/lib/agent/goal-activation";
 import { crearDiarioDelTurno } from "@/lib/agent/diario-del-turno";
 import { corteDelTurno, crearRegistroDelTurno } from "@/lib/agent/registro-del-turno";
-import { actualizarSuite, marcarRegresiones, migrarSuite, vivas } from "@/lib/agent/pruebas-de-la-pagina";
-import type { FalloSpec } from "@/lib/agent/prueba-js";
 import {
   abrirFilaDelTurno,
   avanceDelTurno,
@@ -88,7 +85,7 @@ import { realDeps, runAgentTool, summarizeProjectState, type AgentDeps, type Age
 import { cerrarTerminalDeLaSesion } from "@/lib/agent/terminal/herramienta";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
-import { observarPagina, verifyEditedPage } from "@/lib/agent/verify";
+import { observarPagina } from "@/lib/agent/verify";
 import { usarPagina } from "@/lib/agent/usar-pagina";
 import {
   createVisualQualityRendererPool,
@@ -112,7 +109,7 @@ import { MAX_PROMPT } from "@/lib/workspace-v2/comentarios-de-lineas";
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/agent — the OpenLen Agent's agentic loop (F1 Task 9).
 //
-// Body: { projectId, prompt, history?, attachedImage?, scope? }
+// Body: { projectId, prompt, history?, attachedImage?, attachedImages?, scope? }
 // attachedImage/scope validated with the same limits/posture as
 // /api/templates/ai-design (F2 Task 8) — see the constants + validation
 // block below.
@@ -262,6 +259,10 @@ type CuerpoDelTurno = {
   dichoAntes?: unknown;
   scope?: ScopeBody;
   attachedImage?: AttachedImageBody;
+  /** Crear es Len: hasta `MAX_PHOTOS_PER_MESSAGE` fotos en un mensaje. */
+  attachedImages?: unknown;
+  /** Crear es Len: la referencia por URL, validada con `parseStyleDirection`. */
+  styleDirection?: unknown;
   /** EL ESFUERZO DE ESTE TURNO, fijado por el cliente al ENVIAR. Ver
    *  `esfuerzoDelTurno` más abajo: se manda por turno, no se lee en vivo. */
   esfuerzo?: unknown;
@@ -365,7 +366,7 @@ async function correrTurno(
   // MEDIDO el 2026-09-03 sobre una plantilla real de 59,6 KB: abrir Chromium y
   // medir cuesta 4,80 s; medir con el navegador YA abierto, 2,16 s. El arranque
   // son ~2,6 s y se pagaba ENTERO en cada mirada — las dos verificaciones del
-  // turno y cada `mirar_pagina` que pida el modelo. En una página de 8,8 KB la
+  // turno y cada `view_page` que pida el modelo. En una página de 8,8 KB la
   // medición baja a 1,63 s, así que el arranque llega a ser MÁS caro que el
   // trabajo.
   //
@@ -386,7 +387,9 @@ async function correrTurno(
   //
   // Un turno que edita renderizaba DOS VECES el mismo documento: la medición
   // que vuelve al modelo tras editar (`medirParaElModelo`) y la de los ojos al
-  // cerrar. +2,16 s en caliente, por nada.
+  // cerrar. +2,16 s en caliente, por nada. (⚰️ Esas dos se retiraron el
+  // 2026-10-06, plans/crear-es-len; el memo lo comparten hoy las miradas que
+  // pide Len, `view_page` y `use_page`.)
   //
   // ⚰️ Esto se dejó sin memoizar el 2026-09-05 con un motivo escrito —«miden
   // documentos distintos: los ojos inyectan el script y las fotos por su
@@ -455,11 +458,11 @@ async function correrTurno(
       await debitCredits(uid, centicreditos);
       chargedByTools += centicreditos;
     }),
-    // `mirar_pagina` mide por el mismo navegador que los ojos: es la herramienta
+    // `view_page` mide por el mismo navegador que los ojos: es la herramienta
     // que más veces lo abre en un turno.
     observarPagina: (input: Parameters<typeof observarPagina>[0]) =>
       observarPagina(input, { medir: medirDelTurno }),
-    // `usar_pagina` (H9) abre SU navegador por visita y no el del turno: cada
+    // `use_page` (H9) abre SU navegador por visita y no el del turno: cada
     // visita tiene que empezar limpia (sin lo guardado por la anterior) y lleva
     // su propio preludio.
     usarPagina,
@@ -469,10 +472,9 @@ async function correrTurno(
   const pageSlug =
     pageSlugRaw && project.data?.pages?.[pageSlugRaw] ? pageSlugRaw : null;
   if (pageSlugRaw && !pageSlug) return errorJson(404, "page not found");
-  // LA VISTA DEL TURNO — el contexto con el que se hornea todo lo que se mide,
-  // para que sea el mismo documento que el taller le está enseñando al usuario.
-  // Ver D5 de la spec 2026-09-15.
-  const vistaDelTurno = vistaParaMedir(projectId, project, pageSlug);
+  // ⚰️ Aquí se armaba `vistaDelTurno` (`vistaParaMedir`), el contexto con el que
+  // se horneaba lo que medían `medirParaElModelo` y los ojos al cerrar.
+  // Retirados el 2026-10-06 (plans/crear-es-len).
   // Todas cargadas: las diferidas y ToolSearch (H2) se retiraron en Len 2.1.
   const tools = buildFunctionDeclarations(process.env, {}, mode);
   // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador
@@ -554,29 +556,32 @@ async function correrTurno(
     }
   }
 
-  // Validate the attached image (optional) — same shape/limits/posture as
-  // ai-design: must be a valid http(s) URL (root-relative resolved against
-  // req.url), invalid attachments are silently dropped rather than a 400
-  // (the prompt itself still has value).
-  let attachedImage: { url: string; alt?: string } | null = null;
-  if (body?.attachedImage && typeof body.attachedImage === "object") {
-    const url =
-      typeof body.attachedImage.url === "string" ? body.attachedImage.url.trim() : "";
-    if (url.length > 0 && url.length <= ATTACHED_URL_MAX) {
-      try {
-        const parsed = new URL(url, req.url);
-        if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-          const alt =
-            typeof body.attachedImage.alt === "string"
-              ? body.attachedImage.alt.trim().slice(0, ATTACHED_ALT_MAX)
-              : "";
-          attachedImage = alt ? { url: parsed.href, alt } : { url: parsed.href };
-        }
-      } catch {
-        /* leave attachedImage null */
-      }
+  // LAS FOTOS DEL MENSAJE: `attachedImages` (hasta 4, como Crear) y el
+  // `attachedImage` de siempre, que sigue llegando del chat. Misma validación
+  // de antes para cada una —same shape/limits/posture as ai-design: a valid
+  // http(s) URL, root-relative resolved against req.url—; una inválida se
+  // descarta en silencio en vez de un 400 (el mensaje sigue valiendo).
+  const leerFoto = (raw: unknown): ChatPhoto | null => {
+    if (!raw || typeof raw !== "object") return null;
+    const r = raw as AttachedImageBody;
+    const url = typeof r.url === "string" ? r.url.trim() : "";
+    if (url.length === 0 || url.length > ATTACHED_URL_MAX) return null;
+    try {
+      const parsed = new URL(url, req.url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+      const alt = typeof r.alt === "string" ? r.alt.trim().slice(0, ATTACHED_ALT_MAX) : "";
+      return alt ? { url: parsed.href, alt } : { url: parsed.href };
+    } catch {
+      return null;
     }
+  };
+  const attachedImages: ChatPhoto[] = [];
+  for (const raw of [...(Array.isArray(body?.attachedImages) ? body.attachedImages : []), body?.attachedImage]) {
+    const foto = leerFoto(raw);
+    // La misma foto dos veces (el chat manda las dos claves) es una sola.
+    if (foto && !attachedImages.some((f) => f.url === foto.url)) attachedImages.push(foto);
   }
+  attachedImages.splice(MAX_PHOTOS_PER_MESSAGE);
 
   // La puerta valida la credencial del papel que de verdad razona este turno —
   // ver lib/ai/turn-credentials.ts. Aqui vivia tambien un `PROVIDER` de Gemini
@@ -615,15 +620,18 @@ async function correrTurno(
   // De la más nueva a la más vieja: la del turno primero. Si no caben juntas en
   // la petición, las más viejas van sin píxeles y con su dirección, como DeepSeek
   // (`fotosQueCaben`); el turno sigue.
-  const masNuevaPrimero = [attachedImage?.url, ...[...filasDelHistorial].reverse().map((f) => f.attachedImage?.url)].filter(
-    (u): u is string => !!u,
-  );
+  const masNuevaPrimero = [
+    ...attachedImages.map((f) => f.url),
+    ...[...filasDelHistorial].reverse().flatMap((f) => photosOf(f.attachedImage).map((p) => p.url)),
+  ];
   const fotos = fotosQueCaben(masNuevaPrimero, await conseguirFotos(masNuevaPrimero, { origen: req.url, signal: req.signal }));
   const pixelesDe = (url: string): InlineImage | null => {
     const f = fotos.get(url);
     return f && f !== NO_CABE ? f : null;
   };
-  const attachedInline: InlineImage | null = attachedImage ? pixelesDe(attachedImage.url) : null;
+  const attachedInlines: InlineImage[] = attachedImages
+    .map((f) => pixelesDe(f.url))
+    .filter((p): p is InlineImage => p !== null);
   if (fotos.size > 0) {
     const valores = [...fotos.values()];
     const vistas = valores.filter((f) => f && f !== NO_CABE).length;
@@ -645,7 +653,7 @@ async function correrTurno(
       publishedAt: project.publishedAt,
       // LA DERIVA, en una lectura aparte: `loadProject` trae el borrador, y
       // las huellas de lo publicado están en otras columnas de la misma fila.
-      // Es una consulta por turno, la misma que ya hacen `activar_modulo` y la
+      // Es una consulta por turno, la misma que ya hacen `toggle_module` y la
       // franja de la Bandeja. Sin ella el ESTADO dice «publicado» de una
       // release que puede ser la de anteayer, y el Agente contesta «ya
       // contesta la IA» sin llamar a una sola herramienta.
@@ -755,9 +763,11 @@ async function correrTurno(
     // que no tocó nada. Es un hecho estructural, no una lectura de su prosa.
     // Un historial vacío (primer turno) no dispara nada.
     turnoAnteriorMudo: turnoAnteriorMudoDe(history),
-    attachedImage: attachedImage
-      ? { ...attachedImage, ...(attachedInline ? { visible: true } : {}) }
-      : null,
+    attachedImages: attachedImages.map((f) => (pixelesDe(f.url) ? { ...f, visible: true } : f)),
+    // LA REFERENCIA POR URL (plans/crear-es-len): el mismo bloque que Crear
+    // ponía delante del brief, en el contexto de ESTE turno. Sólo para el
+    // modelo: la fila guarda lo que el dueño escribió (`prompt`), no el bloque.
+    styleDirection: parseStyleDirection(body),
     seleccion,
     maxPromptTokens: MAX_PROMPT_TOKENS,
   };
@@ -805,7 +815,7 @@ async function correrTurno(
           degradaciones: argsDelTurno.degradaciones,
           turnoAnteriorMudo: argsDelTurno.turnoAnteriorMudo,
           conPin: seleccion !== null,
-          conImagen: attachedImage !== null,
+          conImagen: attachedImages.length > 0,
           activePage: pageSlug,
         }),
       ),
@@ -818,7 +828,7 @@ async function correrTurno(
   // LA FOTO DE ESTE TURNO, PEGADA A TU MENSAJE (A): viaja en todas las vueltas
   // y en el cierre, como una imagen pegada en Claude Code. Antes se anclaba a
   // la primera vuelta y en la segunda Len ya no la tenía delante.
-  if (attachedInline) messages[messages.length - 1] = { ...messages[messages.length - 1]!, images: [attachedInline] };
+  if (attachedInlines.length > 0) messages[messages.length - 1] = { ...messages[messages.length - 1]!, images: attachedInlines };
 
   // PIEZA 7 · EL MODO PLAN DEL TURNO, como el de DeepSeek: plegado de la última
   // fila con transcripción y, si el dueño eligió otra cosa al mandar, gana él y
@@ -933,6 +943,9 @@ async function correrTurno(
        *  Vive fuera del try por lo mismo que `mutoDurable`: lo lee el `finally`
        *  al escribir la fila. Ver `corteDelTurno`. */
       let corte: AgentErrorCode | null = null;
+      /** Lo paró el dueño con ■ (no el perro del silencio): va en la
+       *  transcripción y el historial siguiente lo dice (`MARCA_DE_TURNO_DETENIDO`). */
+      let detenido = false;
       // EL REGISTRO DEL TURNO, del lado del SERVIDOR. Los tres viven fuera del
       // try por el mismo motivo que `mutoDurable`: quien los vuelca es el
       // `finally`, y el turno que hay que poder leer después es el que revienta.
@@ -950,20 +963,11 @@ async function correrTurno(
       const registro = crearRegistroDelTurno();
       /** H4 · lo que vio el modelo en este turno (`AgentLoopResult.transcripcion`). */
       let transcripcionDelTurno: Message[] | null = null;
-      // CÓMO QUEDA LA SUITE DE LA PÁGINA al cerrar el turno. Se recoge aquí
-      // —como el registro o `mutoDurable`— porque quien lo sabe es el veredicto
-      // de los ojos, que ocurre dentro del bucle, y quien lo guarda es la
-      // escritura del final. Ver PROMPT-la-suite-de-la-pagina.md.
-      type SuiteDelTurno = {
-        turno?: { codigo: string; fallos: readonly FalloSpec[]; pagina: string | null };
-        retirar: string[];
-        /** Ids de las promesas que este turno llegó a correr, y de las que
-         *  fallaron. Las necesita el contador: sin «cuáles se comprobaron», un
-         *  turno en la home daría por arregladas las del menú. */
-        comprobadas: string[];
-        rotas: string[];
-      };
-      let suiteDelTurno: SuiteDelTurno | null = null;
+      // ⚰️ Aquí se recogía `suiteDelTurno`, CÓMO QUEDABA LA SUITE DE LA PÁGINA
+      // al cerrar el turno. Lo llenaba el veredicto de los ojos (`verifyTurn`),
+      // retirado el 2026-10-06 con las promesas rotas (plans/crear-es-len,
+      // tarea 10); sin él no lo llenaba nadie y la escritura del final era
+      // código muerto. `lib/agent/pruebas-de-la-pagina.ts` sigue.
       // LO QUE COBRÓ EL TURNO (centicréditos) y CUÁNDO EMPEZÓ: el cierre del chat
       // los enseña (plans/new-chat/, decisión de Jesús del 03/10), en el `done` y
       // en la fila para que no desaparezcan al recargar. `null` = aún no se cobró.
@@ -1042,6 +1046,12 @@ async function correrTurno(
                     ...(planActivo ? { planMode: true as const } : {}),
                     // Pieza 8: y el encargo como queda, que es de donde lo pliega el siguiente.
                     ...(goalActual ? { goal: goalActual } : {}),
+                    // El ■ del dueño, para que el turno siguiente lo sepa.
+                    ...(detenido ? { detenido: true as const } : {}),
+                    // Los avisos con los que razonó este turno, para que su
+                    // razonamiento (que vuelve en el historial) tenga su aviso al
+                    // lado y no se lea como de AHORA. Como DeepSeek.
+                    ...(built.ok && built.avisos ? { avisos: built.avisos } : {}),
                   }
                 : // LOTE 7-8: sin transcripción (el bucle reventó), la foto del
                   // estado si el turno lo cambió —lo plegado es de ANTES de la
@@ -1136,7 +1146,7 @@ async function correrTurno(
         };
         // La fila, abierta: desde aquí el turno se puede volver a mirar.
         try {
-          await abrirFilaDelTurno(projectId, { id: filaId, userText: prompt, page: pageSlug, attachedImage });
+          await abrirFilaDelTurno(projectId, { id: filaId, userText: prompt, page: pageSlug, attachedImage: photosForRow(attachedImages) });
           filaAbierta = true;
         } catch (err) {
           console.warn("[agent] no se pudo abrir la fila del turno", err);
@@ -1189,7 +1199,7 @@ async function correrTurno(
               goal,
               askUser: async (questions: UserQuestion[]) => {
                 emit("question", { questions });
-                return esperarRespuesta(turnoId, { timeoutMs: ASK_USER_TIMEOUT_MS, signal: upstreamAbort.signal });
+                return esperarRespuesta(turnoId, { timeoutMs: ASK_USER_TIMEOUT_MS, signal: upstreamAbort.signal, preguntas: questions });
               },
             }
           : { ...deps, planMode, goal };
@@ -1198,6 +1208,9 @@ async function correrTurno(
           tools,
           // Pieza 7: en modo plan el bucle no empuja a editar.
           planModeActive: () => planActivo,
+          // La página a medias de un `Write` que aún no dijo su ruta se pinta
+          // en la que el turno tiene abierta (`lib/agent/write-preview.ts`).
+          activePage: () => agentSession.page,
           // El ■ también corta la espera entre reintentos del proveedor
           // (`lib/agent/retry-policy.ts`).
           signal: upstreamAbort.signal,
@@ -1321,302 +1334,13 @@ async function correrTurno(
             if (outcome.ficherosTocados?.length) emit("ficheros", { ficherosTocados: outcome.ficherosTocados });
             return outcome;
           },
-          // 🔴 EL MOMENTO `tsc`: lo medido vuelve AL MODELO, no sólo al usuario.
-          //
-          // Los ojos de abajo miden al CERRAR el turno, y para entonces el
-          // modelo ya no puede hacer nada: la crítica sale por la tarjeta y el
-          // usuario se queda con «tu página se sale» y sin nadie a quien
-          // pedírselo hasta el turno siguiente. Esto mide en cuanto una tanda
-          // toca el documento, y el hecho viaja en el mismo mensaje que las
-          // respuestas de esa tanda — el modelo lo lee en su paso siguiente y
-          // arregla con una op.
-          //
-          // CERO llamadas nuevas al modelo. El coste es un render, y va por el
-          // MISMO navegador del turno (`medirDelTurno`), así que no paga
-          // arranque: 2,16 s en caliente contra 4,80 s en frío, medido.
-          //
-          // Se apaga con el mismo interruptor que los ojos: son la misma
-          // decisión de producto —mirar la página que se acaba de escribir— y
-          // dos palancas para una decisión es como se queda una encendida sin
-          // que nadie sepa por qué.
-          medirParaElModelo:
-            process.env.OPENLEN_AGENT_VISION === "0"
-              ? undefined
-              : async (gemelo: string) => {
-                  // Las fotos del dueño, incrustadas: medir sin ellas da
-                  // lecturas de contraste sobre fondos que en la página real no
-                  // están vacíos. Es lo mismo que hacen los ojos aquí abajo.
-                  // LA CARPETA (pieza 9, carril B): se relee aquí, no al
-                  // empezar: el turno pudo escribir `js/app.js` hace un paso.
-                  const vista = await vistaConCarpeta(vistaDelTurno, deps, projectId);
-                  const paraMedir = documentoMedible(await inlineOwnAssets(gemelo), vista);
-                  const carpeta = carpetaDeLaVista(vista);
-                  return componerMedicion(
-                    await (carpeta ? medirDelTurno(paraMedir, {}, { carpeta }) : medirDelTurno(paraMedir)),
-                    gemelo,
-                  );
-                },
-          // ⚰️ Aquí iba `lineaBase`, el documento del arranque etiquetado con los
-          // ids del motor. Len 2.0 (T9): la base la trae cada escritura
-          // (`htmlPrevio`) y el bucle hace el gemelo con posiciones.
-          // F5 — los ojos: tras un turno que mutó el documento, renderiza y
-          // MIDE (JavaScript que grita, desborde a 390 px, contraste del píxel,
-          // la suite de la página). Lo que encuentra SE LE DICE al usuario al
-          // cerrar el turno; ya no abre ciclo de arreglo ni revierte nada
-          // (`12f6a11e`) — corrige él, pidiéndoselo a Len por el chat. Desde
-          // Len 2.1 SIN la llamada de visión (ver `sinVision` abajo). El render
-          // corre por la casa. `OPENLEN_AGENT_VISION=0` apaga la comprobación
-          // ENTERA, medida incluida: el nombre es de cuando los ojos eran eso.
-          verifyTurn:
-            process.env.OPENLEN_AGENT_VISION === "0"
-              ? undefined
-              : async ({ html, page, taggedHtml: gemelo, otrasPaginas }) => {
-                  // EL JAVASCRIPT DEL MODELO, para que los ojos lo VEAN correr.
-                  // `html` viene saneado —así se persiste—, así que sin esto la
-                  // verificación mira una página sin scripts.
-                  //
-                  // SE RE-LEE AQUÍ, no se usa un código leído ANTES del turno (el
-                  // `runtimeCode` que hubo aquí), así que en el turno donde el modelo
-                  // ESCRIBE el JavaScript los ojos miraban una página con el
-                  // código viejo — o sin ninguno. Es decir: escribía la ruleta
-                  // y se verificaba una página sin ruleta, justo en el único
-                  // turno donde eso importa.
-                  //
-                  // Releer cuesta una fila; la verificación ya paga segundos de
-                  // Chrome y una llamada de visión. Y es lo correcto por otra
-                  // razón: comprueba lo que se GUARDÓ, no lo que creemos que se
-                  // guardó.
-                  //
-                  // Y SI LA RE-LECTURA FALLA, NO SE ADIVINA. Caer al código
-                  // de antes del turno reintroduce exactamente el fallo que
-                  // esta re-lectura vino a arreglar: aprobar el script NUEVO
-                  // mirando el viejo. Cuando no se puede saber qué se guardó,
-                  // el turno queda SIN verificar — que es la verdad — en vez de
-                  // verificado contra otra página.
-                  const fresco = await (async () => {
-                                        const row = await deps
-                      .loadProject(projectId, userId)
-                      .catch(() => deps.loadProject(projectId, userId).catch(() => null));
-                    if (!row) return { kind: "desconocido" as const };
-                    // DEL DOCUMENTO QUE ESTE TURNO GUARDÓ. Se relee de la base
-                    // en vez de fiarse de lo que creemos haber guardado — ése
-                    // era el motivo original y sigue en pie.
-                    const guardado =
-                      (page ? row.data?.pages?.[page]?.html : row.data?.html) ?? "";
-                    return {
-                      kind: "codigo" as const,
-                      code: scriptDelDocumento(guardado) || null,
-                      // De la fila que se acaba de releer: si el turno cambió
-                      // los ajustes (activar el chat, por ejemplo), los ojos
-                      // miran la página CON su burbuja, que es la que se guardó.
-                      // Y LA CARPETA (pieza 9, carril B), releída como la fila.
-                      vista: await vistaConCarpeta(vistaParaMedir(projectId, row, page ?? null), deps, projectId),
-                    };
-                  })();
-                  if (fresco.kind === "desconocido") {
-                    console.warn(
-                      "[agent] no se pudo releer lo guardado — turno SIN verificar",
-                    );
-                    // El comentario ya decía «SIN verificar» y la línea de abajo
-                    // devolvía el visto bueno. Ahora dice lo que hace.
-                    return {
-                      estado: "no_mirado",
-                      motivo: "no se pudo releer el documento guardado",
-                    };
-                  }
-                  // LAS FOTOS DEL DUEÑO, DENTRO DEL DOCUMENTO QUE SE MIRA.
-                  //
-                  // El render de verificación instala un guardia SSRF que corta
-                  // loopback — y hace bien. Pero en desarrollo nuestro propio
-                  // subidor devuelve URLs de `localhost`, así que las fotos que
-                  // el dueño sube quedaban FUERA de la captura: un hueco que los
-                  // ojos no pueden distinguir de una imagen rota. El 2026-08-27
-                  // eso acabó con el Agente borrándole a Jesús su propia foto.
-                  //
-                  // Se traen los bytes del almacenamiento y viajan dentro del
-                  // documento: no hay petición que cortar, no hay hueco, y los
-                  // ojos juzgan la página que el dueño ve. Fail-soft — si algo
-                  // no se puede leer, se mira como se miraba antes.
-                  const paraLosOjos = await inlineOwnAssets(html);
-                  // EL GEMELO PASA POR LO MISMO. Es el documento que se MIDE, y
-                  // medirlo sin las fotos del dueño daría lecturas de contraste
-                  // sobre fondos que en la página real no están vacíos. Nombre
-                  // distinto para no confundirlo con el gemelo de la línea base,
-                  // que es OTRO documento: el del principio del turno.
-                  const gemeloParaLosOjos = gemelo ? await inlineOwnAssets(gemelo) : undefined;
-                  // Las promesas de ESTA página que siguen teniendo sentido.
-                  // Se saca a una constante porque hacen falta dos veces: para
-                  // los ojos, y para que el contador sepa cuáles se comprobaron.
-                  // MIGRADAS AL LEER: las que se guardaron en DSL pasan a JS. La
-                  // que no se pueda convertir se conserva y no corre — y se dice.
-                  const migrada = migrarSuite(project.data.pruebas ?? []);
-                  if (migrada.sinMigrar.length > 0) {
-                    // eslint-disable-next-line no-console
-                    console.warn(`[agent] suite de la pagina: ${migrada.sinMigrar.length} promesa(s) en formato viejo sin convertir`);
-                  }
-                  const promesasDeLaPagina = vivas(migrada.suite, paraLosOjos, pageSlug);
-                  // LAS OTRAS PÁGINAS QUE TOCÓ EL TURNO, por el mismo camino que
-                  // la principal: con las fotos del dueño dentro, o sus huecos
-                  // se leerían como imágenes rotas — que es exactamente lo que
-                  // el 2026-08-27 acabó con el Agente borrando una foto buena.
-                  //
-                  // `page` viaja con cada una porque es lo que ROTULA su captura
-                  // y prefija sus frases. Fail-soft igual: si una no se puede
-                  // preparar, se cae ella sola y el recuento de la tarjeta ya
-                  // dice cuántas se miraron.
-                  const otrasParaLosOjos = await Promise.all(
-                    (otrasPaginas ?? []).map(async (p) => ({
-                      html: await inlineOwnAssets(p.html),
-                      page: p.page,
-                      ...(p.taggedHtml
-                        ? { taggedHtml: await inlineOwnAssets(p.taggedHtml) }
-                        : {}),
-                    })),
-                  );
-                  const verdict = await verifyEditedPage({
-                    html: paraLosOjos,
-                    // QUÉ página es ésta — sólo para rotular. Sin esto, con dos
-                    // páginas en juego las frases de la principal salen sin
-                    // dirección y el usuario no sabe de cuál hablan.
-                    page: pageSlug,
-                    ...(otrasParaLosOjos.length > 0
-                      ? { otrasPaginas: otrasParaLosOjos }
-                      : {}),
-                    ...(gemeloParaLosOjos ? { taggedHtml: gemeloParaLosOjos } : {}),
-                    runtime: fresco.code,
-                    // LAS PROMESAS QUE ESTA PÁGINA YA CUMPLIÓ. Van con la del
-                    // turno en el mismo programa del navegador: sin esto, una
-                    // edición que se lleva por delante el carrito construido
-                    // hace seis turnos pasa limpia — la foto sale igual y la
-                    // consola no grita. `vivas` deja fuera las que ya no
-                    // señalan a nada en el documento que se acaba de guardar.
-                    guardadas: promesasDeLaPagina,
-                    vista: fresco.vista,
-                    // DE LA SESIÓN, no del cuerpo de la petición: aquí se leía
-                    // `prompt`, que es el objetivo CONGELADO en el instante en
-                    // que empezó el turno. Una corrección a media faena lo
-                    // cambia — ver el envoltorio de `leerDireccion`.
-                    userPrompt: agentSession.userPrompt ?? prompt,
-                    // 🔴 SIN LA LLAMADA DE VISIÓN (Len 2.1, 2026-09-30). La
-                    // lectura de producción de ese día
-                    // (`plans/len-2/corridas/2026-09-30-m5-lectura-produccion`):
-                    // desde el 06/09 la visión no dio un solo «roto» que no
-                    // diera ya la medida, y sus tres afirmaciones concretas
-                    // —un dibujo mal atribuido, un teléfono mal leído, el
-                    // contenido `.reveal` que la captura no baja a ver— fueron
-                    // falsas y le llegaron al usuario en la tarjeta. Su único
-                    // acierto comprobado (31/08) lo causaba una pieza de la
-                    // plataforma ya retirada (`db2109f3`). La medida se queda
-                    // entera: es gratis y es la que caza.
-                    sinVision: true,
-                  },
-                  // EL NAVEGADOR DEL TURNO. Sin esto cada pasada abría el suyo:
-                  // ~2,6 s de arranque por mirada, medido. Ver `medirDelTurno`.
-                  {
-                    medir: medirDelTurno,
-                  });
-                  // LA CUENTA, antes de decidir. La ruta sólo miraba
-                  // `verdict.broken` y tiraba `verdict.fallback`, así que nada
-                  // DENTRO del producto distinguía «miré y está bien» de «no
-                  // pude mirar» — y los ojos fallan ABIERTOS por diseño. Con
-                  // Chrome caído en el box la verificación aprobaría todo en
-                  // silencio, y sólo el journal lo sabría. Crear ya contaba los
-                  // suyos (`recordCriticRun`); el Agente no contaba nada.
-                  recordAgentEyes({ fallback: verdict.fallback, broken: verdict.broken });
-                  // LO QUE LA SUITE SE LLEVA DE ESTE TURNO. Aquí es donde se
-                  // sabe: los ojos acaban de correr la promesa del turno y las
-                  // guardadas, y traen los dos resultados por separado.
-                  //
-                  // 🔴 NACE EN VERDE: la promesa sólo se guarda si NO falló,
-                  // o sea con `fallosDelTurno` vacío. La decisión la toma
-                  // `actualizarSuite`; aquí sólo se recoge el hecho.
-                  // ⚰️ La promesa del turno (`prueba_js`, en `agentSession.behaviorJs`)
-                  // entraba aquí en la suite si nacía en verde. Len 2.0 no la
-                  // tiene: la suite sólo recomprueba y retira las guardadas.
-                  // Las que NO corrieron no se cuentan como comprobadas: si no,
-                  // una rota que no se miró saldría «arreglada».
-                  const sinCorrer = new Set(verdict.guardadasSinCorrer ?? []);
-                  suiteDelTurno = {
-                    retirar: [...(verdict.retirarPruebas ?? [])],
-                    comprobadas: promesasDeLaPagina.filter((p) => !sinCorrer.has(p.id)).map((p) => p.id),
-                    rotas: (verdict.regresiones ?? []).map((r) => r.id),
-                  };
-                  // LOS LÍMITES DE LA MEDIDA, AL REGISTRO Y A NINGÚN OTRO SITIO.
-                  //
-                  // No van a `notas` ni a `critique`: esas dos SE LE EMITEN al
-                  // usuario verbatim y esto es castellano fijo del servidor con
-                  // jerga de instrumento (medido el 2026-09-16: le llegaba
-                  // «prompt devuelve null, confirm false» a quien pidió cambiar
-                  // un titular). Al modelo le llegan a mitad de turno por
-                  // `<limites-de-la-medida>`; al usuario, por el aviso del
-                  // lienzo, traducido. Aquí se apuntan para que un hecho que el
-                  // medidor devolvió no desaparezca sin dejar rastro.
-                  if (verdict.limites.length > 0) {
-                    // eslint-disable-next-line no-console
-                    console.log(`[agent-verify] límites de la medida: ${verdict.limites.join(" · ")}`);
-                  }
-                  // 🔴 Y AHORA EL FALLBACK SALE POR SU PROPIA PUERTA. La cuenta
-                  // de arriba ya distinguía «miré» de «no pude mirar», pero el
-                  // valor que devolvía esta función no: los dos salían como
-                  // `ok: true`, así que aguas abajo —la tarjeta, el bucle, el
-                  // cierre del modelo— el visto bueno de una verificación real
-                  // era indistinguible del de una que nunca corrió.
-                  // LAS REGRESIONES VIAJAN CON CUALQUIER VEREDICTO, y por eso
-                  // se cuelgan aquí en vez de dentro de una rama: un turno puede
-                  // salir «bien» y haberse llevado por delante una promesa de
-                  // hace seis turnos. Son dos cosas distintas.
-                  // CUÁNTAS PÁGINAS SE MIRARON DE VERDAD, por el mismo
-                  // envoltorio que las regresiones. Va aquí y no en cada rama
-                  // porque es de la MEDIDA, no del desenlace — y sin él la
-                  // tarjeta contaría las que se pidieron, que es distinto de
-                  // las que llegaron a tener captura.
-                  const conRegresiones = <T extends VerifyOutcome>(salida: T): T => {
-                    const base = verdict.regresiones?.length
-                      ? { ...salida, regresiones: verdict.regresiones }
-                      : salida;
-                    return typeof verdict.paginasMiradas === "number"
-                      ? { ...base, paginasMiradas: verdict.paginasMiradas }
-                      : base;
-                  };
-                  // LO ROTO VA ANTES QUE EL FALLBACK. `conHechos` deja
-                  // `broken: true` también en un veredicto de fallback cuando
-                  // el navegador vio algo (una excepción gritada antes de que
-                  // la captura se cayera), y preguntar primero por `fallback`
-                  // tiraba ese hecho al suelo como «no mirado».
-                  if (verdict.broken) {
-                    return conRegresiones({
-                      estado: "roto",
-                      // Una línea por problema, en el idioma del usuario: es lo
-                      // que el bucle le emite al usuario al cerrar el turno.
-                      //
-                      // ⚰️ Aquí iba también `problemas: verdict.issues.length`,
-                      // la cuenta para comparar con la segunda pasada. No hay
-                      // segunda pasada desde el 2026-09-04.
-                      critique: verdict.issues.map((i) => `- ${i}`).join("\n"),
-                    });
-                  }
-                  if (verdict.fallback) {
-                    return conRegresiones({ estado: "no_mirado", motivo: "la verificación visual no pudo correr" });
-                  }
-                  // 🔴 OBSERVADO — lo que se ve y no se puede llamar defecto
-                  // desde la captura. Va DESPUÉS de `broken` a propósito: los
-                  // hechos del navegador mandan y no los toca esta rama.
-                  //
-                  // Es la paridad con Crear, donde el crítico informa y no
-                  // gasta desde que se midió que pedía regenerar por las FOTOS
-                  // sin arreglar nada. Aquí, un marcador intencional leído como
-                  // imagen rota abría un ciclo de reparación que no podía salir
-                  // bien — el catálogo no tiene ese rubro, así que buscar más no
-                  // podía cambiar la queja.
-                  if (verdict.observaciones.length > 0) {
-                    return conRegresiones({ estado: "observado", notas: verdict.observaciones });
-                  }
-                  // `conMedida` viaja para que la tarjeta pueda decir QUÉ
-                  // comprobó sin afirmar un eje que nadie midió: si el render
-                  // del medidor se cayó, el desborde y el contraste no se han
-                  // mirado aunque el veredicto salga limpio.
-                  return conRegresiones({ estado: "bien", conMedida: verdict.conMedida });
-                },
+          // ⚰️ Aquí se enchufaban `medirParaElModelo` (la medición con navegador
+          // que volvía al MODELO tras cada tanda) y `verifyTurn` (los ojos al
+          // cerrar, con su tarjeta `verificar_diseno`), los dos tras la palanca
+          // `OPENLEN_AGENT_VISION`. Retirados el 2026-10-06 (plans/crear-es-len):
+          // DeepSeek no mide nada por su cuenta, y la regla es DeepSeek. Lo que
+          // queda del navegador del turno es lo que pide Len: `view_page` y
+          // `use_page`, por `medirDelTurno` (arriba).
           // Deja pasar el evento TAL CUAL y se queda una copia de lo que hace
           // falta para registrar el turno: no cambia el orden, ni el contenido,
           // ni el momento en que llega al cliente.
@@ -1642,64 +1366,10 @@ async function correrTurno(
         mutoDurable = mutoDurable || result.mutoDurable;
         transcripcionDelTurno = result.transcripcion ?? null;
         corte = corteDelTurno({ ...result, mutoDurable: mutoDurable || estadoCambiado() });
+        detenido = canceladoAProposito && result.errorCode === "cancelled";
 
-        // LA SUITE DE LA PÁGINA, guardada. Dos cosas a la vez y en este orden:
-        // se retiran las promesas que el navegador declaró sin sentido —su
-        // selector ya no señala a nada— y entra la del turno SI nació en verde.
-        // La decisión vive en `actualizarSuite`, no aquí.
-        //
-        // Fail-soft como el borrado del objetivo: el trabajo del turno ya está
-        // hecho y cobrado, y perderlo por no poder guardar una comprobación
-        // sería cambiar un problema pequeño por uno grande.
-        // El `as` rompe el estrechamiento, y hace falta: lo asigna un callback
-        // que TypeScript no sigue, así que aquí lo lee como `null` —y dentro
-        // del `if`, como `never`— por mucho que se anote el tipo.
-        const cambios = suiteDelTurno as SuiteDelTurno | null;
-        if (cambios && (cambios.turno || cambios.retirar.length > 0)) {
-          try {
-            await deps.saveProjectData(projectId, userId, (actual) => {
-              // CONTRA EL DOCUMENTO QUE DE VERDAD QUEDÓ. Se lee de `actual` —lo
-              // que hay en la base ahora— y no del html del turno: entre medias
-              // pudo entrar otra escritura, y limpiar la suite contra un
-              // documento viejo mataría promesas que siguen en pie.
-              //
-              // Vacío ⇒ no se limpia. Una página que no se puede leer no puede
-              // servir de excusa para vaciar nada.
-              const documento = pageSlug
-                ? actual.pages?.[pageSlug]?.html ?? ""
-                : actual.html ?? "";
-              // EL CONTADOR, antes de tocar nada más: marca las que se han
-              // roto, desmarca las que han vuelto, y cuenta las tres cosas. De
-              // este número sale la decisión que el plan dejó abierta — si una
-              // regresión puede llegar a declarar rota la página.
-              // Migrada también aquí: lo que se escribe de vuelta ya va en JS,
-              // y así la migración queda guardada sin un paso aparte.
-              const { suite: marcadas, cuenta } = marcarRegresiones(migrarSuite(actual.pruebas ?? []).suite, {
-                comprobadas: cambios.comprobadas,
-                rotas: cambios.rotas,
-              });
-              if (cuenta.nuevas || cuenta.siguenRotas || cuenta.arregladas) {
-                // Dentro del actualizador: si la escritura se reintentara, esta
-                // línea saldría dos veces. Es barato y se lee igual; sacarla
-                // fuera costaría otro `as` para esquivar el estrechamiento.
-                // eslint-disable-next-line no-console
-                console.log(
-                  `[agent] suite de la pagina: nuevas=${cuenta.nuevas} siguen=${cuenta.siguenRotas} arregladas=${cuenta.arregladas}`,
-                );
-              }
-              const suite = actualizarSuite(marcadas, {
-                ...cambios,
-                ...(documento ? { documento, pagina: pageSlug } : {}),
-              });
-              return suite.length > 0
-                ? { ...actual, pruebas: suite }
-                : (({ pruebas: _sin, ...resto }) => resto)(actual);
-            });
-          } catch (err) {
-            // eslint-disable-next-line no-console
-            console.error("[agent] no se pudo guardar la suite de la pagina: %o", err);
-          }
-        }
+        // ⚰️ Aquí se guardaba la suite de la página (`marcarRegresiones` →
+        // `actualizarSuite`). Ver arriba, donde se recogía: se fue con los ojos.
         // F2-T9 billing ruling (Jesús 2026-07-07): a turn that ended on a
         // terminal error (stopReason error/cancelled/max_tokens, or the
         // maxTurns/maxToolCalls caps) debits 0 credits — the user got no

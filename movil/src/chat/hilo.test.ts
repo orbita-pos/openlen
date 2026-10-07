@@ -99,7 +99,7 @@ describe("el turno en vivo", () => {
   });
   it("las tarjetas que prepara: el borrador y «Publicar»", () => {
     let v = conEvento(turnoNuevo(), ev("confirm", { action: "responder", canal: "correo", texto: "Hola" }));
-    v = conEvento(v, ev("confirm", { action: "publicar", subdominio: "luna", idiomas: ["es", 3], republicar: false }));
+    v = conEvento(v, ev("confirm", { action: "publish", subdominio: "luna", idiomas: ["es", 3], republicar: false }));
     expect(v.tarjetas.map((x) => x.tipo)).toEqual(["respuesta", "publicar"]);
     expect(elementosDelTurno(v, 1).map((e) => e.tipo)).toEqual(["tarjeta", "tarjeta"]);
   });
@@ -180,7 +180,10 @@ describe("marcar y sinLoEnviado", () => {
 describe("claveDeAvance", () => {
   it("cada herramienta, su frase; una desconocida, «trabajando»; ninguna, nada", () => {
     expect(claveDeAvance("Edit")).toBe("cambiando");
+    expect(claveDeAvance("view_page")).toBe("comprobando");
+    // Una fila de antes del 2026-10-06 trae el nombre viejo: la misma frase.
     expect(claveDeAvance("mirar_pagina")).toBe("comprobando");
+    expect(claveDeAvance("ver_visitas")).toBe(claveDeAvance("get_visits"));
     expect(claveDeAvance("TodoWrite")).toBe("trabajando");
     expect(claveDeAvance(null)).toBeNull();
   });

@@ -18,9 +18,9 @@ import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
 /** Estrecha un ToolOutcome a la tarjeta de PUBLICAR.
  *
  *  `confirm` fue una UNIÓN mientras existió `proponer_objetivo` (retirada el
- *  30/09), y vuelve a serlo con `preparar_respuesta` (plans/len-resultados/). */
+ *  30/09), y vuelve a serlo con `draft_reply` (plans/len-resultados/). */
 function pub(o: { confirm?: { action: string } }) {
-  return o.confirm?.action === "publicar"
+  return o.confirm?.action === "publish"
     ? (o.confirm as unknown as {
         action: string;
         subdominio: string;
@@ -37,7 +37,7 @@ const HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta nam
 // cambio que no ocurre: ver "no miente sobre una pagina que no lee tokens".
 const THEMED_HTML = `<!doctype html><html><head><title>Tacos El Güero</title><meta name="description" content="Tacos"><style>body{background:var(--ol-bg);color:var(--ol-fg);font-family:var(--ol-font-display)}a{color:var(--ol-accent);border-radius:calc(8px * var(--ol-r-scale))}</style></head><body><h1 data-x="k">Tacos El Güero</h1><p>Los mejores del barrio.</p><a href="#x">Pide</a></body></html>`;
 
-// Fixture with an image already on the page — editar_imagen only edits images
+// Fixture with an image already on the page — edit_image only edits images
 // whose URL appears verbatim in the current document.
 const IMG_URL = "https://images.openlen.com/orig-photo.webp";
 const IMG_HTML = `<!doctype html><html><head><title>Estudio</title><meta name="description" content="x"></head><body><img src="${IMG_URL}" alt="foto"><h1 data-x="k">Estudio</h1></body></html>`;
@@ -105,7 +105,7 @@ function makeDeps(
     memoriaUsuario: [] as { userId: string; preferencia: string }[],
     versions: [] as string[],
     /** Los snapshots CON contenido, del más nuevo al más viejo — lo que la
-     *  tabla real guarda y lo que `revertir_ultimo_cambio` necesita para tener
+     *  tabla real guarda y lo que `undo_last_change` necesita para tener
      *  a dónde volver. `versions` (sólo etiquetas) se conserva porque muchas
      *  pruebas cuentan sobre él. */
     snapshots: [] as { id: string; label: string; page: string | null; html: string; source?: string }[],
@@ -164,7 +164,7 @@ function makeDeps(
     async snapshotVersion(a) {
       store.versions.push(a.label);
       store.versionPages.push(a.page);
-      // Y el CONTENIDO, para que `revertir_ultimo_cambio` tenga a dónde volver.
+      // Y el CONTENIDO, para que `undo_last_change` tenga a dónde volver.
       // El doble guarda lo mismo que la tabla real: id, etiqueta, ámbito y html.
       const id = `v${store.snapshots.length + 1}`;
       store.snapshots.unshift({
@@ -371,10 +371,10 @@ describe("summarizeProjectState", () => {
   });
 });
 
-describe("activar_modulo", () => {
+describe("toggle_module", () => {
   it("provisions owner chat on chat enable, threading the session email", async () => {
     const { deps, store } = makeDeps();
-    await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "chat" });
+    await runAgentTool(makeSession(), deps, "toggle_module", { module: "chat" });
     assert.equal(store.provisioned, 1);
     // The email must reach the dep — getOrCreateOwnerChatUser short-circuits on
     // an existing row, so a dropped email would strand the owner forever.
@@ -387,7 +387,7 @@ describe("activar_modulo", () => {
   // activó. Es la red para cualquier nombre que el modelo se invente.
   it("un módulo que no existe se rechaza al modelo, no lanza", async () => {
     const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "comments" });
+    const out = await runAgentTool(makeSession(), deps, "toggle_module", { module: "comments" });
     assert.equal(out.response.ok, false);
     assert.ok(String(out.response.error).includes("unknown"));
     // Y no toca nada: un rechazo que además escribiera sería peor que un throw.
@@ -405,11 +405,11 @@ describe("activar_modulo", () => {
   describe("dice si los visitantes ya lo ven", () => {
     it("🔴 publicada con cambios sin publicar: no lo verán hasta volver a publicar", async () => {
       const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: true });
-      const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
+      const out = await runAgentTool(makeSession(), deps, "toggle_module", { module: "assistant" });
       assert.equal(out.response.ok, true);
-      assert.equal(out.response.ya_en_efecto_para_visitantes, false);
-      assert.match(String(out.response.aviso), /publish(es)? again/);
-      assert.match(String(out.response.aviso), /won't see it/);
+      assert.equal(out.response.already_live_for_visitors, false);
+      assert.match(String(out.response.note), /publish(es)? again/);
+      assert.match(String(out.response.note), /won't see it/);
     });
 
     // APAGAR TIENE EFECTO YA; ENCENDER NECESITA PUBLICAR. No es una simetría
@@ -424,14 +424,14 @@ describe("activar_modulo", () => {
     // nueva, no al revés.
     it("🔴 APAGARLO en una publicada tiene efecto YA, aunque haya deriva", async () => {
       const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: true });
-      const out = await runAgentTool(makeSession(), deps, "activar_modulo", {
-        modulo: "chat",
-        encender: false,
+      const out = await runAgentTool(makeSession(), deps, "toggle_module", {
+        module: "chat",
+        on: false,
       });
-      assert.equal(out.response.ya_en_efecto_para_visitantes, true);
-      assert.doesNotMatch(String(out.response.aviso), /lo seguirán viendo/);
+      assert.equal(out.response.already_live_for_visitors, true);
+      assert.doesNotMatch(String(out.response.note), /lo seguirán viendo/);
       // Y el aviso le prohíbe a Len la frase vieja, que es la que se le pega.
-      assert.match(String(out.response.aviso), /removes itself/);
+      assert.match(String(out.response.note), /removes itself/);
     });
 
     it("🔴 pero el aviso NO se calla la release vieja: ahí la burbuja se queda", async () => {
@@ -439,47 +439,47 @@ describe("activar_modulo", () => {
       // sigue con su burbuja hasta que se republique. Len no puede saber de qué
       // fecha es la release, así que lo dice como condición, no como hecho.
       const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: false });
-      const out = await runAgentTool(makeSession(), deps, "activar_modulo", {
-        modulo: "assistant",
-        encender: false,
+      const out = await runAgentTool(makeSession(), deps, "toggle_module", {
+        module: "assistant",
+        on: false,
       });
       // A la frase que lo DISTINGUE, no a «vuelva a publicar» a secas: eso
       // casaría también con el aviso viejo, el que pedía publicar para poder
       // apagar. Reparo de la revisión del 2026-09-17.
-      assert.match(String(out.response.aviso), /published a long time ago/);
+      assert.match(String(out.response.note), /published a long time ago/);
     });
 
     it("🔴 nunca publicada: aparecerá cuando la publique", async () => {
       const { deps } = makeDeps({ subdomain: null, publishedAt: null });
-      const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
-      assert.equal(out.response.ya_en_efecto_para_visitantes, false);
-      assert.match(String(out.response.aviso), /when they publish it/);
+      const out = await runAgentTool(makeSession(), deps, "toggle_module", { module: "assistant" });
+      assert.equal(out.response.already_live_for_visitors, false);
+      assert.match(String(out.response.note), /when they publish it/);
     });
 
     it("nunca publicada y APAGANDO: nadie lo ve ni lo veía, no hay nada que avisar", async () => {
       const { deps } = makeDeps({ subdomain: null, publishedAt: null });
-      const out = await runAgentTool(makeSession(), deps, "activar_modulo", {
-        modulo: "assistant",
-        encender: false,
+      const out = await runAgentTool(makeSession(), deps, "toggle_module", {
+        module: "assistant",
+        on: false,
       });
-      assert.equal(out.response.ya_en_efecto_para_visitantes, false);
-      assert.equal(out.response.aviso, undefined);
+      assert.equal(out.response.already_live_for_visitors, false);
+      assert.equal(out.response.note, undefined);
     });
 
     it("BRAZO DE CONTROL: publicada y sin nada pendiente tras guardar → ya lo ven, sin aviso", async () => {
       // Pasa, por ejemplo, al volver a encender lo que ya estaba encendido en
       // lo publicado. Sin este caso, «avisar siempre» pasaría las de arriba.
       const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: false });
-      const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
-      assert.equal(out.response.ya_en_efecto_para_visitantes, true);
-      assert.equal(out.response.aviso, undefined);
+      const out = await runAgentTool(makeSession(), deps, "toggle_module", { module: "assistant" });
+      assert.equal(out.response.already_live_for_visitors, true);
+      assert.equal(out.response.note, undefined);
     });
 
     it("🔴 la deriva se lee DESPUÉS de guardar, no antes", async () => {
       // Leída antes, una página publicada y al día diría «ya lo ven» justo
       // sobre el guardado que acaba de ponerla en deriva.
       const { deps, store } = makeDeps({ subdomain: "tacos", publishedAt: new Date() });
-      await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
+      await runAgentTool(makeSession(), deps, "toggle_module", { module: "assistant" });
       assert.deepEqual(store.derivaLeidaConGuardados, [1]);
     });
   });
@@ -496,7 +496,7 @@ describe("el estado del proyecto (el que va en el contexto)", () => {
     // (retirada el 2026-08-29). Lo que esta prueba vigila —que el estado vea
     // la mutación anterior y no una copia rancia— sigue vivo con cualquier
     // módulo; hoy el único es `chat`.
-    await runAgentTool(session, deps, "activar_modulo", { modulo: "chat" });
+    await runAgentTool(session, deps, "toggle_module", { module: "chat" });
     const estado = summarizeProjectState((await deps.loadProject("p1", "u1"))!, null);
     assert.equal((estado.modulos as Record<string, boolean>).chat, true);
   });
@@ -532,13 +532,13 @@ describe("preparar_marketing, retirada", () => {
   });
 });
 
-// ── mirar_pagina: el derecho a preguntar ────────────────────────────────────
+// ── view_page: el derecho a preguntar ────────────────────────────────────
 //
 // 🔴 MEDIDO el 2026-09-02: con un veredicto de contraste que el medidor se
 // había inventado, el Agente releyó el documento CINCO veces y teorizó seis
 // sobre el velo del hero antes de rendirse y pintar media portada de sólido.
 // No es un modelo tonto: es un modelo con una pregunta que no puede hacer.
-describe("mirar_pagina", () => {
+describe("view_page", () => {
   it("tipo=medir devuelve la respuesta y NO toca la página", async () => {
     const { deps } = makeDeps();
     const vistas: unknown[] = [];
@@ -549,12 +549,12 @@ describe("mirar_pagina", () => {
         return { respuesta: "detrás del titular se pinta rgb(11, 18, 32)" };
       },
     };
-    const out = await runAgentTool(makeSession(), conOjos, "mirar_pagina", {
-      tipo: "medir",
-      pregunta: "¿qué color se pinta detrás del titular?",
+    const out = await runAgentTool(makeSession(), conOjos, "view_page", {
+      mode: "measure",
+      question: "¿qué color se pinta detrás del titular?",
     });
     assert.equal(out.response.ok, true);
-    assert.match(String(out.response.respuesta), /rgb\(11, 18, 32\)/);
+    assert.match(String(out.response.answer), /rgb\(11, 18, 32\)/);
     // Read-only de verdad: ni tarjeta de acción ni documento nuevo.
     assert.equal(out.action, undefined);
     assert.equal(out.updatedHtml, undefined);
@@ -572,34 +572,34 @@ describe("mirar_pagina", () => {
         return { respuesta: "se ven tres cajas de color plano" };
       },
     };
-    await runAgentTool(makeSession(), conOjos, "mirar_pagina", {
-      tipo: "describir", pregunta: "¿qué hay?", zona: "las tarjetas",
+    await runAgentTool(makeSession(), conOjos, "view_page", {
+      mode: "describe", question: "¿qué hay?", area: "las tarjetas",
     });
-    await runAgentTool(makeSession(), conOjos, "mirar_pagina", {
-      tipo: "describir", pregunta: "¿qué hay?",
+    await runAgentTool(makeSession(), conOjos, "view_page", {
+      mode: "describe", question: "¿qué hay?",
     });
     assert.equal(vistas[0].zona, "las tarjetas");
     assert.equal("zona" in vistas[1], false);
   });
 
   // El tope de `describir` es 2 porque GASTA. Pasado el tope se endurece la
-  // respuesta, no se bloquea la llamada — misma doctrina que elegir_foto.
+  // respuesta, no se bloquea la llamada — misma doctrina que find_photo.
   it("pasado el tope de describir, endurece la respuesta sin fallar", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
     const conOjos = { ...deps, observarPagina: async () => ({ respuesta: "se ve algo" }) };
     for (let i = 0; i < 2; i++) {
-      const ok = await runAgentTool(session, conOjos, "mirar_pagina", {
-        tipo: "describir", pregunta: "¿?",
+      const ok = await runAgentTool(session, conOjos, "view_page", {
+        mode: "describe", question: "¿?",
       });
       assert.equal(ok.response.ok, true, `la mirada #${i + 1} no debería estar topada`);
-      assert.equal(ok.response.nota, undefined);
+      assert.equal(ok.response.note, undefined);
     }
-    const tercera = await runAgentTool(session, conOjos, "mirar_pagina", {
-      tipo: "describir", pregunta: "¿?",
+    const tercera = await runAgentTool(session, conOjos, "view_page", {
+      mode: "describe", question: "¿?",
     });
     assert.equal(tercera.response.ok, true);
-    assert.match(String(tercera.response.nota), /too many looks/i);
+    assert.match(String(tercera.response.note), /too many looks/i);
   });
 
   // Y los dos topes son INDEPENDIENTES: gastar el de la cara no puede dejar al
@@ -609,30 +609,30 @@ describe("mirar_pagina", () => {
     const session = makeSession();
     const conOjos = { ...deps, observarPagina: async () => ({ respuesta: "dato" }) };
     for (let i = 0; i < 3; i++) {
-      await runAgentTool(session, conOjos, "mirar_pagina", { tipo: "describir", pregunta: "¿?" });
+      await runAgentTool(session, conOjos, "view_page", { mode: "describe", question: "¿?" });
     }
-    const medida = await runAgentTool(session, conOjos, "mirar_pagina", {
-      tipo: "medir", pregunta: "¿qué hay detrás del titular?",
+    const medida = await runAgentTool(session, conOjos, "view_page", {
+      mode: "measure", question: "¿qué hay detrás del titular?",
     });
-    assert.equal(medida.response.respuesta, "dato");
-    assert.equal(medida.response.nota, undefined);
+    assert.equal(medida.response.answer, "dato");
+    assert.equal(medida.response.note, undefined);
   });
 
   it("un tipo que no existe se rechaza diciendo cuáles hay", async () => {
     const { deps } = makeDeps();
     const conOjos = { ...deps, observarPagina: async () => ({ respuesta: "x" }) };
-    const out = await runAgentTool(makeSession(), conOjos, "mirar_pagina", {
-      tipo: "adivinar", pregunta: "¿?",
+    const out = await runAgentTool(makeSession(), conOjos, "view_page", {
+      mode: "adivinar", question: "¿?",
     });
     assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /medir/);
-    assert.match(String(out.response.error), /describir/);
+    assert.match(String(out.response.error), /measure/);
+    assert.match(String(out.response.error), /describe/);
   });
 
   it("sin la dependencia inyectada lo DICE, no revienta", async () => {
     const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "mirar_pagina", {
-      tipo: "medir", pregunta: "¿?",
+    const out = await runAgentTool(makeSession(), deps, "view_page", {
+      mode: "measure", question: "¿?",
     });
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /isn't available/i);
@@ -644,20 +644,20 @@ describe("mirar_pagina", () => {
   it("si la mirada falla, no devuelve un visto bueno", async () => {
     const { deps } = makeDeps();
     const conOjos = { ...deps, observarPagina: async () => null };
-    const out = await runAgentTool(makeSession(), conOjos, "mirar_pagina", {
-      tipo: "medir", pregunta: "¿?",
+    const out = await runAgentTool(makeSession(), conOjos, "view_page", {
+      mode: "measure", question: "¿?",
     });
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /don't take it as meaning it's fine/i);
   });
 });
 
-// ── usar_pagina: usarla como un visitante (H9) ──────────────────────────────
+// ── use_page: usarla como un visitante (H9) ──────────────────────────────
 //
 // Lo que corre en Chromium se prueba en `usar-pagina.browser.test.ts`. Aquí,
 // lo de la herramienta: la entrada se comprueba ANTES de abrir el navegador, a
 // qué página va, y que no poder abrirla no se lee como que funciona.
-describe("usar_pagina", () => {
+describe("use_page", () => {
   const conNavegador = (deps: AgentDeps, visitas: Record<string, unknown>[]) => ({
     ...deps,
     usarPagina: async (input: Record<string, unknown>) => {
@@ -669,8 +669,8 @@ describe("usar_pagina", () => {
   it("🔴 una entrada que no valida NO abre el navegador, y dice qué cambiar", async () => {
     const { deps } = makeDeps();
     const visitas: Record<string, unknown>[] = [];
-    const out = await runAgentTool(makeSession(), conNavegador(deps, visitas), "usar_pagina", {
-      pasos: [{ pulsa: "Agregar", lee: "Total" }],
+    const out = await runAgentTool(makeSession(), conNavegador(deps, visitas), "use_page", {
+      steps: [{ click: "Agregar", read: "Total" }],
     });
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /each step does ONE thing/);
@@ -680,15 +680,15 @@ describe("usar_pagina", () => {
   it("devuelve el informe y NO toca la página", async () => {
     const { deps } = makeDeps();
     const visitas: Record<string, unknown>[] = [];
-    const out = await runAgentTool(makeSession(), conNavegador(deps, visitas), "usar_pagina", {
-      pasos: [{ pulsa: "Agregar" }],
+    const out = await runAgentTool(makeSession(), conNavegador(deps, visitas), "use_page", {
+      steps: [{ click: "Agregar" }],
     });
     assert.equal(out.response.ok, true);
-    assert.match(String(out.response.visita), /pulsé un <button>/);
+    assert.match(String(out.response.visit), /pulsé un <button>/);
     assert.equal(out.updatedHtml, undefined);
     assert.equal(out.mutoDurable, undefined);
     assert.equal(visitas.length, 1);
-    assert.deepEqual(visitas[0]!.pasos, [{ pulsa: "Agregar" }]);
+    assert.deepEqual(visitas[0]!.pasos, [{ click: "Agregar" }]);
     assert.equal(visitas[0]!.ruta, "/index.html");
   });
 
@@ -698,18 +698,18 @@ describe("usar_pagina", () => {
     const visitas: Record<string, unknown>[] = [];
     const session = makeSession();
     session.escritos = ["/menu/index.html"];
-    await runAgentTool(session, conNavegador(deps, visitas), "usar_pagina", { pasos: [{ pulsa: "Pedir" }] });
+    await runAgentTool(session, conNavegador(deps, visitas), "use_page", { steps: [{ click: "Pedir" }] });
     assert.equal(visitas[0]!.ruta, "/menu/index.html");
     assert.equal(visitas[0]!.html, MENU);
     // CONTROL: sin nada escrito, la que el dueño tiene abierta.
     const otra: Record<string, unknown>[] = [];
-    await runAgentTool(makeSession(), conNavegador(deps, otra), "usar_pagina", { pasos: [{ pulsa: "Pedir" }] });
+    await runAgentTool(makeSession(), conNavegador(deps, otra), "use_page", { steps: [{ click: "Pedir" }] });
     assert.equal(otra[0]!.ruta, "/index.html");
   });
 
   it("sin navegador lo dice, y le recuerda que al cerrar diga que no lo probó", async () => {
     const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "usar_pagina", { pasos: [{ pulsa: "Agregar" }] });
+    const out = await runAgentTool(makeSession(), deps, "use_page", { steps: [{ click: "Agregar" }] });
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /you couldn't test it/);
   });
@@ -717,7 +717,7 @@ describe("usar_pagina", () => {
   it("si la visita revienta, no la da por buena ni por mala", async () => {
     const { deps } = makeDeps();
     const roto = { ...deps, usarPagina: async () => { throw new Error("chromium no arrancó"); } };
-    const out = await runAgentTool(makeSession(), roto, "usar_pagina", { pasos: [{ pulsa: "Agregar" }] });
+    const out = await runAgentTool(makeSession(), roto, "use_page", { steps: [{ click: "Agregar" }] });
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /Don't take it as meaning it works or that it doesn't/);
   });
@@ -740,7 +740,7 @@ describe("usar_pagina", () => {
     };
     const session = makeSession();
     const outs = await Promise.all(
-      [1, 2, 3].map(() => runAgentTool(session, conVisitaLenta, "usar_pagina", { pasos: [{ lee: "Inicio" }] })),
+      [1, 2, 3].map(() => runAgentTool(session, conVisitaLenta, "use_page", { steps: [{ read: "Inicio" }] })),
     );
     assert.equal(max, 2);
     assert.deepEqual(outs.map((o) => o.response.ok), [true, true, true]);
@@ -771,7 +771,7 @@ describe("usar_pagina", () => {
       let ended = false;
       const requested: string[] = [];
       const withSignIn = withBackend(deps, visits, { ok: true, email: "ana@tiendaluna.mx", session: SESSION, end: async () => { ended = true; } }, requested);
-      const out = await runAgentTool(makeSession(), withSignIn, "usar_pagina", { pasos: [{ pulsa: "Agregar" }], sign_in_as: "only_user" });
+      const out = await runAgentTool(makeSession(), withSignIn, "use_page", { steps: [{ click: "Agregar" }], sign_in_as: "only_user" });
       assert.equal(out.response.ok, true);
       assert.deepEqual(requested, ["only_user"]);
       assert.deepEqual(visits[0]!.signedInAs, { email: "ana@tiendaluna.mx", storageKey: STORAGE_KEY, session: SESSION });
@@ -782,7 +782,7 @@ describe("usar_pagina", () => {
       const { deps } = makeDeps();
       const visits: Record<string, unknown>[] = [];
       const withSignIn = withBackend(deps, visits, { ok: false, reason: "pick_one", emails: ["ana@tiendaluna.mx", "beto@tiendaluna.mx"], total: 2 });
-      const out = await runAgentTool(makeSession(), withSignIn, "usar_pagina", { pasos: [{ pulsa: "Agregar" }], sign_in_as: "only_user" });
+      const out = await runAgentTool(makeSession(), withSignIn, "use_page", { steps: [{ click: "Agregar" }], sign_in_as: "only_user" });
       assert.equal(out.response.ok, false);
       assert.match(String(out.response.error), /ask the user in chat which one/);
       assert.match(String(out.response.error), /ana@tiendaluna\.mx, beto@tiendaluna\.mx/);
@@ -793,7 +793,7 @@ describe("usar_pagina", () => {
       const { deps } = makeDeps();
       const visits: Record<string, unknown>[] = [];
       const withSignIn = withBackend(deps, visits, { ok: false, reason: "not_found", emails: ["ana@tiendaluna.mx"], total: 1 });
-      const out = await runAgentTool(makeSession(), withSignIn, "usar_pagina", { pasos: [{ pulsa: "Agregar" }], sign_in_as: "nadie@tiendaluna.mx" });
+      const out = await runAgentTool(makeSession(), withSignIn, "use_page", { steps: [{ click: "Agregar" }], sign_in_as: "nadie@tiendaluna.mx" });
       assert.equal(out.response.ok, false);
       assert.match(String(out.response.error), /no user of the page has the email «nadie@tiendaluna\.mx»/);
       assert.match(String(out.response.error), /ana@tiendaluna\.mx/);
@@ -804,7 +804,7 @@ describe("usar_pagina", () => {
       const { deps } = makeDeps();
       const visits: Record<string, unknown>[] = [];
       const withSignIn = withBackend(deps, visits, { ok: false, reason: "no_users" });
-      const out = await runAgentTool(makeSession(), withSignIn, "usar_pagina", { pasos: [{ pulsa: "Agregar" }], sign_in_as: "only_user" });
+      const out = await runAgentTool(makeSession(), withSignIn, "use_page", { steps: [{ click: "Agregar" }], sign_in_as: "only_user" });
       assert.equal(out.response.ok, false);
       assert.match(String(out.response.error), /has no users yet/);
       assert.equal(visits.length, 0);
@@ -814,7 +814,7 @@ describe("usar_pagina", () => {
       const { deps } = makeDeps();
       const visits: Record<string, unknown>[] = [];
       const noBackend = { ...conNavegador(deps, visits), signInForVisit: async () => null };
-      const out = await runAgentTool(makeSession(), noBackend, "usar_pagina", { pasos: [{ pulsa: "Agregar" }], sign_in_as: "only_user" });
+      const out = await runAgentTool(makeSession(), noBackend, "use_page", { steps: [{ click: "Agregar" }], sign_in_as: "only_user" });
       assert.equal(out.response.ok, false);
       assert.match(String(out.response.error), /no backend to sign in to/);
       assert.equal(visits.length, 0);
@@ -824,7 +824,7 @@ describe("usar_pagina", () => {
       const { deps } = makeDeps();
       const visits: Record<string, unknown>[] = [];
       const broken = { ...conNavegador(deps, visits), signInForVisit: async () => { throw new Error("la base no contesta"); } };
-      const out = await runAgentTool(makeSession(), broken, "usar_pagina", { pasos: [{ pulsa: "Agregar" }], sign_in_as: "only_user" });
+      const out = await runAgentTool(makeSession(), broken, "use_page", { steps: [{ click: "Agregar" }], sign_in_as: "only_user" });
       assert.equal(out.response.ok, false);
       assert.match(String(out.response.error), /couldn't sign in/);
       assert.doesNotMatch(String(out.response.error), /no backend/);
@@ -839,7 +839,7 @@ describe("usar_pagina", () => {
         usarPagina: async () => { throw new Error("chromium no arrancó"); },
         signInForVisit: async () => ({ storageKey: STORAGE_KEY, result: { ok: true, email: "ana@tiendaluna.mx", session: SESSION, end: async () => { ended = true; } } }),
       };
-      await runAgentTool(makeSession(), withSignIn, "usar_pagina", { pasos: [{ pulsa: "Agregar" }], sign_in_as: "only_user" });
+      await runAgentTool(makeSession(), withSignIn, "use_page", { steps: [{ click: "Agregar" }], sign_in_as: "only_user" });
       assert.equal(ended, true);
     });
 
@@ -848,23 +848,23 @@ describe("usar_pagina", () => {
       const visits: Record<string, unknown>[] = [];
       const requested: string[] = [];
       const withSignIn = withBackend(deps, visits, { ok: false, reason: "no_users" }, requested);
-      await runAgentTool(makeSession(), withSignIn, "usar_pagina", { pasos: [{ pulsa: "Agregar" }] });
+      await runAgentTool(makeSession(), withSignIn, "use_page", { steps: [{ click: "Agregar" }] });
       assert.deepEqual(requested, []);
       assert.equal(visits[0]!.signedInAs ?? null, null);
     });
   });
 });
 
-describe("elegir_foto", () => {
+describe("find_photo", () => {
   it("returns up to 6 fotos with absolute urls, no action card, no persistence", async () => {
     const { deps, store } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "elegir_foto", {});
+    const out = await runAgentTool(makeSession(), deps, "find_photo", {});
     assert.equal(out.response.ok, true);
-    const fotos = out.response.fotos as { url: string; alt: string; estilo: string }[];
+    const fotos = out.response.photos as { url: string; alt: string; style: string }[];
     assert.ok(fotos.length > 0);
     assert.ok(fotos.length <= 6);
     assert.ok(fotos[0].url.startsWith("https://images.openlen.com/"));
-    assert.ok(fotos[0].estilo);
+    assert.ok(fotos[0].style);
     assert.equal(out.action, undefined);
     assert.equal(out.updatedHtml, undefined);
     assert.equal(store.saved.length, 0);
@@ -873,28 +873,28 @@ describe("elegir_foto", () => {
 
   it("filters by estilo through deps.fetchImageManifest", async () => {
     const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "elegir_foto", { estilo: "claymorph" });
+    const out = await runAgentTool(makeSession(), deps, "find_photo", { style: "claymorph" });
     assert.equal(out.response.ok, true);
-    const fotos = out.response.fotos as { estilo: string }[];
+    const fotos = out.response.photos as { style: string }[];
     assert.ok(fotos.length >= 1);
-    assert.ok(fotos.every((f) => f.estilo === "claymorph"));
+    assert.ok(fotos.every((f) => f.style === "claymorph"));
   });
 
   it("filters by busqueda against alt/id/family", async () => {
     const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "elegir_foto", { busqueda: "portfolio" });
+    const out = await runAgentTool(makeSession(), deps, "find_photo", { query: "portfolio" });
     assert.equal(out.response.ok, true);
-    const fotos = out.response.fotos as { url: string }[];
+    const fotos = out.response.photos as { url: string }[];
     assert.equal(fotos.length, 1);
     assert.ok(fotos[0].url.includes("warm-glassy"));
   });
 
   it("empty results come back ok:true with an empty list and a helpful nota", async () => {
     const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "elegir_foto", { busqueda: "esto-no-existe-en-el-catalogo" });
+    const out = await runAgentTool(makeSession(), deps, "find_photo", { query: "esto-no-existe-en-el-catalogo" });
     assert.equal(out.response.ok, true);
-    assert.deepEqual(out.response.fotos, []);
-    assert.ok(typeof out.response.nota === "string" && (out.response.nota as string).length > 0);
+    assert.deepEqual(out.response.photos, []);
+    assert.ok(typeof out.response.note === "string" && (out.response.note as string).length > 0);
   });
 
   it("2nd empty search pivots the model off the hunt toward a real fallback", async () => {
@@ -904,14 +904,14 @@ describe("elegir_foto", () => {
     // that names concrete alternatives so the model stops hunting.
     const { deps } = makeDeps();
     const session = makeSession(); // shared across calls — the per-turn counter accumulates
-    const first = await runAgentTool(session, deps, "elegir_foto", { busqueda: "terror-que-no-existe" });
-    const second = await runAgentTool(session, deps, "elegir_foto", { busqueda: "horror-tampoco" });
-    assert.deepEqual(first.response.fotos, []);
-    assert.deepEqual(second.response.fotos, []);
+    const first = await runAgentTool(session, deps, "find_photo", { query: "terror-que-no-existe" });
+    const second = await runAgentTool(session, deps, "find_photo", { query: "horror-tampoco" });
+    assert.deepEqual(first.response.photos, []);
+    assert.deepEqual(second.response.photos, []);
     assert.equal(session.photoSearchesThisTurn, 2);
     // First: exploratory. Second: pivot, with a concrete way out.
-    const nota = String(second.response.nota);
-    assert.notEqual(nota, String(first.response.nota), "la segunda búsqueda vacía no cambia de nota: no hay giro");
+    const nota = String(second.response.note);
+    assert.notEqual(nota, String(first.response.note), "la segunda búsqueda vacía no cambia de nota: no hay giro");
     assert.ok(/gradient/i.test(nota), `la nota de pivote no nombra ninguna salida concreta: ${nota}`);
 
     // 🔴 Y QUE NO MANDE A UNA HERRAMIENTA QUE PUEDE NO ESTAR.
@@ -938,24 +938,24 @@ describe("elegir_foto", () => {
 
   it("hard-stops photo searches past the per-turn ceiling", async () => {
     // Backstop so a search-only chain can't spin toward the loop's absolute
-    // cap (which would surface a red error): past the ceiling elegir_foto stops
+    // cap (which would surface a red error): past the ceiling find_photo stops
     // returning fresh results even for a query that WOULD match.
     const { deps } = makeDeps();
     const session = makeSession();
     let last: Awaited<ReturnType<typeof runAgentTool>> | undefined;
     for (let i = 0; i < 8; i++) {
-      last = await runAgentTool(session, deps, "elegir_foto", { estilo: "claymorph" });
+      last = await runAgentTool(session, deps, "find_photo", { style: "claymorph" });
     }
     assert.equal(last!.response.ok, true);
-    assert.deepEqual(last!.response.fotos, []);
-    assert.match(String(last!.response.nota), /too many|stop searching/i);
+    assert.deepEqual(last!.response.photos, []);
+    assert.match(String(last!.response.note), /too many|stop searching/i);
   });
 
   it("a malformed manifest comes back as an empty list, not a throw", async () => {
     const { deps } = makeDeps({ imageManifest: { images: "not-an-array" } });
-    const out = await runAgentTool(makeSession(), deps, "elegir_foto", {});
+    const out = await runAgentTool(makeSession(), deps, "find_photo", {});
     assert.equal(out.response.ok, true);
-    assert.deepEqual(out.response.fotos, []);
+    assert.deepEqual(out.response.photos, []);
   });
 });
 
@@ -979,13 +979,13 @@ describe("urlIsPageImage", () => {
   });
 });
 
-describe("editar_imagen", () => {
+describe("edit_image", () => {
   it("rejects a url not present in the document, without fetching or saving", async () => {
     const { deps, store } = makeDeps({ data: { html: IMG_HTML } });
     const session = makeSession(IMG_HTML);
-    const out = await runAgentTool(session, deps, "editar_imagen", {
-      imagen_url: "https://evil.com/not-in-doc.png",
-      instruccion: "quita el logo",
+    const out = await runAgentTool(session, deps, "edit_image", {
+      image_url: "https://evil.com/not-in-doc.png",
+      instruction: "quita el logo",
     });
     assert.equal(out.response.ok, false);
     assert.equal(store.fetches.length, 0);
@@ -999,12 +999,12 @@ describe("editar_imagen", () => {
   it("happy path: fetch→edit→upload→swap, persists the new url, versions=2, re-tags, card present", async () => {
     const { deps, store } = makeDeps({ data: { html: IMG_HTML } });
     const session = makeSession(IMG_HTML);
-    const out = await runAgentTool(session, deps, "editar_imagen", {
-      imagen_url: IMG_URL,
-      instruccion: "quita el logo del fondo",
+    const out = await runAgentTool(session, deps, "edit_image", {
+      image_url: IMG_URL,
+      instruction: "quita el logo del fondo",
     });
     assert.equal(out.response.ok, true);
-    assert.equal(out.response.nueva_url, "https://images.openlen.com/edited-123.webp");
+    assert.equal(out.response.new_url, "https://images.openlen.com/edited-123.webp");
     // The exact source URL is swapped for the new asset URL in the saved doc.
     assert.ok(store.data.html.includes("https://images.openlen.com/edited-123.webp"));
     assert.ok(!store.data.html.includes(IMG_URL));
@@ -1012,10 +1012,10 @@ describe("editar_imagen", () => {
     assert.equal(store.versions.length, 2);
     // Len 2.0: dice en qué ficheros cambió, y el lienzo recibe el documento
     // limpio, sin ids.
-    assert.deepEqual(out.response.ficheros, ["index.html"]);
+    assert.deepEqual(out.response.files, ["index.html"]);
     assert.ok(!out.updatedHtml?.includes("data-op-id"));
     assert.ok(out.updatedHtml?.includes("edited-123.webp"));
-    assert.equal(out.action?.tool, "editar_imagen");
+    assert.equal(out.action?.tool, "edit_image");
     assert.equal(out.action?.ok, true);
     // The edit ran with the session user and the instruction as the prompt.
     assert.equal(store.imageEdits.length, 1);
@@ -1029,15 +1029,15 @@ describe("editar_imagen", () => {
   it("refuses a second edit in the same turn (per-turn cap), without fetching again", async () => {
     const { deps, store } = makeDeps({ data: { html: IMG_HTML } });
     const session = makeSession(IMG_HTML);
-    const first = await runAgentTool(session, deps, "editar_imagen", {
-      imagen_url: IMG_URL,
-      instruccion: "quita el logo",
+    const first = await runAgentTool(session, deps, "edit_image", {
+      image_url: IMG_URL,
+      instruction: "quita el logo",
     });
     assert.equal(first.response.ok, true);
     const fetchesAfterFirst = store.fetches.length;
-    const second = await runAgentTool(session, deps, "editar_imagen", {
-      imagen_url: IMG_URL,
-      instruccion: "otra edición",
+    const second = await runAgentTool(session, deps, "edit_image", {
+      image_url: IMG_URL,
+      instruction: "otra edición",
     });
     assert.equal(second.response.ok, false);
     assert.ok(String(second.response.error).includes("turn"));
@@ -1054,9 +1054,9 @@ describe("editar_imagen", () => {
       editImageResult: { error: "blocked", status: 422, body: { error: "blocked", reason: "SAFETY" } },
     });
     const session = makeSession(IMG_HTML);
-    const out = await runAgentTool(session, deps, "editar_imagen", {
-      imagen_url: IMG_URL,
-      instruccion: "algo prohibido",
+    const out = await runAgentTool(session, deps, "edit_image", {
+      image_url: IMG_URL,
+      instruction: "algo prohibido",
     });
     assert.equal(out.response.ok, false);
     assert.equal(store.uploads.length, 0);
@@ -1072,9 +1072,9 @@ describe("editar_imagen", () => {
       fetchImageResult: { ok: false, error: "upstream_error" },
     });
     const session = makeSession(IMG_HTML);
-    const out = await runAgentTool(session, deps, "editar_imagen", {
-      imagen_url: IMG_URL,
-      instruccion: "algo",
+    const out = await runAgentTool(session, deps, "edit_image", {
+      image_url: IMG_URL,
+      instruction: "algo",
     });
     assert.equal(out.response.ok, false);
     assert.equal(store.imageEdits.length, 0);
@@ -1085,13 +1085,13 @@ describe("editar_imagen", () => {
   });
 });
 
-describe("publicar", () => {
+describe("publish", () => {
   it("NEVER publishes — an existing claim + no new subdominio → confirm with the current name, republicar true", async () => {
     const { deps, store } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
-    const out = await runAgentTool(makeSession(), deps, "publicar", {});
+    const out = await runAgentTool(makeSession(), deps, "publish", {});
     assert.equal(out.response.ok, true);
     assert.ok(out.confirm);
-    assert.equal(pub(out)!.action, "publicar");
+    assert.equal(pub(out)!.action, "publish");
     assert.equal(pub(out)!.subdominio, "tacos-guero");
     assert.equal(pub(out)!.republicar, true);
     // The tool touches NOTHING — no project save, no publish side effect.
@@ -1100,7 +1100,7 @@ describe("publicar", () => {
 
   it("a new subdominio (normalized lowercase/trim) → uses it, republicar false", async () => {
     const { deps } = makeDeps({ subdomain: "viejo-nombre" });
-    const out = await runAgentTool(makeSession(), deps, "publicar", { subdominio: "  Nuevo-Sitio  " });
+    const out = await runAgentTool(makeSession(), deps, "publish", { subdomain: "  Nuevo-Sitio  " });
     assert.equal(out.response.ok, true);
     assert.equal(pub(out)!.subdominio, "nuevo-sitio");
     assert.equal(pub(out)!.republicar, false);
@@ -1108,7 +1108,7 @@ describe("publicar", () => {
 
   it("a new subdominio that equals the current claim (case-insensitive) → republicar true", async () => {
     const { deps } = makeDeps({ subdomain: "mi-tienda" });
-    const out = await runAgentTool(makeSession(), deps, "publicar", { subdominio: "MI-TIENDA" });
+    const out = await runAgentTool(makeSession(), deps, "publish", { subdomain: "MI-TIENDA" });
     assert.equal(out.response.ok, true);
     assert.equal(pub(out)!.subdominio, "mi-tienda");
     assert.equal(pub(out)!.republicar, true);
@@ -1116,7 +1116,7 @@ describe("publicar", () => {
 
   it("a shape-invalid subdominio (accents/spaces) → ok:false BEFORE any confirm card, nothing saved", async () => {
     const { deps, store } = makeDeps({ subdomain: "tienda-vieja" });
-    const out = await runAgentTool(makeSession(), deps, "publicar", { subdominio: "héllo world" });
+    const out = await runAgentTool(makeSession(), deps, "publish", { subdomain: "héllo world" });
     assert.equal(out.response.ok, false);
     assert.equal(out.confirm, undefined);
     assert.equal(out.action, undefined);
@@ -1130,7 +1130,7 @@ describe("publicar", () => {
 
   it("a reserved subdominio (cuenta) → ok:false BEFORE any confirm card, nothing saved", async () => {
     const { deps, store } = makeDeps({ subdomain: "tienda-vieja" });
-    const out = await runAgentTool(makeSession(), deps, "publicar", { subdominio: "cuenta" });
+    const out = await runAgentTool(makeSession(), deps, "publish", { subdomain: "cuenta" });
     assert.equal(out.response.ok, false);
     assert.equal(out.confirm, undefined);
     assert.equal(out.action, undefined);
@@ -1141,7 +1141,7 @@ describe("publicar", () => {
 
   it("no claim AND no subdominio → ok:false telling the model to ask the user, no confirm, nothing saved", async () => {
     const { deps, store } = makeDeps(); // subdomain null
-    const out = await runAgentTool(makeSession(), deps, "publicar", {});
+    const out = await runAgentTool(makeSession(), deps, "publish", {});
     assert.equal(out.response.ok, false);
     assert.equal(out.confirm, undefined);
     assert.ok(String(out.response.error).toLowerCase().includes("subdomain"), String(out.response.error));
@@ -1173,10 +1173,10 @@ describe("publicar", () => {
     const session = makeSession();
     session.mensajeDelUsuario = "ya publícala";
 
-    const primera = await runAgentTool(session, deps, "publicar", {});
+    const primera = await runAgentTool(session, deps, "publish", {});
     assert.equal(primera.response.ok, false);
 
-    const segunda = await runAgentTool(session, deps, "publicar", { subdominio: "mi-negocio" });
+    const segunda = await runAgentTool(session, deps, "publish", { subdomain: "mi-negocio" });
     assert.equal(segunda.response.ok, false, "se dejó colar el subdominio inventado");
     assert.equal(segunda.confirm, undefined, "construyó la tarjeta de confirmación igual");
     assert.equal(segunda.action, undefined);
@@ -1197,7 +1197,7 @@ describe("publicar", () => {
   it("un subdominio que el usuario NUNCA dijo se rechaza, sin tarjeta", async () => {
     const { deps, store } = makeDeps(); // sin reclamo
     const session = { ...makeSession(), mensajeDelUsuario: "ya publícala" };
-    const out = await runAgentTool(session, deps, "publicar", { subdominio: "tacos-el-primo" });
+    const out = await runAgentTool(session, deps, "publish", { subdomain: "tacos-el-primo" });
     assert.equal(out.response.ok, false, "se coló un subdominio inventado");
     assert.equal(out.confirm, undefined, "construyó la tarjeta igual");
     assert.equal(store.saved.length, 0);
@@ -1211,7 +1211,7 @@ describe("publicar", () => {
     // El dueño escribe «mi negocio»; el subdominio válido es «mi-negocio».
     // Exigirle el guion sería rechazarlo por la ortografía de una regla nuestra.
     const session = { ...makeSession(), mensajeDelUsuario: "publícala como mi negocio" };
-    const out = await runAgentTool(session, deps, "publicar", { subdominio: "mi-negocio" });
+    const out = await runAgentTool(session, deps, "publish", { subdomain: "mi-negocio" });
     assert.equal(out.response.ok, true);
     assert.equal(pub(out)!.subdominio, "mi-negocio");
   });
@@ -1220,7 +1220,7 @@ describe("publicar", () => {
     // Republicar no elige nada nuevo: el nombre ya es del usuario de antes.
     const { deps } = makeDeps({ subdomain: "tienda-vieja" });
     const session = { ...makeSession(), mensajeDelUsuario: "ya publícala" };
-    const out = await runAgentTool(session, deps, "publicar", {});
+    const out = await runAgentTool(session, deps, "publish", {});
     assert.equal(out.response.ok, true);
     assert.equal(pub(out)!.republicar, true);
   });
@@ -1230,10 +1230,10 @@ describe("publicar", () => {
   it("pero en el turno siguiente, con el nombre que dio el usuario, publica", async () => {
     const { deps } = makeDeps(); // subdomain null
     const primerTurno = makeSession();
-    await runAgentTool(primerTurno, deps, "publicar", {});
+    await runAgentTool(primerTurno, deps, "publish", {});
 
     const turnoSiguiente = makeSession();
-    const out = await runAgentTool(turnoSiguiente, deps, "publicar", { subdominio: "mi-negocio" });
+    const out = await runAgentTool(turnoSiguiente, deps, "publish", { subdomain: "mi-negocio" });
     assert.equal(out.response.ok, true);
     assert.equal(pub(out)!.subdominio, "mi-negocio");
     assert.equal(pub(out)!.republicar, false);
@@ -1241,24 +1241,24 @@ describe("publicar", () => {
 
   it("filters idiomas through isPublishLocale — invalid dropped, capped at 9", async () => {
     const { deps } = makeDeps({ subdomain: "tienda" });
-    const out = await runAgentTool(makeSession(), deps, "publicar", {
-      idiomas: ["es", "en", "xx", "zz", "pt", 42, null],
+    const out = await runAgentTool(makeSession(), deps, "publish", {
+      languages: ["es", "en", "xx", "zz", "pt", 42, null],
     });
     assert.equal(out.response.ok, true);
     assert.deepEqual(pub(out)!.idiomas, ["es", "en", "pt"]);
     // The dropped ones are noted in the response for the model.
-    assert.ok(out.response.idiomas_ignorados);
+    assert.ok(out.response.ignored_languages);
   });
 
   it("more than 9 valid idiomas are capped to 9, the overflow surfaces in idiomas_ignorados", async () => {
     const { deps } = makeDeps({ subdomain: "tienda" });
-    const out = await runAgentTool(makeSession(), deps, "publicar", {
-      idiomas: ["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"],
+    const out = await runAgentTool(makeSession(), deps, "publish", {
+      languages: ["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"],
     });
     assert.equal(out.response.ok, true);
     assert.equal(pub(out)!.idiomas.length, 9);
     // The dropped-by-cap locale is reported too, not silently vanished.
-    assert.deepEqual(out.response.idiomas_ignorados, ["nl"]);
+    assert.deepEqual(out.response.ignored_languages, ["nl"]);
   });
 
   it("idiomas absent → confirm.idiomas is [] and nothing is flagged as ignored", async () => {
@@ -1266,10 +1266,10 @@ describe("publicar", () => {
     // endpoint keeps the project's stored setting — an [] here must NEVER
     // reach the POST body (it would wipe a live site's translations).
     const { deps } = makeDeps({ subdomain: "tienda" });
-    const out = await runAgentTool(makeSession(), deps, "publicar", {});
+    const out = await runAgentTool(makeSession(), deps, "publish", {});
     assert.equal(out.response.ok, true);
     assert.deepEqual(pub(out)!.idiomas, []);
-    assert.equal(out.response.idiomas_ignorados, undefined);
+    assert.equal(out.response.ignored_languages, undefined);
   });
 });
 
@@ -1724,7 +1724,7 @@ describe("TodoWrite, retirada (F4)", () => {
 describe("publicar sin subdominio ya no da órdenes de comportamiento", () => {
   it("señala `ask_user_question` en vez de pedirle al modelo que se pare solo", async () => {
     const { deps } = makeDeps();
-    const out = await runAgentTool(makeSession(), deps, "publicar", {});
+    const out = await runAgentTool(makeSession(), deps, "publish", {});
 
     assert.equal(out.response.ok, false);
     const error = String(out.response.error);
@@ -1741,7 +1741,7 @@ describe("publicar sin subdominio ya no da órdenes de comportamiento", () => {
     session.mensajeDelUsuario = "ya publícala";
 
     for (let i = 0; i < 5; i++) {
-      const out = await runAgentTool(session, deps, "publicar", { subdominio: "tacos-el-guero" });
+      const out = await runAgentTool(session, deps, "publish", { subdomain: "tacos-el-guero" });
       assert.equal(out.response.ok, false, `la llamada ${i + 1} pasó`);
       assert.match(String(out.response.error), /you made that name up/);
       assert.equal(out.confirm, undefined);
@@ -1753,7 +1753,7 @@ describe("publicar sin subdominio ya no da órdenes de comportamiento", () => {
     const session = makeSession();
     session.mensajeDelUsuario = "publícala como tacos-el-guero";
 
-    const out = await runAgentTool(session, deps, "publicar", { subdominio: "tacos-el-guero" });
+    const out = await runAgentTool(session, deps, "publish", { subdomain: "tacos-el-guero" });
     assert.equal(out.response.ok, true);
     assert.equal(pub(out)?.subdominio, "tacos-el-guero");
   });
@@ -1776,7 +1776,7 @@ async function editarConLen(
   return runAgentTool(session, deps, "Edit", { file_path: ruta, old_string: viejo, new_string: nuevo });
 }
 
-describe("revertir_ultimo_cambio", () => {
+describe("undo_last_change", () => {
   async function editaDosVeces(session: AgentSession, deps: AgentDeps, ruta = "/index.html", titular = "Tacos El Güero") {
     const primera = await editarConLen(session, deps, `${titular}</h1>`, "Uno</h1>", ruta);
     assert.equal(primera.response.ok, true, String(primera.response.tool_result));
@@ -1790,7 +1790,7 @@ describe("revertir_ultimo_cambio", () => {
     await editaDosVeces(session, deps);
     assert.ok(store.data.html.includes("Dos"));
 
-    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    const out = await runAgentTool(session, deps, "undo_last_change", {});
 
     assert.equal(out.response.ok, true);
     // El snapshot más nuevo ES el estado actual: restaurarlo no desharía nada y
@@ -1804,9 +1804,9 @@ describe("revertir_ultimo_cambio", () => {
     const session = makeSession();
     await editaDosVeces(session, deps);
 
-    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    const out = await runAgentTool(session, deps, "undo_last_change", {});
 
-    assert.equal(out.response.fichero, "index.html");
+    assert.equal(out.response.file, "index.html");
     assert.equal(out.response.documento, undefined);
     // Sin esto el usuario ve la página vieja.
     assert.ok(String(out.updatedHtml).includes("Uno"));
@@ -1816,7 +1816,7 @@ describe("revertir_ultimo_cambio", () => {
     const { deps, store } = makeDeps();
     const session = makeSession();
     await editaDosVeces(session, deps);
-    await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    await runAgentTool(session, deps, "undo_last_change", {});
 
     const aCiegas = await runAgentTool(session, deps, "Edit", {
       file_path: "/index.html",
@@ -1836,7 +1836,7 @@ describe("revertir_ultimo_cambio", () => {
   it("sin cambio anterior lo DICE, en vez de fingir que deshizo algo", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
-    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    const out = await runAgentTool(session, deps, "undo_last_change", {});
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /there is no|nothing to/i);
   });
@@ -1851,7 +1851,7 @@ describe("revertir_ultimo_cambio", () => {
     await editaDosVeces(session, deps, "/menu/index.html", "Menú");
 
     // Sin file_path: el último fichero que Len escribió en este turno.
-    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    const out = await runAgentTool(session, deps, "undo_last_change", {});
 
     assert.equal(out.response.ok, true);
     assert.ok(store.data.pages!.menu.html.includes("Uno"));
@@ -1868,7 +1868,7 @@ describe("revertir_ultimo_cambio", () => {
     await editaDosVeces(session, deps, "/menu/index.html", "Menú");
     await editarConLen(session, deps, "Los mejores del barrio.", "Los mejores de Monterrey.");
 
-    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", { file_path: "/menu/index.html" });
+    const out = await runAgentTool(session, deps, "undo_last_change", { file_path: "/menu/index.html" });
 
     assert.equal(out.response.ok, true, String(out.response.error ?? ""));
     assert.ok(store.data.pages!.menu.html.includes("Uno"));
@@ -1884,7 +1884,7 @@ describe("revertir_ultimo_cambio", () => {
     const session = makeSession();
     await editaDosVeces(session, deps);
 
-    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    const out = await runAgentTool(session, deps, "undo_last_change", {});
 
     assert.equal(out.response.ok, true);
     assert.equal(typeof out.versionPrevia, "string");
@@ -1898,12 +1898,12 @@ describe("revertir_ultimo_cambio", () => {
 
 // ─── H06 · DESHACER LO DE LEN SIN LLEVARSE LO DEL DUEÑO (auditoría 2026-09-22) ─
 //
-// `revertir_ultimo_cambio` restauraba `versiones[1]` fuera de quien fuera. Con el
+// `undo_last_change` restauraba `versiones[1]` fuera de quien fuera. Con el
 // dueño editando a mano poco después de un turno de Len —el editor sólo guarda
 // versión si pasaron cinco minutos— su texto desaparecía de la página viva; con
 // su versión guardada, se deshacía SU edición y se conservaba la de Len (C11 y
 // C11b). Ahora se deshace la última escritura de Len sobre lo que hay ahora.
-describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después", () => {
+describe("H06 · undo_last_change respeta lo que el dueño editó después", () => {
   /** Len edita el titular; después el dueño cambia el párrafo a mano. */
   async function lenYLuegoElDueno(opts: { conVersion: boolean; mismoSitio?: boolean }) {
     const { deps, store } = makeDeps();
@@ -1922,16 +1922,16 @@ describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después
 
   it("🔴 C11 · sin versión del dueño: se va lo de Len y se queda lo suyo", async () => {
     const { deps, store, session } = await lenYLuegoElDueno({ conVersion: false });
-    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    const out = await runAgentTool(session, deps, "undo_last_change", {});
     assert.equal(out.response.ok, true, String(out.response.error ?? ""));
     assert.ok(store.data.html.includes("Los mejores de Monterrey."), "se llevó la edición del dueño");
     assert.ok(!store.data.html.includes("Tacos de Len"), "no deshizo lo de Len");
-    assert.match(String(out.response.conservado), /what the user edited by hand/);
+    assert.match(String(out.response.kept), /what the user edited by hand/);
   });
 
   it("🔴 C11b · con la versión del dueño encima: tampoco se deshace SU edición", async () => {
     const { deps, store, session } = await lenYLuegoElDueno({ conVersion: true });
-    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    const out = await runAgentTool(session, deps, "undo_last_change", {});
     assert.equal(out.response.ok, true, String(out.response.error ?? ""));
     assert.ok(store.data.html.includes("Los mejores de Monterrey."));
     assert.ok(!store.data.html.includes("Tacos de Len"));
@@ -1940,7 +1940,7 @@ describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después
   it("🔴 si el dueño tocó LO MISMO, no se toca nada y se le pide preguntar", async () => {
     const { deps, store, session } = await lenYLuegoElDueno({ conVersion: false, mismoSitio: true });
     const antes = store.data.html;
-    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    const out = await runAgentTool(session, deps, "undo_last_change", {});
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /ask_user_question/);
     assert.equal(store.data.html, antes, "tocó la página cuando debía preguntar");
@@ -1954,7 +1954,7 @@ describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después
     const { deps, store } = makeDeps();
     const session = makeSession();
     await editarConLen(session, deps, "Tacos El Güero</h1>", "Tacos de Len</h1>");
-    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    const out = await runAgentTool(session, deps, "undo_last_change", {});
     assert.equal(out.response.ok, true);
     assert.equal(store.data.html.includes("Tacos de Len"), false);
 
@@ -1972,7 +1972,7 @@ describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después
     assert.deepEqual(bloque, [], "el deshacer de Len llegó al turno siguiente como edición del dueño");
 
     // Y otro «deshaz» no pregunta por una edición a mano que no existe.
-    const otra = await runAgentTool(makeSession(store.data.html), deps, "revertir_ultimo_cambio", {});
+    const otra = await runAgentTool(makeSession(store.data.html), deps, "undo_last_change", {});
     assert.equal(otra.response.ok, true, String(otra.response.error ?? ""));
   });
 
@@ -1980,7 +1980,7 @@ describe("H06 · revertir_ultimo_cambio respeta lo que el dueño editó después
     const { deps, store } = makeDeps();
     const session = makeSession();
     await editarConLen(session, deps, "Tacos El Güero</h1>", "Tacos de Len</h1>");
-    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    const out = await runAgentTool(session, deps, "undo_last_change", {});
     assert.equal(out.response.ok, true);
     assert.equal(store.data.html.includes("Tacos de Len"), false);
     assert.ok(store.data.html.includes("Tacos El Güero</h1>"));
@@ -2062,9 +2062,9 @@ describe("mutoDurable: lo que ya escribió en la base", () => {
     const { deps } = makeDeps();
 
     // Era `cambiar_motion`, retirada el 2026-08-26, y después
-    // `preparar_marketing`, retirada en Len 2.1. `activar_modulo` sirve igual:
+    // `preparar_marketing`, retirada en Len 2.1. `toggle_module` sirve igual:
     // escribe ajustes y no emite documento, que es lo que se mide.
-    const out = await runAgentTool(makeSession(), deps, "activar_modulo", { modulo: "assistant" });
+    const out = await runAgentTool(makeSession(), deps, "toggle_module", { module: "assistant" });
 
     assert.equal(out.response.ok, true, JSON.stringify(out.response));
     assert.equal(out.updatedHtml, undefined, "no debería emitir documento");
@@ -2126,37 +2126,37 @@ describe("mutoDurable: lo que ya escribió en la base", () => {
 // llamada al modelo, es un filtro local, así que bloquearla no ahorra nada y
 // puede dejar al usuario sin una foto que existía.
 describe("el aviso de pivotar cuenta vacías SEGUIDAS", () => {
-  const NADA = { busqueda: "esto-no-existe-en-el-catalogo" };
+  const NADA = { query: "esto-no-existe-en-el-catalogo" };
 
   it("a la segunda vacía seguida el aviso pasa a ser el pivote", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
 
-    const primera = await runAgentTool(session, deps, "elegir_foto", NADA);
-    assert.ok(String(primera.response.nota).includes("ONE more time"));
+    const primera = await runAgentTool(session, deps, "find_photo", NADA);
+    assert.ok(String(primera.response.note).includes("ONE more time"));
 
-    const segunda = await runAgentTool(session, deps, "elegir_foto", NADA);
-    assert.ok(String(segunda.response.nota).includes("limited"));
-    assert.ok(String(segunda.response.nota).includes("gradient"));
+    const segunda = await runAgentTool(session, deps, "find_photo", NADA);
+    assert.ok(String(segunda.response.note).includes("limited"));
+    assert.ok(String(segunda.response.note).includes("gradient"));
   });
 
   it("una que SÍ encuentra reinicia la cuenta", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
 
-    await runAgentTool(session, deps, "elegir_foto", NADA);
-    await runAgentTool(session, deps, "elegir_foto", NADA);
+    await runAgentTool(session, deps, "find_photo", NADA);
+    await runAgentTool(session, deps, "find_photo", NADA);
     assert.equal(session.busquedasVaciasSeguidas, 2);
 
     // Encuentra → la cuenta vuelve a cero. Y la búsqueda NO estaba bloqueada:
     // ésa es la diferencia con la pared dura que se descartó.
-    const buena = await runAgentTool(session, deps, "elegir_foto", { busqueda: "portfolio" });
-    assert.ok((buena.response.fotos as unknown[]).length > 0);
+    const buena = await runAgentTool(session, deps, "find_photo", { query: "portfolio" });
+    assert.ok((buena.response.photos as unknown[]).length > 0);
     assert.equal(session.busquedasVaciasSeguidas, 0);
 
     // Por tanto la siguiente vacía vuelve a ser la PRIMERA: consejo suave.
-    const siguiente = await runAgentTool(session, deps, "elegir_foto", NADA);
-    assert.ok(String(siguiente.response.nota).includes("ONE more time"));
+    const siguiente = await runAgentTool(session, deps, "find_photo", NADA);
+    assert.ok(String(siguiente.response.note).includes("ONE more time"));
   });
 
   // EL CASO QUE BAJAR EL TECHO A 3 HABRÍA ROTO.
@@ -2164,9 +2164,9 @@ describe("el aviso de pivotar cuenta vacías SEGUIDAS", () => {
     const { deps } = makeDeps();
     const session = makeSession();
     for (let i = 0; i < 4; i++) {
-      const out = await runAgentTool(session, deps, "elegir_foto", { busqueda: "portfolio" });
+      const out = await runAgentTool(session, deps, "find_photo", { query: "portfolio" });
       assert.ok(
-        (out.response.fotos as unknown[]).length > 0,
+        (out.response.photos as unknown[]).length > 0,
         `la búsqueda productiva #${i + 1} volvió vacía: el tope cuenta lo que no debe`,
       );
     }
@@ -2193,10 +2193,10 @@ const CON_SCRIPT_VIEJO = `<!doctype html><html><head><title>Decks</title><meta n
 
 // ── LA CARPETA en los ojos (pieza 9 de Len 2.5) ─────────────────────────────
 //
-// `mirar_pagina` y `usar_pagina` abren la página en el Chromium del servidor:
+// `view_page` y `use_page` abren la página en el Chromium del servidor:
 // si sus ficheros (`/js/app.js`, `/data/menu.json`) no viajan con la vista, Len
 // ve rota una página que publicada funciona. Sólo viaja lo que se publica.
-describe("la carpeta viaja con la vista de mirar_pagina y usar_pagina", () => {
+describe("la carpeta viaja con la vista de view_page y use_page", () => {
   const CARPETA = {
     "/js/app.js": "document.title = 'cargó'",
     "/data/menu.json": "[]",
@@ -2205,7 +2205,7 @@ describe("la carpeta viaja con la vista de mirar_pagina y usar_pagina", () => {
   };
   const PUBLICABLE = { "/js/app.js": "document.title = 'cargó'", "/data/menu.json": "[]" };
 
-  it("🔴 mirar_pagina: la vista lleva los ficheros publicables", async () => {
+  it("🔴 view_page: la vista lleva los ficheros publicables", async () => {
     const { deps } = makeDeps();
     const vistas: Record<string, unknown>[] = [];
     await runAgentTool(makeSession(), {
@@ -2215,11 +2215,11 @@ describe("la carpeta viaja con la vista de mirar_pagina y usar_pagina", () => {
         vistas.push(input.vista as Record<string, unknown>);
         return { respuesta: "x" };
       },
-    }, "mirar_pagina", { tipo: "medir", pregunta: "¿se lee?" });
+    }, "view_page", { mode: "measure", question: "¿se lee?" });
     assert.deepEqual(vistas[0]!.files, PUBLICABLE);
   });
 
-  it("🔴 usar_pagina: la vista lleva los ficheros publicables", async () => {
+  it("🔴 use_page: la vista lleva los ficheros publicables", async () => {
     const { deps } = makeDeps();
     const visitas: Record<string, unknown>[] = [];
     await runAgentTool(makeSession(), {
@@ -2229,7 +2229,7 @@ describe("la carpeta viaja con la vista de mirar_pagina y usar_pagina", () => {
         visitas.push(input);
         return { informe: "1. pulsa «Agregar» → pulsé." };
       },
-    }, "usar_pagina", { pasos: [{ pulsa: "Agregar" }] });
+    }, "use_page", { steps: [{ click: "Agregar" }] });
     assert.deepEqual((visitas[0]!.vista as Record<string, unknown>).files, PUBLICABLE);
   });
 
@@ -2243,8 +2243,8 @@ describe("la carpeta viaja con la vista de mirar_pagina y usar_pagina", () => {
         return { respuesta: "x" };
       },
     };
-    await runAgentTool(makeSession(), { ...conOjos, projectFiles: async () => ({ "/tests/a.spec.ts": "t" }) }, "mirar_pagina", { tipo: "medir", pregunta: "¿?" });
-    await runAgentTool(makeSession(), conOjos, "mirar_pagina", { tipo: "medir", pregunta: "¿?" });
+    await runAgentTool(makeSession(), { ...conOjos, projectFiles: async () => ({ "/tests/a.spec.ts": "t" }) }, "view_page", { mode: "measure", question: "¿?" });
+    await runAgentTool(makeSession(), conOjos, "view_page", { mode: "measure", question: "¿?" });
     assert.equal("files" in vistas[0]!, false);
     assert.equal("files" in vistas[1]!, false);
   });
@@ -2259,7 +2259,7 @@ describe("la carpeta viaja con la vista de mirar_pagina y usar_pagina", () => {
         vistas.push(input.vista as Record<string, unknown>);
         return { respuesta: "x" };
       },
-    }, "mirar_pagina", { tipo: "medir", pregunta: "¿?" });
+    }, "view_page", { mode: "measure", question: "¿?" });
     assert.equal(out.response.ok, true);
     assert.equal("files" in vistas[0]!, false);
   });

@@ -121,19 +121,16 @@ export default defineConfig({
       "lib/plan.test.ts",
       "lib/credits-client.test.ts",
       "components/app/credit-pill.test.tsx",
-      // El reductor SSE de la superficie Crear: distingue el muro de créditos
-      // de una generación fallida (reintentar no sirve para el primero).
-      "lib/use-generation.test.ts",
-      // Y el bucle de lectura entero, con React de verdad: un EOF sin evento
-      // terminal no puede dejar el spinner girando para siempre.
-      "lib/use-generation.stream.test.tsx",
+      // ⚰️ `lib/use-generation*.test.ts(x)`, el cliente de Crear: se fueron con
+      // `/api/generate` el 2026-10-06 (plans/crear-es-len, tarea 12).
       // Counter arithmetic of sanitizeForPublish. Lives at lib/ root beside the
       // module it covers; the older lib/html-engine.test.ts is node:test and
       // stays out of this runner.
       "lib/html-engine.sanitize-counters.test.ts",
       "lib/contract/**/*.test.ts",
       "lib/document/**/*.test.ts",
-      "lib/evals/**/*.test.ts",
+      // ⚰️ `lib/evals/**` (el cohorte de briefs y el marcador de `evals:pages`,
+      // que medían la tubería de Crear) se fue con Crear el 2026-10-06.
       "lib/page-engine/**/*.test.ts",
       "lib/generation/**/*.test.ts",
       "lib/html-gate/**/*.test.ts",
@@ -145,6 +142,7 @@ export default defineConfig({
       "lib/style-match/scrape/**/*.test.ts",
       "lib/style-match/extract/**/*.test.ts",
       "lib/style-match/direction.test.ts",
+      "lib/style-match/parse-direction.test.ts",
       "lib/style-match/character.test.ts",
       "lib/style-match/reference.test.ts",
       "lib/templates/visual-metadata.test.ts",
@@ -212,7 +210,6 @@ export default defineConfig({
       "lib/ai/needs-image-eyes.test.ts",
       "lib/package-scripts-contract.test.ts",
       "lib/ai/turn-credentials.test.ts",
-      "lib/ai/referencia-adjunta.test.ts",
       "lib/etiqueta-idioma.test.ts",
       // Sólo el fetch del adjunto (tope + plazo). El render de puppeteer del
       // mismo módulo NO se toca aquí: el import es dinámico y nunca corre.
@@ -353,10 +350,8 @@ export default defineConfig({
       // R1: sin su línea aquí un .test.ts existe, compila y NO CORRE NUNCA
       // (el `include` es lista blanca fichero a fichero, no un glob).
       "app/api/agent/esfuerzo/route.test.ts",
-      // Su gemela para el selector de modelo de Crear: la frontera donde entra
-      // lo que elige el navegador. Misma razón y misma lista blanca — sin esta
-      // línea el fichero existe, compila y NO CORRE NUNCA.
-      "app/api/crear/escritor/route.test.ts",
+      // ⚰️ Su gemela para el selector de modelo de Crear
+      // (`app/api/crear/escritor`) se fue con Crear el 2026-10-06.
       "app/api/auth/register/route.test.ts",
       // POST y GET del lienzo servido desde su propio origen (spec 2026-09-15).
       // `include` es LISTA BLANCA.
@@ -365,14 +360,13 @@ export default defineConfig({
       "app/api/lienzo/[docId]/route.test.ts",
       // El lienzo sirve el sitio entero (pieza 9 de Len 2.5).
       "app/api/lienzo/site/**/*.test.ts",
+      // Las fotos subidas sin R2 que `next start` no sirve solo (crear-es-len, 06/10).
+      "app/uploads/**/*.test.ts",
       "lib/lecturas-de-users-proyectan.test.ts",
       "lib/ninguna-prueba-a-oscuras.test.ts",
       "components/workspace-v2/panels/mando-esfuerzo.test.tsx",
-      // El selector de modelo de Crear: lo que enseña (fila de defecto, la del
-      // razonador apagada con motivo cuando hay imagen) y cómo se sale (Esc,
-      // clic fuera, flechas — el gancho compartido `use-mando-desplegable`).
-      // `include` es LISTA BLANCA: sin esta línea existiría y no correría nunca.
-      "components/workspace-v2/selector-de-modelo.test.tsx",
+      // ⚰️ El selector de modelo de Crear (`selector-de-modelo.test.tsx`) se fue
+      // con Crear el 2026-10-06.
       "lib/agent/brain.test.ts",
       // Len Dynamis (lib/agent/dynamis.ts): del cuerpo del turno a lo que lee el
       // modelo. `include` es LISTA BLANCA: sin esta línea no correría nunca.
@@ -383,6 +377,8 @@ export default defineConfig({
       // Los ojos del arnés de evals: sin esto vuelve a mirar sin `spec` ni
       // `guardadas`. LISTA BLANCA.
       "lib/agent/catalog.test.ts",
+      "lib/agent/tool-renames.test.ts",
+      "lib/agent/tools-in-english.test.ts",
       // Len 2.0: el sitio como ficheros, con el contrato de Read/Edit/Write/
       // Grep/Glob de Claude Code (plans/len-2/ficheros-plan.md). Piezas puras.
       "lib/agent/ficheros/**/*.test.ts",
@@ -394,6 +390,7 @@ export default defineConfig({
       // es LISTA BLANCA: sin esta linea no corre nunca.
       "lib/generation/model-policy-sin-huerfanas.test.ts",
       "lib/agent/loop.test.ts",
+      "lib/agent/write-preview.test.ts",
       // La compactación dentro del turno (pieza 2 de Len 2.5): todo el módulo.
       "lib/agent/compaction/**/*.test.ts",
       "lib/agent/retry-policy.test.ts",
@@ -524,6 +521,8 @@ export default defineConfig({
       // salvo `documento.ts` (binding nativo, que vitest SÍ carga). `include`
       // es LISTA BLANCA: sin esta línea estas pruebas no corren nunca.
       "lib/lienzo/**/*.test.ts",
+      // `fixRedirectHost` del middleware: producción en la caja vs. producción en local.
+      "lib/middleware-redirect-host.test.ts",
       "lib/publish/base-host.test.ts",
       "lib/publish/bake-surfaces.test.ts",
       "lib/publish/frame-origins.test.ts",
@@ -588,18 +587,17 @@ export default defineConfig({
       // Task 4 — the two fail-open ingestion surfaces.
       "app/api/projects/from-html/route.test.ts",
       "app/api/projects/from-template/route.test.ts",
-      // Task 4 step 3 — the AI creation surface. Ran four mutations after its
-      // last sanitize and validated behaviours after the row was written.
-      "app/api/generate/route.test.ts",
-      "app/api/generate/system-prompt.test.ts",
+      // ⚰️ Task 4 step 3 — the AI creation surface (`app/api/generate/`),
+      // retired with Crear on 2026-10-06: creating is the first message to Len.
       // Los eventos de uso (lib/uso/ y su ruta). LISTA BLANCA: sin estas dos
       // líneas sus pruebas no correrían y la puerta saldría verde igual.
       "lib/uso/**/*.test.ts",
       "app/api/uso/route.test.ts",
-      // Uno a uno, NO un glob: `lib/ai-stream/` tiene además pruebas escritas
-      // con `node:test` (generate, model-runtime-capture) que corren en el otro
-      // runner (`npm run test:node`); barrerlas aquí las hace fallar con "No
-      // test suite found" aunque estén sanas. Y ojo — `include` es una LISTA
+      // Uno a uno, NO un glob: `lib/ai-stream/` tenía además pruebas escritas
+      // con `node:test` (generate, model-runtime-capture — se fueron con Crear
+      // el 2026-10-06) que corrían en el otro runner (`npm run test:node`), y
+      // barrerlas aquí las hacía fallar con "No test suite found" aunque
+      // estuvieran sanas. Y ojo — `include` es una LISTA
       // BLANCA: un fichero nuevo NO CORRE hasta aparecer aquí.
       "lib/ai-stream/model-runtime.test.ts",
       "lib/ai-stream/inject-model-runtime.test.ts",
@@ -614,10 +612,11 @@ export default defineConfig({
       "lib/projects/preview.test.ts",
       "lib/projects/settings-patch.test.ts",
       "lib/projects/create-page.test.ts",
-      "lib/projects/paginas-declaradas.test.ts",
       // Las copias de ANTES no entran en el registro que ve el Agente.
       "lib/projects/cambios-para-el-agente.test.ts",
-      "lib/projects/construir-paginas-declaradas.test.ts",
+      // ⚰️ `paginas-declaradas` y `construir-paginas-declaradas` (las subpáginas
+      // que Crear construía de los enlaces de su portada) se fueron con Crear el
+      // 2026-10-06: con Len, una página es un fichero más.
       "lib/projects/inline-own-assets.test.ts",
       "lib/projects/assets-config.test.ts",
       "lib/projects/drift-pill.test.ts",
@@ -634,6 +633,11 @@ export default defineConfig({
       "lib/projects/chat-en-curso.pg.test.ts",
       // El chat nuevo: las charlas archivables y el 👍/👎 (plans/new-chat/).
       "lib/projects/chat-conversations.pg.test.ts",
+      // Crear es Len: el proyecto en blanco y su título (plans/crear-es-len).
+      "lib/projects/blank-project.pg.test.ts",
+      "lib/projects/blank.test.ts",
+      "lib/projects/chat-photos.test.ts",
+      "lib/workspace-v2/upload-photos.test.ts",
       "lib/projects/escritores-de-data.test.ts",
       "lib/notifications/**/*.test.ts",
     ],

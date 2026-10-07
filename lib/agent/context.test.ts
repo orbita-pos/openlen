@@ -47,7 +47,7 @@ describe("buildAgentContext", () => {
     const s = buildAgentContext({
       state: {},
       userBrief: null,
-      attachedImage: { url: "https://images.openlen.com/foo.webp", alt: "Foto de taco" },
+      attachedImages: [{ url: "https://images.openlen.com/foo.webp", alt: "Foto de taco" }],
     });
     expect(s).toContain("IMAGE ATTACHED BY THE USER");
     expect(s).toContain("https://images.openlen.com/foo.webp");
@@ -77,7 +77,7 @@ describe("buildAgentContext", () => {
     const s = buildAgentContext({
       state: {},
       userBrief: null,
-      attachedImage: { url: "http://localhost:3000/api/projects/p1/assets/casa.png" },
+      attachedImages: [{ url: "http://localhost:3000/api/projects/p1/assets/casa.png" }],
     });
     expect(s).toContain("http://localhost:3000/api/projects/p1/assets/casa.png");
     expect(s).toContain("DON'T TALK ABOUT IT");
@@ -96,17 +96,36 @@ describe("buildAgentContext", () => {
     expect(s).not.toContain("IMAGE ATTACHED BY THE USER");
   });
 
+  // Crear es Len: hasta 4 fotos por mensaje, cada una con su dirección y su
+  // etiqueta, y la regla de Crear de no promediarlas.
+  it("con varias fotos las nombra una a una, por su etiqueta, y no las promedia", () => {
+    const s = buildAgentContext({
+      state: {},
+      userBrief: null,
+      attachedImages: [
+        { url: "https://images.openlen.com/logo.png", alt: "Logo", visible: true },
+        { url: "https://images.openlen.com/local.jpg", visible: true },
+      ],
+    });
+    expect(s).toContain("IMAGES ATTACHED BY THE USER (2)");
+    expect(s).toContain("Image 1: https://images.openlen.com/logo.png (alt text: Logo)");
+    expect(s).toContain("Image 2: https://images.openlen.com/local.jpg");
+    expect(s).toContain("you CAN SEE THEM");
+    expect(s).toContain("they are NOT averaged");
+    expect(s).not.toContain("IMAGE ATTACHED BY THE USER:");
+  });
+
   // F5 — los píxeles viajan adjuntos: el bloque lo dice SOLO con visible=true.
   it("visible=true adds the PUEDES VERLA line; without it the text is the F2 shape", () => {
     const base = { state: {}, userBrief: null };
     const seen = buildAgentContext({
       ...base,
-      attachedImage: { url: "https://images.openlen.com/foo.webp", visible: true },
+      attachedImages: [{ url: "https://images.openlen.com/foo.webp", visible: true }],
     });
     expect(seen).toContain("CAN SEE IT");
     const blind = buildAgentContext({
       ...base,
-      attachedImage: { url: "https://images.openlen.com/foo.webp" },
+      attachedImages: [{ url: "https://images.openlen.com/foo.webp" }],
     });
     expect(blind).not.toContain("CAN SEE IT");
     expect(blind).toContain("IMAGE ATTACHED BY THE USER");
@@ -458,11 +477,14 @@ describe("buildAgentMessages", () => {
     expect(result.messages.some((m) => m.role === "assistant")).toBe(false);
   });
 
-  // El contexto y la petición viajan en UN solo mensaje de usuario, y ese
-  // mensaje es el ÚLTIMO: contexto primero, petición al final, pegada al punto
-  // de generación. Es la misma forma que la tarea 4 necesita para colgar los
-  // avisos por turno del final del turno y no a 35.000 caracteres de él.
-  it("funde contexto y petición en el último mensaje de usuario", () => {
+  // EL MENSAJE DEL DUEÑO VA SOLO, Y EL ÚLTIMO, como en DeepSeek (su contexto
+  // de entorno es OTRO mensaje: `agent.ts`, `runtimeContext.project`) y en
+  // Claude Code. Antes iba pegado detrás del contexto, todo en inglés, con
+  // «WHAT THE USER ASKS YOU NOW:» en medio, y en el primer turno de un proyecto
+  // —sin historia en su idioma— Len empezaba a narrar en inglés a un dueño que
+  // escribía en español (ensayo de caja de crear-es-len, 06/10). El contexto va
+  // justo antes; la petición sigue pegada al punto de generación.
+  it("la petición del dueño es el último mensaje, sola; el contexto, el de antes", () => {
     const result = buildAgentMessages({
       state: { publicado: false },
       userBrief: null,
@@ -474,17 +496,13 @@ describe("buildAgentMessages", () => {
     if (!result.ok) throw new Error("el fixture no debe exceder el presupuesto");
 
     const ultimo = result.messages[result.messages.length - 1];
-    expect(ultimo.role).toBe("user");
-    expect(ultimo.content).toContain(result.contextBlock);
-    expect(ultimo.content.endsWith("Añade un filtro interactivo")).toBe(true);
-    // El contexto va ANTES de la petición, no al revés.
-    expect(ultimo.content.indexOf(result.contextBlock)).toBeLessThan(
-      ultimo.content.lastIndexOf("Añade un filtro interactivo"),
-    );
-    // Y no queda un segundo mensaje de usuario suelto con el contexto: el
-    // único otro es el manual de la plataforma, que no lleva el contexto.
+    expect(ultimo).toEqual({ role: "user", content: "Añade un filtro interactivo" });
+    const contexto = result.messages[result.messages.length - 2];
+    expect(contexto.role).toBe("user");
+    expect(contexto.content).toBe(result.contextBlock);
+    // Los mensajes de usuario: el manual, el contexto y la petición.
     const usuario = result.messages.filter((m) => m.role === "user");
-    expect(usuario).toHaveLength(2);
+    expect(usuario).toHaveLength(3);
     expect(esAdjuntoDelManual(usuario[0].content)).toBe(true);
     expect(usuario[0].content).not.toContain(result.contextBlock);
   });
@@ -523,18 +541,20 @@ describe("buildAgentMessages", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("el fixture no debe exceder el presupuesto");
 
-    // system, el manual, el historial y el turno.
+    // system, el manual, el historial, el contexto y la petición.
     expect(result.messages.map((m) => m.role)).toEqual([
       "system",
       "user",
       "user",
       "assistant",
       "user",
+      "user",
     ]);
     expect(esAdjuntoDelManual(result.messages[1].content)).toBe(true);
     expect(result.messages[2].content).toBe("Añade un filtro");
     expect(result.messages[3].content).toBe("Filtro añadido.");
-    expect(result.messages[4].content).toContain(result.contextBlock);
+    expect(result.messages[4].content).toBe(result.contextBlock);
+    expect(result.messages[5].content).toBe("Ahora ponlo en dos columnas");
   });
 });
 
@@ -611,6 +631,15 @@ describe("los avisos del turno van al final, no enterrados", () => {
     expect(c.indexOf("Ponme el titular en azul")).toBeLessThan(c.indexOf("WHAT IS ALREADY KNOWN TO BE BROKEN"));
   });
 
+  it("y se devuelven aparte, para guardarlos con el turno (el historial los repone)", () => {
+    const r = buildAgentMessages({ ...base, turnoAnteriorMudo: true });
+    if (!r.ok) throw new Error("el fixture no debe exceder el presupuesto");
+    expect(r.avisos).toContain("your previous turn did NOT call any tool");
+    expect(ultimo(r).endsWith(r.avisos)).toBe(true);
+    const sin = buildAgentMessages(base);
+    expect(sin.ok && sin.avisos).toBe("");
+  });
+
   it("van MARCADOS: el usuario no escribió eso", () => {
     // Sin la marca, el modelo los lee como parte de la petición y contesta al
     // aviso en vez de al usuario. Es la misma marca que ya usa loop.ts.
@@ -645,5 +674,25 @@ describe("los avisos del turno van al final, no enterrados", () => {
     });
     expect(ctx).not.toContain("your previous turn did NOT call");
     expect(ctx).not.toContain("WHAT IS ALREADY KNOWN TO BE BROKEN");
+  });
+});
+
+// Crear es Len: la referencia por URL viaja con el mensaje, el mismo bloque que Crear.
+describe("buildAgentContext — la referencia por URL", () => {
+  const direccion = {
+    hostname: "",
+    palette: [{ role: "bg", hex: "#112233" }],
+    polarity: "dark" as const,
+    fontFamily: "Inter",
+    radius: "soft" as const,
+  };
+  it("con referencia, el bloque de Crear cierra el contexto", () => {
+    const s = buildAgentContext({ state: {}, userBrief: null, styleDirection: direccion });
+    expect(s).toContain("<visual-direction>");
+    expect(s).toContain("#112233 (bg)");
+    expect(s.trimEnd().endsWith("</visual-direction>")).toBe(true);
+  });
+  it("sin ella, ni rastro", () => {
+    expect(buildAgentContext({ state: {}, userBrief: null })).not.toContain("<visual-direction>");
   });
 });

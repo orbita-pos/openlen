@@ -38,8 +38,6 @@ const root = mkdtempSync(path.join(tmpdir(), "ol-iframe-"));
 process.env.PUBLISH_ROOT = root;
 
 import { publishToDir } from "./filesystem";
-import { generateHtmlStream, type PageStreamProvider } from "@/lib/ai-stream/generate";
-import type { StreamEvent } from "@/lib/ai-gateway";
 import { applyOps, tagWithOpIds } from "@/lib/html-engine";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { aplicarEdiciones } from "@/lib/page-engine/aplicar-ediciones";
@@ -69,36 +67,9 @@ const CON_SPOTIFY = PREVIA.replace(`<section id="musica"><h2>Escúchanos</h2></s
 const tiene = (html: string, src: string) => new RegExp(`<iframe[^>]*src="${src.replace(/[.?]/g, "\\$&")}"`).test(html);
 
 describe("lo que escribe el MODELO conserva su iframe de fuera de la lista", () => {
-  it("Crear: el stream con las opciones de la ruta y la puerta de crear", async () => {
-    const eventos: StreamEvent[] = [
-      { type: "start", id: "m1" },
-      { type: "text_delta", text: CON_SPOTIFY },
-      { type: "done", stopReason: { kind: "end_turn" } },
-    ];
-    const provider = {
-      async *stream() {
-        for (const e of eventos) yield e;
-      },
-    } as unknown as PageStreamProvider;
-    const { stream, done } = generateHtmlStream(
-      {
-        messages: [{ role: "user" as const, content: "la página de la banda" }],
-        userId: "u1",
-        // Las de `app/api/generate/route.ts`, no los defectos del crate.
-        htmlOpts: { injectOpIds: false, sanitize: false, normalizeOnEnd: false },
-      },
-      { provider, wroteWith: "reasoner", debit: (async () => {}) as never },
-    );
-    const reader = stream.getReader();
-    while (!(await reader.read()).done) {
-      /* vaciar */
-    }
-    const s = await done;
-    assert.ok(tiene(s.finalHtml ?? "", SPOTIFY), "el stream se lo quitó");
-    const listo = await preparePage(s.finalHtml!, { renderChecks: false });
-    assert.ok(listo.ok);
-    assert.ok(tiene(listo.html, SPOTIFY), "la puerta de crear se lo quitó");
-  });
+  // ⚰️ «Crear: el stream con las opciones de la ruta y la puerta de crear»
+  // (`generateHtmlStream`) se fue con `/api/generate` el 2026-10-06: crear es
+  // el primer mensaje a Len, cuyo camino es el del caso «Len» de aquí abajo.
 
   it("Chat, por operaciones: un replace de la sección que lo trae", async () => {
     const etiquetado = tagWithOpIds(PREVIA).taggedHtml;

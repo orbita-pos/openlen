@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { systemPromptFor } from "@/app/api/generate/system-prompt";
 import { aiDesignSystemMessage } from "@/app/api/templates/ai-design/system-prompt";
 import { instruccionesDeLen } from "@/lib/agent/catalog";
 import { swapJsClauses } from "@/lib/ai/js-clause";
@@ -39,9 +38,8 @@ const MENTIRAS: readonly [string, string][] = [
 
 function superficies(): [string, string][] {
   return [
-    // `{}` es el camino REAL: el mínimo es opt-OUT, sólo el literal "0" lo apaga.
-    ["crear (contrato mínimo)", systemPromptFor({})],
-    ["crear (contrato completo)", systemPromptFor({ OPENLEN_MIN_CONTRACT: "0" })],
+    // ⚰️ «crear», con sus contratos mínimo y completo, se fue con
+    // `/api/generate` el 2026-10-06: crear es el primer mensaje a Len.
     ["chat (ai-design)", aiDesignSystemMessage()],
     ["len (agente)", instruccionesDeLen()],
   ];
@@ -68,7 +66,7 @@ describe("y todas saben cómo se pone un mapa que de verdad funciona", () => {
   }
 });
 
-// ─── LAS LIBRERIAS, EN LAS CINCO ───────────────────────────────────────────
+// ─── LAS LIBRERIAS, EN TODAS ───────────────────────────────────────────────
 //
 // La tercera de las tres listas del hallazgo 4. Las otras dos —el saneador y
 // las ops de cabeza— las vigila `lib/ai/librerias-acuerdo.test.ts` contra el
@@ -76,7 +74,7 @@ describe("y todas saben cómo se pone un mapa que de verdad funciona", () => {
 // una capacidad que el prompt no nombra es una capacidad que no existe. Es la
 // leccion medida de js-clause.ts, donde el JavaScript llevaba abierto dias y
 // salian 0 de 6 paginas con codigo porque el prompt seguia prohibiendolo.
-describe("las cinco superficies ofrecen las librerias", () => {
+describe("todas las superficies ofrecen las librerias", () => {
   for (const [nombre, prompt] of superficies()) {
     it(`${nombre} — trae el bloque, y una sola vez`, () => {
       // Len decide dónde va su <script> desde el 2026-09-29: su bloque dice

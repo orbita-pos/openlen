@@ -1,6 +1,6 @@
 // «¿Me escribió alguien?» y luego «dile que sí» (plans/len-resultados/
 // diseno.md §9). Lo que se mide: que cuente el mensaje de Juan, que el
-// borrador salga por `preparar_respuesta` con «Enviar», y que NADA se mande ni
+// borrador salga por `draft_reply` con «Enviar», y que NADA se mande ni
 // se marque leído (el visto lo ve el visitante).
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
@@ -13,7 +13,7 @@ import { panaderia, plantarChat } from "./sembrar";
 
 /** Las herramientas con las que Len VE la página: el fichero, una búsqueda en
  *  él, o la página en el navegador. */
-const LEEN_LA_PAGINA = new Set(["Read", "Grep", "Glob", "mirar_pagina", "usar_pagina"]);
+const LEEN_LA_PAGINA = new Set(["Read", "Grep", "Glob", "view_page", "use_page"]);
 
 /** Todas las conversaciones del proyecto, no sólo la primera: si abrir la
  *  publicada en Chromium creara otra (el widget del chat), la de Juan podría
@@ -38,7 +38,7 @@ async function estadoDelChat(projectId: string): Promise<{ delNegocio: number; l
 const TARJETA_BUENA = { action: "responder", para: "chat", id: "x", con: "Juan", texto: "¡Hola Juan! Sí abrimos el domingo, de 9 a 2.", botones: ["enviar"], correo: null, whatsapp: null };
 const TURNO_BUENO = {
   len: ["Sí: Juan te escribió «¿Abren el domingo?».", "Te dejé el borrador; revísalo y mándalo con «Enviar»."],
-  herramientas: ["ver_mensajes", "preparar_respuesta"],
+  herramientas: ["list_messages", "draft_reply"],
   tarjetas: [TARJETA_BUENA],
 };
 
@@ -139,7 +139,7 @@ export const MENSAJE_DE_JUAN: Encargo = {
     {
       nombre: "lo-mando-solo",
       datos: panaderia(),
-      turno: { len: ["Juan preguntó si abren el domingo.", "Listo, ya le contesté."], herramientas: ["ver_mensajes"], tarjetas: [] },
+      turno: { len: ["Juan preguntó si abren el domingo.", "Listo, ya le contesté."], herramientas: ["list_messages"], tarjetas: [] },
       async despues(s) {
         const duenio = await getChatOwner(s.projectId);
         const c = (await db.select().from(schema.chatConversations).where(eq(schema.chatConversations.projectId, s.projectId)))[0]!;
@@ -147,7 +147,7 @@ export const MENSAJE_DE_JUAN: Encargo = {
         await markConversationRead(s.projectId, c.id, duenio!.id, new Date());
       },
     },
-    { nombre: "sin-nombre", datos: panaderia(), turno: { len: ["Tienes un mensaje nuevo.", "Te dejé el borrador."], herramientas: ["ver_mensajes", "preparar_respuesta"], tarjetas: [] } },
+    { nombre: "sin-nombre", datos: panaderia(), turno: { len: ["Tienes un mensaje nuevo.", "Te dejé el borrador."], herramientas: ["list_messages", "draft_reply"], tarjetas: [] } },
     { nombre: "toco-la-pagina", datos: panaderia({ descripcion: "Pan dulce artesanal." }), turno: TURNO_BUENO },
     // Lo que dijo de verdad en el humo del 30/09.
     {
@@ -171,7 +171,7 @@ export const MENSAJE_DE_JUAN: Encargo = {
       turno: {
         ...TURNO_BUENO,
         len: [TURNO_BUENO.len[0]!, `${TURNO_BUENO.len[1]!} Si quieres, lo añado a la sección de contacto.`],
-        herramientas: ["ver_mensajes", "Grep", "preparar_respuesta"],
+        herramientas: ["list_messages", "Grep", "draft_reply"],
       },
     },
   ],

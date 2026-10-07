@@ -545,7 +545,7 @@ function leerCandidatos(value: unknown): CandidatoDeContraste[] {
   return salida;
 }
 
-/** Chromium como lo arrancan los ojos. Lo usa también `usar_pagina`
+/** Chromium como lo arrancan los ojos. Lo usa también `use_page`
  *  (`lib/agent/usar-pagina.ts`), que necesita la `Browser` entera de Puppeteer. */
 export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
   // Los perfiles huerfanos del temporal, una vez por proceso y sin bloquear.

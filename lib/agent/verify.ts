@@ -13,6 +13,11 @@
 // Chrome, sin key, timeout, JSON malformado → veredicto "ok" con fallback=true
 // y el turno cierra como siempre. La verificación solo puede mejorar un turno
 // o dejarlo igual — nunca bloquearlo.
+//
+// ⚠️ DESDE EL 2026-10-06 EL BUCLE YA NO LLAMA A `verifyTurn` (plans/crear-es-len,
+// como DeepSeek: el arnés no obliga a mirar). Lo de aquí que sigue vivo lo usa
+// Len cuando decide mirar —`view_page` (`observarPagina`)— y
+// `verifyEditedPage` sólo lo llama `scripts/medir-ojos.ts`.
 
 import type { InlineImage, StreamEvent } from "@/lib/ai-gateway";
 import { esGritoDeLaPagina, renderHtmlToInlineImage } from "@/lib/ai/inline-image";
@@ -118,8 +123,9 @@ export interface VisualVerdict {
    * resultado fue que un creador que pidió cambiar un titular leía «prompt
    * devuelve null, confirm false» — en español, fuera cual fuera su idioma.
    *
-   * Al modelo estos hechos le llegan por `redactarLimites`, en el canal de
-   * `<limites-de-la-medida>` que sólo lee él; al usuario, por los avisos del
+   * Al modelo estos hechos le llegan cuando él mira (`observarPagina`, con
+   * `limitesDeLaMedicion`) —el sobre de la medición tras editar,
+   * `redactarLimites`, se retiró el 2026-10-06—; al usuario, por los avisos del
    * lienzo, traducidos a los diez idiomas. Aquí quedan para el registro y para
    * que las pruebas puedan fijarlos: un hecho que el medidor devuelve no se
    * tira en silencio.
@@ -130,7 +136,8 @@ export interface VisualVerdict {
    * en móvil y el contraste?
    *
    * 🔴 EXISTE PARA NO AFIRMAR UN EJE QUE NADIE MIRÓ, que es la regla que este
-   * repo ya escribió en `medicionLimpia` («un campo ausente no es un cero») y
+   * repo ya escribió en `medicionLimpia` (retirada el 2026-10-06) —«un campo
+   * ausente no es un cero»— y
    * que aquí faltaba. Los ojos son DOS renders: el de la foto y el del medidor.
    * Si el segundo se cae, `hechos.contrastes` queda vacío y `desbordaMovil` en
    * false por AUSENCIA, no por medida — y el veredicto sale `broken:false`
@@ -1505,7 +1512,7 @@ export interface MiradaParams {
    * el usuario tiene delante — igual que `VerifyParams.vista`.
    *
    * 🔴 ESTO FALTABA, y es el mismo defecto que arregló `f63b0cb9` en los ojos:
-   * `mirar_pagina` medía el documento PELADO mientras el lienzo le enseñaba al
+   * `view_page` medía el documento PELADO mientras el lienzo le enseñaba al
    * usuario el horneado (asistente, chat, sello). Dos páginas distintas, y la
    * herramienta que el modelo llama a mano hasta cuatro veces por turno era la
    * que miraba la que no existe.

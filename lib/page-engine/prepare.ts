@@ -20,8 +20,9 @@ import type {
 } from "./contract";
 
 /**
- * EL motor de la página: una tubería ordenada que crear, editar y el Agente
- * comparten, en vez de tres versiones escritas a mano.
+ * EL motor de la página: una tubería ordenada que el Chat y el Agente
+ * comparten (y crear, hasta que se retiró el 2026-10-06), en vez de una
+ * versión escrita a mano por superficie.
  *
  * Medido antes de escribir esto: de las etapas de abajo, la ruta de crear
  * corría todas y el Chat y el Agente NINGUNA salvo la puerta. Se creaba una
@@ -161,8 +162,9 @@ export async function preparePage(
   // modelo ES la página.
   const gated = await gate(
     current,
-    // `gateReservedMarker`, no `sanitizeForPublish`: por este motor pasan las TRES
-    // superficies del modelo —Crear, el Chat y Len— y ninguna otra. Lo que
+    // `gateReservedMarker`, no `sanitizeForPublish`: por este motor pasan las
+    // superficies del modelo —el Chat y Len; Crear también, hasta el
+    // 2026-10-06— y ninguna otra. Lo que
     // escribe el modelo no se le recorta; sólo se le aplica la puerta de
     // `data-slot-path`, que no admite excepción por procedencia.
     { sanitize: gateReservedMarker },

@@ -91,7 +91,7 @@ async function hostIsBlocked(hostname: string): Promise<boolean> {
  *      primera petición (medido), así que no es la defensa: sólo acota.
  *
  * Lo que NO cubre: un clic DE VERDAD (con gesto de usuario) en un enlace
- * `target="_blank"` dentro de una visita (`usar_pagina` intercepta los suyos
+ * `target="_blank"` dentro de una visita (`use_page` intercepta los suyos
  * con su preludio), y `--block-new-web-contents`, que en el headless nuevo no
  * hace nada (medido).
  */
@@ -100,7 +100,7 @@ export const BLOQUEO_DE_VENTANAS = `(function () {
   window.__olSinVentanas = true;
   // Sólo si sigue siendo el NATIVO: quien mide puede haber puesto antes el suyo,
   // que apunta a dónde manda la página (los graders de Len-Bench, el preludio de
-  // usar_pagina) y tampoco abre nada. Una página no se adelanta a esto: corre
+  // use_page) y tampoco abre nada. Una página no se adelanta a esto: corre
   // antes que sus scripts.
   try {
     if (/\\[native code\\]/.test(Function.prototype.toString.call(window.open))) {
@@ -179,7 +179,7 @@ export async function installSubresourceSsrfGuard(
      * `allowOrigins` —un `location.href = "https://wa.me/…"`, un `tel:`— se
      * corta y se avisa con su dirección, en vez de salir a la red.
      *
-     * Lo necesita `usar_pagina` (`lib/agent/usar-pagina.ts`), que usa la página
+     * Lo necesita `use_page` (`lib/agent/usar-pagina.ts`), que usa la página
      * como un visitante: un botón de WhatsApp no puede abrir WhatsApp de
      * verdad, y a dónde mandaba es justo el dato que Len tiene que ver. Sin la
      * opción, todo sigue como antes.

@@ -203,9 +203,10 @@ async function main() {
   console.log(`  storageUrl   : ${record.storageUrl}`);
   console.log(`  size         : ${record.size} bytes`);
 
-  // Capture the full-page reference screenshot inline (Quality S2). A
-  // template without a screenshot silently loses the multimodal vision
-  // boost in /api/generate, so a capture failure fails the whole add —
+  // Capture the full-page reference screenshot inline (Quality S2). The
+  // template page, cloning and the visual-metadata review all read it (it also
+  // fed /api/generate's multimodal reference until Crear was retired on
+  // 2026-10-06), so a capture failure fails the whole add —
   // re-run after fixing (or run `templates:capture-screenshots` for a
   // one-off backfill).
   console.log(`Capturing full-page reference screenshot...`);

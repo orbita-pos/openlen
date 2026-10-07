@@ -1145,7 +1145,7 @@ test("sin `vista`, se mide exactamente lo de siempre", async () => {
   assert.equal(medido, "<html><body><h1>Hola</h1></body></html>");
 });
 
-// ── Y LA OTRA SUPERFICIE QUE MIDE: `mirar_pagina` ───────────────────────────
+// ── Y LA OTRA SUPERFICIE QUE MIDE: `view_page` ──────────────────────────────
 //
 // 🔴 POR QUÉ ESTAS PRUEBAS SON DE COMPORTAMIENTO Y NO UN GREP. La guarda de las
 // cinco superficies (`lib/lienzo/documento.test.ts`) lee el FICHERO y busca
@@ -1155,7 +1155,7 @@ test("sin `vista`, se mide exactamente lo de siempre", async () => {
 // en verde en las 195 pruebas del plan y en las 5194 de la suite. Un fichero no
 // es una llamada.
 
-test("`mirar_pagina` mide el documento HORNEADO, como los ojos", async () => {
+test("`view_page` mide el documento HORNEADO, como los ojos", async () => {
   let medido = "";
   const r = await observarPagina(
     { html: PARAMS.html, tipo: "medir", pregunta: "¿se lee?", vista: VISTA },
@@ -1173,7 +1173,7 @@ test("`mirar_pagina` mide el documento HORNEADO, como los ojos", async () => {
   assert.notEqual(medido, PARAMS.html);
 });
 
-test("CONTRA-PRUEBA: sin `vista`, `mirar_pagina` mide lo de siempre", async () => {
+test("CONTRA-PRUEBA: sin `vista`, `view_page` mide lo de siempre", async () => {
   let medido = "";
   await observarPagina(
     { html: PARAMS.html, tipo: "medir", pregunta: "¿se lee?" },
@@ -1187,7 +1187,7 @@ test("CONTRA-PRUEBA: sin `vista`, `mirar_pagina` mide lo de siempre", async () =
   assert.equal(medido, PARAMS.html);
 });
 
-test("🔴 `mirar_pagina` dice los DOS límites, no sólo los diálogos", async () => {
+test("🔴 `view_page` dice los DOS límites, no sólo los diálogos", async () => {
   const r = await observarPagina(
     { html: PARAMS.html, tipo: "medir", pregunta: "¿qué tal?" },
     {
@@ -1368,13 +1368,13 @@ test("una llamada a /api/f/ sale en límites, sin acusar a la página", async ()
 
 // ── doctrina 4: lo que escribió la página va marcado como DATO ──────────────
 //
-// Las DOS ramas de `mirar_pagina`, y las dos a propósito. `medir` cita el texto
+// Las DOS ramas de `view_page`, y las dos a propósito. `medir` cita el texto
 // de los nodos ilegibles y las rutas a las que llama la página; `describir`
 // devuelve lo que el papel con visión TRANSCRIBE de la captura, que es lo
 // mismo con otro camino. Arreglar una y dejar la otra es exactamente la
 // asimetría que este fichero ya pagó dos veces (H3).
 
-test("🔴 `mirar_pagina` (medir) marca como DATO lo que citó de la página", async () => {
+test("🔴 `view_page` (medir) marca como DATO lo que citó de la página", async () => {
   const r = await observarPagina(
     { html: PARAMS.html, tipo: "medir", pregunta: "¿se lee?" },
     {
@@ -1394,7 +1394,7 @@ test("🔴 `mirar_pagina` (medir) marca como DATO lo que citó de la página", a
   );
 });
 
-test("🔴 `mirar_pagina` (describir) también — el papel con visión transcribe la página", async () => {
+test("🔴 `view_page` (describir) también — el papel con visión transcribe la página", async () => {
   const r = await observarPagina(
     { html: PARAMS.html, tipo: "describir", pregunta: "¿qué ves?" },
     {
@@ -1757,7 +1757,7 @@ test("🔴 los ojos cargan la carpeta: la foto y la medida reciben los ficheros 
   assert.deepEqual(enLaMedida, { files: CARPETA, pagina: "menu" });
 });
 
-test("🔴 `mirar_pagina` también: la medida recibe la carpeta", async () => {
+test("🔴 `view_page` también: la medida recibe la carpeta", async () => {
   let enLaMedida: unknown = null;
   await observarPagina(
     { html: PARAMS.html, tipo: "medir", pregunta: "¿se lee?", vista: { ...VISTA, files: CARPETA } },

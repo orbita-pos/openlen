@@ -74,12 +74,18 @@ describe("la barra viva", () => {
         startedAt: 1,
         actions: [
           { tool: "Read", status: "done", summary: "index.html" },
-          { tool: "elegir_foto", status: "running", summary: "" },
+          { tool: "find_photo", status: "running", summary: "" },
         ],
       }),
       { busy: true },
     );
     expect(s).toMatchObject({ kind: "working", activity: "photos", face: "buscando" });
+  });
+
+  it("una fila de antes del 2026-10-06, con el nombre viejo, dice lo mismo", () => {
+    expect(activityOf("elegir_foto")).toBe(activityOf("find_photo"));
+    expect(activityOf("mirar_pagina")).toBe("reading");
+    expect(activityOf("ver_visitas")).toBe("results");
   });
 
   it("escribiendo sin herramienta: trabajando, sin actividad", () => {
@@ -146,6 +152,34 @@ describe("la barra viva", () => {
     expect(liveStatus(t, { busy: false })).toEqual({ kind: "done", face: "terminado" });
   });
 
+  // Ensayo de caja de crear-es-len (07/10): el modelo mandó `enter_plan_mode`
+  // EN LA MISMA TANDA que `find_photo` y `Read`; la pregunta no era la última
+  // tarjeta y el chat no la veía: ni barra de espera ni tarjeta para aceptar.
+  // Como DeepSeek, la pregunta abierta sale de su llamada, esté donde esté.
+  it("🔴 la pregunta sin contestar cuenta aunque otras llamadas de su tanda vayan detrás", () => {
+    const preguntas = [{ id: "plan-mode", question: "Switch to plan mode?", intent: { kind: "plan-consent" as const } }];
+    const t = turn({
+      actions: [
+        { tool: "Read", status: "done", summary: "/index.html" },
+        { tool: "enter_plan_mode", status: "done", summary: "", pregunta: "Switch to plan mode?", preguntas },
+        { tool: "find_photo", status: "done", summary: "madera" },
+        { tool: "Read", status: "done", summary: "librerias.md" },
+      ],
+    });
+    expect(questionsOf(t)).toEqual(preguntas);
+    expect(liveStatus(t, { busy: false })).toMatchObject({ kind: "waiting", reason: "question", intent: "plan-consent" });
+  });
+
+  it("BRAZO DE CONTROL: una pregunta ya contestada en medio del turno no cuenta", () => {
+    const t = turn({
+      actions: [
+        { tool: "ask_user_question", status: "done", summary: "", pregunta: "¿Color?", respuesta: "azul" },
+        { tool: "Edit", status: "done", summary: "/index.html" },
+      ],
+    });
+    expect(questionOf(t)).toBeNull();
+  });
+
   it("🔴 pieza 7: una revisión del plan sin contestar al cerrar el turno es esperar, con su tarjeta", () => {
     const preguntas = [{ id: "plan-review", question: "Approve this plan and leave plan mode?", intent: { kind: "plan-review" as const, plan: "# Plan" } }];
     const t = turn({ actions: [{ tool: "exit_plan_mode", status: "done", summary: "", pregunta: "Approve this plan and leave plan mode?", preguntas }] });
@@ -165,7 +199,7 @@ describe("la barra viva", () => {
   });
 
   it("una tarjeta de publicar sin tocar espera tu aprobación; resuelta, ya no", () => {
-    const t = turn({ confirm: { action: "publicar", subdominio: "luna", idiomas: [], republicar: false } });
+    const t = turn({ confirm: { action: "publish", subdominio: "luna", idiomas: [], republicar: false } });
     expect(liveStatus(t, { busy: false })).toMatchObject({ kind: "waiting", reason: "publish" });
     expect(liveStatus(t, { busy: false, settledConfirms: new Set(["t1"]) }).kind).toBe("done");
   });

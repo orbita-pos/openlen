@@ -231,6 +231,9 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
         {
           messages: messagesForFireworks(messages),
           ...(withTools ? { tools: wireTools } : {}),
+          // LOS TROZOS DE LOS ARGUMENTOS, para pintar un Write mientras se
+          // escribe. Sólo con herramientas: el cierre (`closeOut`) no tiene.
+          ...(withTools ? { streamToolArgs: true } : {}),
           maxOutputTokens,
           temperature,
           requestId: options.requestId,

@@ -4,6 +4,7 @@
 // Sin pasos ni herramientas: el chat del móvil no es el de la web.
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { tarjetaDeConfirmacion, type TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
+import { currentToolName } from "@/lib/agent/tool-renames";
 import type { EventoSse } from "@/lib/len-bench/sse";
 
 export type EstadoLocal = "ok" | "enviando" | "noSeEnvio" | "noSeSubio" | "transcribiendo" | "noSeEntendio";
@@ -189,21 +190,22 @@ const AVANCES: Record<string, string> = {
   Glob: "leyendo",
   Edit: "cambiando",
   Write: "cambiando",
-  editar_imagen: "cambiando",
-  mirar_pagina: "comprobando",
-  usar_pagina: "comprobando",
+  edit_image: "cambiando",
+  view_page: "comprobando",
+  use_page: "comprobando",
   verificar_diseno: "comprobando",
-  elegir_foto: "fotos",
+  find_photo: "fotos",
   leer_de_internet: "internet",
-  ver_visitas: "visitas",
-  ver_formularios: "formularios",
-  ver_mensajes: "mensajes",
-  preparar_respuesta: "borrador",
-  publicar: "publicar",
-  activar_modulo: "modulo",
-  revertir_ultimo_cambio: "deshaciendo",
+  get_visits: "visitas",
+  list_form_submissions: "formularios",
+  list_messages: "mensajes",
+  draft_reply: "borrador",
+  publish: "publicar",
+  toggle_module: "modulo",
+  undo_last_change: "deshaciendo",
 };
 
 export function claveDeAvance(herramienta: string | null): string | null {
-  return herramienta ? (AVANCES[herramienta] ?? "trabajando") : null;
+  // Con el nombre de hoy: una fila guardada antes del 2026-10-06 trae el de antes.
+  return herramienta ? (AVANCES[currentToolName(herramienta)] ?? "trabajando") : null;
 }

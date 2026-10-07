@@ -17,6 +17,7 @@
   },
   "turn": {
     "imageSent": "이미지 전송됨",
+    "imagesSent": "이미지 {count}개 전송됨",
     "homePage": "홈"
   },
   "proceso": {

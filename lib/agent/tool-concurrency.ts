@@ -19,23 +19,23 @@ type Classifier = (args: Record<string, unknown>) => boolean;
 
 const always: Classifier = () => true;
 
-/** `usar_pagina` escribe en la base REAL de la página cuando un clic manda un
+/** `use_page` escribe en la base REAL de la página cuando un clic manda un
  *  formulario o dispara su JavaScript, y una visita con sesión abre una en el
  *  backend: dos así a la vez se pisan. De un clic no se puede saber de antemano
- *  si escribe, así que cualquier `pulsa` la deja exclusiva (§11 de la
+ *  si escribe, así que cualquier `click` la deja exclusiva (§11 de la
  *  investigación). Escribir en un campo o elegir una opción no manda nada. */
 const visitWithoutClicks: Classifier = (args) => {
   if (args.sign_in_as !== undefined && typeof args.sign_in_as !== "string") return false;
   if (typeof args.sign_in_as === "string" && args.sign_in_as.trim()) return false;
-  const pasos = args.pasos;
+  const pasos = args.steps;
   if (!Array.isArray(pasos) || pasos.length === 0) return false;
-  return pasos.every((p) => typeof p === "object" && p !== null && !("pulsa" in p));
+  return pasos.every((p) => typeof p === "object" && p !== null && !("click" in p));
 };
 
 /** Las declaraciones, conservadoras como las de DeepSeek: lectura de ficheros,
  *  búsqueda y lectura web, y lo que sólo lee del proyecto (visitas, formularios,
  *  mensajes, mirar la página). Los nombres web son `NOMBRE_WEB_SEARCH` y
- *  `NOMBRE_WEB_FETCH` (la prueba lo sujeta). `elegir_foto` NO: su cuenta de
+ *  `NOMBRE_WEB_FETCH` (la prueba lo sujeta). `find_photo` NO: su cuenta de
  *  búsquedas vacías seguidas depende del orden. */
 const CLASSIFIERS: Readonly<Record<string, Classifier>> = {
   Read: always,
@@ -43,11 +43,11 @@ const CLASSIFIERS: Readonly<Record<string, Classifier>> = {
   Glob: always,
   web_search: always,
   web_fetch: always,
-  ver_visitas: always,
-  ver_formularios: always,
-  ver_mensajes: always,
-  mirar_pagina: always,
-  usar_pagina: visitWithoutClicks,
+  get_visits: always,
+  list_form_submissions: always,
+  list_messages: always,
+  view_page: always,
+  use_page: visitWithoutClicks,
   // Pieza 5: como DeepSeek, leer un evento es seguro; las dos búsquedas no.
   session_event_read: always,
 };

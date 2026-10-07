@@ -24,6 +24,7 @@ import {
 } from "./panels/chat-panel";
 import { useIsMobile } from "./use-is-mobile";
 import { NewChatPanel } from "./chat/new-chat-panel";
+import type { PendingAttachments } from "./chat/use-agent-chat";
 import { CHAT_WIDTH_DEFAULT, setChatLayout, useChatLayout, useChatVersion, useChatWidth } from "./chat/use-chat-version";
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { PastePanel } from "./panels/paste-panel";
@@ -243,6 +244,8 @@ interface LeftSidebarProps {
   /** Ver `ChatPanelProps.pendingDraftAutoSend`. */
   pendingDraftAutoSend?: boolean;
   onPendingDraftConsumed?: () => void;
+  /** Las fotos y la referencia del primer mensaje (plans/crear-es-len). */
+  pendingAttachments?: PendingAttachments | null;
   /** The account section shown in the workspace CENTER ("page" = the canvas).
    *  The global-section rail icons set this; the parent renders the section. */
   activeSection?: SectionView;
@@ -301,6 +304,7 @@ export function LeftSidebar({
   pendingDraft = null,
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
+  pendingAttachments = null,
   sitePages = [],
   activeSitePage = null,
 }: LeftSidebarProps) {
@@ -523,6 +527,7 @@ export function LeftSidebar({
                 pendingDraft={pendingDraft}
                 pendingDraftAutoSend={pendingDraftAutoSend}
                 onPendingDraftConsumed={onPendingDraftConsumed}
+                pendingAttachments={pendingAttachments}
                 onClose={onToggleCollapse}
               />
             )}
@@ -543,6 +548,7 @@ export function LeftSidebar({
                 pendingDraft={pendingDraft}
                 pendingDraftAutoSend={pendingDraftAutoSend}
                 onPendingDraftConsumed={onPendingDraftConsumed}
+                pendingAttachments={pendingAttachments}
                 sitePages={sitePages}
               />
             )}

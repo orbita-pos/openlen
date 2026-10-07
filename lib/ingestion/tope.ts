@@ -17,8 +17,9 @@ import { PLAN_LIMITS, checkAndConsume, getUserPlan, userLimitKey } from "@/lib/l
  * Consume una unidad del tope de ingestión de este usuario.
  *
  * Devuelve `null` cuando puede pasar, o la `Response` 429 ya montada cuando no
- * — mismo cuerpo que el 429 de `/api/generate`, para que el cliente no tenga
- * que aprenderse dos formas de la misma negativa.
+ * — el mismo cuerpo que tenía el 429 de `/api/generate` (retirado el
+ * 2026-10-06), para que el cliente no tuviera que aprenderse dos formas de la
+ * misma negativa.
  */
 export async function topeDeIngestion(userId: string): Promise<Response | null> {
   const plan = await getUserPlan(userId);

@@ -202,8 +202,8 @@ export function scriptFor(id: ScenarioId, turnoId: string): ScriptStep[] {
         wait(900, "text", { text: "Voy con las dos cosas: primero fotos de pan recién hecho para la portada y después el formulario de encargos.\n\n" }),
         wait(300, "action", { tool: "Read", status: "running", summary: "index.html" }),
         wait(700, "action", { tool: "Read", status: "done", summary: "index.html" }),
-        wait(200, "action", { tool: "elegir_foto", status: "running", summary: "" }),
-        wait(1400, "action", { tool: "elegir_foto", status: "done", summary: "pan de masa madre" }),
+        wait(200, "action", { tool: "find_photo", status: "running", summary: "" }),
+        wait(1400, "action", { tool: "find_photo", status: "done", summary: "pan de masa madre" }),
         wait(200, "action", { tool: "Edit", status: "running", summary: "index.html" }),
         wait(1200, "html", { html: demoPage({ photos: true, form: false }), page: null, versionPrevia: "v-antes" }),
         wait(100, "action", {
@@ -373,19 +373,19 @@ export function scriptFor(id: ScenarioId, turnoId: string): ScriptStep[] {
     case "publish":
       return [
         ...head,
-        wait(700, "action", { tool: "publicar", status: "running", summary: "" }),
-        wait(800, "action", { tool: "publicar", status: "done", summary: "panaderia-luna" }),
-        wait(100, "confirm", { action: "publicar", subdominio: "panaderia-luna", idiomas: ["es", "en"], republicar: false }),
+        wait(700, "action", { tool: "publish", status: "running", summary: "" }),
+        wait(800, "action", { tool: "publish", status: "done", summary: "panaderia-luna" }),
+        wait(100, "confirm", { action: "publish", subdominio: "panaderia-luna", idiomas: ["es", "en"], republicar: false }),
         wait(200, "text", { text: "Antes de publicar te pregunto: es tu dirección pública. Puedes cambiarla antes de publicar." }),
         wait(100, "done", DONE({ centicredits: 35, durationMs: 3_100 })),
       ];
     case "reply":
       return [
         ...head,
-        wait(700, "action", { tool: "ver_mensajes", status: "running", summary: "" }),
-        wait(900, "action", { tool: "ver_mensajes", status: "done", summary: "1 sin leer" }),
-        wait(200, "action", { tool: "preparar_respuesta", status: "running", summary: "" }),
-        wait(700, "action", { tool: "preparar_respuesta", status: "done", summary: "Ana" }),
+        wait(700, "action", { tool: "list_messages", status: "running", summary: "" }),
+        wait(900, "action", { tool: "list_messages", status: "done", summary: "1 sin leer" }),
+        wait(200, "action", { tool: "draft_reply", status: "running", summary: "" }),
+        wait(700, "action", { tool: "draft_reply", status: "done", summary: "Ana" }),
         wait(100, "confirm", {
           action: "responder",
           para: "formulario",
