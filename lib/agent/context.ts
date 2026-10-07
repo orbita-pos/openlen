@@ -416,7 +416,15 @@ export interface BuildAgentMessagesArgs {
 }
 
 export type BuildAgentMessagesResult =
-  | { ok: true; messages: Message[]; systemPrompt: string; contextBlock: string }
+  | {
+      ok: true;
+      messages: Message[];
+      systemPrompt: string;
+      contextBlock: string;
+      /** Los avisos del turno, tal y como van detrás de las palabras del dueño:
+       *  la ruta los guarda con el turno y el historial los repone en su sitio. */
+      avisos: string;
+    }
   | { ok: false; reason: "too_large" };
 
 // ⚰️ Aquí vivía `PETICION_DEL_USUARIO` («WHAT THE USER ASKS YOU NOW:»), la
@@ -517,5 +525,5 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     { role: "user", content: contextBlock },
     { role: "user", content: `${args.prompt}${avisos}` },
   ];
-  return { ok: true, messages, systemPrompt, contextBlock };
+  return { ok: true, messages, systemPrompt, contextBlock, avisos };
 }

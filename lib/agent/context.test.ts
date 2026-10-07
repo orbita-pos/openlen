@@ -631,6 +631,15 @@ describe("los avisos del turno van al final, no enterrados", () => {
     expect(c.indexOf("Ponme el titular en azul")).toBeLessThan(c.indexOf("WHAT IS ALREADY KNOWN TO BE BROKEN"));
   });
 
+  it("y se devuelven aparte, para guardarlos con el turno (el historial los repone)", () => {
+    const r = buildAgentMessages({ ...base, turnoAnteriorMudo: true });
+    if (!r.ok) throw new Error("el fixture no debe exceder el presupuesto");
+    expect(r.avisos).toContain("your previous turn did NOT call any tool");
+    expect(ultimo(r).endsWith(r.avisos)).toBe(true);
+    const sin = buildAgentMessages(base);
+    expect(sin.ok && sin.avisos).toBe("");
+  });
+
   it("van MARCADOS: el usuario no escribió eso", () => {
     // Sin la marca, el modelo los lee como parte de la petición y contesta al
     // aviso en vez de al usuario. Es la misma marca que ya usa loop.ts.

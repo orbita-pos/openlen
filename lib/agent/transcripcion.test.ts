@@ -90,6 +90,20 @@ describe("historialDesdeLaBase", () => {
     expect(h.some((m) => m.content === MARCA_DE_TURNO_DETENIDO)).toBe(false);
   });
 
+  // COMO DEEPSEEK, LO QUE SE LE DIJO AL MODELO SE QUEDA EN SU SITIO. DeepSeek
+  // devuelve el razonamiento de cada turno («passed back verbatim») y TAMBIÉN
+  // guarda en la sesión el contexto con el que razonó. Len guardaba lo primero
+  // y tiraba lo segundo: un «The system notice says…» de un turno viejo, sin
+  // el aviso al lado, se leía como si el aviso fuera de AHORA, y Len rehacía lo
+  // que el dueño había parado (ensayo de caja de crear-es-len, 07/10).
+  it("🔴 los avisos de un turno vuelven pegados a las palabras del dueño, como se mandaron", () => {
+    const avisos = "\n\nSYSTEM (the user did NOT write this):\nNOTICE: your previous turn did NOT call any tool.";
+    const h = historialDesdeLaBase([
+      { userText: "¿cómo va mi página?", assistantReasoning: "Sin visitas.", transcript: { mensajes: [], leidos: [], avisos } },
+    ]);
+    expect(h[0]).toEqual({ role: "user", content: `¿cómo va mi página?${avisos}`, opensTurn: true });
+  });
+
   it("una fila sin transcripción (anterior a H4, o del Chat) cae a su texto", () => {
     const h = historialDesdeLaBase([fila("hola", null, "Hola, ¿qué cambiamos?")]);
     expect(h).toEqual([

@@ -98,6 +98,11 @@ export interface TranscripcionGuardada {
   /** El dueño paró el turno con ■ antes de que terminara (el `interrupted` de
    *  DeepSeek). El historial lo dice con `MARCA_DE_TURNO_DETENIDO`. */
   readonly detenido?: true;
+  /** Los avisos del turno (`avisosDelTurno`), tal y como fueron detrás de las
+   *  palabras del dueño. Como DeepSeek, que guarda en la sesión el contexto con
+   *  el que el modelo razonó: el razonamiento de este turno vuelve en el
+   *  historial (H15), y sin su aviso al lado se leía como de AHORA. */
+  readonly avisos?: string;
 }
 
 // La marca que va detrás de un turno que el dueño paró vive en
@@ -258,7 +263,9 @@ export function notaDeLaFoto(foto: { url: string; alt?: string }, estado: "vista
  *  siempre, byte a byte; con una, el de siempre también. */
 function mensajeDelDueno(f: FilaDelHistorial, fotos: FotosDeLaConversacion): MensajeDelHistorial {
   const adjuntas = photosOf(f.attachedImage);
-  if (adjuntas.length === 0) return { role: "user", content: f.userText, opensTurn: true };
+  // Como se mandó: sus palabras y, detrás, los avisos de ese turno.
+  const texto = `${f.userText}${f.transcript?.avisos ?? ""}`;
+  if (adjuntas.length === 0) return { role: "user", content: texto, opensTurn: true };
   const notas: string[] = [];
   const imagenes: InlineImage[] = [];
   for (const adjunta of adjuntas) {
@@ -270,7 +277,7 @@ function mensajeDelDueno(f: FilaDelHistorial, fotos: FotosDeLaConversacion): Men
   return {
     role: "user",
     opensTurn: true,
-    content: `${f.userText}\n\n${notas.join("\n")}`,
+    content: `${texto}\n\n${notas.join("\n")}`,
     ...(imagenes.length > 0 ? { images: imagenes } : {}),
   };
 }

@@ -1048,6 +1048,10 @@ async function correrTurno(
                     ...(goalActual ? { goal: goalActual } : {}),
                     // El ■ del dueño, para que el turno siguiente lo sepa.
                     ...(detenido ? { detenido: true as const } : {}),
+                    // Los avisos con los que razonó este turno, para que su
+                    // razonamiento (que vuelve en el historial) tenga su aviso al
+                    // lado y no se lea como de AHORA. Como DeepSeek.
+                    ...(built.ok && built.avisos ? { avisos: built.avisos } : {}),
                   }
                 : // LOTE 7-8: sin transcripción (el bucle reventó), la foto del
                   // estado si el turno lo cambió —lo plegado es de ANTES de la
