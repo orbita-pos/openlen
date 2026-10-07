@@ -943,6 +943,9 @@ async function correrTurno(
        *  Vive fuera del try por lo mismo que `mutoDurable`: lo lee el `finally`
        *  al escribir la fila. Ver `corteDelTurno`. */
       let corte: AgentErrorCode | null = null;
+      /** Lo paró el dueño con ■ (no el perro del silencio): va en la
+       *  transcripción y el historial siguiente lo dice (`MARCA_DE_TURNO_DETENIDO`). */
+      let detenido = false;
       // EL REGISTRO DEL TURNO, del lado del SERVIDOR. Los tres viven fuera del
       // try por el mismo motivo que `mutoDurable`: quien los vuelca es el
       // `finally`, y el turno que hay que poder leer después es el que revienta.
@@ -1043,6 +1046,8 @@ async function correrTurno(
                     ...(planActivo ? { planMode: true as const } : {}),
                     // Pieza 8: y el encargo como queda, que es de donde lo pliega el siguiente.
                     ...(goalActual ? { goal: goalActual } : {}),
+                    // El ■ del dueño, para que el turno siguiente lo sepa.
+                    ...(detenido ? { detenido: true as const } : {}),
                   }
                 : // LOTE 7-8: sin transcripción (el bucle reventó), la foto del
                   // estado si el turno lo cambió —lo plegado es de ANTES de la
@@ -1357,6 +1362,7 @@ async function correrTurno(
         mutoDurable = mutoDurable || result.mutoDurable;
         transcripcionDelTurno = result.transcripcion ?? null;
         corte = corteDelTurno({ ...result, mutoDurable: mutoDurable || estadoCambiado() });
+        detenido = canceladoAProposito && result.errorCode === "cancelled";
 
         // ⚰️ Aquí se guardaba la suite de la página (`marcarRegresiones` →
         // `actualizarSuite`). Ver arriba, donde se recogía: se fue con los ojos.

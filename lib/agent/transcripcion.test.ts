@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Message } from "@/lib/ai-gateway";
 import {
+  MARCA_DE_TURNO_DETENIDO,
   NO_CABE,
   RESULTADO_VACIADO,
   historialDesdeLaBase,
@@ -57,6 +58,36 @@ describe("historialDesdeLaBase", () => {
     ]);
     expect(h[1]!.functionCalls).toEqual([{ name: "ask_user_question", args: { questions: [{ id: "q1", question: "¿Qué dirección quieres?" }] } }]);
     expect(h[2]!.functionResponses![0]!.name).toBe("ask_user_question");
+  });
+
+  // Ensayo de caja de crear-es-len (06/10): el dueño paró con ■ una «reescribe
+  // la portada» a mitad del Write; el historial sólo decía «La escribo entera.»
+  // y el turno siguiente («¿cómo va mi página?») la rehízo sin que nadie se lo
+  // pidiera. Como Claude Code («[Request interrupted by user]»): se le dice.
+  it("🔴 un turno que el dueño paró con ■ lleva la marca detrás de lo que alcanzó a hacer", () => {
+    const h = historialDesdeLaBase([
+      { userText: "reescribe la portada", assistantReasoning: "La escribo entera.", transcript: { mensajes: [], leidos: [], detenido: true } },
+      fila("¿cómo va mi página?", null, "Sin visitas todavía."),
+    ]);
+    expect(h.slice(0, 3)).toEqual([
+      { role: "user", content: "reescribe la portada", opensTurn: true },
+      { role: "assistant", content: "La escribo entera." },
+      { role: "user", content: MARCA_DE_TURNO_DETENIDO },
+    ]);
+    expect(h[3]).toEqual({ role: "user", content: "¿cómo va mi página?", opensTurn: true });
+  });
+
+  it("la marca va también detrás de las llamadas que sí se hicieron", () => {
+    const h = historialDesdeLaBase([
+      { userText: "cambia el título", assistantReasoning: "", transcript: { mensajes: leer("/index.html", PAGINA), leidos: [], detenido: true } },
+    ]);
+    expect(h.at(-1)).toEqual({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
+    expect(h[2]!.functionResponses).toHaveLength(1);
+  });
+
+  it("BRAZO DE CONTROL: un turno que terminó no lleva marca", () => {
+    const h = historialDesdeLaBase([fila("hola", null, "Hola.")]);
+    expect(h.some((m) => m.content === MARCA_DE_TURNO_DETENIDO)).toBe(false);
   });
 
   it("una fila sin transcripción (anterior a H4, o del Chat) cae a su texto", () => {

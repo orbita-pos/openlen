@@ -94,7 +94,21 @@ export interface TranscripcionGuardada {
   /** PIEZA 8 · el encargo como quedó al cerrar el turno (`goalFromRows` lo
    *  pliega). Ausente = no había; `null` = se quitó. */
   readonly goal?: GoalSnapshot | null;
+  /** El dueño paró el turno con ■ antes de que terminara (el `interrupted` de
+   *  DeepSeek). El historial lo dice con `MARCA_DE_TURNO_DETENIDO`. */
+  readonly detenido?: true;
 }
+
+/**
+ * LO QUE EL MODELO LEE DETRÁS DE UN TURNO QUE EL DUEÑO PARÓ, como el
+ * «[Request interrupted by user]» de Claude Code. Sin ella, un «La escribo
+ * entera.» cortado a mitad del Write se leía como una promesa pendiente, y el
+ * turno siguiente la cumplía aunque el dueño hubiera pasado a otra cosa
+ * (ensayo de caja de crear-es-len, 06/10). Sólo el hecho: qué hacer con él lo
+ * decide el modelo con lo que diga el dueño después.
+ */
+export const MARCA_DE_TURNO_DETENIDO =
+  "[Request interrupted by the owner (■): this turn did not finish, and only what is above got done.]";
 
 /** Una fila de `projectChatMessages`, con lo que hace falta para el historial. */
 export interface FilaDelHistorial {
@@ -287,6 +301,7 @@ export function historialDesdeLaBase(
     } else if (f.assistantReasoning.trim()) {
       mensajes.push({ role: "assistant", content: f.assistantReasoning });
     }
+    if (f.transcript?.detenido) mensajes.push({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
   }
   return microcompactar(mensajes, presupuesto);
 }
