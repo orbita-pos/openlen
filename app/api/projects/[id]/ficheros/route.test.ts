@@ -11,11 +11,13 @@ vi.mock("@/lib/db", () => {
   return { db: { select: () => cadena }, schema: { projects: { id: "id", userId: "userId" } } };
 });
 vi.mock("@/lib/agent/terminal/editar-a-mano", () => ({ guardarAMano: vi.fn() }));
+vi.mock("@/lib/agent/terminal/operar-a-mano", () => ({ operarAMano: vi.fn() }));
 vi.mock("@/lib/agent/herramientas-de-ficheros", () => ({ cargarFicherosDeLaTerminal: vi.fn() }));
 vi.mock("@/lib/agent/terminal/solo-lectura", () => ({ soloLecturaDeLaTerminal: vi.fn() }));
 vi.mock("@/lib/agent/tools", () => ({ realDeps: () => ({}) }));
 
-import { PUT } from "./route";
+import { DELETE, PATCH, POST, PUT } from "./route";
+import { operarAMano } from "@/lib/agent/terminal/operar-a-mano";
 import { auth } from "@/auth";
 import { guardarAMano } from "@/lib/agent/terminal/editar-a-mano";
 
@@ -69,5 +71,56 @@ describe("PUT /api/projects/[id]/ficheros — editar a mano (la #18)", () => {
 
     vi.mocked(guardarAMano).mockResolvedValueOnce({ ok: false, motivo: "no_existe" });
     expect((await pedir(BIEN)).status).toBe(404);
+  });
+});
+
+// CREAR, RENOMBRAR Y BORRAR (el explorador como el de VS Code). Igual de finas:
+// la forma del cuerpo y el código de cada salida; lo de verdad, en node:test.
+describe("POST, PATCH y DELETE — crear, renombrar y borrar desde el explorador", () => {
+  const params = { params: Promise.resolve({ id: "p1" }) };
+  const req = (metodo: string, cuerpo?: unknown, qs = "") =>
+    new Request(`http://x/api/projects/p1/ficheros${qs}`, { method: metodo, ...(cuerpo !== undefined ? { body: JSON.stringify(cuerpo) } : {}) });
+  beforeEach(() => {
+    propios.splice(0, propios.length, { id: "p1" });
+    vi.mocked(auth).mockReset();
+    vi.mocked(operarAMano).mockReset();
+    comoUsuario("u1");
+  });
+
+  it("401 sin sesión y 404 ajeno, sin tocar nada", async () => {
+    comoUsuario(null);
+    expect((await POST(req("POST", { ruta: "/js/a.js" }), params)).status).toBe(401);
+    comoUsuario("u1");
+    propios.splice(0);
+    expect((await DELETE(req("DELETE", undefined, "?ruta=/js"), params)).status).toBe(404);
+    expect(operarAMano).not.toHaveBeenCalled();
+  });
+
+  it("crear: la operación con su ruta; 400 sin ruta absoluta", async () => {
+    vi.mocked(operarAMano).mockResolvedValue({ ok: true, rutas: ["/js/a.js"] });
+    const r = await POST(req("POST", { ruta: "/js/a.js" }), params);
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ rutas: ["/js/a.js"] });
+    expect(operarAMano).toHaveBeenCalledWith("p1", "u1", { tipo: "crear", ruta: "/js/a.js" });
+    expect((await POST(req("POST", { ruta: "js/a.js" }), params)).status).toBe(400);
+  });
+
+  it("renombrar: { de, a }; «existe» y «pagina» son 409, «rechazado» 422", async () => {
+    vi.mocked(operarAMano).mockResolvedValueOnce({ ok: false, motivo: "existe", rutas: ["/b.js"] });
+    expect((await PATCH(req("PATCH", { de: "/a.js", a: "/b.js" }), params)).status).toBe(409);
+    vi.mocked(operarAMano).mockResolvedValueOnce({ ok: false, motivo: "pagina", rutas: ["/menu/index.html"] });
+    const p = await PATCH(req("PATCH", { de: "/menu", a: "/carta" }), params);
+    expect(p.status).toBe(409);
+    expect(await p.json()).toEqual({ error: "pagina", rutas: ["/menu/index.html"] });
+    vi.mocked(operarAMano).mockResolvedValueOnce({ ok: false, motivo: "rechazado", detalle: "no" });
+    expect((await PATCH(req("PATCH", { de: "/a.js", a: "/x/y.js" }), params)).status).toBe(422);
+    expect(operarAMano).toHaveBeenLastCalledWith("p1", "u1", { tipo: "renombrar", de: "/a.js", a: "/x/y.js" });
+  });
+
+  it("borrar: ?ruta=; la raíz no se borra", async () => {
+    vi.mocked(operarAMano).mockResolvedValue({ ok: true, rutas: ["/js/a.js"] });
+    expect((await DELETE(req("DELETE", undefined, "?ruta=/js"), params)).status).toBe(200);
+    expect(operarAMano).toHaveBeenCalledWith("p1", "u1", { tipo: "borrar", ruta: "/js" });
+    expect((await DELETE(req("DELETE", undefined, "?ruta=/"), params)).status).toBe(400);
   });
 });

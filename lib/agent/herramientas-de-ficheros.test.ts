@@ -1955,3 +1955,91 @@ describe("convertir una página en app", () => {
     assert.match(vistos[5]!, /Converted: this project is now a web app/);
   });
 });
+
+// EL EXPLORADOR COMO EL DE VS CODE (`lib/agent/terminal/operar-a-mano.ts`):
+// crear, renombrar y borrar ficheros y carpetas a mano, por el camino de la
+// terminal del usuario y con sus guardas.
+describe("crear, renombrar y borrar a mano, desde el explorador", () => {
+  const conSitio = () => {
+    const c = conCarpeta({ html: HOME, pages: { menu: { html: MENU, title: "Menú" } } });
+    c.archivos["/js/app.js"] = "console.log(1);";
+    c.archivos["/js/util/fecha.js"] = "export const hoy = 1;";
+    c.archivos["/menu/extra.css"] = "h1{color:red}";
+    return c;
+  };
+
+  it("crear un fichero vacío en una carpeta nueva", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps, archivos, versiones } = conSitio();
+    const r = await operarAMano("p1", "u1", { tipo: "crear", ruta: "/css/base.css" }, deps);
+    assert.deepEqual(r, { ok: true, rutas: ["/css/base.css"] });
+    assert.equal(archivos["/css/base.css"], "");
+    assert.match(versiones.at(-1)!.label, /^Code editor/, "a tu nombre, no al de Len");
+  });
+
+  it("crear una página: nace con un documento mínimo, con el idioma de la portada", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps, store } = conSitio();
+    const r = await operarAMano("p1", "u1", { tipo: "crear", ruta: "/contacto/index.html" }, deps);
+    assert.equal(r.ok, true, JSON.stringify(r));
+    assert.match(store.data.pages?.contacto?.html ?? "", /<html lang="es">[\s\S]*<title>Contacto<\/title>/);
+  });
+
+  it("lo que ya existe —un fichero, o una carpeta con ese nombre— no se pisa", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps } = conSitio();
+    assert.deepEqual(await operarAMano("p1", "u1", { tipo: "crear", ruta: "/js/app.js" }, deps), { ok: false, motivo: "existe", rutas: ["/js/app.js"] });
+    assert.deepEqual(await operarAMano("p1", "u1", { tipo: "crear", ruta: "/js" }, deps), { ok: false, motivo: "existe", rutas: ["/js"] });
+  });
+
+  it("lo de la plataforma no se crea: vuelve la guarda", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps } = conSitio();
+    const r = await operarAMano("p1", "u1", { tipo: "crear", ruta: "/AGENTS.md" }, deps);
+    assert.equal(r.ok, false);
+    assert.equal(!r.ok && r.motivo, "existe", "el manual ya está en el árbol");
+    const otra = await operarAMano("p1", "u1", { tipo: "crear", ruta: "/api/x.js" }, deps);
+    assert.equal(!otra.ok && otra.motivo, "rechazado");
+  });
+
+  it("🔴 renombrar una carpeta mueve todo lo que tiene dentro, y no deja copias", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps, archivos } = conSitio();
+    const r = await operarAMano("p1", "u1", { tipo: "renombrar", de: "/js", a: "/scripts" }, deps);
+    assert.deepEqual(r, { ok: true, rutas: ["/scripts/app.js", "/scripts/util/fecha.js"] });
+    assert.equal(archivos["/scripts/util/fecha.js"], "export const hoy = 1;");
+    assert.equal(archivos["/js/app.js"], undefined);
+    assert.equal(archivos["/js/util/fecha.js"], undefined);
+  });
+
+  it("renombrar sobre algo que existe no hace nada y dice qué", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps, archivos } = conSitio();
+    archivos["/scripts/app.js"] = "otro";
+    const r = await operarAMano("p1", "u1", { tipo: "renombrar", de: "/js", a: "/scripts" }, deps);
+    assert.deepEqual(r, { ok: false, motivo: "existe", rutas: ["/scripts/app.js"] });
+    assert.equal(archivos["/js/app.js"], "console.log(1);");
+  });
+
+  it("🔴 una página no se renombra (su dirección y sus enlaces), ni nada se mueve a una ruta de página", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps, store } = conSitio();
+    const r = await operarAMano("p1", "u1", { tipo: "renombrar", de: "/menu", a: "/carta" }, deps);
+    assert.equal(!r.ok && r.motivo, "pagina");
+    assert.ok(store.data.pages?.menu);
+    const otra = await operarAMano("p1", "u1", { tipo: "renombrar", de: "/js/app.js", a: "/js/index.html" }, deps);
+    assert.equal(!otra.ok && otra.motivo, "pagina");
+  });
+
+  it("borrar una carpeta: sus ficheros se van; las páginas que tenga se devuelven para su propia ruta", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps, archivos, store } = conSitio();
+    assert.deepEqual(await operarAMano("p1", "u1", { tipo: "borrar", ruta: "/js" }, deps), { ok: true, rutas: ["/js/app.js", "/js/util/fecha.js"] });
+    assert.equal(archivos["/js/app.js"], undefined);
+    const r = await operarAMano("p1", "u1", { tipo: "borrar", ruta: "/menu" }, deps);
+    assert.deepEqual(r, { ok: false, motivo: "pagina", rutas: ["/menu/index.html"] });
+    assert.equal(archivos["/menu/extra.css"], undefined, "lo que no es página sí se borró");
+    assert.ok(store.data.pages?.menu, "la página la borra su propia ruta");
+    assert.deepEqual(await operarAMano("p1", "u1", { tipo: "borrar", ruta: "/nada" }, deps), { ok: false, motivo: "no_existe" });
+  });
+});
