@@ -477,11 +477,14 @@ describe("buildAgentMessages", () => {
     expect(result.messages.some((m) => m.role === "assistant")).toBe(false);
   });
 
-  // El contexto y la petición viajan en UN solo mensaje de usuario, y ese
-  // mensaje es el ÚLTIMO: contexto primero, petición al final, pegada al punto
-  // de generación. Es la misma forma que la tarea 4 necesita para colgar los
-  // avisos por turno del final del turno y no a 35.000 caracteres de él.
-  it("funde contexto y petición en el último mensaje de usuario", () => {
+  // EL MENSAJE DEL DUEÑO VA SOLO, Y EL ÚLTIMO, como en DeepSeek (su contexto
+  // de entorno es OTRO mensaje: `agent.ts`, `runtimeContext.project`) y en
+  // Claude Code. Antes iba pegado detrás del contexto, todo en inglés, con
+  // «WHAT THE USER ASKS YOU NOW:» en medio, y en el primer turno de un proyecto
+  // —sin historia en su idioma— Len empezaba a narrar en inglés a un dueño que
+  // escribía en español (ensayo de caja de crear-es-len, 06/10). El contexto va
+  // justo antes; la petición sigue pegada al punto de generación.
+  it("la petición del dueño es el último mensaje, sola; el contexto, el de antes", () => {
     const result = buildAgentMessages({
       state: { publicado: false },
       userBrief: null,
@@ -493,17 +496,13 @@ describe("buildAgentMessages", () => {
     if (!result.ok) throw new Error("el fixture no debe exceder el presupuesto");
 
     const ultimo = result.messages[result.messages.length - 1];
-    expect(ultimo.role).toBe("user");
-    expect(ultimo.content).toContain(result.contextBlock);
-    expect(ultimo.content.endsWith("Añade un filtro interactivo")).toBe(true);
-    // El contexto va ANTES de la petición, no al revés.
-    expect(ultimo.content.indexOf(result.contextBlock)).toBeLessThan(
-      ultimo.content.lastIndexOf("Añade un filtro interactivo"),
-    );
-    // Y no queda un segundo mensaje de usuario suelto con el contexto: el
-    // único otro es el manual de la plataforma, que no lleva el contexto.
+    expect(ultimo).toEqual({ role: "user", content: "Añade un filtro interactivo" });
+    const contexto = result.messages[result.messages.length - 2];
+    expect(contexto.role).toBe("user");
+    expect(contexto.content).toBe(result.contextBlock);
+    // Los mensajes de usuario: el manual, el contexto y la petición.
     const usuario = result.messages.filter((m) => m.role === "user");
-    expect(usuario).toHaveLength(2);
+    expect(usuario).toHaveLength(3);
     expect(esAdjuntoDelManual(usuario[0].content)).toBe(true);
     expect(usuario[0].content).not.toContain(result.contextBlock);
   });
@@ -542,18 +541,20 @@ describe("buildAgentMessages", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("el fixture no debe exceder el presupuesto");
 
-    // system, el manual, el historial y el turno.
+    // system, el manual, el historial, el contexto y la petición.
     expect(result.messages.map((m) => m.role)).toEqual([
       "system",
       "user",
       "user",
       "assistant",
       "user",
+      "user",
     ]);
     expect(esAdjuntoDelManual(result.messages[1].content)).toBe(true);
     expect(result.messages[2].content).toBe("Añade un filtro");
     expect(result.messages[3].content).toBe("Filtro añadido.");
-    expect(result.messages[4].content).toContain(result.contextBlock);
+    expect(result.messages[4].content).toBe(result.contextBlock);
+    expect(result.messages[5].content).toBe("Ahora ponlo en dos columnas");
   });
 });
 

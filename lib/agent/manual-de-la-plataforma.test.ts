@@ -20,7 +20,6 @@ import {
   WEB_EXTENSIONS,
 } from "./ficheros/folder";
 import { clauseMarker } from "@/lib/ai/js-clause";
-import { PETICION_DEL_USUARIO } from "./context";
 
 // /AGENTS.md (paso 7 de 2.5): lo que es de la plataforma sale del prompt de Len
 // y va a un manual que el arnés adjunta, como Claude Code sus ficheros de
@@ -222,7 +221,7 @@ describe("cómo se adjunta", () => {
   });
 
   it("y se distingue de lo que escribe el usuario, aunque cite el manual", () => {
-    expect(esAdjuntoDelManual(`${PETICION_DEL_USUARIO}${RUTA_MANUAL} (the platform manual`)).toBe(false);
+    expect(esAdjuntoDelManual(`Añade una página. ${RUTA_MANUAL} (the platform manual`)).toBe(false);
     expect(esAdjuntoDelManual("<system-reminder>\nPlatform instructions for this conversation")).toBe(false);
   });
 });

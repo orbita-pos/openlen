@@ -419,15 +419,14 @@ export type BuildAgentMessagesResult =
   | { ok: true; messages: Message[]; systemPrompt: string; contextBlock: string }
   | { ok: false; reason: "too_large" };
 
-/** Marca dónde acaba el contexto que pone el servidor y empiezan las palabras
- *  literales del usuario. Sin ella, la petición se lee como una línea más del
- *  volcado de ESTADO DEL PROYECTO que la precede. */
-export const PETICION_DEL_USUARIO = "WHAT THE USER ASKS YOU NOW:\n";
+// ⚰️ Aquí vivía `PETICION_DEL_USUARIO` («WHAT THE USER ASKS YOU NOW:»), la
+// costura entre el contexto y las palabras del dueño cuando iban en UN mensaje.
+// Desde el 2026-10-06 van en dos, como DeepSeek: la costura es el mensaje.
 
 /** Assemble the exact message array an agent turn ships upstream: system
- *  prompt, the prior history, then ONE user message carrying the context block
- *  (state + brief + optional selection/image blocks) followed by the
- *  user's own words. Shared by app/api/agent/route.ts and the eval harness so a
+ *  prompt, the prior history, then the context block (state + brief +
+ *  optional selection/image blocks) in its own user message, and LAST the
+ *  user's own words (plus the turn's marked notices). Shared by app/api/agent/route.ts and the eval harness so a
  *  turn is byte-identical whichever entry point built it. Applies the same
  *  pre-flight size guard the route used inline (413 on overflow).
  *
@@ -439,9 +438,16 @@ export const PETICION_DEL_USUARIO = "WHAT THE USER ASKS YOU NOW:\n";
  *  es el pecado en sí (OpenCode fabrica dos: `prompt.ts:1279-1282` y
  *  `transform.ts:285-296`); el pecado era fabricar la conducta equivocada.
  *
- *  Y el contexto va PEGADO a la petición, al final del array, no colgando
+ *  Y el contexto va JUNTO a la petición, al final del array, no colgando
  *  antes del historial: es el punto de generación, y es donde la tarea 4
- *  necesita poder colgar los avisos por turno. */
+ *  necesita poder colgar los avisos por turno.
+ *
+ *  🔴 PERO EN SU PROPIO MENSAJE, como DeepSeek (su contexto de entorno es otro
+ *  mensaje: `agent.ts`, `runtimeContext.project`) y Claude Code. Pegados, la
+ *  petición era la cola de un bloque en inglés, y en el primer turno de un
+ *  proyecto Len empezaba a narrar en inglés a un dueño que escribía en español
+ *  (ensayo de caja de crear-es-len, 06/10). El último mensaje es el del dueño:
+ *  ahí van también sus fotos (la ruta) y, marcados, los avisos del turno. */
 export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMessagesResult {
   const systemPrompt = buildAgentSystemPrompt(process.env, args.mode);
   const contextBlock = buildAgentContext({
@@ -508,7 +514,8 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     { role: "system", content: systemPrompt },
     { role: "user", content: manual },
     ...history,
-    { role: "user", content: `${contextBlock}${PETICION_DEL_USUARIO}${args.prompt}${avisos}` },
+    { role: "user", content: contextBlock },
+    { role: "user", content: `${args.prompt}${avisos}` },
   ];
   return { ok: true, messages, systemPrompt, contextBlock };
 }
