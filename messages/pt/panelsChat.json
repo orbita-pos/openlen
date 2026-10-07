@@ -111,7 +111,9 @@
   "undo": {
     "failedHttp": "Não foi possível desfazer ({status}) — a alteração continua aplicada. Tenta de novo.",
     "failedNetwork": "Não foi possível desfazer: o servidor não respondeu — a alteração continua aplicada. Tenta de novo.",
-    "failedResponse": "Não foi possível desfazer: o servidor respondeu sem a página — a alteração continua aplicada. Tenta de novo."
+    "failedResponse": "Não foi possível desfazer: o servidor respondeu sem a página — a alteração continua aplicada. Tenta de novo.",
+    "failedOverlap": "Não foi possível desfazer: {rutas} mudou depois deste turno, e desfazê-lo apagaria isso. Nada foi desfeito.",
+    "notUndone": "Desfeito, exceto {rutas}: desfazer um turno não traz de volta a base de dados, a memória nem as configurações."
   },
   "cutShort": "Foi interrompido antes de terminar ({reason}), mas o que fiz já ficou guardado. Vê a página.",
   "memoria": {

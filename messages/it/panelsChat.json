@@ -111,7 +111,9 @@
   "undo": {
     "failedHttp": "Impossibile annullare ({status}) — la modifica è ancora applicata. Riprova.",
     "failedNetwork": "Impossibile annullare: il server non ha risposto — la modifica è ancora applicata. Riprova.",
-    "failedResponse": "Impossibile annullare: il server ha risposto senza la pagina — la modifica è ancora applicata. Riprova."
+    "failedResponse": "Impossibile annullare: il server ha risposto senza la pagina — la modifica è ancora applicata. Riprova.",
+    "failedOverlap": "Impossibile annullare: {rutas} è cambiato dopo questo turno, e annullarlo lo cancellerebbe. Non è stato annullato nulla.",
+    "notUndone": "Annullato, tranne {rutas}: annullare un turno non ripristina il database, la memoria né le impostazioni."
   },
   "cutShort": "Si è interrotto prima di finire ({reason}), ma quello che ho fatto è già salvato. Controlla la pagina.",
   "memoria": {

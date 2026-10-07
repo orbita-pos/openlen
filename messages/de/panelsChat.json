@@ -111,7 +111,9 @@
   "undo": {
     "failedHttp": "Rückgängig machen fehlgeschlagen ({status}) — die Änderung ist weiterhin aktiv. Versuch es erneut.",
     "failedNetwork": "Rückgängig machen fehlgeschlagen: keine Antwort vom Server — die Änderung ist weiterhin aktiv. Versuch es erneut.",
-    "failedResponse": "Rückgängig machen fehlgeschlagen: Der Server antwortete ohne die Seite — die Änderung ist weiterhin aktiv. Versuch es erneut."
+    "failedResponse": "Rückgängig machen fehlgeschlagen: Der Server antwortete ohne die Seite — die Änderung ist weiterhin aktiv. Versuch es erneut.",
+    "failedOverlap": "Rückgängig machen fehlgeschlagen: {rutas} wurde nach diesem Schritt geändert, und Rückgängigmachen würde das löschen. Es wurde nichts rückgängig gemacht.",
+    "notUndone": "Rückgängig gemacht, außer {rutas}: Das Rückgängigmachen eines Schritts stellt Datenbank, Gedächtnis und Einstellungen nicht wieder her."
   },
   "cutShort": "Der Vorgang brach vorzeitig ab ({reason}), aber das bereits Erledigte ist gespeichert. Sieh dir die Seite an.",
   "memoria": {

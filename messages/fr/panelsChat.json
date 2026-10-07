@@ -111,7 +111,9 @@
   "undo": {
     "failedHttp": "Impossible d’annuler ({status}) — la modification est toujours appliquée. Réessayez.",
     "failedNetwork": "Impossible d’annuler : le serveur n’a pas répondu — la modification est toujours appliquée. Réessayez.",
-    "failedResponse": "Impossible d’annuler : le serveur a répondu sans la page — la modification est toujours appliquée. Réessayez."
+    "failedResponse": "Impossible d’annuler : le serveur a répondu sans la page — la modification est toujours appliquée. Réessayez.",
+    "failedOverlap": "Impossible d’annuler : {rutas} a changé après ce tour, et l’annuler effacerait ce changement. Rien n’a été annulé.",
+    "notUndone": "Annulé, sauf {rutas} : annuler un tour ne rétablit ni la base de données, ni la mémoire, ni les réglages."
   },
   "cutShort": "Le tour s’est interrompu avant la fin ({reason}), mais ce que j’ai fait est déjà enregistré. Vérifiez la page.",
   "memoria": {

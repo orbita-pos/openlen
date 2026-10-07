@@ -157,6 +157,13 @@ export interface DesignTurn {
   cortado?: boolean;
   /** El servidor rechazó el último Deshacer. El turno SIGUE aplicado. */
   undoFallo?: FalloDeUndo;
+  /** F2 de las apps web: el id con el que el servidor guardó lo que cambió el
+   *  turno (evento `deshacible`): con él, Deshacer lo hace el servidor entero.
+   *  Ver `TurnoParaUndo.deshacerEnServidor`. */
+  deshacerEnServidor?: string;
+  /** Lo que el turno cambió y NO volvió al deshacerlo (la base de datos de
+   *  /supabase, la memoria, los ajustes): se dice bajo «Revertido». */
+  noSeDeshizo?: string[];
   /** Deshacer en vuelo — el botón espera al servidor antes de cantar nada. */
   undoEnCurso?: boolean;
   postEditHtml?: string;
@@ -1185,6 +1192,8 @@ export function useAgentChat({
         // cambió, en orden (evento `ficheros`). Para Deshacer: van con la
         // página o el botón no se ofrece.
         const ficherosTocados: Array<{ ruta: string; versionPrevia: string | null }> = [];
+        // F2: el servidor guardó lo que cambió el turno para deshacerlo entero.
+        let deshacerEnServidor: string | null = null;
         // LA DIRECCIÓN DEL DESHACER, y se queda el PRIMERO. `persistPage`
         // archiva un «antes» por cada escritura, así que un turno con dos
         // `editar_pagina` deja dos versiones — y sólo la primera es el
@@ -1558,6 +1567,10 @@ export function useAgentChat({
                 const ficheros = (payload as { ficheros?: unknown } | null)?.ficheros;
                 const validos = Array.isArray(ficheros) ? ficheros.filter(esFicheroCambiado) : [];
                 if (validos.length > 0) cambiosEnVivo.guardar(projectId, { turnId, pedido: prompt, ficheros: validos });
+              } else if (evName === "deshacible") {
+                // F2 de las apps web: Deshacer lo hará el servidor, entero.
+                const id = (payload as { turnId?: unknown } | null)?.turnId;
+                if (typeof id === "string" && id) deshacerEnServidor = id;
               } else if (evName === "ficheros") {
                 // LA CARPETA (pieza 9 de Len 2.5): lo que cambió de la carpeta
                 // una herramienta, con la versión de su «antes».
@@ -1828,6 +1841,7 @@ export function useAgentChat({
             // son las que tocó. Cuando no coinciden, Deshacer no puede cumplir.
             paginasTocadas: [...paginasTocadas],
             ...(ficherosTocados.length > 0 ? { ficherosTocados: [...ficherosTocados] } : {}),
+            ...(deshacerEnServidor ? { deshacerEnServidor } : {}),
             versionPrevia,
             // Aplicado CON aviso: el cambio está y el usuario tiene que ver el
             // aviso. La marca de corte, en cambio, sólo si de verdad se cortó
@@ -2075,6 +2089,7 @@ export function useAgentChat({
         // Los ficheros devueltos no cambian el documento: el lienzo se recarga
         // con el aviso (lib/lienzo/carpeta-cambiada.ts).
         ficherosRestaurados: () => notifyFolderChanged(projectId),
+        noSeDeshizo: (rutas) => updateTurn(turn.id, { noSeDeshizo: [...rutas] }),
         marcarRevertido: () =>
           updateTurn(turn.id, { status: "reverted", undoEnCurso: false }),
         marcarFallo: (fallo) =>
