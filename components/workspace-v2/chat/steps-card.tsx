@@ -41,6 +41,7 @@ import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 import { duracionLegible, procesoDelTurno } from "@/lib/workspace-v2/proceso-del-turno";
 import { activityOf, type Activity } from "./live-status";
 import { asksTheOwner } from "@/lib/agent/ask-user-question";
+import { currentToolName } from "@/lib/agent/tool-renames";
 import type { DesignTurn } from "./use-agent-chat";
 
 const ICON_OF: Readonly<Record<Activity, LucideIcon>> = {
@@ -183,7 +184,10 @@ function StepRow({
 }) {
   const t = useTranslations("wsPage");
   const [open, setOpen] = useState(false);
-  const label = KNOWN_TOOLS.has(action.tool) ? t(`agent.tool.${action.tool}`) : action.tool;
+  // El nombre de hoy: una fila guardada antes del 2026-10-06 trae el de antes
+  // (como `agent-action-card.tsx`).
+  const tool = currentToolName(action.tool);
+  const label = KNOWN_TOOLS.has(tool) ? t(`agent.tool.${tool}`) : action.tool;
   const detail = summaryLabel(action, t);
   const coverage = coberturaTitle(action, t);
   // Qué porqué y en qué color: `reasonLine` (N41) — en rojo, nunca lo que leyó el modelo.

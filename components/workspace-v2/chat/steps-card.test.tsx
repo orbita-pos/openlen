@@ -45,6 +45,22 @@ describe("la tarjeta de los pasos", () => {
     expect(host.textContent).not.toContain("agent.failed");
   });
 
+  // Ensayo de caja de crear-es-len (06/10): un turno guardado ANTES de que las
+  // 11 herramientas pasaran al inglés pintaba `ver_visitas`, `mirar_pagina` y
+  // `usar_pagina` crudos en esta tarjeta (la hermana, `agent-action-card`, ya
+  // los traducía).
+  it("🔴 una fila guardada con el nombre de antes sale con la etiqueta de hoy", () => {
+    const host = pintar([
+      { tool: "ver_visitas", status: "done", summary: "" } as AgentAction,
+      { tool: "mirar_pagina", status: "done", summary: "index.html" } as AgentAction,
+      { tool: "usar_pagina", status: "done", summary: "index.html" } as AgentAction,
+    ]);
+    expect(host.textContent).toContain("agent.tool.get_visits");
+    expect(host.textContent).toContain("agent.tool.view_page");
+    expect(host.textContent).toContain("agent.tool.use_page");
+    expect(host.textContent).not.toMatch(/ver_visitas|mirar_pagina|usar_pagina/);
+  });
+
   it("las demás herramientas que fallan siguen como estaban: «falló» y su motivo para el dueño (N41)", () => {
     const host = pintar([{ tool: "Write", status: "error", summary: "/js/app.js" } as AgentAction]);
     expect(host.textContent).toContain("agent.failed");
