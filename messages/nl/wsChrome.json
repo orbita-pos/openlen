@@ -265,7 +265,16 @@
         "Fold_line": "Inklappen",
         "Unfold_line": "Uitklappen"
       },
-      "dividir": "Rechts splitsen"
+      "dividir": "Rechts splitsen",
+      "subidos": "{count, plural, one {# bestand geüpload.} other {# bestanden geüpload.}}",
+      "noSubidos": "Niet geüpload:",
+      "motivoTipo": "alleen tekstbestanden worden geüpload (code, CSS, JSON, SVG…); foto’s horen bij Afbeeldingen",
+      "motivoGrande": "groter dan 1 MB",
+      "motivoNombre": "de naam bevat spaties of tekens die niet zijn toegestaan",
+      "motivoDemasiados": "te veel tegelijk (hoogstens {max})",
+      "reemplazar": "{count, plural, one {{lista} bestaat al. Vervangen?} other {{lista} bestaan al. Vervangen?}}",
+      "abrirAlLado": "Zet hier neer om het ernaast te openen",
+      "subiendo": "Uploaden…"
     }
   },
   "placeholder": {

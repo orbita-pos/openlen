@@ -257,7 +257,16 @@
         "Fold_line": "접기",
         "Unfold_line": "펼치기"
       },
-      "dividir": "오른쪽으로 분할"
+      "dividir": "오른쪽으로 분할",
+      "subidos": "{count, plural, other {파일 #개를 업로드했습니다.}}",
+      "noSubidos": "업로드되지 않음:",
+      "motivoTipo": "텍스트 파일(코드, CSS, JSON, SVG 등)만 업로드됩니다. 사진은 이미지에 올리세요",
+      "motivoGrande": "1MB를 넘습니다",
+      "motivoNombre": "이름에 공백이나 허용되지 않는 문자가 있습니다",
+      "motivoDemasiados": "한 번에 너무 많습니다(최대 {max}개)",
+      "reemplazar": "{count, plural, other {{lista}이(가) 이미 있습니다. 바꿀까요?}}",
+      "abrirAlLado": "여기에 놓으면 옆에 엽니다",
+      "subiendo": "업로드 중…"
     }
   },
   "placeholder": {

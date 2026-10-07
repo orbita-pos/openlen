@@ -257,7 +257,16 @@
         "Fold_line": "Fold line",
         "Unfold_line": "Unfold line"
       },
-      "dividir": "Split right"
+      "dividir": "Split right",
+      "subidos": "{count, plural, one {# file uploaded.} other {# files uploaded.}}",
+      "noSubidos": "Not uploaded:",
+      "motivoTipo": "only text files are uploaded (code, CSS, JSON, SVG…); photos go in Images",
+      "motivoGrande": "over 1 MB",
+      "motivoNombre": "the name has spaces or characters that aren't allowed",
+      "motivoDemasiados": "too many at once (at most {max})",
+      "reemplazar": "{count, plural, one {{lista} already exists. Replace it?} other {{lista} already exist. Replace them?}}",
+      "abrirAlLado": "Drop here to open it alongside",
+      "subiendo": "Uploading…"
     }
   },
   "placeholder": {

@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { abiertaEnAlguno, abrirEn, cerrarEn, dividir, moverPestana, quitarDentro, renombrarEn, unGrupo } from "./grupos-de-editores";
+import {
+  abiertaEnAlguno,
+  abrirEn,
+  abrirEnNuevo,
+  cerrarEn,
+  dividir,
+  MAX_GRUPOS,
+  moverPestana,
+  quitarDentro,
+  renombrarEn,
+  unGrupo,
+} from "./grupos-de-editores";
 import { destinoAlSoltar } from "./explorador";
 
 describe("los grupos de editores, como en VS Code", () => {
@@ -10,7 +21,7 @@ describe("los grupos de editores, como en VS Code", () => {
     expect(e).toEqual({ grupos: [{ pestanas: ["/index.html", "/js/app.js"], activa: "/index.html" }], activo: 0 });
   });
 
-  it("«Dividir» pone el archivo activo también a la derecha; con dos grupos, lo lleva al otro", () => {
+  it("«Dividir» pone el archivo activo también JUSTO a su derecha, hasta cuatro; sin sitio, lo lleva al de al lado", () => {
     let e = dividir(unGrupo(["/a.js", "/b.js"], "/b.js"), 0);
     expect(e).toEqual({
       grupos: [
@@ -19,11 +30,49 @@ describe("los grupos de editores, como en VS Code", () => {
       ],
       activo: 1,
     });
-    e = abrirEn(e, 1, "/c.js");
-    e = dividir(e, 1);
-    expect(e.grupos).toHaveLength(2);
-    expect(e.grupos[0]!.activa).toBe("/c.js");
-    expect(e.activo).toBe(0);
+    // Dividir el PRIMERO con dos abiertos: el nuevo va entre los dos.
+    e = abrirEn(e, 0, "/a.js");
+    e = dividir(e, 0);
+    expect(e.grupos.map((g) => g.activa)).toEqual(["/a.js", "/a.js", "/b.js"]);
+    expect(e.activo).toBe(1);
+    e = dividir(e, 2);
+    expect(e.grupos).toHaveLength(MAX_GRUPOS);
+    // Lleno: dividir el último lo abre en el de su izquierda.
+    e = abrirEn(e, 3, "/c.js");
+    e = dividir(e, 3);
+    expect(e.grupos).toHaveLength(MAX_GRUPOS);
+    expect(e.grupos[2]!.activa).toBe("/c.js");
+    expect(e.activo).toBe(2);
+  });
+
+  it("abrir en un grupo nuevo (soltar en el borde) va a la derecha de todo; lleno, al último", () => {
+    let e = abrirEnNuevo(unGrupo(["/a.js"], "/a.js"), "/b.js");
+    expect(e.grupos.map((g) => g.pestanas)).toEqual([["/a.js"], ["/b.js"]]);
+    expect(e.activo).toBe(1);
+    e = abrirEnNuevo(abrirEnNuevo(e, "/c.js"), "/d.js");
+    e = abrirEnNuevo(e, "/e.js");
+    expect(e.grupos.map((g) => g.pestanas)).toEqual([["/a.js"], ["/b.js"], ["/c.js"], ["/d.js", "/e.js"]]);
+  });
+
+  it("🔴 reordenar dentro del mismo grupo: delante de la pestaña sobre la que se suelta, o al final", () => {
+    let e = unGrupo(["/a", "/b", "/c", "/d"], "/a");
+    e = moverPestana(e, 0, 0, "/d", "/b");
+    expect(e.grupos[0]).toEqual({ pestanas: ["/a", "/d", "/b", "/c"], activa: "/d" });
+    e = moverPestana(e, 0, 0, "/a", null);
+    expect(e.grupos[0]!.pestanas).toEqual(["/d", "/b", "/c", "/a"]);
+    // Soltarla sobre sí misma no la mueve.
+    e = moverPestana(e, 0, 0, "/b", "/b");
+    expect(e.grupos[0]!.pestanas).toEqual(["/d", "/b", "/c", "/a"]);
+  });
+
+  it("mover a otro grupo en un sitio concreto, o a uno nuevo (que no pasa de cuatro)", () => {
+    let e = abrirEnNuevo(unGrupo(["/a", "/b"], "/a"), "/x");
+    e = abrirEn(e, 1, "/y");
+    e = moverPestana(e, 0, 1, "/b", "/y");
+    expect(e.grupos[1]).toEqual({ pestanas: ["/x", "/b", "/y"], activa: "/b" });
+    e = moverPestana(e, 1, 9, "/y");
+    expect(e.grupos.map((g) => g.pestanas)).toEqual([["/a"], ["/x", "/b"], ["/y"]]);
+    expect(e.activo).toBe(2);
   });
 
   it("cerrar la última pestaña de un grupo lo quita, y el otro queda activo", () => {

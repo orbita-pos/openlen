@@ -99,6 +99,12 @@ const labels = {
     cerrarAviso: "Cerrar el aviso",
     noSeHizo: "No se hizo:",
     dividir: "Dividir a la derecha",
+    abrirAlLado: "Abrir al lado",
+    subidos: (n: number) => `${n} subidos.`,
+    noSubidos: "No se subieron:",
+    motivo: { tipo: "tipo", grande: "grande", nombre: "nombre", demasiados: "demasiados" },
+    reemplazar: (n: number, lista: string) => `¿Reemplazar ${lista}?`,
+    subiendo: "Subiendo…",
   },
 };
 
@@ -515,8 +521,8 @@ describe("CodeView — dos editores lado a lado", () => {
     await esperar(() => el.querySelector('[data-grupo="1"] .cm-editor'));
     expect(pestanasDe(el, 0)).toEqual(["index.html"]);
     expect(pestanasDe(el, 1)).toEqual(["index.html"]);
-    // Con dos, no se ofrece dividir otra vez.
-    expect(porEtiqueta(el, "Dividir a la derecha (Ctrl+\\)")).toBeUndefined();
+    // Con dos, se sigue pudiendo dividir: caben hasta cuatro.
+    expect(porEtiqueta(el, "Dividir a la derecha (Ctrl+\\)")).toBeDefined();
     act(() => {
       const v = editorDe(el, 0);
       v.dispatch({ changes: { from: v.state.doc.length, insert: "<p>uno</p>" } });
@@ -571,6 +577,95 @@ describe("CodeView — dos editores lado a lado", () => {
     });
     await esperar(() => pestanasDe(el, 0).length === 2);
     expect(pestanasDe(el, 0)).toEqual(["reservas.json", "index.html"]);
+  });
+
+  it("🔴 hasta cuatro lados: Ctrl+\\ divide hasta cuatro, y no más", async () => {
+    const { el } = await pintar();
+    for (let i = 0; i < 4; i++) tecla(document.body, "\\", { ctrlKey: true });
+    await esperar(() => el.querySelector('[data-grupo="3"] .cm-editor'));
+    expect(el.querySelectorAll("[data-grupo]")).toHaveLength(4);
+    expect(porEtiqueta(el, "Dividir a la derecha (Ctrl+\\)")).toBeUndefined();
+  });
+
+  it("🔴 una pestaña soltada sobre otra de su mismo lado se coloca delante de ella", async () => {
+    const { el } = await pintar();
+    act(() => botonDelArbol(el, "reservas.json").click());
+    await esperar(() => pestanasDe(el, 0).length === 2);
+    expect(pestanasDe(el, 0)).toEqual(["index.html", "reservas.json"]);
+    const tabDe = (nombre: string) => [...el.querySelectorAll<HTMLElement>('[data-grupo="0"] [role="tab"]')].find((t) => t.textContent === nombre)!.parentElement!;
+    act(() => {
+      tabDe("reservas.json").dispatchEvent(new Event("dragstart", { bubbles: true }));
+    });
+    act(() => {
+      tabDe("index.html").dispatchEvent(new Event("dragover", { bubbles: true, cancelable: true }));
+    });
+    act(() => {
+      tabDe("index.html").dispatchEvent(new Event("drop", { bubbles: true, cancelable: true }));
+    });
+    expect(pestanasDe(el, 0)).toEqual(["reservas.json", "index.html"]);
+    expect(el.querySelectorAll("[data-grupo]")).toHaveLength(1);
+  });
+
+  it("mientras se arrastra aparece la franja «Abrir al lado»; soltar ahí abre un editor nuevo", async () => {
+    const { el } = await pintar();
+    expect(el.querySelector("[data-abrir-al-lado]")).toBeNull();
+    act(() => {
+      botonDelArbol(el, "reservas.json").parentElement!.dispatchEvent(new Event("dragstart", { bubbles: true }));
+    });
+    const franja = el.querySelector("[data-abrir-al-lado]")!;
+    expect(franja.textContent).toBe("Abrir al lado");
+    act(() => {
+      franja.dispatchEvent(new Event("drop", { bubbles: true, cancelable: true }));
+    });
+    await esperar(() => pestanasDe(el, 1).length === 1);
+    expect(pestanasDe(el, 0)).toEqual(["index.html"]);
+    expect(pestanasDe(el, 1)).toEqual(["reservas.json"]);
+    expect(el.querySelector("[data-abrir-al-lado]")).toBeNull();
+  });
+});
+
+describe("CodeView — subir archivos soltándolos desde tu ordenador", () => {
+  // El `File` de jsdom no tiene `text()`.
+  const archivo = (contenido: string, nombre: string) => Object.assign(new File([contenido], nombre), { text: async () => contenido });
+  const dice = (el: HTMLElement) => el.textContent ?? "";
+  const soltarDelOrdenador = (hasta: Element, archivos: File[]) => {
+    const dt = { types: ["Files"], items: [], files: archivos, dropEffect: "none" };
+    for (const tipo of ["dragover", "drop"]) {
+      const ev = new Event(tipo, { bubbles: true, cancelable: true });
+      Object.defineProperty(ev, "dataTransfer", { value: dt });
+      act(() => {
+        hasta.dispatchEvent(ev);
+      });
+    }
+  };
+
+  it("🔴 lo nuevo se crea en la carpeta donde se suelta; lo que existe se reemplaza tras preguntar; una foto, no", async () => {
+    const { el } = await pintar();
+    soltarDelOrdenador(botonDelArbol(el, "datos").parentElement!, [
+      archivo("body{}", "base.css"),
+      archivo('[{"nombre":"Luis"}]', "reservas.json"),
+      archivo("x", "foto.jpg"),
+    ]);
+    await esperar(() => dice(el).includes("subidos"));
+    expect(window.confirm).toHaveBeenCalledWith("¿Reemplazar /datos/reservas.json?");
+    expect(llamadas.find((l) => l.metodo === "POST")!.cuerpo).toEqual({ ruta: "/datos/base.css", contenido: "body{}" });
+    expect(llamadas.find((l) => l.metodo === "PUT")!.cuerpo).toEqual({
+      ruta: "/datos/reservas.json",
+      contenido: '[{"nombre":"Luis"}]',
+      base: '[{"nombre":"Ana"}]',
+    });
+    expect(dice(el)).toContain("2 subidos.");
+    expect(dice(el)).toContain("foto.jpg — tipo");
+  });
+
+  it("si no quieres reemplazar, sólo se sube lo nuevo", async () => {
+    vi.stubGlobal("confirm", vi.fn(() => false));
+    const { el } = await pintar();
+    soltarDelOrdenador(el.querySelector("nav")!, [archivo("a", "app.js"), archivo("<h1>x</h1>", "index.html")]);
+    await esperar(() => dice(el).includes("subidos"));
+    expect(llamadas.filter((l) => l.metodo === "PUT")).toEqual([]);
+    expect(llamadas.filter((l) => l.metodo === "POST").map((l) => (l.cuerpo as { ruta: string }).ruta)).toEqual(["/app.js"]);
+    expect(dice(el)).toContain("1 subidos.");
   });
 });
 

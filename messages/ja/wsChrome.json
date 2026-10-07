@@ -257,7 +257,16 @@
         "Fold_line": "折りたたむ",
         "Unfold_line": "展開"
       },
-      "dividir": "右に分割"
+      "dividir": "右に分割",
+      "subidos": "{count, plural, other {# 個のファイルをアップロードしました。}}",
+      "noSubidos": "アップロードされなかったもの：",
+      "motivoTipo": "アップロードできるのはテキストファイル（コード、CSS、JSON、SVG など）だけです。写真は「画像」へ",
+      "motivoGrande": "1 MB を超えています",
+      "motivoNombre": "名前に空白や使えない文字が含まれています",
+      "motivoDemasiados": "一度に多すぎます（最大 {max}）",
+      "reemplazar": "{count, plural, other {{lista} はすでにあります。置き換えますか？}}",
+      "abrirAlLado": "ここにドロップすると横に開きます",
+      "subiendo": "アップロード中…"
     }
   },
   "placeholder": {

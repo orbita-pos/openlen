@@ -257,7 +257,16 @@
         "Fold_line": "Einklappen",
         "Unfold_line": "Ausklappen"
       },
-      "dividir": "Rechts teilen"
+      "dividir": "Rechts teilen",
+      "subidos": "{count, plural, one {# Datei hochgeladen.} other {# Dateien hochgeladen.}}",
+      "noSubidos": "Nicht hochgeladen:",
+      "motivoTipo": "nur Textdateien werden hochgeladen (Code, CSS, JSON, SVG…); Fotos gehören zu Bilder",
+      "motivoGrande": "größer als 1 MB",
+      "motivoNombre": "der Name enthält Leerzeichen oder unzulässige Zeichen",
+      "motivoDemasiados": "zu viele auf einmal (höchstens {max})",
+      "reemplazar": "{count, plural, one {{lista} existiert bereits. Ersetzen?} other {{lista} existieren bereits. Ersetzen?}}",
+      "abrirAlLado": "Hier ablegen, um es daneben zu öffnen",
+      "subiendo": "Wird hochgeladen…"
     }
   },
   "placeholder": {

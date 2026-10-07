@@ -257,7 +257,16 @@
         "Fold_line": "Comprimi",
         "Unfold_line": "Espandi"
       },
-      "dividir": "Dividi a destra"
+      "dividir": "Dividi a destra",
+      "subidos": "{count, plural, one {# file caricato.} other {# file caricati.}}",
+      "noSubidos": "Non caricati:",
+      "motivoTipo": "si caricano solo file di testo (codice, CSS, JSON, SVG…); le foto vanno in Immagini",
+      "motivoGrande": "supera 1 MB",
+      "motivoNombre": "il nome contiene spazi o caratteri non ammessi",
+      "motivoDemasiados": "troppi in una volta (al massimo {max})",
+      "reemplazar": "{count, plural, one {{lista} esiste già. Sostituirlo?} other {{lista} esistono già. Sostituirli?}}",
+      "abrirAlLado": "Rilascia qui per aprirlo accanto",
+      "subiendo": "Caricamento…"
     }
   },
   "placeholder": {

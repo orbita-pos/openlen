@@ -257,7 +257,16 @@
         "Fold_line": "Replier",
         "Unfold_line": "Déplier"
       },
-      "dividir": "Diviser à droite"
+      "dividir": "Diviser à droite",
+      "subidos": "{count, plural, one {# fichier importé.} other {# fichiers importés.}}",
+      "noSubidos": "Non importés :",
+      "motivoTipo": "seuls les fichiers texte sont importés (code, CSS, JSON, SVG…) ; les photos vont dans Images",
+      "motivoGrande": "dépasse 1 Mo",
+      "motivoNombre": "le nom contient des espaces ou des caractères non autorisés",
+      "motivoDemasiados": "trop à la fois (au plus {max})",
+      "reemplazar": "{count, plural, one {{lista} existe déjà. Le remplacer ?} other {{lista} existent déjà. Les remplacer ?}}",
+      "abrirAlLado": "Déposez ici pour l’ouvrir à côté",
+      "subiendo": "Importation…"
     }
   },
   "placeholder": {

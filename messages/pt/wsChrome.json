@@ -265,7 +265,16 @@
         "Fold_line": "Recolher",
         "Unfold_line": "Expandir"
       },
-      "dividir": "Dividir à direita"
+      "dividir": "Dividir à direita",
+      "subidos": "{count, plural, one {# arquivo enviado.} other {# arquivos enviados.}}",
+      "noSubidos": "Não foram enviados:",
+      "motivoTipo": "só se enviam arquivos de texto (código, CSS, JSON, SVG…); fotos vão em Imagens",
+      "motivoGrande": "passa de 1 MB",
+      "motivoNombre": "o nome tem espaços ou caracteres não permitidos",
+      "motivoDemasiados": "muitos de uma vez (no máximo {max})",
+      "reemplazar": "{count, plural, one {{lista} já existe. Substituir?} other {{lista} já existem. Substituir?}}",
+      "abrirAlLado": "Solte aqui para abrir ao lado",
+      "subiendo": "Enviando…"
     }
   },
   "placeholder": {

@@ -257,7 +257,16 @@
         "Fold_line": "折叠",
         "Unfold_line": "展开"
       },
-      "dividir": "向右拆分"
+      "dividir": "向右拆分",
+      "subidos": "{count, plural, other {已上传 # 个文件。}}",
+      "noSubidos": "未上传：",
+      "motivoTipo": "只能上传文本文件（代码、CSS、JSON、SVG 等）；照片请放到“图片”",
+      "motivoGrande": "超过 1 MB",
+      "motivoNombre": "名称含有空格或不允许的字符",
+      "motivoDemasiados": "一次太多（最多 {max} 个）",
+      "reemplazar": "{count, plural, other {{lista} 已存在。要替换吗？}}",
+      "abrirAlLado": "拖放到这里以在旁边打开",
+      "subiendo": "上传中…"
     }
   },
   "placeholder": {

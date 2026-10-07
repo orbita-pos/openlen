@@ -74,6 +74,8 @@ import {
 import {
   abiertaEnAlguno,
   abrirEn,
+  abrirEnNuevo,
+  cabeOtro,
   cerrarEn,
   dividir,
   moverPestana,
@@ -83,6 +85,7 @@ import {
   type Editores,
 } from "@/lib/workspace-v2/grupos-de-editores";
 import { colorearLineas, lenguajeDe, type Lenguaje } from "@/lib/workspace-v2/colorear";
+import { MAX_SUBIDA, planDeSubida, type MotivoDeSalto } from "@/lib/workspace-v2/subir-ficheros";
 import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 
 import { copiar } from "./copiar";
@@ -134,8 +137,16 @@ export interface EtiquetasDelIde {
   readonly carpetaVacia: string;
   readonly cerrarAviso: string;
   readonly noSeHizo: string;
-  /** «Dividir a la derecha»: el archivo, también en un segundo editor al lado. */
+  /** «Dividir a la derecha»: el archivo, también en otro editor al lado. */
   readonly dividir: string;
+  /** La franja del borde mientras se arrastra: soltar ahí abre un editor nuevo. */
+  readonly abrirAlLado: string;
+  // Subir archivos de tu ordenador soltándolos en el árbol.
+  readonly subidos: (n: number) => string;
+  readonly noSubidos: string;
+  readonly motivo: Readonly<Record<MotivoDeSalto, string>>;
+  readonly reemplazar: (n: number, lista: string) => string;
+  readonly subiendo: string;
   /** Las frases del editor (buscar y reemplazar, plegar), por su texto en inglés. */
   readonly frasesDelEditor?: Readonly<Record<string, string>>;
 }
@@ -259,6 +270,46 @@ function avisarAlTaller(projectId: string, rutas: readonly string[]): void {
 }
 
 const nombreDe = (ruta: string) => ruta.slice(ruta.lastIndexOf("/") + 1);
+
+/** ¿Lo que se arrastra son archivos de tu ordenador (y no algo de la lente)? */
+const sonDelOrdenador = (dt: DataTransfer | null | undefined) => Boolean(dt && Array.from(dt.types ?? []).includes("Files"));
+
+/**
+ * LO SOLTADO DESDE TU ORDENADOR, con su ruta relativa: una carpeta soltada
+ * entra con todo lo de dentro (`css/base.css`), como en VS Code. Las entradas se
+ * toman EN el evento —después del `await` el navegador ya no las da— y se
+ * recorren luego. Se deja de recorrer pasado un tope: soltar un
+ * `node_modules` por error no puede colgar la pestaña.
+ */
+function lectorDeLoSoltado(dt: DataTransfer): () => Promise<{ readonly relativa: string; readonly archivo: File }[]> {
+  type Entrada = { isFile: boolean; isDirectory: boolean; name: string; file?: (ok: (f: File) => void, mal: (e: unknown) => void) => void; createReader?: () => { readEntries: (ok: (es: Entrada[]) => void, mal: (e: unknown) => void) => void } };
+  const entradas = Array.from(dt.items ?? [])
+    .filter((i) => i.kind === "file")
+    .map((i) => ((i as unknown as { webkitGetAsEntry?: () => unknown }).webkitGetAsEntry?.() ?? null) as Entrada | null)
+    .filter((x): x is Entrada => x !== null);
+  const sueltos = Array.from(dt.files ?? []);
+  return async () => {
+    if (entradas.length === 0) return sueltos.map((archivo) => ({ relativa: archivo.name, archivo }));
+    const fuera: { relativa: string; archivo: File }[] = [];
+    const tope = MAX_SUBIDA * 3;
+    const recorrer = async (e: Entrada, base: string): Promise<void> => {
+      if (fuera.length >= tope) return;
+      if (e.isFile && e.file) {
+        const archivo = await new Promise<File>((ok, mal) => e.file!(ok, mal));
+        fuera.push({ relativa: base + e.name, archivo });
+      } else if (e.isDirectory && e.createReader) {
+        const lector = e.createReader();
+        for (;;) {
+          const lote = await new Promise<Entrada[]>((ok, mal) => lector.readEntries(ok, mal));
+          if (lote.length === 0 || fuera.length >= tope) break;
+          for (const h of lote) await recorrer(h, `${base}${e.name}/`);
+        }
+      }
+    };
+    for (const e of entradas) await recorrer(e, "");
+    return fuera;
+  };
+}
 
 /** Lo que se está escribiendo en el árbol: un nombre nuevo, o el de algo que se renombra. */
 type Edicion =
@@ -827,35 +878,88 @@ function Explorador({
   // todos los navegadores mientras se arrastra); al `dataTransfer` va la ruta
   // en texto, que es lo que pide Firefox para empezar a arrastrar.
   const arrastre = useRef<Arrastre | null>(null);
+  // Hay algo de la lente en el aire: se enseña la franja del borde (abrir al lado).
+  const [hayArrastre, setHayArrastre] = useState(false);
   const [sobre, setSobre] = useState<string | null>(null);
   const relojDeDesplegar = useRef<ReturnType<typeof setTimeout> | null>(null);
   const empezarArrastre = (e: ReactDragEvent, a: Arrastre) => {
     arrastre.current = a;
+    setHayArrastre(true);
     e.dataTransfer?.setData(TIPO_ARRASTRE, a.ruta);
     e.dataTransfer?.setData("text/plain", a.ruta);
     if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
   };
   const terminarArrastre = () => {
     arrastre.current = null;
+    setHayArrastre(false);
     setSobre(null);
     if (relojDeDesplegar.current) clearTimeout(relojDeDesplegar.current);
   };
+
+  /** SUBIR lo soltado desde tu ordenador a `carpeta`: lo nuevo se crea, lo que existe se reemplaza (tras preguntar). */
+  const subirDelOrdenador = async (leer: () => Promise<{ readonly relativa: string; readonly archivo: File }[]>, carpeta: string) => {
+    setAviso(ide.subiendo);
+    const soltados = await leer().catch(() => []);
+    const porRelativa = new Map(soltados.map((s) => [s.relativa, s.archivo]));
+    const plan = planDeSubida(
+      soltados.map((s) => ({ relativa: s.relativa, tamano: s.archivo.size })),
+      carpeta,
+      new Set(guardados.keys()),
+    );
+    const reemplazos = plan.subir.filter((x) => x.reemplaza);
+    const lista = reemplazos.map((x) => x.ruta).join(", ");
+    const subir = reemplazos.length > 0 && !window.confirm(ide.reemplazar(reemplazos.length, lista)) ? plan.subir.filter((x) => !x.reemplaza) : plan.subir;
+    const hechos: string[] = [];
+    const fallos = plan.saltados.map((x) => `${x.nombre} — ${ide.motivo[x.motivo]}`);
+    for (const x of subir) {
+      const archivo = porRelativa.get(x.origen.relativa);
+      if (!archivo) continue;
+      const contenido = await Promise.resolve()
+        .then(() => archivo.text())
+        .catch(() => null);
+      if (contenido === null) {
+        fallos.push(`${x.origen.relativa} — ${labels.editar.error}`);
+        continue;
+      }
+      const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/ficheros`, {
+        method: x.reemplaza ? "PUT" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(x.reemplaza ? { ruta: x.ruta, contenido, base: guardados.get(x.ruta) ?? "" } : { ruta: x.ruta, contenido }),
+      }).catch(() => null);
+      if (r?.ok) hechos.push(x.ruta);
+      else fallos.push(`${x.origen.relativa} — ${r ? await explicar(r) : labels.editar.error}`);
+    }
+    if (hechos.length > 0) {
+      setCarpetasVacias((c) => c.filter((v) => !hechos.some((h) => estaDentro(h, v))));
+      for (const h of hechos) desplegar(carpetaDe(h));
+      avisarAlTaller(projectId, hechos);
+      setRecarga((n) => n + 1);
+    }
+    setAviso([hechos.length > 0 ? ide.subidos(hechos.length) : "", fallos.length > 0 ? `${ide.noSubidos}\n${fallos.join("\n")}` : ""].filter(Boolean).join("\n") || null);
+  };
+
   /** Soltar en el árbol: `carpeta` es la carpeta de destino (`""`, la raíz). */
   const soltarEnCarpeta = (e: ReactDragEvent, carpeta: string) => {
     e.preventDefault();
     e.stopPropagation();
     const a = arrastre.current;
     terminarArrastre();
+    // Archivos de tu ordenador: se suben ahí.
+    if (!a && sonDelOrdenador(e.dataTransfer)) {
+      void subirDelOrdenador(lectorDeLoSoltado(e.dataTransfer), carpeta);
+      return;
+    }
     if (!a || a.de !== "arbol") return;
     const destino = destinoAlSoltar(a.ruta, carpeta);
     if (destino) void renombrar(a.ruta, destino, a.tipo);
   };
   const encimaDeCarpeta = (e: ReactDragEvent, carpeta: string, plegada: boolean) => {
     const a = arrastre.current;
-    if (!a || a.de !== "arbol" || destinoAlSoltar(a.ruta, carpeta) === null) return;
+    const delOrdenador = !a && sonDelOrdenador(e.dataTransfer);
+    if (!delOrdenador && (!a || a.de !== "arbol" || destinoAlSoltar(a.ruta, carpeta) === null)) return;
     e.preventDefault();
     e.stopPropagation();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    if (e.dataTransfer) e.dataTransfer.dropEffect = delOrdenador ? "copy" : "move";
     if (sobre !== carpeta) {
       setSobre(carpeta);
       // Una carpeta plegada se abre si te quedas encima, como en VS Code.
@@ -863,15 +967,34 @@ function Explorador({
       if (plegada && carpeta) relojDeDesplegar.current = setTimeout(() => desplegar(carpeta), 600);
     }
   };
-  /** Soltar en un editor: un archivo del árbol se abre ahí; una pestaña del otro grupo se muda. */
-  const soltarEnGrupo = (e: ReactDragEvent, g: number) => {
+  /** Soltar en un editor: una pestaña se muda allí (o se reordena, si es del
+   *  mismo), delante de `antesDe`; un archivo del árbol se abre ahí. */
+  const soltarEnGrupo = (e: ReactDragEvent, g: number, antesDe: string | null = null) => {
     const a = arrastre.current;
     if (!a) return;
     e.preventDefault();
+    e.stopPropagation();
     terminarArrastre();
-    if (a.de === "pestana") setEditores((x) => moverPestana(x, a.grupo, g, a.ruta));
-    else if (a.tipo === "fichero") abrir(a.ruta, null, g);
+    if (a.de === "pestana") setEditores((x) => moverPestana(x, a.grupo, g, a.ruta, antesDe));
+    else if (a.tipo === "fichero") {
+      abrir(a.ruta, null, g);
+      if (antesDe) setEditores((x) => moverPestana(x, g, g, a.ruta, antesDe));
+    }
   };
+  /** Soltar en la franja del borde: un editor NUEVO a la derecha, con eso. */
+  const soltarEnNuevo = (e: ReactDragEvent) => {
+    const a = arrastre.current;
+    if (!a) return;
+    e.preventDefault();
+    e.stopPropagation();
+    terminarArrastre();
+    if (a.de === "pestana") setEditores((x) => moverPestana(x, a.grupo, x.grupos.length, a.ruta));
+    else if (a.tipo === "fichero") {
+      setEditores((x) => abrirEnNuevo(x, a.ruta));
+      setSeleccion({ ruta: a.ruta, tipo: "fichero" });
+    }
+  };
+  const aceptaEditor = () => Boolean(arrastre.current && (arrastre.current.de === "pestana" || arrastre.current.tipo === "fichero"));
   const dividirActivo = () => setEditores((e) => dividir(e, e.activo));
   // Ctrl/Cmd+\ divide el editor, como en VS Code.
   useEffect(() => {
@@ -1009,7 +1132,7 @@ function Explorador({
               onMouseDownCapture={() => editores.activo !== g && setEditores((e) => ({ ...e, activo: g }))}
               onFocusCapture={() => editores.activo !== g && setEditores((e) => ({ ...e, activo: g }))}
               onDragOver={(e) => {
-                if (arrastre.current && (arrastre.current.de === "pestana" || arrastre.current.tipo === "fichero")) e.preventDefault();
+                if (aceptaEditor()) e.preventDefault();
               }}
               onDrop={(e) => soltarEnGrupo(e, g)}
               className={`flex min-h-0 min-w-0 flex-1 flex-col ${g > 0 ? "border-t bd md:border-l md:border-t-0" : ""} ${
@@ -1029,6 +1152,8 @@ function Explorador({
                 onCerrar={(r) => cerrarPestana(r, g)}
                 onArrastrar={(e, r) => empezarArrastre(e, { de: "pestana", ruta: r, grupo: g })}
                 onSoltarArrastre={terminarArrastre}
+                aceptaSoltar={aceptaEditor}
+                onSoltarSobre={(e, r) => soltarEnGrupo(e, g, r)}
               />
               {!ruta || contenido === null ? (
                 <p className="p-4 text-[12px] fg-muted">{ide.vacio}</p>
@@ -1054,7 +1179,7 @@ function Explorador({
                   labels={labels}
                   onCambio={(texto) => ponerBuffer(ruta, (b) => ({ ...b, texto, version: (b.version ?? 0) + 1, autor: g }))}
                   onGuardar={() => void guardar(ruta)}
-                  onDividir={editores.grupos.length < 2 ? dividirActivo : null}
+                  onDividir={cabeOtro(editores) ? dividirActivo : null}
                   compacto={varios}
                   onCargarAhora={(actual) =>
                     ponerBuffer(ruta, (b) => ({ base: actual, texto: actual, revision: b.revision + 1, estado: { tipo: "listo" } }))
@@ -1064,6 +1189,25 @@ function Explorador({
             </div>
           );
         })}
+        {/* LA FRANJA DEL BORDE, sólo mientras se arrastra algo de la lente y
+            cabe otro editor: soltar aquí lo abre al lado, como en VS Code. */}
+        {hayArrastre && cabeOtro(editores) && (
+          <div
+            data-abrir-al-lado=""
+            onDragOver={(e) => {
+              if (!aceptaEditor()) return;
+              e.preventDefault();
+              setSobre("__al-lado");
+            }}
+            onDragLeave={() => setSobre((x) => (x === "__al-lado" ? null : x))}
+            onDrop={soltarEnNuevo}
+            className={`flex shrink-0 items-center justify-center border-dashed p-2 text-center text-[11px] ui-small md:w-24 md:border-l ${
+              sobre === "__al-lado" ? "bg-accent-soft text-accent border-[color:var(--accent)]" : "fg-faint bd"
+            } border-t md:border-t-0`}
+          >
+            {ide.abrirAlLado}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1238,6 +1382,8 @@ function Pestanas({
   onCerrar,
   onArrastrar,
   onSoltarArrastre,
+  aceptaSoltar,
+  onSoltarSobre,
 }: {
   pestanas: readonly string[];
   activa: string | null;
@@ -1248,17 +1394,43 @@ function Pestanas({
   /** Arrastrar una pestaña al otro editor la muda allí. */
   onArrastrar?: (e: ReactDragEvent, ruta: string) => void;
   onSoltarArrastre?: () => void;
+  /** ¿Lo que se arrastra puede caer aquí? (una pestaña, o un archivo del árbol) */
+  aceptaSoltar?: () => boolean;
+  /** Soltado SOBRE la pestaña `ruta`: lo arrastrado va delante de ella (reordenar). */
+  /** Soltado en la barra de pestañas: delante de `antesDe` (`null`, al final). */
+  onSoltarSobre?: (e: ReactDragEvent, antesDe: string | null) => void;
 }) {
+  // Sobre qué pestaña se suelta, y de qué lado: la mitad derecha la deja DETRÁS (como en VS Code).
+  const [encima, setEncima] = useState<{ readonly ruta: string; readonly detras: boolean } | null>(null);
   if (pestanas.length === 0) return null;
+  const detrasDe = (e: ReactDragEvent) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    return r.width > 0 && e.clientX > r.left + r.width / 2;
+  };
   return (
     <div role="tablist" className="flex shrink-0 overflow-x-auto nice-scroll border-b bd bg-elev">
-      {pestanas.map((ruta) => {
+      {pestanas.map((ruta, i) => {
         const es = ruta === activa;
         const sucia = sucias.has(ruta);
         return (
           <div
             key={ruta}
-            className={`group flex shrink-0 items-center gap-1 border-r bd pl-3 pr-1 text-[12px] ${es ? "bg-app fg" : "fg-muted hover:fg"}`}
+            className={`group flex shrink-0 items-center gap-1 border-r bd pl-3 pr-1 text-[12px] ${es ? "bg-app fg" : "fg-muted hover:fg"} ${
+              encima?.ruta === ruta ? (encima.detras ? "shadow-[inset_-2px_0_0_var(--accent)]" : "shadow-[inset_2px_0_0_var(--accent)]") : ""
+            }`}
+            onDragOver={(e) => {
+              if (!aceptaSoltar?.()) return;
+              e.preventDefault();
+              e.stopPropagation();
+              const detras = detrasDe(e);
+              if (encima?.ruta !== ruta || encima.detras !== detras) setEncima({ ruta, detras });
+            }}
+            onDragLeave={() => setEncima((x) => (x?.ruta === ruta ? null : x))}
+            onDrop={(e) => {
+              setEncima(null);
+              // Detrás de ésta es delante de la siguiente (o al final).
+              onSoltarSobre?.(e, detrasDe(e) ? (pestanas[i + 1] ?? null) : ruta);
+            }}
             title={ruta}
             draggable={Boolean(onArrastrar)}
             onDragStart={(e) => onArrastrar?.(e, ruta)}

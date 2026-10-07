@@ -46,6 +46,7 @@ import { PageBuildingLoader } from "./page-building-loader";
 import { ScanOverlay } from "./scan-overlay";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
 import { onFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
+import { MAX_SUBIDA } from "@/lib/workspace-v2/subir-ficheros";
 
 // ---------------------------------------------------------------------------
 
@@ -1226,6 +1227,17 @@ export function PreviewArea({
                 cerrarAviso: t("preview.ide.cerrarAviso"),
                 noSeHizo: t("preview.ide.noSeHizo"),
                 dividir: t("preview.ide.dividir"),
+                abrirAlLado: t("preview.ide.abrirAlLado"),
+                subidos: (count: number) => t("preview.ide.subidos", { count }),
+                noSubidos: t("preview.ide.noSubidos"),
+                motivo: {
+                  tipo: t("preview.ide.motivoTipo"),
+                  grande: t("preview.ide.motivoGrande"),
+                  nombre: t("preview.ide.motivoNombre"),
+                  demasiados: t("preview.ide.motivoDemasiados", { max: MAX_SUBIDA }),
+                },
+                reemplazar: (count: number, lista: string) => t("preview.ide.reemplazar", { count, lista }),
+                subiendo: t("preview.ide.subiendo"),
                 frasesDelEditor: Object.fromEntries(
                   FRASES_DEL_EDITOR.map((f) => [f, t(`preview.ide.editor.${f.replace(/ /g, "_")}`)]),
                 ),
