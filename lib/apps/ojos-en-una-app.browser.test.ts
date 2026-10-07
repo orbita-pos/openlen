@@ -10,6 +10,7 @@
 //     espera se pide, con su tope, sólo en una app.
 import { describe, expect, it } from "vitest";
 import { CATALOGO_ACTUAL } from "@/lib/apps/dependencias";
+import { esqueletoDeApp } from "@/lib/apps/esqueleto";
 import { carpetaDeLaVista, documentoMedible, pantallaDe, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { cargarEnOrigenReal, ESPERA_A_LA_RED_MS, RED_CALMADA_MS } from "@/lib/ai/origen-de-medida";
@@ -93,6 +94,21 @@ describe("los ojos de Len en una app", () => {
     expect(js.length).toBeGreaterThan(0);
     expect(js[0]).toMatchObject({ ruta: "/src/Roto.jsx", linea: 3 });
     expect(js.some((d) => d.ruta === "/index.html")).toBe(false);
+  }, 90_000);
+});
+
+describe("el esqueleto con el que nace una app (H10)", () => {
+  it("🔴 arranca en los ojos de Len sin un error: se ve su título", async () => {
+    const e = esqueletoDeApp({ titulo: "Caja del Café", idioma: "es" });
+    const v: ContextoDeVista = { ...vista(), files: e.ficheros, app: e.app, pantalla: null };
+    const leer = `(async () => {
+      for (let i = 0; i < 100; i++) { if (document.querySelector("h1")) break; await new Promise((r) => setTimeout(r, 20)); }
+      return document.querySelector("h1")?.textContent ?? null;
+    })()`;
+    const m = await renderVisualQualityViewports(documentoMedible(e.html, v), {}, { behaviorProgram: leer, carpeta: carpetaDeLaVista(v)! });
+    expect(m).not.toBeNull();
+    expect(m!.runtimeErrors ?? []).toEqual([]);
+    expect(m!.behaviorResult).toBe("Caja del Café");
   }, 90_000);
 });
 

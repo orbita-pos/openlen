@@ -87,7 +87,7 @@ const PROBAR_LA_APP =
   'If you change the app, test it before you call it done. What it DOES —a button, a form, a calculation, something that is saved or changes when clicked—, use it with usar_pagina: the path the user asked for and some odd case (an empty or wrong value, reloading the app). What it SHOWS —a screen, a list, a total—, look at it with mirar_pagina tipo="medir", which is free and tells whether something overflows on mobile. And check that the screens you didn\'t touch still work.';
 
 const LA_APP_SON_FICHEROS = (entrada: string) => `THE APP IS FILES:
-/index.html is only the shell that starts the app: its <head> (<title>, the <meta> tags, the fonts) and the <div id="root"> plus <script type="module" src="${entrada}"> that it must keep. The app itself lives in /src: ${entrada} mounts it, /src/App.jsx holds its screens, each component goes in its own file under /src/components, and /src/lib/supabase.js exports the backend client. Read to read, Edit to change an exact piece, Write to create a new file or rewrite a whole one, Grep to search the whole site and Glob to list files. PROJECT STATE lists the app's files; the files themselves don't come in your context, so whatever you say about the code —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: otherwise, read it first or don't describe it.
+/index.html is only the shell that starts the app: its <head> (<title>, the <meta> tags, the fonts) and the <div id="root"> plus <script type="module" src="${entrada}"> that it must keep. The app itself lives in /src: ${entrada} mounts it, /src/App.jsx holds its routes, each screen goes in its own file under /src/screens and each component under /src/components, and /src/lib/supabase.js exports the backend client. Read to read, Edit to change an exact piece, Write to create a new file or rewrite a whole one, Grep to search the whole site and Glob to list files. PROJECT STATE lists the app's files; the files themselves don't come in your context, so whatever you say about the code —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: otherwise, read it first or don't describe it.
 - There is no npm and no build to run: you write the files and OpenLen compiles each one as it is served. Imports work as in Vite (relative, "@/" for /src, without extension, CSS and JSON), and packages are only the ones listed in /AGENTS.md; anything else is written in the project.
 - After each Edit or Write the change is ALREADY saved and the user sees the app running on their canvas. If a file doesn't compile, the <new-diagnostics> give you its file, its line and why, and the app stays blank until you fix it: fix it in this turn. Every change is also kept: the user goes back from the editor, so never tell them that no copies are kept.
 - Screens are hash routes (/#/sales): a new screen is a component and a <Route> in /src/App.jsx, and you reach it with <Link to="/sales">. Never a /<slug>/index.html: that would be a separate static page, outside the app.
@@ -126,7 +126,7 @@ function seccionDeLaApp(app: AppDeProyecto): string {
   return `THIS PROJECT IS A WEB APP:
 React in /src —.jsx, .tsx, .ts or .js— that OpenLen serves and publishes as it is. There is no bundler, no npm and no build: each file is compiled on its own (JSX and TypeScript to JavaScript, at the same path and keeping its line numbers) and the browser joins them through their imports.
 - /index.html is the shell: its <head> (<title>, <meta>, the Tailwind and Google Fonts tags, a <style> of your own) and, in its <body>, <div id="root"> and <script type="module" src="${app.entrada}">. Without those two the app doesn't start. The app itself never goes in it.
-- ${app.entrada} mounts the app (createRoot(document.getElementById("root")).render(…)); /src/App.jsx holds the screens; components go in /src/components, one per file; /src/lib/supabase.js exports the backend client.
+- ${app.entrada} mounts the app (createRoot(document.getElementById("root")).render(…)) inside <HashRouter>; /src/App.jsx holds the routes; each screen goes in /src/screens and each component in /src/components, one per file; /src/lib/supabase.js exports the backend client.
 - IMPORTS work as in Vite: "./x", "../x", "/src/x" and "@/x" (= /src/x), with or without extension, or a folder's index; import "./x.css" adds that stylesheet; import data from "./x.json". import.meta.env has VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (also as VITE_SUPABASE_ANON_KEY), MODE, DEV and PROD: public values only — a secret never goes in the code.
 - PACKAGES, the only ones (catalog ${app.catalogo}):
 ${paquetes}
@@ -241,6 +241,11 @@ const PUBLICAR_EN_LA_APP =
  *   · `publicar` sin `idiomas`: la traducción automática no ve el texto que
  *     vive en el JSX (H15), y aceptarlos sería prometer lo que no se hace.
  */
+/** Las herramientas que `declaracionesDeLaApp` cambia, por su nombre. Si una se
+ *  renombra en el catálogo y aquí no, la app la recibiría como la de una página
+ *  SIN QUE NADA FALLE: lo vigila `modo-app.test.ts` («los nombres que usa»). */
+export const HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP = ["mirar_pagina", "usar_pagina", "revertir_ultimo_cambio", "publicar"] as const;
+
 export function declaracionesDeLaApp(declaraciones: readonly Record<string, unknown>[]): Record<string, unknown>[] {
   return declaraciones.map((d) => {
     const parametros = d.parameters as { properties?: Record<string, unknown>; required?: string[] } | undefined;

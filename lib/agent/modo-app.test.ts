@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma, textoDeLaPlataforma } from "./manual-de-la-plataforma";
-import { GUIA_DE_LA_APP, promptDeLaApp } from "./modo-app";
+import { GUIA_DE_LA_APP, HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP, promptDeLaApp } from "./modo-app";
 import { RUTA_GUIA, RUTA_LIBRERIAS, RUTA_MANUAL } from "./ficheros/manual";
 import { summarizeProjectState } from "./tools";
 import { CATALOGO_ACTUAL, catalogo } from "@/lib/apps/dependencias";
@@ -152,5 +152,35 @@ describe("el estado del proyecto en una app", () => {
     expect(estado.ficheros).toEqual(["/index.html"]);
     expect(estado.abierta_en_el_editor).toBe("/index.html");
     expect(estado).not.toHaveProperty("app");
+  });
+});
+
+// 🔴 LOS NOMBRES QUE USA. El modo app reconoce herramientas POR SU NOMBRE y las
+// nombra en su prompt y su manual. Si el catálogo las renombra (hay una rama
+// que las pasa al inglés) y esto no, nada falla: la app recibe la herramienta
+// de una página y Len lee nombres que no existen. Estas dos pruebas lo cazan.
+describe("los nombres que usa el modo app", () => {
+  const app = buildFunctionDeclarations(ENV, {}, "len", APP);
+  const declaradas = new Set(app.map((d) => String(d.name)));
+
+  it("cada herramienta que cambia en una app existe en el catálogo", () => {
+    for (const n of HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP) expect(declaradas.has(n), n).toBe(true);
+  });
+
+  it("todo lo que parece el nombre de una herramienta en su prompt, su manual y su guía existe", () => {
+    const texto = [
+      buildAgentSystemPrompt(ENV, "len", APP),
+      buildManualDeLaPlataforma(ENV, "len", APP),
+      ...Object.values(documentosDeLaPlataforma(APP)),
+      ...app.map((d) => String(d.description ?? "")),
+    ].join("\n");
+    // Lo que tiene forma de nombre y NO es una herramienta: un parámetro, un
+    // valor o un identificador de Postgres. Si una herramienta se renombra, su
+    // nombre viejo cae aquí y la prueba lo dice.
+    const NO_SON_HERRAMIENTAS = new Set(["blocked_reason", "sign_in_as", "postgres_changes", "supabase_realtime", "sin_leer", "output_mode"]);
+    const sueltos = [...new Set([...texto.matchAll(/\b[a-z]+(?:_[a-z0-9]+)+\b/g)].map((m) => m[0]))].filter(
+      (t) => !declaradas.has(t) && !NO_SON_HERRAMIENTAS.has(t),
+    );
+    expect(sueltos).toEqual([]);
   });
 });
