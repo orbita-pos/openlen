@@ -35,16 +35,16 @@ import {
   rectangularSelection,
 } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import { bracketMatching, foldGutter, foldKeymap, HighlightStyle, indentOnInput, syntaxHighlighting } from "@codemirror/language";
+import { bracketMatching, foldGutter, foldKeymap, indentOnInput } from "@codemirror/language";
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
-import { tags as t } from "@lezer/highlight";
 import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
 import { javascript } from "@codemirror/lang-javascript";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
 import { sql } from "@codemirror/lang-sql";
+import { coloresDelEditor } from "./colores-del-editor";
 
 /** El lenguaje por la extensión del fichero; sin uno conocido, texto plano. */
 export function lenguajeDeRuta(ruta: string): Extension {
@@ -77,18 +77,6 @@ export function lenguajeDeRuta(ruta: string): Extension {
   }
 }
 
-const colores = HighlightStyle.define([
-  { tag: [t.tagName, t.angleBracket], color: "var(--sx-etq)" },
-  { tag: [t.attributeName, t.propertyName], color: "var(--sx-atr)" },
-  { tag: [t.string, t.special(t.string), t.attributeValue, t.regexp], color: "var(--sx-val)" },
-  { tag: [t.comment, t.lineComment, t.blockComment], color: "var(--fg-faint)", fontStyle: "italic" },
-  { tag: [t.keyword, t.controlKeyword, t.moduleKeyword, t.operatorKeyword, t.definitionKeyword], color: "var(--sx-pal)" },
-  { tag: [t.number, t.bool, t.null, t.atom], color: "var(--sx-num)" },
-  { tag: [t.function(t.variableName), t.function(t.propertyName), t.className, t.typeName], color: "var(--sx-pro)" },
-  { tag: [t.heading, t.strong], color: "var(--sx-tit)", fontWeight: "600" },
-  { tag: [t.punctuation, t.bracket, t.separator], color: "var(--fg-faint)" },
-  { tag: t.invalid, color: "var(--danger, #e5484d)" },
-]);
 
 const tema = EditorView.theme({
   "&": { height: "100%", fontSize: "11.5px", backgroundColor: "var(--bg)", color: "var(--fg)" },
@@ -266,7 +254,7 @@ export default function EditorCodigo({
           ]),
           lenguajeDeRuta(ruta),
           ...(frases ? [EditorState.phrases.of(frases)] : []),
-          syntaxHighlighting(colores),
+          coloresDelEditor,
           tema,
           // «Las líneas bajan» (Jesús, 02/10): el ajuste de línea, como hasta ahora.
           EditorView.lineWrapping,
