@@ -81,7 +81,9 @@ function incluidos(inputs: Readonly<Record<string, unknown>>): Incluido[] {
 
 function textoDeLicencia(dir: string): string | null {
   for (const f of ["LICENSE", "LICENSE.md", "LICENSE.txt", "license", "LICENCE"]) {
-    if (existsSync(path.join(dir, f))) return readFileSync(path.join(dir, f), "utf8").trim();
+    // A LF: algunos paquetes traen su licencia con CRLF, y la salida tiene que
+    // ser la misma en cualquier máquina.
+    if (existsSync(path.join(dir, f))) return readFileSync(path.join(dir, f), "utf8").replace(/\r\n?/g, "\n").trim();
   }
   return null;
 }
@@ -192,6 +194,12 @@ async function main(): Promise<void> {
       }
       const faltan = MODOS.flatMap((modo) => ficherosDelCatalogo(nombre).filter((f) => !existsSync(path.join(guardado, modo, f))).map((f) => `${modo}/${f}`));
       if (faltan.length === 0) {
+        // Las licencias no son código servido ni van en el manifiesto: se dejan
+        // al día también cuando el catálogo ya está (salvo al sólo comprobar).
+        const rutaLicencias = path.join(guardado, "LICENCIAS.txt");
+        const licenciasAlDia = existsSync(rutaLicencias) && readFileSync(rutaLicencias, "utf8") === textoLicencias;
+        if (soloComprobar && !licenciasAlDia) throw new Error(`LICENCIAS.txt del catálogo ${nombre} no está al día (npm run apps:vendor)`);
+        if (!licenciasAlDia) writeFileSync(rutaLicencias, textoLicencias);
         console.log(`apps:vendor — ${nombre} ya está construido y coincide byte a byte.`);
         return;
       }

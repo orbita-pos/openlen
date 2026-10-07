@@ -23,3 +23,8 @@
 *.woff       binary
 *.woff2      binary
 *.node       binary
+
+# Las dependencias de las apps web (lib/apps/dependencias.ts): sus bytes están
+# CONGELADOS por huella (manifest.json) y las apps publicadas los cachean como
+# inmutables. Git no les toca los finales de línea, nunca.
+public/app-vendor/** -text
