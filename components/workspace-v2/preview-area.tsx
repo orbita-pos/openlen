@@ -209,6 +209,27 @@ function injectCanvasScrollbar(html: string): string {
 /** Las formas de mirar el mismo proyecto. «terminal» (F6a): los comandos de
  *  Len, sólo cuando la terminal está encendida o el proyecto ya tiene alguno.
  *  «cambios»: lo que cambió cada turno de esta sesión, fichero a fichero. */
+/** Las frases de CodeMirror que se ven en la lente «Código» (buscar y
+ *  reemplazar, ir a la línea, plegar), por su texto en inglés; su traducción
+ *  está en `preview.ide.editor`, con `_` en vez de espacios. */
+const FRASES_DEL_EDITOR = [
+  "Find",
+  "Replace",
+  "next",
+  "previous",
+  "all",
+  "match case",
+  "regexp",
+  "by word",
+  "replace",
+  "replace all",
+  "close",
+  "Go to line",
+  "go",
+  "Fold line",
+  "Unfold line",
+] as const;
+
 // ⚰️ «datos»: la lente de los almacenes `data-ol-stores`, retirada el 2026-10-04.
 export type Lente = "pagina" | "codigo" | "terminal" | "cambios";
 
@@ -1171,16 +1192,42 @@ export function PreviewArea({
                 tope: t("preview.comentar.tope"),
               },
               editar: {
-                editar: t("preview.editar.editar"),
                 guardar: t("preview.editar.guardar"),
                 guardando: t("preview.editar.guardando"),
-                descartar: t("preview.editar.descartar"),
                 cargando: t("preview.editar.cargando"),
                 cambio: t("preview.editar.cambio"),
                 cargarAhora: t("preview.editar.cargarAhora"),
                 rechazado: t("preview.editar.rechazado"),
                 error: t("preview.editar.error"),
                 nota: t("preview.editar.nota"),
+              },
+              ide: {
+                nuevoArchivo: t("preview.ide.nuevoArchivo"),
+                nuevaCarpeta: t("preview.ide.nuevaCarpeta"),
+                contraer: t("preview.ide.contraer"),
+                actualizar: t("preview.ide.actualizar"),
+                acciones: t("preview.ide.acciones"),
+                renombrar: t("preview.ide.renombrar"),
+                borrar: t("preview.ide.borrar"),
+                copiarRuta: t("preview.ide.copiarRuta"),
+                nombre: t("preview.ide.nombre"),
+                nombreInvalido: t("preview.ide.nombreInvalido"),
+                existe: (ruta: string) => t("preview.ide.existe", { ruta }),
+                pagina: t("preview.ide.pagina"),
+                portada: t("preview.ide.portada"),
+                confirmarBorrar: (ruta: string) => t("preview.ide.confirmarBorrar", { ruta }),
+                confirmarBorrarCarpeta: (ruta: string) => t("preview.ide.confirmarBorrarCarpeta", { ruta }),
+                confirmarCerrar: (nombre: string) => t("preview.ide.confirmarCerrar", { nombre }),
+                cerrarPestana: t("preview.ide.cerrarPestana"),
+                sinGuardar: t("preview.ide.sinGuardar"),
+                vacio: t("preview.ide.vacio"),
+                comentarAyuda: t("preview.ide.comentarAyuda"),
+                carpetaVacia: t("preview.ide.carpetaVacia"),
+                cerrarAviso: t("preview.ide.cerrarAviso"),
+                noSeHizo: t("preview.ide.noSeHizo"),
+                frasesDelEditor: Object.fromEntries(
+                  FRASES_DEL_EDITOR.map((f) => [f, t(`preview.ide.editor.${f.replace(/ /g, "_")}`)]),
+                ),
               },
               noEsta: t("preview.code.noEsta"),
               buscar: t("preview.code.buscar"),

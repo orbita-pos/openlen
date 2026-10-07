@@ -204,10 +204,8 @@
       "tope": "Es warten schon 10 Kommentare: schick zuerst die Nachricht."
     },
     "editar": {
-      "editar": "Bearbeiten",
       "guardar": "Speichern",
       "guardando": "Wird gespeichert…",
-      "descartar": "Verwerfen",
       "cargando": "Wird geladen…",
       "cambio": "Diese Datei hat sich geändert, während du sie bearbeitet hast (Len, der Editor oder dein Terminal). Es wurde nichts gespeichert.",
       "cargarAhora": "Aktuelle Fassung laden",
@@ -217,7 +215,49 @@
     },
     "appSinLienzo": "Die App kann hier nicht laufen: Die echte Leinwand antwortet nicht. Ihr Code ist in der Ansicht Code, und veröffentlicht funktioniert sie.",
     "verCodigo": "Code ansehen",
-    "direccionApp": "App"
+    "direccionApp": "App",
+    "ide": {
+      "nuevoArchivo": "Neue Datei",
+      "nuevaCarpeta": "Neuer Ordner",
+      "contraer": "Ordner einklappen",
+      "actualizar": "Aktualisieren",
+      "acciones": "Weitere Aktionen",
+      "renombrar": "Umbenennen",
+      "borrar": "Löschen",
+      "copiarRuta": "Pfad kopieren",
+      "nombre": "Name",
+      "nombreInvalido": "Buchstaben, Zahlen, „-“, „_“ und „.“, ohne Leerzeichen. Ein „/“ legt Ordner an.",
+      "existe": "{ruta} existiert bereits.",
+      "pagina": "Seiten werden hier nicht umbenannt oder verschoben: Ihre Adresse und ihre Links hängen vom Namen ab.",
+      "portada": "Die Startseite (/index.html) kann nicht gelöscht werden.",
+      "confirmarBorrar": "{ruta} löschen? Es bleibt in Versionen, und Len sieht es in seinem nächsten Zug.",
+      "confirmarBorrarCarpeta": "Den Ordner {ruta} mit allem Inhalt löschen?",
+      "confirmarCerrar": "{nombre} hat ungespeicherte Änderungen. Schließen und verwerfen?",
+      "cerrarPestana": "Schließen",
+      "sinGuardar": "Nicht gespeichert",
+      "vacio": "Öffne eine Datei im Explorer oder erstelle eine neue.",
+      "comentarAyuda": "Klicke auf eine Zeilennummer, um sie für Len zu kommentieren.",
+      "carpetaVacia": "Leer: wird gespeichert, sobald du darin eine Datei anlegst.",
+      "cerrarAviso": "Hinweis schließen",
+      "noSeHizo": "Nicht ausgeführt:",
+      "editor": {
+        "Find": "Suchen",
+        "Replace": "Ersetzen",
+        "next": "weiter",
+        "previous": "zurück",
+        "all": "alle",
+        "match_case": "Groß/klein",
+        "regexp": "Regex",
+        "by_word": "ganzes Wort",
+        "replace": "ersetzen",
+        "replace_all": "alle ersetzen",
+        "close": "schließen",
+        "Go_to_line": "Gehe zu Zeile",
+        "go": "los",
+        "Fold_line": "Einklappen",
+        "Unfold_line": "Ausklappen"
+      }
+    }
   },
   "placeholder": {
     "ai": {

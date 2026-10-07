@@ -212,10 +212,8 @@
       "tope": "Já há 10 comentários esperando: envie a mensagem primeiro."
     },
     "editar": {
-      "editar": "Editar",
       "guardar": "Salvar",
       "guardando": "Salvando…",
-      "descartar": "Descartar",
       "cargando": "Carregando…",
       "cambio": "Este arquivo mudou enquanto você o editava (Len, o editor ou seu terminal). Nada foi salvo.",
       "cargarAhora": "Carregar o atual",
@@ -225,7 +223,49 @@
     },
     "appSinLienzo": "O app não pode rodar aqui: o canvas real não responde. O código está na lente Código, e publicado funciona.",
     "verCodigo": "Ver o código",
-    "direccionApp": "App"
+    "direccionApp": "App",
+    "ide": {
+      "nuevoArchivo": "Novo arquivo",
+      "nuevaCarpeta": "Nova pasta",
+      "contraer": "Recolher pastas",
+      "actualizar": "Atualizar",
+      "acciones": "Mais ações",
+      "renombrar": "Renomear",
+      "borrar": "Excluir",
+      "copiarRuta": "Copiar caminho",
+      "nombre": "Nome",
+      "nombreInvalido": "Use letras, números, “-”, “_” e “.”, sem espaços. Uma “/” cria pastas.",
+      "existe": "{ruta} já existe.",
+      "pagina": "As páginas não são renomeadas nem movidas daqui: o endereço e os links delas dependem do nome.",
+      "portada": "A página inicial (/index.html) não pode ser excluída.",
+      "confirmarBorrar": "Excluir {ruta}? Fica em Versões, e o Len verá no próximo turno.",
+      "confirmarBorrarCarpeta": "Excluir a pasta {ruta} e tudo o que há nela?",
+      "confirmarCerrar": "{nombre} tem alterações não salvas. Fechar e perdê-las?",
+      "cerrarPestana": "Fechar",
+      "sinGuardar": "Não salvo",
+      "vacio": "Abra um arquivo do explorador ou crie um novo.",
+      "comentarAyuda": "Clique no número de uma linha para comentá-la ao Len.",
+      "carpetaVacia": "Vazia: é salva quando você cria um arquivo dentro.",
+      "cerrarAviso": "Fechar aviso",
+      "noSeHizo": "Não foi feito:",
+      "editor": {
+        "Find": "Buscar",
+        "Replace": "Substituir",
+        "next": "próxima",
+        "previous": "anterior",
+        "all": "todas",
+        "match_case": "maiúsculas",
+        "regexp": "regex",
+        "by_word": "palavra",
+        "replace": "substituir",
+        "replace_all": "substituir tudo",
+        "close": "fechar",
+        "Go_to_line": "Ir para a linha",
+        "go": "ir",
+        "Fold_line": "Recolher",
+        "Unfold_line": "Expandir"
+      }
+    }
   },
   "placeholder": {
     "ai": {

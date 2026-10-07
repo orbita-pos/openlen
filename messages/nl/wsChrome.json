@@ -212,10 +212,8 @@
       "tope": "Er wachten al 10 opmerkingen: stuur eerst het bericht."
     },
     "editar": {
-      "editar": "Bewerken",
       "guardar": "Opslaan",
       "guardando": "Opslaan…",
-      "descartar": "Verwerpen",
       "cargando": "Laden…",
       "cambio": "Dit bestand is gewijzigd terwijl je het bewerkte (Len, de editor of je terminal). Er is niets opgeslagen.",
       "cargarAhora": "Huidige versie laden",
@@ -225,7 +223,49 @@
     },
     "appSinLienzo": "De app kan hier niet draaien: het echte canvas reageert niet. De code staat in de lens Code, en gepubliceerd werkt hij.",
     "verCodigo": "Code bekijken",
-    "direccionApp": "App"
+    "direccionApp": "App",
+    "ide": {
+      "nuevoArchivo": "Nieuw bestand",
+      "nuevaCarpeta": "Nieuwe map",
+      "contraer": "Mappen inklappen",
+      "actualizar": "Vernieuwen",
+      "acciones": "Meer acties",
+      "renombrar": "Naam wijzigen",
+      "borrar": "Verwijderen",
+      "copiarRuta": "Pad kopiëren",
+      "nombre": "Naam",
+      "nombreInvalido": "Gebruik letters, cijfers, ‘-’, ‘_’ en ‘.’, zonder spaties. Een ‘/’ maakt mappen aan.",
+      "existe": "{ruta} bestaat al.",
+      "pagina": "Pagina’s worden hier niet hernoemd of verplaatst: hun adres en links hangen af van hun naam.",
+      "portada": "De startpagina (/index.html) kan niet worden verwijderd.",
+      "confirmarBorrar": "{ruta} verwijderen? Het blijft in Versies, en Len ziet het in zijn volgende beurt.",
+      "confirmarBorrarCarpeta": "De map {ruta} en alles erin verwijderen?",
+      "confirmarCerrar": "{nombre} heeft niet-opgeslagen wijzigingen. Sluiten en kwijtraken?",
+      "cerrarPestana": "Sluiten",
+      "sinGuardar": "Niet opgeslagen",
+      "vacio": "Open een bestand in de verkenner, of maak een nieuw bestand.",
+      "comentarAyuda": "Klik op een regelnummer om die regel voor Len te becommentariëren.",
+      "carpetaVacia": "Leeg: wordt opgeslagen zodra je er een bestand in maakt.",
+      "cerrarAviso": "Melding sluiten",
+      "noSeHizo": "Niet uitgevoerd:",
+      "editor": {
+        "Find": "Zoeken",
+        "Replace": "Vervangen",
+        "next": "volgende",
+        "previous": "vorige",
+        "all": "alle",
+        "match_case": "hoofdletters",
+        "regexp": "regex",
+        "by_word": "heel woord",
+        "replace": "vervangen",
+        "replace_all": "alles vervangen",
+        "close": "sluiten",
+        "Go_to_line": "Ga naar regel",
+        "go": "ga",
+        "Fold_line": "Inklappen",
+        "Unfold_line": "Uitklappen"
+      }
+    }
   },
   "placeholder": {
     "ai": {

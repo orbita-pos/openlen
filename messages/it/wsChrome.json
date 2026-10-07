@@ -204,10 +204,8 @@
       "tope": "Ci sono già 10 commenti in attesa: invia prima il messaggio."
     },
     "editar": {
-      "editar": "Modifica",
       "guardar": "Salva",
       "guardando": "Salvataggio…",
-      "descartar": "Scarta",
       "cargando": "Caricamento…",
       "cambio": "Questo file è cambiato mentre lo modificavi (Len, l’editor o il tuo terminale). Non è stato salvato nulla.",
       "cargarAhora": "Carica quello attuale",
@@ -217,7 +215,49 @@
     },
     "appSinLienzo": "L’app non può girare qui: la vera tela non risponde. Il suo codice è nella vista Codice, e una volta pubblicata funziona.",
     "verCodigo": "Vedi il codice",
-    "direccionApp": "App"
+    "direccionApp": "App",
+    "ide": {
+      "nuevoArchivo": "Nuovo file",
+      "nuevaCarpeta": "Nuova cartella",
+      "contraer": "Comprimi cartelle",
+      "actualizar": "Aggiorna",
+      "acciones": "Altre azioni",
+      "renombrar": "Rinomina",
+      "borrar": "Elimina",
+      "copiarRuta": "Copia percorso",
+      "nombre": "Nome",
+      "nombreInvalido": "Usa lettere, numeri, «-», «_» e «.», senza spazi. Una «/» crea cartelle.",
+      "existe": "{ruta} esiste già.",
+      "pagina": "Le pagine non si rinominano né si spostano da qui: indirizzo e link dipendono dal nome.",
+      "portada": "La home (/index.html) non si può eliminare.",
+      "confirmarBorrar": "Eliminare {ruta}? Resta in Versioni, e Len lo vedrà al prossimo turno.",
+      "confirmarBorrarCarpeta": "Eliminare la cartella {ruta} e tutto ciò che contiene?",
+      "confirmarCerrar": "{nombre} ha modifiche non salvate. Chiuderlo e perderle?",
+      "cerrarPestana": "Chiudi",
+      "sinGuardar": "Non salvato",
+      "vacio": "Apri un file dall’explorer o creane uno nuovo.",
+      "comentarAyuda": "Clicca sul numero di una riga per commentarla a Len.",
+      "carpetaVacia": "Vuota: viene salvata quando crei un file al suo interno.",
+      "cerrarAviso": "Chiudi avviso",
+      "noSeHizo": "Non eseguito:",
+      "editor": {
+        "Find": "Trova",
+        "Replace": "Sostituisci",
+        "next": "successivo",
+        "previous": "precedente",
+        "all": "tutti",
+        "match_case": "maiuscole",
+        "regexp": "regex",
+        "by_word": "parola",
+        "replace": "sostituisci",
+        "replace_all": "sostituisci tutto",
+        "close": "chiudi",
+        "Go_to_line": "Vai alla riga",
+        "go": "vai",
+        "Fold_line": "Comprimi",
+        "Unfold_line": "Espandi"
+      }
+    }
   },
   "placeholder": {
     "ai": {

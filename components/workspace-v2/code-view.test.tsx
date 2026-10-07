@@ -1,16 +1,38 @@
 // @vitest-environment jsdom
-// La lente «Código» abierta en un fichero pedido desde el Chat (la #9 de
-// plans/len-agente-2026/notas/fase-5-taller.md). Arnés manual de react-dom +
-// act(), como `terminal-view.test.tsx`.
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+// LA LENTE «CÓDIGO», COMO VS CODE: el explorador (crear, renombrar, borrar,
+// carpetas), las pestañas con el editor de verdad (CodeMirror), guardar con su
+// base, buscar (la #11), la marca de lo cambiado (la #19), comentar una línea
+// para Len (la #8) y el fichero pedido desde el Chat (la #9). Arnés manual de
+// react-dom + act(), como `terminal-view.test.tsx`; el servidor, un `fetch`
+// falso que hace de `/api/projects/[id]/ficheros`.
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { EditorView } from "@codemirror/view";
 
 import { CodeView } from "./code-view";
 import { comentariosDelChat } from "@/lib/workspace-v2/comentarios-de-lineas";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
 
+// `next/dynamic` carga el editor aparte: aquí, con React.lazy, para esperarlo.
+vi.mock("next/dynamic", async () => {
+  const React = await import("react");
+  return {
+    default: (cargar: () => Promise<{ default: React.ComponentType<Record<string, unknown>> }>) => {
+      const Perezoso = React.lazy(cargar);
+      return (p: Record<string, unknown>) => React.createElement(React.Suspense, { fallback: null }, React.createElement(Perezoso, p));
+    },
+  };
+});
+
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+beforeAll(() => {
+  // jsdom no mide: CodeMirror pregunta por rectángulos que aquí no existen.
+  const vacio = () => ({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
+  Range.prototype.getClientRects ??= vacio;
+  Range.prototype.getBoundingClientRect ??= () => new DOMRect();
+});
 
 const labels = {
   title: "El código",
@@ -43,10 +65,8 @@ const labels = {
     tope: "Ya hay 10 comentarios esperando",
   },
   editar: {
-    editar: "Editar",
     guardar: "Guardar",
     guardando: "Guardando…",
-    descartar: "Descartar",
     cargando: "Cargando…",
     cambio: "Este archivo cambió mientras lo editabas. No se guardó nada.",
     cargarAhora: "Cargar lo de ahora",
@@ -54,27 +74,68 @@ const labels = {
     error: "No se pudo guardar.",
     nota: "Se guarda como tu versión.",
   },
+  ide: {
+    nuevoArchivo: "Nuevo archivo",
+    nuevaCarpeta: "Nueva carpeta",
+    contraer: "Contraer carpetas",
+    actualizar: "Actualizar",
+    acciones: "Más acciones",
+    renombrar: "Renombrar",
+    borrar: "Borrar",
+    copiarRuta: "Copiar ruta",
+    nombre: "Nombre",
+    nombreInvalido: "Nombre no válido",
+    existe: (ruta: string) => `Ya existe ${ruta}.`,
+    pagina: "Las páginas no se renombran desde aquí.",
+    portada: "La portada no se puede borrar.",
+    confirmarBorrar: (ruta: string) => `¿Borrar ${ruta}?`,
+    confirmarBorrarCarpeta: (ruta: string) => `¿Borrar la carpeta ${ruta}?`,
+    confirmarCerrar: (nombre: string) => `${nombre} tiene cambios. ¿Cerrar?`,
+    cerrarPestana: "Cerrar",
+    sinGuardar: "Sin guardar",
+    vacio: "Abre un archivo.",
+    comentarAyuda: "Pulsa el número de una línea para comentarla a Len.",
+    carpetaVacia: "Vacía",
+    cerrarAviso: "Cerrar el aviso",
+    noSeHizo: "No se hizo:",
+  },
 };
 
-const LISTA = {
-  ficheros: [
-    { ruta: "/index.html", contenido: "<h1>Portada</h1>" },
-    { ruta: "/menu/index.html", contenido: "<h1>Menú</h1>" },
-    { ruta: "/datos/reservas.json", contenido: '[{"nombre":"Ana"}]' },
-  ],
-  perezosos: ["/resultados/visitas.json"],
-};
+/** El servidor de mentira: la lista, y lo que le llega por cada método. */
+let LISTA: { ficheros: { ruta: string; contenido: string }[]; perezosos: string[] };
+let llamadas: { metodo: string; url: string; cuerpo: unknown }[];
+let respuesta: (metodo: string, url: string, cuerpo: unknown) => Response | null;
 
 const roots: Root[] = [];
+let n = 0;
+let proyecto = "";
 beforeEach(() => {
+  // Cada prueba, su proyecto: lo abierto se recuerda por proyecto.
+  proyecto = `p${++n}`;
+  LISTA = {
+    ficheros: [
+      { ruta: "/index.html", contenido: "<h1>Portada</h1>" },
+      { ruta: "/menu/index.html", contenido: "<h1>Menú</h1>" },
+      { ruta: "/datos/reservas.json", contenido: '[{"nombre":"Ana"}]' },
+    ],
+    perezosos: ["/.openlen/resultados/visitas.json"],
+  };
+  llamadas = [];
+  respuesta = () => null;
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (url: string) =>
-      url.includes("?ruta=")
-        ? new Response(JSON.stringify({ contenido: '{"hoy":12}' }))
-        : new Response(JSON.stringify(LISTA)),
-    ),
+    vi.fn(async (url: string, init?: RequestInit) => {
+      const metodo = init?.method ?? "GET";
+      const cuerpo = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
+      llamadas.push({ metodo, url, cuerpo });
+      const propia = respuesta(metodo, url, cuerpo);
+      if (propia) return propia;
+      if (metodo === "GET" && url.includes("?ruta=")) return new Response(JSON.stringify({ contenido: '{"hoy":12}' }));
+      if (metodo === "GET") return new Response(JSON.stringify(LISTA));
+      return new Response(JSON.stringify({ rutas: [] }));
+    }),
   );
+  vi.stubGlobal("confirm", vi.fn(() => true));
 });
 afterEach(() => {
   roots.splice(0).forEach((r) => act(() => r.unmount()));
@@ -82,134 +143,298 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function pintar(peticion: { ruta: string; n: number } | null) {
+async function esperar(cond: () => unknown, veces = 60) {
+  for (let i = 0; i < veces && !cond(); i++) {
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 5));
+    });
+  }
+}
+
+async function pintar(o: { peticion?: { ruta: string; n: number } | null; onClose?: () => void; id?: string } = {}) {
   const el = document.createElement("div");
   document.body.appendChild(el);
   const root = createRoot(el);
   roots.push(root);
-  const render = async (p: typeof peticion) => {
+  const render = async (peticion: { ruta: string; n: number } | null = o.peticion ?? null) => {
     await act(async () => {
-      root.render(<CodeView html="<h1>Lienzo</h1>" projectId="p1" rutaActual="/index.html" peticion={p} onClose={() => {}} labels={labels} />);
+      root.render(
+        <CodeView
+          html="<h1>Lienzo</h1>"
+          projectId={o.id ?? proyecto}
+          rutaActual="/index.html"
+          peticion={peticion}
+          onClose={o.onClose ?? (() => {})}
+          labels={labels}
+        />,
+      );
     });
+    await esperar(() => el.querySelector(".cm-editor") || el.textContent?.includes(labels.ide.vacio));
   };
-  await render(peticion);
-  return { el, render };
+  await render();
+  return { el, root, render };
 }
 
-const elegido = (el: HTMLElement) => el.querySelector("header span")?.textContent;
+const editor = (el: HTMLElement) => EditorView.findFromDOM(el.querySelector<HTMLElement>(".cm-editor")!)!;
+const texto = (el: HTMLElement) => editor(el).state.doc.toString();
+const escribir = (el: HTMLElement, nuevo: string) =>
+  act(() => {
+    const v = editor(el);
+    v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: nuevo } });
+  });
+const pestanas = (el: HTMLElement) => [...el.querySelectorAll('[role="tab"]')].map((t) => t.textContent);
+const activa = (el: HTMLElement) => el.querySelector('[role="tab"][aria-selected="true"]')?.textContent;
+const botonDelArbol = (el: HTMLElement, nombre: string) =>
+  [...el.querySelectorAll<HTMLButtonElement>("nav li button")].find((b) => b.querySelector(".truncate")?.textContent === nombre)!;
+const porEtiqueta = (el: HTMLElement, etiqueta: string) => el.querySelector<HTMLButtonElement>(`button[aria-label="${etiqueta}"]`)!;
+const tecla = (target: Element, key: string, extra: KeyboardEventInit = {}) => {
+  const e = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...extra });
+  act(() => {
+    target.dispatchEvent(e);
+  });
+  return e;
+};
+const escribirNombre = async (el: HTMLElement, nombre: string) => {
+  const caja = el.querySelector<HTMLInputElement>('nav input[aria-label="Nombre"]')!;
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+  act(() => {
+    setter.call(caja, nombre);
+    caja.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  tecla(caja, "Enter");
+  await esperar(() => false, 3);
+};
 
-describe("CodeView con una petición del Chat", () => {
-  it("se abre en ESE fichero, con su carpeta desplegada", async () => {
-    const { el } = await pintar({ ruta: "/datos/reservas.json", n: 1 });
-    expect(elegido(el)).toBe("datos/reservas.json");
-    expect(el.textContent).toContain('[{"nombre":"Ana"}]');
-    expect(el.querySelector('[aria-current="true"]')!.textContent).toBe("reservas.json");
+describe("CodeView — abrir archivos en pestañas", () => {
+  it("abre la página del lienzo con lo GUARDADO, en un editor de verdad", async () => {
+    const { el } = await pintar();
+    expect(pestanas(el)).toEqual(["index.html"]);
+    expect(texto(el)).toBe("<h1>Portada</h1>");
+    expect(el.querySelector(".cm-lineNumbers")).not.toBeNull();
   });
 
-  it("con la lente ya abierta, una petición nueva cambia de fichero; la misma otra vez no hace nada", async () => {
-    const { el, render } = await pintar(null);
-    expect(elegido(el)).toBe("index.html");
+  it("un clic en el árbol abre otra pestaña; la petición del Chat también, con su carpeta desplegada", async () => {
+    const { el, render } = await pintar();
+    act(() => botonDelArbol(el, "reservas.json").click());
+    await esperar(() => texto(el).includes("Ana"));
+    expect(pestanas(el)).toEqual(["index.html", "reservas.json"]);
     await render({ ruta: "/menu/index.html", n: 2 });
-    expect(elegido(el)).toBe("menu/index.html");
-    expect(el.textContent).toContain("<h1>Menú</h1>");
-    expect(el.querySelector('[aria-current="true"]')!.textContent).toBe("index.html");
+    await esperar(() => texto(el).includes("Menú"));
+    expect(activa(el)).toBe("index.html");
+    expect(pestanas(el)).toEqual(["index.html", "reservas.json", "index.html"]);
+    expect(el.querySelector("header")?.textContent).toContain("menu/index.html");
   });
 
-  it("un fichero de los que se calculan al abrirlos se pide solo", async () => {
-    const { el } = await pintar({ ruta: "/resultados/visitas.json", n: 3 });
-    await act(async () => {});
-    expect(el.textContent).toContain('{"hoy":12}');
+  it("lo que se calcula al abrirlo se pide y es de sólo lectura (sin Guardar)", async () => {
+    const { el } = await pintar({ peticion: { ruta: "/.openlen/resultados/visitas.json", n: 1 } });
+    await esperar(() => el.querySelector(".cm-editor") && texto(el).includes("hoy"));
+    expect(texto(el)).toBe('{"hoy":12}');
+    expect(editor(el).state.readOnly).toBe(true);
+    expect([...el.querySelectorAll("header button")].some((b) => b.textContent === "Guardar")).toBe(false);
+    expect(el.textContent).toContain("Sólo lectura");
   });
 
-  it("si el fichero ya no está, lo dice en vez de quedarse cargando", async () => {
-    const { el } = await pintar({ ruta: "/clases/index.html", n: 4 });
-    expect(el.textContent).toContain("clases/index.html · ya no está.");
-    expect(el.textContent).not.toContain("Cargando…");
+  it("si el archivo ya no está, lo dice", async () => {
+    const { el } = await pintar({ peticion: { ruta: "/borrada/index.html", n: 1 } });
+    await esperar(() => el.textContent?.includes("ya no está."));
+    expect(el.textContent).toContain("borrada/index.html · ya no está.");
   });
 });
 
-/** Escribir en un input controlado por React: el setter nativo y el evento `input`. */
-function escribir(input: HTMLInputElement, texto: string) {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
-  act(() => {
-    setter.call(input, texto);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+describe("CodeView — editar y guardar", () => {
+  it("🔴 escribir marca la pestaña sin guardar; Ctrl+S guarda con su BASE y la deja limpia", async () => {
+    respuesta = (m, _u, c) => {
+      if (m !== "PUT") return null;
+      const { ruta, contenido } = c as { ruta: string; contenido: string };
+      LISTA.ficheros = LISTA.ficheros.map((f) => (f.ruta === ruta ? { ruta, contenido } : f));
+      return new Response(JSON.stringify({ contenido }));
+    };
+    const { el } = await pintar();
+    escribir(el, "<h1>Portada nueva</h1>");
+    expect(el.querySelector('[role="tablist"]')!.textContent).toContain("●");
+    tecla(el.querySelector(".cm-content")!, "s", { ctrlKey: true });
+    await esperar(() => llamadas.some((l) => l.metodo === "PUT"));
+    await esperar(() => !el.querySelector('[role="tablist"]')!.textContent!.includes("●"));
+    expect(llamadas.find((l) => l.metodo === "PUT")!.cuerpo).toEqual({
+      ruta: "/index.html",
+      contenido: "<h1>Portada nueva</h1>",
+      base: "<h1>Portada</h1>",
+    });
+    expect(texto(el)).toBe("<h1>Portada nueva</h1>");
   });
-}
 
-function tecla(el: EventTarget, key: string, extra: KeyboardEventInit = {}, atendida = false) {
-  const e = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...extra });
-  if (atendida) e.preventDefault();
-  act(() => {
-    el.dispatchEvent(e);
+  it("si cambió mientras lo editabas, no se pisa: avisa, y «Cargar lo de ahora» lo trae", async () => {
+    respuesta = (m) => (m === "PUT" ? new Response(JSON.stringify({ error: "cambio", actual: "<h1>De Len</h1>" }), { status: 409 }) : null);
+    const { el } = await pintar();
+    escribir(el, "<h1>Mío</h1>");
+    act(() => [...el.querySelectorAll<HTMLButtonElement>("header button")].find((b) => b.textContent === "Guardar")!.click());
+    await esperar(() => el.textContent?.includes("cambió mientras lo editabas"));
+    act(() => [...el.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === "Cargar lo de ahora")!.click());
+    await esperar(() => texto(el) === "<h1>De Len</h1>");
+    expect(texto(el)).toBe("<h1>De Len</h1>");
+    expect(el.querySelector('[role="tablist"]')!.textContent).not.toContain("●");
   });
-  return e;
-}
+
+  it("lo que una guarda rechaza dice por qué", async () => {
+    respuesta = (m) => (m === "PUT" ? new Response(JSON.stringify({ error: "rechazado", detalle: "data-slot-path no" }), { status: 422 }) : null);
+    const { el } = await pintar();
+    escribir(el, "<h1 data-slot-path=x>x</h1>");
+    tecla(el.querySelector(".cm-content")!, "s", { ctrlKey: true });
+    await esperar(() => el.textContent?.includes("data-slot-path no"));
+    expect(el.textContent).toContain("No se guardó:");
+  });
+
+  it("cerrar una pestaña con cambios pregunta; si no, se queda", async () => {
+    const { el } = await pintar();
+    escribir(el, "<h1>sin guardar</h1>");
+    vi.mocked(window.confirm).mockReturnValueOnce(false);
+    act(() => porEtiqueta(el, "Cerrar: index.html (Sin guardar)").click());
+    expect(pestanas(el)).toEqual(["index.html"]);
+    act(() => porEtiqueta(el, "Cerrar: index.html (Sin guardar)").click());
+    expect(pestanas(el)).toEqual([]);
+    expect(el.textContent).toContain("Abre un archivo.");
+  });
+
+  it("🔴 lo no guardado sobrevive a cerrar la lente y volver (mirar la app y volver)", async () => {
+    const primera = await pintar();
+    escribir(primera.el, "<h1>a medias</h1>");
+    act(() => primera.root.unmount());
+    roots.splice(roots.indexOf(primera.root), 1);
+    const { el } = await pintar();
+    expect(texto(el)).toBe("<h1>a medias</h1>");
+    expect(el.querySelector('[role="tablist"]')!.textContent).toContain("●");
+  });
+});
+
+describe("CodeView — el explorador: crear, renombrar, borrar", () => {
+  it("«Nuevo archivo» en la carpeta elegida: el nombre se escribe en el árbol, se crea y se abre", async () => {
+    respuesta = (m, _u, c) => {
+      if (m !== "POST") return null;
+      LISTA.ficheros.push({ ruta: (c as { ruta: string }).ruta, contenido: "" });
+      return new Response(JSON.stringify({ rutas: [(c as { ruta: string }).ruta] }));
+    };
+    const { el } = await pintar();
+    act(() => botonDelArbol(el, "datos").click()); // elegir la carpeta (y plegarla)
+    act(() => porEtiqueta(el, "Nuevo archivo").click());
+    await escribirNombre(el, "horarios.json");
+    await esperar(() => activa(el) === "horarios.json");
+    expect(llamadas.find((l) => l.metodo === "POST")!.cuerpo).toEqual({ ruta: "/datos/horarios.json" });
+    expect(activa(el)).toBe("horarios.json");
+  });
+
+  it("un nombre que no vale se dice y no se crea nada", async () => {
+    const { el } = await pintar();
+    act(() => porEtiqueta(el, "Nuevo archivo").click());
+    const caja = el.querySelector<HTMLInputElement>('nav input[aria-label="Nombre"]')!;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+    act(() => {
+      setter.call(caja, "con espacio.js");
+      caja.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(el.textContent).toContain("Nombre no válido");
+    tecla(caja, "Enter");
+    expect(llamadas.some((l) => l.metodo === "POST")).toBe(false);
+  });
+
+  it("«Nueva carpeta» aparece vacía en el árbol, y un archivo nuevo dentro nace en ella", async () => {
+    const { el } = await pintar();
+    act(() => porEtiqueta(el, "Nueva carpeta").click());
+    await escribirNombre(el, "js");
+    expect(botonDelArbol(el, "js")).toBeTruthy();
+    expect(llamadas.some((l) => l.metodo === "POST")).toBe(false);
+    act(() => porEtiqueta(el, "Nuevo archivo").click());
+    await escribirNombre(el, "app.js");
+    await esperar(() => llamadas.some((l) => l.metodo === "POST"));
+    expect(llamadas.find((l) => l.metodo === "POST")!.cuerpo).toEqual({ ruta: "/js/app.js" });
+  });
+
+  it("F2 renombra (y la pestaña abierta sigue al archivo); una página no tiene «Renombrar»", async () => {
+    respuesta = (m) => (m === "PATCH" ? new Response(JSON.stringify({ rutas: ["/datos/citas.json"] })) : null);
+    const { el } = await pintar();
+    act(() => botonDelArbol(el, "reservas.json").click());
+    await esperar(() => activa(el) === "reservas.json");
+    tecla(botonDelArbol(el, "reservas.json"), "F2");
+    await escribirNombre(el, "citas.json");
+    await esperar(() => llamadas.some((l) => l.metodo === "PATCH"));
+    expect(llamadas.find((l) => l.metodo === "PATCH")!.cuerpo).toEqual({ de: "/datos/reservas.json", a: "/datos/citas.json" });
+    expect(pestanas(el)).toContain("citas.json");
+    // El menú de una página: sin «Renombrar».
+    act(() => {
+      porEtiqueta(el, "Más acciones: index.html").click();
+    });
+    const menu = el.querySelector('[role="menu"]')!;
+    expect([...menu.querySelectorAll("button")].map((b) => b.textContent?.replace(/F2|Supr/, ""))).toEqual(["Borrar", "Copiar ruta"]);
+  });
+
+  it("Supr borra lo elegido tras preguntar; una carpeta con una página la borra por su propia ruta", async () => {
+    respuesta = (m, url) => {
+      if (m === "DELETE" && url.includes("/ficheros?ruta=%2Fmenu")) {
+        return new Response(JSON.stringify({ error: "pagina", rutas: ["/menu/index.html"] }), { status: 409 });
+      }
+      return null;
+    };
+    const { el } = await pintar();
+    act(() => botonDelArbol(el, "menu").click());
+    tecla(botonDelArbol(el, "menu"), "Delete");
+    await esperar(() => llamadas.some((l) => l.url.includes("/pages/menu")));
+    expect(window.confirm).toHaveBeenCalledWith("¿Borrar la carpeta /menu?");
+    expect(llamadas.filter((l) => l.metodo === "DELETE").map((l) => decodeURIComponent(l.url))).toEqual([
+      `/api/projects/${proyecto}/ficheros?ruta=/menu`,
+      `/api/projects/${proyecto}/pages/menu`,
+    ]);
+  });
+
+  it("la portada no se borra, y se dice", async () => {
+    const { el } = await pintar();
+    const portada = [...el.querySelectorAll<HTMLButtonElement>("nav > ul > li button")].find((b) => b.querySelector(".truncate")?.textContent === "index.html")!;
+    act(() => portada.click());
+    tecla(portada, "Delete");
+    expect(el.querySelector('[role="alert"]')!.textContent).toContain("La portada no se puede borrar.");
+    expect(llamadas.some((l) => l.metodo === "DELETE")).toBe(false);
+  });
+
+  it("lo que el servidor no hace se explica en el aviso", async () => {
+    respuesta = (m) => (m === "POST" ? new Response(JSON.stringify({ error: "rechazado", detalle: "/api/ is reserved" }), { status: 422 }) : null);
+    const { el } = await pintar();
+    act(() => porEtiqueta(el, "Nuevo archivo").click());
+    await escribirNombre(el, "api/x.js");
+    await esperar(() => el.querySelector('[role="alert"]'));
+    expect(el.querySelector('[role="alert"]')!.textContent).toContain("No se hizo: /api/ is reserved");
+  });
+});
 
 describe("CodeView — buscar en los archivos (la #11)", () => {
-  const buscador = (el: HTMLElement) => el.querySelector<HTMLInputElement>('input[aria-label="Buscar en los archivos"]')!;
-
-  it("por nombre y por dentro, con lo que casó resaltado; el lienzo cuenta como la página abierta", async () => {
-    const { el } = await pintar(null);
-    escribir(buscador(el), "menu");
-    expect(el.textContent).toContain("Por nombre");
-    expect(el.textContent).toContain("Dentro de los archivos");
-    expect([...el.querySelectorAll("mark")].map((m) => m.textContent)).toEqual(["Menú"]);
-    // El árbol se va mientras hay algo escrito.
-    expect(el.querySelector("nav button[aria-expanded]")).toBeNull();
-    // La portada se busca como está en el LIENZO, no como está guardada.
-    escribir(buscador(el), "lienzo");
-    expect(el.textContent).toContain("index.html");
-    escribir(buscador(el), "portada");
-    expect(el.textContent).toContain("Nada coincide con «portada».");
-  });
-
-  it("los que se calculan al abrirlos se encuentran por nombre, y se dice que sólo por nombre", async () => {
-    const { el } = await pintar(null);
-    escribir(buscador(el), "visitas");
-    expect(el.textContent).toContain("1 sólo por nombre.");
-  });
-
-  it("pulsar una línea abre el fichero y la resalta", async () => {
-    const { el } = await pintar(null);
-    escribir(buscador(el), "ana");
-    const linea = [...el.querySelectorAll("nav button")].find((b) => b.textContent?.includes('[{"nombre":"Ana"}]'))!;
-    act(() => (linea as HTMLButtonElement).click());
-    expect(elegido(el)).toBe("datos/reservas.json");
-    expect(el.querySelector('[data-linea="1"]')!.className).toContain("bg-accent-soft");
-  });
-
-  it("flechas y Enter abren el resultado activo; Escape borra la búsqueda y no cierra la lente", async () => {
-    const onClose = vi.fn();
-    const div = document.createElement("div");
-    document.body.appendChild(div);
-    const root = createRoot(div);
-    roots.push(root);
-    await act(async () => {
-      root.render(<CodeView html="<h1>Lienzo</h1>" projectId="p1" rutaActual="/index.html" onClose={onClose} labels={labels} />);
+  const buscar = (el: HTMLElement, q: string) => {
+    const caja = el.querySelector<HTMLInputElement>('input[aria-label="Buscar en los archivos"]')!;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+    act(() => {
+      setter.call(caja, q);
+      caja.dispatchEvent(new Event("input", { bubbles: true }));
     });
-    const input = buscador(div);
-    escribir(input, "h1");
-    // Activo, el primero (portada, línea 1); una flecha abajo, el de menú.
-    tecla(input, "ArrowDown");
-    tecla(input, "Enter");
-    expect(elegido(div)).toBe("menu/index.html");
+    return caja;
+  };
 
-    expect(tecla(input, "Escape").defaultPrevented).toBe(true);
-    expect(input.value).toBe("");
+  it("por nombre y por dentro; Enter abre el resultado en su línea; Escape borra y no cierra la lente", async () => {
+    const onClose = vi.fn();
+    const { el } = await pintar({ onClose });
+    const caja = buscar(el, "Ana");
+    expect(el.textContent).toContain("Dentro de los archivos");
+    tecla(caja, "Enter");
+    await esperar(() => activa(el) === "reservas.json");
+    expect(activa(el)).toBe("reservas.json");
+    expect(tecla(caja, "Escape").defaultPrevented).toBe(true);
     expect(onClose).not.toHaveBeenCalled();
-    // Como en /new, donde React escucha en el propio `document`: la tecla llega
-    // al oyente de la lente aunque el buscador la parara, y manda la marca.
-    tecla(document, "Escape", {}, true);
-    expect(onClose).not.toHaveBeenCalled();
-    tecla(input, "Escape");
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(caja.value).toBe("");
   });
 
-  it("Ctrl+Mayús+F lleva al buscador", async () => {
-    const { el } = await pintar(null);
+  it("Ctrl+P y Ctrl+Mayús+F llevan al buscador", async () => {
+    const { el } = await pintar();
+    const caja = el.querySelector<HTMLInputElement>('input[aria-label="Buscar en los archivos"]')!;
+    tecla(document.body, "p", { ctrlKey: true });
+    expect(document.activeElement).toBe(caja);
+    act(() => caja.blur());
     tecla(document.body, "F", { ctrlKey: true, shiftKey: true });
-    expect(document.activeElement).toBe(buscador(el));
+    expect(document.activeElement).toBe(caja);
   });
 });
 
@@ -223,156 +448,56 @@ describe("CodeView — la marca de «cambiado» en el árbol (la #19)", () => {
         { ruta: "/datos/reservas.json", tipo: "texto", antes: null, despues: "[]" },
       ],
     });
-    const div = document.createElement("div");
-    document.body.appendChild(div);
-    const root = createRoot(div);
-    roots.push(root);
-    await act(async () => {
-      root.render(<CodeView html="<h1>Lienzo</h1>" projectId="p-marcas" rutaActual="/index.html" onClose={() => {}} labels={labels} />);
-    });
-    const marcadas = [...div.querySelectorAll("nav [title]")].map((m) => [m.closest("button")!.querySelector(".truncate")!.textContent, m.getAttribute("title")]);
+    const { el } = await pintar({ id: "p-marcas" });
+    const marcadas = [...el.querySelectorAll("nav li button > span[title]")].map((m) => [
+      m.closest("button")!.querySelector(".truncate")!.textContent,
+      m.getAttribute("title"),
+    ]);
     expect(marcadas).toEqual([
       ["reservas.json", "Nuevo en esta sesión"],
       ["index.html", "Cambió en esta sesión"],
     ]);
-    // La portada no cambió: sin marca. Las carpetas de los marcados, con su punto.
-    const portada = [...div.querySelectorAll("nav button")].find((b) => b.textContent === "index.html" && !b.closest("ul ul"));
-    expect(portada?.querySelector("[title]")).toBeFalsy();
-    expect(div.querySelectorAll("nav button[aria-expanded] .opacity-40")).toHaveLength(2);
-  });
-});
-
-describe("CodeView — colores de sintaxis (la #15)", () => {
-  it("un HTML se pinta con sus colores y un fichero sin lenguaje conocido, sin ellos; el texto no cambia", async () => {
-    const { el, render } = await pintar({ ruta: "/menu/index.html", n: 10 });
-    expect([...el.querySelectorAll("section .sx-etq")].map((s) => s.textContent)).toEqual(["h1", "h1"]);
-    expect(el.querySelector("section code")!.textContent).toContain("<h1>Menú</h1>");
-    await render({ ruta: "/datos/reservas.json", n: 11 });
-    expect([...el.querySelectorAll("section .sx-pro")].map((s) => s.textContent)).toEqual(['"nombre"']);
+    expect(el.querySelectorAll("nav button[aria-expanded] .opacity-40")).toHaveLength(2);
   });
 });
 
 describe("CodeView — comentar una línea para el siguiente mensaje (la #8)", () => {
-  const escribirEn = (area: HTMLTextAreaElement, texto: string) => {
+  it("pulsar el NÚMERO de una línea abre la caja; lo añadido espera el mensaje con el código de esa línea", async () => {
+    comentariosDelChat.vaciar(proyecto);
+    const { el } = await pintar();
+    const numero = el.querySelector(".cm-lineNumbers .cm-gutterElement:not(.cm-gutterElement[style*='hidden'])");
+    // El primero del margen puede ser el que mide; se busca el de la línea 1.
+    const uno = [...el.querySelectorAll(".cm-lineNumbers .cm-gutterElement")].find((g) => g.textContent === "1") ?? numero!;
+    act(() => {
+      uno.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    });
+    const area = el.querySelector<HTMLTextAreaElement>("[data-caja-de-comentario] textarea")!;
+    expect(area).not.toBeNull();
     const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!;
     act(() => {
-      setter.call(area, texto);
+      setter.call(area, "un título más corto");
       area.dispatchEvent(new Event("input", { bubbles: true }));
     });
-  };
-
-  it("el número abre la caja; Enter lo deja esperando el mensaje, con el código de esa línea; Escape no cierra la lente", async () => {
-    comentariosDelChat.vaciar("p1");
-    const onClose = vi.fn();
-    const el = document.createElement("div");
-    document.body.appendChild(el);
-    const root = createRoot(el);
-    roots.push(root);
-    await act(async () => {
-      root.render(<CodeView html="<h1>Lienzo</h1>" projectId="p1" rutaActual="/index.html" peticion={null} onClose={onClose} labels={labels} />);
-    });
-    act(() => el.querySelector<HTMLButtonElement>('[data-comentar-linea="1"]')!.click());
-    const area = el.querySelector<HTMLTextAreaElement>("[data-caja-de-comentario] textarea")!;
-    expect(document.activeElement).toBe(area);
-    // Escape la cierra, y no cierra la lente.
-    expect(tecla(area, "Escape").defaultPrevented).toBe(true);
-    expect(onClose).not.toHaveBeenCalled();
-    expect(el.querySelector("[data-caja-de-comentario]")).toBeNull();
-
-    act(() => el.querySelector<HTMLButtonElement>('[data-comentar-linea="1"]')!.click());
-    const otra = el.querySelector<HTMLTextAreaElement>("[data-caja-de-comentario] textarea")!;
-    escribirEn(otra, "pon un título más corto");
-    tecla(otra, "Enter");
-    expect(comentariosDelChat.lista("p1")).toMatchObject([
-      { ruta: "/index.html", linea: 1, codigo: "<h1>Lienzo</h1>", texto: "pon un título más corto" },
+    tecla(area, "Enter");
+    expect(comentariosDelChat.lista(proyecto)).toMatchObject([
+      { ruta: "/index.html", linea: 1, codigo: "<h1>Portada</h1>", texto: "un título más corto" },
     ]);
-    expect(el.querySelector("[data-caja-de-comentario]")).toBeNull();
-    expect(el.querySelector("[data-comentario-pendiente]")!.textContent).toContain("pon un título más corto");
-    // Quitarlo lo saca de la cola.
-    act(() => el.querySelector<HTMLButtonElement>("[data-comentario-pendiente] button")!.click());
-    expect(comentariosDelChat.lista("p1")).toHaveLength(0);
+    expect(el.querySelector("[data-comentario-pendiente]")!.textContent).toContain("un título más corto");
+    await esperar(() => el.querySelector(".ol-marca-comentario"));
+    expect(el.querySelector(".ol-marca-comentario")).not.toBeNull();
   });
 });
 
-describe("CodeView — editar a mano (la #18)", () => {
-  async function abrirMenu(respuestaDelPut: () => Response) {
-    const llamadas: { url: string; init?: RequestInit }[] = [];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string, init?: RequestInit) => {
-        llamadas.push({ url, ...(init ? { init } : {}) });
-        if (init?.method === "PUT") return respuestaDelPut();
-        if (url.includes("?ruta=")) return new Response(JSON.stringify({ contenido: '{"hoy":12}' }));
-        return new Response(JSON.stringify(LISTA));
-      }),
-    );
-    const onClose = vi.fn();
+describe("CodeView sin proyecto (la vista previa de una plantilla)", () => {
+  it("sólo el documento, de sólo lectura y con colores", async () => {
     const el = document.createElement("div");
     document.body.appendChild(el);
     const root = createRoot(el);
     roots.push(root);
     await act(async () => {
-      root.render(
-        <CodeView html="<h1>Lienzo</h1>" projectId="p1" rutaActual="/index.html" peticion={{ ruta: "/menu/index.html", n: 1 }} onClose={onClose} labels={labels} />,
-      );
+      root.render(<CodeView html="<h1>Plantilla</h1>" projectId={null} onClose={() => {}} labels={labels} />);
     });
-    const editar = [...el.querySelectorAll("button")].find((b) => b.textContent === "Editar")!;
-    await act(async () => editar.click());
-    const area = el.querySelector<HTMLTextAreaElement>("[data-editor-de-fichero] textarea")!;
-    return { el, area, llamadas, onClose };
-  }
-  const escribirEn = (area: HTMLTextAreaElement, texto: string) => {
-    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!;
-    act(() => {
-      setter.call(area, texto);
-      area.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-  };
-
-  it("empieza por lo GUARDADO, Ctrl+S guarda con su base y vuelve a la vista; Escape no cierra la lente", async () => {
-    const { el, area, llamadas, onClose } = await abrirMenu(() => new Response(JSON.stringify({ contenido: "<h1>Carta</h1>\n" })));
-    expect(area.value).toBe("<h1>Menú</h1>");
-    expect(tecla(area, "Escape").defaultPrevented).toBe(true);
-    expect(onClose).not.toHaveBeenCalled();
-    escribirEn(area, "<h1>Carta</h1>");
-    await act(async () => {
-      area.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true, bubbles: true, cancelable: true }));
-    });
-    const put = llamadas.find((l) => l.init?.method === "PUT")!;
-    expect(put.url).toBe("/api/projects/p1/ficheros");
-    expect(JSON.parse(String(put.init!.body))).toEqual({ ruta: "/menu/index.html", contenido: "<h1>Carta</h1>", base: "<h1>Menú</h1>" });
-    expect(el.querySelector("[data-editor-de-fichero]")).toBeNull();
-    // Y se vuelve a pedir la lista, para enseñar lo guardado.
-    expect(llamadas.filter((l) => !l.init?.method).length).toBeGreaterThanOrEqual(3);
-  });
-
-  it("🔴 si cambió mientras lo editabas, no se guarda nada y se puede cargar lo de ahora", async () => {
-    const { el, area } = await abrirMenu(() => new Response(JSON.stringify({ error: "cambio", actual: "<h1>Menú de Len</h1>" }), { status: 409 }));
-    escribirEn(area, "<h1>Carta</h1>");
-    await act(async () => [...el.querySelectorAll("button")].find((b) => b.textContent === "Guardar")!.click());
-    expect(el.textContent).toContain("Este archivo cambió mientras lo editabas");
-    act(() => [...el.querySelectorAll("button")].find((b) => b.textContent === "Cargar lo de ahora")!.click());
-    expect(el.querySelector<HTMLTextAreaElement>("[data-editor-de-fichero] textarea")!.value).toBe("<h1>Menú de Len</h1>");
-  });
-
-  it("lo que una guarda rechaza dice por qué; lo que se calcula al abrirlo no tiene «Editar»", async () => {
-    const { el, area } = await abrirMenu(
-      () => new Response(JSON.stringify({ error: "rechazado", detalle: "menu/index.html: not saved — JavaScript…" }), { status: 422 }),
-    );
-    escribirEn(area, "<h1>Carta</h1><script>x()</script>");
-    await act(async () => [...el.querySelectorAll("button")].find((b) => b.textContent === "Guardar")!.click());
-    expect(el.textContent).toContain("No se guardó:");
-    expect(el.textContent).toContain("menu/index.html: not saved — JavaScript…");
-
-    const otro = document.createElement("div");
-    document.body.appendChild(otro);
-    const root = createRoot(otro);
-    roots.push(root);
-    await act(async () => {
-      root.render(
-        <CodeView html="<h1>Lienzo</h1>" projectId="p1" rutaActual="/index.html" peticion={{ ruta: "/resultados/visitas.json", n: 1 }} onClose={() => {}} labels={labels} />,
-      );
-    });
-    expect([...otro.querySelectorAll("button")].some((b) => b.textContent === "Editar")).toBe(false);
+    expect(el.querySelector("nav")).toBeNull();
+    expect([...el.querySelectorAll(".sx-etq")].map((s) => s.textContent)).toEqual(["h1", "h1"]);
   });
 });

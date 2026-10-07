@@ -204,10 +204,8 @@
       "tope": "コメントがすでに 10 件待っています。先にメッセージを送ってください。"
     },
     "editar": {
-      "editar": "編集",
       "guardar": "保存",
       "guardando": "保存中…",
-      "descartar": "破棄",
       "cargando": "読み込み中…",
       "cambio": "編集中にこのファイルが変更されました（Len、エディター、またはあなたのターミナル）。何も保存されていません。",
       "cargarAhora": "現在の内容を読み込む",
@@ -217,7 +215,49 @@
     },
     "appSinLienzo": "ここではアプリを実行できません：実際のキャンバスが応答していません。コードは「コード」レンズにあり、公開すれば動きます。",
     "verCodigo": "コードを見る",
-    "direccionApp": "アプリ"
+    "direccionApp": "アプリ",
+    "ide": {
+      "nuevoArchivo": "新しいファイル",
+      "nuevaCarpeta": "新しいフォルダー",
+      "contraer": "フォルダーを折りたたむ",
+      "actualizar": "更新",
+      "acciones": "その他の操作",
+      "renombrar": "名前を変更",
+      "borrar": "削除",
+      "copiarRuta": "パスをコピー",
+      "nombre": "名前",
+      "nombreInvalido": "英数字、「-」「_」「.」を使い、空白は入れないでください。「/」でフォルダーを作成します。",
+      "existe": "{ruta} はすでにあります。",
+      "pagina": "ページはここでは名前変更や移動ができません：アドレスとリンクが名前に依存しているためです。",
+      "portada": "トップページ（/index.html）は削除できません。",
+      "confirmarBorrar": "{ruta} を削除しますか？バージョンに残り、Len は次のターンで確認します。",
+      "confirmarBorrarCarpeta": "フォルダー {ruta} と中身をすべて削除しますか？",
+      "confirmarCerrar": "{nombre} に未保存の変更があります。閉じて破棄しますか？",
+      "cerrarPestana": "閉じる",
+      "sinGuardar": "未保存",
+      "vacio": "エクスプローラーからファイルを開くか、新しく作成してください。",
+      "comentarAyuda": "行番号をクリックすると、その行を Len へのコメントにできます。",
+      "carpetaVacia": "空：中にファイルを作ると保存されます。",
+      "cerrarAviso": "閉じる",
+      "noSeHizo": "実行されませんでした：",
+      "editor": {
+        "Find": "検索",
+        "Replace": "置換",
+        "next": "次へ",
+        "previous": "前へ",
+        "all": "すべて",
+        "match_case": "大文字小文字",
+        "regexp": "正規表現",
+        "by_word": "単語単位",
+        "replace": "置換",
+        "replace_all": "すべて置換",
+        "close": "閉じる",
+        "Go_to_line": "行へ移動",
+        "go": "移動",
+        "Fold_line": "折りたたむ",
+        "Unfold_line": "展開"
+      }
+    }
   },
   "placeholder": {
     "ai": {

@@ -204,10 +204,8 @@
       "tope": "10 comments are already waiting: send the message first."
     },
     "editar": {
-      "editar": "Edit",
       "guardar": "Save",
       "guardando": "Saving…",
-      "descartar": "Discard",
       "cargando": "Loading…",
       "cambio": "This file changed while you were editing it (Len, the editor or your terminal). Nothing was saved.",
       "cargarAhora": "Load the current one",
@@ -217,7 +215,49 @@
     },
     "appSinLienzo": "The app can't run here: the real canvas isn't responding. Its code is in the Code lens, and it works once published.",
     "verCodigo": "View the code",
-    "direccionApp": "App"
+    "direccionApp": "App",
+    "ide": {
+      "nuevoArchivo": "New file",
+      "nuevaCarpeta": "New folder",
+      "contraer": "Collapse folders",
+      "actualizar": "Refresh",
+      "acciones": "More actions",
+      "renombrar": "Rename",
+      "borrar": "Delete",
+      "copiarRuta": "Copy path",
+      "nombre": "Name",
+      "nombreInvalido": "Use letters, numbers, “-”, “_” and “.”, no spaces. A “/” creates folders.",
+      "existe": "{ruta} already exists.",
+      "pagina": "Pages aren't renamed or moved from here: their address and their links depend on their name.",
+      "portada": "The home page (/index.html) can't be deleted.",
+      "confirmarBorrar": "Delete {ruta}? It stays in Versions, and Len will see it on its next turn.",
+      "confirmarBorrarCarpeta": "Delete the folder {ruta} and everything in it?",
+      "confirmarCerrar": "{nombre} has unsaved changes. Close it and lose them?",
+      "cerrarPestana": "Close",
+      "sinGuardar": "Unsaved",
+      "vacio": "Open a file from the explorer, or create a new one.",
+      "comentarAyuda": "Click a line number to comment it to Len.",
+      "carpetaVacia": "Empty: it's saved when you create a file inside.",
+      "cerrarAviso": "Dismiss",
+      "noSeHizo": "Not done:",
+      "editor": {
+        "Find": "Find",
+        "Replace": "Replace",
+        "next": "next",
+        "previous": "previous",
+        "all": "all",
+        "match_case": "match case",
+        "regexp": "regexp",
+        "by_word": "by word",
+        "replace": "replace",
+        "replace_all": "replace all",
+        "close": "close",
+        "Go_to_line": "Go to line",
+        "go": "go",
+        "Fold_line": "Fold line",
+        "Unfold_line": "Unfold line"
+      }
+    }
   },
   "placeholder": {
     "ai": {

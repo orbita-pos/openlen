@@ -204,10 +204,8 @@
       "tope": "10 commentaires attendent déjà : envoyez d’abord le message."
     },
     "editar": {
-      "editar": "Modifier",
       "guardar": "Enregistrer",
       "guardando": "Enregistrement…",
-      "descartar": "Abandonner",
       "cargando": "Chargement…",
       "cambio": "Ce fichier a changé pendant que vous le modifiiez (Len, l’éditeur ou votre terminal). Rien n’a été enregistré.",
       "cargarAhora": "Charger l’actuel",
@@ -217,7 +215,49 @@
     },
     "appSinLienzo": "L’app ne peut pas tourner ici : le vrai canevas ne répond pas. Son code est dans l’onglet Code, et une fois publiée elle fonctionne.",
     "verCodigo": "Voir le code",
-    "direccionApp": "App"
+    "direccionApp": "App",
+    "ide": {
+      "nuevoArchivo": "Nouveau fichier",
+      "nuevaCarpeta": "Nouveau dossier",
+      "contraer": "Replier les dossiers",
+      "actualizar": "Actualiser",
+      "acciones": "Plus d’actions",
+      "renombrar": "Renommer",
+      "borrar": "Supprimer",
+      "copiarRuta": "Copier le chemin",
+      "nombre": "Nom",
+      "nombreInvalido": "Utilisez lettres, chiffres, « - », « _ » et « . », sans espaces. Un « / » crée des dossiers.",
+      "existe": "{ruta} existe déjà.",
+      "pagina": "Les pages ne se renomment ni ne se déplacent d’ici : leur adresse et leurs liens dépendent de leur nom.",
+      "portada": "La page d’accueil (/index.html) ne peut pas être supprimée.",
+      "confirmarBorrar": "Supprimer {ruta} ? Il reste dans Versions, et Len le verra à son prochain tour.",
+      "confirmarBorrarCarpeta": "Supprimer le dossier {ruta} et tout son contenu ?",
+      "confirmarCerrar": "{nombre} a des modifications non enregistrées. Le fermer et les perdre ?",
+      "cerrarPestana": "Fermer",
+      "sinGuardar": "Non enregistré",
+      "vacio": "Ouvrez un fichier de l’explorateur, ou créez-en un.",
+      "comentarAyuda": "Cliquez sur le numéro d’une ligne pour la commenter à Len.",
+      "carpetaVacia": "Vide : il est enregistré quand vous y créez un fichier.",
+      "cerrarAviso": "Fermer l’avis",
+      "noSeHizo": "Non effectué :",
+      "editor": {
+        "Find": "Rechercher",
+        "Replace": "Remplacer",
+        "next": "suivant",
+        "previous": "précédent",
+        "all": "tout",
+        "match_case": "casse",
+        "regexp": "regex",
+        "by_word": "mot entier",
+        "replace": "remplacer",
+        "replace_all": "tout remplacer",
+        "close": "fermer",
+        "Go_to_line": "Aller à la ligne",
+        "go": "aller",
+        "Fold_line": "Replier",
+        "Unfold_line": "Déplier"
+      }
+    }
   },
   "placeholder": {
     "ai": {

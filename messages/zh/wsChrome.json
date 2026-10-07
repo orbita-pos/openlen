@@ -204,10 +204,8 @@
       "tope": "已有 10 条评论在等待：请先发送消息。"
     },
     "editar": {
-      "editar": "编辑",
       "guardar": "保存",
       "guardando": "正在保存…",
-      "descartar": "放弃",
       "cargando": "正在加载…",
       "cambio": "你编辑期间这个文件被改动了（Len、编辑器或你的终端）。没有保存任何内容。",
       "cargarAhora": "加载当前内容",
@@ -217,7 +215,49 @@
     },
     "appSinLienzo": "这里无法运行应用：真实画布没有响应。代码在“代码”视图里，发布后可以正常使用。",
     "verCodigo": "查看代码",
-    "direccionApp": "应用"
+    "direccionApp": "应用",
+    "ide": {
+      "nuevoArchivo": "新建文件",
+      "nuevaCarpeta": "新建文件夹",
+      "contraer": "折叠文件夹",
+      "actualizar": "刷新",
+      "acciones": "更多操作",
+      "renombrar": "重命名",
+      "borrar": "删除",
+      "copiarRuta": "复制路径",
+      "nombre": "名称",
+      "nombreInvalido": "请使用字母、数字、“-”、“_”和“.”，不要有空格。用“/”可创建文件夹。",
+      "existe": "{ruta} 已存在。",
+      "pagina": "页面不能在这里重命名或移动：它们的地址和链接依赖于名称。",
+      "portada": "首页（/index.html）不能删除。",
+      "confirmarBorrar": "删除 {ruta}？它会保留在版本中，Len 会在下一轮看到。",
+      "confirmarBorrarCarpeta": "删除文件夹 {ruta} 及其中的所有内容？",
+      "confirmarCerrar": "{nombre} 有未保存的更改。关闭并丢弃吗？",
+      "cerrarPestana": "关闭",
+      "sinGuardar": "未保存",
+      "vacio": "从资源管理器打开一个文件，或新建一个。",
+      "comentarAyuda": "点击行号即可把这一行评论给 Len。",
+      "carpetaVacia": "空：在里面创建文件后才会保存。",
+      "cerrarAviso": "关闭提示",
+      "noSeHizo": "未执行：",
+      "editor": {
+        "Find": "查找",
+        "Replace": "替换",
+        "next": "下一个",
+        "previous": "上一个",
+        "all": "全部",
+        "match_case": "区分大小写",
+        "regexp": "正则",
+        "by_word": "全词",
+        "replace": "替换",
+        "replace_all": "全部替换",
+        "close": "关闭",
+        "Go_to_line": "跳到行",
+        "go": "跳转",
+        "Fold_line": "折叠",
+        "Unfold_line": "展开"
+      }
+    }
   },
   "placeholder": {
     "ai": {
