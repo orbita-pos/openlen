@@ -89,7 +89,8 @@
       "pagina": "Pré-visualização",
       "codigo": "Código",
       "terminal": "Terminal",
-      "cambios": "Mudanças"
+      "cambios": "Mudanças",
+      "app": "App"
     },
     "toolbar": {
       "editPage": "Editar página (⌘E)",
@@ -153,7 +154,8 @@
       "masCoincidencias": "{count, plural, one {E mais # ocorrência.} other {E mais # ocorrências.}}",
       "sinContenido": "{count, plural, one {# arquivo calculado ao abrir só é buscado pelo nome.} other {# arquivos calculados ao abrir só são buscados pelo nome.}}",
       "marcaNuevo": "Novo nesta sessão",
-      "marcaCambiado": "Mudou nesta sessão"
+      "marcaCambiado": "Mudou nesta sessão",
+      "titleApp": "O código do seu app"
     },
     "terminal": {
       "title": "O terminal do Len",
@@ -220,7 +222,10 @@
       "rechazado": "Não foi salvo:",
       "error": "Não foi possível salvar.",
       "nota": "Fica salvo como sua versão; o Len verá no próximo turno."
-    }
+    },
+    "appSinLienzo": "O app não pode rodar aqui: o canvas real não responde. O código está na lente Código, e publicado funciona.",
+    "verCodigo": "Ver o código",
+    "direccionApp": "App"
   },
   "placeholder": {
     "ai": {

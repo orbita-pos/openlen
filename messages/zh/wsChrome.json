@@ -81,7 +81,8 @@
       "pagina": "预览",
       "codigo": "代码",
       "terminal": "终端",
-      "cambios": "更改"
+      "cambios": "更改",
+      "app": "应用"
     },
     "toolbar": {
       "editPage": "编辑页面（⌘E）",
@@ -145,7 +146,8 @@
       "masCoincidencias": "{count, plural, other {还有 # 处匹配。}}",
       "sinContenido": "{count, plural, other {# 个打开时才计算的文件只按名称搜索。}}",
       "marcaNuevo": "本次会话新建",
-      "marcaCambiado": "本次会话已更改"
+      "marcaCambiado": "本次会话已更改",
+      "titleApp": "你的应用的代码"
     },
     "terminal": {
       "title": "Len 的终端",
@@ -212,7 +214,10 @@
       "rechazado": "未保存：",
       "error": "无法保存。",
       "nota": "会保存为你的版本；Len 会在下一轮看到。"
-    }
+    },
+    "appSinLienzo": "这里无法运行应用：真实画布没有响应。代码在“代码”视图里，发布后可以正常使用。",
+    "verCodigo": "查看代码",
+    "direccionApp": "应用"
   },
   "placeholder": {
     "ai": {

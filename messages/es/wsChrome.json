@@ -81,7 +81,8 @@
       "pagina": "Vista previa",
       "codigo": "Código",
       "terminal": "Terminal",
-      "cambios": "Cambios"
+      "cambios": "Cambios",
+      "app": "App"
     },
     "toolbar": {
       "editPage": "Editar página (⌘E)",
@@ -145,7 +146,8 @@
       "masCoincidencias": "{count, plural, one {Y # coincidencia más.} other {Y # coincidencias más.}}",
       "sinContenido": "{count, plural, one {# archivo que se calcula al abrirlo sólo se busca por nombre.} other {# archivos que se calculan al abrirlos sólo se buscan por nombre.}}",
       "marcaNuevo": "Nuevo en esta sesión",
-      "marcaCambiado": "Cambió en esta sesión"
+      "marcaCambiado": "Cambió en esta sesión",
+      "titleApp": "El código de tu app"
     },
     "terminal": {
       "title": "La terminal de Len",
@@ -212,7 +214,10 @@
       "rechazado": "No se guardó:",
       "error": "No se pudo guardar.",
       "nota": "Se guarda como tu versión; Len lo verá en su próximo turno."
-    }
+    },
+    "appSinLienzo": "Aquí no se puede ejecutar la app: el lienzo real no responde. Su código está en la lente Código, y publicada funciona.",
+    "verCodigo": "Ver el código",
+    "direccionApp": "App"
   },
   "placeholder": {
     "ai": {

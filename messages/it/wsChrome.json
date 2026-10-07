@@ -81,7 +81,8 @@
       "pagina": "Anteprima",
       "codigo": "Codice",
       "terminal": "Terminale",
-      "cambios": "Modifiche"
+      "cambios": "Modifiche",
+      "app": "App"
     },
     "toolbar": {
       "editPage": "Modifica pagina (⌘E)",
@@ -145,7 +146,8 @@
       "masCoincidencias": "{count, plural, one {E # altra corrispondenza.} other {E altre # corrispondenze.}}",
       "sinContenido": "{count, plural, one {# file calcolato all'apertura si cerca solo per nome.} other {# file calcolati all'apertura si cercano solo per nome.}}",
       "marcaNuevo": "Nuovo in questa sessione",
-      "marcaCambiado": "Modificato in questa sessione"
+      "marcaCambiado": "Modificato in questa sessione",
+      "titleApp": "Il codice della tua app"
     },
     "terminal": {
       "title": "Il terminale di Len",
@@ -212,7 +214,10 @@
       "rechazado": "Non salvato:",
       "error": "Impossibile salvare.",
       "nota": "Si salva come tua versione; Len lo vedrà al prossimo turno."
-    }
+    },
+    "appSinLienzo": "L’app non può girare qui: la vera tela non risponde. Il suo codice è nella vista Codice, e una volta pubblicata funziona.",
+    "verCodigo": "Vedi il codice",
+    "direccionApp": "App"
   },
   "placeholder": {
     "ai": {

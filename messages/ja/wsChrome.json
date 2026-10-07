@@ -81,7 +81,8 @@
       "pagina": "プレビュー",
       "codigo": "コード",
       "terminal": "ターミナル",
-      "cambios": "変更"
+      "cambios": "変更",
+      "app": "アプリ"
     },
     "toolbar": {
       "editPage": "ページを編集（⌘E）",
@@ -145,7 +146,8 @@
       "masCoincidencias": "{count, plural, other {ほかに # 件。}}",
       "sinContenido": "{count, plural, other {開いたときに計算される # 個のファイルは名前でのみ検索します。}}",
       "marcaNuevo": "このセッションで新規",
-      "marcaCambiado": "このセッションで変更"
+      "marcaCambiado": "このセッションで変更",
+      "titleApp": "アプリのコード"
     },
     "terminal": {
       "title": "Len のターミナル",
@@ -212,7 +214,10 @@
       "rechazado": "保存されませんでした：",
       "error": "保存できませんでした。",
       "nota": "あなたのバージョンとして保存されます。Len は次のターンで確認します。"
-    }
+    },
+    "appSinLienzo": "ここではアプリを実行できません：実際のキャンバスが応答していません。コードは「コード」レンズにあり、公開すれば動きます。",
+    "verCodigo": "コードを見る",
+    "direccionApp": "アプリ"
   },
   "placeholder": {
     "ai": {

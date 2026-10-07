@@ -89,7 +89,8 @@
       "pagina": "Voorbeeld",
       "codigo": "Code",
       "terminal": "Terminal",
-      "cambios": "Wijzigingen"
+      "cambios": "Wijzigingen",
+      "app": "App"
     },
     "toolbar": {
       "editPage": "Pagina bewerken (⌘E)",
@@ -153,7 +154,8 @@
       "masCoincidencias": "{count, plural, one {En nog # treffer.} other {En nog # treffers.}}",
       "sinContenido": "{count, plural, one {# bestand dat bij het openen wordt berekend, wordt alleen op naam gezocht.} other {# bestanden die bij het openen worden berekend, worden alleen op naam gezocht.}}",
       "marcaNuevo": "Nieuw in deze sessie",
-      "marcaCambiado": "Gewijzigd in deze sessie"
+      "marcaCambiado": "Gewijzigd in deze sessie",
+      "titleApp": "De code van je app"
     },
     "terminal": {
       "title": "Lens terminal",
@@ -220,7 +222,10 @@
       "rechazado": "Niet opgeslagen:",
       "error": "Opslaan is mislukt.",
       "nota": "Wordt opgeslagen als jouw versie; Len ziet het bij de volgende beurt."
-    }
+    },
+    "appSinLienzo": "De app kan hier niet draaien: het echte canvas reageert niet. De code staat in de lens Code, en gepubliceerd werkt hij.",
+    "verCodigo": "Code bekijken",
+    "direccionApp": "App"
   },
   "placeholder": {
     "ai": {

@@ -81,7 +81,8 @@
       "pagina": "미리보기",
       "codigo": "코드",
       "terminal": "터미널",
-      "cambios": "변경 사항"
+      "cambios": "변경 사항",
+      "app": "앱"
     },
     "toolbar": {
       "editPage": "페이지 편집 (⌘E)",
@@ -145,7 +146,8 @@
       "masCoincidencias": "{count, plural, other {그 외 #건.}}",
       "sinContenido": "{count, plural, other {열 때 계산되는 파일 #개는 이름으로만 검색합니다.}}",
       "marcaNuevo": "이번 세션에서 새로 생김",
-      "marcaCambiado": "이번 세션에서 변경됨"
+      "marcaCambiado": "이번 세션에서 변경됨",
+      "titleApp": "앱의 코드"
     },
     "terminal": {
       "title": "Len의 터미널",
@@ -212,7 +214,10 @@
       "rechazado": "저장되지 않음:",
       "error": "저장하지 못했습니다.",
       "nota": "내 버전으로 저장되며, Len은 다음 턴에 확인합니다."
-    }
+    },
+    "appSinLienzo": "여기서는 앱을 실행할 수 없습니다: 실제 캔버스가 응답하지 않습니다. 코드는 코드 렌즈에 있고, 게시하면 작동합니다.",
+    "verCodigo": "코드 보기",
+    "direccionApp": "앱"
   },
   "placeholder": {
     "ai": {

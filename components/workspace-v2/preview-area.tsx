@@ -105,6 +105,10 @@ interface PreviewAreaProps {
    *  properties panel) — exclusive, like sectionSelectMode. srcDoc is
    *  frozen so live property edits don't trigger a reload. */
   inspectMode?: boolean;
+  /** UNA APP WEB (F4 de la spec local 2026-10-07-apps): el lienzo la enseña
+   *  corriendo, sin edición visual; la lente Código va la primera, y si el
+   *  lienzo real no responde lo dice (en local, el cascarón no arranca nada). */
+  esApp?: boolean;
   /** Toggles inspect mode from the preview toolbar. Omitted (e.g. in
    *  template-preview) hides the toolbar button. */
   onToggleInspect?: () => void;
@@ -226,6 +230,7 @@ export function PreviewArea({
   onIframeRef,
   redesigning = false,
   inspectMode = false,
+  esApp = false,
   onToggleInspect,
   insertRequest = null,
   removeRequest = null,
@@ -621,6 +626,9 @@ export function PreviewArea({
   }, [projectId]);
   const esperandoRemoto = remotoActivo && lienzo.estado.modo === "esperando";
   const vistaLimitada = remotoActivo && lienzo.estado.modo === "local";
+  // Una app sólo corre en el lienzo real: sin él (o mientras no hay proyecto),
+  // lo que hay en local es el cascarón, que no arranca nada.
+  const sinLienzoDeApp = esApp && !modoRemoto && !esperandoRemoto;
   const iframeFuente = previewUrl ? { src: previewUrl } : modoRemoto ? { src: urlRemota! } : esperandoRemoto ? { src: "about:blank" } : { srcDoc: finalSrcDoc };
   const iframeSandbox = modoRemoto ? SANDBOX_REMOTO : SANDBOX_LOCAL;
 
@@ -829,8 +837,17 @@ export function PreviewArea({
               value={lente}
               onChange={setLente}
               options={[
-                { value: "pagina", label: t("preview.lente.pagina"), icon: Eye },
-                { value: "codigo", label: t("preview.lente.codigo"), icon: Code2 },
+                // En una app, el CÓDIGO va el primero: es lo que se edita (la
+                // app corriendo no se toca a mano), y su lente se llama «App».
+                ...(esApp
+                  ? [
+                      { value: "codigo" as const, label: t("preview.lente.codigo"), icon: Code2 },
+                      { value: "pagina" as const, label: t("preview.lente.app"), icon: Eye },
+                    ]
+                  : [
+                      { value: "pagina" as const, label: t("preview.lente.pagina"), icon: Eye },
+                      { value: "codigo" as const, label: t("preview.lente.codigo"), icon: Code2 },
+                    ]),
                 ...(hayTerminal
                   ? [{ value: "terminal" as const, label: t("preview.lente.terminal"), icon: TerminalIcon }]
                   : []),
@@ -855,7 +872,7 @@ export function PreviewArea({
             Abrir en otra pestaña SÍ se queda: apunta a la URL publicada, que
             existe se mire la lente que se mire. */}
         <div className="flex items-center gap-0.5 justify-self-end">
-          {lente === "pagina" && onToggleInspect && (
+          {lente === "pagina" && onToggleInspect && !esApp && (
             <IconBtn
               label={
                 inspectMode
@@ -958,7 +975,27 @@ export function PreviewArea({
       )}
       {/* Habla de los límites de la VISTA PREVIA: sólo en su lente. Encima de
           Código o Terminal parecía que eran ellas las limitadas. */}
-      {vistaLimitada && lente === "pagina" && (
+      {/* UNA APP SIN LIENZO REAL: en local sólo está el cascarón, que no
+          arranca nada (los fuentes los sirve el host del lienzo), así que no
+          se pinta una página en blanco sin decir por qué. */}
+      {sinLienzoDeApp && lente === "pagina" && (
+        <div
+          role="status"
+          className="relative z-10 shrink-0 min-h-8 py-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-3 text-[11.5px] bg-elev fg-muted border-b bd ui-small fade-in"
+        >
+          <span className="text-center">{t("preview.appSinLienzo")}</span>
+          {hayCodigo && (
+            <button
+              type="button"
+              onClick={() => setLente("codigo")}
+              className="h-6 px-2.5 rounded-full border bd bg-app fg font-medium hover:bg-elev transition"
+            >
+              {t("preview.verCodigo")}
+            </button>
+          )}
+        </div>
+      )}
+      {vistaLimitada && !sinLienzoDeApp && lente === "pagina" && (
         <div
           role="status"
           className="relative z-10 shrink-0 h-8 flex items-center justify-center px-3 text-[11.5px] bg-elev fg-muted border-b bd ui-small fade-in"
@@ -1155,7 +1192,7 @@ export function PreviewArea({
               sinContenido: (count: number) => t("preview.code.sinContenido", { count }),
               marcaNuevo: t("preview.code.marcaNuevo"),
               marcaCambiado: t("preview.code.marcaCambiado"),
-              title: t("preview.code.title"),
+              title: esApp ? t("preview.code.titleApp") : t("preview.code.title"),
               close: t("preview.code.close"),
               copy: t("preview.code.copy"),
               copied: t("preview.code.copied"),

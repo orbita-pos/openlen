@@ -81,7 +81,8 @@
       "pagina": "Vorschau",
       "codigo": "Code",
       "terminal": "Terminal",
-      "cambios": "Änderungen"
+      "cambios": "Änderungen",
+      "app": "App"
     },
     "toolbar": {
       "editPage": "Seite bearbeiten (⌘E)",
@@ -145,7 +146,8 @@
       "masCoincidencias": "{count, plural, one {Und # weiterer Treffer.} other {Und # weitere Treffer.}}",
       "sinContenido": "{count, plural, one {# Datei, die beim Öffnen berechnet wird, wird nur nach Namen durchsucht.} other {# Dateien, die beim Öffnen berechnet werden, werden nur nach Namen durchsucht.}}",
       "marcaNuevo": "Neu in dieser Sitzung",
-      "marcaCambiado": "In dieser Sitzung geändert"
+      "marcaCambiado": "In dieser Sitzung geändert",
+      "titleApp": "Der Code deiner App"
     },
     "terminal": {
       "title": "Lens Terminal",
@@ -212,7 +214,10 @@
       "rechazado": "Nicht gespeichert:",
       "error": "Konnte nicht speichern.",
       "nota": "Wird als deine Version gespeichert; Len sieht es in seinem nächsten Durchlauf."
-    }
+    },
+    "appSinLienzo": "Die App kann hier nicht laufen: Die echte Leinwand antwortet nicht. Ihr Code ist in der Ansicht Code, und veröffentlicht funktioniert sie.",
+    "verCodigo": "Code ansehen",
+    "direccionApp": "App"
   },
   "placeholder": {
     "ai": {

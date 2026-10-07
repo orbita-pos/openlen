@@ -18,6 +18,7 @@
 // que hace.
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronDown, Globe } from "lucide-react";
 import { ICONO_BARRA } from "./icons";
 
@@ -40,6 +41,10 @@ export interface AddressBarProps {
   /** Cuántos cambios hay sin aplicar. Con alguno, cambiar de página los aplica
    *  primero (lo hace el padre) — aquí sólo se dice, para que no sorprenda. */
   pendientes?: number;
+  /** UNA APP: no tiene páginas (sus pantallas van por hash y las elige su
+   *  propio menú), así que no hay rutas que elegir ni páginas que crear o
+   *  borrar desde aquí: sólo la dirección. */
+  esApp?: boolean;
 }
 
 export function AddressBar({
@@ -50,7 +55,9 @@ export function AddressBar({
   onSwitch,
   onCreate,
   onDelete,
+  esApp = false,
 }: AddressBarProps) {
+  const t = useTranslations("wsChrome");
   const [abierto, setAbierto] = useState(false);
   const cajaRef = useRef<HTMLDivElement | null>(null);
 
@@ -81,6 +88,16 @@ export function AddressBar({
   };
 
   const ruta = activePage ? `/${activePage}` : "/";
+
+  if (esApp) {
+    return (
+      <div className="w-full min-w-0 h-7 pl-2.5 pr-2.5 inline-flex items-center gap-1.5 rounded-full border bd bg-elev text-[12px]">
+        <Globe size={ICONO_BARRA} className="shrink-0 fg-faint" />
+        {subdomain && <span className="fg-faint truncate min-w-0 hidden sm:inline">{subdomain}.{baseHost}</span>}
+        <span className="fg font-medium truncate min-w-0">{t("preview.direccionApp")}</span>
+      </div>
+    );
+  }
 
   // VIVE DENTRO de la barra de herramientas del lienzo, no en una fila
   // propia: ocupa el sitio donde estaban las medidas «1280 × 800 · 50%», que

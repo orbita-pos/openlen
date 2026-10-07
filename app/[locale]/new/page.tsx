@@ -116,7 +116,7 @@ import { uploadPhotos } from "@/lib/workspace-v2/upload-photos";
 import type { PendingAttachments } from "@/components/workspace-v2/chat/use-agent-chat";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
 import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
-import type { SitePage } from "@/lib/projects/types";
+import type { AppDeProyecto, SitePage } from "@/lib/projects/types";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { AddressBar } from "@/components/workspace-v2/address-bar";
 import { abrirDesdeElTaller } from "@/components/workspace-v2/abrir-fuera";
@@ -184,6 +184,11 @@ interface LoadedProject {
    *  control on the published page. */
   degradations: Degradation[] | undefined;
   degradationsDismissed: boolean | undefined;
+  /** UNA APP WEB (`data.app`, spec local 2026-10-07-apps): el lienzo la enseña
+   *  corriendo y sin edición visual. Ausente = una página. Cambia con un turno
+   *  (una app que nace, una página que se convierte) y con su Deshacer: lo trae
+   *  el refetch de `onChatChange`. */
+  app: AppDeProyecto | null;
 }
 
 /** Las frases concretas de un código de degradación, sin repetir.
@@ -1207,6 +1212,7 @@ function NewV2Inner() {
                 pages?: Record<string, SitePage>;
                 degradations?: Degradation[];
                 degradationsDismissed?: boolean;
+                app?: AppDeProyecto;
               };
             };
           }
@@ -1247,6 +1253,7 @@ function NewV2Inner() {
         settings: p.data?.settings,
         degradations: p.data?.degradations,
         degradationsDismissed: p.data?.degradationsDismissed,
+        app: p.data?.app ?? null,
       });
       setProjectName(p.title);
       setProjectLoadFailure(null);
@@ -1342,8 +1349,14 @@ function NewV2Inner() {
   // tab; consolidated into the inspector on the right). When on, gates ALL
   // iframe affordances at once: drag handles, image/icon replace, inline
   // text edit, AND element-inspect outlines. Off → iframe renders clean.
+  // UNA APP NO SE EDITA EN EL LIENZO: su texto vive en el JSX, y el lienzo la
+  // enseña corriendo desde el host del lienzo. Ni lápiz, ni soltar ficheros,
+  // ni elegir un elemento para el chat; se cambia hablando con Len o en la
+  // lente Código.
+  const esApp = !!loadedProject?.app;
   const editingActive =
     inspectMode &&
+    !esApp &&
     entryMode === "editing" &&
     !!loadedProject &&
     // Suppress the editor (inline-edit + element-inspect) while the Chat tab's
@@ -1356,7 +1369,15 @@ function NewV2Inner() {
   // the Edit toggle: dragging a file over the page (or pasting an image) is
   // unambiguous intent, and the iframe script is visually silent when idle.
   const dropEnabled =
-    entryMode === "editing" && !!loadedProject && !sectionSelectMode;
+    entryMode === "editing" && !!loadedProject && !sectionSelectMode && !esApp;
+  // Si el proyecto PASA a ser una app con el lápiz encendido (nace o se
+  // convierte en este mismo turno), se apaga: el inspector no tiene nada que
+  // inspeccionar en una app.
+  useEffect(() => {
+    if (!esApp) return;
+    setInspectMode(false);
+    setSectionSelectMode(false);
+  }, [esApp]);
 
   // Compute which sidebar tabs are locked based on the entry mode + the
   // loaded project's shape. In an entry flow, only the relevant tab is
@@ -3382,7 +3403,7 @@ function NewV2Inner() {
           onRestoreApplied={applyRestoredVersion}
           onPrepareSnapshot={flushPendingSave}
           sectionSelectMode={sectionSelectMode}
-          onToggleSectionSelect={(active) => setSectionSelectMode(active)}
+          onToggleSectionSelect={esApp ? undefined : (active) => setSectionSelectMode(active)}
           scopedSelection={scopedSelection}
           onClearScope={() => setScopedSelection(null)}
           pendingDraft={pendingChatDraft}
@@ -3581,6 +3602,7 @@ function NewV2Inner() {
                     onSwitch={switchSitePage}
                     onCreate={createSitePage}
                     onDelete={deleteSitePage}
+                    esApp={esApp}
                   />
                 }
                 pendientes={pendientes}
@@ -3595,7 +3617,8 @@ function NewV2Inner() {
                 sectionSelectMode={sectionSelectMode}
                 editingActive={editingActive}
                 inspectMode={inspectMode}
-                onToggleInspect={toggleInspect}
+                onToggleInspect={esApp ? undefined : toggleInspect}
+                esApp={esApp}
                 insertRequest={insertRequest}
                 removeRequest={removeRequest}
                 dropEnabled={dropEnabled}

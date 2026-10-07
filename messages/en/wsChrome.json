@@ -81,7 +81,8 @@
       "pagina": "Preview",
       "codigo": "Code",
       "terminal": "Terminal",
-      "cambios": "Changes"
+      "cambios": "Changes",
+      "app": "App"
     },
     "toolbar": {
       "editPage": "Edit page (⌘E)",
@@ -145,7 +146,8 @@
       "masCoincidencias": "{count, plural, one {And # more match.} other {And # more matches.}}",
       "sinContenido": "{count, plural, one {# file computed when opened is only searched by name.} other {# files computed when opened are only searched by name.}}",
       "marcaNuevo": "New in this session",
-      "marcaCambiado": "Changed in this session"
+      "marcaCambiado": "Changed in this session",
+      "titleApp": "Your app's code"
     },
     "terminal": {
       "title": "Len's terminal",
@@ -212,7 +214,10 @@
       "rechazado": "Not saved:",
       "error": "Couldn't save.",
       "nota": "Saved as your version; Len will see it on its next turn."
-    }
+    },
+    "appSinLienzo": "The app can't run here: the real canvas isn't responding. Its code is in the Code lens, and it works once published.",
+    "verCodigo": "View the code",
+    "direccionApp": "App"
   },
   "placeholder": {
     "ai": {
