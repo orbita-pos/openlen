@@ -15,7 +15,7 @@ import path from "node:path";
 import { legacyWebp2000Variant, processImage } from "@/lib/images";
 import { validateSubdomain } from "@/lib/subdomain/validate";
 import { gateReservedMarker, sealRelease, stripOpIds } from "@/lib/html-engine";
-import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
+import { optimizeHtmlForProduction, type FuenteDeClases } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
@@ -435,6 +435,23 @@ interface BakeDocumentCtx {
    *  document? True → the widget bakes ONLY in the documents that carry the
    *  band. False → the historical fallback (append before </body> everywhere)
    *  so "turn the module on and something shows up" keeps working. */
+  /** El código de la carpeta, para que Tailwind hornee también las clases que
+   *  sólo escribe un script (`fuentesDeClasesDeLaCarpeta`). Es del SITIO, no de
+   *  un documento: un mismo `/js/app.js` puede servir a varias páginas. */
+  fuentesDeClases?: readonly FuenteDeClases[];
+}
+
+/**
+ * Lo que el horneado de Tailwind lee de la carpeta además del documento: el
+ * código publicable (`.js`, `.mjs`), que es lo que mete clases en el DOM. El
+ * CSS, los datos y el texto no las escriben. Ver `bakeTailwind`.
+ */
+export function fuentesDeClasesDeLaCarpeta(
+  files: ReadonlyArray<{ path: string; content: string }>,
+): FuenteDeClases[] {
+  return files
+    .filter((f) => isPublishableFolderPath(f.path) && /\.m?js$/i.test(f.path))
+    .map((f) => ({ raw: f.content, extension: /\.mjs$/i.test(f.path) ? "mjs" : "js" }));
 }
 
 interface AssistantBake {
@@ -475,7 +492,7 @@ async function bakeDocument(
   // publish it on home and /menu. Read off the incoming document (the same
   // source the site-wide scan used), so both halves of the rule always agree.
 
-  const optimized = await optimizeHtmlForProduction(html);
+  const optimized = await optimizeHtmlForProduction(html, ctx.fuentesDeClases);
 
   // Consolidate Unsplash credits BEFORE the asset migrations below. We need
   // to see the original `images.unsplash.com` URLs to detect anonymous
@@ -880,6 +897,7 @@ export async function publishToDir(
     assistant: params.assistant,
     orders: params.orders,
     chat: params.chat,
+    fuentesDeClases: fuentesDeClasesDeLaCarpeta(params.files ?? []),
   };
   let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
 

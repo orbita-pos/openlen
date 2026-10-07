@@ -149,13 +149,24 @@ export interface OptimizeResult {
   cssBytes: number;
 }
 
+/**
+ * Lo que el horneado lee ADEMÁS del documento: el código de la carpeta que
+ * pinta clases (`el.className = "bg-red-500"`). Ver `bakeTailwind`.
+ */
+export interface FuenteDeClases {
+  readonly raw: string;
+  /** Sin punto: `js`, `mjs`. Tailwind elige el extractor por ella. */
+  readonly extension: string;
+}
+
 export async function optimizeHtmlForProduction(
   html: string,
+  fuentes: readonly FuenteDeClases[] = [],
 ): Promise<OptimizeResult> {
   if (process.env.NODE_ENV !== "production") {
     return { html, baked: false, cssBytes: 0 };
   }
-  const baked = await bakeTailwind(html);
+  const baked = await bakeTailwind(html, fuentes);
   const r = rustOptimizeForPublish(baked.html);
   if (r.html === null) {
     throw new Error(
@@ -170,8 +181,20 @@ export async function optimizeHtmlForProduction(
  * Pure (no Rust, no env) so it's unit-testable on its own. Returns the HTML
  * unchanged + `baked:false` on every safe-skip path (no CDN script, `?plugins=`
  * variant, or compile failure) so it can never break a publish.
+ *
+ * 🔴 `fuentes`: EL CÓDIGO DE LA CARPETA TAMBIÉN PINTA CLASES (2026-10-07).
+ * Hasta hoy se compilaba leyendo sólo el documento, así que una clase que
+ * únicamente escribía `/js/app.js` —una tarjeta que el script construye, un
+ * `classList.add("bg-red-500")`— se quedaba sin CSS en la publicada. En el
+ * lienzo no se notaba: el CDN de Tailwind mira el DOM vivo, y el horneado sólo
+ * corre en producción. Con las apps web (spec 2026-10-07-apps, H1) casi todas
+ * las clases viven en el código, así que sin esto saldrían sin estilos. Leer de
+ * más sólo puede añadir CSS, nunca quitarlo.
  */
-export async function bakeTailwind(html: string): Promise<OptimizeResult> {
+export async function bakeTailwind(
+  html: string,
+  fuentes: readonly FuenteDeClases[] = [],
+): Promise<OptimizeResult> {
   const m = CDN_TAG_RE.exec(html);
   if (!m) {
     // Sin CDN, ni el carrier ni los scripts de tema tienen quién los lea (en
@@ -221,6 +244,7 @@ export async function bakeTailwind(html: string): Promise<OptimizeResult> {
     css = await generateTailwindCss(
       html,
       mergeThemeExtends(carrier ?? conConfig.extend ?? {}, html),
+      fuentes,
     );
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -257,10 +281,11 @@ export async function bakeTailwind(html: string): Promise<OptimizeResult> {
 async function generateTailwindCss(
   html: string,
   extend: Record<string, unknown> = {},
+  fuentes: readonly FuenteDeClases[] = [],
 ): Promise<string> {
   const result = await postcss([
     tailwindcss({
-      content: [{ raw: html, extension: "html" }],
+      content: [{ raw: html, extension: "html" }, ...fuentes.map((f) => ({ raw: f.raw, extension: f.extension }))],
       theme: { extend },
       plugins: [],
       corePlugins: { preflight: true },

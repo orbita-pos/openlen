@@ -15,7 +15,7 @@ process.env.OPENLEN_LOCALIZE = "0";
 const root = mkdtempSync(path.join(tmpdir(), "olcarpeta-"));
 process.env.PUBLISH_ROOT = root;
 
-import { publishToDir, rollbackToSha } from "./filesystem";
+import { fuentesDeClasesDeLaCarpeta, publishToDir, rollbackToSha } from "./filesystem";
 import { SELF_UNREGISTERING_SW } from "./service-worker";
 
 const DOC = (label: string, extra = "") => `<!doctype html>
@@ -109,5 +109,50 @@ describe("publicar la carpeta (pieza 9)", () => {
     const c = await publishToDir({ subdomain: "huella", html: DOC("h"), files: [{ path: "/js/app.js", content: "2" }] });
     assert.equal(a.sha, b.sha);
     assert.notEqual(a.sha, c.sha);
+  });
+});
+
+// H1 de la spec 2026-10-07-apps: lo que el horneado de Tailwind lee de la carpeta.
+
+describe("las fuentes de clases de la carpeta", () => {
+  it("lee el código publicable (.js, .mjs) y nada más", () => {
+    const fuentes = fuentesDeClasesDeLaCarpeta([
+      { path: "/js/app.js", content: "a" },
+      { path: "/sw.js", content: "b" },
+      { path: "/js/util.mjs", content: "c" },
+      { path: "/css/site.css", content: "d" },
+      { path: "/data/menu.json", content: "e" },
+      { path: "/tests/home.spec.ts", content: "f" },
+      { path: "/tests/helper.js", content: "g" },
+      { path: "/supabase/migrations/20261007000000_x.sql", content: "h" },
+    ]);
+    assert.deepEqual(fuentes, [
+      { raw: "a", extension: "js" },
+      { raw: "b", extension: "js" },
+      { raw: "c", extension: "mjs" },
+    ]);
+  });
+});
+
+describe("publicar en producción hornea las clases del código de la carpeta", () => {
+  after(() => rmSync(root, { recursive: true, force: true }));
+  it("una clase que sólo escribe /js/app.js sale en el CSS de la release", async () => {
+    const env = process.env as Record<string, string | undefined>;
+    const antes = env.NODE_ENV;
+    env.NODE_ENV = "production";
+    try {
+      const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>t</title><script src="https://cdn.tailwindcss.com"></script></head><body><h1 class="p-4">Hola</h1><div id="tarjetas"></div><script src="/js/app.js"></script></body></html>`;
+      await publishToDir({
+        subdomain: "clasesdelcodigo",
+        html,
+        files: [{ path: "/js/app.js", content: 'document.getElementById("tarjetas").className = "ring-4 bg-[#123456]";' }],
+      });
+      const publicada = actual("clasesdelcodigo", "index.html");
+      assert.ok(!publicada.includes("cdn.tailwindcss.com"), "se horneó");
+      assert.ok(publicada.includes(".ring-4"), "ring-4, sólo en el script");
+      assert.ok(publicada.includes("bg-\\[\\#123456\\]"), "valor arbitrario, sólo en el script");
+    } finally {
+      env.NODE_ENV = antes;
+    }
   });
 });

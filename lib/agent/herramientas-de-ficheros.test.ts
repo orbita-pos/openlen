@@ -1189,20 +1189,23 @@ describe("la terminal DEL USUARIO (la #17 de plans/len-agente-2026/notas/fase-5-
     }
   });
 
-  it("no mete código que el sitio no tenía, y la página se queda como estaba", async () => {
+  // Hasta el 2026-10-07 esto se RECHAZABA (la #17: «no mete código que el sitio
+  // no tenía»). Se retiró con las apps web (D1 de la spec 2026-10-07-apps): el
+  // dueño escribe JavaScript como cualquier otro texto.
+  it("el JavaScript escrito a mano se guarda, como cualquier otro texto", async () => {
     const { deps, store } = makeDepsCompletos({ html: CON_SCRIPT });
     try {
-      for (const command of [
-        "sed -i 's#</body>#<script>alert(1)</script></body>#' /index.html",
-        "sed -i 's/abrir()\"/robar()\"/' /index.html",
-        "sed -i 's#<h1>#<h1 onmouseover=\"robar()\">#' /index.html",
-      ]) {
+      for (const [command, queda] of [
+        ["sed -i 's#</body>#<script>alert(1)</script></body>#' /index.html", /<script>alert\(1\)<\/script>/],
+        ["sed -i 's/abrir()\"/cerrar()\"/' /index.html", /onclick="cerrar\(\)"/],
+        ["sed -i 's#<h1>#<h1 onmouseover=\"cerrar()\">#' /index.html", /<h1 onmouseover="cerrar\(\)">/],
+      ] as const) {
         const r = await correr(deps, command);
-        assert.notEqual(r.exitCode, 0, command);
-        assert.equal(r.cambio, false, command);
-        assert.match(r.salida, /JavaScript .* cannot be added or changed by hand/, command);
-        assert.equal(store.data.html, CON_SCRIPT, command);
+        assert.equal(r.exitCode, 0, `${command}\n${r.salida}`);
+        assert.equal(r.cambio, true, command);
+        assert.match(store.data.html, queda, command);
       }
+      assert.equal(store.snapshots[0]?.source, "manual");
     } finally {
       await cerrarLasTerminalesDelUsuario();
     }
@@ -1261,13 +1264,12 @@ describe("editar a mano en la lente «Código» (la #18 de plans/len-agente-2026
     assert.equal(store.snapshots.length, 0);
   });
 
-  it("valen las guardas de la terminal: ni JavaScript nuevo ni el manual", async () => {
+  it("valen las guardas de la terminal: el manual no se toca; el JavaScript sí, desde el 2026-10-07", async () => {
     const { deps, store } = makeDepsCompletos({ html: CON_SCRIPT });
-    const js = await guardarAMano("p-editor", "u1", "/index.html", CON_SCRIPT.replace("</body>", "<script>alert(1)</script></body>"), CON_SCRIPT, deps);
-    assert.equal(js.ok, false);
-    if (!js.ok && js.motivo === "rechazado") assert.match(js.detalle, /JavaScript .* cannot be added or changed by hand/);
-    else assert.fail(JSON.stringify(js));
-    assert.equal(store.data.html, CON_SCRIPT);
+    const conAlert = CON_SCRIPT.replace("</body>", "<script>alert(1)</script></body>");
+    const js = await guardarAMano("p-editor", "u1", "/index.html", conAlert, CON_SCRIPT, deps);
+    assert.equal(js.ok, true, JSON.stringify(js));
+    assert.match(store.data.html, /<script>alert\(1\)<\/script>/);
     const ficheros = await cargarFicherosDeLaTerminal(
       { projectId: "p-editor", userId: "u1", page: null, ownerEmail: null, imageEditsThisTurn: 0, photoSearchesThisTurn: 0, busquedasVaciasSeguidas: 0 },
       deps,
@@ -1507,7 +1509,7 @@ describe("la carpeta del proyecto (pieza 9)", () => {
     }
   });
 
-  it("🔴 el editor del dueño cambia /data/menu.json pero no /js/app.js, y su versión dice que fue él", async () => {
+  it("🔴 el editor del dueño cambia /data/menu.json y /js/app.js, y su versión dice que fue él", async () => {
     const { deps, archivos, versiones } = conCarpeta({ html: HOME });
     archivos["/data/menu.json"] = "[]";
     archivos["/js/app.js"] = "console.log(1)";
@@ -1516,9 +1518,11 @@ describe("la carpeta del proyecto (pieza 9)", () => {
     assert.equal(archivos["/data/menu.json"], "[1]");
     assert.equal(versiones.at(-1)?.source, "manual");
     assert.match(versiones.at(-1)?.label ?? "", /^Code editor: /);
-    const no = await guardarAMano("p1", "u1", "/js/app.js", "console.log(2)", "console.log(1)", deps);
-    assert.equal(no.ok, false);
-    assert.equal(archivos["/js/app.js"], "console.log(1)");
+    // Hasta el 2026-10-07 un .js sólo podía ser COPIA de uno guardado.
+    const js = await guardarAMano("p1", "u1", "/js/app.js", "console.log(2)", "console.log(1)", deps);
+    assert.equal(js.ok, true, JSON.stringify(js));
+    assert.equal(archivos["/js/app.js"], "console.log(2)");
+    assert.match(versiones.at(-1)?.label ?? "", /^Code editor: /);
   });
 
   it("BRAZO DE CONTROL: un fichero de más de 1 MiB no se guarda", async () => {
