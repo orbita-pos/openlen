@@ -83,9 +83,9 @@ const authMiddleware = auth((req) => {
     // would double up (/en/new → /en/en/new → 404). Matches every other caller
     // (projects/page.tsx, use-template-button, …) which pass bare paths.
     loginUrl.searchParams.set("next", destinoDelLogin(pathWithoutLocale(req.nextUrl.pathname), req.nextUrl.search));
-    return fixRedirectHost(NextResponse.redirect(loginUrl));
+    return fixRedirectHost(NextResponse.redirect(loginUrl), req);
   }
-  return fixRedirectHost(intlMiddleware(req));
+  return fixRedirectHost(intlMiddleware(req), req);
 }) as unknown as (req: NextRequest) => ReturnType<typeof intlMiddleware>;
 
 // Behind the Caddy proxy, Next builds absolute redirects from the upstream
@@ -96,11 +96,29 @@ const authMiddleware = auth((req) => {
 // the response from the URL the redirect was created with.
 //
 // Trigger is dev-safe without a NODE_ENV gate: it only fires when the target is
-// our own domain carrying a stray port, or a leaked localhost in production.
-// In dev the redirect target is plain localhost:3000 (correct) → untouched.
+// our own domain carrying a stray port, or a leaked localhost in production
+// when the request came in through a public host (the box, behind Caddy). In
+// dev — and in a production build run locally — the redirect target is plain
+// localhost (correct) → untouched.
 const IS_PROD = process.env.NODE_ENV === "production";
 
-function fixRedirectHost(res: NextResponse): NextResponse {
+/** ¿Es un host de esta máquina? (`localhost`, `127.0.0.1`, `[::1]`, `*.localhost`). */
+function esHostLocal(hostConPuerto: string): boolean {
+  const h = hostConPuerto.trim().toLowerCase().replace(/:\d+$/, "").replace(/^\[|\]$/g, "");
+  return h === "localhost" || h === "127.0.0.1" || h === "0.0.0.0" || h === "::1" || h.endsWith(".localhost");
+}
+
+/**
+ * ¿La petición llegó desde fuera? En la caja, Caddy le pasa a Next el Host
+ * público (y `X-Forwarded-Host`); un build de producción corrido EN LOCAL sólo
+ * trae hosts locales, y su redirección a localhost es la buena: rehacerla
+ * hacia openlen.com mandaba el ensayo a producción (crear-es-len, 06/10).
+ */
+function vinoDeFuera(req: NextRequest): boolean {
+  return [req.headers.get("x-forwarded-host"), req.headers.get("host")].some((h) => !!h && !esHostLocal(h));
+}
+
+function fixRedirectHost(res: NextResponse, req: NextRequest): NextResponse {
   const loc = res.headers.get("location");
   if (!loc) return res;
   let u: URL;
@@ -113,7 +131,7 @@ function fixRedirectHost(res: NextResponse): NextResponse {
   const ourHostWithPort =
     (h === "openlen.com" || h === "www.openlen.com") && !!u.port;
   const leakedLocalhost =
-    IS_PROD && (h === "localhost" || h === "127.0.0.1" || h === "0.0.0.0");
+    IS_PROD && (h === "localhost" || h === "127.0.0.1" || h === "0.0.0.0") && vinoDeFuera(req);
   if (!ourHostWithPort && !leakedLocalhost) return res;
 
   u.protocol = "https:";
@@ -145,7 +163,7 @@ export default function middleware(req: NextRequest): ReturnType<typeof intlMidd
       req.nextUrl.origin,
     );
     if (search) url.search = search;
-    return fixRedirectHost(NextResponse.redirect(url));
+    return fixRedirectHost(NextResponse.redirect(url), req);
   }
 
   // El post «powered-by-gemini» se retiró el 2026-08-28 por ser falso —ver
@@ -157,7 +175,7 @@ export default function middleware(req: NextRequest): ReturnType<typeof intlMidd
       pathname.replace("/blog/powered-by-gemini", "/blog/the-models-behind-your-page"),
       req.nextUrl.origin,
     );
-    return fixRedirectHost(NextResponse.redirect(url, 308));
+    return fixRedirectHost(NextResponse.redirect(url, 308), req);
   }
 
   // A brief in the URL without an explicit mode opens the AI entry flow.
@@ -167,7 +185,7 @@ export default function middleware(req: NextRequest): ReturnType<typeof intlMidd
       params.set("mode", "ai");
       const url = new URL(pathname, req.nextUrl.origin);
       url.search = "?" + params.toString();
-      return fixRedirectHost(NextResponse.redirect(url));
+      return fixRedirectHost(NextResponse.redirect(url), req);
     }
   }
 
@@ -181,13 +199,14 @@ export default function middleware(req: NextRequest): ReturnType<typeof intlMidd
     const target = sanitizeNext(req.nextUrl.searchParams.get("next"));
     return fixRedirectHost(
       NextResponse.redirect(new URL(`/${locale}${target}`, req.nextUrl.origin)),
+      req,
     );
   }
 
   if (isProtected(pathname)) {
     return authMiddleware(req);
   }
-  return fixRedirectHost(intlMiddleware(req));
+  return fixRedirectHost(intlMiddleware(req), req);
 }
 
 export const config = {
