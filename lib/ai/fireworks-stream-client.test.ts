@@ -572,6 +572,40 @@ describe("el ■ a mitad de una llamada (ensayo de caja de crear-es-len, 06/10)"
   });
 });
 
+describe("el stream que se corta a mitad de una llamada (ensayo de caja, 06/10)", () => {
+  // Un turno real murió con «tool arguments were not JSON: Write» (16.738
+  // caracteres de una página, cortados dentro de un <path>): se armaba la
+  // llamada ANTES de mirar cómo terminó el stream, y lo que era un corte salía
+  // como un error del modelo.
+  const writeAMedias = chunk({ tool_calls: [{ index: 0, id: "c1", function: { name: "Write", arguments: '{"file_path":"/index.html","content":"<!doctype html><ht' } }] });
+
+  it("🔴 sin finish_reason es un corte de transporte (reintentable), no «not JSON»", async () => {
+    const { client: c } = client(writeAMedias);
+    const events = await drain(c.stream(REQUEST));
+    expect(events.some((e) => e.type === "function_call")).toBe(false);
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", code: "transport" } });
+  });
+
+  it("🔴 con finish_reason «length» es max_tokens, y la llamada a medias no existe", async () => {
+    const { client: c } = client(writeAMedias + chunk({}, "length"));
+    const events = await drain(c.stream(REQUEST));
+    expect(events.some((e) => e.type === "function_call")).toBe(false);
+    expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "max_tokens" } });
+  });
+
+  it("BRAZO DE CONTROL: una llamada entera con «tool_calls» se arma como siempre", async () => {
+    const { client: c } = client(
+      chunk({ tool_calls: [{ index: 0, id: "c1", function: { name: "Write", arguments: '{"file_path":"/index.html","content":"<p>x</p>"}' } }] }, "tool_calls"),
+    );
+    const events = await drain(c.stream(REQUEST));
+    expect(events.find((e) => e.type === "function_call")).toEqual({
+      type: "function_call",
+      name: "Write",
+      args: { file_path: "/index.html", content: "<p>x</p>" },
+    });
+  });
+});
+
 describe("cortes a mitad del stream (revisión de la pieza 1)", () => {
   it("si la conexión se cierra a media respuesta (sin finish_reason), sale con code «transport» y lo escrito llega", async () => {
     const { client: c } = client(chunk({ content: "Voy a cambi" }));

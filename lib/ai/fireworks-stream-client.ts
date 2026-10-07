@@ -494,12 +494,21 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
       // (`assistant/message` con `interrupted: true`). Armar aquí los
       // argumentos a medias de un Write daba «tool arguments were not JSON» —un
       // error del modelo— y el chat decía «El modelo tuvo un problema».
+      // Y LO MISMO SI EL STREAM NO TERMINÓ: sin `finish_reason` (la red lo
+      // cortó) no se arma nada y sale como corte de transporte, que el bucle
+      // reintenta; con `length` (el tope de salida) la llamada que quedó a
+      // medias no existe y sale como `max_tokens`. Armarla antes de mirar cómo
+      // terminó convertía un corte en «tool arguments were not JSON» —un
+      // turno real murió así con 16.738 caracteres de página cortados dentro de
+      // un <path> (ensayo de caja, 06/10)—.
       // Argumentos que no son JSON no son una llamada: ejecutarlos a medias es
       // peor que no ejecutarlos.
-      for (const [, call] of cancelled ? [] : [...pendingCalls.entries()].sort(([left], [right]) => left - right)) {
+      const armar = !cancelled && finishReason !== null;
+      for (const [, call] of armar ? [...pendingCalls.entries()].sort(([left], [right]) => left - right) : []) {
         if (!call.name) continue;
         let args: unknown;
         try { args = call.args.trim() === "" ? {} : JSON.parse(call.args); } catch {
+          if (finishReason === "length") continue;
           yield { type: "done", stopReason: { kind: "error", error: `tool arguments were not JSON: ${call.name}` } };
           return;
         }
