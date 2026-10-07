@@ -2,8 +2,9 @@
  * LOS HILOS EN EL CÓDIGO: un comentario con menciones sobre una línea de un
  * fichero (como Claude Tag, pero en la lente «Código»).
  *
- *   · `@Len` — el cliente le pide el cambio en un turno (con `hiloId`), y al
- *     cerrar el turno la ruta de Len contesta EN EL HILO (`respuestaDeLen`).
+ *   · `@Len` — la ruta del hilo arranca el turno EN EL SERVIDOR
+ *     (`lib/agent/turnos-desde-el-servidor.ts`), y al cerrarlo la ruta de Len
+ *     contesta EN EL HILO (`respuestaDeLen`), o el lanzador dice por qué no pudo.
  *   · `@persona` — alguien del proyecto (el dueño o un miembro): le llega un
  *     aviso (push y correo, `lib/notifications`) y el hilo se le marca sin ver.
  *
