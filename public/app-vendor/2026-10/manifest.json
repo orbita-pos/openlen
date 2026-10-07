@@ -1,0 +1,27 @@
+{
+  "catalogo": "2026-10",
+  "versiones": {
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "@supabase/supabase-js": "2.117.2"
+  },
+  "esbuild": "0.28.0",
+  "ficheros": {
+    "desarrollo": {
+      "react.js": "sha256-6Abv38frl2p4MiTHm4oJ6NNBajLvAvTDn1DrlMAHQGE=",
+      "react-jsx-runtime.js": "sha256-qIzTqbJ60FVUuqzQQzfApFxb0q6VHY6z4wrxydHecpw=",
+      "react-dom.js": "sha256-LL24/spr0Z+1cTJdAc9TyjF2N5iujj4ajObxIi1PObs=",
+      "react-dom-client.js": "sha256-5k4owk+OzEALLs92lI0kzWzZkMXt5OFDnVsVXyIqdU0=",
+      "supabase-js.js": "sha256-VO8L36m52qW6RvZveoLwWjH8oispUNQkRjwf+iSIQss=",
+      "react-todo.js": "sha256-4QpLupJwd8nsKCHR6HEv0m+2YKGlrsSisKhRnppEbqU="
+    },
+    "produccion": {
+      "react.js": "sha256-6Abv38frl2p4MiTHm4oJ6NNBajLvAvTDn1DrlMAHQGE=",
+      "react-jsx-runtime.js": "sha256-qIzTqbJ60FVUuqzQQzfApFxb0q6VHY6z4wrxydHecpw=",
+      "react-dom.js": "sha256-LL24/spr0Z+1cTJdAc9TyjF2N5iujj4ajObxIi1PObs=",
+      "react-dom-client.js": "sha256-5k4owk+OzEALLs92lI0kzWzZkMXt5OFDnVsVXyIqdU0=",
+      "supabase-js.js": "sha256-VO8L36m52qW6RvZveoLwWjH8oispUNQkRjwf+iSIQss=",
+      "react-todo.js": "sha256-XYNAhUXHQhJASQihN13SpC3xRfQTMTSgparMD6BWSMg="
+    }
+  }
+}

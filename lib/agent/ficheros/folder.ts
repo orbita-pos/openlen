@@ -22,7 +22,10 @@ import { esFicheroDeSupabase, motivoParaNoGuardar as supabaseSaveProblem } from 
 
 export type FolderFileKind = "web" | "tests" | "supabase";
 
-export const WEB_EXTENSIONS = [".js", ".mjs", ".css", ".json", ".webmanifest", ".txt", ".svg", ".md"] as const;
+/** `.jsx`, `.tsx` y `.ts` son FUENTES (apps web, spec local 2026-10-07-apps):
+ *  se guardan como se escriben y se sirven y publican COMPILADOS a JavaScript,
+ *  en su misma ruta (`lib/apps/compilador.ts`). */
+export const WEB_EXTENSIONS = [".js", ".mjs", ".jsx", ".tsx", ".ts", ".css", ".json", ".webmanifest", ".txt", ".svg", ".md"] as const;
 const TEST_EXTENSIONS = [".ts", ".js", ".mjs", ".json", ".md", ".txt"] as const;
 
 export const MAX_FOLDER_FILE_BYTES = 1024 * 1024;
@@ -35,10 +38,11 @@ const MAX_DEPTH = 8;
 /** Primeras carpetas que no pueden ser del proyecto. Las de la primera línea
  *  son cada `handle` del bloque `*.openlen.app` del Caddyfile —un fichero ahí
  *  nunca se vería: Caddy contesta esa ruta con otra cosa— más las rutas de
- *  Supabase que vienen (`storage`, `functions`, `realtime`); las de la segunda,
- *  las carpetas de Len y de su terminal. */
+ *  Supabase que vienen (`storage`, `functions`, `realtime`) y `openlen`, donde
+ *  la plataforma sirve las dependencias de las apps (`lib/apps/dependencias.ts`);
+ *  las de la segunda, las carpetas de Len y de su terminal. */
 export const RESERVED_ROOTS: readonly string[] = [
-  "api", "c", "assets", "uploads", "rest", "auth", "storage", "functions", "realtime",
+  "api", "c", "assets", "uploads", "rest", "auth", "storage", "functions", "realtime", "openlen",
   "memoria", "ajustes", "tmp", "bin", "usr", "dev", "proc",
 ];
 /** Ficheros sueltos de la plataforma: el manual de Len. */
@@ -138,6 +142,11 @@ export function publishableFolderFiles(files: Readonly<Record<string, string>>):
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
   ".js": "text/javascript",
   ".mjs": "text/javascript",
+  // Los fuentes se sirven COMPILADOS: un <script type="module"> exige un tipo
+  // de JavaScript, y con `text/plain` el navegador no lo ejecuta.
+  ".jsx": "text/javascript",
+  ".tsx": "text/javascript",
+  ".ts": "text/javascript",
   ".css": "text/css",
   ".json": "application/json",
   ".webmanifest": "application/manifest+json",

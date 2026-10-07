@@ -443,15 +443,17 @@ interface BakeDocumentCtx {
 
 /**
  * Lo que el horneado de Tailwind lee de la carpeta además del documento: el
- * código publicable (`.js`, `.mjs`), que es lo que mete clases en el DOM. El
- * CSS, los datos y el texto no las escriben. Ver `bakeTailwind`.
+ * código publicable (`.js`, `.mjs` y los fuentes de una app, `.jsx`, `.tsx`,
+ * `.ts`), que es lo que mete clases en el DOM. El CSS, los datos y el texto no
+ * las escriben. Ver `bakeTailwind`. Se lee el FUENTE: las clases son las mismas
+ * antes y después de compilar.
  */
 export function fuentesDeClasesDeLaCarpeta(
   files: ReadonlyArray<{ path: string; content: string }>,
 ): FuenteDeClases[] {
   return files
-    .filter((f) => isPublishableFolderPath(f.path) && /\.m?js$/i.test(f.path))
-    .map((f) => ({ raw: f.content, extension: /\.mjs$/i.test(f.path) ? "mjs" : "js" }));
+    .filter((f) => isPublishableFolderPath(f.path) && /\.(?:m?js|jsx|tsx?)$/i.test(f.path))
+    .map((f) => ({ raw: f.content, extension: /\.([a-z]+)$/i.exec(f.path)![1]!.toLowerCase() }));
 }
 
 interface AssistantBake {

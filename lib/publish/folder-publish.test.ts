@@ -115,11 +115,14 @@ describe("publicar la carpeta (pieza 9)", () => {
 // H1 de la spec 2026-10-07-apps: lo que el horneado de Tailwind lee de la carpeta.
 
 describe("las fuentes de clases de la carpeta", () => {
-  it("lee el código publicable (.js, .mjs) y nada más", () => {
+  it("lee el código publicable (.js, .mjs y los fuentes de una app) y nada más", () => {
     const fuentes = fuentesDeClasesDeLaCarpeta([
       { path: "/js/app.js", content: "a" },
       { path: "/sw.js", content: "b" },
       { path: "/js/util.mjs", content: "c" },
+      { path: "/src/App.jsx", content: "i" },
+      { path: "/src/Carrito.tsx", content: "j" },
+      { path: "/src/lib/precio.ts", content: "k" },
       { path: "/css/site.css", content: "d" },
       { path: "/data/menu.json", content: "e" },
       { path: "/tests/home.spec.ts", content: "f" },
@@ -130,6 +133,9 @@ describe("las fuentes de clases de la carpeta", () => {
       { raw: "a", extension: "js" },
       { raw: "b", extension: "js" },
       { raw: "c", extension: "mjs" },
+      { raw: "i", extension: "jsx" },
+      { raw: "j", extension: "tsx" },
+      { raw: "k", extension: "ts" },
     ]);
   });
 });

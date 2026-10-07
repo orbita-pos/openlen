@@ -524,6 +524,9 @@ export default defineConfig({
       // salvo `documento.ts` (binding nativo, que vitest SÍ carga). `include`
       // es LISTA BLANCA: sin esta línea estas pruebas no corren nunca.
       "lib/lienzo/**/*.test.ts",
+      // Las apps web (spec local 2026-10-07-apps): el catálogo, el compilador
+      // y el documento de la app. Puro salvo lo que lee `public/app-vendor/`.
+      "lib/apps/**/*.test.ts",
       "lib/publish/base-host.test.ts",
       "lib/publish/bake-surfaces.test.ts",
       "lib/publish/frame-origins.test.ts",

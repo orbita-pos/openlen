@@ -148,7 +148,7 @@ describe("el manual de la plataforma", () => {
     for (const ext of WEB_EXTENSIONS) expect(manual, ext).toContain(ext);
     // Las raíces que el sitio publicado contesta con otra cosa; las de Len y su
     // terminal (`memoria`, `tmp`…) no son cosa del manual.
-    const delSitio = ["api", "c", "assets", "uploads", "rest", "auth", "storage", "functions", "realtime"];
+    const delSitio = ["api", "c", "assets", "uploads", "rest", "auth", "storage", "functions", "realtime", "openlen"];
     expect(RESERVED_ROOTS).toEqual(expect.arrayContaining(delSitio));
     expect(manual).toContain(`except the reserved roots (${delSitio.map((r) => `/${r}`).join(", ")})`);
     expect(manual).not.toContain("/memoria,");

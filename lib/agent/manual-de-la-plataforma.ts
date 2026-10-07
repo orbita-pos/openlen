@@ -76,7 +76,7 @@ LINKS (<a href>):
 - ANCHORS ("#pricing"): only if that id EXISTS on the target page; if not, create it in the same edit.
 
 THE PROJECT'S FOLDER:
-Besides its pages, the project is a folder like any Vercel + Supabase project: /js, /css, /data/*.json, /sw.js, /manifest.json and any other text file (${WEB_EXTENSIONS.join(" ")}), anywhere except the reserved roots (${RAICES_DEL_SITIO}). They are read and changed like the pages, every change can be undone with the turn, and publishing ships them as they are, next to the pages. Reference them by path: \`<script src="/js/app.js" type="module">\`, \`fetch("/data/menu.json")\`.
+Besides its pages, the project is a folder like any Vercel + Supabase project: /js, /css, /data/*.json, /sw.js, /manifest.json and any other text file (${WEB_EXTENSIONS.join(" ")}), anywhere except the reserved roots (${RAICES_DEL_SITIO}). They are read and changed like the pages, every change can be undone with the turn, and publishing ships them as they are, next to the pages — except .jsx, .tsx and .ts, which are served and published compiled to JavaScript at the same path. Reference them by path: \`<script src="/js/app.js" type="module">\`, \`fetch("/data/menu.json")\`.
 - /tests holds Playwright tests (never published); /supabase holds the backend's migrations.
 - mirar_pagina, usar_pagina and the checks after each turn load these files the way the published site does. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - An installable app is a /manifest.json plus a service worker at /sw.js; if the site stops using one, the platform publishes a /sw.js that removes itself, so no visitor stays on an old version.

@@ -173,9 +173,25 @@ export type VisualEngineProjectMetadata =
 import type { PruebaGuardada } from "@/lib/agent/pruebas-de-la-pagina";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 
+/**
+ * UNA APP WEB (spec local docs/superpowers/specs/2026-10-07-apps-design.md):
+ * el proyecto es código —React en `/src`— y no una página. `html` es el
+ * cascarón (`<div id="root">`) y lo que se ve lo pinta la entrada.
+ */
+export interface AppDeProyecto {
+  /** El catálogo de dependencias, FIJADO al nacer (`lib/apps/dependencias.ts`):
+   *  subirlo a todas las apps a la vez rompería las que ya existen. */
+  catalogo: string;
+  /** El módulo que monta la app (`/src/main.jsx`). */
+  entrada: string;
+}
+
 export interface ProjectData {
   /** Publish-ready static HTML — the source of truth for the project. */
   html: string;
+  /** Presente = el proyecto es una APP WEB, no una página. Ausente en todo lo
+   *  anterior al 2026-10-07. */
+  app?: AppDeProyecto;
   /** Non-HTML project settings (form config, …). Absent on older rows. */
   settings?: ProjectSettings;
   /** Multi-page: extra pages keyed by slug. Absent/empty = classic
