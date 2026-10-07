@@ -8,7 +8,16 @@
 
 import "./new-chat.css";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 
@@ -28,6 +37,7 @@ import { useConversations } from "./use-conversations";
 import { setChatLayout, useChatLayout, useFloatBox, type FloatBox } from "./use-chat-version";
 import type { LiveStatus } from "./live-status";
 import { useIsMobile } from "../use-is-mobile";
+import { pedidosALen } from "@/lib/workspace-v2/pedidos-a-len";
 import { useTurnFeedback } from "./use-turn-feedback";
 
 export interface NewChatPanelProps {
@@ -118,6 +128,13 @@ function AgentChatView({
 }) {
   const t = useTranslations("panelsChat");
   const tAgent = useTranslations("wsPage.agent");
+  // LO PEDIDO A LEN DESDE UN HILO DEL CÓDIGO: se manda como un mensaje más, con
+  // su `hiloId`, en cuanto Len está libre (lib/workspace-v2/pedidos-a-len.ts).
+  const pedidoALen = useSyncExternalStore(
+    pedidosALen.subscribe,
+    () => pedidosALen.primero(projectId),
+    () => null,
+  );
   const tSidebar = useTranslations("wsChrome");
   const chat = useAgentChat({
     page: flatProjectPage,
@@ -134,6 +151,13 @@ function AgentChatView({
     onPendingDraftConsumed,
     pendingAttachments,
   });
+  // Un lector no le pide nada a Len (el servidor tampoco lo dejaría).
+  const { send: enviarALen } = chat;
+  useEffect(() => {
+    if (!pedidoALen || chat.busy || soloLectura) return;
+    pedidosALen.atendido(projectId, pedidoALen);
+    void enviarALen(pedidoALen.texto, null, { hiloId: pedidoALen.hiloId });
+  }, [pedidoALen, chat.busy, soloLectura, projectId, enviarALen]);
   const memory = useAgentMemory();
   const feedback = useTurnFeedback(projectId);
   const conversations = useConversations(projectId, chat.conversationChanged);

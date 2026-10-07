@@ -266,7 +266,21 @@
       "motivoDemasiados": "too many at once (at most {max})",
       "reemplazar": "{count, plural, one {{lista} already exists. Replace it?} other {{lista} already exist. Replace them?}}",
       "abrirAlLado": "Drop here to open it alongside",
-      "subiendo": "Uploading…"
+      "subiendo": "Uploading…",
+      "hilos": {
+        "placeholder": "What to change… Type @ to mention Len or someone on the project.",
+        "comentar": "Comment",
+        "responder": "Reply",
+        "placeholderRespuesta": "Reply… (@ to mention)",
+        "resolver": "Resolve",
+        "reabrir": "Reopen",
+        "resuelto": "Resolved",
+        "len": "Len",
+        "enCola": "Sent to Len: you’ll see the turn in the chat and the reply here.",
+        "soloEditoresLen": "Only people who can edit can ask Len for changes.",
+        "error": "That didn’t work. Try again.",
+        "mencionado": "You were mentioned here"
+      }
     }
   },
   "placeholder": {

@@ -266,7 +266,21 @@
       "motivoDemasiados": "一次太多（最多 {max} 个）",
       "reemplazar": "{count, plural, one {{lista} 已存在。要替换吗？} other {{lista} 已存在。要替换吗？}}",
       "abrirAlLado": "拖放到这里以在旁边打开",
-      "subiendo": "上传中…"
+      "subiendo": "上传中…",
+      "hilos": {
+        "placeholder": "要改什么…… 输入 @ 可提及 Len 或项目成员。",
+        "comentar": "评论",
+        "responder": "回复",
+        "placeholderRespuesta": "回复……（@ 提及）",
+        "resolver": "标记为已解决",
+        "reabrir": "重新打开",
+        "resuelto": "已解决",
+        "len": "Len",
+        "enCola": "已发给 Len：在聊天中可以看到处理过程，回复会显示在这里。",
+        "soloEditoresLen": "只有可编辑的人才能让 Len 修改。",
+        "error": "没有成功，请重试。",
+        "mencionado": "有人在这里提到了你"
+      }
     }
   },
   "placeholder": {

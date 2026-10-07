@@ -266,7 +266,21 @@
       "motivoDemasiados": "trop à la fois (au plus {max})",
       "reemplazar": "{count, plural, one {{lista} existe déjà. Le remplacer ?} other {{lista} existent déjà. Les remplacer ?}}",
       "abrirAlLado": "Déposez ici pour l’ouvrir à côté",
-      "subiendo": "Importation…"
+      "subiendo": "Importation…",
+      "hilos": {
+        "placeholder": "Quoi changer… Tapez @ pour mentionner Len ou quelqu’un du projet.",
+        "comentar": "Commenter",
+        "responder": "Répondre",
+        "placeholderRespuesta": "Répondez… (@ pour mentionner)",
+        "resolver": "Résoudre",
+        "reabrir": "Rouvrir",
+        "resuelto": "Résolu",
+        "len": "Len",
+        "enCola": "Envoyé à Len : vous verrez le tour dans le chat et la réponse ici.",
+        "soloEditoresLen": "Seules les personnes qui peuvent modifier peuvent demander des changements à Len.",
+        "error": "Ça n’a pas fonctionné. Réessayez.",
+        "mencionado": "On vous a mentionné ici"
+      }
     }
   },
   "placeholder": {

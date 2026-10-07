@@ -266,7 +266,21 @@
       "motivoDemasiados": "demasiados de una vez (como mucho {max})",
       "reemplazar": "{count, plural, one {Ya existe {lista}. ¿Reemplazarlo?} other {Ya existen {lista}. ¿Reemplazarlos?}}",
       "abrirAlLado": "Suelta aquí para abrirlo al lado",
-      "subiendo": "Subiendo…"
+      "subiendo": "Subiendo…",
+      "hilos": {
+        "placeholder": "Qué cambiar… Escribe @ para mencionar a Len o a alguien del proyecto.",
+        "comentar": "Comentar",
+        "responder": "Responder",
+        "placeholderRespuesta": "Responde… (@ para mencionar)",
+        "resolver": "Resolver",
+        "reabrir": "Reabrir",
+        "resuelto": "Resuelto",
+        "len": "Len",
+        "enCola": "Enviado a Len: verás el turno en el chat y la respuesta aquí.",
+        "soloEditoresLen": "Solo quien puede editar puede pedirle cambios a Len.",
+        "error": "No se pudo. Inténtalo de nuevo.",
+        "mencionado": "Te mencionaron aquí"
+      }
     }
   },
   "placeholder": {

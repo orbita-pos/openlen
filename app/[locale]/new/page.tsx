@@ -1365,6 +1365,18 @@ function NewV2Inner() {
   const esApp = !!loadedProject?.app;
   // Un lector de un proyecto compartido sólo mira.
   const soloLector = loadedProject?.rol === "lector";
+  // EL ENLACE DE UN AVISO DE MENCIÓN (`?codigo=/src/App.jsx`, hilos en el
+  // código): al cargar el proyecto, abre ese fichero en la lente «Código».
+  const codigoParam = searchParams.get("codigo");
+  const codigoAbierto = useRef<string | null>(null);
+  useEffect(() => {
+    const id = loadedProject?.id;
+    if (!id || !codigoParam || !codigoParam.startsWith("/")) return;
+    const clave = `${id}\u0000${codigoParam}`;
+    if (codigoAbierto.current === clave) return;
+    codigoAbierto.current = clave;
+    abrirEnElCodigo.abrir(id, codigoParam);
+  }, [loadedProject?.id, codigoParam]);
   const editingActive =
     inspectMode &&
     !esApp &&

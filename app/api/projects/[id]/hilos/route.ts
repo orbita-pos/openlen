@@ -1,5 +1,6 @@
 // /api/projects/[id]/hilos — LOS HILOS EN EL CÓDIGO (lib/projects/hilos.ts).
 //
+// GET  ?solo=sinVer → { sinVer: { total, rutas } } — para marcar ficheros.
 // GET  ?ruta=  → { hilos, personas, puedeLen, sinVer } — los del fichero (o
 //               todos), a quién se puede mencionar, si quien pide puede llamar
 //               a Len, y sus menciones sin ver en el proyecto.
@@ -22,7 +23,10 @@ export async function GET(req: Request, ctx: Ctx): Promise<Response> {
   const { id } = await ctx.params;
   const q = await quienEnElProyecto(id);
   if (!q.ok) return q.respuesta;
-  const ruta = new URL(req.url).searchParams.get("ruta");
+  const url = new URL(req.url);
+  // Sólo las menciones sin ver (el explorador marca sus ficheros).
+  if (url.searchParams.get("solo") === "sinVer") return json({ sinVer: await mencionesSinVer(id, q.userId) });
+  const ruta = url.searchParams.get("ruta");
   const [hilos, personas, sinVer] = await Promise.all([
     listarHilos(id, q.userId, ruta),
     personasDelProyecto(id),

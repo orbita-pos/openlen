@@ -266,7 +266,21 @@
       "motivoDemasiados": "한 번에 너무 많습니다(최대 {max}개)",
       "reemplazar": "{count, plural, one {{lista}이(가) 이미 있습니다. 바꿀까요?} other {{lista}이(가) 이미 있습니다. 바꿀까요?}}",
       "abrirAlLado": "여기에 놓으면 옆에 엽니다",
-      "subiendo": "업로드 중…"
+      "subiendo": "업로드 중…",
+      "hilos": {
+        "placeholder": "바꿀 내용… @를 입력해 Len이나 프로젝트 멤버를 언급하세요.",
+        "comentar": "댓글",
+        "responder": "답글",
+        "placeholderRespuesta": "답글… (@로 언급)",
+        "resolver": "해결",
+        "reabrir": "다시 열기",
+        "resuelto": "해결됨",
+        "len": "Len",
+        "enCola": "Len에게 보냈습니다. 작업은 채팅에서, 답변은 여기서 볼 수 있습니다.",
+        "soloEditoresLen": "편집 권한이 있는 사람만 Len에게 변경을 요청할 수 있습니다.",
+        "error": "실패했습니다. 다시 시도하세요.",
+        "mencionado": "여기서 언급되었습니다"
+      }
     }
   },
   "placeholder": {

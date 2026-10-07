@@ -274,7 +274,21 @@
       "motivoDemasiados": "te veel tegelijk (hoogstens {max})",
       "reemplazar": "{count, plural, one {{lista} bestaat al. Vervangen?} other {{lista} bestaan al. Vervangen?}}",
       "abrirAlLado": "Zet hier neer om het ernaast te openen",
-      "subiendo": "Uploaden…"
+      "subiendo": "Uploaden…",
+      "hilos": {
+        "placeholder": "Wat wijzigen… Typ @ om Len of iemand van het project te noemen.",
+        "comentar": "Reageren",
+        "responder": "Antwoorden",
+        "placeholderRespuesta": "Antwoorden… (@ om te noemen)",
+        "resolver": "Afronden",
+        "reabrir": "Heropenen",
+        "resuelto": "Afgerond",
+        "len": "Len",
+        "enCola": "Naar Len gestuurd: de beurt zie je in de chat, het antwoord hier.",
+        "soloEditoresLen": "Alleen wie mag bewerken, kan Len om wijzigingen vragen.",
+        "error": "Dat lukte niet. Probeer het opnieuw.",
+        "mencionado": "Je bent hier genoemd"
+      }
     }
   },
   "placeholder": {

@@ -1070,6 +1070,8 @@ export function useAgentChat({
         /** El primer mensaje de un proyecto en blanco que nace como app. */
         readonly naceComo?: PideNacer["naceComo"];
         readonly idioma?: string;
+        /** Pedido con `@Len` desde un hilo del código: Len contesta además allí. */
+        readonly hiloId?: string;
       },
     ) => {
       const escrito = rawPrompt.trim();
@@ -1328,6 +1330,8 @@ export function useAgentChat({
               ...(opciones?.styleDirection ? { styleDirection: opciones.styleDirection } : {}),
               // UNA APP NACE con este mensaje (la tarjeta App del estado vacío).
               ...camposDeNacer(opciones),
+              // Desde un hilo del código (`@Len`): Len contesta en él al cerrar.
+              ...(opciones?.hiloId ? { hiloId: opciones.hiloId } : {}),
             }),
             signal: abort.signal,
           });

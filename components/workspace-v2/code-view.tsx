@@ -90,6 +90,7 @@ import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 
 import { copiar } from "./copiar";
 import { DebajoDeLaLinea, claveDeLinea, useComentarLineas, type EtiquetasDeComentar } from "./comentar-linea";
+import { HILOS_VISTOS, useHilos, type EtiquetasDeHilos } from "./hilos-del-codigo";
 import { LineaColoreada } from "./linea-coloreada";
 import { Check, ChevronDown, ChevronRight, Copy, FileText, Search, X } from "./icons";
 import { IconBtn } from "./ui";
@@ -149,6 +150,10 @@ export interface EtiquetasDelIde {
   readonly subiendo: string;
   /** Las frases del editor (buscar y reemplazar, plegar), por su texto en inglés. */
   readonly frasesDelEditor?: Readonly<Record<string, string>>;
+  /** Los hilos en el código (`@Len`, `@persona`). Sin ellos, comentar sólo espera al chat. */
+  readonly hilos?: EtiquetasDeHilos;
+  /** El título de la marca «@» de un fichero donde te mencionaron y aún no lo viste. */
+  readonly mencionado?: string;
 }
 
 interface CodeViewProps {
@@ -391,6 +396,26 @@ function Explorador({
 
   // La lista se vuelve a pedir tras cada cambio de aquí, y cuando Len cambia algo.
   const [recarga, setRecarga] = useState(0);
+  // Los ficheros donde te mencionaron y aún no lo viste (hilos en el código).
+  const [mencionadas, setMencionadas] = useState<ReadonlySet<string>>(() => new Set());
+  useEffect(() => {
+    let vivo = true;
+    const leer = () =>
+      void fetch(`/api/projects/${encodeURIComponent(projectId)}/hilos?solo=sinVer`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j: { sinVer?: { rutas?: string[] } } | null) => {
+          if (vivo && j?.sinVer?.rutas) setMencionadas(new Set(j.sinVer.rutas));
+        })
+        .catch(() => {});
+    leer();
+    const reloj = setInterval(leer, 30_000);
+    window.addEventListener(HILOS_VISTOS, leer);
+    return () => {
+      vivo = false;
+      clearInterval(reloj);
+      window.removeEventListener(HILOS_VISTOS, leer);
+    };
+  }, [projectId, recarga, activa]);
   const turnosConCambios = useSyncExternalStore(
     cambiosEnVivo.subscribe,
     () => cambiosEnVivo.turnos(projectId),
@@ -857,6 +882,11 @@ function Explorador({
                       </span>
                     )}
                     <MarcaDelFichero marca={marcas.get(n.ruta)} labels={labels} />
+                    {mencionadas.has(n.ruta) && ide.mencionado && (
+                      <span title={ide.mencionado} aria-label={ide.mencionado} className="shrink-0 text-[10.5px] font-semibold text-accent" data-mencionado="">
+                        @
+                      </span>
+                    )}
                   </button>
                 )}
                 <button
@@ -1528,10 +1558,13 @@ function PanelDelArchivo({
     return () => clearTimeout(t);
   }, [copiado]);
   const comentar = useComentarLineas(projectId, ruta);
+  // Los hilos de este fichero (`@Len`, `@persona`): se ven bajo su línea.
+  const hilos = useHilos(projectId, ruta);
+  const conHilos = labels.ide.hilos ? { ctx: hilos, labels: labels.ide.hilos } : undefined;
   const lineas = useMemo(() => texto.split("\n"), [texto]);
-  // Las líneas con algo que enseñar debajo: las comentadas y la que se está comentando.
+  // Las líneas con algo que enseñar debajo: las comentadas, las de un hilo y la que se está comentando.
   const comentadas: number[] = [];
-  for (let i = 1; i <= lineas.length; i++) if (comentar.deLaLinea(i, false).length > 0) comentadas.push(i);
+  for (let i = 1; i <= lineas.length; i++) if (comentar.deLaLinea(i, false).length > 0 || hilos.lineas.includes(i)) comentadas.push(i);
   // La misma lista, la misma referencia: el editor sólo repinta el margen si cambia.
   const claveComentadas = comentadas.join(",");
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1624,7 +1657,14 @@ function PanelDelArchivo({
               <div className="mb-0.5 font-mono text-[10.5px] fg-faint">
                 {n} · <span className="whitespace-pre">{(lineas[n - 1] ?? "").trim().slice(0, 80)}</span>
               </div>
-              <DebajoDeLaLinea comentar={comentar} linea={n} deAntes={false} codigo={lineas[n - 1] ?? ""} labels={labels.comentar} />
+              <DebajoDeLaLinea
+                comentar={comentar}
+                linea={n}
+                deAntes={false}
+                codigo={lineas[n - 1] ?? ""}
+                labels={labels.comentar}
+                {...(conHilos ? { hilos: conHilos } : {})}
+              />
             </div>
           ))}
         </div>

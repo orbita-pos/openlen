@@ -13,6 +13,7 @@ import { EditorView } from "@codemirror/view";
 import { CodeView } from "./code-view";
 import { comentariosDelChat } from "@/lib/workspace-v2/comentarios-de-lineas";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
+import { pedidosALen } from "@/lib/workspace-v2/pedidos-a-len";
 
 // `next/dynamic` carga el editor aparte: aquí, con React.lazy, para esperarlo.
 vi.mock("next/dynamic", async () => {
@@ -158,7 +159,7 @@ async function esperar(cond: () => unknown, veces = 60) {
   }
 }
 
-async function pintar(o: { peticion?: { ruta: string; n: number } | null; onClose?: () => void; id?: string } = {}) {
+async function pintar(o: { peticion?: { ruta: string; n: number } | null; onClose?: () => void; id?: string; labels?: typeof labels } = {}) {
   const el = document.createElement("div");
   document.body.appendChild(el);
   const root = createRoot(el);
@@ -172,7 +173,7 @@ async function pintar(o: { peticion?: { ruta: string; n: number } | null; onClos
           rutaActual="/index.html"
           peticion={peticion}
           onClose={o.onClose ?? (() => {})}
-          labels={labels}
+          labels={o.labels ?? labels}
         />,
       );
     });
@@ -714,5 +715,119 @@ describe("CodeView — arrastrar y soltar en el árbol", () => {
     )!;
     expect(pagina.parentElement!.getAttribute("draggable")).toBe("false");
     expect(botonDelArbol(el, ".openlen").parentElement!.getAttribute("draggable")).toBe("false");
+  });
+});
+
+describe("CodeView — hilos en una línea con @Len y @persona", () => {
+  const HILOS = {
+    placeholder: "Qué cambiar… @ para mencionar",
+    comentar: "Comentar",
+    responder: "Responder",
+    placeholderRespuesta: "Responde…",
+    resolver: "Resolver",
+    reabrir: "Reabrir",
+    resuelto: "Resuelto",
+    len: "Len",
+    enCola: "Enviado a Len",
+    soloEditoresLen: "Solo editores",
+    error: "No se pudo",
+  };
+  const conHilos = { ...labels, ide: { ...labels.ide, hilos: HILOS, mencionado: "Te mencionaron aquí" } };
+  let hilos: unknown[];
+
+  const abrirCaja = async (el: HTMLElement) => {
+    const uno = [...el.querySelectorAll(".cm-lineNumbers .cm-gutterElement")].find((g) => g.textContent === "1")!;
+    act(() => {
+      uno.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    });
+    return el.querySelector<HTMLTextAreaElement>("[data-caja-de-comentario] textarea")!;
+  };
+  const escribir = (area: HTMLTextAreaElement, valor: string) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!;
+    act(() => {
+      setter.call(area, valor);
+      area.setSelectionRange(valor.length, valor.length);
+      area.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  };
+
+  beforeEach(() => {
+    comentariosDelChat.vaciar(proyecto);
+    hilos = [];
+    respuesta = (m, url) => {
+      if (url.includes("/hilos/vistas")) return new Response(JSON.stringify({ ok: true }));
+      if (url.includes("/hilos?solo=sinVer")) return new Response(JSON.stringify({ sinVer: { total: 1, rutas: ["/datos/reservas.json"] } }));
+      if (m === "GET" && url.includes("/hilos?ruta=")) {
+        return new Response(
+          JSON.stringify({
+            hilos,
+            personas: [
+              { userId: "yo", nombre: "Yo", rol: "dueno" },
+              { userId: "u-ana", nombre: "Ana", rol: "editor" },
+            ],
+            puedeLen: true,
+            yo: "yo",
+            sinVer: { total: 0, rutas: [] },
+          }),
+        );
+      }
+      if (m === "POST" && url.endsWith("/hilos")) return new Response(JSON.stringify({ hiloId: "h1", mensajeId: "m1", mencionados: ["u-ana"] }));
+      return null;
+    };
+  });
+
+  it("🔴 con @Ana, lo comentado se guarda como hilo (no espera al chat) y sale bajo su línea", async () => {
+    const { el } = await pintar({ labels: conHilos });
+    await esperar(() => llamadas.some((l) => l.url.includes("/hilos?ruta=")));
+    const area = await abrirCaja(el);
+    escribir(area, "@An");
+    // El @ autocompleta.
+    await esperar(() => el.querySelector("[data-arroba]"));
+    expect([...el.querySelectorAll("[data-arroba] [role=option]")].map((o) => o.textContent)).toEqual(["@Ana"]);
+    escribir(area, "@Ana ¿esto va así?");
+    hilos = [
+      {
+        id: "h1", ruta: "/index.html", linea: 1, codigo: "<h1>Portada</h1>", estado: "abierto", creadoPor: "yo", sinVer: 0,
+        mensajes: [{ id: "m1", autorId: "yo", autor: "Yo", texto: "@Ana ¿esto va así?", filaId: null, createdAt: "2026-10-07T10:00:00Z" }],
+      },
+    ];
+    tecla(area, "Enter");
+    await esperar(() => el.querySelector("[data-hilo]"));
+    const post = llamadas.find((l) => l.metodo === "POST" && l.url.endsWith("/hilos"))!;
+    expect(post.cuerpo).toMatchObject({ ruta: "/index.html", linea: 1, codigo: "<h1>Portada</h1>", texto: "@Ana ¿esto va así?", menciones: ["u-ana"], len: false });
+    expect(comentariosDelChat.lista(proyecto)).toEqual([]);
+    expect(el.querySelector("[data-hilo]")!.textContent).toContain("¿esto va así?");
+    expect(pedidosALen.primero(proyecto)).toBeNull();
+  });
+
+  it("🔴 con @Len, además deja el pedido para el chat, con el hilo, la línea y el código", async () => {
+    const { el } = await pintar({ labels: conHilos });
+    await esperar(() => llamadas.some((l) => l.url.includes("/hilos?ruta=")));
+    const area = await abrirCaja(el);
+    escribir(area, "@Len pon el título en azul");
+    tecla(area, "Enter");
+    await esperar(() => pedidosALen.primero(proyecto));
+    const pedido = pedidosALen.primero(proyecto)!;
+    expect(pedido.hiloId).toBe("h1");
+    expect(pedido.texto).toContain("@Len pon el título en azul");
+    expect(pedido.texto).toContain("/index.html:1 `<h1>Portada</h1>`");
+    expect(llamadas.find((l) => l.metodo === "POST" && l.url.endsWith("/hilos"))!.cuerpo).toMatchObject({ len: true });
+    pedidosALen.atendido(proyecto, pedido);
+  });
+
+  it("sin @, comentar sigue esperando al próximo mensaje del chat, como siempre", async () => {
+    const { el } = await pintar({ labels: conHilos });
+    await esperar(() => llamadas.some((l) => l.url.includes("/hilos?ruta=")));
+    const area = await abrirCaja(el);
+    escribir(area, "más grande");
+    tecla(area, "Enter");
+    expect(comentariosDelChat.lista(proyecto)).toMatchObject([{ ruta: "/index.html", linea: 1, texto: "más grande" }]);
+    expect(llamadas.some((l) => l.metodo === "POST" && l.url.endsWith("/hilos"))).toBe(false);
+  });
+
+  it("el explorador marca con @ los ficheros donde te mencionaron", async () => {
+    const { el } = await pintar({ labels: conHilos });
+    await esperar(() => el.querySelector("[data-mencionado]"));
+    expect(botonDelArbol(el, "reservas.json").querySelector("[data-mencionado]")).not.toBeNull();
   });
 });

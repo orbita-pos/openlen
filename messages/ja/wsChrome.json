@@ -266,7 +266,21 @@
       "motivoDemasiados": "一度に多すぎます（最大 {max}）",
       "reemplazar": "{count, plural, one {{lista} はすでにあります。置き換えますか？} other {{lista} はすでにあります。置き換えますか？}}",
       "abrirAlLado": "ここにドロップすると横に開きます",
-      "subiendo": "アップロード中…"
+      "subiendo": "アップロード中…",
+      "hilos": {
+        "placeholder": "変更したいこと… @ で Len やプロジェクトのメンバーをメンションできます。",
+        "comentar": "コメント",
+        "responder": "返信",
+        "placeholderRespuesta": "返信…（@ でメンション）",
+        "resolver": "解決",
+        "reabrir": "再開",
+        "resuelto": "解決済み",
+        "len": "Len",
+        "enCola": "Len に送りました。作業はチャットで、返信はここで見られます。",
+        "soloEditoresLen": "Len に変更を頼めるのは編集できる人だけです。",
+        "error": "うまくいきませんでした。もう一度お試しください。",
+        "mencionado": "ここでメンションされました"
+      }
     }
   },
   "placeholder": {
