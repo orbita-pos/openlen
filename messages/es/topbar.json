@@ -162,6 +162,11 @@
       "pegar": "O pega este enlace en tu navegador:",
       "ignorar": "Si no esperabas esta invitación, puedes ignorar este correo.",
       "alguien": "Alguien"
+    },
+    "mencion": {
+      "asunto": "{quien} te mencionó en {titulo}",
+      "donde": "En {ruta}, línea {linea}:",
+      "ver": "Abrir el hilo"
     }
   }
 }

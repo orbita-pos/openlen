@@ -162,6 +162,11 @@
       "pegar": "或将此链接粘贴到浏览器中：",
       "ignorar": "如果你没有预期会收到此邀请，可以忽略这封邮件。",
       "alguien": "有人"
+    },
+    "mencion": {
+      "asunto": "{quien} 在 {titulo} 中提到了你",
+      "donde": "{ruta} 第 {linea} 行：",
+      "ver": "打开讨论"
     }
   }
 }

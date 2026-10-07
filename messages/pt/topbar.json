@@ -162,6 +162,11 @@
       "pegar": "Ou cole este link no navegador:",
       "ignorar": "Se você não esperava este convite, pode ignorar este e-mail.",
       "alguien": "Alguém"
+    },
+    "mencion": {
+      "asunto": "{quien} mencionou você em {titulo}",
+      "donde": "Em {ruta}, linha {linea}:",
+      "ver": "Abrir a conversa"
     }
   }
 }

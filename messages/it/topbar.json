@@ -162,6 +162,11 @@
       "pegar": "Oppure incolla questo link nel browser:",
       "ignorar": "Se non aspettavi questo invito, puoi ignorare questa email.",
       "alguien": "Qualcuno"
+    },
+    "mencion": {
+      "asunto": "{quien} ti ha menzionato in {titulo}",
+      "donde": "In {ruta}, riga {linea}:",
+      "ver": "Apri la conversazione"
     }
   }
 }

@@ -2,6 +2,7 @@ import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { accesoAlProyecto, puede } from "@/lib/projects/acceso";
 import { conAutor } from "@/lib/projects/autor-del-cambio";
+import { hiloDelProyecto, respuestaDeLen } from "@/lib/projects/hilos";
 import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miembros";
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
@@ -296,6 +297,9 @@ type CuerpoDelTurno = {
   naceComo?: unknown;
   /** El idioma de la interfaz, para el `lang` del cascarón de una app que nace. */
   idioma?: unknown;
+  /** HILOS EN EL CÓDIGO: el turno se pidió con `@Len` desde un hilo; al cerrar,
+   *  Len contesta en él (lib/projects/hilos.ts). */
+  hiloId?: unknown;
 };
 
 /** La ronda de un encargo que abre el conductor (pieza 8). Nunca sale del cuerpo. */
@@ -383,6 +387,9 @@ async function correrTurno(
       if (!(await cabeEnElTope(projectId, 1))) return errorJson(402, "the project's monthly limit for members is used up", "tope_de_miembros");
     }
   }
+  // El hilo del que viene el turno, si es de ESTE proyecto (si no, se ignora).
+  const hiloPedido = typeof body?.hiloId === "string" ? body.hiloId.slice(0, 100) : "";
+  const hiloDelTurno = hiloPedido && (await hiloDelProyecto(projectId, hiloPedido).catch(() => null)) ? hiloPedido : null;
   // F4 Task 1 — multi-page base: page slug, validated CLONED from
   // app/api/templates/ai-design/route.ts (read that file first if editing
   // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in
@@ -1131,6 +1138,13 @@ async function correrTurno(
             });
           } catch (err) {
             console.warn("[agent] no se pudo registrar el turno", err);
+          }
+          // Pedido desde un hilo del código: Len contesta EN EL HILO con lo que
+          // dijo al cerrar (y el hilo enlaza al turno del chat).
+          if (hiloDelTurno) {
+            await respuestaDeLen({ projectId, hiloId: hiloDelTurno, texto: registro.texto, filaId }).catch((err: unknown) =>
+              console.warn("[agent] no se pudo contestar en el hilo", err),
+            );
           }
         } else if (filaAbierta) {
           try {

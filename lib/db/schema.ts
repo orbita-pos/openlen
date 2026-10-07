@@ -1295,6 +1295,57 @@ export const projectMemberSpend = pgTable(
   (t) => [primaryKey({ columns: [t.projectId, t.userId, t.mes] })],
 );
 
+// ─── Hilos en el código — @Len y @persona sobre una línea ─────────────────────
+// Un comentario con menciones sobre una línea de un fichero se queda como hilo
+// (lib/projects/hilos.ts): @Len lo atiende en un turno y contesta en el hilo;
+// a una persona del proyecto le llega un aviso. `npm run hilos:migrate`.
+export const codeThreads = pgTable(
+  "codeThreads",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    ruta: text("ruta").notNull(),
+    linea: integer("linea").notNull(),
+    /** La línea tal como estaba al abrir el hilo (el fichero cambia después). */
+    codigo: text("codigo").notNull(),
+    estado: text("estado").$type<"abierto" | "resuelto">().notNull().default("abierto"),
+    creadoPor: text("creadoPor").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("codeThreads_project_ruta_idx").on(t.projectId, t.ruta)],
+);
+
+export const codeThreadMessages = pgTable(
+  "codeThreadMessages",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    threadId: text("threadId").notNull().references(() => codeThreads.id, { onDelete: "cascade" }),
+    /** NULL = Len. */
+    autorId: text("autorId"),
+    texto: text("texto").notNull(),
+    /** El turno de Len: el que lanzó este mensaje, o el que lo escribió. */
+    filaId: text("filaId"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("codeThreadMessages_thread_idx").on(t.threadId, t.createdAt)],
+);
+
+/** Una mención a una persona: de aquí salen el aviso y el «sin ver». */
+export const codeMentions = pgTable(
+  "codeMentions",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    threadId: text("threadId").notNull().references(() => codeThreads.id, { onDelete: "cascade" }),
+    messageId: text("messageId").notNull(),
+    userId: text("userId").notNull(),
+    vistaAt: timestamp("vistaAt", { mode: "date" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("codeMentions_user_idx").on(t.userId, t.projectId)],
+);
+
 // ─── Broadcast module — email your audience (members-only, v1) ──────────────
 // Applied in prod via `npm run broadcast:migrate`. Shares the members monthly
 // email budget (lib/broadcast/limits.ts). The recipient snapshot is taken at

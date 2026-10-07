@@ -1,5 +1,11 @@
 import { Resend } from "resend";
-import { correoDeInvitacion, idiomaDelCorreo, type DatosDeLaInvitacion } from "@/lib/projects/correo-de-invitacion";
+import {
+  correoDeInvitacion,
+  correoDeMencion,
+  idiomaDelCorreo,
+  type DatosDeLaInvitacion,
+  type DatosDeLaMencion,
+} from "@/lib/projects/correos-del-proyecto";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Email — Resend client with console-log fallback.
@@ -571,6 +577,20 @@ export async function sendProjectInviteEmail(input: ProjectInviteEmail): Promise
     return;
   }
   await enviar(live, "project invite email", { from, to: input.to, ...correo });
+}
+
+/** «Te mencionaron» en un hilo del código (lib/projects/hilos.ts). */
+export async function sendMentionEmail(input: DatosDeLaMencion & { to: string; idioma?: string | null }): Promise<void> {
+  const correo = correoDeMencion(input, idiomaDelCorreo(input.idioma));
+  const live = liveClientOrWarn("mention email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`\n  📧 [DEV] ${correo.subject} → ${input.to}\n     ${input.url}\n`);
+    }
+    return;
+  }
+  await enviar(live, "mention email", { from, to: input.to, ...correo });
 }
 
 // ─── Chat — offline-owner notification ───────────────────────────────────────

@@ -95,6 +95,11 @@ async function avisoDeLen(event: LenTurnoEvent): Promise<PushPayload> {
   };
 }
 
+/** Al fichero del hilo, en la lente «Código» (`?codigo=` lo abre `/new`). */
+export function urlDelHilo(projectId: string, ruta: string): string {
+  return `/new?project=${encodeURIComponent(projectId)}&codigo=${encodeURIComponent(ruta)}`;
+}
+
 // ── Channel object ─────────────────────────────────────────────────────────────
 
 export const webPushChannel: NotificationChannel = {
@@ -106,11 +111,17 @@ export const webPushChannel: NotificationChannel = {
     const payload =
       event.type === "len_turno"
         ? await avisoDeLen(event)
-        : {
-            title: event.senderName,
-            body: event.preview,
-            url: "/inbox?conv=" + event.conversationId,
-          };
+        : event.type === "mencion"
+          ? {
+              title: `@ ${event.quien}`,
+              body: `${event.ruta.replace(/^\/+/, "")}:${event.linea} — ${event.preview}`,
+              url: urlDelHilo(event.projectId, event.ruta),
+            }
+          : {
+              title: event.senderName,
+              body: event.preview,
+              url: "/inbox?conv=" + event.conversationId,
+            };
 
     const { sent, failed } = await sendPushToUser(event.recipientUserId, payload);
 

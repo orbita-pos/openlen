@@ -25,7 +25,22 @@ export interface LenTurnoEvent {
   pregunta: boolean;
 }
 
-export type NotificationEvent = ChatMessageEvent | LenTurnoEvent;
+/** HILOS EN EL CÓDIGO: alguien te mencionó en una línea de un fichero de un
+ *  proyecto compartido (`lib/projects/hilos.ts`). Push y correo. */
+export interface MencionEvent {
+  type: "mencion";
+  projectId: string;
+  recipientUserId: string;
+  /** Quien te mencionó: su nombre o su correo. */
+  quien: string;
+  preview: string;
+  ruta: string;
+  linea: number;
+  /** El idioma de la interfaz de quien mencionó (el del correo). */
+  idioma?: string | null;
+}
+
+export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent;
 
 export interface NotificationPrefs {
   webPushEnabled: boolean;

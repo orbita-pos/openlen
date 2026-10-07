@@ -162,6 +162,11 @@
       "pegar": "Ou collez ce lien dans votre navigateur :",
       "ignorar": "Si vous n’attendiez pas cette invitation, vous pouvez ignorer cet e-mail.",
       "alguien": "Quelqu’un"
+    },
+    "mencion": {
+      "asunto": "{quien} vous a mentionné dans {titulo}",
+      "donde": "Dans {ruta}, ligne {linea} :",
+      "ver": "Ouvrir le fil"
     }
   }
 }

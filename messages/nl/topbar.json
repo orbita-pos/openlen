@@ -162,6 +162,11 @@
       "pegar": "Of plak deze link in je browser:",
       "ignorar": "Als je deze uitnodiging niet verwachtte, kun je deze e-mail negeren.",
       "alguien": "Iemand"
+    },
+    "mencion": {
+      "asunto": "{quien} heeft je genoemd in {titulo}",
+      "donde": "In {ruta}, regel {linea}:",
+      "ver": "Draad openen"
     }
   }
 }

@@ -18,6 +18,9 @@ const mocks = vi.hoisted(() => ({
   cabeEnElTope: vi.fn(async () => true),
   margenDeMiembros: vi.fn(async (): Promise<number | null> => null),
   sumarGasto: vi.fn(async () => undefined),
+  // Los hilos en el código: el turno pedido desde un hilo contesta en él.
+  hiloDelProyecto: vi.fn(async (): Promise<{ id: string } | null> => null),
+  respuestaDeLen: vi.fn(async () => true),
   guardarCambiosDelTurno: vi.fn(async () => false),
   auth: vi.fn(),
   getCreditState: vi.fn(),
@@ -90,6 +93,10 @@ const mocks = vi.hoisted(() => ({
 
 // Compartir el proyecto: aquí quien pide es el dueño (ver acceso-de-prueba.ts).
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
+vi.mock("@/lib/projects/hilos", () => ({
+  hiloDelProyecto: mocks.hiloDelProyecto,
+  respuestaDeLen: mocks.respuestaDeLen,
+}));
 vi.mock("@/lib/projects/miembros", () => ({
   cabeEnElTope: mocks.cabeEnElTope,
   margenDeMiembros: mocks.margenDeMiembros,
@@ -2515,5 +2522,25 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     expect((await pedir()).status).toBe(404);
     expect(mocks.loadProject).not.toHaveBeenCalled();
     expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+  });
+
+  it("🔴 un turno pedido desde un hilo del código contesta en el hilo; uno de otro proyecto se ignora", async () => {
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "Cambiado el título.", turns: 1, toolCalls: 1,
+      usage: { inputTokens: 10, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: true,
+    });
+    mocks.creditsForUsage.mockReturnValue(5);
+    mocks.hiloDelProyecto.mockResolvedValue({ id: "h1" });
+    await readEvents(await pedir({ hiloId: "h1", turnId: "11111111-1111-4111-8111-111111111111" }));
+    expect(mocks.hiloDelProyecto).toHaveBeenCalledWith("p1", "h1");
+    expect(mocks.respuestaDeLen).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: "p1", hiloId: "h1", filaId: "11111111-1111-4111-8111-111111111111" }),
+    );
+
+    mocks.respuestaDeLen.mockClear();
+    mocks.hiloDelProyecto.mockResolvedValue(null);
+    await readEvents(await pedir({ hiloId: "de-otro" }));
+    expect(mocks.respuestaDeLen).not.toHaveBeenCalled();
   });
 });

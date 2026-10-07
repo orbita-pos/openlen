@@ -162,6 +162,11 @@
       "pegar": "Or paste this link into your browser:",
       "ignorar": "If you weren’t expecting this invitation, you can ignore this email.",
       "alguien": "Someone"
+    },
+    "mencion": {
+      "asunto": "{quien} mentioned you in {titulo}",
+      "donde": "In {ruta}, line {linea}:",
+      "ver": "Open the thread"
     }
   }
 }

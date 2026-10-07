@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { sendChatNotificationEmail } from "@/lib/email";
-import type { NotificationChannel, NotificationEvent, DeliveryResult } from "../types";
+import { sendChatNotificationEmail, sendMentionEmail } from "@/lib/email";
+import type { NotificationChannel, NotificationEvent, DeliveryResult, MencionEvent } from "../types";
+import { urlDelHilo } from "./webpush";
 
 export const emailChannel: NotificationChannel = {
   id: "email",
@@ -13,6 +14,7 @@ export const emailChannel: NotificationChannel = {
     // turno que termina sin nadie mirando sería ruido, y quien lo necesita de
     // verdad —la app móvil— vive de push.
     if (event.type === "len_turno") return "skipped";
+    if (event.type === "mencion") return enviarMencion(event);
     // Resolve recipient's platform email + display name
     const userRows = await db
       .select({ email: schema.users.email, name: schema.users.name })
@@ -49,3 +51,22 @@ export const emailChannel: NotificationChannel = {
     return "sent";
   },
 };
+
+/** «Te mencionaron» en un hilo del código: al correo de quien mencionaron. */
+async function enviarMencion(event: MencionEvent): Promise<DeliveryResult> {
+  const [u] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, event.recipientUserId)).limit(1);
+  if (!u?.email) return "skipped";
+  const [p] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, event.projectId)).limit(1);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com";
+  await sendMentionEmail({
+    to: u.email,
+    idioma: event.idioma ?? null,
+    projectTitle: p?.title ?? "",
+    quien: event.quien,
+    ruta: event.ruta,
+    linea: event.linea,
+    texto: event.preview,
+    url: siteUrl + urlDelHilo(event.projectId, event.ruta),
+  });
+  return "sent";
+}
