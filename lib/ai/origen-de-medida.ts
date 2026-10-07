@@ -305,5 +305,5 @@ export async function cargarEnOrigenReal(
 }
 
 /** Lo que vive un documento con carpeta tras cargar: más que cualquier medida
- *  (los pasos de `usar_pagina` y los ojos acaban antes), y acotado. */
+ *  (los pasos de `use_page` y los ojos acaban antes), y acotado. */
 const VIDA_CON_CARPETA_MS = 3 * 60_000;

@@ -30,12 +30,13 @@ import { userMemoryBlock } from "@/lib/agent/context";
 const RAIZ = path.resolve(__dirname, "../..");
 
 // Cada una llega al MISMO formateador por un camino distinto, y el token lo
-// dice en vez de esconderlo tras un OR de conveniencia: Crear y el Chat llaman
-// a `userMemoryBlock` en la propia ruta; el Agente le pasa `userMemory` a
+// dice en vez de esconderlo tras un OR de conveniencia: el Chat llama (y Crear
+// llamaba) a `userMemoryBlock` en la propia ruta; el Agente le pasa `userMemory` a
 // `buildAgentMessages`, que lo formatea dentro (`buildAgentContext`). Las tres
 // formas son legítimas — lo que no lo es es que una no lea la memoria.
+// ⚰️ «crear» (`app/api/generate/route.ts`) se fue con Crear el 2026-10-06:
+// crear es el primer mensaje a Len, que es la tercera de aquí abajo.
 const SUPERFICIES: [string, string, string][] = [
-  ["crear", "app/api/generate/route.ts", "userMemoryBlock("],
   ["chat (ai-design)", "app/api/templates/ai-design/route.ts", "userMemoryBlock("],
   ["len (agente)", "app/api/agent/route.ts", "userMemory:"],
 ];

@@ -110,25 +110,25 @@ describe("transporte de texto en streaming", () => {
     // caracteres: leerlos ingenuamente parte el JSON a la mitad.
     const { client: c } = client(
       chunk({ content: "Voy a activar reservas." })
-      + chunk({ tool_calls: [{ index: 0, id: "call_1", function: { name: "activar_modulo", arguments: '{"mod' } }] })
+      + chunk({ tool_calls: [{ index: 0, id: "call_1", function: { name: "toggle_module", arguments: '{"mod' } }] })
       + chunk({ tool_calls: [{ index: 0, function: { arguments: 'ulo":"bookings"}' } }] }, "tool_calls"),
     );
-    const events = await drain(c.stream({ ...REQUEST, tools: [{ type: "function", function: { name: "activar_modulo" } }] }));
+    const events = await drain(c.stream({ ...REQUEST, tools: [{ type: "function", function: { name: "toggle_module" } }] }));
     // El texto sale EN VIVO y la llamada al cerrar el turno: el Agente narra y
     // luego actúa, que es lo que lo hace sentir vivo.
     expect(events[0]).toEqual({ type: "text_delta", text: "Voy a activar reservas." });
-    expect(events[1]).toEqual({ type: "function_call", name: "activar_modulo", args: { modulo: "bookings" } });
+    expect(events[1]).toEqual({ type: "function_call", name: "toggle_module", args: { modulo: "bookings" } });
     expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "end_turn" } });
   });
 
   it("conserva el orden de varias llamadas en un turno", async () => {
     const { client: c } = client(
-      chunk({ tool_calls: [{ index: 1, id: "b", function: { name: "publicar", arguments: "{}" } }] })
+      chunk({ tool_calls: [{ index: 1, id: "b", function: { name: "publish", arguments: "{}" } }] })
       + chunk({ tool_calls: [{ index: 0, id: "a", function: { name: "leer_estado", arguments: "{}" } }] }, "tool_calls"),
     );
     const events = await drain(c.stream(REQUEST));
     expect(events.filter((e) => e.type === "function_call").map((e) => (e as { name: string }).name))
-      .toEqual(["leer_estado", "publicar"]);
+      .toEqual(["leer_estado", "publish"]);
   });
 
   it("no ejecuta a medias una llamada cuyos argumentos no son JSON", async () => {
@@ -303,6 +303,36 @@ describe("transporte de texto en streaming", () => {
     const events = await drain(c.stream(REQUEST));
     // Con su código desde Len 2.5: una caída de red es reintentable (`lib/agent/retry-policy.ts`).
     expect(events).toEqual([{ type: "done", stopReason: { kind: "error", error: "socket hang up", code: "transport" } }]);
+  });
+
+  it("con streamToolArgs cede los trozos de los argumentos EN VIVO, y la llamada armada sale igual", async () => {
+    // Los «live tool deltas» de DeepSeek: el lienzo pinta un Write mientras se
+    // escribe. El trozo lleva el nombre de la llamada aunque el proveedor sólo
+    // lo mande en el primero.
+    const { client: c } = client(
+      chunk({ tool_calls: [{ index: 0, id: "call_1", function: { name: "Write", arguments: '{"file_path":"/index.html",' } }] })
+      + chunk({ tool_calls: [{ index: 0, function: { arguments: '"content":"<h1>Hola' } }] })
+      + chunk({ tool_calls: [{ index: 0, function: { arguments: '</h1>"}' } }] }, "tool_calls"),
+    );
+    const events = await drain(c.stream({ ...REQUEST, streamToolArgs: true, tools: [{ type: "function", function: { name: "Write" } }] }));
+    expect(events.filter((e) => e.type === "function_call_delta")).toEqual([
+      { type: "function_call_delta", index: 0, name: "Write", argsDelta: '{"file_path":"/index.html",' },
+      { type: "function_call_delta", index: 0, name: "Write", argsDelta: '"content":"<h1>Hola' },
+      { type: "function_call_delta", index: 0, name: "Write", argsDelta: '</h1>"}' },
+    ]);
+    expect(events.find((e) => e.type === "function_call")).toEqual({
+      type: "function_call",
+      name: "Write",
+      args: { file_path: "/index.html", content: "<h1>Hola</h1>" },
+    });
+  });
+
+  it("sin streamToolArgs no sale ni un trozo: el cable de siempre", async () => {
+    const { client: c } = client(
+      chunk({ tool_calls: [{ index: 0, id: "call_1", function: { name: "Write", arguments: '{"file_path":"/index.html","content":"x"}' } }] }, "tool_calls"),
+    );
+    const events = await drain(c.stream({ ...REQUEST, tools: [{ type: "function", function: { name: "Write" } }] }));
+    expect(events.some((e) => e.type === "function_call_delta")).toBe(false);
   });
 });
 
@@ -517,6 +547,62 @@ describe("el código del fallo, para que el bucle sepa reintentar", () => {
     const c = createFireworksStreamClient({ apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
     const events = await drain(c.stream(REQUEST, { signal: ctrl.signal }));
     expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "cancelled" } });
+  });
+});
+
+describe("el ■ a mitad de una llamada (ensayo de caja de crear-es-len, 06/10)", () => {
+  // Cortar mientras llegaban los argumentos de un Write salía como «tool
+  // arguments were not JSON: Write» —un error del modelo— y el chat decía «El
+  // modelo tuvo un problema». Como DeepSeek (`assistant/message` con
+  // `interrupted: true`): lo dicho se queda, la llamada sin despachar no existe.
+  it("🔴 sale como cancelado, con el texto ya cedido y SIN la llamada a medias", async () => {
+    const ctrl = new AbortController();
+    const body =
+      chunk({ content: "La escribo entera." }) +
+      chunk({ tool_calls: [{ index: 0, id: "c1", function: { name: "Write", arguments: '{"content":"<!doctype html><ht' } }] });
+    const { client: c } = client(body);
+    const events: FireworksStreamEvent[] = [];
+    for await (const e of c.stream({ ...REQUEST, streamToolArgs: true, tools: [{ type: "function", function: { name: "Write" } }] }, { signal: ctrl.signal })) {
+      events.push(e);
+      if (e.type === "function_call_delta") ctrl.abort();
+    }
+    expect(events.some((e) => e.type === "text_delta")).toBe(true);
+    expect(events.some((e) => e.type === "function_call")).toBe(false);
+    expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "cancelled" } });
+  });
+});
+
+describe("el stream que se corta a mitad de una llamada (ensayo de caja, 06/10)", () => {
+  // Un turno real murió con «tool arguments were not JSON: Write» (16.738
+  // caracteres de una página, cortados dentro de un <path>): se armaba la
+  // llamada ANTES de mirar cómo terminó el stream, y lo que era un corte salía
+  // como un error del modelo.
+  const writeAMedias = chunk({ tool_calls: [{ index: 0, id: "c1", function: { name: "Write", arguments: '{"file_path":"/index.html","content":"<!doctype html><ht' } }] });
+
+  it("🔴 sin finish_reason es un corte de transporte (reintentable), no «not JSON»", async () => {
+    const { client: c } = client(writeAMedias);
+    const events = await drain(c.stream(REQUEST));
+    expect(events.some((e) => e.type === "function_call")).toBe(false);
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", code: "transport" } });
+  });
+
+  it("🔴 con finish_reason «length» es max_tokens, y la llamada a medias no existe", async () => {
+    const { client: c } = client(writeAMedias + chunk({}, "length"));
+    const events = await drain(c.stream(REQUEST));
+    expect(events.some((e) => e.type === "function_call")).toBe(false);
+    expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "max_tokens" } });
+  });
+
+  it("BRAZO DE CONTROL: una llamada entera con «tool_calls» se arma como siempre", async () => {
+    const { client: c } = client(
+      chunk({ tool_calls: [{ index: 0, id: "c1", function: { name: "Write", arguments: '{"file_path":"/index.html","content":"<p>x</p>"}' } }] }, "tool_calls"),
+    );
+    const events = await drain(c.stream(REQUEST));
+    expect(events.find((e) => e.type === "function_call")).toEqual({
+      type: "function_call",
+      name: "Write",
+      args: { file_path: "/index.html", content: "<p>x</p>" },
+    });
   });
 });
 

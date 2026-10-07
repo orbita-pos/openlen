@@ -6,13 +6,13 @@ import { diagnosticosDeLaEscritura } from "./agent/diagnosticos-de-la-escritura"
 // may only export the recognized route-handler bindings (GET/POST/runtime/…)
 // — Next's generated .next/types/app/api/**/route.ts type-checks the
 // module's exports against that whitelist, so `export const SYSTEM_PROMPT`
-// inside route.ts fails `tsc --noEmit`. Both routes split their prompt into
-// a sibling system-prompt.ts (a plain module Next's router never touches,
+// inside route.ts fails `tsc --noEmit`. The Chat route splits its prompt into
+// a sibling system-prompt.ts (and so did `/api/generate`, retired with Crear
+// on 2026-10-06) (a plain module Next's router never touches,
 // and — usefully for this test — with no native/DB/auth imports, so it can
 // be statically imported straight under vitest, no node:test needed).
-import { generateSystemMessage } from "../app/api/generate/system-prompt";
 import { aiDesignSystemMessage } from "../app/api/templates/ai-design/system-prompt";
-import { conContratoMinimo } from "./publish-contract-min";
+import { conContratoMinimo, PUBLISH_CONTRACT_MIN } from "./publish-contract-min";
 
 // ESTE FICHERO SE LLAMABA `design-guidance-seam.test.ts` y su mitad principal
 // era «el guardia de la costura»: vigilaba que las superficies siguieran
@@ -43,12 +43,11 @@ import { conContratoMinimo } from "./publish-contract-min";
 // Lo que sí viaja es contrato: el vocabulario de tokens, del que dependen los
 // controles de tema del editor.
 describe("ninguna superficie manda gusto nuestro", () => {
-  // LO QUE PRODUCCIÓN MANDA, no la constante de al lado. `crear` sustituye el
-  // contrato por el mínimo y cambia las cláusulas del JavaScript en el
-  // ensamblado; afirmar sobre `SYSTEM_PROMPT` medía otra jaula que la que
-  // reciben las páginas de la gente.
+  // LO QUE PRODUCCIÓN MANDA, no la constante de al lado: afirmar sobre una
+  // constante medía otra jaula que la que reciben las páginas de la gente.
+  // ⚰️ «crear» (`/api/generate`) se fue el 2026-10-06: crear es el primer
+  // mensaje a Len, que ya está en la lista.
   const PROMPTS: Array<[string, () => string]> = [
-    ["crear", () => generateSystemMessage({})],
     ["editar", () => aiDesignSystemMessage()],
     ["Agente", () => instruccionesDeLen()],
     // ⚰️ «rediseño» (`lib/agent/redesign.ts`, `redisenar_pagina`) se retiró con
@@ -75,8 +74,8 @@ describe("ninguna superficie manda gusto nuestro", () => {
   // 🔴 Y LEN YA NO, desde el 2026-09-29 (OK de Jesús). El Tema descubre qué
   // variables lee la página y escribe en ésas, y conmuta su propio interruptor
   // oscuro (`el-tema-sigue-a-la-pagina.browser.test.ts`): el prefijo `--ol-`
-  // protegía al editor de un defecto suyo, no al modelo de uno propio. Crear y
-  // el Chat lo siguen recibiendo hasta que se mida Crear.
+  // protegía al editor de un defecto suyo, no al modelo de uno propio. El Chat
+  // lo sigue recibiendo (Crear, que también, se retiró el 2026-10-06).
   const CON_VOCABULARIO_OL = PROMPTS.filter(([n]) => n !== "Agente");
   it.each(CON_VOCABULARIO_OL)("%s exige el vocabulario de tokens", (_name, getPrompt) => {
     const p = getPrompt();
@@ -115,12 +114,10 @@ describe("ninguna superficie manda gusto nuestro", () => {
     expect(p).toContain("They go in the <head>, before your own <script>");
   });
 
-  it("CONTRA-PRUEBA: Crear y el Chat las siguen recibiendo hasta medir Crear", () => {
-    for (const p of [generateSystemMessage({}), aiDesignSystemMessage()]) {
-      expect(p).toContain("Spotify, Calendly");
-      expect(p).toContain("required vocabulary");
-    }
-    expect(generateSystemMessage({})).toContain("Your own <script> goes at the end of the body");
+  it("CONTRA-PRUEBA: el Chat las sigue recibiendo", () => {
+    const p = aiDesignSystemMessage();
+    expect(p).toContain("Spotify, Calendly");
+    expect(p).toContain("required vocabulary");
   });
 
   // NINGÚN PROMPT OFRECE UN MECANISMO RETIRADO COMO SI SIGUIERA VIVO.
@@ -136,7 +133,7 @@ describe("ninguna superficie manda gusto nuestro", () => {
   // disponible. El prompt del Agente ya no los nombra ni en español
   // (auditoría del 2026-09-29: Claude Code no enumera lo que no existe); que
   // no finja haber activado uno lo sujetan dos puertas de código, el enum de
-  // `activar_modulo` y `INSISTE_SIN_EFECTO`.
+  // `toggle_module` y `INSISTE_SIN_EFECTO`.
   const RETIRADOS = [
     "Members module", "Bookings module", "Orders module",
     "Comments module", "Broadcast module",
@@ -188,8 +185,8 @@ describe("ninguna superficie manda gusto nuestro", () => {
     // «Usa `addEventListener`, no `onclick`» existía porque el editor borraba
     // los `on*` al retocar a mano. Desde el 2026-09-29 no los borra
     // (lib/publish/el-on-del-modelo.test.ts), así que Len ya no la recibe: una
-    // regla que protegía a la plataforma de un defecto suyo. Crear y el Chat
-    // la siguen teniendo hasta medir Crear.
+    // regla que protegía a la plataforma de un defecto suyo. El Chat la sigue
+    // teniendo.
     if (name === "Agente") expect(p).not.toContain("addEventListener");
     else expect(p).toContain("addEventListener");
   });
@@ -259,9 +256,9 @@ describe("ninguna superficie manda gusto nuestro", () => {
  * trozo de contrato; el rediseño ahorra cuatro veces más porque además dejó de
  * interpolar `DESIGN_GUIDANCE` entera.
  */
-describe("el contrato mínimo alcanza a las tres superficies", () => {
+describe("el contrato mínimo alcanza a las superficies", () => {
+  // ⚰️ «crear» se fue con `/api/generate` el 2026-10-06.
   const SUPERFICIES: Array<[string, () => string]> = [
-    ["crear", () => generateSystemMessage({})],
     ["editar", () => aiDesignSystemMessage()],
     ["Agente", () => instruccionesDeLen()],
   ];
@@ -278,11 +275,9 @@ describe("el contrato mínimo alcanza a las tres superficies", () => {
     expect(p).not.toContain("OUTPUT FORMAT — strict rules");
   });
 
-  it.each(SUPERFICIES)("%s vuelve al completo con OPENLEN_MIN_CONTRACT=0", (nombre, getPrompt) => {
+  it.each(SUPERFICIES)("%s vuelve al completo con OPENLEN_MIN_CONTRACT=0", (_n, getPrompt) => {
     vi.stubEnv("OPENLEN_MIN_CONTRACT", "0");
-    const p =
-      nombre === "crear" ? generateSystemMessage({ OPENLEN_MIN_CONTRACT: "0" }) : getPrompt();
-    expect(p).toContain("OUTPUT FORMAT — strict rules");
+    expect(getPrompt()).toContain("OUTPUT FORMAT — strict rules");
   });
 
   /**
@@ -306,8 +301,8 @@ describe("el contrato mínimo alcanza a las tres superficies", () => {
    * iconos: `max-w-` sólo ACOTA y nunca agranda. Las dos variantes se midieron y
    * dan el mismo resultado sobre el caso roto.
    */
-  it("🔴 el contrato dice CÓMO se dimensiona una imagen, no sólo que la página quepa", () => {
-    const p = generateSystemMessage({});
+  it.each(SUPERFICIES)("🔴 %s: el contrato dice CÓMO se dimensiona una imagen, no sólo que la página quepa", (_n, getPrompt) => {
+    const p = getPrompt();
     expect(p).toContain('class="max-w-full h-auto"');
     // La meta sigue estando: el mecanismo la acompaña, no la sustituye.
     expect(p).toContain("Readable and usable from 360 px wide");
@@ -316,12 +311,10 @@ describe("el contrato mínimo alcanza a las tres superficies", () => {
   // EL MÍNIMO ADELGAZA DE VERDAD. Sin esta cuenta, la palanca podría estar
   // cableada y no recortar nada, que es justo el fallo que su guarda de
   // sustitución existe para impedir — pero desde el otro lado.
-  it.each(SUPERFICIES)("%s pesa MENOS con el mínimo que con el completo", (nombre, getPrompt) => {
+  it.each(SUPERFICIES)("%s pesa MENOS con el mínimo que con el completo", (_n, getPrompt) => {
     const conMin = getPrompt();
     vi.stubEnv("OPENLEN_MIN_CONTRACT", "0");
-    const conCompleto =
-      nombre === "crear" ? generateSystemMessage({ OPENLEN_MIN_CONTRACT: "0" }) : getPrompt();
-    expect(conMin.length).toBeLessThan(conCompleto.length);
+    expect(conMin.length).toBeLessThan(getPrompt().length);
   });
 
   /**
@@ -356,11 +349,12 @@ describe("el contrato mínimo alcanza a las tres superficies", () => {
  * cualquier deriva; esto fija el PORQUÉ, que un diff de 37.000 caracteres no
  * dice.
  *
- * Cada arreglo va con su CONTRA-PRUEBA a propósito: las dos frases son VERDAD
- * en `crear` —devuelve el documento entero y sus subpáginas declaradas se
- * construyen— así que un arreglo que las quitara de todas partes rompería la
- * superficie donde son ciertas, y saldría verde en cualquier prueba que sólo
- * mirase al Agente.
+ * Cada arreglo iba con su CONTRA-PRUEBA en `crear`, donde las dos frases eran
+ * VERDAD (devolvía el documento entero y construía sus subpáginas declaradas).
+ * Crear se retiró el 2026-10-06; la contra-prueba mira ahora el contrato
+ * CRUDO: la frase sigue ahí, y lo que la quita es el corte por superficie
+ * (`contratoParaSuperficie`). Sin eso, un «no la contiene» pasaría también si
+ * alguien borrara la frase del contrato por error.
  */
 describe("el contrato dicho para cada superficie", () => {
   const DOCUMENTO_ENTERO = "The first character of your response is";
@@ -377,16 +371,17 @@ describe("el contrato dicho para cada superficie", () => {
     expect(aiDesignSystemMessage()).not.toContain(DOCUMENTO_ENTERO);
   });
 
-  it("CONTRA-PRUEBA: crear SÍ la recibe — ahí es verdad", () => {
-    expect(generateSystemMessage({})).toContain(DOCUMENTO_ENTERO);
+  it("CONTRA-PRUEBA: el contrato crudo SÍ la trae — la quita el corte por superficie", () => {
+    expect(PUBLISH_CONTRACT_MIN).toContain(DOCUMENTO_ENTERO);
   });
 
-  // 2. Escribir `href="/servicios"` sólo crea la página en `crear`. En las
-  //    otras tres no crea nada: la ruta no existe, Caddy sirve la portada con
-  //    un 200 y el enlace se rompe EN SILENCIO. O sea que el contrato enseñaba
-  //    a cometer el fallo que otra de sus propias viñetas advierte.
-  it("sólo `crear` recibe que un enlace CREA la página", () => {
-    expect(generateSystemMessage({})).toContain(EL_ENLACE_CREA);
+  // 2. Escribir `href="/servicios"` sólo creaba la página en `crear` (retirado
+  //    el 2026-10-06). En las demás no crea nada: la ruta no existe, Caddy
+  //    sirve la portada con un 200 y el enlace se rompe EN SILENCIO. O sea que
+  //    el contrato enseñaba a cometer el fallo que otra de sus propias viñetas
+  //    advierte.
+  it("ninguna superficie recibe que un enlace CREA la página", () => {
+    expect(PUBLISH_CONTRACT_MIN).toContain(EL_ENLACE_CREA);
     expect(instruccionesDeLen()).not.toContain(EL_ENLACE_CREA);
     expect(aiDesignSystemMessage()).not.toContain(EL_ENLACE_CREA);
   });
@@ -472,21 +467,22 @@ describe("el contrato dicho para cada superficie", () => {
       expect(p).not.toContain("• Tailwind via CDN:");
       expect(p).not.toContain("• Your own CSS goes in a");
       // Y lo que SÍ reciben: dónde viven esas tres cosas, sin ordenar crearlas.
-      expect(p).toContain("The document you edit already has them");
+      // (Desde el 2026-10-06 Len también escribe desde cero —Crear es su
+      // primer mensaje—, así que la frase dice las dos cosas: si ya están, se
+      // añade dentro; si la página es nueva, lleva las tres.)
+      expect(p).toContain("When the document already has them, add what you are missing INSIDE them");
     }
   });
 
-  it("CONTRA-PRUEBA: crear SÍ las recibe — ahí construye el <head>", () => {
-    for (const p of [generateSystemMessage({})]) {
-      expect(p).toContain("• Tailwind via CDN:");
-      expect(p).toContain("• Your own CSS goes in a");
-    }
+  it("CONTRA-PRUEBA: el contrato crudo SÍ las trae — las quita el corte por superficie", () => {
+    expect(PUBLISH_CONTRACT_MIN).toContain("• Tailwind via CDN:");
+    expect(PUBLISH_CONTRACT_MIN).toContain("• Your own CSS goes in a");
   });
 
-  it("el bloque oscuro se le ORDENA a quien crea y se le CONDICIONA a quien edita", () => {
-    for (const p of [generateSystemMessage({})]) {
-      expect(p).toContain("Also emit `:root[data-ol-mode=");
-    }
+  it("el bloque oscuro no se le ORDENA a nadie: se le CONDICIONA a quien edita", () => {
+    // La orden está en el contrato crudo (era la de Crear, retirado el
+    // 2026-10-06), y el corte por superficie la cambia.
+    expect(PUBLISH_CONTRACT_MIN).toContain("Also emit `:root[data-ol-mode=");
     // El Agente, sólo en la página que crea (H8): en la que ya existe manda ella.
     expect(instruccionesDeLen()).toContain("On a page you create yourself, also write its dark version");
     expect(aiDesignSystemMessage()).toContain("If the page doesn't define it yet, write it yourself");
@@ -514,7 +510,6 @@ describe("el contrato dicho para cada superficie", () => {
   //    (ver «Len: sus colores en variables de :root, con SUS nombres» arriba).
   it("el vocabulario que el contrato ordena es el que el editor LEE", () => {
     for (const [nombre, prompt] of [
-      ["crear", generateSystemMessage({})],
       ["chat", aiDesignSystemMessage()],
     ] as const) {
       for (const token of TOKENS_DEL_CONTRATO) {
@@ -524,7 +519,7 @@ describe("el contrato dicho para cada superficie", () => {
   });
 
   it("y ya no ordena el espacio de nombres que nadie lee", () => {
-    for (const prompt of [generateSystemMessage({}), aiDesignSystemMessage()]) {
+    for (const prompt of [aiDesignSystemMessage()]) {
       // `--ol-bg` NO contiene la subcadena `--bg`, así que esto distingue.
       for (const pelado of ["--bg", "--fg", "--accent", "--surface", "--border", "--radius"]) {
         expect(prompt).not.toContain(pelado);

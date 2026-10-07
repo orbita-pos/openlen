@@ -112,7 +112,7 @@ export function lineaGuardadaDelCierre(
  *   (a) un `editar_pagina` con `sin_cambio` emite `html` igual, así que al
  *       recargar recuperaba un «Aplicado · Deshacer» sobre un turno que no
  *       movió un byte;
- *   (b) un `activar_modulo` muta de forma durable SIN emitir documento, así que
+ *   (b) un `toggle_module` muta de forma durable SIN emitir documento, así que
  *       al recargar PERDÍA el pie que sí tenía en vivo.
  *
  * Extraída, no copiada: copiar la condición buena al otro sitio deja dos otra

@@ -20,7 +20,6 @@ import {
   WEB_EXTENSIONS,
 } from "./ficheros/folder";
 import { clauseMarker } from "@/lib/ai/js-clause";
-import { PETICION_DEL_USUARIO } from "./context";
 
 // /AGENTS.md (paso 7 de 2.5): lo que es de la plataforma sale del prompt de Len
 // y va a un manual que el arnés adjunta, como Claude Code sus ficheros de
@@ -95,7 +94,7 @@ describe("el manual de la plataforma", () => {
     for (const ruta of RUTAS_DE_DOCS) expect(manual).toContain(ruta);
     // Lo que mata F4: que Len deje de leer la guía al escribir una página nueva.
     expect(manual).toContain(`${RUTA_GUIA}: the design guide`);
-    expect(manual).toMatch(/read it BEFORE writing a page from scratch or a redesign/);
+    expect(manual).toMatch(/read it BEFORE writing a page from scratch \(an empty \/index\.html is one\) or a redesign/);
     // Los datos de una página, en su backend: ni rastro de data-ol-stores (2026-10-04).
     expect(manual).not.toContain("data-ol-stores");
   });
@@ -222,7 +221,22 @@ describe("cómo se adjunta", () => {
   });
 
   it("y se distingue de lo que escribe el usuario, aunque cite el manual", () => {
-    expect(esAdjuntoDelManual(`${PETICION_DEL_USUARIO}${RUTA_MANUAL} (the platform manual`)).toBe(false);
+    expect(esAdjuntoDelManual(`Añade una página. ${RUTA_MANUAL} (the platform manual`)).toBe(false);
     expect(esAdjuntoDelManual("<system-reminder>\nPlatform instructions for this conversation")).toBe(false);
+  });
+});
+
+describe("crear desde cero vive en la guía de diseño (plans/crear-es-len)", () => {
+  it("la guía trae lo que sabía Crear: la forma no viene dada, el <title> y el <head> enteros", () => {
+    const guia = documentosDeLaPlataforma()[RUTA_GUIA]!;
+    expect(guia).toContain("WHEN THE PAGE IS EMPTY");
+    expect(guia).toContain("There is no default shape.");
+    expect(guia).toContain("a descriptive <title> that names the product");
+  });
+
+  it("/AGENTS.md no lo carga en cada vuelta: sólo dice cuándo leerlo", () => {
+    const agents = buildManualDeLaPlataforma({});
+    expect(agents).not.toContain("There is no default shape.");
+    expect(agents).toContain("an empty /index.html is one");
   });
 });

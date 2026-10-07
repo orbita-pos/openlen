@@ -5,10 +5,10 @@
  * `/.openlen` (oculta, como el `.git` de DeepSeek: un `grep -r /` del sitio no
  * entra, ni calcula nada, ni mezcla lo que escribió un visitante con las páginas):
  *
- *   /.openlen/resultados/visitas.json     lo mismo que devuelve `ver_visitas` sin argumentos
+ *   /.openlen/resultados/visitas.json     lo mismo que devuelve `get_visits` sin argumentos
  *   /.openlen/bandeja/formularios.jsonl   un formulario por línea (90 días, los 50 más recientes), entero
  *   /.openlen/bandeja/mensajes.jsonl      una conversación del chat por línea, con sus mensajes
- *   /.openlen/catalogo/fotos.jsonl        el catálogo «Imágenes by OpenLen» entero (el de `elegir_foto`)
+ *   /.openlen/catalogo/fotos.jsonl        el catálogo «Imágenes by OpenLen» entero (el de `find_photo`)
  *   /.openlen/versiones/indice.jsonl      las versiones guardadas de cada página, de la más nueva a la más vieja
  *   /.openlen/versiones/<id>/…            cada una, en la MISMA ruta que su página
  *                                         (`diff /.openlen/versiones/<id>/index.html /index.html`)

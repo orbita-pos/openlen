@@ -17,6 +17,7 @@
   },
   "turn": {
     "imageSent": "Afbeelding verstuurd",
+    "imagesSent": "{count} afbeeldingen verstuurd",
     "homePage": "Home"
   },
   "proceso": {

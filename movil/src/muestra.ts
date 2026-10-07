@@ -37,7 +37,7 @@ function turnoDeMentira(prompt: string, foto?: string, turnId?: string): Respons
     ? [
         ["turno", { turnoId: "muestra-vivo" }, 60],
         ["action", { tool: "Read", status: "running", summary: "" }, 900],
-        ["action", { tool: "mirar_pagina", status: "running", summary: "" }, 1200],
+        ["action", { tool: "view_page", status: "running", summary: "" }, 1200],
         ["text", { text: dicho }, 500],
         ["action", { tool: "preguntar", status: "done", summary: "" }, 50],
         ["done", { turns: 1, toolCalls: 3 }, 100],
@@ -47,7 +47,7 @@ function turnoDeMentira(prompt: string, foto?: string, turnId?: string): Respons
         ["action", { tool: "Read", status: "running", summary: "" }, 500],
         ["action", { tool: "Edit", status: "running", summary: "" }, 1300],
         ["html", { html: "", page: null }, 300],
-        ["action", { tool: "mirar_pagina", status: "running", summary: "" }, 1300],
+        ["action", { tool: "view_page", status: "running", summary: "" }, 1300],
         ["text", { text: dicho.slice(0, 20) }, 500],
         ["text", { text: dicho.slice(20) }, 250],
         ["done", { turns: 1, toolCalls: 3 }, 100],

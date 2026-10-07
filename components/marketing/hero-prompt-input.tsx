@@ -41,9 +41,10 @@ const HERO_ASKS = ["bakery", "barber", "photographer", "course"] as const;
 // Hero prompt input — the homepage entry into AI generation. Mirrors the
 // /new AI brief panel: same quick-prompts, same composer affordances.
 //
-// Submit, when signed in, routes to /new?mode=ai&brief=…&autostart=1 so the
-// build kicks off on arrival. When signed out, a dialog asks the user to sign
-// in first — the brief rides along via ?next= so nothing is lost.
+// Submit, when signed in, routes to /new?brief=… — the brief arrives WRITTEN
+// in the blank project's composer and nothing is sent until the user does
+// (plans/crear-es-len, like DeepSeek). When signed out, a dialog asks the user
+// to sign in first — the brief rides along via ?next= so nothing is lost.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function HeroPromptInput() {
@@ -68,9 +69,10 @@ export function HeroPromptInput() {
   // cosas distintas que la pagina necesita a la vez—, y obligar a elegir una
   // era pagar el precio entero para no escribir esa linea.
   //
-  // Ahora la linea existe: `/api/generate` antepone un bloque al brief cuando
-  // llegan varias, diciendole que las lea por separado y con que criterio
-  // resolver si se contradicen. El riesgo se trata donde vive, en el prompt.
+  // Ahora la linea existe: el contexto de Len antepone un bloque cuando llegan
+  // varias (`attachedImagesBlock`, lib/agent/context.ts; hasta el 2026-10-06
+  // lo hacia `/api/generate`), diciendole que las lea por separado y con que
+  // criterio resolver si se contradicen. El riesgo se trata donde vive, en el prompt.
   const [referencias, setReferencias] = useState<
     { dataUrl: string; nombre: string; bytes: number }[]
   >([]);
@@ -132,9 +134,10 @@ export function HeroPromptInput() {
   // Match the /new brief panel — a real brief needs a little substance.
   const canSend = briefLimit.isValid;
 
-  const target = `/new?mode=ai&brief=${encodeURIComponent(
-    value.trim(),
-  )}&autostart=1`;
+  // RELLENA Y NO ENVÍA (plans/crear-es-len), como DeepSeek con
+  // `startSession(…, { prompt })`: el brief llega ESCRITO al compositor del
+  // proyecto en blanco y el usuario pulsa enviar. Sin `autostart`.
+  const target = `/new?brief=${encodeURIComponent(value.trim())}`;
 
   const submit = () => {
     if (!canSend || submitting || status === "loading") return;

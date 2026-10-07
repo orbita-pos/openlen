@@ -28,18 +28,16 @@ const RAIZ = join(import.meta.dirname, "..", "..");
 const SUPERFICIES = [
   "app/api/agent/route.ts",
   "app/api/templates/ai-design/route.ts",
-  "app/api/generate/route.ts",
 ] as const;
 
 /**
- * Crear no pasa `latidoMs`: late con su propio `setInterval`, escrito antes de
- * que la mecánica compartida existiera, y su `progress` lleva además la cuenta
- * de caracteres que el cliente PINTA (`use-generation.ts`). Cambiarlo por el
- * comentario compartido le quitaría esa señal a cambio de nada, así que queda
- * exento — pero exento de la FORMA, no de la regla: abajo se comprueba que
- * sigue latiendo.
+ * ⚰️ Crear (`app/api/generate/route.ts`) era la exenta: latía con su propio
+ * `setInterval`, escrito antes de la mecánica compartida, y aquí se comprobaba
+ * que siguiera latiendo a su manera. Se fue con Crear el 2026-10-06, y con él
+ * la prueba de «la exenta late a su manera». Queda el conjunto por si vuelve
+ * a hacer falta una: exenta de la FORMA, nunca de la regla.
  */
-const EXENTAS = new Set<string>(["app/api/generate/route.ts"]);
+const EXENTAS = new Set<string>();
 
 const fuente = (ruta: string) => readFileSync(join(RAIZ, ruta), "utf8");
 
@@ -55,13 +53,6 @@ describe("las superficies de IA laten", () => {
     });
 
     expect(mudas, "abre un stream que puede quedarse 90 s callado y que Caddy cortará").toEqual([]);
-  });
-
-  it("y la exenta late a su manera — exenta de la forma, no de la regla", () => {
-    const texto = fuente("app/api/generate/route.ts");
-    expect(texto, "Crear se quedó sin su keepalive propio y sin el compartido").toMatch(
-      /keepalive\s*=\s*setInterval\(/,
-    );
   });
 
   it("el intervalo deja margen de sobra antes del muro de 90 s del proxy", () => {

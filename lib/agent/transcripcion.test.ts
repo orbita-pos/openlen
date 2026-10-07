@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Message } from "@/lib/ai-gateway";
 import {
+  MARCA_DE_TURNO_DETENIDO,
   NO_CABE,
   RESULTADO_VACIADO,
   historialDesdeLaBase,
@@ -57,6 +58,50 @@ describe("historialDesdeLaBase", () => {
     ]);
     expect(h[1]!.functionCalls).toEqual([{ name: "ask_user_question", args: { questions: [{ id: "q1", question: "¿Qué dirección quieres?" }] } }]);
     expect(h[2]!.functionResponses![0]!.name).toBe("ask_user_question");
+  });
+
+  // Ensayo de caja de crear-es-len (06/10): el dueño paró con ■ una «reescribe
+  // la portada» a mitad del Write; el historial sólo decía «La escribo entera.»
+  // y el turno siguiente («¿cómo va mi página?») la rehízo sin que nadie se lo
+  // pidiera. Como Claude Code («[Request interrupted by user]»): se le dice.
+  it("🔴 un turno que el dueño paró con ■ lleva la marca detrás de lo que alcanzó a hacer", () => {
+    const h = historialDesdeLaBase([
+      { userText: "reescribe la portada", assistantReasoning: "La escribo entera.", transcript: { mensajes: [], leidos: [], detenido: true } },
+      fila("¿cómo va mi página?", null, "Sin visitas todavía."),
+    ]);
+    expect(h.slice(0, 3)).toEqual([
+      { role: "user", content: "reescribe la portada", opensTurn: true },
+      { role: "assistant", content: "La escribo entera." },
+      { role: "user", content: MARCA_DE_TURNO_DETENIDO },
+    ]);
+    expect(h[3]).toEqual({ role: "user", content: "¿cómo va mi página?", opensTurn: true });
+  });
+
+  it("la marca va también detrás de las llamadas que sí se hicieron", () => {
+    const h = historialDesdeLaBase([
+      { userText: "cambia el título", assistantReasoning: "", transcript: { mensajes: leer("/index.html", PAGINA), leidos: [], detenido: true } },
+    ]);
+    expect(h.at(-1)).toEqual({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
+    expect(h[2]!.functionResponses).toHaveLength(1);
+  });
+
+  it("BRAZO DE CONTROL: un turno que terminó no lleva marca", () => {
+    const h = historialDesdeLaBase([fila("hola", null, "Hola.")]);
+    expect(h.some((m) => m.content === MARCA_DE_TURNO_DETENIDO)).toBe(false);
+  });
+
+  // COMO DEEPSEEK, LO QUE SE LE DIJO AL MODELO SE QUEDA EN SU SITIO. DeepSeek
+  // devuelve el razonamiento de cada turno («passed back verbatim») y TAMBIÉN
+  // guarda en la sesión el contexto con el que razonó. Len guardaba lo primero
+  // y tiraba lo segundo: un «The system notice says…» de un turno viejo, sin
+  // el aviso al lado, se leía como si el aviso fuera de AHORA, y Len rehacía lo
+  // que el dueño había parado (ensayo de caja de crear-es-len, 07/10).
+  it("🔴 los avisos de un turno vuelven pegados a las palabras del dueño, como se mandaron", () => {
+    const avisos = "\n\nSYSTEM (the user did NOT write this):\nNOTICE: your previous turn did NOT call any tool.";
+    const h = historialDesdeLaBase([
+      { userText: "¿cómo va mi página?", assistantReasoning: "Sin visitas.", transcript: { mensajes: [], leidos: [], avisos } },
+    ]);
+    expect(h[0]).toEqual({ role: "user", content: `¿cómo va mi página?${avisos}`, opensTurn: true });
   });
 
   it("una fila sin transcripción (anterior a H4, o del Chat) cae a su texto", () => {
@@ -203,6 +248,17 @@ describe("H15 fase 2 · lo pensado en los turnos siguientes", () => {
 // la transcripción, el último es el texto final y las llamadas van antes. Mirado
 // igual, TODOS los turnos habrían salido mudos.
 describe("turnoAnteriorMudoDe — con el historial del navegador y con el de la base", () => {
+  // Ensayo de caja (06/10): tras parar con ■ una reescritura a mitad del
+  // Write, el aviso de «turno mudo» («If the user asked you for a change and it
+  // still isn't applied, apply it NOW») hacía que el turno siguiente —una
+  // pregunta por las visitas— rehiciera lo que el dueño acababa de parar.
+  it("🔴 un turno que el dueño paró con ■ NO es mudo: no se le empuja a rehacerlo", () => {
+    const h = historialDesdeLaBase([
+      { userText: "reescribe la portada", assistantReasoning: "La escribo entera.", transcript: { mensajes: [], leidos: [], detenido: true } },
+    ]);
+    expect(turnoAnteriorMudoDe(h)).toBe(false);
+  });
+
   it("🔴 un turno de la base que llamó a herramientas NO es mudo aunque cierre con texto", () => {
     const h = historialDesdeLaBase([fila("cambia el título", [...leer("/index.html", PAGINA), { role: "assistant", content: "Listo." }])]);
     expect(turnoAnteriorMudoDe(h)).toBe(false);

@@ -1,7 +1,7 @@
 /**
  * UN TOPE DE TAREAS A LA VEZ. La pieza 4 de Len 2.5 deja correr juntas las
  * llamadas seguras de una vuelta; DeepSeek deja la capacidad en manos de quien
- * la gasta («providers own their capacity controls»). Lo usa `usar_pagina`, que
+ * la gasta («providers own their capacity controls»). Lo usa `use_page`, que
  * arranca un Chromium por visita (§11 de la investigación: tope 2).
  */
 export function createConcurrencyLimit(max: number): <T>(fn: () => Promise<T>) => Promise<T> {

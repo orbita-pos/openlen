@@ -65,19 +65,13 @@ npm run dev
 For self-hosted production deployment (Hetzner box + Caddy wildcard +
 Let's Encrypt + systemd), see [`infra/SETUP.md`](./infra/SETUP.md).
 
-Then in another terminal:
-
-```bash
-curl -N -X POST http://localhost:3000/api/generate \
-  -H "Content-Type: application/json" \
-  -d '{"brief":"Landing page for FlowDeck, a Kanban tool for designers. Pricing: Free, Pro $29/mo, Team $99/mo."}'
-```
-
-The endpoint streams Server-Sent Events. The document arrives as it is
-written (`html_chunk`), alongside `progress`, whatever the browser measured
-about the finished page (`medida`), and `project_saved` with the id once it is
-in the database — the page is a project you own from that moment, not a
-download.
+Then open <http://localhost:3000/en/new>, sign in and describe the page you
+want. `/new` opens a blank project and what you send is the first message to
+Len, the agent (`POST /api/agent`): it writes the page as files, and the canvas
+paints the document while it is being written (`page_preview` events on the
+stream). The page is a project you own from the first message, not a
+download. (Until 2026-10-06 creating had its own endpoint, `/api/generate`;
+it was retired so that creating and editing are the same conversation.)
 
 ## Environment variables
 
@@ -212,8 +206,9 @@ inari-pages/
 
 Five representative briefs run end-to-end. The scoring that survives is in
 [`EVAL_PHASE_2.md`](./EVAL_PHASE_2.md); the `evals/` directory it was produced
-from is gone. Today's harnesses are `npm run evals:pages` and
-`npm run evals:agent`:
+from is gone. Today's harness is Len-Bench (`npm run bench:len`): since
+2026-10-06 creating a page is the first message to Len, so there is no
+separate generation pipeline to measure.
 
 | Brief                | Quality | Cost      | Wall    | Refines |
 |----------------------|---------|-----------|---------|---------|
@@ -225,11 +220,10 @@ from is gone. Today's harnesses are `npm run evals:pages` and
 
 **Averages:** $0.126/gen · 42.0 s · 4.8/5 quality · 100 % gates pass first try.
 
-To re-run:
+To measure Len today:
 
 ```bash
-npm run evals:pages   # page generation — spends real money
-npm run evals:agent   # the Agent (Len)
+npm run bench:len -- --juego=dev --runs=3 --budget-usd=5 --yes   # spends real money
 ```
 
 ## Roadmap

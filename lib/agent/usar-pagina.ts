@@ -1,4 +1,4 @@
-// USAR LA PÁGINA — `usar_pagina`, H9 (plans/len-2/hipotesis/H9-usar-la-pagina.md).
+// USAR LA PÁGINA — `use_page`, H9 (plans/len-2/hipotesis/H9-usar-la-pagina.md).
 //
 // 🔴 POR QUÉ EXISTE. Len medía la página tras cada edición y podía mirarla, pero
 // NUNCA la usaba: no pulsaba, no tecleaba, no recargaba. Así se entregaron la
@@ -563,11 +563,11 @@ function decodificada(u: string): string {
 }
 
 function describirPaso(p: PasoDeUso): string {
-  if ("pulsa" in p) return `pulsa ${q(p.pulsa)}${p.dentro_de ? ` dentro_de ${q(p.dentro_de)}` : ""}`;
-  if ("escribe" in p) return `escribe ${q(p.escribe)} en ${q(p.en)}`;
-  if ("elige" in p) return `elige ${q(p.elige)}${p.dentro_de ? ` dentro_de ${q(p.dentro_de)}` : ""}`;
-  if ("recarga" in p) return "recarga";
-  return `lee ${q(p.lee)}`;
+  if ("click" in p) return `click ${q(p.click)}${p.within ? ` within ${q(p.within)}` : ""}`;
+  if ("type" in p) return `type ${q(p.type)} into ${q(p.into)}`;
+  if ("choose" in p) return `choose ${q(p.choose)}${p.within ? ` within ${q(p.within)}` : ""}`;
+  if ("reload" in p) return "reload";
+  return `read ${q(p.read)}`;
 }
 
 export interface VisitaParams {
@@ -659,10 +659,10 @@ const SIN_TECLEAR = new Set(["range", "date", "time", "month", "week", "datetime
 
 async function actuar(
   page: Page,
-  paso: Exclude<PasoDeUso, { readonly lee: string }>,
+  paso: Exclude<PasoDeUso, { readonly read: string }>,
   cambiantes: Set<string>,
 ): Promise<Actuacion> {
-  if ("recarga" in paso) {
+  if ("reload" in paso) {
     const antes = await foto(page);
     await page.reload({ waitUntil: "load", timeout: 20_000 });
     return {
@@ -674,17 +674,17 @@ async function actuar(
     };
   }
 
-  if ("escribe" in paso) {
-    const r = (await page.evaluate(US(`campo(${JSON.stringify(paso.en)})`))) as ResultadoCampo;
+  if ("type" in paso) {
+    const r = (await page.evaluate(US(`campo(${JSON.stringify(paso.into)})`))) as ResultadoCampo;
     if (r.n !== 1) {
       return {
         ok: false,
         hecho:
           r.n > 1
-            ? `couldn't: there are ${r.n} fields that match ${q(paso.en)}: ${(r.etiquetas ?? []).map((e) => q(e, 50)).join(", ")}. Say which one with a more exact text from its label.`
+            ? `couldn't: there are ${r.n} fields that match ${q(paso.into)}: ${(r.etiquetas ?? []).map((e) => q(e, 50)).join(", ")}. Say which one with a more exact text from its label.`
             : r.selects
-              ? `couldn't: ${q(paso.en)} is a dropdown; it is chosen with \`elige\`, not typed into.`
-              : `couldn't: there is no visible field with the label, placeholder or name ${q(paso.en)}.${
+              ? `couldn't: ${q(paso.into)} is a dropdown; it is chosen with \`choose\`, not typed into.`
+              : `couldn't: there is no visible field with the label, placeholder or name ${q(paso.into)}.${
                   (r.hay ?? []).length ? ` The fields there are: ${r.hay!.map((e) => q(e, 50)).join(", ")}.` : " The page has no visible field."
                 }`,
       };
@@ -692,22 +692,22 @@ async function actuar(
     const previo = (await page.evaluate(US("antesDeActuar()"))) as Previo | null;
     const antes = await quieta(page, cambiantes);
     const propio = lineaDelCampo(r.etiqueta || r.tipo || "input");
-    const etiqueta = q(r.etiqueta || paso.en);
+    const etiqueta = q(r.etiqueta || paso.into);
     if (SIN_TECLEAR.has(r.tipo ?? "")) {
-      await page.evaluate(US(`ponerValor(${JSON.stringify(paso.escribe)})`));
-      const hecho = r.tipo === "range" ? `I moved the slider ${etiqueta} to ${q(paso.escribe)}.` : `I set ${q(paso.escribe)} in the field ${etiqueta} (<input type=${r.tipo}>).`;
+      await page.evaluate(US(`ponerValor(${JSON.stringify(paso.type)})`));
+      const hecho = r.tipo === "range" ? `I moved the slider ${etiqueta} to ${q(paso.type)}.` : `I set ${q(paso.type)} in the field ${etiqueta} (<input type=${r.tipo}>).`;
       return { ok: true, hecho, antes, detalle: [], previo, propio };
     }
     await page.evaluate(US("vaciarCampo()"));
-    await page.keyboard.type(paso.escribe, { delay: 10 });
+    await page.keyboard.type(paso.type, { delay: 10 });
     await page.keyboard.press("Tab");
-    return { ok: true, hecho: `I typed ${q(paso.escribe)} into the field ${etiqueta} and left the field.`, antes, detalle: [], previo, propio };
+    return { ok: true, hecho: `I typed ${q(paso.type)} into the field ${etiqueta} and left the field.`, antes, detalle: [], previo, propio };
   }
 
-  const esElige = "elige" in paso;
-  const texto = "elige" in paso ? paso.elige : paso.pulsa;
-  const dentro = paso.dentro_de ?? "";
-  // `elige` sobre un desplegable o una casilla actúa DENTRO de la búsqueda, así
+  const esElige = "choose" in paso;
+  const texto = "choose" in paso ? paso.choose : paso.click;
+  const dentro = paso.within ?? "";
+  // `choose` sobre un desplegable o una casilla actúa DENTRO de la búsqueda, así
   // que la foto de antes va primero.
   let antes: Foto | null = esElige ? await quieta(page, cambiantes) : null;
   const expr = `${esElige ? "opcion" : "control"}(${JSON.stringify(texto)}, ${JSON.stringify(dentro)})`;
@@ -717,7 +717,7 @@ async function actuar(
     if (r.n > 1) {
       const cuales = r.que === "desplegable" ? "dropdowns" : r.que === "casilla" ? "checkboxes" : "controls";
       const pistas = (r.pistas ?? []).filter(Boolean);
-      hecho = `couldn't: there are ${r.n} ${cuales} that say ${q(texto)}${dentro ? ` dentro_de ${q(dentro)}` : ""}. Say which one with \`dentro_de\` (a text from its block)${pistas.length ? `: ${pistas.map((t) => q(t, 50)).join(", ")}` : ""}.`;
+      hecho = `couldn't: there are ${r.n} ${cuales} that say ${q(texto)}${dentro ? ` within ${q(dentro)}` : ""}. Say which one with \`within\` (a text from its block)${pistas.length ? `: ${pistas.map((t) => q(t, 50)).join(", ")}` : ""}.`;
     } else if (dentro) {
       hecho = `couldn't: there is no ${esElige ? "option" : "control"} ${q(texto)} inside a block that says ${q(dentro)}.`;
     } else {
@@ -761,7 +761,7 @@ async function actuar(
   const alFinal: string[] = [];
   if ((r.otros ?? []).length) {
     alFinal.push(
-      `(note: other controls also say ${q(texto)} and I didn't press them: ${r.otros!.map((t) => q(t, 50)).join(", ")}${r.masOtros ? ` and ${r.masOtros} more` : ""}. To try one, name it in full or use dentro_de.)`,
+      `(note: other controls also say ${q(texto)} and I didn't press them: ${r.otros!.map((t) => q(t, 50)).join(", ")}${r.masOtros ? ` and ${r.masOtros} more` : ""}. To try one, name it in full or use within.)`,
     );
   }
   if (r.href) {
@@ -777,7 +777,7 @@ async function actuar(
   return { ok: true, hecho, antes, detalle, previo, alFinal };
 }
 
-/** `lee`: lo pintado por el JS puede llegar después de la carga, así que se
+/** `read`: lo pintado por el JS puede llegar después de la carga, así que se
  *  espera un poco a que aparezca antes de decir que no está. */
 async function leerPaso(page: Page, texto: string): Promise<string> {
   let r: { encontrado: boolean; texto?: string; campos?: string[]; sitios?: number } = { encontrado: false };
@@ -873,8 +873,8 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
           lineas.push(`${encabezado} → not done: the visit went over ${Math.round(plazoMs / 1000)} s and was cut here.`);
           break;
         }
-        if ("lee" in paso) {
-          lineas.push(`${encabezado} → ${await leerPaso(page, paso.lee)}`);
+        if ("read" in paso) {
+          lineas.push(`${encabezado} → ${await leerPaso(page, paso.read)}`);
           continue;
         }
         const accion = await actuar(page, paso, cambiantes);
@@ -936,7 +936,7 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
         // el paso no hizo nada, y se dice (el contador que tapaba el botón muerto).
         if (propios.length === 0 && salidas.length === 0 && sale.envios.length === 0 && !seFue) {
           const salvo = cambios.length > 0 ? " (only what changes by itself changed)" : "";
-          if ("recarga" in paso) detalle.push(`after reloading, the page looks the same as before reloading${salvo}.`);
+          if ("reload" in paso) detalle.push(`after reloading, the page looks the same as before reloading${salvo}.`);
           else {
             const campo = accion.previo?.campo === true;
             detalle.push(

@@ -1,4 +1,4 @@
-// Los números de la tarjeta de visitas de la llamada: los de `ver_visitas`, en la
+// Los números de la tarjeta de visitas de la llamada: los de `get_visits`, en la
 // hora del usuario y con el rango por defecto de la herramienta (últimos 7 días).
 // No sale de /api/projects/<id>/insights: ése corta los días en UTC.
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";

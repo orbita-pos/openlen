@@ -23,7 +23,7 @@
 
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
-import { siguienteDeLaFila, turnoDeLaFila } from "@/lib/agent/direcciones";
+import { preguntaPendiente, siguienteDeLaFila, turnoDeLaFila } from "@/lib/agent/direcciones";
 import { leerTurnoDelUsuario, marcarCortadaSiSigueEnCurso } from "@/lib/projects/chat";
 
 export const runtime = "nodejs";
@@ -68,7 +68,12 @@ export const GET = paraLaApp(async (
   }
 
   const turnoId = turnoDeLaFila(fila, userId);
-  if (turnoId) return json({ turno, turnoId });
+  if (turnoId) {
+    // La pregunta que Len espera AHORA, para volver a pintar su tarjeta: como
+    // DeepSeek, quien se reengancha la recibe otra vez y la puede contestar.
+    const preguntas = preguntaPendiente(turnoId, userId);
+    return json(preguntas ? { turno, turnoId, preguntas } : { turno, turnoId });
+  }
 
   // Huérfana: nadie la corre. Se cierra como cortada, y se dice ya así.
   try {

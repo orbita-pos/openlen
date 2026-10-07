@@ -648,8 +648,8 @@ export async function POST(req: Request): Promise<Response> {
   // evidence yet that the image moves the needle for ai-design (most turns
   // mutate the HTML, so a per-turn render rarely earns its cost). Opt in with
   // OPENLEN_AIDESIGN_PAGE_REFERENCE=1 once a use case proves it (e.g.
-  // "redesign this page as SaaS"). The /api/generate reference — the
-  // paper-backed win — is unconditional. Also skipped when the user attached
+  // "redesign this page as SaaS"). (Crear's /api/generate made its reference
+  // unconditional — the paper-backed win — until it was retired on 2026-10-06.) Also skipped when the user attached
   // an image (avoid two-image confusion). Best-effort: a render failure just
   // proceeds text-only.
   let referenceImages: InlineImage[] | undefined;
@@ -1459,13 +1459,13 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         console.log(
           `[ai-design] ${modelLabel} — prompt: ${usage?.inputTokens ?? "?"}, output: ${usage?.outputTokens ?? "?"}, thinking: ${usage?.thinkingTokens ?? "?"} → ${credits} credits · mode: ${outputMode} · ${Date.now() - startedAt}ms`,
         );
-        // El cobro NO puede tumbar un turno que ya guardó. /api/generate lleva
-        // este mismo catch desde siempre; el Chat lo dejaba explotar, y el
+        // El cobro NO puede tumbar un turno que ya guardó. /api/generate llevaba
+        // este mismo catch desde siempre (se retiró el 2026-10-06); el Chat lo dejaba explotar, y el
         // mismo evento —un UPDATE remoto que rechaza— terminaba en una página
         // editada y un error en pantalla. Dos superficies, dos políticas
         // opuestas para el mismo hecho.
         //
-        // 🔴 SIGUE SIN HABER RECONCILIACIÓN, ni aquí ni en /api/generate: el
+        // 🔴 SIGUE SIN HABER RECONCILIACIÓN aquí (ni la hubo en /api/generate): el
         // cargo perdido sólo queda en este diario. Cerrarlo de verdad pide un
         // cargo idempotente que se pueda reintentar, y eso es trabajo de
         // esquema. Lo que esto arregla es la MENTIRA, no la contabilidad.

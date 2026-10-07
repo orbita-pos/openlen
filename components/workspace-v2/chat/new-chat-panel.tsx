@@ -23,7 +23,7 @@ import { LiveBar } from "./live-bar";
 import { GoalCardView } from "./goal-card";
 import { liveStatus } from "./live-status";
 import { MemoryDrawer, useAgentMemory } from "./len-memory";
-import { useAgentChat, type ScopedSelection } from "./use-agent-chat";
+import { useAgentChat, type PendingAttachments, type ScopedSelection } from "./use-agent-chat";
 import { useConversations } from "./use-conversations";
 import { setChatLayout, useChatLayout, useFloatBox, type FloatBox } from "./use-chat-version";
 import type { LiveStatus } from "./live-status";
@@ -46,6 +46,8 @@ export interface NewChatPanelProps {
   pendingDraft?: string | null;
   pendingDraftAutoSend?: boolean;
   onPendingDraftConsumed?: () => void;
+  /** Ver `AgentChatOptions.pendingAttachments`. */
+  pendingAttachments?: PendingAttachments | null;
   /** En el móvil el panel tapa la pantalla: la ✕ de la cabecera lo cierra. */
   onClose?: () => void;
 }
@@ -105,6 +107,7 @@ function AgentChatView({
   pendingDraft = null,
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
+  pendingAttachments = null,
   onClose,
 }: NewChatPanelProps & {
   projectId: string;
@@ -126,6 +129,7 @@ function AgentChatView({
     pendingDraft,
     pendingDraftAutoSend,
     onPendingDraftConsumed,
+    pendingAttachments,
   });
   const memory = useAgentMemory();
   const feedback = useTurnFeedback(projectId);

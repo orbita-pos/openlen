@@ -99,12 +99,21 @@ export function urlDelDocumento(
   if (!etiqueta) return null;
   const camino = input.pagina ? `/${encodeURIComponent(input.pagina)}/index.html` : "/";
   const ruta = `${camino}?${LIENZO_PARAM}=${encodeURIComponent(input.docId)}`;
-  if (esProduccion(env)) {
+  // Un build de producción corrido EN LOCAL (el ensayo de caja) también es
+  // producción, pero su borrador vive aquí: el dominio de lienzo es de la caja.
+  if (esProduccion(env) && !esPeticionLocal(input.hostDeLaPeticion)) {
     const base = lienzoBaseHost(env);
     return base ? `https://${etiqueta}.${base}${ruta}` : null;
   }
   const puerto = /:(\d+)$/.exec(String(input.hostDeLaPeticion ?? ""))?.[1];
   return `http://${etiqueta}.localhost${puerto ? `:${puerto}` : ""}${ruta}`;
+}
+
+/** ¿El Host de la petición es de esta máquina? (`localhost`, `127.0.0.1`,
+ *  `[::1]`, `*.localhost`). En la caja llega el público: Caddy lo pasa tal cual. */
+function esPeticionLocal(host: string | null): boolean {
+  const h = String(host ?? "").trim().toLowerCase().replace(/:\d+$/, "").replace(/^\[|\]$/g, "");
+  return h === "localhost" || h === "127.0.0.1" || h === "::1" || h.endsWith(".localhost");
 }
 
 /** El parámetro de la URL del lienzo que elige el documento. */

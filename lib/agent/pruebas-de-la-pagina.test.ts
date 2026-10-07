@@ -21,8 +21,6 @@
 // modelo que escribió el código — es un cambio en la página. Cambia quién es el
 // testigo, que es la frase con la que ese mismo fichero separa lo que puede
 // acusar de lo que no.
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -326,55 +324,12 @@ describe("la suite de la página", () => {
     });
   });
 
-  // ─── Los eslabones del turno ───────────────────────────────────────────────
-  //
-  // Igual que `motivo-llega-a-la-tarjeta.test.ts`, y por el mismo motivo: un
-  // campo nuevo cruza varios ficheros y el que se olvida no rompe nada — todo
-  // compila, las pruebas de al lado siguen verdes y la suite simplemente no se
-  // guarda. Aquí la cadena es corta y son tres pasos:
-  //   1 · la ruta PASA las guardadas a los ojos,
-  //   2 · los ojos devuelven los fallos del turno CRUDOS —de ellos depende que
-  //       la promesa nazca en verde, y eso no se lee de una frase en prosa—,
-  //   3 · la ruta GUARDA con `actualizarSuite`.
-  describe("los tres eslabones del turno", () => {
-    const lee = (...p: string[]) => readFileSync(join(process.cwd(), ...p), "utf8");
-
-    it("1 · la ruta pasa las promesas vivas a los ojos", () => {
-      const ruta = lee("app", "api", "agent", "route.ts");
-      // MIGRADAS AL LEER: la forma vieja pasa a JS antes de filtrarse.
-      expect(ruta).toMatch(/const migrada = migrarSuite\(project\.data\.pruebas \?\? \[\]\)/);
-      expect(ruta).toMatch(/const promesasDeLaPagina = vivas\(migrada\.suite/);
-      expect(ruta).toContain("guardadas: promesasDeLaPagina");
-    });
-
-    it("2 · los ojos devuelven las regresiones por su canal", () => {
-      const ojos = lee("lib", "agent", "verify.ts");
-      // (Los fallos del turno se fueron con `prueba_js` en Len 2.0.)
-      expect(ojos).toContain("verdict.regresiones = h.regresiones");
-    });
-
-    it("4 · la ruta CUENTA lo que le pasó a la suite", () => {
-      const ruta = lee("app", "api", "agent", "route.ts");
-      expect(ruta).toContain("marcarRegresiones(migrarSuite(actual.pruebas ?? []).suite");
-      // Con las que de verdad se comprobaron: sin eso, un turno en la home
-      // daría por arregladas las promesas del menú.
-      // Las que NO corrieron no cuentan como comprobadas: si no, una rota que
-      // no se miró saldría «arreglada».
-      expect(ruta).toMatch(/comprobadas: promesasDeLaPagina\.filter\(\(p\) => !sinCorrer\.has\(p\.id\)\)\.map/);
-      expect(ruta).toMatch(/suite de la pagina: nuevas=/);
-    });
-
-    it("3 · la ruta guarda la suite al cerrar el turno", () => {
-      const ruta = lee("app", "api", "agent", "route.ts");
-      // Sobre las YA MARCADAS por el contador, no sobre las crudas: marcar y
-      // guardar en el mismo paso es como se pierde uno de los dos.
-      expect(ruta).toContain("actualizarSuite(marcadas, {");
-      // Y limpia contra el documento que quedó EN LA BASE, no contra el del
-      // turno: entre medias pudo entrar otra escritura.
-      expect(ruta).toMatch(/const documento = pageSlug/);
-      expect(ruta).toMatch(/\.\.\.\(documento \? \{ documento, pagina: pageSlug \} : \{\}\)/);
-    });
-  });
+  // ⚰️ «Los tres eslabones del turno» (la ruta pasaba las promesas a los ojos,
+  // los ojos devolvían las regresiones y la ruta guardaba la suite) se borraron
+  // el 2026-10-06: el primero y el tercero vivían en el cierre del turno de
+  // `app/api/agent/route.ts` (`verifyTurn`), retirado con las promesas rotas
+  // (plans/crear-es-len, tarea 10). Una guarda de una cadena que ya no existe
+  // es una prueba en verde que no ejerce nada.
 
   // ─── Repartir lo que el navegador devuelve ─────────────────────────────────
   //

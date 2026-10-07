@@ -17,6 +17,7 @@
   },
   "turn": {
     "imageSent": "图片已发送",
+    "imagesSent": "已发送 {count} 张图片",
     "homePage": "首页"
   },
   "proceso": {

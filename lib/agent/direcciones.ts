@@ -18,7 +18,7 @@
 // la corrección llega a un proceso y el turno vive en el otro. Ése es el
 // disparador para moverlo a la base, y no antes ([[no-redis-or-queue-until-trigger]]).
 
-import { QUESTION_DISMISSED, type AskUserResult, type QuestionAnswer } from "@/lib/agent/ask-user-question";
+import { QUESTION_DISMISSED, type AskUserResult, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
 
 /** Cuánto texto se acepta. Una corrección es una frase, no un documento. */
 export const MAX_DIRECCION = 2000;
@@ -52,7 +52,13 @@ interface TurnoAbierto {
   /** Pieza 3 de Len 2.5: la pregunta de `ask_user_question` que ESPERA
    *  respuesta ahora mismo (como mucho una: la herramienta es exclusiva), y si
    *  la última ya se contestó — para que un doble clic no la resuelva dos veces. */
-  readonly pregunta: { resolver?: (r: AskUserResult) => void; respondida: boolean };
+  readonly pregunta: {
+    resolver?: (r: AskUserResult) => void;
+    respondida: boolean;
+    /** Lo que se preguntó, mientras espera: el reenganche lo devuelve para
+     *  volver a pintar la tarjeta (`preguntaPendiente`). */
+    preguntas?: readonly UserQuestion[];
+  };
 }
 
 // 🔴 EN `globalThis`, NO en un `const` del módulo. MEDIDO el 2026-09-03 con el
@@ -173,7 +179,7 @@ const MAX_ETIQUETA = 120;
  */
 export function esperarRespuesta(
   turnoId: string,
-  o: { readonly timeoutMs: number; readonly signal?: AbortSignal },
+  o: { readonly timeoutMs: number; readonly signal?: AbortSignal; readonly preguntas?: readonly UserQuestion[] },
 ): Promise<AskUserResult> {
   const turno = abiertos.get(turnoId);
   if (!turno || o.signal?.aborted) return Promise.resolve(null);
@@ -183,12 +189,14 @@ export function esperarRespuesta(
     function terminar(r: AskUserResult): void {
       if (turno!.pregunta.resolver !== terminar) return;
       turno!.pregunta.resolver = undefined;
+      turno!.pregunta.preguntas = undefined;
       if (reloj) clearTimeout(reloj);
       o.signal?.removeEventListener("abort", alAbortar);
       resolve(r);
     }
     turno.pregunta.respondida = false;
     turno.pregunta.resolver = terminar;
+    turno.pregunta.preguntas = o.preguntas;
     reloj = setTimeout(() => terminar(null), o.timeoutMs);
     (reloj as { unref?: () => void }).unref?.();
     o.signal?.addEventListener("abort", alAbortar, { once: true });
@@ -284,6 +292,19 @@ export function cancelar(turnoId: string, userId: string): ResultadoCancelar {
  *
  * Mismo control de dueño que todo lo demás: la fila de otro no existe.
  */
+/**
+ * LA PREGUNTA QUE ESPERA, para quien vuelve a engancharse. Como DeepSeek («a
+ * browser that reconnects receives it again and can still complete it»): al
+ * recargar con una pregunta en el aire, la tarjeta no salía hasta que vencía la
+ * espera (ensayo de caja de crear-es-len, 06/10). `null` si no espera ninguna
+ * o el turno es de otro.
+ */
+export function preguntaPendiente(turnoId: string, userId: string): readonly UserQuestion[] | null {
+  const turno = abiertos.get(turnoId);
+  if (!turno || turno.userId !== userId || !turno.pregunta.resolver) return null;
+  return turno.pregunta.preguntas ?? null;
+}
+
 export function turnoDeLaFila(filaId: string, userId: string): string | null {
   for (const [id, t] of abiertos) {
     if (t.filaId === filaId && t.userId === userId) return id;

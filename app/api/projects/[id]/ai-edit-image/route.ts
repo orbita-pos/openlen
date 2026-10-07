@@ -17,7 +17,7 @@ import { editImage, realImageEditTransport } from "@/lib/ai/image-edit-core";
 // Response: { imageBase64, mimeType, cost } — the edited image.
 //
 // This route is a SHELL over lib/ai/image-edit-core.ts (shared with the agent's
-// editar_imagen tool). It keeps auth + project ownership + MIME allowlist + the
+// edit_image tool). It keeps auth + project ownership + MIME allowlist + the
 // 6MB cap + the credit gate here, then hands the Gemini call + debit-on-success
 // to the core and maps its result straight back to HTTP — byte-identical to the
 // pre-extraction behavior the client (replace-asset-modal) depends on. The

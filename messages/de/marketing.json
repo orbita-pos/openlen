@@ -34,17 +34,6 @@
     "removeImage": "Bild entfernen",
     "attachedAlt": "Angehängte Referenz",
     "micSilent": "Das Mikrofon wurde geöffnet, aber nichts erkannt. Prüfe, ob Chrome den richtigen Eingang nutzt und du eine Verbindung hast — die Spracherkennung läuft beim Dienst deines Browsers, nicht bei OpenLen.",
-    "modelo": {
-      "abrir": "Modell wählen",
-      "titulo": "Modell wählen",
-      "subtitulo": "Ändert das Modell, das die Seite schreibt. Deine Wahl wird für die nächsten gespeichert.",
-      "auto": "Automatisch (empfohlen)",
-      "autoDesc": "Verwendet das Standardmodell (aktuell: {modelo})",
-      "reasonerDesc": "Schneller, liest aber keine Bilder",
-      "visualCriticDesc": "Schreibt ausführlicher und liest deine Bilder",
-      "sinVision": "Liest keine Bilder, und du hast eines angehängt",
-      "masCaro": "~{n}× die Kosten"
-    },
     "asks": {
       "bakery": {
         "label": "Meine Bäckerei",

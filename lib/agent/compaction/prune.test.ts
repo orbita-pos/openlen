@@ -66,7 +66,7 @@ describe("podar resultados grandes (la de DeepSeek)", () => {
   it("una respuesta que viaja como objeto se poda por el JSON que ve el modelo", () => {
     const respuesta = { ok: true, envios: Array.from({ length: 400 }, (_, i) => ({ id: i, mensaje: "hola ".repeat(10) })) };
     const json = JSON.stringify(respuesta);
-    const ms: Message[] = [{ role: "user", content: "", functionResponses: [{ name: "ver_formularios", response: respuesta }] }, { role: "user", content: "x" }];
+    const ms: Message[] = [{ role: "user", content: "", functionResponses: [{ name: "list_form_submissions", response: respuesta }] }, { role: "user", content: "x" }];
     expect(oversizedResults(ms, 1)).toEqual([{ key: "0:0", text: json }]);
     const { messages, count } = pruneToolResults(ms, 1, new Map());
     expect(count).toBe(1);

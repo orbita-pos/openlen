@@ -3,6 +3,7 @@ import { ownerReasonFrom } from "@/lib/agent/owner-reason";
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
+import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import {
   appendChatMessage,
   updateChatMessageStatus,
@@ -169,6 +170,16 @@ const TurnSchema = z.object({
       url: z.string().max(2000),
       alt: z.string().max(1000).optional(),
     })
+    .optional(),
+  // Crear es Len: con dos o más fotos, todas (la primera va también arriba).
+  attachedImages: z
+    .array(
+      z.object({
+        url: z.string().max(2000),
+        alt: z.string().max(1000).optional(),
+      }),
+    )
+    .max(MAX_PHOTOS_PER_MESSAGE)
     .optional(),
   assistantReasoning: z.string().max(20000),
   status: z.enum(["applied", "reverted"]),

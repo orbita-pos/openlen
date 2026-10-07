@@ -14,8 +14,7 @@ import { esqueletoDeApp } from "@/lib/apps/esqueleto";
 import { carpetaDeLaVista, documentoMedible, pantallaDe, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { cargarEnOrigenReal, ESPERA_A_LA_RED_MS, RED_CALMADA_MS } from "@/lib/ai/origen-de-medida";
-import { componerMedicion, diagnosticosMedidos } from "@/lib/agent/aviso-medido";
-import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
+import { diagnosticosMedidos } from "@/lib/agent/aviso-medido";
 
 const APP = { catalogo: CATALOGO_ACTUAL, entrada: "/src/main.jsx" };
 const CASCARON =
@@ -89,7 +88,7 @@ describe("los ojos de Len en una app", () => {
     const m = await medir("#/roto");
     const errores = (m.runtimeErrors ?? []).join("\n");
     expect(errores).toMatch(/\(at \/src\/Roto\.jsx:3:\d+\)/);
-    const diags = diagnosticosMedidos(componerMedicion(m, etiquetarConPosiciones(CASCARON)), "/index.html", CASCARON);
+    const diags = diagnosticosMedidos(m, "/index.html", CASCARON);
     const js = diags.filter((d) => d.codigo === "js");
     expect(js.length).toBeGreaterThan(0);
     expect(js[0]).toMatchObject({ ruta: "/src/Roto.jsx", linea: 3 });

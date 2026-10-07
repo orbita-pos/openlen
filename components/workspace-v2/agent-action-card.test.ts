@@ -14,6 +14,7 @@ import type { AgentAction } from "./agent-action-card";
 import { KNOWN_TOOLS } from "./agent-action-card";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { OWNER_REASON_CODES, type OwnerReasonCode } from "@/lib/agent/owner-reason";
+import { LEGACY_TOOL_NAMES_FOR_CARDS } from "@/lib/agent/tool-renames";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -517,5 +518,51 @@ describe("🔴 la tarjeta dice CUÁNTAS páginas se miraron", () => {
     // tarjeta existe para dar.
     expect(accion.visualPaginas, `visualPaginas de ${loc} sin {miradas}`).toContain("{miradas}");
     expect(accion.visualPaginas, `visualPaginas de ${loc} sin {tocadas}`).toContain("{tocadas}");
+  });
+});
+
+// ─── LOS NOMBRES DE ANTES (plans/crear-es-len/plan-herramientas.md) ─────────
+//
+// Las 11 herramientas pasaron al inglés el 2026-10-06 y la base no se migró:
+// una conversación guardada sigue trayendo `ver_visitas`. Esa tarjeta se pinta
+// con la etiqueta de `get_visits`, no con el nombre crudo.
+describe("una tarjeta guardada con el nombre de antes se pinta con el de hoy", () => {
+  let root: Root | null = null;
+  let host: HTMLDivElement | null = null;
+  const pintar = (action: AgentAction): HTMLElement => {
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    root = createRoot(host);
+    act(() => {
+      root!.render(createElement(AgentActionCard, { action }));
+    });
+    return host.firstElementChild as HTMLElement;
+  };
+  afterEach(() => {
+    act(() => root?.unmount());
+    host?.remove();
+    root = null;
+    host = null;
+  });
+  const es = JSON.parse(readFileSync(join(process.cwd(), "messages", "es", "wsPage.json"), "utf-8")).agent
+    .tool as Record<string, string>;
+
+  it("🔴 `ver_visitas` guardada pinta la etiqueta de get_visits («Mirando tus visitas»)", () => {
+    const el = pintar(action("ver_visitas", ""));
+    expect(el.textContent).toContain("agent.tool.get_visits");
+    expect(el.textContent).not.toContain("ver_visitas");
+    expect(es.get_visits).toBe("Mirando tus visitas");
+  });
+
+  it("y la de hoy, `view_page`, pinta «Comprobando la página»", () => {
+    const el = pintar(action("view_page", ""));
+    expect(el.textContent).toContain("agent.tool.view_page");
+    expect(es.view_page).toBe("Comprobando la página");
+  });
+
+  it("los nombres viejos no están en KNOWN_TOOLS: se resuelven, no se listan", () => {
+    for (const viejo of LEGACY_TOOL_NAMES_FOR_CARDS.filter((n) => n !== "preguntar")) {
+      expect(KNOWN_TOOLS.has(viejo), viejo).toBe(false);
+    }
   });
 });

@@ -82,9 +82,9 @@ const COMO_LA_APP =
   "What you add to the app is written the way the app is written —its components, its file layout, its names, its Tailwind classes and its colors—, just as new code is written like the code around it.";
 
 const PROBAR_LA_PAGINA =
-  'If you change the page, test it before you call it done. What it DOES —a button, a form, a calculation, something that is saved or changes when clicked—, use it with usar_pagina: the path the user asked for and some odd case (an empty or wrong value, reloading the page). What it SHOWS —a section, a new page—, look at it with mirar_pagina tipo="medir", which is free and tells whether something overflows on mobile. And check that the rest of the page is still as it was.';
+  'If you change the page, test it before you call it done. What it DOES —a button, a form, a calculation, something that is saved or changes when clicked—, use it with use_page: the path the user asked for and some odd case (an empty or wrong value, reloading the page). What it SHOWS —a section, a new page—, look at it with view_page mode="measure", which is free and tells whether something overflows on mobile. And check that the rest of the page is still as it was.';
 const PROBAR_LA_APP =
-  'If you change the app, test it before you call it done. What it DOES —a button, a form, a calculation, something that is saved or changes when clicked—, use it with usar_pagina: the path the user asked for and some odd case (an empty or wrong value, reloading the app). What it SHOWS —a screen, a list, a total—, look at it with mirar_pagina tipo="medir", which is free and tells whether something overflows on mobile. And check that the screens you didn\'t touch still work.';
+  'If you change the app, test it before you call it done. What it DOES —a button, a form, a calculation, something that is saved or changes when clicked—, use it with use_page: the path the user asked for and some odd case (an empty or wrong value, reloading the app). What it SHOWS —a screen, a list, a total—, look at it with view_page mode="measure", which is free and tells whether something overflows on mobile. And check that the screens you didn\'t touch still work.';
 
 const LA_APP_SON_FICHEROS = (entrada: string) => `THE APP IS FILES:
 /index.html is only the shell that starts the app: its <head> (<title>, the <meta> tags, the fonts) and the <div id="root"> plus <script type="module" src="${entrada}"> that it must keep. The app itself lives in /src: ${entrada} mounts it, /src/App.jsx holds its routes, each screen goes in its own file under /src/screens and each component under /src/components, and /src/lib/supabase.js exports the backend client. Read to read, Edit to change an exact piece, Write to create a new file or rewrite a whole one, Grep to search the whole site and Glob to list files. PROJECT STATE lists the app's files; the files themselves don't come in your context, so whatever you say about the code —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: otherwise, read it first or don't describe it.
@@ -92,7 +92,7 @@ const LA_APP_SON_FICHEROS = (entrada: string) => `THE APP IS FILES:
 - After each Edit or Write the change is ALREADY saved and the user sees the app running on their canvas. If a file doesn't compile, the <new-diagnostics> give you its file, its line and why, and the app stays blank until you fix it: fix it in this turn. Every change is also kept: the user goes back from the editor, so never tell them that no copies are kept.
 - Screens are hash routes (/#/sales): a new screen is a component and a <Route> in /src/App.jsx, and you reach it with <Link to="/sales">. Never a /<slug>/index.html: that would be a separate static page, outside the app.
 - 🔴 A CHANGE GOES THROUGH EVERY FILE THAT DEPENDS ON IT, and only those: a renamed prop or component, a removed field, a column that changes in a table — search for every use with Grep before changing it and change them all in the same turn, migration included when the data changes. A file left behind breaks the app at runtime, in a screen you didn't look at. <example>user: "call it 'stock' instead of 'quantity'" — agent: searches for quantity with Grep across /src and /supabase, writes a migration that renames the column, and changes every component that reads or writes it.</example>
-- "Undo that" is handled with revertir_ultimo_cambio, which undoes your previous turn whole, never by editing backwards from memory.`;
+- "Undo that" is handled with undo_last_change, which undoes your previous turn whole, never by editing backwards from memory.`;
 
 const LO_QUE_PUEDE_LA_PAGINA_INICIO = "- What a page can do is not limited by your list of tools but by whether it needs a server.";
 const LO_QUE_PUEDE_LA_APP =
@@ -134,7 +134,7 @@ ${paquetes}
 - ICONS: lucide-react has a selection of ${ICONOS_DE_LAS_APPS.length} icons, the usual ones for an app (${ALGUNOS_ICONOS.join(", ")}…), by their current name or their old one, with or without the Icon suffix. If one isn't there, the compiler says so and suggests the closest; or draw it as an inline <svg>.
 - SCREENS are hash routes: <HashRouter> (in ${app.entrada}) with <Routes> and <Route path="/sales" element={<Sales />} />, <Link to="/sales">, useNavigate() and useParams(). The address is /#/sales. BrowserRouter, createBrowserRouter and the data routers (loaders, actions) don't exist here: a path without # breaks when the published app is reloaded. Never write a /<slug>/index.html in an app: it would be a static page outside it.
 - STYLES are Tailwind classes in className, written WHOLE. When publishing, OpenLen builds the CSS from the classes that appear in the files, so a class assembled in pieces (\`bg-\${color}-500\`) is missing from the published app even though it worked on the canvas. To vary one, choose between whole names: ok ? "bg-green-600" : "bg-red-600". Your own CSS goes in a .css file imported from ${app.entrada}, or in the shell's <style>.
-- ERRORS: a file that doesn't compile comes back in <new-diagnostics> with its file and line, and is NOT served: the app is blank until it is fixed. What fails while the app runs (mirar_pagina, usar_pagina and the checks after each turn) comes with the error's message and, when the browser gives it, the file and line of the source. The canvas and your checks run React's development build, with its whole error messages; the published app, the production one.
+- ERRORS: a file that doesn't compile comes back in <new-diagnostics> with its file and line, and is NOT served: the app is blank until it is fixed. What fails while the app runs (view_page and use_page) comes with the error's message and, when the browser gives it, the file and line of the source. The canvas, view_page and use_page run React's development build, with its whole error messages; the published app, the production one.
 - There is no StrictMode: each effect runs once, as in the published app.`;
 }
 
@@ -158,8 +158,9 @@ const LOS_ENLACES = `LINKS:
 
 const LA_CARPETA = (app: AppDeProyecto) => `THE PROJECT'S FOLDER:
 Besides /src, the folder takes any other text file —/data/*.json, /manifest.json, /sw.js, images as .svg— anywhere except the reserved roots (${RAICES_DEL_SITIO}), and publishing ships them next to the app. /tests holds Playwright tests (never published); /supabase holds the backend's migrations.
-- mirar_pagina, usar_pagina and the checks after each turn run the app the way it is published, starting at ${app.entrada}. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
-- Up to ${MAX_FOLDER_FILES} files and ${MAX_FOLDER_BYTES / 1024 / 1024} MB; ${MAX_FOLDER_FILE_BYTES / 1024 / 1024} MB per file (${MAX_TEST_FILE_BYTES / 1024} KB per test file).`;
+- view_page and use_page run the app the way it is published, starting at ${app.entrada}. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
+- Up to ${MAX_FOLDER_FILES} files and ${MAX_FOLDER_BYTES / 1024 / 1024} MB; ${MAX_FOLDER_FILE_BYTES / 1024 / 1024} MB per file (${MAX_TEST_FILE_BYTES / 1024} KB per test file).
+Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors, with their file and line; use_page tries it like a user, screen by screen. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.`;
 
 const EN_LA_PAGINA_SUPABASE_INICIO = "- In the page, supabase-js as usual:";
 const EN_LA_APP_SUPABASE =
@@ -179,7 +180,7 @@ function elBackend(manualDePagina: string): string {
 const QUE_PIDE_PUBLICAR = `WHAT PUBLISHING REQUIRES:
 • The shell keeps Tailwind via CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`) and the Google Fonts stylesheets in its <head>; when publishing, OpenLen replaces the CDN with the compiled CSS.
 • Illustrations and logos: inline SVG, with className="max-w-full h-auto". Icons: lucide-react.
-• No external image URL (unsplash, picsum, placehold.co…), not even one that comes in the request: a server we don't control is a 404 on the published app. The photos the user uploads or that elegir_foto gives you are fine.
+• No external image URL (unsplash, picsum, placehold.co…), not even one that comes in the request: a server we don't control is a 404 on the published app. The photos the user uploads or that find_photo gives you are fine.
 • MAPS and VIDEOS are <iframe>s, as in a page: \`https://maps.google.com/maps?q=<address>&output=embed\`, \`https://www.youtube.com/embed/<ID>\` — and a video ONLY if they give you the link.`;
 
 const INDICE_DE_LA_APP = `MORE, IN /.openlen/docs (read them when you need them):
@@ -219,7 +220,7 @@ COLOR, SHAPE AND TYPE
 // ─── Las herramientas ────────────────────────────────────────────────────────
 
 /** El parámetro con el que se abre una pantalla de la app (H6: van por hash). */
-export const PARAMETRO_PANTALLA = {
+export const PARAMETRO_SCREEN = {
   type: "STRING",
   description: 'Optional: the screen to open, as its hash route, e.g. "#/sales". Without it, the app opens at its start ("#/").',
 };
@@ -234,33 +235,33 @@ const PUBLICAR_EN_LA_APP =
  * Las declaraciones de una app, desde las de la página: las mismas herramientas
  * (la caché del prefijo no cambia entre turnos de un mismo proyecto) con lo que
  * en una app es distinto.
- *   · `mirar_pagina` y `usar_pagina`: no hay páginas que elegir, hay pantallas
- *     (`pantalla`, una ruta de hash) — `file_path` se va.
- *   · `revertir_ultimo_cambio` deshace el TURNO anterior entero (F2), no la
+ *   · `view_page` y `use_page`: no hay páginas que elegir, hay pantallas
+ *     (`screen`, una ruta de hash) — `file_path` se va.
+ *   · `undo_last_change` deshace el TURNO anterior entero (F2), no la
  *     última versión de una página: en una app un turno toca cinco ficheros.
- *   · `publicar` sin `idiomas`: la traducción automática no ve el texto que
+ *   · `publish` sin `languages`: la traducción automática no ve el texto que
  *     vive en el JSX (H15), y aceptarlos sería prometer lo que no se hace.
  */
 /** Las herramientas que `declaracionesDeLaApp` cambia, por su nombre. Si una se
  *  renombra en el catálogo y aquí no, la app la recibiría como la de una página
  *  SIN QUE NADA FALLE: lo vigila `modo-app.test.ts` («los nombres que usa»). */
-export const HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP = ["mirar_pagina", "usar_pagina", "revertir_ultimo_cambio", "publicar"] as const;
+export const HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP = ["view_page", "use_page", "undo_last_change", "publish"] as const;
 
 export function declaracionesDeLaApp(declaraciones: readonly Record<string, unknown>[]): Record<string, unknown>[] {
   return declaraciones.map((d) => {
     const parametros = d.parameters as { properties?: Record<string, unknown>; required?: string[] } | undefined;
     const sinFilePath = () => {
       const { file_path: _fuera, ...resto } = parametros?.properties ?? {};
-      return { ...d, parameters: { ...parametros, properties: { ...resto, pantalla: PARAMETRO_PANTALLA } } };
+      return { ...d, parameters: { ...parametros, properties: { ...resto, screen: PARAMETRO_SCREEN } } };
     };
     switch (d.name) {
-      case "mirar_pagina":
-      case "usar_pagina":
+      case "view_page":
+      case "use_page":
         return sinFilePath();
-      case "revertir_ultimo_cambio":
+      case "undo_last_change":
         return { ...d, description: REVERTIR_EN_LA_APP, parameters: { type: "OBJECT", properties: {} } };
-      case "publicar": {
-        const { idiomas: _fuera, ...resto } = parametros?.properties ?? {};
+      case "publish": {
+        const { languages: _fuera, ...resto } = parametros?.properties ?? {};
         return { ...d, description: `${String(d.description)}${PUBLICAR_EN_LA_APP}`, parameters: { ...parametros, properties: resto } };
       }
       default:

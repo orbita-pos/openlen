@@ -347,8 +347,8 @@ const EL_HEAD_YA_EXISTE =
   "• The three things the look depends on live in the `<head>`: Tailwind via CDN " +
   "(`<script src=\"https://cdn.tailwindcss.com\"></script>`), the Google Fonts stylesheets " +
   "(`<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/…\">`) and the page's own CSS " +
-  "in a `<style>`. The document you edit already has them: add what you are missing INSIDE them " +
-  "—a new family, new rules— instead of duplicating them.";
+  "in a `<style>`. When the document already has them, add what you are missing INSIDE them " +
+  "—a new family, new rules— instead of duplicating them; a page you write from scratch gets all three.";
 
 const EL_BLOQUE_OSCURO_SI_FALTA =
   'If the page doesn\'t define it yet, write it yourself: `:root[data-ol-mode="dark"] { … }` with ' +

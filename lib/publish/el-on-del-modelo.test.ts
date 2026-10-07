@@ -35,8 +35,6 @@ const root = mkdtempSync(path.join(tmpdir(), "ol-on-"));
 process.env.PUBLISH_ROOT = root;
 
 import { publishToDir } from "./filesystem";
-import { generateHtmlStream, type PageStreamProvider } from "@/lib/ai-stream/generate";
-import type { StreamEvent } from "@/lib/ai-gateway";
 import { applyOps, tagWithOpIds } from "@/lib/html-engine";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { aplicarEdiciones } from "@/lib/page-engine/aplicar-ediciones";
@@ -65,37 +63,9 @@ const PREVIA = `<!doctype html>
 const CON_ONCLICK = PREVIA.replace(`<button id="b">Pulsa</button>`, BOTON_CON_ONCLICK);
 
 describe("lo que escribe el MODELO conserva su onclick", () => {
-  it("Crear: el stream con las opciones de la ruta y la puerta de crear", async () => {
-    const eventos: StreamEvent[] = [
-      { type: "start", id: "m1" },
-      { type: "text_delta", text: CON_ONCLICK },
-      { type: "done", stopReason: { kind: "end_turn" } },
-    ];
-    const provider = {
-      async *stream() {
-        for (const e of eventos) yield e;
-      },
-    } as unknown as PageStreamProvider;
-    const { stream, done } = generateHtmlStream(
-      {
-        messages: [{ role: "user" as const, content: "un contador" }],
-        userId: "u1",
-        // Las de `app/api/generate/route.ts`, no los defectos del crate: con
-        // `sanitize: true` se mediría otro producto.
-        htmlOpts: { injectOpIds: false, sanitize: false, normalizeOnEnd: false },
-      },
-      { provider, wroteWith: "reasoner", debit: (async () => {}) as never },
-    );
-    const reader = stream.getReader();
-    while (!(await reader.read()).done) {
-      /* vaciar */
-    }
-    const s = await done;
-    assert.ok(s.finalHtml?.includes(ONCLICK), "el stream se lo quitó");
-    const listo = await preparePage(s.finalHtml!, { renderChecks: false });
-    assert.ok(listo.ok);
-    assert.ok(listo.html.includes(ONCLICK), "la puerta de crear se lo quitó");
-  });
+  // ⚰️ «Crear: el stream con las opciones de la ruta y la puerta de crear»
+  // (`generateHtmlStream`) se fue con `/api/generate` el 2026-10-06: crear es
+  // el primer mensaje a Len, cuyo camino es el del caso «Len» de aquí abajo.
 
   it("Chat, por operaciones: un replace que trae el onclick", async () => {
     const etiquetado = tagWithOpIds(PREVIA).taggedHtml;

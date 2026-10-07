@@ -40,6 +40,8 @@ import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "../pane
 import { NIVEL_POR_DEFECTO, type EsfuerzoAgente, type NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import type { StoredChatTurn } from "@/lib/projects/types";
+import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
+import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { fusionarConversacion } from "@/lib/chat/fusionar-conversacion";
@@ -88,6 +90,9 @@ export interface DesignTurn {
   /** Image attached to this turn — rendered in the user bubble as proof
    *  it was actually sent with the message. */
   attachedImage?: AttachedImage;
+  /** Crear es Len: todas las fotos del turno, sólo cuando son dos o más
+   *  (`attachedImage` es entonces la primera). */
+  attachedImages?: readonly AttachedImage[];
   /**
    * El elemento al que se acotó ESTE turno — misma prueba que la imagen.
    *
@@ -177,7 +182,7 @@ export interface DesignTurn {
    *  `done` (it finalizes to applied but the card stays tappable). Local-only,
    *  never persisted (F2-T11 decision) — see the `persistTurn` comment for why. */
   confirm?: AgentConfirm;
-  /** El borrador de `preparar_respuesta` (plans/len-resultados/): una tarjeta
+  /** El borrador de `draft_reply` (plans/len-resultados/): una tarjeta
    *  que sólo manda si el usuario toca. Local, como `confirm`: no se guarda. */
   respuesta?: RespuestaPreparada;
   /** Agent-mode: the turn finished without any `html` event (answer-only or
@@ -249,6 +254,16 @@ export interface AgentChatOptions {
    * pulsar «Enviar» después es preguntar dos veces lo mismo. */
   pendingDraftAutoSend?: boolean;
   onPendingDraftConsumed?: () => void;
+  /** LO QUE VIAJA CON EL BORRADOR que se manda solo (plans/crear-es-len): las
+   *  fotos y la referencia por URL del estado vacío, el primer mensaje de un
+   *  proyecto en blanco. Se consume con el borrador. */
+  pendingAttachments?: PendingAttachments | null;
+}
+
+/** Las fotos (ya subidas) y la referencia que acompañan a un borrador. */
+export interface PendingAttachments {
+  readonly images: readonly AttachedImage[];
+  readonly styleDirection: StyleDirection | null;
 }
 
 export function useAgentChat({
@@ -264,6 +279,7 @@ export function useAgentChat({
   pendingDraft = null,
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
+  pendingAttachments = null,
 }: AgentChatOptions) {
   const t = useTranslations("panelsChat");
   // Agent-mode messages live under the wsPage namespace (shared with the
@@ -693,7 +709,7 @@ export function useAgentChat({
         return;
       }
       if (!r.ok) return;
-      const cuerpo = (await r.json().catch(() => null)) as { turno?: StoredChatTurn; turnoId?: string; siguiente?: unknown } | null;
+      const cuerpo = (await r.json().catch(() => null)) as { turno?: StoredChatTurn; turnoId?: string; siguiente?: unknown; preguntas?: unknown } | null;
       if (!vivo || !cuerpo?.turno) return;
       const turno = cuerpo.turno;
       if (turno.enCurso) {
@@ -706,6 +722,11 @@ export function useAgentChat({
                   userText: turno.userText,
                   assistantReasoning: turno.assistantReasoning,
                   actions: accionesAlRecargar(turno.actions),
+                  // La pregunta que Len espera AHORA (`ask_user_question`):
+                  // como DeepSeek, quien se reengancha la recibe otra vez y la
+                  // puede contestar. Sin esto la tarjeta no salía hasta que
+                  // vencía la espera. El servidor manda: sin pregunta, fuera.
+                  pendingQuestions: questionsFrom(cuerpo.preguntas) ?? undefined,
                 }
               : x,
           ),
@@ -1037,6 +1058,11 @@ export function useAgentChat({
         readonly comentarios?: readonly ComentarioDeLinea[];
         /** Pieza 8: «Reanudar» el encargo — un turno sin mensaje: la ronda siguiente. */
         readonly goal?: "resume";
+        /** Crear es Len: VARIAS fotos (hasta `MAX_PHOTOS_PER_MESSAGE`). Ganan
+         *  sobre la del compositor y sobre `imageOverride`. */
+        readonly images?: readonly AttachedImage[];
+        /** Crear es Len: la referencia por URL, que viaja con ESTE mensaje. */
+        readonly styleDirection?: StyleDirection | null;
       },
     ) => {
       const escrito = rawPrompt.trim();
@@ -1064,6 +1090,11 @@ export function useAgentChat({
       // imageOverride lets Retry re-send the failed turn's original image;
       // undefined = use the live composer image, null = explicitly none.
       const img = imageOverride !== undefined ? imageOverride : attachedImage;
+      const imgs: readonly AttachedImage[] = opciones?.images?.length
+        ? opciones.images.slice(0, MAX_PHOTOS_PER_MESSAGE)
+        : img
+          ? [img]
+          : [];
       // Snapshot the page scope at send time — preEditHtml is THIS page's
       // document, and the drip / apply / revert / undo legs must all write
       // back to the same slot even if the user switches pages mid-stream.
@@ -1079,7 +1110,8 @@ export function useAgentChat({
       const newTurn: DesignTurn = {
         id: turnId,
         userText: textoDelTurno,
-        attachedImage: img ?? undefined,
+        attachedImage: imgs[0],
+        ...(imgs.length > 1 ? { attachedImages: imgs } : {}),
         // El alcance viaja EN el turno, no sólo en la petición: es la misma
         // prueba que la imagen. Se lee AQUÍ, antes de que el envío lo suelte
         // del compositor unas líneas más abajo.
@@ -1129,7 +1161,8 @@ export function useAgentChat({
         : null;
       // Same snapshot discipline for any attached image — the in-flight
       // request keeps the one that was set when Send fired.
-      const turnImage = img ? { url: img.url, alt: img.alt } : null;
+      const turnImage = imgs[0] ? { url: imgs[0].url, alt: imgs[0].alt } : null;
+      const turnImages = imgs.map((f) => ({ url: f.url, alt: f.alt }));
 
       // Agent mode (flag-gated) — talk to /api/agent instead of ai-design.
       // Same SSE reader/line-parse shape as below, different event dispatch:
@@ -1184,6 +1217,13 @@ export function useAgentChat({
         // el dueño retiró y no la que la sustituyó.
         const correcciones: string[] = [];
         let latestAgentHtml: string | null = null;
+        // ¿Hay en el lienzo una página A MEDIAS de este turno? Si el turno
+        // acaba sin su `html` (una guarda rechazó el Write, se cortó, se
+        // canceló), se devuelve el último documento GUARDADO de esa página —el
+        // de antes del turno, o el de un Write anterior del mismo turno—: medio
+        // HTML pintado no es la página de nadie.
+        let previewPainted = false;
+        let savedTurnPageHtml: string | null = null;
         // Cada evento `html` deja aquí la página que escribió. Es lo único que
         // permite saber, al cerrar el turno, si la única preimagen que tenemos
         // (la de `turnPage`) cubre de verdad lo que cambió.
@@ -1277,7 +1317,8 @@ export function useAgentChat({
               // absent/empty means home, cloned for parity.
               ...(turnPage ? { page: turnPage } : {}),
               ...(turnScope ? { scope: turnScope } : {}),
-              ...(turnImage ? { attachedImage: turnImage } : {}),
+              ...(turnImages.length > 0 ? { attachedImages: turnImages } : {}),
+              ...(opciones?.styleDirection ? { styleDirection: opciones.styleDirection } : {}),
             }),
             signal: abort.signal,
           });
@@ -1576,6 +1617,18 @@ export function useAgentChat({
                 // una herramienta, con la versión de su «antes».
                 ficherosTocados.push(...ficherosDelEvento(payload));
                 notifyFolderChanged(projectId);
+              } else if (evName === "page_preview") {
+                // Sólo la página que el dueño tiene delante, y marcada como no
+                // confiable, como el goteo del chat viejo (`html_chunk`).
+                const html = strField(payload, "html");
+                const evPage =
+                  payload && typeof payload === "object" && typeof (payload as { page?: unknown }).page === "string"
+                    ? (payload as { page: string }).page
+                    : null;
+                if (html && evPage === turnPage) {
+                  previewPainted = true;
+                  onLocalUpdate(html, evPage, true);
+                }
               } else if (evName === "html") {
                 const html = strField(payload, "html");
                 if (html) {
@@ -1596,6 +1649,10 @@ export function useAgentChat({
                       ? (payload as { page: string }).page
                       : null;
                   paginasTocadas.push(evPage);
+                  if (evPage === turnPage) {
+                    previewPainted = false;
+                    savedTurnPageHtml = html;
+                  }
                   // EL NOMBRE DEL CAMPO NO ES UNA CONVENCIÓN: es el del evento
                   // del bucle. Tipado contra él a propósito — si allí se
                   // renombra, esto deja de compilar en vez de quedarse mudo, que
@@ -1622,13 +1679,13 @@ export function useAgentChat({
                 };
                 const subdominio =
                   typeof c.subdominio === "string" ? c.subdominio : "";
-                if (c.action === "publicar" && subdominio) {
+                if (c.action === "publish" && subdominio) {
                   const idiomas = Array.isArray(c.idiomas)
                     ? c.idiomas.filter((x): x is string => typeof x === "string")
                     : [];
                   updateTurn(turnId, {
                     confirm: {
-                      action: "publicar",
+                      action: "publish",
                       subdominio,
                       idiomas,
                       republicar: c.republicar === true,
@@ -1821,7 +1878,7 @@ export function useAgentChat({
             //     idéntico: las dos superficies se contradecían y sólo una se
             //     ve desde el Chat. Ahora el servidor dice el hecho y se cree.
             //
-            // (b) Al revés: `activar_modulo` y compañía mutan de forma durable
+            // (b) Al revés: `toggle_module` y compañía mutan de forma durable
             //     SIN emitir html, y el pie decía «No cambió nada de la página»
             //     sobre un turno que sí cambió cosas. `mutoDurable` ya viajaba
             //     en el terminal y sólo se usaba para elegir rojo o ámbar.
@@ -1857,7 +1914,8 @@ export function useAgentChat({
             // orden. Sin correcciones es `prompt` y nada más, byte a byte.
             // Pieza 8: en una ronda, su mensaje (el que guarda el servidor).
             userText: [textoDelTurno, ...correcciones.map((c) => `↳ ${c}`)].join("\n"),
-            attachedImage: img ?? undefined,
+            attachedImage: imgs[0],
+            ...(imgs.length > 1 ? { attachedImages: [...imgs] } : {}),
             // El aviso viaja a la transcripción: al recargar, el turno tiene
             // que seguir contando que se cortó. Sin esto el usuario ve un turno
             // aplicado y limpio sobre un trabajo a medias.
@@ -1918,6 +1976,7 @@ export function useAgentChat({
             seguirEnElServidor(turnId);
           }
         } finally {
+          if (previewPainted) onLocalUpdate(savedTurnPageHtml ?? preEditHtml, turnPage);
           if (abortRef.current === abort) {
             abortRef.current = null;
             agentStreamOpenRef.current = false;
@@ -1996,9 +2055,15 @@ export function useAgentChat({
   useEffect(() => {
     if (!pendingDraftAutoSend || !pendingDraft) return;
     const texto = pendingDraft;
+    const adjuntos = pendingAttachments;
     onPendingDraftConsumed?.();
-    void send(texto);
-  }, [pendingDraftAutoSend, pendingDraft, onPendingDraftConsumed, send]);
+    // El primer mensaje de un proyecto en blanco lleva sus fotos y su
+    // referencia (plans/crear-es-len); el resto de borradores, nada más.
+    void send(texto, undefined, {
+      ...(adjuntos?.images.length ? { images: adjuntos.images } : {}),
+      ...(adjuntos?.styleDirection ? { styleDirection: adjuntos.styleDirection } : {}),
+    });
+  }, [pendingDraftAutoSend, pendingDraft, pendingAttachments, onPendingDraftConsumed, send]);
 
   const handleRetry = useCallback(
     (turn: DesignTurn) => {
@@ -2011,7 +2076,7 @@ export function useAgentChat({
       }
       // Re-send with the turn's ORIGINAL image (the live composer was cleared
       // after the first send), so a vision/image edit retries as the same request.
-      void send(turn.userText, turn.attachedImage ?? null);
+      void send(turn.userText, turn.attachedImage ?? null, turn.attachedImages ? { images: turn.attachedImages } : undefined);
     },
     [send],
   );
@@ -2379,6 +2444,7 @@ export function restoreTurn(s: StoredChatTurn): DesignTurn {
     id: s.id,
     userText: s.userText,
     attachedImage: s.attachedImage,
+    ...(s.attachedImages ? { attachedImages: s.attachedImages } : {}),
     assistantReasoning: s.assistantReasoning,
     // Len 2.1: sigue trabajando en el servidor. Se pinta en marcha, contando
     // desde que empezó, y el panel relee su fila hasta que cierra.

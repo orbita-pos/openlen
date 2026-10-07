@@ -42,8 +42,8 @@ describe("el motivo del DUEÑO cruza los cinco eslabones (N41)", () => {
 
   it("3 · el servidor lo copia a la tarjeta que PERSISTE él", () => {
     const r = crearRegistroDelTurno();
-    r.observar({ type: "action", tool: "publicar", status: "error", summary: "x", ownerReason: { code: "address_needed" } });
-    r.observar({ type: "action", tool: "publicar", status: "error", summary: "y" });
+    r.observar({ type: "action", tool: "publish", status: "error", summary: "x", ownerReason: { code: "address_needed" } });
+    r.observar({ type: "action", tool: "publish", status: "error", summary: "y" });
     expect(r.tarjetas[0]).toMatchObject({ ownerReason: { code: "address_needed" } });
     // BRAZO DE CONTROL: la tarjeta sin motivo no se inventa uno.
     expect(r.tarjetas[1]).not.toHaveProperty("ownerReason");

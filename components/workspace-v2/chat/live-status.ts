@@ -8,7 +8,9 @@
 // Es la forma de la barra de estado de Claude Code: dice qué hace, no cómo.
 
 import type { DesignTurn } from "./use-agent-chat";
+import type { AgentAction } from "../agent-action-card";
 import { asksTheOwner, questionText, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { currentToolName } from "@/lib/agent/tool-renames";
 
 /** Qué clase de trabajo hace la herramienta, en palabras de quien no programa. */
 export type Activity =
@@ -46,7 +48,7 @@ const ACTIVITY_OF: Readonly<Record<string, Activity>> = {
   Read: "reading",
   Grep: "reading",
   Glob: "reading",
-  mirar_pagina: "reading",
+  view_page: "reading",
   buscar_en_pagina: "reading",
   Edit: "editing",
   Write: "editing",
@@ -64,22 +66,22 @@ const ACTIVITY_OF: Readonly<Record<string, Activity>> = {
   editar_dato: "editing",
   quitar_dato: "editing",
   bash: "terminal",
-  elegir_foto: "photos",
-  editar_imagen: "image",
+  find_photo: "photos",
+  edit_image: "image",
   web_search: "web",
   web_fetch: "web",
   leer_de_internet: "web",
   verificar_diseno: "checking",
-  usar_pagina: "checking",
-  publicar: "publishing",
+  use_page: "checking",
+  publish: "publishing",
   recordar_preferencia: "remembering",
-  ver_visitas: "results",
-  ver_formularios: "results",
-  ver_mensajes: "results",
-  preparar_respuesta: "reply",
-  activar_modulo: "module",
+  get_visits: "results",
+  list_form_submissions: "results",
+  list_messages: "results",
+  draft_reply: "reply",
+  toggle_module: "module",
   conectar_datos_vivos: "module",
-  revertir_ultimo_cambio: "undoing",
+  undo_last_change: "undoing",
   preguntar: "asking",
   // Pieza 3 de Len 2.5: el nombre de hoy (`preguntar` se queda por lo guardado).
   ask_user_question: "asking",
@@ -93,7 +95,8 @@ const ACTIVITY_OF: Readonly<Record<string, Activity>> = {
 };
 
 export function activityOf(tool: string): Activity {
-  return ACTIVITY_OF[tool] ?? "working";
+  // Con el nombre de hoy: una fila guardada antes del 2026-10-06 trae el de antes.
+  return ACTIVITY_OF[currentToolName(tool)] ?? "working";
 }
 
 const FACE_OF: Readonly<Record<Activity, FaceState>> = {
@@ -188,12 +191,28 @@ export function retryPhase(
  *  la herramienta de preguntar (con su nombre de hoy o el de antes), que no
  *  falló y que nadie contestó dentro del turno (pieza 3: con `respuesta`, Len
  *  ya la tuvo y siguió). */
+/**
+ * DÓNDE ESTÁ LA PREGUNTA QUE ESPERA AL DUEÑO, o -1. La última de las que le
+ * preguntan, si sigue abierta. No la última TARJETA: el modelo puede mandar la
+ * pregunta en la misma tanda que otras llamadas, que van detrás (ensayo de caja
+ * de crear-es-len, 07/10: `enter_plan_mode` con `find_photo` y `Read`, y el
+ * chat no la veía). Como DeepSeek, la pregunta sale de su llamada.
+ */
+export function openQuestionIndex(actions: readonly AgentAction[] | undefined): number {
+  const list = actions ?? [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    const a = list[i]!;
+    if (!asksTheOwner(a.tool)) continue;
+    // Alinear con DeepSeek: una CANCELADA (`dismissed`) ya no espera a nadie.
+    return a.status === "error" || a.respuesta || a.dismissed ? -1 : i;
+  }
+  return -1;
+}
+
 function lastQuestion(turn: Pick<DesignTurn, "actions" | "status">) {
   if (turn.status !== "applied") return null;
-  const last = turn.actions?.[turn.actions.length - 1];
-  // Alinear con DeepSeek: una CANCELADA (`dismissed`) ya no espera a nadie.
-  if (!last || !asksTheOwner(last.tool) || last.status === "error" || last.respuesta || last.dismissed) return null;
-  return last;
+  const i = openQuestionIndex(turn.actions);
+  return i < 0 ? null : turn.actions![i]!;
 }
 
 /** La pregunta con la que acabó el turno, si acabó preguntando. */

@@ -1,5 +1,5 @@
 // UN TOPE DE COSAS A LA VEZ (pieza 4): la capacidad la pone quien la gasta, como
-// dice DeepSeek — aquí, las visitas de `usar_pagina`, cada una con su Chromium.
+// dice DeepSeek — aquí, las visitas de `use_page`, cada una con su Chromium.
 import { describe, expect, it } from "vitest";
 import { createConcurrencyLimit } from "./concurrency-limit";
 

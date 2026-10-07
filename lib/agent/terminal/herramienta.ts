@@ -111,7 +111,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   // UNA APP (F3): lo que no compila, UNA vez con el comando entero ya guardado
   // —un `sed -i` sobre dos ficheros pasa por un instante roto entre uno y otro—.
   // Cuenta también si sólo tocó el cascarón.
-  const appCambiada = [...escrituras].reverse().find((o) => o.appCambiada)?.appCambiada;
+  const appCambiada = escrituras.some((o) => o.appCambiada);
   const diagnosticos = [
     ...escrituras.flatMap((o) => o.diagnosticos ?? []),
     ...(session.app && (appCambiada || paginas.length > 0) ? await diagnosticosDeLaAppTrasEscribir(session, deps) : []),
@@ -152,7 +152,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
         }
       : {}),
     ...(diagnosticos.length > 0 ? { diagnosticos } : {}),
-    ...(appCambiada ? { appCambiada } : {}),
+    ...(appCambiada ? { appCambiada: true as const } : {}),
     ...(ficherosTocados.length > 0 ? { ficherosTocados } : {}),
     ...(escrituras.some((o) => o.mutoDurable) ? { mutoDurable: true } : {}),
   };

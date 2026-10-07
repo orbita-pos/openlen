@@ -17,8 +17,8 @@ import {
 // on the auth check, so it never shows on /login etc.
 //
 // Fetches on mount and again when an in-workspace AI turn announces that its
-// metered debit finished. /api/generate hard-redirects, so its next mount is
-// already fresh.
+// metered debit finished. Creating a page is a Len turn since 2026-10-06, so
+// that same announcement covers it.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function CreditPill() {

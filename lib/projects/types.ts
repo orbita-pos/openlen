@@ -329,8 +329,12 @@ export interface StoredChatTurn {
     roundsStarted: number;
     activation: "armed" | "disarmed";
   };
-  /** Image the user attached to this turn — shown in the restored bubble. */
+  /** Image the user attached to this turn — shown in the restored bubble.
+   *  With two or more (Crear es Len), the FIRST one; all of them go in
+   *  `attachedImages`. */
   attachedImage?: { url: string; alt?: string };
+  /** Every photo of the turn, only when there are two or more. */
+  attachedImages?: { url: string; alt?: string }[];
   assistantReasoning: string;
   /** Settled status only — a turn is persisted once it stops streaming. */
   status: "applied" | "error" | "reverted";

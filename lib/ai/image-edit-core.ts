@@ -1,6 +1,6 @@
 // Edición de imagen por instrucción — el NÚCLEO, extraído
 // from app/api/projects/[id]/ai-edit-image/route.ts so the same call powers
-// both the route (in-editor Replace modal) and the agent's editar_imagen tool.
+// both the route (in-editor Replace modal) and the agent's edit_image tool.
 //
 // The route stays a byte-identical shell: it keeps auth / ownership / MIME
 // allowlist / size cap / credit gate and maps this core's result straight to

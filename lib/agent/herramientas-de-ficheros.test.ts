@@ -488,11 +488,11 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
 });
 
 describe("Len 2.0 — las que se quedan, sin página activa", () => {
-  it("mirar_pagina mira el fichero que se le dice", async () => {
+  it("view_page mira el fichero que se le dice", async () => {
     const { deps, store } = makeDepsCompletos({ html: HOME, pages: { menu: { html: MENU } } });
-    const out = await runAgentTool(makeSession(), deps, "mirar_pagina", {
-      tipo: "medir",
-      pregunta: "¿se sale en el móvil?",
+    const out = await runAgentTool(makeSession(), deps, "view_page", {
+      mode: "measure",
+      question: "¿se sale en el móvil?",
       file_path: "/menu/index.html",
     });
     assert.equal(out.response.ok, true);
@@ -501,46 +501,46 @@ describe("Len 2.0 — las que se quedan, sin página activa", () => {
 
   it("…y sin file_path, la que el dueño tiene abierta", async () => {
     const { deps, store } = makeDepsCompletos({ html: HOME, pages: { menu: { html: MENU } } });
-    await runAgentTool({ ...makeSession(), page: "menu" }, deps, "mirar_pagina", { tipo: "medir", pregunta: "¿algo roto?" });
+    await runAgentTool({ ...makeSession(), page: "menu" }, deps, "view_page", { mode: "measure", question: "¿algo roto?" });
     assert.equal(store.mirado[0]?.html, MENU);
   });
 
-  it("mirar_pagina con un fichero que no existe lo dice como Read", async () => {
+  it("view_page con un fichero que no existe lo dice como Read", async () => {
     const { deps } = makeDepsCompletos({ html: HOME });
-    const out = await runAgentTool(makeSession(), deps, "mirar_pagina", { tipo: "medir", pregunta: "x", file_path: "/menu.html" });
+    const out = await runAgentTool(makeSession(), deps, "view_page", { mode: "measure", question: "x", file_path: "/menu.html" });
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /^There is no file at /);
   });
 
-  it("editar_imagen busca la imagen en TODOS los ficheros y la cambia donde esté", async () => {
+  it("edit_image busca la imagen en TODOS los ficheros y la cambia donde esté", async () => {
     const FOTO = "https://images.openlen.com/gorra.webp";
     const menuConFoto = MENU.replace("<p>Tel", `<img src="${FOTO}" alt="gorra"><p>Tel`);
     const { deps, store } = makeDepsCompletos({ html: HOME, pages: { menu: { html: menuConFoto } } });
-    const out = await runAgentTool(makeSession(), deps, "editar_imagen", { imagen_url: FOTO, instruccion: "quita el fondo" });
+    const out = await runAgentTool(makeSession(), deps, "edit_image", { image_url: FOTO, instruction: "quita el fondo" });
     assert.equal(out.response.ok, true, String(out.response.error));
-    assert.equal(out.response.nueva_url, "https://images.openlen.com/editada.webp");
-    assert.deepEqual(out.response.ficheros, ["menu/index.html"]);
+    assert.equal(out.response.new_url, "https://images.openlen.com/editada.webp");
+    assert.deepEqual(out.response.files, ["menu/index.html"]);
     assert.ok(store.data.pages!.menu!.html.includes("editada.webp"));
     assert.ok(!store.data.pages!.menu!.html.includes(FOTO));
   });
 
-  it("editar_imagen con una URL que no está en el sitio se niega sin gastar", async () => {
+  it("edit_image con una URL que no está en el sitio se niega sin gastar", async () => {
     const { deps } = makeDepsCompletos({ html: HOME });
-    const out = await runAgentTool(makeSession(), deps, "editar_imagen", {
-      imagen_url: "https://evil.example/x.png",
-      instruccion: "x",
+    const out = await runAgentTool(makeSession(), deps, "edit_image", {
+      image_url: "https://evil.example/x.png",
+      instruction: "x",
     });
     assert.equal(out.response.ok, false);
   });
 
-  it("revertir_ultimo_cambio deshace lo último que Len escribió, en su fichero", async () => {
+  it("undo_last_change deshace lo último que Len escribió, en su fichero", async () => {
     const { deps, store } = makeDepsCompletos({ html: HOME, pages: { menu: { html: MENU } } });
     const session = makeSession();
     await runAgentTool(session, deps, "Read", { file_path: "/menu/index.html" });
     const edit = await runAgentTool(session, deps, "Edit", { file_path: "/menu/index.html", old_string: "Tel 55 1234 5678", new_string: "Tel 99 0000 0000" });
     assert.equal(edit.response.ok, true, String(edit.response.tool_result));
     // Sin file_path: el último fichero que escribió en este turno.
-    const out = await runAgentTool(session, deps, "revertir_ultimo_cambio", {});
+    const out = await runAgentTool(session, deps, "undo_last_change", {});
     assert.equal(out.response.ok, true, String(out.response.error));
     assert.equal(out.page, "menu");
     assert.ok(!String(store.data.pages!.menu!.html).includes("99 0000 0000"));
@@ -557,15 +557,15 @@ describe("Len 2.0 — las que se quedan, sin página activa", () => {
 describe("H2 retirada · ToolSearch ya no existe y nada está diferido", () => {
   it("llamar a ToolSearch no carga nada: el despachador no la conoce", async () => {
     const { deps } = makeDeps({ html: HOME });
-    const r = await runAgentTool(makeSession(), deps, "ToolSearch", { query: "select:revertir_ultimo_cambio" });
+    const r = await runAgentTool(makeSession(), deps, "ToolSearch", { query: "select:undo_last_change" });
     assert.equal(r.response.ok, false);
     assert.equal(r.response.error, "unknown tool");
     assert.doesNotMatch(JSON.stringify(r.response), /<functions>/);
   });
 
-  it("revertir_ultimo_cambio corre sin cargar nada antes", async () => {
+  it("undo_last_change corre sin cargar nada antes", async () => {
     const { deps } = makeDepsCompletos({ html: HOME });
-    const r = await runAgentTool(makeSession(), deps, "revertir_ultimo_cambio", {});
+    const r = await runAgentTool(makeSession(), deps, "undo_last_change", {});
     assert.doesNotMatch(JSON.stringify(r.response), /InputValidationError|deferred tool|unknown tool/);
   });
 });
@@ -986,11 +986,11 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
       }
     });
 
-    it("/.openlen/resultados/visitas.json es lo que devuelve ver_visitas; el catálogo, el de elegir_foto", async () => {
+    it("/.openlen/resultados/visitas.json es lo que devuelve get_visits; el catálogo, el de find_photo", async () => {
       const { deps } = conResultados();
       const session = makeSession();
       try {
-        const v = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "jq -c '[.hoy.vistas, .ultimos_30_dias.vistas, .publicada]' /.openlen/resultados/visitas.json" }));
+        const v = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "jq -c '[.today.views, .last_30_days.views, .published]' /.openlen/resultados/visitas.json" }));
         assert.match(texto(v), /^\[7,120,false\]\n/);
         assert.doesNotMatch(texto(v), /<system-reminder>/);
         const fotos = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "jq -r 'select(.estilo==\"food-editorial\") | .url' /.openlen/catalogo/fotos.jsonl" }));
@@ -1098,7 +1098,7 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
       }
     });
 
-    it("el título va por renameProject y el asistente por activar_modulo, con su aviso", async () => {
+    it("el título va por renameProject y el asistente por toggle_module, con su aviso", async () => {
       const { deps, store } = conAjustes();
       const session = makeSession();
       try {
@@ -1555,7 +1555,7 @@ describe("en una app", () => {
     const w = await runAgentTool(s, deps, "Write", { file_path: "/src/App.jsx", content: "export default function App() {\n  return <h1>Caja 2</h1>;\n}" });
     assert.equal(w.response.ok, true, JSON.stringify(w.response));
     assert.match(archivos["/src/App.jsx"]!, /Caja 2/);
-    assert.equal(w.appCambiada?.cascaron, CASCARON);
+    assert.equal(w.appCambiada, true);
     assert.equal(w.updatedHtml, undefined, "el cascarón no cambió: el lienzo no se repinta con él");
     assert.deepEqual(diags(w), []);
   });
@@ -1622,11 +1622,11 @@ describe("en una app", () => {
         return { ok: true as const, paginas: [], ficheros: ["/src/App.jsx", "/src/Carrito.jsx"], noSeDeshacen: ["/supabase/migrations/2_b.sql"], deshacerId: "d1" };
       },
     } as unknown as AgentDeps;
-    const r = await runAgentTool(sesion(), conDeshacer, "revertir_ultimo_cambio", {});
+    const r = await runAgentTool(sesion(), conDeshacer, "undo_last_change", {});
     assert.equal(r.response.ok, true, JSON.stringify(r.response));
     assert.deepEqual(r.response.deshecho, ["/src/App.jsx", "/src/Carrito.jsx"]);
     assert.deepEqual(r.response.no_vuelve, ["/supabase/migrations/2_b.sql"]);
-    assert.ok(r.appCambiada, "lo que se ve cambió: se mide y se mira");
+    assert.ok(r.appCambiada, "lo que se ve cambió");
     assert.deepEqual(pedidos, ["p1"]);
   });
 
@@ -1638,12 +1638,12 @@ describe("en una app", () => {
         return { ok: false as const, motivo: "se_solapan" as const, rutas: ["/src/App.jsx"] };
       },
     } as unknown as AgentDeps;
-    const r = await runAgentTool(sesion(), conChoque, "revertir_ultimo_cambio", {});
+    const r = await runAgentTool(sesion(), conChoque, "undo_last_change", {});
     assert.equal(r.response.ok, false);
     assert.match(String(r.response.error), /Nothing was undone: after that turn, \/src\/App\.jsx was changed again/);
   });
 
-  it("editar_imagen encuentra la foto en el CÓDIGO de la app y la cambia ahí, archivando el antes", async () => {
+  it("edit_image encuentra la foto en el CÓDIGO de la app y la cambia ahí, archivando el antes", async () => {
     const { deps, archivos, versiones } = conApp();
     const FOTO = "https://images.openlen.com/cafe.webp";
     archivos["/src/App.jsx"] = `export default function App() {\n  return <img src="${FOTO}" alt="Café" />;\n}`;
@@ -1659,20 +1659,20 @@ describe("en una app", () => {
         return { url: "https://images.openlen.com/cafe-editada.webp" };
       },
     } as unknown as AgentDeps;
-    const r = await runAgentTool(sesion(), conIA, "editar_imagen", { imagen_url: FOTO, instruccion: "más luz" });
+    const r = await runAgentTool(sesion(), conIA, "edit_image", { image_url: FOTO, instruction: "más luz" });
     assert.equal(r.response.ok, true, JSON.stringify(r.response));
     assert.match(archivos["/src/App.jsx"]!, /cafe-editada\.webp/);
     assert.equal(versiones.at(-1)?.path, "/src/App.jsx");
     assert.ok(r.appCambiada);
     // CONTRA-PRUEBA: una URL que no está entera entre comillas en el código no se toca.
-    const otra = await runAgentTool(sesion(), conIA, "editar_imagen", { imagen_url: "https://images.openlen.com/cafe", instruccion: "x" });
+    const otra = await runAgentTool(sesion(), conIA, "edit_image", { image_url: "https://images.openlen.com/cafe", instruction: "x" });
     assert.equal(otra.response.ok, false);
   });
 
   it("🔴 una app que no compila no llega a la tarjeta de publicar: Len sabe qué arreglar antes", async () => {
     const { deps, archivos } = conApp();
     archivos["/src/App.jsx"] = "export default () => <div";
-    const r = await runAgentTool(sesion(), deps, "publicar", { subdominio: "caja" });
+    const r = await runAgentTool(sesion(), deps, "publish", { subdomain: "caja" });
     assert.equal(r.response.ok, false);
     assert.match(String(r.response.error), /The app can't be published yet[\s\S]*\/src\/App\.jsx:1/);
     assert.equal(r.confirm, undefined);

@@ -1,5 +1,5 @@
 // lib/agent/photo-search.ts — pure search over the "Imágenes by OpenLen"
-// manifest (public/openlen-images/manifest.json), for the elegir_foto agent
+// manifest (public/openlen-images/manifest.json), for the find_photo agent
 // tool. Replicates the filtering semantics of the client picker
 // (components/workspace-v2/replace-asset-modal.tsx's OpenLenTab: style exact
 // match + free-text substring match against alt/id/family) but adds

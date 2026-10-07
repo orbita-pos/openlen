@@ -51,7 +51,7 @@ export const MENSAJE_DE_JUAN_CON_HORARIO: Encargo = {
       turno: {
         ...TURNO_BUENO,
         len: [TURNO_BUENO.len[0]!, `${TURNO_BUENO.len[1]!} Miré tu página y no tiene ningún horario escrito.`],
-        herramientas: ["ver_mensajes", "Grep", "preparar_respuesta"],
+        herramientas: ["list_messages", "Grep", "draft_reply"],
       },
     },
     { nombre: "quito-el-horario", datos: panaderia(), turno: TURNO_BUENO },
@@ -64,7 +64,7 @@ export const MENSAJE_DE_JUAN_CON_HORARIO: Encargo = {
       turno: {
         ...TURNO_BUENO,
         len: [TURNO_BUENO.len[0]!, `${TURNO_BUENO.len[1]!} Si quieres, lo pongo también en la sección de contacto.`],
-        herramientas: ["ver_mensajes", "Grep", "preparar_respuesta"],
+        herramientas: ["list_messages", "Grep", "draft_reply"],
       },
     },
   ],

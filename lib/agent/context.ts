@@ -19,6 +19,8 @@ import type { AgentMode } from "@/lib/agent/dynamis";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { textoDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO } from "@/lib/agent/ficheros/memoria";
+import { directionToBriefBlock } from "@/lib/style-match/direction";
+import type { StyleDirection } from "@/lib/style-match/direction-types";
 
 /**
  * El bloque para el prompt, o `""` cuando no hay nada.
@@ -211,6 +213,38 @@ export function seleccionBlock(sel: SeleccionDelDueno | null | undefined): strin
   return `<system-reminder>\n${cuerpo}\n\nIt may or may not matter for what you are doing now.\n</system-reminder>\n\n`;
 }
 
+/** Una foto del mensaje, como la ve el contexto: `visible` = sus píxeles van
+ *  pegados al mensaje y el modelo PUEDE VERLA. */
+export interface AttachedImageForContext {
+  readonly url: string;
+  readonly alt?: string;
+  readonly visible?: boolean;
+}
+
+/**
+ * VARIAS FOTOS EN UN MENSAJE (Crear es Len, 2026-10-06). Lo que decía Crear de
+ * sus referencias (`app/api/generate/route.ts`, «ATTACHED REFERENCES») junto
+ * con lo que dice Len de una foto suelta: aquí SÍ tienen dirección, así que las
+ * que pertenecen a la página se colocan, y las de inspiración sólo se miran.
+ * Las etiquetas («Image 1…») son las que pone `withImages` en
+ * `lib/ai/fireworks-stream-client.ts` a las que llegan con píxeles.
+ */
+function attachedImagesBlock(imagenes: readonly AttachedImageForContext[]): string {
+  const lineas = imagenes
+    .map((f, i) => `Image ${i + 1}: ${f.url}${f.alt ? ` (alt text: ${f.alt})` : ""}`)
+    .join("\n");
+  const vistas = imagenes.filter((f) => f.visible).length;
+  const seeLine =
+    vistas === imagenes.length
+      ? "\nThey are ATTACHED to this turn, labeled in that order, and you CAN SEE THEM."
+      : vistas > 0
+        ? `\n${vistas} of them are ATTACHED to this turn and you CAN SEE THEM; of the rest you only have the address.`
+        : "";
+  return `IMAGES ATTACHED BY THE USER (${imagenes.length}), in this order:\n${lineas}${seeLine}
+They are NOT the same idea cut into pieces and they are NOT averaged. Usually each one brings something different —a logo, the premises or the product, a mood board—. Read them ONE BY ONE and take from each what only it tells you; if two contradict each other, the user's message wins, and if it doesn't settle it, Image 1 wins.
+The ones that belong ON the page (a logo, the premises, a product) are REAL image URLs the user attached on purpose — place each one using its EXACT URL (verbatim) as the src of an <img> (or as a CSS background-image), with alt text true to what it shows. A mood board is for looking at, not for inserting. NEVER make up or change a URL, and DON'T TALK ABOUT the addresses: OpenLen's uploader wrote them, they work in the editor and they are baked in when publishing, even if they start with localhost. Don't refuse and don't replace them with placeholders.\n\n`;
+}
+
 export function buildAgentContext(args: {
   /** Inyectable sólo para las pruebas: sin esto el bloque HOY cambiaría cada
    *  día y ninguna prueba podría fijarlo. */
@@ -247,10 +281,17 @@ export function buildAgentContext(args: {
    *  placeholder if one exists. Absent/omitted ⇒ no block.
    *  F5 — `visible: true` means the route ALSO attached the image's pixels to
    *  the first model turn (inlineData), so the block tells the model it can
-   *  actually SEE the image, not just its URL. */
-  attachedImage?: { url: string; alt?: string; visible?: boolean } | null;
+   *  actually SEE the image, not just its URL.
+   *  Crear es Len (2026-10-06) — hasta 4 por mensaje (`MAX_PHOTOS_PER_MESSAGE`).
+   *  Con UNA, el bloque es byte a byte el de siempre. */
+  attachedImages?: readonly AttachedImageForContext[] | null;
   /** Lo que el dueño señaló en el lienzo. Ver `SeleccionDelDueno`. */
   seleccion?: SeleccionDelDueno | null;
+  /** LA REFERENCIA POR URL de este mensaje (Crear es Len, 2026-10-06): el
+   *  mismo bloque que Crear ponía delante del brief (`directionToBriefBlock`),
+   *  aquí al final del contexto, justo antes de lo que pide el dueño. Ausente ⇒
+   *  salida byte-idéntica. */
+  styleDirection?: StyleDirection | null;
 }): string {
   const brief = (args.userBrief ?? "").trim();
   const briefBlock = brief
@@ -258,15 +299,19 @@ export function buildAgentContext(args: {
     : "";
 
   let imageBlock = "";
-  if (args.attachedImage) {
-    const altLine = args.attachedImage.alt ? `\nAlt text: ${args.attachedImage.alt}` : "";
+  const imagenes = args.attachedImages ?? [];
+  if (imagenes.length > 1) {
+    imageBlock = attachedImagesBlock(imagenes);
+  } else if (imagenes.length === 1) {
+    const attachedImage = imagenes[0]!;
+    const altLine = attachedImage.alt ? `\nAlt text: ${attachedImage.alt}` : "";
     // F5: cuando los píxeles viajan adjuntos al turno, díselo — puede diseñar
     // CON la imagen (colores, orientación, contenido) en vez de colocarla a
     // ciegas. Sin visible, el texto queda byte-idéntico a F2 (pinned).
-    const seeLine = args.attachedImage.visible
+    const seeLine = attachedImage.visible
       ? `\nThe image is ATTACHED to this turn and you CAN SEE IT: use it to decide where and how to place it — match the palette and the layout to its colors, orientation and content, and write an alt that is true to what it shows.`
       : "";
-    imageBlock = `IMAGE ATTACHED BY THE USER: ${args.attachedImage.url}${altLine}${seeLine}\nThis is a REAL image URL that the user attached on purpose — place it using this EXACT URL (verbatim) as the src of an <img> (or as a CSS background-image). NEVER make up or change the URL. And DON'T TALK ABOUT IT: OpenLen's uploader wrote it, it works in the editor and it is baked in when publishing. There is nothing to warn about, not even if it starts with localhost. Don't refuse, don't replace it with a placeholder, and DON'T ask them to upload it again "some other way" — it is the same uploader and it would give the same address. Place it and talk about the DESIGN, not the address. If the page already has a placeholder for this image (a <div> with a gradient, an empty box with a border), REPLACE that whole element with the <img> — don't nest it inside. Always include alt text (use the user's if they gave one; if not, infer it from the context).\n\n`;
+    imageBlock = `IMAGE ATTACHED BY THE USER: ${attachedImage.url}${altLine}${seeLine}\nThis is a REAL image URL that the user attached on purpose — place it using this EXACT URL (verbatim) as the src of an <img> (or as a CSS background-image). NEVER make up or change the URL. And DON'T TALK ABOUT IT: OpenLen's uploader wrote it, it works in the editor and it is baked in when publishing. There is nothing to warn about, not even if it starts with localhost. Don't refuse, don't replace it with a placeholder, and DON'T ask them to upload it again "some other way" — it is the same uploader and it would give the same address. Place it and talk about the DESIGN, not the address. If the page already has a placeholder for this image (a <div> with a gradient, an empty box with a border), REPLACE that whole element with the <img> — don't nest it inside. Always include alt text (use the user's if they gave one; if not, infer it from the context).\n\n`;
   }
 
   // El modelo no sabe qué día es, y eso no es cosmético: pidiéndole una cuenta
@@ -313,7 +358,7 @@ ${dichoBlock}`
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${recorteBlock}${memoriaBlock}${hoy}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${briefBlock}${seleccionBlock(args.seleccion)}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}`;
+  return `${recorteBlock}${memoriaBlock}${hoy}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${briefBlock}${seleccionBlock(args.seleccion)}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
 }
 
 
@@ -365,7 +410,9 @@ export interface BuildAgentMessagesArgs {
   /** Prior turns, ALREADY hardened to {role, content} + capped by the caller
    *  (the route slices to 36 + 4000 chars). */
   history: readonly MensajeDelHistorial[];
-  attachedImage?: { url: string; alt?: string; visible?: boolean } | null;
+  attachedImages?: readonly AttachedImageForContext[] | null;
+  /** Ver buildAgentContext.styleDirection. */
+  styleDirection?: StyleDirection | null;
   /** Ver buildAgentContext.seleccion. */
   seleccion?: SeleccionDelDueno | null;
   /** Pre-flight size ceiling; over it → { ok:false, reason:"too_large" }. */
@@ -373,18 +420,25 @@ export interface BuildAgentMessagesArgs {
 }
 
 export type BuildAgentMessagesResult =
-  | { ok: true; messages: Message[]; systemPrompt: string; contextBlock: string }
+  | {
+      ok: true;
+      messages: Message[];
+      systemPrompt: string;
+      contextBlock: string;
+      /** Los avisos del turno, tal y como van detrás de las palabras del dueño:
+       *  la ruta los guarda con el turno y el historial los repone en su sitio. */
+      avisos: string;
+    }
   | { ok: false; reason: "too_large" };
 
-/** Marca dónde acaba el contexto que pone el servidor y empiezan las palabras
- *  literales del usuario. Sin ella, la petición se lee como una línea más del
- *  volcado de ESTADO DEL PROYECTO que la precede. */
-export const PETICION_DEL_USUARIO = "WHAT THE USER ASKS YOU NOW:\n";
+// ⚰️ Aquí vivía `PETICION_DEL_USUARIO` («WHAT THE USER ASKS YOU NOW:»), la
+// costura entre el contexto y las palabras del dueño cuando iban en UN mensaje.
+// Desde el 2026-10-06 van en dos, como DeepSeek: la costura es el mensaje.
 
 /** Assemble the exact message array an agent turn ships upstream: system
- *  prompt, the prior history, then ONE user message carrying the context block
- *  (state + brief + optional selection/image blocks) followed by the
- *  user's own words. Shared by app/api/agent/route.ts and the eval harness so a
+ *  prompt, the prior history, then the context block (state + brief +
+ *  optional selection/image blocks) in its own user message, and LAST the
+ *  user's own words (plus the turn's marked notices). Shared by app/api/agent/route.ts and the eval harness so a
  *  turn is byte-identical whichever entry point built it. Applies the same
  *  pre-flight size guard the route used inline (413 on overflow).
  *
@@ -396,9 +450,16 @@ export const PETICION_DEL_USUARIO = "WHAT THE USER ASKS YOU NOW:\n";
  *  es el pecado en sí (OpenCode fabrica dos: `prompt.ts:1279-1282` y
  *  `transform.ts:285-296`); el pecado era fabricar la conducta equivocada.
  *
- *  Y el contexto va PEGADO a la petición, al final del array, no colgando
+ *  Y el contexto va JUNTO a la petición, al final del array, no colgando
  *  antes del historial: es el punto de generación, y es donde la tarea 4
- *  necesita poder colgar los avisos por turno. */
+ *  necesita poder colgar los avisos por turno.
+ *
+ *  🔴 PERO EN SU PROPIO MENSAJE, como DeepSeek (su contexto de entorno es otro
+ *  mensaje: `agent.ts`, `runtimeContext.project`) y Claude Code. Pegados, la
+ *  petición era la cola de un bloque en inglés, y en el primer turno de un
+ *  proyecto Len empezaba a narrar en inglés a un dueño que escribía en español
+ *  (ensayo de caja de crear-es-len, 06/10). El último mensaje es el del dueño:
+ *  ahí van también sus fotos (la ruta) y, marcados, los avisos del turno. */
 export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMessagesResult {
   const systemPrompt = buildAgentSystemPrompt(process.env, args.mode, args.app ?? null);
   const contextBlock = buildAgentContext({
@@ -412,7 +473,8 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     dichoAntes: args.dichoAntes,
     degradaciones: args.degradaciones,
     conversacionRecortada: args.conversacionRecortada,
-    attachedImage: args.attachedImage,
+    attachedImages: args.attachedImages,
+    styleDirection: args.styleDirection,
     seleccion: args.seleccion,
   });
   const avisos = avisosDelTurno({
@@ -431,7 +493,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   // aparece después de haber decidido que cabía. El manual también.
   // Y las fotos (A): viajan pegadas a su mensaje en todas las vueltas, así que
   // ocupan contexto como en Claude Code. La del turno cuenta si se vio.
-  const fotos = args.history.reduce((n, m) => n + (m.images?.length ?? 0), 0) + (args.attachedImage?.visible ? 1 : 0);
+  const fotos = args.history.reduce((n, m) => n + (m.images?.length ?? 0), 0) + (args.attachedImages ?? []).filter((f) => f.visible).length;
   const fijo = manual + contextBlock + args.prompt + avisos;
   const cabe = (caracteresDelHistorial: number) =>
     Math.ceil((fijo.length + caracteresDelHistorial + systemPrompt.length) / 3.5) + fotos * TOKENS_POR_FOTO <=
@@ -464,7 +526,8 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     { role: "system", content: systemPrompt },
     { role: "user", content: manual },
     ...history,
-    { role: "user", content: `${contextBlock}${PETICION_DEL_USUARIO}${args.prompt}${avisos}` },
+    { role: "user", content: contextBlock },
+    { role: "user", content: `${args.prompt}${avisos}` },
   ];
-  return { ok: true, messages, systemPrompt, contextBlock };
+  return { ok: true, messages, systemPrompt, contextBlock, avisos };
 }

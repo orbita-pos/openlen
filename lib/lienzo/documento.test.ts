@@ -158,7 +158,11 @@ describe("documentoMedible: el horneado no puede tumbar una medición", () => {
 describe("las superficies que miden hornean el documento de vista", () => {
   const MIDEN: ReadonlyArray<readonly [string, string]> = [
     ["los ojos de Len", "lib/agent/verify.ts"],
-    ["la ruta del Agente", "app/api/agent/route.ts"],
+    // ⚰️ «la ruta del Agente» (`app/api/agent/route.ts`) medía por su cuenta
+    // al cerrar el turno y tras cada edición (`verifyTurn`, `medirParaElModelo`).
+    // Las dos se retiraron el 2026-10-06 (plans/crear-es-len, tarea 10): ahora
+    // mide sólo Len, a mano, y quien arma su vista es `tools.ts`.
+    ["las herramientas de Len (view_page, use_page)", "lib/agent/tools.ts"],
     ["el motor de la página", "lib/page-engine/prepare.ts"],
     ["el Chat (ai-design)", "app/api/templates/ai-design/route.ts"],
   ];
@@ -167,13 +171,13 @@ describe("las superficies que miden hornean el documento de vista", () => {
   // llamada: un fichero con DOS caminos que miden pasa con que uno solo hornee.
   // Pasó — `lib/agent/verify.ts` la cumplía desde el 2026-09-15 porque
   // `runVerify` horneaba, mientras `observarPagina`, en el mismo fichero, medía
-  // el documento pelado; o sea que `mirar_pagina`, la herramienta que el modelo
+  // el documento pelado; o sea que `view_page`, la herramienta que el modelo
   // llama a mano hasta cuatro veces por turno, seguía mirando una página que el
   // usuario no tiene delante. En verde en las 195 pruebas del plan y en las
   // 5194 de la suite.
   //
   // Quien fija cada CAMINO son las pruebas de comportamiento (`verify.test.ts`:
-  // «lo que se MIDE va horneado» para los ojos y «mirar_pagina mide el documento
+  // «lo que se MIDE va horneado» para los ojos y «view_page mide el documento
   // HORNEADO» para la mirada, las dos con su contra-prueba sin `vista`). Esto se
   // queda porque sigue cazando lo que aquéllas no pueden: una superficie que
   // deja de hornear ENTERA, o una nueva que nace sin hacerlo.
@@ -189,7 +193,7 @@ describe("las superficies que miden hornean el documento de vista", () => {
   // puente entre la herramienta y `observarPagina`. Se comprueba aquí porque es
   // el único punto donde se decide si la mirada recibe contexto o no — el
   // comportamiento de `observarPagina` con y sin él lo fijan sus pruebas.
-  it("🔴 mirar_pagina le pasa la vista a observarPagina", () => {
+  it("🔴 view_page le pasa la vista a observarPagina", () => {
     const src = readFileSync(join(process.cwd(), "lib/agent/tools.ts"), "utf8");
     expect(
       /observarPagina\(\{[\s\S]{0,600}?vista:/.test(src),

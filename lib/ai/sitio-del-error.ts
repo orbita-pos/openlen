@@ -10,7 +10,7 @@
 // que es el único sitio donde seguro que NO está.
 //
 // Puro: lo usan los tres que oyen `pageerror` (los dos renderizadores y
-// `usar_pagina`) y quien convierte lo medido en diagnósticos.
+// `use_page`) y quien convierte lo medido en diagnósticos.
 
 export interface SitioDelError {
   /** La ruta del fichero en el sitio: `/src/Carrito.jsx`. */

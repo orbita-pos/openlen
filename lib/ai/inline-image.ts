@@ -159,8 +159,8 @@ export async function fetchImageAsInlineData(
  *
  *  NOTE: this spawns headless Chromium per call, so the ai-design caller
  *  leaves it OFF by default — opt in with OPENLEN_AIDESIGN_PAGE_REFERENCE=1.
- *  (The /api/generate reference path doesn't use this — it fetches a
- *  pre-rendered template screenshot.) */
+ *  (Crear's /api/generate reference path, retired on 2026-10-06, didn't use
+ *  this — it fetched a pre-rendered template screenshot.) */
 /**
  * Pulsa los controles de la página y devuelve cuántos.
  *

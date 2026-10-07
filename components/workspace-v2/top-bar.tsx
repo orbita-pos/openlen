@@ -43,6 +43,7 @@ import { CreditPill } from "@/components/app/credit-pill";
 import { OpenLenMark } from "@/components/openlen-logo";
 import { AccountMenu } from "./account-menu";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
+import { visibleProjects } from "@/lib/projects/blank";
 
 interface ReleaseEntry {
   sha: string;
@@ -184,7 +185,7 @@ export function TopBar({
   // ser una opción del menú, que es donde se busca.
   const [proyectosOpen, setProyectosOpen] = useState(false);
   const [misPaginas, setMisPaginas] = useState<
-    Array<{ id: string; title: string; logoUrl: string | null }> | null
+    Array<{ id: string; title: string; logoUrl: string | null; isBlank?: boolean }> | null
   >(null);
   const proyectosRef = useRef<HTMLDivElement>(null);
   const [releases, setReleases] = useState<ReleaseEntry[] | null>(null);
@@ -243,10 +244,12 @@ export function TopBar({
     let cancelado = false;
     void fetch("/api/projects")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { projects?: Array<{ id: string; title: string; logoUrl?: string | null }> } | null) => {
+      .then((d: { projects?: Array<{ id: string; title: string; logoUrl?: string | null; isBlank?: boolean }> } | null) => {
         if (cancelado) return;
         setMisPaginas(
-          (d?.projects ?? []).map((p) => ({
+          // Los proyectos en blanco no se ofrecen (plans/crear-es-len): el
+          // abierto ya no sale en esta lista, y los demás no son de nadie.
+          visibleProjects(d?.projects ?? [], null).map((p) => ({
             id: p.id,
             title: p.title,
             logoUrl: p.logoUrl ?? null,

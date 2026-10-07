@@ -9,7 +9,7 @@ import { aLas, haceUnRato, panaderia, plantarFormulario } from "./sembrar";
 
 const TURNO_BUENO = {
   len: ["Tienes 2 formularios nuevos: María López pregunta por un tres leches para 20 y Pedro Ruiz quiere 20 conchas para el sábado."],
-  herramientas: ["ver_formularios"],
+  herramientas: ["list_form_submissions"],
   tarjetas: [],
 };
 
@@ -32,7 +32,7 @@ export const FORMULARIOS_NUEVOS: Encargo = {
     await plantarFormulario(s.projectId, "pedro", { nombre: "Pedro Ruiz", "teléfono": "+52 33 1234 5678", mensaje: "Quiero 20 conchas para el sábado" }, aLas(s, 1, 17), null);
   },
   graders: [
-    preguntoAlServidor("ver_formularios"),
+    preguntoAlServidor("list_form_submissions"),
     {
       nombre: "dice-cuantos-y-de-quien",
       peso: 2,
@@ -48,7 +48,7 @@ export const FORMULARIOS_NUEVOS: Encargo = {
   solucion: panaderia(),
   solucionTurno: TURNO_BUENO,
   rotas: [
-    { nombre: "cuenta-los-vistos", datos: panaderia(), turno: { len: ["Tienes 7 formularios: María, Pedro y cinco clientes más."], herramientas: ["ver_formularios"], tarjetas: [] } },
+    { nombre: "cuenta-los-vistos", datos: panaderia(), turno: { len: ["Tienes 7 formularios: María, Pedro y cinco clientes más."], herramientas: ["list_form_submissions"], tarjetas: [] } },
     { nombre: "de-memoria", datos: panaderia(), turno: { len: ["Tienes 2 nuevos, de María y de Pedro."], herramientas: [], tarjetas: [] } },
     { nombre: "toco-la-pagina", datos: panaderia({ descripcion: "Pan dulce artesanal." }), turno: TURNO_BUENO },
   ],

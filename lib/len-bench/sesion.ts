@@ -9,6 +9,7 @@
 import { encode } from "next-auth/jwt";
 import type { Entorno } from "./entorno";
 import { crearLectorSse, type EventoSse } from "./sse";
+import { currentToolName } from "@/lib/agent/tool-renames";
 
 /**
  * El nombre de la cookie de sesión, decidido como lo decide Auth.js.
@@ -142,13 +143,15 @@ export interface TarjetaDePublicar {
   readonly republicar: boolean;
 }
 
-/** La tarjeta «Publicar» que Len dejó en el turno (`publicar` NUNCA publica:
- *  prepara la tarjeta y espera el tap del dueño). La última, si hay varias. */
+/** La tarjeta «Publicar» que Len dejó en el turno (`publish` NUNCA publica:
+ *  prepara la tarjeta y espera el tap del dueño). La última, si hay varias.
+ *  Su `action` es el nombre de la herramienta: `publicar` en una grabación de
+ *  antes del 2026-10-06, que se sigue leyendo. */
 export function tarjetaDePublicar(eventos: readonly EventoSse[]): TarjetaDePublicar | null {
   let t: TarjetaDePublicar | null = null;
   for (const e of eventos) {
     const d = e.datos as { action?: unknown; subdominio?: unknown; idiomas?: unknown; republicar?: unknown } | null;
-    if (e.nombre !== "confirm" || d?.action !== "publicar" || typeof d.subdominio !== "string") continue;
+    if (e.nombre !== "confirm" || typeof d?.action !== "string" || currentToolName(d.action) !== "publish" || typeof d.subdominio !== "string") continue;
     t = {
       subdominio: d.subdominio,
       idiomas: Array.isArray(d.idiomas) ? d.idiomas.filter((x): x is string => typeof x === "string") : [],
@@ -206,12 +209,14 @@ export function textoDeLen(eventos: readonly EventoSse[]): string {
 
 /** Las herramientas que Len llamó en el turno, sin repetir y en el orden de la
  *  primera llamada: el `tool` de sus eventos `action` (el bucle emite uno al
- *  empezar cada llamada y otro al acabarla). */
+ *  empezar cada llamada y otro al acabarla). Con el nombre de HOY: una
+ *  grabación de antes del 2026-10-06 trae `ver_visitas`, y puntúa igual. */
 export function herramientasDeLen(eventos: readonly EventoSse[]): string[] {
   const vistas: string[] = [];
   for (const e of eventos) {
-    const tool = (e.datos as { tool?: unknown } | null)?.tool;
-    if (e.nombre === "action" && typeof tool === "string" && !vistas.includes(tool)) vistas.push(tool);
+    const crudo = (e.datos as { tool?: unknown } | null)?.tool;
+    const tool = typeof crudo === "string" ? currentToolName(crudo) : null;
+    if (e.nombre === "action" && tool !== null && !vistas.includes(tool)) vistas.push(tool);
   }
   return vistas;
 }

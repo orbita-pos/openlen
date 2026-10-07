@@ -1,19 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import { swapJsClauses, clauseMarker } from "./js-clause";
-import { SYSTEM_PROMPT, systemPromptFor } from "../../app/api/generate/system-prompt";
 import { modelRuntimePromptBlock } from "../ai-stream/model-runtime";
 import { SYSTEM_PROMPT as CHAT_SYSTEM_PROMPT } from "../../app/api/templates/ai-design/system-prompt";
 import { instruccionesDeLen } from "../agent/catalog";
 
-// El JavaScript del modelo ya no tiene interruptor (26/08/2026): estos
-// entornos sólo dirigen el CONTRATO, que es lo que `systemPromptFor` lee.
-const DEFECTO = {} as const;
-const MINIMO = { OPENLEN_MIN_CONTRACT: "1" } as const;
-// El contrato MÍNIMO pasó a ser el DEFECTO el 2026-08-23. Para probar el
-// completo hay que pedirlo: sin esto media suite mediría el prompt equivocado y
-// pasaría por el motivo que no es.
-const COMPLETO = { OPENLEN_MIN_CONTRACT: "0" } as const;
+// ⚰️ Las pruebas sobre el prompt de CREAR (`systemPromptFor` de
+// `app/api/generate/system-prompt.ts`, en sus contratos completo y mínimo) se
+// fueron con la ruta el 2026-10-06 (plans/crear-es-len, tarea 12). Lo que
+// vigilaban de las superficies que quedan —que ninguna prohíba el JavaScript
+// que se acepta— lo miran `js-clause-superficies.test.ts` y el bloque del Chat
+// de aquí abajo.
 
 // RETIRADO el 2026-08-26 con el interruptor. Fijaba que con `OPENLEN_MODEL_JS`
 // apagado el prompt saliera INTACTO —ni un carácter de coste para quien no
@@ -22,51 +19,10 @@ const COMPLETO = { OPENLEN_MIN_CONTRACT: "0" } as const;
 // serlo: ahora la interactividad la escribe el modelo.
 
 describe("con JS libre, las conductas desaparecen del prompt", () => {
-  it("ni un solo marcador declarativo sobrevive", () => {
-    const vivo = systemPromptFor(COMPLETO);
-    for (const marcador of [
-      "data-ol-sticky",
-      "data-ol-filter",
-      "data-ol-lightbox",
-      "data-ol-countdown",
-      "data-ol-scroller",
-      "CONDUCTAS",
-    ]) {
-      expect(vivo, `el prompt todavía enseña ${marcador}`).not.toContain(marcador);
-    }
-  });
-
-  it("y en su lugar se le dice que la escriba él, con las dos mitades", () => {
-    const vivo = systemPromptFor(COMPLETO);
-    expect(vivo).toContain("INTERACTIVITY — YOU write it");
-    // La lección del nav mudo, generalizada: comportamiento Y su CSS.
-    expect(vivo).toContain("BOTH HALVES");
-  });
-
-  it("el Chat recibe exactamente el mismo trato", () => {
+  it("el Chat las cambia por «escríbela tú»", () => {
     const vivo = swapJsClauses(CHAT_SYSTEM_PROMPT, ["contrato-completo", "conductas", "no-negociable"]);
     expect(vivo).not.toContain("data-ol-sticky");
     expect(vivo).toContain("INTERACTIVITY — YOU write it");
-  });
-
-  // El contrato mínimo ya había sustituido `PUBLISH_CONTRACT` entero, y con él
-  // se fueron carrusel y conductas. Pedir la marca ahí haría LANZAR.
-  it("el contrato mínimo no pide la cláusula — no la tiene y lanzaría", () => {
-    expect(() => systemPromptFor(MINIMO)).not.toThrow();
-    expect(systemPromptFor(MINIMO)).not.toContain("data-ol-sticky");
-  });
-
-  // LA FORMA DE PRODUCCIÓN desde el 2026-08-23: mínimo por defecto + JS libre.
-  // Los dos interruptores están pensados para ir juntos — el mínimo a solas
-  // entrega páginas inertes, medido 0/6 (ver `system-prompt.ts`).
-  it("el prompt que de verdad se envía: mínimo, con JS libre y sin conductas", () => {
-    const real = systemPromptFor(DEFECTO);
-    expect(real).not.toContain("data-ol-sticky");
-    expect(real).not.toContain("CONDUCTAS");
-    // La prohibición del mínimo está VOLTEADA, no simplemente ausente.
-    expect(real).not.toContain(clauseMarker("contrato-min"));
-    expect(real).toContain("<script>");
-    expect(real.length).toBeLessThan(systemPromptFor(COMPLETO).length);
   });
 });
 
@@ -90,20 +46,11 @@ describe("con el JavaScript abierto, el prompt NO se contradice", () => {
     "no sobrevive",
   ];
 
-  for (const [nombre, env] of [
-    ["contrato completo", COMPLETO],
-    ["contrato mínimo", MINIMO],
-  ] as const) {
-    it(`${nombre}: no queda ni una prohibición de JavaScript`, () => {
-      const vivo = systemPromptFor(env) + modelRuntimePromptBlock();
-      const coladas = PROHIBICIONES.filter((p) => vivo.includes(p));
-      expect(coladas, `el prompt todavía prohíbe lo que el sistema acepta: ${coladas.join(", ")}`).toEqual([]);
-    });
-
-    it(`${nombre}: y sí dice que el script sobrevive`, () => {
-      expect(systemPromptFor(env)).toContain("<script>");
-    });
-  }
+  it("el bloque del JavaScript no trae ninguna prohibición", () => {
+    const bloque = modelRuntimePromptBlock();
+    const coladas = PROHIBICIONES.filter((p) => bloque.includes(p));
+    expect(coladas, `el bloque todavía prohíbe lo que el sistema acepta: ${coladas.join(", ")}`).toEqual([]);
+  });
 
   it("el bloque ya no cierra invitando a omitirlo", () => {
     const bloque = modelRuntimePromptBlock();
@@ -112,7 +59,6 @@ describe("con el JavaScript abierto, el prompt NO se contradice", () => {
   });
 
   it("avisa de no esconder contenido tras el script (la trampa del .reveal)", () => {
-    expect(systemPromptFor(MINIMO)).toMatch(/hide content (in|with) CSS/i);
     expect(modelRuntimePromptBlock()).toMatch(/hide content (in|with) CSS/i);
   });
 });
@@ -142,7 +88,7 @@ describe("una marca que ya no existe LANZA, no se ignora", () => {
 });
 
 /**
- * El Chat (pestaña de rediseño) monta su prompt igual que crear, y desde el
+ * El Chat (pestaña de rediseño) monta su prompt igual que crear lo montaba, y desde el
  * 2026-08-21 también captura el script en modo REESCRITURA. Su cláusula tiene
  * que voltear con el mismo interruptor, o le prometeríamos al modelo algo que su
  * propio contrato le prohíbe.

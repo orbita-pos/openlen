@@ -9,9 +9,7 @@ vi.mock("@/lib/db", () => ({
   schema: { usageEvents: {} },
 }));
 
-import { guardarEventos, puedeRegistrar, registrarEnServidor } from "./registrar";
-
-const ctx = (headers: Record<string, string> = {}) => ({ userId: "u1", headers: new Headers(headers) });
+import { guardarEventos, puedeRegistrar } from "./registrar";
 
 describe("registrar eventos de uso en el servidor", () => {
   beforeEach(() => {
@@ -21,28 +19,19 @@ describe("registrar eventos de uso en el servidor", () => {
     vi.unstubAllEnvs();
   });
 
-  it("guarda un fallo con el id del usuario y sin sesión de navegador", async () => {
-    await registrarEnServidor("crear_fallo", { codigo: "sin_creditos" }, ctx());
-    expect(mocks.values).toHaveBeenCalledWith([
-      { userId: "u1", name: "crear_fallo", sessionId: null, data: { codigo: "sin_creditos" } },
-    ]);
-  });
-
-  it("con «No rastrear» o el GPC no guarda nada", async () => {
-    await registrarEnServidor("crear_fallo", { codigo: "modelo" }, ctx({ DNT: "1" }));
-    await registrarEnServidor("crear_fallo", { codigo: "modelo" }, ctx({ "Sec-GPC": "1" }));
-    expect(mocks.values).not.toHaveBeenCalled();
+  // ⚰️ Las pruebas de `registrarEnServidor` (guardar `crear_fallo`, y no
+  // guardarlo con «No rastrear», el GPC o un código con texto libre) se fueron
+  // con él el 2026-10-06. «No rastrear» y el GPC siguen probados aquí abajo,
+  // por `puedeRegistrar`, que es quien los decide.
+  it("con «No rastrear» o el GPC no se registra", () => {
+    expect(puedeRegistrar(new Headers({ DNT: "1" }), {} as unknown as NodeJS.ProcessEnv)).toBe(false);
+    expect(puedeRegistrar(new Headers({ "Sec-GPC": "1" }), {} as unknown as NodeJS.ProcessEnv)).toBe(false);
   });
 
   it("el operador lo apaga con el literal 0, y sólo con ése", () => {
     expect(puedeRegistrar(new Headers(), { OPENLEN_EVENTOS_DE_USO: "0" } as unknown as NodeJS.ProcessEnv)).toBe(false);
     expect(puedeRegistrar(new Headers(), { OPENLEN_EVENTOS_DE_USO: "1" } as unknown as NodeJS.ProcessEnv)).toBe(true);
     expect(puedeRegistrar(new Headers(), {} as unknown as NodeJS.ProcessEnv)).toBe(true);
-  });
-
-  it("un código con texto libre no se guarda", async () => {
-    await registrarEnServidor("crear_fallo", { codigo: "The model said: hola" }, ctx());
-    expect(mocks.values).not.toHaveBeenCalled();
   });
 
   it("si la base falla no lanza: el turno que lo registra sigue", async () => {

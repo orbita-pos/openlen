@@ -9,6 +9,7 @@ import {
   dismissQuestion,
   esperarRespuesta,
   leerDireccion,
+  preguntaPendiente,
   responder,
   turnoDeLaFila,
   turnoVivoDelProyecto,
@@ -158,6 +159,31 @@ describe("¿sigue vivo el turno de esta fila?", () => {
 describe("la respuesta a una pregunta de Len, dentro del turno", () => {
   afterEach(() => vi.useRealTimers());
   const respuesta = [{ id: "plazo", selected: ["48 horas"] }];
+
+  // Como DeepSeek («a browser that reconnects receives it again and can still
+  // complete it»): al recargar con una pregunta en el aire, el reenganche
+  // (`GET /api/agent/turno/<fila>`) la devuelve para pintar su tarjeta. Antes la
+  // tarjeta no salía hasta que vencía la espera (ensayo de caja, 06/10).
+  it("🔴 la pregunta que espera se puede volver a leer, y deja de estar al contestarla", async () => {
+    abrirTurno("t1", "u1");
+    const preguntas = [{ id: "plazo", question: "¿En cuánto tiempo?" }];
+    expect(preguntaPendiente("t1", "u1")).toBeNull();
+    const espera = esperarRespuesta("t1", { timeoutMs: 60_000, preguntas });
+    expect(preguntaPendiente("t1", "u1")).toEqual(preguntas);
+    expect(preguntaPendiente("t1", "otro")).toBeNull();
+    responder("t1", "u1", respuesta);
+    await espera;
+    expect(preguntaPendiente("t1", "u1")).toBeNull();
+  });
+
+  it("y también deja de estar cuando vence la espera", async () => {
+    vi.useFakeTimers();
+    abrirTurno("t1", "u1");
+    const espera = esperarRespuesta("t1", { timeoutMs: 1000, preguntas: [{ id: "a", question: "¿?" }] });
+    vi.advanceTimersByTime(1001);
+    expect(await espera).toBeNull();
+    expect(preguntaPendiente("t1", "u1")).toBeNull();
+  });
 
   it("llega a quien espera", async () => {
     abrirTurno("t1", "u1");

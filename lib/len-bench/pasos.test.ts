@@ -51,6 +51,6 @@ describe("fallidasDeLaTraza", () => {
     expect(fallidasDeLaTraza(traza)).toEqual({ Edit: 3 });
   });
   it("una respuesta sin `ok` no cuenta como fallida", () => {
-    expect(fallidasDeLaTraza([{ role: "user", content: "", functionResponses: [{ name: "usar_pagina", response: { resultado: "x" } }] }])).toEqual({});
+    expect(fallidasDeLaTraza([{ role: "user", content: "", functionResponses: [{ name: "use_page", response: { resultado: "x" } }] }])).toEqual({});
   });
 });

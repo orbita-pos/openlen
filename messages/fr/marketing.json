@@ -34,17 +34,6 @@
     "removeImage": "Retirer l'image",
     "attachedAlt": "Référence jointe",
     "micSilent": "Le micro s'est ouvert mais rien n'a été reconnu. Vérifiez que Chrome utilise la bonne entrée et que vous avez une connexion — la reconnaissance vocale tourne sur le service de votre navigateur, pas sur OpenLen.",
-    "modelo": {
-      "abrir": "Choisir le modèle",
-      "titulo": "Choisir le modèle",
-      "subtitulo": "Change le modèle qui écrit la page. Votre choix est enregistré pour les prochaines.",
-      "auto": "Automatique (recommandé)",
-      "autoDesc": "Utilise le modèle par défaut (actuellement : {modelo})",
-      "reasonerDesc": "Plus rapide, mais ne lit pas les images",
-      "visualCriticDesc": "Écrit plus en détail et lit vos images",
-      "sinVision": "Ne lit pas les images, et vous en avez joint une",
-      "masCaro": "~{n}× le coût"
-    },
     "asks": {
       "bakery": {
         "label": "Ma boulangerie",

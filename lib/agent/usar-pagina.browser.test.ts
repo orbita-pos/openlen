@@ -34,9 +34,9 @@ const calculadora = (arreglada: boolean) =>
     });
   </script>`);
 
-describe("usar_pagina — la barra que no mueve el precio", () => {
+describe("use_page — la barra que no mueve el precio", () => {
   it("🔴 con el fallo dice que no cambió nada; arreglada, dice el precio nuevo", async () => {
-    const pasos: PasoDeUso[] = [{ escribe: "3", en: "Metros" }, { lee: "Total" }];
+    const pasos: PasoDeUso[] = [{ type: "3", into: "Metros" }, { read: "Total" }];
     const rota = await visitar(calculadora(false), pasos);
     const bien = await visitar(calculadora(true), pasos);
     expect(rota).toContain("I moved the slider «Metros» to «3»");
@@ -47,7 +47,7 @@ describe("usar_pagina — la barra que no mueve el precio", () => {
   }, 90_000);
 });
 
-describe("usar_pagina — el clic que nadie escucha", () => {
+describe("use_page — el clic que nadie escucha", () => {
   const boton = (conOyente: "nada" | "pinta" | "calla") =>
     marco(`
     <p id="msg">Sin aplicar</p>
@@ -58,15 +58,15 @@ describe("usar_pagina — el clic que nadie escucha", () => {
     </script>`);
 
   it("🔴 sin oyente lo dice; con oyente que pinta, dice el cambio y no la nota", async () => {
-    const muerto = await visitar(boton("nada"), [{ pulsa: "Aplicar" }]);
-    const vivo = await visitar(boton("pinta"), [{ pulsa: "Aplicar" }]);
+    const muerto = await visitar(boton("nada"), [{ click: "Aplicar" }]);
+    const vivo = await visitar(boton("pinta"), [{ click: "Aplicar" }]);
     expect(muerto).toContain("there is nothing behind it");
     expect(vivo).toContain("«Sin aplicar» → «Aplicado»");
     expect(vivo).not.toContain("there is nothing behind it");
   }, 90_000);
 
   it("🔴 NO acusa en falso: si alguien escucha pero no pinta nada, dice que no cambió, sin la nota", async () => {
-    const informe = await visitar(boton("calla"), [{ pulsa: "Aplicar" }]);
+    const informe = await visitar(boton("calla"), [{ click: "Aplicar" }]);
     expect(informe).toContain("nothing changed");
     expect(informe).not.toContain("there is nothing behind it");
   }, 90_000);
@@ -75,12 +75,12 @@ describe("usar_pagina — el clic que nadie escucha", () => {
     const html = marco(`
       <p id="msg">0</p><button class="sumar">Sumar</button>
       <script>document.addEventListener("click", function (e) { if (e.target.closest(".sumar")) console.log("x"); });</script>`);
-    const informe = await visitar(html, [{ pulsa: "Sumar" }]);
+    const informe = await visitar(html, [{ click: "Sumar" }]);
     expect(informe).not.toContain("there is nothing behind it");
   }, 90_000);
 });
 
-describe("usar_pagina — lo que cambia solo", () => {
+describe("use_page — lo que cambia solo", () => {
   const contador = (botonVivo: boolean) =>
     marco(`
     <p>Visitas hoy: <span id="n">100</span></p>
@@ -92,8 +92,8 @@ describe("usar_pagina — lo que cambia solo", () => {
     </script>`);
 
   it("🔴 el contador que se mueve solo sale marcado; lo que movió el clic, no", async () => {
-    const muerto = await visitar(contador(false), [{ pulsa: "Abrir" }]);
-    const vivo = await visitar(contador(true), [{ pulsa: "Abrir" }]);
+    const muerto = await visitar(contador(false), [{ click: "Abrir" }]);
+    const vivo = await visitar(contador(true), [{ click: "Abrir" }]);
     expect(muerto).toContain("also changes by itself");
     expect(muerto).toContain("there is nothing behind it");
     expect(vivo).toContain("«Cerrado» → «Abierto»");
@@ -102,13 +102,13 @@ describe("usar_pagina — lo que cambia solo", () => {
   }, 90_000);
 });
 
-describe("usar_pagina — nada sale de la visita", () => {
+describe("use_page — nada sale de la visita", () => {
   it("🔴 un formulario normal dice qué habría mandado; si el script cancela el envío, lo dice", async () => {
     const form = (cancela: boolean) =>
       marco(`
       <form id="f"><label>Nombre <input name="nombre"></label><button type="submit">Enviar</button></form>
       ${cancela ? '<script>document.getElementById("f").addEventListener("submit", function (e) { e.preventDefault(); });</script>' : ""}`);
-    const pasos: PasoDeUso[] = [{ escribe: "Ana", en: "Nombre" }, { pulsa: "Enviar" }];
+    const pasos: PasoDeUso[] = [{ type: "Ana", into: "Nombre" }, { click: "Enviar" }];
     const normal = await visitar(form(false), pasos);
     const cancelado = await visitar(form(true), pasos);
     expect(normal).toContain("sent the form with: nombre=«Ana»");
@@ -122,7 +122,7 @@ describe("usar_pagina — nada sale de la visita", () => {
       <a href="https://wa.me/5215512345678?text=Hola%20quiero%20pedir">Pedir por WhatsApp</a>
       <p id="p">Uno</p><button id="b">Siguiente</button>
       <script>document.getElementById("b").addEventListener("click", function () { document.getElementById("p").textContent = "Dos"; });</script>`);
-    const informe = await visitar(html, [{ pulsa: "Pedir por WhatsApp" }, { pulsa: "Siguiente" }]);
+    const informe = await visitar(html, [{ click: "Pedir por WhatsApp" }, { click: "Siguiente" }]);
     expect(informe).toContain("it was sending to «https://wa.me/5215512345678?text=Hola quiero pedir» (not opened)");
     expect(informe).toContain("«Uno» → «Dos»");
   }, 90_000);
@@ -131,12 +131,12 @@ describe("usar_pagina — nada sale de la visita", () => {
     const html = marco(`
       <button id="b">Pedir</button>
       <script>document.getElementById("b").addEventListener("click", function () { location.href = "https://wa.me/5215500000000?text=pedido"; });</script>`);
-    const informe = await visitar(html, [{ pulsa: "Pedir" }]);
+    const informe = await visitar(html, [{ click: "Pedir" }]);
     expect(informe).toContain("it was sending to «https://wa.me/5215500000000?text=pedido» (not opened)");
   }, 90_000);
 });
 
-describe("usar_pagina — lo que se recuerda al volver", () => {
+describe("use_page — lo que se recuerda al volver", () => {
   const carrito = (guarda: boolean) =>
     marco(`
     <p id="c">Carrito vacío</p><button id="a">Agregar</button>
@@ -148,7 +148,7 @@ describe("usar_pagina — lo que se recuerda al volver", () => {
     </script>`);
 
   it("🔴 si guarda, tras recargar se ve igual; si no, lo dice", async () => {
-    const pasos: PasoDeUso[] = [{ pulsa: "Agregar" }, { recarga: true }];
+    const pasos: PasoDeUso[] = [{ click: "Agregar" }, { reload: true }];
     const guarda = await visitar(carrito(true), pasos);
     const olvida = await visitar(carrito(false), pasos);
     expect(guarda).toContain("saved in the browser «n» = «1»");
@@ -157,7 +157,7 @@ describe("usar_pagina — lo que se recuerda al volver", () => {
   }, 90_000);
 });
 
-describe("usar_pagina — un control que no es único o no existe no se pulsa al azar", () => {
+describe("use_page — un control que no es único o no existe no se pulsa al azar", () => {
   const tienda = marco(`
     <div class="card"><h3>Jabón de romero</h3><button class="add" data-p="romero">Agregar</button></div>
     <div class="card"><h3>Vela de cera</h3><button class="add" data-p="vela">Agregar</button></div>
@@ -165,8 +165,8 @@ describe("usar_pagina — un control que no es único o no existe no se pulsa al
     <script>document.querySelectorAll(".add").forEach(function (b) { b.addEventListener("click", function () { document.getElementById("t").textContent = "Pediste " + b.dataset.p; }); });</script>`);
 
   it("🔴 dos «Agregar» se nombran y no se pulsa ninguno; con dentro_de, el suyo", async () => {
-    const ambiguo = await visitar(tienda, [{ pulsa: "Agregar" }, { lee: "Pediste" }]);
-    const elegido = await visitar(tienda, [{ pulsa: "Agregar", dentro_de: "Vela de cera" }]);
+    const ambiguo = await visitar(tienda, [{ click: "Agregar" }, { read: "Pediste" }]);
+    const elegido = await visitar(tienda, [{ click: "Agregar", within: "Vela de cera" }]);
     expect(ambiguo).toContain("there are 2 controls that say «Agregar»");
     expect(ambiguo).toContain("Step 2 wasn't done");
     expect(elegido).toContain("«Nada» → «Pediste vela»");
@@ -179,23 +179,23 @@ describe("usar_pagina — un control que no es único o no existe no se pulsa al
       <a href="https://wa.me/5215511111111">WhatsApp</a>
       <a href="#visitanos">Agenda por WhatsApp →</a>
       <section id="visitanos"><p>Visítanos</p></section>`);
-    const conOtros = await visitar(html, [{ pulsa: "WhatsApp" }]);
-    const solo = await visitar(marco(`<a href="https://wa.me/5215511111111">WhatsApp</a>`), [{ pulsa: "WhatsApp" }]);
+    const conOtros = await visitar(html, [{ click: "WhatsApp" }]);
+    const solo = await visitar(marco(`<a href="https://wa.me/5215511111111">WhatsApp</a>`), [{ click: "WhatsApp" }]);
     expect(conOtros).toContain("it was sending to «https://wa.me/5215511111111»");
     expect(conOtros).toContain("other controls also say «WhatsApp» and I didn't press them: «Agenda por WhatsApp →»");
     expect(solo).not.toContain("other controls");
-    const roto = await visitar(html, [{ pulsa: "Agenda por WhatsApp →" }]);
+    const roto = await visitar(html, [{ click: "Agenda por WhatsApp →" }]);
     expect(roto).toContain("it is a link to «#visitanos»");
   }, 90_000);
 
   it("uno que no existe se dice con lo que sí hay", async () => {
-    const informe = await visitar(tienda, [{ pulsa: "Comprar ahora" }]);
+    const informe = await visitar(tienda, [{ click: "Comprar ahora" }]);
     expect(informe).toContain("there is no visible control that says «Comprar ahora»");
     expect(informe).toContain("«Agregar»");
   }, 90_000);
 });
 
-describe("usar_pagina — la página con scroll suave", () => {
+describe("use_page — la página con scroll suave", () => {
   // 🔴 El turno de producción del 2026-09-28: la página traía
   // `html{scroll-behavior:smooth}`, así que llevar el control a la vista era un
   // desplazamiento ANIMADO. El mousedown caía en el enlace y el mouseup, 20 ms
@@ -246,7 +246,7 @@ describe("usar_pagina — la página con scroll suave", () => {
   }, 90_000);
 });
 
-describe("usar_pagina — elegir", () => {
+describe("use_page — elegir", () => {
   it("🔴 una opción de desplegable y un radio con etiqueta mueven el precio; sin oyente, no", async () => {
     const pagina = (conOyente: boolean) =>
       marco(`
@@ -258,7 +258,7 @@ describe("usar_pagina — elegir", () => {
         function calc() { var base = document.getElementById("s").value === "Nogal" ? 150 : 100; var t = Number(document.querySelector("input[name=t]:checked").value); document.getElementById("precio").textContent = "$ " + base * t; }
         ${conOyente ? 'document.getElementById("s").addEventListener("change", calc); document.querySelectorAll("input[name=t]").forEach(function (r) { r.addEventListener("change", calc); });' : ""}
       </script>`);
-    const pasos: PasoDeUso[] = [{ elige: "Nogal" }, { elige: "Grande" }];
+    const pasos: PasoDeUso[] = [{ choose: "Nogal" }, { choose: "Grande" }];
     const vivo = await visitar(pagina(true), pasos);
     const muerto = await visitar(pagina(false), pasos);
     expect(vivo).toContain("I chose «Nogal» in the dropdown «Acabado");
@@ -276,7 +276,7 @@ describe("usar_pagina — elegir", () => {
 // va en SU clave del `localStorage` antes de que corra la página. La sesión es
 // de mentira aquí (no hay backend): lo que se prueba es la visita, no GoTrue
 // (eso está en lib/backend/auth/visit-session.test.ts).
-describe("usar_pagina — entrar como un usuario de la página", () => {
+describe("use_page — entrar como un usuario de la página", () => {
   const STORAGE_KEY = "sb-abcdefghijklmnopqrst-auth-token";
   const signedInAs = {
     email: "ana@tiendaluna.mx",
@@ -295,7 +295,7 @@ describe("usar_pagina — entrar como un usuario de la página", () => {
     </script>`);
 
   it("🔴 la sesión ya está guardada cuando corre la página, y el informe lo dice; sin ella, nadie", async () => {
-    const pasos: PasoDeUso[] = [{ lee: "Salir" }];
+    const pasos: PasoDeUso[] = [{ read: "Salir" }];
     const signedIn = (await usarPagina({ html: pageHtml, pasos, ruta: "/index.html", signedInAs })).informe;
     const anonymous = await visitar(pageHtml, pasos);
     expect(signedIn).toContain("Hola, ana@tiendaluna.mx");
@@ -305,7 +305,7 @@ describe("usar_pagina — entrar como un usuario de la página", () => {
   }, 90_000);
 
   it("🔴 si la página cierra la sesión, recargar no la vuelve a abrir", async () => {
-    const pasos: PasoDeUso[] = [{ pulsa: "Salir" }, { recarga: true }, { lee: "Salir" }];
+    const pasos: PasoDeUso[] = [{ click: "Salir" }, { reload: true }, { read: "Salir" }];
     const report = (await usarPagina({ html: pageHtml, pasos, ruta: "/index.html", signedInAs })).informe;
     // Había sesión antes de pulsar «Salir»: si no, el resto no prueba nada.
     expect(report).toContain("«Hola, ana@tiendaluna.mx» → «Sin sesión»");
@@ -318,7 +318,7 @@ describe("usar_pagina — entrar como un usuario de la página", () => {
 // LA CARPETA (pieza 9 de Len 2.5): el JavaScript que vive en `/js/app.js` llega
 // a la visita como llegaría a la publicada. Sin la carpeta, el mismo botón no
 // tiene a nadie detrás: es lo que Len vería, y diría, si no viajara.
-describe("usar_pagina — la carpeta del proyecto", () => {
+describe("use_page — la carpeta del proyecto", () => {
   const pagina = marco(`
     <p id="msg">Sin aplicar</p>
     <button id="aplicar">Aplicar</button>
@@ -335,7 +335,7 @@ describe("usar_pagina — la carpeta del proyecto", () => {
   });
 
   it("🔴 el script de /js/app.js llega y el botón pinta; BRAZO DE CONTROL: sin la carpeta, nadie lo escucha", async () => {
-    const pasos: PasoDeUso[] = [{ pulsa: "Aplicar" }];
+    const pasos: PasoDeUso[] = [{ click: "Aplicar" }];
     const con = (await usarPagina({ html: pagina, pasos, ruta: "/index.html", vista: vista({ "/js/app.js": APP }) })).informe;
     const sin = (await usarPagina({ html: pagina, pasos, ruta: "/index.html", vista: vista() })).informe;
     expect(con).toContain("«Sin aplicar» → «Aplicado»");

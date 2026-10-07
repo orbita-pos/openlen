@@ -56,6 +56,8 @@ export function answerOfNextTurn(next: DesignTurn | undefined): { answer: string
 export function UserMessage({ turn, initial }: { turn: DesignTurn; initial: string }) {
   const t = useTranslations("panelsChat");
   const { text: escrito, corrections } = splitCorrections(turn.userText);
+  // Una foto, como siempre; con dos o más (Crear es Len), todas.
+  const fotos = turn.attachedImages ?? (turn.attachedImage ? [turn.attachedImage] : []);
   // PIEZA 8 · LAS RONDAS DEL ENCARGO: su mensaje (el de DeepSeek) queda en la
   // charla porque lo lee el modelo, pero el dueño no lo escribió. La ronda 1 es
   // su mensaje —su objetivo—; las siguientes, una línea.
@@ -86,11 +88,13 @@ export function UserMessage({ turn, initial }: { turn: DesignTurn; initial: stri
     <div className="flex flex-col items-end gap-1.5">
       <div className="nc-up flex items-end justify-end gap-2">
         <div className="max-w-[84%] whitespace-pre-wrap break-words rounded-[16px_16px_4px_16px] border bd bg-elev px-3 py-2 text-[14px] leading-relaxed fg">
-          {turn.attachedImage && (
+          {fotos.length > 0 && (
             <div className="mb-1.5 flex items-center gap-1.5 text-[11.5px] fg-muted">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={turn.attachedImage.url} alt="" className="h-9 w-9 rounded-[7px] object-cover" />
-              {t("turn.imageSent")}
+              {fotos.map((f) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={f.url} src={f.url} alt="" className="h-9 w-9 rounded-[7px] object-cover" />
+              ))}
+              {fotos.length > 1 ? t("turn.imagesSent", { count: fotos.length }) : t("turn.imageSent")}
             </div>
           )}
           {turn.scope && (

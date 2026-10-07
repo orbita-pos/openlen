@@ -88,11 +88,12 @@ export type HtmlGateResult =
  *   - `app/api/projects/from-html`            { render: false, seal: false }
  *   - `app/api/projects/from-template`        { render: false, seal: false }
  *     (dos veces — una para la portada, otra por cada subpágina clonada)
- *   - `lib/page-engine/prepare.ts` — EL MOTOR. Por aquí entran las TRES
- *     superficies del modelo (Crear, el Chat y Len) y ninguna otra, así que
- *     `/api/generate`, `/api/templates/ai-design` y `/api/agent` llegan a esta
- *     puerta a través de él, no por su cuenta. Y llega distinto: `sanitize` es
- *     `gateReservedMarker` en vez de `sanitizeForPublish` y `normalize: false`.
+ *   - `lib/page-engine/prepare.ts` — EL MOTOR. Por aquí entran las superficies
+ *     del modelo (el Chat y Len; Crear también, hasta que se retiró el
+ *     2026-10-06) y ninguna otra, así que `/api/templates/ai-design` y
+ *     `/api/agent` llegan a esta puerta a través de él, no por su cuenta. Y
+ *     llega distinto: `sanitize` es `gateReservedMarker` en vez de
+ *     `sanitizeForPublish` y `normalize: false`.
  *
  * Todas pasan `seal: false`: nada se sirve desde una ruta que escribe en la
  * base, y `publishToDir` sella al publicar. `render: false` en todas, porque

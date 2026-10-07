@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { nombreDeError, validarDatos, validarEventoDeCliente } from "./catalogo";
+import { validarDatos, validarEventoDeCliente } from "./catalogo";
 
 const SESION = "0f8e2c1a-6b1d-4d7e-9a55-3c2b1f0e9d11";
 
 describe("el catálogo de eventos de uso", () => {
   it("acepta un evento del navegador que cumple su esquema", () => {
     expect(
-      validarEventoDeCliente({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 2, referencia: false, escritor: "reasoner" } }),
-    ).toEqual({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 2, referencia: false, escritor: "reasoner" } });
+      validarEventoDeCliente({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 2, referencia: false } }),
+    ).toEqual({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 2, referencia: false } });
   });
 
   // 🔴 LA REGLA ENTERA: el brief no cabe. Una clave de más descarta el evento
@@ -18,14 +18,13 @@ describe("el catálogo de eventos de uso", () => {
       validarEventoDeCliente({
         nombre: "crear_envio",
         sesion: SESION,
-        // 🔴 LLEVA TODAS LAS CLAVES OBLIGATORIAS a propósito: sin `escritor`
-        // este evento saldría `null` por la clave que FALTA, y la prueba
+        // 🔴 LLEVA TODAS LAS CLAVES OBLIGATORIAS a propósito: sin una de
+        // ellas este evento saldría `null` por la clave que FALTA, y la prueba
         // pasaría por el motivo equivocado — el brief podría colarse y esto
         // seguiría verde. Lo único que sobra aquí es el brief.
         datos: {
           imagenes: 0,
           referencia: false,
-          escritor: "reasoner",
           brief: "mi negocio de tacos en Oaxaca",
         },
       }),
@@ -33,10 +32,14 @@ describe("el catálogo de eventos de uso", () => {
     expect(validarEventoDeCliente({ nombre: "crear_vista", sesion: SESION, datos: { texto: "hola" } })).toBeNull();
   });
 
-  it("el navegador no puede fingir un fallo del servidor", () => {
+  // ⚰️ «el navegador no puede fingir un fallo del servidor» probaba
+  // `crear_fallo`, el único evento de origen servidor; se fue con
+  // `/api/generate` el 2026-10-06.
+  it("un evento de antes, con `escritor` (el selector de Crear), ya no pasa", () => {
     expect(
-      validarEventoDeCliente({ nombre: "crear_fallo", sesion: SESION, datos: { codigo: "modelo" } }),
+      validarEventoDeCliente({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 0, referencia: false, escritor: "reasoner" } }),
     ).toBeNull();
+    expect(validarEventoDeCliente({ nombre: "crear_modelo_abrio", sesion: SESION, datos: {} })).toBeNull();
   });
 
   it("descarta nombres fuera del catálogo, también los que viven en el prototipo", () => {
@@ -67,17 +70,6 @@ describe("el catálogo de eventos de uso", () => {
     expect(validarDatos("crear_plantilla", { plantilla: "Mi Plantilla" })).toBeNull();
   });
 
-  it("un código de fallo sólo pasa con el formato de Claude Code", () => {
-    expect(validarDatos("crear_fallo", { codigo: "sin_creditos" })).toEqual({ codigo: "sin_creditos" });
-    expect(validarDatos("crear_fallo", { codigo: "The model said: no" })).toBeNull();
-    expect(validarDatos("crear_fallo", { codigo: "puerta", detalle: "x".repeat(41) })).toBeNull();
-  });
-
-  it("de un error sale su nombre como código, nunca el mensaje", () => {
-    expect(nombreDeError(new TypeError("el brief decía algo privado"))).toBe("type_error");
-    const abortado = new Error("x");
-    abortado.name = "AbortError";
-    expect(nombreDeError(abortado)).toBe("abort_error");
-    expect(nombreDeError("no soy un error")).toBe("desconocido");
-  });
+  // ⚰️ «un código de fallo…» y «de un error sale su nombre…» probaban
+  // `crear_fallo` y `nombreDeError`, que se fueron con Crear el 2026-10-06.
 });

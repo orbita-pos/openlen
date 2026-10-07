@@ -108,22 +108,22 @@ describe("las herramientas en una app", () => {
   });
 
   it("mirar y usar abren una PANTALLA (#/ruta), no una página", () => {
-    for (const n of ["mirar_pagina", "usar_pagina"]) {
-      expect(de(app, n).parameters.properties).toHaveProperty("pantalla");
+    for (const n of ["view_page", "use_page"]) {
+      expect(de(app, n).parameters.properties).toHaveProperty("screen");
       expect(de(app, n).parameters.properties).not.toHaveProperty("file_path");
       expect(de(pagina, n).parameters.properties).toHaveProperty("file_path");
     }
   });
 
   it("deshacer es el turno anterior entero, sin fichero que elegir", () => {
-    expect(de(app, "revertir_ultimo_cambio").description).toMatch(/Undoes your PREVIOUS turn whole/);
-    expect(de(app, "revertir_ultimo_cambio").parameters.properties).toEqual({});
+    expect(de(app, "undo_last_change").description).toMatch(/Undoes your PREVIOUS turn whole/);
+    expect(de(app, "undo_last_change").parameters.properties).toEqual({});
   });
 
-  it("publicar no acepta idiomas: una app no se traduce sola", () => {
-    expect(de(app, "publicar").parameters.properties).not.toHaveProperty("idiomas");
-    expect(de(app, "publicar").description).toMatch(/without translations/);
-    expect(de(pagina, "publicar").parameters.properties).toHaveProperty("idiomas");
+  it("publish no acepta idiomas (languages): una app no se traduce sola", () => {
+    expect(de(app, "publish").parameters.properties).not.toHaveProperty("languages");
+    expect(de(app, "publish").description).toMatch(/without translations/);
+    expect(de(pagina, "publish").parameters.properties).toHaveProperty("languages");
   });
 
   it("sin app, las de siempre", () => {
@@ -177,7 +177,7 @@ describe("los nombres que usa el modo app", () => {
     // Lo que tiene forma de nombre y NO es una herramienta: un parámetro, un
     // valor o un identificador de Postgres. Si una herramienta se renombra, su
     // nombre viejo cae aquí y la prueba lo dice.
-    const NO_SON_HERRAMIENTAS = new Set(["blocked_reason", "sign_in_as", "postgres_changes", "supabase_realtime", "sin_leer", "output_mode"]);
+    const NO_SON_HERRAMIENTAS = new Set(["blocked_reason", "sign_in_as", "postgres_changes", "supabase_realtime", "by_date", "output_mode"]);
     const sueltos = [...new Set([...texto.matchAll(/\b[a-z]+(?:_[a-z0-9]+)+\b/g)].map((m) => m[0]))].filter(
       (t) => !declaradas.has(t) && !NO_SON_HERRAMIENTAS.has(t),
     );
