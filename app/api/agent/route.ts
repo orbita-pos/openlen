@@ -87,6 +87,7 @@ import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
 import { cambiosDelTurnoParaDeshacer } from "@/lib/projects/deshacer-turno-plan";
 import { guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
+import { nacerComoApp } from "@/lib/projects/nacer-como-app";
 import { observarPagina } from "@/lib/agent/verify";
 import { usarPagina } from "@/lib/agent/usar-pagina";
 import {
@@ -284,6 +285,12 @@ type CuerpoDelTurno = {
   /** Pieza 8: la puerta del dueño al encargo — `"create"` (la opción «Encargo»:
    *  el mensaje es el objetivo) o `"resume"` («Reanudar»). Otra cosa no cuenta. */
   goal?: unknown;
+  /** UNA APP NACE (H10 de la spec local 2026-10-07-apps): `"app"` en el primer
+   *  mensaje de un proyecto en blanco lo convierte en app antes del turno. Otra
+   *  cosa no cuenta, y en un proyecto con algo dentro no hace nada. */
+  naceComo?: unknown;
+  /** El idioma de la interfaz, para el `lang` del cascarón de una app que nace. */
+  idioma?: unknown;
 };
 
 /** La ronda de un encargo que abre el conductor (pieza 8). Nunca sale del cuerpo. */
@@ -469,6 +476,24 @@ async function correrTurno(
     // su propio preludio.
     usarPagina,
   };
+  // UNA APP NACE (H10): crear es el primer mensaje a Len en un proyecto en
+  // blanco, y si ese mensaje pide una app, el proyecto recibe aquí el esqueleto
+  // (`lib/projects/nacer-como-app.ts`) — antes de leerlo, para que el turno
+  // entero sea ya de app. Sólo toca un proyecto en blanco, en una sentencia; si
+  // no lo está, no pasa nada y el turno sigue con lo que hay. Va antes de la
+  // puerta de créditos a propósito: el dueño eligió app, y sin créditos se
+  // queda con el esqueleto, que arranca, en vez de con una página en blanco.
+  if (body?.naceComo === "app" && !opts.round) {
+    await nacerComoApp({
+      projectId,
+      userId,
+      titulo: "App",
+      ...(typeof body.idioma === "string" ? { idioma: body.idioma } : {}),
+    }).catch((err: unknown) => {
+      // eslint-disable-next-line no-console
+      console.warn("[agent] la app no pudo nacer; el turno sigue con el proyecto como está", err);
+    });
+  }
   const project = await deps.loadProject(projectId, userId);
   if (!project) return errorJson(404, "project not found");
   const pageSlug =

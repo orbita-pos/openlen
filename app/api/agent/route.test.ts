@@ -80,6 +80,8 @@ const mocks = vi.hoisted(() => ({
   // N42: el cobro que la ruta le pasa a `realDeps` — el que usan las
   // herramientas que cobran aparte del modelo (búsquedas, editar una imagen).
   cobroDeLasHerramientas: undefined as undefined | ((userId: string, centicreditos: number) => Promise<unknown>),
+  // UNA APP NACE (H10): el esqueleto, antes de leer el proyecto.
+  nacerComoApp: vi.fn(async (_p: unknown) => true),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -140,6 +142,7 @@ vi.mock("@/lib/resultados/zona-guardada", () => ({
 vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }));
 // F2 de las apps web: lo que cambió el turno, guardado para deshacerlo entero.
 vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.guardarCambiosDelTurno }));
+vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
 vi.mock("@/lib/projects/chat", () => ({
   turnosParaElHistorial: mocks.turnosParaElHistorial,
   registrarTurnoDelServidor: mocks.registrarTurnoDelServidor,
@@ -309,6 +312,42 @@ describe("POST /api/agent credit gate", () => {
   // porque cada una leía el interruptor por su cuenta y ése fue el hallazgo 1.
   // Ya no hay capacidad que repartir: el modelo siempre puede escribir el
   // JavaScript de su página, así que no queda nada en lo que discrepar.
+  // UNA APP NACE (H10 de la spec local 2026-10-07-apps): el primer mensaje que
+  // la pide convierte el proyecto en blanco ANTES de leerlo, para que el turno
+  // entero sea ya de app (su prompt, su manual, sus herramientas).
+  it("🔴 naceComo: \"app\" pone el esqueleto ANTES de leer el proyecto, con el idioma de la interfaz", async () => {
+    const orden: string[] = [];
+    mocks.nacerComoApp.mockImplementationOnce(async () => (orden.push("nace"), true));
+    mocks.loadProject.mockImplementationOnce(async () => (orden.push("lee"), null));
+    await POST(new Request("http://localhost/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ projectId: "p1", prompt: "hazme un POS para una cafetería", naceComo: "app", idioma: "es" }),
+    }));
+    expect(mocks.nacerComoApp).toHaveBeenCalledWith({ projectId: "p1", userId: "u1", titulo: "App", idioma: "es" });
+    expect(orden).toEqual(["nace", "lee"]);
+  });
+
+  it("CONTRA-PRUEBA: sin naceComo, o con otro valor, no nace nada", async () => {
+    for (const extra of [{}, { naceComo: "pagina" }, { naceComo: true }]) {
+      await POST(new Request("http://localhost/api/agent", {
+        method: "POST",
+        body: JSON.stringify({ projectId: "p1", prompt: "cambia el título", ...extra }),
+      }));
+    }
+    expect(mocks.nacerComoApp).not.toHaveBeenCalled();
+  });
+
+  it("si la app no puede nacer, el turno sigue con el proyecto como está", async () => {
+    mocks.nacerComoApp.mockRejectedValueOnce(new Error("la base no contesta"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await POST(new Request("http://localhost/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ projectId: "p1", prompt: "hazme un POS", naceComo: "app" }),
+    }));
+    expect(mocks.loadProject).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it("un slug inválido devuelve 404 antes de construir prompt o autoridad de Home", async () => {
     const res = await POST(new Request("http://localhost/api/agent", {
       method: "POST",

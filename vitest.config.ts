@@ -206,6 +206,7 @@ export default defineConfig({
       // la sentencia, contra Postgres).
       "lib/projects/deshacer-turno-plan.test.ts",
       "lib/projects/deshacer-turno.pg.test.ts",
+      "lib/projects/nacer-como-app.pg.test.ts",
       "lib/publish/model-runtime-locales.test.ts",
       // Un idioma pedido que no sale tiene que OÍRSE: el fallo era mudo y por
       // eso la traducción vivió cinco meses sin producir una sola página.
