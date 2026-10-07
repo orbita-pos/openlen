@@ -188,36 +188,42 @@ modelo (más la confirmación de publicar):
   tus visitas», «Comprobando la página», «Probando la página». Prueba nueva en
   `steps-card.test.tsx`.
 
-### Visto y NO arreglado (ya pasa en `master` o es del entorno)
+### Segunda ronda (07/10): lo que salió en el ensayo, arreglado «como DeepSeek»
 
-- **■ a mitad de un `Write` sale como «El modelo tuvo un problema»**, no como
-  «Detenido», y la fila queda `applied` con `motivo=upstream` (0 créditos, eso
-  sí). Causa: `lib/ai/fireworks-stream-client.ts`, tras cortar, arma las
-  llamadas a medias ANTES de mirar `cancelled` y devuelve «tool arguments were
-  not JSON: Write». El mismo código está en `master`; la rama sólo lo hace más
-  visible, porque ahora se ve el `Write` mientras se escribe. Arreglo propuesto
-  (pequeño): si `cancelled`, saltarse el armado y ceder `{ kind: "cancelled" }`.
-- **En producción en local, cualquier redirección a `localhost` acaba en
-  `https://openlen.com`** (`fixRedirectHost`, `middleware.ts:103`, que existe
-  para la caja). Así la portada de marketing → `/new?brief=` (que redirige para
-  añadir `mode=ai`) y `localhost:3007/` → `/es` saltaban a producción. En la
-  caja el host es openlen.com y está bien. Para el ensayo: navegar a la URL
-  final o usar `http://ensayo.localhost:3007` (no se reescribe).
-- **El lienzo por origen** apunta en producción a
-  `https://lienzo-<etiqueta>.<PUBLISH_BASE_HOST>`, que en local no existe; cae
-  solo a la vista limitada (`srcdoc`). Para el ensayo, `OPENLEN_LIENZO_ORIGEN=0`.
-- **La primera frase de Len sale en inglés** en los turnos que empiezan una
-  página o una reescritura grande, aunque el brief sea en español («I'll start
-  by reading the design guide…», «The user wants a full rewrite…»). El cierre
-  y los turnos siguientes, en español. No se comparó con `master`: es para
-  mirar, no está claro que sea de la rama.
-- **Tras cortar con ■ una reescritura**, el turno siguiente («¿cómo va mi
-  página?») contestó Y rehízo la reescritura cortada, que seguía en su
-  historial. Conducta del modelo, no de las herramientas.
+Jesús pidió arreglar lo visto. Cada arreglo con su prueba, typecheck y lint, y
+comprobado después en el build de producción en 127.0.0.1 con Fireworks real
+(esta ronda: ~13 créditos, ~0,13 $; la sesión entera, 44,75 créditos).
+
+| Commit | Qué | Comprobado en el ensayo |
+|---|---|---|
+| `0c68e064` | **■ a mitad de un `Write`**: el cliente de Fireworks armaba los argumentos a medias y salía «tool arguments were not JSON» → «El modelo tuvo un problema». Como DeepSeek (`interrupted: true`): lo dicho se queda y las llamadas sin despachar no existen. | ■ con la página a medias: «Cancelado.» / «Detenido · lo que ya hizo se queda»; el lienzo vuelve a lo guardado en <1 s. |
+| `93b13596` | **El stream que se corta a mitad de una llamada** (visto al comprobar lo anterior: un turno de crear murió con 16.738 caracteres de página cortados dentro de un `<path>`). Sólo se arman llamadas si el stream terminó: sin `finish_reason` es corte de transporte (se reintenta); con `length`, `max_tokens` (el bucle continúa como Claude Code). | Pruebas; el corte real no se repitió. |
+| `24fad8fb` + `fd1f7334` | **Retomar lo cortado**: la transcripción guarda `detenido` (el `interrupted` de DeepSeek) y el historial pone detrás la marca «[Request interrupted by the owner (■)…]», como Claude Code. Y la causa real: el aviso de «turno mudo» («If the user asked you for a change and it still isn't applied, apply it NOW») saltaba tras un turno parado antes de su primera herramienta; parado no es mudo. | En una conversación LIMPIA (Pino): tras el ■, «¿cómo va mi página?» → sólo `get_visits`, «la landing quedó a medias… ¿La escribo ya?». (En Brisa y en Monte siguió rehaciéndola: su historial traía razonamientos VIEJOS que citaban el aviso —en Monte, la fila sembrada a mano para el paso 4—.) |
+| `1ca1bda9` | **Inglés al empezar**: la petición del dueño iba pegada detrás del contexto en inglés con «WHAT THE USER ASKS YOU NOW:». Como DeepSeek (su contexto es otro mensaje, `runtimeContext.project`) y Claude Code: el contexto en su propio mensaje, y el último es el del dueño, solo (con sus fotos y, marcados, los avisos). | Dos primeros turnos de proyecto (Tinta, Brisa): toda la narración en español desde la primera frase. Antes, 3 de 3 empezaban en inglés. |
+| `d45cb804` | **Redirecciones a openlen.com**: `fixRedirectHost` sólo rehace hacia openlen.com si la petición llegó por un host público (Caddy pasa el Host y `X-Forwarded-Host` de fuera). | `localhost:3007/` → `/es`, portada → `/new?brief=` y login con `?next=`, todo en local. |
+| `bb9dc660` | **El lienzo en local**: con un Host local, `urlDelDocumento` va a `http://lienzo-….localhost:<puerto>` también en producción. | El lienzo carga por su origen, sin «vista limitada». |
+| `3facae7c` | **Las fotos sin R2 con `next start`**: `app/uploads/[...path]` sirve lo subido después del build (sólo ráster, nosniff, sin salir de la carpeta, nada si hay R2). | Las dos miniaturas del brief se ven. |
+| `ffac2660` | **«Untitled page» en la barra** de un proyecto cuyo primer turno no escribió la portada: el relleno se traduce siempre («Proyecto nuevo»). | Pino sin portada: «Proyecto nuevo». |
+
+**Puertas al final:** typecheck limpio; las pruebas tocadas en verde
+(`fireworks-stream-client`, `loop`, `transcripcion`, `context`, `manual-de-la-plataforma`,
+`route` del agente, `prompts-golden`, `lienzo`, `middleware-redirect-host`,
+`app/uploads`); `test:node` 676 de 676; `npm run build` compila.
+
+### Visto y NO arreglado
+
 - **Recargar con una pregunta de Len pendiente** pinta «Escribiendo» sin la
   tarjeta de la pregunta hasta que vence la espera (2 min, `ASK_USER_TIMEOUT_MS`);
   después la tarjeta vuelve y la respuesta abre el turno siguiente. Pieza 3 de
   Len 2.5, no de esta rama.
+- **`enter_plan_mode` en un primer turno** (Pino) no sacó tarjeta de aprobar:
+  la pregunta salió como texto del turno y en inglés («Switch to plan mode?
+  Len explores and agrees the approach…»). No investigado; Len 2.5, no de esta rama.
+- **Un ■ antes de que llegue el uso** (`usage`) cobra 0: el ■ cobra lo usado,
+  pero sin el trozo de uso del proveedor no hay tokens que contar. Ya era así.
+- **El razonamiento de turnos viejos vuelve en el historial (H15)**, y uno que
+  citaba un aviso ya retirado lo sigue «oyendo»: así siguió rehaciéndose la
+  reescritura en Brisa y Monte. Se va solo cuando esos turnos salen de la ventana.
 
 ## Lo que queda
 
