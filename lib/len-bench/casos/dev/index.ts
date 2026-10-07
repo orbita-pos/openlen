@@ -33,8 +33,9 @@ import { crear as encargoGrande } from "./encargo-grande";
 import { crear as nombreNuevo } from "./nombre-nuevo";
 import { crear as codigoDeDescuento } from "./codigo-de-descuento";
 import { crear as pedidoMinimo } from "./pedido-minimo";
-// Añadido a mano (no viene del reparto): la tarea #15 de las apps.
+// Añadidos a mano (no vienen del reparto): los casos de las apps.
 import { crear as posDeCafeteria } from "./pos-de-cafeteria";
+import { crear as paginaQueSeVuelveApp } from "./pagina-que-se-vuelve-app";
 
 const DIR = path.resolve("lib/len-bench/casos/dev/paginas");
 
@@ -71,4 +72,5 @@ export const ENCARGOS: Encargo[] = [
   codigoDeDescuento(DIR),
   pedidoMinimo(DIR),
   posDeCafeteria(),
+  paginaQueSeVuelveApp(),
 ];

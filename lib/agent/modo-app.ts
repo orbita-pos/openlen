@@ -27,6 +27,7 @@
 // Todo en inglés: lo lee el modelo.
 
 import type { AppDeProyecto } from "@/lib/projects/types";
+import { CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE } from "@/lib/agent/convertir-en-app";
 import { catalogo } from "@/lib/apps/dependencias";
 import { ICONOS_DE_LAS_APPS } from "@/lib/apps/iconos";
 import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
@@ -112,6 +113,8 @@ export function promptDeLaApp(promptDePagina: string, app: AppDeProyecto): strin
   const fin = encontrar(p, "\n", i);
   p = p.slice(0, i) + LO_QUE_PUEDE_LA_APP + p.slice(fin);
   p = cambiarBloque(p, "THEIR DATA AND THEIR LINKS:\n", "\n\nMEMORY IS TWO FILES", SUS_DATOS_EN_LA_APP);
+  // Convertir en app es de una página: en una app, la viñeta sobra.
+  p = cambiar(p, `\n${LA_PAGINA_QUE_CRECE}`, "");
   return p;
 }
 
@@ -248,7 +251,8 @@ const PUBLICAR_EN_LA_APP =
 export const HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP = ["view_page", "use_page", "undo_last_change", "publish"] as const;
 
 export function declaracionesDeLaApp(declaraciones: readonly Record<string, unknown>[]): Record<string, unknown>[] {
-  return declaraciones.map((d) => {
+  // `convert_to_app` es de una página: una app ya lo es.
+  return declaraciones.filter((d) => d.name !== CONVERTIR_EN_APP).map((d) => {
     const parametros = d.parameters as { properties?: Record<string, unknown>; required?: string[] } | undefined;
     const sinFilePath = () => {
       const { file_path: _fuera, ...resto } = parametros?.properties ?? {};

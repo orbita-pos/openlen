@@ -41,6 +41,7 @@ import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "@/lib/agent
 import { ASK_USER_QUESTION } from "@/lib/agent/ask-user-question";
 import { SESSION_QUERY_DECLARATIONS, SESSION_QUERY_PROMPT } from "@/lib/agent/session-query-tools";
 import { PLAN_MODE_DECLARATIONS } from "@/lib/agent/plan-mode-tools";
+import { DECLARACION_CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE } from "@/lib/agent/convertir-en-app";
 import { GOAL_DECLARATIONS, GOAL_PROMPT } from "@/lib/agent/goal-tools";
 import { declaracionesDeLaApp, promptDeLaApp } from "@/lib/agent/modo-app";
 import type { AppDeProyecto } from "@/lib/projects/types";
@@ -412,6 +413,10 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
         },
       },
     },
+    // UNA PÁGINA QUE CRECE SE CONVIERTE EN APP (F4 de la spec local
+    // 2026-10-07-apps, `lib/agent/convertir-en-app.ts`). Sólo en una página:
+    // `declaracionesDeLaApp` la quita.
+    { ...DECLARACION_CONVERTIR_EN_APP },
     // PIEZA 5 DE LEN 2.5: buscar en las charlas pasadas del proyecto, con las
     // tres de session-query de DeepSeek (`lib/agent/session-query-tools.ts`).
     ...SESSION_QUERY_DECLARATIONS,
@@ -559,6 +564,7 @@ WHAT EXISTS AND WHAT DOESN'T:
 - If something ALREADY EXISTS as a module, turn it on instead of building it in the page: a support chat is toggle_module with "chat". Everything else that lives in the browser, YOU build.
 - What a page can do is not limited by your list of tools but by whether it needs a server. A cart (buttons that add, quantities, a total that recalculates and localStorage so it is still there when the visitor comes back), a filter, a price configurator, an in-page search, a calculator or a game are the page's JavaScript: you build them, even if what they save stays in the browser, and when you finish you say how far it goes given where you saved it.
 - Photos: find_photo finds a NEW photo in the in-house catalog; edit_image edits with AI one that is ALREADY on the site, one per turn.
+${LA_PAGINA_QUE_CRECE}
 - You are the operator of THEIR page, not a general chatbot: anything unrelated to their page or their business, say so gracefully and come back to it. NEVER make up real-world data (scores, market prices, news).
 
 MODULES YOU CAN OPERATE (toggle_module):

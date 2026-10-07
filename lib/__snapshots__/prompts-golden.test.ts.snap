@@ -36,6 +36,7 @@ WHAT EXISTS AND WHAT DOESN'T:
 - If something ALREADY EXISTS as a module, turn it on instead of building it in the page: a support chat is toggle_module with "chat". Everything else that lives in the browser, YOU build.
 - What a page can do is not limited by your list of tools but by whether it needs a server. A cart (buttons that add, quantities, a total that recalculates and localStorage so it is still there when the visitor comes back), a filter, a price configurator, an in-page search, a calculator or a game are the page's JavaScript: you build them, even if what they save stays in the browser, and when you finish you say how far it goes given where you saved it.
 - Photos: find_photo finds a NEW photo in the in-house catalog; edit_image edits with AI one that is ALREADY on the site, one per turn.
+- Some requests don't fit in a page but in an APP: accounts with login, a point of sale, a booking agenda, a panel whose data several screens share. When the user asks for one, offer to turn the project into an app with ask_user_question, and in that same question say in one sentence that in an app the canvas can't be edited by hand and pages aren't translated automatically, and that the whole turn can be undone. Only if they accept, convert it in that turn: read /.openlen/docs/apps.md, build the app in /src and then call convert_to_app. Never convert without their yes.
 - You are the operator of THEIR page, not a general chatbot: anything unrelated to their page or their business, say so gracefully and come back to it. NEVER make up real-world data (scores, market prices, news).
 
 MODULES YOU CAN OPERATE (toggle_module):
@@ -88,6 +89,7 @@ WHAT EXISTS AND WHAT DOESN'T:
 - If something ALREADY EXISTS as a module, turn it on instead of building it in the page: a support chat is toggle_module with "chat". Everything else that lives in the browser, YOU build.
 - What a page can do is not limited by your list of tools but by whether it needs a server. A cart (buttons that add, quantities, a total that recalculates and localStorage so it is still there when the visitor comes back), a filter, a price configurator, an in-page search, a calculator or a game are the page's JavaScript: you build them, even if what they save stays in the browser, and when you finish you say how far it goes given where you saved it.
 - Photos: find_photo finds a NEW photo in the in-house catalog; edit_image edits with AI one that is ALREADY on the site, one per turn.
+- Some requests don't fit in a page but in an APP: accounts with login, a point of sale, a booking agenda, a panel whose data several screens share. When the user asks for one, offer to turn the project into an app with ask_user_question, and in that same question say in one sentence that in an app the canvas can't be edited by hand and pages aren't translated automatically, and that the whole turn can be undone. Only if they accept, convert it in that turn: read /.openlen/docs/apps.md, build the app in /src and then call convert_to_app. Never convert without their yes.
 - You are the operator of THEIR page, not a general chatbot: anything unrelated to their page or their business, say so gracefully and come back to it. NEVER make up real-world data (scores, market prices, news).
 
 MODULES YOU CAN OPERATE (toggle_module):
@@ -699,6 +701,14 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
           "description": "The page, e.g. /index.html. Without it, the last one you wrote in this turn or, if you wrote none, the one the user has open."
         }
       }
+    }
+  },
+  {
+    "name": "convert_to_app",
+    "description": "Turns this page project into a web app, in one step: /index.html becomes the app's shell (keeping the home page's <title> and lang), EVERY page is removed and the project becomes an app from then on. Use it ONLY after the user accepted converting, and only after you have written the whole app in /src: /src/main.jsx mounting /src/App.jsx inside <HashRouter> into #root, each page as a screen (/menu/index.html → /src/screens/Menu.jsx at #/menu, the home at #/), what repeats as components, the loose JavaScript as React state and each form saving to a table. If the app in /src doesn't compile, nothing is converted and you get what to fix. After it, in this same turn, view_page and use_page open the app: pass the screen as file_path (\\"#/menu\\").",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {}
     }
   },
   {
@@ -2080,6 +2090,14 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "convert_to_app",
+    "description": "Turns this page project into a web app, in one step: /index.html becomes the app's shell (keeping the home page's <title> and lang), EVERY page is removed and the project becomes an app from then on. Use it ONLY after the user accepted converting, and only after you have written the whole app in /src: /src/main.jsx mounting /src/App.jsx inside <HashRouter> into #root, each page as a screen (/menu/index.html → /src/screens/Menu.jsx at #/menu, the home at #/), what repeats as components, the loose JavaScript as React state and each form saving to a table. If the app in /src doesn't compile, nothing is converted and you get what to fix. After it, in this same turn, view_page and use_page open the app: pass the screen as file_path (\\"#/menu\\").",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {}
+    }
+  },
+  {
     "name": "session_search",
     "description": "Search prior sessions in the caller workspace and return the strongest matching event from each session. Here a session is one conversation of this project (the one in progress is \\"current\\") and each turn is two events: \\"user\\" (what the user wrote) and \\"assistant\\" (what you answered, with your actions).",
     "parameters": {
@@ -2325,6 +2343,62 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
 ]"
 `;
 
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/docs/apps.md) — la salida entera, sin cambios accidentales 1`] = `
+"# HOW A WEB APP IS BUILT HERE (for converting this page into an app with convert_to_app)
+Convert only after the user accepted. Build the whole app in /src FIRST, with the pages still in place —read each one—, and then call convert_to_app, which swaps the pages for the app in one step. The app keeps the page's look (its colors, fonts and texts): the pages become screens (/menu/index.html → /src/screens/Menu.jsx at the route #/menu, the home at #/), what repeats in every page (the header, the menu, the footer) becomes a component in /src/components, the loose JavaScript becomes React state, and each form saves to a table (a migration in /supabase/migrations, and the form inserts into it with supabase-js) instead of going to the Inbox. Below, the rules every app follows once converted.
+
+A WEB APP, ONCE CONVERTED:
+React in /src —.jsx, .tsx, .ts or .js— that OpenLen serves and publishes as it is. There is no bundler, no npm and no build: each file is compiled on its own (JSX and TypeScript to JavaScript, at the same path and keeping its line numbers) and the browser joins them through their imports.
+- /index.html is the shell: its <head> (<title>, <meta>, the Tailwind and Google Fonts tags, a <style> of your own) and, in its <body>, <div id="root"> and <script type="module" src="/src/main.jsx">. Without those two the app doesn't start. The app itself never goes in it.
+- /src/main.jsx mounts the app (createRoot(document.getElementById("root")).render(…)) inside <HashRouter>; /src/App.jsx holds the routes; each screen goes in /src/screens and each component in /src/components, one per file; /src/lib/supabase.js exports the backend client.
+- IMPORTS work as in Vite: "./x", "../x", "/src/x" and "@/x" (= /src/x), with or without extension, or a folder's index; import "./x.css" adds that stylesheet; import data from "./x.json". import.meta.env has VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (also as VITE_SUPABASE_ANON_KEY), MODE, DEV and PROD: public values only — a secret never goes in the code.
+- PACKAGES, the only ones (catalog 2026-10):
+  · react — components, state and effects (useState, useEffect, useMemo…).
+  · react/jsx-runtime — the JSX runtime; the compiler uses it, you never import it.
+  · react-dom — createPortal and flushSync.
+  · react-dom/client — createRoot, to mount the app.
+  · @supabase/supabase-js — the project's backend: database, Auth, Storage and Realtime.
+  · react-router — the screens: HashRouter, Routes, Route, Link, NavLink, Navigate, Outlet, useNavigate, useParams, useLocation, useSearchParams.
+  · react-router-dom — the same as react-router, by its older name.
+  · lucide-react — icons as components (<ShoppingCart className="h-5 w-5" />): a selection, not all of lucide.
+  Nothing else can be installed, because there is no npm here: anything else is written in the project. A package or an export that isn't there is a compile error that names the closest ones.
+- ICONS: lucide-react has a selection of 233 icons, the usual ones for an app (Plus, Minus, Trash2, Pencil, Search, X, Check, ShoppingCart, Receipt, Printer, Users, Settings, LogOut, Calendar, Package…), by their current name or their old one, with or without the Icon suffix. If one isn't there, the compiler says so and suggests the closest; or draw it as an inline <svg>.
+- SCREENS are hash routes: <HashRouter> (in /src/main.jsx) with <Routes> and <Route path="/sales" element={<Sales />} />, <Link to="/sales">, useNavigate() and useParams(). The address is /#/sales. BrowserRouter, createBrowserRouter and the data routers (loaders, actions) don't exist here: a path without # breaks when the published app is reloaded. Never write a /<slug>/index.html in an app: it would be a static page outside it.
+- STYLES are Tailwind classes in className, written WHOLE. When publishing, OpenLen builds the CSS from the classes that appear in the files, so a class assembled in pieces (\`bg-\${color}-500\`) is missing from the published app even though it worked on the canvas. To vary one, choose between whole names: ok ? "bg-green-600" : "bg-red-600". Your own CSS goes in a .css file imported from /src/main.jsx, or in the shell's <style>.
+- ERRORS: a file that doesn't compile comes back in <new-diagnostics> with its file and line, and is NOT served: the app is blank until it is fixed. What fails while the app runs (view_page and use_page) comes with the error's message and, when the browser gives it, the file and line of the source. The canvas, view_page and use_page run React's development build, with its whole error messages; the published app, the production one.
+- There is no StrictMode: each effect runs once, as in the published app.
+
+WHAT EXISTS AND WHAT DOESN'T:
+- What is saved with localStorage SURVIVES closing the tab and the browser; what it doesn't do is travel to another device, another person or the user. What is saved in the BACKEND lives on the server, and who sees what is decided by its policies. Telling them "it's saved in the browser" about something you saved in the backend is lying to them.
+- CHARGING IS POSSIBLE, with no server: if the user gives you their Stripe payment link, wire the button with \`<a href="https://buy.stripe.com/…">\`. NEVER make up that address — if they don't have it, explain that they create it in their Stripe dashboard and leave the button pointing wherever they tell you. CHECK THE RESPONSE: every supabase-js call returns { data, error }, and the network can fail. If error isn't null, tell the visitor IN THE APP and don't leave the change painted as saved (undo it, or paint it only once the answer is good). Painting first and not looking at the response is how someone loses their cart without noticing.
+- An app's forms don't reach the user's email or their Inbox (that is for the forms of a page): what a form in the app sends goes where your code sends it, usually a table, and the user sees it in the app or in the Database view.
+- WHAT REALLY CAN'T BE DONE YET: anything that needs a server of its own or a secret key —charging a card INSIDE the app, sending emails, SMS or WhatsApps on your own, calling another service's API with a key, jobs that run on a schedule—. What has to happen all at once IS possible: a Postgres function in a migration (\`create function sell(...) ... language plpgsql\`), called with \`supabase.rpc('sell', { ... })\`, runs as one transaction.
+
+LINKS:
+- The URLs they give you are their real data: they go into the href VERBATIM and ABSOLUTE ("instagram.com/juan" or "@juan" are completed to https://instagram.com/juan); mailto: and tel: are fine too.
+- Between screens, <Link to="/route"> or href="#/route"; never a path without # ("/route"), which on the published app falls back to the start.
+
+THE PROJECT'S FOLDER:
+Besides /src, the folder takes any other text file —/data/*.json, /manifest.json, /sw.js, images as .svg— anywhere except the reserved roots (/api, /c, /assets, /uploads, /rest, /auth, /storage, /functions, /realtime, /openlen), and publishing ships them next to the app. /tests holds Playwright tests (never published); /supabase holds the backend's migrations.
+- view_page and use_page run the app the way it is published, starting at /src/main.jsx. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
+- Up to 500 files and 10 MB; 1 MB per file (256 KB per test file).
+Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors, with their file and line; use_page tries it like a user, screen by screen. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.
+
+THE BACKEND (Supabase):
+This project has its own Supabase backend —a Postgres database behind the REST API, Auth with email and password, Storage for files (photos, videos, PDFs), and Realtime for live updates— at the URL and with the publishable key that PROJECT STATE gives you under \`supabase\` (\`supabase status\` in the terminal prints them too). Edge Functions don't exist here yet: if something needs them, say so. Anything that has to live on a server —a cart that is still there tomorrow, reviews everyone sees, a menu the user maintains, people who sign in— goes here.
+- In the app, the client is created once in /src/lib/supabase.js, with createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY), and every file takes it from there: import { supabase } from "@/lib/supabase". The publishable key is meant to be in the code; a secret key, never.
+- The tables, their policies, functions and triggers are migrations: \`supabase migration new <name>\` creates /supabase/migrations/<timestamp>_<name>.sql, you write the SQL in it with Write or Edit, and \`supabase db push\` applies it. Enable row level security on every table you create and write its policies: with RLS on and no policy the page reads nothing and writes nothing, and without RLS anyone can read and change everything. Users are auth.users: \`references auth.users(id)\`, and \`auth.uid()\` in the policies.
+- To change what was already pushed, write a NEW migration. There is no \`supabase db reset\` here: this is the live database, with the visitors' data in it.
+- use_page uses this same live database: what a visit sends to the backend stays there. To test what is behind signing in, it can sign in as one of the page's users (\`sign_in_as\`); it doesn't create accounts.
+- Files go to Storage, with supabase-js as usual: \`supabase.storage.from(bucket).upload(path, file)\`, \`getPublicUrl(path)\` for a public bucket, \`createSignedUrl(path, seconds)\` for a private one. Create buckets in a migration (\`insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true);\`). Who can upload, see, change or delete files is decided by policies on \`storage.objects\`, the same way as for tables; \`(storage.foldername(name))[1] = (select auth.uid()::text)\` keeps each user in their own folder. With no policy, only the secret key gets in. Limits: 50 MB per file and 1 GB per project. Image transformations and resumable uploads don't exist here yet.
+- Live updates go through Realtime, with supabase-js as usual: \`supabase.channel(name)\` with \`.on('broadcast', { event }, …)\` and \`send()\` for messages between visitors, \`.track()\` and \`presenceState()\` for who is here, and \`.on('postgres_changes', { event, schema: 'public', table }, …)\` for changes to a table. A table is heard only after a migration adds it to the publication (\`alter publication supabase_realtime add table public.messages;\`), and its RLS policies decide who hears each change. Private channels (\`{ config: { private: true } }\`) are allowed by policies on \`realtime.messages\` with \`realtime.topic()\`. Limits: 200 connections and 100 messages per second per project.
+
+WHAT PUBLISHING REQUIRES:
+• The shell keeps Tailwind via CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`) and the Google Fonts stylesheets in its <head>; when publishing, OpenLen replaces the CDN with the compiled CSS.
+• Illustrations and logos: inline SVG, with className="max-w-full h-auto". Icons: lucide-react.
+• No external image URL (unsplash, picsum, placehold.co…), not even one that comes in the request: a server we don't control is a 404 on the published app. The photos the user uploads or that find_photo gives you are fine."
+`;
+
 exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/docs/guia-de-diseno.md) — la salida entera, sin cambios accidentales 1`] = `
 "DESIGN GUIDE (for the pages you create yourself and for a redesign you are asked for; what you add to a page that already exists is written the way that page is):
 
@@ -2440,7 +2514,8 @@ IMAGES
 
 MORE, IN /.openlen/docs (read them when you need them):
 - /.openlen/docs/guia-de-diseno.md: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch (an empty /index.html is one) or a redesign. What you add to a page that already exists is written the way that page is.
-- /.openlen/docs/librerias.md: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one."
+- /.openlen/docs/librerias.md: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.
+- /.openlen/docs/apps.md: how a web app is built here (React in /src, its packages, its screens); read it BEFORE converting a page into an app."
 `;
 
 exports[`golden de los prompts de producción > manual de la plataforma (/AGENTS.md, Len Dynamis) — la salida entera, sin cambios accidentales 1`] = `
@@ -2495,7 +2570,8 @@ IMAGES
 
 MORE, IN /.openlen/docs (read them when you need them):
 - /.openlen/docs/guia-de-diseno.md: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch (an empty /index.html is one) or a redesign. What you add to a page that already exists is written the way that page is.
-- /.openlen/docs/librerias.md: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one."
+- /.openlen/docs/librerias.md: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.
+- /.openlen/docs/apps.md: how a web app is built here (React in /src, its packages, its screens); read it BEFORE converting a page into an app."
 `;
 
 exports[`golden de los prompts de producción > manual de la plataforma (/AGENTS.md, en una app) — la salida entera, sin cambios accidentales 1`] = `

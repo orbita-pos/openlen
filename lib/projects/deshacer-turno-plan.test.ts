@@ -2,7 +2,14 @@
 // QUÉ SE DESHACE DE UN TURNO (F2 de las apps web): todo o nada, y nada si el
 // dueño tocó después lo mismo que tocó Len.
 import { describe, expect, it } from "vitest";
-import { cambiosDelTurnoParaDeshacer, esDeshacible, planearDeshacer, type CambioDelTurno } from "./deshacer-turno-plan";
+import {
+  cambiosDelTurnoParaDeshacer,
+  conForma,
+  esDeshacible,
+  planearDeshacer,
+  RUTA_FORMA,
+  type CambioDelTurno,
+} from "./deshacer-turno-plan";
 import type { ProjectData } from "@/lib/projects/types";
 
 describe("qué vuelve al deshacer un turno", () => {
@@ -127,5 +134,70 @@ describe("planearDeshacer", () => {
       { path: "/src/Nuevo.jsx", content: "n" },
     ]);
     expect(otraVez.borrar).toEqual(["/src/Viejo.jsx"]);
+  });
+});
+
+// F4 · CONVERTIR UNA PÁGINA EN APP (`convert_to_app`) es un turno como otro: las
+// páginas se van, /src llega y el proyecto recibe `data.app`. La forma
+// (`RUTA_FORMA`) lleva `data.app` y los títulos, así que deshacerlo lo deshace
+// ENTERO, y deshacer el deshacer lo vuelve a convertir.
+describe("deshacer una conversión en app", () => {
+  const APP = { catalogo: "2026-10", entrada: "/src/main.jsx" };
+  const pagina: ProjectData = {
+    html: "<!doctype html><title>Café</title><h1>Inicio</h1>",
+    pages: {
+      carta: { html: "<h1>Carta</h1>", title: "Nuestra carta" },
+      socios: { html: "<h1>Socios</h1>", membersOnly: true },
+    },
+  };
+  const app: ProjectData = { html: "<!doctype html><div id=\"root\"></div>", app: APP };
+  const src = { "/src/main.jsx": "main", "/src/screens/Carta.jsx": "carta" };
+  const foto = (d: ProjectData, ficheros: Record<string, string>) => {
+    const f: Record<string, string> = { "/index.html": d.html, ...ficheros };
+    for (const [slug, p] of Object.entries(d.pages ?? {})) f[`/${slug}/index.html`] = p.html;
+    return conForma(f, d);
+  };
+  const cambios = cambiosDelTurnoParaDeshacer(foto(pagina, {}), foto(app, src));
+
+  it("la forma es una ruta más del turno, y vuelve", () => {
+    expect(esDeshacible(RUTA_FORMA)).toBe(true);
+    expect(cambios.map((c) => c.ruta)).toEqual([
+      "/ajustes/forma.json",
+      "/carta/index.html",
+      "/index.html",
+      "/socios/index.html",
+      "/src/main.jsx",
+      "/src/screens/Carta.jsx",
+    ]);
+  });
+
+  it("🔴 deshacerla devuelve las páginas CON su título, quita /src y quita data.app", () => {
+    const plan = planearDeshacer(cambios, { data: app, ficheros: src });
+    if (!plan.ok) throw new Error(plan.motivo);
+    expect(plan.data).toEqual(pagina);
+    expect([...plan.borrar].sort()).toEqual(["/src/main.jsx", "/src/screens/Carta.jsx"]);
+    expect(plan.ficheros).not.toContain(RUTA_FORMA);
+    expect(plan.esperados.map((e) => e.path)).not.toContain(RUTA_FORMA);
+  });
+
+  it("…y deshacer el deshacer la vuelve a convertir", () => {
+    const plan = planearDeshacer(cambios, { data: app, ficheros: src });
+    if (!plan.ok) throw new Error(plan.motivo);
+    const rehacer = planearDeshacer(plan.inverso, { data: plan.data, ficheros: {} });
+    if (!rehacer.ok) throw new Error(rehacer.motivo);
+    expect(rehacer.data).toEqual(app);
+    expect(rehacer.escribir.map((e) => e.path).sort()).toEqual(["/src/main.jsx", "/src/screens/Carta.jsx"]);
+  });
+
+  it("🔴 la forma no depende del orden de las claves: Postgres (jsonb) las reordena", () => {
+    const reordenada: ProjectData = { ...app, app: { entrada: APP.entrada, catalogo: APP.catalogo } };
+    const plan = planearDeshacer(cambios, { data: reordenada, ficheros: src });
+    expect(plan.ok).toBe(true);
+  });
+
+  it("CONTRA-PRUEBA: si el dueño cambió el título de una página después, no se deshace nada", () => {
+    const tocada = { ...cambios.find((c) => c.ruta === RUTA_FORMA)! };
+    const despues = planearDeshacer([tocada], { data: { ...app, pages: { otra: { html: "x", title: "Otra" } } }, ficheros: src });
+    expect(despues).toEqual({ ok: false, motivo: "se_solapan", rutas: [RUTA_FORMA] });
   });
 });

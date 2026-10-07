@@ -853,7 +853,7 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
     const session = makeSession();
     try {
       const ls = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "ls /.openlen/docs" }));
-      assert.match(texto(ls), /^guia-de-diseno\.md\nlibrerias\.md\n/);
+      assert.match(texto(ls), /^apps\.md\nguia-de-diseno\.md\nlibrerias\.md\n/);
       const cat = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "grep -c var /.openlen/docs/guia-de-diseno.md" }));
       assert.match(texto(cat), /^[1-9]/);
       const escribe = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "echo x >> /.openlen/docs/librerias.md" }));
@@ -1815,5 +1815,143 @@ export default function App() {
     });
     assert.ok(c.archivos["/src/screens/Caja.jsx"], "la escritura llegó: lo que falla es publicar");
     assert.equal(eventos.some((x) => x.type === "confirm"), false);
+  });
+});
+
+// F4 · UNA PÁGINA QUE CRECE SE CONVIERTE EN APP (`convert_to_app`,
+// lib/agent/convertir-en-app.ts): Len construye /src con la página intacta y la
+// herramienta voltea de una vez. El compilador es la puerta.
+describe("convertir una página en app", () => {
+  const HOME_ES = HOME.replace("<title>Tienda Brote</title>", "<title>Brote · Inicio</title>");
+  const conPaginas = () => {
+    const c = conCarpeta({
+      html: HOME_ES,
+      pages: { menu: { html: MENU, title: "La carta" }, contacto: { html: MENU.replace("Menú", "Contacto") } },
+    });
+    return c;
+  };
+  const MAIN = 'import { createRoot } from "react-dom/client";\nimport { HashRouter } from "react-router-dom";\nimport App from "./App";\n\ncreateRoot(document.getElementById("root")).render(\n  <HashRouter>\n    <App />\n  </HashRouter>,\n);\n';
+  const APP_JSX =
+    'import { Routes, Route } from "react-router-dom";\nimport Inicio from "./screens/Inicio";\nimport Menu from "./screens/Menu";\n\nexport default function App() {\n  return (\n    <Routes>\n      <Route path="/" element={<Inicio />} />\n      <Route path="/menu" element={<Menu />} />\n    </Routes>\n  );\n}\n';
+  const conLaApp = (archivos: Record<string, string>) => {
+    archivos["/src/main.jsx"] = MAIN;
+    archivos["/src/App.jsx"] = APP_JSX;
+    archivos["/src/screens/Inicio.jsx"] = "export default function Inicio() {\n  return <h1>Tienda Brote</h1>;\n}\n";
+    archivos["/src/screens/Menu.jsx"] = "export default function Menu() {\n  return <h1>Menú</h1>;\n}\n";
+  };
+
+  it("se declara en una página y NO en una app; el prompt de la app no la nombra", async () => {
+    const { buildFunctionDeclarations, buildAgentSystemPrompt } = await import("./catalog");
+    const APP = { catalogo: "2026-10", entrada: "/src/main.jsx" };
+    assert.ok(buildFunctionDeclarations(process.env, {}, "len", null).some((d) => d.name === "convert_to_app"));
+    assert.ok(!buildFunctionDeclarations(process.env, {}, "len", APP).some((d) => d.name === "convert_to_app"));
+    assert.match(buildAgentSystemPrompt(process.env, "len", null), /convert_to_app/);
+    assert.doesNotMatch(buildAgentSystemPrompt(process.env, "len", APP), /convert_to_app/);
+  });
+
+  it("sin /src/main.jsx no convierte nada, y dice cómo empezar", async () => {
+    const { deps, store } = conPaginas();
+    const antes = JSON.stringify(store.data);
+    const r = await runAgentTool(makeSession(), deps, "convert_to_app", {});
+    assert.equal(r.response.ok, false);
+    assert.match(String(r.response.error), /write the app in \/src first[\s\S]*createRoot/);
+    assert.equal(JSON.stringify(store.data), antes);
+  });
+
+  it("🔴 si la app de /src no compila, NO convierte nada: la página sigue entera", async () => {
+    const { deps, store, archivos } = conPaginas();
+    conLaApp(archivos);
+    archivos["/src/screens/Menu.jsx"] = "export default function Menu() {\n  return <h1>Menú\n}\n";
+    const antes = JSON.stringify(store.data);
+    const r = await runAgentTool(makeSession(), deps, "convert_to_app", {});
+    assert.equal(r.response.ok, false);
+    assert.match(String(r.response.error), /Nothing was converted[\s\S]*\/src\/screens\/Menu\.jsx/);
+    assert.equal(JSON.stringify(store.data), antes);
+  });
+
+  it("🔴 convierte de una vez: el cascarón con el título y el idioma de la portada, sin páginas, con data.app, y lo de antes en Versiones", async () => {
+    const { deps, store, archivos } = conPaginas();
+    conLaApp(archivos);
+    const s = makeSession();
+    s.page = "menu";
+    const r = await runAgentTool(s, deps, "convert_to_app", {});
+    assert.equal(r.response.ok, true, JSON.stringify(r.response));
+    assert.deepEqual(store.data.app, { catalogo: "2026-10", entrada: "/src/main.jsx" });
+    assert.equal(store.data.pages, undefined);
+    assert.match(store.data.html, /<html lang="es">/);
+    assert.match(store.data.html, /<title>Brote · Inicio<\/title>/);
+    assert.match(store.data.html, /<div id="root"><\/div>/);
+    assert.deepEqual(store.versions.map((v) => v.page), [null, "contacto", "menu"]);
+    assert.deepEqual(r.response.removed_pages, ["/contacto/index.html", "/menu/index.html"]);
+    assert.match(String(r.response.tool_result), /"#\/contacto", "#\/menu"/);
+    assert.match(String(r.response.tool_result), /canvas can't be edited by hand and pages aren't translated automatically/);
+    assert.ok(r.appCambiada);
+    // EL RESTO DEL TURNO YA ES DE UNA APP.
+    assert.deepEqual(s.app, store.data.app);
+    assert.equal(s.page, null);
+    const pagina = await runAgentTool(s, deps, "Write", { file_path: "/otra/index.html", content: "<!doctype html><p>x</p>" });
+    assert.equal(pagina.response.ok, false, "en una app no se crean páginas");
+    const rota = await runAgentTool(s, deps, "Write", { file_path: "/src/screens/Nueva.jsx", content: "export default () => <div" });
+    assert.ok((rota.diagnosticos ?? []).some((d) => d.ruta === "/src/screens/Nueva.jsx"), "lo que no compila ya vuelve en el acto");
+  });
+
+  it("una app no se vuelve a convertir", async () => {
+    const { deps, archivos } = conCarpeta({ html: "<!doctype html>", app: { catalogo: "2026-10", entrada: "/src/main.jsx" } });
+    conLaApp(archivos);
+    const r = await runAgentTool(makeSession(), deps, "convert_to_app", {});
+    assert.equal(r.response.ok, false);
+    assert.match(String(r.response.error), /already an app/);
+  });
+
+  it("en una app, file_path \"#/menu\" es la pantalla de view_page y use_page; en una página no cambia nada", async () => {
+    const { pantallaPorFilePath } = await import("./tools");
+    const APP = { catalogo: "2026-10", entrada: "/src/main.jsx" };
+    assert.deepEqual(pantallaPorFilePath({ app: APP }, { file_path: "#/menu", mode: "measure" }), { mode: "measure", screen: "#/menu" });
+    assert.deepEqual(pantallaPorFilePath({ app: APP }, { file_path: "/index.html" }), { file_path: "/index.html" });
+    assert.deepEqual(pantallaPorFilePath({}, { file_path: "#/menu" }), { file_path: "#/menu" });
+  });
+
+  it("🔴 un turno guionizado: lee las páginas, escribe /src, convierte y prueba — y lo roto antes de voltear no voltea", async () => {
+    const { runAgentLoop } = await import("./loop");
+    const { deps, store, archivos } = conPaginas();
+    const s: AgentSession = { ...makeSession(), userPrompt: "sí, conviértela" };
+    const fin = { type: "done" as const, stopReason: { kind: "end_turn" as const } };
+    const call = (name: string, args: Record<string, unknown>) => ({ type: "function_call" as const, name, args });
+    const guion = [
+      [call("Read", { file_path: "/index.html" }), call("Read", { file_path: "/menu/index.html" }), call("Read", { file_path: "/contacto/index.html" }), fin],
+      [
+        call("Write", { file_path: "/src/main.jsx", content: MAIN }),
+        call("Write", { file_path: "/src/App.jsx", content: APP_JSX }),
+        call("Write", { file_path: "/src/screens/Inicio.jsx", content: "export default function Inicio() {\n  return <h1>Tienda Brote</h1>;\n}\n" }),
+        call("Write", { file_path: "/src/screens/Menu.jsx", content: "export default function Menu() {\n  return <h1>Menú\n}\n" }),
+        fin,
+      ],
+      // Rota: no voltea, y la página sigue entera.
+      [call("convert_to_app", {}), fin],
+      [call("Write", { file_path: "/src/screens/Menu.jsx", content: "export default function Menu() {\n  return <h1>Menú</h1>;\n}\n" }), fin],
+      [call("convert_to_app", {}), fin],
+      [{ type: "text_delta" as const, text: "Listo: ya es una app." }, fin],
+    ];
+    let i = 0;
+    const vistos: string[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "sí, conviértela" }],
+      tools: [],
+      openStream: (messages) => {
+        vistos.push(JSON.stringify(messages.at(-1)));
+        const turno = guion[Math.min(i++, guion.length - 1)]!;
+        return (async function* () {
+          for (const ev of turno) yield ev;
+        })();
+      },
+      runTool: (name, args) => runAgentTool(s, deps, name, args),
+      emit: () => undefined,
+    });
+    assert.equal(r.terminalError, false);
+    assert.match(vistos[3]!, /Nothing was converted[\s\S]*Menu\.jsx/, "la primera vez, lo que no compila");
+    assert.ok(archivos["/src/App.jsx"]);
+    assert.deepEqual(store.data.app, { catalogo: "2026-10", entrada: "/src/main.jsx" });
+    assert.equal(store.data.pages, undefined);
+    assert.match(vistos[5]!, /Converted: this project is now a web app/);
   });
 });

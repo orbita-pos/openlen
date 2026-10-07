@@ -87,6 +87,8 @@ describe("buildFunctionDeclarations", () => {
       "create_goal",
       "update_goal",
       "undo_last_change",
+      // F4 de las apps: convertir una página en app (sólo en una página).
+      "convert_to_app",
       // Pieza 5 de Len 2.5: buscar en las charlas pasadas, como DeepSeek.
       "session_search",
       "session_event_search",

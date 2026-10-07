@@ -50,6 +50,7 @@ import {
   type SettingsPatchOutcome,
 } from "@/lib/projects/settings-patch";
 import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
+import { CONVERTIR_EN_APP, toolConvertirEnApp } from "@/lib/agent/convertir-en-app";
 import type { ResultadoDeDeshacer } from "@/lib/projects/deshacer-turno";
 import { erroresDeLaApp, problemasDelCascaron } from "@/lib/agent/compila-la-app";
 import { textoDeDiagnostico } from "@/lib/apps/compilador";
@@ -1311,6 +1312,19 @@ const MAX_MIRADAS_MEDIR = 4;
  *  del servidor). */
 export const MAX_CONCURRENT_VISITS = 2;
 
+/**
+ * EN UNA APP, `file_path: "#/menu"` ES LA PANTALLA. En el turno que convierte
+ * una página en app (`convert_to_app`), Len sigue con las declaraciones de una
+ * página —se eligen al empezar el turno— y no tiene `screen`: así puede probar
+ * cada pantalla antes de dar la conversión por buena. En una página no cambia
+ * nada.
+ */
+export function pantallaPorFilePath(data: Pick<ProjectData, "app">, args: Record<string, unknown>): Record<string, unknown> {
+  if (!data.app || typeof args.file_path !== "string" || !args.file_path.trim().startsWith("#")) return args;
+  const { file_path: pantalla, ...resto } = args;
+  return { ...resto, screen: args.screen ?? pantalla };
+}
+
 async function toolMirarPagina(
   session: AgentSession,
   deps: AgentDeps,
@@ -1360,6 +1374,7 @@ async function toolMirarPagina(
 
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "project not found" } };
+  args = pantallaPorFilePath(row.data, args);
   // Len 2.0: el fichero que se le dice, o la página que el dueño tiene abierta.
   const pedida = paginaPedida(session, row.data, args.file_path, { preferirLoEscrito: false });
   if (!pedida.ok) return { response: { ok: false, error: pedida.error } };
@@ -1423,6 +1438,7 @@ async function toolUsarPagina(
   }
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "project not found" } };
+  args = pantallaPorFilePath(row.data, args);
   // Sin `file_path`: la última página que escribió en este turno —la que acaba
   // de cambiar y quiere probar— y si no escribió ninguna, la que el dueño tiene
   // abierta.
@@ -2214,6 +2230,8 @@ async function ejecutarHerramienta(
         return await toolEditarImagen(session, deps, args);
       case "publish":
         return await toolPublicar(session, deps, args);
+      case CONVERTIR_EN_APP:
+        return await toolConvertirEnApp(session, deps);
       case ASK_USER_QUESTION:
         return await toolAskUserQuestion(session, deps, args);
       // Pieza 7: el modo plan, como DeepSeek (la salida) y Claude Code (la entrada).

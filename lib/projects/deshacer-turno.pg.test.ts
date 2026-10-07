@@ -11,7 +11,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
-import { cambiosDelTurnoParaDeshacer, planearDeshacer } from "@/lib/projects/deshacer-turno-plan";
+import { cambiosDelTurnoParaDeshacer, conForma, planearDeshacer } from "@/lib/projects/deshacer-turno-plan";
 import { TURNOS_GUARDADOS, deshacerTurno, escribirDeshacer, guardarCambiosDelTurno, ultimoTurnoDeshacible } from "@/lib/projects/deshacer-turno";
 import type { ProjectData } from "@/lib/projects/types";
 
@@ -184,5 +184,33 @@ describe("deshacer un turno entero", () => {
     await guardarCambiosDelTurno(PROYECTO, TURNO, [{ ruta: "/css/x.css", antes: "a", despues: "b", deshacible: true }]);
     const filas = await db.select().from(schema.projectTurnChanges).where(eq(schema.projectTurnChanges.turnId, TURNO));
     expect(filas).toHaveLength(1);
+  });
+});
+
+// F4 · DESHACER UNA CONVERSIÓN EN APP (`convert_to_app`): las páginas vuelven
+// con su título, /src se va y `data.app` también — en la misma sentencia.
+describe("deshacer una conversión en app", () => {
+  const TURNO_CONVERSION = "22222222-2222-4222-8222-222222222222";
+  const APP_DATA: ProjectData = { html: '<div id="root"></div>', app: { catalogo: "2026-10", entrada: "/src/main.jsx" } };
+  const SRC = { "/src/main.jsx": "main", "/src/screens/Menu.jsx": "menu" };
+
+  it("🔴 devuelve la página entera y la deja sin data.app; deshacerlo otra vez la vuelve a convertir", async () => {
+    await ponerProyecto(APP_DATA, { ...ANTES_FICHEROS, ...SRC });
+    await guardarCambiosDelTurno(
+      PROYECTO,
+      TURNO_CONVERSION,
+      cambiosDelTurnoParaDeshacer(conForma(foto(ANTES_DATA, ANTES_FICHEROS), ANTES_DATA), conForma(foto(APP_DATA, { ...ANTES_FICHEROS, ...SRC }), APP_DATA)),
+    );
+    const r = await deshacerTurno({ projectId: PROYECTO, userId: USUARIO, turnId: TURNO_CONVERSION });
+    expect(r.ok, JSON.stringify(r)).toBe(true);
+    const tras = await estado();
+    expect(tras.data).toEqual(ANTES_DATA);
+    expect(tras.ficheros).toEqual(ANTES_FICHEROS);
+    if (!r.ok) return;
+    const otra = await deshacerTurno({ projectId: PROYECTO, userId: USUARIO, turnId: r.deshacerId });
+    expect(otra.ok, JSON.stringify(otra)).toBe(true);
+    const rehecha = await estado();
+    expect(rehecha.data).toEqual(APP_DATA);
+    expect(rehecha.ficheros).toEqual({ ...ANTES_FICHEROS, ...SRC });
   });
 });

@@ -103,8 +103,9 @@ describe("las herramientas en una app", () => {
     parameters: { properties: Record<string, unknown> };
   };
 
-  it("las MISMAS herramientas, en el mismo orden", () => {
-    expect(app.map((d) => d.name)).toEqual(pagina.map((d) => d.name));
+  it("las MISMAS herramientas, en el mismo orden, menos convert_to_app (una app ya lo es)", () => {
+    expect(app.map((d) => d.name)).toEqual(pagina.map((d) => d.name).filter((n) => n !== "convert_to_app"));
+    expect(pagina.map((d) => d.name)).toContain("convert_to_app");
   });
 
   it("mirar y usar abren una PANTALLA (#/ruta), no una página", () => {

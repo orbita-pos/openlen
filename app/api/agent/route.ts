@@ -85,7 +85,7 @@ import { realDeps, runAgentTool, summarizeProjectState, type AgentDeps, type Age
 import { cerrarTerminalDeLaSesion } from "@/lib/agent/terminal/herramienta";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
-import { cambiosDelTurnoParaDeshacer } from "@/lib/projects/deshacer-turno-plan";
+import { cambiosDelTurnoParaDeshacer, conForma } from "@/lib/projects/deshacer-turno-plan";
 import { guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
 import { nacerComoApp } from "@/lib/projects/nacer-como-app";
 import { observarPagina } from "@/lib/agent/verify";
@@ -1186,7 +1186,12 @@ async function correrTurno(
             // (`lib/projects/deshacer-turno.ts`). Fail-soft: sin esto no hay
             // Deshacer de servidor, y el chat usa el de siempre.
             try {
-              if (await guardarCambiosDelTurno(projectId, filaId, cambiosDelTurnoParaDeshacer(antes, despues))) {
+              // Con LA FORMA (`RUTA_FORMA`): `data.app` y los títulos de las
+              // páginas, para que deshacer una conversión en app la deshaga
+              // entera. La de antes, de la fila con la que empezó el turno.
+              const alAcabar = await deps.loadProject(projectId, userId).catch(() => null);
+              const [fotoA, fotoD] = alAcabar ? [conForma(antes, project.data), conForma(despues, alAcabar.data)] : [antes, despues];
+              if (await guardarCambiosDelTurno(projectId, filaId, cambiosDelTurnoParaDeshacer(fotoA, fotoD))) {
                 emit("deshacible", { turnId: filaId });
               }
             } catch (err) {

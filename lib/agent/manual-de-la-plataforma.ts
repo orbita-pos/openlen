@@ -33,10 +33,13 @@ import {
   CARPETA_DOCS,
   CIERRE_DEL_ADJUNTO,
   PRINCIPIO_DEL_ADJUNTO,
+  RUTA_APPS,
   RUTA_GUIA,
   RUTA_LIBRERIAS,
   RUTA_MANUAL,
 } from "@/lib/agent/ficheros/manual";
+import { CATALOGO_ACTUAL } from "@/lib/apps/dependencias";
+import { ENTRADA } from "@/lib/apps/esqueleto";
 import {
   MAX_FOLDER_BYTES,
   MAX_FOLDER_FILE_BYTES,
@@ -177,7 +180,26 @@ const FROM_SCRATCH = `WHEN THE PAGE IS EMPTY (you are writing it from scratch):
 
 const INDICE = `MORE, IN ${CARPETA_DOCS} (read them when you need them):
 - ${RUTA_GUIA}: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch (an empty /index.html is one) or a redesign. What you add to a page that already exists is written the way that page is.
-- ${RUTA_LIBRERIAS}: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.`;
+- ${RUTA_LIBRERIAS}: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.
+- ${RUTA_APPS}: how a web app is built here (React in /src, its packages, its screens); read it BEFORE converting a page into an app.`;
+
+/** /.openlen/docs/apps.md en una página: el manual de una app recién
+ *  convertida, para escribirla en /src antes de `convert_to_app`. */
+function manualParaConvertir(): string {
+  return `# HOW A WEB APP IS BUILT HERE (for converting this page into an app with convert_to_app)
+Convert only after the user accepted. Build the whole app in /src FIRST, with the pages still in place —read each one—, and then call convert_to_app, which swaps the pages for the app in one step. The app keeps the page's look (its colors, fonts and texts): the pages become screens (/menu/index.html → /src/screens/Menu.jsx at the route #/menu, the home at #/), what repeats in every page (the header, the menu, the footer) becomes a component in /src/components, the loose JavaScript becomes React state, and each form saves to a table (a migration in /supabase/migrations, and the form inserts into it with supabase-js) instead of going to the Inbox. Below, the rules every app follows once converted.
+
+${manualDeLaApp(manualSinPartir(), { catalogo: CATALOGO_ACTUAL, entrada: ENTRADA })
+  .replace(/^# OpenLen: how the platform works\n\n/, "")
+  .replace("THIS PROJECT IS A WEB APP:", "A WEB APP, ONCE CONVERTED:")
+  // Su índice nombra la guía de diseño de una APP, que en una página no está
+  // en esa ruta: lo que se convierte conserva el aspecto de la página.
+  .replace(/\n\nMORE, IN [\s\S]*$/, "")
+  // Los mapas y vídeos se dicen igual que en la página, que ya los dice: dos
+  // veces la misma regla es una de más (prompts-superficies.test.ts). Tras
+  // convertir, el manual de la app la trae.
+  .replace(/\n• MAPS and VIDEOS[^\n]*/, "")}`;
+}
 
 const encontrar = (texto: string, marca: string, desde = 0): number => {
   const i = texto.indexOf(marca, desde);
@@ -244,7 +266,7 @@ export function buildManualDeLaPlataforma(
  *  diseño en la MISMA ruta, y no tiene la de las librerías de las páginas
  *  (sus paquetes son los de su catálogo, en /AGENTS.md). */
 export function documentosDeLaPlataforma(app: AppDeProyecto | null = null): Readonly<Record<string, string>> {
-  return app ? { [RUTA_GUIA]: GUIA_DE_LA_APP } : partirElManual().docs;
+  return app ? { [RUTA_GUIA]: GUIA_DE_LA_APP } : { ...partirElManual().docs, [RUTA_APPS]: manualParaConvertir() };
 }
 
 /** El texto de un fichero del manual por su ruta, o `null` si no es ninguno. */

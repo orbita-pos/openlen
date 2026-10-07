@@ -25,7 +25,61 @@ import { esDeLaPlataforma } from "@/lib/agent/ficheros/manual";
 import { classifyFolderPath } from "@/lib/agent/ficheros/folder";
 import { leerFichero, paginaDeRuta, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { esDelProyecto } from "@/lib/agent/terminal/ficheros";
-import type { ProjectData } from "@/lib/projects/types";
+import type { AppDeProyecto, ProjectData, SitePage } from "@/lib/projects/types";
+
+/**
+ * LA FORMA DEL PROYECTO, como una ruta más del turno: `data.app` y el título de
+ * cada página (y si es sólo para miembros). No es un fichero de nadie —ni la
+ * terminal ni el chat la ven—: sólo viaja en las fotos que guarda el turno para
+ * deshacerlo (app/api/agent/route.ts). Sin ella, deshacer una conversión en app
+ * (`convert_to_app`) devolvía las páginas y dejaba `data.app` puesto —una app
+ * sin /src— y las páginas volvían sin su título.
+ */
+export const RUTA_FORMA = "/ajustes/forma.json";
+
+interface Forma {
+  readonly app: AppDeProyecto | null;
+  readonly paginas: Readonly<Record<string, Omit<SitePage, "html">>>;
+}
+
+/** El texto de la forma: estable (las páginas en orden) para que dos fotos
+ *  iguales den el mismo texto. */
+export function formaDelProyecto(data: Pick<ProjectData, "app" | "pages">): string {
+  const paginas: Record<string, Omit<SitePage, "html">> = {};
+  for (const slug of Object.keys(data.pages ?? {}).sort()) {
+    const p = data.pages![slug]!;
+    paginas[slug] = { ...(p.title !== undefined ? { title: p.title } : {}), ...(p.membersOnly ? { membersOnly: true } : {}) };
+  }
+  const forma: Forma = { app: data.app ?? null, paginas };
+  return JSON.stringify(forma, clavesOrdenadas);
+}
+
+/** Las claves de cada objeto, en orden: `data` vuelve de Postgres como `jsonb`,
+ *  que REORDENA las claves (`{"entrada","catalogo"}`), y la forma leída de la
+ *  base tiene que dar el mismo texto que la que se guardó con el turno. */
+function clavesOrdenadas(_clave: string, valor: unknown): unknown {
+  if (!valor || typeof valor !== "object" || Array.isArray(valor)) return valor;
+  return Object.fromEntries(Object.entries(valor as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+}
+
+/** La foto con la forma: lo que guarda el turno para deshacerlo. */
+export function conForma(foto: Readonly<Record<string, string>>, data: Pick<ProjectData, "app" | "pages">): Record<string, string> {
+  return { ...foto, [RUTA_FORMA]: formaDelProyecto(data) };
+}
+
+/** Pone la forma de antes sobre `data`: `data.app` y el título de las páginas
+ *  que hay (las que el deshacer ya devolvió o dejó). */
+function aplicarForma(data: ProjectData, texto: string | null): ProjectData {
+  const forma = (texto ? JSON.parse(texto) : { app: null, paginas: {} }) as Forma;
+  const { app: _app, pages, ...resto } = data;
+  void _app;
+  const paginas = pages
+    ? Object.fromEntries(Object.entries(pages).map(([slug, p]) => [slug, { html: p.html, ...(forma.paginas[slug] ?? {}) }]))
+    : undefined;
+  // Sin páginas, sin la clave: como un proyecto que nunca las tuvo (una app).
+  const conPaginas = paginas && Object.keys(paginas).length > 0;
+  return { ...resto, ...(forma.app ? { app: forma.app } : {}), ...(conPaginas ? { pages: paginas } : {}) };
+}
 
 /** Lo que el turno cambió en una ruta. */
 export interface CambioDelTurno {
@@ -48,6 +102,7 @@ export interface CambioDelTurno {
  * Lo que no vuelve se DICE (`noSeDeshacen`), no se calla.
  */
 export function esDeshacible(ruta: string): boolean {
+  if (ruta === RUTA_FORMA) return true;
   if (paginaDeRuta(ruta)) return true;
   const c = classifyFolderPath(ruta);
   return c.ok && (c.kind === "web" || c.kind === "tests");
@@ -73,6 +128,7 @@ export function cambiosDelTurnoParaDeshacer(
 
 /** Lo que hay AHORA en una ruta, leído como lo leen las fotos. */
 function contenidoActual(ruta: string, data: ProjectData, ficheros: Readonly<Record<string, string>>): string | null {
+  if (ruta === RUTA_FORMA) return formaDelProyecto(data);
   if (paginaDeRuta(ruta)) {
     const html = leerFichero(data, ruta);
     return html === null ? null : sinOpIds(html);
@@ -125,7 +181,13 @@ export function planearDeshacer(
   const esperados: Array<{ path: string; content: string | null }> = [];
   const paginas: Array<{ page: string | null; html: string }> = [];
   const ficheros: string[] = [];
+  // La forma va AL FINAL: los títulos se ponen sobre las páginas ya devueltas.
+  let forma: { readonly antes: string | null } | null = null;
   for (const c of deshacibles) {
+    if (c.ruta === RUTA_FORMA) {
+      forma = { antes: c.antes };
+      continue;
+    }
     const donde = paginaDeRuta(c.ruta);
     if (donde) {
       if (donde.page === null) {
@@ -147,6 +209,7 @@ export function planearDeshacer(
     if (c.antes === null) borrar.push(c.ruta);
     else escribir.push({ path: c.ruta, content: c.antes });
   }
+  if (forma) data = aplicarForma(data, forma.antes);
   const inverso = deshacibles.map((c) => ({ ruta: c.ruta, antes: c.despues, despues: c.antes, deshacible: true }));
   return { ok: true, data, escribir, borrar, esperados, paginas, ficheros, noSeDeshacen, inverso };
 }
