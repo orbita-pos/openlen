@@ -70,10 +70,12 @@ interface DatosDeHilos {
 /** Se emite al marcar menciones como vistas: quien pinta las «@» las relee. */
 export const HILOS_VISTOS = "openlen:hilos-vistos";
 
-/** ¿Espera el hilo una respuesta de Len? (lo último lo escribió alguien y nombra a Len) */
+/** ¿Espera el hilo una respuesta de Len? (alguien se la pidió y aún no contestó) */
 export const esperaALen = (h: Hilo) => {
-  const ultimo = h.mensajes.at(-1);
-  return h.estado === "abierto" && Boolean(ultimo?.autorId) && /(^|[^\w@])@len\b/i.test(ultimo?.texto ?? "");
+  // Un pedido (un mensaje de alguien con la fila de su turno) sin un mensaje de
+  // Len con esa misma fila: lo mismo que mira el servidor para retomarlo.
+  const contestadas = new Set(h.mensajes.filter((m) => !m.autorId && m.filaId).map((m) => m.filaId));
+  return h.mensajes.some((m) => Boolean(m.autorId) && Boolean(m.filaId) && !contestadas.has(m.filaId));
 };
 
 /**

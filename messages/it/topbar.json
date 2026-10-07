@@ -172,7 +172,8 @@
       "fallo": "Non sono riuscito a farlo: {motivo}",
       "falloSinMotivo": "Non ci sono arrivato. Chiedimelo di nuovo dalla conversazione.",
       "topeAgotado": "il limite mensile di Len per i membri di questo progetto è esaurito. Il proprietario può aumentarlo in «Invita».",
-      "sinCreditos": "non ci sono più crediti sull’account del proprietario del progetto."
+      "sinCreditos": "non ci sono più crediti sull’account del proprietario del progetto.",
+      "interrumpido": "Il server si è riavviato mentre ci lavoravo, quindi potrebbe essere fatto a metà. Controlla le modifiche e, se serve, chiedimelo di nuovo dalla conversazione."
     }
   }
 }

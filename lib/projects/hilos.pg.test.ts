@@ -7,11 +7,14 @@ import { eq, inArray } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import {
+  apuntarPedidoALen,
   cambiarEstado,
+  contextoParaLen,
   crearHilo,
   listarHilos,
   marcarVistas,
   mencionesSinVer,
+  pedidosALenSinContestar,
   personasDelProyecto,
   responderHilo,
   respuestaDeLen,
@@ -27,6 +30,7 @@ beforeEach(async () => {
     await db.insert(schema.users).values({ id, email: `${id}@ejemplo.invalido`, name: id.replace("prueba-hilos-", "") }).onConflictDoNothing();
   }
   await db.delete(schema.projects).where(eq(schema.projects.id, PROYECTO));
+  await db.delete(schema.projectChatMessages).where(eq(schema.projectChatMessages.id, "prueba-hilos-fila-empezada"));
   await db.insert(schema.projects).values({ id: PROYECTO, userId: DUENO, title: "Con hilos", brief: "", data: { html: "<p>x</p>" } });
   await db.insert(schema.projectMembers).values({ projectId: PROYECTO, userId: ANA, rol: "editor" });
 });
@@ -83,5 +87,35 @@ describe("los hilos en el código", () => {
     expect(await respuestaDeLen({ projectId: "otro", hiloId: h.hiloId, texto: "x", filaId: null })).toBe(false);
     expect(await responderHilo({ projectId: "otro", hiloId: h.hiloId, autorId: DUENO, texto: "x", menciones: [] })).toBeNull();
     expect(await cambiarEstado("otro", h.hiloId, "resuelto")).toBe(false);
+  });
+
+  it("🔴 un pedido a Len apuntado queda «sin contestar» hasta que Len contesta con su fila, y dice si llegó a empezar", async () => {
+    const pedido = { idioma: "es", url: "http://localhost/api/projects/x/hilos" };
+    const a = await crearHilo({ projectId: PROYECTO, autorId: ANA, ruta: "/index.html", linea: 3, codigo: "<h1>", texto: "Ojo con esto", menciones: [] });
+    const pide = await responderHilo({ projectId: PROYECTO, hiloId: a.hiloId, autorId: ANA, texto: "@Len pon el título en azul", menciones: [] });
+    await apuntarPedidoALen({ mensajeId: pide!.mensajeId, filaId: "prueba-hilos-fila-nueva", pedido });
+    const b = await crearHilo({ projectId: PROYECTO, autorId: DUENO, ruta: "/index.html", linea: 9, codigo: "<p>", texto: "@Len quita esto", menciones: [] });
+    await apuntarPedidoALen({ mensajeId: b.mensajeId, filaId: "prueba-hilos-fila-empezada", pedido });
+    // El de B llegó a abrir su fila del chat: el turno empezó.
+    await db.insert(schema.projectChatMessages).values({ id: "prueba-hilos-fila-empezada", projectId: PROYECTO, userText: "@Len quita esto", assistantReasoning: "", status: "en_curso" });
+
+    const despues = new Date(Date.now() + 60_000);
+    const mios = (await pedidosALenSinContestar(despues)).filter((p) => p.projectId === PROYECTO);
+    expect(mios.map((p) => [p.hiloId, p.autorId, p.texto, p.filaId, p.empezado, p.pedido])).toEqual([
+      [a.hiloId, ANA, "@Len pon el título en azul", "prueba-hilos-fila-nueva", false, pedido],
+      [b.hiloId, DUENO, "@Len quita esto", "prueba-hilos-fila-empezada", true, pedido],
+    ]);
+    // Lo escrito después del arranque no es de un reinicio.
+    expect((await pedidosALenSinContestar(new Date(Date.now() - 60_000))).filter((p) => p.projectId === PROYECTO)).toEqual([]);
+
+    // El contexto para Len: lo dicho ANTES del pedido, no el pedido.
+    const [hiloA] = (await listarHilos(PROYECTO, ANA, "/index.html")).filter((h) => h.id === a.hiloId);
+    expect(contextoParaLen(hiloA!, pide!.mensajeId)).toBe(
+      "[Requested from a comment thread in the code: `/index.html:3` — `<h1>`. Your final reply is also posted in that thread.]\nEarlier in the thread:\n- ana: Ojo con esto",
+    );
+
+    // Len contesta con la fila de A: A deja de estar pendiente.
+    await respuestaDeLen({ projectId: PROYECTO, hiloId: a.hiloId, texto: "Hecho.", filaId: "prueba-hilos-fila-nueva" });
+    expect((await pedidosALenSinContestar(despues)).filter((p) => p.projectId === PROYECTO).map((p) => p.hiloId)).toEqual([b.hiloId]);
   });
 });

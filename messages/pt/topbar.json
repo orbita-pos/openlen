@@ -172,7 +172,8 @@
       "fallo": "Não consegui fazer: {motivo}",
       "falloSinMotivo": "Não cheguei a fazer. Peça de novo pela conversa.",
       "topeAgotado": "o limite mensal do Len para os membros deste projeto acabou. O dono pode aumentá-lo em «Convidar».",
-      "sinCreditos": "não há mais créditos na conta do dono do projeto."
+      "sinCreditos": "não há mais créditos na conta do dono do projeto.",
+      "interrumpido": "O servidor reiniciou enquanto eu fazia isto, então pode ter ficado pela metade. Confira as alterações e, se precisar, peça de novo pela conversa."
     }
   }
 }

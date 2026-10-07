@@ -37,7 +37,7 @@ export async function POST(req: Request, ctx: Ctx): Promise<Response> {
     });
   }
   const filaId = body.data.len
-    ? await pedirleALen({ req, projectId: id, userId: q.userId, hiloId, texto: body.data.texto, ...(body.data.idioma ? { idioma: body.data.idioma } : {}) })
+    ? await pedirleALen({ req, projectId: id, userId: q.userId, hiloId, mensajeId: escrito.mensajeId, texto: body.data.texto, ...(body.data.idioma ? { idioma: body.data.idioma } : {}) })
     : null;
   return json({ mensajeId: escrito.mensajeId, mencionados: escrito.mencionados, filaId });
 }

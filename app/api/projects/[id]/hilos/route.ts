@@ -12,6 +12,7 @@ import { z } from "zod";
 
 import { puede } from "@/lib/projects/acceso";
 import { crearHilo, listarHilos, mencionesSinVer, personasDelProyecto } from "@/lib/projects/hilos";
+import { retomarPedidosDelHilo } from "@/lib/agent/turnos-desde-el-servidor";
 import { avisarMenciones, CuerpoDelMensaje, json, pedirleALen, quienEnElProyecto } from "./_comun";
 
 export const runtime = "nodejs";
@@ -23,6 +24,8 @@ export async function GET(req: Request, ctx: Ctx): Promise<Response> {
   const { id } = await ctx.params;
   const q = await quienEnElProyecto(id);
   if (!q.ok) return q.respuesta;
+  // Por si el arranque no llegó a retomar los pedidos a Len (una vez por proceso).
+  void retomarPedidosDelHilo();
   const url = new URL(req.url);
   // Sólo las menciones sin ver (el explorador marca sus ficheros).
   if (url.searchParams.get("solo") === "sinVer") return json({ sinVer: await mencionesSinVer(id, q.userId) });
@@ -68,7 +71,7 @@ export async function POST(req: Request, ctx: Ctx): Promise<Response> {
   });
   // `@Len`: el turno arranca aquí, en el servidor; el chat lo sigue si está abierto.
   const filaId = body.data.len
-    ? await pedirleALen({ req, projectId: id, userId: q.userId, hiloId: escrito.hiloId, texto: body.data.texto, ...(body.data.idioma ? { idioma: body.data.idioma } : {}) })
+    ? await pedirleALen({ req, projectId: id, userId: q.userId, hiloId: escrito.hiloId, mensajeId: escrito.mensajeId, texto: body.data.texto, ...(body.data.idioma ? { idioma: body.data.idioma } : {}) })
     : null;
   return json({ hiloId: escrito.hiloId, mensajeId: escrito.mensajeId, mencionados: escrito.mencionados, filaId });
 }

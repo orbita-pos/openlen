@@ -53,6 +53,12 @@ export function answerOfNextTurn(next: DesignTurn | undefined): { answer: string
   return corrections.length > 0 ? { answer: corrections.join("\n"), cancelled: false } : { answer: null, cancelled: true };
 }
 
+/** La inicial de un nombre (o de un correo, sin el dominio). */
+export function inicialDe(nombre: string | null | undefined): string {
+  const limpio = nombre?.trim().split("@")[0] ?? "";
+  return (limpio.charAt(0) || "?").toUpperCase();
+}
+
 export function UserMessage({
   turn,
   initial,
@@ -135,9 +141,11 @@ export function UserMessage({
         </div>
         <span
           aria-hidden
+          title={turn.autor}
           className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FF7E55] to-[#C72E10] text-[10.5px] font-bold text-white"
+          data-autor-del-turno={turn.autor ?? ""}
         >
-          {initial}
+          {turn.autor ? inicialDe(turn.autor) : initial}
         </span>
       </div>
       {corrections.map((c, i) => (

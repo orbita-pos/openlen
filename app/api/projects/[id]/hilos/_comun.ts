@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { accesoAlProyecto, type AccesoAlProyecto } from "@/lib/projects/acceso";
-import { MAX_TEXTO_DEL_HILO, listarHilos } from "@/lib/projects/hilos";
+import { MAX_TEXTO_DEL_HILO, apuntarPedidoALen, contextoParaLen, listarHilos } from "@/lib/projects/hilos";
 import { fraseDeFalloDelHilo, idiomaDelCorreo } from "@/lib/projects/correos-del-proyecto";
 import { lanzarTurnoDelHilo } from "@/lib/agent/turnos-desde-el-servidor";
 
@@ -34,7 +34,7 @@ export const CuerpoDelMensaje = z.object({
   texto: z.string().trim().min(1).max(MAX_TEXTO_DEL_HILO),
   /** Ids de las personas mencionadas (las valida `mencionesValidas`). */
   menciones: z.array(z.string().max(100)).max(20).default([]),
-  /** ¿Menciona a Len? Sólo quien puede editar (el turno lo lanza el cliente). */
+  /** ¿Menciona a Len? Sólo quien puede editar (el turno arranca en el servidor). */
   len: z.boolean().default(false),
   /** El idioma de la interfaz de quien escribe: el del correo del aviso. */
   idioma: z.string().max(8).optional(),
@@ -66,7 +66,9 @@ export async function avisarMenciones(p: {
 
 /**
  * `@Len` en un hilo: el turno arranca EN EL SERVIDOR (como Claude Tag), con lo
- * dicho antes en el hilo como contexto SÓLO para el modelo. Devuelve su fila,
+ * dicho antes en el hilo como contexto SÓLO para el modelo. El pedido se apunta
+ * en el mensaje ANTES de lanzarlo: si el servidor se reinicia antes de que Len
+ * conteste, se retoma al arrancar (`retomarPedidosDelHilo`). Devuelve su fila,
  * para que el chat lo siga si está abierto.
  */
 export async function pedirleALen(p: {
@@ -74,23 +76,21 @@ export async function pedirleALen(p: {
   projectId: string;
   userId: string;
   hiloId: string;
+  mensajeId: string;
   texto: string;
   idioma?: string;
 }): Promise<string | null> {
   const [hilo] = await listarHilosPorId(p.projectId, p.userId, p.hiloId);
   if (!hilo) return null;
-  // Lo dicho ANTES de este mensaje (el último es el que lo pide).
-  const antes = hilo.mensajes.slice(0, -1).slice(-8);
-  const contexto = [
-    `[Requested from a comment thread in the code: \`${hilo.ruta}:${hilo.linea}\`${hilo.codigo.trim() ? ` — \`${hilo.codigo.trim().slice(0, 200)}\`` : ""}. Your final reply is also posted in that thread.]`,
-    ...(antes.length > 0 ? ["Earlier in the thread:", ...antes.map((m) => `- ${m.autorId ? (m.autor ?? "?") : "Len"}: ${m.texto}`)] : []),
-  ].join("\n");
   const idioma = idiomaDelCorreo(p.idioma);
-  const { filaId } = await lanzarTurnoDelHilo({
+  const filaId = crypto.randomUUID();
+  await apuntarPedidoALen({ mensajeId: p.mensajeId, filaId, pedido: { idioma, url: p.req.url } });
+  await lanzarTurnoDelHilo({
     userId: p.userId,
     projectId: p.projectId,
     texto: p.texto,
-    hilo: { hiloId: hilo.id, ruta: hilo.ruta, linea: hilo.linea, contexto },
+    filaId,
+    hilo: { hiloId: hilo.id, ruta: hilo.ruta, linea: hilo.linea, contexto: contextoParaLen(hilo, p.mensajeId) },
     origen: p.req.url,
     fraseDeFallo: (fallo) => fraseDeFalloDelHilo(idioma, fallo),
   });

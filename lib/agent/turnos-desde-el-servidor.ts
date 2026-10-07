@@ -10,7 +10,14 @@
  * sus métodos— y, si aún no se cargó, se importa.
  *
  * Un turno a la vez por proyecto: si Len ya trabaja en él, el pedido espera en
- * la cola del proyecto (en memoria; un reinicio la pierde y el hilo lo dice).
+ * la cola del proyecto. La cola vive en memoria, pero el pedido NO: queda
+ * apuntado en su mensaje del hilo (`apuntarPedidoALen`), y al arrancar el
+ * servidor `retomarPedidosDelHilo` lo retoma —el que no llegó a empezar se
+ * vuelve a lanzar con su misma fila; el que se cortó a medias, Len lo dice en
+ * el hilo (pudo dejar cambios hechos: no se repite a ciegas)—. Se llama desde
+ * `instrumentation.ts` y, por si acaso, la primera vez que alguien lee los
+ * hilos. Supone UN proceso de Next (como la cola y `hayTurnoVivoEnElProyecto`).
+ *
  * Si el turno no llega a contestar (sin créditos, el tope de los miembros, un
  * fallo), Len lo dice en el hilo con el motivo, para que nunca se quede en
  * «trabajando».
@@ -18,7 +25,8 @@
 import "server-only";
 
 import { hayTurnoVivoEnElProyecto } from "@/lib/agent/direcciones";
-import { hiloTieneRespuestaDe, respuestaDeLen } from "@/lib/projects/hilos";
+import { fraseDeFalloDelHilo, fraseDeInterrupcionDelHilo, idiomaDelCorreo } from "@/lib/projects/correos-del-proyecto";
+import { contextoParaLen, hiloTieneRespuestaDe, listarHilos, pedidosALenSinContestar, respuestaDeLen } from "@/lib/projects/hilos";
 
 export interface OrigenDelHilo {
   readonly hiloId: string;
@@ -103,10 +111,12 @@ export async function lanzarTurnoDelHilo(p: {
   readonly hilo: PedidoDelHilo;
   readonly origen: string;
   readonly fraseDeFallo: (fallo: FalloDelTurno | null) => string;
+  /** La fila del turno, si ya se apuntó con el pedido (`apuntarPedidoALen`). */
+  readonly filaId?: string;
 }): Promise<{ readonly filaId: string }> {
   if (!corredor) await import("@/app/api/agent/route");
   const correr = corredor;
-  const filaId = crypto.randomUUID();
+  const filaId = p.filaId ?? crypto.randomUUID();
   const anterior = colas.get(p.projectId) ?? Promise.resolve();
   const trabajo = anterior
     .catch(() => undefined)
@@ -144,4 +154,52 @@ export async function lanzarTurnoDelHilo(p: {
     if (colas.get(p.projectId) === trabajo) colas.delete(p.projectId);
   });
   return { filaId };
+}
+
+/** Cuándo arrancó este proceso: lo pedido antes, nadie de aquí lo corre. */
+const ARRANQUE = new Date();
+/** Pasado esto, un pedido que no empezó ya no se lanza solo (sorprendería): Len
+ *  dice en el hilo que no llegó. */
+const RETOMAR_HASTA_MS = 24 * 3_600_000;
+
+let retomando: Promise<number> | null = null;
+
+/**
+ * Los pedidos a `@Len` que un reinicio dejó sin contestar: los que no llegaron
+ * a empezar se lanzan otra vez (con su misma fila, como si nada); los que se
+ * cortaron a medias, o son de hace más de un día, Len lo dice en el hilo. Una
+ * vez por proceso; devuelve cuántos atendió. Nunca lanza.
+ */
+export function retomarPedidosDelHilo(): Promise<number> {
+  retomando ??= retomar().catch((err) => {
+    console.error("[hilos] no se pudieron retomar los pedidos a Len", err);
+    return 0;
+  });
+  return retomando;
+}
+
+async function retomar(): Promise<number> {
+  const pendientes = await pedidosALenSinContestar(ARRANQUE);
+  for (const p of pendientes) {
+    const idioma = idiomaDelCorreo(p.pedido.idioma);
+    const viejo = ARRANQUE.getTime() - p.createdAt.getTime() > RETOMAR_HASTA_MS;
+    if (p.empezado || viejo) {
+      const texto = p.empezado ? fraseDeInterrupcionDelHilo(idioma) : fraseDeFalloDelHilo(idioma, null);
+      await respuestaDeLen({ projectId: p.projectId, hiloId: p.hiloId, texto, filaId: p.filaId });
+      continue;
+    }
+    const hilo = (await listarHilos(p.projectId, p.autorId)).find((h) => h.id === p.hiloId);
+    if (!hilo) continue;
+    await lanzarTurnoDelHilo({
+      userId: p.autorId,
+      projectId: p.projectId,
+      texto: p.texto,
+      filaId: p.filaId,
+      hilo: { hiloId: hilo.id, ruta: hilo.ruta, linea: hilo.linea, contexto: contextoParaLen(hilo, p.mensajeId) },
+      origen: p.pedido.url,
+      fraseDeFallo: (fallo) => fraseDeFalloDelHilo(idioma, fallo),
+    });
+  }
+  if (pendientes.length > 0) console.info(`[hilos] ${pendientes.length} pedido(s) a Len retomados tras el reinicio`);
+  return pendientes.length;
 }

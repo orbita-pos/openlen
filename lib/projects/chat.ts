@@ -43,7 +43,7 @@ export async function getChatMessages(
       .limit(CHAT_LIMIT),
     conversationStateOf(projectId),
   ]);
-  const turns = rows.map(rowToTurn);
+  const turns = await conAutores(projectId, rows);
   // Piezas 7 y 8: la foto va en el último turno cerrado, que es donde la busca
   // el chat (`lastPlanMode`, el encargo).
   if (estado.planMode || estado.goal) {
@@ -58,6 +58,39 @@ export async function getChatMessages(
     }
   }
   return turns;
+}
+
+/** Las filas, con quién pidió cada turno (compartir el proyecto): `autorId`
+ *  si fue un miembro, el dueño si es NULL. Una consulta para todos; si falla,
+ *  van sin autor y el chat pinta la inicial de quien mira, como antes. */
+async function conAutores(
+  projectId: string,
+  rows: Omit<typeof schema.projectChatMessages.$inferSelect, "transcript">[],
+): Promise<StoredChatTurn[]> {
+  const turns = rows.map(rowToTurn);
+  if (rows.length === 0) return turns;
+  try {
+    const miembros = [...new Set(rows.map((r) => r.autorId).filter((x): x is string => Boolean(x)))];
+    const [dueno] = await db
+      .select({ userId: schema.projects.userId })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, projectId))
+      .limit(1);
+    const ids = [...new Set([...(dueno ? [dueno.userId] : []), ...miembros])];
+    if (ids.length === 0) return turns;
+    const gente = await db
+      .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+      .from(schema.users)
+      .where(inArray(schema.users.id, ids));
+    const nombre = new Map(gente.map((u) => [u.id, u.name?.trim() || u.email]));
+    return turns.map((t, i) => {
+      const autor = nombre.get(rows[i]!.autorId ?? dueno?.userId ?? "");
+      return autor ? { ...t, autor } : t;
+    });
+  } catch (err) {
+    console.warn("[chat] no se pudo leer quién pidió cada turno", err);
+    return turns;
+  }
 }
 
 /** El encargo con la activación de ESTE proceso (tras un reinicio, desarmado). */

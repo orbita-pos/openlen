@@ -172,7 +172,8 @@
       "fallo": "Das habe ich nicht geschafft: {motivo}",
       "falloSinMotivo": "Ich bin nicht dazu gekommen. Frag mich noch einmal in der Unterhaltung.",
       "topeAgotado": "das monatliche Len-Limit für die Mitglieder dieses Projekts ist aufgebraucht. Der Eigentümer kann es unter „Einladen“ erhöhen.",
-      "sinCreditos": "auf dem Konto des Projekteigentümers sind keine Credits mehr."
+      "sinCreditos": "auf dem Konto des Projekteigentümers sind keine Credits mehr.",
+      "interrumpido": "Der Server wurde neu gestartet, während ich daran gearbeitet habe – es kann halb fertig sein. Prüf die Änderungen und frag mich bei Bedarf noch einmal in der Unterhaltung."
     }
   }
 }

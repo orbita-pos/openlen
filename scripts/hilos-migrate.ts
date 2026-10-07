@@ -59,7 +59,8 @@ async function main() {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS "codeMentions_user_idx" ON "codeMentions" ("userId", "projectId");`);
   // De dónde vino un turno pedido con `@Len` desde un hilo (la etiqueta del chat).
   await db.execute(sql`ALTER TABLE "projectChatMessages" ADD COLUMN IF NOT EXISTS "origen" jsonb;`);
-  console.log("[hilos:migrate] codeThreads, codeThreadMessages, codeMentions y projectChatMessages.origen listas");
+  await db.execute(sql`ALTER TABLE "codeThreadMessages" ADD COLUMN IF NOT EXISTS "pedidoALen" jsonb;`);
+  console.log("[hilos:migrate] codeThreads, codeThreadMessages (con pedidoALen), codeMentions y projectChatMessages.origen listas");
   process.exit(0);
 }
 

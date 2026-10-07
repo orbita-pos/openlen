@@ -90,6 +90,9 @@ export interface DesignTurn {
   userText: string;
   /** Pedido con `@Len` desde un hilo del código: la etiqueta «desde el hilo». */
   origen?: { hiloId: string; ruta: string; linea: number };
+  /** Quién lo pidió, si viene del servidor (`StoredChatTurn.autor`). Sin él,
+   *  es de quien mira: lo acaba de mandar desde aquí. */
+  autor?: string;
   /** Image attached to this turn — rendered in the user bubble as proof
    *  it was actually sent with the message. */
   attachedImage?: AttachedImage;
@@ -2508,6 +2511,7 @@ export function restoreTurn(s: StoredChatTurn): DesignTurn {
     ...(typeof s.centicredits === "number" ? { centicredits: s.centicredits } : {}),
     ...(typeof s.durationMs === "number" ? { durationMs: s.durationMs } : {}),
     ...(s.origen ? { origen: s.origen } : {}),
+    ...(s.autor ? { autor: s.autor } : {}),
   };
 }
 

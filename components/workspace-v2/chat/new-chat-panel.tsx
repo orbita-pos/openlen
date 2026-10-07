@@ -27,7 +27,7 @@ import type { EtiquetasDeRespuesta } from "../agent-reply-card";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { ChatComposer } from "./chat-composer";
 import { ChatHeader } from "./chat-header";
-import { LenTurn, UserMessage } from "./chat-turn";
+import { inicialDe, LenTurn, UserMessage } from "./chat-turn";
 import { LiveBar } from "./live-bar";
 import { GoalCardView } from "./goal-card";
 import { liveStatus } from "./live-status";
@@ -175,10 +175,10 @@ function AgentChatView({
   }, [chat.busy, reloadMemory]);
   const [settledConfirms, setSettledConfirms] = useState<ReadonlySet<string>>(() => new Set());
   const { data: session } = useSession();
-  const initial = useMemo(() => {
-    const name = session?.user?.name?.trim() || session?.user?.email?.split("@")[0] || "";
-    return (name.charAt(0) || "?").toUpperCase();
-  }, [session?.user?.name, session?.user?.email]);
+  const initial = useMemo(
+    () => inicialDe(session?.user?.name?.trim() || session?.user?.email),
+    [session?.user?.name, session?.user?.email],
+  );
 
   const relativeTime = useCallback(
     (ms: number) => {

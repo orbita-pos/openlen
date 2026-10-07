@@ -131,3 +131,10 @@ export function fraseDeFalloDelHilo(idioma: IdiomaDelCorreo, fallo: { motivo: st
     fallo.code === "tope_de_miembros" ? t("topeAgotado") : fallo.code === "no_credits" ? t("sinCreditos") : fallo.motivo.slice(0, 300);
   return t("fallo", { motivo });
 }
+
+/** La frase de Len en un hilo cuando un reinicio del servidor le cortó el
+ *  turno a medias: pudo dejar cambios hechos, así que no se repite solo. */
+export function fraseDeInterrupcionDelHilo(idioma: IdiomaDelCorreo): string {
+  const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.hilo" });
+  return t("interrumpido");
+}

@@ -52,4 +52,15 @@ describe("un turno desde un hilo del código, en la charla", () => {
     const host = pintar({ id: "t", userText: "hola", assistantReasoning: "", status: "applied" } as DesignTurn);
     expect(host.querySelector("[data-origen-del-turno]")).toBeNull();
   });
+
+  it("🔴 la inicial es la de quien pidió el turno (otro del proyecto), no la de quien mira", () => {
+    // Quien mira es «A» (`pintar`).
+    const turn = restoreTurn({ id: "f2", userText: "hazlo", assistantReasoning: "", status: "applied", appliedAt: 0, autor: "zoe@ejemplo.com" });
+    const avatar = pintar(turn).querySelector<HTMLElement>("[data-autor-del-turno]")!;
+    expect(avatar.textContent).toBe("Z");
+    expect(avatar.getAttribute("title")).toBe("zoe@ejemplo.com");
+    expect(pintar({ ...turn, autor: "bruno" }).querySelector("[data-autor-del-turno]")!.textContent).toBe("B");
+    // Sin autor (lo acaba de mandar quien mira), la suya.
+    expect(pintar({ ...turn, autor: undefined }).querySelector("[data-autor-del-turno]")!.textContent).toBe("A");
+  });
 });

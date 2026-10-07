@@ -172,7 +172,8 @@
       "fallo": "I couldn’t do it: {motivo}",
       "falloSinMotivo": "I couldn’t get to it. Ask me again from the thread.",
       "topeAgotado": "this project’s monthly Len limit for members is used up. The owner can raise it under Invite.",
-      "sinCreditos": "there are no credits left on the project owner’s account."
+      "sinCreditos": "there are no credits left on the project owner’s account.",
+      "interrumpido": "The server restarted while I was working on this, so it may be half done. Check the changes and, if needed, ask me again from the thread."
     }
   }
 }

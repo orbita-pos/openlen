@@ -2,9 +2,13 @@
  * LOS HILOS EN EL CÓDIGO: un comentario con menciones sobre una línea de un
  * fichero (como Claude Tag, pero en la lente «Código»).
  *
- *   · `@Len` — la ruta del hilo arranca el turno EN EL SERVIDOR
- *     (`lib/agent/turnos-desde-el-servidor.ts`), y al cerrarlo la ruta de Len
- *     contesta EN EL HILO (`respuestaDeLen`), o el lanzador dice por qué no pudo.
+ *   · `@Len` — la ruta del hilo apunta el pedido en su mensaje
+ *     (`apuntarPedidoALen`) y arranca el turno EN EL SERVIDOR
+ *     (`lib/agent/turnos-desde-el-servidor.ts`); al cerrarlo, la ruta de Len
+ *     contesta EN EL HILO (`respuestaDeLen`), o el lanzador dice por qué no
+ *     pudo. Un pedido es «sin contestar» mientras no haya un mensaje de Len con
+ *     su misma fila: así lo ve el hilo («Len está en ello…») y así lo retoma un
+ *     reinicio (`pedidosALenSinContestar`).
  *   · `@persona` — alguien del proyecto (el dueño o un miembro): le llega un
  *     aviso (push y correo, `lib/notifications`) y el hilo se le marca sin ver.
  *
@@ -15,7 +19,7 @@
  */
 import "server-only";
 
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -220,6 +224,90 @@ export async function hiloTieneRespuestaDe(hiloId: string, filaId: string): Prom
     .where(and(eq(schema.codeThreadMessages.threadId, hiloId), eq(schema.codeThreadMessages.filaId, filaId), isNull(schema.codeThreadMessages.autorId)))
     .limit(1);
   return filas.length > 0;
+}
+
+/** Lo que hace falta para retomar un pedido a `@Len` tras un reinicio. */
+export interface PedidoALen {
+  readonly idioma: string;
+  /** La URL de la petición que lo pidió (el turno la usa de origen). */
+  readonly url: string;
+}
+
+/** El mensaje `mensajeId` le pide algo a Len en el turno `filaId`: se apunta
+ *  ANTES de lanzarlo, para que un reinicio no lo pierda. */
+export async function apuntarPedidoALen(p: { mensajeId: string; filaId: string; pedido: PedidoALen }): Promise<void> {
+  await db
+    .update(schema.codeThreadMessages)
+    .set({ filaId: p.filaId, pedidoALen: { idioma: p.pedido.idioma, url: p.pedido.url } })
+    .where(eq(schema.codeThreadMessages.id, p.mensajeId));
+}
+
+/**
+ * Lo que va al MODELO con un pedido desde el hilo (no a lo que se ve en el
+ * chat): dónde, y lo dicho ANTES del mensaje que lo pide (los 8 últimos).
+ */
+export function contextoParaLen(hilo: Hilo, mensajeId: string): string {
+  const i = hilo.mensajes.findIndex((m) => m.id === mensajeId);
+  const antes = hilo.mensajes.slice(0, i >= 0 ? i : -1).slice(-8);
+  return [
+    `[Requested from a comment thread in the code: \`${hilo.ruta}:${hilo.linea}\`${hilo.codigo.trim() ? ` — \`${hilo.codigo.trim().slice(0, 200)}\`` : ""}. Your final reply is also posted in that thread.]`,
+    ...(antes.length > 0 ? ["Earlier in the thread:", ...antes.map((m) => `- ${m.autorId ? (m.autor ?? "?") : "Len"}: ${m.texto}`)] : []),
+  ].join("\n");
+}
+
+export interface PedidoSinContestar {
+  readonly projectId: string;
+  readonly hiloId: string;
+  readonly mensajeId: string;
+  readonly autorId: string;
+  readonly texto: string;
+  readonly filaId: string;
+  readonly pedido: PedidoALen;
+  readonly createdAt: Date;
+  /** ¿Llegó a empezar? (su fila del chat existe: el turno la abre al arrancar). */
+  readonly empezado: boolean;
+}
+
+/** Los pedidos a `@Len` escritos antes de `antesDe` a los que Len aún no
+ *  contestó: los que un reinicio dejó sin nadie que los corra. */
+export async function pedidosALenSinContestar(antesDe: Date): Promise<PedidoSinContestar[]> {
+  const m = schema.codeThreadMessages;
+  const filas = await db
+    .select({
+      projectId: schema.codeThreads.projectId,
+      hiloId: m.threadId,
+      mensajeId: m.id,
+      autorId: m.autorId,
+      texto: m.texto,
+      filaId: m.filaId,
+      pedido: m.pedidoALen,
+      createdAt: m.createdAt,
+      empezado: sql<boolean>`exists (select 1 from "projectChatMessages" c where c."id" = ${m.filaId})`,
+    })
+    .from(m)
+    .innerJoin(schema.codeThreads, eq(schema.codeThreads.id, m.threadId))
+    .where(
+      and(
+        isNotNull(m.pedidoALen),
+        isNotNull(m.filaId),
+        isNotNull(m.autorId),
+        lt(m.createdAt, antesDe),
+        sql`not exists (select 1 from "codeThreadMessages" r where r."threadId" = ${m.threadId} and r."filaId" = ${m.filaId} and r."autorId" is null)`,
+      ),
+    )
+    .orderBy(asc(m.createdAt))
+    .limit(200);
+  return filas.map((f) => ({
+    projectId: f.projectId,
+    hiloId: f.hiloId,
+    mensajeId: f.mensajeId,
+    autorId: f.autorId!,
+    texto: f.texto,
+    filaId: f.filaId!,
+    pedido: f.pedido!,
+    createdAt: f.createdAt,
+    empezado: Boolean(f.empezado),
+  }));
 }
 
 export async function hiloDelProyecto(projectId: string, hiloId: string) {

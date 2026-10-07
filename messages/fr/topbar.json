@@ -172,7 +172,8 @@
       "fallo": "Je n’ai pas pu le faire : {motivo}",
       "falloSinMotivo": "Je n’ai pas pu m’en occuper. Redemandez-le-moi depuis le fil.",
       "topeAgotado": "la limite mensuelle de Len pour les membres de ce projet est atteinte. Le propriétaire peut l’augmenter dans « Inviter ».",
-      "sinCreditos": "il n’y a plus de crédits sur le compte du propriétaire du projet."
+      "sinCreditos": "il n’y a plus de crédits sur le compte du propriétaire du projet.",
+      "interrumpido": "Le serveur a redémarré pendant que je m’en occupais, ce n’est peut-être fait qu’à moitié. Vérifiez les changements et, si besoin, redemandez-le-moi depuis le fil."
     }
   }
 }

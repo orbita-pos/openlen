@@ -7,11 +7,15 @@ const mocks = vi.hoisted(() => ({
   vivo: false,
   respuestas: [] as { hiloId: string; texto: string; filaId: string | null }[],
   contestoLen: false,
+  pendientes: [] as unknown[],
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/app/api/agent/route", () => ({}));
 vi.mock("@/lib/agent/direcciones", () => ({ hayTurnoVivoEnElProyecto: () => mocks.vivo }));
 vi.mock("@/lib/projects/hilos", () => ({
+  pedidosALenSinContestar: async () => mocks.pendientes,
+  listarHilos: async () => [{ id: "h-nuevo", ruta: "/src/App.jsx", linea: 7, codigo: "x", mensajes: [] }],
+  contextoParaLen: (h: { id: string }, mensajeId: string) => `CTX ${h.id} antes de ${mensajeId}`,
   hiloTieneRespuestaDe: async () => mocks.contestoLen,
   respuestaDeLen: async (p: { hiloId: string; texto: string; filaId: string | null }) => {
     mocks.respuestas.push(p);
@@ -19,7 +23,7 @@ vi.mock("@/lib/projects/hilos", () => ({
   },
 }));
 
-import { lanzarTurnoDelHilo, registrarCorredorDeTurnos } from "./turnos-desde-el-servidor";
+import { lanzarTurnoDelHilo, registrarCorredorDeTurnos, retomarPedidosDelHilo } from "./turnos-desde-el-servidor";
 
 const sse = (eventos: [string, unknown][]) =>
   new Response(eventos.map(([e, d]) => `event: ${e}\ndata: ${JSON.stringify(d)}\n\n`).join(""), {
@@ -43,6 +47,7 @@ beforeEach(() => {
   mocks.vivo = false;
   mocks.respuestas = [];
   mocks.contestoLen = false;
+  mocks.pendientes = [];
 });
 
 describe("el turno de un hilo, en el servidor", () => {
@@ -92,5 +97,40 @@ describe("el turno de un hilo, en el servidor", () => {
     await lanzar();
     await hasta(() => mocks.respuestas.length > 0);
     expect(mocks.respuestas[0]!.texto).toBe("No pude: tope_de_miembros");
+  });
+});
+
+describe("tras un reinicio del servidor", () => {
+  it("🔴 retoma los pedidos sin contestar: relanza el que no empezó con su misma fila; el cortado a medias y el viejo, Len lo dice en el hilo", async () => {
+    const pedido = { idioma: "es", url: "http://x/api/projects/p1/hilos" };
+    const hace = (ms: number) => new Date(Date.now() - ms);
+    mocks.pendientes = [
+      { projectId: "p1", hiloId: "h-nuevo", mensajeId: "m1", autorId: "ana", texto: "@Len hazlo", filaId: "f-nuevo", pedido, createdAt: hace(60_000), empezado: false },
+      { projectId: "p1", hiloId: "h-cortado", mensajeId: "m2", autorId: "ana", texto: "@Len eso", filaId: "f-cortado", pedido, createdAt: hace(60_000), empezado: true },
+      { projectId: "p1", hiloId: "h-viejo", mensajeId: "m3", autorId: "ana", texto: "@Len lo otro", filaId: "f-viejo", pedido: { ...pedido, idioma: "en" }, createdAt: hace(3 * 86_400_000), empezado: false },
+    ];
+    const corredor = vi.fn(async () => {
+      mocks.contestoLen = true;
+      return sse([["done", {}]]);
+    });
+    registrarCorredorDeTurnos(corredor);
+    expect(await retomarPedidosDelHilo()).toBe(3);
+    await hasta(() => corredor.mock.calls.length > 0);
+    expect(corredor).toHaveBeenCalledTimes(1);
+    expect(corredor).toHaveBeenCalledWith(
+      "ana",
+      { projectId: "p1", prompt: "@Len hazlo", turnId: "f-nuevo", answersQuestions: false },
+      expect.objectContaining({ url: pedido.url }),
+      { hilo: { hiloId: "h-nuevo", ruta: "/src/App.jsx", linea: 7, contexto: "CTX h-nuevo antes de m1" } },
+    );
+    expect(mocks.respuestas.map((r) => [r.hiloId, r.filaId])).toEqual([
+      ["h-cortado", "f-cortado"],
+      ["h-viejo", "f-viejo"],
+    ]);
+    expect(mocks.respuestas[0]!.texto).toMatch(/Se reinició el servidor/);
+    expect(mocks.respuestas[1]!.texto).toBe("I couldn’t get to it. Ask me again from the thread.");
+    // Una vez por proceso: la segunda llamada no vuelve a lanzar nada.
+    await retomarPedidosDelHilo();
+    expect(corredor).toHaveBeenCalledTimes(1);
   });
 });

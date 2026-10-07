@@ -11,6 +11,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { EditorView } from "@codemirror/view";
 
 import { CodeView } from "./code-view";
+import { esperaALen } from "./hilos-del-codigo";
 import { comentariosDelChat } from "@/lib/workspace-v2/comentarios-de-lineas";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
 import { turnosDelHilo } from "@/lib/workspace-v2/turnos-del-hilo";
@@ -812,7 +813,7 @@ describe("CodeView — hilos en una línea con @Len y @persona", () => {
     hilos = [
       {
         id: "h1", ruta: "/index.html", linea: 1, codigo: "<h1>Portada</h1>", estado: "abierto", creadoPor: "yo", sinVer: 0,
-        mensajes: [{ id: "m1", autorId: "yo", autor: "Yo", texto: "@Len pon el título en azul", filaId: null, createdAt: "2026-10-07T10:00:00Z" }],
+        mensajes: [{ id: "m1", autorId: "yo", autor: "Yo", texto: "@Len pon el título en azul", filaId: "fila-1", createdAt: "2026-10-07T10:00:00Z" }],
       },
     ];
     tecla(area, "Enter");
@@ -840,5 +841,17 @@ describe("CodeView — hilos en una línea con @Len y @persona", () => {
     const { el } = await pintar({ labels: conHilos });
     await esperar(() => el.querySelector("[data-mencionado]"));
     expect(botonDelArbol(el, "reservas.json").querySelector("[data-mencionado]")).not.toBeNull();
+  });
+});
+
+describe("¿espera el hilo a Len?", () => {
+  const msj = (autorId: string | null, filaId: string | null, texto = "x") => ({ id: Math.random().toString(), autorId, autor: autorId, texto, filaId, createdAt: new Date() });
+  const hilo = (mensajes: ReturnType<typeof msj>[]) => ({ id: "h", ruta: "/a", linea: 1, codigo: "", estado: "abierto" as const, creadoPor: "yo", createdAt: new Date(), sinVer: 0, mensajes });
+  it("🔴 mientras un pedido no tenga la respuesta de Len con su fila, aunque después hablen otros", () => {
+    expect(esperaALen(hilo([msj("yo", "f1", "@Len hazlo"), msj("ana", null, "¿y esto?")]))).toBe(true);
+    expect(esperaALen(hilo([msj("yo", "f1", "@Len hazlo"), msj(null, "f1", "Hecho.")]))).toBe(false);
+  });
+  it("nombrar a Len sin pedírselo (sin fila) no lo pone «en ello»", () => {
+    expect(esperaALen(hilo([msj("yo", null, "esto lo hizo @Len ayer")]))).toBe(false);
   });
 });

@@ -1330,6 +1330,10 @@ export const codeThreadMessages = pgTable(
     texto: text("texto").notNull(),
     /** El turno de Len: el que lanzó este mensaje, o el que lo escribió. */
     filaId: text("filaId"),
+    /** En un mensaje que le pide algo a `@Len`: lo que hace falta para
+     *  retomarlo si el servidor se reinicia antes de que conteste
+     *  (`retomarPedidosDelHilo`). */
+    pedidoALen: jsonb("pedidoALen").$type<{ idioma: string; url: string }>(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => [index("codeThreadMessages_thread_idx").on(t.threadId, t.createdAt)],

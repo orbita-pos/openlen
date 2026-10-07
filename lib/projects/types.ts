@@ -315,6 +315,9 @@ export interface StoredChatTurn {
   /** Pedido con `@Len` desde un hilo del código (lib/projects/hilos.ts): el
    *  chat lo marca «desde el hilo · fichero:línea» y lo abre al pulsarlo. */
   origen?: { hiloId: string; ruta: string; linea: number };
+  /** Quién lo pidió (su nombre, o su correo): el dueño o un miembro del
+   *  proyecto. El chat pinta su inicial en la burbuja, no la de quien mira. */
+  autor?: string;
   /** Pieza 7: tras este turno la charla seguía en modo plan (lo que pliega el
    *  servidor; `getChatMessages` lo pone en el último turno cerrado). El chat
    *  enciende su ficha «Plan» si el último turno lo trae. */
