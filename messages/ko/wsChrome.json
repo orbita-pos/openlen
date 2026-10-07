@@ -235,7 +235,17 @@
     "pasteHtml": "또는 내 HTML 붙여넣기",
     "galleryHeading": "검증된 템플릿",
     "search": "템플릿 검색…",
-    "noResults": "“{query}”에 대한 결과가 없습니다"
+    "noResults": "“{query}”에 대한 결과가 없습니다",
+    "kind": {
+      "label": "무엇을 만들까요?",
+      "page": "페이지",
+      "pageHint": "비즈니스용 웹사이트: 랜딩, 메뉴, 포트폴리오",
+      "app": "앱",
+      "appHint": "사용하는 것: POS, 예약, 로그인이 있는 대시보드",
+      "appPlaceholder": "앱을 설명하세요: 무엇을 하고, 누가 쓰는지…",
+      "headline": "다음 앱은 여기서 시작됩니다",
+      "subtitle": "무엇을 해야 하는지 Len에게 말하면 화면, 데이터, 로그인까지 만들어 줍니다."
+    }
   },
   "empty": {
     "badge": "OpenLen 워크스페이스",

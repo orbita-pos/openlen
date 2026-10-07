@@ -235,7 +235,17 @@
     "pasteHtml": "o incolla il tuo HTML",
     "galleryHeading": "Template verificati",
     "search": "Cerca template…",
-    "noResults": "Nessun risultato per «{query}»"
+    "noResults": "Nessun risultato per «{query}»",
+    "kind": {
+      "label": "Cosa vuoi creare?",
+      "page": "Pagina",
+      "pageHint": "Un sito per la tua attività: landing, menù, portfolio",
+      "app": "App",
+      "appHint": "Qualcosa da usare: cassa, agenda, pannello con login",
+      "appPlaceholder": "Descrivi la tua app: cosa fa, chi la usa…",
+      "headline": "La tua prossima app inizia qui",
+      "subtitle": "Di’ a Len cosa deve fare e lui la costruisce: schermate, dati e login."
+    }
   },
   "empty": {
     "badge": "Spazio di lavoro OpenLen",

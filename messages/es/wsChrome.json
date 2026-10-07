@@ -235,7 +235,17 @@
     "pasteHtml": "o pega tu propio HTML",
     "galleryHeading": "Plantillas verificadas",
     "search": "Buscar plantillas…",
-    "noResults": "Sin resultados para «{query}»"
+    "noResults": "Sin resultados para «{query}»",
+    "kind": {
+      "label": "¿Qué quieres hacer?",
+      "page": "Página",
+      "pageHint": "Una web para tu negocio: landing, menú, portafolio",
+      "app": "App",
+      "appHint": "Algo que se usa: punto de venta, agenda, panel con login",
+      "appPlaceholder": "Describe tu app: qué hace, quién la usa…",
+      "headline": "Tu próxima app empieza aquí",
+      "subtitle": "Cuéntale a Len qué tiene que hacer y la construye: sus pantallas, sus datos y su login."
+    }
   },
   "empty": {
     "badge": "Workspace de OpenLen",

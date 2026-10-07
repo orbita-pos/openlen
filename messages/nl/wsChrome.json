@@ -243,7 +243,17 @@
     "pasteHtml": "of plak je eigen HTML",
     "galleryHeading": "Geverifieerde sjablonen",
     "search": "Sjablonen zoeken…",
-    "noResults": "Geen resultaten voor “{query}”"
+    "noResults": "Geen resultaten voor “{query}”",
+    "kind": {
+      "label": "Wat wil je maken?",
+      "page": "Pagina",
+      "pageHint": "Een website voor je bedrijf: landingspagina, menukaart, portfolio",
+      "app": "App",
+      "appHint": "Iets wat je gebruikt: kassa, agenda, dashboard met login",
+      "appPlaceholder": "Beschrijf je app: wat hij doet, wie hem gebruikt…",
+      "headline": "Je volgende app begint hier",
+      "subtitle": "Vertel Len wat hij moet doen en hij bouwt hem: de schermen, de gegevens en de login."
+    }
   },
   "empty": {
     "badge": "OpenLen-werkruimte",

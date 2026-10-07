@@ -47,6 +47,7 @@ import { AlertTriangle, Check, Sparkles, Undo, X } from "@/components/workspace-
 import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
 import { PastePanel } from "@/components/workspace-v2/panels/paste-panel";
 import { StartLanding } from "@/components/workspace-v2/start-landing";
+import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
 import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
 import { ejecutarUndo } from "@/components/workspace-v2/panels/undo-turn";
@@ -901,9 +902,13 @@ function NewV2Inner() {
   // volver con la convergencia: la vista se transforma YA, sin recargar.
   const [heroSent, setHeroSent] = useState(false);
   const [heroSending, setHeroSending] = useState(false);
+  // PÁGINA O APP (las dos tarjetas del estado vacío). Página por defecto, y
+  // vuelve a serlo al cambiar de proyecto: es una elección de ESTE proyecto.
+  const [naceComo, setNaceComo] = useState<NaceComo>("pagina");
   const [pendingChatAttachments, setPendingChatAttachments] = useState<PendingAttachments | null>(null);
   useEffect(() => {
     setHeroSent(false);
+    setNaceComo("pagina");
   }, [projectParam]);
   // EL ESTADO VACÍO DEL CHAT DE LEN: un proyecto en blanco no tiene lienzo que
   // enseñar todavía. Como el «Session Intent hero» de DeepSeek, el centro es el
@@ -944,7 +949,14 @@ function NewV2Inner() {
       const fotos = aiFotos.length > 0 ? aiFotos : delTransito;
       const subidas = fotos.length > 0 ? await uploadPhotos(fotos, loadedProjectId) : { images: [], failed: 0 };
       if (subidas.failed > 0) toast.error(t("toast.photosNotUploaded", { count: subidas.failed }));
-      setPendingChatAttachments({ images: subidas.images, styleDirection: aiReference });
+      // Con App elegida, el primer mensaje lleva `naceComo` y el idioma de la
+      // interfaz: el servidor le pone el esqueleto antes del turno, con ese
+      // `lang` en el cascarón (`lib/projects/nacer-como-app.ts`).
+      setPendingChatAttachments({
+        images: subidas.images,
+        styleDirection: aiReference,
+        ...(naceComo === "app" ? { naceComo: "app" as const, idioma: locale } : {}),
+      });
       setPendingChatDraft(brief);
       setPendingChatAutoSend(true);
       setHeroSent(true);
@@ -956,7 +968,7 @@ function NewV2Inner() {
     } finally {
       setHeroSending(false);
     }
-  }, [loadedProjectId, heroSending, aiPrompt, aiFotos, aiReference, toast, t]);
+  }, [loadedProjectId, heroSending, aiPrompt, aiFotos, aiReference, naceComo, locale, toast, t]);
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const data = e.data;
@@ -3543,6 +3555,8 @@ function NewV2Inner() {
                   setTemplateError(null);
                 }}
                 onPaste={() => router.push("/new?mode=paste")}
+                naceComo={naceComo}
+                onNaceComoChange={setNaceComo}
               />
             </div>
           ))}

@@ -235,7 +235,17 @@
     "pasteHtml": "or paste your own HTML",
     "galleryHeading": "Verified templates",
     "search": "Search templates…",
-    "noResults": "No results for “{query}”"
+    "noResults": "No results for “{query}”",
+    "kind": {
+      "label": "What do you want to make?",
+      "page": "Page",
+      "pageHint": "A website for your business: landing, menu, portfolio",
+      "app": "App",
+      "appHint": "Something people use: point of sale, booking, dashboard with login",
+      "appPlaceholder": "Describe your app: what it does, who uses it…",
+      "headline": "Your next app starts here",
+      "subtitle": "Tell Len what it has to do and it builds it: its screens, its data and its login."
+    }
   },
   "empty": {
     "badge": "OpenLen Workspace",

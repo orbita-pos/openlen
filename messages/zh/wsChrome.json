@@ -235,7 +235,17 @@
     "pasteHtml": "或粘贴你自己的 HTML",
     "galleryHeading": "已验证的模板",
     "search": "搜索模板…",
-    "noResults": "没有“{query}”的结果"
+    "noResults": "没有“{query}”的结果",
+    "kind": {
+      "label": "你想做什么？",
+      "page": "页面",
+      "pageHint": "为你的生意做个网站：落地页、菜单、作品集",
+      "app": "应用",
+      "appHint": "拿来用的东西：收银、预约、带登录的后台",
+      "appPlaceholder": "描述你的应用：它做什么、谁在用……",
+      "headline": "你的下一个应用从这里开始",
+      "subtitle": "告诉 Len 它要做什么，Len 就把它做出来：页面、数据和登录。"
+    }
   },
   "empty": {
     "badge": "OpenLen 工作区",

@@ -235,7 +235,17 @@
     "pasteHtml": "oder füge dein eigenes HTML ein",
     "galleryHeading": "Geprüfte Vorlagen",
     "search": "Vorlagen suchen…",
-    "noResults": "Keine Ergebnisse für „{query}“"
+    "noResults": "Keine Ergebnisse für „{query}“",
+    "kind": {
+      "label": "Was möchtest du erstellen?",
+      "page": "Seite",
+      "pageHint": "Eine Website für dein Business: Landingpage, Speisekarte, Portfolio",
+      "app": "App",
+      "appHint": "Etwas zum Benutzen: Kasse, Terminbuchung, Dashboard mit Login",
+      "appPlaceholder": "Beschreibe deine App: was sie tut, wer sie nutzt…",
+      "headline": "Deine nächste App beginnt hier",
+      "subtitle": "Sag Len, was sie können soll, und er baut sie: ihre Screens, ihre Daten und ihren Login."
+    }
   },
   "empty": {
     "badge": "OpenLen Workspace",

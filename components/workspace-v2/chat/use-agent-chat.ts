@@ -61,6 +61,7 @@ import { cambiosEnVivo, esFicheroCambiado } from "@/lib/workspace-v2/cambios-en-
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import { ownerReasonFrom } from "@/lib/agent/owner-reason";
 import { httpErrorText } from "./http-error";
+import { camposDeNacer, type PideNacer } from "./nace-como";
 
 /** El evento `html` del bucle, tal cual sale por el cable. Se usa como TIPO al
  *  leer el payload para que un renombrado allí rompa aquí la compilación en vez
@@ -261,9 +262,12 @@ export interface AgentChatOptions {
 }
 
 /** Las fotos (ya subidas) y la referencia que acompañan a un borrador. */
-export interface PendingAttachments {
+export interface PendingAttachments extends PideNacer {
   readonly images: readonly AttachedImage[];
   readonly styleDirection: StyleDirection | null;
+  // UNA APP NACE (`PideNacer`): la tarjeta App del estado vacío. El servidor
+  // convierte el proyecto en blanco en app antes del turno
+  // (`lib/projects/nacer-como-app.ts`), con el idioma de la interfaz de `lang`.
 }
 
 export function useAgentChat({
@@ -1063,6 +1067,9 @@ export function useAgentChat({
         readonly images?: readonly AttachedImage[];
         /** Crear es Len: la referencia por URL, que viaja con ESTE mensaje. */
         readonly styleDirection?: StyleDirection | null;
+        /** El primer mensaje de un proyecto en blanco que nace como app. */
+        readonly naceComo?: PideNacer["naceComo"];
+        readonly idioma?: string;
       },
     ) => {
       const escrito = rawPrompt.trim();
@@ -1319,6 +1326,8 @@ export function useAgentChat({
               ...(turnScope ? { scope: turnScope } : {}),
               ...(turnImages.length > 0 ? { attachedImages: turnImages } : {}),
               ...(opciones?.styleDirection ? { styleDirection: opciones.styleDirection } : {}),
+              // UNA APP NACE con este mensaje (la tarjeta App del estado vacío).
+              ...camposDeNacer(opciones),
             }),
             signal: abort.signal,
           });
@@ -2062,6 +2071,7 @@ export function useAgentChat({
     void send(texto, undefined, {
       ...(adjuntos?.images.length ? { images: adjuntos.images } : {}),
       ...(adjuntos?.styleDirection ? { styleDirection: adjuntos.styleDirection } : {}),
+      ...camposDeNacer(adjuntos),
     });
   }, [pendingDraftAutoSend, pendingDraft, pendingAttachments, onPendingDraftConsumed, send]);
 

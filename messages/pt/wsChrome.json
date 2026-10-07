@@ -243,7 +243,17 @@
     "pasteHtml": "ou cole seu próprio HTML",
     "galleryHeading": "Modelos verificados",
     "search": "Buscar modelos…",
-    "noResults": "Sem resultados para “{query}”"
+    "noResults": "Sem resultados para “{query}”",
+    "kind": {
+      "label": "O que você quer fazer?",
+      "page": "Página",
+      "pageHint": "Um site para o seu negócio: landing, cardápio, portfólio",
+      "app": "App",
+      "appHint": "Algo que se usa: ponto de venda, agenda, painel com login",
+      "appPlaceholder": "Descreva seu app: o que faz, quem usa…",
+      "headline": "Seu próximo app começa aqui",
+      "subtitle": "Conte ao Len o que ele precisa fazer e ele o constrói: telas, dados e login."
+    }
   },
   "empty": {
     "badge": "Espaço de trabalho OpenLen",

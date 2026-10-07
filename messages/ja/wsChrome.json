@@ -235,7 +235,17 @@
     "pasteHtml": "または自分の HTML を貼り付け",
     "galleryHeading": "検証済みテンプレート",
     "search": "テンプレートを検索…",
-    "noResults": "「{query}」の結果はありません"
+    "noResults": "「{query}」の結果はありません",
+    "kind": {
+      "label": "何を作りますか？",
+      "page": "ページ",
+      "pageHint": "ビジネスのためのウェブサイト：ランディング、メニュー、ポートフォリオ",
+      "app": "アプリ",
+      "appHint": "使うもの：POSレジ、予約、ログイン付きダッシュボード",
+      "appPlaceholder": "アプリについて説明してください：何をするか、誰が使うか…",
+      "headline": "次のアプリはここから",
+      "subtitle": "何をするアプリかを Len に伝えれば、画面・データ・ログインまで作ります。"
+    }
   },
   "empty": {
     "badge": "OpenLen ワークスペース",
