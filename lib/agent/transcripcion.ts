@@ -31,6 +31,7 @@ import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "@/lib/agent/terminal/cambios-del-comando";
 import { currentToolCall, currentToolName } from "@/lib/agent/tool-renames";
+import { MARCA_DE_TURNO_DETENIDO } from "@/lib/agent/historial-saneado";
 import type { GoalSnapshot } from "@/lib/agent/goal";
 import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 
@@ -99,16 +100,9 @@ export interface TranscripcionGuardada {
   readonly detenido?: true;
 }
 
-/**
- * LO QUE EL MODELO LEE DETRÁS DE UN TURNO QUE EL DUEÑO PARÓ, como el
- * «[Request interrupted by user]» de Claude Code. Sin ella, un «La escribo
- * entera.» cortado a mitad del Write se leía como una promesa pendiente, y el
- * turno siguiente la cumplía aunque el dueño hubiera pasado a otra cosa
- * (ensayo de caja de crear-es-len, 06/10). Sólo el hecho: qué hacer con él lo
- * decide el modelo con lo que diga el dueño después.
- */
-export const MARCA_DE_TURNO_DETENIDO =
-  "[Request interrupted by the owner (■): this turn did not finish, and only what is above got done.]";
+// La marca que va detrás de un turno que el dueño paró vive en
+// `historial-saneado.ts`, que es puro: la lee también `turnoAnteriorMudoDe`.
+export { MARCA_DE_TURNO_DETENIDO };
 
 /** Una fila de `projectChatMessages`, con lo que hace falta para el historial. */
 export interface FilaDelHistorial {

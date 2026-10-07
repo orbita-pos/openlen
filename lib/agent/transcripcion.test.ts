@@ -234,6 +234,17 @@ describe("H15 fase 2 · lo pensado en los turnos siguientes", () => {
 // la transcripción, el último es el texto final y las llamadas van antes. Mirado
 // igual, TODOS los turnos habrían salido mudos.
 describe("turnoAnteriorMudoDe — con el historial del navegador y con el de la base", () => {
+  // Ensayo de caja (06/10): tras parar con ■ una reescritura a mitad del
+  // Write, el aviso de «turno mudo» («If the user asked you for a change and it
+  // still isn't applied, apply it NOW») hacía que el turno siguiente —una
+  // pregunta por las visitas— rehiciera lo que el dueño acababa de parar.
+  it("🔴 un turno que el dueño paró con ■ NO es mudo: no se le empuja a rehacerlo", () => {
+    const h = historialDesdeLaBase([
+      { userText: "reescribe la portada", assistantReasoning: "La escribo entera.", transcript: { mensajes: [], leidos: [], detenido: true } },
+    ]);
+    expect(turnoAnteriorMudoDe(h)).toBe(false);
+  });
+
   it("🔴 un turno de la base que llamó a herramientas NO es mudo aunque cierre con texto", () => {
     const h = historialDesdeLaBase([fila("cambia el título", [...leer("/index.html", PAGINA), { role: "assistant", content: "Listo." }])]);
     expect(turnoAnteriorMudoDe(h)).toBe(false);
