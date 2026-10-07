@@ -563,6 +563,8 @@ export default defineConfig({
       "app/api/projects/[id]/terminal/route.test.ts",
       // Editar a mano en la lente «Código» (la #18).
       "app/api/projects/[id]/ficheros/route.test.ts",
+      // Una app web que no compila: 422 con fichero y línea (spec local 2026-10-07-apps).
+      "app/api/projects/[id]/publish/route.test.ts",
       // Deshacer un fichero de la carpeta (pieza 9 de Len 2.5).
       "app/api/projects/*/ficheros/versions/**/*.test.ts",
       // Exportar lleva la carpeta (pieza 9 de Len 2.5).

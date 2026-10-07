@@ -350,3 +350,13 @@ export function textoDeDiagnostico(d: Diagnostico): string {
   const sitio = d.linea === null ? d.ruta : d.columna === null ? `${d.ruta}:${d.linea}` : `${d.ruta}:${d.linea}:${d.columna}`;
   return `${sitio} — ${d.mensaje}`;
 }
+
+/** Una app que no compila NO SE PUBLICA (spec local 2026-10-07-apps, §5.6):
+ *  media app en el subdominio del dueño es peor que la release anterior. La
+ *  lanza `publishToDir` antes de tocar el disco, con todos los errores. */
+export class AppNoCompilaError extends Error {
+  constructor(readonly errores: readonly Diagnostico[]) {
+    super(`la app no compila:\n${errores.map(textoDeDiagnostico).join("\n")}`);
+    this.name = "AppNoCompilaError";
+  }
+}

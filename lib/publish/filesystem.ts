@@ -43,8 +43,13 @@ import { validatePageSlug } from "@/lib/projects/site-pages";
 import { isPublishableFolderPath, publishableFolderFiles } from "@/lib/agent/ficheros/folder";
 import { SELF_UNREGISTERING_SW, serviceWorkerPaths } from "@/lib/publish/service-worker";
 import type {
+  AppDeProyecto,
   FormConfig,
 } from "@/lib/projects/types";
+import { AppNoCompilaError, compilarCarpeta } from "@/lib/apps/compilador";
+import { catalogo as catalogoDeApps, ficherosDelCatalogo, rutaDeVendor } from "@/lib/apps/dependencias";
+import { conImportMap, conPrecarga, rutasDePrecarga } from "@/lib/apps/documento";
+import { leerVendor } from "@/lib/apps/servir";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Publish-to-disk primitives — versioned releases + `current` symlink.
@@ -172,6 +177,13 @@ export interface PublishParams {
    *  páginas, con la ruta de `projectFiles` (`/js/app.js`). Se publican tal
    *  cual los web (`lib/agent/ficheros/folder.ts`); el resto se ignora. */
   files?: ReadonlyArray<{ path: string; content: string }>;
+  /** UNA APP WEB (spec local docs/superpowers/specs/2026-10-07-apps-design.md):
+   *  su carpeta se COMPILA antes de tocar el disco —si algo no compila, no se
+   *  publica (`AppNoCompilaError`)—, sus documentos llevan el import map y la
+   *  precarga, y su catálogo va, de producción, en `/openlen/vendor/`. */
+  app?: AppDeProyecto | null;
+  /** Su `import.meta.env` público (`lib/apps/entorno.ts`). */
+  entorno?: Readonly<Record<string, string>>;
   /** Site assistant (settings.assistant). When enabled, the visitor-facing
    *  chat widget IIFE is injected before </body> on the root doc AND every
    *  page/locale variant. The owner's business brain never ships — the widget
@@ -870,6 +882,44 @@ export async function publishToDir(
   }
   const publishHtml = sanitized.html;
 
+  // LOS FUENTES (.jsx .tsx .ts, y en una app también .js) SE COMPILAN AQUÍ,
+  // antes de hornear nada y de tocar el disco: si algo no compila NO SE
+  // PUBLICA — media app en el subdominio del dueño sería peor que la release
+  // de antes, que sigue sirviéndose. La publicada recibe lo MISMO que vieron el
+  // lienzo y los ojos de Len: el mismo compilador (`lib/apps/compilador.ts`).
+  const app = params.app ?? null;
+  const carpetaPublicable: Record<string, string> = Object.fromEntries(
+    (params.files ?? []).filter((f) => isPublishableFolderPath(f.path)).map((f) => [f.path, f.content]),
+  );
+  if (app && !catalogoDeApps(app.catalogo)) {
+    throw new Error(`publishToDir: la app pide el catálogo ${app.catalogo}, que no existe`);
+  }
+  if (app && !Object.hasOwn(carpetaPublicable, app.entrada)) {
+    throw new AppNoCompilaError([
+      { ruta: app.entrada, linea: null, columna: null, mensaje: "the app's entry module does not exist" },
+    ]);
+  }
+  const compilada = compilarCarpeta({
+    carpeta: carpetaPublicable,
+    catalogo: app?.catalogo ?? null,
+    ...(params.entorno ? { entorno: params.entorno } : {}),
+    entrada: app?.entrada ?? null,
+  });
+  if (compilada.errores.length > 0) throw new AppNoCompilaError(compilada.errores);
+  // El catálogo, de PRODUCCIÓN, del mismo origen. Sin él la app no arranca, así
+  // que una dependencia que falta en el disco del servidor también para todo.
+  const vendorDeLaApp = app
+    ? ficherosDelCatalogo(app.catalogo).map((f) => {
+        const content = leerVendor(app.catalogo, f, "produccion");
+        if (content === null) throw new Error(`publishToDir: falta ${f} del catálogo ${app.catalogo} (npm run apps:vendor)`);
+        return { path: rutaDeVendor(app.catalogo, f).slice(1), content };
+      })
+    : [];
+  /** El documento de una app: el import map y la precarga, sobre lo ya
+   *  sellado, en el mismo punto que la vista (`documentoDeVista`). */
+  const paraLaApp = (html: string): string =>
+    app ? conPrecarga(conImportMap(html, app.catalogo), rutasDePrecarga(app.catalogo, compilada.grafo, compilada.paquetes)) : html;
+
   const sub = v.value;
   const root = getRoot();
   const subDir = safeJoin(root, sub);
@@ -1020,17 +1070,17 @@ export async function publishToDir(
   // que nuestra propia CSP bloquea, así que el visitante lee el marcador de
   // Cloudflare en vez del correo del negocio. Va aquí —después de optimizar,
   // hornear y sellar— para que ningún parser posterior pueda moverlo.
-  migratedHtml = optOutOfEmailObfuscation(migratedHtml);
+  migratedHtml = optOutOfEmailObfuscation(paraLaApp(migratedHtml));
 
   const releaseFiles: Array<{ path: string; content: string }> = [
     { path: "index.html", content: migratedHtml },
     ...localeDocs.map((d) => ({
       path: `${d.locale}/index.html`,
-      content: optOutOfEmailObfuscation(d.html),
+      content: optOutOfEmailObfuscation(paraLaApp(d.html)),
     })),
     ...pageDocs.map((p) => ({
       path: `${p.slug}/index.html`,
-      content: optOutOfEmailObfuscation(p.html),
+      content: optOutOfEmailObfuscation(paraLaApp(p.html)),
     })),
     { path: "sitemap.xml", content: sitemap },
     { path: "robots.txt", content: buildRobots(baseUrl) },
@@ -1045,13 +1095,14 @@ export async function publishToDir(
   ];
 
   // LA CARPETA (pieza 9 de Len 2.5): los ficheros web del proyecto, tal cual,
-  // junto a las páginas. Se filtran OTRA VEZ aquí aunque el llamador ya lo
+  // junto a las páginas — salvo los fuentes, que van COMPILADOS en su misma
+  // ruta (arriba). Se filtran OTRA VEZ aquí aunque el llamador ya lo
   // haga (como `data-slot-path`): ni una prueba, ni una migración, ni una ruta
   // reservada o rara llegan al disco. Si el dueño trae su robots.txt o su
   // llms.txt, gana el suyo, como en Vercel con `public/`.
-  const folder = publishableFolderFiles(Object.fromEntries((params.files ?? []).map((f) => [f.path, f.content])));
+  const folder = publishableFolderFiles(compilada.ficheros);
   const own = new Set(folder.map((f) => f.path));
-  const tree = [...releaseFiles.filter((f) => !own.has(f.path)), ...folder];
+  const tree = [...releaseFiles.filter((f) => !own.has(f.path)), ...folder, ...vendorDeLaApp];
   // EL SERVICE WORKER NO ATRAPA A NADIE (lib/publish/service-worker.ts): donde
   // el sitio tuvo o puede tener uno y esta release no lo trae, va el que se da
   // de baja. Las rutas se recuerdan fuera de la release, para las siguientes.

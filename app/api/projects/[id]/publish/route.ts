@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
 import { auth } from "@/auth";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
@@ -26,6 +27,8 @@ export const dynamic = "force-dynamic";
 //                      project exists but belongs to someone else)
 //   404 not_found     — project id doesn't exist for this user
 //   409 taken         — another row already claims this subdomain
+//   422 app_does_not_compile — an app web whose code does not compile; `errors`
+//                      lists file:line — message (spec local 2026-10-07-apps)
 //   500 error         — disk write or DB error after validation passed
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -78,6 +81,11 @@ export const POST = paraLaApp(async (
     }
     if (err instanceof ProjectNotFoundError) {
       return json({ error: "not_found" }, 404);
+    }
+    // Una app web que no compila no se publica (spec local 2026-10-07-apps):
+    // se dice qué fichero y qué línea, para el dueño y para Len.
+    if (err instanceof AppNoCompilaError) {
+      return json({ error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) }, 422);
     }
     // eslint-disable-next-line no-console
     console.error("[publish] unexpected error:", err);

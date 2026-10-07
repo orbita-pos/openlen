@@ -19,6 +19,7 @@ import {
   ReleaseNotFoundError,
 } from "@/lib/publish/filesystem";
 import { purgeSubdomain } from "@/lib/publish/cache-purge";
+import { entornoPublicoDeLaApp } from "@/lib/apps/entorno";
 import { dropPageDatabase, pageDatabaseRef } from "@/lib/backend/teardown";
 import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
@@ -896,6 +897,11 @@ export async function publishProject(
   // ⚰️ Aquí se buscaba el perfil del negocio para hornear la banda «Mis
   // plataformas». Se va con ella el 2026-08-29: era su único consumidor, así
   // que publicar deja de pagar una consulta por una sección que ya no existe.
+  // UNA APP WEB (spec local 2026-10-07-apps): su carpeta se compila al
+  // publicar (`publishToDir`) con su `import.meta.env` público. Sin traducción
+  // automática: su texto vive en el código, no en el documento (H15).
+  const app = project.data?.app ?? null;
+  const entornoDeLaApp = app ? await entornoPublicoDeLaApp(params.projectId) : undefined;
   let publishResult: {
     sha: string;
     html: string;
@@ -927,13 +933,15 @@ export async function publishProject(
         : undefined,
       pages: publicPages,
       files: Object.entries(projectFiles).map(([path, content]) => ({ path, content })),
+      app,
+      ...(entornoDeLaApp ? { entorno: entornoDeLaApp } : {}),
       sourceLang,
       // `targets` ya viene filtrado (códigos válidos, sin el idioma de origen),
       // así que es exactamente «lo que debería salir». Comparar contra ESTO es
       // lo que permite decirle al dueño qué idioma se cayó.
-      localesPedidos: targets,
+      localesPedidos: app ? [] : targets,
       buildLocaleDocs:
-        targets.length > 0
+        !app && targets.length > 0
           ? (finalHtml) =>
               localizeForPublish({
                 projectId: params.projectId,
