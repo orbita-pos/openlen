@@ -550,6 +550,28 @@ describe("el código del fallo, para que el bucle sepa reintentar", () => {
   });
 });
 
+describe("el ■ a mitad de una llamada (ensayo de caja de crear-es-len, 06/10)", () => {
+  // Cortar mientras llegaban los argumentos de un Write salía como «tool
+  // arguments were not JSON: Write» —un error del modelo— y el chat decía «El
+  // modelo tuvo un problema». Como DeepSeek (`assistant/message` con
+  // `interrupted: true`): lo dicho se queda, la llamada sin despachar no existe.
+  it("🔴 sale como cancelado, con el texto ya cedido y SIN la llamada a medias", async () => {
+    const ctrl = new AbortController();
+    const body =
+      chunk({ content: "La escribo entera." }) +
+      chunk({ tool_calls: [{ index: 0, id: "c1", function: { name: "Write", arguments: '{"content":"<!doctype html><ht' } }] });
+    const { client: c } = client(body);
+    const events: FireworksStreamEvent[] = [];
+    for await (const e of c.stream({ ...REQUEST, streamToolArgs: true, tools: [{ type: "function", function: { name: "Write" } }] }, { signal: ctrl.signal })) {
+      events.push(e);
+      if (e.type === "function_call_delta") ctrl.abort();
+    }
+    expect(events.some((e) => e.type === "text_delta")).toBe(true);
+    expect(events.some((e) => e.type === "function_call")).toBe(false);
+    expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "cancelled" } });
+  });
+});
+
 describe("cortes a mitad del stream (revisión de la pieza 1)", () => {
   it("si la conexión se cierra a media respuesta (sin finish_reason), sale con code «transport» y lo escrito llega", async () => {
     const { client: c } = client(chunk({ content: "Voy a cambi" }));

@@ -489,9 +489,14 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
         void reader.cancel().catch(() => undefined);
       }
 
+      // EL ■ NO ARMA NADA, como DeepSeek: un turno cancelado a mitad del stream
+      // conserva lo dicho y sus llamadas sin despachar no existen
+      // (`assistant/message` con `interrupted: true`). Armar aquí los
+      // argumentos a medias de un Write daba «tool arguments were not JSON» —un
+      // error del modelo— y el chat decía «El modelo tuvo un problema».
       // Argumentos que no son JSON no son una llamada: ejecutarlos a medias es
       // peor que no ejecutarlos.
-      for (const [, call] of [...pendingCalls.entries()].sort(([left], [right]) => left - right)) {
+      for (const [, call] of cancelled ? [] : [...pendingCalls.entries()].sort(([left], [right]) => left - right)) {
         if (!call.name) continue;
         let args: unknown;
         try { args = call.args.trim() === "" ? {} : JSON.parse(call.args); } catch {
