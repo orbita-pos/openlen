@@ -210,17 +210,19 @@ comprobado después en el build de producción en 127.0.0.1 con Fireworks real
 `route` del agente, `prompts-golden`, `lienzo`, `middleware-redirect-host`,
 `app/uploads`); `test:node` 676 de 676; `npm run build` compila.
 
+### Tercera ronda (07/10): los tres que quedaban, como DeepSeek
+
+| Commit | Qué | Comprobado en el ensayo |
+|---|---|---|
+| `1354a8c1` | **Recargar con una pregunta en el aire**: como DeepSeek («a browser that reconnects receives it again and can still complete it»), el registro de turnos abiertos guarda la pregunta mientras espera (`preguntaPendiente`), el reenganche la devuelve y el chat pinta su tarjeta. | Pino: pregunta del modo plan esperando, recarga → la tarjeta vuelve; «Planear primero» desde ella llega al turno VIVO (`respuesta=Plan first`) y Len sigue en modo plan. |
+| `d0a1c949` | **La pregunta del modo plan como texto en inglés y sin tarjeta**: el modelo la mandó en la misma tanda que `find_photo` y `Read`. El servidor ponía como texto del turno nuestra frase fija en inglés, y el chat sólo buscaba la pregunta en la ÚLTIMA tarjeta. Ahora una pregunta con `intent` cierra el turno sin texto (la tarjeta la pinta traducida), y la pregunta abierta sale de su llamada, esté donde esté (`openQuestionIndex`). | La tarjeta en español («Len quiere planear antes de cambiar nada. ¿Planear primero?»), sin «Switch to plan mode?». La tanda en paralelo, con pruebas (no se pudo forzar en vivo). |
+| `9f878435` | **El ■ antes de que llegue el uso cobraba 0**: Fireworks manda el uso al final del stream. Como DeepSeek (el dueño paga lo que el modelo llegó a gastar), sin el uso del proveedor el bucle cuenta lo que llegó —la petición y lo generado— con el estimador de la compactación; sin un solo trozo, nada. | ■ a los 7 s del primer stream: «■ del dueño — 64 … vueltas=1 llamadas=0» (antes, 0). |
+
+Puertas: typecheck limpio, las pruebas tocadas en verde, `test:node` 676 de 676,
+`npm run build` compila.
+
 ### Visto y NO arreglado
 
-- **Recargar con una pregunta de Len pendiente** pinta «Escribiendo» sin la
-  tarjeta de la pregunta hasta que vence la espera (2 min, `ASK_USER_TIMEOUT_MS`);
-  después la tarjeta vuelve y la respuesta abre el turno siguiente. Pieza 3 de
-  Len 2.5, no de esta rama.
-- **`enter_plan_mode` en un primer turno** (Pino) no sacó tarjeta de aprobar:
-  la pregunta salió como texto del turno y en inglés («Switch to plan mode?
-  Len explores and agrees the approach…»). No investigado; Len 2.5, no de esta rama.
-- **Un ■ antes de que llegue el uso** (`usage`) cobra 0: el ■ cobra lo usado,
-  pero sin el trozo de uso del proveedor no hay tokens que contar. Ya era así.
 - **El razonamiento de turnos viejos vuelve en el historial (H15)**, y uno que
   citaba un aviso ya retirado lo sigue «oyendo»: así siguió rehaciéndose la
   reescritura en Brisa y Monte. Se va solo cuando esos turnos salen de la ventana.
