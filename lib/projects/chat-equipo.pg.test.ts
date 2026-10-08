@@ -79,4 +79,23 @@ describe("el chat del equipo", () => {
     const turnos = await getChatMessages(PROYECTO);
     expect(turnos.at(-1)).toMatchObject({ tipo: "persona", autorId: ELI, menciones: [DUENO], userText: "@dueno mira" });
   });
+
+  it("🔴 C1 · con la charla ya en 50 filas, el mensaje nuevo del equipo sale en el chat (se poda la más vieja)", async () => {
+    const base = Date.UTC(2026, 9, 1);
+    await db.insert(schema.projectChatMessages).values(
+      Array.from({ length: 50 }, (_, i) => ({
+        id: `prueba-equipo-viejo-${i}`,
+        projectId: PROYECTO,
+        userText: `turno ${i}`,
+        assistantReasoning: "hecho",
+        status: "applied",
+        createdAt: new Date(base + i * 1000),
+      })),
+    );
+    await escribirMensajeDelEquipo({ projectId: PROYECTO, autorId: ELI, texto: "@dueno el nuevo", menciones: [DUENO] });
+    const turnos = await getChatMessages(PROYECTO);
+    expect(turnos).toHaveLength(50);
+    expect(turnos.at(-1)).toMatchObject({ tipo: "persona", userText: "@dueno el nuevo" });
+    expect(turnos[0]!.userText).toBe("turno 1");
+  });
 });

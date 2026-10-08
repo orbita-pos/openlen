@@ -8,6 +8,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { MAX_TEXTO_DEL_HILO, mencionesValidas, personasDelProyecto } from "@/lib/projects/hilos";
+import { trim } from "@/lib/projects/chat";
 
 export const TIPO_PERSONA = "persona";
 
@@ -33,6 +34,9 @@ export async function escribirMensajeDelEquipo(p: {
   if (mencionados.length > 0) {
     await db.insert(schema.projectChatMentions).values(mencionados.map((userId) => ({ projectId: p.projectId, mensajeId: id, userId })));
   }
+  // La charla tiene tope (`CHAT_LIMIT`) como con cada turno de Len: sin podar,
+  // la fila 51 no se vería en el chat.
+  await trim(p.projectId);
   return { id, mencionados };
 }
 

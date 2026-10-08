@@ -566,7 +566,9 @@ export async function updateChatMessageStatus(
 /** Evict the oldest rows beyond the cap — mirrors projectVersions' trim. Sólo
  *  la charla en curso: las archivadas tienen su propio tope
  *  (`MAX_ARCHIVED_CONVERSATIONS`) y no se recortan con cada turno nuevo. */
-async function trim(projectId: string): Promise<void> {
+/** Poda la charla en curso a `CHAT_LIMIT` filas (las más viejas se van).
+ *  Exportada para el chat del equipo, que escribe filas sin pasar por un turno. */
+export async function trim(projectId: string): Promise<void> {
   const rows = await db
     .select({ id: schema.projectChatMessages.id })
     .from(schema.projectChatMessages)
