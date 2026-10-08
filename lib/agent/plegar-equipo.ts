@@ -25,7 +25,9 @@ export function plegarEquipo(
   for (const f of filas) {
     if (f.tipo === "persona") {
       if (f.autorId) {
-        const fotos = photosOf(f.fila.attachedImage);
+        // Las fotos, sólo del dueño: como el binario de Claude Code, que baja
+        // los adjuntos del mensaje de `rc_owner` y de los demás no (el texto sí).
+        const fotos = f.autorId === duenoId ? photosOf(f.fila.attachedImage) : [];
         pendientes.push({ autorId: f.autorId, texto: f.fila.userText, menciones: f.menciones ?? [], createdAt: f.createdAt, ...(fotos.length > 0 ? { fotos } : {}) });
       }
       continue;
