@@ -319,6 +319,14 @@ export function turnoDeLaFila(filaId: string, userId: string): string | null {
   return null;
 }
 
+/** ¿Alguien corre esta fila, sea quien sea? Un miembro que mira el turno de
+ *  otro (compartir el proyecto) no tiene su `turnoId`, pero la fila NO es
+ *  huérfana: no se corta. */
+export function filaEnMarcha(filaId: string): boolean {
+  for (const t of abiertos.values()) if (t.filaId === filaId) return true;
+  return false;
+}
+
 /** El turno terminó. Se llama SIEMPRE, también cuando revienta. */
 export function cerrarTurno(turnoId: string): void {
   // Una pregunta que seguía esperando se suelta: su herramienta cierra el turno

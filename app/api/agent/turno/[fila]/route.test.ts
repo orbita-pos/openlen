@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   turnoDeLaFila: vi.fn(),
+  filaEnMarcha: vi.fn((): boolean => false),
   preguntaPendiente: vi.fn((): unknown => null),
   siguienteDeLaFila: vi.fn((): string | null => null),
   leerTurnoDelUsuario: vi.fn(),
@@ -12,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/agent/direcciones", () => ({
   turnoDeLaFila: mocks.turnoDeLaFila,
+  filaEnMarcha: mocks.filaEnMarcha,
   siguienteDeLaFila: mocks.siguienteDeLaFila,
   preguntaPendiente: mocks.preguntaPendiente,
 }));
@@ -75,6 +77,20 @@ describe("GET /api/agent/turno/[fila] — volver a mirar un turno que sigue", ()
     expect(turno.cortado).toBe(true);
     expect(turno.enCurso).toBeUndefined();
     expect(cuerpo.turnoId).toBeUndefined();
+  });
+
+  // Visto en el ensayo de caja (08/10): Eli miraba el proyecto mientras corría el
+  // turno de Dana; su panel lo siguió por aquí, «nadie» lo corría para Eli, y el
+  // turno de Dana se guardó como cortado.
+  it("🔴 un miembro que mira el turno de OTRO lo sigue en curso, sin `turnoId` y sin cortarlo", async () => {
+    mocks.auth.mockResolvedValue({ user: { id: "u-eli" } });
+    mocks.leerTurnoDelUsuario.mockResolvedValue(enCurso);
+    mocks.turnoDeLaFila.mockReturnValue(null);
+    mocks.filaEnMarcha.mockReturnValue(true);
+    const { cuerpo } = await pedir();
+    expect(cuerpo).toEqual({ turno: enCurso });
+    expect(mocks.marcarCortadaSiSigueEnCurso).not.toHaveBeenCalled();
+    expect(mocks.filaEnMarcha).toHaveBeenCalledWith("fila-1");
   });
 
   it("un turno ya cerrado vuelve tal cual, sin mirar el almacén", async () => {
