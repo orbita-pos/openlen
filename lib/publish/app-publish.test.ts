@@ -16,7 +16,7 @@ process.env.OPENLEN_LOCALIZE = "0";
 const root = mkdtempSync(path.join(tmpdir(), "olapp-"));
 process.env.PUBLISH_ROOT = root;
 
-import { publishToDir } from "./filesystem";
+import { publishToDir, tailwindStylesheetsOf } from "./filesystem";
 import { AppNoCompilaError } from "@/lib/apps/compilador";
 import { CATALOGO_ACTUAL } from "@/lib/apps/dependencias";
 
@@ -144,6 +144,39 @@ describe("publicar una app en PRODUCCIÓN (horneado y minificado de verdad)", ()
       const mapa = /<script type=importmap data-openlen-importmap>([\s\S]*?)<\/script>|<script type="importmap" data-openlen-importmap>([\s\S]*?)<\/script>/.exec(html);
       assert.ok(mapa, "import map tras el minificado");
       assert.equal(JSON.parse((mapa![1] ?? mapa![2])!).imports["react-dom/client"], `/openlen/vendor/${CATALOGO_ACTUAL}/react-dom-client.js`);
+    } finally {
+      env.NODE_ENV = antes;
+    }
+  });
+});
+
+describe("las hojas de Tailwind de una app (apps 2026-11, tarea 2)", () => {
+  it("tailwindStylesheetsOf: sólo las hojas publicables que usan Tailwind", () => {
+    const hojas = tailwindStylesheetsOf([
+      { path: "/src/index.css", content: "@layer base { a {} }" },
+      { path: "/src/plano.css", content: "body { color: red }" },
+      { path: "/src/App.jsx", content: "@apply en un comentario de JS" },
+      { path: "/tests/x.css", content: "@apply p-2" },
+    ]);
+    assert.deepEqual(hojas, ["@layer base { a {} }"]);
+  });
+
+  it("🔴 en PRODUCCIÓN, el @apply de la hoja de la app está en el CSS horneado de la publicada", async () => {
+    const env = process.env as Record<string, string | undefined>;
+    const antes = env.NODE_ENV;
+    env.NODE_ENV = "production";
+    try {
+      const conHoja = [
+        ...CARPETA.filter((f) => f.path !== "/src/index.css"),
+        { path: "/src/index.css", content: "@tailwind base;\n@layer components { .tarjeta-de-prueba { @apply ring-8; } }" },
+        // Como el CDN con el DOM, el horneado sólo emite las clases de un `@layer
+        // components` que aparecen en el código: aquí, en el JSX.
+        { path: "/src/Tarjeta.jsx", content: 'export default () => <div className="tarjeta-de-prueba" />;' },
+      ];
+      await publishToDir({ subdomain: "apphoja", html: CASCARON, files: conHoja, app: APP });
+      const html = leer("apphoja", "index.html");
+      assert.ok(!html.includes("cdn.tailwindcss.com"), "se horneó");
+      assert.ok(html.includes(".tarjeta-de-prueba"), "la regla de la hoja está en el CSS horneado");
     } finally {
       env.NODE_ENV = antes;
     }

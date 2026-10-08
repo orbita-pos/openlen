@@ -277,3 +277,36 @@ test("prod mode: optimizeHtmlForProduction pasa el código de la carpeta al horn
   assert.equal(r.baked, true);
   assert.ok(r.html.includes(".ring-4"), "ring-4 llega tras el minificado");
 });
+
+// ─── Las hojas de Tailwind de una app (apps 2026-11, tarea 2) ────────────────
+// `class="btn"` en el documento: como el CDN con el DOM, el horneado sólo emite
+// las clases de un `@layer components` que aparecen en el contenido.
+const DOC_SHADCN =
+  '<!doctype html><html><head><script src="https://cdn.tailwindcss.com"></script>' +
+  '<script>tailwind.config = { theme: { extend: { colors: { primary: { DEFAULT: "hsl(var(--primary))" } } } } }</script>' +
+  '</head><body><div id="root" class="btn"></div></body></html>';
+
+test("bakeTailwind: las hojas de la app se hornean con el theme del cascarón", async () => {
+  const hoja = "@tailwind base;\n@layer base { :root { --primary: 240 100% 50%; } }\n@layer components { .btn { @apply bg-primary; } }";
+  const r = await bakeTailwind(DOC_SHADCN, [], [hoja]);
+  assert.equal(r.baked, true);
+  assert.match(r.html, /--primary: 240 100% 50%/);
+  assert.match(r.html, /\.btn\s*\{[^}]*background-color: hsl\(var\(--primary\)\)/);
+  // El `@tailwind base` de la hoja no duplica el preflight: ya lo pone el horneado.
+  assert.equal(r.html.split("box-sizing: border-box").length - 1, 1);
+});
+
+test("bakeTailwind: una hoja que no compila deja el CDN (la página se ve como en el lienzo)", async () => {
+  const r = await bakeTailwind(DOC_SHADCN, [], [".x { @apply bg-nope; }"]);
+  assert.equal(r.baked, false);
+  assert.equal(r.html, DOC_SHADCN);
+});
+
+test("bakeTailwind: un </style> dentro de la hoja no cierra el <style> horneado", async () => {
+  const hoja = '.x::after { content: "</style><b id=fuera>"; }\n/* </STYLE> */\n.btn { @apply bg-primary; }';
+  const r = await bakeTailwind(DOC_SHADCN, [], [hoja]);
+  assert.equal(r.baked, true);
+  const cierres = r.html.match(/<\/style/gi) ?? [];
+  assert.equal(cierres.length, 1, "sólo el cierre del <style data-tw-baked>");
+  assert.ok(!/<b id=fuera>/.test(r.html.split(/<\/style/i)[1] ?? ""), "nada de la hoja queda fuera del <style>");
+});
