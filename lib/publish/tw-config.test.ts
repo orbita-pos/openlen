@@ -3,6 +3,7 @@ import {
   extractTwConfig,
   injectTwCarrier,
   readTwCarrier,
+  readTwDarkMode,
   stripTwCarrier,
 } from "./tw-config";
 
@@ -271,3 +272,30 @@ describe("el carrier es una config VÁLIDA de Tailwind para el CDN (bug del prev
     expect(readTwCarrier(oldFormat)).toEqual({ colors: { lime: "#A8E40B" } });
   });
 })
+
+describe("darkMode (apps 2026-11, tarea 3)", () => {
+  test("se lee de la config y del carrier, y lo hostil no pasa", () => {
+    const conClase = `<script>tailwind.config = { darkMode: ["class"], theme: { extend: { colors: { a: "#000" } } } }</script>`;
+    expect(extractTwConfig(conClase).darkMode).toEqual(["class"]);
+    expect(readTwDarkMode(conClase)).toEqual(["class"]);
+    expect(readTwDarkMode(`<script>tailwind.config = { darkMode: "class" }</script>`)).toBe("class");
+    expect(readTwDarkMode(`<script>tailwind.config = { darkMode: ["selector", "[data-mode=\\"dark\\"]"] }</script>`)).toEqual(["selector", '[data-mode="dark"]']);
+    expect(readTwDarkMode(`<script>tailwind.config = { darkMode: "javascript:x" }</script>`)).toBeNull();
+    expect(readTwDarkMode(`<script>tailwind.config = { darkMode: ["class", "</script><script>x"] }</script>`)).toBeNull();
+    expect(readTwDarkMode("<p>sin config</p>")).toBeNull();
+    const conCarrier = injectTwCarrier("<head></head>", { colors: { a: "#000" } }, "class");
+    expect(readTwDarkMode(conCarrier)).toBe("class");
+  });
+
+  test("sin darkMode, el carrier sale byte a byte como antes", () => {
+    const extend = { colors: { a: "#000" } };
+    expect(injectTwCarrier("<head></head>", extend)).toBe(injectTwCarrier("<head></head>", extend, null));
+    expect(injectTwCarrier("<head></head>", extend)).toContain('tailwind.config={"theme":{"extend":{"colors":{"a":"#000"}}}}');
+  });
+
+  test("una config con SÓLO darkMode no cuenta como descartada: su darkMode se lee", () => {
+    const r = extractTwConfig(`<script>tailwind.config = { darkMode: "class" }</script>`);
+    expect(r.extend).toBeNull();
+    expect(r.darkMode).toBe("class");
+  });
+});

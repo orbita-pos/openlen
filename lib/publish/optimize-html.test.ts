@@ -310,3 +310,15 @@ test("bakeTailwind: un </style> dentro de la hoja no cierra el <style> horneado"
   assert.equal(cierres.length, 1, "sólo el cierre del <style data-tw-baked>");
   assert.ok(!/<b id=fuera>/.test(r.html.split(/<\/style/i)[1] ?? ""), "nada de la hoja queda fuera del <style>");
 });
+
+test("bakeTailwind: darkMode por clase se hornea como clase, no como media query", async () => {
+  const doc =
+    '<!doctype html><html><head><script src="https://cdn.tailwindcss.com"></script>' +
+    '<script>tailwind.config = { darkMode: ["class"], theme: { extend: {} } }</script>' +
+    '</head><body><div class="dark:bg-black">x</div></body></html>';
+  const r = await bakeTailwind(doc);
+  assert.equal(r.baked, true);
+  // Tailwind 3.4 escribe la variante por clase como `:is(.dark *)`.
+  assert.match(r.html, /\.dark\\:bg-black:is\(\.dark \*\)/);
+  assert.doesNotMatch(r.html, /prefers-color-scheme: dark/);
+});
