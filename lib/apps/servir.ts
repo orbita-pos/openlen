@@ -16,7 +16,9 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { compilarFuente, esFuenteCompilable, textoDeDiagnostico, type Diagnostico } from "./compilador";
-import { ficherosDelCatalogo, rutaDeVendor, rutaDeVendorValida, type ModoVendor } from "./dependencias";
+// La versión en JavaScript del analizador, la misma que usa el compilador.
+import { parse } from "es-module-lexer/js";
+import { dependenciaDe, ficherosDelCatalogo, rutaDeVendor, rutaDeVendorValida, type ModoVendor } from "./dependencias";
 
 /** Dónde están las dependencias construidas (`npm run apps:vendor`). En
  *  producción `process.cwd()` es /opt/openlen-app, con `public/` dentro (lo
@@ -48,6 +50,48 @@ export function vendorPorRuta(catalogo: string, modo: ModoVendor): Record<string
     if (cuerpo !== null) out[rutaDeVendor(catalogo, f)] = cuerpo;
   }
   return out;
+}
+
+const FUENTE_JS = /\.(?:m?js|jsx|tsx?)$/i;
+
+/**
+ * LOS FICHEROS DEL CATÁLOGO QUE UNA APP ALCANZA (2026-10-08): los paquetes que
+ * importa algún fichero compilado —estático o `import("…")` literal—, y lo que
+ * esos ficheros importan a su vez (`./react-todo.js`, `./chunk-*.js`). Es lo que
+ * la publicación copia a cada release: el catálogo 2026-11 entero son 3,2 MB, y
+ * una app que no dibuja gráficas no necesita los 516 KB de recharts. Si un
+ * fichero compilado no se puede leer, se copia el catálogo entero: sobrar sólo
+ * cuesta disco; faltar, una app rota.
+ */
+export function vendorFilesFor(nombreCatalogo: string, compilados: Readonly<Record<string, string>>): string[] {
+  const pila: string[] = [];
+  for (const [ruta, js] of Object.entries(compilados)) {
+    if (!FUENTE_JS.test(ruta)) continue;
+    let imports: ReturnType<typeof parse>[0];
+    try {
+      [imports] = parse(js);
+    } catch {
+      return ficherosDelCatalogo(nombreCatalogo);
+    }
+    for (const i of imports) {
+      const especificador = "specifier" in i ? i.specifier : undefined;
+      const d = typeof especificador === "string" ? dependenciaDe(nombreCatalogo, especificador) : null;
+      if (d) pila.push(d.fichero);
+    }
+  }
+  const vistos = new Set<string>();
+  while (pila.length > 0) {
+    const f = pila.pop()!;
+    if (vistos.has(f)) continue;
+    vistos.add(f);
+    const cuerpo = leerVendor(nombreCatalogo, f, "produccion");
+    if (cuerpo === null) continue;
+    for (const i of parse(cuerpo)[0]) {
+      const especificador = "specifier" in i ? i.specifier : undefined;
+      if (typeof especificador === "string" && especificador.startsWith("./")) pila.push(especificador.slice(2));
+    }
+  }
+  return [...vistos].sort();
 }
 
 export interface OpcionesDeServicio {

@@ -47,9 +47,9 @@ import type {
   FormConfig,
 } from "@/lib/projects/types";
 import { AppNoCompilaError, compilarCarpeta, usesTailwindDirectives } from "@/lib/apps/compilador";
-import { catalogo as catalogoDeApps, ficherosDelCatalogo, rutaDeVendor } from "@/lib/apps/dependencias";
+import { catalogo as catalogoDeApps, rutaDeVendor } from "@/lib/apps/dependencias";
 import { conImportMap, conPrecarga, rutasDePrecarga } from "@/lib/apps/documento";
-import { leerVendor } from "@/lib/apps/servir";
+import { leerVendor, vendorFilesFor } from "@/lib/apps/servir";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Publish-to-disk primitives — versioned releases + `current` symlink.
@@ -921,8 +921,10 @@ export async function publishToDir(
   if (compilada.errores.length > 0) throw new AppNoCompilaError(compilada.errores);
   // El catálogo, de PRODUCCIÓN, del mismo origen. Sin él la app no arranca, así
   // que una dependencia que falta en el disco del servidor también para todo.
+  // Sólo lo que la app alcanza (`vendorFilesFor`): el 2026-11 entero son 3,2 MB
+  // por release.
   const vendorDeLaApp = app
-    ? ficherosDelCatalogo(app.catalogo).map((f) => {
+    ? vendorFilesFor(app.catalogo, compilada.ficheros).map((f) => {
         const content = leerVendor(app.catalogo, f, "produccion");
         if (content === null) throw new Error(`publishToDir: falta ${f} del catálogo ${app.catalogo} (npm run apps:vendor)`);
         return { path: rutaDeVendor(app.catalogo, f).slice(1), content };

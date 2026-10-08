@@ -57,7 +57,11 @@ describe("el manual de una app (/AGENTS.md)", () => {
   const manual = buildManualDeLaPlataforma(ENV, "len", APP);
 
   it("nombra cada paquete de SU catálogo, y nada de las librerías de las páginas", () => {
-    for (const d of catalogo(APP.catalogo)!.dependencias) expect(manual).toContain(`· ${d.especificador} — `);
+    for (const d of catalogo(APP.catalogo)!.dependencias) {
+      // Los `@radix-ui/react-*` sueltos no: el manual nombra `radix-ui`.
+      if (d.hiddenFromManual) expect(manual).not.toContain(`· ${d.especificador} — `);
+      else expect(manual).toContain(`· ${d.especificador} — `);
+    }
     expect(manual).not.toMatch(/libs\.openlen\.com|cdn\.jsdelivr\.net\/npm\/@supabase/);
     expect(manual).not.toContain(RUTA_LIBRERIAS);
   });

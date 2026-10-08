@@ -93,7 +93,9 @@ export function rutasDePrecarga(catalogo: string, grafo: readonly string[], paqu
     .map((d) => rutaDeVendor(catalogo, d.fichero));
   // Las fachadas de React importan el bundle compartido.
   const usaReact = paquetes.some((p) => p === "react" || p.startsWith("react/") || p.startsWith("react-dom"));
-  const internos = usaReact ? c.internos.map((f) => rutaDeVendor(catalogo, f)) : [];
+  // Los trozos compartidos de un catálogo por partes (`chunk-*`) NO: cada paquete
+  // importa sólo los suyos, y precargarlos todos bajaría Radix entero para un clsx.
+  const internos = usaReact ? c.internos.filter((f) => !f.startsWith("chunk-")).map((f) => rutaDeVendor(catalogo, f)) : [];
   return [...new Set([...vendor, ...internos, ...grafo])];
 }
 

@@ -5,7 +5,7 @@
 // Run: npx tsx --require ./scripts/test-node-server-only-shim.cjs --test lib/publish/app-publish.test.ts
 import { after, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -83,7 +83,8 @@ describe("publicar una app web", () => {
 
   it("🔴 el catálogo va de PRODUCCIÓN, byte a byte, en /openlen/vendor/", async () => {
     await publishToDir({ subdomain: "appvendor", html: CASCARON, files: CARPETA, app: APP });
-    for (const f of ["react.js", "react-todo.js", "react-dom-client.js", "react-jsx-runtime.js", "supabase-js.js"]) {
+    // Lo que esta app alcanza (no importa supabase-js: ver «sólo lo que la app alcanza»).
+    for (const f of ["react.js", "react-todo.js", "react-dom-client.js", "react-jsx-runtime.js"]) {
       const publicado = leer("appvendor", `openlen/vendor/${CATALOGO_ACTUAL}/${f}`);
       const fuente = readFileSync(path.join(process.cwd(), "public", "app-vendor", CATALOGO_ACTUAL, "produccion", f), "utf8");
       assert.equal(publicado, fuente, f);
@@ -180,5 +181,43 @@ describe("las hojas de Tailwind de una app (apps 2026-11, tarea 2)", () => {
     } finally {
       env.NODE_ENV = antes;
     }
+  });
+});
+
+describe("del catálogo, sólo lo que la app alcanza (apps 2026-11, tarea 5)", () => {
+  /** Los ficheros de vendor de una release, y lo que cada uno importa con `./`. */
+  function vendorPublicado(sub: string): { ficheros: string[]; importan: Map<string, string[]> } {
+    const dir = path.join(releaseViva(sub), "openlen", "vendor", CATALOGO_ACTUAL);
+    const ficheros = readdirSync(dir).sort();
+    const importan = new Map<string, string[]>();
+    for (const f of ficheros) {
+      const js = readFileSync(path.join(dir, f), "utf8");
+      importan.set(f, [...js.matchAll(/from\s*"\.\/([A-Za-z0-9-]+\.js)"|import\s*"\.\/([A-Za-z0-9-]+\.js)"/g)].map((m) => (m[1] ?? m[2])!));
+    }
+    return { ficheros, importan };
+  }
+
+  it("🔴 una app que no importa recharts ni Radix no se lleva sus ficheros, y lo que se lleva está completo", async () => {
+    await publishToDir({ subdomain: "appmagra", html: CASCARON, files: CARPETA, app: APP });
+    const { ficheros, importan } = vendorPublicado("appmagra");
+    for (const no of ["recharts.js", "radix-ui.js", "radix-dialog.js", "supabase-js.js", "zod.js"]) assert.ok(!ficheros.includes(no), no);
+    for (const si of ["react.js", "react-dom-client.js", "react-jsx-runtime.js", "react-todo.js"]) assert.ok(ficheros.includes(si), si);
+    // Cerrado: todo lo que importa un fichero publicado también está publicado.
+    for (const [f, deps] of importan) for (const d of deps) assert.ok(ficheros.includes(d), `${f} importa ${d}, que no se publicó`);
+  });
+
+  it("una app que importa un primitivo de Radix y supabase-js se lleva su fichero y sus trozos compartidos", async () => {
+    const conRadix = [
+      ...CARPETA.filter((f) => f.path !== "/src/components/Boton.jsx"),
+      {
+        path: "/src/components/Boton.jsx",
+        content: 'import { Slot } from "@radix-ui/react-slot";\nimport { createClient } from "@supabase/supabase-js";\nexport default function Boton(props) { return <Slot><button {...props} /></Slot>; }\nexport const cliente = createClient;',
+      },
+    ];
+    await publishToDir({ subdomain: "appradix", html: CASCARON, files: conRadix, app: APP });
+    const { ficheros, importan } = vendorPublicado("appradix");
+    for (const si of ["radix-slot.js", "supabase-js.js"]) assert.ok(ficheros.includes(si), si);
+    assert.ok(!ficheros.includes("recharts.js"));
+    for (const [f, deps] of importan) for (const d of deps) assert.ok(ficheros.includes(d), `${f} importa ${d}, que no se publicó`);
   });
 });

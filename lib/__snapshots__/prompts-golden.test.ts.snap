@@ -2352,7 +2352,7 @@ React in /src —.jsx, .tsx, .ts or .js— that OpenLen serves and publishes as 
 - /index.html is the shell: its <head> (<title>, <meta>, the Tailwind and Google Fonts tags, a <style> of your own) and, in its <body>, <div id="root"> and <script type="module" src="/src/main.jsx">. Without those two the app doesn't start. The app itself never goes in it.
 - /src/main.jsx mounts the app (createRoot(document.getElementById("root")).render(…)) inside <HashRouter>; /src/App.jsx holds the routes; each screen goes in /src/screens and each component in /src/components, one per file; /src/lib/supabase.js exports the backend client.
 - IMPORTS work as in Vite: "./x", "../x", "/src/x" and "@/x" (= /src/x), with or without extension, or a folder's index; import "./x.css" adds that stylesheet; import data from "./x.json". import.meta.env has VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (also as VITE_SUPABASE_ANON_KEY), MODE, DEV and PROD: public values only — a secret never goes in the code.
-- PACKAGES, the only ones (catalog 2026-10):
+- PACKAGES, the only ones (catalog 2026-11):
   · react — components, state and effects (useState, useEffect, useMemo…).
   · react/jsx-runtime — the JSX runtime; the compiler uses it, you never import it.
   · react-dom — createPortal and flushSync.
@@ -2361,6 +2361,32 @@ React in /src —.jsx, .tsx, .ts or .js— that OpenLen serves and publishes as 
   · react-router — the screens: HashRouter, Routes, Route, Link, NavLink, Navigate, Outlet, useNavigate, useParams, useLocation, useSearchParams.
   · react-router-dom — the same as react-router, by its older name.
   · lucide-react — icons as components (<ShoppingCart className="h-5 w-5" />): a selection, not all of lucide.
+  · radix-ui — shadcn/ui's primitives in one package: import { Dialog, Select, Tabs, Popover, … } from "radix-ui".
+  · class-variance-authority — cva(): a component's variants (shadcn's buttonVariants).
+  · clsx — joins class names conditionally.
+  · tailwind-merge — twMerge(): joins Tailwind classes, the last one wins (shadcn's cn()).
+  · sonner — toasts: <Toaster /> once and toast("Saved").
+  · cmdk — a command palette / searchable list (shadcn's Command).
+  · vaul — a drawer that slides from the edge (shadcn's Drawer).
+  · input-otp — a one-time-code input (shadcn's InputOTP).
+  · react-resizable-panels — resizable panels: PanelGroup, Panel, PanelResizeHandle (shadcn's Resizable).
+  · react-day-picker — a calendar / date picker, v9 (shadcn's Calendar).
+  · embla-carousel-react — a carousel (shadcn's Carousel).
+  · next-themes — light/dark mode with a class on <html>: ThemeProvider and useTheme (works without Next).
+  · react-hook-form — forms: useForm, register, handleSubmit, Controller (shadcn's Form).
+  · zod — schemas and validation, zod 3: import { z } from "zod".
+  · @hookform/resolvers/zod — zodResolver(schema), to validate react-hook-form with zod.
+  · @tanstack/react-query — server data with cache: QueryClient, QueryClientProvider, useQuery, useMutation.
+  · @tanstack/react-table — tables with sorting, filters and pages, v8: useReactTable (shadcn's data table).
+  · date-fns — dates: format, addDays, differenceInDays, parseISO…
+  · date-fns/locale — date-fns locales: es, enUS, ptBR, fr, de, it, ja, ko, zhCN, nl.
+  · recharts — charts, v2: ResponsiveContainer, BarChart, LineChart, AreaChart, PieChart, XAxis, YAxis, Tooltip (shadcn's Chart).
+  · framer-motion — animation: motion.div, AnimatePresence.
+  · zustand — global state: create(set => ({ … })).
+  · react-markdown — renders Markdown as React: <Markdown>{text}</Markdown>.
+  · @dnd-kit/core — drag and drop: DndContext, useDraggable, useDroppable.
+  · @dnd-kit/sortable — sortable lists on top of @dnd-kit/core: SortableContext, useSortable, arrayMove.
+  · @dnd-kit/utilities — CSS.Transform.toString, for @dnd-kit/sortable.
   Nothing else can be installed, because there is no npm here: anything else is written in the project. A package or an export that isn't there is a compile error that names the closest ones.
 - ICONS: lucide-react has a selection of 233 icons, the usual ones for an app (Plus, Minus, Trash2, Pencil, Search, X, Check, ShoppingCart, Receipt, Printer, Users, Settings, LogOut, Calendar, Package…), by their current name or their old one, with or without the Icon suffix. If one isn't there, the compiler says so and suggests the closest; or draw it as an inline <svg>.
 - SCREENS are hash routes: <HashRouter> (in /src/main.jsx) with <Routes> and <Route path="/sales" element={<Sales />} />, <Link to="/sales">, useNavigate() and useParams(). The address is /#/sales. BrowserRouter, createBrowserRouter and the data routers (loaders, actions) don't exist here: a path without # breaks when the published app is reloaded. Never write a /<slug>/index.html in an app: it would be a static page outside it.
