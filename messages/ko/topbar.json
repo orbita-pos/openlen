@@ -166,7 +166,9 @@
     "mencion": {
       "asunto": "{quien} 님이 {titulo}에서 나를 언급했습니다",
       "donde": "{ruta} {linea}번째 줄:",
-      "ver": "스레드 열기"
+      "ver": "스레드 열기",
+      "dondeChat": "프로젝트 채팅에서:",
+      "verChat": "채팅 열기"
     },
     "hilo": {
       "fallo": "하지 못했습니다: {motivo}",

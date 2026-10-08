@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { sendChatNotificationEmail, sendMentionEmail } from "@/lib/email";
 import type { NotificationChannel, NotificationEvent, DeliveryResult, MencionEvent } from "../types";
-import { urlDelHilo } from "./webpush";
+import { urlDelChat, urlDelHilo } from "./webpush";
 
 export const emailChannel: NotificationChannel = {
   id: "email",
@@ -58,15 +58,15 @@ async function enviarMencion(event: MencionEvent): Promise<DeliveryResult> {
   if (!u?.email) return "skipped";
   const [p] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, event.projectId)).limit(1);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com";
+  const enElChat = event.donde === "chat" || !event.ruta;
   await sendMentionEmail({
     to: u.email,
     idioma: event.idioma ?? null,
     projectTitle: p?.title ?? "",
     quien: event.quien,
-    ruta: event.ruta,
-    linea: event.linea,
+    ...(enElChat ? { donde: "chat" as const } : { ruta: event.ruta!, linea: event.linea ?? 1 }),
     texto: event.preview,
-    url: siteUrl + urlDelHilo(event.projectId, event.ruta),
+    url: siteUrl + (enElChat ? urlDelChat(event.projectId) : urlDelHilo(event.projectId, event.ruta!)),
   });
   return "sent";
 }

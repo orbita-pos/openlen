@@ -1377,6 +1377,16 @@ function NewV2Inner() {
     codigoAbierto.current = clave;
     abrirEnElCodigo.abrir(id, codigoParam);
   }, [loadedProject?.id, codigoParam]);
+  // EL ENLACE DE UNA MENCIÓN EN EL CHAT (`?chat=1`, el chat del equipo): al
+  // cargar el proyecto, abre el panel del chat.
+  const chatParam = searchParams.get("chat") === "1";
+  const chatAbiertoPorEnlace = useRef<string | null>(null);
+  useEffect(() => {
+    const id = loadedProject?.id;
+    if (!id || !chatParam || chatAbiertoPorEnlace.current === id) return;
+    chatAbiertoPorEnlace.current = id;
+    setMode("chat");
+  }, [loadedProject?.id, chatParam]);
   const editingActive =
     inspectMode &&
     !esApp &&

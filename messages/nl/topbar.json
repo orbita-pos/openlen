@@ -166,7 +166,9 @@
     "mencion": {
       "asunto": "{quien} heeft je genoemd in {titulo}",
       "donde": "In {ruta}, regel {linea}:",
-      "ver": "Draad openen"
+      "ver": "Draad openen",
+      "dondeChat": "In de projectchat:",
+      "verChat": "Chat openen"
     },
     "hilo": {
       "fallo": "Het lukte me niet: {motivo}",

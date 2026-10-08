@@ -34,8 +34,11 @@ export interface MencionEvent {
   /** Quien te mencionó: su nombre o su correo. */
   quien: string;
   preview: string;
-  ruta: string;
-  linea: number;
+  /** Desde un hilo del código. */
+  ruta?: string;
+  linea?: number;
+  /** Desde el chat del proyecto (el chat del equipo). */
+  donde?: "chat";
   /** El idioma de la interfaz de quien mencionó (el del correo). */
   idioma?: string | null;
 }

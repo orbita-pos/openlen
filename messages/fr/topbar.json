@@ -166,7 +166,9 @@
     "mencion": {
       "asunto": "{quien} vous a mentionné dans {titulo}",
       "donde": "Dans {ruta}, ligne {linea} :",
-      "ver": "Ouvrir le fil"
+      "ver": "Ouvrir le fil",
+      "dondeChat": "Dans le chat du projet :",
+      "verChat": "Ouvrir le chat"
     },
     "hilo": {
       "fallo": "Je n’ai pas pu le faire : {motivo}",

@@ -49,3 +49,13 @@ describe("el correo de la invitación", () => {
     expect(fraseDeFalloDelHilo("es", null)).toBe("No llegué a hacerlo. Pídemelo otra vez desde el hilo.");
   });
 });
+
+describe("el correo de una mención en el chat (el chat del equipo)", () => {
+  it("🔴 desde el chat dice «en el chat» y lleva al chat, sin fichero ni línea", () => {
+    const c = correoDeMencion({ projectTitle: "Taller", quien: "Eli", donde: "chat", texto: "@Dana mira el pie", url: "https://openlen.com/new?project=p1&chat=1" }, "es");
+    expect(c.subject).toBe("Eli te mencionó en Taller");
+    expect(c.text).toContain("En el chat del proyecto:");
+    expect(c.html).toContain("Abrir el chat");
+    expect(c.text).not.toContain("línea");
+  });
+});

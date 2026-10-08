@@ -166,7 +166,9 @@
     "mencion": {
       "asunto": "{quien} さんが {titulo} であなたをメンションしました",
       "donde": "{ruta} の {linea} 行目：",
-      "ver": "スレッドを開く"
+      "ver": "スレッドを開く",
+      "dondeChat": "プロジェクトのチャットで:",
+      "verChat": "チャットを開く"
     },
     "hilo": {
       "fallo": "できませんでした：{motivo}",

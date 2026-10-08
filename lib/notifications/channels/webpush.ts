@@ -100,6 +100,11 @@ export function urlDelHilo(projectId: string, ruta: string): string {
   return `/new?project=${encodeURIComponent(projectId)}&codigo=${encodeURIComponent(ruta)}`;
 }
 
+/** Al chat del proyecto (`?chat=1` lo abre `/new`). */
+export function urlDelChat(projectId: string): string {
+  return `/new?project=${encodeURIComponent(projectId)}&chat=1`;
+}
+
 // ── Channel object ─────────────────────────────────────────────────────────────
 
 export const webPushChannel: NotificationChannel = {
@@ -114,8 +119,8 @@ export const webPushChannel: NotificationChannel = {
         : event.type === "mencion"
           ? {
               title: `@ ${event.quien}`,
-              body: `${event.ruta.replace(/^\/+/, "")}:${event.linea} — ${event.preview}`,
-              url: urlDelHilo(event.projectId, event.ruta),
+              body: event.donde === "chat" || !event.ruta ? event.preview : `${event.ruta.replace(/^\/+/, "")}:${event.linea ?? 1} — ${event.preview}`,
+              url: event.donde === "chat" || !event.ruta ? urlDelChat(event.projectId) : urlDelHilo(event.projectId, event.ruta),
             }
           : {
               title: event.senderName,

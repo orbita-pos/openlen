@@ -95,8 +95,10 @@ function marco(
 export interface DatosDeLaMencion {
   readonly projectTitle: string;
   readonly quien: string;
-  readonly ruta: string;
-  readonly linea: number;
+  /** Desde un hilo del código: el fichero y la línea. Desde el chat: `donde: "chat"`. */
+  readonly ruta?: string;
+  readonly linea?: number;
+  readonly donde?: "chat";
   readonly texto: string;
   readonly url: string;
 }
@@ -108,12 +110,13 @@ export function correoDeMencion(
   const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros" });
   const titulo = datos.projectTitle.trim() || "OpenLen";
   const subject = t("mencion.asunto", { quien: datos.quien, titulo });
-  const donde = t("mencion.donde", { ruta: datos.ruta.replace(/^\/+/, ""), linea: datos.linea });
+  const enElChat = datos.donde === "chat" || !datos.ruta;
+  const donde = enElChat ? t("mencion.dondeChat") : t("mencion.donde", { ruta: datos.ruta!.replace(/^\/+/, ""), linea: datos.linea ?? 1 });
   const html = marco(idioma, {
     titulo: subject,
     parrafos: [donde],
     cita: datos.texto,
-    boton: t("mencion.ver"),
+    boton: enElChat ? t("mencion.verChat") : t("mencion.ver"),
     url: datos.url,
     pegar: t("email.pegar"),
   });
