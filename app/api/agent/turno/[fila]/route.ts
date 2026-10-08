@@ -14,16 +14,21 @@
 // 🔴 UNA FILA EN CURSO QUE NADIE CORRE SE CIERRA AQUÍ. Si el servidor se
 // reinició a mitad de un turno (un deploy), su `finally` no llegó y la fila se
 // quedaría «trabajando» para siempre. Con un solo proceso, el almacén de turnos
-// es la verdad (`turnoDeLaFila`): si no lo tiene, el turno murió, y la fila
+// es la verdad (`filaEnMarcha`): si nadie la corre, el turno murió, y la fila
 // pasa a cortada. ⚠️ Con dos instancias dejaría de ser cierto, igual que
 // `dirigir`.
+//
+// Un MIEMBRO que mira el turno de otro (compartir el proyecto) lo sigue en
+// curso, pero sin `turnoId`: corregir o parar es de quien lo pidió. Antes se
+// buscaba sólo el turno de quien pregunta, y el turno de la dueña se guardaba
+// como cortado en cuanto un miembro lo miraba (ensayo de caja, 08/10).
 //
 // AUTORIZACIÓN: sesión + dueño del proyecto de la fila. 404 si no existe o no
 // es tuya, sin distinguir.
 
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
-import { preguntaPendiente, siguienteDeLaFila, turnoDeLaFila } from "@/lib/agent/direcciones";
+import { filaEnMarcha, preguntaPendiente, siguienteDeLaFila, turnoDeLaFila } from "@/lib/agent/direcciones";
 import { leerTurnoDelUsuario, marcarCortadaSiSigueEnCurso } from "@/lib/projects/chat";
 
 export const runtime = "nodejs";
@@ -74,6 +79,9 @@ export const GET = paraLaApp(async (
     const preguntas = preguntaPendiente(turnoId, userId);
     return json(preguntas ? { turno, turnoId, preguntas } : { turno, turnoId });
   }
+
+  // Lo corre otra persona del proyecto: se mira, no se toca.
+  if (filaEnMarcha(fila)) return json({ turno });
 
   // Huérfana: nadie la corre. Se cierra como cortada, y se dice ya así.
   try {

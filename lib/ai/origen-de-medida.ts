@@ -39,6 +39,7 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 import { allowEgressOrigin } from "@/lib/security/egress-proxy";
 import { randomUUID } from "node:crypto";
 import { contentTypeFor, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { rutaDeVendorValida } from "@/lib/apps/dependencias";
 
 export interface DocumentoServido {
   /** El URL que hay que abrir en el navegador. */
@@ -61,6 +62,34 @@ export interface OpcionesDelDocumento {
    *  `/<id>/<pagina>/` para que lo relativo se resuelva desde su carpeta, como
    *  en la publicada (`/<pagina>/`). */
   readonly pagina?: string | null;
+  /** UNA APP: la pantalla que se abre, como su ruta de hash (`#/ventas`). Va
+   *  detrás del URL del documento; el servidor nunca la ve. */
+  readonly hash?: string;
+  /** UNA APP (H12 de la spec local 2026-10-07-apps): tras cargar, esperar a que
+   *  la red se calme. Una app pide sus datos DESPUÉS del `load`, y medirla en
+   *  ese instante es medir su «Cargando…». */
+  readonly esperarALaRed?: boolean;
+}
+
+/** Cuánto sin peticiones abiertas es «la red se calmó», y el tope de la
+ *  espera: una app que sondea cada segundo no puede colgar la medida. */
+export const RED_CALMADA_MS = 500;
+export const ESPERA_A_LA_RED_MS = 5_000;
+
+/** Lo mínimo para esperar a la red. Estructural: la `Page` de Puppeteer encaja,
+ *  y un doble de prueba que no lo trae simplemente no espera. */
+export interface ConEsperaDeRed {
+  waitForNetworkIdle?(options?: { idleTime?: number; timeout?: number }): Promise<unknown>;
+}
+
+/**
+ * Espera a que la red se calme, con tope, si la vista lo pide. Nunca lanza: si
+ * se acaba el tope, se mide lo que haya —que es lo que vería un visitante
+ * impaciente—, no se deja de medir.
+ */
+export async function esperarALaRed(page: ConEsperaDeRed, opciones: Pick<OpcionesDelDocumento, "esperarALaRed"> | undefined): Promise<void> {
+  if (!opciones?.esperarALaRed || !page.waitForNetworkIdle) return;
+  await page.waitForNetworkIdle({ idleTime: RED_CALMADA_MS, timeout: ESPERA_A_LA_RED_MS }).catch(() => undefined);
 }
 
 export interface OrigenDeMedida {
@@ -172,7 +201,12 @@ function crear(): Promise<OrigenDeMedida> {
           if (opciones.files) {
             ficherosPorDocumento.set(
               id,
-              new Map(Object.entries(opciones.files).filter(([ruta]) => isPublishableFolderPath(ruta))),
+              // Las dependencias de una app (`/openlen/vendor/…`) viven en una
+              // raíz RESERVADA de la carpeta, así que el filtro de lo
+              // publicable las dejaría fuera: se aceptan por su nombre exacto.
+              new Map(
+                Object.entries(opciones.files).filter(([ruta]) => isPublishableFolderPath(ruta) || rutaDeVendorValida(ruta) !== null),
+              ),
             );
           }
           const pagina = opciones.pagina ? `${encodeURIComponent(opciones.pagina)}/` : "";
@@ -215,7 +249,7 @@ export function origenDeMedida(): Promise<OrigenDeMedida> {
 /** Lo mínimo que hace falta para poner un documento delante de un navegador.
  *  Estructural a propósito: la `Page` de Puppeteer encaja tal cual, y los
  *  dobles de prueba —que implementan esto a mano y no traen `goto`— también. */
-export interface PaginaCargable {
+export interface PaginaCargable extends ConEsperaDeRed {
   setContent(html: string, options?: { waitUntil?: "load"; timeout?: number }): Promise<unknown>;
   /** Opcional por los dobles de prueba. Cuando existe se navega a un origen de
    *  verdad en vez de volcar el documento en `about:blank`. */
@@ -259,7 +293,8 @@ export async function cargarEnOrigenReal(
   }
   const doc = (await origenDeMedida()).publicar(html, opciones);
   try {
-    await page.goto(doc.url, { waitUntil: "load", timeout: 20_000 });
+    await page.goto(doc.url + (opciones.hash ?? ""), { waitUntil: "load", timeout: 20_000 });
+    await esperarALaRed(page, opciones);
   } finally {
     // Con carpeta, el documento se queda lo que dura una medida: la página
     // sigue pidiendo sus ficheros DESPUÉS de cargar (un `fetch` en un clic, un

@@ -10,7 +10,7 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { Crosshair, CornerDownRight, Flag } from "lucide-react";
+import { AtSign, Crosshair, CornerDownRight, Flag } from "lucide-react";
 
 import { TextoDeLen } from "../texto-de-len";
 import { AgentConfirmCard } from "../agent-confirm-card";
@@ -29,6 +29,8 @@ import { LenFace } from "./len-face";
 import { TurnClose } from "./turn-close";
 import type { DesignTurn } from "./use-agent-chat";
 import { roundOfTurn } from "./goal-state";
+import { TextoConMenciones } from "../hilos-del-codigo";
+import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
 
 const NO_TURNS: readonly CambiosDeUnTurno[] = [];
 
@@ -53,7 +55,31 @@ export function answerOfNextTurn(next: DesignTurn | undefined): { answer: string
   return corrections.length > 0 ? { answer: corrections.join("\n"), cancelled: false } : { answer: null, cancelled: true };
 }
 
-export function UserMessage({ turn, initial }: { turn: DesignTurn; initial: string }) {
+/** La inicial de un nombre (o de un correo, sin el dominio). */
+export function inicialDe(nombre: string | null | undefined): string {
+  const limpio = nombre?.trim().split("@")[0] ?? "";
+  return (limpio.charAt(0) || "?").toUpperCase();
+}
+
+const SIN_GENTE: readonly PersonaMencionable[] = [];
+const SIN_COLOR = () => "";
+
+export function UserMessage({
+  turn,
+  initial,
+  onAbrirOrigen,
+  gente = SIN_GENTE,
+  colorDe = SIN_COLOR,
+}: {
+  turn: DesignTurn;
+  initial: string;
+  /** Pedido desde un hilo del código: abrir ese fichero en «Código». */
+  onAbrirOrigen?: (ruta: string) => void;
+  /** El chat del equipo: la gente del proyecto, para pintar sus menciones en
+   *  su color. Sin ella, sólo `@Len` (en naranja). */
+  gente?: readonly PersonaMencionable[];
+  colorDe?: (userId: string) => string;
+}) {
   const t = useTranslations("panelsChat");
   const { text: escrito, corrections } = splitCorrections(turn.userText);
   // Una foto, como siempre; con dos o más (Crear es Len), todas.
@@ -103,19 +129,34 @@ export function UserMessage({ turn, initial }: { turn: DesignTurn; initial: stri
               <span className="min-w-0 truncate font-mono">{turn.scope.hint}</span>
             </div>
           )}
+          {turn.origen && (
+            <button
+              type="button"
+              onClick={() => onAbrirOrigen?.(turn.origen!.ruta)}
+              className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-left text-[11.5px] fg-muted hover:fg"
+              data-origen-del-turno=""
+            >
+              <AtSign size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+              <span className="min-w-0 truncate">
+                {t("turn.desdeElHilo", { donde: `${turn.origen.ruta.replace(/^\/+/, "")}:${turn.origen.linea}` })}
+              </span>
+            </button>
+          )}
           {ronda && (
             <div className="mb-1 flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--nc-accent-text)]">
               <Flag size={12} className="shrink-0" />
               {t("newChat.goal.label")}
             </div>
           )}
-          {text}
+          <TextoConMenciones texto={text} gente={gente} colorDe={colorDe} />
         </div>
         <span
           aria-hidden
+          title={turn.autor}
           className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FF7E55] to-[#C72E10] text-[10.5px] font-bold text-white"
+          data-autor-del-turno={turn.autor ?? ""}
         >
-          {initial}
+          {turn.autor ? inicialDe(turn.autor) : initial}
         </span>
       </div>
       {corrections.map((c, i) => (
@@ -158,7 +199,8 @@ export function LenTurn({
   when: string;
   vote: TurnFeedback | undefined;
   labels: EtiquetasDeRespuesta;
-  onUndo: (turn: DesignTurn) => void;
+  /** Sin él no hay «Deshacer» (un lector del proyecto compartido). */
+  onUndo?: (turn: DesignTurn) => void;
   onRetry: (turn: DesignTurn) => void;
   onPublished: (url: string) => void;
   onConfirmSettled: (turnId: string) => void;

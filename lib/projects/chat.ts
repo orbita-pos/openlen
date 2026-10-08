@@ -5,7 +5,7 @@
 // project interleave instead of overwriting a shared blob. Callers verify
 // project ownership before invoking append/update — see the chat route.
 
-import { and, asc, desc, eq, getTableColumns, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { FilaDelHistorial, TranscripcionGuardada } from "@/lib/agent/transcripcion";
@@ -13,6 +13,8 @@ import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import { parseGoalSnapshot, type GoalSnapshot } from "@/lib/agent/goal";
 import { goalActivation } from "@/lib/agent/goal-activation";
 import { photosForRow, photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
+import { MAX_MENSAJES_DEL_EQUIPO } from "@/lib/agent/equipo";
+import { turnosDeshacibles } from "@/lib/projects/deshacer-turno";
 
 /** Las columnas de la fila SIN la transcripción (H4): el panel del chat no la
  *  usa, y son los resultados enteros de cada turno. Se calculan al usarse, no
@@ -43,7 +45,7 @@ export async function getChatMessages(
       .limit(CHAT_LIMIT),
     conversationStateOf(projectId),
   ]);
-  const turns = rows.map(rowToTurn);
+  const turns = await conDeshacibles(projectId, await conAutores(projectId, rows));
   // Piezas 7 y 8: la foto va en el último turno cerrado, que es donde la busca
   // el chat (`lastPlanMode`, el encargo).
   if (estado.planMode || estado.goal) {
@@ -58,6 +60,59 @@ export async function getChatMessages(
     }
   }
   return turns;
+}
+
+/** Las filas cuyo turno aún se puede deshacer en el servidor, marcadas
+ *  (`deshacible`). Si la consulta falla, van como antes: sin la marca. */
+async function conDeshacibles(projectId: string, turns: StoredChatTurn[]): Promise<StoredChatTurn[]> {
+  const aplicados = turns.filter((t) => t.status === "applied" && !t.enCurso && !t.tipo).map((t) => t.id);
+  const ids = await turnosDeshacibles(projectId, aplicados).catch(() => new Set<string>());
+  return ids.size === 0 ? turns : turns.map((t) => (ids.has(t.id) ? { ...t, deshacible: true as const } : t));
+}
+
+/** Las filas, con quién pidió cada turno (compartir el proyecto): `autorId`
+ *  si fue un miembro, el dueño si es NULL. Una consulta para todos; si falla,
+ *  van sin autor y el chat pinta la inicial de quien mira, como antes. */
+async function conAutores(
+  projectId: string,
+  rows: Omit<typeof schema.projectChatMessages.$inferSelect, "transcript">[],
+): Promise<StoredChatTurn[]> {
+  const turns = rows.map(rowToTurn);
+  if (rows.length === 0) return turns;
+  try {
+    // Los que pidieron y los mencionados (el chat del equipo): de quien ya no es
+    // del proyecto también hace falta el nombre.
+    const miembros = [
+      ...new Set(rows.flatMap((r) => [r.autorId, ...(r.menciones ?? [])]).filter((x): x is string => Boolean(x))),
+    ];
+    // UNA consulta, sin `limit`: el dueño del proyecto y los miembros que pidieron algo.
+    const gente = await db
+      .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email, duenoId: schema.projects.userId })
+      .from(schema.projects)
+      .innerJoin(
+        schema.users,
+        or(eq(schema.users.id, schema.projects.userId), miembros.length > 0 ? inArray(schema.users.id, miembros) : undefined),
+      )
+      .where(eq(schema.projects.id, projectId));
+    const duenoId = gente[0]?.duenoId;
+    const nombre = new Map(gente.map((u) => [u.id, u.name?.trim() || u.email]));
+    return turns.map((t, i) => {
+      const autorId = rows[i]!.autorId ?? duenoId ?? undefined;
+      const autor = nombre.get(autorId ?? "");
+      const nombres = Object.fromEntries(
+        (rows[i]!.menciones ?? []).flatMap((id) => (nombre.has(id) ? [[id, nombre.get(id)!]] : [])),
+      );
+      return {
+        ...t,
+        ...(autor ? { autor } : {}),
+        ...(autorId ? { autorId } : {}),
+        ...(Object.keys(nombres).length > 0 ? { nombres } : {}),
+      };
+    });
+  } catch (err) {
+    console.warn("[chat] no se pudo leer quién pidió cada turno", err);
+    return turns;
+  }
 }
 
 /** El encargo con la activación de ESTE proceso (tras un reinicio, desarmado). */
@@ -145,6 +200,9 @@ export async function turnosParaElHistorial(projectId: string, cuantos: number):
       and(
         enCurso(projectId),
         ne(schema.projectChatMessages.status, ESTADO_EN_CURSO),
+        // Los mensajes entre personas no son turnos (lib/projects/chat-equipo.ts):
+        // si los miembros se fueron, siguen en la base y no deben volver a Len.
+        isNull(schema.projectChatMessages.tipo),
       ),
     )
     .orderBy(desc(schema.projectChatMessages.createdAt))
@@ -155,6 +213,58 @@ export async function turnosParaElHistorial(projectId: string, cuantos: number):
     transcript: r.transcript ?? null,
     attachedImage: r.attachedImage ?? null,
   }));
+}
+
+/** Una fila de la charla en curso con lo que hace falta para plegar el equipo. */
+export interface FilaCruda {
+  readonly tipo: string | null;
+  readonly autorId: string | null;
+  readonly menciones: string[] | null;
+  readonly createdAt: Date;
+  readonly fila: FilaDelHistorial;
+}
+
+/** Como `turnosParaElHistorial`, con las filas de persona incluidas (el chat del
+ *  equipo): las últimas `cuantos` filas, de la más vieja a la más reciente. */
+export async function filasParaElHistorialConEquipo(projectId: string, cuantos: number): Promise<FilaCruda[]> {
+  const t = schema.projectChatMessages;
+  const columnas = {
+    tipo: t.tipo,
+    autorId: t.autorId,
+    menciones: t.menciones,
+    createdAt: t.createdAt,
+    userText: t.userText,
+    assistantReasoning: t.assistantReasoning,
+    transcript: t.transcript,
+    attachedImage: t.attachedImage,
+  };
+  // Los turnos de Len, como siempre (`turnosParaElHistorial`): los mensajes del
+  // equipo NO cuentan en esa ventana —si contaran, una charla larga entre
+  // personas le quitaría a Len su historial, su modo plan y su encargo—.
+  const turnos = await db
+    .select(columnas)
+    .from(t)
+    .where(and(enCurso(projectId), ne(t.status, ESTADO_EN_CURSO), isNull(t.tipo)))
+    .orderBy(desc(t.createdAt))
+    .limit(cuantos);
+  // Y aparte, los mensajes del equipo desde el turno más viejo que se ve (los
+  // de antes ya no tienen dónde ir), con el tope del sobre.
+  const desde = turnos.at(-1)?.createdAt;
+  const personas = await db
+    .select(columnas)
+    .from(t)
+    .where(and(enCurso(projectId), eq(t.tipo, "persona"), desde ? gte(t.createdAt, desde) : undefined))
+    .orderBy(desc(t.createdAt))
+    .limit(MAX_MENSAJES_DEL_EQUIPO);
+  return [...turnos, ...personas]
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    .map((r) => ({
+      tipo: r.tipo ?? null,
+      autorId: r.autorId ?? null,
+      menciones: r.menciones ?? null,
+      createdAt: r.createdAt,
+      fila: { userText: r.userText, assistantReasoning: r.assistantReasoning, transcript: r.transcript ?? null, attachedImage: r.attachedImage ?? null },
+    }));
 }
 
 /**
@@ -185,13 +295,23 @@ export async function filasParaBuscar(projectId: string): Promise<ChatRowForSear
       actions: t.actions,
       createdAt: t.createdAt,
       status: t.status,
+      tipo: t.tipo,
+      autorNombre: schema.users.name,
+      autorCorreo: schema.users.email,
     })
     .from(t)
+    // EL CHAT DEL EQUIPO: sus mensajes también se buscan —es como Len lee
+    // entero lo que el sobre recortó—, con quién los escribió.
+    .leftJoin(schema.users, eq(schema.users.id, t.autorId))
     .where(eq(t.projectId, projectId))
     .orderBy(desc(t.createdAt))
     .limit(maxFilasParaBuscar());
   // Las más recientes si hubiera de más; el módulo las ordena por fecha.
-  return rows.map((r) => ({ ...r, actions: r.actions ?? null }));
+  return rows.map(({ tipo, autorNombre, autorCorreo, ...r }) => ({
+    ...r,
+    actions: r.actions ?? null,
+    ...(tipo === "persona" ? { equipo: { autor: autorNombre?.trim() || autorCorreo || "someone" } } : {}),
+  }));
 }
 
 /** La transcripción de UNA fila del proyecto, para `session_event_read`. */
@@ -363,6 +483,10 @@ export async function abrirFilaDelTurno(
     readonly page: string | null;
     /** Lo que se guarda tal cual: `photosForRow` (una foto, un objeto). */
     readonly attachedImage?: ChatPhoto | ChatPhoto[] | null;
+    /** Quién lo pidió, si no fue el dueño (compartir el proyecto). */
+    readonly autorId?: string | null;
+    /** Pedido con `@Len` desde un hilo del código: de dónde (el chat lo enseña). */
+    readonly origen?: { hiloId: string; ruta: string; linea: number } | null;
   },
 ): Promise<void> {
   await db
@@ -372,6 +496,8 @@ export async function abrirFilaDelTurno(
       projectId,
       userText: turn.userText.slice(0, 4000),
       attachedImage: turn.attachedImage ?? null,
+      autorId: turn.autorId ?? null,
+      origen: turn.origen ?? null,
       assistantReasoning: "",
       page: turn.page ?? null,
       status: ESTADO_EN_CURSO,
@@ -433,7 +559,19 @@ export async function leerTurnoDelUsuario(
     .select({ ...columnasDelPanel(), goal: sql<unknown>`${schema.projectChatMessages.transcript}->'goal'` })
     .from(schema.projectChatMessages)
     .innerJoin(schema.projects, eq(schema.projects.id, schema.projectChatMessages.projectId))
-    .where(and(eq(schema.projectChatMessages.id, id), eq(schema.projects.userId, userId)))
+    .where(
+      and(
+        eq(schema.projectChatMessages.id, id),
+        // El dueño, o un miembro del proyecto (compartir el proyecto, lib/projects/acceso.ts).
+        or(
+          eq(schema.projects.userId, userId),
+          inArray(
+            schema.projects.id,
+            db.select({ id: schema.projectMembers.projectId }).from(schema.projectMembers).where(eq(schema.projectMembers.userId, userId)),
+          ),
+        ),
+      ),
+    )
     .limit(1);
   const row = rows[0];
   if (!row) return null;
@@ -474,7 +612,9 @@ export async function updateChatMessageStatus(
 /** Evict the oldest rows beyond the cap — mirrors projectVersions' trim. Sólo
  *  la charla en curso: las archivadas tienen su propio tope
  *  (`MAX_ARCHIVED_CONVERSATIONS`) y no se recortan con cada turno nuevo. */
-async function trim(projectId: string): Promise<void> {
+/** Poda la charla en curso a `CHAT_LIMIT` filas (las más viejas se van).
+ *  Exportada para el chat del equipo, que escribe filas sin pasar por un turno. */
+export async function trim(projectId: string): Promise<void> {
   const rows = await db
     .select({ id: schema.projectChatMessages.id })
     .from(schema.projectChatMessages)
@@ -516,6 +656,11 @@ function rowToTurn(
   // Lo que cobró y tardó, si el servidor lo apuntó (plans/new-chat/).
   if (typeof row.centicredits === "number") turn.centicredits = row.centicredits;
   if (typeof row.durationMs === "number") turn.durationMs = row.durationMs;
+  // Pedido con `@Len` desde un hilo del código: la etiqueta «desde el hilo».
+  if (row.origen) turn.origen = row.origen;
+  // El chat del equipo: un mensaje entre personas y a quién menciona.
+  if (row.tipo === "persona") turn.tipo = "persona";
+  if (row.menciones && row.menciones.length > 0) turn.menciones = row.menciones;
   return turn;
 }
 
@@ -611,8 +756,10 @@ export async function listArchivedConversations(projectId: string): Promise<Arch
   const rows = await db
     .select({
       id: t.conversation,
-      title: sql<string>`(array_agg(${t.userText} ORDER BY ${t.createdAt}))[1]`,
-      turns: sql<number>`count(*)::int`,
+      // Por sus turnos con Len: los mensajes del equipo (tipo «persona») no
+      // titulan ni cuentan; una charla sólo de equipo se titula con el primero.
+      title: sql<string>`coalesce((array_agg(${t.userText} ORDER BY ${t.createdAt}) FILTER (WHERE ${t.tipo} IS NULL))[1], (array_agg(${t.userText} ORDER BY ${t.createdAt}))[1])`,
+      turns: sql<number>`(count(*) FILTER (WHERE ${t.tipo} IS NULL))::int`,
       startedAt: sql<string>`min(${t.createdAt})`,
       endedAt: sql<string>`max(${t.createdAt})`,
     })

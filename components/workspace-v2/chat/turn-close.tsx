@@ -20,7 +20,7 @@ import { Clock, RotateCcw, Sparkles, TriangleAlert, X } from "lucide-react";
 import { CENTICREDITOS_POR_CREDITO } from "@/lib/credits-client";
 import { duracionLegible } from "@/lib/workspace-v2/proceso-del-turno";
 import type { FeedbackReason, TurnFeedback } from "@/lib/chat/feedback-reasons";
-import { planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
+import { ofreceDeshacer, planDeUndo, textoDelFallo, type FalloDeUndo } from "../panels/undo-turn";
 import { isPublishNote } from "./publish-note";
 import { editsOfTurn } from "./turn-changes";
 import { FeedbackButtons, FeedbackForm } from "./turn-feedback";
@@ -45,7 +45,8 @@ export function TurnClose({
   turn: DesignTurn;
   currentPage: string | null;
   vote: TurnFeedback | undefined;
-  onUndo: (turn: DesignTurn) => void;
+  /** Sin él no hay «Deshacer»: quien sólo mira (un lector) no deshace. */
+  onUndo?: (turn: DesignTurn) => void;
   onRetry: (turn: DesignTurn) => void;
   /** Devuelve si el servidor guardó el voto: «Gracias» sólo entonces. */
   onRate: (rating: "up" | "down", reasons?: readonly FeedbackReason[], note?: string | null) => Promise<boolean>;
@@ -137,7 +138,7 @@ export function TurnClose({
             <>
               <Sparkles size={12} className="text-[var(--accent)]" />
               {edits > 0 ? t("newChat.close.appliedEdits", { count: edits }) : t("newChat.close.applied")}
-              {plan?.kind === "restaurar" && (
+              {onUndo && ofreceDeshacer(plan) && (
                 <button
                   type="button"
                   onClick={() => onUndo(turn)}
@@ -170,6 +171,11 @@ export function TurnClose({
         </div>
       )}
       {turn.undoFallo && <UndoFailedNotice failure={turn.undoFallo} />}
+      {turn.status === "reverted" && turn.noSeDeshizo && turn.noSeDeshizo.length > 0 && (
+        // F2: deshecho, pero lo que cambió el turno en la base de datos, la
+        // memoria o los ajustes no vuelve con él. Se dice.
+        <p className="text-[11.5px] leading-snug fg-faint">{t("undo.notUndone", { rutas: turn.noSeDeshizo.join(", ") })}</p>
+      )}
       {form && (
         <FeedbackForm
           initial={vote}
@@ -202,11 +208,7 @@ function UndoFailedNotice({ failure }: { failure: FalloDeUndo }) {
     <div ref={box} role="alert" className="nc-notice-bad flex items-start gap-2 rounded-[9px] px-2.5 py-1.5 text-[12px] leading-snug">
       <X size={14} className="mt-px shrink-0" />
       <span className="min-w-0 flex-1 break-words">
-        {failure.motivo === "red"
-          ? t("undo.failedNetwork")
-          : failure.motivo === "respuesta"
-            ? t("undo.failedResponse")
-            : t("undo.failedHttp", { status: failure.status })}
+        {t(textoDelFallo(failure).clave, textoDelFallo(failure).valores)}
       </span>
     </div>
   );

@@ -6,6 +6,8 @@ import { createSitePage } from "@/lib/projects/create-page";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import type { ProjectData } from "@/lib/projects/types";
 import { listSitePages } from "@/lib/projects/site-pages";
+import { exigirAcceso } from "@/lib/projects/acceso";
+import { conAutorDeLaPeticion, quienDeLaSesion } from "@/lib/projects/autor-del-cambio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,18 +61,24 @@ export async function GET(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
-  const row = await loadRow(id, session.user.id);
+  const acceso = await exigirAcceso(id, session.user.id, "ver");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
+  const row = await loadRow(id, duenoId);
   if (!row) return json({ error: "not_found" }, 404);
   return json({ pages: listSitePages(row.data) }, 200);
 }
 
-export async function POST(
+export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
 
   const body = await req.json().catch(() => null);
   const parsed = CreateSchema.safeParse(body);
@@ -85,7 +93,7 @@ export async function POST(
   let outcome!: ReturnType<typeof createSitePage>;
   const escrito = await actualizarData({
     projectId: id,
-    userId: session.user.id,
+    userId: duenoId,
     aplicar: (actual) => {
       outcome = createSitePage(actual, parsed.data);
       return "error" in outcome ? { error: outcome.error } : outcome.nextData;
@@ -117,7 +125,7 @@ export async function POST(
   }
 
   return json({ ok: true, page: { slug: outcome.slug, title: outcome.title } }, 200);
-}
+});
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {

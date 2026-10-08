@@ -5,17 +5,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // la terminal, sus guardas, «cambió desde que lo abriste») lo prueban las de
 // node:test en lib/agent/herramientas-de-ficheros.test.ts.
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
-const propios: { id: string }[] = [];
+// Lo que devuelve la consulta de `accesoAlProyecto`: el dueño del proyecto y,
+// si quien pide es miembro, su rol (lib/projects/acceso.ts).
+const propios: { duenoId: string; rol: "editor" | "lector" | null }[] = [];
 vi.mock("@/lib/db", () => {
-  const cadena = { from: () => cadena, where: () => cadena, limit: async () => propios };
-  return { db: { select: () => cadena }, schema: { projects: { id: "id", userId: "userId" } } };
+  const cadena = { from: () => cadena, leftJoin: () => cadena, where: () => cadena, limit: async () => propios };
+  return {
+    db: { select: () => cadena },
+    schema: { projects: { id: "id", userId: "userId" }, projectMembers: { projectId: "projectId", userId: "userId", rol: "rol" } },
+  };
 });
 vi.mock("@/lib/agent/terminal/editar-a-mano", () => ({ guardarAMano: vi.fn() }));
+vi.mock("@/lib/agent/terminal/operar-a-mano", () => ({ operarAMano: vi.fn() }));
 vi.mock("@/lib/agent/herramientas-de-ficheros", () => ({ cargarFicherosDeLaTerminal: vi.fn() }));
 vi.mock("@/lib/agent/terminal/solo-lectura", () => ({ soloLecturaDeLaTerminal: vi.fn() }));
 vi.mock("@/lib/agent/tools", () => ({ realDeps: () => ({}) }));
 
-import { PUT } from "./route";
+import { DELETE, PATCH, POST, PUT } from "./route";
+import { operarAMano } from "@/lib/agent/terminal/operar-a-mano";
 import { auth } from "@/auth";
 import { guardarAMano } from "@/lib/agent/terminal/editar-a-mano";
 
@@ -28,7 +35,7 @@ const BIEN = { ruta: "/index.html", contenido: "<h1>b</h1>", base: "<h1>a</h1>" 
 
 describe("PUT /api/projects/[id]/ficheros — editar a mano (la #18)", () => {
   beforeEach(() => {
-    propios.splice(0, propios.length, { id: "p1" });
+    propios.splice(0, propios.length, { duenoId: "u1", rol: null });
     vi.mocked(auth).mockReset();
     vi.mocked(guardarAMano).mockReset();
   });
@@ -69,5 +76,83 @@ describe("PUT /api/projects/[id]/ficheros — editar a mano (la #18)", () => {
 
     vi.mocked(guardarAMano).mockResolvedValueOnce({ ok: false, motivo: "no_existe" });
     expect((await pedir(BIEN)).status).toBe(404);
+  });
+});
+
+// CREAR, RENOMBRAR Y BORRAR (el explorador como el de VS Code). Igual de finas:
+// la forma del cuerpo y el código de cada salida; lo de verdad, en node:test.
+describe("POST, PATCH y DELETE — crear, renombrar y borrar desde el explorador", () => {
+  const params = { params: Promise.resolve({ id: "p1" }) };
+  const req = (metodo: string, cuerpo?: unknown, qs = "") =>
+    new Request(`http://x/api/projects/p1/ficheros${qs}`, { method: metodo, ...(cuerpo !== undefined ? { body: JSON.stringify(cuerpo) } : {}) });
+  beforeEach(() => {
+    propios.splice(0, propios.length, { duenoId: "u1", rol: null });
+    vi.mocked(auth).mockReset();
+    vi.mocked(operarAMano).mockReset();
+    comoUsuario("u1");
+  });
+
+  it("401 sin sesión y 404 ajeno, sin tocar nada", async () => {
+    comoUsuario(null);
+    expect((await POST(req("POST", { ruta: "/js/a.js" }), params)).status).toBe(401);
+    comoUsuario("u1");
+    propios.splice(0);
+    expect((await DELETE(req("DELETE", undefined, "?ruta=/js"), params)).status).toBe(404);
+    expect(operarAMano).not.toHaveBeenCalled();
+  });
+
+  it("crear: la operación con su ruta; 400 sin ruta absoluta", async () => {
+    vi.mocked(operarAMano).mockResolvedValue({ ok: true, rutas: ["/js/a.js"] });
+    const r = await POST(req("POST", { ruta: "/js/a.js" }), params);
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ rutas: ["/js/a.js"] });
+    expect(operarAMano).toHaveBeenCalledWith("p1", "u1", { tipo: "crear", ruta: "/js/a.js" });
+    expect((await POST(req("POST", { ruta: "js/a.js" }), params)).status).toBe(400);
+  });
+
+  it("renombrar: { de, a }; «existe» y «pagina» son 409, «rechazado» 422", async () => {
+    vi.mocked(operarAMano).mockResolvedValueOnce({ ok: false, motivo: "existe", rutas: ["/b.js"] });
+    expect((await PATCH(req("PATCH", { de: "/a.js", a: "/b.js" }), params)).status).toBe(409);
+    vi.mocked(operarAMano).mockResolvedValueOnce({ ok: false, motivo: "pagina", rutas: ["/menu/index.html"] });
+    const p = await PATCH(req("PATCH", { de: "/menu", a: "/carta" }), params);
+    expect(p.status).toBe(409);
+    expect(await p.json()).toEqual({ error: "pagina", rutas: ["/menu/index.html"] });
+    vi.mocked(operarAMano).mockResolvedValueOnce({ ok: false, motivo: "rechazado", detalle: "no" });
+    expect((await PATCH(req("PATCH", { de: "/a.js", a: "/x/y.js" }), params)).status).toBe(422);
+    expect(operarAMano).toHaveBeenLastCalledWith("p1", "u1", { tipo: "renombrar", de: "/a.js", a: "/x/y.js" });
+  });
+
+  it("borrar: ?ruta=; la raíz no se borra", async () => {
+    vi.mocked(operarAMano).mockResolvedValue({ ok: true, rutas: ["/js/a.js"] });
+    expect((await DELETE(req("DELETE", undefined, "?ruta=/js"), params)).status).toBe(200);
+    expect(operarAMano).toHaveBeenCalledWith("p1", "u1", { tipo: "borrar", ruta: "/js" });
+    expect((await DELETE(req("DELETE", undefined, "?ruta=/"), params)).status).toBe(400);
+  });
+});
+
+describe("los miembros del proyecto (compartir el proyecto)", () => {
+  beforeEach(() => {
+    vi.mocked(auth).mockReset();
+    vi.mocked(guardarAMano).mockReset();
+    vi.mocked(operarAMano).mockReset();
+  });
+
+  it("🔴 un editor guarda, y se guarda con el id del DUEÑO; un lector, 403; un extraño, 404", async () => {
+    vi.mocked(guardarAMano).mockResolvedValue({ ok: true, contenido: "<h1>b</h1>" });
+    comoUsuario("ana");
+    propios.splice(0, propios.length, { duenoId: "u1", rol: "editor" });
+    expect((await pedir(BIEN)).status).toBe(200);
+    expect(guardarAMano).toHaveBeenCalledWith("p1", "u1", BIEN.ruta, BIEN.contenido, BIEN.base);
+
+    vi.mocked(guardarAMano).mockClear();
+    propios.splice(0, propios.length, { duenoId: "u1", rol: "lector" });
+    expect((await pedir(BIEN)).status).toBe(403);
+    const borrar = await DELETE(new Request("http://x/api/projects/p1/ficheros?ruta=/a.js", { method: "DELETE" }), { params: Promise.resolve({ id: "p1" }) });
+    expect(borrar.status).toBe(403);
+
+    propios.splice(0, propios.length, { duenoId: "u1", rol: null });
+    expect((await pedir(BIEN)).status).toBe(404);
+    expect(guardarAMano).not.toHaveBeenCalled();
+    expect(operarAMano).not.toHaveBeenCalled();
   });
 });

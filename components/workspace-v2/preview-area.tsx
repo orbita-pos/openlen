@@ -46,6 +46,7 @@ import { PageBuildingLoader } from "./page-building-loader";
 import { ScanOverlay } from "./scan-overlay";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
 import { onFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
+import { MAX_SUBIDA } from "@/lib/workspace-v2/subir-ficheros";
 
 // ---------------------------------------------------------------------------
 
@@ -92,6 +93,8 @@ interface PreviewAreaProps {
    *  swap, plus inline-edit if the project is flat). When false, the
    *  iframe shows the page exactly as a visitor would. */
   editingActive?: boolean;
+  /** Un lector del proyecto compartido: la lente Código, de sólo lectura. */
+  soloLectura?: boolean;
   /** El JavaScript del modelo, YA AUTORIZADO por el servidor (`getProject`).
    *  Se injerta sólo fuera de los modos de edición — ver `derive`. */
   /** Callback fired with the iframe element after mount. Parent stashes
@@ -105,6 +108,10 @@ interface PreviewAreaProps {
    *  properties panel) — exclusive, like sectionSelectMode. srcDoc is
    *  frozen so live property edits don't trigger a reload. */
   inspectMode?: boolean;
+  /** UNA APP WEB (F4 de la spec local 2026-10-07-apps): el lienzo la enseña
+   *  corriendo, sin edición visual; la lente Código va la primera, y si el
+   *  lienzo real no responde lo dice (en local, el cascarón no arranca nada). */
+  esApp?: boolean;
   /** Toggles inspect mode from the preview toolbar. Omitted (e.g. in
    *  template-preview) hides the toolbar button. */
   onToggleInspect?: () => void;
@@ -205,6 +212,27 @@ function injectCanvasScrollbar(html: string): string {
 /** Las formas de mirar el mismo proyecto. «terminal» (F6a): los comandos de
  *  Len, sólo cuando la terminal está encendida o el proyecto ya tiene alguno.
  *  «cambios»: lo que cambió cada turno de esta sesión, fichero a fichero. */
+/** Las frases de CodeMirror que se ven en la lente «Código» (buscar y
+ *  reemplazar, ir a la línea, plegar), por su texto en inglés; su traducción
+ *  está en `preview.ide.editor`, con `_` en vez de espacios. */
+const FRASES_DEL_EDITOR = [
+  "Find",
+  "Replace",
+  "next",
+  "previous",
+  "all",
+  "match case",
+  "regexp",
+  "by word",
+  "replace",
+  "replace all",
+  "close",
+  "Go to line",
+  "go",
+  "Fold line",
+  "Unfold line",
+] as const;
+
 // ⚰️ «datos»: la lente de los almacenes `data-ol-stores`, retirada el 2026-10-04.
 export type Lente = "pagina" | "codigo" | "terminal" | "cambios";
 
@@ -223,9 +251,11 @@ export function PreviewArea({
   openInNewTabUrl = null,
   sectionSelectMode = false,
   editingActive = false,
+  soloLectura = false,
   onIframeRef,
   redesigning = false,
   inspectMode = false,
+  esApp = false,
   onToggleInspect,
   insertRequest = null,
   removeRequest = null,
@@ -621,6 +651,9 @@ export function PreviewArea({
   }, [projectId]);
   const esperandoRemoto = remotoActivo && lienzo.estado.modo === "esperando";
   const vistaLimitada = remotoActivo && lienzo.estado.modo === "local";
+  // Una app sólo corre en el lienzo real: sin él (o mientras no hay proyecto),
+  // lo que hay en local es el cascarón, que no arranca nada.
+  const sinLienzoDeApp = esApp && !modoRemoto && !esperandoRemoto;
   const iframeFuente = previewUrl ? { src: previewUrl } : modoRemoto ? { src: urlRemota! } : esperandoRemoto ? { src: "about:blank" } : { srcDoc: finalSrcDoc };
   const iframeSandbox = modoRemoto ? SANDBOX_REMOTO : SANDBOX_LOCAL;
 
@@ -829,8 +862,17 @@ export function PreviewArea({
               value={lente}
               onChange={setLente}
               options={[
-                { value: "pagina", label: t("preview.lente.pagina"), icon: Eye },
-                { value: "codigo", label: t("preview.lente.codigo"), icon: Code2 },
+                // En una app, el CÓDIGO va el primero: es lo que se edita (la
+                // app corriendo no se toca a mano), y su lente se llama «App».
+                ...(esApp
+                  ? [
+                      { value: "codigo" as const, label: t("preview.lente.codigo"), icon: Code2 },
+                      { value: "pagina" as const, label: t("preview.lente.app"), icon: Eye },
+                    ]
+                  : [
+                      { value: "pagina" as const, label: t("preview.lente.pagina"), icon: Eye },
+                      { value: "codigo" as const, label: t("preview.lente.codigo"), icon: Code2 },
+                    ]),
                 ...(hayTerminal
                   ? [{ value: "terminal" as const, label: t("preview.lente.terminal"), icon: TerminalIcon }]
                   : []),
@@ -855,7 +897,7 @@ export function PreviewArea({
             Abrir en otra pestaña SÍ se queda: apunta a la URL publicada, que
             existe se mire la lente que se mire. */}
         <div className="flex items-center gap-0.5 justify-self-end">
-          {lente === "pagina" && onToggleInspect && (
+          {lente === "pagina" && onToggleInspect && !esApp && (
             <IconBtn
               label={
                 inspectMode
@@ -958,7 +1000,27 @@ export function PreviewArea({
       )}
       {/* Habla de los límites de la VISTA PREVIA: sólo en su lente. Encima de
           Código o Terminal parecía que eran ellas las limitadas. */}
-      {vistaLimitada && lente === "pagina" && (
+      {/* UNA APP SIN LIENZO REAL: en local sólo está el cascarón, que no
+          arranca nada (los fuentes los sirve el host del lienzo), así que no
+          se pinta una página en blanco sin decir por qué. */}
+      {sinLienzoDeApp && lente === "pagina" && (
+        <div
+          role="status"
+          className="relative z-10 shrink-0 min-h-8 py-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-3 text-[11.5px] bg-elev fg-muted border-b bd ui-small fade-in"
+        >
+          <span className="text-center">{t("preview.appSinLienzo")}</span>
+          {hayCodigo && (
+            <button
+              type="button"
+              onClick={() => setLente("codigo")}
+              className="h-6 px-2.5 rounded-full border bd bg-app fg font-medium hover:bg-elev transition"
+            >
+              {t("preview.verCodigo")}
+            </button>
+          )}
+        </div>
+      )}
+      {vistaLimitada && !sinLienzoDeApp && lente === "pagina" && (
         <div
           role="status"
           className="relative z-10 shrink-0 h-8 flex items-center justify-center px-3 text-[11.5px] bg-elev fg-muted border-b bd ui-small fade-in"
@@ -1122,6 +1184,7 @@ export function PreviewArea({
             projectId={previewUrl ? null : projectId}
             rutaActual={rutaDePagina(pagina)}
             peticion={peticionDeCodigoVigente}
+            soloLectura={soloLectura}
             onClose={() => setLente("pagina")}
             labels={{
               comentar: {
@@ -1134,16 +1197,68 @@ export function PreviewArea({
                 tope: t("preview.comentar.tope"),
               },
               editar: {
-                editar: t("preview.editar.editar"),
                 guardar: t("preview.editar.guardar"),
                 guardando: t("preview.editar.guardando"),
-                descartar: t("preview.editar.descartar"),
                 cargando: t("preview.editar.cargando"),
                 cambio: t("preview.editar.cambio"),
                 cargarAhora: t("preview.editar.cargarAhora"),
                 rechazado: t("preview.editar.rechazado"),
                 error: t("preview.editar.error"),
                 nota: t("preview.editar.nota"),
+              },
+              ide: {
+                nuevoArchivo: t("preview.ide.nuevoArchivo"),
+                nuevaCarpeta: t("preview.ide.nuevaCarpeta"),
+                contraer: t("preview.ide.contraer"),
+                actualizar: t("preview.ide.actualizar"),
+                acciones: t("preview.ide.acciones"),
+                renombrar: t("preview.ide.renombrar"),
+                borrar: t("preview.ide.borrar"),
+                copiarRuta: t("preview.ide.copiarRuta"),
+                nombre: t("preview.ide.nombre"),
+                nombreInvalido: t("preview.ide.nombreInvalido"),
+                existe: (ruta: string) => t("preview.ide.existe", { ruta }),
+                pagina: t("preview.ide.pagina"),
+                portada: t("preview.ide.portada"),
+                confirmarBorrar: (ruta: string) => t("preview.ide.confirmarBorrar", { ruta }),
+                confirmarBorrarCarpeta: (ruta: string) => t("preview.ide.confirmarBorrarCarpeta", { ruta }),
+                confirmarCerrar: (nombre: string) => t("preview.ide.confirmarCerrar", { nombre }),
+                cerrarPestana: t("preview.ide.cerrarPestana"),
+                sinGuardar: t("preview.ide.sinGuardar"),
+                vacio: t("preview.ide.vacio"),
+                comentarAyuda: t("preview.ide.comentarAyuda"),
+                carpetaVacia: t("preview.ide.carpetaVacia"),
+                cerrarAviso: t("preview.ide.cerrarAviso"),
+                noSeHizo: t("preview.ide.noSeHizo"),
+                dividir: t("preview.ide.dividir"),
+                abrirAlLado: t("preview.ide.abrirAlLado"),
+                subidos: (count: number) => t("preview.ide.subidos", { count }),
+                noSubidos: t("preview.ide.noSubidos"),
+                motivo: {
+                  tipo: t("preview.ide.motivoTipo"),
+                  grande: t("preview.ide.motivoGrande"),
+                  nombre: t("preview.ide.motivoNombre"),
+                  demasiados: t("preview.ide.motivoDemasiados", { max: MAX_SUBIDA }),
+                },
+                reemplazar: (count: number, lista: string) => t("preview.ide.reemplazar", { count, lista }),
+                subiendo: t("preview.ide.subiendo"),
+                hilos: {
+                  placeholder: t("preview.ide.hilos.placeholder"),
+                  comentar: t("preview.ide.hilos.comentar"),
+                  responder: t("preview.ide.hilos.responder"),
+                  placeholderRespuesta: t("preview.ide.hilos.placeholderRespuesta"),
+                  resolver: t("preview.ide.hilos.resolver"),
+                  reabrir: t("preview.ide.hilos.reabrir"),
+                  resuelto: t("preview.ide.hilos.resuelto"),
+                  len: t("preview.ide.hilos.len"),
+                  trabajando: t("preview.ide.hilos.trabajando"),
+                  soloEditoresLen: t("preview.ide.hilos.soloEditoresLen"),
+                  error: t("preview.ide.hilos.error"),
+                },
+                mencionado: t("preview.ide.hilos.mencionado"),
+                frasesDelEditor: Object.fromEntries(
+                  FRASES_DEL_EDITOR.map((f) => [f, t(`preview.ide.editor.${f.replace(/ /g, "_")}`)]),
+                ),
               },
               noEsta: t("preview.code.noEsta"),
               buscar: t("preview.code.buscar"),
@@ -1155,7 +1270,7 @@ export function PreviewArea({
               sinContenido: (count: number) => t("preview.code.sinContenido", { count }),
               marcaNuevo: t("preview.code.marcaNuevo"),
               marcaCambiado: t("preview.code.marcaCambiado"),
-              title: t("preview.code.title"),
+              title: esApp ? t("preview.code.titleApp") : t("preview.code.title"),
               close: t("preview.code.close"),
               copy: t("preview.code.copy"),
               copied: t("preview.code.copied"),

@@ -81,7 +81,8 @@
       "pagina": "Aperçu",
       "codigo": "Code",
       "terminal": "Terminal",
-      "cambios": "Modifications"
+      "cambios": "Modifications",
+      "app": "App"
     },
     "toolbar": {
       "editPage": "Modifier la page (⌘E)",
@@ -145,7 +146,8 @@
       "masCoincidencias": "{count, plural, one {Et # résultat de plus.} other {Et # résultats de plus.}}",
       "sinContenido": "{count, plural, one {# fichier calculé à l'ouverture n'est cherché que par son nom.} other {# fichiers calculés à l'ouverture ne sont cherchés que par leur nom.}}",
       "marcaNuevo": "Nouveau dans cette session",
-      "marcaCambiado": "Modifié dans cette session"
+      "marcaCambiado": "Modifié dans cette session",
+      "titleApp": "Le code de votre app"
     },
     "terminal": {
       "title": "Le terminal de Len",
@@ -202,16 +204,83 @@
       "tope": "10 commentaires attendent déjà : envoyez d’abord le message."
     },
     "editar": {
-      "editar": "Modifier",
       "guardar": "Enregistrer",
       "guardando": "Enregistrement…",
-      "descartar": "Abandonner",
       "cargando": "Chargement…",
       "cambio": "Ce fichier a changé pendant que vous le modifiiez (Len, l’éditeur ou votre terminal). Rien n’a été enregistré.",
       "cargarAhora": "Charger l’actuel",
       "rechazado": "Non enregistré :",
       "error": "Impossible d’enregistrer.",
       "nota": "Enregistré comme votre version ; Len le verra à son prochain tour."
+    },
+    "appSinLienzo": "L’app ne peut pas tourner ici : le vrai canevas ne répond pas. Son code est dans l’onglet Code, et une fois publiée elle fonctionne.",
+    "verCodigo": "Voir le code",
+    "direccionApp": "App",
+    "ide": {
+      "nuevoArchivo": "Nouveau fichier",
+      "nuevaCarpeta": "Nouveau dossier",
+      "contraer": "Replier les dossiers",
+      "actualizar": "Actualiser",
+      "acciones": "Plus d’actions",
+      "renombrar": "Renommer",
+      "borrar": "Supprimer",
+      "copiarRuta": "Copier le chemin",
+      "nombre": "Nom",
+      "nombreInvalido": "Utilisez lettres, chiffres, « - », « _ » et « . », sans espaces. Un « / » crée des dossiers.",
+      "existe": "{ruta} existe déjà.",
+      "pagina": "Les pages ne se renomment ni ne se déplacent d’ici : leur adresse et leurs liens dépendent de leur nom.",
+      "portada": "La page d’accueil (/index.html) ne peut pas être supprimée.",
+      "confirmarBorrar": "Supprimer {ruta} ? Il reste dans Versions, et Len le verra à son prochain tour.",
+      "confirmarBorrarCarpeta": "Supprimer le dossier {ruta} et tout son contenu ?",
+      "confirmarCerrar": "{nombre} a des modifications non enregistrées. Le fermer et les perdre ?",
+      "cerrarPestana": "Fermer",
+      "sinGuardar": "Non enregistré",
+      "vacio": "Ouvrez un fichier de l’explorateur, ou créez-en un.",
+      "comentarAyuda": "Cliquez sur le numéro d’une ligne pour la commenter à Len.",
+      "carpetaVacia": "Vide : il est enregistré quand vous y créez un fichier.",
+      "cerrarAviso": "Fermer l’avis",
+      "noSeHizo": "Non effectué :",
+      "editor": {
+        "Find": "Rechercher",
+        "Replace": "Remplacer",
+        "next": "suivant",
+        "previous": "précédent",
+        "all": "tout",
+        "match_case": "casse",
+        "regexp": "regex",
+        "by_word": "mot entier",
+        "replace": "remplacer",
+        "replace_all": "tout remplacer",
+        "close": "fermer",
+        "Go_to_line": "Aller à la ligne",
+        "go": "aller",
+        "Fold_line": "Replier",
+        "Unfold_line": "Déplier"
+      },
+      "dividir": "Diviser à droite",
+      "subidos": "{count, plural, one {# fichier importé.} other {# fichiers importés.}}",
+      "noSubidos": "Non importés :",
+      "motivoTipo": "seuls les fichiers texte sont importés (code, CSS, JSON, SVG…) ; les photos vont dans Images",
+      "motivoGrande": "dépasse 1 Mo",
+      "motivoNombre": "le nom contient des espaces ou des caractères non autorisés",
+      "motivoDemasiados": "trop à la fois (au plus {max})",
+      "reemplazar": "{count, plural, one {{lista} existe déjà. Le remplacer ?} other {{lista} existent déjà. Les remplacer ?}}",
+      "abrirAlLado": "Déposez ici pour l’ouvrir à côté",
+      "subiendo": "Importation…",
+      "hilos": {
+        "placeholder": "Quoi changer… Tapez @ pour mentionner Len ou quelqu’un du projet.",
+        "comentar": "Commenter",
+        "responder": "Répondre",
+        "placeholderRespuesta": "Répondez… (@ pour mentionner)",
+        "resolver": "Résoudre",
+        "reabrir": "Rouvrir",
+        "resuelto": "Résolu",
+        "len": "Len",
+        "soloEditoresLen": "Seules les personnes qui peuvent modifier peuvent demander des changements à Len.",
+        "error": "Ça n’a pas fonctionné. Réessayez.",
+        "mencionado": "On vous a mentionné ici",
+        "trabajando": "Len s’en occupe…"
+      }
     }
   },
   "placeholder": {
@@ -235,7 +304,17 @@
     "pasteHtml": "ou collez votre propre HTML",
     "galleryHeading": "Modèles vérifiés",
     "search": "Rechercher des modèles…",
-    "noResults": "Aucun résultat pour « {query} »"
+    "noResults": "Aucun résultat pour « {query} »",
+    "kind": {
+      "label": "Que voulez-vous créer ?",
+      "page": "Page",
+      "pageHint": "Un site pour votre activité : landing, menu, portfolio",
+      "app": "App",
+      "appHint": "Un outil qu’on utilise : caisse, agenda, tableau de bord avec connexion",
+      "appPlaceholder": "Décrivez votre app : ce qu’elle fait, qui l’utilise…",
+      "headline": "Votre prochaine app commence ici",
+      "subtitle": "Dites à Len ce qu’elle doit faire et il la construit : ses écrans, ses données et sa connexion."
+    }
   },
   "empty": {
     "badge": "Espace de travail OpenLen",

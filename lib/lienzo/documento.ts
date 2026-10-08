@@ -16,9 +16,11 @@
 
 import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
 import { sealRelease } from "@/lib/html-engine";
-import type { ProjectData } from "@/lib/projects/types";
+import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
 import { bakeModulesForPreviewHtml } from "@/lib/publish/preview-bake";
 import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { conImportMap } from "@/lib/apps/documento";
+import { servirRutaDeLaApp, vendorPorRuta } from "@/lib/apps/servir";
 
 export interface ContextoDeVista {
   projectId: string;
@@ -31,16 +33,63 @@ export interface ContextoDeVista {
    *  → contenido. No entran en el documento: viajan con él hasta el navegador
    *  que lo mide, que los contesta cuando la página los pide. */
   files?: Readonly<Record<string, string>>;
+  /** UNA APP WEB (spec local 2026-10-07-apps): su documento lleva el import map
+   *  del catálogo y sus fuentes se sirven compilados. Ausente = una página. */
+  app?: AppDeProyecto | null;
+  /** Lo que vale `import.meta.env` en la app: sólo valores públicos
+   *  (`lib/apps/entorno.ts`). */
+  entorno?: Readonly<Record<string, string>>;
+  /** UNA APP: la pantalla que se abre (`#/ventas`), la que Len pidió mirar o
+   *  usar. Ausente = el principio de la app. */
+  pantalla?: string | null;
+}
+
+/** `ventas`, `/ventas` o `#/ventas` → `#/ventas`; vacío → `null`. */
+export function pantallaDe(valor: unknown): string | null {
+  if (typeof valor !== "string") return null;
+  const limpia = valor.trim().replace(/^#/, "").replace(/^\/?/, "/");
+  if (limpia === "/" || /\s/.test(limpia) || limpia.length > 200) return null;
+  return `#${limpia}`;
+}
+
+/**
+ * LA CARPETA COMO LA SIRVE EL LIENZO: cada fuente compilado (`.jsx`, `.tsx`,
+ * `.ts`, y en una app también `.js`), lo demás tal cual, y en una app las
+ * dependencias de su catálogo en `/openlen/vendor/`. Es lo MISMO que contesta
+ * `/api/lienzo/site` (los dos pasan por `servirRutaDeLaApp`), así que los ojos
+ * de Len miden la app que el dueño ve. React va en su build de desarrollo, como
+ * en el lienzo: sus mensajes de error enteros son lo que Len necesita leer.
+ */
+export function carpetaServida(
+  files: Readonly<Record<string, string>>,
+  app: AppDeProyecto | null,
+  entorno?: Readonly<Record<string, string>>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [ruta, contenido] of Object.entries(files)) {
+    const servido = servirRutaDeLaApp(ruta, files, { app, ...(entorno ? { entorno } : {}), modo: "desarrollo" });
+    out[ruta] = servido ? servido.cuerpo : contenido;
+  }
+  if (app) Object.assign(out, vendorPorRuta(app.catalogo, "desarrollo"));
+  return out;
 }
 
 /** Lo que el navegador que mide necesita de la carpeta, o `undefined` si la
  *  vista no trae ficheros: así quien mide una página sin carpeta llama igual
- *  que siempre. */
+ *  que siempre. Una app trae siempre algo: las dependencias de su catálogo. */
 export function carpetaDeLaVista(
-  vista: Pick<ContextoDeVista, "files" | "pagina"> | null | undefined,
-): { files: Readonly<Record<string, string>>; pagina: string | null } | undefined {
-  if (!vista?.files || Object.keys(vista.files).length === 0) return undefined;
-  return { files: vista.files, pagina: vista.pagina };
+  vista: Pick<ContextoDeVista, "files" | "pagina" | "app" | "entorno" | "pantalla"> | null | undefined,
+): { files: Readonly<Record<string, string>>; pagina: string | null; hash?: string; esperarALaRed?: boolean } | undefined {
+  const app = vista?.app ?? null;
+  const files = vista?.files ?? {};
+  if (!vista || (!app && Object.keys(files).length === 0)) return undefined;
+  return {
+    files: carpetaServida(files, app, vista.entorno),
+    pagina: vista.pagina,
+    // UNA APP: la pantalla pedida, y esperar a que pida sus datos (H12).
+    ...(app && vista.pantalla ? { hash: vista.pantalla } : {}),
+    ...(app ? { esperarALaRed: true } : {}),
+  };
 }
 
 export function documentoDeVista(html: string, ctx: ContextoDeVista): string {
@@ -60,7 +109,11 @@ export function documentoDeVista(html: string, ctx: ContextoDeVista): string {
     // aquí para que nadie deduzca un efecto que no ocurre.
     sandboxed: false,
   });
-  return sealRelease(out).html;
+  const sellado = sealRelease(out).html;
+  // El import map de la app va lo ÚLTIMO, con el documento ya sellado: ningún
+  // pase posterior puede moverlo de delante de los módulos. La publicación lo
+  // pone en el mismo punto (`publishToDir`).
+  return ctx.app ? conImportMap(sellado, ctx.app.catalogo) : sellado;
 }
 
 /** Lo que hace falta de la fila del proyecto para armar la vista. Se escribe
@@ -70,7 +123,7 @@ export function documentoDeVista(html: string, ctx: ContextoDeVista): string {
 export interface FilaDeProyecto {
   title?: string | null;
   subdomain?: string | null;
-  data?: { settings?: ProjectData["settings"] } | null;
+  data?: { settings?: ProjectData["settings"]; app?: AppDeProyecto | null } | null;
 }
 
 /**
@@ -103,6 +156,7 @@ export function vistaParaMedir(
     pagina,
     settings: fila.data?.settings,
     logoUrl: null,
+    app: fila.data?.app ?? null,
   };
 }
 
@@ -116,10 +170,16 @@ export function vistaParaMedir(
  * `deps` es estructural (el `projectFiles` de `AgentDeps`): lo llaman la
  * herramienta (`view_page`, `use_page`) y la ruta del agente (los ojos y
  * la medida que vuelve al modelo).
+ *
+ * En una APP trae además su `import.meta.env` (`entornoDeLaApp`): sin él, una
+ * app que habla con su backend se mediría sin la URL de ese backend.
  */
 export async function vistaConCarpeta(
   vista: ContextoDeVista,
-  deps: { projectFiles?(projectId: string): Promise<Readonly<Record<string, string>>> },
+  deps: {
+    projectFiles?(projectId: string): Promise<Readonly<Record<string, string>>>;
+    entornoDeLaApp?(projectId: string): Promise<Readonly<Record<string, string>>>;
+  },
   projectId: string,
 ): Promise<ContextoDeVista> {
   let todos: Readonly<Record<string, string>> | null | undefined;
@@ -128,9 +188,25 @@ export async function vistaConCarpeta(
   } catch {
     todos = null;
   }
-  if (!todos) return vista;
+  let conEntorno = vista;
+  if (vista.app && deps.entornoDeLaApp) {
+    const entorno = await deps.entornoDeLaApp(projectId).catch(() => null);
+    if (entorno) conEntorno = { ...vista, entorno };
+  }
+  if (!todos) return conEntorno;
   const files = Object.fromEntries(Object.entries(todos).filter(([ruta]) => isPublishableFolderPath(ruta)));
-  return Object.keys(files).length > 0 ? { ...vista, files } : vista;
+  return Object.keys(files).length > 0 ? { ...conEntorno, files } : conEntorno;
+}
+
+/**
+ * EL DOCUMENTO QUE SE FOTOGRAFÍA. Los ojos fotografían lo GUARDADO, sin hornear
+ * (el horneado metería nuestros módulos en la foto: ver `verify.ts`). Pero una
+ * APP sin su import map no arranca —sus fuentes compilados piden `react` por su
+ * nombre—, y la foto sería una pantalla en blanco que la app no tiene, juzgada
+ * como rota. Así que a una app se le pone el import map, y nada más.
+ */
+export function documentoParaLaFoto(html: string, vista: Pick<ContextoDeVista, "app"> | null | undefined): string {
+  return vista?.app ? conImportMap(html, vista.app.catalogo) : html;
 }
 
 /**
@@ -160,6 +236,8 @@ export function documentoMedible(
         error instanceof Error ? error.message : String(error)
       }`,
     );
-    return html;
+    // Crudo, pero una app CON su import map: sin él no arranca, y lo que se
+    // mediría sería una pantalla en blanco que la app no tiene.
+    return vista.app ? conImportMap(html, vista.app.catalogo) : html;
   }
 }

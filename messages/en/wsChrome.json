@@ -81,7 +81,8 @@
       "pagina": "Preview",
       "codigo": "Code",
       "terminal": "Terminal",
-      "cambios": "Changes"
+      "cambios": "Changes",
+      "app": "App"
     },
     "toolbar": {
       "editPage": "Edit page (⌘E)",
@@ -145,7 +146,8 @@
       "masCoincidencias": "{count, plural, one {And # more match.} other {And # more matches.}}",
       "sinContenido": "{count, plural, one {# file computed when opened is only searched by name.} other {# files computed when opened are only searched by name.}}",
       "marcaNuevo": "New in this session",
-      "marcaCambiado": "Changed in this session"
+      "marcaCambiado": "Changed in this session",
+      "titleApp": "Your app's code"
     },
     "terminal": {
       "title": "Len's terminal",
@@ -202,16 +204,83 @@
       "tope": "10 comments are already waiting: send the message first."
     },
     "editar": {
-      "editar": "Edit",
       "guardar": "Save",
       "guardando": "Saving…",
-      "descartar": "Discard",
       "cargando": "Loading…",
       "cambio": "This file changed while you were editing it (Len, the editor or your terminal). Nothing was saved.",
       "cargarAhora": "Load the current one",
       "rechazado": "Not saved:",
       "error": "Couldn't save.",
       "nota": "Saved as your version; Len will see it on its next turn."
+    },
+    "appSinLienzo": "The app can't run here: the real canvas isn't responding. Its code is in the Code lens, and it works once published.",
+    "verCodigo": "View the code",
+    "direccionApp": "App",
+    "ide": {
+      "nuevoArchivo": "New file",
+      "nuevaCarpeta": "New folder",
+      "contraer": "Collapse folders",
+      "actualizar": "Refresh",
+      "acciones": "More actions",
+      "renombrar": "Rename",
+      "borrar": "Delete",
+      "copiarRuta": "Copy path",
+      "nombre": "Name",
+      "nombreInvalido": "Use letters, numbers, “-”, “_” and “.”, no spaces. A “/” creates folders.",
+      "existe": "{ruta} already exists.",
+      "pagina": "Pages aren't renamed or moved from here: their address and their links depend on their name.",
+      "portada": "The home page (/index.html) can't be deleted.",
+      "confirmarBorrar": "Delete {ruta}? It stays in Versions, and Len will see it on its next turn.",
+      "confirmarBorrarCarpeta": "Delete the folder {ruta} and everything in it?",
+      "confirmarCerrar": "{nombre} has unsaved changes. Close it and lose them?",
+      "cerrarPestana": "Close",
+      "sinGuardar": "Unsaved",
+      "vacio": "Open a file from the explorer, or create a new one.",
+      "comentarAyuda": "Click a line number to comment it to Len.",
+      "carpetaVacia": "Empty: it's saved when you create a file inside.",
+      "cerrarAviso": "Dismiss",
+      "noSeHizo": "Not done:",
+      "editor": {
+        "Find": "Find",
+        "Replace": "Replace",
+        "next": "next",
+        "previous": "previous",
+        "all": "all",
+        "match_case": "match case",
+        "regexp": "regexp",
+        "by_word": "by word",
+        "replace": "replace",
+        "replace_all": "replace all",
+        "close": "close",
+        "Go_to_line": "Go to line",
+        "go": "go",
+        "Fold_line": "Fold line",
+        "Unfold_line": "Unfold line"
+      },
+      "dividir": "Split right",
+      "subidos": "{count, plural, one {# file uploaded.} other {# files uploaded.}}",
+      "noSubidos": "Not uploaded:",
+      "motivoTipo": "only text files are uploaded (code, CSS, JSON, SVG…); photos go in Images",
+      "motivoGrande": "over 1 MB",
+      "motivoNombre": "the name has spaces or characters that aren't allowed",
+      "motivoDemasiados": "too many at once (at most {max})",
+      "reemplazar": "{count, plural, one {{lista} already exists. Replace it?} other {{lista} already exist. Replace them?}}",
+      "abrirAlLado": "Drop here to open it alongside",
+      "subiendo": "Uploading…",
+      "hilos": {
+        "placeholder": "What to change… Type @ to mention Len or someone on the project.",
+        "comentar": "Comment",
+        "responder": "Reply",
+        "placeholderRespuesta": "Reply… (@ to mention)",
+        "resolver": "Resolve",
+        "reabrir": "Reopen",
+        "resuelto": "Resolved",
+        "len": "Len",
+        "soloEditoresLen": "Only people who can edit can ask Len for changes.",
+        "error": "That didn’t work. Try again.",
+        "mencionado": "You were mentioned here",
+        "trabajando": "Len is working on it…"
+      }
     }
   },
   "placeholder": {
@@ -235,7 +304,17 @@
     "pasteHtml": "or paste your own HTML",
     "galleryHeading": "Verified templates",
     "search": "Search templates…",
-    "noResults": "No results for “{query}”"
+    "noResults": "No results for “{query}”",
+    "kind": {
+      "label": "What do you want to make?",
+      "page": "Page",
+      "pageHint": "A website for your business: landing, menu, portfolio",
+      "app": "App",
+      "appHint": "Something people use: point of sale, booking, dashboard with login",
+      "appPlaceholder": "Describe your app: what it does, who uses it…",
+      "headline": "Your next app starts here",
+      "subtitle": "Tell Len what it has to do and it builds it: its screens, its data and its login."
+    }
   },
   "empty": {
     "badge": "OpenLen Workspace",

@@ -47,7 +47,7 @@ beforeEach(async () => {
       "id" text primary key,
       "projectId" text not null references "projects"("id") on delete cascade,
       "path" text not null, "content" text, "label" text not null, "source" text not null,
-      "createdAt" timestamp not null default now());
+      "autorId" text, "createdAt" timestamp not null default now());
     insert into "projects" ("id", "userId") values ('p1', 'u1'), ('p2', 'u1'), ('p3', 'u2');
   `);
   base.db = drizzle(pg, { schema });

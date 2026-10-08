@@ -18,7 +18,8 @@
   "turn": {
     "imageSent": "Bild gesendet",
     "imagesSent": "{count} Bilder gesendet",
-    "homePage": "Startseite"
+    "homePage": "Startseite",
+    "desdeElHilo": "aus der Unterhaltung · {donde}"
   },
   "proceso": {
     "completadoEn": "Abgeschlossen in <d>{duracion}</d>",
@@ -104,7 +105,19 @@
     "modeLenDesc": "Der für jeden Tag: schnell, für fast alles",
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "Für große Aufträge: denkt vor jedem Schritt so gründlich wie möglich. Langsamer und verbraucht mehr Credits",
-    "effortDynamis": "Len Odyssey denkt immer so gründlich wie möglich"
+    "effortDynamis": "Len Odyssey denkt immer so gründlich wie möglich",
+    "soloLectura": "Du kannst dieses Projekt ansehen, aber nicht ändern. Bitte den Eigentümer um Bearbeitungszugriff."
+  },
+  "equipo": {
+    "paraLen": "An Len",
+    "paraPersonas": "An {nombres} · Len antwortet nicht",
+    "paraLenYPersonas": "An Len und {nombres}",
+    "soloEditoresLen": "Nur Bearbeiter können Len um etwas bitten",
+    "enviarA": "An {nombre} senden",
+    "deA": "{autor} → {para} · Len antwortet nicht",
+    "mencionar": "{nombre} erwähnen",
+    "error": "Senden fehlgeschlagen. Versuch es noch einmal.",
+    "placeholder": "Schreib Len, oder @, um mit jemandem im Projekt zu sprechen…"
   },
   "noChange": {
     "label": "Auf der Seite hat sich nichts geändert"
@@ -112,7 +125,9 @@
   "undo": {
     "failedHttp": "Rückgängig machen fehlgeschlagen ({status}) — die Änderung ist weiterhin aktiv. Versuch es erneut.",
     "failedNetwork": "Rückgängig machen fehlgeschlagen: keine Antwort vom Server — die Änderung ist weiterhin aktiv. Versuch es erneut.",
-    "failedResponse": "Rückgängig machen fehlgeschlagen: Der Server antwortete ohne die Seite — die Änderung ist weiterhin aktiv. Versuch es erneut."
+    "failedResponse": "Rückgängig machen fehlgeschlagen: Der Server antwortete ohne die Seite — die Änderung ist weiterhin aktiv. Versuch es erneut.",
+    "failedOverlap": "Rückgängig machen fehlgeschlagen: {rutas} wurde nach diesem Schritt geändert, und Rückgängigmachen würde das löschen. Es wurde nichts rückgängig gemacht.",
+    "notUndone": "Rückgängig gemacht, außer {rutas}: Das Rückgängigmachen eines Schritts stellt Datenbank, Gedächtnis und Einstellungen nicht wieder her."
   },
   "cutShort": "Der Vorgang brach vorzeitig ab ({reason}), aber das bereits Erledigte ist gespeichert. Sieh dir die Seite an.",
   "memoria": {

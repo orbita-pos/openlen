@@ -7,6 +7,8 @@ import {
   getBaselineVersion,
   listVersions,
 } from "@/lib/projects/versions";
+import { exigirAcceso } from "@/lib/projects/acceso";
+import { conAutorDeLaPeticion, quienDeLaSesion } from "@/lib/projects/autor-del-cambio";
 
 export const runtime = "nodejs";
 
@@ -23,6 +25,9 @@ export async function GET(
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
 
   const { id } = await ctx.params;
+  const acceso = await exigirAcceso(id, session.user.id, "ver");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
   if (!id) return json({ error: "missing id" }, 400);
 
   const url = new URL(req.url);
@@ -36,7 +41,7 @@ export async function GET(
     }
     const baseline = await getBaselineVersion({
       projectId: id,
-      userId: session.user.id,
+      userId: duenoId,
       page,
     });
     return json({ baseline }, 200);
@@ -44,7 +49,7 @@ export async function GET(
 
   const versions = await listVersions({
     projectId: id,
-    userId: session.user.id,
+    userId: duenoId,
   });
   return json({ versions }, 200);
 }
@@ -62,7 +67,7 @@ interface PostBody {
 // project's CURRENT html (home or a site page) as a manual checkpoint.
 // The content is read server-side — this route never accepts html, so it
 // can't become a second (sanitize-bypassing) write path.
-export async function POST(
+export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ): Promise<Response> {
@@ -70,6 +75,9 @@ export async function POST(
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
 
   const { id } = await ctx.params;
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
   if (!id) return json({ error: "missing id" }, 400);
 
   const body = (await req.json().catch(() => null)) as PostBody | null;
@@ -82,7 +90,7 @@ export async function POST(
     .where(
       and(
         eq(schema.projects.id, id),
-        eq(schema.projects.userId, session.user.id),
+        eq(schema.projects.userId, duenoId),
       ),
     )
     .limit(1);
@@ -115,7 +123,7 @@ export async function POST(
   if (!versionId) return json({ error: "snapshot_failed" }, 500);
 
   return json({ ok: true, id: versionId }, 200);
-}
+});
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {

@@ -78,7 +78,7 @@ describe("Write", () => {
     expect(r.ok).toBe(false);
     if (r.ok) return;
     expect(r.resultado.texto.startsWith("<tool_use_error>Cannot create /logo.png: ")).toBe(true);
-    expect(r.resultado.texto).toContain("text files only (.js .mjs .css .json .webmanifest .txt .svg .md)");
+    expect(r.resultado.texto).toContain("text files only (.js .mjs .jsx .tsx .ts .css .json .webmanifest .txt .svg .md)");
     expect(r.resultado.texto).not.toContain("Did you mean");
   });
 

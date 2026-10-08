@@ -11,6 +11,7 @@ import {
   MAX_UPLOAD_BYTES,
 } from "@/lib/projects/assets";
 import { consumeToken, RATE_LIMITS, rateLimitedResponse } from "@/lib/rate-limit";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/[id]/assets — upload an image or audio asset for a
@@ -40,13 +41,16 @@ export async function GET(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
+  const acceso = await exigirAcceso(id, session.user.id, "ver");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
   const rows = await db
     .select({ id: schema.projects.id })
     .from(schema.projects)
     .where(
       and(
         eq(schema.projects.id, id),
-        eq(schema.projects.userId, session.user.id),
+        eq(schema.projects.userId, duenoId),
       ),
     )
     .limit(1);
@@ -74,6 +78,9 @@ export async function POST(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
 
   // Verify ownership before touching the upload.
   const rows = await db
@@ -82,7 +89,7 @@ export async function POST(
     .where(
       and(
         eq(schema.projects.id, id),
-        eq(schema.projects.userId, session.user.id),
+        eq(schema.projects.userId, duenoId),
       ),
     )
     .limit(1);

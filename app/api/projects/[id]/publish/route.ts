@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { eq } from "drizzle-orm";
+import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
+import { db, schema } from "@/lib/db";
+import { exigirAcceso } from "@/lib/projects/acceso";
+import { conAutor } from "@/lib/projects/autor-del-cambio";
 import { auth } from "@/auth";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
@@ -26,6 +31,8 @@ export const dynamic = "force-dynamic";
 //                      project exists but belongs to someone else)
 //   404 not_found     — project id doesn't exist for this user
 //   409 taken         — another row already claims this subdomain
+//   422 app_does_not_compile — an app web whose code does not compile; `errors`
+//                      lists file:line — message (spec local 2026-10-07-apps)
 //   500 error         — disk write or DB error after validation passed
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -43,6 +50,9 @@ export const POST = paraLaApp(async (
   const userId = await usuarioDeLaPeticion(req);
   if (!userId) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
+  // Publican el dueño y los editores (lib/projects/acceso.ts)…
+  const acceso = await exigirAcceso(id, userId, "editar");
+  if (acceso instanceof Response) return acceso;
 
   let body: unknown;
   try {
@@ -57,14 +67,21 @@ export const POST = paraLaApp(async (
       400,
     );
   }
+  // …pero la DIRECCIÓN la elige el dueño: un editor sólo vuelve a publicar
+  // en la que ya tiene el proyecto (reclamar otra cuenta contra su plan).
+  if (acceso.rol !== "dueno") {
+    const [p] = await db.select({ subdomain: schema.projects.subdomain }).from(schema.projects).where(eq(schema.projects.id, id)).limit(1);
+    if (!p?.subdomain || p.subdomain !== parsed.data.subdomain) return json({ error: "solo_dueno_direccion" }, 403);
+  }
 
   try {
-    const result = await publishProject({
+    // La versión «Publicado» lleva el nombre de quien publicó (lib/projects/autor-del-cambio.ts).
+    const result = await conAutor(userId, () => publishProject({
       projectId: id,
-      userId: userId,
+      userId: acceso.duenoId,
       subdomain: parsed.data.subdomain,
       languages: parsed.data.languages,
-    });
+    }));
     return json(result, 200);
   } catch (err) {
     if (err instanceof SubdomainInvalidError) {
@@ -78,6 +95,11 @@ export const POST = paraLaApp(async (
     }
     if (err instanceof ProjectNotFoundError) {
       return json({ error: "not_found" }, 404);
+    }
+    // Una app web que no compila no se publica (spec local 2026-10-07-apps):
+    // se dice qué fichero y qué línea, para el dueño y para Len.
+    if (err instanceof AppNoCompilaError) {
+      return json({ error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) }, 422);
     }
     // eslint-disable-next-line no-console
     console.error("[publish] unexpected error:", err);

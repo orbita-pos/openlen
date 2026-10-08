@@ -47,6 +47,7 @@ function normaliza(prompt: string): string {
 }
 
 const CON_TERMINAL = { OPENLEN_TERMINAL: "1" };
+const APP = { catalogo: "2026-10", entrada: "/src/main.jsx" };
 
 const SUPERFICIES: ReadonlyArray<readonly [string, () => string]> = [
   // ⚰️ «crear» (`/api/generate`) se retiró el 2026-10-06: crear es el primer
@@ -65,6 +66,13 @@ const SUPERFICIES: ReadonlyArray<readonly [string, () => string]> = [
   // Len se mueve. Los /.openlen/docs son los mismos en los dos modos.
   ["agente (Len Dynamis)", () => buildAgentSystemPrompt(CON_TERMINAL, "dynamis")],
   ["manual de la plataforma (/AGENTS.md, Len Dynamis)", () => buildManualDeLaPlataforma(CON_TERMINAL, "dynamis")],
+  // UNA APP WEB (F3 de la spec local 2026-10-07-apps): lo que lee Len cuando el
+  // proyecto es una app. Va APARTE: lo de una página no se mueve por ella.
+  ["agente (Len, en una app)", () => buildAgentSystemPrompt({}, "len", APP)],
+  ["manual de la plataforma (/AGENTS.md, en una app)", () => buildManualDeLaPlataforma({}, "len", APP)],
+  ...Object.keys(documentosDeLaPlataforma(APP)).map(
+    (ruta) => [`manual de la plataforma (${ruta}, en una app)`, () => documentosDeLaPlataforma(APP)[ruta]!] as const,
+  ),
 ];
 
 describe("golden de los prompts de producción", () => {
@@ -109,6 +117,12 @@ describe("golden de los prompts de producción", () => {
   // lee. `env: {}` fija el modo por defecto igual que el resto del fichero.
   it("las declaraciones de herramientas, enteras", () => {
     const decls = JSON.stringify(buildFunctionDeclarations({}), null, 2);
+    expect(normaliza(decls)).toMatchSnapshot();
+  });
+
+  // Las de una app: las mismas herramientas, con pantallas en vez de páginas.
+  it("las declaraciones de herramientas en una app, enteras", () => {
+    const decls = JSON.stringify(buildFunctionDeclarations({}, {}, "len", APP), null, 2);
     expect(normaliza(decls)).toMatchSnapshot();
   });
 

@@ -10,7 +10,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ejecutarUndo,
   ficherosDelEvento,
+  ofreceDeshacer,
   planDeUndo,
+  textoDelFallo,
   type DepsDeUndo,
   type FalloDeUndo,
 } from "./undo-turn";
@@ -602,5 +604,126 @@ describe("deshacer con ficheros avisa de que la carpeta cambió", () => {
       { ...e.deps, fetchImpl: (async () => restaurado("<html>x</html>")) as unknown as typeof fetch, ficherosRestaurados: aviso },
     );
     expect(aviso).not.toHaveBeenCalled();
+  });
+});
+
+// F2 DE LAS APPS WEB: con registro en el servidor, Deshacer lo hace el servidor
+// ENTERO —páginas y ficheros a la vez, o nada— y se niega si alguien cambió
+// después lo mismo. El de siempre queda de respaldo.
+describe("F2 · deshacer el turno en el servidor", () => {
+  const json = (cuerpo: unknown, status = 200) => new Response(JSON.stringify(cuerpo), { status });
+  const TURNO = {
+    status: "applied",
+    preEditHtml: "<html>antes</html>",
+    versionPrevia: "v1",
+    page: null,
+    // Tocó otra página: el Deshacer de siempre no podía.
+    paginasTocadas: [null, "menu"],
+    deshacerEnServidor: "t-1",
+  } as const;
+
+  it("con registro, el plan es del servidor — también si el turno tocó otra página", () => {
+    const plan = planDeUndo(TURNO, null);
+    expect(plan.kind).toBe("servidor");
+    if (plan.kind !== "servidor") return;
+    expect(plan.turnId).toBe("t-1");
+    expect(plan.respaldo).toEqual({ kind: "imposible", motivo: "otra-pagina" });
+    expect(ofreceDeshacer(plan)).toBe(true);
+  });
+
+  it("CONTRA-PRUEBA: un turno no aplicado no se deshace aunque tenga registro", () => {
+    expect(ofreceDeshacer(planDeUndo({ ...TURNO, status: "reverted" }, null))).toBe(false);
+  });
+
+  it("🔴 200: pinta CADA página que devolvió el servidor, avisa de los ficheros y de lo que no volvió", async () => {
+    const e = espias();
+    const ficheros = vi.fn();
+    const noSeDeshizo = vi.fn();
+    const fetchImpl = vi.fn(async () =>
+      json({
+        paginas: [
+          { page: null, html: "<p>home</p>" },
+          { page: "menu", html: "<p>menú</p>" },
+        ],
+        ficheros: ["/src/App.jsx"],
+        noSeDeshacen: ["/supabase/migrations/1_a.sql"],
+        deshacerId: "d1",
+      }),
+    );
+    const ok = await ejecutarUndo(planDeUndo(TURNO, null), {
+      ...e.deps,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      ficherosRestaurados: ficheros,
+      noSeDeshizo,
+    });
+    expect(ok).toBe(true);
+    expect(fetchImpl).toHaveBeenCalledWith("/api/projects/p1/turnos/t-1/deshacer", { method: "POST" });
+    expect(e.pintado).toEqual([
+      { html: "<p>home</p>", page: null },
+      { html: "<p>menú</p>", page: "menu" },
+    ]);
+    expect(ficheros).toHaveBeenCalledTimes(1);
+    expect(noSeDeshizo).toHaveBeenCalledWith(["/supabase/migrations/1_a.sql"]);
+    expect(e.revertido).toBe(1);
+  });
+
+  it("🔴 409 se_solapan: nada se pinta, nada se da por revertido, y el fallo lleva las rutas", async () => {
+    const e = espias();
+    const ok = await ejecutarUndo(planDeUndo(TURNO, null), {
+      ...e.deps,
+      fetchImpl: (async () => json({ error: "se_solapan", rutas: ["/src/App.jsx"] }, 409)) as unknown as typeof fetch,
+    });
+    expect(ok).toBe(false);
+    expect(e.pintado).toEqual([]);
+    expect(e.revertido).toBe(0);
+    expect(e.fallos).toEqual([{ motivo: "se_solapan", rutas: ["/src/App.jsx"] }]);
+  });
+
+  it("404 sin_registro: cae al Deshacer de siempre, si lo hay", async () => {
+    const e = espias();
+    const llamadas: string[] = [];
+    const fetchImpl = (async (url: string) => {
+      llamadas.push(url);
+      return url.includes("/turnos/") ? json({ error: "sin_registro" }, 404) : restaurado("<html>antes</html>");
+    }) as unknown as typeof fetch;
+    const turno = { ...TURNO, paginasTocadas: [null] };
+    expect(await ejecutarUndo(planDeUndo(turno, null), { ...e.deps, fetchImpl })).toBe(true);
+    expect(llamadas).toEqual(["/api/projects/p1/turnos/t-1/deshacer", "/api/projects/p1/versions/v1/restore"]);
+    expect(e.pintado).toEqual([{ html: "<html>antes</html>", page: null }]);
+  });
+
+  it("404 sin_registro y sin respaldo posible: es un fallo, no un «Revertido»", async () => {
+    const e = espias();
+    const ok = await ejecutarUndo(planDeUndo(TURNO, null), {
+      ...e.deps,
+      fetchImpl: (async () => json({ error: "sin_registro" }, 404)) as unknown as typeof fetch,
+    });
+    expect(ok).toBe(false);
+    expect(e.fallos).toEqual([{ motivo: "http", status: 404 }]);
+  });
+
+  it("sin red, «red»; un 200 sin páginas, «respuesta»", async () => {
+    const e = espias();
+    await ejecutarUndo(planDeUndo(TURNO, null), {
+      ...e.deps,
+      fetchImpl: (async () => {
+        throw new TypeError("offline");
+      }) as unknown as typeof fetch,
+    });
+    await ejecutarUndo(planDeUndo(TURNO, null), {
+      ...e.deps,
+      fetchImpl: (async () => json({ ok: true })) as unknown as typeof fetch,
+    });
+    expect(e.fallos).toEqual([{ motivo: "red" }, { motivo: "respuesta" }]);
+    expect(e.revertido).toBe(0);
+  });
+
+  it("textoDelFallo: una clave por motivo, con sus valores", () => {
+    expect(textoDelFallo({ motivo: "se_solapan", rutas: ["/a.jsx", "/b.jsx"] })).toEqual({
+      clave: "undo.failedOverlap",
+      valores: { rutas: "/a.jsx, /b.jsx" },
+    });
+    expect(textoDelFallo({ motivo: "http", status: 503 })).toEqual({ clave: "undo.failedHttp", valores: { status: 503 } });
+    expect(textoDelFallo({ motivo: "red" })).toEqual({ clave: "undo.failedNetwork" });
   });
 });

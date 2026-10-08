@@ -34,6 +34,7 @@ import { InboxHub } from "@/components/inbox/inbox-hub";
 import { FranjaDeEstado, type OnAjustesGuardados } from "@/components/inbox/franja-de-estado";
 import { ExploreView } from "@/components/community/explore-view";
 import { ProjectsSection } from "../projects/projects-section";
+import { MiembrosDialog } from "@/components/workspace-v2/miembros-dialog";
 import { AnalyticsSection } from "../analytics/analytics-section";
 import { MarketingView } from "@/components/workspace-v2/marketing-view";
 import { DatabaseView } from "@/components/workspace-v2/database-view";
@@ -47,6 +48,7 @@ import { AlertTriangle, Check, Sparkles, Undo, X } from "@/components/workspace-
 import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
 import { PastePanel } from "@/components/workspace-v2/panels/paste-panel";
 import { StartLanding } from "@/components/workspace-v2/start-landing";
+import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
 import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
 import { ejecutarUndo } from "@/components/workspace-v2/panels/undo-turn";
@@ -113,9 +115,11 @@ import { isBlankProject } from "@/lib/projects/blank";
 import { UNTITLED_PROJECT_TITLE } from "@/lib/projects/titulo-del-html";
 import { uploadPhotos } from "@/lib/workspace-v2/upload-photos";
 import type { PendingAttachments } from "@/components/workspace-v2/chat/use-agent-chat";
+import { chatALaVista, useChatSinVer } from "@/components/workspace-v2/chat/use-chat-sin-ver";
+import { setChatLayout, useChatLayout } from "@/components/workspace-v2/chat/use-chat-version";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
 import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
-import type { SitePage } from "@/lib/projects/types";
+import type { AppDeProyecto, SitePage } from "@/lib/projects/types";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { AddressBar } from "@/components/workspace-v2/address-bar";
 import { abrirDesdeElTaller } from "@/components/workspace-v2/abrir-fuera";
@@ -183,6 +187,15 @@ interface LoadedProject {
    *  control on the published page. */
   degradations: Degradation[] | undefined;
   degradationsDismissed: boolean | undefined;
+  /** UNA APP WEB (`data.app`, spec local 2026-10-07-apps): el lienzo la enseña
+   *  corriendo y sin edición visual. Ausente = una página. Cambia con un turno
+   *  (una app que nace, una página que se convierte) y con su Deshacer: lo trae
+   *  el refetch de `onChatChange`. */
+  app: AppDeProyecto | null;
+  /** COMPARTIR EL PROYECTO (lib/projects/acceso.ts): tú eres el dueño, un
+   *  editor o un lector. Un lector no edita nada; el servidor lo hace cumplir,
+   *  esto sólo esconde lo que no podría hacer. */
+  rol: "dueno" | "editor" | "lector";
 }
 
 /** Las frases concretas de un código de degradación, sin repetir.
@@ -358,6 +371,7 @@ function NewV2Inner() {
   }, [entryMode]);
   const [leftCollapsed, setLeftCollapsed] = useState(entryMode === "ai");
   const isMobile = useIsMobile();
+  const chatLayout = useChatLayout();
   // Collapse the sidebar to the rail when the center carries the whole surface,
   // re-applied once per entry-mode transition (a synced ref so a manual toggle
   // persists). DESKTOP: the AI landing (bare /new, no page) collapses — its
@@ -526,6 +540,8 @@ function NewV2Inner() {
   }, [pageParam, loadedProject, searchParams, router]);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [customDomainOpen, setCustomDomainOpen] = useState(false);
+  // Los miembros del proyecto (compartir el proyecto).
+  const [miembrosOpen, setMiembrosOpen] = useState(false);
   const [vercelOpen, setVercelOpen] = useState(false);
   const [githubOpen, setGithubOpen] = useState(false);
   const [deployErrorKey, setDeployErrorKey] = useState<string | null>(null);
@@ -901,9 +917,13 @@ function NewV2Inner() {
   // volver con la convergencia: la vista se transforma YA, sin recargar.
   const [heroSent, setHeroSent] = useState(false);
   const [heroSending, setHeroSending] = useState(false);
+  // PÁGINA O APP (las dos tarjetas del estado vacío). Página por defecto, y
+  // vuelve a serlo al cambiar de proyecto: es una elección de ESTE proyecto.
+  const [naceComo, setNaceComo] = useState<NaceComo>("pagina");
   const [pendingChatAttachments, setPendingChatAttachments] = useState<PendingAttachments | null>(null);
   useEffect(() => {
     setHeroSent(false);
+    setNaceComo("pagina");
   }, [projectParam]);
   // EL ESTADO VACÍO DEL CHAT DE LEN: un proyecto en blanco no tiene lienzo que
   // enseñar todavía. Como el «Session Intent hero» de DeepSeek, el centro es el
@@ -944,7 +964,14 @@ function NewV2Inner() {
       const fotos = aiFotos.length > 0 ? aiFotos : delTransito;
       const subidas = fotos.length > 0 ? await uploadPhotos(fotos, loadedProjectId) : { images: [], failed: 0 };
       if (subidas.failed > 0) toast.error(t("toast.photosNotUploaded", { count: subidas.failed }));
-      setPendingChatAttachments({ images: subidas.images, styleDirection: aiReference });
+      // Con App elegida, el primer mensaje lleva `naceComo` y el idioma de la
+      // interfaz: el servidor le pone el esqueleto antes del turno, con ese
+      // `lang` en el cascarón (`lib/projects/nacer-como-app.ts`).
+      setPendingChatAttachments({
+        images: subidas.images,
+        styleDirection: aiReference,
+        ...(naceComo === "app" ? { naceComo: "app" as const, idioma: locale } : {}),
+      });
       setPendingChatDraft(brief);
       setPendingChatAutoSend(true);
       setHeroSent(true);
@@ -956,7 +983,7 @@ function NewV2Inner() {
     } finally {
       setHeroSending(false);
     }
-  }, [loadedProjectId, heroSending, aiPrompt, aiFotos, aiReference, toast, t]);
+  }, [loadedProjectId, heroSending, aiPrompt, aiFotos, aiReference, naceComo, locale, toast, t]);
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const data = e.data;
@@ -1195,7 +1222,9 @@ function NewV2Inner() {
                 pages?: Record<string, SitePage>;
                 degradations?: Degradation[];
                 degradationsDismissed?: boolean;
+                app?: AppDeProyecto;
               };
+              rol?: "dueno" | "editor" | "lector";
             };
           }
         | null;
@@ -1235,6 +1264,8 @@ function NewV2Inner() {
         settings: p.data?.settings,
         degradations: p.data?.degradations,
         degradationsDismissed: p.data?.degradationsDismissed,
+        app: p.data?.app ?? null,
+        rol: p.rol ?? "dueno",
       });
       setProjectName(p.title);
       setProjectLoadFailure(null);
@@ -1330,8 +1361,49 @@ function NewV2Inner() {
   // tab; consolidated into the inspector on the right). When on, gates ALL
   // iframe affordances at once: drag handles, image/icon replace, inline
   // text edit, AND element-inspect outlines. Off → iframe renders clean.
+  // UNA APP NO SE EDITA EN EL LIENZO: su texto vive en el JSX, y el lienzo la
+  // enseña corriendo desde el host del lienzo. Ni lápiz, ni soltar ficheros,
+  // ni elegir un elemento para el chat; se cambia hablando con Len o en la
+  // lente Código.
+  const esApp = !!loadedProject?.app;
+  // Un lector de un proyecto compartido sólo mira.
+  const soloLector = loadedProject?.rol === "lector";
+  // El chat del equipo: las menciones del chat sin ver, un punto en su icono del
+  // carril; con el chat a la vista, 0 (abrirlo las ve).
+  const chatSinVer = useChatSinVer(
+    loadedProject?.id ?? null,
+    chatALaVista({ mode, plegado: leftCollapsed, layout: chatLayout, movil: isMobile }),
+  );
+  // EL ENLACE DE UN AVISO DE MENCIÓN (`?codigo=/src/App.jsx`, hilos en el
+  // código): al cargar el proyecto, abre ese fichero en la lente «Código».
+  const codigoParam = searchParams.get("codigo");
+  const codigoAbierto = useRef<string | null>(null);
+  useEffect(() => {
+    const id = loadedProject?.id;
+    if (!id || !codigoParam || !codigoParam.startsWith("/")) return;
+    const clave = `${id}\u0000${codigoParam}`;
+    if (codigoAbierto.current === clave) return;
+    codigoAbierto.current = clave;
+    abrirEnElCodigo.abrir(id, codigoParam);
+  }, [loadedProject?.id, codigoParam]);
+  // EL ENLACE DE UNA MENCIÓN EN EL CHAT (`?chat=1`, el chat del equipo): al
+  // cargar el proyecto, abre el panel del chat.
+  const chatParam = searchParams.get("chat") === "1";
+  const chatAbiertoPorEnlace = useRef<string | null>(null);
+  useEffect(() => {
+    const id = loadedProject?.id;
+    if (!id || !chatParam || chatAbiertoPorEnlace.current === id) return;
+    chatAbiertoPorEnlace.current = id;
+    setMode("chat");
+    // A la vista de verdad: en el móvil el panel entra plegado, y un chat
+    // minimizado no enseña la mención que el aviso prometía.
+    setLeftCollapsed(false);
+    if (chatLayout === "minimized") setChatLayout("docked");
+  }, [loadedProject?.id, chatParam, chatLayout]);
   const editingActive =
     inspectMode &&
+    !esApp &&
+    !soloLector &&
     entryMode === "editing" &&
     !!loadedProject &&
     // Suppress the editor (inline-edit + element-inspect) while the Chat tab's
@@ -1344,7 +1416,15 @@ function NewV2Inner() {
   // the Edit toggle: dragging a file over the page (or pasting an image) is
   // unambiguous intent, and the iframe script is visually silent when idle.
   const dropEnabled =
-    entryMode === "editing" && !!loadedProject && !sectionSelectMode;
+    entryMode === "editing" && !!loadedProject && !sectionSelectMode && !esApp && !soloLector;
+  // Si el proyecto PASA a ser una app con el lápiz encendido (nace o se
+  // convierte en este mismo turno), se apaga: el inspector no tiene nada que
+  // inspeccionar en una app.
+  useEffect(() => {
+    if (!esApp) return;
+    setInspectMode(false);
+    setSectionSelectMode(false);
+  }, [esApp]);
 
   // Compute which sidebar tabs are locked based on the entry mode + the
   // loaded project's shape. In an entry flow, only the relevant tab is
@@ -3240,19 +3320,22 @@ function NewV2Inner() {
         projectLoading={projectLoadingFromUrl}
         projectUnavailable={projectUnavailable}
         savingStatus={savingStatus}
-        onPublish={onPublish}
+        // Un lector no publica; elegir dominio, integraciones y miembros,
+        // sólo el dueño (lib/projects/acceso.ts lo hace cumplir en el servidor).
+        onPublish={soloLector ? undefined : onPublish}
         published={published}
         projectId={loadedProject?.id}
+        onMiembros={loadedProject ? () => setMiembrosOpen(true) : undefined}
         onRolledBack={() => {
           if (loadedProject?.id) {
             void refetchProject(loadedProject.id);
           }
         }}
         onCustomDomain={
-          loadedProject ? () => setCustomDomainOpen(true) : undefined
+          loadedProject?.rol === "dueno" ? () => setCustomDomainOpen(true) : undefined
         }
         onDeployVercel={
-          loadedProject
+          loadedProject?.rol === "dueno"
             ? () => {
                 setDeployErrorKey(null);
                 setVercelOpen(true);
@@ -3260,7 +3343,7 @@ function NewV2Inner() {
             : undefined
         }
         onDeployGitHub={
-          loadedProject
+          loadedProject?.rol === "dueno"
             ? () => {
                 setDeployErrorKey(null);
                 setGithubOpen(true);
@@ -3326,6 +3409,8 @@ function NewV2Inner() {
           flatProjectHtml={loadedProject ? activeDoc : undefined}
           flatProjectPage={activeSitePage}
           flatProjectId={loadedProject?.id}
+          soloLectura={soloLector}
+          chatSinVer={chatSinVer}
           onFlatHtmlUpdate={(newHtml, pageOverride, untrusted) => {
             // Va en el MISMO handler que el html para que no puedan
             // desincronizarse: un drip crudo del chat marca el documento como
@@ -3370,7 +3455,7 @@ function NewV2Inner() {
           onRestoreApplied={applyRestoredVersion}
           onPrepareSnapshot={flushPendingSave}
           sectionSelectMode={sectionSelectMode}
-          onToggleSectionSelect={(active) => setSectionSelectMode(active)}
+          onToggleSectionSelect={esApp ? undefined : (active) => setSectionSelectMode(active)}
           scopedSelection={scopedSelection}
           onClearScope={() => setScopedSelection(null)}
           pendingDraft={pendingChatDraft}
@@ -3543,6 +3628,8 @@ function NewV2Inner() {
                   setTemplateError(null);
                 }}
                 onPaste={() => router.push("/new?mode=paste")}
+                naceComo={naceComo}
+                onNaceComoChange={setNaceComo}
               />
             </div>
           ))}
@@ -3567,6 +3654,7 @@ function NewV2Inner() {
                     onSwitch={switchSitePage}
                     onCreate={createSitePage}
                     onDelete={deleteSitePage}
+                    esApp={esApp}
                   />
                 }
                 pendientes={pendientes}
@@ -3580,8 +3668,10 @@ function NewV2Inner() {
                 editableInjection={editableInjection}
                 sectionSelectMode={sectionSelectMode}
                 editingActive={editingActive}
+                soloLectura={soloLector}
                 inspectMode={inspectMode}
-                onToggleInspect={toggleInspect}
+                onToggleInspect={esApp ? undefined : toggleInspect}
+                esApp={esApp}
                 insertRequest={insertRequest}
                 removeRequest={removeRequest}
                 dropEnabled={dropEnabled}
@@ -3929,6 +4019,16 @@ function NewV2Inner() {
 
           Lo último que sujetaba la franja era «Live at …», y eso vive en la
           barra de dirección, encima del lienzo, donde el visitante lo leería. */}
+      {loadedProject && (
+        <MiembrosDialog
+          key={`miembros-${loadedProject.id}`}
+          projectId={loadedProject.id}
+          projectTitle={loadedProject.title}
+          open={miembrosOpen}
+          onClose={() => setMiembrosOpen(false)}
+          onSalir={() => router.push("/new?view=projects")}
+        />
+      )}
       {loadedProject && (
         <CustomDomainModal
           key={loadedProject.id}

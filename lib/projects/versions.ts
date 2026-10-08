@@ -15,6 +15,7 @@
 import { and, desc, eq, isNull, inArray, ne } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { actualizarData } from "@/lib/projects/escribir-data";
+import { autorDelCambio } from "@/lib/projects/autor-del-cambio";
 import type { ProjectData } from "@/lib/projects/types";
 
 const VERSION_LIMIT = 50; // unpinned rows per (project, page) scope
@@ -40,6 +41,8 @@ export interface VersionSummary {
   pinned: boolean;
   isBaseline: boolean;
   createdAt: Date;
+  /** Quién la hizo, si no fue el dueño (compartir el proyecto): su nombre o correo. */
+  autor?: string | null;
 }
 
 interface CreateVersionParams {
@@ -137,6 +140,7 @@ export async function createVersion(
     html: params.html,
     page,
     isBaseline,
+    autorId: autorDelCambio(),
   });
   if (isBaseline) await demoteOtherBaselines(params.projectId, page, id);
 
@@ -199,8 +203,12 @@ export async function listVersions(
       pinned: schema.projectVersions.pinned,
       isBaseline: schema.projectVersions.isBaseline,
       createdAt: schema.projectVersions.createdAt,
+      autorId: schema.projectVersions.autorId,
+      autorName: schema.users.name,
+      autorEmail: schema.users.email,
     })
     .from(schema.projectVersions)
+    .leftJoin(schema.users, eq(schema.users.id, schema.projectVersions.autorId))
     .where(eq(schema.projectVersions.projectId, params.projectId))
     .orderBy(desc(schema.projectVersions.createdAt))
     .limit(LIST_LIMIT);
@@ -214,6 +222,8 @@ export async function listVersions(
     pinned: r.pinned,
     isBaseline: r.isBaseline,
     createdAt: r.createdAt,
+    // Sólo si no fue el dueño: lo suyo no necesita firma.
+    autor: r.autorId && r.autorId !== params.userId ? r.autorName?.trim() || r.autorEmail || null : null,
   }));
 }
 

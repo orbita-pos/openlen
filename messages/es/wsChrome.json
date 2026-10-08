@@ -81,7 +81,8 @@
       "pagina": "Vista previa",
       "codigo": "Código",
       "terminal": "Terminal",
-      "cambios": "Cambios"
+      "cambios": "Cambios",
+      "app": "App"
     },
     "toolbar": {
       "editPage": "Editar página (⌘E)",
@@ -145,7 +146,8 @@
       "masCoincidencias": "{count, plural, one {Y # coincidencia más.} other {Y # coincidencias más.}}",
       "sinContenido": "{count, plural, one {# archivo que se calcula al abrirlo sólo se busca por nombre.} other {# archivos que se calculan al abrirlos sólo se buscan por nombre.}}",
       "marcaNuevo": "Nuevo en esta sesión",
-      "marcaCambiado": "Cambió en esta sesión"
+      "marcaCambiado": "Cambió en esta sesión",
+      "titleApp": "El código de tu app"
     },
     "terminal": {
       "title": "La terminal de Len",
@@ -202,16 +204,83 @@
       "tope": "Ya hay 10 comentarios esperando: manda el mensaje primero."
     },
     "editar": {
-      "editar": "Editar",
       "guardar": "Guardar",
       "guardando": "Guardando…",
-      "descartar": "Descartar",
       "cargando": "Cargando…",
       "cambio": "Este archivo cambió mientras lo editabas (Len, el editor o tu terminal). No se guardó nada.",
       "cargarAhora": "Cargar lo de ahora",
       "rechazado": "No se guardó:",
       "error": "No se pudo guardar.",
       "nota": "Se guarda como tu versión; Len lo verá en su próximo turno."
+    },
+    "appSinLienzo": "Aquí no se puede ejecutar la app: el lienzo real no responde. Su código está en la lente Código, y publicada funciona.",
+    "verCodigo": "Ver el código",
+    "direccionApp": "App",
+    "ide": {
+      "nuevoArchivo": "Nuevo archivo",
+      "nuevaCarpeta": "Nueva carpeta",
+      "contraer": "Contraer carpetas",
+      "actualizar": "Actualizar",
+      "acciones": "Más acciones",
+      "renombrar": "Renombrar",
+      "borrar": "Borrar",
+      "copiarRuta": "Copiar ruta",
+      "nombre": "Nombre",
+      "nombreInvalido": "Usa letras, números, «-», «_» y «.», sin espacios. Con «/» se crean carpetas.",
+      "existe": "Ya existe {ruta}.",
+      "pagina": "Las páginas no se renombran ni se mueven desde aquí: su dirección y sus enlaces dependen de su nombre.",
+      "portada": "La portada (/index.html) no se puede borrar.",
+      "confirmarBorrar": "¿Borrar {ruta}? Queda en Versiones, y Len lo verá en su próximo turno.",
+      "confirmarBorrarCarpeta": "¿Borrar la carpeta {ruta} y todo lo que tiene dentro?",
+      "confirmarCerrar": "{nombre} tiene cambios sin guardar. ¿Cerrarlo y perderlos?",
+      "cerrarPestana": "Cerrar",
+      "sinGuardar": "Sin guardar",
+      "vacio": "Abre un archivo del explorador, o crea uno nuevo.",
+      "comentarAyuda": "Pulsa el número de una línea para comentarla a Len.",
+      "carpetaVacia": "Vacía: se guarda al crear un archivo dentro.",
+      "cerrarAviso": "Cerrar el aviso",
+      "noSeHizo": "No se hizo:",
+      "editor": {
+        "Find": "Buscar",
+        "Replace": "Reemplazar",
+        "next": "siguiente",
+        "previous": "anterior",
+        "all": "todas",
+        "match_case": "mayúsculas",
+        "regexp": "regex",
+        "by_word": "palabra",
+        "replace": "reemplazar",
+        "replace_all": "reemplazar todo",
+        "close": "cerrar",
+        "Go_to_line": "Ir a la línea",
+        "go": "ir",
+        "Fold_line": "Plegar",
+        "Unfold_line": "Desplegar"
+      },
+      "dividir": "Dividir a la derecha",
+      "subidos": "{count, plural, one {# archivo subido.} other {# archivos subidos.}}",
+      "noSubidos": "No se subieron:",
+      "motivoTipo": "sólo se suben archivos de texto (código, CSS, JSON, SVG…); las fotos van en Imágenes",
+      "motivoGrande": "pasa de 1 MB",
+      "motivoNombre": "el nombre lleva espacios o caracteres que no valen",
+      "motivoDemasiados": "demasiados de una vez (como mucho {max})",
+      "reemplazar": "{count, plural, one {Ya existe {lista}. ¿Reemplazarlo?} other {Ya existen {lista}. ¿Reemplazarlos?}}",
+      "abrirAlLado": "Suelta aquí para abrirlo al lado",
+      "subiendo": "Subiendo…",
+      "hilos": {
+        "placeholder": "Qué cambiar… Escribe @ para mencionar a Len o a alguien del proyecto.",
+        "comentar": "Comentar",
+        "responder": "Responder",
+        "placeholderRespuesta": "Responde… (@ para mencionar)",
+        "resolver": "Resolver",
+        "reabrir": "Reabrir",
+        "resuelto": "Resuelto",
+        "len": "Len",
+        "soloEditoresLen": "Solo quien puede editar puede pedirle cambios a Len.",
+        "error": "No se pudo. Inténtalo de nuevo.",
+        "mencionado": "Te mencionaron aquí",
+        "trabajando": "Len está en ello…"
+      }
     }
   },
   "placeholder": {
@@ -235,7 +304,17 @@
     "pasteHtml": "o pega tu propio HTML",
     "galleryHeading": "Plantillas verificadas",
     "search": "Buscar plantillas…",
-    "noResults": "Sin resultados para «{query}»"
+    "noResults": "Sin resultados para «{query}»",
+    "kind": {
+      "label": "¿Qué quieres hacer?",
+      "page": "Página",
+      "pageHint": "Una web para tu negocio: landing, menú, portafolio",
+      "app": "App",
+      "appHint": "Algo que se usa: punto de venta, agenda, panel con login",
+      "appPlaceholder": "Describe tu app: qué hace, quién la usa…",
+      "headline": "Tu próxima app empieza aquí",
+      "subtitle": "Cuéntale a Len qué tiene que hacer y la construye: sus pantallas, sus datos y su login."
+    }
   },
   "empty": {
     "badge": "Workspace de OpenLen",

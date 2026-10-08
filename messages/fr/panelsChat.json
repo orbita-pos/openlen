@@ -18,7 +18,8 @@
   "turn": {
     "imageSent": "Image envoyée",
     "imagesSent": "{count} images envoyées",
-    "homePage": "Accueil"
+    "homePage": "Accueil",
+    "desdeElHilo": "depuis le fil · {donde}"
   },
   "proceso": {
     "completadoEn": "Terminé en <d>{duracion}</d>",
@@ -104,7 +105,19 @@
     "modeLenDesc": "Celui de tous les jours : rapide, pour presque tout",
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "Pour les gros travaux : réfléchit au maximum avant chaque étape. Plus lent, et consomme plus de crédits",
-    "effortDynamis": "Len Odyssey réfléchit toujours au maximum"
+    "effortDynamis": "Len Odyssey réfléchit toujours au maximum",
+    "soloLectura": "Vous pouvez voir ce projet, mais pas le modifier. Demandez au propriétaire un accès éditeur."
+  },
+  "equipo": {
+    "paraLen": "À Len",
+    "paraPersonas": "À {nombres} · Len ne répond pas",
+    "paraLenYPersonas": "À Len et {nombres}",
+    "soloEditoresLen": "Seuls les éditeurs peuvent demander des choses à Len",
+    "enviarA": "Envoyer à {nombre}",
+    "deA": "{autor} → {para} · Len ne répond pas",
+    "mencionar": "Mentionner {nombre}",
+    "error": "Envoi impossible. Réessayez.",
+    "placeholder": "Écrivez à Len, ou @ pour parler à quelqu’un du projet…"
   },
   "noChange": {
     "label": "Rien n'a changé sur la page"
@@ -112,7 +125,9 @@
   "undo": {
     "failedHttp": "Impossible d’annuler ({status}) — la modification est toujours appliquée. Réessayez.",
     "failedNetwork": "Impossible d’annuler : le serveur n’a pas répondu — la modification est toujours appliquée. Réessayez.",
-    "failedResponse": "Impossible d’annuler : le serveur a répondu sans la page — la modification est toujours appliquée. Réessayez."
+    "failedResponse": "Impossible d’annuler : le serveur a répondu sans la page — la modification est toujours appliquée. Réessayez.",
+    "failedOverlap": "Impossible d’annuler : {rutas} a changé après ce tour, et l’annuler effacerait ce changement. Rien n’a été annulé.",
+    "notUndone": "Annulé, sauf {rutas} : annuler un tour ne rétablit ni la base de données, ni la mémoire, ni les réglages."
   },
   "cutShort": "Le tour s’est interrompu avant la fin ({reason}), mais ce que j’ai fait est déjà enregistré. Vérifiez la page.",
   "memoria": {

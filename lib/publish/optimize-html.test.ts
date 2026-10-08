@@ -247,3 +247,33 @@ test("bake temático: tolera la forma serializada por DOM (data-ol-radius=\"\") 
   assert.match(r.html, /\.p-4\s*\{[^}]*var\(--ol-space-4\)/, "space derivado pese al =\"\"");
   assert.ok(!/<script data-ol-radius/.test(r.html), "script serializado también se retira");
 });
+
+// H1 de la spec 2026-10-07-apps: el código de la carpeta también pinta clases.
+// Hasta hoy el horneado leía sólo el documento, y una clase que únicamente
+// escribía `/js/app.js` se quedaba sin CSS en la publicada (en el lienzo no se
+// veía: allí el CDN mira el DOM vivo).
+const CODIGO_QUE_PINTA = 'card.className = "ring-4 bg-[#123456]"; el.classList.add("translate-x-12");';
+
+test("bake: las clases que sólo escribe el código de la carpeta también se hornean", async () => {
+  const r = await bakeTailwind(DOC_WITH_CDN, [{ raw: CODIGO_QUE_PINTA, extension: "js" }]);
+  assert.equal(r.baked, true);
+  assert.ok(r.html.includes(".ring-4"), "ring-4, sólo en el script");
+  assert.ok(r.html.includes("bg-\\[\\#123456\\]"), "valor arbitrario, sólo en el script");
+  assert.ok(r.html.includes(".translate-x-12"), "classList.add");
+  assert.ok(r.html.includes(".p-4"), "lo del documento sigue");
+});
+
+test("bake: BRAZO DE CONTROL — sin el código, esas clases no salen", async () => {
+  const r = await bakeTailwind(DOC_WITH_CDN);
+  assert.equal(r.baked, true);
+  assert.ok(!r.html.includes(".ring-4"));
+  assert.ok(!r.html.includes(".translate-x-12"));
+});
+
+test("prod mode: optimizeHtmlForProduction pasa el código de la carpeta al horneado", async () => {
+  const r = await withEnv({ NODE_ENV: "production" }, () =>
+    optimizeHtmlForProduction(DOC_WITH_CDN, [{ raw: CODIGO_QUE_PINTA, extension: "js" }]),
+  );
+  assert.equal(r.baked, true);
+  assert.ok(r.html.includes(".ring-4"), "ring-4 llega tras el minificado");
+});

@@ -36,6 +36,15 @@
   --shadow-card:   0 1px 2px 0 oklch(0% 0 0 / 0.04), 0 1px 3px 0 oklch(0% 0 0 / 0.04);
   --shadow-elev:   0 1px 2px 0 oklch(0% 0 0 / 0.06), 0 12px 32px -8px oklch(0% 0 0 / 0.12);
   --shadow-coral:  0 1px 2px 0 rgba(255,90,54,0.35), 0 8px 24px -6px rgba(255,90,54,0.50);
+  /* La gente en los hilos del código (`colorDePersona`, lib/workspace-v2/menciones.ts):
+     un color por persona, legible sobre --bg/--bg-elev, y ninguno cerca del
+     naranja de Len (--accent), que es SU color. */
+  --persona-1:     oklch(50% 0.17 255);  /* azul */
+  --persona-2:     oklch(50% 0.19 300);  /* violeta */
+  --persona-3:     oklch(50% 0.13 150);  /* verde */
+  --persona-4:     oklch(52% 0.19 350);  /* rosa */
+  --persona-5:     oklch(50% 0.09 195);  /* turquesa */
+  --persona-6:     oklch(52% 0.11 95);   /* oliva */
 
   background: var(--bg);
   color: var(--fg);
@@ -55,6 +64,12 @@
   --hover:         oklch(18% 0.01 12);
   --accent-soft:   oklch(28% 0.07 30);
   --accent-ring:   oklch(72% 0.18 30);
+  --persona-1:     oklch(72% 0.14 255);
+  --persona-2:     oklch(74% 0.14 300);
+  --persona-3:     oklch(76% 0.15 150);
+  --persona-4:     oklch(74% 0.15 350);
+  --persona-5:     oklch(78% 0.11 195);
+  --persona-6:     oklch(82% 0.13 95);
 }
 
 /* 🔴 EL VELO DE UN DIÁLOGO, Y POR QUÉ NO PODÍA SER UNA UTILIDAD DE TAILWIND.
@@ -143,31 +158,60 @@
 }
 
 /* ─── Colores de sintaxis del taller (la #15 de plans/len-agente-2026/notas/
-   fase-5-taller.md; el escáner es lib/workspace-v2/colorear.ts). En claro, los
-   700 de Tailwind; en oscuro, los 300: los dos por encima de 4,5:1 sobre su
-   fondo. El comentario y la puntuación, con el gris atenuado de siempre. ─── */
+   fase-5-taller.md): los de VS Code, «Light+» en claro y «Dark+» en oscuro.
+   Los usan el editor (components/workspace-v2/colores-del-editor.ts) y el
+   escáner de sólo lectura (lib/workspace-v2/colorear.ts). Las tres `--sx-ll*`
+   son las llaves por nivel. ─── */
 .workspace-v2 {
-  --sx-etq: #9a3412;
-  --sx-atr: #6d28d9;
-  --sx-val: #047857;
-  --sx-pal: #1d4ed8;
-  --sx-num: #b45309;
-  --sx-pro: #0369a1;
-  --sx-tit: #9a3412;
+  --sx-etq: #800000;  /* etiqueta HTML */
+  --sx-ang: #800000;  /* < > de la etiqueta */
+  --sx-atr: #e50000;  /* atributo; propiedad CSS */
+  --sx-atv: #0000ff;  /* valor de un atributo */
+  --sx-val: #a31515;  /* texto entre comillas */
+  --sx-pal: #0000ff;  /* const, function, true, null, this */
+  --sx-ctl: #af00db;  /* import, return, if */
+  --sx-fun: #795e26;  /* una función */
+  --sx-var: #001080;  /* una variable, una propiedad */
+  --sx-tip: #267f99;  /* un tipo, una clase, un componente */
+  --sx-num: #098658;
+  --sx-com: #008000;
+  --sx-reg: #811f3f;
+  --sx-esc: #ee0000;
+  --sx-sel: #800000;  /* selector CSS */
+  --sx-cssv: #0451a5; /* valor CSS */
+  --sx-pro: #0451a5;  /* clave de JSON */
+  --sx-tit: #800000;
+  --sx-ll1: #0431fa;
+  --sx-ll2: #319331;
+  --sx-ll3: #7b3814;
 }
 .dark .workspace-v2 {
-  --sx-etq: #fdba74;
-  --sx-atr: #c4b5fd;
-  --sx-val: #6ee7b7;
-  --sx-pal: #93c5fd;
-  --sx-num: #fcd34d;
-  --sx-pro: #7dd3fc;
-  --sx-tit: #fdba74;
+  --sx-etq: #569cd6;
+  --sx-ang: #808080;
+  --sx-atr: #9cdcfe;
+  --sx-atv: #ce9178;
+  --sx-val: #ce9178;
+  --sx-pal: #569cd6;
+  --sx-ctl: #c586c0;
+  --sx-fun: #dcdcaa;
+  --sx-var: #9cdcfe;
+  --sx-tip: #4ec9b0;
+  --sx-num: #b5cea8;
+  --sx-com: #6a9955;
+  --sx-reg: #d16969;
+  --sx-esc: #d7ba7d;
+  --sx-sel: #d7ba7d;
+  --sx-cssv: #ce9178;
+  --sx-pro: #9cdcfe;
+  --sx-tit: #569cd6;
+  --sx-ll1: #ffd700;
+  --sx-ll2: #da70d6;
+  --sx-ll3: #179fff;
 }
 .workspace-v2 .sx-etq { color: var(--sx-etq); }
 .workspace-v2 .sx-atr { color: var(--sx-atr); }
 .workspace-v2 .sx-val { color: var(--sx-val); }
-.workspace-v2 .sx-com { color: var(--fg-faint); font-style: italic; }
+.workspace-v2 .sx-com { color: var(--sx-com); }
 .workspace-v2 .sx-pal { color: var(--sx-pal); }
 .workspace-v2 .sx-num { color: var(--sx-num); }
 .workspace-v2 .sx-pro { color: var(--sx-pro); }

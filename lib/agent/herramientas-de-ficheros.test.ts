@@ -853,7 +853,7 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
     const session = makeSession();
     try {
       const ls = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "ls /.openlen/docs" }));
-      assert.match(texto(ls), /^guia-de-diseno\.md\nlibrerias\.md\n/);
+      assert.match(texto(ls), /^apps\.md\nguia-de-diseno\.md\nlibrerias\.md\n/);
       const cat = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "grep -c var /.openlen/docs/guia-de-diseno.md" }));
       assert.match(texto(cat), /^[1-9]/);
       const escribe = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "echo x >> /.openlen/docs/librerias.md" }));
@@ -1189,20 +1189,23 @@ describe("la terminal DEL USUARIO (la #17 de plans/len-agente-2026/notas/fase-5-
     }
   });
 
-  it("no mete código que el sitio no tenía, y la página se queda como estaba", async () => {
+  // Hasta el 2026-10-07 esto se RECHAZABA (la #17: «no mete código que el sitio
+  // no tenía»). Se retiró con las apps web (D1 de la spec 2026-10-07-apps): el
+  // dueño escribe JavaScript como cualquier otro texto.
+  it("el JavaScript escrito a mano se guarda, como cualquier otro texto", async () => {
     const { deps, store } = makeDepsCompletos({ html: CON_SCRIPT });
     try {
-      for (const command of [
-        "sed -i 's#</body>#<script>alert(1)</script></body>#' /index.html",
-        "sed -i 's/abrir()\"/robar()\"/' /index.html",
-        "sed -i 's#<h1>#<h1 onmouseover=\"robar()\">#' /index.html",
-      ]) {
+      for (const [command, queda] of [
+        ["sed -i 's#</body>#<script>alert(1)</script></body>#' /index.html", /<script>alert\(1\)<\/script>/],
+        ["sed -i 's/abrir()\"/cerrar()\"/' /index.html", /onclick="cerrar\(\)"/],
+        ["sed -i 's#<h1>#<h1 onmouseover=\"cerrar()\">#' /index.html", /<h1 onmouseover="cerrar\(\)">/],
+      ] as const) {
         const r = await correr(deps, command);
-        assert.notEqual(r.exitCode, 0, command);
-        assert.equal(r.cambio, false, command);
-        assert.match(r.salida, /JavaScript .* cannot be added or changed by hand/, command);
-        assert.equal(store.data.html, CON_SCRIPT, command);
+        assert.equal(r.exitCode, 0, `${command}\n${r.salida}`);
+        assert.equal(r.cambio, true, command);
+        assert.match(store.data.html, queda, command);
       }
+      assert.equal(store.snapshots[0]?.source, "manual");
     } finally {
       await cerrarLasTerminalesDelUsuario();
     }
@@ -1261,13 +1264,12 @@ describe("editar a mano en la lente «Código» (la #18 de plans/len-agente-2026
     assert.equal(store.snapshots.length, 0);
   });
 
-  it("valen las guardas de la terminal: ni JavaScript nuevo ni el manual", async () => {
+  it("valen las guardas de la terminal: el manual no se toca; el JavaScript sí, desde el 2026-10-07", async () => {
     const { deps, store } = makeDepsCompletos({ html: CON_SCRIPT });
-    const js = await guardarAMano("p-editor", "u1", "/index.html", CON_SCRIPT.replace("</body>", "<script>alert(1)</script></body>"), CON_SCRIPT, deps);
-    assert.equal(js.ok, false);
-    if (!js.ok && js.motivo === "rechazado") assert.match(js.detalle, /JavaScript .* cannot be added or changed by hand/);
-    else assert.fail(JSON.stringify(js));
-    assert.equal(store.data.html, CON_SCRIPT);
+    const conAlert = CON_SCRIPT.replace("</body>", "<script>alert(1)</script></body>");
+    const js = await guardarAMano("p-editor", "u1", "/index.html", conAlert, CON_SCRIPT, deps);
+    assert.equal(js.ok, true, JSON.stringify(js));
+    assert.match(store.data.html, /<script>alert\(1\)<\/script>/);
     const ficheros = await cargarFicherosDeLaTerminal(
       { projectId: "p-editor", userId: "u1", page: null, ownerEmail: null, imageEditsThisTurn: 0, photoSearchesThisTurn: 0, busquedasVaciasSeguidas: 0 },
       deps,
@@ -1480,7 +1482,7 @@ describe("la carpeta del proyecto (pieza 9)", () => {
     assert.match(texto(a), /reserved/);
     const b = await runAgentTool(makeSession(), deps, "Write", { file_path: "/logo.png", content: "1" });
     assert.equal(b.response.ok, false);
-    assert.match(texto(b), /\.js \.mjs \.css/);
+    assert.match(texto(b), /\.js \.mjs \.jsx \.tsx \.ts \.css/);
     assert.deepEqual(archivos, {});
   });
 
@@ -1507,7 +1509,7 @@ describe("la carpeta del proyecto (pieza 9)", () => {
     }
   });
 
-  it("🔴 el editor del dueño cambia /data/menu.json pero no /js/app.js, y su versión dice que fue él", async () => {
+  it("🔴 el editor del dueño cambia /data/menu.json y /js/app.js, y su versión dice que fue él", async () => {
     const { deps, archivos, versiones } = conCarpeta({ html: HOME });
     archivos["/data/menu.json"] = "[]";
     archivos["/js/app.js"] = "console.log(1)";
@@ -1516,9 +1518,11 @@ describe("la carpeta del proyecto (pieza 9)", () => {
     assert.equal(archivos["/data/menu.json"], "[1]");
     assert.equal(versiones.at(-1)?.source, "manual");
     assert.match(versiones.at(-1)?.label ?? "", /^Code editor: /);
-    const no = await guardarAMano("p1", "u1", "/js/app.js", "console.log(2)", "console.log(1)", deps);
-    assert.equal(no.ok, false);
-    assert.equal(archivos["/js/app.js"], "console.log(1)");
+    // Hasta el 2026-10-07 un .js sólo podía ser COPIA de uno guardado.
+    const js = await guardarAMano("p1", "u1", "/js/app.js", "console.log(2)", "console.log(1)", deps);
+    assert.equal(js.ok, true, JSON.stringify(js));
+    assert.equal(archivos["/js/app.js"], "console.log(2)");
+    assert.match(versiones.at(-1)?.label ?? "", /^Code editor: /);
   });
 
   it("BRAZO DE CONTROL: un fichero de más de 1 MiB no se guarda", async () => {
@@ -1526,5 +1530,516 @@ describe("la carpeta del proyecto (pieza 9)", () => {
     const w = await runAgentTool(makeSession(), deps, "Write", { file_path: "/data/x.json", content: "x".repeat(1024 * 1024 + 1) });
     assert.equal(w.response.ok, false);
     assert.deepEqual(archivos, {});
+  });
+});
+
+// UNA APP WEB (F3 de la spec local 2026-10-07-apps): el código vive en /src, lo
+// que no compila vuelve a Len en el acto, y una app no tiene páginas.
+describe("en una app", () => {
+  const APP = { catalogo: "2026-10", entrada: "/src/main.jsx" };
+  const CASCARON =
+    '<!doctype html><html lang="es"><head><title>Caja</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>';
+  const sesion = (): AgentSession => ({ ...makeSession(), app: APP });
+  const conApp = () => {
+    const c = conCarpeta({ html: CASCARON, app: APP });
+    c.archivos["/src/main.jsx"] = 'import { createRoot } from "react-dom/client";\nimport App from "./App";\ncreateRoot(document.getElementById("root")).render(<App />);';
+    c.archivos["/src/App.jsx"] = "export default function App() {\n  return <h1>Caja</h1>;\n}";
+    return c;
+  };
+  const diags = (o: { diagnosticos?: readonly { ruta: string; linea: number; mensaje: string; codigo?: string }[] }) => o.diagnosticos ?? [];
+
+  it("escribir código de la app la marca como cambiada (para medirla y mirarla), y si compila no dice nada", async () => {
+    const { deps, archivos } = conApp();
+    const s = sesion();
+    await runAgentTool(s, deps, "Read", { file_path: "/src/App.jsx" });
+    const w = await runAgentTool(s, deps, "Write", { file_path: "/src/App.jsx", content: "export default function App() {\n  return <h1>Caja 2</h1>;\n}" });
+    assert.equal(w.response.ok, true, JSON.stringify(w.response));
+    assert.match(archivos["/src/App.jsx"]!, /Caja 2/);
+    assert.equal(w.appCambiada, true);
+    assert.equal(w.updatedHtml, undefined, "el cascarón no cambió: el lienzo no se repinta con él");
+    assert.deepEqual(diags(w), []);
+  });
+
+  it("🔴 lo que no compila vuelve en el acto, con su fichero y su línea", async () => {
+    const { deps } = conApp();
+    const s = sesion();
+    const w = await runAgentTool(s, deps, "Write", { file_path: "/src/Carrito.jsx", content: "export default function Carrito() {\n  return <div>\n}" });
+    assert.equal(w.response.ok, true, "se guarda, como en cualquier editor");
+    const d = diags(w);
+    assert.equal(d.length, 1);
+    assert.equal(d[0]!.ruta, "/src/Carrito.jsx");
+    assert.equal(d[0]!.codigo, "compila");
+    assert.match(d[0]!.mensaje, /the app doesn't load/);
+  });
+
+  it("🔴 lo que rompe en OTRO fichero también: borrar lo que alguien importa", async () => {
+    const { deps } = conApp();
+    const s = sesion();
+    await runAgentTool(s, deps, "Read", { file_path: "/src/App.jsx" });
+    const w = await runAgentTool(s, deps, "Write", { file_path: "/src/App.jsx", content: "export const App = () => null;" });
+    const d = diags(w);
+    assert.deepEqual(d.map((x) => [x.ruta, x.linea]), [["/src/main.jsx", 2]]);
+    assert.match(d[0]!.mensaje, /has no default export: it exports App/);
+  });
+
+  it("CONTRA-PRUEBA: un fallo que el dueño ya tenía en otro fichero no se le carga a Len", async () => {
+    const { deps, archivos } = conApp();
+    archivos["/src/Viejo.jsx"] = "export default () => <div";
+    const s = sesion();
+    await runAgentTool(s, deps, "Read", { file_path: "/src/App.jsx" });
+    const w = await runAgentTool(s, deps, "Write", { file_path: "/src/App.jsx", content: "export default function App() {\n  return <h2>Caja</h2>;\n}" });
+    assert.deepEqual(diags(w), []);
+  });
+
+  it("🔴 una app no tiene páginas: un /<slug>/index.html se rechaza y dice qué hacer", async () => {
+    const { deps, store } = conApp();
+    const w = await runAgentTool(sesion(), deps, "Write", { file_path: "/ventas/index.html", content: "<!doctype html><p>x</p>" });
+    assert.equal(w.response.ok, false);
+    assert.match(texto(w), /an app has no pages: a new screen is a component in \/src and a <Route>/);
+    assert.equal(store.data.pages, undefined);
+  });
+
+  it("el cascarón que deja de cargar la app se dice en la escritura", async () => {
+    const { deps } = conApp();
+    const s = sesion();
+    await runAgentTool(s, deps, "Read", { file_path: "/index.html" });
+    const w = await runAgentTool(s, deps, "Edit", {
+      file_path: "/index.html",
+      old_string: '<script type="module" src="/src/main.jsx"></script>',
+      new_string: "",
+    });
+    assert.equal(w.response.ok, true);
+    assert.ok(diags(w).some((x) => x.ruta === "/index.html" && /The shell no longer loads the app/.test(x.mensaje)), JSON.stringify(diags(w)));
+  });
+
+  it("🔴 «deshaz eso» deshace el TURNO anterior entero, no la última versión del cascarón", async () => {
+    const { deps } = conApp();
+    const pedidos: string[] = [];
+    const conDeshacer = {
+      ...deps,
+      async deshacerTurnoAnterior(p: string) {
+        pedidos.push(p);
+        return { ok: true as const, paginas: [], ficheros: ["/src/App.jsx", "/src/Carrito.jsx"], noSeDeshacen: ["/supabase/migrations/2_b.sql"], deshacerId: "d1" };
+      },
+    } as unknown as AgentDeps;
+    const r = await runAgentTool(sesion(), conDeshacer, "undo_last_change", {});
+    assert.equal(r.response.ok, true, JSON.stringify(r.response));
+    assert.deepEqual(r.response.deshecho, ["/src/App.jsx", "/src/Carrito.jsx"]);
+    assert.deepEqual(r.response.no_vuelve, ["/supabase/migrations/2_b.sql"]);
+    assert.ok(r.appCambiada, "lo que se ve cambió");
+    assert.deepEqual(pedidos, ["p1"]);
+  });
+
+  it("…y si el dueño tocó después lo mismo, no deshace nada y dice qué", async () => {
+    const { deps } = conApp();
+    const conChoque = {
+      ...deps,
+      async deshacerTurnoAnterior() {
+        return { ok: false as const, motivo: "se_solapan" as const, rutas: ["/src/App.jsx"] };
+      },
+    } as unknown as AgentDeps;
+    const r = await runAgentTool(sesion(), conChoque, "undo_last_change", {});
+    assert.equal(r.response.ok, false);
+    assert.match(String(r.response.error), /Nothing was undone: after that turn, \/src\/App\.jsx was changed again/);
+  });
+
+  it("edit_image encuentra la foto en el CÓDIGO de la app y la cambia ahí, archivando el antes", async () => {
+    const { deps, archivos, versiones } = conApp();
+    const FOTO = "https://images.openlen.com/cafe.webp";
+    archivos["/src/App.jsx"] = `export default function App() {\n  return <img src="${FOTO}" alt="Café" />;\n}`;
+    const conIA = {
+      ...deps,
+      async fetchImage() {
+        return { ok: true, base64: "b64", mimeType: "image/webp" };
+      },
+      async editImage() {
+        return { imageBase64: "b64editada", mimeType: "image/webp", cost: 4 };
+      },
+      async uploadAsset() {
+        return { url: "https://images.openlen.com/cafe-editada.webp" };
+      },
+    } as unknown as AgentDeps;
+    const r = await runAgentTool(sesion(), conIA, "edit_image", { image_url: FOTO, instruction: "más luz" });
+    assert.equal(r.response.ok, true, JSON.stringify(r.response));
+    assert.match(archivos["/src/App.jsx"]!, /cafe-editada\.webp/);
+    assert.equal(versiones.at(-1)?.path, "/src/App.jsx");
+    assert.ok(r.appCambiada);
+    // CONTRA-PRUEBA: una URL que no está entera entre comillas en el código no se toca.
+    const otra = await runAgentTool(sesion(), conIA, "edit_image", { image_url: "https://images.openlen.com/cafe", instruction: "x" });
+    assert.equal(otra.response.ok, false);
+  });
+
+  it("🔴 una app que no compila no llega a la tarjeta de publicar: Len sabe qué arreglar antes", async () => {
+    const { deps, archivos } = conApp();
+    archivos["/src/App.jsx"] = "export default () => <div";
+    const r = await runAgentTool(sesion(), deps, "publish", { subdomain: "caja" });
+    assert.equal(r.response.ok, false);
+    assert.match(String(r.response.error), /The app can't be published yet[\s\S]*\/src\/App\.jsx:1/);
+    assert.equal(r.confirm, undefined);
+  });
+
+  it("🔴 la terminal lo dice UNA vez con el comando entero: renombrar en dos ficheros no da un error a medias", async () => {
+    const { deps, archivos } = conApp();
+    archivos["/src/App.jsx"] = 'import { Total } from "./total";\nexport default function App() {\n  return <Total />;\n}';
+    archivos["/src/total.jsx"] = "export function Total() {\n  return <b>0</b>;\n}";
+    const s = sesion();
+    try {
+      const r = await conTerminal(() => runAgentTool(s, deps, "bash", { command: "sed -i 's/Total/Suma/g' /src/total.jsx /src/App.jsx" }));
+      assert.equal(r.response.ok, true, JSON.stringify(r.response));
+      assert.match(archivos["/src/App.jsx"]!, /Suma/);
+      assert.deepEqual(diags(r), [], "tras el comando entero, todo compila");
+      assert.ok(r.appCambiada, "la app cambió");
+      // Y uno que sí deja algo roto, se dice.
+      const roto = await conTerminal(() => runAgentTool(s, deps, "bash", { command: "rm /src/total.jsx" }));
+      assert.deepEqual(diags(roto).map((x) => x.ruta), ["/src/App.jsx"]);
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
+});
+
+// TAREA #15 · UN TURNO DE APP DE PUNTA A PUNTA, guionizado: el bucle de verdad
+// (`runAgentLoop`), las herramientas de verdad (`runAgentTool`) sobre el doble
+// de la carpeta, y un «modelo» con guion que hace lo que haría Len con «hazme
+// un POS para una cafetería» sobre el esqueleto con el que nace una app. Lo que
+// mira: que lo que no compila le VUELVE al modelo en el `<new-diagnostics>` de
+// la tanda siguiente, que lo arreglado deja de decirse, y que publicar sale en
+// su tarjeta sólo cuando la app compila. Sin modelo ni red: $0.
+describe("un turno de app, guionizado (tarea #15)", () => {
+  it("🔴 POS de una cafetería: escribe, ve lo que no compila, lo arregla y deja la tarjeta de publicar", async () => {
+    const { runAgentLoop } = await import("./loop");
+    const { esqueletoDeApp } = await import("@/lib/apps/esqueleto");
+    const { erroresDeLaApp } = await import("./compila-la-app");
+    const e = esqueletoDeApp({ titulo: "Café Luna", idioma: "es" });
+    const c = conCarpeta({ html: e.html, app: e.app });
+    Object.assign(c.archivos, e.ficheros);
+    const s: AgentSession = {
+      ...makeSession(),
+      app: e.app,
+      mensajeDelUsuario: "hazme un POS para una cafetería y publícalo en cafe-luna",
+      userPrompt: "hazme un POS para una cafetería y publícalo en cafe-luna",
+    };
+
+    const CAJA_ROTA = `import { useState } from "react";
+export default function Caja() {
+  const [ticket, setTicket] = useState(0);
+  return (
+    <main className="p-6">
+      <button onClick={() => setTicket(ticket + 2.5)}>Café con leche</button>
+      <p>Ticket: {ticket.toFixed(2)} €
+    </main>
+  );
+}
+`;
+    const CAJA = CAJA_ROTA.replace("{ticket.toFixed(2)} €\n", "{ticket.toFixed(2)} €</p>\n");
+    const APP = `import { Routes, Route } from "react-router-dom";
+import Inicio from "./screens/Inicio";
+import Caja from "./screens/Caja";
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Inicio />} />
+      <Route path="/caja" element={<Caja />} />
+    </Routes>
+  );
+}
+`;
+    const call = (name: string, args: Record<string, unknown>) => ({ type: "function_call" as const, name, args });
+    const fin = { type: "done" as const, stopReason: { kind: "end_turn" as const } };
+    const guion = [
+      [call("Read", { file_path: "/src/App.jsx" }), fin],
+      [call("Write", { file_path: "/src/screens/Caja.jsx", content: CAJA_ROTA }), call("Write", { file_path: "/src/App.jsx", content: APP }), fin],
+      [call("Write", { file_path: "/src/screens/Caja.jsx", content: CAJA }), fin],
+      [call("publish", { subdomain: "cafe-luna" }), fin],
+      [{ type: "text_delta" as const, text: "Listo: la caja está en #/caja." }, fin],
+    ];
+    // Lo que el «modelo» recibió al abrir cada vuelta: el último mensaje.
+    const vistos: string[] = [];
+    let i = 0;
+    const eventos: { type: string }[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: s.userPrompt! }],
+      tools: [],
+      openStream: (messages) => {
+        vistos.push(JSON.stringify(messages.at(-1)));
+        const turno = guion[Math.min(i++, guion.length - 1)]!;
+        return (async function* () {
+          for (const ev of turno) yield ev;
+        })();
+      },
+      runTool: (name, args) => runAgentTool(s, c.deps, name, args),
+      emit: (ev) => eventos.push(ev),
+    });
+
+    assert.equal(r.terminalError, false);
+    // Tras la tanda que dejó Caja.jsx rota, el modelo lo LEE con fichero y línea.
+    assert.match(vistos[2]!, /<new-diagnostics>[\s\S]*\/src\/screens\/Caja\.jsx[\s\S]*the app doesn't load/);
+    // Y una vez arreglada, la tanda siguiente ya no lo dice.
+    assert.doesNotMatch(vistos[3]!, /new-diagnostics/);
+    // La carpeta compila y tiene su pantalla con su ruta.
+    assert.deepEqual(erroresDeLaApp(e.app, c.archivos), []);
+    assert.match(c.archivos["/src/App.jsx"]!, /path="\/caja"/);
+    // Publicar deja su tarjeta: la app compila.
+    const confirm = eventos.find((x) => x.type === "confirm") as { subdominio?: string } | undefined;
+    assert.equal(confirm?.subdominio, "cafe-luna");
+    assert.match(r.finalText, /caja/);
+  });
+
+  it("CONTRA-PRUEBA: si la deja rota, publicar no llega a la tarjeta", async () => {
+    const { runAgentLoop } = await import("./loop");
+    const { esqueletoDeApp } = await import("@/lib/apps/esqueleto");
+    const e = esqueletoDeApp({ titulo: "Café Luna" });
+    const c = conCarpeta({ html: e.html, app: e.app });
+    Object.assign(c.archivos, e.ficheros);
+    const s: AgentSession = { ...makeSession(), app: e.app, mensajeDelUsuario: "publícalo en cafe-luna" };
+    const fin = { type: "done" as const, stopReason: { kind: "end_turn" as const } };
+    const guion = [
+      [{ type: "function_call" as const, name: "Write", args: { file_path: "/src/screens/Caja.jsx", content: "export default () => <main" } }, fin],
+      [{ type: "function_call" as const, name: "publish", args: { subdomain: "cafe-luna" } }, fin],
+      [{ type: "text_delta" as const, text: "No se pudo." }, fin],
+    ];
+    let i = 0;
+    const eventos: { type: string }[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: () => {
+        const turno = guion[Math.min(i++, guion.length - 1)]!;
+        return (async function* () {
+          for (const ev of turno) yield ev;
+        })();
+      },
+      runTool: (name, args) => runAgentTool(s, c.deps, name, args),
+      emit: (ev) => eventos.push(ev),
+    });
+    assert.ok(c.archivos["/src/screens/Caja.jsx"], "la escritura llegó: lo que falla es publicar");
+    assert.equal(eventos.some((x) => x.type === "confirm"), false);
+  });
+});
+
+// F4 · UNA PÁGINA QUE CRECE SE CONVIERTE EN APP (`convert_to_app`,
+// lib/agent/convertir-en-app.ts): Len construye /src con la página intacta y la
+// herramienta voltea de una vez. El compilador es la puerta.
+describe("convertir una página en app", () => {
+  const HOME_ES = HOME.replace("<title>Tienda Brote</title>", "<title>Brote · Inicio</title>");
+  const conPaginas = () => {
+    const c = conCarpeta({
+      html: HOME_ES,
+      pages: { menu: { html: MENU, title: "La carta" }, contacto: { html: MENU.replace("Menú", "Contacto") } },
+    });
+    return c;
+  };
+  const MAIN = 'import { createRoot } from "react-dom/client";\nimport { HashRouter } from "react-router-dom";\nimport App from "./App";\n\ncreateRoot(document.getElementById("root")).render(\n  <HashRouter>\n    <App />\n  </HashRouter>,\n);\n';
+  const APP_JSX =
+    'import { Routes, Route } from "react-router-dom";\nimport Inicio from "./screens/Inicio";\nimport Menu from "./screens/Menu";\n\nexport default function App() {\n  return (\n    <Routes>\n      <Route path="/" element={<Inicio />} />\n      <Route path="/menu" element={<Menu />} />\n    </Routes>\n  );\n}\n';
+  const conLaApp = (archivos: Record<string, string>) => {
+    archivos["/src/main.jsx"] = MAIN;
+    archivos["/src/App.jsx"] = APP_JSX;
+    archivos["/src/screens/Inicio.jsx"] = "export default function Inicio() {\n  return <h1>Tienda Brote</h1>;\n}\n";
+    archivos["/src/screens/Menu.jsx"] = "export default function Menu() {\n  return <h1>Menú</h1>;\n}\n";
+  };
+
+  it("se declara en una página y NO en una app; el prompt de la app no la nombra", async () => {
+    const { buildFunctionDeclarations, buildAgentSystemPrompt } = await import("./catalog");
+    const APP = { catalogo: "2026-10", entrada: "/src/main.jsx" };
+    assert.ok(buildFunctionDeclarations(process.env, {}, "len", null).some((d) => d.name === "convert_to_app"));
+    assert.ok(!buildFunctionDeclarations(process.env, {}, "len", APP).some((d) => d.name === "convert_to_app"));
+    assert.match(buildAgentSystemPrompt(process.env, "len", null), /convert_to_app/);
+    assert.doesNotMatch(buildAgentSystemPrompt(process.env, "len", APP), /convert_to_app/);
+  });
+
+  it("sin /src/main.jsx no convierte nada, y dice cómo empezar", async () => {
+    const { deps, store } = conPaginas();
+    const antes = JSON.stringify(store.data);
+    const r = await runAgentTool(makeSession(), deps, "convert_to_app", {});
+    assert.equal(r.response.ok, false);
+    assert.match(String(r.response.error), /write the app in \/src first[\s\S]*createRoot/);
+    assert.equal(JSON.stringify(store.data), antes);
+  });
+
+  it("🔴 si la app de /src no compila, NO convierte nada: la página sigue entera", async () => {
+    const { deps, store, archivos } = conPaginas();
+    conLaApp(archivos);
+    archivos["/src/screens/Menu.jsx"] = "export default function Menu() {\n  return <h1>Menú\n}\n";
+    const antes = JSON.stringify(store.data);
+    const r = await runAgentTool(makeSession(), deps, "convert_to_app", {});
+    assert.equal(r.response.ok, false);
+    assert.match(String(r.response.error), /Nothing was converted[\s\S]*\/src\/screens\/Menu\.jsx/);
+    assert.equal(JSON.stringify(store.data), antes);
+  });
+
+  it("🔴 convierte de una vez: el cascarón con el título y el idioma de la portada, sin páginas, con data.app, y lo de antes en Versiones", async () => {
+    const { deps, store, archivos } = conPaginas();
+    conLaApp(archivos);
+    const s = makeSession();
+    s.page = "menu";
+    const r = await runAgentTool(s, deps, "convert_to_app", {});
+    assert.equal(r.response.ok, true, JSON.stringify(r.response));
+    assert.deepEqual(store.data.app, { catalogo: "2026-10", entrada: "/src/main.jsx" });
+    assert.equal(store.data.pages, undefined);
+    assert.match(store.data.html, /<html lang="es">/);
+    assert.match(store.data.html, /<title>Brote · Inicio<\/title>/);
+    assert.match(store.data.html, /<div id="root"><\/div>/);
+    assert.deepEqual(store.versions.map((v) => v.page), [null, "contacto", "menu"]);
+    assert.deepEqual(r.response.removed_pages, ["/contacto/index.html", "/menu/index.html"]);
+    assert.match(String(r.response.tool_result), /"#\/contacto", "#\/menu"/);
+    assert.match(String(r.response.tool_result), /canvas can't be edited by hand and pages aren't translated automatically/);
+    assert.ok(r.appCambiada);
+    // EL RESTO DEL TURNO YA ES DE UNA APP.
+    assert.deepEqual(s.app, store.data.app);
+    assert.equal(s.page, null);
+    const pagina = await runAgentTool(s, deps, "Write", { file_path: "/otra/index.html", content: "<!doctype html><p>x</p>" });
+    assert.equal(pagina.response.ok, false, "en una app no se crean páginas");
+    const rota = await runAgentTool(s, deps, "Write", { file_path: "/src/screens/Nueva.jsx", content: "export default () => <div" });
+    assert.ok((rota.diagnosticos ?? []).some((d) => d.ruta === "/src/screens/Nueva.jsx"), "lo que no compila ya vuelve en el acto");
+  });
+
+  it("una app no se vuelve a convertir", async () => {
+    const { deps, archivos } = conCarpeta({ html: "<!doctype html>", app: { catalogo: "2026-10", entrada: "/src/main.jsx" } });
+    conLaApp(archivos);
+    const r = await runAgentTool(makeSession(), deps, "convert_to_app", {});
+    assert.equal(r.response.ok, false);
+    assert.match(String(r.response.error), /already an app/);
+  });
+
+  it("en una app, file_path \"#/menu\" es la pantalla de view_page y use_page; en una página no cambia nada", async () => {
+    const { pantallaPorFilePath } = await import("./tools");
+    const APP = { catalogo: "2026-10", entrada: "/src/main.jsx" };
+    assert.deepEqual(pantallaPorFilePath({ app: APP }, { file_path: "#/menu", mode: "measure" }), { mode: "measure", screen: "#/menu" });
+    assert.deepEqual(pantallaPorFilePath({ app: APP }, { file_path: "/index.html" }), { file_path: "/index.html" });
+    assert.deepEqual(pantallaPorFilePath({}, { file_path: "#/menu" }), { file_path: "#/menu" });
+  });
+
+  it("🔴 un turno guionizado: lee las páginas, escribe /src, convierte y prueba — y lo roto antes de voltear no voltea", async () => {
+    const { runAgentLoop } = await import("./loop");
+    const { deps, store, archivos } = conPaginas();
+    const s: AgentSession = { ...makeSession(), userPrompt: "sí, conviértela" };
+    const fin = { type: "done" as const, stopReason: { kind: "end_turn" as const } };
+    const call = (name: string, args: Record<string, unknown>) => ({ type: "function_call" as const, name, args });
+    const guion = [
+      [call("Read", { file_path: "/index.html" }), call("Read", { file_path: "/menu/index.html" }), call("Read", { file_path: "/contacto/index.html" }), fin],
+      [
+        call("Write", { file_path: "/src/main.jsx", content: MAIN }),
+        call("Write", { file_path: "/src/App.jsx", content: APP_JSX }),
+        call("Write", { file_path: "/src/screens/Inicio.jsx", content: "export default function Inicio() {\n  return <h1>Tienda Brote</h1>;\n}\n" }),
+        call("Write", { file_path: "/src/screens/Menu.jsx", content: "export default function Menu() {\n  return <h1>Menú\n}\n" }),
+        fin,
+      ],
+      // Rota: no voltea, y la página sigue entera.
+      [call("convert_to_app", {}), fin],
+      [call("Write", { file_path: "/src/screens/Menu.jsx", content: "export default function Menu() {\n  return <h1>Menú</h1>;\n}\n" }), fin],
+      [call("convert_to_app", {}), fin],
+      [{ type: "text_delta" as const, text: "Listo: ya es una app." }, fin],
+    ];
+    let i = 0;
+    const vistos: string[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "sí, conviértela" }],
+      tools: [],
+      openStream: (messages) => {
+        vistos.push(JSON.stringify(messages.at(-1)));
+        const turno = guion[Math.min(i++, guion.length - 1)]!;
+        return (async function* () {
+          for (const ev of turno) yield ev;
+        })();
+      },
+      runTool: (name, args) => runAgentTool(s, deps, name, args),
+      emit: () => undefined,
+    });
+    assert.equal(r.terminalError, false);
+    assert.match(vistos[3]!, /Nothing was converted[\s\S]*Menu\.jsx/, "la primera vez, lo que no compila");
+    assert.ok(archivos["/src/App.jsx"]);
+    assert.deepEqual(store.data.app, { catalogo: "2026-10", entrada: "/src/main.jsx" });
+    assert.equal(store.data.pages, undefined);
+    assert.match(vistos[5]!, /Converted: this project is now a web app/);
+  });
+});
+
+// EL EXPLORADOR COMO EL DE VS CODE (`lib/agent/terminal/operar-a-mano.ts`):
+// crear, renombrar y borrar ficheros y carpetas a mano, por el camino de la
+// terminal del usuario y con sus guardas.
+describe("crear, renombrar y borrar a mano, desde el explorador", () => {
+  const conSitio = () => {
+    const c = conCarpeta({ html: HOME, pages: { menu: { html: MENU, title: "Menú" } } });
+    c.archivos["/js/app.js"] = "console.log(1);";
+    c.archivos["/js/util/fecha.js"] = "export const hoy = 1;";
+    c.archivos["/menu/extra.css"] = "h1{color:red}";
+    return c;
+  };
+
+  it("crear un fichero vacío en una carpeta nueva", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps, archivos, versiones } = conSitio();
+    const r = await operarAMano("p1", "u1", { tipo: "crear", ruta: "/css/base.css" }, deps);
+    assert.deepEqual(r, { ok: true, rutas: ["/css/base.css"] });
+    assert.equal(archivos["/css/base.css"], "");
+    assert.match(versiones.at(-1)!.label, /^Code editor/, "a tu nombre, no al de Len");
+  });
+
+  it("crear una página: nace con un documento mínimo, con el idioma de la portada", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps, store } = conSitio();
+    const r = await operarAMano("p1", "u1", { tipo: "crear", ruta: "/contacto/index.html" }, deps);
+    assert.equal(r.ok, true, JSON.stringify(r));
+    assert.match(store.data.pages?.contacto?.html ?? "", /<html lang="es">[\s\S]*<title>Contacto<\/title>/);
+  });
+
+  it("lo que ya existe —un fichero, o una carpeta con ese nombre— no se pisa", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps } = conSitio();
+    assert.deepEqual(await operarAMano("p1", "u1", { tipo: "crear", ruta: "/js/app.js" }, deps), { ok: false, motivo: "existe", rutas: ["/js/app.js"] });
+    assert.deepEqual(await operarAMano("p1", "u1", { tipo: "crear", ruta: "/js" }, deps), { ok: false, motivo: "existe", rutas: ["/js"] });
+  });
+
+  it("lo de la plataforma no se crea: vuelve la guarda", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps } = conSitio();
+    const r = await operarAMano("p1", "u1", { tipo: "crear", ruta: "/AGENTS.md" }, deps);
+    assert.equal(r.ok, false);
+    assert.equal(!r.ok && r.motivo, "existe", "el manual ya está en el árbol");
+    const otra = await operarAMano("p1", "u1", { tipo: "crear", ruta: "/api/x.js" }, deps);
+    assert.equal(!otra.ok && otra.motivo, "rechazado");
+  });
+
+  it("🔴 renombrar una carpeta mueve todo lo que tiene dentro, y no deja copias", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps, archivos } = conSitio();
+    const r = await operarAMano("p1", "u1", { tipo: "renombrar", de: "/js", a: "/scripts" }, deps);
+    assert.deepEqual(r, { ok: true, rutas: ["/scripts/app.js", "/scripts/util/fecha.js"] });
+    assert.equal(archivos["/scripts/util/fecha.js"], "export const hoy = 1;");
+    assert.equal(archivos["/js/app.js"], undefined);
+    assert.equal(archivos["/js/util/fecha.js"], undefined);
+  });
+
+  it("renombrar sobre algo que existe no hace nada y dice qué", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps, archivos } = conSitio();
+    archivos["/scripts/app.js"] = "otro";
+    const r = await operarAMano("p1", "u1", { tipo: "renombrar", de: "/js", a: "/scripts" }, deps);
+    assert.deepEqual(r, { ok: false, motivo: "existe", rutas: ["/scripts/app.js"] });
+    assert.equal(archivos["/js/app.js"], "console.log(1);");
+  });
+
+  it("🔴 una página no se renombra (su dirección y sus enlaces), ni nada se mueve a una ruta de página", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps, store } = conSitio();
+    const r = await operarAMano("p1", "u1", { tipo: "renombrar", de: "/menu", a: "/carta" }, deps);
+    assert.equal(!r.ok && r.motivo, "pagina");
+    assert.ok(store.data.pages?.menu);
+    const otra = await operarAMano("p1", "u1", { tipo: "renombrar", de: "/js/app.js", a: "/js/index.html" }, deps);
+    assert.equal(!otra.ok && otra.motivo, "pagina");
+  });
+
+  it("borrar una carpeta: sus ficheros se van; las páginas que tenga se devuelven para su propia ruta", async () => {
+    const { operarAMano } = await import("./terminal/operar-a-mano");
+    const { deps, archivos, store } = conSitio();
+    assert.deepEqual(await operarAMano("p1", "u1", { tipo: "borrar", ruta: "/js" }, deps), { ok: true, rutas: ["/js/app.js", "/js/util/fecha.js"] });
+    assert.equal(archivos["/js/app.js"], undefined);
+    const r = await operarAMano("p1", "u1", { tipo: "borrar", ruta: "/menu" }, deps);
+    assert.deepEqual(r, { ok: false, motivo: "pagina", rutas: ["/menu/index.html"] });
+    assert.equal(archivos["/menu/extra.css"], undefined, "lo que no es página sí se borró");
+    assert.ok(store.data.pages?.menu, "la página la borra su propia ruta");
+    assert.deepEqual(await operarAMano("p1", "u1", { tipo: "borrar", ruta: "/nada" }, deps), { ok: false, motivo: "no_existe" });
   });
 });

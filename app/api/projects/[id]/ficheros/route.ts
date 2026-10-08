@@ -1,5 +1,6 @@
 // Los ficheros del proyecto, para el explorador de la lente «Código». El GET, sólo lectura;
-// el PUT guarda lo editado a mano (la #18, abajo).
+// el PUT guarda lo editado a mano (la #18, abajo); POST, PATCH y DELETE crean,
+// renombran y borran, como el explorador de VS Code (`operar-a-mano.ts`).
 //
 // Es el MISMO árbol que ve Len en su terminal (F1 y F5 de plans/len-agente-2026):
 // sale de `cargarFicherosDeLaTerminal` (páginas, `/supabase`, `/memoria`,
@@ -11,18 +12,19 @@
 //   GET                  → { ficheros: [{ ruta, contenido }], perezosos: [ruta] }
 //   GET ?ruta=/.openlen/… → { ruta, contenido }   (los de sólo lectura se calculan al pedirlos)
 //
-// 401 sin sesión, 404 si el proyecto no es tuyo — el mismo par que las demás
-// rutas de proyecto (ver la cabecera de `datos/route.ts`).
-
-import { and, eq } from "drizzle-orm";
+// 401 sin sesión, 404 si no puedes abrir el proyecto — el mismo par que las
+// demás rutas de proyecto. Lo ven el dueño y sus miembros; escriben el dueño y
+// los editores (lib/projects/acceso.ts), y se guarda siempre con el id del dueño.
 
 import { auth } from "@/auth";
-import { db, schema } from "@/lib/db";
+import { exigirAcceso, type AccesoAlProyecto, type Permiso } from "@/lib/projects/acceso";
 import { realDeps, type AgentSession } from "@/lib/agent/tools";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { soloLecturaDeLaTerminal } from "@/lib/agent/terminal/solo-lectura";
 import { esDeLaPlataforma } from "@/lib/agent/ficheros/manual";
 import { guardarAMano } from "@/lib/agent/terminal/editar-a-mano";
+import { operarAMano, type ResultadoAMano } from "@/lib/agent/terminal/operar-a-mano";
+import { conAutorDeLaPeticion, quienDeLaSesion } from "@/lib/projects/autor-del-cambio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,27 +38,22 @@ function json(cuerpo: unknown, status = 200): Response {
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) return json({ error: "unauthorized" }, 401);
-  const propio = await db
-    .select({ id: schema.projects.id })
-    .from(schema.projects)
-    .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
-    .limit(1);
-  if (propio.length === 0) return json({ error: "not_found" }, 404);
+  const acceso = await accesoDe(id, "ver");
+  if (acceso instanceof Response) return acceso;
 
   // La sesión de un turno que no existe: sólo hace falta para leer, como las herramientas.
   const sesion: AgentSession = {
     projectId: id,
-    userId,
+    userId: acceso.duenoId,
     page: null,
     ownerEmail: null,
     imageEditsThisTurn: 0,
     photoSearchesThisTurn: 0,
     busquedasVaciasSeguidas: 0,
   };
-  const deps = realDeps();
+  // Un miembro no ve `/.openlen/resultados` ni `/.openlen/bandeja`: son datos
+  // de los visitantes, y eso es del dueño (lib/projects/acceso.ts).
+  const deps = acceso.rol === "dueno" ? realDeps() : { ...realDeps(), resultados: undefined };
 
   const ruta = new URL(req.url).searchParams.get("ruta");
   if (ruta !== null) {
@@ -89,17 +86,10 @@ const MAX_FICHERO = 2_000_000;
  *                               422 { error: "rechazado", detalle }
  *                               404 si no existe, 400 sin los tres, 413 si es enorme
  */
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+export const PUT = conAutorDeLaPeticion(quienDeLaSesion, async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) return json({ error: "unauthorized" }, 401);
-  const propio = await db
-    .select({ id: schema.projects.id })
-    .from(schema.projects)
-    .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
-    .limit(1);
-  if (propio.length === 0) return json({ error: "not_found" }, 404);
+  const userId = await duenoDe(id);
+  if (typeof userId !== "string") return userId;
 
   let cuerpo: { ruta?: unknown; contenido?: unknown; base?: unknown };
   try {
@@ -118,4 +108,81 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (r.motivo === "cambio") return json({ error: "cambio", actual: r.actual }, 409);
   if (r.motivo === "rechazado") return json({ error: "rechazado", detalle: r.detalle }, 422);
   return json({ error: "not_found" }, 404);
+});
+
+/** Quién pide y con qué rol (lib/projects/acceso.ts); si no entra, la respuesta de error. */
+async function accesoDe(id: string, permiso: Permiso): Promise<AccesoAlProyecto | Response> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return json({ error: "unauthorized" }, 401);
+  return exigirAcceso(id, userId, permiso);
 }
+
+/** Para escribir: el id del DUEÑO (con él se guarda) si quien pide puede editar. */
+async function duenoDe(id: string): Promise<string | Response> {
+  const acceso = await accesoDe(id, "editar");
+  return acceso instanceof Response ? acceso : acceso.duenoId;
+}
+
+const esRuta = (x: unknown): x is string => typeof x === "string" && x.startsWith("/") && x.length <= 300 && !x.includes("\0");
+
+function respuestaDe(r: ResultadoAMano): Response {
+  if (r.ok) return json({ rutas: r.rutas });
+  if (r.motivo === "existe") return json({ error: "existe", rutas: r.rutas }, 409);
+  if (r.motivo === "no_existe") return json({ error: "not_found" }, 404);
+  if (r.motivo === "pagina") return json({ error: "pagina", rutas: r.rutas }, 409);
+  return json({ error: "rechazado", detalle: r.detalle }, 422);
+}
+
+async function cuerpoDe(req: Request): Promise<Record<string, unknown> | null> {
+  try {
+    const c = (await req.json()) as unknown;
+    return c && typeof c === "object" ? (c as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * POST — crear un fichero vacío («Nuevo archivo»). Una página nueva
+ * (`/<slug>/index.html`) nace con un documento mínimo.
+ *
+ *   { ruta, contenido? } → 200 { rutas } · 409 { error: "existe" } · 422 { error: "rechazado", detalle }
+ */
+export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  const { id } = await params;
+  const userId = await duenoDe(id);
+  if (typeof userId !== "string") return userId;
+  const c = await cuerpoDe(req);
+  if (!c || !esRuta(c.ruta) || (c.contenido !== undefined && typeof c.contenido !== "string")) return json({ error: "sin_cuerpo" }, 400);
+  if (typeof c.contenido === "string" && c.contenido.length > MAX_FICHERO) return json({ error: "demasiado_grande" }, 413);
+  return respuestaDe(await operarAMano(id, userId, { tipo: "crear", ruta: c.ruta, ...(typeof c.contenido === "string" ? { contenido: c.contenido } : {}) }));
+});
+
+/**
+ * PATCH — renombrar o mover un fichero o una carpeta (F2).
+ *
+ *   { de, a } → 200 { rutas } (las nuevas) · 409 «existe» o «pagina» · 422 «rechazado» · 404
+ */
+export const PATCH = conAutorDeLaPeticion(quienDeLaSesion, async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  const { id } = await params;
+  const userId = await duenoDe(id);
+  if (typeof userId !== "string") return userId;
+  const c = await cuerpoDe(req);
+  if (!c || !esRuta(c.de) || !esRuta(c.a)) return json({ error: "sin_cuerpo" }, 400);
+  return respuestaDe(await operarAMano(id, userId, { tipo: "renombrar", de: c.de, a: c.a }));
+});
+
+/**
+ * DELETE ?ruta=… — borrar un fichero o una carpeta entera (Supr). Las páginas
+ * que haya dentro NO se borran aquí: vuelven en `409 { error: "pagina", rutas }`
+ * y el cliente las quita con `DELETE /api/projects/[id]/pages/[slug]`.
+ */
+export const DELETE = conAutorDeLaPeticion(quienDeLaSesion, async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  const { id } = await params;
+  const userId = await duenoDe(id);
+  if (typeof userId !== "string") return userId;
+  const ruta = new URL(req.url).searchParams.get("ruta");
+  if (!esRuta(ruta) || ruta === "/") return json({ error: "sin_cuerpo" }, 400);
+  return respuestaDe(await operarAMano(id, userId, { tipo: "borrar", ruta }));
+});

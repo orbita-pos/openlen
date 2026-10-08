@@ -112,5 +112,70 @@
     "passcodeSet": "Set",
     "passcodeSetToast": "Password set",
     "passcodeClearedToast": "Password removed"
+  },
+  "miembros": {
+    "boton": "Invite",
+    "titulo": "Project members",
+    "subtitulo": "They work on this project with you. What they ask Len for is paid from your credits.",
+    "subtituloMiembro": "Who works on this project.",
+    "correo": "Email",
+    "rol": "Role",
+    "invitar": "Invite",
+    "rolEditor": "Editor",
+    "rolLector": "View only",
+    "rolEditorAyuda": "Edits the code and pages, talks to Len and publishes.",
+    "rolLectorAyuda": "Sees the project without changing anything.",
+    "dueno": "Owner",
+    "tu": "(you)",
+    "pendiente": "Invitation sent",
+    "cancelar": "Cancel invitation",
+    "quitar": "Remove",
+    "salir": "Leave project",
+    "confirmarSalir": "Leave “{titulo}”? You’ll need a new invitation to come back.",
+    "confirmarQuitar": "Remove {nombre} from the project?",
+    "enviada": "Invitation sent to {correo}.",
+    "vacio": "No one else yet. Invite people by email.",
+    "tope": "Len limit for members",
+    "topeAyuda": "Credits per month they can spend, all together. Empty = no limit.",
+    "sinTope": "No limit",
+    "guardarTope": "Save",
+    "topeGuardado": "Limit saved.",
+    "gastado": "This month: {gastado} credits.",
+    "gastadoDe": "This month: {gastado} of {tope} credits.",
+    "gastoDeMiembro": "{n} credits this month",
+    "cargando": "Loading…",
+    "cerrar": "Close",
+    "errores": {
+      "tuMismo": "That’s your own email.",
+      "yaEsMiembro": "Already a member.",
+      "limite": "At most {max} people per project.",
+      "generico": "That didn’t work. Try again."
+    },
+    "email": {
+      "asuntoEditor": "{quien} invited you to work on {titulo} on OpenLen",
+      "asuntoLector": "{quien} invited you to view {titulo} on OpenLen",
+      "fraseEditor": "{quien} invited you to work on “{titulo}”: edit its code and pages, and ask Len for changes.",
+      "fraseLector": "{quien} invited you to view “{titulo}”.",
+      "titulo": "You’re invited",
+      "aceptar": "Accept invitation",
+      "cuenta": "If you don’t have an OpenLen account yet, you’ll create one for free when you accept. The link is valid for 7 days.",
+      "pegar": "Or paste this link into your browser:",
+      "ignorar": "If you weren’t expecting this invitation, you can ignore this email.",
+      "alguien": "Someone"
+    },
+    "mencion": {
+      "asunto": "{quien} mentioned you in {titulo}",
+      "donde": "In {ruta}, line {linea}:",
+      "ver": "Open the thread",
+      "dondeChat": "In the project chat:",
+      "verChat": "Open the chat"
+    },
+    "hilo": {
+      "fallo": "I couldn’t do it: {motivo}",
+      "falloSinMotivo": "I couldn’t get to it. Ask me again from the thread.",
+      "topeAgotado": "this project’s monthly Len limit for members is used up. The owner can raise it under Invite.",
+      "sinCreditos": "there are no credits left on the project owner’s account.",
+      "interrumpido": "The server restarted while I was working on this, so it may be half done. Check the changes and, if needed, ask me again from the thread."
+    }
   }
 }

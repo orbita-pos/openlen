@@ -112,5 +112,70 @@
     "passcodeSet": "Instellen",
     "passcodeSetToast": "Wachtwoord ingesteld",
     "passcodeClearedToast": "Wachtwoord verwijderd"
+  },
+  "miembros": {
+    "boton": "Uitnodigen",
+    "titulo": "Projectleden",
+    "subtitulo": "Ze werken samen met jou aan dit project. Wat ze aan Len vragen, wordt betaald met jouw credits.",
+    "subtituloMiembro": "Wie er aan dit project werkt.",
+    "correo": "E-mail",
+    "rol": "Rol",
+    "invitar": "Uitnodigen",
+    "rolEditor": "Bewerker",
+    "rolLector": "Alleen bekijken",
+    "rolEditorAyuda": "Bewerkt de code en pagina’s, praat met Len en publiceert.",
+    "rolLectorAyuda": "Ziet het project zonder iets te wijzigen.",
+    "dueno": "Eigenaar",
+    "tu": "(jij)",
+    "pendiente": "Uitnodiging verstuurd",
+    "cancelar": "Uitnodiging intrekken",
+    "quitar": "Verwijderen",
+    "salir": "Project verlaten",
+    "confirmarSalir": "“{titulo}” verlaten? Je hebt een nieuwe uitnodiging nodig om terug te komen.",
+    "confirmarQuitar": "{nombre} uit het project verwijderen?",
+    "enviada": "Uitnodiging verstuurd naar {correo}.",
+    "vacio": "Nog niemand anders. Nodig mensen uit via e-mail.",
+    "tope": "Len-limiet voor leden",
+    "topeAyuda": "Credits per maand die ze samen mogen uitgeven. Leeg = geen limiet.",
+    "sinTope": "Geen limiet",
+    "guardarTope": "Opslaan",
+    "topeGuardado": "Limiet opgeslagen.",
+    "gastado": "Deze maand: {gastado} credits.",
+    "gastadoDe": "Deze maand: {gastado} van {tope} credits.",
+    "gastoDeMiembro": "{n} credits deze maand",
+    "cargando": "Laden…",
+    "cerrar": "Sluiten",
+    "errores": {
+      "tuMismo": "Dat is je eigen e-mailadres.",
+      "yaEsMiembro": "Is al lid.",
+      "limite": "Maximaal {max} personen per project.",
+      "generico": "Dat lukte niet. Probeer het opnieuw."
+    },
+    "email": {
+      "asuntoEditor": "{quien} heeft je uitgenodigd om op OpenLen aan {titulo} te werken",
+      "asuntoLector": "{quien} heeft je uitgenodigd om {titulo} op OpenLen te bekijken",
+      "fraseEditor": "{quien} heeft je uitgenodigd om aan “{titulo}” te werken: de code en pagina’s bewerken en Len om wijzigingen vragen.",
+      "fraseLector": "{quien} heeft je uitgenodigd om “{titulo}” te bekijken.",
+      "titulo": "Je bent uitgenodigd",
+      "aceptar": "Uitnodiging accepteren",
+      "cuenta": "Heb je nog geen OpenLen-account, dan maak je er bij het accepteren gratis een aan. De link is 7 dagen geldig.",
+      "pegar": "Of plak deze link in je browser:",
+      "ignorar": "Als je deze uitnodiging niet verwachtte, kun je deze e-mail negeren.",
+      "alguien": "Iemand"
+    },
+    "mencion": {
+      "asunto": "{quien} heeft je genoemd in {titulo}",
+      "donde": "In {ruta}, regel {linea}:",
+      "ver": "Draad openen",
+      "dondeChat": "In de projectchat:",
+      "verChat": "Chat openen"
+    },
+    "hilo": {
+      "fallo": "Het lukte me niet: {motivo}",
+      "falloSinMotivo": "Ik ben er niet aan toegekomen. Vraag het me opnieuw vanuit de draad.",
+      "topeAgotado": "de maandelijkse Len-limiet voor leden van dit project is op. De eigenaar kan die verhogen onder ‘Uitnodigen’.",
+      "sinCreditos": "er zijn geen credits meer op het account van de eigenaar van het project.",
+      "interrumpido": "De server is opnieuw opgestart terwijl ik hiermee bezig was, dus het kan half af zijn. Bekijk de wijzigingen en vraag het me zo nodig opnieuw vanuit de draad."
+    }
   }
 }

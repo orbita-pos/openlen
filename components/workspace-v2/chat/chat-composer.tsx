@@ -21,6 +21,11 @@ import type { AgentMode } from "@/lib/agent/dynamis";
 import type { EsfuerzoAgente, NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import type { ComentarioDeLinea } from "@/lib/workspace-v2/comentarios-de-lineas";
 import type { AttachedImage, ScopedSelection } from "./use-agent-chat";
+import { CajaConMenciones, useArroba } from "../hilos-del-codigo";
+import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
+
+const NADIE: readonly PersonaMencionable[] = [];
+const SIN_COLOR = () => "";
 
 export function ChatComposer({
   value,
@@ -49,6 +54,11 @@ export function ChatComposer({
   goalChip = false,
   goalAvailable = true,
   onToggleGoal,
+  debajo,
+  etiquetaEnviar,
+  placeholder,
+  mencionables,
+  bloqueado = false,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -82,6 +92,20 @@ export function ChatComposer({
   goalChip?: boolean;
   goalAvailable?: boolean;
   onToggleGoal?: () => void;
+  /** EL CHAT DEL EQUIPO: la línea de a quién va, debajo de la caja. */
+  debajo?: ReactNode;
+  /** «Enviar a Eli» cuando el mensaje es para una persona: también con Len
+   *  trabajando, porque entonces el botón no dirige a Len. */
+  etiquetaEnviar?: string;
+  /** El texto de la caja vacía, si no es el de siempre (sin turno corriendo). */
+  placeholder?: string;
+  /** EL CHAT DEL EQUIPO: con gente, «@» sugiere a Len (si puede) y a cada
+   *  persona, y las menciones se ven en su color dentro de la caja, como en los
+   *  hilos del código. Sin esto, la caja de siempre. */
+  mencionables?: { gente: readonly PersonaMencionable[]; colorDe: (userId: string) => string; conLen: boolean };
+  /** No se puede enviar lo que hay en la caja (un mensaje al equipo en vuelo,
+   *  o un lector que le pide algo a Len): ni el botón ni Enter envían. */
+  bloqueado?: boolean;
 }) {
   const t = useTranslations("panelsChat");
   const [plusOpen, setPlusOpen] = useState(false);
@@ -92,6 +116,7 @@ export function ChatComposer({
   const hasContent = value.trim().length > 0 || comments.length > 0;
   const typed = value.trim().length > 0;
   const tr = t as unknown as (k: string, v?: Record<string, string>) => string;
+  const arroba = useArroba(value, onChange, textareaRef, mencionables?.gente ?? NADIE, mencionables?.conLen ?? false, mencionables?.colorDe);
 
   return (
     <div>
@@ -141,29 +166,51 @@ export function ChatComposer({
             )}
           </div>
         )}
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              onSubmit();
-            }
-          }}
-          rows={1}
-          placeholder={
-            busy
+        {(() => {
+          const caja = {
+            value,
+            onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+              onChange(e.target.value);
+              arroba.onSeleccion(e);
+            },
+            onSelect: arroba.onSeleccion,
+            onClick: arroba.onSeleccion,
+            onKeyUp: arroba.onSeleccion,
+            onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+              // Con el desplegable del @ abierto, Enter/Tab/flechas son suyos.
+              if (arroba.tecla(e)) return;
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (!bloqueado) onSubmit();
+              }
+            },
+            rows: 1,
+            placeholder: busy
               ? t("composer.placeholderRunning")
               : goalChip && onToggleGoal
                 ? t("newChat.goal.placeholder")
                 : scopedSelection
                 ? t("composer.placeholderScoped", { target: scopedSelection.hint.split(" ")[0] ?? "" })
-                : t("composer.placeholder")
-          }
-          className="mt-0.5 block w-full resize-none bg-transparent text-[14px] leading-normal fg outline-none placeholder:fg-faint nice-scroll"
-          style={{ minHeight: 44 }}
-        />
+                : (placeholder ?? t("composer.placeholder")),
+            style: { minHeight: 44 },
+          };
+          // UNA sola caja, con o sin gente: si la gente llega mientras se
+          // escribe, se encienden los colores sin desmontarla ni quitarle el foco.
+          return (
+            <div className="mt-0.5">
+              {arroba.menu && <div className="absolute bottom-full left-0 right-0 z-20 mb-1.5">{arroba.menu}</div>}
+              <CajaConMenciones
+                {...caja}
+                cajaRef={textareaRef}
+                pintar={!!mencionables}
+                gente={mencionables?.gente ?? NADIE}
+                colorDe={mencionables?.colorDe ?? SIN_COLOR}
+                medida="text-[14px] leading-normal"
+                className="outline-none placeholder:fg-faint nice-scroll"
+              />
+            </div>
+          );
+        })()}
         <div className="mt-0.5 flex items-center gap-[3px]">
           <div className="relative" ref={plus.refContenedor} onKeyDown={plus.alPulsarTecla}>
             <button
@@ -290,13 +337,15 @@ export function ChatComposer({
           <button
             type="button"
             onClick={busy && !typed ? onStop : onSubmit}
-            disabled={!busy && !hasContent}
-            aria-label={busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
-            title={busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
+            disabled={(!busy && !hasContent) || (bloqueado && typed)}
+            aria-label={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
+            title={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
             className={`ml-1 flex h-8 min-w-8 shrink-0 items-center justify-center gap-1.5 rounded-[10px] text-white transition hover:-translate-y-px disabled:translate-y-0 disabled:cursor-default ${
-              busy && typed
+              bloqueado && typed
+                ? "bg-[var(--border-strong)]"
+                : busy && typed && !etiquetaEnviar
                 ? "bg-[var(--accent-strong)] px-2.5 text-[12.5px] font-semibold"
-                : busy
+                : busy && !(typed && etiquetaEnviar)
                   ? "bg-[var(--fg)] !text-[var(--bg)]"
                   : hasContent
                     ? "bg-[var(--accent-strong)]"
@@ -308,12 +357,13 @@ export function ChatComposer({
             ) : (
               <>
                 <ArrowUp size={16} />
-                {busy && <span>{t("composer.steer")}</span>}
+                {busy && !etiquetaEnviar && <span>{t("composer.steer")}</span>}
               </>
             )}
           </button>
         </div>
       </div>
+      {debajo}
       <p className="mb-[-4px] mt-[7px] text-center text-[11px] fg-faint">{t("newChat.composer.disclaimer")}</p>
     </div>
   );

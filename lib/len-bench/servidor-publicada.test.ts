@@ -23,6 +23,9 @@ beforeAll(async () => {
   fs.writeFileSync(path.join(rel, "index.html"), "<h1>HOME</h1>");
   fs.writeFileSync(path.join(rel, "menu", "index.html"), "<h1>MENU</h1>");
   fs.writeFileSync(path.join(raiz, "demo", "assets", "a.css"), "body{}");
+  // Los fuentes de una app, ya compilados en su misma ruta.
+  fs.mkdirSync(path.join(rel, "src"), { recursive: true });
+  fs.writeFileSync(path.join(rel, "src", "main.jsx"), "export {};");
   // Lo que deja publishToDir en Windows sin modo desarrollador: `current` no
   // es un enlace sino un FICHERO con el sha de la release.
   fs.mkdirSync(path.join(raiz, "win", "releases", "abc123"), { recursive: true });
@@ -47,6 +50,15 @@ describe("servirPublicada", () => {
       expect(await (await fetch(`${s.url}/menu/`)).text()).toBe("<h1>MENU</h1>");
       expect(await (await fetch(`${s.url}/menu`)).text()).toBe("<h1>MENU</h1>");
       expect(await (await fetch(`${s.url}/assets/a.css`)).text()).toBe("body{}");
+    } finally {
+      await s.cerrar();
+    }
+  });
+  it("🔴 los fuentes de una app salen como JavaScript, como el `@fuentes` del Caddyfile: si no, la app no arranca", async () => {
+    const s = await servirPublicada({ raiz, sub: "demo", next: nextUrl, hostPublicado: "demo.openlen.app" });
+    try {
+      const r = await fetch(`${s.url}/src/main.jsx`);
+      expect(r.headers.get("content-type")).toMatch(/^text\/javascript/);
     } finally {
       await s.cerrar();
     }

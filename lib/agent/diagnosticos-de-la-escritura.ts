@@ -55,6 +55,11 @@ export interface Escritura {
   /** Los ids que el script busca y la página ya no tiene, NUEVOS de esta
    *  escritura (`persistPage`). */
   readonly referenciasRotas?: readonly string[];
+  /** UNA APP (F3): el fichero es su cascarón, y lo que se ve vive en /src.
+   *  Lo que compara el `<head>` o el CSS con el CUERPO del documento —la meta
+   *  description contra el texto, las reglas contra las clases— no aplica: el
+   *  cuerpo sólo tiene `<div id="root">`, y todo saldría «desfasado». */
+  readonly enUnaApp?: boolean;
 }
 
 const FUENTE = "openlen";
@@ -177,7 +182,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
         ),
       );
     }
-    const viejos = metaDesfasada(html);
+    const viejos = e.enUnaApp ? [] : metaDesfasada(html);
     if (viejos.length > 0) {
       const meta = /<meta[^>]*\bname\s*=\s*["']description["']/i.exec(html);
       fuera.push(
@@ -244,7 +249,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
                 ),
       );
     }
-    for (const r of reglasQueNuncaAplican(html, todoElJsDelDocumento(html))) {
+    for (const r of e.enUnaApp ? [] : reglasQueNuncaAplican(html, todoElJsDelDocumento(html))) {
       fuera.push(
         diag(
           posicionDe(html, r.selector),

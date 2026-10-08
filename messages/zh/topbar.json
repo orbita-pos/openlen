@@ -112,5 +112,70 @@
     "passcodeSet": "设置",
     "passcodeSetToast": "已设置密码",
     "passcodeClearedToast": "已移除密码"
+  },
+  "miembros": {
+    "boton": "邀请",
+    "titulo": "项目成员",
+    "subtitulo": "他们与你一起处理这个项目。他们向 Len 提出的请求由你的额度支付。",
+    "subtituloMiembro": "谁在处理这个项目。",
+    "correo": "邮箱",
+    "rol": "角色",
+    "invitar": "邀请",
+    "rolEditor": "编辑者",
+    "rolLector": "仅查看",
+    "rolEditorAyuda": "可编辑代码和页面、与 Len 对话并发布。",
+    "rolLectorAyuda": "可以查看项目，但不能修改。",
+    "dueno": "所有者",
+    "tu": "（你）",
+    "pendiente": "已发送邀请",
+    "cancelar": "取消邀请",
+    "quitar": "移除",
+    "salir": "退出项目",
+    "confirmarSalir": "退出“{titulo}”？之后需要新的邀请才能回来。",
+    "confirmarQuitar": "将 {nombre} 移出项目？",
+    "enviada": "已向 {correo} 发送邀请。",
+    "vacio": "还没有其他人。通过邮箱邀请。",
+    "tope": "成员的 Len 上限",
+    "topeAyuda": "成员每月合计可用的额度。留空 = 不设上限。",
+    "sinTope": "不设上限",
+    "guardarTope": "保存",
+    "topeGuardado": "上限已保存。",
+    "gastado": "本月：{gastado} 额度。",
+    "gastadoDe": "本月：已用 {gastado} / {tope} 额度。",
+    "gastoDeMiembro": "本月 {n} 额度",
+    "cargando": "加载中…",
+    "cerrar": "关闭",
+    "errores": {
+      "tuMismo": "这是你自己的邮箱。",
+      "yaEsMiembro": "已经是成员。",
+      "limite": "每个项目最多 {max} 人。",
+      "generico": "没有成功，请重试。"
+    },
+    "email": {
+      "asuntoEditor": "{quien} 邀请你在 OpenLen 上参与 {titulo}",
+      "asuntoLector": "{quien} 邀请你在 OpenLen 上查看 {titulo}",
+      "fraseEditor": "{quien} 邀请你参与“{titulo}”：编辑代码和页面，并让 Len 做修改。",
+      "fraseLector": "{quien} 邀请你查看“{titulo}”。",
+      "titulo": "你收到了邀请",
+      "aceptar": "接受邀请",
+      "cuenta": "如果你还没有 OpenLen 账号，接受邀请时即可免费创建。链接 7 天内有效。",
+      "pegar": "或将此链接粘贴到浏览器中：",
+      "ignorar": "如果你没有预期会收到此邀请，可以忽略这封邮件。",
+      "alguien": "有人"
+    },
+    "mencion": {
+      "asunto": "{quien} 在 {titulo} 中提到了你",
+      "donde": "{ruta} 第 {linea} 行：",
+      "ver": "打开讨论",
+      "dondeChat": "在项目聊天中：",
+      "verChat": "打开聊天"
+    },
+    "hilo": {
+      "fallo": "没能完成：{motivo}",
+      "falloSinMotivo": "我没能处理。请在讨论里再让我做一次。",
+      "topeAgotado": "本项目成员的 Len 月度上限已用完。所有者可以在「邀请」中提高上限。",
+      "sinCreditos": "项目所有者的账户里已经没有额度了。",
+      "interrumpido": "我处理时服务器重启了，可能只完成了一半。请检查改动，如有需要，请在讨论里再让我做一次。"
+    }
   }
 }

@@ -1,6 +1,5 @@
-import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
-import { db, schema } from "@/lib/db";
+import { accesoAlProyecto, puede } from "@/lib/projects/acceso";
 import { consumeToken, RATE_LIMITS, rateLimitedResponse } from "@/lib/rate-limit";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 
@@ -34,13 +33,10 @@ export async function GET(
   if (!userId) return new Response("unauthorized", { status: 401 });
   const { id } = await params;
 
-  // Ownership gate — only the project owner can proxy through this route.
-  const rows = await db
-    .select({ id: schema.projects.id })
-    .from(schema.projects)
-    .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
-    .limit(1);
-  if (rows.length === 0) return new Response("not_found", { status: 404 });
+  // Access gate — the owner and the project's editors (lib/projects/acceso.ts).
+  // The rate limit below stays per requester.
+  const acceso = await accesoAlProyecto(id, userId);
+  if (!acceso || !puede(acceso.rol, "editar")) return new Response("not_found", { status: 404 });
 
   const target = new URL(req.url).searchParams.get("url");
   if (!target) return new Response("missing_url", { status: 400 });

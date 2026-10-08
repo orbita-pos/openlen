@@ -28,7 +28,7 @@ import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 // aquí abajo llegó a afirmar un mínimo distinto del que se comprobaba.
 import { UMBRAL_CONTRASTE } from "@/lib/ai/contraste";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
-import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
+import { carpetaDeLaVista, documentoMedible, documentoParaLaFoto, type ContextoDeVista } from "@/lib/lienzo/documento";
 import type { OpcionesDelDocumento } from "@/lib/ai/origen-de-medida";
 // Las frases de «lo que la medición no pudo comprobar», en un solo sitio. Import
 // de valor y sin coste: `aviso-medido` no importa nada — ni la pasarela, ni las
@@ -831,7 +831,8 @@ async function runVerify(
   };
   sinCorrerPor([]);
   const conGuion = codigo && entradas.length > 0;
-  const image = await render(paraRenderizar, {
+  // UNA APP se fotografía con su import map: sin él no arranca (F3).
+  const image = await render(documentoParaLaFoto(paraRenderizar, params.vista), {
     onErrors: (e) => hechos.gritos.push(...e),
     onBlocked: (u) => hechos.bloqueadas.push(...u),
     ...(carpeta ? { carpeta } : {}),
@@ -1661,7 +1662,8 @@ export async function observarPagina(
   // Avisar de un contraste que sabemos calcular es darle trabajo al usuario.
   const render = internals.render ?? renderHtmlToInlineImage;
   const carpeta = carpetaDeLaVista(params.vista);
-  const image = await (carpeta ? render(params.html, { carpeta }) : render(params.html)).catch(() => null);
+  const foto = documentoParaLaFoto(params.html, params.vista);
+  const image = await (carpeta ? render(foto, { carpeta }) : render(foto)).catch(() => null);
   if (!image) return null;
 
   const provider = internals.provider ?? describeProvider();

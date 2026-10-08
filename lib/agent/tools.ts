@@ -29,7 +29,7 @@ import { stripOpIds } from "@/lib/html-ops";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import { debitCredits } from "@/lib/credits";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
-import { vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
+import { pantallaDe, vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 import type { SignedInAs } from "@/lib/agent/usar-pagina";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
@@ -49,7 +49,11 @@ import {
   type SettingsPatchBody,
   type SettingsPatchOutcome,
 } from "@/lib/projects/settings-patch";
-import type { ProjectData } from "@/lib/projects/types";
+import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
+import { CONVERTIR_EN_APP, toolConvertirEnApp } from "@/lib/agent/convertir-en-app";
+import type { ResultadoDeDeshacer } from "@/lib/projects/deshacer-turno";
+import { erroresDeLaApp, problemasDelCascaron } from "@/lib/agent/compila-la-app";
+import { textoDeDiagnostico } from "@/lib/apps/compilador";
 import { createVersion, type VersionSource } from "@/lib/projects/versions";
 import { isPublishLocale } from "@/lib/publish/publish-locales";
 import {
@@ -69,7 +73,8 @@ import {
   toolRead,
   toolWrite,
 } from "@/lib/agent/herramientas-de-ficheros";
-import { ficherosDelSitio, leerFichero, rutaDePagina, rutaRelativa } from "@/lib/agent/ficheros/sitio";
+import { ficherosDelSitio, leerFichero, rutaDePagina, rutaRelativa, sinOpIds } from "@/lib/agent/ficheros/sitio";
+import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { NOMBRE_BASH } from "@/lib/agent/terminal/declaracion";
 import { toolBash } from "@/lib/agent/terminal/herramienta";
@@ -163,6 +168,10 @@ export interface AgentDeps {
    *  páginas —`/supabase/`, `/tests/`, `js/`, `css/`, `data/`…—, por ruta.
    *  Opcional: sin él no hay carpeta. */
   projectFiles?(projectId: string): Promise<Record<string, string>>;
+  /** APPS WEB (spec local 2026-10-07-apps): lo que vale `import.meta.env` en la
+   *  app —la URL de su backend y su clave PUBLICABLE—, para que los ojos de Len
+   *  midan la app hablando con su backend. Opcional: sin él, sólo MODE/DEV/PROD. */
+  entornoDeLaApp?(projectId: string): Promise<Record<string, string>>;
   /** Guardar uno, archivando antes su «antes» (`projectFileVersions`). */
   saveProjectFile?(projectId: string, path: string, content: string, version: FileVersionNote): Promise<{ versionPrevia: string | null }>;
   /** Borrar uno, archivando lo que tenía. */
@@ -308,6 +317,14 @@ export interface AgentDeps {
     userId: string,
     page: string | null,
   ): Promise<{ id: string; label: string; source?: string }[]>;
+  /** UNA APP (F3): deshace el último turno registrado entero, con el deshacer
+   *  de F2 (`lib/projects/deshacer-turno.ts`): todo o nada, y nada si el dueño
+   *  tocó después lo mismo. `sin_turno` = no hay ninguno que deshacer.
+   *  Opcional: sin ella, la herramienta lo dice. */
+  deshacerTurnoAnterior?(
+    projectId: string,
+    userId: string,
+  ): Promise<ResultadoDeDeshacer | { readonly ok: false; readonly motivo: "sin_turno" }>;
   /** El documento guardado en ESA versión. Lo necesita `undo_last_change`
    *  para deshacer lo de Len sobre lo que hay ahora sin llevarse lo que el
    *  dueño editó después (H06). Opcional: sin ella, la herramienta restaura
@@ -437,6 +454,10 @@ export function realDeps(
     async projectFiles(projectId) {
       const { listProjectFiles } = await import("@/lib/backend/files");
       return listProjectFiles(projectId);
+    },
+    async entornoDeLaApp(projectId) {
+      const { entornoPublicoDeLaApp } = await import("@/lib/apps/entorno");
+      return entornoPublicoDeLaApp(projectId);
     },
     async saveProjectFile(projectId, path, content, version) {
       const { saveProjectFile } = await import("@/lib/backend/files");
@@ -651,6 +672,12 @@ export function realDeps(
         .filter((v) => v.page === page)
         .map((v) => ({ id: v.id, label: v.label, source: v.source }));
     },
+    async deshacerTurnoAnterior(projectId, userId) {
+      const { deshacerTurno, ultimoTurnoDeshacible } = await import("@/lib/projects/deshacer-turno");
+      const turnId = await ultimoTurnoDeshacible(projectId);
+      if (!turnId) return { ok: false, motivo: "sin_turno" } as const;
+      return deshacerTurno({ projectId, userId, turnId });
+    },
     async versionHtml(projectId, userId, versionId) {
       const { getVersionHtml } = await import("@/lib/projects/versions");
       return getVersionHtml({ projectId, userId, versionId });
@@ -667,9 +694,9 @@ export interface AgentSession {
   userId: string;
   /**
    * QUIÉN ESCRIBE. Ausente = Len. `"usuario"` = la terminal del usuario (la #17
-   * de plans/len-agente-2026/notas/fase-5-taller.md): lo que guarda no puede
-   * meter código que el sitio no tenía (`javascript-del-usuario.ts`) y su versión
-   * se etiqueta como suya, no como «Before AI edit».
+   * de plans/len-agente-2026/notas/fase-5-taller.md): pasa por la misma puerta
+   * que Len —también con JavaScript, desde el 2026-10-07— y su versión se
+   * etiqueta como suya, no como «Before AI edit».
    */
   autor?: "usuario";
   /** Con `autor: "usuario"`, DESDE DÓNDE: su terminal (ausente) o el editor de
@@ -678,6 +705,11 @@ export interface AgentSession {
   /** El modo del turno (`lib/agent/dynamis.ts`). Ausente = Len. Lo lee el
    *  /AGENTS.md que ve la terminal: en Dynamis no nombra Read, Edit ni Write. */
   mode?: AgentMode;
+  /** UNA APP WEB (F3 de la spec local 2026-10-07-apps): `project.data.app` al
+   *  empezar el turno. Ausente o `null` = una página. Lo leen el manual que
+   *  devuelve Read, las guardas de la escritura y las herramientas que en una
+   *  app hacen otra cosa (deshacer, publicar). */
+  app?: AppDeProyecto | null;
   // ⚰️ Aquí vivían `taggedHtml` (el documento activo con ids, contra el que se
   // aplicaban las ops) y `baseHtml` (contra qué comparar si otro escribió). Len
   // 2.0 edita ficheros (plans/len-2/ficheros-plan.md): cada herramienta lee la
@@ -778,6 +810,10 @@ export interface AgentSession {
    *  un precio o un enlace que ya estaba en OTRA página no lo inventó Len al
    *  copiarlo (H13). Se toma en la primera escritura del turno. */
   sitioAlEmpezar?: string;
+  /** UNA APP (F3): su carpeta como estaba antes de la primera escritura del
+   *  turno. Contra ella se decide qué NO compila por culpa de este turno
+   *  (`lib/agent/compila-la-app.ts`), y con ella se mide la línea base. */
+  carpetaAlEmpezar?: Map<string, string>;
   /** F1 · la terminal de este turno (`lib/agent/terminal/`), si Len la usó, y
    *  cómo estaban sus ficheros tras el último comando: contra eso se decide
    *  qué cambió en el siguiente. Se cierra al acabar el turno. */
@@ -886,6 +922,12 @@ export interface ToolOutcome {
    *  `crear_pagina` no lo trae: una página que acaba de nacer no tiene «antes»
    *  al que volver, y `restaurar_version` tampoco — ya es un viaje al pasado. */
   versionPrevia?: string | null;
+  /** UNA APP (F3): la llamada cambió su código. El cascarón (/index.html) es
+   *  el mismo, pero lo que se VE no: es lo que pide comprobar que la app
+   *  compila (`diagnosticosDeLaAppTrasEscribir`). NO va en `updatedHtml`: eso
+   *  repintaría el lienzo con un documento que no cambió y la terminal leería
+   *  el cascarón como el contenido del fichero escrito. */
+  appCambiada?: true;
   /** F1 · las OTRAS páginas que escribió la misma llamada (un `sed -i` de la
    *  terminal sobre varias): el bucle hace con cada una lo mismo que con
    *  `updatedHtml`/`page`/`htmlPrevio`/`versionPrevia`. */
@@ -1007,10 +1049,15 @@ export function summarizeProjectState(
     /** El backend del proyecto (plans/pages-backend/design.md): lo que la
      *  página pone en `createClient`. `null`/ausente ⇒ no hay en este servidor. */
     supabase?: { url: string; publishableKey: string } | null;
+    /** En una APP, las rutas de su carpeta (`/src/App.jsx`…): el código de una
+     *  app no son páginas, y sin la lista Len empezaría cada turno a ciegas,
+     *  listando /src. En una página no se pasa: su estado no cambia. */
+    ficherosDeLaCarpeta?: readonly string[];
   },
   /** La página que el dueño tiene abierta en el editor; `null` es la Home. */
   page: string | null = null,
 ): Record<string, unknown> {
+  const app = row.data.app ?? null;
   const modulos = {} as Record<AgentModule, boolean>;
   for (const m of AGENT_MODULES) {
     modulos[m] = row.data.settings?.[MODULE_SETTINGS_KEY[m]]?.enabled === true;
@@ -1047,10 +1094,22 @@ export function summarizeProjectState(
     // Home —el nombre que pedía `trabajar_en_pagina`, que ya no existe—. La
     // Home va en la lista: medido el 2026-08-26, sin ella el Agente contestaba
     // que un sitio de dos páginas tenía una.
-    ficheros: ficherosDelSitio(row.data),
+    //
+    // En una APP, también su carpeta: ahí vive el código (F3 de la spec local
+    // 2026-10-07-apps). Sin /memoria ni /ajustes, que no son de la app y la
+    // memoria ya va en el contexto.
+    ficheros: app
+      ? [
+          ...new Set([
+            ...ficherosDelSitio(row.data),
+            ...(row.ficherosDeLaCarpeta ?? []).filter((r) => !r.startsWith("/memoria/") && !r.startsWith("/ajustes/")),
+          ]),
+        ].sort()
+      : ficherosDelSitio(row.data),
     // La que el dueño tiene abierta en el editor, como el «fichero abierto en
-    // el IDE» de Claude Code: puede que la petición sea sobre ésa, o no.
-    abierta_en_el_editor: rutaDePagina(page),
+    // el IDE» de Claude Code: puede que la petición sea sobre ésa, o no. En
+    // una app el lienzo enseña la app entera: no hay página abierta que decir.
+    ...(app ? { app: { entrada: app.entrada, catalogo: app.catalogo } } : { abierta_en_el_editor: rutaDePagina(page) }),
     modulos,
     // Lo que la página pone en `createClient(url, key)` (THE BACKEND, en el
     // manual). Con los nombres que tienen en Supabase.
@@ -1253,6 +1312,19 @@ const MAX_MIRADAS_MEDIR = 4;
  *  del servidor). */
 export const MAX_CONCURRENT_VISITS = 2;
 
+/**
+ * EN UNA APP, `file_path: "#/menu"` ES LA PANTALLA. En el turno que convierte
+ * una página en app (`convert_to_app`), Len sigue con las declaraciones de una
+ * página —se eligen al empezar el turno— y no tiene `screen`: así puede probar
+ * cada pantalla antes de dar la conversión por buena. En una página no cambia
+ * nada.
+ */
+export function pantallaPorFilePath(data: Pick<ProjectData, "app">, args: Record<string, unknown>): Record<string, unknown> {
+  if (!data.app || typeof args.file_path !== "string" || !args.file_path.trim().startsWith("#")) return args;
+  const { file_path: pantalla, ...resto } = args;
+  return { ...resto, screen: args.screen ?? pantalla };
+}
+
 async function toolMirarPagina(
   session: AgentSession,
   deps: AgentDeps,
@@ -1302,6 +1374,7 @@ async function toolMirarPagina(
 
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "project not found" } };
+  args = pantallaPorFilePath(row.data, args);
   // Len 2.0: el fichero que se le dice, o la página que el dueño tiene abierta.
   const pedida = paginaPedida(session, row.data, args.file_path, { preferirLoEscrito: false });
   if (!pedida.ok) return { response: { ok: false, error: pedida.error } };
@@ -1318,8 +1391,12 @@ async function toolMirarPagina(
       ...(zona ? { zona } : {}),
       // LA VISTA, para que lo que se mide sea el documento que el usuario tiene
       // delante y no el pelado. La fila ya está leída aquí arriba, así que no
-      // cuesta una consulta. Ver `MiradaParams.vista`.
-      vista: await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId),
+      // cuesta una consulta. Ver `MiradaParams.vista`. En una app, con la
+      // pantalla que se pidió (`#/ventas`).
+      vista: {
+        ...(await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId)),
+        ...(row.data.app ? { pantalla: pantallaDe(args.screen) } : {}),
+      },
     })
     .catch(() => null);
   if (!visto) {
@@ -1361,6 +1438,7 @@ async function toolUsarPagina(
   }
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "project not found" } };
+  args = pantallaPorFilePath(row.data, args);
   // Sin `file_path`: la última página que escribió en este turno —la que acaba
   // de cambiar y quiere probar— y si no escribió ninguna, la que el dueño tiene
   // abierta.
@@ -1396,11 +1474,17 @@ async function toolUsarPagina(
   }
 
   const usarPagina = deps.usarPagina;
-  const vista = await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId);
+  // En una app, la visita empieza en la pantalla que se pidió (`#/ventas`).
+  const pantalla = row.data.app ? pantallaDe(args.screen) : null;
+  const vista = {
+    ...(await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId)),
+    ...(pantalla ? { pantalla } : {}),
+  };
   // Pieza 4: con herramientas en paralelo, como mucho `MAX_CONCURRENT_VISITS`
   // Chromium a la vez en el turno; la que sobra espera su plaza.
   const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
-  const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta: pedida.ruta, vista, signedInAs }))
+  const ruta = row.data.app ? `/${pantalla ?? "#/"}` : pedida.ruta;
+  const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta, vista, signedInAs }))
     .catch(() => null)
     .finally(() => end?.().catch(() => undefined));
   if (!visto) {
@@ -1549,7 +1633,18 @@ async function toolEditarImagen(
   const conLaImagen = ficherosDelSitio(inicial.data).filter((ruta) =>
     urlIsPageImage(leerFichero(inicial.data, ruta) ?? "", imagenUrl),
   );
-  if (conLaImagen.length === 0) {
+  // UNA APP (F3): sus imágenes viven en el código de /src (`src="…"` en el
+  // JSX, `foto: "…"` en un JSON). Cuenta la URL EXACTA entre comillas en un
+  // fichero de la app: escrita ahí por Len o por el dueño, como un atributo de
+  // imagen en una página. Una URL suelta dentro de un texto, no.
+  const enElCodigo: string[] = [];
+  if (inicial.data.app && deps.projectFiles) {
+    const carpeta = await deps.projectFiles(session.projectId).catch(() => ({}) as Record<string, string>);
+    for (const [ruta, contenido] of Object.entries(carpeta)) {
+      if (isPublishableFolderPath(ruta) && urlEntreComillas(contenido, imagenUrl)) enElCodigo.push(ruta);
+    }
+  }
+  if (conLaImagen.length === 0 && enElCodigo.length === 0) {
     return {
       response: {
         ok: false,
@@ -1604,6 +1699,23 @@ async function toolEditarImagen(
     if (!guardado.ok) return { response: { ok: false, error: guardado.error } };
     cambiados.push({ ruta, html: guardado.html, page: guardado.page, versionPrevia: guardado.versionPrevia });
   }
+  // Y en el código de la app, cada fichero por su camino (con su «antes»
+  // archivado, para deshacer).
+  const enLaCarpeta: { ruta: string; versionPrevia: string | null }[] = [];
+  if (enElCodigo.length > 0 && deps.saveProjectFile && deps.projectFiles) {
+    const carpeta = await deps.projectFiles(session.projectId);
+    for (const ruta of enElCodigo) {
+      const antes = carpeta[ruta];
+      if (antes === undefined) continue;
+      const { versionPrevia } = await deps.saveProjectFile(session.projectId, ruta, antes.split(imagenUrl).join(nuevaUrl), {
+        before: antes,
+        label: `Imagen editada: ${instruccion.slice(0, 60)}`,
+        source: "chat",
+      });
+      enLaCarpeta.push({ ruta, versionPrevia });
+      session.leidos?.delete(ruta);
+    }
+  }
   // El lienzo pinta UNA página por evento: la que el dueño tiene abierta si
   // cambió, y si no la primera.
   const pintada = cambiados.find((c) => c.page === session.page) ?? cambiados[0];
@@ -1613,13 +1725,21 @@ async function toolEditarImagen(
       ok: true,
       new_url: nuevaUrl,
       // Qué ficheros cambiaron: lo que Len tenía leído de ellos ya no vale.
-      files: cambiados.map((c) => rutaRelativa(c.ruta)),
+      files: [...cambiados.map((c) => rutaRelativa(c.ruta)), ...enLaCarpeta.map((c) => rutaRelativa(c.ruta))],
     },
     action: { tool: "edit_image", ok: true, summary: instruccion.slice(0, 60) },
     ...(pintada
       ? { updatedHtml: pintada.html, page: pintada.page, versionPrevia: pintada.versionPrevia }
       : {}),
+    ...(enLaCarpeta.length > 0
+      ? { ficherosTocados: enLaCarpeta, mutoDurable: true, appCambiada: true }
+      : {}),
   };
+}
+
+/** ¿Está `url` en el texto como una cadena ENTERA entre comillas? */
+function urlEntreComillas(texto: string, url: string): boolean {
+  return ['"', "'", "`"].some((c) => texto.includes(`${c}${url}${c}`));
 }
 
 const MAX_PUBLISH_LOCALES = 9;
@@ -1635,6 +1755,32 @@ async function toolPublicar(
 ): Promise<ToolOutcome> {
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "project not found" } };
+
+  // UNA APP QUE NO COMPILA NO SE PUBLICA (F3): `publishToDir` la rechazaría
+  // después del botón, con el dueño mirando. Se dice ANTES, a Len, con lo que
+  // hay que arreglar. Y sin idiomas: la traducción no ve el texto del JSX (H15),
+  // así que pedirlos sería prometer lo que no se hace.
+  const app = row.data.app ?? null;
+  if (app) {
+    const v = deps.projectFiles ? await deps.projectFiles(session.projectId).catch(() => null) : null;
+    const errores = v ? erroresDeLaApp(app, v) : [];
+    const cascaron = v ? problemasDelCascaron(app, sinOpIds(row.data.html ?? ""), v) : [];
+    if (errores.length > 0 || cascaron.length > 0) {
+      return {
+        response: {
+          ok: false,
+          error: `The app can't be published yet: fix this first (nothing was published).\n${[
+            ...errores.map(textoDeDiagnostico),
+            ...cascaron.map((d) => `${d.ruta} — ${d.mensaje}`),
+          ].join("\n")}`,
+        },
+      };
+    }
+    if (args.languages !== undefined) {
+      const { languages: _sinIdiomas, ...resto } = args;
+      args = resto;
+    }
+  }
 
   const current = row.subdomain; // string | null — the project's active claim
   const raw = typeof args.subdomain === "string" ? args.subdomain.trim().toLowerCase() : "";
@@ -1851,11 +1997,52 @@ async function toolAskUserQuestion(
  * con ids: lo que Len tenía leído de ese fichero deja de valer, y el propio
  * Edit se lo dirá si intenta editarlo sin releer.
  */
+/**
+ * «DESHAZ ESO» EN UNA APP (F3): el turno anterior ENTERO. En una app un turno
+ * toca cinco ficheros; volver la última versión de una página —el cascarón,
+ * que casi nunca cambia— «deshacía» el fichero equivocado y decía que sí.
+ */
+async function revertirTurnoDeLaApp(session: AgentSession, deps: AgentDeps): Promise<ToolOutcome> {
+  if (!deps.deshacerTurnoAnterior) {
+    return { response: { ok: false, error: "undoing a turn isn't available in this environment: tell the user to use Undo in the chat." } };
+  }
+  const r = await deps.deshacerTurnoAnterior(session.projectId, session.userId).catch(() => null);
+  if (!r) return { response: { ok: false, error: "the previous turn couldn't be undone this time: nothing was changed." } };
+  if (!r.ok) {
+    const error =
+      r.motivo === "se_solapan"
+        ? `Nothing was undone: after that turn, ${r.rutas.join(", ")} ${r.rutas.length === 1 ? "was" : "were"} changed again, and undoing it would take that away too. DON'T undo it on your own: ask the user with ask_user_question.`
+        : r.motivo === "sin_turno" || r.motivo === "sin_registro"
+          ? "There is no previous turn of yours to undo here (the oldest ones aren't kept): tell the user, and if they want something back, ask what."
+          : r.motivo === "ya_deshecho"
+            ? "That turn was already undone."
+            : r.motivo === "sin_cambios"
+              ? `That turn only changed what doesn't come back (${r.noSeDeshacen.join(", ")}): the database isn't undone; a new migration does it.`
+              : "The previous turn couldn't be undone this time: nothing was changed.";
+    return { response: { ok: false, error } };
+  }
+  // Lo de Len de antes ya no vale: los ficheros cambiaron por debajo.
+  for (const ruta of [...r.ficheros, ...r.paginas.map((p) => rutaDePagina(p.page))]) session.leidos?.delete(ruta);
+  const shell = r.paginas.find((p) => p.page === null);
+  return {
+    response: {
+      ok: true,
+      deshecho: [...r.paginas.map((p) => rutaDePagina(p.page)), ...r.ficheros],
+      ...(r.noSeDeshacen.length ? { no_vuelve: r.noSeDeshacen, nota: "The database isn't undone: a pushed migration stays." } : {}),
+    },
+    action: { tool: "undo_last_change", ok: true, summary: "Undid the previous turn", cambio: "cambio" },
+    mutoDurable: true,
+    ...(shell ? { updatedHtml: shell.html, page: null } : {}),
+    ...(r.ficheros.length > 0 ? { appCambiada: true as const } : {}),
+  };
+}
+
 async function toolRevertirUltimoCambio(
   session: AgentSession,
   deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
+  if (session.app) return await revertirTurnoDeLaApp(session, deps);
   const inicial = await deps.loadProject(session.projectId, session.userId);
   if (!inicial) return { response: { ok: false, error: "project not found" } };
   const pedida = paginaPedida(session, inicial.data, args.file_path, { preferirLoEscrito: true });
@@ -2043,6 +2230,8 @@ async function ejecutarHerramienta(
         return await toolEditarImagen(session, deps, args);
       case "publish":
         return await toolPublicar(session, deps, args);
+      case CONVERTIR_EN_APP:
+        return await toolConvertirEnApp(session, deps);
       case ASK_USER_QUESTION:
         return await toolAskUserQuestion(session, deps, args);
       // Pieza 7: el modo plan, como DeepSeek (la salida) y Claude Code (la entrada).

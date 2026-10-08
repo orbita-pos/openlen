@@ -91,7 +91,7 @@ describe("Caddy, la carpeta y el host lienzo-*", () => {
   });
 
   it("🔴 nota 4: ni las cabeceras de caché ni los tipos se estampan en un host lienzo (Next pone los suyos; Caddy los duplicaría)", () => {
-    for (const nombre of ["assets", "carpeta", "doc", "webmanifest", "markdown"]) {
+    for (const nombre of ["assets", "carpeta", "vendor", "fuentes", "doc", "webmanifest", "markdown"]) {
       expect(matcher(nombre), `@${nombre}`).toMatch(/\n\s*not header_regexp Host \^lienzo-\n/);
     }
   });
@@ -110,7 +110,8 @@ describe("Caddy, la carpeta y el host lienzo-*", () => {
     const c = matcher("carpeta");
     const rutas = rutasDe(c, "path ");
     // /storage/v1/* (carril D): Next pone la caché de cada objeto, los privados `private`.
-    expect(rutasDe(c, "not path ")).toEqual(["/assets/*", "/uploads/*", "/storage/v1/*"]);
+    // /openlen/vendor/* (apps web): inmutable, con su propia regla (@vendor).
+    expect(rutasDe(c, "not path ")).toEqual(["/assets/*", "/uploads/*", "/openlen/vendor/*", "/storage/v1/*"]);
     expect(PAGINAS).toContain('header @carpeta Cache-Control "public, max-age=0, must-revalidate"');
     const doc = matcher("doc");
     // Nota 8: la línea de extensiones, NO la de `/api/f/*` (la vigila caddy-contract).
@@ -119,6 +120,18 @@ describe("Caddy, la carpeta y el host lienzo-*", () => {
       expect(rutas, ext).toContain(`*${ext}`);
       expect(extensionesDoc, ext).toContain(`*${ext}`);
     }
+  });
+
+  it("🔴 apps web: los fuentes compilados (.jsx .tsx .ts) salen como JavaScript", () => {
+    // Un <script type="module"> con otro tipo no se ejecuta. La tabla del
+    // sistema da `video/mp2t` a .ts y nada a .jsx/.tsx.
+    expect(rutasDe(matcher("fuentes"), "path ")).toEqual(["*.jsx", "*.tsx", "*.ts"]);
+    expect(PAGINAS).toContain('header @fuentes Content-Type "text/javascript; charset=utf-8"');
+  });
+
+  it("🔴 apps web: las dependencias del catálogo son inmutables (su versión va en la ruta)", () => {
+    expect(rutasDe(matcher("vendor"), "path ")).toEqual(["/openlen/vendor/*"]);
+    expect(PAGINAS).toContain('header @vendor Cache-Control "public, immutable, max-age=31536000"');
   });
 
   it("nota 6: .webmanifest y .md con su tipo explícito (la tabla de Go no los trae)", () => {

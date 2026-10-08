@@ -128,7 +128,7 @@ export const DECLARACIONES_DE_FICHEROS: readonly Record<string, unknown>[] = [
         },
         type: {
           type: "STRING",
-          description: "Only search files of this type (rg --type). Every file of this website is html.",
+          description: "Only search files of this type (rg --type): html, js (also .jsx), ts (also .tsx), css, json, md, sql.",
         },
         head_limit: {
           type: "NUMBER",

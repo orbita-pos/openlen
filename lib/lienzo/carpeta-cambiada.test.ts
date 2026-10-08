@@ -39,7 +39,7 @@ describe("🔴 los eslabones del aviso", () => {
     const chat = lee("components", "workspace-v2", "chat", "use-agent-chat.ts");
     expect(chat).toMatch(/ficherosTocados\.push\(\.\.\.ficherosDelEvento\(payload\)\);\s*notifyFolderChanged\(projectId\)/);
     expect(chat).toMatch(/ficherosRestaurados: \(\) => notifyFolderChanged\(projectId\)/);
-    const editor = lee("components", "workspace-v2", "editor-de-fichero.tsx");
+    const editor = lee("components", "workspace-v2", "code-view.tsx");
     expect(editor).toMatch(/notifyFolderChanged\(projectId\)/);
     const lienzo = lee("components", "workspace-v2", "preview-area.tsx");
     expect(lienzo).toMatch(/onFolderChanged\(projectId,/);

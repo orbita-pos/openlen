@@ -12,6 +12,7 @@ import {
   preguntaPendiente,
   responder,
   turnoDeLaFila,
+  filaEnMarcha,
   turnoVivoDelProyecto,
   rondaSiguiente,
   siguienteDeLaFila,
@@ -150,6 +151,15 @@ describe("¿sigue vivo el turno de esta fila?", () => {
 
   it("una fila que nadie escribe (el servidor se reinició) no tiene turno", () => {
     expect(turnoDeLaFila("huerfana", "u1")).toBeNull();
+    expect(filaEnMarcha("huerfana")).toBe(false);
+  });
+
+  it("🔴 la fila de otro no es suya, pero SÍ está en marcha (un miembro la mira, no la corta)", () => {
+    abrirTurno("t1", "u1", Date.now(), { filaId: "fila-1" });
+    expect(turnoDeLaFila("fila-1", "otro")).toBeNull();
+    expect(filaEnMarcha("fila-1")).toBe(true);
+    cerrarTurno("t1");
+    expect(filaEnMarcha("fila-1")).toBe(false);
   });
 });
 

@@ -27,14 +27,19 @@ import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contrac
 import { bloqueDeLibrerias } from "@/lib/librerias";
 import { paraSoloLaTerminal, terminalOnly } from "@/lib/agent/terminal/declaracion";
 import type { AgentMode } from "@/lib/agent/dynamis";
+import { GUIA_DE_LA_APP, manualDeLaApp } from "@/lib/agent/modo-app";
+import type { AppDeProyecto } from "@/lib/projects/types";
 import {
   CARPETA_DOCS,
   CIERRE_DEL_ADJUNTO,
   PRINCIPIO_DEL_ADJUNTO,
+  RUTA_APPS,
   RUTA_GUIA,
   RUTA_LIBRERIAS,
   RUTA_MANUAL,
 } from "@/lib/agent/ficheros/manual";
+import { CATALOGO_ACTUAL } from "@/lib/apps/dependencias";
+import { ENTRADA } from "@/lib/apps/esqueleto";
 import {
   MAX_FOLDER_BYTES,
   MAX_FOLDER_FILE_BYTES,
@@ -76,7 +81,7 @@ LINKS (<a href>):
 - ANCHORS ("#pricing"): only if that id EXISTS on the target page; if not, create it in the same edit.
 
 THE PROJECT'S FOLDER:
-Besides its pages, the project is a folder like any Vercel + Supabase project: /js, /css, /data/*.json, /sw.js, /manifest.json and any other text file (${WEB_EXTENSIONS.join(" ")}), anywhere except the reserved roots (${RAICES_DEL_SITIO}). They are read and changed like the pages, every change can be undone with the turn, and publishing ships them as they are, next to the pages. Reference them by path: \`<script src="/js/app.js" type="module">\`, \`fetch("/data/menu.json")\`.
+Besides its pages, the project is a folder like any Vercel + Supabase project: /js, /css, /data/*.json, /sw.js, /manifest.json and any other text file (${WEB_EXTENSIONS.join(" ")}), anywhere except the reserved roots (${RAICES_DEL_SITIO}). They are read and changed like the pages, every change can be undone with the turn, and publishing ships them as they are, next to the pages — except .jsx, .tsx and .ts, which are served and published compiled to JavaScript at the same path. Reference them by path: \`<script src="/js/app.js" type="module">\`, \`fetch("/data/menu.json")\`.
 - /tests holds Playwright tests (never published); /supabase holds the backend's migrations.
 - view_page and use_page load these files the way the published site does. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - An installable app is a /manifest.json plus a service worker at /sw.js; if the site stops using one, the platform publishes a /sw.js that removes itself, so no visitor stays on an old version.
@@ -175,7 +180,26 @@ const FROM_SCRATCH = `WHEN THE PAGE IS EMPTY (you are writing it from scratch):
 
 const INDICE = `MORE, IN ${CARPETA_DOCS} (read them when you need them):
 - ${RUTA_GUIA}: the design guide —color, type, dark mode and finish—; read it BEFORE writing a page from scratch (an empty /index.html is one) or a redesign. What you add to a page that already exists is written the way that page is.
-- ${RUTA_LIBRERIAS}: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.`;
+- ${RUTA_LIBRERIAS}: the chart, carousel and gallery libraries that survive publishing, with their exact tag; read it before adding one.
+- ${RUTA_APPS}: how a web app is built here (React in /src, its packages, its screens); read it BEFORE converting a page into an app.`;
+
+/** /.openlen/docs/apps.md en una página: el manual de una app recién
+ *  convertida, para escribirla en /src antes de `convert_to_app`. */
+function manualParaConvertir(): string {
+  return `# HOW A WEB APP IS BUILT HERE (for converting this page into an app with convert_to_app)
+Convert only after the user accepted. Build the whole app in /src FIRST, with the pages still in place —read each one—, and then call convert_to_app, which swaps the pages for the app in one step. The app keeps the page's look (its colors, fonts and texts): the pages become screens (/menu/index.html → /src/screens/Menu.jsx at the route #/menu, the home at #/), what repeats in every page (the header, the menu, the footer) becomes a component in /src/components, the loose JavaScript becomes React state, and each form saves to a table (a migration in /supabase/migrations, and the form inserts into it with supabase-js) instead of going to the Inbox. Below, the rules every app follows once converted.
+
+${manualDeLaApp(manualSinPartir(), { catalogo: CATALOGO_ACTUAL, entrada: ENTRADA })
+  .replace(/^# OpenLen: how the platform works\n\n/, "")
+  .replace("THIS PROJECT IS A WEB APP:", "A WEB APP, ONCE CONVERTED:")
+  // Su índice nombra la guía de diseño de una APP, que en una página no está
+  // en esa ruta: lo que se convierte conserva el aspecto de la página.
+  .replace(/\n\nMORE, IN [\s\S]*$/, "")
+  // Los mapas y vídeos se dicen igual que en la página, que ya los dice: dos
+  // veces la misma regla es una de más (prompts-superficies.test.ts). Tras
+  // convertir, el manual de la app la trae.
+  .replace(/\n• MAPS and VIDEOS[^\n]*/, "")}`;
+}
 
 const encontrar = (texto: string, marca: string, desde = 0): number => {
   const i = texto.indexOf(marca, desde);
@@ -226,24 +250,29 @@ export function partirElManual(entero: string = manualSinPartir()): ManualPartid
 }
 
 /** El contenido de /AGENTS.md: lo que Read devuelve y lo que se adjunta. En Len
- *  Dynamis no nombra Read, Edit ni Write, que no tiene. */
+ *  Dynamis no nombra Read, Edit ni Write, que no tiene. En una APP es el suyo
+ *  (`lib/agent/modo-app.ts`), con las secciones que valen en los dos sitios
+ *  tomadas enteras de éste. */
 export function buildManualDeLaPlataforma(
   env: Readonly<Record<string, string | undefined>> = process.env,
   mode: AgentMode = "len",
+  app: AppDeProyecto | null = null,
 ): string {
-  const { agents } = partirElManual();
+  const agents = app ? manualDeLaApp(manualSinPartir(), app) : partirElManual().agents;
   return terminalOnly(mode, env) ? paraSoloLaTerminal(agents) : agents;
 }
 
-/** Los ficheros de /.openlen/docs, por su ruta. */
-export function documentosDeLaPlataforma(): Readonly<Record<string, string>> {
-  return partirElManual().docs;
+/** Los ficheros de /.openlen/docs, por su ruta. Una app tiene su guía de
+ *  diseño en la MISMA ruta, y no tiene la de las librerías de las páginas
+ *  (sus paquetes son los de su catálogo, en /AGENTS.md). */
+export function documentosDeLaPlataforma(app: AppDeProyecto | null = null): Readonly<Record<string, string>> {
+  return app ? { [RUTA_GUIA]: GUIA_DE_LA_APP } : { ...partirElManual().docs, [RUTA_APPS]: manualParaConvertir() };
 }
 
 /** El texto de un fichero del manual por su ruta, o `null` si no es ninguno. */
-export function textoDeLaPlataforma(ruta: string, mode: AgentMode = "len"): string | null {
-  if (ruta === RUTA_MANUAL) return buildManualDeLaPlataforma(process.env, mode);
-  const docs = documentosDeLaPlataforma();
+export function textoDeLaPlataforma(ruta: string, mode: AgentMode = "len", app: AppDeProyecto | null = null): string | null {
+  if (ruta === RUTA_MANUAL) return buildManualDeLaPlataforma(process.env, mode, app);
+  const docs = documentosDeLaPlataforma(app);
   return Object.hasOwn(docs, ruta) ? docs[ruta]! : null;
 }
 

@@ -6,6 +6,7 @@ import "server-only";
 import { and, desc, eq, inArray } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
+import { autorDelCambio } from "@/lib/projects/autor-del-cambio";
 import { deleteProjectFile, listProjectFiles, saveProjectFile } from "@/lib/backend/files";
 
 const LIMIT_PER_PATH = 20;
@@ -20,7 +21,7 @@ export async function archiveFileVersion(p: {
   source: string;
 }): Promise<string> {
   const id = crypto.randomUUID();
-  await db.insert(schema.projectFileVersions).values({ id, ...p, label: p.label.slice(0, LABEL_MAX) });
+  await db.insert(schema.projectFileVersions).values({ id, ...p, label: p.label.slice(0, LABEL_MAX), autorId: autorDelCambio() });
   const rows = await db
     .select({ id: schema.projectFileVersions.id })
     .from(schema.projectFileVersions)

@@ -18,7 +18,8 @@
   "turn": {
     "imageSent": "Image sent",
     "imagesSent": "{count} images sent",
-    "homePage": "Home"
+    "homePage": "Home",
+    "desdeElHilo": "from the thread · {donde}"
   },
   "proceso": {
     "completadoEn": "Completed in <d>{duracion}</d>",
@@ -104,7 +105,19 @@
     "modeLenDesc": "The everyday one: fast, for almost anything",
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "For big jobs: thinks as hard as it can before each step. Slower, and uses more credits",
-    "effortDynamis": "Len Odyssey always thinks as hard as it can"
+    "effortDynamis": "Len Odyssey always thinks as hard as it can",
+    "soloLectura": "You can view this project, but not change it. Ask the owner for editor access."
+  },
+  "equipo": {
+    "paraLen": "To Len",
+    "paraPersonas": "To {nombres} · Len won't reply",
+    "paraLenYPersonas": "To Len and {nombres}",
+    "soloEditoresLen": "Only editors can ask Len for things",
+    "enviarA": "Send to {nombre}",
+    "deA": "{autor} → {para} · Len won't reply",
+    "mencionar": "Mention {nombre}",
+    "error": "Couldn't send. Try again.",
+    "placeholder": "Write to Len, or @ to talk to someone on the project…"
   },
   "noChange": {
     "label": "Nothing on the page changed"
@@ -112,7 +125,9 @@
   "undo": {
     "failedHttp": "Couldn’t undo ({status}) — the change is still applied. Try again.",
     "failedNetwork": "Couldn’t undo: the server didn’t respond — the change is still applied. Try again.",
-    "failedResponse": "Couldn’t undo: the server replied without the page — the change is still applied. Try again."
+    "failedResponse": "Couldn’t undo: the server replied without the page — the change is still applied. Try again.",
+    "failedOverlap": "Couldn’t undo: {rutas} changed after this turn, and undoing it would erase that. Nothing was undone.",
+    "notUndone": "Undone, except {rutas}: undoing a turn doesn’t bring back the database, the memory or the settings."
   },
   "cutShort": "It was cut short before finishing ({reason}), but what I did is already saved. Check the page.",
   "memoria": {

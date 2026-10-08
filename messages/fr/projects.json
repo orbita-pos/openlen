@@ -214,5 +214,11 @@
     "bulkDeleted": "{count, plural, one {# page supprimée} other {# pages supprimées}}",
     "bulkArchived": "{count, plural, one {# page archivée} other {# pages archivées}}",
     "somethingWrong": "Une erreur s'est produite"
+  },
+  "compartidos": {
+    "titulo": "Partagés avec vous",
+    "de": "de {nombre}",
+    "rolEditor": "Éditeur",
+    "rolLector": "Lecture seule"
   }
 }
