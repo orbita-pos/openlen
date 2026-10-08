@@ -1,0 +1,80 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mocks = vi.hoisted(() => ({
+  quienEnElProyecto: vi.fn(),
+  escribirMensajeDelEquipo: vi.fn(async () => ({ id: "m1", mencionados: ["u-eli"] })),
+  mencionesDelChatSinVer: vi.fn(async () => 2),
+  personasDelProyecto: vi.fn(async () => [
+    { userId: "u-dana", nombre: "Dana Dueña", email: "d@x", rol: "dueno" },
+    { userId: "u-eli", nombre: "Eli Editor", email: "e@x", rol: "editor" },
+  ]),
+  scheduleNotification: vi.fn(async () => {}),
+}));
+
+vi.mock("@/auth", () => ({ auth: vi.fn() }));
+vi.mock("../../hilos/_comun", async (original) => ({
+  ...(await original<typeof import("../../hilos/_comun")>()),
+  quienEnElProyecto: mocks.quienEnElProyecto,
+}));
+vi.mock("@/lib/projects/chat-equipo", () => ({
+  escribirMensajeDelEquipo: mocks.escribirMensajeDelEquipo,
+  mencionesDelChatSinVer: mocks.mencionesDelChatSinVer,
+}));
+vi.mock("@/lib/projects/hilos", async (original) => ({
+  ...(await original<typeof import("@/lib/projects/hilos")>()),
+  personasDelProyecto: mocks.personasDelProyecto,
+}));
+vi.mock("@/lib/notifications/dispatch", () => ({ scheduleNotification: mocks.scheduleNotification }));
+vi.mock("@/lib/agent/turnos-desde-el-servidor", () => ({ retomarPedidosDelHilo: vi.fn(async () => {}), lanzarTurnoDelHilo: vi.fn() }));
+
+import { GET, POST } from "./route";
+
+const enviar = async (cuerpo: unknown) => {
+  const res = await POST(
+    new Request("http://localhost/api/projects/p1/chat/mensajes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(cuerpo) }),
+    { params: Promise.resolve({ id: "p1" }) },
+  );
+  return { status: res.status, cuerpo: (await res.json()) as Record<string, unknown> };
+};
+
+describe("POST /api/projects/[id]/chat/mensajes — escribir a una persona", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.quienEnElProyecto.mockResolvedValue({ ok: true, userId: "u-leo", nombre: "Leo Lector", acceso: { rol: "lector", duenoId: "u-dana" } });
+  });
+
+  it("🔴 un lector puede escribir a una persona, y la persona recibe el aviso del chat", async () => {
+    const { status, cuerpo } = await enviar({ texto: "@Eli Editor mira el pie", menciones: ["u-eli"], idioma: "es" });
+    expect(status).toBe(200);
+    expect(cuerpo).toEqual({ id: "m1", mencionados: ["u-eli"] });
+    expect(mocks.escribirMensajeDelEquipo).toHaveBeenCalledWith({ projectId: "p1", autorId: "u-leo", texto: "@Eli Editor mira el pie", menciones: ["u-eli"] });
+    expect(mocks.scheduleNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "mencion", donde: "chat", recipientUserId: "u-eli", quien: "Leo Lector", projectId: "p1", idioma: "es" }),
+    );
+  });
+
+  it("🔴 con @Len no es un mensaje: es un turno (400 lleva_len), y no se escribe nada", async () => {
+    const { status, cuerpo } = await enviar({ texto: "@Len y @Eli Editor", menciones: ["u-eli"] });
+    expect(status).toBe(400);
+    expect(cuerpo.error).toBe("lleva_len");
+    expect(mocks.escribirMensajeDelEquipo).not.toHaveBeenCalled();
+  });
+
+  it("sin nadie del proyecto mencionado → 400 sin_mencion", async () => {
+    const { status, cuerpo } = await enviar({ texto: "hola a todos", menciones: ["u-extrano"] });
+    expect(status).toBe(400);
+    expect(cuerpo.error).toBe("sin_mencion");
+    expect(mocks.escribirMensajeDelEquipo).not.toHaveBeenCalled();
+  });
+
+  it("un texto vacío o de más de 4.000 → 400 invalid_body", async () => {
+    expect((await enviar({ texto: "   ", menciones: ["u-eli"] })).status).toBe(400);
+    expect((await enviar({ texto: "x".repeat(4001), menciones: ["u-eli"] })).status).toBe(400);
+  });
+
+  it("GET ?solo=sinVer devuelve las menciones sin ver de quien pide", async () => {
+    const res = await GET(new Request("http://localhost/api/projects/p1/chat/mensajes?solo=sinVer"), { params: Promise.resolve({ id: "p1" }) });
+    expect(await res.json()).toEqual({ sinVer: 2 });
+    expect(mocks.mencionesDelChatSinVer).toHaveBeenCalledWith("p1", "u-leo");
+  });
+});

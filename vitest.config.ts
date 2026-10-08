@@ -580,6 +580,8 @@ export default defineConfig({
       "app/api/projects/[id]/ficheros/route.test.ts",
       // Abrir un hilo en una línea (lib/projects/hilos.ts): una línea larga no se rechaza.
       "app/api/projects/[id]/hilos/route.test.ts",
+      // El chat del equipo: escribir a una persona del proyecto.
+      "app/api/projects/[id]/chat/mensajes/route.test.ts",
       // Una app web que no compila: 422 con fichero y línea (spec local 2026-10-07-apps).
       "app/api/projects/[id]/publish/route.test.ts",
       // F2 de las apps web: deshacer un turno entero.
