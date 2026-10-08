@@ -432,6 +432,10 @@ export interface StoredChatTurn {
    *  después de haber cambiado algo. Lo escribe el servidor
    *  (`corteDelTurno`); al recargar se avisa y el historial lo marca. */
   cortado?: boolean;
+  /** El servidor guarda lo que cambió este turno y aún se puede deshacer
+   *  entero (`turnosDeshacibles`): al recargar, el chat ofrece el Deshacer del
+   *  servidor, como Claude Code ofrece restaurar el código al reanudar. */
+  deshacible?: true;
   /** LEN 2.1 · el turno SIGUE TRABAJANDO en el servidor. La fila se crea al
    *  empezar (`status: en_curso`) y se va llenando, porque el turno ya no
    *  muere con el cliente; quien la lee puede volver a engancharse

@@ -12,7 +12,8 @@ import { and, eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { cambiosDelTurnoParaDeshacer, conForma, planearDeshacer } from "@/lib/projects/deshacer-turno-plan";
-import { TURNOS_GUARDADOS, deshacerTurno, escribirDeshacer, guardarCambiosDelTurno, ultimoTurnoDeshacible } from "@/lib/projects/deshacer-turno";
+import { TURNOS_GUARDADOS, deshacerTurno, escribirDeshacer, guardarCambiosDelTurno, turnosDeshacibles, ultimoTurnoDeshacible } from "@/lib/projects/deshacer-turno";
+import { getChatMessages } from "@/lib/projects/chat";
 import type { ProjectData } from "@/lib/projects/types";
 
 const USUARIO = "prueba-deshacer-turno-user";
@@ -75,6 +76,31 @@ beforeEach(async () => {
 afterAll(async () => {
   await db.delete(schema.projects).where(eq(schema.projects.id, PROYECTO));
   for (const id of [USUARIO, OTRO]) await db.delete(schema.users).where(eq(schema.users.id, id));
+});
+
+// Como Claude Code, que guarda el punto de restauración en la transcripción y lo
+// ofrece al reanudar: la fila del chat dice si su turno se puede deshacer, y el
+// Deshacer no depende de la pestaña que vio el turno.
+describe("deshacer tras recargar", () => {
+  it("🔴 el turno con registro es deshacible; deshecho, ya no; uno sin registro, nunca", async () => {
+    expect(await turnosDeshacibles(PROYECTO, [TURNO, "sin-registro"])).toEqual(new Set([TURNO]));
+    expect(await turnosDeshacibles(PROYECTO, [])).toEqual(new Set());
+    const r = await deshacerTurno({ projectId: PROYECTO, userId: USUARIO, turnId: TURNO });
+    expect(r.ok).toBe(true);
+    expect(await turnosDeshacibles(PROYECTO, [TURNO])).toEqual(new Set());
+  });
+
+  it("🔴 la conversación cargada lo dice en cada fila (`deshacible`)", async () => {
+    await db.delete(schema.projectChatMessages).where(eq(schema.projectChatMessages.projectId, PROYECTO));
+    await db.insert(schema.projectChatMessages).values([
+      { id: TURNO, projectId: PROYECTO, userText: "hazme la app", assistantReasoning: "hecho", status: "applied" },
+      { id: "22222222-2222-4222-8222-222222222222", projectId: PROYECTO, userText: "hola", assistantReasoning: "hola", status: "applied" },
+    ]);
+    const turnos = await getChatMessages(PROYECTO);
+    expect(turnos.find((t) => t.id === TURNO)?.deshacible).toBe(true);
+    expect(turnos.find((t) => t.id !== TURNO)?.deshacible).toBeUndefined();
+    await db.delete(schema.projectChatMessages).where(eq(schema.projectChatMessages.projectId, PROYECTO));
+  });
 });
 
 describe("deshacer un turno entero", () => {

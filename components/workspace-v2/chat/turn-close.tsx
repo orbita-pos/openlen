@@ -45,7 +45,8 @@ export function TurnClose({
   turn: DesignTurn;
   currentPage: string | null;
   vote: TurnFeedback | undefined;
-  onUndo: (turn: DesignTurn) => void;
+  /** Sin él no hay «Deshacer»: quien sólo mira (un lector) no deshace. */
+  onUndo?: (turn: DesignTurn) => void;
   onRetry: (turn: DesignTurn) => void;
   /** Devuelve si el servidor guardó el voto: «Gracias» sólo entonces. */
   onRate: (rating: "up" | "down", reasons?: readonly FeedbackReason[], note?: string | null) => Promise<boolean>;
@@ -137,7 +138,7 @@ export function TurnClose({
             <>
               <Sparkles size={12} className="text-[var(--accent)]" />
               {edits > 0 ? t("newChat.close.appliedEdits", { count: edits }) : t("newChat.close.applied")}
-              {ofreceDeshacer(plan) && (
+              {onUndo && ofreceDeshacer(plan) && (
                 <button
                   type="button"
                   onClick={() => onUndo(turn)}

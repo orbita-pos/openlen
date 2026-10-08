@@ -199,7 +199,8 @@ export function LenTurn({
   when: string;
   vote: TurnFeedback | undefined;
   labels: EtiquetasDeRespuesta;
-  onUndo: (turn: DesignTurn) => void;
+  /** Sin él no hay «Deshacer» (un lector del proyecto compartido). */
+  onUndo?: (turn: DesignTurn) => void;
   onRetry: (turn: DesignTurn) => void;
   onPublished: (url: string) => void;
   onConfirmSettled: (turnId: string) => void;

@@ -390,7 +390,7 @@ function AgentChatView({
                 }
                 vote={feedback.votes[turn.id]}
                 labels={replyLabels}
-                onUndo={chat.handleUndo}
+                {...(soloLectura ? {} : { onUndo: chat.handleUndo })}
                 onRetry={chat.handleRetry}
                 onPublished={chat.handlePublished}
                 onConfirmSettled={settle}

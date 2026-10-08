@@ -14,6 +14,7 @@ import { parseGoalSnapshot, type GoalSnapshot } from "@/lib/agent/goal";
 import { goalActivation } from "@/lib/agent/goal-activation";
 import { photosForRow, photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import { MAX_MENSAJES_DEL_EQUIPO } from "@/lib/agent/equipo";
+import { turnosDeshacibles } from "@/lib/projects/deshacer-turno";
 
 /** Las columnas de la fila SIN la transcripción (H4): el panel del chat no la
  *  usa, y son los resultados enteros de cada turno. Se calculan al usarse, no
@@ -44,7 +45,7 @@ export async function getChatMessages(
       .limit(CHAT_LIMIT),
     conversationStateOf(projectId),
   ]);
-  const turns = await conAutores(projectId, rows);
+  const turns = await conDeshacibles(projectId, await conAutores(projectId, rows));
   // Piezas 7 y 8: la foto va en el último turno cerrado, que es donde la busca
   // el chat (`lastPlanMode`, el encargo).
   if (estado.planMode || estado.goal) {
@@ -59,6 +60,14 @@ export async function getChatMessages(
     }
   }
   return turns;
+}
+
+/** Las filas cuyo turno aún se puede deshacer en el servidor, marcadas
+ *  (`deshacible`). Si la consulta falla, van como antes: sin la marca. */
+async function conDeshacibles(projectId: string, turns: StoredChatTurn[]): Promise<StoredChatTurn[]> {
+  const aplicados = turns.filter((t) => t.status === "applied" && !t.enCurso && !t.tipo).map((t) => t.id);
+  const ids = await turnosDeshacibles(projectId, aplicados).catch(() => new Set<string>());
+  return ids.size === 0 ? turns : turns.map((t) => (ids.has(t.id) ? { ...t, deshacible: true as const } : t));
 }
 
 /** Las filas, con quién pidió cada turno (compartir el proyecto): `autorId`

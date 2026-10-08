@@ -2524,6 +2524,8 @@ export function restoreTurn(s: StoredChatTurn): DesignTurn {
     // Guardado como cortado por el servidor: el aviso se compone al pintar,
     // en el idioma de quien lo mira (`AvisoDeTurno`).
     ...(s.cortado ? { cortado: true } : {}),
+    // Deshacer tras recargar: el servidor aún tiene lo que cambió el turno.
+    ...(s.deshacible ? { deshacerEnServidor: s.id } : {}),
     // Lo que cobró y tardó, si el servidor lo apuntó (plans/new-chat/).
     ...(typeof s.centicredits === "number" ? { centicredits: s.centicredits } : {}),
     ...(typeof s.durationMs === "number" ? { durationMs: s.durationMs } : {}),

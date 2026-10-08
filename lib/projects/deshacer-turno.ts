@@ -21,7 +21,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { folderFingerprint } from "@/lib/projects/files-hash";
@@ -168,6 +168,23 @@ export async function ultimoTurnoDeshacible(projectId: string): Promise<string |
     .orderBy(desc(t.createdAt))
     .limit(1);
   return fila?.turnId ?? null;
+}
+
+/**
+ * DE ESTOS TURNOS, LOS QUE TODAVÍA SE PUEDEN DESHACER EN EL SERVIDOR: con algo
+ * deshacible guardado y sin deshacer. Lo pide el chat al cargar la conversación
+ * (`getChatMessages` → `deshacible`), como Claude Code, que guarda el punto de
+ * restauración con cada mensaje en la transcripción y lo ofrece al reanudar: el
+ * Deshacer no depende de la pestaña que vio el turno.
+ */
+export async function turnosDeshacibles(projectId: string, turnIds: readonly string[]): Promise<Set<string>> {
+  if (turnIds.length === 0) return new Set();
+  const t = schema.projectTurnChanges;
+  const filas = await db
+    .selectDistinct({ turnId: t.turnId })
+    .from(t)
+    .where(and(eq(t.projectId, projectId), inArray(t.turnId, [...turnIds]), isNull(t.undoneAt), eq(t.undoable, true)));
+  return new Set(filas.map((f) => f.turnId));
 }
 
 /** Lo que dijo la sentencia del deshacer. */
