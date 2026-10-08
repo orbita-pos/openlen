@@ -2562,6 +2562,33 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     expect(mocks.debitCredits).toHaveBeenCalledWith("dueno-1", 5);
   });
 
+  it("🔴 con miembros, Len recibe lo que el equipo se dijo desde el último turno, quién pide y la regla; sin miembros, el prompt de siempre", async () => {
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "Hecho.", turns: 1, toolCalls: 0,
+      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
+    });
+    mocks.personasDelProyecto.mockResolvedValueOnce([
+      { userId: "dueno-1", nombre: "Dana Dueña", email: "d@x", rol: "dueno" },
+      { userId: "ana", nombre: "Ana Editora", email: "a@x", rol: "editor" },
+    ]);
+    mocks.filasParaElHistorialConEquipo.mockResolvedValueOnce([
+      { tipo: null, autorId: null, menciones: null, createdAt: new Date(Date.UTC(2026, 9, 7, 18, 1)), fila: { userText: "pon el botón", assistantReasoning: "hecho", transcript: null } },
+      { tipo: "persona", autorId: "dueno-1", menciones: ["ana"], createdAt: new Date(Date.UTC(2026, 9, 7, 18, 2)), fila: { userText: "@Ana Editora ¿el pie en gris?", assistantReasoning: "", transcript: null } },
+    ]);
+    await readEvents(await pedir({ prompt: "@Len pon el pie gris" }));
+    const conEquipo = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string; equipo?: boolean }])[0];
+    expect(conEquipo.equipo).toBe(true);
+    expect(conEquipo.prompt.startsWith('<team-messages trust="relay">\n<message from="Dana Dueña" role="owner" to="Ana Editora"')).toBe(true);
+    expect(conEquipo.prompt.endsWith('</team-messages>\n<asked-by name="Ana Editora" role="editor"/>\n@Len pon el pie gris')).toBe(true);
+    expect(mocks.turnosParaElHistorial).not.toHaveBeenCalled();
+
+    await readEvents(await pedir({ prompt: "@Len pon el pie gris" }));
+    const sinEquipo = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string; equipo?: boolean }])[0];
+    expect(sinEquipo.prompt).toBe("@Len pon el pie gris");
+    expect(sinEquipo.equipo).toBe(false);
+  });
+
   it("🔴 «@Len y @Eli Editor …» es un turno que además apunta la mención y avisa a Eli por el chat", async () => {
     mocks.personasDelProyecto.mockResolvedValueOnce([
       { userId: "dueno-1", nombre: "Dana Dueña", email: "d@x", rol: "dueno" },

@@ -850,7 +850,8 @@ async function correrTurno(
     // la fila (y el chat) guardan sólo lo que se escribió.
     // En un proyecto con miembros, delante: lo que el equipo se dijo desde el
     // último turno y quién pide éste (lib/agent/equipo.ts).
-    prompt: `${equipoAhora ? `${equipoAhora}\n` : ""}${pideAhora ? `${pideAhora}\n` : ""}${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n${prompt}` : prompt}`,
+    // (`equipoAhora` ya acaba en salto de línea: `plegarEquipo`).
+    prompt: `${equipoAhora}${pideAhora ? `${pideAhora}\n` : ""}${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n${prompt}` : prompt}`,
     equipo: compartido,
     history,
     // ¿El turno anterior fue MUDO? Se deriva del historial que acaba de
