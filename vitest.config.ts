@@ -577,6 +577,8 @@ export default defineConfig({
       "app/api/projects/[id]/terminal/route.test.ts",
       // Editar a mano en la lente «Código» (la #18).
       "app/api/projects/[id]/ficheros/route.test.ts",
+      // Abrir un hilo en una línea (lib/projects/hilos.ts): una línea larga no se rechaza.
+      "app/api/projects/[id]/hilos/route.test.ts",
       // Una app web que no compila: 422 con fichero y línea (spec local 2026-10-07-apps).
       "app/api/projects/[id]/publish/route.test.ts",
       // F2 de las apps web: deshacer un turno entero.

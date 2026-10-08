@@ -11,7 +11,7 @@
 import { z } from "zod";
 
 import { puede } from "@/lib/projects/acceso";
-import { crearHilo, listarHilos, mencionesSinVer, personasDelProyecto } from "@/lib/projects/hilos";
+import { MAX_CODIGO_DEL_HILO, crearHilo, listarHilos, mencionesSinVer, personasDelProyecto } from "@/lib/projects/hilos";
 import { retomarPedidosDelHilo } from "@/lib/agent/turnos-desde-el-servidor";
 import { avisarMenciones, CuerpoDelMensaje, json, pedirleALen, quienEnElProyecto } from "./_comun";
 
@@ -41,7 +41,10 @@ export async function GET(req: Request, ctx: Ctx): Promise<Response> {
 const Crear = CuerpoDelMensaje.extend({
   ruta: z.string().startsWith("/").max(300),
   linea: z.number().int().min(1).max(1_000_000),
-  codigo: z.string().max(2000).default(""),
+  // La línea entera llega del cliente, y un HTML pegado o minificado es UNA
+  // línea de miles de caracteres: se recorta a lo que se guarda, no se rechaza
+  // (un `.max` aquí no ahorra nada, el cuerpo ya está leído).
+  codigo: z.string().default("").transform((c) => c.slice(0, MAX_CODIGO_DEL_HILO)),
 });
 
 export async function POST(req: Request, ctx: Ctx): Promise<Response> {
