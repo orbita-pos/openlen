@@ -34,7 +34,7 @@ import { lastPlanMode, planAnswersForMessage, planModeAfterAnswer, togglePlanSel
 import { canCreateGoal, goalOrder, goalViewOf, lastGoal, roundAfterDone, roundOfTurn, roundTextFor, type GoalView } from "./goal-state";
 import type { AgentConfirm } from "../agent-confirm-card";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
-import { ejecutarUndo, ficherosDelEvento, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
+import { ejecutarUndo, ficherosDelEvento, ofreceDeshacer, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
 import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "../panels/turno-cerrado";
 import { NIVEL_POR_DEFECTO, type EsfuerzoAgente, type NivelEsfuerzo } from "@/lib/agent/esfuerzo";
@@ -2184,12 +2184,12 @@ export function useAgentChat({
 
   const handleUndo = useCallback(
     async (turn: DesignTurn) => {
-      // Una sola decisión, la misma que pinta el botón (ver TurnFooter):
-      // turno aplicado, con preimagen, y sin haber tocado otra página.
-      // Restored (pre-reload) turns carry no preEditHtml — their revisions
-      // are reachable via the Versions tab, not this inline Undo.
+      // Una sola decisión, la misma que pinta el botón (`ofreceDeshacer`):
+      // con preimagen («restaurar») o con registro en el servidor («servidor»,
+      // F2). Antes salía si no era «restaurar»: el Deshacer del servidor se
+      // pintaba y no hacía nada (ensayo de caja, 08/10).
       const plan = planDeUndo(turn, pageRef.current ?? null);
-      if (plan.kind !== "restaurar") return;
+      if (!ofreceDeshacer(plan)) return;
       if (turn.undoEnCurso) return;
 
       updateTurn(turn.id, { undoEnCurso: true, undoFallo: undefined });
