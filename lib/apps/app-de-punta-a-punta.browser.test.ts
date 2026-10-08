@@ -155,6 +155,17 @@ const TIPOS: Record<string, string> = {
   ".json": "application/json",
 };
 
+/** La release viva: `current` es un enlace en la caja, y en un Windows sin
+ *  permiso para enlaces `publishToDir` deja en su lugar un fichero con el sha. */
+function releaseViva(sub: string): string {
+  const current = path.join(entorno.raiz, sub, "current");
+  try {
+    return path.join(entorno.raiz, sub, "releases", readFileSync(current, "utf8").trim());
+  } catch {
+    return current;
+  }
+}
+
 let servidorLienzo: Server;
 let servidorPublicada: Server;
 let puertoLienzo = 0;
@@ -180,7 +191,7 @@ beforeAll(async () => {
     if (url.pathname === "/favicon.ico") return void res.writeHead(204).end();
     const sub = (req.headers.host ?? "").split(".")[0]!;
     const rel = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
-    const fichero = path.join(entorno.raiz, sub, "current", rel);
+    const fichero = path.join(releaseViva(sub), rel);
     try {
       if (!statSync(fichero).isFile()) throw new Error("no");
       res.writeHead(200, { "content-type": TIPOS[path.extname(fichero)] ?? "application/octet-stream" });
@@ -288,7 +299,7 @@ describe("🔴 una app web hace lo mismo en el lienzo, en los ojos de Len y publ
       app: APP,
       entorno: ENTORNO,
     });
-    const index = path.join(entorno.raiz, "pos-sin-mapa", "current", "index.html");
+    const index = path.join(releaseViva("pos-sin-mapa"), "index.html");
     writeFileSync(index, readFileSync(index, "utf8").replace(/<script type="importmap"[\s\S]*?<\/script>/, ""));
     const { resultado, errores } = await abrir(`http://pos-sin-mapa.localhost:${puertoPublicada}/`);
     expect(resultado).toEqual({ error: "la app no se pintó" });

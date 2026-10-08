@@ -757,6 +757,8 @@ describe("la vista «Datos» se retiró y el prompt no la nombra", () => {
       terminal: "Terminal",
       // Lo que cambió en cada turno de la sesión, fichero a fichero.
       cambios: "Cambios",
+      // Apps (F4): en una app el lienzo la enseña corriendo.
+      app: "App",
     });
   });
 });
