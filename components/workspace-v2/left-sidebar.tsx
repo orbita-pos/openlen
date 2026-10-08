@@ -63,6 +63,7 @@ function UnifiedRail({
   lockedTabs,
   lockReason,
   badges,
+  chatSinVer = 0,
   hasDatabase,
   centerView,
 }: {
@@ -72,6 +73,8 @@ function UnifiedRail({
   lockedTabs?: SidebarMode[];
   lockReason?: string;
   badges: { leads: number; chat: number };
+  /** El chat del equipo: menciones del chat sin ver (un punto en su icono). */
+  chatSinVer?: number;
   hasDatabase: boolean;
   centerView: SectionView;
 }) {
@@ -87,11 +90,12 @@ function UnifiedRail({
       item.kind === "view" && item.badge
         ? item.badge.reduce((n, k) => n + badges[k], 0)
         : 0;
+    const sinVer = item.kind === "panel" && item.id === "chat" ? chatSinVer : 0;
     const plainLabel = t(`rail.${key}`);
     const label = locked
       ? (lockReason ?? t("sidebar.tabLocked", { label: plainLabel }))
-      : badgeCount > 0
-        ? `${plainLabel} — ${tInbox("badge.count", { count: badgeCount })}`
+      : badgeCount + sinVer > 0
+        ? `${plainLabel} — ${tInbox("badge.count", { count: badgeCount + sinVer })}`
         : plainLabel;
     const I = item.icon;
     return (
@@ -123,6 +127,9 @@ function UnifiedRail({
             >
               {formatBadge(badgeCount)}
             </span>
+          )}
+          {sinVer > 0 && (
+            <span aria-hidden className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--accent)]" data-testid="rail-dot-chat" />
           )}
         </button>
       </Tooltip>
@@ -190,6 +197,8 @@ interface LeftSidebarProps {
   flatProjectId?: string;
   /** Un lector del proyecto compartido: el chat se lee, no se escribe. */
   soloLectura?: boolean;
+  /** El chat del equipo: menciones del chat sin ver (`useChatSinVer`). */
+  chatSinVer?: number;
   /** Multi-page: slug of the site page the canvas is editing (null = home).
    *  Forwarded to ChatPanel so chat edits land in the right document. */
   flatProjectPage?: string | null;
@@ -290,6 +299,7 @@ export function LeftSidebar({
   flatProjectHtml,
   flatProjectId,
   soloLectura = false,
+  chatSinVer = 0,
   flatProjectPage = null,
   onFlatHtmlUpdate,
   flatProjectChat,
@@ -390,6 +400,7 @@ export function LeftSidebar({
             leads: inboxCounts?.leads ?? 0,
             chat: inboxCounts?.chat ?? 0,
           }}
+          chatSinVer={chatSinVer}
           hasDatabase={hasDatabase}
           centerView={activeSection}
         />
@@ -427,6 +438,7 @@ export function LeftSidebar({
             leads: inboxCounts?.leads ?? 0,
             chat: inboxCounts?.chat ?? 0,
           }}
+          chatSinVer={chatSinVer}
           hasDatabase={hasDatabase}
           centerView={activeSection}
         />

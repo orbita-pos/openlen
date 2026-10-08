@@ -115,6 +115,7 @@ import { isBlankProject } from "@/lib/projects/blank";
 import { UNTITLED_PROJECT_TITLE } from "@/lib/projects/titulo-del-html";
 import { uploadPhotos } from "@/lib/workspace-v2/upload-photos";
 import type { PendingAttachments } from "@/components/workspace-v2/chat/use-agent-chat";
+import { useChatSinVer } from "@/components/workspace-v2/chat/use-chat-sin-ver";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
 import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import type { AppDeProyecto, SitePage } from "@/lib/projects/types";
@@ -1365,6 +1366,9 @@ function NewV2Inner() {
   const esApp = !!loadedProject?.app;
   // Un lector de un proyecto compartido sólo mira.
   const soloLector = loadedProject?.rol === "lector";
+  // El chat del equipo: las menciones del chat sin ver, un punto en su icono del
+  // carril; con el chat a la vista, 0 (abrirlo las ve).
+  const chatSinVer = useChatSinVer(loadedProject?.id ?? null, mode === "chat" && !leftCollapsed);
   // EL ENLACE DE UN AVISO DE MENCIÓN (`?codigo=/src/App.jsx`, hilos en el
   // código): al cargar el proyecto, abre ese fichero en la lente «Código».
   const codigoParam = searchParams.get("codigo");
@@ -3397,6 +3401,7 @@ function NewV2Inner() {
           flatProjectPage={activeSitePage}
           flatProjectId={loadedProject?.id}
           soloLectura={soloLector}
+          chatSinVer={chatSinVer}
           onFlatHtmlUpdate={(newHtml, pageOverride, untrusted) => {
             // Va en el MISMO handler que el html para que no puedan
             // desincronizarse: un drip crudo del chat marca el documento como

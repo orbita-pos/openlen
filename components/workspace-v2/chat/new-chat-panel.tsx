@@ -255,7 +255,11 @@ function AgentChatView({
       const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes?solo=firma`, { cache: "no-store" }).catch(() => null);
       const j = r?.ok ? ((await r.json().catch(() => null)) as { firma?: unknown } | null) : null;
       if (typeof j?.firma !== "string") return;
-      if (firma !== null && j.firma !== firma) onChatChangeRef.current?.();
+      if (firma !== null && j.firma !== firma) {
+        onChatChangeRef.current?.();
+        // Lo que llega con el chat a la vista, visto queda (el punto del carril).
+        void fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes/vistas`, { method: "POST" }).catch(() => {});
+      }
       firma = j.firma;
     };
     void mirar();

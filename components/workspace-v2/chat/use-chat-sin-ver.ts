@@ -1,0 +1,31 @@
+"use client";
+
+// Las menciones del chat sin ver (el chat del equipo), para el punto del
+// carril. Cada 30 s, como los hilos; con el chat abierto, 0 (abrirlo las ve).
+
+import { useEffect, useState } from "react";
+
+export function useChatSinVer(projectId: string | null, chatAbierto: boolean): number {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (!projectId || chatAbierto) {
+      setN(0);
+      return;
+    }
+    let vivo = true;
+    const leer = () =>
+      void fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes?solo=sinVer`, { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          if (vivo && j && typeof j.sinVer === "number") setN(j.sinVer);
+        })
+        .catch(() => {});
+    leer();
+    const reloj = window.setInterval(leer, 30_000);
+    return () => {
+      vivo = false;
+      window.clearInterval(reloj);
+    };
+  }, [projectId, chatAbierto]);
+  return n;
+}
