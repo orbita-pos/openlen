@@ -6,7 +6,7 @@ import { eq, inArray } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { apuntarMencionesDelTurno, escribirMensajeDelEquipo, firmaDelChat, marcarChatVisto, mencionesDelChatSinVer } from "@/lib/projects/chat-equipo";
-import { getChatMessages, turnosParaElHistorial } from "@/lib/projects/chat";
+import { filasParaElHistorialConEquipo, getChatMessages, turnosParaElHistorial } from "@/lib/projects/chat";
 
 const DUENO = "prueba-equipo-dueno";
 const ELI = "prueba-equipo-eli";
@@ -97,5 +97,30 @@ describe("el chat del equipo", () => {
     expect(turnos).toHaveLength(50);
     expect(turnos.at(-1)).toMatchObject({ tipo: "persona", userText: "@dueno el nuevo" });
     expect(turnos[0]!.userText).toBe("turno 1");
+  });
+
+  it("🔴 C2 · los mensajes del equipo NO ocupan la ventana de turnos de Len: 12 turnos y, aparte, los mensajes desde el más viejo de ellos", async () => {
+    const base = Date.UTC(2026, 9, 2);
+    const fila = (id: string, min: number, persona: boolean) => ({
+      id: `prueba-equipo-c2-${id}`,
+      projectId: PROYECTO,
+      userText: id,
+      assistantReasoning: persona ? "" : "hecho",
+      status: "applied",
+      createdAt: new Date(base + min * 60_000),
+      ...(persona ? { tipo: "persona", autorId: ELI, menciones: [DUENO] } : {}),
+    });
+    await db.insert(schema.projectChatMessages).values([
+      fila("persona-vieja", 0, true),
+      ...Array.from({ length: 14 }, (_, i) => fila(`turno-${i}`, 1 + i, false)),
+      ...Array.from({ length: 13 }, (_, i) => fila(`persona-${i}`, 20 + i, true)),
+    ]);
+    const filas = await filasParaElHistorialConEquipo(PROYECTO, 12);
+    const turnos = filas.filter((f) => f.tipo === null).map((f) => f.fila.userText);
+    const personas = filas.filter((f) => f.tipo === "persona").map((f) => f.fila.userText);
+    expect(turnos).toEqual(Array.from({ length: 12 }, (_, i) => `turno-${i + 2}`));
+    expect(personas).toEqual(Array.from({ length: 13 }, (_, i) => `persona-${i}`));
+    // En orden de fecha: los turnos primero (son anteriores), luego el equipo.
+    expect(filas.map((f) => f.createdAt.getTime())).toEqual([...filas.map((f) => f.createdAt.getTime())].sort((x, y) => x - y));
   });
 });

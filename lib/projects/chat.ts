@@ -5,7 +5,7 @@
 // project interleave instead of overwriting a shared blob. Callers verify
 // project ownership before invoking append/update — see the chat route.
 
-import { and, asc, desc, eq, getTableColumns, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { FilaDelHistorial, TranscripcionGuardada } from "@/lib/agent/transcripcion";
@@ -13,6 +13,7 @@ import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import { parseGoalSnapshot, type GoalSnapshot } from "@/lib/agent/goal";
 import { goalActivation } from "@/lib/agent/goal-activation";
 import { photosForRow, photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
+import { MAX_MENSAJES_DEL_EQUIPO } from "@/lib/agent/equipo";
 
 /** Las columnas de la fila SIN la transcripción (H4): el panel del chat no la
  *  usa, y son los resultados enteros de cada turno. Se calculan al usarse, no
@@ -206,28 +207,43 @@ export interface FilaCruda {
  *  equipo): las últimas `cuantos` filas, de la más vieja a la más reciente. */
 export async function filasParaElHistorialConEquipo(projectId: string, cuantos: number): Promise<FilaCruda[]> {
   const t = schema.projectChatMessages;
-  const rows = await db
-    .select({
-      tipo: t.tipo,
-      autorId: t.autorId,
-      menciones: t.menciones,
-      createdAt: t.createdAt,
-      userText: t.userText,
-      assistantReasoning: t.assistantReasoning,
-      transcript: t.transcript,
-      attachedImage: t.attachedImage,
-    })
+  const columnas = {
+    tipo: t.tipo,
+    autorId: t.autorId,
+    menciones: t.menciones,
+    createdAt: t.createdAt,
+    userText: t.userText,
+    assistantReasoning: t.assistantReasoning,
+    transcript: t.transcript,
+    attachedImage: t.attachedImage,
+  };
+  // Los turnos de Len, como siempre (`turnosParaElHistorial`): los mensajes del
+  // equipo NO cuentan en esa ventana —si contaran, una charla larga entre
+  // personas le quitaría a Len su historial, su modo plan y su encargo—.
+  const turnos = await db
+    .select(columnas)
     .from(t)
-    .where(and(enCurso(projectId), ne(t.status, ESTADO_EN_CURSO)))
+    .where(and(enCurso(projectId), ne(t.status, ESTADO_EN_CURSO), isNull(t.tipo)))
     .orderBy(desc(t.createdAt))
     .limit(cuantos);
-  return rows.reverse().map((r) => ({
-    tipo: r.tipo ?? null,
-    autorId: r.autorId ?? null,
-    menciones: r.menciones ?? null,
-    createdAt: r.createdAt,
-    fila: { userText: r.userText, assistantReasoning: r.assistantReasoning, transcript: r.transcript ?? null, attachedImage: r.attachedImage ?? null },
-  }));
+  // Y aparte, los mensajes del equipo desde el turno más viejo que se ve (los
+  // de antes ya no tienen dónde ir), con el tope del sobre.
+  const desde = turnos.at(-1)?.createdAt;
+  const personas = await db
+    .select(columnas)
+    .from(t)
+    .where(and(enCurso(projectId), eq(t.tipo, "persona"), desde ? gte(t.createdAt, desde) : undefined))
+    .orderBy(desc(t.createdAt))
+    .limit(MAX_MENSAJES_DEL_EQUIPO);
+  return [...turnos, ...personas]
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    .map((r) => ({
+      tipo: r.tipo ?? null,
+      autorId: r.autorId ?? null,
+      menciones: r.menciones ?? null,
+      createdAt: r.createdAt,
+      fila: { userText: r.userText, assistantReasoning: r.assistantReasoning, transcript: r.transcript ?? null, attachedImage: r.attachedImage ?? null },
+    }));
 }
 
 /**
