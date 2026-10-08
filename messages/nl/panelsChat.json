@@ -108,6 +108,17 @@
     "effortDynamis": "Len Odyssey denkt altijd zo grondig mogelijk na",
     "soloLectura": "Je kunt dit project bekijken, maar niet wijzigen. Vraag de eigenaar om bewerkrechten."
   },
+  "equipo": {
+    "paraLen": "Aan Len",
+    "paraPersonas": "Aan {nombres} · Len antwoordt niet",
+    "paraLenYPersonas": "Aan Len en {nombres}",
+    "soloEditoresLen": "Alleen bewerkers kunnen Len iets vragen",
+    "enviarA": "Stuur naar {nombre}",
+    "deA": "{autor} → {para} · Len antwoordt niet",
+    "mencionar": "{nombre} noemen",
+    "error": "Versturen mislukt. Probeer het opnieuw.",
+    "placeholder": "Schrijf Len, of @ om met iemand van het project te praten…"
+  },
   "noChange": {
     "label": "Er is niets op de pagina veranderd"
   },

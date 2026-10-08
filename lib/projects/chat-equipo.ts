@@ -57,3 +57,21 @@ export async function marcarChatVisto(projectId: string, userId: string): Promis
     .set({ vistaAt: new Date() })
     .where(and(eq(schema.projectChatMentions.projectId, projectId), eq(schema.projectChatMentions.userId, userId), isNull(schema.projectChatMentions.vistaAt)));
 }
+
+/** LA FIRMA DE LA CONVERSACIÓN EN CURSO, para que un chat compartido abierto la
+ *  relea sólo si cambió (y no el proyecto entero cada 10 s): cuántas filas, la
+ *  más nueva, y cuántas siguen en curso o están deshechas —un turno que termina
+ *  o se deshace cambia la firma sin añadir filas—. */
+export async function firmaDelChat(projectId: string): Promise<string> {
+  const t = schema.projectChatMessages;
+  const [r] = await db
+    .select({
+      n: sql<number>`count(*)::int`,
+      ultima: sql<string | null>`max(${t.createdAt})::text`,
+      enCurso: sql<number>`(count(*) filter (where ${t.status} = 'en_curso'))::int`,
+      deshechas: sql<number>`(count(*) filter (where ${t.status} = 'reverted'))::int`,
+    })
+    .from(t)
+    .where(and(eq(t.projectId, projectId), isNull(t.conversation)));
+  return `${r?.n ?? 0}:${r?.ultima ?? ""}:${r?.enCurso ?? 0}:${r?.deshechas ?? 0}`;
+}

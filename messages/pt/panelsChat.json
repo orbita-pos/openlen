@@ -108,6 +108,17 @@
     "effortDynamis": "O Len Odyssey sempre pensa o máximo possível",
     "soloLectura": "Você pode ver este projeto, mas não alterá-lo. Peça ao dono acesso de editor."
   },
+  "equipo": {
+    "paraLen": "Para o Len",
+    "paraPersonas": "Para {nombres} · o Len não responde",
+    "paraLenYPersonas": "Para o Len e {nombres}",
+    "soloEditoresLen": "Só editores podem pedir coisas ao Len",
+    "enviarA": "Enviar para {nombre}",
+    "deA": "{autor} → {para} · o Len não responde",
+    "mencionar": "Mencionar {nombre}",
+    "error": "Não foi possível enviar. Tente de novo.",
+    "placeholder": "Escreva ao Len, ou @ para falar com alguém do projeto…"
+  },
   "noChange": {
     "label": "Nada mudou na página"
   },

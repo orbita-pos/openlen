@@ -108,6 +108,17 @@
     "effortDynamis": "Len Odyssey denkt immer so gründlich wie möglich",
     "soloLectura": "Du kannst dieses Projekt ansehen, aber nicht ändern. Bitte den Eigentümer um Bearbeitungszugriff."
   },
+  "equipo": {
+    "paraLen": "An Len",
+    "paraPersonas": "An {nombres} · Len antwortet nicht",
+    "paraLenYPersonas": "An Len und {nombres}",
+    "soloEditoresLen": "Nur Bearbeiter können Len um etwas bitten",
+    "enviarA": "An {nombre} senden",
+    "deA": "{autor} → {para} · Len antwortet nicht",
+    "mencionar": "{nombre} erwähnen",
+    "error": "Senden fehlgeschlagen. Versuch es noch einmal.",
+    "placeholder": "Schreib Len, oder @, um mit jemandem im Projekt zu sprechen…"
+  },
   "noChange": {
     "label": "Auf der Seite hat sich nichts geändert"
   },

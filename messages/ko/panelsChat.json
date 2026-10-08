@@ -108,6 +108,17 @@
     "effortDynamis": "Len Odyssey는 항상 최대한 깊이 생각합니다",
     "soloLectura": "이 프로젝트는 볼 수만 있고 바꿀 수는 없습니다. 소유자에게 편집자 권한을 요청하세요."
   },
+  "equipo": {
+    "paraLen": "Len에게",
+    "paraPersonas": "{nombres}에게 · Len은 답하지 않아요",
+    "paraLenYPersonas": "Len과 {nombres}에게",
+    "soloEditoresLen": "편집자만 Len에게 요청할 수 있어요",
+    "enviarA": "{nombre}에게 보내기",
+    "deA": "{autor} → {para} · Len은 답하지 않아요",
+    "mencionar": "{nombre} 멘션",
+    "error": "보내지 못했어요. 다시 시도하세요.",
+    "placeholder": "Len에게 쓰거나, @로 프로젝트의 누군가와 이야기하세요…"
+  },
   "noChange": {
     "label": "페이지가 변경되지 않았습니다"
   },

@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   quienEnElProyecto: vi.fn(),
   escribirMensajeDelEquipo: vi.fn(async () => ({ id: "m1", mencionados: ["u-eli"] })),
   mencionesDelChatSinVer: vi.fn(async () => 2),
+  firmaDelChat: vi.fn(async () => "3:abc:0:0"),
   personasDelProyecto: vi.fn(async () => [
     { userId: "u-dana", nombre: "Dana Dueña", email: "d@x", rol: "dueno" },
     { userId: "u-eli", nombre: "Eli Editor", email: "e@x", rol: "editor" },
@@ -19,6 +20,7 @@ vi.mock("../../hilos/_comun", async (original) => ({
 vi.mock("@/lib/projects/chat-equipo", () => ({
   escribirMensajeDelEquipo: mocks.escribirMensajeDelEquipo,
   mencionesDelChatSinVer: mocks.mencionesDelChatSinVer,
+  firmaDelChat: mocks.firmaDelChat,
 }));
 vi.mock("@/lib/projects/hilos", async (original) => ({
   ...(await original<typeof import("@/lib/projects/hilos")>()),
@@ -76,5 +78,11 @@ describe("POST /api/projects/[id]/chat/mensajes — escribir a una persona", () 
     const res = await GET(new Request("http://localhost/api/projects/p1/chat/mensajes?solo=sinVer"), { params: Promise.resolve({ id: "p1" }) });
     expect(await res.json()).toEqual({ sinVer: 2 });
     expect(mocks.mencionesDelChatSinVer).toHaveBeenCalledWith("p1", "u-leo");
+  });
+
+  it("GET ?solo=firma devuelve la firma de la conversación, para releerla sólo si cambió", async () => {
+    const res = await GET(new Request("http://localhost/api/projects/p1/chat/mensajes?solo=firma"), { params: Promise.resolve({ id: "p1" }) });
+    expect(await res.json()).toEqual({ firma: "3:abc:0:0" });
+    expect(mocks.firmaDelChat).toHaveBeenCalledWith("p1");
   });
 });

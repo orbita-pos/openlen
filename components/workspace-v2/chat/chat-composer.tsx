@@ -49,6 +49,9 @@ export function ChatComposer({
   goalChip = false,
   goalAvailable = true,
   onToggleGoal,
+  debajo,
+  etiquetaEnviar,
+  placeholder,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -82,6 +85,13 @@ export function ChatComposer({
   goalChip?: boolean;
   goalAvailable?: boolean;
   onToggleGoal?: () => void;
+  /** EL CHAT DEL EQUIPO: la línea de a quién va, debajo de la caja. */
+  debajo?: ReactNode;
+  /** «Enviar a Eli» cuando el mensaje es para una persona: también con Len
+   *  trabajando, porque entonces el botón no dirige a Len. */
+  etiquetaEnviar?: string;
+  /** El texto de la caja vacía, si no es el de siempre (sin turno corriendo). */
+  placeholder?: string;
 }) {
   const t = useTranslations("panelsChat");
   const [plusOpen, setPlusOpen] = useState(false);
@@ -159,7 +169,7 @@ export function ChatComposer({
                 ? t("newChat.goal.placeholder")
                 : scopedSelection
                 ? t("composer.placeholderScoped", { target: scopedSelection.hint.split(" ")[0] ?? "" })
-                : t("composer.placeholder")
+                : (placeholder ?? t("composer.placeholder"))
           }
           className="mt-0.5 block w-full resize-none bg-transparent text-[14px] leading-normal fg outline-none placeholder:fg-faint nice-scroll"
           style={{ minHeight: 44 }}
@@ -291,12 +301,12 @@ export function ChatComposer({
             type="button"
             onClick={busy && !typed ? onStop : onSubmit}
             disabled={!busy && !hasContent}
-            aria-label={busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
-            title={busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
+            aria-label={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
+            title={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
             className={`ml-1 flex h-8 min-w-8 shrink-0 items-center justify-center gap-1.5 rounded-[10px] text-white transition hover:-translate-y-px disabled:translate-y-0 disabled:cursor-default ${
-              busy && typed
+              busy && typed && !etiquetaEnviar
                 ? "bg-[var(--accent-strong)] px-2.5 text-[12.5px] font-semibold"
-                : busy
+                : busy && !(typed && etiquetaEnviar)
                   ? "bg-[var(--fg)] !text-[var(--bg)]"
                   : hasContent
                     ? "bg-[var(--accent-strong)]"
@@ -308,12 +318,13 @@ export function ChatComposer({
             ) : (
               <>
                 <ArrowUp size={16} />
-                {busy && <span>{t("composer.steer")}</span>}
+                {busy && !etiquetaEnviar && <span>{t("composer.steer")}</span>}
               </>
             )}
           </button>
         </div>
       </div>
+      {debajo}
       <p className="mb-[-4px] mt-[7px] text-center text-[11px] fg-faint">{t("newChat.composer.disclaimer")}</p>
     </div>
   );

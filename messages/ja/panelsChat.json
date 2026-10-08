@@ -108,6 +108,17 @@
     "effortDynamis": "Len Odyssey は常に限界まで考えます",
     "soloLectura": "このプロジェクトは閲覧のみ可能です。編集するにはオーナーに編集者権限を依頼してください。"
   },
+  "equipo": {
+    "paraLen": "Len へ",
+    "paraPersonas": "{nombres} へ · Len は返信しません",
+    "paraLenYPersonas": "Len と {nombres} へ",
+    "soloEditoresLen": "Len に頼めるのは編集者だけです",
+    "enviarA": "{nombre} に送信",
+    "deA": "{autor} → {para} · Len は返信しません",
+    "mencionar": "{nombre} をメンション",
+    "error": "送信できませんでした。もう一度お試しください。",
+    "placeholder": "Len に書くか、@ でプロジェクトの誰かと話す…"
+  },
   "noChange": {
     "label": "ページに変更はありません"
   },

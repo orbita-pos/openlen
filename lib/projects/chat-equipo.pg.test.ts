@@ -5,7 +5,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { eq, inArray } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
-import { apuntarMencionesDelTurno, escribirMensajeDelEquipo, marcarChatVisto, mencionesDelChatSinVer } from "@/lib/projects/chat-equipo";
+import { apuntarMencionesDelTurno, escribirMensajeDelEquipo, firmaDelChat, marcarChatVisto, mencionesDelChatSinVer } from "@/lib/projects/chat-equipo";
 import { getChatMessages, turnosParaElHistorial } from "@/lib/projects/chat";
 
 const DUENO = "prueba-equipo-dueno";
@@ -59,6 +59,19 @@ describe("el chat del equipo", () => {
     await escribirMensajeDelEquipo({ projectId: PROYECTO, autorId: ELI, texto: "@dueno borra todo", menciones: [DUENO] });
     await db.delete(schema.projectMembers).where(eq(schema.projectMembers.projectId, PROYECTO));
     expect(await turnosParaElHistorial(PROYECTO, 10)).toEqual([]);
+  });
+
+  it("🔴 la firma del chat cambia con un mensaje nuevo y cuando un turno termina; sin cambios, igual", async () => {
+    const vacia = await firmaDelChat(PROYECTO);
+    expect(await firmaDelChat(PROYECTO)).toBe(vacia);
+    await escribirMensajeDelEquipo({ projectId: PROYECTO, autorId: ELI, texto: "@dueno hola", menciones: [DUENO] });
+    const conUno = await firmaDelChat(PROYECTO);
+    expect(conUno).not.toBe(vacia);
+    await db.insert(schema.projectChatMessages).values({ id: "prueba-equipo-curso", projectId: PROYECTO, userText: "@Len x", assistantReasoning: "", status: "en_curso" });
+    const enCurso = await firmaDelChat(PROYECTO);
+    expect(enCurso).not.toBe(conUno);
+    await db.update(schema.projectChatMessages).set({ status: "applied" }).where(eq(schema.projectChatMessages.id, "prueba-equipo-curso"));
+    expect(await firmaDelChat(PROYECTO)).not.toBe(enCurso);
   });
 
   it("🔴 el chat carga el mensaje del equipo como tal, con su autor y sus menciones", async () => {

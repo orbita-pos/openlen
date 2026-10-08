@@ -108,6 +108,17 @@
     "effortDynamis": "Len Odyssey 始终尽全力思考",
     "soloLectura": "你可以查看此项目，但不能修改。请向所有者申请编辑权限。"
   },
+  "equipo": {
+    "paraLen": "发给 Len",
+    "paraPersonas": "发给 {nombres} · Len 不会回复",
+    "paraLenYPersonas": "发给 Len 和 {nombres}",
+    "soloEditoresLen": "只有编辑者可以请 Len 做事",
+    "enviarA": "发送给 {nombre}",
+    "deA": "{autor} → {para} · Len 不会回复",
+    "mencionar": "提及 {nombre}",
+    "error": "发送失败，请重试。",
+    "placeholder": "写给 Len，或用 @ 与项目中的人交谈…"
+  },
   "noChange": {
     "label": "页面没有任何变化"
   },

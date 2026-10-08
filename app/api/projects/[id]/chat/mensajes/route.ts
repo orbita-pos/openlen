@@ -5,10 +5,12 @@
 //   escribir a alguien es comentar, no editar). Con `@Len` es un turno y va por
 //   /api/agent (400 lleva_len).
 // GET ?solo=sinVer → { sinVer }: las menciones del chat sin ver de quien pide.
+// GET ?solo=firma → { firma }: la firma de la conversación (`firmaDelChat`), para
+//   que un chat compartido abierto la relea sólo si cambió.
 import { z } from "zod";
 
 import { MAX_TEXTO_DEL_HILO, mencionesValidas, personasDelProyecto } from "@/lib/projects/hilos";
-import { escribirMensajeDelEquipo, mencionesDelChatSinVer } from "@/lib/projects/chat-equipo";
+import { escribirMensajeDelEquipo, firmaDelChat, mencionesDelChatSinVer } from "@/lib/projects/chat-equipo";
 import { scheduleNotification } from "@/lib/notifications/dispatch";
 import { mencionesDe } from "@/lib/workspace-v2/menciones";
 import { json, quienEnElProyecto } from "../../hilos/_comun";
@@ -28,7 +30,9 @@ export async function GET(req: Request, ctx: Ctx): Promise<Response> {
   const { id } = await ctx.params;
   const q = await quienEnElProyecto(id);
   if (!q.ok) return q.respuesta;
-  if (new URL(req.url).searchParams.get("solo") === "sinVer") return json({ sinVer: await mencionesDelChatSinVer(id, q.userId) });
+  const solo = new URL(req.url).searchParams.get("solo");
+  if (solo === "sinVer") return json({ sinVer: await mencionesDelChatSinVer(id, q.userId) });
+  if (solo === "firma") return json({ firma: await firmaDelChat(id) });
   return json({ error: "invalid_query" }, 400);
 }
 

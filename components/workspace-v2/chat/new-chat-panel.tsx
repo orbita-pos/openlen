@@ -40,6 +40,12 @@ import { useIsMobile } from "../use-is-mobile";
 import { turnosDelHilo } from "@/lib/workspace-v2/turnos-del-hilo";
 import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import { useTurnFeedback } from "./use-turn-feedback";
+import { useGenteDelChat } from "./use-gente-del-chat";
+import { MensajeDelEquipo } from "./mensaje-del-equipo";
+import { GenteDelChat } from "./gente-del-chat";
+import { LineaDeDestino } from "./linea-de-destino";
+import { destinoDe, permitido } from "@/lib/workspace-v2/destino-del-mensaje";
+import { colorDePersona } from "@/lib/workspace-v2/menciones";
 
 export interface NewChatPanelProps {
   flatProjectId?: string;
@@ -226,6 +232,72 @@ function AgentChatView({
     setSettledConfirms((s) => new Set(s).add(turnId));
   }, []);
 
+  // EL CHAT DEL EQUIPO (docs/superpowers/specs/2026-10-07-chat-del-equipo-design.md):
+  // en un proyecto con miembros, `@persona` sin `@Len` es un mensaje para ella
+  // (Len no responde); con `@Len`, un turno como siempre. Sin miembros, nada cambia.
+  const equipo = useGenteDelChat(projectId);
+  const idsDelEquipo = useMemo(() => equipo.gente.map((p) => p.userId), [equipo.gente]);
+  const colorDe = useCallback((id: string) => colorDePersona(id, idsDelEquipo), [idsDelEquipo]);
+  const destino = destinoDe(chat.draft, equipo.gente, equipo.yo);
+  const [errorEquipo, setErrorEquipo] = useState(false);
+  // Con el proyecto compartido y el chat abierto, cada 10 s se mira la firma de
+  // la conversación y sólo si cambió se relee (`onChatChange`); releer el
+  // proyecto entero cada 10 s, y avisar a las otras pestañas, sería mucho.
+  const onChatChangeRef = useRef(onChatChange);
+  onChatChangeRef.current = onChatChange;
+  const busyRef = useRef(chat.busy);
+  busyRef.current = chat.busy;
+  useEffect(() => {
+    if (!equipo.compartido) return;
+    let firma: string | null = null;
+    const mirar = async () => {
+      if (document.hidden || busyRef.current) return;
+      const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes?solo=firma`, { cache: "no-store" }).catch(() => null);
+      const j = r?.ok ? ((await r.json().catch(() => null)) as { firma?: unknown } | null) : null;
+      if (typeof j?.firma !== "string") return;
+      if (firma !== null && j.firma !== firma) onChatChangeRef.current?.();
+      firma = j.firma;
+    };
+    void mirar();
+    const reloj = window.setInterval(() => void mirar(), 10_000);
+    return () => window.clearInterval(reloj);
+  }, [equipo.compartido, projectId]);
+  // Abrir el chat ve las menciones (el punto del carril se apaga).
+  useEffect(() => {
+    if (!equipo.compartido) return;
+    void fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes/vistas`, { method: "POST" }).catch(() => {});
+  }, [equipo.compartido, projectId]);
+  const enviarAlEquipo = async (): Promise<boolean> => {
+    if (destino.tipo !== "personas") return false;
+    setErrorEquipo(false);
+    const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        texto: chat.draft,
+        menciones: destino.personas.map((p) => p.userId),
+        idioma: document.documentElement.lang || undefined,
+      }),
+    }).catch(() => null);
+    if (!r?.ok) {
+      setErrorEquipo(true);
+      return true;
+    }
+    chat.setDraft("");
+    onChatChange?.();
+    return true;
+  };
+  const enviar = async () => {
+    if (equipo.compartido) {
+      if (!permitido(destino, equipo.puedeLen)) return;
+      if (await enviarAlEquipo()) return;
+    }
+    chat.submit();
+  };
+  // Los mensajes entre personas no son turnos: la pregunta de Len la contesta
+  // su turno siguiente, no lo que se digan dos personas en medio.
+  const siguienteDeLen = (i: number) => chat.turns.slice(i + 1).find((x) => x.tipo !== "persona");
+
   const body = (
     <div className="nc flex h-full min-h-0 flex-col bg-side">
       <ChatHeader
@@ -240,6 +312,20 @@ function AgentChatView({
         closeLabel={tSidebar("sidebar.collapsePanel")}
         relativeTime={relativeTime}
       />
+      {equipo.compartido && (
+        <div className="flex shrink-0 justify-end border-b bd px-4 py-1.5">
+          <GenteDelChat
+            gente={equipo.gente}
+            yo={equipo.yo}
+            colorDe={colorDe}
+            onMencionar={(n) => {
+              const d = chat.draft;
+              chat.setDraft(`${d}${d && !d.endsWith(" ") ? " " : ""}@${n} `);
+              queueMicrotask(() => chat.taRef.current?.focus());
+            }}
+          />
+        </div>
+      )}
       <div className={`nc-fold shrink-0 ${memoryOpen ? "border-b bd" : ""}`} data-open={memoryOpen}>
         <div>{memoryOpen && <MemoryDrawer projectId={projectId} memory={memory} />}</div>
       </div>
@@ -254,13 +340,16 @@ function AgentChatView({
             }}
           />
         ) : (
-          chat.turns.map((turn, i) => (
+          chat.turns.map((turn, i) =>
+            turn.tipo === "persona" ? (
+              <MensajeDelEquipo key={turn.id} turn={turn} gente={equipo.gente} yo={equipo.yo} colorDe={colorDe} />
+            ) : (
             <div key={turn.id} className="flex flex-col gap-4">
               <UserMessage turn={turn} initial={initial} onAbrirOrigen={(ruta) => abrirEnElCodigo.abrir(projectId, ruta)} />
               <LenTurn
                 turn={turn}
-                next={chat.turns[i + 1]}
-                isLast={i === chat.turns.length - 1}
+                next={siguienteDeLen(i)}
+                isLast={siguienteDeLen(i) === undefined}
                 currentPage={flatProjectPage}
                 projectId={projectId}
                 // Un turno con error no tiene `appliedAt`: su hora es la de cuando
@@ -282,7 +371,8 @@ function AgentChatView({
                 onClearRate={() => feedback.clear(turn.id)}
               />
             </div>
-          ))
+            ),
+          )
         )}
       </div>
       <div className="relative z-[2] shrink-0 px-3 pb-3 pt-1">
@@ -297,7 +387,7 @@ function AgentChatView({
             onClear={() => void chat.clearGoal()}
           />
         )}
-        {soloLectura ? (
+        {soloLectura && !equipo.compartido ? (
           <p className="m-3 rounded-xl border bd bg-elev px-3 py-2.5 text-[12.5px] fg-muted" data-solo-lectura="">
             {t("composer.soloLectura")}
           </p>
@@ -305,7 +395,7 @@ function AgentChatView({
           <ChatComposer
             value={chat.draft}
             onChange={chat.setDraft}
-            onSubmit={chat.submit}
+            onSubmit={() => void enviar()}
             onStop={chat.handleCancel}
             busy={chat.busy}
             textareaRef={chat.taRef}
@@ -329,6 +419,20 @@ function AgentChatView({
             goalChip={chat.goalChip}
             goalAvailable={chat.goalAvailable}
             {...(chat.goalOffered ? { onToggleGoal: chat.toggleGoalChip } : {})}
+            {...(equipo.compartido
+              ? {
+                  placeholder: t("equipo.placeholder"),
+                  debajo: (
+                    <>
+                      <LineaDeDestino destino={destino} puedeLen={equipo.puedeLen} colorDe={colorDe} />
+                      {errorEquipo && <p className="px-3 pb-1 text-[11.5px] text-accent">{t("equipo.error")}</p>}
+                    </>
+                  ),
+                  ...(destino.tipo === "personas"
+                    ? { etiquetaEnviar: t("equipo.enviarA", { nombre: destino.personas.map((p) => p.nombre).join(", ") }) }
+                    : {}),
+                }
+              : {})}
           />
         )}
       </div>
