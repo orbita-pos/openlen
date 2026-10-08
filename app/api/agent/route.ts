@@ -1300,11 +1300,18 @@ async function correrTurno(
                 console.warn("[agent] no se pudieron apuntar las menciones", err),
               );
               const nombre = genteDelProyecto.find((p) => p.userId === quien)?.nombre ?? "";
+              const idioma = typeof body?.idioma === "string" ? body.idioma.slice(0, 10) : null;
               void import("@/lib/notifications/dispatch")
                 .then(({ scheduleNotification }) =>
                   Promise.all(
                     mencionados.map((recipientUserId) =>
-                      scheduleNotification({ type: "mencion", donde: "chat", projectId, recipientUserId, quien: nombre, preview: prompt.slice(0, 200), idioma: null }),
+                      // Como Slack: espera un minuto (si lo ve antes, nada) y las
+                      // seguidas se juntan en un aviso (`mencion-chat:`).
+                      scheduleNotification(
+                        { type: "mencion", donde: "chat", projectId, recipientUserId, quien: nombre, preview: prompt.slice(0, 200), idioma },
+                        `mencion-chat:${projectId}:${recipientUserId}`,
+                        { retrasoMs: 60_000 },
+                      ),
                     ),
                   ),
                 )

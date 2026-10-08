@@ -1348,6 +1348,10 @@ export function useAgentChat({
               // LA HORA DEL USUARIO: «hoy» es su día, no el de UTC
               // (plans/len-resultados/diseno.md §7).
               zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              // EL IDIOMA DE LA INTERFAZ: el de los avisos de una mención que
+              // salga de este turno (el chat del equipo), y el `lang` de una app
+              // que nace (`camposDeNacer` lo pisa con el suyo si viene).
+              idioma: locale,
               // PIEZA 3: este chat SABE contestar las preguntas de Len dentro del
               // turno (la tarjeta con opciones y `POST /api/agent/responder`).
               answersQuestions: true,

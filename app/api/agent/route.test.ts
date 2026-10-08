@@ -2642,11 +2642,13 @@ describe("POST /api/agent — un miembro del proyecto", () => {
       usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
       terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
     });
-    await readEvents(await pedir({ prompt: "@Len y @Eli Editor revisad el pie, @Ana Editora también" }));
+    await readEvents(await pedir({ prompt: "@Len y @Eli Editor revisad el pie, @Ana Editora también", idioma: "es" }));
     expect(mocks.apuntarMencionesDelTurno).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p1", mencionados: ["eli"] }));
     await vi.waitFor(() => expect(mocks.scheduleNotification).toHaveBeenCalled());
     expect(mocks.scheduleNotification).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "mencion", donde: "chat", projectId: "p1", recipientUserId: "eli", quien: "Ana Editora" }),
+      expect.objectContaining({ type: "mencion", donde: "chat", projectId: "p1", recipientUserId: "eli", quien: "Ana Editora", idioma: "es" }),
+      "mencion-chat:p1:eli",
+      { retrasoMs: 60_000 },
     );
     expect(mocks.scheduleNotification).toHaveBeenCalledTimes(1);
   });

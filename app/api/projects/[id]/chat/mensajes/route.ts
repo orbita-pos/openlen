@@ -57,7 +57,12 @@ export async function POST(req: Request, ctx: Ctx): Promise<Response> {
       quien: q.nombre,
       preview: body.data.texto.slice(0, 200),
       idioma: body.data.idioma ?? null,
-    }).catch((err) => console.error("[chat-equipo] no se pudo programar el aviso de mención", err));
+    },
+    // Como Slack: el aviso espera un minuto (si lo ve antes, no sale) y las
+    // menciones seguidas a la misma persona se juntan en UN aviso.
+    `mencion-chat:${id}:${recipientUserId}`,
+    { retrasoMs: 60_000 },
+    ).catch((err) => console.error("[chat-equipo] no se pudo programar el aviso de mención", err));
   }
   return json({ id: escrito.id, mencionados: escrito.mencionados });
 }

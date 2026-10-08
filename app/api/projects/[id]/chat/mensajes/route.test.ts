@@ -52,6 +52,9 @@ describe("POST /api/projects/[id]/chat/mensajes — escribir a una persona", () 
     expect(mocks.escribirMensajeDelEquipo).toHaveBeenCalledWith({ projectId: "p1", autorId: "u-leo", texto: "@Eli Editor mira el pie", menciones: ["u-eli"] });
     expect(mocks.scheduleNotification).toHaveBeenCalledWith(
       expect.objectContaining({ type: "mencion", donde: "chat", recipientUserId: "u-eli", quien: "Leo Lector", projectId: "p1", idioma: "es" }),
+      // Como Slack: espera un minuto y las seguidas se juntan en un aviso.
+      "mencion-chat:p1:u-eli",
+      { retrasoMs: 60_000 },
     );
   });
 
