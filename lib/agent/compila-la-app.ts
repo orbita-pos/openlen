@@ -72,6 +72,18 @@ export function problemasDelCascaron(app: AppDeProyecto, cascaron: string, carpe
       fuera.push(diag(`${app.entrada} mounts the app in #${id}, and the shell has no element with id="${id}".`, "raiz"));
     }
   }
+  // El tailwind.config de shadcn trae `plugins: [require("tailwindcss-animate")]`
+  // por reflejo. En el navegador `require` no existe: el script lanza y el CDN se
+  // queda sin la config ENTERA (colores, radios, modo oscuro). Sólo cuenta un
+  // `require(` en el MISMO script que asigna la config.
+  if (/<script\b[^>]*>(?:(?!<\/script)[\s\S])*?tailwind\.config\s*=(?:(?!<\/script)[\s\S])*?\brequire\s*\(/i.test(cascaron)) {
+    fuera.push(
+      diag(
+        "The shell's tailwind.config calls require(). There is no require in a browser: the script throws and the whole config is lost (colors, radius, dark mode). Keep the config as plain data, with no plugins; write keyframes and animations in theme.extend.",
+        "tailwind-config",
+      ),
+    );
+  }
   return fuera;
 }
 

@@ -28,7 +28,7 @@
 
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE } from "@/lib/agent/convertir-en-app";
-import { catalogo } from "@/lib/apps/dependencias";
+import { catalogo, dependenciaDe } from "@/lib/apps/dependencias";
 import { ICONOS_DE_LAS_APPS } from "@/lib/apps/iconos";
 import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
 import {
@@ -129,17 +129,22 @@ function seccionDeLaApp(app: AppDeProyecto): string {
     .filter((d) => !d.hiddenFromManual)
     .map((d) => `  · ${d.especificador} — ${d.para}`)
     .join("\n");
+  // Sólo con un catálogo que trae Radix (2026-11 en adelante): uno sin sus
+  // paquetes no puede prometer shadcn.
+  const shadcn = dependenciaDe(app.catalogo, "radix-ui")
+    ? `\n  shadcn/ui works as usual: you write its components in /src/components/ui (one per file, as its CLI would), cn() in /src/lib/utils.ts with clsx and tailwind-merge, and each Radix primitive imports from "radix-ui" or as @radix-ui/react-<name>.`
+    : "";
   return `THIS PROJECT IS A WEB APP:
 React in /src —.jsx, .tsx, .ts or .js— that OpenLen serves and publishes as it is. There is no bundler, no npm and no build: each file is compiled on its own (JSX and TypeScript to JavaScript, at the same path and keeping its line numbers) and the browser joins them through their imports.
 - /index.html is the shell: its <head> (<title>, <meta>, the Tailwind and Google Fonts tags, a <style> of your own) and, in its <body>, <div id="root"> and <script type="module" src="${app.entrada}">. Without those two the app doesn't start. The app itself never goes in it.
 - ${app.entrada} mounts the app (createRoot(document.getElementById("root")).render(…)) inside <HashRouter>; /src/App.jsx holds the routes; each screen goes in /src/screens and each component in /src/components, one per file; /src/lib/supabase.js exports the backend client.
 - IMPORTS work as in Vite: "./x", "../x", "/src/x" and "@/x" (= /src/x), with or without extension, or a folder's index; import "./x.css" adds that stylesheet; import data from "./x.json". import.meta.env has VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (also as VITE_SUPABASE_ANON_KEY), MODE, DEV and PROD: public values only — a secret never goes in the code.
 - PACKAGES, the only ones (catalog ${app.catalogo}):
-${paquetes}
+${paquetes}${shadcn}
   Nothing else can be installed, because there is no npm here: anything else is written in the project. A package or an export that isn't there is a compile error that names the closest ones.
 - ICONS: lucide-react has a selection of ${ICONOS_DE_LAS_APPS.length} icons, the usual ones for an app (${ALGUNOS_ICONOS.join(", ")}…), by their current name or their old one, with or without the Icon suffix. If one isn't there, the compiler says so and suggests the closest; or draw it as an inline <svg>.
 - SCREENS are hash routes: <HashRouter> (in ${app.entrada}) with <Routes> and <Route path="/sales" element={<Sales />} />, <Link to="/sales">, useNavigate() and useParams(). The address is /#/sales. BrowserRouter, createBrowserRouter and the data routers (loaders, actions) don't exist here: a path without # breaks when the published app is reloaded. Never write a /<slug>/index.html in an app: it would be a static page outside it.
-- STYLES are Tailwind classes in className, written WHOLE. When publishing, OpenLen builds the CSS from the classes that appear in the files, so a class assembled in pieces (\`bg-\${color}-500\`) is missing from the published app even though it worked on the canvas. To vary one, choose between whole names: ok ? "bg-green-600" : "bg-red-600". Your own CSS goes in a .css file imported from ${app.entrada}, or in the shell's <style>.
+- STYLES are Tailwind classes in className, written WHOLE. When publishing, OpenLen builds the CSS from the classes that appear in the files, so a class assembled in pieces (\`bg-\${color}-500\`) is missing from the published app even though it worked on the canvas. To vary one, choose between whole names: ok ? "bg-green-600" : "bg-red-600". Your own CSS goes in a .css file imported from ${app.entrada}, or in the shell's <style>. A .css file may use Tailwind's @layer and @apply, with the theme of the shell's tailwind.config, as in a Vite project. It is Tailwind CSS 3: the theme lives in that tailwind.config and the colors as CSS variables in @layer base — not Tailwind 4's @import "tailwindcss", @theme or @custom-variant, which do nothing here. That tailwind.config is plain data: no require() and no plugins (tailwindcss-animate is not available: write the keyframes and animations in theme.extend).
 - ERRORS: a file that doesn't compile comes back in <new-diagnostics> with its file and line, and is NOT served: the app is blank until it is fixed. What fails while the app runs (view_page and use_page) comes with the error's message and, when the browser gives it, the file and line of the source. The canvas, view_page and use_page run React's development build, with its whole error messages; the published app, the production one.
 - There is no StrictMode: each effect runs once, as in the published app.`;
 }
