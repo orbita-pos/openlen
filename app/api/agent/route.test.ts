@@ -74,6 +74,7 @@ const mocks = vi.hoisted(() => ({
   turnosParaElHistorial: vi.fn(async (): Promise<unknown[]> => []),
   filasParaElHistorialConEquipo: vi.fn(async (): Promise<unknown[]> => []),
   apuntarMencionesDelTurno: vi.fn(async () => {}),
+  nombresDeUsuarios: vi.fn(async (): Promise<Map<string, string>> => new Map()),
   registrarTurnoDelServidor: vi.fn(async () => {}),
   // Len 2.1: la fila del turno se abre al empezar y se va llenando.
   abrirFilaDelTurno: vi.fn(async () => {}),
@@ -213,7 +214,7 @@ vi.mock("@/lib/agent/tools", () => ({
 // lee el bucle: el turno real se abre y se cierra dentro del mismo `POST`, asi
 // que con el almacen de verdad no hay ventana para meter nada desde fuera.
 vi.mock("@/lib/notifications/dispatch", () => ({ scheduleNotification: mocks.scheduleNotification }));
-vi.mock("@/lib/projects/chat-equipo", () => ({ apuntarMencionesDelTurno: mocks.apuntarMencionesDelTurno }));
+vi.mock("@/lib/projects/chat-equipo", () => ({ apuntarMencionesDelTurno: mocks.apuntarMencionesDelTurno, nombresDeUsuarios: mocks.nombresDeUsuarios }));
 vi.mock("@/lib/agent/direcciones", () => ({
   abrirTurno: mocks.abrirTurno,
   cerrarTurno: vi.fn(),
@@ -2587,6 +2588,26 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     const sinEquipo = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string; equipo?: boolean }])[0];
     expect(sinEquipo.prompt).toBe("@Len pon el pie gris");
     expect(sinEquipo.equipo).toBe(false);
+  });
+
+  it("🔴 I1 · quien ya dejó el proyecto sale en el sobre con su nombre (no «someone»)", async () => {
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "Hecho.", turns: 1, toolCalls: 0,
+      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
+    });
+    mocks.personasDelProyecto.mockResolvedValueOnce([
+      { userId: "dueno-1", nombre: "Dana Dueña", email: "d@x", rol: "dueno" },
+      { userId: "ana", nombre: "Ana Editora", email: "a@x", rol: "editor" },
+    ]);
+    mocks.filasParaElHistorialConEquipo.mockResolvedValueOnce([
+      { tipo: "persona", autorId: "ex-1", menciones: ["ana"], createdAt: new Date(Date.UTC(2026, 9, 7, 18, 2)), fila: { userText: "me voy", assistantReasoning: "", transcript: null } },
+    ]);
+    mocks.nombresDeUsuarios.mockResolvedValueOnce(new Map([["ex-1", "Eva Exmiembro"]]));
+    await readEvents(await pedir({ prompt: "@Len hola" }));
+    const args = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string }])[0];
+    expect(args.prompt).toContain('<message from="Eva Exmiembro" role="former member" to="Ana Editora"');
+    expect(mocks.nombresDeUsuarios).toHaveBeenCalledWith(["ex-1"]);
   });
 
   it("🔴 «@Len y @Eli Editor …» es un turno que además apunta la mención y avisa a Eli por el chat", async () => {

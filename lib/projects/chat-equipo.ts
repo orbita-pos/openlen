@@ -4,7 +4,7 @@
 // en un canal de Claude Tag. Lo ve todo el proyecto y Len lo lee como contexto
 // (lib/agent/equipo.ts). Ownership y permisos, del llamador.
 
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { MAX_TEXTO_DEL_HILO, mencionesValidas, personasDelProyecto } from "@/lib/projects/hilos";
@@ -78,4 +78,15 @@ export async function firmaDelChat(projectId: string): Promise<string> {
     .from(t)
     .where(and(eq(t.projectId, projectId), isNull(t.conversation)));
   return `${r?.n ?? 0}:${r?.ultima ?? ""}:${r?.enCurso ?? 0}:${r?.deshechas ?? 0}`;
+}
+
+/** El nombre visible (o el correo) de cada usuario, para quien ya no está en el
+ *  proyecto pero sigue en la charla: el sobre de Len lo nombra igual. */
+export async function nombresDeUsuarios(ids: readonly string[]): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db
+    .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+    .from(schema.users)
+    .where(inArray(schema.users.id, [...ids]));
+  return new Map(rows.map((u) => [u.id, u.name?.trim() || u.email]));
 }

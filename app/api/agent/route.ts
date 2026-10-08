@@ -3,7 +3,7 @@ import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { accesoAlProyecto, puede } from "@/lib/projects/acceso";
 import { conAutor } from "@/lib/projects/autor-del-cambio";
 import { hiloDelProyecto, mencionesValidas, personasDelProyecto, respuestaDeLen } from "@/lib/projects/hilos";
-import { apuntarMencionesDelTurno } from "@/lib/projects/chat-equipo";
+import { apuntarMencionesDelTurno, nombresDeUsuarios } from "@/lib/projects/chat-equipo";
 import { mencionesDe } from "@/lib/workspace-v2/menciones";
 import { registrarCorredorDeTurnos, type PedidoDelHilo } from "@/lib/agent/turnos-desde-el-servidor";
 import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miembros";
@@ -568,7 +568,13 @@ async function correrTurno(
   let filasDelHistorial: FilaDelHistorial[];
   if (compartido) {
     const crudas = await filasParaElHistorialConEquipo(projectId, TURNOS_DEL_HISTORIAL).catch(() => []);
-    const plegado = plegarEquipo(crudas, genteDelProyecto, userId);
+    // Quien ya dejó el proyecto (autor o mencionado) se nombra igual en el sobre.
+    const enElProyecto = new Set(genteDelProyecto.map((p) => p.userId));
+    const fuera = [...new Set(crudas.filter((f) => f.tipo === "persona").flatMap((f) => [f.autorId ?? "", ...(f.menciones ?? [])]))].filter(
+      (id) => id && !enElProyecto.has(id),
+    );
+    const nombres = await nombresDeUsuarios(fuera).catch(() => new Map<string, string>());
+    const plegado = plegarEquipo(crudas, genteDelProyecto, userId, (id) => nombres.get(id) ?? null);
     filasDelHistorial = plegado.filas;
     equipoAhora = plegado.ahora;
   } else {
