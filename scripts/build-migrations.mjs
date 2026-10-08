@@ -138,6 +138,16 @@ const targets = [
   "folder-migrate",
   // F2 de las apps web: lo que cambió cada turno, para deshacerlo entero.
   "turn-changes-migrate",
+  // Compartir el proyecto: projectMembers, invitaciones, el gasto de los
+  // miembros y `autorId` en el chat y las versiones. Aditiva e idempotente.
+  "miembros-migrate",
+  // Los hilos del código (codeThreads, sus mensajes y menciones) y
+  // `projectChatMessages.origen`.
+  "hilos-migrate",
+  // El chat del equipo: `projectChatMessages.tipo` / `.menciones` y
+  // projectChatMentions. 🔴 OBLIGATORIA antes que el código: el panel del chat
+  // SELECCIONA todas las columnas de la fila.
+  "chat-equipo-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE
