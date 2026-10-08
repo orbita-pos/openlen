@@ -70,6 +70,7 @@
     "turn-changes:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/turn-changes-migrate.ts",
     "miembros:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/miembros-migrate.ts",
     "hilos:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/hilos-migrate.ts",
+    "chat-equipo:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/chat-equipo-migrate.ts",
     "movil:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/movil-migrate.ts",
     "renewal-reminders:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/renewal-reminders-migrate.ts",
     "publish-hash:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/publish-hash-migrate.ts",

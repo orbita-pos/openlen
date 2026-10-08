@@ -410,6 +410,14 @@ export const projectChatMessages = pgTable(
     // hilo, el fichero y la línea, para la etiqueta del chat. NULL = desde el chat.
     // `npm run hilos:migrate`.
     origen: jsonb("origen").$type<{ hiloId: string; ruta: string; linea: number }>(),
+    // EL CHAT DEL EQUIPO (docs/superpowers/specs/2026-10-07-chat-del-equipo-design.md):
+    // NULL = un turno con Len (todo lo de siempre); "persona" = un mensaje entre
+    // personas del proyecto, sin respuesta de Len. Sin migración de datos: las
+    // filas de antes son turnos.
+    tipo: text("tipo"),
+    // A quién menciona la fila (ids de usuario): en un mensaje entre personas, y
+    // en un turno con Len que además menciona a alguien.
+    menciones: jsonb("menciones").$type<string[]>(),
     status: text("status").notNull(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     // LA CHARLA A LA QUE PERTENECE (plans/new-chat/, «Empezar de cero»). NULL =
@@ -1352,6 +1360,20 @@ export const codeMentions = pgTable(
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => [index("codeMentions_user_idx").on(t.userId, t.projectId)],
+);
+
+/** Las menciones del CHAT sin ver (el punto del carril), con la forma de `codeMentions`. */
+export const projectChatMentions = pgTable(
+  "projectChatMentions",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    mensajeId: text("mensajeId").notNull().references(() => projectChatMessages.id, { onDelete: "cascade" }),
+    userId: text("userId").notNull(),
+    vistaAt: timestamp("vistaAt", { mode: "date" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("projectChatMentions_user_idx").on(t.userId, t.projectId)],
 );
 
 // ─── Broadcast module — email your audience (members-only, v1) ──────────────
