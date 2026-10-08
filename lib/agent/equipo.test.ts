@@ -52,4 +52,9 @@ describe("el sobre de los mensajes del equipo", () => {
     expect(quienPide(GENTE[0]!)).toBe('<asked-by name="Dana Dueña" role="owner"/>');
     expect(quienPide(null)).toBe("");
   });
+
+  it("🔴 las fotos de un mensaje van dentro, con su dirección (escapada), para que Len pueda usarlas", () => {
+    const con = { ...m("u-eli", "esta foto", ["u-dana"], 40), fotos: [{ url: 'https://x.test/a.jpg?q="1"' }] };
+    expect(sobreDelEquipo([con], GENTE)).toContain('>esta foto<image src="https://x.test/a.jpg?q=&quot;1&quot;"/></message>');
+  });
 });

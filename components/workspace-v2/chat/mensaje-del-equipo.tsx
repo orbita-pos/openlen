@@ -28,7 +28,9 @@ export function MensajeDelEquipo({
   const nombre = (id: string) =>
     gente.find((p) => p.userId === id)?.nombre ?? turn.nombres?.[id] ?? (id === autorId ? turn.autor : undefined) ?? "?";
   const para = (turn.menciones ?? []).map(nombre).join(", ");
-  const inicial = (nombre(autorId).trim()[0] ?? "?").toUpperCase();
+  // Las fotos que lleva el mensaje (una, o todas si son varias).
+  const fotos = turn.attachedImages ?? (turn.attachedImage ? [turn.attachedImage] : []);
+  const inicial =(nombre(autorId).trim()[0] ?? "?").toUpperCase();
   return (
     <div className={`nc-up flex items-start gap-2 ${propio ? "flex-row-reverse" : ""}`} data-mensaje-del-equipo={propio ? "propio" : "ajeno"}>
       <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10.5px] font-bold text-white" style={{ background: colorDe(autorId) }}>
@@ -39,6 +41,16 @@ export function MensajeDelEquipo({
         <p className="mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-relaxed fg">
           <TextoConMenciones texto={turn.userText} gente={gente} colorDe={colorDe} />
         </p>
+        {fotos.length > 0 && (
+          <div className={`mt-1.5 flex flex-wrap gap-1.5 ${propio ? "justify-end" : ""}`}>
+            {fotos.map((f) => (
+              <a key={f.url} href={f.url} target="_blank" rel="noreferrer">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={f.url} alt={f.alt ?? ""} className="h-16 w-16 rounded-[8px] border bd object-cover" />
+              </a>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

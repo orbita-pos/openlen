@@ -9,6 +9,7 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { MAX_TEXTO_DEL_HILO, mencionesValidas, personasDelProyecto } from "@/lib/projects/hilos";
 import { trim } from "@/lib/projects/chat";
+import { MAX_PHOTOS_PER_MESSAGE, photosForRow, type ChatPhoto } from "@/lib/projects/chat-photos";
 
 export const TIPO_PERSONA = "persona";
 
@@ -17,6 +18,8 @@ export async function escribirMensajeDelEquipo(p: {
   autorId: string;
   texto: string;
   menciones: readonly string[];
+  /** Las fotos adjuntas, como las de un turno (`photosForRow`). */
+  fotos?: readonly ChatPhoto[];
 }): Promise<{ id: string; mencionados: string[] }> {
   const mencionados = mencionesValidas(p.menciones, await personasDelProyecto(p.projectId), p.autorId);
   const id = crypto.randomUUID();
@@ -30,6 +33,7 @@ export async function escribirMensajeDelEquipo(p: {
     // El autor, siempre explícito (también el dueño): el color y el sobre lo leen.
     autorId: p.autorId,
     menciones: mencionados,
+    attachedImage: photosForRow((p.fotos ?? []).slice(0, MAX_PHOTOS_PER_MESSAGE)),
   });
   if (mencionados.length > 0) {
     await db.insert(schema.projectChatMentions).values(mencionados.map((userId) => ({ projectId: p.projectId, mensajeId: id, userId })));
@@ -89,4 +93,15 @@ export async function nombresDeUsuarios(ids: readonly string[]): Promise<Map<str
     .from(schema.users)
     .where(inArray(schema.users.id, [...ids]));
   return new Map(rows.map((u) => [u.id, u.name?.trim() || u.email]));
+}
+
+/** ¿Tiene el proyecto algún miembro? UNA consulta barata, para que un turno en
+ *  un proyecto sin miembros (casi todos) no pida las personas para nada. */
+export async function proyectoCompartido(projectId: string): Promise<boolean> {
+  const [r] = await db
+    .select({ id: schema.projectMembers.id })
+    .from(schema.projectMembers)
+    .where(eq(schema.projectMembers.projectId, projectId))
+    .limit(1);
+  return Boolean(r);
 }

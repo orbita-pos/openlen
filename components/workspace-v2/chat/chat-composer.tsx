@@ -58,6 +58,7 @@ export function ChatComposer({
   etiquetaEnviar,
   placeholder,
   mencionables,
+  bloqueado = false,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -102,6 +103,9 @@ export function ChatComposer({
    *  persona, y las menciones se ven en su color dentro de la caja, como en los
    *  hilos del código. Sin esto, la caja de siempre. */
   mencionables?: { gente: readonly PersonaMencionable[]; colorDe: (userId: string) => string; conLen: boolean };
+  /** No se puede enviar lo que hay en la caja (un mensaje al equipo en vuelo,
+   *  o un lector que le pide algo a Len): ni el botón ni Enter envían. */
+  bloqueado?: boolean;
 }) {
   const t = useTranslations("panelsChat");
   const [plusOpen, setPlusOpen] = useState(false);
@@ -177,7 +181,7 @@ export function ChatComposer({
               if (arroba.tecla(e)) return;
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                onSubmit();
+                if (!bloqueado) onSubmit();
               }
             },
             rows: 1,
@@ -333,11 +337,13 @@ export function ChatComposer({
           <button
             type="button"
             onClick={busy && !typed ? onStop : onSubmit}
-            disabled={!busy && !hasContent}
+            disabled={(!busy && !hasContent) || (bloqueado && typed)}
             aria-label={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
             title={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
             className={`ml-1 flex h-8 min-w-8 shrink-0 items-center justify-center gap-1.5 rounded-[10px] text-white transition hover:-translate-y-px disabled:translate-y-0 disabled:cursor-default ${
-              busy && typed && !etiquetaEnviar
+              bloqueado && typed
+                ? "bg-[var(--border-strong)]"
+                : busy && typed && !etiquetaEnviar
                 ? "bg-[var(--accent-strong)] px-2.5 text-[12.5px] font-semibold"
                 : busy && !(typed && etiquetaEnviar)
                   ? "bg-[var(--fg)] !text-[var(--bg)]"

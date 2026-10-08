@@ -115,7 +115,8 @@ import { isBlankProject } from "@/lib/projects/blank";
 import { UNTITLED_PROJECT_TITLE } from "@/lib/projects/titulo-del-html";
 import { uploadPhotos } from "@/lib/workspace-v2/upload-photos";
 import type { PendingAttachments } from "@/components/workspace-v2/chat/use-agent-chat";
-import { useChatSinVer } from "@/components/workspace-v2/chat/use-chat-sin-ver";
+import { chatALaVista, useChatSinVer } from "@/components/workspace-v2/chat/use-chat-sin-ver";
+import { setChatLayout, useChatLayout } from "@/components/workspace-v2/chat/use-chat-version";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
 import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import type { AppDeProyecto, SitePage } from "@/lib/projects/types";
@@ -370,6 +371,7 @@ function NewV2Inner() {
   }, [entryMode]);
   const [leftCollapsed, setLeftCollapsed] = useState(entryMode === "ai");
   const isMobile = useIsMobile();
+  const chatLayout = useChatLayout();
   // Collapse the sidebar to the rail when the center carries the whole surface,
   // re-applied once per entry-mode transition (a synced ref so a manual toggle
   // persists). DESKTOP: the AI landing (bare /new, no page) collapses — its
@@ -1368,7 +1370,10 @@ function NewV2Inner() {
   const soloLector = loadedProject?.rol === "lector";
   // El chat del equipo: las menciones del chat sin ver, un punto en su icono del
   // carril; con el chat a la vista, 0 (abrirlo las ve).
-  const chatSinVer = useChatSinVer(loadedProject?.id ?? null, mode === "chat" && !leftCollapsed);
+  const chatSinVer = useChatSinVer(
+    loadedProject?.id ?? null,
+    chatALaVista({ mode, plegado: leftCollapsed, layout: chatLayout, movil: isMobile }),
+  );
   // EL ENLACE DE UN AVISO DE MENCIÓN (`?codigo=/src/App.jsx`, hilos en el
   // código): al cargar el proyecto, abre ese fichero en la lente «Código».
   const codigoParam = searchParams.get("codigo");
@@ -1390,7 +1395,11 @@ function NewV2Inner() {
     if (!id || !chatParam || chatAbiertoPorEnlace.current === id) return;
     chatAbiertoPorEnlace.current = id;
     setMode("chat");
-  }, [loadedProject?.id, chatParam]);
+    // A la vista de verdad: en el móvil el panel entra plegado, y un chat
+    // minimizado no enseña la mención que el aviso prometía.
+    setLeftCollapsed(false);
+    if (chatLayout === "minimized") setChatLayout("docked");
+  }, [loadedProject?.id, chatParam, chatLayout]);
   const editingActive =
     inspectMode &&
     !esApp &&

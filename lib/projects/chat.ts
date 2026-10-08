@@ -738,8 +738,10 @@ export async function listArchivedConversations(projectId: string): Promise<Arch
   const rows = await db
     .select({
       id: t.conversation,
-      title: sql<string>`(array_agg(${t.userText} ORDER BY ${t.createdAt}))[1]`,
-      turns: sql<number>`count(*)::int`,
+      // Por sus turnos con Len: los mensajes del equipo (tipo «persona») no
+      // titulan ni cuentan; una charla sólo de equipo se titula con el primero.
+      title: sql<string>`coalesce((array_agg(${t.userText} ORDER BY ${t.createdAt}) FILTER (WHERE ${t.tipo} IS NULL))[1], (array_agg(${t.userText} ORDER BY ${t.createdAt}))[1])`,
+      turns: sql<number>`(count(*) FILTER (WHERE ${t.tipo} IS NULL))::int`,
       startedAt: sql<string>`min(${t.createdAt})`,
       endedAt: sql<string>`max(${t.createdAt})`,
     })

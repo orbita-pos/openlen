@@ -19,7 +19,7 @@ afterEach(() => {
 
 const ELI = { userId: "u-eli", nombre: "Eli Editor" };
 
-function Compositor({ onSubmit, conGente }: { onSubmit: () => void; conGente: boolean }) {
+function Compositor({ onSubmit, conGente, bloqueado = false }: { onSubmit: () => void; conGente: boolean; bloqueado?: boolean }) {
   const [v, setV] = useState("");
   const ta = useRef<HTMLTextAreaElement | null>(null);
   return (
@@ -42,6 +42,7 @@ function Compositor({ onSubmit, conGente }: { onSubmit: () => void; conGente: bo
       effortResolvesTo="medium"
       onEffortChange={() => {}}
       mode="len"
+      bloqueado={bloqueado}
       {...(conGente ? { mencionables: { gente: [ELI], colorDe: () => "rgb(9, 8, 7)", conLen: true } } : {})}
     />
   );
@@ -109,5 +110,25 @@ describe("cuando llega la gente", () => {
     const despues = host.querySelector("textarea")!;
     expect(despues).toBe(antes);
     expect(document.activeElement).toBe(antes);
+  });
+});
+
+describe("cuando no se puede enviar", () => {
+  it("🔴 bloqueado (enviando, o un lector que menciona a Len): ni el botón ni Enter envían", () => {
+    const onSubmit = vi.fn();
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    act(() => root.render(<Compositor onSubmit={onSubmit} conGente bloqueado />));
+    const caja = host.querySelector("textarea")!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(caja, "@Len hola");
+      caja.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    act(() => void caja.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })));
+    const enviar = host.querySelector<HTMLButtonElement>('button[aria-label="composer.send"]');
+    expect(enviar?.disabled).toBe(true);
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 });

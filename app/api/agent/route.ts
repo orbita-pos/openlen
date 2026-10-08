@@ -3,7 +3,7 @@ import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { accesoAlProyecto, puede } from "@/lib/projects/acceso";
 import { conAutor } from "@/lib/projects/autor-del-cambio";
 import { hiloDelProyecto, mencionesValidas, personasDelProyecto, respuestaDeLen } from "@/lib/projects/hilos";
-import { apuntarMencionesDelTurno, nombresDeUsuarios } from "@/lib/projects/chat-equipo";
+import { apuntarMencionesDelTurno, nombresDeUsuarios, proyectoCompartido } from "@/lib/projects/chat-equipo";
 import { mencionesDe } from "@/lib/workspace-v2/menciones";
 import { registrarCorredorDeTurnos, type PedidoDelHilo } from "@/lib/agent/turnos-desde-el-servidor";
 import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miembros";
@@ -562,7 +562,10 @@ async function correrTurno(
   // miembros, los mensajes entre personas viajan en su sobre delante del turno
   // siguiente, y los del final delante de la petición de ahora. Sin miembros,
   // las filas de siempre y nada más (byte-idéntico).
-  const genteDelProyecto = await personasDelProyecto(projectId).catch(() => []);
+  // Primero la pregunta barata (¿hay miembros?): casi ningún proyecto los tiene.
+  const genteDelProyecto = (await proyectoCompartido(projectId).catch(() => false))
+    ? await personasDelProyecto(projectId).catch(() => [])
+    : [];
   const compartido = genteDelProyecto.length > 1;
   let equipoAhora = "";
   let filasDelHistorial: FilaDelHistorial[];

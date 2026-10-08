@@ -4,7 +4,8 @@
 //   personas del proyecto; Len no contesta. Cualquier rol (un lector también:
 //   escribir a alguien es comentar, no editar). Con `@Len` es un turno y va por
 //   /api/agent (400 lleva_len).
-// GET ?solo=sinVer → { sinVer }: las menciones del chat sin ver de quien pide.
+// GET ?solo=sinVer → { sinVer, compartido }: las menciones del chat sin ver de
+//   quien pide, y si hay miembros (sin ellos, el carril deja de preguntar).
 // GET ?solo=firma → { firma }: la firma de la conversación (`firmaDelChat`), para
 //   que un chat compartido abierto la relea sólo si cambió.
 import { z } from "zod";
@@ -12,6 +13,7 @@ import { z } from "zod";
 import { MAX_TEXTO_DEL_HILO, mencionesValidas, personasDelProyecto } from "@/lib/projects/hilos";
 import { escribirMensajeDelEquipo, firmaDelChat, mencionesDelChatSinVer } from "@/lib/projects/chat-equipo";
 import { scheduleNotification } from "@/lib/notifications/dispatch";
+import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import { mencionesDe } from "@/lib/workspace-v2/menciones";
 import { json, quienEnElProyecto } from "../../hilos/_comun";
 
@@ -24,6 +26,16 @@ const Cuerpo = z.object({
   texto: z.string().trim().min(1).max(MAX_TEXTO_DEL_HILO),
   menciones: z.array(z.string().max(100)).max(20).default([]),
   idioma: z.string().max(8).optional(),
+  // Las fotos adjuntas, como en un turno: direcciones http(s) del subidor.
+  fotos: z
+    .array(
+      z.object({
+        url: z.string().max(2048).refine((u) => /^https?:\/\//i.test(u) || (u.startsWith("/") && !u.startsWith("//")), "url"),
+        alt: z.string().max(300).optional(),
+      }),
+    )
+    .max(MAX_PHOTOS_PER_MESSAGE)
+    .default([]),
 });
 
 export async function GET(req: Request, ctx: Ctx): Promise<Response> {
@@ -31,7 +43,10 @@ export async function GET(req: Request, ctx: Ctx): Promise<Response> {
   const q = await quienEnElProyecto(id);
   if (!q.ok) return q.respuesta;
   const solo = new URL(req.url).searchParams.get("solo");
-  if (solo === "sinVer") return json({ sinVer: await mencionesDelChatSinVer(id, q.userId) });
+  if (solo === "sinVer") {
+    const [sinVer, personas] = await Promise.all([mencionesDelChatSinVer(id, q.userId), personasDelProyecto(id)]);
+    return json({ sinVer, compartido: personas.length > 1 });
+  }
   if (solo === "firma") return json({ firma: await firmaDelChat(id) });
   return json({ error: "invalid_query" }, 400);
 }
@@ -47,7 +62,7 @@ export async function POST(req: Request, ctx: Ctx): Promise<Response> {
     return json({ error: "lleva_len", message: "Messages to Len are turns: send them to /api/agent." }, 400);
   }
   if (mencionesValidas(body.data.menciones, personas, q.userId).length === 0) return json({ error: "sin_mencion" }, 400);
-  const escrito = await escribirMensajeDelEquipo({ projectId: id, autorId: q.userId, texto: body.data.texto, menciones: body.data.menciones });
+  const escrito = await escribirMensajeDelEquipo({ projectId: id, autorId: q.userId, texto: body.data.texto, menciones: body.data.menciones, fotos: body.data.fotos });
   for (const recipientUserId of escrito.mencionados) {
     await scheduleNotification({
       type: "mencion",

@@ -245,6 +245,24 @@ function AgentChatView({
     [equipo.gente, equipo.yo, equipo.puedeLen, colorDe],
   );
   const [errorEquipo, setErrorEquipo] = useState(false);
+  // Un mensaje al equipo en vuelo: ni un segundo Enter ni el botón lo repiten.
+  const [enviandoEquipo, setEnviandoEquipo] = useState(false);
+  const enviandoEquipoRef = useRef(false);
+  // La firma que este panel ya conoce: tras enviar se fija aquí, y el sondeo no
+  // vuelve a releer por un cambio que acabamos de hacer nosotros.
+  const firmaRef = useRef<string | null>(null);
+  // Minimizado, el chat sigue montado pero nadie lo ve: no marca nada visto.
+  const aLaVista = layout !== "minimized";
+  const aLaVistaRef = useRef(aLaVista);
+  aLaVistaRef.current = aLaVista;
+  const leerFirma = useCallback(async (): Promise<string | null> => {
+    const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes?solo=firma`, { cache: "no-store" }).catch(() => null);
+    const j = r?.ok ? ((await r.json().catch(() => null)) as { firma?: unknown } | null) : null;
+    return typeof j?.firma === "string" ? j.firma : null;
+  }, [projectId]);
+  const marcarVisto = useCallback(() => {
+    void fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes/vistas`, { method: "POST" }).catch(() => {});
+  }, [projectId]);
   // Con el proyecto compartido y el chat abierto, cada 10 s se mira la firma de
   // la conversación y sólo si cambió se relee (`onChatChange`); releer el
   // proyecto entero cada 10 s, y avisar a las otras pestañas, sería mucho.
@@ -254,47 +272,59 @@ function AgentChatView({
   busyRef.current = chat.busy;
   useEffect(() => {
     if (!equipo.compartido) return;
-    let firma: string | null = null;
+    firmaRef.current = null;
     const mirar = async () => {
       if (document.hidden || busyRef.current) return;
-      const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes?solo=firma`, { cache: "no-store" }).catch(() => null);
-      const j = r?.ok ? ((await r.json().catch(() => null)) as { firma?: unknown } | null) : null;
-      if (typeof j?.firma !== "string") return;
-      if (firma !== null && j.firma !== firma) {
+      const firma = await leerFirma();
+      if (firma === null) return;
+      if (firmaRef.current !== null && firma !== firmaRef.current) {
         onChatChangeRef.current?.();
         // Lo que llega con el chat a la vista, visto queda (el punto del carril).
-        void fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes/vistas`, { method: "POST" }).catch(() => {});
+        if (aLaVistaRef.current) marcarVisto();
       }
-      firma = j.firma;
+      firmaRef.current = firma;
     };
     void mirar();
     const reloj = window.setInterval(() => void mirar(), 10_000);
     return () => window.clearInterval(reloj);
-  }, [equipo.compartido, projectId]);
-  // Abrir el chat ve las menciones (el punto del carril se apaga).
+  }, [equipo.compartido, leerFirma, marcarVisto]);
+  // Ver el chat ve las menciones (el punto del carril se apaga): al abrirlo, y
+  // al volver de minimizado.
   useEffect(() => {
-    if (!equipo.compartido) return;
-    void fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes/vistas`, { method: "POST" }).catch(() => {});
-  }, [equipo.compartido, projectId]);
+    if (equipo.compartido && aLaVista) marcarVisto();
+  }, [equipo.compartido, aLaVista, marcarVisto]);
   const enviarAlEquipo = async (): Promise<boolean> => {
     if (destino.tipo !== "personas") return false;
+    if (enviandoEquipoRef.current) return true;
+    enviandoEquipoRef.current = true;
+    setEnviandoEquipo(true);
     setErrorEquipo(false);
-    const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        texto: chat.draft,
-        menciones: destino.personas.map((p) => p.userId),
-        idioma: document.documentElement.lang || undefined,
-      }),
-    }).catch(() => null);
-    if (!r?.ok) {
-      setErrorEquipo(true);
+    try {
+      const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          texto: chat.draft,
+          menciones: destino.personas.map((p) => p.userId),
+          idioma: document.documentElement.lang || undefined,
+          // La foto adjunta viaja con el mensaje, como un adjunto en Slack.
+          ...(chat.attachedImage ? { fotos: [chat.attachedImage] } : {}),
+        }),
+      }).catch(() => null);
+      if (!r?.ok) {
+        setErrorEquipo(true);
+        return true;
+      }
+      chat.setDraft("");
+      chat.setAttachedImage(null);
+      // La firma nueva es nuestra: el sondeo no tiene que releer por ella.
+      firmaRef.current = await leerFirma();
+      onChatChange?.();
       return true;
+    } finally {
+      enviandoEquipoRef.current = false;
+      setEnviandoEquipo(false);
     }
-    chat.setDraft("");
-    onChatChange?.();
-    return true;
   };
   const enviar = async () => {
     if (equipo.compartido) {
@@ -432,6 +462,9 @@ function AgentChatView({
               ? {
                   placeholder: t("equipo.placeholder"),
                   mencionables,
+                  // Lo que no se va a enviar no se ofrece: un mensaje al equipo
+                  // en vuelo, o un lector que le pide algo a Len.
+                  bloqueado: enviandoEquipo || !permitido(destino, equipo.puedeLen),
                   debajo: (
                     <>
                       <LineaDeDestino destino={destino} puedeLen={equipo.puedeLen} colorDe={colorDe} />

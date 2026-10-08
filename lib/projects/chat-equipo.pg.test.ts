@@ -5,8 +5,8 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { eq, inArray } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
-import { apuntarMencionesDelTurno, escribirMensajeDelEquipo, firmaDelChat, marcarChatVisto, mencionesDelChatSinVer } from "@/lib/projects/chat-equipo";
-import { filasParaElHistorialConEquipo, getChatMessages, quitarFilaDelTurno, turnosParaElHistorial } from "@/lib/projects/chat";
+import { apuntarMencionesDelTurno, escribirMensajeDelEquipo, firmaDelChat, marcarChatVisto, mencionesDelChatSinVer, proyectoCompartido } from "@/lib/projects/chat-equipo";
+import { filasParaElHistorialConEquipo, getChatMessages, listArchivedConversations, quitarFilaDelTurno, startNewConversation, turnosParaElHistorial } from "@/lib/projects/chat";
 
 const DUENO = "prueba-equipo-dueno";
 const ELI = "prueba-equipo-eli";
@@ -137,5 +137,29 @@ describe("el chat del equipo", () => {
     await db.delete(schema.projectMembers).where(eq(schema.projectMembers.projectId, PROYECTO));
     const turnos = await getChatMessages(PROYECTO);
     expect(turnos.at(-1)!.nombres).toEqual({ [ELI]: "eli" });
+  });
+
+  it("🔴 un mensaje del equipo guarda sus fotos y el chat las trae", async () => {
+    await escribirMensajeDelEquipo({ projectId: PROYECTO, autorId: ELI, texto: "@dueno mira", menciones: [DUENO], fotos: [{ url: "https://x.test/a.jpg" }, { url: "https://x.test/b.jpg" }] });
+    const ultimo = (await getChatMessages(PROYECTO)).at(-1)!;
+    expect(ultimo.attachedImages).toEqual([{ url: "https://x.test/a.jpg" }, { url: "https://x.test/b.jpg" }]);
+  });
+
+  it("proyectoCompartido: con un miembro sí; sin miembros, no", async () => {
+    expect(await proyectoCompartido(PROYECTO)).toBe(true);
+    await db.delete(schema.projectMembers).where(eq(schema.projectMembers.projectId, PROYECTO));
+    expect(await proyectoCompartido(PROYECTO)).toBe(false);
+  });
+
+  it("🔴 una charla archivada se titula y se cuenta por sus turnos con Len, no por lo que se dijo el equipo", async () => {
+    const base = Date.UTC(2026, 9, 3);
+    await db.insert(schema.projectChatMessages).values([
+      { id: "prueba-equipo-arch-1", projectId: PROYECTO, userText: "@dueno hola", assistantReasoning: "", status: "applied", tipo: "persona", autorId: ELI, menciones: [DUENO], createdAt: new Date(base) },
+      { id: "prueba-equipo-arch-2", projectId: PROYECTO, userText: "pon el pie gris", assistantReasoning: "hecho", status: "applied", createdAt: new Date(base + 60_000) },
+      { id: "prueba-equipo-arch-3", projectId: PROYECTO, userText: "@eli listo", assistantReasoning: "", status: "applied", tipo: "persona", autorId: DUENO, menciones: [ELI], createdAt: new Date(base + 120_000) },
+    ]);
+    await startNewConversation(PROYECTO);
+    const [charla] = await listArchivedConversations(PROYECTO);
+    expect(charla).toMatchObject({ title: "pon el pie gris", turns: 1 });
   });
 });

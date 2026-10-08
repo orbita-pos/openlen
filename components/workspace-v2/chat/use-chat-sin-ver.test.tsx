@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
-import { useChatSinVer } from "./use-chat-sin-ver";
+import { chatALaVista, useChatSinVer } from "./use-chat-sin-ver";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -48,5 +48,38 @@ describe("el punto de «sin ver» del chat", () => {
     const { n, fetch } = await medir(true);
     expect(n).toBe(0);
     expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("¿el chat se ve?", () => {
+  it("🔴 minimizado no se ve (y no marca nada visto); flotante sí aunque el panel esté plegado; anclado, sólo desplegado", () => {
+    expect(chatALaVista({ mode: "chat", plegado: false, layout: "minimized", movil: false })).toBe(false);
+    expect(chatALaVista({ mode: "chat", plegado: true, layout: "floating", movil: false })).toBe(true);
+    expect(chatALaVista({ mode: "chat", plegado: true, layout: "docked", movil: false })).toBe(false);
+    expect(chatALaVista({ mode: "chat", plegado: false, layout: "docked", movil: false })).toBe(true);
+    expect(chatALaVista({ mode: "content", plegado: false, layout: "floating", movil: false })).toBe(false);
+    // En el móvil el chat siempre va anclado: lo que cuenta es el panel.
+    expect(chatALaVista({ mode: "chat", plegado: false, layout: "minimized", movil: true })).toBe(true);
+    expect(chatALaVista({ mode: "chat", plegado: true, layout: "floating", movil: true })).toBe(false);
+  });
+});
+
+describe("sin miembros", () => {
+  it("🔴 si el servidor dice que el proyecto no es compartido, deja de preguntar", async () => {
+    vi.useFakeTimers();
+    try {
+      const f = vi.fn(async () => new Response(JSON.stringify({ sinVer: 0, compartido: false }), { status: 200 }));
+      vi.stubGlobal("fetch", f);
+      const host = document.createElement("div");
+      document.body.appendChild(host);
+      root = createRoot(host);
+      await act(async () => root!.render(<Sonda abierto={false} ver={() => {}} />));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(95_000);
+      });
+      expect(f).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

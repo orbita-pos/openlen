@@ -161,7 +161,9 @@ export function ChatPanel({
         projectId={flatProjectId}
         projectHtml={flatProjectHtml ?? ""}
         onLocalUpdate={onFlatHtmlUpdate}
-        initialChat={flatProjectChat}
+        // El chat viejo no tiene chat del equipo: los mensajes entre personas
+        // no son turnos de Len y no se pintan como tales.
+        initialChat={flatProjectChat?.filter((t) => t.tipo !== "persona")}
         onChatChange={onChatChange}
         onRedesigningChange={onRedesigningChange}
         sectionSelectMode={sectionSelectMode}

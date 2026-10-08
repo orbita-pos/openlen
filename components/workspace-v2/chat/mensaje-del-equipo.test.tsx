@@ -54,4 +54,20 @@ describe("un mensaje entre personas", () => {
     );
     expect([...host.querySelectorAll("p")].some((p) => p.textContent === "Eva Ex → Ida Ida · Len no responde")).toBe(true);
   });
+
+  it("🔴 enseña las fotos que lleva el mensaje", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    const conFotos = { ...(turn as object), attachedImage: { url: "https://x.test/a.jpg" }, attachedImages: [{ url: "https://x.test/a.jpg" }, { url: "https://x.test/b.jpg" }] } as never;
+    act(() =>
+      root.render(
+        <NextIntlClientProvider locale="es" messages={{ panelsChat }}>
+          <MensajeDelEquipo turn={conFotos} gente={GENTE} yo="u-dana" colorDe={() => "red"} />
+        </NextIntlClientProvider>,
+      ),
+    );
+    expect([...host.querySelectorAll("img")].map((i) => i.getAttribute("src"))).toEqual(["https://x.test/a.jpg", "https://x.test/b.jpg"]);
+  });
 });

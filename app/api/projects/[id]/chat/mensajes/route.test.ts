@@ -49,7 +49,7 @@ describe("POST /api/projects/[id]/chat/mensajes — escribir a una persona", () 
     const { status, cuerpo } = await enviar({ texto: "@Eli Editor mira el pie", menciones: ["u-eli"], idioma: "es" });
     expect(status).toBe(200);
     expect(cuerpo).toEqual({ id: "m1", mencionados: ["u-eli"] });
-    expect(mocks.escribirMensajeDelEquipo).toHaveBeenCalledWith({ projectId: "p1", autorId: "u-leo", texto: "@Eli Editor mira el pie", menciones: ["u-eli"] });
+    expect(mocks.escribirMensajeDelEquipo).toHaveBeenCalledWith({ projectId: "p1", autorId: "u-leo", texto: "@Eli Editor mira el pie", menciones: ["u-eli"], fotos: [] });
     expect(mocks.scheduleNotification).toHaveBeenCalledWith(
       expect.objectContaining({ type: "mencion", donde: "chat", recipientUserId: "u-eli", quien: "Leo Lector", projectId: "p1", idioma: "es" }),
       // Como Slack: espera un minuto y las seguidas se juntan en un aviso.
@@ -79,7 +79,8 @@ describe("POST /api/projects/[id]/chat/mensajes — escribir a una persona", () 
 
   it("GET ?solo=sinVer devuelve las menciones sin ver de quien pide", async () => {
     const res = await GET(new Request("http://localhost/api/projects/p1/chat/mensajes?solo=sinVer"), { params: Promise.resolve({ id: "p1" }) });
-    expect(await res.json()).toEqual({ sinVer: 2 });
+    // Y si el proyecto es compartido: sin miembros, el carril deja de preguntar.
+    expect(await res.json()).toEqual({ sinVer: 2, compartido: true });
     expect(mocks.mencionesDelChatSinVer).toHaveBeenCalledWith("p1", "u-leo");
   });
 
@@ -87,5 +88,12 @@ describe("POST /api/projects/[id]/chat/mensajes — escribir a una persona", () 
     const res = await GET(new Request("http://localhost/api/projects/p1/chat/mensajes?solo=firma"), { params: Promise.resolve({ id: "p1" }) });
     expect(await res.json()).toEqual({ firma: "3:abc:0:0" });
     expect(mocks.firmaDelChat).toHaveBeenCalledWith("p1");
+  });
+
+  it("🔴 las fotos adjuntas viajan con el mensaje; una dirección que no es http(s) → 400", async () => {
+    const ok = await enviar({ texto: "@Eli Editor mira", menciones: ["u-eli"], fotos: [{ url: "https://x.test/a.jpg", alt: "pie" }] });
+    expect(ok.status).toBe(200);
+    expect(mocks.escribirMensajeDelEquipo).toHaveBeenLastCalledWith(expect.objectContaining({ fotos: [{ url: "https://x.test/a.jpg", alt: "pie" }] }));
+    expect((await enviar({ texto: "@Eli Editor mira", menciones: ["u-eli"], fotos: [{ url: "javascript:alert(1)" }] })).status).toBe(400);
   });
 });

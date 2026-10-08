@@ -5,6 +5,7 @@
 
 import type { FilaCruda } from "@/lib/projects/chat";
 import type { FilaDelHistorial } from "@/lib/agent/transcripcion";
+import { photosOf } from "@/lib/projects/chat-photos";
 import { quienPide, sobreDelEquipo, type AutorDelEquipo, type MensajeDelEquipo } from "./equipo";
 
 export function plegarEquipo(
@@ -23,7 +24,10 @@ export function plegarEquipo(
   };
   for (const f of filas) {
     if (f.tipo === "persona") {
-      if (f.autorId) pendientes.push({ autorId: f.autorId, texto: f.fila.userText, menciones: f.menciones ?? [], createdAt: f.createdAt });
+      if (f.autorId) {
+        const fotos = photosOf(f.fila.attachedImage);
+        pendientes.push({ autorId: f.autorId, texto: f.fila.userText, menciones: f.menciones ?? [], createdAt: f.createdAt, ...(fotos.length > 0 ? { fotos } : {}) });
+      }
       continue;
     }
     const pide = quienPide(persona.get(f.autorId ?? duenoId) ?? null);

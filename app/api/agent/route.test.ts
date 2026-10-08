@@ -75,6 +75,8 @@ const mocks = vi.hoisted(() => ({
   filasParaElHistorialConEquipo: vi.fn(async (): Promise<unknown[]> => []),
   apuntarMencionesDelTurno: vi.fn(async () => {}),
   nombresDeUsuarios: vi.fn(async (): Promise<Map<string, string>> => new Map()),
+  // Sin miembros por defecto: ni se piden las personas.
+  proyectoCompartido: vi.fn(async () => false),
   registrarTurnoDelServidor: vi.fn(async () => {}),
   // Len 2.1: la fila del turno se abre al empezar y se va llenando.
   abrirFilaDelTurno: vi.fn(async () => {}),
@@ -214,7 +216,11 @@ vi.mock("@/lib/agent/tools", () => ({
 // lee el bucle: el turno real se abre y se cierra dentro del mismo `POST`, asi
 // que con el almacen de verdad no hay ventana para meter nada desde fuera.
 vi.mock("@/lib/notifications/dispatch", () => ({ scheduleNotification: mocks.scheduleNotification }));
-vi.mock("@/lib/projects/chat-equipo", () => ({ apuntarMencionesDelTurno: mocks.apuntarMencionesDelTurno, nombresDeUsuarios: mocks.nombresDeUsuarios }));
+vi.mock("@/lib/projects/chat-equipo", () => ({
+  apuntarMencionesDelTurno: mocks.apuntarMencionesDelTurno,
+  nombresDeUsuarios: mocks.nombresDeUsuarios,
+  proyectoCompartido: mocks.proyectoCompartido,
+}));
 vi.mock("@/lib/agent/direcciones", () => ({
   abrirTurno: mocks.abrirTurno,
   cerrarTurno: vi.fn(),
@@ -2569,6 +2575,7 @@ describe("POST /api/agent — un miembro del proyecto", () => {
       usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
       terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
     });
+    mocks.proyectoCompartido.mockResolvedValueOnce(true);
     mocks.personasDelProyecto.mockResolvedValueOnce([
       { userId: "dueno-1", nombre: "Dana Dueña", email: "d@x", rol: "dueno" },
       { userId: "ana", nombre: "Ana Editora", email: "a@x", rol: "editor" },
@@ -2590,12 +2597,24 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     expect(sinEquipo.equipo).toBe(false);
   });
 
+  it("🔴 sin miembros, el turno no pide las personas del proyecto (una consulta barata y ya)", async () => {
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "Hecho.", turns: 1, toolCalls: 0,
+      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
+    });
+    await readEvents(await pedir({ prompt: "@Len hola" }));
+    expect(mocks.proyectoCompartido).toHaveBeenCalledWith("p1");
+    expect(mocks.personasDelProyecto).not.toHaveBeenCalled();
+  });
+
   it("🔴 I1 · quien ya dejó el proyecto sale en el sobre con su nombre (no «someone»)", async () => {
     mocks.runAgentLoop.mockResolvedValue({
       finalText: "Hecho.", turns: 1, toolCalls: 0,
       usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
       terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
     });
+    mocks.proyectoCompartido.mockResolvedValueOnce(true);
     mocks.personasDelProyecto.mockResolvedValueOnce([
       { userId: "dueno-1", nombre: "Dana Dueña", email: "d@x", rol: "dueno" },
       { userId: "ana", nombre: "Ana Editora", email: "a@x", rol: "editor" },
@@ -2616,6 +2635,7 @@ describe("POST /api/agent — un miembro del proyecto", () => {
       usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
       terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
     });
+    mocks.proyectoCompartido.mockResolvedValueOnce(true);
     mocks.personasDelProyecto.mockResolvedValueOnce([
       { userId: "dueno-1", nombre: "Dana Dueña", email: "d@x", rol: "dueno" },
       { userId: "ana", nombre: "Ana Editora", email: "a@x", rol: "editor" },
@@ -2632,6 +2652,7 @@ describe("POST /api/agent — un miembro del proyecto", () => {
   });
 
   it("🔴 «@Len y @Eli Editor …» es un turno que además apunta la mención y avisa a Eli por el chat", async () => {
+    mocks.proyectoCompartido.mockResolvedValueOnce(true);
     mocks.personasDelProyecto.mockResolvedValueOnce([
       { userId: "dueno-1", nombre: "Dana Dueña", email: "d@x", rol: "dueno" },
       { userId: "ana", nombre: "Ana Editora", email: "a@x", rol: "editor" },

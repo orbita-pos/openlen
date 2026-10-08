@@ -15,6 +15,8 @@ export interface MensajeDelEquipo {
   readonly texto: string;
   readonly menciones: readonly string[];
   readonly createdAt: Date;
+  /** Las fotos adjuntas (el chat del equipo las guarda en la fila). */
+  readonly fotos?: readonly { readonly url: string }[];
 }
 
 export const MAX_MENSAJES_DEL_EQUIPO = 30;
@@ -38,7 +40,8 @@ export function sobreDelEquipo(
     const p = persona.get(m.autorId);
     const rol = p ? ROL[p.rol] : "former member";
     const para = m.menciones.map(nombre).join(", ");
-    return `<message from="${escapar(nombre(m.autorId))}" role="${rol}" to="${escapar(para)}" at="${cuando(m.createdAt)}">${escapar(m.texto)}</message>`;
+    const fotos = (m.fotos ?? []).map((f) => `<image src="${escapar(f.url)}"/>`).join("");
+    return `<message from="${escapar(nombre(m.autorId))}" role="${rol}" to="${escapar(para)}" at="${cuando(m.createdAt)}">${escapar(m.texto)}${fotos}</message>`;
   });
   return ['<team-messages trust="relay">', ...lineas, "</team-messages>"].join("\n");
 }
