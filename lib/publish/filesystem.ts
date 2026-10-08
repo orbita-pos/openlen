@@ -19,10 +19,10 @@ import { optimizeHtmlForProduction, type FuenteDeClases } from "@/lib/publish/op
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
-import { widgetApiBase } from "@/lib/publish/base-host";
+import { widgetApiBase } from "@/lib/publish/base-host";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeMediaPreconnect } from "@/lib/publish/video-embed";
-import { optOutOfEmailObfuscation } from "@/lib/publish/cloudflare-email";
+import { optOutOfEmailObfuscation } from "@/lib/publish/cloudflare-email";
 import {
   annotateLanguageCluster,
   buildRobots,
@@ -46,7 +46,7 @@ import type {
   AppDeProyecto,
   FormConfig,
 } from "@/lib/projects/types";
-import { AppNoCompilaError, compilarCarpeta } from "@/lib/apps/compilador";
+import { AppNoCompilaError, compilarCarpeta, usesTailwindDirectives } from "@/lib/apps/compilador";
 import { catalogo as catalogoDeApps, ficherosDelCatalogo, rutaDeVendor } from "@/lib/apps/dependencias";
 import { conImportMap, conPrecarga, rutasDePrecarga } from "@/lib/apps/documento";
 import { leerVendor } from "@/lib/apps/servir";
@@ -436,7 +436,7 @@ interface BakeDocumentCtx {
   /** Site assistant widget config. Absent/disabled = no widget injected. */
   assistant?: AssistantBake;
   /** Collections module. When enabled, the owner's item list is baked as STATIC
-   *  HTML (grid/list of cards) at the placeholder, or appended. */
+   *  HTML (grid/list of cards) at the placeholder, or appended. */
   /** WhatsApp button. When enabled with a usable number, a floating FAB is baked
    *  (suppressed if the profile contact widget is already present). */
   /** Pedidos por WhatsApp — cart over the collections buttons. */
@@ -451,6 +451,8 @@ interface BakeDocumentCtx {
    *  sólo escribe un script (`fuentesDeClasesDeLaCarpeta`). Es del SITIO, no de
    *  un documento: un mismo `/js/app.js` puede servir a varias páginas. */
   fuentesDeClases?: readonly FuenteDeClases[];
+  /** Las hojas de una app con `@layer`/`@apply` (`tailwindStylesheetsOf`): van al horneado. */
+  tailwindStylesheets?: readonly string[];
 }
 
 /**
@@ -466,6 +468,17 @@ export function fuentesDeClasesDeLaCarpeta(
   return files
     .filter((f) => isPublishableFolderPath(f.path) && /\.(?:m?js|jsx|tsx?)$/i.test(f.path))
     .map((f) => ({ raw: f.content, extension: /\.([a-z]+)$/i.exec(f.path)![1]!.toLowerCase() }));
+}
+
+/** Las hojas de la carpeta que usan Tailwind (`@layer`, `@apply`): el
+ *  compilador las inyecta como `text/tailwindcss` (lib/apps/compilador.ts), el
+ *  CDN las procesa en el lienzo, y aquí se hornean para la publicada. */
+export function tailwindStylesheetsOf(
+  files: ReadonlyArray<{ path: string; content: string }>,
+): string[] {
+  return files
+    .filter((f) => isPublishableFolderPath(f.path) && /\.css$/i.test(f.path) && usesTailwindDirectives(f.content))
+    .map((f) => f.content);
 }
 
 interface AssistantBake {
@@ -506,7 +519,7 @@ async function bakeDocument(
   // publish it on home and /menu. Read off the incoming document (the same
   // source the site-wide scan used), so both halves of the rule always agree.
 
-  const optimized = await optimizeHtmlForProduction(html, ctx.fuentesDeClases);
+  const optimized = await optimizeHtmlForProduction(html, ctx.fuentesDeClases, ctx.tailwindStylesheets ?? []);
 
   // Consolidate Unsplash credits BEFORE the asset migrations below. We need
   // to see the original `images.unsplash.com` URLs to detect anonymous
@@ -946,10 +959,12 @@ export async function publishToDir(
     formConfigs: params.formConfigs,
     analyticsEnabled: params.analyticsEnabled ?? true,
     logoUrl: params.logoUrl,
-    assistant: params.assistant,
+    assistant: params.assistant,
     orders: params.orders,
     chat: params.chat,
     fuentesDeClases: fuentesDeClasesDeLaCarpeta(params.files ?? []),
+    // Sólo una app: sólo en una app inyecta el compilador las hojas como `text/tailwindcss`.
+    tailwindStylesheets: app ? tailwindStylesheetsOf(params.files ?? []) : [],
   };
   let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
 
