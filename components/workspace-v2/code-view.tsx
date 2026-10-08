@@ -1654,7 +1654,9 @@ function PanelDelArchivo({
         <div className="max-h-[40%] shrink-0 overflow-auto nice-scroll border-t bd bg-elev px-3 py-2 text-[12px]">
           {paraEnsenar.map((n) => (
             <div key={n} className="mb-1.5 last:mb-0">
-              <div className="mb-0.5 font-mono text-[10.5px] fg-faint">
+              {/* Una línea con «…»: 80 letras de código sin cortar ensanchaban el panel,
+                  y los hilos de debajo se desplazaban de lado con él. */}
+              <div className="mb-0.5 truncate font-mono text-[10.5px] fg-faint">
                 {n} · <span className="whitespace-pre">{(lineas[n - 1] ?? "").trim().slice(0, 80)}</span>
               </div>
               <DebajoDeLaLinea
