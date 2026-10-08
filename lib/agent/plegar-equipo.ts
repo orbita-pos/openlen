@@ -6,7 +6,7 @@
 import type { FilaCruda } from "@/lib/projects/chat";
 import type { FilaDelHistorial } from "@/lib/agent/transcripcion";
 import { photosOf } from "@/lib/projects/chat-photos";
-import { quienPide, sobreDelEquipo, type AutorDelEquipo, type MensajeDelEquipo } from "./equipo";
+import { neutralizarMarcas, quienPide, sobreDelEquipo, type AutorDelEquipo, type MensajeDelEquipo } from "./equipo";
 
 export function plegarEquipo(
   filas: readonly FilaCruda[],
@@ -31,7 +31,8 @@ export function plegarEquipo(
       continue;
     }
     const pide = quienPide(persona.get(f.autorId ?? duenoId) ?? null);
-    fuera.push({ ...f.fila, prefijoDelEquipo: `${sobre()}${pide ? `${pide}\n` : ""}` });
+    // Lo escrito, con las marcas a mano neutralizadas: sólo vale la del servidor.
+    fuera.push({ ...f.fila, userText: neutralizarMarcas(f.fila.userText), prefijoDelEquipo:`${sobre()}${pide ? `${pide}\n` : ""}` });
   }
   return { filas: fuera, ahora: sobre() };
 }

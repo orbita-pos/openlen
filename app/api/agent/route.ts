@@ -45,7 +45,7 @@ import {
 import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversacion";
 import { filasParaElHistorialConEquipo, turnosParaElHistorial } from "@/lib/projects/chat";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
-import { quienPide } from "@/lib/agent/equipo";
+import { neutralizarMarcas, quienPide } from "@/lib/agent/equipo";
 import { parseStyleDirection } from "@/lib/style-match/parse-direction";
 import { MAX_PHOTOS_PER_MESSAGE, photosForRow, photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import type { Message } from "@/lib/ai-gateway";
@@ -860,7 +860,9 @@ async function correrTurno(
     // En un proyecto con miembros, delante: lo que el equipo se dijo desde el
     // último turno y quién pide éste (lib/agent/equipo.ts).
     // (`equipoAhora` ya acaba en salto de línea: `plegarEquipo`).
-    prompt: `${equipoAhora}${pideAhora ? `${pideAhora}\n` : ""}${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n${prompt}` : prompt}`,
+    // Con miembros, lo escrito va con las marcas a mano neutralizadas: el único
+    // <asked-by> que vale es el que pone el servidor (como en el binario).
+    prompt: `${equipoAhora}${pideAhora ? `${pideAhora}\n` : ""}${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
     equipo: compartido,
     history,
     // ¿El turno anterior fue MUDO? Se deriva del historial que acaba de
