@@ -112,11 +112,6 @@
       }
     },
     "extras": {
-      "kit": {
-        "title": "Marketing Kit",
-        "chip": "{posts} fertige Posts",
-        "body": "Fertige Social-Posts, passend zu deiner Seite — gleiche Palette, gleiche Schrift, garantierter Kontrast. Auswählen, Caption anpassen, posten."
-      },
       "coach": {
         "title": "Page Coach",
         "tip": "Zieh den WhatsApp-Button über die Falz — 62 % der Besucher scrollen nie am Hero vorbei.",

@@ -43,6 +43,15 @@ describe("el rail no tiene hub de Módulos", () => {
     expect(vistas).not.toContain("business");
   });
 
+  // La sección Marketing (los posts para redes) se quitó el 2026-10-08: estaba
+  // mal hecha y se rehará de nuevo, mejor (Jesús). Hasta entonces, ni icono.
+  it("ni a la sección de marketing, que se rehará", () => {
+    const vistas = items
+      .filter((i) => i.kind === "view")
+      .map((i) => (i as { view: string }).view);
+    expect(vistas).not.toContain("marketing");
+  });
+
   // El rail sigue siendo un rail: si el barrido se llevara algo de más, esto lo
   // dice antes que un ojo.
   it("y sigue teniendo lo que sí existe", () => {

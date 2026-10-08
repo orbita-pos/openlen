@@ -528,7 +528,7 @@ describe("preparar_marketing, retirada", () => {
     const { deps, store } = makeDeps();
     const out = await runAgentTool(makeSession(), deps, "preparar_marketing", { registro: "general", combinar: true });
     assert.equal(out.response.ok, false);
-    assert.equal(store.data.settings?.marketing, undefined);
+    assert.equal((store.data.settings as Record<string, unknown> | undefined)?.marketing, undefined);
   });
 });
 

@@ -112,11 +112,6 @@
       }
     },
     "extras": {
-      "kit": {
-        "title": "Marketing Kit",
-        "chip": "{posts} 个现成帖子",
-        "body": "与页面同款的社交海报，即选即用 — 同一配色、同一字体、对比度有保证。选一张，改改文案，直接发布。"
-      },
       "coach": {
         "title": "Page Coach",
         "tip": "把 WhatsApp 按钮移到首屏 — 62% 的访客从不滚动到英雄区以下。",

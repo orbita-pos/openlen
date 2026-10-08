@@ -624,6 +624,10 @@ export const templates = pgTable(
 
 // Curated social-post templates (Marketing Kit). Mirror of `templates`:
 // metadata here, HTML body in R2 under posts/<id>-<hash>.html.
+// ⚠️ SIN LECTOR desde el 2026-10-08: la sección Marketing se quitó para
+// rehacerla mejor, y con ella su tienda (`lib/marketing/post-templates/`) y su
+// CLI. La tabla y sus filas se quedan a propósito —borrar datos de producción
+// no entraba en «quitar la sección»— para que la nueva decida qué aprovecha.
 export const postTemplates = pgTable("postTemplates", {
   id: text("id").primaryKey(), // slug — 'promo-restaurante-01'
   name: text("name").notNull(),
