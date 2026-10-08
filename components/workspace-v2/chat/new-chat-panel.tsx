@@ -239,6 +239,11 @@ function AgentChatView({
   const idsDelEquipo = useMemo(() => equipo.gente.map((p) => p.userId), [equipo.gente]);
   const colorDe = useCallback((id: string) => colorDePersona(id, idsDelEquipo), [idsDelEquipo]);
   const destino = destinoDe(chat.draft, equipo.gente, equipo.yo);
+  // A quién sugiere el «@» de la caja: la gente menos uno mismo, y Len si puede.
+  const mencionables = useMemo(
+    () => ({ gente: equipo.gente.filter((p) => p.userId !== equipo.yo), colorDe, conLen: equipo.puedeLen }),
+    [equipo.gente, equipo.yo, equipo.puedeLen, colorDe],
+  );
   const [errorEquipo, setErrorEquipo] = useState(false);
   // Con el proyecto compartido y el chat abierto, cada 10 s se mira la firma de
   // la conversación y sólo si cambió se relee (`onChatChange`); releer el
@@ -349,7 +354,7 @@ function AgentChatView({
               <MensajeDelEquipo key={turn.id} turn={turn} gente={equipo.gente} yo={equipo.yo} colorDe={colorDe} />
             ) : (
             <div key={turn.id} className="flex flex-col gap-4">
-              <UserMessage turn={turn} initial={initial} onAbrirOrigen={(ruta) => abrirEnElCodigo.abrir(projectId, ruta)} />
+              <UserMessage turn={turn} initial={initial} onAbrirOrigen={(ruta) => abrirEnElCodigo.abrir(projectId, ruta)} gente={equipo.gente} colorDe={colorDe} />
               <LenTurn
                 turn={turn}
                 next={siguienteDeLen(i)}
@@ -426,6 +431,7 @@ function AgentChatView({
             {...(equipo.compartido
               ? {
                   placeholder: t("equipo.placeholder"),
+                  mencionables,
                   debajo: (
                     <>
                       <LineaDeDestino destino={destino} puedeLen={equipo.puedeLen} colorDe={colorDe} />

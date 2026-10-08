@@ -29,6 +29,8 @@ import { LenFace } from "./len-face";
 import { TurnClose } from "./turn-close";
 import type { DesignTurn } from "./use-agent-chat";
 import { roundOfTurn } from "./goal-state";
+import { TextoConMenciones } from "../hilos-del-codigo";
+import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
 
 const NO_TURNS: readonly CambiosDeUnTurno[] = [];
 
@@ -59,15 +61,24 @@ export function inicialDe(nombre: string | null | undefined): string {
   return (limpio.charAt(0) || "?").toUpperCase();
 }
 
+const SIN_GENTE: readonly PersonaMencionable[] = [];
+const SIN_COLOR = () => "";
+
 export function UserMessage({
   turn,
   initial,
   onAbrirOrigen,
+  gente = SIN_GENTE,
+  colorDe = SIN_COLOR,
 }: {
   turn: DesignTurn;
   initial: string;
   /** Pedido desde un hilo del código: abrir ese fichero en «Código». */
   onAbrirOrigen?: (ruta: string) => void;
+  /** El chat del equipo: la gente del proyecto, para pintar sus menciones en
+   *  su color. Sin ella, sólo `@Len` (en naranja). */
+  gente?: readonly PersonaMencionable[];
+  colorDe?: (userId: string) => string;
 }) {
   const t = useTranslations("panelsChat");
   const { text: escrito, corrections } = splitCorrections(turn.userText);
@@ -137,7 +148,7 @@ export function UserMessage({
               {t("newChat.goal.label")}
             </div>
           )}
-          {text}
+          <TextoConMenciones texto={text} gente={gente} colorDe={colorDe} />
         </div>
         <span
           aria-hidden

@@ -219,9 +219,13 @@ export function CajaConMenciones({
   className = "",
   value,
   onScroll,
+  pintar = true,
   ...resto
 }: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "value"> & {
   cajaRef: RefObject<HTMLTextAreaElement | null>;
+  /** Sin pintar, una caja normal —el MISMO textarea, para que encender los
+   *  colores después (llega la gente) no lo desmonte ni le quite el foco—. */
+  pintar?: boolean;
   gente: readonly PersonaMencionable[];
   colorDe: (userId: string) => string;
   medida: string;
@@ -231,15 +235,17 @@ export function CajaConMenciones({
   const copia = useRef<HTMLSpanElement>(null);
   return (
     <span className="relative block">
-      <span
-        ref={copia}
-        aria-hidden="true"
-        className={`pointer-events-none absolute inset-0 block overflow-hidden whitespace-pre-wrap break-words border-transparent fg ${medida} ${fondo}`}
-      >
-        <TextoConMenciones texto={value} gente={gente} colorDe={colorDe} />
-        {/* Un salto final como el del textarea: si no, la última línea vacía no ocupa sitio. */}
-        {"\n"}
-      </span>
+      {pintar && (
+        <span
+          ref={copia}
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-0 block overflow-hidden whitespace-pre-wrap break-words border-transparent fg ${medida} ${fondo}`}
+        >
+          <TextoConMenciones texto={value} gente={gente} colorDe={colorDe} />
+          {/* Un salto final como el del textarea: si no, la última línea vacía no ocupa sitio. */}
+          {"\n"}
+        </span>
+      )}
       <textarea
         ref={cajaRef}
         value={value}
@@ -247,7 +253,7 @@ export function CajaConMenciones({
           if (copia.current) copia.current.scrollTop = e.currentTarget.scrollTop;
           onScroll?.(e);
         }}
-        className={`relative block w-full resize-none bg-transparent text-transparent caret-[var(--fg)] ${medida} ${className}`}
+        className={`relative block w-full resize-none bg-transparent ${pintar ? "text-transparent caret-[var(--fg)]" : "fg"} ${medida} ${className}`}
         {...resto}
       />
     </span>

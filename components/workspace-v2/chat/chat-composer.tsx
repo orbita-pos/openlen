@@ -21,6 +21,11 @@ import type { AgentMode } from "@/lib/agent/dynamis";
 import type { EsfuerzoAgente, NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import type { ComentarioDeLinea } from "@/lib/workspace-v2/comentarios-de-lineas";
 import type { AttachedImage, ScopedSelection } from "./use-agent-chat";
+import { CajaConMenciones, useArroba } from "../hilos-del-codigo";
+import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
+
+const NADIE: readonly PersonaMencionable[] = [];
+const SIN_COLOR = () => "";
 
 export function ChatComposer({
   value,
@@ -52,6 +57,7 @@ export function ChatComposer({
   debajo,
   etiquetaEnviar,
   placeholder,
+  mencionables,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -92,6 +98,10 @@ export function ChatComposer({
   etiquetaEnviar?: string;
   /** El texto de la caja vacía, si no es el de siempre (sin turno corriendo). */
   placeholder?: string;
+  /** EL CHAT DEL EQUIPO: con gente, «@» sugiere a Len (si puede) y a cada
+   *  persona, y las menciones se ven en su color dentro de la caja, como en los
+   *  hilos del código. Sin esto, la caja de siempre. */
+  mencionables?: { gente: readonly PersonaMencionable[]; colorDe: (userId: string) => string; conLen: boolean };
 }) {
   const t = useTranslations("panelsChat");
   const [plusOpen, setPlusOpen] = useState(false);
@@ -102,6 +112,7 @@ export function ChatComposer({
   const hasContent = value.trim().length > 0 || comments.length > 0;
   const typed = value.trim().length > 0;
   const tr = t as unknown as (k: string, v?: Record<string, string>) => string;
+  const arroba = useArroba(value, onChange, textareaRef, mencionables?.gente ?? NADIE, mencionables?.conLen ?? false, mencionables?.colorDe);
 
   return (
     <div>
@@ -151,29 +162,51 @@ export function ChatComposer({
             )}
           </div>
         )}
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              onSubmit();
-            }
-          }}
-          rows={1}
-          placeholder={
-            busy
+        {(() => {
+          const caja = {
+            value,
+            onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+              onChange(e.target.value);
+              arroba.onSeleccion(e);
+            },
+            onSelect: arroba.onSeleccion,
+            onClick: arroba.onSeleccion,
+            onKeyUp: arroba.onSeleccion,
+            onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+              // Con el desplegable del @ abierto, Enter/Tab/flechas son suyos.
+              if (arroba.tecla(e)) return;
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                onSubmit();
+              }
+            },
+            rows: 1,
+            placeholder: busy
               ? t("composer.placeholderRunning")
               : goalChip && onToggleGoal
                 ? t("newChat.goal.placeholder")
                 : scopedSelection
                 ? t("composer.placeholderScoped", { target: scopedSelection.hint.split(" ")[0] ?? "" })
-                : (placeholder ?? t("composer.placeholder"))
-          }
-          className="mt-0.5 block w-full resize-none bg-transparent text-[14px] leading-normal fg outline-none placeholder:fg-faint nice-scroll"
-          style={{ minHeight: 44 }}
-        />
+                : (placeholder ?? t("composer.placeholder")),
+            style: { minHeight: 44 },
+          };
+          // UNA sola caja, con o sin gente: si la gente llega mientras se
+          // escribe, se encienden los colores sin desmontarla ni quitarle el foco.
+          return (
+            <div className="mt-0.5">
+              {arroba.menu && <div className="absolute bottom-full left-0 right-0 z-20 mb-1.5">{arroba.menu}</div>}
+              <CajaConMenciones
+                {...caja}
+                cajaRef={textareaRef}
+                pintar={!!mencionables}
+                gente={mencionables?.gente ?? NADIE}
+                colorDe={mencionables?.colorDe ?? SIN_COLOR}
+                medida="text-[14px] leading-normal"
+                className="outline-none placeholder:fg-faint nice-scroll"
+              />
+            </div>
+          );
+        })()}
         <div className="mt-0.5 flex items-center gap-[3px]">
           <div className="relative" ref={plus.refContenedor} onKeyDown={plus.alPulsarTecla}>
             <button
