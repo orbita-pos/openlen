@@ -117,6 +117,10 @@ export interface FilaDelHistorial {
   /** Las fotos que el dueño adjuntó a ese turno (columna `attachedImage`):
    *  un objeto en las filas de siempre, una lista con dos o más (`photosOf`). */
   readonly attachedImage?: ChatPhoto | readonly ChatPhoto[] | null;
+  /** EL CHAT DEL EQUIPO (lib/agent/plegar-equipo.ts): los mensajes entre personas
+   *  que hubo antes de este turno y quién lo pidió, ya en su sobre. Sólo en
+   *  proyectos con miembros; ausente = el mensaje de siempre, byte a byte. */
+  readonly prefijoDelEquipo?: string;
 }
 
 /**
@@ -264,7 +268,7 @@ export function notaDeLaFoto(foto: { url: string; alt?: string }, estado: "vista
 function mensajeDelDueno(f: FilaDelHistorial, fotos: FotosDeLaConversacion): MensajeDelHistorial {
   const adjuntas = photosOf(f.attachedImage);
   // Como se mandó: sus palabras y, detrás, los avisos de ese turno.
-  const texto = `${f.userText}${f.transcript?.avisos ?? ""}`;
+  const texto = `${f.prefijoDelEquipo ?? ""}${f.userText}${f.transcript?.avisos ?? ""}`;
   if (adjuntas.length === 0) return { role: "user", content: texto, opensTurn: true };
   const notas: string[] = [];
   const imagenes: InlineImage[] = [];

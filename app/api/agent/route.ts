@@ -2,7 +2,7 @@ import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { accesoAlProyecto, puede } from "@/lib/projects/acceso";
 import { conAutor } from "@/lib/projects/autor-del-cambio";
-import { hiloDelProyecto, respuestaDeLen } from "@/lib/projects/hilos";
+import { hiloDelProyecto, personasDelProyecto, respuestaDeLen } from "@/lib/projects/hilos";
 import { registrarCorredorDeTurnos, type PedidoDelHilo } from "@/lib/agent/turnos-desde-el-servidor";
 import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miembros";
 import { correoDelUsuario } from "@/lib/movil/llaves";
@@ -41,7 +41,9 @@ import {
   type MensajeDelHistorial,
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversacion";
-import { turnosParaElHistorial } from "@/lib/projects/chat";
+import { filasParaElHistorialConEquipo, turnosParaElHistorial } from "@/lib/projects/chat";
+import { plegarEquipo } from "@/lib/agent/plegar-equipo";
+import { quienPide } from "@/lib/agent/equipo";
 import { parseStyleDirection } from "@/lib/style-match/parse-direction";
 import { MAX_PHOTOS_PER_MESSAGE, photosForRow, photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import type { Message } from "@/lib/ai-gateway";
@@ -554,9 +556,23 @@ async function correrTurno(
   // del navegador entra. El del navegador queda sólo para las conversaciones sin
   // ninguna transcripción todavía (anteriores a H4), con su saneado de siempre.
   // Fail-soft: si la base no contesta, el turno sigue con el del navegador.
-  const filasDelHistorial: FilaDelHistorial[] = await turnosParaElHistorial(projectId, TURNOS_DEL_HISTORIAL).catch(
-    () => [],
-  );
+  // EL CHAT DEL EQUIPO (lib/agent/plegar-equipo.ts): en un proyecto con
+  // miembros, los mensajes entre personas viajan en su sobre delante del turno
+  // siguiente, y los del final delante de la petición de ahora. Sin miembros,
+  // las filas de siempre y nada más (byte-idéntico).
+  const genteDelProyecto = await personasDelProyecto(projectId).catch(() => []);
+  const compartido = genteDelProyecto.length > 1;
+  let equipoAhora = "";
+  let filasDelHistorial: FilaDelHistorial[];
+  if (compartido) {
+    const crudas = await filasParaElHistorialConEquipo(projectId, TURNOS_DEL_HISTORIAL).catch(() => []);
+    const plegado = plegarEquipo(crudas, genteDelProyecto, userId);
+    filasDelHistorial = plegado.filas;
+    equipoAhora = plegado.ahora;
+  } else {
+    filasDelHistorial = await turnosParaElHistorial(projectId, TURNOS_DEL_HISTORIAL).catch(() => []);
+  }
+  const pideAhora = compartido ? quienPide(genteDelProyecto.find((p) => p.userId === quien) ?? null) : "";
   // El historial se ARMA más abajo, después de conseguir las fotos de la
   // conversación (A): sin ellas, la foto de un turno anterior no tendría dónde ir.
   const dichoAntes = sanearDichoAntes(body?.dichoAntes);
@@ -830,7 +846,10 @@ async function correrTurno(
     dichoAntes,
     // Desde un hilo del código, el modelo lee también dónde y lo dicho antes;
     // la fila (y el chat) guardan sólo lo que se escribió.
-    prompt: hiloDelTurno ? `${hiloDelTurno.contexto}\n\n${prompt}` : prompt,
+    // En un proyecto con miembros, delante: lo que el equipo se dijo desde el
+    // último turno y quién pide éste (lib/agent/equipo.ts).
+    prompt: `${equipoAhora ? `${equipoAhora}\n` : ""}${pideAhora ? `${pideAhora}\n` : ""}${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n${prompt}` : prompt}`,
+    equipo: compartido,
     history,
     // ¿El turno anterior fue MUDO? Se deriva del historial que acaba de
     // sanearse: el último mensaje del asistente sin `functionCalls` significa

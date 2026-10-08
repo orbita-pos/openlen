@@ -424,3 +424,12 @@ describe("stateOnlyTranscript (lote 7-8)", () => {
     expect(leidosSembrados(transcript.leidos, h, () => "x").size).toBe(0);
   });
 });
+
+describe("el chat del equipo en el historial", () => {
+  it("🔴 el prefijo del equipo va delante de las palabras del turno; sin él, el mensaje no cambia", () => {
+    const sin = historialDesdeLaBase([{ userText: "hola", assistantReasoning: "ok", transcript: null }]);
+    const con = historialDesdeLaBase([{ userText: "hola", assistantReasoning: "ok", transcript: null, prefijoDelEquipo: "<asked-by/>\n" }]);
+    expect(sin[0]!.content).toBe("hola");
+    expect(con[0]!.content).toBe("<asked-by/>\nhola");
+  });
+});

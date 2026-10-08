@@ -177,6 +177,9 @@ export async function turnosParaElHistorial(projectId: string, cuantos: number):
       and(
         enCurso(projectId),
         ne(schema.projectChatMessages.status, ESTADO_EN_CURSO),
+        // Los mensajes entre personas no son turnos (lib/projects/chat-equipo.ts):
+        // si los miembros se fueron, siguen en la base y no deben volver a Len.
+        isNull(schema.projectChatMessages.tipo),
       ),
     )
     .orderBy(desc(schema.projectChatMessages.createdAt))
@@ -186,6 +189,43 @@ export async function turnosParaElHistorial(projectId: string, cuantos: number):
     assistantReasoning: r.assistantReasoning,
     transcript: r.transcript ?? null,
     attachedImage: r.attachedImage ?? null,
+  }));
+}
+
+/** Una fila de la charla en curso con lo que hace falta para plegar el equipo. */
+export interface FilaCruda {
+  readonly tipo: string | null;
+  readonly autorId: string | null;
+  readonly menciones: string[] | null;
+  readonly createdAt: Date;
+  readonly fila: FilaDelHistorial;
+}
+
+/** Como `turnosParaElHistorial`, con las filas de persona incluidas (el chat del
+ *  equipo): las últimas `cuantos` filas, de la más vieja a la más reciente. */
+export async function filasParaElHistorialConEquipo(projectId: string, cuantos: number): Promise<FilaCruda[]> {
+  const t = schema.projectChatMessages;
+  const rows = await db
+    .select({
+      tipo: t.tipo,
+      autorId: t.autorId,
+      menciones: t.menciones,
+      createdAt: t.createdAt,
+      userText: t.userText,
+      assistantReasoning: t.assistantReasoning,
+      transcript: t.transcript,
+      attachedImage: t.attachedImage,
+    })
+    .from(t)
+    .where(and(enCurso(projectId), ne(t.status, ESTADO_EN_CURSO)))
+    .orderBy(desc(t.createdAt))
+    .limit(cuantos);
+  return rows.reverse().map((r) => ({
+    tipo: r.tipo ?? null,
+    autorId: r.autorId ?? null,
+    menciones: r.menciones ?? null,
+    createdAt: r.createdAt,
+    fila: { userText: r.userText, assistantReasoning: r.assistantReasoning, transcript: r.transcript ?? null, attachedImage: r.attachedImage ?? null },
   }));
 }
 
@@ -219,7 +259,8 @@ export async function filasParaBuscar(projectId: string): Promise<ChatRowForSear
       status: t.status,
     })
     .from(t)
-    .where(eq(t.projectId, projectId))
+    // El chat del equipo: los mensajes entre personas no son charlas con Len.
+    .where(and(eq(t.projectId, projectId), isNull(t.tipo)))
     .orderBy(desc(t.createdAt))
     .limit(maxFilasParaBuscar());
   // Las más recientes si hubiera de más; el módulo las ordena por fecha.

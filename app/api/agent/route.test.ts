@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({
   corredor: null as null | ((u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: { hilo: { hiloId: string; ruta: string; linea: number; contexto: string } }) => Promise<Response>),
   hiloDelProyecto: vi.fn(async (): Promise<{ id: string } | null> => null),
   respuestaDeLen: vi.fn(async () => true),
+  // Sin miembros por defecto: el turno de siempre, sin el chat del equipo.
+  personasDelProyecto: vi.fn(async (): Promise<{ userId: string; nombre: string; email: string; rol: "dueno" | "editor" | "lector" }[]> => []),
   guardarCambiosDelTurno: vi.fn(async () => false),
   auth: vi.fn(),
   getCreditState: vi.fn(),
@@ -70,6 +72,7 @@ const mocks = vi.hoisted(() => ({
   // H4: el historial sale de la base. Sin este doble, estas pruebas escribían
   // turnos de verdad en la base local (fallaban en silencio: «p1» no existe).
   turnosParaElHistorial: vi.fn(async (): Promise<unknown[]> => []),
+  filasParaElHistorialConEquipo: vi.fn(async (): Promise<unknown[]> => []),
   registrarTurnoDelServidor: vi.fn(async () => {}),
   // Len 2.1: la fila del turno se abre al empezar y se va llenando.
   abrirFilaDelTurno: vi.fn(async () => {}),
@@ -103,6 +106,7 @@ vi.mock("@/lib/agent/turnos-desde-el-servidor", () => ({
 vi.mock("@/lib/projects/hilos", () => ({
   hiloDelProyecto: mocks.hiloDelProyecto,
   respuestaDeLen: mocks.respuestaDeLen,
+  personasDelProyecto: mocks.personasDelProyecto,
 }));
 vi.mock("@/lib/projects/miembros", () => ({
   cabeEnElTope: mocks.cabeEnElTope,
@@ -170,6 +174,7 @@ vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.
 vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
 vi.mock("@/lib/projects/chat", () => ({
   turnosParaElHistorial: mocks.turnosParaElHistorial,
+  filasParaElHistorialConEquipo: mocks.filasParaElHistorialConEquipo,
   registrarTurnoDelServidor: mocks.registrarTurnoDelServidor,
   abrirFilaDelTurno: mocks.abrirFilaDelTurno,
   avanceDelTurno: mocks.avanceDelTurno,

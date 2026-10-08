@@ -21,6 +21,7 @@ import { textoDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcr
 import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO } from "@/lib/agent/ficheros/memoria";
 import { directionToBriefBlock } from "@/lib/style-match/direction";
 import type { StyleDirection } from "@/lib/style-match/direction-types";
+import { REGLA_DEL_EQUIPO } from "./equipo";
 
 /**
  * El bloque para el prompt, o `""` cuando no hay nada.
@@ -246,6 +247,9 @@ The ones that belong ON the page (a logo, the premises, a product) are REAL imag
 }
 
 export function buildAgentContext(args: {
+  /** El proyecto tiene miembros: la regla del chat del equipo va delante.
+   *  Ausente/false ⇒ contexto BYTE-idéntico al de antes del chat del equipo. */
+  equipo?: boolean;
   /** Inyectable sólo para las pruebas: sin esto el bloque HOY cambiaría cada
    *  día y ninguna prueba podría fijarlo. */
   now?: Date;
@@ -358,7 +362,7 @@ ${dichoBlock}`
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${recorteBlock}${memoriaBlock}${hoy}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${briefBlock}${seleccionBlock(args.seleccion)}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
+  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${recorteBlock}${memoriaBlock}${hoy}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${briefBlock}${seleccionBlock(args.seleccion)}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
 }
 
 
@@ -375,6 +379,8 @@ export function estimateContextTokens(userContent: string, systemPrompt: string)
 export const TOKENS_POR_FOTO = 1_024;
 
 export interface BuildAgentMessagesArgs {
+  /** Ver buildAgentContext.equipo. */
+  equipo?: boolean;
   // ⚰️ Aquí iba `diferidas`: los nombres de las herramientas diferidas (H2),
   // anunciados en un `<system-reminder>` para cargarlas con ToolSearch. Se
   // retiraron con ToolSearch en Len 2.1 (2026-09-30): todo va cargado.
@@ -463,6 +469,7 @@ export type BuildAgentMessagesResult =
 export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMessagesResult {
   const systemPrompt = buildAgentSystemPrompt(process.env, args.mode, args.app ?? null);
   const contextBlock = buildAgentContext({
+    equipo: args.equipo,
     zona: args.zona,
     state: args.state,
     userBrief: args.userBrief,
